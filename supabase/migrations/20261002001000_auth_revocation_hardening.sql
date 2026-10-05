@@ -16,7 +16,7 @@
 --
 --   1. `auth_revoke_user_sessions(uuid)` — server-only. Deletes the user's
 --      sessions and refresh tokens, so no existing session can be refreshed.
---   2. The knowledge read policies now require an ACTIVE Ask Sunny user, so an
+--   2. The knowledge read policies now require an ACTIVE Ask Bubbles user, so an
 --      access token that outlives a revocation reads nothing.
 --   3. The audit vocabulary gains the actions that record it.
 --
@@ -67,7 +67,7 @@ grant execute on function public.auth_revoke_user_sessions(uuid) to service_role
 -- The application reads knowledge with the secret key, which bypasses RLS;
 -- no browser code queries these tables. These policies are therefore the
 -- guard for exactly one caller: a raw PostgREST request carrying a user's
--- access token. That caller must be an ACTIVE Ask Sunny user — not merely a
+-- access token. That caller must be an ACTIVE Ask Bubbles user — not merely a
 -- Supabase user, not an invited one, not a disabled one.
 --
 -- The check is an uncorrelated scalar subquery, so Postgres evaluates it once

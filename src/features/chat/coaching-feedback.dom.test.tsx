@@ -69,7 +69,7 @@ function serve(templateKey: string, values: { fieldKey: string; value: string | 
         employeeName: "Kaitlyn Marsh",
         locationId: "loc-0310",
         locationName: null,
-        source: "ask_sunny",
+        source: "assistant",
         status: "draft",
         followUpDate: "2026-10-15",
       },

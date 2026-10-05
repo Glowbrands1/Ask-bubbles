@@ -1,18 +1,18 @@
 -- ============================================================================
--- WOVEN → ASK SUNNY ACCESS: the identity link, and a record of planned actions
+-- WOVEN → ASK BUBBLES ACCESS: the identity link, and a record of planned actions
 -- ============================================================================
 --
--- STAGE 1 OF THE ACCESS SYNC. This migration lets Ask Sunny SAY, durably and
+-- STAGE 1 OF THE ACCESS SYNC. This migration lets Ask Bubbles SAY, durably and
 -- explicitly, which Woven employee each account belongs to (or that it belongs
 -- to none), and record what an access sync WOULD do. It changes no access:
 --
 --   * no app_users row is inserted, updated or deleted;
 --   * no auth.users row is touched;
---   * no role, status, scope or salon assignment changes;
+--   * no role, status, scope or location assignment changes;
 --   * the only function that writes records SHADOW runs and refuses any other
 --     mode — there is no apply path in this migration.
 --
--- THE LINK (`employee_account_links`) — one row per Ask Sunny account:
+-- THE LINK (`employee_account_links`) — one row per Ask Bubbles account:
 --
 --   woven_linked        this account IS that Woven EmployeeID. After linking,
 --                       the EmployeeID is authoritative; email is never used
@@ -100,7 +100,7 @@ create unique index if not exists employee_account_links_one_account_per_employe
   where external_employee_id is not null;
 
 comment on table public.employee_account_links is
-  'One row per Ask Sunny account: woven_linked (this account IS that Woven EmployeeID; the id is authoritative after linking) or not_woven_managed (never touched by a Woven action). The managed_* flags say what Woven may manage; all default off. No row = unclassified (only a link is ever proposed). Read by the access planner; never written by the directory sync.';
+  'One row per Ask Bubbles account: woven_linked (this account IS that Woven EmployeeID; the id is authoritative after linking) or not_woven_managed (never touched by a Woven action). The managed_* flags say what Woven may manage; all default off. No row = unclassified (only a link is ever proposed). Read by the access planner; never written by the directory sync.';
 
 drop trigger if exists employee_account_links_touch_updated_at on public.employee_account_links;
 create trigger employee_account_links_touch_updated_at
@@ -224,7 +224,7 @@ left join public.employee_account_links l on l.app_user_id = u.id
 left join public.employee_role_overrides o on o.app_user_id = u.id;
 
 comment on view public.employee_access_accounts is
-  'Read-only. Each Ask Sunny account with its Woven link (if any) and protected override (if any), for the access planner. Grants, links and changes nothing.';
+  'Read-only. Each Ask Bubbles account with its Woven link (if any) and protected override (if any), for the access planner. Grants, links and changes nothing.';
 
 revoke all on public.employee_access_accounts from public, anon, authenticated, service_role;
 grant select on public.employee_access_accounts to service_role;

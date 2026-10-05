@@ -1,4 +1,4 @@
--- Ask Sunny — corrective migration for two privilege defects in
+-- Ask Bubbles — corrective migration for two privilege defects in
 -- 20260829000400_rls.sql, found by post-application verification.
 --
 -- 20260829000400 has been corrected in Git so a fresh project comes up right.

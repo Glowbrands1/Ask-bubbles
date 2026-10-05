@@ -1,4 +1,4 @@
--- Ask Sunny — vector retrieval RPC.
+-- Ask Bubbles — vector retrieval RPC.
 --
 -- Retrieval is a database function rather than a query assembled in the
 -- application so that:

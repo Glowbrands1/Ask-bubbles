@@ -42,7 +42,7 @@ function loaded(status: "draft" | "finalized") {
       employeeName: "Jane Smith",
       locationId: "loc-0311",
       locationName: "NE Lincoln O Street",
-      source: "ask_sunny",
+      source: "assistant",
       status,
       followUpDate: null,
     },

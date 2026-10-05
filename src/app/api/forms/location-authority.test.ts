@@ -408,7 +408,7 @@ describe("15. a chat-created form is authorized like any other", () => {
         templateKey: "coaching",
         employeeName: "Sarah Jones",
         locationId: "loc-0101",
-        source: "ask_sunny",
+        source: "assistant",
       }),
     );
 
@@ -422,7 +422,7 @@ describe("15. a chat-created form is authorized like any other", () => {
       post({
         templateKey: "coaching-v2-from-a-stale-conversation",
         employeeName: "Sarah Jones",
-        source: "ask_sunny",
+        source: "assistant",
       }),
     );
 
@@ -433,7 +433,7 @@ describe("15. a chat-created form is authorized like any other", () => {
   it("refuses a template the library has marked inactive", async () => {
     const { route, created } = await load({ active: false });
     const response = await route.POST(
-      post({ templateKey: "coaching", employeeName: "Sarah Jones", source: "ask_sunny" }),
+      post({ templateKey: "coaching", employeeName: "Sarah Jones", source: "assistant" }),
     );
 
     expect(response.status).toBe(404);
@@ -479,7 +479,7 @@ describe("16-17. a foreign salon cannot be created by bypassing the UI", () => {
         templateKey: "coaching",
         employeeName: "Sarah Jones",
         locationId: "loc-0999",
-        source: "ask_sunny",
+        source: "assistant",
       }),
     );
 
@@ -497,7 +497,7 @@ describe("16-17. a foreign salon cannot be created by bypassing the UI", () => {
         templateKey: "coaching",
         employeeName: "Sarah Jones",
         locationId: "loc-0101",
-        source: "ask_sunny",
+        source: "assistant",
       }),
     );
 
@@ -514,12 +514,12 @@ describe("46. a chat-created form is a canonical instance", () => {
         templateKey: "coaching",
         employeeName: "Sarah Jones",
         locationId: "loc-0101",
-        source: "ask_sunny",
+        source: "assistant",
       }),
     );
 
     expect(created).toHaveLength(1);
-    expect(created[0]!.source).toBe("ask_sunny");
+    expect(created[0]!.source).toBe("assistant");
     expect(created[0]!.templateKey).toBe("coaching");
     expect(created[0]!.locationId).toBe("loc-0101");
   });
@@ -533,7 +533,7 @@ describe("46. a chat-created form is a canonical instance", () => {
         templateKey: "coaching",
         employeeName: "Sarah Jones",
         locationId: "loc-0101",
-        source: "ask_sunny",
+        source: "assistant",
       }),
     );
 
@@ -603,6 +603,6 @@ describe("47-48. no second forms engine, and no second monitoring store", () => 
 
     expect(listInstances).toContain("form_instance_overview");
     expect(listInstances).not.toMatch(/eq\(\s*["']source["']/);
-    expect(listInstances).not.toContain("ask_sunny");
+    expect(listInstances).not.toContain("assistant");
   });
 });

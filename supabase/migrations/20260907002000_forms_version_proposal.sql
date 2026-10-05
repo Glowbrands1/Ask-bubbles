@@ -2,7 +2,7 @@
 -- WHERE A DRAFT RECORDS THE DOCUMENT IT WAS EXTRACTED FROM.
 --
 -- An administrator can now upload the business's own PDF or Word file and have
--- Ask Sunny read it into a PROPOSED form. The proposal is not a new kind of
+-- Ask Bubbles read it into a PROPOSED form. The proposal is not a new kind of
 -- record: it is an ordinary DRAFT VERSION, so it inherits everything the engine
 -- already guarantees — a published version cannot be edited, publishing
 -- archives the one it replaces, and forms already filled keep rendering against

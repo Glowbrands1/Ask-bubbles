@@ -123,7 +123,7 @@ interface LoadedInstance {
     employeeName: string;
     locationId: string | null;
     locationName: string | null;
-    source: "manual" | "ask_sunny";
+    source: "manual" | "assistant";
     status: "draft" | "finalized" | "revised";
     followUpDate: string | null;
   };
@@ -906,7 +906,7 @@ export function policyVerificationNoticeFor(
   // Nothing to report while Sunny is still writing — the fields are empty
   // because it has not got to them yet.
   if (prefilling) return null;
-  if (loaded.instance.source !== "ask_sunny") return null;
+  if (loaded.instance.source !== "assistant") return null;
   if (!loaded.events.some((event) => event.kind === "drafted")) return null;
 
   const grounded = fieldsForVariant(loaded.version.document, loaded.instance.variantKey).filter(
@@ -992,7 +992,7 @@ function prefillNoticeFor(
   if (prefill.kind === "complete") return null;
 
   /* unknown — reopened from storage. Read the form's own history. */
-  if (loaded.instance.source !== "ask_sunny") return null;
+  if (loaded.instance.source !== "assistant") return null;
   if (loaded.events.some((event) => event.kind === "drafted")) return null;
 
   return {

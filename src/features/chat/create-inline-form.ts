@@ -132,7 +132,7 @@ export async function createInlineForm({
        */
       ...(proposal.payrollDeduct ? { payrollDeduct: proposal.payrollDeduct } : {}),
       locationId: proposal.locationId,
-      source: "ask_sunny",
+      source: "assistant",
       /*
        * THE CONVERSATION AS IT STANDS NOW, not as it stood when the card was
        * drawn. The server re-reads who and which form it now names and

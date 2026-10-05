@@ -3,7 +3,7 @@
 --
 -- WHAT THIS ADDS, and nothing else:
 --
---   employee_role_overrides   one row per PROTECTED Ask Sunny account: the role
+--   employee_role_overrides   one row per PROTECTED Ask Bubbles account: the role
 --                             and scope level that account keeps whatever its
 --                             Woven position says. A person sets each row.
 --
@@ -12,7 +12,7 @@
 --                             effective_scope_level and role_source at the end.
 --                             The resolution order is
 --                               protected override → confirmed position → none,
---                             and role_differs / primary_salon_differs now read
+--                             and role_differs / primary_location_differs now read
 --                             the effective role, so a protected admin is never
 --                             reported as "should be" a lower role.
 --
@@ -34,7 +34,7 @@
 -- ---------------------------------------------------------------------------
 
 create table if not exists public.employee_role_overrides (
-  /* The Ask Sunny account. Keyed on the id, never an email: some accounts' app_users.email is not their sign-in email. */
+  /* The Ask Bubbles account. Keyed on the id, never an email: some accounts' app_users.email is not their sign-in email. */
   app_user_id uuid primary key references public.app_users (id) on delete cascade,
 
   /*
@@ -66,7 +66,7 @@ alter table public.employee_role_overrides force row level security;
 revoke all on table public.employee_role_overrides from anon, authenticated;
 
 comment on table public.employee_role_overrides is
-  'Protected Ask Sunny accounts: the role and scope level each keeps regardless of its Woven position. Wins over the position map in every resolution (employee_access_preview.effective_role). Set by a person; the sync never writes it. Changes no app_users row by itself.';
+  'Protected Ask Bubbles accounts: the role and scope level each keeps regardless of its Woven position. Wins over the position map in every resolution (employee_access_preview.effective_role). Set by a person; the sync never writes it. Changes no app_users row by itself.';
 
 -- --------------------------------------------------------- access preview ---
 
@@ -81,10 +81,10 @@ select
   d.position_id,
   pm.status               as position_mapping_status,
   coalesce(pm.is_confirmed, false) as position_mapping_confirmed,
-  pm.ask_sunny_role       as mapped_role,
-  pm.ask_sunny_scope_level as mapped_scope_level,
+  pm.mapped_role       as mapped_role,
+  pm.mapped_scope_level as mapped_scope_level,
   d.primary_woven_location_id,
-  s.salon_number          as mapped_primary_salon_number,
+  lm.location_id          as mapped_primary_location_id,
   u.id                    as app_user_id,
   u.role                  as app_user_role,
   u.status                as app_user_status,
@@ -96,20 +96,20 @@ select
      and d.email_address is not null
      and not ('duplicate_email' = any (d.data_issues))
      and coalesce(pm.is_confirmed, false)
-     and s.salon_number is not null) as would_provision_candidate,
-  /* Phase 3 question: Woven says terminated, the Ask Sunny login is not disabled. */
+     and lm.location_id is not null) as would_provision_candidate,
+  /* Phase 3 question: Woven says terminated, the Ask Bubbles login is not disabled. */
   (u.id is not null and d.employment_status = 'terminated' and u.status <> 'disabled') as would_deactivate_candidate,
   /* Phase 4 question: the EFFECTIVE role (override first) differs from the account's role. */
   (u.id is not null
-     and coalesce(ov.locked_role, case when coalesce(pm.is_confirmed, false) then pm.ask_sunny_role end) is not null
-     and u.role is distinct from coalesce(ov.locked_role, case when coalesce(pm.is_confirmed, false) then pm.ask_sunny_role end)) as role_differs,
-  /* Phase 5 question: a salon-scoped login whose salon differs from Woven's mapped primary. A protected account's scope is its override's. */
-  (u.id is not null and ov.app_user_id is null and u.scope_level = 'salon' and s.salon_number is not null
-     and u.scope_primary_area_id is distinct from ('loc-' || s.salon_number)) as primary_salon_differs,
+     and coalesce(ov.locked_role, case when coalesce(pm.is_confirmed, false) then pm.mapped_role end) is not null
+     and u.role is distinct from coalesce(ov.locked_role, case when coalesce(pm.is_confirmed, false) then pm.mapped_role end)) as role_differs,
+  /* Phase 5 question: a location-scoped login whose location differs from Woven's mapped primary. A protected account's scope is its override's. */
+  (u.id is not null and ov.app_user_id is null and u.scope_level = 'location' and lm.location_id is not null
+     and u.scope_primary_area_id is distinct from lm.location_id) as primary_location_differs,
   /* ---- added by 20260930000100: the resolution, stated ---- */
   ov.locked_role as role_override,
-  coalesce(ov.locked_role, case when coalesce(pm.is_confirmed, false) then pm.ask_sunny_role end) as effective_role,
-  coalesce(ov.locked_scope_level, case when coalesce(pm.is_confirmed, false) then pm.ask_sunny_scope_level end) as effective_scope_level,
+  coalesce(ov.locked_role, case when coalesce(pm.is_confirmed, false) then pm.mapped_role end) as effective_role,
+  coalesce(ov.locked_scope_level, case when coalesce(pm.is_confirmed, false) then pm.mapped_scope_level end) as effective_scope_level,
   case
     when ov.app_user_id is not null then 'override'
     when coalesce(pm.is_confirmed, false) then 'position'
@@ -118,7 +118,6 @@ select
 from public.employee_access_directory d
 left join public.woven_position_map pm on pm.woven_position_id = d.position_id
 left join public.woven_location_map lm on lm.woven_location_id = d.primary_woven_location_id and lm.status = 'mapped'
-left join public.salons s on s.id = lm.salon_id
 left join public.employee_role_overrides ov on ov.external_employee_id = d.external_employee_id
 left join public.app_users u
   on (ov.app_user_id is not null and u.id = ov.app_user_id)
@@ -138,7 +137,7 @@ select
   pm.is_confirmed  as position_mapping_confirmed,
   d.primary_woven_location_id, d.primary_location_name,
   lm.status        as primary_location_mapping_status,
-  ps.salon_number  as primary_salon_number,
+  lm.location_id   as primary_location_id,
   aff.additional_locations,
   aff.temporary_or_expiring_locations,
   coalesce(aff.active_location_count, 0) as active_location_count,
@@ -154,7 +153,6 @@ select
 from public.employee_access_directory d
 left join public.woven_position_map pm on pm.woven_position_id = d.position_id
 left join public.woven_location_map lm on lm.woven_location_id = d.primary_woven_location_id
-left join public.salons ps on ps.id = lm.salon_id
 left join lateral (
   select
     jsonb_agg(jsonb_build_object('wovenLocationId', a.woven_location_id, 'name', a.location_name, 'number', a.location_number))
@@ -183,6 +181,6 @@ revoke all on public.employee_access_preview from public, anon, authenticated;
 revoke all on public.employee_directory_view from public, anon, authenticated;
 
 comment on view public.employee_access_preview is
-  'What provisioning, deactivation, role and salon-scope phases WOULD do, as questions. effective_role resolves protected override → confirmed position → none; role_source says which. Read-only; nothing acts on it in phase one.';
+  'What provisioning, deactivation, role and location-scope phases WOULD do, as questions. effective_role resolves protected override → confirmed position → none; role_source says which. Read-only; nothing acts on it in phase one.';
 comment on view public.employee_directory_view is
   'The employee directory with affiliations, mapping state and recent changes; last_change_classification lets the screen say "Initial import". Contains names and emails: server-only, shown behind manage_users.';

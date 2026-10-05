@@ -89,7 +89,7 @@ const CORRECTED = [
 ];
 
 function create(templateKey: string, employeeName: string, conversation: unknown) {
-  return post({ templateKey, employeeName, variantKey: null, employeeRole: null, locationId: null, source: "ask_sunny", conversation });
+  return post({ templateKey, employeeName, variantKey: null, employeeRole: null, locationId: null, source: "assistant", conversation });
 }
 
 beforeEach(() => vi.resetModules());

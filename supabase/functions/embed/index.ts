@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 /**
- * Ask Sunny — embedding generation.
+ * Ask Bubbles — embedding generation.
  *
  * Runs the `gte-small` sentence-transformer natively inside the Supabase Edge
  * Runtime (`Supabase.ai.Session`). There is no external embedding vendor and no

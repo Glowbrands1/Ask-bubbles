@@ -46,7 +46,7 @@ describe("the inline form after a chat change", () => {
           employeeName: "Kaitlyn Marsh",
           locationId: "loc-0310",
           locationName: null,
-          source: "ask_sunny",
+          source: "assistant",
           status: "draft",
           followUpDate: server.followUpDate,
         },

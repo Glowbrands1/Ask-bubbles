@@ -1,4 +1,4 @@
--- Ask Sunny — private Storage bucket for original documents.
+-- Ask Bubbles — private Storage bucket for original documents.
 --
 -- PRIVATE, unconditionally. Company policy manuals, coaching frameworks and
 -- compensation material must never sit behind a public URL. Files are read

@@ -1,4 +1,4 @@
--- Ask Sunny — corrective migration: embedding width 1024 -> 384.
+-- Ask Bubbles — corrective migration: embedding width 1024 -> 384.
 --
 -- WHY. The embedding backend changed from an external vendor (Voyage AI,
 -- 1024-dimension vectors over a REST API requiring VOYAGE_API_KEY) to the

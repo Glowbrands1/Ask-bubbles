@@ -93,7 +93,7 @@ describe("11-12. the canonical endpoint is called, with source ask_sunny", () =>
 
     expect(calls[0]!.url).toBe("/api/forms/instances");
     expect(calls[0]!.method).toBe("POST");
-    expect(calls[0]!.body.source).toBe("ask_sunny");
+    expect(calls[0]!.body.source).toBe("assistant");
   });
 
   it("does not invent a chat-specific form endpoint", async () => {

@@ -8,7 +8,7 @@
 --
 --   NOTHING IS READABLE WITHOUT THE SECRET KEY. Row level security is enabled
 --   AND forced on every table, and not one policy is created. `anon` and
---   `authenticated` are revoked outright. Ask Sunny has no identity provider
+--   `authenticated` are revoked outright. Ask Bubbles has no identity provider
 --   yet — `authorizeRequest` returns 501 in live mode for exactly that reason —
 --   so there is no honest way to say which authenticated user may read which
 --   employee's file. Until that exists, the answer is nobody: reads and writes
@@ -29,8 +29,8 @@
 -- `form_field_responsibility` on the field inside the version document, and the
 -- server drops anything the model writes into a field it does not own. The
 -- responsibility of a given field is per template — a self-review section is
--- manual in the DMIT EPP and AI-drafted in the SDIT EPP, and neither is a
--- global rule.
+-- manual on one form and AI-drafted on another, and neither is a global
+-- rule.
 --
 -- NOTHING HERE TOUCHES REPORTING. No reporting table, view, function or enum is
 -- referenced, altered or dropped. The two domains share the database and
@@ -39,15 +39,16 @@
 
 -- ------------------------------------------------------------------ enums ---
 
--- The four layouts the nine templates are built from. Verified from the
--- reference captures: Coaching stands alone; DPOA and Policy Review share the
--- corrective layout; SDIT/TSD/ASD-SDIT/FTTC share one three-page EPP; the two
--- DMIT reviews are one six-page document in two role variants.
+-- The layout families a form may declare, mirrored by FORM_LAYOUT_FAMILIES in
+-- src/config/company/forms/categories.ts. A family groups documents of the
+-- same shape; it carries no business rule on its own.
 create type public.form_layout_family as enum (
+  'standard',
   'coaching',
   'corrective',
-  'epp',
-  'dmit_epp'
+  'review',
+  'interview',
+  'separation'
 );
 
 create type public.form_template_status as enum (
@@ -59,8 +60,8 @@ create type public.form_template_status as enum (
 -- WHO PUTS CONTENT IN A FIELD. The server enforces this; the model is told
 -- about it but is never trusted to honour it.
 create type public.form_field_responsibility as enum (
-  'system',     -- the app fills it: today's date, the salon, the template name
-  'ai',         -- Ask Sunny may draft it, and a manager may edit it after
+  'system',     -- the app fills it: today's date, the location, the template name
+  'ai',         -- Ask Bubbles may draft it, and a manager may edit it after
   'manager',    -- the manager writes it; AI output into it is discarded
   'employee',   -- the employee's own words, collected in person
   'manual',     -- filled by hand on the printed page; never populated at all
@@ -75,7 +76,7 @@ create type public.form_instance_status as enum (
 
 create type public.form_instance_source as enum (
   'manual',     -- typed by a manager
-  'ask_sunny'   -- drafted by the assistant, then reviewed
+  'assistant'   -- drafted by the assistant, then reviewed
 );
 
 create type public.form_asset_kind as enum (
@@ -135,7 +136,7 @@ create table public.form_template_versions (
    * out; the column stores what that parser produced.
    */
   document jsonb not null,
-  -- Role variants this version offers, e.g. the DMIT review's TSD and DMIT
+  -- Role variants this version offers, e.g. one review form's two role
   -- readings. Empty for a template with a single reading.
   variants jsonb not null default '[]'::jsonb,
   notes text not null default '',
@@ -195,7 +196,7 @@ create table public.form_template_assets (
    * WHAT THE UPLOAD ACTUALLY CONTAINS. An uploaded PDF does not become fillable
    * by being uploaded: it either carries AcroForm fields or it does not. This
    * records the inspection — field names, page count, whether a mapping exists
-   * — so "can Ask Sunny fill this?" is answered from evidence rather than hope.
+   * — so "can Ask Bubbles fill this?" is answered from evidence rather than hope.
    */
   acroform jsonb not null default '{}'::jsonb,
   -- Why an asset was rejected, or what the validator noticed. Never discarded:
@@ -254,7 +255,7 @@ create table public.form_instances (
   follow_up_date date,
   finalized_at timestamptz,
   exported_at timestamptz,
-  -- A revision points at what it replaced, so the DMIT lifecycle — review,
+  -- A revision points at what it replaced, so a review lifecycle — review,
   -- plan, follow-up, re-evaluation — reads as one history rather than as
   -- unrelated documents.
   revises_instance_id uuid references public.form_instances (id) on delete set null,
@@ -283,7 +284,7 @@ create table public.form_instance_values (
   /*
    * WHO PUT THIS HERE. Not the same thing as who is ALLOWED to: responsibility
    * lives on the template, this records what actually happened, which is what
-   * makes "Ask Sunny drafted this, a manager edited it" answerable later.
+   * makes "Ask Bubbles drafted this, a manager edited it" answerable later.
    */
   filled_by public.form_field_responsibility not null default 'manager',
   -- For a policy-grounded field: the knowledge documents the language came

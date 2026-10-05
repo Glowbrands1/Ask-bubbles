@@ -140,7 +140,7 @@ begin
      * emphatically not something to create one for — an account that could
      * invent its own profile is an account that could invent its own role.
      */
-    raise exception 'No Ask Sunny profile exists for this account.'
+    raise exception 'No Ask Bubbles profile exists for this account.'
       using errcode = 'insufficient_privilege';
   end if;
 

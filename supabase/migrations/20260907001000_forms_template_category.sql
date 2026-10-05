@@ -1,32 +1,12 @@
 -- ============================================================================
--- HIRING & INTERVIEW FORMS — the category, the layout family, and the marker
--- that lets a re-issued source document become a new version.
+-- FORM TEMPLATE CATEGORY AND SEED REVISION.
 --
--- ADDITIVE AND, WITH ONE STATED EXCEPTION, REVERSIBLE. Nothing here drops,
--- renames or rewrites anything. Two columns are added with defaults that
--- describe the rows already in the table, so every existing template and every
--- existing version keeps meaning exactly what it meant before this ran, and
--- both columns can be dropped again.
---
--- THE EXCEPTION IS THE ENUM. Postgres can add a value to an enum type and
--- cannot remove one. `interview` is therefore a one-way change to
--- `form_layout_family`. Rolling this migration back means dropping the two
--- columns and leaving the unused enum value in place — it is inert unless a row
--- uses it, and after a rollback none would.
---
--- WHAT DEPENDS ON IT. The four Hiring & Interview templates are seeded with
--- `layout_family = 'interview'`, so `ensureTemplateLibrary` cannot install them
--- until this has run. The existing nine are unaffected either way.
+-- `category` is the Forms page section a template renders under; plain text
+-- checked against COMPANY_FORM_CATEGORIES in src/config/company/forms, so a new
+-- heading is a config change rather than a migration. `seed_revision` lets the
+-- seeder publish a new version when a registry form is re-issued, without ever
+-- overwriting a version a person authored in the editor (revision 0).
 -- ============================================================================
-
--- ------------------------------------------------------- the layout family ---
-
--- A fifth layout, for a form filled in the room while a candidate answers: no
--- Employee Information, no acknowledgement, no employee signature, and a long
--- run of question-and-notes pairs the other four layouts have nothing like.
-alter type public.form_layout_family add value if not exists 'interview';
-
--- ------------------------------------------------------------ the category ---
 
 /*
  * WHICH SECTION OF THE FORMS PAGE A TEMPLATE RENDERS UNDER.
@@ -37,14 +17,13 @@ alter type public.form_layout_family add value if not exists 'interview';
  * change, not a schema change — an enum here would mean a migration every time
  * the business wanted a new heading.
  *
- * The default names the group the nine existing forms were already in, so this
- * column arrives correct for every row that predates it.
+ * The default is the configured default category.
  */
 alter table public.form_templates
-  add column if not exists category text not null default 'hr_performance';
+  add column if not exists category text not null default 'examples';
 
 comment on column public.form_templates.category is
-  'Which section of the Forms page this template renders under. Checked against FORM_CATEGORIES in src/lib/forms/catalog.ts; hr_performance is the group the original nine forms are in.';
+  'Which section of the Forms page this template renders under. Checked against COMPANY_FORM_CATEGORIES in src/config/company/forms; examples is the default group.';
 
 create index if not exists form_templates_by_category
   on public.form_templates (category, display_order);
@@ -58,8 +37,8 @@ create index if not exists form_templates_by_category
  * which is right — it is what stops the code overwriting an administrator's
  * published edits. But it also meant that when the business re-issued a form,
  * the new document could never reach a database that already had the old one.
- * The Coaching Form was re-issued; without this column its first version would
- * stay published forever.
+ * Without this column a re-issued form's first version would stay published
+ * forever.
  *
  * So a seeded version records its seed's revision, and `ensureTemplateLibrary`
  * publishes a NEW version when the code's revision is higher than anything in

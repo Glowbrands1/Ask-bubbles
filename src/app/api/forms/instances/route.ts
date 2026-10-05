@@ -109,7 +109,7 @@ export async function POST(request: Request) {
       employeeRole?: string | null;
       locationId?: string | null;
       locationName?: string | null;
-      source?: "manual" | "ask_sunny";
+      source?: "manual" | "assistant";
       formDate?: string;
       /** The chat the proposal came from, for `checkProposalIsCurrent`. Ask Sunny only. */
       conversation?: unknown;
@@ -152,7 +152,7 @@ export async function POST(request: Request) {
      * is refused here even if the browser still offered it. See
      * `lib/forms/proposal-currency.ts`.
      */
-    if (body.source === "ask_sunny" && Array.isArray(body.conversation)) {
+    if (body.source === "assistant" && Array.isArray(body.conversation)) {
       const currency = checkProposalIsCurrent({
         conversation: parseHistory(body.conversation),
         templateKey: body.templateKey,
@@ -199,7 +199,7 @@ export async function POST(request: Request) {
       locationName,
       createdBy: actor.id,
       createdByRole: actor.role,
-      source: body.source === "ask_sunny" ? "ask_sunny" : "manual",
+      source: body.source === "assistant" ? "assistant" : "manual",
       // A real calendar day or nothing, in which case the form is dated today.
       formDate: isIsoCalendarDate(body.formDate) ? body.formDate : undefined,
     });

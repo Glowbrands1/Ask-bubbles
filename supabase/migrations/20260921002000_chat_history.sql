@@ -1,9 +1,9 @@
 -- ---------------------------------------------------------------------------
--- ASK SUNNY CHAT HISTORY — the conversation, where the person can reach it.
+-- ASK BUBBLES CHAT HISTORY — the conversation, where the person can reach it.
 --
 -- WHAT THIS CHANGES. Conversations lived in the browser's IndexedDB and
 -- nowhere else, so History existed on exactly one device. A manager who asked
--- Sunny something from the salon could not find it from home, and a new laptop
+-- the assistant something at the store could not find it from home, and a new laptop
 -- started empty with no way back. These tables are the account-scoped copy.
 --
 -- WHAT IT DOES NOT CHANGE, and this is the part worth being explicit about:
@@ -12,7 +12,7 @@
 --   adoption record and it stays text-free. Nothing here backfills it, reads it
 --   for text, or gives it a column one could be put in.
 --
---   `ask_sunny_feedback` is untouched. It remains keyed to the turn, and it
+--   `assistant_feedback` is untouched. It remains keyed to the turn, and it
 --   remains the source of truth for what anybody said about an answer.
 --
 --   No existing table, view, function, policy or grant is altered. This file
@@ -56,11 +56,11 @@
 --
 --   Laptop A imports conversation X. Laptop B still holds X locally. The
 --   person deletes X on Laptop A. A hard delete leaves the server with no
---   record that X ever existed — so when Laptop B next opens Ask Sunny, the
+--   record that X ever existed — so when Laptop B next opens Ask Bubbles, the
 --   union adds X back, and it becomes importable again.
 --
 -- A delete that undoes itself on another device is not a delete, and the
--- History panel now promises it removes conversations "from your Ask Sunny
+-- History panel now promises it removes conversations "from your Ask Bubbles
 -- account and from this browser". So the server keeps a DURABLE, POSITIVE
 -- record of the decision, in two shapes:
 --
@@ -110,7 +110,7 @@ create table if not exists public.chat_conversations (
    * WHOSE IT IS. The one fact everything else here rests on.
    *
    * `on delete cascade`, and the direction is the opposite of the choice made
-   * in `activity_events` and `ask_sunny_feedback` — on purpose. Those two are
+   * in `activity_events` and `assistant_feedback` — on purpose. Those two are
    * the estate's record of what happened and must outlive an account. A
    * conversation is not a record of the business; it is a person's own working
    * history, and when their account is deleted there is no one it belongs to.
@@ -224,7 +224,7 @@ create table if not exists public.chat_conversations (
 );
 
 comment on table public.chat_conversations is
-  'One Ask Sunny conversation, owned by the authenticated person who had it. Readable only by its own user_id: there is no administrative viewer and no cross-user read in this phase. A deleted conversation becomes a tombstone — deleted_at set, turns destroyed, title nulled — so that an intentional delete is not undone by a second browser''s stale local copy.';
+  'One Ask Bubbles conversation, owned by the authenticated person who had it. Readable only by its own user_id: there is no administrative viewer and no cross-user read in this phase. A deleted conversation becomes a tombstone — deleted_at set, turns destroyed, title nulled — so that an intentional delete is not undone by a second browser''s stale local copy.';
 
 comment on column public.chat_conversations.client_conversation_id is
   'The browser-minted conv_* id. Correlation only — unique per user, never joined across users, never consulted for access. Also what a tombstone names so a stale browser can suppress its own copy.';
@@ -271,7 +271,7 @@ create table if not exists public.chat_messages (
 
   /*
    * WHAT WAS SAID. This is the sensitive column in this migration and it is
-   * worth naming as such: managers ask Sunny about named employees' attendance
+   * worth naming as such: managers ask the assistant about named employees' attendance
    * and performance, so this holds HR content, and the access rule above is the
    * whole protection. The bound is generous enough for the longest detailed
    * answer the model produces and small enough that a pasted workbook is
@@ -382,7 +382,7 @@ create table if not exists public.chat_messages (
 );
 
 comment on table public.chat_messages is
-  'The turns of one Ask Sunny conversation, owned by the same person as the conversation — which the composite foreign key to chat_conversations (id, user_id) makes a property of the schema rather than of the code. Holds question and answer text, which activity_events deliberately does not.';
+  'The turns of one Ask Bubbles conversation, owned by the same person as the conversation — which the composite foreign key to chat_conversations (id, user_id) makes a property of the schema rather than of the code. Holds question and answer text, which activity_events deliberately does not.';
 
 comment on column public.chat_messages.position is
   'The thread''s own order, from the browser''s array index. Not unique: two concurrent appends must both survive with a deterministic order rather than one being rejected. Reads sort on (position, created_at, client_message_id), which is a total order.';
@@ -469,7 +469,7 @@ create table if not exists public.chat_history_boundaries (
 );
 
 comment on table public.chat_history_boundaries is
-  'One row per person: the instant they last cleared their Ask Sunny history. Every conversation created at or before it is suppressed everywhere — hidden, unimportable and unsynced — so a browser holding stale local copies cannot resurrect them one at a time. Server-set; a caller can never supply or move it.';
+  'One row per person: the instant they last cleared their Ask Bubbles history. Every conversation created at or before it is suppressed everywhere — hidden, unimportable and unsynced — so a browser holding stale local copies cannot resurrect them one at a time. Server-set; a caller can never supply or move it.';
 
 comment on column public.chat_history_boundaries.history_cleared_at is
   'Compared against chat_conversations.created_at and against a local record''s own createdAt. Set from the server clock when Clear History runs.';

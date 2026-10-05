@@ -1,4 +1,4 @@
--- Ask Sunny — required Postgres extensions.
+-- Ask Bubbles — required Postgres extensions.
 --
 -- pgvector powers similarity search over knowledge_chunks.embedding.
 -- pgcrypto provides gen_random_uuid() for primary keys.

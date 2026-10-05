@@ -1,8 +1,8 @@
 -- ---------------------------------------------------------------------------
--- WOVEN → ASK SUNNY KNOWLEDGE SYNC — the manifest, the run ledger, the audit log
+-- WOVEN → ASK BUBBLES KNOWLEDGE SYNC — the manifest, the run ledger, the audit log
 --
 -- NOT APPLIED. Prepared with the connector and applied only with explicit
--- approval, verbatim, in one transaction, to Ask Sunny Dev
+-- approval, verbatim, in one transaction, to Ask Bubbles Dev
 -- (`rbkylaavthsjepsczccv`) — which Production also reads, so applying it IS a
 -- production schema change. Run `npm run verify:woven-knowledge-migration`
 -- first, and the Supabase advisors after.
@@ -20,7 +20,7 @@
 --   knowledge_sync_events              per-item audit log of what each run did
 --   knowledge_sync_audience_decisions  an administrator's answer, per source
 --                                      audience label, to "may everyone in Ask
---                                      Sunny see this?"
+--                                      Bubbles see this?"
 --
 -- AND ONE ADDITION TO AN EXISTING TYPE: `knowledge_document_status` gains
 -- `retired`. A document the source unpublished or removed is RETIRED, not
@@ -190,12 +190,12 @@ create table if not exists public.knowledge_sync_items (
   content_hash text check (content_hash is null or content_hash ~ '^[0-9a-f]{64}$'),
 
   /*
-   * The Ask Sunny document this item owns. `on delete set null`: if an
+   * The Ask Bubbles document this item owns. `on delete set null`: if an
    * administrator deletes the document by hand, the manifest forgets it and the
-   * next sync treats the item as not yet in Ask Sunny.
+   * next sync treats the item as not yet in Ask Bubbles.
    */
   knowledge_document_id uuid references public.knowledge_documents (id) on delete set null,
-  in_ask_sunny boolean not null default false,
+  in_knowledge_base boolean not null default false,
 
   state text not null check (state in (
     'NEW', 'UPDATED', 'UNCHANGED', 'PERMISSION_CHANGED', 'UNPUBLISHED',
@@ -224,7 +224,7 @@ create table if not exists public.knowledge_sync_items (
   constraint knowledge_sync_items_identity unique (source, content_type, entity_id, part_key)
 );
 
-/* NO DUPLICATES IN ASK SUNNY: a knowledge document has at most one owner. */
+/* NO DUPLICATES IN ASK BUBBLES: a knowledge document has at most one owner. */
 create unique index if not exists knowledge_sync_items_one_owner
   on public.knowledge_sync_items (knowledge_document_id)
   where knowledge_document_id is not null;
@@ -296,7 +296,7 @@ revoke all on public.knowledge_sync_events             from anon, authenticated;
 revoke all on public.knowledge_sync_audience_decisions from anon, authenticated;
 
 comment on table public.knowledge_sync_items is
-  'Manifest of source knowledge items (Woven) and the Ask Sunny document each owns. Server-only.';
+  'Manifest of source knowledge items (Woven) and the Ask Bubbles document each owns. Server-only.';
 comment on table public.knowledge_sync_runs is
   'One row per knowledge sync attempt; the partial unique index is the run lock. Server-only.';
 comment on table public.knowledge_sync_events is

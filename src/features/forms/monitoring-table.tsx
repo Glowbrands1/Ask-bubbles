@@ -81,7 +81,7 @@ export interface MonitoredForm {
   locationName: string | null;
   createdBy: string;
   createdByRole: string | null;
-  source: "manual" | "ask_sunny";
+  source: "manual" | "assistant";
   status: "draft" | "finalized" | "revised";
   formDate: string;
   followUpDate: string | null;
@@ -576,7 +576,7 @@ export function MonitoringTable({
                           </span>
                           <span className="block text-[11px] text-subtle-foreground">
                             v{form.templateVersion} · {DOC_STATUS_LABEL[form.status]}
-                            {form.source === "ask_sunny" ? " · Ask Sunny" : ""}
+                            {form.source === "assistant" ? " · Ask Sunny" : ""}
                           </span>
                         </td>
 

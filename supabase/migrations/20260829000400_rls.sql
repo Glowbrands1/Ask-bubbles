@@ -1,4 +1,4 @@
--- Ask Sunny — row level security for internal company knowledge.
+-- Ask Bubbles — row level security for internal company knowledge.
 --
 -- Threat model for this milestone: these documents are confidential internal
 -- company material. The default posture is therefore DENY. Nothing is readable

@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- THE APPLICATION USER — who a person IS in Ask Sunny, beside who Supabase Auth
+-- THE APPLICATION USER — who a person IS in Ask Bubbles, beside who Supabase Auth
 -- says they are.
 --
 -- Supabase Auth owns credentials and nothing else: passwords, recovery tokens
@@ -32,7 +32,7 @@
  * `?? "admin"` treats as privileged. Adding a role is a migration, which is
  * correct while role POLICY is code-controlled.
  *
- * `employee` is the frontline role: Ask Sunny, Knowledge Base, Videos, nothing
+ * `employee` is the frontline role: Ask Bubbles, Knowledge Base, Videos, nothing
  * else. `admin` is the CLIENT administrator — full access, and distinct from
  * `developer`, which stays for internal build and support work. They are
  * separate because "the customer's administrator" and "the people who build
@@ -44,8 +44,8 @@ begin
   if not exists (select 1 from pg_type where typname = 'app_user_role') then
     create type public.app_user_role as enum (
       'employee',
-      'assistant_salon_director',
-      'salon_director',
+      'assistant_manager',
+      'location_manager',
       'district_manager',
       'regional_manager',
       'admin',
@@ -85,7 +85,7 @@ $$;
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'app_scope_level') then
-    create type public.app_scope_level as enum ('global', 'region', 'district', 'salon');
+    create type public.app_scope_level as enum ('global', 'region', 'district', 'location');
   end if;
 end
 $$;
@@ -110,7 +110,7 @@ create table if not exists public.app_users (
   role public.app_user_role not null,
   status public.app_user_status not null default 'invited',
 
-  scope_level public.app_scope_level not null default 'salon',
+  scope_level public.app_scope_level not null default 'location',
   scope_primary_area_id text,
   scope_also_covers_area_ids text[] not null default '{}',
 
@@ -140,7 +140,7 @@ comment on column public.app_users.email is
 /*
  * EMAIL IS UNIQUE CASE-INSENSITIVELY.
  *
- * `Curt.Bowen@suntancity.com` and `curt.bowen@suntancity.com` are one person.
+ * `Pat.Example@example.com` and `pat.example@example.com` are one person.
  * A plain unique constraint would admit both and leave two profiles competing
  * to describe the same account, so the index is on `lower(email)` and every
  * lookup lowercases. `citext` would do the same job; an expression index needs

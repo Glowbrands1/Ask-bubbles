@@ -2,7 +2,7 @@
 -- WOVEN EMPLOYEE DIRECTORY — a read-only copy of who works where, and what moved
 --
 -- NOT APPLIED. Revised in place on 29 September 2026 against the official Woven
--- OpenAPI 3 export, before its first application anywhere: Ask Sunny Dev
+-- OpenAPI 3 export, before its first application anywhere: Ask Bubbles Dev
 -- (`rbkylaavthsjepsczccv`) is the only Supabase project, it has no branches,
 -- and this version is absent from its migration history. It is applied only
 -- with explicit approval, verbatim, in one transaction — and because Production
@@ -15,9 +15,9 @@
 --                                   (source_system, external_employee_id)
 --   employee_location_affiliations  one row per employee × Woven location
 --   employee_directory_changes      append-only history of what changed, per run
---   woven_location_map              Woven location → Ask Sunny salon, reviewed
+--   woven_location_map              Woven location → Ask Bubbles location, reviewed
 --                                   by a person, never inferred
---   woven_position_map              Woven PositionID → Ask Sunny role and scope,
+--   woven_position_map              Woven PositionID → Ask Bubbles role and scope,
 --                                   reviewed by a person, applied to nobody
 --   seven enums, one payload type, three functions the sync calls (claim,
 --   commit, abandon), two reviewer functions, one append-only guard trigger,
@@ -30,7 +30,7 @@
 --   to `app_users` or `auth.users`, no trigger fires on them, and no function
 --   reads or writes them. Two read-only views JOIN `app_users` to SHOW what a
 --   later phase would do; they grant, link and change nothing. A terminated
---   employee is RECORDED as terminated; their Ask Sunny login is not disabled.
+--   employee is RECORDED as terminated; their Ask Bubbles login is not disabled.
 --   A position mapping is a LABEL; it sets nobody's role or scope.
 --
 --   `docs/HANDOFF.md` says "There is no employee directory, and none should be
@@ -86,7 +86,7 @@ begin
       'reactivated',
       /* NOT a promotion. `classification` says more only when the position map proves it. */
       'position_changed',
-      /* A move of home salon. */
+      /* A move of home location. */
       'primary_location_changed',
       'location_access_added',
       'location_access_removed',
@@ -115,9 +115,9 @@ begin
     create type public.woven_location_map_status as enum (
       /* Seen in Woven, not yet reviewed. The default for every new location. */
       'unmapped',
-      /* A person confirmed which Ask Sunny salon it is. */
+      /* A person confirmed which Ask Bubbles location it is. */
       'mapped',
-      /* A person confirmed it is not a salon (an office, a test location). */
+      /* A person confirmed it is not a store location (an office, a test location). */
       'ignored'
     );
   end if;
@@ -125,9 +125,9 @@ begin
   if not exists (select 1 from pg_type where typname = 'woven_position_map_status') then
     create type public.woven_position_map_status as enum (
       'unmapped',
-      /* A person chose the Ask Sunny role and default scope level. */
+      /* A person chose the Ask Bubbles role and default scope level. */
       'mapped',
-      /* A person confirmed the position needs no Ask Sunny role. */
+      /* A person confirmed the position needs no Ask Bubbles role. */
       'ignored'
     );
   end if;
@@ -262,7 +262,7 @@ create table if not exists public.employee_access_directory (
     check (primary_woven_location_id is null or primary_woven_location_id ~ '^[A-Za-z0-9._:-]{1,64}$'),
   primary_location_name text check (primary_location_name is null or length(primary_location_name) <= 160),
 
-  /* Woven's own flags. Informational: none of them decides Ask Sunny access. */
+  /* Woven's own flags. Informational: none of them decides Ask Bubbles access. */
   has_multiple_location_access boolean,
   has_all_location_access      boolean,
   woven_login_allowed          boolean,
@@ -385,7 +385,7 @@ alter table public.employee_location_affiliations force row level security;
 revoke all on table public.employee_location_affiliations from anon, authenticated;
 
 comment on table public.employee_location_affiliations is
-  'One row per Woven employee × Woven location. primary / additional / temporary_or_expiring_access (an ExpiresOn is present; whether that always means "borrowed" awaits live validation). Deactivated, never deleted, and only on a full read. Grants no Ask Sunny salon access.';
+  'One row per Woven employee × Woven location. primary / additional / temporary_or_expiring_access (an ExpiresOn is present; whether that always means "borrowed" awaits live validation). Deactivated, never deleted, and only on a full read. Grants no Ask Bubbles location access.';
 
 -- --------------------------------------------------------- change history ---
 
@@ -486,7 +486,7 @@ alter table public.employee_directory_changes force row level security;
 revoke all on table public.employee_directory_changes from anon, authenticated;
 
 comment on table public.employee_directory_changes is
-  'Append-only history of what changed for a Woven employee between syncs. A position change is never labelled a promotion unless the confirmed position map proves it. Recording a change grants, removes or alters no Ask Sunny access.';
+  'Append-only history of what changed for a Woven employee between syncs. A position change is never labelled a promotion unless the confirmed position map proves it. Recording a change grants, removes or alters no Ask Bubbles access.';
 
 -- ----------------------------------------------------- Woven location map ---
 
@@ -508,18 +508,18 @@ create table if not exists public.woven_location_map (
   is_non_location boolean,
 
   /*
-   * A SUGGESTION ONLY: the salon whose `salon_number` equals the Woven Number
-   * exactly (leading zeros included). Recomputed each run. A person still
-   * decides — the Google store codes proved numbers across systems collide.
+   * A SUGGESTION ONLY: the configured location whose code equals the Woven
+   * Number exactly, computed by the application from the roster and passed in
+   * with each run. A person still decides — numbers across systems collide.
    */
-  suggested_salon_id uuid references public.salons (id) on delete set null,
+  suggested_location_id text check (suggested_location_id is null or suggested_location_id ~ '^loc-[A-Za-z0-9-]{1,16}$'),
 
   status public.woven_location_map_status not null default 'unmapped',
   /*
-   * The Ask Sunny salon, set by a PERSON through `woven_location_map_review`.
-   * A Woven location id is not a salon number, and a name match is not proof.
+   * The Ask Bubbles location, set by a PERSON through `woven_location_map_review`.
+   * A Woven location id is not a store code, and a name match is not proof.
    */
-  salon_id uuid references public.salons (id) on delete restrict,
+  location_id text check (location_id is null or location_id ~ '^loc-[A-Za-z0-9-]{1,16}$'),
 
   first_seen_run_id uuid references public.employee_sync_runs (id) on delete set null,
   first_seen_at timestamptz not null default now(),
@@ -531,8 +531,8 @@ create table if not exists public.woven_location_map (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
-  constraint woven_location_map_salon_agrees
-    check ((status = 'mapped') = (salon_id is not null))
+  constraint woven_location_map_location_agrees
+    check ((status = 'mapped') = (location_id is not null))
 );
 
 drop trigger if exists woven_location_map_touch_updated_at on public.woven_location_map;
@@ -540,9 +540,9 @@ create trigger woven_location_map_touch_updated_at
   before update on public.woven_location_map
   for each row execute function public.touch_updated_at();
 
-create index if not exists woven_location_map_salon
-  on public.woven_location_map (salon_id)
-  where salon_id is not null;
+create index if not exists woven_location_map_location
+  on public.woven_location_map (location_id)
+  where location_id is not null;
 create index if not exists woven_location_map_needs_review
   on public.woven_location_map (first_seen_at)
   where status = 'unmapped';
@@ -552,7 +552,7 @@ alter table public.woven_location_map force row level security;
 revoke all on table public.woven_location_map from anon, authenticated;
 
 comment on table public.woven_location_map is
-  'Woven location id → Ask Sunny salon. Every location the sync sees is queued here as unmapped, with Woven''s catalog fields and an exact-number suggestion; only a person maps it. The sync never overwrites a mapping and never fails because a location is unmapped.';
+  'Woven location id → Ask Bubbles location. Every location the sync sees is queued here as unmapped, with Woven''s catalog fields and an exact-number suggestion; only a person maps it. The sync never overwrites a mapping and never fails because a location is unmapped.';
 
 -- ----------------------------------------------------- Woven position map ---
 
@@ -565,8 +565,8 @@ create table if not exists public.woven_position_map (
 
   status public.woven_position_map_status not null default 'unmapped',
   /* Chosen by a PERSON. Uses the application's own enums, so no invented role can be named. */
-  ask_sunny_role        public.app_user_role,
-  ask_sunny_scope_level public.app_scope_level,
+  mapped_role        public.app_user_role,
+  mapped_scope_level public.app_scope_level,
   /* Higher is more senior. Two positions may share a rank. Null: no ordering claimed. */
   hierarchy_rank smallint check (hierarchy_rank is null or hierarchy_rank between 0 and 1000),
 
@@ -583,7 +583,7 @@ create table if not exists public.woven_position_map (
   updated_at timestamptz not null default now(),
 
   constraint woven_position_map_mapping_agrees check (
-    (status = 'mapped') = (ask_sunny_role is not null and ask_sunny_scope_level is not null)
+    (status = 'mapped') = (mapped_role is not null and mapped_scope_level is not null)
   )
 );
 
@@ -601,7 +601,7 @@ alter table public.woven_position_map force row level security;
 revoke all on table public.woven_position_map from anon, authenticated;
 
 comment on table public.woven_position_map is
-  'Woven PositionID → Ask Sunny role, default scope level and hierarchy rank, set by a person. Queued by the sync as unmapped. In phase one it LABELS changes only: nothing reads it to set a role, scope or salon access.';
+  'Woven PositionID → Ask Bubbles role, default scope level and hierarchy rank, set by a person. Queued by the sync as unmapped. In phase one it LABELS changes only: nothing reads it to set a role, scope or salon access.';
 
 -- ------------------------------------------------------------ functions ----
 
@@ -946,12 +946,12 @@ begin
   insert into public.woven_location_map as m (
     woven_location_id, woven_location_name, woven_display_name, woven_location_number,
     woven_district_id, woven_district_name, woven_region_id, woven_region_name,
-    is_closed, is_non_location, suggested_salon_id, first_seen_run_id
+    is_closed, is_non_location, suggested_location_id, first_seen_run_id
   )
   select l.woven_location_id, l.woven_location_name, l.woven_display_name, l.woven_location_number,
          l.woven_district_id, l.woven_district_name, l.woven_region_id, l.woven_region_name,
          l.is_closed, l.is_non_location,
-         (select s.id from public.salons s where s.salon_number = l.woven_location_number),
+         case when l.suggested_location_id ~ '^loc-[A-Za-z0-9-]{1,16}$' then l.suggested_location_id end,
          p_run_id
     from jsonb_to_recordset(p_locations) as l(
       woven_location_id     text,
@@ -963,7 +963,8 @@ begin
       woven_region_id       text,
       woven_region_name     text,
       is_closed             boolean,
-      is_non_location       boolean
+      is_non_location       boolean,
+      suggested_location_id text
     )
    where l.woven_location_id is not null
   on conflict (woven_location_id) do update set
@@ -977,7 +978,7 @@ begin
     woven_region_name     = coalesce(excluded.woven_region_name, m.woven_region_name),
     is_closed             = coalesce(excluded.is_closed, m.is_closed),
     is_non_location       = coalesce(excluded.is_non_location, m.is_non_location),
-    suggested_salon_id    = coalesce(excluded.suggested_salon_id, m.suggested_salon_id);
+    suggested_location_id = coalesce(excluded.suggested_location_id, m.suggested_location_id);
 
   /* ---- 6. queue every position seen; never touch a mapping ---- */
   insert into public.woven_position_map as p (woven_position_id, woven_position_name, first_seen_run_id)
@@ -1062,37 +1063,36 @@ end;
 $$;
 
 /*
- * A PERSON's decision about one Woven location: map it to a salon (by the
- * salon number people already use), mark it ignored, or send it back to
- * unmapped. Not called by the sync. Changes nothing but the map row.
+ * A PERSON's decision about one Woven location: map it to a configured
+ * location id (loc-<code>), mark it ignored, or send it back to unmapped. Not called by the sync. Changes nothing but the map row.
  */
 create or replace function public.woven_location_map_review(
   p_woven_location_id text,
   p_status            public.woven_location_map_status,
-  p_salon_number      text,
+  p_location_id       text,
   p_reviewed_by       text
 ) returns jsonb
 language plpgsql
 set search_path = ''
 as $$
 declare
-  v_salon uuid;
   v_rows integer;
 begin
   if length(btrim(coalesce(p_reviewed_by, ''))) = 0 then
     return jsonb_build_object('status', 'reviewer_required');
   end if;
 
-  if p_status = 'mapped' then
-    select s.id into v_salon from public.salons s where s.salon_number = p_salon_number;
-    if v_salon is null then
-      return jsonb_build_object('status', 'unknown_salon');
-    end if;
+  /*
+   * The roster is configuration, so the application checks the id against
+   * it before calling; the database still refuses anything malformed.
+   */
+  if p_status = 'mapped' and (p_location_id is null or p_location_id !~ '^loc-[A-Za-z0-9-]{1,16}$') then
+    return jsonb_build_object('status', 'invalid_location');
   end if;
 
   update public.woven_location_map m
      set status      = p_status,
-         salon_id    = case when p_status = 'mapped' then v_salon end,
+         location_id = case when p_status = 'mapped' then p_location_id end,
          reviewed_by = left(p_reviewed_by, 120),
          reviewed_at = now()
    where m.woven_location_id = p_woven_location_id;
@@ -1103,7 +1103,7 @@ end;
 $$;
 
 /*
- * A PERSON's decision about one Woven position: its Ask Sunny role, default
+ * A PERSON's decision about one Woven position: its Ask Bubbles role, default
  * scope level and rank; or ignored; or back to unmapped. Not called by the
  * sync. Changes nothing but the map row — in particular, no `app_users` row.
  */
@@ -1130,8 +1130,8 @@ begin
 
   update public.woven_position_map p
      set status                = p_status,
-         ask_sunny_role        = case when p_status = 'mapped' then p_role end,
-         ask_sunny_scope_level = case when p_status = 'mapped' then p_scope_level end,
+         mapped_role        = case when p_status = 'mapped' then p_role end,
+         mapped_scope_level = case when p_status = 'mapped' then p_scope_level end,
          hierarchy_rank        = case when p_status = 'mapped' then p_hierarchy_rank end,
          reviewed_by           = left(p_reviewed_by, 120),
          reviewed_at           = now()
@@ -1218,7 +1218,7 @@ select
   pm.is_confirmed  as position_mapping_confirmed,
   d.primary_woven_location_id, d.primary_location_name,
   lm.status        as primary_location_mapping_status,
-  ps.salon_number  as primary_salon_number,
+  lm.location_id   as primary_location_id,
   aff.additional_locations,
   aff.temporary_or_expiring_locations,
   coalesce(aff.active_location_count, 0) as active_location_count,
@@ -1232,7 +1232,6 @@ select
 from public.employee_access_directory d
 left join public.woven_position_map pm on pm.woven_position_id = d.position_id
 left join public.woven_location_map lm on lm.woven_location_id = d.primary_woven_location_id
-left join public.salons ps on ps.id = lm.salon_id
 left join lateral (
   select
     jsonb_agg(jsonb_build_object('wovenLocationId', a.woven_location_id, 'name', a.location_name, 'number', a.location_number))
@@ -1258,7 +1257,7 @@ left join lateral (
 ) rc on true;
 
 /*
- * WHICH DIRECTORY ROWS SHARE AN EMAIL WITH AN ASK SUNNY LOGIN — for review.
+ * WHICH DIRECTORY ROWS SHARE AN EMAIL WITH AN ASK BUBBLES LOGIN — for review.
  * Read-only. It GRANTS NOTHING and LINKS NOTHING. A duplicate email is shown
  * as such and never resolved by picking one.
  */
@@ -1280,7 +1279,7 @@ where d.email_address is not null;
 
 /*
  * WHAT A LATER PHASE WOULD DO — AND DOES NOT. One row per directory employee,
- * beside the Ask Sunny login that shares their email, if any. Every `would_*`
+ * beside the Ask Bubbles login that shares their email, if any. Every `would_*`
  * column is a QUESTION for a person; nothing reads this view to act, and the
  * phase-one code has no path that writes `app_users`.
  *
@@ -1298,10 +1297,10 @@ select
   d.position_id,
   pm.status               as position_mapping_status,
   coalesce(pm.is_confirmed, false) as position_mapping_confirmed,
-  pm.ask_sunny_role       as mapped_role,
-  pm.ask_sunny_scope_level as mapped_scope_level,
+  pm.mapped_role       as mapped_role,
+  pm.mapped_scope_level as mapped_scope_level,
   d.primary_woven_location_id,
-  s.salon_number          as mapped_primary_salon_number,
+  lm.location_id          as mapped_primary_location_id,
   u.id                    as app_user_id,
   u.role                  as app_user_role,
   u.status                as app_user_status,
@@ -1313,18 +1312,17 @@ select
      and d.email_address is not null
      and not ('duplicate_email' = any (d.data_issues))
      and coalesce(pm.is_confirmed, false)
-     and s.salon_number is not null) as would_provision_candidate,
-  /* Phase 3 question: Woven says terminated, the Ask Sunny login is not disabled. */
+     and lm.location_id is not null) as would_provision_candidate,
+  /* Phase 3 question: Woven says terminated, the Ask Bubbles login is not disabled. */
   (u.id is not null and d.employment_status = 'terminated' and u.status <> 'disabled') as would_deactivate_candidate,
   /* Phase 4 question: a confirmed position maps to a different role. */
-  (u.id is not null and coalesce(pm.is_confirmed, false) and u.role is distinct from pm.ask_sunny_role) as role_differs,
-  /* Phase 5 question: a salon-scoped login whose salon differs from Woven's mapped primary. */
-  (u.id is not null and u.scope_level = 'salon' and s.salon_number is not null
-     and u.scope_primary_area_id is distinct from ('loc-' || s.salon_number)) as primary_salon_differs
+  (u.id is not null and coalesce(pm.is_confirmed, false) and u.role is distinct from pm.mapped_role) as role_differs,
+  /* Phase 5 question: a location-scoped login whose location differs from Woven's mapped primary. */
+  (u.id is not null and u.scope_level = 'location' and lm.location_id is not null
+     and u.scope_primary_area_id is distinct from lm.location_id) as primary_location_differs
 from public.employee_access_directory d
 left join public.woven_position_map pm on pm.woven_position_id = d.position_id
 left join public.woven_location_map lm on lm.woven_location_id = d.primary_woven_location_id and lm.status = 'mapped'
-left join public.salons s on s.id = lm.salon_id
 left join public.app_users u on d.email_address is not null and lower(u.email) = lower(d.email_address);
 
 revoke all on public.employee_sync_status from public, anon, authenticated;
@@ -1340,6 +1338,6 @@ comment on view public.employee_sync_run_summary is
 comment on view public.employee_directory_view is
   'The employee directory with affiliations, mapping state and recent changes. Contains names and emails: server-only, shown behind manage_users.';
 comment on view public.employee_directory_login_matches is
-  'Woven employees whose email matches an Ask Sunny login. Read-only, for review; grants and links nothing.';
+  'Woven employees whose email matches an Ask Bubbles login. Read-only, for review; grants and links nothing.';
 comment on view public.employee_access_preview is
-  'What provisioning, deactivation, role and salon-scope phases WOULD do, as questions. Read-only; nothing acts on it in phase one.';
+  'What provisioning, deactivation, role and location-scope phases WOULD do, as questions. Read-only; nothing acts on it in phase one.';

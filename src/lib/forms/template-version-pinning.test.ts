@@ -194,7 +194,7 @@ function newCoachingForm() {
     locationName: null,
     createdBy: "user-a",
     createdByRole: "admin",
-    source: "ask_sunny",
+    source: "assistant",
   });
 }
 

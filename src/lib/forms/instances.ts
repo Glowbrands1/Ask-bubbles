@@ -40,7 +40,7 @@ import { getCurrentVersion, getVersion, type TemplateVersionRow } from "./reposi
  */
 
 export type InstanceStatus = "draft" | "finalized" | "revised";
-export type InstanceSource = "manual" | "ask_sunny";
+export type InstanceSource = "manual" | "assistant";
 
 export interface InstanceRow {
   id: string;

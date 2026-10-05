@@ -1,4 +1,4 @@
--- Ask Sunny — company knowledge base schema.
+-- Ask Bubbles — company knowledge base schema.
 --
 -- Field names map onto the existing KnowledgeDocument / KnowledgeChunk types in
 -- src/types/index.ts. Where the TypeScript name is camelCase the column is the

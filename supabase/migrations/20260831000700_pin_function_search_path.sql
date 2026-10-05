@@ -1,4 +1,4 @@
--- Ask Sunny — pin the trigger function's search_path.
+-- Ask Bubbles — pin the trigger function's search_path.
 --
 -- Supabase's database linter reported `function_search_path_mutable` against
 -- `public.touch_updated_at` after the first real migration run:
