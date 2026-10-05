@@ -63,3 +63,18 @@ projects were never written to.
    (`docs/woven.md`); the location roster; the real forms; the report
    catalogue and metric definitions; confirmation of the role → permission
    matrix; brand assets; whether "Makery" replaces "location" in copy.
+
+## QA results (this build)
+
+| Gate | Result |
+|---|---|
+| Lint (`npm run lint`) | clean |
+| Typecheck (`npm run typecheck`) | clean |
+| Tests (`npm test`) | 218 files, 4,310 passed, 0 failed (27 skipped: local-stack suites needing Docker) |
+| Production build | passes |
+| `verify:bundle` | no demo content in live client assets |
+| `verify:secrets` | built with canary secrets; none reach client assets |
+| `verify:migrations` | all 32 migrations apply; RLS checks pass (mutation-tested) |
+| Residue scan | no reference-product names outside the deliberate isolation warnings |
+| Secrets scan of tracked files | no credentials |
+| Browser QA (demo, Chromium) | Team Member, Location Manager and Owner at 1366px and 390px across every route: role-accurate navigation, access-denied states, honest empty / not-connected states, grounded answers with sources, sign-out; no console or page errors, no horizontal overflow |
