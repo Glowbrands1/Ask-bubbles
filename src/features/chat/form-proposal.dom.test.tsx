@@ -73,8 +73,8 @@ function bubble(overrides: Partial<ChatMessage> = {}) {
   );
 }
 
-describe("45. the card shows what Sunny established", () => {
-  it("names the template, the employee and the salon it verified", () => {
+describe("45. the card shows what Bubbles established", () => {
+  it("names the template, the employee and the location it verified", () => {
     const { container } = bubble({ formProposal: proposal() });
     // Scoped to the card itself: the answer prose above it names the template
     // too, and an unscoped query would pass on that alone.
@@ -97,12 +97,12 @@ describe("46. a missing fact reads as missing, not as a blank", () => {
       formProposal: proposal({ employeeName: null, status: "needs_employee" }),
     });
 
-    expect(container.textContent).toMatch(/Not yet — tell Sunny who this form is about/);
+    expect(container.textContent).toMatch(/Not yet — tell Bubbles who this form is about/);
     // The prototype's stand-in, in the one place it would be least noticed.
     expect(container.textContent).not.toMatch(/Jane|Kowalski/i);
   });
 
-  it("says the salon is not set, and shows no invented salon name", () => {
+  it("says the location is not set, and shows no invented location name", () => {
     const { container } = bubble({
       formProposal: proposal({
         locationId: null,
@@ -111,11 +111,11 @@ describe("46. a missing fact reads as missing, not as a blank", () => {
       }),
     });
 
-    expect(container.textContent).toMatch(/Not set — Ask Sunny could not verify one/);
+    expect(container.textContent).toMatch(/Not set — Ask Bubbles could not verify one/);
     expect(container.textContent).not.toMatch(/Sun Tan City —/);
   });
 
-  it("asks which salon when the manager covers more than one", () => {
+  it("asks which location when the manager covers more than one", () => {
     const { container } = bubble({
       formProposal: proposal({
         locationId: null,
@@ -123,12 +123,12 @@ describe("46. a missing fact reads as missing, not as a blank", () => {
         status: "needs_location",
       }),
     });
-    expect(container.textContent).toMatch(/say which salon this is about/i);
+    expect(container.textContent).toMatch(/say which location this is about/i);
   });
 });
 
-describe("the salon picker offers only the manager's own salons", () => {
-  it("lets a one-salon manager confirm their own after naming another", () => {
+describe("the location picker offers only the manager's own locations", () => {
+  it("lets a one-location manager confirm their own after naming another", () => {
     const { container } = bubble({
       formProposal: proposal({
         locationId: null,
@@ -144,7 +144,7 @@ describe("the salon picker offers only the manager's own salons", () => {
     expect(container.textContent).not.toContain("loc-0468");
   });
 
-  it("shows no picker once the salon is settled", () => {
+  it("shows no picker once the location is settled", () => {
     const { container } = bubble({
       formProposal: proposal({ authorizedLocationIds: ["loc-0306"], locationId: "loc-0306" }),
     });

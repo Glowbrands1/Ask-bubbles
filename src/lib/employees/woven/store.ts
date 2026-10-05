@@ -1,4 +1,5 @@
 import "server-only";
+import { locationByCode } from "@/lib/locations";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -197,6 +198,8 @@ export function locationToRow(location: CommitLocation): Record<string, unknown>
     woven_region_name: location.regionName ?? null,
     is_closed: location.isClosed ?? null,
     is_non_location: location.isNonLocation ?? null,
+    /* A suggestion only, from the configured roster; a person still maps it. */
+    suggested_location_id: location.number?.trim() ? (locationByCode(location.number.trim())?.id ?? null) : null,
   };
 }
 
@@ -375,14 +378,14 @@ export function createSupabaseDirectoryStore(client?: SupabaseClient): EmployeeD
     },
 
     async loadLocationMap() {
-      const { data, error } = await db().from("woven_location_map").select("woven_location_id, status, salon_id");
+      const { data, error } = await db().from("woven_location_map").select("woven_location_id, status, location_id");
       if (error) throw storeFailure("read the Woven location map", error);
       return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
         wovenLocationId: String(row.woven_location_id),
         status: (["unmapped", "mapped", "ignored"].includes(String(row.status))
           ? row.status
           : "unmapped") as LocationMapStatus,
-        salonId: str(row.salon_id),
+        locationId: str(row.location_id),
       }));
     },
 

@@ -188,7 +188,7 @@ export function LoginScreen({
         <ul className="mt-8 max-w-md space-y-3.5">
           {[
             {
-              title: "Ask Sunny",
+              title: "Ask Bubbles",
               body: "Grounded answers from your own knowledge base, with the source shown every time.",
             },
             {
@@ -232,7 +232,7 @@ export function LoginScreen({
         {realAuth ? null : (
           <p className="mt-10 max-w-md text-xs leading-relaxed text-subtle-foreground">
             Preview build. Content shown throughout the app is seeded demo data
-            — it is not real company policy or real salon performance.
+            — it is not real company policy or real location performance.
           </p>
         )}
       </aside>

@@ -244,7 +244,7 @@ describe("who may obtain the original file", () => {
   });
 
   it("asks for view_knowledge, not manage_knowledge", async () => {
-    // Reading a document you may already read through Sunny is not managing it.
+    // Reading a document you may already read through Bubbles is not managing it.
     const { route, trace } = await loadRoute();
     await route.GET(get(), params);
     expect(trace.authorized).toEqual(["view_knowledge"]);
@@ -339,7 +339,7 @@ describe("the knowledge corpus is the build's, not the caller's", () => {
     expect(code).toContain("activeKnowledgeCorpus()");
   });
 
-  it("does not derive the corpus from the user's salon or district scope", () => {
+  it("does not derive the corpus from the user's location or district scope", () => {
     /*
      * A DIFFERENT CONCEPT WEARING A SIMILAR NAME. `AccessScope` says which
      * locations a manager covers INSIDE one brand; the knowledge corpus is the
@@ -573,8 +573,8 @@ describe("failures are safe and readable", () => {
  * ============================================================================
  *
  * REPORTED: a Regional Manager could download
- * ASK_SUNNY_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT.txt. That file is not
- * reference material — it is Sunny's operating rules, including the guard
+ * EXAMPLE_FRAMEWORK_KB_TEXT.txt. That file is not
+ * reference material — it is Bubbles' operating rules, including the guard
  * against recommending discipline on a metric alone.
  *
  * WHAT MUST NOT HAPPEN IN FIXING IT is the route becoming admin-only. It serves
@@ -589,12 +589,12 @@ describe("failures are safe and readable", () => {
 
 const FRAMEWORK_ROW = {
   id: DOC_ID,
-  title: "ASK SUNNY PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT",
+  title: "ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT",
   tags: [],
-  original_filename: "ASK_SUNNY_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT.txt",
+  original_filename: "EXAMPLE_FRAMEWORK_KB_TEXT.txt",
   mime_type: "text/plain",
   file_type: "txt",
-  storage_path: `${SCOPE}/${DOC_ID}/v1/ASK_SUNNY_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT.txt`,
+  storage_path: `${SCOPE}/${DOC_ID}/v1/EXAMPLE_FRAMEWORK_KB_TEXT.txt`,
   status: "indexed",
 };
 

@@ -8,7 +8,7 @@ import { NAV_SECTIONS } from "./navigation";
 
 /**
  * ============================================================================
- * FORM CREATION STARTS IN ASK SUNNY — NO GENERIC "CREATE A FORM" WAY IN
+ * FORM CREATION STARTS IN ASK BUBBLES — NO GENERIC "CREATE A FORM" WAY IN
  * ============================================================================
  *
  * The standalone builder at `/forms/create` still exists: a chat proposal's
@@ -17,7 +17,7 @@ import { NAV_SECTIONS } from "./navigation";
  * takes a manager to it from the app's chrome — the sidebar, the mobile drawer,
  * the Overview shortcuts, the Forms pages, the chat header or the context rail.
  * The chat's own "Create a form" controls are allowed because they are not
- * links: they post "Create a form from this conversation." to Ask Sunny.
+ * links: they post "Create a form from this conversation." to Ask Bubbles.
  *
  * A SOURCE SCAN, deliberately. A new link to the builder from anywhere in the
  * UI tree fails here, whichever component it is added to.
@@ -63,7 +63,7 @@ describe("no generic Create a Form entry point", () => {
     }
   });
 
-  it("the chat's own Create a form controls post to Ask Sunny rather than link anywhere", () => {
+  it("the chat's own Create a form controls post to Ask Bubbles rather than link anywhere", () => {
     const chat = readFileSync("src/features/chat/chat-screen.tsx", "utf8");
     expect(chat).toMatch(/void send\(CREATE_FORM_FROM_CONVERSATION\)/);
     const rail = readFileSync("src/features/chat/context-panel.tsx", "utf8");

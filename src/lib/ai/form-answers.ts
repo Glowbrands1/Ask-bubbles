@@ -113,7 +113,7 @@ export function answerInventoryQuestion(input: {
 function listAnswer(inventory: FormInventory, role: Role | null): AskResponse {
   /*
    * OFFERED, NOT MERELY CREATABLE. "Which form should I use?" is a manager
-   * asking to be pointed at one, so this is a shortlist Sunny is putting
+   * asking to be pointed at one, so this is a shortlist Bubbles is putting
    * forward and the chooser withholding applies to it. The templates it leaves
    * out are still published and still answered for by name — see
    * `availabilityAnswer`, which resolves by key.
@@ -273,7 +273,7 @@ export function answerRegisterClarification(input: {
  * against naming a form that is not in it has something to point at.
  *
  * SENT ON EVERY TURN rather than only on turns that look form-shaped. It is a
- * dozen short lines, and the alternative is a keyword gate deciding when Sunny
+ * dozen short lines, and the alternative is a keyword gate deciding when Bubbles
  * is allowed to be accurate about the library.
  *
  * PUBLISHED ROWS ONLY. An unpublished template is not a form anybody can be
@@ -298,7 +298,7 @@ export function buildFormInventoryBlock(inventory: FormInventory): string {
        * THE ONE THING THE MODEL CANNOT WORK OUT FROM THE ROW.
        *
        * The server-written answers are already narrowed — `offerable` keeps a
-       * withheld form out of every list Sunny assembles itself. This block is
+       * withheld form out of every list Bubbles assembles itself. This block is
        * the other half: the turns the model writes freehand, where a library
        * it can see is a library it will happily recommend from. So the rule
        * travels WITH THE ROW rather than only in the prompt's forms section,

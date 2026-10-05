@@ -14,12 +14,12 @@ import { LinkReviewPanel, type LinkReviewItem } from "./link-review-panel";
 
 /**
  * ============================================================================
- * ACCESS PREVIEW — what a Woven → Ask Sunny access sync WOULD do. Read-only.
+ * ACCESS PREVIEW — what a Woven → Ask Bubbles access sync WOULD do. Read-only.
  * ============================================================================
  *
  * Every row is the access planner's answer for one Woven employee, or for an
- * Ask Sunny account no employee explains. Nothing on this tab creates an
- * account, sends an invite, disables anyone, or changes a role or salon. The
+ * Ask Bubbles account no employee explains. Nothing on this tab creates an
+ * account, sends an invite, disables anyone, or changes a role or location. The
  * guards say whether a run would even be allowed to apply its changes.
  */
 
@@ -35,7 +35,7 @@ export type AccessPlanState = { state: "ready"; plan: AccessPlanView } | { state
 const ACTION_LABEL: Record<AccessAction, string> = {
   NO_CHANGE: "No change",
   CREATE_USER: "Create account",
-  UPDATE_PRIMARY_LOCATION: "Update primary salon",
+  UPDATE_PRIMARY_LOCATION: "Update primary location",
   UPDATE_ROLE: "Update role",
   DISABLE_TERMINATED: "Disable (terminated)",
   FLAG_LINK_REVIEW: "Review link",
@@ -65,18 +65,18 @@ function actionTone(action: AccessAction): BadgeTone {
 
 /** Plain sentences for the planner's reason codes. Unknown codes fall back to the code itself. */
 const REASON: Record<string, string> = {
-  eligible_salon_manager_without_account:
-    "Active Salon Director or Assistant Salon Director with a usable email and a mapped salon, and no Ask Sunny account.",
-  position_not_auto_provisioned: "This Woven position does not get an Ask Sunny account automatically in this rollout.",
+  eligible_location_manager_without_account:
+    "Active Location Director or Assistant Location Director with a usable email and a mapped location, and no Ask Bubbles account.",
+  position_not_auto_provisioned: "This Woven position does not get an Ask Bubbles account automatically in this rollout.",
   woven_position_not_confirmed: "The Woven position has no approved mapping, so no role is assigned.",
   woven_position_missing: "Woven has no position for this employee.",
   primary_location_missing: "Woven has no primary location for this employee.",
-  primary_location_unmapped: "The Woven primary location is not mapped to a salon.",
-  primary_location_not_a_salon: "The Woven primary location is not a salon (e.g. Corporate).",
+  primary_location_unmapped: "The Woven primary location is not mapped to a location.",
+  primary_location_not_a_location: "The Woven primary location is not a location (e.g. Corporate).",
   woven_email_missing: "Woven has no email address for this employee.",
   woven_email_invalid: "Woven's email address is not usable.",
   email_shared_by_several_woven_employees: "Several Woven employees share this email; nothing is linked or created automatically.",
-  email_shared_by_several_accounts: "Several Ask Sunny accounts share this email.",
+  email_shared_by_several_accounts: "Several Ask Bubbles accounts share this email.",
   email_matches_account_linked_to_another_employee: "This email belongs to an account already linked to a different Woven employee.",
   email_matches_account_marked_not_woven_managed: "This email belongs to an account marked not managed by Woven.",
   exact_email_match_awaiting_confirmation:
@@ -86,24 +86,24 @@ const REASON: Record<string, string> = {
     "Terminated in Woven, but this is a protected or administrative account — never disabled automatically.",
   terminated_in_woven_status_not_woven_managed: "Terminated in Woven, but this account's status is not managed by Woven.",
   access_already_revoked: "Access has already been revoked.",
-  terminated_no_account: "Terminated in Woven; there is no Ask Sunny account.",
+  terminated_no_account: "Terminated in Woven; there is no Ask Bubbles account.",
   woven_status_unknown: "Woven's status for this employee is not Active or Terminated. Fails closed: nothing changes.",
   not_in_latest_woven_read: "Not in Woven's latest read. Absence is never treated as termination; review only.",
   active_in_woven_after_revocation:
     "Access was revoked after a Woven termination and Woven now shows Active. Reactivation needs approval.",
-  disabled_in_ask_sunny_active_in_woven: "Disabled in Ask Sunny while Woven shows Active. Never re-enabled automatically.",
+  disabled_in_knowledge_base_active_in_woven: "Disabled in Ask Bubbles while Woven shows Active. Never re-enabled automatically.",
   woven_shows_past_termination_date: "Woven shows Active but with a past termination date.",
   woven_email_differs_from_login_email:
     "Woven's email differs from the sign-in email. The sign-in email is never changed automatically.",
-  protected_account_not_managed_by_woven: "Protected account: Woven never changes its role, scope or salon.",
-  scope_above_salon_level_not_managed_by_woven: "This account's scope is wider than one salon. Woven never narrows it.",
+  protected_account_not_managed_by_woven: "Protected account: Woven never changes its role, scope or location.",
+  scope_above_location_level_not_managed_by_woven: "This account's scope is wider than one location. Woven never narrows it.",
   woven_position_maps_to_a_different_role: "Woven's approved position mapping is a different role.",
-  woven_position_changed_within_salon_tier: "Woven's position moved between Salon Director and Assistant Salon Director.",
+  woven_position_changed_within_location_tier: "Woven's position moved between Location Director and Assistant Location Director.",
   role_not_woven_managed: "Woven's mapped role differs, but this account's role is not managed by Woven.",
   woven_position_outside_automatic_tier:
-    "Woven's mapped role is outside Salon Director / Assistant Salon Director, so it is review only.",
-  woven_primary_location_changed: "Woven's mapped primary salon differs from the account's salon.",
-  location_not_woven_managed: "Woven's primary salon differs, but this account's location is not managed by Woven.",
+    "Woven's mapped role is outside Location Director / Assistant Location Director, so it is review only.",
+  woven_primary_location_changed: "Woven's mapped primary location differs from the account's location.",
+  location_not_woven_managed: "Woven's primary location differs, but this account's location is not managed by Woven.",
   in_sync_with_woven: "Matches Woven.",
   linked_employee_not_in_woven_directory: "Linked to a Woven employee who is not in the directory.",
   marked_not_woven_managed: "Marked not managed by Woven. Absence from Woven means nothing for it.",
@@ -181,7 +181,7 @@ export function AccessPreview({
   return (
     <section aria-label="Access Preview" className="flex flex-col gap-6">
       <Notice tone="primary" icon={<ShieldCheck />} title="What the access sync would do — read-only">
-        Nothing on this tab creates an account, sends an invite, disables anyone, or changes a role or salon. Access mode:{" "}
+        Nothing on this tab creates an account, sends an invite, disables anyone, or changes a role or location. Access mode:{" "}
         <strong>{accessMode === "shadow" ? "shadow (plans are recorded, never applied)" : "off (preview only)"}</strong>.
       </Notice>
 
@@ -264,11 +264,11 @@ function Plan({ plan, actionFilter }: { plan: AccessPlanView; actionFilter: stri
                   "Woven status",
                   "Woven position",
                   "Woven primary location",
-                  "Ask Sunny account",
+                  "Ask Bubbles account",
                   "Current role",
-                  "Current scope / salon",
+                  "Current scope / location",
                   "Proposed role",
-                  "Proposed salon",
+                  "Proposed location",
                   "Proposed action",
                   "Reason",
                 ].map((h) => (

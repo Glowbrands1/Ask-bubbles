@@ -23,7 +23,7 @@ afterEach(cleanup);
 describe("the detail section hides nothing — it defers it", () => {
   it("keeps the content in the document, so find-in-page still reaches it", () => {
     render(
-      <ReportDetailSection title="Sessions by salon and equipment" weight="57 rows">
+      <ReportDetailSection title="Sessions by location and equipment" weight="57 rows">
         <p>MO Kansas City Wornall</p>
       </ReportDetailSection>,
     );
@@ -34,18 +34,18 @@ describe("the detail section hides nothing — it defers it", () => {
 
   it("says how much is inside before it is opened", () => {
     render(
-      <ReportDetailSection title="Sessions by salon and equipment" weight="57 rows">
+      <ReportDetailSection title="Sessions by location and equipment" weight="57 rows">
         <p>rows</p>
       </ReportDetailSection>,
     );
     expect(screen.getByText("57 rows")).toBeTruthy();
-    expect(screen.getByText("Sessions by salon and equipment")).toBeTruthy();
+    expect(screen.getByText("Sessions by location and equipment")).toBeTruthy();
   });
 
   it("opens by default when asked, for a table short enough not to need hiding", () => {
     render(
-      <ReportDetailSection title="All measures by salon" defaultOpen>
-        <p>one salon</p>
+      <ReportDetailSection title="All measures by location" defaultOpen>
+        <p>one location</p>
       </ReportDetailSection>,
     );
     expect(document.querySelector("details")?.open).toBe(true);
@@ -53,7 +53,7 @@ describe("the detail section hides nothing — it defers it", () => {
 
   it("is a native disclosure, so it works without JavaScript and by keyboard", () => {
     render(
-      <ReportDetailSection title="Salon detail">
+      <ReportDetailSection title="Location detail">
         <p>rows</p>
       </ReportDetailSection>,
     );

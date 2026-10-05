@@ -580,7 +580,7 @@ describe("7. Save to directory: a successful dry run, then an explicit confirmat
       "employee_directory_changes", "woven_location_map", "woven_position_map",
     ]);
     expect(within(screen.getByTestId("woven-save-never")).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
-      "app_users", "authentication", "login access", "roles", "scope", "salon permissions/access",
+      "app_users", "authentication", "login access", "roles", "scope", "location permissions/access",
     ]);
   });
 

@@ -52,7 +52,7 @@
 export type InventoryQuestion =
   /** "What forms do we have?" — name the library. */
   | { kind: "list" }
-  /** "Where are those forms?" — say where in Ask Sunny they are. */
+  /** "Where are those forms?" — say where in Ask Bubbles they are. */
   | { kind: "location" }
   /**
    * "Do we have a role-play form?" — a yes or a no about ONE thing.
@@ -62,7 +62,7 @@ export type InventoryQuestion =
    * the same question. Where it finds a template the answer is about that
    * template; where it finds none, the honest answer is that nothing matching is
    * published — which is exactly right for a form the business names but Ask
-   * Sunny does not carry.
+   * Bubbles does not carry.
    */
   | { kind: "availability" }
   | { kind: "none" };
@@ -178,7 +178,7 @@ const AVAILABILITY_PHRASES = [
   "is there a",
   "is there an",
   "are there any",
-  "does ask sunny have",
+  "does ask bubbles have",
   "do we already have",
   "have we got",
 ];
@@ -253,7 +253,7 @@ export function detectInventoryQuestion(question: string): InventoryQuestion {
    * "What forms do we have?" contains BOTH "what forms" and "do we have", and it
    * is plainly a request for the library rather than a yes-or-no about one
    * thing. An earlier draft checked availability first and answered it with
-   * "Not as a form in Ask Sunny" — a flat no to a question that asked what
+   * "Not as a form in Ask Bubbles" — a flat no to a question that asked what
    * there was.
    *
    * The reverse conflict does not exist: "do we have a follow-up coaching

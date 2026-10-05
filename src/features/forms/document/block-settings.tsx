@@ -82,7 +82,7 @@ const TITLE: Record<FormBlock["kind"], string> = {
   checkbox_group: "Checkbox group",
   expectation_checklist: "Expectations checklist",
   objective_rows: "Objectives and plans",
-  draft_details: "Ask Sunny draft details",
+  draft_details: "Ask Bubbles draft details",
   answer_statements: "Answers as sentences",
   numbered_list: "Numbered list",
   signature_row: "Signature line",
@@ -244,7 +244,7 @@ function FieldSettings({
       <CheckboxField
         id={`grounded-${field.key}`}
         label="Must quote approved policy"
-        description="Ask Sunny may only fill this from a knowledge-base match, and leaves it blank for the manager when it cannot find one. Use it for 'Policy Violated' and the manual quotation."
+        description="Ask Bubbles may only fill this from a knowledge-base match, and leaves it blank for the manager when it cannot find one. Use it for 'Policy Violated' and the manual quotation."
         checked={field.policyGrounded === true}
         onCheckedChange={(checked) =>
           onChange({ ...field, ...(checked ? { policyGrounded: true } : { policyGrounded: undefined }) })
@@ -276,7 +276,7 @@ function ResponsibilityPicker({
         ))}
       </Select>
       <p className="text-[11px] leading-snug text-subtle-foreground">
-        Only <span className="text-foreground">Ask Sunny drafts</span> is written by the
+        Only <span className="text-foreground">Ask Bubbles drafts</span> is written by the
         assistant. The server enforces that against whatever the model returns, so this
         is the setting, not a hint.
       </p>
@@ -311,7 +311,7 @@ function HelpField({ value, onChange }: { value: string; onChange: (next: string
         id="help"
         rows={2}
         value={value}
-        placeholder="Shown to the manager, and given to Ask Sunny as context for this field."
+        placeholder="Shown to the manager, and given to Ask Bubbles as context for this field."
         onChange={(event) => onChange(event.target.value)}
       />
     </div>

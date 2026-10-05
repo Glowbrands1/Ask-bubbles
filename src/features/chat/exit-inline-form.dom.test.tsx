@@ -14,7 +14,7 @@ import { TEMPLATE_SEEDS } from "@/lib/forms/library";
  * ============================================================================
  *
  * The real inline editor, mounted on the real seeded exit document with the
- * values a draft actually stores. What a manager must see: the facts Sunny
+ * values a draft actually stores. What a manager must see: the facts Bubbles
  * filled, every yes/no question present and UNANSWERED (the source's pre-ticked
  * "Written notice attached? No" included), signature lines with nothing to type
  * into, and — once finalized — a Download PDF that asks the canonical route.
@@ -116,7 +116,7 @@ function group(container: HTMLElement, label: string): HTMLElement {
 const isTicked = (element: Element) => element.getAttribute("aria-checked") === "true";
 
 describe("the draft, as the manager reviews it", () => {
-  it("shows what Sunny filled", async () => {
+  it("shows what Bubbles filled", async () => {
     serve("draft");
     const { container } = mount();
     await waitFor(() => expect(container.textContent).toContain("Employee Information"));
@@ -205,7 +205,7 @@ describe("the Details section HR asked for", () => {
         { fieldKey: "resignation_method", value: "Text message", checked: [], filledBy: "system" },
         { fieldKey: "resignation_reason", value: "She's moving to Denver.", checked: [], filledBy: "system" },
         { fieldKey: "store_items_returned", value: null, checked: ["yes"], filledBy: "system" },
-        { fieldKey: "salon_key_returned", value: null, checked: ["no"], filledBy: "system" },
+        { fieldKey: "location_key_returned", value: null, checked: ["no"], filledBy: "system" },
         { fieldKey: "eligible_for_rehire", value: null, checked: ["no"], filledBy: "system" },
       );
       return { ok: true, json: async () => body } as unknown as Response;
@@ -222,7 +222,7 @@ describe("the Details section HR asked for", () => {
   it("shows every line, filled from the stored answers, and the unanswered ones as not answered", async () => {
     serveWithDetails();
     const { container } = mount();
-    await waitFor(() => expect(container.textContent).toContain("Salon Key Returned"));
+    await waitFor(() => expect(container.textContent).toContain("Location Key Returned"));
 
     const values = [...container.querySelectorAll<HTMLInputElement>("input")].map((input) => input.value);
     for (const value of ["2026-09-20", "Text message", "She's moving to Denver."]) {
@@ -235,7 +235,7 @@ describe("the Details section HR asked for", () => {
     const section = details(container);
     expect(section).toContain("Store Items ReturnedStore items were returned.");
     expect(section).toContain(
-      "Salon Key ReturnedSalon key was not returned. Employee will be payroll deducted $25 for the salon key.",
+      "Location Key ReturnedLocation key was not returned. Employee will be payroll deducted $25 for the location key.",
     );
     expect(section).toContain("Payroll DeductionNot answered yet");
     expect(section).toContain("Minimum Wage / Bonus ForfeitureNot answered yet");
@@ -246,7 +246,7 @@ describe("the Details section HR asked for", () => {
   it("follows the tick boxes: answering a question updates its Details line in place", async () => {
     serveWithDetails();
     const { container } = mount();
-    await waitFor(() => expect(container.textContent).toContain("Salon Key Returned"));
+    await waitFor(() => expect(container.textContent).toContain("Location Key Returned"));
 
     const tick = (question: string, answer: "Yes" | "No") =>
       fireEvent.click(
@@ -255,13 +255,13 @@ describe("the Details section HR asked for", () => {
           .querySelector('[role="checkbox"]')!,
       );
     // The key came back after all: untick No, tick Yes.
-    tick("Salon key was returned", "No");
-    tick("Salon key was returned", "Yes");
+    tick("Location key was returned", "No");
+    tick("Location key was returned", "Yes");
     tick("Is Payroll Deduction applicable? *", "No");
     tick("*Are they to be dropped to minimum wage?", "Yes");
     tick("*Do they forfeit their bonus?", "Yes");
 
-    await waitFor(() => expect(details(container)).toContain("Salon Key ReturnedSalon key was returned."));
+    await waitFor(() => expect(details(container)).toContain("Location Key ReturnedLocation key was returned."));
     const section = details(container);
     expect(section).not.toContain("$25");
     expect(section).toContain("Payroll DeductionPayroll deduction is not applicable.");

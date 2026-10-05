@@ -5,23 +5,23 @@ import type { AudienceDecision } from "./types";
  * WHO MAY SEE A SYNCED DOCUMENT
  * ============================================================================
  *
- * ASK SUNNY HAS ONE KNOWLEDGE AUDIENCE TODAY: every signed-in user. Row level
+ * ASK BUBBLES HAS ONE KNOWLEDGE AUDIENCE TODAY: every signed-in user. Row level
  * security on `knowledge_documents` is `using (true)` for `authenticated`, and
- * retrieval does not filter by role, salon or position. So the only access
- * boundary a synced document can be given is "in Ask Sunny" or "not in Ask
- * Sunny".
+ * retrieval does not filter by role, location or position. So the only access
+ * boundary a synced document can be given is "in Ask Bubbles" or "not in Ask
+ * Bubbles".
  *
  * That makes the mapping from a source's audience simple and strict:
  *
- *   company-wide in the source   → in Ask Sunny
- *   anything narrower or unknown → held for review, NOT in Ask Sunny
+ *   company-wide in the source   → in Ask Bubbles
+ *   anything narrower or unknown → held for review, NOT in Ask Bubbles
  *
  * An administrator decides a held audience ONCE, by its label ("All Teams",
  * "Managers"), not item by item. The decision is keyed on the audience, so a
  * record whose audience later changes in the source is re-evaluated rather
  * than carried through on an old approval.
  *
- * Woven positions are not mapped onto Ask Sunny roles anywhere in this
+ * Woven positions are not mapped onto Ask Bubbles roles anywhere in this
  * codebase (see docs/woven-employee-sync.md §4), so "Managers only" cannot be
  * honoured as "Managers only" — sharing it is sharing it with everyone, and the
  * review screen says so.

@@ -35,7 +35,7 @@ import { ACTIVE_BRAND } from "@/lib/brand";
  * NOT THE USER'S AccessScope
  * ============================================================================
  *
- * `AccessScope` — salon, district, region — says which LOCATIONS a manager
+ * `AccessScope` — location, district, region — says which LOCATIONS a manager
  * covers inside one brand. The knowledge corpus is the brand itself. They are
  * different questions with similarly-shaped answers, and deriving one from the
  * other would break the day a second brand ships while quietly widening access

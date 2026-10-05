@@ -26,7 +26,7 @@ import {
  *   Laptop A. If the server merely forgot X, Laptop B's next hydration adds it
  *   back and offers to import it again — undoing the delete and contradicting
  *   the History panel, which now says Clear History removes conversations "from
- *   your Ask Sunny account and from this browser".
+ *   your Ask Bubbles account and from this browser".
  *
  * AND THE SECOND DEFECT, WHICH THE FIRST FIX DID NOT CLOSE. Suppression judged
  * a clear by the conversation's own `createdAt` — `nowIso()` from whatever the

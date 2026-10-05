@@ -32,7 +32,7 @@ import type { RoleGroundingResult } from "./role-grounding";
  *                         made — so they collapse into `false`.
  *
  * FAIL-CLOSED, NOT FAIL-OPEN. `false` means the claim is withheld, so a broken
- * query makes Ask Sunny say less rather than more. That is the opposite of the
+ * query makes Ask Bubbles say less rather than more. That is the opposite of the
  * catch this file exists to keep out of the mandatory path.
  */
 

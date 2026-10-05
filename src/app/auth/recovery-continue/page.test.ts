@@ -16,7 +16,7 @@ async function renderPage(held: string | undefined, retry?: string) {
   vi.doMock("next/headers", () => ({
     cookies: async () => ({
       get: (name: string) =>
-        name === "sunny_recovery_token" && held ? { name, value: held } : undefined,
+        name === "bubbles_recovery_token" && held ? { name, value: held } : undefined,
     }),
   }));
   const { default: Page } = await import("./page");

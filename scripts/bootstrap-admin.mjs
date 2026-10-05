@@ -11,7 +11,7 @@
  * Needs three environment variables, and reads no others:
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SECRET_KEY            (or SUPABASE_SERVICE_ROLE_KEY)
- *   ASK_SUNNY_SITE_URL             where the invitation link should land
+ *   ASK_BUBBLES_SITE_URL             where the invitation link should land
  *
  * ============================================================================
  * WHY THIS IS A SCRIPT AND NOT CODE IN THE APPLICATION
@@ -87,12 +87,12 @@ if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
 const secret =
   process.env.SUPABASE_SECRET_KEY?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-const site = process.env.ASK_SUNNY_SITE_URL?.trim();
+const site = process.env.ASK_BUBBLES_SITE_URL?.trim();
 
 const missing = [
   !url ? "NEXT_PUBLIC_SUPABASE_URL" : null,
   !secret ? "SUPABASE_SECRET_KEY" : null,
-  !site ? "ASK_SUNNY_SITE_URL" : null,
+  !site ? "ASK_BUBBLES_SITE_URL" : null,
 ].filter(Boolean);
 
 if (missing.length > 0) {
@@ -127,14 +127,14 @@ let redirectTo;
 try {
   redirectTo = `${new URL(site).origin}/auth/accept`;
 } catch {
-  fail(`ASK_SUNNY_SITE_URL is not a URL. Use the full origin, e.g. https://ask-sunny.vercel.app`);
+  fail(`ASK_BUBBLES_SITE_URL is not a URL. Use the full origin, e.g. https://ask-bubbles.vercel.app`);
 }
 
 const admin = createClient(url, secret, {
   auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
 });
 
-console.log(`\nAsk Sunny — bootstrap the first administrator`);
+console.log(`\nAsk Bubbles — bootstrap the first administrator`);
 console.log(`  project : ${new URL(url).host}`);
 console.log(`  person  : ${displayName} <${email}>`);
 console.log(`  link to : ${new URL(redirectTo).origin}\n`);
@@ -157,7 +157,7 @@ if (existing.data) {
   const row = existing.data;
 
   if (!resend) {
-    console.log(`• An Ask Sunny profile already exists for that address.`);
+    console.log(`• An Ask Bubbles profile already exists for that address.`);
     console.log(`    role   : ${row.role}`);
     console.log(`    status : ${row.status}`);
     console.log(

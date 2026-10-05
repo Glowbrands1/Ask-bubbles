@@ -39,7 +39,7 @@ export function ChangeReviewButtons({
         router.refresh();
       }
     } catch {
-      setError("Ask Sunny's server could not be reached.");
+      setError("Ask Bubbles' server could not be reached.");
     } finally {
       setBusy(false);
     }

@@ -153,7 +153,7 @@ describe("3. a date the manager never gave is corrected, not carried", () => {
         "On September 8, 2026, Sarah wore a mini skirt.",
         "",
         "Expectation:",
-        "Sarah meets the salon's appearance standards.",
+        "Sarah meets the location's appearance standards.",
       ].join("\n"),
     };
 
@@ -192,14 +192,14 @@ describe("4. the observation survives, whatever date the model writes", () => {
     const result = chain(
       [
         "Observed:",
-        "On September 10, 2026, Sarah Test was observed wearing a mini skirt at the Kearny salon.",
+        "On September 10, 2026, Sarah Test was observed wearing a mini skirt at the Kearny location.",
         "",
         "Expectation:",
-        "Sarah meets the salon's appearance standards for every scheduled shift.",
+        "Sarah meets the location's appearance standards for every scheduled shift.",
       ].join("\n"),
     );
 
-    expect(result.values.observation).toContain("wearing a mini skirt at the Kearny salon");
+    expect(result.values.observation).toContain("wearing a mini skirt at the Kearny location");
     expect(result.values.observation).toContain("September 10, 2026");
     expect(result.emptied).toEqual([]);
   });
@@ -212,15 +212,15 @@ describe("4. the observation survives, whatever date the model writes", () => {
     const result = chain(
       [
         "Observed:",
-        "On September 8, 2026, Sarah Test was observed wearing a mini skirt at the Kearny salon.",
+        "On September 8, 2026, Sarah Test was observed wearing a mini skirt at the Kearny location.",
         "",
         "Expectation:",
-        "Sarah meets the salon's appearance standards for every scheduled shift.",
+        "Sarah meets the location's appearance standards for every scheduled shift.",
       ].join("\n"),
     );
 
     // The fact survives, and the invented date never reaches the record.
-    expect(result.values.observation).toContain("wearing a mini skirt at the Kearny salon");
+    expect(result.values.observation).toContain("wearing a mini skirt at the Kearny location");
     expect(result.values.observation).toContain("September 10, 2026");
     expect(result.values.observation).not.toContain("September 8");
     expect(result.emptied).toEqual([]);

@@ -37,7 +37,7 @@ export function errorResponse(error: unknown, route = "route"): NextResponse {
   /*
    * THE TURN COULD NOT BE OPENED, SO NOTHING WAS ASKED.
    *
-   * Translated here rather than at each call site so every Ask Sunny route
+   * Translated here rather than at each call site so every Ask Bubbles route
    * reports it identically. It is a 503 because the cause is a dependency that
    * is momentarily unavailable rather than anything wrong with the request —
    * which is also why the client is told it is worth retrying. The `reason` is
@@ -175,7 +175,7 @@ export function assertLiveMode(): void {
   if (isDemoMode()) {
     throw new AiError(
       "not_configured",
-      "Ask Sunny is running in demo mode. Set NEXT_PUBLIC_DEMO_MODE=false and configure the live services to use this endpoint.",
+      "Ask Bubbles is running in demo mode. Set NEXT_PUBLIC_DEMO_MODE=false and configure the live services to use this endpoint.",
       409,
     );
   }

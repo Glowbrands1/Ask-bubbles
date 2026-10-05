@@ -115,7 +115,7 @@ export class WovenIntoKnowledge {
 
   async documentId(key: string): Promise<string> {
     const id = (await this.item(key)).knowledgeDocumentId;
-    if (!id) throw new Error("the item has no Ask Sunny document");
+    if (!id) throw new Error("the item has no Ask Bubbles document");
     return id;
   }
 

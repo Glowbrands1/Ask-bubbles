@@ -8,12 +8,12 @@ import { LocationReviewForm, PositionReviewForm } from "./mapping-forms";
 import { label, when } from "./format";
 
 /**
- * MAPPINGS — Woven location → Ask Sunny salon, Woven position → role and scope.
+ * MAPPINGS — Woven location → Ask Bubbles location, Woven position → role and scope.
  *
  * Reviewed here, APPLIED NOWHERE in phase one. A confirmed location labels the
- * directory and the change feed with a salon; a confirmed, ranked position
+ * directory and the change feed with a location; a confirmed, ranked position
  * lets a position change be called a confirmed promotion or demotion. Neither
- * changes a login, a role, a scope level, a primary salon or salon access.
+ * changes a login, a role, a scope level, a primary location or location access.
  */
 
 const LOCATION_TONE: Record<LocationMappingRow["status"], BadgeTone> = { mapped: "ready", unmapped: "attention", ignored: "neutral" };
@@ -34,13 +34,13 @@ export function MappingReview({
     <section aria-label="Mappings" className="flex flex-col gap-6">
       <Notice tone="primary" icon={<ShieldCheck />} title="Mappings are reviewed here and applied nowhere in this phase">
         A confirmed match is stored and used to label the directory and the change feed. No login, role, scope level, primary
-        salon or salon access changes because of it.
+        location or location access changes because of it.
       </Notice>
 
       <div>
         <SectionHeader
-          title="Woven location → Ask Sunny salon"
-          description={`${unmappedLocations} unmapped of ${locations.length}. A suggestion is an exact match of Woven's Number to a salon number, leading zeros included — a person confirms every one.`}
+          title="Woven location → Ask Bubbles location"
+          description={`${unmappedLocations} unmapped of ${locations.length}. A suggestion is an exact match of Woven's Number to a location number, leading zeros included — a person confirms every one.`}
         />
         {locations.length === 0 ? (
           <EmptyState title="No Woven locations seen yet" description="Locations are queued here by the first sync." />
@@ -49,7 +49,7 @@ export function MappingReview({
             <table className="w-full text-left text-[12.5px]">
               <thead className="bg-surface-muted text-[11px] tracking-wide text-muted-foreground uppercase">
                 <tr>
-                  {["Woven location", "Number", "Woven district / region", "Employees", "Suggested salon", "Mapped salon", "Status", "Review"].map((h) => (
+                  {["Woven location", "Number", "Woven district / region", "Employees", "Suggested location", "Mapped location", "Status", "Review"].map((h) => (
                     <th key={h} scope="col" className="px-3 py-2 font-semibold whitespace-nowrap">
                       {h}
                     </th>
@@ -74,11 +74,11 @@ export function MappingReview({
                     <td className="px-3 py-2">
                       {row.isNonLocation && row.status === "unmapped"
                         ? "Suggest ignore"
-                        : row.suggestedSalonNumber
-                          ? `${row.suggestedSalonNumber} · ${row.suggestedSalonName ?? ""}`
+                        : row.suggestedLocationCode
+                          ? `${row.suggestedLocationCode} · ${row.suggestedLocationName ?? ""}`
                           : <span className="text-muted-foreground">No exact number match</span>}
                     </td>
-                    <td className="px-3 py-2">{row.salonNumber ? `${row.salonNumber} · ${row.salonName ?? ""}` : "—"}</td>
+                    <td className="px-3 py-2">{row.locationCode ? `${row.locationCode} · ${row.locationName ?? ""}` : "—"}</td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       <Badge tone={LOCATION_TONE[row.status]} size="sm">
                         {row.status}
@@ -102,7 +102,7 @@ export function MappingReview({
 
       <div>
         <SectionHeader
-          title="Woven position → Ask Sunny role and scope"
+          title="Woven position → Ask Bubbles role and scope"
           description={`${unmappedPositions} unmapped of ${positions.length}. A position change is a confirmed promotion or demotion only when both positions are confirmed here with ranks; higher is more senior.`}
         />
         {positions.length === 0 ? (
@@ -112,7 +112,7 @@ export function MappingReview({
             <table className="w-full text-left text-[12.5px]">
               <thead className="bg-surface-muted text-[11px] tracking-wide text-muted-foreground uppercase">
                 <tr>
-                  {["Woven position", "Active employees", "Ask Sunny role", "Scope level", "Rank", "Status", "Review"].map((h) => (
+                  {["Woven position", "Active employees", "Ask Bubbles role", "Scope level", "Rank", "Status", "Review"].map((h) => (
                     <th key={h} scope="col" className="px-3 py-2 font-semibold whitespace-nowrap">
                       {h}
                     </th>

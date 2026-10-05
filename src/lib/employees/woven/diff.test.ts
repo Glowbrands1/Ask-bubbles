@@ -58,7 +58,7 @@ function resolved(overrides: Partial<ResolvedEmployee> = {}): ResolvedEmployee {
     terminationLastDayWorked: null,
     terminationTypeCode: null,
     positionId: "POS-SC",
-    positionName: "Salon Consultant",
+    positionName: "Location Consultant",
     primaryLocationId: "WL-0306",
     primaryLocationName: "KS Manhattan",
     hasMultipleLocationAccess: false,
@@ -154,7 +154,7 @@ describe("employment status", () => {
 
 describe("position changes", () => {
   it("are UNCLASSIFIED without a position map — never a promotion by default", () => {
-    const [change] = diffEmployee(onFile(), resolved({ positionId: "POS-SD", positionName: "Salon Director" }), opts());
+    const [change] = diffEmployee(onFile(), resolved({ positionId: "POS-SD", positionName: "Location Director" }), opts());
     expect(change.kind).toBe("position_changed");
     expect(change.classification).toBe("unclassified");
     expect(change.effectiveDate).toBeNull();

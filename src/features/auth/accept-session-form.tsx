@@ -34,7 +34,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
  *
  * It is read from the fragment, handed to `supabase.auth.setSession()`, and
  * dropped. It is never logged, never rendered, never put in component state
- * that survives the call, and never sent to an Ask Sunny endpoint — the only
+ * that survives the call, and never sent to an Ask Bubbles endpoint — the only
  * thing that ever receives it is Supabase's own client, which validates it
  * against the auth server.
  *

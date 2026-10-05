@@ -22,12 +22,12 @@ import { ResetPasswordForm } from "./reset-password-form";
  *
  * So this screen now reads the link itself, in both shapes.
  *
- * Setting a password is also not by itself enough to use Ask Sunny. An INVITED
+ * Setting a password is also not by itself enough to use Ask Bubbles. An INVITED
  * profile is refused by the auth provider, so somebody who set a password and
  * stopped would hold a working credential the application still turns away.
  * Activation therefore happens here, where we know the password actually took.
  *
- * The password goes to Supabase and nowhere else: no Ask Sunny endpoint ever
+ * The password goes to Supabase and nowhere else: no Ask Bubbles endpoint ever
  * receives it, and the activation call that follows carries no body at all.
  */
 
@@ -306,7 +306,7 @@ describe("an invalid or expired recovery link", () => {
 /* ----------------------------------------------------------- the password */
 
 describe("the password itself", () => {
-  it("goes to Supabase and to no Ask Sunny endpoint", async () => {
+  it("goes to Supabase and to no Ask Bubbles endpoint", async () => {
     await setPassword();
     await waitFor(() => expect(supabase.updateUser).toHaveBeenCalledWith({ password: PASSWORD }));
 

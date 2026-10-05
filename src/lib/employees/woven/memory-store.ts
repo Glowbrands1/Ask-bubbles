@@ -77,7 +77,7 @@ export class MemoryDirectoryStore implements EmployeeDirectoryStore {
   }
 
   async loadLocationMap(): Promise<LocationMapEntry[]> {
-    return [...this.locationMap.values()].map(({ wovenLocationId, status, salonId }) => ({ wovenLocationId, status, salonId }));
+    return [...this.locationMap.values()].map(({ wovenLocationId, status, locationId }) => ({ wovenLocationId, status, locationId }));
   }
 
   async loadPositionMap(): Promise<PositionMapEntry[]> {
@@ -154,7 +154,7 @@ export class MemoryDirectoryStore implements EmployeeDirectoryStore {
       this.locationMap.set(location.wovenLocationId, {
         wovenLocationId: location.wovenLocationId,
         status: existing?.status ?? "unmapped",
-        salonId: existing?.salonId ?? null,
+        locationId: existing?.locationId ?? null,
         name: location.name ?? existing?.name ?? null,
         number: location.number ?? existing?.number ?? null,
       });
@@ -213,13 +213,13 @@ export class MemoryDirectoryStore implements EmployeeDirectoryStore {
     }
   }
 
-  /** Test helper: what a reviewer does when they map a Woven location to a salon. */
-  mapLocation(wovenLocationId: string, salonId: string | null, status: LocationMapEntry["status"] = "mapped") {
+  /** Test helper: what a reviewer does when they map a Woven location to a location. */
+  mapLocation(wovenLocationId: string, locationId: string | null, status: LocationMapEntry["status"] = "mapped") {
     const existing = this.locationMap.get(wovenLocationId);
     this.locationMap.set(wovenLocationId, {
       wovenLocationId,
       status,
-      salonId,
+      locationId,
       name: existing?.name ?? null,
       number: existing?.number ?? null,
     });

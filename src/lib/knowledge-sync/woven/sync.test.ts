@@ -115,7 +115,7 @@ describe("setup safety", () => {
     expect(await h.run("sync", { trigger: "schedule" })).toMatchObject({ status: "refused", code: "initial_sync_not_done" });
   });
 
-  it("dry run: counts everything, writes nothing to the manifest or Ask Sunny", async () => {
+  it("dry run: counts everything, writes nothing to the manifest or Ask Bubbles", async () => {
     const h = new Harness();
     const outcome = await h.run("preview");
     const r = report(outcome);
@@ -160,9 +160,9 @@ describe("the monthly cycle", () => {
 
     expect(h.sink.searchable().map((d) => d.title).sort()).toEqual(["Attendance Policy", "Attendance Policy (PDF)", "Dress Code", "Lotion Guide", "Team Member Handbook"]);
     expect(r.totals).toMatchObject({ new: 5, inSync: 5, errors: 0 });
-    expect(h.item(HANDBOOK)).toMatchObject({ state: "NEW", inAskSunny: true, pendingAction: "none", versionId: uuid(2101) });
+    expect(h.item(HANDBOOK)).toMatchObject({ state: "NEW", inKnowledgeBase: true, pendingAction: "none", versionId: uuid(2101) });
     expect(h.item(HANDBOOK).contentHash).toMatch(/^[0-9a-f]{64}$/);
-    expect(h.item(BONUS)).toMatchObject({ state: "NEEDS_REVIEW", inAskSunny: false });
+    expect(h.item(BONUS)).toMatchObject({ state: "NEEDS_REVIEW", inKnowledgeBase: false });
     const doc = h.sink.documents.get(h.item(HANDBOOK).knowledgeDocumentId!)!;
     expect(doc).toMatchObject({ category: "policies_compliance", tags: ["woven", "woven-handbook"], fileName: "Team Member Handbook.pdf" });
     expect(h.store.settings.initialSyncCompletedAt).not.toBeNull();
@@ -170,7 +170,7 @@ describe("the monthly cycle", () => {
     /* A policy body is ingested as its own text document, titled and in reading order. */
     const body = h.sink.documents.get(h.item(ATTENDANCE_BODY).knowledgeDocumentId!)!;
     expect(body).toMatchObject({ mimeType: "text/plain", title: "Attendance Policy", tags: ["woven", "woven-policy"] });
-    expect(new TextDecoder().decode(body.bytes)).toBe("Attendance Policy\n\nArrive on time.\n\nCall the salon if you will be late.\n");
+    expect(new TextDecoder().decode(body.bytes)).toBe("Attendance Policy\n\nArrive on time.\n\nCall the location if you will be late.\n");
   });
 
   it("a second run with nothing changed downloads and re-indexes nothing", async () => {
@@ -192,7 +192,7 @@ describe("the monthly cycle", () => {
     expect(h.sink.searchable().map((d) => d.title)).toContain("Dress Code");
   });
 
-  it("updated version: a new handbook version replaces the same Ask Sunny document", async () => {
+  it("updated version: a new handbook version replaces the same Ask Bubbles document", async () => {
     const h = new Harness();
     await h.initial();
     const id = h.item(HANDBOOK).knowledgeDocumentId;
@@ -229,19 +229,19 @@ describe("the monthly cycle", () => {
     expect(h.sink.documents.get(h.item(HANDBOOK).knowledgeDocumentId!)!.title).toBe("Team Member Handbook 2026");
   });
 
-  it("permission change: an item narrowed to some teams leaves Ask Sunny, and returns when shared again", async () => {
+  it("permission change: an item narrowed to some teams leaves Ask Bubbles, and returns when shared again", async () => {
     const h = new Harness();
     await h.initial();
-    h.fake.state.handbooks[0]!.audience = "Salon Directors";
+    h.fake.state.handbooks[0]!.audience = "Location Directors";
     let r = report(await h.run("sync"));
     expect(r.totals.permissionChanged).toBe(1);
-    expect(h.item(HANDBOOK)).toMatchObject({ state: "PERMISSION_CHANGED", inAskSunny: false, reason: "audience_needs_review" });
+    expect(h.item(HANDBOOK)).toMatchObject({ state: "PERMISSION_CHANGED", inKnowledgeBase: false, reason: "audience_needs_review" });
     expect(h.sink.searchable().map((d) => d.title)).not.toContain("Team Member Handbook");
 
     /* An administrator decides that audience may be shared with everyone. */
-    await h.store.saveDecision({ source: "woven", audienceKey: "salon directors", decision: "company_wide", decidedBy: "admin:test", decidedAt: h.clock.toISOString() });
+    await h.store.saveDecision({ source: "woven", audienceKey: "location directors", decision: "company_wide", decidedBy: "admin:test", decidedAt: h.clock.toISOString() });
     r = report(await h.run("sync"));
-    expect(h.item(HANDBOOK)).toMatchObject({ state: "PERMISSION_CHANGED", inAskSunny: true });
+    expect(h.item(HANDBOOK)).toMatchObject({ state: "PERMISSION_CHANGED", inKnowledgeBase: true });
     /* Restored under the SAME document id: no duplicate. */
     expect(h.sink.documents.size).toBe(5);
     expect(h.sink.searchable()).toHaveLength(5);
@@ -253,26 +253,26 @@ describe("the monthly cycle", () => {
     /* Woven's display summary for a Targeted policy is the audience label decided on. */
     await h.store.saveDecision({ source: "woven", audienceKey: "all teams 8 positions", decision: "excluded", decidedBy: "admin:test", decidedAt: h.clock.toISOString() });
     await h.run("sync");
-    expect(h.item(BONUS)).toMatchObject({ state: "EXCLUDED", reason: "audience_excluded", inAskSunny: false });
+    expect(h.item(BONUS)).toMatchObject({ state: "EXCLUDED", reason: "audience_excluded", inKnowledgeBase: false });
     await h.store.saveDecision({ source: "woven", audienceKey: "all teams 8 positions", decision: "company_wide", decidedBy: "admin:test", decidedAt: h.clock.toISOString() });
     await h.run("sync");
-    expect(h.item(BONUS)).toMatchObject({ inAskSunny: true });
+    expect(h.item(BONUS)).toMatchObject({ inKnowledgeBase: true });
   });
 
   it("procedure steps, their attachment and Knowledge Element text sync once their audience is decided", async () => {
     const h = new Harness();
     await h.initial();
-    expect(h.sink.searchable().map((d) => d.title)).not.toContain("Opening the Salon");
+    expect(h.sink.searchable().map((d) => d.title)).not.toContain("Opening the Location");
     await h.store.saveDecision({ source: "woven", audienceKey: "(none stated)", decision: "company_wide", decidedBy: "admin:test", decidedAt: h.clock.toISOString() });
     const r = report(await h.run("sync"));
     expect(r.totals.new).toBe(4);
     const titles = h.sink.searchable().map((d) => d.title);
-    expect(titles).toEqual(expect.arrayContaining(["Opening the Salon", "Bed Cleaning", "Spray Tan Basics", "Opening the Salon — Opening Checklist"]));
+    expect(titles).toEqual(expect.arrayContaining(["Opening the Location", "Bed Cleaning", "Spray Tan Basics", "Opening the Location — Opening Checklist"]));
     const steps = h.sink.documents.get(h.item(`procedure\u0000${uuid(301)}\u0000content`).knowledgeDocumentId!)!;
     expect(steps).toMatchObject({ category: "operations", mimeType: "text/plain" });
     /* The attachment: keyed by step and stored name, named for people by its display name. */
     const attachment = h.item(`procedure\u0000${uuid(301)}\u0000attachment:${uuid(3012)}:a1b2c3d4-0000-4000-8000-000000003111.pdf`);
-    expect(attachment).toMatchObject({ inAskSunny: true, fileName: "Opening Checklist.pdf", documentId: null, locator: { procedureId: uuid(301), stepId: uuid(3012), storedFileName: "a1b2c3d4-0000-4000-8000-000000003111.pdf" } });
+    expect(attachment).toMatchObject({ inKnowledgeBase: true, fileName: "Opening Checklist.pdf", documentId: null, locator: { procedureId: uuid(301), stepId: uuid(3012), storedFileName: "a1b2c3d4-0000-4000-8000-000000003111.pdf" } });
     expect(h.sink.documents.get(attachment.knowledgeDocumentId!)).toMatchObject({ fileName: "Opening Checklist.pdf", mimeType: "application/pdf" });
     /* Downloaded through the verified route, with the stored name — never a signed URL kept. */
     expect(h.fake.log.filter((q) => q.path === "/KnowledgeCenter/Download_ProcedureStep_Attachment")).toHaveLength(1);
@@ -282,7 +282,7 @@ describe("the monthly cycle", () => {
   it("a Targeted policy is held for review even though its display text says All Teams", async () => {
     const h = new Harness();
     await h.initial();
-    expect(h.item(`policy\u0000${uuid(103)}\u0000content`)).toMatchObject({ state: "NEEDS_REVIEW", reason: "audience_needs_review", inAskSunny: false });
+    expect(h.item(`policy\u0000${uuid(103)}\u0000content`)).toMatchObject({ state: "NEEDS_REVIEW", reason: "audience_needs_review", inKnowledgeBase: false });
   });
 
   it("unpublished: a document switched to draft is retired, not deleted", async () => {
@@ -292,7 +292,7 @@ describe("the monthly cycle", () => {
     const r = report(await h.run("sync"));
     /* The policy's body and its attachment. */
     expect(r.totals.unpublished).toBe(2);
-    expect(h.item(ATTENDANCE)).toMatchObject({ state: "UNPUBLISHED", inAskSunny: false });
+    expect(h.item(ATTENDANCE)).toMatchObject({ state: "UNPUBLISHED", inKnowledgeBase: false });
     const doc = h.sink.documents.get(h.item(ATTENDANCE).knowledgeDocumentId!)!;
     expect(doc.retired).toBe(true);
   });
@@ -303,20 +303,20 @@ describe("the monthly cycle", () => {
     h.fake.state.policies.splice(0, 1);
     const r = report(await h.run("sync"));
     expect(r.totals.removed).toBe(2);
-    expect(h.item(ATTENDANCE)).toMatchObject({ state: "REMOVED", reason: "not_in_source", inAskSunny: false });
+    expect(h.item(ATTENDANCE)).toMatchObject({ state: "REMOVED", reason: "not_in_source", inKnowledgeBase: false });
     /* It stays removed quietly on later runs. */
     const again = report(await h.run("sync"));
     expect(again.totals.removed).toBe(0);
   });
 
-  it("re-publishing a removed document restores the same Ask Sunny document", async () => {
+  it("re-publishing a removed document restores the same Ask Bubbles document", async () => {
     const h = new Harness();
     await h.initial();
     const saved = h.fake.state.policies.splice(0, 1);
     await h.run("sync");
     h.fake.state.policies.unshift(...saved);
     await h.run("sync");
-    expect(h.item(ATTENDANCE).inAskSunny).toBe(true);
+    expect(h.item(ATTENDANCE).inKnowledgeBase).toBe(true);
     expect(h.sink.documents.size).toBe(5);
   });
 });
@@ -333,7 +333,7 @@ describe("protection against accidental mass removal", () => {
     const r = report(outcome);
     expect(outcome.status).toBe("succeeded_with_warnings");
     expect(r.byType.policy).toMatchObject({ listing: "failed" });
-    expect(h.item(ATTENDANCE)).toMatchObject({ inAskSunny: true, state: "NEW" });
+    expect(h.item(ATTENDANCE)).toMatchObject({ inKnowledgeBase: true, state: "NEW" });
     expect(r.totals.updated).toBe(1);
     expect(r.attention.map((a) => a.code)).toContain("listing_failed_policy");
     /* A scan with a failed listing is not a complete scan: the schedule tries again tomorrow. */
@@ -346,7 +346,7 @@ describe("protection against accidental mass removal", () => {
     h.fake.state.policies = [];
     const r = report(await h.run("sync"));
     expect(r.byType.policy).toMatchObject({ listing: "not_trusted", listingCode: "empty_listing" });
-    expect(h.item(ATTENDANCE).inAskSunny).toBe(true);
+    expect(h.item(ATTENDANCE).inKnowledgeBase).toBe(true);
     expect(h.sink.retireCalls).toBe(0);
   });
 
@@ -356,7 +356,7 @@ describe("protection against accidental mass removal", () => {
     h.fake.loginInstead.add("/KnowledgeCenter/_Handbooks_List_ForDataTable");
     const r = report(await h.run("sync"));
     expect(r.byType.handbook!.listing).toBe("failed");
-    expect(h.item(HANDBOOK).inAskSunny).toBe(true);
+    expect(h.item(HANDBOOK).inKnowledgeBase).toBe(true);
   });
 
   it("every listing failing fails the run and changes nothing", async () => {
@@ -437,10 +437,10 @@ describe("failures stay local, and recover", () => {
     h.advanceDays(1);
     await h.run("continue");
     const recovered = h.store.items.get(`woven\u0000${failing.contentType}\u0000${failing.entityId}\u0000${failing.partKey}`)!;
-    expect(recovered).toMatchObject({ state: "NEW", inAskSunny: true, retryCount: 0, lastError: null });
+    expect(recovered).toMatchObject({ state: "NEW", inKnowledgeBase: true, retryCount: 0, lastError: null });
   });
 
-  it("retry is idempotent: every attempt at a part addresses the same Ask Sunny document", async () => {
+  it("retry is idempotent: every attempt at a part addresses the same Ask Bubbles document", async () => {
     const h = new Harness();
     await h.run("preview");
     h.sink.failNextIngest = new SinkError("ingest_embedding_failed", "Embedding failed.");
@@ -598,7 +598,7 @@ describe("scheduling every 30 days", () => {
     const retry = await runScheduledWovenKnowledgeTick(h.overrides());
     expect(retry.status).toBe("succeeded");
     expect(h.store.runs.at(-1)).toMatchObject({ mode: "continue", trigger: "schedule" });
-    expect(h.item(HANDBOOK)).toMatchObject({ state: "UPDATED", inAskSunny: true, retryCount: 0 });
+    expect(h.item(HANDBOOK)).toMatchObject({ state: "UPDATED", inKnowledgeBase: true, retryCount: 0 });
     expect(h.sink.documents.size).toBe(documents);
 
     h.advanceDays(1);
@@ -632,7 +632,7 @@ describe("test connection", () => {
     expect(fake.log.every((r) => r.method === "GET" || r.path === "/Login/Authenticate" || r.path.includes("_List_"))).toBe(true);
   });
 
-  it("passes through the verified account chooser and the photo prompt to JB & Associates", async () => {
+  it("passes through the verified account chooser and the photo prompt to Example Soap Co", async () => {
     const fake = new FakeWoven();
     fake.state.requireCompanySelection = true;
     fake.state.photoPrompt = true;
@@ -671,7 +671,7 @@ describe("preview test mode (Preview deployments without the sync tables)", () =
     const r = report(outcome);
     expect(r.company).toEqual({ companyLabel: COMPANY, companyVerified: true });
     expect(r.totals).toMatchObject({ discovered: 13, new: 5 });
-    /* Nothing reached the (real) store or Ask Sunny. */
+    /* Nothing reached the (real) store or Ask Bubbles. */
     expect(h.store.runs).toHaveLength(0);
     expect(h.store.items.size).toBe(0);
     expect(h.sink.ingestCalls + h.sink.metadataCalls + h.sink.retireCalls).toBe(0);

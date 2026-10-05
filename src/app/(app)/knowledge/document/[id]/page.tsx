@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  *
  * `/knowledge` is administrators-only because it is the corpus's management
  * console. This route is the other half of that split: one document, named by
- * id, opened because Sunny cited it. Every role that can be given an answer
+ * id, opened because Bubbles cited it. Every role that can be given an answer
  * holds `view_knowledge`, so every role can open its sources.
  *
  * It reaches no listing. The only knowledge call behind this page is

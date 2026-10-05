@@ -75,7 +75,7 @@ describe("the four states an uploaded document can be in", () => {
     renderOne({ documentState: "none" });
     expect(screen.getByText("No document")).toBeTruthy();
     expect(
-      screen.getByText(/Ask Sunny reads it into a draft of this form for you to review/),
+      screen.getByText(/Ask Bubbles reads it into a draft of this form for you to review/),
     ).toBeTruthy();
   });
 

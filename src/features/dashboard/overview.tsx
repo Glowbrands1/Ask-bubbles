@@ -114,7 +114,7 @@ export function OverviewScreen({ followUps: followUpData }: { followUps: Overvie
                     <span className="flex items-center gap-2.5">
                       <CardTitle>Follow-ups</CardTitle>
                       {!followUpData.failure && followUps.length > 0 ? (
-                        <span className="rounded-[4px] bg-brand-yellow px-2 py-[3px] text-[8.5px] font-black tracking-[0.08em] text-brand-yellow-foreground uppercase">
+                        <span className="rounded-[4px] bg-brand-accent px-2 py-[3px] text-[8.5px] font-black tracking-[0.08em] text-brand-accent-foreground uppercase">
                           {formatNumber(followUps.length)} open
                         </span>
                       ) : null}

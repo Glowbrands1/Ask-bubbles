@@ -136,7 +136,7 @@ export async function GET() {
      * still shows REAL report data, and report QA on it is valid.
      *
      * THE ASSISTANT DOES NOT. In demo mode `getAIProvider` returns
-     * `MockAIProvider`, which invents figures. So every Ask Sunny answer on a
+     * `MockAIProvider`, which invents figures. So every Ask Bubbles answer on a
      * demo-mode deployment is fiction, and any QA of a definition, a table or a
      * refusal is worthless there.
      *

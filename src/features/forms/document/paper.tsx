@@ -74,7 +74,7 @@ export function Sheet({
  * A scrollable workspace holding one or more sheets.
  *
  * The light workspace behind the paper is what makes it read as a document
- * rather than as a panel — it is the one place in Ask Sunny that deliberately
+ * rather than as a panel — it is the one place in Ask Bubbles that deliberately
  * looks like a print preview.
  */
 export function Workspace({

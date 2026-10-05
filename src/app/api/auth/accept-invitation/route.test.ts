@@ -136,7 +136,7 @@ describe("what it refuses", () => {
   it("passes on the refusals the database wrote, and only those", async () => {
     for (const message of [
       "This account is disabled.",
-      "No Ask Sunny profile exists for this account.",
+      "No Ask Bubbles profile exists for this account.",
       "This account has not confirmed its email address.",
     ]) {
       const { POST } = await loadRoute({ rpcError: { message } });

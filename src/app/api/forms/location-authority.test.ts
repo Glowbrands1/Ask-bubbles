@@ -6,7 +6,7 @@ import type { AccessScope } from "@/types";
 
 /**
  * ============================================================================
- * REQUIREMENTS 27–33 — THE SALON ON AN HR RECORD IS THE SERVER'S DECISION
+ * REQUIREMENTS 27–33 — THE LOCATION ON AN HR RECORD IS THE SERVER'S DECISION
  * ============================================================================
  *
  * THE ROUTE, NOT THE CHAT ORCHESTRATION. `POST /api/forms/instances` is the one
@@ -16,10 +16,10 @@ import type { AccessScope } from "@/types";
  * the next caller does not have, which is why these tests drive the ROUTE.
  *
  * WHAT WAS EXPLOITABLE. The route read `locationId` and `locationName` from the
- * body and passed both straight to `createInstance`. A signed-in Salon Director
+ * body and passed both straight to `createInstance`. A signed-in Location Director
  * assigned to loc-0101 could file a Corrective Action Form against
  * loc-0999 by editing one field of the request — and the record would look, to
- * everybody who opened it afterwards, exactly like one filed by that salon's
+ * everybody who opened it afterwards, exactly like one filed by that location's
  * own manager. `authorizeForms` had the scope in its hand and discarded it.
  *
  * The first test below is the GUARD ON THE GUARD: it proves the fixture can
@@ -28,7 +28,7 @@ import type { AccessScope } from "@/types";
 
 const ORIGINAL = { ...process.env };
 
-const SALON_SCOPE: AccessScope = {
+const LOCATION_SCOPE: AccessScope = {
   level: "location",
   primaryAreaId: "loc-0101",
   alsoCoversAreaIds: [],
@@ -51,7 +51,7 @@ async function load(options: {
   demo?: boolean;
   active?: boolean;
 } = {}) {
-  const { scope = SALON_SCOPE, role = "location_manager", demo = false, active = true } = options;
+  const { scope = LOCATION_SCOPE, role = "location_manager", demo = false, active = true } = options;
 
   process.env.NEXT_PUBLIC_DEMO_MODE = demo ? "true" : "false";
   vi.resetModules();
@@ -66,7 +66,7 @@ async function load(options: {
        * The REAL matrix, applied the way `authorizeRequest` applies it. A mock
        * that returned an identity regardless of the permission would make every
        * permission assertion below vacuous — which it did, until requirement 15
-       * caught it by passing against an Assistant Salon Director.
+       * caught it by passing against an Assistant Location Director.
        */
       authorizeRequest: async (_request: Request, permission: string) => {
         if (!hasPermission(DEFAULT_PERMISSION_MATRIX, role as never, permission as never)) {
@@ -159,7 +159,7 @@ afterEach(() => {
 
 describe("27. the fixture can express the attack", () => {
   it("stores whatever location it is given, when it is given one", async () => {
-    // The salon on this actor's own assignment goes through, which is what
+    // The location on this actor's own assignment goes through, which is what
     // makes the refusal of a foreign one below a real result rather than a
     // route that stores nothing whatever it is sent.
     const { route, created } = await load();
@@ -175,7 +175,7 @@ describe("27. the fixture can express the attack", () => {
 
 /* ======================================================== the refusal == */
 
-describe("28. a salon the caller is not assigned to is refused", () => {
+describe("28. a location the caller is not assigned to is refused", () => {
   it("returns 403 and creates nothing", async () => {
     const { route, created } = await load();
     const response = await route.POST(
@@ -189,7 +189,7 @@ describe("28. a salon the caller is not assigned to is refused", () => {
     expect(payload.error).toMatch(/not one you are assigned to/i);
   });
 
-  it("refuses even when a plausible salon NAME is supplied alongside", async () => {
+  it("refuses even when a plausible location NAME is supplied alongside", async () => {
     const { route, created } = await load();
     const response = await route.POST(
       post({
@@ -227,7 +227,7 @@ describe("30. a display name is never an independent authority", () => {
   it("is dropped when no location id was authorized", async () => {
     /*
      * A location id and a display name must not become two authorities. A
-     * caller sending only a name would otherwise leave a salon on the record
+     * caller sending only a name would otherwise leave a location on the record
      * that no scope check ever saw.
      */
     const { route, created } = await load();
@@ -246,12 +246,12 @@ describe("30. a display name is never an independent authority", () => {
 
   it("is dropped in LIVE mode even when the id beside it was authorized", async () => {
     /*
-     * There is no salon roster. The only source of a display name is
+     * There is no location roster. The only source of a display name is
      * `DEMO_LOCATIONS`, which `primaryLocationName` reads and which falls back
      * to the raw id when the lookup misses — so a name arriving here is demo
      * data or the id again, bound to the validated location by nothing.
      *
-     * A wrong salon NAME on a disciplinary record reads as verified to everyone
+     * A wrong location NAME on a disciplinary record reads as verified to everyone
      * who opens the file later, and the record outlives the caveat.
      */
     const { route, created } = await load();
@@ -268,8 +268,8 @@ describe("30. a display name is never an independent authority", () => {
     expect(created[0]!.locationName).toBeNull();
   });
 
-  it("is the ROSTER's name for an authorized roster salon in live mode, never the caller's", async () => {
-    // The roster exists now (`PRODUCTION_SALONS`), so the printed Location is
+  it("is the ROSTER's name for an authorized roster location in live mode, never the caller's", async () => {
+    // The roster exists now (`PRODUCTION_LOCATIONS`), so the printed Location is
     // looked up server-side from the VALIDATED id. What the caller typed is
     // still ignored.
     const { route, created } = await load({
@@ -288,7 +288,7 @@ describe("30. a display name is never an independent authority", () => {
   });
 
   it("is kept in DEMO mode, where it is explicitly synthetic", async () => {
-    // Preview carries the standing synthetic-data notice, the demo salon names
+    // Preview carries the standing synthetic-data notice, the demo location names
     // are the point of the fixture, and nothing there is an HR record.
     const { route, created } = await load({ demo: true, scope: null });
     await route.POST(
@@ -296,7 +296,7 @@ describe("30. a display name is never an independent authority", () => {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-ask-sunny-demo-role": "location_manager",
+          "x-ask-bubbles-demo-role": "location_manager",
         },
         body: JSON.stringify({
           templateKey: "dpoa",
@@ -313,7 +313,7 @@ describe("30. a display name is never an independent authority", () => {
 
 /* ======================================= what did NOT change (31–33) == */
 
-describe("31. a form with no salon is still a form", () => {
+describe("31. a form with no location is still a form", () => {
   it("creates it, rather than refusing for a field nobody asked for", async () => {
     const { route, created } = await load();
     const response = await route.POST(post({ templateKey: "dpoa", employeeName: "Sarah Jones" }));
@@ -349,7 +349,7 @@ describe("32. preview mode is unchanged", () => {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-ask-sunny-demo-role": "location_manager",
+        "x-ask-bubbles-demo-role": "location_manager",
       },
       body: JSON.stringify({
         templateKey: "dpoa",
@@ -400,7 +400,7 @@ describe("33. the template's own permission is still what is enforced", () => {
  */
 describe("15. a chat-created form is authorized like any other", () => {
   it("applies the TEMPLATE's own permission, not chat's opinion of it", async () => {
-    // An Assistant Salon Director holds `create_coaching` — a different
+    // An Assistant Location Director holds `create_coaching` — a different
     // permission from `create_coaching_form` — and no form permission at all.
     const { route, created } = await load({ role: "assistant_manager" });
     const response = await route.POST(
@@ -465,12 +465,12 @@ describe("14. the server pins the version; the browser never names one", () => {
   });
 });
 
-describe("16-17. a foreign salon cannot be created by bypassing the UI", () => {
+describe("16-17. a foreign location cannot be created by bypassing the UI", () => {
   it("refuses the exact body a tampered proposal would produce", async () => {
     /*
      * The attack the inline flow makes easy to attempt: the proposal is in
      * IndexedDB, so `locationId` is one edit away. The UI never offers Create
-     * draft for an unresolved salon — and that is irrelevant, because this
+     * draft for an unresolved location — and that is irrelevant, because this
      * route does not know or care what the UI offered.
      */
     const { route, created } = await load();
@@ -507,7 +507,7 @@ describe("16-17. a foreign salon cannot be created by bypassing the UI", () => {
 });
 
 describe("46. a chat-created form is a canonical instance", () => {
-  it("records source ask_sunny, and nothing chat-specific alongside it", async () => {
+  it("records source assistant, and nothing chat-specific alongside it", async () => {
     const { route, created } = await load();
     await route.POST(
       post({
@@ -524,7 +524,7 @@ describe("46. a chat-created form is a canonical instance", () => {
     expect(created[0]!.locationId).toBe("loc-0101");
   });
 
-  it("carries no salon display name, because none is authoritative", async () => {
+  it("carries no location display name, because none is authoritative", async () => {
     // `createInlineForm` sends no `locationName`, and the route would drop one
     // anyway if the id had been refused. See docs/chat-phase-3.md.
     const { route, created } = await load();
@@ -540,7 +540,7 @@ describe("46. a chat-created form is a canonical instance", () => {
     expect(created[0]!.locationName).toBeNull();
   });
 
-  it("falls back to manual for any source that is not ask_sunny", async () => {
+  it("falls back to manual for any source that is not assistant", async () => {
     // The route allow-lists rather than echoing, so a caller cannot invent a
     // third provenance value that Form Monitoring has never heard of.
     const { route, created } = await load();

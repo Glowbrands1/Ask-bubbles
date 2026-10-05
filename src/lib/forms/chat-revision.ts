@@ -150,7 +150,7 @@ export async function reviseActiveForm(input: {
   const notes = managerContext(input.history, { content: input.question }).text;
   const currentText = [...current.values()].map((entry) => entry.value ?? "").join("\n");
 
-  let scope: RevisionScope = scopeRevision(input.question, labelled, new Set<string>());
+  const scope: RevisionScope = scopeRevision(input.question, labelled, new Set<string>());
   if (asksDate) {
     const more = (scope.mode === "fields" || scope.mode === "findings") && scope.keys.size > 0;
     if (!more) return dateReply(dateLines, dateChanged ? input.instanceId : null);

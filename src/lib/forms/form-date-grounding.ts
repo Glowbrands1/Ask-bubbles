@@ -7,7 +7,7 @@
  * calendar date:
  *
  *   "Observed: On September 10, 2026, Sarah Test was observed wearing a mini
- *    skirt at the Kearny salon location…"
+ *    skirt at the Kearny location location…"
  *
  * The manager had said "3. today". The narrative guard, correctly, treats a
  * date the manager never gave as an ungrounded specific — and, correctly for

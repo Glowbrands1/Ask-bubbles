@@ -59,7 +59,11 @@ export const WOVEN_MIN_COMPLETENESS_ENV = "WOVEN_MIN_COMPLETENESS_PERCENT";
  * one), and while it is unset nobody is eligible.
  */
 export const WOVEN_LOGIN_EMAIL_DOMAINS_ENV = "WOVEN_LOGIN_EMAIL_DOMAINS";
-/** Optional. Woven's CompanyID (a GUID). Without it, Woven picks the company and says which it chose. */
+/**
+ * Woven's CompanyID (a GUID). REQUIRED for a sync: without it the sync stays
+ * off. The read-only validation runs without it and reports which company
+ * Woven would choose, which is how the id is found.
+ */
 export const WOVEN_COMPANY_ID_ENV = "WOVEN_COMPANY_ID";
 /** Optional. The token request's `Platform` integer (1–4, unnamed in the spec). */
 export const WOVEN_PLATFORM_ENV = "WOVEN_PLATFORM";
@@ -73,7 +77,7 @@ export const WOVEN_CREDENTIAL_ENV = [
 
 const DEFAULTS = {
   /*
-   * 100 per page: a salon estate of a few hundred active staff is a handful of
+   * 100 per page: a location estate of a few hundred active staff is a handful of
    * pages, and a page is small enough that one failing costs little to retry.
    */
   pageSize: 100,
@@ -145,7 +149,7 @@ export interface WovenConfig {
   minCompletenessPercent: number;
   /** Lower-cased login-eligible domains. Empty means NOBODY is login-eligible. Never filters storage. */
   loginEmailDomains: string[];
-  /** Woven CompanyID for the token request, when configured. Not a secret. */
+  /** Woven CompanyID for the token request. Required for a sync. Not a secret. */
   companyId: string | null;
   /** The token request's Platform integer, when configured. */
   platform: number | null;
@@ -260,17 +264,31 @@ export function readWovenConfig(env: Env = process.env): WovenConfig {
   if (!username) missingCredentials.push(WOVEN_USERNAME_ENV);
   if (password.length === 0) missingCredentials.push(WOVEN_PASSWORD_ENV);
 
-  const enabled = readFlag(env, WOVEN_SYNC_ENABLED_ENV);
+  const companyId = readCompanyId(env, problems);
+  /*
+   * A SYNC NEEDS AN EXPLICIT COMPANY. Without WOVEN_COMPANY_ID, Woven chooses
+   * the company for a login that can see several — and a shared login could
+   * then pull another company's people into this deployment. So the sync
+   * stays off until the id is set; the read-only validation (which is how the
+   * id is discovered) still runs.
+   */
+  const syncRequested = readFlag(env, WOVEN_SYNC_ENABLED_ENV);
+  if (syncRequested && companyId === null) {
+    problems.push(
+      `${WOVEN_SYNC_ENABLED_ENV} is on but ${WOVEN_COMPANY_ID_ENV} is not set, so the sync stays off. Run the read-only validation to find the CompanyID.`,
+    );
+  }
+  const enabled = syncRequested && companyId !== null;
   const validationEnabled = readFlag(env, WOVEN_VALIDATION_ENABLED_ENV);
   const writesEnabled = readFlag(env, WOVEN_SYNC_WRITES_ENABLED_ENV);
   const scheduleEnabled = readFlag(env, WOVEN_SYNC_SCHEDULE_ENABLED_ENV);
 
-  if (writesEnabled && !enabled) {
+  if (writesEnabled && !syncRequested) {
     problems.push(
       `${WOVEN_SYNC_WRITES_ENABLED_ENV} is on but ${WOVEN_SYNC_ENABLED_ENV} is off, so no sync runs and nothing is saved.`,
     );
   }
-  if (scheduleEnabled && !enabled) {
+  if (scheduleEnabled && !syncRequested) {
     problems.push(
       `${WOVEN_SYNC_SCHEDULE_ENABLED_ENV} is on but ${WOVEN_SYNC_ENABLED_ENV} is off, so the schedule starts nothing.`,
     );
@@ -315,7 +333,7 @@ export function readWovenConfig(env: Env = process.env): WovenConfig {
       problems,
     ),
     loginEmailDomains: readDomains(env, problems),
-    companyId: readCompanyId(env, problems),
+    companyId,
     platform: readPlatform(env, problems),
     problems,
   };

@@ -25,9 +25,9 @@
  * store's initial state is `DEMO_CONVERSATIONS` in both modes, and the
  * `chat_conversations` persist effect is the only one with no demo-mode guard,
  * so `conv-seed-1 … conv-seed-6` and their `msg-s*` turns were written to the
- * browser of every real person who has ever opened Ask Sunny.
+ * browser of every real person who has ever opened Ask Bubbles.
  *
- * They are fabricated. A manager never asked them and Sunny never answered
+ * They are fabricated. A manager never asked them and Bubbles never answered
  * them. Importing them would put invented history into a real person's account,
  * where it would be indistinguishable from the real thing.
  *
@@ -90,7 +90,7 @@ const TIMESTAMP_CHARS = 8;
 /**
  * The earliest minting time treated as real.
  *
- * Ask Sunny did not exist before this, so an id claiming to predate it was not
+ * Ask Bubbles did not exist before this, so an id claiming to predate it was not
  * minted by `createId` on a correctly-set clock. Rejecting is the safe reading:
  * the cost is that a browser with a badly wrong clock has its history declined
  * and SAID SO in the import result, rather than quietly filed under a date

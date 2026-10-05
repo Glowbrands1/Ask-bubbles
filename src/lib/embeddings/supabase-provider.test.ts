@@ -310,7 +310,7 @@ describe("SupabaseEmbeddingProvider", () => {
  * HTTP 546 — WORKER_RESOURCE_LIMIT
  * ============================================================================
  *
- * THE LIVE FAILURE THESE PIN. A 58-page PDF was uploaded to the Ask Sunny Dev
+ * THE LIVE FAILURE THESE PIN. A 58-page PDF was uploaded to the Ask Bubbles Dev
  * project and never indexed. Its first batch of 16 chunks came back 546; the
  * function's own logs recorded `sb_error_code: WORKER_RESOURCE_LIMIT` alongside
  * `CPU Time exceeded` and a worker shutdown, at 2357 ms and 2451 ms of

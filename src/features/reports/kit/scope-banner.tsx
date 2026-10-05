@@ -3,13 +3,13 @@
  *
  * The banner itself said the thing that still needs saying — this workbook is
  * one recipient's filtered copy, so any figure on the page is a figure about
- * those salons and never the chain's — and it now says it on the shared
+ * those locations and never the chain's — and it now says it on the shared
  * freshness line at the top of all five tabs, in a manager's words. See the
  * note below.
  *
- * EVERY NUMBER IN THE SENTENCE COMES FROM THE DATABASE. The salon count and the
+ * EVERY NUMBER IN THE SENTENCE COMES FROM THE DATABASE. The location count and the
  * period are read from `comp_sales_report_scope`, which counts them from the
- * live facts rather than from a stored summary. Hard-coding "15 salons" would
+ * live facts rather than from a stored summary. Hard-coding "15 locations" would
  * make the banner a claim that could quietly stop being true; counting it makes
  * the banner a measurement that cannot.
  */
@@ -38,10 +38,10 @@ export function formatPeriodEnd(periodEnd: string): string {
  * nobody mounts is a second place for the wording to drift back.
  *
  * WHAT THEY SAID IS NOT LOST. All four facts — the period, how current it is,
- * how many salons are included and whether the delivery covered more — are on
+ * how many locations are included and whether the delivery covered more — are on
  * `features/reports/freshness-line.tsx`, in one line, on all five tabs, in
  * Central Time and in a manager's words. The recipient-slice caveat survives as
- * "this delivery covered N salons across the chain", which is the same claim
+ * "this delivery covered N locations across the chain", which is the same claim
  * without the internal noun.
  *
  * `formatPeriodEnd` stays: the filter bar labels its period menu with it.

@@ -25,10 +25,10 @@ import {
  * THE TWO FAILURES THIS RULES OUT are both worse than an empty section, which
  * is what makes them worth a test rather than a comment:
  *
- *   A DEAD LINK. A rendered anchor to nowhere, discovered by a Salon Director
+ *   A DEAD LINK. A rendered anchor to nowhere, discovered by a Location Director
  *   rather than by a developer.
  *
- *   A RELATIVE URL. `/training` from configuration resolves against Ask Sunny's
+ *   A RELATIVE URL. `/training` from configuration resolves against Ask Bubbles'
  *   own origin and produces a link to a page that does not exist here — the
  *   exact failure this module exists to avoid, arriving through configuration
  *   instead of through code.
@@ -127,7 +127,7 @@ describe("a configured value that would produce a broken link", () => {
   });
 
   it("refuses a value that is not a URL at all", () => {
-    for (const value of ["ask sunny training", "https://", "::::"]) {
+    for (const value of ["ask bubbles training", "https://", "::::"]) {
       expect(trainingLinks({ [TEAMS_TRAINING_URL_ENV]: value })[0].href, value).toBeNull();
     }
   });

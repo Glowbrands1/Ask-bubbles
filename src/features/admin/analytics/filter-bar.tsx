@@ -38,13 +38,13 @@ export function AnalyticsFilterBar({
   base,
   filters,
   districts,
-  salons,
+  locations,
   roles,
 }: {
   base: string;
   filters: AnalyticsFilters;
-  districts: string[];
-  salons: { id: string; name: string; district: string | null }[];
+  districts: { id: string; label: string }[];
+  locations: { id: string; name: string; districtId: string | null; district: string | null }[];
   roles: Role[];
 }) {
   const { apply, pending } = useQueryNavigation(base);
@@ -55,14 +55,14 @@ export function AnalyticsFilterBar({
   };
 
   /*
-   * THE LOCATION LIST NARROWS WITH THE DISTRICT, and the selected salon is
-   * cleared when it does. Leaving a salon selected from another district would
+   * THE LOCATION LIST NARROWS WITH THE DISTRICT, and the selected location is
+   * cleared when it does. Leaving a location selected from another district would
    * produce an empty page whose two controls contradict each other, with nothing
    * on screen explaining why.
    */
-  const visibleSalons = filters.district
-    ? salons.filter((salon) => salon.district === filters.district)
-    : salons;
+  const visibleLocations = filters.district
+    ? locations.filter((location) => location.districtId === filters.district)
+    : locations;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -87,7 +87,7 @@ export function AnalyticsFilterBar({
 
       {/*
         A CONTROL WITH ONE OPTION CANNOT CHANGE THE VIEW, so it is not drawn —
-        the same rule the Comp Report filter bar follows. With a single district
+        With a single district
         on record, a District dropdown is furniture that implies a choice the
         estate does not have.
       */}
@@ -97,8 +97,8 @@ export function AnalyticsFilterBar({
           options={[
             { value: "", label: "All districts" },
             ...districts.map((district) => ({
-              value: district,
-              label: district,
+              value: district.id,
+              label: district.label,
             })),
           ]}
           selected={filters.district ?? ""}
@@ -106,7 +106,7 @@ export function AnalyticsFilterBar({
             push({
               ...filters,
               district: value === "" ? null : value,
-              salonId: null,
+              locationId: null,
             })
           }
           pending={pending}
@@ -114,21 +114,21 @@ export function AnalyticsFilterBar({
         />
       ) : null}
 
-      {salons.length > 1 ? (
+      {locations.length > 1 ? (
         <SingleSelectMenu
           label="Location"
           options={[
             { value: "", label: "All locations" },
-            ...visibleSalons.map((salon) => ({
-              value: salon.id,
-              label: salon.name,
-              note: salon.district ?? undefined,
-              searchText: salon.district ?? undefined,
+            ...visibleLocations.map((location) => ({
+              value: location.id,
+              label: location.name,
+              note: location.district ?? undefined,
+              searchText: location.district ?? undefined,
             })),
           ]}
-          selected={filters.salonId ?? ""}
+          selected={filters.locationId ?? ""}
           onChange={(value) =>
-            push({ ...filters, salonId: value === "" ? null : value })
+            push({ ...filters, locationId: value === "" ? null : value })
           }
           pending={pending}
           emptyLabel="All locations"

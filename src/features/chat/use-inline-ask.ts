@@ -18,7 +18,7 @@ import { announceFormUpdate } from "./form-update-events";
 
 /**
  * =============================================================================
- * ASKING SUNNY WITHOUT LEAVING THE PAGE
+ * ASKING BUBBLES WITHOUT LEAVING THE PAGE
  * =============================================================================
  *
  * The send path the Overview's band and the report tabs' ask bar both use.
@@ -40,7 +40,7 @@ import { announceFormUpdate } from "./form-update-events";
  *   2. THE THREAD LIVES IN THE STORE, NOT IN LOCAL STATE. Only the
  *      conversation's id is held here. That is what lets the exchange survive a
  *      refresh, makes `history` on a follow-up the real thread rather than an
- *      empty list, and lets "Continue in Ask Sunny" adopt the SAME conversation
+ *      empty list, and lets "Continue in Ask Bubbles" adopt the SAME conversation
  *      instead of replaying it.
  *
  *   3. A FAILED TURN IS A STORED TURN. The question is written before the
@@ -48,7 +48,7 @@ import { announceFormUpdate } from "./form-update-events";
  *      ever lost to silence.
  *
  * IT SENDS NO FIGURES. `reportContext` is pointers only — which family, which
- * period, which salons, which measure — and there is nowhere in it to put a
+ * period, which locations, which measure — and there is nowhere in it to put a
  * number. The server re-reads the report for itself, which is what stops a stale
  * render or an edited DOM from being treated as a fact about money.
  *
@@ -69,7 +69,7 @@ export interface InlineAskOptions {
    * WHERE THIS ASK BAR LIVES.
    *
    * The one fact about a turn that only the browser knows, and the thing that
-   * makes "where is Ask Sunny actually used?" answerable. `reportContext`
+   * makes "where is Ask Bubbles actually used?" answerable. `reportContext`
    * cannot stand in for it: the Overview band and the Google Reviews bar send
    * none, and a question about Sales Totals can be asked from the chat tab as
    * easily as from the Sales Totals bar.
@@ -199,7 +199,7 @@ export function useInlineAsk({ reportContext, onActiveChange, surface }: InlineA
           continueProposalTemplateKey: continuationFor(history)?.templateKey,
           /*
            * The form this conversation last created, so "change her new
-           * location to salon 24" can correct it. Revalidated server-side.
+           * location to location 24" can correct it. Revalidated server-side.
            */
           activeFormInstanceId: activeFormInstanceFor(history),
           /* Pointers at the view. Never a figure — see the header. */

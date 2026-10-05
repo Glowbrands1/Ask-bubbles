@@ -75,7 +75,7 @@ export function directoryRowFromView(row: Record<string, unknown>): DirectoryRow
     primaryLocationMappingStatus: ["unmapped", "mapped", "ignored"].includes(String(row.primary_location_mapping_status))
       ? (row.primary_location_mapping_status as LocationMapStatus)
       : null,
-    primarySalonNumber: str(row.primary_salon_number),
+    primaryLocationCode: str(row.primary_location_code),
     additionalLocations: locationsFrom(row.additional_locations),
     temporaryOrExpiringLocations: locationsFrom(row.temporary_or_expiring_locations),
     activeLocationCount: num(row.active_location_count),
@@ -95,7 +95,7 @@ export function directoryRowFromView(row: Record<string, unknown>): DirectoryRow
   };
 }
 
-/** Every directory row. A salon estate is hundreds of people, so the tab filters in memory with `views.ts`. */
+/** Every directory row. A location estate is hundreds of people, so the tab filters in memory with `views.ts`. */
 export async function loadDirectoryRows(): Promise<DirectoryRow[]> {
   const db = getSupabaseAdmin();
   const rows: DirectoryRow[] = [];

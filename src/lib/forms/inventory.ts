@@ -14,7 +14,7 @@ import type { TemplateSummary } from "./repository";
  * ============================================================================
  *
  * THE PROBLEM THIS EXISTS TO REMOVE. Asked "what forms do we use for corrective
- * action?", Sunny had nothing but retrieved policy text to answer from — the
+ * action?", Bubbles had nothing but retrieved policy text to answer from — the
  * Forms Library was not in the prompt at all. A language model asked to name
  * forms, with no list of forms, names plausible ones. The reference platform did
  * exactly that: it described a "Role-Play Evaluation" and a "Follow-Up Coaching
@@ -74,7 +74,7 @@ export interface InventoryEntry {
   requiredPermission: string;
   /** Whether THIS actor holds that permission. */
   canCreate: boolean;
-  /** Whether Sunny can create and edit it inside the conversation. */
+  /** Whether Bubbles can create and edit it inside the conversation. */
   inlineCreation: boolean;
 }
 
@@ -144,7 +144,7 @@ export function creatable(inventory: FormInventory): InventoryEntry[] {
 }
 
 /**
- * The templates Sunny may PUT FORWARD, in display order.
+ * The templates Bubbles may PUT FORWARD, in display order.
  *
  * `creatable` is the authorization answer and stays exactly that — it is what
  * "may this person start this form" means, and the Forms screens and the
@@ -153,7 +153,7 @@ export function creatable(inventory: FormInventory): InventoryEntry[] {
  * has not named a form. See `chooser.ts` for which are withheld and why.
  *
  * A withheld template is still creatable, still published and still answered
- * for by name. It is only never the one Sunny brings up first.
+ * for by name. It is only never the one Bubbles brings up first.
  */
 export function offerable(inventory: FormInventory): InventoryEntry[] {
   return creatable(inventory).filter((entry) => companyFormFor(entry.templateKey)?.offeredInChooser === true);
@@ -178,7 +178,7 @@ export function entryFor(
  *
  * The labels come from `FORM_CATEGORIES` rather than being written again here,
  * so "HR & Performance Forms" is one string: the heading a manager sees on the
- * page and the words Sunny uses for it in a sentence cannot drift apart, which
+ * page and the words Bubbles uses for it in a sentence cannot drift apart, which
  * is the whole point of telling somebody where a form is.
  */
 export function groupedForActor(
@@ -188,12 +188,12 @@ export function groupedForActor(
 }
 
 /**
- * The same grouping, over the templates Sunny may put forward.
+ * The same grouping, over the templates Bubbles may put forward.
  *
  * SEPARATE FROM `groupedForActor` RATHER THAN REPLACING IT, because the two
  * answer different questions. "Where are the forms, and how are they grouped?"
  * describes the whole library, which still carries every category it always
- * did; "which forms can I use?" is Sunny offering a shortlist, and that is
+ * did; "which forms can I use?" is Bubbles offering a shortlist, and that is
  * this one.
  */
 export function groupedOfferedForActor(
@@ -222,14 +222,14 @@ function grouped(
 
 /**
  * ============================================================================
- * WHERE THE FORMS ACTUALLY ARE IN ASK SUNNY
+ * WHERE THE FORMS ACTUALLY ARE IN ASK BUBBLES
  * ============================================================================
  *
  * Written once, here, because "where is that form?" is a question with a
  * ROLE-DEPENDENT answer and getting it wrong sends a manager to a page they
  * cannot open.
  *
- *   Ask Sunny (this chat)      needs `view_forms_workspace`. The ONLY place a
+ *   Ask Bubbles (this chat)      needs `view_forms_workspace`. The ONLY place a
  *                              form is created. There is no Create a Form
  *                              screen any more — it was removed so that every
  *                              form starts from a conversation — so this must
@@ -237,7 +237,7 @@ function grouped(
  *
  *   Forms → Form Templates     needs `manage_form_templates`. The template
  *                              library itself — the blank documents and their
- *                              versions. A Salon Director does NOT have this,
+ *                              versions. A Location Director does NOT have this,
  *                              and telling one to go there is the small wrong
  *                              answer that makes the whole reply untrustworthy.
  *
@@ -245,7 +245,7 @@ function grouped(
  *                              created, and what is due for follow-up.
  */
 export function formsLocationFor(role: Role | null): string {
-  const inChat = "**Ask Sunny**, right here — tell me which form you need and who it is for";
+  const inChat = "**Ask Bubbles**, right here — tell me which form you need and who it is for";
   if (role === null) {
     return `${inChat}.`;
   }

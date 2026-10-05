@@ -119,16 +119,16 @@ describe("the nine directory filters", () => {
   });
 });
 
-describe("mappingSummary: Corporate is an approved non-salon exception, not a missing salon", () => {
+describe("mappingSummary: Corporate is an approved non-location exception, not a missing location", () => {
   /* Shaped like the live rows: Corporate reviewed 'ignored'; NE Omaha Q still 'unmapped'. */
-  const CORPORATE = "JB & Associates - Corporate";
+  const CORPORATE = "Example Soap Co - Corporate";
   const base = byName("Odessa Farthing");
   const corporate = (over: Partial<DirectoryRow>): DirectoryRow => ({
     ...base,
     primaryLocationId: "LOC-CORP",
     primaryLocationName: CORPORATE,
     primaryLocationMappingStatus: "ignored",
-    primarySalonNumber: null,
+    primaryLocationCode: null,
     positionId: "POS-MAINT",
     positionName: "Maintenance",
     positionMappingStatus: "unmapped",
@@ -162,22 +162,22 @@ describe("mappingSummary: Corporate is an approved non-salon exception, not a mi
     expect(mappingSummary(corporate({ hasAllLocationAccess: null, activeLocationCount: 1 })).label).not.toContain("All locations");
   });
 
-  it("the tooltip keeps the facts: not a salon, position unmapped, and an unresolved location still counted", () => {
+  it("the tooltip keeps the facts: not a location, position unmapped, and an unresolved location still counted", () => {
     const s = mappingSummary(corporate({ hasAllLocationAccess: true, hasUnmappedLocation: true }));
     expect(s.label).toBe("Maintenance + All locations");
-    expect(s.note).toContain(`${CORPORATE} is not a salon`);
+    expect(s.note).toContain(`${CORPORATE} is not a location`);
     expect(s.note).toContain("Position not yet mapped");
     expect(s.note).toContain("still counted under Unmapped location");
     expect(mappingSummary(corporate({ hasAllLocationAccess: true, hasUnmappedLocation: false })).note).not.toContain("Unmapped location");
   });
 
-  it("a normal salon employee still needs a confirmed salon mapping", () => {
-    const salon = byName("Marisol Quintero");
-    expect(salon.primaryLocationMappingStatus).toBe("mapped");
-    expect(mappingSummary(salon)).toEqual({ label: "Mapped", tone: "ready", note: null });
-    expect(mappingSummary({ ...salon, primaryLocationMappingStatus: "unmapped", hasUnmappedLocation: true }).label).toBe("Location unmapped");
-    expect(mappingSummary({ ...salon, positionMappingStatus: "unmapped", hasUnmappedLocation: true }).label).toBe("Position + location");
-    expect(mappingSummary({ ...salon, positionMappingStatus: "unmapped" }).label).toBe("Position unmapped");
+  it("a normal location employee still needs a confirmed location mapping", () => {
+    const location = byName("Marisol Quintero");
+    expect(location.primaryLocationMappingStatus).toBe("mapped");
+    expect(mappingSummary(location)).toEqual({ label: "Mapped", tone: "ready", note: null });
+    expect(mappingSummary({ ...location, primaryLocationMappingStatus: "unmapped", hasUnmappedLocation: true }).label).toBe("Location unmapped");
+    expect(mappingSummary({ ...location, positionMappingStatus: "unmapped", hasUnmappedLocation: true }).label).toBe("Position + location");
+    expect(mappingSummary({ ...location, positionMappingStatus: "unmapped" }).label).toBe("Position unmapped");
     /* A missing email still wins, Corporate or not. */
     expect(mappingSummary(corporate({ emailAddress: null })).label).toBe("Missing email");
   });
@@ -186,13 +186,13 @@ describe("mappingSummary: Corporate is an approved non-salon exception, not a mi
     const q = { wovenLocationId: "LOC-NEQ", name: "NE Omaha Q", number: null, expiresOn: null };
     const corporateOnly = corporate({ hasAllLocationAccess: false, activeLocationCount: 1, hasUnmappedLocation: false });
     const corporateWithQ = corporate({ hasAllLocationAccess: true, activeLocationCount: 17, additionalLocations: [q], hasUnmappedLocation: true });
-    const salonWithQ = { ...byName("Marisol Quintero"), additionalLocations: [q], activeLocationCount: 2, hasUnmappedLocation: true };
-    const salonOnly = byName("Marisol Quintero");
-    const set = [corporateOnly, corporateWithQ, salonWithQ, salonOnly];
+    const locationWithQ = { ...byName("Marisol Quintero"), additionalLocations: [q], activeLocationCount: 2, hasUnmappedLocation: true };
+    const locationOnly = byName("Marisol Quintero");
+    const set = [corporateOnly, corporateWithQ, locationWithQ, locationOnly];
     const page = queryDirectory(set, parseDirectoryQuery({}));
     /* Corporate alone never counts; the unresolved location does, wherever it appears. */
     expect(page.filterCounts.unmapped_location).toBe(2);
-    expect(set.filter((r) => matchesFilter(r, "unmapped_location"))).toEqual([corporateWithQ, salonWithQ]);
+    expect(set.filter((r) => matchesFilter(r, "unmapped_location"))).toEqual([corporateWithQ, locationWithQ]);
     expect(queryDirectory(set, parseDirectoryQuery({ location: "LOC-NEQ" })).total).toBe(2);
   });
 
@@ -232,32 +232,32 @@ describe("the eligibility preview", () => {
   const domains = WOVEN_SAMPLE_DATASET.loginEmailDomains;
 
   it("is always a preview", () => {
-    expect(evaluateEligibility("marisol.quintero@sample-salons.test", preview, domains).previewOnly).toBe(true);
+    expect(evaluateEligibility("marisol.quintero@sample-locations.test", preview, domains).previewOnly).toBe(true);
   });
 
-  it("eligible: active, login domain, confirmed role, mapped salon, no login yet", () => {
-    const r = evaluateEligibility("MARISOL.QUINTERO@sample-salons.test", preview, domains);
+  it("eligible: active, login domain, confirmed role, mapped location, no login yet", () => {
+    const r = evaluateEligibility("MARISOL.QUINTERO@sample-locations.test", preview, domains);
     expect(r.verdict).toBe("eligible");
-    expect(r.employee).toMatchObject({ wouldCreateRole: "employee", wouldCreateScopeLevel: "location", primarySalonNumber: "S101" });
+    expect(r.employee).toMatchObject({ wouldCreateRole: "employee", wouldCreateScopeLevel: "location", primaryLocationCode: "S101" });
   });
 
   it("not eligible: terminated, not in Woven, not an address, or not at a login domain", () => {
-    expect(evaluateEligibility("delphine.harrow@sample-salons.test", preview, domains).verdict).toBe("not_eligible");
-    expect(evaluateEligibility("nobody@sample-salons.test", preview, domains).verdict).toBe("not_eligible");
+    expect(evaluateEligibility("delphine.harrow@sample-locations.test", preview, domains).verdict).toBe("not_eligible");
+    expect(evaluateEligibility("nobody@sample-locations.test", preview, domains).verdict).toBe("not_eligible");
     expect(evaluateEligibility("nope", preview, domains).verdict).toBe("not_eligible");
     const personal = evaluateEligibility("wren.castellano@personal-mail.test", preview, domains);
     expect(personal.verdict).toBe("not_eligible");
     expect(personal.reasons.join(" ")).toMatch(/login-email domain/);
   });
 
-  it("held for review: unconfirmed position, unmapped salon, or an existing login", () => {
-    expect(evaluateEligibility("rosalind.okafor@sample-salons.test", preview, domains).verdict).toBe("held_for_review");
-    expect(evaluateEligibility("theo.vantongeren@sample-salons.test", preview, domains).verdict).toBe("held_for_review");
-    expect(evaluateEligibility("jonah.brightwater@sample-salons.test", preview, domains).reasons.join(" ")).toMatch(/already exists/);
+  it("held for review: unconfirmed position, unmapped location, or an existing login", () => {
+    expect(evaluateEligibility("rosalind.okafor@sample-locations.test", preview, domains).verdict).toBe("held_for_review");
+    expect(evaluateEligibility("theo.vantongeren@sample-locations.test", preview, domains).verdict).toBe("held_for_review");
+    expect(evaluateEligibility("jonah.brightwater@sample-locations.test", preview, domains).reasons.join(" ")).toMatch(/already exists/);
   });
 
   it("with NO login domain configured, nobody is eligible", () => {
-    const r = evaluateEligibility("marisol.quintero@sample-salons.test", preview, []);
+    const r = evaluateEligibility("marisol.quintero@sample-locations.test", preview, []);
     expect(r.verdict).toBe("not_eligible");
     expect(r.reasons.join(" ")).toMatch(/WOVEN_LOGIN_EMAIL_DOMAINS/);
   });
@@ -268,9 +268,9 @@ describe("the eligibility preview", () => {
   });
 
   it("domain matching is exact and case-insensitive", () => {
-    expect(domainEligible("A@Sample-Salons.TEST", ["sample-salons.test"])).toBe(true);
-    expect(domainEligible("a@evil-sample-salons.test", ["sample-salons.test"])).toBe(false);
-    expect(domainEligible(null, ["sample-salons.test"])).toBe(false);
+    expect(domainEligible("A@Sample-Locations.TEST", ["sample-locations.test"])).toBe(true);
+    expect(domainEligible("a@evil-sample-locations.test", ["sample-locations.test"])).toBe(false);
+    expect(domainEligible(null, ["sample-locations.test"])).toBe(false);
   });
 });
 
@@ -286,7 +286,7 @@ describe("access drift", () => {
 });
 
 describe("the sample set is honest", () => {
-  it("every id is SAMPLE-, every salon is a Sample Salon, every email a test domain", () => {
+  it("every id is SAMPLE-, every location is a Sample Location, every email a test domain", () => {
     const all = JSON.stringify(WOVEN_SAMPLE_DATASET);
     for (const r of rows as readonly DirectoryRow[]) {
       expect(r.externalEmployeeId.startsWith("SAMPLE-")).toBe(true);

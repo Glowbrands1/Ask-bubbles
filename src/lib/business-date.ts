@@ -31,7 +31,7 @@
  *
  *   The reporting layer keeps ISO dates in UTC and infers no zone at all, which
  *   is correct for a workbook: a period is a label, not a moment. A follow-up
- *   IS a moment — "is this late?" is asked at a salon, in the morning, in the
+ *   IS a moment — "is this late?" is asked at a location, in the morning, in the
  *   United States — so UTC is the wrong ruler. At 8pm Eastern the UTC date has
  *   already rolled over, and a form due tomorrow would show as overdue that
  *   evening. That is precisely the failure this module prevents.
@@ -40,14 +40,14 @@
  *
  * THE ZONE IS EXPLICIT AND OVERRIDABLE. It is not read from the host, because
  * the host is a container in some region and has nothing to do with where the
- * salons are. `NEXT_PUBLIC_` so the same value is available on both sides of
+ * locations are. `NEXT_PUBLIC_` so the same value is available on both sides of
  * the render and the server and the browser can never disagree about what day
  * it is.
  *
  * The default is US Eastern. Sun Tan City operates across US zones, so no
  * single choice is exactly local everywhere; what matters is that it is a
  * BUSINESS zone rather than UTC, and that it is one value everything agrees on.
- * A salon an hour west sees a form become overdue an hour before its own
+ * A location an hour west sees a form become overdue an hour before its own
  * midnight, which is an hour of skew instead of four or five.
  */
 
@@ -136,7 +136,7 @@ export function shiftDays(date: string, days: number): string {
 /**
  * The last day of the business week containing `date`.
  *
- * SUNDAY TO SATURDAY, the US retail week — the one salon schedules and weekly
+ * SUNDAY TO SATURDAY, the US retail week — the one location schedules and weekly
  * review numbers are already read in. It matters for exactly one thing: what
  * "due this week" means on the Overview. On a Thursday it reaches to Saturday;
  * on a Saturday "this week" is today, and next Monday's follow-up is next

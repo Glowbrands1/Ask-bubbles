@@ -108,7 +108,7 @@ describe("the TypeScript", () => {
       /*
        * A BARE app_users column name. The Woven views expose prefixed copies
        * (`app_user_scope_level`, `mapped_scope_level`) and the position map has
-       * `ask_sunny_scope_level`; those are read-only views and a label, and the
+       * `mapped_scope_level`; those are read-only views and a label, and the
        * lookbehind lets them through while a real `scope_level` still fails.
        */
       expect(text, file).not.toMatch(/(?<![a-z_])(scope_primary_area_id|scope_also_covers_area_ids|scope_level)(?![a-z_])/);

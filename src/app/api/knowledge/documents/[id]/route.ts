@@ -17,7 +17,7 @@ import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
  * different heights.
  *
  * GET is `view_knowledge` — the same permission the original-file route asks
- * for, and for the same reason given there. Somebody Sunny just quoted a policy
+ * for, and for the same reason given there. Somebody Bubbles just quoted a policy
  * to, by name, is not being told anything new by being shown that policy's own
  * record. This is what keeps a citation clickable for a Regional Manager or an
  * Employee now that the Knowledge Base SCREEN is administrators-only.

@@ -20,7 +20,7 @@ import { ForgotPasswordForm } from "./forgot-password-form";
  *
  * THE ANSWER IS THE SAME WHETHER THE ADDRESS EXISTS OR NOT. The server answers
  * every well-formed request identically; this screen shows the same
- * "If this address has an Ask Sunny account…" confirmation for all of them.
+ * "If this address has an Ask Bubbles account…" confirmation for all of them.
  */
 
 const browserSupabase = vi.hoisted(() => ({
@@ -58,7 +58,7 @@ function request(email = EMAIL) {
 }
 
 describe("who makes the request", () => {
-  it("posts the address to the Ask Sunny endpoint", async () => {
+  it("posts the address to the Ask Bubbles endpoint", async () => {
     request();
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
@@ -104,7 +104,7 @@ describe("the answer is the same whatever the address is", () => {
   it("confirms with the existing wording", async () => {
     request();
     await waitFor(() => expect(screen.getByText(/Check your email/i)).toBeTruthy());
-    expect(screen.getByText(/has an Ask Sunny account/i)).toBeTruthy();
+    expect(screen.getByText(/has an Ask Bubbles account/i)).toBeTruthy();
   });
 
   it("confirms identically for an unknown address (the server says ok either way)", async () => {

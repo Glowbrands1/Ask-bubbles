@@ -214,7 +214,7 @@ export function ContentTab({ active, focus }: { active: boolean; focus?: Content
         <table className="w-full min-w-[1100px] text-left text-[13px]">
           <thead>
             <tr className="text-muted-foreground">
-              {["Title", "Type", "Woven status", "Audience", "Version", "Woven last updated", "First seen", "Last seen", "Last synced", "Sync state", "In Ask Sunny"].map((h) => (
+              {["Title", "Type", "Woven status", "Audience", "Version", "Woven last updated", "First seen", "Last seen", "Last synced", "Sync state", "In Ask Bubbles"].map((h) => (
                 <th key={h} className="px-3 py-2 font-medium whitespace-nowrap">
                   {h}
                 </th>
@@ -277,11 +277,11 @@ function ContentRowView({ row, expanded, onToggle }: { row: ContentRow; expanded
           <Badge tone={SYNC_STATE_TONE[row.syncState]}>{CONTENT_SYNC_STATE_LABEL[row.syncState]}</Badge>
         </td>
         <td className="px-3 py-2">
-          {row.askSunny.length === 0 ? (
+          {row.askBubbles.length === 0 ? (
             <span className="text-muted-foreground">—</span>
           ) : (
             <ul className="flex flex-col gap-0.5">
-              {row.askSunny.map((doc) => (
+              {row.askBubbles.map((doc) => (
                 <li key={doc.id}>
                   <Link className="text-primary hover:underline" href={`/knowledge/document/${encodeURIComponent(doc.id)}`}>
                     {doc.title}

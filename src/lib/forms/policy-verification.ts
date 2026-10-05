@@ -27,7 +27,7 @@ import { fieldsForVariant, type FormDocument } from "./document";
  * `formDerivedProvenance`, for the one field whose value is COPIED OFF THE FORM
  * — the ticked offense category, which makes no claim about a manual and so has
  * no manual to be checked against. `applyAssistantDraft` then refuses to write
- * a policy-grounded value that carries neither, so Ask Sunny cannot produce an
+ * a policy-grounded value that carries neither, so Ask Bubbles cannot produce an
  * unverified one.
  *
  * Which makes the inverse informative: an unverified policy value on a form is
@@ -93,4 +93,4 @@ export function unverifiedPolicyFields(
 export const POLICY_ACKNOWLEDGEMENT_REQUIRED = "policy_verification_required";
 
 export const POLICY_ACKNOWLEDGEMENT_MESSAGE =
-  "Official policy verification is incomplete. Ask Sunny could not verify one or more policy fields from an approved policy source. Review the applicable company policy before issuing this Corrective Action Form. If you have independently verified the policy, you may continue.";
+  "Official policy verification is incomplete. Ask Bubbles could not verify one or more policy fields from an approved policy source. Review the applicable company policy before issuing this Corrective Action Form. If you have independently verified the policy, you may continue.";

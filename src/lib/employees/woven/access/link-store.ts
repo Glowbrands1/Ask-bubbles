@@ -14,7 +14,7 @@ import { loadAccessPlan } from "./load";
  * admins confirming at once cannot both succeed.
  *
  * Writes `employee_account_links` and nothing else: no app_users row, no auth
- * call, no role, scope, status or salon.
+ * call, no role, scope, status or location.
  */
 export async function recordLinkReview(input: LinkReviewInput, reviewer: string): Promise<LinkRowToInsert> {
   const plan = await loadAccessPlan();

@@ -5,7 +5,7 @@ import type { SheetView, WorkbookView } from "./workbook";
  * THE PARSER SEAM.
  *
  * One parser per REPORT FAMILY, registered in `index.ts`. KPI, Personal Bonus
- * and Salon Bonus each become a new module implementing this interface; none of
+ * and Location Bonus each become a new module implementing this interface; none of
  * them touches this file, and none of them touches `CompSalesReportParser`.
  *
  * Deliberately NOT one parser with a growing `if (sheetName === ...)` chain.

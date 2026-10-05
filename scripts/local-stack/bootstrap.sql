@@ -2,7 +2,7 @@
 -- A SUPABASE-SHAPED DATABASE, FOR THE DISPOSABLE LOCAL STACK ONLY.
 -- ============================================================================
 --
--- Mirrors what Ask Sunny's Supabase project was observed to have (read-only
+-- Mirrors what Ask Bubbles' Supabase project was observed to have (read-only
 -- catalog check, 2 Oct 2026), so migrations and RLS behave as they do there:
 --
 --   * `supabase_admin` is the superuser; `postgres` is NOT — it is LOGIN,
@@ -11,12 +11,12 @@
 --     are NOLOGIN; `authenticator` (LOGIN, NOINHERIT) is PostgREST's login.
 --   * `supabase_auth_admin` owns the `auth` schema, as Supabase Auth expects.
 --   * Default privileges in `public` grant tables, functions and sequences to
---     anon, authenticated and service_role — which is why Ask Sunny's
+--     anon, authenticated and service_role — which is why Ask Bubbles'
 --     migrations revoke explicitly.
 --   * `postgres` may DELETE from auth.sessions / auth.refresh_tokens (granted
 --     after Supabase Auth has created them; see up.sh).
 --
--- `storage` is a stub: Ask Sunny's migrations only create buckets in it.
+-- `storage` is a stub: Ask Bubbles' migrations only create buckets in it.
 
 create role postgres login createrole createdb bypassrls password 'postgres';
 create role anon nologin;

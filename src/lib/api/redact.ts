@@ -63,5 +63,5 @@ export function describeError(error: unknown): string {
  * to write to the console, so the policy is enforced by there being one door.
  */
 export function logRouteError(route: string, error: unknown): void {
-  console.error(`[ask-sunny] ${route}: ${describeError(error)}`);
+  console.error(`[ask-bubbles] ${route}: ${describeError(error)}`);
 }

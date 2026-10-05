@@ -25,7 +25,7 @@ import { formsHeaders } from "./forms-fetch";
  * between them is the thing an administrator most needs to understand and it
  * cannot be understood one tab at a time:
  *
- *   DOCUMENT TEMPLATES are what Ask Sunny fills and what a generated PDF is
+ *   DOCUMENT TEMPLATES are what Ask Bubbles fills and what a generated PDF is
  *   drawn from. Editing one is editing the form.
  *
  *   UPLOADED PDF TEMPLATES are the official copies an administrator replaces.
@@ -41,7 +41,7 @@ import { formsHeaders } from "./forms-fetch";
  * THE REFERENCE'S LAYOUT, NOT ITS COLOURS. The supplied screenshot is a black
  * administration surface; what was being asked for there is the ARRANGEMENT —
  * two headed sections, a two-column grid, one line of status per card, one
- * action. Ask Sunny keeps its own approved palette, so the same structure
+ * action. Ask Bubbles keeps its own approved palette, so the same structure
  * arrives on the cream canvas.
  */
 
@@ -190,7 +190,7 @@ export function TemplateLibrary({
       {/* ------------------------------------------- DOCUMENT TEMPLATES --- */}
       <PanelHeading
         title="Document templates"
-        blurb="Edit these forms like a document — the page itself opens, and chips show where Ask Sunny fills the draft. Publishing creates a new immutable version; forms already finalized keep printing the version they were signed against."
+        blurb="Edit these forms like a document — the page itself opens, and chips show where Ask Bubbles fills the draft. Publishing creates a new immutable version; forms already finalized keep printing the version they were signed against."
       />
 
       {groupTemplatesByCategory(templates).map((category) => (
@@ -277,7 +277,7 @@ export function TemplateLibrary({
       <div className="mt-10">
         <PanelHeading
           title="Uploaded source documents"
-          blurb="Upload the document the business issues — PDF or Word — and Ask Sunny reads it into a DRAFT of the form above for you to check. The draft is not the form: the live version does not move until you open the draft, read it, and publish it, and forms already filled keep the version they were signed on. The file itself is kept byte for byte in the format it arrived in, versioned, and never overwritten."
+          blurb="Upload the document the business issues — PDF or Word — and Ask Bubbles reads it into a DRAFT of the form above for you to check. The draft is not the form: the live version does not move until you open the draft, read it, and publish it, and forms already filled keep the version they were signed on. The file itself is kept byte for byte in the format it arrived in, versioned, and never overwritten."
           icon={<Upload className="size-3.5" />}
         />
 
@@ -451,7 +451,7 @@ function DocumentState({ template }: { template: TemplateSummaryView }) {
           ? `Kept as the official copy. No form could be read out of it: ${template.documentProblem}`
           : "Kept as the official copy. No form has been read out of it.";
       default:
-        return "Upload the document the business issues, and Ask Sunny reads it into a draft of this form for you to review.";
+        return "Upload the document the business issues, and Ask Bubbles reads it into a draft of this form for you to review.";
     }
   })();
 

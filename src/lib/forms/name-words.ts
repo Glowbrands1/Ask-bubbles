@@ -83,7 +83,7 @@ export const NOT_A_TYPED_NAME = new Set([
   "performance", "went", "going", "goes",
   /*
    * COACHING FEEDBACK, 1 OCTOBER 2026. "since our coaching on bed sanitizing"
-   * named an employee "bed sanitizing". The salon-floor topics a coaching
+   * named an employee "bed sanitizing". The location-floor topics a coaching
    * form is about are never who it is for.
    */
   "bed", "beds", "sanitizing", "sanitising", "sanitize", "sanitise",
@@ -94,7 +94,7 @@ export const NOT_A_TYPED_NAME = new Set([
    * name is read (`maskTeamSubjectPhrases`); these are the same words on
    * their own, so a variant the mask does not cover still names nobody.
    */
-  "general", "group", "whole", "entire", "refresher", "team-wide", "salon-wide",
+  "general", "group", "whole", "entire", "refresher", "team-wide", "location-wide",
   "store-wide", "company-wide", "teamwide", "everyone's",
   /*
    * What people ask ABOUT a form rather than who it is for: "coaching tips",

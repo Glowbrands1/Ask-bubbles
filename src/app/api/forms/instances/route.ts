@@ -27,7 +27,7 @@ import type { Permission } from "@/types";
  * POST   /api/forms/instances   starts a form from a template's current version
  * DELETE /api/forms/instances   removes every DEMO DRAFT, by provenance
  *
- * The permission is the TEMPLATE's, not a blanket "forms" one: a Salon Director
+ * The permission is the TEMPLATE's, not a blanket "forms" one: a Location Director
  * may create a coaching form and not a disciplinary plan of action, and that
  * distinction is data on the template rather than a rule written here.
  */
@@ -49,9 +49,9 @@ export async function GET(request: Request) {
      * ==========================================================================
      *
      * This listed EVERY form in the company to anybody holding
-     * `view_form_monitoring` — which is every manager role. A Salon Director at
-     * one salon read the employee names, coaching topics and disciplinary
-     * history of every other salon.
+     * `view_form_monitoring` — which is every manager role. A Location Director at
+     * one location read the employee names, coaching topics and disciplinary
+     * history of every other location.
      *
      * Filtered HERE rather than in the screen, because a client-side filter is
      * a presentation choice and this is an access boundary: the rows would
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
      *
      * This read the whole company ordered by recency, took 200, and filtered
      * that page. Confidential — no foreign row reached the browser — and wrong
-     * as a history: across 22 salons, an authorized record older than 200
+     * as a history: across 22 locations, an authorized record older than 200
      * foreign ones never entered the page, so the filter could not return it
      * and a manager's own history silently lost rows.
      *
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
       locationName?: string | null;
       source?: "manual" | "assistant";
       formDate?: string;
-      /** The chat the proposal came from, for `checkProposalIsCurrent`. Ask Sunny only. */
+      /** The chat the proposal came from, for `checkProposalIsCurrent`. Ask Bubbles only. */
       conversation?: unknown;
     } | null;
 
@@ -170,15 +170,15 @@ export async function POST(request: Request) {
      *
      * This route accepted `locationId` and `locationName` and stored them
      * unchecked. The authenticated identity has carried an `AccessScope` all
-     * along — `authorizeForms` was discarding it — so nothing compared the salon
-     * on a disciplinary record against the salons the person filing it covers.
+     * along — `authorizeForms` was discarding it — so nothing compared the location
+     * on a disciplinary record against the locations the person filing it covers.
      *
      * ENFORCED HERE, AT THE ROUTE EVERY CALLER GOES THROUGH, rather than in the
      * chat orchestration that will use it next. A check that lives in one
      * caller is a check the next caller does not have.
      *
      * A REFUSAL IS A 403 WITH A REASON, not a silently dropped field. Quietly
-     * storing the form without its salon would file an HR document against
+     * storing the form without its location would file an HR document against
      * nobody's location and tell the manager it worked.
      */
     const location = authorizeLocation(actor.scope, body.locationId ?? null);
@@ -257,7 +257,7 @@ export async function DELETE(request: Request) {
 
 /**
  * ============================================================================
- * A SALON NAME NOBODY VERIFIED DOES NOT GO ON A LIVE HR RECORD
+ * A LOCATION NAME NOBODY VERIFIED DOES NOT GO ON A LIVE HR RECORD
  * ============================================================================
  *
  * THE NAME FOLLOWS THE ID, AND IS DROPPED WHEN THE ID IS. A location id and a
@@ -270,7 +270,7 @@ export async function DELETE(request: Request) {
  * again, and neither is bound to the validated location by anything
  * trustworthy. The name printed on the form is looked up from the production
  * roster by the VALIDATED ID, server-side; an id the roster does not know gets
- * no name. A wrong salon NAME on a disciplinary record is worse than no name.
+ * no name. A wrong location NAME on a disciplinary record is worse than no name.
  *
  * DEMO MODE KEEPS THE CALLER'S NAME, EXPLICITLY AS SYNTHETIC. Preview carries
  * the standing notice that only synthetic data belongs there, and nothing in
@@ -285,7 +285,7 @@ function resolveLocationName(
    * THE ROSTER EXISTS NOW, so the name is what the paragraph above said it
    * would become: resolved SERVER-SIDE from the validated id, never read from
    * the request. the company location roster is the authority, validated
-   * against reporting (`salonRosterMatches`). An id the roster does not know
+   * against reporting (`locationRosterMatches`). An id the roster does not know
    * gets no name rather than a guess, and a name the caller typed is still
    * ignored in live mode.
    */

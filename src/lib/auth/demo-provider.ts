@@ -20,7 +20,7 @@ import type {
  * compared or hashed, and no token is issued or validated.
  */
 
-const DEMO_ROLE_HEADER = "x-ask-sunny-demo-role";
+const DEMO_ROLE_HEADER = "x-ask-bubbles-demo-role";
 
 export class DemoAuthProvider implements AuthProvider {
   readonly kind = "demo" as const;

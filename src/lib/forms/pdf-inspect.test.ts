@@ -10,7 +10,7 @@ import {
 } from "./pdf-inspect";
 
 /**
- * "REPLACE WITH NEW PDF" IS NOT A PROMISE THAT ASK SUNNY CAN FILL IT.
+ * "REPLACE WITH NEW PDF" IS NOT A PROMISE THAT ASK BUBBLES CAN FILL IT.
  *
  * Every reference PDF supplied for this feature was checked in Phase 0 and
  * carries no AcroForm fields at all — they are print captures. So the inspector

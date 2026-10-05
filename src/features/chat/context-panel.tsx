@@ -84,7 +84,7 @@ export function ContextPanel({
           </Button>
           {busy ? (
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-              Sunny is answering. This will be ready the moment that finishes.
+              Bubbles is answering. This will be ready the moment that finishes.
             </p>
           ) : null}
           {/*

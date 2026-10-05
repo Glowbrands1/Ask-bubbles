@@ -35,7 +35,7 @@ import type { ReportRoute } from "./reports-routes";
  * strip so the data gets the room."
  *
  * One strip, four things in it: the title, the sub-line, the provenance chips,
- * and the report-scoped Ask Sunny bar. No greeting and no shortcuts row — those
+ * and the report-scoped Ask Bubbles bar. No greeting and no shortcuts row — those
  * belong to the Overview's full-height band. The measured claim the artifact
  * makes for this is that the first real number starts 180px down the page
  * instead of 400px, and that is the whole point of the treatment.
@@ -55,7 +55,7 @@ export function ReportFrame({
 }: {
   report: ReportRoute;
   /**
-   * The report-level action, which in practice is "Ask Sunny about this
+   * The report-level action, which in practice is "Ask Bubbles about this
    * report".
    *
    * A SLOT RATHER THAN THE COMPONENT ITSELF, because the frame does not know
@@ -75,7 +75,7 @@ export function ReportFrame({
    * A SLOT for the same reason `action` is one: the three report families keep
    * provenance in three different shapes, and the frame has no business
    * learning any of them. What the frame guarantees is the POSITION — top
-   * right of the band, beside the title — so "15 of 252 salons chain-wide" is
+   * right of the band, beside the title — so "15 of 252 locations chain-wide" is
    * in the same place on every tab.
    *
    * The artifact's argument for hoisting these out of the page body: "they are
@@ -126,7 +126,7 @@ export function ReportFrame({
  *   the red corner glow          the one sanctioned appearance of the red-light
  *                                red, run a step quieter here than on the
  *                                Overview because this strip is a third as tall
- *   the LAST WORD IN YELLOW      "Salon *Performance*" — one yellow accent in
+ *   the LAST WORD IN YELLOW      "Location *Performance*" — one yellow accent in
  *                                the title, so the heading carries the brand
  *                                without a second filled object
  */
@@ -148,7 +148,7 @@ export function ReportBand({
   return (
     <div
       className={cn(
-        "border-b-4 border-brand-yellow bg-band bg-[image:var(--band-glow-slim)] px-5 pt-4 pb-5 sm:px-6",
+        "border-b-4 border-brand-accent bg-band bg-[image:var(--band-glow-slim)] px-5 pt-4 pb-5 sm:px-6",
         className,
       )}
     >
@@ -156,7 +156,7 @@ export function ReportBand({
         <div className="min-w-0">
           <h1 className="display text-[24px] tracking-[0.012em] text-band-foreground sm:text-[28px]">
             {lead ? `${lead} ` : ""}
-            <span className="text-brand-yellow">{accent}</span>
+            <span className="text-brand-accent">{accent}</span>
           </h1>
           {description ? (
             <p className="mt-1.5 text-[11.5px] leading-snug text-band-muted-foreground">

@@ -11,11 +11,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  * ============================================================================
  *
  * Runs only when `scripts/local-stack/up.sh` has started the local stack and
- * its environment is exported (`ASK_SUNNY_LOCAL_STACK=1`). Never against the
- * Ask Sunny project: every URL and key below comes from the local env file, and
+ * its environment is exported (`ASK_BUBBLES_LOCAL_STACK=1`). Never against the
+ * Ask Bubbles project: every URL and key below comes from the local env file, and
  * the suite refuses a URL that is not 127.0.0.1.
  *
- *   set -a; . /tmp/ask-sunny-local-stack/env; set +a
+ *   set -a; . /tmp/ask-bubbles-local-stack/env; set +a
  *   npx vitest run src/lib/auth/revocation.local-stack.test.ts
  *
  * It drives the REAL code path an administrator's "Disable" takes —
@@ -25,7 +25,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  * what the person can and cannot still do.
  */
 
-const ENABLED = process.env.ASK_SUNNY_LOCAL_STACK === "1";
+const ENABLED = process.env.ASK_BUBBLES_LOCAL_STACK === "1";
 const URL_ = process.env.LOCAL_STACK_URL ?? "";
 const ANON = process.env.LOCAL_ANON_KEY ?? "";
 const SERVICE = process.env.LOCAL_SERVICE_ROLE_KEY ?? "";
@@ -105,11 +105,11 @@ describe.skipIf(!ENABLED)("termination on a real Supabase Auth server (local sta
     const profile = (id: string, email: string, role: string, scope: Record<string, unknown>) => ({
       id, email, display_name: email.split("@")[0], role, status: "active", ...scope,
     });
-    const salon = { scope_level: "location", scope_primary_area_id: "loc-0307", scope_also_covers_area_ids: [] };
+    const location = { scope_level: "location", scope_primary_area_id: "loc-0307", scope_also_covers_area_ids: [] };
     const global = { scope_level: "global", scope_primary_area_id: null, scope_also_covers_area_ids: [] };
     const { error: profilesError } = await admin.from("app_users").insert([
-      profile(targetId, TARGET_EMAIL, "location_manager", salon),
-      profile(controlId, CONTROL_EMAIL, "location_manager", salon),
+      profile(targetId, TARGET_EMAIL, "location_manager", location),
+      profile(controlId, CONTROL_EMAIL, "location_manager", location),
       profile(adminId, ADMIN_EMAIL, "admin", global),
     ]);
     if (profilesError) throw new Error(`profiles: ${profilesError.message}`);
@@ -141,7 +141,7 @@ describe.skipIf(!ENABLED)("termination on a real Supabase Auth server (local sta
     /* Disposable stack; nothing to clean in a shared system. */
   });
 
-  it("BEFORE: the person can use Ask Sunny's API, read knowledge with their token, and holds two sessions", async () => {
+  it("BEFORE: the person can use Ask Bubbles' API, read knowledge with their token, and holds two sessions", async () => {
     const { authorizeRequest } = await import("@/lib/auth/server");
     const context = await authorizeRequest(new Request("http://127.0.0.1:3000/api/x", { headers: { cookie: cookieA } }), "ask_questions");
     expect(context.identity.subject).toBe(targetId);
@@ -182,7 +182,7 @@ describe.skipIf(!ENABLED)("termination on a real Supabase Auth server (local sta
     }
   });
 
-  it("cannot use Ask Sunny's API with the still-unexpired access token in their cookie", async () => {
+  it("cannot use Ask Bubbles' API with the still-unexpired access token in their cookie", async () => {
     const { authorizeRequest } = await import("@/lib/auth/server");
     await expect(
       authorizeRequest(new Request("http://127.0.0.1:3000/api/x", { headers: { cookie: cookieA } }), "ask_questions"),

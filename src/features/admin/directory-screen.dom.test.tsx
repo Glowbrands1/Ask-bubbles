@@ -95,7 +95,7 @@ describe("the directory never offers a password", () => {
     render(<DirectoryScreen initialUsers={[user()]} />);
 
     expect(document.querySelector('input[type="password"]')).toBeNull();
-    expect(screen.getByText(/Ask Sunny never handles passwords/i)).toBeTruthy();
+    expect(screen.getByText(/Ask Bubbles never handles passwords/i)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /set password|copy link|show link/i })).toBeNull();
   });
 

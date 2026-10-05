@@ -9,7 +9,7 @@ import { DirectoryError, patchUser } from "@/lib/admin/user-directory";
  *
  * The body may carry a display name, a role, a status and a scope. It may not
  * carry a password, and there is no branch here that would read one: passwords
- * belong to Supabase Auth, and an endpoint that accepted one would be Ask Sunny
+ * belong to Supabase Auth, and an endpoint that accepted one would be Ask Bubbles
  * handling a credential it has no business seeing.
  *
  * The two refusals that matter — no changing your own role or status, and the

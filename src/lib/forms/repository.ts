@@ -494,7 +494,7 @@ async function publishSeedRevision(
    * does not say the database is behind — an administrator may have applied the
    * same document already, through the editor or by publishing a draft read out
    * of an uploaded file. That is exactly what happened to the Coaching Form: its
-   * new document reached Ask Sunny Dev as a published version before this code
+   * new document reached Ask Bubbles Dev as a published version before this code
    * did, and without this check the next deploy would publish a byte-identical
    * version 3, archive theirs, and leave two versions saying the same thing with
    * no way to tell why there are two.

@@ -152,7 +152,7 @@ describe("every way a lookup can fail, and it denies in all of them", () => {
 });
 
 describe("scope, which fails closed in the other direction", () => {
-  it("narrows an unrecognised scope level to salon rather than refusing", () => {
+  it("narrows an unrecognised scope level to location rather than refusing", () => {
     /*
      * Deliberately unlike the role checks, and the asymmetry is the point.
      * ROLE decides what somebody may DO, so a value we cannot read must refuse.

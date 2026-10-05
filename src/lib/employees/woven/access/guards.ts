@@ -22,7 +22,7 @@ export const ACCESS_GUARD_LIMITS = {
   minActiveRetainedPercent: 80,
   /** Terminations may disable at most max(absolute, percent of managed, active accounts). */
   maxDisables: { absolute: 3, percent: 5 },
-  /** Primary-salon moves: at most max(absolute, percent of salon-tier linked accounts). */
+  /** Primary-location moves: at most max(absolute, percent of location-tier linked accounts). */
   maxLocationMoves: { absolute: 3, percent: 10 },
   maxRoleChanges: { absolute: 3, percent: 10 },
   /** Accounts created in one run. Invites are a separate, later action. */
@@ -112,11 +112,11 @@ export function evaluateAccessGuards(input: GuardInput): GuardResult {
 
   const counts = countActions(input.rows);
   const managedActive = input.rows.filter((r) => r.account?.via === "link" && r.account.status === "active").length;
-  const salonTier = input.rows.filter((r) => r.account?.via === "link" && r.account.scopeLevel === "location").length;
+  const locationTier = input.rows.filter((r) => r.account?.via === "link" && r.account.scopeLevel === "location").length;
 
   const disableLimit = limit(managedActive, L.maxDisables);
-  const moveLimit = limit(salonTier, L.maxLocationMoves);
-  const roleLimit = limit(salonTier, L.maxRoleChanges);
+  const moveLimit = limit(locationTier, L.maxLocationMoves);
+  const roleLimit = limit(locationTier, L.maxRoleChanges);
   Object.assign(details, {
     disables: counts.DISABLE_TERMINATED,
     disableLimit,
@@ -157,7 +157,7 @@ export const GUARD_DESCRIPTIONS: Record<AccessGuardCode, string> = {
   active_count_dropped: `Active employees fell below ${ACCESS_GUARD_LIMITS.minActiveRetainedPercent}% of the previous sync.`,
   zero_active_employees: "Woven shows no active employees at all.",
   terminations_exceed_threshold: "More accounts would be disabled than the safety threshold allows.",
-  location_moves_exceed_threshold: "More primary salons would move than the safety threshold allows.",
+  location_moves_exceed_threshold: "More primary locations would move than the safety threshold allows.",
   role_changes_exceed_threshold: "More roles would change than the safety threshold allows.",
   creates_exceed_batch_limit: `More than ${ACCESS_GUARD_LIMITS.maxCreates} accounts would be created in one run.`,
   mappings_disappeared: "Location or position mappings have disappeared since the last recorded run.",

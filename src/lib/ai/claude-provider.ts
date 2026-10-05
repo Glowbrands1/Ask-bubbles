@@ -40,7 +40,7 @@ async function post<T>(url: string, body: unknown): Promise<T> {
   } catch {
     throw new AiError(
       "model_failed",
-      "Ask Sunny could not be reached. Check your connection and try again.",
+      "Ask Bubbles could not be reached. Check your connection and try again.",
       503,
       [],
     );
@@ -55,7 +55,7 @@ async function post<T>(url: string, body: unknown): Promise<T> {
   if (!response.ok) {
     throw new AiError(
       (payload.code as AiError["code"]) ?? "model_failed",
-      payload.error ?? "Ask Sunny could not answer that right now.",
+      payload.error ?? "Ask Bubbles could not answer that right now.",
       response.status,
       payload.missing ?? [],
     );

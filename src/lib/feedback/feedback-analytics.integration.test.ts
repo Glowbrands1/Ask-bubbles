@@ -31,8 +31,8 @@ import type { AccessScope, Role } from "@/types";
  *
  * WHY IT EXISTS: fixing the star control must not change where a rating goes.
  * There is one feedback table and one analytics pipeline, and a rating left by
- * an Admin, a Regional Manager, a District Manager, a Salon Director or an
- * Employee must reach the same dashboard with its role, salon, surface and
+ * an Admin, a Regional Manager, a District Manager, a Location Director or an
+ * Employee must reach the same dashboard with its role, location, surface and
  * topic intact.
  */
 
@@ -79,8 +79,8 @@ interface Person {
   scope: AccessScope;
 }
 
-const SALON_0306 = "0306";
-const SALON_0144 = "0144";
+const LOCATION_0306 = "0306";
+const LOCATION_0144 = "0144";
 
 const PEOPLE = {
   admin: {
@@ -93,25 +93,25 @@ const PEOPLE = {
     id: "a0000000-0000-4000-8000-000000000002",
     role: "regional_manager",
     name: "Test Regional Manager",
-    scope: { level: "location", primaryAreaId: `loc-${SALON_0144}`, alsoCoversAreaIds: [] },
+    scope: { level: "location", primaryAreaId: `loc-${LOCATION_0144}`, alsoCoversAreaIds: [] },
   },
   dm: {
     id: "a0000000-0000-4000-8000-000000000003",
     role: "district_manager",
     name: "Test District Manager",
-    scope: { level: "location", primaryAreaId: `loc-${SALON_0306}`, alsoCoversAreaIds: [] },
+    scope: { level: "location", primaryAreaId: `loc-${LOCATION_0306}`, alsoCoversAreaIds: [] },
   },
   sd: {
     id: "a0000000-0000-4000-8000-000000000004",
     role: "location_manager",
-    name: "Test Salon Director",
-    scope: { level: "location", primaryAreaId: `loc-${SALON_0306}`, alsoCoversAreaIds: [] },
+    name: "Test Location Director",
+    scope: { level: "location", primaryAreaId: `loc-${LOCATION_0306}`, alsoCoversAreaIds: [] },
   },
   employee: {
     id: "a0000000-0000-4000-8000-000000000005",
     role: "employee",
     name: "Test Employee",
-    scope: { level: "location", primaryAreaId: `loc-${SALON_0144}`, alsoCoversAreaIds: [] },
+    scope: { level: "location", primaryAreaId: `loc-${LOCATION_0144}`, alsoCoversAreaIds: [] },
   },
 } satisfies Record<string, Person>;
 
@@ -129,9 +129,9 @@ beforeAll(async () => {
   harness = await createMigratedTestDatabase(APPLIED, { platform: PLATFORM });
 
   await harness.db.exec(`
-    insert into public.salons (salon_number, store_name) values
-      ('${SALON_0306}', 'KS Manhattan'),
-      ('${SALON_0144}', 'NE Lincoln');
+    insert into public.locations (location_code, store_name) values
+      ('${LOCATION_0306}', 'KS Manhattan'),
+      ('${LOCATION_0144}', 'NE Lincoln');
   `);
   for (const person of Object.values(PEOPLE)) {
     await harness.db.query(`insert into auth.users (id) values ($1)`, [person.id]);
@@ -181,7 +181,7 @@ afterAll(async () => {
 async function feedbackRows(turnId: string) {
   return (
     await harness.db.query<{ id: string; rating: number; user_id: string }>(
-      `select id, rating, user_id from public.ask_sunny_feedback where activity_event_id = $1`,
+      `select id, rating, user_id from public.assistant_feedback where activity_event_id = $1`,
       [turnId],
     )
   ).rows;
@@ -229,7 +229,7 @@ describe("every role's rating is saved against its own turn", () => {
     });
   });
 
-  it("a Salon Director and an Employee, who hold ask_questions too", async () => {
+  it("a Location Director and an Employee, who hold ask_questions too", async () => {
     await store.saveFeedback({
       turnId: turns.sd,
       userId: PEOPLE.sd.id,
@@ -242,7 +242,7 @@ describe("every role's rating is saved against its own turn", () => {
       userId: PEOPLE.employee.id,
       rating: 1,
       gotWhatNeeded: "no",
-      comment: "Wrong salon entirely.",
+      comment: "Wrong location entirely.",
     });
     expect(await feedbackRows(turns.sd)).toHaveLength(1);
     expect(await feedbackRows(turns.employee)).toHaveLength(1);
@@ -308,7 +308,7 @@ describe("Admin → Analytics → Conversation Feedback sees every submitted rat
     expect(chat).toMatchObject({ events: 5, rated: 5, averageRating: 3.2 });
   });
 
-  it("lists each with its person, role, salon, surface, topic, comment and time", async () => {
+  it("lists each with its person, role, location, surface, topic, comment and time", async () => {
     const page = await queries.loadFeedbackPage(
       filters.EMPTY_FILTERS,
       feedbackFilters.EMPTY_FEEDBACK_FILTERS,
@@ -348,7 +348,7 @@ describe("Admin → Analytics → Conversation Feedback sees every submitted rat
     expect(byTurn.get(turns.employee)).toMatchObject({
       role: "employee",
       storeName: "NE Lincoln",
-      comment: "Wrong salon entirely.",
+      comment: "Wrong location entirely.",
     });
 
     for (const item of page.items) {
@@ -394,7 +394,7 @@ describe("this suite applies every migration that shapes feedback analytics", ()
   it("has no later migration redefining a feedback or analytics object", () => {
     const later = ALL_MIGRATIONS.slice(ALL_MIGRATIONS.indexOf(LAST_FEEDBACK_MIGRATION) + 1);
     const redefines =
-      /\b(create\s+or\s+replace\s+(function|view)\s+public\.(analytics_\w+|feedback_\w+|leader_directory|location_managery|activity_attributed|activity_unified)|alter\s+table\s+(if\s+exists\s+)?public\.(ask_sunny_feedback|activity_events)|alter\s+type\s+public\.(activity_\w+|feedback_\w+))\b/i;
+      /\b(create\s+or\s+replace\s+(function|view)\s+public\.(analytics_\w+|feedback_\w+|leader_directory|location_managery|activity_attributed|activity_unified)|alter\s+table\s+(if\s+exists\s+)?public\.(assistant_feedback|activity_events)|alter\s+type\s+public\.(activity_\w+|feedback_\w+))\b/i;
 
     const offenders = later.filter((name) => {
       const sql = readFileSync(join(MIGRATIONS_DIR, `${name}.sql`), "utf8")

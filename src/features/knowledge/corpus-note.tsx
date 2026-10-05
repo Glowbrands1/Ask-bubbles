@@ -11,7 +11,7 @@ import { Notice } from "@/components/ui/feedback";
  * printed above 57 of the customer's own documents with 56 indexed. Every
  * clause of it is a statement about the demo build: a "seeded set", a corpus
  * that "mirrors" the real one, and a "prototype" with no SharePoint or Woven
- * sync. Read over a real library it tells a Salon Director their knowledge base
+ * sync. Read over a real library it tells a Location Director their knowledge base
  * is not real content.
  *
  * NOT DELETED, because it is true and useful in the demo build, where somebody

@@ -11,7 +11,7 @@ import { REPORTS, reportForPath } from "./reports-routes";
  *
  * The sidebar names the SECTION and opens its default report; this names the
  * reports within it. Two levels, because a manager who wants Sales Totals
- * should not have to know it lives under a heading called Salon Performance —
+ * should not have to know it lives under a heading called Location Performance —
  * and the sidebar staying on one "Reports & Analytics" entry is what keeps the
  * left rail from growing a row per report as more arrive.
  *
@@ -78,7 +78,7 @@ export function ReportTabs({ className }: { className?: string }) {
                */
               "-mb-px shrink-0 border-b-[3px] px-3.5 py-3.5 text-[10px] font-black tracking-[0.1em] whitespace-nowrap uppercase transition-colors",
               current
-                ? "border-brand-yellow text-foreground"
+                ? "border-brand-accent text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >

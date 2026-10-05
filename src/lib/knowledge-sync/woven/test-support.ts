@@ -15,8 +15,8 @@
  * storage host records whether a Woven cookie was (wrongly) sent to it.
  */
 
-export const COMPANY = "JB & Associates";
-export const USERNAME = "ask-sunny-integration@example.test";
+export const COMPANY = "Example Soap Co";
+export const USERNAME = "ask-bubbles-integration@example.test";
 export const PASSWORD = "correct horse battery staple";
 
 export interface FakeAttachment {
@@ -99,9 +99,9 @@ export interface FakeWovenState {
   chooserMechanism: "verified" | "script" | "link" | "form";
   /** Deliberately broken verified choosers, for the failure tests. */
   chooserVariant: "ok" | "malformed_entry" | "no_form" | "missing_fields";
-  /** `data-company-name` on the JB & Associates entry (live: empty). */
+  /** `data-company-name` on the Example Soap Co entry (live: empty). */
   chooserCompanyName: string;
-  /** Accounts the chooser lists (live: JB & Associates, Midwest Soap Makers). */
+  /** Accounts the chooser lists (live: Example Soap Co, Other Example Co). */
   chooserAccounts: { id: string; name: string }[];
   /** Show the verified "Add Profile Photo" interstitial after sign-in (and after choosing, if any). */
   photoPrompt: boolean;
@@ -146,7 +146,7 @@ export function defaultState(): FakeWovenState {
     photoVariant: "ok",
     chooserAccounts: [
       { id: uuid(9001), name: COMPANY },
-      { id: uuid(9002), name: "Midwest Soap Makers" },
+      { id: uuid(9002), name: "Other Example Co" },
     ],
     policies: [
       {
@@ -155,7 +155,7 @@ export function defaultState(): FakeWovenState {
         status: "current",
         audience: "Public",
         updated: "5/1/2025",
-        body: "Arrive on time.\nCall the salon if you will be late.",
+        body: "Arrive on time.\nCall the location if you will be late.",
         version: "Version 2",
         attachments: [{ documentId: uuid(1101), name: "Attendance Policy.pdf", size: 12345, contentType: "application/pdf", bytes: "%PDF attendance v1" }],
       },
@@ -209,7 +209,7 @@ export function defaultState(): FakeWovenState {
     procedures: [
       {
         id: uuid(301),
-        title: "Opening the Salon",
+        title: "Opening the Location",
         steps: [
           { id: uuid(3011), title: "Open the Door", text: "Unlock the front door." },
           { id: uuid(3012), title: "Lights On", text: "Turn on the lights." },
@@ -220,8 +220,8 @@ export function defaultState(): FakeWovenState {
     ],
     fileLibrary: [
       { EntityID: uuid(401), Column1: "PDF", Column2: '<a href="#">Lotion Guide</a>', Column3: LIVE_STATUS("Published"), Column4: "Public", Column5: "<span>1.2 MB</span>", Column6: "9/1/2026", Column7: "Sales", Column8: "Sun Tan City" },
-      { EntityID: uuid(402), Column1: "Video", Column2: "<b>Welcome Video</b>", Column3: LIVE_STATUS("Published"), Column4: "Public", Column5: "40 MB", Column6: "8/1/2026", Column7: "", Column8: "JB & Associates" },
-      { EntityID: uuid(403), Column1: "PDF", Column2: "Old Flyer", Column3: LIVE_STATUS("Unpublished"), Column4: "Public", Column5: "1 MB", Column6: "1/1/2024", Column7: "", Column8: "JB & Associates" },
+      { EntityID: uuid(402), Column1: "Video", Column2: "<b>Welcome Video</b>", Column3: LIVE_STATUS("Published"), Column4: "Public", Column5: "40 MB", Column6: "8/1/2026", Column7: "", Column8: "Example Soap Co" },
+      { EntityID: uuid(403), Column1: "PDF", Column2: "Old Flyer", Column3: LIVE_STATUS("Unpublished"), Column4: "Public", Column5: "1 MB", Column6: "1/1/2024", Column7: "", Column8: "Example Soap Co" },
     ],
     fileLibraryFiles: {
       [uuid(401)]: { bytes: "%PDF-1.4 Lotion guide: apply the bronzer after the shower.", fileName: "Lotion Guide.pdf" },
@@ -345,7 +345,7 @@ export function loginPageHtml(error = ""): string {
 
 /** The verified account dropdown, carrying the ACTIVE company. */
 function accountMenu(company: string): string {
-  return `<ul class="nav navbar-nav navbar-right"><li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">Ask Sunny Integration<br><small>${esc(company)}</small></a></li></ul>`;
+  return `<ul class="nav navbar-nav navbar-right"><li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">Ask Bubbles Integration<br><small>${esc(company)}</small></a></li></ul>`;
 }
 
 /** Verified headers: Policy, Status, Audience, Last Updated, Acknowledgement, plus an unlabeled document column. */
@@ -465,7 +465,7 @@ export class FakeWoven {
       this.photoSubmissions += 1;
       if (form.get("__RequestVerificationToken") !== "photo-token" || form.get("SkipAddEmployeeProfileImage") !== "true") return html("Bad Request", 400);
       if (this.state.photoVariant === "returns_login") return html(loginPageHtml());
-      if (this.state.photoVariant === "wrong_company") this.chosenCompany = "Midwest Soap Makers";
+      if (this.state.photoVariant === "wrong_company") this.chosenCompany = "Other Example Co";
       this.photoSkipped = true;
       return redirect("/");
     }
@@ -530,7 +530,7 @@ export class FakeWoven {
     if (this.malformed.has(path)) return json({ unexpected: true });
 
     const s = this.state;
-    /* The switcher lists JB & Associates either way; only the account dropdown says which is ACTIVE. */
+    /* The switcher lists Example Soap Co either way; only the account dropdown says which is ACTIVE. */
     if (path === "/Dashboard" || path === "/") {
       return html(
         page(

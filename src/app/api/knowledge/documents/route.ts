@@ -41,7 +41,7 @@ export async function GET(request: Request) {
      *
      * READING ONE CITED DOCUMENT IS NOT THIS. `GET /api/knowledge/documents/[id]`
      * and the original-file route still ask for `view_knowledge` alone, so a
-     * citation stays openable for every role Sunny answers for.
+     * citation stays openable for every role Bubbles answers for.
      */
     await authorizeAdminConsoleRequest(request, "view_knowledge");
     assertWithinRateLimit(request, "search");

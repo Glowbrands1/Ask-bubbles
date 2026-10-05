@@ -150,14 +150,14 @@ export async function refineUnresolved(
     return {
       hints,
       notes: [
-        `${Object.keys(hints).length} of ${asking.length} unreadable line${asking.length === 1 ? "" : "s"} were classified by Ask Sunny. Their wording is unchanged — only what kind of thing each line is was decided.`,
+        `${Object.keys(hints).length} of ${asking.length} unreadable line${asking.length === 1 ? "" : "s"} were classified by Ask Bubbles. Their wording is unchanged — only what kind of thing each line is was decided.`,
       ],
     };
   } catch (error) {
     return {
       hints: {},
       notes: [
-        `Ask Sunny could not help classify ${asking.length} unreadable line${asking.length === 1 ? "" : "s"} (${(error as Error).message}). They are listed below for you to place by hand.`,
+        `Ask Bubbles could not help classify ${asking.length} unreadable line${asking.length === 1 ? "" : "s"} (${(error as Error).message}). They are listed below for you to place by hand.`,
       ],
     };
   }

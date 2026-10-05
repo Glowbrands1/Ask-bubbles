@@ -22,7 +22,7 @@
  *   <what the employee should do differently>
  *
  * ============================================================================
- * THE MANAGER SUPPLIES THE INCIDENT. ASK SUNNY SUPPLIES THE COACHING.
+ * THE MANAGER SUPPLIES THE INCIDENT. ASK BUBBLES SUPPLIES THE COACHING.
  * ============================================================================
  *
  * This is the product decision, and it is the opposite of what an earlier
@@ -41,7 +41,7 @@
  * WHICH LEAVES A SHARPER LINE FOR THE GUARD TO HOLD
  * ============================================================================
  *
- * The guard below polices FACTS, never guidance. Guidance is Ask Sunny's to
+ * The guard below polices FACTS, never guidance. Guidance is Ask Bubbles' to
  * write; a fact is the manager's to supply. So what runs on the model's output
  * is exactly three things, and nothing else:
  *
@@ -101,8 +101,8 @@ export const OBSERVED_EXPECTATION = "observed_expectation";
  * that does not exist, and a consequence quoted from a document nobody
  * retrieved. What the manager wanted in its place reads:
  *
- *   "This is being addressed as a policy review of salon appearance standards.
- *    Jane is expected to arrive for each shift in attire that meets the salon's
+ *   "This is being addressed as a policy review of location appearance standards.
+ *    Jane is expected to arrive for each shift in attire that meets the location's
  *    dress and appearance standards, and to confirm with a manager beforehand
  *    if she is uncertain whether an item of clothing is appropriate. The
  *    specific dress code language should be reviewed with Jane from the current

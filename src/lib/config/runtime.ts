@@ -32,7 +32,7 @@ export type RuntimeMode = "demo" | "live";
  *            a real identity provider must be connected for anyone to sign in.
  *
  *   "true"   DEMO. Seeded content throughout, and the login screen offers the
- *            role-preview entry. Note that Salon Performance still reads real
+ *            role-preview entry. Note that Location Performance still reads real
  *            reporting data: it queries Supabase directly and does not consult
  *            this flag.
  *
@@ -144,7 +144,7 @@ export type ModeSource =
  * no read that recovers the runtime value. Editing the variable changes
  * nothing until a rebuild, and the rebuild bakes in whatever it then finds.
  *
- * That is not a hypothetical. Production served https://ask-sunny.vercel.app
+ * That is not a hypothetical. Production served https://ask-bubbles.vercel.app
  * with `{"mode":"demo","configured":true,"missingEnvironmentVariables":[]}` —
  * every credential present and working, and seeded demo content on the page
  * anyway, because one build-time string had gone stale. Case-insensitive

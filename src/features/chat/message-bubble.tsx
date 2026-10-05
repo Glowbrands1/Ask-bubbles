@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, FilePlus2, Loader2, RotateCcw, Settings2 } from "lucide-react";
 
-import { SunMark } from "@/components/brand-mark";
+import { BubbleMark } from "@/components/brand-mark";
 import { RichText } from "@/components/rich-text";
 import { SourceList } from "@/components/source-list";
 import { Badge } from "@/components/ui/badge";
@@ -70,7 +70,7 @@ export function MessageBubble({
      * ONE SIDE BUBBLED AND ONE SIDE NOT.
      *
      * The Marquee Chat artifact's fifth item, and the reason is scanning rather
-     * than decoration: "Sunny's reply sits directly on the peach ground at a
+     * than decoration: "Bubbles' reply sits directly on the peach ground at a
      * 78-character measure. Only the manager's own message gets a bubble — one
      * side bubbled and one side not is what makes a thread scannable."
      *
@@ -99,7 +99,7 @@ export function MessageBubble({
   }
 
   // A failed turn is rendered as a failure, never inside an answer bubble.
-  // Nothing about it should read as something Sunny said.
+  // Nothing about it should read as something Bubbles said.
   if (message.error) {
     return <ChatErrorBubble message={message} onRetry={onRetry} isAdmin={isAdmin} />;
   }
@@ -113,7 +113,7 @@ export function MessageBubble({
      * 78-character measure — long enough for a policy answer to read as a
      * document and short enough that the eye returns to the right place — and
      * gives the identity line the display face with a yellow mode tag, so
-     * "SUNNY · STANDARD" reads as a byline rather than as a card header.
+     * "BUBBLES · STANDARD" reads as a byline rather than as a card header.
      */
     <div className="flex gap-3">
       {/*
@@ -122,15 +122,15 @@ export function MessageBubble({
         them and only the lenses survive — the smudge this codebase already hit
         once on the empty state. `onBrand` swaps the two inks.
       */}
-      <span className="mt-0.5 grid size-[30px] shrink-0 place-items-center rounded-full bg-brand-yellow">
-        <SunMark className="size-[19px]" onBrand />
+      <span className="mt-0.5 grid size-[30px] shrink-0 place-items-center rounded-full bg-brand-accent">
+        <BubbleMark className="size-[19px]" onBrand />
       </span>
       <div className="min-w-0 max-w-[78ch] flex-1">
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="display text-[16px] text-foreground">Sunny</span>
+            <span className="display text-[16px] text-foreground">Bubbles</span>
             {message.mode ? (
-              <span className="rounded-[var(--radius-xs)] bg-brand-yellow px-2 py-[3px] text-[8.5px] font-black tracking-[0.08em] uppercase text-brand-yellow-foreground">
+              <span className="rounded-[var(--radius-xs)] bg-brand-accent px-2 py-[3px] text-[8.5px] font-black tracking-[0.08em] uppercase text-brand-accent-foreground">
                 {ANSWER_MODE_LABEL[message.mode]}
               </span>
             ) : null}
@@ -181,9 +181,9 @@ export function MessageBubble({
           */}
           {message.formHandoff && !message.formProposal ? (
             <p className="mt-4 rounded-[var(--radius-md)] border border-border bg-surface-muted px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-              This draft came from an earlier version of Ask Sunny, which filled
+              This draft came from an earlier version of Ask Bubbles, which filled
               in details nobody had given it, so it can no longer be opened. Ask
-              Sunny again to create the form here in the conversation.
+              Bubbles again to create the form here in the conversation.
             </p>
           ) : null}
         </div>
@@ -194,7 +194,7 @@ export function MessageBubble({
               Not covered by the knowledge base
             </span>
             <p className="mt-0.5">
-              Sunny found no company document that answers this, so there are no
+              Bubbles found no company document that answers this, so there are no
               sources to show. Anything above is general guidance, not{" "}
               company policy — check with your manager before acting on it.
             </p>
@@ -237,7 +237,7 @@ export function MessageBubble({
                     "rounded-[22px] border bg-surface px-3.5 py-[7px] text-left text-[11.5px] font-bold transition-colors",
                     buildsForm
                       ? "border-measure-data text-measure-flagged-foreground hover:bg-followup-attention-soft"
-                      : "border-border-strong text-foreground hover:border-brand-yellow",
+                      : "border-border-strong text-foreground hover:border-brand-accent",
                   )}
                 >
                   {suggestion}
@@ -267,7 +267,7 @@ export function MessageBubble({
 
 /**
  * ============================================================================
- * A FORM PROPOSAL — WHAT SUNNY WOULD CREATE, AND WHAT IT IS STILL MISSING
+ * A FORM PROPOSAL — WHAT BUBBLES WOULD CREATE, AND WHAT IT IS STILL MISSING
  * ============================================================================
  *
  * NOTHING HERE IS A FORM. There is no instance, no template version, no field
@@ -276,7 +276,7 @@ export function MessageBubble({
  * proposal into a record is not built, and a control that looks like it works
  * is worse than an absent one.
  *
- * SO THE CARD IS ALL STATEMENT AND NO ACTION. It says which form, what Sunny
+ * SO THE CARD IS ALL STATEMENT AND NO ACTION. It says which form, what Bubbles
  * established, and — in the same list, at the same weight — what it could not.
  * A missing value reads as missing rather than as a blank that might fill
  * itself in.
@@ -301,7 +301,7 @@ function FormProposalCard({
   const [creating, setCreating] = React.useState(false);
   const [problem, setProblem] = React.useState<string | null>(null);
   /*
-   * WHERE SUNNY'S PREFILL HAS GOT TO, for the editor below.
+   * WHERE BUBBLES'S PREFILL HAS GOT TO, for the editor below.
    *
    * `unknown` is the honest default: a card rendering an `instanceRef` that
    * came back from IndexedDB did not watch that prefill happen and cannot say
@@ -322,9 +322,9 @@ function FormProposalCard({
    */
   const [created, setCreated] = React.useState<ChatFormInstanceRef | null>(null);
   /*
-   * WHICH SALON, WHEN THE ACTOR COVERS SEVERAL.
+   * WHICH LOCATION, WHEN THE ACTOR COVERS SEVERAL.
    *
-   * Ids, not names: there is no salon roster, and the only source of a display
+   * Ids, not names: there is no location roster, and the only source of a display
    * name in this app is seeded demo data — see docs/chat-phase-3.md. Offering
    * the ids the scope actually proves is honest and answerable; offering
    * invented names would not be.
@@ -332,7 +332,7 @@ function FormProposalCard({
    * Whatever is chosen is re-authorized against the AccessScope by
    * `POST /api/forms/instances`, so an edited list buys nothing.
    */
-  const [salon, setSalon] = React.useState("");
+  const [location, setLocation] = React.useState("");
 
   /*
    * ==========================================================================
@@ -384,14 +384,14 @@ function FormProposalCard({
    * EVERY CONDITION HERE HAS TO HOLD. The turn came from a card
    * (`consumePickerChoice`, which clears itself so a re-render cannot make a
    * second form and the next ordinary turn cannot inherit the intent); the
-   * proposal is READY, so the employee and the salon are settled; the
-   * template supports being created here; no salon choice is outstanding; and
+   * proposal is READY, so the employee and the location are settled; the
+   * template supports being created here; no location choice is outstanding; and
    * nothing has been created from this card already. A proposal missing any
    * of that still renders its button and still asks.
    *
    * THE SERVER IS UNCHANGED AND STILL DECIDES. `POST /api/forms/instances`
    * re-resolves the template, re-applies its own permission and re-authorises
-   * the salon against the AccessScope. This removes a click, not a check.
+   * the location against the AccessScope. This removes a click, not a check.
    */
   React.useEffect(() => {
     if (!consumePickerChoice?.()) return;
@@ -422,7 +422,7 @@ function FormProposalCard({
 
     try {
       const result = await createInlineForm({
-        proposal: salon ? { ...proposal, locationId: salon } : proposal,
+        proposal: location ? { ...proposal, locationId: location } : proposal,
         messages: conversation,
         call: (url, init) => formsFetch(url, role, user.name, init),
         /*
@@ -451,7 +451,7 @@ function FormProposalCard({
       if (result.draftWarning) {
         /*
          * THE ROW EXISTS AND THE PREFILL DID NOT. Said on the card, and said in
-         * the log too — "Sunny couldn't prefill the details" is what the manager
+         * the log too — "Bubbles couldn't prefill the details" is what the manager
          * needs, and which template it happened on is what an operator needs.
          */
         logTurnEvent("form.draft.failed", {
@@ -533,25 +533,25 @@ function FormProposalCard({
       <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs">
         <ProposalRow label="Employee">
           {proposal.employeeName ?? (
-            <Missing>Not yet — tell Sunny who this form is about</Missing>
+            <Missing>Not yet — tell Bubbles who this form is about</Missing>
           )}
         </ProposalRow>
-        <ProposalRow label="Salon">
-          {salon ? (
-            <span className="font-mono text-[11px] text-foreground">{salon}</span>
+        <ProposalRow label="Location">
+          {location ? (
+            <span className="font-mono text-[11px] text-foreground">{location}</span>
           ) : proposal.locationResolution === "not_applicable" ? (
             /*
-             * NOT A GAP. A global actor is not assigned to a salon, and the
+             * NOT A GAP. A global actor is not assigned to a location, and the
              * server permits a form that names none — so this is an answer, and
              * the card says which answer rather than asking a question with
              * nothing to pick from.
              */
-            <Missing>Not recorded — your account covers every salon</Missing>
+            <Missing>Not recorded — your account covers every location</Missing>
           ) : proposal.locationId ? (
             /*
-             * THE VERIFIED ID, NOT AN INVENTED NAME. There is no salon roster
+             * THE VERIFIED ID, NOT AN INVENTED NAME. There is no location roster
              * to resolve a display name from. the company location roster is the authority, but a
-             * demo data — putting a fictional salon name in front of somebody
+             * demo data — putting a fictional location name in front of somebody
              * about to file a disciplinary record is the class of thing this
              * phase exists to stop. `locationName` stays null until a roster
              * exists; see docs/chat-phase-3.md.
@@ -562,8 +562,8 @@ function FormProposalCard({
           ) : (
             <Missing>
               {proposal.locationResolution === "needs_selection"
-                ? "Not set — say which salon this is about"
-                : "Not set — Ask Sunny could not verify one"}
+                ? "Not set — say which location this is about"
+                : "Not set — Ask Bubbles could not verify one"}
             </Missing>
           )}
         </ProposalRow>
@@ -574,7 +574,7 @@ function FormProposalCard({
 
         `supportsInlineDraft` is set server-side and is true only for a template
         the inline editor supports AND a proposal with nothing missing. A
-        proposal still needing the employee or the salon gets no button — not a
+        proposal still needing the employee or the location gets no button — not a
         disabled one, because the gap is the reason it is not offered, and a
         greyed-out control invites the manager to hunt for what would enable it.
 
@@ -583,23 +583,23 @@ function FormProposalCard({
         exactly the "Coming later" problem this workstream just removed.
       */}
       {/*
-        THE ONE QUESTION THE CARD CAN ANSWER FOR ITSELF. Shown when the salon is
+        THE ONE QUESTION THE CARD CAN ANSWER FOR ITSELF. Shown when the location is
         still open and the choices are known: a manager assigned to several
-        salons who has not named one of them, or one who named a salon outside
-        their assignment (then even a single-salon manager confirms their own
-        rather than having it substituted silently). Only their own salons are
+        locations who has not named one of them, or one who named a location outside
+        their assignment (then even a single-location manager confirms their own
+        rather than having it substituted silently). Only their own locations are
         offered, and the server re-authorizes whichever is picked.
       */}
       {!superseded && proposal.authorizedLocationIds.length > 0 && !proposal.locationId ? (
         <div className="mt-4 min-w-0 space-y-1.5">
-          <Label htmlFor={`salon-${proposal.proposalId}`}>Which salon is this about?</Label>
+          <Label htmlFor={`location-${proposal.proposalId}`}>Which location is this about?</Label>
           <Select
-            id={`salon-${proposal.proposalId}`}
+            id={`location-${proposal.proposalId}`}
             className="min-w-0"
-            value={salon}
-            onChange={(event) => setSalon(event.target.value)}
+            value={location}
+            onChange={(event) => setLocation(event.target.value)}
           >
-            <option value="">Choose a salon…</option>
+            <option value="">Choose a location…</option>
             {proposal.authorizedLocationIds.map((id) => (
               <option key={id} value={id}>
                 {/* The roster's name for the id; the id itself only if the roster does not know it. */}
@@ -610,7 +610,7 @@ function FormProposalCard({
         </div>
       ) : null}
 
-      {!superseded && (proposal.supportsInlineDraft || (salon && proposal.status === "needs_location")) ? (
+      {!superseded && (proposal.supportsInlineDraft || (location && proposal.status === "needs_location")) ? (
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <Button size="sm" onClick={() => void create()} disabled={creating}>
             {creating ? <Loader2 className="animate-spin" /> : null}
@@ -641,7 +641,7 @@ function Missing({ children }: { children: React.ReactNode }) {
 /**
  * A failed turn.
  *
- * Visually distinct from an answer on purpose: it carries no Sunny avatar copy
+ * Visually distinct from an answer on purpose: it carries no Bubbles avatar copy
  * that could read as speech, it names what went wrong, and it offers "Try
  * again" only when trying again could actually help. Configuration problems
  * point an administrator at the admin screen instead of inviting a retry that
@@ -701,7 +701,7 @@ function ChatErrorBubble({
         </Notice>
 
         <p className="mt-2 text-xs text-subtle-foreground">
-          Nothing was answered from memory. Sunny does not guess when it cannot
+          Nothing was answered from memory. Bubbles does not guess when it cannot
           reach the knowledge base.
         </p>
       </div>
@@ -713,17 +713,17 @@ export function ThinkingBubble() {
   return (
     <div className="flex gap-3" aria-live="polite">
       <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-soft">
-        <SunMark className="size-4" />
+        <BubbleMark className="size-4" />
       </span>
       <div className="rounded-[var(--radius-lg)] rounded-tl-sm border border-border bg-surface px-4 py-3.5 shadow-soft">
-        <span className="sr-only">Sunny is thinking</span>
+        <span className="sr-only">Bubbles is thinking</span>
         <span className="flex items-center gap-1.5" aria-hidden>
           {[0, 1, 2].map((index) => (
             <span
               key={index}
               className="size-1.5 rounded-full bg-primary"
               style={{
-                animation: "sunny-pulse-dot 1.1s ease-in-out infinite",
+                animation: "bubbles-pulse-dot 1.1s ease-in-out infinite",
                 animationDelay: `${index * 0.16}s`,
               }}
             />

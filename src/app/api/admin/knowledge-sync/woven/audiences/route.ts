@@ -9,10 +9,10 @@ import { readWovenKnowledgeStatus } from "@/lib/knowledge-sync/woven/status";
 /**
  * PUT /api/admin/knowledge-sync/woven/audiences — an administrator's answer to
  * "Woven shares these items with only some teams. Who should see them in Ask
- * Sunny?"
+ * Bubbles?"
  *
- *   `{ "audienceKey": "managers", "decision": "company_wide" }`  share with everyone in Ask Sunny
- *   `{ "audienceKey": "managers", "decision": "excluded" }`      keep out of Ask Sunny
+ *   `{ "audienceKey": "managers", "decision": "company_wide" }`  share with everyone in Ask Bubbles
+ *   `{ "audienceKey": "managers", "decision": "excluded" }`      keep out of Ask Bubbles
  *   `{ "audienceKey": "managers", "decision": null }`            undo; held for review again
  *
  * Decided once per audience, not per item. It takes effect on the next sync —

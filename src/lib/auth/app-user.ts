@@ -112,7 +112,7 @@ export function toAppUserProfile(row: unknown): ProfileLookup {
   }
 
   /*
-   * An unrecognised scope level falls back to `salon`, the NARROWEST scope —
+   * An unrecognised scope level falls back to `location`, the NARROWEST scope —
    * the opposite direction from the role checks above, and for a different
    * reason. Role decides what somebody may do and must never be guessed. Scope
    * decides how much data they see, and there the fail-closed answer is the
@@ -189,10 +189,10 @@ export async function getAppUser(
 export function profileDenialMessage(denial: ProfileDenial): string {
   switch (denial) {
     case "lookup_failed":
-      return "Ask Sunny could not verify your account just now. Try again in a moment.";
+      return "Ask Bubbles could not verify your account just now. Try again in a moment.";
     case "unknown_role":
-      return "Your account is set to a role this version of Ask Sunny does not recognise. Ask an administrator to review it.";
+      return "Your account is set to a role this version of Ask Bubbles does not recognise. Ask an administrator to review it.";
     default:
-      return "Your Ask Sunny account is not active. Ask an administrator to set up your access.";
+      return "Your Ask Bubbles account is not active. Ask an administrator to set up your access.";
   }
 }

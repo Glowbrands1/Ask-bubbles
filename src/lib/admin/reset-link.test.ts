@@ -59,7 +59,7 @@ function fakeAdmin(options: { row?: Record<string, unknown> | null; link?: LinkO
               action_link: ACTION_LINK,
               email_otp: "123456",
               hashed_token: outcome === "no_hash" ? "" : HASH,
-              redirect_to: "https://ask-sunny.vercel.app",
+              redirect_to: "https://ask-bubbles.vercel.app",
               verification_type: outcome === "wrong_type" ? "magiclink" : "recovery",
             },
             user: { id: outcome === "wrong_user" ? "someone-else" : (row?.id as string) },
@@ -145,7 +145,7 @@ async function loadWith(fake: ReturnType<typeof fakeAdmin>) {
 }
 
 const toUrl = (hash: string) =>
-  `https://ask-sunny.vercel.app/auth/recovery-start?token_hash=${hash}&type=recovery`;
+  `https://ask-bubbles.vercel.app/auth/recovery-start?token_hash=${hash}&type=recovery`;
 
 describe("who may receive a reset link", () => {
   it("refuses an UNKNOWN user, without asking Supabase for anything", async () => {
@@ -301,7 +301,7 @@ describe("what it will not hand over", () => {
   it("refuses a URL that /auth/recovery-start would not accept", async () => {
     const fake = fakeAdmin();
     const { generateResetLink } = await loadWith(fake);
-    const broken = (hash: string) => `https://ask-sunny.vercel.app/auth/recovery-start?token_hash=${hash}`;
+    const broken = (hash: string) => `https://ask-bubbles.vercel.app/auth/recovery-start?token_hash=${hash}`;
 
     await expect(generateResetLink("emp-1", broken, actor)).rejects.toMatchObject({
       code: "provider_failed",

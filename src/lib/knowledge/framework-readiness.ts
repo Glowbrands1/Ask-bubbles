@@ -17,7 +17,7 @@ import { SupabaseKnowledgeProvider } from "./providers/supabase";
  *
  * The unit tests pin today's filename, today's locator strings and today's
  * chunk indices. That is the right thing for them to do — a re-upload that
- * changes what Sunny reasons with SHOULD break a test — but it means they can
+ * changes what Bubbles reasons with SHOULD break a test — but it means they can
  * only ever describe the corpus as it was when they were written. They cannot
  * see tomorrow's re-upload drifting away from them, because they never look at
  * a database.

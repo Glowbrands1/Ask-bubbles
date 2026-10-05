@@ -515,7 +515,7 @@ describe("a database failure is never reported as a refusal", () => {
     const body = await response.text();
 
     /*
-     * Rows here hold what somebody asked Sunny about a named employee, and a
+     * Rows here hold what somebody asked Bubbles about a named employee, and a
      * Postgres error can quote row contents.
      */
     expect(body).not.toContain("fake failure");

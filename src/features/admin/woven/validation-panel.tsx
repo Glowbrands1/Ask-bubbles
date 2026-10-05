@@ -144,7 +144,7 @@ function Summary({ report }: { report: ValidationReport }) {
   const n = report.normalized;
   const token = report.token;
   const enums = report.enums;
-  const coverage = report.locations?.salonCoverage ?? null;
+  const coverage = report.locations?.locationCoverage ?? null;
   const details = report.details;
   const employeeTriggers = enums?.employeeWebhookTriggers ?? [];
 
@@ -207,11 +207,11 @@ function Summary({ report }: { report: ValidationReport }) {
             {report.locations.records} total · {report.locations.withNumber} with a Number · {report.locations.closed} closed ·{" "}
             {report.locations.nonLocations} non-locations
           </Row>
-          <Row label="Ask Sunny salon match">
+          <Row label="Ask Bubbles location match">
             {coverage?.outcome === "compared"
-              ? `${coverage.exactMatches} exact Number matches, covering ${coverage.salonsMatched} of ${coverage.salons} salons · ${coverage.unmatchedWovenLocations} Woven locations unmatched (${coverage.unmatchedOpenWovenLocations} open) · ${coverage.salonsWithoutWovenLocation} salons with no Woven location${coverage.leadingZeroOnlyMatches > 0 ? ` · ${coverage.leadingZeroOnlyMatches} match only if leading zeros are ignored (not counted)` : ""}`
-              : coverage?.outcome === "salons_unavailable"
-                ? "Ask Sunny's salons could not be read"
+              ? `${coverage.exactMatches} exact Number matches, covering ${coverage.locationsMatched} of ${coverage.locations} locations · ${coverage.unmatchedWovenLocations} Woven locations unmatched (${coverage.unmatchedOpenWovenLocations} open) · ${coverage.locationsWithoutWovenLocation} locations with no Woven location${coverage.leadingZeroOnlyMatches > 0 ? ` · ${coverage.leadingZeroOnlyMatches} match only if leading zeros are ignored (not counted)` : ""}`
+              : coverage?.outcome === "locations_unavailable"
+                ? "Ask Bubbles' locations could not be read"
                 : "not compared"}
           </Row>
         </>
@@ -268,7 +268,7 @@ function LocationReviewArea({ review }: { review: NonNullable<ValidationReport["
     <details data-testid="woven-location-review" className="rounded-[var(--radius-md)] border border-border bg-surface px-4 py-3 text-[13px]">
       <summary className="cursor-pointer font-semibold">Location numbers and names (review only — nothing is mapped)</summary>
       <p className="mt-2 text-muted-foreground">
-        Woven locations and Ask Sunny salons only; no employee appears here. Matching is exact on the number. Mappings are made on the
+        Woven locations and Ask Bubbles locations only; no employee appears here. Matching is exact on the number. Mappings are made on the
         Mappings tab, by a person.
       </p>
       <div className="mt-3 grid gap-4 lg:grid-cols-2">
@@ -290,28 +290,28 @@ function LocationReviewArea({ review }: { review: NonNullable<ValidationReport["
                   {l.closed ? " · closed" : ""}
                   {l.nonLocation ? " · non-location" : ""}
                 </td>
-                <td>{l.matchedSalonNumber ? `salon ${l.matchedSalonNumber}` : "none"}</td>
+                <td>{l.matchedLocationCode ? `location ${l.matchedLocationCode}` : "none"}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <table className="w-full text-left">
-          <caption className="mb-1 text-left font-semibold">Ask Sunny salons with no Woven location</caption>
+          <caption className="mb-1 text-left font-semibold">Ask Bubbles locations with no Woven location</caption>
           <thead>
             <tr className="text-muted-foreground">
-              <th className="pr-3 font-medium">Salon number</th>
+              <th className="pr-3 font-medium">Location number</th>
               <th className="font-medium">Name</th>
             </tr>
           </thead>
           <tbody>
-            {review.salonsWithoutWovenLocation.length === 0 ? (
+            {review.locationsWithoutWovenLocation.length === 0 ? (
               <tr>
                 <td colSpan={2} className="text-muted-foreground">
                   none
                 </td>
               </tr>
             ) : (
-              review.salonsWithoutWovenLocation.map((s) => (
+              review.locationsWithoutWovenLocation.map((s) => (
                 <tr key={s.number}>
                   <td className="pr-3 font-mono">{s.number}</td>
                   <td>{s.name}</td>
@@ -359,7 +359,7 @@ export function ValidationPanel({
         setReport(body.report);
       }
     } catch {
-      setError("The check could not reach Ask Sunny's server.");
+      setError("The check could not reach Ask Bubbles' server.");
     } finally {
       setRunning(false);
     }
@@ -369,7 +369,7 @@ export function ValidationPanel({
     <section className="mb-8" data-testid="woven-validation-panel">
       <SectionHeader
         title="Test Woven connection"
-        description="Read-only validation. Signs in to Woven and reads the enum list, every employee page, a small sample of employee details and the location list, and compares the locations with Ask Sunny's salons. Runs no sync and writes nothing anywhere. Shows counts, field names and Woven's own labels only."
+        description="Read-only validation. Signs in to Woven and reads the enum list, every employee page, a small sample of employee details and the location list, and compares the locations with Ask Bubbles' locations. Runs no sync and writes nothing anywhere. Shows counts, field names and Woven's own labels only."
         actions={
           <Button onClick={run} disabled={!available || running || (accessCodeRequired && accessCode.trim().length === 0)}>
             <PlayCircle />

@@ -111,7 +111,7 @@ export function wovenEmployee(id: string, options: FixtureEmployeeOptions = {}):
     TerminatedLastDayWorked: pick(options.lastDayWorked, "0001-01-01T00:00:00"),
     TerminationType: pick(options.terminationType, 0),
     PositionID: pick(options.positionId, "POS-SC"),
-    PositionName: pick(options.positionName, "Salon Consultant"),
+    PositionName: pick(options.positionName, "Location Consultant"),
     PositionColor: "#123456",
     PrimaryLocationID: pick(options.primaryLocationId, "WL-0306"),
     PrimaryLocationName: pick(options.primaryLocationName, "KS Manhattan"),
@@ -223,7 +223,7 @@ export interface FakeWovenOptions {
 
 export const FAKE_CREDENTIALS = {
   subscriptionKey: "test-subscription-key-000000",
-  username: "ask-sunny-app-user",
+  username: "ask-bubbles-app-user",
   password: "test-password-not-real",
 };
 

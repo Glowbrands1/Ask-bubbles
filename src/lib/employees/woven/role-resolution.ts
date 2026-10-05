@@ -2,7 +2,7 @@ import type { Role, ScopeLevel } from "@/types";
 
 /**
  * ============================================================================
- * WHICH ASK SUNNY ROLE A WOVEN EMPLOYEE RESOLVES TO — and who is protected
+ * WHICH ASK BUBBLES ROLE A WOVEN EMPLOYEE RESOLVES TO — and who is protected
  * ============================================================================
  *
  * ONE ORDER, EVERYWHERE:
@@ -11,7 +11,7 @@ import type { Role, ScopeLevel } from "@/types";
  *   2. the CONFIRMED Woven position mapping (`woven_position_map`), then
  *   3. nothing — an unmapped or unconfirmed position resolves to no role.
  *
- * Location mapping is separate: it answers WHICH salon, never what role.
+ * Location mapping is separate: it answers WHICH location, never what role.
  *
  * `employee_access_preview` states the same order in SQL (effective_role,
  * role_source); `role-resolution.test.ts` and the migration verifier pin both.

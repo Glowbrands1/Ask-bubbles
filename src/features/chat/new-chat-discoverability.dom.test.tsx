@@ -207,7 +207,7 @@ function chatHeader(): HTMLElement {
   return header as HTMLElement;
 }
 
-describe("Ask Sunny chat header", () => {
+describe("Ask Bubbles chat header", () => {
   it("offers New chat without the History drawer being opened first", () => {
     renderChat();
 
@@ -259,7 +259,7 @@ describe("Ask Sunny chat header", () => {
       screen.getByRole("heading", { name: /how can .* help today/i }),
     ).toBeTruthy();
     expect(
-      (screen.getByLabelText(/ask sunny a question/i) as HTMLTextAreaElement).value,
+      (screen.getByLabelText(/ask bubbles a question/i) as HTMLTextAreaElement).value,
     ).toBe("");
 
     // Nothing was deleted, and the old thread is selectable again.

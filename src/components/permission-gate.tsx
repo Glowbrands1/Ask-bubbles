@@ -10,6 +10,7 @@ import { PageShell } from "@/components/ui/layout";
 import { ROLE_LABEL } from "@/lib/permissions";
 import { useSession } from "@/lib/session/session-context";
 import type { Permission } from "@/types";
+import { ACTIVE_BRAND } from "@/lib/brand";
 
 /**
  * Client-side permission gating — the SECOND line, not the first.
@@ -66,7 +67,7 @@ export function PermissionGate({
            */
           <Button asChild variant="secondary">
             <Link href={can("view_overview") ? "/" : "/chat"}>
-              {can("view_overview") ? "Back to Overview" : "Back to Ask Sunny"}
+              {can("view_overview") ? "Back to Home" : `Back to ${ACTIVE_BRAND.productName}`}
             </Link>
           </Button>
         }

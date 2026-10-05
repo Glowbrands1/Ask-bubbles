@@ -10,7 +10,7 @@ import type { KnowledgeProvider, KnowledgeQuery } from "../types";
  * screen and the citation plumbing are unchanged.
  */
 export class RemoteKnowledgeProvider implements KnowledgeProvider {
-  readonly name = "Ask Sunny knowledge service";
+  readonly name = "Ask Bubbles knowledge service";
 
   private lastCitations: SourceCitation[] = [];
 

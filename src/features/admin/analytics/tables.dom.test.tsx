@@ -22,8 +22,8 @@ import { LeadersTable, LocationsTable } from "./tables";
  */
 
 const LOCATION: LocationRow = {
-  salonId: "11111111-1111-4111-8111-111111111111",
-  salonNumber: "0306",
+  locationId: "11111111-1111-4111-8111-111111111111",
+  locationCode: "0306",
   storeName: "MO Kansas City Wornall",
   district: "Patterson, Madeline",
   events: 12,
@@ -37,7 +37,7 @@ const LOCATION: LocationRow = {
 
 const SILENT_LOCATION: LocationRow = {
   ...LOCATION,
-  salonId: "22222222-2222-4222-8222-222222222222",
+  locationId: "22222222-2222-4222-8222-222222222222",
   storeName: "TN Oak Ridge",
   events: 0,
   activeLeaders: 0,
@@ -49,7 +49,7 @@ const LEADER: LeaderRow = {
   displayName: "Pau",
   role: "regional_manager",
   status: "active",
-  salonId: LOCATION.salonId,
+  locationId: LOCATION.locationId,
   storeName: "MO Kansas City Wornall",
   district: "Patterson, Madeline",
   events: 9,
@@ -105,7 +105,7 @@ describe("both Overview cards still render everything they did", () => {
       expect(screen.getByRole("columnheader", { name: heading })).toBeDefined();
     }
     /*
-     * SCOPED TO ITS OWN ROW. Both fixtures carry "/ 5" — one salon has three of
+     * SCOPED TO ITS OWN ROW. Both fixtures carry "/ 5" — one location has three of
      * five leaders active and the other none — so a page-wide query finds two.
      * Asserting within the row is also the more honest check: it proves the
      * figures sit in the row they describe.

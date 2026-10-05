@@ -1,6 +1,6 @@
 import "server-only";
 
-import { DEFAULT_WOVEN_COMPANY, DEFAULT_WOVEN_TEAM_BASE_URL } from "./contract";
+import { DEFAULT_WOVEN_TEAM_BASE_URL } from "./contract";
 
 /**
  * ============================================================================
@@ -104,9 +104,13 @@ export function readWovenKnowledgeConfig(env: Env = process.env): WovenKnowledge
   /* A password is not trimmed: surrounding whitespace can be part of it. */
   const password = env[WOVEN_TEAM_PASSWORD_ENV] ?? "";
 
+  /* The company is required: a login can see several, and guessing one is how the wrong tenant gets synced. */
+  const company = (env[WOVEN_TEAM_COMPANY_ENV] ?? "").trim();
+
   const missingCredentials: string[] = [];
   if (!username) missingCredentials.push(WOVEN_TEAM_USERNAME_ENV);
   if (password.length === 0) missingCredentials.push(WOVEN_TEAM_PASSWORD_ENV);
+  if (!company) missingCredentials.push(WOVEN_TEAM_COMPANY_ENV);
 
   const enabled = readFlag(env, WOVEN_KNOWLEDGE_SYNC_ENABLED_ENV);
   if (enabled && missingCredentials.length > 0) {
@@ -116,8 +120,6 @@ export function readWovenKnowledgeConfig(env: Env = process.env): WovenKnowledge
       } not set.`,
     );
   }
-
-  const company = (env[WOVEN_TEAM_COMPANY_ENV] ?? "").trim() || DEFAULT_WOVEN_COMPANY;
 
   return {
     enabled,

@@ -11,12 +11,12 @@ import type { FormBlock, FormDocument, FieldResponsibility, FormField } from "..
  * template, that would be a quiet regression on two fronts.
  *
  *   THE ENGINE WOULD STOP FILLING THE HEADER. `createInstance` seeds the
- *   employee, the date, the job title and the salon into four specific keys. A
+ *   employee, the date, the job title and the location into four specific keys. A
  *   fresh extraction calling them `name` and `date` renders four blank rules
  *   where a name belongs.
  *
  *   AND EVERY BUSINESS DECISION ABOUT THE FORM WOULD BE LOST. Which fields Ask
- *   Sunny may draft is not a property of the words on the page — it was decided
+ *   Bubbles may draft is not a property of the words on the page — it was decided
  *   per field, per form, and it is recorded on the CURRENT version. Extraction
  *   cannot re-derive it from a PDF and must not pretend to.
  *

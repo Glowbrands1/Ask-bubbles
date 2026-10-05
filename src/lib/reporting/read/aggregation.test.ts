@@ -21,9 +21,9 @@ describe("what may be summed", () => {
     expect(isSummable("years")).toBe(false);
   });
 
-  it("never averages a percentage across salons", () => {
-    // A mean of per-salon percentage changes weights a tiny salon equally with
-    // a large one, producing a number that matches no salon and no total.
+  it("never averages a percentage across locations", () => {
+    // A mean of per-location percentage changes weights a tiny location equally with
+    // a large one, producing a number that matches no location and no total.
     expect(canAggregate("percent", "mean")).toBe(false);
     expect(canAggregate("ratio", "mean")).toBe(false);
     expect(unitPolicy("percent").preferred).toBe("median");
@@ -46,9 +46,9 @@ describe("aggregate()", () => {
       basisYear: 2026,
       unit: "currency",
       values,
-      salonCount: 4,
+      locationCount: 4,
     });
-    expect(result).toMatchObject({ kind: "sum", value: 100, salonCount: 4 });
+    expect(result).toMatchObject({ kind: "sum", value: 100, locationCount: 4 });
     // Structurally impossible to claim a chain total.
     expect(result.companyWide).toBe(false);
   });
@@ -59,7 +59,7 @@ describe("aggregate()", () => {
       basisYear: 2024,
       unit: "percent",
       values: [-0.1, 0, 0.2, 0.4],
-      salonCount: 4,
+      locationCount: 4,
     });
     expect(result.kind).toBe("median");
     expect(result.value).toBeCloseTo(0.1, 10);
@@ -71,7 +71,7 @@ describe("aggregate()", () => {
       basisYear: 2024,
       unit: "percent",
       values,
-      salonCount: 4,
+      locationCount: 4,
       kind: "sum",
     });
     expect(result.value).toBeNull();
@@ -84,7 +84,7 @@ describe("aggregate()", () => {
       basisYear: null,
       unit: "rank",
       values,
-      salonCount: 4,
+      locationCount: 4,
     });
     expect(result.value).toBeNull();
     expect(result.unavailableReason).toMatch(/whole chain/i);
@@ -97,7 +97,7 @@ describe("aggregate()", () => {
       basisYear: 2019,
       unit: "count",
       values: [],
-      salonCount: 0,
+      locationCount: 0,
     });
     expect(result.value).toBeNull();
     expect(result.unavailableReason).toMatch(/no values/i);
@@ -109,7 +109,7 @@ describe("aggregate()", () => {
       basisYear: 2026,
       unit: "count",
       values: [0, 0],
-      salonCount: 2,
+      locationCount: 2,
     });
     expect(result.value).toBe(0);
   });
@@ -120,7 +120,7 @@ describe("aggregate()", () => {
       basisYear: null,
       unit: "ratio",
       values: [1, 2, 3, 4],
-      salonCount: 4,
+      locationCount: 4,
       kind: "median",
     });
     expect(result.value).toBe(2.5);
@@ -132,7 +132,7 @@ describe("aggregate()", () => {
       basisYear: 2026,
       unit: "currency",
       values: [10, Number.NaN, 20, Number.POSITIVE_INFINITY],
-      salonCount: 2,
+      locationCount: 2,
       kind: "sum",
     });
     expect(result.value).toBe(30);

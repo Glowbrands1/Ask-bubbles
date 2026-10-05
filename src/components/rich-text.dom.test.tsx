@@ -10,15 +10,15 @@ afterEach(cleanup);
 /**
  * The 14 September review, from the restricted session:
  *
- *   "Markdown tables are rendering as raw text. The salon list appeared with
- *    literal pipes — `| Salon | PPTA | |---|---|` — instead of displaying as a
+ *   "Markdown tables are rendering as raw text. The location list appeared with
+ *    literal pipes — `| Location | PPTA | |---|---|` — instead of displaying as a
  *    formatted table."
  */
 
-const SALON_TABLE = [
-  "Here are the salons:",
+const LOCATION_TABLE = [
+  "Here are the locations:",
   "",
-  "| Salon | PPTA | Tans |",
+  "| Location | PPTA | Tans |",
   "|---|---:|---:|",
   "| MO Kansas City Wornall | $3.54 | 150 |",
   "| NE Kearney | $0.19 | 105 |",
@@ -28,25 +28,25 @@ const SALON_TABLE = [
 
 describe("markdown tables render as tables", () => {
   it("renders a table element rather than a paragraph of pipes", () => {
-    render(<RichText content={SALON_TABLE} />);
+    render(<RichText content={LOCATION_TABLE} />);
 
     const table = screen.getByRole("table");
     expect(table).toBeTruthy();
     // The literal source must not survive anywhere on screen.
     expect(document.body.textContent).not.toContain("|---|");
-    expect(document.body.textContent).not.toContain("| Salon |");
+    expect(document.body.textContent).not.toContain("| Location |");
   });
 
   it("puts the header row in column headers", () => {
-    render(<RichText content={SALON_TABLE} />);
+    render(<RichText content={LOCATION_TABLE} />);
     const headers = screen.getAllByRole("columnheader").map((cell) => cell.textContent);
-    expect(headers).toEqual(["Salon", "PPTA", "Tans"]);
+    expect(headers).toEqual(["Location", "PPTA", "Tans"]);
   });
 
   it("puts every body row in the table", () => {
-    render(<RichText content={SALON_TABLE} />);
+    render(<RichText content={LOCATION_TABLE} />);
     const rows = within(screen.getByRole("table")).getAllByRole("row");
-    // One header row plus two salons.
+    // One header row plus two locations.
     expect(rows).toHaveLength(3);
     expect(rows[1].textContent).toContain("MO Kansas City Wornall");
     expect(rows[1].textContent).toContain("$3.54");
@@ -54,13 +54,13 @@ describe("markdown tables render as tables", () => {
   });
 
   it("keeps the prose around it as prose", () => {
-    render(<RichText content={SALON_TABLE} />);
-    expect(screen.getByText("Here are the salons:")).toBeTruthy();
+    render(<RichText content={LOCATION_TABLE} />);
+    expect(screen.getByText("Here are the locations:")).toBeTruthy();
     expect(screen.getByText("That is the whole list.")).toBeTruthy();
   });
 
   it("honours the delimiter row's alignment", () => {
-    render(<RichText content={SALON_TABLE} />);
+    render(<RichText content={LOCATION_TABLE} />);
     const headers = screen.getAllByRole("columnheader");
     expect(headers[0].className).toContain("text-left");
     expect(headers[1].className).toContain("text-right");
@@ -70,11 +70,11 @@ describe("markdown tables render as tables", () => {
   it("renders a table written without the outer pipes", () => {
     render(
       <RichText
-        content={["Salon | PPTA", "--- | ---", "KS Lawrence | $3.25"].join("\n")}
+        content={["Location | PPTA", "--- | ---", "KS Lawrence | $3.25"].join("\n")}
       />,
     );
     expect(screen.getAllByRole("columnheader").map((c) => c.textContent)).toEqual([
-      "Salon",
+      "Location",
       "PPTA",
     ]);
     expect(screen.getByRole("table").textContent).toContain("KS Lawrence");
@@ -83,7 +83,7 @@ describe("markdown tables render as tables", () => {
   it("still renders bold inside a cell", () => {
     render(
       <RichText
-        content={["| Salon | Note |", "|---|---|", "| KS Lawrence | **check this** |"].join("\n")}
+        content={["| Location | Note |", "|---|---|", "| KS Lawrence | **check this** |"].join("\n")}
       />,
     );
     expect(screen.getByText("check this").tagName).toBe("STRONG");
@@ -93,7 +93,7 @@ describe("markdown tables render as tables", () => {
     render(
       <RichText
         content={[
-          "| Salon | PPTA | Tans |",
+          "| Location | PPTA | Tans |",
           "|---|---|---|",
           "| KS Lawrence | $3.25 |",
         ].join("\n")}
@@ -137,7 +137,7 @@ describe("no raw HTML path exists", () => {
     render(
       <RichText
         content={[
-          "| Salon | Note |",
+          "| Location | Note |",
           "|---|---|",
           "| <img src=x onerror=alert(1)> | <b>bold?</b> |",
         ].join("\n")}
@@ -171,11 +171,11 @@ describe("no raw HTML path exists", () => {
 
 /**
  * ============================================================================
- * A WHOLE ASK SUNNY ANSWER, NOT A FEATURE AT A TIME
+ * A WHOLE ASK BUBBLES ANSWER, NOT A FEATURE AT A TIME
  * ============================================================================
  *
  * Every test above exercises one construct in isolation, and all of them passed
- * while the reported defect was live: "The salon list appeared with literal
+ * while the reported defect was live: "The location list appeared with literal
  * pipes." A real answer is a heading, then prose, then a table, then bullets,
  * then prose again — and the bugs in this module have always been at the
  * BOUNDARIES between those, where a block ends and the next begins.
@@ -189,9 +189,9 @@ describe("a complete assistant answer", () => {
   const ANSWER = [
     "### Sales Totals — 12 September",
     "",
-    "Across your salons PPTA came in at **$2.25**, weighted by each salon's own tans.",
+    "Across your locations PPTA came in at **$2.25**, weighted by each location's own tans.",
     "",
-    "| Salon | PPTA | Tans |",
+    "| Location | PPTA | Tans |",
     "| --- | ---: | ---: |",
     "| MO Kansas City Wornall | $2.38 | 102 |",
     "| NE Kearney | $1.28 | 65 |",
@@ -200,23 +200,23 @@ describe("a complete assistant answer", () => {
     "Two things stand out:",
     "",
     "- **NE Omaha 132nd and Maple** reports a PPTA of zero, which is a data question rather than a performance finding.",
-    "- The spread between the strongest and weakest salon is **$1.10**.",
+    "- The spread between the strongest and weakest location is **$1.10**.",
     "",
     "Product attachment is the behaviour behind that gap.",
   ].join("\n");
 
-  it("renders the table as a table, with every salon in it", () => {
+  it("renders the table as a table, with every location in it", () => {
     render(<RichText content={ANSWER} />);
 
     const table = screen.getByRole("table");
     expect(table).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "Salon" })).toBeTruthy();
-    for (const salon of [
+    expect(screen.getByRole("columnheader", { name: "Location" })).toBeTruthy();
+    for (const location of [
       "MO Kansas City Wornall",
       "NE Kearney",
       "NE Omaha 132nd and Maple",
     ]) {
-      expect(screen.getByRole("cell", { name: salon })).toBeTruthy();
+      expect(screen.getByRole("cell", { name: location })).toBeTruthy();
     }
   });
 
@@ -239,7 +239,7 @@ describe("a complete assistant answer", () => {
     const { container } = render(<RichText content={ANSWER} />);
     const text = container.textContent ?? "";
 
-    expect(text).toContain("weighted by each salon's own tans");
+    expect(text).toContain("weighted by each location's own tans");
     expect(text).toContain("Product attachment is the behaviour behind that gap.");
   });
 

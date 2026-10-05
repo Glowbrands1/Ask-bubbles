@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Jost, Lato, Manrope, Passion_One } from "next/font/google";
+import { Fredoka, Lato } from "next/font/google";
 
 import { ACTIVE_BRAND, brandStyle } from "@/lib/brand";
 import { pageAuthorizationEnforced, pageIdentity } from "@/lib/auth/page";
@@ -7,36 +7,18 @@ import { Providers } from "./providers";
 import "./globals.css";
 
 /**
- * THE APPROVED PAIRING: Passion One for display, Lato for everything else.
+ * TYPE: Fredoka for display headings and the wordmarks — rounded and friendly,
+ * a temporary stand-in for Buff City Soap's brand face until a brand kit is
+ * supplied — and Lato for everything else.
  *
- * Both through `next/font`, which is why this is safe to add: the files are
- * downloaded at BUILD time and served from this origin, so there is no runtime
- * request to a font CDN, no third-party dependency in the critical path and
- * nothing to block first paint. `display: "swap"` plus the fallback stacks in
- * globals.css mean text is readable before the webfont lands rather than
- * invisible, and the metric-adjusted fallbacks Next generates keep the reflow
- * from being a visible jump.
- *
- * PASSION ONE IS A DISPLAY FACE AND IS TREATED AS ONE. It carries headings and
- * prominent metrics; it is never used for body copy, form labels or anything
- * under 16px, where its tight apertures and heavy weight make it genuinely
- * hard to read. That is why Lato is loaded alongside rather than instead of it.
- *
- * Manrope stays for now: it is what every existing screen is set in, so
- * removing it would restyle the whole product in a checkpoint whose brief was
- * to BEGIN applying the new direction. `--font-sans` points at Lato, so new and
- * updated surfaces pick it up; Manrope remains available under its own
- * variable until the changeover is finished deliberately.
- *
- * JOST CARRIES THE WORDMARKS ONLY. The direction sets both "Ask Sunny" and the
- * "Sun Tan City" lockup in a wide-tracked geometric sans, which is a different
- * job from either display headings or body copy — a logotype, at two sizes, and
- * nothing else in the product uses it.
+ * Both through `next/font`: the files are downloaded at BUILD time and served
+ * from this origin, so there is no runtime request to a font CDN. Fredoka is
+ * a display face and is never used for body copy, labels or table cells.
  */
-const passionOne = Passion_One({
+const fredoka = Fredoka({
   subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-passion-one",
+  weight: ["400", "500", "600"],
+  variable: "--font-fredoka",
   display: "swap",
 });
 
@@ -47,30 +29,16 @@ const lato = Lato({
   display: "swap",
 });
 
-const jost = Jost({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-jost",
-  display: "swap",
-});
-
-const manrope = Manrope({
-  subsets: ["latin"],
-  variable: "--font-manrope",
-  display: "swap",
-});
-
 export const metadata: Metadata = {
   title: {
     default: `${ACTIVE_BRAND.productName} — ${ACTIVE_BRAND.tagline}`,
     template: `%s · ${ACTIVE_BRAND.productName}`,
   },
-  description:
-    "Ask Sunny is the manager operating platform for JB & Associates: assistant, knowledge base, forms, follow-ups, training, reporting and reviews in one place.",
+  description: ACTIVE_BRAND.description,
 };
 
 export const viewport: Viewport = {
-  themeColor: "#fff6f0",
+  themeColor: "#fbf5ec",
   width: "device-width",
   initialScale: 1,
 };
@@ -101,9 +69,8 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${lato.variable} ${passionOne.variable} ${jost.variable} ${manrope.variable}`}
-      // Brand palette overrides are applied here, so a second brand instance
-      // (Buff City Soap) is a BrandConfig swap rather than a restyle.
+      className={`${lato.variable} ${fredoka.variable}`}
+      // Brand palette overrides from the BrandConfig are applied here.
       style={brandStyle(ACTIVE_BRAND)}
     >
       <body className="antialiased">

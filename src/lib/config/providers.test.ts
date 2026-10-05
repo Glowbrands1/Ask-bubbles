@@ -270,7 +270,7 @@ describe("storage provider selection", () => {
 /**
  * THE BUG THIS BLOCK EXISTS FOR, stated as the evidence that found it.
  *
- * https://ask-sunny.vercel.app served:
+ * https://ask-bubbles.vercel.app served:
  *
  *   {"mode":"demo","configured":true,"missingEnvironmentVariables":[],
  *    "configurationProblems":[]}

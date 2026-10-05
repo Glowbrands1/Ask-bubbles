@@ -21,7 +21,7 @@ import {
  * THE GATE IS `view_analytics`, WHICH IS ADMINISTRATION-ONLY
  * ============================================================================
  *
- * It is held by `admin`, `owner` and `developer` and by nobody else — a Salon
+ * It is held by `admin`, `owner` and `developer` and by nobody else — a Location
  * Director or District Manager reaching this route is refused with 403 by
  * `authorizeRequest` before the id is even read. That is the same permission
  * the analytics screen is gated by, deliberately: the queue and the page that
@@ -158,7 +158,7 @@ export async function PATCH(
  *
  * SAME GATE AS PATCH — `view_analytics`, which is administration-only — and the
  * same ordering: authorization clears before the privileged client is touched.
- * A Salon Director or District Manager reaching this is refused with 403
+ * A Location Director or District Manager reaching this is refused with 403
  * before the id is read.
  *
  * NO BODY, so there is nothing to validate and nothing a caller could assert.

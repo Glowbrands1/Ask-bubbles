@@ -106,7 +106,7 @@ describe("recognising a reference with no subject", () => {
 
 /** The deterministic Forms location answer, as `form-answers.ts` writes it. */
 const FORMS_LOCATION_ANSWER = [
-  "You create and find forms in **Ask Sunny**, right here — tell me which form you need and who it is for.",
+  "You create and find forms in **Ask Bubbles**, right here — tell me which form you need and who it is for.",
   "",
   "They are grouped as **HR & Performance Forms** and **Hiring & Interview Forms**.",
   "",
@@ -120,7 +120,7 @@ const FRAMEWORK_ANSWER =
 describe("resolving against the nearest anchor", () => {
   it("reads a list of templates as the forms register", () => {
     const answer = [
-      "These are the forms published in Ask Sunny that you can use:",
+      "These are the forms published in Ask Bubbles that you can use:",
       `- **${TEMPLATE_NAMES[0]}**`,
       `- **${TEMPLATE_NAMES[1]}**`,
       "The **guidance** is Knowledge Base material.",

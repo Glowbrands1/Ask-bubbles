@@ -19,7 +19,7 @@ import { correctiveActionDocument } from "@/lib/forms/library";
  * NOTHING HERE WRITES. Asserted, not assumed — see requirement 42.
  */
 
-const SALON: AccessScope = {
+const LOCATION: AccessScope = {
   level: "location",
   primaryAreaId: "loc-0101",
   alsoCoversAreaIds: [],
@@ -67,7 +67,7 @@ function epp(overrides: Record<string, unknown> = {}) {
     key: "sdit-epp",
     name: "SDIT EPP",
     shortName: "SDIT EPP",
-    description: "Employee Performance Plan for a Salon Director in training.",
+    description: "Employee Performance Plan for a Location Director in training.",
     layoutFamily: "epp",
     requiredPermission: "create_epp",
     displayOrder: 4,
@@ -128,7 +128,7 @@ function turn(
     questionMessageId: "msg-current",
     actor: {
       role: (options.role === undefined ? "location_manager" : options.role) as never,
-      scope: options.scope === undefined ? SALON : options.scope,
+      scope: options.scope === undefined ? LOCATION : options.scope,
     },
     summaries: library as never,
     ...(options.continueTemplateKey ? { continueTemplateKey: options.continueTemplateKey } : {}),
@@ -213,7 +213,7 @@ describe("38. a named template the library does not publish is refused, not subs
 describe("39. the TEMPLATE's own permission decides, and chat cannot widen it", () => {
   it("refuses a DPOA to a role that cannot create corrective action", async () => {
     const { proposals } = await load([template(), dpoa()]);
-    // An Assistant Salon Director holds `create_coaching` — which is a
+    // An Assistant Location Director holds `create_coaching` — which is a
     // different permission from `create_coaching_form` — and no form
     // permission at all.
     const response = await proposals.proposeFormForTurn(
@@ -232,7 +232,7 @@ describe("39. the TEMPLATE's own permission decides, and chat cannot widen it", 
     expect(response!.formProposal).toBeUndefined();
   });
 
-  it("allows a Salon Director the forms they already hold", async () => {
+  it("allows a Location Director the forms they already hold", async () => {
     const { proposals } = await load([template(), dpoa()]);
     const response = await proposals.proposeFormForTurn(
       turn("write a DPOA for Sarah Jones", { role: "location_manager" }),
@@ -255,7 +255,7 @@ describe("39. the TEMPLATE's own permission decides, and chat cannot widen it", 
      */
     expect(offered(response!)).toContain("Coaching Form");
     expect(offered(response!)).toContain("Corrective Action Form");
-    // A Salon Director does not hold `create_epp`, so offering it would be an
+    // A Location Director does not hold `create_epp`, so offering it would be an
     // invitation to a refusal — collapsed behind "See more forms" included.
     expect(offered(response!)).not.toContain("SDIT EPP");
   });
@@ -462,7 +462,7 @@ describe("43. the proposal id is the server's, not the caller's", () => {
  * ============================================================================
  *
  *   Manager: "Build me a coaching form for that."
- *   Sunny:   "I don't yet know who this form is about..."
+ *   Bubbles:   "I don't yet know who this form is about..."
  *   Manager: "Sarah Test"
  *
  * That third turn was routed into retrieval, because `detectTemplateIntent`
@@ -582,7 +582,7 @@ describe("F3. a tampered hint gains nothing", () => {
     expect(response!.formProposal).toBeUndefined();
   });
 
-  it("still authorizes the salon from the authenticated scope, not the hint", async () => {
+  it("still authorizes the location from the authenticated scope, not the hint", async () => {
     const { proposals } = await load([template()]);
     const response = await proposals.proposeFormForTurn(
       turn("Sarah Test", {
@@ -603,10 +603,10 @@ describe("F3. a tampered hint gains nothing", () => {
 
 /**
  * ============================================================================
- * A GLOBAL ADMINISTRATOR IS NOT "MISSING A SALON"
+ * A GLOBAL ADMINISTRATOR IS NOT "MISSING A LOCATION"
  * ============================================================================
  *
- * WHAT QA SAW. Asked for a coaching form, Ask Sunny wrote a pseudo-form in
+ * WHAT QA SAW. Asked for a coaching form, Ask Bubbles wrote a pseudo-form in
  * prose — "here's a draft body you can paste into whichever official form" —
  * and told the manager the knowledge base contains no coaching template.
  *
@@ -640,7 +640,7 @@ describe("P4-RC. a global actor can create a coaching form", () => {
     expect(response!.formProposal!.employeeName).toBe("Sarah Test");
   });
 
-  it("names no salon, and says so rather than asking", async () => {
+  it("names no location, and says so rather than asking", async () => {
     const { proposals } = await load([template()]);
     const response = await proposals.proposeFormForTurn(
       turn("Build me a coaching form for Sarah Test for that.", {
@@ -651,9 +651,9 @@ describe("P4-RC. a global actor can create a coaching form", () => {
 
     expect(response!.formProposal!.locationId).toBeNull();
     expect(response!.formProposal!.locationResolution).toBe("not_applicable");
-    expect(response!.content).toMatch(/covers every salon, so this form won't name one/i);
+    expect(response!.content).toMatch(/covers every location, so this form won't name one/i);
     // The question that had nothing to answer it is gone.
-    expect(response!.content).not.toMatch(/which salon is this about/i);
+    expect(response!.content).not.toMatch(/which location is this about/i);
   });
 
   it("does not send them to the standalone builder", async () => {
@@ -763,7 +763,7 @@ describe("RR-E. with no form established, it asks rather than defaulting", () =>
     expect(calls).toEqual([]);
     expect(offered(response!)).toContain("Coaching Form");
     expect(offered(response!)).toContain("Corrective Action Form");
-    // A Salon Director holds no `create_epp`.
+    // A Location Director holds no `create_epp`.
     expect(offered(response!)).not.toContain("SDIT EPP");
   });
 
@@ -831,7 +831,7 @@ describe("RR-F. with a form already established, it continues that one", () => {
     expect(response!.formProposal!.sourceMessageIds).toContain("m2");
   });
 
-  it("never takes a fact from Sunny's own prose", async () => {
+  it("never takes a fact from Bubbles' own prose", async () => {
     const { proposals } = await load([template()]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, {
@@ -971,7 +971,7 @@ describe("F5. the rail picks up the form the manager already named", () => {
 
   it("still applies the template's own permission to a looked-back key", async () => {
     /*
-     * The look-back is a hint about WHICH form, never a grant. A Salon Director
+     * The look-back is a hint about WHICH form, never a grant. A Location Director
      * has no `create_epp`, and naming one earlier cannot change that.
      */
     const { proposals } = await load([template(), epp()]);
@@ -1039,11 +1039,11 @@ describe("CA-INTAKE. the opening depends on whether the manager has described an
 
     const content = response!.content;
 
-    // The business's questions, in its order and wording — less the salon,
-    // which this one-salon account already settles.
+    // The business's questions, in its order and wording — less the location,
+    // which this one-location account already settles.
     expect(content).toMatch(/I can help you create a \*\*Corrective Action Form\*\*/);
     expect(content).toMatch(/^1\. Employee's full name$/m);
-    expect(content).not.toMatch(/Salon location/);
+    expect(content).not.toMatch(/Location location/);
     expect(content).toMatch(/^2\. Date for the form/m);
     expect(content).toMatch(/^3\. What happened/m);
     expect(content).toMatch(/^4\. Whether this is a verbal or written warning$/m);
@@ -1053,7 +1053,7 @@ describe("CA-INTAKE. the opening depends on whether the manager has described an
 
     /*
      * THE NAME THE BUSINESS RETIRED, ANYWHERE IN THE OPENING, IS THE BUG THIS
-     * BLOCK EXISTS FOR. They sent us a screenshot of Ask Sunny offering to
+     * BLOCK EXISTS FOR. They sent us a screenshot of Ask Bubbles offering to
      * create a "Disciplinary Plan of Action (DPOA) form" and asked for the
      * questions kept and the name gone.
      */
@@ -1119,9 +1119,9 @@ describe("CA-INTAKE. the opening depends on whether the manager has described an
     );
 
     expect(response!.content).toMatch(/I can help you create a \*\*Corrective Action Form\*\*/);
-    // Sarah Test was named and the salon is the account's: neither is asked.
+    // Sarah Test was named and the location is the account's: neither is asked.
     expect(response!.content).not.toMatch(/Employee's full name/);
-    expect(response!.content).not.toMatch(/Salon location/);
+    expect(response!.content).not.toMatch(/Location location/);
     expect(response!.content).toMatch(/^1\. Date for the form/m);
   });
 });
@@ -1268,7 +1268,7 @@ describe("PICK. an ambiguous request offers structured choices", () => {
  * ============================================================================
  *
  * The business asked for the Hiring & Interview forms to stop appearing among
- * the choices Sunny puts in front of a manager who has not named a form — the
+ * the choices Bubbles puts in front of a manager who has not named a form — the
  * cards behind "Create a form from this conversation" and the lists that go
  * with them. See `lib/forms/chooser.ts`.
  *
@@ -1344,7 +1344,7 @@ describe("HIDE. the hiring forms are not offered as choices", () => {
       }),
     );
 
-    expect(response!.content).toMatch(/not published in Ask Sunny yet/i);
+    expect(response!.content).toMatch(/not published in Ask Bubbles yet/i);
     expect(response!.content).toContain("Coaching Form");
     for (const entry of HIRING) {
       expect(response!.content, entry.name as string).not.toContain(entry.name);
@@ -1353,7 +1353,7 @@ describe("HIDE. the hiring forms are not offered as choices", () => {
 
   it("asks the question and offers nothing when the hiring forms are all there is", async () => {
     /*
-     * The rule that Sunny asks rather than defaults survives an empty
+     * The rule that Bubbles asks rather than defaults survives an empty
      * shortlist: withholding must not fall back to offering a withheld form.
      */
     const { proposals } = await load(HIRING);
@@ -1440,7 +1440,7 @@ describe("HIDE. the hiring forms are not offered as choices", () => {
   it("still refuses one the role cannot create", async () => {
     /*
      * Withholding is applied AFTER permission, never in place of it. An
-     * Assistant Salon Director has no `create_hiring_form`, and the refusal
+     * Assistant Location Director has no `create_hiring_form`, and the refusal
      * is the same one it always was — not a silent "no such form".
      */
     const { proposals } = await load([template(), ...HIRING]);

@@ -236,7 +236,7 @@ describe("responsibility is per template, not per field name", () => {
      * THE ASSERTION THAT STOPS A TIDY-UP. Two questions that read almost the
      * same, answered differently by the business:
      *
-     *   SDIT EPP  "Assistant Salon Director Thoughts"  -> AI FILLS chip
+     *   SDIT EPP  "Assistant Location Director Thoughts"  -> AI FILLS chip
      *   DMIT EPP  "In what areas do you feel..."       -> FILLED BY HAND chip
      *
      * Both are copied from the reference captures. A rule like "self-review
@@ -271,7 +271,7 @@ describe("responsibility is per template, not per field name", () => {
      *
      * THE TWO PERFORMANCE PLANS' `policy_references` NAME A MANUAL TOO. Each
      * sits on that plan's draft-details appendix rather than on the form the
-     * employee signs, and names the sections of the JB & Associates
+     * employee signs, and names the sections of the Example Soap Co
      * Employment Policy Manual the observation actually pointed at. Marked
      * grounded for the same reason the other two are: if no section resolves,
      * the line must stay blank rather than name a policy nobody checked.
@@ -360,7 +360,7 @@ describe("the library matches the verified inventory", () => {
     expect(framework.map((entry) => entry.key)).toEqual(["follow-up-coaching"]);
     expect(framework[0]!.provenance).toEqual({
       kind: "framework",
-      document: "ASK_SUNNY_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT",
+      document: "EXAMPLE_FRAMEWORK_KB_TEXT",
       locator: "§9.2 Template: Create a follow-up coaching form",
       note: expect.stringContaining("did NOT originate from an uploaded business PDF"),
     });
@@ -401,7 +401,7 @@ describe("the library matches the verified inventory", () => {
      * The four were one layout because the four reference captures differed
      * only in a title and a reviewer pairing. That stopped being true of the
      * SDIT EPP: the form the business issues for it carries the standing
-     * expectations a Salon Director in Training is marked against, the
+     * expectations a Location Director in Training is marked against, the
      * PPTA/LPSVA/UPTA productivity table, the section the employee completes,
      * and the re-evaluation.
      *
@@ -449,16 +449,16 @@ describe("the library matches the verified inventory", () => {
      * succeeding?" on a page titled SDIT.
      */
     expect(pairings).toEqual([
-      "Training Salon Director/SDIT",
+      "Training Location Director/SDIT",
       /*
        * THE SUBJECT OF THE MANAGEMENT PERFORMANCE PLAN IS THE TSD. It was
        * "SD", inherited from the shared builder, so the form asked "In what
-       * areas is the SD currently succeeding?" about a Training Salon
+       * areas is the SD currently succeeding?" about a Training Location
        * Director — the same wrong-role defect the SDIT plan had.
        */
       "District Manager/TSD",
-      "Training Salon Director/ASD",
-      "Salon Director/TC",
+      "Training Location Director/ASD",
+      "Location Director/TC",
     ]);
   });
 
@@ -614,11 +614,11 @@ describe("the library matches the verified inventory", () => {
    *
    * An interview form has no Job Title, because the applicant does not have
    * one yet — only the prescreening call asks, and it asks "Position Applied
-   * For". What all four DO share is the subject, the date and the salon, and
+   * For". What all four DO share is the subject, the date and the location, and
    * they carry the engine's own keys for those so `createInstance` fills them
    * from the record rather than asking the interviewer to type a name twice.
    */
-  it("fills the applicant, the date and the salon on every hiring form", () => {
+  it("fills the applicant, the date and the location on every hiring form", () => {
     const hiring = TEMPLATE_SEEDS.filter((entry) => entry.category === "hiring");
     expect(hiring).toHaveLength(4);
     for (const template of hiring) {

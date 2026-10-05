@@ -62,18 +62,18 @@ describe("scan, audience choices and the initial sync, in the database", () => {
     expect(docs.filter((d) => d.status === "indexed").map((d) => d.title)).toEqual(expect.arrayContaining(["Attendance Policy", "Dress Code", "Manager Bonus Policy"]));
     expect(docs.every((d) => d.source === "woven")).toBe(true);
 
-    const manifest = await q<{ entity_id: string; part_key: string; record_title: string | null; state: string; in_ask_sunny: boolean; error_category: string | null }>(
-      "select entity_id, part_key, record_title, state, in_ask_sunny, error_category from public.knowledge_sync_items",
+    const manifest = await q<{ entity_id: string; part_key: string; record_title: string | null; state: string; in_knowledge_base: boolean; error_category: string | null }>(
+      "select entity_id, part_key, record_title, state, in_knowledge_base, error_category from public.knowledge_sync_items",
     );
-    expect(manifest.find((m) => m.entity_id === uuid(101) && m.part_key === "content")).toMatchObject({ record_title: "Attendance Policy", in_ask_sunny: true });
+    expect(manifest.find((m) => m.entity_id === uuid(101) && m.part_key === "content")).toMatchObject({ record_title: "Attendance Policy", in_knowledge_base: true });
     /* The fixture handbook's bytes are not a real PDF: that one item fails and will retry; the others are unaffected. */
     const handbook = manifest.find((m) => m.entity_id === uuid(201))!;
-    expect(handbook).toMatchObject({ state: "ERROR", in_ask_sunny: false });
-    expect(manifest.filter((m) => m.in_ask_sunny).length).toBeGreaterThanOrEqual(3);
+    expect(handbook).toMatchObject({ state: "ERROR", in_knowledge_base: false });
+    expect(manifest.filter((m) => m.in_knowledge_base).length).toBeGreaterThanOrEqual(3);
     /* Nothing without an audience choice, nothing draft and nothing unsupported was added. */
-    expect(manifest.filter((m) => m.state === "NEEDS_REVIEW").every((m) => !m.in_ask_sunny)).toBe(true);
-    expect(manifest.filter((m) => m.state === "BLOCKED").every((m) => !m.in_ask_sunny)).toBe(true);
-    expect(manifest.filter((m) => m.state === "EXCLUDED").every((m) => !m.in_ask_sunny)).toBe(true);
+    expect(manifest.filter((m) => m.state === "NEEDS_REVIEW").every((m) => !m.in_knowledge_base)).toBe(true);
+    expect(manifest.filter((m) => m.state === "BLOCKED").every((m) => !m.in_knowledge_base)).toBe(true);
+    expect(manifest.filter((m) => m.state === "EXCLUDED").every((m) => !m.in_knowledge_base)).toBe(true);
   });
 
   it("running the sync again adds nothing: same documents, same ids, no duplicates", async () => {
@@ -89,7 +89,7 @@ describe("scan, audience choices and the initial sync, in the database", () => {
     expect(owners).toEqual([]);
   });
 
-  it("the Content view reads the manifest after the initial sync, with Ask Sunny titles", async () => {
+  it("the Content view reads the manifest after the initial sync, with Ask Bubbles titles", async () => {
     await h.run("preview");
     await h.run("sync");
     const content = await readWovenKnowledgeContent({
@@ -98,7 +98,7 @@ describe("scan, audience choices and the initial sync, in the database", () => {
         new Map((await q<{ id: string; title: string }>("select id::text as id, title from public.knowledge_documents where id::text = any($1)", [ids])).map((r) => [r.id, r.title])),
     });
     expect(content.basis).toBe("manifest");
-    expect(content.rows.find((r) => r.title === "Attendance Policy")).toMatchObject({ syncState: "up_to_date", askSunny: [expect.objectContaining({ title: "Attendance Policy" })] });
+    expect(content.rows.find((r) => r.title === "Attendance Policy")).toMatchObject({ syncState: "up_to_date", askBubbles: [expect.objectContaining({ title: "Attendance Policy" })] });
     expect(content.rows.find((r) => r.title === "Team Member Handbook")).toMatchObject({ syncState: "error" });
   });
 });

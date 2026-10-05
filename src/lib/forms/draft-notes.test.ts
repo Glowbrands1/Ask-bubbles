@@ -18,7 +18,7 @@ import type { ChatMessage } from "@/types";
  * filter here exists because of what the alternative would put on somebody's
  * employment file:
  *
- *   an assistant turn        Sunny's INTERPRETATION of what the manager said,
+ *   an assistant turn        Bubbles' INTERPRETATION of what the manager said,
  *                            written up as fact
  *   a dropped turn           content the bounded window excluded, sneaking back
  *                            in through the client
@@ -44,9 +44,9 @@ describe("20. only the manager's own turns become drafting notes", () => {
      * assistant id — by bug or otherwise — still gets nothing from it.
      */
     const manager = turn("user", "Sarah was late three times this week.");
-    const sunny = turn("assistant", "Understood. Is this about Jane Kowalski?");
+    const bubbles = turn("assistant", "Understood. Is this about Jane Kowalski?");
 
-    const notes = draftNotesFromConversation([manager, sunny], [manager.id, sunny.id]);
+    const notes = draftNotesFromConversation([manager, bubbles], [manager.id, bubbles.id]);
 
     expect(notes.text).toBe("Sarah was late three times this week.");
     expect(notes.text).not.toContain("Jane Kowalski");
@@ -164,7 +164,7 @@ describe("F5. an over-long current turn does not produce an empty draft", () => 
     expect(notes.truncated).toBe(true);
     expect(notes.text.length).toBeLessThanOrEqual(MANAGER_CONTEXT_CHARS);
     expect(notes.text).toContain("The full account of what happened.");
-    expect(notes.text).toMatch(/longer than Ask Sunny reads at once/);
+    expect(notes.text).toMatch(/longer than Ask Bubbles reads at once/);
   });
 
   it("matches exactly what the proposal was built from", () => {
@@ -187,8 +187,8 @@ describe("26. an account too thin to draft from is refused, not padded", () => {
   });
 
   it("reports unusable when nothing at all qualified", () => {
-    const sunny = turn("assistant", "Here is what I would put on a Coaching Form.");
-    expect(draftNotesAreUsable(draftNotesFromConversation([sunny], [sunny.id]))).toBe(false);
+    const bubbles = turn("assistant", "Here is what I would put on a Coaching Form.");
+    expect(draftNotesAreUsable(draftNotesFromConversation([bubbles], [bubbles.id]))).toBe(false);
   });
 
   it("accepts a real account", () => {

@@ -7,7 +7,7 @@
  * skirt today", the assistant wrote into Observation of Offense:
  *
  *   "On September 10, Sarah Test was observed wearing a mini skirt at the
- *    Kearny salon location, WHICH IS NOT IN COMPLIANCE WITH THE SUN TAN CITY
+ *    Kearny location location, WHICH IS NOT IN COMPLIANCE WITH THE SUN TAN CITY
  *    DRESS CODE POLICY."
  *
  * The first clause is a fact a manager reported. The second is a legal-shaped
@@ -67,7 +67,7 @@
  * Trailing clauses that convert an observation into a finding.
  *
  * Each pattern eats to the end of its clause — the next `.`, `;` or `—` — so
- * "…wearing a mini skirt at the Kearny salon, which is not in compliance with
+ * "…wearing a mini skirt at the Kearny location, which is not in compliance with
  * the dress code policy." loses exactly the part after the comma.
  */
 const CLAIM_CLAUSE: readonly RegExp[] = [
@@ -98,7 +98,7 @@ const BREACH_WORD =
  * What survives as a statement.
  *
  * A clause cut can leave "On September 10, Sarah Test was observed wearing a
- * mini skirt at the Kearny salon location." — which is the whole point — or it
+ * mini skirt at the Kearny location location." — which is the whole point — or it
  * can leave a stub like "This was." A stub is dropped: a fragment on an HR
  * record is worse than a shorter paragraph.
  */
@@ -212,7 +212,7 @@ export function stripUnsupportedPolicyClaims(
  * a thing they can go and check.
  */
 export const POLICY_CLAIM_REMOVED_NOTICE =
-  "Ask Sunny kept the observation to what was seen. It removed the statement that a policy was breached, because no approved policy was retrieved to support it — confirm the exact policy in the official manual, then add the finding yourself.";
+  "Ask Bubbles kept the observation to what was seen. It removed the statement that a policy was breached, because no approved policy was retrieved to support it — confirm the exact policy in the official manual, then add the finding yourself.";
 
 /* ================================================================ */
 /*  AN ACTION PLAN MAY SET AN EXPECTATION. IT MAY NOT WRITE A RULE.   */
@@ -252,7 +252,7 @@ export const POLICY_CLAIM_REMOVED_NOTICE =
  *   A CONCRETE ARTIFACT OR THRESHOLD — a garment, a name badge, footwear, a
  *   locker, a hemline, a notice period — is the CONTENT OF A POLICY. Nobody
  *   can know it without reading the manual, and a manager reading it back off
- *   a form Ask Sunny wrote will believe the manual said so.
+ *   a form Ask Bubbles wrote will believe the manual said so.
  *
  * So the test is an obligation ("must", "is required to", "may not") over an
  * object drawn from a deliberately SHORT list of policy artifacts. "Dress
@@ -280,7 +280,7 @@ const OBLIGATION =
  *
  * SHORT ON PURPOSE, and every entry is a thing somebody could only know by
  * reading the manual. A bare "phone" is deliberately absent — "Sarah must
- * answer the salon phone promptly" is a behaviour — while "personal phone" and
+ * answer the location phone promptly" is a behaviour — while "personal phone" and
  * "locker" are the dress-and-devices policy's own vocabulary.
  */
 const REQUIREMENT_OBJECT: readonly RegExp[] = [
@@ -547,10 +547,10 @@ export function stripUnsupportedPolicyAttributions(
 
 /** The sentence a manager sees when an unsupported attribution was removed. */
 export const POLICY_ATTRIBUTION_REMOVED_NOTICE =
-  "A sentence saying company policy requires something was removed: the JB & Associates manual sections that were checked do not state it. The coaching point is still on the form — add the requirement yourself if the manual does say so.";
+  "A sentence saying company policy requires something was removed: the company manual sections that were checked do not state it. The coaching point is still on the form — add the requirement yourself if the manual does say so.";
 
 export const POLICY_REQUIREMENT_REMOVED_NOTICE =
-  "Ask Sunny kept the plan to what it can support. It removed a specific requirement — the kind of detail that only the manual can settle — because no approved policy was retrieved to back it, and replaced it with the general expectation. Add the exact requirement once you have confirmed it in the official manual.";
+  "Ask Bubbles kept the plan to what it can support. It removed a specific requirement — the kind of detail that only the manual can settle — because no approved policy was retrieved to back it, and replaced it with the general expectation. Add the exact requirement once you have confirmed it in the official manual.";
 
 /**
  * ============================================================================
@@ -569,7 +569,7 @@ export const POLICY_REQUIREMENT_REMOVED_NOTICE =
  * and thirteen of the templates have no policy field at all.
  */
 export const POLICY_SEPARATION_RULES: readonly string[] = [
-  "An observation states WHAT WAS SEEN OR HEARD and never whether it broke a rule. Write 'was observed wearing a mini skirt at the salon', never 'which is not in compliance with the dress code policy'.",
+  "An observation states WHAT WAS SEEN OR HEARD and never whether it broke a rule. Write 'was observed wearing a mini skirt at the location', never 'which is not in compliance with the dress code policy'.",
   "Never write that something violates, breaches, contravenes or is not in compliance with a policy, a dress code, a handbook or a standard. Whether a rule was broken is settled by the policy fields, from the approved manual, and nowhere else on this form.",
   "The Type of Offense boxes are CATEGORIES you may tick. They are not policies. Never copy an offense category — 'Dress Code Violation', 'Standards of Conduct', 'Absenteeism' — into a policy field: a policy field takes the policy's own title or section from the approved manual, and nothing else.",
   "Never state a specific rule the approved policy in front of you does not state. Without a retrieved requirement, write the expectation generally — that the employee is expected to meet the current company requirement and that management will review it with them — rather than inventing what the requirement is.",

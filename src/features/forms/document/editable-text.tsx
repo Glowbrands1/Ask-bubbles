@@ -101,7 +101,7 @@ export function EditableText({
       data-placeholder={placeholder}
       className={cn(
         "-mx-0.5 rounded-[3px] px-0.5 outline-none",
-        "hover:bg-black/[0.045] focus:bg-brand-yellow-soft focus:ring-1 focus:ring-brand-yellow/45",
+        "hover:bg-black/[0.045] focus:bg-brand-accent-soft focus:ring-1 focus:ring-brand-accent/45",
         "empty:before:text-black/30 empty:before:italic empty:before:content-[attr(data-placeholder)]",
         multiline ? "whitespace-pre-wrap" : "whitespace-pre-wrap",
         className,

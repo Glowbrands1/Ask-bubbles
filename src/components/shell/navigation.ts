@@ -41,7 +41,7 @@ export interface NavItem {
    * It does not replace `permission`; both must pass. Reading one cited
    * document is a separate, ungated-by-this route — see
    * `/knowledge/document/[id]`, which every role holding `view_knowledge` may
-   * open so Sunny's citations stay clickable.
+   * open so Bubbles' citations stay clickable.
    */
   adminOnly?: boolean;
   /**
@@ -49,11 +49,11 @@ export interface NavItem {
    * NAVIGATES to.
    *
    * Needed wherever a sidebar entry names a SECTION but opens that section's
-   * default page. "Reports & Analytics" opens Salon Performance directly — a
+   * default page. "Reports & Analytics" opens Location Performance directly — a
    * manager should not have to pick a report before seeing one — but it must
    * stay highlighted across every reporting route, including the drill-down and
    * the reports added later. Keying the highlight on `href` would light up on
-   * Salon Performance and go dark on Sales Totals, which reads as having left
+   * Location Performance and go dark on Sales Totals, which reads as having left
    * the section.
    *
    * Matched as a prefix, exactly as `href` is.
@@ -193,7 +193,7 @@ export const ICONS = { Sparkles };
  * Whether a sidebar item is the one the current route belongs to.
  *
  * Every item matches as a prefix, so a nested route keeps its section lit:
- * `/reports/salon-performance/0468` belongs to Reports & Analytics, and
+ * `/reports/location-performance/0468` belongs to Reports & Analytics, and
  * `/forms/monitoring/abc` to Form Monitoring. `/` is the exception, because a
  * prefix match on it would mark Overview active everywhere.
  *

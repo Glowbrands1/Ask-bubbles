@@ -25,7 +25,7 @@ export function hiddenInputValue(page: ParsedPage, name: string): string | null 
  * THE WOVEN TEAM HTTP CLIENT — same-origin, cookie session, read-only
  * ============================================================================
  *
- * Once signed in, Ask Sunny makes the same same-origin requests the Woven Team
+ * Once signed in, Ask Bubbles makes the same same-origin requests the Woven Team
  * web app makes, with the session cookie it was issued. No browser is driven.
  *
  * FAILS CLOSED. A read that answers with a redirect to the login page, a login
@@ -232,12 +232,12 @@ export class WovenTeamClient {
     try {
       parsed = new URL(url);
     } catch {
-      throw new WovenTeamError("download_failed", "Woven gave a download link Ask Sunny could not read.", { path: where });
+      throw new WovenTeamError("download_failed", "Woven gave a download link Ask Bubbles could not read.", { path: where });
     }
     if (parsed.protocol !== "https:" || !DOWNLOAD_HOST_PATTERN.test(parsed.hostname)) {
       throw new WovenTeamError(
         "download_host_not_allowed",
-        "Woven's download link points somewhere Ask Sunny does not download from.",
+        "Woven's download link points somewhere Ask Bubbles does not download from.",
         { path: where },
       );
     }
@@ -254,7 +254,7 @@ export class WovenTeamClient {
     const declared = Number(response.headers.get("content-length") ?? "0");
     if (declared > maxBytes) {
       await discard(response);
-      throw new WovenTeamError("too_large", "The file is larger than Ask Sunny's upload limit.", { path: where });
+      throw new WovenTeamError("too_large", "The file is larger than Ask Bubbles' upload limit.", { path: where });
     }
     const bytes = await readCapped(response, maxBytes, where);
     return { bytes, contentType: response.headers.get("content-type") ?? "application/octet-stream" };
@@ -290,7 +290,7 @@ export class WovenTeamClient {
           const file = await this.downloadSigned(url.href, maxBytes);
           return { ...file, fileName: null };
         }
-        throw new WovenTeamError("download_host_not_allowed", "Woven's download points somewhere Ask Sunny does not download from.", { path: where });
+        throw new WovenTeamError("download_host_not_allowed", "Woven's download points somewhere Ask Bubbles does not download from.", { path: where });
       }
       const headers: Record<string, string> = { Accept: "*/*" };
       const cookie = this.jar.header();
@@ -330,7 +330,7 @@ export class WovenTeamClient {
       const declared = Number(response.headers.get("content-length") ?? "0");
       if (declared > maxBytes) {
         await discard(response);
-        throw new WovenTeamError("too_large", "The file is larger than Ask Sunny's upload limit.", { path: where });
+        throw new WovenTeamError("too_large", "The file is larger than Ask Bubbles' upload limit.", { path: where });
       }
       const contentType = response.headers.get("content-type") ?? "application/octet-stream";
       const bytes = await readCapped(response, maxBytes, where);
@@ -424,7 +424,7 @@ export class WovenTeamClient {
     try {
       return JSON.parse(text) as unknown;
     } catch {
-      throw new WovenTeamError("bad_response", `Woven answered ${where} with data Ask Sunny could not read.`, { status: 200, path: where });
+      throw new WovenTeamError("bad_response", `Woven answered ${where} with data Ask Bubbles could not read.`, { status: 200, path: where });
     }
   }
 
@@ -485,7 +485,7 @@ export class WovenTeamClient {
               ? retryAfter * 1000
               : this.transport.baseBackoffMs * 2 ** attempt;
           if (waitMs > this.transport.maxRetryAfterMs) {
-            throw new WovenTeamError("rate_limited", `Woven asked Ask Sunny to wait longer than a sync allows for ${path}.`, { status: 429, path });
+            throw new WovenTeamError("rate_limited", `Woven asked Ask Bubbles to wait longer than a sync allows for ${path}.`, { status: 429, path });
           }
           await this.pause(waitMs, path);
           continue;
@@ -565,7 +565,7 @@ async function readCapped(response: Response, maxBytes: number, path: string): P
     total += value.byteLength;
     if (total > maxBytes) {
       await reader.cancel();
-      throw new WovenTeamError("too_large", "The file is larger than Ask Sunny's upload limit.", { path });
+      throw new WovenTeamError("too_large", "The file is larger than Ask Bubbles' upload limit.", { path });
     }
     chunks.push(value);
   }

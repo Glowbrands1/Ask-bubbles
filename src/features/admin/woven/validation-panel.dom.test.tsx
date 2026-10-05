@@ -66,7 +66,7 @@ async function realReport(includeLocationReview: boolean): Promise<ValidationRep
     config,
     client: new WovenClient({ baseUrl: config.baseUrl, credentials: FAKE_CREDENTIALS, fetch: fake.fetch, sleep: async () => {} }),
     now: () => new Date("2026-09-28T15:00:00Z"),
-    salons: { outcome: "loaded", salons: [{ number: "0306", name: "Salon 306" }, { number: "0412", name: "Salon 412" }] },
+    locations: { outcome: "loaded", locations: [{ number: "0306", name: "Location 306" }, { number: "0412", name: "Location 412" }] },
     includeLocationReview,
   });
 }
@@ -97,8 +97,8 @@ describe("the connection test's summary", () => {
     expect(row("Employees")).toBe("6 active · 1 terminated · 0 other status · 7 unique");
     expect(row("Unique PositionIDs")).toMatch(/^\d+$/);
     expect(row("Woven locations")).toContain("2 total");
-    expect(row("Ask Sunny salon match")).toContain("1 exact Number matches, covering 1 of 2 salons");
-    expect(row("Ask Sunny salon match")).toContain("1 salons with no Woven location");
+    expect(row("Ask Bubbles location match")).toContain("1 exact Number matches, covering 1 of 2 locations");
+    expect(row("Ask Bubbles location match")).toContain("1 locations with no Woven location");
     expect(row("Email domains")).toMatch(/^suntancity\.test \(\d+\)/);
     expect(row("Email domains")).not.toContain("@");
     expect(row("Location access flags")).toBe("2 with HasMultipleLocationAccess · 1 with AllLocationAccess");
@@ -230,12 +230,12 @@ describe("the location review area", () => {
     expect(screen.queryByText("Woven Store 306")).toBeNull();
   });
 
-  it("lists location numbers and names, and salons with no Woven location, when the server sent one", async () => {
+  it("lists location numbers and names, and locations with no Woven location, when the server sent one", async () => {
     await show(await realReport(true));
     const area = screen.getByTestId("woven-location-review");
     expect(within(area).getByText("Woven Store 306")).toBeTruthy();
-    expect(within(area).getByText("salon 0306")).toBeTruthy();
-    expect(within(area).getByText("Salon 412")).toBeTruthy();
+    expect(within(area).getByText("location 0306")).toBeTruthy();
+    expect(within(area).getByText("Location 412")).toBeTruthy();
     expect(area.textContent).toContain("nothing is mapped");
   });
 });

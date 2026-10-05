@@ -118,7 +118,7 @@ function codeOf(error: unknown): string {
 
 function messageOf(error: unknown): string {
   if (error instanceof WovenTeamError || error instanceof WovenShapeError || error instanceof HtmlShapeError) return error.message;
-  return "Woven returned something Ask Sunny did not expect.";
+  return "Woven returned something Ask Bubbles did not expect.";
 }
 
 export class WovenKnowledgeConnector implements KnowledgeSourceConnector {
@@ -282,7 +282,7 @@ export class WovenKnowledgeConnector implements KnowledgeSourceConnector {
       if (item.partKey === "content") {
         return await this.fetchText(item.contentType, item.locator, item.entityId, item.title);
       }
-      throw new PartFetchError("capability_unavailable", "Ask Sunny cannot download this kind of Woven item yet.", false);
+      throw new PartFetchError("capability_unavailable", "Ask Bubbles cannot download this kind of Woven item yet.", false);
     } catch (error) {
       if (error instanceof PartFetchError) throw error;
       if (error instanceof WovenConnectorError) {
@@ -312,10 +312,10 @@ export class WovenKnowledgeConnector implements KnowledgeSourceConnector {
     } else if (contentType === "knowledge_element" && locator.elementId) {
       body = (await this.readKnowledgeElement(locator.elementId)).text;
     } else {
-      throw new PartFetchError("capability_unavailable", "Ask Sunny cannot read this kind of Woven page yet.", false);
+      throw new PartFetchError("capability_unavailable", "Ask Bubbles cannot read this kind of Woven page yet.", false);
     }
     if (body === null) {
-      throw new PartFetchError("woven_unexpected_shape", "This Woven page no longer has the layout Ask Sunny reads.", true);
+      throw new PartFetchError("woven_unexpected_shape", "This Woven page no longer has the layout Ask Bubbles reads.", true);
     }
     if (body.trim().length === 0) throw new PartFetchError("empty_file", "This Woven item has no text.", true);
     return {
@@ -423,8 +423,8 @@ export function verifiedFile(file: FetchedFile): FetchedFile {
 }
 
 /**
- * Settles the file name and MIME type Ask Sunny's validator will accept, from
- * the extension first and the declared type second. A file Ask Sunny cannot
+ * Settles the file name and MIME type Ask Bubbles' validator will accept, from
+ * the extension first and the declared type second. A file Ask Bubbles cannot
  * index is a permanent, per-item outcome, not a retry.
  */
 export function indexableFile(bytes: Uint8Array, fileName: string, declaredMime: string): FetchedFile {
@@ -434,7 +434,7 @@ export function indexableFile(bytes: Uint8Array, fileName: string, declaredMime:
   const byMime = SUPPORTED_KINDS.find((k) => k.mimeTypes.includes(mime));
   const kind = byExt ?? byMime;
   if (!kind) {
-    throw new PartFetchError("unsupported_format", "This Woven file is not a format Ask Sunny can read.", false);
+    throw new PartFetchError("unsupported_format", "This Woven file is not a format Ask Bubbles can read.", false);
   }
   if (bytes.byteLength === 0) throw new PartFetchError("empty_file", "Woven returned an empty file.", true);
   return {

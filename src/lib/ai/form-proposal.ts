@@ -261,7 +261,7 @@ export interface SuggestedForms {
 /**
  * Proactive form suggestions after an ordinary answer.
  *
- * NONE UNTIL THE COMPANY DEFINES WHEN. Ask Sunny suggested specific forms when
+ * NONE UNTIL THE COMPANY DEFINES WHEN. Ask Bubbles suggested specific forms when
  * a conversation described a performance concern; which Buff form answers
  * which situation is a business rule nobody has supplied, so this suggests
  * nothing rather than guessing. The hook stays so the rule can be added to the

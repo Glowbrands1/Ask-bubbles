@@ -30,7 +30,7 @@ import {
 
 /**
  * ============================================================================
- * THE WOVEN OPERATIONS API CLIENT — the only place Ask Sunny talks to Woven
+ * THE WOVEN OPERATIONS API CLIENT — the only place Ask Bubbles talks to Woven
  * ============================================================================
  *
  * READ-ONLY BY CONSTRUCTION. The single POST this client can make is to

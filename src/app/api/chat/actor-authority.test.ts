@@ -9,7 +9,7 @@ import type { AccessScope } from "@/types";
  *
  * A form proposal needs two facts a caller must never be able to assert about
  * itself: which ROLE is asking (it decides which templates are offered) and
- * which SALONS they are assigned to (it decides which salon a form may name).
+ * which LOCATIONS they are assigned to (it decides which location a form may name).
  *
  * Both are read from `authorizeRequest` and passed to `answerQuestion` as a
  * SEPARATE ARGUMENT from the parsed body — which is the structural part. There

@@ -7,7 +7,7 @@ import { ACTIVITY_SURFACES } from "@/lib/analytics/taxonomy";
 
 /**
  * ============================================================================
- * FEEDBACK REACHES EVERY ASK SUNNY SURFACE — AND GATES NONE OF THEM
+ * FEEDBACK REACHES EVERY ASK BUBBLES SURFACE — AND GATES NONE OF THEM
  * ============================================================================
  *
  * Nine places in this application can answer a question. Two properties have to
@@ -17,7 +17,7 @@ import { ACTIVITY_SURFACES } from "@/lib/analytics/taxonomy";
  *      quiet one — a tenth surface added next quarter that draws an ask bar,
  *      answers questions, and offers no way to say how it did.
  *
- *   2. NO SURFACE REQUIRES ONE. Ask Sunny used to hold the next question until
+ *   2. NO SURFACE REQUIRES ONE. Ask Bubbles used to hold the next question until
  *      the last answer was rated, on every send path. In the Forms flow that
  *      was not a nag but a dead end: "Which form do you need?" is an answer, so
  *      the cards under it and the composer beside it were both held until
@@ -77,7 +77,7 @@ describe("every send path declares where it is", () => {
      * A TOTAL MAPPING, not a lookup with a fallback, so a sixth report family
      * is a type error rather than a silent `unknown` on a live dashboard.
      */
-    const source = code(read("src/features/reports/ask-sunny-about-report.tsx"));
+    const source = code(read("src/features/reports/ask-bubbles-about-report.tsx"));
     expect(source).toContain("surface: SURFACE_FOR_REPORT_FAMILY[context.family]");
   });
 
@@ -105,9 +105,9 @@ describe("every send path declares where it is", () => {
 const RENDER_HOSTS = [
   "src/features/chat/chat-screen.tsx",
   "src/features/dashboard/ask-band.tsx",
-  "src/features/reports/ask-sunny-about-report.tsx",
+  "src/features/reports/ask-bubbles-about-report.tsx",
   "src/features/reviews/reviews-ask-bar.tsx",
-  "src/features/reports/sales-totals/ask-sunny-panel.tsx",
+  "src/features/reports/sales-totals/ask-bubbles-panel.tsx",
 ];
 
 describe("every render host draws the shared rating control", () => {
@@ -176,8 +176,8 @@ const SEND_AND_ACTION_PATHS = [
   "src/features/chat/context-panel.tsx",
   "src/features/dashboard/ask-band.tsx",
   "src/features/reviews/reviews-ask-bar.tsx",
-  "src/features/reports/ask-sunny-about-report.tsx",
-  "src/features/reports/sales-totals/ask-sunny-panel.tsx",
+  "src/features/reports/ask-bubbles-about-report.tsx",
+  "src/features/reports/sales-totals/ask-bubbles-panel.tsx",
 ];
 
 describe("no send path and no form action waits on a rating", () => {
@@ -248,7 +248,7 @@ describe("no send path and no form action waits on a rating", () => {
      * `SalesTotalsAnalysisResponse` transcripts rather than `ChatMessage`
      * threads — so the rule is restated in its terms and asserted here.
      */
-    const source = code(read("src/features/reports/sales-totals/ask-sunny-panel.tsx"));
+    const source = code(read("src/features/reports/sales-totals/ask-bubbles-panel.tsx"));
     expect(source).toContain("if (busy) return;");
     expect(source).not.toContain("if (busy || blocked) return;");
   });
@@ -257,7 +257,7 @@ describe("no send path and no form action waits on a rating", () => {
     /*
      * THE BOUNDARY THE ORIGINAL BRIEF ASKED FOR, kept now that the rest of the
      * gating is gone. Nothing may run on unload, on a route change, or as an
-     * inescapable dialog — a manager with a salon waiting on them must always
+     * inescapable dialog — a manager with a location waiting on them must always
      * be able to leave.
      */
     for (const file of [

@@ -58,7 +58,7 @@ const SUPERSEDED_COACHING = {
       kind: "checkbox_group",
       key: "coaching_topics",
       options: [
-        { key: "salon_tours", label: "Salon Tours" },
+        { key: "location_tours", label: "Location Tours" },
         { key: "lotion_basics", label: "Lotion Basics" },
       ],
       responsibility: "ai",
@@ -287,7 +287,7 @@ describe("a form the business has re-issued", () => {
   it("does nothing when the published form already says what the seed says", async () => {
     /*
      * THE CASE THIS PROTECTS, AND IT IS NOT HYPOTHETICAL. The re-issued Coaching
-     * Form reached Ask Sunny Dev as a published version BEFORE this code did —
+     * Form reached Ask Bubbles Dev as a published version BEFORE this code did —
      * an administrator's draft was corrected and published against the official
      * PDF. Without this check the next deploy would publish a byte-identical
      * version 3, archive theirs, and leave two versions saying the same thing.
@@ -327,7 +327,7 @@ describe("a form the business has re-issued", () => {
       // One revision behind, with the same document and the OLD pairing.
       row.seed_revision = sdit.revision - 1;
       row.variants = [
-        { key: "default", label: "SDIT review", role: "Training Salon Director", roleAbbr: "ASD" },
+        { key: "default", label: "SDIT review", role: "Training Location Director", roleAbbr: "ASD" },
       ];
     }
 
@@ -365,13 +365,13 @@ describe("a form the business has re-issued", () => {
 
 describe("the Resignation/Exit Form's revision 2 (HR's Details lines)", () => {
   const exitSeed = TEMPLATE_SEEDS.find((seed) => seed.key === "stc-exit")!;
-  /** Revision 1's document: no salon key question, no Details lines, "Details" as the paragraph. */
+  /** Revision 1's document: no location key question, no Details lines, "Details" as the paragraph. */
   const REVISION_ONE = (() => {
     const document = JSON.parse(JSON.stringify(exitSeed.document)) as {
       blocks: { kind: string; key?: string; field?: { key: string; label: string } }[];
     };
     document.blocks = document.blocks
-      .filter((block) => !(block.kind === "checkbox_group" && block.key === "salon_key_returned"))
+      .filter((block) => !(block.kind === "checkbox_group" && block.key === "location_key_returned"))
       .filter((block) => block.kind !== "answer_statements")
       .filter((block) => !(block.kind === "field" && block.field!.key.startsWith("resignation_")));
     const details = document.blocks.find((block) => block.kind === "field" && block.field!.key === "details")!;

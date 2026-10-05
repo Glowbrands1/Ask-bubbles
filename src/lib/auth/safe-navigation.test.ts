@@ -29,7 +29,7 @@ import {
  * of the PARSED result, which is the only thing a browser cares about.
  */
 
-const ORIGIN = "https://ask-sunny.preview.test";
+const ORIGIN = "https://ask-bubbles.preview.test";
 
 /**
  * Every destination that must fail closed.

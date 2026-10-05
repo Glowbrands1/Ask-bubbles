@@ -10,7 +10,7 @@ import type { BreakdownRow } from "@/lib/analytics/queries";
 import { changeAgainst } from "@/lib/analytics/queries";
 
 /**
- * WHAT ASK SUNNY IS ACTUALLY USED FOR.
+ * WHAT ASK BUBBLES IS ACTUALLY USED FOR.
  *
  * Horizontal ranked bars over a table, because the question is comparative —
  * "which of these is biggest" — and a bar answers it before the number is read.
@@ -109,7 +109,7 @@ export function UsageTypesPanel({
                   {formatNumber(row.activeUsers)}
                 </td>
                 <td data-align="right" className="pr-3 tabular-nums">
-                  {formatNumber(row.activeSalons)}
+                  {formatNumber(row.activeLocations)}
                 </td>
                 <td
                   data-align="right"

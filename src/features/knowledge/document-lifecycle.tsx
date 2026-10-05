@@ -113,7 +113,7 @@ export function DocumentLifecycle({
           <span className="font-semibold">Processing</span>
           <p className="mt-0.5">
             The document is being read, split into retrieval chunks and indexed.
-            Sunny will not cite it until every chunk is stored.
+            Bubbles will not cite it until every chunk is stored.
           </p>
         </Notice>
       ) : null}
@@ -135,14 +135,14 @@ export function DocumentLifecycle({
         <Notice tone="accent" icon={<CheckCircle2 />}>
           <span className="font-semibold">Indexed and searchable</span>
           <p className="mt-0.5">
-            Every chunk is stored, so Sunny can cite this document.
+            Every chunk is stored, so Bubbles can cite this document.
           </p>
         </Notice>
       ) : null}
 
       {!processing && !failed && !document.indexed ? (
         <Notice tone="neutral">
-          Not indexed. This document is in the library but Sunny cannot cite it
+          Not indexed. This document is in the library but Bubbles cannot cite it
           yet.
         </Notice>
       ) : null}

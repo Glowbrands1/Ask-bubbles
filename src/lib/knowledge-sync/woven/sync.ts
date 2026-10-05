@@ -39,7 +39,7 @@ export type WovenRunOutcome =
   | { status: "not_configured"; missing: string[] };
 
 /**
- * The sink used in PREVIEW TEST MODE. A preview never writes to Ask Sunny —
+ * The sink used in PREVIEW TEST MODE. A preview never writes to Ask Bubbles —
  * the engine returns before applying anything — and this makes that a
  * guarantee rather than a property of the engine: every write throws. The one
  * read (titles of hand-uploaded documents, for the duplicate count) passes
@@ -47,7 +47,7 @@ export type WovenRunOutcome =
  */
 export function readOnlySink(inner: KnowledgeSink): KnowledgeSink {
   const refuse = async (): Promise<never> => {
-    throw new SinkError("preview_test_mode", "Preview test mode never writes to Ask Sunny.", false);
+    throw new SinkError("preview_test_mode", "Preview test mode never writes to Ask Bubbles.", false);
   };
   return {
     ingest: refuse,

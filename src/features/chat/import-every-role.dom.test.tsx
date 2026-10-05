@@ -269,7 +269,7 @@ describe.each(ROLES)("signed in as %s", (role) => {
     expect(screen.getByRole("button", { name: /^Saturday coverage from last month/ })).toBeTruthy();
 
     /* The prompt above the thread has nothing left to offer, so it is gone. */
-    expect(screen.queryByText(/Ask Sunny found 1 conversation/i)).toBeNull();
+    expect(screen.queryByText(/Ask Bubbles found 1 conversation/i)).toBeNull();
 
     /* 5 & 6. What this role may do anywhere else is exactly what it was. */
     expect(permissions.current).toEqual(before);
@@ -280,7 +280,7 @@ describe.each(ROLES)("signed in as %s", (role) => {
     await renderChatAs(role);
 
     await user.click(await screen.findByRole("button", { name: /not now/i }));
-    expect(screen.queryByText(/Ask Sunny found 1 conversation/i)).toBeNull();
+    expect(screen.queryByText(/Ask Bubbles found 1 conversation/i)).toBeNull();
 
     await openHistory(user);
     await user.click(historyImportButton());
@@ -311,11 +311,11 @@ describe.each(ROLES)("signed in as %s", (role) => {
 
 describe("the reported case: a District Manager with History and no prompt", () => {
   it("has Import in History even though the prompt above the thread is not showing", async () => {
-    window.localStorage.setItem("ask-sunny:import-local-history-dismissed", "true");
+    window.localStorage.setItem("ask-bubbles:import-local-history-dismissed", "true");
     const user = userEvent.setup();
     await renderChatAs("district_manager");
 
-    expect(screen.queryByText(/Ask Sunny found/i)).toBeNull();
+    expect(screen.queryByText(/Ask Bubbles found/i)).toBeNull();
 
     await openHistory(user);
     expect(historyImportButton()).toBeTruthy();

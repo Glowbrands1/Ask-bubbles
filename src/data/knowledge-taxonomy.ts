@@ -5,7 +5,7 @@
  *
  * The categories a document can be filed under, and the statuses it can be in.
  * Vocabulary describing the product's own structure: it states nothing about a
- * salon, a person or a figure, and it is as true of a live corpus as of a
+ * location, a person or a figure, and it is as true of a live corpus as of a
  * seeded one.
  *
  * WHY IT MOVED OUT OF `data/demo/knowledge.ts`. It was defined at the top of
@@ -38,13 +38,13 @@ export const KNOWLEDGE_CATEGORIES: KnowledgeCategoryMeta[] = [
     id: "policies_compliance",
     label: "Policies & Compliance",
     description:
-      "Company policy manuals, employment standards, and compliance references Sunny cites when answering policy questions.",
+      "Company policy manuals, employment standards, and compliance references Bubbles cites when answering policy questions.",
   },
   {
     id: "operations",
     label: "Operations",
     description:
-      "Opening and closing standards, staffing, scheduling, inventory, and the day-to-day running of a salon.",
+      "Opening and closing standards, staffing, scheduling, inventory, and the day-to-day running of a location.",
   },
   {
     id: "training",
@@ -80,7 +80,7 @@ export const KNOWLEDGE_CATEGORIES: KnowledgeCategoryMeta[] = [
     id: "safety",
     label: "Safety",
     description:
-      "Incident response, emergency procedures, and salon safety standards.",
+      "Incident response, emergency procedures, and location safety standards.",
   },
   {
     id: "equipment_procedures",

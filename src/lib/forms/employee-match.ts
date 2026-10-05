@@ -6,7 +6,7 @@
  * A form's employee has always been free text in the manager's own spelling.
  * Production feedback: "Katlin" was accepted for a Kaitlyn without a word, and
  * the record carries the misspelling for good. Where the employee directory
- * knows who works at the manager's salons, the typed name is checked against
+ * knows who works at the manager's locations, the typed name is checked against
  * THAT LIST ONLY — the roster the caller passes in is already restricted to the
  * actor's own scope, and nothing here can widen it.
  *
@@ -34,7 +34,7 @@ export interface RosterEmployee {
   readonly firstName: string;
   readonly lastName: string;
   readonly preferredFirstName?: string | null;
-  /** Ask Sunny salon ids (`loc-NNNN`) the employee is actively assigned to. */
+  /** Ask Bubbles location ids (`loc-NNNN`) the employee is actively assigned to. */
   readonly locationIds: readonly string[];
 }
 
@@ -218,7 +218,7 @@ export function matchEmployeeName(typed: string, roster: readonly RosterEmployee
  */
 export function nameConfirmationQuestion(typed: string, candidates: readonly string[]): string {
   if (candidates.length === 1) {
-    return `Did you mean **${candidates[0]}**? I couldn't find **${typed}** exactly in the employee list for your salons, so I want to be sure before it goes on the form. Reply "yes" to use **${candidates[0]}**, or "no" to keep **${typed}** as you typed it.`;
+    return `Did you mean **${candidates[0]}**? I couldn't find **${typed}** exactly in the employee list for your locations, so I want to be sure before it goes on the form. Reply "yes" to use **${candidates[0]}**, or "no" to keep **${typed}** as you typed it.`;
   }
   const names = candidates.map((name) => `**${name}**`);
   return `Did you mean ${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}? More than one person on your team is a close match for **${typed}**, so tell me which one — or say "keep ${typed}" to use the name exactly as you typed it.`;
@@ -232,7 +232,7 @@ const NEGATIVE =
   /^\s*(?:no|nope|nah|n|keep (?:it|that|the name)?(?: as (?:i )?typed| as is)?|keep\s+.+|leave it|as typed|that'?s (?:wrong|not (?:her|him|them|it|right)))\b/i;
 
 export type NameConfirmation =
-  /** The manager said yes to the single name Sunny suggested. */
+  /** The manager said yes to the single name Bubbles suggested. */
   | { kind: "accepted"; name: string }
   /** The manager said keep what they typed. */
   | { kind: "declined" }

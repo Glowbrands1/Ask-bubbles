@@ -25,7 +25,7 @@ describe("P4-1. an unresolved placeholder is detected whatever it is called", ()
   it.each([
     "I will check in on [Follow-Up Date].",
     "Discussed with [Employee Name].",
-    "At [Salon] on [Date].",
+    "At [Location] on [Date].",
     "Reviewed with {{manager}}.",
   ])("%s", (text) => {
     expect(containsPlaceholder(text)).toBe(true);

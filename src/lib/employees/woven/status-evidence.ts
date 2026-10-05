@@ -76,7 +76,7 @@ export function hasPastTermination(versions: readonly { terminationDate: string 
 }
 
 /**
- * THE STATUS ASK SUNNY MAY ACT ON, from one directory row.
+ * THE STATUS ASK BUBBLES MAY ACT ON, from one directory row.
  *
  *   active      Woven's own Status, read in the latest stored run, is Active.
  *   terminated  Woven's own Status, read in the latest stored run (a list read,

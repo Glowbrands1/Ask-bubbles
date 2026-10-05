@@ -30,7 +30,7 @@ export interface ActivityRecord {
   category: ActivityCategory;
   actorId: string | null;
   actorRole: Role | null;
-  /** The actor's own scope, which is where the salon attribution comes from. */
+  /** The actor's own scope, which is where the location attribution comes from. */
   scope?: AccessScope | null;
   succeeded?: boolean;
   latencyMs?: number | null;
@@ -41,7 +41,7 @@ export interface ActivityRecord {
    * compile, and written as null rather than as a guess when it is absent — a
    * null reads as "not recorded" on the dashboard, which is true, where
    * defaulting to `main_chat` would file the Overview band's history under the
-   * chat tab and make the first "where is Ask Sunny used?" chart confidently
+   * chat tab and make the first "where is Ask Bubbles used?" chart confidently
    * wrong.
    */
   surface?: ActivitySurface | null;
@@ -57,27 +57,19 @@ export interface ActivityRecord {
 }
 
 /**
- * THE SALON, FROM THE ACCOUNT AND NOWHERE ELSE.
+ * THE LOCATION, FROM THE ACCOUNT AND NOWHERE ELSE.
  *
- * `scope.primaryAreaId` is `loc-<salon_number>` — the application's own
- * authoritative account-to-location relationship. The raw value is stored and
- * the salon row is resolved from it at write time, so an event stays
- * attributable even for a location reporting has never seen.
- *
- * It is never derived from anything the person typed. A manager asking about
- * "the Wornall situation" is not evidence that they work at Wornall, and an
- * adoption dashboard built on that kind of inference reports fiction.
+ * A location-scoped account's `scope.primaryAreaId` is its `loc-<code>` id —
+ * the application's authoritative account-to-location relationship. Wider
+ * scopes (district, region, global) name no single location, so their events
+ * carry none. Never derived from anything the person typed.
  */
-function locationRefOf(scope: AccessScope | null | undefined): string | null {
-  if (!scope || scope.level === "global") return null;
-  const primary = scope.primaryAreaId?.trim();
-  return primary && primary.length > 0 ? primary : null;
-}
+const LOCATION_ID = /^loc-[A-Za-z0-9-]{1,16}$/;
 
-function salonNumberOf(locationRef: string | null): string | null {
-  if (!locationRef) return null;
-  const number = locationRef.replace(/^loc-/, "").trim();
-  return number.length > 0 ? number : null;
+function locationIdOf(scope: AccessScope | null | undefined): string | null {
+  if (!scope || scope.level !== "location") return null;
+  const primary = scope.primaryAreaId?.trim() ?? "";
+  return LOCATION_ID.test(primary) ? primary : null;
 }
 
 /**
@@ -85,8 +77,8 @@ function salonNumberOf(locationRef: string | null): string | null {
  * written. Never throws.
  *
  * AWAITED OR FLOATED IS THE CALLER'S DECISION, and it now genuinely differs.
- * A caller that needs to hand the turn's id back to the browser — every Ask
- * Sunny answer, so that its feedback has something to attach to — must await
+ * A caller that needs to hand the turn's id back to the browser — every
+ * assistant answer, so that its feedback has something to attach to — must await
  * this and accept one insert's latency. A caller that does not, floats it
  * through `recordActivityAsync` below and keeps the old trade.
  *
@@ -122,27 +114,13 @@ export async function recordActivity(
 
   try {
     const supabase = getSupabaseAdmin();
-    const locationRef = locationRefOf(record.scope);
-    const salonNumber = salonNumberOf(locationRef);
-
-    let salonId: string | null = null;
-    if (salonNumber) {
-      const { data } = await supabase
-        .from("salons")
-        .select("id")
-        .eq("salon_number", salonNumber)
-        .maybeSingle();
-      salonId = (data?.id as string | undefined) ?? null;
-    }
-
     const { error } = await supabase.from("activity_events").insert({
       id,
       actor_user_id: record.actorId,
       actor_role: record.actorRole,
       feature: record.feature,
       category: record.category,
-      salon_id: salonId,
-      location_ref: locationRef,
+      location_id: locationIdOf(record.scope),
       succeeded: record.succeeded ?? true,
       latency_ms: record.latencyMs ?? null,
       surface: record.surface ?? null,
@@ -268,7 +246,7 @@ export class TurnUnavailableError extends Error {
 
   constructor(reason: string) {
     super(
-      "Ask Sunny could not start a recorded session, so nothing was asked. Please try again.",
+      "Ask Bubbles could not start a recorded session, so nothing was asked. Please try again.",
     );
     this.name = "TurnUnavailableError";
     this.reason = reason;

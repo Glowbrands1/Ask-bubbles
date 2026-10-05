@@ -31,7 +31,7 @@ import {
  *
  * `manage_integrations` AND `manage_users`. A mapping is a LABEL in phase one:
  * it classifies position changes and feeds the Access Preview, and it sets
- * nobody's role, scope or salon access.
+ * nobody's role, scope or location access.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

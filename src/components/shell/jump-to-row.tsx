@@ -25,7 +25,7 @@ export const QUICK_ACTION_ICONS: Record<string, LucideIcon> = {
  * THE SHORTCUT ROW, IN THE CHROME.
  *
  * They used to be white elevated cards on the canvas, directly above the Ask
- * Sunny card — which made the quietest content on the page the loudest object
+ * Bubbles card — which made the quietest content on the page the loudest object
  * on it. The direction's argument is that they are NAVIGATION: every one
  * of them already exists in the left rail, so they belong in the dark chrome as
  * one uniform row, out of the hero's way.
@@ -70,11 +70,11 @@ export function JumpToRow() {
         .map((action) => {
         const Icon = QUICK_ACTION_ICONS[action.iconKey] ?? Sparkles;
         const className =
-          "inline-flex items-center gap-2 rounded-full border border-brand-yellow px-3 py-1.5 text-[10.5px] font-bold text-band-chip-foreground transition-colors hover:text-brand-yellow";
+          "inline-flex items-center gap-2 rounded-full border border-brand-accent px-3 py-1.5 text-[10.5px] font-bold text-band-chip-foreground transition-colors hover:text-brand-accent";
 
         const content = (
           <>
-            <Icon className="size-3 shrink-0 text-brand-yellow" aria-hidden />
+            <Icon className="size-3 shrink-0 text-brand-accent" aria-hidden />
             {action.label}
           </>
         );

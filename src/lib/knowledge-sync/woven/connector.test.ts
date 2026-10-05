@@ -81,7 +81,7 @@ describe("Woven Team sign-in", () => {
     it("reads the id from the DOM each time, not from a constant", async () => {
       const state = chooserState();
       state.chooserAccounts = [
-        { id: uuid(9002), name: "Midwest Soap Makers" },
+        { id: uuid(9002), name: "Other Example Co" },
         { id: "845b93ad-2989-4cda-a18c-388edffc4c6d", name: COMPANY },
       ];
       const fake = new FakeWoven(state);
@@ -92,17 +92,17 @@ describe("Woven Team sign-in", () => {
 
     it("a non-empty data-company-name is carried into CompanyName unchanged", async () => {
       const state = chooserState();
-      state.chooserCompanyName = "JB & Associates";
+      state.chooserCompanyName = "Example Soap Co";
       const fake = new FakeWoven(state);
       const { connector } = connectorFor(fake);
       await expect(connector.connect()).resolves.toMatchObject({ companyVerified: true });
-      expect(new URLSearchParams(continuePosts(fake)[0]!.body).get("CompanyName")).toBe("JB & Associates");
+      expect(new URLSearchParams(continuePosts(fake)[0]!.body).get("CompanyName")).toBe("Example Soap Co");
     });
 
-    it("chooses exactly JB & Associates, never a partial match", async () => {
+    it("chooses exactly Example Soap Co, never a partial match", async () => {
       const state = chooserState();
       state.chooserAccounts = [
-        { id: uuid(1), name: "JB & Associates West" },
+        { id: uuid(1), name: "Example Soap Co West" },
         { id: uuid(9001), name: COMPANY },
       ];
       const fake = new FakeWoven(state);
@@ -130,9 +130,9 @@ describe("Woven Team sign-in", () => {
       expect(fake.photoSubmissions).toBe(0);
     });
 
-    it("JB & Associates missing from the chooser is company_not_listed, and nothing is submitted", async () => {
+    it("Example Soap Co missing from the chooser is company_not_listed, and nothing is submitted", async () => {
       const state = chooserState();
-      state.chooserAccounts = [{ id: uuid(9002), name: "Midwest Soap Makers" }];
+      state.chooserAccounts = [{ id: uuid(9002), name: "Other Example Co" }];
       const fake = new FakeWoven(state);
       const { connector } = connectorFor(fake);
       await expect(connector.connect()).rejects.toMatchObject({ code: "woven_company_not_listed" });
@@ -158,7 +158,7 @@ describe("Woven Team sign-in", () => {
 
     it("a final dashboard showing another company is company_not_verified, and nothing is read", async () => {
       const state = chooserState();
-      state.otherCompany = "Midwest Soap Makers";
+      state.otherCompany = "Other Example Co";
       const fake = new FakeWoven(state);
       const { connector } = connectorFor(fake);
       await expect(connector.connect()).rejects.toMatchObject({ code: "woven_company_not_verified" });
@@ -189,7 +189,7 @@ describe("Woven Team sign-in", () => {
     expect(fake.log.some((r) => r.path === "/Policy")).toBe(false);
   });
 
-  it("chooser with JB & Associates as a plain link: follows it, then confirms the company", async () => {
+  it("chooser with Example Soap Co as a plain link: follows it, then confirms the company", async () => {
     const state = defaultState();
     state.requireCompanySelection = true;
     state.chooserMechanism = "link";
@@ -201,7 +201,7 @@ describe("Woven Team sign-in", () => {
     expect(fake.chosenCompany).toBe(COMPANY);
   });
 
-  it("chooser with JB & Associates as a form button posting back to /Login/Authenticate: submits it without the password", async () => {
+  it("chooser with Example Soap Co as a form button posting back to /Login/Authenticate: submits it without the password", async () => {
     const state = defaultState();
     state.requireCompanySelection = true;
     state.chooserMechanism = "form";
@@ -215,11 +215,11 @@ describe("Woven Team sign-in", () => {
     expect(posts[1]!.url).toContain("ReturnUrl=%2F");
   });
 
-  it("a chooser that does not offer JB & Associates is company_not_listed, not a login failure", async () => {
+  it("a chooser that does not offer Example Soap Co is company_not_listed, not a login failure", async () => {
     const state = defaultState();
     state.requireCompanySelection = true;
     state.chooserMechanism = "link";
-    state.chooserAccounts = [{ id: uuid(9002), name: "Midwest Soap Makers" }];
+    state.chooserAccounts = [{ id: uuid(9002), name: "Other Example Co" }];
     const { connector } = connectorFor(new FakeWoven(state));
     await expect(connector.connect()).rejects.toMatchObject({ code: "woven_company_not_listed" });
   });
@@ -228,7 +228,7 @@ describe("Woven Team sign-in", () => {
     const state = defaultState();
     state.requireCompanySelection = true;
     state.chooserMechanism = "link";
-    state.otherCompany = "Midwest Soap Makers";
+    state.otherCompany = "Other Example Co";
     const { connector } = connectorFor(new FakeWoven(state));
     await expect(connector.connect()).rejects.toMatchObject({ code: "woven_company_not_verified" });
   });
@@ -359,9 +359,9 @@ describe("Woven Team sign-in", () => {
     await expect(connector.connect()).resolves.toEqual({ companyLabel: COMPANY, companyVerified: true });
   });
 
-  it("refuses to read anything when the landing page is not JB & Associates", async () => {
+  it("refuses to read anything when the landing page is not Example Soap Co", async () => {
     const state = defaultState();
-    state.otherCompany = "Some Other Salon Group";
+    state.otherCompany = "Some Other Location Group";
     const fake = new FakeWoven(state);
     const { connector } = connectorFor(fake);
     await expect(connector.connect()).rejects.toMatchObject({ code: "woven_company_not_verified" });
@@ -453,14 +453,14 @@ describe("the six adapters, against the handoff's shapes", () => {
     const first = ok(await connector.list("procedure"));
     const again = ok(await connector.list("procedure"));
     const opening = first.records[0]!;
-    expect(first.records.map((r) => r.title)).toEqual(["Opening the Salon", "Bed Cleaning"]);
+    expect(first.records.map((r) => r.title)).toEqual(["Opening the Location", "Bed Cleaning"]);
     /* The page renders every step twice (carousel and scroll view): read once. */
     expect(opening.sourceMetadata).toMatchObject({ steps: 2 });
     expect(opening.parts.map((p) => p.partKey)).toEqual(["content", `attachment:${uuid(3012)}:${STORED}`]);
     expect(opening.parts[0]!.retrieval).toEqual({ kind: "available", locator: { procedureId: uuid(301) } });
     /* procedure → step → stored file name → display name; no document id invented from the stored name. */
     expect(opening.parts[1]).toMatchObject({
-      title: "Opening the Salon — Opening Checklist",
+      title: "Opening the Location — Opening Checklist",
       documentId: null,
       versionId: uuid(3012),
       fileName: "Opening Checklist.pdf",
@@ -489,10 +489,10 @@ describe("the six adapters, against the handoff's shapes", () => {
     fake.state.procedures[0]!.steps[1]!.text = "Not Provided";
     const { connector } = connectorFor(fake);
     await connector.connect();
-    const file = await connector.fetchPart({ contentType: "procedure", entityId: uuid(301), partKey: "content", locator: { procedureId: uuid(301) }, fileName: null, mimeType: "text/plain", title: "Opening the Salon" });
+    const file = await connector.fetchPart({ contentType: "procedure", entityId: uuid(301), partKey: "content", locator: { procedureId: uuid(301) }, fileName: null, mimeType: "text/plain", title: "Opening the Location" });
     const text = new TextDecoder().decode(file.bytes);
     expect(text).not.toMatch(/not provided/i);
-    expect(text).toBe("Opening the Salon\n\nStep 1 — Open the Door\nUnlock the front door.\n\nStep 2 — Lights On\n");
+    expect(text).toBe("Opening the Location\n\nStep 1 — Open the Door\nUnlock the front door.\n\nStep 2 — Lights On\n");
     /* A procedure whose every step is the placeholder offers no text part at all. */
     fake.state.procedures[1]!.steps[0]!.text = "  not provided ";
     fake.state.procedures[1]!.steps[0]!.title = "";
@@ -546,7 +546,7 @@ describe("the six adapters, against the handoff's shapes", () => {
       locator: { procedureId: uuid(301), stepId: uuid(3012), storedFileName: STORED },
       fileName: "Opening Checklist.pdf",
       mimeType: null,
-      title: "Opening the Salon — Opening Checklist",
+      title: "Opening the Location — Opening Checklist",
     });
     expect(file).toMatchObject({ fileName: "Opening Checklist.pdf", mimeType: "application/pdf" });
     expect(new TextDecoder().decode(file.bytes)).toBe("%PDF-1.4 Opening Checklist.pdf");
@@ -769,10 +769,10 @@ describe("downloads", () => {
     const { connector } = connectorFor(fake);
     await connector.connect();
     const policy = await connector.fetchPart({ contentType: "policy", entityId: uuid(101), partKey: "content", locator: { policyId: uuid(101) }, fileName: null, mimeType: "text/plain", title: "Attendance Policy" });
-    expect(new TextDecoder().decode(policy.bytes)).toBe("Attendance Policy\n\nArrive on time.\n\nCall the salon if you will be late.\n");
+    expect(new TextDecoder().decode(policy.bytes)).toBe("Attendance Policy\n\nArrive on time.\n\nCall the location if you will be late.\n");
     expect(policy).toMatchObject({ fileName: `policy-${uuid(101)}.txt`, mimeType: "text/plain" });
-    const steps = await connector.fetchPart({ contentType: "procedure", entityId: uuid(301), partKey: "content", locator: { procedureId: uuid(301) }, fileName: null, mimeType: "text/plain", title: "Opening the Salon" });
-    expect(new TextDecoder().decode(steps.bytes)).toBe("Opening the Salon\n\nStep 1 — Open the Door\nUnlock the front door.\n\nStep 2 — Lights On\nTurn on the lights.\n");
+    const steps = await connector.fetchPart({ contentType: "procedure", entityId: uuid(301), partKey: "content", locator: { procedureId: uuid(301) }, fileName: null, mimeType: "text/plain", title: "Opening the Location" });
+    expect(new TextDecoder().decode(steps.bytes)).toBe("Opening the Location\n\nStep 1 — Open the Door\nUnlock the front door.\n\nStep 2 — Lights On\nTurn on the lights.\n");
   });
 
   it("a text page that lost its verified structure is a retryable per-item failure", async () => {

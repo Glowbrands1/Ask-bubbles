@@ -96,7 +96,7 @@ export function SectionHeader({
           {description ? null : (
             <span
               aria-hidden
-              className="h-[3px] min-w-6 flex-1 rounded-sm bg-brand-yellow"
+              className="h-[3px] min-w-6 flex-1 rounded-sm bg-brand-accent"
             />
           )}
         </div>

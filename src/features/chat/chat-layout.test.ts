@@ -105,7 +105,7 @@ describe("the conversation is the flexible region and the composer is not", () =
     // on near-black behind a 4px yellow top edge — so the old string described a
     // hairline that is deliberately gone. The layout guarantee is `shrink-0`,
     // which is what this test is for and what is checked.
-    expect(COMPOSER_CODE).toMatch(/className="shrink-0 border-t-4 border-brand-yellow/);
+    expect(COMPOSER_CODE).toMatch(/className="shrink-0 border-t-4 border-brand-accent/);
     /*
      * `flex-1` IS PERMITTED INSIDE THE DOCK, on the disclaimer that shares a
      * row with the mode control — it is not on the dock's own container, which

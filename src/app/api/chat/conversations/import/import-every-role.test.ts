@@ -11,7 +11,7 @@ import type { Permission, Role } from "@/types";
  *
  * REPORTED: a District Manager had History but no Import. There was never a
  * role check on Import — the route asks for `ask_questions`, exactly as the
- * History list does — and these cases pin that, for every role Ask Sunny has:
+ * History list does — and these cases pin that, for every role Ask Bubbles has:
  *
  *   the import route asks for `ask_questions` and nothing else, so anybody who
  *   can open History can import;
@@ -280,7 +280,7 @@ describe("importing widens nobody's access", () => {
     expect(dmHistory.conversations.map((entry) => entry.title)).toEqual([shared.title]);
   });
 
-  it("a role without the Ask Sunny permission is still refused, and nothing is stored", async () => {
+  it("a role without the Ask Bubbles permission is still refused, and nothing is stored", async () => {
     /*
      * No shipped role lacks `ask_questions`. This is the guard that Import did
      * not become a way round the matrix: take the permission away and the

@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils/cn";
  * Marquee artifacts settle it the other way and show the validator's working:
  * coral passes all six checks as a data fill on peach, and the near-black the
  * ramp used was refused for "reading as grey rather than as a colour". See
- * `salon-performance/chart-palette.ts` for the full table.
+ * `location-performance/chart-palette.ts` for the full table.
  *
  * `primary` is therefore the data, with `track` behind it and `benchmark` for a
  * comparison drawn ON a bar. `accent` and `slate` stay on the neutral ramp for
@@ -47,7 +47,7 @@ export const CHART_COLORS = {
   track: "var(--measure-data-track)",
   benchmark: "var(--measure-benchmark)",
   accent: "var(--measure-series-strong)",
-  gold: "var(--brand-yellow)",
+  gold: "var(--brand-accent)",
   slate: "var(--measure-series-recessive)",
   blush: "var(--measure-track)",
   muted: "var(--measure-track)",

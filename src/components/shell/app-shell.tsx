@@ -15,8 +15,9 @@ import { usePreference, writePreference } from "@/lib/utils/client-store";
 import { JumpToRow } from "./jump-to-row";
 import { SidebarNav } from "./sidebar";
 import { GlobalSearch } from "./global-search";
+import { ACTIVE_BRAND } from "@/lib/brand";
 
-const COLLAPSE_KEY = "ask-sunny:sidebar-collapsed";
+const COLLAPSE_KEY = "ask-bubbles:sidebar-collapsed";
 
 export function AppShell({
   children,
@@ -75,7 +76,7 @@ export function AppShell({
           <Menu />
         </Button>
 
-        <Link href="/" aria-label="Ask Sunny — Overview" className="shrink-0">
+        <Link href="/" aria-label={`${ACTIVE_BRAND.productName} — Home`} className="shrink-0">
           <BrandMark size="md" onDark />
         </Link>
 
@@ -90,15 +91,15 @@ export function AppShell({
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="Search Ask Sunny"
+                aria-label={`Search ${ACTIVE_BRAND.productName}`}
                 className="text-chrome-foreground hover:bg-hover-surface hover:text-hover-surface-foreground"
               >
                 <Search />
               </Button>
             </DialogTrigger>
             <DialogContent
-              title="Search Ask Sunny"
-              description="Documents, videos, forms, salons and screens."
+              title={`Search ${ACTIVE_BRAND.productName}`}
+              description="Documents, videos, forms, locations and screens."
               wide
             >
               <GlobalSearch />
@@ -110,7 +111,7 @@ export function AppShell({
 
             THE BREAKPOINT DID NOT NEED TO MOVE WHEN THE LOCKUP GREW TO 18px,
             and it was measured rather than guessed. In Jost at .22em the lockup
-            is 179px and Ask Sunny is 178px, so at the `sm` floor of 640px —
+            is 179px and Ask Bubbles is 178px, so at the `sm` floor of 640px —
             with the mobile menu button also present — there is still ~190px of
             clear space between the two marks and the bar does not scroll. A
             first pass raised this to `lg` on an estimate; the measurement said
@@ -195,12 +196,12 @@ export function DesktopSearchLauncher({ className }: { className?: string }) {
           )}
         >
           <Search className="size-3.5 shrink-0" aria-hidden />
-          <span className="flex-1 truncate">Search Ask Sunny</span>
+          <span className="flex-1 truncate">Search {ACTIVE_BRAND.productName}</span>
         </button>
       </DialogTrigger>
       <DialogContent
-        title="Search Ask Sunny"
-        description="Documents, videos, forms, salons and screens."
+        title={`Search ${ACTIVE_BRAND.productName}`}
+        description="Documents, videos, forms, locations and screens."
         wide
       >
         <GlobalSearch />

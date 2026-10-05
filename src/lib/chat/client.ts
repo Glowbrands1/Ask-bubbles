@@ -40,7 +40,7 @@ export class ChatSyncFailure extends Error {
 }
 
 async function failureFrom(response: Response): Promise<ChatSyncFailure> {
-  let message = "Ask Sunny could not reach your account history.";
+  let message = "Ask Bubbles could not reach your account history.";
   try {
     const payload = (await response.json()) as { error?: unknown };
     if (typeof payload.error === "string" && payload.error.trim()) {
@@ -63,8 +63,8 @@ async function failureFrom(response: Response): Promise<ChatSyncFailure> {
 function offline(error: unknown): ChatSyncFailure {
   return new ChatSyncFailure(
     error instanceof Error && error.message
-      ? "Ask Sunny could not reach your account history."
-      : "Ask Sunny could not reach your account history.",
+      ? "Ask Bubbles could not reach your account history."
+      : "Ask Bubbles could not reach your account history.",
     0,
     true,
   );

@@ -13,7 +13,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
  * asks for a code the operator set in Vercel as a Sensitive, Preview-only
  * variable. Without it, nothing reaches Woven.
  *
- * WHAT IT IS NOT. It is not Ask Sunny authentication and changes none of it,
+ * WHAT IT IS NOT. It is not Ask Bubbles authentication and changes none of it,
  * and it opens nothing but that one route: not the sync, not the cron, not
  * any other live behaviour. A live deployment never reads it.
  *

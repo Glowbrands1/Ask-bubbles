@@ -136,11 +136,11 @@ afterEach(cleanup);
  */
 async function ask(user: ReturnType<typeof userEvent.setup>, question: string) {
   const before = asks.length;
-  const box = screen.getByLabelText("Ask Sunny a question");
+  const box = screen.getByLabelText("Ask Bubbles a question");
   await user.click(box);
   await user.type(box, question);
-  // By role: the band's own section carries `aria-label="Ask Sunny"` too.
-  await user.click(screen.getByRole("button", { name: "Ask Sunny" }));
+  // By role: the band's own section carries `aria-label="Ask Bubbles"` too.
+  await user.click(screen.getByRole("button", { name: "Ask Bubbles" }));
   await waitFor(() => expect(asks.length).toBe(before + 1));
 }
 
@@ -157,7 +157,7 @@ describe("asking twice in the band", () => {
      * one question only, and the field also used to be forced back to the text
      * that had been asked.
      */
-    const box = screen.getByLabelText("Ask Sunny a question") as HTMLTextAreaElement;
+    const box = screen.getByLabelText("Ask Bubbles a question") as HTMLTextAreaElement;
     expect(box.readOnly).toBe(false);
     expect(box.value).toBe("");
   });
@@ -251,7 +251,7 @@ describe("asking twice in the band", () => {
     await ask(user, "Second question");
     await waitFor(() => expect(screen.getByText("Answer 2")).toBeTruthy());
 
-    expect(screen.getAllByText("Continue in Ask Sunny").length).toBe(1);
+    expect(screen.getAllByText("Continue in Ask Bubbles").length).toBe(1);
   });
 
   it("clears the typed text before it clears the conversation", async () => {
@@ -265,7 +265,7 @@ describe("asking twice in the band", () => {
     await ask(user, "First question");
     await waitFor(() => expect(screen.getByText("Answer 1")).toBeTruthy());
 
-    const box = screen.getByLabelText("Ask Sunny a question");
+    const box = screen.getByLabelText("Ask Bubbles a question");
     await user.click(box);
     await user.type(box, "half a thought");
     await user.keyboard("{Escape}");

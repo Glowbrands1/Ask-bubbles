@@ -40,16 +40,16 @@ That default is what caused two real privilege defects in the knowledge
 migrations, so reproducing it locally is the point rather than a detail.
 
 ```bash
-initdb -D /var/tmp/asksunny-pg -U postgres --auth=trust
-pg_ctl -D /var/tmp/asksunny-pg -o '-p 55432 -k /var/tmp' start
-createdb -h /var/tmp -p 55432 -U postgres asksunny
+initdb -D /var/tmp/askbubbles-pg -U postgres --auth=trust
+pg_ctl -D /var/tmp/askbubbles-pg -o '-p 55432 -k /var/tmp' start
+createdb -h /var/tmp -p 55432 -U postgres askbubbles
 
-psql -h /var/tmp -p 55432 -U postgres -d asksunny -v ON_ERROR_STOP=1 \
+psql -h /var/tmp -p 55432 -U postgres -d askbubbles -v ON_ERROR_STOP=1 \
   -f supabase/tests/supabase_stub.sql
 for f in supabase/migrations/*.sql; do
-  psql -h /var/tmp -p 55432 -U postgres -d asksunny -v ON_ERROR_STOP=1 -q -f "$f" || break
+  psql -h /var/tmp -p 55432 -U postgres -d askbubbles -v ON_ERROR_STOP=1 -q -f "$f" || break
 done
-psql -h /var/tmp -p 55432 -U postgres -d asksunny -f supabase/tests/reporting_schema_checks.sql
+psql -h /var/tmp -p 55432 -U postgres -d askbubbles -f supabase/tests/reporting_schema_checks.sql
 ```
 
 Every `MUST FAIL` step below is expected to print an error. A step that

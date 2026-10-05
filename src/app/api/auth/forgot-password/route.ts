@@ -46,7 +46,7 @@ import { getSupabaseRecoveryClient } from "@/lib/supabase/recovery-client";
  * ============================================================================
  *
  * A reset link is a fresh sign-in. Before it is requested, the profile is read
- * server-side (`recoveryEligibility`): only an `active` or `invited` Ask Sunny
+ * server-side (`recoveryEligibility`): only an `active` or `invited` Ask Bubbles
  * account gets an email. A disabled account, an address with no profile, or a
  * lookup that fails gets NOTHING — and the same `200 { ok: true }`, so the
  * answer still says nothing about which case applied.

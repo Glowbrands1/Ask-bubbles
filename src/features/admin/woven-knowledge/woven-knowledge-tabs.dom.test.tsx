@@ -26,7 +26,7 @@ function typeReport(over: Partial<SyncReport["byType"]["policy"]> = {}) {
 const PREVIEW: SyncReport = {
   mode: "preview",
   trigger: "manual",
-  company: { companyLabel: "JB & Associates", companyVerified: true },
+  company: { companyLabel: "Example Soap Co", companyVerified: true },
   byType: { policy: typeReport(), handbook: typeReport({ discovered: 1, items: 1, eligible: 1, needsReview: 0, new: 1 }) },
   totals: { discovered: 23, inSync: 0, new: 1, updated: 0, metadataOnly: 0, unchanged: 0, permissionChanged: 0, unpublished: 0, removed: 0, excluded: 0, needsReview: 29, blocked: 0, errors: 0, deferred: 0, removalsHeld: 0 },
   audiences: [],
@@ -40,7 +40,7 @@ function afterScan(overrides: Partial<WovenKnowledgeStatus> = {}): WovenKnowledg
   return {
     enabled: true,
     missingCredentials: [],
-    company: "JB & Associates",
+    company: "Example Soap Co",
     database: "ready",
     previewTestMode: false,
     headline: "needs_attention",
@@ -53,7 +53,7 @@ function afterScan(overrides: Partial<WovenKnowledgeStatus> = {}): WovenKnowledg
     documentsInSync: 0,
     lastSync: null,
     needsAttention: 29,
-    attention: [{ code: "audience_review", message: "29 items are shared with only some teams in Woven. Choose who should see them in Ask Sunny.", count: 29 }],
+    attention: [{ code: "audience_review", message: "29 items are shared with only some teams in Woven. Choose who should see them in Ask Bubbles.", count: 29 }],
     latestScanAt: null,
     scanProblems: [],
     latestPreview: PREVIEW,
@@ -78,7 +78,7 @@ function afterScan(overrides: Partial<WovenKnowledgeStatus> = {}): WovenKnowledg
           errorCode: null,
           totals: PREVIEW.totals,
           notes: [{ code: "audience_review", message: "29 published items are limited to specific teams or positions in Woven." }],
-          company: "JB & Associates",
+          company: "Example Soap Co",
         },
         {
           id: "run-1",
@@ -115,10 +115,10 @@ function row(over: Partial<ContentRow>): ContentRow {
     lastSeenAt: "2026-09-29T22:27:00Z",
     lastSyncedAt: null,
     syncState: "waiting_for_audience",
-    askSunny: [],
+    askBubbles: [],
     parts: [
-      { key: "body-0", kind: "body", title: "Attendance Policy", fileName: null, syncState: "waiting_for_audience", inAskSunny: false, ref: "ref-1", previewable: false, askSunnyDocumentId: null },
-      { key: "attachment-1", kind: "attachment", title: "Attendance Policy — Attendance Policy", fileName: "Attendance Policy.pdf", syncState: "waiting_for_audience", inAskSunny: false, ref: "ref-2", previewable: false, askSunnyDocumentId: null },
+      { key: "body-0", kind: "body", title: "Attendance Policy", fileName: null, syncState: "waiting_for_audience", inKnowledgeBase: false, ref: "ref-1", previewable: false, knowledgeDocumentIdInBase: null },
+      { key: "attachment-1", kind: "attachment", title: "Attendance Policy — Attendance Policy", fileName: "Attendance Policy.pdf", syncState: "waiting_for_audience", inKnowledgeBase: false, ref: "ref-2", previewable: false, knowledgeDocumentIdInBase: null },
     ],
     ...over,
   };
@@ -129,9 +129,9 @@ const CONTENT: WovenKnowledgeContent = {
   scannedAt: "2026-09-29T22:27:00Z",
   rows: [
     row({}),
-    row({ key: "handbook:h1", title: "Team Member Handbook", contentType: "handbook", wovenStatus: "Published", audience: "Public", audienceDecision: "public", syncState: "new", parts: [{ key: "version-0", kind: "version", title: "Team Member Handbook", fileName: "Team Member Handbook.pdf", syncState: "new", inAskSunny: false, ref: "ref-3", previewable: false, askSunnyDocumentId: null }] }),
-    row({ key: "procedure:r1", title: "Opening the Salon", contentType: "procedure", wovenStatus: "Listed", audience: "No audience stated", wovenUpdatedAt: null, syncState: "not_supported", parts: [{ key: "body-0", kind: "body", title: "Opening the Salon", fileName: null, syncState: "not_supported", inAskSunny: false, ref: "ref-4", previewable: false, askSunnyDocumentId: null }] }),
-    row({ key: "knowledge_element:k1", title: "New Element", contentType: "knowledge_element", wovenStatus: "Draft", published: false, audience: "No audience stated", syncState: "unpublished", parts: [{ key: "body-0", kind: "body", title: "New Element", fileName: null, syncState: "unpublished", inAskSunny: false, ref: "ref-5", previewable: false, askSunnyDocumentId: null }] }),
+    row({ key: "handbook:h1", title: "Team Member Handbook", contentType: "handbook", wovenStatus: "Published", audience: "Public", audienceDecision: "public", syncState: "new", parts: [{ key: "version-0", kind: "version", title: "Team Member Handbook", fileName: "Team Member Handbook.pdf", syncState: "new", inKnowledgeBase: false, ref: "ref-3", previewable: false, knowledgeDocumentIdInBase: null }] }),
+    row({ key: "procedure:r1", title: "Opening the Location", contentType: "procedure", wovenStatus: "Listed", audience: "No audience stated", wovenUpdatedAt: null, syncState: "not_supported", parts: [{ key: "body-0", kind: "body", title: "Opening the Location", fileName: null, syncState: "not_supported", inKnowledgeBase: false, ref: "ref-4", previewable: false, knowledgeDocumentIdInBase: null }] }),
+    row({ key: "knowledge_element:k1", title: "New Element", contentType: "knowledge_element", wovenStatus: "Draft", published: false, audience: "No audience stated", syncState: "unpublished", parts: [{ key: "body-0", kind: "body", title: "New Element", fileName: null, syncState: "unpublished", inKnowledgeBase: false, ref: "ref-5", previewable: false, knowledgeDocumentIdInBase: null }] }),
   ],
 };
 
@@ -142,7 +142,7 @@ describe("Overview after the Initial Scan", () => {
     expect(screen.getByText("15 Teams 5 Positions")).toBeTruthy();
     expect(screen.getByText("4 items")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "Share with everyone" })).toHaveLength(2);
-    expect(screen.getAllByRole("button", { name: "Keep out of Ask Sunny" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Keep out of Ask Bubbles" })).toHaveLength(2);
   });
 
   it("the choices show even when no other attention item is present", () => {
@@ -154,7 +154,7 @@ describe("Overview after the Initial Scan", () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ status: "ok" }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     render(<WovenKnowledgeScreen liveMode status={afterScan()} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "Keep out of Ask Sunny" })[1]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "Keep out of Ask Bubbles" })[1]!);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("/api/admin/knowledge-sync/woven/audiences");
@@ -216,8 +216,8 @@ describe("Content", () => {
           audienceDecision: "company_wide",
           syncState: "up_to_date",
           parts: [
-            { key: "body-0", kind: "body", title: "EOM Performance Eval", fileName: null, syncState: "up_to_date", inAskSunny: true, ref: "ref-6", previewable: false, askSunnyDocumentId: null },
-            { key: "attachment-1", kind: "attachment", title: "EOM Performance Eval — 05. EOM Performance Evaluation Core Process", fileName: "05. EOM Performance Evaluation Core Process.pdf", syncState: "up_to_date", inAskSunny: true, ref: "ref-7", previewable: false, askSunnyDocumentId: null },
+            { key: "body-0", kind: "body", title: "EOM Performance Eval", fileName: null, syncState: "up_to_date", inKnowledgeBase: true, ref: "ref-6", previewable: false, knowledgeDocumentIdInBase: null },
+            { key: "attachment-1", kind: "attachment", title: "EOM Performance Eval — 05. EOM Performance Evaluation Core Process", fileName: "05. EOM Performance Evaluation Core Process.pdf", syncState: "up_to_date", inKnowledgeBase: true, ref: "ref-7", previewable: false, knowledgeDocumentIdInBase: null },
           ],
         }),
       ],
@@ -244,8 +244,8 @@ describe("Content", () => {
           audienceDecision: "public",
           syncState: "up_to_date",
           parts: [
-            { key: "version-0", kind: "version", title: "JBA Policy Manual", fileName: "JBA-Policy-Manual-Edited-5.2025.pdf", syncState: "up_to_date", inAskSunny: true, ref: "ref-8", previewable: false, askSunnyDocumentId: null },
-            { key: "superseded_copy-0", kind: "superseded_copy", title: "JBA Policy Manual Edited 5.2025", fileName: null, syncState: "stale", inAskSunny: false, ref: "ref-9", previewable: false, askSunnyDocumentId: null },
+            { key: "version-0", kind: "version", title: "JBA Policy Manual", fileName: "JBA-Policy-Manual-Edited-5.2025.pdf", syncState: "up_to_date", inKnowledgeBase: true, ref: "ref-8", previewable: false, knowledgeDocumentIdInBase: null },
+            { key: "superseded_copy-0", kind: "superseded_copy", title: "JBA Policy Manual Edited 5.2025", fileName: null, syncState: "stale", inKnowledgeBase: false, ref: "ref-9", previewable: false, knowledgeDocumentIdInBase: null },
           ],
         }),
       ],
@@ -314,7 +314,7 @@ describe("audience choices show what they affect, before anyone decides", () => 
     audience: "N/A",
     audienceKey: "n/a",
     syncState: "waiting_for_audience",
-    parts: [{ key: "file-0", kind: "file", title: "1 KEY TC Mastery - Safety 10.2024", fileName: "1 KEY TC Mastery - Safety 10.2024.pdf", syncState: "waiting_for_audience", inAskSunny: false, ref: "0123456789abcdef", previewable: true, askSunnyDocumentId: null }],
+    parts: [{ key: "file-0", kind: "file", title: "1 KEY TC Mastery - Safety 10.2024", fileName: "1 KEY TC Mastery - Safety 10.2024.pdf", syncState: "waiting_for_audience", inKnowledgeBase: false, ref: "0123456789abcdef", previewable: true, knowledgeDocumentIdInBase: null }],
   });
   const withMembers = () =>
     afterScan({
@@ -337,7 +337,7 @@ describe("audience choices show what they affect, before anyone decides", () => 
         return new Response(
           JSON.stringify({
             status: "ok",
-            preview: { title: LOTION.title, contentType: "file_library", sourceName: LOTION.title, fileName: "1 KEY TC Mastery - Safety 10.2024.pdf", askSunnyDocumentId: null, sections: [{ label: "", page: 2, text: "Always wear eye protection in the booth." }], characterCount: 40, truncated: false },
+            preview: { title: LOTION.title, contentType: "file_library", sourceName: LOTION.title, fileName: "1 KEY TC Mastery - Safety 10.2024.pdf", knowledgeDocumentIdInBase: null, sections: [{ label: "", page: 2, text: "Always wear eye protection in the booth." }], characterCount: 40, truncated: false },
           }),
           { status: 200 },
         );
@@ -387,7 +387,7 @@ describe("after setup: Scan Woven is always there, and it is only a preview", ()
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ status: "succeeded" }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     render(<WovenKnowledgeScreen liveMode status={setUp()} />);
-    expect(screen.getByText(/previews what changed — nothing is added, removed or replaced in Ask Sunny/)).toBeTruthy();
+    expect(screen.getByText(/previews what changed — nothing is added, removed or replaced in Ask Bubbles/)).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Scan Woven" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
@@ -402,14 +402,14 @@ describe("after setup: Scan Woven is always there, and it is only a preview", ()
         status={setUp({
           latestPreview: { ...PREVIEW, totals: { ...PREVIEW.totals, new: 350, updated: 2, unpublished: 1, removed: 0, permissionChanged: 0, unchanged: 78, needsReview: 95, blocked: 22, errors: 1 } },
           latestScanAt: "2026-09-30T13:00:00Z",
-          scanProblems: ["22 Procedures items can't be read by Ask Sunny yet."],
+          scanProblems: ["22 Procedures items can't be read by Ask Bubbles yet."],
         })}
       />,
     );
     const plan = screen.getByRole("region", { name: "What Sync Now would do" });
-    expect(within(plan).getByText("Add to Ask Sunny").nextSibling?.textContent).toBe("350");
-    expect(within(plan).getByText(/Take out of Ask Sunny/).nextSibling?.textContent).toBe("1");
-    expect(within(plan).getByText("22 Procedures items can't be read by Ask Sunny yet.")).toBeTruthy();
+    expect(within(plan).getByText("Add to Ask Bubbles").nextSibling?.textContent).toBe("350");
+    expect(within(plan).getByText(/Take out of Ask Bubbles/).nextSibling?.textContent).toBe("1");
+    expect(within(plan).getByText("22 Procedures items can't be read by Ask Bubbles yet.")).toBeTruthy();
   });
 
   it("a failing document is named, with its type, reason and retry status, and links into Content", async () => {
@@ -429,11 +429,11 @@ describe("after setup: Scan Woven is always there, and it is only a preview", ()
           attention: [
             {
               code: "items_failing",
-              message: "1 document could not be synced and needs a person. Ask Sunny has stopped retrying it.",
+              message: "1 document could not be synced and needs a person. Ask Bubbles has stopped retrying it.",
               count: 1,
               items: [{ title: "Product Guide- Norvell Body Butter", contentType: "file_library", reason: "No text could be read from this file — it looks like a scanned image.", retry: "stopped", nextRetryAt: null, rowKey: "file_library:x" }],
             },
-            { code: "work_continues", message: "350 items are still being processed. Ask Sunny continues them automatically at the next hourly check.", count: 350 },
+            { code: "work_continues", message: "350 items are still being processed. Ask Bubbles continues them automatically at the next hourly check.", count: 350 },
           ],
         })}
       />,
@@ -442,7 +442,7 @@ describe("after setup: Scan Woven is always there, and it is only a preview", ()
     expect(within(failing).getByText("Product Guide- Norvell Body Butter")).toBeTruthy();
     expect(within(failing).getByText("File Library · No text could be read from this file — it looks like a scanned image.")).toBeTruthy();
     expect(within(failing).getByText("Stopped retrying — needs a person")).toBeTruthy();
-    expect(screen.getByText("350 items are still being processed. Ask Sunny continues them automatically at the next hourly check.")).toBeTruthy();
+    expect(screen.getByText("350 items are still being processed. Ask Bubbles continues them automatically at the next hourly check.")).toBeTruthy();
     await userEvent.click(within(failing).getByRole("button", { name: "Show in Content" }));
     await waitFor(() => expect(screen.getAllByTestId("content-row")).toHaveLength(1));
     expect((screen.getByLabelText("Search by title") as HTMLInputElement).value).toBe("Product Guide- Norvell Body Butter");

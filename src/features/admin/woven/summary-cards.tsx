@@ -113,7 +113,7 @@ export function SummaryCards({ counts, scheduleOn }: { counts: OverviewCounts; s
           value={counts.positionChangesSinceLast}
           sub={`${counts.confirmedPromotionsDemotionsSinceLast} confirmed promotion or demotion`}
         />
-        <Card label="Location transfers since last sync" value={counts.transfersSinceLast} sub="primary salon moved" />
+        <Card label="Location transfers since last sync" value={counts.transfersSinceLast} sub="primary location moved" />
         <Card
           label="Location access changes"
           value={counts.locationAccessAddedSinceLast + counts.locationAccessRemovedSinceLast}

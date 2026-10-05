@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 /**
  * NO EXTERNAL IDENTITY PROVIDER IS A FOUNDATIONAL DEPENDENCY.
  *
- * The constraint: Ask Sunny must work fully without Microsoft Entra ID, and
+ * The constraint: Ask Bubbles must work fully without Microsoft Entra ID, and
  * Entra access may never be available. Reporting, the dashboard, report
  * ingestion, knowledge/RAG and automation all run with no identity provider
  * configured at all.

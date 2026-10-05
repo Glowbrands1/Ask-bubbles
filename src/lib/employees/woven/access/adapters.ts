@@ -48,7 +48,7 @@ export function plannerLocation(row: LocationMappingRow): PlannerLocation {
   return {
     wovenLocationId: row.wovenLocationId,
     status: row.status,
-    salonNumber: row.status === "mapped" ? row.salonNumber : null,
+    locationCode: row.status === "mapped" ? row.locationCode : null,
     name: row.name,
   };
 }

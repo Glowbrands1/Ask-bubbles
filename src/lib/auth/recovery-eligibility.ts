@@ -7,7 +7,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
  * MAY A RECOVERY EMAIL BE SENT FOR THIS ADDRESS?
  * ============================================================================
  *
- * Only for an Ask Sunny account that is `active` or `invited`. NOT for a
+ * Only for an Ask Bubbles account that is `active` or `invited`. NOT for a
  * DISABLED one — a reset link is a fresh sign-in, and a revoked person must
  * not be able to mint one — and not for an address with no profile at all.
  *

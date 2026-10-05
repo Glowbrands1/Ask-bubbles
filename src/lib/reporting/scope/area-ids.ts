@@ -4,7 +4,7 @@
  * ============================================================================
  *
  * Districts and regions have no id in the reporting source. They are LABELS:
- * `salon_period_attributes.district_label` holds the name of the manager who
+ * `location_period_attributes.district_label` holds the name of the manager who
  * runs the district, and `region_label` the same for the region.
  *
  * So an area id is derived from the label by a pure function rather than
@@ -15,9 +15,9 @@
  *
  * WHAT HAPPENS WHEN A DISTRICT IS RENAMED. Its slug changes, an account still
  * carrying the old id matches nothing, and the allowlist comes back empty —
- * the account sees no salons until it is reassigned. That is the safe
+ * the account sees no locations until it is reassigned. That is the safe
  * direction: a renamed district is a business change somebody should confirm,
- * and showing nothing is recoverable where showing the wrong salons is not.
+ * and showing nothing is recoverable where showing the wrong locations is not.
  */
 
 /** `Patterson, Madeline` -> `patterson-madeline`. Stable and reversible enough. */

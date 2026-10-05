@@ -153,7 +153,7 @@ export function KnowledgeScreen() {
     return {
       total: documents.length,
       categories: categories.size,
-      // "Indexed" counts documents Sunny can actually cite, which is the
+      // "Indexed" counts documents Bubbles can actually cite, which is the
       // indexed flag rather than the status badge: a document can read as Ready
       // in the library while its chunks are still being rebuilt.
       indexed: documents.filter((doc) => doc.indexed).length,
@@ -201,7 +201,7 @@ export function KnowledgeScreen() {
       <PageHeader
         eyebrow="Knowledge"
         title="Knowledge Base"
-        description="Every document Sunny answers from. Upload once, and every manager gets the same answer from the same source."
+        description="Every document Bubbles answers from. Upload once, and every manager gets the same answer from the same source."
         actions={
           canManage ? (
             <Button onClick={() => openUpload()}>
@@ -239,7 +239,7 @@ export function KnowledgeScreen() {
             {stats.failed === 1 ? "failed" : "failed"} to process
           </span>
           <p className="mt-0.5">
-            Sunny cannot cite {stats.failed === 1 ? "it" : "them"}. Open{" "}
+            Bubbles cannot cite {stats.failed === 1 ? "it" : "them"}. Open{" "}
             {stats.failed === 1 ? "the document" : "each document"} to see why
             and retry — the original file is still stored.
           </p>
@@ -298,7 +298,7 @@ export function KnowledgeScreen() {
             {/*
               DEMO MODE ONLY. In live mode these are the customer's own
               uploaded documents, and a "Demo content" chip beside a real count
-              tells a Salon Director their knowledge base is fake. Kept for the
+              tells a Location Director their knowledge base is fake. Kept for the
               demo build, where it is true and useful.
             */}
             {live ? null : <DemoDataNote />}
@@ -517,7 +517,7 @@ export function KnowledgeScreen() {
         {deleteDocument ? (
           <DialogContent
             title="Delete this document?"
-            description="It is removed from the knowledge library and Sunny stops citing it."
+            description="It is removed from the knowledge library and Bubbles stops citing it."
           >
             <p className="text-[13px] leading-relaxed text-muted-foreground">
               <span className="font-medium text-foreground">
@@ -532,7 +532,7 @@ export function KnowledgeScreen() {
               ) : null}{" "}
               will be removed
               {lifecycleIsLive()
-                ? ", along with every stored file and every retrieval chunk. Sunny stops citing it immediately. This cannot be undone."
+                ? ", along with every stored file and every retrieval chunk. Bubbles stops citing it immediately. This cannot be undone."
                 : " from this browser."}
             </p>
 

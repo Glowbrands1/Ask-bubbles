@@ -14,7 +14,7 @@ import { loadAccessPlan, type AccessPlan } from "./load";
  * ONE run and its actions through `employee_access_record_shadow_run`, in one
  * transaction. That function writes `employee_access_runs` and
  * `employee_access_actions` and nothing else; it cannot create an account,
- * send an invite, revoke access or change a salon or role. There is no apply
+ * send an invite, revoke access or change a location or role. There is no apply
  * path anywhere in the code.
  *
  * A run whose guards trip is still recorded — as `aborted`, with the codes —

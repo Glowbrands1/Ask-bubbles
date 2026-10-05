@@ -240,7 +240,7 @@ function howManyRely(input: InsightInput): Insight | null {
     key: "reliance",
     value: String(totals.activeUsers),
     question: "How many leaders rely on it?",
-    detail: `${formatCount(totals.activeUsers, "leader", "leaders")} used Ask Sunny at least once, averaging ${average.toFixed(1)} inquiries each. ${movement} The By Location tab lists who has not started.`,
+    detail: `${formatCount(totals.activeUsers, "leader", "leaders")} used Ask Bubbles at least once, averaging ${average.toFixed(1)} inquiries each. ${movement} The By Location tab lists who has not started.`,
   };
 }
 

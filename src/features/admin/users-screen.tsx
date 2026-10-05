@@ -128,7 +128,7 @@ export function UsersScreen({
         description={
           authenticated
             ? "Individual logins for every person. Roles and scope are read from the server on every request; passwords are held by Supabase Auth and are never visible here."
-            : "Individual logins for every person. Salon accounts sign in under the salon email — nobody shares a credential."
+            : "Individual logins for every person. Location accounts sign in under the location email — nobody shares a credential."
         }
         actions={
           /*
@@ -245,11 +245,11 @@ export function UsersScreen({
                         {ROLE_LABEL[user.role]}
                       </Badge>
                       {user.isLocationAccount ? (
-                        <Tooltip content="Signs in under the salon email address as a Salon Director.">
+                        <Tooltip content="Signs in under the location email address as a Location Director.">
                           <span className="inline-flex">
                             <Badge tone="accent" size="sm">
                               <Building2 className="size-2.5" aria-hidden />
-                              Salon account
+                              Location account
                             </Badge>
                           </span>
                         </Tooltip>
@@ -305,7 +305,7 @@ export function UsersScreen({
         <TabsContent value="organization">
           <SectionHeader
             title="Organization structure"
-            description="Regions, districts and salons. Scope assignments reference these."
+            description="Regions, districts and locations. Scope assignments reference these."
           />
           <div className="space-y-4">
             {COMPANY_REGIONS.map((region) => (
@@ -345,7 +345,7 @@ export function UsersScreen({
                                 (location) => location.districtId === district.id,
                               ).length
                             }{" "}
-                            salons
+                            locations
                           </span>
                         </div>
                         <ul className="mt-2 flex flex-wrap gap-1.5">
@@ -370,8 +370,8 @@ export function UsersScreen({
           <Notice tone="neutral" icon={<Info />} className="mt-5">
             <p className="font-semibold text-foreground">The end-state login model</p>
             <p className="mt-1">
-              Every person gets an individual login. Salon-level accounts sign in
-              under the salon email address as a Salon Director; District and
+              Every person gets an individual login. Location-level accounts sign in
+              under the location email address as a Location Director; District and
               Regional Managers get personal logins. This replaces the single
               shared credential in use today, and it is what makes per-user chat
               history, scoped reporting and an audit trail possible.
@@ -430,10 +430,10 @@ export function UsersScreen({
                     })
                   }
                 >
-                  <option value="global">Global — all salons</option>
+                  <option value="global">Global — all locations</option>
                   <option value="region">Region</option>
                   <option value="district">District</option>
-                  <option value="location">Single salon</option>
+                  <option value="location">Single location</option>
                 </Select>
               </FieldGroup>
 
@@ -469,7 +469,7 @@ export function UsersScreen({
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="Salons">
+                  <optgroup label="Locations">
                     {COMPANY_LOCATIONS.map((location) => (
                       <option key={location.id} value={location.id}>
                         {location.name}
@@ -567,7 +567,7 @@ export function UsersScreen({
           </Notice>
           <p className="mt-4 text-[13px] leading-relaxed text-muted-foreground">
             When it is wired up, this dialog collects name, email, role and scope
-            — and the identity provider sends the invitation. Ask Sunny stores
+            — and the identity provider sends the invitation. Ask Bubbles stores
             the profile, never the password.
           </p>
           <DialogActions>
@@ -596,7 +596,7 @@ export function UsersScreen({
               </p>
               <p className="mt-1">
                 In production this triggers a password reset through the identity
-                provider, which emails the user a secure link. Ask Sunny never
+                provider, which emails the user a secure link. Ask Bubbles never
                 sees, stores, or sets a password — and this prototype has no
                 password storage at all.
               </p>

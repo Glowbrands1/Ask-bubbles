@@ -22,7 +22,7 @@ import type { OutlineNode, SourceOutline } from "./outline";
  * RESPONSIBILITIES ARE NOT GUESSED FROM LABELS. Everything this file produces
  * is `manager` — a person fills it — except the handful of header lines the
  * ENGINE itself fills from the record. Deciding that a field called "Details"
- * should be drafted by Ask Sunny is a business decision about one form, and it
+ * should be drafted by Ask Bubbles is a business decision about one form, and it
  * is made in the editor by the person reviewing the proposal. `align.ts` then
  * carries the decisions already made on the CURRENT version forward, so
  * re-issuing a form does not silently un-decide them.
@@ -60,7 +60,7 @@ const CANONICAL: { match: RegExp; key: string }[] = [
   { match: /^date$/i, key: "form_date" },
   { match: /^job\s*title$/i, key: "job_title" },
   { match: /^position\s+applied\s+for$/i, key: "job_title" },
-  { match: /^(location|salon\s*name)$/i, key: "location" },
+  { match: /^(location|location\s*name)$/i, key: "location" },
 ];
 
 function canonicalKey(label: string): string | null {

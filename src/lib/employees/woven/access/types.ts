@@ -7,7 +7,7 @@ import type { EmploymentStatus, LocationMapStatus, PositionMapStatus } from "../
  * THE ACCESS PLANNER'S VOCABULARY
  * ============================================================================
  *
- * What a Woven → Ask Sunny access sync WOULD do for one employee or account.
+ * What a Woven → Ask Bubbles access sync WOULD do for one employee or account.
  * Four actions would change access (the MUTATING ones); everything else is
  * NO_CHANGE or a FLAG for a person to review. In this stage nothing applies
  * any of them: the Access Preview shows them, and shadow mode only records
@@ -79,14 +79,14 @@ export interface PlannerPosition {
 export interface PlannerLocation {
   wovenLocationId: string;
   status: LocationMapStatus;
-  /** The mapped salon's number, e.g. "0307". Null unless status is `mapped`. */
-  salonNumber: string | null;
+  /** The mapped location's number, e.g. "0307". Null unless status is `mapped`. */
+  locationCode: string | null;
   name: string | null;
 }
 
 export type AccountManagement = "woven_linked" | "not_woven_managed" | null;
 
-/** One Ask Sunny account, with its Woven link and protected override (from `employee_access_accounts`). */
+/** One Ask Bubbles account, with its Woven link and protected override (from `employee_access_accounts`). */
 export interface PlannerAccount {
   appUserId: string;
   email: string;
@@ -143,7 +143,7 @@ export interface PlannedRow {
     via: "link" | "email_candidate" | "account_only";
   } | null;
   proposedRole: Role | null;
-  /** A salon area id (`loc-0307`) when a salon follows from Woven's primary location. */
+  /** A location area id (`loc-0307`) when a location follows from Woven's primary location. */
   proposedPrimaryAreaId: string | null;
   /** Primary first. */
   actions: AccessAction[];

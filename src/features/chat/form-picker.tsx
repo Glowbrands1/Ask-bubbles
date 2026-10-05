@@ -15,7 +15,7 @@ import type { ChatFormChoice, ChatFormSelection } from "@/types";
  *
  * The answer to an unnamed form request used to be every form this manager may
  * create, written into the message as a bullet list. It was correct — the rule
- * that Sunny asks rather than defaults is the one thing this workstream will
+ * that Bubbles asks rather than defaults is the one thing this workstream will
  * not give up — and it was thirteen forms of prose in a chat bubble.
  *
  * So the everyday form is offered on its own, and the rest are one click away.

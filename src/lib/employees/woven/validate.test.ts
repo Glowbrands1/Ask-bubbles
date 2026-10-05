@@ -13,7 +13,7 @@ import {
   wovenEmployee,
   wovenLocation,
 } from "./test-support";
-import { runWovenLiveValidation, type SalonComparisonInput, type ValidationReport } from "./validate";
+import { runWovenLiveValidation, type LocationComparisonInput, type ValidationReport } from "./validate";
 
 /**
  * ============================================================================
@@ -64,7 +64,7 @@ async function validate(
   fakeOptions: Partial<Parameters<typeof createFakeWoven>[0]> = {},
   extraConfig: Record<string, string> = {},
   prepare?: (fake: ReturnType<typeof createFakeWoven>) => void,
-  run: { salons?: SalonComparisonInput; includeLocationReview?: boolean } = {},
+  run: { locations?: LocationComparisonInput; includeLocationReview?: boolean } = {},
 ): Promise<{ report: ValidationReport; fake: ReturnType<typeof createFakeWoven> }> {
   const { employees, details } = estate();
   const fake = createFakeWoven({
@@ -191,13 +191,13 @@ describe("webhooks, from Woven's own vocabulary", () => {
   });
 });
 
-describe("salon coverage: Woven /locations against salons.salon_number", () => {
-  const SALONS: SalonComparisonInput = {
+describe("location coverage: Woven /locations against locations.location_code", () => {
+  const LOCATIONS: LocationComparisonInput = {
     outcome: "loaded",
-    salons: [
-      { number: "0306", name: "Salon Three-Oh-Six" },
-      { number: "0412", name: "Salon Four-Twelve" },
-      { number: "0520", name: "Salon Five-Twenty" },
+    locations: [
+      { number: "0306", name: "Location Three-Oh-Six" },
+      { number: "0412", name: "Location Four-Twelve" },
+      { number: "0520", name: "Location Five-Twenty" },
     ],
   };
   const LOCATIONS = [
@@ -208,46 +208,46 @@ describe("salon coverage: Woven /locations against salons.salon_number", () => {
     wovenLocation("WL-HQ", { name: "Head Office", nonLocation: true }),
   ];
 
-  it("counts exact matches, unmatched locations, uncovered salons, closed and non-locations", async () => {
-    const { report } = await validate({ locations: LOCATIONS }, {}, undefined, { salons: SALONS });
+  it("counts exact matches, unmatched locations, uncovered locations, closed and non-locations", async () => {
+    const { report } = await validate({ locations: LOCATIONS }, {}, undefined, { locations: LOCATIONS });
     expect(report.locations).toMatchObject({ records: 5, withNumber: 4, closed: 1, nonLocations: 1 });
-    expect(report.locations?.salonCoverage).toEqual({
+    expect(report.locations?.locationCoverage).toEqual({
       outcome: "compared",
-      salons: 3,
+      locations: 3,
       exactMatches: 1,
-      salonsMatched: 1,
+      locationsMatched: 1,
       unmatchedWovenLocations: 4,
       unmatchedOpenWovenLocations: 2,
-      salonsWithoutWovenLocation: 2,
+      locationsWithoutWovenLocation: 2,
       leadingZeroOnlyMatches: 1,
       duplicateWovenNumbers: 0,
     });
-    expect(verdicts(report, "Salon coverage")).toEqual(["warn"]);
-    expect(message(report, "Salon coverage")).toMatch(/1 would match only if leading zeros were ignored; they are not counted/);
-    expect(message(report, "Salon coverage")).toMatch(/Nothing is mapped or confirmed/);
+    expect(verdicts(report, "Location coverage")).toEqual(["warn"]);
+    expect(message(report, "Location coverage")).toMatch(/1 would match only if leading zeros were ignored; they are not counted/);
+    expect(message(report, "Location coverage")).toMatch(/Nothing is mapped or confirmed/);
   });
 
-  it("passes when every salon and every open location match", async () => {
+  it("passes when every location and every open location match", async () => {
     const { report } = await validate(
       { locations: [wovenLocation("WL-0", { number: "0306" }), wovenLocation("WL-HQ", { nonLocation: true })] },
       {},
       undefined,
-      { salons: { outcome: "loaded", salons: [{ number: "0306", name: "x" }] } },
+      { locations: { outcome: "loaded", locations: [{ number: "0306", name: "x" }] } },
     );
-    expect(verdicts(report, "Salon coverage")).toEqual(["pass"]);
+    expect(verdicts(report, "Location coverage")).toEqual(["pass"]);
   });
 
   it("gives location numbers and names only when asked (manage_users), and never an employee or a location's other fields", async () => {
-    const without = await validate({ locations: LOCATIONS }, {}, undefined, { salons: SALONS });
+    const without = await validate({ locations: LOCATIONS }, {}, undefined, { locations: LOCATIONS });
     expect(without.report.locationReview).toBeNull();
     expect(JSON.stringify(without.report)).not.toContain("Woven Store 306");
-    expect(JSON.stringify(without.report)).not.toContain("Salon Four-Twelve");
+    expect(JSON.stringify(without.report)).not.toContain("Location Four-Twelve");
 
-    const { report } = await validate({ locations: LOCATIONS }, {}, undefined, { salons: SALONS, includeLocationReview: true });
-    expect(report.locationReview?.wovenLocations[0]).toEqual({ number: "0306", name: "Woven Store 306", closed: false, nonLocation: false, matchedSalonNumber: "0306" });
-    expect(report.locationReview?.salonsWithoutWovenLocation).toEqual([
-      { number: "0412", name: "Salon Four-Twelve" },
-      { number: "0520", name: "Salon Five-Twenty" },
+    const { report } = await validate({ locations: LOCATIONS }, {}, undefined, { locations: LOCATIONS, includeLocationReview: true });
+    expect(report.locationReview?.wovenLocations[0]).toEqual({ number: "0306", name: "Woven Store 306", closed: false, nonLocation: false, matchedLocationCode: "0306" });
+    expect(report.locationReview?.locationsWithoutWovenLocation).toEqual([
+      { number: "0412", name: "Location Four-Twelve" },
+      { number: "0520", name: "Location Five-Twenty" },
     ]);
     const text = JSON.stringify(report);
     for (const forbidden of ["SENSITIVE-MANAGER-NAME", "SENSITIVE-LOCATION-PHONE", "Quinlan", "quinlan", "WL-0\"", "A1\""]) {
@@ -255,10 +255,10 @@ describe("salon coverage: Woven /locations against salons.salon_number", () => {
     }
   });
 
-  it("says so when the salons could not be read, and still runs every Woven check", async () => {
-    const { report } = await validate({}, {}, undefined, { salons: { outcome: "unavailable", salons: [] } });
-    expect(report.locations?.salonCoverage.outcome).toBe("salons_unavailable");
-    expect(message(report, "Salon coverage")).toMatch(/could not be read/);
+  it("says so when the locations could not be read, and still runs every Woven check", async () => {
+    const { report } = await validate({}, {}, undefined, { locations: { outcome: "unavailable", locations: [] } });
+    expect(report.locations?.locationCoverage.outcome).toBe("locations_unavailable");
+    expect(message(report, "Location coverage")).toMatch(/could not be read/);
     expect(report.ok).toBe(true);
   });
 });
@@ -267,7 +267,7 @@ describe("what the report must never contain", () => {
   it("no names, emails, employee ids, dates, titles or sensitive values", async () => {
     const { report } = await validate();
     const text = JSON.stringify(report);
-    for (const forbidden of ["Quinlan", "quinlan", "A1\"", "T1\"", "2025-01-31", "Salon Consultant", "KS Manhattan", SENSITIVE_MARKER, "token-1", FAKE_CREDENTIALS.password]) {
+    for (const forbidden of ["Quinlan", "quinlan", "A1\"", "T1\"", "2025-01-31", "Location Consultant", "KS Manhattan", SENSITIVE_MARKER, "token-1", FAKE_CREDENTIALS.password]) {
       expect(text).not.toContain(forbidden);
     }
   });

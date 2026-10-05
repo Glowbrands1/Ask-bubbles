@@ -217,7 +217,7 @@ describe("authorizeRequest — live mode", () => {
     // The demo role header is meaningless in live mode: the unconfigured
     // provider is the one in play, and it identifies nobody.
     await expect(
-      authorizeRequest(request({ "x-ask-sunny-demo-role": "owner" }), "manage_knowledge"),
+      authorizeRequest(request({ "x-ask-bubbles-demo-role": "owner" }), "manage_knowledge"),
     ).rejects.toBeInstanceOf(AuthError);
   });
 
@@ -271,9 +271,9 @@ describe("authorizeRequest — demo mode", () => {
     setMode("demo");
     const { authorizeRequest, AuthError } = await loadAuth();
 
-    // A Salon Director does not hold manage_users.
+    // A Location Director does not hold manage_users.
     const error = await authorizeRequest(
-      request({ "x-ask-sunny-demo-role": "location_manager" }),
+      request({ "x-ask-bubbles-demo-role": "location_manager" }),
       "manage_users",
     ).catch((caught: unknown) => caught);
 
@@ -289,7 +289,7 @@ describe("authorizeRequest — demo mode", () => {
     // An owner holds manage_users in DEFAULT_PERMISSION_MATRIX. Nothing the
     // client could send changes what the server checks against.
     const result = await authorizeRequest(
-      request({ "x-ask-sunny-demo-role": "owner" }),
+      request({ "x-ask-bubbles-demo-role": "owner" }),
       "manage_users",
     );
     expect(result.identity.role).toBe("owner");

@@ -238,7 +238,7 @@ describe("a chat turn is classified by evidence, strongest first", () => {
    * `lib/ai/quick-questions.ts` — so they are the highest-volume questions in
    * the product and the ones the adoption chart most needs to get right.
    *
-   * "Which salons need my attention today?" named no metric and no report, so
+   * "Which locations need my attention today?" named no metric and no report, so
    * it fell through the whole ladder to `general_guidance`: the Daily Stats
    * bar understated its own best case, and the District Manager chip was
    * invisible. Step 2 does not rescue it — `hadReportContext` means the
@@ -246,8 +246,8 @@ describe("a chat turn is classified by evidence, strongest first", () => {
    * never does, however many report families the question then routes to.
    */
   it.each([
-    "Which salons need my attention today?",
-    "Which salons need attention today?",
+    "Which locations need my attention today?",
+    "Which locations need attention today?",
     "Where is my district losing revenue based on the latest data?",
     "Where is my region losing revenue based on the latest data?",
     "Where are we losing revenue based on the latest data?",
@@ -479,7 +479,7 @@ describe("filters survive the round trip through a URL", () => {
       from: null,
       to: null,
       district: "Patterson, Madeline",
-      salonId: "3f1b2c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+      locationId: "3f1b2c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
       role: "location_manager" as const,
       actorId: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
       inactiveOnly: true,
@@ -493,14 +493,14 @@ describe("filters survive the round trip through a URL", () => {
     expect(serializeFilters(EMPTY_FILTERS)).toBe("");
   });
 
-  it("drops a salon or leader id that is not a uuid", () => {
+  it("drops a location or leader id that is not a uuid", () => {
     /*
      * Both are passed to a Postgres function as typed arguments. A junk value
      * must come back as "no filter" rather than as an error page from the
      * database, which is what a hand-edited URL would otherwise produce.
      */
-    const parsed = parseFilters({ salon: "'; drop table", leader: "42" });
-    expect(parsed.salonId).toBeNull();
+    const parsed = parseFilters({ location: "'; drop table", leader: "42" });
+    expect(parsed.locationId).toBeNull();
     expect(parsed.actorId).toBeNull();
   });
 

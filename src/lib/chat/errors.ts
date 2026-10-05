@@ -37,4 +37,4 @@ export class ChatStoreError extends Error {
  * guessing ids in the first place.
  */
 export const CONVERSATION_REFUSED =
-  "That conversation is not available. You can only open conversations from your own Ask Sunny history.";
+  "That conversation is not available. You can only open conversations from your own Ask Bubbles history.";

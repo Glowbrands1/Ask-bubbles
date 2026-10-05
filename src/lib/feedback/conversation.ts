@@ -24,9 +24,9 @@ import type { SavedFeedback } from "./types";
  * THE STORED GRAIN IS STILL ONE TURN, AND THAT IS DELIBERATE
  * =============================================================================
  *
- * `ask_sunny_feedback` is keyed to `activity_events.id` — the server's name for
+ * `assistant_feedback` is keyed to `activity_events.id` — the server's name for
  * one answered turn — and every analytics read joins through it for the role,
- * the salon, the surface and the topic. A conversation-level rating that needed
+ * the location, the surface and the topic. A conversation-level rating that needed
  * a conversation-level row would be a second review system beside the one the
  * dashboard already reads, so this attaches the rating to a turn IN that
  * conversation and lets the existing model carry it. The browser's own

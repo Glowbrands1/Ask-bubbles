@@ -127,10 +127,10 @@ describe("the control only appears where there is something to rate", () => {
     open();
     fireEvent.click(screen.getByRole("button", { name: /rate this conversation/i }));
 
-    expect(screen.getByText(/how was your ask sunny experience\?/i)).toBeDefined();
-    expect(screen.getByRole("radiogroup", { name: /how was your ask sunny experience/i })).toBeDefined();
+    expect(screen.getByText(/how was your ask bubbles experience\?/i)).toBeDefined();
+    expect(screen.getByRole("radiogroup", { name: /how was your ask bubbles experience/i })).toBeDefined();
     expect(screen.getByRole("radiogroup", { name: /what you needed/i })).toBeDefined();
-    expect(screen.getByLabelText(/anything sunny should do better/i)).toBeDefined();
+    expect(screen.getByLabelText(/anything bubbles should do better/i)).toBeDefined();
   });
 
   it("marks a conversation that was already rated, instead of asking again", () => {
@@ -211,7 +211,7 @@ describe("saving", () => {
 
     fireEvent.click(screen.getByRole("radio", { name: /^2 — Slightly helpful$/ }));
     fireEvent.click(screen.getByRole("radio", { name: "No" }));
-    fireEvent.change(screen.getByLabelText(/anything sunny should do better/i), {
+    fireEvent.change(screen.getByLabelText(/anything bubbles should do better/i), {
       target: { value: "  It cut off the policy text.  " },
     });
     fireEvent.click(screen.getByRole("button", { name: "Submit feedback" }));
@@ -262,8 +262,8 @@ describe("saving", () => {
 
     fireEvent.click(screen.getByRole("radio", { name: /^1 — Not helpful$/ }));
     fireEvent.click(screen.getByRole("radio", { name: "No" }));
-    fireEvent.change(screen.getByLabelText(/anything sunny should do better/i), {
-      target: { value: "Wrong salon entirely." },
+    fireEvent.change(screen.getByLabelText(/anything bubbles should do better/i), {
+      target: { value: "Wrong location entirely." },
     });
     fireEvent.click(screen.getByRole("button", { name: "Submit feedback" }));
 
@@ -271,9 +271,9 @@ describe("saving", () => {
       "That answer is not yours to rate.",
     );
     expect(
-      (screen.getByLabelText(/anything sunny should do better/i) as HTMLTextAreaElement)
+      (screen.getByLabelText(/anything bubbles should do better/i) as HTMLTextAreaElement)
         .value,
-    ).toBe("Wrong salon entirely.");
+    ).toBe("Wrong location entirely.");
   });
 });
 
@@ -287,7 +287,7 @@ describe("editing replaces an opinion rather than adding one", () => {
     fireEvent.click(screen.getByRole("button", { name: /edit your rating/i }));
 
     expect(
-      (screen.getByLabelText(/anything sunny should do better/i) as HTMLTextAreaElement)
+      (screen.getByLabelText(/anything bubbles should do better/i) as HTMLTextAreaElement)
         .value,
     ).toBe("Nearly right.");
     expect(
@@ -295,7 +295,7 @@ describe("editing replaces an opinion rather than adding one", () => {
     ).toBe(true);
 
     fireEvent.click(screen.getByRole("radio", { name: /^5 — Very helpful$/ }));
-    fireEvent.change(screen.getByLabelText(/anything sunny should do better/i), {
+    fireEvent.change(screen.getByLabelText(/anything bubbles should do better/i), {
       target: { value: "Fixed now." },
     });
     fireEvent.click(screen.getByRole("button", { name: "Update rating" }));
@@ -316,7 +316,7 @@ describe("editing replaces an opinion rather than adding one", () => {
   it("cancels back to what was saved, discarding the edit", () => {
     open({ saved: saved() });
     fireEvent.click(screen.getByRole("button", { name: /edit your rating/i }));
-    fireEvent.change(screen.getByLabelText(/anything sunny should do better/i), {
+    fireEvent.change(screen.getByLabelText(/anything bubbles should do better/i), {
       target: { value: "Something else" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
@@ -325,7 +325,7 @@ describe("editing replaces an opinion rather than adding one", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /edit your rating/i }));
     expect(
-      (screen.getByLabelText(/anything sunny should do better/i) as HTMLTextAreaElement)
+      (screen.getByLabelText(/anything bubbles should do better/i) as HTMLTextAreaElement)
         .value,
     ).toBe("Nearly right.");
   });
@@ -339,7 +339,7 @@ describe("the controls are reachable without a mouse", () => {
     fireEvent.click(screen.getByRole("button", { name: /rate this conversation/i }));
 
     const group = screen.getByRole("radiogroup", {
-      name: /how was your ask sunny experience/i,
+      name: /how was your ask bubbles experience/i,
     });
     expect(group).toBeDefined();
 
@@ -375,7 +375,7 @@ describe("the controls are reachable without a mouse", () => {
      */
     open();
     fireEvent.click(screen.getByRole("button", { name: /rate this conversation/i }));
-    expect(screen.getByLabelText(/anything sunny should do better/i)).toBeDefined();
+    expect(screen.getByLabelText(/anything bubbles should do better/i)).toBeDefined();
   });
 
   it("selects a rating from the keyboard", () => {
@@ -532,7 +532,7 @@ describe("choosing a star never moves the page", () => {
         );
       }
       expect(
-        (screen.getByLabelText(/anything sunny should do better/i) as HTMLTextAreaElement).value,
+        (screen.getByLabelText(/anything bubbles should do better/i) as HTMLTextAreaElement).value,
       ).toBe("");
 
       /* The form is still open, still unsaved, and nothing has gone anywhere. */
@@ -554,7 +554,7 @@ describe("choosing a star never moves the page", () => {
      */
     expand();
     const group = screen.getByRole("radiogroup", {
-      name: /how was your ask sunny experience/i,
+      name: /how was your ask bubbles experience/i,
     });
     const stars = [...group.querySelectorAll<HTMLInputElement>('input[type="radio"]')];
     expect(stars).toHaveLength(5);
@@ -615,7 +615,7 @@ describe("each shape of submission reaches the endpoint intact", () => {
     fireEvent.click(screen.getByRole("button", { name: /rate this conversation/i }));
     fireEvent.click(screen.getByRole("radio", { name: /^2 — Slightly helpful$/ }));
     fireEvent.click(screen.getByRole("radio", { name: "Partially" }));
-    fireEvent.change(screen.getByLabelText(/anything sunny should do better/i), {
+    fireEvent.change(screen.getByLabelText(/anything bubbles should do better/i), {
       target: { value: "Missed the policy." },
     });
     fireEvent.click(screen.getByRole("button", { name: "Submit feedback" }));

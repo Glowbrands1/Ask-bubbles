@@ -8,7 +8,7 @@ import type { LocationMappingRow, PositionMappingRow } from "@/lib/employees/wov
 
 /**
  * The two review forms. Each saves ONE map row through its route and nothing
- * else: a location's salon, a position's role, default scope and rank. They
+ * else: a location's location, a position's role, default scope and rank. They
  * change nobody's access — phase one uses a mapping as a label only.
  * Disabled on sample data and in demo mode, where the routes refuse.
  */
@@ -27,13 +27,13 @@ async function patch(url: string, body: unknown): Promise<string | null> {
     const parsed = (await response.json().catch(() => null)) as { reason?: string; status?: string } | null;
     return parsed?.reason ?? (parsed?.status ? parsed.status.replaceAll("_", " ") : `Not saved (HTTP ${response.status}).`);
   } catch {
-    return "Ask Sunny's server could not be reached.";
+    return "Ask Bubbles' server could not be reached.";
   }
 }
 
 export function LocationReviewForm({ row, disabled }: { row: LocationMappingRow; disabled: boolean }) {
   const router = useRouter();
-  const [salonNumber, setSalonNumber] = useState(row.salonNumber ?? row.suggestedSalonNumber ?? "");
+  const [locationCode, setLocationCode] = useState(row.locationCode ?? row.suggestedLocationCode ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +43,7 @@ export function LocationReviewForm({ row, disabled }: { row: LocationMappingRow;
     const failure = await patch("/api/admin/employees/woven/locations", {
       wovenLocationId: row.wovenLocationId,
       status,
-      ...(status === "mapped" ? { salonNumber } : {}),
+      ...(status === "mapped" ? { locationCode } : {}),
     });
     setBusy(false);
     if (failure) setError(failure);
@@ -52,19 +52,19 @@ export function LocationReviewForm({ row, disabled }: { row: LocationMappingRow;
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <label className="sr-only" htmlFor={`salon-${row.wovenLocationId}`}>
-        Ask Sunny salon number
+      <label className="sr-only" htmlFor={`location-${row.wovenLocationId}`}>
+        Ask Bubbles location number
       </label>
       <input
-        id={`salon-${row.wovenLocationId}`}
+        id={`location-${row.wovenLocationId}`}
         className={`${input} w-24 font-mono`}
-        value={salonNumber}
-        onChange={(e) => setSalonNumber(e.target.value)}
+        value={locationCode}
+        onChange={(e) => setLocationCode(e.target.value)}
         placeholder="0306"
         disabled={disabled || busy}
       />
-      <button type="button" className={button} disabled={disabled || busy || salonNumber.trim() === ""} onClick={() => save("mapped")}>
-        {row.status === "mapped" ? "Change" : row.suggestedSalonNumber && salonNumber === row.suggestedSalonNumber ? "Confirm" : "Map"}
+      <button type="button" className={button} disabled={disabled || busy || locationCode.trim() === ""} onClick={() => save("mapped")}>
+        {row.status === "mapped" ? "Change" : row.suggestedLocationCode && locationCode === row.suggestedLocationCode ? "Confirm" : "Map"}
       </button>
       {row.status !== "ignored" ? (
         <button type="button" className={button} disabled={disabled || busy} onClick={() => save("ignored")}>
@@ -112,7 +112,7 @@ export function PositionReviewForm({ row, disabled }: { row: PositionMappingRow;
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <label className="sr-only" htmlFor={`role-${id}`}>
-        Ask Sunny role
+        Ask Bubbles role
       </label>
       <select id={`role-${id}`} className={input} value={role} onChange={(e) => setRole(e.target.value)} disabled={disabled || busy}>
         <option value="">Role…</option>

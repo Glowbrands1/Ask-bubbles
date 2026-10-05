@@ -40,10 +40,10 @@ import {
  * It does two things no route here used to do: it authorizes on the TEMPLATE'S
  * OWN permission rather than a hard-coded `create_coaching_form` — so a role
  * that may write a coaching form cannot save, draft or finalize a DPOA — and it
- * checks the form's salon against the caller's `AccessScope`.
+ * checks the form's location against the caller's `AccessScope`.
  *
  * An unauthorized form answers exactly as a missing one does. A 403 here would
- * confirm that a guessed UUID names a real record at somebody else's salon.
+ * confirm that a guessed UUID names a real record at somebody else's location.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

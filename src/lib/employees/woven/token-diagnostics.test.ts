@@ -13,7 +13,7 @@ import { describeTokenDiagnostics, diagnoseTokenResponse, redact, type DiagnoseI
 
 const SECRETS = {
   subscriptionKey: "sk-live-9f8e7d6c5b4a3f2e1d0c",
-  username: "ask.sunny.integration@glowbrands.test",
+  username: "ask.bubbles.integration@glowbrands.test",
   password: "Pa55w0rd!-not-real",
 };
 const ACCESS = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U";

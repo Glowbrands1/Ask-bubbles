@@ -18,7 +18,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
  *
  * The password goes straight to Supabase Auth and nowhere else. It is held in
  * component state only while the field is on screen, never written to storage,
- * never logged, never sent to an Ask Sunny endpoint. Ask Sunny has no password
+ * never logged, never sent to an Ask Bubbles endpoint. Ask Bubbles has no password
  * table of its own and hashes nothing itself — that is Supabase Auth's job, and
  * a second implementation of it would be a credential store we have no business
  * owning.

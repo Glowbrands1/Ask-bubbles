@@ -233,7 +233,7 @@ async function renderChat() {
       session={{
         subject: "11111111-1111-4111-8111-aaaaaaaaaaaa",
         email: "sd@example.com",
-        displayName: "Salon Director",
+        displayName: "Location Director",
         role: "location_manager",
         scope: { level: "location", primaryAreaId: "loc-0306", alsoCoversAreaIds: [] },
       }}
@@ -270,7 +270,7 @@ describe("rating is scoped to the conversation being rated", () => {
 
     await user.click(screen.getByRole("button", { name: /rate this conversation/i }));
     expect(
-      screen.getByRole("textbox", { name: /anything sunny should do better/i }),
+      screen.getByRole("textbox", { name: /anything bubbles should do better/i }),
     ).toBeTruthy();
 
     await openConversation(user, /^Beta thread/);
@@ -282,7 +282,7 @@ describe("rating is scoped to the conversation being rated", () => {
      * it.
      */
     expect(
-      screen.queryByRole("textbox", { name: /anything sunny should do better/i }),
+      screen.queryByRole("textbox", { name: /anything bubbles should do better/i }),
     ).toBeNull();
     expect(screen.getByRole("button", { name: /rate this conversation/i })).toBeTruthy();
   });
@@ -294,7 +294,7 @@ describe("rating is scoped to the conversation being rated", () => {
 
     await user.click(screen.getByRole("button", { name: /rate this conversation/i }));
     await user.type(
-      screen.getByRole("textbox", { name: /anything sunny should do better/i }),
+      screen.getByRole("textbox", { name: /anything bubbles should do better/i }),
       "Alpha specific complaint",
     );
     await user.click(screen.getByRole("radio", { name: /^2 —/ }));
@@ -310,7 +310,7 @@ describe("rating is scoped to the conversation being rated", () => {
      * dashboard able to tell.
      */
     const comment = screen.getByRole("textbox", {
-      name: /anything sunny should do better/i,
+      name: /anything bubbles should do better/i,
     }) as HTMLTextAreaElement;
     expect(comment.value).toBe("");
     expect((screen.getByRole("radio", { name: /^2 —/ }) as HTMLInputElement).checked).toBe(
@@ -375,7 +375,7 @@ describe("a past conversation can be reopened and continued", () => {
     await openConversation(user, /^Alpha thread/);
 
     await user.type(
-      screen.getByLabelText(/ask sunny a question/i),
+      screen.getByLabelText(/ask bubbles a question/i),
       "and what about Tuesday?",
     );
     await user.keyboard("{Enter}");
@@ -430,7 +430,7 @@ describe("create a form from this conversation", () => {
     await renderChat();
     await openConversation(user, /^Alpha thread/);
 
-    await user.type(screen.getByLabelText(/ask sunny a question/i), "a slow question");
+    await user.type(screen.getByLabelText(/ask bubbles a question/i), "a slow question");
     await user.keyboard("{Enter}");
 
     /*
@@ -442,7 +442,7 @@ describe("create a form from this conversation", () => {
       name: /create a form from this conversation/i,
     }) as HTMLButtonElement;
     expect(action.disabled).toBe(true);
-    expect(screen.getByText(/sunny is answering/i)).toBeTruthy();
+    expect(screen.getByText(/bubbles is answering/i)).toBeTruthy();
 
     release?.();
     await waitFor(() => expect(screen.getByText(/an answer/)).toBeTruthy());
@@ -497,7 +497,7 @@ describe("create a form from this conversation", () => {
 
     // A turn is started and is still in flight.
     await user.type(
-      screen.getByLabelText(/ask sunny a question/i),
+      screen.getByLabelText(/ask bubbles a question/i),
       "coaching form for Sarah Test",
     );
     await user.keyboard("{Enter}");
@@ -623,7 +623,7 @@ describe("create a form below the rail's breakpoint", () => {
     await waitFor(() => expect(questions).toContain("Create a form from this conversation."));
   });
 
-  it("is disabled while Sunny is answering, like the rail", async () => {
+  it("is disabled while Bubbles is answering, like the rail", async () => {
     const user = userEvent.setup();
     let release: (() => void) | undefined;
     vi.stubGlobal(
@@ -647,7 +647,7 @@ describe("create a form below the rail's breakpoint", () => {
 
     await renderChat();
     await openConversation(user, /^Alpha thread/);
-    await user.type(screen.getByLabelText(/ask sunny a question/i), "a slow question");
+    await user.type(screen.getByLabelText(/ask bubbles a question/i), "a slow question");
     await user.keyboard("{Enter}");
 
     expect(narrowAction()!.disabled).toBe(true);

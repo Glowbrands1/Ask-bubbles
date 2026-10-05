@@ -37,7 +37,7 @@ import type {
  *   does unknown → active. Only Woven's explicit terminated status records a
  *   termination.
  *
- *   NOT AN ACCESS DECISION. Nothing here changes a role, a scope, a salon
+ *   NOT AN ACCESS DECISION. Nothing here changes a role, a scope, a location
  *   assignment or a login.
  *
  * EFFECTIVE DATES ARE ONLY WOVEN'S: a hire or start date, a termination date,
@@ -148,7 +148,7 @@ export function diffEmployee(
       toValue: { employmentStatus: next.employmentStatus, terminationDate: next.terminationDate },
       classification: null,
       effectiveDate: next.terminationDate,
-      /* Recorded only. Disabling an Ask Sunny login is a later, separately approved phase. */
+      /* Recorded only. Disabling an Ask Bubbles login is a later, separately approved phase. */
       details: {
         lastDayWorked: next.terminationLastDayWorked,
         terminationTypeCode: next.terminationTypeCode,
@@ -252,7 +252,7 @@ export function diffEmployee(
       toValue: { emailAddress: next.emailAddress },
       classification: null,
       effectiveDate: null,
-      /* An email change never re-points an existing Ask Sunny login. */
+      /* An email change never re-points an existing Ask Bubbles login. */
       details: { loginLinkChanged: false },
     });
   }

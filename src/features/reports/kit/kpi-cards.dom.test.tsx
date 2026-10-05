@@ -14,7 +14,7 @@ import { KpiCardRow, trendFor, type KpiCard } from "./kpi-cards";
  * this row carries two things that were put there on purpose:
  *
  *   `N/A`, NEVER `0`. A card is the most quoted object on the page, and a zero
- *   is how "the source did not report this" becomes "this salon did nothing" in
+ *   is how "the source did not report this" becomes "this location did nothing" in
  *   somebody's summary.
  *
  *   THE HELPER IS REQUIRED. Several of these measures have near-identical names
@@ -31,7 +31,7 @@ function card(overrides: Partial<KpiCard> = {}): KpiCard {
     id: "total-tans",
     label: "Total Tans",
     value: "48,584",
-    helper: "Across 15 salons, read once per salon.",
+    helper: "Across 15 locations, read once per location.",
     ...overrides,
   };
 }
@@ -43,13 +43,13 @@ describe("the bed and spa KPI row keeps what makes a figure quotable", () => {
     render(<KpiCardRow cards={[card()]} />);
     expect(screen.getByText("Total Tans")).toBeTruthy();
     expect(screen.getByText("48,584")).toBeTruthy();
-    expect(screen.getByText("Across 15 salons, read once per salon.")).toBeTruthy();
+    expect(screen.getByText("Across 15 locations, read once per location.")).toBeTruthy();
   });
 
   it("prints N/A for a figure the source did not report, never a zero", () => {
     render(
       <KpiCardRow
-        cards={[card({ value: null, helper: "This salon reported no tans column." })]}
+        cards={[card({ value: null, helper: "This location reported no tans column." })]}
       />,
     );
     expect(screen.getByText("N/A")).toBeTruthy();

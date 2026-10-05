@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils/cn";
  *
  * WHAT DID NOT CHANGE, AND IT IS THE WHOLE REASON THIS WRAPPER EXISTS. A null
  * value renders as `N/A`, never as `0` — a card is the most quoted thing on the
- * page, and `0` is how "the source did not report this" becomes "this salon did
+ * page, and `0` is how "the source did not report this" becomes "this location did
  * nothing" in somebody's summary. The helper line stays REQUIRED rather than
  * optional: a card whose meaning needs explaining and does not explain it is
  * worse than no card. Both survived the restyle intact.

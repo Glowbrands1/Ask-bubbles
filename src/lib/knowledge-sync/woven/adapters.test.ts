@@ -150,20 +150,20 @@ describe("recognising the page after credentials", () => {
     const state = defaultState();
     state.chooserMechanism = "link";
     state.chooserAccounts = [
-      { id: uuid(1), name: "JB & Associates West" },
-      { id: uuid(2), name: "JB & Associates" },
+      { id: uuid(1), name: "Example Soap Co West" },
+      { id: uuid(2), name: "Example Soap Co" },
     ];
-    expect(chooserAction(accountChooserHtml(state), "JB & Associates")).toEqual({ kind: "link", href: `/Login/SelectAccount?pCompanyID=${uuid(2)}` });
+    expect(chooserAction(accountChooserHtml(state), "Example Soap Co")).toEqual({ kind: "link", href: `/Login/SelectAccount?pCompanyID=${uuid(2)}` });
   });
 
   it("the verified chooser: every rendered field kept as rendered; only CompanyID and CompanyName are set", () => {
     const state = defaultState();
-    state.chooserCompanyName = "JB & Associates";
+    state.chooserCompanyName = "Example Soap Co";
     const html = verifiedChooserHtml(state).replace(
       '<input type="hidden" name="ReturnUrl" value="/">',
       '<input type="hidden" name="ReturnUrl" value="/Home?tab=1"><input type="hidden" name="ExtraRendered" value="kept">',
     );
-    const submission = continueLoginSubmission(html, "/Login/Authenticate?ReturnUrl=%2F", "JB & Associates");
+    const submission = continueLoginSubmission(html, "/Login/Authenticate?ReturnUrl=%2F", "Example Soap Co");
     expect(submission.path).toBe("/Login/Authenticate");
     expect(submission.fields).toEqual({
       AuthenticationRequestUser: USERNAME,
@@ -171,7 +171,7 @@ describe("recognising the page after credentials", () => {
       ReturnUrl: "/Home?tab=1",
       ExtraRendered: "kept",
       CompanyID: uuid(9001),
-      CompanyName: "JB & Associates",
+      CompanyName: "Example Soap Co",
       __RequestVerificationToken: "continue-token",
     });
   });
@@ -180,7 +180,7 @@ describe("recognising the page after credentials", () => {
     const html = verifiedChooserHtml(defaultState());
     const refused = (h: string) => {
       try {
-        continueLoginSubmission(h, "/Login/Authenticate", "JB & Associates");
+        continueLoginSubmission(h, "/Login/Authenticate", "Example Soap Co");
         return null;
       } catch (e) {
         return e instanceof WovenTeamError ? e.code : "other";

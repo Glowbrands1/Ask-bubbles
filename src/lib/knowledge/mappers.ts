@@ -138,7 +138,7 @@ export function rowToSearchResult(row: MatchedChunkRow): SearchResult {
  *
  * Every field comes from a row the database actually returned. The model is
  * never consulted for a document id, a title, a page number or an excerpt —
- * which is what makes it structurally impossible for Sunny to cite a document
+ * which is what makes it structurally impossible for Bubbles to cite a document
  * that was not retrieved.
  */
 export function rowToCitation(row: MatchedChunkRow): SourceCitation {

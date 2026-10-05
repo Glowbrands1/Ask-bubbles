@@ -20,7 +20,7 @@ import {
  * Preview will have.
  *
  * Proves: the only Woven calls are the token POST and the four documented
- * reads; the only Supabase call is a SELECT on `salons`; nothing is written
+ * reads; the only Supabase call is a SELECT on `locations`; nothing is written
  * anywhere; and the code and credentials appear nowhere in the response.
  */
 
@@ -76,7 +76,7 @@ async function run(body: unknown) {
         get: (_t, method: string) => (...args: unknown[]) => {
           supabase.calls.push(`${name}.${method}(${args.map(String).join(", ")})`);
           if (WRITE_METHODS.includes(method)) throw new Error(`Supabase write attempted: ${name}.${method}`);
-          if (method === "select") return Promise.resolve({ data: [{ id: "s1", salon_number: "0306", store_name: "Salon 306" }], error: null });
+          if (method === "select") return Promise.resolve({ data: [{ id: "s1", location_code: "0306", store_name: "Location 306" }], error: null });
           throw new Error(`unexpected Supabase method ${name}.${method}`);
         },
       },
@@ -117,7 +117,7 @@ async function run(body: unknown) {
 
   const { POST } = await import("./route");
   const response = await POST(
-    new Request("https://ask-sunny.test/api/admin/employees/woven/validate", {
+    new Request("https://ask-bubbles.test/api/admin/employees/woven/validate", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
@@ -128,11 +128,11 @@ async function run(body: unknown) {
 
 /* The real client paces requests ~650ms apart (Woven's rate limit), so a full run takes several seconds. */
 describe("demo mode + access code + validation on + sync off", { timeout: 60_000 }, () => {
-  it("runs the real validation: Woven reads only, a salons SELECT only, no write anywhere", async () => {
+  it("runs the real validation: Woven reads only, a locations SELECT only, no write anywhere", async () => {
     const { response, text, fake, supabase } = await run({ accessCode: CODE });
     expect(response.status).toBe(200);
     expect(JSON.parse(text).report.token.ok).toBe(true);
-    expect(JSON.parse(text).report.locations.salonCoverage).toMatchObject({ outcome: "compared", exactMatches: 1 });
+    expect(JSON.parse(text).report.locations.locationCoverage).toMatchObject({ outcome: "compared", exactMatches: 1 });
 
     /* 5. Woven: the token POST, then GETs to the four documented reads. Nothing else. */
     expect(fake.calls.filter((c) => c.method !== "GET").map((c) => `${c.method} ${c.path}`)).toEqual(["POST /tokens/v2"]);
@@ -140,8 +140,8 @@ describe("demo mode + access code + validation on + sync off", { timeout: 60_000
       expect(["/employees", "/lists/enums", "/locations"].includes(call.path) || /^\/employees\/[^/]+\/details$/.test(call.path), call.path).toBe(true);
     }
 
-    /* 4. Supabase: one SELECT on salons. No insert, update, upsert, delete or rpc. */
-    expect(supabase.calls).toEqual(["salons.select(id, salon_number, store_name)"]);
+    /* 4. Supabase: one SELECT on locations. No insert, update, upsert, delete or rpc. */
+    expect(supabase.calls).toEqual(["locations.select(id, location_code, store_name)"]);
 
     /* Nothing sensitive in the response. */
     for (const forbidden of [CODE, FAKE_CREDENTIALS.password, FAKE_CREDENTIALS.subscriptionKey, "Genevieve", "genevieve@", "Horatio"]) {

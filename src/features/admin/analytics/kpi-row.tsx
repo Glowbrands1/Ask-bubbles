@@ -10,7 +10,7 @@ import { changeAgainst, type AnalyticsTotals } from "@/lib/analytics/queries";
  * around it, and five bordered boxes make five objects that run together.
  *
  * WHAT IS DELIBERATELY NOT HERE: an average response time. The reference
- * dashboard leads with one, and Ask Sunny cannot honestly produce it yet —
+ * dashboard leads with one, and Ask Bubbles cannot honestly produce it yet —
  * latency is recorded from this release forward and only for chat, so a figure
  * shown today would describe a handful of turns and be read as describing the
  * product. It appears when there is a month of it to average.
@@ -40,8 +40,8 @@ export function AnalyticsKpiRow({
       />
       <StatColumn
         label="Active locations"
-        value={formatNumber(totals.activeSalons)}
-        delta={deltaLabel(totals.activeSalons, previous.activeSalons)}
+        value={formatNumber(totals.activeLocations)}
+        delta={deltaLabel(totals.activeLocations, previous.activeLocations)}
         period={periodLabel}
       />
       <StatColumn

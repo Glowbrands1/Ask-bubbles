@@ -10,19 +10,19 @@ import { CONTENT_TYPE_LABEL } from "@/lib/knowledge-sync/types";
 import type { PartPreview, PartPreviewResult } from "@/lib/knowledge-sync/woven/part-preview";
 
 /**
- * "Preview" for one Woven item part: what Ask Sunny would read in it, before
- * an audience choice or a sync. A part already in Ask Sunny opens its
+ * "Preview" for one Woven item part: what Ask Bubbles would read in it, before
+ * an audience choice or a sync. A part already in Ask Bubbles opens its
  * existing document page; otherwise the server reads the file from Woven and
  * extracts its text in memory — nothing is stored or made searchable. The
  * request carries only the part's opaque `ref`.
  */
-export function PartPreviewButton({ part, label = "Preview" }: { part: Pick<ContentPart, "ref" | "previewable" | "askSunnyDocumentId" | "title">; label?: string }) {
+export function PartPreviewButton({ part, label = "Preview" }: { part: Pick<ContentPart, "ref" | "previewable" | "knowledgeDocumentIdInBase" | "title">; label?: string }) {
   const [state, setState] = useState<{ loading: boolean; result: PartPreviewResult | null }>({ loading: false, result: null });
   const [open, setOpen] = useState(false);
 
-  if (part.askSunnyDocumentId) {
+  if (part.knowledgeDocumentIdInBase) {
     return (
-      <Link className="inline-flex items-center gap-1 text-[12px] text-primary hover:underline" href={`/knowledge/document/${encodeURIComponent(part.askSunnyDocumentId)}`}>
+      <Link className="inline-flex items-center gap-1 text-[12px] text-primary hover:underline" href={`/knowledge/document/${encodeURIComponent(part.knowledgeDocumentIdInBase)}`}>
         <Eye className="size-3.5" aria-hidden /> {label}
       </Link>
     );
@@ -66,9 +66,9 @@ function PreviewPanel({ result }: { result: PartPreviewResult }) {
         {CONTENT_TYPE_LABEL[p.contentType]} · From: {p.sourceName}
         {p.fileName ? ` · ${p.fileName}` : ""}
       </p>
-      {p.askSunnyDocumentId ? (
-        <Link className="mt-2 inline-block text-primary hover:underline" href={`/knowledge/document/${encodeURIComponent(p.askSunnyDocumentId)}`}>
-          Open the Ask Sunny document
+      {p.knowledgeDocumentIdInBase ? (
+        <Link className="mt-2 inline-block text-primary hover:underline" href={`/knowledge/document/${encodeURIComponent(p.knowledgeDocumentIdInBase)}`}>
+          Open the Ask Bubbles document
         </Link>
       ) : (
         <>

@@ -3,8 +3,10 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { businessToday } from "@/lib/business-date";
 import type { Role } from "@/types";
+import { COMPANY_DISTRICTS, COMPANY_LOCATIONS, locationById } from "@/lib/locations";
 import {
   bucketFor,
+  locationFilterFor,
   resolveWindow,
   type AnalyticsFilters,
   type ResolvedWindow,
@@ -16,7 +18,7 @@ import {
  * EVERY AGGREGATE IS COMPUTED IN POSTGRES. This module calls five functions and
  * receives five small results; it never selects event rows and counts them here.
  * That is the difference between a dashboard that stays fast as the event table
- * grows and one that gets slower every week — and with fifteen salons and a
+ * grows and one that gets slower every week — and with fifteen locations and a
  * year of history, "just select them all" is the kind of shortcut that works
  * until precisely the moment somebody depends on it.
  *
@@ -27,7 +29,7 @@ import {
 export interface AnalyticsTotals {
   events: number;
   activeUsers: number;
-  activeSalons: number;
+  activeLocations: number;
   forms: number;
   documents: number;
   reports: number;
@@ -45,7 +47,7 @@ export interface BreakdownRow {
   key: string;
   events: number;
   activeUsers: number;
-  activeSalons: number;
+  activeLocations: number;
 }
 
 export interface LeaderRow {
@@ -53,8 +55,8 @@ export interface LeaderRow {
   displayName: string;
   role: Role;
   status: string;
-  salonId: string | null;
-  storeName: string | null;
+  locationId: string | null;
+  locationName: string | null;
   district: string | null;
   events: number;
   forms: number;
@@ -65,9 +67,9 @@ export interface LeaderRow {
 }
 
 export interface LocationRow {
-  salonId: string;
-  salonNumber: string;
-  storeName: string;
+  locationId: string;
+  locationCode: string;
+  locationName: string;
   district: string | null;
   events: number;
   activeLeaders: number;
@@ -88,15 +90,15 @@ export interface AnalyticsSnapshot {
   byFeature: BreakdownRow[];
   leaders: LeaderRow[];
   locations: LocationRow[];
-  districts: string[];
-  salons: { id: string; name: string; district: string | null }[];
+  districts: { id: string; label: string }[];
+  locationOptions: { id: string; name: string; districtId: string | null; district: string | null }[];
   roster: { id: string; name: string; role: Role }[];
 }
 
 const EMPTY_TOTALS: AnalyticsTotals = {
   events: 0,
   activeUsers: 0,
-  activeSalons: 0,
+  activeLocations: 0,
   forms: 0,
   documents: 0,
   reports: 0,
@@ -109,8 +111,7 @@ function filterArgs(filters: AnalyticsFilters, window: ResolvedWindow) {
   return {
     p_from: window.from,
     p_to: window.to,
-    p_district: filters.district,
-    p_salon: filters.salonId,
+    p_locations: locationFilterFor(filters),
     p_role: filters.role,
     p_actor: filters.actorId,
   };
@@ -157,7 +158,6 @@ export async function loadAnalytics(
     byFeature,
     leaders,
     locations,
-    salons,
     roster,
   ] = await Promise.all([
     supabase.rpc("analytics_totals", args),
@@ -171,10 +171,6 @@ export async function loadAnalytics(
     supabase.rpc("analytics_breakdown", { ...args, p_dimension: "feature" }),
     supabase.rpc("analytics_leaders", args),
     supabase.rpc("analytics_locations", args),
-    supabase
-      .from("location_managery")
-      .select("salon_id, store_name, district_label")
-      .order("store_name"),
     supabase
       .from("leader_directory")
       .select("user_id, display_name, role")
@@ -190,17 +186,10 @@ export async function loadAnalytics(
     byFeature.error ??
     leaders.error ??
     locations.error ??
-    salons.error ??
     roster.error;
   if (failure) {
     throw new Error(`Analytics could not be loaded: ${failure.message}`);
   }
-
-  const salonRows = (salons.data ?? []) as {
-    salon_id: string;
-    store_name: string;
-    district_label: string | null;
-  }[];
 
   return {
     window,
@@ -214,51 +203,39 @@ export async function loadAnalytics(
     byRole: readBreakdown(byRole.data),
     byCategory: readBreakdown(byCategory.data),
     byFeature: readBreakdown(byFeature.data),
-    leaders: (leaders.data ?? []).map((row: Record<string, unknown>) => ({
-      userId: String(row.user_id),
-      displayName: String(row.display_name ?? ""),
-      role: row.role as Role,
-      status: String(row.status ?? ""),
-      salonId: (row.salon_id as string | null) ?? null,
-      storeName: (row.store_name as string | null) ?? null,
-      district: (row.district_label as string | null) ?? null,
-      events: toNumber(row.events),
-      forms: toNumber(row.forms),
-      documents: toNumber(row.documents),
-      chatEvents: toNumber(row.chat_events),
-      topCategory: (row.top_category as string | null) ?? null,
-      lastActive: (row.last_active as string | null) ?? null,
-    })),
-    locations: (locations.data ?? []).map((row: Record<string, unknown>) => ({
-      salonId: String(row.salon_id),
-      salonNumber: String(row.salon_number ?? ""),
-      storeName: String(row.store_name ?? ""),
-      district: (row.district_label as string | null) ?? null,
-      events: toNumber(row.events),
-      activeLeaders: toNumber(row.active_leaders),
-      assignedLeaders: toNumber(row.assigned_leaders),
-      forms: toNumber(row.forms),
-      reports: toNumber(row.reports),
-      topCategory: (row.top_category as string | null) ?? null,
-      lastActive: (row.last_active as string | null) ?? null,
-    })),
+    leaders: (leaders.data ?? []).map((row: Record<string, unknown>) => {
+      const locationId = (row.location_id as string | null) ?? null;
+      const location = locationById(locationId);
+      return {
+        userId: String(row.user_id),
+        displayName: String(row.display_name ?? ""),
+        role: row.role as Role,
+        status: String(row.status ?? ""),
+        locationId,
+        locationName: location?.name ?? null,
+        district: location?.districtName ?? null,
+        events: toNumber(row.events),
+        forms: toNumber(row.forms),
+        documents: toNumber(row.documents),
+        chatEvents: toNumber(row.chat_events),
+        topCategory: (row.top_category as string | null) ?? null,
+        lastActive: (row.last_active as string | null) ?? null,
+      };
+    }),
+    locations: mergeWithRoster(
+      (locations.data ?? []) as Record<string, unknown>[],
+      locationFilterFor(filters),
+    ),
     /*
-     * The filter options come from the DIRECTORIES, not from the filtered
-     * result. Reading them off the current result would make a filter remove
-     * its own option — pick a district and every other district vanishes from
-     * the dropdown, leaving no way back but the Reset button.
+     * The filter options come from the CONFIGURED ROSTER, not from the
+     * filtered result, so picking a filter never removes its own siblings.
      */
-    districts: [
-      ...new Set(
-        salonRows
-          .map((row) => row.district_label)
-          .filter((label): label is string => Boolean(label)),
-      ),
-    ].sort(),
-    salons: salonRows.map((row) => ({
-      id: row.salon_id,
-      name: row.store_name,
-      district: row.district_label,
+    districts: COMPANY_DISTRICTS.map((district) => ({ id: district.id, label: district.name })),
+    locationOptions: COMPANY_LOCATIONS.map((location) => ({
+      id: location.id,
+      name: location.name,
+      districtId: location.districtId,
+      district: location.districtName,
     })),
     roster: (roster.data ?? []).map(
       (row: { user_id: string; display_name: string; role: Role }) => ({
@@ -270,6 +247,41 @@ export async function loadAnalytics(
   };
 }
 
+/**
+ * EVERY LOCATION, INCLUDING THE SILENT ONES. The database returns locations
+ * that have activity or assigned people; the roster is configuration, so the
+ * locations with neither are added here with zeros — "this store has done
+ * nothing this month" is the row management came for. Rows for ids the roster
+ * does not know are kept, labelled by their code, rather than dropped.
+ */
+function mergeWithRoster(rows: Record<string, unknown>[], filter: string[] | null): LocationRow[] {
+  const byId = new Map(rows.map((row) => [String(row.location_id), row]));
+  const ids = new Set<string>(byId.keys());
+  for (const location of COMPANY_LOCATIONS) {
+    if (filter === null || filter.includes(location.id)) ids.add(location.id);
+  }
+  return [...ids]
+    .map((id) => {
+      const row = byId.get(id) ?? {};
+      const location = locationById(id);
+      const code = location?.code ?? id.replace(/^loc-/, "");
+      return {
+        locationId: id,
+        locationCode: code,
+        locationName: location?.name ?? code,
+        district: location?.districtName ?? null,
+        events: toNumber(row.events),
+        activeLeaders: toNumber(row.active_leaders),
+        assignedLeaders: toNumber(row.assigned_leaders),
+        forms: toNumber(row.forms),
+        reports: toNumber(row.reports),
+        topCategory: (row.top_category as string | null) ?? null,
+        lastActive: (row.last_active as string | null) ?? null,
+      };
+    })
+    .sort((a, b) => b.events - a.events || a.locationName.localeCompare(b.locationName));
+}
+
 function readTotals(data: unknown): AnalyticsTotals {
   /* The function returns a one-row table, so supabase-js hands back an array. */
   const row = Array.isArray(data) ? data[0] : data;
@@ -278,7 +290,7 @@ function readTotals(data: unknown): AnalyticsTotals {
   return {
     events: toNumber(record.events),
     activeUsers: toNumber(record.active_users),
-    activeSalons: toNumber(record.active_salons),
+    activeLocations: toNumber(record.active_locations),
     forms: toNumber(record.forms),
     documents: toNumber(record.documents),
     reports: toNumber(record.reports),
@@ -293,7 +305,7 @@ function readBreakdown(data: unknown): BreakdownRow[] {
     key: String(row.key ?? ""),
     events: toNumber(row.events),
     activeUsers: toNumber(row.active_users),
-    activeSalons: toNumber(row.active_salons),
+    activeLocations: toNumber(row.active_locations),
   }));
 }
 

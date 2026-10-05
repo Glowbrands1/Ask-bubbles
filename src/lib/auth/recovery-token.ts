@@ -46,7 +46,7 @@ import { getSupabaseSessionClientFor } from "@/lib/supabase/auth-clients";
  * outside this file learns is whether one is being held.
  */
 
-export const RECOVERY_TOKEN_COOKIE = "sunny_recovery_token";
+export const RECOVERY_TOKEN_COOKIE = "bubbles_recovery_token";
 
 /** Seconds. See the table above. */
 export const RECOVERY_TOKEN_MAX_AGE = 15 * 60;

@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils/cn";
  * dashboard.
  *
  * =============================================================================
- * STILL ONE COMPONENT FOR EVERY ASK SUNNY SURFACE
+ * STILL ONE COMPONENT FOR EVERY ASK BUBBLES SURFACE
  * =============================================================================
  *
  * Nine places can answer a question — the chat tab, the Overview band, the five
@@ -52,7 +52,7 @@ import { cn } from "@/lib/utils/cn";
  * =============================================================================
  *
  * `turnId` is the server's name for one answered turn — the `activity_events`
- * row — and it is what the rating is keyed to, so the role, the salon, the
+ * row — and it is what the rating is keyed to, so the role, the location, the
  * surface and the topic are a join away and are already correct. The caller
  * picks that turn with `conversationRatingTarget`, which prefers an
  * already-rated turn so an edit upserts the existing row instead of opening a
@@ -256,7 +256,7 @@ export function ConversationRating({
                   className={cn(
                     "size-3.5",
                     value <= saved.rating
-                      ? "fill-brand-yellow text-brand-yellow"
+                      ? "fill-brand-accent text-brand-accent"
                       : "text-border-strong",
                   )}
                 />
@@ -312,11 +312,11 @@ export function ConversationRating({
       {/* ------------------------------------------------------- rating -- */}
       <fieldset>
         <legend className="text-[11.5px] font-bold text-foreground">
-          How was your Ask Sunny experience?
+          How was your Ask Bubbles experience?
         </legend>
         <div
           role="radiogroup"
-          aria-label="How was your Ask Sunny experience?"
+          aria-label="How was your Ask Bubbles experience?"
           className="mt-1.5 flex items-center gap-1"
         >
           {FEEDBACK_RATINGS.map((value) => {
@@ -325,7 +325,7 @@ export function ConversationRating({
               <label
                 key={value}
                 title={`${value} — ${RATING_LABEL[value]}`}
-                className="relative cursor-pointer rounded-md p-0.5 focus-within:ring-2 focus-within:ring-brand-yellow focus-within:outline-none"
+                className="relative cursor-pointer rounded-md p-0.5 focus-within:ring-2 focus-within:ring-brand-accent focus-within:outline-none"
               >
                 {/*
                   A REAL RADIO, VISUALLY HIDDEN RATHER THAN `display: none`.
@@ -366,7 +366,7 @@ export function ConversationRating({
                   className={cn(
                     "size-5 transition-colors",
                     active
-                      ? "fill-brand-yellow text-brand-yellow"
+                      ? "fill-brand-accent text-brand-accent"
                       : "text-border-strong",
                   )}
                 />
@@ -399,10 +399,10 @@ export function ConversationRating({
             <label
               key={outcome}
               className={cn(
-                "relative cursor-pointer rounded-full border px-3.5 py-1.5 text-[11.5px] font-bold transition-colors focus-within:ring-2 focus-within:ring-brand-yellow",
+                "relative cursor-pointer rounded-full border px-3.5 py-1.5 text-[11.5px] font-bold transition-colors focus-within:ring-2 focus-within:ring-brand-accent",
                 draft.gotWhatNeeded === outcome
                   ? "border-band bg-band text-band-foreground"
-                  : "border-border-strong bg-surface text-foreground hover:border-brand-yellow",
+                  : "border-border-strong bg-surface text-foreground hover:border-brand-accent",
               )}
             >
               <input
@@ -428,7 +428,7 @@ export function ConversationRating({
           htmlFor={`comment-${turnId}`}
           className="text-[11.5px] font-bold text-foreground"
         >
-          Anything Sunny should do better?{" "}
+          Anything Bubbles should do better?{" "}
           <span className="font-normal text-muted-foreground">(optional)</span>
         </label>
         <textarea
@@ -440,7 +440,7 @@ export function ConversationRating({
           onChange={(event) =>
             setDraft((d) => ({ ...d, comment: event.target.value }))
           }
-          className="scroll-slim mt-1.5 w-full resize-none rounded-lg border border-border-strong bg-surface px-3 py-2 text-[13px] leading-snug text-foreground placeholder:text-placeholder-foreground focus-visible:border-brand-yellow focus-visible:outline-none"
+          className="scroll-slim mt-1.5 w-full resize-none rounded-lg border border-border-strong bg-surface px-3 py-2 text-[13px] leading-snug text-foreground placeholder:text-placeholder-foreground focus-visible:border-brand-accent focus-visible:outline-none"
           placeholder="What worked, what was missing — the more specific, the more we can fix."
         />
       </div>

@@ -20,7 +20,7 @@ function status(overrides: Partial<WovenKnowledgeStatus> = {}): WovenKnowledgeSt
   return {
     enabled: true,
     missingCredentials: [],
-    company: "JB & Associates",
+    company: "Example Soap Co",
     database: "ready",
     previewTestMode: false,
     headline: "up_to_date",
@@ -55,7 +55,7 @@ describe("Woven Knowledge Sync screen", () => {
   it("shows the manager's view: state, company, dates and counts", () => {
     render(<WovenKnowledgeScreen liveMode status={status()} />);
     expect(screen.getByTestId("headline").textContent).toContain("Up to date");
-    expect(screen.getByText("Company: JB & Associates")).toBeTruthy();
+    expect(screen.getByText("Company: Example Soap Co")).toBeTruthy();
     expect(screen.getAllByText("Sep 29, 2026")).toHaveLength(2);
     expect(screen.getByText("Oct 29, 2026")).toBeTruthy();
     expect(screen.getByText("642")).toBeTruthy();
@@ -132,7 +132,7 @@ describe("Woven Knowledge Sync screen", () => {
     const report = {
       mode: "preview",
       trigger: "manual",
-      company: { companyLabel: "JB & Associates", companyVerified: true },
+      company: { companyLabel: "Example Soap Co", companyVerified: true },
       byType: {
         handbook: { listing: "ok", listingCode: null, discovered: 3, items: 3, eligible: 2, excludedUnpublished: 1, excludedUnsupported: 0, excludedByDecision: 0, needsReview: 0, blocked: 0, blockedCapabilities: [], statusValues: {}, new: 2, updated: 0, unchanged: 0, permissionChanged: 0, unpublished: 0, removed: 0, errors: 0 },
         course: { listing: "failed", listingCode: "woven_antiforgery_rejected", discovered: 0, items: 0, eligible: 0, excludedUnpublished: 0, excludedUnsupported: 0, excludedByDecision: 0, needsReview: 0, blocked: 0, blockedCapabilities: [], statusValues: {}, new: 0, updated: 0, unchanged: 0, permissionChanged: 0, unpublished: 0, removed: 0, errors: 0 },
@@ -153,7 +153,7 @@ describe("Woven Knowledge Sync screen", () => {
     render(<WovenKnowledgeScreen liveMode status={status({ database: "missing", previewTestMode: true })} />);
     fireEvent.click(screen.getByRole("button", { name: /Run Initial Scan/ }));
     await waitFor(() => expect(screen.getByText(/nothing was saved/)).toBeTruthy());
-    expect(screen.getByText("Scan result — JB & Associates")).toBeTruthy();
+    expect(screen.getByText("Scan result — Example Soap Co")).toBeTruthy();
     expect(screen.getByText("Handbooks")).toBeTruthy();
     expect(screen.getByText(/woven_antiforgery_rejected/)).toBeTruthy();
     expect(JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body))).toMatchObject({ mode: "preview" });

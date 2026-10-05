@@ -1,7 +1,7 @@
 # Disposable local stack
 
 A Supabase-shaped stack on `127.0.0.1` for the authentication and access-sync
-integration tests. **No cloud resources, no cost, never the Ask Sunny
+integration tests. **No cloud resources, no cost, never the Ask Bubbles
 project.** Every credential in it is a throwaway local value.
 
 ```

@@ -9,7 +9,7 @@ import type { AccessScope, Permission, Role } from "@/types";
 /**
  * WHO MAY TOUCH A FORM, AND WHAT THIS APP CAN HONESTLY PROMISE ABOUT IT.
  *
- * Forms hold HR content, and Ask Sunny runs in two modes. Those two facts
+ * Forms hold HR content, and Ask Bubbles runs in two modes. Those two facts
  * together decide everything in this file, so they are stated plainly rather
  * than papered over:
  *
@@ -24,7 +24,7 @@ import type { AccessScope, Permission, Role } from "@/types";
  *   standing notice that only synthetic data belongs here, and the database is
  *   reachable by nothing but the secret key.
  *
- * The permission matrix is still applied — a Salon Director cannot open
+ * The permission matrix is still applied — a Location Director cannot open
  * Template Management even in demo — because the matrix is the app's own model
  * of who does what, and QA against a wrong model teaches the wrong thing. What
  * it is NOT is a security boundary, and this file does not pretend otherwise.
@@ -48,8 +48,8 @@ export interface FormsActor {
    * THE AUTHENTICATED ASSIGNMENT, carried rather than discarded.
    *
    * `authorizeRequest` has always returned `identity.scope`; this file used to
-   * drop it on the floor, which is why nothing compared the salon on a
-   * disciplinary record against the salons the person filing it covers.
+   * drop it on the floor, which is why nothing compared the location on a
+   * disciplinary record against the locations the person filing it covers.
    *
    * `null` for a DEMO actor, and that is the point: a scope the browser
    * asserted about itself is not a security control, so it is absent rather
@@ -64,8 +64,8 @@ export interface FormsActor {
   wouldRequire?: Permission;
 }
 
-const DEMO_ROLE_HEADER = "x-ask-sunny-demo-role";
-const DEMO_NAME_HEADER = "x-ask-sunny-demo-name";
+const DEMO_ROLE_HEADER = "x-ask-bubbles-demo-role";
+const DEMO_NAME_HEADER = "x-ask-bubbles-demo-name";
 
 function readDemoRole(request: Request): Role | null {
   const raw = request.headers.get(DEMO_ROLE_HEADER);
@@ -124,14 +124,14 @@ export async function authorizeForms(
   if (!actor.role) {
     throw new AuthError(
       "unauthenticated",
-      "Sign in to Ask Sunny before working with forms.",
+      "Sign in to Ask Bubbles before working with forms.",
     );
   }
   /*
    * PREVIEW MODE DOES NOT ENFORCE THE MATRIX, AND THAT IS THE HONEST CHOICE.
    *
    * `DEFAULT_PERMISSION_MATRIX` is this app's own GUESS at who does what.
-   * Nobody has configured roles yet, so refusing a Salon Director the DMIT EPP
+   * Nobody has configured roles yet, so refusing a Location Director the DMIT EPP
    * was not policy being applied — it was an invented restriction standing in
    * front of a form the owner was trying to look at. It was self-defeating too:
    * the role it checks arrives in a header the browser sets, so anyone refused
@@ -162,7 +162,7 @@ export async function authorizeForms(
  * quietly dropped from one screen while the others keep claiming it.
  */
 export const SYNTHETIC_DATA_NOTICE =
-  "Preview mode: Ask Sunny cannot yet verify who is signed in, so forms created here are for testing only. Use synthetic employee details — do not enter real HR information until an identity provider is connected.";
+  "Preview mode: Ask Bubbles cannot yet verify who is signed in, so forms created here are for testing only. Use synthetic employee details — do not enter real HR information until an identity provider is connected.";
 
 /** True while that notice must be shown. */
 export function formsIdentityIsUnverified(): boolean {

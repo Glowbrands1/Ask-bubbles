@@ -18,7 +18,7 @@ import { listOutstandingFollowUps } from "@/lib/forms/instances";
  * IT IS READ HERE, ON THE SERVER, THROUGH THE SAME MODULE the Overview and Form
  * Monitoring use. That is the whole reason it is in the layout and not in the
  * sidebar component: a browser-side recount is exactly how the Overview and
- * Form Monitoring came to state different numbers about the same salon, and a
+ * Form Monitoring came to state different numbers about the same location, and a
  * badge that disagrees with the page it links to is worse than no badge.
  *
  * The rail is on every screen, so this is one Forms read per navigation. The

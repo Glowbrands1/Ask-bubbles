@@ -1,11 +1,11 @@
 import type { ReportMetricUnit, ReportPeriodGrain } from "../types";
 
 /**
- * DATA CONTRACTS FOR THE SALON PERFORMANCE DASHBOARD.
+ * DATA CONTRACTS FOR THE LOCATION PERFORMANCE DASHBOARD.
  *
  * Every chart in 6B consumes one of these shapes. They are defined before any
  * chart exists so the questions that matter — what may be summed, how many
- * salons are behind a number, whether a direction is even defined — are settled
+ * locations are behind a number, whether a direction is even defined — are settled
  * in types rather than negotiated per component.
  *
  * Two rules are encoded structurally rather than documented:
@@ -14,8 +14,8 @@ import type { ReportMetricUnit, ReportPeriodGrain } from "../types";
  *   recipient slice, so no aggregate computed from it is company-wide, and
  *   nothing can set the flag true without a compile error.
  *
- *   `salonCount` is REQUIRED on every aggregate. A number without its
- *   denominator is the thing that turns a 15-salon figure into an apparent
+ *   `locationCount` is REQUIRED on every aggregate. A number without its
+ *   denominator is the thing that turns a 15-location figure into an apparent
  *   chain total, so the type refuses to carry one without the other.
  */
 
@@ -30,7 +30,7 @@ export interface ReportScope {
   periodLabel: string;
   fiscalYear: number;
   /** Counted from the live facts, never read from a summary column. */
-  salonCount: number;
+  locationCount: number;
   factCount: number;
   metricCount: number;
   ingestedAt: string | null;
@@ -87,7 +87,7 @@ export interface PeriodOption {
   grain: ReportPeriodGrain;
   periodEnd: string;
   periodLabel: string;
-  salonCount: number;
+  locationCount: number;
   /**
    * When this period's delivery was ingested, newest attempt. Null when the
    * scope view recorded none.
@@ -105,8 +105,8 @@ export interface PeriodOption {
 /** One selectable value within a filter facet. */
 export interface FacetOption {
   value: string;
-  /** How many salons in the period carry it. */
-  salonCount: number;
+  /** How many locations in the period carry it. */
+  locationCount: number;
 }
 
 export type FacetName =
@@ -118,7 +118,7 @@ export type FacetName =
   | "quintile_group"
   | "pricing_plan"
   | "market_consolidation"
-  | "comp_salon";
+  | "comp_location";
 
 /**
  * Facets present in a period, with their values.
@@ -143,7 +143,7 @@ export interface MetricDescriptor {
   /** Ascending. `spa_sessions` simply has no 2019 entry. */
   availableBasisYears: number[];
   factCount: number;
-  salonCount: number;
+  locationCount: number;
   /**
    * The workbook sheet these facts came from.
    *
@@ -170,15 +170,15 @@ export interface MetricAggregate {
   kind: AggregationKind;
   value: number | null;
   /** Required: a figure without its denominator invites a company-wide reading. */
-  salonCount: number;
+  locationCount: number;
   companyWide: false;
   /** Set when `value` is null. User-facing. */
   unavailableReason?: string;
 }
 
-/** One salon's value for a metric — the row behind ranking and drill-down. */
-export interface SalonMetricValue {
-  salonNumber: string;
+/** One location's value for a metric — the row behind ranking and drill-down. */
+export interface LocationMetricValue {
+  locationCode: string;
   storeName: string;
   basisYear: number | null;
   value: number;
@@ -186,9 +186,9 @@ export interface SalonMetricValue {
   sourceColumn: string;
 }
 
-/** A salon's descriptors for the selected period, as reported. */
-export interface SalonPeriodDescriptors {
-  salonNumber: string;
+/** A location's descriptors for the selected period, as reported. */
+export interface LocationPeriodDescriptors {
+  locationCode: string;
   storeName: string;
   /** A MANAGER'S NAME in this source. Descriptive history, never an identity. */
   districtLabel: string | null;
@@ -197,11 +197,11 @@ export interface SalonPeriodDescriptors {
   ownershipGroup: string | null;
   dma: string | null;
   pricingPlan: string | null;
-  isCompSalon: boolean | null;
+  isCompLocation: boolean | null;
   quintileGroup: string | null;
   /** Reported by the source against the whole chain. Never recomputed here. */
   revenueRank: number | null;
-  salonAgeYears: number | null;
+  locationAgeYears: number | null;
   avgClientAge: number | null;
   spaPieces: number | null;
 }

@@ -17,7 +17,7 @@ import {
  * At 8pm US Eastern the UTC date has already rolled over. A follow-up due
  * tomorrow, judged against `new Date().toISOString().slice(0,10)`, would show
  * as due TODAY that evening and as OVERDUE from 8pm the day it was due — hours
- * before anybody at the salon has finished work. The boundary tests below fail
+ * before anybody at the location has finished work. The boundary tests below fail
  * if this module ever starts reading UTC or the host's zone.
  */
 
@@ -35,7 +35,7 @@ describe("the business date", () => {
   it("is still the previous day late in the evening, when UTC has already moved on", () => {
     // 2026-09-04T23:30Z is 7:30pm Eastern on the 4th. UTC agrees here...
     expect(businessToday(new Date("2026-09-04T23:30:00Z"))).toBe("2026-09-04");
-    // ...and 2026-09-05T02:00Z is 10pm Eastern, STILL the 4th at the salon.
+    // ...and 2026-09-05T02:00Z is 10pm Eastern, STILL the 4th at the location.
     // A naive UTC slice would say the 5th, and every follow-up due on the 5th
     // would read as due today four hours early.
     expect(new Date("2026-09-05T02:00:00Z").toISOString().slice(0, 10)).toBe("2026-09-05");

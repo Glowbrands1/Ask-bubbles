@@ -36,7 +36,7 @@ afterEach(() => {
 
 interface RunSeen {
   permissions: string[];
-  runs: { salons: unknown; includeLocationReview: unknown }[];
+  runs: { locations: unknown; includeLocationReview: unknown }[];
   syncs: number;
   rateLimitChecks: number;
   /** Everything written to the console while the route ran. */
@@ -51,7 +51,7 @@ async function loadRoute(
     rateLimited?: boolean;
     env?: Record<string, string>;
     role?: string;
-    salonsFail?: boolean;
+    locationsFail?: boolean;
   } = {},
 ) {
   vi.resetModules();
@@ -96,15 +96,15 @@ async function loadRoute(
     },
   }));
   vi.doMock("@/lib/employees/woven/validate", () => ({
-    runWovenLiveValidation: async (opts: { salons: unknown; includeLocationReview: unknown }) => {
-      seen.runs.push({ salons: opts.salons, includeLocationReview: opts.includeLocationReview });
+    runWovenLiveValidation: async (opts: { locations: unknown; includeLocationReview: unknown }) => {
+      seen.runs.push({ locations: opts.locations, includeLocationReview: opts.includeLocationReview });
       return { ok: true, findings: [] };
     },
   }));
   vi.doMock("@/lib/employees/woven/locations", () => ({
-    listSalonsForComparison: async () => {
-      if (options.salonsFail) throw new Error("db down");
-      return [{ number: "0306", name: "Salon" }];
+    listLocationsForComparison: async () => {
+      if (options.locationsFail) throw new Error("db down");
+      return [{ number: "0306", name: "Location" }];
     },
   }));
   /* Tripwire: the validation route must never reach the sync. */
@@ -124,7 +124,7 @@ const CREDS = { WOVEN_SUBSCRIPTION_KEY: "k", WOVEN_USERNAME: "u", WOVEN_PASSWORD
 /** The first live connection test: validation on, the sync OFF. */
 const VALIDATION_ONLY = { ...CREDS, WOVEN_VALIDATION_ENABLED: "true", WOVEN_SYNC_ENABLED: "false" };
 const post = (body?: unknown) =>
-  new Request("https://ask-sunny.test/api/admin/employees/woven/validate", {
+  new Request("https://ask-bubbles.test/api/admin/employees/woven/validate", {
     method: "POST",
     ...(body === undefined ? {} : { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
   });
@@ -184,10 +184,10 @@ describe("POST /api/admin/employees/woven/validate", () => {
     expect(seen.runs).toHaveLength(0);
   });
 
-  it("passes the salons for the coverage counts, and the location review only to a manage_users caller", async () => {
+  it("passes the locations for the coverage counts, and the location review only to a manage_users caller", async () => {
     const admin = await loadRoute({ env: VALIDATION_ONLY });
     await admin.POST(post());
-    expect(admin.seen.runs[0]).toEqual({ salons: { outcome: "loaded", salons: [{ number: "0306", name: "Salon" }] }, includeLocationReview: true });
+    expect(admin.seen.runs[0]).toEqual({ locations: { outcome: "loaded", locations: [{ number: "0306", name: "Location" }] }, includeLocationReview: true });
 
     /* A role without manage_users (authorizeRequest is stubbed to admit it here) gets counts only. */
     const other = await loadRoute({ env: VALIDATION_ONLY, role: "employee" });
@@ -195,10 +195,10 @@ describe("POST /api/admin/employees/woven/validate", () => {
     expect(other.seen.runs[0].includeLocationReview).toBe(false);
   });
 
-  it("still runs the Woven checks when the salons cannot be read", async () => {
-    const { POST, seen } = await loadRoute({ env: VALIDATION_ONLY, salonsFail: true });
+  it("still runs the Woven checks when the locations cannot be read", async () => {
+    const { POST, seen } = await loadRoute({ env: VALIDATION_ONLY, locationsFail: true });
     expect((await POST(post())).status).toBe(200);
-    expect(seen.runs[0].salons).toEqual({ outcome: "unavailable", salons: [] });
+    expect(seen.runs[0].locations).toEqual({ outcome: "unavailable", locations: [] });
   });
 
   it("does not import the sync, the store or any write path, and reads the sync switch only to refuse", () => {

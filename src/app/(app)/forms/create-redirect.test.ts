@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import nextConfig from "../../../../next.config";
 
 /**
- * FORMS ARE ONLY CREATED BY CHATTING WITH ASK SUNNY.
+ * FORMS ARE ONLY CREATED BY CHATTING WITH ASK BUBBLES.
  *
  * The standalone Create a Form screen — form dropdown, employee field, location
  * dropdown, "Start this form" — was removed. An old bookmark or shortcut to it

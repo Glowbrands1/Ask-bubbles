@@ -15,14 +15,14 @@ import { usePreference, writePreference } from "@/lib/utils/client-store";
 
 /**
  * ============================================================================
- * "ASK SUNNY FOUND CONVERSATIONS STORED ON THIS DEVICE."
+ * "ASK BUBBLES FOUND CONVERSATIONS STORED ON THIS DEVICE."
  * ============================================================================
  *
  * THE ONLY PATH FROM A BROWSER'S OLD HISTORY TO AN ACCOUNT, and it is a button
  * a person presses.
  *
  * WHY IT IS A PROMPT AND NOT A BACKGROUND TASK. Conversations held in a
- * browser predate any promise that Ask Sunny would keep them. They contain what
+ * browser predate any promise that Ask Bubbles would keep them. They contain what
  * managers asked about named employees' attendance and performance. Copying
  * them to a server because a page rendered would be taking someone's private
  * record and putting it somewhere they did not choose — which is not a
@@ -50,7 +50,7 @@ import { usePreference, writePreference } from "@/lib/utils/client-store";
  * dismissal to an account would re-ask on every sign-in about history that has
  * already been declined once.
  */
-const DISMISSED_KEY = "ask-sunny:import-local-history-dismissed";
+const DISMISSED_KEY = "ask-bubbles:import-local-history-dismissed";
 
 /**
  * ONE IMPORT, TWO PLACES TO PRESS IT.
@@ -59,7 +59,7 @@ const DISMISSED_KEY = "ask-sunny:import-local-history-dismissed";
  * run through this, which runs through the store's `importLocalConversations`
  * — the same client, the same server route, the same validation and the same
  * ownership rule. Neither surface looks at a role: Import is available to
- * everybody who can use Ask Sunny, and it only ever writes their own
+ * everybody who can use Ask Bubbles, and it only ever writes their own
  * conversations to their own account.
  */
 function useLocalHistoryImport() {
@@ -86,7 +86,7 @@ function useLocalHistoryImport() {
         error:
           error instanceof Error && error.message
             ? error.message
-            : "Ask Sunny could not import those conversations just now.",
+            : "Ask Bubbles could not import those conversations just now.",
       });
     } finally {
       setBusy(false);
@@ -138,7 +138,7 @@ export function ImportLocalHistoryPrompt() {
   return (
     <div className="mx-auto mb-3 w-full max-w-3xl rounded-[var(--radius-sm)] border border-border bg-surface px-3.5 py-3 shadow-soft">
       <p className="text-[12.5px] leading-relaxed text-foreground">
-        Ask Sunny found{" "}
+        Ask Bubbles found{" "}
         {count === 1 ? "1 conversation" : `${count} conversations`} stored on this
         device. Import {count === 1 ? "it" : "them"} to your account so{" "}
         {count === 1 ? "it is" : "they are"} available on your other devices?
@@ -238,7 +238,7 @@ export function HistoryImportButton() {
       >
         <DialogContent
           title="Import conversations from this device"
-          description="Brings conversations stored in this browser onto your Ask Sunny account, so they are available on your other devices."
+          description="Brings conversations stored in this browser onto your Ask Bubbles account, so they are available on your other devices."
         >
           <div className="space-y-2 text-[13px] leading-relaxed text-muted-foreground">
             {imported > 0 ? (
@@ -271,7 +271,7 @@ export function HistoryImportButton() {
               </p>
             ) : (
               <p>
-                Ask Sunny could not check your account just now, so it cannot tell
+                Ask Bubbles could not check your account just now, so it cannot tell
                 which conversations on this device still need importing. Nothing was
                 sent. Try again in a moment.
               </p>

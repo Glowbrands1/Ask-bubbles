@@ -99,7 +99,7 @@ function expectNoSecrets(value: unknown, shown = true) {
 let h: WovenIntoKnowledge;
 
 function fileLibraryRow(id: number, title: string, updated = "9/1/2026", status = "Published") {
-  return { EntityID: uuid(id), Column1: "PDF", Column2: `<a href="#">${title}</a>`, Column3: LIVE_STATUS(status), Column4: "Public", Column5: "<span>1 MB</span>", Column6: updated, Column7: "", Column8: "JB & Associates" };
+  return { EntityID: uuid(id), Column1: "PDF", Column2: `<a href="#">${title}</a>`, Column3: LIVE_STATUS(status), Column4: "Public", Column5: "<span>1 MB</span>", Column6: updated, Column7: "", Column8: "Example Soap Co" };
 }
 
 async function uploadByHand(title: string, fileName: string, lines: string[], mimeType = "application/pdf", tags: string[] = []) {
@@ -198,7 +198,7 @@ describe("File Library PDFs, end to end", () => {
     h.fake.state.fileLibraryFiles[uuid(404)] = { bytes: "", via: "html" };
     const outcome = await h.initial();
     expect(outcome.status).toBe("succeeded_with_warnings");
-    expect(await h.item(FILE(404))).toMatchObject({ state: "ERROR", errorCategory: "woven_not_a_file", inAskSunny: false, knowledgeDocumentId: null });
+    expect(await h.item(FILE(404))).toMatchObject({ state: "ERROR", errorCategory: "woven_not_a_file", inKnowledgeBase: false, knowledgeDocumentId: null });
     expect(await row(await h.documentId(FILE(401)))).toMatchObject({ status: "indexed" });
     expect(await h.documentId(OPENING_TEXT)).toBeTruthy();
   });
@@ -230,9 +230,9 @@ describe("Procedures: step text and step attachments", () => {
     expect(text).not.toMatch(/not provided/i);
 
     const attachment = await h.documentId(CHECKLIST_PART);
-    expect(await row(attachment)).toMatchObject({ title: "Opening the Salon — Opening Checklist", source: "woven", status: "indexed" });
+    expect(await row(attachment)).toMatchObject({ title: "Opening the Location — Opening Checklist", source: "woven", status: "indexed" });
     const answer = await ask(CHECKLIST_QUESTION);
-    expect(answer.citations).toEqual(expect.arrayContaining([expect.objectContaining({ documentId: attachment, documentTitle: "Opening the Salon — Opening Checklist" })]));
+    expect(answer.citations).toEqual(expect.arrayContaining([expect.objectContaining({ documentId: attachment, documentTitle: "Opening the Location — Opening Checklist" })]));
     expectNoSecrets(answer.citations);
   });
 
@@ -271,7 +271,7 @@ describe("Procedures: step text and step attachments", () => {
     const outcome = await h.initial();
     expect(outcome.status).toBe("succeeded_with_warnings");
     const failed = (await h.store.loadManifest("woven")).find((i) => i.partKey.includes("b2c3d4e5"))!;
-    expect(failed).toMatchObject({ state: "ERROR", inAskSunny: false });
+    expect(failed).toMatchObject({ state: "ERROR", inKnowledgeBase: false });
     expect(await row(await h.documentId(CHECKLIST_PART))).toMatchObject({ status: "indexed" });
   });
 });
@@ -387,14 +387,14 @@ describe("on the real manifest tables", () => {
     await h.store.saveDecision({ source: "woven", audienceKey: "(none stated)", decision: "company_wide", decidedBy: "admin:test", decidedAt: h.clock.toISOString() });
 
     await h.initial();
-    expect(await h.item(CHECKLIST_PART)).toMatchObject({ inAskSunny: true, locator: { procedureId: uuid(301), stepId: uuid(3012), storedFileName: STORED } });
-    expect(await h.item(FILE(401))).toMatchObject({ inAskSunny: true, locator: { fileLibraryId: uuid(401) } });
+    expect(await h.item(CHECKLIST_PART)).toMatchObject({ inKnowledgeBase: true, locator: { procedureId: uuid(301), stepId: uuid(3012), storedFileName: STORED } });
+    expect(await h.item(FILE(401))).toMatchObject({ inKnowledgeBase: true, locator: { fileLibraryId: uuid(401) } });
     await h.run("sync");
-    expect(await h.item(CHECKLIST_PART)).toMatchObject({ state: "UNCHANGED", pendingAction: "none", inAskSunny: true });
+    expect(await h.item(CHECKLIST_PART)).toMatchObject({ state: "UNCHANGED", pendingAction: "none", inKnowledgeBase: true });
   });
 });
 
-describe("Preview: what Ask Sunny would read, before a choice or a sync", () => {
+describe("Preview: what Ask Bubbles would read, before a choice or a sync", () => {
   const connector = () =>
     new WovenKnowledgeConnector({
       client: new WovenTeamClient({ baseUrl: "https://app.woven.team", fetch: h.fake.fetch, sleep: noSleep, transport: { minIntervalMs: 0, baseBackoffMs: 0 } }),
@@ -403,7 +403,7 @@ describe("Preview: what Ask Sunny would read, before a choice or a sync", () => 
     });
   const preview = (ref: string) => previewWovenPart(ref, { store: h.store, connector: connector() });
 
-  it("an item not yet in Ask Sunny: its text read from Woven in memory — nothing stored, indexed or recorded", async () => {
+  it("an item not yet in Ask Bubbles: its text read from Woven in memory — nothing stored, indexed or recorded", async () => {
     /* Held for an audience choice, so not synced. */
     await h.store.saveDecision({ source: "woven", audienceKey: "(none stated)", decision: "excluded", decidedBy: "admin:test", decidedAt: h.clock.toISOString() });
     await h.initial();
@@ -414,7 +414,7 @@ describe("Preview: what Ask Sunny would read, before a choice or a sync", () => 
     const result = await preview(partRef(attachment));
     expect(result).toMatchObject({
       status: "ok",
-      preview: { title: "Opening the Salon — Opening Checklist", contentType: "procedure", sourceName: "Opening the Salon", fileName: "Opening Checklist.pdf", askSunnyDocumentId: null },
+      preview: { title: "Opening the Location — Opening Checklist", contentType: "procedure", sourceName: "Opening the Location", fileName: "Opening Checklist.pdf", knowledgeDocumentIdInBase: null },
     });
     if (result.status !== "ok") throw new Error("no preview");
     expect(result.preview.sections.map((s) => s.text).join("\n")).toContain("Sanitize every tanning bed");
@@ -430,10 +430,10 @@ describe("Preview: what Ask Sunny would read, before a choice or a sync", () => 
     expect(text.status === "ok" && text.preview.sections.map((s) => s.text).join("\n")).toContain("Unlock the front door.");
   });
 
-  it("an item already in Ask Sunny opens its existing document; unreadable and unknown items say so", async () => {
+  it("an item already in Ask Bubbles opens its existing document; unreadable and unknown items say so", async () => {
     await h.initial();
     const file = await h.item(FILE(401));
-    expect(await preview(partRef(file))).toMatchObject({ status: "ok", preview: { askSunnyDocumentId: file.knowledgeDocumentId } });
+    expect(await preview(partRef(file))).toMatchObject({ status: "ok", preview: { knowledgeDocumentIdInBase: file.knowledgeDocumentId } });
     expect(await preview("0000000000000000")).toMatchObject({ status: "not_found" });
     expect(await preview("../../etc")).toMatchObject({ status: "not_found" });
   });

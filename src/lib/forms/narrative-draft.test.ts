@@ -14,7 +14,7 @@ import {
 
 /**
  * ============================================================================
- * THE MANAGER SUPPLIES THE INCIDENT; ASK SUNNY SUPPLIES THE COACHING
+ * THE MANAGER SUPPLIES THE INCIDENT; ASK BUBBLES SUPPLIES THE COACHING
  * ============================================================================
  *
  * The line these tests hold is FACTS versus GUIDANCE, not "did the manager say
@@ -177,7 +177,7 @@ describe("TEST D — no policy claim and no consequence is invented", () => {
      * policy is ordinary coaching and must survive, or the guard would delete
      * the guidance it is supposed to protect.
      */
-    const draft = `${EXPECTATION_LABEL}\nSarah is expected to follow the salon's attendance policy and arrive on time.`;
+    const draft = `${EXPECTATION_LABEL}\nSarah is expected to follow the location's attendance policy and arrive on time.`;
     expect(guardNarrative(draft, BARE_INCIDENT).text).toBe(draft);
   });
 

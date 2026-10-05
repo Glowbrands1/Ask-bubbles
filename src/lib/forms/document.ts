@@ -60,7 +60,7 @@ export const RESPONSIBILITY_LABEL: Record<FieldResponsibility, string> = {
  * The short chip the editor shows on the block itself.
  *
  * `system` and `ai` both read "AI FILLS", which is deliberate and matches the
- * reference forms: from the reader's side both are Ask Sunny filling the field,
+ * reference forms: from the reader's side both are Ask Bubbles filling the field,
  * and the distinction that matters to THEM is only "does a person have to write
  * this". The difference the engine cares about — filled from the record versus
  * drafted by the model — is real and is what the gear says, but it is not a
@@ -257,7 +257,7 @@ export type FormBlock =
    *
    * The TSD Management Performance Plan's Plan of Action is not a paragraph.
    * It is eight fixed rows — Bench, Management Bench, the three productivity
-   * categories, Coaching and Development, District Outreach, Salon Standards
+   * categories, Coaching and Development, District Outreach, Location Standards
    * — each printing a CATEGORY, the OBJECTIVE the business has written for it,
    * and a space for the plan against that objective.
    *

@@ -22,7 +22,7 @@ import {
 } from "./types";
 
 /**
- * ASK SUNNY FEEDBACK — the rules, tested where they are decided.
+ * ASK BUBBLES FEEDBACK — the rules, tested where they are decided.
  *
  * All pure functions. The rating control, every host and the route all import
  * these rather than restating them, so a case proved here is proved for every
@@ -187,7 +187,7 @@ describe("the conversation's rating attaches to one turn", () => {
         answer({
           error: {
             kind: "model_failed",
-            message: "Sunny could not answer.",
+            message: "Bubbles could not answer.",
             question: "x",
             retryable: true,
           },
@@ -224,7 +224,7 @@ describe("the conversation's rating attaches to one turn", () => {
    *
    * THE DUPLICATE THIS PREVENTS: rate a conversation, ask two more questions,
    * then change your mind. If the edit attached to the NEWEST turn it would
-   * insert a second `ask_sunny_feedback` row — the unique key is
+   * insert a second `assistant_feedback` row — the unique key is
    * (activity_event_id, user_id), so a different event is a different row — and
    * the dashboard would report two opinions where one person had one.
    */
@@ -282,7 +282,7 @@ describe("an acknowledgement is not a question", () => {
     "Thanks — can you also pull the Spa numbers?",
     "ok so what should I coach first?",
     "What is the attendance policy?",
-    "no, that is the wrong salon",
+    "no, that is the wrong location",
   ])("classifies %o as a question", (text) => {
     /*
      * WHOLE-STRING EQUALITY, NEVER A PREFIX. These five are the most
@@ -486,7 +486,7 @@ describe("the queue defaults to open work, and closes nothing", () => {
         process.cwd(),
         "supabase/migrations",
         readdirSync(join(process.cwd(), "supabase/migrations"))
-          .filter((name) => name.includes("ask_sunny_feedback_reads"))
+          .filter((name) => name.includes("assistant_feedback_reads"))
           .sort()[0],
       ),
       "utf8",

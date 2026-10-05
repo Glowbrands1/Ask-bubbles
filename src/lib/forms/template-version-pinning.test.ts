@@ -371,7 +371,7 @@ describe("TV-4. no layer duplicates the Coaching Form's structure", () => {
   it.each(RENDER_PATH)("%s names no coaching field or option", (path) => {
     /*
      * THE ACCEPTANCE CRITERION FROM THE OTHER SIDE. If v3 is published
-     * tomorrow, Ask Sunny must use it without a line changing here — which is
+     * tomorrow, Ask Bubbles must use it without a line changing here — which is
      * only true while no layer holds its own copy of the field list.
      */
     const source = code(path);

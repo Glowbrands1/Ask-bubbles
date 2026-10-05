@@ -93,7 +93,7 @@ const AREAS: Record<Exclude<ScopeLevel, "global">, { id: string; name: string }[
 };
 
 function areaName(scope: AccessScope): string {
-  if (scope.level === "global") return "All salons";
+  if (scope.level === "global") return "All locations";
   if (!scope.primaryAreaId) return "—";
   const list = AREAS[scope.level];
   return list.find((entry) => entry.id === scope.primaryAreaId)?.name ?? scope.primaryAreaId;
@@ -300,7 +300,7 @@ export function DirectoryScreen({
 
       <SectionHeader
         title="Team"
-        description="Every person with an Ask Sunny login. Roles and access are read from the server on every request — nothing here is decided in the browser."
+        description="Every person with an Ask Bubbles login. Roles and access are read from the server on every request — nothing here is decided in the browser."
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -354,7 +354,7 @@ export function DirectoryScreen({
               title={users.length === 0 ? "No accounts yet" : "Nobody matches that"}
               description={
                 users.length === 0
-                  ? "No Ask Sunny accounts exist yet. Invite the first person to get started."
+                  ? "No Ask Bubbles accounts exist yet. Invite the first person to get started."
                   : "Try a different name, email or role."
               }
             />
@@ -513,7 +513,7 @@ export function DirectoryScreen({
         </CardContent>
       </Card>
 
-      <Notice tone="neutral" icon={<ShieldCheck />} title="Ask Sunny never handles passwords">
+      <Notice tone="neutral" icon={<ShieldCheck />} title="Ask Bubbles never handles passwords">
         Passwords are held by Supabase Auth. Nobody here — including an
         administrator — can read, set or email one. &ldquo;Send sign-in
         link&rdquo; asks Supabase to email the person a single-use link they use
@@ -695,7 +695,7 @@ function InviteDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        title="Invite someone to Ask Sunny"
+        title="Invite someone to Ask Bubbles"
         description="They receive an email with a link to set their own password. No password is created here."
       >
         <form onSubmit={submit} className="space-y-4">
@@ -757,7 +757,7 @@ function InviteDialog({
               }}
               disabled={busy}
             >
-              <option value="location">One salon</option>
+              <option value="location">One location</option>
               <option value="district">A district</option>
               <option value="region">A region</option>
               <option value="global">Everything</option>

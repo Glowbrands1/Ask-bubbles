@@ -25,7 +25,7 @@ import { implicitRedirectTarget } from "@/lib/admin/redirect-target";
  * has. Supabase mails it directly to the person, and all this route learns is
  * which kind of email was sent.
  *
- * Ask Sunny also never generates a password to hand over. There is no such
+ * Ask Bubbles also never generates a password to hand over. There is no such
  * value anywhere in this path.
  */
 

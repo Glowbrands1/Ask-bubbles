@@ -61,7 +61,7 @@ import { SingleSelectMenu, useQueryNavigation } from "@/features/reports/filter-
  * TWO SETS OF FILTERS IN ONE URL
  * ============================================================================
  *
- * The shared analytics filters — date, district, salon, role — narrow this like
+ * The shared analytics filters — date, district, location, role — narrow this like
  * they narrow every other panel, and are edited by the bar above. The queue's
  * own five are edited here. Both are serialised into the same query string so a
  * link to "pending 1-stars on Spa Engagement, this month, Knoxville" is one URL
@@ -188,7 +188,7 @@ export function FeedbackQueue({
               ? `Everything in this period has been dealt with — ${formatNumber(closedCounts.resolved)} resolved and ${formatNumber(closedCounts.dismissed)} dismissed. Nothing was deleted; switch the status filter to see them.`
               : hasActiveFeedbackFilters(queue)
                 ? "Clear a filter to widen the search. Hidden comments are excluded unless you ask for them."
-                : "Ratings are collected under every Ask Sunny answer and appear here as they arrive. Nothing is backfilled."
+                : "Ratings are collected under every Ask Bubbles answer and appear here as they arrive. Nothing is backfilled."
           }
         />
       ) : (
@@ -456,10 +456,10 @@ function QueueRow({ item, onOpen }: { item: FeedbackItem; onOpen: () => void }) 
           {item.displayName ?? "Unattributed"}
           {item.role ? ` (${ROLE_LABEL[item.role]})` : ""}
         </span>
-        {item.storeName ? (
+        {item.locationName ? (
           <>
             <span aria-hidden>·</span>
-            <span>{item.storeName}</span>
+            <span>{item.locationName}</span>
           </>
         ) : null}
         <span aria-hidden>·</span>
@@ -715,7 +715,7 @@ function DeleteControl({
       </Button>
       <DialogContent
         title="Delete this feedback permanently?"
-        description="This removes the comment, rating and outcome from Ask Sunny Analytics. This cannot be undone."
+        description="This removes the comment, rating and outcome from Ask Bubbles Analytics. This cannot be undone."
       >
         <div className="px-6 py-4">
           <p className="text-[13px] leading-relaxed text-body-foreground">
@@ -820,8 +820,8 @@ function FeedbackDetail({
               {item.displayName ?? "Unattributed"}
               {item.role ? ` · ${ROLE_LABEL[item.role]}` : ""}
             </Fact>
-            <Fact label="Salon">
-              {item.storeName ?? "Not recorded"}
+            <Fact label="Location">
+              {item.locationName ?? "Not recorded"}
               {item.district ? ` · ${item.district}` : ""}
             </Fact>
             <Fact label="Surface">
@@ -852,7 +852,7 @@ function FeedbackDetail({
 
           {/*
             WHAT IS DELIBERATELY NOT HERE: the question and the answer.
-            Neither is stored anywhere in this schema — managers ask Ask Sunny
+            Neither is stored anywhere in this schema — managers ask Ask Bubbles
             about named employees' attendance and performance, and an adoption
             dashboard needs to know THAT somebody asked, never WHAT. The turn
             reference, the surface and the topic are what an administrator can
@@ -860,7 +860,7 @@ function FeedbackDetail({
           */}
           <p className="rounded-lg bg-surface-muted px-3.5 py-3 text-[12px] leading-relaxed text-muted-foreground">
             The question and the answer are not shown because they are not
-            stored. Ask Sunny records that a question was asked, which topic it
+            stored. Ask Bubbles records that a question was asked, which topic it
             was about and which surface it came from — never the text. Use the
             turn reference above if you need to correlate with a report of a
             specific conversation.
@@ -880,7 +880,7 @@ function FeedbackDetail({
               maxLength={RESOLUTION_NOTE_MAX_LENGTH}
               onChange={(event) => setNote(event.target.value)}
               placeholder="What was done about this, or why nothing was."
-              className="scroll-slim mt-1.5 w-full resize-none rounded-lg border border-border-strong bg-surface px-3 py-2 text-[13px] text-foreground placeholder:text-placeholder-foreground focus-visible:border-brand-yellow focus-visible:outline-none"
+              className="scroll-slim mt-1.5 w-full resize-none rounded-lg border border-border-strong bg-surface px-3 py-2 text-[13px] text-foreground placeholder:text-placeholder-foreground focus-visible:border-brand-accent focus-visible:outline-none"
             />
             <p className="mt-1 text-[11px] text-muted-foreground">
               Internal only. The person who left the feedback never sees this.
@@ -939,7 +939,7 @@ function RatingStars({ rating }: { rating: number }) {
           className={cn(
             "size-3.5",
             value <= rating
-              ? "fill-brand-yellow text-brand-yellow"
+              ? "fill-brand-accent text-brand-accent"
               : "text-border-strong",
           )}
         />
@@ -960,7 +960,7 @@ function StatusChip({
       <span
         className={cn(
           "rounded-[4px] px-2 py-[3px] text-[9px] font-black tracking-[0.08em] uppercase",
-          status === "pending" && "bg-brand-yellow text-brand-yellow-foreground",
+          status === "pending" && "bg-brand-accent text-brand-accent-foreground",
           status === "in_review" && "bg-band text-band-foreground",
           status === "resolved" &&
             "bg-measure-positive-soft text-measure-positive-foreground",

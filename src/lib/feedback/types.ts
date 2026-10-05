@@ -1,5 +1,5 @@
 /**
- * ASK SUNNY FEEDBACK — the shared vocabulary.
+ * ASK BUBBLES FEEDBACK — the shared vocabulary.
  *
  * Client-safe: unions, labels and pure functions. No database client, no
  * secret, no server-only import. The browser validates a draft with the same
@@ -9,7 +9,7 @@
  *
  * THE STORED GRAIN IS ONE ANSWER. Every type here is about a single assistant
  * turn, named by the server-minted `turnId` that came back with it — which is
- * what lets a rating be joined to a role, a salon, a surface and a topic.
+ * what lets a rating be joined to a role, a location, a surface and a topic.
  *
  * WHAT A PERSON RATES IS THE CONVERSATION. The control is one passive "Rate
  * this conversation" action, and it attaches what they said to a turn inside
@@ -119,7 +119,7 @@ export interface SavedFeedback {
  * Whether a draft may be submitted, and what is missing if not.
  *
  * THE STARS ARE THE ONLY REQUIREMENT. A rating with no words is still a real
- * signal — it moves the average for a surface, a role and a salon — and the
+ * signal — it moves the average for a surface, a role and a location — and the
  * alternative is what this replaces: a voluntary control that refuses to accept
  * the thing somebody actually wanted to say.
  *

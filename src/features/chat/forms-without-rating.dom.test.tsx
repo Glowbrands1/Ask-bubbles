@@ -166,7 +166,7 @@ afterEach(() => {
 
 async function ask(text: string) {
   const user = userEvent.setup();
-  const field = screen.getByLabelText(/ask sunny a question/i);
+  const field = screen.getByLabelText(/ask bubbles a question/i);
   await user.type(field, text);
   await user.click(screen.getByRole("button", { name: /send message/i }));
 }
@@ -214,7 +214,7 @@ describe('"I need a form" reaches the form, with no rating anywhere in the way',
     await screen.findByText("Which form do you need?");
 
     /* The composer is not disabled and says nothing about rating. */
-    const field = screen.getByLabelText(/ask sunny a question/i) as HTMLTextAreaElement;
+    const field = screen.getByLabelText(/ask bubbles a question/i) as HTMLTextAreaElement;
     expect(field.disabled).toBe(false);
     expect(screen.queryByText(/please rate the answer above/i)).toBeNull();
     expect(screen.queryByText(/required before your next question/i)).toBeNull();
@@ -256,7 +256,7 @@ describe("rating is offered once, passively, and required by nothing", () => {
       screen.getByRole("button", { name: /rate this conversation/i }),
     ).toBeDefined();
     expect(
-      screen.queryByRole("radiogroup", { name: /how was your ask sunny experience/i }),
+      screen.queryByRole("radiogroup", { name: /how was your ask bubbles experience/i }),
     ).toBeNull();
     expect(
       screen.queryByRole("radiogroup", { name: /what you needed/i }),
@@ -282,9 +282,9 @@ describe("rating is offered once, passively, and required by nothing", () => {
     expect(invitations).toHaveLength(1);
 
     await user.click(invitations[0]);
-    expect(screen.getByText(/how was your ask sunny experience\?/i)).toBeDefined();
+    expect(screen.getByText(/how was your ask bubbles experience\?/i)).toBeDefined();
     expect(
-      screen.getByRole("radiogroup", { name: /how was your ask sunny experience/i }),
+      screen.getByRole("radiogroup", { name: /how was your ask bubbles experience/i }),
     ).toBeDefined();
   });
 

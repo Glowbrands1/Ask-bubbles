@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from "vitest";
  * emailed, and the response to it sets a session cookie. A callback that
  * honoured `?next=https://evil.example` would hand a freshly-authenticated
  * person to another host — with the link looking entirely legitimate, because
- * it really does come from Ask Sunny.
+ * it really does come from Ask Bubbles.
  *
  * THE CODE NEVER LEAKS. The `code` parameter is a single-use credential.
  * Logging it puts a credential in a log aggregator; reflecting it into an error
@@ -43,7 +43,7 @@ async function loadRoute(exchange: { error: unknown } = { error: null }) {
 const CODE_ABC = "abc";
 
 function url(query: string): Request {
-  return new Request(`https://ask-sunny.test/auth/callback${query}`);
+  return new Request(`https://ask-bubbles.test/auth/callback${query}`);
 }
 
 describe("where the callback is willing to send somebody", () => {
@@ -52,7 +52,7 @@ describe("where the callback is willing to send somebody", () => {
     const response = await GET(url("?code=abc&next=https://evil.example/steal"));
 
     const location = response.headers.get("location")!;
-    expect(new URL(location).host).toBe("ask-sunny.test");
+    expect(new URL(location).host).toBe("ask-bubbles.test");
     expect(location).not.toContain("evil.example");
   });
 
@@ -65,7 +65,7 @@ describe("where the callback is willing to send somebody", () => {
     const { GET } = await loadRoute();
     const response = await GET(url("?code=abc&next=//evil.example/steal"));
 
-    expect(new URL(response.headers.get("location")!).host).toBe("ask-sunny.test");
+    expect(new URL(response.headers.get("location")!).host).toBe("ask-bubbles.test");
   });
 
   it.each([
@@ -96,7 +96,7 @@ describe("where the callback is willing to send somebody", () => {
       const response = await GET(url(`?code=${CODE_ABC}&next=${encodeURIComponent(next)}`));
 
       const location = response.headers.get("location")!;
-      expect(new URL(location).origin, next).toBe("https://ask-sunny.test");
+      expect(new URL(location).origin, next).toBe("https://ask-bubbles.test");
       expect(location).not.toContain("evil.example");
     },
   );
@@ -127,7 +127,7 @@ describe("where the callback is willing to send somebody", () => {
       const emitted = new URL(response.headers.get("location")!);
 
       expect(emitted.origin, `${next} escaped to ${emitted.origin}`).toBe(
-        "https://ask-sunny.test",
+        "https://ask-bubbles.test",
       );
       expect(emitted.username, next).toBe("");
       expect(emitted.password, next).toBe("");
@@ -152,7 +152,7 @@ describe("where the callback is willing to send somebody", () => {
     for (const next of ["javascript:alert(1)", "data:text/html,x", "mailto:a@b.c"]) {
       const response = await GET(url(`?code=abc&next=${encodeURIComponent(next)}`));
       const location = response.headers.get("location")!;
-      expect(location.startsWith("https://ask-sunny.test/"), next).toBe(true);
+      expect(location.startsWith("https://ask-bubbles.test/"), next).toBe(true);
     }
   });
 
@@ -161,14 +161,14 @@ describe("where the callback is willing to send somebody", () => {
     const response = await GET(url("?code=abc&next=/reset-password"));
 
     expect(response.headers.get("location")).toBe(
-      "https://ask-sunny.test/reset-password",
+      "https://ask-bubbles.test/reset-password",
     );
   });
 
   it("defaults to the root when no destination is given", async () => {
     const { GET } = await loadRoute();
     const response = await GET(url("?code=abc"));
-    expect(response.headers.get("location")).toBe("https://ask-sunny.test/");
+    expect(response.headers.get("location")).toBe("https://ask-bubbles.test/");
   });
 });
 

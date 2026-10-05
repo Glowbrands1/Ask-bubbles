@@ -43,7 +43,7 @@ export function SectionRule({
       <h2 className="display shrink-0 text-[16px] tracking-[0.035em] text-foreground">
         {label}
       </h2>
-      <span aria-hidden className="h-[3px] min-w-6 flex-1 rounded-sm bg-brand-yellow" />
+      <span aria-hidden className="h-[3px] min-w-6 flex-1 rounded-sm bg-brand-accent" />
       {action ? (
         <Link
           href={action.href}
@@ -235,7 +235,7 @@ export function CountTiles({
           className={cn(
             "rounded-xl px-3.5 py-3",
             tile.tone === "overdue" && "bg-followup-attention",
-            tile.tone === "soon" && "bg-brand-yellow",
+            tile.tone === "soon" && "bg-brand-accent",
             tile.tone === "open" && "bg-surface-muted",
           )}
         >
@@ -243,7 +243,7 @@ export function CountTiles({
             className={cn(
               "eyebrow",
               tile.tone === "overdue" && "text-followup-attention-muted-foreground",
-              tile.tone === "soon" && "text-brand-yellow-soft-foreground",
+              tile.tone === "soon" && "text-brand-accent-soft-foreground",
               tile.tone === "open" && "text-muted-foreground",
             )}
           >
@@ -253,7 +253,7 @@ export function CountTiles({
             className={cn(
               "display-figure mt-1 text-[26px]",
               tile.tone === "overdue" && "text-followup-attention-foreground",
-              tile.tone === "soon" && "text-brand-yellow-foreground",
+              tile.tone === "soon" && "text-brand-accent-foreground",
               tile.tone === "open" && "text-foreground",
             )}
           >
@@ -321,7 +321,7 @@ export function BareRow({
 }) {
   const inner = (
     <>
-      <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-sm bg-brand-yellow" />
+      <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-sm bg-brand-accent" />
       <span className="min-w-0 flex-1 text-[12px] text-foreground">{children}</span>
       {meta ? (
         <span className="shrink-0 text-[10.5px] whitespace-nowrap text-muted-foreground">
@@ -369,7 +369,7 @@ export function QuintileChip({
     <span
       className={cn(
         "inline-flex items-center rounded-[var(--radius-xs)] px-2 py-[3px] text-[8px] font-black tracking-[0.09em] whitespace-nowrap uppercase",
-        tone === "top" && "bg-chrome text-brand-yellow",
+        tone === "top" && "bg-chrome text-brand-accent",
         tone === "upper" && "bg-surface-muted text-body-foreground",
         tone === "mid" && "bg-muted text-muted-foreground",
         tone === "bottom" && "bg-measure-flagged text-followup-attention-foreground",
@@ -472,7 +472,7 @@ export function StatusChip({
  * THE PROVENANCE ROW, IN THE BAND RATHER THAN AT THE FOOT OF THE PAGE.
  *
  * The Reports artifact's second punch-list item, in its own words: "'15 of 15
- * salons', 'recipient slice — not company-wide' and the load timestamp become
+ * locations', 'recipient slice — not company-wide' and the load timestamp become
  * chips in the band. They are the reason anyone trusts a number they are about
  * to quote in an L10."
  *
@@ -490,7 +490,7 @@ export function ProvenanceChip({
       className={cn(
         "inline-flex items-center rounded-[22px] border px-2.5 py-[5px] text-[8.5px] font-black tracking-[0.1em] whitespace-nowrap uppercase",
         emphasis
-          ? "border-[color-mix(in_srgb,var(--brand-yellow)_50%,transparent)] text-brand-yellow"
+          ? "border-[color-mix(in_srgb,var(--brand-accent)_50%,transparent)] text-brand-accent"
           : "border-band-pill-border text-band-muted-foreground",
         className,
       )}

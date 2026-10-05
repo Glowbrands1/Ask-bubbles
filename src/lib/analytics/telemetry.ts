@@ -72,7 +72,7 @@ export type TurnEvent =
    */
   | "form.create.failed"
   /**
-   * The row EXISTS and Sunny could not prefill it.
+   * The row EXISTS and Bubbles could not prefill it.
    *
    * A warning, never an error: the form is real, it is in Form Monitoring, and
    * the manager completes it by hand. Recorded separately because the operational
@@ -88,7 +88,7 @@ export interface TurnTelemetry {
    * Which template a form event was about, as a LIBRARY KEY.
    *
    * A key names a published document — "coaching", "dpoa" — and is the same
-   * value in every deployment. It is not an employee, not a salon and not
+   * value in every deployment. It is not an employee, not a location and not
    * anything the manager typed, so it carries no more than the template list
    * already public to everyone who can open Forms.
    */

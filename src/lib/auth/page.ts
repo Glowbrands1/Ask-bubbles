@@ -62,7 +62,7 @@ export function pageAuthorizationEnforced(): boolean {
  *
  * An Employee cannot see the Overview, so sending them to `/` after sign-in
  * would bounce them straight back out — and a redirect loop is the classic way
- * this goes wrong. Ask Sunny is the screen their role exists for, so that is
+ * this goes wrong. Ask Bubbles is the screen their role exists for, so that is
  * where they start.
  *
  * The rule is derived from the permission rather than listed by role, so a role

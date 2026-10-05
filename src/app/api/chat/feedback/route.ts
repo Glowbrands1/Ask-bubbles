@@ -17,7 +17,7 @@ import {
 } from "@/lib/feedback/types";
 
 /**
- * POST /api/chat/feedback — rate one Ask Sunny answer.
+ * POST /api/chat/feedback — rate one Ask Bubbles answer.
  * GET  /api/chat/feedback?turn=<id>&turn=<id> — what you already said about them.
  *
  * ============================================================================
@@ -26,7 +26,7 @@ import {
  *
  * Feedback is about an answer, so the permission to have received an answer is
  * the permission to rate one. Anything narrower would create a class of user
- * who can use Ask Sunny and cannot say it was wrong, which is precisely
+ * who can use Ask Bubbles and cannot say it was wrong, which is precisely
  * backwards — the frontline Employee holding `ask_questions` is the population
  * whose complaints this feature exists to collect.
  *
@@ -44,7 +44,7 @@ import {
  * WHAT A FEEDBACK BODY MAY AND MAY NOT CARRY
  * ============================================================================
  *
- * IT MAY NOT CARRY THE IDENTITY. No `userId`, no role, no salon — every one of
+ * IT MAY NOT CARRY THE IDENTITY. No `userId`, no role, no location — every one of
  * those comes from `authorizeRequest`, and there is no field here a caller
  * could put one in. This is the same separation `/api/chat` makes for the form
  * proposal, for the same reason: the two facts a caller must never assert about

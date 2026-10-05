@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { ArrowUp, Info } from "lucide-react";
 
-import { SunMark } from "@/components/brand-mark";
+import { BubbleMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/controls";
 import { Tooltip } from "@/components/ui/overlays";
@@ -126,7 +126,7 @@ export function Composer({
   const field = (
     <>
       <label htmlFor="chat-input" className="sr-only">
-        Ask Sunny a question
+        Ask Bubbles a question
       </label>
       <textarea
         id="chat-input"
@@ -142,7 +142,7 @@ export function Composer({
             submit();
           }
         }}
-        placeholder="Ask about policy, coaching, operations or performance — or ask Sunny to draft a form"
+        placeholder="Ask about policy, coaching, operations or performance — or ask Bubbles to draft a form"
         className="scroll-slim max-h-50 w-full resize-none bg-transparent text-[14px] leading-relaxed text-foreground placeholder:text-placeholder-foreground focus-visible:outline-none"
       />
     </>
@@ -159,7 +159,7 @@ export function Composer({
         value, and it is one of the two filled blocks the direction allows a
         screen.
       */
-      className="grid size-[38px] shrink-0 place-items-center rounded-full bg-brand-yellow text-brand-yellow-foreground transition-opacity disabled:opacity-40"
+      className="grid size-[38px] shrink-0 place-items-center rounded-full bg-brand-accent text-brand-accent-foreground transition-opacity disabled:opacity-40"
     >
       <ArrowUp className="size-[15px]" strokeWidth={2.5} />
     </button>
@@ -171,9 +171,9 @@ export function Composer({
       bookended in dark chrome and the conversation between them reads as a
       document on paper.
     */
-    <div className="shrink-0 border-t-4 border-brand-yellow bg-band px-4 pt-4 pb-3.5 sm:px-6">
+    <div className="shrink-0 border-t-4 border-brand-accent bg-band px-4 pt-4 pb-3.5 sm:px-6">
       <div className="flex items-center gap-3.5 rounded-[var(--radius-lg)] bg-surface py-3 pr-3.5 pl-4.5 shadow-ask focus-within:shadow-ask-focus">
-        <SunMark className="size-[26px] shrink-0" onDark />
+        <BubbleMark className="size-[26px] shrink-0" onDark />
         <div className="flex min-w-0 flex-1 items-center">{field}</div>
         {sendButton}
       </div>
@@ -258,7 +258,7 @@ export function AnswerModeControl({
           variant="ghost"
           size="iconSm"
           type="button"
-          aria-label="About answer modes and Sunny's limits"
+          aria-label="About answer modes and Bubbles' limits"
           className="shrink-0 text-band-muted-foreground hover:text-hover-surface-foreground"
         >
           <Info />

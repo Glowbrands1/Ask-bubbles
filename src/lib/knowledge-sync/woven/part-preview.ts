@@ -13,13 +13,13 @@ import { WovenTeamClient } from "./http";
 
 /**
  * ============================================================================
- * "PREVIEW" — WHAT ASK SUNNY WOULD READ IN ONE WOVEN ITEM, BEFORE ANY CHOICE
+ * "PREVIEW" — WHAT ASK BUBBLES WOULD READ IN ONE WOVEN ITEM, BEFORE ANY CHOICE
  * ============================================================================
  *
  * An administrator deciding "Share with everyone" (or about to run a large
  * sync) sees the content itself, not only its title:
  *
- *   ALREADY IN ASK SUNNY   the existing document page (`askSunnyDocumentId`),
+ *   ALREADY IN ASK BUBBLES   the existing document page (`knowledgeDocumentIdInBase`),
  *                          which shows the indexed text and opens the file;
  *   NOT YET                the part is fetched from Woven exactly as a sync
  *                          would fetch it and run through the SAME extractor,
@@ -27,10 +27,10 @@ import { WovenTeamClient } from "./http";
  *                          searchable, and the manifest is not touched.
  *
  * The request names the part by its opaque `ref` (see `partRef`); the locator
- * comes from what Ask Sunny recorded, or from a fresh listing of that one
+ * comes from what Ask Bubbles recorded, or from a fresh listing of that one
  * content type — never from the browser. What comes back is the title, type,
  * source name, file name and extracted text with its page/section labels. No
- * Woven or storage URL, no stored file name, no id beyond the Ask Sunny
+ * Woven or storage URL, no stored file name, no id beyond the Ask Bubbles
  * document's own.
  */
 
@@ -43,8 +43,8 @@ export interface PartPreview {
   /** The Woven item it belongs to (the manual, the procedure, the policy). */
   sourceName: string;
   fileName: string | null;
-  /** Set when Ask Sunny already holds this part: open that document instead. */
-  askSunnyDocumentId: string | null;
+  /** Set when Ask Bubbles already holds this part: open that document instead. */
+  knowledgeDocumentIdInBase: string | null;
   sections: { label: string; page: number | null; text: string }[];
   characterCount: number;
   truncated: boolean;
@@ -67,13 +67,13 @@ export async function previewWovenPart(
   const target = known ?? scanned;
   if (!target) return { status: "not_found", reason: "That item is not in the latest Woven inventory. Scan Woven again." };
   if (target.state === "BLOCKED" || target.reason === "unsupported_format") {
-    return { status: "not_previewable", reason: "Ask Sunny can't read this kind of Woven item yet, so there is nothing to preview." };
+    return { status: "not_previewable", reason: "Ask Bubbles can't read this kind of Woven item yet, so there is nothing to preview." };
   }
 
   const sourceName = (target.recordTitle ?? "").trim() || target.title;
   const base = { title: target.title, contentType: target.contentType, sourceName, fileName: target.fileName };
-  if (known?.inAskSunny && known.knowledgeDocumentId) {
-    return { status: "ok", preview: { ...base, askSunnyDocumentId: known.knowledgeDocumentId, sections: [], characterCount: 0, truncated: false } };
+  if (known?.inKnowledgeBase && known.knowledgeDocumentId) {
+    return { status: "ok", preview: { ...base, knowledgeDocumentIdInBase: known.knowledgeDocumentId, sections: [], characterCount: 0, truncated: false } };
   }
 
   const config = overrides.config ?? readWovenKnowledgeConfig();
@@ -128,7 +128,7 @@ export async function previewWovenPart(
         ...base,
         /* The name the file is known by, never a storage name. */
         fileName: target.fileName ?? (file.mimeType === "text/plain" ? null : file.fileName),
-        askSunnyDocumentId: null,
+        knowledgeDocumentIdInBase: null,
         sections,
         characterCount: extracted.characterCount,
         truncated: extracted.characterCount > PREVIEW_CHARACTERS,

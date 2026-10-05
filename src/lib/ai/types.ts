@@ -11,7 +11,7 @@ import type {
 export interface AskContext {
   /** Who is asking — used for the manager field on generated forms. */
   userName: string;
-  /** Their salon or area — used for the location field. */
+  /** Their location or area — used for the location field. */
   locationName: string;
   /**
    * ISO date the assistant should treat as "today".
@@ -20,7 +20,7 @@ export interface AskContext {
    * it. `/api/chat` fills it from its own clock and never from the request
    * body. The browser used to send `DEMO_ANCHOR.slice(0, 10)` — a frozen
    * prototype date — and the route preferred it, so the prompt opened with a
-   * day that had already passed and every freshness judgement Sunny could have
+   * day that had already passed and every freshness judgement Bubbles could have
    * made was made against it.
    *
    * The field stays on this internal contract because the prompt genuinely
@@ -67,7 +67,7 @@ export interface AskRequest {
    * The template of the still-open proposal on the previous assistant turn.
    *
    * ORCHESTRATION, NOT AUTHORITY — it names a KIND of form and carries no
-   * employee, salon, value or status. The server revalidates it against the
+   * employee, location, value or status. The server revalidates it against the
    * published library and the actor's permission, so a forged one produces
    * only what typing the template's name would have. See
    * `lib/forms/proposal-continuation.ts`.
@@ -78,15 +78,15 @@ export interface AskRequest {
    * might correct it.
    *
    * ORCHESTRATION, NOT AUTHORITY, like the continuation key: the server loads
-   * the instance, applies the template's own edit permission and the salon
+   * the instance, applies the template's own edit permission and the location
    * scope through `authorizeInstance`, and ignores an id that fails either.
    */
   activeFormInstanceId?: string;
   /**
    * What the manager was looking at when they asked, when they came from a
-   * report tab's "Ask Sunny about this report".
+   * report tab's "Ask Bubbles about this report".
    *
-   * POINTERS ONLY — which family, which period, which salons, which measure.
+   * POINTERS ONLY — which family, which period, which locations, which measure.
    * There is nowhere in `ChatReportContext` to put a figure, so the browser
    * cannot send a number and have it treated as true; the server re-reads the
    * report for itself. See `reporting/read/chat-report-context.ts`.
@@ -97,7 +97,7 @@ export interface AskRequest {
    */
   reportContext?: ChatReportContext | null;
   /**
-   * WHICH ASK SUNNY SURFACE THE QUESTION WAS TYPED INTO.
+   * WHICH ASK BUBBLES SURFACE THE QUESTION WAS TYPED INTO.
    *
    * The one thing only the browser knows. `reportContext` says which report is
    * being discussed and cannot stand in for this — the Overview band and the
@@ -130,7 +130,7 @@ export type ClientAskRequest = Omit<AskRequest, "scopeId" | "context"> & {
  * How well the knowledge base covered the question.
  *
  * Carried explicitly rather than inferred from an empty citation list or from
- * the wording of the answer: "Sunny had nothing to go on" and "Sunny answered
+ * the wording of the answer: "Bubbles had nothing to go on" and "Bubbles answered
  * but chose not to cite" are different situations that need different UI, and
  * pattern-matching the prose to tell them apart would be guesswork.
  */
@@ -167,14 +167,14 @@ export interface AskResponse {
   coverage?: KnowledgeCoverage;
   followUpSuggestions?: string[];
   /**
-   * What Sunny is OFFERING to create. Present only on a form-request turn.
+   * What Bubbles is OFFERING to create. Present only on a form-request turn.
    *
    * REPLACES `formHandoff`, `pendingFormTemplateId` AND `pendingFormValues`,
    * which are gone rather than deprecated. Between them they carried a drafted
    * set of HR field values and a half-filled bag of pending ones through
    * browser-local chat state, and a fact missing on one turn was supplied from
    * a default on the next. A proposal carries no field values at all: it names
-   * the template, who it is about and which salon, and nothing else. See
+   * the template, who it is about and which location, and nothing else. See
    * `lib/ai/form-proposal.ts`.
    */
   formProposal?: ChatFormProposal;
@@ -189,7 +189,7 @@ export interface AskResponse {
   formSelection?: ChatFormSelection;
   /**
    * A form already created in this conversation that this turn corrected —
-   * "change her new location to salon 24". The id and the field keys only; the
+   * "change her new location to location 24". The id and the field keys only; the
    * inline editor re-reads the canonical instance rather than trusting values
    * carried here. See `lib/forms/chat-correction.ts`.
    */

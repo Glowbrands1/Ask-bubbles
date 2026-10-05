@@ -12,14 +12,14 @@ import type { AggregationKind, MetricAggregate } from "./types";
  *
  *   currency / count / hours — SUM is valid arithmetic. It is still not a
  *     company total: see `companyWide` on MetricAggregate.
- *   percent — NEVER summed, and never averaged across salons either. A mean of
- *     per-salon percentage changes weights a tiny salon equally with a large
- *     one and produces a number that matches no salon and no total. The median
+ *   percent — NEVER summed, and never averaged across locations either. A mean of
+ *     per-location percentage changes weights a tiny location equally with a large
+ *     one and produces a number that matches no location and no total. The median
  *     is reported instead, as a description of the distribution.
  *   ratio — same reasoning. A mean of per-unit averages is not the per-unit
  *     average of the whole.
  *   rank — reported by the source against the entire chain. Aggregating or
- *     recomputing it from 15 salons would silently disagree with the source.
+ *     recomputing it from 15 locations would silently disagree with the source.
  *   years — a mean age is meaningful, a sum of ages is not.
  */
 
@@ -41,7 +41,7 @@ const DISTRIBUTION_ONLY: UnitPolicy = {
   allowed: ["median", "min", "max", "count"],
   preferred: "median",
   refusalNote:
-    "This measure cannot be summed, and averaging it across salons would weight every salon equally. The median is shown instead.",
+    "This measure cannot be summed, and averaging it across locations would weight every location equally. The median is shown instead.",
 };
 
 export const UNIT_POLICIES: Record<ReportMetricUnit, UnitPolicy> = {
@@ -59,7 +59,7 @@ export const UNIT_POLICIES: Record<ReportMetricUnit, UnitPolicy> = {
     allowed: ["count"],
     preferred: null,
     refusalNote:
-      "Ranks are reported by the source against the whole chain. They are never recomputed or aggregated from the salons in this report.",
+      "Ranks are reported by the source against the whole chain. They are never recomputed or aggregated from the locations in this report.",
   },
 };
 
@@ -97,8 +97,8 @@ export function aggregate(input: {
   basisYear: number | null;
   unit: ReportMetricUnit;
   values: number[];
-  /** Distinct salons behind `values`. Required, never inferred from length. */
-  salonCount: number;
+  /** Distinct locations behind `values`. Required, never inferred from length. */
+  locationCount: number;
   kind?: AggregationKind;
 }): MetricAggregate {
   const policy = UNIT_POLICIES[input.unit];
@@ -107,7 +107,7 @@ export function aggregate(input: {
   const base = {
     metricCode: input.metricCode,
     basisYear: input.basisYear,
-    salonCount: input.salonCount,
+    locationCount: input.locationCount,
     companyWide: false as const,
   };
 

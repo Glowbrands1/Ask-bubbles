@@ -6,17 +6,17 @@
  * A knowledge SOURCE (Woven today; SharePoint or another system later) hands
  * the engine normalised `SourceRecord`s. The engine compares them with the
  * MANIFEST — what the source looked like at the last successful sync — and
- * drives Ask Sunny's existing knowledge pipeline through a `KnowledgeSink`.
+ * drives Ask Bubbles' existing knowledge pipeline through a `KnowledgeSink`.
  *
  * Nothing in this file knows a Woven route, a Woven field name or a Supabase
  * column. Source specifics live under `./woven/`; persistence lives in
- * `./store.ts`; Ask Sunny ingestion lives in `./sink.ts`.
+ * `./store.ts`; Ask Bubbles ingestion lives in `./sink.ts`.
  *
  * IDENTITY IS THE SOURCE'S OWN ID, never a filename or a title. One source
  * record can carry several ingestible PARTS (a policy and each of its
  * attachments), so a manifest row is keyed on
  * `(source, contentType, entityId, partKey)` and each row maps to at most one
- * Ask Sunny knowledge document.
+ * Ask Bubbles knowledge document.
  */
 
 export const SOURCE_SYSTEMS = ["woven"] as const;
@@ -45,12 +45,12 @@ export const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
  * What a run concluded about one manifest item.
  *
  * The first eight are the classification the sync was specified with. Two more
- * are needed to say honestly why something is NOT in Ask Sunny:
+ * are needed to say honestly why something is NOT in Ask Bubbles:
  *
  *   NEEDS_REVIEW  published, but who may see it could not be mapped onto Ask
- *                 Sunny's access model. Held out until an administrator decides.
+ *                 Bubbles' access model. Held out until an administrator decides.
  *   EXCLUDED      deliberately not synced: a draft that was never published, a
- *                 format Ask Sunny cannot index (video), or an audience an
+ *                 format Ask Bubbles cannot index (video), or an audience an
  *                 administrator chose to keep out.
  */
 export const SYNC_STATES = [
@@ -67,7 +67,7 @@ export const SYNC_STATES = [
 ] as const;
 export type SyncState = (typeof SYNC_STATES)[number];
 
-/** What still has to happen to Ask Sunny for an item. */
+/** What still has to happen to Ask Bubbles for an item. */
 export type PendingAction = "none" | "ingest" | "retire";
 
 export type Publication = "published" | "unpublished" | "unknown";
@@ -224,15 +224,15 @@ export interface ManifestItem {
 
   /** Metadata fingerprint seen at the latest scan. */
   observedFingerprint: string;
-  /** Fingerprint of the metadata last APPLIED to Ask Sunny. Null until first applied. */
+  /** Fingerprint of the metadata last APPLIED to Ask Bubbles. Null until first applied. */
   syncedFingerprint: string | null;
   /** SHA-256 of the bytes last ingested. */
   contentHash: string | null;
 
-  /** The Ask Sunny knowledge document this item owns. Assigned before first ingest. */
+  /** The Ask Bubbles knowledge document this item owns. Assigned before first ingest. */
   knowledgeDocumentId: string | null;
-  /** True while that document is searchable in Ask Sunny. */
-  inAskSunny: boolean;
+  /** True while that document is searchable in Ask Bubbles. */
+  inKnowledgeBase: boolean;
 
   state: SyncState;
   previousState: SyncState | null;
@@ -273,7 +273,7 @@ export interface InventoryItem {
   reason: string | null;
   pendingAction: PendingAction;
   knowledgeDocumentId: string | null;
-  inAskSunny: boolean;
+  inKnowledgeBase: boolean;
   errorCategory: string | null;
   retryCount: number;
   firstSeenAt: string;
@@ -378,7 +378,7 @@ export interface SyncReport {
     removalsHeld: number;
   };
   audiences: { audienceKey: string; label: string; items: number; decision: AudienceDecision["decision"] | "public" | null }[];
-  /** Eligible items whose title matches a document uploaded to Ask Sunny by hand. */
+  /** Eligible items whose title matches a document uploaded to Ask Bubbles by hand. */
   possibleManualDuplicates: number;
   /**
    * Hand uploads this run found to be the same document as a current synced

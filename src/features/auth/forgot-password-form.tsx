@@ -31,7 +31,7 @@ import { Notice } from "@/components/ui/feedback";
  */
 
 /**
- * The Ask Sunny endpoint that asks Supabase for the reset email.
+ * The Ask Bubbles endpoint that asks Supabase for the reset email.
  *
  * SERVER-SIDE, deliberately. This form used to call `resetPasswordForEmail`
  * from the browser, whose `@supabase/ssr` client uses PKCE: the link came back
@@ -101,7 +101,7 @@ export function ForgotPasswordForm() {
     return (
       <div className="mt-8 space-y-4">
         <Notice tone="accent" icon={<MailCheck />} title="Check your email">
-          If <strong>{email.trim()}</strong> has an Ask Sunny account, a
+          If <strong>{email.trim()}</strong> has an Ask Bubbles account, a
           password reset link is on its way. The link can be used once and
           expires shortly.
         </Notice>

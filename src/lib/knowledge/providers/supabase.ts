@@ -280,7 +280,7 @@ export class SupabaseKnowledgeProvider implements KnowledgeProvider {
    * method rather than a filter over `listDocuments`: that one is the INVENTORY
    * — it answers "what does this company hold", which is exactly the question a
    * non-administrator must not be able to ask. This answers "what is the
-   * document I was just shown a quote from", which every role Sunny answers for
+   * document I was just shown a quote from", which every role Bubbles answers for
    * may ask.
    *
    * Selected on id AND scope together, matching the original-file route: a

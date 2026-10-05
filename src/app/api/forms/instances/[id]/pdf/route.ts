@@ -21,9 +21,9 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   try {
     const { id } = await context.params;
     /*
-     * A PDF IS THE WHOLE RECORD, so this needs the same salon check as reading
+     * A PDF IS THE WHOLE RECORD, so this needs the same location check as reading
      * it on screen. It asked only for `view_form_monitoring`, which every
-     * manager role holds — so a guessed UUID returned another salon's finalized
+     * manager role holds — so a guessed UUID returned another location's finalized
      * disciplinary document as a downloadable file.
      */
     const { actor, loaded } = await authorizeInstance(request, id, "view");

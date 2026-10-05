@@ -22,7 +22,7 @@ import type { ChatMessage } from "@/types";
  * THREE FILTERS, EACH FOR A DIFFERENT FAILURE
  * ============================================================================
  *
- *   role === "user"    An assistant turn is Sunny's INTERPRETATION of what the
+ *   role === "user"    An assistant turn is Bubbles' INTERPRETATION of what the
  *                      manager said. Promoting an interpretation to a factual
  *                      HR record is the worst failure available here, and the
  *                      one nobody would catch, because the wording reads fine.

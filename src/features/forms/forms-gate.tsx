@@ -21,7 +21,7 @@ import type { Permission } from "@/types";
  * `PermissionGate` replaces a page with "not available for your access level".
  * That is right once somebody has decided who may do what. Nobody has: the
  * matrix behind it is this app's own guess, and it was standing between the
- * owner and a form they were trying to look at — a Salon Director refused the
+ * owner and a form they were trying to look at — a Location Director refused the
  * DMIT EPP because the default list happens not to include Create EPP.
  *
  * It was also not protecting anything. The preview role comes from the browser,

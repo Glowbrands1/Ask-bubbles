@@ -50,7 +50,7 @@ function assistantTurn(content: string): ChatMessage {
   };
 }
 
-const SALON: AccessScope = {
+const LOCATION: AccessScope = {
   level: "location",
   primaryAreaId: "loc-0101",
   alsoCoversAreaIds: [],
@@ -59,7 +59,7 @@ const SALON: AccessScope = {
 function propose(
   history: ChatMessage[],
   question: string,
-  scope: AccessScope | null = SALON,
+  scope: AccessScope | null = LOCATION,
   inlineDraftSupported = true,
 ) {
   return buildProposal({
@@ -78,7 +78,7 @@ describe("7. only the manager's own turns are read", () => {
   it("ignores a name that appears only in an assistant turn", () => {
     const history = [
       userTurn("I need to document a conversation"),
-      // Sunny's own paraphrase. Promoting this to a fact on an employment
+      // Bubbles' own paraphrase. Promoting this to a fact on an employment
       // record is the failure nobody would notice, because it reads fine.
       assistantTurn("Sure — is this about Jane Kowalski?"),
     ];
@@ -260,7 +260,7 @@ describe("R6. an over-long current message is cut visibly, not silently", () => 
 
     expect(context.truncated).toBe(true);
     expect(context.text.length).toBeLessThanOrEqual(MANAGER_CONTEXT_CHARS);
-    expect(context.text).toMatch(/longer than Ask Sunny reads at once/);
+    expect(context.text).toMatch(/longer than Ask Bubbles reads at once/);
     // And it is still the manager's own words up to the cut.
     expect(context.text.startsWith("w".repeat(100))).toBe(true);
   });
@@ -320,18 +320,18 @@ describe("11. a name the manager actually gave is used verbatim", () => {
   });
 
   it("accepts a lone first name only when it is the whole message", () => {
-    // What a manager types when Sunny has just asked who the form is for.
+    // What a manager types when Bubbles has just asked who the form is for.
     expect(extractEmployeeNames("Sarah")).toEqual(["Sarah"]);
     expect(extractEmployeeNames("Sarah was late on Tuesday")).toEqual([]);
   });
 
   it.each([
-    "please draft a form for Jane Test, Salon Test, she was late today",
-    "coaching form for Jane Test at Salon Test",
+    "please draft a form for Jane Test, Location Test, she was late today",
+    "coaching form for Jane Test at Location Test",
     "Jane Test, Location Test — late again",
-  ])("a salon named alongside the employee is not a second candidate: %s", (sentence) => {
-    // "Salon Test" reads as a capitalised full name, so the turn resolved as
-    // ambiguous and Sunny re-asked for a name the manager had just given.
+  ])("a location named alongside the employee is not a second candidate: %s", (sentence) => {
+    // "Location Test" reads as a capitalised full name, so the turn resolved as
+    // ambiguous and Bubbles re-asked for a name the manager had just given.
     expect(extractEmployeeNames(sentence)).toEqual(["Jane Test"]);
   });
 });
@@ -356,7 +356,7 @@ describe("11. a name the manager actually gave is used verbatim", () => {
  * surname given as a single initial was invisible and the turn produced no
  * employee at all.
  *
- * First name plus last initial is how half a salon refers to people, so this
+ * First name plus last initial is how half a location refers to people, so this
  * was never an edge case.
  */
 describe("11b. a surname given as an initial", () => {
@@ -593,8 +593,8 @@ describe("11f. the intake answered on one line, as a comma-separated list", () =
    * names; the manager's shape.
    */
   it.each([
-    ["dana moss, KS shawnee, she is the salon director. we can use todays date.", ["dana moss"]],
-    ["Dana Moss, KS Shawnee, she is the salon director. we can use todays date.", ["Dana Moss"]],
+    ["dana moss, KS shawnee, she is the location director. we can use todays date.", ["dana moss"]],
+    ["Dana Moss, KS Shawnee, she is the location director. we can use todays date.", ["Dana Moss"]],
     ["dana moss, NE Kearney, today, she was late", ["dana moss"]],
     ["dana, MO St Joseph, 9/11, late again", ["dana"]],
     ["DANA MOSS, KS shawnee, today", ["DANA MOSS"]],
@@ -613,7 +613,7 @@ describe("11f. the intake answered on one line, as a comma-separated list", () =
     expect(extractEmployeeNames(text)).toEqual([]);
   });
 
-  it("reads a roster salon as a place, not as a second person", () => {
+  it("reads a roster location as a place, not as a second person", () => {
     expect(extractEmployeeNames("Sarah Jones was late at KS Shawnee Mission Pkwy")).toEqual(["Sarah Jones"]);
     expect(extractEmployeeNames("NE Kearney")).toEqual([]);
   });
@@ -660,8 +660,8 @@ describe("13. a missing employee stays missing", () => {
 
 /* ======================================================== location == */
 
-describe("14. the salon comes from the authenticated scope", () => {
-  it("fills in the one salon a manager is assigned to", () => {
+describe("14. the location comes from the authenticated scope", () => {
+  it("fills in the one location a manager is assigned to", () => {
     const proposal = propose([], "coaching form for Sarah Jones");
 
     expect(proposal.locationId).toBe("loc-0101");
@@ -693,11 +693,11 @@ describe("14. the salon comes from the authenticated scope", () => {
   });
 });
 
-describe("15. no salon DISPLAY NAME is invented", () => {
+describe("15. no location DISPLAY NAME is invented", () => {
   it("leaves locationName null even when the id resolved", () => {
     /*
-     * There is no salon roster to resolve a name from, and `DEMO_LOCATIONS` is
-     * seeded demo data rather than an authority. A fictional salon name in
+     * There is no location roster to resolve a name from, and `DEMO_LOCATIONS` is
+     * seeded demo data rather than an authority. A fictional location name in
      * front of a manager about to file a disciplinary record is exactly the
      * class of thing this phase removes.
      */
@@ -711,7 +711,7 @@ describe("a first name plus a stated role names the employee", () => {
   it("reads the sentence a manager opens with", () => {
     /*
      * THE REPORTED SHAPE, verbatim. A first name on its own is how managers
-     * refer to their team, and it reached nothing: Ask Sunny asked who the
+     * refer to their team, and it reached nothing: Ask Bubbles asked who the
      * plan was for immediately after being told.
      */
     const proposal = propose(
@@ -731,7 +731,7 @@ describe("a first name plus a stated role names the employee", () => {
     for (const [sentence, name] of [
       ["Marco is a Tanning Consultant", "Marco"],
       ["Dana was an FTTC last year", "Dana"],
-      ["Priya is our new Salon Director", "Priya"],
+      ["Priya is our new Location Director", "Priya"],
     ] as const) {
       expect(propose([userTurn(sentence)], "coaching form please").employeeName, sentence).toBe(
         name,
@@ -748,7 +748,7 @@ describe("a first name plus a stated role names the employee", () => {
     for (const [turnText, question] of [
       ["", "Create a coaching form for a performance concern"],
       ["She is an SDIT at Lincoln South", "coaching form please"],
-      ["He was a Salon Director before this", "coaching form please"],
+      ["He was a Location Director before this", "coaching form please"],
       ["Coaching Form is the one I need", "coaching form please"],
       ["Tuesday was a difficult shift for the team", "coaching form please"],
     ] as const) {
@@ -769,12 +769,12 @@ describe("a first name plus a stated role names the employee", () => {
   });
 });
 
-describe("a salon named in two words is not a second employee", () => {
+describe("a location named in two words is not a second employee", () => {
   it("does not ask which of them the form is for", () => {
     /*
      * REPORTED SHAPE: "Jessica Vance is an SDIT at Lincoln South. She's great
      * with clients but she's been late several times." Two capitalised pairs,
-     * one of them the salon — and the answer used to be "which of them is this
+     * one of them the location — and the answer used to be "which of them is this
      * for?", asked of somebody who had just said.
      */
     const proposal = propose(
@@ -862,7 +862,7 @@ describe("P3-1. inline creation is offered only when nothing is missing", () => 
     expect(proposal.supportsInlineDraft).toBe(false);
   });
 
-  it("is false while the salon is unverified", () => {
+  it("is false while the location is unverified", () => {
     const proposal = propose([], "coaching form for Sarah Jones", {
       level: "district",
       primaryAreaId: "dist-01",
@@ -874,7 +874,7 @@ describe("P3-1. inline creation is offered only when nothing is missing", () => 
 
   it("is false for a template the inline editor does not support", () => {
     // Ready in every other respect. The template is the reason.
-    const proposal = propose([], "coaching form for Sarah Jones", SALON, false);
+    const proposal = propose([], "coaching form for Sarah Jones", LOCATION, false);
     expect(proposal.status).toBe("ready");
     expect(proposal.supportsInlineDraft).toBe(false);
   });
@@ -886,10 +886,10 @@ describe("P3-1. inline creation is offered only when nothing is missing", () => 
   });
 });
 
-describe("17. asking order is employee first, then salon", () => {
+describe("17. asking order is employee first, then location", () => {
   it("does not ask two questions at once", () => {
     // A manager who has not said who the form is about cannot usefully answer
-    // which salon it belongs to, and two questions get one answer.
+    // which location it belongs to, and two questions get one answer.
     const proposal = propose([], "coaching form please", {
       level: "location",
       primaryAreaId: "loc-0101",
@@ -923,7 +923,7 @@ describe("the employee named with the form, across the library", () => {
     ["Demotion jane smith", "jane smith"],
     ["Demotion for Jane Smith", "Jane Smith"],
     ["Position Transfer for Mary Cruz", "Mary Cruz"],
-    ["Transfer for mary anne cruz to salon 24", "mary anne cruz"],
+    ["Transfer for mary anne cruz to location 24", "mary anne cruz"],
     ["Exit for john michael doe effective october 2", "john michael doe"],
     ["Exit John Doe", "John Doe"],
     ["Resignation for John Doe", "John Doe"],

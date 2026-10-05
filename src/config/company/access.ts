@@ -10,7 +10,7 @@ import type { Permission, PermissionMatrix, Role } from "@/types";
  * Buff configuration, and this file is the one place both are decided.
  *
  * PROVISIONAL. Buff City Soap has not confirmed its title structure. The
- * labels below are neutral retail titles, and the grants follow Ask Sunny's
+ * labels below are neutral retail titles, and the grants follow Ask Bubbles'
  * proven least-privilege shape: frontline staff read, managers create, district
  * and above administer. Replace the labels when Buff's Woven positions are
  * known; tighten or widen the grants here and nowhere else.

@@ -26,15 +26,15 @@ function chunk(marker: number, title: string): GroundingChunk {
 describe("buildSystemPrompt", () => {
   it("names the assistant, the manager and the location", () => {
     const prompt = buildSystemPrompt({
-      assistantName: "Sunny",
+      assistantName: "Bubbles",
       brandName: "Sun Tan City",
-      salonNoun: "location",
+      locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
       hasContext: true,
     });
 
-    expect(prompt).toContain("You are Sunny");
+    expect(prompt).toContain("You are Bubbles");
     expect(prompt).toContain("Dana Reyes");
     expect(prompt).toContain("MO Kansas City Wornall");
     expect(prompt).toContain("2026-08-29");
@@ -42,9 +42,9 @@ describe("buildSystemPrompt", () => {
 
   it("forbids fabricating policy, documents and citations", () => {
     const prompt = buildSystemPrompt({
-      assistantName: "Sunny",
+      assistantName: "Bubbles",
       brandName: "Sun Tan City",
-      salonNoun: "location",
+      locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
       hasContext: true,
@@ -58,9 +58,9 @@ describe("buildSystemPrompt", () => {
 
   it("requires company knowledge and general guidance to be distinguished", () => {
     const prompt = buildSystemPrompt({
-      assistantName: "Sunny",
+      assistantName: "Bubbles",
       brandName: "Sun Tan City",
-      salonNoun: "location",
+      locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
       hasContext: true,
@@ -72,9 +72,9 @@ describe("buildSystemPrompt", () => {
 
   it("states outright that there is no company knowledge when nothing was retrieved", () => {
     const prompt = buildSystemPrompt({
-      assistantName: "Sunny",
+      assistantName: "Bubbles",
       brandName: "Sun Tan City",
-      salonNoun: "location",
+      locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
       hasContext: false,
@@ -92,9 +92,9 @@ describe("buildSystemPrompt", () => {
    */
   it("adds a third statement kind when report figures are attached", () => {
     const prompt = buildSystemPrompt({
-      assistantName: "Sunny",
+      assistantName: "Bubbles",
       brandName: "Sun Tan City",
-      salonNoun: "location",
+      locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
       hasContext: true,
@@ -102,16 +102,16 @@ describe("buildSystemPrompt", () => {
     });
 
     expect(prompt).toContain("three kinds of statement");
-    expect(prompt).toContain("3. Salon report figures");
+    expect(prompt).toContain("3. Location report figures");
     expect(prompt).toContain("Never mark them with a source marker");
     expect(prompt).toContain("name the reporting period the figure belongs to");
   });
 
   it("forbids inventing a report figure when report figures ARE attached", () => {
     const prompt = buildSystemPrompt({
-      assistantName: "Sunny",
+      assistantName: "Bubbles",
       brandName: "Sun Tan City",
-      salonNoun: "location",
+      locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
       hasContext: true,
@@ -124,9 +124,9 @@ describe("buildSystemPrompt", () => {
 
   it("forbids stating any report figure at all when none is attached", () => {
     const prompt = buildSystemPrompt({
-      assistantName: "Sunny",
+      assistantName: "Bubbles",
       brandName: "Sun Tan City",
-      salonNoun: "location",
+      locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
       hasContext: true,
@@ -136,24 +136,24 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain("Do not state a tans count");
     expect(prompt).toContain("a conversion rate");
     expect(prompt).toContain("two kinds of statement");
-    expect(prompt).not.toContain("3. Salon report figures");
+    expect(prompt).not.toContain("3. Location report figures");
   });
 
   it("defaults to having no report figures", () => {
     // An older caller that has not been updated must get the RESTRICTIVE
     // branch, not the permissive one.
     const withoutFlag = buildSystemPrompt({
-      assistantName: "Sunny",
+      assistantName: "Bubbles",
       brandName: "Sun Tan City",
-      salonNoun: "location",
+      locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
       hasContext: true,
     });
     const explicitlyFalse = buildSystemPrompt({
-      assistantName: "Sunny",
+      assistantName: "Bubbles",
       brandName: "Sun Tan City",
-      salonNoun: "location",
+      locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
       hasContext: true,
@@ -167,9 +167,9 @@ describe("buildSystemPrompt", () => {
     // Report figures with no matching documents is the commonest reporting
     // question: both notices must appear, and neither may replace the other.
     const prompt = buildSystemPrompt({
-      assistantName: "Sunny",
+      assistantName: "Bubbles",
       brandName: "Sun Tan City",
-      salonNoun: "location",
+      locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
       hasContext: false,
@@ -177,15 +177,15 @@ describe("buildSystemPrompt", () => {
     });
 
     expect(prompt).toContain("no company documents matched this question");
-    expect(prompt).toContain("3. Salon report figures");
+    expect(prompt).toContain("3. Location report figures");
   });
 
   it("varies the length instruction by answer mode", () => {
     const build = (mode: "quick" | "standard" | "detailed") =>
       buildSystemPrompt({
-        assistantName: "Sunny",
+        assistantName: "Bubbles",
         brandName: "Sun Tan City",
-        salonNoun: "location",
+        locationNoun: "location",
         context: CONTEXT,
         mode,
         hasContext: true,

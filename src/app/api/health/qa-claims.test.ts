@@ -46,7 +46,7 @@ function code(source: string): string {
 
 describe("claim 1 — the reports do not depend on demo mode", () => {
   const REPORTS = [
-    "salon-performance",
+    "location-performance",
     "sales-totals",
     "bed-usage",
     "spa-wellness",
@@ -105,9 +105,9 @@ describe("the endpoint discloses no value of any environment variable", () => {
 
   it("adds no row, count or figure from the reporting tables", () => {
     // The QA block answers an architecture question, not a data question. A
-    // salon count on an unauthenticated endpoint would be a disclosure.
+    // location count on an unauthenticated endpoint would be a disclosure.
     const route = readFileSync(join(SRC, "app", "api", "health", "route.ts"), "utf8");
 
-    expect(route).not.toMatch(/getSupabaseAdmin|\.from\(|salonCount|loadReport/);
+    expect(route).not.toMatch(/getSupabaseAdmin|\.from\(|locationCount|loadReport/);
   });
 });

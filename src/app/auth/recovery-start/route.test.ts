@@ -43,9 +43,9 @@ async function loadRoute(
   const held = options.held;
   vi.doMock("next/headers", () => ({
     cookies: async () => ({
-      getAll: () => (held ? [{ name: "sunny_recovery_token", value: held }] : []),
+      getAll: () => (held ? [{ name: "bubbles_recovery_token", value: held }] : []),
       get: (name: string) =>
-        name === "sunny_recovery_token" && held ? { name, value: held } : undefined,
+        name === "bubbles_recovery_token" && held ? { name, value: held } : undefined,
       set: () => {},
     }),
   }));
@@ -101,7 +101,7 @@ async function loadRoute(
   return { ...route, seen };
 }
 
-const ORIGIN = "https://ask-sunny.vercel.app";
+const ORIGIN = "https://ask-bubbles.vercel.app";
 
 function get(query = "", headers: Record<string, string> = {}): Request {
   return new Request(`${ORIGIN}/auth/recovery-start${query}`, { headers });
@@ -121,7 +121,7 @@ const LINK = `?token_hash=${TOKEN}&type=recovery`;
 function heldCookie(response: Response): string | undefined {
   return response.headers
     .getSetCookie()
-    .find((line) => line.startsWith("sunny_recovery_token="));
+    .find((line) => line.startsWith("bubbles_recovery_token="));
 }
 
 describe("GET — what a mail scanner, a prefetch, or the click itself does", () => {
@@ -162,7 +162,7 @@ describe("GET — what a mail scanner, a prefetch, or the click itself does", ()
     const cookie = heldCookie(await GET(get(LINK)));
 
     expect(cookie).toBeDefined();
-    expect(cookie).toContain(`sunny_recovery_token=${TOKEN}`);
+    expect(cookie).toContain(`bubbles_recovery_token=${TOKEN}`);
     expect(cookie).toMatch(/HttpOnly/i);
     expect(cookie).toMatch(/SameSite=lax/i);
     expect(cookie).toMatch(/Secure/i);

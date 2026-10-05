@@ -11,7 +11,7 @@ import { planSupersession, type LibraryDocument } from "./supersession";
 import type { SourceSystem } from "./types";
 
 /**
- * ASK SUNNY'S EXISTING KNOWLEDGE PIPELINE, as the sync engine's sink.
+ * ASK BUBBLES'S EXISTING KNOWLEDGE PIPELINE, as the sync engine's sink.
  *
  * No second knowledge system: a synced document goes through the same
  * validate → private Storage → extract → chunk → embed → pgvector path an
@@ -30,7 +30,7 @@ function asSinkError(error: unknown, fallback: string): SinkError {
     const permanent = ["unsupported_type", "too_large", "empty_file", "no_text"].includes(error.code);
     return new SinkError(`ingest_${error.code}`, error.message.slice(0, 300), !permanent);
   }
-  return new SinkError(fallback, "Ask Sunny could not save this document.", true);
+  return new SinkError(fallback, "Ask Bubbles could not save this document.", true);
 }
 
 export function createSupabaseKnowledgeSink(source: SourceSystem): KnowledgeSink {

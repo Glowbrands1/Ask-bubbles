@@ -64,7 +64,7 @@ describe("the allowlist", () => {
       hireDate: "2024-03-11",
       startDate: "2024-03-18",
       positionId: "POS-SC",
-      positionName: "Salon Consultant",
+      positionName: "Location Consultant",
       primaryLocationId: "WL-0306",
       primaryLocationName: "KS Manhattan",
       hasMultipleLocationAccess: false,

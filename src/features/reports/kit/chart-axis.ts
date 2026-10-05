@@ -1,17 +1,17 @@
 /**
- * THE RANKING AXIS SHOWS THE STORE NAME. THE CATEGORY IS STILL THE SALON NUMBER.
+ * THE RANKING AXIS SHOWS THE STORE NAME. THE CATEGORY IS STILL THE LOCATION NUMBER.
  *
  * A manager reads "MO Kansas City Liberty"; nobody recognises 0394 on sight. So
  * the axis had to stop showing numbers.
  *
  * But it cannot simply be keyed on `storeName`. Recharts treats a category
- * axis value as the identity of a bar, and `salons.store_name` carries no
- * unique constraint — only a not-blank check. Two salons sharing a name would
+ * axis value as the identity of a bar, and `locations.store_name` carries no
+ * unique constraint — only a not-blank check. Two locations sharing a name would
  * silently collapse into one bar holding one of their two values, which is a
- * wrong figure rather than a cosmetic fault. `salon_number` IS unique, so it
+ * wrong figure rather than a cosmetic fault. `location_code` IS unique, so it
  * stays the category and only the rendered tick changes.
  *
- * The number is not lost: `salonTick` keeps it first in the tooltip. The axis
+ * The number is not lost: `locationTick` keeps it first in the tooltip. The axis
  * is for recognition, the tooltip for identification.
  *
  * Pure functions in their own module so they can be tested without loading
@@ -19,17 +19,17 @@
  */
 
 /** The fields these helpers need — narrower than a full ranking row. */
-export interface SalonAxisRow {
-  readonly salonNumber: string;
+export interface LocationAxisRow {
+  readonly locationCode: string;
   readonly storeName: string;
 }
 
-/** Maps a salon number to the name shown on the axis. */
+/** Maps a location number to the name shown on the axis. */
 export function storeNameTicks(
-  rows: readonly SalonAxisRow[],
+  rows: readonly LocationAxisRow[],
 ): (value: string) => string {
   const byNumber = new Map(
-    rows.filter((row) => row.storeName).map((row) => [row.salonNumber, row.storeName]),
+    rows.filter((row) => row.storeName).map((row) => [row.locationCode, row.storeName]),
   );
   /*
    * Falls back to the number rather than to an empty tick. A nameless bar
@@ -39,9 +39,9 @@ export function storeNameTicks(
 }
 
 /** Widest axis the longest name in view needs, within bounds. */
-export function salonAxisWidth(rows: readonly SalonAxisRow[]): number {
+export function locationAxisWidth(rows: readonly LocationAxisRow[]): number {
   const longest = rows.reduce(
-    (widest, row) => Math.max(widest, (row.storeName || row.salonNumber).length),
+    (widest, row) => Math.max(widest, (row.storeName || row.locationCode).length),
     0,
   );
   /*
@@ -63,7 +63,7 @@ export function salonAxisWidth(rows: readonly SalonAxisRow[]): number {
  * The chart asked for a SYMMETRIC domain — `[-bound, bound]` where `bound` was
  * the largest absolute change plus 15% headroom — on the reasoning that a +5%
  * bar and a -5% bar should be the same length. That reasoning is right, and it
- * only applies when there ARE bars on both sides. With every salon up, the
+ * only applies when there ARE bars on both sides. With every location up, the
  * symmetry manufactured a whole negative half nobody could reach: half the plot
  * area empty, every real bar squeezed into the other half, and an axis labelled
  * down to -71% under a heading about growth.

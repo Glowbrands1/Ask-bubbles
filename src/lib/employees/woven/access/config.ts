@@ -10,7 +10,7 @@ import "server-only";
  *   shadow  as off, AND each successful scheduled directory sync records the
  *           plan in `employee_access_runs` / `employee_access_actions`
  *           (result = shadow). Still nothing is applied: no account is
- *           created, no invite sent, no access revoked, no salon or role moved.
+ *           created, no invite sent, no access revoked, no location or role moved.
  *
  * THERE IS NO APPLY MODE. Any other value — including "apply" — is reported as
  * a problem and treated as off. Applying actions is a later stage that needs

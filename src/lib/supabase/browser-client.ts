@@ -26,7 +26,7 @@ import { supabaseUrlUsable } from "@/lib/config/runtime";
  *
  * NO CREDENTIAL IS EVER STORED. The password is passed straight to Supabase
  * Auth and never written to state that outlives the call, never logged, and
- * never sent anywhere else. Ask Sunny has no password database of its own and
+ * never sent anywhere else. Ask Bubbles has no password database of its own and
  * hashes nothing itself — that is Supabase Auth's job, and duplicating it
  * would mean owning a credential store we have no business owning.
  */

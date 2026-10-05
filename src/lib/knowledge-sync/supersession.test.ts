@@ -72,7 +72,7 @@ describe("the Content view shows the replaced upload beside its current Woven co
     state: "UNCHANGED",
     reason: null,
     pendingAction: "none",
-    inAskSunny: true,
+    inKnowledgeBase: true,
     knowledgeDocumentId: "w-handbook",
     firstSeenAt: "2026-09-29T00:00:00Z",
     lastSeenAt: "2026-09-30T00:00:00Z",

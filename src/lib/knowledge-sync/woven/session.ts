@@ -40,7 +40,7 @@ import { hiddenInputValue, safePath, WovenTeamError, type PageResponse, type Wov
  *   A. the credential form again (a password field) or an HTTP error
  *        → `login_failed`. The only outcome that blames the password.
  *   B. the ACCOUNT CHOOSER ("Select account for login", verified live)
- *        → credentials accepted; choose JB & Associates (below).
+ *        → credentials accepted; choose WOVEN_TEAM_COMPANY (below).
  *   C. the "Add Profile Photo" interstitial (verified live)
  *        → "Ask me later": the page's own form, SkipAddEmployeeProfileImage=true.
  *   D. anything else — normally the dashboard
@@ -57,7 +57,7 @@ import { hiddenInputValue, safePath, WovenTeamError, type PageResponse, type Wov
  *                          guessed.
  *
  * COMPANY CHECK, ALWAYS: the account dropdown (`a.dropdown-toggle`, verified)
- * must then show JB & Associates, or nothing is read.
+ * must then show WOVEN_TEAM_COMPANY, or nothing is read.
  *
  * The session is re-established automatically when a read finds it expired;
  * see `WovenKnowledgeConnector.withSession`.
@@ -73,7 +73,7 @@ export const unverifiedCompanySelector: CompanySelector = {
   async select() {
     throw new WovenTeamError(
       "company_selection_unverified",
-      "Woven accepted the sign-in and asked which account to open, and Ask Sunny does not yet know how to answer that step.",
+      "Woven accepted the sign-in and asked which account to open, and Ask Bubbles does not yet know how to answer that step.",
       { path: LOGIN_SUBMIT_PATH },
     );
   },
@@ -122,7 +122,7 @@ export function profilePhotoSkip(html: string, pagePath: string): { path: string
   const doc = parseHtmlDocument(html);
   const form = byId(doc, PROFILE_PHOTO_FORM_ID);
   const changed = (why: string) =>
-    new WovenTeamError("profile_photo_prompt_changed", `Woven's "Add Profile Photo" page ${why}, so Ask Sunny did not submit it.`, {
+    new WovenTeamError("profile_photo_prompt_changed", `Woven's "Add Profile Photo" page ${why}, so Ask Bubbles did not submit it.`, {
       path: safePath(pagePath),
     });
   if (!form || form.tagName !== "form") throw changed("no longer has its form");
@@ -256,7 +256,7 @@ export const markupCompanySelector: CompanySelector = {
       case "ambiguous":
         throw new WovenTeamError(
           "company_selection_unverified",
-          `Woven's account chooser lists ${company} ${action.count} times, so Ask Sunny did not pick one.`,
+          `Woven's account chooser lists ${company} ${action.count} times, so Ask Bubbles did not pick one.`,
           { path: safePath(page.path) },
         );
       case "unsupported":
@@ -333,7 +333,7 @@ export function continueLoginSubmission(
 ): { path: string; fields: Record<string, string> } {
   const doc = parseHtmlDocument(html);
   const changed = (why: string) =>
-    new WovenTeamError("account_chooser_changed", `Woven's account chooser ${why}, so Ask Sunny did not submit it.`, {
+    new WovenTeamError("account_chooser_changed", `Woven's account chooser ${why}, so Ask Bubbles did not submit it.`, {
       path: safePath(pagePath),
     });
 
@@ -405,7 +405,7 @@ export function readLoginForm(html: string): { fields: Record<string, string>; a
   const form = elementsByTag(doc, "form").find((f) => actionPath(attr(f, "action") ?? "") === LOGIN_SUBMIT_PATH.toLowerCase());
   const token = hiddenInputValue(doc, LOGIN_FIELDS.antiForgery);
   if (!form || !token) {
-    throw new WovenTeamError("login_page_changed", "Woven's sign-in page no longer looks the way Ask Sunny expects.", {
+    throw new WovenTeamError("login_page_changed", "Woven's sign-in page no longer looks the way Ask Bubbles expects.", {
       path: LOGIN_PAGE_PATH,
     });
   }
@@ -474,7 +474,7 @@ export async function establishSession(client: WovenTeamClient, options: Session
       }
       throw new WovenTeamError(
         previous === "photo" ? "profile_photo_prompt_failed" : "company_selection_unverified",
-        `Woven answered HTTP ${landing.status} after Ask Sunny ${previous === "photo" ? "skipped the profile-photo prompt" : `chose ${options.company}`}.`,
+        `Woven answered HTTP ${landing.status} after Ask Bubbles ${previous === "photo" ? "skipped the profile-photo prompt" : `chose ${options.company}`}.`,
         { status: landing.status, path: safePath(landing.path) },
       );
     }
@@ -494,7 +494,7 @@ export async function establishSession(client: WovenTeamClient, options: Session
 
     if (isAccountChooser(landing.text)) {
       if (chose) {
-        throw new WovenTeamError("company_selection_unverified", `Ask Sunny chose ${options.company} on Woven's account chooser, but Woven showed the chooser again.`, {
+        throw new WovenTeamError("company_selection_unverified", `Ask Bubbles chose ${options.company} on Woven's account chooser, but Woven showed the chooser again.`, {
           path: safePath(landing.path),
         });
       }
@@ -525,7 +525,7 @@ export async function establishSession(client: WovenTeamClient, options: Session
   if (!isDashboard(landing)) {
     throw new WovenTeamError(
       "dashboard_not_reached",
-      `Ask Sunny signed in to Woven but did not reach the Woven dashboard, so nothing was read.`,
+      `Ask Bubbles signed in to Woven but did not reach the Woven dashboard, so nothing was read.`,
       { path: safePath(landing.path) },
     );
   }
@@ -533,7 +533,7 @@ export async function establishSession(client: WovenTeamClient, options: Session
   if (!company) {
     throw new WovenTeamError(
       "company_not_verified",
-      `Ask Sunny signed in to Woven but could not confirm it is working in ${options.company}, so nothing was read.`,
+      `Ask Bubbles signed in to Woven but could not confirm it is working in ${options.company}, so nothing was read.`,
       { path: safePath(landing.path) },
     );
   }

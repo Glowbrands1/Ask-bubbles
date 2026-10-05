@@ -25,7 +25,7 @@ import type {
  * The desync this checkpoint fixes was structural, not arithmetic: the card
  * derived follow-ups from `useAppStore().forms`, a browser-side demo
  * collection with its own `overdue` / `due_soon` statuses, while Form
- * Monitoring had moved to Supabase. Two sources, two answers, same salon.
+ * Monitoring had moved to Supabase. Two sources, two answers, same location.
  *
  * So the load-bearing tests here are the two that assert the SOURCE — that the
  * card renders what the server handed it, and that the module no longer reaches
@@ -139,7 +139,7 @@ const REVIEW_BLOCK: ReviewsOverviewBlock = {
   status: "ready",
   totalReviews: 88,
   averageRating: 4.8523,
-  salonCount: 15,
+  locationCount: 15,
 };
 
 describe("the follow-ups card", () => {
@@ -155,7 +155,7 @@ describe("the follow-ups card", () => {
     expect(screen.getByText("2 due this week")).toBeTruthy();
   });
 
-  it("lists the rows the server sent, with the salon and how late each is", () => {
+  it("lists the rows the server sent, with the location and how late each is", () => {
     render(
       <Overview
         followUps={followUps({
@@ -249,7 +249,7 @@ describe("the follow-ups card", () => {
       <Overview followUps={followUps({ failure: "connection refused" })} />,
     );
     expect(screen.getByText("Follow-ups could not be read")).toBeTruthy();
-    expect(screen.getByText("Ask Sunny could not reach the Forms record.")).toBeTruthy();
+    expect(screen.getByText("Ask Bubbles could not reach the Forms record.")).toBeTruthy();
     // And the rest of the screen is still there. Google Reviews is now the
     // horizontal yellow bar rather than a card, so it is identified by its own
     // label instead of a card title.
@@ -351,19 +351,19 @@ describe("the second card agrees with the first, and its tiles add up", () => {
     expect(screen.getAllByRole("link", { name: /open form monitoring/i })).toHaveLength(2);
   });
 
-  it("names the reader's own assignment rather than every salon they cover", () => {
+  it("names the reader's own assignment rather than every location they cover", () => {
     render(
       <Overview
         followUps={followUps({ scopeLabel: "MO Kansas City Wornall" })}
       />,
     );
     expect(screen.getByText("Across MO Kansas City Wornall")).toBeTruthy();
-    expect(screen.queryByText("Across every salon you cover")).toBeNull();
+    expect(screen.queryByText("Across every location you cover")).toBeNull();
   });
 
   it("says how many records were held back as non-production", () => {
     render(<Overview followUps={followUps({ excluded: 3 })} />);
-    expect(screen.getByText(/3 records are filed against a salon that is not on the roster/)).toBeTruthy();
+    expect(screen.getByText(/3 records are filed against a location that is not on the roster/)).toBeTruthy();
     expect(screen.getByText(/still in Form Monitoring/)).toBeTruthy();
   });
 });
@@ -462,12 +462,12 @@ describe("the Overview does not present seeded content as live company data", ()
    */
   const ready: ReportingOverview = {
     status: "ready",
-    scopeLabel: "15 salons included",
+    scopeLabel: "15 locations included",
     updatedLabel: "Sep 8, 2026",
     sources: [
       {
-        key: "salon-performance",
-        label: "Salon Performance",
+        key: "location-performance",
+        label: "Location Performance",
         periodLabel: "YTD Aug 2026",
         ingestedAt: null,
       },
@@ -478,7 +478,7 @@ describe("the Overview does not present seeded content as live company data", ()
         label: "Total Revenue",
         value: "$7.5M",
         periodLabel: "YTD Aug 2026",
-        salonCount: 15,
+        locationCount: 15,
         cadence: "monthly" as const,
         sourceReport: "Comp Report",
         unavailableReason: null,
@@ -505,8 +505,8 @@ describe("the Overview does not present seeded content as live company data", ()
      * note claiming the block is a placeholder.
      *
      * The four numbers named here are the seeded ones exactly: 189 gained,
-     * 4.63 average, a 230 goal summed from invented per-salon goals, and 15
-     * salons counted by the length of the demo array.
+     * 4.63 average, a 230 goal summed from invented per-location goals, and 15
+     * locations counted by the length of the demo array.
      */
     expect(screen.getByText("Total reviews")).toBeTruthy();
     expect(
@@ -516,7 +516,7 @@ describe("the Overview does not present seeded content as live company data", ()
     expect(screen.queryByText("4.63")).toBeNull();
     expect(screen.queryByText(/of 230 weekly goal/)).toBeNull();
     // The invented activity feed.
-    expect(screen.queryByText("Recent Ask Sunny activity")).toBeNull();
+    expect(screen.queryByText("Recent Ask Bubbles activity")).toBeNull();
     // And the label that started this.
     expect(
       screen.queryByText(/Demo content — seeded for this prototype/),
@@ -551,7 +551,7 @@ describe("the Overview does not present seeded content as live company data", ()
     expect(document.querySelectorAll(".stat-cell").length).toBeGreaterThan(0);
     // The old card's heading and its claim about "yesterday" are both gone.
     expect(screen.queryByText("Daily Stats")).toBeNull();
-    expect(screen.queryByText("Yesterday across all salons")).toBeNull();
+    expect(screen.queryByText("Yesterday across all locations")).toBeNull();
   });
 
   it("shows no seeded Daily Stats grid in demo mode either", async () => {
@@ -582,7 +582,7 @@ describe("the Overview does not present seeded content as live company data", ()
      * fabricated actions attributed to named people. In demo mode it arrives
      * a tick after first paint instead of with it.
      */
-    expect(await screen.findByText("Recent Ask Sunny activity")).toBeTruthy();
+    expect(await screen.findByText("Recent Ask Bubbles activity")).toBeTruthy();
     expect(
       screen.getAllByText(/Demo content — seeded for this prototype/).length,
     ).toBeGreaterThan(0);
@@ -593,7 +593,7 @@ describe("the Overview does not present seeded content as live company data", ()
      * It was `greetingForHour(demoNow().getUTCHours())` — a fixed August
      * instant, read as UTC. On the live Preview every manager was greeted at
      * whatever time of day DEMO_ANCHOR fell on, and even a real clock read as
-     * UTC would be four or five hours out at a US salon.
+     * UTC would be four or five hours out at a US location.
      */
     /*
      * THE RULE IS UNCHANGED; THE GREETING MOVED. It now lives in the band —
@@ -628,7 +628,7 @@ describe("the Overview does not present seeded content as live company data", ()
     const page = readFileSync("src/app/(app)/page.tsx", "utf8");
     expect(page).not.toMatch(/loadSalesTotals\(/);
     expect(page).not.toMatch(/listSalesTotalsDates/);
-    expect(page).not.toMatch(/aggregateSalons|aggregateMeasure|buildKpiCards/);
+    expect(page).not.toMatch(/aggregateLocations|aggregateMeasure|buildKpiCards/);
 
     const projection = readFileSync("src/lib/reporting/read/overview.ts", "utf8")
       .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -647,7 +647,7 @@ describe("the Overview panel states which way each measure moved", () => {
    * THE ARROW ON THE OVERVIEW, AND THE THREE THINGS THAT CAN GO WRONG WITH IT.
    *
    * The panel showed a figure and its period and no direction at all. It now
-   * carries the report's own change, coloured by the same rule the Salon
+   * carries the report's own change, coloured by the same rule the Location
    * Performance KPI row uses — green good, red behind — so the two surfaces
    * cannot describe the same measure differently.
    *
@@ -662,7 +662,7 @@ describe("the Overview panel states which way each measure moved", () => {
     label: "Total Revenue",
     value: "$7.5M",
     periodLabel: "YTD Aug 2026",
-    salonCount: 15,
+    locationCount: 15,
     cadence: "monthly" as const,
     sourceReport: "Comp Report",
     unavailableReason: null,
@@ -675,12 +675,12 @@ describe("the Overview panel states which way each measure moved", () => {
       <PerformanceOverviewCard
         overview={{
           status: "ready",
-          scopeLabel: "15 salons included",
+          scopeLabel: "15 locations included",
           updatedLabel: "Sep 8, 2026",
           sources: [
             {
-              key: "salon-performance",
-              label: "Salon Performance",
+              key: "location-performance",
+              label: "Location Performance",
               periodLabel: "YTD Aug 2026",
               ingestedAt: null,
             },
@@ -780,7 +780,7 @@ describe("the collapsed strip states what the panel states", () => {
     label: "Total Revenue",
     value: "$7.5M",
     periodLabel: "YTD Aug 2026",
-    salonCount: 15,
+    locationCount: 15,
     cadence: "monthly" as const,
     sourceReport: "Comp Report",
     unavailableReason: null,
@@ -790,12 +790,12 @@ describe("the collapsed strip states what the panel states", () => {
 
   const readyWith = (kpis: OverviewKpi[]): ReportingOverview => ({
     status: "ready",
-    scopeLabel: "15 salons included",
+    scopeLabel: "15 locations included",
     updatedLabel: "Sep 8, 2026",
     sources: [
       {
-        key: "salon-performance",
-        label: "Salon Performance",
+        key: "location-performance",
+        label: "Location Performance",
         periodLabel: "YTD Aug 2026",
         ingestedAt: null,
       },
@@ -910,7 +910,7 @@ describe("the training section with no destinations configured", () => {
     // A heading over nothing is what the review objected to. The section says
     // something true instead, and names who can fix it.
     expect(
-      screen.getByText(/Training is hosted in Teams and Woven rather than in Ask Sunny/),
+      screen.getByText(/Training is hosted in Teams and Woven rather than in Ask Bubbles/),
     ).toBeTruthy();
     expect(screen.getByText(/An\s+administrator can set them/)).toBeTruthy();
   });

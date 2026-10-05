@@ -45,7 +45,7 @@ function renderComposer(
 }
 
 function textarea(): HTMLTextAreaElement {
-  return screen.getByLabelText("Ask Sunny a question") as HTMLTextAreaElement;
+  return screen.getByLabelText("Ask Bubbles a question") as HTMLTextAreaElement;
 }
 
 afterEach(cleanup);
@@ -236,7 +236,7 @@ describe("the explanatory prose no longer occupies a permanent row", () => {
      */
     renderComposer();
     const info = screen.getByRole("button", {
-      name: "About answer modes and Sunny's limits",
+      name: "About answer modes and Bubbles' limits",
     });
     expect(info.tagName).toBe("BUTTON");
     expect(info.hasAttribute("disabled")).toBe(false);

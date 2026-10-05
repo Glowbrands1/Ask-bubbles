@@ -83,7 +83,7 @@ const OTHER_PERSON =
   /\b(?:clients?|guests?|customers?|members?|co-?workers?|colleagues?|team\s?mates?|associates?|someone|somebody|anyone|anybody|everyone|everybody|person|people|another|other|managers?|supervisors?|directors?|leaders?|consultants?|trainees?|trainers?|mom|dad|mother|father|sons?|daughters?|child|children|kids?|boyfriend|girlfriend|husband|wife|partner|friends?|family|parents?|sister|brother)\b/gi;
 
 /** Groups that can be "they" but never "he" or "she". */
-const COLLECTIVE = /\b(?:team|staff|management|leadership|employees|everyone|people|crew|salon|company)\b/i;
+const COLLECTIVE = /\b(?:team|staff|management|leadership|employees|everyone|people|crew|location|company)\b/i;
 
 /**
  * Capitalised words that are not a person — form vocabulary, the calendar and
@@ -415,7 +415,7 @@ export interface EmployeeNameResult {
  * that is unambiguous. See the header for what is never touched.
  *
  * `knownWords` are capitalised words that are not people in this form's
- * context — the brand, the salon — so naming them does not hold a sentence
+ * context — the brand, the location — so naming them does not hold a sentence
  * back.
  */
 export function nameInsteadOfPronouns(

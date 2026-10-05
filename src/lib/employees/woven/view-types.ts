@@ -34,9 +34,9 @@ export interface DirectoryRow {
   positionMappingStatus: PositionMapStatus | null;
   primaryLocationId: string | null;
   primaryLocationName: string | null;
-  /** The primary location's map status; `ignored` is a deliberate non-salon location such as Corporate. */
+  /** The primary location's map status; `ignored` is a deliberate non-location location such as Corporate. */
   primaryLocationMappingStatus: LocationMapStatus | null;
-  primarySalonNumber: string | null;
+  primaryLocationCode: string | null;
   additionalLocations: DirectoryLocation[];
   temporaryOrExpiringLocations: DirectoryLocation[];
   activeLocationCount: number;
@@ -192,10 +192,10 @@ export interface LocationMappingRow {
   isNonLocation: boolean | null;
   employeeCount: number;
   status: LocationMapStatus;
-  salonNumber: string | null;
-  salonName: string | null;
-  suggestedSalonNumber: string | null;
-  suggestedSalonName: string | null;
+  locationCode: string | null;
+  locationName: string | null;
+  suggestedLocationCode: string | null;
+  suggestedLocationName: string | null;
   reviewedBy: string | null;
   reviewedAt: string | null;
 }
@@ -225,7 +225,7 @@ export interface AccessPreviewRow {
   positionMappingConfirmed: boolean;
   mappedRole: string | null;
   mappedScopeLevel: string | null;
-  mappedPrimarySalonNumber: string | null;
+  mappedPrimaryLocationCode: string | null;
   appUserRole: string | null;
   appUserStatus: string | null;
   appUserScopeLevel: string | null;
@@ -234,7 +234,7 @@ export interface AccessPreviewRow {
   wouldProvision: boolean;
   wouldDeactivate: boolean;
   roleDiffers: boolean;
-  primarySalonDiffers: boolean;
+  primaryLocationDiffers: boolean;
   /** A protected override's role, when this employee has one. */
   roleOverride: string | null;
   /** The role this employee resolves to: override → confirmed position → none. */
@@ -255,7 +255,7 @@ export interface EligibilityResult {
     employmentStatus: EmploymentStatus;
     wouldCreateRole: string | null;
     wouldCreateScopeLevel: string | null;
-    primarySalonNumber: string | null;
+    primaryLocationCode: string | null;
   } | null;
   /** Always true in phase one: nothing is created. */
   previewOnly: true;

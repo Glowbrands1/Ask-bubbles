@@ -119,14 +119,14 @@ export async function authorizeRequest(
     if (unauthenticatedBypassIgnoredInProduction() && !warnedAboutIgnoredFlag) {
       warnedAboutIgnoredFlag = true;
       console.error(
-        `[ask-sunny] SECURITY: ${UNAUTHENTICATED_ESCAPE_HATCH} is set, but this is a production build and the bypass is disabled. Protected requests are being refused. Remove the variable — it can never take effect here.`,
+        `[ask-bubbles] SECURITY: ${UNAUTHENTICATED_ESCAPE_HATCH} is set, but this is a production build and the bypass is disabled. Protected requests are being refused. Remove the variable — it can never take effect here.`,
       );
     }
 
     if (!unauthenticatedAccessAllowed()) {
       throw new AuthError(
         "no_provider",
-        "This action requires authentication, and no identity provider is configured. Ask Sunny refuses protected functionality in live mode until one is connected.",
+        "This action requires authentication, and no identity provider is configured. Ask Bubbles refuses protected functionality in live mode until one is connected.",
         provider.missingConfiguration,
       );
     }
@@ -150,7 +150,7 @@ export async function authorizeRequest(
     if (!warnedAboutEscapeHatch) {
       warnedAboutEscapeHatch = true;
       console.warn(
-        `[ask-sunny] SECURITY: ${UNAUTHENTICATED_ESCAPE_HATCH} is enabled in a ${process.env.NODE_ENV ?? "non-production"} runtime. Protected routes are serving unauthenticated requests. This is for local acceptance testing only.`,
+        `[ask-bubbles] SECURITY: ${UNAUTHENTICATED_ESCAPE_HATCH} is enabled in a ${process.env.NODE_ENV ?? "non-production"} runtime. Protected routes are serving unauthenticated requests. This is for local acceptance testing only.`,
       );
     }
 
@@ -217,7 +217,7 @@ export async function authorizeRequest(
  *
  * READING A SINGLE CITED DOCUMENT IS NOT MANAGEMENT and does not come through
  * here — `view_knowledge` on its own still opens one document's detail and its
- * stored file, which is what keeps Sunny's citations openable for every role.
+ * stored file, which is what keeps Bubbles' citations openable for every role.
  */
 export async function authorizeAdminConsoleRequest(
   request: Request,

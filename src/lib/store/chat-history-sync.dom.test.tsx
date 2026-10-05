@@ -14,7 +14,7 @@ import type { ChatConversation } from "@/types";
  * enforced: in the store, which is the single shared persistence path both
  * conversation-creating surfaces write through.
  *
- * Conversations already in a browser predate any promise that Ask Sunny would
+ * Conversations already in a browser predate any promise that Ask Bubbles would
  * keep them, and they contain what managers asked about named employees. They
  * go to the account when somebody presses Import, and at no other moment —
  * INCLUDING when one of them is continued, since syncing it then would send

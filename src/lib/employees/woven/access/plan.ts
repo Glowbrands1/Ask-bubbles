@@ -1,3 +1,4 @@
+import { WOVEN_AUTO_PROVISION_ROLES, WOVEN_LOCATION_MANAGED_ROLES } from "@/config/company/woven";
 import { ADMIN_CONSOLE_ROLES } from "@/lib/permissions";
 import type { Role } from "@/types";
 
@@ -9,23 +10,24 @@ import type { AccessAction, PlannedRow, PlannerAccount, PlannerEmployee, Planner
  * THE ACCESS PLANNER — pure, deterministic, and it changes nothing
  * ============================================================================
  *
- * Given the Woven directory, the approved mappings and the Ask Sunny accounts
+ * Given the Woven directory, the approved mappings and the Ask Bubbles accounts
  * with their links, it says what an access sync WOULD do for each person. It
  * reads no database and writes none: the same input always gives the same
  * plan, so running it ten times is running it once.
  *
- * THE POLICY (owner decisions, 2 Oct 2026)
+ * THE POLICY (reference-platform defaults; the role lists are company config
+ * in src/config/company/woven.ts and are NOT yet confirmed by Buff City Soap)
  *
  *   IDENTITY. A confirmed link (Woven EmployeeID → account) is authoritative.
  *     Without one, an exact, case-insensitive email match to exactly ONE
  *     unclassified account is only PROPOSED (FLAG_LINK_REVIEW) — never acted
  *     on, never merged. Email is never used to re-match a linked account.
  *
- *   ACCOUNTS. Only a Woven position whose APPROVED mapping is Salon Director
- *     or Assistant Salon Director may get an account automatically, and only
+ *   ACCOUNTS. Only a Woven position whose APPROVED mapping is in AUTO_PROVISION_ROLES
+ *     (default: Location Manager, Assistant Manager) may get an account automatically, and only
  *     when active, with a usable unique email (personal addresses allowed)
- *     and a primary location mapped to a salon. Everyone else — Tanning
- *     Consultants, District Managers and above, corporate and unmapped
+ *     and a primary location mapped to a location. Everyone else — team
+ *     members, District Managers and above, corporate and unmapped
  *     positions — gets no account from Woven.
  *
  *   TERMINATION. Only Woven's own Terminated status, read in the latest run,
@@ -33,12 +35,11 @@ import type { AccessAction, PlannedRow, PlannerAccount, PlannerEmployee, Planner
  *     Woven is review only. Unknown status fails closed. Protected accounts
  *     and administrators are never disabled automatically.
  *
- *   LOCATION AND ROLE. Only for a linked Salon Director / Assistant Salon
- *     Director whose scope is a single salon, with the matching managed flag:
- *     the PRIMARY salon follows Woven's mapped primary location, and the role
+ *   LOCATION AND ROLE. Only for a linked account in LOCATION_MANAGED_ROLES whose scope is a single location, with the matching managed flag:
+ *     the PRIMARY location follows Woven's mapped primary location, and the role
  *     may move between those two roles. Additional, temporary or expiring
  *     locations never change access. A global, region or district account is
- *     never narrowed to a salon. Anything else that differs is flagged.
+ *     never narrowed to a location. Anything else that differs is flagged.
  *
  *   REHIRE. A linked account whose access was revoked and who is Active in
  *     Woven again is flagged for review, never re-enabled.
@@ -49,14 +50,14 @@ import type { AccessAction, PlannedRow, PlannerAccount, PlannerEmployee, Planner
 
 export const ACCESS_POLICY_VERSION = "access-policy-1";
 
-/** The approved mapped roles that may be provisioned from Woven in this rollout. */
-export const AUTO_PROVISION_ROLES: readonly Role[] = ["location_manager", "assistant_manager"];
-/** The roles whose primary salon and role Woven may manage — the salon-level manager tier. */
-export const SALON_MANAGED_ROLES: readonly Role[] = ["location_manager", "assistant_manager"];
+/** Company policy (src/config/company/woven.ts): who the preview may propose an account for. */
+export const AUTO_PROVISION_ROLES: readonly Role[] = WOVEN_AUTO_PROVISION_ROLES;
+/** Company policy: the roles whose primary location and role Woven may manage. */
+export const LOCATION_MANAGED_ROLES: readonly Role[] = WOVEN_LOCATION_MANAGED_ROLES;
 
-const isSalonManagedRole = (role: Role | null): role is Role => role !== null && SALON_MANAGED_ROLES.includes(role);
+const isLocationManagedRole = (role: Role | null): role is Role => role !== null && LOCATION_MANAGED_ROLES.includes(role);
 const lower = (value: string | null) => (value ?? "").trim().toLowerCase();
-export const salonAreaId = (salonNumber: string) => `loc-${salonNumber}`;
+export const locationAreaId = (locationCode: string) => `loc-${locationCode}`;
 
 function accountView(account: PlannerAccount, via: NonNullable<PlannedRow["account"]>["via"]): NonNullable<PlannedRow["account"]> {
   return {
@@ -88,8 +89,8 @@ function proposedLocation(employee: PlannerEmployee, locations: Map<string, Plan
   if (!employee.primaryWovenLocationId) return { areaId: null, problem: "primary_location_missing" } as const;
   const location = locations.get(employee.primaryWovenLocationId);
   if (!location || location.status === "unmapped") return { areaId: null, problem: "primary_location_unmapped" } as const;
-  if (location.status === "ignored" || !location.salonNumber) return { areaId: null, problem: "primary_location_not_a_salon" } as const;
-  return { areaId: salonAreaId(location.salonNumber), problem: null } as const;
+  if (location.status === "ignored" || !location.locationCode) return { areaId: null, problem: "primary_location_not_a_location" } as const;
+  return { areaId: locationAreaId(location.locationCode), problem: null } as const;
 }
 
 function confirmedRole(employee: PlannerEmployee, positions: Map<string, PlannerPosition>): Role | null {
@@ -276,7 +277,7 @@ function planEmployee(employee: PlannerEmployee, ctx: Context): PlannedRow {
   }
   if (linked.status === "disabled") {
     actions.push("FLAG_STATUS_CONFLICT");
-    reasons.push("disabled_in_ask_sunny_active_in_woven");
+    reasons.push("disabled_in_knowledge_base_active_in_woven");
     return row();
   }
   if (employee.issues.includes("status_termination_conflict")) reasons.push("woven_shows_past_termination_date");
@@ -298,9 +299,9 @@ function planEmployee(employee: PlannerEmployee, ctx: Context): PlannedRow {
     return row();
   }
 
-  const salonTier = isSalonManagedRole(linked.role) && linked.scopeLevel === "location";
-  if (!salonTier) {
-    reasons.push("scope_above_salon_level_not_managed_by_woven");
+  const locationTier = isLocationManagedRole(linked.role) && linked.scopeLevel === "location";
+  if (!locationTier) {
+    reasons.push("scope_above_location_level_not_managed_by_woven");
     if (role !== linked.role) {
       actions.push("FLAG_ROLE_REVIEW");
       reasons.push("woven_position_maps_to_a_different_role");
@@ -310,16 +311,16 @@ function planEmployee(employee: PlannerEmployee, ctx: Context): PlannedRow {
 
   let locationBlocked = false;
   if (role !== linked.role) {
-    if (isSalonManagedRole(role) && linked.managedRole) {
+    if (isLocationManagedRole(role) && linked.managedRole) {
       actions.push("UPDATE_ROLE");
-      reasons.push("woven_position_changed_within_salon_tier");
+      reasons.push("woven_position_changed_within_location_tier");
       before = { ...(before ?? {}), role: linked.role };
       after = { ...(after ?? {}), role };
     } else {
       actions.push("FLAG_ROLE_REVIEW");
-      reasons.push(isSalonManagedRole(role) ? "role_not_woven_managed" : "woven_position_outside_automatic_tier");
+      reasons.push(isLocationManagedRole(role) ? "role_not_woven_managed" : "woven_position_outside_automatic_tier");
       /* A pending role change outside the tier also holds the location: review the person, not one field. */
-      locationBlocked = !isSalonManagedRole(role);
+      locationBlocked = !isLocationManagedRole(role);
     }
   }
 
@@ -395,7 +396,7 @@ function planWithoutAccount(
     return row();
   }
   actions.push("CREATE_USER");
-  reasons.push("eligible_salon_manager_without_account");
+  reasons.push("eligible_location_manager_without_account");
   setValues(null, {
     email,
     display_name: employee.name,

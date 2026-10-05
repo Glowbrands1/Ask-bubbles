@@ -3,10 +3,10 @@
  * THE WOVEN TEAM WEB-APP CONTRACT — every assumed Woven name, in one file
  * ============================================================================
  *
- * SOURCE OF TRUTH: "Woven Team → Ask Sunny: Read-Only Connector Handoff",
- * compiled from the authenticated JB & Associates pages and the JavaScript
+ * SOURCE OF TRUTH: the reference platform's read-only Woven Team connector
+ * handoff, compiled from authenticated Woven Team pages and the JavaScript
  * those pages served. These are Woven Team's INTERNAL, authenticated web-app
- * routes (class B/D in the handoff), used deliberately: Ask Sunny reads the
+ * routes (class B/D in the handoff), used deliberately: Ask Bubbles reads the
  * same responses the signed-in web app reads. This file is the one place to
  * correct when Woven changes a name, and the one place to finish when browser
  * evidence resolves an `UNVERIFIED` item.
@@ -26,8 +26,12 @@
 
 export const DEFAULT_WOVEN_TEAM_BASE_URL = "https://app.woven.team";
 
-/** The tenant this build syncs. Configurable, checked after sign-in. */
-export const DEFAULT_WOVEN_COMPANY = "JB & Associates";
+/*
+ * THE TENANT IS NOT A DEFAULT. A Woven login can see more than one company
+ * (the account chooser lists every company the user belongs to), so the
+ * company this deployment syncs MUST be named in WOVEN_TEAM_COMPANY and is
+ * checked after sign-in. With it unset, knowledge sync stays disabled.
+ */
 
 /* ------------------------------------------------------ authentication -- */
 
@@ -53,8 +57,8 @@ export const LOGIN_FORM_MARKER = /action\s*=\s*["']\/Login\/Authenticate["']/i;
 
 /**
  * VERIFIED (browser evidence, Sept 2026): after sign-in, the authenticated
- * account dropdown `a.dropdown-toggle` carries the active company's name
- * ("JB & Associates"). This is the post-login company check.
+ * account dropdown `a.dropdown-toggle` carries the active company's name. This is the post-login company check
+ * against WOVEN_TEAM_COMPANY.
  */
 export const ACTIVE_COMPANY_TAG = "a";
 export const ACTIVE_COMPANY_CLASS = "dropdown-toggle";
@@ -64,7 +68,7 @@ export const ACTIVE_COMPANY_CLASS = "dropdown-toggle";
  * `POST /Login/Authenticate` answers 200 at `/Login/Authenticate?ReturnUrl=%2F`
  * with the ACCOUNT CHOOSER, not a login error. Its visible heading is "Select
  * account for login" (the tab title reads "Select Company"), with a searchable
- * "Account" table listing JB & Associates and Midwest Soap Makers. The
+ * "Account" table listing every company the login belongs to. The
  * credentials were accepted: this is never `login_failed`.
  *
  * VERIFIED (browser evidence, 29 Sept 2026): how a chooser row submits.
@@ -305,7 +309,7 @@ export const fileLibraryDownloadPath = (fileLibraryId: string) =>
 export const FILE_LIBRARY_PUBLISHED_STATUSES = ["published"];
 export const FILE_LIBRARY_UNPUBLISHED_STATUSES = ["unpublished", "draft", "archived", "not shared"];
 /**
- * The File Library type labels Ask Sunny can index, mapped to a file type.
+ * The File Library type labels Ask Bubbles can index, mapped to a file type.
  * "PDF" is VERIFIED; the Word label is UNVERIFIED and matched loosely. Anything
  * else (video, image, link) is an unsupported format, not a failure.
  */

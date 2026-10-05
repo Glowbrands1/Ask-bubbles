@@ -162,13 +162,13 @@ export default async function FormTemplatesPage() {
       <PageHeader
         eyebrow="Authorized admin"
         title="Form Templates"
-        description="Two layers: the document template Ask Sunny fills, and the official PDF or Word copy each form was issued as."
+        description="Two layers: the document template Ask Bubbles fills, and the official PDF or Word copy each form was issued as."
       />
 
       {/*
         NOT `PermissionGate`. Roles have not been configured, so the default
         matrix was replacing this page with "not available for your access
-        level" for a Salon Director — an invented restriction in front of the
+        level" for a Location Director — an invented restriction in front of the
         owner's own templates, enforced against a role the browser asserts. The
         notice says what the permission will be; see `forms-gate.tsx`.
       */}

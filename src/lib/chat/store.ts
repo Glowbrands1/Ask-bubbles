@@ -80,12 +80,12 @@ interface MessageRow {
 function unavailable(action: string): never {
   /*
    * The Postgres message can quote row contents — and rows here hold what
-   * somebody asked Sunny about a named employee. It is never surfaced and never
+   * somebody asked Bubbles about a named employee. It is never surfaced and never
    * logged from this module; an operator gets the detail from Supabase's own
    * logs, where it is already access-controlled.
    */
   throw new ChatStoreError(
-    `Ask Sunny could not ${action} just now. Your conversation is still on this device — please try again.`,
+    `Ask Bubbles could not ${action} just now. Your conversation is still on this device — please try again.`,
   );
 }
 

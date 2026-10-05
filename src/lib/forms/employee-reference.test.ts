@@ -147,7 +147,7 @@ describe("what is never rewritten", () => {
     expect(rewrite('She said "he told me I could leave early" before her shift.')).toBe(
       'Jessica said "he told me I could leave early" before the shift.',
     );
-    const manual = "“An employee must notify her manager before she leaves the salon.”";
+    const manual = "“An employee must notify her manager before she leaves the location.”";
     expect(rewrite(manual)).toBe(manual);
   });
 

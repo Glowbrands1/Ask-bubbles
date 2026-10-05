@@ -34,7 +34,7 @@ const SOURCE = readFileSync("src/lib/admin/user-directory.ts", "utf8");
 /** Comments stripped — this file explains the rules it must not break. */
 const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
-describe("Ask Sunny never handles a password", () => {
+describe("Ask Bubbles never handles a password", () => {
   it("never handles a password VALUE", () => {
     /*
      * THE LOAD-BEARING ASSERTION OF THIS FILE. Every route below the directory
@@ -117,7 +117,7 @@ describe("email normalization", () => {
 });
 
 describe("scope normalization fails closed", () => {
-  it("narrows an unrecognised level to salon, the smallest", () => {
+  it("narrows an unrecognised level to location, the smallest", () => {
     const scope = normalizeScope({ level: "planet", primaryAreaId: "loc-1" });
     expect(scope.level).toBe("location");
   });
@@ -656,7 +656,7 @@ describe("disabling revokes access at the AUTHENTICATION layer too", () => {
     const fake = fakeFor(MANAGER);
     const { patchUser } = await load(fake);
     await patchUser(MANAGER.id, { scope: { level: "location", primaryAreaId: "loc-0394", alsoCoversAreaIds: [] } }, actor);
-    expect(fake.audits).toEqual([expect.objectContaining({ action: "scope_changed", from_value: "salon:loc-0307", to_value: "salon:loc-0394" })]);
+    expect(fake.audits).toEqual([expect.objectContaining({ action: "scope_changed", from_value: "location:loc-0307", to_value: "location:loc-0394" })]);
   });
 
   it("re-saving the same scope writes no scope audit row", async () => {

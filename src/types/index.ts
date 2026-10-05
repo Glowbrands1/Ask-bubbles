@@ -294,7 +294,7 @@ export interface ChatMessage {
    */
   coverage?: "grounded" | "insufficient" | "not_applicable";
   /**
-   * What Sunny is offering to create. Rendered inline; creates nothing.
+   * What Bubbles is offering to create. Rendered inline; creates nothing.
    *
    * This replaces `pendingFormTemplateId` / `pendingFormValues`, which
    * accumulated half-filled HR values in browser-local chat state and let a
@@ -305,7 +305,7 @@ export interface ChatMessage {
    * The form choices offered when the request named no form.
    *
    * Present INSTEAD of a proposal: an ambiguous request produces a question,
-   * and a question has no template, no employee and no salon to propose.
+   * and a question has no template, no employee and no location to propose.
    */
   formSelection?: ChatFormSelection;
   /**
@@ -317,7 +317,7 @@ export interface ChatMessage {
   /**
    * Set instead of `content` when the turn failed. The chat surface renders
    * this as a distinct, actionable state rather than as an answer — a failure
-   * must never be mistaken for something Sunny said.
+   * must never be mistaken for something Bubbles said.
    */
   error?: ChatTurnError;
 }
@@ -382,7 +382,7 @@ export interface ChatConversation {
 
 /**
  * ============================================================================
- * A FORM PROPOSAL — WHAT SUNNY IS OFFERING TO CREATE, AND WHAT IS STILL MISSING
+ * A FORM PROPOSAL — WHAT BUBBLES IS OFFERING TO CREATE, AND WHAT IS STILL MISSING
  * ============================================================================
  *
  * THE PROPOSAL IS NOT THE HR RECORD. Nothing here is a form: there is no
@@ -391,13 +391,13 @@ export interface ChatConversation {
  * source of truth, and none of them exist until a manager confirms.
  *
  * SO WHAT IS IT FOR? Showing the manager, before anything is written, exactly
- * which form Sunny matched, who it thinks the form is about, and which salon it
+ * which form Bubbles matched, who it thinks the form is about, and which location it
  * would be filed against — with anything it could not establish named as
  * missing rather than filled in with something plausible.
  *
  * `sourceMessageIds` IS THE DURABLE PART. It points at the manager's own turns
  * rather than copying them, so when a form is eventually drafted the authority
- * is what the manager actually said — not a summary of it, and never Sunny's
+ * is what the manager actually said — not a summary of it, and never Bubbles'
  * paraphrase of it.
  */
 /**
@@ -461,7 +461,7 @@ export interface ChatFormProposal {
    *
    * It is a presentation hint and nothing more. `POST /api/forms/instances`
    * re-checks the template, its published version, the actor's permission and
-   * the salon on every call, so a browser that flips this to `true` gains
+   * the location on every call, so a browser that flips this to `true` gains
    * exactly nothing.
    */
   supportsInlineDraft: boolean;
@@ -472,7 +472,7 @@ export interface ChatFormProposal {
    * `null` for the twelve templates that declare no variants, and for those
    * the column has always held null. Set only where the published version
    * declares EXACTLY ONE reading — the SDIT EPP's, whose subject is an ASD
-   * reviewed by a Training Salon Director — because a document with several
+   * reviewed by a Training Location Director — because a document with several
    * cannot be created from chat at all until something asks which. See
    * `lib/forms/inline-draft.ts`.
    *
@@ -509,31 +509,31 @@ export interface ChatFormProposal {
    * See `lib/forms/payroll-deduct.ts`.
    */
   payrollDeduct?: "yes" | "no" | null;
-  /** Null unless the authenticated scope proves exactly one salon. */
+  /** Null unless the authenticated scope proves exactly one location. */
   locationId: string | null;
   /**
-   * Display name for the resolved salon, when one is available.
+   * Display name for the resolved location, when one is available.
    *
-   * Absent today: there is no salon roster to resolve a name from an id, and
-   * inventing one would put a fictional salon in front of a manager about to
+   * Absent today: there is no location roster to resolve a name from an id, and
+   * inventing one would put a fictional location in front of a manager about to
    * file a disciplinary record. See `docs/chat-phase-2.md`.
    */
   locationName: string | null;
   locationResolution: "resolved" | "needs_selection" | "not_applicable" | "unavailable";
   /**
-   * Salon ids this actor is assigned to, when there is more than one.
+   * Location ids this actor is assigned to, when there is more than one.
    *
    * Their OWN assignment, echoed back so the card can offer a choice rather
-   * than a dead end. Ids, not names: there is no salon roster, and the only
+   * than a dead end. Ids, not names: there is no location roster, and the only
    * source of a display name in this app is seeded demo data. Whatever comes
    * back is re-authorized against the scope by `POST /api/forms/instances`, so
    * an edited list buys nothing.
    */
   authorizedLocationIds: string[];
   /**
-   * A salon the manager NAMED that their scope does not cover, by its roster
+   * A location the manager NAMED that their scope does not cover, by its roster
    * name — set only when nothing they named is theirs. It is never filed
-   * against; it is why the card asks which of their own salons this is.
+   * against; it is why the card asks which of their own locations this is.
    * Optional so conversations stored before it existed still read.
    */
   namedLocationOutOfScope?: string | null;
@@ -541,7 +541,7 @@ export interface ChatFormProposal {
    * What is still needed. `ready` means nothing is — NOT that anything exists.
    *
    * There is no "needs_template" state, because a proposal without a validated
-   * template is not a proposal: when Sunny cannot tell which form was asked
+   * template is not a proposal: when Bubbles cannot tell which form was asked
    * for, or the library does not publish it, the turn carries a question and no
    * proposal at all rather than a card with an empty frame.
    */
@@ -715,7 +715,7 @@ export interface ExternalResource {
   description: string;
   category: ResourceCategory;
   url: string;
-  /** External apps open in a new tab; internal ones route inside Ask Sunny. */
+  /** External apps open in a new tab; internal ones route inside Ask Bubbles. */
   openMode: "new_tab" | "internal" | "modal";
   owner: string;
   /** Honest status — nothing is wired up in this phase. */
@@ -768,6 +768,8 @@ export interface BrandConfig {
     trail: string;
   };
   tagline: string;
+  /** One sentence for page metadata. */
+  description: string;
   /**
    * Maps the semantic aliases in globals.css to this brand's raw values.
    * Applied at the app shell, so a second brand is a config swap.

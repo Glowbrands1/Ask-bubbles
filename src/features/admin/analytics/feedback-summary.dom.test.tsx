@@ -58,7 +58,7 @@ describe("the panel names what it counts", () => {
   it("says outright that resolved and dismissed ratings leave the figures", () => {
     /*
      * THE SENTENCE THAT PREVENTS THE MISREADING. Without it a rising average
-     * looks like Sunny improving when it may only mean somebody worked the
+     * looks like Bubbles improving when it may only mean somebody worked the
      * queue.
      */
     panel(SUMMARY);
@@ -110,7 +110,7 @@ describe("an empty panel says which kind of empty it is", () => {
   it("says nobody has rated anything when nothing has been", () => {
     panel(EMPTY);
     expect(screen.getByText("No feedback yet")).toBeDefined();
-    expect(screen.getByText(/nobody rated an ask sunny answer/i)).toBeDefined();
+    expect(screen.getByText(/nobody rated an ask bubbles answer/i)).toBeDefined();
   });
 
   it("never prints a zero average", () => {

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { ArrowUp, X } from "lucide-react";
 
-import { SunMark } from "@/components/brand-mark";
+import { BubbleMark } from "@/components/brand-mark";
 import { AnswerSheet } from "@/features/dashboard/answer-sheet";
 import { ConversationRating } from "@/features/chat/conversation-rating";
 import { useInlineAsk } from "@/features/chat/use-inline-ask";
@@ -16,7 +16,7 @@ import { reportById } from "@/lib/reporting/registry";
 
 /**
  * ============================================================================
- * "ASK SUNNY ABOUT THIS REPORT" — ON EVERY REPORT TAB
+ * "ASK BUBBLES ABOUT THIS REPORT" — ON EVERY REPORT TAB
  * ============================================================================
  *
  * One control, five dashboards. It opens Chat already talking about what the
@@ -25,7 +25,7 @@ import { reportById } from "@/lib/reporting/registry";
  *
  * IT SENDS NO NUMBERS, and that is the property worth stating twice. Every
  * parameter is a pointer at rows — which report, which period, which window,
- * which salons, which districts, which measure, which view. There is no prop on
+ * which locations, which districts, which measure, which view. There is no prop on
  * this component through which a figure could be passed and no field in
  * `ChatReportContext` to put one in, because everything on the screen was
  * formatted by a browser and a browser is not a source of truth about money. A
@@ -55,8 +55,8 @@ import { reportById } from "@/lib/reporting/registry";
  * ============================================================================
  *
  * REPORTED, AND THE REASON IS THE WHOLE POINT OF THE CONTROL: "when I click ask
- * sunny about this reports, it moves me to a different tab which i dont like,
- * can we please stay on the reports so we can ask sunny about it."
+ * bubbles about this reports, it moves me to a different tab which i dont like,
+ * can we please stay on the reports so we can ask bubbles about it."
  *
  * That is right. A manager asking about the report in front of them wants the
  * answer next to the figures it is about — being thrown to a different screen
@@ -72,12 +72,12 @@ import { reportById } from "@/lib/reporting/registry";
  * is a gap, and an inline answer that skipped history would be one.
  *
  * THE HAND-OFF IS KEPT, NOT FORCED. `AnswerSheet` still offers "Continue in Ask
- * Sunny" on the newest exchange, and it adopts the SAME conversation rather
+ * Bubbles" on the newest exchange, and it adopts the SAME conversation rather
  * than replaying it — so the manager chooses when to move, instead of the
  * control choosing for them. Follow-up chips continue here.
  *
  * IT STILL SENDS NO NUMBERS. Every parameter is a pointer at rows — which
- * report, which period, which window, which salons, which districts, which
+ * report, which period, which window, which locations, which districts, which
  * measure, which view. There is nowhere in `ChatReportContext` to put a figure,
  * so the server re-reads the rows and answers from what Postgres said.
  *
@@ -93,7 +93,7 @@ import { reportById } from "@/lib/reporting/registry";
  * THE PROMPT IS THE PLACEHOLDER, so the field is genuinely typeable and the
  * suggested question is still what a manager gets by pressing send on an empty
  * bar. The artifact draws the question in the bar rather than only the label,
- * because "Ask Sunny about this report" on its own does not say what you will
+ * because "Ask Bubbles about this report" on its own does not say what you will
  * get; making it the placeholder keeps that and makes the control an input
  * rather than a link that looks like one.
  */
@@ -157,7 +157,7 @@ export function AskAboutReport({
   return (
     <div className={className}>
       <div className="flex items-center gap-3 rounded-[14px] bg-surface py-2.5 pr-3 pl-4 shadow-ask focus-within:shadow-ask-focus">
-        <SunMark className="size-6 shrink-0" onDark />
+        <BubbleMark className="size-6 shrink-0" onDark />
         <label htmlFor="report-ask" className="sr-only">
           Ask {ACTIVE_BRAND.assistantName} about this report ({label})
         </label>
@@ -192,7 +192,7 @@ export function AskAboutReport({
           onClick={() => submit(value)}
           disabled={busy}
           aria-label={`Ask ${ACTIVE_BRAND.assistantName} about this report`}
-          className="grid size-[34px] shrink-0 place-items-center rounded-full bg-brand-yellow text-brand-yellow-foreground transition-opacity disabled:opacity-40"
+          className="grid size-[34px] shrink-0 place-items-center rounded-full bg-brand-accent text-brand-accent-foreground transition-opacity disabled:opacity-40"
         >
           <ArrowUp className="size-3.5" strokeWidth={2.5} />
         </button>
@@ -212,10 +212,10 @@ export function AskAboutReport({
             {[1, 0.55, 0.28].map((opacity, index) => (
               <span
                 key={index}
-                className="size-1.5 rounded-full bg-brand-yellow"
+                className="size-1.5 rounded-full bg-brand-accent"
                 style={{
                   opacity,
-                  animation: "sunny-pulse-dot 1.1s ease-in-out infinite",
+                  animation: "bubbles-pulse-dot 1.1s ease-in-out infinite",
                   animationDelay: `${index * 0.16}s`,
                 }}
               />

@@ -42,7 +42,7 @@ export function initialsFor(displayName: string, email: string): string {
  *   title           The role's own label. A real job title is not in
  *                   `app_users`, and inventing one would put a fabricated
  *                   string on screen next to a real person's name.
- *   isLocationAccount  False. This described a demo convention where a whole salon
+ *   isLocationAccount  False. This described a demo convention where a whole location
  *                   shared one seeded login; a real profile is one person.
  *   lastActiveAt    Now. This render IS the activity, so it is the one value
  *                   here that is not a guess.

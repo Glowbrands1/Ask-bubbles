@@ -448,7 +448,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       // below as soon as `ready` flips.
       // In live mode the knowledge library lives in Postgres, not in this
       // browser. A stale IndexedDB copy must not shadow it: a document the
-      // server has not indexed is a document Sunny cannot cite, and showing it
+      // server has not indexed is a document Bubbles cannot cite, and showing it
       // as present would be a lie.
       if (DEMO_MODE) {
         if (storedDocuments.length > 0) setDocuments(storedDocuments);
@@ -478,7 +478,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
        *
        * Recorded BEFORE the account is contacted, and before `ready` flips, so
        * the sync effect below cannot queue a single one of them. This is the
-       * line that makes "Ask Sunny does not upload your old conversations
+       * line that makes "Ask Bubbles does not upload your old conversations
        * because you opened a page" a property of the code rather than a
        * promise: automatic sync only ever sees conversations whose signature
        * changed after hydration, and every pre-existing one is primed here.

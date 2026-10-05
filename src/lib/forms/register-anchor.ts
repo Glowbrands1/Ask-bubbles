@@ -3,7 +3,7 @@
  * "I NEED TO FIND THOSE DOCUMENTS" - WHICH DOCUMENTS?
  * ============================================================================
  *
- * Ask Sunny holds two registers, and the business calls both of them
+ * Ask Bubbles holds two registers, and the business calls both of them
  * "documents":
  *
  *   A KNOWLEDGE DOCUMENT is guidance. The Performance Management Framework, the
@@ -46,7 +46,7 @@
  * A turn that names one template and one framework has named both registers, and
  * there is no honest way to pick. One short clarifying question is a better
  * answer than a confident wrong menu - and it is the only place in this file
- * where Ask Sunny declines to resolve rather than guessing.
+ * where Ask Bubbles declines to resolve rather than guessing.
  */
 
 /** The two registers a reference can land in. */

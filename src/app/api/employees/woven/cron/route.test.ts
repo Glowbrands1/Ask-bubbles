@@ -56,7 +56,7 @@ async function loadRoute(env: Partial<Record<(typeof ENV_KEYS)[number], string |
 }
 
 const request = (token?: string) =>
-  new Request("https://ask-sunny.test/api/employees/woven/cron", {
+  new Request("https://ask-bubbles.test/api/employees/woven/cron", {
     headers: token ? { authorization: `Bearer ${token}` } : {},
   });
 

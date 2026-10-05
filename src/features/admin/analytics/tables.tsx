@@ -16,12 +16,12 @@ import type { Role } from "@/types";
  * BOTH LIST THE SILENT ROWS, and that is the single most useful thing on this
  * page. Knowing MO Kansas City Wornall filed seven forms is mildly interesting;
  * knowing NE Kearney filed none is the row somebody acts on. The database
- * functions LEFT JOIN from the directories precisely so a salon or a leader with
+ * functions LEFT JOIN from the directories precisely so a location or a leader with
  * no activity comes back with zeros instead of disappearing, and these tables
  * show them rather than filtering them back out.
  *
  * INACTIVE ROWS ARE MARKED, NEVER COLOURED RED. Nothing is behind plan here —
- * a salon that has not used a tool is a fact, not a failure, and this system
+ * a location that has not used a tool is a fact, not a failure, and this system
  * reserves the coral flag for a measure short of a target the business has set.
  * The mark is a word.
  */
@@ -79,7 +79,7 @@ export function LocationsTable({
     <ScrollTable>
       <table className={compact ? "data-table min-w-[380px]" : "data-table min-w-[860px]"}>
         <caption className="sr-only">
-          Ask Sunny adoption by location, including locations with no activity.
+          Ask Bubbles adoption by location, including locations with no activity.
         </caption>
         <thead>
           <tr>
@@ -104,7 +104,7 @@ export function LocationsTable({
         </thead>
         <tbody>
           {shown.map((row) => (
-            <tr key={row.salonId}>
+            <tr key={row.locationId}>
               <th scope="row" className="pr-3 text-left font-normal">
                 {/*
                   CLICKING A LOCATION FILTERS THE WHOLE SECTION TO IT, carrying
@@ -119,10 +119,10 @@ export function LocationsTable({
                 */}
                 <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1">
                   <Link
-                    href={`${base}?${serializeFilters({ ...filters, salonId: row.salonId })}`}
+                    href={`${base}?${serializeFilters({ ...filters, locationId: row.locationId })}`}
                     className="font-medium underline-offset-2 hover:underline"
                   >
-                    {row.storeName}
+                    {row.locationName}
                   </Link>
                   {inactiveBadge(row.events)}
                 </span>
@@ -138,7 +138,7 @@ export function LocationsTable({
               <td data-align="right" data-width="compact" className="pr-3 tabular-nums">
                 {/*
                   ACTIVE OUT OF ASSIGNED. "3" alone cannot be read; "3 / 5" says
-                  two people at this salon have not touched it, which is the
+                  two people at this location have not touched it, which is the
                   actionable half.
                 */}
                 {formatNumber(row.activeLeaders)}
@@ -196,13 +196,13 @@ export function LeadersTable({
     <ScrollTable>
       <table className={compact ? "data-table min-w-[380px]" : "data-table min-w-[900px]"}>
         <caption className="sr-only">
-          Ask Sunny adoption by leader, including leaders with no activity.
+          Ask Bubbles adoption by leader, including leaders with no activity.
         </caption>
         <thead>
           <tr>
             {/*
               LEADER IS THE ONLY FLEXIBLE COLUMN. Role asks for its label's width
-              — "Assistant Salon Director" is the longest — and Activity for its
+              — "Assistant Location Director" is the longest — and Activity for its
               digits, which is what closes the gap the report describes between
               a leader's name and their role.
             */}
@@ -256,7 +256,7 @@ export function LeadersTable({
               </td>
               {compact ? null : (
                 <td data-width="fit" className="pr-3 text-muted-foreground">
-                  {row.storeName ?? "—"}
+                  {row.locationName ?? "—"}
                 </td>
               )}
               <td data-align="right" data-width="compact" className="pr-3 tabular-nums">

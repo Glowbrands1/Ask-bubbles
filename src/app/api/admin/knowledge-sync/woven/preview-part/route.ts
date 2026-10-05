@@ -9,8 +9,8 @@ import { previewWovenPart } from "@/lib/knowledge-sync/woven/part-preview";
 /**
  * POST /api/admin/knowledge-sync/woven/preview-part — `{ "ref": "<part ref>" }`.
  *
- * What Ask Sunny would read in one Woven item, before an audience choice or a
- * sync: the existing Ask Sunny document when it is already synced, otherwise
+ * What Ask Bubbles would read in one Woven item, before an audience choice or a
+ * sync: the existing Ask Bubbles document when it is already synced, otherwise
  * the text extracted in memory from a fresh read-only download. Nothing is
  * stored or indexed. `manage_integrations`.
  */

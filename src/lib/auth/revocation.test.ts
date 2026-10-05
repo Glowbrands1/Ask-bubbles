@@ -129,7 +129,7 @@ describe("the migration behind it", () => {
     expect(SQL).not.toMatch(/delete from auth\.users|delete from public\.app_users/i);
   });
 
-  it("both knowledge read policies require an ACTIVE Ask Sunny user", () => {
+  it("both knowledge read policies require an ACTIVE Ask Bubbles user", () => {
     for (const policy of ["knowledge_documents_read_authenticated", "knowledge_chunks_read_authenticated"]) {
       const body = SQL.slice(SQL.indexOf(`create policy ${policy}`));
       const using = body.slice(0, body.indexOf(";"));

@@ -265,7 +265,7 @@ describe("rating a conversation leaves the chat exactly where it was", () => {
 
     await user.click(screen.getByRole("button", { name: /rate this conversation/i }));
 
-    expect(screen.getByRole("radiogroup", { name: /how was your ask sunny experience/i })).toBeTruthy();
+    expect(screen.getByRole("radiogroup", { name: /how was your ask bubbles experience/i })).toBeTruthy();
     expect(navigationCalls()).toBe(before);
     expect(window.location.href).toBe(href);
     expect(window.history.length).toBe(historyLength);
@@ -290,7 +290,7 @@ describe("rating a conversation leaves the chat exactly where it was", () => {
     const historyLength = window.history.length;
     const before = navigationCalls();
     const saves = savedToAccount.length;
-    const composer = screen.getByLabelText(/ask sunny a question/i) as HTMLTextAreaElement;
+    const composer = screen.getByLabelText(/ask bubbles a question/i) as HTMLTextAreaElement;
     const composerValue = composer.value;
 
     for (const value of [1, 2, 3, 4, 5]) {
@@ -319,7 +319,7 @@ describe("rating a conversation leaves the chat exactly where it was", () => {
       ).getAllByRole("radio") as HTMLInputElement[];
       expect(outcomes.some((outcome) => outcome.checked)).toBe(false);
       expect(
-        (screen.getByRole("textbox", { name: /anything sunny should do better/i }) as HTMLTextAreaElement)
+        (screen.getByRole("textbox", { name: /anything bubbles should do better/i }) as HTMLTextAreaElement)
           .value,
       ).toBe("");
       expect(composer.value).toBe(composerValue);
@@ -367,7 +367,7 @@ describe("a submitted rating reads as Rated, and survives a reload", () => {
     await user.click(screen.getByRole("radio", { name: /^4 — Helpful$/ }));
     await user.click(screen.getByRole("radio", { name: "Partially" }));
     await user.type(
-      screen.getByRole("textbox", { name: /anything sunny should do better/i }),
+      screen.getByRole("textbox", { name: /anything bubbles should do better/i }),
       "Close, missed the attendance policy.",
     );
     await user.click(screen.getByRole("button", { name: "Submit feedback" }));

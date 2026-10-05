@@ -158,7 +158,7 @@ describe("an answer carrying citations lists them compactly", () => {
     /*
      * THE READ-ONLY SOURCE ROUTE. `/knowledge` is the corpus's management
      * console and is administrators-only; a citation must stay openable for
-     * every role Sunny answers for, so it points at the single-document route,
+     * every role Bubbles answers for, so it points at the single-document route,
      * which asks for `view_knowledge` alone. The rows themselves are unchanged:
      * same three, same order, same documents.
      */
@@ -212,7 +212,7 @@ describe("everything else about an answer is untouched", () => {
   it("still says when the knowledge base did not cover the question", () => {
     /*
      * F. THE MOST IMPORTANT ONE HERE. Coverage is not a source card — it is
-     * Sunny telling a manager that what they just read is general guidance
+     * Bubbles telling a manager that what they just read is general guidance
      * rather than company policy. Removing the bibliography must not have taken
      * that with it.
      */
@@ -230,7 +230,7 @@ describe("everything else about an answer is untouched", () => {
         citations: undefined,
         error: {
           kind: "model_failed",
-          message: "Sunny could not reach the model.",
+          message: "Bubbles could not reach the model.",
           retryable: true,
           question: "how much PTO?",
         },

@@ -20,7 +20,7 @@ import type { FeedbackSummary } from "./feedback-queries";
 const TOTALS: AnalyticsTotals = {
   events: 120,
   activeUsers: 10,
-  activeSalons: 5,
+  activeLocations: 5,
   forms: 20,
   documents: 3,
   reports: 7,
@@ -278,7 +278,7 @@ describe("how many leaders rely on it?", () => {
   it("counts the leaders and the average each", () => {
     const reliance = find(buildInsights(input()), "reliance");
     expect(reliance?.value).toBe("10");
-    expect(reliance?.detail).toContain("10 leaders used Ask Sunny at least once");
+    expect(reliance?.detail).toContain("10 leaders used Ask Bubbles at least once");
     expect(reliance?.detail).toContain("averaging 12.0 inquiries each");
     expect(reliance?.detail).toContain("4 more than the prior period");
   });

@@ -93,7 +93,7 @@ async function loadRoute(options: { permitted?: boolean } = {}) {
   const { POST } = await import("./route");
   const call = (id: string, body?: unknown) =>
     POST(
-      new Request(`https://ask-sunny.vercel.app/api/admin/users/${id}/reset-link`, {
+      new Request(`https://ask-bubbles.vercel.app/api/admin/users/${id}/reset-link`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: body === undefined ? undefined : JSON.stringify(body),
@@ -126,7 +126,7 @@ describe("a permitted administrator", () => {
     const payload = await response.json();
     expect(Object.keys(payload).sort()).toEqual(["email", "url"]);
     expect(payload.url).toBe(
-      `https://ask-sunny.vercel.app/auth/recovery-start?token_hash=${HASH}&type=recovery`,
+      `https://ask-bubbles.vercel.app/auth/recovery-start?token_hash=${HASH}&type=recovery`,
     );
     expect(seen.generated).toEqual([{ type: "recovery", email: "sam@example.test" }]);
   });

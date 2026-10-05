@@ -20,13 +20,13 @@ import { cn } from "@/lib/utils/cn";
  *    place that decides what the numbers are.
  *
  * 2. NAVIGATION USES `scroll: false`. The dashboard is taller than a screen, and
- *    the previous version navigated with plain links — so ticking a salon
+ *    the previous version navigated with plain links — so ticking a location
  *    halfway down the page threw the reader back to the header, every time. The
  *    router call below is the fix, and it is a `push` rather than a `replace` on
  *    purpose: Back then undoes one filter change instead of leaving the page.
  *
  * A POPOVER, NOT A DROPDOWN MENU. A menu closes when an item is activated, which
- * is right for a command and wrong for a multi-select: ticking six salons would
+ * is right for a command and wrong for a multi-select: ticking six locations would
  * mean opening the menu six times.
  */
 
@@ -257,7 +257,7 @@ function OptionRow({
 export interface MenuOption {
   value: string;
   label: string;
-  /** Right-hand note, e.g. a salon count. */
+  /** Right-hand note, e.g. a location count. */
   note?: string;
   /** Extra text matched by the search box. */
   searchText?: string;
@@ -305,9 +305,9 @@ function MultiSelectBody({
    *
    * The action always does the same thing — `onChange([])` — but what an empty
    * selection MEANS is the caller's business, and the word has to match it. In
-   * Sales Totals an empty selection is every salon in the delivery, so "Clear"
+   * Sales Totals an empty selection is every location in the delivery, so "Clear"
    * described the mechanism and contradicted the result: pressing it widens the
-   * dashboard to all fifteen salons. Callers whose empty state genuinely means
+   * dashboard to all fifteen locations. Callers whose empty state genuinely means
    * "no filter applied" keep the default.
    *
    * A LABEL ONLY. No caller can change what the action does through this prop.
@@ -394,8 +394,8 @@ function MultiSelectBody({
         )}
       </div>
 
-      {/* Why this list is the length it is. A four-row Salon menu in a
-          fifteen-salon report looks like a bug unless the menu says that a
+      {/* Why this list is the length it is. A four-row Location menu in a
+          fifteen-location report looks like a bug unless the menu says that a
           district filter above is narrowing it. */}
       {footnote ? (
         <p className="border-t border-border px-3 py-1.5 text-[11px] leading-snug text-subtle-foreground">

@@ -135,19 +135,19 @@ describe("Employee Directory: the status dropdown and the change label", () => {
 });
 
 describe("Directory mapping column", () => {
-  it("shows Corporate staff as '[position] + All locations', and salon rows as before", () => {
+  it("shows Corporate staff as '[position] + All locations', and location rows as before", () => {
     const corporate = {
       ...SAMPLE.directory.find((r) => r.lastName === "Farthing")!,
-      primaryLocationName: "JB & Associates - Corporate",
+      primaryLocationName: "Example Soap Co - Corporate",
       primaryLocationMappingStatus: "ignored" as const,
       positionName: "Maintenance",
       hasAllLocationAccess: true,
     };
-    const salon = SAMPLE.directory.find((r) => r.lastName === "Quintero")!;
-    renderView(sampleProps({ view: "directory", page: queryDirectory([corporate, salon], parseDirectoryQuery({})) }));
+    const location = SAMPLE.directory.find((r) => r.lastName === "Quintero")!;
+    renderView(sampleProps({ view: "directory", page: queryDirectory([corporate, location], parseDirectoryQuery({})) }));
     const table = screen.getByRole("table");
     const badge = within(table).getByText("Maintenance + All locations");
-    expect(badge.getAttribute("title")).toContain("is not a salon");
+    expect(badge.getAttribute("title")).toContain("is not a location");
     expect(within(table).getByText("Mapped")).toBeTruthy();
     expect(within(table).queryByText("Position + location")).toBeNull();
   });
@@ -244,7 +244,7 @@ describe("Mappings", () => {
   it("says mappings are applied nowhere, and shows suggestions and non-locations", () => {
     const { container } = renderView(sampleProps(data));
     expect(screen.getByText("Mappings are reviewed here and applied nowhere in this phase")).toBeTruthy();
-    expect(container.textContent).toContain("S103 · Sample Salon Lakeview");
+    expect(container.textContent).toContain("S103 · Sample Location Lakeview");
     expect(screen.getByText("Suggest ignore")).toBeTruthy();
     expect(screen.getAllByText("No exact number match").length).toBeGreaterThan(0);
   });
@@ -279,8 +279,8 @@ describe("Access Preview", () => {
   it("shows every column the owner asked for, one row per employee or account", () => {
     const { container } = renderView(sampleProps(data));
     for (const header of [
-      "Employee", "Woven ID", "Email", "Woven status", "Woven position", "Woven primary location", "Ask Sunny account",
-      "Current role", "Current scope / salon", "Proposed role", "Proposed salon", "Proposed action", "Reason",
+      "Employee", "Woven ID", "Email", "Woven status", "Woven position", "Woven primary location", "Ask Bubbles account",
+      "Current role", "Current scope / location", "Proposed role", "Proposed location", "Proposed action", "Reason",
     ]) {
       expect(screen.getByRole("columnheader", { name: header })).toBeTruthy();
     }
@@ -311,7 +311,7 @@ describe("Access Preview", () => {
     }
   });
 
-  it("LINK REVIEW: one card per exact-email match, Ask Sunny account ↔ Woven EmployeeID, everything disabled on sample data", () => {
+  it("LINK REVIEW: one card per exact-email match, Ask Bubbles account ↔ Woven EmployeeID, everything disabled on sample data", () => {
     const pending = plan.rows.filter((r) => r.actions.includes("FLAG_LINK_REVIEW"));
     expect(pending.length).toBeGreaterThan(0);
     renderView(sampleProps(data));
@@ -350,7 +350,7 @@ describe("Access Preview", () => {
 
   it("checks an email against the sample rows, as a preview", async () => {
     renderView(sampleProps(data));
-    fireEvent.change(screen.getByLabelText("Email address"), { target: { value: "marisol.quintero@sample-salons.test" } });
+    fireEvent.change(screen.getByLabelText("Email address"), { target: { value: "marisol.quintero@sample-locations.test" } });
     fireEvent.click(screen.getByRole("button", { name: "Check" }));
     expect(await screen.findByText("Eligible")).toBeTruthy();
     expect(screen.getByText("Preview only. No account is created in this phase.")).toBeTruthy();

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
+import { ACTIVE_BRAND } from "@/lib/brand";
 
 export default function NotFound() {
   return (
@@ -23,7 +24,7 @@ export default function NotFound() {
           <Link href="/">Back to Overview</Link>
         </Button>
         <Button asChild variant="secondary">
-          <Link href="/chat">Ask Sunny</Link>
+          <Link href="/chat">{ACTIVE_BRAND.productName}</Link>
         </Button>
       </div>
     </main>

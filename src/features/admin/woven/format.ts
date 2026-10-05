@@ -1,6 +1,6 @@
 /**
  * Dates and labels for the Woven screens. Central time, because that is where
- * the salons are, and every stamp says so rather than leaving the reader to
+ * the locations are, and every stamp says so rather than leaving the reader to
  * guess which clock a sync ran on.
  */
 

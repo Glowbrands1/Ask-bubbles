@@ -1,216 +1,136 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   ASK SUNNY — DESIGN TOKENS · MARQUEE DIRECTION
+   ASK BUBBLES — DESIGN TOKENS · BUFF CITY SOAP (TEMPORARY REFERENCE PALETTE)
    ----------------------------------------------------------------------------
    Two layers, deliberately:
 
-   1. RAW PALETTE TOKENS (--approved-*) — the approved Marquee colour values.
-      Never consumed by components.
+   1. RAW PALETTE TOKENS (--bcs-*) — Buff City Soap colour values. Never
+      consumed by components.
    2. SEMANTIC ALIASES (--background, --primary, ...) — the ONLY thing that
       components are allowed to use.
 
-   To re-skin the whole product (a brand refresh, or the planned Buff City Soap
-   instance) you replace the raw palette and re-point the semantic aliases in
-   this one file, plus swap the BrandConfig in `src/lib/brand/`. No component
-   changes required.
+   To re-skin the product, replace the raw palette and re-point the semantic
+   aliases in this one file, plus the BrandConfig in src/config/company/brand.ts.
+   No component changes required.
 
-   THE FOUR COMMITTED COLOURS, each with one job and one prohibition:
+   THE PALETTE is taken from the public Buff City Soap site as a TEMPORARY
+   reference until an approved brand kit is supplied:
 
-     #1c1f29  the band and the top bar   — never the left rail
-     #ffcc00  brand yellow               — never more than two filled blocks
-     #ef6079  attention ONLY             — never a button; pressing and
-                                           alarming must not look alike
-     #d62c3a  the band's corner glow     — never errors, never text, never a
-                                           fill; `--band-glow` is its only use
+     wine      #5e1a33  navigation and strong surfaces (rail, top bar, band)
+     orange    #f26522  the brand accent; #b8460f is the CTA fill (white text
+                        5.36:1). Raw #f26522 never carries white text (3.15:1).
+     aqua      #2bb5b0  accents and chart data; #0e6b67 when it is text
+     cream     #fbf5ec  the canvas
+     charcoal  #2b2a2e  text
 
-   WHAT THE CURRENT MARQUEE ARTIFACTS CHANGED. The three pinned artifacts —
-   Reports Tab, Google Reviews and Chat Tab — supersede two decisions the
-   earlier freeze made, and they carry a colour-vision validator's results
-   rather than a preference:
-
-     CORAL IS THE CHART DATA FILL. "In a chart, coral is the data. In the
-     interface, coral is attention. A bar and a status pill are different
-     objects." The previous no-hue series ramp is out: the artifact's validator
-     refused the near-black it used for failing the lightness and chroma
-     checks — "technically legible, but reading as grey rather than as a
-     colour". Rank never changes a bar's colour; every bar in a ranking is the
-     same coral.
-
-     GREEN IS THE ONE EXCEPTION, AND IT NOW HAS A LADDER. #2f6b4f marks the
-     good direction wherever the business has stated which way that is — the
-     delta arrow, the diverging bar, and the "outperforming / at goal" chip in
-     the four-state status vocabulary the report tabs and the reviews
-     leaderboard share. Green never becomes a section or category colour, and
-     a measure with no stated direction is still neutral.
-
-   Sage (#5c6559) and #4f7a4c stay out. Yellow still never encodes a value:
-   at 1.47:1 on a light ground it cannot be a chart fill.
+   Attention (follow-ups) is a separate red, #c43c4a, so "somebody has to act"
+   never looks like a button or like the brand. Every text pairing below was
+   measured against WCAG AA (4.5:1) on the grounds it is used on.
    ========================================================================== */
 
 :root {
-  /* ---- Raw palette: the approved Marquee direction ----------------------
-     Raw values only — nothing consumes these directly; they are pointed at by
-     the semantic tokens below, which is what lets a colour's MEANING change
-     without hunting through components. ---------------------------------- */
+  /* ---- Raw palette: Buff City Soap ------------------------------------- */
 
   /* Surfaces and chrome */
-  --approved-topbar: #1c1f29;
-  --approved-chrome: #12141c;
-  --approved-rail: #b2aeaa;
-  --approved-rail-border: #a09c98;
-  --approved-brand-yellow: #ffcc00;
-  --approved-followup: #ef6079;
-  --approved-redlight: #d62c3a;
-  --approved-canvas: #fff6f0;
-  --approved-card: #ffffff;
-  --approved-surface-warm: #f6ece4;
-  --approved-yellow-tint: #fffaea;
-  --approved-clear-surface: #f1efec;
+  --bcs-wine: #5e1a33;
+  --bcs-wine-deep: #47122a;
+  --bcs-rail: #5e1a33;
+  --bcs-rail-border: #74304b;
+  --bcs-orange: #f26522;
+  --bcs-orange-cta: #b8460f;
+  --bcs-attention: #c43c4a;
+  --bcs-glow: #f26522;
+  --bcs-canvas: #fbf5ec;
+  --bcs-card: #ffffff;
+  --bcs-surface-warm: #f3e9da;
+  --bcs-orange-tint: #fdece2;
+  --bcs-clear-surface: #f1ebe2;
+  --bcs-aqua: #2bb5b0;
+  --bcs-aqua-tint: #d9f2f0;
 
   /* Borders and dividers */
-  --approved-border-card: #f0ddd2;
-  --approved-border-hairline: #f5e6dc;
-  --approved-border-row: #f8ece5;
-  --approved-border-strong: #e6cfc2;
-  --approved-border-band: #33353f;
-  --approved-border-band-pill: #43454f;
-  --approved-border-chrome: #24262f;
+  --bcs-border-card: #eadfce;
+  --bcs-border-hairline: #f1e7d9;
+  --bcs-border-row: #f5ede2;
+  --bcs-border-strong: #dccbb4;
+  --bcs-border-band: #74304b;
+  --bcs-border-band-pill: #84405b;
+  --bcs-border-chrome: #5a1d36;
 
   /* Text */
-  --approved-ink: #141821;
-  --approved-ink-body: #3d3e44;
-  /*
-   * THE TWO MUTED INKS ARE DARKENED FROM THE DIRECTION'S VALUES, and this is
-   * the one place the palette is not transcribed literally.
-   *
-   * The artifact sets muted text at #7c7a80 and fine print at #a09a94, which is
-   * right where it uses them: small caps labels and short sub-copy on a mockup.
-   * In the app these two tokens carry real secondary text on three grounds, and
-   * there they measure 4.24 / 3.98 / 3.64 and 2.78 / 2.61 / 2.39 against white,
-   * the canvas and the warm surface — the second one is barely visible, and
-   * both fail AA for body-size text.
-   *
-   * Each is scaled toward black along its OWN channel ratios, so the warm cast
-   * survives and neither becomes a new hue: a derivation, the same move the
-   * hover states make. Both now clear 4.6:1 on all three grounds.
-   *
-   * The literal values remain the direction's for everything that is genuinely
-   * label-sized; if the fine print ever moves to 8px caps on a single ground,
-   * these can go back.
-   */
-  --approved-ink-muted: #6b696e;
-  --approved-ink-light: #6e6a66;
-  --approved-ink-placeholder: #8b8896;
-  --approved-rail-ink: #2b2926;
-  --approved-rail-label: #454240;
-  --approved-rail-icon: #cac6c2;
-  --approved-band-muted: #9d9aa8;
-  --approved-band-chip-ink: #cfcdd6;
-  --approved-band-label: #5f606c;
-  --approved-band-prompt-ink: #e6e4ea;
-  --approved-chrome-chip-ink: #f0eef2;
-  --approved-wordmark: #b6b4c0;
+  --bcs-ink: #2b2a2e;
+  --bcs-ink-body: #4a474d;
+  --bcs-ink-muted: #66626a;
+  --bcs-ink-light: #66615b;
+  --bcs-ink-placeholder: #8d8890;
+  --bcs-rail-ink: #fbf5ec;
+  --bcs-rail-label: #e9d3db;
+  --bcs-rail-icon: #c9a7b4;
+  --bcs-band-muted: #d8b3c1;
+  --bcs-band-chip-ink: #f3dfe6;
+  --bcs-band-label: #c9a7b4;
+  --bcs-band-prompt-ink: #fbf5ec;
+  --bcs-chrome-chip-ink: #f3dfe6;
+  --bcs-wordmark: #e9d3db;
 
-  /* Yellow system */
-  --approved-yellow-ink: #332a00;
-  --approved-yellow-label: #6b5200;
+  /* Orange system (the accent) */
+  --bcs-orange-ink: #3a1406;
+  --bcs-orange-label: #8a3510;
 
-  /* Coral system */
-  --approved-coral-soft-ink: #ffe3e8;
-  --approved-attention-ink: #c2405c;
-  --approved-delta-down: #d4405f;
-  /* THE ONE GREEN, AT THE CURRENT MARQUEE ARTIFACTS' OWN VALUE.
-     Was #1f7a4d, derived here for L* parity with the flag ink. The three
-     pinned Marquee artifacts all draw the good direction at #2f6b4f and the
-     Reports artifact records it as VALIDATED — "deeper and bluer than a
-     standard green on purpose", chosen because the obvious #4f7a4c failed at
-     protan dE 6.7 against the coral. It also measures BETTER than the value it
-     replaces: 6.29:1 on white and 5.90:1 on the canvas as text, and 6.29:1
-     under white as a chip fill. Adopting the artifact's literal therefore costs
-     nothing and puts one green behind every "good direction" the app draws —
-     the delta arrow, the diverging bar and the status chip alike. */
-  --approved-delta-up: #2f6b4f;
+  /* Aqua system */
+  --bcs-aqua-ink: #0e6b67;
 
-  /* ---- Chart data and the status ladder ---------------------------------
-     Added from the three current pinned Marquee artifacts, which settle two
-     questions the earlier freeze answered differently. See
-     `docs/marquee-design-freeze.md` for the superseded decisions. */
+  /* Attention system */
+  --bcs-attention-soft-ink: #ffe1e1;
+  --bcs-attention-ink: #a8322f;
+  --bcs-delta-down: #b8323d;
+  /* The one green, for a stated good direction only. 5.81:1 on the canvas. */
+  --bcs-delta-up: #2f6b4f;
 
-  /* THE CHART DATA FILL, and why it is its own token rather than the
-     follow-up coral it shares a value with.
+  /* ---- Chart data and the status ladder --------------------------------- */
 
-     The Reports artifact states the rule outright: "in a chart, coral is the
-     data. In the interface, coral is attention. A bar and a status pill are
-     different objects." Two sanctioned roles for one value, so each gets its
-     own raw token — which is what lets a future brand move the data fill
-     without moving the alarm, and keeps `--followup-attention` honest for the
-     test that pins it to follow-up surfaces only.
+  /* Chart data is aqua — never the attention red, so a bar is never an alarm. */
+  --bcs-data: #1b8a85;
+  --bcs-data-track: #e3f4f3;
+  --bcs-track-warm: #f6eee3;
+  --bcs-track-zero: #cbbba6;
 
-     The artifact's validator passed this on all six checks and explicitly
-     REFUSED the near-black the previous freeze used: it "failed both the
-     lightness and chroma checks — technically legible, but reading as grey
-     rather than as a colour". */
-  --approved-coral-data: #ef6079;
-  /* The track a coral bar runs in, and the warm track a diverging bar runs in. */
-  --approved-coral-track: #fdeef0;
-  --approved-track-warm: #faf1ea;
-  /* The zero rule on a diverging track, and a bar with no comparison. */
-  --approved-track-zero: #c9bdb4;
+  /* The four-state status ladder; each carries a glyph and a word too. */
+  --bcs-outperforming: var(--bcs-delta-up);
+  --bcs-below-market: #9a6d10;
+  --bcs-at-market-edge: #cbbba6;
+  --bcs-capacity: #dccbb4;
+  --bcs-capacity-ink: #5e4a3a;
 
-  /* THE FOUR-STATE STATUS LADDER, shared by Bed Usage, the spa tabs and the
-     Google Reviews leaderboard — "the same four fills and glyphs as the report
-     tabs, so a chip means the same thing wherever a DM sees it".
-
-     TWO OF THE ARTIFACT'S LITERALS ARE DEEPENED HERE, and this is the same
-     move — and the same justification — as the two muted inks above: these
-     carry 8.5px caps in white, which is small text and needs 4.5:1.
-
-       below market   #b07d12 -> #9a6d10   white 3.63:1 -> 4.60:1
-       significantly  #ef6079 -> #c2405c   white 3.17:1 -> 5.02:1
-
-     Each is scaled toward black along its OWN channel ratios, so the hue
-     survives; the second lands exactly on the deeper coral ink the system
-     already carries, so no new colour is invented. Deepening the "under" chip
-     also keeps the ladder separable from the chart fill, which is the
-     artifact's own rule that a bar and a pill are different objects. */
-  --approved-outperforming: var(--approved-delta-up);
-  --approved-below-market: #9a6d10;
-  --approved-at-market-edge: #c9bdb4;
-  --approved-capacity: #e6cfc2;
-  --approved-capacity-ink: #5e4a3a;
-
-  /* A GOAL DRAWN ACROSS A CHART. Kept at the artifact's literal #b07d12
-     because it is a 2px dashed RULE rather than text — 3.40:1 on the canvas,
-     clear of the 3:1 floor for a non-text graphic — with its label in the
-     yellow label ink at 7.42:1. */
-  --approved-goal-line: #b07d12;
+  /* A goal drawn across a chart: a 2px dashed rule, not text. */
+  --bcs-goal-line: #b07d12;
 
   /* Measures */
-  --approved-measure-track: #f0e4da;
-  --approved-measure-fill: #c9bdb4;
+  --bcs-measure-track: #efe4d5;
+  --bcs-measure-fill: #cbbba6;
 
   /* Band furniture */
-  --approved-band-tile: #2c2f3a;
-  --approved-band-tile-border: #3c3f4b;
+  --bcs-band-tile: #6d2742;
+  --bcs-band-tile-border: #84405b;
 
   /* ---- Semantic aliases — components consume ONLY these ----------------- */
 
   /* The approved canvas: the "daylight" half of the direction. */
-  --background: var(--approved-canvas);
-  --foreground: var(--approved-ink);
+  --background: var(--bcs-canvas);
+  --foreground: var(--bcs-ink);
 
-  --surface: var(--approved-card);
-  --surface-muted: var(--approved-surface-warm);
-  --surface-raised: var(--approved-card);
+  --surface: var(--bcs-card);
+  --surface-muted: var(--bcs-surface-warm);
+  --surface-raised: var(--bcs-card);
 
   /* The approved left rail: a warm mid-gray, which is what gives the
      direction its structure without the weight of a black bar running down
      the page. Rail text and labels are the two values that clear 4.5:1 on it;
      anything lighter on this rail does not. */
   --sidebar: var(--rail);
-  --sidebar-foreground: var(--approved-rail-ink);
-  --sidebar-muted: var(--approved-rail-label);
+  --sidebar-foreground: var(--bcs-rail-ink);
+  --sidebar-muted: var(--bcs-rail-label);
   /* THE SELECTED RAIL ITEM IS THE YELLOW PILL.
      The direction is explicit that the rail keeps exactly one colour and this
      is what it spends it on: "the yellow pill that says where you are". It also
@@ -218,68 +138,68 @@
      BOTH the canvas, so hovering an item barely changed it and the selected one
      did not stand out at all. Now hover is the canvas and active is the yellow,
      which are impossible to confuse. */
-  --sidebar-active: var(--approved-brand-yellow);
-  --sidebar-active-foreground: var(--approved-yellow-ink);
-  --sidebar-icon: var(--approved-rail-icon);
+  --sidebar-active: var(--bcs-canvas);
+  --sidebar-active-foreground: var(--bcs-wine);
+  --sidebar-icon: var(--bcs-rail-icon);
 
-  --muted: var(--approved-surface-warm);
-  --muted-foreground: var(--approved-ink-muted);
-  --subtle-foreground: var(--approved-ink-light);
-  --body-foreground: var(--approved-ink-body);
-  --placeholder-foreground: var(--approved-ink-placeholder);
+  --muted: var(--bcs-surface-warm);
+  --muted-foreground: var(--bcs-ink-muted);
+  --subtle-foreground: var(--bcs-ink-light);
+  --body-foreground: var(--bcs-ink-body);
+  --placeholder-foreground: var(--bcs-ink-placeholder);
 
-  --border: var(--approved-border-card);
-  --border-strong: var(--approved-border-strong);
-  --border-hairline: var(--approved-border-hairline);
-  --border-row: var(--approved-border-row);
+  --border: var(--bcs-border-card);
+  --border-strong: var(--bcs-border-strong);
+  --border-hairline: var(--bcs-border-hairline);
+  --border-row: var(--bcs-border-row);
 
   /* THE DAYLIGHT PRIMARY BUTTON IS NEAR-BLACK, and that is a decision the
      direction forces rather than a preference: coral is committed to
      attention, so it cannot also mean "press me". Yellow is capped at two
      filled blocks a screen, so it cannot carry every primary action either.
      Near-black is what is left, and it is the strongest of the three anyway. */
-  --primary: var(--approved-topbar);
-  --primary-hover: color-mix(in srgb, var(--approved-topbar) 86%, var(--approved-card));
-  --primary-foreground: var(--approved-card);
-  --primary-soft: var(--approved-yellow-tint);
-  --primary-soft-foreground: var(--approved-yellow-label);
+  --primary: var(--bcs-orange-cta);
+  --primary-hover: color-mix(in srgb, var(--bcs-orange-cta) 86%, var(--bcs-orange-ink));
+  --primary-foreground: var(--bcs-card);
+  --primary-soft: var(--bcs-orange-tint);
+  --primary-soft-foreground: var(--bcs-orange-label);
 
   /* WAS SAGE GREEN. The accent slot now carries the brand yellow with the
      approved ink on top, which is the direction's one filled emphasis
      treatment. Green is not in this system at all. */
-  --accent: var(--approved-brand-yellow);
-  --accent-hover: color-mix(in srgb, var(--approved-brand-yellow) 88%, var(--approved-yellow-ink));
-  --accent-foreground: var(--approved-yellow-ink);
-  --accent-soft: var(--approved-yellow-tint);
-  --accent-soft-foreground: var(--approved-yellow-label);
+  --accent: var(--bcs-aqua);
+  --accent-hover: color-mix(in srgb, var(--bcs-aqua) 88%, var(--bcs-ink));
+  --accent-foreground: var(--bcs-ink);
+  --accent-soft: var(--bcs-aqua-tint);
+  --accent-soft-foreground: var(--bcs-aqua-ink);
 
   /* A quiet warm tone. Was a blush pink, which competed with the attention
      coral for no gain — a decorative pink next to a meaningful one is exactly
      how a semantic colour stops meaning anything. */
-  --blush-soft: var(--approved-surface-warm);
-  --blush-soft-foreground: var(--approved-ink);
+  --blush-soft: var(--bcs-surface-warm);
+  --blush-soft-foreground: var(--bcs-ink);
 
-  --highlight: var(--approved-followup);
-  --highlight-deep: var(--approved-attention-ink);
+  --highlight: var(--bcs-attention);
+  --highlight-deep: var(--bcs-attention-ink);
 
   /* The yellow system, under its established names. */
-  --gold: var(--approved-brand-yellow);
-  --gold-deep: var(--approved-yellow-label);
-  --gold-soft: var(--approved-yellow-tint);
+  --gold: var(--bcs-orange);
+  --gold-deep: var(--bcs-orange-label);
+  --gold-soft: var(--bcs-orange-tint);
 
   /* Status tones. Everything that is not demanding action is neutral, which
      is the point of the direction rather than a shortcut: a dashboard where
      something is always coloured teaches managers to ignore the colour. */
-  --status-ready: var(--approved-ink-muted);
-  --status-ready-bg: var(--approved-surface-warm);
-  --status-processing: var(--approved-ink-muted);
-  --status-processing-bg: var(--approved-canvas);
-  --status-attention: var(--approved-yellow-label);
-  --status-attention-bg: var(--approved-yellow-tint);
-  --status-failed: var(--approved-attention-ink);
-  --status-failed-bg: var(--approved-canvas);
-  --status-neutral: var(--approved-ink-muted);
-  --status-neutral-bg: var(--approved-surface-warm);
+  --status-ready: var(--bcs-ink-muted);
+  --status-ready-bg: var(--bcs-surface-warm);
+  --status-processing: var(--bcs-ink-muted);
+  --status-processing-bg: var(--bcs-canvas);
+  --status-attention: var(--bcs-orange-label);
+  --status-attention-bg: var(--bcs-orange-tint);
+  --status-failed: var(--bcs-attention-ink);
+  --status-failed-bg: var(--bcs-canvas);
+  --status-neutral: var(--bcs-ink-muted);
+  --status-neutral-bg: var(--bcs-surface-warm);
 
   /* ============================ SEMANTIC COLOUR ============================
      EACH OF THESE MEANS SOMETHING. That is the whole point, and it is a
@@ -300,27 +220,27 @@
      NEVER A BUTTON. The fill is for the state; the soft pairing is the same
      meaning where a fill would shout — canvas with a coral edge and the
      text-weight coral on top. */
-  --followup-attention: var(--approved-followup);
-  --followup-attention-foreground: var(--approved-card);
-  --followup-attention-soft: var(--approved-canvas);
-  --followup-attention-soft-foreground: var(--approved-attention-ink);
+  --followup-attention: var(--bcs-attention);
+  --followup-attention-foreground: var(--bcs-card);
+  --followup-attention-soft: var(--bcs-canvas);
+  --followup-attention-soft-foreground: var(--bcs-attention-ink);
   /* Secondary copy sitting ON the coral fill. Declared so that the next
      coral surface that needs a second line reaches for this instead of
      inventing a pink; nothing renders sub-copy on a coral fill today. */
-  --followup-attention-muted-foreground: var(--approved-coral-soft-ink);
+  --followup-attention-muted-foreground: var(--bcs-attention-soft-ink);
 
   /* RED LIGHT / WELLNESS. In this direction the red is not a category colour
      at all: its single sanctioned appearance is the band's corner glow, via
      `--band-glow` below. Never errors, never text, never a fill. */
-  --wellness-redlight: var(--approved-redlight);
+  --glow-accent: var(--bcs-glow);
 
   /* BRAND YELLOW. Brand marks, genuine warnings, and the reviews block. Not a
      third accent for general use: at this chroma it outshouts everything near
      it, and the direction caps it at two filled blocks per screen. */
-  --brand-yellow: var(--approved-brand-yellow);
-  --brand-yellow-foreground: var(--approved-yellow-ink);
-  --brand-yellow-soft: var(--approved-yellow-tint);
-  --brand-yellow-soft-foreground: var(--approved-yellow-label);
+  --brand-accent: var(--bcs-orange);
+  --brand-accent-foreground: var(--bcs-orange-ink);
+  --brand-accent-soft: var(--bcs-orange-tint);
+  --brand-accent-soft-foreground: var(--bcs-orange-label);
 
   /* THE HOVER SURFACE. One colour for "the pointer is on this control",
      across every button variant, so hover means the same thing everywhere.
@@ -333,8 +253,8 @@
      The direction defines NO hover palette, so nothing here is a new brand
      colour: every hover is the approved canvas, or a mix of the control's own
      approved base. */
-  --hover-surface: var(--approved-canvas);
-  --hover-surface-foreground: var(--approved-topbar);
+  --hover-surface: var(--bcs-canvas);
+  --hover-surface-foreground: var(--bcs-wine);
 
   /* GENERIC SELECTED / ACTIVE UI. The near-black, not a semantic colour.
      "This control is the one that's on" — a segmented control's chosen option,
@@ -345,38 +265,38 @@
 
      Deliberately NOT the chart series colour. Bars encode data, not
      selection, and they stay on the measure neutrals in chart-palette.ts. */
-  --selected: var(--approved-topbar);
-  --selected-foreground: var(--approved-card);
-  --selected-hover: color-mix(in srgb, var(--approved-topbar) 86%, var(--approved-card));
-  --selected-soft: var(--approved-surface-warm);
-  --selected-soft-foreground: var(--approved-ink);
+  --selected: var(--bcs-wine);
+  --selected-foreground: var(--bcs-card);
+  --selected-hover: color-mix(in srgb, var(--bcs-wine) 86%, var(--bcs-card));
+  --selected-soft: var(--bcs-surface-warm);
+  --selected-soft-foreground: var(--bcs-ink);
 
   /* Chrome from the approved direction. The band is a surface with real area —
      roughly the top third of the Overview — which is what lets yellow and
      coral run at full strength instead of floating on peach. The chrome bar
      above it sits one step deeper. */
-  --topbar: var(--approved-topbar);
-  --topbar-foreground: var(--approved-chrome-chip-ink);
-  --chrome: var(--approved-chrome);
-  --chrome-foreground: var(--approved-chrome-chip-ink);
-  --chrome-border: var(--approved-border-chrome);
-  --rail: var(--approved-rail);
-  --rail-border: var(--approved-rail-border);
+  --topbar: var(--bcs-wine);
+  --topbar-foreground: var(--bcs-chrome-chip-ink);
+  --chrome: var(--bcs-wine-deep);
+  --chrome-foreground: var(--bcs-chrome-chip-ink);
+  --chrome-border: var(--bcs-border-chrome);
+  --rail: var(--bcs-rail);
+  --rail-border: var(--bcs-rail-border);
 
-  --band: var(--approved-topbar);
-  --band-foreground: var(--approved-card);
-  --band-muted-foreground: var(--approved-band-muted);
-  --band-label: var(--approved-band-label);
-  --band-border: var(--approved-border-band);
-  --band-pill-border: var(--approved-border-band-pill);
-  --band-chip-foreground: var(--approved-band-chip-ink);
+  --band: var(--bcs-wine);
+  --band-foreground: var(--bcs-card);
+  --band-muted-foreground: var(--bcs-band-muted);
+  --band-label: var(--bcs-band-label);
+  --band-border: var(--bcs-border-band);
+  --band-pill-border: var(--bcs-border-band-pill);
+  --band-chip-foreground: var(--bcs-band-chip-ink);
   --band-chip-surface: rgb(255 255 255 / 0.04);
-  --band-prompt-foreground: var(--approved-band-prompt-ink);
-  --band-tile: var(--approved-band-tile);
-  --band-tile-border: var(--approved-band-tile-border);
-  --wordmark-muted: var(--approved-wordmark);
+  --band-prompt-foreground: var(--bcs-band-prompt-ink);
+  --band-tile: var(--bcs-band-tile);
+  --band-tile-border: var(--bcs-band-tile-border);
+  --wordmark-muted: var(--bcs-wordmark);
 
-  --clear-surface: var(--approved-clear-surface);
+  --clear-surface: var(--bcs-clear-surface);
 
   /* MEASURES. Direction and target are different questions. Colouring by
      direction says which way the arrow points; colouring by target says where
@@ -397,30 +317,30 @@
      names its series in a legend and labels its bars directly, and the movers
      chart encodes polarity by POSITION across zero first — colour is the second
      cue, which is what makes it readable at protan dE 9.6 and in greyscale. */
-  --measure-track: var(--approved-measure-track);
-  --measure-fill: var(--approved-measure-fill);
-  --measure-flagged: var(--approved-followup);
-  --measure-flagged-foreground: var(--approved-attention-ink);
+  --measure-track: var(--bcs-measure-track);
+  --measure-fill: var(--bcs-measure-fill);
+  --measure-flagged: var(--bcs-attention);
+  --measure-flagged-foreground: var(--bcs-attention-ink);
   /* THE DATA FILL. One colour for every bar in a ranking — rank never changes
      a colour, because a colour that follows rank instead of the salon moves
      when a filter changes the line-up. */
-  --measure-data: var(--approved-coral-data);
-  --measure-data-track: var(--approved-coral-track);
+  --measure-data: var(--bcs-data);
+  --measure-data-track: var(--bcs-data-track);
   /* The warm track and zero rule a diverging bar runs on. */
-  --measure-diverging-track: var(--approved-track-warm);
-  --measure-zero: var(--approved-track-zero);
+  --measure-diverging-track: var(--bcs-track-warm);
+  --measure-zero: var(--bcs-track-zero);
   /* A NAMED COMPARISON DRAWN ON THE BAR ITSELF — the prior period as a 3px
      tick with a white ring, and a reference average as a dashed rule. The
      near-black is the widest separation from the coral available in the
      palette (protan dE 35.2), so the comparison reads at a glance without
      taking area from the measure. This is what let the artifact fold three
      charts into two: the prior year stops being a second bar. */
-  --measure-benchmark: var(--approved-topbar);
-  --measure-goal: var(--approved-goal-line);
-  --measure-goal-foreground: var(--approved-yellow-label);
-  --measure-series: var(--approved-ink-muted);
-  --measure-series-strong: var(--approved-ink);
-  --measure-series-recessive: var(--approved-measure-fill);
+  --measure-benchmark: var(--bcs-wine);
+  --measure-goal: var(--bcs-goal-line);
+  --measure-goal-foreground: var(--bcs-orange-label);
+  --measure-series: var(--bcs-ink-muted);
+  --measure-series-strong: var(--bcs-ink);
+  --measure-series-recessive: var(--bcs-measure-fill);
 
   /* ===================== THE FOUR-STATE STATUS LADDER =====================
      One vocabulary, shared by the Bed Usage equipment levels, the two spa tabs
@@ -440,18 +360,18 @@
      "Tracked for capacity" is not a performance state at all — it is the Bed
      Usage FAST level, held apart because its reductions are intentional. It
      takes the quietest chip in the set for that reason. */
-  --status-outperforming: var(--approved-outperforming);
-  --status-outperforming-foreground: var(--approved-card);
-  --status-at-market: var(--approved-card);
-  --status-at-market-foreground: var(--approved-ink-body);
-  --status-at-market-edge: var(--approved-at-market-edge);
-  --status-below-market: var(--approved-below-market);
-  --status-below-market-foreground: var(--approved-card);
-  --status-under: var(--approved-attention-ink);
-  --status-under-foreground: var(--approved-card);
-  --status-capacity: var(--approved-capacity);
-  --status-capacity-foreground: var(--approved-capacity-ink);
-  --delta-down: var(--approved-delta-down);
+  --status-outperforming: var(--bcs-outperforming);
+  --status-outperforming-foreground: var(--bcs-card);
+  --status-at-market: var(--bcs-card);
+  --status-at-market-foreground: var(--bcs-ink-body);
+  --status-at-market-edge: var(--bcs-at-market-edge);
+  --status-below-market: var(--bcs-below-market);
+  --status-below-market-foreground: var(--bcs-card);
+  --status-under: var(--bcs-attention-ink);
+  --status-under-foreground: var(--bcs-card);
+  --status-capacity: var(--bcs-capacity);
+  --status-capacity-foreground: var(--bcs-capacity-ink);
+  --delta-down: var(--bcs-delta-down);
   /* A CHANGE AGAINST A NAMED COMPARISON, where the business has stated which
      way is better: green for the good direction, the flag ink for the bad one.
 
@@ -465,20 +385,20 @@
      The DOWN direction deliberately reuses the flag ink rather than
      `--delta-down`: one red meaning "behind" across the app, and #d4405f
      measures 4.47:1 on white, under the floor for text this size. */
-  --delta-up: var(--approved-delta-up);
-  --meter-track-on-yellow: rgb(51 42 0 / 0.22);
+  --delta-up: var(--bcs-delta-up);
+  --meter-track-on-accent: rgb(58 20 6 / 0.22);
 
   /* The focus ring is the yellow, because the one focus treatment the
      direction actually draws is the ask bar's yellow glow. */
-  --ring: var(--approved-brand-yellow);
-  --ring-glow: rgb(255 204 0 / 0.22);
+  --ring: var(--bcs-orange);
+  --ring-glow: rgb(242 101 34 / 0.22);
 
   /* GRADIENTS. Exactly two in the whole direction, both radial. The corner
      glow is the only place the red-light red is allowed to appear. */
   --band-glow: radial-gradient(
     110% 150% at 100% 0%,
-    rgb(214 44 58 / 0.4) 0%,
-    rgb(28 31 41 / 0) 56%
+    rgb(242 101 34 / 0.4) 0%,
+    rgb(94 26 51 / 0) 56%
   );
   /* THE SAME GLOW, FOR THE SLIM BAND. The Reports artifact runs the report
      band's corner glow a step quieter and taller than the Overview and Chat
@@ -487,18 +407,18 @@
      rather than as a corner. Same red, same single sanctioned use. */
   --band-glow-slim: radial-gradient(
     110% 160% at 100% 0%,
-    rgb(214 44 58 / 0.34) 0%,
-    rgb(28 31 41 / 0) 56%
+    rgb(242 101 34 / 0.34) 0%,
+    rgb(94 26 51 / 0) 56%
   );
   /* The dark callout's glow: the band's shape in YELLOW, for the two panels the
      artifacts draw on near-black inside the daylight half — the FAST capacity
      note and the period-integrity warning. */
   --callout-glow: radial-gradient(
     120% 165% at 100% 0%,
-    rgb(255 204 0 / 0.15) 0%,
-    rgb(28 31 41 / 0) 60%
+    rgb(242 101 34 / 0.15) 0%,
+    rgb(94 26 51 / 0) 60%
   );
-  --brand-glow: radial-gradient(circle, rgb(255 204 0 / 0.22) 0%, rgb(255 204 0 / 0) 68%);
+  --brand-glow: radial-gradient(circle, rgb(242 101 34 / 0.22) 0%, rgb(242 101 34 / 0) 68%);
 
   /* SHADOWS. Warm-brown rather than neutral black, so a lifted card reads as
      paper on peach instead of as a grey box on a warm field. */
@@ -506,11 +426,11 @@
   --shadow-raised: 0 1px 2px rgb(120 80 70 / 0.05), 0 14px 30px -18px rgb(120 80 70 / 0.5);
   --shadow-float: 0 4px 12px rgb(120 80 70 / 0.08), 0 20px 48px -20px rgb(120 80 70 / 0.55);
   /* Coral-tinted, and ONLY for attention surfaces. */
-  --shadow-attention: 0 1px 2px rgb(120 80 70 / 0.05), 0 14px 30px -18px rgb(180 60 90 / 0.55);
+  --shadow-attention: 0 1px 2px rgb(120 80 70 / 0.05), 0 14px 30px -18px rgb(196 60 74 / 0.55);
   --shadow-rail-active: 0 1px 3px rgb(60 58 54 / 0.28);
   /* The ask bar's hard yellow underline, and the glow it gains on focus. */
-  --shadow-ask: 0 4px 0 var(--approved-brand-yellow);
-  --shadow-ask-focus: 0 4px 0 var(--approved-brand-yellow), 0 0 0 4px var(--ring-glow);
+  --shadow-ask: 0 4px 0 var(--bcs-orange);
+  --shadow-ask-focus: 0 4px 0 var(--bcs-orange), 0 0 0 4px var(--ring-glow);
   --halo-alarm-dot: 0 0 0 4px rgb(255 255 255 / 0.3);
 }
 
@@ -578,11 +498,11 @@
   --color-followup-attention-soft: var(--followup-attention-soft);
   --color-followup-attention-soft-foreground: var(--followup-attention-soft-foreground);
   --color-followup-attention-muted-foreground: var(--followup-attention-muted-foreground);
-  --color-wellness-redlight: var(--wellness-redlight);
-  --color-brand-yellow: var(--brand-yellow);
-  --color-brand-yellow-foreground: var(--brand-yellow-foreground);
-  --color-brand-yellow-soft: var(--brand-yellow-soft);
-  --color-brand-yellow-soft-foreground: var(--brand-yellow-soft-foreground);
+  --color-wellness-redlight: var(--glow-accent);
+  --color-brand-yellow: var(--brand-accent);
+  --color-brand-yellow-foreground: var(--brand-accent-foreground);
+  --color-brand-yellow-soft: var(--brand-accent-soft);
+  --color-brand-yellow-soft-foreground: var(--brand-accent-soft-foreground);
   --color-topbar: var(--topbar);
   --color-topbar-foreground: var(--topbar-foreground);
   --color-rail: var(--rail);
@@ -639,10 +559,10 @@
 
   --color-ring: var(--ring);
 
-  --font-display: var(--font-passion-one), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fredoka), ui-sans-serif, system-ui, sans-serif;
   /* Logotypes only — see the note in layout.tsx. */
-  --font-wordmark: var(--font-jost), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-lato), var(--font-manrope), ui-sans-serif, system-ui, -apple-system,
+  --font-wordmark: var(--font-fredoka), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-lato), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", sans-serif;
 
   --radius-xs: 0.375rem;
@@ -709,7 +629,7 @@
    *
    * Every filter on Google Reviews draws its own capsule and lays a transparent
    * `<select>` across the whole of it. An ACTIVE pill — one that is actually
-   * filtering something — is the dark Ask Sunny capsule with white text,
+   * filtering something — is the dark Ask Bubbles capsule with white text,
    * `bg-selected text-selected-foreground`. `color` INHERITS, so the select
    * inherited white, and so did every `<option>` inside it.
    *
@@ -1081,10 +1001,10 @@
 
 @layer utilities {
   .animate-in-fade {
-    animation: sunny-fade-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: bubbles-fade-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .animate-in-rise {
-    animation: sunny-rise 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: bubbles-rise 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .shimmer {
     background-image: linear-gradient(
@@ -1094,11 +1014,11 @@
       var(--surface-muted) 100%
     );
     background-size: 200% 100%;
-    animation: sunny-shimmer 1.6s ease-in-out infinite;
+    animation: bubbles-shimmer 1.6s ease-in-out infinite;
   }
 }
 
-@keyframes sunny-fade-in {
+@keyframes bubbles-fade-in {
   from {
     opacity: 0;
   }
@@ -1107,7 +1027,7 @@
   }
 }
 
-@keyframes sunny-rise {
+@keyframes bubbles-rise {
   from {
     opacity: 0;
     transform: translateY(6px);
@@ -1118,7 +1038,7 @@
   }
 }
 
-@keyframes sunny-shimmer {
+@keyframes bubbles-shimmer {
   from {
     background-position: 200% 0;
   }
@@ -1127,7 +1047,7 @@
   }
 }
 
-@keyframes sunny-pulse-dot {
+@keyframes bubbles-pulse-dot {
   0%,
   100% {
     opacity: 0.3;

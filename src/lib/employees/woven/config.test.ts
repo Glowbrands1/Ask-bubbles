@@ -20,7 +20,7 @@ describe("readWovenConfig", () => {
     const config = readWovenConfig({
       WOVEN_SYNC_ENABLED: "true",
       WOVEN_SUBSCRIPTION_KEY: "sk-live-very-secret-value",
-      WOVEN_USERNAME: "ask-sunny",
+      WOVEN_USERNAME: "ask-bubbles",
     });
     expect(config.credentials).toBeNull();
     expect(config.problems.join(" ")).toContain("WOVEN_PASSWORD");

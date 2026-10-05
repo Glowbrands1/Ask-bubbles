@@ -245,7 +245,7 @@ export async function importLocalHistory(
       summary.error =
         error instanceof Error && error.message
           ? error.message
-          : "Ask Sunny could not finish importing. Nothing on this device was changed.";
+          : "Ask Bubbles could not finish importing. Nothing on this device was changed.";
       summary.imported = [...imported];
       return summary;
     }

@@ -30,7 +30,7 @@ import { describeTokenDiagnostics, type TokenDiagnostics } from "./token-diagnos
  * READ-ONLY. The token exchange, then GETs only: `/lists/enums`, every page of
  * both list passes, a small SAMPLE of employee details, and `/locations`.
  * Nothing is written to Woven, and nothing is written to Supabase. The caller
- * may pass the Ask Sunny salon numbers it has already read, for the location
+ * may pass the Ask Bubbles location numbers it has already read, for the location
  * coverage comparison; this module reads no database itself.
  *
  * AGGREGATES, KEY NAMES AND WOVEN VOCABULARY ONLY. The report carries counts,
@@ -49,7 +49,7 @@ import { describeTokenDiagnostics, type TokenDiagnostics } from "./token-diagnos
  *   - whether `includeterminatedemployee` returns a superset;
  *   - how often `Locations[]` carries an `ExpiresOn`. What it MEANS is not
  *     settled here: it is reported as needing live operational confirmation;
- *   - how Woven's location Numbers line up with Ask Sunny's salon numbers;
+ *   - how Woven's location Numbers line up with Ask Bubbles' location numbers;
  *   - which sensitive fields the application user can see.
  */
 
@@ -113,29 +113,29 @@ export interface EnumsReport {
   employeeWebhookTriggers: string[];
 }
 
-/** The Ask Sunny salons the route read, or that it could not read them. */
-export interface SalonComparisonInput {
+/** The configured location roster (src/config/company/locations.ts), or that it was unavailable. */
+export interface LocationComparisonInput {
   outcome: "loaded" | "unavailable";
-  salons: { number: string; name: string }[];
+  locations: { number: string; name: string }[];
 }
 
 /**
- * Woven `/locations` against `salons.salon_number`, EXACT string equality —
+ * Woven `/locations` against the configured roster's location codes, EXACT string equality —
  * the same rule the mapping suggestions use. Aggregates only; nothing is
  * mapped or confirmed.
  */
-export interface SalonCoverage {
-  outcome: "compared" | "salons_unavailable" | "not_compared";
-  salons: number;
-  /** Woven locations whose Number equals a salon number exactly. */
+export interface LocationCoverage {
+  outcome: "compared" | "locations_unavailable" | "not_compared";
+  locations: number;
+  /** Woven locations whose Number equals a location number exactly. */
   exactMatches: number;
-  /** Salons with at least one exactly matching Woven location. */
-  salonsMatched: number;
+  /** Locations with at least one exactly matching Woven location. */
+  locationsMatched: number;
   /** Woven locations with no exact match, including those with no Number. */
   unmatchedWovenLocations: number;
   /** Of those, the ones neither closed nor flagged as a non-location. */
   unmatchedOpenWovenLocations: number;
-  salonsWithoutWovenLocation: number;
+  locationsWithoutWovenLocation: number;
   /** Would match only if leading zeros were ignored. NOT counted as matches. */
   leadingZeroOnlyMatches: number;
   /** Woven Numbers carried by more than one Woven location. */
@@ -149,7 +149,7 @@ export interface LocationsReport {
   nonLocations: number;
   closed: number;
   keysReturned: string[];
-  salonCoverage: SalonCoverage;
+  locationCoverage: LocationCoverage;
 }
 
 /** Location numbers and names behind the coverage counts. `manage_users` only. Never employees. */
@@ -159,9 +159,9 @@ export interface LocationReview {
     name: string | null;
     closed: boolean | null;
     nonLocation: boolean | null;
-    matchedSalonNumber: string | null;
+    matchedLocationCode: string | null;
   }[];
-  salonsWithoutWovenLocation: { number: string; name: string }[];
+  locationsWithoutWovenLocation: { number: string; name: string }[];
 }
 
 export interface ValidationReport {
@@ -276,8 +276,8 @@ export interface ValidationOptions {
   config: WovenConfig;
   client?: ValidationClient;
   now?: () => Date;
-  /** Ask Sunny's salons, read by the caller. Absent: the coverage comparison is not made. */
-  salons?: SalonComparisonInput;
+  /** Ask Bubbles' locations, read by the caller. Absent: the coverage comparison is not made. */
+  locations?: LocationComparisonInput;
   /** Fill `locationReview` with location numbers and names. The route sets it for `manage_users` only. */
   includeLocationReview?: boolean;
 }
@@ -293,59 +293,59 @@ function errorLabel({ code, status }: { code: string; status: number | null }): 
   return `${code}${status ? `, HTTP ${status}` : ""}`;
 }
 
-const NOT_COMPARED: SalonCoverage = {
+const NOT_COMPARED: LocationCoverage = {
   outcome: "not_compared",
-  salons: 0,
+  locations: 0,
   exactMatches: 0,
-  salonsMatched: 0,
+  locationsMatched: 0,
   unmatchedWovenLocations: 0,
   unmatchedOpenWovenLocations: 0,
-  salonsWithoutWovenLocation: 0,
+  locationsWithoutWovenLocation: 0,
   leadingZeroOnlyMatches: 0,
   duplicateWovenNumbers: 0,
 };
 
 const withoutLeadingZeros = (value: string) => value.replace(/^0+(?=.)/, "");
 
-export function compareSalonCoverage(
-  locations: { number: string | null; name: string | null; isClosed: boolean | null; isNonLocation: boolean | null }[],
-  salons: SalonComparisonInput | undefined,
-): { coverage: SalonCoverage; review: LocationReview } {
-  const review: LocationReview = { wovenLocations: [], salonsWithoutWovenLocation: [] };
-  if (!salons) return { coverage: { ...NOT_COMPARED }, review };
-  if (salons.outcome === "unavailable") return { coverage: { ...NOT_COMPARED, outcome: "salons_unavailable" }, review };
+export function compareLocationCoverage(
+  wovenLocations: { number: string | null; name: string | null; isClosed: boolean | null; isNonLocation: boolean | null }[],
+  roster: LocationComparisonInput | undefined,
+): { coverage: LocationCoverage; review: LocationReview } {
+  const review: LocationReview = { wovenLocations: [], locationsWithoutWovenLocation: [] };
+  if (!roster) return { coverage: { ...NOT_COMPARED }, review };
+  if (roster.outcome === "unavailable") return { coverage: { ...NOT_COMPARED, outcome: "locations_unavailable" }, review };
 
-  const salonNumbers = new Set(salons.salons.map((salon) => salon.number));
-  const salonsByLooseNumber = new Set(salons.salons.map((salon) => withoutLeadingZeros(salon.number)));
-  const matchedSalons = new Set<string>();
+  const locationCodes = new Set(roster.locations.map((location) => location.number));
+  const locationsByLooseNumber = new Set(roster.locations.map((location) => withoutLeadingZeros(location.number)));
+  const matchedLocations = new Set<string>();
   const numberCounts = new Map<string, number>();
-  const coverage: SalonCoverage = { ...NOT_COMPARED, outcome: "compared", salons: salonNumbers.size };
+  const coverage: LocationCoverage = { ...NOT_COMPARED, outcome: "compared", locations: locationCodes.size };
 
-  for (const location of locations) {
+  for (const location of wovenLocations) {
     const number = location.number?.trim() || null;
     if (number) numberCounts.set(number, (numberCounts.get(number) ?? 0) + 1);
-    const matched = number !== null && salonNumbers.has(number);
+    const matched = number !== null && locationCodes.has(number);
     if (matched) {
       coverage.exactMatches += 1;
-      matchedSalons.add(number);
+      matchedLocations.add(number);
     } else {
       coverage.unmatchedWovenLocations += 1;
       if (location.isClosed !== true && location.isNonLocation !== true) coverage.unmatchedOpenWovenLocations += 1;
-      if (number !== null && salonsByLooseNumber.has(withoutLeadingZeros(number))) coverage.leadingZeroOnlyMatches += 1;
+      if (number !== null && locationsByLooseNumber.has(withoutLeadingZeros(number))) coverage.leadingZeroOnlyMatches += 1;
     }
     review.wovenLocations.push({
       number,
       name: location.name,
       closed: location.isClosed,
       nonLocation: location.isNonLocation,
-      matchedSalonNumber: matched ? number : null,
+      matchedLocationCode: matched ? number : null,
     });
   }
-  coverage.salonsMatched = matchedSalons.size;
-  coverage.salonsWithoutWovenLocation = salonNumbers.size - matchedSalons.size;
+  coverage.locationsMatched = matchedLocations.size;
+  coverage.locationsWithoutWovenLocation = locationCodes.size - matchedLocations.size;
   coverage.duplicateWovenNumbers = [...numberCounts.values()].filter((count) => count > 1).length;
-  review.salonsWithoutWovenLocation = salons.salons
-    .filter((salon) => !matchedSalons.has(salon.number))
+  review.locationsWithoutWovenLocation = roster.locations
+    .filter((location) => !matchedLocations.has(location.number))
     .sort((a, b) => a.number.localeCompare(b.number));
   /* Numbered locations first, in number order; those without a Number last. */
   review.wovenLocations.sort((a, b) =>
@@ -729,7 +729,7 @@ export async function runWovenLiveValidation(options: ValidationOptions): Promis
       findings.push({
         verdict: "warn",
         area: "ExpiresOn",
-        message: `ExpiresOn present: ${d.entriesWithExpiresOn} affiliations${d.isSample ? " (in the sample)" : ""}. Meaning: needs live operational confirmation. Ask Sunny records these only as temporary or expiring access and draws no other conclusion from them.`,
+        message: `ExpiresOn present: ${d.entriesWithExpiresOn} affiliations${d.isSample ? " (in the sample)" : ""}. Meaning: needs live operational confirmation. Ask Bubbles records these only as temporary or expiring access and draws no other conclusion from them.`,
       });
       if (d.allLocationEmployeesSampled > 0) {
         findings.push({
@@ -749,7 +749,7 @@ export async function runWovenLiveValidation(options: ValidationOptions): Promis
     const keys = keysOf(list);
     keys.forEach((k) => allKeys.add(k));
     const catalog = parsed.filter((l): l is NonNullable<typeof l> => l !== null);
-    const { coverage: salonCoverage, review } = compareSalonCoverage(catalog, options.salons);
+    const { coverage: locationCoverage, review } = compareLocationCoverage(catalog, options.locations);
     report.locations = {
       outcome: "answered",
       records: catalog.length,
@@ -757,25 +757,25 @@ export async function runWovenLiveValidation(options: ValidationOptions): Promis
       nonLocations: catalog.filter((l) => l.isNonLocation === true).length,
       closed: catalog.filter((l) => l.isClosed === true).length,
       keysReturned: keys,
-      salonCoverage,
+      locationCoverage,
     };
-    if (options.includeLocationReview === true && salonCoverage.outcome === "compared") report.locationReview = review;
+    if (options.includeLocationReview === true && locationCoverage.outcome === "compared") report.locationReview = review;
     if (!Array.isArray(body)) spec("GET /locations did not return the bare array the spec describes.");
     findings.push({
       verdict: parsed.length > 0 ? "pass" : "warn",
       area: "Location catalog",
-      message: `GET /locations returned ${catalog.length} locations (${report.locations.withNumber} with a Number, ${report.locations.nonLocations} non-locations, ${report.locations.closed} closed). It lists the application user's own locations, so it should cover every salon.`,
+      message: `GET /locations returned ${catalog.length} locations (${report.locations.withNumber} with a Number, ${report.locations.nonLocations} non-locations, ${report.locations.closed} closed). It lists the application user's own locations, so it should cover every location.`,
     });
     findings.push(
-      salonCoverage.outcome === "compared"
+      locationCoverage.outcome === "compared"
         ? {
-            verdict: salonCoverage.salonsWithoutWovenLocation === 0 && salonCoverage.unmatchedOpenWovenLocations === 0 ? "pass" : "warn",
-            area: "Salon coverage",
-            message: `${salonCoverage.exactMatches} Woven locations match an Ask Sunny salon number exactly, covering ${salonCoverage.salonsMatched} of ${salonCoverage.salons} salons. ${salonCoverage.salonsWithoutWovenLocation} salons have no matching Woven location; ${salonCoverage.unmatchedWovenLocations} Woven locations match no salon (${salonCoverage.unmatchedOpenWovenLocations} of them open and not flagged as non-locations).${salonCoverage.leadingZeroOnlyMatches > 0 ? ` ${salonCoverage.leadingZeroOnlyMatches} would match only if leading zeros were ignored; they are not counted.` : ""}${salonCoverage.duplicateWovenNumbers > 0 ? ` ${salonCoverage.duplicateWovenNumbers} Numbers are shared by more than one Woven location.` : ""} Nothing is mapped or confirmed by this check.`,
+            verdict: locationCoverage.locationsWithoutWovenLocation === 0 && locationCoverage.unmatchedOpenWovenLocations === 0 ? "pass" : "warn",
+            area: "Location coverage",
+            message: `${locationCoverage.exactMatches} Woven locations match an Ask Bubbles location number exactly, covering ${locationCoverage.locationsMatched} of ${locationCoverage.locations} locations. ${locationCoverage.locationsWithoutWovenLocation} locations have no matching Woven location; ${locationCoverage.unmatchedWovenLocations} Woven locations match no location (${locationCoverage.unmatchedOpenWovenLocations} of them open and not flagged as non-locations).${locationCoverage.leadingZeroOnlyMatches > 0 ? ` ${locationCoverage.leadingZeroOnlyMatches} would match only if leading zeros were ignored; they are not counted.` : ""}${locationCoverage.duplicateWovenNumbers > 0 ? ` ${locationCoverage.duplicateWovenNumbers} Numbers are shared by more than one Woven location.` : ""} Nothing is mapped or confirmed by this check.`,
           }
-        : salonCoverage.outcome === "salons_unavailable"
-          ? { verdict: "warn", area: "Salon coverage", message: "Ask Sunny's salons could not be read, so Woven locations were not compared with them." }
-          : { verdict: "warn", area: "Salon coverage", message: "No salon list was supplied, so Woven locations were not compared with Ask Sunny salons." },
+        : locationCoverage.outcome === "locations_unavailable"
+          ? { verdict: "warn", area: "Location coverage", message: "Ask Bubbles' locations could not be read, so Woven locations were not compared with them." }
+          : { verdict: "warn", area: "Location coverage", message: "No location list was supplied, so Woven locations were not compared with Ask Bubbles locations." },
     );
   } catch (error) {
     const failure = describeError(error);
@@ -787,9 +787,9 @@ export async function runWovenLiveValidation(options: ValidationOptions): Promis
       nonLocations: 0,
       closed: 0,
       keysReturned: [],
-      salonCoverage: { ...NOT_COMPARED },
+      locationCoverage: { ...NOT_COMPARED },
     };
-    findings.push({ verdict: "warn", area: "Location catalog", message: `GET /locations failed (${errorLabel(failure)}). Locations are still queued from employee records, without catalog fields, and salon coverage could not be compared.` });
+    findings.push({ verdict: "warn", area: "Location catalog", message: `GET /locations failed (${errorLabel(failure)}). Locations are still queued from employee records, without catalog fields, and location coverage could not be compared.` });
     if (SPEC_ERROR_CODES.has(code)) spec(`GET /locations did not answer as the spec describes (${errorLabel(failure)}).`);
   }
 
@@ -800,7 +800,7 @@ export async function runWovenLiveValidation(options: ValidationOptions): Promis
       ? {
           verdict: "warn",
           area: "Access scope",
-          message: `Responses contain keys that look like sensitive HR data: ${report.sensitiveKeysReturned.join(", ")}. Ask Sunny never reads them, but a read-only, scoped Woven user should not receive them — ask Woven whether API access follows the user's role.`,
+          message: `Responses contain keys that look like sensitive HR data: ${report.sensitiveKeysReturned.join(", ")}. Ask Bubbles never reads them, but a read-only, scoped Woven user should not receive them — ask Woven whether API access follows the user's role.`,
         }
       : { verdict: "pass", area: "Access scope", message: "No returned key looks like sensitive HR data." },
   );

@@ -15,7 +15,7 @@ import { isoDate, normalizeCellText } from "./workbook";
  * Placeholder texts that mean "no value" in this source.
  *
  * The real workbook writes `n/a` into descriptor cells that do not apply — a
- * salon with no spa equipment has `n/a` for its install date and pricing plan.
+ * location with no spa equipment has `n/a` for its install date and pricing plan.
  * Carrying that string through would put the literal text "n/a" in a database
  * column whose emptiness is meaningful, so it is normalised to null here rather
  * than in each caller. Excel error strings are included for the same reason.
@@ -39,7 +39,7 @@ const NULL_PLACEHOLDERS = new Set([
  * True when a cell explicitly states "no value" rather than being empty.
  *
  * The distinction matters for measures: the audited workbook writes `n/a` into
- * the spa %-change column for the eight salons with no spa equipment. That is a
+ * the spa %-change column for the eight locations with no spa equipment. That is a
  * deliberate statement that the measure does not apply — the same fact as an
  * empty cell — so it must not be reported as a malformed number. Reporting it
  * as corruption would bury real parse failures under routine non-events.
@@ -116,7 +116,7 @@ export function asNumber(cell: CellValue): number | null {
 /**
  * True/false, or null.
  *
- * Comp-salon flags appear as Y/N, Yes/No, TRUE/FALSE or 1/0 depending on who
+ * Comp-location flags appear as Y/N, Yes/No, TRUE/FALSE or 1/0 depending on who
  * exported the sheet. Anything outside that set is null — an unrecognised flag
  * is not a false.
  */

@@ -141,7 +141,7 @@ const tri = (t: TriState) => `${t.yes} yes · ${t.no} no · ${t.unset} unset`;
 
 /**
  * Why the counts above are what they are — counts and field combinations only.
- * The one list is of LOCATIONS outside Woven's /locations catalog (salons, not
+ * The one list is of LOCATIONS outside Woven's /locations catalog (locations, not
  * people). No employee name, email, id or date is in `SyncDiagnostics`.
  */
 export function DryRunDiagnostics({ diagnostics }: { diagnostics: SyncDiagnostics }) {
@@ -228,7 +228,7 @@ export const SAVE_NEVER_MODIFIES = [
   "login access",
   "roles",
   "scope",
-  "salon permissions/access",
+  "location permissions/access",
 ] as const;
 
 /** Save outcomes that mean a run row exists or changed, so the server-rendered Overview is out of date. */
@@ -373,7 +373,7 @@ export function SyncPanel({
       if (outcome.status === "succeeded" || outcome.status === "rejected") setSummary(outcome.summary);
       if (outcome.status === "succeeded" && outcome.summary.dryRun) setLastDryRun(outcome.summary);
     } else {
-      setResult(response ? `The sync could not run (HTTP ${response.status}).` : "The sync could not reach Ask Sunny's server.");
+      setResult(response ? `The sync could not run (HTTP ${response.status}).` : "The sync could not reach Ask Bubbles' server.");
     }
     setRunning(false);
   }
@@ -392,7 +392,7 @@ export function SyncPanel({
         setLastDryRun(null);
       }
     } else {
-      setResult(response ? `The save could not run (HTTP ${response.status}).` : "The save could not reach Ask Sunny's server.");
+      setResult(response ? `The save could not run (HTTP ${response.status}).` : "The save could not reach Ask Bubbles' server.");
     }
     setConfirming(false);
     setSaving(false);

@@ -26,9 +26,9 @@ import { cn } from "@/lib/utils/cn";
  */
 
 const TONE: Record<FieldResponsibility, string> = {
-  // Amber, as the reference shows, for everything Ask Sunny writes.
-  ai: "bg-brand-yellow-soft text-brand-yellow-soft-foreground ring-brand-yellow/45",
-  system: "bg-brand-yellow-soft text-brand-yellow-soft-foreground ring-brand-yellow/45",
+  // Amber, as the reference shows, for everything Ask Bubbles writes.
+  ai: "bg-brand-accent-soft text-brand-accent-soft-foreground ring-brand-accent/45",
+  system: "bg-brand-accent-soft text-brand-accent-soft-foreground ring-brand-accent/45",
   // Grey for the parts a person owns — a different job, so a different colour.
   manager: "bg-black/[0.055] text-black/65 ring-black/10",
   employee: "bg-black/[0.055] text-black/65 ring-black/10",

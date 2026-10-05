@@ -4,9 +4,10 @@ import type { Metadata } from "next";
 import { PermissionGate } from "@/components/permission-gate";
 import { ChatScreen } from "@/features/chat/chat-screen";
 import { requirePagePermission } from "@/lib/auth/page";
+import { ACTIVE_BRAND } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Ask Sunny",
+  title: ACTIVE_BRAND.productName,
 };
 
 export const dynamic = "force-dynamic";

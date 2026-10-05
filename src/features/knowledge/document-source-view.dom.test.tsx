@@ -11,7 +11,7 @@ import type { KnowledgeDocument } from "@/types";
  * ============================================================================
  *
  * The Knowledge Base screen became administrators-only, which would have broken
- * something real if it had stopped there: a citation under Sunny's answer is a
+ * something real if it had stopped there: a citation under Bubbles' answer is a
  * promise that the quote came from somewhere, and the rows beneath every answer
  * pointed at that screen.
  *

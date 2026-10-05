@@ -8,7 +8,7 @@ import { serializeFilters, type AnalyticsFilters } from "@/lib/analytics/filters
  * THE ADOPTION GAP, stated rather than implied.
  *
  * This is the panel management came for. "MO Kansas City Wornall filed seven
- * forms" is mildly interesting; "twelve of fifteen salons have filed nothing
+ * forms" is mildly interesting; "twelve of fifteen locations have filed nothing
  * this month" is the sentence somebody acts on, and until it is written down as
  * a number it has to be counted by eye from a table of zeros.
  *
@@ -17,7 +17,7 @@ import { serializeFilters, type AnalyticsFilters } from "@/lib/analytics/filters
  * toggle is a LINK carrying every other filter, so "inactive locations in this
  * district over the last 90 days" is a URL somebody can send.
  *
- * NEITHER FIGURE IS COLOURED RED. A salon that has not started is a fact, not a
+ * NEITHER FIGURE IS COLOURED RED. A location that has not started is a fact, not a
  * measure short of a target the business set, and this system reserves the coral
  * flag for the latter. The emphasis is size and a word.
  */

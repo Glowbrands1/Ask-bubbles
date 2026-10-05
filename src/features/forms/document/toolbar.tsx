@@ -73,7 +73,7 @@ export const INSERTS: ToolbarAction[] = [
   {
     key: "field",
     label: "Field on a rule",
-    hint: "One labelled line somebody or Ask Sunny fills",
+    hint: "One labelled line somebody or Ask Bubbles fills",
     icon: <Zap className="size-4" />,
     block: {
       kind: "field",

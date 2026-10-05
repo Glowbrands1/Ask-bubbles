@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils/cn";
  * THE DETAIL TABLE THE THREE TABS SHARE.
  *
  * SORTING IS A LINK, NOT A CLICK HANDLER. The sort lives in the URL alongside
- * the filters, so a manager can send somebody "the salons ranked by spa
+ * the filters, so a manager can send somebody "the locations ranked by spa
  * conversion" and have it arrive that way — and Back undoes one sort rather
  * than leaving the page.
  *
@@ -18,8 +18,8 @@ import { cn } from "@/lib/utils/cn";
  * pre-formatted cells so the page that knows how to combine a column is the
  * one that does.
  *
- * A MISSING VALUE RENDERS AS `—`, never as `0`. A salon that did not report and
- * a salon that reported nothing are different facts, and the second is a
+ * A MISSING VALUE RENDERS AS `—`, never as `0`. A location that did not report and
+ * a location that reported nothing are different facts, and the second is a
  * finding somebody would act on.
  */
 

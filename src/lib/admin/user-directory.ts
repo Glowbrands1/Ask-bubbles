@@ -12,7 +12,7 @@ import type { AccessScope, Role, ScopeLevel } from "@/types";
  * THE USER DIRECTORY. Every write that changes who somebody is.
  * ============================================================================
  *
- * This is the one module in Ask Sunny that legitimately holds the privileged
+ * This is the one module in Ask Bubbles that legitimately holds the privileged
  * Supabase client, because it does two things nothing else does: it reads OTHER
  * people's profile rows, and it calls the Supabase Auth Admin API to create and
  * recover credentials. Row level security on `app_users` allows a person to
@@ -25,7 +25,7 @@ import type { AccessScope, Role, ScopeLevel } from "@/types";
  * that could look up its own caller could be called with nobody in mind.
  *
  * ============================================================================
- * WHAT ASK SUNNY NEVER DOES WITH A PASSWORD
+ * WHAT ASK BUBBLES NEVER DOES WITH A PASSWORD
  * ============================================================================
  *
  * It does not generate one. It does not store one. It does not hash one, email
@@ -98,7 +98,7 @@ export class DirectoryError extends Error {
  * repeating it would turn this endpoint into an account-existence oracle.
  *
  * A send-rate refusal is the exception, and safely so: it is a fact about ASK
- * SUNNY'S OWN QUOTA, not about the address. It is identical for an address that
+ * BUBBLES'S OWN QUOTA, not about the address. It is identical for an address that
  * exists, one that does not, and one that is malformed — so it discloses
  * nothing, while being the one failure here an administrator can actually do
  * something about. That distinction is the whole reason this is separated out
@@ -119,7 +119,7 @@ function isEmailRateLimit(error: unknown): boolean {
 
 /** What an administrator needs to know, and what to do about it. */
 const EMAIL_RATE_LIMIT_ADVICE =
-  "This is a limit on Ask Sunny's own email allowance, not a problem with the address. Wait for the hour to reset and try again, or set up custom SMTP in Supabase to remove the limit.";
+  "This is a limit on Ask Bubbles' own email allowance, not a problem with the address. Wait for the hour to reset and try again, or set up custom SMTP in Supabase to remove the limit.";
 
 /* ------------------------------------------------------------ validation -- */
 
@@ -167,7 +167,7 @@ export function normalizeDisplayName(value: unknown, fallback: string): string {
 /**
  * Reads a scope from request input.
  *
- * An unknown level becomes `salon`, the NARROWEST — the same fail-closed
+ * An unknown level becomes `location`, the NARROWEST — the same fail-closed
  * direction the profile lookup takes, and for the same reason: a scope nobody
  * can read must not become global access.
  */
@@ -192,7 +192,7 @@ export function normalizeScope(value: unknown): AccessScope {
   if (level !== "global" && !primary) {
     throw new DirectoryError(
       "invalid_input",
-      "A salon, district or region scope needs a primary area. Choose one, or set the scope to global.",
+      "A location, district or region scope needs a primary area. Choose one, or set the scope to global.",
     );
   }
   if (level === "global" && primary) {
@@ -342,7 +342,7 @@ export async function inviteUser(
   if (existing) {
     throw new DirectoryError(
       "duplicate_email",
-      "Somebody already has an Ask Sunny account with that email address.",
+      "Somebody already has an Ask Bubbles account with that email address.",
       409,
     );
   }
@@ -590,7 +590,7 @@ export async function patchUser(
     if (!revoked.ok) {
       throw new DirectoryError(
         "auth_revocation_incomplete",
-        "The account is disabled and can no longer use Ask Sunny, but blocking sign-in at the authentication service did not complete. Sending Disable again (status \"disabled\") finishes it.",
+        "The account is disabled and can no longer use Ask Bubbles, but blocking sign-in at the authentication service did not complete. Sending Disable again (status \"disabled\") finishes it.",
         502,
       );
     }
@@ -625,7 +625,7 @@ function scopeLabel(scope: { level: string; primaryAreaId: string | null; alsoCo
 }
 
 /**
- * Refuses a change that would leave nobody able to administer Ask Sunny.
+ * Refuses a change that would leave nobody able to administer Ask Bubbles.
  *
  * Counted over admin/owner/developer together, because what has to survive is
  * the SEAT rather than any particular role — and counted in the database rather

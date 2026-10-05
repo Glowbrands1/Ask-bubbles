@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * THE EMPLOYEE DIRECTORY'S TYPES — what Ask Sunny keeps about a Woven employee
+ * THE EMPLOYEE DIRECTORY'S TYPES — what Ask Bubbles keeps about a Woven employee
  * ============================================================================
  *
  * Everything here is the ALLOWLIST, expressed as a type. There is no field for
@@ -242,7 +242,7 @@ export type LocationMapStatus = "unmapped" | "mapped" | "ignored";
 export interface LocationMapEntry {
   wovenLocationId: string;
   status: LocationMapStatus;
-  salonId: string | null;
+  locationId: string | null;
 }
 
 /** A row of `woven_position_map`, as far as the sync needs it: labels, never access. */

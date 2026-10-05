@@ -11,7 +11,7 @@ import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types
  *
  *   1. POST /api/forms/instances            create the canonical instance
  *   2. onCreated(reference)                  SYNCHRONOUSLY, before step 3
- *   3. POST /api/forms/instances/[id]/draft ask Sunny to prefill it
+ *   3. POST /api/forms/instances/[id]/draft ask Bubbles to prefill it
  *
  * STEP 2 IS A CALLBACK, NOT A RETURN VALUE, AND THAT IS THE FIX.
  *
@@ -49,15 +49,15 @@ import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types
 
 export interface CreateInlineFormResult {
   reference: ChatFormInstanceRef;
-  /** Set when the instance was created but Sunny could not prefill it. */
+  /** Set when the instance was created but Bubbles could not prefill it. */
   draftWarning: string | null;
 }
 
 export const DRAFT_FAILED_WARNING =
-  "Your draft was created, but Sunny couldn't prefill the details. You can complete them below.";
+  "Your draft was created, but Bubbles couldn't prefill the details. You can complete them below.";
 
 export const NO_NOTES_WARNING =
-  "Your draft was created, but there wasn't enough in the conversation for Sunny to prefill it. You can complete it below.";
+  "Your draft was created, but there wasn't enough in the conversation for Bubbles to prefill it. You can complete it below.";
 
 /** The JSON `fetch` wrapper the caller supplies — `formsFetch`, in the app. */
 export type FormsCall = <T>(url: string, init?: RequestInit) => Promise<T>;
@@ -93,8 +93,8 @@ export async function createInlineForm({
    *   locationId    authorized against the authenticated AccessScope
    *   source        fixed, so Form Monitoring can tell where a form came from
    *
-   * `locationName` is DELIBERATELY ABSENT. The only source of a salon display
-   * name in this app is `PRODUCTION_SALONS` — see
+   * `locationName` is DELIBERATELY ABSENT. The only source of a location display
+   * name in this app is `PRODUCTION_LOCATIONS` — see
    * docs/chat-phase-3.md. A validated id with no name is honest; a validated id
    * with a demo name beside it is not.
    */
@@ -117,7 +117,7 @@ export async function createInlineForm({
        * THE JOB TITLE, ONLY WHERE THE MANAGER STATED IT. It fills the form's
        * `job_title` line at creation — a `system` field no model can write —
        * and stays null when they said nothing, leaving a blank the manager
-       * fills rather than a title Ask Sunny invented.
+       * fills rather than a title Ask Bubbles invented.
        */
       employeeRole: proposal.employeeRole,
       /*

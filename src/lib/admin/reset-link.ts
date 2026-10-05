@@ -28,7 +28,7 @@ import {
  *     `resetPasswordForEmail` or `inviteUserByEmail`.
  *   - Supabase's `action_link` is NOT used. It points at `/auth/v1/verify`,
  *     which spends the token on GET — the exact failure PR #33 fixed. Only
- *     `properties.hashed_token` is read, and it is wrapped in Ask Sunny's own
+ *     `properties.hashed_token` is read, and it is wrapped in Ask Bubbles' own
  *     scanner-safe `/auth/recovery-start` URL, so the person goes through the
  *     same flow as an emailed link: Continue → verifyOtp → /reset-password →
  *     updateUser({ password }). No password is created or set here.

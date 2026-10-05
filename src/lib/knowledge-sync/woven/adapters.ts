@@ -149,7 +149,7 @@ export function requireList(body: unknown, what: string): Record<string, unknown
   }
   const list = (body as { list: unknown[] }).list;
   if (list.some((row) => typeof row !== "object" || row === null)) {
-    throw new WovenShapeError("unexpected_shape", `Woven's ${what} list contained rows Ask Sunny could not read.`);
+    throw new WovenShapeError("unexpected_shape", `Woven's ${what} list contained rows Ask Bubbles could not read.`);
   }
   return list as Record<string, unknown>[];
 }
@@ -755,7 +755,7 @@ export function unmatchedManagementEntries(located: ProcedureAttachment[], manag
   return out;
 }
 
-/** The text a procedure contributes to Ask Sunny: its steps, in page order, each with its label and title. */
+/** The text a procedure contributes to Ask Bubbles: its steps, in page order, each with its label and title. */
 export function procedureText(steps: ProcedureStep[]): string {
   return steps
     .filter((s) => s.text.length > 0 || s.title.length > 0)

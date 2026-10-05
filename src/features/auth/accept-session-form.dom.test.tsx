@@ -17,7 +17,7 @@ import { AcceptSessionForm } from "./accept-session-form";
  *
  * Two properties matter beyond "does it work":
  *
- *   THE TOKEN GOES TO SUPABASE AND NOWHERE ELSE. Not to an Ask Sunny endpoint,
+ *   THE TOKEN GOES TO SUPABASE AND NOWHERE ELSE. Not to an Ask Bubbles endpoint,
  *   not to a log, not into rendered output.
  *
  *   THE FRAGMENT LEAVES THE HISTORY ENTRY IMMEDIATELY, via `replaceState` —
@@ -99,7 +99,7 @@ describe("a real invitation fragment", () => {
     expect(router.refresh).toHaveBeenCalled();
   });
 
-  it("NEVER sends the token to an Ask Sunny endpoint", async () => {
+  it("NEVER sends the token to an Ask Bubbles endpoint", async () => {
     /*
      * The load-bearing one. `setSession` is Supabase's own client; a `fetch`
      * from this component would mean a raw credential crossing our own API,

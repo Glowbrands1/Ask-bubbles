@@ -214,7 +214,7 @@ function happyPath(options: { draftFails?: boolean } = {}) {
       return { payload: { instance: { id: "inst-42" } } };
     }
     if (url.endsWith("/draft")) {
-      if (options.draftFails) return { ok: false, payload: { error: "Sunny is unavailable." } };
+      if (options.draftFails) return { ok: false, payload: { error: "Bubbles is unavailable." } };
       return { payload: { values: {}, checked: {}, withheld: [] } };
     }
     if (url === "/api/forms/instances/inst-42" && init.method === "PATCH") {
@@ -273,7 +273,7 @@ describe("8-10. every other proposal state offers no create action", () => {
   it.each([
     ["needs_employee", proposal({ employeeName: null, status: "needs_employee", supportsInlineDraft: false })],
     ["needs_location", proposal({ locationId: null, status: "needs_location", locationResolution: "unavailable", supportsInlineDraft: false })],
-    ["multiple salons", proposal({ locationId: null, status: "needs_location", locationResolution: "needs_selection", supportsInlineDraft: false })],
+    ["multiple locations", proposal({ locationId: null, status: "needs_location", locationResolution: "needs_selection", supportsInlineDraft: false })],
     ["a non-Coaching template", proposal({ templateKey: "dpoa", templateName: "Corrective Action Form", supportsInlineDraft: false })],
   ])("%s", (_name, state) => {
     happyPath();
@@ -730,11 +730,11 @@ describe("a finalized form renders read-only rather than assuming a draft", () =
  *
  * Persisting the reference immediately was right and is not moving. But the
  * editor then rendered immediately too, fetched the SEEDED instance, and never
- * refetched — while Sunny spent up to two minutes writing the real values into
+ * refetched — while Bubbles spent up to two minutes writing the real values into
  * the same row.
  *
  * Two failures in one. The manager sees an empty-looking form and concludes
- * Sunny did not fill it in, when the backend succeeded — which is exactly
+ * Bubbles did not fill it in, when the backend succeeded — which is exactly
  * Marissa's requirement appearing not to work. And if they start typing, their
  * edit and the assistant's write land on the same canonical record in whatever
  * order they arrive.
@@ -751,7 +751,7 @@ function delayedDraft() {
       drafted = didDraft;
       resolve({ payload: { values: {}, checked: {}, withheld: [] } });
     };
-    failDraft = () => resolve({ ok: false, payload: { error: "Sunny is unavailable." } });
+    failDraft = () => resolve({ ok: false, payload: { error: "Bubbles is unavailable." } });
   });
 
   fakeFetch(async (url, init) => {
@@ -762,7 +762,7 @@ function delayedDraft() {
     if (init.method === "PATCH") return { payload: loadedInstance() };
     /*
      * THE CANONICAL READ. Before drafting settles it holds only the seeded
-     * value; afterwards it holds what Sunny wrote. A component that never
+     * value; afterwards it holds what Bubbles wrote. A component that never
      * refetches can only ever show the first of those.
      */
     if (!drafted) return { payload: seededInstance() };
@@ -801,7 +801,7 @@ describe("R2-F1. the reference is still persisted before drafting", () => {
   });
 });
 
-describe("R2-F1. no editable stale form while Sunny is still writing", () => {
+describe("R2-F1. no editable stale form while Bubbles is still writing", () => {
   it("renders read-only with an honest loading state", async () => {
     const { release } = delayedDraft();
     await createAndWait();
@@ -809,8 +809,8 @@ describe("R2-F1. no editable stale form while Sunny is still writing", () => {
     const { container } = renderResult!;
     await waitFor(() => expect(container.textContent).toContain("Employee Information"));
 
-    expect(container.textContent).toMatch(/Sunny is filling it in from your conversation/i);
-    expect(container.textContent).toMatch(/Editing opens as soon as Sunny is finished/i);
+    expect(container.textContent).toMatch(/Bubbles is filling it in from your conversation/i);
+    expect(container.textContent).toMatch(/Editing opens as soon as Bubbles is finished/i);
 
     // Every control is inert, and there is no way to submit.
     const details = container.querySelector<HTMLTextAreaElement>("#form-field-coaching_details")!;
@@ -860,7 +860,7 @@ describe("R2-F1. the drafted values appear when prefill completes", () => {
 
     const { container } = renderResult!;
     await waitFor(() => expect(container.textContent).toContain("Employee Information"));
-    // The pre-draft read: Sunny's text is genuinely not there yet.
+    // The pre-draft read: Bubbles' text is genuinely not there yet.
     expect(container.textContent).not.toContain("Sarah was late twice.");
 
     release();
@@ -882,7 +882,7 @@ describe("R2-F1. the drafted values appear when prefill completes", () => {
     );
     const details = container.querySelector<HTMLTextAreaElement>("#form-field-coaching_details")!;
     expect(details.disabled).toBe(false);
-    expect(container.textContent).not.toMatch(/Sunny is filling it in/i);
+    expect(container.textContent).not.toMatch(/Bubbles is filling it in/i);
   });
 
   it("takes the values from the canonical GET, not the draft response", async () => {
@@ -934,7 +934,7 @@ describe("R2-F1. a refresh during prefill is not mistaken for success", () => {
     /*
      * The conversation reopened from IndexedDB: this tab never watched the
      * prefill and cannot say whether it finished. `applyAssistantDraft` records
-     * a `drafted` event, so its absence on an `ask_sunny` form means the
+     * a `drafted` event, so its absence on an `assistant` form means the
      * assistant never got as far as writing.
      */
     fakeFetch(() => ({ payload: seededInstance() }));
@@ -966,7 +966,7 @@ describe("R2-F1. a refresh during prefill is not mistaken for success", () => {
   });
 
   it("says nothing about prefill on a manually created form", async () => {
-    // Nobody asked Sunny to fill this one in, so there is nothing to report.
+    // Nobody asked Bubbles to fill this one in, so there is nothing to report.
     fakeFetch(() => {
       const manual = seededInstance();
       manual.instance.source = "manual";
@@ -1273,7 +1273,7 @@ describe("P4. Start another begins a new request, never reusing this one", () =>
  * its Direct policy field read "[Verify exact policy language from official
  * manual]" — two claims on one screen, one of them false.
  *
- * Ask Sunny never produces that string: the placeholder guard strips a
+ * Ask Bubbles never produces that string: the placeholder guard strips a
  * bracketed token before anything is stored, and the policy guard withholds a
  * policy value no approved source backs. But the honest half was missing here
  * as well. The drafting route's grounding notice was returned to the browser
@@ -1427,7 +1427,7 @@ describe("the policy-verification notice", () => {
     expect(notice).toMatch(/entered by hand|is blank/);
   });
 
-  it("stays quiet while Sunny is still writing", () => {
+  it("stays quiet while Bubbles is still writing", () => {
     const notice = policyVerificationNoticeFor(
       correctiveInstance([{ fieldKey: "policy_violated", value: null }]),
       true,
@@ -1511,7 +1511,7 @@ describe("a performance plan says what has to happen before it is signed", () =>
     expect(notice).toContain("Review the SDIT EPP with Paulyne Co");
   });
 
-  it("says nothing while Sunny is still writing, or once the form is finalized", () => {
+  it("says nothing while Bubbles is still writing, or once the form is finalized", () => {
     expect(reviewConversationNoticeFor(planInstance("sdit-epp"), true)).toBeNull();
     expect(reviewConversationNoticeFor(planInstance("sdit-epp", "finalized"), false)).toBeNull();
   });
@@ -1535,7 +1535,7 @@ describe("a performance plan says what has to happen before it is signed", () =>
      * THE SAME ARCHITECTURE, ON THE PLAN WHOSE PLAN OF ACTION IS EIGHT ROWS
      * RATHER THAN A PARAGRAPH. Every phrase below is a value stored against
      * the instance — there is no second drafting pass — and the category is
-     * named so the manager can see WHICH of the eight Ask Sunny filled.
+     * named so the manager can see WHICH of the eight Ask Bubbles filled.
      */
     const loaded = planInstance("tsd-epp");
     loaded.values = [

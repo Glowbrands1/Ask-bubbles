@@ -19,11 +19,11 @@ import { cn } from "@/lib/utils/cn";
  * ============================================================================
  *
  * The 14 September review, from the restricted session: "Markdown tables are
- * rendering as raw text. The salon list appeared with literal pipes —
- * `| Salon | PPTA | |---|---|` — instead of displaying as a formatted table."
+ * rendering as raw text. The location list appeared with literal pipes —
+ * `| Location | PPTA | |---|---|` — instead of displaying as a formatted table."
  *
  * The model was already emitting them, correctly, because a ranked list of
- * salons with two figures each IS a table and asking it not to produce one
+ * locations with two figures each IS a table and asking it not to produce one
  * would make the answer worse. The gap was here: a pipe row matched none of the
  * block rules and fell through to `paragraph.push`, which renders the source
  * text. So the renderer learned the one construct it was missing.
@@ -142,9 +142,9 @@ export function RichText({
       blocks.push(
         <div
           key={key}
-          className="rounded-[var(--radius-sm)] border-l-4 border-brand-yellow bg-brand-yellow-soft px-3.5 py-2.5"
+          className="rounded-[var(--radius-sm)] border-l-4 border-brand-accent bg-brand-accent-soft px-3.5 py-2.5"
         >
-          <p className="eyebrow mb-1 text-brand-yellow-soft-foreground">{label}</p>
+          <p className="eyebrow mb-1 text-brand-accent-soft-foreground">{label}</p>
           {/*
             THE BODY IS A SENTENCE NOW, so it starts like one. In the source
             text it is a clause following a colon — "next step: if you are
@@ -218,7 +218,7 @@ export function RichText({
   /**
    * Renders a table and returns how many lines it consumed.
    *
-   * SCROLLS RATHER THAN SQUEEZES. A salon list is fifteen rows of three or four
+   * SCROLLS RATHER THAN SQUEEZES. A location list is fifteen rows of three or four
    * columns and the chat column is narrow; wrapping every cell turns a ranking
    * into a wall. The overflow is on the table's own wrapper, so the answer
    * around it never scrolls sideways.
@@ -264,7 +264,7 @@ export function RichText({
                   PADDED TO THE HEADER'S WIDTH. A model that drops a trailing
                   empty cell produces a short row, and a short row shifts every
                   cell after it into the wrong column — which on a table of
-                  salons and figures is a wrong number under a salon's name
+                  locations and figures is a wrong number under a location's name
                   rather than a cosmetic fault.
                 */}
                 {headerCells.map((_, column) => (

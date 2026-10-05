@@ -13,10 +13,10 @@ import type {
  * WOVEN EMPLOYEE SYNC — LABELLED SAMPLE DATA, FOR DEMO BUILDS ONLY
  * ============================================================================
  *
- * EVERY RECORD HERE IS INVENTED. The people, emails, salons, positions, runs
+ * EVERY RECORD HERE IS INVENTED. The people, emails, locations, positions, runs
  * and changes do not come from Woven and describe nobody. Every id starts with
- * `SAMPLE-`, every salon is a fictional "Sample Salon", and every email is at
- * `sample-salons.test`, a reserved test domain.
+ * `SAMPLE-`, every location is a fictional "Sample Location", and every email is at
+ * `sample-locations.test`, a reserved test domain.
  *
  * REACHABLE FROM EXACTLY ONE PLACE: `lib/demo/runtime.demo.ts`, the demo side
  * of the build-time boundary. A production build never imports that module,
@@ -28,22 +28,22 @@ import type {
  * that would write is disabled while it is shown.
  */
 
-const DOMAIN = "sample-salons.test";
+const DOMAIN = "sample-locations.test";
 const DAY = "2026-09-29";
 const RUN_1 = "SAMPLE-RUN-0118";
 const RUN_2 = "SAMPLE-RUN-0117";
 const RUN_3 = "SAMPLE-RUN-0116";
 
 const loc = {
-  north: { wovenLocationId: "SAMPLE-LOC-101", name: "Sample Salon North", number: "S101" },
-  river: { wovenLocationId: "SAMPLE-LOC-102", name: "Sample Salon Riverside", number: "S102" },
-  lake: { wovenLocationId: "SAMPLE-LOC-103", name: "Sample Salon Lakeview", number: "S103" },
-  oak: { wovenLocationId: "SAMPLE-LOC-104", name: "Sample Salon Oak Park", number: "104" },
+  north: { wovenLocationId: "SAMPLE-LOC-101", name: "Sample Location North", number: "S101" },
+  river: { wovenLocationId: "SAMPLE-LOC-102", name: "Sample Location Riverside", number: "S102" },
+  lake: { wovenLocationId: "SAMPLE-LOC-103", name: "Sample Location Lakeview", number: "S103" },
+  oak: { wovenLocationId: "SAMPLE-LOC-104", name: "Sample Location Oak Park", number: "104" },
   office: { wovenLocationId: "SAMPLE-LOC-900", name: "Sample Support Office", number: "HQ" },
 };
 
 type Loc = (typeof loc)[keyof typeof loc];
-const salonNumber = (l: Loc) => (l === loc.oak || l === loc.office ? null : l.number);
+const locationCode = (l: Loc) => (l === loc.oak || l === loc.office ? null : l.number);
 /* The support office is left unreviewed in the sample, so the Locations tab can show "Suggest ignore". */
 const mapStatus = (l: Loc): DirectoryRow["primaryLocationMappingStatus"] => (l === loc.office || l === loc.oak ? "unmapped" : "mapped");
 
@@ -68,11 +68,11 @@ function person(
     primaryLocationId: primary.wovenLocationId,
     primaryLocationName: primary.name,
     primaryLocationMappingStatus: mapStatus(primary),
-    primarySalonNumber: salonNumber(primary),
+    primaryLocationCode: locationCode(primary),
     additionalLocations: [],
     temporaryOrExpiringLocations: [],
     activeLocationCount: 1,
-    hasUnmappedLocation: salonNumber(primary) === null && primary !== loc.office,
+    hasUnmappedLocation: locationCode(primary) === null && primary !== loc.office,
     hasMultipleLocationAccess: false,
     hasAllLocationAccess: false,
     hireDate: "2023-04-17",
@@ -91,8 +91,8 @@ function person(
 
 const P = {
   associate: ["SAMPLE-POS-01", "Sample Sales Associate", "mapped"] as [string, string, "mapped"],
-  asd: ["SAMPLE-POS-02", "Sample Assistant Salon Director", "mapped"] as [string, string, "mapped"],
-  sd: ["SAMPLE-POS-03", "Sample Salon Director", "mapped"] as [string, string, "mapped"],
+  asd: ["SAMPLE-POS-02", "Sample Assistant Location Director", "mapped"] as [string, string, "mapped"],
+  sd: ["SAMPLE-POS-03", "Sample Location Director", "mapped"] as [string, string, "mapped"],
   dm: ["SAMPLE-POS-04", "Sample District Manager", "mapped"] as [string, string, "mapped"],
   lead: ["SAMPLE-POS-05", "Sample Lead Associate", "unmapped"] as [string, string, "unmapped"],
   trainer: ["SAMPLE-POS-06", "Sample Trainer", "unmapped"] as [string, string, "unmapped"],
@@ -248,7 +248,7 @@ const changes: ChangeRow[] = [
     detectedAt: "2026-09-28T10:31:00Z",
     syncRunId: RUN_2,
   }),
-  change(8, callum, "location_access_removed", "expired", { locationName: "Sample Salon East", expiresOn: "2026-09-27" }, null, {
+  change(8, callum, "location_access_removed", "expired", { locationName: "Sample Location East", expiresOn: "2026-09-27" }, null, {
     fieldName: "location:SAMPLE-LOC-105",
     effectiveDate: "2026-09-27",
     detectedAt: "2026-09-28T10:31:00Z",
@@ -321,7 +321,7 @@ const locations: LocationMappingRow[] = [
   { ...mapRow(loc.office, "unmapped", null, null), employeeCount: 1, isNonLocation: true, districtName: null, regionName: null },
 ];
 
-function mapRow(l: Loc, status: LocationMappingRow["status"], salon: string | null, suggested: string | null = null): LocationMappingRow {
+function mapRow(l: Loc, status: LocationMappingRow["status"], location: string | null, suggested: string | null = null): LocationMappingRow {
   return {
     wovenLocationId: l.wovenLocationId,
     name: l.name,
@@ -333,10 +333,10 @@ function mapRow(l: Loc, status: LocationMappingRow["status"], salon: string | nu
     isNonLocation: false,
     employeeCount: 0,
     status,
-    salonNumber: salon,
-    salonName: salon ? l.name : null,
-    suggestedSalonNumber: suggested,
-    suggestedSalonName: suggested ? l.name : null,
+    locationCode: location,
+    locationName: location ? l.name : null,
+    suggestedLocationCode: suggested,
+    suggestedLocationName: suggested ? l.name : null,
     reviewedBy: status === "mapped" ? "admin:sample-reviewer" : null,
     reviewedAt: status === "mapped" ? "2026-09-24T15:00:00Z" : null,
   };
@@ -370,7 +370,7 @@ function pos(p: [string, string, string], count: number, role: string | null, sc
 const roleFor: Record<string, string> = Object.fromEntries(positions.filter((p) => p.role).map((p) => [p.wovenPositionId, p.role!]));
 const scopeFor: Record<string, string> = Object.fromEntries(positions.filter((p) => p.scopeLevel).map((p) => [p.wovenPositionId, p.scopeLevel!]));
 
-/** Which sample people "have" an Ask Sunny login, and how it differs from Woven. */
+/** Which sample people "have" an Ask Bubbles login, and how it differs from Woven. */
 const logins: Record<string, { role: string; status: string; scope: string; area: string }> = {
   "SAMPLE-EMP-0002": { role: "assistant_manager", status: "active", scope: "location", area: "loc-S103" },
   "SAMPLE-EMP-0003": { role: "assistant_manager", status: "active", scope: "location", area: "loc-S102" },
@@ -394,18 +394,18 @@ const accessPreview: AccessPreviewRow[] = directory.map((d) => {
     positionMappingConfirmed: confirmed,
     mappedRole: role,
     mappedScopeLevel: confirmed && d.positionId ? scopeFor[d.positionId] ?? null : null,
-    mappedPrimarySalonNumber: d.primarySalonNumber,
+    mappedPrimaryLocationCode: d.primaryLocationCode,
     appUserRole: login?.role ?? null,
     appUserStatus: login?.status ?? null,
     appUserScopeLevel: login?.scope ?? null,
     appUserScopePrimaryAreaId: login?.area ?? null,
     hasLogin: login !== undefined,
     wouldProvision:
-      !login && d.employmentStatus === "active" && eligibleDomain && confirmed && d.primarySalonNumber !== null,
+      !login && d.employmentStatus === "active" && eligibleDomain && confirmed && d.primaryLocationCode !== null,
     wouldDeactivate: !!login && d.employmentStatus === "terminated" && login.status !== "disabled",
     roleDiffers: !!login && confirmed && role !== login.role,
-    primarySalonDiffers:
-      !!login && login.scope === "location" && d.primarySalonNumber !== null && login.area !== `loc-${d.primarySalonNumber}`,
+    primaryLocationDiffers:
+      !!login && login.scope === "location" && d.primaryLocationCode !== null && login.area !== `loc-${d.primaryLocationCode}`,
     roleOverride: null,
     effectiveRole: role,
     effectiveScopeLevel: confirmed && d.positionId ? scopeFor[d.positionId] ?? null : null,

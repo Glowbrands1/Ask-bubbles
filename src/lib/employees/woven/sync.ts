@@ -53,7 +53,7 @@ import {
  *
  * WHAT A SUCCESSFUL RUN NEVER DOES:
  *   - delete anybody (absence raises a miss count; it is not termination),
- *   - change a login, a role, a scope or a salon assignment,
+ *   - change a login, a role, a scope or a location assignment,
  *   - call a position change a promotion without a confirmed, ranked mapping,
  *   - write anything to Woven.
  */
@@ -210,7 +210,7 @@ export function outcomeHttpStatus(outcome: SyncOutcome): number {
 /**
  * Refuses a read that cannot be the whole estate.
  *
- *   EMPTY. No employees at all is never a real answer for a salon estate.
+ *   EMPTY. No employees at all is never a real answer for a location estate.
  *   MOSTLY UNREADABLE. More records without a usable EmployeeID than with one.
  *   UNEXPECTEDLY SMALL. Fewer active employees than
  *   `WOVEN_MIN_COMPLETENESS_PERCENT` of the actives already on file.

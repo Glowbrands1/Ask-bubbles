@@ -19,7 +19,7 @@ vi.setConfig({ hookTimeout: 60_000, testTimeout: 60_000 });
  * A Woven policy is synced by the real engine through the real sink into the
  * real `ingestDocument` pipeline, on the repository's own knowledge schema
  * (PGlite + pgvector, the migrations verbatim). Then it is asked for the way
- * Ask Sunny asks:
+ * Ask Bubbles asks:
  *
  *   CHAT       `answerQuestion` with the real `SupabaseKnowledgeProvider` and
  *              the real `match_knowledge_chunks`. Only the model call is
@@ -66,10 +66,10 @@ vi.mock("@/lib/reporting/read/employee-facts", () => ({
  * worded in the policy's own vocabulary to clear the production similarity
  * floor. What is under test is WHICH rows retrieval may return, not ranking.
  */
-const QUESTION = "What does the attendance policy say? Do team members have to arrive on time and call the salon if they will be late?";
-const UPDATED_QUESTION = "Attendance policy: arrive on time for every shift? Text the salon director before the shift starts if late?";
-const NOTES = "Attendance policy: did not arrive on time; did not call the salon; late.";
-const UPDATED_NOTES = "Attendance policy: did not arrive on time for the shift; did not text the salon director before the shift started; late.";
+const QUESTION = "What does the attendance policy say? Do team members have to arrive on time and call the location if they will be late?";
+const UPDATED_QUESTION = "Attendance policy: arrive on time for every shift? Text the location director before the shift starts if late?";
+const NOTES = "Attendance policy: did not arrive on time; did not call the location; late.";
+const UPDATED_NOTES = "Attendance policy: did not arrive on time for the shift; did not text the location director before the shift started; late.";
 
 async function ask(question = QUESTION) {
   model.input = null;
@@ -125,7 +125,7 @@ describe("a synced Woven policy enters the normal knowledge pipeline", () => {
     const chunks = await h.chunks(id);
     expect(chunks.length).toBeGreaterThan(0);
     expect(chunks.every((chunk) => chunk.version === 1)).toBe(true);
-    expect(chunks.map((chunk) => chunk.content).join("\n")).toContain("Call the salon if you will be late.");
+    expect(chunks.map((chunk) => chunk.content).join("\n")).toContain("Call the location if you will be late.");
     /* The stored original is the policy text, in private Storage, under the document's id. */
     expect([...h.database.storage.keys()].some((path) => path.includes(id))).toBe(true);
   });
@@ -140,7 +140,7 @@ describe("chat retrieves and cites synced Woven content", () => {
 
     /* Retrieval → the grounding the model was sent. */
     expect(grounding()).toMatch(/^\[S1\] Attendance Policy/m);
-    expect(grounding()).toContain("Call the salon if you will be late.");
+    expect(grounding()).toContain("Call the location if you will be late.");
     /* The citation: the human-readable title and the synced document's id. */
     expect(answer.citations).toEqual([expect.objectContaining({ documentId: id, documentTitle: "Attendance Policy" })]);
     expect((await h.document(answer.citations[0]!.documentId))?.source).toBe("woven");
@@ -160,7 +160,7 @@ describe("chat retrieves and cites synced Woven content", () => {
     const before = await h.documentCount();
 
     const policy = h.fake.state.policies[0]!;
-    policy.body = "Arrive on time for every shift.\nText your salon director if you will be late, before the shift starts.";
+    policy.body = "Arrive on time for every shift.\nText your location director if you will be late, before the shift starts.";
     policy.version = "Version 3";
     policy.updated = "10/1/2026";
     await h.run("sync");
@@ -171,11 +171,11 @@ describe("chat retrieves and cites synced Woven content", () => {
     /* Stale chunks are gone, not merely outranked. */
     const chunks = await h.chunks(id);
     expect(chunks.every((chunk) => chunk.version === 2)).toBe(true);
-    expect(chunks.map((c) => c.content).join("\n")).not.toContain("Call the salon");
+    expect(chunks.map((c) => c.content).join("\n")).not.toContain("Call the location");
 
     const answer = await ask(UPDATED_QUESTION);
-    expect(grounding()).toContain("Text your salon director if you will be late");
-    expect(grounding()).not.toContain("Call the salon if you will be late.");
+    expect(grounding()).toContain("Text your location director if you will be late");
+    expect(grounding()).not.toContain("Call the location if you will be late.");
     expect(answer.citations).toEqual([expect.objectContaining({ documentId: id, documentTitle: "Attendance Policy" })]);
   });
 
@@ -226,7 +226,7 @@ describe("forms: groundPolicy retrieves synced Woven policy through the server-s
     expect(calls).toEqual([]);
     expect(result.unverified).toBe(false);
     expect(result.passages[0]).toMatchObject({ source: { documentId: id, documentTitle: "Attendance Policy" } });
-    expect(result.passages[0]!.text).toContain("Call the salon if you will be late.");
+    expect(result.passages[0]!.text).toContain("Call the location if you will be late.");
     expectNoSecrets(result);
   });
 
@@ -236,13 +236,13 @@ describe("forms: groundPolicy retrieves synced Woven policy through the server-s
     trapFetch();
     const policy = h.fake.state.policies[0]!;
 
-    policy.body = "Arrive on time for every shift.\nText your salon director if you will be late, before the shift starts.";
+    policy.body = "Arrive on time for every shift.\nText your location director if you will be late, before the shift starts.";
     policy.updated = "10/1/2026";
     await h.run("sync");
     const updated = await groundPolicy(UPDATED_NOTES);
     expect(updated.passages[0]).toMatchObject({ source: { documentId: id } });
-    expect(updated.passages.map((p) => p.text).join("\n")).toContain("Text your salon director");
-    expect(updated.passages.map((p) => p.text).join("\n")).not.toContain("Call the salon");
+    expect(updated.passages.map((p) => p.text).join("\n")).toContain("Text your location director");
+    expect(updated.passages.map((p) => p.text).join("\n")).not.toContain("Call the location");
 
     policy.status = "draft";
     await h.run("sync");

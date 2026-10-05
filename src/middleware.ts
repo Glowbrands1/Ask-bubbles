@@ -37,7 +37,7 @@ import { getSupabaseSessionClientFor } from "@/lib/supabase/auth-clients";
  *   to be bypassed by a path nobody added to the matcher.
  *
  * IT DOES NOT TOUCH `/api/reporting/inbound-email`. That endpoint is
- * authenticated by RESEND'S WEBHOOK SIGNATURE, not by an Ask Sunny session, and
+ * authenticated by RESEND'S WEBHOOK SIGNATURE, not by an Ask Bubbles session, and
  * it must keep working with no user signed in — a report arriving at 6am has
  * nobody's cookie attached. The matcher excludes `/api` entirely, and a test
  * asserts it, because breaking the reporting pipeline by adding auth

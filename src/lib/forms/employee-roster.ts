@@ -14,17 +14,17 @@ import { authorizedLocationIds } from "./location-scope";
  * READ-ONLY USE OF THE PHASE-ONE DIRECTORY. `employee_access_directory` is the
  * observe-only Woven sync (docs/woven-employee-sync.md). Nothing here writes to
  * it, and nothing here grants access: it is read to check a SPELLING and to
- * learn which salon an employee works at, after the actor's own scope has
- * already decided which salons they may file against.
+ * learn which location an employee works at, after the actor's own scope has
+ * already decided which locations they may file against.
  *
  * SCOPE IS APPLIED HERE, BEFORE ANY NAME LEAVES THE SERVER:
  *
- *   salon     employees with an active, person-mapped affiliation at one of the
- *             actor's own salons. Nobody else is ever a candidate.
- *   global    every active employee — a global scope excludes no salon.
+ *   location     employees with an active, person-mapped affiliation at one of the
+ *             actor's own locations. Nobody else is ever a candidate.
+ *   global    every active employee — a global scope excludes no location.
  *   district  NOBODY, for the same reason form creation fails closed for these
  *   region    scopes (`location-scope.ts`): the forms path cannot yet verify
- *             which salons an area contains. An empty roster means the typed
+ *             which locations an area contains. An empty roster means the typed
  *             name is used as typed, exactly as before.
  *   demo      NOBODY. A demo actor has no verified scope.
  *
@@ -82,19 +82,14 @@ export function scopeRoster(
   return roster;
 }
 
-/** `loc-NNNN` — the id every Ask Sunny scope and form uses for a salon. */
-function locationIdForSalonNumber(salonNumber: string): string {
-  return `loc-${salonNumber}`;
-}
-
 /**
- * The whole directory, joined to Ask Sunny salons through the person-reviewed
- * location map. Four small reads joined in memory: the directory is a few
- * hundred rows, and none of these tables has a foreign key to join through.
+ * The whole directory, joined to configured locations through the
+ * person-reviewed location map, which stores the `loc-<code>` id directly.
+ * Three small reads joined in memory.
  */
 export async function readDirectoryRoster(): Promise<DirectoryRosterRow[]> {
   const supabase = getSupabaseAdmin();
-  const [people, affiliations, map, salons] = await Promise.all([
+  const [people, affiliations, map] = await Promise.all([
     supabase
       .from("employee_access_directory")
       .select("id, first_name, last_name, preferred_first_name, employment_status")
@@ -106,30 +101,27 @@ export async function readDirectoryRoster(): Promise<DirectoryRosterRow[]> {
       .limit(20000),
     supabase
       .from("woven_location_map")
-      .select("woven_location_id, salon_id")
+      .select("woven_location_id, location_id")
       .eq("status", "mapped")
       .limit(1000),
-    supabase.from("salons").select("id, salon_number").limit(1000),
   ]);
-  if (people.error || affiliations.error || map.error || salons.error) {
+  if (people.error || affiliations.error || map.error) {
     throw new Error("The employee directory could not be read.");
   }
 
-  const salonNumberById = new Map(
-    (salons.data ?? []).map((row) => [String(row.id), String(row.salon_number)]),
-  );
   const locationByWoven = new Map<string, string>();
   for (const row of map.data ?? []) {
-    const number = row.salon_id ? salonNumberById.get(String(row.salon_id)) : undefined;
-    if (number) locationByWoven.set(String(row.woven_location_id), locationIdForSalonNumber(number));
+    if (typeof row.location_id === "string" && row.location_id.startsWith("loc-")) {
+      locationByWoven.set(String(row.woven_location_id), row.location_id);
+    }
   }
-  const salonsByEmployee = new Map<string, Set<string>>();
+  const locationsByEmployee = new Map<string, Set<string>>();
   for (const row of affiliations.data ?? []) {
     const location = locationByWoven.get(String(row.woven_location_id));
     if (!location) continue;
     const key = String(row.employee_id);
-    if (!salonsByEmployee.has(key)) salonsByEmployee.set(key, new Set());
-    salonsByEmployee.get(key)!.add(location);
+    if (!locationsByEmployee.has(key)) locationsByEmployee.set(key, new Set());
+    locationsByEmployee.get(key)!.add(location);
   }
 
   return (people.data ?? []).map((row) => ({
@@ -138,7 +130,7 @@ export async function readDirectoryRoster(): Promise<DirectoryRosterRow[]> {
     lastName: (row.last_name as string | null) ?? null,
     preferredFirstName: (row.preferred_first_name as string | null) ?? null,
     employmentStatus: (row.employment_status as string | null) ?? null,
-    locationIds: [...(salonsByEmployee.get(String(row.id)) ?? [])].sort(),
+    locationIds: [...(locationsByEmployee.get(String(row.id)) ?? [])].sort(),
   }));
 }
 

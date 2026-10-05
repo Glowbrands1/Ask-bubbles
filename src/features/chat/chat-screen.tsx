@@ -91,7 +91,7 @@ export function ChatScreen() {
    * THE REPORT THIS CONVERSATION IS ABOUT
    * ==========================================================================
    *
-   * Set when the manager arrived from a report tab's "Ask Sunny about this
+   * Set when the manager arrived from a report tab's "Ask Bubbles about this
    * report", read from the URL, and sent with EVERY turn including follow-ups.
    *
    * THE FOLLOW-UPS ARE THE WHOLE REASON IT PERSISTS. "Why is #1 the biggest
@@ -100,7 +100,7 @@ export function ChatScreen() {
    * every turn forever once it arrives. Without this the second question in a
    * report conversation would lose the report.
    *
-   * POINTERS ONLY. Which family, which period, which salons, which measure.
+   * POINTERS ONLY. Which family, which period, which locations, which measure.
    * There is nowhere in it to put a figure, so nothing this browser rendered
    * can be sent as a fact; the server re-reads the rows. See
    * `reporting/read/chat-report-context.ts`.
@@ -265,7 +265,7 @@ export function ChatScreen() {
           continueProposalTemplateKey: continuationFor(history)?.templateKey,
           /*
            * The form this conversation last created, so "change her new
-           * location to salon 24" can correct it. Revalidated server-side.
+           * location to location 24" can correct it. Revalidated server-side.
            */
           activeFormInstanceId: activeFormInstanceFor(history),
           /*
@@ -311,7 +311,7 @@ export function ChatScreen() {
           coverage: response.coverage ?? "not_applicable",
           followUpSuggestions: response.followUpSuggestions,
           /*
-           * WHAT SUNNY IS OFFERING, NOT WHAT IT DREW UP.
+           * WHAT BUBBLES IS OFFERING, NOT WHAT IT DREW UP.
            *
            * `formHandoff`, `pendingFormTemplateId` and `pendingFormValues` were
            * assigned here. Between them they parked a drafted set of HR field
@@ -386,7 +386,7 @@ export function ChatScreen() {
    * Accept ?c= — a conversation that was STARTED INLINE on the Overview.
    *
    * The band writes its turn to the same store this screen reads, so "Continue
-   * in Ask Sunny" does not replay the question: it adopts the existing thread,
+   * in Ask Bubbles" does not replay the question: it adopts the existing thread,
    * which is why the answer the manager already read is the one they land on
    * and why it is in history exactly once.
    */
@@ -500,8 +500,8 @@ export function ChatScreen() {
    * So the CHOICE is remembered for exactly one turn, and a proposal that
    * comes back ready and inline-draftable creates itself. Nothing is widened
    * by this: the create route re-resolves the template, re-applies its
-   * permission and re-authorises the salon, and a proposal that is missing
-   * the employee or the salon is not `ready` and still asks.
+   * permission and re-authorises the location, and a proposal that is missing
+   * the employee or the location is not `ready` and still asks.
    *
    * THE CHOICE TRAVELS WITH THE SEND, rather than being armed beside it. See
    * `autoDraftMessageId` above for the two ways the old arrangement created
@@ -699,7 +699,7 @@ export function ChatScreen() {
         */}
         <div
           className={cn(
-            "flex shrink-0 flex-wrap items-center justify-between gap-3 border-b-4 border-brand-yellow bg-band px-4 sm:px-6",
+            "flex shrink-0 flex-wrap items-center justify-between gap-3 border-b-4 border-brand-accent bg-band px-4 sm:px-6",
             isEmpty ? "py-5" : "py-3.5",
           )}
           style={isEmpty ? { backgroundImage: "var(--band-glow)" } : undefined}
@@ -724,14 +724,14 @@ export function ChatScreen() {
                 */}
                 <h1 className="display text-[26px] text-band-foreground sm:text-[30px]">
                   How can{" "}
-                  <span className="text-brand-yellow">{brand.assistantName}</span>{" "}
+                  <span className="text-brand-accent">{brand.assistantName}</span>{" "}
                   help today?
                 </h1>
                 {/*
                   LOCATION AND WHO IS ASKING, and NOT the same name twice.
-                  `managerDisplayName` is the account's title for a salon login
-                  — "Salon Director — MO Kansas City Wornall" — so concatenating it
-                  with the location rendered the salon twice.
+                  `managerDisplayName` is the account's title for a location login
+                  — "Location Director — MO Kansas City Wornall" — so concatenating it
+                  with the location rendered the location twice.
                 */}
                 <p className="mt-1.5 text-[12px] text-band-muted-foreground">
                   {managerDisplayName.includes(primaryLocationName)
@@ -787,7 +787,7 @@ export function ChatScreen() {
                 className="text-band-chip-foreground hover:bg-hover-surface hover:text-hover-surface-foreground lg:hidden"
                 onClick={createFormFromConversation}
                 disabled={busy}
-                title={busy ? "Sunny is answering. This will be ready the moment that finishes." : undefined}
+                title={busy ? "Bubbles is answering. This will be ready the moment that finishes." : undefined}
               >
                 <FileStack />
                 Create a form
@@ -811,7 +811,7 @@ export function ChatScreen() {
           ONE BODY, ONE DOCK — THE CHATBOX IS ALWAYS AT THE BOTTOM
           ======================================================================
 
-          REPORTED: "for the Ask sunny tab interface, please follow screenshot
+          REPORTED: "for the Ask bubbles tab interface, please follow screenshot
           #4. Chatbox at the bottom not up."
 
           Screenshot #4 is the artifact's own State 2 plate — slim header, the
@@ -858,7 +858,7 @@ export function ChatScreen() {
             {conversationSyncFailed ? (
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-border bg-surface px-3.5 py-2.5">
                 <p className="text-[12px] leading-relaxed text-muted-foreground">
-                  This conversation is saved on this device, but Ask Sunny could
+                  This conversation is saved on this device, but Ask Bubbles could
                   not add it to your account yet. Nothing has been lost.
                 </p>
                 <Button size="sm" variant="ghost" onClick={retryConversationSync}>
@@ -900,7 +900,7 @@ export function ChatScreen() {
                       key={prompt}
                       type="button"
                       onClick={() => void send(prompt)}
-                      className="rounded-[22px] border border-border-strong bg-surface px-3.5 py-2 text-left text-[12px] font-bold text-foreground shadow-soft transition-colors hover:border-brand-yellow"
+                      className="rounded-[22px] border border-border-strong bg-surface px-3.5 py-2 text-left text-[12px] font-bold text-foreground shadow-soft transition-colors hover:border-brand-accent"
                     >
                       {prompt}
                     </button>

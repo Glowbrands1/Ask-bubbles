@@ -1,12 +1,12 @@
 import { ADMIN_CONSOLE_ROLES } from "@/lib/permissions";
 import type { Role } from "@/types";
 
-import { SALON_MANAGED_ROLES } from "./plan";
+import { LOCATION_MANAGED_ROLES } from "./plan";
 import type { PlannedRow } from "./types";
 
 /**
  * ============================================================================
- * LINK REVIEW — a person confirms "this Ask Sunny account IS that Woven
+ * LINK REVIEW — a person confirms "this Ask Bubbles account IS that Woven
  * employee", and from then on the EmployeeID, never the email, identifies it
  * ============================================================================
  *
@@ -29,8 +29,8 @@ import type { PlannedRow } from "./types";
  *
  * WHAT WOVEN MAY MANAGE IS OPT-IN, PER FIELD, AND BOUNDED HERE:
  *   - status:   never for an administrative or protected account;
- *   - location and role: only for a Salon Director / Assistant Salon Director
- *     whose scope is a single salon — the only accounts the planner would
+ *   - location and role: only for a Location Director / Assistant Location Director
+ *     whose scope is a single location — the only accounts the planner would
  *     ever change. For anyone else the flags are stored OFF whatever is asked.
  * All three default OFF. Linking changes nobody's access by itself.
  */
@@ -86,11 +86,11 @@ export function parseLinkReview(body: Record<string, unknown> | null): LinkRevie
 
 /** Which managed flags this account may carry at all. */
 export function allowedManagedFlags(account: { role: Role; scopeLevel: string }, isProtected: boolean) {
-  const salonTier = SALON_MANAGED_ROLES.includes(account.role) && account.scopeLevel === "location";
+  const locationTier = LOCATION_MANAGED_ROLES.includes(account.role) && account.scopeLevel === "location";
   return {
     status: !isProtected && !(ADMIN_CONSOLE_ROLES as readonly Role[]).includes(account.role),
-    location: salonTier && !isProtected,
-    role: salonTier && !isProtected,
+    location: locationTier && !isProtected,
+    role: locationTier && !isProtected,
   };
 }
 

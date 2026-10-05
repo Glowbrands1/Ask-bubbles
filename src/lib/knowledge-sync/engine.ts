@@ -28,7 +28,7 @@ import {
  *   preview   sign in, read every listing, classify — and write NOTHING but the
  *             run's own report. The initial scan and any dry run.
  *   sync      the same read, then save the scan to the manifest and apply it
- *             to Ask Sunny: ingest what is new or changed, retire what left.
+ *             to Ask Bubbles: ingest what is new or changed, retire what left.
  *   continue  no listing: finish work an earlier sync planned but did not reach
  *             (time budget) and retry items that failed. How a monthly sync
  *             that outgrows one serverless invocation completes, unattended.
@@ -37,7 +37,7 @@ import {
  * item, retried later, and does not stop the rest. One content type failing to
  * list is reported and leaves that type's items exactly as they were.
  *
- * IDEMPOTENT. A new item's Ask Sunny document id is DERIVED from its manifest
+ * IDEMPOTENT. A new item's Ask Bubbles document id is DERIVED from its manifest
  * identity (`knowledgeDocumentIdFor`), so every attempt — a retry, or a run
  * after a crash between "ingested" and "recorded" — addresses the same
  * document and can never produce a second copy. The id is written to the
@@ -124,7 +124,7 @@ export function sha256Hex(bytes: Uint8Array): string {
 }
 
 /**
- * The Ask Sunny document id a source item part owns, derived from its identity:
+ * The Ask Bubbles document id a source item part owns, derived from its identity:
  * the same part always maps to the same document.
  *
  * LIVE BUG THIS REPLACES. The id used to be random and saved to the manifest
@@ -133,7 +133,7 @@ export function sha256Hex(bytes: Uint8Array): string {
  * save of the initial sync failed the foreign key and stopped the run.
  */
 export function knowledgeDocumentIdFor(item: Pick<ManifestItem, "source" | "contentType" | "entityId" | "partKey">): string {
-  const h = createHash("sha256").update(`ask-sunny-knowledge-sync\u0000${item.source}\u0000${manifestKey(item)}`).digest("hex");
+  const h = createHash("sha256").update(`ask-bubbles-knowledge-sync\u0000${item.source}\u0000${manifestKey(item)}`).digest("hex");
   /* RFC 4122 layout: version 5 (name-based), variant 10xx. */
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-${((parseInt(h.slice(16, 18), 16) & 0x3f) | 0x80).toString(16)}${h.slice(18, 20)}-${h.slice(20, 32)}`;
 }
@@ -176,7 +176,7 @@ export async function runKnowledgeSync(deps: EngineDeps, options: RunOptions): P
         return {
           status: "refused",
           code: "preview_required",
-          reason: "Run the initial scan first, so the counts can be checked before anything is added to Ask Sunny.",
+          reason: "Run the initial scan first, so the counts can be checked before anything is added to Ask Bubbles.",
         };
       }
     }
@@ -225,7 +225,7 @@ export async function runKnowledgeSync(deps: EngineDeps, options: RunOptions): P
     report.company = connection;
   } catch (error) {
     const code = (error as { code?: string }).code ?? "connection_failed";
-    const reason = error instanceof Error ? error.message : "Ask Sunny could not sign in to Woven.";
+    const reason = error instanceof Error ? error.message : "Ask Bubbles could not sign in to Woven.";
     report.attention.push({ code, message: `Woven sync needs attention: ${reason}` });
     return finish("failed", code, reason);
   }
@@ -271,7 +271,7 @@ export async function runKnowledgeSync(deps: EngineDeps, options: RunOptions): P
       }
       for (const item of scan.items) merged.set(manifestKey(item), item);
 
-      const titles = scan.items.filter((i) => i.pendingAction === "ingest" && !i.inAskSunny).map((i) => deps.describe(i).title);
+      const titles = scan.items.filter((i) => i.pendingAction === "ingest" && !i.inKnowledgeBase).map((i) => deps.describe(i).title);
       try {
         report.possibleManualDuplicates = titles.length > 0 ? await deps.sink.countManualTitleMatches(titles) : 0;
       } catch {
@@ -349,7 +349,7 @@ export async function runKnowledgeSync(deps: EngineDeps, options: RunOptions): P
      */
     if (options.mode === "sync" && listingFailures === 0 && !sessionLost && report.totals.deferred === 0 && deps.sink.supersedeDuplicates) {
       const current = [...merged.values()]
-        .filter((i) => i.inAskSunny && i.knowledgeDocumentId && i.state !== "ERROR")
+        .filter((i) => i.inKnowledgeBase && i.knowledgeDocumentId && i.state !== "ERROR")
         .map((i) => i.knowledgeDocumentId!);
       try {
         const outcome = await deps.sink.supersedeDuplicates(current);
@@ -405,7 +405,7 @@ export async function runKnowledgeSync(deps: EngineDeps, options: RunOptions): P
     const reason =
       error instanceof RunAborted
         ? error.message
-        : "The sync stopped on an unexpected error. Ask Sunny's documents were left as they were.";
+        : "The sync stopped on an unexpected error. Ask Bubbles' documents were left as they were.";
     report.attention.push({ code, message: `Woven sync needs attention: ${reason}` });
     return finish("failed", code, reason);
   }
@@ -432,12 +432,12 @@ interface Applied {
 
 async function applyItem(deps: EngineDeps, item: ManifestItem, nowIso: () => string): Promise<Applied> {
   if (item.pendingAction === "retire") {
-    if (item.knowledgeDocumentId && item.inAskSunny) await deps.sink.retire(item.knowledgeDocumentId);
+    if (item.knowledgeDocumentId && item.inKnowledgeBase) await deps.sink.retire(item.knowledgeDocumentId);
     return {
       item: {
         ...item,
         state: item.state === "ERROR" ? (item.previousState ?? "REMOVED") : item.state,
-        inAskSunny: false,
+        inKnowledgeBase: false,
         pendingAction: "none",
         lastError: null,
         errorCategory: null,
@@ -450,7 +450,7 @@ async function applyItem(deps: EngineDeps, item: ManifestItem, nowIso: () => str
   }
 
   if (!item.locator) {
-    throw new PartFetchError("no_locator", "This item has nothing Ask Sunny can download.", false);
+    throw new PartFetchError("no_locator", "This item has nothing Ask Bubbles can download.", false);
   }
 
   const current = item;
@@ -470,7 +470,7 @@ async function applyItem(deps: EngineDeps, item: ManifestItem, nowIso: () => str
 
   let action: SyncEvent["action"];
   let metadataOnly = false;
-  if (current.inAskSunny && current.contentHash === hash) {
+  if (current.inKnowledgeBase && current.contentHash === hash) {
     await deps.sink.updateMetadata(current.knowledgeDocumentId!, metadata);
     action = "metadata_only";
     metadataOnly = true;
@@ -496,7 +496,7 @@ async function applyItem(deps: EngineDeps, item: ManifestItem, nowIso: () => str
       reason: current.reason === "recheck_bytes" ? null : current.reason,
       syncedFingerprint: current.observedFingerprint,
       contentHash: hash,
-      inAskSunny: true,
+      inKnowledgeBase: true,
       pendingAction: "none",
       lastError: null,
       errorCategory: null,
@@ -553,7 +553,7 @@ function tally(report: SyncReport, items: ManifestItem[], scanned: Set<string> |
   const t = report.totals;
   const entities = new Set<string>();
   for (const item of items) {
-    if (item.inAskSunny) t.inSync += 1;
+    if (item.inKnowledgeBase) t.inSync += 1;
     if (scanned && !scanned.has(manifestKey(item))) continue;
     if (item.state !== "REMOVED") entities.add(`${item.contentType}:${item.entityId}`);
     switch (item.state) {
@@ -573,7 +573,7 @@ function tally(report: SyncReport, items: ManifestItem[], scanned: Set<string> |
         t.unpublished += 1;
         break;
       case "REMOVED":
-        /* Removed FROM ASK SUNNY: only what had actually been synced counts. */
+        /* Removed FROM ASK BUBBLES: only what had actually been synced counts. */
         if (item.reason === "not_in_source" && item.previousState !== "REMOVED" && item.syncedFingerprint !== null) t.removed += 1;
         break;
       case "EXCLUDED":
@@ -603,7 +603,7 @@ function tally(report: SyncReport, items: ManifestItem[], scanned: Set<string> |
           }
         : {
             code: "items_retrying",
-            message: `${t.errors} document${t.errors === 1 ? "" : "s"} could not be updated this time. Ask Sunny will retry automatically.`,
+            message: `${t.errors} document${t.errors === 1 ? "" : "s"} could not be updated this time. Ask Bubbles will retry automatically.`,
             count: t.errors,
           };
     report.attention.push(attention);

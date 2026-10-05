@@ -73,7 +73,7 @@ function conversation(overrides: Record<string, unknown> = {}) {
       {
         id: idAt("msg"),
         role: "assistant",
-        content: "The schedule shows two Salon Directors on Saturday.",
+        content: "The schedule shows two Location Directors on Saturday.",
         createdAt: "2026-09-19T14:00:00.000Z",
         mode: "standard",
         coverage: "grounded",
@@ -104,7 +104,7 @@ describe("a real conversation round-trips", () => {
      * The two turns above deliberately share a millisecond — an answer and the
      * question after it routinely do. Ordering by time alone can put an answer
      * before what it answered, which is the one corruption that would make
-     * Sunny look like it replied before being asked.
+     * Bubbles look like it replied before being asked.
      */
     const source = conversation();
     const parsed = parseConversation(source, NOW);

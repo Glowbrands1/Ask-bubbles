@@ -30,6 +30,8 @@ export const BCS_BRAND: BrandConfig = {
   operatorName: "Buff City Soap",
   wordmark: { lead: "ASK", trail: "BUBBLES" },
   tagline: "Answers, forms and know-how for your team",
+  description:
+    "Ask Bubbles is the Buff City Soap team assistant: grounded answers from company knowledge, guided forms, reports and history in one place.",
   knowledgeScopeId: "bcs-core",
   vocabulary: {
     locationNoun: "location",

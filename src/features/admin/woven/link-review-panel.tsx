@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 /**
  * ============================================================================
- * LINK REVIEW — Ask Sunny account ↔ Woven EmployeeID, confirmed by a person
+ * LINK REVIEW — Ask Bubbles account ↔ Woven EmployeeID, confirmed by a person
  * ============================================================================
  *
  * One card per exact-email match the access planner proposes. Confirming
@@ -15,8 +15,8 @@ import { useRouter } from "next/navigation";
  *
  * Neither changes anybody's access. What Woven may later manage is opt-in per
  * field, all off by default, and only offered where the planner could ever
- * act (status: not for administrators; location and role: Salon Director /
- * Assistant Salon Director at a single salon only). The server re-checks
+ * act (status: not for administrators; location and role: Location Director /
+ * Assistant Location Director at a single location only). The server re-checks
  * everything against the current plan.
  */
 
@@ -44,7 +44,7 @@ async function post(body: unknown): Promise<string | null> {
     const parsed = (await response.json().catch(() => null)) as { reason?: string; status?: string } | null;
     return parsed?.reason ?? (parsed?.status ? parsed.status.replaceAll("_", " ") : `Not saved (HTTP ${response.status}).`);
   } catch {
-    return "Ask Sunny's server could not be reached.";
+    return "Ask Bubbles' server could not be reached.";
   }
 }
 
@@ -92,7 +92,7 @@ function ReviewCard({ item, disabled }: { item: LinkReviewItem; disabled: boolea
       </h4>
       <div className="grid gap-3 text-[12.5px] md:grid-cols-[1fr_auto_1fr]">
         <dl>
-          <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">Ask Sunny account</dt>
+          <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">Ask Bubbles account</dt>
           <dd className="font-semibold text-foreground">{item.account.email}</dd>
           <dd>
             {item.account.role.replaceAll("_", " ")} · {item.account.status} · {item.account.scope}
@@ -115,14 +115,14 @@ function ReviewCard({ item, disabled }: { item: LinkReviewItem; disabled: boolea
       <fieldset className="mt-3 flex flex-col gap-1 text-[12px]" disabled={disabled || busy}>
         <legend className="mb-1 text-[11px] tracking-wide text-muted-foreground uppercase">After linking, Woven may manage (all off by default)</legend>
         {flag("status", "Status — disable on an authoritative Woven termination")}
-        {flag("location", "Primary salon")}
-        {flag("role", "Role (Salon Director ↔ Assistant Salon Director only)")}
+        {flag("location", "Primary location")}
+        {flag("role", "Role (Location Director ↔ Assistant Location Director only)")}
       </fieldset>
 
       <label className="mt-3 flex items-start gap-2 text-[12.5px]">
         <input type="checkbox" checked={same} disabled={disabled || busy} onChange={(e) => setSame(e.target.checked)} />
         <span>
-          I confirm this Ask Sunny account and Woven EmployeeID <span className="font-mono">{item.externalEmployeeId}</span> are the same person.
+          I confirm this Ask Bubbles account and Woven EmployeeID <span className="font-mono">{item.externalEmployeeId}</span> are the same person.
         </span>
       </label>
 
@@ -149,7 +149,7 @@ export function LinkReviewPanel({ items, disabled }: { items: LinkReviewItem[]; 
     <section aria-label="Link review" className="flex flex-col gap-2">
       <h3 className="text-[13px] font-semibold text-foreground">Link review · {items.length}</h3>
       <p className="text-[12px] text-muted-foreground">
-        Each existing Ask Sunny account below has exactly the same email as one Woven employee. Nothing is linked until a person confirms it.
+        Each existing Ask Bubbles account below has exactly the same email as one Woven employee. Nothing is linked until a person confirms it.
         Linking changes nobody&apos;s access.
       </p>
       <ul className="flex flex-col gap-2">

@@ -154,10 +154,10 @@ export type InstanceView = "active" | "archived" | "all";
  *
  * THE DEFECT THIS EXISTS FOR. `listInstances` ordered the WHOLE COMPANY by
  * recency, took the first 200, and the route filtered that page down to the
- * caller's own salon. Confidential enough — no foreign row ever reached the
+ * caller's own location. Confidential enough — no foreign row ever reached the
  * browser — and wrong as a history:
  *
- *   22 salons file forms. 200 newer records exist elsewhere. A salon's own
+ *   22 locations file forms. 200 newer records exist elsewhere. A location's own
  *   still-relevant record is number 201 by date. It never enters the page, so
  *   the filter cannot return it, and its manager opens Form Monitoring to find
  *   their own history has silently lost rows.
@@ -170,13 +170,13 @@ export type InstanceView = "active" | "archived" | "all";
  */
 export interface InstanceListFilter {
   /**
-   * Salon ids this caller may see. `undefined` means unrestricted (global or
+   * Location ids this caller may see. `undefined` means unrestricted (global or
    * preview); an EMPTY ARRAY means no location-bearing row qualifies, which is
    * how district and region fail closed.
    */
   locationIds?: string[];
   /**
-   * Also include rows with NO salon that this actor created. The narrow
+   * Also include rows with NO location that this actor created. The narrow
    * exception for an absent location — see `instance-scope.ts`.
    */
   ownNullLocationCreatedBy?: string;
@@ -216,7 +216,7 @@ export async function listInstances(
    * of the two tops. Neither is a company-wide scan, and nothing extra reaches
    * the browser: the merge is limited again before it is returned.
    *
-   * The salon query is SKIPPED ENTIRELY on an empty id list rather than issued
+   * The location query is SKIPPED ENTIRELY on an empty id list rather than issued
    * as `in.()`, which PostgREST does not accept — and which would be an odd way
    * to express "nothing qualifies" even if it did.
    */
@@ -367,7 +367,7 @@ export async function createInstance(input: NewInstance): Promise<InstanceRow> {
   /*
    * `system` FIELDS ARE FILLED FROM THE RECORD, HERE, AT CREATION.
    *
-   * The form says "Ask Sunny fills this" against Employee Name, Date, Job Title
+   * The form says "Ask Bubbles fills this" against Employee Name, Date, Job Title
    * and Location, and it used to be lying: nothing wrote them, so a manager who
    * had just typed the employee's name on the previous screen was asked to type
    * it again onto a line marked as automatic. The field list hid it; the
@@ -375,7 +375,7 @@ export async function createInstance(input: NewInstance): Promise<InstanceRow> {
    * belonged.
    *
    * The mapping below is EXPLICIT and small. It is not inference from a label —
-   * "location" meaning the salon is a fact about how these nine templates were
+   * "location" meaning the location is a fact about how these nine templates were
    * authored, not a rule that would hold for a field somebody adds tomorrow. A
    * key that is not in this map, or is in it but is not a `system` field in this
    * version, is left alone for whoever the template says owns it.
@@ -553,7 +553,7 @@ export async function saveInstanceValues(
  * The assistant's draft, after the guard.
  *
  * `filled_by: "ai"` is recorded on every value this writes, so Form Monitoring
- * can answer "did Ask Sunny write this, or did a manager?" per field rather
+ * can answer "did Ask Bubbles write this, or did a manager?" per field rather
  * than per form.
  */
 export async function applyAssistantDraft(
@@ -593,7 +593,7 @@ export async function applyAssistantDraft(
    * reaches this table only with provenance that says it was verified. Absent
    * provenance is refusal.
    *
-   * The refusals are reported on the event rather than swallowed, so "Ask Sunny
+   * The refusals are reported on the event rather than swallowed, so "Ask Bubbles
    * proposed a policy quotation and it was withheld" is visible in the audit
    * trail instead of the record simply never mentioning it.
    */
@@ -791,7 +791,7 @@ export async function finalizeInstance(
    * WHAT THE RECORD SAYS ABOUT ITS OWN POLICY, AT THE MOMENT OF APPROVAL
    * ==========================================================================
    *
-   * `refuseUnverifiedPolicyValues` means Ask Sunny cannot write a policy value
+   * `refuseUnverifiedPolicyValues` means Ask Bubbles cannot write a policy value
    * it did not retrieve — so an unverified one on a finalized form is,
    * necessarily, a PERSON'S. That is a legitimate thing for a manager to do
    * and a material fact about the record, and the `finalized` event used to
@@ -1231,16 +1231,16 @@ async function readInstance(id: string): Promise<InstanceRow> {
 export async function listOutstandingFollowUps(
   limit = 50,
   /**
-   * The caller's authorized salons as LOCATION IDS, or null for unrestricted.
+   * The caller's authorized locations as LOCATION IDS, or null for unrestricted.
    *
    * The 14 September review found a restricted account shown "the same 11
-   * overdue records labelled 'Across every salon you cover'" — the whole
+   * overdue records labelled 'Across every location you cover'" — the whole
    * estate's queue under a heading claiming it was theirs. Narrowed in the
    * query so the refused rows are never read.
    *
-   * A FORM WITH NO SALON IS STILL SHOWN to a restricted reader only when they
-   * created it. An administrator's forms legitimately carry no salon (see
-   * `proposeLocation`), and a manager scoped to one salon has no claim on
+   * A FORM WITH NO LOCATION IS STILL SHOWN to a restricted reader only when they
+   * created it. An administrator's forms legitimately carry no location (see
+   * `proposeLocation`), and a manager scoped to one location has no claim on
    * somebody else's unattributed record.
    */
   locationIds: readonly string[] | null = null,

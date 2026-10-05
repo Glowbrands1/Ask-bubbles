@@ -101,7 +101,7 @@ export const MESSAGES_PER_REQUEST_MAX = 400;
  *
  * `feedback` is the rating the person left on their own answer, kept so a
  * reopened thread shows the words they already wrote instead of an empty form —
- * exactly what it does today from IndexedDB. `ask_sunny_feedback` remains the
+ * exactly what it does today from IndexedDB. `assistant_feedback` remains the
  * source of truth that analytics reads; this is a display copy, rewritten
  * whenever the conversation next syncs.
  *
@@ -243,7 +243,7 @@ function metadataWithinBound(metadata: Record<string, unknown>): boolean {
  * `position` comes from the ARRAY INDEX, never from the caller and never from
  * `createdAt`: the browser holds a thread as an ordered array, two turns can
  * share a millisecond, and a question transposed with its own answer is the one
- * corruption that would look like Sunny answering before being asked.
+ * corruption that would look like Bubbles answering before being asked.
  */
 export function parseConversation(
   value: unknown,
@@ -339,7 +339,7 @@ export function parseConversation(
        * FROM THE ARRAY INDEX, PLUS THIS SLICE'S OFFSET. Never from the caller,
        * and never from `createdAt` — two turns can share a millisecond, and a
        * question transposed with its own answer is the one corruption that
-       * would look like Sunny replying before being asked.
+       * would look like Bubbles replying before being asked.
        */
       position: offset + index,
       /*

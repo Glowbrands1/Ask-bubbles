@@ -11,20 +11,20 @@ import type { PositionMappingRow } from "./view-types";
 
 /**
  * ============================================================================
- * THE WOVEN POSITION → ASK SUNNY ROLE AND SCOPE MAP
+ * THE WOVEN POSITION → ASK BUBBLES ROLE AND SCOPE MAP
  * ============================================================================
  *
  * A PERSON DECIDES EVERY MAPPING. Woven has no positions endpoint, so the sync
  * queues each PositionID it sees on an employee as `unmapped`, with its latest
- * name. A reviewer chooses the Ask Sunny role, a DEFAULT scope level and a
+ * name. A reviewer chooses the Ask Bubbles role, a DEFAULT scope level and a
  * rank, and confirms it.
  *
  * IN PHASE ONE IT IS A LABEL. The change feed uses confirmed ranks to classify
  * a position change as a confirmed promotion or demotion, and the Access
  * Preview shows what a later phase would propose. Nothing reads this map to
- * set anybody's role, scope or salon access.
+ * set anybody's role, scope or location access.
  *
- * A SCOPE LEVEL IS A DEFAULT, NOT A RULE: the scope AREA — which salon,
+ * A SCOPE LEVEL IS A DEFAULT, NOT A RULE: the scope AREA — which location,
  * district or region — would come from the location map in a later phase.
  */
 
@@ -55,7 +55,7 @@ export async function listWovenPositions(): Promise<PositionMappingRow[]> {
   const [{ data, error }, counts] = await Promise.all([
     getSupabaseAdmin()
       .from("woven_position_map")
-      .select("woven_position_id, woven_position_name, status, ask_sunny_role, ask_sunny_scope_level, hierarchy_rank, is_confirmed, reviewed_by, reviewed_at")
+      .select("woven_position_id, woven_position_name, status, mapped_role, mapped_scope_level, hierarchy_rank, is_confirmed, reviewed_by, reviewed_at")
       .order("status", { ascending: true })
       .order("woven_position_name", { ascending: true }),
     headcounts(),
@@ -68,8 +68,8 @@ export async function listWovenPositions(): Promise<PositionMappingRow[]> {
     name: str(row.woven_position_name),
     employeeCount: counts.get(String(row.woven_position_id)) ?? 0,
     status: row.status as PositionMapStatus,
-    role: str(row.ask_sunny_role),
-    scopeLevel: str(row.ask_sunny_scope_level),
+    role: str(row.mapped_role),
+    scopeLevel: str(row.mapped_scope_level),
     hierarchyRank: typeof row.hierarchy_rank === "number" ? row.hierarchy_rank : null,
     isConfirmed: row.is_confirmed === true,
     reviewedBy: str(row.reviewed_by),
@@ -106,11 +106,11 @@ export function parsePositionReview(body: Partial<Record<string, unknown>>): Pos
 
   const role = body.role;
   if (typeof role !== "string" || !(ROLES as readonly string[]).includes(role)) {
-    throw new PositionReviewError("Mapping a position needs an Ask Sunny role.");
+    throw new PositionReviewError("Mapping a position needs an Ask Bubbles role.");
   }
   const scopeLevel = body.scopeLevel;
   if (typeof scopeLevel !== "string" || !(SCOPE_LEVELS as readonly string[]).includes(scopeLevel)) {
-    throw new PositionReviewError("Mapping a position needs a default scope level: global, region, district or salon.");
+    throw new PositionReviewError("Mapping a position needs a default scope level: global, region, district or location.");
   }
   let hierarchyRank: number | null = null;
   if (body.hierarchyRank !== undefined && body.hierarchyRank !== null && body.hierarchyRank !== "") {

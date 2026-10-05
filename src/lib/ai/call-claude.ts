@@ -58,7 +58,7 @@ export interface CallClaudeInput {
    *
    * Separate again, and for the same reason the report block is separate: these
    * are measurements about NAMED PEOPLE. They take no source marker, they are
-   * not policy, and they are not the salon-level briefing either — a salon's
+   * not policy, and they are not the location-level briefing either — a location's
    * conversion rate is not an employee's. Four sources, four citation rules,
    * and merging any two is how a coaching guideline starts being quoted back as
    * somebody's measured result.
@@ -146,7 +146,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
     // text. Only the class name is kept — never the body.
     throw new AiError(
       "model_failed",
-      "Sunny could not reach the language model. No answer was generated.",
+      "Bubbles could not reach the language model. No answer was generated.",
       502,
     );
   }

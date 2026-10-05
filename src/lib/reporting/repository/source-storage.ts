@@ -9,7 +9,7 @@ import { REPORTING_BUCKET } from "./types";
 /**
  * THE PRIVATE SOURCE-FILE STORE.
  *
- * Raw comp reports carry salon-level financials and manager names, so the
+ * Raw comp reports carry location-level financials and manager names, so the
  * `reporting-sources` bucket is private, has no `storage.objects` policies at
  * all, and every download is a short-lived signed URL minted server-side. This
  * module never mints one and never logs a byte of content.

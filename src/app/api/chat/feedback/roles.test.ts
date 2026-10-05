@@ -5,12 +5,12 @@ import type { Role } from "@/types";
 
 /**
  * ============================================================================
- * EVERY ROLE THAT CAN ASK SUNNY CAN RATE SUNNY — AND ONLY ITS OWN ANSWERS
+ * EVERY ROLE THAT CAN ASK BUBBLES CAN RATE BUBBLES — AND ONLY ITS OWN ANSWERS
  * ============================================================================
  *
  * `route.test.ts` proves the ownership rule with `authorizeRequest` mocked to
  * say yes. That leaves the question the rollout actually asked unanswered:
- * does an Admin, a Regional Manager, a District Manager, a Salon Director and
+ * does an Admin, a Regional Manager, a District Manager, a Location Director and
  * a frontline Employee each get through the REAL gate?
  *
  * So here `authorizeRequest` and the permission matrix are the real ones, and
@@ -20,7 +20,7 @@ import type { Role } from "@/types";
  * against rows it can see).
  *
  * The gate is `ask_questions` and stays `ask_questions`. Feedback is not an
- * administrator's feature: a person who can ask Sunny a question can say how
+ * administrator's feature: a person who can ask Bubbles a question can say how
  * the answer was, and an administrator gets nothing extra — not even the
  * ability to rate somebody else's turn.
  */
@@ -36,7 +36,7 @@ const NAMED_ROLES: Role[] = [
   "employee",
 ];
 
-/** Every role the permission matrix lets ask Sunny a question. */
+/** Every role the permission matrix lets ask Bubbles a question. */
 const ASKING_ROLES = ROLES.filter((role) =>
   hasPermission(DEFAULT_PERMISSION_MATRIX, role, "ask_questions"),
 );
@@ -158,7 +158,7 @@ afterEach(() => {
 /* ------------------------------------------------------------ the gate --- */
 
 describe("the rating gate is ask_questions, for every role that holds it", () => {
-  it("lets every role the rollout named ask Sunny, so none is locked out of rating", () => {
+  it("lets every role the rollout named ask Bubbles, so none is locked out of rating", () => {
     /*
      * If this fails, the matrix changed — and Admin-only (or manager-only)
      * feedback would follow silently, because the route's gate is the matrix.
@@ -215,8 +215,8 @@ describe("rating only, rating and outcome, and all three are each complete", () 
     ],
     [
       "rating, outcome and comment",
-      { rating: 2, gotWhatNeeded: "no", comment: "  Wrong salon.  " },
-      { rating: 2, got_what_needed: "no", comment: "Wrong salon." },
+      { rating: 2, gotWhatNeeded: "no", comment: "  Wrong location.  " },
+      { rating: 2, got_what_needed: "no", comment: "Wrong location." },
     ],
   ] as const)("%s", async (_label, body, stored) => {
     const { route, seen } = await load("district_manager");

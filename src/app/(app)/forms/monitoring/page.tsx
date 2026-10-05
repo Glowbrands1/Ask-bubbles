@@ -125,7 +125,7 @@ export default async function FormMonitoringPage({
         <PageHeader
           eyebrow="Forms"
           title="Form Monitoring"
-          description="Every form created in Ask Sunny, the template version it was filled from, and what is still outstanding."
+          description="Every form created in Ask Bubbles, the template version it was filled from, and what is still outstanding."
         />
 
         <FormsAccessNotice permission="view_form_monitoring" />

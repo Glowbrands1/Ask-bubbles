@@ -5,7 +5,7 @@ import {
   REPORTING_TIME_ZONE,
   formatDataThrough,
   formatRefreshedAt,
-  formatSalonCount,
+  formatLocationCount,
   freshnessLine,
   monthlyCurrency,
   freshnessSegments,
@@ -15,9 +15,9 @@ import {
  * The 14 September review asked for one line on every report:
  *
  *   Data through September 12, 2026 | Refreshed September 13 at 6:00 a.m. CT |
- *   15 salons included | Updated daily
+ *   15 locations included | Updated daily
  *
- * and for Central Time throughout: "Salon Performance currently reads 'Loaded
+ * and for Central Time throughout: "Location Performance currently reads 'Loaded
  * Sep 11, 2026, 12:50 PM UTC', which is 7:50 a.m. our time."
  */
 
@@ -28,11 +28,11 @@ describe("the line matches the requested format", () => {
         dataThrough: "2026-09-12",
         // 6:00 a.m. Central on 13 September is 11:00 UTC (CDT, UTC-5).
         refreshedAt: "2026-09-13T11:00:00Z",
-        salonCount: 15,
+        locationCount: 15,
         cadence: "daily",
       }),
     ).toBe(
-      "Data through September 12, 2026 | Refreshed September 13 at 6:00 a.m. CT | 15 salons included | Updated daily",
+      "Data through September 12, 2026 | Refreshed September 13 at 6:00 a.m. CT | 15 locations included | Updated daily",
     );
   });
 
@@ -40,7 +40,7 @@ describe("the line matches the requested format", () => {
     const facts = {
       dataThrough: "2026-08-31",
       refreshedAt: "2026-09-01T11:00:00Z",
-      salonCount: 15,
+      locationCount: 15,
     } as const;
     expect(freshnessLine({ ...facts, cadence: "monthly" })).toContain("Updated monthly");
     expect(freshnessLine({ ...facts, cadence: "weekly" })).toContain("Updated weekly");
@@ -87,7 +87,7 @@ describe("times are Central, through the zone rather than an offset", () => {
     const line = freshnessLine({
       dataThrough: "2026-09-12",
       refreshedAt: "2026-09-13T11:00:00Z",
-      salonCount: 15,
+      locationCount: 15,
       cadence: "daily",
     });
     expect(line).not.toContain("UTC");
@@ -98,7 +98,7 @@ describe("times are Central, through the zone rather than an offset", () => {
     const line = freshnessLine({
       dataThrough: "2026-09-12",
       refreshedAt: "2026-09-13T11:00:00Z",
-      salonCount: 15,
+      locationCount: 15,
       cadence: "daily",
     });
     expect(line).toContain("Refreshed");
@@ -131,23 +131,23 @@ describe("a data-through date is a calendar date and never moves", () => {
   });
 });
 
-describe("the salon count is counted, and says whose salons when scoped", () => {
+describe("the location count is counted, and says whose locations when scoped", () => {
   it("reads as the review asked", () => {
-    expect(formatSalonCount(15)).toBe("15 salons included");
-    expect(formatSalonCount(1)).toBe("1 salon included");
+    expect(formatLocationCount(15)).toBe("15 locations included");
+    expect(formatLocationCount(1)).toBe("1 location included");
   });
 
   it("names the assignment for a restricted reader", () => {
-    expect(formatSalonCount(1, "MO Kansas City Wornall")).toBe(
-      "MO Kansas City Wornall · 1 salon",
+    expect(formatLocationCount(1, "MO Kansas City Wornall")).toBe(
+      "MO Kansas City Wornall · 1 location",
     );
   });
 
   it("shows nothing rather than a zero it cannot vouch for", () => {
-    expect(formatSalonCount(null)).toBeNull();
-    expect(formatSalonCount(-1)).toBeNull();
-    // Zero IS a real answer and is shown: no salon reported this delivery.
-    expect(formatSalonCount(0)).toBe("0 salons included");
+    expect(formatLocationCount(null)).toBeNull();
+    expect(formatLocationCount(-1)).toBeNull();
+    // Zero IS a real answer and is shown: no location reported this delivery.
+    expect(formatLocationCount(0)).toBe("0 locations included");
   });
 });
 
@@ -156,12 +156,12 @@ describe("a segment with nothing behind it is omitted, not filled", () => {
     const segments = freshnessSegments({
       dataThrough: "2026-09-12",
       refreshedAt: null,
-      salonCount: 15,
+      locationCount: 15,
       cadence: "daily",
     });
     expect(segments).toEqual([
       "Data through September 12, 2026",
-      "15 salons included",
+      "15 locations included",
       "Updated daily",
     ]);
     expect(segments.join(" ")).not.toContain("Refreshed");
@@ -172,7 +172,7 @@ describe("a segment with nothing behind it is omitted, not filled", () => {
       freshnessSegments({
         dataThrough: null,
         refreshedAt: null,
-        salonCount: null,
+        locationCount: null,
         cadence: "monthly",
       }),
     ).toEqual(["Updated monthly"]);
@@ -182,7 +182,7 @@ describe("a segment with nothing behind it is omitted, not filled", () => {
     const line = freshnessLine({
       dataThrough: null,
       refreshedAt: "not an instant",
-      salonCount: null,
+      locationCount: null,
       cadence: "weekly",
     });
     expect(line).toBe("Updated weekly");

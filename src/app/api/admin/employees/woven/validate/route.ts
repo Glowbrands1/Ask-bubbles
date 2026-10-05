@@ -15,8 +15,8 @@ import {
   WOVEN_VALIDATION_ENABLED_ENV,
   type WovenConfig,
 } from "@/lib/employees/woven/config";
-import { listSalonsForComparison } from "@/lib/employees/woven/locations";
-import { runWovenLiveValidation, type SalonComparisonInput } from "@/lib/employees/woven/validate";
+import { listLocationsForComparison } from "@/lib/employees/woven/locations";
+import { runWovenLiveValidation, type LocationComparisonInput } from "@/lib/employees/woven/validate";
 import {
   checkValidationAccessCode,
   MIN_ACCESS_CODE_LENGTH,
@@ -38,7 +38,7 @@ import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
  * so the first live connection test runs while every sync path is closed.
  * Nothing here calls the sync.
  *
- * SALON COVERAGE. The existing `salons` table is read (SELECT only) and
+ * LOCATION COVERAGE. The existing `locations` table is read (SELECT only) and
  * compared with Woven's `/locations` by exact number. Every caller gets the
  * counts; the location numbers and names behind them go only to a caller who
  * also holds `manage_users`. They are locations, never employees.
@@ -95,7 +95,7 @@ async function admitInDemoMode(
       refusal: refuse(
         {
           status: "disabled",
-          reason: `Ask Sunny is running in demo mode. The Woven connection test runs here only with ${WOVEN_VALIDATION_ENABLED_ENV} on and ${WOVEN_SYNC_ENABLED_ENV} off.`,
+          reason: `Ask Bubbles is running in demo mode. The Woven connection test runs here only with ${WOVEN_VALIDATION_ENABLED_ENV} on and ${WOVEN_SYNC_ENABLED_ENV} off.`,
         },
         409,
       ),
@@ -125,13 +125,9 @@ async function admitInDemoMode(
   }
 }
 
-async function salonsToCompare(): Promise<SalonComparisonInput> {
-  try {
-    return { outcome: "loaded", salons: await listSalonsForComparison() };
-  } catch {
-    /* The comparison is reported as unavailable; the Woven checks still run. */
-    return { outcome: "unavailable", salons: [] };
-  }
+async function locationsToCompare(): Promise<LocationComparisonInput> {
+  /* The roster is configuration; an empty roster compares as zero locations. */
+  return { outcome: "loaded", locations: listLocationsForComparison() };
 }
 
 export async function POST(request: Request) {
@@ -166,7 +162,7 @@ export async function POST(request: Request) {
 
     const report = await runWovenLiveValidation({
       config,
-      salons: await salonsToCompare(),
+      locations: await locationsToCompare(),
       includeLocationReview: hasPermission(DEFAULT_PERMISSION_MATRIX, context.identity.role, "manage_users"),
     });
     return NextResponse.json({ status: "ok", report }, { headers: NO_STORE });

@@ -15,12 +15,12 @@ import { createFakeWoven, FAKE_CREDENTIALS, wovenEmployee } from "./test-support
 
 const ADMIN: RoleOverride = { role: "admin", scopeLevel: "global" };
 const CONSULTANT: PositionMapping = { isConfirmed: true, role: "employee", scopeLevel: "location" };
-const SALON_DIRECTOR: PositionMapping = { isConfirmed: true, role: "location_manager", scopeLevel: "location" };
+const LOCATION_DIRECTOR: PositionMapping = { isConfirmed: true, role: "location_manager", scopeLevel: "location" };
 const UNCONFIRMED_OPERATIONS: PositionMapping = { isConfirmed: false, role: null, scopeLevel: null };
 
 describe("resolveEmployeeRole", () => {
   it("a protected override wins over any position", () => {
-    for (const position of [CONSULTANT, SALON_DIRECTOR, UNCONFIRMED_OPERATIONS, null]) {
+    for (const position of [CONSULTANT, LOCATION_DIRECTOR, UNCONFIRMED_OPERATIONS, null]) {
       expect(resolveEmployeeRole(ADMIN, position)).toEqual({ role: "admin", scopeLevel: "global", source: "override" });
     }
   });
@@ -81,7 +81,7 @@ describe("a later employee sync cannot demote the protected admins", { timeout: 
     };
     await run();
 
-    /* Woven moves the protected person to a salon position. */
+    /* Woven moves the protected person to a location position. */
     employees[0] = wovenEmployee("9001", { positionId: "POS-SC", positionName: "Tanning Consultant" });
     const later = await run();
     expect(later.changesByKind.position_changed).toBe(1);

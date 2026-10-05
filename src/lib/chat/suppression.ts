@@ -13,10 +13,10 @@ import type { ChatConversation } from "@/types";
  *
  *   Laptop A imports conversation X. Laptop B still holds X locally. The person
  *   deletes X on Laptop A. If the server simply forgot X, then when Laptop B
- *   next opens Ask Sunny the union adds X back — and offers to import it again.
+ *   next opens Ask Bubbles the union adds X back — and offers to import it again.
  *
  * A delete that undoes itself on another device is not a delete, and the
- * History panel now promises it removes conversations "from your Ask Sunny
+ * History panel now promises it removes conversations "from your Ask Bubbles
  * account and from this browser".
  *
  * ============================================================================

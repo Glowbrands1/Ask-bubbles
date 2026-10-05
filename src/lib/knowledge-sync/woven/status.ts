@@ -238,7 +238,7 @@ export async function readWovenKnowledgeStatus(
     attention.push({
       code: "work_continues",
       message: settings.autoSyncEnabled
-        ? `${n} item${n === 1 ? " is" : "s are"} still being processed. Ask Sunny continues ${n === 1 ? "it" : "them"} automatically at the next hourly check.`
+        ? `${n} item${n === 1 ? " is" : "s are"} still being processed. Ask Bubbles continues ${n === 1 ? "it" : "them"} automatically at the next hourly check.`
         : `${n} item${n === 1 ? " is" : "s are"} still being processed. Automatic sync is off, so ${n === 1 ? "it continues" : "they continue"} when you press Sync Now.`,
       count: n,
     });
@@ -247,7 +247,7 @@ export async function readWovenKnowledgeStatus(
     const count = undecided.reduce((s, a) => s + a.items, 0);
     attention.push({
       code: "audience_review",
-      message: `${count} item${count === 1 ? " is" : "s are"} shared with only some teams in Woven. Choose who should see ${count === 1 ? "it" : "them"} in Ask Sunny.`,
+      message: `${count} item${count === 1 ? " is" : "s are"} shared with only some teams in Woven. Choose who should see ${count === 1 ? "it" : "them"} in Ask Bubbles.`,
       count,
     });
   }
@@ -258,7 +258,7 @@ export async function readWovenKnowledgeStatus(
   if (exhausted > 0) {
     attention.push({
       code: "items_failing",
-      message: `${exhausted} document${exhausted === 1 ? " could" : "s could"} not be synced and ${exhausted === 1 ? "needs" : "need"} a person. Ask Sunny has stopped retrying ${exhausted === 1 ? "it" : "them"}.`,
+      message: `${exhausted} document${exhausted === 1 ? " could" : "s could"} not be synced and ${exhausted === 1 ? "needs" : "need"} a person. Ask Bubbles has stopped retrying ${exhausted === 1 ? "it" : "them"}.`,
       count: exhausted,
       items: stopped.slice(0, 25).map((i) => detail(i, "stopped")),
     });
@@ -267,7 +267,7 @@ export async function readWovenKnowledgeStatus(
     const n = retrying.length;
     attention.push({
       code: "items_retrying",
-      message: `${n} document${n === 1 ? "" : "s"} could not be synced this time. Ask Sunny will retry automatically.`,
+      message: `${n} document${n === 1 ? "" : "s"} could not be synced this time. Ask Bubbles will retry automatically.`,
       count: n,
       items: retrying.slice(0, 25).map((i) => detail(i, "retrying")),
     });
@@ -306,7 +306,7 @@ export async function readWovenKnowledgeStatus(
     lastSuccessAt: lastFullSync?.finishedAt ?? null,
     lastCheckedAt: settings.lastFullScanAt,
     nextSyncAt: settings.autoSyncEnabled ? nextAutomaticSyncAt(settings) : null,
-    documentsInSync: manifest.filter((i) => i.inAskSunny).length,
+    documentsInSync: manifest.filter((i) => i.inKnowledgeBase).length,
     lastSync: lastFullSync?.report
       ? {
           new: lastFullSync.report.totals.new,
@@ -361,8 +361,8 @@ export function scanProblemsOf(report: SyncReport): string[] {
     if (r.listing === "failed") problems.push(`${TYPE_LABEL[type]} could not be read from Woven this time; ${TYPE_LABEL[type]} will be left as they are.`);
     if (r.listing === "not_trusted") problems.push(`${TYPE_LABEL[type]}: Woven's list looked incomplete, so nothing will be removed from it.`);
     const missing = r.shape?.stepStructureMissing ?? 0;
-    if (missing > 0) problems.push(`${missing} procedure page${missing === 1 ? "" : "s"} did not have the step layout Ask Sunny reads, so ${missing === 1 ? "its" : "their"} text is not synced.`);
-    if (r.blocked > 0) problems.push(`${r.blocked} ${TYPE_LABEL[type]} item${r.blocked === 1 ? "" : "s"} can't be read by Ask Sunny yet.`);
+    if (missing > 0) problems.push(`${missing} procedure page${missing === 1 ? "" : "s"} did not have the step layout Ask Bubbles reads, so ${missing === 1 ? "its" : "their"} text is not synced.`);
+    if (r.blocked > 0) problems.push(`${r.blocked} ${TYPE_LABEL[type]} item${r.blocked === 1 ? "" : "s"} can't be read by Ask Bubbles yet.`);
   }
   return problems;
 }
@@ -385,7 +385,7 @@ export interface WovenKnowledgeContent {
 
 /**
  * The Content view: every Woven item found, as one row each, with its parts.
- * `documentTitles` resolves the Ask Sunny titles of synced documents.
+ * `documentTitles` resolves the Ask Bubbles titles of synced documents.
  */
 export async function readWovenKnowledgeContent(
   overrides: {
@@ -409,7 +409,7 @@ export async function readWovenKnowledgeContent(
   const scanIsNewer = Boolean(lastScan && (!lastApply || Date.parse(lastScan.startedAt) > Date.parse(lastApply.startedAt)));
   const preview = !initialDone || scanIsNewer ? await loadPreviewSafely(store) : [];
   const inventory = effectiveInventory(manifest, preview, initialDone, scanIsNewer);
-  const synced = [...new Set(inventory.filter((i) => i.inAskSunny && i.knowledgeDocumentId).map((i) => i.knowledgeDocumentId!))];
+  const synced = [...new Set(inventory.filter((i) => i.inKnowledgeBase && i.knowledgeDocumentId).map((i) => i.knowledgeDocumentId!))];
   const titles = synced.length > 0 && overrides.documentTitles ? await overrides.documentTitles(synced) : new Map<string, string>();
   const superseded =
     synced.length > 0 && overrides.supersededUploads

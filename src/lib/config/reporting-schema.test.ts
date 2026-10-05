@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 /**
  * REPORTING SCHEMA INVARIANTS.
  *
- * The Salon Performance / Comp Sales migrations encode several properties that
+ * The Location Performance / Comp Sales migrations encode several properties that
  * are easy to state in a comment and easy to lose in an edit. This suite parses
  * the SQL and enforces them, in the same spirit as the embedding-dimension
  * invariant test next door.
@@ -27,8 +27,8 @@ const REPORTING_TABLES = [
   "report_periods",
   "report_ingestions",
   "report_metrics",
-  "salons",
-  "salon_period_attributes",
+  "locations",
+  "location_period_attributes",
   "comp_sales_facts",
 ] as const;
 
@@ -76,8 +76,8 @@ const REPORTING_MIGRATION_FRAGMENTS = [
  *
  * It is not reporting: it creates no fact table, owns no period and parses no
  * workbook. It is not knowledge either. What it does is READ across both — a
- * salon's name and district come from the reporting dimensions, so its views
- * legitimately name `salons`, `salon_period_attributes`, `report_periods` and
+ * location's name and district come from the reporting dimensions, so its views
+ * legitimately name `locations`, `location_period_attributes`, `report_periods` and
  * `report_ingestions`.
  *
  * Without this partition those references would be checked as though they were
@@ -88,16 +88,16 @@ const REPORTING_MIGRATION_FRAGMENTS = [
  * the boundary enforced rather than merely exempted.
  */
 /*
- * ONE FRAGMENT PER FILE, and `ask_sunny_feedback.sql` carries its extension so
- * it cannot also match `ask_sunny_feedback_reads.sql`. The 1:1 invariant is
+ * ONE FRAGMENT PER FILE, and `assistant_feedback.sql` carries its extension so
+ * it cannot also match `assistant_feedback_reads.sql`. The 1:1 invariant is
  * asserted below — a fragment matching two files would quietly shrink the
  * knowledge partition and stop guarding whatever fell out of it.
  */
 const ANALYTICS_MIGRATION_FRAGMENTS = [
   "activity_events",
   "activity_analytics",
-  "ask_sunny_feedback.sql",
-  "ask_sunny_feedback_reads",
+  "assistant_feedback.sql",
+  "assistant_feedback_reads",
 ] as const;
 
 function analyticsFiles(): { name: string; sql: string }[] {
@@ -112,8 +112,8 @@ function analyticsFiles(): { name: string; sql: string }[] {
  * It is not reporting: it parses no workbook, owns no report period and creates
  * no fact table in the Comp Sales sense. It is not knowledge either. Like
  * analytics, what it does is READ the reporting dimensions — a review is filed
- * against a `salons` row and its district comes from `location_managery`, which is
- * precisely the "do not invent a second salon roster" rule being obeyed rather
+ * against a `locations` row and its district comes from `location_managery`, which is
+ * precisely the "do not invent a second location roster" rule being obeyed rather
  * than a boundary being crossed.
  *
  * It gets its own partition instead of joining the analytics one because
@@ -137,9 +137,9 @@ function googleReviewFiles(): { name: string; sql: string }[] {
 /**
  * THE WOVEN EMPLOYEE DIRECTORY — A FIFTH DOMAIN, THE SAME SHAPE AGAIN.
  *
- * A Woven location is mapped to a real salon, so `woven_location_map` names
- * `salons` in a foreign key and the review function looks a salon up by its
- * number — the "do not invent a second salon roster" rule obeyed once more. It
+ * A Woven location is mapped to a real location, so `woven_location_map` names
+ * `locations` in a foreign key and the review function looks a location up by its
+ * number — the "do not invent a second location roster" rule obeyed once more. It
  * may read a reporting table and may never create, alter or drop one.
  */
 const EMPLOYEE_DIRECTORY_MIGRATION_FRAGMENTS = ["woven_employee_directory", "woven_employee_role_overrides"] as const;
@@ -259,7 +259,7 @@ describe("reporting stays out of the knowledge domain", () => {
   it("lets analytics READ reporting tables and never reshape them", () => {
     /*
      * The boundary that replaces the blanket "must not mention" rule for this
-     * partition. Analytics joins the reporting dimensions to put a real salon
+     * partition. Analytics joins the reporting dimensions to put a real location
      * name and district on a row; the moment one of its migrations creates,
      * alters or drops a reporting table it has stopped being a reader and this
      * fails.
@@ -282,8 +282,8 @@ describe("reporting stays out of the knowledge domain", () => {
   it("lets Google Reviews READ reporting tables and never reshape them", () => {
     /*
      * The same boundary the analytics partition is held to, for the same
-     * reason. A Google review is filed against a real salon, so these
-     * migrations legitimately name `salons` in a foreign key and a join — and
+     * reason. A Google review is filed against a real location, so these
+     * migrations legitimately name `locations` in a foreign key and a join — and
      * the moment one of them creates, alters or drops a reporting table it has
      * stopped being a reader.
      */
@@ -446,7 +446,7 @@ describe("row level security posture", () => {
 
   it("creates no storage.objects policy", () => {
     /*
-     * The raw workbooks carry salon financials. Access is server-side only,
+     * The raw workbooks carry location financials. Access is server-side only,
      * through the secret key, with short-lived signed URLs minted after
      * authorization — never a blanket read policy for a browser role.
      */
@@ -478,10 +478,10 @@ describe("row level security posture", () => {
  * `using (true)` is a policy, so Supabase's linter reports row level security
  * as healthy and raises nothing. But the browser holds a session and the
  * publishable key, so a signed-in leader could read PostgREST directly and take
- * every salon's facts -- 13824 rows of `comp_sales_facts` in the audit that
- * found this -- going around the server-side salon scope entirely.
+ * every location's facts -- 13824 rows of `comp_sales_facts` in the audit that
+ * found this -- going around the server-side location scope entirely.
  *
- * The fix removes the browser rather than reproducing the salon rule in 27
+ * The fix removes the browser rather than reproducing the location rule in 27
  * policies, because nothing in a browser ever read these: every reporting read
  * runs under the secret key in a `server-only` module. So these tests assert
  * the END STATE, which is what an attacker meets, rather than any one file's
@@ -494,7 +494,7 @@ const BROWSER_READABLE_TABLES = [
   "bed_equipment_levels",
   "bed_usage_chain_benchmarks",
   "bed_usage_equipment_facts",
-  "bed_usage_salon_facts",
+  "bed_usage_location_facts",
   "bed_usage_snapshots",
   "comp_sales_facts",
   "report_files",
@@ -506,17 +506,17 @@ const BROWSER_READABLE_TABLES = [
   "sales_totals_metrics",
   "sales_totals_scopes",
   "sales_totals_snapshots",
-  "salon_period_attributes",
-  "salons",
+  "location_period_attributes",
+  "locations",
   "spa_bed_inventory",
   "spa_engagement_daily_facts",
   "spa_engagement_manager_facts",
-  "spa_engagement_salon_facts",
+  "spa_engagement_location_facts",
   "spa_engagement_snapshots",
   "spa_equipment_benchmarks",
   "spa_equipment_types",
   "spa_wellness_equipment_facts",
-  "spa_wellness_salon_facts",
+  "spa_wellness_location_facts",
   "spa_wellness_snapshots",
 ] as const;
 
@@ -527,7 +527,7 @@ const BROWSER_READABLE_TABLES = [
  */
 const BROWSER_READABLE_VIEWS = [
   "bed_usage_current_equipment_facts",
-  "bed_usage_current_salon_facts",
+  "bed_usage_current_location_facts",
   "comp_sales_current_facts",
   "comp_sales_filter_options",
   "comp_sales_metric_catalogue",
@@ -535,9 +535,9 @@ const BROWSER_READABLE_VIEWS = [
   "comp_sales_source_views",
   "sales_totals_current_facts",
   "spa_conversion_current",
-  "spa_engagement_current_salon_facts",
+  "spa_engagement_current_location_facts",
   "spa_wellness_current_equipment_facts",
-  "spa_wellness_current_salon_facts",
+  "spa_wellness_current_location_facts",
 ] as const;
 
 describe("the browser cannot reach the reporting domain", () => {
@@ -612,24 +612,24 @@ describe("the browser cannot reach the reporting domain", () => {
   });
 });
 
-describe("the salon business key survives round trips", () => {
-  it("declares salon_number as text, never a numeric type", () => {
+describe("the location business key survives round trips", () => {
+  it("declares location_code as text, never a numeric type", () => {
     /*
-     * THE ZERO-PADDING HAZARD. Source salon numbers look like '0468'. Read as
+     * THE ZERO-PADDING HAZARD. Source location numbers look like '0468'. Read as
      * an integer the leading zero is lost, and the next report that reads it
-     * correctly creates a SECOND salon for the same store — silently splitting
+     * correctly creates a SECOND location for the same store — silently splitting
      * its history in two. Verified against a live Postgres: '0468' and '468'
      * are two distinct rows under the unique constraint.
      */
     const sql = statementsOnly(fileNamed("reporting_dimensions").sql);
-    expect(sql).toContain("salon_number text not null");
-    expect(sql).not.toMatch(/salon_number\s+(integer|bigint|smallint|numeric)/i);
-    expect(sql).toContain("constraint salons_salon_number_key unique (salon_number)");
+    expect(sql).toContain("location_code text not null");
+    expect(sql).not.toMatch(/location_code\s+(integer|bigint|smallint|numeric)/i);
+    expect(sql).toContain("constraint locations_location_code_key unique (location_code)");
   });
 
-  it("refuses a salon number with surrounding whitespace", () => {
+  it("refuses a location number with surrounding whitespace", () => {
     const sql = statementsOnly(fileNamed("reporting_dimensions").sql);
-    expect(sql).toContain("constraint salons_salon_number_format");
+    expect(sql).toContain("constraint locations_location_code_format");
   });
 });
 
@@ -674,8 +674,8 @@ describe("the metric catalogue is a controlled vocabulary", () => {
     const guards = statementsOnly(seed.sql).match(/on conflict[^;]*do nothing/gi) ?? [];
     expect(inserts.length).toBeGreaterThan(0);
     expect(guards.length, "every seed insert must be idempotent").toBe(inserts.length);
-    // Reference data only: no salon, no figure, no period from a real report.
-    expect(statementsOnly(seed.sql)).not.toContain("insert into public.salons");
+    // Reference data only: no location, no figure, no period from a real report.
+    expect(statementsOnly(seed.sql)).not.toContain("insert into public.locations");
     expect(statementsOnly(seed.sql)).not.toContain("insert into public.comp_sales_facts");
   });
 });
@@ -694,7 +694,7 @@ describe("history is preserved rather than overwritten", () => {
 
   it("scopes the business key to live rows only", () => {
     /*
-     * IDEMPOTENCY LAYER 3. At most one live fact per salon, period, metric,
+     * IDEMPOTENCY LAYER 3. At most one live fact per location, period, metric,
      * baseline year AND SOURCE SHEET, so a second report for a period already
      * loaded cannot double the numbers. The partial predicate is what lets a
      * correction be inserted alongside its predecessor instead of replacing it.
@@ -708,12 +708,12 @@ describe("history is preserved rather than overwritten", () => {
      * contract the first time something is altered.
      */
     expect(effectiveLiveKey()).toBe(
-      "create unique index comp_sales_facts_live_key on public.comp_sales_facts (salon_id, period_id, metric_id, coalesce(basis_year, -1), source_sheet) where superseded_by_ingestion_id is null",
+      "create unique index comp_sales_facts_live_key on public.comp_sales_facts (location_id, period_id, metric_id, coalesce(basis_year, -1), source_sheet) where superseded_by_ingestion_id is null",
     );
 
     const dims = statementsOnly(fileNamed("reporting_dimensions").sql);
     expect(dims).toContain(
-      "create unique index salon_period_attributes_live_key on public.salon_period_attributes (salon_id, period_id) where superseded_by_ingestion_id is null",
+      "create unique index location_period_attributes_live_key on public.location_period_attributes (location_id, period_id) where superseded_by_ingestion_id is null",
     );
   });
 
@@ -722,7 +722,7 @@ describe("history is preserved rather than overwritten", () => {
      * WHY THE SHEET IS PART OF THE KEY. `reporting_supersession_scope` scopes
      * supersession to the sheets a report read, so two sheets of one workbook
      * are independent slices. A key without `source_sheet` contradicted that:
-     * it let one sheet's figure block another's for the same salon, period,
+     * it let one sheet's figure block another's for the same location, period,
      * metric and year. The two only agreed while the sheets' mapped columns
      * happened to be disjoint.
      */
@@ -752,7 +752,7 @@ describe("history is preserved rather than overwritten", () => {
   it("never deletes a fact or an attribute row in a migration", () => {
     const sql = reportingSql();
     expect(sql).not.toMatch(/delete from public\.comp_sales_facts/i);
-    expect(sql).not.toMatch(/delete from public\.salon_period_attributes/i);
+    expect(sql).not.toMatch(/delete from public\.location_period_attributes/i);
   });
 
   it("only ever updates a fact to STAMP it superseded, never to restate it", () => {
@@ -769,7 +769,7 @@ describe("history is preserved rather than overwritten", () => {
      */
     const sql = reportingSql();
     let inspected = 0;
-    for (const table of ["comp_sales_facts", "salon_period_attributes"] as const) {
+    for (const table of ["comp_sales_facts", "location_period_attributes"] as const) {
       const pattern = new RegExp(`update public\\.${table}\\s+set\\s+([\\s\\S]*?)\\s+where`, "gi");
       for (const match of sql.matchAll(pattern)) {
         inspected += 1;
@@ -875,7 +875,7 @@ describe("extensibility to further report families", () => {
   });
 
   it("keeps the dimensions family-agnostic", () => {
-    // salons, report_periods, report_metrics and the lineage tables carry no
+    // locations, report_periods, report_metrics and the lineage tables carry no
     // comp-sales-specific column, so a KPI parser reuses them untouched.
     const shared = [
       statementsOnly(fileNamed("reporting_sources_and_files").sql),

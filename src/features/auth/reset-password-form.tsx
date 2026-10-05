@@ -59,14 +59,14 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
  *
  * The tokens are handed to Supabase and dropped. They are never logged, never
  * rendered, never held in state that outlives the call, and never sent to an
- * Ask Sunny endpoint.
+ * Ask Bubbles endpoint.
  *
  * ============================================================================
  * THE PASSWORD
  * ============================================================================
  *
  * It goes to `supabase.auth.updateUser({ password })` and nowhere else. Ask
- * Sunny has no password table, hashes nothing, and stores nothing: Supabase
+ * Bubbles has no password table, hashes nothing, and stores nothing: Supabase
  * Auth is the credential authority and duplicating any part of that would mean
  * owning a credential store we have no business owning. The value is held in
  * component state only while the field is on screen and is cleared the instant
@@ -502,7 +502,7 @@ export function ResetPasswordForm() {
           role="status"
         >
           <Loader2 className="size-4 animate-spin" aria-hidden />
-          Taking you to Ask Sunny…
+          Taking you to Ask Bubbles…
         </p>
       </div>
     );
@@ -542,7 +542,7 @@ export function ResetPasswordForm() {
       </ul>
 
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Choose a password you have not used elsewhere. Ask Sunny never stores
+        Choose a password you have not used elsewhere. Ask Bubbles never stores
         your password — it is held by Supabase Auth, and nobody here can read
         it.
       </p>

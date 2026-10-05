@@ -18,7 +18,7 @@ import { ValidationPanel } from "./validation-panel";
  * steps" are facts about this deployment, and each is MEASURED or EVIDENCED:
  *
  *   Subscription      reported active in the Woven portal; CONFIRMED only when
- *                     a recorded run proves Ask Sunny signed in
+ *                     a recorded run proves Ask Bubbles signed in
  *   Credentials       which server-side variables are set (names, never values)
  *   Sign-in           evidence from a recorded run, or the live check below
  *   Response check    reviewed from the live check's report; a successful sync
@@ -57,9 +57,9 @@ const BUILT = [
   ["Secure connection to Woven", "Signs in, reads every page, stays under Woven's rate limit, retries safely. Read-only: it can reach only the four read endpoints and the sign-in, never a Woven write."],
   ["Employee data filter", "Keeps only the fields listed below and discards everything else before anything is stored."],
   ["Change tracking", "Compares each sync with the last and keeps a permanent history of hires, terminations, rehires, position changes, transfers and location access."],
-  ["Salon and position matching", "An administrator matches each Woven location to its Ask Sunny salon, and each Woven position to a role and rank. Nothing is matched by guesswork, and nothing is applied to anyone's access."],
+  ["Location and position matching", "An administrator matches each Woven location to its Ask Bubbles location, and each Woven position to a role and rank. Nothing is matched by guesswork, and nothing is applied to anyone's access."],
   ["Safety checks", "A partial, failed or suspiciously small read is refused and nothing is saved. Nobody is ever deleted."],
-  ["Test Woven connection", "A read-only validation with its own switch: checks the real Woven responses against what Ask Sunny expects and Woven's locations against the salons, reporting counts and field names only. It never runs a sync."],
+  ["Test Woven connection", "A read-only validation with its own switch: checks the real Woven responses against what Ask Bubbles expects and Woven's locations against the locations, reporting counts and field names only. It never runs a sync."],
 ] as const;
 
 const NEVER_KEPT = [
@@ -82,7 +82,7 @@ const TRACKED = [
   "Terminations",
   "Rehires",
   "Position changes",
-  "Transfers between salons",
+  "Transfers between locations",
   "Location access added or removed",
   "Email changes",
 ];
@@ -131,10 +131,10 @@ export function stepsFor(props: WovenSyncPageProps): Step[] {
 
   const subscription: Step =
     signIn === "succeeded"
-      ? { key: "subscription", title: "Woven subscription", state: "done", label: "Confirmed", detail: "Confirmed: Ask Sunny has signed in to the Operations API with it." }
+      ? { key: "subscription", title: "Woven subscription", state: "done", label: "Confirmed", detail: "Confirmed: Ask Bubbles has signed in to the Operations API with it." }
       : signIn === "failed"
         ? { key: "subscription", title: "Woven subscription", state: "attention", label: "Sign-in refused", detail: "The last recorded sign-in was refused. Check the subscription and the application user in the Woven API portal." }
-        : { key: "subscription", title: "Woven subscription", state: "reported", label: "Reported active", detail: "Shown as Active in the Woven API portal. Ask Sunny confirms it the first time it signs in." };
+        : { key: "subscription", title: "Woven subscription", state: "reported", label: "Reported active", detail: "Shown as Active in the Woven API portal. Ask Bubbles confirms it the first time it signs in." };
 
   const credentials: Step = credentialsReady
     ? { key: "credentials", title: "Server-side credentials", state: "done", label: "Configured", detail: "The subscription key and the Woven application user are set for this deployment." }
@@ -155,7 +155,7 @@ export function stepsFor(props: WovenSyncPageProps): Step[] {
 
   const response: Step = status?.lastSuccessAt
     ? { key: "response", title: "Live response check", state: "done", label: "Accepted", detail: "A sync has read and accepted Woven's responses." }
-    : { key: "response", title: "Live response check", state: credentialsReady ? "pending" : "not_started", label: "Not yet reviewed", detail: "The read-only check compares Woven's real responses with what Ask Sunny expects. Its report is reviewed before anything is stored." };
+    : { key: "response", title: "Live response check", state: credentialsReady ? "pending" : "not_started", label: "Not yet reviewed", detail: "The read-only check compares Woven's real responses with what Ask Bubbles expects. Its report is reviewed before anything is stored." };
 
   const directory: Step = (() => {
     switch (props.database.state) {
@@ -296,7 +296,7 @@ export function WovenSyncScreen(props: WovenSyncPageProps) {
 
       <div className="mb-4 grid gap-6 lg:grid-cols-2">
         <section>
-          <SectionHeader title="What Ask Sunny keeps" description="The only employee fields copied from Woven." />
+          <SectionHeader title="What Ask Bubbles keeps" description="The only employee fields copied from Woven." />
           <Chips items={kept} tone="ready" />
         </section>
         <section>
@@ -324,7 +324,7 @@ export function WovenSyncScreen(props: WovenSyncPageProps) {
 
       <Notice tone="neutral" icon={<ShieldCheck />} title="Access stays exactly as it is">
         The sync records what Woven says. It does not create an account, does not turn off a login when
-        someone is terminated, does not change anyone&apos;s role, scope level, primary salon or salon access,
+        someone is terminated, does not change anyone&apos;s role, scope level, primary location or location access,
         and does not call a position change a promotion unless a confirmed, ranked mapping proves it. Each of
         those needs a separate decision before it is switched on.
       </Notice>

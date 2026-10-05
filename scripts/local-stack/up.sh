@@ -5,7 +5,7 @@
 #
 # For the auth-revocation integration tests (src/**/*.local-stack.test.ts).
 # Everything binds 127.0.0.1, every credential is a throwaway local value, and
-# `down.sh` deletes all of it. It NEVER talks to the Ask Sunny Supabase project.
+# `down.sh` deletes all of it. It NEVER talks to the Ask Bubbles Supabase project.
 #
 #   Postgres 16   native binaries (PGBIN), port 54329, with pgvector
 #   Supabase Auth supabase/gotrue Docker image (host network), port 59999
@@ -22,7 +22,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
-ROOT="${LOCAL_STACK_DIR:-/tmp/ask-sunny-local-stack}"
+ROOT="${LOCAL_STACK_DIR:-/tmp/ask-bubbles-local-stack}"
 PGBIN="${PGBIN:-/usr/lib/postgresql/16/bin}"
 POSTGREST_BIN="${POSTGREST_BIN:-/tmp/postgrest}"
 GOTRUE_IMAGE="${GOTRUE_IMAGE:-supabase/gotrue:v2.180.0}"
@@ -41,11 +41,11 @@ PSQL_ADMIN=(psql -h 127.0.0.1 -p "$PG_PORT" -U supabase_admin -d postgres -v ON_
 "${PSQL_ADMIN[@]}" -f "$HERE/bootstrap.sql"
 
 echo "== mailpit"
-docker run -d --rm --name ask-sunny-local-mailpit --network host "$MAILPIT_IMAGE" \
+docker run -d --rm --name ask-bubbles-local-mailpit --network host "$MAILPIT_IMAGE" \
   --smtp "127.0.0.1:$SMTP_PORT" --listen "127.0.0.1:$MAIL_UI_PORT" >/dev/null
 
 echo "== supabase auth"
-docker run -d --rm --name ask-sunny-local-auth --network host \
+docker run -d --rm --name ask-bubbles-local-auth --network host \
   -e GOTRUE_API_HOST=127.0.0.1 -e PORT="$AUTH_PORT" \
   -e API_EXTERNAL_URL="http://127.0.0.1:$GATEWAY_PORT/auth/v1" \
   -e GOTRUE_DB_DRIVER=postgres -e GOTRUE_DB_NAMESPACE=auth \
@@ -62,7 +62,7 @@ for _ in $(seq 1 60); do
   curl -fsS "http://127.0.0.1:$AUTH_PORT/health" >/dev/null 2>&1 && break
   sleep 1
 done
-curl -fsS "http://127.0.0.1:$AUTH_PORT/health" >/dev/null || { docker logs ask-sunny-local-auth | tail -30; exit 1; }
+curl -fsS "http://127.0.0.1:$AUTH_PORT/health" >/dev/null || { docker logs ask-bubbles-local-auth | tail -30; exit 1; }
 
 # As in the Supabase project: postgres may manage auth sessions (observed DELETE privilege).
 "${PSQL_ADMIN[@]}" -c "grant select, delete on auth.sessions, auth.refresh_tokens to postgres; grant select on auth.users to postgres; grant references on auth.users to postgres;"
@@ -101,7 +101,7 @@ for _ in $(seq 1 30); do
 done
 
 {
-  echo "ASK_SUNNY_LOCAL_STACK=1"
+  echo "ASK_BUBBLES_LOCAL_STACK=1"
   echo "LOCAL_STACK_URL=http://127.0.0.1:$GATEWAY_PORT"
   echo "LOCAL_STACK_MAIL_API=http://127.0.0.1:$MAIL_UI_PORT/api/v1"
   echo "LOCAL_STACK_PG=postgres://supabase_admin@127.0.0.1:$PG_PORT/postgres"

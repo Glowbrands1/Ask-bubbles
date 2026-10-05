@@ -12,11 +12,11 @@ import { domainEligible, employeeName } from "./views";
  * ============================================================================
  *
  * READ-ONLY, AND IT CHANGES NOBODY. `employee_access_preview` sets each Woven
- * employee beside the Ask Sunny login that shares their email, if any, and
+ * employee beside the Ask Bubbles login that shares their email, if any, and
  * answers four questions a later, separately approved phase would act on:
  * would they be provisioned at first login, would their login be disabled,
  * does their confirmed position map to a different role, does their mapped
- * primary salon differ from their salon scope. Nothing reads these answers to
+ * primary location differ from their location scope. Nothing reads these answers to
  * act; phase one has no code path that writes a login, a role or a scope.
  *
  * THE LOGIN-EMAIL RULE IS APPLIED HERE, not in SQL, because it is
@@ -88,7 +88,7 @@ export function accessPreviewRowFromView(
     positionMappingConfirmed: row.position_mapping_confirmed === true,
     mappedRole: str(row.mapped_role),
     mappedScopeLevel: str(row.mapped_scope_level),
-    mappedPrimarySalonNumber: str(row.mapped_primary_salon_number),
+    mappedPrimaryLocationCode: str(row.mapped_primary_location_code),
     appUserRole: str(row.app_user_role),
     appUserStatus: str(row.app_user_status),
     appUserScopeLevel: str(row.app_user_scope_level),
@@ -98,7 +98,7 @@ export function accessPreviewRowFromView(
     wouldProvision: row.would_provision_candidate === true && eligible,
     wouldDeactivate: row.would_deactivate_candidate === true,
     roleDiffers: row.role_differs === true,
-    primarySalonDiffers: row.primary_salon_differs === true,
+    primaryLocationDiffers: row.primary_location_differs === true,
     roleOverride: str(row.role_override),
     effectiveRole: str(row.effective_role),
     effectiveScopeLevel: str(row.effective_scope_level),

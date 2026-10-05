@@ -3,7 +3,7 @@ import { getDocumentProxy } from "unpdf";
 /**
  * WHAT AN UPLOADED PDF ACTUALLY IS.
  *
- * "Replace with new PDF" cannot mean "and now Ask Sunny fills it in". A PDF is
+ * "Replace with new PDF" cannot mean "and now Ask Bubbles fills it in". A PDF is
  * fillable only if it carries AcroForm fields; most business PDFs — including
  * every reference capture supplied for this feature, checked and confirmed —
  * carry none at all. They are pictures of forms.
@@ -129,7 +129,7 @@ export async function inspectPdf(bytes: Uint8Array): Promise<PdfInspection> {
 
   const notes = acroform.hasFields
     ? [
-        `${acroform.fieldCount} fillable field${acroform.fieldCount === 1 ? "" : "s"} found. Map them to template fields before Ask Sunny can fill this PDF; until then generated downloads use the structured renderer.`,
+        `${acroform.fieldCount} fillable field${acroform.fieldCount === 1 ? "" : "s"} found. Map them to template fields before Ask Bubbles can fill this PDF; until then generated downloads use the structured renderer.`,
       ]
     : [
         "No fillable fields in this PDF, so it is stored as the official reference copy. Generated downloads are produced by the structured renderer from the published template version.",

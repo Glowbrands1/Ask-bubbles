@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
  * re-index are administration of the knowledge base rather than use of it.
  *
  * READING A CITED DOCUMENT DID NOT MOVE BEHIND THIS. `/knowledge/document/[id]`
- * asks for `view_knowledge` alone and shows one document, so every role Sunny
+ * asks for `view_knowledge` alone and shows one document, so every role Bubbles
  * answers for can still open the source under a citation.
  */
 export default async function KnowledgePage() {

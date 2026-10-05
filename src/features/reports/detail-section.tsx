@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils/cn";
  * benefit. The native element opens without JavaScript, is keyboard-operable
  * and screen-reader-announced for free, and — the reason that matters here —
  * browser find-in-page reaches inside a closed `<details>` in current Chrome
- * and Safari, so a manager searching for a salon name still finds it.
+ * and Safari, so a manager searching for a location name still finds it.
  *
  * `defaultOpen` EXISTS FOR THE SHORT ONES. A four-row table behind a
  * disclosure is a click that buys nothing, and the point is to stop a

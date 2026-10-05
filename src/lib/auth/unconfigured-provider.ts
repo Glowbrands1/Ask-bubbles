@@ -12,7 +12,7 @@ import type {
  * default choice when one is; every provider is an adapter behind
  * `AuthProvider` and none is a foundational dependency.
  *
- * Note what this state does NOT close. Reporting, the salon dashboard, report
+ * Note what this state does NOT close. Reporting, the location dashboard, report
  * ingestion and knowledge/RAG all work with this provider in place, because
  * none of them identifies a person: reporting reads run server-side and
  * ingestion holds its own machine credential. What stays closed is

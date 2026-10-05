@@ -100,7 +100,7 @@ describe("a rendered coaching form", () => {
     for (const forbidden of [
       "AI FILLS",
       "FILLED BY HAND",
-      "Ask Sunny fills",
+      "Ask Bubbles fills",
       "Edit template",
       "STANDARD FORM",
       "All templates",
@@ -293,7 +293,7 @@ const CLEAR_ABOVE = 0.6;
 
 /** A value long enough to wrap several times in every column on every form. */
 const LONG_ANSWER =
-  "Employees are expected to be in appropriate, professional salon attire that " +
+  "Employees are expected to be in appropriate, professional location attire that " +
   "meets dress code standards for the entire scheduled shift, including any time " +
   "spent at the front counter with clients and coworkers.";
 
@@ -553,7 +553,7 @@ describe("text layout", () => {
      * the column it was given.
      */
     const sentence =
-      "Employees are expected to be in appropriate, professional salon attire " +
+      "Employees are expected to be in appropriate, professional location attire " +
       "that meets dress code standards for the entire scheduled shift.";
     for (const line of wrapText(sentence, 504, 10, "bold")) {
       expect(textWidth(line, 10, "bold")).toBeLessThanOrEqual(504);

@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { ArrowUp, X } from "lucide-react";
 
-import { SunMark } from "@/components/brand-mark";
+import { BubbleMark } from "@/components/brand-mark";
 import { quickQuestionsFor } from "@/lib/ai/quick-questions";
 import { useSession } from "@/lib/session/session-context";
 import { useAppStore } from "@/lib/store/app-store";
@@ -34,12 +34,12 @@ const BAND_PROMPT_COUNT = 4;
 
 /**
  * =============================================================================
- * THE BAND — Ask Sunny stops being a card and becomes the top of the page
+ * THE BAND — Ask Bubbles stops being a card and becomes the top of the page
  * =============================================================================
  *
  * The direction's central move: a near-black surface with real area across the
  * top third, carrying the greeting and a REAL INPUT a manager can type into the
- * moment the page loads. Before this, Ask Sunny was a white card in the middle
+ * moment the page loads. Before this, Ask Bubbles was a white card in the middle
  * of the Overview with an "Open" button — the page talked about the assistant
  * instead of offering it.
  *
@@ -73,7 +73,7 @@ const BAND_PROMPT_COUNT = 4;
  * keeps only the conversation's ID and reads its messages back from the same
  * store the chat page reads, which buys three things that a local array would
  * not: the exchange survives a refresh, `history` sent with each follow-up is
- * the real thread rather than an empty list, and "Continue in Ask Sunny" still
+ * the real thread rather than an empty list, and "Continue in Ask Bubbles" still
  * adopts the SAME conversation instead of replaying it.
  *
  * NEWEST EXCHANGE FIRST, which is the one place this deliberately departs from
@@ -100,7 +100,7 @@ export function AskBand({
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const greeting = greetingForHour(businessHour());
-  /* Salon accounts are shared, so greet the team rather than the salon. */
+  /* Location accounts are shared, so greet the team rather than the location. */
   const greetingName = user.isLocationAccount
     ? `${user.name} team`
     : (user.name.split(" ")[0] ?? user.name);
@@ -110,7 +110,7 @@ export function AskBand({
    *
    * Resolved from the session's scope and permissions rather than sliced off a
    * fixed list, because the four openings a District Manager needs are not the
-   * four a Salon Director needs, and an employee with no reporting access needs
+   * four a Location Director needs, and an employee with no reporting access needs
    * none of the reporting ones at all. `can` is the session's own check against
    * `DEFAULT_PERMISSION_MATRIX`; the boundary on what may actually be READ is
    * enforced server-side in the briefing's queries, not here.
@@ -172,8 +172,8 @@ export function AskBand({
 
   return (
     <section
-      aria-label="Ask Sunny"
-      className={cn("shrink-0 border-b-4 border-brand-yellow bg-band", className)}
+      aria-label="Ask Bubbles"
+      className={cn("shrink-0 border-b-4 border-brand-accent bg-band", className)}
       /* The corner glow: the one sanctioned appearance of the red-light red. */
       style={{ backgroundImage: "var(--band-glow)" }}
     >
@@ -183,7 +183,7 @@ export function AskBand({
           <div className="min-w-0">
             <h1 className="display text-[26px] text-band-foreground sm:text-[30px]">
               {greeting},{" "}
-              <span className="text-brand-yellow">{greetingName}</span>
+              <span className="text-brand-accent">{greetingName}</span>
             </h1>
             <p className="mt-1.5 text-xs text-band-muted-foreground">
               {formatLongDate(businessToday())}
@@ -225,7 +225,7 @@ export function AskBand({
                     className={cn(
                       "rounded-full px-2.5 py-1.5 text-[9px] font-black tracking-[0.07em] uppercase transition-colors",
                       on
-                        ? "bg-brand-yellow text-brand-yellow-foreground"
+                        ? "bg-brand-accent text-brand-accent-foreground"
                         : "text-band-muted-foreground hover:text-band-chip-foreground",
                     )}
                   >
@@ -235,7 +235,7 @@ export function AskBand({
               })}
             </div>
           ) : (
-            <span className="pill-action shrink-0 self-start border border-band-pill-border text-brand-yellow sm:ml-auto sm:self-auto">
+            <span className="pill-action shrink-0 self-start border border-band-pill-border text-brand-accent sm:ml-auto sm:self-auto">
               {primaryLocationName}
             </span>
           )}
@@ -282,17 +282,17 @@ export function AskBand({
               {[1, 0.55, 0.28].map((opacity, index) => (
                 <span
                   key={index}
-                  className="size-1.5 rounded-full bg-brand-yellow"
+                  className="size-1.5 rounded-full bg-brand-accent"
                   style={{
                     opacity,
-                    animation: "sunny-pulse-dot 1.1s ease-in-out infinite",
+                    animation: "bubbles-pulse-dot 1.1s ease-in-out infinite",
                     animationDelay: `${index * 0.16}s`,
                   }}
                 />
               ))}
             </span>
             {/*
-              THE KNOWLEDGE BASE STAYS VISIBLE while Sunny reads. The count is
+              THE KNOWLEDGE BASE STAYS VISIBLE while Bubbles reads. The count is
               the real number of documents in scope — not a decorative figure —
               so it goes up when somebody uploads a policy.
             */}
@@ -444,7 +444,7 @@ function AskCard({
         The direction specifies no mobile behaviour at all (every mockup is
         min-width 960), so this is a judgement call rather than the artifact's.
       */}
-      <SunMark
+      <BubbleMark
         className={cn("hidden shrink-0 sm:block", showPlaceholderBlock && "mt-0.5", "size-[34px]")}
         onDark
       />
@@ -453,7 +453,7 @@ function AskCard({
         {showPlaceholderBlock ? (
           <label htmlFor="band-ask" className="block cursor-text">
             <span className="display mb-0.5 block text-[18px] text-foreground">
-              Ask Sunny anything about running your salon
+              Ask Bubbles anything about running your location
             </span>
             <span className="block text-[15px] text-placeholder-foreground">
               Policy, coaching, operations, performance, training — with the
@@ -485,8 +485,8 @@ function AskCard({
             }
             if (event.key === "Escape") onClear();
           }}
-          aria-label="Ask Sunny a question"
-          placeholder={showPlaceholderBlock ? undefined : "Ask Sunny a question"}
+          aria-label="Ask Bubbles a question"
+          placeholder={showPlaceholderBlock ? undefined : "Ask Bubbles a question"}
           className={cn(
             "w-full resize-none bg-transparent text-foreground outline-none placeholder:text-placeholder-foreground",
             showPlaceholderBlock
@@ -518,7 +518,7 @@ function AskCard({
                   event.preventDefault();
                   onPrompt(prompt);
                 }}
-                className="rounded-full border border-border-strong bg-background px-3.5 py-1.5 text-[11.5px] font-bold text-foreground transition-colors hover:border-brand-yellow disabled:opacity-50"
+                className="rounded-full border border-border-strong bg-background px-3.5 py-1.5 text-[11.5px] font-bold text-foreground transition-colors hover:border-brand-accent disabled:opacity-50"
               >
                 {prompt}
               </button>
@@ -542,9 +542,9 @@ function AskCard({
         type="button"
         onClick={onSubmit}
         disabled={busy || value.trim().length === 0}
-        aria-label="Ask Sunny"
+        aria-label="Ask Bubbles"
         className={cn(
-          "grid size-11 shrink-0 place-items-center rounded-full bg-brand-yellow text-brand-yellow-foreground transition-opacity disabled:opacity-45",
+          "grid size-11 shrink-0 place-items-center rounded-full bg-brand-accent text-brand-accent-foreground transition-opacity disabled:opacity-45",
           showPlaceholderBlock && "mt-0.5",
         )}
       >

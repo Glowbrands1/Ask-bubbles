@@ -12,7 +12,13 @@ import {
   statusesFor,
   type FeedbackFilters,
 } from "./feedback-filters";
-import { resolveWindow, type AnalyticsFilters, type ResolvedWindow } from "./filters";
+import { locationById } from "@/lib/locations";
+import {
+  locationFilterFor,
+  resolveWindow,
+  type AnalyticsFilters,
+  type ResolvedWindow,
+} from "./filters";
 import type { ActivityCategory, ActivitySurface } from "./taxonomy";
 
 /**
@@ -24,7 +30,7 @@ import type { ActivityCategory, ActivitySurface } from "./taxonomy";
  * wire so a browser can count the fours.
  *
  * SERVER ONLY. It holds the secret key and it answers "which named leader said
- * Sunny was useless, and what did they write", which is management information
+ * Bubbles was useless, and what did they write", which is management information
  * and not a browser's business.
  */
 
@@ -60,7 +66,7 @@ export interface FeedbackItem {
   succeeded: boolean;
   role: Role | null;
   displayName: string | null;
-  storeName: string | null;
+  locationName: string | null;
   district: string | null;
 }
 
@@ -100,7 +106,7 @@ export interface ExtractionRow {
   failed: number;
   withWarnings: number;
   facts: number;
-  salons: number;
+  locations: number;
   lastRun: string | null;
 }
 
@@ -147,8 +153,7 @@ function filterArgs(filters: AnalyticsFilters, window: ResolvedWindow) {
   return {
     p_from: window.from,
     p_to: window.to,
-    p_district: filters.district,
-    p_salon: filters.salonId,
+    p_locations: locationFilterFor(filters),
     p_role: filters.role,
     p_actor: filters.actorId,
   };
@@ -184,7 +189,7 @@ export async function loadFeedbackAnalytics(
         /*
          * THE ZONE COMES FROM THE APPLICATION, not from a constant in the SQL.
          * `business-date.ts` is the one answer this product has to "what time
-         * is it where the salons are", and a second copy inside a function
+         * is it where the locations are", and a second copy inside a function
          * would be two parts of one product disagreeing about it — each
          * internally consistent, which is what makes that failure so hard to
          * see.
@@ -236,7 +241,7 @@ export async function loadFeedbackAnalytics(
       failed: toNumber(row.failed),
       withWarnings: toNumber(row.with_warnings),
       facts: toNumber(row.facts),
-      salons: toNumber(row.salons),
+      locations: toNumber(row.locations),
       lastRun: (row.last_run as string | null) ?? null,
     })),
   };
@@ -302,8 +307,8 @@ export async function loadFeedbackPage(
       succeeded: row.succeeded !== false,
       role: (row.role as Role | null) ?? null,
       displayName: (row.display_name as string | null) ?? null,
-      storeName: (row.store_name as string | null) ?? null,
-      district: (row.district_label as string | null) ?? null,
+      locationName: locationNameOf(row.location_id),
+      district: locationById(row.location_id as string | null)?.districtName ?? null,
     })),
     /*
      * THE TOTAL RIDES ON EVERY ROW, so it is read off the first. An empty page
@@ -356,4 +361,9 @@ function readTopics(data: unknown): TopicRow[] {
     acknowledgements: toNumber(row.acknowledgements),
     lastAsked: (row.last_asked as string | null) ?? null,
   }));
+}
+
+function locationNameOf(value: unknown): string | null {
+  if (typeof value !== "string" || value === "") return null;
+  return locationById(value)?.name ?? value.replace(/^loc-/, "");
 }

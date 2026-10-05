@@ -23,7 +23,7 @@
  *
  *   3. NOTHING FLAGGED AS A DATA ISSUE IS READ AS PERFORMANCE. A figure the
  *      source could not produce honestly is a question about the delivery, and
- *      saying so is not the same as saying a salon did badly.
+ *      saying so is not the same as saying a location did badly.
  *
  *   4. NO RECOMMENDATION IS ISSUED. These describe what the period shows. They
  *      do not authorise a purchase, a discipline or a decision.
@@ -77,7 +77,7 @@ export function rate(value: number | null | undefined, digits = 1): string | nul
  * ============================================================================
  *
  * They are not interchangeable and they look identical at a call site, which is
- * how Salon Performance came to print `+0.0%` under a card reading `+4.64%`:
+ * how Location Performance came to print `+0.0%` under a card reading `+4.64%`:
  *
  *   PERCENTAGE POINTS  `percentDifference()` returns `(a / b - 1) * 100`, so
  *                      +127.4 means +127.4%. The classification ladders take
@@ -86,7 +86,7 @@ export function rate(value: number | null | undefined, digits = 1): string | nul
  *
  *   A FRACTION         a stored `*_pct_change` fact is the source's own value,
  *                      0.0464 for +4.64%. The KPI cards, the chart tooltips and
- *                      the Ask Sunny briefing all render these through
+ *                      the Ask Bubbles briefing all render these through
  *                      something that multiplies by 100.
  *
  * `signed` takes POINTS. `signedRate` takes a FRACTION. Neither guesses, and

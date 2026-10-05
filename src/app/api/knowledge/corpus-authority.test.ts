@@ -274,7 +274,7 @@ describe("listing cannot be pointed at another corpus", () => {
   it("still opens ONE cited document to any role that may read the library", async () => {
     /*
      * THE OTHER HALF OF THE SPLIT, and the reason locking the listing does not
-     * break Ask Sunny below Admin. A citation names a document by id; reading
+     * break Ask Bubbles below Admin. A citation names a document by id; reading
      * that one document is use of the knowledge base, and it stays at
      * `view_knowledge`. There is no call on this path that returns a second
      * document, so it cannot be walked into an inventory.
@@ -605,7 +605,7 @@ describe("no knowledge route reads a corpus from the request", () => {
    * This assertion used to be "the string `identity.scope` appears nowhere in
    * any of these routes", which was a proxy for the real rule and has now been
    * outgrown: `/api/chat` reads `identity.scope` legitimately, to decide which
-   * SALON a form proposal may name — a question about the caller's assignment,
+   * LOCATION a form proposal may name — a question about the caller's assignment,
    * not about which company's documents get searched.
    *
    * So the rule is asserted directly instead of by proximity. EVERY assignment
@@ -613,7 +613,7 @@ describe("no knowledge route reads a corpus from the request", () => {
    * scope value reaching one would fail here whatever it was called and
    * wherever in the file it came from.
    *
-   * `primaryAreaId` and `alsoCovers` stay banned outright. They are salon-roster
+   * `primaryAreaId` and `alsoCovers` stay banned outright. They are location-roster
    * internals, and no knowledge route has any business touching them.
    */
   it("derives every corpus from the brand, never from the user's AccessScope", () => {
@@ -646,7 +646,7 @@ describe("no knowledge route reads a corpus from the request", () => {
 
     const chat = code(ROUTES.chat);
     // It exists, and it goes to the answer's ACTOR — the argument that decides
-    // which salon a form proposal may name.
+    // which location a form proposal may name.
     expect(chat).toMatch(/scope:\s*context\.identity\.scope/);
     // And the corpus argument beside it still comes from the brand.
     expect(chat).toMatch(/scopeId:\s*activeKnowledgeCorpus\(\)/);

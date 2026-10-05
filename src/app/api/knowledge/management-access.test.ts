@@ -24,7 +24,7 @@ import type { Role } from "@/types";
  *   MANAGING — the inventory, upload, delete, re-index. Administration of the
  *   corpus. `ADMIN_CONSOLE_ROLES`, via `authorizeAdminConsoleRequest`.
  *
- *   USING — asking Sunny, being given an answer grounded in these documents,
+ *   USING — asking Bubbles, being given an answer grounded in these documents,
  *   and opening the ONE document a citation names. `ask_questions` and
  *   `view_knowledge`, exactly as before.
  *
@@ -75,7 +75,7 @@ describe("the knowledge-base MANAGEMENT routes", () => {
   it("does not let the inventory be read with view_knowledge alone", () => {
     /*
      * The specific regression. `view_knowledge` is held by every role including
-     * Employee — it is what lets Sunny cite a policy at somebody — so it can
+     * Employee — it is what lets Bubbles cite a policy at somebody — so it can
      * never again be the only thing standing in front of the listing.
      */
     const listing = code(MANAGEMENT["the document inventory"]);
@@ -84,7 +84,7 @@ describe("the knowledge-base MANAGEMENT routes", () => {
   });
 });
 
-describe("the routes Ask Sunny needs, which did NOT move", () => {
+describe("the routes Ask Bubbles needs, which did NOT move", () => {
   it("leaves chat retrieval on ask_questions", () => {
     // The answer path. If this ever needs the admin console, every role below
     // Admin has silently lost the product.
@@ -137,7 +137,7 @@ async function authorizeAs(role: Role, permission: "view_knowledge" | "manage_kn
   const { authorizeAdminConsoleRequest } = await import("@/lib/auth/server");
   return authorizeAdminConsoleRequest(
     new Request("https://app.test/api/knowledge/documents", {
-      headers: { "x-ask-sunny-demo-role": role },
+      headers: { "x-ask-bubbles-demo-role": role },
     }),
     permission,
   );
@@ -173,7 +173,7 @@ describe("authorizeAdminConsoleRequest", () => {
 
   it("checks the PERMISSION first, so the two refusals stay distinct", async () => {
     /*
-     * An Assistant Salon Director holds neither. The refusal must be the
+     * An Assistant Location Director holds neither. The refusal must be the
      * permission's, not the console's, or an administrator debugging access
      * reads the wrong cause.
      */

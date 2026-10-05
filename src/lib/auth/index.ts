@@ -34,7 +34,7 @@ export { UnconfiguredAuthProvider } from "./unconfigured-provider";
  * AUTHENTICATION IS PROVIDER-AGNOSTIC, AND THAT IS AN ARCHITECTURAL
  * CONSTRAINT RATHER THAN A PREFERENCE.
  * ---------------------------------------------------------------------------
- * No part of Ask Sunny may require a particular identity provider in order to
+ * No part of Ask Bubbles may require a particular identity provider in order to
  * function. Reporting, the dashboard, report ingestion, knowledge/RAG and
  * automation all work with NO provider configured at all — ingestion holds its
  * own machine credential (`lib/reporting/ingest-credential.ts`), and the

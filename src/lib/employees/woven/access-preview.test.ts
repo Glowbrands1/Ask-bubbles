@@ -13,7 +13,7 @@ const base = {
   position_mapping_confirmed: true,
   mapped_role: "employee",
   mapped_scope_level: "location",
-  mapped_primary_salon_number: null,
+  mapped_primary_location_code: null,
   app_user_id: "u1",
   app_user_role: "admin",
   app_user_status: "active",
@@ -22,7 +22,7 @@ const base = {
   would_provision_candidate: false,
   would_deactivate_candidate: false,
   role_differs: false,
-  primary_salon_differs: false,
+  primary_location_differs: false,
 };
 
 describe("accessPreviewRowFromView", () => {

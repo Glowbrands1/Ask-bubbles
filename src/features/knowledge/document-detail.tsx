@@ -117,7 +117,7 @@ export function DocumentDetail({
       ) : null}
 
       {/* Version history always shows the live version alongside the earlier
-          ones, so "which version is Sunny actually citing" is answerable at a
+          ones, so "which version is Bubbles actually citing" is answerable at a
           glance rather than inferred from the absence of a row. */}
       <div className="mt-6 border-t border-border pt-5">
         <div className="mb-3 flex items-center gap-2">
@@ -158,7 +158,7 @@ export function DocumentDetail({
         </ul>
         <p className="mt-2.5 text-xs leading-relaxed text-muted-foreground">
           {document.previousVersions.length > 0
-            ? "Sunny always answers from the newest version. Earlier versions are kept for reference and are never cited."
+            ? "Bubbles always answers from the newest version. Earlier versions are kept for reference and are never cited."
             : "Uploading a document with this same title creates version " +
               (document.version + 1) +
               " and supersedes this one."}

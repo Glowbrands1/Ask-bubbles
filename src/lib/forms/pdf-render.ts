@@ -37,7 +37,7 @@ import { closingForDisplay } from "./required-closing";
  *   any editor control, sidebar or top bar
  *   the instructions an administrator sees above the editor
  * The printed form is the corporate document: white paper, black section bars,
- * ruled lines, empty signature lines. The Ask Sunny theme stops at the browser.
+ * ruled lines, empty signature lines. The Ask Bubbles theme stops at the browser.
  */
 
 /* --------------------------------------------------------- font metrics --- */

@@ -83,9 +83,9 @@ describe("the intakes count every natural shape as the date being given", () => 
     const corrective = readCorrectiveActionIntake({
       text: `3. ${typed}`,
       employeeKnown: true,
-      salonSettled: true,
+      locationSettled: true,
     });
-    const epp = readEppIntake({ text: `3. ${typed}`, employeeKnown: true, salonSettled: true });
+    const epp = readEppIntake({ text: `3. ${typed}`, employeeKnown: true, locationSettled: true });
 
     expect(corrective.supplied).toContain("form_date");
     expect(epp.supplied).toContain("form_date");
@@ -102,8 +102,8 @@ describe("\"today\" counts as the date being given, with or without the apostrop
   it.each(["we can use todays date", "we can use today's date", "Todays date.", "use today", "today’s date"])(
     "%s",
     (typed) => {
-      const corrective = readCorrectiveActionIntake({ text: typed, employeeKnown: true, salonSettled: true });
-      const epp = readEppIntake({ text: typed, employeeKnown: true, salonSettled: true });
+      const corrective = readCorrectiveActionIntake({ text: typed, employeeKnown: true, locationSettled: true });
+      const epp = readEppIntake({ text: typed, employeeKnown: true, locationSettled: true });
 
       expect(corrective.supplied).toContain("form_date");
       expect(epp.supplied).toContain("form_date");
@@ -113,7 +113,7 @@ describe("\"today\" counts as the date being given, with or without the apostrop
   );
 
   it("is not read out of a word that only starts the same way", () => {
-    const corrective = readCorrectiveActionIntake({ text: "todayish maybe", employeeKnown: true, salonSettled: true });
+    const corrective = readCorrectiveActionIntake({ text: "todayish maybe", employeeKnown: true, locationSettled: true });
     expect(corrective.supplied).not.toContain("form_date");
   });
 });

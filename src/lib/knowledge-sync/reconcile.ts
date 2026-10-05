@@ -29,12 +29,12 @@ import type {
  * EVIDENCE, IN ORDER: the source's stable id identifies the item; version,
  * version id, updated date, attachment ids and (for records without a
  * dependable date) a detail fingerprint decide whether it changed; publication
- * and audience decide whether Ask Sunny may hold it. File bytes are hashed at
+ * and audience decide whether Ask Bubbles may hold it. File bytes are hashed at
  * download time, so a changed fingerprint whose bytes turn out identical is a
  * metadata-only update, never a re-index.
  *
  * TWO FINGERPRINTS PER ITEM. `observedFingerprint` is what the latest scan saw;
- * `syncedFingerprint` is what was last APPLIED to Ask Sunny. Comparing the scan
+ * `syncedFingerprint` is what was last APPLIED to Ask Bubbles. Comparing the scan
  * with the synced value, not the observed one, means an update whose download
  * failed is still an update on the next run instead of silently "unchanged".
  *
@@ -46,7 +46,7 @@ import type {
  *      was there last time) is used for additions and updates only; nothing it
  *      omits is treated as removed.
  *   3. Across the run, if more than `MASS_REMOVAL_FLOOR` items AND more than
- *      `MASS_REMOVAL_SHARE` of what is in Ask Sunny would leave at once, every
+ *      `MASS_REMOVAL_SHARE` of what is in Ask Bubbles would leave at once, every
  *      removal is held until an administrator confirms it.
  */
 
@@ -145,7 +145,7 @@ function plan(
   part: SourcePart,
   previous: ManifestItem | undefined,
 ): { state: SyncState; pendingAction: PendingAction; reason: string | null } {
-  const live = previous?.inAskSunny === true;
+  const live = previous?.inKnowledgeBase === true;
   const retire = (state: SyncState, reason: string) => ({
     state: live ? state : state === "UNPUBLISHED" ? "EXCLUDED" : state,
     pendingAction: (live ? "retire" : "none") as PendingAction,
@@ -160,9 +160,9 @@ function plan(
   }
 
   /*
-   * BLOCKED BEFORE AUDIENCE. A part Ask Sunny cannot fetch yet is not put in
+   * BLOCKED BEFORE AUDIENCE. A part Ask Bubbles cannot fetch yet is not put in
    * front of an administrator for an access decision that could change
-   * nothing. A document already in Ask Sunny is kept as it is: being unable to
+   * nothing. A document already in Ask Bubbles is kept as it is: being unable to
    * check is not a reason to remove.
    */
   if (part.retrieval.kind === "blocked") {
@@ -302,7 +302,7 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
 
         const eligible = record.publication === "published" && part.retrieval.kind !== "unsupported_format";
         if (eligible) report.eligible += 1;
-        /* Only parts Ask Sunny could actually hold need an audience decision. */
+        /* Only parts Ask Bubbles could actually hold need an audience decision. */
         if (eligible && part.retrieval.kind === "available") {
           const akey = audienceKey(record.audience);
           const entry = audiences.get(akey) ?? {
@@ -340,7 +340,7 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
           syncedFingerprint: previous?.syncedFingerprint ?? null,
           contentHash: previous?.contentHash ?? null,
           knowledgeDocumentId: previous?.knowledgeDocumentId ?? null,
-          inAskSunny: previous?.inAskSunny ?? false,
+          inKnowledgeBase: previous?.inKnowledgeBase ?? false,
           state: decision.state,
           previousState: previous?.state ?? null,
           pendingAction: decision.pendingAction,
@@ -365,13 +365,13 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
         items.push(previous);
         continue;
       }
-      const alreadyGone = previous.state === "REMOVED" && !previous.inAskSunny;
+      const alreadyGone = previous.state === "REMOVED" && !previous.inKnowledgeBase;
       const next: ManifestItem = {
         ...previous,
         previousState: previous.state,
         state: "REMOVED",
         reason: "not_in_source",
-        pendingAction: previous.inAskSunny ? "retire" : "none",
+        pendingAction: previous.inKnowledgeBase ? "retire" : "none",
       };
       if (!alreadyGone && previous.syncedFingerprint !== null) report.removed += 1;
       items.push(next);
@@ -380,7 +380,7 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     if (!trusted) {
       attention.push({
         code: `listing_not_trusted_${listing.contentType}`,
-        message: `Woven's ${listing.contentType.replace("_", " ")} list looked incomplete, so nothing was removed from Ask Sunny for it. Nothing needs doing unless this repeats.`,
+        message: `Woven's ${listing.contentType.replace("_", " ")} list looked incomplete, so nothing was removed from Ask Bubbles for it. Nothing needs doing unless this repeats.`,
       });
     }
   }
@@ -388,7 +388,7 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
   /* Guard 3: hold a mass removal. */
   let removalsHeld = 0;
   const retiring = items.filter((item) => item.pendingAction === "retire");
-  const live = input.manifest.filter((item) => item.inAskSunny).length;
+  const live = input.manifest.filter((item) => item.inKnowledgeBase).length;
   if (
     !input.confirmLargeRemoval &&
     retiring.length > MASS_REMOVAL_FLOOR &&
@@ -401,7 +401,7 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     removalsHeld = retiring.length;
     attention.push({
       code: "mass_removal_held",
-      message: `${retiring.length} documents disappeared from Woven or stopped being shared at once. They are still in Ask Sunny until you confirm the removal.`,
+      message: `${retiring.length} documents disappeared from Woven or stopped being shared at once. They are still in Ask Bubbles until you confirm the removal.`,
       count: retiring.length,
     });
   }
@@ -411,7 +411,7 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     const heldItems = needsReview.reduce((sum, a) => sum + a.items, 0);
     attention.push({
       code: "audience_review",
-      message: `${heldItems} published item${heldItems === 1 ? " is" : "s are"} limited to specific teams or positions in Woven. Choose whether each audience should be shared in Ask Sunny.`,
+      message: `${heldItems} published item${heldItems === 1 ? " is" : "s are"} limited to specific teams or positions in Woven. Choose whether each audience should be shared in Ask Bubbles.`,
       count: heldItems,
     });
   }

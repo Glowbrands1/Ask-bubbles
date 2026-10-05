@@ -225,7 +225,7 @@ export function SegmentedControl({
             "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-bold tracking-[0.04em] uppercase transition-colors",
             "text-muted-foreground hover:text-foreground",
             tone === "brand"
-              ? "data-[state=on]:bg-brand-yellow data-[state=on]:text-brand-yellow-foreground"
+              ? "data-[state=on]:bg-brand-accent data-[state=on]:text-brand-accent-foreground"
               : "data-[state=on]:bg-selected data-[state=on]:text-selected-foreground",
           )}
         >

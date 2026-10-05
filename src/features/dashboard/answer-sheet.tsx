@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowUpRight, Play } from "lucide-react";
 
-import { SunMark } from "@/components/brand-mark";
+import { BubbleMark } from "@/components/brand-mark";
 import { RichText } from "@/components/rich-text";
 import { SourceList } from "@/components/source-list";
 import { ANSWER_MODE_LABEL } from "@/data/answer-modes";
@@ -71,7 +71,7 @@ export function AnswerSheet({
 
   if (message.error) {
     /*
-     * A failed turn reads as a failure on the sheet, never as something Sunny
+     * A failed turn reads as a failure on the sheet, never as something Bubbles
      * said. The detail and the retry live on the chat page, which is where the
      * thread and its history already are.
      */
@@ -90,7 +90,7 @@ export function AnswerSheet({
               onClick={() => continueInChat(message.error?.question)}
               className="pill-action bg-band text-band-foreground"
             >
-              Open in Ask Sunny
+              Open in Ask Bubbles
               <ArrowUpRight className="size-3" aria-hidden />
             </button>
             <button
@@ -134,12 +134,12 @@ export function AnswerSheet({
     <div className="border-b border-border bg-surface px-5 py-5 sm:px-6 sm:pt-[22px] sm:pb-6">
       {/* ------------------------------------------------------------ head -- */}
       <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
-        <span className="grid size-[30px] shrink-0 place-items-center rounded-full bg-brand-yellow">
-          <SunMark className="size-[17px]" onDark />
+        <span className="grid size-[30px] shrink-0 place-items-center rounded-full bg-brand-accent">
+          <BubbleMark className="size-[17px]" onDark />
         </span>
-        <span className="display text-[16px] text-foreground">Sunny</span>
+        <span className="display text-[16px] text-foreground">Bubbles</span>
         {message.mode ? (
-          <span className="rounded-[4px] bg-brand-yellow px-2 py-[3px] text-[8.5px] font-black tracking-[0.08em] text-brand-yellow-foreground uppercase">
+          <span className="rounded-[4px] bg-brand-accent px-2 py-[3px] text-[8.5px] font-black tracking-[0.08em] text-brand-accent-foreground uppercase">
             {ANSWER_MODE_LABEL[message.mode].split("—")[0].trim()}
           </span>
         ) : null}
@@ -158,7 +158,7 @@ export function AnswerSheet({
             onClick={() => continueInChat()}
             className="pill-action ml-auto bg-band text-band-foreground"
           >
-            Continue in Ask Sunny
+            Continue in Ask Bubbles
             <ArrowUpRight className="size-3" aria-hidden />
           </button>
         ) : null}
@@ -179,8 +179,8 @@ export function AnswerSheet({
           the block simply does not render.
         */}
         {nextStep ? (
-          <div className="my-4 rounded-lg border-l-4 border-brand-yellow bg-brand-yellow-soft px-3.5 py-3">
-            <p className="eyebrow mb-1 text-brand-yellow-soft-foreground">
+          <div className="my-4 rounded-lg border-l-4 border-brand-accent bg-brand-accent-soft px-3.5 py-3">
+            <p className="eyebrow mb-1 text-brand-accent-soft-foreground">
               Your manager-ready next step
             </p>
             {/*
@@ -230,7 +230,7 @@ export function AnswerSheet({
                 onClick={() =>
                   onAsk ? onAsk(suggestion) : continueInChat(suggestion)
                 }
-                className="rounded-full border border-border-strong bg-surface px-3.5 py-1.5 text-[11.5px] font-bold text-foreground transition-colors hover:border-brand-yellow"
+                className="rounded-full border border-border-strong bg-surface px-3.5 py-1.5 text-[11.5px] font-bold text-foreground transition-colors hover:border-brand-accent"
               >
                 {suggestion}
               </button>

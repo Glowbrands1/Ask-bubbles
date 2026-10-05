@@ -4,12 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronsLeft, Lock } from "lucide-react";
 
-import { BrandMark, SunMark } from "@/components/brand-mark";
+import { BrandMark, BubbleMark } from "@/components/brand-mark";
 import { Tooltip } from "@/components/ui/overlays";
 import { useSession } from "@/lib/session/session-context";
 import { cn } from "@/lib/utils/cn";
 import { NAV_SECTIONS, isActivePath } from "./navigation";
 import { UserMenu } from "./user-menu";
+import { ACTIVE_BRAND } from "@/lib/brand";
 
 export function SidebarNav({
   collapsed,
@@ -33,7 +34,7 @@ export function SidebarNav({
    *
    * Hiding a screen a role cannot use is right once somebody has decided who
    * may do what. Nobody has: the matrix behind `can()` is this app's own guess,
-   * and hiding on it left Form Templates off the rail for a Salon Director —
+   * and hiding on it left Form Templates off the rail for a Location Director —
    * with the page gate already stood down, that meant the screen existed and
    * there was NO WAY IN. "I don't see it on the app" was exactly that.
    *
@@ -67,7 +68,7 @@ export function SidebarNav({
     <div className="flex h-full flex-col bg-sidebar">
       {/*
         THE DRAWER ONLY. On desktop the shell's navy top bar carries the
-        wordmark, so repeating it here would put two Ask Sunny marks on screen.
+        wordmark, so repeating it here would put two Ask Bubbles marks on screen.
         The drawer slides over the content with no bar above it, so it still
         needs one.
       */}
@@ -79,11 +80,11 @@ export function SidebarNav({
         )}
       >
         {isCollapsed ? (
-          <Link href="/" aria-label="Ask Sunny — Overview" onClick={onNavigate}>
-            <SunMark className="size-6" />
+          <Link href="/" aria-label={`${ACTIVE_BRAND.productName} — Home`} onClick={onNavigate}>
+            <BubbleMark className="size-6" />
           </Link>
         ) : (
-          <Link href="/" onClick={onNavigate} aria-label="Ask Sunny — Overview">
+          <Link href="/" onClick={onNavigate} aria-label={`${ACTIVE_BRAND.productName} — Home`}>
             <BrandMark size="md" />
           </Link>
         )}
@@ -105,7 +106,7 @@ export function SidebarNav({
                     surface, and section labels take the lighter of the two.
                   */
                   "eyebrow mb-2 flex items-center gap-1.5 px-2.5 text-sidebar-muted",
-                  section.admin && "text-brand-yellow-soft-foreground",
+                  section.admin && "text-brand-accent-soft-foreground",
                 )}
               >
                 {section.admin ? <Lock className="size-2.5" aria-hidden /> : null}

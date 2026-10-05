@@ -99,7 +99,7 @@ async function load(
 }
 
 const req = (method: string, body?: unknown, path = "x") =>
-  new Request(`https://ask-sunny.test/api/admin/employees/woven/${path}`, {
+  new Request(`https://ask-bubbles.test/api/admin/employees/woven/${path}`, {
     method,
     headers: { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),

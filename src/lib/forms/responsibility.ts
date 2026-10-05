@@ -82,7 +82,7 @@ export function enforceResponsibilities(
       continue;
     }
     if (!AI_WRITABLE.includes(responsibility)) {
-      rejected.push({ key, reason: `${responsibility} fields are not drafted by Ask Sunny` });
+      rejected.push({ key, reason: `${responsibility} fields are not drafted by Ask Bubbles` });
       continue;
     }
     if (typeof value !== "string") {
@@ -100,7 +100,7 @@ export function enforceResponsibilities(
       continue;
     }
     if (!AI_WRITABLE.includes(responsibility)) {
-      rejected.push({ key, reason: `${responsibility} groups are not ticked by Ask Sunny` });
+      rejected.push({ key, reason: `${responsibility} groups are not ticked by Ask Bubbles` });
       continue;
     }
     const options = optionKeys.get(key) ?? new Set<string>();
@@ -230,7 +230,7 @@ export function enforcePersonEdit(
      * kept the option list it was seeded with. It stopped being survivable when
      * a form could be RE-ISSUED: the Coaching Form's topics changed wholesale,
      * so a stale browser tab or a draft carried across the change can now post
-     * `salon_tours` at a version whose list has no such option. Filtering it is
+     * `location_tours` at a version whose list has no such option. Filtering it is
      * right — a tick nobody can print is not a tick — but a manager who ticked
      * a box and was told nothing would reasonably believe it saved.
      *

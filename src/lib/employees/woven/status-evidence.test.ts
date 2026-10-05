@@ -15,7 +15,7 @@ import { createFakeWoven, FAKE_CREDENTIALS, FAKE_ENUMS, FAKE_STATUS, wovenDetail
  * ============================================================================
  *
  * Reported in Production: an employee Woven's UI shows as Terminated stayed
- * Active in Ask Sunny. The run reads each EmployeeID several times (default
+ * Active in Ask Bubbles. The run reads each EmployeeID several times (default
  * list, with-terminated list, and now Woven's terminated-status filter and
  * details). It used to keep the FIRST version it saw, so an Active copy in the
  * default read overwrote a Terminated one from a later read. These tests pin

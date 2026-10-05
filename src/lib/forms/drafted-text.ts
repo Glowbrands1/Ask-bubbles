@@ -33,7 +33,7 @@
  */
 
 /**
- * Bracketed fill-in tokens: `[Follow-Up Date]`, `[Employee Name]`, `[Salon]`,
+ * Bracketed fill-in tokens: `[Follow-Up Date]`, `[Employee Name]`, `[Location]`,
  * `[Job Title]`, `{{anything}}`.
  *
  * Deliberately shape-based rather than a list of known tokens — the next one a

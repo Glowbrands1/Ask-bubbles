@@ -18,9 +18,9 @@ import {
  * `chat_conversations` persist effect is the only collection effect with no
  * demo-mode guard. So `conv-seed-1 … conv-seed-6` and their `msg-s*` turns have
  * been written into the IndexedDB of every real person who has ever opened Ask
- * Sunny in production.
+ * Bubbles in production.
  *
- * Nobody asked them. Sunny never answered them. Importing one would put
+ * Nobody asked them. Bubbles never answered them. Importing one would put
  * invented history into a real person's account where it would be
  * indistinguishable from the real thing — and the person it would mislead most
  * is whoever later reads their own history looking for something they actually
@@ -126,7 +126,7 @@ describe("anything else fails closed", () => {
     ["a SQL fragment", "conv_1' or '1'='1"],
     ["a uuid", "conv_11111111-1111-4111-8111-111111111111"],
     ["too short to carry a timestamp", "conv_abc"],
-    ["a timestamp before Ask Sunny existed", `conv_${(0).toString(36).padStart(8, "0")}1abcdef`],
+    ["a timestamp before Ask Bubbles existed", `conv_${(0).toString(36).padStart(8, "0")}1abcdef`],
   ])("rejects %s", (_label, value) => {
     expect(isClientConversationId(value, NOW)).toBe(false);
     expect(isClientMessageId(String(value).replace("conv", "msg"), NOW)).toBe(false);

@@ -10,17 +10,17 @@ import {
  * WHICH ORIGINAL FILES ONLY AN ADMINISTRATOR MAY TAKE AWAY
  * ============================================================================
  *
- * A citation opens the document it names, for every role Sunny answers for.
+ * A citation opens the document it names, for every role Bubbles answers for.
  * That is the point of the read-only source route and it does not change here.
  *
  * WHAT DOES CHANGE is the ORIGINAL FILE for one narrow class of document: the
  * frameworks. They are not reference material a manager consults — they are
- * Sunny's own reasoning, the operating rules and escalation guards that decide
+ * Bubbles' own reasoning, the operating rules and escalation guards that decide
  * how employee metrics become coaching, written as plain-text source. Handing
  * that file to somebody is handing them the assistant's instructions, which is
  * a different act from showing them the policy they were quoted.
  *
- * RETRIEVAL IS UNTOUCHED, and that is the whole shape of this. Sunny still
+ * RETRIEVAL IS UNTOUCHED, and that is the whole shape of this. Bubbles still
  * reads these documents, still grounds answers in them and still cites them for
  * every role. Only the stored .txt itself stops being downloadable.
  *

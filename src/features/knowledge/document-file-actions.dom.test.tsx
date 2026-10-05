@@ -296,7 +296,7 @@ describe("the Knowledge Base row exposes the actions", () => {
  * THE FRAMEWORKS ARE NOT REFERENCE MATERIAL
  * ============================================================================
  *
- * A framework .txt is Sunny's own reasoning — the operating rules and the guard
+ * A framework .txt is Bubbles' own reasoning — the operating rules and the guard
  * against recommending discipline on a metric alone. Handing a manager that
  * file is handing them the assistant's instructions, which is a different act
  * from showing them the policy they were quoted.
@@ -314,8 +314,8 @@ describe("the Knowledge Base row exposes the actions", () => {
  */
 
 const FRAMEWORK_TXT = {
-  title: "ASK SUNNY PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT",
-  fileName: "ASK_SUNNY_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT.txt",
+  title: "ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT",
+  fileName: "EXAMPLE_FRAMEWORK_KB_TEXT.txt",
   fileType: "txt" as const,
 };
 

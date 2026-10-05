@@ -97,23 +97,23 @@ describe("which origin a link points back at", () => {
   });
 
   it("prefers a configured site URL when one is set", () => {
-    process.env.NEXT_PUBLIC_SITE_URL = "https://ask-sunny.example/";
+    process.env.NEXT_PUBLIC_SITE_URL = "https://ask-bubbles.example/";
     expect(implicitRedirectTarget(request("https://pr-42.vercel.app/api/x"))).toBe(
-      "https://ask-sunny.example/auth/accept",
+      "https://ask-bubbles.example/auth/accept",
     );
   });
 
   it("tolerates a trailing slash rather than producing a doubled one", () => {
-    process.env.NEXT_PUBLIC_SITE_URL = "https://ask-sunny.example/";
+    process.env.NEXT_PUBLIC_SITE_URL = "https://ask-bubbles.example/";
     expect(implicitRedirectTarget(request())).not.toContain("//auth");
   });
 
   it("builds the same target from a bare origin, for callers with no request", () => {
-    expect(implicitRedirectTargetFor("https://ask-sunny.example")).toBe(
-      "https://ask-sunny.example/auth/accept",
+    expect(implicitRedirectTargetFor("https://ask-bubbles.example")).toBe(
+      "https://ask-bubbles.example/auth/accept",
     );
-    expect(implicitRedirectTargetFor("https://ask-sunny.example/some/path")).toBe(
-      "https://ask-sunny.example/auth/accept",
+    expect(implicitRedirectTargetFor("https://ask-bubbles.example/some/path")).toBe(
+      "https://ask-bubbles.example/auth/accept",
     );
   });
 });

@@ -103,7 +103,7 @@ export class MockAIProvider implements AIProvider {
      *
      * A REAL PROPOSAL NEEDS TWO THINGS THIS PROVIDER CANNOT HAVE: the published
      * template library, which lives behind the privileged key on the server,
-     * and a verified scope saying which salons the person covers. Preview mode
+     * and a verified scope saying which locations the person covers. Preview mode
      * has neither. Producing a convincing coaching document from neither is
      * exactly the behaviour Phase 2 exists to remove, so the honest answer is
      * to name the limitation.

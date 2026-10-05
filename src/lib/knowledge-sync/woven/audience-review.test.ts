@@ -81,7 +81,7 @@ describe("the dry run's audience choices", () => {
     const targeted = status.audienceReviews.find((a) => a.audienceKey === TARGETED)!;
     expect(targeted.members!.map((m) => [m.title, m.contentType, m.wovenStatus, m.syncState])).toEqual([["Manager Bonus Policy", "policy", "current", "waiting_for_audience"]]);
     const none = status.audienceReviews.find((a) => a.audienceKey === NONE)!;
-    expect(none.members!.map((m) => m.title).sort()).toEqual(["Bed Cleaning", "Opening the Salon", "Spray Tan Basics"]);
+    expect(none.members!.map((m) => m.title).sort()).toEqual(["Bed Cleaning", "Opening the Location", "Spray Tan Basics"]);
     expect(none.membersTotal).toBe(3);
     expect(JSON.stringify(status.audienceReviews)).not.toMatch(/locator|Arrive on time|a1b2c3d4|https?:/);
     expect(status.attention.map((a) => a.code)).toContain("audience_review");
@@ -122,12 +122,12 @@ describe("the dry run's audience choices", () => {
 
     const items = [...h.store.items.values()];
     const bonus = items.filter((i) => i.entityId === uuid(103));
-    expect(bonus.every((i) => i.inAskSunny)).toBe(true);
+    expect(bonus.every((i) => i.inKnowledgeBase)).toBe(true);
     const noAudience = items.filter((i) => i.reason === "audience_excluded");
     /* Two procedures' step text, one step attachment, one Knowledge Element. */
     expect(noAudience.length).toBe(4);
-    expect(noAudience.every((i) => !i.inAskSunny && i.state === "EXCLUDED")).toBe(true);
-    /* Nothing kept out reached Ask Sunny. */
+    expect(noAudience.every((i) => !i.inKnowledgeBase && i.state === "EXCLUDED")).toBe(true);
+    /* Nothing kept out reached Ask Bubbles. */
     const synced = new Set(h.sink.searchable().map((d) => d.id));
     expect(noAudience.some((i) => i.knowledgeDocumentId && synced.has(i.knowledgeDocumentId))).toBe(false);
   });
@@ -137,12 +137,12 @@ describe("the dry run's audience choices", () => {
     await h.run("preview");
     await h.run("sync");
     const held = [...h.store.items.values()].filter((i) => i.audience?.includes("All Teams 8 Positions"));
-    expect(held.every((i) => i.state === "NEEDS_REVIEW" && !i.inAskSunny)).toBe(true);
+    expect(held.every((i) => i.state === "NEEDS_REVIEW" && !i.inKnowledgeBase)).toBe(true);
 
     await h.decide(TARGETED, "company_wide");
     h.clock = new Date(h.clock.getTime() + 60_000);
     await h.run("sync");
-    expect([...h.store.items.values()].filter((i) => i.audience?.includes("All Teams 8 Positions")).every((i) => i.inAskSunny)).toBe(true);
+    expect([...h.store.items.values()].filter((i) => i.audience?.includes("All Teams 8 Positions")).every((i) => i.inKnowledgeBase)).toBe(true);
   });
 
   it("the inventory is display metadata only: no locator, no body text, no URL, no credential", async () => {
@@ -164,7 +164,7 @@ describe("the Content view", () => {
 
     expect(content.basis).toBe("latest_scan");
     const attendance = content.rows.find((r) => r.title === "Attendance Policy")!;
-    expect(attendance).toMatchObject({ contentType: "policy", wovenStatus: "current", audience: "Public", audienceDecision: "public", version: "Version 2", syncState: "new", lastSyncedAt: null, askSunny: [] });
+    expect(attendance).toMatchObject({ contentType: "policy", wovenStatus: "current", audience: "Public", audienceDecision: "public", version: "Version 2", syncState: "new", lastSyncedAt: null, askBubbles: [] });
     expect(attendance.parts.map((p) => [p.kind, p.syncState])).toEqual([
       ["body", "new"],
       ["attachment", "new"],
@@ -177,9 +177,9 @@ describe("the Content view", () => {
     expect(content.rows.find((r) => r.title === "Welcome Video")).toMatchObject({ syncState: "not_supported" });
     expect(content.rows.find((r) => r.title === "Lotion Guide")).toMatchObject({ syncState: "new", published: true });
     /* A procedure's parts: its step text, and each attachment by the name people see — never the stored name. */
-    const opening = content.rows.find((r) => r.title === "Opening the Salon")!;
+    const opening = content.rows.find((r) => r.title === "Opening the Location")!;
     expect(opening.parts.map((p) => [p.kind, p.fileName ?? p.title])).toEqual([
-      ["body", "Opening the Salon"],
+      ["body", "Opening the Location"],
       ["attachment", "Opening Checklist.pdf"],
     ]);
     expect(JSON.stringify(opening)).not.toContain("a1b2c3d4-0000");
@@ -193,7 +193,7 @@ describe("the Content view", () => {
     expect(content.rows.find((r) => r.title === "Manager Bonus Policy")).toMatchObject({ syncState: "new", audienceDecision: "company_wide" });
   });
 
-  it("after the initial sync, reads the manifest: synced items are up to date and link their Ask Sunny documents", async () => {
+  it("after the initial sync, reads the manifest: synced items are up to date and link their Ask Bubbles documents", async () => {
     const h = new Harness();
     await h.run("preview");
     await h.run("sync");
@@ -205,8 +205,8 @@ describe("the Content view", () => {
     const attendance = content.rows.find((r) => r.title === "Attendance Policy")!;
     expect(attendance.syncState).toBe("up_to_date");
     expect(attendance.lastSyncedAt).not.toBeNull();
-    expect(attendance.askSunny).toHaveLength(2);
-    expect(attendance.askSunny[0]!.title).toMatch(/^Doc /);
+    expect(attendance.askBubbles).toHaveLength(2);
+    expect(attendance.askBubbles[0]!.title).toMatch(/^Doc /);
   });
 
   it("never invents a Woven date", () => {
@@ -218,8 +218,8 @@ describe("the Content view", () => {
             contentType: "procedure",
             entityId: "p1",
             partKey: "content",
-            recordTitle: "Opening the salon",
-            title: "Opening the salon",
+            recordTitle: "Opening the location",
+            title: "Opening the location",
             status: "Listed",
             audience: null,
             version: null,
@@ -229,7 +229,7 @@ describe("the Content view", () => {
             reason: "procedure_content",
             pendingAction: "none",
             knowledgeDocumentId: null,
-            inAskSunny: false,
+            inKnowledgeBase: false,
             errorCategory: null,
             retryCount: 0,
             firstSeenAt: "2026-09-29T12:00:00Z",
@@ -258,7 +258,7 @@ describe("Scan Woven after setup: a preview that changes nothing", () => {
     return h;
   }
 
-  it("reads Woven, classifies, shows what Sync Now would do — and writes nothing to Ask Sunny, the manifest or the schedule", async () => {
+  it("reads Woven, classifies, shows what Sync Now would do — and writes nothing to Ask Bubbles, the manifest or the schedule", async () => {
     const h = await setUp();
     const manifestBefore = JSON.stringify([...h.store.items.values()]);
     const settingsBefore = { ...h.store.settings };
@@ -309,11 +309,11 @@ describe("Needs attention says exactly what it is about", () => {
     await h.run("preview");
     await h.run("sync");
     await h.store.saveSettings({ ...h.store.settings, autoSyncEnabled: true });
-    const pending = [...h.store.items.values()].filter((i) => i.pendingAction === "none" && i.inAskSunny).slice(0, 2);
+    const pending = [...h.store.items.values()].filter((i) => i.pendingAction === "none" && i.inKnowledgeBase).slice(0, 2);
     for (const item of pending) h.store.items.set(`woven\u0000${item.contentType}\u0000${item.entityId}\u0000${item.partKey}`, { ...item, pendingAction: "ingest" });
     const status = await h.status();
     expect(status.attention.find((a) => a.code === "work_continues")).toMatchObject({
-      message: "2 items are still being processed. Ask Sunny continues them automatically at the next hourly check.",
+      message: "2 items are still being processed. Ask Bubbles continues them automatically at the next hourly check.",
       count: 2,
     });
     await h.store.saveSettings({ ...h.store.settings, autoSyncEnabled: false });
@@ -324,7 +324,7 @@ describe("Needs attention says exactly what it is about", () => {
     const h = new Harness();
     await h.run("preview");
     await h.run("sync");
-    const item = [...h.store.items.values()].find((i) => i.contentType === "handbook" && i.inAskSunny)!;
+    const item = [...h.store.items.values()].find((i) => i.contentType === "handbook" && i.inKnowledgeBase)!;
     h.store.items.set(`woven\u0000${item.contentType}\u0000${item.entityId}\u0000${item.partKey}`, {
       ...item,
       state: "ERROR",

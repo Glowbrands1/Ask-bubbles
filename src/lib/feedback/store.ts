@@ -110,7 +110,7 @@ export async function saveFeedback(
   const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase
-    .from("ask_sunny_feedback")
+    .from("assistant_feedback")
     .upsert(
       {
         activity_event_id: input.turnId,
@@ -169,7 +169,7 @@ export async function ownFeedbackForTurns(
 
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
-    .from("ask_sunny_feedback")
+    .from("assistant_feedback")
     .select("id, activity_event_id, rating, got_what_needed, comment, updated_at")
     .eq("user_id", userId)
     .in("activity_event_id", turnIds);
@@ -254,7 +254,7 @@ export async function moderateFeedback(input: ModerationInput): Promise<void> {
   if (Object.keys(patch).length === 0) return;
 
   const { error } = await supabase
-    .from("ask_sunny_feedback")
+    .from("assistant_feedback")
     .update(patch)
     .eq("id", input.feedbackId);
 
@@ -287,7 +287,7 @@ export async function moderateFeedback(input: ModerationInput): Promise<void> {
  * IT DOES NOT TOUCH THE TURN
  * ============================================================================
  *
- * `ask_sunny_feedback.activity_event_id` cascades FROM the event TO the
+ * `assistant_feedback.activity_event_id` cascades FROM the event TO the
  * feedback, never the other way, so deleting a rating cannot remove the record
  * that a question was asked. That is the correct direction: the question really
  * was asked and really was answered, and the usage figures should keep saying
@@ -300,7 +300,7 @@ export async function deleteFeedback(feedbackId: string): Promise<void> {
   const supabase = getSupabaseAdmin();
 
   const { error } = await supabase
-    .from("ask_sunny_feedback")
+    .from("assistant_feedback")
     .delete()
     .eq("id", feedbackId);
 

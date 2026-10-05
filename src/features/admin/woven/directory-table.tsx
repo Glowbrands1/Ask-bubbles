@@ -218,7 +218,7 @@ export function DirectoryTable({ page, query, sample }: { page: DirectoryPage; q
                   <td className="px-3 py-2">{row.positionName ?? "—"}</td>
                   <td className="px-3 py-2 font-mono text-[11.5px] text-muted-foreground">{row.positionId ?? "—"}</td>
                   <td className="px-3 py-2">
-                    {row.primarySalonNumber ? `${row.primarySalonNumber} · ` : ""}
+                    {row.primaryLocationCode ? `${row.primaryLocationCode} · ` : ""}
                     {row.primaryLocationName ?? row.primaryLocationId ?? "—"}
                   </td>
                   <td className="px-3 py-2">

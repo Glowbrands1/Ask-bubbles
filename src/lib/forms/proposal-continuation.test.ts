@@ -5,11 +5,11 @@ import type { ChatFormProposal, ChatMessage } from "@/types";
 
 /**
  * ============================================================================
- * REMEDIATION FINDING 3 — ANSWERING SUNNY CONTINUES THE SAME PROPOSAL
+ * REMEDIATION FINDING 3 — ANSWERING BUBBLES CONTINUES THE SAME PROPOSAL
  * ============================================================================
  *
  * The hint's job is narrow and its job is the whole safety argument: it names a
- * KIND of form and nothing else. No employee, no salon, no field value, no
+ * KIND of form and nothing else. No employee, no location, no field value, no
  * status — none of what `pendingFormValues` used to carry.
  */
 

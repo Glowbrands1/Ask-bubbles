@@ -78,7 +78,7 @@ async function loadRoute(
   }));
 
   const { POST } = await import("./route");
-  const call = (body: unknown, origin = "https://ask-sunny.vercel.app") =>
+  const call = (body: unknown, origin = "https://ask-bubbles.vercel.app") =>
     POST(
       new Request(`${origin}/api/auth/forgot-password`, {
         method: "POST",
@@ -107,18 +107,18 @@ describe("the request Supabase receives", () => {
     await call({ email: EMAIL });
 
     expect(seen.calls[0].options).toEqual({
-      redirectTo: "https://ask-sunny.vercel.app/reset-password",
+      redirectTo: "https://ask-bubbles.vercel.app/reset-password",
     });
   });
 
   it("uses the configured site URL when there is one", async () => {
     const { call, seen } = await loadRoute();
-    process.env.NEXT_PUBLIC_SITE_URL = "https://ask-sunny.vercel.app/";
+    process.env.NEXT_PUBLIC_SITE_URL = "https://ask-bubbles.vercel.app/";
     await call({ email: EMAIL }, "https://some-preview.vercel.app");
     delete process.env.NEXT_PUBLIC_SITE_URL;
 
     expect(seen.calls[0].options).toEqual({
-      redirectTo: "https://ask-sunny.vercel.app/reset-password",
+      redirectTo: "https://ask-bubbles.vercel.app/reset-password",
     });
   });
 
@@ -127,7 +127,7 @@ describe("the request Supabase receives", () => {
     await call({ email: EMAIL, redirectTo: "https://evil.example/steal" });
 
     expect(seen.calls[0].options).toEqual({
-      redirectTo: "https://ask-sunny.vercel.app/reset-password",
+      redirectTo: "https://ask-bubbles.vercel.app/reset-password",
     });
   });
 

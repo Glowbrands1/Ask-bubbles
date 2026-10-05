@@ -30,7 +30,7 @@ const GLOBALS = readFileSync(join(SOURCE_DIR, "app", "globals.css"), "utf8");
 const APPROVED = {
   "--approved-topbar": "#1c1f29",
   "--approved-rail": "#b2aeaa",
-  "--approved-brand-yellow": "#ffcc00",
+  "--approved-brand-accent": "#ffcc00",
   "--approved-followup": "#ef6079",
   "--approved-redlight": "#d62c3a",
   "--approved-canvas": "#fff6f0",
@@ -72,8 +72,8 @@ describe("the approved palette is present and unaltered", () => {
      */
     for (const alias of [
       "--followup-attention:",
-      "--wellness-redlight:",
-      "--brand-yellow:",
+      "--glow-accent:",
+      "--brand-accent:",
       "--topbar:",
       "--rail:",
     ]) {
@@ -317,11 +317,11 @@ describe("the approved direction is frozen", () => {
     expect(GLOBALS).toContain("--measure-benchmark: var(--approved-topbar)");
 
     const palette = codeOf(
-      join(SOURCE_DIR, "features", "reports", "salon-performance", "chart-palette.ts"),
+      join(SOURCE_DIR, "features", "reports", "location-performance", "chart-palette.ts"),
     );
     expect(palette).toContain('SERIES_PRIMARY = "var(--measure-data)"');
     // Yellow measures 1.47:1 on a light ground. It never encodes a value.
-    expect(palette).not.toContain("brand-yellow");
+    expect(palette).not.toContain("brand-accent");
   });
 
   it("spends the green only where a direction has actually been stated", () => {
@@ -343,13 +343,13 @@ describe("the approved direction is frozen", () => {
      * back into each chart, which is what the file exists to prevent.
      *
      * The guarantee is unchanged for everything that actually paints: the
-     * movers chart, the KPI rows, the per-salon rows and the comparison table
+     * movers chart, the KPI rows, the per-location rows and the comparison table
      * all still have to ask.
      */
     const definitionSite = join(
       "features",
       "reports",
-      "salon-performance",
+      "location-performance",
       "chart-palette.ts",
     );
 
@@ -410,8 +410,8 @@ describe("the approved direction is frozen", () => {
       // The primary action is the near-black, on white. Never the coral.
       "--primary: var(--approved-topbar)",
       // Yellow is the accent and the focus ring; it replaced the sage.
-      "--accent: var(--approved-brand-yellow)",
-      "--ring: var(--approved-brand-yellow)",
+      "--accent: var(--approved-brand-accent)",
+      "--ring: var(--approved-brand-accent)",
       // The flag: coral fill, deeper coral ink.
       "--measure-flagged: var(--approved-followup)",
       "--measure-flagged-foreground: var(--approved-attention-ink)",
@@ -561,7 +561,7 @@ describe("the mockup's placeholder content was not built", () => {
   });
 });
 
-describe("the Ask Sunny brand", () => {
+describe("the Ask Bubbles brand", () => {
   const APP_SHELL = readFileSync(join(SOURCE_DIR, "components", "shell", "app-shell.tsx"), "utf8");
   const BRAND = readFileSync(join(SOURCE_DIR, "components", "brand-mark.tsx"), "utf8");
 
@@ -598,9 +598,9 @@ describe("the Ask Sunny brand", () => {
     expect(BRAND).not.toMatch(/[\u2600\u2601\u{1F31E}\u{1F31F}\u{2604}]/u);
   });
 
-  it("colours the sun and SUNNY with the brand yellow", () => {
-    expect(BRAND).toContain("var(--brand-yellow)");
-    expect(BRAND).toContain("text-brand-yellow");
+  it("colours the sun and BUBBLES with the brand yellow", () => {
+    expect(BRAND).toContain("var(--brand-accent)");
+    expect(BRAND).toContain("text-brand-accent");
   });
 
   it("keeps ASK legible against the navy", () => {
@@ -611,7 +611,7 @@ describe("the Ask Sunny brand", () => {
   it("shows one wordmark at a time", () => {
     /*
      * The sidebar used to carry the wordmark. With a top bar above it that
-     * would be two Ask Sunny marks on one screen, so the sidebar's is now the
+     * would be two Ask Bubbles marks on one screen, so the sidebar's is now the
      * drawer's only — the drawer slides over the content with no bar above it.
      */
     const sidebar = readFileSync(join(SOURCE_DIR, "components", "shell", "sidebar.tsx"), "utf8");
@@ -662,7 +662,7 @@ describe("the Ask Sunny brand", () => {
      * selected is the yellow, which cannot be confused, and the pair is
      * asserted together so neither can drift back onto the other.
      */
-    expect(GLOBALS).toContain("--sidebar-active: var(--approved-brand-yellow)");
+    expect(GLOBALS).toContain("--sidebar-active: var(--approved-brand-accent)");
     expect(GLOBALS).toContain(
       "--sidebar-active-foreground: var(--approved-yellow-ink)",
     );
@@ -731,7 +731,7 @@ describe("the Ask Sunny brand", () => {
      */
     const chat = codeOf(join(SOURCE_DIR, "features", "chat", "conversation-list.tsx"));
     expect(chat).not.toContain("bg-sidebar-active");
-    expect(chat).toContain("border-l-brand-yellow");
+    expect(chat).toContain("border-l-brand-accent");
   });
 
   it("leaves the chart series on the data colour, not the selection colour", () => {
@@ -741,7 +741,7 @@ describe("the Ask Sunny brand", () => {
      * on the page indistinguishable from the chart.
      */
     const palette = readFileSync(
-      join(SOURCE_DIR, "features", "reports", "salon-performance", "chart-palette.ts"),
+      join(SOURCE_DIR, "features", "reports", "location-performance", "chart-palette.ts"),
       "utf8",
     );
     expect(palette).not.toContain("--selected");

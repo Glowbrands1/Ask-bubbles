@@ -27,7 +27,7 @@ import type { ChatMessage } from "@/types";
  *                  nothing). A different form — refused.
  *
  * WHAT THIS IS NOT. It is not an authorization check; the template's own
- * permission and the salon scope are enforced by the route as before, and the
+ * permission and the location scope are enforced by the route as before, and the
  * manual builder may still file for any name typed into it. It answers one
  * question — is this proposal still the one the conversation stands behind? —
  * and where the conversation cannot say (the turns that named the person have

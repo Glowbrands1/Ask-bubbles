@@ -49,7 +49,7 @@ export async function reindexDocument(input: {
   if (row.status === "retired") {
     throw new IngestionError("not_configured", "That document no longer exists.", 404);
   }
-  /* A superseded copy is not brought back into search by a re-index: its current replacement is what Ask Sunny uses. */
+  /* A superseded copy is not brought back into search by a re-index: its current replacement is what Ask Bubbles uses. */
   if (row.status === "superseded") {
     throw new IngestionError("persistence_failed", "This copy was replaced by the current version synced from Woven, so it is not re-indexed.", 409);
   }

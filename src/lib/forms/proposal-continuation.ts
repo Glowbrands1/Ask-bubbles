@@ -2,11 +2,11 @@ import type { ChatMessage } from "@/types";
 
 /**
  * ============================================================================
- * ANSWERING SUNNY'S QUESTION IS PART OF THE SAME REQUEST
+ * ANSWERING BUBBLES'S QUESTION IS PART OF THE SAME REQUEST
  * ============================================================================
  *
  *   Manager: "Build me a coaching form for that."
- *   Sunny:   "I don't yet know who this form is about..."
+ *   Bubbles:   "I don't yet know who this form is about..."
  *   Manager: "Sarah Test"
  *
  * That third turn was routed into ordinary retrieval: `detectTemplateIntent`
@@ -23,9 +23,9 @@ import type { ChatMessage } from "@/types";
  * and read back on the next one, where anything still missing became a default.
  * That is not what this is, and the difference is the whole point.
  *
- * THIS CARRIES A TEMPLATE KEY. Nothing else. No employee, no salon, no topic,
+ * THIS CARRIES A TEMPLATE KEY. Nothing else. No employee, no location, no topic,
  * no field value, no status the server would trust. It says only "the last
- * thing Sunny offered was a form of this kind" — and every fact on the
+ * thing Bubbles offered was a form of this kind" — and every fact on the
  * resulting proposal is re-derived from the manager's own turns, exactly as it
  * would be on a first request.
  *
@@ -176,12 +176,12 @@ export function isProposalSuperseded(messages: readonly ChatMessage[], proposalI
  * ============================================================================
  *
  * The most recent form created in this conversation, by instance id — the
- * target of "change her new location to salon 24". None once a newer, not yet
+ * target of "change her new location to location 24". None once a newer, not yet
  * created proposal is on screen: the manager is talking about that one now,
  * and the continuation above carries it.
  *
  * An id only, revalidated by the server (`correctActiveForm` runs the
- * template's own edit permission and the salon scope). A forged one reaches
+ * template's own edit permission and the location scope). A forged one reaches
  * nothing the manager could not already edit in the inline form.
  */
 export function activeFormInstanceFor(messages: ChatMessage[]): string | undefined {

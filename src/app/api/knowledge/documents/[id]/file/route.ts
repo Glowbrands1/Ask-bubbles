@@ -26,7 +26,7 @@ import { OriginalFileError, originalFileLink } from "@/lib/knowledge/original-fi
  * listing already returns every document's title, description, category, size
  * and uploader to anybody holding it. The retrieval path goes further: a
  * grounded answer quotes the document's own text. Somebody who may read the
- * policy through Sunny and see it listed by name is not being given anything
+ * policy through Bubbles and see it listed by name is not being given anything
  * new by being able to open it — and a manager who cannot re-open a document
  * they uploaded is the problem this route exists to fix.
  *
@@ -34,12 +34,12 @@ import { OriginalFileError, originalFileLink } from "@/lib/knowledge/original-fi
  * file is not managing it.
  *
  * ============================================================================
- * EXCEPT FOR THE FRAMEWORKS, WHICH ARE SUNNY'S OWN REASONING
+ * EXCEPT FOR THE FRAMEWORKS, WHICH ARE BUBBLES'S OWN REASONING
  * ============================================================================
  *
  * One class of document is held back from a non-administrator: the framework
  * and plain-text SOURCE files. They are not reference material — they are the
- * operating rules and escalation guards that decide how Sunny turns metrics
+ * operating rules and escalation guards that decide how Bubbles turns metrics
  * into coaching, and handing somebody that .txt is handing them the assistant's
  * instructions rather than the policy they were quoted.
  *
@@ -49,7 +49,7 @@ import { OriginalFileError, originalFileLink } from "@/lib/knowledge/original-fi
  * admin-only would have taken previews away from the managers this product is
  * for — see `restricted-download.ts` for how a framework is identified.
  *
- * RETRIEVAL IS UNAFFECTED. Sunny still reads these documents, still grounds
+ * RETRIEVAL IS UNAFFECTED. Bubbles still reads these documents, still grounds
  * answers in them and still cites them for every role. Only the stored file
  * stops being handed over.
  *
@@ -67,7 +67,7 @@ import { OriginalFileError, originalFileLink } from "@/lib/knowledge/original-fi
  * caller is and WHAT they may do, not WHICH company's corpus this deployment
  * serves. That is a property of the build, so it is read from the build.
  *
- * NOT FROM THE USER'S `AccessScope` EITHER. Salon, district and region scope
+ * NOT FROM THE USER'S `AccessScope` EITHER. Location, district and region scope
  * describe which locations a manager covers inside one brand; the knowledge
  * corpus is the brand itself. Deriving one from the other would conflate two
  * unrelated concepts and would break the moment a second brand shipped.

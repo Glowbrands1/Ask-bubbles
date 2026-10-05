@@ -30,7 +30,7 @@ import { userFromSession, type AuthenticatedSession } from "./authenticated-user
  * SESSION
  * ---------------------------------------------------------------------------
  * "Who is using the app right now", and nothing else. No password is handled,
- * stored, compared or hashed here or anywhere else in Ask Sunny — Supabase Auth
+ * stored, compared or hashed here or anywhere else in Ask Bubbles — Supabase Auth
  * owns credentials, and duplicating that would mean owning a credential store
  * we have no business owning.
  *
@@ -67,8 +67,8 @@ import { userFromSession, type AuthenticatedSession } from "./authenticated-user
  * server.
  */
 const DEMO_MODE = isDemoMode();
-const SIGNED_IN_KEY = "ask-sunny:demo-signed-in";
-const ROLE_KEY = "ask-sunny:demo-role";
+const SIGNED_IN_KEY = "ask-bubbles:demo-signed-in";
+const ROLE_KEY = "ask-bubbles:demo-role";
 const DEFAULT_ROLE: Role = "location_manager";
 
 /**
@@ -76,7 +76,7 @@ const DEFAULT_ROLE: Role = "location_manager";
  *
  * Empty rather than plausible. Every field a screen might render is blank, so
  * there is no fabricated name to leak into a greeting, an avatar or an audit
- * line, and the scope is the narrowest one that exists: assigned to no salon,
+ * line, and the scope is the narrowest one that exists: assigned to no location,
  * covering nothing. A component that renders this is showing an empty state,
  * which is the truth about who is signed in.
  */
@@ -120,8 +120,8 @@ interface SessionValue {
   /** Location used to pre-fill generated forms. */
   primaryLocationName: string;
   /**
-   * Name written into the "Manager" field of a generated form. Salon accounts
-   * are shared per salon, so their role title reads correctly on a form where
+   * Name written into the "Manager" field of a generated form. Location accounts
+   * are shared per location, so their role title reads correctly on a form where
    * the bare account name ("MO Kansas City Wornall") would not.
    */
   managerDisplayName: string;
@@ -217,7 +217,7 @@ export function SessionProvider({
    * `push` so the back button cannot return to the app shell. `refresh`
    * because it invalidates the router cache — without it, Next may still hold
    * rendered payloads for pages the previous person visited, and on a shared
-   * salon computer that is somebody else's data on screen.
+   * location computer that is somebody else's data on screen.
    *
    * The Supabase client is imported lazily so the module, and the publishable
    * key it reads, are only pulled into the bundle where they are used.

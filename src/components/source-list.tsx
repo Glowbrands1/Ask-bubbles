@@ -60,7 +60,7 @@ export function SourceList({
                 `/knowledge` is the corpus's management console and is
                 administrators-only; this opens the ONE document being cited and
                 asks only for `view_knowledge`, so the row stays clickable for
-                every role Sunny answers for. Nothing else about a citation
+                every role Bubbles answers for. Nothing else about a citation
                 changed — same rows, same order, same excerpt, same locator.
 
                 Encoded as a PATH SEGMENT now that it is one. As a query value a
@@ -76,7 +76,7 @@ export function SourceList({
               */}
               <span
                 aria-hidden
-                className="mt-px grid size-[17px] shrink-0 place-items-center rounded-[var(--radius-xs)] bg-brand-yellow text-[9.5px] font-black text-brand-yellow-foreground"
+                className="mt-px grid size-[17px] shrink-0 place-items-center rounded-[var(--radius-xs)] bg-brand-accent text-[9.5px] font-black text-brand-accent-foreground"
               >
                 {index + 1}
               </span>

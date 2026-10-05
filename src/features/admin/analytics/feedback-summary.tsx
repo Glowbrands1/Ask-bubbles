@@ -56,7 +56,7 @@ export function ConversationFeedbackSummary({
         description={
           closed > 0
             ? `Everything leaders said in the ${periodLabel.toLowerCase()} has been dealt with — ${formatNumber(summary.queue.resolved)} resolved and ${formatNumber(summary.queue.dismissed)} dismissed. Nothing was deleted; these figures describe outstanding feedback, so they clear as the queue is worked.`
-            : `Nobody rated an Ask Sunny answer in the ${periodLabel.toLowerCase()}. Ratings are collected under every answer and appear here as they arrive — nothing is backfilled, so this fills from the day the feature shipped.`
+            : `Nobody rated an Ask Bubbles answer in the ${periodLabel.toLowerCase()}. Ratings are collected under every answer and appear here as they arrive — nothing is backfilled, so this fills from the day the feature shipped.`
         }
       />
     );
@@ -79,7 +79,7 @@ export function ConversationFeedbackSummary({
               ? summary.averageRating.toFixed(1)
               : "—"}
           </span>
-          <Star className="size-6 fill-brand-yellow text-brand-yellow" aria-hidden />
+          <Star className="size-6 fill-brand-accent text-brand-accent" aria-hidden />
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           average rating · open feedback
@@ -133,7 +133,7 @@ export function ConversationFeedbackSummary({
                   </dt>
                   <dd className="flex min-w-0 flex-1 items-center gap-2">
                     <span
-                      className="h-2 rounded-full bg-brand-yellow"
+                      className="h-2 rounded-full bg-brand-accent"
                       style={{ width: `${Math.max(share, count > 0 ? 2 : 0)}%` }}
                       aria-hidden
                     />
@@ -185,7 +185,7 @@ export function ConversationFeedbackSummary({
                   aria-hidden
                 >
                   <div
-                    className="h-full rounded-full bg-brand-yellow"
+                    className="h-full rounded-full bg-brand-accent"
                     style={{ width: `${share}%` }}
                   />
                 </div>

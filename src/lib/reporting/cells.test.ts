@@ -57,9 +57,9 @@ describe("asNumber", () => {
     expect(asNumber(cell(""))).toBeNull();
   });
 
-  it("never turns a salon number into a figure by accident", () => {
+  it("never turns a location number into a figure by accident", () => {
     // '0468' IS numeric text, so this documents that the parser must not run
-    // salon numbers through asNumber — it reads them with asText.
+    // location numbers through asNumber — it reads them with asText.
     expect(asNumber(cell("0468"))).toBe(468);
     expect(asText(cell("0468"))).toBe("0468");
   });

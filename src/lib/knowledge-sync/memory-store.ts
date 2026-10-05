@@ -5,7 +5,7 @@ import type { AudienceDecision, InventoryItem, ManifestItem, SourceSystem, SyncE
 /**
  * In-memory implementations of the store and the sink. They enforce the same
  * guarantees the database does — one live run, one manifest row per
- * (source, type, entity, part), one owner per Ask Sunny document — so the engine
+ * (source, type, entity, part), one owner per Ask Bubbles document — so the engine
  * tests prove idempotency rather than assume it.
  */
 
@@ -25,9 +25,9 @@ export function toInventoryItem(item: ManifestItem, observedAt: string): Invento
     state: item.state,
     reason: item.reason,
     pendingAction: item.pendingAction,
-    /* A dry run changes nothing in Ask Sunny: these describe the manifest as it was. */
+    /* A dry run changes nothing in Ask Bubbles: these describe the manifest as it was. */
     knowledgeDocumentId: item.knowledgeDocumentId,
-    inAskSunny: item.inAskSunny,
+    inKnowledgeBase: item.inKnowledgeBase,
     errorCategory: null,
     retryCount: 0,
     firstSeenAt: item.firstSeenAt ?? observedAt,

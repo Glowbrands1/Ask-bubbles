@@ -67,8 +67,8 @@ function enumMembers(sql: string, typeName: string): string[] {
   return [...found[1].matchAll(/'([^']+)'/g)].map((match) => match[1]);
 }
 
-const FEEDBACK_SQL = migration("ask_sunny_feedback.sql");
-const READS_SQL = migration("ask_sunny_feedback_reads");
+const FEEDBACK_SQL = migration("assistant_feedback.sql");
+const READS_SQL = migration("assistant_feedback_reads");
 
 /* ------------------------------------------------- the enums match the app -- */
 
@@ -157,7 +157,7 @@ describe("the feedback table", () => {
    *
    * The table above created `got_what_needed` and `comment` as `not null`, with
    * the comment additionally required to be non-empty. That was the right trade
-   * while Ask Sunny demanded a rating after every answer and held the next
+   * while Ask Bubbles demanded a rating after every answer and held the next
    * question until one arrived. Rating is now a passive action nobody has to
    * open, and a required field on a voluntary form is the reason the form gets
    * abandoned.
@@ -201,7 +201,7 @@ describe("the feedback table", () => {
     });
 
     it("rewrites no data and drops no column", () => {
-      expect(relaxed).not.toMatch(/update public\.ask_sunny_feedback/i);
+      expect(relaxed).not.toMatch(/update public\.assistant_feedback/i);
       expect(relaxed).not.toMatch(/drop column/i);
     });
   });
@@ -214,7 +214,7 @@ describe("the feedback table", () => {
      */
     expect(sql).toContain("hidden_at timestamptz");
     expect(sql).toContain("hidden_by uuid");
-    expect(sql).not.toMatch(/delete from public\.ask_sunny_feedback/i);
+    expect(sql).not.toMatch(/delete from public\.assistant_feedback/i);
   });
 
   it("keeps the feedback when the person is deleted", () => {
@@ -231,10 +231,10 @@ describe("the feedback table", () => {
      * grants revoked because Supabase hands `anon` and `authenticated` full DML
      * on any new table in `public`.
      */
-    expect(sql).toContain("alter table public.ask_sunny_feedback enable row level security");
-    expect(sql).toContain("alter table public.ask_sunny_feedback force row level security");
-    expect(sql).toContain("revoke all on public.ask_sunny_feedback from anon, authenticated");
-    expect(sql).not.toMatch(/create policy[\s\S]*ask_sunny_feedback/i);
+    expect(sql).toContain("alter table public.assistant_feedback enable row level security");
+    expect(sql).toContain("alter table public.assistant_feedback force row level security");
+    expect(sql).toContain("revoke all on public.assistant_feedback from anon, authenticated");
+    expect(sql).not.toMatch(/create policy[\s\S]*assistant_feedback/i);
   });
 
   it("revokes the trigger function from all three roles", () => {
@@ -244,7 +244,7 @@ describe("the feedback table", () => {
      * `public` alone leaves the door open. All three, every time.
      */
     expect(sql).toContain(
-      "revoke all on function public.ask_sunny_feedback_touch() from public, anon, authenticated",
+      "revoke all on function public.assistant_feedback_touch() from public, anon, authenticated",
     );
   });
 
@@ -253,7 +253,7 @@ describe("the feedback table", () => {
      * Every event written before this migration happened on a surface nobody
      * recorded. Defaulting them would file the Overview band's and five report
      * bars' history under whichever surface was convenient, and the first
-     * "where is Ask Sunny used?" chart would be confidently wrong.
+     * "where is Ask Bubbles used?" chart would be confidently wrong.
      */
     expect(sql).toContain("add column if not exists surface public.activity_surface");
     expect(sql).toContain("add column if not exists turn_kind public.activity_turn_kind");
@@ -269,11 +269,11 @@ describe("the feedback table", () => {
      * model refuses to hold.
      */
     const columns =
-      sql.split("create table if not exists public.ask_sunny_feedback (")[1]?.split(");")[0] ??
+      sql.split("create table if not exists public.assistant_feedback (")[1]?.split(");")[0] ??
       "";
     expect(columns.length).toBeGreaterThan(0);
     for (const forbidden of ["question", "prompt", "answer", "excerpt", "transcript"]) {
-      expect(columns, `ask_sunny_feedback declares ${forbidden}`).not.toMatch(
+      expect(columns, `assistant_feedback declares ${forbidden}`).not.toMatch(
         new RegExp(`\\b${forbidden}\\b`),
       );
     }
@@ -355,7 +355,7 @@ describe("the feedback read functions", () => {
   it("takes the timezone as an argument rather than hard-coding a second one", () => {
     /*
      * `business-date.ts` is this product's one answer to "what time is it where
-     * the salons are". A copy inside a function would be two parts of one
+     * the locations are". A copy inside a function would be two parts of one
      * product disagreeing about it, each internally consistent — which is what
      * makes that failure so hard to see.
      */

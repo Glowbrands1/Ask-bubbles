@@ -49,7 +49,7 @@ export async function GET(request: Request, context: { params: Promise<{ key: st
     for (const field of fieldsForVariant(version.document, variant?.key ?? null)) {
       values[field.key] =
         field.responsibility === "ai"
-          ? "[Ask Sunny drafts this]"
+          ? "[Ask Bubbles drafts this]"
           : field.responsibility === "manual"
             ? ""
             : field.responsibility === "system"

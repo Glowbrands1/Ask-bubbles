@@ -45,7 +45,7 @@ vi.mock("@/lib/session/session-context", () => ({
     user: {
       name: "Madeline Reyes",
       isLocationAccount: false,
-      title: "Salon Director",
+      title: "Location Director",
       scope: session.scope,
     },
     role: session.role,
@@ -104,7 +104,7 @@ describe("the Overview band offers the questions this reader can be answered", (
 
     expect(chips()).toEqual([
       "Where is my district losing revenue based on the latest data?",
-      "Which salons need my attention today?",
+      "Which locations need my attention today?",
       "Help me prepare for a coaching conversation.",
       "What does our policy say about attendance?",
     ]);
@@ -129,30 +129,30 @@ describe("the Overview band offers the questions this reader can be answered", (
 
     expect(chips().slice(0, 2)).toEqual([
       "Where are we losing revenue based on the latest data?",
-      "Which salons need attention today?",
+      "Which locations need attention today?",
     ]);
   });
 
-  it("gives a salon director the salon-level opening", () => {
+  it("gives a location director the location-level opening", () => {
     render(<AskBand />);
 
     const rendered = chips();
     expect(rendered[0]).toBe(
       "Show me the most recent Daily Stats and what I need to focus on today.",
     );
-    expect(rendered).not.toContain("Which salons need my attention today?");
+    expect(rendered).not.toContain("Which locations need my attention today?");
     expect(rendered).toHaveLength(4);
   });
 
   /**
-   * EXTRA SALON ACCESS IS A DATA BOUNDARY, NOT A PROMOTION.
+   * EXTRA LOCATION ACCESS IS A DATA BOUNDARY, NOT A PROMOTION.
    *
-   * A Salon Director covering three salons during a vacancy is still a Salon
+   * A Location Director covering three locations during a vacancy is still a Location
    * Director, and the band must not start asking them about "my district". An
-   * earlier version derived breadth from the accessible salon count and did
+   * earlier version derived breadth from the accessible location count and did
    * exactly that.
    */
-  it("keeps a salon director on the salon opening when they cover extra salons", () => {
+  it("keeps a location director on the location opening when they cover extra locations", () => {
     session = {
       role: "location_manager",
       scope: {
@@ -204,6 +204,6 @@ describe("the Overview band offers the questions this reader can be answered", (
       "How should I handle a client objection?",
       "Show me training related to this issue.",
     ]);
-    expect(rendered.join(" ")).not.toMatch(/Daily Stats|revenue|salons need/i);
+    expect(rendered.join(" ")).not.toMatch(/Daily Stats|revenue|locations need/i);
   });
 });

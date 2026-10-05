@@ -10,7 +10,7 @@ import type { AccessScope, Permission, Role } from "@/types";
  * line between a presentation aid and an authenticated subject stays drawn in
  * the type system rather than in a comment.
  *
- * PROVIDER-AGNOSTIC BY CONSTRAINT. Nothing in Ask Sunny may require a
+ * PROVIDER-AGNOSTIC BY CONSTRAINT. Nothing in Ask Bubbles may require a
  * particular identity provider to function; every provider is an adapter behind
  * this interface, and none is a foundational dependency. Supabase Auth is the
  * default choice for employee login unless another is explicitly chosen; see

@@ -510,7 +510,7 @@ export function MonitoringTable({
             {emptyMessage ?? (
               <>
                 No forms yet. Create one by chatting with{" "}
-                <span className="text-foreground">Ask Sunny</span>.
+                <span className="text-foreground">Ask Bubbles</span>.
               </>
             )}
           </CardContent>
@@ -560,7 +560,7 @@ export function MonitoringTable({
                         {/*
                           * The FORM cell carries the audit facts that used to
                           * have columns of their own — template version, the
-                          * document's lifecycle, and whether Ask Sunny drafted
+                          * document's lifecycle, and whether Ask Bubbles drafted
                           * it. Three columns for three rarely-read facts made
                           * the table unreadable and pushed the actions off
                           * screen; one small line keeps them all reachable.
@@ -576,7 +576,7 @@ export function MonitoringTable({
                           </span>
                           <span className="block text-[11px] text-subtle-foreground">
                             v{form.templateVersion} · {DOC_STATUS_LABEL[form.status]}
-                            {form.source === "assistant" ? " · Ask Sunny" : ""}
+                            {form.source === "assistant" ? " · Ask Bubbles" : ""}
                           </span>
                         </td>
 
@@ -843,7 +843,7 @@ export function MonitoringTable({
         >
           <div className="space-y-3 text-[13px] leading-relaxed text-muted-foreground">
             <p>
-              Only records created by a preview session are included — Ask Sunny matches on the{" "}
+              Only records created by a preview session are included — Ask Bubbles matches on the{" "}
               <code className="rounded-[var(--radius-xs)] bg-surface-muted px-1 py-0.5 text-[12px] text-foreground">
                 demo:
               </code>{" "}

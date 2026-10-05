@@ -43,7 +43,7 @@ async function load(role: string) {
     authorizeRequest: async (_request: Request, permission: string) => {
       /*
        * THE REAL MATRIX DECIDES, not a flag in this test. Importing it means a
-       * change that granted `view_analytics` to a Salon Director would fail
+       * change that granted `view_analytics` to a Location Director would fail
        * here rather than passing a test that had hard-coded the old answer.
        */
       const { DEFAULT_PERMISSION_MATRIX } = await import("@/lib/permissions");
@@ -317,7 +317,7 @@ describe("permanent delete is a separate, administration-only verb", () => {
     const { route, seen } = await load("admin");
     await route.DELETE(del(), params());
 
-    expect(seen.deletes.map((entry) => entry.table)).toEqual(["ask_sunny_feedback"]);
+    expect(seen.deletes.map((entry) => entry.table)).toEqual(["assistant_feedback"]);
     expect(seen.deletes.map((entry) => entry.table)).not.toContain("activity_events");
   });
 
@@ -386,7 +386,7 @@ describe("hide is still not delete", () => {
     const store = readFileSync(join(process.cwd(), "src/lib/feedback/store.ts"), "utf8");
     const fn = store.split("export async function deleteFeedback")[1] ?? "";
     expect(fn.length).toBeGreaterThan(0);
-    expect(fn).toContain('.from("ask_sunny_feedback")');
+    expect(fn).toContain('.from("assistant_feedback")');
     expect(fn).not.toContain("activity_events");
   });
 });

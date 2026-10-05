@@ -10,7 +10,7 @@ import type { LocationCatalogEntry, NormalizedEmployee } from "./types";
  * email, EmployeeID, login id or date is copied out — dates are compared and
  * bucketed, never returned. The only identifiers are Woven's own vocabulary
  * (status and termination-type integers with their enum labels) and LOCATION
- * ids and names, which are salons, not people.
+ * ids and names, which are locations, not people.
  *
  * READ-ONLY BY CONSTRUCTION. This module takes what the sync already read and
  * returns a report. It decides nothing: no status, no change, no write reads it.

@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  *
  * Two properties, and the second matters as much as the first:
  *
- *   A RATE LIMIT SAYS SO. It is a fact about Ask Sunny's own quota, identical
+ *   A RATE LIMIT SAYS SO. It is a fact about Ask Bubbles' own quota, identical
  *   for an address that exists, one that does not and one that is malformed, so
  *   naming it discloses nothing.
  *

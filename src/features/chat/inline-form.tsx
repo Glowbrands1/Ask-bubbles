@@ -31,7 +31,7 @@ import { displayLocator } from "@/lib/knowledge/locator";
 
 /**
  * ============================================================================
- * WHERE SUNNY'S PREFILL HAS GOT TO
+ * WHERE BUBBLES'S PREFILL HAS GOT TO
  * ============================================================================
  *
  * The instance reference is persisted the instant the row exists — that is the
@@ -40,11 +40,11 @@ import { displayLocator } from "@/lib/knowledge/locator";
  * the meantime produced a second race:
  *
  *   the editor fetched the instance immediately, showing the SEEDED values;
- *   Sunny then wrote the real ones into the same row;
+ *   Bubbles then wrote the real ones into the same row;
  *   the editor never refetched, so the screen kept the pre-draft version.
  *
  * Two failures in one. The manager sees an empty-looking form and concludes
- * Sunny did not fill it in — when the backend had succeeded — and if they start
+ * Bubbles did not fill it in — when the backend had succeeded — and if they start
  * typing, their edit and the assistant's write land on the same canonical
  * record in whatever order they happen to arrive.
  *
@@ -176,7 +176,7 @@ export function InlineForm({
   const [save, setSave] = React.useState<SaveState>({ kind: "clean" });
   /*
    * BUMPED WHEN A CHAT TURN CORRECTED THIS FORM ("change her new location to
-   * salon 24"), so the fetch below re-reads the canonical instance. See
+   * location 24"), so the fetch below re-reads the canonical instance. See
    * `form-update-events.ts`.
    */
   const [externalRevision, setExternalRevision] = React.useState(0);
@@ -220,7 +220,7 @@ export function InlineForm({
    *
    * `prefill.kind` is in the dependency list, which is the fix: when it moves
    * from `running` to `complete` or `failed` the canonical instance is read
-   * again, so the screen shows what Sunny actually wrote rather than the
+   * again, so the screen shows what Bubbles actually wrote rather than the
    * seeded values this component first loaded.
    *
    * THE RELOAD IS A GET, NOT THE DRAFT RESPONSE. The drafting endpoint does
@@ -271,7 +271,7 @@ export function InlineForm({
       <Notice tone="attention" className="mt-4">
         <span className="font-semibold text-foreground">This form is not available</span>
         <p className="mt-0.5">
-          {load.message} Ask Sunny has not created another one — if you still need this
+          {load.message} Ask Bubbles has not created another one — if you still need this
           form, start a new conversation about it.
         </p>
       </Notice>
@@ -281,7 +281,7 @@ export function InlineForm({
   const { loaded } = load;
 
   /*
-   * NOT EDITABLE WHILE SUNNY IS STILL WRITING. A finalized form is read-only
+   * NOT EDITABLE WHILE BUBBLES IS STILL WRITING. A finalized form is read-only
    * because its values are frozen; a prefilling one is read-only because the
    * manager and the assistant would otherwise be writing to the same canonical
    * record at the same time, in whatever order the requests happen to land.
@@ -298,7 +298,7 @@ export function InlineForm({
   const reviewNotice = reviewConversationNoticeFor(loaded, prefilling);
   const policyNotice = policyVerificationNoticeFor(loaded, prefilling);
   /*
-   * THE SAME RULE THE SERVER APPLIES, with no `ask_sunny` gating — a corrective
+   * THE SAME RULE THE SERVER APPLIES, with no `assistant` gating — a corrective
    * form started by hand in the old Create a Form screen (since removed; its
    * instances are still opened here) has unsourced policy fields too, and
    * the server will refuse to finalize it. The NOTICE above stays gated to
@@ -474,7 +474,7 @@ export function InlineForm({
         </p>
         {/*
           THE BADGE REPORTS STATUS, NOT EDITABILITY, AND THE TWO ARE NOT THE
-          SAME THING. `readOnly` is now true while Sunny is prefilling as well
+          SAME THING. `readOnly` is now true while Bubbles is prefilling as well
           as when a form is frozen — driving the label from it would put
           "Finalized" on an unsigned draft, which is a false statement about an
           HR record and exactly the kind of thing nobody re-reads.
@@ -487,12 +487,12 @@ export function InlineForm({
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
         <dt className="text-subtle-foreground">Employee</dt>
         <dd className="min-w-0 text-foreground">{loaded.instance.employeeName}</dd>
-        <dt className="text-subtle-foreground">Salon</dt>
+        <dt className="text-subtle-foreground">Location</dt>
         <dd className="min-w-0 text-foreground">
           {/*
             THE ID, OR NOTHING. `location_name` is only set when a caller
             supplied one, and chat deliberately supplies none: the only source
-            of a salon display name in this app is `PRODUCTION_SALONS`, which is
+            of a location display name in this app is `PRODUCTION_LOCATIONS`, which is
             seeded demo data. See docs/chat-phase-3.md.
           */}
           {loaded.instance.locationName ?? (
@@ -512,7 +512,7 @@ export function InlineForm({
       {/*
         WHAT TO DO WITH A PERFORMANCE PLAN, ON THE PLAN ITSELF.
 
-        A plan is not finished when Sunny stops writing: it is finished after
+        A plan is not finished when Bubbles stops writing: it is finished after
         the conversation with the employee, which is also when it is signed.
         Saying so here rather than in the chat prose means it survives a
         refresh and is still there when the form is reopened next week.
@@ -591,7 +591,7 @@ export function InlineForm({
       {prefilling ? (
         <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="size-3.5 animate-spin" aria-hidden />
-          Editing opens as soon as Sunny is finished.
+          Editing opens as soon as Bubbles is finished.
         </p>
       ) : (
         <div className="mt-4 min-w-0 space-y-3 border-t border-border pt-4">
@@ -813,7 +813,7 @@ export function InlineForm({
  * AFTER A REFRESH, THIS TAB KNOWS NOTHING. The conversation reopens from
  * IndexedDB with an instance id and no memory of the request that was in
  * flight. So the form's OWN AUDIT TRAIL is read instead: `applyAssistantDraft`
- * records a `drafted` event, so its absence on an `ask_sunny` form means the
+ * records a `drafted` event, so its absence on an `assistant` form means the
  * assistant never got as far as writing.
  *
  * THE HONEST LIMIT, STATED RATHER THAN PAPERED OVER: the absence of that event
@@ -836,7 +836,7 @@ export function InlineForm({
  * field said "[Verify exact policy language from official manual]". Two claims
  * on one screen, one of them false.
  *
- * Ask Sunny does not produce that string — `drafted-text.ts` strips a bracketed
+ * Ask Bubbles does not produce that string — `drafted-text.ts` strips a bracketed
  * placeholder before anything is stored, and `policy-grounding.ts` withholds a
  * policy value that no approved source backs. But the honest half of the
  * reference's behaviour was missing here too: the manager was told nothing at
@@ -903,7 +903,7 @@ export function policyVerificationNoticeFor(
   loaded: LoadedInstance,
   prefilling: boolean,
 ): string | null {
-  // Nothing to report while Sunny is still writing — the fields are empty
+  // Nothing to report while Bubbles is still writing — the fields are empty
   // because it has not got to them yet.
   if (prefilling) return null;
   if (loaded.instance.source !== "assistant") return null;
@@ -957,7 +957,7 @@ export function policyVerificationNoticeFor(
       : null,
   ].filter((part): part is string => part !== null);
 
-  return `Policy verification is still required: ${parts.join(", and ")}. Confirm the exact policy in the official manual before you issue this form — Ask Sunny will not write policy wording it cannot source, and it cannot vouch for wording it did not retrieve.`;
+  return `Policy verification is still required: ${parts.join(", and ")}. Confirm the exact policy in the official manual before you issue this form — Ask Bubbles will not write policy wording it cannot source, and it cannot vouch for wording it did not retrieve.`;
 }
 
 /**
@@ -981,7 +981,7 @@ function prefillNoticeFor(
   if (prefill.kind === "running") {
     return {
       tone: "neutral",
-      text: "Draft created. Sunny is filling it in from your conversation…",
+      text: "Draft created. Bubbles is filling it in from your conversation…",
     };
   }
 
@@ -997,6 +997,6 @@ function prefillNoticeFor(
 
   return {
     tone: "attention",
-    text: "Sunny's prefill has not completed for this draft. You can complete it yourself below — if Sunny does finish, reopening this form will show what it wrote.",
+    text: "Bubbles' prefill has not completed for this draft. You can complete it yourself below — if Bubbles does finish, reopening this form will show what it wrote.",
   };
 }

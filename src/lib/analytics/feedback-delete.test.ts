@@ -32,7 +32,7 @@ const READS = readFileSync(
     process.cwd(),
     "supabase/migrations",
     readdirSync(join(process.cwd(), "supabase/migrations"))
-      .filter((name) => name.includes("ask_sunny_feedback_reads"))
+      .filter((name) => name.includes("assistant_feedback_reads"))
       .sort()[0],
   ),
   "utf8",
@@ -97,7 +97,7 @@ describe("every feedback figure is derived on read, never stored", () => {
   ])("computes %s from the rows that exist", (_label, fragment) => {
     /*
      * A `count`/`avg` over `feedback_attributed` sees only the rows still in
-     * `ask_sunny_feedback`, so a deleted row leaves every one of these the
+     * `assistant_feedback`, so a deleted row leaves every one of these the
      * moment it is gone. That is the mechanism the brief's example describes.
      */
     expect(SUMMARY).toContain(fragment);
@@ -148,7 +148,7 @@ describe("every feedback figure is derived on read, never stored", () => {
         process.cwd(),
         "supabase/migrations",
         readdirSync(join(process.cwd(), "supabase/migrations"))
-          .filter((name) => name.includes("ask_sunny_feedback.sql"))
+          .filter((name) => name.includes("assistant_feedback.sql"))
           .sort()[0],
       ),
       "utf8",
@@ -173,14 +173,14 @@ describe("every feedback figure is derived on read, never stored", () => {
           process.cwd(),
           "supabase/migrations",
           readdirSync(join(process.cwd(), "supabase/migrations"))
-            .filter((name) => name.includes("ask_sunny_feedback.sql"))
+            .filter((name) => name.includes("assistant_feedback.sql"))
             .sort()[0],
         ),
         "utf8",
       ),
     );
     const triggers = feedbackTable.match(/create trigger (\w+)/g) ?? [];
-    expect(triggers).toEqual(["create trigger ask_sunny_feedback_touch"]);
+    expect(triggers).toEqual(["create trigger assistant_feedback_touch"]);
   });
 });
 

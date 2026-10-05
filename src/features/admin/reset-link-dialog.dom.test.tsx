@@ -55,7 +55,7 @@ afterEach(() => {
 });
 
 const URL_VALUE =
-  "https://ask-sunny.vercel.app/auth/recovery-start?token_hash=abcdef0123456789abcdef&type=recovery";
+  "https://ask-bubbles.vercel.app/auth/recovery-start?token_hash=abcdef0123456789abcdef&type=recovery";
 
 describe("where the action is offered", () => {
   it("only on active, non-administrator accounts", () => {

@@ -21,9 +21,9 @@ import {
  *
  * REMOVED WITH THE CHIPS: "Recipient slice" and "Recipient slice — not
  * company-wide". The review is blunt about it — "That is internal language and
- * will not mean anything to a Salon Director. '15 salons included' communicates
- * the same thing clearly." The FACT it carried is not lost: the salon count is
- * a count of the salons in view, and where the delivery covered more than the
+ * will not mean anything to a Location Director. '15 locations included' communicates
+ * the same thing clearly." The FACT it carried is not lost: the location count is
+ * a count of the locations in view, and where the delivery covered more than the
  * reader sees, `detail` below says so in words a manager uses.
  */
 export function ReportFreshnessLine({

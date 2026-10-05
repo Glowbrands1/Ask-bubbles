@@ -2,7 +2,7 @@ import { AiError } from "@/lib/ai/errors";
 import type { ChatTurnError } from "@/types";
 
 /**
- * Turns whatever went wrong into something a salon manager can act on.
+ * Turns whatever went wrong into something a location manager can act on.
  *
  * Pure and exported so the mapping is testable without rendering anything. The
  * distinction that matters most is `retryable`: offering "Try again" on a
@@ -21,7 +21,7 @@ export function toChatTurnError(error: unknown, question: string): ChatTurnError
           kind: "not_configured",
           message:
             error.missing.length > 0
-              ? "Ask Sunny is not finished being set up, so it cannot answer yet. An administrator needs to add the missing configuration."
+              ? "Ask Bubbles is not finished being set up, so it cannot answer yet. An administrator needs to add the missing configuration."
               : error.message,
           missing: error.missing,
           // A missing key is not fixed by asking again.
@@ -49,7 +49,7 @@ export function toChatTurnError(error: unknown, question: string): ChatTurnError
       case "turn_unavailable":
         /*
          * NOTHING WAS ASKED, and saying so is the whole point of this branch.
-         * Ask Sunny records every answer as a turn so it can be rated, and it
+         * Ask Bubbles records every answer as a turn so it can be rated, and it
          * opens that record BEFORE calling the model — so a failure here means
          * the question never left the building. Retrying costs nothing and
          * usually works, because the common cause is a cold connection.
@@ -57,7 +57,7 @@ export function toChatTurnError(error: unknown, question: string): ChatTurnError
         return {
           kind: "turn_unavailable",
           message:
-            "Sunny could not start a recorded session, so your question was not sent. Nothing was lost — try again.",
+            "Bubbles could not start a recorded session, so your question was not sent. Nothing was lost — try again.",
           retryable: true,
           question,
         };
@@ -84,7 +84,7 @@ export function toChatTurnError(error: unknown, question: string): ChatTurnError
         return {
           kind: "model_failed",
           message:
-            "Sunny could not produce an answer. Nothing was answered from memory — try again in a moment.",
+            "Bubbles could not produce an answer. Nothing was answered from memory — try again in a moment.",
           retryable: true,
           question,
         };
@@ -113,7 +113,7 @@ export function toChatTurnError(error: unknown, question: string): ChatTurnError
 export function chatErrorTitle(kind: ChatTurnError["kind"]): string {
   switch (kind) {
     case "not_configured":
-      return "Ask Sunny is not set up yet";
+      return "Ask Bubbles is not set up yet";
     case "unauthenticated":
       return "You are not signed in";
     case "retrieval_failed":

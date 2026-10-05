@@ -21,7 +21,7 @@ import {
  *
  * If the two ever drift, ingestion writes vectors of one width into a column of
  * another: Postgres rejects the insert, or — worse, if only the RPC signature
- * drifts — retrieval silently returns nothing and Sunny answers "the knowledge
+ * drifts — retrieval silently returns nothing and Bubbles answers "the knowledge
  * base does not cover that" for every question. So the SQL is parsed and
  * checked rather than trusted.
  *

@@ -204,14 +204,14 @@ describe("4. a stored sync writes only directory, history and mapping data", () 
     expect(writes).toEqual([]);
   });
 
-  it("the directory store has no method that reaches app_users, auth, roles, scope, salon access or login state", () => {
+  it("the directory store has no method that reaches app_users, auth, roles, scope, location access or login state", () => {
     const methods = Object.getOwnPropertyNames(MemoryDirectoryStore.prototype).filter((m) => m !== "constructor");
-    for (const method of methods) expect(method).not.toMatch(/user|auth|role|scope|login|access|salon|invite|disable/i);
+    for (const method of methods) expect(method).not.toMatch(/user|auth|role|scope|login|access|location|invite|disable/i);
   });
 });
 
 describe("5 and 6. every location and position stays unmapped until a person reviews it", () => {
-  it("queues the catalog, off-catalog affiliation locations and every position as unmapped, with no salon", async () => {
+  it("queues the catalog, off-catalog affiliation locations and every position as unmapped, with no location", async () => {
     const { store, run } = setup(
       [
         wovenEmployee("5001", { positionId: "POS-A" }),
@@ -228,7 +228,7 @@ describe("5 and 6. every location and position stays unmapped until a person rev
     expect([...store.locationMap.keys()].sort()).toEqual(["WL-0144", "WL-0306", "WL-OFFCAT"]);
     for (const entry of store.locationMap.values()) {
       expect(entry.status).toBe("unmapped");
-      expect(entry.salonId).toBeNull();
+      expect(entry.locationId).toBeNull();
     }
     expect([...store.positionMap.keys()].sort()).toEqual(["POS-A", "POS-B"]);
     for (const entry of store.positionMap.values()) {
@@ -241,7 +241,7 @@ describe("5 and 6. every location and position stays unmapped until a person rev
   });
 });
 
-describe("7. no employee-sync UI, route or library code can reach app_users, auth, roles, scope or salon access", () => {
+describe("7. no employee-sync UI, route or library code can reach app_users, auth, roles, scope or location access", () => {
   const ROOTS = [
     "src/lib/employees/woven",
     "src/app/api/admin/employees/woven",
@@ -261,12 +261,12 @@ describe("7. no employee-sync UI, route or library code can reach app_users, aut
   const code = (file: string) =>
     readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
-  /* The six sync tables, their five read-only views, and `salons` (read, to name a mapped location). */
+  /* The six sync tables, their five read-only views, and `locations` (read, to name a mapped location). */
   const TABLES = new Set([
     "employee_sync_runs", "employee_access_directory", "employee_location_affiliations",
     "employee_directory_changes", "woven_location_map", "woven_position_map",
     "employee_sync_status", "employee_sync_run_summary", "employee_directory_view",
-    "employee_directory_login_matches", "employee_access_preview", "salons",
+    "employee_directory_login_matches", "employee_access_preview", "locations",
     /* The access planner (stage 1): accounts through a read-only VIEW, the links, and the shadow record. */
     "employee_access_accounts", "employee_account_links", "employee_access_runs", "employee_access_actions",
   ]);
@@ -283,7 +283,7 @@ describe("7. no employee-sync UI, route or library code can reach app_users, aut
     expect(files.some((f) => f.endsWith("sync-panel.tsx"))).toBe(true);
   });
 
-  it("every table read or written is an employee-sync table or view (or a read of salons)", () => {
+  it("every table read or written is an employee-sync table or view (or a read of locations)", () => {
     for (const file of files) {
       for (const [, table] of code(file).matchAll(/\.from\(\s*["'`]([^"'`]+)["'`]/g)) expect(TABLES, `${file}: ${table}`).toContain(table);
     }
@@ -307,9 +307,9 @@ describe("7. no employee-sync UI, route or library code can reach app_users, aut
     expect(writers.sort()).toEqual(["employee_account_links.insert", "employee_directory_changes.update"]);
   });
 
-  it("salons is only ever read", () => {
+  it("locations is only ever read", () => {
     for (const file of files) {
-      for (const m of code(file).matchAll(/\.from\(\s*["'`]salons["'`]\)\s*\.(\w+)\(/g)) expect(m[1], file).toBe("select");
+      for (const m of code(file).matchAll(/\.from\(\s*["'`]locations["'`]\)\s*\.(\w+)\(/g)) expect(m[1], file).toBe("select");
     }
   });
 });

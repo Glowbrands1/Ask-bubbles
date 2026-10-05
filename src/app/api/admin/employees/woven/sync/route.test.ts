@@ -59,7 +59,7 @@ async function loadRoute(options: { permitted?: boolean } = {}) {
 }
 
 const post = (body: unknown) =>
-  new Request("https://ask-sunny.test/api/admin/employees/woven/sync", {
+  new Request("https://ask-bubbles.test/api/admin/employees/woven/sync", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),

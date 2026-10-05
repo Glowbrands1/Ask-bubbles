@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { ACCESS_GUARD_LIMITS, evaluateAccessGuards, type DirectoryRunFacts } from "./guards";
-import { countActions, planAccess, salonAreaId } from "./plan";
+import { countActions, planAccess, locationAreaId } from "./plan";
 import { ACCESS_ACTIONS, isMutating, type PlannedRow, type PlannerAccount, type PlannerEmployee, type PlannerInput } from "./types";
 
 /**
@@ -29,11 +29,11 @@ const positions: PlannerInput["positions"] = [
   { wovenPositionId: POS.ops, status: "unmapped", isConfirmed: false, role: null, scopeLevel: null },
 ];
 const locations: PlannerInput["locations"] = [
-  { wovenLocationId: LOC.grandIsland, status: "mapped", salonNumber: "0307", name: "NE Grand Island" },
-  { wovenLocationId: LOC.omahaCenter, status: "mapped", salonNumber: "0314", name: "NE Omaha Center" },
-  { wovenLocationId: LOC.liberty, status: "mapped", salonNumber: "0394", name: "KC Liberty" },
-  { wovenLocationId: LOC.corporate, status: "ignored", salonNumber: null, name: "JB & Associates - Corporate" },
-  { wovenLocationId: LOC.omahaQ, status: "unmapped", salonNumber: null, name: "NE Omaha Q" },
+  { wovenLocationId: LOC.grandIsland, status: "mapped", locationCode: "0307", name: "NE Grand Island" },
+  { wovenLocationId: LOC.omahaCenter, status: "mapped", locationCode: "0314", name: "NE Omaha Center" },
+  { wovenLocationId: LOC.liberty, status: "mapped", locationCode: "0394", name: "KC Liberty" },
+  { wovenLocationId: LOC.corporate, status: "ignored", locationCode: null, name: "Example Soap Co - Corporate" },
+  { wovenLocationId: LOC.omahaQ, status: "unmapped", locationCode: null, name: "NE Omaha Q" },
 ];
 
 let seq = 0;
@@ -46,7 +46,7 @@ function employee(overrides: Partial<PlannerEmployee> = {}): PlannerEmployee {
     employmentStatus: "active",
     missingSyncCount: 0,
     positionId: POS.sd,
-    positionName: "Salon Director",
+    positionName: "Location Director",
     primaryWovenLocationId: LOC.grandIsland,
     primaryLocationName: "NE Grand Island",
     additionalLocationNames: [],
@@ -82,7 +82,7 @@ function account(overrides: Partial<PlannerAccount> = {}): PlannerAccount {
   };
 }
 
-/** A confirmed, fully Woven-managed salon manager account for `e`. */
+/** A confirmed, fully Woven-managed location manager account for `e`. */
 const linkedTo = (e: PlannerEmployee, overrides: Partial<PlannerAccount> = {}) =>
   account({
     email: e.emailAddress ?? "nobody@gmail.com",
@@ -135,7 +135,7 @@ function simulateApply(rows: PlannedRow[], accounts: PlannerAccount[], employees
 /* --------------------------------------------------------------- cases -- */
 
 describe("provisioning", () => {
-  it("1. active Salon Director, approved mapping, email, mapped salon, no account → CREATE_USER (invite not sent)", () => {
+  it("1. active Location Director, approved mapping, email, mapped location, no account → CREATE_USER (invite not sent)", () => {
     const e = employee({ emailAddress: "Carley.R@Gmail.com" });
     const row = rowOf(plan([e]), e);
     expect(row.actions).toEqual(["CREATE_USER"]);
@@ -153,8 +153,8 @@ describe("provisioning", () => {
     });
   });
 
-  it("an Assistant Salon Director is provisioned too; a personal email is allowed", () => {
-    const e = employee({ positionId: POS.asd, positionName: "Assistant Salon Director", emailAddress: "asd@icloud.com" });
+  it("an Assistant Location Director is provisioned too; a personal email is allowed", () => {
+    const e = employee({ positionId: POS.asd, positionName: "Assistant Location Director", emailAddress: "asd@icloud.com" });
     expect(rowOf(plan([e]), e).actions).toEqual(["CREATE_USER"]);
   });
 
@@ -182,13 +182,13 @@ describe("provisioning", () => {
     expect(rowOf(plan([noPosition]), noPosition).actions).toEqual(["FLAG_UNMAPPED_POSITION"]);
   });
 
-  it("12. unmapped location → FLAG_UNMAPPED_LOCATION; Corporate (not a salon) likewise — never an invented salon", () => {
+  it("12. unmapped location → FLAG_UNMAPPED_LOCATION; Corporate (not a location) likewise — never an invented location", () => {
     const unmapped = employee({ primaryWovenLocationId: LOC.omahaQ });
     const corporate = employee({ primaryWovenLocationId: LOC.corporate });
     const unknownLocation = employee({ primaryWovenLocationId: "L-NEVER-SEEN" });
     const rows = plan([unmapped, corporate, unknownLocation]);
     expect(rowOf(rows, unmapped)).toMatchObject({ actions: ["FLAG_UNMAPPED_LOCATION"], reasons: ["primary_location_unmapped"], proposedPrimaryAreaId: null });
-    expect(rowOf(rows, corporate)).toMatchObject({ actions: ["FLAG_UNMAPPED_LOCATION"], reasons: ["primary_location_not_a_salon"] });
+    expect(rowOf(rows, corporate)).toMatchObject({ actions: ["FLAG_UNMAPPED_LOCATION"], reasons: ["primary_location_not_a_location"] });
     expect(rowOf(rows, unknownLocation).actions).toEqual(["FLAG_UNMAPPED_LOCATION"]);
     expect(mutating(rows)).toEqual([]);
   });
@@ -300,7 +300,7 @@ describe("primary location", () => {
     expect(JSON.stringify(row.after)).not.toMatch(/also_covers|role/);
   });
 
-  it("4 / 23. additional or temporary locations change → primary salon unchanged, no action", () => {
+  it("4 / 23. additional or temporary locations change → primary location unchanged, no action", () => {
     const e = employee({ additionalLocationNames: ["KC Liberty", "NE Omaha Center"] });
     const row = rowOf(plan([e], [linkedTo(e)]), e);
     expect(row.actions).toEqual(["NO_CHANGE"]);
@@ -314,13 +314,13 @@ describe("primary location", () => {
     expect(row.actions).toEqual(["FLAG_LOCATION_REVIEW"]);
   });
 
-  it("12b. a linked manager whose Woven primary becomes unmapped keeps their salon; flagged", () => {
+  it("12b. a linked manager whose Woven primary becomes unmapped keeps their location; flagged", () => {
     const e = employee({ primaryWovenLocationId: LOC.omahaQ });
     const row = rowOf(plan([e], [linkedTo(e)]), e);
     expect(row.actions).toEqual(["FLAG_UNMAPPED_LOCATION"]);
   });
 
-  it("22. District Manager, Regional Manager and admin accounts are NEVER narrowed to a salon by Woven's primary location", () => {
+  it("22. District Manager, Regional Manager and admin accounts are NEVER narrowed to a location by Woven's primary location", () => {
     const cases = [
       { role: "district_manager", scopeLevel: "global", positionId: POS.dm },
       { role: "district_manager", scopeLevel: "district", positionId: POS.dm },
@@ -336,16 +336,16 @@ describe("primary location", () => {
     }
   });
 
-  it("a Salon Director whose account was given a wider scope by hand is not narrowed either", () => {
+  it("a Location Director whose account was given a wider scope by hand is not narrowed either", () => {
     const e = employee();
     const rows = plan([e], [linkedTo(e, { scopeLevel: "district", primaryAreaId: "dist-patterson-madeline" })]);
     expect(mutating(rows)).toEqual([]);
-    expect(rowOf(rows, e).reasons).toContain("scope_above_salon_level_not_managed_by_woven");
+    expect(rowOf(rows, e).reasons).toContain("scope_above_location_level_not_managed_by_woven");
   });
 });
 
 describe("role", () => {
-  it("15. Assistant Salon Director → Salon Director (approved mapping, role managed) → UPDATE_ROLE", () => {
+  it("15. Assistant Location Director → Location Director (approved mapping, role managed) → UPDATE_ROLE", () => {
     const e = employee({ positionId: POS.sd });
     const linked = linkedTo(e, { role: "assistant_manager" });
     const row = rowOf(plan([e], [linked]), e);
@@ -354,7 +354,7 @@ describe("role", () => {
     expect(row.after).toEqual({ role: "location_manager" });
   });
 
-  it("15b. a promotion OUT of the salon tier (Salon Director → District Manager) is review only, and holds the location too", () => {
+  it("15b. a promotion OUT of the location tier (Location Director → District Manager) is review only, and holds the location too", () => {
     const e = employee({ positionId: POS.dm, primaryWovenLocationId: LOC.liberty });
     const row = rowOf(plan([e], [linkedTo(e)]), e);
     expect(row.actions).toEqual(["FLAG_ROLE_REVIEW"]);
@@ -549,17 +549,17 @@ describe("the mass-change guards", () => {
     expect(result.codes).toContain("terminations_exceed_threshold");
   });
 
-  it("24. a location MAPPING change that would move a whole salon's managers is visible and blocked", () => {
+  it("24. a location MAPPING change that would move a whole location's managers is visible and blocked", () => {
     const managers = Array.from({ length: 6 }, () => employee({ primaryWovenLocationId: LOC.grandIsland }));
     const accounts = managers.map((e) => linkedTo(e, { primaryAreaId: "loc-0307" }));
     const steady = plan(managers, accounts);
     expect(mutating(steady)).toEqual([]);
 
-    /* Someone re-maps the Grand Island Woven location to salon 0394 by mistake. */
-    const remapped = locations.map((l) => (l.wovenLocationId === LOC.grandIsland ? { ...l, salonNumber: "0394" } : l));
+    /* Someone re-maps the Grand Island Woven location to location 0394 by mistake. */
+    const remapped = locations.map((l) => (l.wovenLocationId === LOC.grandIsland ? { ...l, locationCode: "0394" } : l));
     const rows = planAccess({ employees: managers, positions, locations: remapped, accounts });
     expect(countActions(rows).UPDATE_PRIMARY_LOCATION).toBe(6);
-    expect(rows.every((r) => r.after?.scope_primary_area_id === salonAreaId("0394"))).toBe(true);
+    expect(rows.every((r) => r.after?.scope_primary_area_id === locationAreaId("0394"))).toBe(true);
     const result = evaluateAccessGuards({ rows, runs: [run(), run()], ...healthy });
     expect(result.codes).toContain("location_moves_exceed_threshold");
     expect(result.details).toMatchObject({ locationMoves: 6, locationMoveLimit: ACCESS_GUARD_LIMITS.maxLocationMoves.absolute });

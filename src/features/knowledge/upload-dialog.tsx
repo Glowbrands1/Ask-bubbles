@@ -270,7 +270,7 @@ export function UploadDialog({
         title: item.title.trim(),
         description:
           (single ? description.trim() : "") ||
-          "Uploaded through the Ask Sunny knowledge library.",
+          "Uploaded through the Ask Bubbles knowledge library.",
         category,
         fileName: item.file.name,
         fileType: fileTypeFromName(item.file.name),
@@ -565,7 +565,7 @@ export function UploadDialog({
             large batch takes a few minutes. Each shows as{" "}
             <Badge tone="processing" size="sm">Processing</Badge> until every
             chunk is stored, and only then as{" "}
-            <Badge tone="ready" size="sm">Ready</Badge>. Sunny cannot cite one
+            <Badge tone="ready" size="sm">Ready</Badge>. Bubbles cannot cite one
             before that.
           </>
         ) : (

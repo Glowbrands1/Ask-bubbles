@@ -69,7 +69,7 @@ export function WovenHeader({ current, sampleLabel }: { current: WovenTabKey; sa
       <PageHeader
         eyebrow="Admin · Integrations · Woven"
         title="Woven Employee Sync"
-        description="Who works where, in what position, and what changed — read from Woven. Observe only: no login, role, scope or salon access is changed."
+        description="Who works where, in what position, and what changed — read from Woven. Observe only: no login, role, scope or location access is changed."
       />
       {sampleLabel ? <SampleBanner label={sampleLabel} /> : null}
       <WovenTabs current={current} />

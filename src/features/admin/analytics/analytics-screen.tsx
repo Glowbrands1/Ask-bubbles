@@ -27,6 +27,7 @@ import {
   TopicsPanel,
   WhenPanel,
 } from "./usage-shape";
+import { ACTIVE_BRAND } from "@/lib/brand";
 
 export const ANALYTICS_BASE = "/admin/analytics";
 
@@ -138,7 +139,7 @@ export function AnalyticsScreen({
     <PageShell className="space-y-6">
       <PageHeader
         title="Analytics"
-        description="Who is using Ask Sunny, from which salon, how often, and what for."
+        description={`Who is using ${ACTIVE_BRAND.productName}, from which location, how often, and what for.`}
       />
 
       <div className="space-y-4">
@@ -146,7 +147,7 @@ export function AnalyticsScreen({
           base={`${ANALYTICS_BASE}${view === "overview" ? "" : `/${view}`}`}
           filters={filters}
           districts={snapshot.districts}
-          salons={snapshot.salons}
+          locations={snapshot.locationOptions}
           roles={[...ROLES]}
         />
 
@@ -168,7 +169,7 @@ export function AnalyticsScreen({
       {totals.chatEvents === 0 ? (
         <Notice tone="neutral" title="Assistant activity starts from this release">
           Forms, documents and report ingestions are counted from their own
-          records and show real history. Questions asked in Ask Sunny were not
+          records and show real history. Questions asked in Ask Bubbles were not
           recorded anywhere before now, so that column fills from the day this
           shipped rather than being backfilled.
         </Notice>
@@ -193,7 +194,7 @@ export function AnalyticsScreen({
           {/*
             THE ADOPTION GAP, ABOVE THE RANKINGS.
 
-            "Which salons have not started" is more actionable than "which are
+            "Which locations have not started" is more actionable than "which are
             busiest", so it is stated as a sentence before either table rather
             than left to be inferred from rows of zeros further down.
           */}
@@ -260,12 +261,12 @@ export function AnalyticsScreen({
 
           <div className="grid gap-4 xl:grid-cols-2">
             <section className="space-y-3">
-              <SectionRule label="When Ask Sunny is used" />
+              <SectionRule label="When Ask Bubbles is used" />
               <WhenPanel rows={feedback.when} timezoneLabel={timezoneLabel()} />
             </section>
 
             <section className="space-y-3">
-              <SectionRule label="Where Ask Sunny is used" />
+              <SectionRule label="Where Ask Bubbles is used" />
               <SurfacesPanel rows={feedback.surfaces} />
             </section>
           </div>
@@ -273,7 +274,7 @@ export function AnalyticsScreen({
           <section className="space-y-0">
             <SectionHeader
               title="Conversation feedback"
-              description="Every Ask Sunny answer can be rated by the person who asked for it. These figures count open feedback — resolved and dismissed ratings leave them. The Feedback tab is the queue."
+              description="Every Ask Bubbles answer can be rated by the person who asked for it. These figures count open feedback — resolved and dismissed ratings leave them. The Feedback tab is the queue."
               actions={
                 <TabLink view="feedback" filters={filters}>
                   View comments
@@ -288,7 +289,7 @@ export function AnalyticsScreen({
           </section>
 
           <section className="space-y-3">
-            <SectionRule label="What Ask Sunny is used for" />
+            <SectionRule label="What Ask Bubbles is used for" />
             <UsageTypesPanel
               rows={snapshot.byCategory}
               previousRows={previousCategories}
@@ -303,7 +304,7 @@ export function AnalyticsScreen({
           <section className="space-y-0">
             <SectionHeader
               title="Conversation feedback"
-              description={`Ratings left against individual Ask Sunny answers in ${window.label.toLowerCase()}. The figures count open feedback only, so they clear as the queue is worked; each rating names the answer it is about, the surface it was asked from and the topic it concerned.`}
+              description={`Ratings left against individual Ask Bubbles answers in ${window.label.toLowerCase()}. The figures count open feedback only, so they clear as the queue is worked; each rating names the answer it is about, the surface it was asked from and the topic it concerned.`}
             />
             <ConversationFeedbackSummary
               summary={feedback.summary}
@@ -397,7 +398,7 @@ export function AnalyticsScreen({
         <>
           <section className="space-y-0">
             <SectionHeader
-              title="Which parts of Ask Sunny are used"
+              title="Which parts of Ask Bubbles are used"
               description="The five areas of the product, by recorded activity."
             />
             <FeatureUsagePanel rows={snapshot.byFeature} total={totals.events} />

@@ -125,7 +125,7 @@ export async function POST(request: Request) {
      * POINT.
      *
      * A form proposal has to know two things a caller must never be able to
-     * assert about itself: which role is asking, and which salons they are
+     * assert about itself: which role is asking, and which locations they are
      * assigned to. Both come from `authorizeRequest` — a validated session and
      * `app_users` — and neither is read from `body`, which is why they are a
      * second argument rather than two more fields on `AskRequest`.
@@ -274,7 +274,7 @@ function parseAskRequest(body: Partial<AskRequest>): AskRequest {
       locationName: optionalString(
         context?.locationName,
         LIMITS.personName,
-        "your salon",
+        "your location",
       ),
       /*
        * WHAT DAY IT IS COMES FROM THE SERVER, IN THE BUSINESS TIMEZONE.
@@ -284,7 +284,7 @@ function parseAskRequest(body: Partial<AskRequest>): AskRequest {
        * IT USED TO PREFER THE CALLER'S `todayIso`, and the browser sent
        * `DEMO_ANCHOR.slice(0, 10)` — a frozen prototype date. So the prompt
        * opened with "Today is 2026-08-26" for as long as that constant stood,
-       * and every freshness judgement Sunny could have made was made against a
+       * and every freshness judgement Bubbles could have made was made against a
        * day that had already passed. What day it is is a fact the server knows
        * and a client can only assert: the same argument as the corpus above,
        * one field down.

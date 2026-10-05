@@ -7,39 +7,39 @@ import {
   isProductionRecord,
   nonProductionReason,
 } from "./production-records";
-import { PRODUCTION_SALONS } from "@/data/salons";
+import { PRODUCTION_LOCATIONS } from "@/data/locations";
 
 /**
  * The 14 September review: "The Overview follow-up queue includes 'Jordan Vance
- * (test)', 'suzy sunshine', 'Ace Test', and a salon called Maple Crossing,
- * which is not one of our 15 salons. Let's get this cleaned up before rollout."
+ * (test)', 'suzy sunshine', 'Ace Test', and a location called Maple Crossing,
+ * which is not one of our 15 locations. Let's get this cleaned up before rollout."
  *
  * Those are live rows created by testing against the deployment. What is tested
  * here is the MECHANISM that keeps such a record off a manager's summary — not
  * a list of those names, which are deliberately nowhere in the source.
  */
 
-const REAL_SALON = PRODUCTION_SALONS[0].name;
+const REAL_LOCATION = PRODUCTION_LOCATIONS[0].name;
 
-describe("a salon that is not on the roster is not production data", () => {
-  it("holds back a record filed against a salon the business does not operate", () => {
+describe("a location that is not on the roster is not production data", () => {
+  it("holds back a record filed against a location the business does not operate", () => {
     /*
      * "Maple Crossing" is caught STRUCTURALLY, by not being one of the fifteen
-     * — so the next invented salon is caught too, without anybody adding it to
+     * — so the next invented location is caught too, without anybody adding it to
      * a list.
      */
     const reason = nonProductionReason({
       employeeName: "Someone",
       locationName: "Maple Crossing",
     });
-    expect(reason).toBe("salon_not_on_roster");
+    expect(reason).toBe("location_not_on_roster");
     expect(isProductionRecord({ employeeName: "Someone", locationName: "Maple Crossing" })).toBe(
       false,
     );
   });
 
-  it("keeps every record filed against a real salon", () => {
-    for (const location of PRODUCTION_SALONS) {
+  it("keeps every record filed against a real location", () => {
+    for (const location of PRODUCTION_LOCATIONS) {
       expect(
         isProductionRecord({ employeeName: "Someone", locationName: location.name }),
       ).toBe(true);
@@ -50,15 +50,15 @@ describe("a salon that is not on the roster is not production data", () => {
     expect(
       isProductionRecord({
         employeeName: "Someone",
-        locationName: `  ${REAL_SALON.toUpperCase()}  `,
+        locationName: `  ${REAL_LOCATION.toUpperCase()}  `,
       }),
     ).toBe(true);
   });
 
-  it("treats a record with NO salon as production data", () => {
+  it("treats a record with NO location as production data", () => {
     /*
-     * A form can legitimately carry no salon: an administrator's account covers
-     * every salon rather than one, and `proposeLocation` fills in nothing for
+     * A form can legitimately carry no location: an administrator's account covers
+     * every location rather than one, and `proposeLocation` fills in nothing for
      * them. Treating a blank as suspicious would hide an administrator's own
      * real work.
      */
@@ -80,20 +80,20 @@ describe("the explicit exclusion list is configuration, and empty by default", (
     expect(names.has("another tester")).toBe(true);
   });
 
-  it("holds back a configured name filed against a real salon", () => {
+  it("holds back a configured name filed against a real location", () => {
     const excludedNames = configuredExcludedNames({
       [EXCLUDED_EMPLOYEE_NAMES_ENV]: "Test Person",
     });
     expect(
       nonProductionReason(
-        { employeeName: "Test Person", locationName: REAL_SALON },
+        { employeeName: "Test Person", locationName: REAL_LOCATION },
         { excludedNames },
       ),
     ).toBe("excluded_by_configuration");
     // And leaves everyone else alone.
     expect(
       isProductionRecord(
-        { employeeName: "A Real Manager", locationName: REAL_SALON },
+        { employeeName: "A Real Manager", locationName: REAL_LOCATION },
         { excludedNames },
       ),
     ).toBe(true);
@@ -105,7 +105,7 @@ describe("the explicit exclusion list is configuration, and empty by default", (
     });
     expect(
       isProductionRecord(
-        { employeeName: "  TEST   PERSON ", locationName: REAL_SALON },
+        { employeeName: "  TEST   PERSON ", locationName: REAL_LOCATION },
         { excludedNames },
       ),
     ).toBe(false);
@@ -149,12 +149,12 @@ describe("holding a record back is said out loud", () => {
  * of the sixteen outstanding follow-ups carry a null `location_name`.
  *
  * One of those is `suzy sunshine`, which the review named by hand. It carries
- * `loc-109` — a salon id from the retired twelve-store demo roster — and no
+ * `loc-109` — a location id from the retired twelve-store demo roster — and no
  * name at all. The same roster rule applied to the ID catches it; applied to
  * the name it could not, because there was no name to apply it to.
  */
-describe("the roster guard on the salon id", () => {
-  it("refuses a record filed against a salon id the roster does not know", () => {
+describe("the roster guard on the location id", () => {
+  it("refuses a record filed against a location id the roster does not know", () => {
     // The retired demo roster's ids, which is what the live test rows carry.
     for (const locationId of ["loc-101", "loc-102", "loc-109", "loc-111"]) {
       expect(
@@ -163,7 +163,7 @@ describe("the roster guard on the salon id", () => {
       ).toBe(false);
       expect(
         nonProductionReason({ employeeName: "Someone", locationName: null, locationId }),
-      ).toBe("salon_not_on_roster");
+      ).toBe("location_not_on_roster");
     }
   });
 
@@ -177,8 +177,8 @@ describe("the roster guard on the salon id", () => {
     ).toBe(false);
   });
 
-  it("keeps every record filed against a salon on the roster", () => {
-    for (const location of PRODUCTION_SALONS) {
+  it("keeps every record filed against a location on the roster", () => {
+    for (const location of PRODUCTION_LOCATIONS) {
       expect(
         isProductionRecord({
           employeeName: "A Real Employee",
@@ -190,9 +190,9 @@ describe("the roster guard on the salon id", () => {
     }
   });
 
-  it("keeps a record with NO salon at all", () => {
+  it("keeps a record with NO location at all", () => {
     /*
-     * An administrator's form legitimately carries no salon — see
+     * An administrator's form legitimately carries no location — see
      * `proposeLocation` — so an absent id says nothing either way. Refusing it
      * would hide real work, which is worse than showing a test record.
      */

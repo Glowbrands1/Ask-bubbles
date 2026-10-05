@@ -11,7 +11,7 @@ import { PINNED_KNOWLEDGE_ROLES } from "@/config/company/knowledge";
  *
  * A few documents are not evidence. They are the REASONING a whole class of
  * question must be answered with. The Employee Performance Framework is the
- * first: it does not tell a manager what the refund window is, it tells Sunny
+ * first: it does not tell a manager what the refund window is, it tells Bubbles
  * how to turn employee metrics into coaching priorities, what to recognise,
  * what to observe before documenting, and what never to escalate on a number
  * alone. A framework like that is either present for every question in its
@@ -20,7 +20,7 @@ import { PINNED_KNOWLEDGE_ROLES } from "@/config/company/knowledge";
  *
  * MEASURED, NOT ASSUMED. Against the live corpus (28 documents, 897 chunks,
  * gte-small), a policy-manual query returns 0 framework chunks in its top 14 —
- * and so does a query anchored in the Salon Coaching Guide, which is the
+ * and so does a query anchored in the Location Coaching Guide, which is the
  * closest neighbour the framework has. A coaching question phrased in the
  * Coaching Guide's vocabulary can therefore retrieve no framework at all. That
  * is the failure this registry exists to remove.
@@ -53,7 +53,7 @@ import { PINNED_KNOWLEDGE_ROLES } from "@/config/company/knowledge";
  *                 silently lose the framework. Rejected.
  *
  *   `category`    Already populated (`leadership_coaching`) and NOT unique: the
- *                 Sun Tan City Salon Coaching Guide is filed under it too.
+ *                 Sun Tan City Location Coaching Guide is filed under it too.
  *                 Pinning by category would pin a whole PDF manual as
  *                 mandatory reasoning. Rejected as an identifier.
  *

@@ -23,14 +23,14 @@ import {
  *
  * AUTHORIZED SERVER-SIDE as an `edit` on THIS FORM'S TEMPLATE. Deliberately not
  * `manage_form_records`: that one gates destroying and hiding records, and a
- * Salon Director who may document a coaching conversation must be able to say
+ * Location Director who may document a coaching conversation must be able to say
  * the conversation happened without also being able to delete filed forms.
  *
  * NOT `create_coaching_form` EITHER, which is what it asked for on every
  * template — a role that may document a coaching conversation could set the
- * follow-up on an EPP it holds no permission for, at a salon it does not cover.
+ * follow-up on an EPP it holds no permission for, at a location it does not cover.
  * `authorizeInstance` resolves the template's own permission and checks the
- * form's salon against the caller's `AccessScope`.
+ * form's location against the caller's `AccessScope`.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

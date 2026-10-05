@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * Two rules, and only one of them is the permission.
  *
  *   `ask_questions` says this person may rate SOMETHING. It is the right gate:
- *   anything narrower would create a class of user who can use Ask Sunny and
+ *   anything narrower would create a class of user who can use Ask Bubbles and
  *   cannot say it was wrong, and the frontline Employee holding it is the
  *   population whose complaints this feature exists to collect.
  *
@@ -362,7 +362,7 @@ describe("reading your own feedback", () => {
     );
 
     expect(response.status).toBe(200);
-    const read = seen.selects.find((entry) => entry.table === "ask_sunny_feedback");
+    const read = seen.selects.find((entry) => entry.table === "assistant_feedback");
     expect(read?.filters.user_id).toBe("user-1");
   });
 });

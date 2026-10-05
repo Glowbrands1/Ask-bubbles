@@ -202,7 +202,7 @@ describe("changes between syncs", () => {
 
     fake.state.employees = [
       wovenEmployee("A", { status: TERMINATED, terminationDate: "2026-09-20" }),
-      wovenEmployee("B", { positionId: "POS-SD", positionName: "Salon Director" }),
+      wovenEmployee("B", { positionId: "POS-SD", positionName: "Location Director" }),
       wovenEmployee("C", { status: ACTIVE }),
       wovenEmployee("D", { primaryLocationId: "WL-0144", primaryLocationName: "NE Lincoln" }),
       wovenEmployee("E"),
@@ -359,10 +359,10 @@ describe("data quality is flagged, never fatal", () => {
     expect(first.issueCounts.unmapped_location).toBe(2);
     expect([...store.locationMap.values()].every((l) => l.status === "unmapped")).toBe(true);
 
-    store.mapLocation("WL-0306", "salon-uuid-0306");
+    store.mapLocation("WL-0306", "location-uuid-0306");
     const second = succeeded(await run());
     expect(second.unmappedLocations).toBe(1);
-    expect(store.locationMap.get("WL-0306")).toMatchObject({ status: "mapped", salonId: "salon-uuid-0306" });
+    expect(store.locationMap.get("WL-0306")).toMatchObject({ status: "mapped", locationId: "location-uuid-0306" });
   });
 
   it("a record with no employee id is rejected and counted; the rest sync", async () => {
@@ -557,7 +557,7 @@ describe("locations", () => {
   it("stores the /locations catalog on the location map, never a mapping", async () => {
     const { run, store } = setup([wovenEmployee("A")], {}, { locations: [wovenLocation("WL-0306", { number: "0306" }), wovenLocation("WL-HQ", { nonLocation: true })] });
     await run();
-    expect(store.locationMap.get("WL-0306")).toMatchObject({ status: "unmapped", salonId: null, number: "0306" });
+    expect(store.locationMap.get("WL-0306")).toMatchObject({ status: "unmapped", locationId: null, number: "0306" });
     expect(store.locationMap.has("WL-HQ")).toBe(true);
   });
 

@@ -56,7 +56,7 @@ export function EligibilityCheck({
         setResult(body.result);
       }
     } catch {
-      setError("Ask Sunny's server could not be reached.");
+      setError("Ask Bubbles' server could not be reached.");
     } finally {
       setBusy(false);
     }
@@ -114,7 +114,7 @@ export function EligibilityCheck({
                 {result.employee.wouldCreateRole
                   ? `${result.employee.wouldCreateRole.replaceAll("_", " ")}, ${result.employee.wouldCreateScopeLevel ?? "?"} scope`
                   : "no role — position not confirmed"}
-                {result.employee.primarySalonNumber ? ` at salon ${result.employee.primarySalonNumber}` : ""}
+                {result.employee.primaryLocationCode ? ` at location ${result.employee.primaryLocationCode}` : ""}
               </dd>
             </dl>
           ) : null}

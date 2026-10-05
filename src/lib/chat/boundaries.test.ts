@@ -459,7 +459,7 @@ describe("the privacy promise on screen matches the behaviour", () => {
 
   it("no longer claims Clear history only touches this browser, in live mode", () => {
     expect(LIST).toContain(
-      "Removes every conversation from your Ask Sunny account and from this browser.",
+      "Removes every conversation from your Ask Bubbles account and from this browser.",
     );
   });
 

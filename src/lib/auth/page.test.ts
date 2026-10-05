@@ -124,12 +124,12 @@ describe("every page in the authenticated app is guarded on the server", () => {
 });
 
 describe("where a role lands", () => {
-  it("sends an Employee to Ask Sunny, not to the Overview", async () => {
+  it("sends an Employee to Ask Bubbles, not to the Overview", async () => {
     /*
      * THE REDIRECT LOOP THIS AVOIDS. An Employee cannot hold `view_overview`,
      * so landing them on `/` would bounce them straight back out — and the
      * bounce target of a forbidden page is the landing page, so the two would
-     * ping-pong. Ask Sunny is the screen the role exists for.
+     * ping-pong. Ask Bubbles is the screen the role exists for.
      */
     const { defaultLandingForRole } = await import("./page");
     expect(defaultLandingForRole("employee")).toBe("/chat");

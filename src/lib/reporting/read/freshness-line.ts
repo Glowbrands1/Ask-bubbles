@@ -6,14 +6,14 @@
  * The 14 September review asked for this format, verbatim:
  *
  *   Data through September 12, 2026 | Refreshed September 13 at 6:00 a.m. CT |
- *   15 salons included | Updated daily
+ *   15 locations included | Updated daily
  *
  * "This should replace the current row of four chips, which is harder to scan
  *  and inconsistent from tab to tab. The cadence should reflect the actual
  *  schedule for each report."
  *
  * FOUR FACTS, AND EVERY ONE IS MEASURED. The data-through date and the refresh
- * instant come from the report's own stored metadata, the salon count is
+ * instant come from the report's own stored metadata, the location count is
  * counted from the live rows, and the cadence is declared per report family.
  * Nothing here is a constant and nothing is a hard-coded date — the review's
  * own example dates appear nowhere in this module or its tests as values.
@@ -22,7 +22,7 @@
  * CENTRAL TIME, THROUGH THE IANA ZONE
  * ============================================================================
  *
- * "Times are displaying in UTC. Salon Performance currently reads 'Loaded Sep
+ * "Times are displaying in UTC. Location Performance currently reads 'Loaded Sep
  *  11, 2026, 12:50 PM UTC', which is 7:50 a.m. our time. Everything should
  *  display in Central Time. No one should have to convert it."
  *
@@ -109,8 +109,8 @@ export interface FreshnessFacts {
   readonly dataThrough: string | null;
   /** ISO instant the delivery was ingested. Null when not recorded. */
   readonly refreshedAt: string | null;
-  /** Salons the figures actually cover. Counted, never asserted. */
-  readonly salonCount: number | null;
+  /** Locations the figures actually cover. Counted, never asserted. */
+  readonly locationCount: number | null;
   readonly cadence: ReportCadence;
   /**
    * The delivery's own name, so an `on_delivery` cadence can say which report
@@ -118,8 +118,8 @@ export interface FreshnessFacts {
    */
   readonly sourceReport?: string | null;
   /**
-   * Set when the reader sees fewer salons than the report holds because of
-   * their own assignment, so the count can say whose salons it is counting
+   * Set when the reader sees fewer locations than the report holds because of
+   * their own assignment, so the count can say whose locations it is counting
    * rather than implying the delivery only carried that many.
    */
   readonly scopeLabel?: string | null;
@@ -194,19 +194,19 @@ export function formatRefreshedAt(instant: string | null): string | null {
   return `${value("month")} ${value("day")} at ${value("hour")}:${value("minute")} ${meridiem} CT`;
 }
 
-/** `15 salons included`, or a scoped equivalent. */
-export function formatSalonCount(
-  salonCount: number | null,
+/** `15 locations included`, or a scoped equivalent. */
+export function formatLocationCount(
+  locationCount: number | null,
   scopeLabel?: string | null,
 ): string | null {
-  if (salonCount === null || !Number.isFinite(salonCount) || salonCount < 0) return null;
-  const salons = `${salonCount} ${salonCount === 1 ? "location" : "salons"}`;
+  if (locationCount === null || !Number.isFinite(locationCount) || locationCount < 0) return null;
+  const locations = `${locationCount} ${locationCount === 1 ? "location" : "locations"}`;
   /*
-   * A RESTRICTED READER IS TOLD WHOSE SALONS THESE ARE. "1 salon included" on
-   * a fifteen-salon delivery reads as a broken report; "MO Kansas City Wornall
-   * · 1 salon" reads as an assignment, which is what it is.
+   * A RESTRICTED READER IS TOLD WHOSE LOCATIONS THESE ARE. "1 location included" on
+   * a fifteen-location delivery reads as a broken report; "MO Kansas City Wornall
+   * · 1 location" reads as an assignment, which is what it is.
    */
-  return scopeLabel ? `${scopeLabel} · ${salons}` : `${salons} included`;
+  return scopeLabel ? `${scopeLabel} · ${locations}` : `${locations} included`;
 }
 
 /**
@@ -221,12 +221,12 @@ export function formatSalonCount(
 export function freshnessSegments(facts: FreshnessFacts): string[] {
   const dataThrough = formatDataThrough(facts.dataThrough);
   const refreshed = formatRefreshedAt(facts.refreshedAt);
-  const salons = formatSalonCount(facts.salonCount, facts.scopeLabel ?? null);
+  const locations = formatLocationCount(facts.locationCount, facts.scopeLabel ?? null);
 
   return [
     dataThrough ? `Data through ${dataThrough}` : null,
     refreshed ? `Refreshed ${refreshed}` : null,
-    salons,
+    locations,
     cadenceLabel(facts.cadence, facts.sourceReport ?? null),
   ].filter((segment): segment is string => segment !== null);
 }

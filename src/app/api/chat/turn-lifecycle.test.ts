@@ -8,7 +8,7 @@ import type { ChatMessage } from "@/types";
  * THE INVARIANT: A SUCCESSFUL ANSWER ALWAYS HAS A RATEABLE TURN
  * ============================================================================
  *
- * REPORTED IN PRODUCTION, on the first Bed Usage question of a session: Sunny
+ * REPORTED IN PRODUCTION, on the first Bed Usage question of a session: Bubbles
  * answered, and no feedback panel appeared. The second question on the same
  * screen behaved correctly.
  *
@@ -235,7 +235,7 @@ describe("the rating control, on the state the server no longer produces", () =>
   });
 });
 
-/* ---------------------------------------------------- every Ask Sunny surface */
+/* ---------------------------------------------------- every Ask Bubbles surface */
 
 describe("the guarantee holds on every surface, not just the one that broke", () => {
   /*
@@ -247,7 +247,7 @@ describe("the guarantee holds on every surface, not just the one that broke", ()
     "bed_usage",
     "main_chat",
     "overview",
-    "salon_performance",
+    "location_performance",
     "sales_totals",
     "spa_wellness",
     "spa_engagement",

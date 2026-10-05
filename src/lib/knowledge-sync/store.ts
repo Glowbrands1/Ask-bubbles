@@ -79,7 +79,7 @@ function itemToRow(item: ManifestItem): Row {
     synced_fingerprint: item.syncedFingerprint,
     content_hash: item.contentHash,
     knowledge_document_id: item.knowledgeDocumentId,
-    in_ask_sunny: item.inAskSunny,
+    in_knowledge_base: item.inKnowledgeBase,
     state: item.state,
     previous_state: item.previousState,
     pending_action: item.pendingAction,
@@ -117,8 +117,8 @@ export function rowToItem(row: Row): ManifestItem {
     syncedFingerprint: str(row.synced_fingerprint),
     contentHash: str(row.content_hash),
     knowledgeDocumentId: documentId,
-    /* A document deleted by hand detaches (`on delete set null`): it is then not in Ask Sunny. */
-    inAskSunny: row.in_ask_sunny === true && documentId !== null,
+    /* A document deleted by hand detaches (`on delete set null`): it is then not in Ask Bubbles. */
+    inKnowledgeBase: row.in_knowledge_base === true && documentId !== null,
     state: row.state as SyncState,
     previousState: (str(row.previous_state) as SyncState | null) ?? null,
     pendingAction: row.pending_action as PendingAction,
@@ -378,7 +378,7 @@ export function createSupabaseKnowledgeSyncStore(db: SupabaseClient = getSupabas
           reason: str(r.reason),
           pendingAction: r.pending_action as PendingAction,
           knowledgeDocumentId: null,
-          inAskSunny: false,
+          inKnowledgeBase: false,
           errorCategory: null,
           retryCount: 0,
           firstSeenAt: String(r.first_seen_at),

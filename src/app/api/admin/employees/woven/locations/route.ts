@@ -24,9 +24,9 @@ import {
  * /api/admin/employees/woven/locations — the Woven location crosswalk.
  *
  * GET lists every Woven location the sync has seen, with Woven's catalog
- * facts, headcounts and exact-number salon suggestions.
+ * facts, headcounts and exact-number location suggestions.
  * PATCH records a person's decision about one:
- *   { "wovenLocationId": "…", "status": "mapped", "salonNumber": "0306" }
+ *   { "wovenLocationId": "…", "status": "mapped", "locationCode": "101" }
  *   { "wovenLocationId": "…", "status": "ignored" }
  *   { "wovenLocationId": "…", "status": "unmapped" }
  *
@@ -36,7 +36,7 @@ import {
  * already exist; the matrix is unchanged. The reviewer is the verified
  * session, never the body.
  *
- * A mapping says which Ask Sunny salon a Woven location is. It changes nobody's
+ * A mapping says which Ask Bubbles location a Woven location is. It changes nobody's
  * access in phase one.
  */
 export const runtime = "nodejs";
@@ -45,7 +45,7 @@ export const dynamic = "force-dynamic";
 const REVIEW_STATUS: Record<string, number> = {
   reviewed: 200,
   unknown_location: 404,
-  unknown_salon: 422,
+  not_on_roster: 422,
   reviewer_required: 400,
 };
 

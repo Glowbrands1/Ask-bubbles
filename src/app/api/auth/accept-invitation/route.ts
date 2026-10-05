@@ -11,7 +11,7 @@ import { getSupabaseSessionClient } from "@/lib/supabase/auth-clients";
  * POST /api/auth/accept-invitation — invited becomes active.
  * ============================================================================
  *
- * THE ONE ROUTE IN ASK SUNNY THAT DOES NOT CALL `authorizeRequest`, and the
+ * THE ONE ROUTE IN ASK BUBBLES THAT DOES NOT CALL `authorizeRequest`, and the
  * reason is structural rather than an exemption. `authorizeRequest` resolves
  * the caller's profile and refuses an INVITED one — correctly, because a
  * credential that has never been used is not yet a user of this application.
@@ -69,13 +69,13 @@ export async function POST() {
     if (error) {
       /*
        * Every refusal the function raises is a sentence written for a person —
-       * "This account is disabled", "No Ask Sunny profile exists for this
+       * "This account is disabled", "No Ask Bubbles profile exists for this
        * account" — so they are safe to pass on and are the only thing somebody
        * can act on. A message we did not write is not returned.
        */
       const known = [
         "Not signed in.",
-        "No Ask Sunny profile exists for this account.",
+        "No Ask Bubbles profile exists for this account.",
         "This account is disabled.",
         "This account has not confirmed its email address.",
       ];
@@ -97,7 +97,7 @@ export async function POST() {
      *
      * The alternative is navigating to `/` and letting the page guard bounce
      * anybody without `view_overview` — which works, but greets a new Employee
-     * with a "denied" notice as the first thing they ever see in Ask Sunny.
+     * with a "denied" notice as the first thing they ever see in Ask Bubbles.
      *
      * Only a PATH crosses back, never the role.
      */

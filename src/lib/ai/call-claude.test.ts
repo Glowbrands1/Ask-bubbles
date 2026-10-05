@@ -76,6 +76,6 @@ describe("an SDK failure cannot echo the request back", () => {
     const rethrown = handler.match(/error\.message/g) ?? [];
     expect(rethrown).toHaveLength(1);
     expect(handler).toMatch(/MissingConfigurationError/);
-    expect(handler).toMatch(/Sunny could not reach the language model/);
+    expect(handler).toMatch(/Bubbles could not reach the language model/);
   });
 });

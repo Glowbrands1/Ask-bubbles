@@ -18,7 +18,7 @@
 export const CLAUDE_MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5";
 
 /**
- * Reasoning effort for grounded answers. Ask Sunny is a question-answering
+ * Reasoning effort for grounded answers. Ask Bubbles is a question-answering
  * surface over retrieved text rather than an open-ended reasoning task, and
  * managers are waiting on the response, so the default trades the top of the
  * range for latency. Raise to "high" if answer quality proves insufficient.
@@ -64,7 +64,7 @@ export const CLAUDE_MAX_TOKENS: Record<"quick" | "standard" | "detailed", number
  * 16 was documented as "deliberately small". It was not small enough, and the
  * comment saying so was never measured against a real worker.
  *
- * A 58-page PDF failed to index in the Ask Sunny Dev project. Its very first
+ * A 58-page PDF failed to index in the Ask Bubbles Dev project. Its very first
  * batch — 16 chunks, one request — came back HTTP 546. The function's own logs
  * name the cause: `sb_error_code: WORKER_RESOURCE_LIMIT`, with `CPU Time
  * exceeded` and a worker shutdown logged in the same millisecond. Two attempts,
@@ -158,7 +158,7 @@ export const RETRIEVAL = {
   contextChunks: 12,
   /**
    * Cosine similarity below which a chunk is not considered supporting
-   * evidence. When nothing clears this bar Sunny says the knowledge base does
+   * evidence. When nothing clears this bar Bubbles says the knowledge base does
    * not cover the question instead of answering from general knowledge.
    *
    * THIS NUMBER IS MODEL-SPECIFIC AND PROVISIONAL. Similarity scores are not
@@ -175,13 +175,13 @@ export const RETRIEVAL = {
    *                     -> every chunk in the corpus 0.72 - 0.74
    *
    * At 0.35 — the value calibrated for the previous model — a question about
-   * the boiling point of tungsten retrieved all three salon chunks. The guard
+   * the boiling point of tungsten retrieved all three location chunks. The guard
    * was doing nothing. 0.78 sits above every off-topic and cross-topic score
    * observed and well below the on-topic band.
    *
    * It is calibrated on three fictional sentences, not on the real corpus, so
    * treat it as a floor to revisit once documents are loaded: too high and
-   * Sunny refuses questions it could answer, too low and it grounds answers in
+   * Bubbles refuses questions it could answer, too low and it grounds answers in
    * text that does not support them. Whichever way it moves, it moves with
    * evidence.
    */

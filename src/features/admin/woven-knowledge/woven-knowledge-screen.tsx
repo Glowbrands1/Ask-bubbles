@@ -138,7 +138,7 @@ export function WovenKnowledgeScreen({ liveMode, status: initial }: WovenKnowled
       if (outcome === "succeeded" || (mode === "preview" && outcome === "succeeded_with_warnings")) {
         return {
           tone: "accent",
-          text: mode === "preview" ? "Scan finished. Nothing in Ask Sunny was changed — see what Sync Now would do below." : "Sync finished. Ask Sunny is up to date.",
+          text: mode === "preview" ? "Scan finished. Nothing in Ask Bubbles was changed — see what Sync Now would do below." : "Sync finished. Ask Bubbles is up to date.",
         };
       }
       if (outcome === "succeeded_with_warnings") return { tone: "attention", text: "Sync finished, with a few things to look at below." };
@@ -150,7 +150,7 @@ export function WovenKnowledgeScreen({ liveMode, status: initial }: WovenKnowled
     act("auto", async () => {
       const r = await call("/api/admin/knowledge-sync/woven", { method: "PATCH", body: JSON.stringify({ autoSyncEnabled: enabled }) });
       if (!r.ok) return { tone: "attention", text: reasonOf(r.body, "The setting could not be saved.") };
-      return { tone: "accent", text: enabled ? "Automatic sync is on. Ask Sunny will check Woven every 30 days." : "Automatic sync is off." };
+      return { tone: "accent", text: enabled ? "Automatic sync is on. Ask Bubbles will check Woven every 30 days." : "Automatic sync is off." };
     });
 
   const decide = (audience: AudienceReview, decision: AudienceReview["decision"]) =>
@@ -163,7 +163,7 @@ export function WovenKnowledgeScreen({ liveMode, status: initial }: WovenKnowled
           decision === "company_wide"
             ? `“${audience.label}” items will be added on the next sync.`
             : decision === "excluded"
-              ? `“${audience.label}” items will stay out of Ask Sunny.`
+              ? `“${audience.label}” items will stay out of Ask Bubbles.`
               : `“${audience.label}” is back to waiting for a decision.`,
       };
     });
@@ -177,7 +177,7 @@ export function WovenKnowledgeScreen({ liveMode, status: initial }: WovenKnowled
       <PageHeader
         eyebrow="Admin · Integrations"
         title="Woven Knowledge Sync"
-        description="Woven is where policies, handbooks and training live. Ask Sunny checks it every 30 days and keeps its own knowledge base current — no uploads, no comparing versions."
+        description="Woven is where policies, handbooks and training live. Ask Bubbles checks it every 30 days and keeps its own knowledge base current — no uploads, no comparing versions."
       />
 
       {!liveMode ? (
@@ -187,14 +187,14 @@ export function WovenKnowledgeScreen({ liveMode, status: initial }: WovenKnowled
       ) : null}
       {!status ? (
         <Notice tone="attention" icon={<AlertTriangle />} title="Database not configured" className="mb-6">
-          Ask Sunny&apos;s database is not configured for this deployment.
+          Ask Bubbles&apos;s database is not configured for this deployment.
         </Notice>
       ) : status.previewTestMode ? (
         <PreviewTestPanel status={status} busy={busy} canAct={liveMode} report={testReport} onTest={testConnection} onScan={() => runSync("preview")} />
       ) : status.database !== "ready" ? (
         <Notice tone="attention" icon={<AlertTriangle />} title="Not installed yet" className="mb-6">
           {status.database === "missing"
-            ? "The Woven sync's storage has not been added to the database yet. That is a one-time step for whoever maintains Ask Sunny."
+            ? "The Woven sync's storage has not been added to the database yet. That is a one-time step for whoever maintains Ask Bubbles."
             : "The sync's status could not be read just now. Try again in a moment."}
         </Notice>
       ) : null}
@@ -274,7 +274,7 @@ export function WovenKnowledgeScreen({ liveMode, status: initial }: WovenKnowled
  * Shown on a Preview (never Production) deployment whose database does not
  * have the sync tables. Test Connection and Run Initial Scan read the real
  * Woven and show what they found; nothing is saved and nothing reaches Ask
- * Sunny's knowledge base.
+ * Bubbles' knowledge base.
  */
 function PreviewTestPanel(props: {
   status: WovenKnowledgeStatus;
@@ -292,7 +292,7 @@ function PreviewTestPanel(props: {
       <Notice tone="attention" icon={<AlertTriangle />} title="Preview test mode — results are not saved" className="mb-4">
         This Preview deployment does not have the Woven sync&apos;s storage installed. You can test the connection and
         run the initial scan against the real Woven. The results are shown here only; nothing is saved and nothing is
-        added to Ask Sunny.
+        added to Ask Bubbles.
       </Notice>
       {!configured ? (
         <p className="mb-3 text-[13px] text-muted-foreground">
@@ -398,7 +398,7 @@ function StatusPanel(props: {
       </dl>
       {initialDone ? (
         <p className="mt-3 text-[12px] text-muted-foreground">
-          <strong>Scan Woven</strong> previews what changed — nothing is added, removed or replaced in Ask Sunny, and the next automatic sync date does not move.{" "}
+          <strong>Scan Woven</strong> previews what changed — nothing is added, removed or replaced in Ask Bubbles, and the next automatic sync date does not move.{" "}
           <strong>Sync Now</strong> applies the changes.
         </p>
       ) : null}
@@ -415,9 +415,9 @@ function StatusPanel(props: {
 function ScanPlanPanel({ status }: { status: WovenKnowledgeStatus }) {
   const t = status.latestPreview!.totals;
   const lines: [string, number][] = [
-    ["Add to Ask Sunny", t.new],
-    ["Update in Ask Sunny", t.updated],
-    ["Take out of Ask Sunny (unpublished, removed or narrowed in Woven)", t.unpublished + t.removed + t.permissionChanged],
+    ["Add to Ask Bubbles", t.new],
+    ["Update in Ask Bubbles", t.updated],
+    ["Take out of Ask Bubbles (unpublished, removed or narrowed in Woven)", t.unpublished + t.removed + t.permissionChanged],
     ["Leave as they are (unchanged)", t.unchanged],
     ["Wait for an audience choice", t.needsReview],
     ["Not yet supported", t.blocked],
@@ -481,7 +481,7 @@ function AttentionPanel(props: {
       {massRemoval ? (
         <div className="mb-4">
           <Button variant="destructive" size="sm" disabled={props.busy !== null} onClick={props.onConfirmRemoval}>
-            Yes, remove them from Ask Sunny
+            Yes, remove them from Ask Bubbles
           </Button>
         </div>
       ) : null}
@@ -489,8 +489,8 @@ function AttentionPanel(props: {
       {undecided.length > 0 ? (
         <div className="rounded-[var(--radius-md)] border border-border bg-surface">
           <p className="border-b border-border px-4 py-3 text-[13px] leading-relaxed text-muted-foreground">
-            Woven shares these only with certain teams or positions. Ask Sunny can&apos;t limit a document to those
-            same people yet, so it either shares it with <strong>everyone who uses Ask Sunny</strong> or leaves it out.
+            Woven shares these only with certain teams or positions. Ask Bubbles can&apos;t limit a document to those
+            same people yet, so it either shares it with <strong>everyone who uses Ask Bubbles</strong> or leaves it out.
             You decide once per audience; new items with the same audience follow your choice.
           </p>
           <ul className="divide-y divide-border">
@@ -508,7 +508,7 @@ function AttentionPanel(props: {
                       Share with everyone
                     </Button>
                     <Button size="sm" variant="outline" disabled={props.busy !== null} onClick={() => props.onDecide(audience, "excluded")}>
-                      Keep out of Ask Sunny
+                      Keep out of Ask Bubbles
                     </Button>
                   </div>
                 </div>
@@ -596,7 +596,7 @@ function AudienceMembers({ audience, onOpenContent }: { audience: AudienceReview
               </p>
               <div className="mt-1 flex flex-wrap gap-x-3">
                 {m.parts
-                  .filter((p) => p.previewable || p.askSunnyDocumentId)
+                  .filter((p) => p.previewable || p.knowledgeDocumentIdInBase)
                   .map((p) => (
                     <PartPreviewButton
                       key={p.key}
@@ -664,7 +664,7 @@ function SetupPanel(props: {
         <SetupStep n={1} title="Connect to Woven" state={stateOf(0)}>
           {configured ? (
             <>
-              <p>The Woven sign-in for the Ask Sunny integration account is in place. Check it works:</p>
+              <p>The Woven sign-in for the Ask Bubbles integration account is in place. Check it works:</p>
               <Button className="mt-2" size="sm" onClick={props.onTest} disabled={disabled}>
                 {props.busy === "test" ? <Loader2 className="animate-spin" /> : <PlugZap />}
                 Test Connection
@@ -672,7 +672,7 @@ function SetupPanel(props: {
             </>
           ) : (
             <p>
-              Whoever maintains Ask Sunny adds the Woven sign-in for a dedicated integration account once, as protected
+              Whoever maintains Ask Bubbles adds the Woven sign-in for a dedicated integration account once, as protected
               settings in Vercel{status.missingCredentials.length > 0 ? ` (${status.missingCredentials.join(", ")})` : ""}
               {!status.enabled ? " and switches the sync on (WOVEN_KNOWLEDGE_SYNC_ENABLED)" : ""}. Nobody needs to sign in to Woven again after that.
             </p>
@@ -703,7 +703,7 @@ function SetupPanel(props: {
           </div>
         </SetupStep>
         <SetupStep n={4} title="Turn on automatic sync" state={stateOf(3)}>
-          <p>Ask Sunny will check Woven every 30 days and keep itself current. You only hear from it if something needs you.</p>
+          <p>Ask Bubbles will check Woven every 30 days and keep itself current. You only hear from it if something needs you.</p>
           <Button className="mt-2" size="sm" onClick={props.onEnableAuto} disabled={disabled}>
             Enable Automatic Sync
           </Button>
@@ -838,7 +838,7 @@ function AdvancedPanel({ status }: { status: WovenKnowledgeStatus }) {
         <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
       </summary>
       <div className="border-t border-border px-4 py-3 text-[13px]">
-        <p className="mb-1 font-semibold">Tracked, but not yet brought into Ask Sunny</p>
+        <p className="mb-1 font-semibold">Tracked, but not yet brought into Ask Bubbles</p>
         {blocked.length === 0 ? (
           <p className="mb-3 text-muted-foreground">Nothing.</p>
         ) : (

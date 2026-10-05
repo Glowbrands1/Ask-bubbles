@@ -6,7 +6,7 @@
  * cheaper than a dependency here.
  */
 
-const DB_NAME = "ask-sunny-prototype";
+const DB_NAME = "ask-bubbles-prototype";
 const DB_VERSION = 1;
 
 export const RECORD_STORE = "records";

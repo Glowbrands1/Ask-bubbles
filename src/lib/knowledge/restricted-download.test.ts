@@ -39,7 +39,7 @@ import {
  * ============================================================================
  *
  * The reported case: a Regional Manager could download
- * ASK_SUNNY_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT.txt — Sunny's own
+ * EXAMPLE_FRAMEWORK_KB_TEXT.txt — Bubbles' own
  * operating rules, including the guard against recommending discipline on a
  * metric alone. That file is the assistant's instructions, not the policy a
  * manager was quoted.

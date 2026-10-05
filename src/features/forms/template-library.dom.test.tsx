@@ -186,7 +186,7 @@ describe("the Forms page", () => {
     renderLibrary();
     expect(
       screen.getAllByText(
-        "Upload the document the business issues, and Ask Sunny reads it into a draft of this form for you to review.",
+        "Upload the document the business issues, and Ask Bubbles reads it into a draft of this form for you to review.",
       ),
     ).toHaveLength(TEMPLATE_SEEDS.length);
     expect(screen.getAllByText("No document")).toHaveLength(TEMPLATE_SEEDS.length);

@@ -77,7 +77,7 @@ const REAL = {
     {
       id: "msg_mfx1a2b3c4d52",
       role: "assistant",
-      content: "Two Salon Directors are scheduled.",
+      content: "Two Location Directors are scheduled.",
       /* Deliberately the same millisecond — see the ordering test. */
       createdAt: "2026-08-01T09:00:00.000Z",
       mode: "standard",

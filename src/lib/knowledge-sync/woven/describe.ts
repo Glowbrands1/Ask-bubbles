@@ -2,7 +2,7 @@ import type { SinkMetadata } from "../ports";
 import { CONTENT_TYPE_LABEL, type ContentType, type ManifestItem } from "../types";
 
 /**
- * How a Woven item is filed in Ask Sunny's library. The category decides which
+ * How a Woven item is filed in Ask Bubbles' library. The category decides which
  * shelf it sits on; the tags mark its origin so it is recognisable in the
  * Knowledge Base screen and in search filters.
  */

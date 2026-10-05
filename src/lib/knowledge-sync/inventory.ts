@@ -36,7 +36,7 @@ export const CONTENT_SYNC_STATE_LABEL: Record<ContentSyncState, string> = {
   new: "New in Woven",
   updated: "Updated in Woven",
   waiting_for_audience: "Waiting for audience decision",
-  kept_out: "Kept out of Ask Sunny",
+  kept_out: "Kept out of Ask Bubbles",
   not_supported: "Not yet supported",
   unpublished: "Draft / unpublished",
   retired: "Retired",
@@ -80,13 +80,13 @@ export interface ContentPart {
   title: string;
   fileName: string | null;
   syncState: ContentSyncState;
-  inAskSunny: boolean;
+  inKnowledgeBase: boolean;
   /** An opaque reference to this part for the preview request (a hash of its identity; carries no name). */
   ref: string;
-  /** Ask Sunny can read this part's content (it is not blocked or an unsupported format). */
+  /** Ask Bubbles can read this part's content (it is not blocked or an unsupported format). */
   previewable: boolean;
-  /** The searchable Ask Sunny document for this part, when there is one: the existing document preview. */
-  askSunnyDocumentId: string | null;
+  /** The searchable Ask Bubbles document for this part, when there is one: the existing document preview. */
+  knowledgeDocumentIdInBase: string | null;
 }
 
 export interface ContentRow {
@@ -106,8 +106,8 @@ export interface ContentRow {
   lastSeenAt: string;
   lastSyncedAt: string | null;
   syncState: ContentSyncState;
-  /** Ask Sunny documents this item owns, while they are searchable. */
-  askSunny: { id: string; title: string }[];
+  /** Ask Bubbles documents this item owns, while they are searchable. */
+  askBubbles: { id: string; title: string }[];
   parts: ContentPart[];
 }
 
@@ -134,7 +134,7 @@ export function partRef(item: Pick<InventoryItem, "contentType" | "entityId" | "
 
 const HELD_FOR_AUDIENCE = new Set(["audience_needs_review", "audience_excluded"]);
 
-/** True for a part whose presence in Ask Sunny is decided by an audience choice. */
+/** True for a part whose presence in Ask Bubbles is decided by an audience choice. */
 export function heldForAudience(item: Pick<InventoryItem, "reason" | "state">): boolean {
   return item.reason !== null && HELD_FOR_AUDIENCE.has(item.reason) && item.state !== "REMOVED";
 }
@@ -150,7 +150,7 @@ export function effectiveInventory(manifest: InventoryItem[], preview: Inventory
     /*
      * AFTER SETUP, A SCAN NEWER THAN THE LAST SYNC is what Woven holds now:
      * its classification (New / Updated / Removed…) and Woven's own fields
-     * lead, and what only Ask Sunny knows — whether a part is in Ask Sunny,
+     * lead, and what only Ask Bubbles knows — whether a part is in Ask Bubbles,
      * its document, when it was synced, its error — comes from the manifest.
      */
     const byKey = new Map(manifest.map((item) => [partIdentity(item), item]));
@@ -190,28 +190,28 @@ export function effectiveInventory(manifest: InventoryItem[], preview: Inventory
 export function partSyncState(item: InventoryItem, decisions: ReadonlyMap<string, AudienceDecision>): ContentSyncState {
   if (item.state === "ERROR") return "error";
   if (item.state === "REMOVED") return "retired";
-  if (item.state === "BLOCKED") return item.inAskSunny ? "up_to_date" : "not_supported";
+  if (item.state === "BLOCKED") return item.inKnowledgeBase ? "up_to_date" : "not_supported";
 
   if (heldForAudience(item)) {
     const decision = decisions.get(audienceKey(item.audience))?.decision ?? null;
-    if (decision === "company_wide") return item.inAskSunny ? "up_to_date" : "new";
+    if (decision === "company_wide") return item.inKnowledgeBase ? "up_to_date" : "new";
     if (decision === "excluded") return "kept_out";
     return "waiting_for_audience";
   }
 
   if (item.state === "EXCLUDED") {
     if (item.reason === "unsupported_format") return "not_supported";
-    return item.knowledgeDocumentId && !item.inAskSunny ? "retired" : "unpublished";
+    return item.knowledgeDocumentId && !item.inKnowledgeBase ? "retired" : "unpublished";
   }
-  if (item.state === "UNPUBLISHED") return item.inAskSunny ? "unpublished" : item.knowledgeDocumentId ? "retired" : "unpublished";
+  if (item.state === "UNPUBLISHED") return item.inKnowledgeBase ? "unpublished" : item.knowledgeDocumentId ? "retired" : "unpublished";
 
   if (item.pendingAction === "ingest") {
-    /* A byte re-check of a part already in Ask Sunny is routine, not a change. */
-    if (item.state === "UNCHANGED") return item.inAskSunny ? "up_to_date" : "new";
-    return item.state === "UPDATED" || (item.state === "PERMISSION_CHANGED" && item.inAskSunny) ? "updated" : "new";
+    /* A byte re-check of a part already in Ask Bubbles is routine, not a change. */
+    if (item.state === "UNCHANGED") return item.inKnowledgeBase ? "up_to_date" : "new";
+    return item.state === "UPDATED" || (item.state === "PERMISSION_CHANGED" && item.inKnowledgeBase) ? "updated" : "new";
   }
   if (item.pendingAction === "retire") return "unpublished";
-  return item.inAskSunny ? "up_to_date" : "new";
+  return item.inKnowledgeBase ? "up_to_date" : "new";
 }
 
 function partKind(partKey: string): ContentPart["kind"] {
@@ -246,7 +246,7 @@ const earliest = (values: string[]) => values.reduce((a, b) => (Date.parse(b) < 
 const latest = (values: string[]) => values.reduce((a, b) => (Date.parse(b) > Date.parse(a) ? b : a));
 
 /**
- * One row per Woven item. `documentTitles` are the Ask Sunny titles of the
+ * One row per Woven item. `documentTitles` are the Ask Bubbles titles of the
  * documents the manifest says are searchable.
  */
 export function contentRows(
@@ -287,8 +287,8 @@ export function contentRows(
       lastSeenAt: latest(parts.map((p) => p.lastSeenAt)),
       lastSyncedAt: lastSynced.length > 0 ? latest(lastSynced) : null,
       syncState,
-      askSunny: parts
-        .filter((p) => p.inAskSunny && p.knowledgeDocumentId)
+      askBubbles: parts
+        .filter((p) => p.inKnowledgeBase && p.knowledgeDocumentId)
         .map((p) => ({ id: p.knowledgeDocumentId!, title: documentTitles.get(p.knowledgeDocumentId!) ?? p.title })),
       parts: [
         ...parts.map((p, i) => ({
@@ -297,10 +297,10 @@ export function contentRows(
           title: p.title,
           fileName: p.fileName,
           syncState: states[i]!,
-          inAskSunny: p.inAskSunny,
+          inKnowledgeBase: p.inKnowledgeBase,
           ref: partRef(p),
           previewable: p.state !== "BLOCKED" && p.reason !== "unsupported_format" && p.state !== "REMOVED",
-          askSunnyDocumentId: p.inAskSunny ? p.knowledgeDocumentId : null,
+          knowledgeDocumentIdInBase: p.inKnowledgeBase ? p.knowledgeDocumentId : null,
         })),
         /* Informational: the row's own state is its Woven parts'. */
         ...parts
@@ -311,11 +311,11 @@ export function contentRows(
             title: doc.title,
             fileName: null,
             syncState: "stale" as const,
-            inAskSunny: false,
+            inKnowledgeBase: false,
             ref: `superseded:${doc.id}`,
             previewable: false,
-            /* Kept for audit: the Ask Sunny document page still opens it. */
-            askSunnyDocumentId: doc.id,
+            /* Kept for audit: the Ask Bubbles document page still opens it. */
+            knowledgeDocumentIdInBase: doc.id,
           })),
       ],
     });

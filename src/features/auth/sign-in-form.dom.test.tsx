@@ -72,8 +72,8 @@ beforeEach(() => {
   Object.defineProperty(window, "location", {
     configurable: true,
     value: {
-      origin: "https://ask-sunny.preview.test",
-      href: "https://ask-sunny.preview.test/",
+      origin: "https://ask-bubbles.preview.test",
+      href: "https://ask-bubbles.preview.test/",
       pathname: "/",
       replace: locationReplace,
       assign: vi.fn(),
@@ -100,7 +100,7 @@ describe("a successful sign-in enters the application", () => {
     await signIn();
 
     await waitFor(() => expect(locationReplace).toHaveBeenCalledTimes(1));
-    expect(locationReplace).toHaveBeenCalledWith("https://ask-sunny.preview.test/");
+    expect(locationReplace).toHaveBeenCalledWith("https://ask-bubbles.preview.test/");
   });
 
   it("no longer relies on the router for the post-login transition", async () => {
@@ -188,7 +188,7 @@ describe("failed credentials stay on the form", () => {
 });
 
 describe("the destination cannot be pointed off-origin", () => {
-  const ORIGIN = "https://ask-sunny.preview.test";
+  const ORIGIN = "https://ask-bubbles.preview.test";
 
   /**
    * THE ESCAPES A PREFIX TEST DOES NOT CATCH.
@@ -308,7 +308,7 @@ describe("where each role ends up, decided on the server", () => {
     expect(defaultLandingForRole("admin")).toBe("/");
   });
 
-  it("lands an Employee on Ask Sunny, NOT the Overview", () => {
+  it("lands an Employee on Ask Bubbles, NOT the Overview", () => {
     // The guard on `/` bounces them, because they cannot hold `view_overview`.
     expect(hasPermission(DEFAULT_PERMISSION_MATRIX, "employee", "view_overview")).toBe(false);
     expect(defaultLandingForRole("employee")).toBe("/chat");

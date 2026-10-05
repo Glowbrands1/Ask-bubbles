@@ -47,11 +47,11 @@
  * The three structural decisions the earlier validation produced all survive,
  * because the artifacts reach the same conclusions:
  *
- *   RANKING USES ONE COLOUR FOR EVERY BAR. Salons have no natural order, so
+ *   RANKING USES ONE COLOUR FOR EVERY BAR. Locations have no natural order, so
  *   shading them by size would double-encode bar length as hue and burn the
  *   only free channel on information the chart already shows. The artifact's
  *   tenth item says the same thing more sharply: "a colour that follows rank
- *   instead of the salon is a colour that lies."
+ *   instead of the location is a colour that lies."
  *
  *   THE BASELINE COMPARISON IS ORDINAL, NOT CATEGORICAL. The artifact folds it
  *   further — the prior year stops being a bar at all and becomes a tick on the

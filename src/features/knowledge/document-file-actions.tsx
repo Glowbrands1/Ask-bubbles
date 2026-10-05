@@ -110,7 +110,7 @@ export function DocumentFileActions({
    *
    * A manager opening the training PDF a citation named sees exactly what they
    * saw before. A framework or plain-text SOURCE file is different: it is
-   * Sunny's own reasoning rather than something written to be read, so the
+   * Bubbles' own reasoning rather than something written to be read, so the
    * original is administrators-only.
    *
    * BOTH CONTROLS GO, not just Download. `preview` resolves the same signed URL
@@ -216,7 +216,7 @@ export function DocumentPreviewDialog({
               icon={<FileWarning />}
               title="Preview isn't available for this file type"
             >
-              Ask Sunny can only show PDFs in the browser. Download the original
+              Ask Bubbles can only show PDFs in the browser. Download the original
               to open it in the application it was made in — the file itself is
               unchanged.
             </Notice>

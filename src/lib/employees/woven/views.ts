@@ -105,7 +105,7 @@ export interface MappingSummary {
  * above still come from the stored flags, unchanged.
  *
  * A primary location reviewed as `ignored` (Corporate) is a deliberate
- * non-salon exception, not a missing salon mapping. Those rows read as
+ * non-location exception, not a missing location mapping. Those rows read as
  * "[Woven PositionName] + [their Woven scope]": "All locations" only when
  * Woven says AllLocationAccess, otherwise what the affiliations actually show.
  * An unresolved location in their access (NE Omaha Q) is still counted under
@@ -124,9 +124,9 @@ export function mappingSummary(row: DirectoryRow): MappingSummary {
           : row.activeLocationCount > 1
             ? `${row.activeLocationCount} locations`
             : `${row.primaryLocationName ?? "Primary location"} only`;
-    const notes = [`${row.primaryLocationName ?? "This primary location"} is not a salon (approved exception).`];
-    if (!positionMapped && row.positionId !== null) notes.push("Position not yet mapped to an Ask Sunny role.");
-    if (row.hasUnmappedLocation) notes.push("Access includes a location not yet mapped to a salon, still counted under Unmapped location.");
+    const notes = [`${row.primaryLocationName ?? "This primary location"} is not a location (approved exception).`];
+    if (!positionMapped && row.positionId !== null) notes.push("Position not yet mapped to an Ask Bubbles role.");
+    if (row.hasUnmappedLocation) notes.push("Access includes a location not yet mapped to a location, still counted under Unmapped location.");
     return { label: `${row.positionName ?? "No position"} + ${scope}`, tone: "neutral", note: notes.join(" ") };
   }
 
@@ -207,7 +207,7 @@ export function queryDirectory(rows: readonly DirectoryRow[], query: DirectoryQu
     if (row.primaryLocationId) {
       locations.set(
         row.primaryLocationId,
-        row.primarySalonNumber ? `${row.primarySalonNumber} · ${row.primaryLocationName ?? ""}`.trim() : row.primaryLocationName ?? row.primaryLocationId,
+        row.primaryLocationCode ? `${row.primaryLocationCode} · ${row.primaryLocationName ?? ""}`.trim() : row.primaryLocationName ?? row.primaryLocationId,
       );
     }
     for (const l of [...row.additionalLocations, ...row.temporaryOrExpiringLocations]) {
@@ -277,7 +277,7 @@ export function domainEligible(email: string | null, domains: readonly string[])
 
 /** Rows where a later phase would do something. Read-only: this changes nobody. */
 export function accessDrift(rows: readonly AccessPreviewRow[]): AccessPreviewRow[] {
-  return rows.filter((r) => r.wouldDeactivate || r.roleDiffers || r.primarySalonDiffers || r.wouldProvision);
+  return rows.filter((r) => r.wouldDeactivate || r.roleDiffers || r.primaryLocationDiffers || r.wouldProvision);
 }
 
 /**
@@ -286,7 +286,7 @@ export function accessDrift(rows: readonly AccessPreviewRow[]): AccessPreviewRow
  * Eligible only when every condition a later phase would need holds: exactly
  * one directory employee has the email, they are active, the address is at a
  * configured login domain, their position is confirmed with a role, and their
- * primary location is mapped to a salon. Anything missing is "held for
+ * primary location is mapped to a location. Anything missing is "held for
  * review"; not active, not at a login domain or not in Woven is "not eligible".
  * With no login domain configured, nobody is eligible.
  */
@@ -328,7 +328,7 @@ export function evaluateEligibility(
     employmentStatus: m.employmentStatus,
     wouldCreateRole: m.positionMappingConfirmed ? m.mappedRole : null,
     wouldCreateScopeLevel: m.positionMappingConfirmed ? m.mappedScopeLevel : null,
-    primarySalonNumber: m.mappedPrimarySalonNumber,
+    primaryLocationCode: m.mappedPrimaryLocationCode,
   };
 
   if (m.employmentStatus !== "active") {
@@ -342,15 +342,15 @@ export function evaluateEligibility(
   if (reasons.length > 0) return { ...base, verdict: "not_eligible", reasons, employee };
 
   const held: string[] = [];
-  if (m.hasLogin) held.push("An Ask Sunny login already exists for this email; provisioning would not create another.");
-  if (!m.positionMappingConfirmed) held.push("Their Woven position has no confirmed Ask Sunny role yet.");
-  if (m.mappedPrimarySalonNumber === null) held.push("Their primary Woven location is not matched to an Ask Sunny salon yet.");
+  if (m.hasLogin) held.push("An Ask Bubbles login already exists for this email; provisioning would not create another.");
+  if (!m.positionMappingConfirmed) held.push("Their Woven position has no confirmed Ask Bubbles role yet.");
+  if (m.mappedPrimaryLocationCode === null) held.push("Their primary Woven location is not matched to an Ask Bubbles location yet.");
   if (held.length > 0) return { ...base, verdict: "held_for_review", reasons: held, employee };
 
   return {
     ...base,
     verdict: "eligible",
-    reasons: ["Active in Woven, at a login-email domain, with a confirmed role and a mapped salon."],
+    reasons: ["Active in Woven, at a login-email domain, with a confirmed role and a mapped location."],
     employee,
   };
 }

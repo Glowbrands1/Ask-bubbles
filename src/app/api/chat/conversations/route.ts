@@ -38,7 +38,7 @@ import {
  * THE GATE IS `ask_questions`, for the reason `/api/chat/feedback` uses the
  * same one: the permission to have had a conversation is the permission to
  * have its history. Anything narrower would create a class of user who can use
- * Ask Sunny and cannot find what they asked yesterday — and the frontline
+ * Ask Bubbles and cannot find what they asked yesterday — and the frontline
  * Employee holding `ask_questions` is exactly who a second device serves.
  *
  * Guard order matches every other route here: mode, configuration,
@@ -49,7 +49,7 @@ import {
  * WHAT A BODY MAY NOT CARRY
  * ============================================================================
  *
- * NOT THE IDENTITY. No `userId`, no email, no role, no salon. `ConversationPayload`
+ * NOT THE IDENTITY. No `userId`, no email, no role, no location. `ConversationPayload`
  * has no field for any of them, so there is nothing here to read even by
  * mistake — the same separation `/api/chat` makes for the form proposal, and
  * for the same reason: the two facts a caller must never assert about itself
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
     if (!parsed.ok) {
       throw new AiError(
         "bad_request",
-        "That conversation could not be saved: it is not a conversation Ask Sunny recorded.",
+        "That conversation could not be saved: it is not a conversation Ask Bubbles recorded.",
         400,
       );
     }

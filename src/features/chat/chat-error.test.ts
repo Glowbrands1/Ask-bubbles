@@ -68,7 +68,7 @@ describe("toChatTurnError", () => {
   });
 
   it("maps a model refusal to a non-retryable state", () => {
-    const turn = toChatTurnError(new AiError("refused", "Sunny could not…", 422), QUESTION);
+    const turn = toChatTurnError(new AiError("refused", "Bubbles could not…", 422), QUESTION);
     expect(turn.kind).toBe("model_failed");
     expect(turn.retryable).toBe(false);
   });
@@ -131,7 +131,7 @@ describe("chatErrorTitle", () => {
     const titles = kinds.map(chatErrorTitle);
     for (const title of titles) {
       expect(title.length).toBeGreaterThan(3);
-      // No error codes or jargon in front of a salon manager.
+      // No error codes or jargon in front of a location manager.
       expect(title).not.toMatch(/[_]|error|exception/i);
     }
     // model_failed and unknown deliberately share a heading; the rest differ.

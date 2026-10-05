@@ -171,7 +171,7 @@ export function ConversationList({
                         className={cn(
                           "flex w-full items-start gap-2 rounded-[10px] border border-border bg-surface px-2.5 py-2 pr-8 text-left leading-tight transition-shadow",
                           active
-                            ? "border-l-[3px] border-l-brand-yellow shadow-raised"
+                            ? "border-l-[3px] border-l-brand-accent shadow-raised"
                             : "shadow-soft hover:shadow-raised",
                         )}
                       >
@@ -247,7 +247,7 @@ export function ConversationList({
           title="Clear chat history?"
           description={
             accountHistory
-              ? "Removes every conversation from your Ask Sunny account and from this browser."
+              ? "Removes every conversation from your Ask Bubbles account and from this browser."
               : "Removes every conversation stored in this browser."
           }
         >
@@ -255,15 +255,15 @@ export function ConversationList({
             {accountHistory ? (
               <>
                 This permanently deletes all {conversations.length} conversations
-                from your Ask Sunny history, on this and every other device you
-                sign in on. Documents, forms, and everything else in Ask Sunny are
+                from your Ask Bubbles history, on this and every other device you
+                sign in on. Documents, forms, and everything else in Ask Bubbles are
                 unaffected.
               </>
             ) : (
               <>
                 This permanently deletes all {conversations.length} conversations
                 from your history. Documents, forms, and everything else in Ask
-                Sunny are unaffected.
+                Bubbles are unaffected.
               </>
             )}
           </p>
@@ -297,7 +297,7 @@ export function ConversationList({
                   setClearError(
                     error instanceof Error && error.message
                       ? error.message
-                      : "Ask Sunny could not clear your history just now. Nothing was deleted.",
+                      : "Ask Bubbles could not clear your history just now. Nothing was deleted.",
                   );
                 } finally {
                   setClearing(false);

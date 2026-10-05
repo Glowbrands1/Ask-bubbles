@@ -11,9 +11,9 @@ import { beforeAll, describe, expect, it } from "vitest";
  * ============================================================================
  *
  * Runs only on the disposable local stack (`scripts/local-stack/up.sh`,
- * `ASK_SUNNY_LOCAL_STACK=1`), where every migration has been applied as the
+ * `ASK_BUBBLES_LOCAL_STACK=1`), where every migration has been applied as the
  * non-superuser `postgres` role, exactly as in the Supabase project. Never
- * against the Ask Sunny project.
+ * against the Ask Bubbles project.
  *
  * Proves: the backfill links protected overrides with every managed flag off
  * and marks unmatched accounts not-Woven-managed; the link constraints refuse
@@ -22,7 +22,7 @@ import { beforeAll, describe, expect, it } from "vitest";
  * `app_users` and `auth.users` byte-for-byte unchanged.
  */
 
-const ENABLED = process.env.ASK_SUNNY_LOCAL_STACK === "1";
+const ENABLED = process.env.ASK_BUBBLES_LOCAL_STACK === "1";
 const URL_ = process.env.LOCAL_STACK_URL ?? "";
 const ANON = process.env.LOCAL_ANON_KEY ?? "";
 const SERVICE = process.env.LOCAL_SERVICE_ROLE_KEY ?? "";
@@ -89,13 +89,13 @@ describe.skipIf(!ENABLED)("stage 1 on real Postgres (local stack)", { timeout: 6
       ('${ids.linkedSd}', 'linked-${run}@gmail.test', 'Linked SD', 'location_manager', 'active', 'location', 'loc-0307'),
       ('${ids.candidate2}', 'candidate2-${run}@gmail.test', 'Candidate Two', 'district_manager', 'active', 'global', null)`);
 
-    sql(`insert into public.salons (salon_number, store_name) values ('0307', 'NE Grand Island'), ('0394', 'KC Liberty') on conflict do nothing`);
-    sql(`insert into public.woven_location_map (woven_location_id, woven_location_name, status, salon_id, reviewed_by, reviewed_at)
-         select 'WL-GI-${run}', 'NE Grand Island', 'mapped', id, 'test', now() from public.salons where salon_number = '0307'`);
-    sql(`insert into public.woven_location_map (woven_location_id, woven_location_name, status, salon_id, reviewed_by, reviewed_at)
-         select 'WL-LIB-${run}', 'KC Liberty', 'mapped', id, 'test', now() from public.salons where salon_number = '0394'`);
-    sql(`insert into public.woven_position_map (woven_position_id, woven_position_name, status, ask_sunny_role, ask_sunny_scope_level, hierarchy_rank, reviewed_by, reviewed_at)
-         values ('WP-SD-${run}', 'Salon Director', 'mapped', 'location_manager', 'location', 30, 'test', now()),
+    sql(`insert into public.locations (location_code, store_name) values ('0307', 'NE Grand Island'), ('0394', 'KC Liberty') on conflict do nothing`);
+    sql(`insert into public.woven_location_map (woven_location_id, woven_location_name, status, location_id, reviewed_by, reviewed_at)
+         select 'WL-GI-${run}', 'NE Grand Island', 'mapped', id, 'test', now() from public.locations where location_code = '0307'`);
+    sql(`insert into public.woven_location_map (woven_location_id, woven_location_name, status, location_id, reviewed_by, reviewed_at)
+         select 'WL-LIB-${run}', 'KC Liberty', 'mapped', id, 'test', now() from public.locations where location_code = '0394'`);
+    sql(`insert into public.woven_position_map (woven_position_id, woven_position_name, status, mapped_role, mapped_scope_level, hierarchy_rank, reviewed_by, reviewed_at)
+         values ('WP-SD-${run}', 'Location Director', 'mapped', 'location_manager', 'location', 30, 'test', now()),
                 ('WP-OWN-${run}', 'Owner', 'unmapped', null, null, null, null, null)`);
 
     const hash = "0".repeat(64);

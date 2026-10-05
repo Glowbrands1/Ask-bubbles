@@ -278,8 +278,8 @@ describe("Forgot Password asks for the new path", () => {
      * and this project issues both shapes.
      */
     const { recoveryUrlFor } = await import("@/lib/auth/routes");
-    expect(recoveryUrlFor("https://ask-sunny.vercel.app")).toBe(
-      "https://ask-sunny.vercel.app/reset-password",
+    expect(recoveryUrlFor("https://ask-bubbles.vercel.app")).toBe(
+      "https://ask-bubbles.vercel.app/reset-password",
     );
     expect(recoveryUrlFor("https://pr-42.vercel.app/")).toBe(
       "https://pr-42.vercel.app/reset-password",

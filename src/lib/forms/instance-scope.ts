@@ -21,12 +21,12 @@ import type { Permission } from "@/types";
  * AN HR RECORD THAT ALREADY EXISTS IS NOT PUBLIC TO EVERY MANAGER
  * ============================================================================
  *
- * THE GAP. Phase 2 authorized the salon a form is CREATED against. Nothing
- * authorized the salon of a form being READ, EDITED, DRAFTED, FINALIZED,
+ * THE GAP. Phase 2 authorized the location a form is CREATED against. Nothing
+ * authorized the location of a form being READ, EDITED, DRAFTED, FINALIZED,
  * ARCHIVED, DELETED or EXPORTED. Every one of those routes took an id from the
- * URL and served the row, so a Salon Director at salon A who knew a UUID could
+ * URL and served the row, so a Location Director at location A who knew a UUID could
  * open — and edit, and finalize, and delete — a disciplinary record belonging to
- * salon B. Form Monitoring listed every form in the company to anybody holding
+ * location B. Form Monitoring listed every form in the company to anybody holding
  * `view_form_monitoring`, which is every manager role.
  *
  * Creation being locked while everything after it was open is the worst shape
@@ -36,11 +36,11 @@ import type { Permission } from "@/types";
  * A REFUSAL IS A 404, NOT A 403 — AND THAT IS THE OPPOSITE OF CREATION
  * ============================================================================
  *
- * Creating names a salon the CALLER CHOSE, so a refusal there is a 403 that
- * says which salon and why: they need to know.
+ * Creating names a location the CALLER CHOSE, so a refusal there is a 403 that
+ * says which location and why: they need to know.
  *
  * Reading names a UUID and nothing else. A 403 would confirm that the UUID
- * names a real form at a salon they do not cover — an existence oracle over
+ * names a real form at a location they do not cover — an existence oracle over
  * other people's HR records, one guess at a time. So an unauthorized instance
  * answers exactly as a missing one does: same status, same wording. The caller
  * cannot tell the difference, which is the point.
@@ -49,20 +49,20 @@ import type { Permission } from "@/types";
  * WHO MAY TOUCH WHICH FORM
  * ============================================================================
  *
- *   salon actor      the form's salon must be one they are assigned to
+ *   location actor      the form's location must be one they are assigned to
  *   global actor     everything — that is what global means
  *   district/region  FAILS CLOSED, exactly as creation does: their
  *                    `primaryAreaId` is an area id and nothing expands an area
- *                    into its salons, so "is this salon in your district?" has
+ *                    into its locations, so "is this location in your district?" has
  *                    no truthful answer yet
  *   demo (no scope)  not enforced — a scope the browser asserted about itself
  *                    is not a security control, and preview QA needs the data
  *
- * THE NULL-LOCATION RULE. A form can legitimately carry no salon: Phase 2 lets
+ * THE NULL-LOCATION RULE. A form can legitimately carry no location: Phase 2 lets
  * a manager create one without naming a location, and older rows predate the
  * column being used. Refusing everybody would strand real work, and allowing
  * everybody would make `locationId: null` a way to opt out of the boundary.
- * So a form with no salon belongs to WHOEVER CREATED IT, and to global actors.
+ * So a form with no location belongs to WHOEVER CREATED IT, and to global actors.
  * That keeps every manager's own work reachable without opening anybody else's.
  */
 
@@ -98,18 +98,18 @@ export function actorMaySeeInstance(actor: FormsActor, instance: InstanceRow): b
    * used to be tested FIRST, above the location rule, so authorship overrode
    * assignment:
    *
-   *   A manager files a coaching record at salon A.
-   *   They transfer, and their scope becomes salon B.
-   *   Their AccessScope no longer covers salon A at all.
+   *   A manager files a coaching record at location A.
+   *   They transfer, and their scope becomes location B.
+   *   Their AccessScope no longer covers location A at all.
    *   They could still open, edit, finalize, archive and delete that record —
    *   and download its PDF — because they had once created it.
    *
-   * Authorization here answers "may this person see this salon's HR records
+   * Authorization here answers "may this person see this location's HR records
    * TODAY", and the answer changed when they moved. It also quietly punched
    * through the district/region fail-closed rule for any historical record
    * those actors had created themselves.
    *
-   * So a record that names a salon is decided by the salon, and nothing else.
+   * So a record that names a location is decided by the location, and nothing else.
    */
   if (instance.locationId) {
     // Area scopes resolve through the roster; a location not on it fails closed.
@@ -121,13 +121,13 @@ export function actorMaySeeInstance(actor: FormsActor, instance: InstanceRow): b
    * AND THIS IS WHERE THE CREATOR EXCEPTION BELONGS
    * ==========================================================================
    *
-   * A record naming NO salon has no scope to be decided by. Phase 2 lets a
+   * A record naming NO location has no scope to be decided by. Phase 2 lets a
    * manager create one without a location, and older rows predate the column
    * being used. Refusing everybody would strand real work; allowing everybody
    * would make `locationId: null` the way to opt out of the boundary.
    *
    * So it belongs to whoever created it — and to nobody else below global.
-   * That is a narrow exception about an ABSENT salon, not an override of a
+   * That is a narrow exception about an ABSENT location, not an override of a
    * present one.
    */
   return instance.createdBy === actor.id;
@@ -182,12 +182,12 @@ export function visibleInstances<T extends InstanceRow>(
  * ============================================================================
  *
  * `view_form_monitoring` is the generic "see the forms" permission, and an
- * Assistant Salon Director holds it so they can see outstanding coaching and
+ * Assistant Location Director holds it so they can see outstanding coaching and
  * follow-ups. The Resignation/Exit Form is different in kind: it records
  * payroll deduction, minimum wage, bonus forfeiture and rehire eligibility.
  * So a filed exit form is readable — viewed, downloaded, edited, listed,
  * counted — only by a role that holds its CREATION permission, and the normal
- * salon scoping still applies on top.
+ * location scoping still applies on top.
  *
  * Keyed on the layout family, which every instance row carries through the
  * `form_instance_overview` view; `create_exit_form` is the permission the
@@ -273,7 +273,7 @@ export async function authorizeInstance(
   /*
    * A RESTRICTED FORM IS NOT THERE FOR SOMEBODY WHO MAY NOT CREATE IT — for
    * every action, reading included. The answer is the same 404 a missing or
-   * out-of-scope form gets, so an Assistant Salon Director trying exit-form ids
+   * out-of-scope form gets, so an Assistant Location Director trying exit-form ids
    * learns nothing about which exist.
    */
   const restricted = readPermissionFor(loaded.instance);

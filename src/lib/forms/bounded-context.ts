@@ -47,7 +47,7 @@ export const JOIN = "\n\n";
 
 /** Appended when the CURRENT turn alone is longer than the whole budget. */
 export const TRUNCATION_MARKER =
-  "\n[This message was longer than Ask Sunny reads at once and was cut here.]";
+  "\n[This message was longer than Ask Bubbles reads at once and was cut here.]";
 
 export interface BoundedTurn {
   /** Browser-local message id. Provenance only; absent is fine. */

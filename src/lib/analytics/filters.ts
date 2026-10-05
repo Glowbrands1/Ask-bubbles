@@ -11,6 +11,7 @@
  * Client-safe. No database client, no secret, no server-only import.
  */
 
+import { COMPANY_DISTRICTS, locationIdsInArea } from "@/lib/locations";
 import { ROLES } from "@/lib/permissions";
 import type { Role } from "@/types";
 
@@ -42,14 +43,14 @@ export interface AnalyticsFilters {
   from: string | null;
   to: string | null;
   district: string | null;
-  salonId: string | null;
+  locationId: string | null;
   role: Role | null;
   actorId: string | null;
   /**
    * Show only the rows with no activity in the window.
    *
    * A VIEW FILTER, not a query filter, and the distinction is deliberate: the
-   * database functions already return every salon and every leader including
+   * database functions already return every location and every leader including
    * the silent ones, so "inactive only" is a predicate over rows that have
    * already arrived rather than a seventh argument on five SQL functions. It
    * cannot change a total, which is what keeps "3 of 15 active" honest while
@@ -63,7 +64,7 @@ export const EMPTY_FILTERS: AnalyticsFilters = {
   from: null,
   to: null,
   district: null,
-  salonId: null,
+  locationId: null,
   role: null,
   actorId: null,
   inactiveOnly: false,
@@ -73,7 +74,7 @@ export const EMPTY_FILTERS: AnalyticsFilters = {
 export function hasActiveFilters(filters: AnalyticsFilters): boolean {
   return (
     filters.district !== null ||
-    filters.salonId !== null ||
+    filters.locationId !== null ||
     filters.role !== null ||
     filters.actorId !== null ||
     filters.from !== null ||
@@ -86,6 +87,7 @@ export function hasActiveFilters(filters: AnalyticsFilters): boolean {
 /* ------------------------------------------------------------ parsing ---- */
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const LOCATION_ID = /^loc-[A-Za-z0-9-]{1,16}$/;
 const UUID =
   /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
@@ -97,7 +99,7 @@ function first(value: string | string[] | undefined): string | null {
 /**
  * Read the filters out of a request's search params.
  *
- * EVERY VALUE IS VALIDATED INTO ITS OWN TYPE OR DROPPED. `salon` and `leader`
+ * EVERY VALUE IS VALIDATED INTO ITS OWN TYPE OR DROPPED. `location` and `leader`
  * must look like uuids and `role` must be a role this build knows, because both
  * are passed to a database function as typed arguments — a junk value should
  * come back as "no filter" rather than as an error page from Postgres, and an
@@ -114,7 +116,7 @@ export function parseFilters(
   const fromRaw = first(params.from);
   const toRaw = first(params.to);
   const roleRaw = first(params.role);
-  const salonRaw = first(params.salon);
+  const locationRaw = first(params.location);
   const leaderRaw = first(params.leader);
   const districtRaw = first(params.district);
   const inactiveRaw = first(params.inactive);
@@ -131,13 +133,26 @@ export function parseFilters(
      */
     from: from && to ? from : null,
     to: from && to ? to : null,
-    district: districtRaw && districtRaw.trim() !== "" ? districtRaw : null,
-    salonId: salonRaw && UUID.test(salonRaw) ? salonRaw : null,
+    district:
+      districtRaw && COMPANY_DISTRICTS.some((d) => d.id === districtRaw) ? districtRaw : null,
+    locationId: locationRaw && LOCATION_ID.test(locationRaw) ? locationRaw : null,
     role: ROLES.includes(roleRaw as Role) ? (roleRaw as Role) : null,
     actorId: leaderRaw && UUID.test(leaderRaw) ? leaderRaw : null,
     /* Exactly "1", so a stray `?inactive=maybe` is off rather than on. */
     inactiveOnly: inactiveRaw === "1",
   };
+}
+
+/**
+ * The location filter the database functions take: null for "no filter", or
+ * the exact location ids. A district resolves through the configured roster;
+ * a district with no known locations resolves to an EMPTY list, which matches
+ * nothing — an unknown area never widens to everything.
+ */
+export function locationFilterFor(filters: AnalyticsFilters): string[] | null {
+  if (filters.locationId) return [filters.locationId];
+  if (filters.district) return locationIdsInArea(filters.district);
+  return null;
 }
 
 /** The inverse: filters back into a query string, omitting everything unset. */
@@ -149,7 +164,7 @@ export function serializeFilters(filters: AnalyticsFilters): string {
     params.set("to", filters.to);
   }
   if (filters.district) params.set("district", filters.district);
-  if (filters.salonId) params.set("location", filters.salonId);
+  if (filters.locationId) params.set("location", filters.locationId);
   if (filters.role) params.set("role", filters.role);
   if (filters.actorId) params.set("leader", filters.actorId);
   if (filters.inactiveOnly) params.set("inactive", "1");
@@ -181,7 +196,7 @@ export interface ResolvedWindow {
  * calendar month of a different length.
  *
  * `anchor` is the business day, not the host's: the app decides what "today" is
- * in the salons' timezone, and an analytics window that rolled over at 8pm
+ * in the locations' timezone, and an analytics window that rolled over at 8pm
  * Eastern would put this evening's activity into tomorrow.
  */
 export function resolveWindow(

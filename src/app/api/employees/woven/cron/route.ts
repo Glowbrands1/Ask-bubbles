@@ -43,7 +43,7 @@ import { recordAccessShadowRun } from "@/lib/employees/woven/access/shadow";
  *   5. The run lock — at most one sync at a time, enforced by Postgres.
  *
  * WHAT A RUN DOES NOT DO, even when all five are open: change `app_users`, a
- * role, a scope, a salon assignment or a login; delete anybody; or write to
+ * role, a scope, a location assignment or a login; delete anybody; or write to
  * Woven. See `src/lib/employees/woven/sync.ts`.
  *
  * THE RESPONSE carries codes and counts only — never a name or an email.

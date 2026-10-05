@@ -63,7 +63,7 @@ const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
  * against an hour. Two cards would put a scroll between them.
  *
  * THE CALENDAR IS FILLED, NOT JUST THE BUCKETS THAT HAVE DATA. The query
- * returns only rows with activity, so a Sunday nobody used Ask Sunny is absent
+ * returns only rows with activity, so a Sunday nobody used Ask Bubbles is absent
  * rather than zero. Rendering the response as-is would silently drop Sunday
  * from the chart and shift every other bar left — which reads as a week with
  * six days in it.
@@ -118,7 +118,7 @@ export function WhenPanel({
                     height already carries the whole comparison — so only the
                     answer to "which day" is picked out.
                   */
-                  day === busiestDay ? "bg-brand-yellow" : "bg-surface-muted",
+                  day === busiestDay ? "bg-brand-accent" : "bg-surface-muted",
                 )}
                 style={{
                   height: `${Math.max(4, peakDay > 0 ? (count / peakDay) * 80 : 0)}px`,
@@ -142,7 +142,7 @@ export function WhenPanel({
             <div
               key={hour}
               title={`${clock(hour)} — ${formatNumber(count)}`}
-              className="min-w-0 flex-1 rounded-[2px] bg-brand-yellow"
+              className="min-w-0 flex-1 rounded-[2px] bg-brand-accent"
               style={{
                 /*
                   OPACITY CARRIES THE VALUE AND EVERY BAR KEEPS ITS FULL HEIGHT,
@@ -172,7 +172,7 @@ export function WhenPanel({
 /* ================================================================= surfaces */
 
 /**
- * WHERE ASK SUNNY IS BEING USED.
+ * WHERE ASK BUBBLES IS BEING USED.
  *
  * The question the product could not answer before this release: nine surfaces
  * draw an ask bar and every one of them wrote an identical event.
@@ -199,7 +199,7 @@ export function SurfacesPanel({ rows }: { rows: SurfaceRow[] }) {
     <ScrollTable>
       <table className="data-table min-w-[620px]">
         <caption className="sr-only">
-          Ask Sunny usage by surface, with the rating each surface earned.
+          Ask Bubbles usage by surface, with the rating each surface earned.
         </caption>
         <thead>
           <tr>
@@ -224,7 +224,7 @@ export function SurfacesPanel({ rows }: { rows: SurfaceRow[] }) {
                 <div className="flex items-center gap-2">
                   <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-muted">
                     <span
-                      className="block h-full rounded-full bg-brand-yellow"
+                      className="block h-full rounded-full bg-brand-accent"
                       style={{ width: `${(row.events / largest) * 100}%` }}
                     />
                   </span>
@@ -248,7 +248,7 @@ export function SurfacesPanel({ rows }: { rows: SurfaceRow[] }) {
                 {row.averageRating !== null ? (
                   <span className="inline-flex items-center gap-1">
                     {row.averageRating.toFixed(1)}
-                    <Star className="size-3 fill-brand-yellow text-brand-yellow" aria-hidden />
+                    <Star className="size-3 fill-brand-accent text-brand-accent" aria-hidden />
                   </span>
                 ) : (
                   <span className="text-muted-foreground">No data yet</span>
@@ -272,8 +272,8 @@ export function SurfacesPanel({ rows }: { rows: SurfaceRow[] }) {
  * ============================================================================
  *
  * The dashboard this is modelled on prints a verbatim question beside each
- * topic. Ask Sunny cannot, and will not: `activity_events` has no column for a
- * prompt, an answer or an excerpt, because managers ask Ask Sunny about named
+ * topic. Ask Bubbles cannot, and will not: `activity_events` has no column for a
+ * prompt, an answer or an excerpt, because managers ask Ask Bubbles about named
  * employees' attendance and performance. An adoption dashboard needs to know
  * THAT somebody asked and what it was about, never what they typed.
  *
@@ -350,7 +350,7 @@ export function TopicsPanel({
                     <div className="flex items-center gap-2">
                       <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-muted">
                         <span
-                          className="block h-full rounded-full bg-brand-yellow"
+                          className="block h-full rounded-full bg-brand-accent"
                           style={{ width: `${(row.events / largest) * 100}%` }}
                         />
                       </span>
@@ -394,7 +394,7 @@ export function TopicsPanel({
       </ScrollTable>
 
       <p className="text-[11.5px] leading-relaxed text-muted-foreground">
-        No question text is stored anywhere in Ask Sunny, so there is no verbatim
+        No question text is stored anywhere in Ask Bubbles, so there is no verbatim
         example column — “Last asked” answers the same question without putting a
         manager’s HR conversation on this screen.
         {acknowledgements > 0 ? (
@@ -417,7 +417,7 @@ export function TopicsPanel({
  * REPORT EXTRACTION — runs and outcomes, and deliberately no accuracy rating.
  *
  * THE REFERENCE DASHBOARD SHOWS A STAR RATING PER EXTRACTION ENGINE, collected
- * from managers approving extracted stats in a chat. Ask Sunny has no such flow
+ * from managers approving extracted stats in a chat. Ask Bubbles has no such flow
  * and no such column: ingestion is machine work behind a credential, and nobody
  * is asked to grade it.
  *
@@ -496,7 +496,7 @@ export function ExtractionPanel({ rows }: { rows: ExtractionRow[] }) {
         <strong className="font-bold text-foreground">
           No accuracy rating: no data yet.
         </strong>{" "}
-        Nothing in Ask Sunny asks a person to grade an extraction, so there is
+        Nothing in Ask Bubbles asks a person to grade an extraction, so there is
         none to report. A run that succeeded is a run that completed — not a run
         that read the right column — and presenting the success rate as accuracy
         would claim a measure this product does not collect.

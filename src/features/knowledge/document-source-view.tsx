@@ -13,7 +13,7 @@ import { DocumentDetail } from "./document-detail";
 
 /**
  * ============================================================================
- * ONE DOCUMENT, BECAUSE SUNNY CITED IT — NOT A WAY INTO THE LIBRARY
+ * ONE DOCUMENT, BECAUSE BUBBLES CITED IT — NOT A WAY INTO THE LIBRARY
  * ============================================================================
  *
  * The Knowledge Base SCREEN is administrators-only: the inventory, the counts,
@@ -21,7 +21,7 @@ import { DocumentDetail } from "./document-detail";
  * administration of the corpus.
  *
  * This is the other thing people were doing on that screen, and the reason
- * locking it would otherwise have broken Ask Sunny for everyone below Admin: a
+ * locking it would otherwise have broken Ask Bubbles for everyone below Admin: a
  * citation under an answer is a promise that the quote came from somewhere, and
  * a citation nobody can open is a claim they have to take on trust. Every role
  * that can be given an answer can open the document behind it.
@@ -46,7 +46,7 @@ import { DocumentDetail } from "./document-detail";
  *
  * PREVIEW AND DOWNLOAD STAY. They run through the original-file route, which
  * asks for `view_knowledge` and always has. Somebody who may read the policy
- * through Sunny is not given anything new by being able to open the page it was
+ * through Bubbles is not given anything new by being able to open the page it was
  * quoted from.
  */
 /**
@@ -143,7 +143,7 @@ export function DocumentSourceView({ documentId }: { documentId: string }) {
            */
           description={
             problem ??
-            "The source behind this citation is no longer available. Ask Sunny the question again and the answer will cite what is in the library now."
+            "The source behind this citation is no longer available. Ask Bubbles the question again and the answer will cite what is in the library now."
           }
         />
       </PageShell>
@@ -155,7 +155,7 @@ export function DocumentSourceView({ documentId }: { documentId: string }) {
       <PageHeader
         eyebrow="Source document"
         title={resolved.title}
-        description="The document behind a citation in Sunny's answer."
+        description="The document behind a citation in Bubbles' answer."
       />
       <Card>
         <CardContent>

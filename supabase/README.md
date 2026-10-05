@@ -109,7 +109,7 @@ google_review_sync_runs                     (one row per accepted sync)
 Three things worth knowing before touching it:
 
 * **A Google store code is NOT a salon number.** They overlap without agreeing —
-  Google's 306 is KS Manhattan, ASK Sunny's 0306 is MO Kansas City Wornall — so
+  Google's 306 is KS Manhattan, ASK Bubbles' 0306 is MO Kansas City Wornall — so
   the mapping is a table with a foreign key and never a string transformation.
 * **`eligible_for_weekly_count` is GENERATED** (`rating >= 3`), so no query can
   disagree with the reporting directive.

@@ -12,7 +12,7 @@ import { isActivitySurface, type ActivitySurface } from "./taxonomy";
  * THE FEEDBACK QUEUE'S OWN FILTERS, on top of the shared analytics ones.
  *
  * SEPARATE FROM `AnalyticsFilters` DELIBERATELY. Those five — date, district,
- * salon, role, leader — narrow every panel on every tab, and putting `status`
+ * location, role, leader — narrow every panel on every tab, and putting `status`
  * or `rating` beside them would mean the filter bar offered "3 stars" while the
  * By Location table was on screen, which narrows nothing and explains nothing.
  * These are read only by the Feedback view.

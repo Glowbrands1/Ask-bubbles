@@ -9,7 +9,7 @@ import { ChatSyncFailure } from "./client";
  * The contract this exists to hold, in the order it matters:
  *
  *   A FAILED SAVE COSTS NOTHING THAT WAS ON SCREEN. The question the person
- *   typed and the answer Sunny gave are already in React state and already in
+ *   typed and the answer Bubbles gave are already in React state and already in
  *   IndexedDB before this is ever called. Nothing here writes to either, and
  *   nothing here can remove either. The worst outcome of a total server outage
  *   is the product behaving exactly as it did before this phase.

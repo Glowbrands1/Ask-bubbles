@@ -77,16 +77,16 @@ function recorder(options: { draftFails?: boolean; createFails?: boolean } = {})
       body: init.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {},
     });
     if (url.endsWith("/draft")) {
-      if (options.draftFails) throw new Error("Ask Sunny could not be reached.");
+      if (options.draftFails) throw new Error("Ask Bubbles could not be reached.");
       return { values: {}, checked: {}, withheld: [] };
     }
-    if (options.createFails) throw new Error("That salon is not one you are assigned to.");
+    if (options.createFails) throw new Error("That location is not one you are assigned to.");
     return { instance: { id: "inst-42" } };
   });
   return { calls, call };
 }
 
-describe("11-12. the canonical endpoint is called, with source ask_sunny", () => {
+describe("11-12. the canonical endpoint is called, with source assistant", () => {
   it("posts to /api/forms/instances", async () => {
     const { calls, call } = recorder();
     await createInlineForm({ proposal: proposal(), messages: [ACCOUNT], call, onCreated: () => {} });
@@ -191,7 +191,7 @@ describe("13. the proposal selects an intent and supplies nothing else", () => {
     /*
      * Every one of these would be a browser telling the server something the
      * server must decide: the version is pinned from the published current
-     * version, status is always `draft`, and a salon display name would come
+     * version, status is always `draft`, and a location display name would come
      * from `DEMO_LOCATIONS`.
      */
     const { calls, call } = recorder();
@@ -225,8 +225,8 @@ describe("19-20. the existing drafting endpoint is reused, with manager words on
   });
 
   it("does not send an assistant turn as factual HR input", async () => {
-    const sunny: ChatMessage = {
-      id: "msg-sunny",
+    const bubbles: ChatMessage = {
+      id: "msg-bubbles",
       role: "assistant",
       content: "Understood — was this Jane Kowalski, and was it three occasions?",
       createdAt: "2026-01-05T10:00:00.000Z",
@@ -234,8 +234,8 @@ describe("19-20. the existing drafting endpoint is reused, with manager words on
 
     const { calls, call } = recorder();
     await createInlineForm({
-      proposal: proposal({ sourceMessageIds: [ACCOUNT.id, sunny.id] }),
-      messages: [ACCOUNT, sunny],
+      proposal: proposal({ sourceMessageIds: [ACCOUNT.id, bubbles.id] }),
+      messages: [ACCOUNT, bubbles],
       call,
       onCreated: () => {},
     });
@@ -448,7 +448,7 @@ describe("27-28. the existing draft endpoint's guards are still the ones running
   it("reads the field list from the STORED VERSION, not from the request", () => {
     // A client cannot widen what may be written by sending a longer list. The
     // instance now arrives through `authorizeInstance`, which loads it, applies
-    // the template's own permission and checks the form's salon — so the
+    // the template's own permission and checks the form's location — so the
     // stored-version guarantee is unchanged and the route is scoped too.
     expect(route).toContain('authorizeInstance(request, id, "edit")');
     expect(route).toContain("draftableFields(document, variantKey)");

@@ -85,7 +85,7 @@ export interface SinkMetadata {
   tags: string[];
 }
 
-/** Ask Sunny's knowledge base, as the engine sees it. */
+/** Ask Bubbles' knowledge base, as the engine sees it. */
 export interface KnowledgeSink {
   /** Creates the document, or replaces its content in place. Idempotent on `documentId`. */
   ingest(document: SinkDocument): Promise<{ reusedExistingEmbeddings: boolean }>;
@@ -115,7 +115,7 @@ export class SinkError extends Error {
   }
 }
 
-/** How a source describes one item to Ask Sunny's library. */
+/** How a source describes one item to Ask Bubbles' library. */
 export type DescribeItem = (item: ManifestItem) => SinkMetadata;
 
 export type ContentTypeList = readonly ContentType[];

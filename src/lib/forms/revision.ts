@@ -5,7 +5,7 @@ import { companyFormFor } from "@/config/company/forms";
  * A REDRAFT CHANGES WHAT WAS ASKED FOR, AND NOTHING ELSE
  * ============================================================================
  *
- * Production feedback: a manager asked Sunny to redraft a coaching form "with
+ * Production feedback: a manager asked Bubbles to redraft a coaching form "with
  * changes", and fields that had been on it — Follow-Up Observation, Progress
  * Level, Specific Evidence, the agreed follow-up timeframe — were gone.
  *
@@ -327,7 +327,7 @@ export function instructedFieldsIn(question: string, fields: readonly RevisableF
  * ============================================================================
  *
  * PRODUCTION QA OF PR #81: with no field named — "make the follow up 10 days
- * instead", "redraft it with changes" — every Sunny-written field was open, so
+ * instead", "redraft it with changes" — every Bubbles-written field was open, so
  * a model that rewrote Original Topic, Follow-Up Observation, Progress Level
  * and Next Step had all of it saved. Only the prompt stood in the way.
  *

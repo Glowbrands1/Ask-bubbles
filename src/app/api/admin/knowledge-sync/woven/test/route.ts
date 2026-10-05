@@ -8,8 +8,8 @@ import { testWovenConnection } from "@/lib/knowledge-sync/woven/sync";
  * POST /api/admin/knowledge-sync/woven/test — "Test Connection".
  *
  * Signs in to Woven Team with the configured integration account, confirms the
- * company is JB & Associates, and reads one small list. Writes nothing to Woven
- * or to Ask Sunny. The answer is a status, the company name and a count.
+ * company is the one named in WOVEN_TEAM_COMPANY, and reads one small list. Writes nothing to Woven
+ * or to Ask Bubbles. The answer is a status, the company name and a count.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

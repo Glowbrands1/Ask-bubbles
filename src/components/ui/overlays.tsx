@@ -84,7 +84,7 @@ export function DialogContent({
  * is pinned to one edge, full height, and it slides rather than rises. So this
  * is a variant, not a new primitive.
  *
- * WHY A SIDE PANEL AND NOT A MODAL, for the Ask Sunny reporting use: the
+ * WHY A SIDE PANEL AND NOT A MODAL, for the Ask Bubbles reporting use: the
  * question is ABOUT the numbers on the page. A centred modal covers them, so a
  * reader cannot check an answer against the chart it describes. An edge panel
  * leaves the dashboard visible beside it.

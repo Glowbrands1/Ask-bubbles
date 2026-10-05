@@ -327,7 +327,7 @@ export function TemplateEditorScreen({
       <PageHeader
         eyebrow="Authorized admin"
         title={`${template.name} template`}
-        description="Edit the document this form prints from. Click any wording and type; the chips show where Ask Sunny fills the draft."
+        description="Edit the document this form prints from. Click any wording and type; the chips show where Ask Bubbles fills the draft."
         actions={
           <Button asChild variant="ghost" size="sm">
             <Link href="/forms/templates">

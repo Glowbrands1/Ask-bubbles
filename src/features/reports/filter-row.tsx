@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils/cn";
  * ============================================================================
  *
  * The artifact draws six controls plus a near-black More Filters pill. Bed Usage
- * can offer eight — period, region, district, salon, equipment level, equipment
+ * can offer eight — period, region, district, location, equipment level, equipment
  * type, equipment and performance band — and eight capsules do not fit on one
  * line at 1440px, let alone on a laptop. So the secondary dimensions go behind
  * the pill and the row stays one line at desktop widths.
@@ -39,7 +39,7 @@ import { cn } from "@/lib/utils/cn";
  * A HIDDEN FILTER THAT IS HOLDING A SELECTION IS A LIE ABOUT THE NUMBERS, so
  * the pill carries a count of them and the row defaults to open when any is
  * set. That is why `activeCount` is a prop rather than an optional nicety: a
- * reader must never be looking at eleven of fifteen salons with nothing on
+ * reader must never be looking at eleven of fifteen locations with nothing on
  * screen saying so. The count also keeps the control honest when the row is
  * collapsed — "More filters · 2" is a different claim from "More filters".
  *
@@ -62,7 +62,7 @@ export function FilterRow({
   more?: React.ReactNode;
   /** How many of the `more` controls currently hold a selection. */
   activeCount?: number;
-  /** Right-aligned, e.g. "Show all salons". */
+  /** Right-aligned, e.g. "Show all locations". */
   action?: React.ReactNode;
   pending?: boolean;
   className?: string;

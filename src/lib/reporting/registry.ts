@@ -7,7 +7,7 @@ import type { ReportCadence } from "./read/freshness-line";
  * THE REPORT REGISTRY — the one place a report is declared
  * ============================================================================
  *
- * Ask Sunny registered each report family in five separate places (routes,
+ * Ask Bubbles registered each report family in five separate places (routes,
  * families, catalogue, parsers, chat routing). Here a report is ONE entry, and
  * every consumer — the Reports navigation, the `/reports` index, the report
  * page, chat routing and the "Ask about this report" panel — reads it:

@@ -23,8 +23,8 @@ import type { Role } from "@/types";
  */
 export function formsHeaders(role: Role, name: string): HeadersInit {
   return {
-    "x-ask-sunny-demo-role": role,
-    "x-ask-sunny-demo-name": name.slice(0, 60),
+    "x-ask-bubbles-demo-role": role,
+    "x-ask-bubbles-demo-name": name.slice(0, 60),
   };
 }
 

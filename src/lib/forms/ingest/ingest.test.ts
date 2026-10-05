@@ -153,7 +153,7 @@ describe("the Coaching Form as a flat PDF", () => {
   it("introduces none of the superseded options", () => {
     const everything = JSON.stringify(result.document);
     for (const stale of [
-      "Salon Tours",
+      "Location Tours",
       "Open-ended Questions",
       "Closing the Sale",
       "Client Engagement",

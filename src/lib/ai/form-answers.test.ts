@@ -11,11 +11,11 @@ import { answerInventoryQuestion, buildFormInventoryBlock } from "./form-answers
  * ============================================================================
  *
  * `form-proposal.test.ts` covers the cards. This covers the sentences: the
- * server-written lists Sunny gives when a manager asks which form to use, and
+ * server-written lists Bubbles gives when a manager asks which form to use, and
  * the block the model is handed for every other turn.
  *
  * The rule being pinned is the same one either way. The four Hiring &
- * Interview forms are withheld from what Sunny OFFERS — and they are still
+ * Interview forms are withheld from what Bubbles OFFERS — and they are still
  * published, still named honestly when somebody asks after one, and still in
  * the library whose categories the location answer describes.
  */
@@ -56,7 +56,7 @@ const TANNING_CONSULTANT = summary({
   key: "tanning-consultant-interview",
   name: "Tanning Consultant Interview Form",
   shortName: "TC Interview",
-  description: "The in-salon interview for a Tanning Consultant.",
+  description: "The in-location interview for a Tanning Consultant.",
   category: "hiring",
   layoutFamily: "interview",
   requiredPermission: "create_hiring_form",
@@ -104,7 +104,7 @@ const inventory = () =>
   buildFormInventory(LIBRARY, { role: "location_manager", scope: null });
 
 describe('"which form should I use?"', () => {
-  it("lists what a Salon Director can start, without the withheld four", () => {
+  it("lists what a Location Director can start, without the withheld four", () => {
     const answer = answerInventoryQuestion({
       question: { kind: "list" },
       inventory: inventory(),
@@ -166,7 +166,7 @@ describe('"where are the forms?"', () => {
 
     expect(answer!.content).toContain("HR & Performance Forms");
     expect(answer!.content).toContain("Hiring & Interview Forms");
-    expect(answer!.content).toContain("**Ask Sunny**, right here");
+    expect(answer!.content).toContain("**Ask Bubbles**, right here");
     expect(answer!.content).not.toContain("Create a Form");
   });
 });

@@ -52,7 +52,7 @@ export const ANSWER_MODE_LABEL: Record<AnswerMode, string> = {
  * as three permanently rendered lines above the fold. See MANAGER_NOTE_SHORT.
  */
 export const MANAGER_NOTE =
-  "Sunny supports your decision-making — it does not replace it. Verify official policy, HR, loss prevention, payroll, safety, and maintenance-risk actions through the right leadership channel before you act.";
+  "Bubbles supports your decision-making — it does not replace it. Verify official policy, HR, loss prevention, payroll, safety, and maintenance-risk actions through the right leadership channel before you act.";
 
 /**
  * The one line that stays visible.
@@ -63,7 +63,7 @@ export const MANAGER_NOTE =
  * part that can wait for a hover, and it is one keystroke away rather than gone.
  */
 export const MANAGER_NOTE_SHORT =
-  "Sunny supports your decision-making — it does not replace it.";
+  "Bubbles supports your decision-making — it does not replace it.";
 
 /**
  * THE SOURCE PROMISE, WHICH IS A CLAIM THE PRODUCT HAS TO KEEP.
