@@ -3,8 +3,8 @@
  * THE DATE A MANAGER TYPED, AS THE FORM'S DATE
  * ============================================================================
  *
- * The intakes only ever asked WHETHER a date had been given (`DATE_GIVEN` in
- * `corrective-action-intake.ts` and `epp-intake.ts`). Nothing read WHICH date,
+ * The intakes only ever asked WHETHER a date had been given (a `DATE_GIVEN`
+ * check in each form's intake). Nothing read WHICH date,
  * so a manager who answered "3. 9/11" got a form dated today — and the drafting
  * route, correctly trusting `form_date`, then rewrote the "September 11" in the
  * observation to today as well.
@@ -66,7 +66,7 @@ const DATE_IN_TEXT = new RegExp(
 
 /**
  * A date that names the REVIEW, not the incident — "follow up the week of
- * October 5". Kept in step with `FOLLOW_UP_GIVEN` in `epp-intake.ts`.
+ * October 5". Kept in step with any intake's own follow-up-date check.
  */
 const FOLLOW_UP_BEFORE =
   /\b(?:week of|follow[- ]?up|followup|re[- ]?eval\w*|revisit|check back|check[- ]?in)\b[^.\n]{0,25}$/i;

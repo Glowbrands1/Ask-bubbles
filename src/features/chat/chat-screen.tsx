@@ -492,7 +492,7 @@ export function ChatScreen() {
    * A CARD CLICK IS THE DECISION, AND IT SHOULD NOT HAVE TO BE MADE TWICE
    * ==========================================================================
    *
-   * Choosing "SDIT EPP" from the picker sends the same sentence a manager
+   * Choosing a review form from the picker sends the same sentence a manager
    * could have typed, and the answer comes back as a proposal card with its
    * own "Create draft" button — asking them to confirm a form they just
    * named.
@@ -730,7 +730,7 @@ export function ChatScreen() {
                 {/*
                   LOCATION AND WHO IS ASKING, and NOT the same name twice.
                   `managerDisplayName` is the account's title for a location login
-                  — "Location Director — MO Kansas City Wornall" — so concatenating it
+                  — "Store Manager — Example Location 101" — so concatenating it
                   with the location rendered the location twice.
                 */}
                 <p className="mt-1.5 text-[12px] text-band-muted-foreground">

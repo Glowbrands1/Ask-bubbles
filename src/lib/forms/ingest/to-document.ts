@@ -50,7 +50,7 @@ export function slugify(label: string): string {
  * exact defect `instances.ts` documents having already fixed once.
  *
  * So this is a NAMING map, not an inference about meaning: a line labelled
- * "Name" on a Sun Tan City form is the person the form is about, and these are
+ * "Name" on an HR form is the person the form is about, and these are
  * the engine's words for that. Anything not on this short list gets a derived
  * key and belongs to whoever the reviewer says.
  */

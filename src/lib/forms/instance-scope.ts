@@ -253,8 +253,8 @@ export class InstanceNotVisibleError extends Error {
  *
  *   2. AUTHORIZE ON THE TEMPLATE'S OWN PERMISSION. Every editing route
  *      hard-coded `create_coaching_form`, so a role that may write a coaching
- *      form could save, draft and finalize a Corrective Action Form or an
- *      EPP — permissions it does not hold. The permission is data on the
+ *      form could save, draft and finalize a Corrective Action Form or a
+ *      review form — permissions it does not hold. The permission is data on the
  *      template row; it is read from there.
  *
  *   3. CHECK THE SCOPE, and refuse as a 404.

@@ -18,13 +18,13 @@ import { ACCESS_ACTIONS, isMutating, type PlannedRow, type PlannerAccount, type 
 
 /* ------------------------------------------------------------ fixtures -- */
 
-const POS = { tc: "P-TC", asd: "P-ASD", sd: "P-SD", dm: "P-DM", ops: "P-OPS" };
+const POS = { tm: "P-TM", asm: "P-ASM", lm: "P-LM", dm: "P-DM", ops: "P-OPS" };
 const LOC = { loc307: "L-0307", loc314: "L-0314", liberty: "L-0394", corporate: "L-CORP", locQ: "L-Q" };
 
 const positions: PlannerInput["positions"] = [
-  { wovenPositionId: POS.tc, status: "mapped", isConfirmed: true, role: "employee", scopeLevel: "location" },
-  { wovenPositionId: POS.asd, status: "mapped", isConfirmed: true, role: "assistant_manager", scopeLevel: "location" },
-  { wovenPositionId: POS.sd, status: "mapped", isConfirmed: true, role: "location_manager", scopeLevel: "location" },
+  { wovenPositionId: POS.tm, status: "mapped", isConfirmed: true, role: "employee", scopeLevel: "location" },
+  { wovenPositionId: POS.asm, status: "mapped", isConfirmed: true, role: "assistant_manager", scopeLevel: "location" },
+  { wovenPositionId: POS.lm, status: "mapped", isConfirmed: true, role: "location_manager", scopeLevel: "location" },
   { wovenPositionId: POS.dm, status: "mapped", isConfirmed: true, role: "district_manager", scopeLevel: "district" },
   { wovenPositionId: POS.ops, status: "unmapped", isConfirmed: false, role: null, scopeLevel: null },
 ];
@@ -45,7 +45,7 @@ function employee(overrides: Partial<PlannerEmployee> = {}): PlannerEmployee {
     emailAddress: `person${seq}@gmail.com`,
     employmentStatus: "active",
     missingSyncCount: 0,
-    positionId: POS.sd,
+    positionId: POS.lm,
     positionName: "Location Manager",
     primaryWovenLocationId: LOC.loc307,
     primaryLocationName: "Example Location 307",
@@ -154,12 +154,12 @@ describe("provisioning", () => {
   });
 
   it("an Assistant Manager is provisioned too; a personal email is allowed", () => {
-    const e = employee({ positionId: POS.asd, positionName: "Assistant Manager", emailAddress: "asd@icloud.com" });
+    const e = employee({ positionId: POS.asm, positionName: "Assistant Manager", emailAddress: "asd@icloud.com" });
     expect(rowOf(plan([e]), e).actions).toEqual(["CREATE_USER"]);
   });
 
   it.each([
-    ["Team Member", POS.tc],
+    ["Team Member", POS.tm],
     ["District Manager", POS.dm],
   ])("a %s gets NO account from Woven in this rollout", (_name, positionId) => {
     const e = employee({ positionId });
@@ -346,7 +346,7 @@ describe("primary location", () => {
 
 describe("role", () => {
   it("15. Assistant Manager → Location Manager (approved mapping, role managed) → UPDATE_ROLE", () => {
-    const e = employee({ positionId: POS.sd });
+    const e = employee({ positionId: POS.lm });
     const linked = linkedTo(e, { role: "assistant_manager" });
     const row = rowOf(plan([e], [linked]), e);
     expect(row.actions).toEqual(["UPDATE_ROLE"]);
@@ -362,7 +362,7 @@ describe("role", () => {
   });
 
   it("15c. a demotion out of the tier (to Team Member) is review only — never an automatic downgrade", () => {
-    const e = employee({ positionId: POS.tc });
+    const e = employee({ positionId: POS.tm });
     const rows = plan([e], [linkedTo(e)]);
     expect(rowOf(rows, e).actions).toEqual(["FLAG_ROLE_REVIEW"]);
     expect(mutating(rows)).toEqual([]);
@@ -376,7 +376,7 @@ describe("role", () => {
   });
 
   it("a role difference on an account whose role is not Woven-managed is flagged", () => {
-    const e = employee({ positionId: POS.sd });
+    const e = employee({ positionId: POS.lm });
     expect(rowOf(plan([e], [linkedTo(e, { role: "assistant_manager", managedRole: false })]), e).actions).toEqual(["FLAG_ROLE_REVIEW"]);
   });
 });
@@ -442,7 +442,7 @@ describe("termination", () => {
 
 describe("rehire", () => {
   it("16. revoked because Woven said Terminated, now Active again → FLAG_REHIRE_REVIEW only; never re-enabled", () => {
-    const e = employee({ primaryWovenLocationId: LOC.liberty, positionId: POS.asd });
+    const e = employee({ primaryWovenLocationId: LOC.liberty, positionId: POS.asm });
     const revoked = linkedTo(e, { status: "disabled", accessRevokedAt: "2026-09-01T00:00:00Z", terminatedAt: "2026-09-01T00:00:00Z" });
     const rows = plan([e], [revoked]);
     expect(rowOf(rows, e).actions).toEqual(["FLAG_REHIRE_REVIEW"]);
@@ -460,7 +460,7 @@ describe("idempotency", () => {
     seq = 500;
     const create = employee();
     const move = employee({ primaryWovenLocationId: LOC.liberty });
-    const promote = employee({ positionId: POS.sd });
+    const promote = employee({ positionId: POS.lm });
     const leave = employee({ employmentStatus: "terminated" });
     const steady = employee();
     const employees = [create, move, promote, leave, steady];

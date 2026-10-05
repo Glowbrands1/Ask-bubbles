@@ -23,7 +23,7 @@ describe("headingOf", () => {
 
   it("drops a trailing colon, because that is how a manual writes a heading", () => {
     expect(headingOf("All Locations Dress Code:")).toBe("All Locations Dress Code");
-    expect(headingOf("Sun Tan City:")).toBe("Sun Tan City");
+    expect(headingOf("Example Company:")).toBe("Example Company");
   });
 
   it("ignores small words when judging Title Case", () => {

@@ -45,59 +45,59 @@ describe("sanitizeFileName", () => {
 
 describe("buildStoragePath", () => {
   it("is collision-safe across documents and versions", () => {
-    const a = buildStoragePath({ scopeId: "stc-core", documentId: "doc-1", version: 1, fileName: "policy.pdf" });
-    const b = buildStoragePath({ scopeId: "stc-core", documentId: "doc-2", version: 1, fileName: "policy.pdf" });
-    const c = buildStoragePath({ scopeId: "stc-core", documentId: "doc-1", version: 2, fileName: "policy.pdf" });
+    const a = buildStoragePath({ scopeId: "other-core", documentId: "doc-1", version: 1, fileName: "policy.pdf" });
+    const b = buildStoragePath({ scopeId: "other-core", documentId: "doc-2", version: 1, fileName: "policy.pdf" });
+    const c = buildStoragePath({ scopeId: "other-core", documentId: "doc-1", version: 2, fileName: "policy.pdf" });
 
     expect(new Set([a, b, c]).size).toBe(3);
-    expect(a).toBe("stc-core/doc-1/v1/policy.pdf");
+    expect(a).toBe("other-core/doc-1/v1/policy.pdf");
   });
 
   it("cannot be escaped by a hostile file name", () => {
     const path = buildStoragePath({
-      scopeId: "stc-core",
+      scopeId: "other-core",
       documentId: "doc-1",
       version: 1,
       fileName: "../../../other-tenant/secret.pdf",
     });
-    expect(path).toBe("stc-core/doc-1/v1/secret.pdf");
-    expect(path.startsWith(scopePrefix("stc-core"))).toBe(true);
+    expect(path).toBe("other-core/doc-1/v1/secret.pdf");
+    expect(path.startsWith(scopePrefix("other-core"))).toBe(true);
   });
 });
 
 describe("assertPathWithinScope", () => {
   it("accepts a path the server generated", () => {
-    const path = buildStoragePath({ scopeId: "stc-core", documentId: "d", version: 1, fileName: "a.pdf" });
-    expect(assertPathWithinScope(path, "stc-core")).toBe(path);
+    const path = buildStoragePath({ scopeId: "other-core", documentId: "d", version: 1, fileName: "a.pdf" });
+    expect(assertPathWithinScope(path, "other-core")).toBe(path);
   });
 
   it("rejects traversal, absolute paths and separators", () => {
     for (const bad of [
-      "stc-core/../bcs-core/secret.pdf",
-      "/stc-core/d/v1/a.pdf",
-      "stc-core//d/v1/a.pdf",
-      "stc-core\\d\\v1\\a.pdf",
-      "stc-core/./a.pdf",
+      "other-core/../bcs-core/secret.pdf",
+      "/other-core/d/v1/a.pdf",
+      "other-core//d/v1/a.pdf",
+      "other-core\\d\\v1\\a.pdf",
+      "other-core/./a.pdf",
     ]) {
-      expect(() => assertPathWithinScope(bad, "stc-core")).toThrow();
+      expect(() => assertPathWithinScope(bad, "other-core")).toThrow();
     }
   });
 
   it("rejects a path belonging to another knowledge scope", () => {
-    expect(() => assertPathWithinScope("bcs-core/d/v1/a.pdf", "stc-core")).toThrow(
+    expect(() => assertPathWithinScope("bcs-core/d/v1/a.pdf", "other-core")).toThrow(
       /outside the requested knowledge scope/,
     );
   });
 
   it("rejects an empty or absurdly long path", () => {
-    expect(() => assertPathWithinScope("", "stc-core")).toThrow();
-    expect(() => assertPathWithinScope(`stc-core/${"a".repeat(600)}`, "stc-core")).toThrow();
+    expect(() => assertPathWithinScope("", "other-core")).toThrow();
+    expect(() => assertPathWithinScope(`other-core/${"a".repeat(600)}`, "other-core")).toThrow();
   });
 });
 
 describe("file names with brackets", () => {
   it.each([
-    ["STC Exit(1).docx", "STC-Exit-1-.docx"],
+    ["Example Exit(1).docx", "Example-Exit-1-.docx"],
     ["Demotion Form (3).docx", "Demotion-Form-3-.docx"],
   ])("keeps %s as a usable file rather than dropping it", (name, stored) => {
     expect(sanitizeFileName(name)).toBe(stored);

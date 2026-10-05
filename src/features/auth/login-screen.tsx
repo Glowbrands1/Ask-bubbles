@@ -77,7 +77,7 @@ export function LoginScreen({
             Sign in to {ACTIVE_BRAND.productName}
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {ACTIVE_BRAND.operatorName} · {ACTIVE_BRAND.brandName}
+            {brandLine()}
           </p>
 
           {realAuth ? (
@@ -193,11 +193,11 @@ export function LoginScreen({
             },
             {
               title: "Forms and follow-ups",
-              body: "Draft a coaching form in a conversation, edit every field, and never lose the follow-up.",
+              body: "Start a form in a conversation, review every field, and never lose the follow-up.",
             },
             {
-              title: "Reporting where the work happens",
-              body: "Daily Stats, performance and Google reviews without bouncing between systems.",
+              title: "Reports and history in one place",
+              body: "Your past conversations, and the reports your company publishes, beside the assistant.",
             },
             /*
               "TRAINING THAT FINDS YOU" IS GONE, and it is a promise this
@@ -238,4 +238,10 @@ export function LoginScreen({
       </aside>
     </main>
   );
+}
+
+/** The operator and the brand, once each — they are often the same name. */
+function brandLine(): string {
+  const { operatorName, brandName } = ACTIVE_BRAND;
+  return operatorName === brandName ? brandName : `${operatorName} · ${brandName}`;
 }

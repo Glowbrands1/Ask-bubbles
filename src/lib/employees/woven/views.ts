@@ -108,7 +108,7 @@ export interface MappingSummary {
  * non-location exception, not a missing location mapping. Those rows read as
  * "[Woven PositionName] + [their Woven scope]": "All locations" only when
  * Woven says AllLocationAccess, otherwise what the affiliations actually show.
- * An unresolved location in their access (NE Omaha Q) is still counted under
+ * An unresolved location in their access (Example Location Q) is still counted under
  * Unmapped location, and said so in the note.
  */
 export function mappingSummary(row: DirectoryRow): MappingSummary {

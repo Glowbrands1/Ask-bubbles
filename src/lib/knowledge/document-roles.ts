@@ -53,7 +53,7 @@ import { PINNED_KNOWLEDGE_ROLES } from "@/config/company/knowledge";
  *                 silently lose the framework. Rejected.
  *
  *   `category`    Already populated (`leadership_coaching`) and NOT unique: the
- *                 Sun Tan City Location Coaching Guide is filed under it too.
+ *                 an example location coaching guide is filed under it too.
  *                 Pinning by category would pin a whole PDF manual as
  *                 mandatory reasoning. Rejected as an identifier.
  *

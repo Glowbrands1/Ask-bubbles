@@ -229,7 +229,7 @@ describe("changes between syncs", () => {
       wovenEmployee("A", { status: TERMINATED, terminationDate: "2026-09-20" }),
       wovenEmployee("B", { positionId: "POS-SD", positionName: "Location Manager" }),
       wovenEmployee("C", { status: ACTIVE }),
-      wovenEmployee("D", { primaryLocationId: "WL-0144", primaryLocationName: "NE Lincoln" }),
+      wovenEmployee("D", { primaryLocationId: "WL-0144", primaryLocationName: "Example Location 102" }),
       wovenEmployee("E"),
     ];
     const outcome = await run();

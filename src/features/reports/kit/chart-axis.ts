@@ -1,7 +1,7 @@
 /**
  * THE RANKING AXIS SHOWS THE STORE NAME. THE CATEGORY IS STILL THE LOCATION NUMBER.
  *
- * A manager reads "MO Kansas City Liberty"; nobody recognises 0394 on sight. So
+ * A manager reads "Example Location 104"; nobody recognises 0104 on sight. So
  * the axis had to stop showing numbers.
  *
  * But it cannot simply be keyed on `storeName`. Recharts treats a category

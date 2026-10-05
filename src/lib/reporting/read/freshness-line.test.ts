@@ -138,8 +138,8 @@ describe("the location count is counted, and says whose locations when scoped", 
   });
 
   it("names the assignment for a restricted reader", () => {
-    expect(formatLocationCount(1, "MO Kansas City Wornall")).toBe(
-      "MO Kansas City Wornall · 1 location",
+    expect(formatLocationCount(1, "Example Location 101")).toBe(
+      "Example Location 101 · 1 location",
     );
   });
 

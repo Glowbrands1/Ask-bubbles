@@ -29,7 +29,10 @@ export function AuthPanel({
           {title}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {subtitle ?? `${ACTIVE_BRAND.operatorName} · ${ACTIVE_BRAND.brandName}`}
+          {subtitle ??
+            (ACTIVE_BRAND.operatorName === ACTIVE_BRAND.brandName
+              ? ACTIVE_BRAND.brandName
+              : `${ACTIVE_BRAND.operatorName} · ${ACTIVE_BRAND.brandName}`)}
         </p>
         {children}
       </div>

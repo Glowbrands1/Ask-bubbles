@@ -31,7 +31,7 @@ const SIGNED = "https://project.supabase.co/storage/v1/object/sign/x?token=t";
 function document(overrides: Partial<KnowledgeDocument> = {}): KnowledgeDocument {
   return {
     id: "8f14e45f-ceea-4e78-b2a7-1c1b1a2b3c4d",
-    title: "Sun Tan City Safety Binder",
+    title: "Example Safety Binder",
     description: "",
     category: "policies",
     fileName: "Safety Binder.pdf",
@@ -125,8 +125,8 @@ describe("the actions are visible on a live document", () => {
     expect(requested[0]).toContain("mode=download");
     /*
      * NO CORPUS AND NO PATH ON THE WIRE. The scope used to be sent from here
-     * and the server used to read it — an authenticated Sun Tan City manager
-     * could name `bcs-core` and be handed another brand's file. The server
+     * and the server used to read it — an authenticated manager on another
+     * brand's deployment could name `bcs-core` and be handed this brand's file. The server
      * derives the corpus from the active brand now, and the client stopped
      * sending one, because a value a client keeps sending is a value somebody
      * eventually starts trusting again.
@@ -162,7 +162,7 @@ describe("the preview shows the stored original", () => {
     const { container } = render(
       <DocumentPreviewDialog
         link={link()}
-        title="Sun Tan City Safety Binder"
+        title="Example Safety Binder"
         onClose={vi.fn()}
         onDownload={vi.fn()}
       />,

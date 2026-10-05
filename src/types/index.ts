@@ -471,8 +471,8 @@ export interface ChatFormProposal {
    *
    * `null` for the twelve templates that declare no variants, and for those
    * the column has always held null. Set only where the published version
-   * declares EXACTLY ONE reading — the SDIT EPP's, whose subject is an ASD
-   * reviewed by a Training Location Director — because a document with several
+   * declares EXACTLY ONE reading — for example a review form whose only
+   * reading is one role reviewed by one manager — because a document with several
    * cannot be created from chat at all until something asks which. See
    * `lib/forms/inline-draft.ts`.
    *
@@ -485,9 +485,9 @@ export interface ChatFormProposal {
   /**
    * The employee's job title, where the MANAGER stated it.
    *
-   * "Jessica is an SDIT at Lincoln South" says it; nothing else does. It is
+   * "Riley is a Shift Lead at River Market" says it; nothing else does. It is
    * null whenever they did not, and it is never inferred from the template —
-   * an SDIT EPP is frequently written for somebody whose title the manager
+   * a review form is frequently written for somebody whose title the manager
    * spells differently, and printing a guessed title on an employment record
    * is the class of default this whole path exists to refuse.
    */

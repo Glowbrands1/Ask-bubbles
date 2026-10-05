@@ -151,8 +151,8 @@ export function draftableNumberedLists(document: FormDocument, variantKey: strin
  * What a person is expected to complete before this form can be finalized.
  *
  * `manual` is excluded deliberately: those are filled on the printed page after
- * it leaves the app, so requiring them on screen would make every DMIT EPP
- * impossible to finalize. Signatures are excluded for the same reason.
+ * it leaves the app, so requiring them on screen would make any review form
+ * with a hand-filled section impossible to finalize. Signatures are excluded for the same reason.
  */
 export function requiredOfPeople(
   document: FormDocument,

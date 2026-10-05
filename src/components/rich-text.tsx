@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils/cn";
  *
  * The 14 September review, from the restricted session: "Markdown tables are
  * rendering as raw text. The location list appeared with literal pipes —
- * `| Location | PPTA | |---|---|` — instead of displaying as a formatted table."
+ * `| Location | Sales | |---|---|` — instead of displaying as a formatted table."
  *
  * The model was already emitting them, correctly, because a ranked list of
  * locations with two figures each IS a table and asking it not to produce one
@@ -47,7 +47,7 @@ function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
  * A GitHub-style delimiter row: `|---|:--:|---:|`.
  *
  * The delimiter is what distinguishes a table from a sentence containing pipes,
- * which is why it is required rather than inferred. "Revenue | PPTA | Tans"
+ * which is why it is required rather than inferred. "Revenue | Sales | Guests"
  * typed in prose has no delimiter row under it and stays prose.
  */
 const TABLE_DELIMITER = /^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)*\|?\s*$/;

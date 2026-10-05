@@ -25,7 +25,7 @@ import { Sheet, Workspace, paginate } from "./paper";
  * and everything about what a block MEANS lives in the document model.
  *
  * Blocks are filtered through `blocksForVariant` first, so switching the role
- * reading of a DMIT EPP shows exactly the sheet that reading prints — including
+ * reading of a review form shows exactly the sheet that reading prints — including
  * dropping the blocks scoped to the other reading. That filtering is the same
  * function the PDF renderer calls.
  *

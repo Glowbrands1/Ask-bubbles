@@ -165,8 +165,8 @@ describe("what a non-administrator may still take away", () => {
   it("leaves the learning material this product exists for", () => {
     for (const material of [
       PDF,
-      { ...PDF, title: "Spa Equipment Guide", fileName: "Spa Equipment Guide 5.4.2026.pdf" },
-      { ...PDF, title: "UV Tanning Bed Troubleshooting", fileName: "UV Troubleshooting.pdf" },
+      { ...PDF, title: "Store Equipment Guide", fileName: "Store Equipment Guide 5.4.2026.pdf" },
+      { ...PDF, title: "Register Troubleshooting", fileName: "Register Troubleshooting.pdf" },
       {
         ...PDF,
         title: "Google Review SOP",

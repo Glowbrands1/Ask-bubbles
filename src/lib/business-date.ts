@@ -44,7 +44,7 @@
  * the render and the server and the browser can never disagree about what day
  * it is.
  *
- * The default is US Eastern. Sun Tan City operates across US zones, so no
+ * The default is US Eastern. The locations span US time zones, so no
  * single choice is exactly local everywhere; what matters is that it is a
  * BUSINESS zone rather than UTC, and that it is one value everything agrees on.
  * A location an hour west sees a form become overdue an hour before its own

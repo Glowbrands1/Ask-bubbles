@@ -1,11 +1,8 @@
 -- ---------------------------------------------------------------------------
 -- WOVEN → ASK BUBBLES KNOWLEDGE SYNC — the manifest, the run ledger, the audit log
 --
--- NOT APPLIED. Prepared with the connector and applied only with explicit
--- approval, verbatim, in one transaction, to Ask Bubbles Dev
--- (`rbkylaavthsjepsczccv`) — which Production also reads, so applying it IS a
--- production schema change. Run `npm run verify:woven-knowledge-migration`
--- first, and the Supabase advisors after.
+-- Part of the Ask Bubbles baseline. Applied to the Ask Bubbles Supabase
+-- project only, in order with every other migration in this directory.
 --
 -- WHAT THIS CREATES:
 --

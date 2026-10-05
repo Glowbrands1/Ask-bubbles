@@ -29,7 +29,7 @@ import { normalizeWhitespace, type ExtractedSegment } from "./types";
  *     does not. This single rule removes most of a page.
  *   - No terminal punctuation. A line ending in `.` `,` `;` is a sentence or the
  *     tail of one. A trailing COLON is allowed and then dropped, because
- *     "Sun Tan City:" is how this manual writes a heading.
+ *     "Example Company:" is how a manual can write a heading.
  *   - Not a bullet, not a dot-leader table-of-contents row, not a signature
  *     rule, not the "16 | P a g e" footer every page carries.
  *   - Title Case. Most significant words start capitalised — the property that

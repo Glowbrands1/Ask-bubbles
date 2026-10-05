@@ -106,10 +106,11 @@ export async function createInlineForm({
       employeeName: proposal.employeeName,
       /*
        * WHICH READING OF THE DOCUMENT. Null for the templates that print one
-       * way; the single declared variant for the SDIT EPP. Sending nothing is
-       * what used to pin `null` on a form whose labels are written as
-       * `{{role}}`, so the page read "In what areas is the the employee
-       * currently succeeding?" — which is why every EPP was refused inline.
+       * way; the single declared variant for a review form that declares one.
+       * Sending nothing is what used to pin `null` on a form whose labels are
+       * written as `{{role}}`, so the page read "In what areas is the the
+       * employee currently succeeding?" — which is why every review form was
+       * refused inline.
        * Revalidated against the pinned version by the route.
        */
       variantKey: proposal.variantKey,

@@ -785,16 +785,16 @@ describe("a first name plus a stated role names the employee", () => {
 describe("a location named in two words is not a second employee", () => {
   it("does not ask which of them the form is for", () => {
     /*
-     * REPORTED SHAPE: "Jessica Vance is a Shift Lead at Testville Downtown.
+     * REPORTED SHAPE: "Riley Hartman is a Shift Lead at Testville Downtown.
      * She's been late several times." Two capitalised pairs,
      * one of them the location — and the answer used to be "which of them is this
      * for?", asked of somebody who had just said.
      */
     const proposal = propose(
-      [userTurn("Jessica Vance is a Shift Lead at Testville Downtown. She's been late several times.")],
+      [userTurn("Riley Hartman is a Shift Lead at Testville Downtown. She's been late several times.")],
       "coaching form please",
     );
-    expect(proposal.employeeName).toBe("Jessica Vance");
+    expect(proposal.employeeName).toBe("Riley Hartman");
     expect(proposal.status).toBe("ready");
   });
 

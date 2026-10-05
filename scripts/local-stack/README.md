@@ -24,10 +24,4 @@ delete auth sessions; `anon` / `authenticated` / `service_role` receive the
 same default privileges in `public`. Migrations are applied, in order, as
 `postgres`, each in its own transaction.
 
-One pre-existing repository issue is worked around for the LOCAL copy only:
-`20260919003000_google_review_url_check_repetition.sql` asserts its own probe
-URL is over 500 characters but builds one of about 392, so it cannot apply to
-a fresh database. `up.sh` lengthens that probe in a temporary copy; the file
-in `supabase/migrations` is untouched.
-
 Requires root (Postgres runs as the `postgres` OS user), Docker and Node.

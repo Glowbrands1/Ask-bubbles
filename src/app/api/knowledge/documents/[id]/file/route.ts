@@ -59,9 +59,10 @@ import { OriginalFileError, originalFileLink } from "@/lib/knowledge/original-fi
  *
  * THE GAP THIS CLOSES. This route read the corpus from `?scope=`, validated
  * only that it was SHAPED like a scope id, and used it. `bcs-core` is a real
- * scope — `src/lib/brand` defines it — so an authenticated Sun Tan City manager
- * holding `view_knowledge` could request a Beach Comber Suns document by id with
- * `?scope=bcs-core` and be handed a signed URL for its file.
+ * scope — `src/lib/brand` defines it — so an authenticated manager of a
+ * deployment serving a different brand, holding `view_knowledge`, could request
+ * one of this corpus's documents by id with `?scope=bcs-core` and be handed a
+ * signed URL for its file.
  *
  * `authorizeRequest` did not stop it and was never going to: it proves WHO the
  * caller is and WHAT they may do, not WHICH company's corpus this deployment

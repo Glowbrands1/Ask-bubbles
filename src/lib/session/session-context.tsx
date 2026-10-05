@@ -122,7 +122,7 @@ interface SessionValue {
   /**
    * Name written into the "Manager" field of a generated form. Location accounts
    * are shared per location, so their role title reads correctly on a form where
-   * the bare account name ("MO Kansas City Wornall") would not.
+   * the bare account name ("Example Location 101") would not.
    */
   managerDisplayName: string;
   can: (permission: Permission) => boolean;

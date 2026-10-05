@@ -48,6 +48,8 @@ export interface OverviewFollowUps {
   items: OverviewFollowUp[];
   today: string;
   failure: string | null;
+  /** False when no forms database is configured for this deployment. */
+  connected: boolean;
   excluded: number;
   scopeLabel: string | null;
 }
@@ -127,7 +129,9 @@ export function OverviewScreen({ followUps: followUpData }: { followUps: Overvie
                           : "text-muted-foreground",
                       )}
                     >
-                      {followUpData.failure
+                      {!followUpData.connected
+                        ? "Forms are not connected in this deployment"
+                        : followUpData.failure
                         ? "Follow-ups could not be read"
                         : attention.needsAttention > 0
                           ? "Soonest first"
@@ -148,7 +152,9 @@ export function OverviewScreen({ followUps: followUpData }: { followUps: Overvie
                 <CardContent className="pt-0">
                   {followUps.length === 0 ? (
                     <p className="rounded-[var(--radius-sm)] border border-dashed border-border px-3 py-6 text-center text-[13px] text-muted-foreground">
-                      {followUpData.failure
+                      {!followUpData.connected
+                        ? "Follow-ups appear here once forms are filed in a live deployment."
+                        : followUpData.failure
                         ? "The forms record could not be reached."
                         : "No follow-ups are being tracked."}
                     </p>

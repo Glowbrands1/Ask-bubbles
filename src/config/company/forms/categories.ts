@@ -33,6 +33,19 @@ export const FORM_LAYOUT_FAMILIES = [
 ] as const;
 
 /**
+ * How the template library names each family. Keyed by the family union, so a
+ * family added above without a label here fails the type check.
+ */
+export const FORM_LAYOUT_FAMILY_LABEL: Readonly<Record<(typeof FORM_LAYOUT_FAMILIES)[number], string>> = {
+  standard: "Standard",
+  coaching: "Coaching",
+  corrective: "Corrective",
+  review: "Review",
+  interview: "Interview",
+  separation: "Separation",
+};
+
+/**
  * Families whose filed instances need an extra permission to READ, on top of
  * the ordinary register permission. Empty: no Buff form restricts reading yet.
  */

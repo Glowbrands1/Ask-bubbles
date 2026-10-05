@@ -544,7 +544,7 @@ function AdoptionGap({
  * The business timezone, named the way a reader would say it.
  *
  * SHOWN BESIDE EVERY HOUR ON THIS PAGE, because "the 10am–11am hour is busiest"
- * is meaningless without it — Sun Tan City operates across US zones and the
+ * is meaningless without it — the locations span US time zones and the
  * server is a container in some region with no opinion worth having. The value
  * comes from the same `business-date.ts` constant every other date decision
  * reads, so the page and the query cannot disagree about which clock they mean.

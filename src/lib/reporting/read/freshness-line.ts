@@ -203,7 +203,7 @@ export function formatLocationCount(
   const locations = `${locationCount} ${locationCount === 1 ? "location" : "locations"}`;
   /*
    * A RESTRICTED READER IS TOLD WHOSE LOCATIONS THESE ARE. "1 location included" on
-   * a fifteen-location delivery reads as a broken report; "MO Kansas City Wornall
+   * a fifteen-location delivery reads as a broken report; "Example Location 101
    * · 1 location" reads as an assignment, which is what it is.
    */
   return scopeLabel ? `${scopeLabel} · ${locations}` : `${locations} included`;

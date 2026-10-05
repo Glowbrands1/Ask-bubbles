@@ -71,14 +71,6 @@ echo "== migrations"
 count=0
 for migration in "$REPO"/supabase/migrations/*.sql; do
   source_file="$migration"
-  # PRE-EXISTING, NOT PART OF THIS STACK: this file's own self-check builds a
-  # ~392-character probe and then requires it to exceed 500, so it can never
-  # apply to a fresh database (Production received different SQL for it). The
-  # LOCAL copy only gets a long-enough probe; the repository file is untouched.
-  if [ "$(basename "$migration")" = "20260919003000_google_review_url_check_repetition.sql" ]; then
-    source_file="$ROOT/patched-$(basename "$migration")"
-    sed "s/repeat('x', 300)/repeat('x', 460)/" "$migration" >"$source_file"
-  fi
   psql -h 127.0.0.1 -p "$PG_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -q -1 -f "$source_file" >/dev/null 2>"$ROOT/migration.err" || {
     echo "FAILED: $(basename "$migration")"; cat "$ROOT/migration.err"; exit 1; }
   count=$((count + 1))

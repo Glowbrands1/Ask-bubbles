@@ -131,7 +131,7 @@ describe("request validation", () => {
     for (const bad of ["../../etc", "a b", "", "x".repeat(65), "a/b", null]) {
       expect(() => requireScopeId(bad), String(bad)).toThrow(AiError);
     }
-    expect(requireScopeId("stc-core")).toBe("stc-core");
+    expect(requireScopeId("other-core")).toBe("other-core");
   });
 
   it("accepts only the two document id shapes this system issues", () => {

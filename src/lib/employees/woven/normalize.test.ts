@@ -217,13 +217,13 @@ describe("locations", () => {
   it("reads primary, additional and temporary-or-expiring access from details — never 'borrowed'", () => {
     const details = wovenDetails("1", [
       { id: "WL-0306", name: "Example Location 306", number: "0306" },
-      { id: "WL-0144", name: "NE Lincoln", number: "0144" },
+      { id: "WL-0144", name: "Example Location 102", number: "0144" },
       { id: "WL-0500", name: "Somewhere", expires: "2026-10-12T00:00:00" },
     ]);
     const list = readAffiliations(details, { primaryLocationId: "WL-0306", primaryLocationName: "Example Location 306" });
     expect(list).toEqual([
       { wovenLocationId: "WL-0306", locationName: "Example Location 306", locationNumber: "0306", accessType: "primary", expiresOn: null },
-      { wovenLocationId: "WL-0144", locationName: "NE Lincoln", locationNumber: "0144", accessType: "additional", expiresOn: null },
+      { wovenLocationId: "WL-0144", locationName: "Example Location 102", locationNumber: "0144", accessType: "additional", expiresOn: null },
       { wovenLocationId: "WL-0500", locationName: "Somewhere", locationNumber: null, accessType: "temporary_or_expiring_access", expiresOn: "2026-10-12" },
     ]);
     expect(JSON.stringify(list)).not.toMatch(/borrow/i);

@@ -246,8 +246,8 @@ export type ActivityTurnKind = (typeof ACTIVITY_TURN_KINDS)[number];
  *
  * WHOLE-STRING EQUALITY, NEVER A PREFIX OR A SUBSTRING, and that is the rule
  * this list lives or dies by. "yes" is an acknowledgement; "yes, but why is
- * Wornall down on PPTA?" is a question that happens to start with the word, and
- * a prefix match would throw away the most interesting turns in the log —
+ * Example Location 101 down on sales?" is a question that happens to start
+ * with the word, and a prefix match would throw away the most interesting turns in the log —
  * exactly the follow-ups where somebody pushed back on an answer.
  */
 const ACKNOWLEDGEMENTS: ReadonlySet<string> = new Set([

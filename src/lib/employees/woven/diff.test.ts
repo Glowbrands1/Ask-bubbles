@@ -28,7 +28,7 @@ const PRIMARY: LocationAffiliation = {
 };
 const OTHER: LocationAffiliation = {
   wovenLocationId: "WL-0144",
-  locationName: "NE Lincoln",
+  locationName: "Example Location 102",
   locationNumber: "0144",
   accessType: "additional",
   expiresOn: null,
@@ -187,7 +187,7 @@ describe("locations", () => {
   it("records a primary move as a transfer, and a first primary as assigned", () => {
     const [transfer] = diffEmployee(
       onFile(),
-      resolved({ primaryLocationId: "WL-0144", primaryLocationName: "NE Lincoln", affiliations: [{ ...OTHER, accessType: "primary" }] }),
+      resolved({ primaryLocationId: "WL-0144", primaryLocationName: "Example Location 102", affiliations: [{ ...OTHER, accessType: "primary" }] }),
       opts(),
     );
     expect(transfer.kind).toBe("primary_location_changed");

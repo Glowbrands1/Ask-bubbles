@@ -6,8 +6,8 @@ import { inflateRawSync } from "node:zlib";
  * A `.docx` is a zip, and the two things this pipeline needs that a Word-to-HTML
  * converter does not report both live in entries of their own:
  *
- *   `word/header1.xml`  the page header — where the Coaching Form keeps its
- *                       TITLE and the Sun Tan City brand. A reader that only
+ *   `word/header1.xml`  the page header — where a coaching form can keep its
+ *                       TITLE and the company brand. A reader that only
  *                       saw the body would produce a form with no name on it.
  *   `word/document.xml` the body as Word actually stored it, which still has
  *                       content controls and legacy form fields in it after a

@@ -15,8 +15,8 @@ import { ACTIVE_BRAND } from "@/lib/brand";
  *   `checkbox_group` Type of Coaching, Type of Offense, Topic Of Coaching
  *   `numbered_list`  "Overall top three strengths: 1. 2. 3."
  *   `signature_row`  always-blank signature and date pairs
- *   `page_break`     the DMIT EPP's explicit page breaks
- *   `reference`      the DMIT EPP's position-description block, role-scoped
+ *   `page_break`     a review form's explicit page breaks
+ *   `reference`      a review form's position-description block, role-scoped
  *   `acknowledgement` the confirmation paragraph above each signature block
  *
  * TWO THINGS ARE LOAD-BEARING.
@@ -24,14 +24,14 @@ import { ACTIVE_BRAND } from "@/lib/brand";
  * 1. EVERY FIELD CARRIES A RESPONSIBILITY, and that is template data, not a
  *    hint. The reference forms mark fields "AI FILLS: ..." or "FILLED BY HAND";
  *    those become `responsibility` here and the server enforces it against
- *    whatever a model returns. A field's responsibility is per template: the
- *    DMIT EPP's self-review is filled by hand, the SDIT EPP's is drafted, and
+ *    whatever a model returns. A field's responsibility is per template: one
+ *    review form's self-review is filled by hand, another's is drafted, and
  *    neither is a global rule about "self review" fields.
  *
  * 2. `{{role}}` AND `{{roleAbbr}}` ARE RESOLVED FROM THE CHOSEN VARIANT, never
- *    guessed. The DMIT EPP is one document read two ways — as a TSD review and
- *    as a DMIT review — and the same is true of the four EPPs, which differ by
- *    who reviews whom. Interpolation happens at render time so the stored
+ *    guessed. A review form can be one document read two ways — as a review of
+ *    one role and as a review of another — and the same is true of a family of
+ *    review forms that differ only by who reviews whom. Interpolation happens at render time so the stored
  *    document stays one thing.
  */
 
@@ -206,7 +206,7 @@ export type FormBlock =
    * ONE EXPECTATION, THREE ANSWERS: SUCCEEDING, NEEDS IMPROVEMENT, OR NEITHER
    * ==========================================================================
    *
-   * The SDIT EPP prints a list of the role's standing expectations with two
+   * A review form can print a list of the role's standing expectations with two
    * mark columns beside each — a tick for an area of success, a cross for one
    * needing improvement — and the business's own instruction above them is
    * exactly that. A `checkbox_group` cannot say this: it has one mark per
@@ -238,8 +238,8 @@ export type FormBlock =
        * What the two marks MEAN on this form, where they are not successes
        * and improvements.
        *
-       * The TSD plan's re-evaluation is the same three-state row — met, not
-       * met, or not yet reviewed — over its eight objectives, and printing
+       * A performance plan's re-evaluation is the same three-state row — met,
+       * not met, or not yet reviewed — over its objectives, and printing
        * "Mark areas of success" above it would be the renderer telling the
        * reader something the form does not say. Optional, and absent means
        * the wording every other checklist uses.
@@ -255,11 +255,10 @@ export type FormBlock =
    * A TABLE OF OBJECTIVES, EACH WITH ITS OWN PLAN
    * ==========================================================================
    *
-   * The TSD Management Performance Plan's Plan of Action is not a paragraph.
-   * It is eight fixed rows — Bench, Management Bench, the three productivity
-   * categories, Coaching and Development, District Outreach, Location Standards
-   * — each printing a CATEGORY, the OBJECTIVE the business has written for it,
-   * and a space for the plan against that objective.
+   * A performance plan's Plan of Action is not a paragraph. It is a set of
+   * fixed rows — one per category the plan covers — each printing a CATEGORY,
+   * the OBJECTIVE the business has written for it, and a space for the plan
+   * against that objective.
    *
    * THE CATEGORY AND THE OBJECTIVE ARE THE FORM TALKING. They are fixed text
    * the business owns, identical on every copy, and nothing may write into
@@ -383,7 +382,7 @@ export interface FormVariant {
   role: string;
   /** Substituted for `{{roleAbbr}}` — "DM". */
   roleAbbr: string;
-  /** The position being reviewed, where the document names it: "TSD". */
+  /** The position being reviewed, where the document names it: "ASM". */
   reviewedPosition?: string;
 }
 
@@ -408,7 +407,7 @@ export interface FormLogo {
  *
  * The official forms do not all look alike. Most of the library uses black
  * section bars; the Coaching Form the business issues uses centred headings
- * over thin rules, with the Sun Tan City logo in the top right. Both are
+ * over thin rules, with the company logo in the top right. Both are
  * correct, and which one applies is a property of THE VERSION OF THIS DOCUMENT
  * — so it is stored with the document and read generically by the renderer.
  *
@@ -871,9 +870,9 @@ export function parseFormVariants(raw: unknown): FormVariant[] {
  * The document as one variant reads it.
  *
  * Blocks with no `variantKey` belong to every reading; blocks that name one
- * appear only for that variant. This is how the DMIT EPP prints the TSD
- * position description for a TSD review and the DMIT one for a DMIT review
- * without being two documents that can drift apart.
+ * appear only for that variant. This is how a review form prints one role's
+ * position description for that role's review and another's for the other
+ * reading, without being two documents that can drift apart.
  */
 /**
  * Whether one block prints for a given reading of the form.
@@ -1074,7 +1073,7 @@ export function responsibilityMap(
  * accepts the key, because `responsibilityMap` has it; the PDF renderer reads
  * `values[key]` and prints all three. The two on-screen renderers read
  * `values[`${key}_1`]`, `_2`, `_3` — keys nothing in the system has ever
- * written — so a manager looking at a freshly drafted EPP saw three empty
+ * written — so a manager looking at a freshly drafted review saw three empty
  * boxes under a narrative paragraph that plainly contained the answer.
  *
  * IT WAS WORSE THAN A DISPLAY BUG. Typing into those boxes wrote `_1`, which

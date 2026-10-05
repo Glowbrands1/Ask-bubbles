@@ -175,14 +175,14 @@ const INTAKE_LIST = /^\s*([^,\n]+),[^,\n]*,/;
 
 /*
  * ============================================================================
- * "KS SHAWNEE" IS A LOCATION, BECAUSE EVERY LOCATION'S NAME SAYS SO
+ * "TN TESTVILLE" IS A LOCATION, WHEN THE ROSTER'S NAMES SAY SO
  * ============================================================================
  *
- * Every store name in the production roster opens with its state — "KS
- * Shawnee Mission Pkwy", "NE Kearney", "MO St Joseph" — and managers shorten
- * the rest but keep the prefix. A capitalised pair was otherwise a person, so
- * "<name>, NE Kearney, today" made the LOCATION the employee when the name was in
- * lower case, and made the turn ambiguous when it was not.
+ * Where store names in the roster open with their state — "TN Example Ave",
+ * "TN Testville Downtown" — managers shorten the rest but keep the prefix. A
+ * capitalised pair was otherwise a person, so "<name>, TN Testville, today"
+ * made the LOCATION the employee when the name was in lower case, and made the
+ * turn ambiguous when it was not.
  *
  * THE ROSTER IS THE EVIDENCE, not a list of the fifty states: only the prefixes
  * the business's own locations carry, and only written as a prefix is written —
@@ -197,12 +197,13 @@ const ROSTER_STATES = new Set(
  * A NAME THAT IS A LOCATION ON THE ROSTER IS A PLACE, in any case.
  *
  * `opensWithRosterState` deliberately lets an all-caps "MO SMITH" through as a
- * person, so an all-caps "NE KEARNEY" came through too and made the turn
+ * person, so an all-caps "TN TESTVILLE" came through too and made the turn
  * ambiguous between the employee and a location. This is exact rather than a
  * shape: the candidate, normalised the way reporting normalises store names,
- * IS one of the fifteen locations — with or without its state prefix, when that
- * leaves more than one word. "Lincoln O Street" is a location; "Kearney" alone is
- * never a candidate unless it is the whole message, and is left alone.
+ * IS one of the roster's locations — with or without its state prefix, when
+ * that leaves more than one word. "Testville Downtown" is a location;
+ * "Testville" alone is never a candidate unless it is the whole message, and
+ * is left alone.
  */
 const ROSTER_NAME_KEYS: ReadonlySet<string> = new Set(
   COMPANY_LOCATIONS.flatMap((location) => {
@@ -347,14 +348,14 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
   const PART = `(?:${NAME}|${INITIAL})`;
   /*
    * ==========================================================================
-   * "AT LINCOLN SOUTH" IS A LOCATION, AND IT WAS BEING READ AS A SECOND PERSON
+   * "AT RIVER MARKET" IS A LOCATION, AND IT WAS BEING READ AS A SECOND PERSON
    * ==========================================================================
    *
-   * "Jessica Vance is an SDIT at Lincoln South" yields TWO capitalised pairs,
-   * so the request was ambiguous and Ask Bubbles asked which of them the form
-   * was for — having just been told, in a sentence where one of the two is
-   * plainly a place. Every location whose name is two words had this: Lincoln
-   * South, Kansas City, Union Square.
+   * "Riley Hartman is a Shift Lead at River Market" yields TWO capitalised
+   * pairs, so the request was ambiguous and Ask Bubbles asked which of them the
+   * form was for — having just been told, in a sentence where one of the two is
+   * plainly a place. Every location whose name is two words had this: River
+   * Market, Union Square, West End.
    *
    * THE PREPOSITION IS THE EVIDENCE, and it is the manager's own. A capitalised
    * pair introduced by "at" or "in" is where something happened; a person is
@@ -376,7 +377,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
     ).test(text);
   /*
    * ==========================================================================
-   * "SARAH JOHNSON, LINCOLN SOUTH, TODAY" IS AN ANSWER TO THE INTAKE
+   * "SARAH JOHNSON, RIVER MARKET, TODAY" IS AN ANSWER TO THE INTAKE
    * ==========================================================================
    *
    * The intake asks for the name, then the location, then the date, in that
@@ -384,7 +385,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * is the whole point of asking it as a list. That line carries no
    * preposition, so `AT_A_PLACE` above saw nothing, and the second item came
    * back as a SECOND CAPITALISED PAIR: Ask Bubbles asked whether the form was
-   * for Sarah Johnson or for Lincoln South, one message after asking for both.
+   * for Sarah Johnson or for River Market, one message after asking for both.
    *
    * THE SHAPE IS THE EVIDENCE, and it is as specific as the preposition was.
    * The whole message must OPEN with `<Name>, <Two capitalised words>, ` and
@@ -393,7 +394,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * is anchored at the start, and a sentence describing somebody does not
    * reach a date by its second comma.
    *
-   * SINGLE-WORD LOCATIONS NEVER NEEDED THIS. "Kearney" is one capitalised word,
+   * SINGLE-WORD LOCATIONS NEVER NEEDED THIS. "Testville" is one capitalised word,
    * and a lone capitalised word is not a candidate unless it is the entire
    * message — so only the two-word locations were ever affected, which is the
    * same set `AT_A_PLACE` was written for.
@@ -535,7 +536,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
 
   /*
    * ==========================================================================
-   * "JESSICA IS AN SDIT AT LINCOLN SOUTH" NAMES JESSICA
+   * "RILEY IS A SHIFT LEAD AT RIVER MARKET" NAMES RILEY
    * ==========================================================================
    *
    * A FIRST NAME ON ITS OWN IS HOW MANAGERS REFER TO THEIR TEAM, and it was
@@ -554,15 +555,15 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    *
    * WHAT IT STILL REFUSES. "Create a coaching form for a performance concern"
    * has no copula-plus-role and yields nothing, which is the defect this whole
-   * module was written to remove. "She is an SDIT" yields nothing, because the
+   * module was written to remove. "She is a Shift Lead" yields nothing, because the
    * pronouns are in `NOT_A_NAME`. A form's own name yields nothing, because
    * `isFormVocabulary` rejects it.
    */
   /*
    * THE WHOLE NAME BEFORE THE COPULA, not its last word. Anchored on `NAME`
-   * alone this matched "Vance is an SDIT" inside "Jessica Vance is an SDIT"
-   * and produced a SECOND candidate — so a manager who gave a full name was
-   * asked to choose between it and its own surname.
+   * alone this matched "Hartman is a Shift Lead" inside "Riley Hartman is a
+   * Shift Lead" and produced a SECOND candidate — so a manager who gave a full
+   * name was asked to choose between it and its own surname.
    */
   const NAMED_ROLE = new RegExp(
     `\\b(${NAME}(?:\\s+${PART})*)\\s+(?:is|was)\\s+(?:an?|our|the)\\s+(?:new\\s+)?([A-Za-z][A-Za-z ]{0,28}?)(?=[,.;!?]|\\s+(?:at|in|on|and|who|but)\\b|$)`,
@@ -810,7 +811,7 @@ function withoutAnswerLead(answer: string): string {
  *
  * A bare "name is …" counts only where it OPENS the message or a clause —
  * "name is avery testperson, today wearing slippers", found in production —
- * so "the company name is Sun Tan City" is still nobody.
+ * so "the company name is Example Company" is still nobody.
  *
  * A copula ("the employee is …") is weaker than a colon, because what follows
  * is as often a description — "the employee is always late" — so there the
@@ -1288,9 +1289,9 @@ export interface ProposalInput {
  * it if it tried. That leaves exactly one honest source — the manager's own
  * words — and this reads them.
  *
- * WHY NOT INFER IT FROM THE TEMPLATE. An SDIT EPP is not proof that the
- * employee's title is "SDIT": managers write one for an ASD on the SDIT track,
- * and the abbreviations vary by district. A title printed on somebody's
+ * WHY NOT INFER IT FROM THE TEMPLATE. A review form written for a role is not
+ * proof that the employee holds that title: managers write one for somebody
+ * being developed toward the role, and the abbreviations vary by district. A title printed on somebody's
  * employment record because a template was chosen is a fabricated fact, and the
  * blank line it replaces is one the manager can fill in a second.
  *
@@ -1304,10 +1305,10 @@ export const JOB_TITLES: readonly { pattern: RegExp; title: string }[] = COMPANY
  * The job title the manager stated, or null.
  *
  * FIRST MATCH IN THIS FILE'S ORDER, which runs from the most specific title to
- * the least: "location director in training" contains "location director", and
+ * the least: "assistant store manager" contains "store manager", and
  * reading it as the latter would print the wrong role on the form. Two
  * different titles in one conversation is not refused the way two employee
- * names are — a manager comparing an SDIT to her Location Director has still told
+ * names are — a manager comparing a Shift Lead to her Store Manager has still told
  * us what the subject is, and the field is editable — but the ORDER means the
  * most specific one wins rather than whichever came first in the sentence.
  */

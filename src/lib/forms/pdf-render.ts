@@ -372,9 +372,9 @@ export interface RenderMeta {
  * A section heading, in whichever of the two official treatments this version
  * uses.
  *
- *   bar   a black band with white centred type — the EPPs, the Corrective
- *         Action Form, the hiring forms, and every version written before the
- *         style model.
+ *   bar   a black band with white centred type — for example review forms,
+ *         corrective action forms, hiring forms, and every version written
+ *         before the style model.
  *   rule  centred black type over a hairline across the page, which is how
  *         the business's own Word documents set a heading.
  *
@@ -421,8 +421,8 @@ function drawSection(sheet: Sheet, label: string): void {
  * column. A label too long for that share takes its own wrapped lines above a
  * full-width rule instead — the old code clamped where the value STARTED but
  * still drew the whole label, so a question like "What do you feel is the most
- * important skill for a District Manager to possess?" was overprinted by the
- * answer written on top of it. Several EPP questions are a full sentence, and
+ * important skill for this role to possess?" was overprinted by the answer
+ * written on top of it. Several review questions are a full sentence, and
  * longer again once a variant's role name is interpolated into them.
  */
 function drawValueLine(
@@ -563,10 +563,9 @@ function drawBlock(
       const value = block.field.input === "date" ? sheet.layout.date(raw) : raw;
       if (block.field.input === "long_text") {
         /*
-         * The label is wrapped rather than printed as one line: the phone
-         * prescreen asks "Are you willing to use our services as part of your
-         * Sun Tan City uniform? (Must agree to UV, Sunless and Spa usage to
-         * proceed with employment)", which is half a page wider than the paper.
+         * The label is wrapped rather than printed as one line: an interview
+         * question can be a long sentence with a parenthetical condition
+         * attached, which is half a page wider than the paper.
          */
         for (const line of wrapText(block.field.label, sheet.layout.contentWidth, SIZE.label, LABEL_FONT)) {
           sheet.ensure(LEADING);
@@ -603,9 +602,8 @@ function drawBlock(
        * A FIXED 10pt GUTTER RAN OFF THE PAGE at four columns and further at
        * five: the widths reserve 20pt of slack in total, and n columns need
        * n-1 gutters, so from four columns on the gutters were spending slack
-       * the widths had not left. The TSD plan's productivity rows have FIVE
-       * metrics and "Average Club Dollar" was drawn 12pt past the right
-       * margin.
+       * the widths had not left. A performance plan with FIVE metric columns
+       * had its last metric drawn 12pt past the right margin.
        *
        * TWO AND THREE COLUMNS ARE UNCHANGED, to the point. The slack divides
        * to 20 and to 10, and `min` holds both at the 10 they already had — so
@@ -759,7 +757,7 @@ function drawBlock(
       sheet.check(margin.left, sheet.y - 1, boxSize);
       /*
        * WHAT THE TWO MARKS MEAN ON THIS FORM. Successes and improvements
-       * everywhere but the TSD plan's re-evaluation, which marks the same
+       * everywhere but a performance plan's re-evaluation, which marks the same
        * three states — met, not met, not yet reviewed — over its objectives.
        */
       const successLabel = block.successLabel ?? "Mark areas of success";

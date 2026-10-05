@@ -15,8 +15,8 @@ import { readZipText } from "./zip";
  *   `lib/ingestion/extract/docx.ts`.
  *
  *   THE PAGE HEADER, read straight out of the archive. Word keeps a header in
- *   `word/header1.xml`, and the Coaching Form keeps its TITLE and the Sun Tan
- *   City brand there. Mammoth reports the body only, so a reader that stopped
+ *   `word/header1.xml`, and an example coaching form keeps its TITLE and the
+ *   company brand there. Mammoth reports the body only, so a reader that stopped
  *   at mammoth would produce a form with no name on it. Those lines come back
  *   marked `chrome`, so the outline can tell "the document is called this" from
  *   "the form asks this".

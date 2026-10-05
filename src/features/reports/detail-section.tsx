@@ -78,9 +78,9 @@ export function ReportDetailSection({
  * A PARAGRAPH THAT WAS DEFENDING A NUMBER, PUT BEHIND AN AFFORDANCE
  * ============================================================================
  *
- * THE REQUEST: "Some of the explanatory copy is doing too much. The PPTA 'Not
- * comparable' tile is a three-sentence explanation, and Spa Engagement includes
- * a section titled 'Two measures that look alike and are not.' If a metric
+ * THE REQUEST: "Some of the explanatory copy is doing too much. One metric's
+ * 'Not comparable' tile is a three-sentence explanation, and another report
+ * includes a section titled 'Two measures that look alike and are not.' If a metric
  * requires a paragraph to explain or defend it, that information should live
  * behind an info icon."
  *

@@ -203,8 +203,8 @@ export function alignToCurrent(
        * THE BRAND IS HOUSE STYLE, NOT DOCUMENT CONTENT. Every form in the
        * library prints the same one, in the same case. The TITLE comes from the
        * source — that is the document's own name — but a PDF that spells the
-       * brand "Sun Tan City" must not leave one form shouting less than the
-       * other twelve.
+       * brand in title case must not leave one form shouting less than the
+       * others.
        */
       return { ...block, brand: existing.brand ?? block.brand };
     }

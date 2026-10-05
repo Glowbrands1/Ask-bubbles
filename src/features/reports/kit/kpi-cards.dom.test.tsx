@@ -29,7 +29,7 @@ import { KpiCardRow, trendFor, type KpiCard } from "./kpi-cards";
 function card(overrides: Partial<KpiCard> = {}): KpiCard {
   return {
     id: "total-tans",
-    label: "Total Tans",
+    label: "Total Visits",
     value: "48,584",
     helper: "Across 15 locations, read once per location.",
     ...overrides,
@@ -41,7 +41,7 @@ afterEach(cleanup);
 describe("the bed and spa KPI row keeps what makes a figure quotable", () => {
   it("shows the figure and the line that says what it is", () => {
     render(<KpiCardRow cards={[card()]} />);
-    expect(screen.getByText("Total Tans")).toBeTruthy();
+    expect(screen.getByText("Total Visits")).toBeTruthy();
     expect(screen.getByText("48,584")).toBeTruthy();
     expect(screen.getByText("Across 15 locations, read once per location.")).toBeTruthy();
   });

@@ -31,7 +31,7 @@ const DOC_ID = "8f14e45f-ceea-4e78-b2a7-1c1b1a2b3c4d";
 function documentFixture(overrides: Partial<KnowledgeDocument> = {}): KnowledgeDocument {
   return {
     id: DOC_ID,
-    title: "Sun Tan City Attendance Policy",
+    title: "Example Attendance Policy",
     description: "Ready to work at the start of the scheduled shift.",
     category: "policies",
     fileName: "Attendance Policy.pdf",
@@ -106,7 +106,7 @@ describe("opening the document a citation names", () => {
   it("shows that document", async () => {
     await renderView();
     await waitFor(() =>
-      expect(screen.getByText("Sun Tan City Attendance Policy")).toBeTruthy(),
+      expect(screen.getByText("Example Attendance Policy")).toBeTruthy(),
     );
     expect(screen.getByText(/Ready to work at the start/)).toBeTruthy();
   });
@@ -135,7 +135,7 @@ describe("opening the document a citation names", () => {
   it("offers the preview and download the reader is already permitted", async () => {
     await renderView();
     await waitFor(() =>
-      expect(screen.getByText("Sun Tan City Attendance Policy")).toBeTruthy(),
+      expect(screen.getByText("Example Attendance Policy")).toBeTruthy(),
     );
     expect(screen.getByRole("button", { name: /preview/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /download/i })).toBeTruthy();
@@ -154,7 +154,7 @@ describe("opening the document a citation names", () => {
      */
     const { container } = await renderView();
     await waitFor(() =>
-      expect(screen.getByText("Sun Tan City Attendance Policy")).toBeTruthy(),
+      expect(screen.getByText("Example Attendance Policy")).toBeTruthy(),
     );
 
     for (const label of [/upload/i, /delete/i, /re-?index/i, /retry/i, /re-?categorize/i]) {
@@ -177,6 +177,6 @@ describe("when the document cannot be opened", () => {
     await waitFor(() =>
       expect(screen.getByText(/could not be opened/i)).toBeTruthy(),
     );
-    expect(screen.queryByText("Sun Tan City Attendance Policy")).toBeNull();
+    expect(screen.queryByText("Example Attendance Policy")).toBeNull();
   });
 });

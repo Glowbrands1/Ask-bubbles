@@ -23,6 +23,7 @@ import {
 import { Tooltip, TooltipProvider } from "@/components/ui/overlays";
 import { cn } from "@/lib/utils/cn";
 import type { FormBlock } from "@/lib/forms/document";
+import { FORM_LETTERHEAD_BRAND } from "@/config/company/forms/letterhead";
 
 /**
  * THE DOCUMENT TOOLBAR.
@@ -158,7 +159,7 @@ export const INSERTS: ToolbarAction[] = [
   {
     key: "reference",
     label: "Position description",
-    hint: "The boxed role copy the DMIT EPP prints for the reviewed position",
+    hint: "The boxed role copy a review form prints for the reviewed position",
     icon: <AlignCenter className="size-4" />,
     block: {
       kind: "reference",
@@ -171,7 +172,7 @@ export const INSERTS: ToolbarAction[] = [
     label: "Letterhead",
     hint: "The brand chip and the form's title",
     icon: <ImageIcon className="size-4" />,
-    block: { kind: "letterhead", brand: "SUN TAN CITY", title: "New Form" },
+    block: { kind: "letterhead", brand: FORM_LETTERHEAD_BRAND, title: "New Form" },
   },
   {
     key: "page_break",

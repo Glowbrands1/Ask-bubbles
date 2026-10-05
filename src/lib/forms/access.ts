@@ -131,15 +131,15 @@ export async function authorizeForms(
    * PREVIEW MODE DOES NOT ENFORCE THE MATRIX, AND THAT IS THE HONEST CHOICE.
    *
    * `DEFAULT_PERMISSION_MATRIX` is this app's own GUESS at who does what.
-   * Nobody has configured roles yet, so refusing a Location Director the DMIT EPP
+   * Nobody has configured roles yet, so refusing a store manager a review form
    * was not policy being applied — it was an invented restriction standing in
    * front of a form the owner was trying to look at. It was self-defeating too:
    * the role it checks arrives in a header the browser sets, so anyone refused
    * could simply claim another role and carry on.
    *
    * The permission is still RESOLVED and carried on the actor, so a screen can
-   * say "this will need Create EPP once roles are configured". The model stays
-   * visible without standing in the way.
+   * say "this will need <the form's permission> once roles are configured".
+   * The model stays visible without standing in the way.
    *
    * Live mode is untouched, and is now where enforcement actually happens:
    * `authorizeRequest` above applies the same matrix to a VERIFIED identity, so

@@ -14,8 +14,8 @@ import type { Role } from "@/types";
  * THE TWO ADOPTION TABLES.
  *
  * BOTH LIST THE SILENT ROWS, and that is the single most useful thing on this
- * page. Knowing MO Kansas City Wornall filed seven forms is mildly interesting;
- * knowing NE Kearney filed none is the row somebody acts on. The database
+ * page. Knowing Example Location 101 filed seven forms is mildly interesting;
+ * knowing Example Location 102 filed none is the row somebody acts on. The database
  * functions LEFT JOIN from the directories precisely so a location or a leader with
  * no activity comes back with zeros instead of disappearing, and these tables
  * show them rather than filtering them back out.

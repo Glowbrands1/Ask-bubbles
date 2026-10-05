@@ -134,7 +134,7 @@ describe("the location picker offers only the manager's own locations", () => {
         locationId: null,
         locationResolution: "needs_selection",
         authorizedLocationIds: ["loc-0306"],
-        namedLocationOutOfScope: "KS Lawrence",
+        namedLocationOutOfScope: "Example Location 104",
         status: "needs_location",
       }),
     });

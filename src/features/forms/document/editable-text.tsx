@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils/cn";
  * controlled the moment you leave.
  *
  * `display` exists for interpolation. The stored text is `{{role}} and
- * {{roleAbbr}} will meet`; the reader should see "District Manager and DMIT
+ * {{roleAbbr}} will meet`; the reader should see "District Manager and DM
  * will meet". So a block passes the RESOLVED text as `display` and the RAW text
  * as `value`, and editing swaps to raw — because saving the resolved text would
  * silently burn one variant's wording into a document meant to read both ways.

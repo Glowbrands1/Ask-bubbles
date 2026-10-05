@@ -827,10 +827,10 @@ export async function markExported(instanceId: string, actor: string): Promise<v
 }
 
 /**
- * A revision, or the re-evaluation stage of an EPP.
+ * A revision, or the re-evaluation stage of a review form.
  *
- * The new form copies the old one's values and points back at it, so the
- * DMIT lifecycle — review, plan, follow-up, re-evaluation — reads as one
+ * The new form copies the old one's values and points back at it, so a review
+ * lifecycle — review, plan, follow-up, re-evaluation — reads as one
  * history instead of unrelated documents that happen to share a name. The
  * original is marked `revised` and stays exactly as it was signed.
  */

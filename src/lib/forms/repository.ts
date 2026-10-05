@@ -512,9 +512,10 @@ async function publishSeedRevision(
    * changes only the pairing changes every role word on the page and nothing
    * in the document.
    *
-   * FOUND THE FIRST TIME THAT MATTERED. The SDIT EPP's variant said "ASD",
-   * inherited from the original reference pairing, so the form asked "In what
-   * areas is the ASD currently succeeding?" under a title reading SDIT. The
+   * FOUND THE FIRST TIME THAT MATTERED. A review form's variant named the
+   * wrong role, inherited from the original reference pairing, so the form
+   * asked "In what areas is the <wrong role> currently succeeding?" under a
+   * title naming the right one. The
    * fix is a variant change and nothing else — and a document-only comparison
    * would have declared the database already correct and published nothing,
    * silently, for as long as the two disagreed.

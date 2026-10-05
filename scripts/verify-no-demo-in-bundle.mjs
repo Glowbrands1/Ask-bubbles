@@ -50,10 +50,12 @@ const SERVER = join(NEXT, "server");
 
 /** The Woven sample set's invented names and markers. Checked in client AND server output. */
 const WOVEN_SAMPLE = [
-  "sample-salons.test",
+  "sample-locations.test",
   "SAMPLE-EMP-",
   "SAMPLE-RUN-",
-  "Sample Salon Riverside",
+  "SAMPLE-LOC-",
+  "SAMPLE-POS-",
+  "Example Support Office",
   "Marisol Quintero",
   "Jonah Brightwater",
   "Delphine Harrow",
@@ -117,6 +119,14 @@ const FORBIDDEN = {
    * one of these — in the client assets OR the server bundle (see below).
    */
   "invented Woven sample records": WOVEN_SAMPLE,
+  /* The Ask Bubbles demo corpus and accounts (src/data/demo). */
+  "Ask Bubbles demo content": [
+    "Store Opening Checklist (Demo)",
+    "Guest Experience Basics (Demo)",
+    "Attendance Expectations (Demo)",
+    "@demo.invalid",
+    "That isn't covered by the demo knowledge base",
+  ],
   "fabricated records and rosters": [
     /*
      * "Local prototype storage" is NOT listed, and the near-miss is worth

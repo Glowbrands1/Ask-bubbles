@@ -377,7 +377,7 @@ function FormProposalCard({
    * A FORM THE MANAGER PICKED BY NAME DOES NOT ASK THEM TO PICK IT AGAIN
    * ==========================================================================
    *
-   * Clicking "SDIT EPP" in the picker IS the decision. Coming back with a
+   * Clicking a form in the picker IS the decision. Coming back with a
    * card that says "Create draft" asks for the same decision a second time,
    * which is the friction this workstream exists to remove.
    *

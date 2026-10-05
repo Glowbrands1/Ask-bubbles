@@ -30,7 +30,7 @@ import {
  *
  * Finalizing freezes the values; the database refuses later edits, and the way
  * to correct a finalized form is a revision that points back at it. That is
- * also how the DMIT EPP's re-evaluation stage works, which is why it is the
+ * also how a review form's re-evaluation stage works, which is why it is the
  * same call with a different kind rather than a separate feature.
  *
  * ============================================================================
@@ -39,7 +39,8 @@ import {
  *
  * It does two things no route here used to do: it authorizes on the TEMPLATE'S
  * OWN permission rather than a hard-coded `create_coaching_form` — so a role
- * that may write a coaching form cannot save, draft or finalize a DPOA — and it
+ * that may write a coaching form cannot save, draft or finalize a corrective
+ * action form — and it
  * checks the form's location against the caller's `AccessScope`.
  *
  * An unauthorized form answers exactly as a missing one does. A 403 here would

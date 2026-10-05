@@ -28,7 +28,7 @@ function matchRow(over: Partial<MatchedChunkRow> = {}): MatchedChunkRow {
 function documentRow(over: Partial<KnowledgeDocumentRow> = {}): KnowledgeDocumentRow {
   return {
     id: "doc-1",
-    knowledge_scope_id: "stc-core",
+    knowledge_scope_id: "other-core",
     title: "Attendance Policy",
     description: "How attendance is handled.",
     category: "policies_compliance",
@@ -36,7 +36,7 @@ function documentRow(over: Partial<KnowledgeDocumentRow> = {}): KnowledgeDocumen
     original_filename: "attendance.pdf",
     mime_type: "application/pdf",
     file_type: "pdf",
-    storage_path: "stc-core/doc-1/v1/attendance.pdf",
+    storage_path: "other-core/doc-1/v1/attendance.pdf",
     size_bytes: 12345,
     character_count: 4000,
     source: "upload",
@@ -95,7 +95,7 @@ describe("rowToDocument", () => {
 
   it("never exposes the storage path to the client shape", () => {
     expect(Object.keys(rowToDocument(documentRow()))).not.toContain("storagePath");
-    expect(JSON.stringify(rowToDocument(documentRow()))).not.toContain("stc-core/doc-1");
+    expect(JSON.stringify(rowToDocument(documentRow()))).not.toContain("other-core/doc-1");
   });
 
   it("shows a still-processing document as processing and not indexed", () => {

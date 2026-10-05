@@ -322,7 +322,7 @@
   --measure-flagged: var(--bcs-attention);
   --measure-flagged-foreground: var(--bcs-attention-ink);
   /* THE DATA FILL. One colour for every bar in a ranking — rank never changes
-     a colour, because a colour that follows rank instead of the salon moves
+     a colour, because a colour that follows rank instead of the location moves
      when a filter changes the line-up. */
   --measure-data: var(--bcs-data);
   --measure-data-track: var(--bcs-data-track);
@@ -858,7 +858,7 @@
      Declared as a class rather than inline, because the hub draws several
      tables and each had been writing its own head and row padding — which is
      how two of them end up a pixel apart on the same page. The ranking table
-     adopts it first; the remaining tables (salon metric, salon comparison,
+     adopts it first; the remaining tables (location metric, location comparison,
      sales totals, form monitoring) are still on their own markup and are the
      obvious next thing to fold in.
      ========================================================================== */
@@ -970,7 +970,7 @@
   /*
    * Shrink to the content, but allow a long label to wrap rather than force the
    * table wider. For a column whose values are words of a known kind — a role
-   * label like "Assistant Salon Director" — where nowrap would win the argument
+   * label like "Assistant Location Manager" — where nowrap would win the argument
    * against the flexible column and push it into a squash.
    */
   .data-table thead th[data-width="fit"],

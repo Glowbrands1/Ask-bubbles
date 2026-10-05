@@ -387,9 +387,9 @@ function VariantCondition({
         ))}
       </Select>
       <p className="text-[11px] leading-snug text-subtle-foreground">
-        How one document reads two ways. The DMIT EPP&apos;s position description is
-        scoped this way, so the TSD review and the DMIT review print different copy from
-        the same version.
+        How one document reads two ways. A review form&apos;s position description can be
+        scoped this way, so each role&apos;s review prints its own copy from the same
+        version.
       </p>
     </div>
   );

@@ -40,12 +40,11 @@ import type { TemplateSummary } from "./repository";
  *   THE KNOWLEDGE BASE     policies, guides, frameworks. You read them. They are
  *                          retrieved and cited by the ordinary grounded path.
  *
- *   WORKFLOW STEPS         Observation, Coaching, Role Play, Follow-Up Coaching,
- *                          EPP, Follow-Up Review, Corrective Action, Leadership
- *                          Review — the
- *                          approved progression. A step is NOT automatically a
- *                          form: Role Play is a rung with no template, and
- *                          Follow-Up Review is a section inside the EPP.
+ *   WORKFLOW STEPS         the rungs of a coaching progression — for example
+ *                          observation, coaching, follow-up, a performance
+ *                          review, corrective action. A step is NOT
+ *                          automatically a form: a rung can have no template,
+ *                          or be a section inside another form.
  *
  * Nothing here describes the second or the third. What it does is make the first
  * one exact, so the prompt can state the boundary and mean it.

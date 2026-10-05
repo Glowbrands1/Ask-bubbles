@@ -231,7 +231,7 @@ export interface OutlineOptions {
    * The brand the library already prints.
    *
    * Used for ONE decision: whether the line under the title is the company name
-   * or the first section heading. "Coaching Form / Sun Tan City / Employee
+   * or the first section heading. "Coaching Form / Example Company / Employee
    * Information" and "Coaching Form / Employee Information / ..." are the same
    * shape, and only knowing the brand tells them apart. Where it is unknown the
    * line is left as a heading, which a reviewer can see and correct — the safe

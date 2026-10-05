@@ -24,11 +24,11 @@ describe("the detail section hides nothing — it defers it", () => {
   it("keeps the content in the document, so find-in-page still reaches it", () => {
     render(
       <ReportDetailSection title="Sessions by location and equipment" weight="57 rows">
-        <p>MO Kansas City Wornall</p>
+        <p>Example Location 101</p>
       </ReportDetailSection>,
     );
     // Present but not expanded: nothing was dropped from the markup.
-    expect(screen.getByText("MO Kansas City Wornall")).toBeTruthy();
+    expect(screen.getByText("Example Location 101")).toBeTruthy();
     expect(document.querySelector("details")?.open).toBe(false);
   });
 
@@ -64,11 +64,11 @@ describe("the detail section hides nothing — it defers it", () => {
 describe("a paragraph defending a metric sits behind one line", () => {
   it("shows the label and keeps the explanation available", () => {
     render(
-      <ExplainerNote label="What PPTA is, and what it is not">
+      <ExplainerNote label="What AOV is, and what it is not">
         <span>Product sales divided by total tans.</span>
       </ExplainerNote>,
     );
-    expect(screen.getByText("What PPTA is, and what it is not")).toBeTruthy();
+    expect(screen.getByText("What AOV is, and what it is not")).toBeTruthy();
     expect(screen.getByText("Product sales divided by total tans.")).toBeTruthy();
     expect(document.querySelector("details")?.open).toBe(false);
   });

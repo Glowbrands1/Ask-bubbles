@@ -82,6 +82,7 @@ function followUps(overrides: Partial<OverviewFollowUps> = {}): OverviewFollowUp
     items: [],
     today: TODAY,
     failure: null,
+    connected: true,
     excluded: 0,
     scopeLabel: null,
     ...overrides,
@@ -377,5 +378,13 @@ describe("Home invents nothing where no data source is connected", () => {
       const href = anchor.getAttribute("href") ?? "";
       expect(href.startsWith("/"), href).toBe(true);
     }
+  });
+});
+
+describe("a deployment with no forms database", () => {
+  it("says forms are not connected rather than reporting a failure", () => {
+    render(<OverviewScreen followUps={followUps({ connected: false })} />);
+    expect(screen.getByText("Forms are not connected in this deployment")).toBeTruthy();
+    expect(screen.queryByText("Follow-ups could not be read")).toBeNull();
   });
 });

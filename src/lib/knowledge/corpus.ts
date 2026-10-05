@@ -17,10 +17,10 @@ import { ACTIVE_BRAND } from "@/lib/brand";
  * These routes used to take the corpus from `?scope=`, `body.scopeId` or a
  * multipart field and validate it with `requireScopeId` — which checks the
  * SHAPE of the value, not the caller's right to it. `bcs-core` passes that check
- * because it is a real corpus: `src/lib/brand` defines Buff City Soap alongside
- * Sun Tan City.
+ * because it is a real corpus: `src/lib/brand` defines it, and another brand's
+ * deployment defines its own.
  *
- * So an authenticated Sun Tan City manager, holding every permission they are
+ * So an authenticated manager of one brand, holding every permission they are
  * supposed to hold, could name another company's corpus and have the server use
  * it — to list it, search it, upload into it, re-index it, download from it, or
  * delete from it. `authorizeRequest` did not stop it and was never going to: it

@@ -94,7 +94,7 @@ export function UserMenu({
             </span>
             {!collapsed ? (
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] font-medium text-foreground">
+                <span className="block truncate text-[13px] font-medium text-sidebar-foreground">
                   {user.name}
                 </span>
                 <span className="block truncate text-[11px] text-sidebar-muted">

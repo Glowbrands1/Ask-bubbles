@@ -87,7 +87,7 @@ export interface TurnTelemetry {
   /**
    * Which template a form event was about, as a LIBRARY KEY.
    *
-   * A key names a published document — "coaching", "dpoa" — and is the same
+   * A key names a published document — "coaching", "review" — and is the same
    * value in every deployment. It is not an employee, not a location and not
    * anything the manager typed, so it carries no more than the template list
    * already public to everyone who can open Forms.

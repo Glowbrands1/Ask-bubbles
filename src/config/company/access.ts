@@ -130,6 +130,8 @@ export const COMPANY_PERMISSION_MATRIX: PermissionMatrix = {
 
 /** Roles a demo presenter may switch between. Demo builds only. */
 export const DEMO_SWITCHABLE_ROLES: readonly Role[] = [
+  "employee",
+  "assistant_manager",
   "location_manager",
   "district_manager",
   "regional_manager",

@@ -1,12 +1,8 @@
 -- ---------------------------------------------------------------------------
 -- WOVEN EMPLOYEE DIRECTORY — a read-only copy of who works where, and what moved
 --
--- NOT APPLIED. Revised in place on 29 September 2026 against the official Woven
--- OpenAPI 3 export, before its first application anywhere: Ask Bubbles Dev
--- (`rbkylaavthsjepsczccv`) is the only Supabase project, it has no branches,
--- and this version is absent from its migration history. It is applied only
--- with explicit approval, verbatim, in one transaction — and because Production
--- reads that project, applying it IS a production change.
+-- Part of the Ask Bubbles baseline. Applied to the Ask Bubbles Supabase
+-- project only, in order with every other migration in this directory.
 --
 -- WHAT THIS CREATES, and nothing else:
 --
@@ -601,7 +597,7 @@ alter table public.woven_position_map force row level security;
 revoke all on table public.woven_position_map from anon, authenticated;
 
 comment on table public.woven_position_map is
-  'Woven PositionID → Ask Bubbles role, default scope level and hierarchy rank, set by a person. Queued by the sync as unmapped. In phase one it LABELS changes only: nothing reads it to set a role, scope or salon access.';
+  'Woven PositionID → Ask Bubbles role, default scope level and hierarchy rank, set by a person. Queued by the sync as unmapped. In phase one it LABELS changes only: nothing reads it to set a role, scope or location access.';
 
 -- ------------------------------------------------------------ functions ----
 

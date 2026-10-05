@@ -11,17 +11,17 @@ afterEach(cleanup);
  * The 14 September review, from the restricted session:
  *
  *   "Markdown tables are rendering as raw text. The location list appeared with
- *    literal pipes — `| Location | PPTA | |---|---|` — instead of displaying as a
+ *    literal pipes — `| Location | AOV | |---|---|` — instead of displaying as a
  *    formatted table."
  */
 
 const LOCATION_TABLE = [
   "Here are the locations:",
   "",
-  "| Location | PPTA | Tans |",
+  "| Location | AOV | Visits |",
   "|---|---:|---:|",
   "| Testville Downtown | $3.54 | 150 |",
-  "| NE Kearney | $0.19 | 105 |",
+  "| Example Location 101 | $0.19 | 105 |",
   "",
   "That is the whole list.",
 ].join("\n");
@@ -40,7 +40,7 @@ describe("markdown tables render as tables", () => {
   it("puts the header row in column headers", () => {
     render(<RichText content={LOCATION_TABLE} />);
     const headers = screen.getAllByRole("columnheader").map((cell) => cell.textContent);
-    expect(headers).toEqual(["Location", "PPTA", "Tans"]);
+    expect(headers).toEqual(["Location", "AOV", "Visits"]);
   });
 
   it("puts every body row in the table", () => {
@@ -50,7 +50,7 @@ describe("markdown tables render as tables", () => {
     expect(rows).toHaveLength(3);
     expect(rows[1].textContent).toContain("Testville Downtown");
     expect(rows[1].textContent).toContain("$3.54");
-    expect(rows[2].textContent).toContain("NE Kearney");
+    expect(rows[2].textContent).toContain("Example Location 101");
   });
 
   it("keeps the prose around it as prose", () => {
@@ -70,20 +70,20 @@ describe("markdown tables render as tables", () => {
   it("renders a table written without the outer pipes", () => {
     render(
       <RichText
-        content={["Location | PPTA", "--- | ---", "KS Lawrence | $3.25"].join("\n")}
+        content={["Location | AOV", "--- | ---", "Example Location 104 | $3.25"].join("\n")}
       />,
     );
     expect(screen.getAllByRole("columnheader").map((c) => c.textContent)).toEqual([
       "Location",
-      "PPTA",
+      "AOV",
     ]);
-    expect(screen.getByRole("table").textContent).toContain("KS Lawrence");
+    expect(screen.getByRole("table").textContent).toContain("Example Location 104");
   });
 
   it("still renders bold inside a cell", () => {
     render(
       <RichText
-        content={["| Location | Note |", "|---|---|", "| KS Lawrence | **check this** |"].join("\n")}
+        content={["| Location | Note |", "|---|---|", "| Example Location 104 | **check this** |"].join("\n")}
       />,
     );
     expect(screen.getByText("check this").tagName).toBe("STRONG");
@@ -93,15 +93,15 @@ describe("markdown tables render as tables", () => {
     render(
       <RichText
         content={[
-          "| Location | PPTA | Tans |",
+          "| Location | AOV | Visits |",
           "|---|---|---|",
-          "| KS Lawrence | $3.25 |",
+          "| Example Location 104 | $3.25 |",
         ].join("\n")}
       />,
     );
     const cells = within(screen.getByRole("table")).getAllByRole("cell");
     expect(cells).toHaveLength(3);
-    expect(cells[0].textContent).toBe("KS Lawrence");
+    expect(cells[0].textContent).toBe("Example Location 104");
     expect(cells[1].textContent).toBe("$3.25");
     expect(cells[2].textContent).toBe("");
   });
@@ -109,10 +109,10 @@ describe("markdown tables render as tables", () => {
 
 describe("a table is a table, and a sentence with a pipe is not", () => {
   it("leaves prose containing a pipe alone", () => {
-    render(<RichText content="Revenue | PPTA is not a table without a delimiter row." />);
+    render(<RichText content="Revenue | AOV is not a table without a delimiter row." />);
     expect(screen.queryByRole("table")).toBeNull();
     expect(
-      screen.getByText("Revenue | PPTA is not a table without a delimiter row."),
+      screen.getByText("Revenue | AOV is not a table without a delimiter row."),
     ).toBeTruthy();
   });
 
@@ -123,7 +123,7 @@ describe("a table is a table, and a sentence with a pipe is not", () => {
 
   it("keeps an escaped pipe inside its own cell", () => {
     render(
-      <RichText content={["| Measure | Formula |", "|---|---|", "| PPTA | a \\| b |"].join("\n")}
+      <RichText content={["| Measure | Formula |", "|---|---|", "| AOV | a \\| b |"].join("\n")}
       />,
     );
     const cells = within(screen.getByRole("table")).getAllByRole("cell");
@@ -189,17 +189,17 @@ describe("a complete assistant answer", () => {
   const ANSWER = [
     "### Sales Totals — 12 September",
     "",
-    "Across your locations PPTA came in at **$2.25**, weighted by each location's own tans.",
+    "Across your locations AOV came in at **$2.25**, weighted by each location's own tans.",
     "",
-    "| Location | PPTA | Tans |",
+    "| Location | AOV | Visits |",
     "| --- | ---: | ---: |",
     "| Testville Downtown | $2.38 | 102 |",
-    "| NE Kearney | $1.28 | 65 |",
-    "| NE Omaha 132nd and Maple | n/a | 74 |",
+    "| Example Location 101 | $1.28 | 65 |",
+    "| Example Location 103 132nd and Maple | n/a | 74 |",
     "",
     "Two things stand out:",
     "",
-    "- **NE Omaha 132nd and Maple** reports a PPTA of zero, which is a data question rather than a performance finding.",
+    "- **Example Location 103 132nd and Maple** reports a AOV of zero, which is a data question rather than a performance finding.",
     "- The spread between the strongest and weakest location is **$1.10**.",
     "",
     "Product attachment is the behaviour behind that gap.",
@@ -213,8 +213,8 @@ describe("a complete assistant answer", () => {
     expect(screen.getByRole("columnheader", { name: "Location" })).toBeTruthy();
     for (const location of [
       "Testville Downtown",
-      "NE Kearney",
-      "NE Omaha 132nd and Maple",
+      "Example Location 101",
+      "Example Location 103 132nd and Maple",
     ]) {
       expect(screen.getByRole("cell", { name: location })).toBeTruthy();
     }
@@ -225,7 +225,7 @@ describe("a complete assistant answer", () => {
 
     const items = screen.getAllByRole("listitem");
     expect(items).toHaveLength(2);
-    expect(items[0].textContent).toContain("NE Omaha 132nd and Maple");
+    expect(items[0].textContent).toContain("Example Location 103 132nd and Maple");
     expect(items[1].textContent).toContain("$1.10");
   });
 

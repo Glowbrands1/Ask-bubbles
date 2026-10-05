@@ -15,8 +15,8 @@ import { cn } from "@/lib/utils/cn";
  *
  * The reference forms mark every fillable area with who fills it, and that
  * marking is the single most useful thing on the page: it is how an
- * administrator sees at a glance that the DMIT EPP's self-review is filled by
- * hand while the SDIT EPP's is drafted.
+ * administrator sees at a glance that one review form's self-review is filled
+ * by hand while another's is drafted.
  *
  * THEY ARE EDITOR OVERLAYS AND MUST NEVER PRINT. Nothing here is reachable from
  * `pdf-render.ts` — the PDF is drawn from the document's blocks and values, and
@@ -49,9 +49,9 @@ function Icon({ responsibility }: { responsibility: FieldResponsibility }) {
  * How much of a field's label the chip will carry.
  *
  * Naming the field is what makes a chip useful — "AI FILLS: POLICY VIOLATED"
- * says something "AI FILLS" alone does not. But several fields on the DMIT EPP
- * are whole questions ("What do you feel is the most important skill for a
- * District Manager to possess?"), and a chip carrying one of those wraps to
+ * says something "AI FILLS" alone does not. But several fields on a review
+ * form can be whole questions ("What do you feel is the most important skill
+ * for this role?"), and a chip carrying one of those wraps to
  * three lines and swamps the field it is annotating. Past this length the label
  * is already right there on the page, so the chip drops it and says only who
  * fills it.

@@ -28,7 +28,7 @@ import {
  *
  * NOT `create_coaching_form` EITHER, which is what it asked for on every
  * template — a role that may document a coaching conversation could set the
- * follow-up on an EPP it holds no permission for, at a location it does not cover.
+ * follow-up on a review form it holds no permission for, at a location it does not cover.
  * `authorizeInstance` resolves the template's own permission and checks the
  * form's location against the caller's `AccessScope`.
  */

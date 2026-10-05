@@ -7,7 +7,7 @@ import { serializeFilters, type AnalyticsFilters } from "@/lib/analytics/filters
 /**
  * THE ADOPTION GAP, stated rather than implied.
  *
- * This is the panel management came for. "MO Kansas City Wornall filed seven
+ * This is the panel management came for. "Example Location 101 filed seven
  * forms" is mildly interesting; "twelve of fifteen locations have filed nothing
  * this month" is the sentence somebody acts on, and until it is written down as
  * a number it has to be counted by eye from a table of zeros.

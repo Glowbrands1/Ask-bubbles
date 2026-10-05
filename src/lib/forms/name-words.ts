@@ -19,9 +19,9 @@ export const NOT_A_NAME = new Set([
    * THE SUBJECT PRONOUNS. They could not reach a candidate before: a full name
    * needs two capitalised parts and the preposed pattern needs "for"/"about",
    * so a sentence-initial "She" matched nothing. `NAMED_ROLE` below reads
-   * "<Name> is an SDIT", and "She is an SDIT" is that shape exactly — so the
-   * pronouns have to be named here or the employee on a performance plan
-   * becomes "She".
+   * "<Name> is a Shift Lead", and "She is a Shift Lead" is that shape exactly —
+   * so the pronouns have to be named here or the employee on a performance
+   * plan becomes "She".
    */
   "she", "he", "they", "we", "you",
   /*

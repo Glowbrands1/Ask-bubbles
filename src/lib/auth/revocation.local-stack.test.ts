@@ -34,7 +34,7 @@ const MAIL = process.env.LOCAL_STACK_MAIL_API ?? "";
 
 const run = randomBytes(4).toString("hex");
 /* Per run, so the suite can be re-run against the same stack. */
-const SCOPE = `stc-${run}`;
+const SCOPE = `scope-${run}`;
 const TARGET_EMAIL = `terminated-${run}@local.test`;
 const CONTROL_EMAIL = `control-${run}@local.test`;
 const ADMIN_EMAIL = `admin-${run}@local.test`;

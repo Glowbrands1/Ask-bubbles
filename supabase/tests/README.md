@@ -1,58 +1,28 @@
-# Migration verification harness
+# Database checks
 
-`reporting_schema_checks.sql` proves the behaviours the reporting migrations
-are supposed to guarantee — supersession, idempotency, the basis-year rule,
-the zero-padding hazard, RLS and privileges — by applying them to a **throwaway
-local PostgreSQL cluster** and then trying to break them.
+`rls_checks.sql` runs after every migration has been applied to a throwaway
+local cluster (`npm run verify:migrations`). It impersonates the browser roles
+exactly as PostgREST does and raises on the first failure, inside a
+transaction that is rolled back.
 
-This is not a substitute for applying migrations to Supabase. It is the step
-before that: catching, locally and for free, the class of defect that was
-previously only found by applying migrations to the live project.
+It proves:
 
-`bed_spa_schema_checks.sql` does the same for the Bed Usage, SPA Wellness and
-Spa Engagement migrations. Its most valuable steps are the ones a comment
-cannot enforce:
+1. every `public` table has RLS enabled **and forced**;
+2. `anon` holds no table, view or function privilege;
+3. `authenticated` holds exactly SELECT on `app_users` and EXECUTE on
+   `accept_invitation()`;
+4. a signed-in user reads only their own profile (no cross-user read);
+5. a signed-in user cannot insert, update or delete any profile through the API
+   (no self-elevation of role or scope);
+6. the self-elevation trigger refuses a role change or self re-enable even
+   where a write path exists;
+7. every other table and view is unreadable by a signed-in user, and the
+   reporting, analytics, retrieval and Woven RPCs are not callable;
+8. a user with no profile sees nothing and cannot accept an invitation;
+9. a disabled account cannot re-activate itself, and an invited account
+   accepting its invitation changes status only — never role or scope;
+10. the last active administrator cannot be demoted or disabled;
+11. storage buckets are private and carry no browser policies.
 
-- a **zero-session spa row is refused by Postgres**, not merely avoided by the
-  parser — which is what stops any later `avg()` from counting equipment that
-  is not installed as equipment that is failing;
-- **MTD, YTD and LTM through the same day are three distinct periods**, so a
-  year's spa sessions cannot be divided by a month's tanning traffic;
-- **supersession is scoped to (period, company)**: a corrected report replaces
-  its own month and a backfill of an earlier month supersedes nothing;
-- an **unresolved salon name comes back to the caller** and no salon is
-  invented for it;
-- **Spa Per Unique % and Spa Sessions per Unique Tanner per Spa Bed** come out
-  of the read view as separate columns whose ratio is exactly the bed count.
-
-`src/lib/config/reporting-schema.test.ts` covers the same invariants statically
-and runs in the normal `npm test` suite. This file covers what static text
-analysis cannot: whether Postgres actually enforces them.
-
-## Running it
-
-Needs PostgreSQL 16 and pgvector (`postgresql-16-pgvector`) on the machine —
-`supabase_stub.sql` stands in for the Supabase-managed objects the migrations
-reference (`extensions`, `auth.users`, `storage.buckets`, the `anon` /
-`authenticated` / `service_role` roles), **including Supabase's own
-`alter default privileges ... grant all on tables to anon, authenticated`.**
-That default is what caused two real privilege defects in the knowledge
-migrations, so reproducing it locally is the point rather than a detail.
-
-```bash
-initdb -D /var/tmp/askbubbles-pg -U postgres --auth=trust
-pg_ctl -D /var/tmp/askbubbles-pg -o '-p 55432 -k /var/tmp' start
-createdb -h /var/tmp -p 55432 -U postgres askbubbles
-
-psql -h /var/tmp -p 55432 -U postgres -d askbubbles -v ON_ERROR_STOP=1 \
-  -f supabase/tests/supabase_stub.sql
-for f in supabase/migrations/*.sql; do
-  psql -h /var/tmp -p 55432 -U postgres -d askbubbles -v ON_ERROR_STOP=1 -q -f "$f" || break
-done
-psql -h /var/tmp -p 55432 -U postgres -d askbubbles -f supabase/tests/reporting_schema_checks.sql
-```
-
-Every `MUST FAIL` step below is expected to print an error. A step that
-succeeds where it says MUST FAIL is a regression.
-
-All data in the checks is invented. No report content appears anywhere here.
+The checks were mutation-tested: granting a browser role a table, removing
+FORCE RLS, or granting UPDATE on profiles each makes the suite fail.

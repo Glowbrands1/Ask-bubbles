@@ -6,7 +6,7 @@ import { moversDomain, locationAxisWidth, storeNameTicks } from "./chart-axis";
  * WHAT THE RANKING AXIS SHOWS, AND WHAT IT IS KEYED ON.
  *
  * These are two different questions and the bug worth preventing lives in the
- * gap between them. A manager needs to read "MO Kansas City Liberty" off the
+ * gap between them. A manager needs to read "Example Location 105 Liberty" off the
  * axis; the chart needs each bar to have a unique identity. `locations.store_name`
  * carries no unique constraint — only a not-blank check — so keying the axis on
  * the name would let two locations sharing one collapse into a single bar showing
@@ -17,16 +17,16 @@ import { moversDomain, locationAxisWidth, storeNameTicks } from "./chart-axis";
  */
 
 const ROWS = [
-  { locationCode: "0394", storeName: "MO Kansas City Liberty" },
-  { locationCode: "0468", storeName: "KS Lawrence" },
-  { locationCode: "0314", storeName: "NE Omaha 144th and Center" },
+  { locationCode: "0394", storeName: "Example Location 105 Liberty" },
+  { locationCode: "0468", storeName: "Example Location 104" },
+  { locationCode: "0314", storeName: "Example Location 103 144th and Center" },
 ];
 
 describe("the tick a reader sees", () => {
   it("shows the store name for a location number", () => {
     const tick = storeNameTicks(ROWS);
-    expect(tick("0394")).toBe("MO Kansas City Liberty");
-    expect(tick("0468")).toBe("KS Lawrence");
+    expect(tick("0394")).toBe("Example Location 105 Liberty");
+    expect(tick("0468")).toBe("Example Location 104");
   });
 
   it("falls back to the number rather than rendering nothing", () => {
@@ -62,7 +62,7 @@ describe("the tick a reader sees", () => {
 
 describe("how much room the axis takes", () => {
   it("fits the longest name actually in view", () => {
-    // "NE Omaha 144th and Center" is 25 characters; the old fixed 64px, sized
+    // "Example Location 103 144th and Center" is 25 characters; the old fixed 64px, sized
     // for a four-digit number, would have clipped every name in the set.
     const width = locationAxisWidth(ROWS);
     expect(width).toBeGreaterThan(64);

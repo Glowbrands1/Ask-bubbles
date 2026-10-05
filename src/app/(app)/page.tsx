@@ -6,6 +6,7 @@ import {
   type OverviewFollowUps,
 } from "@/features/dashboard/overview";
 import { pageCan, requirePagePermission } from "@/lib/auth/page";
+import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 import { businessToday } from "@/lib/business-date";
 import { attentionSummary, followUpState } from "@/lib/forms/follow-up";
 import { readPermissionHolder, withoutUnreadable } from "@/lib/forms/instance-scope";
@@ -36,9 +37,12 @@ export default async function HomePage() {
     failure: null,
     excluded: 0,
     scopeLabel: null,
+    connected: supabaseSecretKeyConfigured(),
   };
 
-  if (await pageCan("view_form_monitoring")) {
+  /* No database configured (a demo or an unconfigured preview): there is no
+     forms record to read, which is not a failure, so nothing is attempted. */
+  if (followUps.connected && (await pageCan("view_form_monitoring"))) {
     try {
       const scope = identity?.verified ? identity.scope : null;
       const access = await resolveScopeFor(scope);
@@ -70,6 +74,7 @@ export default async function HomePage() {
       }));
 
       followUps = {
+        ...followUps,
         attention: attentionSummary(production, today),
         items,
         today,

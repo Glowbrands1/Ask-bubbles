@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Notice } from "@/components/ui/feedback";
+import { FORM_LAYOUT_FAMILY_LABEL } from "@/config/company/forms/categories";
 import { groupTemplatesByCategory } from "@/lib/forms/catalog";
 import { ACCEPTED_UPLOAD_TYPES, FORMAT_LABEL, type SourceFormat } from "@/lib/forms/source-format";
 import { formatBytes } from "@/lib/utils/format";
@@ -88,13 +89,8 @@ export interface TemplateSummaryView {
   assetCount: number;
 }
 
-const FAMILY_LABEL: Record<string, string> = {
-  coaching: "Coaching",
-  corrective: "Corrective",
-  epp: "EPP",
-  dmit_epp: "DMIT EPP",
-  interview: "Interview",
-};
+/** The configured families' labels; an unknown family shows its raw key. */
+const FAMILY_LABEL: Readonly<Record<string, string>> = FORM_LAYOUT_FAMILY_LABEL;
 
 export function TemplateLibrary({
   templates,

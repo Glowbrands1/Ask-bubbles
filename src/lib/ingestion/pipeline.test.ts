@@ -168,7 +168,7 @@ function upload() {
     mimeType: "application/pdf",
     title: "Safety Binder",
     category: "safety" as never,
-    scopeId: "stc-core",
+    scopeId: "other-core",
     uploadedByName: "Tester",
   };
 }
