@@ -16,6 +16,7 @@ import { JumpToRow } from "./jump-to-row";
 import { SidebarNav } from "./sidebar";
 import { GlobalSearch } from "./global-search";
 import { ACTIVE_BRAND } from "@/lib/brand";
+import { defaultLandingForRole } from "@/lib/permissions";
 
 const COLLAPSE_KEY = "ask-bubbles:sidebar-collapsed";
 
@@ -30,7 +31,7 @@ export function AppShell({
   children: ReactNode;
   overdueFollowUps?: number;
 }) {
-  const { hydrated, signedIn, demoMode } = useSession();
+  const { hydrated, signedIn, demoMode, role } = useSession();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Read straight from the external store — no effect, no cascading render.
@@ -76,7 +77,7 @@ export function AppShell({
           <Menu />
         </Button>
 
-        <Link href="/" aria-label={`${ACTIVE_BRAND.productName} — Home`} className="shrink-0">
+        <Link href={defaultLandingForRole(role)} aria-label={`${ACTIVE_BRAND.productName} — start`} className="shrink-0">
           <BrandMark size="md" onDark />
         </Link>
 

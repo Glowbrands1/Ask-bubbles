@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { PermissionGate } from "@/components/permission-gate";
 import { SYNTHETIC_DATA_NOTICE, formsIdentityIsUnverified } from "@/lib/forms/access";
 import {
   getCurrentVersion,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/forms/repository";
 import { TemplateEditorScreen } from "@/features/forms/template-editor-screen";
 import { requirePagePermission } from "@/lib/auth/page";
+import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 
 export const metadata: Metadata = { title: "Edit template" };
 export const dynamic = "force-dynamic";
@@ -28,6 +30,9 @@ export default async function EditTemplatePage({
 }) {
   await requirePagePermission("manage_form_templates");
 
+  /* No forms database in this deployment: there is no template to edit. */
+  if (!supabaseSecretKeyConfigured()) notFound();
+
   const { key } = await params;
   const template = await getTemplateByKey(key);
   if (!template) notFound();
@@ -39,50 +44,52 @@ export default async function EditTemplatePage({
   ]);
 
   return (
-    <TemplateEditorScreen
-      template={{
-        key: template.key,
-        name: template.name,
-        description: template.description,
-        layoutFamily: template.layoutFamily,
-      }}
-      initialVersions={versions.map((version) => ({
-        id: version.id,
-        version: version.version,
-        status: version.status,
-        document: version.document,
-        variants: version.variants,
-        notes: version.notes,
-        publishedAt: version.publishedAt,
-        publishedBy: version.publishedBy,
-      }))}
-      initialCurrent={
-        current
-          ? {
-              id: current.id,
-              version: current.version,
-              status: current.status,
-              document: current.document,
-              variants: current.variants,
-              notes: current.notes,
-              publishedAt: current.publishedAt,
-              publishedBy: current.publishedBy,
-            }
-          : null
-      }
-      assets={assets.map((asset) => ({
-        id: asset.id,
-        version: asset.version,
-        kind: asset.kind,
-        status: asset.status,
-        fileName: asset.fileName,
-        sizeBytes: asset.sizeBytes,
-        pageCount: asset.pageCount,
-        acroform: asset.acroform as { hasFields?: boolean; fieldCount?: number },
-        validation: asset.validation as { rejected?: string; notes?: string[] },
-        createdAt: asset.createdAt,
-      }))}
-      notice={formsIdentityIsUnverified() ? SYNTHETIC_DATA_NOTICE : null}
-    />
+    <PermissionGate permission="manage_form_templates">
+      <TemplateEditorScreen
+        template={{
+          key: template.key,
+          name: template.name,
+          description: template.description,
+          layoutFamily: template.layoutFamily,
+        }}
+        initialVersions={versions.map((version) => ({
+          id: version.id,
+          version: version.version,
+          status: version.status,
+          document: version.document,
+          variants: version.variants,
+          notes: version.notes,
+          publishedAt: version.publishedAt,
+          publishedBy: version.publishedBy,
+        }))}
+        initialCurrent={
+          current
+            ? {
+                id: current.id,
+                version: current.version,
+                status: current.status,
+                document: current.document,
+                variants: current.variants,
+                notes: current.notes,
+                publishedAt: current.publishedAt,
+                publishedBy: current.publishedBy,
+              }
+            : null
+        }
+        assets={assets.map((asset) => ({
+          id: asset.id,
+          version: asset.version,
+          kind: asset.kind,
+          status: asset.status,
+          fileName: asset.fileName,
+          sizeBytes: asset.sizeBytes,
+          pageCount: asset.pageCount,
+          acroform: asset.acroform as { hasFields?: boolean; fieldCount?: number },
+          validation: asset.validation as { rejected?: string; notes?: string[] },
+          createdAt: asset.createdAt,
+        }))}
+        notice={formsIdentityIsUnverified() ? SYNTHETIC_DATA_NOTICE : null}
+      />
+    </PermissionGate>
   );
 }

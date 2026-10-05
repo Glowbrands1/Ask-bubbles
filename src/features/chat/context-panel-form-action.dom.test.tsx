@@ -134,10 +134,12 @@ describe("RR-C. the panel is a trigger and nothing more", () => {
     }
   });
 
-  it("is inert rather than misleading when no handler is supplied", () => {
+  it("is absent rather than misleading when no handler is supplied", () => {
+    // ChatScreen supplies the handler only to a role holding create_forms, so
+    // a role that cannot create forms is never offered the action.
     panel(undefined);
-    const control = screen.getByRole("button", { name: /create a form from this conversation/i });
-    expect(control.hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByRole("button", { name: /create a form from this conversation/i })).toBeNull();
+    expect(screen.queryByText("Take it further")).toBeNull();
   });
 });
 
@@ -162,6 +164,6 @@ describe("RR-D. the request it sends is deliberately unspecified", () => {
     // The whole existing pipeline runs: bounded manager context, template
     // intent, continuation hint, authorized list, permission check.
     expect(chat).toContain("send(CREATE_FORM_FROM_CONVERSATION)");
-    expect(chat).toContain("onCreateForm={createFormFromConversation}");
+    expect(chat).toContain('onCreateForm={can("create_forms") ? createFormFromConversation : undefined}');
   });
 });

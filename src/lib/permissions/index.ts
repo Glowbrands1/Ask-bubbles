@@ -135,3 +135,20 @@ export function isPermissionLockedFor(role: Role, permission: Permission) {
   if ((ADMIN_CONSOLE_ROLES as readonly Role[]).includes(role)) return true;
   return permission === "manage_users" || permission === "manage_integrations";
 }
+
+/**
+ * Where a role lands after signing in: Home when it may open Home, otherwise
+ * the assistant. Derived from the permission rather than listed by role, so a
+ * role added later lands somewhere it can actually see. Client-safe; the
+ * server page guards re-export it from `@/lib/auth/page`.
+ */
+export function defaultLandingForRole(role: Role): string {
+  if (hasPermission(DEFAULT_PERMISSION_MATRIX, role, "view_overview")) return "/";
+  if (hasPermission(DEFAULT_PERMISSION_MATRIX, role, "ask_questions")) return "/chat";
+  /*
+   * A role with neither is not something the matrix currently produces. Landing
+   * on the login screen is the honest answer for it: there is no screen this
+   * person can open, and pretending otherwise would be a loop.
+   */
+  return "/login";
+}

@@ -52,7 +52,15 @@ vi.mock("@/lib/api/respond", async (importOriginal) => ({
   assertWithinRateLimit: () => {},
 }));
 vi.mock("@/features/forms/template-library", () => ({ TemplateLibrary: () => null }));
-vi.mock("@/features/forms/forms-gate", () => ({ FormsAccessNotice: () => null }));
+// The page skips the library entirely when no database is configured; these
+// tests are about what it does when one is.
+vi.mock("@/lib/config/server-env", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/config/server-env")>()),
+  supabaseSecretKeyConfigured: () => true,
+}));
+vi.mock("@/components/permission-gate", () => ({
+  PermissionGate: ({ children }: { children: unknown }) => children,
+}));
 vi.mock("@/config/company/forms", async () =>
   (await import("@/test/forms/fixture-forms")).fixtureFormsModule(),
 );

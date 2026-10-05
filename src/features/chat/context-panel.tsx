@@ -60,6 +60,8 @@ export function ContextPanel({
         </p>
       </div>
 
+      {/* Only for a role that may create forms; the server refuses anyone else regardless. */}
+      {onCreateForm ? (
       <section className="mt-6">
         <div className="mb-2 flex items-center gap-2">
           <FileStack className="size-3.5 text-muted-foreground" aria-hidden />
@@ -102,6 +104,7 @@ export function ContextPanel({
           */}
         </div>
       </section>
+      ) : null}
     </div>
   );
 }

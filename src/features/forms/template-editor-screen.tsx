@@ -20,7 +20,6 @@ import {
   type FormVariant,
 } from "@/lib/forms/document";
 
-import { FormsAccessNotice } from "./forms-gate";
 import { BlockSettingsDialog } from "./document/block-settings";
 import { DocumentSurface } from "./document/document-surface";
 import { DocumentToolbar } from "./document/toolbar";
@@ -338,7 +337,6 @@ export function TemplateEditorScreen({
         }
       />
 
-      <FormsAccessNotice permission="manage_form_templates" />
 
       {notice ? (
         <Notice tone="attention" className="mb-4">

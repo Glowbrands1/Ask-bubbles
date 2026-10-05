@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils/cn";
 import { NAV_SECTIONS, isActivePath } from "./navigation";
 import { UserMenu } from "./user-menu";
 import { ACTIVE_BRAND } from "@/lib/brand";
+import { defaultLandingForRole } from "@/lib/permissions";
 
 export function SidebarNav({
   collapsed,
@@ -27,24 +28,15 @@ export function SidebarNav({
   overdueFollowUps?: number;
 }) {
   const pathname = usePathname();
-  const { can, isAdmin, demoMode } = useSession();
+  const { can, isAdmin, role } = useSession();
+  /* The brand mark goes where this role starts, which is not Home for every role. */
+  const homeHref = defaultLandingForRole(role);
 
   /*
-   * WHAT THE RAIL HIDES, AND WHAT IT MUST NOT.
-   *
-   * Hiding a screen a role cannot use is right once somebody has decided who
-   * may do what. Nobody has: the matrix behind `can()` is this app's own guess,
-   * and hiding on it left Form Templates off the rail for a Location Director —
-   * with the page gate already stood down, that meant the screen existed and
-   * there was NO WAY IN. "I don't see it on the app" was exactly that.
-   *
-   * So in preview the permission filter does not remove items; the page itself
-   * says what the permission will be once roles are configured. The ADMIN
-   * section is still gated, because Owner/Developer there is a fixed decision
-   * rather than a guess — see `ADMIN_CONSOLE_ROLES`.
-   *
-   * When identity is real this reverts to filtering on a verified role, and the
-   * server refuses independently either way.
+   * THE RAIL SHOWS WHAT THE ROLE MAY OPEN, in demo and live alike: the role
+   * matrix is company configuration (src/config/company/access.ts), so the
+   * demo's role switcher previews exactly what each role will see. The rail is
+   * not the boundary — the page guards and the API are.
    */
   const sections = NAV_SECTIONS.map((section) => ({
     ...section,
@@ -57,7 +49,6 @@ export function SidebarNav({
        */
       if (item.adminOnly && !isAdmin) return false;
       if (!item.permission) return true;
-      if (demoMode) return true;
       return can(item.permission);
     }),
   })).filter((section) => section.items.length > 0);
@@ -80,11 +71,11 @@ export function SidebarNav({
         )}
       >
         {isCollapsed ? (
-          <Link href="/" aria-label={`${ACTIVE_BRAND.productName} — Home`} onClick={onNavigate}>
+          <Link href={homeHref} aria-label={`${ACTIVE_BRAND.productName} — start`} onClick={onNavigate}>
             <BubbleMark className="size-6" />
           </Link>
         ) : (
-          <Link href="/" onClick={onNavigate} aria-label={`${ACTIVE_BRAND.productName} — Home`}>
+          <Link href={homeHref} onClick={onNavigate} aria-label={`${ACTIVE_BRAND.productName} — start`}>
             <BrandMark size="md" />
           </Link>
         )}

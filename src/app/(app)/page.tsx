@@ -5,6 +5,7 @@ import {
   type OverviewFollowUp,
   type OverviewFollowUps,
 } from "@/features/dashboard/overview";
+import { PermissionGate } from "@/components/permission-gate";
 import { pageCan, requirePagePermission } from "@/lib/auth/page";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 import { businessToday } from "@/lib/business-date";
@@ -87,5 +88,9 @@ export default async function HomePage() {
     }
   }
 
-  return <OverviewScreen followUps={followUps} />;
+  return (
+    <PermissionGate permission="view_overview">
+      <OverviewScreen followUps={followUps} />
+    </PermissionGate>
+  );
 }

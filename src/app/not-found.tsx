@@ -21,7 +21,7 @@ export default function NotFound() {
       </p>
       <div className="mt-7 flex flex-wrap justify-center gap-2">
         <Button asChild>
-          <Link href="/">Back to Overview</Link>
+          <Link href="/">Back to Home</Link>
         </Button>
         <Button asChild variant="secondary">
           <Link href="/chat">{ACTIVE_BRAND.productName}</Link>

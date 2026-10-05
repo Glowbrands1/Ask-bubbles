@@ -13,19 +13,12 @@ import type { Permission, Role } from "@/types";
 import { SidebarNav } from "./sidebar";
 
 /**
- * A SCREEN WITH NO WAY IN IS A BROKEN SCREEN.
+ * WHAT THE RAIL OFFERS EACH ROLE.
  *
- * Form Templates is reachable at /forms/templates and the page-level block was
- * removed, because the permission matrix behind it is this app's own guess and
- * nobody has configured roles yet. The RAIL was still filtering on that same
- * guess — so for a Location Manager the link simply was not there, and the screen
- * existed with no route to it from inside the app. The report was literally
- * "I don't see it on the app".
- *
- * These tests pin both halves of the decision:
- *   in preview, the rail does not hide a screen on an unconfigured permission;
- *   the Admin section is STILL gated, because Owner/Developer there is a fixed
- *   decision rather than a guess.
+ * Ask Bubbles' role matrix is company configuration, so these tests pin that
+ * the rail follows it in demo and live alike: every screen a role may open has
+ * a link, no screen it may not open does, and the admin console stays with the
+ * administrative roles.
  */
 
 vi.mock("next/navigation", () => ({
@@ -44,6 +37,7 @@ function session(role: Role, demoMode: boolean) {
   return {
     can: (permission: Permission) => hasPermission(DEFAULT_PERMISSION_MATRIX, role, permission),
     isAdmin: canAccessAdminConsole(role),
+    role,
     demoMode,
   };
 }
@@ -70,36 +64,43 @@ function renderAs(role: Role, demoMode = true) {
   return render(<SidebarNav />);
 }
 
-describe("what a Location Manager can reach from the rail", () => {
-  it("shows Form Templates, even though the default matrix withholds it", () => {
-    // The premise, asserted so this test cannot pass for the wrong reason: the
-    // matrix really does NOT give a Location Manager this permission.
+describe("what a Location Manager can reach from the rail in the demo", () => {
+  /*
+   * THE DEMO PREVIEWS THE CONFIGURED MATRIX. The role switcher exists to show
+   * what each role will see, so the rail filters on `can()` in demo exactly as
+   * it does live: no item the role cannot open, every item it can.
+   */
+  it("withholds Form Templates, which the matrix withholds", () => {
     expect(
       hasPermission(DEFAULT_PERMISSION_MATRIX, "location_manager", "manage_form_templates"),
     ).toBe(false);
-
     renderAs("location_manager");
-    expect(screen.getByRole("link", { name: /Form Templates/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Form Templates/ })).toBeNull();
   });
 
-  it("shows the whole Forms section, not a subset of it", () => {
+  it("shows the Forms Register, which the matrix grants", () => {
+    expect(
+      hasPermission(DEFAULT_PERMISSION_MATRIX, "location_manager", "view_form_monitoring"),
+    ).toBe(true);
     renderAs("location_manager");
-    // `Create a Form` is not in this list any more: it has no rail entry for
-    // anybody now that forms are created in Ask Bubbles. What this still pins
-    // is that the preview does not hide the REST of the section on a
-    // permission nobody has configured.
-    for (const label of ["Forms Register", "Form Templates"]) {
-      expect(screen.getByRole("link", { name: new RegExp(label) }), label).toBeTruthy();
-    }
-    expect(screen.queryByRole("link", { name: /Create a Form/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /Forms Register/ })).toBeTruthy();
   });
 
-  it("still keeps the admin console out of the rail", () => {
-    // Not a guess: Owner/Developer for the admin console is a fixed decision,
-    // so standing down the permission filter must not open it.
+  it("keeps the admin console out of the rail", () => {
     renderAs("location_manager");
     expect(screen.queryByRole("link", { name: /User Management/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /AI Usage/ })).toBeNull();
+  });
+
+  it("gives a Team Member only the assistant and History", () => {
+    renderAs("employee");
+    expect(screen.getByRole("link", { name: /^Ask Bubbles$/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^History$/ })).toBeTruthy();
+    for (const label of [/^Home$/, /Forms Register/, /Form Templates/, /^Reports$/]) {
+      expect(screen.queryByRole("link", { name: label }), String(label)).toBeNull();
+    }
+    // And the brand mark takes them to the assistant, not to a Home they cannot open.
+    expect(screen.getByRole("link", { name: /— start$/ }).getAttribute("href")).toBe("/chat");
   });
 });
 

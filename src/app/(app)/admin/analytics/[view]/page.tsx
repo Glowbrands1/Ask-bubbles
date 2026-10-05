@@ -6,8 +6,10 @@ import {
   AnalyticsScreen,
   isAnalyticsView,
 } from "@/features/admin/analytics/analytics-screen";
+import { AnalyticsUnavailable } from "@/features/admin/analytics/analytics-unavailable";
 import { loadAnalyticsPage } from "@/features/admin/analytics/load";
 import { requirePagePermission } from "@/lib/auth/page";
+import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 
 export const metadata: Metadata = {
   title: "Analytics",
@@ -35,11 +37,17 @@ export default async function AnalyticsViewPage({
   const { view } = await params;
   if (!isAnalyticsView(view) || view === "overview") notFound();
 
-  const props = await loadAnalyticsPage(view, await searchParams);
+  const loaded = supabaseSecretKeyConfigured()
+    ? await loadAnalyticsPage(view, await searchParams).catch(() => null)
+    : null;
 
   return (
     <PermissionGate permission="view_analytics" adminOnly>
-      <AnalyticsScreen {...props} />
+      {loaded ? (
+        <AnalyticsScreen {...loaded} />
+      ) : (
+        <AnalyticsUnavailable reason={supabaseSecretKeyConfigured() ? "failed" : "not_connected"} />
+      )}
     </PermissionGate>
   );
 }

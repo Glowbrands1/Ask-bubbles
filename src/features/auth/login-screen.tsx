@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { DEMO_SWITCHABLE_ROLES } from "@/config/company/access";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { supabasePublicConfigured } from "@/lib/config/runtime";
-import { ROLE_DESCRIPTION, ROLE_LABEL } from "@/lib/permissions";
+import { ROLE_DESCRIPTION, ROLE_LABEL, defaultLandingForRole } from "@/lib/permissions";
 import { useSession } from "@/lib/session/session-context";
 import type { Role } from "@/types";
 import { SignInForm } from "./sign-in-form";
@@ -61,7 +61,7 @@ export function LoginScreen({
 
   const handlePreview = () => {
     signInAsDemo(selectedRole);
-    if (navigateOnSignIn) router.push("/");
+    if (navigateOnSignIn) router.push(defaultLandingForRole(selectedRole));
   };
 
   return (

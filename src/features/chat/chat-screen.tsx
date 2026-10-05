@@ -1005,7 +1005,7 @@ export function ChatScreen() {
         <aside className="hidden w-76 shrink-0 border-l border-border bg-background lg:block">
           <ContextPanel
             messages={messages}
-            onCreateForm={createFormFromConversation}
+            onCreateForm={can("create_forms") ? createFormFromConversation : undefined}
             busy={busy}
           />
         </aside>

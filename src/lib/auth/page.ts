@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { isDemoMode } from "@/lib/config/runtime";
 import {
   DEFAULT_PERMISSION_MATRIX,
+  defaultLandingForRole,
   canAccessAdminConsole,
   hasPermission,
 } from "@/lib/permissions";
@@ -69,16 +70,7 @@ export function pageAuthorizationEnforced(): boolean {
  * added later lands somewhere it can actually see without anyone remembering to
  * update this.
  */
-export function defaultLandingForRole(role: Role): string {
-  if (hasPermission(DEFAULT_PERMISSION_MATRIX, role, "view_overview")) return "/";
-  if (hasPermission(DEFAULT_PERMISSION_MATRIX, role, "ask_questions")) return "/chat";
-  /*
-   * A role with neither is not something the matrix currently produces. Landing
-   * on the login screen is the honest answer for it: there is no screen this
-   * person can open, and pretending otherwise would be a loop.
-   */
-  return "/login";
-}
+export { defaultLandingForRole };
 
 /** Resolves the caller for a page render, or null. Never throws, never redirects. */
 export async function pageIdentity(): Promise<AuthenticatedIdentity | null> {

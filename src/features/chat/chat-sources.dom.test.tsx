@@ -251,7 +251,7 @@ describe("the context rail no longer shows sources either", () => {
   });
 
   it("still shows the provider status and the take-it-further links", () => {
-    const { container } = render(<ContextPanel messages={[answer()]} />);
+    const { container } = render(<ContextPanel messages={[answer()]} onCreateForm={() => {}} />);
     expect(container.textContent).toContain("Claude");
     expect(container.textContent).toContain("Take it further");
   });
