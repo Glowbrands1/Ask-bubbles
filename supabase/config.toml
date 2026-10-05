@@ -1,0 +1,18 @@
+# Supabase CLI configuration for Ask Bubbles.
+#
+# `project_id` is the local label the CLI uses; the remote project is chosen
+# by `supabase link --project-ref dyurgwieyltnhphihwwj` (Ask Bubbles). Never
+# link this checkout to any other project.
+
+project_id = "ask-bubbles"
+
+[db]
+major_version = 17
+
+# There is no seed data: the baseline migrations create the schema only.
+[db.seed]
+enabled = false
+
+# The embedding function requires a valid JWT, as deployed.
+[functions.embed]
+verify_jwt = true
