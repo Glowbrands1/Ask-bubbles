@@ -1,0 +1,94 @@
+/**
+ * Errors the reporting parsers raise. Messages are user-safe: they describe the
+ * SHAPE of the problem and never echo a figure, a salon name or a manager name
+ * out of the workbook, because these strings reach an admin screen and a log.
+ */
+
+export type ReportParseErrorCode =
+  /** The bytes are not a readable workbook at all. */
+  | "workbook_unreadable"
+  /** No registered parser recognised any sheet in the workbook. */
+  | "unsupported_workbook"
+  /**
+   * A sheet was recognised by name but its structure no longer matches what the
+   * parser was written against. Distinguished from `unsupported_workbook`
+   * because it means "our parser is out of date", not "wrong file" — a
+   * different operational response.
+   */
+  | "template_drift"
+  /** The reporting period marker is missing, or present and not parseable. */
+  | "period_unreadable"
+  /** The sheet was recognised but contained no usable salon rows. */
+  | "no_data_rows"
+  /**
+   * The same salon appeared on more than one row.
+   *
+   * FAIL-CLOSED BY DECISION. An earlier revision kept the first occurrence and
+   * warned. That is wrong for financial reporting: the two rows may hold
+   * different figures, and silently preferring whichever came first publishes
+   * one of them as fact. A duplicated salon means the file's grain is not one
+   * row per salon, which is the assumption every downstream number rests on.
+   */
+  | "duplicate_salon_number"
+  /**
+   * The workbook parsed, and holds no rows for the authorized company.
+   *
+   * DISTINGUISHED FROM `no_data_rows` on purpose. An empty sheet is a broken
+   * delivery; a full sheet with none of our salons in it is a correct file sent
+   * to the wrong tenant, or a company renamed upstream. The first calls for a
+   * re-send, the second for somebody to look at the company column — so they
+   * are different codes rather than one message an operator has to interpret.
+   *
+   * It is a REFUSAL rather than an empty ingestion because an empty ingestion
+   * would supersede the previous period's facts with nothing, and the dashboard
+   * would report zero salons as though that were the answer.
+   */
+  | "authorized_company_absent";
+
+export class ReportParseError extends Error {
+  readonly code: ReportParseErrorCode;
+  /** HTTP status an ingest route should answer with. */
+  readonly status: number;
+  /**
+   * Structural detail for an operator: which markers failed, which sheet was
+   * examined. Never contains cell values from the data band.
+   */
+  readonly details: string[];
+
+  constructor(
+    code: ReportParseErrorCode,
+    message: string,
+    options?: { status?: number; details?: string[]; cause?: unknown },
+  ) {
+    super(message, { cause: options?.cause });
+    this.name = "ReportParseError";
+    this.code = code;
+    this.status = options?.status ?? 422;
+    this.details = options?.details ?? [];
+  }
+}
+
+export function isReportParseError(error: unknown): error is ReportParseError {
+  return error instanceof ReportParseError;
+}
+
+/** One structural reason a parsed report cannot be stored. Never carries a figure. */
+export interface ValidationProblem {
+  readonly code: string;
+  readonly message: string;
+}
+
+/**
+ * A report that parsed but cannot become rows. A refusal with reasons, not an
+ * internal error: the route returns it as 422 with the problem list.
+ */
+export class ReportValidationError extends Error {
+  readonly problems: ValidationProblem[];
+  readonly status = 422;
+
+  constructor(problems: ValidationProblem[]) {
+    super(`The report cannot be ingested: ${problems.map((problem) => problem.message).join(" ")}`);
+    this.name = "ReportValidationError";
+    this.problems = problems;
+  }
+}

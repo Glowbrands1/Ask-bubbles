@@ -1,0 +1,1263 @@
+import "server-only";
+
+import { getSupabaseAdmin } from "@/lib/supabase/server";
+
+import {
+  checkboxGroupsForVariant,
+  fieldsForVariant,
+  parseFormDocument,
+  parseFormVariants,
+  type FieldResponsibility,
+  type FormDocument,
+} from "./document";
+import { refuseUnverifiedPolicyValues } from "./policy-grounding";
+import {
+  POLICY_ACKNOWLEDGEMENT_MESSAGE,
+  unverifiedPolicyFields,
+} from "./policy-verification";
+import {
+  draftableCheckboxGroups,
+  draftableFields,
+  enforcePersonEdit,
+  enforceResponsibilities,
+  type DraftValues,
+} from "./responsibility";
+import { applyRequiredClosings } from "./required-closing";
+import { getCurrentVersion, getVersion, type TemplateVersionRow } from "./repository";
+
+/**
+ * THE FORMS THEMSELVES — one employee, one conversation, one record.
+ *
+ * Two rules are enforced by the database and relied on here rather than
+ * re-checked: a finalized form's values cannot be edited, and the version a
+ * form was filled from cannot be deleted or rewritten. So "what did this say
+ * when it was signed" always has an answer.
+ *
+ * Everything a person or the assistant submits passes through the
+ * responsibility guards on the way in. That is the only path into
+ * `form_instance_values`, which is what makes "the assistant never fills a
+ * signature" a property of the system rather than a promise about a prompt.
+ */
+
+export type InstanceStatus = "draft" | "finalized" | "revised";
+export type InstanceSource = "manual" | "ask_sunny";
+
+export interface InstanceRow {
+  id: string;
+  templateId: string;
+  templateKey: string;
+  templateName: string;
+  templateShortName: string;
+  layoutFamily: string;
+  templateVersionId: string;
+  templateVersion: number;
+  variantKey: string | null;
+  employeeName: string;
+  employeeRole: string | null;
+  locationId: string | null;
+  locationName: string | null;
+  createdBy: string;
+  createdByRole: string | null;
+  source: InstanceSource;
+  status: InstanceStatus;
+  formDate: string;
+  followUpDate: string | null;
+  followedUpAt: string | null;
+  followedUpBy: string | null;
+  finalizedAt: string | null;
+  exportedAt: string | null;
+  archivedAt: string | null;
+  revisesInstanceId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InstanceValueRow {
+  fieldKey: string;
+  value: string | null;
+  checked: string[];
+  filledBy: FieldResponsibility;
+  provenance: Record<string, unknown>;
+}
+
+export interface InstanceEventRow {
+  kind: string;
+  actor: string;
+  detail: Record<string, unknown>;
+  createdAt: string;
+}
+
+function mapInstance(row: Record<string, unknown>): InstanceRow {
+  return {
+    id: String(row.id),
+    templateId: String(row.template_id),
+    templateKey: String(row.template_key ?? ""),
+    templateName: String(row.template_name ?? ""),
+    templateShortName: String(row.template_short_name ?? ""),
+    layoutFamily: String(row.layout_family ?? ""),
+    templateVersionId: String(row.template_version_id),
+    templateVersion: Number(row.template_version ?? 0),
+    variantKey: (row.variant_key as string | null) ?? null,
+    employeeName: String(row.employee_name),
+    employeeRole: (row.employee_role as string | null) ?? null,
+    locationId: (row.location_id as string | null) ?? null,
+    locationName: (row.location_name as string | null) ?? null,
+    createdBy: String(row.created_by),
+    createdByRole: (row.created_by_role as string | null) ?? null,
+    source: row.source as InstanceSource,
+    status: row.status as InstanceStatus,
+    formDate: String(row.form_date),
+    followUpDate: (row.follow_up_date as string | null) ?? null,
+    followedUpAt: (row.followed_up_at as string | null) ?? null,
+    followedUpBy: (row.followed_up_by as string | null) ?? null,
+    finalizedAt: (row.finalized_at as string | null) ?? null,
+    exportedAt: (row.exported_at as string | null) ?? null,
+    archivedAt: (row.archived_at as string | null) ?? null,
+    revisesInstanceId: (row.revises_instance_id as string | null) ?? null,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  };
+}
+
+function mapValue(row: Record<string, unknown>): InstanceValueRow {
+  return {
+    fieldKey: String(row.field_key),
+    value: (row.value as string | null) ?? null,
+    checked: Array.isArray(row.checked) ? (row.checked as string[]) : [],
+    filledBy: row.filled_by as FieldResponsibility,
+    provenance: (row.provenance as Record<string, unknown>) ?? {},
+  };
+}
+
+async function recordEvent(
+  instanceId: string,
+  kind: string,
+  actor: string,
+  detail: Record<string, unknown> = {},
+): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("form_instance_events")
+    .insert({ instance_id: instanceId, kind, actor, detail });
+  if (error) throw new Error(`Could not record the ${kind} event: ${error.message}`);
+}
+
+/* -------------------------------------------------------------- reading --- */
+
+/** Which shelf of the monitoring list to read. */
+export type InstanceView = "active" | "archived" | "all";
+
+/**
+ * ============================================================================
+ * WHAT A CALLER MAY SEE, NARROWED BEFORE THE LIMIT RATHER THAN AFTER IT
+ * ============================================================================
+ *
+ * THE DEFECT THIS EXISTS FOR. `listInstances` ordered the WHOLE COMPANY by
+ * recency, took the first 200, and the route filtered that page down to the
+ * caller's own salon. Confidential enough — no foreign row ever reached the
+ * browser — and wrong as a history:
+ *
+ *   22 salons file forms. 200 newer records exist elsewhere. A salon's own
+ *   still-relevant record is number 201 by date. It never enters the page, so
+ *   the filter cannot return it, and its manager opens Form Monitoring to find
+ *   their own history has silently lost rows.
+ *
+ * A filter cannot return something the query never fetched. So the narrowing
+ * moves into the query, and the limit applies to the VISIBLE result set.
+ *
+ * NOT SOLVED BY RAISING 200. That trades a wrong answer for a later wrong
+ * answer and a bigger payload; the ordering of filter and limit is the bug.
+ */
+export interface InstanceListFilter {
+  /**
+   * Salon ids this caller may see. `undefined` means unrestricted (global or
+   * preview); an EMPTY ARRAY means no location-bearing row qualifies, which is
+   * how district and region fail closed.
+   */
+  locationIds?: string[];
+  /**
+   * Also include rows with NO salon that this actor created. The narrow
+   * exception for an absent location — see `instance-scope.ts`.
+   */
+  ownNullLocationCreatedBy?: string;
+}
+
+export async function listInstances(
+  view: InstanceView = "active",
+  limit = 200,
+  filter?: InstanceListFilter,
+): Promise<InstanceRow[]> {
+  const supabase = getSupabaseAdmin();
+
+  /** The view filter, applied identically to every read below. */
+  function scoped() {
+    const query = supabase.from("form_instance_overview").select("*");
+    // `archived_at` is presentation, not status — see the migration. The active
+    // list is the default because it is what somebody opening the screen wants.
+    if (view === "active") return query.is("archived_at", null);
+    if (view === "archived") return query.not("archived_at", "is", null);
+    return query;
+  }
+
+  /* Unrestricted: global actors and preview. One ordered, bounded read. */
+  if (!filter || filter.locationIds === undefined) {
+    const { data, error } = await scoped()
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(`Could not read form history: ${error.message}`);
+    return (data ?? []).map(mapInstance);
+  }
+
+  /*
+   * TWO BOUNDED READS, MERGED SERVER-SIDE.
+   *
+   * Each is ordered and limited independently, so at most `2 * limit` rows are
+   * ever read — the top `limit` of the union is always contained in the union
+   * of the two tops. Neither is a company-wide scan, and nothing extra reaches
+   * the browser: the merge is limited again before it is returned.
+   *
+   * The salon query is SKIPPED ENTIRELY on an empty id list rather than issued
+   * as `in.()`, which PostgREST does not accept — and which would be an odd way
+   * to express "nothing qualifies" even if it did.
+   */
+  const reads = [];
+
+  if (filter.locationIds.length > 0) {
+    reads.push(
+      scoped()
+        .in("location_id", filter.locationIds)
+        .order("created_at", { ascending: false })
+        .limit(limit),
+    );
+  }
+
+  if (filter.ownNullLocationCreatedBy) {
+    reads.push(
+      scoped()
+        .is("location_id", null)
+        .eq("created_by", filter.ownNullLocationCreatedBy)
+        .order("created_at", { ascending: false })
+        .limit(limit),
+    );
+  }
+
+  if (reads.length === 0) return [];
+
+  const results = await Promise.all(reads);
+
+  // Merge, de-duplicate (a row cannot match both predicates, but the union is
+  // written to be correct rather than to rely on that), sort, then bound.
+  const byId = new Map<string, InstanceRow>();
+  for (const result of results) {
+    if (result.error) throw new Error(`Could not read form history: ${result.error.message}`);
+    for (const row of result.data ?? []) {
+      const mapped = mapInstance(row as Record<string, unknown>);
+      byId.set(mapped.id, mapped);
+    }
+  }
+
+  return [...byId.values()]
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
+    .slice(0, limit);
+}
+
+export interface LoadedInstance {
+  instance: InstanceRow;
+  version: TemplateVersionRow;
+  values: InstanceValueRow[];
+  events: InstanceEventRow[];
+}
+
+export async function loadInstance(id: string): Promise<LoadedInstance | null> {
+  const supabase = getSupabaseAdmin();
+
+  const { data: row, error } = await supabase
+    .from("form_instance_overview")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(`Could not read that form: ${error.message}`);
+  if (!row) return null;
+
+  const instance = mapInstance(row);
+  const version = await getVersion(instance.templateVersionId);
+  if (!version) throw new Error("The template version this form was filled from is missing.");
+
+  const [values, events] = await Promise.all([
+    supabase.from("form_instance_values").select("*").eq("instance_id", id),
+    supabase
+      .from("form_instance_events")
+      .select("*")
+      .eq("instance_id", id)
+      .order("created_at", { ascending: true }),
+  ]);
+  if (values.error) throw new Error(`Could not read the values: ${values.error.message}`);
+  if (events.error) throw new Error(`Could not read the history: ${events.error.message}`);
+
+  return {
+    instance,
+    version,
+    values: (values.data ?? []).map(mapValue),
+    events: (events.data ?? []).map((event) => ({
+      kind: String(event.kind),
+      actor: String(event.actor),
+      detail: (event.detail as Record<string, unknown>) ?? {},
+      createdAt: String(event.created_at),
+    })),
+  };
+}
+
+/* -------------------------------------------------------------- writing --- */
+
+export interface NewInstance {
+  templateKey: string;
+  variantKey: string | null;
+  employeeName: string;
+  employeeRole?: string | null;
+  locationId?: string | null;
+  locationName?: string | null;
+  createdBy: string;
+  createdByRole?: string | null;
+  source: InstanceSource;
+  formDate?: string;
+}
+
+/**
+ * Starts a form from the template's CURRENT published version.
+ *
+ * The version id is copied onto the form at creation and never re-resolved.
+ * Publishing a new template version tomorrow leaves this form pointing at what
+ * it was started from, which is the whole point of versioning.
+ */
+export async function createInstance(input: NewInstance): Promise<InstanceRow> {
+  const supabase = getSupabaseAdmin();
+
+  const { data: template, error: templateError } = await supabase
+    .from("form_templates")
+    .select("id, active")
+    .eq("key", input.templateKey)
+    .maybeSingle();
+  if (templateError) throw new Error(`Could not read the template: ${templateError.message}`);
+  if (!template) throw new Error(`No form template called "${input.templateKey}".`);
+  if (!template.active) throw new Error("That form template is not active.");
+
+  const version = await getCurrentVersion(String(template.id));
+  if (!version) throw new Error("That template has no published version yet.");
+
+  const { data, error } = await supabase
+    .from("form_instances")
+    .insert({
+      template_id: template.id,
+      template_version_id: version.id,
+      variant_key: input.variantKey,
+      employee_name: input.employeeName,
+      employee_role: input.employeeRole ?? null,
+      location_id: input.locationId ?? null,
+      location_name: input.locationName ?? null,
+      created_by: input.createdBy,
+      created_by_role: input.createdByRole ?? null,
+      source: input.source,
+      status: "draft",
+      ...(input.formDate ? { form_date: input.formDate } : {}),
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`Could not start the form: ${error?.message}`);
+
+  /*
+   * `system` FIELDS ARE FILLED FROM THE RECORD, HERE, AT CREATION.
+   *
+   * The form says "Ask Sunny fills this" against Employee Name, Date, Job Title
+   * and Location, and it used to be lying: nothing wrote them, so a manager who
+   * had just typed the employee's name on the previous screen was asked to type
+   * it again onto a line marked as automatic. The field list hid it; the
+   * document made it obvious the moment the page had a blank rule where a name
+   * belonged.
+   *
+   * The mapping below is EXPLICIT and small. It is not inference from a label —
+   * "location" meaning the salon is a fact about how these nine templates were
+   * authored, not a rule that would hold for a field somebody adds tomorrow. A
+   * key that is not in this map, or is in it but is not a `system` field in this
+   * version, is left alone for whoever the template says owns it.
+   */
+  const fromRecord: Record<string, string | null | undefined> = {
+    employee_name: input.employeeName,
+    employee_role: input.employeeRole,
+    job_title: input.employeeRole,
+    location: input.locationName,
+    form_date: input.formDate ?? new Date().toISOString().slice(0, 10),
+    date: input.formDate ?? new Date().toISOString().slice(0, 10),
+  };
+
+  const seeded: Record<string, string> = {};
+  for (const field of fieldsForVariant(version.document, input.variantKey ?? null)) {
+    if (field.responsibility !== "system") continue;
+    const value = fromRecord[field.key];
+    if (typeof value === "string" && value.trim() !== "") seeded[field.key] = value;
+  }
+  if (Object.keys(seeded).length > 0) {
+    await writeValues(String(data.id), { values: seeded, checked: {} }, "system");
+  }
+
+  await recordEvent(String(data.id), "created", input.createdBy, {
+    templateKey: input.templateKey,
+    templateVersion: version.version,
+    variantKey: input.variantKey,
+    source: input.source,
+    seededFromRecord: Object.keys(seeded),
+  });
+
+  const loaded = await loadInstance(String(data.id));
+  if (!loaded) throw new Error("The form vanished immediately after being created.");
+  return loaded.instance;
+}
+
+async function writeValues(
+  instanceId: string,
+  accepted: DraftValues,
+  filledBy: FieldResponsibility,
+  provenance: Record<string, Record<string, unknown>> = {},
+): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const rows = [
+    ...Object.entries(accepted.values).map(([fieldKey, value]) => ({
+      instance_id: instanceId,
+      field_key: fieldKey,
+      value,
+      checked: [],
+      filled_by: filledBy,
+      provenance: provenance[fieldKey] ?? {},
+      updated_at: new Date().toISOString(),
+    })),
+    ...Object.entries(accepted.checked).map(([fieldKey, checked]) => ({
+      instance_id: instanceId,
+      field_key: fieldKey,
+      value: null,
+      checked,
+      filled_by: filledBy,
+      provenance: provenance[fieldKey] ?? {},
+      updated_at: new Date().toISOString(),
+    })),
+  ];
+  if (rows.length === 0) return;
+
+  const { error } = await supabase
+    .from("form_instance_values")
+    .upsert(rows, { onConflict: "instance_id,field_key" });
+  if (error) throw new Error(`Could not save the form: ${error.message}`);
+}
+
+/**
+ * ============================================================================
+ * THE MANAGER'S OWN STATEMENTS, PUT ON THE FORM
+ * ============================================================================
+ *
+ * Some facts on a form are `manager` fields the model cannot write. When a
+ * deterministic reader has taken one from the manager's own words, it is
+ * written here as `system` (the assistant filling a line from what it was
+ * told) with provenance saying so, and ONLY into empty fields, and ONLY for
+ * the keys the caller names — see `selectStatedFacts`.
+ */
+export async function applyStatedFacts(
+  instanceId: string,
+  stated: DraftValues,
+  actor: string,
+  /** The keys a statement may reach. Nothing else is written. */
+  allowedKeys: ReadonlySet<string>,
+): Promise<string[]> {
+  const loaded = await loadInstance(instanceId);
+  if (!loaded || loaded.instance.status !== "draft") return [];
+
+  const selected = selectStatedFacts({
+    document: parseFormDocument(loaded.version.document),
+    variantKey: loaded.instance.variantKey,
+    stated,
+    existing: loaded.values,
+    keys: allowedKeys,
+  });
+  const keys = [...Object.keys(selected.values), ...Object.keys(selected.checked)];
+  if (keys.length === 0) return [];
+
+  const provenance = Object.fromEntries(keys.map((key) => [key, { source: "manager_statement" }]));
+  await writeValues(instanceId, selected, "system", provenance);
+  await recordEvent(instanceId, "drafted", actor, { statedFacts: keys });
+  return keys;
+}
+
+/**
+ * The stated facts that may be written: only keys on the caller's list, only
+ * into fields still empty, and only where a PERSON could have written them —
+ * a statement never fills a signature or a hand-filled line.
+ */
+export function selectStatedFacts(input: {
+  document: FormDocument;
+  variantKey: string | null;
+  stated: { values: Record<string, string>; checked: Record<string, string[]> };
+  existing: readonly { fieldKey: string; value: string | null; checked: string[] }[];
+  keys: ReadonlySet<string>;
+}): { values: Record<string, string>; checked: Record<string, string[]> } {
+  const filled = new Set(
+    input.existing
+      .filter((row) => (row.value ?? "").trim() !== "" || row.checked.length > 0)
+      .map((row) => row.fieldKey),
+  );
+  const onList = <T,>(entries: Record<string, T>) =>
+    Object.fromEntries(
+      Object.entries(entries).filter(([key]) => input.keys.has(key) && !filled.has(key)),
+    );
+  const allowed = enforcePersonEdit(input.document, input.variantKey, {
+    values: onList(input.stated.values),
+    checked: onList(input.stated.checked),
+  });
+  return {
+    values: Object.fromEntries(Object.entries(allowed.values).filter(([, value]) => value.trim() !== "")),
+    checked: Object.fromEntries(Object.entries(allowed.checked).filter(([, options]) => options.length > 0)),
+  };
+}
+
+/** A person's edit. Hand-filled lines and signatures are refused. */
+export async function saveInstanceValues(
+  instanceId: string,
+  submitted: Partial<DraftValues>,
+  actor: string,
+): Promise<{
+  rejected: { key: string; reason: string }[];
+  /** What was stored, after any required closing was re-attached. */
+  values: Record<string, string>;
+}> {
+  const loaded = await loadInstance(instanceId);
+  if (!loaded) throw new Error("That form no longer exists.");
+  if (loaded.instance.status !== "draft") {
+    throw new Error("This form is finalized. Create a revision to change it.");
+  }
+
+  const document = parseFormDocument(loaded.version.document);
+  const result = enforcePersonEdit(document, loaded.instance.variantKey, submitted);
+  /*
+   * A CLOSING THE VERSION REQUIRES IS RE-ATTACHED TO THE MANAGER'S EDIT TOO.
+   * Deleting it in the textarea, or typing after it, does not take it off the
+   * record — see `required-closing.ts`. Nothing else they typed is changed.
+   */
+  const values = applyRequiredClosings(document, loaded.instance.variantKey, result.values);
+  await writeValues(instanceId, { values, checked: result.checked }, "manager");
+  await recordEvent(instanceId, "edited", actor, {
+    fields: Object.keys(result.values).length,
+    groups: Object.keys(result.checked).length,
+    rejected: result.rejected,
+  });
+
+  return { rejected: result.rejected, values };
+}
+
+/**
+ * The assistant's draft, after the guard.
+ *
+ * `filled_by: "ai"` is recorded on every value this writes, so Form Monitoring
+ * can answer "did Ask Sunny write this, or did a manager?" per field rather
+ * than per form.
+ */
+export async function applyAssistantDraft(
+  instanceId: string,
+  draft: Partial<DraftValues>,
+  actor: string,
+  provenance: Record<string, Record<string, unknown>> = {},
+): Promise<{
+  accepted: DraftValues;
+  rejected: { key: string; reason: string }[];
+  /** Policy-quoting keys the write refused for want of verified provenance. */
+  policyRefused: string[];
+}> {
+  const loaded = await loadInstance(instanceId);
+  if (!loaded) throw new Error("That form no longer exists.");
+  if (loaded.instance.status !== "draft") {
+    throw new Error("This form is finalized. Create a revision to change it.");
+  }
+
+  const document = parseFormDocument(loaded.version.document);
+  const result = enforceResponsibilities(document, loaded.instance.variantKey, draft);
+
+  /*
+   * ==========================================================================
+   * A POLICY QUOTATION WITHOUT VERIFIED PROVENANCE IS NEVER WRITTEN
+   * ==========================================================================
+   *
+   * The caller is expected to have run `dropUngroundedPolicy` already, and the
+   * route does. This runs anyway, at the write, because the previous version of
+   * that route wrote first and filtered afterwards — and the filtering did not
+   * work: it tried to blank the fields by writing empty strings, and
+   * `enforceResponsibilities` drops empty strings, so the invented policy
+   * quotation stayed in `form_instance_values`.
+   *
+   * The ordering is fixed upstream. This is what makes the property hold even
+   * if a future caller gets the ordering wrong again: a `policyGrounded` field
+   * reaches this table only with provenance that says it was verified. Absent
+   * provenance is refusal.
+   *
+   * The refusals are reported on the event rather than swallowed, so "Ask Sunny
+   * proposed a policy quotation and it was withheld" is visible in the audit
+   * trail instead of the record simply never mentioning it.
+   */
+  const fields = fieldsForVariant(document, loaded.instance.variantKey);
+  const refused = refuseUnverifiedPolicyValues(fields, result.values, provenance);
+  /*
+   * THE VERSION'S REQUIRED CLOSINGS, AT THE WRITE — after every guard, which
+   * is the only place they can go: the narrative guard removes a sentence
+   * naming corrective action or termination, so the Action Plan's closing is
+   * put on here, by code, on whatever survived. See `required-closing.ts`.
+   */
+  const guarded = {
+    ...refused,
+    values: applyRequiredClosings(document, loaded.instance.variantKey, refused.values),
+  };
+
+  await writeValues(
+    instanceId,
+    { values: guarded.values, checked: result.checked },
+    "ai",
+    provenance,
+  );
+  await recordEvent(instanceId, "drafted", actor, {
+    fields: Object.keys(guarded.values),
+    rejected: result.rejected,
+    ...(guarded.refused.length > 0 ? { policyRefused: guarded.refused } : {}),
+  });
+
+  return {
+    accepted: { values: guarded.values, checked: result.checked },
+    rejected: result.rejected,
+    policyRefused: guarded.refused,
+  };
+}
+
+/**
+ * ============================================================================
+ * A REVISION OF A DRAFT, REQUESTED IN CHAT
+ * ============================================================================
+ *
+ * The keys in `draft` are written exactly as `applyAssistantDraft` writes them
+ * — the assistant's guard, `filled_by: "ai"`. The keys in `cleared` are
+ * emptied, and only because the manager asked for that field to be removed;
+ * `chat-revision.ts` decides that, and this refuses any key the assistant
+ * could not have written in the first place.
+ *
+ * EVERY OTHER VALUE ON THE FORM IS LEFT EXACTLY AS IT IS, by construction:
+ * the upsert names only these keys. That is what a redraft lost before — it
+ * was a new form, drafted from scratch.
+ */
+export async function applyAssistantRevision(
+  instanceId: string,
+  draft: Partial<DraftValues>,
+  cleared: readonly string[],
+  actor: string,
+): Promise<{ accepted: DraftValues; cleared: string[]; rejected: { key: string; reason: string }[] }> {
+  const loaded = await loadInstance(instanceId);
+  if (!loaded) throw new Error("That form no longer exists.");
+  if (loaded.instance.status !== "draft") {
+    throw new Error("This form is finalized. Create a revision to change it.");
+  }
+
+  const document = parseFormDocument(loaded.version.document);
+  const result = enforceResponsibilities(document, loaded.instance.variantKey, draft);
+  const fields = fieldsForVariant(document, loaded.instance.variantKey);
+  const refused = refuseUnverifiedPolicyValues(fields, result.values, {});
+  // A redraft keeps the version's required closings, exactly as a first draft does.
+  const guarded = {
+    ...refused,
+    values: applyRequiredClosings(document, loaded.instance.variantKey, refused.values),
+  };
+
+  const writable = new Set([
+    ...draftableFields(document, loaded.instance.variantKey).map((field) => field.key),
+    ...draftableCheckboxGroups(document, loaded.instance.variantKey).map((group) => group.key),
+  ]);
+  const groupKeys = new Set(
+    checkboxGroupsForVariant(document, loaded.instance.variantKey).map((group) => group.key),
+  );
+  const emptied = cleared.filter(
+    (key) => writable.has(key) && !(key in guarded.values) && !(key in result.checked),
+  );
+
+  await writeValues(instanceId, { values: guarded.values, checked: result.checked }, "ai");
+  if (emptied.length > 0) {
+    /*
+     * A FIELD EMPTIED ON THE MANAGER'S REQUEST WAS NOT WRITTEN BY THEM. This
+     * used to be stamped `manager`, so the record said the manager authored a
+     * value — an empty one — that the app had written. It is the app's write,
+     * made because they asked, and the provenance says exactly that.
+     */
+    await writeValues(
+      instanceId,
+      {
+        values: Object.fromEntries(emptied.filter((key) => !groupKeys.has(key)).map((key) => [key, ""])),
+        checked: Object.fromEntries(emptied.filter((key) => groupKeys.has(key)).map((key) => [key, []])),
+      },
+      "system",
+      Object.fromEntries(emptied.map((key) => [key, { source: "cleared_on_request", via: "chat_revision" }])),
+    );
+  }
+  await recordEvent(instanceId, "drafted", actor, {
+    revision: true,
+    fields: [...Object.keys(guarded.values), ...Object.keys(result.checked)],
+    cleared: emptied,
+    rejected: result.rejected,
+  });
+
+  return {
+    accepted: { values: guarded.values, checked: result.checked },
+    cleared: emptied,
+    rejected: result.rejected,
+  };
+}
+
+/**
+ * Thrown when a policy-dependent form is finalized without anybody having
+ * verified its policy, and without the manager saying they did it themselves.
+ *
+ * A TYPED ERROR rather than a boolean return, because every caller has to
+ * handle it: the route turns it into a 409 the browser can open a dialog on,
+ * and a caller that forgot would otherwise report success on a form that was
+ * never finalized.
+ */
+export class UnverifiedPolicyError extends Error {
+  readonly fields: string[];
+
+  constructor(fields: string[]) {
+    super(POLICY_ACKNOWLEDGEMENT_MESSAGE);
+    this.name = "UnverifiedPolicyError";
+    this.fields = fields;
+  }
+}
+
+export interface FinalizeOptions {
+  /**
+   * The manager has been shown the unverified-policy warning and chosen to
+   * continue. Recorded on the event; never inferred, and never defaulted true.
+   */
+  readonly acknowledgeUnverifiedPolicy?: boolean;
+}
+
+export async function finalizeInstance(
+  instanceId: string,
+  actor: string,
+  followUpDate: string | null,
+  options: FinalizeOptions = {},
+): Promise<InstanceRow> {
+  /*
+   * ==========================================================================
+   * THE CHECK HAPPENS BEFORE THE UPDATE, WHICH IS THE WHOLE POINT
+   * ==========================================================================
+   *
+   * Finalizing freezes an HR record: the database refuses later edits and the
+   * only way back is a revision. So a form that should have prompted for an
+   * acknowledgement must not be frozen and then complained about — the refusal
+   * has to arrive while the record is still a draft the manager can act on.
+   *
+   * IT IS NOT A BLOCK. A manager who has read the manual themselves passes
+   * `acknowledgeUnverifiedPolicy` and files today; what changes is that the
+   * record then says who decided that. See `policy-verification.ts`.
+   */
+  const before = await loadInstance(instanceId);
+  if (!before) throw new Error("That form no longer exists.");
+
+  const unverified = unverifiedPolicyFields(
+    parseFormDocument(before.version.document),
+    before.instance.variantKey,
+    before.values,
+  ).map((field) => field.key);
+
+  if (unverified.length > 0 && options.acknowledgeUnverifiedPolicy !== true) {
+    throw new UnverifiedPolicyError(unverified);
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("form_instances")
+    .update({
+      status: "finalized",
+      finalized_at: new Date().toISOString(),
+      follow_up_date: followUpDate,
+    })
+    .eq("id", instanceId)
+    .eq("status", "draft")
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`Could not finalize the form: ${error?.message}`);
+
+  const loaded = await loadInstance(instanceId);
+  if (!loaded) throw new Error("The finalized form could not be read back.");
+
+  /*
+   * ==========================================================================
+   * WHAT THE RECORD SAYS ABOUT ITS OWN POLICY, AT THE MOMENT OF APPROVAL
+   * ==========================================================================
+   *
+   * `refuseUnverifiedPolicyValues` means Ask Sunny cannot write a policy value
+   * it did not retrieve — so an unverified one on a finalized form is,
+   * necessarily, a PERSON'S. That is a legitimate thing for a manager to do
+   * and a material fact about the record, and the `finalized` event used to
+   * carry only the follow-up date. Six months later, "was this policy
+   * reference checked against the manual, or typed from memory?" had no
+   * answer.
+   *
+   * TWO KEYS, DELIBERATELY. `unverifiedPolicy` is a fact read off the stored
+   * rows; `policyVerificationOverride` is a DECISION a named person made after
+   * being shown the warning. Collapsing them would lose which of the two an
+   * auditor is looking at.
+   *
+   * The per-value record — `filled_by` and `provenance` on each row — is
+   * untouched and remains the finer-grained answer.
+   */
+  await recordEvent(instanceId, "finalized", actor, {
+    followUpDate,
+    ...(unverified.length > 0
+      ? { unverifiedPolicy: unverified, policyVerificationOverride: true }
+      : {}),
+  });
+  return loaded.instance;
+}
+
+export async function markExported(instanceId: string, actor: string): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("form_instances")
+    .update({ exported_at: new Date().toISOString() })
+    .eq("id", instanceId);
+  if (error) throw new Error(`Could not record the export: ${error.message}`);
+  await recordEvent(instanceId, "exported", actor);
+}
+
+/**
+ * A revision, or the re-evaluation stage of an EPP.
+ *
+ * The new form copies the old one's values and points back at it, so the
+ * DMIT lifecycle — review, plan, follow-up, re-evaluation — reads as one
+ * history instead of unrelated documents that happen to share a name. The
+ * original is marked `revised` and stays exactly as it was signed.
+ */
+export async function reviseInstance(
+  instanceId: string,
+  actor: string,
+  kind: "revised" | "reevaluated",
+): Promise<InstanceRow> {
+  const supabase = getSupabaseAdmin();
+  const loaded = await loadInstance(instanceId);
+  if (!loaded) throw new Error("That form no longer exists.");
+  if (loaded.instance.status === "revised") {
+    throw new Error("That form has already been revised.");
+  }
+
+  const version = await getCurrentVersion(loaded.instance.templateId);
+  const { data, error } = await supabase
+    .from("form_instances")
+    .insert({
+      template_id: loaded.instance.templateId,
+      // A revision is filled against the CURRENT version, which may be newer
+      // than the original's — and the original keeps pointing at its own.
+      template_version_id: version?.id ?? loaded.instance.templateVersionId,
+      variant_key: loaded.instance.variantKey,
+      employee_name: loaded.instance.employeeName,
+      employee_role: loaded.instance.employeeRole,
+      location_id: loaded.instance.locationId,
+      location_name: loaded.instance.locationName,
+      created_by: actor,
+      created_by_role: loaded.instance.createdByRole,
+      source: loaded.instance.source,
+      status: "draft",
+      revises_instance_id: loaded.instance.id,
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`Could not open the revision: ${error?.message}`);
+
+  const carried = loaded.values.filter((value) => value.filledBy !== "signature");
+  const rows = carried.map((value) => ({
+    instance_id: data.id,
+    field_key: value.fieldKey,
+    value: value.value,
+    checked: value.checked,
+    filled_by: value.filledBy,
+    provenance: value.provenance,
+  }));
+
+  /*
+   * A REVISION ONTO A NEWER VERSION keeps what the original said, and a
+   * carried value gets any closing the NEW version requires.
+   */
+  if (version) {
+    const target = parseFormDocument(version.document);
+    const textValues = Object.fromEntries(
+      rows.flatMap((row) => (typeof row.value === "string" ? [[row.field_key, row.value]] : [])),
+    );
+    const closed = applyRequiredClosings(target, loaded.instance.variantKey, textValues);
+    for (const row of rows) {
+      if (typeof row.value === "string" && closed[row.field_key] !== row.value) {
+        row.value = closed[row.field_key]!;
+      }
+    }
+  }
+
+  if (rows.length > 0) {
+    const { error: valueError } = await supabase.from("form_instance_values").insert(rows);
+    if (valueError) throw new Error(`Could not carry the values over: ${valueError.message}`);
+  }
+
+  if (loaded.instance.status === "finalized") {
+    await supabase.from("form_instances").update({ status: "revised" }).eq("id", instanceId);
+  }
+
+  await recordEvent(instanceId, kind, actor, { revisionId: data.id });
+  await recordEvent(String(data.id), "created", actor, { revisionOf: instanceId, kind });
+
+  const revision = await loadInstance(String(data.id));
+  if (!revision) throw new Error("The revision could not be read back.");
+  return revision.instance;
+}
+
+/** Variants a form may be printed as, from its own version. */
+export function variantsOf(version: TemplateVersionRow) {
+  return parseFormVariants(version.variants);
+}
+
+/* ------------------------------------------------- removing and archiving --- */
+
+/**
+ * THE MARKER THAT MAKES A RECORD IDENTIFIABLY SYNTHETIC.
+ *
+ * `demoActor` in `lib/forms/access.ts` stamps every row created without a
+ * verified identity as `demo:<role>:<name>`, so the prefix is PROVENANCE — a
+ * fact about how the row was made, written by the server at the time.
+ *
+ * A name ending "(test)" is NOT provenance. Anybody can be called that, and a
+ * real employee whose record happened to match would be destroyed by a sweep
+ * keyed on it. So the bulk cleanup keys on this prefix and nothing else.
+ */
+export const DEMO_ACTOR_PREFIX = "demo:";
+
+/** True when the row carries explicit demo provenance. */
+export function isDemoInstance(instance: Pick<InstanceRow, "createdBy">): boolean {
+  return instance.createdBy.startsWith(DEMO_ACTOR_PREFIX);
+}
+
+export class InstanceProtectedError extends Error {}
+
+/**
+ * Deletes a form outright, values and events with it.
+ *
+ * ONLY A FORM THAT WAS NEVER FINALIZED. A finalized form is a signed HR
+ * document; destroying one silently is the thing this function exists to
+ * refuse. Callers that want it gone from the list use `archiveInstance`.
+ *
+ * The values and events go by CASCADE rather than by three deletes here — the
+ * foreign keys declare it, so there is no ordering to get wrong and no window
+ * in which values outlive their form. A revision pointing at this row has its
+ * `revises_instance_id` set to null by the same declaration.
+ */
+export async function deleteInstance(id: string): Promise<InstanceRow> {
+  const supabase = getSupabaseAdmin();
+
+  const { data: row, error: readError } = await supabase
+    .from("form_instance_overview")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (readError) throw new Error(`Could not read that form: ${readError.message}`);
+  if (!row) throw new Error("That form no longer exists.");
+
+  const instance = mapInstance(row);
+  if (instance.status !== "draft") {
+    throw new InstanceProtectedError(
+      `This form is ${instance.status}, so it cannot be deleted. Archive it instead — that hides it from the active list and keeps the record.`,
+    );
+  }
+
+  const { error } = await supabase.from("form_instances").delete().eq("id", id);
+  if (error) throw new Error(`Could not delete that form: ${error.message}`);
+  return instance;
+}
+
+/**
+ * Hides a form from the active list without changing what it says.
+ *
+ * Works on any status, and deliberately does NOT touch `status`, values, or
+ * `finalized_at`. See the migration for why archiving is a separate column
+ * rather than a fourth status.
+ */
+export async function archiveInstance(
+  id: string,
+  actor: string,
+  archived: boolean,
+): Promise<InstanceRow> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("form_instances")
+    .update({ archived_at: archived ? new Date().toISOString() : null })
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(`Could not ${archived ? "archive" : "restore"} that form: ${error.message}`);
+  if (!data) throw new Error("That form no longer exists.");
+
+  // Archiving is a decision somebody made, so it joins the form's own history.
+  await recordEvent(id, archived ? "archived" : "unarchived", actor);
+
+  const loaded = await loadInstance(id);
+  if (!loaded) throw new Error("That form vanished while being archived.");
+  return loaded.instance;
+}
+
+export interface DemoSweep {
+  /** Demo drafts, which a sweep may delete. */
+  deletable: InstanceRow[];
+  /**
+   * Demo forms that were finalized. Counted and reported, never deleted — the
+   * rule about signed documents does not bend because the document is
+   * synthetic.
+   */
+  protected: InstanceRow[];
+}
+
+/** What a demo sweep would do, without doing any of it. */
+export async function findDemoInstances(): Promise<DemoSweep> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("form_instance_overview")
+    .select("*")
+    .like("created_by", `${DEMO_ACTOR_PREFIX}%`)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`Could not look for demo forms: ${error.message}`);
+
+  const rows = (data ?? []).map(mapInstance);
+  return {
+    deletable: rows.filter((row) => row.status === "draft"),
+    protected: rows.filter((row) => row.status !== "draft"),
+  };
+}
+
+/**
+ * Deletes every demo DRAFT.
+ *
+ * Two guards, because this is the one destructive action that runs without
+ * somebody naming the row:
+ *
+ *   the query filters on the `demo:` provenance prefix AND on draft status, so
+ *   a real record cannot be selected even by mistake;
+ *
+ *   the caller passes the count it showed the person, and a mismatch aborts.
+ *   If a form was finalized between the confirmation dialog and the click, the
+ *   sweep refuses rather than deleting a different set than was agreed to.
+ */
+export async function deleteDemoInstances(expected: number): Promise<{ deleted: number }> {
+  const sweep = await findDemoInstances();
+  if (sweep.deletable.length !== expected) {
+    throw new InstanceProtectedError(
+      `The list changed: ${sweep.deletable.length} demo draft${sweep.deletable.length === 1 ? "" : "s"} to remove, not ${expected}. Nothing was deleted — reload and try again.`,
+    );
+  }
+  if (sweep.deletable.length === 0) return { deleted: 0 };
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("form_instances")
+    .delete()
+    .in("id", sweep.deletable.map((row) => row.id))
+    .like("created_by", `${DEMO_ACTOR_PREFIX}%`)
+    .eq("status", "draft");
+  if (error) throw new Error(`Could not delete the demo forms: ${error.message}`);
+  return { deleted: sweep.deletable.length };
+}
+
+/* ---------------------------------------------------- follow-up tracking --- */
+
+/**
+ * FOLLOW-UP WRITES DO NOT TOUCH THE DOCUMENT.
+ *
+ * Everything below updates `form_instances` only, and only its follow-up
+ * columns. It never writes `form_instance_values`, so
+ * `forms_guard_finalized_values()` is not involved and a finalized form stays
+ * finalized and immutable while its follow-up is scheduled, moved and
+ * completed. That separation is the entire point of tracking follow-ups as
+ * metadata rather than as fields on the form.
+ */
+
+/**
+ * ISO `yyyy-mm-dd`, and a real day in a real month.
+ *
+ * The shape alone is not enough, and `Date.parse` is not enough either:
+ * `Date.parse("2026-02-30T00:00:00Z")` SUCCEEDS and silently rolls forward to
+ * 2 March. A form would then be scheduled for a date nobody chose — or, since
+ * Postgres refuses `2026-02-30` outright, fail with a database error instead of
+ * a sentence. So the parts are reassembled and required to round-trip, which is
+ * the same rule the reporting parser applies to a period marker.
+ */
+function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const built = new Date(Date.UTC(year, month - 1, day));
+  return built.toISOString().slice(0, 10) === value;
+}
+
+export class FollowUpError extends Error {}
+
+/**
+ * Sets or moves the follow-up date.
+ *
+ * The event kind distinguishes the two, because they are different facts about
+ * how a form was managed: `follow_up_started` says somebody decided to track
+ * it, `follow_up_date_changed` says somebody moved a commitment. The detail
+ * carries both dates so the history answers "what was it before".
+ */
+export async function setFollowUpDate(
+  id: string,
+  date: string,
+  actor: string,
+): Promise<InstanceRow> {
+  if (!isCalendarDate(date)) {
+    throw new FollowUpError("A follow-up date must be a real calendar date.");
+  }
+
+  const before = await readInstance(id);
+  if (before.archivedAt) {
+    throw new FollowUpError(
+      "This form is archived. Restore it before scheduling a follow-up.",
+    );
+  }
+  if (before.followedUpAt) {
+    throw new FollowUpError(
+      "This follow-up is already marked complete. Reopen it before changing the date.",
+    );
+  }
+  if (before.followUpDate === date) return before;
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("form_instances")
+    .update({ follow_up_date: date })
+    .eq("id", id);
+  if (error) throw new Error(`Could not set the follow-up date: ${error.message}`);
+
+  await recordEvent(
+    id,
+    before.followUpDate ? "follow_up_date_changed" : "follow_up_started",
+    actor,
+    { from: before.followUpDate, to: date },
+  );
+  return readInstance(id);
+}
+
+/**
+ * Records that the conversation happened.
+ *
+ * THE SCHEDULED DATE IS KEPT. Clearing it would destroy the only evidence of
+ * how late the follow-up was, which is the question somebody reviewing a
+ * pattern of coaching actually asks. So this writes when and who, and leaves
+ * `follow_up_date` exactly as it stood.
+ */
+export async function markFollowedUp(id: string, actor: string): Promise<InstanceRow> {
+  const before = await readInstance(id);
+  if (!before.followUpDate) {
+    throw new FollowUpError(
+      "This form has no follow-up date yet. Start tracking it, then mark it followed up.",
+    );
+  }
+  if (before.followedUpAt) return before;
+
+  const at = new Date().toISOString();
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("form_instances")
+    .update({ followed_up_at: at, followed_up_by: actor })
+    .eq("id", id);
+  if (error) throw new Error(`Could not mark the follow-up complete: ${error.message}`);
+
+  await recordEvent(id, "followed_up", actor, {
+    scheduledFor: before.followUpDate,
+    completedAt: at,
+  });
+  return readInstance(id);
+}
+
+/**
+ * Undoes a completion — explicitly, and on the record.
+ *
+ * A misclick should be correctable, so this exists; but it clears the
+ * completion rather than pretending it never happened, and the
+ * `follow_up_reopened` event keeps the original completion in the form's
+ * history where an audit can see both.
+ */
+export async function reopenFollowUp(id: string, actor: string): Promise<InstanceRow> {
+  const before = await readInstance(id);
+  if (!before.followedUpAt) return before;
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("form_instances")
+    .update({ followed_up_at: null, followed_up_by: null })
+    .eq("id", id);
+  if (error) throw new Error(`Could not reopen the follow-up: ${error.message}`);
+
+  await recordEvent(id, "follow_up_reopened", actor, {
+    wasCompletedAt: before.followedUpAt,
+    wasCompletedBy: before.followedUpBy,
+  });
+  return readInstance(id);
+}
+
+/** One row from the overview, or a refusal. Shared by the three writes above. */
+async function readInstance(id: string): Promise<InstanceRow> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("form_instance_overview")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(`Could not read that form: ${error.message}`);
+  if (!data) throw new FollowUpError("That form no longer exists.");
+  return mapInstance(data);
+}
+
+/**
+ * THE OVERVIEW'S READ — outstanding follow-ups, soonest first.
+ *
+ * Narrow on purpose. The Overview shows a handful of rows and two counts, and
+ * it is the app's home page: it must not pull two hundred forms to count four.
+ * The filters mirror `followUpState`'s "outstanding" branch exactly, and the
+ * partial index in the migration covers this predicate.
+ *
+ * Both screens read the SAME database through this module. That is what stops
+ * the Overview and Form Monitoring disagreeing, which is the fault this
+ * checkpoint exists to fix — the Overview used to derive follow-ups from a
+ * client-side demo store, so the two were never reading the same thing.
+ */
+export async function listOutstandingFollowUps(
+  limit = 50,
+  /**
+   * The caller's authorized salons as LOCATION IDS, or null for unrestricted.
+   *
+   * The 14 September review found a restricted account shown "the same 11
+   * overdue records labelled 'Across every salon you cover'" — the whole
+   * estate's queue under a heading claiming it was theirs. Narrowed in the
+   * query so the refused rows are never read.
+   *
+   * A FORM WITH NO SALON IS STILL SHOWN to a restricted reader only when they
+   * created it. An administrator's forms legitimately carry no salon (see
+   * `proposeLocation`), and a manager scoped to one salon has no claim on
+   * somebody else's unattributed record.
+   */
+  locationIds: readonly string[] | null = null,
+): Promise<InstanceRow[]> {
+  const supabase = getSupabaseAdmin();
+  let query = supabase
+    .from("form_instance_overview")
+    .select("*")
+    .not("follow_up_date", "is", null)
+    .is("followed_up_at", null)
+    .is("archived_at", null)
+    .order("follow_up_date", { ascending: true })
+    .limit(limit);
+
+  if (locationIds !== null) query = query.in("location_id", locationIds);
+
+  const { data, error } = await query;
+  if (error) throw new Error(`Could not read outstanding follow-ups: ${error.message}`);
+  return (data ?? []).map(mapInstance);
+}

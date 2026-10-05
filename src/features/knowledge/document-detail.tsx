@@ -1,0 +1,196 @@
+"use client";
+
+import { History } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { FieldGroup, Select } from "@/components/ui/field";
+import { Notice } from "@/components/ui/feedback";
+import { KNOWLEDGE_CATEGORIES, KNOWLEDGE_CATEGORY_LABEL } from "@/data/knowledge-taxonomy";
+import { useAppStore } from "@/lib/store/app-store";
+import { formatDate, formatDateTime } from "@/lib/utils/date";
+import { FILE_TYPE_LABEL, formatBytes, formatNumber } from "@/lib/utils/format";
+import type { KnowledgeCategory, KnowledgeDocument } from "@/types";
+import { DocumentFileActions } from "./document-file-actions";
+import { DocumentLifecycle } from "./document-lifecycle";
+import { DocumentSourceBadge, DocumentStatusBadge } from "./document-status";
+
+export function DocumentDetail({
+  document,
+  canManage,
+  live,
+}: {
+  document: KnowledgeDocument;
+  canManage: boolean;
+  /** False in demo mode, where documents are seeded and have no stored object. */
+  live: boolean;
+}) {
+  const { updateDocument } = useAppStore();
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <DocumentStatusBadge status={document.status} />
+        <DocumentSourceBadge source={document.source} />
+        <Badge tone="neutral" size="sm">
+          {FILE_TYPE_LABEL[document.fileType]}
+        </Badge>
+        {document.version > 1 ? (
+          <Badge tone="primary" size="sm">
+            Version {document.version}
+          </Badge>
+        ) : null}
+        {document.indexed ? (
+          <Badge tone="accent" size="sm">
+            Indexed
+          </Badge>
+        ) : (
+          <Badge tone="neutral" size="sm">
+            Not indexed
+          </Badge>
+        )}
+      </div>
+
+      <p className="mt-4 text-[13px] leading-relaxed text-muted-foreground">
+        {document.description}
+      </p>
+
+      <DocumentLifecycle document={document} canManage={canManage} />
+
+      <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-border pt-5 sm:grid-cols-3">
+        {[
+          { label: "Category", value: KNOWLEDGE_CATEGORY_LABEL[document.category] },
+          { label: "File", value: document.fileName },
+          { label: "Size", value: formatBytes(document.sizeBytes) },
+          {
+            label: "Characters",
+            value: `${formatNumber(document.characterCount)} approx.`,
+          },
+          { label: "Uploaded by", value: document.uploadedBy },
+          { label: "Uploaded", value: formatDateTime(document.uploadedAt) },
+        ].map((entry) => (
+          <div key={entry.label}>
+            <dt className="eyebrow">{entry.label}</dt>
+            <dd className="mt-1 text-[13px] break-words text-foreground">
+              {entry.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      {document.tags.length > 0 ? (
+        <div className="mt-5">
+          <p className="eyebrow mb-2">Tags</p>
+          <div className="flex flex-wrap gap-1.5">
+            {document.tags.map((tag) => (
+              <Badge key={tag} tone="neutral" size="sm">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {canManage ? (
+        <div className="mt-6 border-t border-border pt-5">
+          <FieldGroup
+            label="Re-categorize"
+            htmlFor={`recategorize-${document.id}`}
+            hint="Moves the document into a different library. Retrieval scope updates immediately."
+          >
+            <Select
+              id={`recategorize-${document.id}`}
+              value={document.category}
+              onChange={(event) =>
+                updateDocument(document.id, {
+                  category: event.target.value as KnowledgeCategory,
+                })
+              }
+            >
+              {KNOWLEDGE_CATEGORIES.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.label}
+                </option>
+              ))}
+            </Select>
+          </FieldGroup>
+        </div>
+      ) : null}
+
+      {/* Version history always shows the live version alongside the earlier
+          ones, so "which version is Sunny actually citing" is answerable at a
+          glance rather than inferred from the absence of a row. */}
+      <div className="mt-6 border-t border-border pt-5">
+        <div className="mb-3 flex items-center gap-2">
+          <History className="size-3.5 text-muted-foreground" aria-hidden />
+          <p className="eyebrow">Version history</p>
+        </div>
+        <ul className="space-y-2">
+          <li className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[color-mix(in_srgb,var(--primary)_22%,transparent)] bg-primary-soft px-3 py-2.5">
+            <span className="flex items-center gap-2 text-[13px] font-medium text-primary-soft-foreground">
+              Version {document.version}
+              <Badge tone="primary" size="sm">
+                {document.indexed ? "Current · cited" : "Current · not cited"}
+              </Badge>
+            </span>
+            <span className="text-xs text-primary-soft-foreground/80">
+              {document.uploadedBy} · {formatDate(document.updatedAt)} ·{" "}
+              {formatBytes(document.sizeBytes)}
+            </span>
+          </li>
+
+          {[...document.previousVersions]
+            .sort((a, b) => b.version - a.version)
+            .map((version) => (
+              <li
+                key={version.version}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-border px-3 py-2.5"
+              >
+                <span className="text-[13px] text-muted-foreground">
+                  Version {version.version}
+                  {version.note ? ` — ${version.note}` : ""}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {version.uploadedBy} · {formatDate(version.uploadedAt)} ·{" "}
+                  {formatBytes(version.sizeBytes)}
+                </span>
+              </li>
+            ))}
+        </ul>
+        <p className="mt-2.5 text-xs leading-relaxed text-muted-foreground">
+          {document.previousVersions.length > 0
+            ? "Sunny always answers from the newest version. Earlier versions are kept for reference and are never cited."
+            : "Uploading a document with this same title creates version " +
+              (document.version + 1) +
+              " and supersedes this one."}
+        </p>
+      </div>
+
+      {/*
+        THE FILE ITSELF.
+
+        This branched on `document.blobKey`, which ONLY an IndexedDB prototype
+        upload ever carries — `rowToDocument` does not set it. So on a real
+        document, stored in Supabase, the button never rendered and this panel
+        told the manager "This is a seeded demo record, so there is no file to
+        download" about a file they had uploaded minutes before. The message was
+        not merely unhelpful; it was false.
+
+        Live documents now resolve a short-lived signed URL for the stored
+        original. A genuinely seeded demo record still has no object behind it,
+        and the server says so in words rather than the panel guessing from a
+        field that means something else.
+      */}
+      <div className="mt-6 border-t border-border pt-5">
+        {live ? (
+          <DocumentFileActions document={document} />
+        ) : (
+          <Notice tone="neutral">
+            This is a seeded demo record, so there is no stored file to open.
+            Documents uploaded in live mode can be previewed and downloaded from
+            here.
+          </Notice>
+        )}
+      </div>
+    </div>
+  );
+}

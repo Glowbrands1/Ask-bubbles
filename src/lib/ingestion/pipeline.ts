@@ -1,0 +1,404 @@
+import "server-only";
+
+import { createHash, randomUUID } from "node:crypto";
+
+import { EMBEDDING_DIMENSIONS } from "@/lib/config/models";
+import { MissingConfigurationError } from "@/lib/config/server-env";
+import { getEmbeddingProvider } from "@/lib/embeddings";
+import { KNOWLEDGE_BUCKET, getSupabaseAdmin } from "@/lib/supabase/server";
+import type { KnowledgeCategory, KnowledgeDocument } from "@/types";
+import { rowToDocument, type KnowledgeDocumentRow } from "@/lib/knowledge/mappers";
+import { chunkSegments, type DocumentChunk } from "./chunking";
+import { IngestionError } from "./errors";
+import { extractDocument } from "./extract";
+import { buildStoragePath, sanitizeFileName } from "./paths";
+import { validateUpload } from "./validation";
+
+/**
+ * INGESTION PIPELINE
+ *
+ *   file -> validate -> store original -> extract -> chunk -> embed -> persist
+ *
+ * Ordering rules that are not negotiable:
+ *
+ *   * The document row exists BEFORE the bytes are read, in status
+ *     "uploading". A crash mid-run leaves a visible, recoverable record rather
+ *     than an orphaned file.
+ *   * `indexed` flips to true, and status to "indexed", only AFTER every chunk
+ *     row has been written. A partially embedded document is never citable:
+ *     the retrieval RPC filters on `indexed = true` and on the current version.
+ *   * Chunks for the previous version are deleted only once the new version's
+ *     chunks are in, so retrieval is never left with nothing.
+ *   * A failure writes status "failed" plus a user-safe reason. Re-running is
+ *     the recovery path, and it is idempotent.
+ */
+
+export interface IngestInput {
+  file: Blob;
+  fileName: string;
+  mimeType: string;
+  title: string;
+  description?: string;
+  category: KnowledgeCategory;
+  tags?: string[];
+  scopeId: string;
+  uploadedByName: string;
+  /**
+   * The uploader's auth user id, where the caller is an authenticated person.
+   *
+   * ADDED FOR ADOPTION ANALYTICS, and it is the id that makes the name usable.
+   * `uploaded_by_name` has always been written from a multipart field the
+   * BROWSER supplies, so it is a label the caller chose rather than an
+   * attribution the server established — every one of the documents already
+   * uploaded carries a name and a null id, which is why "documents uploaded by
+   * this leader" could not be answered at all.
+   *
+   * Optional because ingestion also runs from paths with no person behind it.
+   */
+  uploadedById?: string | null;
+  /**
+   * EXPLICIT IDENTITY, for a knowledge source that owns its documents (the
+   * Woven sync). When given, this row is the one created or superseded —
+   * matched by id, never by title — so a source item is always one document
+   * however its title changes, and a retry of the same item cannot create a
+   * second. Absent for uploads, which keep superseding by title as before.
+   */
+  documentId?: string;
+  /** Where the document came from. Uploads default to `upload`. */
+  source?: "upload" | "woven";
+  /** The note recorded against the version this ingestion supersedes. */
+  supersededNote?: string;
+}
+
+export interface IngestResult {
+  document: KnowledgeDocument;
+  chunkCount: number;
+  /** True when an unchanged version meant embeddings were reused. */
+  reusedExistingEmbeddings: boolean;
+}
+
+export async function ingestDocument(input: IngestInput): Promise<IngestResult> {
+  /* 1. Validate, server-side, whatever the browser claimed.
+        Deliberately before any service is touched, so an unsupported file gets
+        the reason it was actually rejected rather than a configuration error
+        that happens to fire first. */
+  const validated = validateUpload({
+    fileName: input.fileName,
+    mimeType: input.mimeType,
+    sizeBytes: input.file.size,
+  });
+
+  const title = input.title.trim();
+  if (!title) {
+    throw new IngestionError("empty_file", "A document title is required.");
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  /* 2. Versioning: same title in the same scope supersedes, matching the
+        behaviour the prototype's library already has — among documents of
+        the SAME source, so a hand upload never becomes a version of a
+        synced document (or the reverse). */
+  const existing = input.documentId
+    ? await findById(input.scopeId, input.documentId)
+    : await findByTitle(input.scopeId, title, input.source ?? "upload");
+  const version = existing ? existing.version + 1 : 1;
+  const previousVersions = existing
+    ? [
+        ...(existing.previous_versions ?? []),
+        {
+          version: existing.version,
+          uploadedAt: existing.created_at,
+          uploadedBy: existing.uploaded_by_name,
+          sizeBytes: Number(existing.size_bytes),
+          note: input.supersededNote ?? "Superseded by a newer upload",
+        },
+      ]
+    : [];
+
+  const documentId = existing?.id ?? input.documentId ?? randomUUID();
+
+  // The path is derived entirely server-side. Nothing a client sent chooses it.
+  const storagePath = buildStoragePath({
+    scopeId: input.scopeId,
+    documentId,
+    version,
+    fileName: sanitizeFileName(input.fileName),
+  });
+
+  /* 3. Record first, in "uploading". */
+  const baseRow = {
+    id: documentId,
+    knowledge_scope_id: input.scopeId,
+    title,
+    description: input.description?.trim() ?? "",
+    category: input.category,
+    tags: input.tags ?? [],
+    original_filename: sanitizeFileName(input.fileName),
+    mime_type: validated.mimeType,
+    file_type: validated.fileType,
+    storage_path: storagePath,
+    size_bytes: input.file.size,
+    source: input.source ?? ("upload" as const),
+    status: "uploading" as const,
+    indexed: false,
+    failure_reason: null,
+    /* A new version is current again: whatever replaced the old one no longer does. */
+    superseded_by: null,
+    superseded_at: null,
+    version,
+    previous_versions: previousVersions,
+    uploaded_by_name: input.uploadedByName,
+    /*
+     * Null rather than absent when there is no authenticated uploader, so the
+     * column says "nobody was established" instead of silently keeping whatever
+     * a previous version of the row held.
+     */
+    uploaded_by: input.uploadedById ?? null,
+  };
+
+  const { error: upsertError } = await supabase
+    .from("knowledge_documents")
+    .upsert(baseRow);
+  if (upsertError) {
+    throw new IngestionError(
+      "persistence_failed",
+      `The document record could not be saved: ${upsertError.message}`,
+      502,
+    );
+  }
+
+  try {
+    /* 4. Store the original bytes in the PRIVATE bucket. */
+    const { error: uploadError } = await supabase.storage
+      .from(KNOWLEDGE_BUCKET)
+      .upload(storagePath, input.file, {
+        contentType: validated.mimeType,
+        upsert: false,
+      });
+    if (uploadError) {
+      throw new IngestionError(
+        "persistence_failed",
+        `The file could not be stored: ${uploadError.message}`,
+        502,
+      );
+    }
+
+    await setStatus(documentId, "processing");
+
+    /* 5. Extract, preserving page/section locators. */
+    const buffer = new Uint8Array(await input.file.arrayBuffer());
+    const extracted = await extractDocument(validated.fileType, buffer);
+
+    /* 6. Chunk. Deterministic, so an unchanged version hashes identically. */
+    const chunks = chunkSegments(extracted.segments);
+    if (chunks.length === 0) {
+      throw new IngestionError(
+        "no_text",
+        "No indexable text was found in this document.",
+        422,
+      );
+    }
+
+    const contentHash = hashChunks(chunks);
+
+    /* 7. Embed. Skipped entirely when the content is identical to the version
+          already indexed, so re-uploading the same file costs nothing. */
+    let reused = false;
+    if (existing?.content_hash === contentHash && existing.indexed) {
+      reused = true;
+      await supabase
+        .from("knowledge_chunks")
+        .update({ version })
+        .eq("document_id", documentId)
+        .eq("version", existing.version);
+    } else {
+      const embeddings = getEmbeddingProvider();
+      let vectors: number[][];
+      try {
+        vectors = await embeddings.embedDocuments(chunks.map((chunk) => chunk.content));
+      } catch (error) {
+        if (error instanceof MissingConfigurationError) {
+          throw new IngestionError("not_configured", error.message, 503);
+        }
+        throw new IngestionError(
+          "embedding_failed",
+          error instanceof Error ? error.message : "Embedding failed.",
+          502,
+        );
+      }
+
+      if (vectors.length !== chunks.length) {
+        throw new IngestionError(
+          "embedding_failed",
+          "The embedding service returned the wrong number of vectors.",
+          502,
+        );
+      }
+
+      /* 8. Persist chunks for the new version. */
+      const rows = chunks.map((chunk, index) => ({
+        document_id: documentId,
+        knowledge_scope_id: input.scopeId,
+        chunk_index: chunk.index,
+        version,
+        content: chunk.content,
+        locator: chunk.locator,
+        page: chunk.page,
+        section: chunk.section,
+        metadata: {
+          tokenEstimate: chunk.tokenEstimate,
+          charCount: chunk.charCount,
+          fileType: validated.fileType,
+          /*
+           * THE NUMBER THE DOCUMENT PRINTS, and every section heading printed
+           * inside this chunk with the page it is on. A citation names the
+           * printed page where one exists, because that is the number a reader
+           * can check against a paper copy or the contents page; `page` stays
+           * the PDF sheet. Carried in metadata rather than a new column so an
+           * existing corpus can be backfilled without a schema change.
+           */
+          printedPage: chunk.printedPage,
+          sections: chunk.sections,
+        },
+        embedding_model: embeddings.model,
+        embedding: vectors[index]!,
+      }));
+
+      if (rows.some((row) => row.embedding.length !== EMBEDDING_DIMENSIONS)) {
+        throw new IngestionError(
+          "embedding_failed",
+          "An embedding of the wrong width was produced; nothing was indexed.",
+          502,
+        );
+      }
+
+      const { error: chunkError } = await supabase.from("knowledge_chunks").insert(rows);
+      if (chunkError) {
+        throw new IngestionError(
+          "persistence_failed",
+          `Chunks could not be saved: ${chunkError.message}`,
+          502,
+        );
+      }
+    }
+
+    /* 9. Retire the previous version's chunks, after the new ones landed. */
+    if (existing && !reused) {
+      await supabase
+        .from("knowledge_chunks")
+        .delete()
+        .eq("document_id", documentId)
+        .neq("version", version);
+    }
+
+    /* 10. Only now is the document indexed. */
+    const { data, error } = await supabase
+      .from("knowledge_documents")
+      .update({
+        status: "indexed",
+        indexed: true,
+        indexed_at: new Date().toISOString(),
+        character_count: extracted.characterCount,
+        content_hash: contentHash,
+        failure_reason: null,
+      })
+      .eq("id", documentId)
+      .select("*")
+      .single();
+
+    if (error || !data) {
+      throw new IngestionError(
+        "persistence_failed",
+        `The document was indexed but its status could not be saved: ${error?.message ?? "unknown error"}`,
+        502,
+      );
+    }
+
+    return {
+      document: rowToDocument(data as KnowledgeDocumentRow),
+      chunkCount: chunks.length,
+      reusedExistingEmbeddings: reused,
+    };
+  } catch (error) {
+    // Recoverable failure: the record stays, marked failed with a reason a
+    // manager can act on. Re-uploading re-runs the pipeline from the top.
+    const reason =
+      error instanceof IngestionError ? error.message : "Processing failed unexpectedly.";
+    await setStatus(documentId, "failed", reason);
+    throw error instanceof IngestionError
+      ? error
+      : new IngestionError("extraction_failed", reason, 500);
+  }
+}
+
+/* ------------------------------------------------------------- helpers --- */
+
+async function findByTitle(
+  scopeId: string,
+  title: string,
+  source: "upload" | "woven",
+): Promise<KnowledgeDocumentRow | null> {
+  const { data } = await getSupabaseAdmin()
+    .from("knowledge_documents")
+    .select("*")
+    .eq("knowledge_scope_id", scopeId)
+    .eq("source", source)
+    .ilike("title", title)
+    .order("version", { ascending: false })
+    .limit(1);
+  return ((data ?? [])[0] as KnowledgeDocumentRow | undefined) ?? null;
+}
+
+async function findById(
+  scopeId: string,
+  documentId: string,
+): Promise<KnowledgeDocumentRow | null> {
+  const { data, error } = await getSupabaseAdmin()
+    .from("knowledge_documents")
+    .select("*")
+    // Both columns: an id alone must never reach another corpus.
+    .eq("knowledge_scope_id", scopeId)
+    .eq("id", documentId)
+    .maybeSingle();
+  if (error) {
+    throw new IngestionError(
+      "persistence_failed",
+      `The document record could not be read: ${error.message}`,
+      502,
+    );
+  }
+  return (data as KnowledgeDocumentRow | null) ?? null;
+}
+
+async function setStatus(
+  documentId: string,
+  status: "uploading" | "processing" | "indexed" | "failed",
+  failureReason?: string,
+): Promise<void> {
+  await getSupabaseAdmin()
+    .from("knowledge_documents")
+    .update({
+      status,
+      // A document must never look indexed while work is outstanding.
+      ...(status === "indexed" ? {} : { indexed: false }),
+      failure_reason: failureReason ?? null,
+    })
+    .eq("id", documentId);
+}
+
+/**
+ * Content digest over the chunk text. Deterministic chunking makes this a
+ * stable identity for "this version's indexable content", which is what lets an
+ * unchanged re-upload skip embedding entirely.
+ */
+export function hashChunks(chunks: DocumentChunk[]): string {
+  const hash = createHash("sha256");
+  for (const chunk of chunks) {
+    hash.update(chunk.locator);
+    hash.update("|");
+    hash.update(chunk.content);
+    hash.update("|");
+  }
+  return hash.digest("hex");
+}

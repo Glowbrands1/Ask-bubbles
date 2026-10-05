@@ -1,0 +1,252 @@
+import type { ActivitySurface } from "@/lib/analytics/taxonomy";
+import type { ChatReportContext } from "@/lib/reporting/report-context";
+import type {
+  AnswerMode,
+  ChatFormProposal,
+  ChatFormSelection,
+  ChatMessage,
+  SourceCitation,
+} from "@/types";
+
+export interface AskContext {
+  /** Who is asking — used for the manager field on generated forms. */
+  userName: string;
+  /** Their salon or area — used for the location field. */
+  locationName: string;
+  /**
+   * ISO date the assistant should treat as "today".
+   *
+   * SERVER-SET, ALWAYS, which is why `ClientAskContext` below does not carry
+   * it. `/api/chat` fills it from its own clock and never from the request
+   * body. The browser used to send `DEMO_ANCHOR.slice(0, 10)` — a frozen
+   * prototype date — and the route preferred it, so the prompt opened with a
+   * day that had already passed and every freshness judgement Sunny could have
+   * made was made against it.
+   *
+   * The field stays on this internal contract because the prompt genuinely
+   * needs a date; what changed is who is allowed to decide it.
+   */
+  todayIso: string;
+}
+
+/**
+ * What the BROWSER may send as context. Everything except the date.
+ *
+ * Removed rather than left as an ignored field, for the reason
+ * `ClientAskRequest` gives about the corpus: a client that keeps sending an
+ * authority-looking value is an invitation for a future server edit to start
+ * trusting it again.
+ */
+export type ClientAskContext = Omit<AskContext, "todayIso">;
+
+export interface AskRequest {
+  question: string;
+  mode: AnswerMode;
+  /** Prior turns in this conversation. */
+  history: ChatMessage[];
+  /**
+   * Brand knowledge scope (see BrandConfig.knowledgeScopeId).
+   *
+   * SERVER-SET, ALWAYS. `/api/chat` fills this from `activeKnowledgeCorpus()`
+   * and never from the request body — which is why the browser-facing shape
+   * below does not carry it. The field stays on this internal contract because
+   * `answerQuestion` and `knowledge.match` genuinely need an explicit corpus;
+   * what changed is who is allowed to decide it.
+   */
+  scopeId: string;
+  attachedDocumentIds?: string[];
+  /**
+   * Browser-local id of the message carrying `question`.
+   *
+   * PROVENANCE, NOT AUTHORITY — the same status as the ids on `history`. It
+   * lets a form proposal record which of the manager's own turns it was read
+   * from, and it is only ever echoed back to the browser that sent it.
+   */
+  questionMessageId?: string;
+  /**
+   * The template of the still-open proposal on the previous assistant turn.
+   *
+   * ORCHESTRATION, NOT AUTHORITY — it names a KIND of form and carries no
+   * employee, salon, value or status. The server revalidates it against the
+   * published library and the actor's permission, so a forged one produces
+   * only what typing the template's name would have. See
+   * `lib/forms/proposal-continuation.ts`.
+   */
+  continueProposalTemplateKey?: string;
+  /**
+   * The form most recently created in this conversation, when a later turn
+   * might correct it.
+   *
+   * ORCHESTRATION, NOT AUTHORITY, like the continuation key: the server loads
+   * the instance, applies the template's own edit permission and the salon
+   * scope through `authorizeInstance`, and ignores an id that fails either.
+   */
+  activeFormInstanceId?: string;
+  /**
+   * What the manager was looking at when they asked, when they came from a
+   * report tab's "Ask Sunny about this report".
+   *
+   * POINTERS ONLY — which family, which period, which salons, which measure.
+   * There is nowhere in `ChatReportContext` to put a figure, so the browser
+   * cannot send a number and have it treated as true; the server re-reads the
+   * report for itself. See `reporting/read/chat-report-context.ts`.
+   *
+   * It travels with FOLLOW-UPS too, and that is what makes a cross-report
+   * conversation work: "why is #1 the biggest problem?" names no report, and
+   * the keyword routing reads the question only.
+   */
+  reportContext?: ChatReportContext | null;
+  /**
+   * WHICH ASK SUNNY SURFACE THE QUESTION WAS TYPED INTO.
+   *
+   * The one thing only the browser knows. `reportContext` says which report is
+   * being discussed and cannot stand in for this — the Overview band and the
+   * main chat tab both send none, and a question about Sales Totals can be
+   * asked from the chat tab as easily as from the Sales Totals bar.
+   *
+   * REPORTING, NOT AUTHORITY, and this is the reason it is safe to take from a
+   * body. It selects nothing, gates nothing and is read by no code path but the
+   * one that writes the analytics row; the worst a forged value can do is
+   * misattribute one event on an admin-only dashboard. It is still validated
+   * against the enum, so a junk value is recorded as "not recorded" rather than
+   * failing the insert and losing the whole event.
+   */
+  surface?: ActivitySurface | null;
+  context: AskContext;
+}
+
+/**
+ * What the BROWSER may send. Everything an `AskRequest` has except the corpus.
+ *
+ * Removed rather than left as an ignored field: a client that keeps sending an
+ * authority-looking value is an invitation for a future server edit to start
+ * trusting it again.
+ */
+export type ClientAskRequest = Omit<AskRequest, "scopeId" | "context"> & {
+  context: ClientAskContext;
+};
+
+/**
+ * How well the knowledge base covered the question.
+ *
+ * Carried explicitly rather than inferred from an empty citation list or from
+ * the wording of the answer: "Sunny had nothing to go on" and "Sunny answered
+ * but chose not to cite" are different situations that need different UI, and
+ * pattern-matching the prose to tell them apart would be guesswork.
+ */
+export type KnowledgeCoverage =
+  /** Retrieval returned supporting chunks and the answer used them. */
+  | "grounded"
+  /** Retrieval ran and found nothing above the relevance threshold. */
+  | "insufficient"
+  /** Coverage is not a meaningful question — a form flow, a greeting. */
+  | "not_applicable";
+
+export interface AskResponse {
+  content: string;
+  /**
+   * THE SERVER'S NAME FOR THIS TURN — the `activity_events` row it was recorded
+   * as — so the answer can be rated.
+   *
+   * It exists because nothing else in this exchange can serve as one. The
+   * conversation and message ids belong to the browser, which minted them and
+   * could mint any others; a rating keyed to those is a rating anybody could
+   * claim to have left about anything. This value is one the browser received
+   * and did not choose, which is what lets `/api/chat/feedback` check that the
+   * person rating an answer is the person who asked for it.
+   *
+   * OPTIONAL, AND ABSENT IS A REAL CASE RATHER THAN AN ERROR. The activity
+   * insert is best-effort by design — analytics must never be able to fail an
+   * answer — so a turn whose event did not land comes back without one. The
+   * feedback panel then does not render, which is the honest outcome: there is
+   * nothing to attach a rating to. The answer itself is unaffected.
+   */
+  turnId?: string;
+  citations: SourceCitation[];
+  /** Defaults to "not_applicable" when a provider does not report it. */
+  coverage?: KnowledgeCoverage;
+  followUpSuggestions?: string[];
+  /**
+   * What Sunny is OFFERING to create. Present only on a form-request turn.
+   *
+   * REPLACES `formHandoff`, `pendingFormTemplateId` AND `pendingFormValues`,
+   * which are gone rather than deprecated. Between them they carried a drafted
+   * set of HR field values and a half-filled bag of pending ones through
+   * browser-local chat state, and a fact missing on one turn was supplied from
+   * a default on the next. A proposal carries no field values at all: it names
+   * the template, who it is about and which salon, and nothing else. See
+   * `lib/ai/form-proposal.ts`.
+   */
+  formProposal?: ChatFormProposal;
+  /**
+   * The form choices, when the request named no form.
+   *
+   * Mutually exclusive with `formProposal` in practice: a turn either knows
+   * which form it is about and proposes one, or it does not and asks. Built
+   * server-side from the published, permitted library — see
+   * `lib/ai/form-proposal.ts`.
+   */
+  formSelection?: ChatFormSelection;
+  /**
+   * A form already created in this conversation that this turn corrected —
+   * "change her new location to salon 24". The id and the field keys only; the
+   * inline editor re-reads the canonical instance rather than trusting values
+   * carried here. See `lib/forms/chat-correction.ts`.
+   */
+  formUpdate?: { instanceId: string; updated: string[] };
+}
+
+/**
+ * AI ABSTRACTION
+ * ---------------------------------------------------------------------------
+ * The only surface the chat UI talks to. `MockAIProvider` implements it now;
+ * `ClaudeProvider` implements it later. Nothing in `features/chat/` imports an
+ * SDK, a model name, or an API key.
+ */
+export interface AIProvider {
+  readonly name: string;
+  /** False whenever the provider is a stand-in. Surfaced honestly in the UI. */
+  readonly connected: boolean;
+  ask(request: ClientAskRequest): Promise<AskResponse>;
+  /** Short title for the conversation history sidebar. */
+  titleForConversation(firstMessage: string): string;
+}
+
+/* ------------------------------------------------------------ Form drafting */
+
+/**
+ * ============================================================================
+ * `draftForm` IS GONE FROM THIS INTERFACE, AND SO IS `POST /api/forms/draft`
+ * ============================================================================
+ *
+ * They were the prototype's drafting path and they had no callers left: the
+ * inline chat editor drafts through
+ * `POST /api/forms/instances/[id]/draft`, against a real instance and its
+ * pinned template version.
+ *
+ * REMOVED RATHER THAN RE-AUTHORIZED, because the shape was the problem and no
+ * amount of permission checking fixes it. The route:
+ *
+ *   asked for `create_coaching_form` ON EVERY TEMPLATE, so a role that could
+ *   draft a coaching form could have Claude write the prose of a Corrective
+ *   Plan of Action;
+ *
+ *   took the FIELD LIST FROM THE REQUEST BODY, so the set of fields a model was
+ *   allowed to write was whatever the browser said it was — the one decision
+ *   that must come from the stored template version;
+ *
+ *   and addressed templates by the prototype's `tpl-*` ids, which no row in
+ *   `form_templates` has answered to since the engine landed.
+ *
+ * The endpoint that replaced it derives all three from the server: it resolves
+ * the instance, applies THAT TEMPLATE's `required_permission` through
+ * `authorizeInstance`, reads the field list from the version the instance is
+ * pinned to, and offers the model only the fields that version marks `ai`.
+ * Keeping a second drafting endpoint alive beside it would have meant keeping
+ * two sets of those guards in step.
+ *
+ * `lib/forms/fill-rules.ts` went with it. Its guard was expressed over the
+ * prototype's `TemplateField`/`fillRule` shape; the live equivalent is
+ * `enforceResponsibilities` and `AI_WRITABLE` in `lib/forms/responsibility.ts`,
+ * which work over the stored document model and are what the live path runs.
+ */

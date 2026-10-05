@@ -1,0 +1,672 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import {
+  AlertTriangle,
+  Ellipsis,
+  FileText,
+  FolderOpen,
+  Info,
+  Loader2,
+  Search,
+  Download,
+  Eye,
+  Trash2,
+  Upload,
+} from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/controls";
+import { Input, Select } from "@/components/ui/field";
+import { DemoDataNote, EmptyState, Notice, SkeletonRows } from "@/components/ui/feedback";
+import { PageHeader, PageShell, SectionHeader } from "@/components/ui/layout";
+import { StatColumn, StatPanel } from "@/components/ui/marquee";
+import {
+  Dialog,
+  DialogActions,
+  DialogClose,
+  DialogContent,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/overlays";
+import { KNOWLEDGE_CATEGORIES, KNOWLEDGE_CATEGORY_LABEL } from "@/data/knowledge-taxonomy";
+import { isDemoMode } from "@/lib/config/runtime";
+import { KnowledgeCorpusNote } from "./corpus-note";
+import { DocumentPreviewDialog } from "./document-file-actions";
+import { useSession } from "@/lib/session/session-context";
+import { useAppStore } from "@/lib/store/app-store";
+import {
+  deleteDocument as deleteDocumentRemotely,
+  documentFileLink,
+  lifecycleIsLive,
+  type OriginalFileLink,
+} from "./lifecycle-service";
+import { cn } from "@/lib/utils/cn";
+import { formatDate, relativeTime } from "@/lib/utils/date";
+import { FILE_TYPE_LABEL, formatBytes, formatNumber, pluralize } from "@/lib/utils/format";
+import type { KnowledgeCategory, KnowledgeDocument } from "@/types";
+import { DocumentDetail } from "./document-detail";
+import { DocumentSourceBadge, DocumentStatusBadge } from "./document-status";
+import { UploadDialog } from "./upload-dialog";
+
+export function KnowledgeScreen() {
+  const searchParams = useSearchParams();
+  const { can } = useSession();
+  // Demo documents are seeded rows with no stored object behind them, so the
+  // file actions are a live-mode affordance.
+  const live = !isDemoMode();
+  const { documents, removeDocument, ready } = useAppStore();
+
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<KnowledgeCategory | "all">("all");
+  const [uploadCategory, setUploadCategory] = useState<KnowledgeCategory | undefined>();
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  /*
+   * PREVIEW AND DOWNLOAD FROM THE ROW.
+   *
+   * The signed URL is resolved per action and used immediately — never held in
+   * state beyond the open dialog. It is a credential with a clock on it, and
+   * one kept around outlives the reason it was minted.
+   *
+   * `fileSubject` remembers WHICH document the open preview belongs to, so
+   * "Download original" inside the dialog asks the server again for that
+   * document rather than reusing the inline preview link.
+   */
+  const [fileLink, setFileLink] = useState<OriginalFileLink | null>(null);
+  const [fileSubject, setFileSubject] = useState<KnowledgeDocument | null>(null);
+  const [fileProblem, setFileProblem] = useState<string | null>(null);
+
+  const canManage = can("manage_knowledge");
+
+  async function openFile(document: KnowledgeDocument, mode: "download" | "preview") {
+    setFileProblem(null);
+    try {
+      // No corpus is sent. The server derives it from the active brand, so a
+      // scope on this request could only ever be ignored or trusted, and one of
+      // those is a bug waiting to be reintroduced.
+      const link = await documentFileLink({ documentId: document.id, mode });
+      if (mode === "download") {
+        // The signed URL already carries the attachment filename the server
+        // set, so the browser saves it correctly and stays on this screen.
+        window.location.assign(link.url);
+        return;
+      }
+      setFileSubject(document);
+      setFileLink(link);
+    } catch (error) {
+      setFileProblem(
+        error instanceof Error
+          ? error.message
+          : "The file could not be opened. Try again in a moment.",
+      );
+    }
+  }
+
+  /**
+   * Deep links (?document=…, ?upload=1) are derived during render rather than
+   * copied into state in an effect. `undefined` means "no local override yet",
+   * so the URL wins until the user opens or closes something themselves.
+   */
+  const [detailOverride, setDetailOverride] = useState<string | null | undefined>();
+  const detailId =
+    detailOverride === undefined ? searchParams.get("document") : detailOverride;
+  const setDetailId = (next: string | null) => setDetailOverride(next);
+
+  const [uploadOverride, setUploadOverride] = useState<boolean | undefined>();
+  // The ?upload=1 deep link still respects the permission — a role without
+  // manage_knowledge cannot open the upload dialog by editing the URL.
+  const uploadOpen =
+    canManage &&
+    (uploadOverride === undefined
+      ? searchParams.get("upload") === "1"
+      : uploadOverride);
+  const setUploadOpen = (next: boolean) => setUploadOverride(next);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return documents
+      .filter((doc) => (category === "all" ? true : doc.category === category))
+      .filter((doc) => {
+        if (!q) return true;
+        return (
+          doc.title.toLowerCase().includes(q) ||
+          doc.description.toLowerCase().includes(q) ||
+          doc.tags.some((tag) => tag.includes(q)) ||
+          doc.fileName.toLowerCase().includes(q)
+        );
+      })
+      .sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
+  }, [documents, query, category]);
+
+  const stats = useMemo(() => {
+    const categories = new Set(documents.map((doc) => doc.category));
+    return {
+      total: documents.length,
+      categories: categories.size,
+      // "Indexed" counts documents Sunny can actually cite, which is the
+      // indexed flag rather than the status badge: a document can read as Ready
+      // in the library while its chunks are still being rebuilt.
+      indexed: documents.filter((doc) => doc.indexed).length,
+      processing: documents.filter((doc) => doc.status === "processing").length,
+      failed: documents.filter((doc) => doc.status === "failed").length,
+    };
+  }, [documents]);
+
+  const detailDocument = documents.find((doc) => doc.id === detailId) ?? null;
+  const deleteDocument = documents.find((doc) => doc.id === deleteId) ?? null;
+
+  const openUpload = (next?: KnowledgeCategory) => {
+    setUploadCategory(next);
+    setUploadOpen(true);
+  };
+
+  /**
+   * Deleting removes server state first and local state only on success, so a
+   * failed delete never leaves a document missing from the library while it is
+   * still indexed and citable.
+   */
+  const handleDelete = async (target: KnowledgeDocument) => {
+    setDeleting(true);
+    setDeleteError(null);
+
+    try {
+      if (lifecycleIsLive()) {
+        await deleteDocumentRemotely({
+          documentId: target.id,
+        });
+      }
+      removeDocument(target.id);
+      setDeleteId(null);
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error ? error.message : "The document could not be deleted.",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <PageShell>
+      <PageHeader
+        eyebrow="Knowledge"
+        title="Knowledge Base"
+        description="Every document Sunny answers from. Upload once, and every manager gets the same answer from the same source."
+        actions={
+          canManage ? (
+            <Button onClick={() => openUpload()}>
+              <Upload />
+              Upload documents
+            </Button>
+          ) : null
+        }
+      />
+
+      {/* Stats */}
+      {/*
+        ONE PANEL ON HAIRLINES, not four boxes. Four bordered cards make four
+        objects that run together at a glance; the direction divides one panel
+        instead, so the figures read as one set — and `Failed` only takes colour
+        when it is non-zero, because a permanently coral zero is the alarm the
+        palette forbids.
+      */}
+      <StatPanel className="mb-6">
+        <StatColumn label="Documents" value={formatNumber(stats.total)} />
+        <StatColumn label="Indexed & citable" value={formatNumber(stats.indexed)} />
+        <StatColumn label="Processing" value={formatNumber(stats.processing)} />
+        <StatColumn
+          label="Failed"
+          value={formatNumber(stats.failed)}
+          flagged={stats.failed > 0}
+        />
+      </StatPanel>
+
+      {stats.failed > 0 ? (
+        <Notice tone="attention" icon={<AlertTriangle />} className="mb-5">
+          <span className="font-semibold">
+            {formatNumber(stats.failed)}{" "}
+            {pluralize(stats.failed, "document")}{" "}
+            {stats.failed === 1 ? "failed" : "failed"} to process
+          </span>
+          <p className="mt-0.5">
+            Sunny cannot cite {stats.failed === 1 ? "it" : "them"}. Open{" "}
+            {stats.failed === 1 ? "the document" : "each document"} to see why
+            and retry — the original file is still stored.
+          </p>
+        </Notice>
+      ) : null}
+
+      <Tabs defaultValue="documents">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <TabsList>
+            <TabsTrigger value="documents">All documents</TabsTrigger>
+            <TabsTrigger value="libraries">Category libraries</TabsTrigger>
+          </TabsList>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search documents…"
+                aria-label="Search documents"
+                className="pl-9 sm:w-64"
+              />
+            </div>
+            <Select
+              value={category}
+              onChange={(event) =>
+                setCategory(event.target.value as KnowledgeCategory | "all")
+              }
+              aria-label="Filter by category"
+              className="sm:w-56"
+            >
+              <option value="all">All categories</option>
+              {KNOWLEDGE_CATEGORIES.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+
+        <TabsContent value="documents">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-[13px] text-muted-foreground">
+              {formatNumber(filtered.length)}{" "}
+              {pluralize(filtered.length, "document")}
+              {category !== "all"
+                ? ` in ${KNOWLEDGE_CATEGORY_LABEL[category]}`
+                : ""}
+              {query.trim() ? ` matching "${query.trim()}"` : ""}
+            </p>
+            {/*
+              DEMO MODE ONLY. In live mode these are the customer's own
+              uploaded documents, and a "Demo content" chip beside a real count
+              tells a Salon Director their knowledge base is fake. Kept for the
+              demo build, where it is true and useful.
+            */}
+            {live ? null : <DemoDataNote />}
+          </div>
+
+          {!ready ? (
+            <SkeletonRows rows={6} />
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              icon={<FileText />}
+              title="No documents match"
+              description="Try a different search term, or clear the category filter."
+              action={
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setQuery("");
+                    setCategory("all");
+                  }}
+                >
+                  Clear filters
+                </Button>
+              }
+            />
+          ) : (
+            <ul className="space-y-2">
+              {filtered.map((document) => (
+                <DocumentRow
+                  key={document.id}
+                  document={document}
+                  canManage={canManage}
+                  live={live}
+                  onOpen={() => setDetailId(document.id)}
+                  onPreview={() => openFile(document, "preview")}
+                  onDownload={() => openFile(document, "download")}
+                  onDelete={() => setDeleteId(document.id)}
+                />
+              ))}
+            </ul>
+          )}
+        </TabsContent>
+
+        <TabsContent value="libraries">
+          <Notice tone="neutral" icon={<Info />} className="mb-5">
+            Each category behaves like its own small library, with its own
+            description and upload point — so a policy never lands in the
+            equipment library by accident.
+          </Notice>
+
+          <div className="space-y-4">
+            {KNOWLEDGE_CATEGORIES.map((entry) => {
+              const items = documents.filter((doc) => doc.category === entry.id);
+              return (
+                <Card key={entry.id}>
+                  <CardContent className="p-5">
+                    <SectionHeader
+                      title={entry.label}
+                      description={entry.description}
+                      actions={
+                        <>
+                          <Badge tone="neutral">
+                            {formatNumber(items.length)}{" "}
+                            {pluralize(items.length, "document")}
+                          </Badge>
+                          {canManage ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => openUpload(entry.id)}
+                            >
+                              <Upload />
+                              Upload
+                            </Button>
+                          ) : null}
+                        </>
+                      }
+                      className="mb-3"
+                    />
+
+                    {items.length === 0 ? (
+                      <p className="rounded-[var(--radius-sm)] border border-dashed border-border-strong px-4 py-5 text-center text-[13px] text-muted-foreground">
+                        No documents in this library yet.
+                      </p>
+                    ) : (
+                      <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                        {items.slice(0, 6).map((document) => (
+                          <li key={document.id}>
+                            <button
+                              type="button"
+                              onClick={() => setDetailId(document.id)}
+                              className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] border border-border px-3 py-2 text-left transition-colors hover:bg-surface-muted"
+                            >
+                              <FileText
+                                className="size-3.5 shrink-0 text-muted-foreground"
+                                aria-hidden
+                              />
+                              <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">
+                                {document.title}
+                              </span>
+                              <span className="shrink-0 text-xs text-subtle-foreground">
+                                {FILE_TYPE_LABEL[document.fileType]}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {items.length > 6 ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => {
+                          setCategory(entry.id);
+                          setQuery("");
+                        }}
+                      >
+                        <FolderOpen />
+                        View all {items.length}
+                      </Button>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/*
+        The seeded-corpus explanation, which renders in the DEMO build only —
+        see `KnowledgeCorpusNote` for why live mode must say nothing here.
+      */}
+      <KnowledgeCorpusNote live={live} />
+
+      {/* Upload */}
+      <Dialog
+        open={uploadOpen}
+        onOpenChange={(open) => {
+          setUploadOpen(open);
+          if (!open) setUploadCategory(undefined);
+        }}
+      >
+        {/*
+          PLURAL, BECAUSE THE DIALOG TAKES A SELECTION NOW. It said "Upload a
+          document" and "Add a document", which was accurate when the picker
+          took one file and is a false limit now that it takes up to 25 — a
+          reader who reads the title will not try to drop a folder.
+
+          The storage sentence is dropped rather than pluralised: it described
+          demo behaviour only, and the dialog itself now says what happens in
+          each mode, correctly, in the notice at its foot.
+        */}
+        <DialogContent
+          title="Upload documents"
+          description="Add one document or a batch to the knowledge library."
+          wide
+        >
+          <UploadDialog
+            defaultCategory={uploadCategory}
+            onDone={() => {
+              setUploadOpen(false);
+              setUploadCategory(undefined);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail */}
+      {fileProblem ? (
+        <Notice tone="attention" icon={<AlertTriangle />} className="mt-4">
+          {fileProblem}
+        </Notice>
+      ) : null}
+
+      <Dialog
+        open={Boolean(detailDocument)}
+        onOpenChange={(open) => {
+          if (!open) setDetailId(null);
+        }}
+      >
+        {detailDocument ? (
+          <DialogContent title={detailDocument.title} wide>
+            <DocumentDetail
+              document={detailDocument}
+              canManage={canManage}
+              live={live}
+            />
+          </DialogContent>
+        ) : null}
+      </Dialog>
+
+      {/* Preview — the stored original, never a rendering of extracted text. */}
+      <DocumentPreviewDialog
+        link={fileLink}
+        title={fileSubject?.title ?? ""}
+        onClose={() => {
+          setFileLink(null);
+          setFileSubject(null);
+        }}
+        onDownload={() => {
+          if (fileSubject) void openFile(fileSubject, "download");
+        }}
+      />
+
+      {/* Delete confirmation */}
+      <Dialog
+        open={Boolean(deleteDocument)}
+        onOpenChange={(open) => {
+          if (open) return;
+          setDeleteId(null);
+          setDeleteError(null);
+        }}
+      >
+        {deleteDocument ? (
+          <DialogContent
+            title="Delete this document?"
+            description="It is removed from the knowledge library and Sunny stops citing it."
+          >
+            <p className="text-[13px] leading-relaxed text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {deleteDocument.title}
+              </span>
+              {deleteDocument.previousVersions.length > 0 ? (
+                <>
+                  {" "}
+                  and its {deleteDocument.previousVersions.length} earlier{" "}
+                  {pluralize(deleteDocument.previousVersions.length, "version")}
+                </>
+              ) : null}{" "}
+              will be removed
+              {lifecycleIsLive()
+                ? ", along with every stored file and every retrieval chunk. Sunny stops citing it immediately. This cannot be undone."
+                : " from this browser."}
+            </p>
+
+            {deleteError ? (
+              <Notice tone="attention" icon={<AlertTriangle />} className="mt-4">
+                {deleteError}
+              </Notice>
+            ) : null}
+
+            <DialogActions>
+              <DialogClose asChild>
+                <Button variant="ghost" disabled={deleting}>
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button
+                variant="destructive"
+                disabled={deleting}
+                onClick={() => void handleDelete(deleteDocument)}
+              >
+                {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
+                {deleting ? "Deleting…" : "Delete document"}
+              </Button>
+            </DialogActions>
+          </DialogContent>
+        ) : null}
+      </Dialog>
+    </PageShell>
+  );
+}
+
+function DocumentRow({
+  document,
+  canManage,
+  live,
+  onOpen,
+  onPreview,
+  onDownload,
+  onDelete,
+}: {
+  document: KnowledgeDocument;
+  canManage: boolean;
+  live: boolean;
+  onOpen: () => void;
+  onPreview: () => void;
+  onDownload: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <li>
+      <div
+        className={cn(
+          "flex items-center gap-3 rounded-[var(--radius-md)] border border-border bg-surface p-3 shadow-soft transition-[border-color,box-shadow]",
+          "hover:border-border-strong hover:shadow-raised",
+        )}
+      >
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-surface-muted text-muted-foreground">
+            <FileText className="size-4" aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="truncate text-[14px] font-medium text-foreground">
+                {document.title}
+              </span>
+              {document.version > 1 ? (
+                <Badge tone="neutral" size="sm">
+                  v{document.version}
+                </Badge>
+              ) : null}
+            </span>
+            <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+              {KNOWLEDGE_CATEGORY_LABEL[document.category]} ·{" "}
+              {FILE_TYPE_LABEL[document.fileType]} ·{" "}
+              {formatBytes(document.sizeBytes)} · {document.uploadedBy} ·{" "}
+              {formatDate(document.uploadedAt)}
+            </span>
+          </span>
+        </button>
+
+        <div className="hidden shrink-0 items-center gap-2 md:flex">
+          <DocumentSourceBadge source={document.source} />
+          <DocumentStatusBadge status={document.status} />
+          <span className="w-20 text-right text-xs text-subtle-foreground">
+            {relativeTime(document.updatedAt)}
+          </span>
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="iconSm"
+              aria-label={`Actions for ${document.title}`}
+            >
+              <Ellipsis />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={onOpen}>
+              <FileText />
+              View details
+            </DropdownMenuItem>
+            {/*
+              THE TWO ACTIONS PAULYNE COULD NOT FIND. They were reachable from
+              nowhere: the detail panel's download was wired to a field only
+              prototype uploads carry, and the row menu offered details and
+              delete. Both are on the row now, one click from the library.
+            */}
+            {live ? (
+              <>
+                <DropdownMenuItem onSelect={onPreview}>
+                  <Eye />
+                  Preview
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={onDownload}>
+                  <Download />
+                  Download original
+                </DropdownMenuItem>
+              </>
+            ) : null}
+            {canManage ? (
+              <DropdownMenuItem onSelect={onDelete} tone="danger">
+                <Trash2 />
+                Delete
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </li>
+  );
+}

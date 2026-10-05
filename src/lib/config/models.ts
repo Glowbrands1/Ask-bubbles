@@ -1,0 +1,220 @@
+/**
+ * MODEL + PIPELINE CONFIGURATION — the single source of truth.
+ *
+ * Model names, embedding dimensions and chunking parameters are declared here
+ * and nowhere else. No component, route or provider hardcodes a model id.
+ *
+ * This module is safe to import from client code: it contains configuration,
+ * never credentials. Secrets live in `server-env.ts`, which is server-only.
+ */
+
+/* ------------------------------------------------------------------ Claude */
+
+/**
+ * The answering model. Changing this line changes every Claude call in the app.
+ * Overridable per-deployment with ANTHROPIC_MODEL (server-only) so a rollback
+ * does not need a code change.
+ */
+export const CLAUDE_MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5";
+
+/**
+ * Reasoning effort for grounded answers. Ask Sunny is a question-answering
+ * surface over retrieved text rather than an open-ended reasoning task, and
+ * managers are waiting on the response, so the default trades the top of the
+ * range for latency. Raise to "high" if answer quality proves insufficient.
+ */
+export const CLAUDE_EFFORT = (process.env.ANTHROPIC_EFFORT ||
+  "medium") as "low" | "medium" | "high" | "xhigh" | "max";
+
+/** Output ceiling per answer mode. Detailed answers need the most room. */
+export const CLAUDE_MAX_TOKENS: Record<"quick" | "standard" | "detailed", number> = {
+  quick: 1024,
+  standard: 2048,
+  detailed: 4096,
+};
+
+/* -------------------------------------------------------------- Embeddings */
+
+/**
+ * Embedding models this codebase knows how to use.
+ *
+ * `gte-small` runs natively inside the Supabase Edge Runtime — there is no
+ * embedding vendor, no API key and no third-party network hop. The model is
+ * invoked by the `embed` Edge Function in supabase/functions/embed/index.ts.
+ *
+ * `dimensions` is the model's fixed output width, not a width this app
+ * requests: gte-small emits 384 floats and offers no truncation setting.
+ *
+ * The dimension is NOT guessed anywhere: the pgvector column width in
+ * `supabase/migrations` must equal EMBEDDING_DIMENSIONS below, and a test
+ * (`src/lib/config/embedding-dimensions.test.ts`) parses the SQL and enforces
+ * it. Changing the model to one with a different width therefore REQUIRES a new
+ * migration and a re-embed of every chunk — see `supabase/README.md`.
+ *
+ * `maxBatch` is how many inputs THIS APP sends per Edge Function call. Each one
+ * is a separate `session.run` inside a single request, and they share that
+ * request's CPU budget — so the number is bounded by the worker, not by taste.
+ * `embedding-dimensions.test.ts` asserts it never exceeds MAX_INPUTS in the
+ * function source, which is the function's own ceiling rather than this figure.
+ *
+ * ============================================================================
+ * WHY 4, AND WHY IT USED TO BE 16
+ * ============================================================================
+ *
+ * 16 was documented as "deliberately small". It was not small enough, and the
+ * comment saying so was never measured against a real worker.
+ *
+ * A 58-page PDF failed to index in the Ask Sunny Dev project. Its very first
+ * batch — 16 chunks, one request — came back HTTP 546. The function's own logs
+ * name the cause: `sb_error_code: WORKER_RESOURCE_LIMIT`, with `CPU Time
+ * exceeded` and a worker shutdown logged in the same millisecond. Two attempts,
+ * killed at 2357 ms and 2451 ms of execution.
+ *
+ * The budget is measurable from the same logs. A one-input request on that same
+ * deployment completes in 173-202 ms including a ~19 ms cold boot, so a single
+ * gte-small inference costs roughly 130-180 ms of mostly-CPU work. A ~2 s
+ * per-request CPU budget therefore fits about 11-15 inferences — and 16 sits
+ * exactly on top of that ceiling, which is why the failure was total rather
+ * than occasional.
+ *
+ * 4 inferences is ~550-720 ms, roughly a third of the budget. The margin covers
+ * parsing a batch, serialising 4 x 384 floats back, and chunks that tokenise
+ * more densely than the ones measured. It is a bound, not a guarantee: the
+ * provider subdivides on 546 regardless, so a denser document degrades into
+ * more requests rather than into a failed upload.
+ *
+ * REDUCING THIS NEEDS NO FUNCTION REDEPLOY. MAX_INPUTS in the Edge Function is
+ * a ceiling on what it will accept; this is what the app chooses to send.
+ */
+export const EMBEDDING_MODELS = {
+  "gte-small": { dimensions: 384, maxBatch: 4 },
+} as const;
+
+export type EmbeddingModelName = keyof typeof EMBEDDING_MODELS;
+
+/**
+ * The retrieval model. Documents and queries both use this — the same model on
+ * both sides is what makes a similarity score mean anything.
+ */
+export const EMBEDDING_MODEL: EmbeddingModelName = "gte-small";
+
+export const EMBEDDING_DIMENSIONS = EMBEDDING_MODELS[EMBEDDING_MODEL].dimensions;
+export const EMBEDDING_MAX_BATCH = EMBEDDING_MODELS[EMBEDDING_MODEL].maxBatch;
+
+/**
+ * The input ceiling gte-small enforces. Text beyond this is silently truncated
+ * by the model, so the chunker below is sized to stay inside it.
+ */
+export const EMBEDDING_MAX_INPUT_TOKENS = 512;
+
+/**
+ * The dimension the shipped migrations declare for `knowledge_chunks.embedding`.
+ *
+ * Hand-maintained and therefore test-enforced: the suite reads the migrations
+ * in order and fails if the width they end at disagrees with this number. A
+ * drift here would produce vectors the index cannot search.
+ */
+export const MIGRATED_EMBEDDING_DIMENSIONS = 384;
+
+/* ---------------------------------------------------------------- Chunking */
+
+/**
+ * Chunk sizes are bounded by the embedding model, not by taste.
+ *
+ * gte-small truncates its input at EMBEDDING_MAX_INPUT_TOKENS (512) and says
+ * nothing when it does. A chunk larger than that would be stored with an
+ * embedding computed from only its opening — the vector would look fine, the
+ * row would insert fine, and retrieval would quietly miss anything the tail of
+ * the chunk actually said. So the target sits well below the ceiling: the
+ * chunker's characters-per-token estimate is an approximation, and the margin
+ * absorbs text that tokenises more densely than English prose.
+ */
+export const CHUNKING = {
+  /** Target chunk size. Comfortably inside gte-small's 512-token input limit. */
+  targetTokens: 400,
+  /** Hard ceiling before a chunk is force-split. Still under the model limit. */
+  maxTokens: 450,
+  /**
+   * Chunks below this are merged with the following segment rather than stored
+   * on their own — a two-line page makes a useless retrieval unit.
+   */
+  minTokens: 80,
+  /** ~12% of the target, inside the requested 10-15% band. */
+  overlapTokens: 48,
+  /** Deterministic characters-per-token estimate used by the chunker. */
+  charsPerToken: 4,
+} as const;
+
+/* ---------------------------------------------------------------- Retrieval */
+
+export const RETRIEVAL = {
+  /**
+   * Chunks fetched from the vector index per question. Raised alongside the
+   * smaller chunk size above so the grounding context still covers a
+   * comparable amount of source text.
+   */
+  topK: 14,
+  /** Chunks actually placed in the grounding context. */
+  contextChunks: 12,
+  /**
+   * Cosine similarity below which a chunk is not considered supporting
+   * evidence. When nothing clears this bar Sunny says the knowledge base does
+   * not cover the question instead of answering from general knowledge.
+   *
+   * THIS NUMBER IS MODEL-SPECIFIC AND PROVISIONAL. Similarity scores are not
+   * comparable across embedding models, and gte-small's are compressed into a
+   * narrow, high band — a threshold carried over from another model does not
+   * merely mis-tune this guard, it disables it.
+   *
+   * Measured against the deployed `embed` function on a three-sentence
+   * fixture:
+   *
+   *   on-topic question -> its own chunk          0.91 - 0.94
+   *   question -> an unrelated chunk in the corpus 0.75 - 0.78
+   *   wholly off-topic question (tungsten, football, turbochargers)
+   *                     -> every chunk in the corpus 0.72 - 0.74
+   *
+   * At 0.35 — the value calibrated for the previous model — a question about
+   * the boiling point of tungsten retrieved all three salon chunks. The guard
+   * was doing nothing. 0.78 sits above every off-topic and cross-topic score
+   * observed and well below the on-topic band.
+   *
+   * It is calibrated on three fictional sentences, not on the real corpus, so
+   * treat it as a floor to revisit once documents are loaded: too high and
+   * Sunny refuses questions it could answer, too low and it grounds answers in
+   * text that does not support them. Whichever way it moves, it moves with
+   * evidence.
+   */
+  minSimilarity: 0.78,
+  /**
+   * Chunks fetched when a MANDATORY ROLE DOCUMENT is pinned into the turn —
+   * today, an employee-performance question pinning the Employee Performance
+   * Framework.
+   *
+   * Larger than `topK` for one measured reason. The framework is 80 chunks that
+   * sit between 0.91 and 0.95 of EACH OTHER, which is tighter than any of them
+   * sits to another document. So a query anywhere in its topic space returns
+   * almost nothing else: measured against the live corpus, the first
+   * non-framework chunk arrives at rank 6, 10, 17 or 25 depending on the
+   * anchor, and the top 14 hold 13 or 14 framework chunks.
+   *
+   * Since `assembleGrounding` drops the framework from the retrieved half once
+   * it is pinned, a `topK` of 14 would have left the prompt with the framework
+   * and NOTHING ELSE — no policy manual to outrank it, which would make the
+   * source hierarchy unenforceable. Fetching 40 and discarding the framework
+   * rows yields between 1 and 14 real evidence chunks on the anchors measured.
+   *
+   * NOT HIGHER, because `match_knowledge_chunks` clamps `match_count` to 50
+   * internally: a larger number here would read as a promise the database does
+   * not keep.
+   */
+  roleAugmentedTopK: 40,
+} as const;
+
+/* ------------------------------------------------------------ File uploads */
+
+export const UPLOAD_LIMITS = {
+  /** Server-enforced. The client dialog shows the same number. */
+  maxBytes: 50 * 1024 * 1024,
+  minBytes: 1,
+} as const;

@@ -1,0 +1,258 @@
+// @vitest-environment jsdom
+import * as React from "react";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { MessageBubble } from "./message-bubble";
+import { ContextPanel } from "./context-panel";
+import type { ChatMessage, SourceCitation } from "@/types";
+
+/**
+ * ============================================================================
+ * SOURCES ARE A RULE AND NUMBERED ROWS — NOT CARDS, AND NOT NOTHING
+ * ============================================================================
+ *
+ * THE ORIGINAL FEEDBACK, WHICH STILL HOLDS. A grounded answer rendered a
+ * heading and a bordered card per excerpt beneath it — document title, page
+ * locator, category AND an excerpt preview — and the context rail rendered the
+ * same material a second time under "Sources for this answer". A manager asking
+ * about the tardiness policy wants the answer, not a bibliography taller than
+ * it.
+ *
+ * THE FIX WAS TOO BLUNT, AND THE CURRENT ARTIFACT SAYS SO. These tests used to
+ * require that NOTHING appear. The Marquee Chat Tab artifact identifies the
+ * same problem and prescribes a different remedy, as its sixth item: "A SOURCES
+ * label over a 3px rule, then numbered rows with yellow numeral chips. Today
+ * they are three white cards competing with the answer they support."
+ *
+ * So what is asserted now is the SHAPE rather than the absence:
+ *
+ *   - the label and a numbered row per citation ARE rendered;
+ *   - no card, no border per source, no category, and above all NO EXCERPT —
+ *     the excerpt paragraph was most of the height that was objected to;
+ *   - no link into the knowledge base, so a row is a reference and not a
+ *     navigation away from the answer;
+ *   - the context rail still does not repeat them. Sources appear once.
+ *
+ * WHY REMOVAL WAS THE WRONG ANSWER, ON THE PRODUCT'S OWN TERMS. The band's
+ * trust line and the empty state both promise "answers are generated from
+ * indexed company documents" and that every answer shows them. With the block
+ * gone, that promise was false for every answer in the app. A grounding claim a
+ * manager cannot check is worth less than no claim, and this is a product whose
+ * answers get quoted in coaching conversations.
+ *
+ * PRESENTATION ONLY, AND THAT IS STILL THE HALF WORTH TESTING TWICE.
+ * `citations` are produced by retrieval, returned by the API, carried on the
+ * message and stored — unchanged throughout. If these tests passed because
+ * grounding had been turned off, the product would be broken in a way no
+ * source assertion would notice, so coverage, the insufficient-coverage notice,
+ * follow-ups and the answer body are all asserted alongside.
+ */
+
+vi.mock("@/lib/session/session-context", () => ({
+  useSession: () => ({
+    user: { avatarInitials: "PC" },
+    isAdmin: false,
+  }),
+}));
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
+vi.mock("@/lib/ai", () => ({
+  aiProviderStatus: () => ({ name: "Claude", connected: true, detail: "Answering live." }),
+}));
+
+function citation(overrides: Partial<SourceCitation> = {}): SourceCitation {
+  return {
+    documentId: "doc-1",
+    documentTitle: "Attendance Policy",
+    locator: "Page 4",
+    excerpt: "Employees are expected to be ready at their scheduled start time.",
+    category: "policies",
+    relevance: 0.91,
+    ...overrides,
+  } as SourceCitation;
+}
+
+function answer(overrides: Partial<ChatMessage> = {}): ChatMessage {
+  return {
+    id: "m1",
+    role: "assistant",
+    content: "Arriving late three times in two weeks is a documented coaching matter.",
+    createdAt: "2026-09-07T12:00:00Z",
+    mode: "standard",
+    coverage: "grounded",
+    citations: [citation(), citation({ locator: "Page 7" }), citation({ documentId: "doc-2", documentTitle: "Coaching Standards", locator: "Page 2" })],
+    ...overrides,
+  };
+}
+
+function renderAnswer(message: ChatMessage) {
+  return render(
+    <MessageBubble message={message} onSuggestion={vi.fn()} onRetry={vi.fn()} />,
+  );
+}
+
+afterEach(cleanup);
+
+describe("an answer carrying citations lists them compactly", () => {
+  it("renders the label and one numbered row per citation", () => {
+    // A. The artifact's shape: a SOURCES label, then a numbered row each.
+    const { container } = renderAnswer(answer());
+    const text = container.textContent ?? "";
+
+    expect(text).toContain("Sources");
+    expect(text).toContain("Attendance Policy");
+    expect(text).toContain("Coaching Standards");
+    // The locator travels with the row: a policy reference without a page is
+    // not checkable, which is the whole point of showing it.
+    expect(text).toContain("Page 4");
+
+    // Numbered, and the numerals are decorative to a screen reader — the
+    // document title is the accessible content of each row.
+    const items = container.querySelectorAll("li");
+    expect(items.length).toBe(3);
+  });
+
+  it("renders no card and no category, and keeps the excerpt to one clamped line", () => {
+    /*
+     * B. THE HEIGHT THAT WAS OBJECTED TO WAS THE CARD, NOT THE WORDS.
+     *
+     * The old block put a bordered card around every source with the excerpt as
+     * a PARAGRAPH inside it; three of those ran taller than the answer. The
+     * artifact's row keeps a short descriptor after the title — "Attendance &
+     * Dress Code Policy — ready to work at the start of the scheduled shift" —
+     * which is what makes a row worth reading rather than a filename.
+     *
+     * So the excerpt stays and is clamped to a single truncated line, which is
+     * the property asserted here. A retrieval excerpt has no length contract,
+     * and three unclamped ones are how this became taller than the answer the
+     * first time.
+     */
+    const { container } = renderAnswer(answer());
+    const text = container.textContent ?? "";
+
+    // No category, which was card furniture and told a manager nothing.
+    expect(text).not.toContain("policies");
+    // No bordered card per source, and no excerpt in a block of its own.
+    expect(container.querySelector("p.text-xs")).toBeNull();
+    // The descriptor is inline, on a row that cannot grow past one line.
+    const row = container.querySelector('a[href^="/knowledge/document/"]');
+    expect(row).not.toBeNull();
+    expect(row?.querySelector(".truncate")).not.toBeNull();
+  });
+
+  it("makes every source open the document it cites", () => {
+    /*
+     * REPORTED AS A REGRESSION: "why did you remove clickable sources?" — and
+     * it was one. The rows came back without their links while the Overview's
+     * near-copy kept them, so the same citation opened from one surface and not
+     * the other.
+     *
+     * A citation a manager cannot open is a claim they have to take on trust,
+     * which is the opposite of what a source is for — and these answers get
+     * quoted in coaching and disciplinary conversations, so "page 14 of the
+     * Attendance policy" has to be one click from page 14.
+     */
+    const { container } = renderAnswer(answer());
+    /*
+     * THE READ-ONLY SOURCE ROUTE. `/knowledge` is the corpus's management
+     * console and is administrators-only; a citation must stay openable for
+     * every role Sunny answers for, so it points at the single-document route,
+     * which asks for `view_knowledge` alone. The rows themselves are unchanged:
+     * same three, same order, same documents.
+     */
+    const links = container.querySelectorAll('a[href^="/knowledge/document/"]');
+    expect(links).toHaveLength(3);
+    expect(links[0]?.getAttribute("href")).toBe("/knowledge/document/doc-1");
+    expect(links[2]?.getAttribute("href")).toBe("/knowledge/document/doc-2");
+  });
+
+  it("renders no count, badge or 'view sources' affordance", () => {
+    /*
+     * The remedy was not "hide it behind something". A collapsed panel, an
+     * accordion or a count badge each put the sources one interaction further
+     * away than a manager checking a policy answer should have to go.
+     */
+    const { container } = renderAnswer(answer());
+    expect(container.textContent).not.toMatch(/view sources|show sources|\d+ sources?/i);
+  });
+
+  it("renders nothing at all when an answer carries no citations", () => {
+    // An empty SOURCES rule under an ungrounded answer would imply the
+    // retrieval found something and chose not to say what.
+    const { container } = renderAnswer(answer({ citations: [] }));
+    expect(container.textContent).not.toContain("Sources");
+  });
+
+  it("does not crash on a message that still carries citation data", () => {
+    // C. The data is still there. Rendering simply ignores it.
+    const message = answer();
+    expect(message.citations).toHaveLength(3);
+    const { container } = renderAnswer(message);
+    expect(container.textContent).toContain("documented coaching matter");
+  });
+});
+
+describe("everything else about an answer is untouched", () => {
+  it("still renders the answer body", () => {
+    // D.
+    renderAnswer(answer());
+    expect(screen.getByText(/documented coaching matter/)).toBeTruthy();
+  });
+
+  it("still renders follow-up suggestions", () => {
+    // E.
+    renderAnswer(answer({ followUpSuggestions: ["What should I document afterwards?"] }));
+    expect(
+      screen.getByRole("button", { name: "What should I document afterwards?" }),
+    ).toBeTruthy();
+  });
+
+  it("still says when the knowledge base did not cover the question", () => {
+    /*
+     * F. THE MOST IMPORTANT ONE HERE. Coverage is not a source card — it is
+     * Sunny telling a manager that what they just read is general guidance
+     * rather than company policy. Removing the bibliography must not have taken
+     * that with it.
+     */
+    const { container } = renderAnswer(
+      answer({ coverage: "insufficient", citations: [] }),
+    );
+    expect(container.textContent).toContain("Not covered by the knowledge base");
+    expect(container.textContent).toContain("not");
+  });
+
+  it("still renders a failed turn as a failure rather than an answer", () => {
+    const { container } = renderAnswer(
+      answer({
+        content: "",
+        citations: undefined,
+        error: {
+          kind: "model_failed",
+          message: "Sunny could not reach the model.",
+          retryable: true,
+          question: "how much PTO?",
+        },
+      }),
+    );
+    expect(container.querySelector('[role="alert"]')).not.toBeNull();
+  });
+});
+
+describe("the context rail no longer shows sources either", () => {
+  it("renders no 'Sources for this answer' section", () => {
+    // The second surface. Phase 1 did not touch it, so removing only the
+    // in-thread block would have left the request half-done.
+    const { container } = render(<ContextPanel messages={[answer()]} />);
+    expect(container.textContent).not.toMatch(/sources for this answer/i);
+    expect(container.textContent).not.toContain("Attendance Policy");
+    expect(container.querySelector('a[href^="/knowledge/document/"]')).toBeNull();
+  });
+
+  it("still shows the provider status and the take-it-further links", () => {
+    const { container } = render(<ContextPanel messages={[answer()]} />);
+    expect(container.textContent).toContain("Claude");
+    expect(container.textContent).toContain("Take it further");
+  });
+});

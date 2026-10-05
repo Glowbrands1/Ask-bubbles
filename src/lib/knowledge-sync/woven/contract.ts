@@ -1,0 +1,423 @@
+/**
+ * ============================================================================
+ * THE WOVEN TEAM WEB-APP CONTRACT — every assumed Woven name, in one file
+ * ============================================================================
+ *
+ * SOURCE OF TRUTH: "Woven Team → Ask Sunny: Read-Only Connector Handoff",
+ * compiled from the authenticated JB & Associates pages and the JavaScript
+ * those pages served. These are Woven Team's INTERNAL, authenticated web-app
+ * routes (class B/D in the handoff), used deliberately: Ask Sunny reads the
+ * same responses the signed-in web app reads. This file is the one place to
+ * correct when Woven changes a name, and the one place to finish when browser
+ * evidence resolves an `UNVERIFIED` item.
+ *
+ * MARKERS
+ *
+ *   VERIFIED    route, method and field names established by the handoff from
+ *               page code and rendered records.
+ *   UNVERIFIED  the handoff says it was not captured. Anything so marked is
+ *               either not used, or used only in a way that FAILS CLOSED (an
+ *               item held back, a run refused) when it turns out to be wrong.
+ *
+ * THIS CLIENT IS READ-ONLY. Every POST below is a list/search read or a
+ * download-URL request the web app itself makes to show content. Nothing here
+ * creates, edits, publishes, acknowledges or deletes anything in Woven.
+ */
+
+export const DEFAULT_WOVEN_TEAM_BASE_URL = "https://app.woven.team";
+
+/** The tenant this build syncs. Configurable, checked after sign-in. */
+export const DEFAULT_WOVEN_COMPANY = "JB & Associates";
+
+/* ------------------------------------------------------ authentication -- */
+
+/** VERIFIED: `GET /Login` returns the login form. */
+export const LOGIN_PAGE_PATH = "/Login";
+/** VERIFIED: the form posts here, `application/x-www-form-urlencoded`. */
+export const LOGIN_SUBMIT_PATH = "/Login/Authenticate";
+/** VERIFIED: form field names. */
+export const LOGIN_FIELDS = {
+  username: "AuthenticationRequestUser",
+  password: "AuthenticationRequestPass",
+  isLocationLogin: "IsLocationLogin",
+  setTermsSignedDate: "SetTermsSignedDate",
+  antiForgery: "__RequestVerificationToken",
+} as const;
+
+/**
+ * VERIFIED: signs of a login page. Any authenticated read that answers with
+ * one of these is an expired session, never "no content".
+ */
+export const LOGIN_PATH_PREFIXES = ["/login"];
+export const LOGIN_FORM_MARKER = /action\s*=\s*["']\/Login\/Authenticate["']/i;
+
+/**
+ * VERIFIED (browser evidence, Sept 2026): after sign-in, the authenticated
+ * account dropdown `a.dropdown-toggle` carries the active company's name
+ * ("JB & Associates"). This is the post-login company check.
+ */
+export const ACTIVE_COMPANY_TAG = "a";
+export const ACTIVE_COMPANY_CLASS = "dropdown-toggle";
+
+/**
+ * VERIFIED (live Production test, 29 Sept 2026): with correct credentials,
+ * `POST /Login/Authenticate` answers 200 at `/Login/Authenticate?ReturnUrl=%2F`
+ * with the ACCOUNT CHOOSER, not a login error. Its visible heading is "Select
+ * account for login" (the tab title reads "Select Company"), with a searchable
+ * "Account" table listing JB & Associates and Midwest Soap Makers. The
+ * credentials were accepted: this is never `login_failed`.
+ *
+ * VERIFIED (browser evidence, 29 Sept 2026): how a chooser row submits.
+ * Each account is `<a class="select-company" href="javascript:void(0)"
+ * data-company-id="<uuid>" data-company-name="" data-account-status="1">`. A
+ * delegated click handler reads those three attributes and calls
+ * `SelectCompany(id, name, status, true)`, which sets `CompanyID` and
+ * `CompanyName` on `#continue-login-form` and submits it natively: POST
+ * `/Login/Authenticate`, `application/x-www-form-urlencoded`, with
+ * `AuthenticationRequestUser`, `AuthenticationRequestPass`, `ReturnUrl`,
+ * `CompanyID`, `CompanyName` and `__RequestVerificationToken`. The session
+ * does exactly that, reading the id from the entry every time. (The Switch
+ * Account route `/Account/_Change_EmployeeCompany` is NOT this flow.)
+ */
+export const CHOOSER_ENTRY_CLASS = "select-company";
+export const CHOOSER_ENTRY_ATTRS = {
+  companyId: "data-company-id",
+  companyName: "data-company-name",
+  accountStatus: "data-account-status",
+} as const;
+export const CONTINUE_LOGIN_FORM_ID = "continue-login-form";
+export const CONTINUE_LOGIN_FIELDS = {
+  companyId: "CompanyID",
+  companyName: "CompanyName",
+  returnUrl: "ReturnUrl",
+} as const;
+export const CONTINUE_LOGIN_REQUIRED = [
+  "AuthenticationRequestUser",
+  "AuthenticationRequestPass",
+  "ReturnUrl",
+  "CompanyID",
+  "CompanyName",
+  "__RequestVerificationToken",
+] as const;
+
+/**
+ * VERIFIED: a completed sign-in lands on `/`, titled "Dashboard", with the
+ * account dropdown (`a.dropdown-toggle`) showing the active company.
+ */
+export const DASHBOARD_PATH = "/";
+export const DASHBOARD_TITLE = /^\s*dashboard\b/i;
+export const COMPANY_CHOOSER_TEXT = /select\s+(?:company|account\s+for\s+login)/i;
+export const COMPANY_CHOOSER_TITLE = /select\s+(?:company|account)/i;
+
+/**
+ * VERIFIED (live, 29 Sept 2026): Woven may answer at `/Login/Authenticate`
+ * with an "Add Profile Photo" interstitial. Its "Ask me later" link
+ * (`onclick="blur(); ReturnToLogin(); return false;"`) sets
+ * `SkipAddEmployeeProfileImage=true` and submits `#add-profile-image-form`:
+ * POST `/Login/Authenticate`, `application/x-www-form-urlencoded`, with the
+ * fields below, values as the page rendered them. The separate "Don't ask me
+ * again" preference is never used: skipping changes nothing in Woven.
+ */
+export const PROFILE_PHOTO_FORM_ID = "add-profile-image-form";
+export const PROFILE_PHOTO_SKIP_FIELD = "SkipAddEmployeeProfileImage";
+export const PROFILE_PHOTO_FIELDS = [
+  "AuthenticationRequestUser",
+  "AuthenticationRequestPass",
+  "EmployeeID",
+  "CompanyID",
+  PROFILE_PHOTO_SKIP_FIELD,
+  "__RequestVerificationToken",
+] as const;
+
+/**
+ * UNVERIFIED: whether list POSTs need an anti-forgery HEADER in addition to
+ * the session cookie. Null sends none. If Woven turns out to require one, set
+ * the header name here and the client sends the page's
+ * `__RequestVerificationToken` value with every POST.
+ */
+export const ANTIFORGERY_HEADER: string | null = null;
+
+/** Recognised in error pages, so an anti-forgery refusal is named as such. */
+export const ANTIFORGERY_ERROR_MARKER = /anti-?forgery|RequestVerificationToken/i;
+
+/* --------------------------------------------------------------- policies -- */
+
+/** VERIFIED: server-rendered management table; rows carry `data-policy-id`. */
+export const POLICY_LIST_PATH = "/Policy";
+export const POLICY_ROW_ATTRS = {
+  id: "data-policy-id",
+  status: "data-status",
+  disabled: "data-disabled",
+  hasAttachments: "data-has-attachments",
+} as const;
+/**
+ * VERIFIED header labels of the management table: Policy, Status, Audience,
+ * Last Updated, Acknowledgement, plus an unlabeled document column. Cells are
+ * read by header, not by position. A missing header leaves the value unknown,
+ * and an unknown audience is held for review.
+ */
+export const POLICY_HEADER_HINTS = { audience: /^\s*audience\s*$/i, updated: /^\s*last\s+updated\s*$/i } as const;
+/**
+ * VERIFIED: Woven's policy audience setting is `Public` or `Targeted`. The
+ * table's Audience cell is a DISPLAY summary ("All Teams 8 Positions") and is
+ * never read as Public; only the exact label `Public` is company-wide.
+ */
+export const POLICY_AUDIENCE_PUBLIC = "Public";
+export const POLICY_AUDIENCE_TARGETED = "Targeted";
+export const policyDetailPath = (id: string) => `/Policy/Details/${encodeURIComponent(id)}`;
+/** VERIFIED: inline `var mPolicyAttachments = [...]` on the detail page. */
+export const POLICY_ATTACHMENTS_VAR = "mPolicyAttachments";
+export const POLICY_ATTACHMENT_FIELDS = {
+  documentId: "DocumentID",
+  name: "DocumentName",
+  size: "SizeInBytes",
+  url: "AzureFileURL",
+  contentType: "ContentType",
+} as const;
+/**
+ * VERIFIED: the read-only policy detail structure.
+ *   status      `.badge`
+ *   version     `.dropdown-toggle` (the version picker; the account dropdown
+ *               shares the class, so only text that reads as a version is used)
+ *   body        inside `#policy-editor-column`: `label[for="ContentHTML"]`
+ *               followed by `.read-only-label`
+ *   attachments `#policy-attachments [data-document-id]`, file name
+ *               `.wo-preview__name`; the temporary URL and content type are the
+ *               arguments of `DownloadDocumentFromDashboard(...)`
+ */
+export const POLICY_DETAIL = {
+  editorColumnId: "policy-editor-column",
+  bodyLabelFor: "ContentHTML",
+  bodyClass: "read-only-label",
+  statusClass: "badge",
+  versionClass: "dropdown-toggle",
+  attachmentsId: "policy-attachments",
+  attachmentIdAttr: "data-document-id",
+  attachmentNameClass: "wo-preview__name",
+  downloadHelper: "DownloadDocumentFromDashboard",
+} as const;
+
+/** VERIFIED: `data-status` values seen, and what they mean here. */
+export const POLICY_PUBLISHED_STATUSES = ["current", "published"];
+export const POLICY_UNPUBLISHED_STATUSES = ["draft", "archived", "retired", "inactive", "unpublished"];
+
+/* -------------------------------------------------------------- handbooks -- */
+
+/** VERIFIED: POST, JSON content type, no body; answers `{ list: [...] }`. */
+export const HANDBOOK_LIST_PATH = "/KnowledgeCenter/_Handbooks_List_ForDataTable";
+export const HANDBOOK_COLUMNS = { id: "EntityID", name: "Column1", status: "Column2", audience: "Column3", updated: "Column4" } as const;
+export const handbookManagePath = (id: string) => `/KnowledgeCenter/Handbooks/${encodeURIComponent(id)}/manage`;
+/** VERIFIED: inline variables on the manage page. */
+export const HANDBOOK_VARS = {
+  id: "mHandbookID",
+  name: "mHandbookName",
+  updatedOn: "mUpdatedOn",
+  currentVersionId: "mCurrentVersionID",
+  draftVersionId: "mDraftVersionID",
+} as const;
+/** VERIFIED: form POST `pHandbookID`, `pHandbookVersionID`; answers `{ Success, Download: { DownloadURL, FileName } }`. */
+export const HANDBOOK_DOWNLOAD_PATH = "/KnowledgeCenter/_Handbook_DownloadVersion";
+export const HANDBOOK_DOWNLOAD_FIELDS = { handbookId: "pHandbookID", versionId: "pHandbookVersionID" } as const;
+export const HANDBOOK_PUBLISHED_STATUSES = ["published"];
+export const HANDBOOK_UNPUBLISHED_STATUSES = ["draft", "unpublished", "archived", "not shared"];
+
+/* ------------------------------------------------------------- procedures -- */
+
+/** VERIFIED: POST JSON search; answers `{ Success, HTML }`; cards carry `data-procedure-id`. */
+export const PROCEDURE_SEARCH_PATH = "/KnowledgeCenter/_Search_Procedures";
+export const PROCEDURE_SEARCH_BODY = {
+  pModel: { FilterText: "", Categories: [], Frequencies: [], Positions: [], Tags: [] },
+} as const;
+export const PROCEDURE_CARD_ATTR = "data-procedure-id";
+/** VERIFIED: the employee detail link's query names. */
+export const procedureDetailPath = (id: string) =>
+  `/KnowledgeCenter/Procedure/${encodeURIComponent(id)}?pFilterText=&pIsCategoryFilterUsed=false&pIsPositionFilterUsed=false&pIsFrequencyFilterUsed=false&pIsTagFilterUsed=false`;
+
+/** VERIFIED: the management view, which exposes attachment document ids. */
+export const procedureManagementPath = (id: string) => `/KnowledgeCenter/Procedure/${encodeURIComponent(id)}/Management`;
+/**
+ * VERIFIED (browser pass, 30 September 2026) — the employee detail's steps:
+ *
+ *   <div id="procedure-step-<step-id>" class="procedure-step-container …">
+ *     <div id="display-order">Step 1</div>
+ *     <h3>Step One</h3>
+ *     <div id="procedure-step-content">…</div>
+ *     <ul class="procedure-step-attachment-list">
+ *       <a onclick="DownloadProcedureStepAttachment('<stored-file-name>')">Display name.pdf</a>
+ *
+ * The step id is in the container's own `id` (an older reading expected a
+ * `data-procedure-step-id` attribute, which the live page does not carry —
+ * that is why every live procedure's text was blocked). The page can render a
+ * carousel/scroll COPY of each step with the same ids, so steps are
+ * deduplicated by step id. "Not Provided" is the placeholder for an empty step.
+ *
+ * The management view marks each attachment `data-attachment-id`; it is kept
+ * as a fallback listing only — the download is by stored file name.
+ */
+export const PROCEDURE_DETAIL = {
+  stepClass: "procedure-step-container",
+  stepIdPrefix: "procedure-step-",
+  stepIdAttr: "data-procedure-step-id",
+  displayOrderId: "display-order",
+  stepContentId: "procedure-step-content",
+  attachmentListClass: "procedure-step-attachment-list",
+  attachmentIdAttr: "data-attachment-id",
+  attachmentCall: "DownloadProcedureStepAttachment",
+  placeholderBody: /^\s*not provided\s*$/i,
+} as const;
+
+/**
+ * VERIFIED route (browser pass, 30 September 2026): the request
+ * `DownloadProcedureStepAttachment(storedFileName)` makes — a GET carrying only
+ * `pAzureFileName`. The stored name is an identifier of the file, NOT a
+ * document id, and nothing is derived from it.
+ */
+export const procedureAttachmentDownloadPath = (storedFileName: string) =>
+  `/KnowledgeCenter/Download_ProcedureStep_Attachment?pAzureFileName=${encodeURIComponent(storedFileName)}`;
+
+/* ----------------------------------------------------------- file library -- */
+
+/** VERIFIED: POST JSON; answers `{ list: [...] }`, the whole filtered collection (`serverSide:false`). */
+export const FILE_LIBRARY_LIST_PATH = "/FileLibrary/_FileLibrary_Management_List_ForDataTable";
+export const FILE_LIBRARY_LIST_BODY = {
+  pModel: { Name: "", FileAltText: "", FileLibraryTypes: [], FileLibrarySources: [], Tags: [] },
+} as const;
+export const FILE_LIBRARY_COLUMNS = {
+  id: "EntityID",
+  type: "Column1",
+  title: "Column2",
+  status: "Column3",
+  audience: "Column4",
+  size: "Column5",
+  updated: "Column6",
+  tags: "Column7",
+  library: "Column8",
+} as const;
+/**
+ * VERIFIED route (browser pass, 30 September 2026): a File Library download,
+ * by the record's stable id (`EntityID` / row `data-pk`) — never by its Azure
+ * storage name. How the bytes are then delivered (directly, or by a redirect to
+ * storage) was not wire-captured, so the downloader accepts either and checks
+ * the result is a real file.
+ */
+export const fileLibraryDownloadPath = (fileLibraryId: string) =>
+  `/Dashboard/_FileLibrary_Download?pFileLibraryID=${encodeURIComponent(fileLibraryId)}&pDownloadedFromEntityType=FileLibrary`;
+export const FILE_LIBRARY_PUBLISHED_STATUSES = ["published"];
+export const FILE_LIBRARY_UNPUBLISHED_STATUSES = ["unpublished", "draft", "archived", "not shared"];
+/**
+ * The File Library type labels Ask Sunny can index, mapped to a file type.
+ * "PDF" is VERIFIED; the Word label is UNVERIFIED and matched loosely. Anything
+ * else (video, image, link) is an unsupported format, not a failure.
+ */
+export const FILE_LIBRARY_INDEXABLE_TYPES: { pattern: RegExp; markup: RegExp; extension: string; mimeType: string }[] = [
+  { pattern: /^pdf$/i, markup: /fa-file-pdf|application\/pdf|\bpdf\b/, extension: "pdf", mimeType: "application/pdf" },
+  {
+    pattern: /^(docx|word)$/i,
+    markup: /fa-file-word|wordprocessingml/,
+    extension: "docx",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  },
+];
+
+/* ----------------------------------------------------- knowledge elements -- */
+
+/** VERIFIED: POST JSON; `LearningElementStatus: "null"` is the page's "all statuses". */
+export const KNOWLEDGE_ELEMENT_LIST_PATH = "/KnowledgeElement/_KnowledgeElement_List_ForDataTable";
+export const KNOWLEDGE_ELEMENT_LIST_BODY = { pModel: { LearningElementStatus: "null", Tags: [] } } as const;
+export const KNOWLEDGE_ELEMENT_COLUMNS = {
+  id: "EntityID",
+  status: "Column1",
+  title: "Column2",
+  version: "Column3",
+  type: "Column4",
+  tags: "Column5",
+  updated: "Column6",
+} as const;
+
+/** VERIFIED: details page (links to content pages) and a content page. */
+export const knowledgeElementDetailPath = (id: string) => `/KnowledgeElement/Details/${encodeURIComponent(id)}`;
+export const knowledgeElementContentPath = (id: string, pageId: string) =>
+  `/KnowledgeElement/Details/${encodeURIComponent(id)}/Content/${encodeURIComponent(pageId)}`;
+/**
+ * VERIFIED for the sampled content type: title `#Name`; body blocks
+ * `.content[content-id]`. Other content types are not assumed: a page with no
+ * such block is an unsupported structure and the element stays blocked.
+ * Links inside a block are kept as references; an external URL (the sample has
+ * a SharePoint video) is never downloaded.
+ */
+export const KNOWLEDGE_ELEMENT_CONTENT = {
+  titleId: "Name",
+  blockClass: "content",
+  blockIdAttr: "content-id",
+} as const;
+
+/* ---------------------------------------------------------------- courses -- */
+
+/** VERIFIED: POST JSON; archived courses are excluded by `IsArchived: false`. */
+export const COURSE_LIST_PATH = "/Course/_Course_List_ForDataTable";
+export const COURSE_LIST_BODY = { pModel: { LearningElementStatus: "null", Tags: [], IsArchived: false } } as const;
+export const COURSE_COLUMNS = {
+  id: "EntityID",
+  status: "Column1",
+  title: "Column3",
+  version: "Column4",
+  tags: "Column5",
+  updated: "Column6",
+} as const;
+
+/**
+ * VERIFIED route and headers (Order, Name, Type, Prerequisites, Version,
+ * Tag(s), Last Update); page scripts indicate rows are `.entity-row[data-pk]`.
+ * UNVERIFIED: a POPULATED row — none exists in this account — so course items
+ * are not parsed and course content stays blocked.
+ */
+export const courseItemsPath = (id: string) => `/Course/_Course_Items?pCourseID=${encodeURIComponent(id)}`;
+
+/** VERIFIED: learning statuses seen in the status filter. */
+export const LEARNING_PUBLISHED_STATUSES = ["current"];
+export const LEARNING_UNPUBLISHED_STATUSES = ["draft", "archived", "retired"];
+
+/* --------------------------------------------------------------- audience -- */
+
+/**
+ * VERIFIED for Handbooks and the File Library: "Public" is the company-wide
+ * audience ("Audience UI distinguishes Public and Targeted"). Nothing else is
+ * treated as company-wide without an administrator's decision.
+ */
+export const COMPANY_WIDE_AUDIENCE_LABELS = ["Public"];
+
+/* -------------------------------------------------------------- downloads -- */
+
+/**
+ * Temporary signed storage URLs are fetched only from these hosts, over HTTPS,
+ * WITHOUT the Woven session cookie. VERIFIED: policy attachments are on
+ * `woven.blob.core.windows.net` with SAS parameters; File Library originals on
+ * `wovenversioned.blob.core.windows.net`. The handbook `DownloadURL` host was
+ * not recorded, so it is held to the same allowlist.
+ */
+export const DOWNLOAD_HOST_PATTERN = /^[a-z0-9-]+\.blob\.core\.windows\.net$/i;
+
+/**
+ * The capabilities not yet established. A part that needs one is BLOCKED —
+ * tracked, compared, never guessed at — and named by one of these codes in the
+ * admin screen's Advanced section and in the evidence request.
+ */
+export const CAPABILITY = {
+  /**
+   * RETIRED capabilities, kept so manifest rows written before they were
+   * established still read with a label: the File Library download and the
+   * procedure attachment download are verified routes now.
+   */
+  fileLibraryDownload: "file_library_download",
+  procedureAttachmentDownload: "procedure_attachment_download",
+  /** A procedure attachment whose stored file name the page does not give (management-view id only). */
+  procedureAttachmentUnlocated: "procedure_attachment_unlocated",
+  /** A procedure page without the verified step structure. */
+  procedureContent: "procedure_content",
+  /** A policy page without the verified read-only body structure. */
+  policyBody: "policy_body",
+  /** A Knowledge Element with no content page of the verified `.content[content-id]` kind. */
+  knowledgeElementContent: "knowledge_element_content",
+  /** A populated `_Course_Items` row — not seen in this account. */
+  courseContent: "course_content",
+} as const;

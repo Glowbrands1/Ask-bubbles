@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/reviews/apify/cron",
+      "schedule": "0 11,12 * * *"
+    },
+    {
+      "path": "/api/knowledge-sync/woven/cron",
+      "schedule": "40 * * * *"
+    },
+    {
+      "path": "/api/employees/woven/cron",
+      "schedule": "17 11 * * *"
+    }
+  ]
+}

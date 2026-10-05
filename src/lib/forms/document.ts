@@ -1,0 +1,1248 @@
+import { ACTIVE_BRAND } from "@/lib/brand";
+/**
+ * THE FORM DOCUMENT MODEL.
+ *
+ * A template version is a document: an ordered list of blocks that renders three
+ * ways from one definition — the editor an administrator sees, the fill screen a
+ * manager works in, and the printed PDF. One model rather than three is what
+ * stops the printed form drifting from the screen it was filled on.
+ *
+ * The shape comes from the nine reference forms, and every block type in here
+ * earns its place from something one of them does:
+ *
+ *   `section`        the black bars — Employee Information, Type of Warning
+ *   `field_row`      the two-up rows: Employee Name / Date, Job Title / Location
+ *   `checkbox_group` Type of Coaching, Type of Offense, Topic Of Coaching
+ *   `numbered_list`  "Overall top three strengths: 1. 2. 3."
+ *   `signature_row`  always-blank signature and date pairs
+ *   `page_break`     the DMIT EPP's explicit page breaks
+ *   `reference`      the DMIT EPP's position-description block, role-scoped
+ *   `acknowledgement` the confirmation paragraph above each signature block
+ *
+ * TWO THINGS ARE LOAD-BEARING.
+ *
+ * 1. EVERY FIELD CARRIES A RESPONSIBILITY, and that is template data, not a
+ *    hint. The reference forms mark fields "AI FILLS: ..." or "FILLED BY HAND";
+ *    those become `responsibility` here and the server enforces it against
+ *    whatever a model returns. A field's responsibility is per template: the
+ *    DMIT EPP's self-review is filled by hand, the SDIT EPP's is drafted, and
+ *    neither is a global rule about "self review" fields.
+ *
+ * 2. `{{role}}` AND `{{roleAbbr}}` ARE RESOLVED FROM THE CHOSEN VARIANT, never
+ *    guessed. The DMIT EPP is one document read two ways — as a TSD review and
+ *    as a DMIT review — and the same is true of the four EPPs, which differ by
+ *    who reviews whom. Interpolation happens at render time so the stored
+ *    document stays one thing.
+ */
+
+export const FIELD_RESPONSIBILITIES = [
+  "system",
+  "ai",
+  "manager",
+  "employee",
+  "manual",
+  "signature",
+] as const;
+
+export type FieldResponsibility = (typeof FIELD_RESPONSIBILITIES)[number];
+
+/** What each responsibility means where a human has to read it. */
+export const RESPONSIBILITY_LABEL: Record<FieldResponsibility, string> = {
+  system: `Filled by ${ACTIVE_BRAND.productName} from record`,
+  ai: `${ACTIVE_BRAND.productName} drafts`,
+  manager: "Manager completes",
+  employee: "Employee completes",
+  manual: "Filled by hand",
+  signature: "Always blank — signed by hand",
+};
+
+/**
+ * The short chip the editor shows on the block itself.
+ *
+ * `system` and `ai` both read "AI FILLS", which is deliberate and matches the
+ * reference forms: from the reader's side both are Ask Sunny filling the field,
+ * and the distinction that matters to THEM is only "does a person have to write
+ * this". The difference the engine cares about — filled from the record versus
+ * drafted by the model — is real and is what the gear says, but it is not a
+ * distinction an administrator needs on the page. Labelling one "AUTO" only
+ * raised the question of what AUTO meant.
+ */
+export const RESPONSIBILITY_CHIP: Record<FieldResponsibility, string> = {
+  system: "AI FILLS",
+  ai: "AI FILLS",
+  manager: "MANAGER",
+  employee: "EMPLOYEE",
+  manual: "FILLED BY HAND",
+  signature: "SIGNED BY HAND",
+};
+
+/**
+ * Responsibilities the assistant is allowed to write into.
+ *
+ * Exactly one. `system` is filled from the record by the server, not by a
+ * model, and everything else belongs to a person. This constant is the single
+ * place that decision lives — `enforceResponsibilities` reads it, the prompt
+ * builder reads it, and the tests assert on it.
+ */
+export const AI_WRITABLE: readonly FieldResponsibility[] = ["ai"];
+
+export type FieldInput = "text" | "long_text" | "date";
+
+export interface FormField {
+  key: string;
+  label: string;
+  input: FieldInput;
+  responsibility: FieldResponsibility;
+  /** Guidance for the manager, and context for the assistant's prompt. */
+  help?: string;
+  /**
+   * Marks a field whose content must be grounded in approved policy — the
+   * "Policy Violated" and "Direct policy from official manual" lines. The
+   * assistant may only fill these from a knowledge-base match, and leaves them
+   * for the manager when it cannot find one. See `lib/forms/policy-grounding`.
+   */
+  policyGrounded?: boolean;
+  /**
+   * Asks for a drafted narrative of a named shape rather than a loose
+   * paragraph.
+   *
+   *   `observed_expectation`  the three labelled sections — "Observed:",
+   *                           "Expectation:", "Going Forward:".
+   *
+   *   `plan_of_action`        one paragraph saying what is being done, what the
+   *                           employee does next, and that the manual's own
+   *                           wording is to be read with them.
+   *
+   * Versioned rather than hard-coded, the same way `policyGrounded` is: a field
+   * asks for the shape, and no code anywhere names a template key to decide it.
+   * Both shapes meet the SAME guard on what may be asserted; what differs is the
+   * prose the prompt asks for. See `lib/forms/narrative-draft`.
+   */
+  narrative?: "observed_expectation" | "plan_of_action";
+  /**
+   * WHAT KIND OF THING THIS FIELD HOLDS, where knowing changes how it is
+   * drafted.
+   *
+   * `follow_up_timeframe` is the first and currently the only case, and it
+   * exists to settle a contradiction. The drafting prompt forbids scheduling
+   * talk — for good reason: a model asked to fill a coaching record narrates
+   * "I will check in with her on [Follow-Up Date]", and the instance's own
+   * follow-up date is managed separately through its own control.
+   *
+   * But §9.2 of the Performance Management Framework defines a Follow-Up
+   * Coaching field called "Next Follow-Up: [Timeframe]" — the timeframe the
+   * manager and employee AGREED, in their words. Under the blanket rule that
+   * field came back empty on every draft.
+   *
+   * Two different things wearing the same word, so the schema names the
+   * difference rather than a template key being special-cased in the route.
+   * Versioned like `policyGrounded` and `narrative`: a field asks for the
+   * treatment and no code anywhere names a template to decide it.
+   */
+  semantics?: "follow_up_timeframe";
+  /**
+   * A SENTENCE THE VALUE MUST ALWAYS END WITH, whoever wrote the rest.
+   *
+   * The Corrective Action Form's Action Plan ends with the business's own
+   * closing line on every record. That is a property of the DOCUMENT, not a
+   * suggestion to a model: it is appended by code on every write and on every
+   * render, never duplicated, and re-attached after any edit or redraft. See
+   * `required-closing.ts`.
+   *
+   * Versioned like `narrative`: a version published before the business asked
+   * for the line does not carry it, so a form filed against that version
+   * prints exactly what was signed.
+   */
+  requiredClosing?: string;
+  /**
+   * The fewest ruled lines a `long_text` field prints, filled or not — room
+   * for a list written by hand on a printed copy. Absent means one line for an
+   * empty field, as every version before it.
+   */
+  minLines?: number;
+}
+
+export interface CheckboxOption {
+  key: string;
+  label: string;
+}
+
+export type FormBlock =
+  | { kind: "letterhead"; brand: string; title: string; variantKey?: string }
+  | { kind: "section"; label: string; variantKey?: string }
+  | { kind: "paragraph"; text: string; variantKey?: string }
+  | { kind: "note"; text: string; variantKey?: string }
+  | { kind: "field"; field: FormField; variantKey?: string }
+  | { kind: "field_row"; fields: FormField[]; variantKey?: string }
+  | {
+      kind: "checkbox_group";
+      key: string;
+      label?: string;
+      options: CheckboxOption[];
+      responsibility: FieldResponsibility;
+      columns: 2 | 3;
+      /**
+       * AT MOST ONE BOX, for a group that is a question with one answer — a
+       * Yes / No. Absent on every group that predates it, which keep their
+       * any-number-of-boxes behaviour. Enforced where a person's edit is
+       * saved (`enforcePersonEdit`) and on the fill screen, which unticks the
+       * other answer. Nothing makes an answer the default: two empty boxes is
+       * the unanswered state.
+       */
+      single?: true;
+      variantKey?: string;
+    }
+  | {
+      kind: "numbered_list";
+      key: string;
+      label: string;
+      count: number;
+      responsibility: FieldResponsibility;
+      help?: string;
+      variantKey?: string;
+    }
+  /**
+   * ==========================================================================
+   * ONE EXPECTATION, THREE ANSWERS: SUCCEEDING, NEEDS IMPROVEMENT, OR NEITHER
+   * ==========================================================================
+   *
+   * The SDIT EPP prints a list of the role's standing expectations with two
+   * mark columns beside each — a tick for an area of success, a cross for one
+   * needing improvement — and the business's own instruction above them is
+   * exactly that. A `checkbox_group` cannot say this: it has one mark per
+   * option, so the same seven lines would have to be printed twice under two
+   * headings, which is not the document.
+   *
+   * THE THIRD ANSWER IS THE ONE THAT MATTERS. An expectation nobody marked is
+   * NOT EVALUATED, and it must stay that way — a manager who says "I'll do
+   * those later" gets blank rows rather than a form that decided for them. So
+   * blank is the default state of a row and neither mark is implied by the
+   * other.
+   *
+   * TWO KEYS, ONE BLOCK. The marks are stored as two ordinary checkbox
+   * selections over the same option list, which is what lets every guard in
+   * the system reach them unchanged: `responsibilityMap` knows both keys,
+   * `enforceResponsibilities` validates the option keys against this block,
+   * and a stored form reads back without a bespoke value shape.
+   */
+  | {
+      kind: "expectation_checklist";
+      /** Option keys ticked as areas of SUCCESS. */
+      successKey: string;
+      /** Option keys marked as areas NEEDING IMPROVEMENT. */
+      improvementKey: string;
+      label?: string;
+      /** The instruction line the reference prints above the rows. */
+      legend?: string;
+      /**
+       * What the two marks MEAN on this form, where they are not successes
+       * and improvements.
+       *
+       * The TSD plan's re-evaluation is the same three-state row — met, not
+       * met, or not yet reviewed — over its eight objectives, and printing
+       * "Mark areas of success" above it would be the renderer telling the
+       * reader something the form does not say. Optional, and absent means
+       * the wording every other checklist uses.
+       */
+      successLabel?: string;
+      improvementLabel?: string;
+      options: CheckboxOption[];
+      responsibility: FieldResponsibility;
+      variantKey?: string;
+    }
+  /**
+   * ==========================================================================
+   * A TABLE OF OBJECTIVES, EACH WITH ITS OWN PLAN
+   * ==========================================================================
+   *
+   * The TSD Management Performance Plan's Plan of Action is not a paragraph.
+   * It is eight fixed rows — Bench, Management Bench, the three productivity
+   * categories, Coaching and Development, District Outreach, Salon Standards
+   * — each printing a CATEGORY, the OBJECTIVE the business has written for it,
+   * and a space for the plan against that objective.
+   *
+   * THE CATEGORY AND THE OBJECTIVE ARE THE FORM TALKING. They are fixed text
+   * the business owns, identical on every copy, and nothing may write into
+   * them. Only the plan is a value, and each row's plan is its own field with
+   * its own key — which is what lets a draft fill the two rows a conversation
+   * supports and leave the other six blank.
+   */
+  | {
+      kind: "objective_rows";
+      label?: string;
+      /** The heading over the plan column, e.g. "Plan of Action". */
+      planLabel: string;
+      rows: { key: string; category: string; objective: string }[];
+      responsibility: FieldResponsibility;
+      variantKey?: string;
+    }
+  /**
+   * ==========================================================================
+   * THE DRAFT NOTES THAT TRAVEL WITH THE FORM WITHOUT BEING PART OF IT
+   * ==========================================================================
+   *
+   * A reference appendix: the drafted content gathered onto its own sheet,
+   * under a heading that says plainly it is not part of the official pages. It
+   * is where the policy the draft was reasoned against is named, so the
+   * employee-facing form is not cluttered with citations.
+   *
+   * IT DECLARES NO KEYS OF ITS OWN, and that is the whole design. Each entry
+   * ECHOES a value stored against a block above it, so the appendix can never
+   * disagree with the form — there is only one copy of every value — and
+   * `parseFormDocument`'s duplicate-key rule stays intact.
+   */
+  | {
+      kind: "draft_details";
+      label: string;
+      note: string;
+      entries: { label: string; key: string }[];
+      variantKey?: string;
+    }
+  /**
+   * ==========================================================================
+   * YES/NO ANSWERS, PRINTED AGAIN AS THE SENTENCES HR ASKED FOR
+   * ==========================================================================
+   *
+   * The Resignation/Exit Form asks its yes/no questions as tick boxes, and HR
+   * also wants the Details section to SAY them: "Store items were not
+   * returned.", "Employee is eligible for rehire." Writing those sentences into
+   * a second set of fields would give every answer two copies that could
+   * disagree on a payroll document.
+   *
+   * SO THIS BLOCK OWNS NOTHING. Like `draft_details`, every part POINTS AT a
+   * checkbox group another block owns, and the sentence is computed from that
+   * group's stored ticks by `answerStatementText` — the one function the fill
+   * screen, the paper view and the PDF all call, so the three can never word
+   * an answer differently.
+   *
+   * AN UNANSWERED QUESTION PRINTS NOTHING. A group with no tick, or with both
+   * boxes ticked, has no sentence; the line keeps its label over a blank rule.
+   */
+  | {
+      kind: "answer_statements";
+      lines: AnswerStatementLine[];
+      variantKey?: string;
+    }
+  | { kind: "signature_row"; label: string; dateLabel: string; variantKey?: string }
+  | { kind: "page_break"; variantKey?: string }
+  | { kind: "reference"; label: string; body: string[]; variantKey?: string }
+  | { kind: "acknowledgement"; text: string; variantKey?: string };
+
+/** One checkbox group, read as a sentence. */
+export interface AnswerStatementPart {
+  /** The checkbox group this reads. Owned by that group, never by this block. */
+  key: string;
+  /** The sentence for each option key: `{ yes: "…", no: "…" }`. */
+  statements: Record<string, string>;
+}
+
+/** One labelled line of an `answer_statements` block. */
+export interface AnswerStatementLine {
+  label: string;
+  parts: AnswerStatementPart[];
+  /**
+   * One sentence for a line that reads several groups, used once EVERY part is
+   * answered, keyed by the chosen option keys joined with "+" in part order —
+   * "yes+no". Reads better than the parts' sentences side by side.
+   */
+  combined?: Record<string, string>;
+}
+
+/**
+ * The sentence one line prints for the stored ticks, or "" when nothing on it
+ * is answered.
+ *
+ * A PART IS ANSWERED BY EXACTLY ONE TICK. None is unanswered; two ("Yes" and
+ * "No" both ticked by hand) is not an answer either, and printing either
+ * sentence would be choosing for the manager.
+ */
+export function answerStatementText(
+  line: AnswerStatementLine,
+  checked: Readonly<Record<string, readonly string[] | undefined>>,
+): string {
+  const answers = line.parts.map((part) => {
+    const ticked = checked[part.key] ?? [];
+    if (ticked.length !== 1) return null;
+    const option = ticked[0]!;
+    return part.statements[option] !== undefined ? option : null;
+  });
+  if (answers.every((answer): answer is string => answer !== null)) {
+    const combined = line.combined?.[answers.join("+")];
+    if (combined !== undefined) return combined;
+  }
+  return line.parts
+    .map((part, index) => (answers[index] === null ? null : part.statements[answers[index]!]))
+    .filter((sentence): sentence is string => Boolean(sentence))
+    .join(" ");
+}
+
+export interface FormVariant {
+  key: string;
+  label: string;
+  /** Substituted for `{{role}}` — "District Manager". */
+  role: string;
+  /** Substituted for `{{roleAbbr}}` — "DM". */
+  roleAbbr: string;
+  /** The position being reviewed, where the document names it: "TSD". */
+  reviewedPosition?: string;
+}
+
+/**
+ * A logo the printed form carries, named rather than embedded.
+ *
+ * The document stores a KEY into the approved asset registry, never bytes and
+ * never a URL. A stored document is editable by an administrator, so bytes in
+ * the document would mean an arbitrary image could be written onto a signed HR
+ * record; a key can only ever resolve to an asset that was approved and
+ * committed. See `lib/forms/assets`.
+ */
+export interface FormLogo {
+  assetKey: string;
+  placement: "top-right";
+  /** Printed width in points. Height follows the asset's own aspect ratio. */
+  widthPt: number;
+}
+
+/**
+ * THE VISUAL CHOICES THAT BELONG TO A VERSION, NOT TO THE RENDERER.
+ *
+ * The official forms do not all look alike. Most of the library uses black
+ * section bars; the Coaching Form the business issues uses centred headings
+ * over thin rules, with the Sun Tan City logo in the top right. Both are
+ * correct, and which one applies is a property of THE VERSION OF THIS DOCUMENT
+ * — so it is stored with the document and read generically by the renderer.
+ *
+ * EVERY FIELD IS OPTIONAL AND EVERY DEFAULT IS TODAY'S BEHAVIOUR. A version
+ * that says nothing renders exactly as it rendered before this type existed,
+ * which is what keeps the eleven other templates visually untouched by
+ * construction rather than by inspection.
+ */
+export interface FormDocumentStyle {
+  /** `bar` — black bar, white type. `rule` — centred type over a thin rule. */
+  headingStyle?: "bar" | "rule";
+  /** `chip` — black brand chip beside the title. `centered` — stacked, centred. */
+  letterhead?: "chip" | "centered";
+  logo?: FormLogo;
+  /** `standard` — 54pt. `wide` — 72pt, matching a Word default page. */
+  margins?: "standard" | "wide";
+  /** `inline` — captions beside the rules. `ruled` — captions beneath them. */
+  signatureLayout?: "inline" | "ruled";
+  /**
+   * How a date VALUE is shown to a person. `iso` — as stored, 2026-09-20.
+   * `us` — 09/20/2026, the way the Resignation/Exit Form's readers write
+   * dates. Display only: the stored value is always ISO. See `displayDate`.
+   */
+  dateFormat?: "iso" | "us";
+}
+
+/**
+ * A stored date as this version shows it. Anything that is not a plain ISO
+ * calendar date is returned untouched, so a hand-typed value is never mangled.
+ */
+export function displayDate(value: string, style: FormDocumentStyle | undefined): string {
+  if (style?.dateFormat !== "us") return value;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  return match ? `${match[2]}/${match[3]}/${match[1]}` : value;
+}
+
+export interface FormDocument {
+  /** Paper the printed form is laid out for. Letter everywhere so far. */
+  paper: "letter";
+  /** Absent on every version written before the style model existed. */
+  style?: FormDocumentStyle;
+  blocks: FormBlock[];
+}
+
+/* --------------------------------------------------------------- parsing --- */
+
+export class FormDocumentError extends Error {}
+
+const BLOCK_KINDS = new Set([
+  "letterhead",
+  "section",
+  "paragraph",
+  "note",
+  "field",
+  "field_row",
+  "checkbox_group",
+  "expectation_checklist",
+  "objective_rows",
+  "draft_details",
+  "answer_statements",
+  "numbered_list",
+  "signature_row",
+  "page_break",
+  "reference",
+  "acknowledgement",
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readField(raw: unknown, where: string): FormField {
+  if (!isRecord(raw)) throw new FormDocumentError(`${where}: a field must be an object`);
+  const key = raw.key;
+  const label = raw.label;
+  const input = raw.input;
+  const responsibility = raw.responsibility;
+
+  if (typeof key !== "string" || key.length === 0) {
+    throw new FormDocumentError(`${where}: a field needs a key`);
+  }
+  if (typeof label !== "string") throw new FormDocumentError(`${where}: ${key} needs a label`);
+  if (input !== "text" && input !== "long_text" && input !== "date") {
+    throw new FormDocumentError(`${where}: ${key} has an unknown input "${String(input)}"`);
+  }
+  if (!FIELD_RESPONSIBILITIES.includes(responsibility as FieldResponsibility)) {
+    throw new FormDocumentError(
+      `${where}: ${key} has an unknown responsibility "${String(responsibility)}"`,
+    );
+  }
+
+  return {
+    key,
+    label,
+    input,
+    responsibility: responsibility as FieldResponsibility,
+    ...(typeof raw.help === "string" ? { help: raw.help } : {}),
+    ...(raw.policyGrounded === true ? { policyGrounded: true } : {}),
+    ...(raw.narrative === "observed_expectation" || raw.narrative === "plan_of_action"
+      ? { narrative: raw.narrative }
+      : {}),
+    ...(raw.semantics === "follow_up_timeframe"
+      ? { semantics: "follow_up_timeframe" as const }
+      : {}),
+    ...(typeof raw.requiredClosing === "string" && raw.requiredClosing.trim() !== ""
+      ? { requiredClosing: raw.requiredClosing.trim() }
+      : {}),
+    ...(typeof raw.minLines === "number" &&
+    Number.isInteger(raw.minLines) &&
+    raw.minLines >= 1 &&
+    raw.minLines <= 12
+      ? { minLines: raw.minLines }
+      : {}),
+  };
+}
+
+/**
+ * Reads a stored document back, refusing anything it cannot fully understand.
+ *
+ * A form is a legal-ish record: a block this code does not recognise would be
+ * silently dropped from the printed page, which is worse than failing. So an
+ * unknown block kind, a missing responsibility or a duplicate field key is an
+ * error, not a warning.
+ */
+/**
+ * Reads the versioned visual style, refusing anything it does not understand.
+ *
+ * Same rule as a block kind: a style value this code cannot render would change
+ * how a signed document looks — or fail to — with no sign that anything was
+ * dropped. An unknown value is an error, and an ABSENT style is the documented
+ * default rather than an error, because every version written before this
+ * existed has none.
+ */
+function readStyle(raw: unknown): FormDocumentStyle | undefined {
+  if (raw === null || raw === undefined) return undefined;
+  if (!isRecord(raw)) throw new FormDocumentError("style: must be an object");
+
+  const oneOf = <T extends string>(value: unknown, allowed: readonly T[], where: string) => {
+    if (value === undefined || value === null) return undefined;
+    if (typeof value !== "string" || !allowed.includes(value as T)) {
+      throw new FormDocumentError(`style.${where}: unknown value "${String(value)}"`);
+    }
+    return value as T;
+  };
+
+  const style: FormDocumentStyle = {};
+  const headingStyle = oneOf(raw.headingStyle, ["bar", "rule"] as const, "headingStyle");
+  if (headingStyle) style.headingStyle = headingStyle;
+  const letterhead = oneOf(raw.letterhead, ["chip", "centered"] as const, "letterhead");
+  if (letterhead) style.letterhead = letterhead;
+  const margins = oneOf(raw.margins, ["standard", "wide"] as const, "margins");
+  if (margins) style.margins = margins;
+  const signatureLayout = oneOf(raw.signatureLayout, ["inline", "ruled"] as const, "signatureLayout");
+  if (signatureLayout) style.signatureLayout = signatureLayout;
+  const dateFormat = oneOf(raw.dateFormat, ["iso", "us"] as const, "dateFormat");
+  if (dateFormat) style.dateFormat = dateFormat;
+
+  if (raw.logo !== undefined && raw.logo !== null) {
+    if (!isRecord(raw.logo)) throw new FormDocumentError("style.logo: must be an object");
+    const assetKey = raw.logo.assetKey;
+    if (typeof assetKey !== "string" || assetKey.length === 0) {
+      throw new FormDocumentError("style.logo: needs an assetKey");
+    }
+    const placement = oneOf(raw.logo.placement, ["top-right"] as const, "logo.placement");
+    const widthPt = raw.logo.widthPt;
+    if (typeof widthPt !== "number" || !Number.isFinite(widthPt) || widthPt <= 0) {
+      throw new FormDocumentError("style.logo: needs a positive widthPt");
+    }
+    style.logo = { assetKey, placement: placement ?? "top-right", widthPt };
+  }
+
+  return Object.keys(style).length > 0 ? style : undefined;
+}
+
+export function parseFormDocument(raw: unknown): FormDocument {
+  if (!isRecord(raw)) throw new FormDocumentError("A document must be an object");
+  const style = readStyle(raw.style);
+  const blocks = raw.blocks;
+  if (!Array.isArray(blocks)) throw new FormDocumentError("A document needs a block list");
+
+  const seen = new Set<string>();
+  /** Keys an `answer_statements` block reads, checked once every block is parsed. */
+  const echoed: { key: string; where: string }[] = [];
+  const groupKeys = new Set<string>();
+  const claimKey = (key: string, where: string) => {
+    if (seen.has(key)) throw new FormDocumentError(`${where}: duplicate field key "${key}"`);
+    seen.add(key);
+  };
+
+  const parsed: FormBlock[] = blocks.map((block, index) => {
+    const where = `block ${index}`;
+    if (!isRecord(block)) throw new FormDocumentError(`${where}: must be an object`);
+    const kind = block.kind;
+    if (typeof kind !== "string" || !BLOCK_KINDS.has(kind)) {
+      throw new FormDocumentError(`${where}: unknown block kind "${String(kind)}"`);
+    }
+    const variantKey = typeof block.variantKey === "string" ? block.variantKey : undefined;
+
+    switch (kind) {
+      case "letterhead":
+        return {
+          kind,
+          brand: String(block.brand ?? ""),
+          title: String(block.title ?? ""),
+          variantKey,
+        };
+      case "section":
+        return { kind, label: String(block.label ?? ""), variantKey };
+      case "paragraph":
+      case "note":
+      case "acknowledgement":
+        return { kind, text: String(block.text ?? ""), variantKey } as FormBlock;
+      case "field": {
+        const field = readField(block.field, where);
+        claimKey(field.key, where);
+        return { kind, field, variantKey };
+      }
+      case "field_row": {
+        const fields = Array.isArray(block.fields) ? block.fields : [];
+        const parsedFields = fields.map((entry) => readField(entry, where));
+        parsedFields.forEach((field) => claimKey(field.key, where));
+        return { kind, fields: parsedFields, variantKey };
+      }
+      case "checkbox_group": {
+        const key = String(block.key ?? "");
+        if (!key) throw new FormDocumentError(`${where}: a checkbox group needs a key`);
+        claimKey(key, where);
+        groupKeys.add(key);
+        const options = Array.isArray(block.options) ? block.options : [];
+        if (options.length === 0) {
+          throw new FormDocumentError(`${where}: ${key} has no options`);
+        }
+        const responsibility = block.responsibility;
+        if (!FIELD_RESPONSIBILITIES.includes(responsibility as FieldResponsibility)) {
+          throw new FormDocumentError(`${where}: ${key} has an unknown responsibility`);
+        }
+        return {
+          kind,
+          key,
+          ...(typeof block.label === "string" ? { label: block.label } : {}),
+          options: options.map((option) => {
+            if (!isRecord(option)) throw new FormDocumentError(`${where}: bad option in ${key}`);
+            return { key: String(option.key ?? ""), label: String(option.label ?? "") };
+          }),
+          responsibility: responsibility as FieldResponsibility,
+          columns: block.columns === 3 ? 3 : 2,
+          ...(block.single === true ? { single: true as const } : {}),
+          variantKey,
+        };
+      }
+      case "expectation_checklist": {
+        const successKey = String(block.successKey ?? "");
+        const improvementKey = String(block.improvementKey ?? "");
+        if (!successKey || !improvementKey) {
+          throw new FormDocumentError(
+            `${where}: an expectation checklist needs a successKey and an improvementKey`,
+          );
+        }
+        if (successKey === improvementKey) {
+          throw new FormDocumentError(
+            `${where}: the two mark columns cannot share the key "${successKey}"`,
+          );
+        }
+        claimKey(successKey, where);
+        claimKey(improvementKey, where);
+        const options = Array.isArray(block.options) ? block.options : [];
+        if (options.length === 0) {
+          throw new FormDocumentError(`${where}: ${successKey} has no expectations`);
+        }
+        const responsibility = block.responsibility;
+        if (!FIELD_RESPONSIBILITIES.includes(responsibility as FieldResponsibility)) {
+          throw new FormDocumentError(`${where}: ${successKey} has an unknown responsibility`);
+        }
+        return {
+          kind,
+          successKey,
+          improvementKey,
+          ...(typeof block.label === "string" ? { label: block.label } : {}),
+          ...(typeof block.legend === "string" ? { legend: block.legend } : {}),
+          ...(typeof block.successLabel === "string"
+            ? { successLabel: block.successLabel }
+            : {}),
+          ...(typeof block.improvementLabel === "string"
+            ? { improvementLabel: block.improvementLabel }
+            : {}),
+          options: options.map((option) => {
+            if (!isRecord(option)) {
+              throw new FormDocumentError(`${where}: bad expectation in ${successKey}`);
+            }
+            return { key: String(option.key ?? ""), label: String(option.label ?? "") };
+          }),
+          responsibility: responsibility as FieldResponsibility,
+          variantKey,
+        };
+      }
+      case "objective_rows": {
+        const rows = Array.isArray(block.rows) ? block.rows : [];
+        if (rows.length === 0) {
+          throw new FormDocumentError(`${where}: an objective table needs rows`);
+        }
+        const responsibility = block.responsibility;
+        if (!FIELD_RESPONSIBILITIES.includes(responsibility as FieldResponsibility)) {
+          throw new FormDocumentError(`${where}: the objective table has an unknown responsibility`);
+        }
+        return {
+          kind,
+          ...(typeof block.label === "string" ? { label: block.label } : {}),
+          planLabel: String(block.planLabel ?? "Plan of Action"),
+          rows: rows.map((row) => {
+            if (!isRecord(row)) throw new FormDocumentError(`${where}: bad objective row`);
+            const key = String(row.key ?? "");
+            if (!key) throw new FormDocumentError(`${where}: an objective row needs a key`);
+            /* Each row's plan is a value, so each row's key is claimed. */
+            claimKey(key, where);
+            return {
+              key,
+              category: String(row.category ?? ""),
+              objective: String(row.objective ?? ""),
+            };
+          }),
+          responsibility: responsibility as FieldResponsibility,
+          variantKey,
+        };
+      }
+      case "draft_details": {
+        const entries = Array.isArray(block.entries) ? block.entries : [];
+        return {
+          kind,
+          label: String(block.label ?? ""),
+          note: String(block.note ?? ""),
+          /*
+           * NOT `claimKey`. Every entry POINTS AT a key some other block owns;
+           * claiming it here would make a document that echoes its own values
+           * unreadable.
+           */
+          entries: entries.map((entry) => {
+            if (!isRecord(entry)) throw new FormDocumentError(`${where}: bad draft detail`);
+            const key = String(entry.key ?? "");
+            if (!key) throw new FormDocumentError(`${where}: a draft detail needs a key`);
+            return { label: String(entry.label ?? ""), key };
+          }),
+          variantKey,
+        };
+      }
+      case "answer_statements": {
+        const lines = Array.isArray(block.lines) ? block.lines : [];
+        if (lines.length === 0) {
+          throw new FormDocumentError(`${where}: an answer statement block needs lines`);
+        }
+        const sentences = (raw: unknown, what: string): Record<string, string> => {
+          if (!isRecord(raw)) throw new FormDocumentError(`${where}: ${what} must be an object`);
+          return Object.fromEntries(
+            Object.entries(raw).map(([option, sentence]) => [option, String(sentence ?? "")]),
+          );
+        };
+        return {
+          kind,
+          lines: lines.map((line) => {
+            if (!isRecord(line)) throw new FormDocumentError(`${where}: bad answer statement line`);
+            const parts = Array.isArray(line.parts) ? line.parts : [];
+            if (parts.length === 0) {
+              throw new FormDocumentError(`${where}: an answer statement line needs parts`);
+            }
+            return {
+              label: String(line.label ?? ""),
+              /*
+               * NOT `claimKey`, for the reason `draft_details` gives: each part
+               * READS a group another block owns. Checked below instead, so a
+               * mistyped key is an error rather than a line that is blank forever.
+               */
+              parts: parts.map((part) => {
+                if (!isRecord(part)) throw new FormDocumentError(`${where}: bad answer statement part`);
+                const key = String(part.key ?? "");
+                if (!key) throw new FormDocumentError(`${where}: an answer statement part needs a key`);
+                echoed.push({ key, where });
+                return { key, statements: sentences(part.statements, `${key}'s statements`) };
+              }),
+              ...(line.combined !== undefined && line.combined !== null
+                ? { combined: sentences(line.combined, "combined") }
+                : {}),
+            };
+          }),
+          variantKey,
+        };
+      }
+      case "numbered_list": {
+        const key = String(block.key ?? "");
+        if (!key) throw new FormDocumentError(`${where}: a numbered list needs a key`);
+        claimKey(key, where);
+        const responsibility = block.responsibility;
+        if (!FIELD_RESPONSIBILITIES.includes(responsibility as FieldResponsibility)) {
+          throw new FormDocumentError(`${where}: ${key} has an unknown responsibility`);
+        }
+        const count = Number(block.count ?? 0);
+        if (!Number.isInteger(count) || count < 1 || count > 10) {
+          throw new FormDocumentError(`${where}: ${key} needs a line count between 1 and 10`);
+        }
+        return {
+          kind,
+          key,
+          label: String(block.label ?? ""),
+          count,
+          responsibility: responsibility as FieldResponsibility,
+          ...(typeof block.help === "string" ? { help: block.help } : {}),
+          variantKey,
+        };
+      }
+      case "signature_row":
+        return {
+          kind,
+          label: String(block.label ?? "Signature"),
+          dateLabel: String(block.dateLabel ?? "Date"),
+          variantKey,
+        };
+      case "page_break":
+        return { kind, variantKey };
+      case "reference":
+        return {
+          kind,
+          label: String(block.label ?? ""),
+          body: Array.isArray(block.body) ? block.body.map((line) => String(line)) : [],
+          variantKey,
+        };
+      default:
+        throw new FormDocumentError(`${where}: unhandled block kind "${kind}"`);
+    }
+  });
+
+  for (const { key, where } of echoed) {
+    if (!groupKeys.has(key)) {
+      throw new FormDocumentError(`${where}: "${key}" is not a checkbox group on this document`);
+    }
+  }
+
+  return { paper: "letter", ...(style ? { style } : {}), blocks: parsed };
+}
+
+export function parseFormVariants(raw: unknown): FormVariant[] {
+  if (raw === null || raw === undefined) return [];
+  if (!Array.isArray(raw)) throw new FormDocumentError("Variants must be a list");
+  return raw.map((entry, index) => {
+    if (!isRecord(entry)) throw new FormDocumentError(`variant ${index}: must be an object`);
+    const key = String(entry.key ?? "");
+    if (!key) throw new FormDocumentError(`variant ${index}: needs a key`);
+    return {
+      key,
+      label: String(entry.label ?? key),
+      role: String(entry.role ?? ""),
+      roleAbbr: String(entry.roleAbbr ?? ""),
+      ...(typeof entry.reviewedPosition === "string"
+        ? { reviewedPosition: entry.reviewedPosition }
+        : {}),
+    };
+  });
+}
+
+/* ------------------------------------------------------------ traversal --- */
+
+/**
+ * The document as one variant reads it.
+ *
+ * Blocks with no `variantKey` belong to every reading; blocks that name one
+ * appear only for that variant. This is how the DMIT EPP prints the TSD
+ * position description for a TSD review and the DMIT one for a DMIT review
+ * without being two documents that can drift apart.
+ */
+/**
+ * Whether one block prints for a given reading of the form.
+ *
+ * Exported as a predicate, not only as a filtered list, because the editor has
+ * to keep each block's index in the WHOLE document while showing only the ones
+ * this reading prints — an edit or a reorder writes back to the real position,
+ * and filtering first would silently target the wrong block.
+ */
+export function blockAppliesToVariant(block: FormBlock, variantKey: string | null): boolean {
+  return !block.variantKey || block.variantKey === variantKey;
+}
+
+export function blocksForVariant(
+  document: FormDocument,
+  variantKey: string | null,
+): FormBlock[] {
+  return document.blocks.filter((block) => blockAppliesToVariant(block, variantKey));
+}
+
+/** Every field in document order, for a given variant. */
+export function fieldsForVariant(
+  document: FormDocument,
+  variantKey: string | null,
+): FormField[] {
+  const fields: FormField[] = [];
+  for (const block of blocksForVariant(document, variantKey)) {
+    if (block.kind === "field") fields.push(block.field);
+    else if (block.kind === "field_row") fields.push(...block.fields);
+    /*
+     * EACH OBJECTIVE ROW'S PLAN IS A FIELD. See `objectiveRowFields` — the
+     * category and the objective are the form's own words and have no key.
+     */
+    else if (block.kind === "objective_rows") {
+      for (const row of block.rows) {
+        fields.push({
+          key: row.key,
+          label: `${block.planLabel} — ${row.category}`,
+          input: "long_text",
+          responsibility: block.responsibility,
+          help: row.objective,
+        });
+      }
+    }
+  }
+  return fields;
+}
+
+export interface CheckboxFacet {
+  key: string;
+  label: string;
+  options: CheckboxOption[];
+  responsibility: FieldResponsibility;
+  /** At most one option may be ticked. See the `checkbox_group` block. */
+  single?: true;
+}
+
+/**
+ * Every ticked list on the form, INCLUDING the two mark columns of an
+ * expectation checklist.
+ *
+ * ONE ANSWER FOR EVERY GUARD. `responsibilityMap`, `enforceResponsibilities`,
+ * `enforcePersonEdit`, `refuseSensitiveSelections` and the drafting prompt all
+ * ask this question, and they must all get the same answer — an expectation
+ * column that were invisible here would be a set of option keys nothing
+ * validated, on a form a manager signs. So a checklist is FLATTENED into the
+ * two facets it stores as, rather than being a shape every caller has to learn.
+ */
+export function checkboxGroupsForVariant(
+  document: FormDocument,
+  variantKey: string | null,
+): CheckboxFacet[] {
+  const facets: CheckboxFacet[] = [];
+
+  for (const block of blocksForVariant(document, variantKey)) {
+    if (block.kind === "checkbox_group") {
+      facets.push({
+        key: block.key,
+        label: block.label ?? "",
+        options: block.options,
+        responsibility: block.responsibility,
+        ...(block.single ? { single: true as const } : {}),
+      });
+      continue;
+    }
+    if (block.kind === "expectation_checklist") {
+      const label = block.label ?? "";
+      /*
+       * THE COLUMN'S OWN WORDING WHERE IT HAS ONE. A re-evaluation marks the
+       * same rows "Met" and "Not met", and a facet that called those columns
+       * "areas of success" would put the wrong words in front of whatever
+       * reads this — including the drafting prompt, on a document where the
+       * two columns mean something else entirely.
+       */
+      const success = block.successLabel ?? "areas of success";
+      const improvement = block.improvementLabel ?? "areas needing improvement";
+      facets.push({
+        key: block.successKey,
+        label: label ? `${label} — ${success}` : success,
+        options: block.options,
+        responsibility: block.responsibility,
+      });
+      facets.push({
+        key: block.improvementKey,
+        label: label ? `${label} — ${improvement}` : improvement,
+        options: block.options,
+        responsibility: block.responsibility,
+      });
+    }
+  }
+
+  return facets;
+}
+
+/**
+ * The plan fields an objective table declares, as ordinary fields.
+ *
+ * FLATTENED FOR THE SAME REASON THE CHECKLIST IS. `responsibilityMap`,
+ * `enforceResponsibilities`, `enforcePersonEdit` and the drafting prompt all
+ * ask "which fields does this version have"; a plan row invisible to them
+ * would be a value nothing validated on a form somebody signs. The category
+ * and the objective are NOT fields — they are the form's own words, and there
+ * is deliberately no key to write into them.
+ */
+export function objectiveRowFields(
+  document: FormDocument,
+  variantKey: string | null,
+): FormField[] {
+  const fields: FormField[] = [];
+  for (const block of blocksForVariant(document, variantKey)) {
+    if (block.kind !== "objective_rows") continue;
+    for (const row of block.rows) {
+      fields.push({
+        key: row.key,
+        label: `${block.planLabel} — ${row.category}`,
+        input: "long_text",
+        responsibility: block.responsibility,
+        help: row.objective,
+      });
+    }
+  }
+  return fields;
+}
+
+export function expectationChecklistsForVariant(
+  document: FormDocument,
+  variantKey: string | null,
+): Extract<FormBlock, { kind: "expectation_checklist" }>[] {
+  return blocksForVariant(document, variantKey).filter(
+    (block): block is Extract<FormBlock, { kind: "expectation_checklist" }> =>
+      block.kind === "expectation_checklist",
+  );
+}
+
+export function numberedListsForVariant(
+  document: FormDocument,
+  variantKey: string | null,
+): Extract<FormBlock, { kind: "numbered_list" }>[] {
+  return blocksForVariant(document, variantKey).filter(
+    (block): block is Extract<FormBlock, { kind: "numbered_list" }> =>
+      block.kind === "numbered_list",
+  );
+}
+
+/**
+ * Every writable key and what may write it, for one variant.
+ *
+ * The one map the fill screen, the assistant guard and the PDF renderer all
+ * agree on. Signature keys are absent by construction: a signature line has no
+ * key at all, because there is nothing that could ever be stored in it.
+ */
+export function responsibilityMap(
+  document: FormDocument,
+  variantKey: string | null,
+): Map<string, FieldResponsibility> {
+  const map = new Map<string, FieldResponsibility>();
+  for (const field of fieldsForVariant(document, variantKey)) {
+    map.set(field.key, field.responsibility);
+  }
+  for (const group of checkboxGroupsForVariant(document, variantKey)) {
+    map.set(group.key, group.responsibility);
+  }
+  for (const list of numberedListsForVariant(document, variantKey)) {
+    map.set(list.key, list.responsibility);
+  }
+  return map;
+}
+
+/* -------------------------------------------------------- numbered list --- */
+
+/**
+ * ============================================================================
+ * A NUMBERED LIST IS ONE VALUE, AND EVERY READER HAS TO AGREE ON THAT
+ * ============================================================================
+ *
+ * THE DEFECT THESE TWO FUNCTIONS EXIST TO REMOVE. The assistant is asked for
+ * `top_strengths` and writes three lines into it; `enforceResponsibilities`
+ * accepts the key, because `responsibilityMap` has it; the PDF renderer reads
+ * `values[key]` and prints all three. The two on-screen renderers read
+ * `values[`${key}_1`]`, `_2`, `_3` — keys nothing in the system has ever
+ * written — so a manager looking at a freshly drafted EPP saw three empty
+ * boxes under a narrative paragraph that plainly contained the answer.
+ *
+ * IT WAS WORSE THAN A DISPLAY BUG. Typing into those boxes wrote `_1`, which
+ * is not a field on the version, so `enforcePersonEdit` REJECTED it. The
+ * manager filled the line in, the save reported success, and the value was
+ * dropped on the way to the table.
+ *
+ * SO THE KEY IS THE BLOCK'S KEY, EVERYWHERE, and the line number is a position
+ * inside the value rather than part of the name. These two functions are the
+ * only place that split and join it.
+ *
+ * POSITIONS ARE PRESERVED ON THE WAY IN. A manager who fills line 2 and leaves
+ * line 1 blank keeps line 2 on line 2 while they are typing. The PDF renderer
+ * compacts blanks when it prints, which is its own long-standing behaviour and
+ * is left alone here: this change is about the editor reading what the
+ * assistant wrote, not about re-laying-out four other templates' paper.
+ */
+export function numberedListLines(value: string | undefined, count: number): string[] {
+  const lines = (value ?? "").split("\n");
+  return Array.from({ length: count }, (_unused, index) => lines[index] ?? "");
+}
+
+/**
+ * The stored value with one line replaced.
+ *
+ * TRAILING BLANKS ARE DROPPED so an untouched list stays an empty string
+ * rather than becoming "\n\n" — which would read as a filled field to
+ * `enforceResponsibilities`, and print two blank ruled lines as content.
+ */
+export function withNumberedListLine(
+  value: string | undefined,
+  count: number,
+  index: number,
+  text: string,
+): string {
+  const lines = numberedListLines(value, count);
+  lines[index] = text.replace(/\n/g, " ");
+  while (lines.length > 0 && lines[lines.length - 1]!.trim() === "") lines.pop();
+  return lines.join("\n");
+}
+
+/* ------------------------------------------------------- interpolation --- */
+
+/**
+ * Resolves `{{role}}` and `{{roleAbbr}}` against the chosen variant.
+ *
+ * An unknown placeholder is LEFT ALONE rather than blanked. A form that prints
+ * "{{roleAbbr}}" is visibly wrong and gets fixed; a form that prints an empty
+ * space reads as finished and is not.
+ */
+export function interpolate(text: string, variant: FormVariant | null): string {
+  if (!text.includes("{{")) return text;
+  return text.replace(/\{\{(\w+)\}\}/g, (match, name: string) => {
+    if (!variant) return match;
+    if (name === "role") return variant.role || match;
+    if (name === "roleAbbr") return variant.roleAbbr || match;
+    if (name === "reviewedPosition") return variant.reviewedPosition || match;
+    return match;
+  });
+}
+
+/** The same, applied to every human-readable string in a block. */
+export function interpolateBlock(block: FormBlock, variant: FormVariant | null): FormBlock {
+  switch (block.kind) {
+    case "letterhead":
+      return { ...block, title: interpolate(block.title, variant) };
+    case "section":
+      return { ...block, label: interpolate(block.label, variant) };
+    case "paragraph":
+    case "note":
+    case "acknowledgement":
+      return { ...block, text: interpolate(block.text, variant) };
+    case "field":
+      return { ...block, field: { ...block.field, label: interpolate(block.field.label, variant) } };
+    case "field_row":
+      return {
+        ...block,
+        fields: block.fields.map((field) => ({
+          ...field,
+          label: interpolate(field.label, variant),
+        })),
+      };
+    case "checkbox_group":
+      return {
+        ...block,
+        ...(block.label ? { label: interpolate(block.label, variant) } : {}),
+        options: block.options.map((option) => ({
+          ...option,
+          label: interpolate(option.label, variant),
+        })),
+      };
+    case "expectation_checklist":
+      return {
+        ...block,
+        ...(block.label ? { label: interpolate(block.label, variant) } : {}),
+        ...(block.legend ? { legend: interpolate(block.legend, variant) } : {}),
+        options: block.options.map((option) => ({
+          ...option,
+          label: interpolate(option.label, variant),
+        })),
+      };
+    case "objective_rows":
+      return {
+        ...block,
+        ...(block.label ? { label: interpolate(block.label, variant) } : {}),
+        planLabel: interpolate(block.planLabel, variant),
+        rows: block.rows.map((row) => ({
+          ...row,
+          category: interpolate(row.category, variant),
+          objective: interpolate(row.objective, variant),
+        })),
+      };
+    case "draft_details":
+      return {
+        ...block,
+        label: interpolate(block.label, variant),
+        note: interpolate(block.note, variant),
+        entries: block.entries.map((entry) => ({
+          ...entry,
+          label: interpolate(entry.label, variant),
+        })),
+      };
+    case "answer_statements":
+      return {
+        ...block,
+        lines: block.lines.map((line) => ({
+          ...line,
+          label: interpolate(line.label, variant),
+          parts: line.parts.map((part) => ({
+            ...part,
+            statements: Object.fromEntries(
+              Object.entries(part.statements).map(([option, sentence]) => [
+                option,
+                interpolate(sentence, variant),
+              ]),
+            ),
+          })),
+          ...(line.combined
+            ? {
+                combined: Object.fromEntries(
+                  Object.entries(line.combined).map(([answers, sentence]) => [
+                    answers,
+                    interpolate(sentence, variant),
+                  ]),
+                ),
+              }
+            : {}),
+        })),
+      };
+    case "numbered_list":
+      return { ...block, label: interpolate(block.label, variant) };
+    case "reference":
+      return {
+        ...block,
+        label: interpolate(block.label, variant),
+        body: block.body.map((line) => interpolate(line, variant)),
+      };
+    default:
+      return block;
+  }
+}
+
+/** The document as it reads for one variant, placeholders resolved. */
+export function renderDocument(
+  document: FormDocument,
+  variant: FormVariant | null,
+): FormBlock[] {
+  return blocksForVariant(document, variant?.key ?? null).map((block) =>
+    interpolateBlock(block, variant),
+  );
+}

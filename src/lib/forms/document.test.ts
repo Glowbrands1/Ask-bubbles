@@ -1,0 +1,750 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  blocksForVariant,
+  fieldsForVariant,
+  interpolate,
+  parseFormDocument,
+  parseFormVariants,
+  renderDocument,
+  responsibilityMap,
+  FormDocumentError,
+  type FormDocument,
+} from "./document";
+import {
+  draftableFields,
+  enforcePersonEdit,
+  enforceResponsibilities,
+  requiredOfPeople,
+} from "./responsibility";
+import { DMIT_VARIANTS, TEMPLATE_SEEDS, defaultVariantKey } from "./library";
+
+/**
+ * THE ENGINE THE WHOLE FORMS FEATURE RESTS ON.
+ *
+ * Three things are being protected here, and only the first is about types:
+ *
+ *   a stored document that this code cannot fully understand must FAIL rather
+ *   than render with a block quietly missing — a form is a record somebody
+ *   signs;
+ *
+ *   the assistant writes only into fields the TEMPLATE says it may, whatever it
+ *   returns, and never into a signature;
+ *
+ *   responsibility is per template. The tests below assert that the DMIT EPP's
+ *   self-assessment is hand-filled while the SDIT EPP's is drafted, because
+ *   that difference is a business decision read off the reference forms and the
+ *   kind of thing a later "tidy-up" would flatten into one rule.
+ */
+
+const seed = (key: string) => {
+  const found = TEMPLATE_SEEDS.find((entry) => entry.key === key);
+  if (!found) throw new Error(`no seed ${key}`);
+  return found;
+};
+
+/** A document round-tripped through JSON, the way the database stores it. */
+const stored = (document: FormDocument) =>
+  parseFormDocument(JSON.parse(JSON.stringify(document)));
+
+describe("reading a stored document", () => {
+  it("round-trips every seeded template", () => {
+    for (const template of TEMPLATE_SEEDS) {
+      const parsed = stored(template.document);
+      expect(parsed.blocks.length, template.key).toBe(template.document.blocks.length);
+    }
+  });
+
+  it("refuses a block kind it does not understand", () => {
+    // Rendering "most of" a disciplinary form is worse than refusing to render
+    // it: the missing part is invisible on the page that gets signed.
+    expect(() => parseFormDocument({ blocks: [{ kind: "iframe" }] })).toThrow(FormDocumentError);
+  });
+
+  it("refuses two fields with the same key", () => {
+    expect(() =>
+      parseFormDocument({
+        blocks: [
+          { kind: "field", field: { key: "a", label: "A", input: "text", responsibility: "ai" } },
+          { kind: "field", field: { key: "a", label: "B", input: "text", responsibility: "ai" } },
+        ],
+      }),
+    ).toThrow(/duplicate field key/);
+  });
+
+  it("refuses a field whose responsibility is not one of the six", () => {
+    expect(() =>
+      parseFormDocument({
+        blocks: [
+          { kind: "field", field: { key: "a", label: "A", input: "text", responsibility: "whoever" } },
+        ],
+      }),
+    ).toThrow(/unknown responsibility/);
+  });
+
+  it("refuses a checkbox group with no options", () => {
+    expect(() =>
+      parseFormDocument({
+        blocks: [{ kind: "checkbox_group", key: "k", options: [], responsibility: "ai" }],
+      }),
+    ).toThrow(/no options/);
+  });
+});
+
+describe("role variants", () => {
+  it("gives each DMIT reading its own position description and nothing else", () => {
+    const document = stored(seed("dmit-epp-tsd").document);
+    const tsd = blocksForVariant(document, "tsd");
+    const dmit = blocksForVariant(document, "dmit");
+
+    const references = (blocks: typeof tsd) =>
+      blocks.filter((block) => block.kind === "reference").length;
+
+    // One reference block each — never both, never neither.
+    expect(references(tsd)).toBe(1);
+    expect(references(dmit)).toBe(1);
+    // And the two readings are otherwise the same document.
+    expect(tsd.length).toBe(dmit.length);
+    expect(fieldsForVariant(document, "tsd").map((f) => f.key)).toEqual(
+      fieldsForVariant(document, "dmit").map((f) => f.key),
+    );
+  });
+
+  it("resolves {{role}} and {{roleAbbr}} from the chosen variant", () => {
+    const document = stored(seed("dmit-epp-tsd").document);
+    const variant = DMIT_VARIANTS[0];
+    const rendered = renderDocument(document, variant);
+    const text = JSON.stringify(rendered);
+
+    expect(text).not.toContain("{{role}}");
+    expect(text).not.toContain("{{roleAbbr}}");
+    expect(text).toContain("District Manager");
+    expect(text).toContain("TSD");
+  });
+
+  it("leaves an unknown placeholder visible rather than blanking it", () => {
+    /*
+     * A form that prints "{{seniority}}" is obviously broken and gets fixed. A
+     * form that prints an empty space looks finished and is not.
+     */
+    expect(interpolate("Reviewed by {{seniority}}", DMIT_VARIANTS[0])).toBe(
+      "Reviewed by {{seniority}}",
+    );
+  });
+
+  it("parses stored variants and keeps the reviewed position", () => {
+    const parsed = parseFormVariants(JSON.parse(JSON.stringify(DMIT_VARIANTS)));
+    expect(parsed.map((v) => v.key)).toEqual(["tsd", "dmit"]);
+    expect(parsed[0].reviewedPosition).toBe("TSD");
+  });
+
+  it("starts each DMIT template on its own reading", () => {
+    expect(defaultVariantKey("dmit-epp-tsd")).toBe("tsd");
+    expect(defaultVariantKey("dmit-epp-dmit")).toBe("dmit");
+  });
+});
+
+describe("what the assistant is allowed to write", () => {
+  const document = stored(seed("dpoa").document);
+
+  it("keeps values for AI fields", () => {
+    const result = enforceResponsibilities(document, null, {
+      values: { observation: "Arrived 25 minutes late on three shifts." },
+    });
+    expect(result.values.observation).toContain("25 minutes late");
+    expect(result.rejected).toEqual([]);
+  });
+
+  it("drops a field that is not on this template version", () => {
+    const result = enforceResponsibilities(document, null, {
+      values: { employee_signature: "Jane Smith" },
+    });
+    expect(result.values).toEqual({});
+    expect(result.rejected[0].reason).toMatch(/not a field/);
+  });
+
+  it("drops checkbox options the form does not offer", () => {
+    const result = enforceResponsibilities(document, null, {
+      checked: { warning_type: ["written", "banishment"] },
+    });
+    expect(result.checked.warning_type).toEqual(["written"]);
+    expect(result.rejected[0].reason).toMatch(/options not on this form/);
+  });
+
+  it("never writes into a hand-filled field", () => {
+    /*
+     * The DMIT EPP's self-assessment. The model is not shown these fields, and
+     * if it returns them anyway the values are discarded — which is the point
+     * of enforcing on the output rather than in the prompt.
+     */
+    const dmit = stored(seed("dmit-epp-tsd").document);
+    const result = enforceResponsibilities(dmit, "tsd", {
+      values: { self_succeeding: "I am doing well at scheduling." },
+    });
+    expect(result.values).toEqual({});
+    expect(result.rejected[0].reason).toMatch(/manual fields are not drafted/);
+  });
+
+  it("never writes a signature, because there is nothing to write into", () => {
+    // Signature blocks carry no key at all, so a signature cannot even be
+    // addressed. This asserts that property rather than a filter that could be
+    // removed.
+    for (const template of TEMPLATE_SEEDS) {
+      const parsed = stored(template.document);
+      const keys = [...responsibilityMap(parsed, defaultVariantKey(template.key)).keys()];
+      const signatureKeys = keys.filter((key) => /signature/i.test(key));
+      expect(signatureKeys, template.key).toEqual([]);
+    }
+  });
+
+  it("is offered no system fields to write", () => {
+    // Employee name, date, job title and location come from the record. The
+    // model is never asked for them, so it cannot get them wrong.
+    const draftable = draftableFields(document, null).map((field) => field.key);
+    expect(draftable).not.toContain("employee_name");
+    expect(draftable).not.toContain("form_date");
+    expect(draftable).toContain("observation");
+  });
+});
+
+describe("what a person is allowed to write", () => {
+  const document = stored(seed("dmit-epp-tsd").document);
+
+  it("lets a manager edit an AI-drafted field", () => {
+    const result = enforcePersonEdit(document, "tsd", {
+      values: { plan_of_action: "Shadow a district visit in week two." },
+    });
+    expect(result.values.plan_of_action).toContain("Shadow a district visit");
+  });
+
+  it("refuses to store a hand-filled field from the app", () => {
+    /*
+     * Those lines are answered on the printed page, in the conversation. Typing
+     * them into the app would put words in the employee's mouth.
+     */
+    const result = enforcePersonEdit(document, "tsd", {
+      values: { self_strengths: "Coaching, scheduling, merchandising" },
+    });
+    expect(result.values).toEqual({});
+    expect(result.rejected[0].reason).toMatch(/manual fields are not completed/);
+  });
+});
+
+describe("responsibility is per template, not per field name", () => {
+  it("drafts the SDIT EPP's self review and leaves the DMIT EPP's by hand", () => {
+    /*
+     * THE ASSERTION THAT STOPS A TIDY-UP. Two questions that read almost the
+     * same, answered differently by the business:
+     *
+     *   SDIT EPP  "Assistant Salon Director Thoughts"  -> AI FILLS chip
+     *   DMIT EPP  "In what areas do you feel..."       -> FILLED BY HAND chip
+     *
+     * Both are copied from the reference captures. A rule like "self-review
+     * fields are always manual" would be wrong, and this fails if anyone adds
+     * one.
+     */
+    const sdit = stored(seed("sdit-epp").document);
+    const dmit = stored(seed("dmit-epp-tsd").document);
+
+    expect(responsibilityMap(sdit, "default").get("employee_self_review")).toBe("ai");
+    expect(responsibilityMap(dmit, "tsd").get("self_succeeding")).toBe("manual");
+  });
+
+  it("marks every policy-quoting field as grounded, and only those", () => {
+    const grounded: string[] = [];
+    for (const template of TEMPLATE_SEEDS) {
+      const parsed = stored(template.document);
+      for (const field of fieldsForVariant(parsed, defaultVariantKey(template.key))) {
+        if (field.policyGrounded) grounded.push(`${template.key}:${field.key}`);
+      }
+    }
+    /*
+     * THE FIELD THAT NAMES A MANUAL, ON EACH CORRECTIVE FORM.
+     *
+     * The Corrective Action Form's `policy_violated` is deliberately NOT here
+     * any more. The business settled that it holds the offense CATEGORY ticked
+     * above it — a classification already on the page — so it makes no claim
+     * about a document and has nothing to fail closed against. `policy_language`
+     * names the approved manual and still does.
+     *
+     * The Policy Review is untouched: both of its fields still quote policy.
+     *
+     * THE TWO PERFORMANCE PLANS' `policy_references` NAME A MANUAL TOO. Each
+     * sits on that plan's draft-details appendix rather than on the form the
+     * employee signs, and names the sections of the JB & Associates
+     * Employment Policy Manual the observation actually pointed at. Marked
+     * grounded for the same reason the other two are: if no section resolves,
+     * the line must stay blank rather than name a policy nobody checked.
+     *
+     * THE TSD PLAN IS NOT AN EXCEPTION TO THAT, and this list is where a
+     * regression would show: its nine management expectations are the
+     * BUSINESS'S expectations, not the manual's, so the one field on it that
+     * may name a manual is this one and it fails closed like the rest.
+     */
+    expect(grounded.sort()).toEqual([
+      "dpoa:policy_language",
+      "policy-review:policy_language",
+      "policy-review:policy_violated",
+      "sdit-epp:policy_references",
+      "tsd-epp:policy_references",
+    ]);
+  });
+
+  it("only ever grounds a field the assistant is allowed to draft", () => {
+    // A grounded field that nobody may draft would be a contradiction: the
+    // grounding exists to constrain the assistant's output.
+    for (const template of TEMPLATE_SEEDS) {
+      const parsed = stored(template.document);
+      for (const field of fieldsForVariant(parsed, defaultVariantKey(template.key))) {
+        if (field.policyGrounded) expect(field.responsibility, field.key).toBe("ai");
+      }
+    }
+  });
+});
+
+describe("the library matches the verified inventory", () => {
+  it("has exactly the seventeen templates, once each", () => {
+    expect(TEMPLATE_SEEDS).toHaveLength(17);
+    const keys = TEMPLATE_SEEDS.map((entry) => entry.key);
+    expect(new Set(keys).size).toBe(17);
+    expect(keys).toEqual([
+      "coaching",
+      "dpoa",
+      "policy-review",
+      "sdit-epp",
+      "tsd-epp",
+      "asd-sdit-epp",
+      "fttc-epp",
+      "dmit-epp-tsd",
+      "dmit-epp-dmit",
+      /*
+       * The fourteenth, and the only one with no paper source form: defined by
+       * §9.2 of the approved Performance Management Framework. Listed last in
+       * this file because `display_order` is written only on INSERT, so
+       * renumbering the eight forms above it would leave the code and every
+       * already-seeded database disagreeing.
+       */
+      "follow-up-coaching",
+      /*
+       * The fifteenth: the Resignation/Exit Form, transcribed from STC Exit.docx.
+       * Its own Separation & Exit category sits between the HR forms and the
+       * hiring forms, and the library is listed in category order.
+       */
+      "stc-exit",
+      /*
+       * The Demotion and Position Transfer forms. There is ONE Demotion Form:
+       * the STC Demotion Example is the same document kept as a reference, not
+       * a template.
+       */
+      "demotion",
+      "position-transfer",
+      "prescreen-phone-interview",
+      "tanning-consultant-interview",
+      "management-interview-round-1",
+      "management-interview-round-2",
+    ]);
+  });
+
+  it("records the framework provenance of the one form with no paper source", () => {
+    /*
+     * The distinction that has to survive: every other template stands for a
+     * document the business issues on paper, and this one does not. Asserted on
+     * the seed because the seeder writes it onto the template's asset row, so
+     * "which official form is this?" has an answer months later — and for this
+     * one the honest answer is "none, it comes from the framework".
+     */
+    const paper = TEMPLATE_SEEDS.filter((entry) => entry.provenance === undefined);
+    expect(paper).toHaveLength(16);
+
+    const framework = TEMPLATE_SEEDS.filter((entry) => entry.provenance !== undefined);
+    expect(framework.map((entry) => entry.key)).toEqual(["follow-up-coaching"]);
+    expect(framework[0]!.provenance).toEqual({
+      kind: "framework",
+      document: "ASK_SUNNY_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT",
+      locator: "§9.2 Template: Create a follow-up coaching form",
+      note: expect.stringContaining("did NOT originate from an uploaded business PDF"),
+    });
+    // And it must not claim to be a paper form anywhere in its own notes.
+    expect(framework[0]!.revisionNote).toContain("Framework-defined");
+  });
+
+  it("builds them from six layouts, in the proportions the references showed", () => {
+    const counts = TEMPLATE_SEEDS.reduce<Record<string, number>>((acc, entry) => {
+      acc[entry.layoutFamily] = (acc[entry.layoutFamily] ?? 0) + 1;
+      return acc;
+    }, {});
+    expect(counts).toEqual({
+      // Two now: the Coaching Form and the Follow-Up Coaching Form are the same
+      // family of document, and the family is a semantic grouping rather than a
+      // layout — the coaching form carries its paper source's own `style`, and
+      // the follow-up, having no paper source, carries none.
+      // Four: plus the Demotion and Position Transfer Forms, which share the
+      // single-page, non-ladder layout. See `employment-change-library.ts`.
+      coaching: 4,
+      corrective: 2,
+      epp: 4,
+      dmit_epp: 2,
+      interview: 4,
+      // The Resignation/Exit Form. Not a rung of the ladder, so not `corrective`.
+      exit: 1,
+    });
+  });
+
+  it("gives the two shared EPPs one shape, and the SDIT and TSD plans their own", () => {
+    const epps = TEMPLATE_SEEDS.filter((entry) => entry.layoutFamily === "epp");
+
+    /*
+     * ======================================================================
+     * TWO STILL SHARE A BUILDER. THE SDIT AND TSD PLANS DELIBERATELY DO NOT.
+     * ======================================================================
+     *
+     * The four were one layout because the four reference captures differed
+     * only in a title and a reviewer pairing. That stopped being true of the
+     * SDIT EPP: the form the business issues for it carries the standing
+     * expectations a Salon Director in Training is marked against, the
+     * PPTA/LPSVA/UPTA productivity table, the section the employee completes,
+     * and the re-evaluation.
+     *
+     * IT IS NOW ALSO UNTRUE OF THE TSD PLAN, and for stronger reasons: the
+     * business issues that one under its own title, "Management Performance
+     * Plan", with NINE management expectations rather than the SDIT's seven,
+     * FIVE productivity metrics per column rather than three, a self-
+     * assessment the manager fills themselves, and a plan of action written
+     * as eight fixed objectives that are re-evaluated one by one.
+     *
+     * THE ASSERTION IS THAT THE OTHER TWO DID NOT MOVE. Widening a shared
+     * builder would have put an SDIT's expectations or a TSD's bench plan on
+     * a Tanning Consultant's performance plan, and this is what would have
+     * caught it.
+     */
+    const shared = epps.filter((entry) => entry.key !== "sdit-epp" && entry.key !== "tsd-epp");
+    const shapes = new Set(
+      shared.map((entry) => entry.document.blocks.map((block) => block.kind).join("|")),
+    );
+    expect(shapes.size, "ASD-SDIT and FTTC should be one layout").toBe(1);
+    expect(shared.map((entry) => entry.key)).toEqual(["asd-sdit-epp", "fttc-epp"]);
+
+    for (const key of ["sdit-epp", "tsd-epp"]) {
+      const own = TEMPLATE_SEEDS.find((entry) => entry.key === key)!;
+      const shape = own.document.blocks.map((block) => block.kind).join("|");
+      expect(shapes.has(shape), `${key} is its own layout`).toBe(false);
+      expect(own.document.blocks.map((block) => block.kind), key).toContain(
+        "expectation_checklist",
+      );
+      expect(own.document.blocks.map((block) => block.kind), key).toContain("draft_details");
+    }
+
+    /* The eight-objective plan table is the TSD plan's alone. */
+    for (const entry of TEMPLATE_SEEDS) {
+      const kinds = entry.document.blocks.map((block) => block.kind);
+      expect(kinds.includes("objective_rows"), entry.key).toBe(entry.key === "tsd-epp");
+    }
+
+    const pairings = epps.map((entry) => `${entry.variants[0].role}/${entry.variants[0].roleAbbr}`);
+    /*
+     * THE SUBJECT OF EACH PLAN, WHICH IS WHAT `{{roleAbbr}}` PRINTS. The SDIT
+     * EPP addresses the SDIT; the ASD-SDIT plan addresses the ASD on the
+     * development track, which is what its name says. They were both "ASD",
+     * and the SDIT form asked "In what areas is the ASD currently
+     * succeeding?" on a page titled SDIT.
+     */
+    expect(pairings).toEqual([
+      "Training Salon Director/SDIT",
+      /*
+       * THE SUBJECT OF THE MANAGEMENT PERFORMANCE PLAN IS THE TSD. It was
+       * "SD", inherited from the shared builder, so the form asked "In what
+       * areas is the SD currently succeeding?" about a Training Salon
+       * Director — the same wrong-role defect the SDIT plan had.
+       */
+      "District Manager/TSD",
+      "Training Salon Director/ASD",
+      "Salon Director/TC",
+    ]);
+  });
+
+  /**
+   * ==========================================================================
+   * THE HR HEADER, AND THE ONE FORM THAT CARRIES LESS OF IT
+   * ==========================================================================
+   *
+   * The nine forms read from paper sources all open with the same four
+   * record-filled fields, because all nine paper forms do.
+   *
+   * The Follow-Up Coaching Form carries only two — the employee and the date —
+   * and that is deliberate rather than an oversight. Its source is §9.2 of the
+   * Performance Management Framework, whose output format lists NEITHER a job
+   * title nor a location; §9.1, the coaching form's, does list Job Title. Adding
+   * the other two to match the rest of the library would be inventing fields on
+   * a document that goes in an employment file, which is the whole failure this
+   * work exists to remove. The two that ARE there are the minimum for the page
+   * to identify its subject, and they are `system` — seeded from the
+   * `form_instances` row, never drafted and never typed.
+   */
+  const PAPER_SOURCED_HR_HEADER = ["employee_name", "form_date", "job_title", "location"];
+
+  it("starts every paper-sourced HR form with the same four record-filled header fields", () => {
+    const paperHr = TEMPLATE_SEEDS.filter(
+      (entry) => entry.category === "hr_performance" && entry.provenance === undefined,
+    );
+    expect(paperHr).toHaveLength(9);
+
+    for (const template of paperHr) {
+      const parsed = stored(template.document);
+      const map = responsibilityMap(parsed, defaultVariantKey(template.key));
+      for (const key of PAPER_SOURCED_HR_HEADER) {
+        expect(map.get(key), `${template.key}:${key}`).toBe("system");
+      }
+    }
+  });
+
+  it("gives the framework-defined form NO header fields at all", () => {
+    /*
+     * STRICT §9.2 FIDELITY. An earlier version opened this document with
+     * `employee_name` and `form_date` as `system` fields, reasoning that a
+     * printed page with no name is not a record of anything. The need was real
+     * and the place was wrong: §9.2 lists neither, and adding a field to a
+     * framework-defined schema is the same class of act as adding an
+     * acknowledgement to it.
+     *
+     * They are RECORD METADATA instead, and the engine already renders them as
+     * such — `RenderMeta` prints the employee, the form date, the template name
+     * and the draft status in the footer of every page, sourced from the
+     * `form_instances` row; the inline editor and Create a Form both show the
+     * employee above the document from the same row.
+     */
+    const seed = TEMPLATE_SEEDS.find((entry) => entry.key === "follow-up-coaching")!;
+    const map = responsibilityMap(stored(seed.document), defaultVariantKey(seed.key));
+
+    for (const key of ["employee_name", "form_date", "job_title", "location"]) {
+      expect(map.get(key), key).toBeUndefined();
+    }
+  });
+
+  it("gives the framework-defined form no signature or acknowledgement block", () => {
+    /*
+     * §9.2 specifies neither, and copying the Coaching Form's for visual
+     * consistency would mean inventing the wording of an employee
+     * acknowledgement. If the business issues a paper Follow-Up Coaching Form
+     * later, its acknowledgement arrives with it as revision 2.
+     */
+    const seed = TEMPLATE_SEEDS.find((entry) => entry.key === "follow-up-coaching")!;
+    const kinds = seed.document.blocks.map((block) => block.kind);
+
+    expect(kinds).not.toContain("signature_row");
+    expect(kinds).not.toContain("acknowledgement");
+  });
+
+  it("gives the framework-defined form exactly the fields and options of §9.2", () => {
+    const seed = TEMPLATE_SEEDS.find((entry) => entry.key === "follow-up-coaching")!;
+    const parsed = stored(seed.document);
+    const map = responsibilityMap(parsed, defaultVariantKey(seed.key));
+
+    // Exactly the eight §9.2 entries. Nothing else at all.
+    expect([...map.keys()].sort()).toEqual(
+      [
+        "additional_coaching",
+        "follow_up_observation",
+        "next_follow_up",
+        "next_step",
+        "original_expectation",
+        "original_topic",
+        "progress_level",
+        "specific_evidence",
+      ].sort(),
+    );
+
+    // No policy field, no warning level: §9.2 has neither, and "Next Step"
+    // NAMES an escalation rather than imposing one.
+    const fields = parsed.blocks.flatMap((block) =>
+      block.kind === "field" ? [block.field] : block.kind === "field_row" ? block.fields : [],
+    );
+    expect(fields.some((field) => field.policyGrounded)).toBe(false);
+
+    /*
+     * The two option lists, from §9.2.
+     *
+     * THE KEYS ARE §9.2's, AND ONE LABEL DELIBERATELY IS NOT. The framework
+     * spells the seventh rung "DPOA"; the business has since renamed that
+     * document the Corrective Action Form and asked for the old name to
+     * disappear from everything a manager reads. So the LABEL follows the
+     * business and the KEY still says `dpoa`, which is what preserves the
+     * traceability the "verbatim from §9.2" rule was protecting — a box ticked
+     * before the rename and one ticked after are the same stored value, and
+     * the mapping back to §9.2 is exact.
+     *
+     * The keys are asserted below for that reason: they are the part that must
+     * not drift.
+     */
+    const groups = parsed.blocks.filter((block) => block.kind === "checkbox_group");
+    const options = Object.fromEntries(
+      groups.map((group) => [
+        group.kind === "checkbox_group" ? group.key : "",
+        group.kind === "checkbox_group" ? group.options.map((option) => option.label) : [],
+      ]),
+    );
+    const optionKeys = Object.fromEntries(
+      groups.map((group) => [
+        group.kind === "checkbox_group" ? group.key : "",
+        group.kind === "checkbox_group" ? group.options.map((option) => option.key) : [],
+      ]),
+    );
+    expect(options.progress_level).toEqual([
+      "Improved",
+      "Partially Improved",
+      "No Improvement",
+    ]);
+    expect(options.next_step).toEqual([
+      "Continue",
+      "Role-play",
+      "EPP",
+      "Corrective Action",
+      "Leadership Review",
+    ]);
+    expect(optionKeys.next_step).toEqual([
+      "continue",
+      "role_play",
+      "epp",
+      "dpoa",
+      "leadership_review",
+    ]);
+  });
+
+  /*
+   * THE HIRING FORMS' HEADER IS DIFFERENT, AND THE DIFFERENCE IS THE POINT.
+   *
+   * An interview form has no Job Title, because the applicant does not have
+   * one yet — only the prescreening call asks, and it asks "Position Applied
+   * For". What all four DO share is the subject, the date and the salon, and
+   * they carry the engine's own keys for those so `createInstance` fills them
+   * from the record rather than asking the interviewer to type a name twice.
+   */
+  it("fills the applicant, the date and the salon on every hiring form", () => {
+    const hiring = TEMPLATE_SEEDS.filter((entry) => entry.category === "hiring");
+    expect(hiring).toHaveLength(4);
+    for (const template of hiring) {
+      const parsed = stored(template.document);
+      const map = responsibilityMap(parsed, defaultVariantKey(template.key));
+      expect(map.get("employee_name"), `${template.key}:employee_name`).toBe("system");
+      expect(map.get("form_date"), `${template.key}:form_date`).toBe("system");
+      if (template.key !== "prescreen-phone-interview") {
+        expect(map.get("location"), `${template.key}:location`).toBe("system");
+      }
+    }
+  });
+
+  it("asks a person for something on every form", () => {
+    // A form nobody has to complete is a form that finalizes itself, which is
+    // not what any of these documents are for.
+    for (const template of TEMPLATE_SEEDS) {
+      const parsed = stored(template.document);
+      const people = requiredOfPeople(parsed, defaultVariantKey(template.key));
+      const draftable = draftableFields(parsed, defaultVariantKey(template.key));
+      expect(people.length + draftable.length, template.key).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps the DMIT lifecycle in one document", () => {
+    /*
+     * Follow-up, acknowledgement, re-evaluation and a second acknowledgement
+     * are one form in the reference, not four. Splitting them would lose the
+     * link between a plan and whether its objectives were met.
+     */
+    const parsed = stored(seed("dmit-epp-tsd").document);
+    const map = responsibilityMap(parsed, "tsd");
+    expect(map.has("follow_up_week")).toBe(true);
+    expect(map.has("objectives_met")).toBe(true);
+    expect(map.has("reevaluation_plan")).toBe(true);
+
+    const acknowledgements = parsed.blocks.filter((block) => block.kind === "acknowledgement");
+    expect(acknowledgements.length).toBe(2);
+
+    const pageBreaks = parsed.blocks.filter((block) => block.kind === "page_break");
+    expect(pageBreaks.length).toBe(2);
+  });
+});
+
+describe("the versioned visual style", () => {
+  const withStyle = (style: unknown) =>
+    parseFormDocument({ paper: "letter", style, blocks: [{ kind: "section", label: "S" }] });
+
+  it("reads a full style back exactly as it was stored", () => {
+    const style = {
+      headingStyle: "rule",
+      letterhead: "centered",
+      margins: "wide",
+      signatureLayout: "ruled",
+      logo: { assetKey: "sun-tan-city", placement: "top-right", widthPt: 76 },
+    };
+    expect(withStyle(style).style).toEqual(style);
+  });
+
+  it("is absent, not invented, on a document that has none", () => {
+    /*
+     * Every version written before the style model has no `style` key at all,
+     * and must keep rendering the way it always did. An absent style is the
+     * documented default, never an error.
+     */
+    const parsed = parseFormDocument({ paper: "letter", blocks: [{ kind: "section", label: "S" }] });
+    expect(parsed.style).toBeUndefined();
+    expect(withStyle(null).style).toBeUndefined();
+    expect(withStyle({}).style).toBeUndefined();
+  });
+
+  it("refuses a style value it cannot render, rather than dropping it", () => {
+    /*
+     * The same rule as an unknown block kind, and for the same reason: a value
+     * this code silently ignored would change how a signed document looks — or
+     * fail to — with nothing anywhere saying so.
+     *
+     * GUARD ON THE GUARD: the valid spelling of each one is accepted directly
+     * above and below, so these are refusals of the VALUE, not of the key.
+     */
+    expect(() => withStyle({ headingStyle: "underline" })).toThrow(FormDocumentError);
+    expect(() => withStyle({ letterhead: "banner" })).toThrow(FormDocumentError);
+    expect(() => withStyle({ margins: "narrow" })).toThrow(FormDocumentError);
+    expect(() => withStyle({ signatureLayout: "stacked" })).toThrow(FormDocumentError);
+    expect(() => withStyle({ logo: { assetKey: "x", placement: "middle", widthPt: 10 } })).toThrow(
+      FormDocumentError,
+    );
+    expect(() => withStyle("rule")).toThrow(FormDocumentError);
+  });
+
+  it("refuses a logo with no key or no width", () => {
+    // A logo reference that resolves to nothing is a masthead that silently
+    // loses its mark on every printed record.
+    expect(() => withStyle({ logo: { placement: "top-right", widthPt: 76 } })).toThrow(
+      FormDocumentError,
+    );
+    expect(() => withStyle({ logo: { assetKey: "sun-tan-city" } })).toThrow(FormDocumentError);
+    expect(() => withStyle({ logo: { assetKey: "sun-tan-city", widthPt: 0 } })).toThrow(
+      FormDocumentError,
+    );
+  });
+
+  it("carries a field's narrative marking through storage", () => {
+    const parsed = parseFormDocument({
+      paper: "letter",
+      blocks: [
+        {
+          kind: "field",
+          field: {
+            key: "d",
+            label: "D",
+            input: "long_text",
+            responsibility: "ai",
+            narrative: "observed_expectation",
+          },
+        },
+        {
+          kind: "field",
+          field: { key: "e", label: "E", input: "text", responsibility: "ai", narrative: "nonsense" },
+        },
+      ],
+    });
+    const [first, second] = parsed.blocks;
+    expect(first.kind === "field" && first.field.narrative).toBe("observed_expectation");
+    // An unrecognised marking is dropped rather than trusted: it can only ever
+    // relax a guard, never tighten one.
+    expect(second.kind === "field" && second.field.narrative).toBeUndefined();
+  });
+});

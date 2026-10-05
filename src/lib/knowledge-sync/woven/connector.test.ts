@@ -1,0 +1,857 @@
+import { describe, expect, it } from "vitest";
+
+import { CONTENT_TYPES, PartFetchError, type ListingResult } from "../types";
+import { WovenConnectorError, WovenKnowledgeConnector } from "./connector";
+import { WovenTeamClient } from "./http";
+import type { CompanySelector } from "./session";
+import { COMPANY, FakeWoven, PASSWORD, USERNAME, defaultState, noSleep, uuid } from "./test-support";
+
+function connectorFor(fake: FakeWoven, options: { password?: string; company?: string; selector?: CompanySelector; maxBytes?: number } = {}) {
+  const client = new WovenTeamClient({ baseUrl: "https://app.woven.team", fetch: fake.fetch, sleep: noSleep, transport: { minIntervalMs: 0, baseBackoffMs: 0 } });
+  return {
+    client,
+    connector: new WovenKnowledgeConnector({
+      client,
+      credentials: { username: USERNAME, password: options.password ?? PASSWORD },
+      company: options.company ?? COMPANY,
+      selector: options.selector,
+      maxBytes: options.maxBytes,
+    }),
+  };
+}
+
+function ok(listing: ListingResult) {
+  if (!listing.ok) throw new Error(`listing failed: ${listing.code} ${listing.message}`);
+  return listing;
+}
+
+describe("Woven Team sign-in", () => {
+  it("reads the anti-forgery token and hidden fields from /Login and posts the documented form", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    const info = await connector.connect();
+
+    expect(info).toEqual({ companyLabel: COMPANY, companyVerified: true });
+    const post = fake.log.find((r) => r.path === "/Login/Authenticate")!;
+    expect(post.method).toBe("POST");
+    expect(post.contentType).toMatch(/application\/x-www-form-urlencoded/);
+    const form = new URLSearchParams(post.body);
+    expect(form.get("__RequestVerificationToken")).toBe("login-token-123");
+    expect(form.get("IsLocationLogin")).toBe("False");
+    expect(form.has("SetTermsSignedDate")).toBe(true);
+    /* The login page's anti-forgery cookie is sent back with the POST. */
+    expect(post.cookie).toContain("__RequestVerificationToken_Cookie=af1");
+  });
+
+  it("reports a refused sign-in as login_failed, never as an empty library", async () => {
+    const { connector } = connectorFor(new FakeWoven(), { password: "wrong" });
+    await expect(connector.connect()).rejects.toMatchObject({ code: "woven_login_failed" });
+  });
+
+  describe("the verified login-time account chooser (#continue-login-form)", () => {
+    const continuePosts = (fake: FakeWoven) =>
+      fake.log.filter((r) => r.path === "/Login/Authenticate" && r.method === "POST" && (new URLSearchParams(r.body).get("CompanyID") ?? "") !== "" && !new URLSearchParams(r.body).has("SkipAddEmployeeProfileImage"));
+    const chooserState = () => {
+      const state = defaultState();
+      state.requireCompanySelection = true;
+      return state;
+    };
+
+    it("submits the rendered form with CompanyID from data-company-id; ReturnUrl, CompanyName, token and credentials as rendered", async () => {
+      const fake = new FakeWoven(chooserState());
+      const { connector } = connectorFor(fake);
+      await expect(connector.connect()).resolves.toEqual({ companyLabel: COMPANY, companyVerified: true });
+      const posts = continuePosts(fake);
+      expect(posts).toHaveLength(1);
+      expect(posts[0]!.contentType).toMatch(/application\/x-www-form-urlencoded/);
+      expect(posts[0]!.url).toBe("https://app.woven.team/Login/Authenticate");
+      expect(Object.fromEntries(new URLSearchParams(posts[0]!.body))).toEqual({
+        AuthenticationRequestUser: USERNAME,
+        AuthenticationRequestPass: PASSWORD,
+        ReturnUrl: "/",
+        CompanyID: uuid(9001),
+        CompanyName: "",
+        __RequestVerificationToken: "continue-token",
+      });
+      expect(fake.chosenCompany).toBe(COMPANY);
+      /* Not the in-app company switch. */
+      expect(fake.log.some((r) => /_Change_EmployeeCompany/i.test(r.path))).toBe(false);
+    });
+
+    it("reads the id from the DOM each time, not from a constant", async () => {
+      const state = chooserState();
+      state.chooserAccounts = [
+        { id: uuid(9002), name: "Midwest Soap Makers" },
+        { id: "845b93ad-2989-4cda-a18c-388edffc4c6d", name: COMPANY },
+      ];
+      const fake = new FakeWoven(state);
+      const { connector } = connectorFor(fake);
+      await expect(connector.connect()).resolves.toMatchObject({ companyVerified: true });
+      expect(new URLSearchParams(continuePosts(fake)[0]!.body).get("CompanyID")).toBe("845b93ad-2989-4cda-a18c-388edffc4c6d");
+    });
+
+    it("a non-empty data-company-name is carried into CompanyName unchanged", async () => {
+      const state = chooserState();
+      state.chooserCompanyName = "JB & Associates";
+      const fake = new FakeWoven(state);
+      const { connector } = connectorFor(fake);
+      await expect(connector.connect()).resolves.toMatchObject({ companyVerified: true });
+      expect(new URLSearchParams(continuePosts(fake)[0]!.body).get("CompanyName")).toBe("JB & Associates");
+    });
+
+    it("chooses exactly JB & Associates, never a partial match", async () => {
+      const state = chooserState();
+      state.chooserAccounts = [
+        { id: uuid(1), name: "JB & Associates West" },
+        { id: uuid(9001), name: COMPANY },
+      ];
+      const fake = new FakeWoven(state);
+      const { connector } = connectorFor(fake);
+      await expect(connector.connect()).resolves.toMatchObject({ companyVerified: true });
+      expect(new URLSearchParams(continuePosts(fake)[0]!.body).get("CompanyID")).toBe(uuid(9001));
+    });
+
+    it("chooser → Add Profile Photo → 'Ask me later' → dashboard", async () => {
+      const state = chooserState();
+      state.photoPrompt = true;
+      const fake = new FakeWoven(state);
+      const { connector } = connectorFor(fake);
+      await expect(connector.connect()).resolves.toEqual({ companyLabel: COMPANY, companyVerified: true });
+      expect(fake.continueSubmissions).toBe(1);
+      expect(fake.photoSubmissions).toBe(1);
+      expect(fake.photoSkipped).toBe(true);
+    });
+
+    it("chooser → dashboard directly: no photo form is submitted", async () => {
+      const fake = new FakeWoven(chooserState());
+      const { connector } = connectorFor(fake);
+      await expect(connector.connect()).resolves.toMatchObject({ companyVerified: true });
+      expect(fake.continueSubmissions).toBe(1);
+      expect(fake.photoSubmissions).toBe(0);
+    });
+
+    it("JB & Associates missing from the chooser is company_not_listed, and nothing is submitted", async () => {
+      const state = chooserState();
+      state.chooserAccounts = [{ id: uuid(9002), name: "Midwest Soap Makers" }];
+      const fake = new FakeWoven(state);
+      const { connector } = connectorFor(fake);
+      await expect(connector.connect()).rejects.toMatchObject({ code: "woven_company_not_listed" });
+      expect(fake.continueSubmissions).toBe(0);
+    });
+
+    it.each([
+      ["malformed_entry", /data-company-id/],
+      ["no_form", /#continue-login-form/],
+      ["missing_fields", /missing ReturnUrl/],
+    ] as const)("a chooser with %s is account_chooser_changed, not submitted and not a login failure", async (variant, why) => {
+      const state = chooserState();
+      state.chooserVariant = variant;
+      const fake = new FakeWoven(state);
+      const { connector } = connectorFor(fake);
+      const error = (await connector.connect().catch((e: unknown) => e)) as { code: string; message: string };
+      expect(error.code).toBe("woven_account_chooser_changed");
+      expect(error.message).toMatch(why);
+      /* No field value is echoed into the message. */
+      for (const secret of [USERNAME, PASSWORD, "continue-token", uuid(9001)]) expect(error.message).not.toContain(secret);
+      expect(fake.continueSubmissions).toBe(0);
+    });
+
+    it("a final dashboard showing another company is company_not_verified, and nothing is read", async () => {
+      const state = chooserState();
+      state.otherCompany = "Midwest Soap Makers";
+      const fake = new FakeWoven(state);
+      const { connector } = connectorFor(fake);
+      await expect(connector.connect()).rejects.toMatchObject({ code: "woven_company_not_verified" });
+      expect(fake.log.some((r) => r.path === "/Policy")).toBe(false);
+    });
+
+    it("landing anywhere but the Dashboard at / is dashboard_not_reached", async () => {
+      const fake = new FakeWoven(chooserState());
+      const selector: CompanySelector = { select: (_page, _company, client) => client.request("GET", "/Dashboard", null) };
+      const { connector } = connectorFor(fake, { selector });
+      await expect(connector.connect()).rejects.toMatchObject({ code: "woven_dashboard_not_reached" });
+    });
+  });
+
+  it("valid credentials → the live account chooser → NOT login_failed; a script-driven entry stops as company_selection_unverified, naming the script", async () => {
+    const state = defaultState();
+    state.requireCompanySelection = true;
+    state.chooserMechanism = "script";
+    const fake = new FakeWoven(state);
+    const { connector } = connectorFor(fake);
+    const error = (await connector.connect().catch((e: unknown) => e)) as { code: string; message: string };
+    expect(error.code).toBe("woven_company_selection_unverified");
+    expect(error.code).not.toBe("woven_login_failed");
+    expect(error.message).toMatch(/accepted the sign-in/);
+    expect(error.message).toContain("onclick=SelectAccount(…)");
+    /* The company id is not echoed into the message, and nothing was read. */
+    expect(error.message).not.toContain(uuid(9001));
+    expect(fake.log.some((r) => r.path === "/Policy")).toBe(false);
+  });
+
+  it("chooser with JB & Associates as a plain link: follows it, then confirms the company", async () => {
+    const state = defaultState();
+    state.requireCompanySelection = true;
+    state.chooserMechanism = "link";
+    const fake = new FakeWoven(state);
+    const { connector } = connectorFor(fake);
+    await expect(connector.connect()).resolves.toEqual({ companyLabel: COMPANY, companyVerified: true });
+    const chose = fake.log.find((r) => r.path === "/Login/SelectAccount")!;
+    expect(new URL(chose.url).searchParams.get("pCompanyID")).toBe(uuid(9001));
+    expect(fake.chosenCompany).toBe(COMPANY);
+  });
+
+  it("chooser with JB & Associates as a form button posting back to /Login/Authenticate: submits it without the password", async () => {
+    const state = defaultState();
+    state.requireCompanySelection = true;
+    state.chooserMechanism = "form";
+    const fake = new FakeWoven(state);
+    const { connector } = connectorFor(fake);
+    await expect(connector.connect()).resolves.toMatchObject({ companyVerified: true });
+    const posts = fake.log.filter((r) => r.path === "/Login/Authenticate" && r.method === "POST");
+    expect(posts).toHaveLength(2);
+    const selection = Object.fromEntries(new URLSearchParams(posts[1]!.body));
+    expect(selection).toEqual({ __RequestVerificationToken: "chooser-token", SelectedCompanyID: uuid(9001) });
+    expect(posts[1]!.url).toContain("ReturnUrl=%2F");
+  });
+
+  it("a chooser that does not offer JB & Associates is company_not_listed, not a login failure", async () => {
+    const state = defaultState();
+    state.requireCompanySelection = true;
+    state.chooserMechanism = "link";
+    state.chooserAccounts = [{ id: uuid(9002), name: "Midwest Soap Makers" }];
+    const { connector } = connectorFor(new FakeWoven(state));
+    await expect(connector.connect()).rejects.toMatchObject({ code: "woven_company_not_listed" });
+  });
+
+  it("choosing an account that lands in another company is refused by the company check", async () => {
+    const state = defaultState();
+    state.requireCompanySelection = true;
+    state.chooserMechanism = "link";
+    state.otherCompany = "Midwest Soap Makers";
+    const { connector } = connectorFor(new FakeWoven(state));
+    await expect(connector.connect()).rejects.toMatchObject({ code: "woven_company_not_verified" });
+  });
+
+  it("wrong credentials are still login_failed, even when the chooser exists for this account", async () => {
+    const state = defaultState();
+    state.requireCompanySelection = true;
+    const { connector } = connectorFor(new FakeWoven(state), { password: "wrong" });
+    await expect(connector.connect()).rejects.toMatchObject({ code: "woven_login_failed" });
+  });
+
+  describe("the Add Profile Photo interstitial", () => {
+    const photoPosts = (fake: FakeWoven) =>
+      fake.log.filter((r) => r.path === "/Login/Authenticate" && r.method === "POST" && new URLSearchParams(r.body).has("SkipAddEmployeeProfileImage"));
+
+    it("valid login → photo prompt → 'Ask me later' (the page's own form, SkipAddEmployeeProfileImage=true) → dashboard", async () => {
+      const state = defaultState();
+      state.photoPrompt = true;
+      const fake = new FakeWoven(state);
+      const { connector } = connectorFor(fake);
+      await expect(connector.connect()).resolves.toEqual({ companyLabel: COMPANY, companyVerified: true });
+      const posts = photoPosts(fake);
+      expect(posts).toHaveLength(1);
+      expect(posts[0]!.contentType).toMatch(/application\/x-www-form-urlencoded/);
+      const fields = Object.fromEntries(new URLSearchParams(posts[0]!.body));
+      expect(Object.keys(fields).sort()).toEqual(
+        ["AuthenticationRequestPass", "AuthenticationRequestUser", "CompanyID", "EmployeeID", "SkipAddEmployeeProfileImage", "__RequestVerificationToken"].sort(),
+      );
+      /* Values are the page's own; only the skip flag is set. The file input is never sent. */
+      expect(fields).toMatchObject({ SkipAddEmployeeProfileImage: "true", __RequestVerificationToken: "photo-token", EmployeeID: uuid(7001), CompanyID: uuid(9001) });
+      /* "Don't ask me again" is never used. */
+      expect(fake.log.some((r) => /DontAsk/i.test(r.url + r.body))).toBe(false);
+    });
+
+    it("works after the account chooser too: chooser → photo prompt → dashboard", async () => {
+      const state = defaultState();
+      state.requireCompanySelection = true;
+      state.chooserMechanism = "link";
+      state.photoPrompt = true;
+      const fake = new FakeWoven(state);
+      const { connector } = connectorFor(fake);
+      await expect(connector.connect()).resolves.toMatchObject({ companyVerified: true });
+      expect(Object.fromEntries(new URLSearchParams(photoPosts(fake)[0]!.body)).CompanyID).toBe(uuid(9001));
+    });
+
+    it("the photo page is never reported as a failed login, although its form carries the credentials", async () => {
+      const state = defaultState();
+      state.photoPrompt = true;
+      state.photoVariant = "missing_field";
+      const { connector } = connectorFor(new FakeWoven(state));
+      const error = (await connector.connect().catch((e: unknown) => e)) as { code: string; message: string };
+      expect(error.code).not.toBe("woven_login_failed");
+    });
+
+    it("a photo form missing a required field is not submitted", async () => {
+      const state = defaultState();
+      state.photoPrompt = true;
+      state.photoVariant = "missing_field";
+      const fake = new FakeWoven(state);
+      const { connector } = connectorFor(fake);
+      const error = (await connector.connect().catch((e: unknown) => e)) as { code: string; message: string };
+      expect(error.code).toBe("woven_profile_photo_prompt_changed");
+      expect(error.message).toContain("EmployeeID");
+      expect(photoPosts(fake)).toHaveLength(0);
+      /* No field VALUE is echoed. */
+      expect(error.message).not.toContain(PASSWORD);
+      expect(error.message).not.toContain(USERNAME);
+    });
+
+    it("a photo form without its anti-forgery token is not submitted", async () => {
+      const state = defaultState();
+      state.photoPrompt = true;
+      state.photoVariant = "no_token";
+      const fake = new FakeWoven(state);
+      const { connector } = connectorFor(fake);
+      await expect(connector.connect()).rejects.toMatchObject({ code: "woven_profile_photo_prompt_changed" });
+      expect(photoPosts(fake)).toHaveLength(0);
+    });
+
+    it("'Ask me later' answered with the sign-in page is a photo-step failure, not a password failure", async () => {
+      const state = defaultState();
+      state.photoPrompt = true;
+      state.photoVariant = "returns_login";
+      const { connector } = connectorFor(new FakeWoven(state));
+      await expect(connector.connect()).rejects.toMatchObject({ code: "woven_profile_photo_prompt_failed" });
+    });
+
+    it("'Ask me later' landing in another company is refused by the company check", async () => {
+      const state = defaultState();
+      state.photoPrompt = true;
+      state.photoVariant = "wrong_company";
+      const { connector } = connectorFor(new FakeWoven(state));
+      await expect(connector.connect()).rejects.toMatchObject({ code: "woven_company_not_verified" });
+    });
+
+    it("already on the dashboard: no photo form is submitted", async () => {
+      const fake = new FakeWoven();
+      const { connector } = connectorFor(fake);
+      await expect(connector.connect()).resolves.toMatchObject({ companyVerified: true });
+      expect(photoPosts(fake)).toHaveLength(0);
+      expect(fake.photoSubmissions).toBe(0);
+    });
+
+    it("a script-driven chooser still stops before the photo step, as company_selection_unverified", async () => {
+      const state = defaultState();
+      state.requireCompanySelection = true;
+      state.chooserMechanism = "script";
+      state.photoPrompt = true;
+      const fake = new FakeWoven(state);
+      const { connector } = connectorFor(fake);
+      await expect(connector.connect()).rejects.toMatchObject({ code: "woven_company_selection_unverified" });
+      expect(photoPosts(fake)).toHaveLength(0);
+    });
+  });
+
+  it("uses a replacement CompanySelector when one is supplied", async () => {
+    const state = defaultState();
+    state.requireCompanySelection = true;
+    const fake = new FakeWoven(state);
+    const selector: CompanySelector = { select: (_page, _company, client) => client.request("GET", "/", null) };
+    const { connector } = connectorFor(fake, { selector });
+    await expect(connector.connect()).resolves.toMatchObject({ companyVerified: true });
+  });
+
+  it("confirms the company from the account dropdown (a.dropdown-toggle), not from a company merely listed on the page", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await expect(connector.connect()).resolves.toEqual({ companyLabel: COMPANY, companyVerified: true });
+  });
+
+  it("refuses to read anything when the landing page is not JB & Associates", async () => {
+    const state = defaultState();
+    state.otherCompany = "Some Other Salon Group";
+    const fake = new FakeWoven(state);
+    const { connector } = connectorFor(fake);
+    await expect(connector.connect()).rejects.toMatchObject({ code: "woven_company_not_verified" });
+  });
+
+  it("will not list before connecting", async () => {
+    const { connector } = connectorFor(new FakeWoven());
+    expect(await connector.list("policy")).toMatchObject({ ok: false, code: "woven_not_connected" });
+  });
+});
+
+describe("the six adapters, against the handoff's shapes", () => {
+  it("Policies: verified table headers, the Public/Targeted audience, body, status, version and #policy-attachments; no signed URL kept", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const listing = ok(await connector.list("policy"));
+
+    expect(listing.records.map((r) => r.title)).toEqual(["Attendance Policy", "Dress Code", "Manager Bonus Policy"]);
+    const attendance = listing.records[0]!;
+    expect(attendance).toMatchObject({ entityId: uuid(101), status: "current", publication: "published", audience: ["Public"], updatedAt: "2025-05-01", version: "Version 2", attachmentIds: [uuid(1101)] });
+    expect(attendance.sourceMetadata).toMatchObject({ detailStatus: "Published" });
+    /* The Targeted policy's display summary is carried as-is, never read as Public. */
+    expect(listing.records[2]!.audience).toEqual(["All Teams 8 Positions"]);
+
+    expect(attendance.parts.map((p) => p.partKey)).toEqual(["content", `attachment:${uuid(1101)}`]);
+    expect(attendance.parts[0]).toMatchObject({ mimeType: "text/plain", retrieval: { kind: "available", locator: { policyId: uuid(101) } } });
+    expect(attendance.parts[0]!.contentDigest).toMatch(/^[0-9a-f]{64}$/);
+    expect(attendance.parts[1]).toMatchObject({
+      title: "Attendance Policy (PDF)",
+      fileName: "Attendance Policy.pdf",
+      mimeType: "application/pdf",
+      retrieval: { kind: "available", locator: { policyId: uuid(101), documentId: uuid(1101) } },
+    });
+    expect(listing.diagnostics).toMatchObject({
+      headers: ["Policy", "Status", "Audience", "Last Updated", "Acknowledgement", ""],
+      audienceColumnFound: true,
+      updatedColumnFound: true,
+    });
+    expect(JSON.stringify(listing)).not.toMatch(/sig=|blob\.core|SECRET/);
+  });
+
+  it("Policies: the inline mPolicyAttachments variable and the DOM records are merged, not doubled", async () => {
+    const fake = new FakeWoven();
+    fake.state.policyAttachmentsVar = true;
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const listing = ok(await connector.list("policy"));
+    expect(listing.records[0]!.parts.filter((p) => p.partKey.startsWith("attachment:"))).toHaveLength(1);
+    expect(listing.records[0]!.parts[1]!.sizeBytes).toBe(12345);
+  });
+
+  it("Policies: a page without the verified body structure blocks the body only; attachments still sync", async () => {
+    const fake = new FakeWoven();
+    fake.state.policies[0]!.body = null;
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const listing = ok(await connector.list("policy"));
+    expect(listing.records[0]!.parts[0]!.retrieval).toEqual({ kind: "blocked", capability: "policy_body" });
+    expect(listing.records[0]!.parts[1]!.retrieval.kind).toBe("available");
+  });
+
+  it("Policies: a policy with an empty body contributes no text part", async () => {
+    const fake = new FakeWoven();
+    fake.state.policies[0]!.body = "";
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const listing = ok(await connector.list("policy"));
+    expect(listing.records[0]!.parts.map((p) => p.partKey)).toEqual([`attachment:${uuid(1101)}`]);
+    expect(listing.records[0]!.parts[0]!.title).toBe("Attendance Policy");
+  });
+
+  it("Handbooks: DataTables rows plus the manage page's version ids; no current version means nothing published", async () => {
+    const { connector } = connectorFor(new FakeWoven());
+    await connector.connect();
+    const listing = ok(await connector.list("handbook"));
+    const [published, draft] = listing.records;
+    expect(published).toMatchObject({ title: "Team Member Handbook", publication: "published", versionId: uuid(2101), updatedAt: "2026-05-13T14:02:11", audience: ["Public"] });
+    expect(published!.parts[0]!.retrieval).toEqual({ kind: "available", locator: { handbookId: uuid(201), versionId: uuid(2101) } });
+    expect(draft!.publication).toBe("unpublished");
+  });
+
+  const STORED = "a1b2c3d4-0000-4000-8000-000000003111.pdf";
+
+  it("Procedures: steps from the live markup — deduplicated copies, order, title — and each step's attachment by its stored name", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const first = ok(await connector.list("procedure"));
+    const again = ok(await connector.list("procedure"));
+    const opening = first.records[0]!;
+    expect(first.records.map((r) => r.title)).toEqual(["Opening the Salon", "Bed Cleaning"]);
+    /* The page renders every step twice (carousel and scroll view): read once. */
+    expect(opening.sourceMetadata).toMatchObject({ steps: 2 });
+    expect(opening.parts.map((p) => p.partKey)).toEqual(["content", `attachment:${uuid(3012)}:${STORED}`]);
+    expect(opening.parts[0]!.retrieval).toEqual({ kind: "available", locator: { procedureId: uuid(301) } });
+    /* procedure → step → stored file name → display name; no document id invented from the stored name. */
+    expect(opening.parts[1]).toMatchObject({
+      title: "Opening the Salon — Opening Checklist",
+      documentId: null,
+      versionId: uuid(3012),
+      fileName: "Opening Checklist.pdf",
+      recheckBytes: true,
+      retrieval: { kind: "available", locator: { procedureId: uuid(301), stepId: uuid(3012), storedFileName: STORED } },
+    });
+    /* The management view's id for the same file is recognised by its name and not listed twice. */
+    expect(opening.parts.some((p) => p.retrieval.kind === "blocked")).toBe(false);
+    /* The pages carry a rotating token and a random script value; neither is a change. */
+    expect(again.records.map((r) => r.contentFingerprint)).toEqual(first.records.map((r) => r.contentFingerprint));
+    expect(again.records[0]!.parts.map((p) => p.contentDigest)).toEqual(opening.parts.map((p) => p.contentDigest));
+
+    /* A reworded step moves the text part only — its attachment is not re-read for it. */
+    fake.state.procedures[0]!.steps[1]!.text = "Turn on the lights and the music.";
+    const changed = ok(await connector.list("procedure"));
+    expect(changed.records[0]!.parts[0]!.contentDigest).not.toBe(opening.parts[0]!.contentDigest);
+    expect(changed.records[0]!.contentFingerprint).toBe(opening.contentFingerprint);
+    /* So does a retitled or reordered step. */
+    fake.state.procedures[0]!.steps[1]!.title = "Lights and Music";
+    expect(ok(await connector.list("procedure")).records[0]!.parts[0]!.contentDigest).not.toBe(changed.records[0]!.parts[0]!.contentDigest);
+    expect(changed.records[1]!.contentFingerprint).toBe(first.records[1]!.contentFingerprint);
+  });
+
+  it("Procedures: Woven's 'Not Provided' placeholder is no text", async () => {
+    const fake = new FakeWoven();
+    fake.state.procedures[0]!.steps[1]!.text = "Not Provided";
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const file = await connector.fetchPart({ contentType: "procedure", entityId: uuid(301), partKey: "content", locator: { procedureId: uuid(301) }, fileName: null, mimeType: "text/plain", title: "Opening the Salon" });
+    const text = new TextDecoder().decode(file.bytes);
+    expect(text).not.toMatch(/not provided/i);
+    expect(text).toBe("Opening the Salon\n\nStep 1 — Open the Door\nUnlock the front door.\n\nStep 2 — Lights On\n");
+    /* A procedure whose every step is the placeholder offers no text part at all. */
+    fake.state.procedures[1]!.steps[0]!.text = "  not provided ";
+    fake.state.procedures[1]!.steps[0]!.title = "";
+    const listing = ok(await connector.list("procedure"));
+    expect(listing.records[1]!.parts).toEqual([]);
+  });
+
+  it("Procedures: a page without the verified step structure keeps its text blocked, never guessed", async () => {
+    const fake = new FakeWoven();
+    fake.state.procedures[1]!.legacyLayout = true;
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const listing = ok(await connector.list("procedure"));
+    expect(listing.records[1]!.parts[0]!.retrieval).toEqual({ kind: "blocked", capability: "procedure_content" });
+    expect(listing.records[1]!.contentFingerprint).toMatch(/^[0-9a-f]{64}$/);
+    /* The raw response is what is parsed: the run reports how many pages lacked the structure. */
+    expect(listing.diagnostics).toMatchObject({ stepStructureMissing: 1 });
+  });
+
+  it("Procedures: an attachment only the management view names stays blocked — it has no stored name to download by", async () => {
+    const fake = new FakeWoven();
+    fake.state.procedures[1]!.attachments.push({ documentId: uuid(3211), stepIndex: 0, fileName: "Bed Chart.pdf", managementOnly: true });
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const listing = ok(await connector.list("procedure"));
+    expect(listing.records[1]!.parts.find((p) => p.partKey === `attachment:${uuid(3211)}`)).toMatchObject({
+      documentId: uuid(3211),
+      fileName: "Bed Chart.pdf",
+      retrieval: { kind: "blocked", capability: "procedure_attachment_unlocated" },
+    });
+  });
+
+  it("Procedures: an unreadable management view still lists the attachments the page itself offers", async () => {
+    const fake = new FakeWoven();
+    fake.failures.set(`/KnowledgeCenter/Procedure/${uuid(301)}/Management`, 403);
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const listing = ok(await connector.list("procedure"));
+    expect(listing.records[0]!.parts.map((p) => p.partKey)).toEqual(["content", `attachment:${uuid(3012)}:${STORED}`]);
+    expect(listing.diagnostics).toMatchObject({ managementUnreadable: 1 });
+  });
+
+  it("Procedures: an attachment downloads by its stored name, and keeps its display name", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const file = await connector.fetchPart({
+      contentType: "procedure",
+      entityId: uuid(301),
+      partKey: `attachment:${uuid(3012)}:${STORED}`,
+      locator: { procedureId: uuid(301), stepId: uuid(3012), storedFileName: STORED },
+      fileName: "Opening Checklist.pdf",
+      mimeType: null,
+      title: "Opening the Salon — Opening Checklist",
+    });
+    expect(file).toMatchObject({ fileName: "Opening Checklist.pdf", mimeType: "application/pdf" });
+    expect(new TextDecoder().decode(file.bytes)).toBe("%PDF-1.4 Opening Checklist.pdf");
+    const request = fake.log.find((r) => r.path === "/KnowledgeCenter/Download_ProcedureStep_Attachment")!;
+    expect(new URL(request.url).searchParams.get("pAzureFileName")).toBe(STORED);
+    expect(request.cookie).toMatch(/WovenSession=/);
+  });
+
+  it.each([
+    ["a hidden sort key before the label", '<span class="hidden">3</span>PDF'],
+    ["an icon", '<i class="fa fa-file-pdf"></i>'],
+    ["a lower-case label with an icon", '<span><i class="fa fa-file-pdf-o"></i> pdf</span>'],
+  ])("File Library: a PDF type cell with %s is still a PDF", async (_label, cell) => {
+    const fake = new FakeWoven();
+    fake.state.fileLibrary[0]!.Column1 = cell;
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const listing = ok(await connector.list("file_library"));
+    expect(listing.records[0]!.parts[0]).toMatchObject({ fileName: "Lotion Guide.pdf", retrieval: { kind: "available" } });
+    /* A video stays unsupported however its cell is written. */
+    expect(listing.records[1]!.parts[0]!.retrieval.kind).toBe("unsupported_format");
+  });
+
+  it("File Library: a title with the file's extension is recognised even when the type label is not", async () => {
+    const fake = new FakeWoven();
+    Object.assign(fake.state.fileLibrary[0]!, { Column1: "Document", Column2: "<a>Lotion Guide.pdf</a>" });
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    expect(ok(await connector.list("file_library")).records[0]!.parts[0]).toMatchObject({ fileName: "Lotion Guide.pdf", retrieval: { kind: "available" } });
+  });
+
+  it("File Library: published PDFs download by FileLibraryID; video unsupported, unpublished excluded", async () => {
+    const { connector } = connectorFor(new FakeWoven());
+    await connector.connect();
+    const listing = ok(await connector.list("file_library"));
+    const [pdf, video, old] = listing.records;
+    expect(pdf).toMatchObject({ entityId: uuid(401), title: "Lotion Guide", publication: "published", audience: ["Public"], updatedAt: "2026-09-01" });
+    expect(pdf!.parts[0]).toMatchObject({ partKey: "file", fileName: "Lotion Guide.pdf", mimeType: "application/pdf", documentId: uuid(401) });
+    expect(pdf!.parts[0]!.retrieval).toEqual({ kind: "available", locator: { fileLibraryId: uuid(401) } });
+    expect(video!.parts[0]!.retrieval.kind).toBe("unsupported_format");
+    expect(old!.publication).toBe("unpublished");
+    expect(listing.diagnostics).toMatchObject({ typeLabels: { PDF: 2, Video: 1 } });
+  });
+
+  it("Knowledge Elements: content pages read from the verified structure; drafts are never fetched; external links are references", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const ke = ok(await connector.list("knowledge_element"));
+    expect(ke.records[0]).toMatchObject({ title: "Spray Tan Basics", status: "Current", publication: "published", version: "v2", updatedAt: "2025-10-09" });
+    expect(ke.records[0]!.parts[0]).toMatchObject({ partKey: "content", retrieval: { kind: "available", locator: { elementId: uuid(501) } } });
+    expect(ke.records[0]!.sourceMetadata).toMatchObject({ contentPages: 1 });
+    expect(ke.records[1]).toMatchObject({ status: "Draft", publication: "unpublished" });
+    expect(fake.log.some((r) => r.path.startsWith(`/KnowledgeElement/Details/${uuid(502)}`))).toBe(false);
+
+    const file = await connector.fetchPart({ contentType: "knowledge_element", entityId: uuid(501), partKey: "content", locator: { elementId: uuid(501) }, fileName: null, mimeType: "text/plain", title: "Spray Tan Basics" });
+    expect(new TextDecoder().decode(file.bytes)).toBe(
+      "Spray Tan Basics\n\nSpray Tan Basics\n\nPrepare the booth.\n\nWatch the booth video.\nLink: booth video (https://example.sharepoint.com/sites/training/video.mp4)\n",
+    );
+    expect(file).toMatchObject({ mimeType: "text/plain" });
+    /* The SharePoint link was never requested. */
+    expect(fake.log.some((r) => r.url.includes("sharepoint"))).toBe(false);
+  });
+
+  it("Knowledge Elements: an unsupported content type keeps the element blocked", async () => {
+    const fake = new FakeWoven();
+    fake.state.knowledgeElementPages[uuid(501)]![0]!.blocks = null;
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const ke = ok(await connector.list("knowledge_element"));
+    expect(ke.records[0]!.parts[0]!.retrieval).toEqual({ kind: "blocked", capability: "knowledge_element_content" });
+    expect(ke.diagnostics).toMatchObject({ unsupportedContent: 1 });
+  });
+
+  it("Courses: status, version and the hidden ISO date; items stay blocked and are not requested", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const courses = ok(await connector.list("course"));
+    expect(courses.records[0]).toMatchObject({ title: "Onboarding", version: "v3", updatedAt: "2025-10-13" });
+    expect(courses.records[0]!.parts[0]!.retrieval).toEqual({ kind: "blocked", capability: "course_content" });
+    expect(fake.log.some((r) => r.path.startsWith("/Course/_Course_Items"))).toBe(false);
+  });
+
+  it("sends the list bodies the handoff documents", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    for (const type of CONTENT_TYPES) ok(await connector.list(type));
+    const body = (path: string) => fake.log.find((r) => r.path === path)?.body;
+    expect(JSON.parse(body("/KnowledgeCenter/_Search_Procedures")!)).toEqual({ pModel: { FilterText: "", Categories: [], Frequencies: [], Positions: [], Tags: [] } });
+    expect(JSON.parse(body("/KnowledgeElement/_KnowledgeElement_List_ForDataTable")!)).toEqual({ pModel: { LearningElementStatus: "null", Tags: [] } });
+    expect(JSON.parse(body("/Course/_Course_List_ForDataTable")!)).toEqual({ pModel: { LearningElementStatus: "null", Tags: [], IsArchived: false } });
+    expect(body("/KnowledgeCenter/_Handbooks_List_ForDataTable")).toBe("");
+    expect(fake.log.find((r) => r.path === "/FileLibrary/_FileLibrary_Management_List_ForDataTable")!.contentType).toBe("application/json; charset=utf-8");
+  });
+});
+
+describe("failing closed", () => {
+  it("re-authenticates once when the session expires mid-listing, and carries on", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    fake.expireSessionAfter = 2;
+    const listing = ok(await connector.list("policy"));
+    expect(listing.records).toHaveLength(3);
+    expect(fake.logins).toBe(2);
+  });
+
+  it("a login page where data was expected is a failed listing, not an empty one", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    fake.loginInstead.add("/FileLibrary/_FileLibrary_Management_List_ForDataTable");
+    const listing = await connector.list("file_library");
+    expect(listing.ok).toBe(false);
+  });
+
+  it("a changed response shape (no `list`) is a failed listing", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    fake.malformed.add("/Course/_Course_List_ForDataTable");
+    expect(await connector.list("course")).toMatchObject({ ok: false, code: "woven_unexpected_shape" });
+  });
+
+  it("a server error on one adapter leaves the others working", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    fake.failures.set("/KnowledgeCenter/_Search_Procedures", 500);
+    expect((await connector.list("procedure")).ok).toBe(false);
+    expect((await connector.list("handbook")).ok).toBe(true);
+  });
+
+  it("a policy page that drops its table is a failed listing", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    fake.state.policies = [];
+    /* An empty table is still a table: that is a legitimate (if suspicious) answer the engine judges. */
+    expect((await connector.list("policy")).ok).toBe(true);
+    fake.failures.set("/Policy", 200);
+    expect(await connector.list("policy")).toMatchObject({ ok: false, code: "woven_unexpected_shape" });
+  });
+});
+
+describe("downloads", () => {
+  it("handbook: asks for a fresh link, downloads it WITHOUT the Woven cookie, and never keeps the URL", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const file = await connector.fetchPart({ contentType: "handbook", entityId: uuid(201), partKey: "current-version", locator: { handbookId: uuid(201), versionId: uuid(2101) }, fileName: null, mimeType: null, title: "T" });
+    expect(new TextDecoder().decode(file.bytes)).toBe("%PDF handbook v1");
+    expect(file).toMatchObject({ fileName: "Team Member Handbook.pdf", mimeType: "application/pdf" });
+    const form = new URLSearchParams(fake.log.find((r) => r.path === "/KnowledgeCenter/_Handbook_DownloadVersion")!.body);
+    expect(Object.fromEntries(form)).toEqual({ pHandbookID: uuid(201), pHandbookVersionID: uuid(2101) });
+    expect(fake.blobRequests).toHaveLength(1);
+    expect(fake.blobRequests[0]!.cookie).toBeNull();
+  });
+
+  it("policy attachment: re-reads the detail page for a fresh link; an expired link is replaced once", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    fake.expireNextLinks = 1;
+    const file = await connector.fetchPart({ contentType: "policy", entityId: uuid(101), partKey: `attachment:${uuid(1101)}`, locator: { policyId: uuid(101), documentId: uuid(1101) }, fileName: "Attendance Policy.pdf", mimeType: "application/pdf", title: "T" });
+    expect(new TextDecoder().decode(file.bytes)).toBe("%PDF attendance v1");
+    expect(fake.log.filter((r) => r.path === `/Policy/Details/${uuid(101)}`)).toHaveLength(2);
+    expect(fake.blobRequests.every((r) => r.cookie === null)).toBe(true);
+  });
+
+  it("two expired links in a row are a retryable per-item failure whose message carries no URL", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    fake.expireNextLinks = 2;
+    const error = await connector
+      .fetchPart({ contentType: "policy", entityId: uuid(101), partKey: `attachment:${uuid(1101)}`, locator: { policyId: uuid(101), documentId: uuid(1101) }, fileName: "a.pdf", mimeType: "application/pdf", title: "T" })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(PartFetchError);
+    expect(error).toMatchObject({ category: "woven_download_link_expired", retryable: true });
+    expect((error as Error).message).not.toMatch(/https?:|sig=|blob/);
+  });
+
+  it("a file over the size limit is refused and not retried", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake, { maxBytes: 4 });
+    await connector.connect();
+    const error = await connector
+      .fetchPart({ contentType: "handbook", entityId: uuid(201), partKey: "current-version", locator: { handbookId: uuid(201), versionId: uuid(2101) }, fileName: null, mimeType: null, title: "T" })
+      .catch((e: unknown) => e);
+    expect(error).toMatchObject({ category: "woven_too_large", retryable: false });
+  });
+
+  it("an expired session during a download signs in again", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    fake.expireSession();
+    const file = await connector.fetchPart({ contentType: "handbook", entityId: uuid(201), partKey: "current-version", locator: { handbookId: uuid(201), versionId: uuid(2101) }, fileName: null, mimeType: null, title: "T" });
+    expect(file.bytes.byteLength).toBeGreaterThan(0);
+    expect(fake.logins).toBe(2);
+  });
+
+  it("a signed-in session that cannot be re-established is reported as session lost", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    fake.expireSession();
+    fake.state.otherCompany = "Elsewhere Inc";
+    const error = await connector
+      .fetchPart({ contentType: "handbook", entityId: uuid(201), partKey: "current-version", locator: { handbookId: uuid(201), versionId: uuid(2101) }, fileName: null, mimeType: null, title: "T" })
+      .catch((e: unknown) => e);
+    expect(error).toMatchObject({ sessionLost: true });
+  });
+
+  it("policy and procedure text are read fresh from their pages as titled plain-text documents", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    const policy = await connector.fetchPart({ contentType: "policy", entityId: uuid(101), partKey: "content", locator: { policyId: uuid(101) }, fileName: null, mimeType: "text/plain", title: "Attendance Policy" });
+    expect(new TextDecoder().decode(policy.bytes)).toBe("Attendance Policy\n\nArrive on time.\n\nCall the salon if you will be late.\n");
+    expect(policy).toMatchObject({ fileName: `policy-${uuid(101)}.txt`, mimeType: "text/plain" });
+    const steps = await connector.fetchPart({ contentType: "procedure", entityId: uuid(301), partKey: "content", locator: { procedureId: uuid(301) }, fileName: null, mimeType: "text/plain", title: "Opening the Salon" });
+    expect(new TextDecoder().decode(steps.bytes)).toBe("Opening the Salon\n\nStep 1 — Open the Door\nUnlock the front door.\n\nStep 2 — Lights On\nTurn on the lights.\n");
+  });
+
+  it("a text page that lost its verified structure is a retryable per-item failure", async () => {
+    const fake = new FakeWoven();
+    const { connector } = connectorFor(fake);
+    await connector.connect();
+    fake.state.policies[0]!.body = null;
+    await expect(
+      connector.fetchPart({ contentType: "policy", entityId: uuid(101), partKey: "content", locator: { policyId: uuid(101) }, fileName: null, mimeType: "text/plain", title: "T" }),
+    ).rejects.toMatchObject({ category: "woven_unexpected_shape", retryable: true });
+  });
+
+  it("refuses parts whose download is not established (Courses)", async () => {
+    const { connector } = connectorFor(new FakeWoven());
+    await connector.connect();
+    await expect(
+      connector.fetchPart({ contentType: "course", entityId: uuid(601), partKey: "content", locator: { courseId: uuid(601) }, fileName: null, mimeType: null, title: "T" }),
+    ).rejects.toMatchObject({ category: "capability_unavailable", retryable: false });
+  });
+
+  describe("File Library downloads", () => {
+    const FL = { contentType: "file_library" as const, entityId: uuid(401), partKey: "file", locator: { fileLibraryId: uuid(401) }, fileName: "Lotion Guide.pdf", mimeType: "application/pdf", title: "Lotion Guide" };
+
+    it("downloads the file by its FileLibraryID through the verified route", async () => {
+      const fake = new FakeWoven();
+      const { connector } = connectorFor(fake);
+      await connector.connect();
+      const file = await connector.fetchPart(FL);
+      expect(file).toMatchObject({ fileName: "Lotion Guide.pdf", mimeType: "application/pdf" });
+      expect(new TextDecoder().decode(file.bytes)).toMatch(/^%PDF-1\.4 Lotion guide/);
+      const request = fake.log.find((r) => r.path === "/Dashboard/_FileLibrary_Download")!;
+      expect(Object.fromEntries(new URL(request.url).searchParams)).toEqual({ pFileLibraryID: uuid(401), pDownloadedFromEntityType: "FileLibrary" });
+    });
+
+    it("follows a redirect to storage without the session cookie", async () => {
+      const fake = new FakeWoven();
+      fake.state.fileLibraryFiles[uuid(401)]!.via = "redirect";
+      const { connector } = connectorFor(fake);
+      await connector.connect();
+      const file = await connector.fetchPart(FL);
+      expect(new TextDecoder().decode(file.bytes)).toMatch(/^%PDF/);
+      expect(fake.blobRequests).toHaveLength(1);
+      expect(fake.blobRequests[0]!.cookie).toBeNull();
+    });
+
+    it("an error page served in place of the file is refused, never indexed", async () => {
+      const fake = new FakeWoven();
+      fake.state.fileLibraryFiles[uuid(401)]!.via = "html";
+      const { connector } = connectorFor(fake);
+      await connector.connect();
+      await expect(connector.fetchPart(FL)).rejects.toMatchObject({ category: "woven_not_a_file", retryable: true });
+    });
+
+    it("a sign-in page served in place of the file is a lost session, never a file", async () => {
+      const fake = new FakeWoven();
+      fake.state.fileLibraryFiles[uuid(401)]!.via = "login";
+      const { connector } = connectorFor(fake);
+      await connector.connect();
+      await expect(connector.fetchPart(FL)).rejects.toMatchObject({ sessionLost: true });
+    });
+
+    it("bytes that are not the PDF they claim to be are refused", async () => {
+      const fake = new FakeWoven();
+      fake.state.fileLibraryFiles[uuid(401)] = { bytes: "just some text", contentType: "application/pdf" };
+      const { connector } = connectorFor(fake);
+      await connector.connect();
+      await expect(connector.fetchPart(FL)).rejects.toMatchObject({ category: "woven_not_a_file" });
+    });
+
+    it("a file Woven no longer has is a permanent per-item outcome", async () => {
+      const fake = new FakeWoven();
+      delete fake.state.fileLibraryFiles[uuid(401)];
+      const { connector } = connectorFor(fake);
+      await connector.connect();
+      await expect(connector.fetchPart(FL)).rejects.toMatchObject({ category: "woven_not_found", retryable: false });
+    });
+  });
+
+  it("connector errors carry woven_ codes", () => {
+    expect(new WovenConnectorError("woven_login_failed", "x").code).toBe("woven_login_failed");
+  });
+});

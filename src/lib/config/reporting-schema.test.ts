@@ -1,0 +1,1126 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+/**
+ * REPORTING SCHEMA INVARIANTS.
+ *
+ * The Salon Performance / Comp Sales migrations encode several properties that
+ * are easy to state in a comment and easy to lose in an edit. This suite parses
+ * the SQL and enforces them, in the same spirit as the embedding-dimension
+ * invariant test next door.
+ *
+ * These are STATIC checks over the migration text. They are not a substitute
+ * for applying the migrations — that is checkpoint 3 — but they catch the
+ * regressions that would otherwise only surface against a live project, which
+ * is exactly how the two privilege defects in the knowledge migrations were
+ * found the expensive way.
+ */
+
+const MIGRATIONS_DIR = join(process.cwd(), "supabase", "migrations");
+
+/** Tables that make up the reporting domain. */
+const REPORTING_TABLES = [
+  "report_sources",
+  "report_files",
+  "report_periods",
+  "report_ingestions",
+  "report_metrics",
+  "salons",
+  "salon_period_attributes",
+  "comp_sales_facts",
+] as const;
+
+/** The read surface. A view, and therefore easy to forget when granting. */
+const REPORTING_VIEW = "comp_sales_current_facts";
+
+function migrationFiles(): { name: string; sql: string }[] {
+  return readdirSync(MIGRATIONS_DIR)
+    .filter((name) => name.endsWith(".sql"))
+    .sort()
+    .map((name) => ({ name, sql: readFileSync(join(MIGRATIONS_DIR, name), "utf8") }));
+}
+
+/** Strips `--` comment lines so prose cannot satisfy — or fail — an assertion. */
+function statementsOnly(sql: string): string {
+  return sql
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("--"))
+    .join("\n")
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * Which migrations belong to the reporting domain, by filename.
+ *
+ * Listed explicitly because the partition matters in BOTH directions: these
+ * files are the ones the ordering and RLS assertions cover, and every other
+ * file is asserted to contain no reporting table at all. A reporting migration
+ * missing from this list is therefore not merely unchecked — it gets checked as
+ * though it were a knowledge migration and fails for referencing its own
+ * domain, which is how `sales_totals` announced itself.
+ *
+ * `sales_totals` is the second report FAMILY; `ingestions` covers changes to
+ * the shared ingestion tables that neither family owns alone.
+ */
+const REPORTING_MIGRATION_FRAGMENTS = [
+  "reporting",
+  "comp_sales",
+  "sales_totals",
+  "ingestions",
+] as const;
+
+/**
+ * ADOPTION ANALYTICS — A THIRD DOMAIN, and neither of the other two.
+ *
+ * It is not reporting: it creates no fact table, owns no period and parses no
+ * workbook. It is not knowledge either. What it does is READ across both — a
+ * salon's name and district come from the reporting dimensions, so its views
+ * legitimately name `salons`, `salon_period_attributes`, `report_periods` and
+ * `report_ingestions`.
+ *
+ * Without this partition those references would be checked as though they were
+ * knowledge migrations reaching into reporting, which is the thing the rule next
+ * door exists to stop and is NOT what these files do. So the partition is
+ * explicit and the property that actually matters is asserted instead: analytics
+ * may read a reporting table and may never create, alter or drop one. That keeps
+ * the boundary enforced rather than merely exempted.
+ */
+/*
+ * ONE FRAGMENT PER FILE, and `ask_sunny_feedback.sql` carries its extension so
+ * it cannot also match `ask_sunny_feedback_reads.sql`. The 1:1 invariant is
+ * asserted below — a fragment matching two files would quietly shrink the
+ * knowledge partition and stop guarding whatever fell out of it.
+ */
+const ANALYTICS_MIGRATION_FRAGMENTS = [
+  "activity_events",
+  "activity_analytics",
+  "ask_sunny_feedback.sql",
+  "ask_sunny_feedback_reads",
+] as const;
+
+function analyticsFiles(): { name: string; sql: string }[] {
+  return migrationFiles().filter((file) =>
+    ANALYTICS_MIGRATION_FRAGMENTS.some((fragment) => file.name.includes(fragment)),
+  );
+}
+
+/**
+ * GOOGLE REVIEWS — A FOURTH DOMAIN, AND THE SAME SHAPE AS ANALYTICS.
+ *
+ * It is not reporting: it parses no workbook, owns no report period and creates
+ * no fact table in the Comp Sales sense. It is not knowledge either. Like
+ * analytics, what it does is READ the reporting dimensions — a review is filed
+ * against a `salons` row and its district comes from `location_managery`, which is
+ * precisely the "do not invent a second salon roster" rule being obeyed rather
+ * than a boundary being crossed.
+ *
+ * It gets its own partition instead of joining the analytics one because
+ * "adoption analytics" says what that partition is FOR, and a reader who found
+ * a Google review migration inside it would reasonably conclude the reviews are
+ * an adoption metric. Same rule, separate name, and the property that matters is
+ * asserted below: it may read a reporting table and may never create, alter or
+ * drop one.
+ */
+const GOOGLE_REVIEW_MIGRATION_FRAGMENTS = [
+  "google_reviews.sql",
+  "google_review_rollups",
+] as const;
+
+function googleReviewFiles(): { name: string; sql: string }[] {
+  return migrationFiles().filter((file) =>
+    GOOGLE_REVIEW_MIGRATION_FRAGMENTS.some((fragment) => file.name.includes(fragment)),
+  );
+}
+
+/**
+ * THE WOVEN EMPLOYEE DIRECTORY — A FIFTH DOMAIN, THE SAME SHAPE AGAIN.
+ *
+ * A Woven location is mapped to a real salon, so `woven_location_map` names
+ * `salons` in a foreign key and the review function looks a salon up by its
+ * number — the "do not invent a second salon roster" rule obeyed once more. It
+ * may read a reporting table and may never create, alter or drop one.
+ */
+const EMPLOYEE_DIRECTORY_MIGRATION_FRAGMENTS = ["woven_employee_directory", "woven_employee_role_overrides"] as const;
+
+function employeeDirectoryFiles(): { name: string; sql: string }[] {
+  return migrationFiles().filter((file) =>
+    EMPLOYEE_DIRECTORY_MIGRATION_FRAGMENTS.some((fragment) => file.name.includes(fragment)),
+  );
+}
+
+function reportingFiles(): { name: string; sql: string }[] {
+  return migrationFiles().filter((file) =>
+    REPORTING_MIGRATION_FRAGMENTS.some((fragment) => file.name.includes(fragment)),
+  );
+}
+
+function reportingSql(): string {
+  return reportingFiles().map((file) => statementsOnly(file.sql)).join(" ");
+}
+
+/**
+ * The live fact key AS THE SCHEMA ENDS UP WITH IT.
+ *
+ * Migrations are applied in filename order and the last `create unique index`
+ * for a name is what the database is left holding, so the effective definition
+ * is the last one across every reporting migration — not the one in the file
+ * that first created the table.
+ */
+function effectiveLiveKey(): string {
+  const pattern =
+    /create unique index comp_sales_facts_live_key on public\.comp_sales_facts [^;]*/g;
+  const found = reportingFiles().flatMap((file) => statementsOnly(file.sql).match(pattern) ?? []);
+  if (found.length === 0) throw new Error("No migration defines comp_sales_facts_live_key");
+  return found[found.length - 1].replace(/\s+/g, " ").trim();
+}
+
+function fileNamed(fragment: string): { name: string; sql: string } {
+  const found = reportingFiles().find((file) => file.name.includes(fragment));
+  if (!found) throw new Error(`No reporting migration matching "${fragment}"`);
+  return found;
+}
+
+describe("reporting migrations exist and are ordered", () => {
+  it("ships every reporting migration", () => {
+    const names = reportingFiles().map((file) => file.name);
+    for (const fragment of [
+      "reporting_enums",
+      "reporting_sources_and_files",
+      "reporting_periods_and_ingestions",
+      "reporting_dimensions",
+      "comp_sales_facts",
+      "reporting_rls",
+      "reporting_storage_bucket",
+      "reporting_seed_comp_sales",
+    ]) {
+      expect(names.some((name) => name.includes(fragment)), fragment).toBe(true);
+    }
+  });
+
+  it("creates every table before the migration that secures it", () => {
+    // A grant on a table that does not exist yet fails at apply time, and a
+    // table created after its RLS migration is left wide open.
+    const files = migrationFiles();
+    const rls = files.findIndex((file) => file.name.includes("reporting_rls"));
+
+    for (const table of REPORTING_TABLES) {
+      const created = files.findIndex((file) =>
+        statementsOnly(file.sql).includes(`create table public.${table} (`),
+      );
+      expect(created, `${table} is never created`).toBeGreaterThanOrEqual(0);
+      expect(created, `${table} is created after its RLS migration`).toBeLessThan(rls);
+    }
+  });
+
+  it("seeds reference data only after the tables it targets exist", () => {
+    const files = migrationFiles();
+    const seed = files.findIndex((file) => file.name.includes("reporting_seed"));
+    const metrics = files.findIndex((file) => file.name.includes("reporting_dimensions"));
+    expect(metrics).toBeLessThan(seed);
+  });
+});
+
+describe("reporting stays out of the knowledge domain", () => {
+  it("never references the RAG tables", () => {
+    // Reporting is a separate bounded domain. A foreign key either way would
+    // couple two lifecycles that have nothing to do with each other.
+    const sql = reportingSql();
+    expect(sql).not.toContain("knowledge_documents");
+    expect(sql).not.toContain("knowledge_chunks");
+  });
+
+  it("keeps the knowledge migrations free of reporting tables", () => {
+    // The exact complement of `reportingFiles`, so the two partitions cannot
+    // drift apart and leave a migration in neither or both.
+    const reporting = new Set(reportingFiles().map((file) => file.name));
+    const analytics = new Set(analyticsFiles().map((file) => file.name));
+    const googleReviews = new Set(googleReviewFiles().map((file) => file.name));
+    const employeeDirectory = new Set(employeeDirectoryFiles().map((file) => file.name));
+    const knowledge = migrationFiles()
+      .filter(
+        (file) =>
+          !reporting.has(file.name) &&
+          !analytics.has(file.name) &&
+          !googleReviews.has(file.name) &&
+          !employeeDirectory.has(file.name),
+      )
+      .map((file) => statementsOnly(file.sql))
+      .join(" ");
+
+    for (const table of REPORTING_TABLES) {
+      expect(knowledge, `knowledge migrations mention ${table}`).not.toContain(
+        `public.${table}`,
+      );
+    }
+  });
+
+  it("lets analytics READ reporting tables and never reshape them", () => {
+    /*
+     * The boundary that replaces the blanket "must not mention" rule for this
+     * partition. Analytics joins the reporting dimensions to put a real salon
+     * name and district on a row; the moment one of its migrations creates,
+     * alters or drops a reporting table it has stopped being a reader and this
+     * fails.
+     */
+    for (const file of analyticsFiles()) {
+      const sql = statementsOnly(file.sql);
+      for (const table of REPORTING_TABLES) {
+        for (const verb of ["create table", "alter table", "drop table"]) {
+          expect(sql, `${file.name} ${verb} ${table}`).not.toContain(
+            `${verb} public.${table}`,
+          );
+          expect(sql, `${file.name} ${verb} if not exists ${table}`).not.toContain(
+            `${verb} if not exists public.${table}`,
+          );
+        }
+      }
+    }
+  });
+
+  it("lets Google Reviews READ reporting tables and never reshape them", () => {
+    /*
+     * The same boundary the analytics partition is held to, for the same
+     * reason. A Google review is filed against a real salon, so these
+     * migrations legitimately name `salons` in a foreign key and a join — and
+     * the moment one of them creates, alters or drops a reporting table it has
+     * stopped being a reader.
+     */
+    for (const file of googleReviewFiles()) {
+      const sql = statementsOnly(file.sql);
+      for (const table of REPORTING_TABLES) {
+        for (const verb of ["create table", "alter table", "drop table"]) {
+          expect(sql, `${file.name} ${verb} ${table}`).not.toContain(
+            `${verb} public.${table}`,
+          );
+          expect(sql, `${file.name} ${verb} if not exists ${table}`).not.toContain(
+            `${verb} if not exists public.${table}`,
+          );
+        }
+      }
+    }
+  });
+
+  it("ships the Google Reviews migrations it claims to partition", () => {
+    expect(googleReviewFiles().map((file) => file.name)).toHaveLength(
+      GOOGLE_REVIEW_MIGRATION_FRAGMENTS.length,
+    );
+  });
+
+  it("lets the employee directory READ reporting tables and never reshape them", () => {
+    for (const file of employeeDirectoryFiles()) {
+      const sql = statementsOnly(file.sql);
+      for (const table of REPORTING_TABLES) {
+        for (const verb of ["create table", "alter table", "drop table"]) {
+          expect(sql, `${file.name} ${verb} ${table}`).not.toContain(
+            `${verb} public.${table}`,
+          );
+          expect(sql, `${file.name} ${verb} if not exists ${table}`).not.toContain(
+            `${verb} if not exists public.${table}`,
+          );
+        }
+      }
+    }
+  });
+
+  it("ships the employee directory migrations it claims to partition", () => {
+    expect(employeeDirectoryFiles().map((file) => file.name)).toHaveLength(
+      EMPLOYEE_DIRECTORY_MIGRATION_FRAGMENTS.length,
+    );
+  });
+
+  it("ships the analytics migrations it claims to partition", () => {
+    /*
+     * The partition is only safe while it names files that exist. A renamed
+     * migration would silently fall back into the knowledge set and fail there
+     * with a confusing message rather than here with this one.
+     */
+    expect(analyticsFiles().map((file) => file.name)).toHaveLength(
+      ANALYTICS_MIGRATION_FRAGMENTS.length,
+    );
+  });
+
+  it("uses a separate Storage bucket from knowledge documents", () => {
+    // Checked against STATEMENTS: the migration's comments legitimately name the
+    // knowledge bucket when explaining why this is a separate one.
+    const bucket = statementsOnly(fileNamed("reporting_storage_bucket").sql);
+    expect(bucket).toContain("'reporting-sources'");
+    expect(bucket).not.toContain("knowledge-documents");
+  });
+});
+
+describe("row level security posture", () => {
+  it("enables AND forces row level security on every reporting table", () => {
+    const sql = statementsOnly(fileNamed("reporting_rls").sql);
+
+    for (const table of REPORTING_TABLES) {
+      expect(sql, `${table} enable`).toContain(
+        `alter table public.${table} enable row level security;`,
+      );
+      expect(sql, `${table} force`).toContain(
+        `alter table public.${table} force row level security;`,
+      );
+    }
+  });
+
+  it("revokes the browser roles' inherited privileges before granting", () => {
+    /*
+     * REGRESSION, learned from the knowledge tables. Supabase ships
+     * `alter default privileges ... grant all on tables to anon, authenticated`,
+     * so both roles hold INSERT/UPDATE/DELETE the moment a table is created in
+     * `public`. A `grant select` is additive and does NOT take those away.
+     */
+    const sql = statementsOnly(fileNamed("reporting_rls").sql);
+
+    for (const relation of [...REPORTING_TABLES, REPORTING_VIEW]) {
+      expect(sql, `${relation} must be revoked from both roles`).toContain(
+        `revoke all on public.${relation} from anon, authenticated;`,
+      );
+    }
+  });
+
+  it("revokes and grants the view as well as the tables", () => {
+    /*
+     * REGRESSION. Default privileges treat a VIEW as a table, so
+     * comp_sales_current_facts inherits the same grants — and it reads every
+     * reporting table at once. Securing eight tables and forgetting the view
+     * that joins them would leave the whole domain readable.
+     */
+    const sql = statementsOnly(fileNamed("reporting_rls").sql);
+    expect(sql).toContain(`revoke all on public.${REPORTING_VIEW} from anon, authenticated;`);
+    expect(sql).toContain(`grant select on public.${REPORTING_VIEW} to authenticated;`);
+  });
+
+  it("grants the anonymous role nothing, anywhere in the reporting domain", () => {
+    // `revoke ... from anon, authenticated` is expected and required; what must
+    // never appear is a grant in anon's direction.
+    const sql = reportingSql();
+    expect(sql).not.toMatch(/\bto anon\b/);
+    expect(sql).not.toMatch(/grant[^;]*\banon\b/i);
+  });
+
+  it("grants authenticated select and nothing else", () => {
+    const sql = statementsOnly(fileNamed("reporting_rls").sql);
+
+    for (const relation of [...REPORTING_TABLES, REPORTING_VIEW]) {
+      expect(sql, `${relation}`).toContain(`grant select on public.${relation} to authenticated;`);
+    }
+    // No write privilege is granted to a browser-held role by any statement.
+    expect(sql).not.toMatch(/grant\s+(insert|update|delete|all)\b[^;]*to (anon|authenticated)/i);
+  });
+
+  it("creates no write policy for any browser role", () => {
+    // A grant alone reads nothing under RLS, and a policy alone is refused by
+    // the grant. Writes must have neither.
+    const sql = statementsOnly(fileNamed("reporting_rls").sql);
+    expect(sql).not.toMatch(/create policy[^;]*for (insert|update|delete|all)/i);
+  });
+
+  it("makes the read view run as the caller, not as its owner", () => {
+    /*
+     * WITHOUT THIS THE VIEW DEFEATS ROW LEVEL SECURITY ON EVERY TABLE AT ONCE.
+     *
+     * A plain PostgreSQL view runs with its OWNER's privileges and RLS context.
+     * This view is owned by the migration role, which holds BYPASSRLS on
+     * Supabase, so it would read every row beneath it and hand the result to
+     * anyone who could select from the view.
+     *
+     * Demonstrated against a live PostgreSQL in
+     * supabase/tests/reporting_schema_checks.sql: a role with grants but no
+     * policy sees 0 rows through the view with security_invoker, and 2 rows
+     * through the same view without it while still seeing 0 through the table
+     * underneath.
+     */
+    const sql = statementsOnly(fileNamed("comp_sales_facts").sql);
+    expect(sql).toContain(`create view public.${REPORTING_VIEW} with (security_invoker = true)`);
+    // The caller needs the base tables too: security_invoker means the view is
+    // a convenience join, not a privilege boundary.
+    const rls = statementsOnly(fileNamed("reporting_rls").sql);
+    for (const table of REPORTING_TABLES) {
+      expect(rls, `${table} must be selectable for the view to resolve`).toContain(
+        `grant select on public.${table} to authenticated;`,
+      );
+    }
+  });
+
+  it("creates no storage.objects policy", () => {
+    /*
+     * The raw workbooks carry salon financials. Access is server-side only,
+     * through the secret key, with short-lived signed URLs minted after
+     * authorization — never a blanket read policy for a browser role.
+     */
+    const sql = reportingSql();
+    expect(sql).not.toMatch(/create policy[^;]*on storage\.objects/i);
+    expect(sql).not.toMatch(/grant[^;]*on storage\.objects/i);
+  });
+
+  it("keeps the reporting bucket private", () => {
+    const sql = fileNamed("reporting_storage_bucket").sql;
+    // The `public` column of storage.buckets must be false. Company financials
+    // behind a guessable URL is the failure this asserts against.
+    expect(sql).toMatch(/'reporting-sources',\s*\n?\s*false/);
+    expect(sql).not.toMatch(/'reporting-sources',\s*\n?\s*true/);
+  });
+});
+
+/**
+ * ============================================================================
+ * THE REPORTING DOMAIN IS SERVER-ONLY. THE GRANTS ABOVE ARE NOW HISTORY.
+ * ============================================================================
+ *
+ * The assertions in "row level security posture" describe what
+ * `reporting_rls` DID, and they stay: that file really does grant
+ * `authenticated` select, and a test that lied about a shipped migration would
+ * be worse than no test. What that posture turned out to ALLOW is the point of
+ * this block.
+ *
+ * `using (true)` is a policy, so Supabase's linter reports row level security
+ * as healthy and raises nothing. But the browser holds a session and the
+ * publishable key, so a signed-in leader could read PostgREST directly and take
+ * every salon's facts -- 13824 rows of `comp_sales_facts` in the audit that
+ * found this -- going around the server-side salon scope entirely.
+ *
+ * The fix removes the browser rather than reproducing the salon rule in 27
+ * policies, because nothing in a browser ever read these: every reporting read
+ * runs under the secret key in a `server-only` module. So these tests assert
+ * the END STATE, which is what an attacker meets, rather than any one file's
+ * intent.
+ */
+const SERVER_ONLY_MIGRATION = "reporting_tables_server_only";
+
+/** Every reporting table the browser could read before the migration below. */
+const BROWSER_READABLE_TABLES = [
+  "bed_equipment_levels",
+  "bed_usage_chain_benchmarks",
+  "bed_usage_equipment_facts",
+  "bed_usage_salon_facts",
+  "bed_usage_snapshots",
+  "comp_sales_facts",
+  "report_files",
+  "report_ingestions",
+  "report_metrics",
+  "report_periods",
+  "report_sources",
+  "sales_totals_facts",
+  "sales_totals_metrics",
+  "sales_totals_scopes",
+  "sales_totals_snapshots",
+  "salon_period_attributes",
+  "salons",
+  "spa_bed_inventory",
+  "spa_engagement_daily_facts",
+  "spa_engagement_manager_facts",
+  "spa_engagement_salon_facts",
+  "spa_engagement_snapshots",
+  "spa_equipment_benchmarks",
+  "spa_equipment_types",
+  "spa_wellness_equipment_facts",
+  "spa_wellness_salon_facts",
+  "spa_wellness_snapshots",
+] as const;
+
+/**
+ * The views are listed separately because forgetting them is the exact mistake
+ * that would undo the whole migration: a view is a table to Supabase's default
+ * privileges, and these join the same facts back together.
+ */
+const BROWSER_READABLE_VIEWS = [
+  "bed_usage_current_equipment_facts",
+  "bed_usage_current_salon_facts",
+  "comp_sales_current_facts",
+  "comp_sales_filter_options",
+  "comp_sales_metric_catalogue",
+  "comp_sales_report_scope",
+  "comp_sales_source_views",
+  "sales_totals_current_facts",
+  "spa_conversion_current",
+  "spa_engagement_current_salon_facts",
+  "spa_wellness_current_equipment_facts",
+  "spa_wellness_current_salon_facts",
+] as const;
+
+describe("the browser cannot reach the reporting domain", () => {
+  it("revokes every reporting table and view from both browser roles", () => {
+    const sql = statementsOnly(fileNamed(SERVER_ONLY_MIGRATION).sql);
+
+    for (const relation of [...BROWSER_READABLE_TABLES, ...BROWSER_READABLE_VIEWS]) {
+      expect(sql, `${relation} is still reachable by a browser role`).toContain(
+        `revoke all on public.${relation} from anon, authenticated;`,
+      );
+    }
+  });
+
+  it("drops every permissive browser select policy", () => {
+    /*
+     * The revoke alone denies these roles. The policy goes too because a
+     * `using (true)` sitting beside a revoked grant is a loaded spring: one
+     * `grant select` typed later and the table is open again, with nothing in
+     * that diff to suggest it.
+     */
+    const sql = statementsOnly(fileNamed(SERVER_ONLY_MIGRATION).sql);
+
+    for (const table of BROWSER_READABLE_TABLES) {
+      expect(sql, `${table} keeps its permissive policy`).toContain(
+        `drop policy if exists ${table}_select_authenticated on public.${table};`,
+      );
+    }
+  });
+
+  it("leaves row level security enabled, disabling nothing", () => {
+    // Deny-all is RLS ON with no policy. Turning RLS off to "simplify" the
+    // table after removing its policy would reopen it to anything later
+    // granted, which is the failure this whole migration exists to prevent.
+    const sql = statementsOnly(fileNamed(SERVER_ONLY_MIGRATION).sql);
+    expect(sql).not.toMatch(/disable row level security/i);
+    expect(sql).not.toMatch(/no force row level security/i);
+  });
+
+  it("never re-grants a reporting relation to a browser role afterwards", () => {
+    /*
+     * THE ONE THAT MATTERS IN A YEAR. Closing this today is worth little if the
+     * next reporting migration re-adds `grant select ... to authenticated` out
+     * of habit, copied from the file above it. Only files ordered AFTER the
+     * migration are checked, because the historical grants are real and must
+     * keep passing their own assertions.
+     */
+    const files = reportingFiles();
+    const at = files.findIndex((file) => file.name.includes(SERVER_ONLY_MIGRATION));
+    expect(at, "the server-only migration is missing").toBeGreaterThanOrEqual(0);
+
+    const later = files.slice(at + 1);
+    for (const file of later) {
+      const sql = statementsOnly(file.sql);
+      for (const relation of [...BROWSER_READABLE_TABLES, ...BROWSER_READABLE_VIEWS]) {
+        expect(sql, `${file.name} re-grants ${relation} to a browser role`).not.toContain(
+          `grant select on public.${relation} to authenticated;`,
+        );
+      }
+    }
+  });
+
+  it("leaves the authentication path alone", () => {
+    /*
+     * `app_users` is the one table a browser role legitimately reads: getAppUser
+     * queries it through the SESSION client so `app_users_select_own`
+     * (`id = auth.uid()`) enforces one row, rather than the `.eq` being trusted
+     * on its own. Revoking it would break sign-in for everybody, and it is not
+     * this class of bug -- its policy is identity-scoped, not `using (true)`.
+     */
+    const sql = statementsOnly(fileNamed(SERVER_ONLY_MIGRATION).sql);
+    expect(sql).not.toContain("app_users");
+  });
+});
+
+describe("the salon business key survives round trips", () => {
+  it("declares salon_number as text, never a numeric type", () => {
+    /*
+     * THE ZERO-PADDING HAZARD. Source salon numbers look like '0468'. Read as
+     * an integer the leading zero is lost, and the next report that reads it
+     * correctly creates a SECOND salon for the same store — silently splitting
+     * its history in two. Verified against a live Postgres: '0468' and '468'
+     * are two distinct rows under the unique constraint.
+     */
+    const sql = statementsOnly(fileNamed("reporting_dimensions").sql);
+    expect(sql).toContain("salon_number text not null");
+    expect(sql).not.toMatch(/salon_number\s+(integer|bigint|smallint|numeric)/i);
+    expect(sql).toContain("constraint salons_salon_number_key unique (salon_number)");
+  });
+
+  it("refuses a salon number with surrounding whitespace", () => {
+    const sql = statementsOnly(fileNamed("reporting_dimensions").sql);
+    expect(sql).toContain("constraint salons_salon_number_format");
+  });
+});
+
+describe("the metric catalogue is a controlled vocabulary", () => {
+  it("makes facts reference metrics by foreign key, not by name", () => {
+    const sql = statementsOnly(fileNamed("comp_sales_facts").sql);
+    expect(sql).toContain("metric_id uuid not null");
+    // No free-text metric name column on the fact table.
+    expect(sql).not.toMatch(/metric_code\s+text/i);
+  });
+
+  it("enforces the basis-year rule in the database, not only in the parser", () => {
+    /*
+     * The composite foreign key targets (id, basis_year_required) TOGETHER, so
+     * a fact whose flag disagrees with the catalogue has no parent row to point
+     * at. The check then ties the flag to the value actually present. Between
+     * them, a metric that needs a year cannot be stored without one.
+     */
+    const facts = statementsOnly(fileNamed("comp_sales_facts").sql);
+    const dims = statementsOnly(fileNamed("reporting_dimensions").sql);
+
+    expect(facts).toContain("foreign key (metric_id, metric_basis_year_required)");
+    expect(facts).toContain("references public.report_metrics (id, basis_year_required)");
+    expect(facts).toContain(
+      "check (metric_basis_year_required = (basis_year is not null))",
+    );
+    // The composite reference is only legal because of this unique constraint.
+    expect(dims).toContain(
+      "constraint report_metrics_id_basis_year_key unique (id, basis_year_required)",
+    );
+  });
+
+  it("stores money and counts as numeric, never floating point", () => {
+    const sql = statementsOnly(fileNamed("comp_sales_facts").sql);
+    expect(sql).toContain("value numeric not null");
+    expect(sql).not.toMatch(/value\s+(double precision|real|float)/i);
+  });
+
+  it("seeds reference data idempotently and with no report content", () => {
+    const seed = fileNamed("reporting_seed_comp_sales");
+    const inserts = statementsOnly(seed.sql).match(/insert into/gi) ?? [];
+    const guards = statementsOnly(seed.sql).match(/on conflict[^;]*do nothing/gi) ?? [];
+    expect(inserts.length).toBeGreaterThan(0);
+    expect(guards.length, "every seed insert must be idempotent").toBe(inserts.length);
+    // Reference data only: no salon, no figure, no period from a real report.
+    expect(statementsOnly(seed.sql)).not.toContain("insert into public.salons");
+    expect(statementsOnly(seed.sql)).not.toContain("insert into public.comp_sales_facts");
+  });
+});
+
+describe("history is preserved rather than overwritten", () => {
+  it("gives facts and attributes a supersession column", () => {
+    const facts = statementsOnly(fileNamed("comp_sales_facts").sql);
+    const dims = statementsOnly(fileNamed("reporting_dimensions").sql);
+
+    for (const [label, sql] of [["facts", facts], ["attributes", dims]] as const) {
+      expect(sql, label).toContain(
+        "superseded_by_ingestion_id uuid references public.report_ingestions (id)",
+      );
+    }
+  });
+
+  it("scopes the business key to live rows only", () => {
+    /*
+     * IDEMPOTENCY LAYER 3. At most one live fact per salon, period, metric,
+     * baseline year AND SOURCE SHEET, so a second report for a period already
+     * loaded cannot double the numbers. The partial predicate is what lets a
+     * correction be inserted alongside its predecessor instead of replacing it.
+     *
+     * READ FROM THE LAST MIGRATION THAT DEFINES IT, not from the one that
+     * created it. This assertion used to read `comp_sales_facts.sql` alone and
+     * quote the original four-column key — so when
+     * `comp_sales_live_key_per_sheet` added `source_sheet`, the test went on
+     * passing while describing a key the deployed schema no longer had. A
+     * schema contract that only ever reads the CREATING migration stops being a
+     * contract the first time something is altered.
+     */
+    expect(effectiveLiveKey()).toBe(
+      "create unique index comp_sales_facts_live_key on public.comp_sales_facts (salon_id, period_id, metric_id, coalesce(basis_year, -1), source_sheet) where superseded_by_ingestion_id is null",
+    );
+
+    const dims = statementsOnly(fileNamed("reporting_dimensions").sql);
+    expect(dims).toContain(
+      "create unique index salon_period_attributes_live_key on public.salon_period_attributes (salon_id, period_id) where superseded_by_ingestion_id is null",
+    );
+  });
+
+  it("includes the source sheet, because supersession is scoped to sheets", () => {
+    /*
+     * WHY THE SHEET IS PART OF THE KEY. `reporting_supersession_scope` scopes
+     * supersession to the sheets a report read, so two sheets of one workbook
+     * are independent slices. A key without `source_sheet` contradicted that:
+     * it let one sheet's figure block another's for the same salon, period,
+     * metric and year. The two only agreed while the sheets' mapped columns
+     * happened to be disjoint.
+     */
+    const scope = statementsOnly(fileNamed("reporting_supersession_scope").sql);
+    expect(scope).toContain("source_sheet = any (v_sheet_names)");
+    expect(effectiveLiveKey()).toContain("source_sheet)");
+  });
+
+  it("changes the key by replacing the index, touching no row", () => {
+    const migration = fileNamed("comp_sales_live_key_per_sheet").sql;
+    const sql = statementsOnly(migration);
+
+    // Index work only: no data is read, written, moved or deleted.
+    expect(sql).toContain("drop index if exists public.comp_sales_facts_live_key");
+    expect(sql).toContain("create unique index comp_sales_facts_live_key");
+    for (const forbidden of [
+      "insert into",
+      "update public.comp_sales_facts",
+      "delete from",
+      "alter table",
+      "truncate",
+    ]) {
+      expect(sql, forbidden).not.toContain(forbidden);
+    }
+  });
+
+  it("never deletes a fact or an attribute row in a migration", () => {
+    const sql = reportingSql();
+    expect(sql).not.toMatch(/delete from public\.comp_sales_facts/i);
+    expect(sql).not.toMatch(/delete from public\.salon_period_attributes/i);
+  });
+
+  it("only ever updates a fact to STAMP it superseded, never to restate it", () => {
+    /*
+     * Corrections supersede; they never overwrite. Supersession is implemented
+     * by setting `superseded_by_ingestion_id` on the outgoing row — that IS the
+     * mechanism, so an UPDATE is expected here.
+     *
+     * What must never appear is an update that touches anything else: the
+     * moment a migration can rewrite `value`, "what did the report say when it
+     * first arrived" stops being answerable, which is the whole point of
+     * keeping the old row. So every assignment is checked, not just the
+     * presence of an UPDATE.
+     */
+    const sql = reportingSql();
+    let inspected = 0;
+    for (const table of ["comp_sales_facts", "salon_period_attributes"] as const) {
+      const pattern = new RegExp(`update public\\.${table}\\s+set\\s+([\\s\\S]*?)\\s+where`, "gi");
+      for (const match of sql.matchAll(pattern)) {
+        inspected += 1;
+        const assigned = match[1]
+          .split(",")
+          .map((assignment) => assignment.split("=")[0].trim().toLowerCase());
+        expect(assigned, `${table} update assigns more than the supersession stamp`).toEqual([
+          "superseded_by_ingestion_id",
+        ]);
+      }
+    }
+    // Guard against a vacuous pass: the supersession updates DO exist, so if
+    // the pattern matched nothing the assertion above proved nothing.
+    expect(inspected, "no supersession update was found to inspect").toBeGreaterThanOrEqual(2);
+  });
+
+  it("keeps each reporting period independently addressable", () => {
+    // Aug 16, Aug 23 and Aug 30 must be separate rows, not one row overwritten.
+    const sql = statementsOnly(fileNamed("reporting_periods_and_ingestions").sql);
+    expect(sql).toContain("constraint report_periods_grain_end_key unique (grain, period_end)");
+  });
+});
+
+describe("idempotency and lineage", () => {
+  it("makes file content identity unique", () => {
+    const sql = statementsOnly(fileNamed("reporting_sources_and_files").sql);
+    expect(sql).toContain("constraint report_files_sha256_key unique (file_sha256)");
+    expect(sql).toContain("check (file_sha256 ~ '^[0-9a-f]{64}$')");
+  });
+
+  it("makes delivery identity unique only where one exists", () => {
+    // Partial, so many files with no upstream id do not collide with each other.
+    const sql = statementsOnly(fileNamed("reporting_sources_and_files").sql);
+    expect(sql).toContain(
+      "create unique index report_files_source_message_key on public.report_files (source_id, external_message_id) where external_message_id is not null",
+    );
+  });
+
+  it("lets a failed parse be retried without destroying its record", () => {
+    /*
+     * RETRY SEMANTICS. A blanket unique on (file_id, parser_key,
+     * parser_version) would make a failed ingestion permanently unretryable:
+     * the only ways forward would be deleting the failed row or updating it in
+     * place, and both erase what went wrong — which is exactly the row an
+     * operator needs. Attempts are therefore unconstrained.
+     */
+    const sql = statementsOnly(fileNamed("reporting_periods_and_ingestions").sql);
+    expect(sql).not.toMatch(
+      /unique \(file_id, parser_key, parser_version\)\s*,/,
+    );
+  });
+
+  it("allows at most one attempt per file and parser version to succeed", () => {
+    /*
+     * The other half of the same rule: retries are free, SUCCESS is unique. So
+     * "these bytes have already been loaded by this parser version" is a fact
+     * the database guarantees rather than something the repository remembers.
+     * Duplicate facts are independently impossible via the live business key.
+     */
+    const sql = statementsOnly(fileNamed("reporting_periods_and_ingestions").sql);
+    expect(sql).toContain(
+      "create unique index report_ingestions_one_success_key on public.report_ingestions (file_id, parser_key, parser_version) where status = 'succeeded'",
+    );
+  });
+
+  it("refuses an ingestion that claims success without evidence", () => {
+    // Same shape as knowledge_documents_indexed_requires_status: a status is a
+    // claim, and the schema refuses claims the data does not support.
+    const sql = statementsOnly(fileNamed("reporting_periods_and_ingestions").sql);
+    expect(sql).toContain("constraint report_ingestions_succeeded_requires_period");
+    expect(sql).toContain("constraint report_ingestions_failed_requires_reason");
+  });
+
+  it("keeps the lineage chain unbroken by foreign key", () => {
+    // fact -> ingestion -> file -> source, plus cell-level columns on the fact.
+    const facts = statementsOnly(fileNamed("comp_sales_facts").sql);
+    const ing = statementsOnly(fileNamed("reporting_periods_and_ingestions").sql);
+    const files = statementsOnly(fileNamed("reporting_sources_and_files").sql);
+
+    expect(facts).toContain("ingestion_id uuid not null references public.report_ingestions (id)");
+    expect(facts).toContain("source_sheet text not null");
+    expect(facts).toContain("source_column text not null");
+    expect(ing).toContain("file_id uuid not null references public.report_files (id)");
+    expect(files).toContain("source_id uuid not null references public.report_sources (id)");
+  });
+
+  it("records which sheets an ingestion actually read", () => {
+    // The workbook carries an abandoned block of template columns that must
+    // never be ingested, so what was read is part of the lineage answer.
+    const sql = statementsOnly(fileNamed("reporting_periods_and_ingestions").sql);
+    expect(sql).toContain("source_sheet_names text[] not null default '{}'");
+  });
+});
+
+describe("extensibility to further report families", () => {
+  it("names the fact table after its family rather than generically", () => {
+    // One controlled fact model per report family. A single generic facts table
+    // shared by comp, KPI and bonus reports would have no way to say what a row
+    // means, and nowhere to put family-specific columns.
+    const names = reportingFiles().map((file) => file.name);
+    expect(names.some((name) => name.includes("comp_sales_facts"))).toBe(true);
+    expect(reportingSql()).not.toMatch(/create table public\.report_facts\b/i);
+  });
+
+  it("keeps the dimensions family-agnostic", () => {
+    // salons, report_periods, report_metrics and the lineage tables carry no
+    // comp-sales-specific column, so a KPI parser reuses them untouched.
+    const shared = [
+      statementsOnly(fileNamed("reporting_sources_and_files").sql),
+      statementsOnly(fileNamed("reporting_periods_and_ingestions").sql),
+      statementsOnly(fileNamed("reporting_dimensions").sql),
+    ].join(" ");
+
+    expect(shared).not.toContain("comp_sales_facts");
+    // The family a source feeds is data, not a column name.
+    expect(shared).toContain("report_family text not null");
+  });
+});
+
+/**
+ * The dashboard read views (checkpoint 6A).
+ *
+ * Two properties, both of which this project has already lost once and paid to
+ * find out: a view that is not `security_invoker` reads around row level
+ * security using its owner's BYPASSRLS, and a view created in `public` inherits
+ * Supabase's `grant all ... to anon, authenticated` default privileges unless
+ * they are explicitly revoked.
+ */
+const READ_VIEWS = [
+  "comp_sales_report_scope",
+  "comp_sales_filter_options",
+  "comp_sales_metric_catalogue",
+] as const;
+
+describe("dashboard read views are secured", () => {
+  it("ships the read-views migration", () => {
+    expect(reportingFiles().some((file) => file.name.includes("reporting_read_views"))).toBe(
+      true,
+    );
+  });
+
+  it("creates every read view with security_invoker", () => {
+    const sql = statementsOnly(fileNamed("reporting_read_views").sql);
+    for (const view of READ_VIEWS) {
+      expect(sql, view).toContain(`create or replace view public.${view} with (security_invoker = true)`);
+    }
+  });
+
+  it("revokes the inherited default privileges from both browser roles", () => {
+    const sql = statementsOnly(fileNamed("reporting_read_views").sql);
+    for (const view of READ_VIEWS) {
+      expect(sql, `${view} revoke`).toMatch(
+        new RegExp(`revoke all on public\\.${view}\\s+from public, anon, authenticated|revoke all on public\\.${view}\\s+from anon, authenticated`),
+      );
+    }
+  });
+
+  it("grants read-only access and never a write", () => {
+    const sql = statementsOnly(fileNamed("reporting_read_views").sql);
+    for (const view of READ_VIEWS) {
+      expect(sql, `${view} grant`).toContain(`grant select on public.${view}`);
+      expect(sql).not.toMatch(new RegExp(`grant (insert|update|delete|all) on public\\.${view}`, "i"));
+    }
+  });
+
+  it("revokes before it grants, so an additive grant cannot be undone", () => {
+    const sql = statementsOnly(fileNamed("reporting_read_views").sql);
+    for (const view of READ_VIEWS) {
+      const revoke = sql.indexOf(`revoke all on public.${view}`);
+      const grant = sql.indexOf(`grant select on public.${view}`);
+      expect(revoke, view).toBeGreaterThanOrEqual(0);
+      expect(grant, view).toBeGreaterThan(revoke);
+    }
+  });
+});
+
+describe("ingestion functions are not callable by browser roles", () => {
+  it("revokes execute from public, anon and authenticated", () => {
+    const sql = statementsOnly(fileNamed("reporting_ingestion_functions").sql);
+    for (const fn of [
+      "begin_report_ingestion",
+      "complete_comp_sales_ingestion",
+      "fail_report_ingestion",
+    ]) {
+      expect(sql, fn).toContain(`revoke all on function public.${fn}`);
+      expect(sql, fn).toMatch(new RegExp(`grant execute on function public\\.${fn}[^;]*to service_role`));
+    }
+  });
+
+  it("pins search_path on every ingestion function", () => {
+    const sql = statementsOnly(fileNamed("reporting_ingestion_functions").sql);
+    const creates = sql.match(/create or replace function public\.\w+/g) ?? [];
+    expect(creates.length).toBeGreaterThanOrEqual(3);
+    expect((sql.match(/set search_path = ''/g) ?? []).length).toBeGreaterThanOrEqual(creates.length);
+  });
+
+  it("never marks an ingestion function SECURITY DEFINER", () => {
+    const sql = statementsOnly(fileNamed("reporting_ingestion_functions").sql);
+    expect(sql).not.toMatch(/security definer/i);
+  });
+});
+
+/**
+ * EVERY INGESTION STATUS THE LIVE FUNCTIONS WRITE MUST BE A VALUE OF THE ENUM.
+ *
+ * 20260902001000_reporting_intake_lineage rewrote `begin_report_ingestion` and
+ * changed the status it opens an attempt with from 'parsing' to 'running',
+ * which report_ingestion_status does not define. Nothing here noticed: the enum
+ * is declared in one migration, the insert written in another, and no test
+ * looked at the pair. The defect reached the live project, where every
+ * ingestion after it failed with `invalid input value for enum` before writing
+ * a row — and the failure surfaced as a generic "ingestion could not be
+ * completed", because a database error string is deliberately not returned to
+ * an external caller.
+ *
+ * CHECKED AGAINST THE EFFECTIVE DEFINITION, NOT THE HISTORY. Migrations are
+ * append-only: the migration that introduced 'running' still contains it and
+ * must not be edited. What matters is the LAST definition of each function, so
+ * that is what these assertions resolve first.
+ */
+describe("ingestion statuses stay inside the enum", () => {
+  /** The enum's members, read from the migration that declares them. */
+  function ingestionStatuses(): string[] {
+    const sql = statementsOnly(fileNamed("reporting_enums").sql);
+    const declaration = /create type public\.report_ingestion_status as enum \(([^)]*)\)/.exec(sql);
+    expect(declaration, "report_ingestion_status is declared").not.toBeNull();
+    return [...(declaration as RegExpExecArray)[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
+  }
+
+  /**
+   * The body of the LAST migration that (re)defines `name`, which is the
+   * definition a freshly applied database ends up with.
+   */
+  function effectiveDefinition(name: string): { file: string; body: string } {
+    const opening = `create or replace function public.${name}(`;
+    const files = reportingFiles()
+      .map((file) => ({ file: file.name, sql: statementsOnly(file.sql) }))
+      .filter((file) => file.sql.includes(opening));
+    expect(files.length, `${name} is defined somewhere`).toBeGreaterThan(0);
+    const last = files[files.length - 1];
+    return { file: last.file, body: last.sql.slice(last.sql.lastIndexOf(opening)) };
+  }
+
+  /**
+   * The comma-separated items of a parenthesised list starting at `open`,
+   * split at TOP LEVEL only — `coalesce(p_sheet_names, '{}')` is one item, and
+   * a naive split on "," or a `[^)]*` capture makes it two and silently stops
+   * the whole check from matching anything.
+   */
+  function listAt(sql: string, open: number): string[] | null {
+    let depth = 0;
+    let quoted = false;
+    let item = "";
+    const items: string[] = [];
+    for (let at = open; at < sql.length; at += 1) {
+      const character = sql[at];
+      if (quoted) {
+        item += character;
+        if (character === "'") quoted = false;
+        continue;
+      }
+      if (character === "'") { quoted = true; item += character; continue; }
+      if (character === "(") {
+        depth += 1;
+        if (depth === 1) continue;
+      }
+      if (character === ")") {
+        depth -= 1;
+        if (depth === 0) { items.push(item.trim()); return items; }
+      }
+      if (character === "," && depth === 1) { items.push(item.trim()); item = ""; continue; }
+      item += character;
+    }
+    return null;
+  }
+
+  /** Status literals a body assigns to, or compares against, the column. */
+  function statusLiterals(sql: string): string[] {
+    const found = [...sql.matchAll(/status\s*(?:=|<>|!=)\s*'([a-z_]+)'/g)].map((m) => m[1]);
+
+    // The opening INSERT names its columns and values positionally, so the
+    // literal is found by the column's own index rather than by proximity.
+    for (const insert of sql.matchAll(/insert into public\.report_ingestions \(/g)) {
+      const columns = listAt(sql, insert.index + insert[0].length - 1);
+      if (!columns) continue;
+      const valuesAt = sql.indexOf("values (", insert.index);
+      if (valuesAt === -1) continue;
+      const values = listAt(sql, valuesAt + "values ".length);
+      if (!values || values.length !== columns.length) continue;
+      const at = columns.indexOf("status");
+      if (at === -1) continue;
+      const literal = /^'([a-z_]+)'$/.exec(values[at]);
+      if (literal) found.push(literal[1]);
+    }
+    return found;
+  }
+
+  const INGESTION_FUNCTIONS = [
+    "begin_report_ingestion",
+    "complete_comp_sales_ingestion",
+    "fail_report_ingestion",
+  ];
+
+  it("writes and compares only declared statuses", () => {
+    const statuses = ingestionStatuses();
+    expect(statuses).toContain("parsing");
+
+    let checked = 0;
+    for (const name of INGESTION_FUNCTIONS) {
+      const { file, body } = effectiveDefinition(name);
+      for (const status of statusLiterals(body)) {
+        checked += 1;
+        expect(statuses, `${file} has ${name} use status "${status}"`).toContain(status);
+      }
+    }
+    // A parse that silently matched nothing would pass every assertion above.
+    expect(checked, "status literals were actually found").toBeGreaterThan(3);
+  });
+
+  it("opens an attempt in the enum's active-processing state", () => {
+    // 'received' means the bytes are stored and nothing has read them yet, and
+    // 'succeeded' is the completion step's to write. An attempt opens in the
+    // one state between them.
+    expect(
+      statusLiterals(effectiveDefinition("begin_report_ingestion").body),
+    ).toContain("parsing");
+  });
+
+  it("agrees with any state the completion step guards on", () => {
+    // The completion step in 20260831001700 refused an attempt that was not
+    // 'parsing'; the supersession-scope rewrite did not carry that guard over.
+    // Whether it comes back is a separate decision — but if it does, it must
+    // name the state the opening INSERT actually writes, or every ingestion
+    // stalls with its attempt row already committed.
+    const guard = /where id = p_ingestion_id and status = '([a-z_]+)'/.exec(
+      effectiveDefinition("complete_comp_sales_ingestion").body,
+    );
+    if (guard === null) return;
+    expect(statusLiterals(effectiveDefinition("begin_report_ingestion").body)).toContain(
+      guard[1],
+    );
+  });
+
+  it("records the source of every attempt it opens", () => {
+    // report_ingestions.source_id is NOT NULL, and the same rewrite dropped it
+    // from the insert — a second failure hiding behind the first.
+    const { body } = effectiveDefinition("begin_report_ingestion");
+    const opening = body.indexOf("insert into public.report_ingestions (");
+    expect(opening, "an attempt is inserted").toBeGreaterThanOrEqual(0);
+    const columns = listAt(body, body.indexOf("(", opening));
+    expect(columns, "the insert names its columns").not.toBeNull();
+    expect(columns as string[]).toContain("source_id");
+  });
+});

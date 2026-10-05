@@ -1,0 +1,107 @@
+"use client";
+
+import { FileStack, Info } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { aiProviderStatus } from "@/lib/ai";
+import type { ChatMessage } from "@/types";
+
+/**
+ * Right-hand context rail: what grounded the most recent answer, what training
+ * matched, and an honest note about which provider is answering.
+ */
+export function ContextPanel({
+  messages,
+  onCreateForm,
+  busy = false,
+}: {
+  messages: ChatMessage[];
+  /**
+   * Starts a form FROM THIS CONVERSATION, without leaving it.
+   *
+   * Supplied by `ChatScreen`, which owns the conversation and the send path.
+   * This panel is only the trigger: it does not read the manager's turns, does
+   * not choose a template and does not create an instance. Doing any of that
+   * here would be a second orchestrator competing with the one that works.
+   */
+  onCreateForm?: () => void;
+  /**
+   * WHETHER A TURN IS ALREADY IN FLIGHT, and the reason this prop exists.
+   *
+   * `send` refuses a second question while one is running — correctly, since
+   * the answer is built from the conversation as it stands. What was wrong is
+   * that the refusal was INVISIBLE: the button stayed live, the manager pressed
+   * it, and nothing happened, on a control whose whole promise is "turn this
+   * conversation into a form". Reported from the Teams rollout as the action
+   * failing.
+   *
+   * So the refusal is stated where it happens. The control says it is waiting
+   * rather than silently discarding the press.
+   */
+  busy?: boolean;
+}) {
+  const provider = aiProviderStatus();
+
+  return (
+    <div className="scroll-slim h-full overflow-y-auto p-4">
+      <div className="rounded-[var(--radius-md)] border border-border bg-surface-muted p-3.5">
+        <div className="flex items-center gap-2">
+          <Info className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+          <p className="text-[13px] font-semibold text-foreground">
+            {provider.name}
+          </p>
+          <Badge tone={provider.connected ? "ready" : "neutral"} size="sm">
+            {provider.connected ? "Connected" : "Prototype"}
+          </Badge>
+        </div>
+        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+          {provider.detail}
+        </p>
+      </div>
+
+      <section className="mt-6">
+        <div className="mb-2 flex items-center gap-2">
+          <FileStack className="size-3.5 text-muted-foreground" aria-hidden />
+          <p className="eyebrow">Take it further</p>
+        </div>
+        <div className="space-y-1.5">
+          {/*
+            AN ACTION, NOT A LINK. This was `<Link href="/forms/create">`, which
+            navigated away from the conversation the manager was in the middle
+            of — to a builder where they retyped the employee and the incident
+            they had just described. The whole point of the button is the
+            conversation it is standing next to.
+          */}
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full justify-start"
+            disabled={!onCreateForm || busy}
+            onClick={onCreateForm}
+          >
+            Create a form from this conversation
+          </Button>
+          {busy ? (
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              Sunny is answering. This will be ready the moment that finishes.
+            </p>
+          ) : null}
+          {/*
+            THE TWO RAIL DUPLICATES ARE GONE.
+
+            The Marquee Chat artifact's punch list: "'Take it further' duplicates
+            the rail — Browse the knowledge base and Browse training videos are
+            both in the left nav. Keep only 'Create a form from this
+            conversation'."
+
+            Neither had any conversation context to carry: they were plain links
+            to `/knowledge` and `/videos`, two rows above the same two entries in
+            the navigation rail. The action that remains is the only one here
+            that can only be done from a thread.
+          */}
+        </div>
+      </section>
+    </div>
+  );
+}

@@ -1,0 +1,81 @@
+import { demoRuntime } from "@/lib/demo/runtime";
+import type { Role } from "@/types";
+import type {
+  AuthenticatedIdentity,
+  AuthProvider,
+  AuthRequestContext,
+} from "./types";
+
+/**
+ * DemoAuthProvider — the presenter's role switcher, described honestly.
+ *
+ * It returns a fully-formed identity for whichever demo role is active, which
+ * is exactly what the prototype needs and exactly what production must never
+ * accept. Two properties keep that line visible:
+ *
+ *   isProductionGrade = false      -> server guards refuse it in live mode
+ *   identity.verified  = false     -> nothing can mistake it for an assertion
+ *
+ * It performs no credential handling of any kind: no password is read, stored,
+ * compared or hashed, and no token is issued or validated.
+ */
+
+const DEMO_ROLE_HEADER = "x-ask-sunny-demo-role";
+
+export class DemoAuthProvider implements AuthProvider {
+  readonly kind = "demo" as const;
+  readonly name = "Demo role switcher (not authentication)";
+  readonly isProductionGrade = false;
+  readonly missingConfiguration: string[] = [];
+
+  private readonly defaultRole: Role;
+
+  constructor(defaultRole: Role = "location_manager") {
+    this.defaultRole = defaultRole;
+  }
+
+  async identify(context: AuthRequestContext): Promise<AuthenticatedIdentity> {
+    // The header is a convenience for exercising roles in the demo, and is
+    // trusted precisely because nothing it unlocks is protected: this provider
+    // is refused outright wherever authorization actually matters.
+    const requested = context.headers.get(DEMO_ROLE_HEADER);
+    const role = isRole(requested) ? requested : this.defaultRole;
+    /*
+     * FETCHED, NOT BUNDLED. This provider is only constructed in demo mode,
+     * but a static import of the seeded roster shipped to every deployment
+     * regardless. `identify` is already async, so the import costs nothing
+     * here and keeps a dozen fabricated people out of production.
+     */
+    const user = await demoRuntime.userForRole(role);
+    if (!user) {
+      throw new Error(
+        "DemoAuthProvider was constructed in a build with no demo runtime. " +
+          "This provider is only selected in demo mode; a production build has " +
+          "no seeded identity to hand back.",
+      );
+    }
+
+    return {
+      subject: `demo:${user.id}`,
+      email: user.email,
+      displayName: user.name,
+      role: user.role,
+      scope: user.scope,
+      // Never true. A demo identity is not an assertion about a real person.
+      verified: false,
+    };
+  }
+}
+
+const ROLES: Role[] = [
+  "assistant_manager",
+  "location_manager",
+  "district_manager",
+  "regional_manager",
+  "owner",
+  "developer",
+];
+
+function isRole(value: string | null): value is Role {
+  return typeof value === "string" && (ROLES as string[]).includes(value);
+}

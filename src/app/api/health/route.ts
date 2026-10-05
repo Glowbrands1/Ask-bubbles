@@ -1,0 +1,170 @@
+import { NextResponse } from "next/server";
+
+import { getRateLimiter } from "@/lib/api/rate-limit";
+import { authProviderStatus } from "@/lib/auth";
+import {
+  UNAUTHENTICATED_ESCAPE_HATCH,
+  isProductionRuntime,
+  unauthenticatedAccessAllowed,
+  unauthenticatedBypassAvailable,
+  unauthenticatedBypassIgnoredInProduction,
+} from "@/lib/auth/server";
+import { buildSecurityWarnings } from "@/lib/config/security-warnings";
+import { liveReadiness } from "@/lib/config/server-env";
+import { EMBEDDING_FUNCTION_NAME } from "@/lib/embeddings";
+
+/**
+ * GET /api/health
+ *
+ * Configuration readiness, by variable NAME only. No value of any environment
+ * variable is read into the response, so this is safe to call from the admin
+ * screen and safe to leave in a log.
+ *
+ * This reports whether the app is CONFIGURED. It does not claim any service has
+ * been reached: a present key is not a working key, and this endpoint does not
+ * pretend otherwise. `verified: false` says so in the payload itself.
+ *
+ * Deliberately unauthenticated: it is the screen an administrator uses to find
+ * out why nothing works, which must keep working when authentication is the
+ * thing that is broken. It discloses variable names, service names and model
+ * names — facts already in the repository — and nothing else.
+ */
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  const readiness = liveReadiness();
+  const auth = authProviderStatus();
+  const escapeHatchOn = unauthenticatedAccessAllowed();
+  const bypassAvailable = unauthenticatedBypassAvailable();
+  const bypassIgnored = unauthenticatedBypassIgnoredInProduction();
+
+  /* Security warnings are separate from configuration problems: these are
+     states that work but should not be trusted, rather than states that fail. */
+  const securityWarnings = buildSecurityWarnings({
+    mode: readiness.mode,
+    authProviderKind: auth.kind,
+    authIsProductionGrade: auth.productionGrade,
+    unauthenticatedAccessAllowed: escapeHatchOn,
+    unauthenticatedBypassIgnoredInProduction: bypassIgnored,
+    escapeHatchVariableName: UNAUTHENTICATED_ESCAPE_HATCH,
+  });
+
+  return NextResponse.json({
+    mode: readiness.mode,
+    /* Which rule chose the mode, and the environment Vercel built this
+       deployment for. Diagnostics, not secrets. */
+    modeSource: readiness.modeSource,
+    deploymentEnvironment: readiness.deploymentEnvironment,
+    configured: readiness.ready,
+    /* Names only. Never values. */
+    missingEnvironmentVariables: readiness.missing,
+    /* Misconfigurations that block live mode even when nothing is missing. */
+    configurationProblems: readiness.problems,
+    securityWarnings,
+    services: {
+      anthropic: {
+        configured: readiness.anthropic.ready,
+        missing: readiness.anthropic.missing,
+      },
+      embeddings: {
+        configured: readiness.embeddings.ready,
+        missing: readiness.embeddings.missing,
+        /* The model runs inside a Supabase Edge Function, so this service has
+           no credential of its own — it is ready exactly when Supabase is. */
+        provider: "Supabase Edge Functions",
+        functionName: EMBEDDING_FUNCTION_NAME,
+        note: "Runs the gte-small model inside the project's own Edge Runtime. No external embedding vendor and no separate API key.",
+      },
+      supabase: {
+        configured: readiness.supabase.ready,
+        missing: readiness.supabase.missing,
+        /* Which variable name supplied the privileged key. Never the value. */
+        secretKeySource: readiness.supabaseSecretKeySource,
+        browserPublishableKey: {
+          configured: readiness.supabaseBrowserKey.ready,
+          requiredNow: readiness.supabaseBrowserKey.requiredNow,
+          note: "Reserved for the browser client that arrives with authentication. Nothing reads it yet, so it does not block live mode.",
+        },
+      },
+      authentication: {
+        kind: auth.kind,
+        name: auth.name,
+        productionGrade: auth.productionGrade,
+        missing: auth.missingConfiguration,
+        detail: auth.detail,
+        /* Active right now. False in every production build. */
+        unauthenticatedAccessAllowed: escapeHatchOn,
+        developmentBypass: {
+          variable: UNAUTHENTICATED_ESCAPE_HATCH,
+          /* Whether this environment permits the bypass at all. */
+          available: bypassAvailable,
+          /* Whether it is currently in effect. */
+          active: escapeHatchOn,
+          /* Set on a production build, and therefore doing nothing. */
+          ignoredInProduction: bypassIgnored,
+          note: bypassAvailable
+            ? "This is a development or test runtime, so the bypass can be enabled for local acceptance testing."
+            : "This is a production build. The bypass is permanently disabled here and cannot be enabled by any environment variable.",
+        },
+      },
+    },
+    models: {
+      claude: readiness.claudeModel,
+      embedding: readiness.embeddingModel,
+      embeddingDimensions: readiness.embeddingDimensions,
+      embeddingDimensionMismatch: readiness.embeddingDimensionMismatch,
+    },
+    runtime: {
+      nodeEnv: process.env.NODE_ENV ?? null,
+      production: isProductionRuntime(),
+    },
+    /*
+     * ==========================================================================
+     * WHAT A PREVIEW IS AND IS NOT SAFE TO QA
+     * ==========================================================================
+     *
+     * The question a reviewer opening a Preview deployment actually has is "am
+     * I looking at real figures or at seeded ones", and `mode` alone does not
+     * answer it — because the answer is DIFFERENT for the reports and for the
+     * assistant, and assuming one rule covers both is the mistake this block
+     * exists to stop.
+     *
+     * THE REPORTS READ SUPABASE IN EITHER MODE. Not one of the five report
+     * pages consults `isDemoMode`, and the reporting read layer contains no
+     * demo branch at all — verified by test. So a Preview built in demo mode
+     * still shows REAL report data, and report QA on it is valid.
+     *
+     * THE ASSISTANT DOES NOT. In demo mode `getAIProvider` returns
+     * `MockAIProvider`, which invents figures. So every Ask Sunny answer on a
+     * demo-mode deployment is fiction, and any QA of a definition, a table or a
+     * refusal is worthless there.
+     *
+     * Both are facts about the architecture rather than about the data, so
+     * nothing here reads a value, a row or a count.
+     */
+    qa: {
+      reporting: {
+        source: "supabase",
+        dependsOnMode: false,
+        configured: readiness.supabase.ready,
+        note: "All five reports read the reporting tables in Supabase in either mode. Demo mode does not substitute seeded report data, so report QA is valid on a preview whatever the mode says.",
+      },
+      assistant: {
+        provider: readiness.mode === "live" ? "claude" : "mock",
+        dependsOnMode: true,
+        note:
+          readiness.mode === "live"
+            ? "Answers come from Claude and are grounded on the reporting tables. Assistant QA is valid here."
+            : "Answers come from the mock provider, which INVENTS figures. Assistant QA on this deployment is worthless — set NEXT_PUBLIC_DEMO_MODE=false for this environment and redeploy.",
+      },
+    },
+    rateLimit: {
+      name: getRateLimiter().name,
+      /* False for the in-memory limiter: counters are per server instance. */
+      distributed: getRateLimiter().distributed,
+    },
+    verified: false,
+    note: "Reports configuration only. No request has been made to any external service.",
+  });
+}

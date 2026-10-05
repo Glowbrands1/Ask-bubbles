@@ -1,0 +1,1002 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { AlertTriangle, Check, Download, ExternalLink, Loader2, Plus } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input, Label } from "@/components/ui/field";
+import { Notice } from "@/components/ui/feedback";
+import { Dialog, DialogActions, DialogContent } from "@/components/ui/overlays";
+import { downloadFormPdf, formsFetch } from "@/features/forms/forms-fetch";
+import { onFormUpdate } from "./form-update-events";
+import {
+  ResponsiveForm,
+  type ResponsiveFormValues,
+} from "@/features/forms/document/responsive-form";
+import { useSession } from "@/lib/session/session-context";
+import { checkboxGroupsForVariant, fieldsForVariant } from "@/lib/forms/document";
+import {
+  POLICY_ACKNOWLEDGEMENT_MESSAGE,
+  unverifiedPolicyFields,
+} from "@/lib/forms/policy-verification";
+import type {
+  FieldResponsibility,
+  FormDocument,
+  FormVariant,
+} from "@/lib/forms/document";
+import type { ChatFormInstanceRef } from "@/types";
+import { displayLocator } from "@/lib/knowledge/locator";
+
+/**
+ * ============================================================================
+ * WHERE SUNNY'S PREFILL HAS GOT TO
+ * ============================================================================
+ *
+ * The instance reference is persisted the instant the row exists — that is the
+ * Remediation 1 invariant and it is not moving. But the drafting request that
+ * follows it may run for up to two minutes, and rendering an editable form in
+ * the meantime produced a second race:
+ *
+ *   the editor fetched the instance immediately, showing the SEEDED values;
+ *   Sunny then wrote the real ones into the same row;
+ *   the editor never refetched, so the screen kept the pre-draft version.
+ *
+ * Two failures in one. The manager sees an empty-looking form and concludes
+ * Sunny did not fill it in — when the backend had succeeded — and if they start
+ * typing, their edit and the assistant's write land on the same canonical
+ * record in whatever order they happen to arrive.
+ *
+ * So the editor is told where prefill has got to, and it renders read-only
+ * until that question has an answer.
+ */
+export type PrefillState =
+  /** The drafting request is in flight. Read-only, and says so. */
+  | { kind: "running" }
+  /** It finished. Reload the canonical instance, then allow editing. */
+  | { kind: "complete" }
+  /** It failed. The form is real and editable; the warning explains. */
+  | { kind: "failed"; message: string }
+  /**
+   * This tab did not start it — the conversation was reopened from storage.
+   *
+   * Whether a prefill is still running, finished, or died with the tab that
+   * launched it is NOT knowable from here. The editor works it out from the
+   * form's own event trail instead; see `prefillNoticeFor`.
+   */
+  | { kind: "unknown" };
+
+/**
+ * ============================================================================
+ * THE REAL FORM, INSIDE THE CONVERSATION
+ * ============================================================================
+ *
+ * THE POSTGRES ROW IS THE SOURCE OF TRUTH, AND THIS COMPONENT IS BUILT AROUND
+ * THAT ONE SENTENCE. The chat message stores an id; every render fetches the
+ * instance by that id; every save is a request whose response is what gets
+ * displayed next. Nothing about the form's contents lives in IndexedDB.
+ *
+ * Why it has to work this way: a form is an HR record that outlives the browser
+ * it was created in. It gets edited from Form Monitoring, finalized, revised and
+ * read by people who were never in this conversation. A copy of its values in
+ * chat would be stale the first time any of that happened — and stale in the
+ * most dangerous direction, because it would look authoritative.
+ *
+ * ============================================================================
+ * WHAT IT DOES WHEN THE SERVER SAYS NO
+ * ============================================================================
+ *
+ *   404  the form is gone. Say so. Do NOT create another one — the manager
+ *        asked for a form once, and silently making a second is how duplicate
+ *        disciplinary records happen.
+ *   403  no longer permitted. Say so, for the same reason.
+ *   finalized  render it read-only. Phase 4 adds the finalized controls; this
+ *        phase must simply not assume every referenced form stays a draft.
+ */
+
+interface LoadedValueRow {
+  fieldKey: string;
+  value: string | null;
+  checked: string[];
+  filledBy: FieldResponsibility;
+  /**
+   * What the server recorded about where this value came from.
+   *
+   * `verified: true` is written ONLY by `provenanceFor` when `groundPolicy`
+   * returned passages above the match floor — see `policy-grounding.ts`. A
+   * manager's own edit goes through `saveInstanceValues`, which writes
+   * `filled_by: "manager"` and leaves this empty. That difference is what lets
+   * the notice below tell "no approved policy matched" from "somebody typed
+   * something here", and it already travels on every GET.
+   */
+  provenance?: Record<string, unknown>;
+}
+
+interface LoadedInstance {
+  instance: {
+    id: string;
+    templateName: string;
+    templateVersion: number;
+    templateVersionId: string;
+    variantKey: string | null;
+    employeeName: string;
+    locationId: string | null;
+    locationName: string | null;
+    source: "manual" | "ask_sunny";
+    status: "draft" | "finalized" | "revised";
+    followUpDate: string | null;
+  };
+  version: { document: FormDocument; variants: FormVariant[] };
+  values: LoadedValueRow[];
+  /** The form's own audit trail. Used to answer the `unknown` case honestly. */
+  events: { kind: string; actor: string; createdAt: string }[];
+}
+
+type SaveState =
+  | { kind: "clean" }
+  | { kind: "dirty" }
+  | { kind: "saving" }
+  | { kind: "saved" }
+  | { kind: "error"; message: string };
+
+type ActionState =
+  | { kind: "idle" }
+  | { kind: "busy"; what: "follow-up" | "finalize" | "pdf" }
+  | { kind: "error"; message: string };
+
+type LoadState =
+  | { kind: "loading" }
+  | { kind: "ready"; loaded: LoadedInstance }
+  | { kind: "gone"; message: string };
+
+function splitValues(rows: LoadedValueRow[]): ResponsiveFormValues {
+  const values: Record<string, string> = {};
+  const checked: Record<string, string[]> = {};
+  for (const row of rows) {
+    if (row.value !== null) values[row.fieldKey] = row.value;
+    if (row.checked.length) checked[row.fieldKey] = row.checked;
+  }
+  return { values, checked };
+}
+
+export function InlineForm({
+  reference,
+  prefill,
+  onStartAnother,
+}: {
+  reference: ChatFormInstanceRef;
+  prefill: PrefillState;
+  /** Begins a NEW request. Never reuses this instance — see the button below. */
+  onStartAnother?: () => void;
+}) {
+  const { role, user } = useSession();
+  const [load, setLoad] = React.useState<LoadState>({ kind: "loading" });
+  const [edits, setEdits] = React.useState<ResponsiveFormValues>({ values: {}, checked: {} });
+  const [save, setSave] = React.useState<SaveState>({ kind: "clean" });
+  /*
+   * BUMPED WHEN A CHAT TURN CORRECTED THIS FORM ("change her new location to
+   * salon 24"), so the fetch below re-reads the canonical instance. See
+   * `form-update-events.ts`.
+   */
+  const [externalRevision, setExternalRevision] = React.useState(0);
+  React.useEffect(
+    () => onFormUpdate(reference.instanceId, () => setExternalRevision((value) => value + 1)),
+    [reference.instanceId],
+  );
+  /*
+   * THE FOLLOW-UP DATE IS INSTANCE METADATA, NOT A FIELD ON THIS TEMPLATE.
+   *
+   * The published Coaching Form has no follow-up field at all — which is why a
+   * model narrating "I will check in on [Follow-Up Date]" into Details was
+   * putting one fact under two authorities, and why that sentence is now
+   * stripped before anything is stored. The date lives on `form_instances` and
+   * is set through its own route, so it gets its own control.
+   *
+   * It starts EMPTY unless the server already holds one. There is no
+   * deterministic product rule for a default here, so inventing "today + 14"
+   * would be exactly the kind of manufactured HR fact this workstream removed.
+   */
+  const [followUp, setFollowUp] = React.useState("");
+  const [action, setAction] = React.useState<ActionState>({ kind: "idle" });
+  /*
+   * THE ACKNOWLEDGEMENT DIALOG. Open only while the manager is being asked;
+   * their answer is passed straight into the request rather than stored, so a
+   * previous "Finalize anyway" cannot silently authorise a later one.
+   */
+  const [confirmingPolicy, setConfirmingPolicy] = React.useState(false);
+
+  const call = React.useCallback(
+    <T,>(url: string, init: RequestInit = {}) => formsFetch<T>(url, role, user.name, init),
+    [role, user.name],
+  );
+
+  const instanceId = reference.instanceId;
+
+  /*
+   * ==========================================================================
+   * FETCHED ON MOUNT, AND FETCHED AGAIN THE MOMENT PREFILL SETTLES
+   * ==========================================================================
+   *
+   * `prefill.kind` is in the dependency list, which is the fix: when it moves
+   * from `running` to `complete` or `failed` the canonical instance is read
+   * again, so the screen shows what Sunny actually wrote rather than the
+   * seeded values this component first loaded.
+   *
+   * THE RELOAD IS A GET, NOT THE DRAFT RESPONSE. The drafting endpoint does
+   * return the values it accepted, and copying those into React would be
+   * quicker and wrong: `applyAssistantDraft` re-filters them, the policy guard
+   * can withhold a field the model wrote, and a value the server refused would
+   * sit on screen looking saved. The canonical read stays the only authority.
+   *
+   * After a refresh this is still the only path there is: the conversation
+   * reloads from IndexedDB carrying an id, and the values come from the server.
+   * Local edits are deliberately reset by a fresh load.
+   */
+  React.useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const loaded = await call<LoadedInstance>(`/api/forms/instances/${instanceId}`);
+        if (cancelled) return;
+        setLoad({ kind: "ready", loaded });
+        setEdits(splitValues(loaded.values));
+        setSave({ kind: "clean" });
+        // Server value, or blank. Never a generated one.
+        setFollowUp(loaded.instance.followUpDate ?? "");
+        setAction({ kind: "idle" });
+      } catch (error) {
+        if (cancelled) return;
+        setLoad({ kind: "gone", message: (error as Error).message });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [call, instanceId, prefill.kind, externalRevision]);
+
+  if (load.kind === "loading") {
+    return (
+      <div className="mt-4 flex items-center gap-2 rounded-[var(--radius-md)] border border-border bg-surface-muted px-4 py-3 text-xs text-muted-foreground">
+        <Loader2 className="size-3.5 animate-spin" aria-hidden />
+        Opening {reference.templateName}…
+      </div>
+    );
+  }
+
+  if (load.kind === "gone") {
+    return (
+      <Notice tone="attention" className="mt-4">
+        <span className="font-semibold text-foreground">This form is not available</span>
+        <p className="mt-0.5">
+          {load.message} Ask Sunny has not created another one — if you still need this
+          form, start a new conversation about it.
+        </p>
+      </Notice>
+    );
+  }
+
+  const { loaded } = load;
+
+  /*
+   * NOT EDITABLE WHILE SUNNY IS STILL WRITING. A finalized form is read-only
+   * because its values are frozen; a prefilling one is read-only because the
+   * manager and the assistant would otherwise be writing to the same canonical
+   * record at the same time, in whatever order the requests happen to land.
+   */
+  const finalized = loaded.instance.status !== "draft";
+  /* Whether the form's own body carries an agreed follow-up timeframe. */
+  const hasTimeframeField = fieldsForVariant(
+    loaded.version.document,
+    loaded.instance.variantKey,
+  ).some((field) => field.semantics === "follow_up_timeframe");
+  const prefilling = prefill.kind === "running";
+  const readOnly = finalized || prefilling;
+  const notice = prefillNoticeFor(prefill, loaded);
+  const reviewNotice = reviewConversationNoticeFor(loaded, prefilling);
+  const policyNotice = policyVerificationNoticeFor(loaded, prefilling);
+  /*
+   * THE SAME RULE THE SERVER APPLIES, with no `ask_sunny` gating — a corrective
+   * form started by hand in the old Create a Form screen (since removed; its
+   * instances are still opened here) has unsourced policy fields too, and
+   * the server will refuse to finalize it. The NOTICE above stays gated to
+   * assistant-drafted forms so a blank manual form is not nagged the moment it
+   * opens; the DIALOG is not, because meeting a refusal with no way past it is
+   * worse than being asked.
+   */
+  const unresolvedPolicy = unverifiedPolicyFields(
+    loaded.version.document,
+    loaded.instance.variantKey,
+    loaded.values,
+  );
+  const policySources = storedPolicySources(loaded.values);
+  const variant =
+    loaded.version.variants.find((entry) => entry.key === loaded.instance.variantKey) ?? null;
+
+  function change(next: ResponsiveFormValues) {
+    setEdits(next);
+    // "Saved" must never survive a keystroke — it would be describing the
+    // previous state of the form.
+    setSave({ kind: "dirty" });
+  }
+
+  /** Re-reads the canonical instance. Every action ends here. */
+  async function reload() {
+    const loaded = await call<LoadedInstance>(`/api/forms/instances/${instanceId}`);
+    setLoad({ kind: "ready", loaded });
+    setEdits(splitValues(loaded.values));
+    setFollowUp(loaded.instance.followUpDate ?? "");
+    setSave({ kind: "clean" });
+    return loaded;
+  }
+
+  /**
+   * The follow-up date, through its own canonical route.
+   *
+   * `PUT /api/forms/instances/[id]/follow-up` validates the calendar date,
+   * refuses an archived or already-completed follow-up, and records
+   * `follow_up_started` or `follow_up_date_changed` so the history says which
+   * happened. None of that is re-implemented here.
+   */
+  async function saveFollowUp() {
+    if (action.kind === "busy") return;
+    setAction({ kind: "busy", what: "follow-up" });
+    try {
+      await call(`/api/forms/instances/${instanceId}/follow-up`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ date: followUp }),
+      });
+      await reload();
+      setAction({ kind: "idle" });
+    } catch (error) {
+      setAction({ kind: "error", message: (error as Error).message });
+    }
+  }
+
+  /**
+   * FINALIZE — and never with unsaved edits in the box.
+   *
+   * Finalizing freezes the values the SERVER holds. A manager who typed into
+   * Details and then finalized without saving would freeze the version without
+   * their change and have no way to correct it but a revision. So the control
+   * is disabled while the editor is dirty, and this is the second guard.
+   */
+  async function finalize(acknowledgeUnverifiedPolicy = false) {
+    if (action.kind === "busy") return;
+    if (save.kind === "dirty" || save.kind === "saving") {
+      setAction({
+        kind: "error",
+        message: "Save your changes first — finalizing freezes what the server holds.",
+      });
+      return;
+    }
+
+    /*
+     * ========================================================================
+     * AN UNVERIFIED POLICY IS ASKED ABOUT, NOT WAVED THROUGH AND NOT BLOCKED
+     * ========================================================================
+     *
+     * Finalizing freezes an HR record. Doing that to a corrective action whose
+     * policy nobody sourced — silently, on one click — is how a form nobody
+     * checked becomes a form nobody can un-issue.
+     *
+     * THE SERVER IS THE GUARANTEE, not this. `finalizeInstance` refuses an
+     * unacknowledged finalize outright and answers 409, so a client that
+     * skipped this dialog would still be refused. What the dialog adds is a
+     * way THROUGH that refusal for the manager who has read the manual
+     * themselves — without it they would meet a dead end.
+     *
+     * Both read the same rule from `policy-verification.ts`, which is what
+     * stops the dialog opening on forms the server would wave through, or
+     * failing to open on ones it would refuse.
+     */
+    if (!acknowledgeUnverifiedPolicy && unresolvedPolicy.length > 0) {
+      setConfirmingPolicy(true);
+      return;
+    }
+
+    setConfirmingPolicy(false);
+    setAction({ kind: "busy", what: "finalize" });
+    try {
+      await call(`/api/forms/instances/${instanceId}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        // The canonical follow-up date, or none. Never a generated one.
+        body: JSON.stringify({
+          action: "finalize",
+          followUpDate: followUp || null,
+          ...(acknowledgeUnverifiedPolicy ? { acknowledgeUnverifiedPolicy: true } : {}),
+        }),
+      });
+      await reload();
+      setAction({ kind: "idle" });
+    } catch (error) {
+      setAction({ kind: "error", message: (error as Error).message });
+    }
+  }
+
+  /**
+   * The PDF comes from the server, from the pinned template version and the
+   * stored values — never from what this component happens to be holding.
+   * `downloadFormPdf` fetches it with the Forms headers, because a plain link
+   * carries none and would download a JSON error instead of a record.
+   */
+  async function downloadPdf() {
+    if (action.kind === "busy") return;
+    setAction({ kind: "busy", what: "pdf" });
+    try {
+      await downloadFormPdf(instanceId, role, user.name);
+      setAction({ kind: "idle" });
+    } catch (error) {
+      setAction({ kind: "error", message: (error as Error).message });
+    }
+  }
+
+  async function submit() {
+    if (save.kind === "saving") return;
+    setSave({ kind: "saving" });
+    try {
+      const result = await call<{ values: LoadedValueRow[] }>(
+        `/api/forms/instances/${instanceId}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ values: edits.values, checked: edits.checked }),
+        },
+      );
+      /*
+       * The response carries the RELOADED instance, so what is displayed after
+       * a save is what the server stored — including any value it rejected
+       * because the template does not let a person write it.
+       */
+      setEdits(splitValues(result.values));
+      setSave({ kind: "saved" });
+      setAction({ kind: "idle" });
+    } catch (error) {
+      /*
+       * THE MANAGER'S TYPING SURVIVES A FAILED SAVE. `edits` is untouched here
+       * on purpose: they may have spent five minutes on the details field, and
+       * discarding it to show a clean error would be the worst possible
+       * response to a network blip.
+       */
+      setSave({ kind: "error", message: (error as Error).message });
+    }
+  }
+
+  return (
+    <div className="mt-4 min-w-0 rounded-[var(--radius-md)] border border-border bg-surface-muted p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-[13px] font-semibold text-foreground">
+          {loaded.instance.templateName}
+        </p>
+        {/*
+          THE BADGE REPORTS STATUS, NOT EDITABILITY, AND THE TWO ARE NOT THE
+          SAME THING. `readOnly` is now true while Sunny is prefilling as well
+          as when a form is frozen — driving the label from it would put
+          "Finalized" on an unsigned draft, which is a false statement about an
+          HR record and exactly the kind of thing nobody re-reads.
+        */}
+        <Badge tone={finalized ? "outline" : "accent"} size="sm">
+          {finalized ? "Finalized" : "Draft"}
+        </Badge>
+      </div>
+
+      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+        <dt className="text-subtle-foreground">Employee</dt>
+        <dd className="min-w-0 text-foreground">{loaded.instance.employeeName}</dd>
+        <dt className="text-subtle-foreground">Salon</dt>
+        <dd className="min-w-0 text-foreground">
+          {/*
+            THE ID, OR NOTHING. `location_name` is only set when a caller
+            supplied one, and chat deliberately supplies none: the only source
+            of a salon display name in this app is `PRODUCTION_SALONS`, which is
+            seeded demo data. See docs/chat-phase-3.md.
+          */}
+          {loaded.instance.locationName ?? (
+            <span className="font-mono text-[11px]">
+              {loaded.instance.locationId ?? "—"}
+            </span>
+          )}
+        </dd>
+      </dl>
+
+      {notice ? (
+        <Notice tone={notice.tone} className="mt-3">
+          {notice.text}
+        </Notice>
+      ) : null}
+
+      {/*
+        WHAT TO DO WITH A PERFORMANCE PLAN, ON THE PLAN ITSELF.
+
+        A plan is not finished when Sunny stops writing: it is finished after
+        the conversation with the employee, which is also when it is signed.
+        Saying so here rather than in the chat prose means it survives a
+        refresh and is still there when the form is reopened next week.
+      */}
+      {reviewNotice ? (
+        <Notice tone="neutral" className="mt-3">
+          {reviewNotice}
+        </Notice>
+      ) : null}
+
+      {/*
+        THE POLICY FIELDS ARE BLANK, AND THE FORM SAYS SO.
+
+        Read off the stored record rather than off the drafting response, so it
+        survives a refresh and shows on a form reopened next week. See
+        `policyVerificationNoticeFor`.
+      */}
+      {policyNotice ? (
+        <Notice tone="attention" className="mt-3">
+          {policyNotice}
+        </Notice>
+      ) : null}
+
+      {/*
+        WHERE THE POLICY CAME FROM, WITH ITS PAGE.
+
+        Read off the value's own stored provenance — which `provenanceFor`
+        writes only from a retrieval above the match floor — so it survives a
+        refresh and cannot name a document nobody read. It is the answer to
+        "which manual is this, and where in it", months after the fact.
+      */}
+      {policySources.length > 0 ? (
+        <div className="mt-3 rounded-[var(--radius-sm)] border border-border bg-surface p-3">
+          <p className="eyebrow">Policy source</p>
+          <ul className="mt-1 space-y-0.5">
+            {policySources.map((source) => (
+              <li key={`${source.documentId}-${source.locator}`} className="text-xs text-foreground">
+                {source.documentTitle}
+                {source.locator ? ` — ${source.locator}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div className="mt-4 min-w-0 border-t border-border pt-4">
+        <ResponsiveForm
+          document={loaded.version.document}
+          variant={variant}
+          values={edits}
+          readOnly={readOnly}
+          onValue={(key, value) =>
+            change({ ...edits, values: { ...edits.values, [key]: value } })
+          }
+          onToggle={(key, option) => {
+            const current = edits.checked[key] ?? [];
+            /*
+             * A YES / NO HOLDS ONE ANSWER: ticking one unticks the other, and
+             * ticking the ticked one clears it back to unanswered. The save
+             * route refuses both at once as well — see `enforcePersonEdit`.
+             */
+            const single = checkboxGroupsForVariant(
+              loaded.version.document,
+              loaded.instance.variantKey,
+            ).some((group) => group.key === key && group.single);
+            const next = current.includes(option)
+              ? current.filter((entry) => entry !== option)
+              : single
+                ? [option]
+                : [...current, option];
+            change({ ...edits, checked: { ...edits.checked, [key]: next } });
+          }}
+        />
+      </div>
+
+      {prefilling ? (
+        <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="size-3.5 animate-spin" aria-hidden />
+          Editing opens as soon as Sunny is finished.
+        </p>
+      ) : (
+        <div className="mt-4 min-w-0 space-y-3 border-t border-border pt-4">
+          {/*
+            ==================================================================
+            THE FOLLOW-UP DATE IS A DATE CONTROL, NOT A SENTENCE
+            ==================================================================
+            The published Coaching Form has no follow-up field, so this is
+            instance metadata with its own route. It is here rather than in the
+            form body because putting it in both would let the two disagree the
+            moment a manager moved it — which is what "[Follow-Up Date]" in
+            Details was already doing.
+          */}
+          <div className="flex min-w-0 flex-wrap items-end gap-2">
+            <div className="min-w-0 space-y-1">
+              <Label htmlFor={`follow-up-${instanceId}`}>Follow-up date</Label>
+              <Input
+                id={`follow-up-${instanceId}`}
+                type="date"
+                className="min-w-0"
+                value={followUp}
+                disabled={finalized || action.kind === "busy"}
+                onChange={(event) => setFollowUp(event.target.value)}
+                aria-describedby={`follow-up-hint-${instanceId}`}
+              />
+            </div>
+            {!finalized && followUp !== (loaded.instance.followUpDate ?? "") ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void saveFollowUp()}
+                disabled={action.kind === "busy"}
+              >
+                {action.kind === "busy" && action.what === "follow-up" ? (
+                  <Loader2 className="animate-spin" />
+                ) : null}
+                Set date
+              </Button>
+            ) : null}
+            {finalized && !loaded.instance.followUpDate ? (
+              <span className="text-xs text-subtle-foreground">No follow-up recorded.</span>
+            ) : null}
+          </div>
+          {/*
+            ONE THING PER CONTROL. The date here is the calendar day the
+            follow-up is scheduled, and drives Form Monitoring. Where the form
+            itself carries an agreed timeframe ("within 2 weeks" — the
+            Follow-Up Coaching Form's Next Follow-Up), that is the expectation
+            and this is the booking, and the hint says so instead of the two
+            reading as the same field twice.
+          */}
+          <p id={`follow-up-hint-${instanceId}`} className="text-xs text-subtle-foreground">
+            {hasTimeframeField
+              ? "The day the follow-up is scheduled, once you've picked one. The agreed timeframe stays in Next Follow-Up above."
+              : "The day the follow-up is scheduled, once you've picked one."}
+          </p>
+
+          {finalized ? (
+            <p className="text-xs text-subtle-foreground">
+              This form is finalized, so its values are frozen. A correction is a revision.
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                size="sm"
+                onClick={() => void submit()}
+                disabled={save.kind === "saving" || save.kind === "clean"}
+              >
+                {save.kind === "saving" ? <Loader2 className="animate-spin" /> : null}
+                {save.kind === "saving" ? "Saving…" : "Save changes"}
+              </Button>
+
+              {/* "Saved" appears only after the server said so. */}
+              {save.kind === "saved" ? (
+                <span className="flex items-center gap-1 text-xs text-status-ready">
+                  <Check className="size-3.5" aria-hidden />
+                  Saved
+                </span>
+              ) : null}
+              {save.kind === "dirty" ? (
+                <span className="text-xs text-muted-foreground">Unsaved changes</span>
+              ) : null}
+              {save.kind === "error" ? (
+                <span className="flex items-center gap-1 text-xs text-status-attention">
+                  <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
+                  {save.message} Your changes are still here — try again.
+                </span>
+              ) : null}
+            </div>
+          )}
+
+          {/*
+            ==================================================================
+            FINALIZING FREEZES THE VERSION THE SERVER HOLDS
+            ==================================================================
+            Disabled while the editor is dirty, and refused again in `finalize`.
+            A manager who typed into Details and finalized without saving would
+            freeze the version WITHOUT their change, and the only way back is a
+            revision.
+          */}
+          {finalized ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" onClick={() => void downloadPdf()} disabled={action.kind === "busy"}>
+                {action.kind === "busy" && action.what === "pdf" ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Download />
+                )}
+                Download PDF
+              </Button>
+              <Button variant="secondary" size="sm" asChild>
+                <Link href="/forms/monitoring">
+                  <ExternalLink />
+                  View in Form Monitoring
+                </Link>
+              </Button>
+              {onStartAnother ? (
+                <Button variant="ghost" size="sm" onClick={onStartAnother}>
+                  <Plus />
+                  Start another
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="accent"
+                size="sm"
+                onClick={() => void finalize()}
+                disabled={action.kind === "busy" || save.kind === "dirty" || save.kind === "saving"}
+              >
+                {action.kind === "busy" && action.what === "finalize" ? (
+                  <Loader2 className="animate-spin" />
+                ) : null}
+                Finalize
+              </Button>
+              <span className="text-xs text-subtle-foreground">
+                Freezes these values. Signatures are signed on paper afterwards.
+              </span>
+            </div>
+          )}
+
+          {action.kind === "error" ? (
+            <p className="flex items-start gap-1 text-xs text-status-attention">
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+              {action.message}
+            </p>
+          ) : null}
+        </div>
+      )}
+
+      {/*
+        THE ACKNOWLEDGEMENT, IN THE PATTERN THE REST OF FORMS ALREADY USES.
+
+        It names the fields, because "are you sure?" on its own is a dialog
+        people learn to dismiss without reading — the same reason the delete
+        confirmation in Form Monitoring states the employee, the form and the
+        status.
+      */}
+      <Dialog
+        open={confirmingPolicy}
+        onOpenChange={(open) => {
+          if (!open) setConfirmingPolicy(false);
+        }}
+      >
+        {confirmingPolicy ? (
+          <DialogContent
+            title="Official policy verification is incomplete"
+            description={POLICY_ACKNOWLEDGEMENT_MESSAGE}
+          >
+            <dl className="space-y-3 text-[13px]">
+              <div>
+                <dt className="eyebrow">Not verified</dt>
+                <dd className="mt-0.5 text-foreground">
+                  {unresolvedPolicy
+                    .map((field) => `${field.label}${field.filled ? " (entered by hand)" : " (blank)"}`)
+                    .join(", ")}
+                </dd>
+              </div>
+              <div>
+                <dt className="eyebrow">Form</dt>
+                <dd className="mt-0.5 text-foreground">
+                  {loaded.instance.templateName} · {loaded.instance.employeeName}
+                </dd>
+              </div>
+            </dl>
+
+            <DialogActions>
+              <Button variant="ghost" onClick={() => setConfirmingPolicy(false)}>
+                Go back and review
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => void finalize(true)}
+                disabled={action.kind === "busy"}
+              >
+                {action.kind === "busy" && action.what === "finalize" ? (
+                  <Loader2 className="animate-spin" />
+                ) : null}
+                Finalize anyway
+              </Button>
+            </DialogActions>
+          </DialogContent>
+        ) : null}
+      </Dialog>
+    </div>
+  );
+}
+
+
+/**
+ * ============================================================================
+ * WHAT TO SAY ABOUT PREFILL, INCLUDING WHEN IT CANNOT BE KNOWN
+ * ============================================================================
+ *
+ * The first three cases are states this tab watched happen. The fourth is the
+ * one that needed thinking about.
+ *
+ * AFTER A REFRESH, THIS TAB KNOWS NOTHING. The conversation reopens from
+ * IndexedDB with an instance id and no memory of the request that was in
+ * flight. So the form's OWN AUDIT TRAIL is read instead: `applyAssistantDraft`
+ * records a `drafted` event, so its absence on an `ask_sunny` form means the
+ * assistant never got as far as writing.
+ *
+ * THE HONEST LIMIT, STATED RATHER THAN PAPERED OVER: the absence of that event
+ * cannot distinguish STILL RUNNING from PERMANENTLY FAILED. Both look
+ * identical from here, and telling them apart would need somewhere to record
+ * that a request started — a schema change this phase does not have.
+ *
+ * So the wording claims neither. It says prefill has not completed, which is
+ * the only thing that is certainly true, and the form stays editable because a
+ * manager who reopened a real draft must be able to work on it. What it must
+ * never do is let a stale read be mistaken for a finished one.
+ */
+/**
+ * ============================================================================
+ * A DRAFT WITH NO POLICY ON IT MUST NOT READ AS A FINISHED ONE
+ * ============================================================================
+ *
+ * QA's complaint was about the reference platform, and it was exactly right:
+ * a corrective action form was presented as READY while its Direct policy
+ * field said "[Verify exact policy language from official manual]". Two claims
+ * on one screen, one of them false.
+ *
+ * Ask Sunny does not produce that string — `drafted-text.ts` strips a bracketed
+ * placeholder before anything is stored, and `policy-grounding.ts` withholds a
+ * policy value that no approved source backs. But the honest half of the
+ * reference's behaviour was missing here too: the manager was told nothing at
+ * all. The drafting route's grounding notice is returned to the browser and
+ * discarded, so the form simply came back with two empty fields and no reason.
+ *
+ * ============================================================================
+ * READ OFF THE RECORD, NOT OFF THE RESPONSE
+ * ============================================================================
+ *
+ * The drafting response is gone the moment the tab reloads, and this is
+ * precisely the state that has to survive: a form reopened next week with its
+ * policy fields still blank is still a form that cannot be issued. So the test
+ * is on the STORED INSTANCE — this version marks fields as policy-grounded,
+ * the assistant drafted this form, and those fields are empty — which is the
+ * same conclusion the notice was drawing, taken from something durable.
+ *
+ * WHAT IT DELIBERATELY DOES NOT DO. It does not block finalizing. A manager who
+ * has checked the manual themselves and typed the policy in is exactly who this
+ * form is for, and the moment they do the fields are no longer empty and the
+ * notice goes. Refusing them the button on the strength of a heuristic would be
+ * the guard overreaching; telling them what is missing is the guard's job.
+ *
+ * ONLY WHILE THE FIELDS ARE ACTUALLY EMPTY, and only on an assistant-drafted
+ * form. A form filled in by hand on the old Create a Form screen has not been
+ * promised a policy lookup and does not need to be told one did not happen.
+ */
+interface StoredPolicySource {
+  documentId: string;
+  documentTitle: string;
+  locator: string;
+}
+
+/**
+ * The approved documents behind this form's policy fields, de-duplicated.
+ *
+ * FROM THE VALUE'S OWN PROVENANCE, which `provenanceFor` writes only when
+ * `groundPolicy` returned passages above the match floor. So this can never
+ * name a manual nobody read, and it survives a refresh — "which policy is this
+ * and what page" has an answer months later, which is the whole reason the
+ * provenance is stored rather than reported once and dropped.
+ */
+export function storedPolicySources(values: LoadedValueRow[]): StoredPolicySource[] {
+  const seen = new Map<string, StoredPolicySource>();
+
+  for (const row of values) {
+    if (row.provenance?.verified !== true) continue;
+    const sources = row.provenance.sources;
+    if (!Array.isArray(sources)) continue;
+
+    for (const entry of sources as Record<string, unknown>[]) {
+      const documentTitle = String(entry?.documentTitle ?? "").trim();
+      if (documentTitle === "") continue;
+      const documentId = String(entry?.documentId ?? documentTitle);
+      const locator = displayLocator(String(entry?.locator ?? ""));
+      seen.set(`${documentId}|${locator}`, { documentId, documentTitle, locator });
+    }
+  }
+
+  return [...seen.values()];
+}
+
+export function policyVerificationNoticeFor(
+  loaded: LoadedInstance,
+  prefilling: boolean,
+): string | null {
+  // Nothing to report while Sunny is still writing — the fields are empty
+  // because it has not got to them yet.
+  if (prefilling) return null;
+  if (loaded.instance.source !== "ask_sunny") return null;
+  if (!loaded.events.some((event) => event.kind === "drafted")) return null;
+
+  const grounded = fieldsForVariant(loaded.version.document, loaded.instance.variantKey).filter(
+    (field) => field.policyGrounded,
+  );
+  if (grounded.length === 0) return null;
+
+  /*
+   * ==========================================================================
+   * UNVERIFIED IS NOT THE SAME AS BLANK, AND TESTING FOR BLANK WAS WRONG
+   * ==========================================================================
+   *
+   * The first version of this asked whether the field was EMPTY. That made the
+   * warning disappear the moment anybody typed into it — including the exact
+   * case it exists for: a manager typing "Dress Code Violation" into Policy
+   * Violated by hand, which is not a policy, is in no manual, and is precisely
+   * the value the drafting guard had just refused to write. The form then read
+   * as complete, and nothing on screen said the manual had never answered.
+   *
+   * So the test is VERIFICATION, which the row already carries. A policy field
+   * stands verified only when its provenance says so, and that flag is written
+   * in one place — `provenanceFor`, from a retrieval above the match floor. A
+   * manager's edit writes `filled_by: "manager"` and no provenance at all, so
+   * their text is reported as theirs rather than as the manual's.
+   *
+   * WHAT IT DOES NOT DO IS STOP THEM. A manager who has read the manual and
+   * typed the policy in is exactly who this form is for; the notice tells them
+   * the app cannot vouch for it, and Finalize stays available.
+   */
+  const rows = new Map(loaded.values.map((row) => [row.fieldKey, row]));
+  const verified = (key: string) => rows.get(key)?.provenance?.verified === true;
+  const filled = (key: string) => (rows.get(key)?.value ?? "").trim() !== "";
+
+  const unresolved = grounded.filter((field) => !verified(field.key));
+  if (unresolved.length === 0) return null;
+
+  const blank = unresolved.filter((field) => !filled(field.key));
+  const byHand = unresolved.filter((field) => filled(field.key));
+  const quote = (fields: typeof grounded) =>
+    fields.map((field) => `“${field.label}”`).join(" and ");
+
+  const parts = [
+    blank.length > 0
+      ? `${quote(blank)} ${blank.length === 1 ? "is" : "are"} blank because no approved policy matched what you described`
+      : null,
+    byHand.length > 0
+      ? `${quote(byHand)} ${byHand.length === 1 ? "was" : "were"} entered by hand and ${byHand.length === 1 ? "has" : "have"} not been checked against the manual`
+      : null,
+  ].filter((part): part is string => part !== null);
+
+  return `Policy verification is still required: ${parts.join(", and ")}. Confirm the exact policy in the official manual before you issue this form — Ask Sunny will not write policy wording it cannot source, and it cannot vouch for wording it did not retrieve.`;
+}
+
+/**
+ * A closing line after a plan-type form is drafted. None of the company's
+ * current forms is a plan written before the conversation, so there is
+ * nothing to add; the hook stays for when one is.
+ */
+export function reviewConversationNoticeFor(
+  loaded: LoadedInstance,
+  prefilling: boolean,
+): string | null {
+  void loaded;
+  void prefilling;
+  return null;
+}
+
+function prefillNoticeFor(
+  prefill: PrefillState,
+  loaded: LoadedInstance,
+): { tone: "attention" | "neutral"; text: string } | null {
+  if (prefill.kind === "running") {
+    return {
+      tone: "neutral",
+      text: "Draft created. Sunny is filling it in from your conversation…",
+    };
+  }
+
+  if (prefill.kind === "failed") {
+    return { tone: "attention", text: prefill.message };
+  }
+
+  if (prefill.kind === "complete") return null;
+
+  /* unknown — reopened from storage. Read the form's own history. */
+  if (loaded.instance.source !== "ask_sunny") return null;
+  if (loaded.events.some((event) => event.kind === "drafted")) return null;
+
+  return {
+    tone: "attention",
+    text: "Sunny's prefill has not completed for this draft. You can complete it yourself below — if Sunny does finish, reopening this form will show what it wrote.",
+  };
+}

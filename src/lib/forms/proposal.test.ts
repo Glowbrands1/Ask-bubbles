@@ -1,0 +1,946 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  MANAGER_CONTEXT_CHARS,
+  MANAGER_CONTEXT_TURNS,
+  buildProposal,
+  extractEmployeeNames,
+  managerContext,
+  resolveEmployee,
+} from "./proposal";
+import type { AccessScope, ChatMessage } from "@/types";
+
+/**
+ * ============================================================================
+ * REQUIREMENTS 7–17 — WHAT A PROPOSAL MAY CONTAIN
+ * ============================================================================
+ *
+ * Every test here exists because the retired flow had the opposite behaviour.
+ * `buildFormDraft` filled an employment document like this when the manager had
+ * said nothing:
+ *
+ *     employee_name  -> "Jane Kowalski"
+ *     topic          -> "repeated tardiness"
+ *     employee_role  -> "Tanning Consultant"
+ *     details        -> "Arrived after the start of a scheduled shift on three
+ *                        occasions in the past two weeks..."
+ *     follow_up_date -> today + 14
+ *
+ * and `buildFormCollection` offered "Jane Kowalski — late on the 12th, 15th and
+ * 19th" as a clickable follow-up chip. None of those facts existed.
+ */
+
+let counter = 0;
+function userTurn(content: string): ChatMessage {
+  counter += 1;
+  return {
+    id: `msg-${counter}`,
+    role: "user",
+    content,
+    createdAt: "2026-01-05T10:00:00.000Z",
+  };
+}
+function assistantTurn(content: string): ChatMessage {
+  counter += 1;
+  return {
+    id: `msg-${counter}`,
+    role: "assistant",
+    content,
+    createdAt: "2026-01-05T10:00:00.000Z",
+  };
+}
+
+const SALON: AccessScope = {
+  level: "location",
+  primaryAreaId: "loc-0101",
+  alsoCoversAreaIds: [],
+};
+
+function propose(
+  history: ChatMessage[],
+  question: string,
+  scope: AccessScope | null = SALON,
+  inlineDraftSupported = true,
+) {
+  return buildProposal({
+    proposalId: "prop-1",
+    templateKey: "coaching",
+    templateName: "Coaching Form",
+    context: managerContext(history, { id: "msg-current", content: question }),
+    scope,
+    inlineDraftSupported,
+  });
+}
+
+/* ================================================= manager turns only == */
+
+describe("7. only the manager's own turns are read", () => {
+  it("ignores a name that appears only in an assistant turn", () => {
+    const history = [
+      userTurn("I need to document a conversation"),
+      // Sunny's own paraphrase. Promoting this to a fact on an employment
+      // record is the failure nobody would notice, because it reads fine.
+      assistantTurn("Sure — is this about Jane Kowalski?"),
+    ];
+
+    const context = managerContext(history, { id: "msg-current", content: "yes please" });
+
+    expect(context.text).not.toContain("Jane Kowalski");
+    expect(context.messages.map((message) => message.content)).toEqual([
+      "I need to document a conversation",
+      "yes please",
+    ]);
+  });
+
+  it("ignores a failed turn, which is not something anybody said", () => {
+    const failed: ChatMessage = {
+      ...userTurn("Marcus Webb was late again"),
+      error: {
+        kind: "model_failed",
+        message: "no",
+        retryable: true,
+        question: "Marcus Webb was late again",
+      },
+    };
+    const context = managerContext([failed], { id: "msg-current", content: "carry on" });
+    expect(context.text).not.toContain("Marcus Webb");
+  });
+});
+
+describe("8. the window is bounded", () => {
+  it("keeps the most recent turns and drops older ones", () => {
+    const history = Array.from({ length: 30 }, (_unused, index) =>
+      userTurn(`turn ${index}`),
+    );
+    const context = managerContext(history, { id: "msg-current", content: "now" });
+
+    expect(context.messages).toHaveLength(MANAGER_CONTEXT_TURNS);
+    expect(context.messages.at(-1)!.content).toBe("now");
+    // "the whole conversation" is not context — it is every employee the
+    // manager has mentioned since they signed in.
+    expect(context.text).not.toContain("turn 0");
+  });
+});
+
+/**
+ * ============================================================================
+ * PHASE 2 REMEDIATION, REQUIREMENTS R1-R6 — THE NEWEST WORDS WIN
+ * ============================================================================
+ *
+ * THE DEFECT QA FOUND. The bounded window walked OLDEST -> NEWEST and stopped
+ * at the first turn that would overflow the character budget, so a long earlier
+ * statement could spend the whole budget and the manager's current correction
+ * never entered the context at all.
+ *
+ * Every other bounding failure produces a THIN draft. This one produces a
+ * CONFIDENT WRONG draft: an occurrence count on a disciplinary record that the
+ * manager had explicitly retracted, written as fact.
+ */
+describe("R1. the current correction survives character pressure", () => {
+  /*
+   * Marissa's own shape of conversation, with the budget deliberately
+   * exhausted by the earlier statement. Before the fix the correction was
+   * dropped and "three times" was the only occurrence count in the context.
+   */
+  const longStatement = `Sarah was late three times this week. ${"Context that fills the budget. ".repeat(
+    Math.ceil(MANAGER_CONTEXT_CHARS / 30),
+  )}`;
+
+  it("keeps the correction and drops the older statement", () => {
+    const context = managerContext([userTurn(longStatement)], {
+      id: "msg-current",
+      content: "Correction — it was twice, not three times.",
+    });
+
+    expect(context.text).toContain("Correction — it was twice, not three times.");
+    expect(context.text).not.toContain("late three times");
+    expect(context.messages).toHaveLength(1);
+  });
+
+  it("is a real budget squeeze, not a test that would pass either way", () => {
+    // The guard on the guard: both turns together must genuinely exceed the
+    // budget, or "the correction survived" proves nothing.
+    const correction = "Correction — it was twice, not three times.";
+    expect(longStatement.length + correction.length).toBeGreaterThan(MANAGER_CONTEXT_CHARS);
+  });
+});
+
+describe("R2. older context is dropped before newer context", () => {
+  it("keeps the most recent turns that fit and stops there", () => {
+    // Four turns, budget enough for roughly two of them plus the current one.
+    const filler = "x".repeat(Math.floor(MANAGER_CONTEXT_CHARS / 3));
+    const context = managerContext(
+      [
+        userTurn(`oldest ${filler}`),
+        userTurn(`middle ${filler}`),
+        userTurn(`newest-prior ${filler}`),
+      ],
+      { id: "msg-current", content: "the current turn" },
+    );
+
+    expect(context.text).toContain("the current turn");
+    expect(context.text).toContain("newest-prior");
+    expect(context.text).not.toContain("oldest ");
+  });
+
+  it("stops rather than skipping a long recent turn for a short old one", () => {
+    /*
+     * Skipping would reintroduce the same recency inversion in miniature: an
+     * older statement surviving while a newer one is dropped.
+     */
+    const context = managerContext(
+      [
+        userTurn("SHORT-AND-OLD"),
+        userTurn("LONG-AND-RECENT ".repeat(Math.ceil(MANAGER_CONTEXT_CHARS / 10))),
+      ],
+      { id: "msg-current", content: "now" },
+    );
+
+    expect(context.text).toContain("now");
+    expect(context.text).not.toContain("LONG-AND-RECENT");
+    expect(context.text).not.toContain("SHORT-AND-OLD");
+  });
+});
+
+describe("R3. retained messages come back in chronological order", () => {
+  it("reads the way the manager said them, not newest-first", () => {
+    // Retention runs in priority order; presentation runs in time order.
+    // Reversing an account misstates the sequence of events.
+    const first = userTurn("Sarah was late on Monday.");
+    const second = userTurn("She was late again on Wednesday.");
+    const context = managerContext([first, second], {
+      id: "msg-current",
+      content: "Build a coaching form for Sarah.",
+    });
+
+    expect(context.messages.map((message) => message.content)).toEqual([
+      "Sarah was late on Monday.",
+      "She was late again on Wednesday.",
+      "Build a coaching form for Sarah.",
+    ]);
+    expect(context.text.indexOf("Monday")).toBeLessThan(context.text.indexOf("Wednesday"));
+  });
+});
+
+describe("R4. sourceMessageIds name only what was retained", () => {
+  it("omits the id of a turn that did not fit", () => {
+    const dropped = userTurn("y".repeat(MANAGER_CONTEXT_CHARS));
+    const context = managerContext([dropped], { id: "msg-current", content: "now" });
+
+    expect(context.ids).toEqual(["msg-current"]);
+    expect(context.ids).not.toContain(dropped.id);
+  });
+
+  it("names every turn that was retained", () => {
+    const first = userTurn("Sarah was late Monday.");
+    const context = managerContext([first], { id: "msg-current", content: "now" });
+    expect(context.ids).toEqual([first.id, "msg-current"]);
+  });
+});
+
+describe("R5. the current message never disappears", () => {
+  it("survives an earlier turn that consumed the entire budget", () => {
+    const context = managerContext([userTurn("z".repeat(MANAGER_CONTEXT_CHARS * 2))], {
+      id: "msg-current",
+      content: "Build a coaching form for Sarah Jones.",
+    });
+
+    expect(context.messages).toHaveLength(1);
+    expect(context.text).toBe("Build a coaching form for Sarah Jones.");
+    expect(context.truncated).toBe(false);
+  });
+});
+
+describe("R6. an over-long current message is cut visibly, not silently", () => {
+  it("marks the truncation rather than pretending the whole message arrived", () => {
+    const context = managerContext([], {
+      id: "msg-current",
+      content: "w".repeat(MANAGER_CONTEXT_CHARS * 2),
+    });
+
+    expect(context.truncated).toBe(true);
+    expect(context.text.length).toBeLessThanOrEqual(MANAGER_CONTEXT_CHARS);
+    expect(context.text).toMatch(/longer than Ask Sunny reads at once/);
+    // And it is still the manager's own words up to the cut.
+    expect(context.text.startsWith("w".repeat(100))).toBe(true);
+  });
+
+  it("is deterministic — the same message twice gives the same context", () => {
+    const message = { id: "msg-current", content: "q".repeat(MANAGER_CONTEXT_CHARS + 500) };
+    expect(managerContext([], message).text).toBe(managerContext([], message).text);
+  });
+});
+
+describe("9. sourceMessageIds point at the manager's own turns", () => {
+  it("records the ids that were supplied, and invents none", () => {
+    const first = userTurn("Sarah Jones needs a coaching form");
+    const proposal = propose([first], "about attendance");
+
+    expect(proposal.sourceMessageIds).toEqual([first.id, "msg-current"]);
+  });
+
+  it("carries no id for a history entry that arrived without one", () => {
+    // `parseHistory` drops a malformed id rather than rejecting the request, so
+    // an id-less turn still contributes its words — just not its provenance.
+    const context = managerContext(
+      [{ role: "user", content: "Sarah Jones was late" } as ChatMessage],
+      { id: "msg-current", content: "coaching form please" },
+    );
+    expect(context.ids).toEqual(["msg-current"]);
+    expect(context.text).toContain("Sarah Jones");
+  });
+});
+
+/* ======================================================== employee == */
+
+describe("10. a capitalised first word is not a name", () => {
+  it("does not produce an employee called 'Create'", () => {
+    // The exact prototype regression: `extractEmployeeName` accepted a
+    // capitalised leading word, so this sentence named an employee "Create".
+    const names = extractEmployeeNames("Create a coaching form for a performance concern");
+    expect(names).toEqual([]);
+  });
+
+  it.each([
+    "Draft a form about attendance",
+    "Please start a coaching document",
+    "Write up the conversation from this morning",
+  ])("%s yields no employee", (sentence) => {
+    expect(extractEmployeeNames(sentence)).toEqual([]);
+  });
+});
+
+describe("11. a name the manager actually gave is used verbatim", () => {
+  it.each([
+    ["I need a coaching form for Sarah Jones", "Sarah Jones"],
+    ["this is about Marcus Webb", "Marcus Webb"],
+    ["Jordan Vance", "Jordan Vance"],
+  ])("%s", (sentence, expected) => {
+    expect(extractEmployeeNames(sentence)).toContain(expected);
+  });
+
+  it("accepts a lone first name only when it is the whole message", () => {
+    // What a manager types when Sunny has just asked who the form is for.
+    expect(extractEmployeeNames("Sarah")).toEqual(["Sarah"]);
+    expect(extractEmployeeNames("Sarah was late on Tuesday")).toEqual([]);
+  });
+
+  it.each([
+    "please draft a form for Jane Test, Salon Test, she was late today",
+    "coaching form for Jane Test at Salon Test",
+    "Jane Test, Location Test — late again",
+  ])("a salon named alongside the employee is not a second candidate: %s", (sentence) => {
+    // "Salon Test" reads as a capitalised full name, so the turn resolved as
+    // ambiguous and Sunny re-asked for a name the manager had just given.
+    expect(extractEmployeeNames(sentence)).toEqual(["Jane Test"]);
+  });
+});
+
+/* ==================================================================== */
+/*  A SURNAME GIVEN AS AN INITIAL                                       */
+/* ==================================================================== */
+
+/**
+ * ============================================================================
+ * "PAULYNE C" IS A NAME
+ * ============================================================================
+ *
+ * Asked who a Corrective Action Form was for, a manager answered
+ *
+ *     "Paulyne C she was wearing slippers today and was already given verbal
+ *      warning on aug 21"
+ *
+ * and got the identical question back. Every other fact in that sentence was
+ * read correctly — the incident, the prior warning, the date. What matched
+ * nothing was the NAME: the pattern required two characters per part, so a
+ * surname given as a single initial was invisible and the turn produced no
+ * employee at all.
+ *
+ * First name plus last initial is how half a salon refers to people, so this
+ * was never an edge case.
+ */
+describe("11b. a surname given as an initial", () => {
+  it.each([
+    [
+      "the sentence that was answered with the same question",
+      "Paulyne C she was wearing slippers today and was already given verbal warning on aug 21",
+      "Paulyne C",
+    ],
+    ["with a full stop", "Paulyne C.", "Paulyne C"],
+    ["as the whole answer", "Paulyne C", "Paulyne C"],
+    ["after a preposition", "Corrective action for Paulyne C, she wore slippers", "Paulyne C"],
+    ["mid-sentence", "Sarah T was late again today", "Sarah T"],
+  ])("%s", (_label, sentence, expected) => {
+    expect(extractEmployeeNames(sentence)).toEqual([expected]);
+  });
+
+  /*
+   * ONE SPELLING PER PERSON. "Paulyne C." matches both the sentence pattern
+   * and the whole-message one, with and without the stop — two candidates for
+   * one person would have been read as ambiguous and asked about.
+   */
+  it("does not turn one person into two candidates", () => {
+    expect(extractEmployeeNames("Paulyne C.")).toHaveLength(1);
+  });
+
+  it("still reads a real surname as a surname", () => {
+    expect(extractEmployeeNames("Paulyne Camacho was late")).toEqual(["Paulyne Camacho"]);
+  });
+
+  /*
+   * THE TWO LONE CAPITALS THAT ARE ORDINARY ENGLISH. Accepting a trailing
+   * initial must not turn every "I" and "A" into somebody's surname.
+   */
+  it.each([
+    "Sarah I saw her wearing slippers today",
+    "Sarah A lot of people were late this week",
+    "I spoke to her today about it",
+  ])("reads no employee out of a lone capital: %s", (sentence) => {
+    expect(extractEmployeeNames(sentence)).toEqual([]);
+  });
+
+  it("keeps two initialled people as two candidates", () => {
+    expect(extractEmployeeNames("Create a corrective action for Dana B and Marco T")).toEqual([
+      "Dana B",
+      "Marco T",
+    ]);
+  });
+});
+
+/* ==================================================================== */
+/*  A NAME IN ANY CASE, AND A FIRST NAME ON ITS OWN                     */
+/* ==================================================================== */
+
+/**
+ * ============================================================================
+ * "paulyne co" IS THE SAME ANSWER AS "Paulyne Co"
+ * ============================================================================
+ *
+ * The capital letter was the only evidence a word was a name, so a manager who
+ * typed the name in lower case — or asked for a form "for paulyne" — got no
+ * employee and therefore no form. Where the sentence itself says a name is
+ * being given, the casing no longer decides whether it is read.
+ */
+describe("11c. capitalisation does not decide whether a name is read", () => {
+  const NAMES = [
+    "Paulyne Co",
+    "paulyne co",
+    "PAULYNE CO",
+    "pAuLyNe Co",
+    "test test",
+    "Test Test",
+    "paulyne",
+    "PAULYNE",
+  ];
+
+  it.each(NAMES)("as the whole answer: %s", (name) => {
+    expect(extractEmployeeNames(name)).toEqual([name]);
+  });
+
+  it.each(NAMES)("after the form it is for: %s", (name) => {
+    expect(extractEmployeeNames(`Create a Corrective Action form for ${name}`)).toEqual([name]);
+    expect(extractEmployeeNames(`corrective action for ${name}, she wore slippers today`)).toEqual([
+      name,
+    ]);
+  });
+
+  it.each(NAMES)("as item 1 of a numbered answer: %s", (name) => {
+    expect(extractEmployeeNames(`1. ${name}\n2. kearney\n3. today\n4. she wore slippers`)).toEqual([
+      name,
+    ]);
+  });
+
+  it("collapses stray spaces rather than treating them as part of the name", () => {
+    expect(extractEmployeeNames("   paulyne    co  ")).toEqual(["paulyne co"]);
+    expect(extractEmployeeNames("coaching form for  paulyne   co")).toEqual(["paulyne co"]);
+  });
+
+  it("reads an answer introduced as who it is for", () => {
+    expect(extractEmployeeNames("for paulyne")).toEqual(["paulyne"]);
+    expect(extractEmployeeNames("it's for paulyne co")).toEqual(["paulyne co"]);
+  });
+
+  it("stops at the sentence that follows the name", () => {
+    expect(extractEmployeeNames("coaching form for paulyne because she was late")).toEqual([
+      "paulyne",
+    ]);
+    expect(extractEmployeeNames("form for paulyne co she wore slippers today")).toEqual([
+      "paulyne co",
+    ]);
+  });
+
+  it("keeps a surname followed by a capitalised word, which used to be dropped", () => {
+    expect(extractEmployeeNames("Corrective action for Paulyne Co She wore slippers")).toEqual([
+      "Paulyne Co",
+    ]);
+  });
+
+  it("reads the name out of an all-caps request", () => {
+    expect(extractEmployeeNames("CREATE A CORRECTIVE ACTION FORM FOR PAULYNE CO")).toEqual([
+      "PAULYNE CO",
+    ]);
+  });
+
+  it("is one person however many ways the message spells them", () => {
+    expect(extractEmployeeNames("Form for PAULYNE CO. Paulyne Co was late.")).toHaveLength(1);
+  });
+
+  /*
+   * THE POSITION IS THE EVIDENCE, SO ONLY THOSE POSITIONS COUNT. Lower-case
+   * words anywhere else are still not a name — otherwise every question asked
+   * while a proposal is open would be read as the answer to "who is this for?".
+   */
+  it.each([
+    "what is the policy for tardiness?",
+    "a form about attendance",
+    "coaching form for a performance concern",
+    "thanks",
+    "ok",
+    "late again",
+    "she was late today",
+    "verbal warning",
+  ])("reads no employee out of: %s", (sentence) => {
+    expect(extractEmployeeNames(sentence)).toEqual([]);
+  });
+
+  it("still finds two different people, whatever the case", () => {
+    expect(
+      resolveEmployee(
+        managerContext([], { id: "msg-current", content: "coaching form for paulyne and Marco Diaz" }),
+      ).kind,
+    ).toBe("ambiguous");
+  });
+});
+
+/**
+ * A SURNAME IS NOT REQUIRED. A first name the manager gave is the employee on
+ * the proposal, the proposal is ready, and the draft can be created; the name
+ * stays editable on the form.
+ */
+describe("11d. a first name alone is enough to create the draft", () => {
+  it.each(["paulyne", "PAULYNE", "Paulyne"])("%s", (name) => {
+    const proposal = propose([], `Create a Corrective Action form for ${name}`);
+    expect(proposal.employeeName).toBe(name);
+    expect(proposal.status).toBe("ready");
+    expect(proposal.supportsInlineDraft).toBe(true);
+  });
+
+  it("answers the question 'who is this for?' with a lower-case name", () => {
+    const proposal = propose(
+      [userTurn("I need a coaching form"), assistantTurn("Who is this form for?")],
+      "paulyne co",
+    );
+    expect(proposal.employeeName).toBe("paulyne co");
+    expect(proposal.status).toBe("ready");
+  });
+});
+
+/**
+ * PUNCTUATION WRAPPED AROUND A NAME IS NOT PART OF IT. "(paulyne)" and
+ * "\"paulyne co\"" are the answer "paulyne" / "paulyne co", and the apostrophe
+ * or hyphen INSIDE a real name is left exactly as typed.
+ */
+describe("11e. a name wrapped in punctuation is still the name", () => {
+  const WRAPPED: [string, string][] = [
+    ["(paulyne)", "paulyne"],
+    ['"paulyne"', "paulyne"],
+    ["'paulyne'", "paulyne"],
+    ["“paulyne”", "paulyne"],
+    ["paulyne,", "paulyne"],
+    ["paulyne.", "paulyne"],
+    ["(paulyne co)", "paulyne co"],
+    ['"paulyne co"', "paulyne co"],
+    ['"PAULYNE CO"', "PAULYNE CO"],
+    ["PAULYNE CO,", "PAULYNE CO"],
+    ["(pAuLyNe Co)", "pAuLyNe Co"],
+    ["(test test)", "test test"],
+    ['"john smith"', "john smith"],
+    ["maria cruz,", "maria cruz"],
+  ];
+
+  it.each(WRAPPED)("as the whole answer: %s", (typed, name) => {
+    expect(extractEmployeeNames(typed)).toEqual([name]);
+  });
+
+  it.each(WRAPPED)("in the request: %s", (typed, name) => {
+    expect(extractEmployeeNames(`Create a Corrective Action form for ${typed} she wore slippers`)).toEqual([
+      name,
+    ]);
+  });
+
+  it.each(["O'Connor", "o'connor", "O’Connor", "D'Angelo", "Anne-Marie", "Mary-Jane Smith", "mary-jane smith"])(
+    "keeps the punctuation that belongs to the name: %s",
+    (name) => {
+      expect(extractEmployeeNames(name)).toEqual([name]);
+      expect(extractEmployeeNames(`coaching form for ${name}`)).toEqual([name]);
+      expect(extractEmployeeNames(`("${name}")`)).toEqual([name]);
+    },
+  );
+
+  it("still sees two wrapped people as two", () => {
+    expect(
+      resolveEmployee(
+        managerContext([], { id: "msg-current", content: "coaching form for (paulyne) and Marco Diaz" }),
+      ).kind,
+    ).toBe("ambiguous");
+  });
+});
+
+describe("11f. the intake answered on one line, as a comma-separated list", () => {
+  /*
+   * The rollout's failing "Create a form from this conversation": the
+   * manager answered the numbered intake on one line, name first. Invented
+   * names; the manager's shape.
+   */
+  it.each([
+    ["dana moss, KS shawnee, she is the salon director. we can use todays date.", ["dana moss"]],
+    ["Dana Moss, KS Shawnee, she is the salon director. we can use todays date.", ["Dana Moss"]],
+    ["dana moss, NE Kearney, today, she was late", ["dana moss"]],
+    ["dana, MO St Joseph, 9/11, late again", ["dana"]],
+    ["DANA MOSS, KS shawnee, today", ["DANA MOSS"]],
+  ])("reads the first item as the employee: %s", (text, names) => {
+    expect(extractEmployeeNames(text)).toEqual(names);
+  });
+
+  it.each([
+    "what is the policy for tardiness, call outs, and no shows?",
+    "hmm, not sure yet, maybe later",
+    "thanks, that helps, bye",
+    "great, perfect, thank you",
+    "she was late, again, today",
+    "dana moss, KS shawnee",
+  ])("reads nothing that is not a list answer led by a name: %s", (text) => {
+    expect(extractEmployeeNames(text)).toEqual([]);
+  });
+
+  it("reads a roster salon as a place, not as a second person", () => {
+    expect(extractEmployeeNames("Sarah Jones was late at KS Shawnee Mission Pkwy")).toEqual(["Sarah Jones"]);
+    expect(extractEmployeeNames("NE Kearney")).toEqual([]);
+  });
+
+  it("still reads a person whose name only looks like a prefix", () => {
+    expect(extractEmployeeNames("Mo Smith was late today")).toEqual(["Mo Smith"]);
+    expect(extractEmployeeNames("CREATE A COACHING FORM FOR MO SMITH")).toContain("MO SMITH");
+  });
+
+  it("still asks when the list names two people", () => {
+    expect(extractEmployeeNames("Dana Moss, Sarah Jones, both late today")).toEqual(["Dana Moss", "Sarah Jones"]);
+  });
+});
+
+describe("12. two possible people is a question, not a coin toss", () => {
+  it("resolves to ambiguous rather than picking the first", () => {
+    const context = managerContext([], {
+      id: "msg-current",
+      content: "Sarah Jones and Marcus Webb were both late",
+    });
+    const resolution = resolveEmployee(context);
+
+    expect(resolution.kind).toBe("ambiguous");
+    if (resolution.kind !== "ambiguous") return;
+    expect(resolution.candidates).toEqual(["Sarah Jones", "Marcus Webb"]);
+  });
+
+  it("puts no employee on the proposal when it cannot tell", () => {
+    const proposal = propose([], "Sarah Jones and Marcus Webb were both late");
+    expect(proposal.employeeName).toBeNull();
+    expect(proposal.status).toBe("needs_employee");
+  });
+});
+
+describe("13. a missing employee stays missing", () => {
+  it("is null, and is not Jane Kowalski", () => {
+    const proposal = propose([], "I need a coaching form");
+
+    expect(proposal.employeeName).toBeNull();
+    expect(proposal.status).toBe("needs_employee");
+    expect(JSON.stringify(proposal)).not.toMatch(/Jane|Kowalski/i);
+  });
+});
+
+/* ======================================================== location == */
+
+describe("14. the salon comes from the authenticated scope", () => {
+  it("fills in the one salon a manager is assigned to", () => {
+    const proposal = propose([], "coaching form for Sarah Jones");
+
+    expect(proposal.locationId).toBe("loc-0101");
+    expect(proposal.locationResolution).toBe("resolved");
+    expect(proposal.status).toBe("ready");
+  });
+
+  it("asks when the manager covers more than one", () => {
+    const proposal = propose([], "coaching form for Sarah Jones", {
+      level: "location",
+      primaryAreaId: "loc-0101",
+      alsoCoversAreaIds: ["loc-0102"],
+    });
+
+    expect(proposal.locationId).toBeNull();
+    expect(proposal.locationResolution).toBe("needs_selection");
+    expect(proposal.status).toBe("needs_location");
+  });
+
+  it("fills in nothing for a district manager", () => {
+    const proposal = propose([], "coaching form for Sarah Jones", {
+      level: "district",
+      primaryAreaId: "dist-01",
+      alsoCoversAreaIds: [],
+    });
+
+    expect(proposal.locationId).toBeNull();
+    expect(proposal.locationResolution).toBe("unavailable");
+  });
+});
+
+describe("15. no salon DISPLAY NAME is invented", () => {
+  it("leaves locationName null even when the id resolved", () => {
+    /*
+     * There is no salon roster to resolve a name from, and `DEMO_LOCATIONS` is
+     * seeded demo data rather than an authority. A fictional salon name in
+     * front of a manager about to file a disciplinary record is exactly the
+     * class of thing this phase removes.
+     */
+    const proposal = propose([], "coaching form for Sarah Jones");
+    expect(proposal.locationId).toBe("loc-0101");
+    expect(proposal.locationName).toBeNull();
+  });
+});
+
+describe("a first name plus a stated role names the employee", () => {
+  it("reads the sentence a manager opens with", () => {
+    /*
+     * THE REPORTED SHAPE, verbatim. A first name on its own is how managers
+     * refer to their team, and it reached nothing: Ask Sunny asked who the
+     * plan was for immediately after being told.
+     */
+    const proposal = propose(
+      [
+        userTurn(
+          "Jessica is an SDIT at Lincoln South. She's great with customers but she's been late several times.",
+        ),
+      ],
+      "Create an Employee Performance Plan from this conversation.",
+    );
+    expect(proposal.employeeName).toBe("Jessica");
+    expect(proposal.employeeRole).toBe("SDIT");
+    expect(proposal.status).toBe("ready");
+  });
+
+  it("takes the role in the words the business uses", () => {
+    for (const [sentence, name] of [
+      ["Marco is a Tanning Consultant", "Marco"],
+      ["Dana was an FTTC last year", "Dana"],
+      ["Priya is our new Salon Director", "Priya"],
+    ] as const) {
+      expect(propose([userTurn(sentence)], "coaching form please").employeeName, sentence).toBe(
+        name,
+      );
+    }
+  });
+
+  it("still refuses everything the conservative rule was written for", () => {
+    /*
+     * THE DEFECT THIS MODULE EXISTS TO PREVENT. A capitalised leading word is
+     * not a name, a pronoun is not a name, and a form's own name is not a
+     * name — none of these has a copula followed by a job title.
+     */
+    for (const [turnText, question] of [
+      ["", "Create a coaching form for a performance concern"],
+      ["She is an SDIT at Lincoln South", "coaching form please"],
+      ["He was a Salon Director before this", "coaching form please"],
+      ["Coaching Form is the one I need", "coaching form please"],
+      ["Tuesday was a difficult shift for the team", "coaching form please"],
+    ] as const) {
+      const proposal = propose(
+        turnText ? [userTurn(turnText)] : [],
+        question,
+      );
+      expect(proposal.employeeName, `${turnText} | ${question}`).toBeNull();
+    }
+  });
+
+  it("does not fire on a sentence that states no role", () => {
+    // "is a problem" is not a job title, so nothing is named.
+    expect(
+      propose([userTurn("Jessica is a problem on late shifts")], "coaching form please")
+        .employeeName,
+    ).toBeNull();
+  });
+});
+
+describe("a salon named in two words is not a second employee", () => {
+  it("does not ask which of them the form is for", () => {
+    /*
+     * REPORTED SHAPE: "Jessica Vance is an SDIT at Lincoln South. She's great
+     * with clients but she's been late several times." Two capitalised pairs,
+     * one of them the salon — and the answer used to be "which of them is this
+     * for?", asked of somebody who had just said.
+     */
+    const proposal = propose(
+      [userTurn("Jessica Vance is an SDIT at Lincoln South. She's been late several times.")],
+      "coaching form please",
+    );
+    expect(proposal.employeeName).toBe("Jessica Vance");
+    expect(proposal.status).toBe("ready");
+  });
+
+  it("only drops a name the sentence pattern found at a place", () => {
+    // Named as a person too: the preposition that introduced it is "for", so
+    // the candidate survives and the place reading loses.
+    const proposal = propose(
+      [userTurn("Write it for Sarah Jones. I saw her at Sarah Jones on Tuesday.")],
+      "coaching form please",
+    );
+    expect(proposal.employeeName).toBe("Sarah Jones");
+  });
+
+  it("still finds two real people when the manager named two", () => {
+    const proposal = propose(
+      [userTurn("Sarah Jones and Marco Diaz were both late on Tuesday.")],
+      "coaching form please",
+    );
+    expect(proposal.status).toBe("needs_employee");
+  });
+});
+
+/* ==================================================== not a record == */
+
+describe("16. a proposal carries no HR field values at all", () => {
+  it("has no topic, details, role, follow-up date or checked options", () => {
+    const proposal = propose(
+      [userTurn("Sarah Jones was late on the 12th")],
+      "coaching form please",
+    );
+
+    expect(Object.keys(proposal).sort()).toEqual([
+      "authorizedLocationIds",
+      "employeeName",
+      "employeeRole",
+      "formDate",
+      "locationId",
+      "locationName",
+      "locationResolution",
+      "proposalId",
+      "sourceMessageIds",
+      "status",
+      "supportsInlineDraft",
+      "templateKey",
+      "templateName",
+      "variantKey",
+    ]);
+
+    /*
+     * `employeeRole` IS THE FIELD THIS TEST IS NAMED AFTER, and it is here
+     * because the prototype DEFAULTED it to "Tanning Consultant". It carries a
+     * job title only where the manager stated one, and this manager did not —
+     * so it is null, and the forbidden list below still holds.
+     */
+    expect(proposal.employeeRole).toBeNull();
+    expect(proposal.variantKey).toBeNull();
+    // Same rule for the date: only one the manager typed as a calendar date.
+    expect(proposal.formDate).toBeNull();
+
+    const serialized = JSON.stringify(proposal);
+    for (const invented of [
+      "Tanning Consultant",
+      "repeated tardiness",
+      "Documented coaching",
+      "three occasions",
+      "follow_up_date",
+      "expected_action",
+    ]) {
+      expect(serialized, invented).not.toContain(invented);
+    }
+  });
+});
+
+describe("P3-1. inline creation is offered only when nothing is missing", () => {
+  it("is false while the employee is unknown", () => {
+    const proposal = propose([], "coaching form please");
+    expect(proposal.status).toBe("needs_employee");
+    expect(proposal.supportsInlineDraft).toBe(false);
+  });
+
+  it("is false while the salon is unverified", () => {
+    const proposal = propose([], "coaching form for Sarah Jones", {
+      level: "district",
+      primaryAreaId: "dist-01",
+      alsoCoversAreaIds: [],
+    });
+    expect(proposal.status).toBe("needs_location");
+    expect(proposal.supportsInlineDraft).toBe(false);
+  });
+
+  it("is false for a template the inline editor does not support", () => {
+    // Ready in every other respect. The template is the reason.
+    const proposal = propose([], "coaching form for Sarah Jones", SALON, false);
+    expect(proposal.status).toBe("ready");
+    expect(proposal.supportsInlineDraft).toBe(false);
+  });
+
+  it("is true only when both are true", () => {
+    const proposal = propose([], "coaching form for Sarah Jones");
+    expect(proposal.status).toBe("ready");
+    expect(proposal.supportsInlineDraft).toBe(true);
+  });
+});
+
+describe("17. asking order is employee first, then salon", () => {
+  it("does not ask two questions at once", () => {
+    // A manager who has not said who the form is about cannot usefully answer
+    // which salon it belongs to, and two questions get one answer.
+    const proposal = propose([], "coaching form please", {
+      level: "location",
+      primaryAreaId: "loc-0101",
+      alsoCoversAreaIds: ["loc-0102"],
+    });
+
+    expect(proposal.employeeName).toBeNull();
+    expect(proposal.locationId).toBeNull();
+    expect(proposal.status).toBe("needs_employee");
+  });
+});
+
+/*
+ * ============================================================================
+ * THE NAME GIVEN WITH THE FORM'S NAME, FOR EVERY FORM
+ * ============================================================================
+ *
+ * Production: "create ca for paulyne co she was late today, got verbal warning
+ * on september 21" selected the Corrective Action Form and read no employee,
+ * because "ca" was missing from a hand-written list of form words. The lead
+ * words now come from the library's own namings.
+ */
+describe("the employee named with the form, across the library", () => {
+  it.each([
+    ["create ca for paulyne co she was late today, got verbal warning on september 21", "paulyne co"],
+    ["CA for paulyne co", "paulyne co"],
+    ["CA for paulyne co she was late today", "paulyne co"],
+    ["ca for Dana Moss", "Dana Moss"],
+    ["Coaching for dana moss", "dana moss"],
+    ["coaching Dana Moss", "Dana Moss"],
+    ["Demotion jane smith", "jane smith"],
+    ["Demotion for Jane Smith", "Jane Smith"],
+    ["Position Transfer for Mary Cruz", "Mary Cruz"],
+    ["Transfer for mary anne cruz to salon 24", "mary anne cruz"],
+    ["Exit for john michael doe effective october 2", "john michael doe"],
+    ["Exit John Doe", "John Doe"],
+    ["Resignation for John Doe", "John Doe"],
+    ["verbal warning for paulyne co", "paulyne co"],
+  ])("%s -> %s", (text, name) => {
+    expect(extractEmployeeNames(text)).toEqual([name]);
+  });
+
+  it("stops the name where the sentence goes on", () => {
+    expect(extractEmployeeNames("coaching for paulyne co wore slippers today")).toEqual(["paulyne co"]);
+    expect(extractEmployeeNames("CA for dana moss late again")).toEqual(["dana moss"]);
+  });
+
+  it.each(["coaching tips for new managers", "what is a coaching form?", "exit process", "coaching went well today"])(
+    "%s names nobody",
+    (text) => {
+      expect(extractEmployeeNames(text)).toEqual([]);
+    },
+  );
+});
