@@ -236,16 +236,16 @@ describe("Content", () => {
       basis: "manifest",
       rows: [
         row({
-          key: "handbook:jba",
-          title: "JBA Policy Manual",
+          key: "handbook:team",
+          title: "Team Policy Manual",
           contentType: "handbook",
           wovenStatus: "Published",
           audience: "Public",
           audienceDecision: "public",
           syncState: "up_to_date",
           parts: [
-            { key: "version-0", kind: "version", title: "JBA Policy Manual", fileName: "JBA-Policy-Manual-Edited-5.2025.pdf", syncState: "up_to_date", inKnowledgeBase: true, ref: "ref-8", previewable: false, knowledgeDocumentIdInBase: null },
-            { key: "superseded_copy-0", kind: "superseded_copy", title: "JBA Policy Manual Edited 5.2025", fileName: null, syncState: "stale", inKnowledgeBase: false, ref: "ref-9", previewable: false, knowledgeDocumentIdInBase: null },
+            { key: "version-0", kind: "version", title: "Team Policy Manual", fileName: "Team-Policy-Manual-Edited-5.2025.pdf", syncState: "up_to_date", inKnowledgeBase: true, ref: "ref-8", previewable: false, knowledgeDocumentIdInBase: null },
+            { key: "superseded_copy-0", kind: "superseded_copy", title: "Team Policy Manual Edited 5.2025", fileName: null, syncState: "stale", inKnowledgeBase: false, ref: "ref-9", previewable: false, knowledgeDocumentIdInBase: null },
           ],
         }),
       ],
@@ -253,11 +253,11 @@ describe("Content", () => {
     render(<WovenKnowledgeScreen liveMode status={afterScan()} />);
     await userEvent.click(screen.getByRole("tab", { name: "Content" }));
     await waitFor(() => expect(screen.getAllByTestId("content-row")).toHaveLength(1));
-    await userEvent.click(screen.getByRole("button", { name: /JBA Policy Manual/ }));
-    const parts = within(screen.getByRole("list", { name: "Parts of JBA Policy Manual" })).getAllByRole("listitem");
+    await userEvent.click(screen.getByRole("button", { name: /Team Policy Manual/ }));
+    const parts = within(screen.getByRole("list", { name: "Parts of Team Policy Manual" })).getAllByRole("listitem");
     expect(parts.map((p) => p.textContent)).toEqual([
-      "Current Woven copy:JBA-Policy-Manual-Edited-5.2025.pdfCurrent",
-      "Previous uploaded copy:JBA Policy Manual Edited 5.2025Stale / Superseded",
+      "Current Woven copy:Team-Policy-Manual-Edited-5.2025.pdfCurrent",
+      "Previous uploaded copy:Team Policy Manual Edited 5.2025Stale / Superseded",
     ]);
     /* The stale state finds it. */
     await userEvent.selectOptions(screen.getByLabelText("Sync state"), "stale");
@@ -308,13 +308,13 @@ describe("Sync History", () => {
 describe("audience choices show what they affect, before anyone decides", () => {
   const LOTION: ContentRow = row({
     key: "file_library:fl1",
-    title: "1 KEY TC Mastery - Safety 10.2024",
+    title: "1 KEY Team Mastery - Safety 10.2024",
     contentType: "file_library",
     wovenStatus: "Published",
     audience: "N/A",
     audienceKey: "n/a",
     syncState: "waiting_for_audience",
-    parts: [{ key: "file-0", kind: "file", title: "1 KEY TC Mastery - Safety 10.2024", fileName: "1 KEY TC Mastery - Safety 10.2024.pdf", syncState: "waiting_for_audience", inKnowledgeBase: false, ref: "0123456789abcdef", previewable: true, knowledgeDocumentIdInBase: null }],
+    parts: [{ key: "file-0", kind: "file", title: "1 KEY Team Mastery - Safety 10.2024", fileName: "1 KEY Team Mastery - Safety 10.2024.pdf", syncState: "waiting_for_audience", inKnowledgeBase: false, ref: "0123456789abcdef", previewable: true, knowledgeDocumentIdInBase: null }],
   });
   const withMembers = () =>
     afterScan({
@@ -325,7 +325,7 @@ describe("audience choices show what they affect, before anyone decides", () => 
     render(<WovenKnowledgeScreen liveMode status={withMembers()} />);
     await userEvent.click(screen.getByRole("button", { name: "View items (66 in Woven)" }));
     const list = screen.getByRole("list", { name: "Items with audience N/A" });
-    expect(within(list).getByText("1 KEY TC Mastery - Safety 10.2024")).toBeTruthy();
+    expect(within(list).getByText("1 KEY Team Mastery - Safety 10.2024")).toBeTruthy();
     expect(within(list).getByText("File Library · Published · Waiting for audience decision")).toBeTruthy();
     expect(within(list).getByText(/And 65 more/)).toBeTruthy();
   });
@@ -337,7 +337,7 @@ describe("audience choices show what they affect, before anyone decides", () => 
         return new Response(
           JSON.stringify({
             status: "ok",
-            preview: { title: LOTION.title, contentType: "file_library", sourceName: LOTION.title, fileName: "1 KEY TC Mastery - Safety 10.2024.pdf", knowledgeDocumentIdInBase: null, sections: [{ label: "", page: 2, text: "Always wear eye protection in the booth." }], characterCount: 40, truncated: false },
+            preview: { title: LOTION.title, contentType: "file_library", sourceName: LOTION.title, fileName: "1 KEY Team Mastery - Safety 10.2024.pdf", knowledgeDocumentIdInBase: null, sections: [{ label: "", page: 2, text: "Always wear eye protection at the workbench." }], characterCount: 40, truncated: false },
           }),
           { status: 200 },
         );
@@ -349,7 +349,7 @@ describe("audience choices show what they affect, before anyone decides", () => 
     await userEvent.click(screen.getByRole("button", { name: "View items (66 in Woven)" }));
     await userEvent.click(screen.getByRole("button", { name: `Preview: ${LOTION.title}` }));
     const region = await screen.findByRole("region", { name: `Preview of ${LOTION.title}` });
-    expect(within(region).getByText("Always wear eye protection in the booth.")).toBeTruthy();
+    expect(within(region).getByText("Always wear eye protection at the workbench.")).toBeTruthy();
     expect(within(region).getByText("p. 2")).toBeTruthy();
     expect(within(region).getByText(/not saved, not searchable/)).toBeTruthy();
   });
@@ -365,7 +365,7 @@ describe("audience choices show what they affect, before anyone decides", () => 
     render(<WovenKnowledgeScreen liveMode status={withMembers()} />);
     await userEvent.click(screen.getAllByRole("button", { name: "Show in Content" })[0]!);
     await waitFor(() => expect(screen.getAllByTestId("content-row")).toHaveLength(1));
-    expect(screen.getByText("1 KEY TC Mastery - Safety 10.2024")).toBeTruthy();
+    expect(screen.getByText("1 KEY Team Mastery - Safety 10.2024")).toBeTruthy();
     expect((screen.getByLabelText("Audience group") as HTMLSelectElement).value).toBe("n/a");
   });
 });

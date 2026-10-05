@@ -130,8 +130,8 @@ export async function GET() {
      * assistant, and assuming one rule covers both is the mistake this block
      * exists to stop.
      *
-     * THE REPORTS READ SUPABASE IN EITHER MODE. Not one of the five report
-     * pages consults `isDemoMode`, and the reporting read layer contains no
+     * THE REPORTS READ SUPABASE IN EITHER MODE. No report page
+     * consults `isDemoMode`, and the reporting read layer contains no
      * demo branch at all — verified by test. So a Preview built in demo mode
      * still shows REAL report data, and report QA on it is valid.
      *
@@ -148,7 +148,7 @@ export async function GET() {
         source: "supabase",
         dependsOnMode: false,
         configured: readiness.supabase.ready,
-        note: "All five reports read the reporting tables in Supabase in either mode. Demo mode does not substitute seeded report data, so report QA is valid on a preview whatever the mode says.",
+        note: "Every report reads the reporting tables in Supabase in either mode. Demo mode does not substitute seeded report data, so report QA is valid on a preview whatever the mode says.",
       },
       assistant: {
         provider: readiness.mode === "live" ? "claude" : "mock",

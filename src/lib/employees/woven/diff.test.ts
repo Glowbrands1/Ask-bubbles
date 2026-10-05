@@ -21,7 +21,7 @@ const TODAY = "2026-09-29";
 
 const PRIMARY: LocationAffiliation = {
   wovenLocationId: "WL-0306",
-  locationName: "KS Manhattan",
+  locationName: "Example Location 306",
   locationNumber: "0306",
   accessType: "primary",
   expiresOn: null,
@@ -60,7 +60,7 @@ function resolved(overrides: Partial<ResolvedEmployee> = {}): ResolvedEmployee {
     positionId: "POS-SC",
     positionName: "Location Consultant",
     primaryLocationId: "WL-0306",
-    primaryLocationName: "KS Manhattan",
+    primaryLocationName: "Example Location 306",
     hasMultipleLocationAccess: false,
     hasAllLocationAccess: false,
     wovenLoginAllowed: true,
@@ -154,7 +154,7 @@ describe("employment status", () => {
 
 describe("position changes", () => {
   it("are UNCLASSIFIED without a position map — never a promotion by default", () => {
-    const [change] = diffEmployee(onFile(), resolved({ positionId: "POS-SD", positionName: "Location Director" }), opts());
+    const [change] = diffEmployee(onFile(), resolved({ positionId: "POS-SD", positionName: "Location Manager" }), opts());
     expect(change.kind).toBe("position_changed");
     expect(change.classification).toBe("unclassified");
     expect(change.effectiveDate).toBeNull();
@@ -246,7 +246,7 @@ describe("email", () => {
   });
 
   it("compares case-insensitively, and ignores a missing email", () => {
-    expect(diffEmployee(onFile(), resolved({ emailAddress: "AVERY@SunTanCity.test" }), opts())).toEqual([]);
+    expect(diffEmployee(onFile(), resolved({ emailAddress: "AVERY@Example.test" }), opts())).toEqual([]);
     expect(diffEmployee(onFile(), resolved({ emailAddress: null }), opts())).toEqual([]);
   });
 });

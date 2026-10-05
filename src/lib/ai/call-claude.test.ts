@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 /**
  * THE EXTRACTION, PINNED.
  *
- * `callClaude` was private to `server-ask.ts` until the Sales Totals analyser
+ * `callClaude` was private to `server-ask.ts` until the form-ingestion refiner
  * needed it. The risk in moving it is not that it stops working — that shows up
  * immediately — but that it gets COPIED instead of shared, leaving two model
  * ids, two effort settings and two error contracts to drift apart.
@@ -17,10 +17,7 @@ import { describe, expect, it } from "vitest";
 
 const CALL_CLAUDE = readFileSync("src/lib/ai/call-claude.ts", "utf8");
 const SERVER_ASK = readFileSync("src/lib/ai/server-ask.ts", "utf8");
-const ANALYZER = readFileSync(
-  "src/lib/reporting/analysis/analyze-sales-totals.ts",
-  "utf8",
-);
+const ANALYZER = readFileSync("src/lib/forms/ingest/refine.ts", "utf8");
 
 describe("one module builds the Claude request", () => {
   it("is the only place messages.create is called", () => {

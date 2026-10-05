@@ -3,7 +3,17 @@ import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AccessScope, ChatMessage } from "@/types";
-import { correctiveActionDocument } from "@/lib/forms/library";
+import { fixtureCorrectiveDocument } from "@/test/forms/fixture-forms";
+
+/*
+ * The fixture forms registry (`src/test/forms/fixture-forms.ts`): a coaching
+ * note, a corrective notice, a form behind a district-level permission, and an
+ * interview guide withheld from the chooser. Registered with `vi.mock`, so it
+ * survives the `vi.resetModules()` each `load()` performs.
+ */
+vi.mock("@/config/company/forms", async () =>
+  (await import("@/test/forms/fixture-forms")).fixtureFormsModule(),
+);
 
 /**
  * ============================================================================
@@ -28,12 +38,12 @@ const LOCATION: AccessScope = {
 function template(overrides: Record<string, unknown> = {}) {
   return {
     id: "tpl-coaching-id",
-    key: "coaching",
-    name: "Coaching Form",
-    shortName: "Coaching",
-    description: "The everyday documented coaching conversation.",
+    key: "fixture-coaching",
+    name: "Fixture Coaching Note",
+    shortName: "Coaching Note",
+    description: "A fixture coaching record.",
     layoutFamily: "coaching",
-    requiredPermission: "create_coaching_form",
+    requiredPermission: "create_forms",
     active: true,
     displayOrder: 1,
     currentVersion: { id: "v1", status: "published" },
@@ -45,31 +55,32 @@ function template(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function dpoa(overrides: Record<string, unknown> = {}) {
+function corrective(overrides: Record<string, unknown> = {}) {
   return template({
-    id: "tpl-dpoa-id",
-    key: "dpoa",
-    name: "Corrective Action Form",
-    shortName: "DPOA",
-    description: "The formal corrective step after coaching.",
+    id: "tpl-corrective-id",
+    key: "fixture-corrective",
+    name: "Fixture Corrective Notice",
+    shortName: "Corrective Notice",
+    description: "A fixture corrective notice.",
     layoutFamily: "corrective",
-    requiredPermission: "create_corrective_action",
+    requiredPermission: "create_forms",
     displayOrder: 2,
-    // The published version, as the library seeds it — the chat reads its questions.
-    currentVersion: { id: "v1", status: "published", document: correctiveActionDocument(), variants: [] },
+    // The published version, as the library seeds it.
+    currentVersion: { id: "v1", status: "published", document: fixtureCorrectiveDocument(), variants: [] },
     ...overrides,
   });
 }
 
-function epp(overrides: Record<string, unknown> = {}) {
+/** A form behind a permission a location manager does not hold. */
+function restricted(overrides: Record<string, unknown> = {}) {
   return template({
-    id: "tpl-sdit-epp-id",
-    key: "sdit-epp",
-    name: "SDIT EPP",
-    shortName: "SDIT EPP",
-    description: "Employee Performance Plan for a Location Director in training.",
-    layoutFamily: "epp",
-    requiredPermission: "create_epp",
+    id: "tpl-separation-id",
+    key: "fixture-separation",
+    name: "Fixture Separation Record",
+    shortName: "Separation Record",
+    description: "A fixture separation record.",
+    layoutFamily: "separation",
+    requiredPermission: "manage_form_records",
     displayOrder: 4,
     ...overrides,
   });
@@ -167,17 +178,17 @@ afterEach(() => {
 
 describe("37. an explicit, published, permitted template becomes a proposal", () => {
   it("names the template from the LIBRARY, not from the sentence", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
       turn("I need a coaching form for Sarah Jones"),
     );
 
     expect(response).not.toBeNull();
     expect(response!.formProposal).toBeDefined();
-    expect(response!.formProposal!.templateKey).toBe("coaching");
+    expect(response!.formProposal!.templateKey).toBe("fixture-coaching");
     // The published name, which is what will appear on the document — never a
     // label this module made up.
-    expect(response!.formProposal!.templateName).toBe("Coaching Form");
+    expect(response!.formProposal!.templateName).toBe("Fixture Coaching Note");
     expect(response!.formProposal!.employeeName).toBe("Sarah Jones");
     expect(response!.formProposal!.locationId).toBe("loc-0101");
     expect(response!.formProposal!.status).toBe("ready");
@@ -188,10 +199,10 @@ describe("37. an explicit, published, permitted template becomes a proposal", ()
 
 describe("38. a named template the library does not publish is refused, not substituted", () => {
   it.each([
-    ["absent from the library", [dpoa()]],
-    ["present but inactive", [template({ active: false }), dpoa()]],
-    ["present but never published", [template({ currentVersion: null }), dpoa()]],
-    ["present with only a draft version", [template({ currentVersion: { id: "v1", status: "draft" } }), dpoa()]],
+    ["absent from the library", [corrective()]],
+    ["present but inactive", [template({ active: false }), corrective()]],
+    ["present but never published", [template({ currentVersion: null }), corrective()]],
+    ["present with only a draft version", [template({ currentVersion: { id: "v1", status: "draft" } }), corrective()]],
   ])("%s", async (_name, summaries) => {
     const { proposals } = await load(summaries);
     const response = await proposals.proposeFormForTurn(
@@ -211,13 +222,13 @@ describe("38. a named template the library does not publish is refused, not subs
 /* ========================================================== permissions == */
 
 describe("39. the TEMPLATE's own permission decides, and chat cannot widen it", () => {
-  it("refuses a DPOA to a role that cannot create corrective action", async () => {
-    const { proposals } = await load([template(), dpoa()]);
-    // An Assistant Location Director holds `create_coaching` — which is a
-    // different permission from `create_coaching_form` — and no form
+  it("refuses a corrective notice to a role that cannot create forms", async () => {
+    const { proposals } = await load([template(), corrective()]);
+    // An assistant manager can view the forms register but holds no
+    // `create_forms`, and no form
     // permission at all.
     const response = await proposals.proposeFormForTurn(
-      turn("write a DPOA for Sarah Jones", { role: "assistant_manager" }),
+      turn("write a corrective notice for Sarah Jones", { role: "assistant_manager" }),
     );
 
     expect(response!.formProposal).toBeUndefined();
@@ -225,23 +236,23 @@ describe("39. the TEMPLATE's own permission decides, and chat cannot widen it", 
   });
 
   it("refuses everything to an actor with no role at all", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
       turn("coaching form for Sarah Jones", { role: null }),
     );
     expect(response!.formProposal).toBeUndefined();
   });
 
-  it("allows a Location Director the forms they already hold", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+  it("allows a location manager the forms they already hold", async () => {
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
-      turn("write a DPOA for Sarah Jones", { role: "location_manager" }),
+      turn("write a corrective notice for Sarah Jones", { role: "location_manager" }),
     );
-    expect(response!.formProposal!.templateKey).toBe("dpoa");
+    expect(response!.formProposal!.templateKey).toBe("fixture-corrective");
   });
 
   it("offers only what the asking role may actually create", async () => {
-    const { proposals } = await load([template(), dpoa(), epp()]);
+    const { proposals } = await load([template(), corrective(), restricted()]);
     const response = await proposals.proposeFormForTurn(
       // Ambiguous, so the answer is the choices.
       turn("can you create a form for me", { role: "location_manager" }),
@@ -253,19 +264,19 @@ describe("39. the TEMPLATE's own permission decides, and chat cannot widen it", 
      * `formSelection`, which is what the picker renders. What is being pinned
      * is unchanged: the permission filter decides what is offered.
      */
-    expect(offered(response!)).toContain("Coaching Form");
-    expect(offered(response!)).toContain("Corrective Action Form");
-    // A Location Director does not hold `create_epp`, so offering it would be an
+    expect(offered(response!)).toContain("Fixture Coaching Note");
+    expect(offered(response!)).toContain("Fixture Corrective Notice");
+    // A location manager does not hold `manage_form_records`, so offering it would be an
     // invitation to a refusal — collapsed behind "See more forms" included.
-    expect(offered(response!)).not.toContain("SDIT EPP");
+    expect(offered(response!)).not.toContain("Fixture Separation Record");
   });
 });
 
 /* ============================================================ ambiguity == */
 
 describe("40. an ambiguous request produces a question, never a default", () => {
-  it("returns no proposal and does not reach for the Coaching Form", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+  it("returns no proposal and does not reach for the coaching note", async () => {
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(turn("create a form for Sarah Jones"));
 
     expect(response!.formProposal).toBeUndefined();
@@ -275,7 +286,7 @@ describe("40. an ambiguous request produces a question, never a default", () => 
   });
 
   it("says so plainly when the role may create nothing", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
       turn("create a form", { role: "employee" }),
     );
@@ -331,7 +342,6 @@ describe("42. a proposal creates nothing", () => {
     expect(Object.keys(response!)).not.toContain("pendingFormTemplateId");
     expect(Object.keys(response!)).not.toContain("pendingFormValues");
     expect(response!.citations).toEqual([]);
-    expect(response!.recommendedVideoIds).toEqual([]);
   });
 
   it("never claims a form exists before one does", async () => {
@@ -349,7 +359,7 @@ describe("42. a proposal creates nothing", () => {
 
   /**
    * ==========================================================================
-   * THE DPOA IS CREATABLE INLINE NOW, AND THE ESCAPE COPY GOES WITH IT
+   * THE CORRECTIVE NOTICE IS CREATABLE INLINE, AND THE ESCAPE COPY GOES WITH IT
    * ==========================================================================
    *
    * This test used to assert the opposite, and the assertion was correct at the
@@ -361,13 +371,13 @@ describe("42. a proposal creates nothing", () => {
    * template's own permission, and the drafting route reads its field list from
    * the pinned version and withholds policy-quoting fields when retrieval finds
    * no approved policy. Those were the three things that had to be true of the
-   * DPOA specifically, and they are. See `lib/forms/inline-draft.ts`.
+   * corrective form specifically, and they are. See `lib/forms/inline-draft.ts`.
    */
   it("offers inline creation for the corrective forms too, not only Coaching", async () => {
-    const { proposals } = await load([template(), dpoa()]);
-    const response = await proposals.proposeFormForTurn(turn("write a DPOA for Sarah Jones"));
+    const { proposals } = await load([template(), corrective()]);
+    const response = await proposals.proposeFormForTurn(turn("write a corrective notice for Sarah Jones"));
 
-    expect(response!.formProposal!.templateKey).toBe("dpoa");
+    expect(response!.formProposal!.templateKey).toBe("fixture-corrective");
     expect(response!.formProposal!.supportsInlineDraft).toBe(true);
     // And therefore NOT the escape copy: sending them to the standalone builder
     // from the one card that can create the form here is the feature arguing
@@ -380,10 +390,10 @@ describe("42. a proposal creates nothing", () => {
     /*
      * A TEMPLATE WITH VARIANTS IS REFUSED INLINE WHATEVER THE KEY LIST SAYS.
      *
-     * `dpoa` is in the inline set, so this row is the structural guard on its
+     * The corrective notice is in the inline set, so this row is the structural guard on its
      * own: `createInlineForm` sends no `variantKey`, so an instance created from
      * chat would pin `null` and interpolate `{{role}}` to "the employee" — which
-     * is how the EPPs would print "In what areas is the the employee currently
+     * is how a review would print "In what areas is the the employee currently
      * succeeding?" on a performance plan. The variants are read off the
      * PUBLISHED VERSION rather than off the seed, because at runtime the
      * database is the authority and an administrator may have added them.
@@ -392,7 +402,7 @@ describe("42. a proposal creates nothing", () => {
      */
     const { proposals } = await load([
       template(),
-      dpoa({
+      corrective({
         currentVersion: {
           id: "v1",
           status: "published",
@@ -403,15 +413,15 @@ describe("42. a proposal creates nothing", () => {
            * refusal this test is about. See `variantsAllowInline`.
            */
           variants: [
-            { key: "tsd", label: "TSD review", role: "TSD", roleAbbr: "SD" },
-            { key: "dmit", label: "DMIT review", role: "DM", roleAbbr: "DMIT" },
+            { key: "lead", label: "Lead review", role: "Store Lead", roleAbbr: "SL" },
+            { key: "trainee", label: "Trainee review", role: "Lead in Training", roleAbbr: "LIT" },
           ],
         },
       }),
     ]);
-    const response = await proposals.proposeFormForTurn(turn("write a DPOA for Sarah Jones"));
+    const response = await proposals.proposeFormForTurn(turn("write a corrective notice for Sarah Jones"));
 
-    expect(response!.formProposal!.templateKey).toBe("dpoa");
+    expect(response!.formProposal!.templateKey).toBe("fixture-corrective");
     expect(response!.formProposal!.supportsInlineDraft).toBe(false);
     expect(response!.content).toMatch(/nothing has been created/i);
     expect(response!.content).toMatch(/can't create this one in chat yet/i);
@@ -421,7 +431,7 @@ describe("42. a proposal creates nothing", () => {
 
   it("does not send the manager to the standalone builder on the inline path", async () => {
     /*
-     * The requirement Marissa's workflow turns on. The escape copy was correct
+     * The requirement a manager's workflow turns on. The escape copy was correct
      * in Phase 2 and is the feature arguing against itself now: the one card
      * that CAN create the form inline must not point away from itself.
      */
@@ -473,14 +483,14 @@ describe("F3. the follow-up continues the same proposal", () => {
   const opening = managerTurn("msg-1", "Build me a coaching form for that.");
 
   it("resolves 'Sarah Test' into the open Coaching proposal", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
-      turn("Sarah Test", { history: [opening], continueTemplateKey: "coaching" }),
+      turn("Sarah Test", { history: [opening], continueTemplateKey: "fixture-coaching" }),
     );
 
     expect(response).not.toBeNull();
     expect(response!.formProposal).toBeDefined();
-    expect(response!.formProposal!.templateKey).toBe("coaching");
+    expect(response!.formProposal!.templateKey).toBe("fixture-coaching");
     expect(response!.formProposal!.employeeName).toBe("Sarah Test");
     expect(response!.formProposal!.status).toBe("ready");
   });
@@ -505,7 +515,7 @@ describe("F3. the follow-up continues the same proposal", () => {
     const response = await proposals.proposeFormForTurn(
       turn("Actually it's for Marcus Webb", {
         history: [opening, managerTurn("msg-2", "Sarah Test")],
-        continueTemplateKey: "coaching",
+        continueTemplateKey: "fixture-coaching",
       }),
     );
 
@@ -527,7 +537,7 @@ describe("F3. a hint never swallows the conversation", () => {
      */
     const { proposals } = await load([template()]);
     const response = await proposals.proposeFormForTurn(
-      turn(question, { continueTemplateKey: "coaching" }),
+      turn(question, { continueTemplateKey: "fixture-coaching" }),
     );
     expect(response).toBeNull();
   });
@@ -538,7 +548,7 @@ describe("F3. a hint never swallows the conversation", () => {
     // called Create.
     const { proposals } = await load([template()]);
     const response = await proposals.proposeFormForTurn(
-      turn("Show me the attendance policy instead", { continueTemplateKey: "coaching" }),
+      turn("Show me the attendance policy instead", { continueTemplateKey: "fixture-coaching" }),
     );
     expect(response).toBeNull();
   });
@@ -557,16 +567,16 @@ describe("F3. a tampered hint gains nothing", () => {
 
   it("is refused when the role could not have asked for that template", async () => {
     /*
-     * The escalation a forged hint would attempt: name a DPOA in the hint and
-     * receive one without typing "DPOA". The template's own
+     * The escalation a forged hint would attempt: name a corrective notice in
+     * the hint and receive one without typing its name. The template's own
      * `required_permission` applies to a continued turn exactly as it does to a
      * typed one.
      */
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
       turn("Sarah Test", {
         role: "assistant_manager",
-        continueTemplateKey: "dpoa",
+        continueTemplateKey: "fixture-corrective",
       }),
     );
 
@@ -577,7 +587,7 @@ describe("F3. a tampered hint gains nothing", () => {
   it("is refused when the template is not published", async () => {
     const { proposals } = await load([template({ currentVersion: null })]);
     const response = await proposals.proposeFormForTurn(
-      turn("Sarah Test", { continueTemplateKey: "coaching" }),
+      turn("Sarah Test", { continueTemplateKey: "fixture-coaching" }),
     );
     expect(response!.formProposal).toBeUndefined();
   });
@@ -586,7 +596,7 @@ describe("F3. a tampered hint gains nothing", () => {
     const { proposals } = await load([template()]);
     const response = await proposals.proposeFormForTurn(
       turn("Sarah Test", {
-        continueTemplateKey: "coaching",
+        continueTemplateKey: "fixture-coaching",
         scope: { level: "district", primaryAreaId: "dist-01", alsoCoversAreaIds: [] },
       }),
     );
@@ -619,7 +629,7 @@ describe("F3. a tampered hint gains nothing", () => {
  * — wrote a facsimile and paraphrased the escape copy it could see in the
  * history.
  *
- * The Forms LIBRARY decides whether a Coaching Form exists, and it does: the
+ * The Forms LIBRARY decides whether a coaching form exists, and it does: the
  * template is active with a published current version. The knowledge base never
  * had a say and should never have been asked.
  */
@@ -684,7 +694,7 @@ describe("P4-RC. the FORMS LIBRARY decides the template exists, never the knowle
 
     // Resolved from the injected library rows, with no read of its own.
     expect(calls).toEqual([]);
-    expect(response!.formProposal!.templateKey).toBe("coaching");
+    expect(response!.formProposal!.templateKey).toBe("fixture-coaching");
   });
 
   it("holds no knowledge-base dependency in the proposal path", () => {
@@ -719,8 +729,8 @@ describe("P4-RC. Claude is forbidden from writing a facsimile form", () => {
     const prompts = readFileSync("src/lib/ai/prompts.ts", "utf8");
 
     expect(prompts).toContain("NEVER WRITE A FACSIMILE OF A COMPANY FORM");
-    expect(prompts).toMatch(/never tell a manager to paste your text into an official form/i);
-    expect(prompts).toMatch(/ask me to create a coaching form/i);
+    expect(prompts).toMatch(/never tell anybody to paste your text into an official form/i);
+    expect(prompts).toMatch(/ask you to create it by name and for whom/i);
   });
 });
 
@@ -737,11 +747,11 @@ describe("P4-RC. Claude is forbidden from writing a facsimile form", () => {
 describe("RR-E. with no form established, it asks rather than defaulting", () => {
   const BUTTON = "Create a form from this conversation.";
 
-  it("does not silently choose the Coaching Form", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+  it("does not silently choose the coaching note", async () => {
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, {
-        history: [managerTurn("m1", "Sarah Test was late today at Kearney.")],
+        history: [managerTurn("m1", "Sarah Test was late today at Testville.")],
       }),
     );
 
@@ -754,27 +764,27 @@ describe("RR-E. with no form established, it asks rather than defaulting", () =>
      * From the canonical library, filtered by published/active and by the
      * TEMPLATE's own required_permission — never a hard-coded or demo list.
      */
-    const { proposals, calls } = await load([template(), dpoa(), epp()]);
+    const { proposals, calls } = await load([template(), corrective(), restricted()]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, { role: "location_manager" }),
     );
 
     // Nothing read here: the library arrives on the turn, read once upstream.
     expect(calls).toEqual([]);
-    expect(offered(response!)).toContain("Coaching Form");
-    expect(offered(response!)).toContain("Corrective Action Form");
-    // A Location Director holds no `create_epp`.
-    expect(offered(response!)).not.toContain("SDIT EPP");
+    expect(offered(response!)).toContain("Fixture Coaching Note");
+    expect(offered(response!)).toContain("Fixture Corrective Notice");
+    // A location manager holds no `manage_form_records`.
+    expect(offered(response!)).not.toContain("Fixture Separation Record");
   });
 
   it("offers a template the library publishes beyond Coaching", async () => {
     // Not Coaching-only: whatever the library publishes and the role permits.
-    const { proposals } = await load([template(), dpoa(), epp()]);
+    const { proposals } = await load([template(), corrective(), restricted()]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, { role: "district_manager" }),
     );
 
-    expect(offered(response!)).toContain("SDIT EPP");
+    expect(offered(response!)).toContain("Fixture Separation Record");
   });
 });
 
@@ -790,22 +800,22 @@ describe("RR-F. with a form already established, it continues that one", () => {
      * Not the forbidden default: the key comes from a proposal this
      * conversation produced, and is revalidated like any other.
      */
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, {
         history: [managerTurn("m1", "Sarah Test was late today.")],
-        continueTemplateKey: "coaching",
+        continueTemplateKey: "fixture-coaching",
       }),
     );
 
-    expect(response!.formProposal!.templateKey).toBe("coaching");
+    expect(response!.formProposal!.templateKey).toBe("fixture-coaching");
     expect(response!.formProposal!.employeeName).toBe("Sarah Test");
   });
 
   it("still revalidates the continued key against the role", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
-      turn(BUTTON, { role: "assistant_manager", continueTemplateKey: "dpoa" }),
+      turn(BUTTON, { role: "assistant_manager", continueTemplateKey: "fixture-corrective" }),
     );
 
     expect(response!.formProposal).toBeUndefined();
@@ -820,7 +830,7 @@ describe("RR-F. with a form already established, it continues that one", () => {
           managerTurn("m1", "Sarah Test was late today."),
           managerTurn("m2", "I already spoke with her about arriving on time."),
         ],
-        continueTemplateKey: "coaching",
+        continueTemplateKey: "fixture-coaching",
       }),
     );
 
@@ -844,7 +854,7 @@ describe("RR-F. with a form already established, it continues that one", () => {
             createdAt: "2026-09-07T12:00:00Z",
           },
         ],
-        continueTemplateKey: "coaching",
+        continueTemplateKey: "fixture-coaching",
       }),
     );
 
@@ -855,19 +865,19 @@ describe("RR-F. with a form already established, it continues that one", () => {
 
 describe("RR-G. the typed flow is unchanged", () => {
   it("still resolves an explicit coaching request the same way", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
       turn("Create a coaching form for Sarah Test"),
     );
 
-    expect(response!.formProposal!.templateKey).toBe("coaching");
+    expect(response!.formProposal!.templateKey).toBe("fixture-coaching");
     expect(response!.formProposal!.employeeName).toBe("Sarah Test");
     expect(response!.formProposal!.status).toBe("ready");
     expect(response!.formProposal!.supportsInlineDraft).toBe(true);
   });
 
   it("an ambiguous TYPED request with nothing open still asks", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(turn("create a form for Sarah Test"));
 
     expect(response!.formProposal).toBeUndefined();
@@ -886,21 +896,21 @@ describe("RR-G. the typed flow is unchanged", () => {
  * a sentence still on their screen.
  *
  * Two separate faults met there, and both are covered here: the rail's own
- * sentence is generic, and the employee reader was counting "Coaching Form" as a
+ * sentence is generic, and the employee reader was counting "Fixture Coaching Note" as a
  * second person. Together they made the flow feel broken twice over.
  */
 describe("F5. the rail picks up the form the manager already named", () => {
   const RAIL = "Create a form from this conversation.";
 
   it("proposes the form named in an earlier manager turn", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
       turn(RAIL, {
         history: [managerTurn("m1", "Coaching Form for Sarah Test, she was late today")],
       }),
     );
 
-    expect(response?.formProposal?.templateKey).toBe("coaching");
+    expect(response?.formProposal?.templateKey).toBe("fixture-coaching");
     // And the employee comes with it — this is the redundancy that was reported.
     expect(response?.formProposal?.employeeName).toBe("Sarah Test");
     expect(response?.formProposal?.status).not.toBe("needs_employee");
@@ -910,9 +920,9 @@ describe("F5. the rail picks up the form the manager already named", () => {
   it("still asks when the manager has never named one", async () => {
     /*
      * THE RULE THIS WHOLE MODULE EXISTS FOR SURVIVES THE FIX. With nothing
-     * said, an ambiguous request is a question — never the Coaching Form.
+     * said, an ambiguous request is a question — never the coaching note.
      */
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
       turn(RAIL, { history: [managerTurn("m1", "Sarah was late again this morning.")] }),
     );
@@ -924,14 +934,14 @@ describe("F5. the rail picks up the form the manager already named", () => {
   it("does not take the form from the ASSISTANT's own words", async () => {
     // The assistant names every template when it asks which one; that listing
     // must never become the answer to its own question.
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
       turn(RAIL, {
         history: [
           {
             id: "a1",
             role: "assistant",
-            content: "Which form do you need? Coaching Form — the everyday documented coaching conversation.",
+            content: "Which form do you need? Fixture Coaching Note — a fixture coaching record.",
             createdAt: "2026-09-07T12:00:00Z",
           },
         ],
@@ -944,39 +954,39 @@ describe("F5. the rail picks up the form the manager already named", () => {
 
   it("prefers the open proposal over the look-back", async () => {
     // A proposal on screen is more recent than anything said before it.
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
       turn(RAIL, {
         history: [managerTurn("m1", "Coaching Form for Sarah Test")],
-        continueTemplateKey: "dpoa",
+        continueTemplateKey: "fixture-corrective",
       }),
     );
 
-    expect(response?.formProposal?.templateKey).toBe("dpoa");
+    expect(response?.formProposal?.templateKey).toBe("fixture-corrective");
   });
 
   it("takes the most recent form the manager named", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
       turn(RAIL, {
         history: [
           managerTurn("m1", "Coaching Form for Sarah Test"),
-          managerTurn("m2", "Actually I need a Corrective Action Form for Sarah Test"),
+          managerTurn("m2", "Actually I need a Fixture Corrective Notice for Sarah Test"),
         ],
       }),
     );
 
-    expect(response?.formProposal?.templateKey).toBe("dpoa");
+    expect(response?.formProposal?.templateKey).toBe("fixture-corrective");
   });
 
   it("still applies the template's own permission to a looked-back key", async () => {
     /*
-     * The look-back is a hint about WHICH form, never a grant. A Location Director
-     * has no `create_epp`, and naming one earlier cannot change that.
+     * The look-back is a hint about WHICH form, never a grant. A location
+     * manager has no `manage_form_records`, and naming one earlier cannot change that.
      */
-    const { proposals } = await load([template(), epp()]);
+    const { proposals } = await load([template(), restricted()]);
     const response = await proposals.proposeFormForTurn(
-      turn(RAIL, { history: [managerTurn("m1", "I need an SDIT EPP for Sarah Test")] }),
+      turn(RAIL, { history: [managerTurn("m1", "I need a separation record for Sarah Test")] }),
     );
 
     expect(response?.formProposal).toBeUndefined();
@@ -990,7 +1000,7 @@ describe("F5. naming the form does not cost you the employee", () => {
       turn("Coaching Form for Sarah Test, she was late today"),
     );
 
-    expect(response?.formProposal?.templateKey).toBe("coaching");
+    expect(response?.formProposal?.templateKey).toBe("fixture-coaching");
     expect(response?.formProposal?.employeeName).toBe("Sarah Test");
     expect(response?.content).not.toMatch(/don't yet know who this form is about/);
   });
@@ -1011,136 +1021,21 @@ describe("F5. naming the form does not cost you the employee", () => {
  * The rule underneath is unchanged and asserted here too — offering is not
  * choosing. No proposal, no template key resolved, nothing created.
  */
-/* ================================================ the two openings ======== */
-
-/**
- * ============================================================================
- * A MANAGER WHO HAS SAID NOTHING GETS THE SEVEN QUESTIONS
- * ============================================================================
- *
- * The picker's card sends `formRequestPhrase(name)` through the composer, which
- * is a manager who has chosen a document and described nothing. There is
- * nothing to draft from, and answering with a single question at a time is the
- * interrogation this feature is supposed to replace — so it is the intake: the
- * seven details the business already asks for, in their order and their
- * wording, and then the form.
- *
- * A MANAGER WHO DESCRIBED SOMETHING STILL GETS THE DRAFT. That is the UX the
- * business signed off, and the two rules do not compete: the test is on what
- * the MANAGER SAID, so a sentence about an incident takes the draft path and a
- * bare form name takes the intake.
- */
-describe("CA-INTAKE. the opening depends on whether the manager has described anything", () => {
-  const CARD = "Create a Corrective Action Form from this conversation.";
-
-  it("asks for what is missing when the card is clicked and nothing has been said", async () => {
-    const { proposals } = await load([template(), dpoa()]);
-    const response = await proposals.proposeFormForTurn(turn(CARD));
-
-    const content = response!.content;
-
-    // The business's questions, in its order and wording — less the location,
-    // which this one-location account already settles.
-    expect(content).toMatch(/I can help you create a \*\*Corrective Action Form\*\*/);
-    expect(content).toMatch(/^1\. Employee's full name$/m);
-    expect(content).not.toMatch(/Location location/);
-    expect(content).toMatch(/^2\. Date for the form/m);
-    expect(content).toMatch(/^3\. What happened/m);
-    expect(content).toMatch(/^4\. Whether this is a verbal or written warning$/m);
-    expect(content).toMatch(/^5\. Whether the employee has previously received coaching and\/or corrective action/m);
-    expect(content).toMatch(/^6\. Is payroll deduct applicable\? \(Yes or No\)$/m);
-    expect(content).toMatch(/^7\. The employee's job title/m);
-
-    /*
-     * THE NAME THE BUSINESS RETIRED, ANYWHERE IN THE OPENING, IS THE BUG THIS
-     * BLOCK EXISTS FOR. They sent us a screenshot of Ask Bubbles offering to
-     * create a "Disciplinary Plan of Action (DPOA) form" and asked for the
-     * questions kept and the name gone.
-     */
-    expect(content).not.toMatch(/disciplinar/i);
-    expect(content).not.toContain("DPOA");
-  });
-
-  it("names the date it would use, rather than saying it would use one", async () => {
-    const { proposals } = await load([template(), dpoa()]);
-    const response = await proposals.proposeFormForTurn(turn(CARD));
-
-    const today = new Date().toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-    expect(response!.content).toContain(`I'll use ${today}`);
-  });
-
-  it("still proposes the form, so one click creates the draft once they answer", async () => {
-    // The intake is the PROSE. The card beside it is unchanged — the business
-    // asked for the single Create Draft click and it is not negotiable here.
-    const { proposals } = await load([template(), dpoa()]);
-    const response = await proposals.proposeFormForTurn(turn(CARD));
-
-    expect(response!.formProposal!.templateKey).toBe("dpoa");
-    expect(response!.formSelection).toBeUndefined();
-  });
-
-  it("drafts instead of interviewing when the manager described an incident", async () => {
-    const { proposals } = await load([template(), dpoa()]);
-    const response = await proposals.proposeFormForTurn(
-      turn("Create a corrective action for Sarah Test. She wore a mini skirt today."),
-    );
-
-    const content = response!.content;
-
-    expect(content).toMatch(/I'll draft a \*\*Corrective Action Form\*\* for \*\*Sarah Test\*\*/);
-    expect(content).not.toMatch(/^1\. Employee's full name$/m);
-  });
-
-  it("drafts when the incident came on an earlier turn and the card was clicked after", async () => {
-    /*
-     * THE ORDER MANAGERS ACTUALLY WORK IN: describe it, then reach for the
-     * document. Reading only the latest turn would hand them the questionnaire
-     * one message after they answered it.
-     */
-    const { proposals } = await load([template(), dpoa()]);
-    const response = await proposals.proposeFormForTurn(
-      turn(CARD, {
-        history: [managerTurn("m1", "Sarah Test was late three times this week.")],
-      }),
-    );
-
-    expect(response!.content).not.toMatch(/^1\. Employee's full name$/m);
-    expect(response!.formProposal!.employeeName).toBe("Sarah Test");
-  });
-
-  it("walks a manager through it on request, without re-asking what they said", async () => {
-    const { proposals } = await load([template(), dpoa()]);
-    const response = await proposals.proposeFormForTurn(
-      turn("Corrective action form for Sarah Test — walk me through it."),
-    );
-
-    expect(response!.content).toMatch(/I can help you create a \*\*Corrective Action Form\*\*/);
-    // Sarah Test was named and the location is the account's: neither is asked.
-    expect(response!.content).not.toMatch(/Employee's full name/);
-    expect(response!.content).not.toMatch(/Location location/);
-    expect(response!.content).toMatch(/^1\. Date for the form/m);
-  });
-});
-
 describe("PICK. an ambiguous request offers structured choices", () => {
   const BUTTON = "Create a form from this conversation.";
 
-  it("suggests the Coaching Form first when the manager may create it", async () => {
-    const { proposals } = await load([template(), dpoa(), epp()]);
+  it("suggests the first offered form first when the manager may create it", async () => {
+    const { proposals } = await load([template(), corrective(), restricted()]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, { role: "district_manager" }),
     );
 
-    expect(response!.formSelection!.primary.templateKey).toBe("coaching");
-    expect(response!.formSelection!.primary.templateName).toBe("Coaching Form");
+    expect(response!.formSelection!.primary.templateKey).toBe("fixture-coaching");
+    expect(response!.formSelection!.primary.templateName).toBe("Fixture Coaching Note");
   });
 
   it("carries the library's own description, not one written in chat", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(turn(BUTTON));
 
     // `template()` builds the row; whatever description it carries is what the
@@ -1151,7 +1046,7 @@ describe("PICK. an ambiguous request offers structured choices", () => {
   });
 
   it("holds the rest back, without repeating the primary form", async () => {
-    const { proposals } = await load([template(), dpoa(), epp()]);
+    const { proposals } = await load([template(), corrective(), restricted()]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, { role: "district_manager" }),
     );
@@ -1159,49 +1054,49 @@ describe("PICK. an ambiguous request offers structured choices", () => {
     const additional = response!.formSelection!.additional;
     expect(additional.map((entry) => entry.templateKey)).not.toContain("coaching");
     expect(additional.map((entry) => entry.templateName)).toEqual([
-      "Corrective Action Form",
-      "SDIT EPP",
+      "Fixture Corrective Notice",
+      "Fixture Separation Record",
     ]);
   });
 
   it("does not name a form in the prose any more", async () => {
-    const { proposals } = await load([template(), dpoa(), epp()]);
+    const { proposals } = await load([template(), corrective(), restricted()]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, { role: "district_manager" }),
     );
 
     // The wall of forms this replaced. The question stays; the list goes.
     expect(response!.content).toMatch(/which form do you need/i);
-    for (const name of ["Coaching Form", "Corrective Action Form", "SDIT EPP"]) {
+    for (const name of ["Fixture Coaching Note", "Fixture Corrective Notice", "Fixture Separation Record"]) {
       expect(response!.content, name).not.toContain(name);
     }
   });
 
   it("offers no form the role cannot create, collapsed or not", async () => {
-    const { proposals } = await load([template(), dpoa(), epp()]);
+    const { proposals } = await load([template(), corrective(), restricted()]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, { role: "location_manager" }),
     );
 
-    expect(offered(response!)).toEqual(["Coaching Form", "Corrective Action Form"]);
+    expect(offered(response!)).toEqual(["Fixture Coaching Note", "Fixture Corrective Notice"]);
   });
 
   it("leads with a form they CAN create when Coaching is not theirs", async () => {
     /*
-     * A deployment that has not published the Coaching Form, or a role without
-     * `create_coaching_form`, must not be shown it as the suggestion — and must
+     * A deployment that has not published the coaching note, or a role without
+     * its permission, must not be shown it as the suggestion — and must
      * not be shown an empty picker either. The first permitted form leads.
      */
     const { proposals } = await load([
-      template({ requiredPermission: "create_epp" }),
-      dpoa(),
+      template({ requiredPermission: "manage_form_records" }),
+      corrective(),
     ]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, { role: "location_manager" }),
     );
 
-    expect(response!.formSelection!.primary.templateKey).toBe("dpoa");
-    expect(offered(response!)).not.toContain("Coaching Form");
+    expect(response!.formSelection!.primary.templateKey).toBe("fixture-corrective");
+    expect(offered(response!)).not.toContain("Fixture Coaching Note");
   });
 
   it("offers nothing at all when nothing is published for this person", async () => {
@@ -1213,10 +1108,10 @@ describe("PICK. an ambiguous request offers structured choices", () => {
   });
 
   it("still proposes nothing — offering is not choosing", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, {
-        history: [managerTurn("m1", "Sarah Test was late today at Kearney.")],
+        history: [managerTurn("m1", "Sarah Test was late today at Testville.")],
       }),
     );
 
@@ -1227,7 +1122,7 @@ describe("PICK. an ambiguous request offers structured choices", () => {
   });
 
   it("gives an explicitly named form its proposal, and no picker", async () => {
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const response = await proposals.proposeFormForTurn(
       turn("Create a Policy Review from this conversation.", {
         role: "location_manager",
@@ -1247,30 +1142,30 @@ describe("PICK. an ambiguous request offers structured choices", () => {
      * composer; this is that sentence arriving at the server. It must produce
      * the proposal a typed request produces — no card-only entry point.
      */
-    const { proposals } = await load([template(), dpoa()]);
+    const { proposals } = await load([template(), corrective()]);
     const { formRequestPhrase } = await import("@/lib/forms/template-intent");
 
     const response = await proposals.proposeFormForTurn(
-      turn(formRequestPhrase("Corrective Action Form"), {
+      turn(formRequestPhrase("Fixture Corrective Notice"), {
         role: "location_manager",
         history: [managerTurn("m1", "Sarah Test was late three times.")],
       }),
     );
 
     expect(response!.formSelection).toBeUndefined();
-    expect(response!.formProposal!.templateKey).toBe("dpoa");
+    expect(response!.formProposal!.templateKey).toBe("fixture-corrective");
   });
 });
 
 /**
  * ============================================================================
- * THE FOUR HIRING FORMS ARE WITHHELD FROM THE CHOOSER
+ * A WITHHELD FORM IS KEPT OUT OF THE CHOOSER
  * ============================================================================
  *
- * The business asked for the Hiring & Interview forms to stop appearing among
+ * A form the registry marks `offeredInChooser: false` stays out of
  * the choices Bubbles puts in front of a manager who has not named a form — the
  * cards behind "Create a form from this conversation" and the lists that go
- * with them. See `lib/forms/chooser.ts`.
+ * with them. See `offeredInChooser` in `src/config/company/forms/`.
  *
  * WHAT THESE PIN IS THE DISTINCTION, not the removal. A withheld form is not a
  * retired one: it stays published, it stays in the forms library, and a
@@ -1278,10 +1173,10 @@ describe("PICK. an ambiguous request offers structured choices", () => {
  * stop working would pass a "does it appear in the picker" test and would be
  * the wrong change.
  */
-describe("HIDE. the hiring forms are not offered as choices", () => {
+describe("HIDE. a form the registry withholds is not offered as a choice", () => {
   const BUTTON = "Create a form from this conversation.";
 
-  function hiring(key: string, name: string, order: number) {
+  function withheld(key: string, name: string, order: number) {
     return template({
       id: `tpl-${key}-id`,
       key,
@@ -1289,40 +1184,36 @@ describe("HIDE. the hiring forms are not offered as choices", () => {
       shortName: name,
       description: `The ${name}.`,
       layoutFamily: "interview",
-      requiredPermission: "create_hiring_form",
-      category: "hiring",
+      requiredPermission: "create_forms",
+      category: "fixture-hiring",
       displayOrder: order,
     });
   }
 
-  const HIRING = [
-    hiring("prescreen-phone-interview", "Prescreen / Phone Interview Form", 10),
-    hiring("tanning-consultant-interview", "Tanning Consultant Interview Form", 11),
-    hiring("management-interview-round-1", "First Round Management Interview Form", 12),
-    hiring("management-interview-round-2", "Second Round Management Interview Form", 13),
-  ];
+  /* The fixture registry keeps its interview guide out of the chooser. */
+  const HIRING = [withheld("fixture-interview", "Fixture Interview Guide", 10)];
 
-  it("offers none of the four, visible or collapsed", async () => {
-    const { proposals } = await load([template(), dpoa(), ...HIRING]);
+  it("offers none of them, visible or collapsed", async () => {
+    const { proposals } = await load([template(), corrective(), ...HIRING]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, { role: "district_manager" }),
     );
 
     // `offered()` reads the primary card AND everything behind "See more
     // forms" — a form withheld only from the visible card is still offered.
-    expect(offered(response!)).toEqual(["Coaching Form", "Corrective Action Form"]);
+    expect(offered(response!)).toEqual(["Fixture Coaching Note", "Fixture Corrective Notice"]);
   });
 
   it("leaves every other form exactly where it was", async () => {
-    const { proposals } = await load([template(), dpoa(), epp(), ...HIRING]);
+    const { proposals } = await load([template(), corrective(), restricted(), ...HIRING]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, { role: "district_manager" }),
     );
 
-    expect(response!.formSelection!.primary.templateKey).toBe("coaching");
+    expect(response!.formSelection!.primary.templateKey).toBe("fixture-coaching");
     expect(
       response!.formSelection!.additional.map((entry) => entry.templateKey),
-    ).toEqual(["dpoa", "sdit-epp"]);
+    ).toEqual(["fixture-corrective", "fixture-separation"]);
   });
 
   it("does not name one in the prose either", async () => {
@@ -1345,13 +1236,13 @@ describe("HIDE. the hiring forms are not offered as choices", () => {
     );
 
     expect(response!.content).toMatch(/not published in Ask Bubbles yet/i);
-    expect(response!.content).toContain("Coaching Form");
+    expect(response!.content).toContain("Fixture Coaching Note");
     for (const entry of HIRING) {
       expect(response!.content, entry.name as string).not.toContain(entry.name);
     }
   });
 
-  it("asks the question and offers nothing when the hiring forms are all there is", async () => {
+  it("asks the question and offers nothing when withheld forms are all there is", async () => {
     /*
      * The rule that Bubbles asks rather than defaults survives an empty
      * shortlist: withholding must not fall back to offering a withheld form.
@@ -1374,78 +1265,22 @@ describe("HIDE. the hiring forms are not offered as choices", () => {
      */
     const { proposals } = await load([template(), ...HIRING]);
     const response = await proposals.proposeFormForTurn(
-      turn("Create a prescreen form for the 2pm call.", { role: "district_manager" }),
+      turn("Create an interview guide for the 2pm call.", { role: "district_manager" }),
     );
 
-    expect(response!.formProposal!.templateKey).toBe("prescreen-phone-interview");
+    expect(response!.formProposal!.templateKey).toBe("fixture-interview");
     expect(response!.formSelection).toBeUndefined();
-  });
-
-  it("cannot be suggested proactively, even if the reader names one", async () => {
-    /*
-     * ========================================================================
-     * THE OTHER PRODUCER OF THE SAME CARDS
-     * ========================================================================
-     *
-     * `suggestFormsForTurn` offers forms unasked, from what the conversation
-     * is about, and it builds the same `ChatFormSelection` the picker does.
-     * `suggestedTemplateKeys` cannot name a hiring form today — it asks for
-     * `coaching`, `dpoa` and the role's plan — so a test written against the
-     * real reader would pass whether or not the withholding were applied
-     * here, and would go on passing the day that changed.
-     *
-     * So the reader is STUBBED TO NAME ONE. This asserts the filter itself:
-     * a withheld key offered as a candidate is dropped rather than rendered.
-     */
-    vi.resetModules();
-    library = [template(), ...HIRING];
-
-    vi.doMock("@/lib/forms/repository", () => ({
-      listTemplateSummaries: async () => {
-        throw new Error("form-proposal must take the library from its caller, not read it");
-      },
-      getTemplateByKey: async () => {
-        throw new Error("form-proposal must not read or write the library");
-      },
-    }));
-    vi.doMock("@/lib/forms/form-opportunity", () => ({
-      detectFormOpportunity: () => ({ kind: "coaching" }),
-      // A future `suggestedTemplateKeys` that asks for a withheld form.
-      suggestedTemplateKeys: () => ["prescreen-phone-interview", "coaching"],
-      formOpportunityLead: () => "Based on what you've described, I can prepare:",
-    }));
-
-    try {
-      const proposals = await import("./form-proposal");
-      const found = proposals.suggestFormsForTurn(
-        turn("How do I handle this?", {
-          role: "district_manager",
-          history: [
-            managerTurn("m1", "Jessica Vance is great with customers but late several times."),
-          ],
-        }) as never,
-      );
-
-      const names = [
-        found!.selection.primary.templateName,
-        ...found!.selection.additional.map((entry) => entry.templateName),
-      ];
-      expect(names).toEqual(["Coaching Form"]);
-      expect(names).not.toContain("Prescreen / Phone Interview Form");
-    } finally {
-      vi.doUnmock("@/lib/forms/form-opportunity");
-    }
   });
 
   it("still refuses one the role cannot create", async () => {
     /*
      * Withholding is applied AFTER permission, never in place of it. An
-     * Assistant Location Director has no `create_hiring_form`, and the refusal
-     * is the same one it always was — not a silent "no such form".
+     * assistant manager holds no `create_forms`, and the refusal is the same
+     * one it always was — not a silent "no such form".
      */
     const { proposals } = await load([template(), ...HIRING]);
     const response = await proposals.proposeFormForTurn(
-      turn("Create a prescreen form for the 2pm call.", {
+      turn("Create an interview guide for the 2pm call.", {
         role: "assistant_manager",
       }),
     );

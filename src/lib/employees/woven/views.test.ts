@@ -120,7 +120,7 @@ describe("the nine directory filters", () => {
 });
 
 describe("mappingSummary: Corporate is an approved non-location exception, not a missing location", () => {
-  /* Shaped like the live rows: Corporate reviewed 'ignored'; NE Omaha Q still 'unmapped'. */
+  /* Shaped like the live rows: Corporate reviewed 'ignored'; Example Location Q still 'unmapped'. */
   const CORPORATE = "Example Soap Co - Corporate";
   const base = byName("Odessa Farthing");
   const corporate = (over: Partial<DirectoryRow>): DirectoryRow => ({
@@ -182,8 +182,8 @@ describe("mappingSummary: Corporate is an approved non-location exception, not a
     expect(mappingSummary(corporate({ emailAddress: null })).label).toBe("Missing email");
   });
 
-  it("NE Omaha Q stays unresolved: its holders are still counted under Unmapped location, Corporate staff included", () => {
-    const q = { wovenLocationId: "LOC-NEQ", name: "NE Omaha Q", number: null, expiresOn: null };
+  it("Example Location Q stays unresolved: its holders are still counted under Unmapped location, Corporate staff included", () => {
+    const q = { wovenLocationId: "LOC-NEQ", name: "Example Location Q", number: null, expiresOn: null };
     const corporateOnly = corporate({ hasAllLocationAccess: false, activeLocationCount: 1, hasUnmappedLocation: false });
     const corporateWithQ = corporate({ hasAllLocationAccess: true, activeLocationCount: 17, additionalLocations: [q], hasUnmappedLocation: true });
     const locationWithQ = { ...byName("Marisol Quintero"), additionalLocations: [q], activeLocationCount: 2, hasUnmappedLocation: true };
@@ -238,7 +238,7 @@ describe("the eligibility preview", () => {
   it("eligible: active, login domain, confirmed role, mapped location, no login yet", () => {
     const r = evaluateEligibility("MARISOL.QUINTERO@sample-locations.test", preview, domains);
     expect(r.verdict).toBe("eligible");
-    expect(r.employee).toMatchObject({ wouldCreateRole: "employee", wouldCreateScopeLevel: "location", primaryLocationCode: "S101" });
+    expect(r.employee).toMatchObject({ wouldCreateRole: "employee", wouldCreateScopeLevel: "location", primaryLocationCode: "101" });
   });
 
   it("not eligible: terminated, not in Woven, not an address, or not at a login domain", () => {
@@ -286,7 +286,7 @@ describe("access drift", () => {
 });
 
 describe("the sample set is honest", () => {
-  it("every id is SAMPLE-, every location is a Sample Location, every email a test domain", () => {
+  it("every id is SAMPLE-, every location an Example Location, every email a test domain", () => {
     const all = JSON.stringify(WOVEN_SAMPLE_DATASET);
     for (const r of rows as readonly DirectoryRow[]) {
       expect(r.externalEmployeeId.startsWith("SAMPLE-")).toBe(true);

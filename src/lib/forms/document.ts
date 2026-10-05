@@ -1226,6 +1226,12 @@ export function interpolateBlock(block: FormBlock, variant: FormVariant | null):
       };
     case "numbered_list":
       return { ...block, label: interpolate(block.label, variant) };
+    case "signature_row":
+      return {
+        ...block,
+        label: interpolate(block.label, variant),
+        dateLabel: interpolate(block.dateLabel, variant),
+      };
     case "reference":
       return {
         ...block,

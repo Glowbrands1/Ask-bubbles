@@ -165,7 +165,7 @@ export function defaultState(): FakeWovenState {
         status: "current",
         audience: "Public",
         updated: "4/2/2025",
-        body: "Wear the Sun Tan City uniform.",
+        body: "Wear the company uniform.",
         version: "Version 1",
         attachments: [],
       },
@@ -216,29 +216,29 @@ export function defaultState(): FakeWovenState {
         ],
         attachments: [{ documentId: uuid(3111), stepIndex: 1, fileName: "Opening Checklist.pdf", storedName: "a1b2c3d4-0000-4000-8000-000000003111.pdf" }],
       },
-      { id: uuid(302), title: "Bed Cleaning", steps: [{ id: uuid(3021), title: "Clean the Bed", text: "Spray and wipe every surface." }], attachments: [] },
+      { id: uuid(302), title: "Bench Cleaning", steps: [{ id: uuid(3021), title: "Clean the Bench", text: "Spray and wipe every surface." }], attachments: [] },
     ],
     fileLibrary: [
-      { EntityID: uuid(401), Column1: "PDF", Column2: '<a href="#">Lotion Guide</a>', Column3: LIVE_STATUS("Published"), Column4: "Public", Column5: "<span>1.2 MB</span>", Column6: "9/1/2026", Column7: "Sales", Column8: "Sun Tan City" },
+      { EntityID: uuid(401), Column1: "PDF", Column2: '<a href="#">Lotion Guide</a>', Column3: LIVE_STATUS("Published"), Column4: "Public", Column5: "<span>1.2 MB</span>", Column6: "9/1/2026", Column7: "Sales", Column8: "Example Soap Co" },
       { EntityID: uuid(402), Column1: "Video", Column2: "<b>Welcome Video</b>", Column3: LIVE_STATUS("Published"), Column4: "Public", Column5: "40 MB", Column6: "8/1/2026", Column7: "", Column8: "Example Soap Co" },
       { EntityID: uuid(403), Column1: "PDF", Column2: "Old Flyer", Column3: LIVE_STATUS("Unpublished"), Column4: "Public", Column5: "1 MB", Column6: "1/1/2024", Column7: "", Column8: "Example Soap Co" },
     ],
     fileLibraryFiles: {
-      [uuid(401)]: { bytes: "%PDF-1.4 Lotion guide: apply the bronzer after the shower.", fileName: "Lotion Guide.pdf" },
+      [uuid(401)]: { bytes: "%PDF-1.4 Lotion guide: apply the shea lotion after the shower.", fileName: "Lotion Guide.pdf" },
     },
     knowledgeElements: [
-      { EntityID: uuid(501), Column1: "<span>Current</span>", Column2: `<a href="/KnowledgeElement/Details/${uuid(501)}">Spray Tan Basics</a>`, Column3: "v2", Column4: "Dynamic", Column5: "Not Provided", Column6: '<span class="hidden">2025-10-09</span><span>10/9/2025</span>' },
+      { EntityID: uuid(501), Column1: "<span>Current</span>", Column2: `<a href="/KnowledgeElement/Details/${uuid(501)}">Soap Loaf Basics</a>`, Column3: "v2", Column4: "Dynamic", Column5: "Not Provided", Column6: '<span class="hidden">2025-10-09</span><span>10/9/2025</span>' },
       { EntityID: uuid(502), Column1: "<span>Draft</span>", Column2: `<a href="/KnowledgeElement/Details/${uuid(502)}">New Element</a>`, Column3: "v1", Column4: "Dynamic", Column5: "Not Provided", Column6: '<span class="hidden">2025-10-10</span><span>10/10/2025</span>' },
     ],
     knowledgeElementPages: {
       [uuid(501)]: [
         {
           pageId: uuid(5011),
-          title: "Spray Tan Basics",
+          title: "Soap Loaf Basics",
           blocks: [
             {
               id: uuid(50111),
-              html: '<p>Prepare the booth.</p><p>Watch the <a href="https://example.sharepoint.com/sites/training/video.mp4">booth video</a>.</p>',
+              html: '<p>Prepare the workbench.</p><p>Watch the <a href="https://example.sharepoint.com/sites/training/video.mp4">workbench video</a>.</p>',
             },
           ],
         },

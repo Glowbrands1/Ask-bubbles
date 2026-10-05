@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ACTIVE_BRAND, BCS_BRAND_DRAFT } from "@/lib/brand";
+import { ACTIVE_BRAND } from "@/lib/brand";
 import { ADMIN_CONSOLE_ROLES, DEFAULT_PERMISSION_MATRIX } from "@/lib/permissions";
 
 /**
@@ -12,35 +12,36 @@ import { ADMIN_CONSOLE_ROLES, DEFAULT_PERMISSION_MATRIX } from "@/lib/permission
  *
  * SIX ROUTES TOOK THE CORPUS FROM THE REQUEST and validated it with
  * `requireScopeId`, which checks the SHAPE of a scope id and nothing else.
- * `bcs-core` passes that check because it is a real corpus: `src/lib/brand`
- * defines Buff City Soap alongside Sun Tan City.
+ * Another brand's corpus id passes that check because it is a well-formed
+ * corpus id — the shape a second company's library has in a shared database.
  *
- * So an authenticated Sun Tan City manager, holding every permission they are
- * meant to hold, could name another company's corpus and have the server use
- * it — to LIST it, SEARCH it, UPLOAD into it, RE-INDEX it, DOWNLOAD from it or
- * DELETE from it. `authorizeRequest` proves who the caller is and what they may
- * do; it says nothing about which company this build serves.
+ * So an authenticated manager, holding every permission they are meant to
+ * hold, could name another company's corpus and have the server use it — to
+ * LIST it, SEARCH it, UPLOAD into it, RE-INDEX it, DOWNLOAD from it or DELETE
+ * from it. `authorizeRequest` proves who the caller is and what they may do;
+ * it says nothing about which company this build serves.
  *
  * ============================================================================
  * WHY EACH TEST SEEDS BOTH CORPORA
  * ============================================================================
  *
- * The first version of the file-route suite seeded only the Sun Tan City row,
- * so a foreign document id matched nothing WHATEVER the route did with the
- * scope — and its "cross-scope" test passed against a route that was reading the
- * caller's corpus. A cross-corpus test that cannot express the attack proves
- * nothing.
+ * A fixture holding only this deployment's rows matches nothing for a foreign
+ * document id WHATEVER the route does with the scope — so a "cross-scope" test
+ * over it passes against a route that reads the caller's corpus. A
+ * cross-corpus test that cannot express the attack proves nothing.
  *
  * So every fixture here holds real foreign data, and each group asserts the
  * foreign data is genuinely reachable when the corpus asks for it, before
  * asserting the browser cannot make the corpus ask.
  */
 
-const STC = ACTIVE_BRAND.knowledgeScopeId;
-const BCS = BCS_BRAND_DRAFT.knowledgeScopeId;
+/* This build's corpus, read from the brand config rather than typed. */
+const OWN = ACTIVE_BRAND.knowledgeScopeId;
+/* A second, well-formed corpus this build does not serve. */
+const FOREIGN = "other-core";
 
-const STC_DOC = "8f14e45f-ceea-4e78-b2a7-1c1b1a2b3c4d";
-const BCS_DOC = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
+const OWN_DOC = "8f14e45f-ceea-4e78-b2a7-1c1b1a2b3c4d";
+const FOREIGN_DOC = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
 
 const ORIGINAL = { ...process.env };
 
@@ -85,7 +86,7 @@ afterEach(() => {
   vi.resetModules();
 });
 
-/** A signed-in Sun Tan City manager holding everything they legitimately hold. */
+/** A signed-in manager holding everything they legitimately hold. */
 /*
  * DEFAULTS TO `admin` NOW THAT KNOWLEDGE-BASE MANAGEMENT IS ADMIN-CONSOLE ONLY.
  *
@@ -166,14 +167,11 @@ function mockAuth(role = "admin") {
 /* ======================================================= the two corpora == */
 
 describe("the fixture's two corpora are real and different", () => {
-  it("names Buff City Soap, not some invented brand", () => {
-    // The Phase 1.1 write-up called `bcs` "Beach Comber Suns". It is Buff City
-    // Soap, and the corpus id in these tests is read from the brand config
-    // rather than typed, so the two cannot drift again.
-    expect(BCS_BRAND_DRAFT.brandName).toBe("Buff City Soap");
-    expect(BCS).toBe("bcs-core");
-    expect(STC).toBe("stc-core");
-    expect(BCS).not.toBe(STC);
+  it("serves the active brand's corpus, and the foreign one is a different, valid id", () => {
+    expect(ACTIVE_BRAND.brandName).toBe("Buff City Soap");
+    expect(OWN).toBe("bcs-core");
+    expect(FOREIGN).toMatch(/^[a-z][a-z0-9-]+$/);
+    expect(FOREIGN).not.toBe(OWN);
   });
 });
 
@@ -189,12 +187,12 @@ describe("listing cannot be pointed at another corpus", () => {
       SupabaseKnowledgeProvider: class {
         async listDocuments(scopeId?: string) {
           listed.push(scopeId);
-          // A REAL TWO-CORPUS LIBRARY. Ask for Buff City Soap's corpus and you
-          // get Buff City Soap's document — which is what makes the refusal
+          // A REAL TWO-CORPUS LIBRARY. Ask for the foreign corpus and you get
+          // the foreign document — which is what makes the refusal
           // below meaningful rather than vacuous.
-          return scopeId === BCS
-            ? [{ id: BCS_DOC, title: "Buff City Soap Handbook" }]
-            : [{ id: STC_DOC, title: "Sun Tan City Safety Binder" }];
+          return scopeId === FOREIGN
+            ? [{ id: FOREIGN_DOC, title: "Other Company Handbook" }]
+            : [{ id: OWN_DOC, title: "Company Safety Binder" }];
         }
       },
     }));
@@ -203,26 +201,26 @@ describe("listing cannot be pointed at another corpus", () => {
     return { route, listed };
   }
 
-  it("returns Buff City Soap's document when its corpus is asked for", async () => {
+  it("returns the foreign document when its corpus is asked for", async () => {
     // The guard on the guard: the fixture can express the attack.
     const { listed } = await load();
     const { SupabaseKnowledgeProvider } = await import("@/lib/knowledge/providers/supabase");
-    const rows = await new SupabaseKnowledgeProvider().listDocuments(BCS);
+    const rows = await new SupabaseKnowledgeProvider().listDocuments(FOREIGN);
 
-    expect(listed).toEqual([BCS]);
-    expect(rows[0]!.title).toContain("Buff City Soap");
+    expect(listed).toEqual([FOREIGN]);
+    expect(rows[0]!.title).toContain("Other Company");
   });
 
   it("lists this build's corpus however the scope query is set", async () => {
-    for (const query of ["", `?scope=${BCS}`, "?scope=stc-core", "?scope="]) {
+    for (const query of ["", `?scope=${FOREIGN}`, `?scope=${OWN}`, "?scope="]) {
       const { route, listed } = await load();
       const response = await route.GET(
         new Request(`https://app.test/api/knowledge/documents${query}`),
       );
       const payload = (await response.json()) as { documents: { title: string }[] };
 
-      expect(listed, `query "${query}"`).toEqual([STC]);
-      expect(payload.documents[0]!.title, `query "${query}"`).toContain("Sun Tan City");
+      expect(listed, `query "${query}"`).toEqual([OWN]);
+      expect(payload.documents[0]!.title, `query "${query}"`).toContain("Company Safety Binder");
     }
   });
 
@@ -287,14 +285,14 @@ describe("listing cannot be pointed at another corpus", () => {
       vi.doMock("@/lib/knowledge/providers/supabase", () => ({
         SupabaseKnowledgeProvider: class {
           async getDocument() {
-            return { id: STC_DOC, title: "Sun Tan City Attendance Policy" };
+            return { id: OWN_DOC, title: "Company Attendance Policy" };
           }
         },
       }));
       const route = await import("./documents/[id]/route");
       const response = await route.GET(
-        new Request(`https://app.test/api/knowledge/documents/${STC_DOC}`),
-        { params: Promise.resolve({ id: STC_DOC }) },
+        new Request(`https://app.test/api/knowledge/documents/${OWN_DOC}`),
+        { params: Promise.resolve({ id: OWN_DOC }) },
       );
       return response.status;
     }
@@ -328,17 +326,17 @@ describe("deleting cannot be pointed at another corpus", () => {
 
   it("never asks to delete from the foreign corpus, whatever the query says", async () => {
     // DESTRUCTIVE, so this is the highest-priority of the six.
-    for (const query of [`?scope=${BCS}`, "", `?scope=${BCS}&scope=${STC}`]) {
+    for (const query of [`?scope=${FOREIGN}`, "", `?scope=${FOREIGN}&scope=${OWN}`]) {
       const { route, deleted } = await load();
       await route.DELETE(
-        new Request(`https://app.test/api/knowledge/documents/${BCS_DOC}${query}`, {
+        new Request(`https://app.test/api/knowledge/documents/${FOREIGN_DOC}${query}`, {
           method: "DELETE",
           headers: { "x-forwarded-for": "10.0.0.9" },
         }),
-        { params: Promise.resolve({ id: BCS_DOC }) },
+        { params: Promise.resolve({ id: FOREIGN_DOC }) },
       );
 
-      expect(deleted.map((entry) => entry.scopeId), `query "${query}"`).toEqual([STC]);
+      expect(deleted.map((entry) => entry.scopeId), `query "${query}"`).toEqual([OWN]);
     }
   });
 
@@ -367,7 +365,7 @@ describe("re-indexing cannot be pointed at another corpus", () => {
     return { route, calls };
   }
 
-  function post(body: unknown, id = BCS_DOC) {
+  function post(body: unknown, id = FOREIGN_DOC) {
     return new Request(`https://app.test/api/knowledge/documents/${id}/reindex`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-forwarded-for": "10.0.0.11" },
@@ -377,22 +375,22 @@ describe("re-indexing cannot be pointed at another corpus", () => {
 
   it("processes only this build's corpus, even when the body names the real other one", async () => {
     const { route, calls } = await load();
-    await route.POST(post({ scopeId: BCS, force: true }), {
-      params: Promise.resolve({ id: BCS_DOC }),
+    await route.POST(post({ scopeId: FOREIGN, force: true }), {
+      params: Promise.resolve({ id: FOREIGN_DOC }),
     });
 
-    expect(calls[0]!.scopeId).toBe(STC);
+    expect(calls[0]!.scopeId).toBe(OWN);
   });
 
   it("still lets the caller choose force", async () => {
     // The corpus is not the caller's. `force` is.
     for (const force of [true, false]) {
       const { route, calls } = await load();
-      await route.POST(post({ scopeId: BCS, force }), {
-        params: Promise.resolve({ id: STC_DOC }),
+      await route.POST(post({ scopeId: FOREIGN, force }), {
+        params: Promise.resolve({ id: OWN_DOC }),
       });
       expect(calls[0]!.force, String(force)).toBe(force);
-      expect(calls[0]!.scopeId).toBe(STC);
+      expect(calls[0]!.scopeId).toBe(OWN);
     }
   });
 
@@ -418,12 +416,12 @@ describe("search cannot be pointed at another corpus", () => {
           queried.push(input);
           /*
            * REAL FOREIGN CONTENT, retrievable when its corpus is queried. A
-           * fixture that returned nothing for `bcs-core` would let this pass
+           * fixture that returned nothing for the foreign corpus would let this pass
            * against a route that searched it.
            */
-          return input.scopeId === BCS
-            ? [{ chunkId: "bcs-1", documentId: "d-bcs", documentTitle: "Buff City Soap Handbook", locator: "Page 1", content: "BCS CONFIDENTIAL soap policy", similarity: 0.99, category: "policies", page: 1, section: null }]
-            : [{ chunkId: "stc-1", documentId: "d-stc", documentTitle: "Sun Tan City Safety Binder", locator: "Page 1", content: "Bed sanitising standard", similarity: 0.95, category: "policies", page: 1, section: null }];
+          return input.scopeId === FOREIGN
+            ? [{ chunkId: "foreign-1", documentId: "d-foreign", documentTitle: "Other Company Handbook", locator: "Page 1", content: "FOREIGN CONFIDENTIAL soap policy", similarity: 0.99, category: "policies", page: 1, section: null }]
+            : [{ chunkId: "own-1", documentId: "d-own", documentTitle: "Company Safety Binder", locator: "Page 1", content: "Spill cleanup standard", similarity: 0.95, category: "policies", page: 1, section: null }];
         }
       },
     }));
@@ -440,28 +438,28 @@ describe("search cannot be pointed at another corpus", () => {
     });
   }
 
-  it("retrieves Buff City Soap content when its corpus is queried", async () => {
+  it("retrieves foreign content when its corpus is queried", async () => {
     // The guard on the guard.
     const { queried } = await load();
     const { SupabaseKnowledgeProvider } = await import("@/lib/knowledge/providers/supabase");
     const rows = await new SupabaseKnowledgeProvider().match({
       query: "soap",
-      scopeId: BCS,
+      scopeId: FOREIGN,
       limit: 3,
     });
 
-    expect(queried[0]!.scopeId).toBe(BCS);
-    expect(rows[0]!.content).toContain("BCS CONFIDENTIAL");
+    expect(queried[0]!.scopeId).toBe(FOREIGN);
+    expect(rows[0]!.content).toContain("FOREIGN CONFIDENTIAL");
   });
 
   it("searches only this build's corpus and returns no foreign text", async () => {
     const { route, queried } = await load();
-    const response = await route.POST(post({ query: "soap policy", scopeId: BCS }));
+    const response = await route.POST(post({ query: "soap policy", scopeId: FOREIGN }));
     const body = await response.text();
 
-    expect(queried.map((entry) => entry.scopeId)).toEqual([STC]);
-    expect(body).not.toContain("BCS CONFIDENTIAL");
-    expect(body).not.toContain("Buff City Soap");
+    expect(queried.map((entry) => entry.scopeId)).toEqual([OWN]);
+    expect(body).not.toContain("FOREIGN CONFIDENTIAL");
+    expect(body).not.toContain("Other Company");
   });
 
   it("reads no scope from the body", () => {
@@ -481,7 +479,7 @@ describe("upload cannot be pointed at another corpus", () => {
     vi.doMock("@/lib/ingestion/pipeline", () => ({
       ingestDocument: async (input: { scopeId: string; title: string }) => {
         ingested.push(input);
-        return { document: { id: STC_DOC, title: input.title }, chunkCount: 4, reusedExistingEmbeddings: false };
+        return { document: { id: OWN_DOC, title: input.title }, chunkCount: 4, reusedExistingEmbeddings: false };
       },
     }));
 
@@ -506,16 +504,16 @@ describe("upload cannot be pointed at another corpus", () => {
     // A WRITE. A caller-chosen corpus here puts this company's document into
     // another company's knowledge base.
     const { route, ingested } = await load();
-    await route.POST(upload(BCS));
+    await route.POST(upload(FOREIGN));
 
     expect(ingested).toHaveLength(1);
-    expect(ingested[0]!.scopeId).toBe(STC);
+    expect(ingested[0]!.scopeId).toBe(OWN);
   });
 
   it("writes into this build's corpus when no scope is sent at all", async () => {
     const { route, ingested } = await load();
     await route.POST(upload());
-    expect(ingested[0]!.scopeId).toBe(STC);
+    expect(ingested[0]!.scopeId).toBe(OWN);
   });
 
   it("reads no scope from the form", () => {
@@ -558,22 +556,22 @@ describe("chat cannot be pointed at another corpus", () => {
      * another company's policies with the answer quoting them back.
      */
     const { route, asked } = await load();
-    await route.POST(ask({ scopeId: BCS }));
+    await route.POST(ask({ scopeId: FOREIGN }));
 
     expect(asked).toHaveLength(1);
-    expect(asked[0]!.scopeId).toBe(STC);
+    expect(asked[0]!.scopeId).toBe(OWN);
   });
 
   it("grounds on this build's corpus with no scope sent", async () => {
     const { route, asked } = await load();
     await route.POST(ask({}));
-    expect(asked[0]!.scopeId).toBe(STC);
+    expect(asked[0]!.scopeId).toBe(OWN);
   });
 
   it("leaves the rest of the request the caller's", async () => {
     // Only the corpus authority moved. Mode, history and context are unchanged.
     const { route, asked } = await load();
-    await route.POST(ask({ scopeId: BCS, mode: "detailed" }));
+    await route.POST(ask({ scopeId: FOREIGN, mode: "detailed" }));
 
     const request = asked[0] as unknown as { mode: string; question: string };
     expect(request.mode).toBe("detailed");

@@ -16,15 +16,14 @@ import type { AccessScope } from "@/types";
  * company to anybody holding `view_form_monitoring` — which is every manager
  * role.
  *
- * A Location Director at location A who knew a UUID could open, edit, finalize and
+ * A location manager at location A who knew a UUID could open, edit, finalize and
  * delete a disciplinary record belonging to location B. Creation being locked while
  * everything after it was open is the worst shape this could have taken,
  * because it reads like the boundary exists.
  *
- * SECOND HOLE, SAME ROUTES. Every editing verb hard-coded
- * `create_coaching_form`, so a role that may write a coaching form could save,
- * draft, finalize and set follow-ups on a Corrective Action Form or an EPP
- * — permissions it does not hold.
+ * SECOND HOLE, SAME ROUTES. Every editing verb hard-coded one form's
+ * permission, so a role that may write that form could save, draft, finalize
+ * and set follow-ups on any other — permissions it does not hold.
  *
  * ============================================================================
  * EVERY FIXTURE HOLDS TWO LOCATIONS' DATA
@@ -47,7 +46,7 @@ const LOCATION_A: AccessScope = {
 const MINE = "11111111-1111-4111-8111-111111111111";
 const THEIRS = "22222222-2222-4222-8222-222222222222";
 const ORPHAN = "33333333-3333-4333-8333-333333333333";
-/** At the caller's OWN location, so only the permission can refuse it. */
+/** At the caller's OWN location, behind a permission the caller lacks, so only the permission can refuse it. */
 const MY_EPP = "55555555-5555-4555-8555-555555555555";
 
 interface Row {
@@ -59,11 +58,52 @@ interface Row {
 }
 
 const ROWS: Record<string, Row> = {
-  [MINE]: { id: MINE, templateKey: "coaching", locationId: "loc-a", createdBy: "user-a", status: "draft" },
-  [THEIRS]: { id: THEIRS, templateKey: "dpoa", locationId: "loc-b", createdBy: "user-b", status: "draft" },
+  [MINE]: { id: MINE, templateKey: "fixture-coaching", locationId: "loc-a", createdBy: "user-a", status: "draft" },
+  [THEIRS]: { id: THEIRS, templateKey: "fixture-corrective", locationId: "loc-b", createdBy: "user-b", status: "draft" },
   // No location at all — the case that must not become a way to opt out.
-  [ORPHAN]: { id: ORPHAN, templateKey: "coaching", locationId: null, createdBy: "user-b", status: "draft" },
-  [MY_EPP]: { id: MY_EPP, templateKey: "sdit-epp", locationId: "loc-a", createdBy: "user-a", status: "draft" },
+  [ORPHAN]: { id: ORPHAN, templateKey: "fixture-coaching", locationId: null, createdBy: "user-b", status: "draft" },
+  [MY_EPP]: { id: MY_EPP, templateKey: "fixture-separation", locationId: "loc-a", createdBy: "user-a", status: "draft" },
+};
+
+/**
+ * The templates the rows point at. Two any form-creating manager may edit, and
+ * one behind `manage_form_records`, which a location manager does not hold and
+ * a district manager does — so the per-template permission is what refuses it.
+ */
+const TEMPLATES: Record<string, Record<string, unknown>> = {
+  "fixture-coaching": {
+    id: "tpl-fixture-coaching",
+    key: "fixture-coaching",
+    name: "Fixture Coaching Note",
+    shortName: "Coaching Note",
+    description: "",
+    layoutFamily: "coaching",
+    requiredPermission: "create_forms",
+    active: true,
+    displayOrder: 1,
+  },
+  "fixture-corrective": {
+    id: "tpl-fixture-corrective",
+    key: "fixture-corrective",
+    name: "Fixture Corrective Notice",
+    shortName: "Corrective Notice",
+    description: "",
+    layoutFamily: "corrective",
+    requiredPermission: "create_forms",
+    active: true,
+    displayOrder: 2,
+  },
+  "fixture-separation": {
+    id: "tpl-fixture-separation",
+    key: "fixture-separation",
+    name: "Fixture Separation Record",
+    shortName: "Separation Record",
+    description: "",
+    layoutFamily: "separation",
+    requiredPermission: "manage_form_records",
+    active: true,
+    displayOrder: 4,
+  },
 };
 
 function instanceRow(row: Row) {
@@ -71,12 +111,7 @@ function instanceRow(row: Row) {
     id: row.id,
     templateId: `tpl-${row.templateKey}`,
     templateKey: row.templateKey,
-    templateName:
-      row.templateKey === "dpoa"
-        ? "Corrective Action Form"
-        : row.templateKey === "sdit-epp"
-          ? "SDIT EPP"
-          : "Coaching Form",
+    templateName: String(TEMPLATES[row.templateKey]?.name ?? row.templateKey),
     templateShortName: row.templateKey,
     layoutFamily: "coaching",
     templateVersionId: "ver-1",
@@ -151,44 +186,7 @@ async function load(
   });
 
   vi.doMock("@/lib/forms/repository", () => ({
-    getTemplateByKey: async (key: string) =>
-      key === "coaching"
-        ? {
-            id: "tpl-coaching",
-            key: "coaching",
-            name: "Coaching Form",
-            shortName: "Coaching",
-            description: "",
-            layoutFamily: "coaching",
-            requiredPermission: "create_coaching_form",
-            active: true,
-            displayOrder: 1,
-          }
-        : key === "dpoa"
-          ? {
-              id: "tpl-dpoa",
-              key: "dpoa",
-              name: "Corrective Action Form",
-              shortName: "DPOA",
-              description: "",
-              layoutFamily: "corrective",
-              requiredPermission: "create_corrective_action",
-              active: true,
-              displayOrder: 2,
-            }
-          : key === "sdit-epp"
-            ? {
-                id: "tpl-sdit-epp",
-                key: "sdit-epp",
-                name: "SDIT EPP",
-                shortName: "SDIT EPP",
-                description: "",
-                layoutFamily: "epp",
-                requiredPermission: "create_epp",
-                active: true,
-                displayOrder: 4,
-              }
-            : null,
+    getTemplateByKey: async (key: string) => TEMPLATES[key] ?? null,
   }));
 
   vi.doMock("@/lib/forms/instances", () => ({
@@ -320,7 +318,7 @@ describe("F4. a foreign form cannot be read by knowing its UUID", () => {
 
     expect(body).not.toContain("loc-b");
     expect(body).not.toContain("Synthetic Person");
-    expect(body).not.toContain("Disciplinary");
+    expect(body).not.toContain("Corrective");
   });
 });
 
@@ -349,7 +347,7 @@ describe("F4. a foreign form cannot be written by knowing its UUID", () => {
   it("refuses archiving, and archives nothing", async () => {
     /*
      * `manage_form_records` sits with the roles that administer Forms, and a
-     * Location Director does not hold it — so they get a 403 before the scope
+     * location manager does not hold it — so they get a 403 before the scope
      * check ever runs, which proves nothing about scope. Role and assignment
      * are independent columns on `app_users`, so the actor that tests THIS
      * boundary is one who holds the permission and covers one location.
@@ -391,7 +389,7 @@ describe("F4. a foreign form cannot be written by knowing its UUID", () => {
 
 /* ======================================================= district / region */
 
-describe("F4. district and regional actors fail closed here too", () => {
+describe("F4. a district or region the roster does not know fails closed here too", () => {
   it.each(["district", "region"] as const)("%s cannot read a location's form", async (level) => {
     const { detail } = await load({
       role: "district_manager",
@@ -438,13 +436,13 @@ describe("F4. a form with no location belongs to whoever created it", () => {
 /* ====================================================== per-template permission */
 
 describe("F4. the TEMPLATE's own permission gates editing, not a hard-coded one", () => {
-  it("refuses an EPP edit to a Location Director, at their OWN location", async () => {
+  it("refuses an edit to a location manager, at their OWN location, on a form above their role", async () => {
     /*
-     * THE HOLE, DEMONSTRATED. Every editing verb asked for
-     * `create_coaching_form`. A Location Director holds that and NOT `create_epp`
-     * — the matrix gives EPPs to district managers and above — so under the old
-     * authorization they could save, draft, finalize and set follow-ups on a
-     * performance plan they have no authority over.
+     * THE HOLE, DEMONSTRATED. Every editing verb asked for one fixed
+     * permission. A location manager holds `create_forms` and NOT
+     * `manage_form_records` — the matrix gives that to district managers and
+     * above — so under the old authorization they could save, draft, finalize
+     * and set follow-ups on a record they have no authority over.
      *
      * The location is their own, so scope cannot be what refuses this. Only the
      * template's own permission can.
@@ -464,8 +462,8 @@ describe("F4. the TEMPLATE's own permission gates editing, not a hard-coded one"
     expect(touched.finalized).toEqual([]);
   });
 
-  it("allows a District Manager, who does hold create_epp", async () => {
-    // The guard on the guard: the EPP is reachable by somebody, so the refusal
+  it("allows a district manager, who does hold manage_form_records", async () => {
+    // The guard on the guard: the form is reachable by somebody, so the refusal
     // above is the permission and not a broken fixture.
     const { detail, touched } = await load({ role: "district_manager", scope: LOCATION_A });
     const response = await detail.PATCH(req("PATCH", { values: {} }), params(MY_EPP));
@@ -474,7 +472,7 @@ describe("F4. the TEMPLATE's own permission gates editing, not a hard-coded one"
     expect(touched.saved).toEqual([MY_EPP]);
   });
 
-  it("still lets a Location Director edit the coaching form at their location", async () => {
+  it("still lets a location manager edit the coaching note at their location", async () => {
     const { detail, touched } = await load();
     expect((await detail.PATCH(req("PATCH", { values: {} }), params(MINE))).status).toBe(200);
     expect(touched.saved).toEqual([MINE]);
@@ -489,7 +487,7 @@ describe("F4. the TEMPLATE's own permission gates editing, not a hard-coded one"
     expect(source).toContain("template?.requiredPermission");
   });
 
-  it("leaves no hard-coded create_coaching_form on any instance route", () => {
+  it("leaves no hard-coded form permission on any instance route", () => {
     const routes = [
       "src/app/api/forms/instances/[id]/route.ts",
       "src/app/api/forms/instances/[id]/draft/route.ts",
@@ -503,6 +501,7 @@ describe("F4. the TEMPLATE's own permission gates editing, not a hard-coded one"
         .replace(/(^|[^:])\/\/.*$/gm, "$1");
 
       expect(source, path).not.toContain('"create_coaching_form"');
+      expect(source, path).not.toContain('"create_forms"');
       // And every verb goes through the scoped guard.
       expect(source, path).toContain("authorizeInstance(");
     }

@@ -10,77 +10,57 @@ import {
 
 /**
  * ============================================================================
- * THE SIX FABRICATED CONVERSATIONS MUST NEVER REACH SUPABASE
+ * SEEDED DEMO CONVERSATIONS MUST NEVER REACH SUPABASE
  * ============================================================================
  *
- * The audit established what makes this urgent rather than tidy: the app store
- * seeds conversation state with `DEMO_CONVERSATIONS` in BOTH modes, and the
- * `chat_conversations` persist effect is the only collection effect with no
- * demo-mode guard. So `conv-seed-1 … conv-seed-6` and their `msg-s*` turns have
- * been written into the IndexedDB of every real person who has ever opened Ask
- * Bubbles in production.
- *
- * Nobody asked them. Bubbles never answered them. Importing one would put
- * invented history into a real person's account where it would be
- * indistinguishable from the real thing — and the person it would mislead most
- * is whoever later reads their own history looking for something they actually
- * said.
- *
- * These tests assert against the SEED DATA ITSELF rather than against a
- * hand-written list, so a seventh seeded conversation added to
- * `data/demo/chat.ts` tomorrow fails here rather than shipping.
+ * Importing a seeded thread would put invented history into a real person's
+ * account, where it would be indistinguishable from the real thing. The demo
+ * build ships no seeded conversations today, so the guard is held two ways:
+ * the named exclusion list is pinned to the seed data itself, so a seed added
+ * to `data/demo/chat.ts` tomorrow must be named; and the structural rule
+ * rejects any id shaped the way seeds are written, named or not.
  */
 
-describe("the seeded demo conversations are not importable", () => {
-  it("has six of them to check, exactly as the audit found", () => {
-    /*
-     * A test that found zero seeds would pass every assertion below while
-     * proving nothing at all.
-     */
-    expect(DEMO_CONVERSATIONS).toHaveLength(6);
-    expect(DEMO_SEED_CONVERSATION_IDS).toHaveLength(6);
-  });
+/* Seed-shaped ids: hand-written, hyphenated, not what `createId` mints. */
+const SEED_SHAPED_CONVERSATION_IDS = ["conv-seed-1", "conv-seed-6", "conv-demo", "CONV_ABC123XYZ"];
+const SEED_SHAPED_MESSAGE_IDS = ["msg-s1", "msg-s12a", "msg-seed-1"];
 
+describe("seeded demo conversations are not importable", () => {
   it("names every seeded id that actually exists in the demo data", () => {
     expect([...DEMO_SEED_CONVERSATION_IDS].sort()).toEqual(
       DEMO_CONVERSATIONS.map((conversation) => conversation.id).sort(),
     );
   });
 
-  it.each(DEMO_SEED_CONVERSATION_IDS)("rejects %s", (id) => {
-    expect(isClientConversationId(id)).toBe(false);
-  });
-
-  it("rejects every seeded conversation id read from the demo data", () => {
+  it("rejects every seeded conversation and message id read from the demo data", () => {
     for (const conversation of DEMO_CONVERSATIONS) {
       expect(
         isClientConversationId(conversation.id),
         `${conversation.id} must never be importable`,
       ).toBe(false);
+      for (const message of conversation.messages) {
+        expect(isClientMessageId(message.id), `${message.id} must never be importable`).toBe(
+          false,
+        );
+      }
     }
   });
 
-  it("rejects every seeded MESSAGE id too", () => {
-    const seedMessageIds = DEMO_CONVERSATIONS.flatMap((conversation) =>
-      conversation.messages.map((message) => message.id),
-    );
-
-    /* The seeds do carry messages, so this is not vacuous either. */
-    expect(seedMessageIds.length).toBeGreaterThan(0);
-
-    for (const id of seedMessageIds) {
-      expect(isClientMessageId(id), `${id} must never be importable`).toBe(false);
-    }
+  it.each(SEED_SHAPED_CONVERSATION_IDS)("rejects the seed-shaped conversation id %s", (id) => {
+    expect(isClientConversationId(id)).toBe(false);
   });
 
-  it("rejects them even if the named list is emptied, because the shape fails too", () => {
+  it.each(SEED_SHAPED_MESSAGE_IDS)("rejects the seed-shaped message id %s", (id) => {
+    expect(isClientMessageId(id)).toBe(false);
+  });
+
+  it("rejects them on shape alone, without the named list", () => {
     /*
-     * The exact-match list is belt and braces. The structural rules are the
-     * belt: a seed id carries hyphens, and `createId` produces lowercase base36
-     * only. This asserts the belt holds on its own, so loosening one rule
-     * cannot silently disarm both.
+     * The structural rule is the belt: a seed id carries hyphens, and
+     * `createId` produces lowercase base36 only. This asserts the belt holds on
+     * its own, so loosening one rule cannot silently disarm both.
      */
-    for (const id of DEMO_SEED_CONVERSATION_IDS) {
+    for (const id of SEED_SHAPED_CONVERSATION_IDS) {
       expect(/^conv_[0-9a-z]{9,32}$/.test(id)).toBe(false);
     }
   });

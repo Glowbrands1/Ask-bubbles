@@ -271,7 +271,7 @@ describe("authorizeRequest — demo mode", () => {
     setMode("demo");
     const { authorizeRequest, AuthError } = await loadAuth();
 
-    // A Location Director does not hold manage_users.
+    // A Location Manager does not hold manage_users.
     const error = await authorizeRequest(
       request({ "x-ask-bubbles-demo-role": "location_manager" }),
       "manage_users",

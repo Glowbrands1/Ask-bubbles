@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -31,6 +31,11 @@ import {
  */
 
 /* ------------------------------------------------------------ the draft --- */
+
+const FEEDBACK_MIGRATION = join(
+  process.cwd(),
+  "supabase/migrations/20260915002000_assistant_feedback.sql",
+);
 
 const COMPLETE: FeedbackDraft = {
   rating: 4,
@@ -278,8 +283,8 @@ describe("an acknowledgement is not a question", () => {
   });
 
   it.each([
-    "yes, but why is Wornall down on PPTA?",
-    "Thanks — can you also pull the Spa numbers?",
+    "yes, but why is Downtown down this week?",
+    "Thanks — can you also pull the opening checklist?",
     "ok so what should I coach first?",
     "What is the attendance policy?",
     "no, that is the wrong location",
@@ -315,8 +320,8 @@ describe("the feedback queue filters survive a round trip through a URL", () => 
       status: "in_review",
       outcome: "no",
       rating: 1,
-      surface: "spa_engagement",
-      search: "DPOA",
+      surface: "report",
+      search: "coaching",
       includeHidden: true,
       page: 3,
     };
@@ -389,7 +394,10 @@ describe("the feedback queue filters survive a round trip through a URL", () => 
 
   it("recognises every surface the product ships and nothing else", () => {
     expect(isActivitySurface("main_chat")).toBe(true);
-    expect(isActivitySurface("spa_wellness")).toBe(true);
+    expect(isActivitySurface("overview")).toBe(true);
+    expect(isActivitySurface("report")).toBe(true);
+    expect(isActivitySurface("unknown")).toBe(true);
+    expect(isActivitySurface("retired_surface")).toBe(false);
     expect(isActivitySurface("constructor")).toBe(false);
     expect(isActivitySurface("toString")).toBe(false);
     expect(isActivitySurface(null)).toBe(false);
@@ -481,25 +489,16 @@ describe("the queue defaults to open work, and closes nothing", () => {
      * complaint that happened. The summary function takes no status argument at
      * all, so there is nowhere for a list filter to reach it.
      */
-    const reads = readFileSync(
-      join(
-        process.cwd(),
-        "supabase/migrations",
-        readdirSync(join(process.cwd(), "supabase/migrations"))
-          .filter((name) => name.includes("assistant_feedback_reads"))
-          .sort()[0],
-      ),
-      "utf8",
-    );
+    const reads = readFileSync(FEEDBACK_MIGRATION, "utf8");
     const summary =
-      reads.split("create or replace function public.analytics_feedback_summary")[1]
+      reads.split("create function public.analytics_feedback_summary")[1]
         ?.split("$$;")[0] ?? "";
 
     expect(summary.length).toBeGreaterThan(0);
     expect(summary).not.toContain("p_status");
     /* And it still counts every status, so the queue depths stay whole. */
     for (const status of ["pending", "in_review", "resolved", "dismissed"]) {
-      expect(summary).toContain(`f.status = '${status}'`);
+      expect(summary).toContain(`c.status = '${status}'`);
     }
   });
 
@@ -508,32 +507,20 @@ describe("the queue defaults to open work, and closes nothing", () => {
      * An empty queue that looks identical to a finished one is the worse of the
      * two failures, so the SQL reads `cardinality = 0` as "everything".
      */
-    const migration = readFileSync(
-      join(
-        process.cwd(),
-        "supabase/migrations",
-        readdirSync(join(process.cwd(), "supabase/migrations"))
-          .filter((name) => name.includes("feedback_list_open_by_default"))
-          .sort()[0],
-      ),
-      "utf8",
+    const migration = readFileSync(FEEDBACK_MIGRATION, "utf8");
+    const list =
+      migration.split("create function public.analytics_feedback_list")[1]?.split("$$;")[0] ?? "";
+    expect(list.length).toBeGreaterThan(0);
+    expect(list).toContain("p_statuses  public.feedback_status[] default null");
+    expect(list).toMatch(
+      /p_statuses is null or cardinality\(p_statuses\) = 0 or f\.status = any \(p_statuses\)/,
     );
-    expect(migration).toContain("cardinality(p_statuses) > 0");
-    expect(migration).toContain("f.status = any (p_statuses)");
     /*
-     * AND THE DEPRECATED SINGLE VALUE IS STILL HONOURED, which is what makes
-     * this migration safe to apply BEFORE the deploy: the build currently in
-     * production passes `p_status` and keeps working unchanged. Without it,
-     * applying and deploying become a coordinated pair and one of the two
-     * orders breaks the Feedback tab for the length of a build.
+     * One list function, with no single-value overload beside it: two
+     * overloads reachable through defaults fail with "function is not unique"
+     * at read time, on a live dashboard.
      */
-    expect(migration).toContain("p_status    public.feedback_status default null");
-    expect(migration).toContain("then f.status = p_status");
-    /*
-     * And the old single-value signature is dropped rather than left standing:
-     * two overloads reachable through defaults fail with "function is not
-     * unique" at read time, on a live dashboard.
-     */
-    expect(migration).toContain("drop function if exists public.analytics_feedback_list");
+    expect(migration.match(/create (?:or replace )?function public\.analytics_feedback_list\(/g)).toHaveLength(1);
+    expect(list).not.toMatch(/\bp_status\b/);
   });
 });

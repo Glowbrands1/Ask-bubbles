@@ -26,7 +26,7 @@ import { guardNarrativeDraft } from "./narrative-draft";
 const FORM_DATE = "2026-09-10";
 const NOTES = [
   "1. Sarah Test",
-  "2. Kearny",
+  "2. Testville",
   "3.today",
   "4.she was wearing mini skirt today",
   "5. verbal warning",
@@ -192,14 +192,14 @@ describe("4. the observation survives, whatever date the model writes", () => {
     const result = chain(
       [
         "Observed:",
-        "On September 10, 2026, Sarah Test was observed wearing a mini skirt at the Kearny location.",
+        "On September 10, 2026, Sarah Test was observed wearing a mini skirt at the Testville location.",
         "",
         "Expectation:",
         "Sarah meets the location's appearance standards for every scheduled shift.",
       ].join("\n"),
     );
 
-    expect(result.values.observation).toContain("wearing a mini skirt at the Kearny location");
+    expect(result.values.observation).toContain("wearing a mini skirt at the Testville location");
     expect(result.values.observation).toContain("September 10, 2026");
     expect(result.emptied).toEqual([]);
   });
@@ -212,7 +212,7 @@ describe("4. the observation survives, whatever date the model writes", () => {
     const result = chain(
       [
         "Observed:",
-        "On September 8, 2026, Sarah Test was observed wearing a mini skirt at the Kearny location.",
+        "On September 8, 2026, Sarah Test was observed wearing a mini skirt at the Testville location.",
         "",
         "Expectation:",
         "Sarah meets the location's appearance standards for every scheduled shift.",
@@ -220,7 +220,7 @@ describe("4. the observation survives, whatever date the model writes", () => {
     );
 
     // The fact survives, and the invented date never reaches the record.
-    expect(result.values.observation).toContain("wearing a mini skirt at the Kearny location");
+    expect(result.values.observation).toContain("wearing a mini skirt at the Testville location");
     expect(result.values.observation).toContain("September 10, 2026");
     expect(result.values.observation).not.toContain("September 8");
     expect(result.emptied).toEqual([]);

@@ -2,7 +2,35 @@ import { readFileSync } from "node:fs";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ACTIVE_BRAND } from "@/lib/brand";
 import { DEFAULT_PERMISSION_MATRIX } from "@/lib/permissions";
+
+/*
+ * A FIXTURE PINNED FRAMEWORK. The shipped configuration pins none yet, so the
+ * tag-based download restriction is exercised against a role defined here —
+ * otherwise "restricted by its tag" could only ever pass on the .txt rule.
+ */
+vi.mock("@/config/company/knowledge", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/config/company/knowledge")>();
+  return {
+    ...actual,
+    PINNED_KNOWLEDGE_ROLES: [
+      {
+        role: {
+          id: "performance_management_framework",
+          tag: "performance-management-framework",
+          fallbackFilenames: ["EXAMPLE_FRAMEWORK_KB_TEXT.txt"],
+          fallbackTitles: ["Performance Management Framework"],
+          ruleGroups: [{ id: "rules", label: "Rules", headings: ["Rules"] }],
+          maxMandatoryChunks: 4,
+        },
+        triggers: [],
+        onUnavailable: "refuse",
+        unavailableMessage: "unavailable",
+      },
+    ],
+  };
+});
 
 /**
  * ============================================================================
@@ -36,22 +64,22 @@ const SERVICE_SOURCE = readFileSync("src/lib/knowledge/original-file.ts", "utf8"
 
 const ORIGINAL = { ...process.env };
 const DOC_ID = "8f14e45f-ceea-4e78-b2a7-1c1b1a2b3c4d";
-const SCOPE = "stc-core";
+/* This deployment's own corpus. */
+const SCOPE = ACTIVE_BRAND.knowledgeScopeId;
 const STORED_PATH = `${SCOPE}/${DOC_ID}/v2/Safety Binder.pdf`;
 
 /*
  * A REAL DOCUMENT IN A REAL SECOND CORPUS.
  *
- * `bcs-core` is not a hypothetical: `src/lib/brand` defines Beach Comber Suns
- * alongside Sun Tan City, and `requireScopeId` accepts it because it is a
- * perfectly well-formed scope id. The earlier version of this suite seeded only
- * the Sun Tan City row, so its "cross-scope" test proved nothing — a foreign id
- * matched nothing because no foreign row existed, not because the route refused
- * to look. Both rows are seeded now.
+ * `other-core` is a perfectly well-formed scope id that `requireScopeId`
+ * accepts — the shape a second brand's corpus would have in a shared
+ * database. A "cross-scope" test that seeded only this deployment's row would
+ * prove nothing: a foreign id would match nothing because no foreign row
+ * existed, not because the route refused to look. Both rows are seeded.
  */
-const FOREIGN_SCOPE = "bcs-core";
+const FOREIGN_SCOPE = "other-core";
 const FOREIGN_DOC_ID = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
-const FOREIGN_PATH = `${FOREIGN_SCOPE}/${FOREIGN_DOC_ID}/v1/BCS Payroll.pdf`;
+const FOREIGN_PATH = `${FOREIGN_SCOPE}/${FOREIGN_DOC_ID}/v1/Other Payroll.pdf`;
 
 interface Trace {
   authorized: string[];
@@ -92,7 +120,7 @@ afterEach(() => {
 function foreignRow() {
   return {
     id: FOREIGN_DOC_ID,
-    original_filename: "BCS Payroll.pdf",
+    original_filename: "Other Payroll.pdf",
     mime_type: "application/pdf",
     file_type: "pdf",
     storage_path: FOREIGN_PATH,
@@ -263,24 +291,23 @@ describe("the knowledge corpus is the build's, not the caller's", () => {
    * ==========================================================================
    *
    * This route read the corpus from `?scope=` and validated only that it was
-   * SHAPED like a scope id. `bcs-core` is shaped like one because it IS one —
-   * `src/lib/brand` defines Beach Comber Suns next to Sun Tan City.
+   * SHAPED like a scope id. Any other brand's corpus id is shaped like one
+   * because it IS one.
    *
-   * So an authenticated Sun Tan City manager, holding `view_knowledge`
-   * legitimately, could ask for a Beach Comber Suns document by id with
-   * `?scope=bcs-core` and be handed a signed URL for another company's file.
-   * `authorizeRequest` did not stop it and was never going to: it proves who
-   * the caller is and what they may do, not which company's corpus this
-   * deployment serves.
+   * So an authenticated manager, holding `view_knowledge` legitimately, could
+   * ask for another corpus's document by id with `?scope=<theirs>` and be
+   * handed a signed URL for another company's file. `authorizeRequest` did not
+   * stop it and was never going to: it proves who the caller is and what they
+   * may do, not which company's corpus this deployment serves.
    *
    * The corpus is now read from `ACTIVE_BRAND`, and these run against a table
-   * that really contains both companies' rows.
+   * that really contains both corpora's rows.
    */
 
   it("has both corpora in the fixture, so the attack is possible to express", async () => {
     /*
-     * THE GUARD ON THE GUARD. The previous suite seeded only the Sun Tan City
-     * row, so a foreign id matched nothing no matter what the route did — the
+     * THE GUARD ON THE GUARD. A suite that seeded only this deployment's row
+     * would match nothing for a foreign id no matter what the route did — the
      * test passed for the wrong reason. This asserts the foreign row is really
      * reachable when its own corpus is asked for, so the refusals below mean
      * something.
@@ -289,12 +316,12 @@ describe("the knowledge corpus is the build's, not the caller's", () => {
     // Ask as the foreign corpus itself would: the fixture must be able to
     // return it, or nothing below is a real test.
     await route.GET(get(), params);
-    expect(trace.filters).toContainEqual(["knowledge_scope_id", "stc-core"]);
+    expect(trace.filters).toContainEqual(["knowledge_scope_id", SCOPE]);
     expect(FOREIGN_SCOPE).not.toBe(SCOPE);
   });
 
   it("refuses a foreign corpus document even when its scope is supplied", async () => {
-    // THE ATTACK, EXACTLY. Real foreign row, real foreign scope, real STC user.
+    // THE ATTACK, EXACTLY. Real foreign row, real foreign scope, real user of this deployment.
     const { route, trace } = await loadRoute();
     const response = await route.GET(
       get(`scope=${FOREIGN_SCOPE}`, FOREIGN_DOC_ID),
@@ -307,14 +334,14 @@ describe("the knowledge corpus is the build's, not the caller's", () => {
 
     const body = await response.text();
     expect(body).not.toContain(FOREIGN_PATH);
-    expect(body).not.toContain("BCS Payroll.pdf");
+    expect(body).not.toContain("Other Payroll.pdf");
   });
 
   it("queries the active brand's corpus however the scope parameter is set", async () => {
     for (const query of [
       "",
       `scope=${FOREIGN_SCOPE}`,
-      "scope=stc-core",
+      `scope=${SCOPE}`,
       "scope=another-corpus",
       `scope=${FOREIGN_SCOPE}&scope=${SCOPE}`,
       "scope=",
@@ -325,7 +352,7 @@ describe("the knowledge corpus is the build's, not the caller's", () => {
       const scopes = trace.filters
         .filter(([column]) => column === "knowledge_scope_id")
         .map(([, value]) => value);
-      expect(scopes, `query "${query}"`).toEqual(["stc-core"]);
+      expect(scopes, `query "${query}"`).toEqual([SCOPE]);
     }
   });
 

@@ -114,7 +114,7 @@ export function wovenEmployee(id: string, options: FixtureEmployeeOptions = {}):
     PositionName: pick(options.positionName, "Location Consultant"),
     PositionColor: "#123456",
     PrimaryLocationID: pick(options.primaryLocationId, "WL-0306"),
-    PrimaryLocationName: pick(options.primaryLocationName, "KS Manhattan"),
+    PrimaryLocationName: pick(options.primaryLocationName, "Example Location 306"),
     HasMultipleLocationAccess: pick(options.hasMultipleLocationAccess, false),
     AllLocationAccess: pick(options.allLocationAccess, false),
     IsLoginAllowed: true,
@@ -297,9 +297,9 @@ export function createFakeWoven(options: FakeWovenOptions) {
           : { TokenExpirationDate: new Date(clock() + options.tokenLifetimeSeconds * 1000).toISOString() }),
         RefreshToken: "SENSITIVE-REFRESH-TOKEN",
         CompanyID: FAKE_COMPANY_ID,
-        CompanyName: "Sun Tan City (test)",
+        CompanyName: "Example Soap Co (test)",
         HasMultipleCompanyAccess: false,
-        CompanyLoginOptions: [{ CompanyID: FAKE_COMPANY_ID, CompanyName: "Sun Tan City (test)" }],
+        CompanyLoginOptions: [{ CompanyID: FAKE_COMPANY_ID, CompanyName: "Example Soap Co (test)" }],
         FirstName: "SENSITIVE-APP-USER-FIRST",
       });
     }

@@ -1,4 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/config/company/forms", async () =>
+  (await import("@/test/forms/fixture-forms")).fixtureFormsModule(),
+);
+vi.mock("@/config/company/forms/categories", async () =>
+  (await import("@/test/forms/fixture-categories")).fixtureCategoriesModule(),
+);
 
 import { TEMPLATE_SEEDS } from "./library";
 import {
@@ -17,10 +24,10 @@ import {
  * sentence after being shown two FRAMEWORKS has a different right answer, and
  * the sentence cannot tell you which — only the turn before it can.
  *
- * THE TEMPLATE NAMES COME FROM THE REAL LIBRARY. `TEMPLATE_SEEDS` rather than a
- * hand-written list, so a template renamed or retired changes what these tests
- * resolve without anybody editing this file — and so no test here can assert
- * against a name the product no longer publishes.
+ * THE TEMPLATE NAMES COME FROM THE LIBRARY. `TEMPLATE_SEEDS` rather than a
+ * hand-written list — here the fixture registry (`src/test/forms/
+ * fixture-forms.ts`), which publishes several forms, one of them named like a
+ * policy document.
  */
 
 const TEMPLATE_NAMES = TEMPLATE_SEEDS.map((seed) => seed.name);
@@ -108,14 +115,14 @@ describe("recognising a reference with no subject", () => {
 const FORMS_LOCATION_ANSWER = [
   "You create and find forms in **Ask Bubbles**, right here — tell me which form you need and who it is for.",
   "",
-  "They are grouped as **HR & Performance Forms** and **Hiring & Interview Forms**.",
+  "They are grouped as **Fixture Team Forms** and **Fixture Hiring Forms**.",
   "",
   "The **templates** are in Forms. The **guidance** is Knowledge Base material, and I cite it when I answer from it.",
 ].join("\n");
 
 /** A grounded answer about the two frameworks, naming neither template. */
 const FRAMEWORK_ANSWER =
-  "The Employee Performance Framework explains how to read the metrics, and the Performance Management Framework sets out the corrective-action progression. [S1]";
+  "The Team Development Framework explains how to read the metrics, and the Store Standards Framework sets out the corrective-action progression. [S1]";
 
 describe("resolving against the nearest anchor", () => {
   it("reads a list of templates as the forms register", () => {
@@ -145,8 +152,8 @@ describe("resolving against the nearest anchor", () => {
     ]);
 
     expect(resolved.register).toBe("knowledge");
-    expect(resolved.named).toContain("performance management framework");
-    expect(resolved.named).toContain("employee performance framework");
+    expect(resolved.named).toContain("store standards framework");
+    expect(resolved.named).toContain("team development framework");
   });
 
   /*
@@ -156,7 +163,7 @@ describe("resolving against the nearest anchor", () => {
    * comparison.
    */
   it("does not count a template whose name reads like a policy as knowledge", () => {
-    const policyReview = TEMPLATE_SEEDS.find((seed) => seed.key === "policy-review");
+    const policyReview = TEMPLATE_SEEDS.find((seed) => seed.key === "fixture-policy-review");
     expect(policyReview, "the library still publishes a Policy Review").toBeDefined();
 
     const resolved = resolve([
@@ -214,13 +221,13 @@ describe("resolving against the nearest anchor", () => {
     const resolved = resolve([
       turn(
         "assistant",
-        `The Performance Management Framework sets the progression, and the **${TEMPLATE_NAMES[0]}** records the first step.`,
+        `The Store Standards Framework sets the progression, and the **${TEMPLATE_NAMES[0]}** records the first step.`,
       ),
     ]);
 
     expect(resolved.ambiguous).toBe(true);
     expect(resolved.register).toBeNull();
-    expect(resolved.named).toContain("performance management framework");
+    expect(resolved.named).toContain("store standards framework");
   });
 
   it("reports nothing rather than ambiguity on a cold open", () => {
@@ -259,7 +266,7 @@ describe("resolving against the nearest anchor", () => {
         [
           `The **${TEMPLATE_NAMES[0]}** is the one to use. Open the **${TEMPLATE_NAMES[0]}**,`,
           `fill in the **${TEMPLATE_NAMES[0]}**, and file it.`,
-          "The Performance Management Framework and the Employee Performance Framework both cover it. [S1]",
+          "The Store Standards Framework and the Team Development Framework both cover it. [S1]",
         ].join(" "),
       ),
     ]);
@@ -278,7 +285,7 @@ describe("resolving against the nearest anchor", () => {
   it("reads the user's own turns, not only the assistant's", () => {
     // Managers name the register themselves at least as often as answers do.
     const resolved = resolve([
-      turn("user", "tell me about the performance management framework"),
+      turn("user", "tell me about the store standards framework"),
     ]);
 
     expect(resolved.register).toBe("knowledge");

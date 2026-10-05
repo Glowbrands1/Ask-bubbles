@@ -8,7 +8,7 @@ import { MemoryKnowledgeSink, MemoryKnowledgeSyncStore } from "../memory-store";
 import { MASS_REMOVAL_FLOOR } from "../reconcile";
 import { SinkError, type KnowledgeSyncStore } from "../ports";
 import { KnowledgeSyncStoreError } from "../store";
-import { previewTestModeAllowed } from "./config";
+import { previewTestModeAllowed, readWovenKnowledgeConfig } from "./config";
 import { readWovenKnowledgeStatus } from "./status";
 import type { ManifestItem } from "../types";
 import type { WovenKnowledgeConfig } from "./config";
@@ -100,6 +100,34 @@ describe("setup safety", () => {
       { ...h.overrides(), config: { ...CONFIG, credentials: null, missingCredentials: ["WOVEN_TEAM_PASSWORD"] } },
     );
     expect(missing).toEqual({ status: "not_configured", missing: ["WOVEN_TEAM_PASSWORD"] });
+    expect(h.fake.log).toHaveLength(0);
+  });
+
+  it("WOVEN_TEAM_COMPANY is required: without it the credentials are incomplete, and no sync, preview or connection test reaches Woven", async () => {
+    const h = new Harness();
+    const config = readWovenKnowledgeConfig({
+      WOVEN_KNOWLEDGE_SYNC_ENABLED: "true",
+      WOVEN_TEAM_USERNAME: USERNAME,
+      WOVEN_TEAM_PASSWORD: PASSWORD,
+    });
+    expect(config.company).toBe("");
+    expect(config.credentials).toBeNull();
+    expect(config.missingCredentials).toEqual(["WOVEN_TEAM_COMPANY"]);
+    expect(config.problems.join(" ")).toContain("WOVEN_TEAM_COMPANY");
+    expect(JSON.stringify(config)).not.toContain(PASSWORD);
+    for (const mode of ["preview", "sync"] as const) {
+      expect(await runWovenKnowledgeSync({ mode, trigger: "manual", requestedBy: "x" }, { ...h.overrides(), config })).toEqual({
+        status: "not_configured",
+        missing: ["WOVEN_TEAM_COMPANY"],
+      });
+    }
+    expect(await testWovenConnection({ config })).toEqual({ status: "not_configured", missing: ["WOVEN_TEAM_COMPANY"] });
+    /* A config built by hand with credentials but no company is refused the same way. */
+    const handBuilt = { ...CONFIG, company: " " };
+    expect(await runWovenKnowledgeSync({ mode: "sync", trigger: "manual", requestedBy: "x" }, { ...h.overrides(), config: handBuilt })).toEqual({
+      status: "not_configured",
+      missing: ["WOVEN_TEAM_COMPANY"],
+    });
     expect(h.fake.log).toHaveLength(0);
   });
 
@@ -232,14 +260,14 @@ describe("the monthly cycle", () => {
   it("permission change: an item narrowed to some teams leaves Ask Bubbles, and returns when shared again", async () => {
     const h = new Harness();
     await h.initial();
-    h.fake.state.handbooks[0]!.audience = "Location Directors";
+    h.fake.state.handbooks[0]!.audience = "Location Managers";
     let r = report(await h.run("sync"));
     expect(r.totals.permissionChanged).toBe(1);
     expect(h.item(HANDBOOK)).toMatchObject({ state: "PERMISSION_CHANGED", inKnowledgeBase: false, reason: "audience_needs_review" });
     expect(h.sink.searchable().map((d) => d.title)).not.toContain("Team Member Handbook");
 
     /* An administrator decides that audience may be shared with everyone. */
-    await h.store.saveDecision({ source: "woven", audienceKey: "location directors", decision: "company_wide", decidedBy: "admin:test", decidedAt: h.clock.toISOString() });
+    await h.store.saveDecision({ source: "woven", audienceKey: "location managers", decision: "company_wide", decidedBy: "admin:test", decidedAt: h.clock.toISOString() });
     r = report(await h.run("sync"));
     expect(h.item(HANDBOOK)).toMatchObject({ state: "PERMISSION_CHANGED", inKnowledgeBase: true });
     /* Restored under the SAME document id: no duplicate. */
@@ -267,7 +295,7 @@ describe("the monthly cycle", () => {
     const r = report(await h.run("sync"));
     expect(r.totals.new).toBe(4);
     const titles = h.sink.searchable().map((d) => d.title);
-    expect(titles).toEqual(expect.arrayContaining(["Opening the Location", "Bed Cleaning", "Spray Tan Basics", "Opening the Location — Opening Checklist"]));
+    expect(titles).toEqual(expect.arrayContaining(["Opening the Location", "Bench Cleaning", "Soap Loaf Basics", "Opening the Location — Opening Checklist"]));
     const steps = h.sink.documents.get(h.item(`procedure\u0000${uuid(301)}\u0000content`).knowledgeDocumentId!)!;
     expect(steps).toMatchObject({ category: "operations", mimeType: "text/plain" });
     /* The attachment: keyed by step and stored name, named for people by its display name. */

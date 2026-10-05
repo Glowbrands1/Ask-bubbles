@@ -10,7 +10,7 @@ import {
 
 const CONTEXT = {
   userName: "Dana Reyes",
-  locationName: "MO Kansas City Wornall",
+  locationName: "Testville Downtown",
   todayIso: "2026-08-29",
 };
 
@@ -27,7 +27,8 @@ describe("buildSystemPrompt", () => {
   it("names the assistant, the manager and the location", () => {
     const prompt = buildSystemPrompt({
       assistantName: "Bubbles",
-      brandName: "Sun Tan City",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
       locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
@@ -36,14 +37,15 @@ describe("buildSystemPrompt", () => {
 
     expect(prompt).toContain("You are Bubbles");
     expect(prompt).toContain("Dana Reyes");
-    expect(prompt).toContain("MO Kansas City Wornall");
+    expect(prompt).toContain("Testville Downtown");
     expect(prompt).toContain("2026-08-29");
   });
 
   it("forbids fabricating policy, documents and citations", () => {
     const prompt = buildSystemPrompt({
       assistantName: "Bubbles",
-      brandName: "Sun Tan City",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
       locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
@@ -59,7 +61,8 @@ describe("buildSystemPrompt", () => {
   it("requires company knowledge and general guidance to be distinguished", () => {
     const prompt = buildSystemPrompt({
       assistantName: "Bubbles",
-      brandName: "Sun Tan City",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
       locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
@@ -67,13 +70,14 @@ describe("buildSystemPrompt", () => {
     });
 
     expect(prompt).toContain("Company knowledge");
-    expect(prompt).toContain("General management guidance");
+    expect(prompt).toContain("General guidance");
   });
 
   it("states outright that there is no company knowledge when nothing was retrieved", () => {
     const prompt = buildSystemPrompt({
       assistantName: "Bubbles",
-      brandName: "Sun Tan City",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
       locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
@@ -87,13 +91,14 @@ describe("buildSystemPrompt", () => {
   /*
    * THE REPORT DATA FLAG. Two grounding kinds share this prompt, and the
    * failure each of these guards is specific: a source marker attached to a
-   * spa session count, or a tans figure asserted from training data when no
+   * report figure, or a sales figure asserted from training data when no
    * report is attached.
    */
   it("adds a third statement kind when report figures are attached", () => {
     const prompt = buildSystemPrompt({
       assistantName: "Bubbles",
-      brandName: "Sun Tan City",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
       locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
@@ -102,15 +107,16 @@ describe("buildSystemPrompt", () => {
     });
 
     expect(prompt).toContain("three kinds of statement");
-    expect(prompt).toContain("3. Location report figures");
+    expect(prompt).toContain("3. Report figures");
     expect(prompt).toContain("Never mark them with a source marker");
-    expect(prompt).toContain("name the reporting period the figure belongs to");
+    expect(prompt).toContain("name the report and reporting period the figure belongs to");
   });
 
   it("forbids inventing a report figure when report figures ARE attached", () => {
     const prompt = buildSystemPrompt({
       assistantName: "Bubbles",
-      brandName: "Sun Tan City",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
       locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
@@ -125,7 +131,8 @@ describe("buildSystemPrompt", () => {
   it("forbids stating any report figure at all when none is attached", () => {
     const prompt = buildSystemPrompt({
       assistantName: "Bubbles",
-      brandName: "Sun Tan City",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
       locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
@@ -133,10 +140,10 @@ describe("buildSystemPrompt", () => {
     });
 
     expect(prompt).toContain("You have NO report figures for this question");
-    expect(prompt).toContain("Do not state a tans count");
-    expect(prompt).toContain("a conversion rate");
+    expect(prompt).toContain("Do not state a sales figure");
+    expect(prompt).toContain("a rate or a comparison from memory");
     expect(prompt).toContain("two kinds of statement");
-    expect(prompt).not.toContain("3. Location report figures");
+    expect(prompt).not.toContain("3. Report figures");
   });
 
   it("defaults to having no report figures", () => {
@@ -144,7 +151,8 @@ describe("buildSystemPrompt", () => {
     // branch, not the permissive one.
     const withoutFlag = buildSystemPrompt({
       assistantName: "Bubbles",
-      brandName: "Sun Tan City",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
       locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
@@ -152,7 +160,8 @@ describe("buildSystemPrompt", () => {
     });
     const explicitlyFalse = buildSystemPrompt({
       assistantName: "Bubbles",
-      brandName: "Sun Tan City",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
       locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
@@ -168,7 +177,8 @@ describe("buildSystemPrompt", () => {
     // question: both notices must appear, and neither may replace the other.
     const prompt = buildSystemPrompt({
       assistantName: "Bubbles",
-      brandName: "Sun Tan City",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
       locationNoun: "location",
       context: CONTEXT,
       mode: "standard",
@@ -177,14 +187,15 @@ describe("buildSystemPrompt", () => {
     });
 
     expect(prompt).toContain("no company documents matched this question");
-    expect(prompt).toContain("3. Location report figures");
+    expect(prompt).toContain("3. Report figures");
   });
 
   it("varies the length instruction by answer mode", () => {
     const build = (mode: "quick" | "standard" | "detailed") =>
       buildSystemPrompt({
         assistantName: "Bubbles",
-        brandName: "Sun Tan City",
+        brandName: "Buff City Soap",
+        productName: "Ask Bubbles",
         locationNoun: "location",
         context: CONTEXT,
         mode,

@@ -453,7 +453,7 @@ describe("the six adapters, against the handoff's shapes", () => {
     const first = ok(await connector.list("procedure"));
     const again = ok(await connector.list("procedure"));
     const opening = first.records[0]!;
-    expect(first.records.map((r) => r.title)).toEqual(["Opening the Location", "Bed Cleaning"]);
+    expect(first.records.map((r) => r.title)).toEqual(["Opening the Location", "Bench Cleaning"]);
     /* The page renders every step twice (carousel and scroll view): read once. */
     expect(opening.sourceMetadata).toMatchObject({ steps: 2 });
     expect(opening.parts.map((p) => p.partKey)).toEqual(["content", `attachment:${uuid(3012)}:${STORED}`]);
@@ -514,13 +514,13 @@ describe("the six adapters, against the handoff's shapes", () => {
 
   it("Procedures: an attachment only the management view names stays blocked — it has no stored name to download by", async () => {
     const fake = new FakeWoven();
-    fake.state.procedures[1]!.attachments.push({ documentId: uuid(3211), stepIndex: 0, fileName: "Bed Chart.pdf", managementOnly: true });
+    fake.state.procedures[1]!.attachments.push({ documentId: uuid(3211), stepIndex: 0, fileName: "Batch Chart.pdf", managementOnly: true });
     const { connector } = connectorFor(fake);
     await connector.connect();
     const listing = ok(await connector.list("procedure"));
     expect(listing.records[1]!.parts.find((p) => p.partKey === `attachment:${uuid(3211)}`)).toMatchObject({
       documentId: uuid(3211),
-      fileName: "Bed Chart.pdf",
+      fileName: "Batch Chart.pdf",
       retrieval: { kind: "blocked", capability: "procedure_attachment_unlocated" },
     });
   });
@@ -596,15 +596,15 @@ describe("the six adapters, against the handoff's shapes", () => {
     const { connector } = connectorFor(fake);
     await connector.connect();
     const ke = ok(await connector.list("knowledge_element"));
-    expect(ke.records[0]).toMatchObject({ title: "Spray Tan Basics", status: "Current", publication: "published", version: "v2", updatedAt: "2025-10-09" });
+    expect(ke.records[0]).toMatchObject({ title: "Soap Loaf Basics", status: "Current", publication: "published", version: "v2", updatedAt: "2025-10-09" });
     expect(ke.records[0]!.parts[0]).toMatchObject({ partKey: "content", retrieval: { kind: "available", locator: { elementId: uuid(501) } } });
     expect(ke.records[0]!.sourceMetadata).toMatchObject({ contentPages: 1 });
     expect(ke.records[1]).toMatchObject({ status: "Draft", publication: "unpublished" });
     expect(fake.log.some((r) => r.path.startsWith(`/KnowledgeElement/Details/${uuid(502)}`))).toBe(false);
 
-    const file = await connector.fetchPart({ contentType: "knowledge_element", entityId: uuid(501), partKey: "content", locator: { elementId: uuid(501) }, fileName: null, mimeType: "text/plain", title: "Spray Tan Basics" });
+    const file = await connector.fetchPart({ contentType: "knowledge_element", entityId: uuid(501), partKey: "content", locator: { elementId: uuid(501) }, fileName: null, mimeType: "text/plain", title: "Soap Loaf Basics" });
     expect(new TextDecoder().decode(file.bytes)).toBe(
-      "Spray Tan Basics\n\nSpray Tan Basics\n\nPrepare the booth.\n\nWatch the booth video.\nLink: booth video (https://example.sharepoint.com/sites/training/video.mp4)\n",
+      "Soap Loaf Basics\n\nSoap Loaf Basics\n\nPrepare the workbench.\n\nWatch the workbench video.\nLink: workbench video (https://example.sharepoint.com/sites/training/video.mp4)\n",
     );
     expect(file).toMatchObject({ mimeType: "text/plain" });
     /* The SharePoint link was never requested. */

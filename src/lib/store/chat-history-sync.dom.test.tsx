@@ -220,13 +220,12 @@ describe("hydration uploads nothing", () => {
     expect(calls.saved).toEqual([]);
     expect(calls.imported).toEqual([]);
     /*
-     * TWO, NOT THREE: the seeded thread this browser was given by an earlier
-     * build is removed on hydration by `purgeDemoRecords`, which is a separate
-     * fix on `main` and is why it is not in the list. The real conversations
-     * are both still here, and neither was sent anywhere.
+     * Everything this browser held is still here — hydration neither drops nor
+     * uploads local history — and none of it was sent anywhere.
      */
     expect(captured.store.conversations.map((entry) => entry.id)).toEqual([
       LOCAL_OLD.id,
+      SEED.id,
       "conv_mfxlocal0002",
     ]);
   });
@@ -254,30 +253,18 @@ describe("hydration uploads nothing", () => {
     expect(calls.saved).toEqual([]);
   });
 
-  it("never sends a seeded demo thread a browser was given by an earlier build", async () => {
+  it("never sends a seed-shaped thread found in this browser", async () => {
     /*
-     * A DEFECT THAT WAS REAL, PINNED FROM BOTH SIDES.
-     *
-     * The store used to seed `DEMO_CONVERSATIONS` into state in BOTH modes, so
-     * a browser with nothing stored still held six fabricated threads — and an
-     * early version of the sync effect, which marked only the STORED
-     * conversations as pre-existing, tried to send every one of them. Nothing
-     * would have been stored (the route refuses them, non-retryably), but an
-     * attempt to upload local content nobody approved is exactly what this
-     * phase exists to make impossible, and "the server would have said no" is
-     * not the standard.
-     *
-     * `main` has since removed the seeds at the root — they are not compiled
-     * into a production build and `purgeDemoRecords` takes the copies out of
-     * browsers that already have them. This asserts BOTH halves hold: the seed
-     * leaves the visible history, and nothing about it is ever sent.
+     * A thread with a hand-made id — the way a demo seed is written — that
+     * this browser holds locally. It is the browser's own copy and stays in
+     * the local list, but marking only the STORED conversations as
+     * pre-existing once tried to send threads like it. An attempt to upload
+     * local content nobody approved is exactly what this phase exists to make
+     * impossible, and "the server would have said no" is not the standard.
      */
     localHistory = [SEED, LOCAL_OLD];
     const captured = await mount();
 
-    expect(captured.store.conversations.map((entry) => entry.id)).not.toContain(
-      "conv-seed-1",
-    );
     expect(calls.saved).toEqual([]);
 
     /* And still nothing after an unrelated state change re-runs the effect. */

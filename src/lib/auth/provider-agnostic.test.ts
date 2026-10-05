@@ -113,14 +113,33 @@ describe("no wording implies an external identity provider is required", () => {
 
 describe("the subsystems that must not need a provider", () => {
   it("authenticates report ingestion with a machine credential, not authorizeRequest", () => {
-    const route = readFileSync(
-      join(SRC, "app", "api", "admin", "reporting", "ingest", "route.ts"),
+    /*
+     * The credential module is the ingestion gate: it reads its own secret and
+     * never reaches for the person-shaped guard, which has no answer for a
+     * scheduled pipeline.
+     */
+    const credential = readFileSync(
+      join(SRC, "lib", "reporting", "ingest-credential.ts"),
       "utf8",
     );
-    expect(route).toContain("authorizeIngestRequest");
-    expect(route).toContain("REPORTING_INGEST_SECRET");
-    // The person-shaped guard has no answer for a scheduled pipeline.
-    expect(route).not.toMatch(/\bawait\s+authorizeRequest\s*\(/);
+    expect(credential).toContain('INGEST_SECRET_ENV = "REPORTING_INGEST_SECRET"');
+    expect(credential).toMatch(/export async function authorizeIngestRequest\(/);
+    expect(credential).not.toMatch(/\bauthorizeRequest\s*\(/);
+
+    /*
+     * And any route that takes reports in goes through it. No report family
+     * ships an ingestion route yet; when one does, it is held to this.
+     */
+    const routes = sourceFiles(join(SRC, "app", "api")).filter(
+      (file) =>
+        file.endsWith("route.ts") &&
+        /@\/lib\/reporting\/ingest-credential/.test(readFileSync(file, "utf8")),
+    );
+    for (const file of routes) {
+      const route = readFileSync(file, "utf8");
+      expect(route, file).toContain("authorizeIngestRequest");
+      expect(route, file).not.toMatch(/\bawait\s+authorizeRequest\s*\(/);
+    }
   });
 
   it("keeps the ingestion credential off the client", () => {
@@ -138,11 +157,17 @@ describe("the subsystems that must not need a provider", () => {
   });
 
   it("reads reporting data server-side, so no caller identity is involved", () => {
-    const repository = readFileSync(
-      join(SRC, "lib", "reporting", "read", "reporting-read-repository.ts"),
-      "utf8",
+    /*
+     * Every reporting module that holds the privileged client is server-only,
+     * so a browser can never be the caller whose identity decides a read.
+     */
+    const privileged = sourceFiles(join(SRC, "lib", "reporting")).filter(
+      (file) => !file.includes(".test.") && /getSupabaseAdmin/.test(readFileSync(file, "utf8")),
     );
-    expect(repository).toMatch(/^import "server-only";/m);
+    expect(privileged.length).toBeGreaterThan(0);
+    for (const file of privileged) {
+      expect(readFileSync(file, "utf8"), file).toMatch(/^import "server-only";/m);
+    }
   });
 
   it("selects a knowledge provider that needs no external identity provider", () => {
@@ -196,11 +221,14 @@ describe("the named default for employee login", () => {
     expect(types.indexOf('"supabase"')).toBeLessThan(types.indexOf('"entra_id"'));
   });
 
-  it("states the constraint in the architecture documentation", () => {
-    const doc = readFileSync(
-      join(ROOT, "docs", "architecture-constraints.md"),
-      "utf8",
-    ).replace(/\s+/g, " ");
+  it("states the constraint in the project documentation", () => {
+    const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+    const at = readme.indexOf("**Architecture constraint.**");
+    expect(at, "README carries the architecture constraint").toBeGreaterThan(-1);
+    const doc = readme
+      .slice(at, readme.indexOf("\n\n", at))
+      .replace(/^>\s?/gm, "")
+      .replace(/\s+/g, " ");
     expect(doc).toMatch(/must work fully without Microsoft Entra ID/i);
     expect(doc).toMatch(/may never be available/i);
     expect(doc).toMatch(/optional adapter/i);

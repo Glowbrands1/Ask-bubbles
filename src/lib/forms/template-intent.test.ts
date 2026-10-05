@@ -34,7 +34,7 @@ describe("an explicitly named template resolves to that template", () => {
 
   it("recognises every registered form by its own published name", () => {
     for (const entry of COMPANY_FORMS) {
-      expect(detectTemplateIntent(`I need a ${entry.seed.name} for Jordan Vance`)).toEqual({
+      expect(detectTemplateIntent(`I need a ${entry.seed.name} for Morgan Blake`)).toEqual({
         kind: "explicit",
         templateKey: entry.seed.key,
       });

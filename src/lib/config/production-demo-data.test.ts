@@ -55,36 +55,24 @@ function productionModules(): string[] {
 
 /**
  * ============================================================================
- * MODULES ALLOWED TO IMPORT `data/demo/*` OR A DEMO SCREEN
+ * THE ONE MODULE ALLOWED TO IMPORT `data/demo/*`
  * ============================================================================
  *
- * ONE: `lib/demo/runtime.demo.ts`, the demo side of the build-time boundary.
+ * `lib/demo/runtime.demo.ts`, the demo side of the build-time boundary.
  * `next.config.ts` substitutes it for `lib/demo/runtime.ts` when a build
  * explicitly asks for the demo, so in a production build nothing imports it
  * and the bundler never emits what it names.
  *
- * The demo-only SCREENS are allowed to import seeded data because they are
- * only ever named by that module. The test below proves it, by checking
- * nothing else in the repository imports them.
+ * WHY NOT DYNAMIC IMPORTS. A dynamic import EMITS its module, so the seeded
+ * chunks would sit in `.next/static`, fetched by nobody. A module nothing
+ * imports is a module nothing emits.
  *
- * WHY NOT DYNAMIC IMPORTS ANY MORE. They were the previous design and they
- * worked as far as they go: no production page downloaded a seeded record. But
- * a dynamic import EMITS its module, so eleven chunks carrying Jane Kowalski,
- * `example.com/policies` and a fabricated $214.62 sat in `.next/static`,
- * fetched by nobody. A module nothing imports is a module nothing emits.
+ * There are no demo-only SCREENS: a screen that needs seeded content asks the
+ * boundary for it. Adding one means adding it here and proving below that only
+ * the boundary names it.
  */
-const DEMO_ONLY_MODULES = new Set([
-  "lib/demo/runtime.demo.ts",
-  "features/admin/ai-usage-demo-screen.tsx",
-  "features/admin/integrations-roadmap-demo.tsx",
-  "features/dashboard/overview-activity-demo.tsx",
-  "features/resources/resources-demo-screen.tsx",
-  "features/reviews/reviews-demo-screen.tsx",
-  "features/videos/videos-activity-demo.tsx",
-]);
-
-/** The one module allowed to name the demo-only ones. */
 const BOUNDARY = "lib/demo/runtime.demo.ts";
+const DEMO_ONLY_MODULES = new Set([BOUNDARY]);
 
 /* ====================================================== the module graph == */
 
@@ -135,14 +123,10 @@ describe("only the demo side of the boundary touches seeded content", () => {
     expect(reached).toEqual([]);
   });
 
-  /** And the boundary genuinely names each of them, so none is dead weight. */
-  it.each([...DEMO_ONLY_MODULES].filter((m) => m !== BOUNDARY))(
-    "%s is named by the demo boundary",
-    (demoModule) => {
-      const base = demoModule.replace(/\.tsx?$/, "").split("/").pop() as string;
-      expect(read(BOUNDARY)).toContain(base);
-    },
-  );
+  it("has a boundary that does import the seeds, so the rule above is not vacuous", () => {
+    expect(code(read(BOUNDARY))).toMatch(/from "@\/data\/demo"/);
+    expect(code(read("lib/demo/runtime.ts"))).not.toMatch(/@\/data\/demo/);
+  });
 
   /**
    * THE PRODUCTION SIDE IS WHAT EVERYTHING ELSE IMPORTS, and it must stay
@@ -174,7 +158,6 @@ describe("the client store seeds nothing it has not fetched", () => {
 
   it.each([
     ["documents", "KnowledgeDocument"],
-    ["videos", "VideoResource"],
     ["templates", "FormTemplate"],
     ["forms", "GeneratedForm"],
     ["conversations", "ChatConversation"],
@@ -196,7 +179,6 @@ describe("the client store seeds nothing it has not fetched", () => {
   it("does not persist seeded collections in live mode", () => {
     for (const collection of [
       "knowledge_documents",
-      "videos",
       "form_templates",
       "generated_forms",
     ]) {
@@ -222,35 +204,27 @@ describe("the client store seeds nothing it has not fetched", () => {
       "if (!DEMO_MODE) return;",
     );
   });
-
-  it("purges seeded records already written to a live browser", () => {
-    expect(store).toContain("purgeDemoRecords");
-    expect(store).toContain("withoutDemoRecords");
-  });
-
-  /**
-   * THE CLEANUP IS THE ONE THING THAT STILL NEEDS IDS IN PRODUCTION, and it
-   * gets them from a module that carries ids and nothing else.
-   */
-  it("keeps the purge working without importing the seeds", () => {
-    const purge = read("lib/store/purge-demo-records.ts");
-    expect(purge).not.toMatch(/from "@\/data\/demo/);
-    expect(purge).toContain('from "./demo-record-ids"');
-  });
 });
 
 /* ========================================================= the screens === */
 
 describe("screens that can render seeded content ask for the mode first", () => {
+  it.each(["features/knowledge/knowledge-screen.tsx"])("%s consults isDemoMode", (path) => {
+    expect(code(read(path)), `${path} must gate on the mode`).toContain("isDemoMode");
+  });
+
   it.each([
-    "features/resources/resources-screen.tsx",
     "features/admin/ai-usage-screen.tsx",
     "features/admin/integrations-screen.tsx",
     "features/dashboard/overview.tsx",
-    "features/knowledge/knowledge-screen.tsx",
-    "features/videos/videos-screen.tsx",
-  ])("%s consults isDemoMode", (path) => {
-    expect(code(read(path)), `${path} must gate on the mode`).toContain("isDemoMode");
+  ])("%s has no seeded content to gate", (path) => {
+    /*
+     * These screens render only what the server or the store reports. Should
+     * one ever reach for seeded content, it must go through the boundary.
+     */
+    const source = code(read(path));
+    expect(source).not.toMatch(/@\/data\/demo/);
+    expect(source).not.toMatch(/\bDEMO_[A-Z_]+\b/);
   });
 
   /**
@@ -274,35 +248,18 @@ describe("screens that can render seeded content ask for the mode first", () => 
 /* ============================================== links a manager can click = */
 
 describe("production links are verified links", () => {
-  it("ships no placeholder or unverified resource", () => {
-    /*
-     * Comments stripped: the file's header legitimately discusses the
-     * placeholders it exists to replace, and why L10 is not here yet.
-     */
-    const body = code(read("data/resources.ts"));
-    for (const banned of [/example\.com/, /localhost/, /placeholder/i, /lovable\.app/, /preview--/]) {
-      expect(body, String(banned)).not.toMatch(banned);
-    }
-  });
-
-  it("renders the production list in live mode and never the seeded one", () => {
-    const screen = code(read("features/resources/resources-screen.tsx"));
-    expect(screen).toContain("PRODUCTION_RESOURCES");
-    expect(screen).not.toContain("DEMO_RESOURCES");
-  });
-
-  /**
+  /*
    * THE QUICK-ACTIONS ROW RENDERS ON EVERY PAGE, so an unverified destination
-   * there is a promise the product makes everywhere — and filtering it at
-   * render would still have shipped the URL. It moved behind the boundary
-   * instead, so a production build does not contain it.
+   * there is a promise the product makes everywhere. Every production action is
+   * an internal route.
    */
-  it("keeps the unverified quick action out of the production list", () => {
-    const productionList = read("data/quick-actions.ts");
-    expect(productionList).not.toMatch(/lovable\.app/);
-    expect(productionList).not.toMatch(/preview--/);
-    expect(code(read("components/shell/jump-to-row.tsx"))).toContain(
-      "demoRuntime.quickActions",
-    );
+  it("keeps the quick actions on internal routes", () => {
+    const productionList = code(read("data/quick-actions.ts"));
+    for (const banned of [/https?:\/\//, /example\.com/, /localhost/, /placeholder/i, /preview--/]) {
+      expect(productionList, String(banned)).not.toMatch(banned);
+    }
+    for (const href of productionList.matchAll(/href:\s*[`"]([^`"]+)[`"]/g)) {
+      expect(href[1].startsWith("/"), href[1]).toBe(true);
+    }
   });
 });

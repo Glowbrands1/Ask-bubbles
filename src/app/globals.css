@@ -498,11 +498,11 @@
   --color-followup-attention-soft: var(--followup-attention-soft);
   --color-followup-attention-soft-foreground: var(--followup-attention-soft-foreground);
   --color-followup-attention-muted-foreground: var(--followup-attention-muted-foreground);
-  --color-wellness-redlight: var(--glow-accent);
-  --color-brand-yellow: var(--brand-accent);
-  --color-brand-yellow-foreground: var(--brand-accent-foreground);
-  --color-brand-yellow-soft: var(--brand-accent-soft);
-  --color-brand-yellow-soft-foreground: var(--brand-accent-soft-foreground);
+  --color-glow-accent: var(--glow-accent);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-foreground: var(--brand-accent-foreground);
+  --color-brand-accent-soft: var(--brand-accent-soft);
+  --color-brand-accent-soft-foreground: var(--brand-accent-soft-foreground);
   --color-topbar: var(--topbar);
   --color-topbar-foreground: var(--topbar-foreground);
   --color-rail: var(--rail);

@@ -5,12 +5,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { announceFormUpdate } from "./form-update-events";
 import { MessageBubble } from "./message-bubble";
-import { TEMPLATE_SEEDS } from "@/lib/forms/library";
+import { FIXTURE_TEMPLATE_SEEDS as TEMPLATE_SEEDS } from "@/test/forms/fixture-forms";
 import type { ChatMessage } from "@/types";
 
 /**
  * ============================================================================
- * PRODUCTION QA OF PR #81 — A CHAT CHANGE SHOWS ON THE FORM AT ONCE
+ * A CHAT CHANGE SHOWS ON THE FORM AT ONCE
  * ============================================================================
  *
  * A revision or a follow-up date set from chat returns `formUpdate`; the chat
@@ -23,6 +23,10 @@ vi.mock("@/lib/session/session-context", () => ({
   useSession: () => ({ user: { avatarInitials: "PC", name: "Paulyne" }, role: "location_manager", isAdmin: false }),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+/* The fixture location roster: the shipped roster is empty until Buff confirms its stores. */
+vi.mock("@/config/company/locations", async () =>
+  (await import("@/test/fixture-locations")).fixtureLocationsModule(),
+);
 
 afterEach(() => {
   cleanup();
@@ -31,20 +35,20 @@ afterEach(() => {
 
 describe("the inline form after a chat change", () => {
   it("re-reads the record when the chat announces an update", async () => {
-    const template = TEMPLATE_SEEDS.find((entry) => entry.key === "follow-up-coaching")!;
+    const template = TEMPLATE_SEEDS.find((entry) => entry.key === "fixture-follow-up")!;
     const server = { followUpDate: null as string | null, timeframe: "within 2 weeks" };
     const fetchMock = vi.fn().mockImplementation(async () => ({
       ok: true,
       json: async () => ({
         instance: {
           id: "inst-1",
-          templateKey: "follow-up-coaching",
+          templateKey: "fixture-follow-up",
           templateName: template.name,
           templateVersion: 1,
           templateVersionId: "ver-1",
           variantKey: null,
-          employeeName: "Kaitlyn Marsh",
-          locationId: "loc-0310",
+          employeeName: "Pat Example",
+          locationId: "loc-101",
           locationName: null,
           source: "assistant",
           status: "draft",
@@ -57,7 +61,7 @@ describe("the inline form after a chat change", () => {
     }));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const user: ChatMessage = { id: "m-1", role: "user", content: "Follow-up form for Kaitlyn Marsh.", createdAt: "2026-10-01T12:00:00Z" };
+    const user: ChatMessage = { id: "m-1", role: "user", content: "Follow-up form for Pat Example.", createdAt: "2026-10-01T12:00:00Z" };
     const message: ChatMessage = {
       id: "a-1",
       role: "assistant",
@@ -68,20 +72,20 @@ describe("the inline form after a chat change", () => {
       citations: [],
       formProposal: {
         proposalId: "prop-1",
-        templateKey: "follow-up-coaching",
-        templateName: "Follow-Up Coaching Form",
+        templateKey: "fixture-follow-up",
+        templateName: "Fixture Follow-Up Note",
         supportsInlineDraft: true,
         variantKey: null,
         employeeRole: null,
-        employeeName: "Kaitlyn Marsh",
-        locationId: "loc-0310",
+        employeeName: "Pat Example",
+        locationId: "loc-101",
         locationName: null,
         locationResolution: "resolved",
         authorizedLocationIds: [],
         status: "ready",
         sourceMessageIds: ["m-1"],
       },
-      formInstanceRef: { instanceId: "inst-1", proposalId: "prop-1", templateName: "Follow-Up Coaching Form" },
+      formInstanceRef: { instanceId: "inst-1", proposalId: "prop-1", templateName: "Fixture Follow-Up Note" },
     };
     render(<MessageBubble message={message} conversation={[user, message]} onSuggestion={() => {}} onFormCreated={vi.fn()} />);
     await waitFor(() => expect(screen.getByDisplayValue("within 2 weeks")).toBeTruthy());

@@ -244,7 +244,7 @@ describe("Mappings", () => {
   it("says mappings are applied nowhere, and shows suggestions and non-locations", () => {
     const { container } = renderView(sampleProps(data));
     expect(screen.getByText("Mappings are reviewed here and applied nowhere in this phase")).toBeTruthy();
-    expect(container.textContent).toContain("S103 · Sample Location Lakeview");
+    expect(container.textContent).toContain("103 · Example Location 103");
     expect(screen.getByText("Suggest ignore")).toBeTruthy();
     expect(screen.getAllByText("No exact number match").length).toBeGreaterThan(0);
   });

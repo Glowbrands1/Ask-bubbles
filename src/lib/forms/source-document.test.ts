@@ -1,7 +1,7 @@
-import { crc32 } from "node:zlib";
 import { describe, expect, it } from "vitest";
 
-import { coachingDocument } from "./library";
+import { EXAMPLE_CHECK_IN_SEED } from "@/config/company/forms/example-check-in";
+import { buildDocx, buildLegacyDoc, buildZip } from "@/test/forms/source-fixtures";
 import { renderFormPdf } from "./pdf-render";
 import { inspectSourceDocument } from "./source-document";
 import {
@@ -29,119 +29,17 @@ import {
 
 /* ------------------------------------------------- a real .docx, in memory --- */
 
-/**
- * The smallest thing that is genuinely a Word document.
- *
- * Written with STORED (uncompressed) entries so the archive is built from the
- * zip format alone, with nothing to go wrong in a compressor. A reader that can
- * open a .docx can open this; one that only pattern-matches bytes cannot.
+/*
+ * `buildDocx` is the smallest thing that is genuinely a Word document: STORED
+ * (uncompressed) zip entries built from the zip format alone, handed to the
+ * same reader the route uses. `buildZip` and `buildLegacyDoc` make the
+ * look-alikes. See `src/test/forms/source-fixtures.ts`.
  */
-function buildDocx(paragraphs: string[]): Uint8Array {
-  const body = paragraphs
-    .map((text) => `<w:p><w:r><w:t>${text}</w:t></w:r></w:p>`)
-    .join("");
 
-  return buildZip([
-    {
-      name: "[Content_Types].xml",
-      content:
-        '<?xml version="1.0" encoding="UTF-8"?>' +
-        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
-        '<Default Extension="xml" ContentType="application/xml"/>' +
-        '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
-        "</Types>",
-    },
-    {
-      name: "_rels/.rels",
-      content:
-        '<?xml version="1.0" encoding="UTF-8"?>' +
-        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
-        "</Relationships>",
-    },
-    {
-      name: "word/document.xml",
-      content:
-        '<?xml version="1.0" encoding="UTF-8"?>' +
-        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
-        `<w:body>${body}</w:body></w:document>`,
-    },
-  ]);
-}
-
-function buildZip(entries: { name: string; content: string }[]): Uint8Array {
-  const encoder = new TextEncoder();
-  const locals: Uint8Array[] = [];
-  const centrals: Uint8Array[] = [];
-  let offset = 0;
-
-  for (const entry of entries) {
-    const name = encoder.encode(entry.name);
-    const data = encoder.encode(entry.content);
-    const sum = crc32(Buffer.from(data));
-
-    const local = new DataView(new ArrayBuffer(30));
-    local.setUint32(0, 0x04034b50, true);
-    local.setUint16(4, 20, true); // version needed
-    local.setUint32(14, sum, true);
-    local.setUint32(18, data.byteLength, true); // stored: sizes match
-    local.setUint32(22, data.byteLength, true);
-    local.setUint16(26, name.byteLength, true);
-    locals.push(new Uint8Array(local.buffer), name, data);
-
-    const central = new DataView(new ArrayBuffer(46));
-    central.setUint32(0, 0x02014b50, true);
-    central.setUint16(4, 20, true); // version made by
-    central.setUint16(6, 20, true); // version needed
-    central.setUint32(16, sum, true);
-    central.setUint32(20, data.byteLength, true);
-    central.setUint32(24, data.byteLength, true);
-    central.setUint16(28, name.byteLength, true);
-    central.setUint32(42, offset, true);
-    centrals.push(new Uint8Array(central.buffer), name);
-
-    offset += 30 + name.byteLength + data.byteLength;
-  }
-
-  const directorySize = centrals.reduce((total, part) => total + part.byteLength, 0);
-  const end = new DataView(new ArrayBuffer(22));
-  end.setUint32(0, 0x06054b50, true);
-  end.setUint16(8, entries.length, true);
-  end.setUint16(10, entries.length, true);
-  end.setUint32(12, directorySize, true);
-  end.setUint32(16, offset, true);
-
-  const parts = [...locals, ...centrals, new Uint8Array(end.buffer)];
-  const total = parts.reduce((size, part) => size + part.byteLength, 0);
-  const zip = new Uint8Array(total);
-  let cursor = 0;
-  for (const part of parts) {
-    zip.set(part, cursor);
-    cursor += part.byteLength;
-  }
-  return zip;
-}
-
-/** The OLE2 compound-file header a Word 97-2003 .doc opens with. */
-function buildLegacyDoc({ word = true }: { word?: boolean } = {}): Uint8Array {
-  const bytes = new Uint8Array(1024);
-  bytes.set([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1], 0);
-  // The directory records a stream name in UTF-16LE. Word's is `WordDocument`;
-  // a workbook's is `Workbook`, which is how the two are told apart.
-  const name = word ? "WordDocument" : "Workbook";
-  let cursor = 512;
-  for (const character of name) {
-    bytes[cursor] = character.charCodeAt(0);
-    bytes[cursor + 1] = 0;
-    cursor += 2;
-  }
-  return bytes;
-}
-
-const REAL_PDF = renderFormPdf(coachingDocument(), null, { values: {}, checked: {} }, {
-  templateName: "Coaching Form",
+const REAL_PDF = renderFormPdf(EXAMPLE_CHECK_IN_SEED.document, null, { values: {}, checked: {} }, {
+  templateName: EXAMPLE_CHECK_IN_SEED.name,
   templateVersion: 1,
-  employeeName: "Jordan Vance",
+  employeeName: "Pat Example",
   formDate: "2026-09-01",
   status: "draft",
 });

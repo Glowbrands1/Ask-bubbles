@@ -125,7 +125,7 @@ describe("the composer's own footprint", () => {
     /*
      * The mode control and the send button share a container. A composer that
      * kept a dedicated full-width row above the input would still render three
-     * working modes and would still fail the thing Marissa reported.
+     * working modes and would still fail the thing a manager reported.
      */
     const modeRow = COMPOSER_CODE.indexOf("<SegmentedControl");
     const textareaAt = COMPOSER_CODE.indexOf("<textarea");

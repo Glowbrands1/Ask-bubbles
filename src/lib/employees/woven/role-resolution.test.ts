@@ -5,7 +5,7 @@ import { readWovenConfig } from "./config";
 import { MemoryDirectoryStore } from "./memory-store";
 import { resolveEmployeeRole, roleWriteAllowed, type PositionMapping, type RoleOverride } from "./role-resolution";
 import { runWovenEmployeeSync } from "./sync";
-import { createFakeWoven, FAKE_CREDENTIALS, wovenEmployee } from "./test-support";
+import { createFakeWoven, FAKE_COMPANY_ID, FAKE_CREDENTIALS, wovenEmployee } from "./test-support";
 
 /**
  * PROTECTED OVERRIDE → CONFIRMED POSITION → NOTHING. The same order the SQL
@@ -56,6 +56,7 @@ describe("a later employee sync cannot demote the protected admins", { timeout: 
   it("position changes for a protected employee are recorded as history only; the resolution stays admin", async () => {
     const CONFIG = readWovenConfig({
       WOVEN_SYNC_ENABLED: "true",
+      WOVEN_COMPANY_ID: FAKE_COMPANY_ID,
       WOVEN_SYNC_WRITES_ENABLED: "true",
       WOVEN_SUBSCRIPTION_KEY: FAKE_CREDENTIALS.subscriptionKey,
       WOVEN_USERNAME: FAKE_CREDENTIALS.username,
@@ -82,7 +83,7 @@ describe("a later employee sync cannot demote the protected admins", { timeout: 
     await run();
 
     /* Woven moves the protected person to a location position. */
-    employees[0] = wovenEmployee("9001", { positionId: "POS-SC", positionName: "Tanning Consultant" });
+    employees[0] = wovenEmployee("9001", { positionId: "POS-SC", positionName: "Team Member" });
     const later = await run();
     expect(later.changesByKind.position_changed).toBe(1);
     expect(store.changes.find((c) => c.kind === "position_changed")?.classification).toBe("unclassified");

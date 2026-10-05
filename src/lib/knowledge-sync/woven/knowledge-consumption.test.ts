@@ -67,9 +67,9 @@ vi.mock("@/lib/reporting/read/employee-facts", () => ({
  * floor. What is under test is WHICH rows retrieval may return, not ranking.
  */
 const QUESTION = "What does the attendance policy say? Do team members have to arrive on time and call the location if they will be late?";
-const UPDATED_QUESTION = "Attendance policy: arrive on time for every shift? Text the location director before the shift starts if late?";
+const UPDATED_QUESTION = "Attendance policy: arrive on time for every shift? Text the location manager before the shift starts if late?";
 const NOTES = "Attendance policy: did not arrive on time; did not call the location; late.";
-const UPDATED_NOTES = "Attendance policy: did not arrive on time for the shift; did not text the location director before the shift started; late.";
+const UPDATED_NOTES = "Attendance policy: did not arrive on time for the shift; did not text the location manager before the shift started; late.";
 
 async function ask(question = QUESTION) {
   model.input = null;
@@ -79,7 +79,7 @@ async function ask(question = QUESTION) {
       mode: "standard",
       history: [],
       scopeId: activeKnowledgeCorpus(),
-      context: { userName: "Dana Reyes", locationName: "MO Kansas City Wornall", todayIso: "2026-09-29" },
+      context: { userName: "Dana Reyes", locationName: "Example Location 101", todayIso: "2026-09-29" },
     } as never,
     { role: "location_manager" as never, scope: { level: "location", primaryAreaId: "loc-0101", alsoCoversAreaIds: [] } } as never,
   );
@@ -160,7 +160,7 @@ describe("chat retrieves and cites synced Woven content", () => {
     const before = await h.documentCount();
 
     const policy = h.fake.state.policies[0]!;
-    policy.body = "Arrive on time for every shift.\nText your location director if you will be late, before the shift starts.";
+    policy.body = "Arrive on time for every shift.\nText your location manager if you will be late, before the shift starts.";
     policy.version = "Version 3";
     policy.updated = "10/1/2026";
     await h.run("sync");
@@ -174,7 +174,7 @@ describe("chat retrieves and cites synced Woven content", () => {
     expect(chunks.map((c) => c.content).join("\n")).not.toContain("Call the location");
 
     const answer = await ask(UPDATED_QUESTION);
-    expect(grounding()).toContain("Text your location director if you will be late");
+    expect(grounding()).toContain("Text your location manager if you will be late");
     expect(grounding()).not.toContain("Call the location if you will be late.");
     expect(answer.citations).toEqual([expect.objectContaining({ documentId: id, documentTitle: "Attendance Policy" })]);
   });
@@ -236,12 +236,12 @@ describe("forms: groundPolicy retrieves synced Woven policy through the server-s
     trapFetch();
     const policy = h.fake.state.policies[0]!;
 
-    policy.body = "Arrive on time for every shift.\nText your location director if you will be late, before the shift starts.";
+    policy.body = "Arrive on time for every shift.\nText your location manager if you will be late, before the shift starts.";
     policy.updated = "10/1/2026";
     await h.run("sync");
     const updated = await groundPolicy(UPDATED_NOTES);
     expect(updated.passages[0]).toMatchObject({ source: { documentId: id } });
-    expect(updated.passages.map((p) => p.text).join("\n")).toContain("Text your location director");
+    expect(updated.passages.map((p) => p.text).join("\n")).toContain("Text your location manager");
     expect(updated.passages.map((p) => p.text).join("\n")).not.toContain("Call the location");
 
     policy.status = "draft";

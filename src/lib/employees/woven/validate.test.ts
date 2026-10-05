@@ -191,8 +191,8 @@ describe("webhooks, from Woven's own vocabulary", () => {
   });
 });
 
-describe("location coverage: Woven /locations against locations.location_code", () => {
-  const LOCATIONS: LocationComparisonInput = {
+describe("location coverage: Woven /locations against the configured roster's location codes", () => {
+  const ROSTER: LocationComparisonInput = {
     outcome: "loaded",
     locations: [
       { number: "0306", name: "Location Three-Oh-Six" },
@@ -200,7 +200,7 @@ describe("location coverage: Woven /locations against locations.location_code", 
       { number: "0520", name: "Location Five-Twenty" },
     ],
   };
-  const LOCATIONS = [
+  const WOVEN_LOCATIONS = [
     wovenLocation("WL-0", { number: "0306", name: "Woven Store 306" }),
     wovenLocation("WL-1", { number: "412", name: "Woven Store 412" }),
     wovenLocation("WL-2", { number: "0777", name: "Woven Store 777", closed: true }),
@@ -209,7 +209,7 @@ describe("location coverage: Woven /locations against locations.location_code", 
   ];
 
   it("counts exact matches, unmatched locations, uncovered locations, closed and non-locations", async () => {
-    const { report } = await validate({ locations: LOCATIONS }, {}, undefined, { locations: LOCATIONS });
+    const { report } = await validate({ locations: WOVEN_LOCATIONS }, {}, undefined, { locations: ROSTER });
     expect(report.locations).toMatchObject({ records: 5, withNumber: 4, closed: 1, nonLocations: 1 });
     expect(report.locations?.locationCoverage).toEqual({
       outcome: "compared",
@@ -238,12 +238,12 @@ describe("location coverage: Woven /locations against locations.location_code", 
   });
 
   it("gives location numbers and names only when asked (manage_users), and never an employee or a location's other fields", async () => {
-    const without = await validate({ locations: LOCATIONS }, {}, undefined, { locations: LOCATIONS });
+    const without = await validate({ locations: WOVEN_LOCATIONS }, {}, undefined, { locations: ROSTER });
     expect(without.report.locationReview).toBeNull();
     expect(JSON.stringify(without.report)).not.toContain("Woven Store 306");
     expect(JSON.stringify(without.report)).not.toContain("Location Four-Twelve");
 
-    const { report } = await validate({ locations: LOCATIONS }, {}, undefined, { locations: LOCATIONS, includeLocationReview: true });
+    const { report } = await validate({ locations: WOVEN_LOCATIONS }, {}, undefined, { locations: ROSTER, includeLocationReview: true });
     expect(report.locationReview?.wovenLocations[0]).toEqual({ number: "0306", name: "Woven Store 306", closed: false, nonLocation: false, matchedLocationCode: "0306" });
     expect(report.locationReview?.locationsWithoutWovenLocation).toEqual([
       { number: "0412", name: "Location Four-Twelve" },
@@ -267,7 +267,7 @@ describe("what the report must never contain", () => {
   it("no names, emails, employee ids, dates, titles or sensitive values", async () => {
     const { report } = await validate();
     const text = JSON.stringify(report);
-    for (const forbidden of ["Quinlan", "quinlan", "A1\"", "T1\"", "2025-01-31", "Location Consultant", "KS Manhattan", SENSITIVE_MARKER, "token-1", FAKE_CREDENTIALS.password]) {
+    for (const forbidden of ["Quinlan", "quinlan", "A1\"", "T1\"", "2025-01-31", "Location Consultant", "Example Location 306", SENSITIVE_MARKER, "token-1", FAKE_CREDENTIALS.password]) {
       expect(text).not.toContain(forbidden);
     }
   });
@@ -452,7 +452,7 @@ describe("a company chooser on sign-in", () => {
             EmployeeID: "8d3a7c1e-5b2f-4e6a-9c8d-1f2e3a4b5c6d",
             TwoFactorAuthentication: { EmailAddress: "person@example.test", TwoFactorAuthenticationCellPhone: "555-201-8844", Use2FA: false },
             CompanyLoginOptions: [
-              { CompanyID: "11111111-2222-3333-4444-555555555555", CompanyName: "Sun Tan City", BrandFriendlyName: "STC", AccountStatus: 1, IsBrandCompany: false, BrandLogoUrl: "https://cdn.woven.test/a.png" },
+              { CompanyID: "11111111-2222-3333-4444-555555555555", CompanyName: "Example Soap Co", BrandFriendlyName: "ESC", AccountStatus: 1, IsBrandCompany: false, BrandLogoUrl: "https://cdn.woven.test/a.png" },
               { CompanyID: "66666666-7777-8888-9999-000000000000", CompanyName: "Glow Brands", BrandFriendlyName: null, AccountStatus: 1, IsBrandCompany: true, BrandLogoUrl: "https://cdn.woven.test/b.png" },
             ],
           }),
@@ -462,7 +462,7 @@ describe("a company chooser on sign-in", () => {
     const d = report.token.ok ? null : report.token.diagnostics;
     expect(d?.companyIdAppearsRequired).toBe(true);
     expect(d?.companyOptions.map((o) => [o.companyName, o.companyId])).toEqual([
-      ["Sun Tan City", "11111111-2222-3333-4444-555555555555"],
+      ["Example Soap Co", "11111111-2222-3333-4444-555555555555"],
       ["Glow Brands", "66666666-7777-8888-9999-000000000000"],
     ]);
     expect(message(report, "Sign-in")).toContain("set WOVEN_COMPANY_ID to the right one");

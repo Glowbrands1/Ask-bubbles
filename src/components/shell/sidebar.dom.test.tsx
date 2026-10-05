@@ -18,7 +18,7 @@ import { SidebarNav } from "./sidebar";
  * Form Templates is reachable at /forms/templates and the page-level block was
  * removed, because the permission matrix behind it is this app's own guess and
  * nobody has configured roles yet. The RAIL was still filtering on that same
- * guess — so for a Location Director the link simply was not there, and the screen
+ * guess — so for a Location Manager the link simply was not there, and the screen
  * existed with no route to it from inside the app. The report was literally
  * "I don't see it on the app".
  *
@@ -70,10 +70,10 @@ function renderAs(role: Role, demoMode = true) {
   return render(<SidebarNav />);
 }
 
-describe("what a Location Director can reach from the rail", () => {
+describe("what a Location Manager can reach from the rail", () => {
   it("shows Form Templates, even though the default matrix withholds it", () => {
     // The premise, asserted so this test cannot pass for the wrong reason: the
-    // matrix really does NOT give a Location Director this permission.
+    // matrix really does NOT give a Location Manager this permission.
     expect(
       hasPermission(DEFAULT_PERMISSION_MATRIX, "location_manager", "manage_form_templates"),
     ).toBe(false);
@@ -88,7 +88,7 @@ describe("what a Location Director can reach from the rail", () => {
     // anybody now that forms are created in Ask Bubbles. What this still pins
     // is that the preview does not hide the REST of the section on a
     // permission nobody has configured.
-    for (const label of ["Form Monitoring", "Form Templates"]) {
+    for (const label of ["Forms Register", "Form Templates"]) {
       expect(screen.getByRole("link", { name: new RegExp(label) }), label).toBeTruthy();
     }
     expect(screen.queryByRole("link", { name: /Create a Form/ })).toBeNull();
@@ -117,18 +117,18 @@ describe("once identity is real", () => {
     // hiding what it cannot use is meaningful again.
     renderAs("location_manager", false);
     expect(screen.queryByRole("link", { name: /Form Templates/ })).toBeNull();
-    // Form Monitoring carries the permission this role DOES hold, so it is
+    // Forms Register carries the permission this role DOES hold, so it is
     // what proves the filter is passing things through rather than hiding
     // everything. It was `Create a Form`, which no role is shown any more.
-    expect(screen.getByRole("link", { name: /Form Monitoring/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Forms Register/ })).toBeTruthy();
   });
 });
 
 describe("what an Employee sees on the rail with real authentication", () => {
   /*
    * THE ACCEPTANCE CRITERION FOR THE FRONTLINE ROLE, rendered rather than
-   * computed: Ask Bubbles, Knowledge Base, Videos. Nothing else, and no empty
-   * section heading left behind where something was filtered out.
+   * computed: the assistant and its history. Nothing else, and no empty section
+   * heading left behind where something was filtered out.
    *
    * `demoMode = false` throughout, because the whole point of this role is what
    * it looks like once identity is real.
@@ -137,10 +137,9 @@ describe("what an Employee sees on the rail with real authentication", () => {
    * The links inside the NAVIGATION, not every link on screen.
    *
    * The rail's header also carries a brand link whose accessible name is
-   * "Ask Bubbles — Overview" — so a query across the whole tree matches
-   * /Overview/ for every role and reports the wordmark as a navigation item.
-   * Scoping to the nav is what makes "an Employee cannot see Overview" mean
-   * the sidebar entry rather than the logo.
+   * the product name — so a query across the whole tree would report the
+   * wordmark as a navigation item. Scoping to the nav is what makes "an
+   * Employee cannot see Home" mean the sidebar entry rather than the logo.
    */
   function navLinks(container: HTMLElement): string[] {
     const nav = container.querySelector("nav")!;
@@ -161,7 +160,7 @@ describe("what an Employee sees on the rail with real authentication", () => {
 
   it("shows exactly the two screens it is entitled to", () => {
     const { container } = renderAs("employee", false);
-    expect(navLinks(container).sort()).toEqual(["Ask Bubbles", "Videos"].sort());
+    expect(navLinks(container).sort()).toEqual(["Ask Bubbles", "History"].sort());
   });
 
   it("does not offer the Knowledge Base management screen", () => {
@@ -184,13 +183,13 @@ describe("what an Employee sees on the rail with real authentication", () => {
     const links = navLinks(container);
 
     for (const label of [
-      "Overview",
-      "Reports & Analytics",
-      "Google Reviews",
+      "Home",
+      "Reports",
+      "Knowledge Base",
       "Create a Form",
-      "Form Monitoring",
+      "Forms Register",
       "Form Templates",
-      "Manager Resources",
+      "Analytics",
       "AI Usage",
       "User Management",
       "Integrations",
@@ -203,18 +202,18 @@ describe("what an Employee sees on the rail with real authentication", () => {
     /*
      * The failure this catches is cosmetic and reads as a bug: "Insights" with
      * nothing under it looks like content that failed to load, and an "Admin"
-     * heading advertises a console the person cannot reach. Only the two
-     * sections with surviving items may appear.
+     * heading advertises a console the person cannot reach. Only the section
+     * with surviving items may appear.
      */
     const { container } = renderAs("employee", false);
     const headings = [...container.querySelectorAll("nav p")].map(
       (node) => node.textContent?.trim() ?? "",
     );
 
-    // "Knowledge" survives on Videos alone now that Knowledge Base is gone from
-    // it for this role — the heading is only wrong when NOTHING is under it.
-    expect(headings.sort()).toEqual(["Assistant", "Knowledge"]);
-    for (const gone of ["Home", "Insights", "Forms", "Tools", "Admin"]) {
+    // "Knowledge" goes with its only entry, the administrators' Knowledge Base
+    // console — the heading is wrong when NOTHING is under it.
+    expect(headings.sort()).toEqual(["Assistant"]);
+    for (const gone of ["Home", "Knowledge", "Insights", "Forms", "Admin"]) {
       expect(headings, gone).not.toContain(gone);
     }
   });
@@ -225,7 +224,15 @@ describe("what an Employee sees on the rail with real authentication", () => {
     const { container } = renderAs("admin", false);
     const links = navLinks(container);
 
-    for (const label of ["Overview", "Ask Bubbles", "Form Templates", "User Management"]) {
+    for (const label of [
+      "Home",
+      "Ask Bubbles",
+      "Knowledge Base",
+      "Form Templates",
+      "Reports",
+      "Analytics",
+      "User Management",
+    ]) {
       expect(links, label).toContain(label);
     }
   });

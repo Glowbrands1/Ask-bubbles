@@ -355,7 +355,7 @@ $$;
 create function public.analytics_when(
   p_from      timestamptz,
   p_to        timestamptz,
-  p_timezone  text   default 'America/Chicago',
+  p_timezone  text   default 'America/New_York',
   p_locations text[] default null,
   p_role      public.app_user_role default null,
   p_actor     uuid   default null
@@ -370,7 +370,7 @@ as $$
   with zone as (
     select case
       when exists (select 1 from pg_timezone_names where name = p_timezone) then p_timezone
-      else 'America/Chicago'
+      else 'America/New_York'
     end as tz
   ),
   local as (

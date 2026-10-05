@@ -14,6 +14,7 @@ const ENV = [
   "WOVEN_VALIDATION_ACCESS_CODE",
   "WOVEN_VALIDATION_ENABLED",
   "WOVEN_SYNC_ENABLED",
+  "WOVEN_COMPANY_ID",
   "WOVEN_SUBSCRIPTION_KEY",
   "WOVEN_USERNAME",
   "WOVEN_PASSWORD",
@@ -51,7 +52,8 @@ async function loadRoute(
     rateLimited?: boolean;
     env?: Record<string, string>;
     role?: string;
-    locationsFail?: boolean;
+    /** The configured roster `listLocationsForComparison` returns. */
+    roster?: { number: string; name: string }[];
   } = {},
 ) {
   vi.resetModules();
@@ -102,10 +104,8 @@ async function loadRoute(
     },
   }));
   vi.doMock("@/lib/employees/woven/locations", () => ({
-    listLocationsForComparison: async () => {
-      if (options.locationsFail) throw new Error("db down");
-      return [{ number: "0306", name: "Location" }];
-    },
+    /* Synchronous: the roster is configuration, not a database read. */
+    listLocationsForComparison: () => options.roster ?? [{ number: "0306", name: "Location" }],
   }));
   /* Tripwire: the validation route must never reach the sync. */
   vi.doMock("@/lib/employees/woven/sync", () => ({
@@ -131,6 +131,8 @@ const post = (body?: unknown) =>
 
 /* A made-up test value; the real one is set only in Vercel. */
 const CODE = "test-access-code-7f3a9c2e41b8";
+/** The sync really on: the switch and the CompanyID it requires. */
+const SYNC_ON = { WOVEN_SYNC_ENABLED: "true", WOVEN_COMPANY_ID: "11111111-1111-1111-1111-111111111111" };
 /** Demo-mode Preview, as it will be configured for the connection test. */
 const DEMO_READY = { ...VALIDATION_ONLY, WOVEN_VALIDATION_ACCESS_CODE: CODE };
 
@@ -160,7 +162,7 @@ describe("POST /api/admin/employees/woven/validate", () => {
   });
 
   it("does not run on the sync switch alone: WOVEN_SYNC_ENABLED no longer opens validation", async () => {
-    const { POST, seen } = await loadRoute({ env: { ...CREDS, WOVEN_SYNC_ENABLED: "true" } });
+    const { POST, seen } = await loadRoute({ env: { ...CREDS, ...SYNC_ON } });
     const response = await POST(post());
     expect(response.status).toBe(409);
     const body = await response.json();
@@ -195,10 +197,10 @@ describe("POST /api/admin/employees/woven/validate", () => {
     expect(other.seen.runs[0].includeLocationReview).toBe(false);
   });
 
-  it("still runs the Woven checks when the locations cannot be read", async () => {
-    const { POST, seen } = await loadRoute({ env: VALIDATION_ONLY, locationsFail: true });
+  it("still runs the Woven checks against an empty roster, comparing zero locations", async () => {
+    const { POST, seen } = await loadRoute({ env: VALIDATION_ONLY, roster: [] });
     expect((await POST(post())).status).toBe(200);
-    expect(seen.runs[0].locations).toEqual({ outcome: "unavailable", locations: [] });
+    expect(seen.runs[0].locations).toEqual({ outcome: "loaded", locations: [] });
   });
 
   it("does not import the sync, the store or any write path, and reads the sync switch only to refuse", () => {
@@ -245,7 +247,7 @@ describe("demo mode: the access code", () => {
   });
 
   it("the correct code does not help while WOVEN_SYNC_ENABLED is on", async () => {
-    const { POST, seen } = await loadRoute({ demo: true, env: { ...DEMO_READY, WOVEN_SYNC_ENABLED: "true" } });
+    const { POST, seen } = await loadRoute({ demo: true, env: { ...DEMO_READY, ...SYNC_ON } });
     const response = await POST(post({ accessCode: CODE }));
     expect(response.status).toBe(409);
     expect((await response.json()).reason).toContain("WOVEN_SYNC_ENABLED off");
@@ -282,7 +284,7 @@ describe("demo mode: the access code", () => {
       [{ demo: true, env: DEMO_READY }, { accessCode: CODE }],
       [{ demo: true, env: DEMO_READY }, { accessCode: "wrong-guess-000000" }],
       [{ demo: true, env: DEMO_READY }, {}],
-      [{ demo: true, env: { ...DEMO_READY, WOVEN_SYNC_ENABLED: "true" } }, { accessCode: CODE }],
+      [{ demo: true, env: { ...DEMO_READY, ...SYNC_ON } }, { accessCode: CODE }],
       [{ demo: true, production: true, env: DEMO_READY }, { accessCode: CODE }],
       [{ demo: true, rateLimited: true, env: DEMO_READY }, { accessCode: CODE }],
       [{ demo: true, permitted: false, env: DEMO_READY }, { accessCode: CODE }],

@@ -1,3 +1,5 @@
+import { COMPANY_FORM_CATEGORIES } from "@/config/company/forms/categories";
+
 /**
  * ============================================================================
  * "I NEED TO FIND THOSE DOCUMENTS" - WHICH DOCUMENTS?
@@ -278,6 +280,10 @@ export function isEllipticalRegisterReference(question: string): boolean {
  *
  * Multi-word on purpose: "form" on its own appears in "performance", in
  * "information" and in ordinary prose about how to inform somebody.
+ *
+ * The forms page's own section headings count too, read from the company's
+ * category configuration rather than spelled here, so a renamed heading
+ * still anchors the register.
  */
 const FORM_STRUCTURE_MARKERS: readonly string[] = [
   "create a form",
@@ -288,8 +294,7 @@ const FORM_STRUCTURE_MARKERS: readonly string[] = [
   "forms page",
   "blank form",
   "fill in the form",
-  "hr & performance forms",
-  "hiring & interview forms",
+  ...COMPANY_FORM_CATEGORIES.map((category) => normalize(category.label)),
 ];
 
 /**

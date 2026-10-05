@@ -103,9 +103,9 @@ const SELECTION = {
   },
   additional: [
     {
-      templateKey: "dpoa",
-      templateName: "Corrective Action Form",
-      description: "The formal corrective step after coaching.",
+      templateKey: "fixture-corrective",
+      templateName: "Fixture Corrective Notice",
+      description: "A fixture corrective notice.",
     },
     {
       templateKey: "policy-review",
@@ -327,7 +327,7 @@ describe("the form picker offers the rest of the library without leaving the cha
     await user.click(screen.getByRole("button", { name: /see more forms/i }));
 
     const more = screen.getByRole("group", { name: /more forms/i });
-    expect(within(more).getByRole("button", { name: /Corrective Action Form/ })).toBeDefined();
+    expect(within(more).getByRole("button", { name: /Fixture Corrective Notice/ })).toBeDefined();
 
     await user.click(within(more).getByRole("button", { name: /Policy Review/ }));
     await waitFor(() => expect(asked).toHaveLength(2));

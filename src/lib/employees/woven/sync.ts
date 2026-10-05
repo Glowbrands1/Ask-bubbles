@@ -1,7 +1,14 @@
 import "server-only";
 
 import { WovenApiError, WovenClient } from "./client";
-import { NEW_HIRE_WINDOW_DAYS, readWovenConfig, WOVEN_SYNC_WRITES_ENABLED_ENV, type WovenConfig } from "./config";
+import {
+  NEW_HIRE_WINDOW_DAYS,
+  readWovenConfig,
+  WOVEN_COMPANY_ID_ENV,
+  WOVEN_SYNC_ENABLED_ENV,
+  WOVEN_SYNC_WRITES_ENABLED_ENV,
+  type WovenConfig,
+} from "./config";
 import { EMPLOYEE_LIST_PASSES, TERMINATED_STATUS_READ, terminatedStatusQuery } from "./contract";
 import { buildSyncDiagnostics, type SyncDiagnostics } from "./diagnostics";
 import { diffEmployee, missingChange, recordHash, type ResolvedEmployee } from "./diff";
@@ -279,7 +286,21 @@ export async function runWovenEmployeeSync(options: SyncOptions): Promise<SyncOu
   const dryRun = options.dryRun === true;
 
   if (!config.enabled) {
-    return { status: "disabled", reason: "WOVEN_SYNC_ENABLED is not on, so nothing reaches Woven." };
+    return {
+      status: "disabled",
+      reason:
+        config.companyId === null
+          ? `${WOVEN_SYNC_ENABLED_ENV} is not on, or ${WOVEN_COMPANY_ID_ENV} (which a sync requires) is not set, so nothing reaches Woven.`
+          : `${WOVEN_SYNC_ENABLED_ENV} is not on, so nothing reaches Woven.`,
+    };
+  }
+  /*
+   * A SYNC NEEDS AN EXPLICIT COMPANY. `readWovenConfig` already keeps the
+   * sync off without WOVEN_COMPANY_ID; this refuses a config built any other
+   * way, so Woven never chooses the company for a sync.
+   */
+  if (config.companyId === null) {
+    return { status: "disabled", reason: `${WOVEN_COMPANY_ID_ENV} is not set, so nothing reaches Woven.` };
   }
   /*
    * THE WRITE SWITCH, ENFORCED HERE — THE ONE PLACE EVERY SYNC PASSES. A save

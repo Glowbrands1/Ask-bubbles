@@ -6,6 +6,7 @@ import { MemoryDirectoryStore } from "./memory-store";
 import { outcomeHttpStatus, runWovenEmployeeSync, validateRead, type SyncOutcome } from "./sync";
 import {
   createFakeWoven,
+  FAKE_COMPANY_ID,
   FAKE_CREDENTIALS,
   FAKE_ENUMS,
   FAKE_STATUS,
@@ -30,6 +31,7 @@ import {
 /* These tests exercise stored syncs, so both switches are on; the write switch has its own tests below. */
 const CONFIG = readWovenConfig({
   WOVEN_SYNC_ENABLED: "true",
+  WOVEN_COMPANY_ID: FAKE_COMPANY_ID,
   WOVEN_SYNC_WRITES_ENABLED: "true",
   WOVEN_SUBSCRIPTION_KEY: FAKE_CREDENTIALS.subscriptionKey,
   WOVEN_USERNAME: FAKE_CREDENTIALS.username,
@@ -105,9 +107,32 @@ describe("switches and configuration", () => {
     expect(store.rows.size).toBe(0);
   });
 
+  it("refuses every sync — dry run or real — without WOVEN_COMPANY_ID, before the store or Woven is touched", async () => {
+    const { run, fake, store } = setup(estate(3));
+    const noCompany = readWovenConfig({
+      WOVEN_SYNC_ENABLED: "true",
+      WOVEN_SYNC_WRITES_ENABLED: "true",
+      WOVEN_SUBSCRIPTION_KEY: FAKE_CREDENTIALS.subscriptionKey,
+      WOVEN_USERNAME: FAKE_CREDENTIALS.username,
+      WOVEN_PASSWORD: FAKE_CREDENTIALS.password,
+    });
+    /* A config built by hand, claiming the sync is on, is refused all the same. */
+    const handBuilt = { ...CONFIG, companyId: null };
+    for (const config of [noCompany, handBuilt]) {
+      for (const dryRun of [true, false]) {
+        const outcome = await run({ config, dryRun });
+        expect(outcome.status).toBe("disabled");
+        expect((outcome as { reason: string }).reason).toContain("WOVEN_COMPANY_ID");
+      }
+    }
+    expect(fake.calls).toHaveLength(0);
+    expect(store.runs).toHaveLength(0);
+    expect(store.rows.size).toBe(0);
+  });
+
   it("names the missing credentials", async () => {
     const { run } = setup(estate(3));
-    const outcome = await run({ config: readWovenConfig({ WOVEN_SYNC_ENABLED: "1", WOVEN_SYNC_WRITES_ENABLED: "1", WOVEN_USERNAME: "x" }) });
+    const outcome = await run({ config: readWovenConfig({ WOVEN_SYNC_ENABLED: "1", WOVEN_COMPANY_ID: FAKE_COMPANY_ID, WOVEN_SYNC_WRITES_ENABLED: "1", WOVEN_USERNAME: "x" }) });
     expect(outcome).toEqual({ status: "not_configured", missing: ["WOVEN_SUBSCRIPTION_KEY", "WOVEN_PASSWORD"] });
   });
 
@@ -202,7 +227,7 @@ describe("changes between syncs", () => {
 
     fake.state.employees = [
       wovenEmployee("A", { status: TERMINATED, terminationDate: "2026-09-20" }),
-      wovenEmployee("B", { positionId: "POS-SD", positionName: "Location Director" }),
+      wovenEmployee("B", { positionId: "POS-SD", positionName: "Location Manager" }),
       wovenEmployee("C", { status: ACTIVE }),
       wovenEmployee("D", { primaryLocationId: "WL-0144", primaryLocationName: "NE Lincoln" }),
       wovenEmployee("E"),
@@ -326,12 +351,12 @@ describe("data quality is flagged, never fatal", () => {
   it("duplicate email, case-insensitively: flagged on every holder, both kept as provided", async () => {
     const { run, store } = setup([
       wovenEmployee("A", { email: "shared@example.test" }),
-      wovenEmployee("B", { email: "Shared@SunTanCity.test" }),
+      wovenEmployee("B", { email: "Shared@Example.test" }),
       wovenEmployee("C"),
     ]);
     const summary = succeeded(await run());
     expect(row(store, "A").emailAddress).toBe("shared@example.test");
-    expect(row(store, "B").emailAddress).toBe("Shared@SunTanCity.test");
+    expect(row(store, "B").emailAddress).toBe("Shared@Example.test");
     expect(summary.issueCounts.duplicate_email).toBe(2);
     expect(store.rows.size).toBe(3);
   });
@@ -620,6 +645,7 @@ describe("new hires", () => {
 function envOf(config: typeof CONFIG): Record<string, string> {
   return {
     WOVEN_SYNC_ENABLED: config.enabled ? "true" : "false",
+    WOVEN_COMPANY_ID: config.companyId ?? "",
     WOVEN_SYNC_WRITES_ENABLED: config.writesEnabled ? "true" : "false",
     WOVEN_SUBSCRIPTION_KEY: config.credentials!.subscriptionKey,
     WOVEN_USERNAME: config.credentials!.username,
@@ -723,6 +749,7 @@ describe("pre-sync safety: live-shaped responses", () => {
 
 describe("the write switch (WOVEN_SYNC_WRITES_ENABLED)", () => {
   const creds = {
+    WOVEN_COMPANY_ID: FAKE_COMPANY_ID,
     WOVEN_SUBSCRIPTION_KEY: FAKE_CREDENTIALS.subscriptionKey,
     WOVEN_USERNAME: FAKE_CREDENTIALS.username,
     WOVEN_PASSWORD: FAKE_CREDENTIALS.password,
@@ -791,7 +818,7 @@ describe("the write switch (WOVEN_SYNC_WRITES_ENABLED)", () => {
   it("the refusal does not depend on credentials being set", async () => {
     const { store, calls } = recordingStore();
     const { run } = setup(estate(1));
-    const outcome = await run({ config: readWovenConfig({ WOVEN_SYNC_ENABLED: "true" }), store, dryRun: false });
+    const outcome = await run({ config: readWovenConfig({ WOVEN_SYNC_ENABLED: "true", WOVEN_COMPANY_ID: FAKE_COMPANY_ID }), store, dryRun: false });
     expect(outcome.status).toBe("writes_disabled");
     expect(calls).toEqual([]);
   });

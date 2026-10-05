@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MessageBubble } from "./message-bubble";
-import { TEMPLATE_SEEDS } from "@/lib/forms/library";
+import { FIXTURE_TEMPLATE_SEEDS as TEMPLATE_SEEDS } from "@/test/forms/fixture-forms";
 import { formRequestPhrase } from "@/lib/forms/template-intent";
 import type { ChatFormChoice, ChatFormSelection, ChatMessage } from "@/types";
 
@@ -15,7 +15,7 @@ import type { ChatFormChoice, ChatFormSelection, ChatMessage } from "@/types";
  * ============================================================================
  *
  * An unnamed form request was answered with every permitted template written
- * into the message — thirteen forms of prose where a question belongs. The
+ * into the message — a wall of forms in prose where a question belongs. The
  * question itself was right and stays; only the wall goes.
  *
  * Rendered rather than source-scanned, following the convention this directory
@@ -23,9 +23,9 @@ import type { ChatFormChoice, ChatFormSelection, ChatMessage } from "@/types";
  * that a card sends a sentence nothing will read.
  *
  * The choices come from the SERVER's projection of the published library, so
- * these fixtures are built from `TEMPLATE_SEEDS` — the same seeds the DB is
- * populated from. Hard-coding thirteen names here would be the second registry
- * this whole design exists to avoid.
+ * these fixtures are built from seeds — here the fixture library
+ * (`src/test/forms/fixture-forms.ts`), which publishes several forms. Hard-
+ * coding names here would be the second registry this design exists to avoid.
  */
 
 vi.mock("@/lib/session/session-context", () => ({
@@ -48,8 +48,8 @@ function choiceFor(key: string): ChatFormChoice {
 
 /** Everything the library seeds, as the server would offer it to an owner. */
 const WHOLE_LIBRARY: ChatFormSelection = {
-  primary: choiceFor("coaching"),
-  additional: TEMPLATE_SEEDS.filter((seed) => seed.key !== "coaching").map((seed) => ({
+  primary: choiceFor("fixture-coaching"),
+  additional: TEMPLATE_SEEDS.filter((seed) => seed.key !== "fixture-coaching").map((seed) => ({
     templateKey: seed.key,
     templateName: seed.name,
     description: seed.description,
@@ -86,8 +86,8 @@ function expander() {
  * One form's card, by the name it leads with.
  *
  * MATCHED FROM THE START, because one template's name contains another's: the
- * library publishes both a "Coaching Form" and a "Follow-Up Coaching Form", and
- * a substring match would find two cards and call it a duplicate.
+ * library can publish a "Coaching Note" and a "Fixture Coaching Note", and a
+ * substring match would find two cards and call it a duplicate.
  */
 function card(name: string) {
   return screen.queryByRole("button", { name: leadsWith(name) });
@@ -104,7 +104,7 @@ function leadsWith(name: string) {
 }
 
 describe("collapsed — the everyday form, and a way to the rest", () => {
-  it("shows the Coaching Form", () => {
+  it("shows the primary form", () => {
     renderPicker();
     expect(card(COACHING.templateName)).not.toBeNull();
   });
@@ -140,21 +140,20 @@ describe("expanded — the remaining permitted forms", () => {
     }
   });
 
-  it("reveals every form behind the Coaching Form, and nothing else", async () => {
+  it("reveals every form behind the primary form, and nothing else", async () => {
     const { user } = renderPicker();
     await user.click(expander());
 
     /*
      * Counted from the seeds rather than written down, so publishing a
-     * template moves this number instead of making the test wrong — it has
-     * already moved once, when the Follow-Up Coaching Form was published.
+     * template moves this number instead of making the test wrong.
      */
     expect(OTHERS).toHaveLength(TEMPLATE_SEEDS.length - 1);
     // Every other form, the primary, and the disclosure. No stragglers.
     expect(screen.getAllByRole("button")).toHaveLength(OTHERS.length + 2);
   });
 
-  it("does not repeat the Coaching Form", async () => {
+  it("does not repeat the primary form", async () => {
     const { user } = renderPicker();
     await user.click(expander());
 
@@ -164,7 +163,7 @@ describe("expanded — the remaining permitted forms", () => {
   it("refuses to repeat it even if a stored turn carried it in both places", async () => {
     const { user } = renderPicker({
       primary: COACHING,
-      additional: [COACHING, choiceFor("policy-review")],
+      additional: [COACHING, choiceFor("fixture-policy-review")],
     });
     await user.click(expander());
 
@@ -201,7 +200,7 @@ describe("expanded — the remaining permitted forms", () => {
 });
 
 describe("collapsing again", () => {
-  it("hides the rest and keeps the Coaching Form", async () => {
+  it("hides the rest and keeps the primary form", async () => {
     const { user } = renderPicker();
     await user.click(expander());
     await user.click(expander());
@@ -215,7 +214,7 @@ describe("collapsing again", () => {
 });
 
 describe("choosing a form", () => {
-  it("asks for the Coaching Form the way a manager would type it", async () => {
+  it("asks for the primary form the way a manager would type it", async () => {
     const { onSuggestion, user } = renderPicker();
     await user.click(card(COACHING.templateName)!);
 
@@ -226,15 +225,15 @@ describe("choosing a form", () => {
      * permission check is on it.
      */
     expect(onSuggestion).toHaveBeenCalledTimes(1);
-    expect(onSuggestion).toHaveBeenCalledWith(formRequestPhrase("Coaching Form"));
+    expect(onSuggestion).toHaveBeenCalledWith(formRequestPhrase("Fixture Coaching Note"));
   });
 
   it("asks for a form chosen from the expanded list", async () => {
     const { onSuggestion, user } = renderPicker();
     await user.click(expander());
-    await user.click(card("Policy Review")!);
+    await user.click(card("Fixture Policy Review")!);
 
-    expect(onSuggestion).toHaveBeenCalledWith(formRequestPhrase("Policy Review"));
+    expect(onSuggestion).toHaveBeenCalledWith(formRequestPhrase("Fixture Policy Review"));
   });
 
   it("calls no API of its own, and navigates nowhere", async () => {

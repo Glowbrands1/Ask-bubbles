@@ -27,16 +27,11 @@ import { describe, expect, it } from "vitest";
  * The arithmetic itself is verified against the SQL's own semantics.
  */
 
-const READS = readFileSync(
-  join(
-    process.cwd(),
-    "supabase/migrations",
-    readdirSync(join(process.cwd(), "supabase/migrations"))
-      .filter((name) => name.includes("assistant_feedback_reads"))
-      .sort()[0],
-  ),
-  "utf8",
-);
+const MIGRATIONS = join(process.cwd(), "supabase/migrations");
+const FEEDBACK_FILE = "20260915002000_assistant_feedback.sql";
+
+/* The table and every read over it are one migration. */
+const READS = readFileSync(join(MIGRATIONS, FEEDBACK_FILE), "utf8");
 
 /** Statements with both comment forms removed, so prose cannot satisfy a check. */
 function statementsOnly(sql: string): string {
@@ -57,6 +52,7 @@ function statementsOnly(sql: string): string {
  * the reporting suite.
  */
 function effectiveDefinition(name: string): string {
+  const opening = new RegExp(`create (?:or replace )?function public\\.${name}\\b`);
   const defining = readdirSync(join(process.cwd(), "supabase/migrations"))
     .filter((file) => file.endsWith(".sql"))
     .sort()
@@ -65,10 +61,11 @@ function effectiveDefinition(name: string): string {
         readFileSync(join(process.cwd(), "supabase/migrations", file), "utf8"),
       ),
     )
-    .filter((sql) => sql.includes(`create or replace function public.${name}`));
+    .filter((sql) => opening.test(sql));
 
   const last = defining[defining.length - 1] ?? "";
-  return last.split(`create or replace function public.${name}`)[1]?.split("$$;")[0] ?? "";
+  const parts = last.split(opening);
+  return parts[parts.length - 1]?.split("$$;")[0] ?? "";
 }
 
 const SUMMARY = effectiveDefinition("analytics_feedback_summary");
@@ -79,21 +76,21 @@ describe("every feedback figure is derived on read, never stored", () => {
   });
 
   it.each([
-    ["total open responses", "counts_toward_ratings(f.status, f.hidden_at)) as responses"],
-    ["average rating", "round(avg(f.rating) filter (where public.feedback_counts_toward_ratings"],
-    ["1 star", "f.rating = 1"],
-    ["2 star", "f.rating = 2"],
-    ["3 star", "f.rating = 3"],
-    ["4 star", "f.rating = 4"],
-    ["5 star", "f.rating = 5"],
-    ["yes", "f.got_what_needed = 'yes'"],
-    ["partially", "f.got_what_needed = 'partially'"],
-    ["no", "f.got_what_needed = 'no'"],
-    ["pending", "f.status = 'pending'"],
-    ["in review", "f.status = 'in_review'"],
-    ["resolved", "f.status = 'resolved'"],
-    ["dismissed", "f.status = 'dismissed'"],
-    ["hidden", "count(*) filter (where f.hidden_at is not null) as hidden"],
+    ["total open responses", "count(*) filter (where c.open),"],
+    ["average rating", "round(avg(c.rating) filter (where c.open), 1)"],
+    ["1 star", "c.open and c.rating = 1"],
+    ["2 star", "c.open and c.rating = 2"],
+    ["3 star", "c.open and c.rating = 3"],
+    ["4 star", "c.open and c.rating = 4"],
+    ["5 star", "c.open and c.rating = 5"],
+    ["yes", "c.open and c.got_what_needed = 'yes'"],
+    ["partially", "c.open and c.got_what_needed = 'partially'"],
+    ["no", "c.open and c.got_what_needed = 'no'"],
+    ["pending", "count(*) filter (where c.status = 'pending')"],
+    ["in review", "count(*) filter (where c.status = 'in_review')"],
+    ["resolved", "count(*) filter (where c.status = 'resolved')"],
+    ["dismissed", "count(*) filter (where c.status = 'dismissed')"],
+    ["hidden", "count(*) filter (where c.hidden_at is not null)"],
   ])("computes %s from the rows that exist", (_label, fragment) => {
     /*
      * A `count`/`avg` over `feedback_attributed` sees only the rows still in
@@ -117,10 +114,13 @@ describe("every feedback figure is derived on read, never stored", () => {
      * those would make `resolved` permanently zero, which is absurd on its
      * face and easy to do by a careless find-and-replace.
      */
-    expect(SUMMARY).toContain("public.feedback_counts_toward_ratings(f.status, f.hidden_at)) as responses");
-    /* `statementsOnly` collapses runs of whitespace, so the alignment goes. */
-    expect(SUMMARY).toContain("count(*) filter (where f.status = 'resolved') as resolved");
-    expect(SUMMARY).toContain("count(*) filter (where f.status = 'dismissed') as dismissed");
+    expect(SUMMARY).toContain(
+      "public.feedback_counts_toward_ratings(f.status, f.hidden_at) as open",
+    );
+    /* The queue depths do NOT carry the `c.open` filter. */
+    expect(SUMMARY).toContain("count(*) filter (where c.status = 'resolved'),");
+    expect(SUMMARY).toContain("count(*) filter (where c.status = 'dismissed'),");
+    expect(SUMMARY).not.toContain("c.open and c.status");
   });
 
   it("defines what counts toward ratings once, and shares it", () => {
@@ -143,17 +143,19 @@ describe("every feedback figure is derived on read, never stored", () => {
      * number that a DELETE never decremented, and a removed QA rating would
      * keep moving the production average with nothing to show for it.
      */
-    const feedbackTable = readFileSync(
-      join(
-        process.cwd(),
-        "supabase/migrations",
-        readdirSync(join(process.cwd(), "supabase/migrations"))
-          .filter((name) => name.includes("assistant_feedback.sql"))
-          .sort()[0],
-      ),
-      "utf8",
-    );
-    const sql = statementsOnly(feedbackTable);
+    /*
+     * The summary's OUTPUT column is called `average_rating`; what must not
+     * exist is a stored column of that name, so only the table and view
+     * definitions are scanned.
+     */
+    const all = statementsOnly(READS);
+    const table = all.split("create table public.assistant_feedback (")[1]?.split(");")[0] ?? "";
+    const view =
+      all.split("create view public.feedback_attributed")[1]?.split(";")[0] ?? "";
+    expect(table.length).toBeGreaterThan(0);
+    expect(view.length).toBeGreaterThan(0);
+    const sql = `${table} ${view}`;
+    expect(all).not.toContain("materialized view");
 
     for (const forbidden of [
       "rating_count",
@@ -167,18 +169,7 @@ describe("every feedback figure is derived on read, never stored", () => {
   });
 
   it("maintains no trigger but the one that touches updated_at", () => {
-    const feedbackTable = statementsOnly(
-      readFileSync(
-        join(
-          process.cwd(),
-          "supabase/migrations",
-          readdirSync(join(process.cwd(), "supabase/migrations"))
-            .filter((name) => name.includes("assistant_feedback.sql"))
-            .sort()[0],
-        ),
-        "utf8",
-      ),
-    );
+    const feedbackTable = statementsOnly(READS);
     const triggers = feedbackTable.match(/create trigger (\w+)/g) ?? [];
     expect(triggers).toEqual(["create trigger assistant_feedback_touch"]);
   });
@@ -244,7 +235,7 @@ describe("the worked example from the brief", () => {
 describe("a deleted row is gone, where a hidden one is merely excluded", () => {
   const LIST =
     statementsOnly(READS)
-      .split("create or replace function public.analytics_feedback_list")[1]
+      .split("create function public.analytics_feedback_list")[1]
       ?.split("$$;")[0] ?? "";
 
   it("the list's only row source is the feedback table", () => {

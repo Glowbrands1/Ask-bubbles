@@ -81,7 +81,7 @@ describe("the dry run's audience choices", () => {
     const targeted = status.audienceReviews.find((a) => a.audienceKey === TARGETED)!;
     expect(targeted.members!.map((m) => [m.title, m.contentType, m.wovenStatus, m.syncState])).toEqual([["Manager Bonus Policy", "policy", "current", "waiting_for_audience"]]);
     const none = status.audienceReviews.find((a) => a.audienceKey === NONE)!;
-    expect(none.members!.map((m) => m.title).sort()).toEqual(["Bed Cleaning", "Opening the Location", "Spray Tan Basics"]);
+    expect(none.members!.map((m) => m.title).sort()).toEqual(["Bench Cleaning", "Opening the Location", "Soap Loaf Basics"]);
     expect(none.membersTotal).toBe(3);
     expect(JSON.stringify(status.audienceReviews)).not.toMatch(/locator|Arrive on time|a1b2c3d4|https?:/);
     expect(status.attention.map((a) => a.code)).toContain("audience_review");

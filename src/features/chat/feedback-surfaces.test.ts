@@ -10,11 +10,12 @@ import { ACTIVITY_SURFACES } from "@/lib/analytics/taxonomy";
  * FEEDBACK REACHES EVERY ASK BUBBLES SURFACE — AND GATES NONE OF THEM
  * ============================================================================
  *
- * Nine places in this application can answer a question. Two properties have to
- * hold across all of them, and the second one is new:
+ * Three places in this application can answer a question — the chat tab, the
+ * Home ask band and the "ask about this report" bar. Two properties have to
+ * hold across all of them:
  *
  *   1. EVERY SURFACE CAN COLLECT A RATING. The failure this catches is the
- *      quiet one — a tenth surface added next quarter that draws an ask bar,
+ *      quiet one — a new surface added next quarter that draws an ask bar,
  *      answers questions, and offers no way to say how it did.
  *
  *   2. NO SURFACE REQUIRES ONE. Ask Bubbles used to hold the next question until
@@ -24,16 +25,15 @@ import { ACTIVITY_SURFACES } from "@/lib/analytics/taxonomy";
  *      somebody rated the question they had just been asked. The suite below
  *      exists so that rule cannot come back by accident, on any surface.
  *
- * ASSERTED AGAINST THE SOURCE rather than by rendering nine screens, because
+ * ASSERTED AGAINST THE SOURCE rather than by rendering every screen, because
  * what matters is a property of every host — including the one somebody adds
  * next month — and a DOM test only covers the hosts it was written for. The
  * behaviour of the control itself is proved once, in
  * `conversation-rating.dom.test.tsx`; this proves it is wired up everywhere and
  * that nothing waits on it.
  *
- * THE HOSTS. `ChatScreen` draws it under the chat thread; the Overview band,
- * the five report ask bars and the Google Reviews bar draw it under their
- * inline threads; the Sales Totals panel draws its own. One control per
+ * THE HOSTS. `ChatScreen` draws it under the chat thread; the Home ask band
+ * and the report ask bar draw it under their inline threads. One control per
  * conversation, never one per answer.
  */
 
@@ -55,16 +55,12 @@ function code(source: string): string {
  * Every place a question can be sent, and the surface it must declare.
  *
  * `useInlineAsk` is not listed: it takes the surface as a required option and
- * has no value of its own, which is the point — its three hosts are below.
+ * has no value of its own, which is the point — its hosts are below.
  */
 const SEND_PATHS: { file: string; surface: string }[] = [
   { file: "src/features/chat/chat-screen.tsx", surface: "main_chat" },
   { file: "src/features/dashboard/ask-band.tsx", surface: "overview" },
-  { file: "src/features/reviews/reviews-ask-bar.tsx", surface: "google_reviews" },
-  {
-    file: "src/app/api/reporting/sales-totals/analyze/route.ts",
-    surface: "sales_totals",
-  },
+  { file: "src/features/reports/ask-about-report.tsx", surface: "report" },
 ];
 
 describe("every send path declares where it is", () => {
@@ -72,13 +68,14 @@ describe("every send path declares where it is", () => {
     expect(code(read(file))).toContain(`surface: "${surface}"`);
   });
 
-  it("the five report tabs derive their surface from the family", () => {
+  it("files every report under one surface, with the report as context", () => {
     /*
-     * A TOTAL MAPPING, not a lookup with a fallback, so a sixth report family
-     * is a type error rather than a silent `unknown` on a live dashboard.
+     * Which report a turn was about travels as its report context, so a new
+     * report needs no surface of its own and cannot borrow another's.
      */
-    const source = code(read("src/features/reports/ask-bubbles-about-report.tsx"));
-    expect(source).toContain("surface: SURFACE_FOR_REPORT_FAMILY[context.family]");
+    const source = code(read("src/features/reports/ask-about-report.tsx"));
+    expect(source).toContain('surface: "report"');
+    expect(source).not.toMatch(/SURFACE_FOR_REPORT_FAMILY/);
   });
 
   it("useInlineAsk requires a surface rather than defaulting one", () => {
@@ -105,9 +102,7 @@ describe("every send path declares where it is", () => {
 const RENDER_HOSTS = [
   "src/features/chat/chat-screen.tsx",
   "src/features/dashboard/ask-band.tsx",
-  "src/features/reports/ask-bubbles-about-report.tsx",
-  "src/features/reviews/reviews-ask-bar.tsx",
-  "src/features/reports/sales-totals/ask-bubbles-panel.tsx",
+  "src/features/reports/ask-about-report.tsx",
 ];
 
 describe("every render host draws the shared rating control", () => {
@@ -120,8 +115,8 @@ describe("every render host draws the shared rating control", () => {
   it("uses one component rather than a copy per surface", () => {
     /*
      * A control that differs by surface produces ratings that are not
-     * comparable, and the dashboard's whole premise is that a 2 from the Spa
-     * Engagement bar means what a 2 from the chat tab means. `useInlineAsk`
+     * comparable, and the dashboard's whole premise is that a 2 from a report
+     * bar means what a 2 from the chat tab means. `useInlineAsk`
      * exists in this codebase because the same mistake was made once with the
      * send path; this is the assertion that stops it being made again.
      */
@@ -135,8 +130,8 @@ describe("every render host draws the shared rating control", () => {
   it("draws one control per conversation rather than one per answer", () => {
     /*
      * THE TWO COMPONENTS THAT USED TO DRAW A PANEL PER ANSWER. `AnswerSheet`
-     * drew one under every answer on the band, the five report bars and the
-     * Google Reviews bar; `MessageBubble` drew one under every answer in the
+     * drew one under every answer on the band and the report bars;
+     * `MessageBubble` drew one under every answer in the
      * chat thread. A thread of six answers carried six standing demands.
      *
      * Rating belongs to the conversation now, so it is mounted by the hosts
@@ -159,14 +154,7 @@ describe("every render host draws the shared rating control", () => {
 
 /* ----------------------------------------------------------- no gate at all -- */
 
-/**
- * Every file that can send a question, open a form, or draw the composer.
- *
- * The Sales Totals panel is here for the same reason it was in the old suite:
- * it holds its own transcript rather than a `ChatMessage` thread, so it used to
- * restate the gating rule in its own terms — which means it is the one place a
- * gate could come back without anybody importing anything.
- */
+/** Every file that can send a question, open a form, or draw the composer. */
 const SEND_AND_ACTION_PATHS = [
   "src/features/chat/chat-screen.tsx",
   "src/features/chat/use-inline-ask.ts",
@@ -175,9 +163,7 @@ const SEND_AND_ACTION_PATHS = [
   "src/features/chat/form-picker.tsx",
   "src/features/chat/context-panel.tsx",
   "src/features/dashboard/ask-band.tsx",
-  "src/features/reviews/reviews-ask-bar.tsx",
-  "src/features/reports/ask-bubbles-about-report.tsx",
-  "src/features/reports/sales-totals/ask-bubbles-panel.tsx",
+  "src/features/reports/ask-about-report.tsx",
 ];
 
 describe("no send path and no form action waits on a rating", () => {
@@ -240,17 +226,6 @@ describe("no send path and no form action waits on a rating", () => {
         /if \(ratingTarget\) return/,
       );
     }
-  });
-
-  it("the Sales Totals panel sends on nothing but the in-flight turn", () => {
-    /*
-     * It cannot import the shared predicate — it keeps
-     * `SalesTotalsAnalysisResponse` transcripts rather than `ChatMessage`
-     * threads — so the rule is restated in its terms and asserted here.
-     */
-    const source = code(read("src/features/reports/sales-totals/ask-bubbles-panel.tsx"));
-    expect(source).toContain("if (busy) return;");
-    expect(source).not.toContain("if (busy || blocked) return;");
   });
 
   it("still blocks nothing on unload or navigation", () => {

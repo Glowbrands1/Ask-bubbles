@@ -80,10 +80,10 @@ describe("pronouns become the first name", () => {
 
   it("rewrites the whole Action Plan the drafting prompt asks for", () => {
     const plan =
-      "Jessica is expected to adhere to the Sun Tan City attendance policy by arriving on time. Moving forward, she should arrive ready to work at the start of her shift. Management will monitor compliance and provide coaching as needed.";
-    const result = nameInsteadOfPronouns(plan, "Jessica Moss", ["Sun Tan City"]);
+      "Jessica is expected to adhere to the Buff City Soap attendance policy by arriving on time. Moving forward, she should arrive ready to work at the start of her shift. Management will monitor compliance and provide coaching as needed.";
+    const result = nameInsteadOfPronouns(plan, "Jessica Moss", ["Buff City Soap"]);
     expect(result.text).toBe(
-      "Jessica is expected to adhere to the Sun Tan City attendance policy by arriving on time. Moving forward, Jessica should arrive ready to work at the start of the shift. Management will monitor compliance and provide coaching as needed.",
+      "Jessica is expected to adhere to the Buff City Soap attendance policy by arriving on time. Moving forward, Jessica should arrive ready to work at the start of the shift. Management will monitor compliance and provide coaching as needed.",
     );
     expect(result.replaced).toBe(2);
     expect(result.text).not.toMatch(/\b(?:she|her|he|his|they|their)\b/i);

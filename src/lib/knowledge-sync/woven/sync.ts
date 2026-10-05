@@ -7,7 +7,7 @@ import { createSupabaseKnowledgeSink } from "../sink";
 import { createSupabaseKnowledgeSyncStore, KnowledgeSyncStoreError } from "../store";
 import { CONTENT_TYPES, type ContentType, type KnowledgeSourceConnector, type ManifestItem, type RunMode, type RunTrigger, type SyncSettings } from "../types";
 import { parseHandbookList } from "./adapters";
-import { readWovenKnowledgeConfig, WOVEN_KNOWLEDGE_SYNC_ENABLED_ENV, type WovenKnowledgeConfig } from "./config";
+import { readWovenKnowledgeConfig, WOVEN_KNOWLEDGE_SYNC_ENABLED_ENV, WOVEN_TEAM_COMPANY_ENV, type WovenKnowledgeConfig } from "./config";
 import { COMPANY_WIDE_AUDIENCE_LABELS, HANDBOOK_LIST_PATH } from "./contract";
 import { WovenConnectorError, WovenKnowledgeConnector } from "./connector";
 import { describeWovenItem } from "./describe";
@@ -96,6 +96,8 @@ export interface WovenSyncOverrides {
 function gate(config: WovenKnowledgeConfig): Extract<WovenRunOutcome, { status: "disabled" | "not_configured" }> | null {
   if (!config.enabled) return { status: "disabled", reason: `${WOVEN_KNOWLEDGE_SYNC_ENABLED_ENV} is not on, so nothing reaches Woven.` };
   if (!config.credentials) return { status: "not_configured", missing: config.missingCredentials };
+  /* The company is required. An empty one would match any active company on the page, so a config built any other way is refused too. */
+  if (!config.company.trim()) return { status: "not_configured", missing: [WOVEN_TEAM_COMPANY_ENV] };
   return null;
 }
 

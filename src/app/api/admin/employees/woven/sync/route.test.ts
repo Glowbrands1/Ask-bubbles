@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
  * WOVEN_VALIDATION_ENABLED is on for the read-only connection test.
  */
 
-const ENV = ["WOVEN_SYNC_WRITES_ENABLED", "WOVEN_VALIDATION_ACCESS_CODE", "WOVEN_VALIDATION_ENABLED", "WOVEN_SYNC_ENABLED", "WOVEN_SUBSCRIPTION_KEY", "WOVEN_USERNAME", "WOVEN_PASSWORD"] as const;
+const ENV = ["WOVEN_SYNC_WRITES_ENABLED", "WOVEN_VALIDATION_ACCESS_CODE", "WOVEN_VALIDATION_ENABLED", "WOVEN_SYNC_ENABLED", "WOVEN_COMPANY_ID", "WOVEN_SUBSCRIPTION_KEY", "WOVEN_USERNAME", "WOVEN_PASSWORD"] as const;
 const saved = Object.fromEntries(ENV.map((k) => [k, process.env[k]]));
 
 afterEach(() => {
@@ -273,7 +273,21 @@ async function loadRouteAgainstFakeWoven(env: Record<string, string>) {
 
 /* The real client paces Woven requests ~650ms apart, so a real dry run takes several seconds. */
 describe("POST /api/admin/employees/woven/sync with WOVEN_SYNC_ENABLED=true and WOVEN_SYNC_WRITES_ENABLED off", { timeout: 60_000 }, () => {
-  const SYNC_ON = { WOVEN_SYNC_ENABLED: "true" };
+  const SYNC_ON = { WOVEN_SYNC_ENABLED: "true", WOVEN_COMPANY_ID: "11111111-1111-1111-1111-111111111111" };
+
+  it("without WOVEN_COMPANY_ID the sync stays off: every body — dry run or confirmed save — is disabled, no store, no Woven call", async () => {
+    for (const body of [{}, { dryRun: true }, { dryRun: false, confirmSave: true }]) {
+      const { POST, seen, fake, written } = await loadRouteAgainstFakeWoven({ WOVEN_SYNC_ENABLED: "true", WOVEN_SYNC_WRITES_ENABLED: "true" });
+      const response = await POST(post(body));
+      const json = await response.json();
+      expect(json.status).toBe("disabled");
+      expect(json.reason).toContain("WOVEN_COMPANY_ID");
+      expect(seen.storesCreated).toBe(0);
+      expect(seen.calls).toEqual([]);
+      expect(fake.calls).toHaveLength(0);
+      expect(written()).toEqual([0, 0, 0, 0, 0, 0]);
+    }
+  });
 
   it("2. a dry run succeeds: Woven is read, the store only read, nothing written, counts only in the response", async () => {
     for (const body of [{}, { dryRun: true }]) {

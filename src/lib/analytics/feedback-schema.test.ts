@@ -6,9 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   ACTIVITY_SURFACES,
   ACTIVITY_TURN_KINDS,
-  SURFACE_FOR_REPORT_FAMILY,
   SURFACE_LABEL,
-  type ActivitySurface,
 } from "./taxonomy";
 import {
   FEEDBACK_OUTCOMES,
@@ -67,8 +65,11 @@ function enumMembers(sql: string, typeName: string): string[] {
   return [...found[1].matchAll(/'([^']+)'/g)].map((match) => match[1]);
 }
 
+/* The event vocabulary (surfaces, turn kinds) lives with the event table. */
+const ANALYTICS_SQL = migration("activity_analytics.sql");
+/* The feedback table and every read over it are one migration. */
 const FEEDBACK_SQL = migration("assistant_feedback.sql");
-const READS_SQL = migration("assistant_feedback_reads");
+const READS_SQL = FEEDBACK_SQL;
 
 /* ------------------------------------------------- the enums match the app -- */
 
@@ -79,13 +80,13 @@ describe("the TypeScript vocabularies mirror the database enums", () => {
    * build failure instead of a production one.
    */
   it("ships the same surfaces", () => {
-    expect(enumMembers(FEEDBACK_SQL, "activity_surface")).toEqual([
+    expect(enumMembers(ANALYTICS_SQL, "activity_surface")).toEqual([
       ...ACTIVITY_SURFACES,
     ]);
   });
 
   it("ships the same turn kinds", () => {
-    expect(enumMembers(FEEDBACK_SQL, "activity_turn_kind")).toEqual([
+    expect(enumMembers(ANALYTICS_SQL, "activity_turn_kind")).toEqual([
       ...ACTIVITY_TURN_KINDS,
     ]);
   });
@@ -110,14 +111,13 @@ describe("the TypeScript vocabularies mirror the database enums", () => {
     }
   });
 
-  it("maps every report family to a real surface", () => {
-    const mapped = Object.values(SURFACE_FOR_REPORT_FAMILY) as ActivitySurface[];
-    expect(mapped.length).toBe(5);
-    for (const surface of mapped) {
-      expect(ACTIVITY_SURFACES).toContain(surface);
-    }
-    /* Five families, five distinct surfaces — never two sharing one. */
-    expect(new Set(mapped).size).toBe(5);
+  it("files every report panel under one surface rather than one per report", () => {
+    /*
+     * Which report a turn was about is its report context, so a new report
+     * needs no enum change and cannot borrow another report's surface.
+     */
+    expect(ACTIVITY_SURFACES).toContain("report");
+    expect(ACTIVITY_SURFACES).toContain("unknown");
   });
 });
 
@@ -151,33 +151,15 @@ describe("the feedback table", () => {
   });
 
   /*
-   * ==========================================================================
-   * THE WORDS BESIDE THE STARS ARE OPTIONAL — A LATER MIGRATION
-   * ==========================================================================
-   *
-   * The table above created `got_what_needed` and `comment` as `not null`, with
-   * the comment additionally required to be non-empty. That was the right trade
-   * while Ask Bubbles demanded a rating after every answer and held the next
-   * question until one arrived. Rating is now a passive action nobody has to
-   * open, and a required field on a voluntary form is the reason the form gets
-   * abandoned.
-   *
-   * ASSERTED AGAINST THE LATER MIGRATION, not by editing the earlier one. A
-   * migration that has been applied anywhere is a historical record; changing
-   * its text changes what a fresh database gets and nothing else, and the two
-   * then disagree.
+   * THE WORDS BESIDE THE STARS ARE OPTIONAL. Rating is a passive action nobody
+   * has to open, and a required field on a voluntary form is the reason the
+   * form gets abandoned — so the outcome and the comment are nullable.
    */
-  describe("the later migration makes the words optional", () => {
-    const relaxed = statementsOnly(migration("feedback_optional_words"));
-
-    it("drops both not-null constraints", () => {
-      expect(relaxed).toMatch(/alter column got_what_needed drop not null/i);
-      expect(relaxed).toMatch(/alter column comment drop not null/i);
-    });
-
-    it("keeps the length bound while allowing no comment at all", () => {
-      expect(relaxed).toContain("comment is null");
-      expect(relaxed).toContain(`length(comment) <= ${COMMENT_MAX_LENGTH}`);
+  describe("the words beside the stars are optional", () => {
+    it("declares neither the outcome nor the comment not null", () => {
+      expect(sql).toMatch(/got_what_needed public\.feedback_outcome,/);
+      expect(sql).not.toMatch(/got_what_needed public\.feedback_outcome not null/);
+      expect(sql).toMatch(/comment text check \(comment is null or/);
     });
 
     it("still refuses an empty string, so absence has one representation", () => {
@@ -186,23 +168,7 @@ describe("the feedback table", () => {
        * is one state and not two. The check is what stops a future caller
        * introducing the second.
        */
-      expect(relaxed).toContain("length(btrim(comment)) > 0");
-    });
-
-    it("finds the old constraint by its definition rather than by its name", () => {
-      /*
-       * `drop constraint if exists <generated name>` would silently do nothing
-       * against a project where the constraint had been named anything else —
-       * leaving the old floor in place while the migration reported success,
-       * and every wordless rating failing at the boundary.
-       */
-      expect(relaxed).toContain("pg_get_constraintdef");
-      expect(relaxed).toContain("ilike '%btrim(comment)%'");
-    });
-
-    it("rewrites no data and drops no column", () => {
-      expect(relaxed).not.toMatch(/update public\.assistant_feedback/i);
-      expect(relaxed).not.toMatch(/drop column/i);
+      expect(sql).toContain("length(btrim(comment)) > 0");
     });
   });
 
@@ -248,17 +214,16 @@ describe("the feedback table", () => {
     );
   });
 
-  it("adds the two event columns without a default that would invent history", () => {
+  it("declares the two event columns without a default that would invent history", () => {
     /*
-     * Every event written before this migration happened on a surface nobody
-     * recorded. Defaulting them would file the Overview band's and five report
-     * bars' history under whichever surface was convenient, and the first
-     * "where is Ask Bubbles used?" chart would be confidently wrong.
+     * An event whose caller did not say where it happened must read as
+     * unrecorded, not be filed under whichever surface was convenient.
      */
-    expect(sql).toContain("add column if not exists surface public.activity_surface");
-    expect(sql).toContain("add column if not exists turn_kind public.activity_turn_kind");
-    expect(sql).not.toMatch(/add column if not exists surface[^;]*default/i);
-    expect(sql).not.toMatch(/add column if not exists turn_kind[^;]*default/i);
+    const events = statementsOnly(ANALYTICS_SQL);
+    expect(events).toContain("surface public.activity_surface,");
+    expect(events).toContain("turn_kind public.activity_turn_kind,");
+    expect(events).not.toMatch(/surface public\.activity_surface[^,]*default/i);
+    expect(events).not.toMatch(/turn_kind public\.activity_turn_kind[^,]*default/i);
   });
 
   it("still has nowhere to put a question", () => {
@@ -269,7 +234,7 @@ describe("the feedback table", () => {
      * model refuses to hold.
      */
     const columns =
-      sql.split("create table if not exists public.assistant_feedback (")[1]?.split(");")[0] ??
+      sql.split("create table public.assistant_feedback (")[1]?.split(");")[0] ??
       "";
     expect(columns.length).toBeGreaterThan(0);
     for (const forbidden of ["question", "prompt", "answer", "excerpt", "transcript"]) {
@@ -290,23 +255,41 @@ describe("the feedback read functions", () => {
      * The property that makes hiding a moderation action rather than a
      * deletion: the average stops counting it the moment it is hidden.
      */
+    expect(sql).toContain(
+      "select p_hidden_at is null and p_status in ('pending', 'in_review')",
+    );
     const summary =
-      sql.split("create or replace function public.analytics_feedback_summary")[1]?.split("$$;")[1] ??
-      "";
-    expect(sql).toContain("avg(f.rating) filter (where f.hidden_at is null)");
-    expect(sql).toContain("count(*) filter (where f.hidden_at is null)");
-    expect(summary).toBeDefined();
+      sql.split("create function public.analytics_feedback_summary")[1]?.split("$$;")[0] ?? "";
+    expect(summary).toContain("public.feedback_counts_toward_ratings(f.status, f.hidden_at) as open");
+    expect(summary).toContain("round(avg(c.rating) filter (where c.open), 1)");
+    /* Every rating bucket counts open rows only. */
+    for (const rating of [1, 2, 3, 4, 5]) {
+      expect(summary).toContain(`count(*) filter (where c.open and c.rating = ${rating})`);
+    }
   });
 
   it("keeps hidden items in the moderation queue counts", () => {
     /* Hiding a complaint is not the same as answering it. */
-    expect(sql).toContain("count(*) filter (where f.status = 'pending')");
-    expect(sql).toContain("count(*) filter (where f.hidden_at is not null) as hidden");
+    expect(sql).toContain("count(*) filter (where c.status = 'pending')");
+    expect(sql).toContain("count(*) filter (where c.hidden_at is not null)");
   });
 
   it("hides hidden feedback from the list unless it is asked for", () => {
     expect(sql).toContain("p_include_hidden boolean default false");
     expect(sql).toContain("(p_include_hidden or f.hidden_at is null)");
+  });
+
+  it("treats an empty status array as no filter rather than as nothing", () => {
+    expect(sql).toContain("p_statuses public.feedback_status[] default null");
+    expect(sql).toContain(
+      "(p_statuses is null or cardinality(p_statuses) = 0 or f.status = any (p_statuses))",
+    );
+  });
+
+  it("filters by the location ids the application resolved, never by a name", () => {
+    expect(sql).toContain("p_locations text[] default null");
+    expect(sql).toContain("(p_locations is null or f.location_id = any (p_locations))");
+    expect(sql).not.toMatch(/p_district|store_name|district_label/);
   });
 
   it("escapes the wildcards in a search term", () => {
@@ -320,12 +303,12 @@ describe("the feedback read functions", () => {
   });
 
   it("leaves acknowledgements out of the topic counts and reports them separately", () => {
-    expect(sql).toContain(
-      "count(*) filter (where a.turn_kind is distinct from 'acknowledgement') as events",
+    const topics =
+      sql.split("create function public.analytics_topics")[1]?.split("$$;")[0] ?? "";
+    expect(topics).toContain(
+      "count(*) filter (where a.turn_kind is distinct from 'acknowledgement'),",
     );
-    expect(sql).toContain(
-      "count(*) filter (where a.turn_kind = 'acknowledgement') as acknowledgements",
-    );
+    expect(topics).toContain("count(*) filter (where a.turn_kind = 'acknowledgement'),");
   });
 
   it("counts a turn whose kind was never assessed as a question", () => {
@@ -345,7 +328,7 @@ describe("the feedback read functions", () => {
      * still read the wrong column.
      */
     const extraction =
-      sql.split("create or replace function public.analytics_extraction_runs")[1]?.split("$$;")[0] ??
+      sql.split("create function public.analytics_extraction_runs")[1]?.split("$$;")[0] ??
       "";
     expect(extraction.length).toBeGreaterThan(0);
     expect(extraction).not.toMatch(/\brating\b/i);
@@ -359,7 +342,12 @@ describe("the feedback read functions", () => {
      * product disagreeing about it, each internally consistent — which is what
      * makes that failure so hard to see.
      */
-    expect(sql).toContain("p_timezone text default 'America/New_York'");
+    const businessDate = readFileSync(join(process.cwd(), "src/lib/business-date.ts"), "utf8");
+    const fallback = /NEXT_PUBLIC_BUSINESS_TIMEZONE\?\.trim\(\) \|\| "([^"]+)"/.exec(businessDate)?.[1];
+    expect(fallback, "business-date.ts declares a fallback zone").toBeTruthy();
+    /* The SQL default and its own fallback are the application's zone, not another. */
+    expect(sql).toContain(`p_timezone text default '${fallback}'`);
+    expect(sql).toContain(`else '${fallback}'`);
     expect(sql).toContain("from pg_timezone_names where name = p_timezone");
   });
 
@@ -368,7 +356,7 @@ describe("the feedback read functions", () => {
      * An unpinned function resolves names against whatever the caller's path
      * happens to be, which is how a trojan table in another schema gets read.
      */
-    const definitions = sql.match(/create or replace function public\.\w+/g) ?? [];
+    const definitions = sql.match(/create (?:or replace )?function public\.\w+/g) ?? [];
     expect(definitions.length).toBeGreaterThanOrEqual(7);
     expect(
       (sql.match(/set search_path = public, extensions/g) ?? []).length,
@@ -376,8 +364,8 @@ describe("the feedback read functions", () => {
   });
 
   it("revokes execute from public, anon and authenticated on every function", () => {
-    const definitions = (sql.match(/create or replace function public\.(\w+)/g) ?? []).map(
-      (line) => line.replace("create or replace function public.", ""),
+    const definitions = (sql.match(/create (?:or replace )?function public\.(\w+)/g) ?? []).map(
+      (line) => line.replace(/create (?:or replace )?function public\./, ""),
     );
     for (const name of definitions) {
       expect(sql, `${name} is not revoked`).toContain(

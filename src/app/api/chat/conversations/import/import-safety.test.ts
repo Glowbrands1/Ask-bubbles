@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DEMO_CONVERSATIONS } from "@/data/demo";
 import { fakeChatSupabase } from "@/test/fake-chat-supabase";
 
 /**
@@ -14,8 +13,8 @@ import { fakeChatSupabase } from "@/test/fake-chat-supabase";
  * worked. After any of those there must be ONE conversation holding ONE copy of
  * each turn, in the order it was said.
  *
- * And the six fabricated threads in every production browser must never be
- * among them.
+ * And seeded demo threads — the `conv-seed-N` / `msg-sN` shape a demo store
+ * once wrote into browsers — must never be among them.
  */
 
 const ORIGINAL = { ...process.env };
@@ -77,7 +76,7 @@ const REAL = {
     {
       id: "msg_mfx1a2b3c4d52",
       role: "assistant",
-      content: "Two Location Directors are scheduled.",
+      content: "Two store managers are scheduled.",
       /* Deliberately the same millisecond — see the ordering test. */
       createdAt: "2026-08-01T09:00:00.000Z",
       mode: "standard",
@@ -98,16 +97,44 @@ const REAL = {
 const SECOND = {
   ...REAL,
   id: "conv_mfx9z8y7x6w5v",
-  title: "Bed usage question",
+  title: "Restock question",
   messages: [
     {
       id: "msg_mfx9z8y7x6w51",
       role: "user",
-      content: "Why is bed usage down?",
+      content: "When does the next soap delivery arrive?",
       createdAt: "2026-08-02T09:00:00.000Z",
     },
   ],
 };
+
+/**
+ * Six seed-shaped demo threads, built here rather than read from the demo
+ * data: the demo build ships none today, and the rule under test is that a
+ * thread of THIS shape is declined whatever the shipped seed list holds.
+ */
+const DEMO_CONVERSATIONS = Array.from({ length: 6 }, (_, index) => ({
+  id: `conv-seed-${index + 1}`,
+  title: `Demo thread ${index + 1}`,
+  createdAt: "2026-07-01T09:00:00.000Z",
+  updatedAt: "2026-07-01T09:05:00.000Z",
+  attachedDocumentIds: [],
+  messages: [
+    {
+      id: `msg-s${index + 1}a`,
+      role: "user",
+      content: "A seeded demo question.",
+      createdAt: "2026-07-01T09:00:00.000Z",
+    },
+    {
+      id: `msg-s${index + 1}b`,
+      role: "assistant",
+      content: "A seeded demo answer.",
+      createdAt: "2026-07-01T09:05:00.000Z",
+      mode: "standard",
+    },
+  ],
+}));
 
 beforeEach(() => {
   vi.resetModules();
@@ -127,7 +154,7 @@ afterEach(() => {
 
 /* ------------------------------------------------------------- the seeds -- */
 
-describe("the six seeded demo conversations never enter Supabase", () => {
+describe("seeded demo conversations never enter Supabase", () => {
   it("declines all of them and stores nothing", async () => {
     const { route, db } = await load(ME);
     const response = await route.POST(post({ conversations: [...DEMO_CONVERSATIONS] }));

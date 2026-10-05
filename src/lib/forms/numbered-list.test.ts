@@ -1,4 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/config/company/forms", async () =>
+  (await import("@/test/forms/fixture-forms")).fixtureFormsModule(),
+);
+
 
 import {
   numberedListLines,
@@ -15,13 +20,13 @@ import { enforcePersonEdit, enforceResponsibilities } from "./responsibility";
  * THE STRUCTURED LISTS THE EDITOR COULD NOT SEE
  * ============================================================================
  *
- * Reported from a live SDIT EPP: the narrative boxes were drafted and the
- * "Overall top three strengths" boxes underneath were empty. The assistant had
+ * Reported from a live performance review: the narrative boxes were drafted
+ * and the "Overall top three strengths" boxes underneath were empty. The assistant had
  * filled them — `top_strengths` held two lines in `form_instance_values` — and
  * the editor was reading `top_strengths_1`, a key nothing has ever written.
  */
 
-const seed = TEMPLATE_SEEDS.find((entry) => entry.key === "sdit-epp")!;
+const seed = TEMPLATE_SEEDS.find((entry) => entry.key === "fixture-role-review")!;
 const document = parseFormDocument(seed.document);
 const variant = parseFormVariants(seed.variants)[0]!;
 

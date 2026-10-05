@@ -177,7 +177,7 @@ describe("the screen", () => {
   it("names the login-email domains when they are set, and never presents them as a storage filter", () => {
     const { container } = render(<WovenSyncScreen {...BASE} loginEmailDomains={["example.com"]} />);
     expect(screen.queryByText("No login-email domain is set")).toBeNull();
-    expect(container.textContent).toMatch(/Only addresses at suntancity\.com would ever be\s+login-eligible/);
+    expect(container.textContent).toMatch(/Only addresses at example\.com would ever be\s+login-eligible/);
   });
 
   it("never calls temporary or expiring access 'borrowed'", () => {

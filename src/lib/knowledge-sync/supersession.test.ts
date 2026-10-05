@@ -12,10 +12,10 @@ const doc = (over: Partial<LibraryDocument> & Pick<LibraryDocument, "id" | "titl
 });
 
 /* The live corpus: the uploaded manual, Woven's copy of the same PDF, and Woven policies merely named after it. */
-const WOVEN_MANUAL = doc({ id: "w-handbook", title: "JBA Policy Manual Edited 5.2025", originalFilename: "JBA-Policy-Manual-Edited-5.2025.pdf", contentHash: "h1" });
-const WOVEN_POLICY_TEXT = doc({ id: "w-policy", title: "JBA Policy Manual 2025", originalFilename: "policy-3d90671a-0000-4000-8000-000000000001.txt", fileType: "txt" });
-const WOVEN_POLICY_PDF = doc({ id: "w-policy-pdf", title: "JBA Policy Manual 2025 — 2025 JBA Policy Manual Master", originalFilename: "2025-JBA-Policy-Manual-Master-Edited-5-2025-with-acknowledgement.pdf" });
-const UPLOAD_MANUAL = doc({ id: "u-manual", title: "JBA Policy Manual Edited 5.2025", originalFilename: "JBA-Policy-Manual-Edited-5.2025.pdf", contentHash: "h1" });
+const WOVEN_MANUAL = doc({ id: "w-handbook", title: "Team Policy Manual Edited 5.2025", originalFilename: "Team-Policy-Manual-Edited-5.2025.pdf", contentHash: "h1" });
+const WOVEN_POLICY_TEXT = doc({ id: "w-policy", title: "Team Policy Manual 2025", originalFilename: "policy-3d90671a-0000-4000-8000-000000000001.txt", fileType: "txt" });
+const WOVEN_POLICY_PDF = doc({ id: "w-policy-pdf", title: "Team Policy Manual 2025 — 2025 Team Policy Manual Master", originalFilename: "2025-Team-Policy-Manual-Master-Edited-5-2025-with-acknowledgement.pdf" });
+const UPLOAD_MANUAL = doc({ id: "u-manual", title: "Team Policy Manual Edited 5.2025", originalFilename: "Team-Policy-Manual-Edited-5.2025.pdf", contentHash: "h1" });
 
 describe("which uploads a current Woven copy replaces — exact identity only", () => {
   it("the live manual: the upload is superseded by Woven's copy of the same file, and by nothing merely titled after it", () => {
@@ -52,7 +52,7 @@ describe("which uploads a current Woven copy replaces — exact identity only", 
   });
 
   it("unrelated uploads, and similar-but-not-equal titles, are never touched", () => {
-    const plan = planSupersession([WOVEN_MANUAL], [doc({ id: "u1", title: "Holiday Schedule" }), doc({ id: "u2", title: "JBA Policy Manual Edited 5.2024", originalFilename: "JBA-Policy-Manual-Edited-5.2024.pdf" })]);
+    const plan = planSupersession([WOVEN_MANUAL], [doc({ id: "u1", title: "Holiday Schedule" }), doc({ id: "u2", title: "Team Policy Manual Edited 5.2024", originalFilename: "Team-Policy-Manual-Edited-5.2024.pdf" })]);
     expect(plan).toEqual({ supersede: [], held: [] });
   });
 });
@@ -62,13 +62,13 @@ describe("the Content view shows the replaced upload beside its current Woven co
     contentType: "handbook",
     entityId: "hb-1",
     partKey: "current-version",
-    title: "JBA Policy Manual",
-    recordTitle: "JBA Policy Manual",
+    title: "Team Policy Manual",
+    recordTitle: "Team Policy Manual",
     status: "Published",
     audience: ["Public"],
     version: null,
     sourceUpdatedAt: "2025-05-13",
-    fileName: "JBA-Policy-Manual-Edited-5.2025.pdf",
+    fileName: "Team-Policy-Manual-Edited-5.2025.pdf",
     state: "UNCHANGED",
     reason: null,
     pendingAction: "none",
@@ -80,7 +80,7 @@ describe("the Content view shows the replaced upload beside its current Woven co
   } as InventoryItem;
 
   it("Current Woven copy: Current; Previous uploaded copy: Stale / Superseded — the row itself stays Current", () => {
-    const [row] = contentRows([item], [], new Map(), new Map([["w-handbook", [{ id: "u-manual", title: "JBA Policy Manual Edited 5.2025" }]]]));
+    const [row] = contentRows([item], [], new Map(), new Map([["w-handbook", [{ id: "u-manual", title: "Team Policy Manual Edited 5.2025" }]]]));
     expect(row!.syncState).toBe("up_to_date");
     expect(row!.parts.map((p) => [p.kind, p.syncState])).toEqual([
       ["version", "up_to_date"],

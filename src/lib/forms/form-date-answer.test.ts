@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { readCorrectiveActionIntake } from "./corrective-action-intake";
-import { readEppIntake } from "./epp-intake";
 import { extractFormDate, isIsoCalendarDate, priorStepDate } from "./form-date-answer";
 
 /**
@@ -78,44 +76,18 @@ describe("isIsoCalendarDate", () => {
   });
 });
 
-describe("the intakes count every natural shape as the date being given", () => {
-  it.each(NATURAL)("%s answers the date question", (typed) => {
-    const corrective = readCorrectiveActionIntake({
-      text: `3. ${typed}`,
-      employeeKnown: true,
-      locationSettled: true,
-    });
-    const epp = readEppIntake({ text: `3. ${typed}`, employeeKnown: true, locationSettled: true });
-
-    expect(corrective.supplied).toContain("form_date");
-    expect(epp.supplied).toContain("form_date");
-  });
-});
-
 /*
- * "we can use todays date" is how the rollout's manager answered, without the
- * apostrophe, and `\btoday\b` does not match inside "todays" — so both intakes
- * asked for the date again. The form keeps its default of today either way;
- * this is only whether the question counts as answered.
+ * "we can use todays date" is how a manager answers, without the apostrophe.
+ * The form keeps its default of today either way: none of these is ever read
+ * as a parsed calendar date.
  */
-describe("\"today\" counts as the date being given, with or without the apostrophe", () => {
+describe("\"today\" is never parsed into a calendar date, with or without the apostrophe", () => {
   it.each(["we can use todays date", "we can use today's date", "Todays date.", "use today", "today’s date"])(
     "%s",
     (typed) => {
-      const corrective = readCorrectiveActionIntake({ text: typed, employeeKnown: true, locationSettled: true });
-      const epp = readEppIntake({ text: typed, employeeKnown: true, locationSettled: true });
-
-      expect(corrective.supplied).toContain("form_date");
-      expect(epp.supplied).toContain("form_date");
-      // Still the default, never a parsed calendar date.
       expect(extractFormDate(typed, "2026-09-28")).toBeNull();
     },
   );
-
-  it("is not read out of a word that only starts the same way", () => {
-    const corrective = readCorrectiveActionIntake({ text: "todayish maybe", employeeKnown: true, locationSettled: true });
-    expect(corrective.supplied).not.toContain("form_date");
-  });
 });
 
 describe("a date that belongs to an earlier step is not the form's date", () => {

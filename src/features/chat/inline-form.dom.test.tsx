@@ -5,13 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 
 import { MessageBubble } from "./message-bubble";
-import {
-  InlineForm,
-  policyVerificationNoticeFor,
-  reviewConversationNoticeFor,
-} from "./inline-form";
+import { InlineForm, policyVerificationNoticeFor } from "./inline-form";
 import { parseFormDocument } from "@/lib/forms/document";
-import { TEMPLATE_SEEDS } from "@/lib/forms/library";
+import { FIXTURE_YES_NO_QUESTION, fixtureSeed } from "@/test/forms/fixture-forms";
 import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types";
 
 /**
@@ -45,7 +41,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 const COACHING_DOCUMENT = {
   paper: "letter" as const,
   blocks: [
-    { kind: "letterhead" as const, brand: "SUN TAN CITY", title: "Coaching Form" },
+    { kind: "letterhead" as const, brand: "BUFF CITY SOAP", title: "Fixture Coaching Note" },
     { kind: "section" as const, label: "Employee Information" },
     {
       kind: "field_row" as const,
@@ -59,8 +55,8 @@ const COACHING_DOCUMENT = {
       key: "coaching_type",
       label: "Type Of Coaching",
       options: [
-        { key: "under_performance", label: "Under Performance" },
-        { key: "re_training", label: "Re-Training" },
+        { key: "skill_building", label: "Skill Building" },
+        { key: "refresher", label: "Refresher" },
       ],
       responsibility: "ai" as const,
       columns: 2 as const,
@@ -92,7 +88,7 @@ function loadedInstance(overrides: Record<string, unknown> = {}) {
   return {
     instance: {
       id: "inst-42",
-      templateName: "Coaching Form",
+      templateName: "Fixture Coaching Note",
       templateVersion: 1,
       templateVersionId: "ver-1",
       variantKey: null,
@@ -134,8 +130,8 @@ function seededInstance() {
 function proposal(overrides: Partial<ChatFormProposal> = {}): ChatFormProposal {
   return {
     proposalId: "prop-1",
-    templateKey: "coaching",
-    templateName: "Coaching Form",
+    templateKey: "fixture-coaching",
+    templateName: "Fixture Coaching Note",
     supportsInlineDraft: true,
     variantKey: null,
     employeeRole: null,
@@ -162,7 +158,7 @@ function assistantTurn(overrides: Partial<ChatMessage> = {}): ChatMessage {
   return {
     id: "msg-answer",
     role: "assistant",
-    content: "Here is what I would put on a **Coaching Form**.",
+    content: "Here is what I would put on a **Fixture Coaching Note**.",
     createdAt: "2026-09-07T12:00:01Z",
     mode: "standard",
     coverage: "not_applicable",
@@ -274,7 +270,7 @@ describe("8-10. every other proposal state offers no create action", () => {
     ["needs_employee", proposal({ employeeName: null, status: "needs_employee", supportsInlineDraft: false })],
     ["needs_location", proposal({ locationId: null, status: "needs_location", locationResolution: "unavailable", supportsInlineDraft: false })],
     ["multiple locations", proposal({ locationId: null, status: "needs_location", locationResolution: "needs_selection", supportsInlineDraft: false })],
-    ["a non-Coaching template", proposal({ templateKey: "dpoa", templateName: "Corrective Action Form", supportsInlineDraft: false })],
+    ["a non-Coaching template", proposal({ templateKey: "fixture-corrective", templateName: "Fixture Corrective Notice", supportsInlineDraft: false })],
   ])("%s", (_name, state) => {
     happyPath();
     const { container } = bubble(assistantTurn({ formProposal: state }));
@@ -312,7 +308,7 @@ describe("18. the create cannot be submitted twice by normal UI use", () => {
         formInstanceRef: {
           instanceId: "inst-42",
           proposalId: "prop-1",
-          templateName: "Coaching Form",
+          templateName: "Fixture Coaching Note",
         },
       }),
     );
@@ -346,7 +342,7 @@ describe("30-31. the editor fetches the instance by id", () => {
     bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -366,7 +362,7 @@ describe("32-33. a form the server will not return is not recreated", () => {
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -384,13 +380,13 @@ describe("35-37. the editor renders from the stored template version", () => {
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
     await waitFor(() => expect(container.textContent).toContain("Employee Information"));
     expect(container.textContent).toContain("Type Of Coaching");
-    expect(container.textContent).toContain("Under Performance");
+    expect(container.textContent).toContain("Skill Building");
     expect(screen.getByDisplayValue("Sarah Jones")).toBeTruthy();
   });
 
@@ -429,7 +425,7 @@ describe("38-41. editing and saving", () => {
     bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -450,7 +446,7 @@ describe("38-41. editing and saving", () => {
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -471,7 +467,7 @@ describe("38-41. editing and saving", () => {
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -492,7 +488,7 @@ describe("42. field responsibility is respected in the inline editor", () => {
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -510,7 +506,7 @@ describe("42. field responsibility is respected in the inline editor", () => {
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -525,7 +521,7 @@ describe("42. field responsibility is respected in the inline editor", () => {
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -559,7 +555,7 @@ describe("43. the coaching flow holds no route to the standalone builder", () =>
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -580,7 +576,7 @@ describe("43. the coaching flow holds no route to the standalone builder", () =>
 describe("44-45. the inline renderer has no paper geometry", () => {
   it("imports neither the paper module nor DocumentSurface", () => {
     /*
-     * Marissa named the form's horizontal scrollbar specifically. `Sheet` is a
+     * A manager named the form's horizontal scrollbar specifically. `Sheet` is a
      * fixed 816px that scales with a transform rather than reflowing — right
      * for the template editor, wrong inside a conversation.
      */
@@ -606,7 +602,7 @@ describe("44-45. the inline renderer has no paper geometry", () => {
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -628,7 +624,7 @@ describe("44-45. the inline renderer has no paper geometry", () => {
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -661,7 +657,7 @@ describe("P4. a draft offers editing, and nothing that implies a finished record
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -678,7 +674,7 @@ describe("P4. a draft offers editing, and nothing that implies a finished record
       const { container } = bubble(
         assistantTurn({
           formProposal: proposal(),
-          formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+          formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
         }),
       );
 
@@ -692,7 +688,7 @@ describe("P4. a draft offers editing, and nothing that implies a finished record
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -707,7 +703,7 @@ describe("a finalized form renders read-only rather than assuming a draft", () =
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -735,7 +731,7 @@ describe("a finalized form renders read-only rather than assuming a draft", () =
  *
  * Two failures in one. The manager sees an empty-looking form and concludes
  * Bubbles did not fill it in, when the backend succeeded — which is exactly
- * Marissa's requirement appearing not to work. And if they start typing, their
+ * the manager's requirement appearing not to work. And if they start typing, their
  * edit and the assistant's write land on the same canonical record in whatever
  * order they arrive.
  */
@@ -941,7 +937,7 @@ describe("R2-F1. a refresh during prefill is not mistaken for success", () => {
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -957,7 +953,7 @@ describe("R2-F1. a refresh during prefill is not mistaken for success", () => {
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -975,7 +971,7 @@ describe("R2-F1. a refresh during prefill is not mistaken for success", () => {
     const { container } = bubble(
       assistantTurn({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
 
@@ -1036,7 +1032,7 @@ function mounted(overrides: Partial<ChatMessage> = {}) {
   return bubble(
     assistantTurn({
       formProposal: proposal(),
-      formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" },
+      formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       ...overrides,
     }),
   );
@@ -1244,7 +1240,7 @@ describe("P4. Start another begins a new request, never reusing this one", () =>
     const onStartAnother = vi.fn();
     render(
       <InlineForm
-        reference={{ instanceId: "inst-42", proposalId: "prop-1", templateName: "Coaching Form" }}
+        reference={{ instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Coaching Note" }}
         prefill={{ kind: "unknown" }}
         onStartAnother={onStartAnother}
       />,
@@ -1286,12 +1282,12 @@ describe("the policy-verification notice", () => {
   const CORRECTIVE_DOCUMENT = {
     paper: "letter" as const,
     blocks: [
-      { kind: "letterhead" as const, brand: "SUN TAN CITY", title: "Corrective Action Form" },
+      { kind: "letterhead" as const, brand: "BUFF CITY SOAP", title: "Fixture Corrective Notice" },
       {
         kind: "field" as const,
         field: {
           key: "observation",
-          label: "Observation of Offense",
+          label: "Observation",
           input: "long_text" as const,
           responsibility: "ai" as const,
         },
@@ -1300,7 +1296,7 @@ describe("the policy-verification notice", () => {
         kind: "field" as const,
         field: {
           key: "policy_violated",
-          label: "Policy Violated",
+          label: "Policy reviewed",
           input: "text" as const,
           responsibility: "ai" as const,
           policyGrounded: true,
@@ -1310,7 +1306,7 @@ describe("the policy-verification notice", () => {
         kind: "field" as const,
         field: {
           key: "policy_language",
-          label: "Direct policy from official manual",
+          label: "Policy wording",
           input: "long_text" as const,
           responsibility: "ai" as const,
           policyGrounded: true,
@@ -1329,7 +1325,7 @@ describe("the policy-verification notice", () => {
     return {
       instance: {
         id: "inst-77",
-        templateName: "Corrective Action Form",
+        templateName: "Fixture Corrective Notice",
         templateVersion: 2,
         templateVersionId: "ver-2",
         variantKey: null,
@@ -1360,8 +1356,8 @@ describe("the policy-verification notice", () => {
     );
 
     expect(notice).toMatch(/Policy verification is still required/);
-    expect(notice).toContain("Policy Violated");
-    expect(notice).toContain("Direct policy from official manual");
+    expect(notice).toContain("Policy reviewed");
+    expect(notice).toContain("Policy wording");
     expect(notice).toMatch(/before you issue this form/i);
   });
 
@@ -1409,7 +1405,7 @@ describe("the policy-verification notice", () => {
     expect(notice).toMatch(/entered by hand/i);
     expect(notice).toMatch(/cannot vouch for wording it did not retrieve/i);
     // And it still distinguishes the one that is simply blank.
-    expect(notice).toMatch(/“Direct policy from official manual” is blank/);
+    expect(notice).toMatch(/“Policy wording” is blank/);
   });
 
   it("treats provenance that is present but unverified as unverified", () => {
@@ -1448,126 +1444,11 @@ describe("the policy-verification notice", () => {
   });
 });
 
-/* ================================================= the review conversation == */
-
-describe("a performance plan says what has to happen before it is signed", () => {
-  const seed = (key: string) => TEMPLATE_SEEDS.find((entry) => entry.key === key)!;
-
-  function planInstance(key: string, status: "draft" | "finalized" = "draft") {
-    const template = seed(key);
-    return {
-      instance: {
-        id: "form-1",
-        templateName: template.name,
-        templateVersion: 2,
-        templateVersionId: "v2",
-        variantKey: template.variants[0]?.key ?? null,
-        employeeName: "Paulyne Co",
-        locationId: "loc-0101",
-        locationName: "Kearney",
-        source: "assistant" as const,
-        status,
-        followUpDate: null,
-      },
-      version: {
-        document: parseFormDocument(template.document),
-        variants: template.variants,
-      },
-      values: [],
-      events: [],
-    };
-  }
-
-  it("tells the manager to review it and leave the signatures blank", () => {
-    const notice = reviewConversationNoticeFor(planInstance("sdit-epp"), false);
-    expect(notice).toContain("Review the SDIT EPP with Paulyne Co");
-    expect(notice).toMatch(/download the PDF/i);
-    expect(notice).toMatch(/leave the signature fields blank/i);
-  });
-
-  it("summarises the plan from the values the screen just fetched", () => {
-    /*
-     * THE SUMMARY IS A READING OF THE FORM. It is built here, at render time,
-     * from the rows the editor loaded — so it cannot report a plan the page
-     * below it does not show, and it follows an edit without being rewritten.
-     */
-    const loaded = planInstance("sdit-epp");
-    loaded.values = [
-      { fieldKey: "improvement_areas", value: "Punctuality", checked: [], filledBy: "ai" },
-      { fieldKey: "top_strengths", value: "Client service", checked: [], filledBy: "ai" },
-      {
-        fieldKey: "plan_of_action",
-        value: "Review clock-in times together each week.",
-        checked: [],
-        filledBy: "ai",
-      },
-    ] as typeof loaded.values;
-
-    const notice = reviewConversationNoticeFor(loaded, false)!;
-    expect(notice).toContain(
-      "The SDIT EPP draft for Paulyne Co focuses on punctuality while continuing to build on client service.",
-    );
-    expect(notice).toContain("The plan of action: Review clock-in times together each week.");
-    expect(notice).toContain("Review the SDIT EPP with Paulyne Co");
-  });
-
-  it("says nothing while Bubbles is still writing, or once the form is finalized", () => {
-    expect(reviewConversationNoticeFor(planInstance("sdit-epp"), true)).toBeNull();
-    expect(reviewConversationNoticeFor(planInstance("sdit-epp", "finalized"), false)).toBeNull();
-  });
-
-  it("says nothing on a form with no section the employee completes", () => {
-    /*
-     * READ OFF THE DOCUMENT, not off a template key. A coaching form records a
-     * conversation that already happened; there is nothing to leave blank for.
-     *
-     * THE TSD PLAN IS NO LONGER ONE OF THESE, which is the same rule working
-     * in the other direction: it gained a self-assessment its subject fills,
-     * so it gained the closing instruction, with nothing here naming it.
-     */
-    for (const key of ["coaching", "dpoa", "policy-review", "asd-sdit-epp"]) {
-      expect(reviewConversationNoticeFor(planInstance(key), false), key).toBeNull();
-    }
-  });
-
-  it("closes the TSD plan on its own stored values", () => {
-    /*
-     * THE SAME ARCHITECTURE, ON THE PLAN WHOSE PLAN OF ACTION IS EIGHT ROWS
-     * RATHER THAN A PARAGRAPH. Every phrase below is a value stored against
-     * the instance — there is no second drafting pass — and the category is
-     * named so the manager can see WHICH of the eight Ask Bubbles filled.
-     */
-    const loaded = planInstance("tsd-epp");
-    loaded.values = [
-      { fieldKey: "improvement_areas", value: "Punctuality", checked: [], filledBy: "ai" },
-      { fieldKey: "top_strengths", value: "Team coaching", checked: [], filledBy: "ai" },
-      {
-        fieldKey: "coaching_and_development",
-        value: "Coach the team on shift-start readiness each week.",
-        checked: [],
-        filledBy: "ai",
-      },
-    ] as typeof loaded.values;
-
-    const notice = reviewConversationNoticeFor(loaded, false)!;
-    expect(notice).toContain(
-      "The TSD EPP draft for Paulyne Co focuses on punctuality while continuing to build on team coaching.",
-    );
-    expect(notice).toContain(
-      "The plan of action: Coaching and Development: Coach the team on shift-start readiness each week.",
-    );
-    expect(notice).toContain("Review the TSD EPP with Paulyne Co");
-    /* The seven rows nobody supported contribute nothing. */
-    expect(notice).not.toContain("Bench");
-    expect(notice).not.toContain("District Outreach");
-  });
-});
-
-describe("the Corrective Action Form's payroll-deduct Yes / No", () => {
-  const corrective = TEMPLATE_SEEDS.find((seed) => seed.key === "dpoa")!;
+describe("a single-answer Yes / No question", () => {
+  const corrective = fixtureSeed("fixture-corrective");
 
   function correctiveInstance() {
-    const loaded = loadedInstance({ templateName: "Corrective Action Form" });
+    const loaded = loadedInstance({ templateName: "Fixture Corrective Notice" });
     return {
       ...loaded,
       version: { document: parseFormDocument(corrective.document), variants: [] },
@@ -1579,12 +1460,12 @@ describe("the Corrective Action Form's payroll-deduct Yes / No", () => {
     fakeFetch(() => ({ payload: correctiveInstance() }));
     bubble(
       assistantTurn({
-        formProposal: proposal({ templateKey: "dpoa", templateName: "Corrective Action Form" }),
-        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Corrective Action Form" },
+        formProposal: proposal({ templateKey: "fixture-corrective", templateName: "Fixture Corrective Notice" }),
+        formInstanceRef: { instanceId: "inst-42", proposalId: "prop-1", templateName: "Fixture Corrective Notice" },
       }),
     );
 
-    const group = await screen.findByRole("group", { name: "Is payroll deduct applicable?" });
+    const group = await screen.findByRole("group", { name: FIXTURE_YES_NO_QUESTION });
     const [yes, no] = within(group).getAllByRole("checkbox");
     expect(yes!.getAttribute("aria-checked")).toBe("false");
     expect(no!.getAttribute("aria-checked")).toBe("false");
@@ -1599,6 +1480,6 @@ describe("the Corrective Action Form's payroll-deduct Yes / No", () => {
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
     await waitFor(() => expect(recorded.some((made) => made.method === "PATCH")).toBe(true));
     const patch = recorded.find((made) => made.method === "PATCH")!;
-    expect((patch.body.checked as Record<string, string[]>).payroll_deduct).toEqual(["no"]);
+    expect((patch.body.checked as Record<string, string[]>).retraining_required).toEqual(["no"]);
   });
 });

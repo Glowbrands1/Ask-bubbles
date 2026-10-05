@@ -112,7 +112,7 @@ describe("46. a missing fact reads as missing, not as a blank", () => {
     });
 
     expect(container.textContent).toMatch(/Not set — Ask Bubbles could not verify one/);
-    expect(container.textContent).not.toMatch(/Sun Tan City —/);
+    expect(container.textContent).not.toMatch(/Buff City Soap —/);
   });
 
   it("asks which location when the manager covers more than one", () => {
@@ -183,7 +183,7 @@ describe("48. a pre-Phase-2 turn still renders, and leads nowhere", () => {
     templateName: "Coaching Form",
     values: {
       employee_name: "Jane Kowalski",
-      employee_role: "Tanning Consultant",
+      employee_role: "Soap Maker",
       follow_up_date: "2026-01-19",
     },
     checkedOptions: { coaching_type: ["Documented coaching"] },
@@ -214,7 +214,7 @@ describe("48. a pre-Phase-2 turn still renders, and leads nowhere", () => {
   it("never puts the stored values back on screen", () => {
     const { container } = bubble({ formHandoff: legacy });
 
-    for (const invented of ["Jane Kowalski", "Tanning Consultant", "Documented coaching"]) {
+    for (const invented of ["Jane Kowalski", "Soap Maker", "Documented coaching"]) {
       expect(container.textContent, invented).not.toContain(invented);
     }
   });

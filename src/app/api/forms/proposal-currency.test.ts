@@ -2,9 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AccessScope, ChatMessage } from "@/types";
 
+/*
+ * Which form a turn names is read from the forms registry; this uses the
+ * fixture one (`src/test/forms/fixture-forms.ts`). Registered with `vi.mock`,
+ * so it survives the `vi.resetModules()` each `load()` performs.
+ */
+vi.mock("@/config/company/forms", async () =>
+  (await import("@/test/forms/fixture-forms")).fixtureFormsModule(),
+);
+
 /**
  * ============================================================================
- * PRODUCTION QA, 30 SEPTEMBER 2026 — A SUPERSEDED CARD CANNOT FILE A FORM
+ * A SUPERSEDED CARD CANNOT FILE A FORM
  * ============================================================================
  *
  * After "Coaching form for Jordan Testperson" was corrected to Avery
@@ -43,8 +52,8 @@ async function load() {
   vi.doMock("@/lib/forms/repository", () => ({
     getTemplateByKey: async (key: string) =>
       ({
-        coaching: { id: "tpl-coaching", key: "coaching", name: "Coaching Form", requiredPermission: "create_coaching_form", active: true },
-        "policy-review": { id: "tpl-pr", key: "policy-review", name: "Policy Review", requiredPermission: "create_policy_review", active: true },
+        "fixture-coaching": { id: "tpl-coaching", key: "fixture-coaching", name: "Fixture Coaching Note", requiredPermission: "create_forms", active: true },
+        "fixture-policy-review": { id: "tpl-pr", key: "fixture-policy-review", name: "Fixture Policy Review", requiredPermission: "create_forms", active: true },
       })[key] ?? null,
   }));
 
@@ -83,9 +92,9 @@ function answered(content: string): Pick<ChatMessage, "id" | "role" | "content">
 
 const CORRECTED = [
   said("Coaching form for Jordan Testperson"),
-  answered("Here is what I would put on a Coaching Form."),
+  answered("Here is what I would put on a Fixture Coaching Note."),
   said("No, not Jordan Testperson. Avery Testperson."),
-  answered("Here is what I would put on a Coaching Form."),
+  answered("Here is what I would put on a Fixture Coaching Note."),
 ];
 
 function create(templateKey: string, employeeName: string, conversation: unknown) {
@@ -102,7 +111,7 @@ afterEach(() => {
 describe("creation from a chat card re-reads the conversation", () => {
   it("refuses the Jordan card once the manager corrected the employee to Avery — and creates nothing", async () => {
     const { route, created } = await load();
-    const response = await route.POST(create("coaching", "Jordan Testperson", CORRECTED));
+    const response = await route.POST(create("fixture-coaching", "Jordan Testperson", CORRECTED));
     expect(response.status).toBe(409);
     const body = (await response.json()) as { error: string; code: string };
     expect(body.code).toBe("proposal_superseded");
@@ -112,7 +121,7 @@ describe("creation from a chat card re-reads the conversation", () => {
 
   it("creates the current card, for the corrected employee", async () => {
     const { route, created } = await load();
-    const response = await route.POST(create("coaching", "Avery Testperson", CORRECTED));
+    const response = await route.POST(create("fixture-coaching", "Avery Testperson", CORRECTED));
     expect(response.status).toBe(200);
     expect(created.map((form) => form.employeeName)).toEqual(["Avery Testperson"]);
   });
@@ -120,7 +129,7 @@ describe("creation from a chat card re-reads the conversation", () => {
   it("refuses a card for someone the manager said it is NOT for, even with no replacement yet", async () => {
     const { route, created } = await load();
     const response = await route.POST(
-      create("coaching", "Jordan Testperson", [said("Coaching form for Jordan Testperson"), answered("…"), said("no, not Jordan")]),
+      create("fixture-coaching", "Jordan Testperson", [said("Coaching form for Jordan Testperson"), answered("…"), said("no, not Jordan")]),
     );
     expect(response.status).toBe(409);
     expect(created).toEqual([]);
@@ -129,7 +138,7 @@ describe("creation from a chat card re-reads the conversation", () => {
   it("refuses a card for a form the conversation has since switched away from", async () => {
     const { route, created } = await load();
     const response = await route.POST(
-      create("coaching", "Avery Testperson", [
+      create("fixture-coaching", "Avery Testperson", [
         said("Coaching form for Avery Testperson"),
         answered("…"),
         said("Actually make it a Policy Review instead"),
@@ -142,7 +151,7 @@ describe("creation from a chat card re-reads the conversation", () => {
   it("refuses a card when the conversation now names two people", async () => {
     const { route } = await load();
     const response = await route.POST(
-      create("coaching", "Avery Testperson", [said("coaching form for Avery Testperson and Jordan Testperson")]),
+      create("fixture-coaching", "Avery Testperson", [said("coaching form for Avery Testperson and Jordan Testperson")]),
     );
     expect(response.status).toBe(409);
   });
@@ -150,7 +159,7 @@ describe("creation from a chat card re-reads the conversation", () => {
   it("is not fooled by a topic word: 'policy review' as the topic keeps the Coaching card current", async () => {
     const { route, created } = await load();
     const response = await route.POST(
-      create("coaching", "Avery Testperson", [said("coaching form for Avery Testperson; topic is policy review")]),
+      create("fixture-coaching", "Avery Testperson", [said("coaching form for Avery Testperson; topic is policy review")]),
     );
     expect(response.status).toBe(200);
     expect(created).toHaveLength(1);
@@ -159,7 +168,7 @@ describe("creation from a chat card re-reads the conversation", () => {
   it("a question asked after the card does not make it stale", async () => {
     const { route } = await load();
     const response = await route.POST(
-      create("coaching", "Avery Testperson", [said("Coaching form for Avery Testperson"), answered("…"), said("is there a transfer form?")]),
+      create("fixture-coaching", "Avery Testperson", [said("Coaching form for Avery Testperson"), answered("…"), said("is there a separation form?")]),
     );
     expect(response.status).toBe(200);
   });
@@ -167,7 +176,7 @@ describe("creation from a chat card re-reads the conversation", () => {
   it("the manual builder, which sends no conversation, is unchanged", async () => {
     const { route, created } = await load();
     const response = await route.POST(
-      post({ templateKey: "coaching", employeeName: "Jordan Testperson", locationId: null, source: "manual" }),
+      post({ templateKey: "fixture-coaching", employeeName: "Jordan Testperson", locationId: null, source: "manual" }),
     );
     expect(response.status).toBe(200);
     expect(created).toHaveLength(1);

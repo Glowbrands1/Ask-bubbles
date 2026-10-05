@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { coachingDocument } from "./library";
+import { fixtureCoachingDocument as coachingDocument } from "@/test/forms/fixture-forms";
 import { draftableFields } from "./responsibility";
 import {
   EXPECTATION_LABEL,
@@ -300,7 +300,7 @@ describe("the guard reports what it removed, and touches nothing else", () => {
   });
 });
 
-describe("the published Coaching Form asks for the shape", () => {
+describe("a coaching document asks for the shape", () => {
   it("marks coaching_details, and only coaching_details", () => {
     const marked = draftableFields(coachingDocument(), null).filter((field) => field.narrative);
     expect(marked.map((field) => field.key)).toEqual(["coaching_details"]);

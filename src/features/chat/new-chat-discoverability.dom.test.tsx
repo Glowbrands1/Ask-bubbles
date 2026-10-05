@@ -14,7 +14,7 @@ import type { ChatConversation } from "@/types";
  * DEMO MODE, SET BEFORE THE STORE MODULE LOADS.
  *
  * These cases are about the chat rail's behaviour over EXISTING conversations,
- * and the seeded pair is their fixture. `app-store.tsx` reads the mode once at
+ * and the fixture threads below are their content. `app-store.tsx` reads the mode once at
  * module scope, so this has to run before the imports above resolve — which is
  * what `vi.hoisted` is for. Setting it in `beforeAll` would be too late.
  *
@@ -24,6 +24,34 @@ import type { ChatConversation } from "@/types";
  */
 vi.hoisted(() => {
   process.env.NEXT_PUBLIC_DEMO_MODE = "true";
+});
+
+/*
+ * THE EXISTING CONVERSATIONS. The demo build ships no seeded threads, so the
+ * fixture is supplied through the same seed the demo boundary hands the store
+ * — two threads, so "more than one" is exercised as well.
+ */
+vi.mock("@/data/demo", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/data/demo")>();
+  const at = new Date("2026-09-20T10:00:00.000Z").toISOString();
+  const thread = (id: string, title: string, question: string, answer: string) => ({
+    id,
+    title,
+    createdAt: at,
+    updatedAt: at,
+    attachedDocumentIds: [],
+    messages: [
+      { id: `${id}-q`, role: "user" as const, content: question, createdAt: at },
+      { id: `${id}-a`, role: "assistant" as const, content: answer, createdAt: at },
+    ],
+  });
+  return {
+    ...actual,
+    DEMO_CONVERSATIONS: [
+      thread("conv-fixture-1", "Weekend coverage", "Who covers Saturday?", "Check the schedule."),
+      thread("conv-fixture-2", "Opening checklist", "How do I open?", "Follow the checklist."),
+    ],
+  };
 });
 
 /**
@@ -244,7 +272,7 @@ describe("Ask Bubbles chat header", () => {
      * are not bundled into production. They land one tick after first paint.
      */
     await user.click(screen.getByRole("button", { name: /^history$/i }));
-    const seeded = await screen.findByRole("button", { name: /^Daily Stats/i });
+    const seeded = await screen.findByRole("button", { name: /^Weekend coverage/i });
     await user.click(seeded);
 
     // The seeded conversation's own turns are on screen, so the empty state is gone.
@@ -264,7 +292,7 @@ describe("Ask Bubbles chat header", () => {
 
     // Nothing was deleted, and the old thread is selectable again.
     await user.click(screen.getByRole("button", { name: /^history$/i }));
-    const again = screen.getByRole("button", { name: /^Daily Stats/i });
+    const again = screen.getByRole("button", { name: /^Weekend coverage/i });
     await user.click(again);
     expect(screen.queryByRole("heading", { name: /how can .* help today/i })).toBeNull();
   });

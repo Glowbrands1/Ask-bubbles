@@ -15,8 +15,9 @@ import type {
  *
  * EVERY RECORD HERE IS INVENTED. The people, emails, locations, positions, runs
  * and changes do not come from Woven and describe nobody. Every id starts with
- * `SAMPLE-`, every location is a fictional "Sample Location", and every email is at
- * `sample-locations.test`, a reserved test domain.
+ * `SAMPLE-`, every location is a fictional "Example Location", every position is
+ * a generic store title, and every email is at `sample-locations.test`, a
+ * reserved test domain.
  *
  * REACHABLE FROM EXACTLY ONE PLACE: `lib/demo/runtime.demo.ts`, the demo side
  * of the build-time boundary. A production build never imports that module,
@@ -35,16 +36,20 @@ const RUN_2 = "SAMPLE-RUN-0117";
 const RUN_3 = "SAMPLE-RUN-0116";
 
 const loc = {
-  north: { wovenLocationId: "SAMPLE-LOC-101", name: "Sample Location North", number: "S101" },
-  river: { wovenLocationId: "SAMPLE-LOC-102", name: "Sample Location Riverside", number: "S102" },
-  lake: { wovenLocationId: "SAMPLE-LOC-103", name: "Sample Location Lakeview", number: "S103" },
-  oak: { wovenLocationId: "SAMPLE-LOC-104", name: "Sample Location Oak Park", number: "104" },
-  office: { wovenLocationId: "SAMPLE-LOC-900", name: "Sample Support Office", number: "HQ" },
+  north: { wovenLocationId: "SAMPLE-LOC-101", name: "Example Location 101", number: "101" },
+  river: { wovenLocationId: "SAMPLE-LOC-102", name: "Example Location 102", number: "102" },
+  lake: { wovenLocationId: "SAMPLE-LOC-103", name: "Example Location 103", number: "103" },
+  oak: { wovenLocationId: "SAMPLE-LOC-104", name: "Example Location 104", number: "104" },
+  office: { wovenLocationId: "SAMPLE-LOC-900", name: "Example Support Office", number: "HQ" },
 };
 
 type Loc = (typeof loc)[keyof typeof loc];
 const locationCode = (l: Loc) => (l === loc.oak || l === loc.office ? null : l.number);
-/* The support office is left unreviewed in the sample, so the Locations tab can show "Suggest ignore". */
+/*
+ * 101 and 102 are reviewed and mapped; 103 is unreviewed with an exact-number
+ * suggestion; 104 has no roster match. The support office is left unreviewed,
+ * so the Locations tab can show "Suggest ignore".
+ */
 const mapStatus = (l: Loc): DirectoryRow["primaryLocationMappingStatus"] => (l === loc.office || l === loc.oak ? "unmapped" : "mapped");
 
 function person(
@@ -90,18 +95,18 @@ function person(
 }
 
 const P = {
-  associate: ["SAMPLE-POS-01", "Sample Sales Associate", "mapped"] as [string, string, "mapped"],
-  asd: ["SAMPLE-POS-02", "Sample Assistant Location Director", "mapped"] as [string, string, "mapped"],
-  sd: ["SAMPLE-POS-03", "Sample Location Director", "mapped"] as [string, string, "mapped"],
-  dm: ["SAMPLE-POS-04", "Sample District Manager", "mapped"] as [string, string, "mapped"],
-  lead: ["SAMPLE-POS-05", "Sample Lead Associate", "unmapped"] as [string, string, "unmapped"],
-  trainer: ["SAMPLE-POS-06", "Sample Trainer", "unmapped"] as [string, string, "unmapped"],
+  member: ["SAMPLE-POS-01", "Team Member", "mapped"] as [string, string, "mapped"],
+  asm: ["SAMPLE-POS-02", "Assistant Manager", "mapped"] as [string, string, "mapped"],
+  lm: ["SAMPLE-POS-03", "Location Manager", "mapped"] as [string, string, "mapped"],
+  dm: ["SAMPLE-POS-04", "District Manager", "mapped"] as [string, string, "mapped"],
+  lead: ["SAMPLE-POS-05", "Lead Team Member", "unmapped"] as [string, string, "unmapped"],
+  trainer: ["SAMPLE-POS-06", "Trainer", "unmapped"] as [string, string, "unmapped"],
 };
 
 const directory: DirectoryRow[] = [
   person(1, "Marisol", "Quintero", {
     primary: loc.north,
-    position: P.associate,
+    position: P.member,
     hireDate: "2026-09-22",
     lastChangeKind: "new_employee",
     lastChangeClassification: "new_hire",
@@ -110,7 +115,7 @@ const directory: DirectoryRow[] = [
   }),
   person(2, "Jonah", "Brightwater", {
     primary: loc.lake,
-    position: P.sd,
+    position: P.lm,
     additionalLocations: [{ ...loc.oak }],
     activeLocationCount: 2,
     hasMultipleLocationAccess: true,
@@ -122,7 +127,7 @@ const directory: DirectoryRow[] = [
   }),
   person(3, "Delphine", "Harrow", {
     primary: loc.river,
-    position: P.asd,
+    position: P.asm,
     employmentStatus: "terminated",
     hireDate: "2023-06-12",
     terminationDate: "2026-09-26",
@@ -132,7 +137,7 @@ const directory: DirectoryRow[] = [
   }),
   person(4, "Priyanka", "Sorensen", {
     primary: loc.river,
-    position: P.sd,
+    position: P.lm,
     hireDate: "2022-01-09",
     lastChangeKind: "primary_location_changed",
     lastChangeAt: `${DAY}T10:32:00Z`,
@@ -152,7 +157,7 @@ const directory: DirectoryRow[] = [
   }),
   person(6, "Theo", "Vantongeren", {
     primary: loc.oak,
-    position: P.associate,
+    position: P.member,
     temporaryOrExpiringLocations: [{ ...loc.lake, expiresOn: "2026-10-12" }],
     activeLocationCount: 2,
     hasMultipleLocationAccess: true,
@@ -172,7 +177,7 @@ const directory: DirectoryRow[] = [
   }),
   person(8, "Emeric", "Lindqvist", {
     primary: loc.north,
-    position: P.asd,
+    position: P.asm,
     hireDate: "2022-11-30",
     lastChangeKind: "reactivated",
     lastChangeAt: "2026-09-27T10:31:00Z",
@@ -180,7 +185,7 @@ const directory: DirectoryRow[] = [
   }),
   person(9, "Beatrix", "Mallory", {
     primary: loc.oak,
-    position: P.associate,
+    position: P.member,
     employmentStatus: "terminated",
     hireDate: "2024-04-14",
     terminationDate: "2026-08-30",
@@ -189,14 +194,14 @@ const directory: DirectoryRow[] = [
   }),
   person(10, "Ignatius", "Pell", {
     primary: loc.north,
-    position: P.associate,
+    position: P.member,
     emailAddress: null,
     hireDate: "2025-07-07",
     dataIssues: ["missing_email"],
   }),
   person(11, "Wren", "Castellano", {
     primary: loc.river,
-    position: P.associate,
+    position: P.member,
     emailAddress: "wren.castellano@personal-mail.test",
     hireDate: "2024-10-01",
   }),
@@ -237,10 +242,10 @@ const change = (
 const [marisol, jonah, delphine, priyanka, callum, theo, rosalind, emeric, beatrix] = directory;
 
 const changes: ChangeRow[] = [
-  change(1, marisol, "new_employee", "new_hire", null, { positionName: P.associate[1], primaryLocationName: loc.north.name }, { effectiveDate: "2026-09-22" }),
+  change(1, marisol, "new_employee", "new_hire", null, { positionName: P.member[1], primaryLocationName: loc.north.name }, { effectiveDate: "2026-09-22" }),
   change(2, delphine, "terminated", null, { employmentStatus: "active" }, { employmentStatus: "terminated" }, { fieldName: "employment_status", effectiveDate: "2026-09-26" }),
-  change(3, jonah, "position_changed", "promotion_confirmed", { positionName: P.asd[1] }, { positionName: P.sd[1] }, { fieldName: "position_id", reviewStatus: "acknowledged" }),
-  change(4, rosalind, "position_changed", "unclassified", { positionName: P.associate[1] }, { positionName: `${P.lead[1]} (not mapped)` }, { fieldName: "position_id" }),
+  change(3, jonah, "position_changed", "promotion_confirmed", { positionName: P.asm[1] }, { positionName: P.lm[1] }, { fieldName: "position_id", reviewStatus: "acknowledged" }),
+  change(4, rosalind, "position_changed", "unclassified", { positionName: P.member[1] }, { positionName: `${P.lead[1]} (not mapped)` }, { fieldName: "position_id" }),
   change(5, priyanka, "primary_location_changed", "transfer", { primaryLocationName: loc.lake.name }, { primaryLocationName: loc.river.name }, { fieldName: "primary_woven_location_id" }),
   change(6, callum, "location_access_added", "additional", null, { locationName: loc.oak.name, accessType: "additional" }, { fieldName: `location:${loc.oak.wovenLocationId}` }),
   change(7, theo, "location_access_added", "temporary_or_expiring_access", null, { locationName: loc.lake.name, expiresOn: "2026-10-12" }, {
@@ -248,7 +253,7 @@ const changes: ChangeRow[] = [
     detectedAt: "2026-09-28T10:31:00Z",
     syncRunId: RUN_2,
   }),
-  change(8, callum, "location_access_removed", "expired", { locationName: "Sample Location East", expiresOn: "2026-09-27" }, null, {
+  change(8, callum, "location_access_removed", "expired", { locationName: "Example Location 105", expiresOn: "2026-09-27" }, null, {
     fieldName: "location:SAMPLE-LOC-105",
     effectiveDate: "2026-09-27",
     detectedAt: "2026-09-28T10:31:00Z",
@@ -314,9 +319,9 @@ const runs: RunRow[] = [
 ];
 
 const locations: LocationMappingRow[] = [
-  { ...mapRow(loc.north, "mapped", "S101"), employeeCount: 5 },
-  { ...mapRow(loc.river, "mapped", "S102"), employeeCount: 4 },
-  { ...mapRow(loc.lake, "unmapped", null, "S103"), employeeCount: 4 },
+  { ...mapRow(loc.north, "mapped", "101"), employeeCount: 5 },
+  { ...mapRow(loc.river, "mapped", "102"), employeeCount: 4 },
+  { ...mapRow(loc.lake, "unmapped", null, "103"), employeeCount: 4 },
   { ...mapRow(loc.oak, "unmapped", null, null), employeeCount: 4 },
   { ...mapRow(loc.office, "unmapped", null, null), employeeCount: 1, isNonLocation: true, districtName: null, regionName: null },
 ];
@@ -327,8 +332,8 @@ function mapRow(l: Loc, status: LocationMappingRow["status"], location: string |
     name: l.name,
     displayName: l.name,
     number: l.number,
-    districtName: l === loc.north || l === loc.river ? "Sample North District" : "Sample South District",
-    regionName: "Sample Central Region",
+    districtName: l === loc.north || l === loc.river ? "Example North District" : "Example South District",
+    regionName: "Example Central Region",
     isClosed: false,
     isNonLocation: false,
     employeeCount: 0,
@@ -343,9 +348,9 @@ function mapRow(l: Loc, status: LocationMappingRow["status"], location: string |
 }
 
 const positions: PositionMappingRow[] = [
-  pos(P.associate, 5, "employee", "location", 10),
-  pos(P.asd, 2, "assistant_manager", "location", 20),
-  pos(P.sd, 2, "location_manager", "location", 30),
+  pos(P.member, 5, "employee", "location", 10),
+  pos(P.asm, 2, "assistant_manager", "location", 20),
+  pos(P.lm, 2, "location_manager", "location", 30),
   pos(P.dm, 1, "district_manager", "district", 40),
   pos(P.lead, 1, null, null, null),
   pos(P.trainer, 1, null, null, null),
@@ -372,10 +377,10 @@ const scopeFor: Record<string, string> = Object.fromEntries(positions.filter((p)
 
 /** Which sample people "have" an Ask Bubbles login, and how it differs from Woven. */
 const logins: Record<string, { role: string; status: string; scope: string; area: string }> = {
-  "SAMPLE-EMP-0002": { role: "assistant_manager", status: "active", scope: "location", area: "loc-S103" },
-  "SAMPLE-EMP-0003": { role: "assistant_manager", status: "active", scope: "location", area: "loc-S102" },
-  "SAMPLE-EMP-0004": { role: "location_manager", status: "active", scope: "location", area: "loc-S103" },
-  "SAMPLE-EMP-0005": { role: "district_manager", status: "active", scope: "district", area: "dist-sample-north" },
+  "SAMPLE-EMP-0002": { role: "assistant_manager", status: "active", scope: "location", area: "loc-103" },
+  "SAMPLE-EMP-0003": { role: "assistant_manager", status: "active", scope: "location", area: "loc-102" },
+  "SAMPLE-EMP-0004": { role: "location_manager", status: "active", scope: "location", area: "loc-103" },
+  "SAMPLE-EMP-0005": { role: "district_manager", status: "active", scope: "district", area: "dist-example-north" },
 };
 
 const accessPreview: AccessPreviewRow[] = directory.map((d) => {

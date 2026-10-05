@@ -136,8 +136,8 @@ describe("where the bytes go", () => {
   it("derives the path server-side, from the template and the digest", async () => {
     const digest = await sha256Hex(minimalPdf());
     expect(digest).toMatch(/^[0-9a-f]{64}$/);
-    const path = buildAssetPath("dpoa", 2, digest, "DPOA final (v2).pdf");
-    expect(path).toBe(`dpoa/v2/${digest.slice(0, 16)}/DPOA-final-v2-.pdf`);
+    const path = buildAssetPath("fixture-corrective", 2, digest, "Notice final (v2).pdf");
+    expect(path).toBe(`fixture-corrective/v2/${digest.slice(0, 16)}/Notice-final-v2-.pdf`);
     // The digest is in the path, so re-uploading identical bytes lands in the
     // same place rather than accumulating near-duplicates.
     expect(path).toContain(digest.slice(0, 16));

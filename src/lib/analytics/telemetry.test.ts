@@ -33,7 +33,7 @@ function captured(level: "info" | "warn") {
 describe("every event is one parseable line", () => {
   it("emits JSON carrying the event name", () => {
     const info = captured("info");
-    logTurnEvent("turn.open.succeeded", { turnId: "t-1", surface: "bed_usage", durationMs: 42 });
+    logTurnEvent("turn.open.succeeded", { turnId: "t-1", surface: "report", durationMs: 42 });
 
     expect(info).toHaveBeenCalledTimes(1);
     const line = String(info.mock.calls[0][0]);
@@ -41,7 +41,7 @@ describe("every event is one parseable line", () => {
     expect(JSON.parse(line)).toMatchObject({
       event: "turn.open.succeeded",
       turnId: "t-1",
-      surface: "bed_usage",
+      surface: "report",
       durationMs: 42,
     });
   });

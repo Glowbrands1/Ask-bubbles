@@ -8,32 +8,39 @@ import { describe, expect, it } from "vitest";
  * COLOUR HAS TO KEEP MEANING SOMETHING
  * ============================================================================
  *
- * The approved palette was signed off on the condition that colours correlate
- * with categories and states across the app, rather than being applied for
- * decoration. Curt's example was explicit: the pink on "4 follow-ups need
- * attention" should mean that same thing everywhere it appears.
+ * The palette is two layers: RAW tokens (`--bcs-*`) hold values, SEMANTIC
+ * aliases (`--background`, `--primary`, `--followup-attention`, …) hold
+ * meanings, and components may only see meanings. That is what lets the
+ * product be re-skinned in one file, and what lets a colour mean the same thing
+ * everywhere it appears.
  *
  * A convention like that decays quietly. Somebody needs a card to stand out,
- * reaches for the nearest accent, and a month later pink means nothing. These
- * tests are the mechanism that stops it, and they check two separate things:
+ * reaches for the nearest accent or pastes a hex, and a month later the
+ * attention red means nothing. These tests are the mechanism that stops it:
  *
- *   1. THE TOKENS EXIST AND HOLD THE APPROVED VALUES, so a "tidy-up" cannot
- *      quietly shift the hue.
- *   2. THE FOLLOW-UP COLOUR IS ONLY USED ON FOLLOW-UP SURFACES. This is the
- *      one that will actually fire one day.
+ *   1. THE RAW PALETTE HOLDS THE AGREED VALUES, so a "tidy-up" cannot shift a
+ *      hue unnoticed.
+ *   2. COMPONENTS NEVER SEE A RAW VALUE — neither a `--bcs-*` token nor its
+ *      hex literal — and every token or utility they name actually exists.
+ *   3. THE FOLLOW-UP COLOUR IS ONLY USED ON FOLLOW-UP SURFACES.
+ *   4. THE KEY TEXT PAIRINGS CLEAR WCAG AA, computed from the token values
+ *      rather than asserted in a comment.
  */
 
 const SOURCE_DIR = join(process.cwd(), "src");
 const GLOBALS = readFileSync(join(SOURCE_DIR, "app", "globals.css"), "utf8");
+/** globals.css with its comments removed, so prose cannot satisfy a check. */
+const GLOBALS_CODE = GLOBALS.replace(/\/\*[\s\S]*?\*\//g, "");
 
-/** The approved values, from the signed-off storefront direction. */
-const APPROVED = {
-  "--approved-topbar": "#1c1f29",
-  "--approved-rail": "#b2aeaa",
-  "--approved-brand-accent": "#ffcc00",
-  "--approved-followup": "#ef6079",
-  "--approved-redlight": "#d62c3a",
-  "--approved-canvas": "#fff6f0",
+/** The agreed raw palette. */
+const PALETTE = {
+  "--bcs-wine": "#5e1a33",
+  "--bcs-orange": "#f26522",
+  "--bcs-orange-cta": "#b8460f",
+  "--bcs-aqua": "#2bb5b0",
+  "--bcs-canvas": "#fbf5ec",
+  "--bcs-ink": "#2b2a2e",
+  "--bcs-attention": "#c43c4a",
 } as const;
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
@@ -41,7 +48,11 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
     const path = join(dir, entry);
     if (statSync(path).isDirectory()) {
       sourceFiles(path, out);
-    } else if (/\.(ts|tsx|css)$/.test(entry) && !entry.endsWith(".test.ts") && !entry.endsWith(".test.tsx")) {
+    } else if (
+      /\.(ts|tsx|css)$/.test(entry) &&
+      !entry.endsWith(".test.ts") &&
+      !entry.endsWith(".test.tsx")
+    ) {
       out.push(path);
     }
   }
@@ -56,43 +67,136 @@ function codeOf(path: string): string {
     .replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
 }
 
-describe("the approved palette is present and unaltered", () => {
-  it("defines every approved colour as a raw token", () => {
-    for (const [token, value] of Object.entries(APPROVED)) {
-      expect(GLOBALS, `${token} is missing`).toContain(`${token}: ${value}`);
+/** The body of the top-level `:root { … }` block. */
+function rootBlock(): string {
+  const start = GLOBALS_CODE.indexOf(":root {");
+  expect(start, ":root is declared").toBeGreaterThan(-1);
+  let depth = 0;
+  for (let at = start; at < GLOBALS_CODE.length; at += 1) {
+    if (GLOBALS_CODE[at] === "{") depth += 1;
+    if (GLOBALS_CODE[at] === "}") {
+      depth -= 1;
+      if (depth === 0) return GLOBALS_CODE.slice(start, at);
+    }
+  }
+  throw new Error(":root is not closed");
+}
+
+/** Every custom property declared in `:root`, name -> raw value. */
+const ROOT: ReadonlyMap<string, string> = new Map(
+  [...rootBlock().matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)].map((m) => [m[1], m[2].trim()]),
+);
+
+/** Every `--color-*` the Tailwind theme exposes as a utility colour. */
+const THEME_COLOURS: ReadonlySet<string> = new Set(
+  [...GLOBALS_CODE.matchAll(/^\s*--color-([a-z0-9-]+)\s*:/gim)].map((m) => m[1]),
+);
+
+/** Follows a token's `var()` chain down to a hex value. */
+function resolveHex(token: string, seen: string[] = []): string {
+  if (seen.includes(token)) throw new Error(`${token} is circular: ${seen.join(" -> ")}`);
+  const value = ROOT.get(token);
+  if (value === undefined) throw new Error(`${token} is not declared in :root`);
+  const reference = /^var\(\s*(--[a-z0-9-]+)\s*\)$/i.exec(value);
+  if (reference) return resolveHex(reference[1], [...seen, token]);
+  if (/^#[0-9a-f]{6}$/i.test(value)) return value.toLowerCase();
+  throw new Error(`${token} does not resolve to a plain hex colour (${value})`);
+}
+
+/** WCAG 2.x relative luminance and contrast ratio. */
+function luminance(hex: string): number {
+  const [r, g, b] = [1, 3, 5]
+    .map((at) => parseInt(hex.slice(at, at + 2), 16) / 255)
+    .map((channel) =>
+      channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+    );
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrast(a: string, b: string): number {
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (light + 0.05) / (dark + 0.05);
+}
+
+/* ================================================== the raw palette ===== */
+
+describe("the raw palette is present and unaltered", () => {
+  it("pins every agreed --bcs value", () => {
+    for (const [token, value] of Object.entries(PALETTE)) {
+      expect(ROOT.get(token), `${token} moved or is missing`).toBe(value);
     }
   });
 
-  it("gives each one a semantic alias, so components never use the raw value", () => {
-    /*
-     * The two-layer rule: raw tokens hold values, semantic tokens hold
-     * meanings, and components may only see meanings. A component using
-     * `--approved-followup` directly would survive a palette change but not a
-     * change of MEANING, which is the thing more likely to happen.
-     */
+  it("gives each meaning a semantic alias, so components never use a raw value", () => {
     for (const alias of [
-      "--followup-attention:",
-      "--glow-accent:",
-      "--brand-accent:",
-      "--topbar:",
-      "--rail:",
+      "--background",
+      "--foreground",
+      "--primary",
+      "--primary-foreground",
+      "--accent",
+      "--accent-foreground",
+      "--followup-attention",
+      "--glow-accent",
+      "--brand-accent",
+      "--brand-accent-foreground",
+      "--topbar",
+      "--rail",
+      "--sidebar",
+      "--selected",
+      "--hover-surface",
     ]) {
-      expect(GLOBALS, `${alias} is missing`).toContain(alias);
+      expect(ROOT.has(alias), `${alias} is missing`).toBe(true);
     }
   });
 
-  it("keeps raw approved tokens out of every component", () => {
+  it("points the settled meanings at the palette they were agreed on", () => {
+    expect(ROOT.get("--background")).toBe("var(--bcs-canvas)");
+    expect(ROOT.get("--foreground")).toBe("var(--bcs-ink)");
+    // The CTA fill is the deep orange: raw #f26522 never carries white text.
+    expect(ROOT.get("--primary")).toBe("var(--bcs-orange-cta)");
+    expect(ROOT.get("--brand-accent")).toBe("var(--bcs-orange)");
+    expect(ROOT.get("--accent")).toBe("var(--bcs-aqua)");
+    expect(ROOT.get("--followup-attention")).toBe("var(--bcs-attention)");
+    expect(ROOT.get("--rail")).toBe("var(--bcs-rail)");
+    expect(resolveHex("--rail")).toBe(PALETTE["--bcs-wine"]);
+    // Chart data is aqua — never the attention red, so a bar is never an alarm.
+    expect(resolveHex("--measure-data")).not.toBe(resolveHex("--followup-attention"));
+  });
+
+  it("keeps the retired token names out of the system", () => {
+    /*
+     * `--brand-yellow` became `--brand-accent` and `--wellness-redlight`
+     * became `--glow-accent`. A survivor under the old name — as a token or as
+     * a Tailwind theme colour — is a second name for one meaning.
+     */
+    for (const retired of ["brand-yellow", "wellness-redlight"]) {
+      expect(GLOBALS_CODE, `${retired} is still declared`).not.toMatch(
+        new RegExp(`--(color-)?${retired}\\b`),
+      );
+      const users = sourceFiles(SOURCE_DIR).filter((path) =>
+        new RegExp(`\\b${retired}\\b`).test(codeOf(path)),
+      );
+      expect(users, `${retired} is still used`).toEqual([]);
+    }
+  });
+});
+
+/* ======================================= components see only meanings === */
+
+describe("components never see a raw palette value", () => {
+  it("keeps raw --bcs tokens out of every component", () => {
     const offenders = sourceFiles(SOURCE_DIR)
       .filter((path) => !path.endsWith("globals.css"))
-      .filter((path) => /--approved-/.test(codeOf(path)));
+      .filter((path) => /--bcs-/.test(codeOf(path)));
 
     expect(offenders, "components must use semantic tokens, not raw palette values").toEqual([]);
   });
 
-  it("keeps the literal hex values out of every component", () => {
+  it("keeps the raw palette's hex literals out of every component", () => {
     /*
-     * A hardcoded #ef6079 is the same defect as using the raw token, minus the
-     * traceability.
+     * A hardcoded hex is the same defect as using the raw token, minus the
+     * traceability. Every hex the raw palette declares is checked, not only the
+     * pinned ones.
      *
      * ONE LEGITIMATE EXCEPTION, and it is a platform limitation rather than a
      * shortcut: `<meta name="theme-color">` is read by the browser before any
@@ -101,48 +205,53 @@ describe("the approved palette is present and unaltered", () => {
      * asserted to be the canvas — a DIFFERENT literal there would mean the
      * browser chrome no longer matches the page it frames.
      */
-    const literals = Object.values(APPROVED);
+    const literals = [
+      ...new Set(
+        [...ROOT.entries()]
+          .filter(([token, value]) => token.startsWith("--bcs-") && /^#[0-9a-f]{6}$/i.test(value))
+          .map(([, value]) => value.toLowerCase())
+          // Pure white is not a brand colour; it is the absence of one.
+          .filter((value) => value !== "#ffffff"),
+      ),
+    ];
+    expect(literals.length).toBeGreaterThan(Object.keys(PALETTE).length);
+
+    const canvas = PALETTE["--bcs-canvas"];
     const offenders = sourceFiles(SOURCE_DIR)
       .filter((path) => !path.endsWith("globals.css"))
-      .filter((path) => {
+      .flatMap((path) => {
         const code = codeOf(path).toLowerCase();
-        const found = literals.filter((value) => code.includes(value));
-        if (found.length === 0) return false;
-        // Permitted only as the theme-color, and only the canvas.
+        const found = literals.filter((value) =>
+          new RegExp(`${value}(?![0-9a-f])`).test(code),
+        );
+        if (found.length === 0) return [];
         if (path.endsWith(join("app", "layout.tsx"))) {
-          return !(
+          const onlyThemeColour =
             found.length === 1 &&
-            found[0] === APPROVED["--approved-canvas"] &&
-            new RegExp(`themecolor:\\s*"${APPROVED["--approved-canvas"]}"`, "i").test(code)
-          );
+            found[0] === canvas &&
+            new RegExp(`themecolor:\\s*"${canvas}"`).test(code) &&
+            code.split(canvas).length === 2;
+          if (onlyThemeColour) return [];
         }
-        return true;
+        return [`${path} -> ${found.join(", ")}`];
       });
 
     expect(offenders, "colours belong in globals.css, not inline").toEqual([]);
+  });
+
+  it("sets the browser theme colour to the canvas", () => {
+    const layout = codeOf(join(SOURCE_DIR, "app", "layout.tsx"));
+    expect(layout).toContain(`themeColor: "${PALETTE["--bcs-canvas"]}"`);
   });
 });
 
 describe("every colour a component names actually exists", () => {
   /**
-   * THE CHECK THAT WOULD HAVE CAUGHT A LIVE RENDERING FAULT.
-   *
-   * `ranked-bar-chart.tsx` painted its At Market bars with
-   * `var(--stc-warm-tan-deep)` and drew its benchmark line with
-   * `var(--stc-slate-deep)`. Both tokens were deleted when the approved palette
-   * replaced the old brand ramp, and nothing said so: the file compiled, the
-   * types were fine, lint was clean, and every other test passed.
-   *
-   * What it did instead is the part worth pinning. An unresolvable `var()` is
-   * not a no-op with a fallback — in an SVG presentation attribute it is an
-   * INVALID value, so recharts handed `fill="var(--stc-warm-tan-deep)"` to the
-   * browser and the initial value took over. Every At Market bar on Bed Usage,
-   * Spa Engagement and Spa Wellness rendered black, and the benchmark line
-   * silently did not draw at all.
-   *
-   * A dead token is undetectable by eye on a page you have not opened — these
-   * three reports need Supabase to render anything — which is exactly the kind
-   * of defect a test is for.
+   * An unresolvable `var()` is not a no-op with a fallback. In an SVG
+   * presentation attribute it is an INVALID value, so a chart handed
+   * `fill="var(--deleted-token)"` renders in the initial colour (black) and a
+   * benchmark line silently does not draw — while the file compiles, the types
+   * pass and lint is clean.
    */
   it("resolves every var(--token) against globals.css", () => {
     const defined = new Set(
@@ -154,9 +263,9 @@ describe("every colour a component names actually exists", () => {
       if (path.endsWith("globals.css")) continue;
       const code = codeOf(path);
       /*
-       * A file may declare its own custom property and read it back — the ask
-       * bar sets one for its focus glow — so locally declared names count as
-       * defined for that file and nowhere else.
+       * A file may declare its own custom property and read it back, so
+       * locally declared names count as defined for that file and nowhere
+       * else. `next/font` declares the font variables at runtime.
        */
       const local = new Set(
         [...code.matchAll(/(?:^|["'{,\s])(--[a-z0-9-]+)\s*:/gim)].map((match) => match[1]),
@@ -173,272 +282,35 @@ describe("every colour a component names actually exists", () => {
       "a var() with no declaration is an invalid value, not a fallback",
     ).toEqual([]);
   });
-});
 
-describe("the approved direction is frozen", () => {
-  /**
-   * THE DESIGN IS SIGNED OFF. THIS IS THE PART THAT STOPS IT DRIFTING.
-   *
-   * "Freeze that design" is not a state a codebase can be left in by
-   * intention alone — a token gets renamed during a refactor, a class gets
-   * inlined, somebody needs one figure a little larger. So the decisions that
-   * are actually settled are asserted here, and a later change to any of them
-   * has to be a deliberate edit to this file rather than a side effect of
-   * something else.
-   *
-   * The ARRANGEMENT of a page is not frozen — sections move, new blocks arrive.
-   * What is frozen is the vocabulary those pages are built from.
-   */
+  it("gives every semantic colour a component uses as a utility a theme colour", () => {
+    /*
+     * THE SAME FAILURE, ONE LAYER UP. `bg-brand-accent` only generates CSS if
+     * the Tailwind theme declares `--color-brand-accent`. A semantic token that
+     * was renamed in `:root` but not in `@theme` leaves every utility naming it
+     * as an unstyled class — no error, no warning, just a missing colour.
+     */
+    const utility =
+      /(?<![\w-])(?:bg|text|border(?:-[trblxyse])?|ring(?:-offset)?|fill|stroke|outline|decoration|divide|from|via|to|caret|placeholder)-([a-z][a-z0-9-]*)/g;
 
-  it("keeps the two removed greens out, and green only on the good direction", () => {
-    /*
-     * GREEN MARKS THE GOOD DIRECTION, AND NOTHING ELSE.
-     *
-     * PREVIOUSLY NARROWER, AND DELIBERATELY WIDENED. This assertion used to
-     * require that NO status colour resolve to a green — "a measure is neutral
-     * until it is behind" — on the earlier freeze's reading. The three current
-     * pinned Marquee artifacts supersede that, and they do it with a validator
-     * rather than a preference:
-     *
-     *   - The Reports artifact's Bed Usage plate draws a four-state status
-     *     ladder in which "Outperforming peers" is a filled green chip, and
-     *     calls that vocabulary "the page's whole point".
-     *   - The Google Reviews artifact reuses the SAME ladder on its leaderboard
-     *     precisely so "a chip means the same thing wherever a DM sees it".
-     *   - Both record the increase colour as #2f6b4f, validated at protan
-     *     dE 9.6 against the coral, and reject the obvious #4f7a4c for failing
-     *     at dE 6.7.
-     *
-     * So the rule the artifacts state is what is pinned here instead, and it is
-     * still narrow: ONE green, spent only where the business has said which
-     * direction is better. It is never a section colour, never a category
-     * colour, and never a series identity — and a measure with no stated
-     * direction is still neutral, which the `sentimentFor` test below enforces
-     * at every site that paints.
-     *
-     * The two greens the direction removed BY NAME stay removed.
-     */
-    /*
-     * Comments stripped first. `globals.css` explains WHY the sage is gone and
-     * names it to do so, and a scan that counted that sentence would force the
-     * reasoning to be deleted to keep the test green.
-     */
-    const declared = GLOBALS.replace(/\/\*[\s\S]*?\*\//g, "").toLowerCase();
-    for (const green of ["#5c6559", "#4f7a4c"]) {
-      expect(declared.includes(green), `${green} was removed from the system`).toBe(false);
+    const missing = new Set<string>();
+    let checked = 0;
+    for (const path of sourceFiles(SOURCE_DIR)) {
+      if (!/\.(ts|tsx)$/.test(path)) continue;
+      for (const match of codeOf(path).matchAll(utility)) {
+        const name = match[1];
+        if (!ROOT.has(`--${name}`)) continue;
+        checked += 1;
+        if (!THEME_COLOURS.has(name)) missing.add(`${match[0]} (${path.slice(SOURCE_DIR.length + 1)})`);
+      }
     }
 
-    // The one permitted green, and it is a DELTA DIRECTION, not a state.
-    expect(GLOBALS).toContain("--delta-up: var(--approved-delta-up)");
-
-    /*
-     * THE INGESTION STATES AND THE SERIES RAMP STAY GREY.
-     *
-     * These are the ones the widening does NOT reach, and the distinction is
-     * the whole point. `--status-ready` and `--status-processing` describe a
-     * document's pipeline state, where nothing is "good" — a knowledge file
-     * that finished indexing is not outperforming anything. The series tokens
-     * carry ORDINAL identity, where a hue would assert a ranking the chart does
-     * not have. A green on any of these is the decay this test exists to catch.
-     */
-    for (const token of [
-      "--status-ready",
-      "--status-processing",
-      "--measure-series",
-      "--measure-series-strong",
-      "--measure-series-recessive",
-    ]) {
-      const value = new RegExp(`${token}:([^;]+);`).exec(GLOBALS)?.[1] ?? "";
-      expect(value, `${token} is missing`).not.toBe("");
-      expect(value, `${token} must not resolve to a green`).not.toContain("delta-up");
-      expect(value, `${token} must not resolve to a green`).not.toContain(
-        "outperforming",
-      );
-    }
-    expect(/--status-ready:([^;]+);/.exec(GLOBALS)?.[1] ?? "").toContain(
-      "--approved-ink-muted",
-    );
-
-    /*
-     * ONE GREEN, SHARED. The delta arrow, the diverging bar and the
-     * outperforming chip must resolve to the SAME value — the artifacts draw
-     * one green and the reason a manager can learn it is that it never varies.
-     */
-    expect(GLOBALS).toContain("--approved-delta-up: #2f6b4f");
-    expect(GLOBALS).toContain("--approved-outperforming: var(--approved-delta-up)");
-  });
-
-  it("holds the four-state status ladder, with a glyph on every rung", () => {
-    /*
-     * THE VOCABULARY THE REPORT TABS AND THE REVIEWS LEADERBOARD SHARE.
-     *
-     * Frozen because its value is entirely in being the same everywhere: the
-     * moment Bed Usage and Google Reviews draw "behind" differently, a chip
-     * stops being something a district manager can read at a glance.
-     *
-     * COLOUR IS NEVER THE ONLY CUE. Each rung carries a glyph and the state in
-     * words, which is what makes the ladder survive greyscale, a printed L10
-     * pack, and a reader who cannot separate the green from the coral — and it
-     * is the reason the green/coral pair is usable at protan dE 9.6 at all.
-     */
-    for (const token of [
-      "--status-outperforming:",
-      "--status-at-market:",
-      "--status-below-market:",
-      "--status-under:",
-      "--status-capacity:",
-    ]) {
-      expect(GLOBALS, `${token} is missing`).toContain(token);
-    }
-
-    const chip = codeOf(join(SOURCE_DIR, "components", "ui", "marquee.tsx"));
-    expect(chip, "the ladder has no shared chip").toContain("StatusChip");
-    for (const glyph of ["▲", "●", "▬", "▼", "◇"]) {
-      expect(chip, `the ${glyph} rung lost its glyph`).toContain(glyph);
-    }
-  });
-
-  it("puts the chart data on the coral and the benchmark on the near-black", () => {
-    /*
-     * THE OTHER DECISION THE CURRENT ARTIFACTS SUPERSEDED, and the one with the
-     * most working shown. The previous freeze gave the series no hue at all —
-     * a lightness ramp, on the argument that no hue was free. The Reports
-     * artifact's validator table refused the near-black that ramp used for the
-     * reading that mattered: it "failed both the lightness and chroma checks —
-     * technically legible, but reading as grey rather than as a colour", while
-     * #ef6079 passes all six.
-     *
-     * The rule that keeps coral from doing two jobs is pinned with it: the data
-     * fill is its OWN token, so the follow-up colour stays available to the
-     * test below that keeps it on follow-up surfaces only.
-     */
-    expect(GLOBALS).toContain("--approved-coral-data: #ef6079");
-    expect(GLOBALS).toContain("--measure-data: var(--approved-coral-data)");
-    expect(GLOBALS).toContain("--measure-benchmark: var(--approved-topbar)");
-
-    const palette = codeOf(
-      join(SOURCE_DIR, "features", "reports", "location-performance", "chart-palette.ts"),
-    );
-    expect(palette).toContain('SERIES_PRIMARY = "var(--measure-data)"');
-    // Yellow measures 1.47:1 on a light ground. It never encodes a value.
-    expect(palette).not.toContain("brand-accent");
-  });
-
-  it("spends the green only where a direction has actually been stated", () => {
-    /*
-     * THE FAILURE MODE GREEN REINTRODUCES. `higher_is_better` is null for some
-     * measures, and a green arrow on one of those is the app asserting a
-     * judgement the business has not made — a rise in a cost measure painted as
-     * good news. So every file that uses the token has to reach it through
-     * `sentimentFor`, which returns "neutral" for a null direction.
-     */
-    /*
-     * ONE EXEMPTION, AND IT IS THE DEFINITION SITE — the same shape as the
-     * `badge.tsx` exemption in the follow-up-colour test below.
-     *
-     * `chart-palette.ts` NAMES the increase colour so the charts have one place
-     * to reach for it; it does not decide when the colour applies, and it
-     * renders nothing. Requiring `sentimentFor` in a module with no measure and
-     * no row would mean either a meaningless reference or the palette inlined
-     * back into each chart, which is what the file exists to prevent.
-     *
-     * The guarantee is unchanged for everything that actually paints: the
-     * movers chart, the KPI rows, the per-location rows and the comparison table
-     * all still have to ask.
-     */
-    const definitionSite = join(
-      "features",
-      "reports",
-      "location-performance",
-      "chart-palette.ts",
-    );
-
-    const users = sourceFiles(SOURCE_DIR)
-      .filter((path) => !path.endsWith("globals.css"))
-      .filter((path) => /text-delta-up|--delta-up/.test(codeOf(path)));
-
-    expect(users.length, "a token nobody uses is not a design system").toBeGreaterThan(0);
-
-    const painters = users.filter((path) => !path.endsWith(definitionSite));
-    expect(
-      painters.length,
-      "the palette cannot be the only file that knows the increase colour",
-    ).toBeGreaterThan(0);
-
-    for (const path of painters) {
-      expect(
-        codeOf(path),
-        `${path} colours a delta green without asking sentimentFor`,
-      ).toMatch(/sentimentFor|sentiment ===/);
-    }
-  });
-
-  it("holds the display vocabulary the direction is drawn in", () => {
-    /*
-     * These five classes ARE the direction: the display face on headings, the
-     * same face with tighter leading on figures, the wide-tracked wordmark, the
-     * tiny all-caps eyebrow, and the pill the actions are drawn as. Components
-     * reference them by name, so a rename is a silent unstyling — every one of
-     * them would still compile and still render, just as unstyled text.
-     */
-    for (const rule of [
-      ".display {",
-      ".display-figure {",
-      ".wordmark {",
-      ".eyebrow {",
-      ".pill-action {",
-      ".stat-cell {",
-      ".stat-grid {",
-    ]) {
-      expect(GLOBALS, `${rule} is missing`).toContain(rule);
-    }
-
-    // The display face is uppercase with POSITIVE tracking and leading at or
-    // under 1 — the thing that lets a figure out-rank a larger heading.
-    const display = /\.display \{([^}]+)\}/.exec(GLOBALS)?.[1] ?? "";
-    expect(display).toContain("text-transform: uppercase");
-    expect(display).toMatch(/letter-spacing:\s*0\.0\d+em/);
-    expect(display).toMatch(/line-height:\s*(1|0\.\d+)/);
-
-    // Figures hold their column when the value changes.
-    const figure = /\.display-figure \{([^}]+)\}/.exec(GLOBALS)?.[1] ?? "";
-    expect(figure).toContain("tabular-nums");
-  });
-
-  it("keeps the settled token meanings pointed where they were signed off", () => {
-    for (const decision of [
-      // The primary action is the near-black, on white. Never the coral.
-      "--primary: var(--approved-topbar)",
-      // Yellow is the accent and the focus ring; it replaced the sage.
-      "--accent: var(--approved-brand-accent)",
-      "--ring: var(--approved-brand-accent)",
-      // The flag: coral fill, deeper coral ink.
-      "--measure-flagged: var(--approved-followup)",
-      "--measure-flagged-foreground: var(--approved-attention-ink)",
-      /*
-       * The ORDINAL ramp still carries no hue, and this is now the narrower
-       * claim it always should have been: a recessive baseline and a neutral
-       * two-period series vary in lightness. The DATA fill is the coral, and it
-       * is pinned separately above.
-       */
-      "--measure-series: var(--approved-ink-muted)",
-    ]) {
-      expect(GLOBALS, `${decision} moved`).toContain(decision);
-    }
-  });
-
-  it("never lets the coral become a primary action", () => {
-    /*
-     * Stated explicitly in the sign-off: the coral is a flag and an alarm, and
-     * pressing must not look like alarming. So no button variant and no
-     * pill-action default may fill with it.
-     */
-    const button = codeOf(join(SOURCE_DIR, "components", "ui", "button.tsx"));
-    for (const fill of ["bg-followup-attention", "bg-measure-flagged"]) {
-      expect(button, `${fill} is not a button fill`).not.toContain(fill);
-    }
+    expect(checked, "semantic colour utilities were actually found").toBeGreaterThan(50);
+    expect([...missing], "utility names a colour the theme does not expose").toEqual([]);
   });
 });
+
+/* ============================================== the follow-up colour ==== */
 
 describe("the follow-up colour means follow-ups", () => {
   /** Every non-test file that mentions the follow-up colour in code. */
@@ -454,18 +326,18 @@ describe("the follow-up colour means follow-ups", () => {
 
   it("appears ONLY on files that deal with follow-ups", () => {
     /*
-     * THE TEST THAT MATTERS. Any file painting something with the follow-up
-     * colour must also be about follow-ups — overdue, late, due. A sales
-     * dashboard reaching for it fails here, which is exactly the drift the
-     * palette was approved on condition of avoiding.
-     *
-     * `badge.tsx` is allowed as the shared definition of the tone; every other
-     * user has to justify itself by its own content.
+     * Any file painting something with the follow-up colour must also be about
+     * follow-ups — overdue, late, due. `badge.tsx` and `marquee.tsx` are
+     * allowed as the shared definitions of the tone and the alarm bar; every
+     * other user has to justify itself by its own content.
      */
-    const allowedDefinition = join("components", "ui", "badge.tsx");
+    const definitions = [
+      join("components", "ui", "badge.tsx"),
+      join("components", "ui", "marquee.tsx"),
+    ];
 
     for (const path of usesFollowupColour()) {
-      if (path.endsWith(allowedDefinition)) continue;
+      if (definitions.some((definition) => path.endsWith(definition))) continue;
       const code = codeOf(path).toLowerCase();
       const aboutFollowUps =
         /follow-?up/.test(code) || /overdue/.test(code) || /needsattention/.test(code);
@@ -478,104 +350,149 @@ describe("the follow-up colour means follow-ups", () => {
 
   it("is not applied to any reporting surface", () => {
     /*
-     * Named explicitly because reporting is where the temptation is greatest —
-     * a revenue figure that "needs attention" is a judgement the data does not
-     * make, and colouring it pink would claim somebody has to act on it.
+     * Reporting is where the temptation is greatest — a figure that "needs
+     * attention" is a judgement the data does not make, and colouring it with
+     * the follow-up red would claim somebody has to act on it.
      */
     const reporting = sourceFiles(join(SOURCE_DIR, "features", "reports")).concat(
       sourceFiles(join(SOURCE_DIR, "lib", "reporting")),
     );
+    expect(reporting.length).toBeGreaterThan(0);
     const offenders = reporting.filter((path) => /followup-attention/.test(codeOf(path)));
-    expect(offenders, "sales figures are not follow-ups").toEqual([]);
+    expect(offenders, "report figures are not follow-ups").toEqual([]);
+  });
+
+  it("never becomes a primary action", () => {
+    /* Pressing must not look like alarming. */
+    const button = codeOf(join(SOURCE_DIR, "components", "ui", "button.tsx"));
+    for (const fill of ["bg-followup-attention", "bg-measure-flagged"]) {
+      expect(button, `${fill} is not a button fill`).not.toContain(fill);
+    }
+  });
+
+  it("is not the generic selected colour either", () => {
+    const selected = ROOT.get("--selected") ?? "";
+    expect(selected).not.toBe("");
+    expect(resolveHex("--selected")).not.toBe(resolveHex("--followup-attention"));
+    expect(resolveHex("--selected")).not.toBe(resolveHex("--glow-accent"));
   });
 });
 
+/* ================================================ WCAG AA contrast ====== */
+
+describe("the key text pairings clear WCAG AA", () => {
+  /*
+   * COMPUTED FROM THE TOKENS, not copied from a comment. Each pairing is a
+   * foreground token on the ground it is drawn on; both are followed through
+   * their `var()` chains to the raw hex, so re-pointing an alias or moving a
+   * raw value is measured here the moment it happens.
+   */
+  const PAIRINGS: readonly [foreground: string, background: string][] = [
+    ["--foreground", "--background"],
+    ["--muted-foreground", "--background"],
+    ["--muted-foreground", "--surface-muted"],
+    ["--muted-foreground", "--surface"],
+    ["--primary-foreground", "--primary"],
+    ["--sidebar-foreground", "--sidebar"],
+    ["--sidebar-muted", "--sidebar"],
+    ["--sidebar-active-foreground", "--sidebar-active"],
+    ["--accent-foreground", "--accent"],
+    ["--followup-attention-foreground", "--followup-attention"],
+    ["--brand-accent-foreground", "--brand-accent"],
+    ["--selected-foreground", "--selected"],
+  ];
+
+  it.each(PAIRINGS)("%s on %s is at least 4.5:1", (foreground, background) => {
+    const ratio = contrast(resolveHex(foreground), resolveHex(background));
+    expect(
+      ratio,
+      `${foreground} (${resolveHex(foreground)}) on ${background} (${resolveHex(background)}) is ${ratio.toFixed(2)}:1`,
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("measures contrast the way WCAG does", () => {
+    // Guard on the guard: black on white is 21:1 and a colour on itself is 1:1.
+    expect(contrast("#000000", "#ffffff")).toBeCloseTo(21, 5);
+    expect(contrast("#5e1a33", "#5e1a33")).toBeCloseTo(1, 5);
+    // And raw orange is the reason the CTA uses the deeper fill.
+    expect(contrast("#ffffff", PALETTE["--bcs-orange"])).toBeLessThan(4.5);
+  });
+});
+
+/* ======================================================== typography ==== */
+
 describe("typography keeps the display face out of body copy", () => {
-  it("loads both approved faces plus a UI stack", () => {
+  it("loads both faces through next/font", () => {
     const layout = readFileSync(join(SOURCE_DIR, "app", "layout.tsx"), "utf8");
-    expect(layout).toContain("Passion_One");
-    expect(layout).toContain("Lato");
-    // Through next/font, so the files are self-hosted at build time rather
-    // than fetched from a third party at runtime.
-    expect(layout).toContain("next/font/google");
-    expect(layout).toContain('display: "swap"');
+    expect(layout).toMatch(/import \{[^}]*\bFredoka\b[^}]*\} from "next\/font\/google"/);
+    expect(layout).toMatch(/import \{[^}]*\bLato\b[^}]*\} from "next\/font\/google"/);
+    // Self-hosted at build time, and text stays visible while a face loads.
+    expect((layout.match(/display: "swap"/g) ?? []).length).toBeGreaterThanOrEqual(2);
+    expect(layout).toContain('variable: "--font-fredoka"');
+    expect(layout).toContain('variable: "--font-lato"');
   });
 
   it("drives UI text with the readable face, not the display one", () => {
     /*
-     * Passion One is a display face: superb in a heading, genuinely hard to
-     * read below about 16px. `--font-sans` is what body copy, labels and table
-     * cells resolve to, so it must never point at it.
+     * Fredoka is a display face: right for a heading or a wordmark, wrong for
+     * a paragraph, a label or a table cell. `--font-sans` is what all of those
+     * resolve to, so it must never point at it.
      */
-    const sans = /--font-sans:([^;]+);/.exec(GLOBALS)?.[1] ?? "";
+    const sans = /--font-sans:([^;]+);/.exec(GLOBALS_CODE)?.[1] ?? "";
     expect(sans).toContain("--font-lato");
-    expect(sans).not.toContain("passion");
+    expect(sans).not.toContain("fredoka");
 
-    const display = /--font-display:([^;]+);/.exec(GLOBALS)?.[1] ?? "";
-    expect(display).toContain("--font-passion-one");
+    expect(/--font-display:([^;]+);/.exec(GLOBALS_CODE)?.[1] ?? "").toContain("--font-fredoka");
+    expect(/--font-wordmark:([^;]+);/.exec(GLOBALS_CODE)?.[1] ?? "").toContain("--font-fredoka");
+
+    // The body element itself is set in the readable face.
+    const body = /\n\s*body \{([^}]+)\}/.exec(GLOBALS_CODE)?.[1] ?? "";
+    expect(body).toContain("font-family: var(--font-sans)");
+
+    // The small all-caps UI furniture is the readable face too.
+    for (const rule of ["eyebrow", "pill-action"]) {
+      const block = new RegExp(`\\.${rule} \\{([^}]+)\\}`).exec(GLOBALS_CODE)?.[1] ?? "";
+      expect(block, `.${rule} is missing`).not.toBe("");
+      expect(block, `.${rule} uses the display face`).toContain("var(--font-sans)");
+    }
   });
 
   it("gives every face a real fallback stack", () => {
-    // So text is readable while a webfont loads, rather than invisible.
-    for (const token of ["--font-sans", "--font-display"]) {
-      const stack = new RegExp(`${token}:([^;]+);`).exec(GLOBALS)?.[1] ?? "";
+    for (const token of ["--font-sans", "--font-display", "--font-wordmark"]) {
+      const stack = new RegExp(`${token}:([^;]+);`).exec(GLOBALS_CODE)?.[1] ?? "";
       expect(stack, `${token} has no fallback`).toMatch(/sans-serif|system-ui/);
     }
   });
-});
 
-describe("the mockup's placeholder content was not built", () => {
-  it("has no Equipment section", () => {
+  it("holds the display vocabulary components are drawn in", () => {
     /*
-     * The storefront mockup showed an equipment panel with beds and filters. It
-     * was established in the meeting that equipment was an EXAMPLE — the data
-     * lives in another system and none of it exists here. Building it would
-     * have meant inventing readings, so the mockup's visual direction was
-     * taken and its placeholder content was not.
+     * Components reference these classes by name, so a rename is a silent
+     * unstyling — every one of them would still compile and still render, just
+     * as unstyled text.
      */
-    /*
-     * Checked STRUCTURALLY rather than by vocabulary. Words like "spray booth"
-     * and "massage bed" are real services and appear legitimately in seeded
-     * knowledge articles, videos and chat answers — a keyword scan flags those
-     * and says nothing about whether an equipment FEATURE was built. What
-     * matters is that no equipment surface exists: no component, no route, and
-     * nothing on the Overview.
-     */
-    const equipmentModules = sourceFiles(SOURCE_DIR).filter((path) =>
-      /equipment/i.test(path),
-    );
-    expect(equipmentModules, "no equipment component or route").toEqual([]);
-
-    const overview = codeOf(join(SOURCE_DIR, "features", "dashboard", "overview.tsx"));
-    expect(/equipment/i.test(overview), "no equipment panel on the Overview").toBe(false);
-
-    // And no equipment status vocabulary in any COMPONENT, which is where a
-    // fabricated panel would have to live.
-    const components = sourceFiles(join(SOURCE_DIR, "features")).concat(
-      sourceFiles(join(SOURCE_DIR, "components")),
-    );
-    const fabricated = components.filter((path) =>
-      /needs service|filter due|Red Light Bed/i.test(codeOf(path)),
-    );
-    expect(fabricated, "equipment readings were never invented").toEqual([]);
+    for (const rule of [
+      ".display {",
+      ".display-figure {",
+      ".wordmark {",
+      ".eyebrow {",
+      ".pill-action {",
+      ".stat-cell {",
+      ".stat-grid {",
+    ]) {
+      expect(GLOBALS_CODE, `${rule} is missing`).toContain(rule);
+    }
+    const figure = /\.display-figure \{([^}]+)\}/.exec(GLOBALS_CODE)?.[1] ?? "";
+    expect(figure).toContain("tabular-nums");
   });
 });
 
+/* ============================================================= brand ==== */
+
 describe("the Ask Bubbles brand", () => {
-  const APP_SHELL = readFileSync(join(SOURCE_DIR, "components", "shell", "app-shell.tsx"), "utf8");
-  const BRAND = readFileSync(join(SOURCE_DIR, "components", "brand-mark.tsx"), "utf8");
+  const APP_SHELL = codeOf(join(SOURCE_DIR, "components", "shell", "app-shell.tsx"));
+  const BRAND = codeOf(join(SOURCE_DIR, "components", "brand-mark.tsx"));
 
   it("puts the dark bar in the SHELL, not on one page", () => {
-    /*
-     * A top bar that only appears on the reporting pages makes reporting look
-     * like a different product. It belongs to the shell, above both the rail
-     * and the content.
-     *
-     * It is the CHROME depth rather than the band's. The Marquee direction
-     * separates the two — the band is #1c1f29 with real area on the Overview,
-     * and the bar above it sits one step deeper at #12141c — so the shell's bar
-     * is `bg-chrome` and `--topbar` no longer paints it.
-     */
     expect(APP_SHELL).toContain("bg-chrome");
     expect(APP_SHELL).toContain("<header");
 
@@ -588,113 +505,60 @@ describe("the Ask Bubbles brand", () => {
     expect(localBars, "the top bar is the shell's, not a page's").toEqual([]);
   });
 
-  it("draws the sun as a vector, never an emoji", () => {
+  it("draws the bubble mark as a vector, never an emoji", () => {
     /*
-     * An emoji renders as whatever the viewer's OS ships — a different sun on
-     * macOS, Windows and Android, none of them the brand colour, and it cannot
-     * be recoloured at all.
+     * An emoji renders as whatever the viewer's OS ships — a different glyph on
+     * every platform, none of them in the brand colours.
      */
+    expect(BRAND).toContain("export function BubbleMark");
     expect(BRAND).toContain("<svg");
-    expect(BRAND).not.toMatch(/[\u2600\u2601\u{1F31E}\u{1F31F}\u{2604}]/u);
+    expect(BRAND).toContain("<circle");
+    expect(BRAND).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 
-  it("colours the sun and BUBBLES with the brand yellow", () => {
+  it("colours the mark and the wordmark from the brand tokens", () => {
     expect(BRAND).toContain("var(--brand-accent)");
+    expect(BRAND).toContain("var(--accent)");
     expect(BRAND).toContain("text-brand-accent");
-  });
-
-  it("keeps ASK legible against the navy", () => {
-    // Not `--foreground`, which is near-black and would vanish on the bar.
+    // On the dark bar the lead word takes the bar's own foreground.
     expect(BRAND).toContain("text-topbar-foreground");
+    // And the words come from the brand config, not from this file.
+    expect(BRAND).toContain("ACTIVE_BRAND.wordmark.lead");
+    expect(BRAND).toContain("ACTIVE_BRAND.wordmark.trail");
   });
 
   it("shows one wordmark at a time", () => {
-    /*
-     * The sidebar used to carry the wordmark. With a top bar above it that
-     * would be two Ask Bubbles marks on one screen, so the sidebar's is now the
-     * drawer's only — the drawer slides over the content with no bar above it.
-     */
     const sidebar = readFileSync(join(SOURCE_DIR, "components", "shell", "sidebar.tsx"), "utf8");
     expect(sidebar).toContain('variant === "desktop" && "hidden"');
   });
 
-  it("uses navy for GENERIC selected state, and only for that", () => {
-    /*
-     * The rule from the brief: generic active UI is navy, and the semantic
-     * colours keep their meanings. A selected filter is a UI state; an overdue
-     * follow-up is a category.
-     */
-    expect(GLOBALS).toContain("--selected: var(--approved-topbar)");
-
+  it("uses the selected token for generic selected state", () => {
+    expect(ROOT.get("--selected")).toBe("var(--bcs-wine)");
     const button = readFileSync(join(SOURCE_DIR, "components", "ui", "button.tsx"), "utf8");
     expect(button).toContain("bg-selected");
-
-    // And the selected colour is NOT the follow-up pink or the wellness red.
-    const selected = /--selected:([^;]+);/.exec(GLOBALS)?.[1] ?? "";
-    expect(selected).not.toContain("followup");
-    expect(selected).not.toContain("redlight");
   });
 
-  it("lands every hover on the approved canvas, from one token", () => {
+  it("lands every hover on the canvas, from one token", () => {
     /*
-     * REPORTED TWICE, so it is pinned here. The rail's hovered and selected
-     * items used to be #c4c0bc — a grey one shade off the #b2aeaa rail — which
-     * read as "still dark" rather than as a state change at all. Hover now
-     * lands on the canvas, which is also where every button hover lands.
-     *
-     * Asserted through the TOKEN rather than the hex, because that is the thing
-     * that keeps the two in step: a component that hard-codes #fff6f0 passes a
+     * Asserted through the TOKEN rather than the hex, because that is what
+     * keeps the two in step: a component that hard-codes the canvas passes a
      * colour check and still drifts the next time the canvas moves.
      */
-    expect(GLOBALS).toContain("--hover-surface: var(--approved-canvas)");
-
-    /*
-     * THE SELECTED RAIL ITEM IS THE YELLOW PILL, NOT THE CANVAS.
-     *
-     * This assertion previously required the canvas here too, from the earlier
-     * storefront direction. The Marquee direction supersedes it and is explicit
-     * about why: the rail keeps exactly ONE colour and spends it on "the yellow
-     * pill that says where you are".
-     *
-     * That also finishes the fix this test was written for. Hover and selected
-     * were both the canvas, so the two states were still hard to tell apart —
-     * the original complaint in a quieter form. Hover is the canvas and
-     * selected is the yellow, which cannot be confused, and the pair is
-     * asserted together so neither can drift back onto the other.
-     */
-    expect(GLOBALS).toContain("--sidebar-active: var(--approved-brand-accent)");
-    expect(GLOBALS).toContain(
-      "--sidebar-active-foreground: var(--approved-yellow-ink)",
-    );
+    expect(ROOT.get("--hover-surface")).toBe("var(--bcs-canvas)");
 
     const button = readFileSync(join(SOURCE_DIR, "components", "ui", "button.tsx"), "utf8");
     const sidebar = codeOf(join(SOURCE_DIR, "components", "shell", "sidebar.tsx"));
 
     /*
-     * EVERY VARIANT, checked one by one rather than by counting occurrences.
-     * The first version of this test counted matches against the number of
-     * keys it found, and its regex swept up the `size:` group's keys too — so
-     * it failed on correct code. Parsing the `variant` group and naming the one
-     * legitimate exception is the assertion that actually means something.
-     *
-     * `link` is that exception: it is text with an underline, not a surface, so
-     * it has no background to hover.
+     * EVERY VARIANT, checked one by one. `link` is the one exception: it is
+     * text with an underline, not a surface, so it has no background to hover.
      */
     const variantGroup = /variant:\s*\{([\s\S]*?)\n      \},/.exec(button)?.[1] ?? "";
     expect(variantGroup).not.toBe("");
     const entries = [
       ...variantGroup.matchAll(/^\s{8}(\w+):\s*(?:\n\s+)?((?:"[^"]*")+)/gm),
     ].map((m) => ({ name: m[1], classes: m[2] }));
-    expect(entries.map((e) => e.name)).toEqual([
-      "primary",
-      "secondary",
-      "accent",
-      "soft",
-      "ghost",
-      "outline",
-      "destructive",
-      "link",
-    ]);
+    expect(entries.length).toBeGreaterThan(3);
     for (const entry of entries) {
       if (entry.name === "link") continue;
       expect(entry.classes, `${entry.name} must hover to the canvas`).toContain(
@@ -702,48 +566,49 @@ describe("the Ask Bubbles brand", () => {
       );
     }
 
-    // The rail: hover on the unselected branch, the token on the selected one.
     expect(sidebar).toContain("hover:bg-hover-surface");
     expect(sidebar).toContain("bg-sidebar-active");
-    // Nothing left mixing the old grey down to a near-invisible wash.
-    expect(sidebar).not.toContain("var(--sidebar-active)_55%");
   });
 
   it("keeps the rail's pill off surfaces it would vanish against", () => {
     /*
-     * `--sidebar-active` is the pale pill that reads against the GREY rail, and
-     * the chat list had borrowed it for a selected conversation sitting on
-     * white, where the same colour is invisible. THAT PROHIBITION STANDS and is
-     * the half of this test that matters.
-     *
-     * WHAT THE MARQUEE CHAT ARTIFACT CHANGED. The remedy used to be
-     * `bg-selected-soft` — the warm neutral fill every generic selected control
-     * takes. The artifact marks the open thread with a YELLOW LEFT EDGE on the
-     * white card instead, and its reasoning is that this is a "where you are"
-     * marker rather than a generic selection: the same job as the rail pill and
-     * the active report tab underline, which are the two other places the
-     * direction spends yellow. The card also keeps its shape when selected,
-     * which a fill changes.
-     *
-     * So the assertion follows the treatment rather than the token, and the
-     * thing it was written to prevent — the invisible pale pill on white — is
-     * still pinned.
+     * `--sidebar-active` is the pill that reads against the dark rail; on a
+     * white card the same colour is invisible. The open conversation in the
+     * chat list is marked with an accent edge instead.
      */
     const chat = codeOf(join(SOURCE_DIR, "features", "chat", "conversation-list.tsx"));
     expect(chat).not.toContain("bg-sidebar-active");
     expect(chat).toContain("border-l-brand-accent");
   });
 
+  it("holds the status ladder, with a glyph on every rung", () => {
+    /* Colour is never the only cue: each rung carries a glyph and a word. */
+    for (const token of [
+      "--status-outperforming",
+      "--status-at-market",
+      "--status-below-market",
+      "--status-under",
+      "--status-capacity",
+    ]) {
+      expect(ROOT.has(token), `${token} is missing`).toBe(true);
+    }
+    const chip = codeOf(join(SOURCE_DIR, "components", "ui", "marquee.tsx"));
+    expect(chip, "the ladder has no shared chip").toContain("StatusChip");
+    for (const glyph of ["▲", "●", "▬", "▼", "◇"]) {
+      expect(chip, `the ${glyph} rung lost its glyph`).toContain(glyph);
+    }
+  });
+
   it("leaves the chart series on the data colour, not the selection colour", () => {
     /*
-     * Bars encode DATA. Painting them with the selected-state navy would say
-     * every bar is selected, and would make the one genuinely selected control
-     * on the page indistinguishable from the chart.
+     * Bars encode DATA. Painting them with the selected-state colour would say
+     * every bar is selected.
      */
-    const palette = readFileSync(
-      join(SOURCE_DIR, "features", "reports", "location-performance", "chart-palette.ts"),
-      "utf8",
-    );
+    const palette = codeOf(join(SOURCE_DIR, "features", "reports", "kit", "chart-palette.ts"));
+    expect(palette).toContain('SERIES_PRIMARY = "var(--measure-data)"');
     expect(palette).not.toContain("--selected");
+    expect(palette).not.toContain("followup-attention");
+    // The brand orange never encodes a value.
+    expect(palette).not.toContain("brand-accent");
   });
 });

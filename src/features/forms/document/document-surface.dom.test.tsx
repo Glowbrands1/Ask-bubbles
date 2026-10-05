@@ -3,7 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { coachingDocument, dmitEppDocument, DMIT_VARIANTS } from "@/lib/forms/library";
+import {
+  FIXTURE_REVIEW_VARIANTS,
+  fixtureCoachingDocument as coachingDocument,
+  fixtureRoleReviewDocument as reviewDocument,
+} from "@/test/forms/fixture-forms";
 import { renderFormPdf } from "@/lib/forms/pdf-render";
 
 import { DocumentSurface } from "./document-surface";
@@ -30,7 +34,7 @@ describe("the document in edit mode", () => {
     render(
       <DocumentSurface document={coachingDocument()} mode="edit" variant={null} />,
     );
-    expect(screen.getByText("Employee Information")).toBeTruthy();
+    expect(screen.getByText("Team Member Information")).toBeTruthy();
     expect(screen.getByText("Type of Coaching")).toBeTruthy();
   });
 
@@ -118,29 +122,29 @@ describe("the document in fill mode", () => {
         onToggle={onToggle}
       />,
     );
-    await user.click(screen.getByLabelText("Underperformance"));
-    expect(onToggle).toHaveBeenCalledWith("coaching_type", "underperformance");
+    await user.click(screen.getByLabelText("Skill Building"));
+    expect(onToggle).toHaveBeenCalledWith("coaching_type", "skill_building");
   });
 });
 
 describe("one document, two readings", () => {
   it("resolves {{role}} from the chosen reading", () => {
-    const tsd = DMIT_VARIANTS.find((entry) => entry.key === "tsd")!;
+    const lead = FIXTURE_REVIEW_VARIANTS.find((entry) => entry.key === "lead")!;
     render(
-      <DocumentSurface document={dmitEppDocument()} mode="edit" variant={tsd} />,
+      <DocumentSurface document={reviewDocument()} mode="edit" variant={lead} />,
     );
     // The stored text is "{{role}}", so seeing the resolved role proves the
     // interpolation runs on the page and not only in the PDF.
     expect(screen.queryByText(/\{\{role\}\}/)).toBeNull();
-    expect(screen.getAllByText(new RegExp(tsd.role)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(new RegExp(lead.role)).length).toBeGreaterThan(0);
   });
 
-  it("splits the DMIT EPP onto the sheets its page breaks ask for", () => {
-    const tsd = DMIT_VARIANTS.find((entry) => entry.key === "tsd")!;
+  it("splits a multi-page review onto the sheets its page breaks ask for", () => {
+    const lead = FIXTURE_REVIEW_VARIANTS.find((entry) => entry.key === "lead")!;
     const { container } = render(
-      <DocumentSurface document={dmitEppDocument()} mode="edit" variant={tsd} />,
+      <DocumentSurface document={reviewDocument()} mode="edit" variant={lead} />,
     );
-    const breaks = dmitEppDocument().blocks.filter((block) => block.kind === "page_break").length;
+    const breaks = reviewDocument().blocks.filter((block) => block.kind === "page_break").length;
     expect(container.querySelectorAll("[data-form-page]").length).toBe(breaks + 1);
   });
 });
@@ -152,9 +156,9 @@ describe("the chips never print", () => {
       null,
       { values: {}, checked: {} },
       {
-        templateName: "Coaching Form",
+        templateName: "Fixture Coaching Note",
         templateVersion: 1,
-        employeeName: "Jordan Vance (test)",
+        employeeName: "Pat Example (test)",
         formDate: "2026-09-04",
         status: "draft",
       },
@@ -167,6 +171,6 @@ describe("the chips never print", () => {
       expect(text.includes(chip), `"${chip}" reached the PDF`).toBe(false);
     }
     // A control: wording that SHOULD print does.
-    expect(text.includes("Employee Information")).toBe(true);
+    expect(text.includes("Team Member Information")).toBe(true);
   });
 });

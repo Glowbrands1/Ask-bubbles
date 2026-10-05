@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MessageBubble } from "./message-bubble";
-import { TEMPLATE_SEEDS } from "@/lib/forms/library";
+import { FIXTURE_TEMPLATE_SEEDS as TEMPLATE_SEEDS } from "@/test/forms/fixture-forms";
 import type { ChatFormProposal, ChatMessage } from "@/types";
 
 /**
@@ -27,6 +27,10 @@ vi.mock("@/lib/session/session-context", () => ({
   useSession: () => ({ user: { avatarInitials: "PC", name: "Paulyne" }, role: "location_manager", isAdmin: false }),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+/* The fixture location roster: the shipped roster is empty until Buff confirms its stores. */
+vi.mock("@/config/company/locations", async () =>
+  (await import("@/test/fixture-locations")).fixtureLocationsModule(),
+);
 
 afterEach(() => {
   cleanup();
@@ -38,13 +42,13 @@ const seed = (key: string) => TEMPLATE_SEEDS.find((entry) => entry.key === key)!
 function proposal(overrides: Partial<ChatFormProposal> = {}): ChatFormProposal {
   return {
     proposalId: "prop-1",
-    templateKey: "follow-up-coaching",
-    templateName: "Follow-Up Coaching Form",
+    templateKey: "fixture-follow-up",
+    templateName: "Fixture Follow-Up Note",
     supportsInlineDraft: true,
     variantKey: null,
     employeeRole: null,
-    employeeName: "Kaitlyn Marsh",
-    locationId: "loc-0310",
+    employeeName: "Pat Example",
+    locationId: "loc-101",
     locationName: null,
     locationResolution: "resolved",
     authorizedLocationIds: [],
@@ -66,8 +70,8 @@ function serve(templateKey: string, values: { fieldKey: string; value: string | 
         templateVersion: 1,
         templateVersionId: "ver-1",
         variantKey: null,
-        employeeName: "Kaitlyn Marsh",
-        locationId: "loc-0310",
+        employeeName: "Pat Example",
+        locationId: "loc-101",
         locationName: null,
         source: "assistant",
         status: "draft",
@@ -81,7 +85,7 @@ function serve(templateKey: string, values: { fieldKey: string; value: string | 
 }
 
 function bubble(message: ChatMessage) {
-  const user: ChatMessage = { id: "m-1", role: "user", content: "Follow-up form for Kaitlyn Marsh.", createdAt: "2026-10-01T12:00:00Z" };
+  const user: ChatMessage = { id: "m-1", role: "user", content: "Follow-up form for Pat Example.", createdAt: "2026-10-01T12:00:00Z" };
   return render(
     <MessageBubble message={message} conversation={[user, message]} onSuggestion={() => {}} onFormCreated={vi.fn()} />,
   );
@@ -90,7 +94,7 @@ function bubble(message: ChatMessage) {
 const assistant = (overrides: Partial<ChatMessage>): ChatMessage => ({
   id: "a-1",
   role: "assistant",
-  content: "Here is what I would put on a **Follow-Up Coaching Form**.",
+  content: "Here is what I would put on a **Fixture Follow-Up Note**.",
   createdAt: "2026-10-01T12:00:01Z",
   mode: "standard",
   coverage: "not_applicable",
@@ -100,11 +104,11 @@ const assistant = (overrides: Partial<ChatMessage>): ChatMessage => ({
 
 describe("the agreed timeframe and the scheduled date", () => {
   it("shows both, labelled as different things, with one date control", async () => {
-    serve("follow-up-coaching", [{ fieldKey: "next_follow_up", value: "within 2 weeks", checked: [], filledBy: "ai" }]);
+    serve("fixture-follow-up", [{ fieldKey: "next_follow_up", value: "within 2 weeks", checked: [], filledBy: "ai" }]);
     const { container } = bubble(
       assistant({
         formProposal: proposal(),
-        formInstanceRef: { instanceId: "inst-1", proposalId: "prop-1", templateName: "Follow-Up Coaching Form" },
+        formInstanceRef: { instanceId: "inst-1", proposalId: "prop-1", templateName: "Fixture Follow-Up Note" },
       }),
     );
 
@@ -117,13 +121,13 @@ describe("the agreed timeframe and the scheduled date", () => {
     expect(container.textContent).not.toContain("Follow up on");
   });
 
-  it("on the Coaching Form, which has no timeframe field, the hint does not point at one", async () => {
-    serve("coaching", []);
+  it("on a coaching note, which has no timeframe field, the hint does not point at one", async () => {
+    serve("fixture-coaching", []);
     const { container } = bubble(
       assistant({
-        content: "Here is what I would put on a **Coaching Form**.",
-        formProposal: proposal({ templateKey: "coaching", templateName: "Coaching Form" }),
-        formInstanceRef: { instanceId: "inst-1", proposalId: "prop-1", templateName: "Coaching Form" },
+        content: "Here is what I would put on a **Fixture Coaching Note**.",
+        formProposal: proposal({ templateKey: "fixture-coaching", templateName: "Fixture Coaching Note" }),
+        formInstanceRef: { instanceId: "inst-1", proposalId: "prop-1", templateName: "Fixture Coaching Note" },
       }),
     );
     await waitFor(() => expect(screen.getByLabelText("Follow-up date")).toBeTruthy());
@@ -138,18 +142,18 @@ describe("choosing a location", () => {
       assistant({
         content: "I won't choose which location this belongs to.",
         formProposal: proposal({
-          templateKey: "coaching",
-          templateName: "Coaching Form",
+          templateKey: "fixture-coaching",
+          templateName: "Fixture Coaching Note",
           locationId: null,
           locationResolution: "needs_selection",
-          authorizedLocationIds: ["loc-0310", "loc-0311"],
+          authorizedLocationIds: ["loc-101", "loc-102"],
           status: "needs_location",
           supportsInlineDraft: false,
         }),
       }),
     );
     const options = [...container.querySelectorAll("option")].map((option) => option.textContent);
-    expect(options).not.toContain("loc-0310");
+    expect(options).not.toContain("loc-101");
     expect(options.filter((text) => text && text !== "Choose a location…").length).toBe(2);
     for (const text of options.filter((entry) => entry !== "Choose a location…")) {
       expect(text).not.toMatch(/^loc-/);

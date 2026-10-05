@@ -54,12 +54,12 @@ function input(overrides: Partial<InsightInput> = {}): InsightInput {
     ],
     topics: [
       { category: "policy_question", events: 60, activeUsers: 8, acknowledgements: 4, lastAsked: "2026-09-14T12:00:00Z" },
-      { category: "coaching_guidance", events: 40, activeUsers: 6, acknowledgements: 2, lastAsked: "2026-09-13T12:00:00Z" },
-      { category: "daily_stats", events: 20, activeUsers: 3, acknowledgements: 0, lastAsked: "2026-09-12T12:00:00Z" },
+      { category: "team_guidance", events: 40, activeUsers: 6, acknowledgements: 2, lastAsked: "2026-09-13T12:00:00Z" },
+      { category: "report_analysis", events: 20, activeUsers: 3, acknowledgements: 0, lastAsked: "2026-09-12T12:00:00Z" },
     ],
     previousTopics: [
       { category: "policy_question", events: 50, activeUsers: 7, acknowledgements: 0, lastAsked: null },
-      { category: "coaching_guidance", events: 10, activeUsers: 2, acknowledgements: 0, lastAsked: null },
+      { category: "team_guidance", events: 10, activeUsers: 2, acknowledgements: 0, lastAsked: null },
     ],
     feedback: FEEDBACK,
     periodLabel: "Last 30 days",
@@ -159,9 +159,9 @@ describe("what do leaders need most?", () => {
   it("leads with the biggest topic and names the fastest riser", () => {
     const needs = find(buildInsights(input()), "needs");
     expect(needs?.value).toBe("50%");
-    expect(needs?.detail).toContain("Policy & compliance questions leads with 60");
-    /* coaching_guidance: 10 -> 40 is +300%; policy: 50 -> 60 is +20%. */
-    expect(needs?.detail).toContain("Coaching & performance guidance, up 300%");
+    expect(needs?.detail).toContain("Policy questions leads with 60");
+    /* team_guidance: 10 -> 40 is +300%; policy: 50 -> 60 is +20%. */
+    expect(needs?.detail).toContain("Team & coaching guidance, up 300%");
   });
 
   it("never calls a topic with no baseline the fastest riser", () => {
@@ -176,7 +176,7 @@ describe("what do leaders need most?", () => {
         input({
           topics: [
             { category: "policy_question", events: 60, activeUsers: 8, acknowledgements: 0, lastAsked: null },
-            { category: "safety_hr", events: 4, activeUsers: 1, acknowledgements: 0, lastAsked: null },
+            { category: "safety_compliance", events: 4, activeUsers: 1, acknowledgements: 0, lastAsked: null },
           ],
           previousTopics: [
             { category: "policy_question", events: 50, activeUsers: 7, acknowledgements: 0, lastAsked: null },
@@ -185,7 +185,7 @@ describe("what do leaders need most?", () => {
       ),
       "needs",
     );
-    expect(needs?.detail).toContain("Policy & compliance questions");
+    expect(needs?.detail).toContain("Policy questions");
     expect(needs?.detail).not.toContain("Safety");
   });
 

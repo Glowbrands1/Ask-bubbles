@@ -68,7 +68,7 @@ function documentV1(): FormDocument {
   return {
     paper: "letter",
     blocks: [
-      { kind: "letterhead", brand: "SUN TAN CITY", title: "Coaching Form" },
+      { kind: "letterhead", brand: "BUFF CITY SOAP", title: "Coaching Form" },
       { kind: "section", label: "Employee Information" },
       {
         kind: "field_row",
@@ -106,7 +106,7 @@ function documentV2(): FormDocument {
   return {
     paper: "letter",
     blocks: [
-      { kind: "letterhead", brand: "SUN TAN CITY", title: "Coaching Form" },
+      { kind: "letterhead", brand: "BUFF CITY SOAP", title: "Coaching Form" },
       { kind: "section", label: "Employee Information" },
       {
         kind: "field_row",

@@ -1,4 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/config/company/forms", async () =>
+  (await import("@/test/forms/fixture-forms")).fixtureFormsModule(),
+);
+vi.mock("@/config/company/forms/categories", async () =>
+  (await import("@/test/forms/fixture-categories")).fixtureCategoriesModule(),
+);
 
 import { buildFormInventory } from "@/lib/forms/inventory";
 import type { TemplateSummary } from "@/lib/forms/repository";
@@ -14,22 +21,25 @@ import { answerInventoryQuestion, buildFormInventoryBlock } from "./form-answers
  * server-written lists Bubbles gives when a manager asks which form to use, and
  * the block the model is handed for every other turn.
  *
- * The rule being pinned is the same one either way. The four Hiring &
- * Interview forms are withheld from what Bubbles OFFERS — and they are still
- * published, still named honestly when somebody asks after one, and still in
+ * The rule being pinned is the same one either way. A form the registry keeps
+ * out of the chooser is withheld from what Bubbles OFFERS — and it is still
+ * published, still named honestly when somebody asks after it, and still in
  * the library whose categories the location answer describes.
+ *
+ * The registry is the fixture one (`src/test/forms/fixture-forms.ts`), whose
+ * interview guide is the withheld form.
  */
 
 function summary(overrides: Partial<TemplateSummary> = {}): TemplateSummary {
   return {
-    id: `tpl-${overrides.key ?? "coaching"}`,
-    key: "coaching",
-    name: "Coaching Form",
-    shortName: "Coaching",
-    description: "The everyday documented coaching conversation.",
-    category: "hr_performance",
+    id: `tpl-${overrides.key ?? "fixture-coaching"}`,
+    key: "fixture-coaching",
+    name: "Fixture Coaching Note",
+    shortName: "Coaching Note",
+    description: "A fixture coaching record.",
+    category: "fixture-team",
     layoutFamily: "coaching",
-    requiredPermission: "create_coaching_form",
+    requiredPermission: "create_forms",
     active: true,
     displayOrder: 1,
     currentVersion: { id: "v1", status: "published" },
@@ -41,70 +51,36 @@ function summary(overrides: Partial<TemplateSummary> = {}): TemplateSummary {
   } as unknown as TemplateSummary;
 }
 
-const PRESCREEN = summary({
-  key: "prescreen-phone-interview",
-  name: "Prescreen / Phone Interview Form",
-  shortName: "Prescreen",
-  description: "The prescreening call, before anyone is booked for an interview.",
-  category: "hiring",
+const INTERVIEW = summary({
+  key: "fixture-interview",
+  name: "Fixture Interview Guide",
+  shortName: "Interview Guide",
+  description: "A fixture interview guide.",
+  category: "fixture-hiring",
   layoutFamily: "interview",
-  requiredPermission: "create_hiring_form",
   displayOrder: 10,
-});
+} as unknown as Partial<TemplateSummary>);
 
-const TANNING_CONSULTANT = summary({
-  key: "tanning-consultant-interview",
-  name: "Tanning Consultant Interview Form",
-  shortName: "TC Interview",
-  description: "The in-location interview for a Tanning Consultant.",
-  category: "hiring",
-  layoutFamily: "interview",
-  requiredPermission: "create_hiring_form",
-  displayOrder: 11,
-});
-
-const MANAGEMENT_ROUND_1 = summary({
-  key: "management-interview-round-1",
-  name: "First Round Management Interview Form",
-  shortName: "Mgmt Round 1",
-  description: "The first management interview.",
-  category: "hiring",
-  layoutFamily: "interview",
-  requiredPermission: "create_hiring_form",
-  displayOrder: 12,
-});
-
-const MANAGEMENT_ROUND_2 = summary({
-  key: "management-interview-round-2",
-  name: "Second Round Management Interview Form",
-  shortName: "Mgmt Round 2",
-  description: "The second management interview and job preview.",
-  category: "hiring",
-  layoutFamily: "interview",
-  requiredPermission: "create_hiring_form",
-  displayOrder: 13,
-});
-
-const HIRING = [PRESCREEN, TANNING_CONSULTANT, MANAGEMENT_ROUND_1, MANAGEMENT_ROUND_2];
+const WITHHELD = [INTERVIEW];
 
 const LIBRARY: TemplateSummary[] = [
   summary(),
   summary({
-    key: "dpoa",
-    name: "Corrective Action Form",
-    shortName: "DPOA",
-    description: "The formal corrective step after coaching.",
-    requiredPermission: "create_corrective_action",
+    key: "fixture-corrective",
+    name: "Fixture Corrective Notice",
+    shortName: "Corrective Notice",
+    description: "A fixture corrective notice.",
+    layoutFamily: "corrective",
     displayOrder: 2,
   } as Partial<TemplateSummary>),
-  ...HIRING,
+  ...WITHHELD,
 ];
 
 const inventory = () =>
   buildFormInventory(LIBRARY, { role: "location_manager", scope: null });
 
 describe('"which form should I use?"', () => {
-  it("lists what a Location Director can start, without the withheld four", () => {
+  it("lists what a location manager can start, without the withheld form", () => {
     const answer = answerInventoryQuestion({
       question: { kind: "list" },
       inventory: inventory(),
@@ -112,26 +88,26 @@ describe('"which form should I use?"', () => {
       namedTemplateKey: null,
     });
 
-    expect(answer!.content).toContain("Coaching Form");
-    expect(answer!.content).toContain("Corrective Action Form");
-    for (const entry of HIRING) {
+    expect(answer!.content).toContain("Fixture Coaching Note");
+    expect(answer!.content).toContain("Fixture Corrective Notice");
+    for (const entry of WITHHELD) {
       expect(answer!.content, entry.name).not.toContain(entry.name);
     }
     // The category heading goes with its forms rather than printing empty.
-    expect(answer!.content).not.toContain("Hiring & Interview Forms");
+    expect(answer!.content).not.toContain("Fixture Hiring Forms");
   });
 });
 
-describe('"do we have a prescreen form?"', () => {
+describe('"do we have an interview guide?"', () => {
   it("still says yes, because withheld is not retired", () => {
     const answer = answerInventoryQuestion({
       question: { kind: "availability" },
       inventory: inventory(),
       role: "location_manager",
-      namedTemplateKey: "prescreen-phone-interview",
+      namedTemplateKey: "fixture-interview",
     });
 
-    expect(answer!.content).toContain("Prescreen / Phone Interview Form");
+    expect(answer!.content).toContain("Fixture Interview Guide");
     expect(answer!.content).toMatch(/^Yes/);
   });
 
@@ -144,18 +120,18 @@ describe('"do we have a prescreen form?"', () => {
     });
 
     expect(answer!.content).toMatch(/no published template for that/i);
-    for (const entry of HIRING) {
+    for (const entry of WITHHELD) {
       expect(answer!.content, entry.name).not.toContain(entry.name);
     }
   });
 });
 
 describe('"where are the forms?"', () => {
-  it("still describes both headings of the forms library", () => {
+  it("still describes every heading of the forms library", () => {
     /*
      * This names no form — it names the library's categories, and one of them
-     * is still Hiring & Interview. It also must not send anybody to the Create
-     * a Form screen, which was removed: forms are only created in chat.
+     * holds only the withheld form. It also must not send anybody to a Create
+     * a Form screen: forms are only created in chat.
      */
     const answer = answerInventoryQuestion({
       question: { kind: "location" },
@@ -164,8 +140,8 @@ describe('"where are the forms?"', () => {
       namedTemplateKey: null,
     });
 
-    expect(answer!.content).toContain("HR & Performance Forms");
-    expect(answer!.content).toContain("Hiring & Interview Forms");
+    expect(answer!.content).toContain("Fixture Team Forms");
+    expect(answer!.content).toContain("Fixture Hiring Forms");
     expect(answer!.content).toContain("**Ask Bubbles**, right here");
     expect(answer!.content).not.toContain("Create a Form");
   });
@@ -174,23 +150,23 @@ describe('"where are the forms?"', () => {
 describe("the FORMS LIBRARY block the model is given", () => {
   const block = () => buildFormInventoryBlock(inventory());
 
-  it("still lists all four, because they still exist", () => {
-    for (const entry of HIRING) {
+  it("still lists the withheld form, because it still exists", () => {
+    for (const entry of WITHHELD) {
       expect(block(), entry.name).toContain(entry.name);
     }
   });
 
-  it("marks each of them NOT OFFERED, and marks nothing else", () => {
+  it("marks it NOT OFFERED, and marks nothing else", () => {
     const marked = block()
       .split("\n")
       .filter((line) => line.includes("NOT OFFERED —"))
       .join("\n");
 
-    for (const entry of HIRING) {
+    for (const entry of WITHHELD) {
       expect(marked, entry.name).toContain(entry.name);
     }
-    expect(marked).not.toContain("Coaching Form");
-    expect(marked).not.toContain("Corrective Action Form");
+    expect(marked).not.toContain("Fixture Coaching Note");
+    expect(marked).not.toContain("Fixture Corrective Notice");
   });
 
   it("says what the marker means, so the rule travels with the list", () => {

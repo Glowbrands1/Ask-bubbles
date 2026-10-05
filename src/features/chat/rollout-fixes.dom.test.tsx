@@ -176,9 +176,9 @@ const READY_PROPOSAL: ChatFormProposal = {
 
 const SELECTION: ChatFormSelection = {
   primary: {
-    templateKey: "dpoa",
-    templateName: "Corrective Action Form",
-    description: "The formal corrective step after coaching.",
+    templateKey: "fixture-corrective",
+    templateName: "Fixture Corrective Notice",
+    description: "A fixture corrective notice.",
   },
   additional: [],
 };
@@ -233,7 +233,7 @@ async function renderChat() {
       session={{
         subject: "11111111-1111-4111-8111-aaaaaaaaaaaa",
         email: "sd@example.com",
-        displayName: "Location Director",
+        displayName: "Store Manager",
         role: "location_manager",
         scope: { level: "location", primaryAreaId: "loc-0306", alsoCoversAreaIds: [] },
       }}
@@ -504,7 +504,7 @@ describe("create a form from this conversation", () => {
 
     // The manager also presses a form card while that turn is running. `send`
     // refuses it, so this choice was NEVER MADE.
-    await user.click(screen.getByRole("button", { name: /Corrective Action Form/i }));
+    await user.click(screen.getByRole("button", { name: /Fixture Corrective Notice/i }));
 
     // The running turn now lands, carrying a ready proposal of its own.
     release?.();
@@ -561,7 +561,7 @@ describe("create a form from this conversation", () => {
      * decision, and a ready proposal that came from that choice creates itself
      * rather than asking the same question twice.
      */
-    await user.click(screen.getByRole("button", { name: /Corrective Action Form/i }));
+    await user.click(screen.getByRole("button", { name: /Fixture Corrective Notice/i }));
     await waitFor(() =>
       expect(called.some((url) => url.includes("/api/forms/instances"))).toBe(true),
     );

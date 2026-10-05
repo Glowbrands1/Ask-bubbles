@@ -151,7 +151,7 @@ describe("RR-D. the request it sends is deliberately unspecified", () => {
      * failure this workstream removed.
      */
     expect(CREATE_FORM_FROM_CONVERSATION).toMatch(/create a form/i);
-    expect(CREATE_FORM_FROM_CONVERSATION).not.toMatch(/coaching|dpoa|policy|epp/i);
+    expect(CREATE_FORM_FROM_CONVERSATION).not.toMatch(/coaching|corrective|policy|check-in/i);
   });
 
   it("is sent through ChatScreen's ordinary send path", () => {

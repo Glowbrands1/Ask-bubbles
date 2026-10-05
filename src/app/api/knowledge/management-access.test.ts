@@ -173,7 +173,7 @@ describe("authorizeAdminConsoleRequest", () => {
 
   it("checks the PERMISSION first, so the two refusals stay distinct", async () => {
     /*
-     * An Assistant Location Director holds neither. The refusal must be the
+     * An Assistant Manager holds neither. The refusal must be the
      * permission's, not the console's, or an administrator debugging access
      * reads the wrong cause.
      */

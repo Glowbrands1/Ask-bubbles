@@ -4,6 +4,7 @@ import { answerQuestion } from "@/lib/ai/server-ask";
 import { groundPolicy } from "@/lib/forms/policy-grounding";
 import { ingestDocument } from "@/lib/ingestion/pipeline";
 import { activeKnowledgeCorpus } from "@/lib/knowledge/corpus";
+import type { KnowledgeDocumentRole } from "@/lib/knowledge/document-roles";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import { minimalPdf } from "@/test/minimal-pdf";
 
@@ -53,19 +54,30 @@ vi.mock("@/lib/reporting/read/employee-facts", () => ({
   EMPLOYEE_DATA_HEADING: "CURRENT EMPLOYEE PERFORMANCE DATA",
 }));
 
-const LOTION = ["Lotion guide", "Apply the bronzer lotion after the shower.", "Wait four hours before rinsing the bronzer lotion."];
-const LOTION_V2 = ["Lotion guide", "Apply the bronzer lotion to dry skin only.", "Wait six hours before rinsing the bronzer lotion."];
-const LOTION_QUESTION = "Lotion guide: apply the bronzer lotion after the shower? Wait hours before rinsing the bronzer lotion?";
-const LOTION_V2_QUESTION = "Lotion guide: apply the bronzer lotion to dry skin only? Wait six hours before rinsing the bronzer lotion?";
+const LOTION = ["Lotion guide", "Apply the shea lotion after the shower.", "Wait four hours before rinsing the shea lotion."];
+const LOTION_V2 = ["Lotion guide", "Apply the shea lotion to dry skin only.", "Wait six hours before rinsing the shea lotion."];
+const LOTION_QUESTION = "Lotion guide: apply the shea lotion after the shower? Wait hours before rinsing the shea lotion?";
+const LOTION_V2_QUESTION = "Lotion guide: apply the shea lotion to dry skin only? Wait six hours before rinsing the shea lotion?";
 
-const CHECKLIST = ["Opening checklist", "Count the till float.", "Sanitize every tanning bed before the first guest."];
-const CHECKLIST_V2 = ["Opening checklist", "Count the till float twice.", "Sanitize every tanning bed and the lotion bar before the first guest."];
-const CHECKLIST_QUESTION = "Opening checklist: count the till float and sanitize every tanning bed before the first guest?";
+const CHECKLIST = ["Opening checklist", "Count the till float.", "Sanitize every soap display before the first guest."];
+const CHECKLIST_V2 = ["Opening checklist", "Count the till float twice.", "Sanitize every soap display and the lotion bar before the first guest."];
+const CHECKLIST_QUESTION = "Opening checklist: count the till float and sanitize every soap display before the first guest?";
 
-const MANUAL = ["JBA Policy Manual", "Dress Code for The Company", "Employees are to keep a neat, clean, professional appearance at all times."];
-const MANUAL_OLD = ["JBA Policy Manual", "Dress Code for The Company", "Employees are to keep a neat appearance. Denim is allowed on weekends."];
-const MANUAL_TITLE = "JBA Policy Manual Edited 5.2025";
+const MANUAL = ["Team Policy Manual", "Dress Code for The Company", "Employees are to keep a neat, clean, professional appearance at all times."];
+const MANUAL_OLD = ["Team Policy Manual", "Dress Code for The Company", "Employees are to keep a neat appearance. Denim is allowed on weekends."];
+const MANUAL_TITLE = "Team Policy Manual Edited 5.2025";
 const MANUAL_QUESTION = "Dress code for the company: employees keep a neat, clean, professional appearance at all times?";
+
+/** A pinned role for this test only: the company's configuration pins none. */
+const MANUAL_ROLE: KnowledgeDocumentRole = {
+  id: "test_policy_manual",
+  tag: "official-policy-manual",
+  fallbackFilenames: [],
+  fallbackTitles: [],
+  /* A PDF chunk's locator is its page and first heading. */
+  ruleGroups: [{ id: "body", label: "The manual's text", headings: [`Page 1 — ${MANUAL[0]}`] }],
+  maxMandatoryChunks: 4,
+};
 
 const FILE = (id: number) => `woven\u0000file_library\u0000${uuid(id)}\u0000file`;
 const STORED = "a1b2c3d4-0000-4000-8000-000000003111.pdf";
@@ -80,7 +92,7 @@ async function ask(question: string) {
       mode: "standard",
       history: [],
       scopeId: activeKnowledgeCorpus(),
-      context: { userName: "Dana Reyes", locationName: "MO Kansas City Wornall", todayIso: "2026-09-30" },
+      context: { userName: "Dana Reyes", locationName: "Example Location 101", todayIso: "2026-09-30" },
     } as never,
     { role: "location_manager" as never, scope: { level: "location", primaryAreaId: "loc-0101", alsoCoversAreaIds: [] } } as never,
   );
@@ -267,7 +279,7 @@ describe("Procedures: step text and step attachments", () => {
   });
 
   it("one attachment that cannot be downloaded does not fail the sync", async () => {
-    h.fake.state.procedures[1]!.attachments.push({ documentId: uuid(3211), stepIndex: 0, fileName: "Bed Chart.pdf", storedName: "b2c3d4e5-0000-4000-8000-000000003211.pdf", bytes: "<html><body>Error</body></html>" });
+    h.fake.state.procedures[1]!.attachments.push({ documentId: uuid(3211), stepIndex: 0, fileName: "Batch Chart.pdf", storedName: "b2c3d4e5-0000-4000-8000-000000003211.pdf", bytes: "<html><body>Error</body></html>" });
     const outcome = await h.initial();
     expect(outcome.status).toBe("succeeded_with_warnings");
     const failed = (await h.store.loadManifest("woven")).find((i) => i.partKey.includes("b2c3d4e5"))!;
@@ -303,9 +315,15 @@ describe("a hand upload that a current Woven copy replaces is SUPERSEDED", () =>
     expect(answer.citations).toEqual(expect.arrayContaining([expect.objectContaining({ documentId: woven, documentTitle: MANUAL_TITLE })]));
     expect(grounding()).not.toContain("Denim");
 
-    /* Forms: the pinned manual is the Woven copy — found by the tag its predecessor carried — and retrieval never returns the upload. */
-    const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(activeKnowledgeCorpus());
-    expect(manual).toMatchObject({ ok: true, documentId: woven, matchedBy: "tag" });
+    /*
+     * A pinned document role resolves to the Woven copy — found by the tag its
+     * superseded predecessor carried — and never to the upload. Forms'
+     * retrieval never returns the upload either.
+     */
+    const pinned = await new SupabaseKnowledgeProvider().fetchRoleGrounding(MANUAL_ROLE, activeKnowledgeCorpus());
+    if (!pinned.ok) throw new Error(JSON.stringify(pinned.failure));
+    expect(pinned.grounding).toMatchObject({ documentId: woven, matchedBy: "tag" });
+    expect(pinned.grounding.rows.every((r) => r.document_id === woven)).toBe(true);
     const policy = await groundPolicy("Dress code for the company: keep a neat, clean, professional appearance at all times. Denim on weekends.");
     expect(policy.sources.some((s) => s.documentId === upload)).toBe(false);
     expect(policy.passages.map((p) => p.text).join("\n")).not.toContain("Denim");
@@ -417,7 +435,7 @@ describe("Preview: what Ask Bubbles would read, before a choice or a sync", () =
       preview: { title: "Opening the Location — Opening Checklist", contentType: "procedure", sourceName: "Opening the Location", fileName: "Opening Checklist.pdf", knowledgeDocumentIdInBase: null },
     });
     if (result.status !== "ok") throw new Error("no preview");
-    expect(result.preview.sections.map((s) => s.text).join("\n")).toContain("Sanitize every tanning bed");
+    expect(result.preview.sections.map((s) => s.text).join("\n")).toContain("Sanitize every soap display");
     expect(result.preview.sections[0]).toMatchObject({ page: 1 });
     /* Read-only. */
     expect(await h.documentCount()).toBe(documents);

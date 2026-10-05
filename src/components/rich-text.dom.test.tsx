@@ -20,7 +20,7 @@ const LOCATION_TABLE = [
   "",
   "| Location | PPTA | Tans |",
   "|---|---:|---:|",
-  "| MO Kansas City Wornall | $3.54 | 150 |",
+  "| Testville Downtown | $3.54 | 150 |",
   "| NE Kearney | $0.19 | 105 |",
   "",
   "That is the whole list.",
@@ -48,7 +48,7 @@ describe("markdown tables render as tables", () => {
     const rows = within(screen.getByRole("table")).getAllByRole("row");
     // One header row plus two locations.
     expect(rows).toHaveLength(3);
-    expect(rows[1].textContent).toContain("MO Kansas City Wornall");
+    expect(rows[1].textContent).toContain("Testville Downtown");
     expect(rows[1].textContent).toContain("$3.54");
     expect(rows[2].textContent).toContain("NE Kearney");
   });
@@ -193,7 +193,7 @@ describe("a complete assistant answer", () => {
     "",
     "| Location | PPTA | Tans |",
     "| --- | ---: | ---: |",
-    "| MO Kansas City Wornall | $2.38 | 102 |",
+    "| Testville Downtown | $2.38 | 102 |",
     "| NE Kearney | $1.28 | 65 |",
     "| NE Omaha 132nd and Maple | n/a | 74 |",
     "",
@@ -212,7 +212,7 @@ describe("a complete assistant answer", () => {
     expect(table).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Location" })).toBeTruthy();
     for (const location of [
-      "MO Kansas City Wornall",
+      "Testville Downtown",
       "NE Kearney",
       "NE Omaha 132nd and Maple",
     ]) {

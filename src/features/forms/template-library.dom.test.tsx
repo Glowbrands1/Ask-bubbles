@@ -3,25 +3,28 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 
 import { fieldsForVariant } from "@/lib/forms/document";
-import { TEMPLATE_SEEDS } from "@/lib/forms/library";
+import { FIXTURE_TEMPLATE_SEEDS as TEMPLATE_SEEDS } from "@/test/forms/fixture-forms";
 
 import { TemplateLibrary, type TemplateSummaryView } from "./template-library";
 
 /**
- * THE FORMS PAGE, WITH THE WHOLE LIBRARY ON IT.
+ * THE FORMS PAGE, WITH A WHOLE LIBRARY ON IT.
  *
- * Rendered from the real seeds rather than from a fixture, because the things
- * worth asserting are all statements about the LIBRARY:
+ * Rendered from seeds — the fixture library and its categories
+ * (`src/test/forms/fixture-forms.ts`, `fixture-categories.ts`), since the
+ * shipped catalog is one placeholder form — because the things worth
+ * asserting are statements about grouping a LIBRARY:
  *
- *   both categories appear, and the existing one is not disturbed;
- *   the new one holds the four supplied forms and nothing else;
- *   Coaching appears once — in the HR section, not moved and not duplicated;
+ *   every category appears, in category order, in both panels;
+ *   each section holds its own forms and nothing else;
+ *   a form appears once per panel — not moved and not duplicated;
  *   every template gets a card, in both panels.
- *
- * A fixture would let this pass while the page showed something else.
  */
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }) }));
+vi.mock("@/config/company/forms/categories", async () =>
+  (await import("@/test/forms/fixture-categories")).fixtureCategoriesModule(),
+);
 vi.mock("@/lib/session/session-context", () => ({
   useSession: () => ({ role: "owner", user: { name: "QA" }, demoMode: true, can: () => true }),
 }));
@@ -91,63 +94,63 @@ describe("the Forms page", () => {
     const headings = Array.from(container.querySelectorAll("section > h3")).map(
       (heading) => heading.textContent,
     );
-    expect(headings).toEqual([
-      "HR & Performance Forms",
-      "Separation & Exit Forms",
-      "Employment Change Forms",
-      "Hiring & Interview Forms",
-      "HR & Performance Forms",
-      "Separation & Exit Forms",
-      "Employment Change Forms",
-      "Hiring & Interview Forms",
-    ]);
+    const order = [
+      "Fixture Team Forms",
+      "Fixture Separation Forms",
+      "Fixture Hiring Forms",
+      "Examples — not approved Buff forms",
+    ];
+    expect(headings).toEqual([...order, ...order]);
   });
 
-  it("puts the Resignation/Exit Form in its own section", () => {
+  it("puts the separation record in its own section", () => {
     renderLibrary();
-    const exit = sectionFor("Separation & Exit Forms", 0);
-    expect(within(exit).getByRole("heading", { name: "Resignation/Exit Form", level: 3 })).toBeTruthy();
+    const separation = sectionFor("Fixture Separation Forms", 0);
+    const names = within(separation)
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent);
+    expect(names).toEqual(["Fixture Separation Record"]);
   });
 
-  it("keeps the existing forms where they were", () => {
+  it("keeps each team form in the team section, in display order", () => {
     renderLibrary();
-    const hr = sectionFor("HR & Performance Forms", 0);
-    for (const name of [
-      "Coaching Form",
-      // Renamed from "Disciplinary Plan of Action"; the key is still `dpoa`.
-      "Corrective Action Form",
-      "Policy Review",
-      "SDIT EPP",
-      "TSD EPP",
-      "ASD-SDIT Performance EPP",
-      "FTTC Performance EPP",
-      "DMIT EPP — TSD Review",
-      "DMIT EPP — DMIT Review",
-    ]) {
-      expect(within(hr).getByRole("heading", { name, level: 3 }), name).toBeTruthy();
-    }
-  });
-
-  it("puts the four supplied recruiting forms in Hiring & Interview Forms", () => {
-    renderLibrary();
-    const hiring = sectionFor("Hiring & Interview Forms", 0);
-    const names = within(hiring)
+    const team = sectionFor("Fixture Team Forms", 0);
+    const names = within(team)
       .getAllByRole("heading", { level: 3 })
       .map((heading) => heading.textContent);
     expect(names).toEqual([
-      "Prescreen / Phone Interview Form",
-      "Tanning Consultant Interview Form",
-      "First Round Management Interview Form",
-      "Second Round Management Interview Form",
+      "Fixture Coaching Note",
+      "Fixture Corrective Notice",
+      "Fixture Policy Review",
+      "Fixture Role Review",
+      "Fixture Peer Review",
+      "Fixture Follow-Up Note",
     ]);
   });
 
-  it("shows Coaching once, and not under Hiring", () => {
+  it("puts the interview guide in the hiring section", () => {
+    renderLibrary();
+    const hiring = sectionFor("Fixture Hiring Forms", 0);
+    const names = within(hiring)
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent);
+    expect(names).toEqual(["Fixture Interview Guide"]);
+  });
+
+  it("shows the coaching note once per panel, and not under Hiring", () => {
     renderLibrary();
     // Once per panel — the document template and the uploaded copy — and no more.
-    expect(screen.getAllByRole("heading", { name: "Coaching Form", level: 3 })).toHaveLength(2);
-    const hiring = sectionFor("Hiring & Interview Forms", 0);
-    expect(within(hiring).queryByRole("heading", { name: "Coaching Form" })).toBeNull();
+    expect(screen.getAllByRole("heading", { name: "Fixture Coaching Note", level: 3 })).toHaveLength(2);
+    const hiring = sectionFor("Fixture Hiring Forms", 0);
+    expect(within(hiring).queryByRole("heading", { name: "Fixture Coaching Note" })).toBeNull();
+  });
+
+  it("labels the placeholder example as not an approved form", () => {
+    renderLibrary();
+    const examples = sectionFor("Examples — not approved Buff forms", 0);
+    expect(
+      within(examples).getByRole("heading", { name: "Team Member Check-In (Example)", level: 3 }),
+    ).toBeTruthy();
   });
 
   it("opens each form at its own route, with no collisions", () => {
@@ -157,8 +160,8 @@ describe("the Forms page", () => {
     );
     expect(links).toHaveLength(TEMPLATE_SEEDS.length);
     expect(new Set(links).size).toBe(links.length);
-    expect(links).toContain("/forms/templates/coaching");
-    expect(links).toContain("/forms/templates/management-interview-round-1");
+    expect(links).toContain("/forms/templates/fixture-coaching");
+    expect(links).toContain("/forms/templates/fixture-interview");
   });
 
   it("offers PDF and Word on every replace control", () => {
@@ -176,7 +179,7 @@ describe("the Forms page", () => {
 
   it("invites an upload where no document has been provided", () => {
     /*
-     * THE REPORT THIS ANSWERS: a new Coaching Form PDF was uploaded, the upload
+     * THE REPORT THIS ANSWERS: a new form PDF was uploaded, the upload
      * succeeded, and the form kept showing the old fields. Uploading now reads
      * the document into a draft, so the card no longer warns that nothing will
      * happen — it says what will, and is explicit that the live form waits for
@@ -194,14 +197,16 @@ describe("the Forms page", () => {
 
   it("does not print a chip for a count of none", () => {
     /*
-     * An interview form has no AI fields and, mostly, no signature line. "0 AI"
-     * against it says nothing and reads as a defect.
+     * An interview guide has no AI fields. "0 AI" against it says nothing and
+     * reads as a defect.
      */
     renderLibrary();
-    const hiring = sectionFor("Hiring & Interview Forms", 0);
+    const hiring = sectionFor("Fixture Hiring Forms", 0);
     expect(within(hiring).queryByText("0 AI")).toBeNull();
-    expect(within(hiring).queryByText("0 signature")).toBeNull();
     // What it does say: how much of it a person fills in.
-    expect(within(hiring).getByText("22 by the manager")).toBeTruthy();
+    expect(within(hiring).getByText("1 by the manager")).toBeTruthy();
+    // And the framework-defined follow-up note, which has no signature line,
+    // prints no "0 signature" either.
+    expect(within(sectionFor("Fixture Team Forms", 0)).queryByText("0 signature")).toBeNull();
   });
 });

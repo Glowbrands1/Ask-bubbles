@@ -10,7 +10,7 @@ import { extname, join } from "node:path";
  * `/api/health` tells a reviewer opening a Preview deployment which half of the
  * product is safe to QA there:
  *
- *   "All five reports read the reporting tables in Supabase in either mode."
+ *   "Every report reads the reporting tables in Supabase in either mode."
  *   "In demo mode the assistant answers through a mock provider."
  *
  * Both are claims about the CODE, not about configuration, and a note in a JSON
@@ -45,21 +45,28 @@ function code(source: string): string {
 }
 
 describe("claim 1 — the reports do not depend on demo mode", () => {
-  const REPORTS = [
-    "location-performance",
-    "sales-totals",
-    "bed-usage",
-    "spa-wellness",
-    "spa-engagement",
-  ];
-
-  it("no report page consults isDemoMode", () => {
-    for (const report of REPORTS) {
-      const page = code(
-        readFileSync(join(SRC, "app", "(app)", "reports", report, "page.tsx"), "utf8"),
-      );
-      expect(page, `${report} branches on demo mode`).not.toMatch(/isDemoMode|demoMode/);
+  it("no report page or report screen consults isDemoMode", () => {
+    /*
+     * Every route under `/reports` and every report component, rather than a
+     * named list: reports are registered by configuration, so a new one adds
+     * no page file this suite would otherwise have to be told about.
+     */
+    const files = [
+      ...filesUnder(join(SRC, "app", "(app)", "reports")),
+      ...filesUnder(join(SRC, "features", "reports")),
+    ];
+    expect(files.some((file) => file.endsWith("page.tsx"))).toBe(true);
+    for (const file of files) {
+      expect(
+        code(readFileSync(file, "utf8")),
+        `${file.slice(SRC.length + 1)} branches on demo mode`,
+      ).not.toMatch(/isDemoMode|demoMode/);
     }
+  });
+
+  it("does not claim a number of reports the product does not have", () => {
+    const route = readFileSync(join(SRC, "app", "api", "health", "route.ts"), "utf8");
+    expect(route).not.toMatch(/\b(two|three|four|five|six|seven)\s+reports?\b/i);
   });
 
   it("the reporting read layer contains no demo branch at all", () => {

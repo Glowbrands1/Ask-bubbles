@@ -31,9 +31,13 @@ import type { AccessScope, Role } from "@/types";
  *
  * WHY IT EXISTS: fixing the star control must not change where a rating goes.
  * There is one feedback table and one analytics pipeline, and a rating left by
- * an Admin, a Regional Manager, a District Manager, a Location Director or an
- * Employee must reach the same dashboard with its role, location, surface and
- * topic intact.
+ * an Admin, a Regional Manager, a District Manager, a Location Manager or a
+ * Team Member must reach the same dashboard with its role, location, surface
+ * and topic intact.
+ *
+ * LOCATIONS ARE TEXT IDS. There is no locations table: an event carries the
+ * actor's `loc-<code>` from their account scope, and the display name comes
+ * from the configured roster, mocked here because the shipped one is empty.
  */
 
 const MIGRATIONS_DIR = join(process.cwd(), "supabase", "migrations");
@@ -47,7 +51,7 @@ const ALL_MIGRATIONS = readdirSync(MIGRATIONS_DIR)
  * and including it is applied, in order. The guard test below fails if a later
  * migration redefines any of these objects, so this cannot silently go stale.
  */
-const LAST_FEEDBACK_MIGRATION = "20260917001000_feedback_optional_words";
+const LAST_FEEDBACK_MIGRATION = "20260915002000_assistant_feedback";
 const APPLIED = ALL_MIGRATIONS.slice(0, ALL_MIGRATIONS.indexOf(LAST_FEEDBACK_MIGRATION) + 1);
 
 /** Supabase platform objects the earlier migrations reach for. */
@@ -65,6 +69,20 @@ vi.mock("@/lib/supabase/server", () => ({
   getSupabaseAdmin: () => harness.client,
 }));
 
+/* A two-location roster; the shipped one is deliberately empty. */
+vi.mock("@/config/company/locations", () => ({
+  LOCATION_CODE_PATTERN: /^[A-Za-z0-9][A-Za-z0-9-]{0,15}$/,
+  COMPANY_LOCATION_ENTRIES: [
+    { code: "101", name: "Testville Downtown", state: "TN", districtId: "dist-east" },
+    { code: "201", name: "Sampleton Square", state: "MS", districtId: "dist-west" },
+  ],
+  COMPANY_DISTRICT_ENTRIES: [
+    { id: "dist-east", name: "East", regionId: null },
+    { id: "dist-west", name: "West", regionId: null },
+  ],
+  COMPANY_REGION_ENTRIES: [],
+}));
+
 /* The turn recorder's telemetry is a log line; it is not what is under test. */
 vi.mock("@/lib/analytics/telemetry", () => ({
   logTurnEvent: () => {},
@@ -79,8 +97,8 @@ interface Person {
   scope: AccessScope;
 }
 
-const LOCATION_0306 = "0306";
-const LOCATION_0144 = "0144";
+const DOWNTOWN = "loc-101";
+const SQUARE = "loc-201";
 
 const PEOPLE = {
   admin: {
@@ -93,25 +111,25 @@ const PEOPLE = {
     id: "a0000000-0000-4000-8000-000000000002",
     role: "regional_manager",
     name: "Test Regional Manager",
-    scope: { level: "location", primaryAreaId: `loc-${LOCATION_0144}`, alsoCoversAreaIds: [] },
+    scope: { level: "location", primaryAreaId: SQUARE, alsoCoversAreaIds: [] },
   },
   dm: {
     id: "a0000000-0000-4000-8000-000000000003",
     role: "district_manager",
     name: "Test District Manager",
-    scope: { level: "location", primaryAreaId: `loc-${LOCATION_0306}`, alsoCoversAreaIds: [] },
+    scope: { level: "location", primaryAreaId: DOWNTOWN, alsoCoversAreaIds: [] },
   },
   sd: {
     id: "a0000000-0000-4000-8000-000000000004",
     role: "location_manager",
-    name: "Test Location Director",
-    scope: { level: "location", primaryAreaId: `loc-${LOCATION_0306}`, alsoCoversAreaIds: [] },
+    name: "Test Location Manager",
+    scope: { level: "location", primaryAreaId: DOWNTOWN, alsoCoversAreaIds: [] },
   },
   employee: {
     id: "a0000000-0000-4000-8000-000000000005",
     role: "employee",
-    name: "Test Employee",
-    scope: { level: "location", primaryAreaId: `loc-${LOCATION_0144}`, alsoCoversAreaIds: [] },
+    name: "Test Team Member",
+    scope: { level: "location", primaryAreaId: SQUARE, alsoCoversAreaIds: [] },
   },
 } satisfies Record<string, Person>;
 
@@ -128,11 +146,6 @@ const turns: Record<keyof typeof PEOPLE, string> = {} as never;
 beforeAll(async () => {
   harness = await createMigratedTestDatabase(APPLIED, { platform: PLATFORM });
 
-  await harness.db.exec(`
-    insert into public.locations (location_code, store_name) values
-      ('${LOCATION_0306}', 'KS Manhattan'),
-      ('${LOCATION_0144}', 'NE Lincoln');
-  `);
   for (const person of Object.values(PEOPLE)) {
     await harness.db.query(`insert into auth.users (id) values ($1)`, [person.id]);
     await harness.db.query(
@@ -229,7 +242,7 @@ describe("every role's rating is saved against its own turn", () => {
     });
   });
 
-  it("a Location Director and an Employee, who hold ask_questions too", async () => {
+  it("a Location Manager and a Team Member, who hold ask_questions too", async () => {
     await store.saveFeedback({
       turnId: turns.sd,
       userId: PEOPLE.sd.id,
@@ -321,7 +334,8 @@ describe("Admin → Analytics → Conversation Feedback sees every submitted rat
       rating: 5,
       role: "admin",
       displayName: "Test Admin",
-      storeName: null,
+      locationName: null,
+      district: null,
       surface: "main_chat",
       category: "policy_question",
       status: "pending",
@@ -331,7 +345,8 @@ describe("Admin → Analytics → Conversation Feedback sees every submitted rat
       gotWhatNeeded: "yes",
       role: "regional_manager",
       displayName: "Test Regional Manager",
-      storeName: "NE Lincoln",
+      locationName: "Sampleton Square",
+      district: "West",
     });
     expect(byTurn.get(turns.dm)).toMatchObject({
       rating: 3,
@@ -339,15 +354,16 @@ describe("Admin → Analytics → Conversation Feedback sees every submitted rat
       comment: "Missed the attendance policy.",
       role: "district_manager",
       displayName: "Test District Manager",
-      storeName: "KS Manhattan",
+      locationName: "Testville Downtown",
+      district: "East",
       surface: "main_chat",
       category: "policy_question",
       succeeded: true,
     });
-    expect(byTurn.get(turns.sd)).toMatchObject({ role: "location_manager", storeName: "KS Manhattan" });
+    expect(byTurn.get(turns.sd)).toMatchObject({ role: "location_manager", locationName: "Testville Downtown" });
     expect(byTurn.get(turns.employee)).toMatchObject({
       role: "employee",
-      storeName: "NE Lincoln",
+      locationName: "Sampleton Square",
       comment: "Wrong location entirely.",
     });
 
@@ -381,7 +397,7 @@ describe("Admin → Analytics → Conversation Feedback sees every submitted rat
 
     /*
      * The ratings count OPEN feedback only (see
-     * `ratings_count_open_feedback_only`): admin 5, rm 4, dm 3 remain.
+     * `feedback_counts_toward_ratings`): admin 5, rm 4, dm 3 remain.
      */
     expect(snapshot.summary.responses).toBe(3);
     expect(snapshot.summary.averageRating).toBe(4);
@@ -394,7 +410,7 @@ describe("this suite applies every migration that shapes feedback analytics", ()
   it("has no later migration redefining a feedback or analytics object", () => {
     const later = ALL_MIGRATIONS.slice(ALL_MIGRATIONS.indexOf(LAST_FEEDBACK_MIGRATION) + 1);
     const redefines =
-      /\b(create\s+or\s+replace\s+(function|view)\s+public\.(analytics_\w+|feedback_\w+|leader_directory|location_managery|activity_attributed|activity_unified)|alter\s+table\s+(if\s+exists\s+)?public\.(assistant_feedback|activity_events)|alter\s+type\s+public\.(activity_\w+|feedback_\w+))\b/i;
+      /\b(create\s+(or\s+replace\s+)?(function|view)\s+public\.(analytics_\w+|feedback_\w+|leader_directory|activity_attributed|activity_unified)|alter\s+table\s+(if\s+exists\s+)?public\.(assistant_feedback|activity_events)|alter\s+type\s+public\.(activity_\w+|feedback_\w+))\b/i;
 
     const offenders = later.filter((name) => {
       const sql = readFileSync(join(MIGRATIONS_DIR, `${name}.sql`), "utf8")

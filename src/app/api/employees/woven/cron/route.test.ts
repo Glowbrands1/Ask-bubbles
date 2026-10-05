@@ -11,6 +11,7 @@ const ENV_KEYS = [
   "SUPABASE_SECRET_KEY",
   "CRON_SECRET",
   "WOVEN_SYNC_ENABLED",
+  "WOVEN_COMPANY_ID",
   "WOVEN_VALIDATION_ENABLED",
   "WOVEN_VALIDATION_ACCESS_CODE",
   "WOVEN_SYNC_WRITES_ENABLED",
@@ -63,6 +64,7 @@ const request = (token?: string) =>
 const ALL_ON = {
   CRON_SECRET: SECRET,
   WOVEN_SYNC_ENABLED: "true",
+  WOVEN_COMPANY_ID: "11111111-1111-1111-1111-111111111111",
   WOVEN_SYNC_SCHEDULE_ENABLED: "true",
   WOVEN_SUBSCRIPTION_KEY: "k",
   WOVEN_USERNAME: "u",
@@ -112,6 +114,16 @@ describe("GET /api/employees/woven/cron", () => {
     expect(response.status).toBe(200);
     expect((await response.json()).status).toBe("disabled");
     expect(runs).toHaveLength(0);
+  });
+
+  it("starts nothing without WOVEN_COMPANY_ID, even with every other switch on", async () => {
+    for (const companyId of [undefined, "not-a-guid"]) {
+      const { GET, runs } = await loadRoute({ ...ALL_ON, WOVEN_SYNC_WRITES_ENABLED: "true", WOVEN_COMPANY_ID: companyId });
+      const response = await GET(request(SECRET));
+      expect(response.status).toBe(200);
+      expect((await response.json()).status).toBe("disabled");
+      expect(runs).toHaveLength(0);
+    }
   });
 
   it("starts nothing while the schedule switch is off", async () => {

@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/config/company/locations", async () =>
+  (await import("@/test/fixture-locations")).fixtureLocationsModule(),
+);
 
 import {
   EXCLUDED_EMPLOYEE_NAMES_ENV,
@@ -7,16 +11,15 @@ import {
   isProductionRecord,
   nonProductionReason,
 } from "./production-records";
-import { PRODUCTION_LOCATIONS } from "@/data/locations";
+import { COMPANY_LOCATIONS as PRODUCTION_LOCATIONS } from "@/lib/locations";
 
 /**
- * The 14 September review: "The Overview follow-up queue includes 'Jordan Vance
- * (test)', 'suzy sunshine', 'Ace Test', and a location called Maple Crossing,
- * which is not one of our 15 locations. Let's get this cleaned up before rollout."
+ * Records created by testing against a deployment — an invented employee, a
+ * location the business does not operate — must stay off a manager's summary.
+ * What is tested here is the MECHANISM that keeps such a record off it, not a
+ * list of names, which must be nowhere in the source.
  *
- * Those are live rows created by testing against the deployment. What is tested
- * here is the MECHANISM that keeps such a record off a manager's summary — not
- * a list of those names, which are deliberately nowhere in the source.
+ * The roster is the test fixture (`src/test/fixture-locations.ts`), not Buff's.
  */
 
 const REAL_LOCATION = PRODUCTION_LOCATIONS[0].name;
@@ -24,16 +27,16 @@ const REAL_LOCATION = PRODUCTION_LOCATIONS[0].name;
 describe("a location that is not on the roster is not production data", () => {
   it("holds back a record filed against a location the business does not operate", () => {
     /*
-     * "Maple Crossing" is caught STRUCTURALLY, by not being one of the fifteen
-     * — so the next invented location is caught too, without anybody adding it to
-     * a list.
+     * "Nowhere Plaza" is caught STRUCTURALLY, by not being on the roster — so
+     * the next invented location is caught too, without anybody adding it to a
+     * list.
      */
     const reason = nonProductionReason({
       employeeName: "Someone",
-      locationName: "Maple Crossing",
+      locationName: "Nowhere Plaza",
     });
     expect(reason).toBe("location_not_on_roster");
-    expect(isProductionRecord({ employeeName: "Someone", locationName: "Maple Crossing" })).toBe(
+    expect(isProductionRecord({ employeeName: "Someone", locationName: "Nowhere Plaza" })).toBe(
       false,
     );
   });
@@ -112,18 +115,17 @@ describe("the explicit exclusion list is configuration, and empty by default", (
   });
 });
 
-describe("no stakeholder example is compiled into the product", () => {
-  it("names none of the four records the review found", async () => {
+describe("no example record is compiled into the product", () => {
+  it("names none of the test records this file uses", async () => {
     const { readFileSync } = await import("node:fs");
     const source = readFileSync("src/lib/forms/production-records.ts", "utf8");
     /*
-     * The review's examples appear in the header, where they record what this
-     * mechanism is for. What must not exist is a hard-coded list — a name in a
+     * What must not exist is a hard-coded list — a name in a
      * source file is a guess that ages badly and cannot be changed without a
      * deploy. Stripping the comments is how the two are told apart.
      */
     const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-    for (const name of ["Jordan Vance", "suzy sunshine", "Ace Test", "Maple Crossing"]) {
+    for (const name of ["Pat Example", "Casey Sample", "Nowhere Plaza"]) {
       expect(code).not.toContain(name);
     }
   });
@@ -144,19 +146,16 @@ describe("holding a record back is said out loud", () => {
  * THE ID IS THE FIELD THAT SURVIVES ON THE LIVE TABLE
  * ============================================================================
  *
- * The roster guard originally read `locationName` only, and against the real
- * `form_instance_overview` that catches very little: on 14 September, thirteen
- * of the sixteen outstanding follow-ups carry a null `location_name`.
- *
- * One of those is `suzy sunshine`, which the review named by hand. It carries
- * `loc-109` — a location id from the retired twelve-store demo roster — and no
- * name at all. The same roster rule applied to the ID catches it; applied to
- * the name it could not, because there was no name to apply it to.
+ * A roster guard that read `locationName` only would catch very little: rows
+ * on `form_instance_overview` often carry a null `location_name` and only a
+ * `location_id`. A test record filed against an id the roster does not know,
+ * with no name at all, is caught by the same rule applied to the ID; applied
+ * to the name it could not be, because there is no name to apply it to.
  */
 describe("the roster guard on the location id", () => {
   it("refuses a record filed against a location id the roster does not know", () => {
-    // The retired demo roster's ids, which is what the live test rows carry.
-    for (const locationId of ["loc-101", "loc-102", "loc-109", "loc-111"]) {
+    // Well-formed ids that are simply not on the roster.
+    for (const locationId of ["loc-901", "loc-902", "loc-909", "loc-911"]) {
       expect(
         isProductionRecord({ employeeName: "Someone", locationName: null, locationId }),
         locationId,
@@ -167,12 +166,12 @@ describe("the roster guard on the location id", () => {
     }
   });
 
-  it("catches suzy sunshine, which the name check could not", () => {
+  it("catches a nameless record by its id, which the name check could not", () => {
     expect(
       isProductionRecord({
-        employeeName: "suzy sunshine",
+        employeeName: "Casey Sample",
         locationName: null,
-        locationId: "loc-109",
+        locationId: "loc-909",
       }),
     ).toBe(false);
   });
@@ -206,11 +205,11 @@ describe("the roster guard on the location id", () => {
 
   it("still refuses on the NAME when only the name is present", () => {
     // The original rule is unchanged; the id check is an addition, not a
-    // replacement. Jordan Vance's row carries both.
+    // replacement. This row carries both, and its id is a real roster id.
     expect(
       isProductionRecord({
-        employeeName: "Jordan Vance (test)",
-        locationName: "Maple Crossing",
+        employeeName: "Pat Example (test)",
+        locationName: "Nowhere Plaza",
         locationId: "loc-102",
       }),
     ).toBe(false);

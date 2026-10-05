@@ -73,7 +73,7 @@ function conversation(overrides: Record<string, unknown> = {}) {
       {
         id: idAt("msg"),
         role: "assistant",
-        content: "The schedule shows two Location Directors on Saturday.",
+        content: "The schedule shows two location managers on Saturday.",
         createdAt: "2026-09-19T14:00:00.000Z",
         mode: "standard",
         coverage: "grounded",
@@ -140,7 +140,6 @@ describe("a real conversation round-trips", () => {
   it("keeps every field the chat surface needs to redraw a turn", () => {
     const source = conversation();
     Object.assign(source.messages[1], {
-      recommendedVideoIds: ["vid_1"],
       followUpSuggestions: ["Why?"],
       formProposal: { id: "p1", templateKey: "coaching" },
       formSelection: { choices: [] },
@@ -156,7 +155,6 @@ describe("a real conversation round-trips", () => {
     expect(metadata.mode).toBe("standard");
     expect(metadata.coverage).toBe("grounded");
     expect(metadata.citations).toHaveLength(1);
-    expect(metadata.recommendedVideoIds).toEqual(["vid_1"]);
     expect(metadata.followUpSuggestions).toEqual(["Why?"]);
     expect(metadata.formProposal).toBeDefined();
     expect(metadata.formSelection).toBeDefined();
@@ -359,15 +357,29 @@ describe("what `createId` actually produces is what the validator accepts", () =
 });
 
 describe("partitioning a whole local history", () => {
-  it("separates the six seeded threads from a real one, with reasons", () => {
+  /*
+   * Seed-shaped threads, written the way a demo seed is: hand-made ids an
+   * earlier demo build could have left in a browser. The demo ships none today,
+   * so these stand in for one.
+   */
+  const seeds = [1, 2, 3].map((n) => ({
+    ...conversation(),
+    id: `conv-seed-${n}`,
+    messages: conversation().messages.map((message, index) => ({
+      ...message,
+      id: `msg-s${n}${index}`,
+    })),
+  }));
+
+  it("separates seeded threads from a real one, with reasons", () => {
     const real = conversation();
     const { eligible, declined } = partitionConversations(
-      [...DEMO_CONVERSATIONS, real],
+      [...DEMO_CONVERSATIONS, ...seeds, real],
       NOW,
     );
 
     expect(eligible.map((payload) => payload.clientConversationId)).toEqual([real.id]);
-    expect(declined).toHaveLength(6);
+    expect(declined).toHaveLength(DEMO_CONVERSATIONS.length + seeds.length);
     for (const entry of declined) {
       expect(entry.reason).toBe("demo_seed");
       expect(entry.id).toMatch(/^conv-seed-/);
@@ -375,7 +387,7 @@ describe("partitioning a whole local history", () => {
   });
 
   it("returns nothing eligible for a history that is only seeds", () => {
-    const { eligible } = partitionConversations([...DEMO_CONVERSATIONS], NOW);
+    const { eligible } = partitionConversations([...DEMO_CONVERSATIONS, ...seeds], NOW);
     expect(eligible).toEqual([]);
   });
 });

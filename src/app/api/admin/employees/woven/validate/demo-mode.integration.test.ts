@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+/* A fixture roster: the production roster is deliberately empty. */
+vi.mock("@/config/company/locations", () => ({
+  LOCATION_CODE_PATTERN: /^[A-Za-z0-9][A-Za-z0-9-]{0,15}$/,
+  COMPANY_LOCATION_ENTRIES: [{ code: "0306", name: "Example Location 306", state: null, districtId: null }],
+  COMPANY_DISTRICT_ENTRIES: [],
+  COMPANY_REGION_ENTRIES: [],
+}));
+
 import {
   createFakeWoven,
   FAKE_CREDENTIALS,
@@ -20,8 +28,9 @@ import {
  * Preview will have.
  *
  * Proves: the only Woven calls are the token POST and the four documented
- * reads; the only Supabase call is a SELECT on `locations`; nothing is written
- * anywhere; and the code and credentials appear nowhere in the response.
+ * reads; Supabase is never called (the location roster is configuration, and
+ * the coverage counts compare against it); nothing is written anywhere; and
+ * the code and credentials appear nowhere in the response.
  */
 
 const ENV = [
@@ -76,7 +85,6 @@ async function run(body: unknown) {
         get: (_t, method: string) => (...args: unknown[]) => {
           supabase.calls.push(`${name}.${method}(${args.map(String).join(", ")})`);
           if (WRITE_METHODS.includes(method)) throw new Error(`Supabase write attempted: ${name}.${method}`);
-          if (method === "select") return Promise.resolve({ data: [{ id: "s1", location_code: "0306", store_name: "Location 306" }], error: null });
           throw new Error(`unexpected Supabase method ${name}.${method}`);
         },
       },
@@ -128,7 +136,7 @@ async function run(body: unknown) {
 
 /* The real client paces requests ~650ms apart (Woven's rate limit), so a full run takes several seconds. */
 describe("demo mode + access code + validation on + sync off", { timeout: 60_000 }, () => {
-  it("runs the real validation: Woven reads only, a locations SELECT only, no write anywhere", async () => {
+  it("runs the real validation: Woven reads only, no Supabase call, no write anywhere", async () => {
     const { response, text, fake, supabase } = await run({ accessCode: CODE });
     expect(response.status).toBe(200);
     expect(JSON.parse(text).report.token.ok).toBe(true);
@@ -140,8 +148,8 @@ describe("demo mode + access code + validation on + sync off", { timeout: 60_000
       expect(["/employees", "/lists/enums", "/locations"].includes(call.path) || /^\/employees\/[^/]+\/details$/.test(call.path), call.path).toBe(true);
     }
 
-    /* 4. Supabase: one SELECT on locations. No insert, update, upsert, delete or rpc. */
-    expect(supabase.calls).toEqual(["locations.select(id, location_code, store_name)"]);
+    /* 4. Supabase: not called at all — no read, and no insert, update, upsert, delete or rpc. */
+    expect(supabase.calls).toEqual([]);
 
     /* Nothing sensitive in the response. */
     for (const forbidden of [CODE, FAKE_CREDENTIALS.password, FAKE_CREDENTIALS.subscriptionKey, "Genevieve", "genevieve@", "Horatio"]) {

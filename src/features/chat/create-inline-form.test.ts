@@ -267,7 +267,7 @@ describe("19-20. the existing drafting endpoint is reused, with manager words on
     // Only `notes`. No topic it made up, no follow-up date, no employee role.
     expect(Object.keys(calls[1]!.body)).toEqual(["notes"]);
     const notes = String(calls[1]!.body.notes);
-    for (const invented of ["Jane Kowalski", "Tanning Consultant", "follow", "14 days"]) {
+    for (const invented of ["Jane Kowalski", "Soap Maker", "follow", "14 days"]) {
       expect(notes, invented).not.toContain(invented);
     }
   });

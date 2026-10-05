@@ -42,10 +42,10 @@ vi.mock("@/lib/session/session-context", () => ({
     user: { name: "Paulyne Camacho", isLocationAccount: false, title: "Owner", scope: {} },
     role: "owner",
     can: () => true,
-    primaryLocationName: "MO Kansas City Wornall",
+    primaryLocationName: "Testville Downtown",
     managerDisplayName: "Paulyne",
     demoMode: true,
-    brand: { knowledgeScopeId: "stc-core" },
+    brand: { knowledgeScopeId: "bcs-core" },
   }),
 }));
 

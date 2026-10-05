@@ -66,7 +66,7 @@ describe("the allowlist", () => {
       positionId: "POS-SC",
       positionName: "Location Consultant",
       primaryLocationId: "WL-0306",
-      primaryLocationName: "KS Manhattan",
+      primaryLocationName: "Example Location 306",
       hasMultipleLocationAccess: false,
       hasAllLocationAccess: false,
       wovenLoginAllowed: true,
@@ -199,7 +199,7 @@ describe("locations", () => {
     const e = ok(wovenEmployee("1", { hasMultipleLocationAccess: false }));
     expect(e.affiliationSource).toBe("list_flag");
     expect(e.affiliations).toEqual([
-      { wovenLocationId: "WL-0306", locationName: "KS Manhattan", locationNumber: null, accessType: "primary", expiresOn: null },
+      { wovenLocationId: "WL-0306", locationName: "Example Location 306", locationNumber: null, accessType: "primary", expiresOn: null },
     ]);
   });
 
@@ -216,13 +216,13 @@ describe("locations", () => {
 
   it("reads primary, additional and temporary-or-expiring access from details — never 'borrowed'", () => {
     const details = wovenDetails("1", [
-      { id: "WL-0306", name: "KS Manhattan", number: "0306" },
+      { id: "WL-0306", name: "Example Location 306", number: "0306" },
       { id: "WL-0144", name: "NE Lincoln", number: "0144" },
       { id: "WL-0500", name: "Somewhere", expires: "2026-10-12T00:00:00" },
     ]);
-    const list = readAffiliations(details, { primaryLocationId: "WL-0306", primaryLocationName: "KS Manhattan" });
+    const list = readAffiliations(details, { primaryLocationId: "WL-0306", primaryLocationName: "Example Location 306" });
     expect(list).toEqual([
-      { wovenLocationId: "WL-0306", locationName: "KS Manhattan", locationNumber: "0306", accessType: "primary", expiresOn: null },
+      { wovenLocationId: "WL-0306", locationName: "Example Location 306", locationNumber: "0306", accessType: "primary", expiresOn: null },
       { wovenLocationId: "WL-0144", locationName: "NE Lincoln", locationNumber: "0144", accessType: "additional", expiresOn: null },
       { wovenLocationId: "WL-0500", locationName: "Somewhere", locationNumber: null, accessType: "temporary_or_expiring_access", expiresOn: "2026-10-12" },
     ]);
@@ -235,7 +235,7 @@ describe("locations", () => {
   });
 
   it("adds the primary when details omit it", () => {
-    const list = readAffiliations(wovenDetails("1", [{ id: "WL-0144" }]), { primaryLocationId: "WL-0306", primaryLocationName: "KS Manhattan" });
+    const list = readAffiliations(wovenDetails("1", [{ id: "WL-0144" }]), { primaryLocationId: "WL-0306", primaryLocationName: "Example Location 306" });
     expect(list?.map((a) => [a.wovenLocationId, a.accessType])).toEqual([
       ["WL-0306", "primary"],
       ["WL-0144", "additional"],
@@ -261,11 +261,11 @@ describe("locations", () => {
 
 describe("the location catalog", () => {
   it("reads Number, district, region, closed and non-location — and nothing sensitive", () => {
-    const entry = readCatalogLocation(wovenLocation("WL-0306", { name: "KS Manhattan", number: "0306", nonLocation: false }));
+    const entry = readCatalogLocation(wovenLocation("WL-0306", { name: "Example Location 306", number: "0306", nonLocation: false }));
     expect(entry).toEqual({
       wovenLocationId: "WL-0306",
-      name: "KS Manhattan",
-      displayName: "KS Manhattan",
+      name: "Example Location 306",
+      displayName: "Example Location 306",
       number: "0306",
       districtId: "22222222-2222-2222-2222-222222222222",
       districtName: "North",

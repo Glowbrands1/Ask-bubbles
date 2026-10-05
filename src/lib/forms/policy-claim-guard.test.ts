@@ -11,11 +11,11 @@ import {
  * THE OBSERVATION KEEPS THE FACT AND LOSES THE FINDING
  * ============================================================================
  *
- * The failure this guard exists for, from QA, verbatim:
+ * The failure this guard exists for, in the shape QA reported it:
  *
  *   "On September 10, 2026, Sarah Test was observed wearing a mini skirt at
- *    the Kearny location location, which is not in compliance with the Sun Tan
- *    City dress code policy."
+ *    the Testville location location, which is not in compliance with the Buff
+ *    City Soap dress code policy."
  *
  * on a form whose Policy Violated field was blank, because retrieval had found
  * nothing to put in it. The record asserted a breach and declined to name the
@@ -37,13 +37,13 @@ function strip(values: Record<string, string>, skip: ReadonlySet<string> = NONE)
 
 describe("1. the QA sentence", () => {
   const OBSERVED =
-    "On September 10, 2026, Sarah Test was observed wearing a mini skirt at the Kearny location location, which is not in compliance with the Sun Tan City dress code policy.";
+    "On September 10, 2026, Sarah Test was observed wearing a mini skirt at the Testville location location, which is not in compliance with the Buff City Soap dress code policy.";
 
   it("keeps what was seen and drops what was concluded", () => {
     const result = strip({ observation: OBSERVED });
 
     expect(result.values.observation).toBe(
-      "On September 10, 2026, Sarah Test was observed wearing a mini skirt at the Kearny location location.",
+      "On September 10, 2026, Sarah Test was observed wearing a mini skirt at the Testville location location.",
     );
     expect(result.adjusted).toEqual(["observation"]);
     expect(result.emptied).toEqual([]);
@@ -190,7 +190,7 @@ describe("4. the same separation, said to the model", () => {
  */
 describe("5. unsourced requirements in the Action Plan", () => {
   const FALLBACK =
-    "Sarah Test is expected to comply with the current Sun Tan City requirements for each scheduled shift. Management will review the applicable expectation with Sarah Test, confirm understanding, and monitor compliance.";
+    "Sarah Test is expected to comply with the current Buff City Soap requirements for each scheduled shift. Management will review the applicable expectation with Sarah Test, confirm understanding, and monitor compliance.";
 
   function strip(values: Record<string, string>, retrieved = "") {
     return stripUnsupportedPolicyRequirements(values, NONE, retrieved, FALLBACK);
@@ -233,7 +233,7 @@ describe("5. unsourced requirements in the Action Plan", () => {
     ["the safe generic", FALLBACK],
     [
       "generic compliance with a named rule",
-      "Sarah is expected to comply with the current Sun Tan City dress code requirements for each scheduled shift.",
+      "Sarah is expected to comply with the current Buff City Soap dress code requirements for each scheduled shift.",
     ],
     [
       "management's own commitment",

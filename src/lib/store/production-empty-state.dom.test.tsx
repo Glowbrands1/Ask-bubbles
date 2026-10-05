@@ -55,14 +55,13 @@ afterEach(cleanup);
 
 /** Reads the store from inside the provider and reports what it holds. */
 function StoreProbe() {
-  const { conversations, forms, templates, documents, videos } = useAppStore();
+  const { conversations, forms, templates, documents } = useAppStore();
   return (
     <ul>
       <li data-testid="conversations">{conversations.length}</li>
       <li data-testid="forms">{forms.length}</li>
       <li data-testid="templates">{templates.length}</li>
       <li data-testid="documents">{documents.length}</li>
-      <li data-testid="videos">{videos.length}</li>
     </ul>
   );
 }
@@ -74,7 +73,7 @@ describe("an unconfigured deployment is live, not demo", () => {
 });
 
 describe("the store holds nothing seeded", () => {
-  it.each(["conversations", "forms", "templates", "documents", "videos"])(
+  it.each(["conversations", "forms", "templates", "documents"])(
     "starts with no seeded %s",
     async (collection) => {
       render(
@@ -141,7 +140,7 @@ describe("empty states are honest sentences", () => {
       </Providers>,
     );
 
-    const input = screen.getByPlaceholderText(/Search documents, videos, forms/i);
+    const input = screen.getByPlaceholderText(/Search screens, documents and forms/i);
     await user.type(input, "coaching");
 
     for (const name of ["Jane Kowalski", "Marcus Trent", "Sofia Delgado"]) {
@@ -167,7 +166,7 @@ describe("empty states are honest sentences", () => {
     );
 
     await user.type(
-      screen.getByPlaceholderText(/Search documents, videos, forms/i),
+      screen.getByPlaceholderText(/Search screens, documents and forms/i),
       "form",
     );
 

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { readWovenConfig } from "./config";
 
+const COMPANY_ID = "11111111-1111-1111-1111-111111111111";
+
 /** Configuration: off by default, credentials by name only, and no insecure base URL. */
 
 describe("readWovenConfig", () => {
@@ -19,6 +21,7 @@ describe("readWovenConfig", () => {
   it("reports a missing credential by NAME and never echoes a value", () => {
     const config = readWovenConfig({
       WOVEN_SYNC_ENABLED: "true",
+      WOVEN_COMPANY_ID: COMPANY_ID,
       WOVEN_SUBSCRIPTION_KEY: "sk-live-very-secret-value",
       WOVEN_USERNAME: "ask-bubbles",
     });
@@ -44,13 +47,13 @@ describe("readWovenConfig", () => {
     expect(validationOnly.scheduleEnabled).toBe(false);
     expect(validationOnly.problems).toEqual([]);
 
-    const syncOnly = readWovenConfig({ ...creds, WOVEN_SYNC_ENABLED: "true" });
+    const syncOnly = readWovenConfig({ ...creds, WOVEN_SYNC_ENABLED: "true", WOVEN_COMPANY_ID: COMPANY_ID });
     expect(syncOnly.enabled).toBe(true);
     expect(syncOnly.validationEnabled).toBe(false);
   });
 
   it("the write switch is off unless set, independent of the sync switch, and flagged when on alone", () => {
-    const creds = { WOVEN_SUBSCRIPTION_KEY: "k", WOVEN_USERNAME: "u", WOVEN_PASSWORD: "p" };
+    const creds = { WOVEN_SUBSCRIPTION_KEY: "k", WOVEN_USERNAME: "u", WOVEN_PASSWORD: "p", WOVEN_COMPANY_ID: COMPANY_ID };
     expect(readWovenConfig({ ...creds, WOVEN_SYNC_ENABLED: "true" })).toMatchObject({ enabled: true, writesEnabled: false });
     expect(readWovenConfig({ ...creds, WOVEN_SYNC_ENABLED: "true", WOVEN_SYNC_WRITES_ENABLED: "true" })).toMatchObject({ enabled: true, writesEnabled: true });
     for (const off of ["", "false", "0", "no", "off", "maybe"]) {
@@ -91,7 +94,7 @@ describe("readWovenConfig", () => {
   });
 
   it("reads login-email domains from WOVEN_LOGIN_EMAIL_DOMAINS", () => {
-    const config = readWovenConfig({ WOVEN_LOGIN_EMAIL_DOMAINS: "SunTanCity.com, @glowbrands.com, bad domain" });
+    const config = readWovenConfig({ WOVEN_LOGIN_EMAIL_DOMAINS: "Example.com, @glowbrands.com, bad domain" });
     expect(config.loginEmailDomains).toEqual(["example.com", "glowbrands.com"]);
     expect(config.problems).toHaveLength(1);
   });
@@ -117,5 +120,29 @@ describe("readWovenConfig", () => {
 
   it("leaves CompanyID unset by default, so Woven chooses and the live check reports it", () => {
     expect(readWovenConfig({}).companyId).toBeNull();
+  });
+
+  it("keeps the sync OFF while WOVEN_SYNC_ENABLED is on without a valid WOVEN_COMPANY_ID, and says why by name", () => {
+    const creds = { WOVEN_SUBSCRIPTION_KEY: "k", WOVEN_USERNAME: "u", WOVEN_PASSWORD: "p" };
+    for (const companyId of [undefined, "", "not-a-guid"]) {
+      const config = readWovenConfig({
+        ...creds,
+        WOVEN_SYNC_ENABLED: "true",
+        WOVEN_SYNC_WRITES_ENABLED: "true",
+        WOVEN_SYNC_SCHEDULE_ENABLED: "true",
+        ...(companyId === undefined ? {} : { WOVEN_COMPANY_ID: companyId }),
+      });
+      expect(config.enabled).toBe(false);
+      expect(config.companyId).toBeNull();
+      expect(config.problems.join(" ")).toContain("WOVEN_SYNC_ENABLED is on but WOVEN_COMPANY_ID is not set, so the sync stays off");
+      expect(JSON.stringify(config.problems)).not.toContain("not-a-guid");
+    }
+  });
+
+  it("the read-only validation still runs without WOVEN_COMPANY_ID — that is how the id is found", () => {
+    const config = readWovenConfig({ WOVEN_SUBSCRIPTION_KEY: "k", WOVEN_USERNAME: "u", WOVEN_PASSWORD: "p", WOVEN_VALIDATION_ENABLED: "true" });
+    expect(config.validationEnabled).toBe(true);
+    expect(config.enabled).toBe(false);
+    expect(config.problems).toEqual([]);
   });
 });

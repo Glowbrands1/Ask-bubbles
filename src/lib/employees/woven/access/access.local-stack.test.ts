@@ -89,13 +89,12 @@ describe.skipIf(!ENABLED)("stage 1 on real Postgres (local stack)", { timeout: 6
       ('${ids.linkedSd}', 'linked-${run}@gmail.test', 'Linked SD', 'location_manager', 'active', 'location', 'loc-0307'),
       ('${ids.candidate2}', 'candidate2-${run}@gmail.test', 'Candidate Two', 'district_manager', 'active', 'global', null)`);
 
-    sql(`insert into public.locations (location_code, store_name) values ('0307', 'NE Grand Island'), ('0394', 'KC Liberty') on conflict do nothing`);
+    /* Locations are roster ids (`loc-<code>`), not rows: there is no locations table. */
     sql(`insert into public.woven_location_map (woven_location_id, woven_location_name, status, location_id, reviewed_by, reviewed_at)
-         select 'WL-GI-${run}', 'NE Grand Island', 'mapped', id, 'test', now() from public.locations where location_code = '0307'`);
-    sql(`insert into public.woven_location_map (woven_location_id, woven_location_name, status, location_id, reviewed_by, reviewed_at)
-         select 'WL-LIB-${run}', 'KC Liberty', 'mapped', id, 'test', now() from public.locations where location_code = '0394'`);
+         values ('WL-GI-${run}', 'Example Location 307', 'mapped', 'loc-0307', 'test', now()),
+                ('WL-LIB-${run}', 'Example Location 394', 'mapped', 'loc-0394', 'test', now())`);
     sql(`insert into public.woven_position_map (woven_position_id, woven_position_name, status, mapped_role, mapped_scope_level, hierarchy_rank, reviewed_by, reviewed_at)
-         values ('WP-SD-${run}', 'Location Director', 'mapped', 'location_manager', 'location', 30, 'test', now()),
+         values ('WP-SD-${run}', 'Location Manager', 'mapped', 'location_manager', 'location', 30, 'test', now()),
                 ('WP-OWN-${run}', 'Owner', 'unmapped', null, null, null, null, null)`);
 
     const hash = "0".repeat(64);

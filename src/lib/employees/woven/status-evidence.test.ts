@@ -7,7 +7,7 @@ import { MemoryDirectoryStore } from "./memory-store";
 import { resolveStatusAcrossReads, terminatedStatusCodes } from "./status-evidence";
 import type { EmployeeWrite } from "./store";
 import { runWovenEmployeeSync, type SyncOutcome } from "./sync";
-import { createFakeWoven, FAKE_CREDENTIALS, FAKE_ENUMS, FAKE_STATUS, wovenDetails, wovenEmployee } from "./test-support";
+import { createFakeWoven, FAKE_COMPANY_ID, FAKE_CREDENTIALS, FAKE_ENUMS, FAKE_STATUS, wovenDetails, wovenEmployee } from "./test-support";
 
 /**
  * ============================================================================
@@ -25,6 +25,7 @@ import { createFakeWoven, FAKE_CREDENTIALS, FAKE_ENUMS, FAKE_STATUS, wovenDetail
 
 const CONFIG = readWovenConfig({
   WOVEN_SYNC_ENABLED: "true",
+  WOVEN_COMPANY_ID: FAKE_COMPANY_ID,
   WOVEN_SYNC_WRITES_ENABLED: "true",
   WOVEN_SUBSCRIPTION_KEY: FAKE_CREDENTIALS.subscriptionKey,
   WOVEN_USERNAME: FAKE_CREDENTIALS.username,

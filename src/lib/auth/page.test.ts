@@ -88,7 +88,7 @@ describe("every page in the authenticated app is guarded on the server", () => {
     }
   });
 
-  it("gates the four screens that previously had no check at all", () => {
+  it("gates the screens that previously had no check at all", () => {
     /*
      * Named individually because these are the ones this milestone is about.
      * The others already had a client-side PermissionGate; these had nothing.
@@ -108,10 +108,6 @@ describe("every page in the authenticated app is guarded on the server", () => {
       },
       "knowledge/document/[id]/page.tsx": {
         permission: "view_knowledge",
-        guard: "requirePagePermission",
-      },
-      "resources/page.tsx": {
-        permission: "view_manager_resources",
         guard: "requirePagePermission",
       },
     };

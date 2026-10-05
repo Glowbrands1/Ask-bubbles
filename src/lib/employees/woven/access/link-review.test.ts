@@ -15,8 +15,8 @@ const positions: PlannerInput["positions"] = [
   { wovenPositionId: "P-DM", status: "mapped", isConfirmed: true, role: "district_manager", scopeLevel: "district" },
 ];
 const locations: PlannerInput["locations"] = [
-  { wovenLocationId: "L-GI", status: "mapped", locationCode: "0307", name: "NE Grand Island" },
-  { wovenLocationId: "L-LIB", status: "mapped", locationCode: "0394", name: "KC Liberty" },
+  { wovenLocationId: "L-GI", status: "mapped", locationCode: "0307", name: "Example Location 307" },
+  { wovenLocationId: "L-LIB", status: "mapped", locationCode: "0394", name: "Example Location 394" },
 ];
 
 const employee = (id: string, over: Partial<PlannerEmployee> = {}): PlannerEmployee => ({
@@ -26,9 +26,9 @@ const employee = (id: string, over: Partial<PlannerEmployee> = {}): PlannerEmplo
   employmentStatus: "active",
   missingSyncCount: 0,
   positionId: "P-SD",
-  positionName: "Location Director",
+  positionName: "Location Manager",
   primaryWovenLocationId: "L-GI",
-  primaryLocationName: "NE Grand Island",
+  primaryLocationName: "Example Location 307",
   additionalLocationNames: [],
   issues: [],
   terminationDate: null,
@@ -142,7 +142,7 @@ describe("decideLinkReview", () => {
     expect(allowedManagedFlags({ role: "owner", scopeLevel: "global" }, false)).toEqual({ status: false, location: false, role: false });
   });
 
-  it("a location-scope Location Director may opt in to all three", () => {
+  it("a location-scope Location Manager may opt in to all three", () => {
     const a = account(1, { email: "e1@gmail.com" });
     const row = decideLinkReview(plan([employee("E1")], [a]), input(a.appUserId, "E1", { managedStatus: true, managedLocation: true, managedRole: true }), REVIEWER);
     expect([row.managed_status, row.managed_location, row.managed_role]).toEqual([true, true, true]);

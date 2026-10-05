@@ -4,6 +4,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AccessScope } from "@/types";
 
+/*
+ * The fixture location roster (`src/test/fixture-locations.ts`): the shipped
+ * roster is empty until Buff City Soap confirms its stores, and district and
+ * region scopes resolve THROUGH the roster. Registered with `vi.mock`, so it
+ * survives the `vi.resetModules()` each `load()` performs.
+ */
+vi.mock("@/config/company/locations", async () =>
+  (await import("@/test/fixture-locations")).fixtureLocationsModule(),
+);
+
 /**
  * ============================================================================
  * REQUIREMENTS 27–33 — THE LOCATION ON AN HR RECORD IS THE SERVER'S DECISION
@@ -16,8 +26,8 @@ import type { AccessScope } from "@/types";
  * the next caller does not have, which is why these tests drive the ROUTE.
  *
  * WHAT WAS EXPLOITABLE. The route read `locationId` and `locationName` from the
- * body and passed both straight to `createInstance`. A signed-in Location Director
- * assigned to loc-0101 could file a Corrective Action Form against
+ * body and passed both straight to `createInstance`. A signed-in location manager
+ * assigned to loc-0101 could file a corrective record against
  * loc-0999 by editing one field of the request — and the record would look, to
  * everybody who opened it afterwards, exactly like one filed by that location's
  * own manager. `authorizeForms` had the scope in its hand and discarded it.
@@ -66,7 +76,7 @@ async function load(options: {
        * The REAL matrix, applied the way `authorizeRequest` applies it. A mock
        * that returned an identity regardless of the permission would make every
        * permission assertion below vacuous — which it did, until requirement 15
-       * caught it by passing against an Assistant Location Director.
+       * caught it by passing against an assistant manager.
        */
       authorizeRequest: async (_request: Request, permission: string) => {
         if (!hasPermission(DEFAULT_PERMISSION_MATRIX, role as never, permission as never)) {
@@ -90,33 +100,43 @@ async function load(options: {
 
   vi.doMock("@/lib/forms/repository", () => ({
     getTemplateByKey: async (key: string) => {
-      if (key === "dpoa") {
-        return {
+      const templates: Record<string, Record<string, unknown>> = {
+        "fixture-corrective": {
           id: "tpl-1",
-          key: "dpoa",
-          name: "Corrective Action Form",
-          shortName: "DPOA",
+          key: "fixture-corrective",
+          name: "Fixture Corrective Notice",
+          shortName: "Corrective Notice",
           description: "",
           layoutFamily: "corrective",
-          requiredPermission: "create_corrective_action",
+          requiredPermission: "create_forms",
           active,
           displayOrder: 2,
-        };
-      }
-      if (key === "coaching") {
-        return {
+        },
+        "fixture-coaching": {
           id: "tpl-2",
-          key: "coaching",
-          name: "Coaching Form",
-          shortName: "Coaching",
+          key: "fixture-coaching",
+          name: "Fixture Coaching Note",
+          shortName: "Coaching Note",
           description: "",
           layoutFamily: "coaching",
-          requiredPermission: "create_coaching_form",
+          requiredPermission: "create_forms",
           active,
           displayOrder: 1,
-        };
-      }
-      return null;
+        },
+        /* A template behind a permission a location manager does not hold. */
+        "fixture-separation": {
+          id: "tpl-3",
+          key: "fixture-separation",
+          name: "Fixture Separation Record",
+          shortName: "Separation Record",
+          description: "",
+          layoutFamily: "separation",
+          requiredPermission: "manage_form_records",
+          active,
+          displayOrder: 3,
+        },
+      };
+      return templates[key] ?? null;
     },
   }));
 
@@ -164,7 +184,7 @@ describe("27. the fixture can express the attack", () => {
     // route that stores nothing whatever it is sent.
     const { route, created } = await load();
     const response = await route.POST(
-      post({ templateKey: "dpoa", employeeName: "Sarah Jones", locationId: "loc-0101" }),
+      post({ templateKey: "fixture-corrective", employeeName: "Sarah Jones", locationId: "loc-0101" }),
     );
 
     expect(response.status).toBe(200);
@@ -179,24 +199,25 @@ describe("28. a location the caller is not assigned to is refused", () => {
   it("returns 403 and creates nothing", async () => {
     const { route, created } = await load();
     const response = await route.POST(
-      post({ templateKey: "dpoa", employeeName: "Sarah Jones", locationId: "loc-0999" }),
+      post({ templateKey: "fixture-corrective", employeeName: "Sarah Jones", locationId: "loc-0999" }),
     );
 
     expect(response.status).toBe(403);
     expect(created).toHaveLength(0);
 
     const payload = (await response.json()) as { error: string };
-    expect(payload.error).toMatch(/not one you are assigned to/i);
+    expect(payload.error).toMatch(/not on your assignment/i);
+    expect(payload.error).toMatch(/only be filed against a location you are assigned to/i);
   });
 
   it("refuses even when a plausible location NAME is supplied alongside", async () => {
     const { route, created } = await load();
     const response = await route.POST(
       post({
-        templateKey: "dpoa",
+        templateKey: "fixture-corrective",
         employeeName: "Sarah Jones",
         locationId: "loc-0999",
-        locationName: "Sun Tan City — Brentwood",
+        locationName: "Buff City Soap — Somewhere Plausible",
       }),
     );
 
@@ -205,19 +226,48 @@ describe("28. a location the caller is not assigned to is refused", () => {
   });
 });
 
-describe("29. a district manager is refused, not silently accepted", () => {
-  it.each(["district", "region"] as const)("%s", async (level) => {
+describe("29. a district or region is resolved through the roster, never taken on trust", () => {
+  it.each(["district", "region"] as const)("refuses a %s the roster does not know", async (level) => {
     const { route, created } = await load({
       role: "district_manager",
       scope: { level, primaryAreaId: `${level}-01`, alsoCoversAreaIds: [] },
     });
     const response = await route.POST(
-      post({ templateKey: "dpoa", employeeName: "Sarah Jones", locationId: "loc-0101" }),
+      post({ templateKey: "fixture-corrective", employeeName: "Sarah Jones", locationId: "loc-101" }),
     );
 
     expect(response.status).toBe(403);
     expect(created).toHaveLength(0);
-    expect(((await response.json()) as { error: string }).error).toMatch(/cannot yet verify/i);
+    expect(((await response.json()) as { error: string }).error).toMatch(/not on your assignment/i);
+  });
+
+  it("files against a location inside the district, and refuses one outside it", async () => {
+    const scope: AccessScope = { level: "district", primaryAreaId: "dist-east", alsoCoversAreaIds: [] };
+    const inside = await load({ role: "district_manager", scope });
+    const accepted = await inside.route.POST(
+      post({ templateKey: "fixture-corrective", employeeName: "Sarah Jones", locationId: "loc-102" }),
+    );
+    expect(accepted.status).toBe(200);
+    expect(inside.created[0]!.locationId).toBe("loc-102");
+
+    const outside = await load({ role: "district_manager", scope });
+    const refused = await outside.route.POST(
+      post({ templateKey: "fixture-corrective", employeeName: "Sarah Jones", locationId: "loc-201" }),
+    );
+    expect(refused.status).toBe(403);
+    expect(outside.created).toHaveLength(0);
+  });
+
+  it("refuses a region actor a store in no district of the region", async () => {
+    const { route, created } = await load({
+      role: "regional_manager",
+      scope: { level: "region", primaryAreaId: "reg-south", alsoCoversAreaIds: [] },
+    });
+    const response = await route.POST(
+      post({ templateKey: "fixture-corrective", employeeName: "Sarah Jones", locationId: "loc-301" }),
+    );
+    expect(response.status).toBe(403);
+    expect(created).toHaveLength(0);
   });
 });
 
@@ -233,9 +283,9 @@ describe("30. a display name is never an independent authority", () => {
     const { route, created } = await load();
     const response = await route.POST(
       post({
-        templateKey: "dpoa",
+        templateKey: "fixture-corrective",
         employeeName: "Sarah Jones",
-        locationName: "Sun Tan City — Brentwood",
+        locationName: "Buff City Soap — Somewhere Plausible",
       }),
     );
 
@@ -246,10 +296,9 @@ describe("30. a display name is never an independent authority", () => {
 
   it("is dropped in LIVE mode even when the id beside it was authorized", async () => {
     /*
-     * There is no location roster. The only source of a display name is
-     * `DEMO_LOCATIONS`, which `primaryLocationName` reads and which falls back
-     * to the raw id when the lookup misses — so a name arriving here is demo
-     * data or the id again, bound to the validated location by nothing.
+     * loc-0101 is not on the roster, so there is no name to look up — and a
+     * name arriving in the request is bound to the validated location by
+     * nothing.
      *
      * A wrong location NAME on a disciplinary record reads as verified to everyone
      * who opens the file later, and the record outlives the caveat.
@@ -257,7 +306,7 @@ describe("30. a display name is never an independent authority", () => {
     const { route, created } = await load();
     await route.POST(
       post({
-        templateKey: "dpoa",
+        templateKey: "fixture-corrective",
         employeeName: "Sarah Jones",
         locationId: "loc-0101",
         locationName: "Whatever They Typed",
@@ -269,22 +318,22 @@ describe("30. a display name is never an independent authority", () => {
   });
 
   it("is the ROSTER's name for an authorized roster location in live mode, never the caller's", async () => {
-    // The roster exists now (`PRODUCTION_LOCATIONS`), so the printed Location is
-    // looked up server-side from the VALIDATED id. What the caller typed is
+    // The printed Location is looked up server-side from the VALIDATED id, on
+    // the company roster (here the fixture roster). What the caller typed is
     // still ignored.
     const { route, created } = await load({
-      scope: { level: "location", primaryAreaId: "loc-0311", alsoCoversAreaIds: [] },
+      scope: { level: "location", primaryAreaId: "loc-101", alsoCoversAreaIds: [] },
     });
     await route.POST(
       post({
-        templateKey: "dpoa",
+        templateKey: "fixture-corrective",
         employeeName: "Sarah Jones",
-        locationId: "loc-0311",
+        locationId: "loc-101",
         locationName: "Whatever They Typed",
       }),
     );
-    expect(created[0]!.locationId).toBe("loc-0311");
-    expect(created[0]!.locationName).toBe("NE Lincoln O Street");
+    expect(created[0]!.locationId).toBe("loc-101");
+    expect(created[0]!.locationName).toBe("TN Testville Downtown");
   });
 
   it("is kept in DEMO mode, where it is explicitly synthetic", async () => {
@@ -299,15 +348,15 @@ describe("30. a display name is never an independent authority", () => {
           "x-ask-bubbles-demo-role": "location_manager",
         },
         body: JSON.stringify({
-          templateKey: "dpoa",
+          templateKey: "fixture-corrective",
           employeeName: "Synthetic Person",
           locationId: "loc-0306",
-          locationName: "MO Kansas City Wornall",
+          locationName: "Synthetic Store Name",
         }),
       }),
     );
 
-    expect(created[0]!.locationName).toBe("MO Kansas City Wornall");
+    expect(created[0]!.locationName).toBe("Synthetic Store Name");
   });
 });
 
@@ -316,7 +365,7 @@ describe("30. a display name is never an independent authority", () => {
 describe("31. a form with no location is still a form", () => {
   it("creates it, rather than refusing for a field nobody asked for", async () => {
     const { route, created } = await load();
-    const response = await route.POST(post({ templateKey: "dpoa", employeeName: "Sarah Jones" }));
+    const response = await route.POST(post({ templateKey: "fixture-corrective", employeeName: "Sarah Jones" }));
 
     expect(response.status).toBe(200);
     expect(created[0]!.locationId).toBeNull();
@@ -326,7 +375,7 @@ describe("31. a form with no location is still a form", () => {
 describe("the form date the chat sends", () => {
   it("is stored when it is a real calendar day", async () => {
     const { route, created } = await load();
-    await route.POST(post({ templateKey: "dpoa", employeeName: "Sarah Jones", formDate: "2026-09-11" }));
+    await route.POST(post({ templateKey: "fixture-corrective", employeeName: "Sarah Jones", formDate: "2026-09-11" }));
 
     expect(created[0]!.formDate).toBe("2026-09-11");
   });
@@ -334,7 +383,7 @@ describe("the form date the chat sends", () => {
   it("is dropped, not stored, when it is not — the form is then dated today", async () => {
     const { route, created } = await load();
     for (const formDate of ["2026-02-30", "9/11", "tomorrow"]) {
-      const response = await route.POST(post({ templateKey: "dpoa", employeeName: "Sarah Jones", formDate }));
+      const response = await route.POST(post({ templateKey: "fixture-corrective", employeeName: "Sarah Jones", formDate }));
       expect(response.status).toBe(200);
     }
 
@@ -352,7 +401,7 @@ describe("32. preview mode is unchanged", () => {
         "x-ask-bubbles-demo-role": "location_manager",
       },
       body: JSON.stringify({
-        templateKey: "dpoa",
+        templateKey: "fixture-corrective",
         employeeName: "Synthetic Person",
         locationId: "loc-0999",
       }),
@@ -377,7 +426,7 @@ describe("33. the template's own permission is still what is enforced", () => {
 
   it("still requires an employee name", async () => {
     const { route, created } = await load();
-    expect((await route.POST(post({ templateKey: "dpoa", employeeName: "  " }))).status).toBe(400);
+    expect((await route.POST(post({ templateKey: "fixture-corrective", employeeName: "  " }))).status).toBe(400);
     expect(created).toHaveLength(0);
   });
 });
@@ -400,12 +449,25 @@ describe("33. the template's own permission is still what is enforced", () => {
  */
 describe("15. a chat-created form is authorized like any other", () => {
   it("applies the TEMPLATE's own permission, not chat's opinion of it", async () => {
-    // An Assistant Location Director holds `create_coaching` — a different
-    // permission from `create_coaching_form` — and no form permission at all.
+    // A location manager may create forms, but not this one: the template
+    // asks for `manage_form_records`, which the role does not hold.
+    const restricted = await load({ role: "location_manager" });
+    const refused = await restricted.route.POST(
+      post({
+        templateKey: "fixture-separation",
+        employeeName: "Sarah Jones",
+        locationId: "loc-0101",
+        source: "assistant",
+      }),
+    );
+    expect(refused.status).toBe(403);
+    expect(restricted.created).toHaveLength(0);
+
+    // An assistant manager holds no form-creating permission at all.
     const { route, created } = await load({ role: "assistant_manager" });
     const response = await route.POST(
       post({
-        templateKey: "coaching",
+        templateKey: "fixture-coaching",
         employeeName: "Sarah Jones",
         locationId: "loc-0101",
         source: "assistant",
@@ -420,7 +482,7 @@ describe("15. a chat-created form is authorized like any other", () => {
     const { route, created } = await load();
     const response = await route.POST(
       post({
-        templateKey: "coaching-v2-from-a-stale-conversation",
+        templateKey: "fixture-coaching-v2-from-a-stale-conversation",
         employeeName: "Sarah Jones",
         source: "assistant",
       }),
@@ -433,7 +495,7 @@ describe("15. a chat-created form is authorized like any other", () => {
   it("refuses a template the library has marked inactive", async () => {
     const { route, created } = await load({ active: false });
     const response = await route.POST(
-      post({ templateKey: "coaching", employeeName: "Sarah Jones", source: "assistant" }),
+      post({ templateKey: "fixture-coaching", employeeName: "Sarah Jones", source: "assistant" }),
     );
 
     expect(response.status).toBe(404);
@@ -476,7 +538,7 @@ describe("16-17. a foreign location cannot be created by bypassing the UI", () =
     const { route, created } = await load();
     const response = await route.POST(
       post({
-        templateKey: "coaching",
+        templateKey: "fixture-coaching",
         employeeName: "Sarah Jones",
         locationId: "loc-0999",
         source: "assistant",
@@ -494,7 +556,7 @@ describe("16-17. a foreign location cannot be created by bypassing the UI", () =
     });
     const response = await route.POST(
       post({
-        templateKey: "coaching",
+        templateKey: "fixture-coaching",
         employeeName: "Sarah Jones",
         locationId: "loc-0101",
         source: "assistant",
@@ -511,7 +573,7 @@ describe("46. a chat-created form is a canonical instance", () => {
     const { route, created } = await load();
     await route.POST(
       post({
-        templateKey: "coaching",
+        templateKey: "fixture-coaching",
         employeeName: "Sarah Jones",
         locationId: "loc-0101",
         source: "assistant",
@@ -520,7 +582,7 @@ describe("46. a chat-created form is a canonical instance", () => {
 
     expect(created).toHaveLength(1);
     expect(created[0]!.source).toBe("assistant");
-    expect(created[0]!.templateKey).toBe("coaching");
+    expect(created[0]!.templateKey).toBe("fixture-coaching");
     expect(created[0]!.locationId).toBe("loc-0101");
   });
 
@@ -530,7 +592,7 @@ describe("46. a chat-created form is a canonical instance", () => {
     const { route, created } = await load();
     await route.POST(
       post({
-        templateKey: "coaching",
+        templateKey: "fixture-coaching",
         employeeName: "Sarah Jones",
         locationId: "loc-0101",
         source: "assistant",
@@ -546,7 +608,7 @@ describe("46. a chat-created form is a canonical instance", () => {
     const { route, created } = await load();
     await route.POST(
       post({
-        templateKey: "coaching",
+        templateKey: "fixture-coaching",
         employeeName: "Sarah Jones",
         source: "something_else",
       }),

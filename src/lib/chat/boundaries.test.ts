@@ -142,21 +142,29 @@ describe("the permission model is unchanged", () => {
      * name. It says that ANY permission added anywhere has to be acknowledged
      * here, by somebody who has just read what this file is guarding.
      *
-     * 24 -> 25 is `view_l10_meetings`, added for the client's request that the
-     * L10 meeting link be "restricted to admin accounts only for now". It gates
-     * one external link, is granted to the administrator roles alone, and
-     * touches no chat route — see `api/resources/l10`.
-     *
-     * 25 -> 26 is `create_exit_form`, the Resignation/Exit Form's own
-     * permission. It is granted to exactly the roles that hold
-     * `create_corrective_action`, gates one template, and touches no chat
-     * history route.
-     *
-     * 26 -> 27 is `create_employment_change_form`, which gates the Demotion
-     * and Position Transfer forms. It is granted to the roles that already
-     * file Corrective Action Forms and reads no conversation.
+     * The list is pinned by name rather than by count, so a swap of one key
+     * for another is caught too. Forms are gated per template by
+     * `create_forms` and the template's own role list, not by a permission
+     * per form.
      */
-    expect(PERMISSIONS).toHaveLength(27);
+    expect([...PERMISSIONS].sort()).toEqual(
+      [
+        "ask_questions",
+        "view_overview",
+        "view_knowledge",
+        "manage_knowledge",
+        "view_forms_workspace",
+        "create_forms",
+        "view_form_monitoring",
+        "manage_form_templates",
+        "manage_form_records",
+        "view_reports",
+        "view_ai_usage",
+        "view_analytics",
+        "manage_users",
+        "manage_integrations",
+      ].sort(),
+    );
   });
 
   it("still has exactly the eight roles it had", () => {

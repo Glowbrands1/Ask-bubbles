@@ -22,23 +22,24 @@ import { LeadersTable, LocationsTable } from "./tables";
  */
 
 const LOCATION: LocationRow = {
-  locationId: "11111111-1111-4111-8111-111111111111",
-  locationCode: "0306",
-  storeName: "MO Kansas City Wornall",
-  district: "Patterson, Madeline",
+  locationId: "loc-101",
+  locationCode: "101",
+  locationName: "Testville Downtown",
+  district: "East",
   events: 12,
   activeLeaders: 3,
   assignedLeaders: 5,
   forms: 4,
   reports: 1,
-  topCategory: "coaching_guidance",
+  topCategory: "team_guidance",
   lastActive: "2026-09-15T10:00:00.000Z",
 };
 
 const SILENT_LOCATION: LocationRow = {
   ...LOCATION,
-  locationId: "22222222-2222-4222-8222-222222222222",
-  storeName: "TN Oak Ridge",
+  locationId: "loc-201",
+  locationCode: "201",
+  locationName: "Sampleton Square",
   events: 0,
   activeLeaders: 0,
   lastActive: null,
@@ -50,20 +51,20 @@ const LEADER: LeaderRow = {
   role: "regional_manager",
   status: "active",
   locationId: LOCATION.locationId,
-  storeName: "MO Kansas City Wornall",
-  district: "Patterson, Madeline",
+  locationName: "Testville Downtown",
+  district: "East",
   events: 9,
   forms: 2,
   documents: 0,
   chatEvents: 7,
-  topCategory: "daily_stats",
+  topCategory: "report_analysis",
   lastActive: "2026-09-15T10:00:00.000Z",
 };
 
 const INVITED_LEADER: LeaderRow = {
   ...LEADER,
   userId: "44444444-4444-4444-8444-444444444444",
-  displayName: "Curt Bowen",
+  displayName: "Jordan Avery",
   status: "invited",
   events: 0,
   forms: 0,
@@ -110,7 +111,7 @@ describe("both Overview cards still render everything they did", () => {
      * Asserting within the row is also the more honest check: it proves the
      * figures sit in the row they describe.
      */
-    const link = screen.getByRole("link", { name: "MO Kansas City Wornall" });
+    const link = screen.getByRole("link", { name: "Testville Downtown" });
     const row = link.closest("tr");
     expect(row).not.toBeNull();
 
@@ -209,7 +210,7 @@ describe("columns are sized deliberately rather than stretched", () => {
 /* ------------------------------------------------------- identity group ---- */
 
 describe("a name and the badges about it read as one thing", () => {
-  it("keeps Curt Bowen, No activity and Invited in a single group", () => {
+  it("keeps Jordan Avery, No activity and Invited in a single group", () => {
     /*
      * THE REPORTED SYMPTOM: they read as "three items spread across the card".
      * Being inside one inline-flex element is what makes them one identity and
@@ -217,7 +218,7 @@ describe("a name and the badges about it read as one thing", () => {
      * line in a narrow column.
      */
     leaders();
-    const link = screen.getByRole("link", { name: "Curt Bowen" });
+    const link = screen.getByRole("link", { name: "Jordan Avery" });
     const group = link.parentElement;
 
     expect(group).not.toBeNull();
@@ -228,7 +229,7 @@ describe("a name and the badges about it read as one thing", () => {
 
   it("groups a silent location with its badge too", () => {
     locations();
-    const link = screen.getByRole("link", { name: "TN Oak Ridge" });
+    const link = screen.getByRole("link", { name: "Sampleton Square" });
     const group = link.parentElement;
 
     expect(group!.className).toContain("inline-flex");

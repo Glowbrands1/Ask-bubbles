@@ -60,14 +60,12 @@ describe("the production implementation carries no seeded content", () => {
   it("returns empty collections for every seeded loader", async () => {
     const seeds = await production.loadSeeds();
     expect(seeds.documents).toEqual([]);
-    expect(seeds.videos).toEqual([]);
     expect(seeds.templates).toEqual([]);
     expect(seeds.forms).toEqual([]);
     expect(seeds.conversations).toEqual([]);
 
     const bank = await production.loadAnswerBank();
     expect(bank.answers).toEqual([]);
-    expect(bank.videos).toEqual([]);
 
     const knowledge = await production.loadKnowledge();
     expect(knowledge.documents).toEqual([]);
@@ -94,11 +92,12 @@ describe("the production implementation carries no seeded content", () => {
     expect(Object.values(fallback).every((text) => text === "")).toBe(true);
   });
 
-  it("offers no demo screen and no unverified quick action", () => {
-    expect(Object.values(production.screens).every((screen) => screen === null)).toBe(
-      true,
-    );
-    expect(production.quickActions).toEqual([]);
+  it("exposes nothing beyond the declared loaders", () => {
+    /*
+     * A new member must be added to both sides deliberately; a stray field on
+     * the production object is a place seeded content could hide.
+     */
+    expect(Object.keys(production).sort()).toEqual(Object.keys(demo).sort());
   });
 });
 
@@ -112,17 +111,21 @@ describe("the demo implementation still works", () => {
   it("returns the seeded collections", async () => {
     const seeds = await demo.loadSeeds();
     expect(seeds.documents.length).toBeGreaterThan(0);
-    expect(seeds.videos.length).toBeGreaterThan(0);
-    expect(seeds.templates.length).toBeGreaterThan(0);
-    expect(seeds.forms.length).toBeGreaterThan(0);
-    expect(seeds.conversations.length).toBeGreaterThan(0);
+    /*
+     * The demo ships a seeded knowledge library only. Conversations start
+     * empty so the demo opens on a fresh thread, and the form library is the
+     * company's own templates — never seeded — so even the demo starts with
+     * none in state.
+     */
+    expect(seeds.conversations).toEqual([]);
+    expect(seeds.templates).toEqual([]);
+    expect(seeds.forms).toEqual([]);
   });
 
   it("returns an answer bank the mock provider can answer from", async () => {
     const bank = await demo.loadAnswerBank();
     expect(bank.answers.length).toBeGreaterThan(0);
     expect(bank.fallback.standard.length).toBeGreaterThan(0);
-    expect(bank.videos.length).toBeGreaterThan(0);
   });
 
   it("returns a corpus the seeded retriever can search", async () => {
@@ -150,15 +153,6 @@ describe("the demo implementation still works", () => {
     for (const row of sample!.directory) {
       if (row.emailAddress) expect(row.emailAddress.endsWith(".test")).toBe(true);
     }
-  });
-
-  it("offers every demo screen", () => {
-    expect(Object.values(demo.screens).every((screen) => screen !== null)).toBe(true);
-  });
-
-  it("offers the unverified quick action that production withholds", () => {
-    expect(demo.quickActions.length).toBeGreaterThan(0);
-    expect(demo.quickActions.some((action) => action.id === "qa-l10")).toBe(true);
   });
 });
 

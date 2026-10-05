@@ -233,8 +233,8 @@ describe("the token request, as the OpenAPI export defines it", () => {
 
     const info = client.tokenInfo!;
     expect(info.companyId).toBe(FAKE_COMPANY_ID);
-    expect(info.companyName).toBe("Sun Tan City (test)");
-    expect(info.companyOptions).toEqual([{ companyId: FAKE_COMPANY_ID, companyName: "Sun Tan City (test)" }]);
+    expect(info.companyName).toBe("Example Soap Co (test)");
+    expect(info.companyOptions).toEqual([{ companyId: FAKE_COMPANY_ID, companyName: "Example Soap Co (test)" }]);
     expect(JSON.stringify(info)).not.toContain("token-1");
     expect(JSON.stringify(info)).not.toContain("SENSITIVE-REFRESH-TOKEN");
   });

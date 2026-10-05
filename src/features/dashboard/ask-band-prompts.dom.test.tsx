@@ -3,6 +3,7 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
+import { QUICK_QUESTIONS, quickQuestionsFor } from "@/lib/ai/quick-questions";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import type { AccessScope, Permission, Role } from "@/types";
 
@@ -19,10 +20,9 @@ import { AskBand } from "./ask-band";
  * a module constant for its whole life, and a component that kept doing that
  * would pass every test in the other file.
  *
- * THE FOUR-CHIP CAP IS PART OF THE WIRING. The direction draws four, the
- * catalogue holds six for any given reader, and which four depends on who is
- * asking — so the cap is asserted here beside the selection rather than
- * trusted.
+ * THE FOUR-CHIP CAP IS PART OF THE WIRING. The band draws four, the catalogue
+ * can hold more for a given reader, and which four depends on who is asking —
+ * so the cap is asserted here beside the selection rather than trusted.
  */
 
 /* The identity under test, rebound per case before each render. */
@@ -30,10 +30,13 @@ let session = {
   role: "location_manager" as Role,
   scope: {
     level: "location",
-    primaryAreaId: "loc-0306",
+    primaryAreaId: "loc-101",
     alsoCoversAreaIds: [],
   } as AccessScope,
 };
+
+const can = (permission: Permission) =>
+  hasPermission(DEFAULT_PERMISSION_MATRIX, session.role, permission);
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: () => {}, refresh: () => {} }),
@@ -43,23 +46,22 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/session/session-context", () => ({
   useSession: () => ({
     user: {
-      name: "Madeline Reyes",
+      name: "Test Manager",
       isLocationAccount: false,
-      title: "Location Director",
+      title: "Location Manager",
       scope: session.scope,
     },
     role: session.role,
     /*
      * THE REAL MATRIX, not `() => true`. Whether an employee is offered a
-     * reporting chip is the whole question in the last case below, and a
-     * permissive stub would answer it wrong in the direction that passes.
+     * forms chip is the whole question in one case below, and a permissive
+     * stub would answer it wrong in the direction that passes.
      */
-    can: (permission: Permission) =>
-      hasPermission(DEFAULT_PERMISSION_MATRIX, session.role, permission),
-    primaryLocationName: "MO Kansas City Wornall",
-    managerDisplayName: "Madeline",
+    can,
+    primaryLocationName: "Testville Downtown",
+    managerDisplayName: "Test",
     demoMode: true,
-    brand: { knowledgeScopeId: "stc-core" },
+    brand: { knowledgeScopeId: "company-core" },
   }),
 }));
 
@@ -67,7 +69,6 @@ vi.mock("@/lib/store/app-store", () => ({
   useAppStore: () => ({
     forms: [],
     documents: [{ id: "doc-1" }],
-    videos: [],
     conversations: [],
     addConversation() {},
     appendConversationMessages() {},
@@ -88,122 +89,84 @@ function chips(): string[] {
 beforeEach(() => {
   session = {
     role: "location_manager",
-    scope: { level: "location", primaryAreaId: "loc-0306", alsoCoversAreaIds: [] },
+    scope: { level: "location", primaryAreaId: "loc-101", alsoCoversAreaIds: [] },
   };
 });
 
 afterEach(cleanup);
 
-describe("the Overview band offers the questions this reader can be answered", () => {
-  it("gives a district-level reader the district wording", () => {
+describe("the Home band offers the questions this reader can be answered", () => {
+  it.each([
+    ["employee", "location", "loc-101"],
+    ["assistant_manager", "location", "loc-101"],
+    ["location_manager", "location", "loc-101"],
+    ["district_manager", "district", "dist-east"],
+    ["regional_manager", "region", "reg-south"],
+    ["admin", "global", null],
+  ] as const)("renders exactly the resolved questions for %s, capped at four", (role, level, area) => {
+    session = { role, scope: { level, primaryAreaId: area, alsoCoversAreaIds: [] } };
+    render(<AskBand />);
+
+    const expected = quickQuestionsFor({ scope: session.scope, can }).slice(0, 4);
+    expect(expected.length).toBeGreaterThan(0);
+    expect(chips()).toEqual(expected);
+  });
+
+  it("gives a manager four chips from the catalogue, in catalogue order", () => {
+    render(<AskBand />);
+
+    const rendered = chips();
+    expect(rendered).toHaveLength(4);
+    const order = rendered.map((chip) => QUICK_QUESTIONS.findIndex((q) => q.text === chip));
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  /**
+   * EXTRA LOCATION ACCESS IS A DATA BOUNDARY, NOT A PROMOTION. A location
+   * manager covering more locations during a vacancy is still a location
+   * manager, and the band must not change what it offers them.
+   */
+  it("keeps a location manager on the same chips when they cover extra locations", () => {
+    render(<AskBand />);
+    const single = chips();
+    cleanup();
+
     session = {
-      role: "district_manager",
-      scope: { level: "district", primaryAreaId: "dist-1", alsoCoversAreaIds: [] },
+      role: "location_manager",
+      scope: {
+        level: "location",
+        primaryAreaId: "loc-101",
+        alsoCoversAreaIds: ["loc-102", "loc-201"],
+      },
+    };
+    render(<AskBand />);
+    expect(chips()).toEqual(single);
+    expect(chips().join(" ")).not.toMatch(/my district|my region/i);
+  });
+
+  it("offers an employee only knowledge questions, and does not leave them with none", () => {
+    session = {
+      role: "employee",
+      scope: { level: "location", primaryAreaId: "loc-101", alsoCoversAreaIds: [] },
     };
     render(<AskBand />);
 
-    expect(chips()).toEqual([
-      "Where is my district losing revenue based on the latest data?",
-      "Which locations need my attention today?",
-      "Help me prepare for a coaching conversation.",
-      "What does our policy say about attendance?",
-    ]);
+    const rendered = chips();
+    expect(rendered.length).toBeGreaterThan(0);
+    const offered = QUICK_QUESTIONS.filter((question) => rendered.includes(question.text));
+    expect(offered.every((question) => question.needs === null || question.needs === "view_knowledge")).toBe(
+      true,
+    );
+    expect(rendered).not.toContain("Which forms can I create here?");
   });
 
-  it("gives a region-level reader the region wording", () => {
-    session = {
-      role: "regional_manager",
-      scope: { level: "region", primaryAreaId: "reg-a", alsoCoversAreaIds: [] },
-    };
-    render(<AskBand />);
-
-    expect(chips()[0]).toBe("Where is my region losing revenue based on the latest data?");
-  });
-
-  it("gives a global reader neutral organization-wide wording", () => {
+  it("promises no report figure, because no report is connected", () => {
     session = {
       role: "admin",
       scope: { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] },
     };
     render(<AskBand />);
-
-    expect(chips().slice(0, 2)).toEqual([
-      "Where are we losing revenue based on the latest data?",
-      "Which locations need attention today?",
-    ]);
-  });
-
-  it("gives a location director the location-level opening", () => {
-    render(<AskBand />);
-
-    const rendered = chips();
-    expect(rendered[0]).toBe(
-      "Show me the most recent Daily Stats and what I need to focus on today.",
-    );
-    expect(rendered).not.toContain("Which locations need my attention today?");
-    expect(rendered).toHaveLength(4);
-  });
-
-  /**
-   * EXTRA LOCATION ACCESS IS A DATA BOUNDARY, NOT A PROMOTION.
-   *
-   * A Location Director covering three locations during a vacancy is still a Location
-   * Director, and the band must not start asking them about "my district". An
-   * earlier version derived breadth from the accessible location count and did
-   * exactly that.
-   */
-  it("keeps a location director on the location opening when they cover extra locations", () => {
-    session = {
-      role: "location_manager",
-      scope: {
-        level: "location",
-        primaryAreaId: "loc-0306",
-        alsoCoversAreaIds: ["loc-0310", "loc-0314"],
-      },
-    };
-    render(<AskBand />);
-
-    const rendered = chips();
-    expect(rendered[0]).toBe(
-      "Show me the most recent Daily Stats and what I need to focus on today.",
-    );
-    expect(rendered.join(" ")).not.toMatch(/my district|my region/i);
-  });
-
-  /**
-   * THE QUESTION THAT STARTED ALL OF THIS IS GONE FROM EVERY SCREEN.
-   *
-   * "What should I focus on in today's Daily Stats?" asked for a report dated
-   * today, and no delivery is ever dated today — so every click opened with an
-   * absence. Asserted for all three identities, because the failure was that
-   * one list was shown to everybody.
-   */
-  it.each([
-    ["district_manager", "district", "dist-1"],
-    ["location_manager", "location", "loc-0306"],
-    ["assistant_manager", "location", "loc-0306"],
-  ] as const)("never offers the retired today's-Daily-Stats chip to %s", (role, level, area) => {
-    session = { role, scope: { level, primaryAreaId: area, alsoCoversAreaIds: [] } };
-    render(<AskBand />);
-
-    for (const chip of chips()) {
-      expect(chip).not.toMatch(/today'?s\s+Daily Stats/i);
-    }
-  });
-
-  it("offers an employee no reporting chip, and does not leave them with none", () => {
-    session = {
-      role: "employee",
-      scope: { level: "location", primaryAreaId: "loc-0306", alsoCoversAreaIds: [] },
-    };
-    render(<AskBand />);
-
-    const rendered = chips();
-    expect(rendered).toEqual([
-      "What does our policy say about attendance?",
-      "How should I handle a client objection?",
-      "Show me training related to this issue.",
-    ]);
-    expect(rendered.join(" ")).not.toMatch(/Daily Stats|revenue|locations need/i);
+    expect(chips().join(" ")).not.toMatch(/revenue|sales|latest data|figures/i);
   });
 });

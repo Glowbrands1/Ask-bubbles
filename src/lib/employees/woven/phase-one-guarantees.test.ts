@@ -10,7 +10,7 @@ import { MemoryDirectoryStore } from "./memory-store";
 import { normalizeEmployee } from "./normalize";
 import type { CommitInput } from "./store";
 import { runWovenEmployeeSync } from "./sync";
-import { createFakeWoven, FAKE_CREDENTIALS, FAKE_ENUMS, wovenDetails, wovenEmployee, wovenLocation } from "./test-support";
+import { createFakeWoven, FAKE_COMPANY_ID, FAKE_CREDENTIALS, FAKE_ENUMS, wovenDetails, wovenEmployee, wovenLocation } from "./test-support";
 
 /**
  * ============================================================================
@@ -27,6 +27,7 @@ import { createFakeWoven, FAKE_CREDENTIALS, FAKE_ENUMS, wovenDetails, wovenEmplo
 
 const CONFIG = readWovenConfig({
   WOVEN_SYNC_ENABLED: "true",
+  WOVEN_COMPANY_ID: FAKE_COMPANY_ID,
   WOVEN_SYNC_WRITES_ENABLED: "true",
   WOVEN_SUBSCRIPTION_KEY: FAKE_CREDENTIALS.subscriptionKey,
   WOVEN_USERNAME: FAKE_CREDENTIALS.username,
@@ -206,7 +207,21 @@ describe("4. a stored sync writes only directory, history and mapping data", () 
 
   it("the directory store has no method that reaches app_users, auth, roles, scope, location access or login state", () => {
     const methods = Object.getOwnPropertyNames(MemoryDirectoryStore.prototype).filter((m) => m !== "constructor");
-    for (const method of methods) expect(method).not.toMatch(/user|auth|role|scope|login|access|location|invite|disable/i);
+    /*
+     * The Woven LOCATION MAP is mapping data this sync owns (Woven location →
+     * roster location, reviewed by a person). These two methods read and seed
+     * it; nothing else may even be named after locations, so no method can
+     * reach a user's location assignments.
+     */
+    const WOVEN_LOCATION_MAP_METHODS = ["loadLocationMap", "mapLocation"];
+    for (const method of methods) {
+      if (WOVEN_LOCATION_MAP_METHODS.includes(method)) continue;
+      expect(method).not.toMatch(/user|auth|role|scope|login|access|location|invite|disable/i);
+    }
+    for (const method of WOVEN_LOCATION_MAP_METHODS) {
+      expect(methods).toContain(method);
+      expect(method).not.toMatch(/user|auth|role|scope|login|access|invite|disable/i);
+    }
   });
 });
 
@@ -219,7 +234,7 @@ describe("5 and 6. every location and position stays unmapped until a person rev
         /* PositionName without a PositionID, as in Production. */
         wovenEmployee("5003", { positionId: null, positionName: "Floater" }),
       ],
-      /* An affiliation location the catalog does not list, like `NE Omaha Q`. */
+      /* An affiliation location the catalog does not list, like `Example Location Q`. */
       { "5002": wovenDetails("5002", [{ id: "WL-0306" }, { id: "WL-OFFCAT", name: "Off-catalog location" }]) },
     );
     await stored(run);

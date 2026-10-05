@@ -1,6 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+
+/* A small roster, because the shipped one is deliberately empty. */
+vi.mock("@/config/company/locations", () => ({
+  LOCATION_CODE_PATTERN: /^[A-Za-z0-9][A-Za-z0-9-]{0,15}$/,
+  COMPANY_LOCATION_ENTRIES: [
+    { code: "101", name: "Testville Downtown", state: "TN", districtId: "dist-east" },
+    { code: "102", name: "Testville Uptown", state: "TN", districtId: "dist-east" },
+    { code: "201", name: "Sampleton Square", state: "MS", districtId: "dist-west" },
+  ],
+  COMPANY_DISTRICT_ENTRIES: [
+    { id: "dist-east", name: "East", regionId: null },
+    { id: "dist-west", name: "West", regionId: null },
+    { id: "dist-empty", name: "Empty", regionId: null },
+  ],
+  COMPANY_REGION_ENTRIES: [],
+}));
 
 import {
   ACTIVITY_CATEGORIES,
@@ -18,6 +34,7 @@ import {
   EMPTY_FILTERS,
   bucketFor,
   hasActiveFilters,
+  locationFilterFor,
   parseFilters,
   resolveWindow,
   serializeFilters,
@@ -120,62 +137,41 @@ describe("the taxonomy matches the database", () => {
 describe("a chat turn is classified by evidence, strongest first", () => {
   const NOTHING = { hadReportContext: false, citedCategories: [] };
 
-  it("takes the form family from the template the answer proposed", () => {
+  it("calls any proposed template a form turn, whichever form it is", () => {
     /*
-     * The strongest signal: the answer named a template key, so the family is a
-     * fact rather than a reading. It beats an attached report and citations,
-     * because producing the form is what the manager came for.
+     * The strongest signal: the answer named a template key, so the turn
+     * produced a form. It beats an attached report and citations, because
+     * producing the form is what the manager came for.
      */
     expect(
       classifyChatTurn({
         ...NOTHING,
-        proposedTemplateKey: "dpoa",
+        proposedTemplateKey: "coaching",
         hadReportContext: true,
         citedCategories: ["policies_compliance"],
         question: "what is the attendance policy",
       }),
-    ).toBe("corrective_action");
-
-    expect(
-      classifyChatTurn({ ...NOTHING, proposedTemplateKey: "coaching" }),
-    ).toBe("coaching_form");
-    expect(
-      classifyChatTurn({ ...NOTHING, proposedTemplateKey: "follow-up-coaching" }),
-    ).toBe("coaching_form");
-    expect(
-      classifyChatTurn({ ...NOTHING, proposedTemplateKey: "tsd-epp" }),
-    ).toBe("epp");
-    expect(
-      classifyChatTurn({ ...NOTHING, proposedTemplateKey: "policy-review" }),
-    ).toBe("policy_review");
+    ).toBe("form_created");
+    expect(categoryForTemplateKey("some-new-template")).toBe("form_created");
+    expect(categoryForTemplateKey("   ")).toBeNull();
+    expect(categoryForTemplateKey(null)).toBeNull();
   });
 
-  it("keeps the DPOA rename from splitting one family in two", () => {
-    /*
-     * The template NAME became "Corrective Action Form"; the KEY stayed `dpoa`.
-     * Matching on the key is what stops the rename creating a second category.
-     */
-    expect(categoryForTemplateKey("dpoa")).toBe("corrective_action");
-  });
-
-  it("calls an unrecognised template a form request rather than guessing", () => {
-    expect(
-      classifyChatTurn({ ...NOTHING, proposedTemplateKey: "some-new-template" }),
-    ).toBe("form_request");
+  it("calls a turn that offered form choices a form request", () => {
     expect(
       classifyChatTurn({ ...NOTHING, offeredFormChoices: true }),
     ).toBe("form_request");
   });
 
-  it("calls a turn carrying an attached report Daily Stats", () => {
+  it("calls a turn carrying an attached report a report analysis", () => {
     expect(
       classifyChatTurn({
         ...NOTHING,
         hadReportContext: true,
         citedCategories: ["policies_compliance"],
-        question: "how are my beds doing",
+        question: "how is my location doing",
       }),
-    ).toBe("daily_stats");
+    ).toBe("report_analysis");
   });
 
   it("takes the topic from the categories of the documents it cited", () => {
@@ -185,13 +181,13 @@ describe("a chat turn is classified by evidence, strongest first", () => {
      */
     expect(
       classifyChatTurn({ ...NOTHING, citedCategories: ["leadership_coaching"] }),
-    ).toBe("coaching_guidance");
+    ).toBe("team_guidance");
     expect(
       classifyChatTurn({ ...NOTHING, citedCategories: ["equipment_procedures"] }),
-    ).toBe("equipment_maintenance");
+    ).toBe("equipment_procedures");
     expect(
       classifyChatTurn({ ...NOTHING, citedCategories: ["bonuses_compensation"] }),
-    ).toBe("pay_bonus");
+    ).toBe("pay_benefits");
   });
 
   it("lets the most-cited category win", () => {
@@ -205,97 +201,42 @@ describe("a chat turn is classified by evidence, strongest first", () => {
 
   it("skips documents filed as 'other' rather than counting them", () => {
     /*
-     * Six of the forty documents in this corpus are "other". A turn citing four
-     * of them and one policy document is a policy question, not an unclassified
-     * one — "other" says nothing about the topic.
+     * A turn citing three "other" documents and one safety document is a safety
+     * question, not an unclassified one — "other" says nothing about the topic.
      */
     expect(
       classifyChatTurn({
         ...NOTHING,
         citedCategories: ["other", "other", "other", "safety"],
       }),
-    ).toBe("safety_hr");
+    ).toBe("safety_compliance");
   });
 
   it("reads the question only when nothing deterministic explained the turn", () => {
     expect(
-      classifyChatTurn({ ...NOTHING, question: "how do I replace a lamp" }),
-    ).toBe("equipment_maintenance");
+      classifyChatTurn({ ...NOTHING, question: "the register equipment is broken" }),
+    ).toBe("equipment_procedures");
     expect(
       classifyChatTurn({ ...NOTHING, question: "when does payroll close" }),
-    ).toBe("pay_bonus");
+    ).toBe("pay_benefits");
     expect(
-      classifyChatTurn({ ...NOTHING, question: "I need to write someone up" }),
-    ).toBe("corrective_action");
-  });
-
-  /**
-   * ==========================================================================
-   * THE QUESTIONS THE PRODUCT ITSELF OFFERS MUST LAND IN THE RIGHT BAR
-   * ==========================================================================
-   *
-   * Every one of these is a chip on the Overview band — see
-   * `lib/ai/quick-questions.ts` — so they are the highest-volume questions in
-   * the product and the ones the adoption chart most needs to get right.
-   *
-   * "Which locations need my attention today?" named no metric and no report, so
-   * it fell through the whole ladder to `general_guidance`: the Daily Stats
-   * bar understated its own best case, and the District Manager chip was
-   * invisible. Step 2 does not rescue it — `hadReportContext` means the
-   * manager came from a report TAB carrying pointers, which a homepage chip
-   * never does, however many report families the question then routes to.
-   */
-  it.each([
-    "Which locations need my attention today?",
-    "Which locations need attention today?",
-    "Where is my district losing revenue based on the latest data?",
-    "Where is my region losing revenue based on the latest data?",
-    "Where are we losing revenue based on the latest data?",
-    "Show me the most recent Daily Stats and what I need to focus on today.",
-  ])("files the report chip %s under Daily Stats", (question) => {
-    expect(classifyQuestionText(question)).toBe("daily_stats");
-    // And through the full ladder, with no deterministic evidence to help it.
-    expect(classifyChatTurn({ ...NOTHING, question })).toBe("daily_stats");
-  });
-
-  it("leaves the non-report chips where they were", () => {
-    /*
-     * The three new terms must not have stolen the rest of the band. A
-     * coaching question is still coaching guidance and a policy question is
-     * still filed by its own topic.
-     */
-    expect(classifyQuestionText("Help me prepare for a coaching conversation.")).toBe(
-      "coaching_guidance",
-    );
-    /*
-     * `policy_question`, not `corrective_action`: the chip says "policy say
-     * about attendance", which does not contain the contiguous phrase
-     * "attendance policy" that the corrective-action list claims. The test
-     * below pins that phrase deliberately; this pins the chip as it is
-     * actually worded.
-     */
-    expect(classifyQuestionText("What does our policy say about attendance?")).toBe(
-      "policy_question",
-    );
-    expect(classifyQuestionText("Create a coaching form for a performance concern.")).toBe(
-      "coaching_form",
-    );
+      classifyChatTurn({ ...NOTHING, question: "how do I handle a guest complaint" }),
+    ).toBe("guest_experience");
   });
 
   it("prefers the longer phrase over the general word inside it", () => {
     /*
-     * "coaching form" must not be decided by "coaching", and "attendance
-     * policy" must not be decided by "policy".
+     * "return policy" is listed under policy and must not be decided by a
+     * shorter operations word; "new hire" must beat "hire" alone only by being
+     * longer, and both still land on hiring.
      */
-    expect(classifyQuestionText("send me the coaching form")).toBe("coaching_form");
-    expect(classifyQuestionText("what is the attendance policy")).toBe(
-      "corrective_action",
-    );
+    expect(classifyQuestionText("what is our return policy")).toBe("policy_question");
+    expect(classifyQuestionText("paperwork for a new hire")).toBe("hiring_onboarding");
   });
 
-  it("matches whole words, so 'epp' is not found inside 'stepped'", () => {
-    expect(classifyQuestionText("he stepped away from the desk")).not.toBe("epp");
-    expect(classifyQuestionText("start an epp")).toBe("epp");
+  it("matches whole words, so 'pay' is not found inside 'paypal' or 'repay'", () => {
+    expect(classifyQuestionText("can I repay this later")).toBeNull();
+    expect(classifyQuestionText("when is pay day")).toBe("pay_benefits");
   });
 
   it("calls an ordinary question general guidance rather than inventing a topic", () => {
@@ -345,19 +286,19 @@ describe("no question text can be persisted", () => {
    */
   const migrationsDir = join(process.cwd(), "supabase", "migrations");
   const eventsMigration = readFileSync(
-    join(migrationsDir, "20260911001000_activity_events.sql"),
+    join(migrationsDir, "20260911001000_activity_analytics.sql"),
     "utf8",
   );
 
   it("declares no text-bearing column on activity_events", () => {
     const table =
       eventsMigration
-        .split("create table if not exists public.activity_events")[1]
+        .split("create table public.activity_events (")[1]
         ?.split(");")[0] ?? "";
 
     /*
      * COLUMN NAMES ONLY — the first identifier on each declaration line.
-     * Scanning the whole block matched the TYPE `text` on `location_ref text`
+     * Scanning the whole block matched the TYPE `text` on `location_id text`
      * and failed for the opposite of the reason this test exists.
      */
     const columnNames = table
@@ -367,6 +308,7 @@ describe("no question text can be persisted", () => {
         (line) =>
           /^[a-z_]+\s+[a-z]/.test(line) &&
           !line.startsWith("constraint") &&
+          !line.startsWith("--") &&
           !line.startsWith("*") &&
           !line.startsWith("/*"),
       )
@@ -478,8 +420,8 @@ describe("filters survive the round trip through a URL", () => {
       range: "90d" as const,
       from: null,
       to: null,
-      district: "Patterson, Madeline",
-      locationId: "3f1b2c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+      district: "dist-east",
+      locationId: "loc-101",
       role: "location_manager" as const,
       actorId: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
       inactiveOnly: true,
@@ -493,13 +435,30 @@ describe("filters survive the round trip through a URL", () => {
     expect(serializeFilters(EMPTY_FILTERS)).toBe("");
   });
 
-  it("drops a location or leader id that is not a uuid", () => {
+  it("drops a district the roster does not know", () => {
+    expect(parseFilters({ district: "dist-nowhere" }).district).toBeNull();
+    expect(parseFilters({ district: "East" }).district).toBeNull();
+  });
+
+  it("resolves a district to its roster locations, and an empty one to nothing", () => {
+    expect(locationFilterFor(EMPTY_FILTERS)).toBeNull();
+    expect(locationFilterFor({ ...EMPTY_FILTERS, locationId: "loc-101" })).toEqual(["loc-101"]);
+    expect(locationFilterFor({ ...EMPTY_FILTERS, district: "dist-east" })?.sort()).toEqual([
+      "loc-101",
+      "loc-102",
+    ]);
+    /* A known district with no locations narrows to NOTHING, never to everything. */
+    expect(locationFilterFor({ ...EMPTY_FILTERS, district: "dist-empty" })).toEqual([]);
+  });
+
+  it("drops a location id that is not loc-<code>, and a leader id that is not a uuid", () => {
     /*
      * Both are passed to a Postgres function as typed arguments. A junk value
      * must come back as "no filter" rather than as an error page from the
      * database, which is what a hand-edited URL would otherwise produce.
      */
     const parsed = parseFilters({ location: "'; drop table", leader: "42" });
+    expect(parseFilters({ location: "3f1b2c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d" }).locationId).toBeNull();
     expect(parsed.locationId).toBeNull();
     expect(parsed.actorId).toBeNull();
   });
@@ -524,7 +483,7 @@ describe("filters survive the round trip through a URL", () => {
 
   it("knows when something is actually narrowing the view", () => {
     expect(hasActiveFilters(EMPTY_FILTERS)).toBe(false);
-    expect(hasActiveFilters({ ...EMPTY_FILTERS, district: "West" })).toBe(true);
+    expect(hasActiveFilters({ ...EMPTY_FILTERS, district: "dist-west" })).toBe(true);
     expect(hasActiveFilters({ ...EMPTY_FILTERS, inactiveOnly: true })).toBe(true);
   });
 

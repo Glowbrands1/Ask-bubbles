@@ -96,7 +96,7 @@ afterEach(() => {
 describe("the request Supabase receives", () => {
   it("calls resetPasswordForEmail once, server-side, with the normalised address", async () => {
     const { call, seen } = await loadRoute();
-    await call({ email: `  Manager@SunTanCity.com ` });
+    await call({ email: `  Manager@Example.COM ` });
 
     expect(seen.calls).toHaveLength(1);
     expect(seen.calls[0].email).toBe(EMAIL);
@@ -212,7 +212,7 @@ describe("what is logged", () => {
 
       const output = lines.join("\n").toLowerCase();
       expect(output).not.toContain(EMAIL.toLowerCase());
-      expect(output).not.toContain("suntancity");
+      expect(output).not.toContain(`@${EMAIL.split("@")[1]}`);
       expect(output).not.toContain("rate limit exceeded");
       expect(output).not.toContain("reset-password");
     },

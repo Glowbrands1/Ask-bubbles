@@ -99,7 +99,7 @@ describe("the connection test's summary", () => {
     expect(row("Woven locations")).toContain("2 total");
     expect(row("Ask Bubbles location match")).toContain("1 exact Number matches, covering 1 of 2 locations");
     expect(row("Ask Bubbles location match")).toContain("1 locations with no Woven location");
-    expect(row("Email domains")).toMatch(/^suntancity\.test \(\d+\)/);
+    expect(row("Email domains")).toMatch(/^example\.test \(\d+\)/);
     expect(row("Email domains")).not.toContain("@");
     expect(row("Location access flags")).toBe("2 with HasMultipleLocationAccess · 1 with AllLocationAccess");
     expect(row("Employee details")).toBe("6 checked · 2 with more than one location");
@@ -181,8 +181,8 @@ describe("company options on a failed sign-in", () => {
         UserName: FAKE_CREDENTIALS.username,
         FirstName: "Rosalind",
         CompanyLoginOptions: [
-          { CompanyID: "11111111-2222-3333-4444-555555555555", CompanyName: "Sun Tan City", BrandFriendlyName: "STC", AccountStatus: 1, IsBrandCompany: false, BrandLogoUrl: "https://cdn.woven.test/a.png" },
-          { CompanyID: "66666666-7777-8888-9999-000000000000", CompanyName: "Glow Brands", BrandFriendlyName: null, AccountStatus: 2, IsBrandCompany: true },
+          { CompanyID: "11111111-2222-3333-4444-555555555555", CompanyName: "Example Soap Co", BrandFriendlyName: "ESC", AccountStatus: 1, IsBrandCompany: false, BrandLogoUrl: "https://cdn.woven.test/a.png" },
+          { CompanyID: "66666666-7777-8888-9999-000000000000", CompanyName: "Other Example Co", BrandFriendlyName: null, AccountStatus: 2, IsBrandCompany: true },
         ],
       }),
       companyIdSent: false,
@@ -203,8 +203,8 @@ describe("company options on a failed sign-in", () => {
     ]);
     const rows = within(section).getAllByRole("row").slice(1).map((r) => [...r.querySelectorAll("td")].map((td) => td.textContent));
     expect(rows).toEqual([
-      ["Sun Tan City", "STC", "11111111-2222-3333-4444-555555555555", "1", "no"],
-      ["Glow Brands", "—", "66666666-7777-8888-9999-000000000000", "2", "yes"],
+      ["Example Soap Co", "ESC", "11111111-2222-3333-4444-555555555555", "1", "no"],
+      ["Other Example Co", "—", "66666666-7777-8888-9999-000000000000", "2", "yes"],
     ]);
     expect(section.textContent).toContain("Nothing is chosen automatically");
     /* Nothing to click: no button, radio or select to pick a company. */

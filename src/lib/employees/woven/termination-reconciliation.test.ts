@@ -6,7 +6,7 @@ import { MemoryDirectoryStore } from "./memory-store";
 import { observedStatus } from "./status-evidence";
 import type { EmployeeWrite } from "./store";
 import { runWovenEmployeeSync, type SyncOutcome } from "./sync";
-import { createFakeWoven, FAKE_CREDENTIALS, FAKE_STATUS, wovenEmployee } from "./test-support";
+import { createFakeWoven, FAKE_COMPANY_ID, FAKE_CREDENTIALS, FAKE_STATUS, wovenEmployee } from "./test-support";
 
 /**
  * ============================================================================
@@ -29,6 +29,7 @@ import { createFakeWoven, FAKE_CREDENTIALS, FAKE_STATUS, wovenEmployee } from ".
 
 const CONFIG = readWovenConfig({
   WOVEN_SYNC_ENABLED: "true",
+  WOVEN_COMPANY_ID: FAKE_COMPANY_ID,
   WOVEN_SYNC_WRITES_ENABLED: "true",
   WOVEN_SUBSCRIPTION_KEY: FAKE_CREDENTIALS.subscriptionKey,
   WOVEN_USERNAME: FAKE_CREDENTIALS.username,
