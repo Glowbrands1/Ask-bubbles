@@ -1,6 +1,6 @@
 import { WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW } from "@/config/company/woven";
 import type { SourceRecord } from "../../types";
-import { BCS_COMPANY_WIDE_AUDIENCE_LABELS, PROCEDURE_ALL_POSITIONS, TEAM_POSITION_AUDIENCE } from "./contract";
+import { BCS_COMPANY_WIDE_AUDIENCE_LABELS, PROCEDURE_ALL_POSITIONS, PUBLIC_AUDIENCE, PUBLIC_MEANS_COMPANY_WIDE, TEAM_POSITION_AUDIENCE } from "./contract";
 
 /**
  * ============================================================================
@@ -11,17 +11,20 @@ import { BCS_COMPANY_WIDE_AUDIENCE_LABELS, PROCEDURE_ALL_POSITIONS, TEAM_POSITIO
  * does not filter by role, team, position or location (`../../access.ts`). So a
  * Woven audience maps to exactly one of three outcomes:
  *
- *   SHARED      the audience is company-wide in Woven — "Public" (Handbooks)
- *               or "All Teams All Positions" (File Library).
+ *   SHARED      the audience is company-wide in Woven — "Public" (Handbooks
+ *               ONLY) or "All Teams All Positions" (File Library).
  *   REVIEWABLE  "All Positions" (Procedures): no position limit, but whether a
  *               procedure can also be limited by team or location is
  *               UNVERIFIED. Held until an administrator decides it once.
  *   NEVER       anything narrower ("8 Teams 21 Positions", "All Teams 3
  *               Positions", a list of positions) → `audience_restricted`;
  *               anything unclear ("N/A", no audience stated, an unrecognised
- *               label) → `audience_unclear`. EXCLUDED, and an administrator's
- *               audience decision cannot share it: Ask Bubbles cannot honour a
- *               narrower audience, so it does not pretend to.
+ *               label) → `audience_unclear`; "Public" on anything but a
+ *               Handbook (File Library, Communications: the label is
+ *               verified, what it grants there is not) → `audience_unverified`.
+ *               EXCLUDED, and an administrator's audience decision cannot
+ *               share it: Ask Bubbles cannot honour a narrower audience, so it
+ *               does not pretend to.
  */
 
 function norm(label: string): string {
@@ -30,10 +33,11 @@ function norm(label: string): string {
 
 const SHARED = new Set(BCS_COMPANY_WIDE_AUDIENCE_LABELS.map(norm));
 
-export function bcsAudienceRestriction(audience: readonly string[] | null): string | null {
+export function bcsAudienceRestriction(audience: readonly string[] | null, record: Pick<SourceRecord, "contentType">): string | null {
   const labels = (audience ?? []).map(norm).filter(Boolean);
   if (labels.length === 0) return "audience_unclear";
   for (const label of labels) {
+    if (PUBLIC_AUDIENCE.test(label) && !PUBLIC_MEANS_COMPANY_WIDE.includes(record.contentType)) return "audience_unverified";
     if (SHARED.has(label) || PROCEDURE_ALL_POSITIONS.test(label)) continue;
     if (/^n\/?a$/.test(label)) return "audience_unclear";
     if (TEAM_POSITION_AUDIENCE.test(label)) return "audience_restricted";

@@ -784,6 +784,7 @@ const PLAN_REASON_LABEL: Record<string, string> = {
   published_not_visible: "Published but outside their visibility window",
   audience_restricted: "Limited to some teams or positions (cannot be shared with everyone)",
   audience_unclear: "Audience unclear (N/A or not stated)",
+  audience_unverified: "Marked Public in Woven, but what Public grants here is not verified",
   audience_needs_review: "Waiting for an audience choice",
   audience_excluded: "Kept out by an audience choice",
   ownership_review: "May belong to another company — waiting for a person to confirm",

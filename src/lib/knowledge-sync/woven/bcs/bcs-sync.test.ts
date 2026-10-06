@@ -117,10 +117,10 @@ describe("dry run", () => {
       policy: { records: 4, parts: 4 },
       handbook: { records: 1, parts: 1 },
       procedure: { records: 6, parts: 6 },
-      file_library: { records: 7, parts: 7 },
-      communication: { records: 2, parts: 2 },
+      file_library: { records: 8, parts: 8 },
+      communication: { records: 3, parts: 3 },
     });
-    expect(p.publishedRecords).toEqual({ policy: 0, handbook: 1, procedure: 3, file_library: 6, communication: 0 });
+    expect(p.publishedRecords).toEqual({ policy: 0, handbook: 1, procedure: 3, file_library: 7, communication: 0 });
     expect(p.excludedByReason).toEqual({
       publication_unverified: 4,
       ownership_review: 1,
@@ -130,7 +130,9 @@ describe("dry run", () => {
       file_library_download_unverified: 2,
       unsupported_format: 2,
       audience_unclear: 1,
-      published_not_visible: 1,
+      /* "Public" on a File Library item: parsed, never shared — what it grants there is unverified. */
+      audience_unverified: 1,
+      published_not_visible: 2,
       draft: 1,
     });
     /* Nothing is shareable until "All Positions" is decided and File Library downloads are verified. */
@@ -156,6 +158,14 @@ describe("dry run", () => {
     expect(titles(p.wouldIngest)).toEqual(["Fire Extinguisher Use", "Opening the Makery"]);
     expect(titles(p.new)).toEqual(["Fire Extinguisher Use", "Opening the Makery"]);
     expect(p.wouldDownload).toEqual([]);
+  });
+
+  it("lists procedures with ONE search — the verified empty-category response — and never a per-category search", async () => {
+    const h = new Harness();
+    await h.run("preview");
+    const searches = h.fake.log.filter((r) => r.path === "/KnowledgeCenter/_Search_Procedures");
+    expect(searches).toHaveLength(1);
+    expect((JSON.parse(searches[0]!.body) as { pModel: { Categories: string[] } }).pModel.Categories).toEqual([]);
   });
 
   it("never fetches a draft procedure's page", async () => {

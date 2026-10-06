@@ -78,7 +78,7 @@ describe("Buff City Soap sync, in the database", () => {
     expect(await q("select id from public.knowledge_documents")).toEqual([]);
     expect(await q("select id from public.knowledge_sync_items")).toEqual([]);
     const inventory = await q<{ content_type: string; reason: string | null }>("select content_type, reason from public.knowledge_sync_preview_items");
-    expect(inventory.filter((r) => r.content_type === "communication").map((r) => r.reason).sort()).toEqual(["draft", "published_not_visible"]);
+    expect(inventory.filter((r) => r.content_type === "communication").map((r) => r.reason).sort()).toEqual(["draft", "published_not_visible", "published_not_visible"]);
     const [runRow] = await q<{ report: { plan?: { flaggedOwnership: unknown[] } } }>("select report from public.knowledge_sync_runs where mode = 'preview'");
     expect(runRow!.report.plan!.flaggedOwnership).toHaveLength(3);
     expect(JSON.stringify(inventory) + JSON.stringify(runRow)).not.toContain(PASSWORD);
@@ -92,7 +92,9 @@ describe("Buff City Soap sync, in the database", () => {
       { title: "Opening the Makery", status: "indexed" },
     ]);
     const states = await q<{ content_type: string; state: string; reason: string | null }>("select content_type, state, reason from public.knowledge_sync_items");
-    expect(states.filter((s) => s.content_type === "communication")).toHaveLength(2);
+    /* The "Public" File Library item is parsed and stored, excluded as audience_unverified — never shared. */
+    expect(states.find((s) => s.reason === "audience_unverified")).toMatchObject({ content_type: "file_library", state: "EXCLUDED" });
+    expect(states.filter((s) => s.content_type === "communication")).toHaveLength(3);
     expect(states.find((s) => s.reason === "ownership_review")).toMatchObject({ content_type: "handbook", state: "NEEDS_REVIEW" });
   });
 });

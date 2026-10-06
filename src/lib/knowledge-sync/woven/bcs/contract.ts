@@ -122,28 +122,38 @@ export const HANDBOOK_STATUS: Record<string, { label: RegExp; publication: "publ
 
 /** VERIFIED_WEB_APP_INTERNAL_ROUTE: POST JSON; answers `{ Success: true, HTML }`. */
 export const PROCEDURE_SEARCH_PATH = "/KnowledgeCenter/_Search_Procedures";
-/** VERIFIED body. Empty `Categories` answers CATEGORY cards; one category answers its procedure cards. */
+/**
+ * VERIFIED body (live structure diagnostic, 2026-10-06). The search with an
+ * EMPTY `Categories` is the whole listing: it answers the category cards AND
+ * every procedure card. A search naming a category (by its
+ * `data-procedure-category-name`) answered NO procedures for any of the 12
+ * categories, so it is never used.
+ */
 export const procedureSearchBody = (categories: string[]) => ({
   pModel: { FilterText: "", Categories: categories, Frequencies: [], Positions: [], Tags: [] },
 });
 /**
- * VERIFIED: category cards carry `data-procedure-category-name` and an
- * indicator count; the per-category counts matched the procedures each
- * category returned. The indicator's exact markup was not captured, so the
- * count is read from an element whose class names an indicator and whose text
- * is a whole number — exactly one per card, or the listing fails.
+ * VERIFIED (2026-10-06): the empty-category response is
+ *   div.row > … category cards: `[data-procedure-category-name]`, each with
+ *                exactly one `div.indicator` holding a whole number
+ *   div.col-xs-12.hidden > div.procedure-grid > procedure cards:
+ *                `.woven-summary-container[data-procedure-id]`, one element
+ *                per procedure, none inside a category card
+ * The 12 indicators summed to 51 and the grid held 51 distinct procedures;
+ * the earlier per-category reads also gave 51 with no procedure in two
+ * categories. So the SUM of the indicators is the completeness proof.
  */
 export const PROCEDURE_CATEGORY_ATTR = "data-procedure-category-name";
 export const PROCEDURE_CATEGORY_INDICATOR_CLASS = /indicator/i;
 /** VERIFIED card markup. */
 export const PROCEDURE_CARD = {
   idAttr: "data-procedure-id",
+  containerClass: "woven-summary-container",
   titleClass: "entity-name",
-  badgeTag: "span",
   badgeClass: "badge",
   positionsImageId: "positions-assigned-image",
 } as const;
-/** VERIFIED: the badge that marks a draft (46 of 51 carry it). */
+/** VERIFIED: the badge that marks a draft (46 of 51 carry it; re-verified 2026-10-06). */
 export const PROCEDURE_UNPUBLISHED_BADGE = /^unpublished$/i;
 /**
  * Badges that state a FREQUENCY, not a publication state. "Monthly" is
@@ -234,8 +244,24 @@ export const COMMUNICATION_STATUS: Record<string, { label: RegExp; publication: 
  */
 export const BCS_COMPANY_WIDE_AUDIENCE_LABELS = ["Public", "All Teams All Positions"];
 
-/** VERIFIED display form of a team/position audience: "8 Teams 21 Positions", "All Teams 3 Positions". */
+/**
+ * VERIFIED display form of a team/position audience: "8 Teams 21 Positions",
+ * "All Teams 3 Positions", "1 Team 1 Position" (2026-10-06: every File
+ * Library and Communications audience but "Public" and "N/A" has this form;
+ * the cell is a pair of `span.badge` elements, read by its text).
+ */
 export const TEAM_POSITION_AUDIENCE = /^(all|\d+)\s+teams?\s+(all|\d+)\s+positions?$/i;
+/** VERIFIED display form "N/A" (File Library). It says nothing about who may see the item. */
+export const NOT_APPLICABLE_AUDIENCE = /^n\/?a$/i;
+/**
+ * VERIFIED display form "Public": Handbooks; and (2026-10-06) 6 File Library
+ * rows and 1 communication, as a single `span.badge`. Its ACCESS MEANING is
+ * verified only for Handbooks. Elsewhere it is parsed, never shared:
+ * `audience_unverified` (see `../policy.ts`).
+ */
+export const PUBLIC_AUDIENCE = /^public$/i;
+/** The content types whose "Public" audience is verified to mean the whole company. */
+export const PUBLIC_MEANS_COMPANY_WIDE: readonly string[] = ["handbook"];
 
 /* ----------------------------------------------------- capabilities -- */
 

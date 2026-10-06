@@ -125,20 +125,23 @@ The integration login must therefore be able to open the Company page.
 |---|---|---|
 | Policies (12) | list + detail structure | **Inventory only.** Publication state is unverified, so every policy is excluded as `publication_unverified`. |
 | Handbooks (1) | list | **Inventory only.** No handbook content/download route is verified for this company, so the part is BLOCKED. The one handbook is a JBA-titled manual → held for ownership review. |
-| Procedures (51) | category enumeration, badges, positions, detail steps | Drafts (`Unpublished`) excluded; their pages are never fetched. Each category's count must equal its indicator or the listing fails. Step text is ingested once the "All Positions" audience is shared by an administrator. Step attachments are not read (unverified). |
-| File Library (264) | list, columns, status keys, audiences | Unpublished excluded. Columns proved on every row (schema drift fails the listing). PDF/DOCX only. Download BLOCKED unless `WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED`. |
-| Communications (133) | list | **Inventory only.** Drafts and "Published – Not Visible" excluded; detail unverified → BLOCKED. A published-and-visible status has not been observed and fails the listing until verified. |
+| Procedures (51) | one empty-category search (category counts + every card), badges, positions, detail steps | One request lists everything: the cards must number exactly the sum of the 12 category counts, or the listing fails (a search naming a category answers nothing, so it is not used). Drafts (`Unpublished`) excluded; their pages are never fetched. Step text is ingested once the "All Positions" audience is shared by an administrator. Step attachments are not read (unverified). |
+| File Library (264) | list, columns, status keys, audience forms | Unpublished excluded. Columns proved on every row (schema drift fails the listing). Audience forms: team/position counts, `N/A`, `Public`. PDF/DOCX only. Download BLOCKED unless `WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED`. |
+| Communications (133) | list, audience forms | **Inventory only.** Drafts and "Published – Not Visible" excluded; detail unverified → BLOCKED. A published-and-visible status has not been observed and fails the listing until verified. Audience forms: team/position counts, `Public`. |
 
 ### Audience rules
 
 Ask Bubbles shows every knowledge document to everyone signed in. So:
 
-- **Shared automatically:** `Public`, `All Teams All Positions`.
+- **Shared automatically:** `Public` on a **Handbook**, `All Teams All Positions`.
 - **Waits for an administrator's decision:** `All Positions` (procedures — no
   position limit, but team/location limits are unverified).
 - **Never shared, not even by a decision:** anything narrower
   (`8 Teams 21 Positions`, `All Teams 3 Positions`, a list of positions) →
-  `audience_restricted`; anything unclear (`N/A`, no audience) → `audience_unclear`.
+  `audience_restricted`; anything unclear (`N/A`, no audience) → `audience_unclear`;
+  `Public` on a File Library item or a communication → `audience_unverified`
+  (the label is verified there; what it grants is not — it may not mean the
+  whole company, so it is not treated as if it did).
 
 ### Records inside Midwest Soap Makers that name another company
 

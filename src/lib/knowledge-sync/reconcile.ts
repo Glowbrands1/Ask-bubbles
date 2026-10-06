@@ -83,8 +83,8 @@ export interface ReconcileInput {
   confirmLargeRemoval?: boolean;
   /** A reason code when this record must be confirmed by a person before it may be synced. */
   hold?: (record: SourceRecord) => string | null;
-  /** A reason code when this audience can never be shared with every Ask Bubbles user. */
-  audienceRestriction?: (audience: readonly string[] | null) => string | null;
+  /** A reason code when this record's audience can never be shared with every Ask Bubbles user. */
+  audienceRestriction?: (audience: readonly string[] | null, record: Pick<SourceRecord, "contentType">) => string | null;
 }
 
 export interface ReconcileOutput {
@@ -160,7 +160,7 @@ export function emptyTypeReport(listing: TypeReport["listing"] = "not_read"): Ty
   };
 }
 
-const RESTRICTED_REASONS = new Set(["audience_restricted", "audience_unclear"]);
+const RESTRICTED_REASONS = new Set(["audience_restricted", "audience_unclear", "audience_unverified"]);
 
 function isRetiredForAccess(item: ManifestItem | undefined): boolean {
   return (
@@ -213,7 +213,7 @@ function plan(
    * never shared — not even by an administrator's decision — and that is a
    * final answer whatever capability the part is still waiting for.
    */
-  const restricted = input.audienceRestriction?.(record.audience) ?? null;
+  const restricted = input.audienceRestriction?.(record.audience, record) ?? null;
   if (restricted) {
     if (live) return { state: "PERMISSION_CHANGED", pendingAction: "retire", reason: restricted };
     return { state: "EXCLUDED", pendingAction: "none", reason: restricted };
@@ -370,7 +370,7 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
         /* Flagged whatever its publication, so a dry run lists every record that may belong to another company. */
         const heldReason = input.hold?.(record) ?? null;
         if (heldReason) held.push(key);
-        const restrictedReason = eligible && !heldReason ? (input.audienceRestriction?.(record.audience) ?? null) : null;
+        const restrictedReason = eligible && !heldReason ? (input.audienceRestriction?.(record.audience, record) ?? null) : null;
         if (restrictedReason) restrictedParts += 1;
         if (
           eligible &&

@@ -4,11 +4,11 @@ import { communicationRecord, parseCommunicationRows } from "./adapters/communic
 import { fileLibraryRecord, parseFileLibraryRows } from "./adapters/file-library";
 import { handbookRecord, parseHandbookRows } from "./adapters/handbooks";
 import { parsePolicyCards, parsePolicyDetail, policyRecord, withPolicyDetail } from "./adapters/policies";
-import { parseProcedureCards, parseProcedureCategories, parseProcedureDetail, procedureRecord, unionProcedureCards } from "./adapters/procedures";
+import { parseProcedureDetail, parseProcedureListing, procedureRecord } from "./adapters/procedures";
 import { ticksToIso } from "./adapters/shared";
 import { assertCompanyPage, companyIdsOnPage } from "./company-guard";
 import { bcsAudienceRestriction, bcsOwnershipHold } from "./policy";
-import { BCS_COMPANY_ID, JBA_COMPANY_ID, bcsId, communicationRow, fileRow, ticks } from "./test-support";
+import { BCS_COMPANY_ID, JBA_COMPANY_ID, FakeBcsWoven, bcsId, communicationRow, fileRow, ticks } from "./test-support";
 
 /**
  * The Buff City Soap adapters against the handoff's recorded shapes. PURE:
@@ -80,63 +80,97 @@ describe("handbooks", () => {
   });
 });
 
-const categoryCards = (cats: [string, string][]) =>
-  cats.map(([name, n]) => `<div data-procedure-category-name="${name}"><h4>${name}</h4><span class="indicator">${n}</span></div>`).join("");
+/**
+ * The empty-category procedure search as the LIVE read-only diagnostic found
+ * it (6 October 2026), sanitized — structure only, invented names and ids:
+ * `div.row` holding the category cards (`[data-procedure-category-name]`,
+ * `div.card-left > img`, `div.card-center > div.entity-name`,
+ * `div.card-right > div.indicator + div.chevron > i`) and, in
+ * `div.col-xs-12.hidden > div.procedure-grid`, one
+ * `.woven-summary-container[data-procedure-id]` per procedure; then a script.
+ * Live: 12 categories whose indicators sum to 51; 51 cards, each id once;
+ * badges "Unpublished" ×45, none ×5, "Unpublished" + "Monthly" ×1.
+ */
+const categoryCard = (name: string, count: string) =>
+  `<div class="col-md-4 category-card woven-card" data-procedure-category-name="${name}"><div class="card-left"><img src="/img/folder.svg"></div><div class="card-center flex-center-content flex-hcenter"><div class="entity-name">${name}</div></div><div class="card-right"><div class="indicator">${count}</div><div class="chevron"><i class="fas fa-chevron-right"></i></div></div></div>`;
 const procedureCard = (id: string, title: string, badges: string[] = [], positions: string | null = "All Positions") =>
-  `<div class="woven-summary-container" data-procedure-id="${id}"><div class="entity-name">${title}</div><div>Safety</div>${badges.map((b) => `<span class="badge">${b}</span>`).join("")}${positions === null ? "" : `<div><img id="positions-assigned-image"> ${positions}</div>`}<a data-procedure-id="${id}">Open</a></div>`;
+  `<div class="woven-summary-container procedure-card" data-procedure-id="${id}"><div class="entity-name">${title}</div>${badges.map((b) => `<span class="badge badge-sm">${b}</span>`).join("")}${positions === null ? "" : `<div><img id="positions-assigned-image"> ${positions}</div>`}</div>`;
+const listing = (categories: [string, string][], cards: string[]) => ({
+  Success: true,
+  HTML: `<div class="row"><div class="col-xs-12">${categories.map(([n, c]) => categoryCard(n, c)).join("")}</div><div class="col-xs-12 hidden"><div class="procedure-grid">${cards.join("")}</div></div></div><script>initProcedureSearch();</script>`,
+});
 
 describe("procedures", () => {
-  it("reads categories with their indicator counts, and refuses a list that cannot be proved complete", () => {
-    expect(parseProcedureCategories({ Success: true, HTML: categoryCards([["Safety", "2"], ["Training", "12"]]) })).toEqual([
-      { name: "Safety", count: 2 },
-      { name: "Training", count: 12 },
-    ]);
-    expect(() => parseProcedureCategories({ Success: true, HTML: categoryCards([["Safety", "many"]]) })).toThrow(/one readable count/);
-    expect(() => parseProcedureCategories({ Success: true, HTML: "" })).toThrow(/no categories/);
-    expect(() => parseProcedureCategories({ Success: true, HTML: procedureCard(bcsId(1), "X") })).toThrow(/procedures where categories/);
-  });
-
-  it("reads publication from the badges: Unpublished (also beside a frequency) is a draft; no badge is published", () => {
-    const cards = parseProcedureCards(
-      {
-        Success: true,
-        HTML: procedureCard(bcsId(1), "Published One") + procedureCard(bcsId(2), "Draft", ["Unpublished"]) + procedureCard(bcsId(3), "Monthly Draft", ["Unpublished | Monthly"]) + procedureCard(bcsId(4), "Monthly", ["Monthly"]),
-      },
-      { name: "Safety", count: 4 },
+  it("reads the live structure in ONE response: category counts and every procedure card, proved complete by the sum", () => {
+    const { categories, cards } = parseProcedureListing(
+      listing(
+        [
+          ["Safety", "2"],
+          ["Training", "1"],
+        ],
+        [procedureCard(bcsId(1), "A"), procedureCard(bcsId(2), "B", ["Unpublished"]), procedureCard(bcsId(3), "C", ["Unpublished", "Monthly"])],
+      ),
     );
-    expect(cards.map((c) => [c.title, c.unpublished, c.frequency])).toEqual([
-      ["Published One", false, null],
-      ["Draft", true, null],
-      ["Monthly Draft", true, "Monthly"],
-      ["Monthly", false, "Monthly"],
+    expect(categories).toEqual([
+      { name: "Safety", count: 2 },
+      { name: "Training", count: 1 },
     ]);
-    expect(procedureRecord(cards[1]!, null)).toMatchObject({ publication: "unpublished", publicationReason: "unpublished", status: "Unpublished" });
+    expect(cards.map((c) => [c.title, c.unpublished, c.frequency])).toEqual([
+      ["A", false, null],
+      ["B", true, null],
+      ["C", true, "Monthly"],
+    ]);
   });
 
-  it("an unknown badge, or a count that does not match the indicator, fails the listing", () => {
-    expect(() => parseProcedureCards({ Success: true, HTML: procedureCard(bcsId(1), "X", ["Archived"]) }, { name: "Safety", count: 1 })).toThrow(/badge Ask Bubbles has not verified/);
-    expect(() => parseProcedureCards({ Success: true, HTML: procedureCard(bcsId(1), "X") }, { name: "Safety", count: 2 })).toThrow(/not the 2 its category shows/);
+  it("a list that cannot be proved complete fails: cards not matching the summed counts, no categories, an unreadable count", () => {
+    expect(() => parseProcedureListing(listing([["Safety", "3"]], [procedureCard(bcsId(1), "A"), procedureCard(bcsId(2), "B")]))).toThrow(/held 2 procedures, not the 3/);
+    /* A procedure under two categories would make the sum exceed the cards: refused, never guessed. */
+    expect(() => parseProcedureListing(listing([["Safety", "1"], ["Training", "1"]], [procedureCard(bcsId(1), "A")]))).toThrow(/held 1 procedures, not the 2/);
+    /* The categories alone (the shape the earlier contract assumed): no cards, so incomplete. */
+    expect(() => parseProcedureListing(listing([["Safety", "2"]], []))).toThrow(/held 0 procedures, not the 2/);
+    expect(() => parseProcedureListing(listing([], [procedureCard(bcsId(1), "A")]))).toThrow(/no categories/);
+    expect(() => parseProcedureListing(listing([["Safety", "many"]], [procedureCard(bcsId(1), "A")]))).toThrow(/one readable count/);
+    expect(() => parseProcedureListing({ Success: false, HTML: "" })).toThrow();
+  });
+
+  it("a procedure id anywhere but a verified card, or twice, fails the listing", () => {
+    const strayLink = procedureCard(bcsId(1), "A").replace("</div></div>", `</div><a data-procedure-id="${bcsId(1)}">Open</a></div>`);
+    expect(() => parseProcedureListing(listing([["Safety", "1"]], [strayLink]))).toThrow(/outside the verified procedure cards/);
+    const noContainer = `<div class="procedure-card" data-procedure-id="${bcsId(1)}"><div class="entity-name">A</div></div>`;
+    expect(() => parseProcedureListing(listing([["Safety", "1"]], [noContainer]))).toThrow(/outside the verified procedure cards/);
+    const insideCategory = listing([["Safety", "1"]], []);
+    insideCategory.HTML = insideCategory.HTML.replace('<div class="indicator">', `${procedureCard(bcsId(1), "A")}<div class="indicator">`);
+    expect(() => parseProcedureListing(insideCategory)).toThrow(/outside the verified procedure cards/);
+    expect(() => parseProcedureListing(listing([["Safety", "2"]], [procedureCard(bcsId(1), "A"), procedureCard(bcsId(1), "A again")]))).toThrow(/same item twice/);
+  });
+
+  it("an unknown badge fails the listing; a badge is read by its class, whatever its tag", () => {
+    expect(() => parseProcedureListing(listing([["Safety", "1"]], [procedureCard(bcsId(1), "X", ["Archived"])]))).toThrow(/badge Ask Bubbles has not verified/);
+    const divBadge = procedureCard(bcsId(1), "X").replace('<div><img', '<div class="badge badge-sm">Unpublished</div><div><img');
+    expect(parseProcedureListing(listing([["Safety", "1"]], [divBadge])).cards[0]!.unpublished).toBe(true);
+    const [card] = parseProcedureListing(listing([["Safety", "1"]], [procedureCard(bcsId(2), "Draft", ["Unpublished"])])).cards;
+    expect(procedureRecord(card!, null)).toMatchObject({ publication: "unpublished", publicationReason: "unpublished", status: "Unpublished" });
   });
 
   it("reads the position line as the audience", () => {
-    const [all, limited, none] = parseProcedureCards(
-      { Success: true, HTML: procedureCard(bcsId(1), "A") + procedureCard(bcsId(2), "B", [], "General Manager, Trainer") + procedureCard(bcsId(3), "C", [], null) },
-      { name: "Safety", count: 3 },
+    const { cards } = parseProcedureListing(
+      listing([["Safety", "3"]], [procedureCard(bcsId(1), "A"), procedureCard(bcsId(2), "B", [], "General Manager, Trainer"), procedureCard(bcsId(3), "C", [], null)]),
     );
-    expect([all!.positions, limited!.positions, none!.positions]).toEqual([["All Positions"], ["General Manager", "Trainer"], null]);
+    expect(cards.map((c) => c.positions)).toEqual([["All Positions"], ["General Manager", "Trainer"], null]);
   });
 
-  it("a procedure in two categories is one procedure", () => {
-    const a = parseProcedureCards({ Success: true, HTML: procedureCard(bcsId(1), "A") }, { name: "Safety", count: 1 });
-    const b = parseProcedureCards({ Success: true, HTML: procedureCard(bcsId(1), "A") + procedureCard(bcsId(2), "B") }, { name: "Training", count: 2 });
-    expect(unionProcedureCards([a, b]).map((c) => c.id)).toEqual([bcsId(1), bcsId(2)]);
+  it("the fake Woven serves the same live structure", () => {
+    const fake = new FakeBcsWoven();
+    const html = (fake as unknown as { procedureListing: (c: unknown) => string }).procedureListing(fake.content[BCS_COMPANY_ID]);
+    const { categories, cards } = parseProcedureListing({ Success: true, HTML: html });
+    expect(cards).toHaveLength(categories.reduce((n, c) => n + c.count, 0));
   });
 
   it("reads the detail page's steps once each, without the 'Not Provided' placeholder", () => {
     const steps = `<div data-procedure-step-id="${bcsId(11)}"><div id="procedure-step-content"><p>Do one.</p></div></div><div data-procedure-step-id="${bcsId(12)}"><div id="procedure-step-content">Not Provided</div></div>`;
     const html = `<html><head><title>Procedures - Opening</title></head><body><div id="procedure-steps-container">${steps}</div><div id="procedure-steps-carousel">${steps}</div></body></html>`;
     expect(parseProcedureDetail(html)).toEqual({ title: "Opening", steps: [{ stepId: bcsId(11), text: "Do one." }, { stepId: bcsId(12), text: "" }] });
-    const [card] = parseProcedureCards({ Success: true, HTML: procedureCard(bcsId(1), "Opening") }, { name: "Safety", count: 1 });
+    const [card] = parseProcedureListing(listing([["Safety", "1"]], [procedureCard(bcsId(1), "Opening")])).cards;
     const record = procedureRecord(card!, html);
     expect(record.parts).toHaveLength(1);
     expect(record.parts[0]!.retrieval).toEqual({ kind: "available", locator: { procedureId: bcsId(1) } });
@@ -182,6 +216,39 @@ describe("File Library", () => {
   it("a list naming the same file twice is refused", () => {
     expect(() => parseFileLibraryRows({ list: [row(), row()] })).toThrow(/same item twice/);
   });
+  /*
+   * The audience cell as the LIVE diagnostic found it (6 October 2026), all 264
+   * rows: "All Teams All Positions" ×159, "All Teams N Positions" ×35 and
+   * "N Teams N Positions" ×2 as two badges; "Public" ×6 as one badge; and a
+   * one-badge form ×62 whose sanitized shape "N / <x>" is consistent with
+   * "N/A" — the only such form accepted: if it is anything else, the listing
+   * fails (the live dry run is the check).
+   */
+  it("parses every verified audience form from the live badge markup", () => {
+    const rows = parseFileLibraryRows({
+      list: [
+        row({ id: bcsId(1), audience: "All Teams All Positions" }),
+        row({ id: bcsId(2), audience: "All Teams 3 Positions" }),
+        row({ id: bcsId(3), audience: "2 Teams 5 Positions" }),
+        row({ id: bcsId(4), audience: "N/A" }),
+        row({ id: bcsId(5), audience: "Public" }),
+      ],
+    });
+    expect(rows.map((r) => r.audience)).toEqual([["All Teams All Positions"], ["All Teams 3 Positions"], ["2 Teams 5 Positions"], ["N/A"], ["Public"]]);
+    expect(row().Column4).toBe('<span class="badge badge-sm">All Teams</span><span class="badge badge-sm badge-light-blue-primary">All Positions</span>');
+  });
+
+  it("a 'Public' File Library item is parsed but NOT shareable: what Public grants there is unverified", () => {
+    const [publicRow] = parseFileLibraryRows({ list: [row({ audience: "Public" })] });
+    const record = fileLibraryRecord(publicRow!, { downloadEnabled: false });
+    expect(bcsAudienceRestriction(record.audience, record)).toBe("audience_unverified");
+  });
+
+  it("an audience in any other form still fails the whole listing", () => {
+    for (const audience of ["Everyone", "3 Locations", "All Teams", "Public, 2 Teams 3 Positions", "Managers Only"]) {
+      expect(() => parseFileLibraryRows({ list: [row({ audience })] }), audience).toThrow(/audience was not in a verified form/);
+    }
+  });
 });
 
 describe("Communications", () => {
@@ -202,6 +269,30 @@ describe("Communications", () => {
     expect(JSON.stringify(record)).not.toContain("A Person");
   });
 
+  /*
+   * The audience cell as the LIVE diagnostic found it (6 October 2026), all 133
+   * rows: `div.no-wrap` holding two badges — "N Teams N Positions" ×119,
+   * "N Team N Positions" ×7, "N Teams All Positions" ×4, "N Team N Position"
+   * ×2 — or one "Public" badge ×1.
+   */
+  it("parses every verified audience form from the live markup; 'Public' is parsed but not shareable", () => {
+    const rows = parseCommunicationRows({
+      list: [
+        communicationRow({ id: bcsId(1), title: "A", key: "3", label: "Published – Not Visible", audience: "8 Teams 21 Positions" }),
+        communicationRow({ id: bcsId(2), title: "B", key: "3", label: "Published – Not Visible", audience: "1 Team 4 Positions" }),
+        communicationRow({ id: bcsId(3), title: "C", key: "3", label: "Published – Not Visible", audience: "2 Teams All Positions" }),
+        communicationRow({ id: bcsId(4), title: "D", key: "1", label: "Draft", audience: "1 Team 1 Position" }),
+        communicationRow({ id: bcsId(5), title: "E", key: "3", label: "Published – Not Visible", audience: "Public" }),
+      ],
+    });
+    expect(rows.map((r) => r.audience)).toEqual([["8 Teams 21 Positions"], ["1 Team 4 Positions"], ["2 Teams All Positions"], ["1 Team 1 Position"], ["Public"]]);
+    const publicRecord = communicationRecord(rows[4]!);
+    expect(bcsAudienceRestriction(publicRecord.audience, publicRecord)).toBe("audience_unverified");
+    expect(() =>
+      parseCommunicationRows({ list: [communicationRow({ id: bcsId(6), title: "F", key: "1", label: "Draft", audience: "Store Managers" })] }),
+    ).toThrow(/audience was not in a verified form/);
+  });
+
   it("the unobserved published-and-visible status fails the listing until it is verified", () => {
     expect(() => parseCommunicationRows({ list: [communicationRow({ id: bcsId(1), title: "X", key: "2", label: "Published", audience: "All Teams All Positions" })] })).toThrow(
       /status Ask Bubbles has not verified/,
@@ -211,14 +302,25 @@ describe("Communications", () => {
 
 describe("audience and ownership rules", () => {
   it("only company-wide audiences pass; narrower ones are restricted; unclear ones are unclear; 'All Positions' waits for a decision", () => {
-    expect(bcsAudienceRestriction(["Public"])).toBeNull();
-    expect(bcsAudienceRestriction(["All Teams All Positions"])).toBeNull();
-    expect(bcsAudienceRestriction(["All Positions"])).toBeNull();
-    expect(bcsAudienceRestriction(["8 Teams 21 Positions"])).toBe("audience_restricted");
-    expect(bcsAudienceRestriction(["All Teams 3 Positions"])).toBe("audience_restricted");
-    expect(bcsAudienceRestriction(["General Manager", "Trainer"])).toBe("audience_restricted");
-    expect(bcsAudienceRestriction(["N/A"])).toBe("audience_unclear");
-    expect(bcsAudienceRestriction(null)).toBe("audience_unclear");
+    const handbook = { contentType: "handbook" } as const;
+    const file = { contentType: "file_library" } as const;
+    const procedure = { contentType: "procedure" } as const;
+    expect(bcsAudienceRestriction(["Public"], handbook)).toBeNull();
+    expect(bcsAudienceRestriction(["All Teams All Positions"], file)).toBeNull();
+    expect(bcsAudienceRestriction(["All Positions"], procedure)).toBeNull();
+    expect(bcsAudienceRestriction(["8 Teams 21 Positions"], file)).toBe("audience_restricted");
+    expect(bcsAudienceRestriction(["All Teams 3 Positions"], file)).toBe("audience_restricted");
+    expect(bcsAudienceRestriction(["1 Team 1 Position"], { contentType: "communication" })).toBe("audience_restricted");
+    expect(bcsAudienceRestriction(["General Manager", "Trainer"], procedure)).toBe("audience_restricted");
+    expect(bcsAudienceRestriction(["N/A"], file)).toBe("audience_unclear");
+    expect(bcsAudienceRestriction(null, file)).toBe("audience_unclear");
+  });
+
+  it("'Public' is company-wide ONLY on a Handbook; anywhere else it is unverified and never shared", () => {
+    for (const contentType of ["file_library", "communication", "procedure", "policy"] as const) {
+      expect(bcsAudienceRestriction(["Public"], { contentType })).toBe("audience_unverified");
+    }
+    expect(bcsAudienceRestriction(["public"], { contentType: "handbook" })).toBeNull();
   });
 
   it("JB & Associates / Sun Tan City titles are held for an ownership check", () => {

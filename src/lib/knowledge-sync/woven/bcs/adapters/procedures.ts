@@ -27,26 +27,34 @@ import { WovenShapeError, assertUnique, blockedPart, digest, requireSuccessHtml,
 
 /**
  * ============================================================================
- * PROCEDURES — `POST /KnowledgeCenter/_Search_Procedures`, by category
+ * PROCEDURES — `POST /KnowledgeCenter/_Search_Procedures`, ONE request
  * ============================================================================
  *
- * VERIFIED for Buff City Soap:
+ * VERIFIED for Buff City Soap (live structure diagnostic, 2026-10-06):
  *
- *   * an empty `Categories` search answers CATEGORY cards, each with its
- *     indicator count; a one-category search answers that category's
- *     procedure cards. All 12 categories gave 51 unique procedures, and every
- *     category's count matched its indicator.
+ *   * the search with no category answers BOTH the category cards (each with
+ *     one indicator count) and every procedure card, the latter in a hidden
+ *     `.procedure-grid`. A search naming one category answers no procedures,
+ *     so it is not used.
  *   * drafts ARE returned to the admin session: 46 of 51 carry the
  *     "Unpublished" badge. A card without it reads as published (the
  *     handoff's enumeration plan).
  *   * the position line: "All Positions", or the positions it is limited to.
  *
- * COMPLETENESS IS PROVED. A category whose cards do not number exactly its
- * indicator count fails the whole listing (`procedure_count_mismatch`): a
- * partial list is never read as the collection.
+ * COMPLETENESS IS PROVED. The procedure cards must number exactly the SUM of
+ * the category indicators (`procedure_count_mismatch` otherwise): a partial
+ * list is never read as the collection. A procedure listed under two
+ * categories would make the sum larger than the cards and fail the listing —
+ * the verified data has none, and the listing does not guess.
+ *
+ * EVERY `data-procedure-id` element must be a `.woven-summary-container`
+ * outside the category cards, and each id must appear once. Anything else is
+ * a changed page (`schema_drift` / `duplicate_source_id`).
  *
  * A BADGE THAT IS NEITHER "Unpublished" NOR A FREQUENCY is an unknown
  * publication state: the listing fails rather than guess what it means.
+ *
+ * A card does not say which category it belongs to, so none is recorded.
  *
  * DETAIL: the full procedure page (`/KnowledgeCenter/Procedure/<id>`), read
  * only for published procedures. Steps carry `data-procedure-step-id` and
@@ -60,13 +68,26 @@ export interface ProcedureCategory {
   count: number;
 }
 
-export function parseProcedureCategories(body: unknown): ProcedureCategory[] {
-  const fragment = parseHtmlFragment(requireSuccessHtml(body, "procedure category"));
-  if (elementsWithAttr(fragment, PROCEDURE_CARD.idAttr).length > 0) {
-    throw new WovenShapeError("schema_drift", "Woven's procedure search answered procedures where categories were expected.");
-  }
+export interface ProcedureCard {
+  id: string;
+  title: string;
+  /** Every badge text, split on "|", for the record. */
+  badges: string[];
+  unpublished: boolean;
+  frequency: string | null;
+  /** "All Positions", the positions it is limited to, or null when the card states none. */
+  positions: string[] | null;
+}
+
+export interface ProcedureListing {
+  categories: ProcedureCategory[];
+  cards: ProcedureCard[];
+}
+
+function parseCategories(fragment: ReturnType<typeof parseHtmlFragment>): { categories: ProcedureCategory[]; cardElements: HtmlElement[] } {
+  const cardElements = elementsWithAttr(fragment, PROCEDURE_CATEGORY_ATTR);
   const categories: ProcedureCategory[] = [];
-  for (const card of elementsWithAttr(fragment, PROCEDURE_CATEGORY_ATTR)) {
+  for (const card of cardElements) {
     const name = (attr(card, PROCEDURE_CATEGORY_ATTR) ?? "").trim();
     if (!name || name.length > 120) throw new WovenShapeError("schema_drift", "A procedure category had no usable name.");
     const indicators = [...walk(card)]
@@ -88,23 +109,12 @@ export function parseProcedureCategories(body: unknown): ProcedureCategory[] {
     categories.map((c) => c.name),
     "procedure category",
   );
-  return categories;
+  return { categories, cardElements };
 }
 
-export interface ProcedureCard {
-  id: string;
-  title: string;
-  category: string;
-  /** Every badge text, split on "|", for the record. */
-  badges: string[];
-  unpublished: boolean;
-  frequency: string | null;
-  /** "All Positions", the positions it is limited to, or null when the card states none. */
-  positions: string[] | null;
-}
-
+/** Every element with the badge class (the tag is not relied on), split on "|". */
 function badgesOf(card: HtmlElement): string[] {
-  return elementsByTag(card, PROCEDURE_CARD.badgeTag)
+  return [...walk(card)]
     .filter((el) => hasClass(el, PROCEDURE_CARD.badgeClass))
     .flatMap((el) => textOf(el).split("|"))
     .map((t) => t.replace(/\s+/g, " ").trim())
@@ -125,50 +135,65 @@ function positionsOf(card: HtmlElement): string[] | null {
     .filter(Boolean);
 }
 
-/** One category's procedure cards. The count must equal the category's indicator. */
-export function parseProcedureCards(body: unknown, category: ProcedureCategory): ProcedureCard[] {
-  const fragment = parseHtmlFragment(requireSuccessHtml(body, "procedure"));
-  const cards: ProcedureCard[] = [];
-  const seen = new Set<string>();
-  for (const card of elementsWithAttr(fragment, PROCEDURE_CARD.idAttr)) {
-    const id = validId(attr(card, PROCEDURE_CARD.idAttr));
-    if (!id) throw new WovenShapeError("schema_drift", "A procedure card had no usable id.");
-    /* A link or button inside a card may repeat the id; one card per procedure. */
-    if (seen.has(id.toLowerCase())) continue;
-    seen.add(id.toLowerCase());
-    const titleEl = elementsByClass(card, PROCEDURE_CARD.titleClass)[0];
-    const title = titleEl ? textOf(titleEl) : "";
-    if (!title) throw new WovenShapeError("schema_drift", "A procedure card had no title: Woven's procedure list has changed shape.");
-
-    const badges = badgesOf(card);
-    let unpublished = false;
-    let frequency: string | null = null;
-    for (const badge of badges) {
-      if (PROCEDURE_UNPUBLISHED_BADGE.test(badge)) unpublished = true;
-      else if (PROCEDURE_FREQUENCY_BADGES.test(badge)) frequency = frequency ?? badge;
-      else {
-        throw new WovenShapeError(
-          "unknown_publication_state",
-          `A procedure carries a badge Ask Bubbles has not verified ("${badge.slice(0, 40)}"), so the procedure list was not used.`,
-        );
-      }
-    }
-    cards.push({ id, title, category: category.name, badges, unpublished, frequency, positions: positionsOf(card) });
+function insideAny(element: HtmlElement, containers: readonly HtmlElement[]): boolean {
+  for (let node = element.parentNode as HtmlElement | undefined; node; node = node.parentNode as HtmlElement | undefined) {
+    if (containers.includes(node)) return true;
   }
-  if (cards.length !== category.count) {
-    throw new WovenShapeError(
-      "procedure_count_mismatch",
-      `Woven's "${category.name.slice(0, 60)}" procedures numbered ${cards.length}, not the ${category.count} its category shows, so the procedure list was not used.`,
-    );
-  }
-  return cards;
+  return false;
 }
 
-/** Cards of every category, one per procedure (a procedure in two categories keeps its first). */
-export function unionProcedureCards(perCategory: ProcedureCard[][]): ProcedureCard[] {
-  const byId = new Map<string, ProcedureCard>();
-  for (const cards of perCategory) for (const card of cards) if (!byId.has(card.id.toLowerCase())) byId.set(card.id.toLowerCase(), card);
-  return [...byId.values()];
+function parseCard(card: HtmlElement): ProcedureCard {
+  const id = validId(attr(card, PROCEDURE_CARD.idAttr));
+  if (!id) throw new WovenShapeError("schema_drift", "A procedure card had no usable id.");
+  const titleEl = elementsByClass(card, PROCEDURE_CARD.titleClass)[0];
+  const title = titleEl ? textOf(titleEl) : "";
+  if (!title) throw new WovenShapeError("schema_drift", "A procedure card had no title: Woven's procedure list has changed shape.");
+
+  const badges = badgesOf(card);
+  let unpublished = false;
+  let frequency: string | null = null;
+  for (const badge of badges) {
+    if (PROCEDURE_UNPUBLISHED_BADGE.test(badge)) unpublished = true;
+    else if (PROCEDURE_FREQUENCY_BADGES.test(badge)) frequency = frequency ?? badge;
+    else {
+      throw new WovenShapeError(
+        "unknown_publication_state",
+        `A procedure carries a badge Ask Bubbles has not verified ("${badge.slice(0, 40)}"), so the procedure list was not used.`,
+      );
+    }
+  }
+  return { id, title, badges, unpublished, frequency, positions: positionsOf(card) };
+}
+
+/**
+ * The whole procedure listing from the one empty-category search: the
+ * categories, and every procedure card — proved complete against the sum of
+ * the category counts.
+ */
+export function parseProcedureListing(body: unknown): ProcedureListing {
+  const fragment = parseHtmlFragment(requireSuccessHtml(body, "procedure"));
+  const { categories, cardElements } = parseCategories(fragment);
+
+  const procedureElements = elementsWithAttr(fragment, PROCEDURE_CARD.idAttr);
+  for (const el of procedureElements) {
+    if (!hasClass(el, PROCEDURE_CARD.containerClass) || insideAny(el, cardElements)) {
+      throw new WovenShapeError("schema_drift", "Woven's procedure list carried a procedure id outside the verified procedure cards.");
+    }
+  }
+  const cards = procedureElements.map(parseCard);
+  assertUnique(
+    cards.map((c) => c.id),
+    "procedure",
+  );
+
+  const expected = categories.reduce((sum, c) => sum + c.count, 0);
+  if (cards.length !== expected) {
+    throw new WovenShapeError(
+      "procedure_count_mismatch",
+      `Woven's procedure list held ${cards.length} procedures, not the ${expected} its categories show, so the procedure list was not used.`,
+    );
+  }
+  return { categories, cards };
 }
 
 export interface ProcedureStep {
@@ -242,7 +267,7 @@ export function procedureRecord(card: ProcedureCard, detailHtml: string | null):
     documentIds: [],
     attachmentIds: [],
     contentFingerprint: null,
-    sourceMetadata: { category: card.category, frequency: card.frequency, steps: steps?.length ?? null },
+    sourceMetadata: { frequency: card.frequency, steps: steps?.length ?? null },
     parts,
   };
 }

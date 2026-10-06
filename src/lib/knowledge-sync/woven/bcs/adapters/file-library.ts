@@ -1,7 +1,7 @@
 import { SUPPORTED_KINDS } from "@/lib/ingestion/validation";
 import type { SourcePart, SourceRecord } from "../../../types";
 import { htmlText } from "../../html";
-import { BCS_CAPABILITY, FILE_LIBRARY_COLUMNS, FILE_LIBRARY_LEVELS, FILE_LIBRARY_STATUS, TEAM_POSITION_AUDIENCE } from "../contract";
+import { BCS_CAPABILITY, FILE_LIBRARY_COLUMNS, FILE_LIBRARY_LEVELS, FILE_LIBRARY_STATUS, NOT_APPLICABLE_AUDIENCE, PUBLIC_AUDIENCE, TEAM_POSITION_AUDIENCE } from "../contract";
 import { WovenShapeError, assertUnique, badgeLabels, digest, keyedCell, requireColumns, requireList, resolveStatus, ticksToIso, validId } from "./shared";
 
 /**
@@ -11,7 +11,8 @@ import { WovenShapeError, assertUnique, badgeLabels, digest, keyedCell, requireC
  *
  * VERIFIED for Buff City Soap: the whole collection in one response (264
  * rows), its column mapping from a sample row, status keys 1 Unpublished /
- * 2 Published, Brand/Account library levels and team/position audiences.
+ * 2 Published, Brand/Account library levels and the audience forms
+ * (team/position counts, "N/A", "Public").
  *
  * THE MAPPING IS PROVED ON EVERY ROW, because the UI's header order differs
  * from the JSON's columns: the status must be a verified key/label pair, the
@@ -39,7 +40,12 @@ export interface FileLibraryRow {
   libraryLevel: (typeof FILE_LIBRARY_LEVELS)[number];
 }
 
-const AUDIENCE_SHAPES = [TEAM_POSITION_AUDIENCE, /^n\/?a$/i];
+/**
+ * The verified audience forms (2026-10-06, all 264 rows): a team/position
+ * count, "N/A" or "Public". Being PARSED does not make one shareable: see
+ * `../policy.ts`. Any other form fails the listing.
+ */
+const AUDIENCE_SHAPES = [TEAM_POSITION_AUDIENCE, NOT_APPLICABLE_AUDIENCE, PUBLIC_AUDIENCE];
 
 export function parseFileLibraryRows(body: unknown): FileLibraryRow[] {
   const rows: FileLibraryRow[] = [];

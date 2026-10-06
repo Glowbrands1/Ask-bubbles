@@ -77,6 +77,26 @@ export interface FakeCompanyContent {
   communications: Record<string, string>[];
 }
 
+/**
+ * An audience cell as the live diagnostic found it (2026-10-06): a
+ * team/position audience is two badges ("All Teams" + "3 Positions"); "N/A"
+ * and "Public" are one badge each.
+ */
+export function audienceBadges(audience: string): string {
+  const m = /^((?:all|\d+)\s+teams?)\s+((?:all|\d+)\s+positions?)$/i.exec(audience);
+  if (m) return `<span class="badge badge-sm">${m[1]}</span><span class="badge badge-sm badge-light-blue-primary">${m[2]}</span>`;
+  if (/^n\/?a$/i.test(audience)) return `<span class="badge badge-sm badge-primary-50">${audience}</span>`;
+  return `<span class="badge badge-sm">${audience}</span>`;
+}
+
+/** A status cell as the live diagnostic found it: hidden key, then a badge with an icon. */
+function statusBadge(key: string, label: string): string {
+  const published = /^published$/i.test(label);
+  const icon = /draft|unpublished/i.test(label) ? "fa-pen-to-square" : "fa-check";
+  const colour = published ? "badge-green-primary" : /draft|unpublished/i.test(label) ? "badge-light-blue-primary" : "badge-primary-50";
+  return `<span class="hidden">${key}</span><span class="badge badge-sm ${colour}"><i class="fa-light ${icon} mr-3xs"></i>${label}</span>`;
+}
+
 export function fileRow(o: {
   id: string;
   title: string;
@@ -92,8 +112,8 @@ export function fileRow(o: {
     EntityID: o.id,
     Column1: `<span class="hidden">Document-.${o.ext}</span><i class="fa fa-file"></i>`,
     Column2: `<a href="javascript:void(0)" class="file-library-link">${o.title}</a>`,
-    Column3: `<span class="hidden">${key}</span><span class="badge">${o.status}</span>`,
-    Column4: `<span class="badge">${o.audience}</span>`,
+    Column3: statusBadge(String(key), o.status),
+    Column4: audienceBadges(o.audience),
     Column5: o.size ?? "1.2",
     Column6: `<span class="hidden">${ticks(o.updated)}</span>${new Date(o.updated).toLocaleDateString("en-US", { timeZone: "UTC" })}`,
     Column7: '<span class="badge">Operations</span>',
@@ -107,10 +127,10 @@ export function communicationRow(o: { id: string; title: string; key: string; la
   return {
     EntityID: o.id,
     Column1: o.title,
-    Column2: `<span class="hidden">${o.key}</span><span class="badge">${o.label}</span>`,
+    Column2: statusBadge(o.key, o.label),
     Column3: "9/1/2026 - 9/30/2026",
     Column4: "9/1/2026",
-    Column5: o.audience,
+    Column5: `<div class="no-wrap">${audienceBadges(o.audience)}</div>`,
     Column6: "A Person",
   };
 }
@@ -130,7 +150,7 @@ export function bcsContent(): FakeCompanyContent {
       {
         id: bcsId(301),
         title: "Opening the Makery",
-        categories: ["General Operations", "Training"],
+        categories: ["General Operations"],
         badges: [],
         positions: "All Positions",
         steps: [
@@ -160,10 +180,12 @@ export function bcsContent(): FakeCompanyContent {
       fileRow({ id: bcsId(405), title: "Welcome Video", ext: "mp4", status: "Published", audience: "All Teams All Positions", library: "Brand", updated: "2026-05-01T00:00:00Z" }),
       fileRow({ id: bcsId(406), title: "Inventory Sheet", ext: "xlsx", status: "Published", audience: "All Teams All Positions", library: "Account", updated: "2026-04-01T00:00:00Z" }),
       fileRow({ id: bcsId(407), title: "Legacy Notice", ext: "pdf", status: "Published", audience: "N/A", library: "Account", updated: "2026-03-01T00:00:00Z" }),
+      fileRow({ id: bcsId(408), title: "Store Hours Poster", ext: "pdf", status: "Published", audience: "Public", library: "Brand", updated: "2026-02-01T00:00:00Z" }),
     ],
     communications: [
       communicationRow({ id: bcsId(501), title: "Weekly Newsletter 40", key: "3", label: "Published – Not Visible", audience: "8 Teams 21 Positions" }),
       communicationRow({ id: bcsId(502), title: "Monthly Pour October", key: "1", label: "Draft", audience: "All Teams All Positions" }),
+      communicationRow({ id: bcsId(503), title: "Holiday Hours", key: "3", label: "Published – Not Visible", audience: "Public" }),
     ],
   };
 }
@@ -331,6 +353,30 @@ export class FakeBcsWoven {
       </body></html>`;
   }
 
+  /**
+   * The empty-category search, as the live diagnostic found it (2026-10-06):
+   * category cards (`div.indicator` count) and, in a hidden
+   * `.procedure-grid`, every procedure card, then a script.
+   */
+  private procedureListing(c: FakeCompanyContent): string {
+    const names = [...new Set(c.procedures.flatMap((p) => p.categories))];
+    const categoryCards = names
+      .map((name) => {
+        const n = this.indicatorOverride.get(name) ?? c.procedures.filter((p) => p.categories.includes(name)).length;
+        const indicator = this.indicatorUnreadable.has(name) ? "many" : String(n);
+        return `<div class="col-md-4 category-card woven-card" data-procedure-category-name="${esc(name)}"><div class="card-left"><img src="/img/folder.svg"></div><div class="card-center flex-center-content flex-hcenter"><div class="entity-name">${esc(name)}</div></div><div class="card-right"><div class="indicator">${indicator}</div><div class="chevron"><i class="fas fa-chevron-right"></i></div></div></div>`;
+      })
+      .join("");
+    const procedureCards = c.procedures
+      .map(
+        (p) => `<div class="woven-summary-container procedure-card" data-procedure-id="${p.id}"><div class="entity-name">${esc(p.title)}</div>
+            ${p.badges.map((b) => `<span class="badge badge-sm">${esc(b)}</span>`).join("")}
+            ${p.positions === null ? "" : `<div><img id="positions-assigned-image" src="/img/positions.svg"> ${esc(p.positions)}</div>`}</div>`,
+      )
+      .join("");
+    return `<div class="row"><div class="col-xs-12">${categoryCards}</div><div class="col-xs-12 hidden"><div class="procedure-grid">${procedureCards}</div></div></div><script>initProcedureSearch();</script>`;
+  }
+
   fetch: typeof fetch = async (input, init) => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
     const headers = new Headers(init?.headers);
@@ -447,27 +493,9 @@ export class FakeBcsWoven {
     }
     if (path === "/KnowledgeCenter/_Search_Procedures" && method === "POST") {
       const wanted = (JSON.parse(body) as { pModel: { Categories: string[] } }).pModel.Categories;
-      if (wanted.length === 0) {
-        const names = [...new Set(c.procedures.flatMap((p) => p.categories))];
-        const cards = names
-          .map((name) => {
-            const n = this.indicatorOverride.get(name) ?? c.procedures.filter((p) => p.categories.includes(name)).length;
-            const indicator = this.indicatorUnreadable.has(name) ? `<span class="woven-indicator">many</span>` : `<span class="woven-indicator">${n}</span>`;
-            return `<div class="category-card" data-procedure-category-name="${esc(name)}"><h4>${esc(name)}</h4>${indicator}</div>`;
-          })
-          .join("");
-        return json({ Success: true, HTML: cards });
-      }
-      const cards = c.procedures
-        .filter((p) => p.categories.includes(wanted[0]!))
-        .map(
-          (p) => `<div class="woven-summary-container" data-procedure-id="${p.id}"><div class="entity-name">${esc(p.title)}</div><div>${esc(wanted[0]!)}</div>
-            ${p.badges.map((b) => `<span class="badge">${esc(b)}</span>`).join("")}
-            ${p.positions === null ? "" : `<div><img id="positions-assigned-image" src="/img/positions.svg"> ${esc(p.positions)}</div>`}
-            <a href="/KnowledgeCenter/Procedure/${p.id}" data-procedure-id="${p.id}">Open</a></div>`,
-        )
-        .join("");
-      return json({ Success: true, HTML: cards });
+      /* VERIFIED live: a search naming a category answers no procedures. */
+      if (wanted.length > 0) return json({ Success: true, HTML: '<div class="row"><div class="col-xs-12"></div></div>' });
+      return json({ Success: true, HTML: this.procedureListing(c) });
     }
     const proc = /^\/KnowledgeCenter\/Procedure\/([^/]+)$/.exec(path);
     if (proc) {
