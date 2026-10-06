@@ -14,8 +14,12 @@
  * The answering model. Changing this line changes every Claude call in the app.
  * Overridable per-deployment with ANTHROPIC_MODEL (server-only) so a rollback
  * does not need a code change.
+ *
+ * Sonnet rather than Opus: answering from retrieved company documents does not
+ * need Opus-tier reasoning, and Sonnet answers faster at lower cost. Adaptive
+ * thinking and the effort levels below are supported unchanged.
  */
-export const CLAUDE_MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5";
+export const CLAUDE_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 
 /**
  * Reasoning effort for grounded answers. Ask Bubbles is a question-answering
