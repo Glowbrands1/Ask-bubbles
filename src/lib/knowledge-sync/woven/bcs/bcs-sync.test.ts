@@ -223,10 +223,21 @@ describe("company guard", () => {
     }
   });
 
-  it("an id in an input is read too", async () => {
+  it("the verified live layout (session-detail readings) proves the company", async () => {
     const h = new Harness();
-    h.fake.companyPage = "input";
+    h.fake.companyPage = "session";
     expect((await h.run("preview")).status).toBe("succeeded");
+  });
+
+  it("one place on the page, or the legacy label/input layout alone, is not proof: nothing is read", async () => {
+    for (const variant of ["single", "input"] as const) {
+      const h = new Harness();
+      h.fake.companyPage = variant;
+      const outcome = await h.run("preview");
+      expect(outcome.status).toBe("failed");
+      expect((outcome as { errorCode: string }).errorCode).toMatch(/company_not_verified/);
+      expect(h.fake.contentReads()).toEqual([]);
+    }
   });
 
   it("a session that moves to the other company mid-run is caught before anything is classified or applied", async () => {

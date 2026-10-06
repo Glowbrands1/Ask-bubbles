@@ -64,7 +64,7 @@ export const CLAUDE_MAX_TOKENS: Record<"quick" | "standard" | "detailed", number
  * 16 was documented as "deliberately small". It was not small enough, and the
  * comment saying so was never measured against a real worker.
  *
- * A 58-page PDF failed to index in the Ask Bubbles Dev project. Its very first
+ * A 58-page PDF failed to index in the reference platform's development project. Its very first
  * batch — 16 chunks, one request — came back HTTP 546. The function's own logs
  * name the cause: `sb_error_code: WORKER_RESOURCE_LIMIT`, with `CPU Time
  * exceeded` and a worker shutdown logged in the same millisecond. Two attempts,

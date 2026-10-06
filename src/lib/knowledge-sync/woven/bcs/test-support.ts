@@ -287,19 +287,15 @@ export class FakeBcsWoven {
   /** False: the login lands straight in `defaultCompanyId` with no chooser. */
   requireCompanySelection = true;
   defaultCompanyId: string = BCS_COMPANY_ID;
-  /**
-   * How `/Company` renders.
-   *   "live"         the structure the live diagnostic found (default): an
-   *                  "Account Management" page, the id ONLY in inline scripts
-   *                  under `companyid` / `wovenCompanyID` / `companyId`, the
-   *                  name in the account menu, other ids under other keys.
-   *   "text","input" other renderings the guard also reads (a "Company ID"
-   *                  label; a `CompanyID` input).
-   *   "missing"      no company id anywhere (other ids still present).
-   *   "conflicting"  the scripts name the pinned id AND another company's.
-   *   "forbidden"    HTTP 403.
+  /** How `/Company` renders: the verified text; an input; no id; or the id twice, differently. */
+  /*
+   * How `/Company` renders. "session" is the VERIFIED_LIVE shape: the active
+   * company in four session-detail readings and a `companyName`, nothing
+   * after a "Company ID" label. The rest are the ways it can fail to prove
+   * the company: no readings, one reading only, a reading naming the other
+   * company, the legacy label/input layout alone, a refused page.
    */
-  companyPage: "live" | "text" | "input" | "missing" | "conflicting" | "forbidden" = "live";
+  companyPage: "session" | "input" | "missing" | "single" | "conflicting" | "forbidden" = "session";
   /** After this many more content reads, the session moves to the other company. */
   switchCompanyAfter: number | null = null;
   /** After this many more authenticated requests, the session ends. */
@@ -332,25 +328,6 @@ export class FakeBcsWoven {
   /** Requests for company content (lists, details, downloads) — not sign-in, dashboard or the Company page. */
   contentReads(): LoggedRequest[] {
     return this.log.filter((r) => /^\/(KnowledgeCenter|FileLibrary|Communication|Dashboard)\//.test(r.path));
-  }
-
-  /** The live `/Company` structure (sanitized shape from the diagnostic; invented values). */
-  private liveCompanyPage(account: { id: string; name: string }, variant: "live" | "missing" | "conflicting"): string {
-    const id = (v: string) => (variant === "missing" ? "" : v);
-    const second = variant === "conflicting" ? JBA_COMPANY_ID : account.id;
-    const userId = bcsId(77001);
-    return `<!DOCTYPE html><html><head><title>Account Management</title>
-      <script defer>window.wovenAnalytics && wovenAnalytics.group(${variant === "missing" ? "{ userid: '" + userId + "' }" : `{ companyid: '${id(account.id)}', name: '${esc(account.name)}', userid: '${userId}' }`});</script>
-      </head><body class="nav-static chat-sidebar-container checking-nav-xs " style="">
-      <nav><ul><li class="dropdown"><a href="#" class="dropdown-toggle fw-500 flex flex-vcenter color-primary" data-toggle="dropdown"><div class="ml-sm visible-lg"><div>Integration User</div><div><small class="text-grey fw-300">${esc(account.name)}</small></div></div></a></li></ul></nav>
-      <main><h1>Account Management</h1><ul class="nav-tabs"><li>Account</li><li>Integrations</li><li>Configuration</li></ul>
-      <input type="hidden" id="SecurityDummyField" name="SecurityDummyField" value="">
-      <input type="hidden" id="CompanyRememberLoginWeb" name="CompanyRememberLoginWeb" value="true">
-      <input type="number" id="CompanyMinutesBeforeAutoLogoutWeb" name="CompanyMinutesBeforeAutoLogoutWeb" value="60"></main>
-      ${switchAccountModal()}
-      <script defer>${variant === "missing" ? `var wovenUserID = '${userId}';` : `var wovenCompanyID = '${id(account.id)}'; var wovenUserID = '${userId}';`}</script>
-      <script>${variant === "missing" ? `initChat({ userId: "${userId}" });` : `initChat({ companyId: "${second}", userId: "${userId}" });`}</script>
-      </body></html>`;
   }
 
   /**
@@ -439,14 +416,29 @@ export class FakeBcsWoven {
       const found = this.accounts.find((a) => a.id === companyId) ?? { id: companyId, name: "Unlisted Co" };
       const account = { id: this.companyPageOverride?.id ?? found.id, name: this.companyPageOverride?.name ?? found.name };
       const brand = companyId === BCS_COMPANY_ID ? "Buff City Soap" : "Sun Tan City";
-      if (this.companyPage === "live" || this.companyPage === "missing" || this.companyPage === "conflicting") {
-        return html(this.liveCompanyPage(account, this.companyPage));
-      }
-      const idBlock =
+      const employee = "e0e0e0e0-0000-4000-8000-0000000000e1";
+      const id = account.id.toLowerCase();
+      const readings = {
+        analytics: `amplitude.getInstance().identify(new amplitude.Identify().setOnce('employeeid', '${employee}').setOnce('companyid', '${id}').set('companyname', '${esc(account.name)}'));`,
+        storage: `WovenApp.setWithExpiry("wovenEmployeeID", "${employee}", 172800); WovenApp.setWithExpiry("wovenCompanyID", "${this.companyPage === "conflicting" ? JBA_COMPANY_ID.toLowerCase() : id}", 172800);`,
+        realtime: `WovenBroadcastChannel.joinSignalRGroups(["timeclocks-${id}"]); WovenBroadcastChannel.joinSignalRGroups(["company-${id}"]);`,
+        chat: `WovenApp.initWovenChat('${id}', '${employee}', 'Integration User');`,
+      };
+      const context = `window.knowledgeContext = { brandName: '${brand}', companyId: '${id}', companyName: '${esc(account.name)}', };`;
+      const scripts =
+        this.companyPage === "session" || this.companyPage === "conflicting"
+          ? `<script>${readings.analytics}</script><script>$(function () { WovenApp.initAutosaveIndexed(); ${readings.chat} });</script><script>${readings.storage}</script><script>${readings.realtime}</script><div id="knowledge-overlay-sources-list"><script>${context}</script></div>`
+          : this.companyPage === "single"
+            ? `<div id="knowledge-overlay-sources-list"><script>${context}</script></div>`
+            : this.companyPage === "missing"
+              ? `<script>WovenApp.setWithExpiry("wovenEmployeeID", "${employee}", 172800);</script><script>window.knowledgeContext = { brandName: '${brand}', companyName: '${esc(account.name)}', };</script>`
+              : "";
+      const legacy =
         this.companyPage === "input"
-          ? `<label for="CompanyID">Company ID</label><input id="CompanyID" name="CompanyID" type="text" readonly value="${account.id}">`
-          : `<div class="form-group"><label>Company ID</label><div class="read-only-label">${account.id}</div></div>`;
-      return html(page(`<h1>Company</h1><div><label>Brand</label><div>${brand}</div></div><div><label>Company</label><div>${esc(account.name)}</div></div>${idBlock}`));
+          ? `<div><label>Company</label><div>${esc(account.name)}</div></div><label for="CompanyID">Company ID</label><input id="CompanyID" name="CompanyID" type="text" readonly value="${account.id}">`
+          : "";
+      const profile = `<div class="ml-sm visible-lg"><h5 class="m-0 fw-500">Integration User</h5><div><small class="text-grey fw-300">${esc(account.name)}</small></div></div>`;
+      return html(page(`<h1>Account Management</h1>${profile}${legacy}${scripts}`, "Account Management"));
     }
 
     if (this.failures.has(path)) return html("<h1>Error</h1>", this.failures.get(path));

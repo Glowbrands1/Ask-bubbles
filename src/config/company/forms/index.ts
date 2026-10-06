@@ -24,6 +24,16 @@ import { EXAMPLE_CHECK_IN_SEED } from "./example-check-in";
  *   checkEmployeeName whether a typed name is checked against the employee
  *                   directory before the form is proposed.
  *   revisable       whether chat may rewrite its drafted fields afterwards.
+ *   chatCorrectableFields
+ *                   the header lines a manager may correct by saying so in
+ *                   chat after the draft exists ("change the date to
+ *                   yesterday", "change the name to Jane Doe-Smith"). Saved as
+ *                   the manager's own edit. Empty: no chat corrections.
+ *   clarifyOn       the verb and noun that mean advice as often as this
+ *                   form — { verb: "coach", noun: "coaching" } makes "coach
+ *                   Avery" and "Avery needs coaching" one question: guidance,
+ *                   or this form? Null: never asked. At most one form should
+ *                   claim a given verb.
  *   status          "placeholder" forms are labelled as such everywhere.
  *
  * TO REPLACE THE CATALOG: add one file per Buff form beside this one, list it
@@ -32,6 +42,9 @@ import { EXAMPLE_CHECK_IN_SEED } from "./example-check-in";
 
 export type CompanyFormStatus = "placeholder" | "approved";
 
+/** Header lines the platform knows how to read a chat correction for. */
+export type ChatCorrectableField = "employee_name" | "form_date";
+
 export interface CompanyFormDefinition {
   readonly seed: TemplateSeed;
   readonly intentPhrases: readonly string[];
@@ -39,6 +52,8 @@ export interface CompanyFormDefinition {
   readonly offeredInChooser: boolean;
   readonly checkEmployeeName: boolean;
   readonly revisable: boolean;
+  readonly chatCorrectableFields: readonly ChatCorrectableField[];
+  readonly clarifyOn: { readonly verb: string; readonly noun: string } | null;
   readonly status: CompanyFormStatus;
 }
 
@@ -58,6 +73,8 @@ export const COMPANY_FORMS: readonly CompanyFormDefinition[] = [
     offeredInChooser: true,
     checkEmployeeName: true,
     revisable: true,
+    chatCorrectableFields: ["employee_name", "form_date"],
+    clarifyOn: null,
     status: "placeholder",
   },
 ];

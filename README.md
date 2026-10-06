@@ -143,8 +143,13 @@ chunks for the brand's knowledge scope → build the system prompt from company
 config → call the model → build citations **from the retrieved rows** (the
 model only chooses `[S#]` markers). When knowledge is unavailable it says so;
 it never invents policy. Conversations sync to `chat_conversations` /
-`chat_messages`, scoped to the account. Forms can be proposed, drafted and
-revised through the conversation for any registry form that opts in.
+`chat_messages`, scoped to the account. Forms can be proposed, drafted,
+revised and corrected ("change the date to yesterday") through the
+conversation for any registry form that opts in. A follow-up keeps the pinned
+documents its question needed, and a question naming the company handbook
+reads it by identity (`NAMED_HANDBOOK`, unset). See
+[docs/chat-parity.md](docs/chat-parity.md) for how this maps to the reference
+platform and how the two were compared.
 
 ## Forms
 

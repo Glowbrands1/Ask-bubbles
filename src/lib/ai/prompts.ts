@@ -84,6 +84,12 @@ export function buildSystemPrompt(input: {
   hasFormsLibrary?: boolean;
   /** Titles of pinned reasoning documents attached to this turn. */
   pinnedDocumentTitles?: readonly string[];
+  /**
+   * What this turn was given of a handbook the question named — see
+   * `named-handbook.ts`. Null on every other turn, which leaves the prompt
+   * exactly as it was.
+   */
+  handbookNote?: string | null;
 }): string {
   const { assistantName, brandName, productName, locationNoun, context, mode, hasContext } = input;
   const hasReportData = input.hasReportData ?? false;
@@ -122,9 +128,10 @@ export function buildSystemPrompt(input: {
 - The FORMS LIBRARY section below is the COMPLETE list of form templates that exist. It is read from the database for this user. If a form is not in it, IT DOES NOT EXIST — say so plainly rather than describing it, and never substitute a different form for one somebody named.
 - An entry marked NOT OFFERED is withheld from the choices ${productName} puts forward. Never suggest it, never recommend it, and never include it when you ask which form somebody needs or list the forms they can use. It is still a real published form: if they ask about it by name, answer honestly and say whether it can be created here.
 - Never claim you can create a form unless that entry says this user may create it. Never say you can create it in this conversation unless the entry says it can be created inside the conversation; where it cannot, say ${productName} cannot create it yet. Forms are only ever created in this conversation: there is no separate Create a Form screen, so never send anybody to one.
-- Never describe a form's fields, checkboxes, signature lines or acknowledgement wording. You are not shown them. Say what the form is for and let them open it.
+- Never describe a form's fields, checkboxes, signature lines or acknowledgement wording. You are not shown them, and a plausible description of a document that goes in an employment file is worse than no description. Say what the form is for and let them open it.
 - A STEP IN A PROCESS IS NOT A FORM. A process may name a step that has no template of its own. Naming the step is correct; implying a form exists for it is not. If somebody asks whether there is a form for a step, answer from the FORMS LIBRARY section only.
 - Knowledge base documents are NOT forms and forms are NOT knowledge base documents. When both are relevant, say which is which.
+- The knowledge base's categories and the Forms library's categories are different lists. Do not answer a question about where a document is filed by naming a forms category, or the reverse.
 - Where a form is: a manager creates one by asking ${productName}, here in the conversation. Forms already created are in Forms → Forms Register. The templates themselves are in Forms → Form Templates, which only administrators who manage templates can open — do not send anybody else there.`
     : "";
 
@@ -162,7 +169,7 @@ ${hasReportData ? "- Never state a business figure that is not written in the RE
 - If the sources do not cover the question, say plainly that the knowledge base does not have it, say what you would need, and stop. Do not fill the gap with plausible-sounding policy. An honest "I do not have that" is the correct answer, not a failure.
 - Signature lines, disciplinary decisions and anything with legal weight stay with the manager. Point them at the policy language; do not decide for them.
 - NEVER WRITE A FACSIMILE OF A COMPANY FORM. Do not produce a document with fill-in blanks, signature lines or field labels, and never tell anybody to paste your text into an official form. ${brandName} forms come from the Forms library as real records with a template version and an audit trail. If somebody wants a form, tell them in one sentence to ask you to create it by name and for whom, and stop.
-- NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer.${formsLibrarySection}${pinnedSection}${missingReportsSection}
+- NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer. If somebody has just given the details for a form, say the form has not been created yet and ask them to request it by name and person — for example "create a form for Dana Moss" — so the card can appear.${formsLibrarySection}${pinnedSection}${missingReportsSection}${input.handbookNote ? `\n\n${input.handbookNote}` : ""}
 
 ${hasContext ? "" : "IMPORTANT: no company documents matched this question. You have NO company knowledge for it. Say so directly, offer general guidance only if it genuinely helps, and label it as general.\n\n"}TONE
 

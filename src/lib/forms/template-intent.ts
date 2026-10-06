@@ -33,6 +33,13 @@ export type TemplateIntent =
   | { kind: "explicit"; templateKey: string }
   /** They asked for a form without saying which. Ask; never default. */
   | { kind: "ambiguous" }
+  /**
+   * "Coach Avery", "Avery needs coaching": a person and a verb that means
+   * advice as often as it means a document. Neither is guessed — the answer
+   * is one short question. Only for a form whose registry entry declares
+   * `clarifyOn`. See `clarifyRequest`.
+   */
+  | { kind: "clarify"; templateKey: string }
   /** Not a form request at all. */
   | { kind: "none" };
 
@@ -448,6 +455,62 @@ export function asksAboutForms(question: string): boolean {
   return /\?\s*$/.test(q);
 }
 
+/* ---------------------------------------------------- advice or a form? -- */
+
+/**
+ * ============================================================================
+ * "COACH AVERY" — ADVICE, OR THE FORM? ASKED, NOT GUESSED
+ * ============================================================================
+ *
+ * Ported from the reference platform's `coachingRequest`, generalised: the
+ * verb and noun come from the form's registry entry (`clarifyOn`) rather than
+ * being one company's coaching words. "Coach Avery", "I need to coach Avery"
+ * and "Avery needs coaching" mean the conversation as often as the record,
+ * and a form on somebody's file is not a coin toss — so the answer is one
+ * short question with a chip for each reading.
+ *
+ * NEVER FOR A QUESTION OR AN ADVICE REQUEST: "how should I coach Avery?",
+ * "coach me through this", "tips" stay with the knowledge base.
+ */
+const CLARIFY_QUESTION_START =
+  /^(?:what|how|when|where|why|who|which|does|do|did|is|are|can|could|should|would|will|may|has|have)\b/;
+const CLARIFY_ADVICE_CUE =
+  /\b(?:how\s+(?:do|should|can|would|could)\s+(?:i|we)|what\s+should\s+(?:i|we)|tips?|advice|guidance|ideas?|help\s+me\s+(?:figure|understand|prepare|plan|think|with))\b/;
+
+function escapeWord(word: string): string {
+  return word.trim().toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+}
+
+/** Whether a naming is a form's bare clarify noun — "coaching", not "coaching note". */
+function isClarifyNoun(phrase: string): boolean {
+  const normalized = phrase.toLowerCase().replace(/\s+/g, " ").trim();
+  return COMPANY_FORMS.some((entry) => entry.clarifyOn?.noun.toLowerCase().trim() === normalized);
+}
+
+function clarifyRequest(q: string): string | null {
+  const polite = /^(?:please\s+)?(?:can|could|would|will)\s+you\b/.test(q);
+  if (((CLARIFY_QUESTION_START.test(q) || /\?\s*$/.test(q)) && !polite) || CLARIFY_ADVICE_CUE.test(q)) return null;
+  for (const entry of COMPANY_FORMS) {
+    if (!entry.clarifyOn) continue;
+    const verb = escapeWord(entry.clarifyOn.verb);
+    const noun = escapeWord(entry.clarifyOn.noun);
+    if (new RegExp(`\\b${verb}\\s+(?:me|us)\\b`).test(q)) continue;
+    const verbAPerson = new RegExp(
+      `^(?:(?:ok(?:ay)?|so|well|hey|hi)[,\\s]+)?(?:i\\s+|we\\s+)?(?:(?:need|have|got|want|am\\s+going|going|plan)\\s+to\\s+|gotta\\s+|gonna\\s+|should\\s+|will\\s+|must\\s+|let'?s\\s+)?${verb}\\s+(\\S+)`,
+    );
+    const personNeeds = new RegExp(
+      `^(\\S+)(?:\\s+(\\S+))?(?:\\s+(\\S+))?\\s+(?:needs|need|requires|could\\s+use|should\\s+get)\\s+(?:some\\s+|more\\s+)?${noun}\\b(?!\\s+(?:form|document|note|record))`,
+    );
+    const verbed = verbAPerson.exec(q);
+    if (verbed && couldBeName(verbed[1])) return entry.seed.key;
+    const needs = personNeeds.exec(q);
+    if (needs && [needs[1], needs[2], needs[3]].filter(Boolean).every((word) => couldBeName(word))) {
+      return entry.seed.key;
+    }
+  }
+  return null;
+}
+
 /**
  * What the manager asked for: a named template, a form without a name, or
  * nothing to do with forms.
@@ -459,9 +522,22 @@ export function detectTemplateIntent(question: string): TemplateIntent {
 
   if (DECLINES_FORM.test(q)) return { kind: "none" };
 
+  /*
+   * BEFORE THE NAMINGS: a form whose registry phrases include its bare noun
+   * ("coaching") would otherwise read "Avery needs coaching" as a request.
+   */
+  const clarify = informational ? null : clarifyRequest(q);
+  if (clarify) return { kind: "clarify", templateKey: clarify };
+
   const requested = requestedNaming(q, question);
   if (requested) {
     if (informational || askedAbout(q, requested.phrase)) return { kind: "none" };
+    /*
+     * "TIPS FOR COACHING AVERY" IS ADVICE. A registry may list a form's bare
+     * noun ("coaching") as a naming; said beside an advice cue, that noun is
+     * the subject of the question, not a request for the record.
+     */
+    if (CLARIFY_ADVICE_CUE.test(q) && isClarifyNoun(requested.phrase)) return { kind: "none" };
     return { kind: "explicit", templateKey: requested.key };
   }
 

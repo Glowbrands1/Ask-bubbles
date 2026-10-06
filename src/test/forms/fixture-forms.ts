@@ -664,6 +664,8 @@ const entry = (
   offeredInChooser: true,
   checkEmployeeName: true,
   revisable: true,
+  chatCorrectableFields: ["employee_name", "form_date"],
+  clarifyOn: null,
   status: "placeholder",
   ...overrides,
 });
@@ -673,7 +675,9 @@ const entry = (
  * stays in it, so a test against the fixtures still sees the real entry.
  */
 export const FIXTURE_COMPANY_FORMS: readonly CompanyFormDefinition[] = [
-  entry(FIXTURE_COACHING_SEED, ["coaching note", "coaching form", "coaching"]),
+  entry(FIXTURE_COACHING_SEED, ["coaching note", "coaching form", "coaching"], {
+    clarifyOn: { verb: "coach", noun: "coaching" },
+  }),
   entry(FIXTURE_CORRECTIVE_SEED, ["corrective notice", "corrective action", "written warning", "verbal warning"]),
   entry(FIXTURE_POLICY_REVIEW_SEED, ["policy review form"], { inlineDraft: false }),
   entry(FIXTURE_ROLE_REVIEW_SEED, ["role review"], { revisable: false }),

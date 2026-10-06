@@ -264,8 +264,8 @@ export function ChatScreen() {
            */
           continueProposalTemplateKey: continuationFor(history)?.templateKey,
           /*
-           * The form this conversation last created, so "change her new
-           * location to location 24" can correct it. Revalidated server-side.
+           * The form this conversation last created, so "change the date to
+           * yesterday" can correct it. Revalidated server-side.
            */
           activeFormInstanceId: activeFormInstanceFor(history),
           /*

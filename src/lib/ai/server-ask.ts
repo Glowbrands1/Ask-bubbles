@@ -1,10 +1,11 @@
 import "server-only";
 
-import { PINNED_KNOWLEDGE_ROLES } from "@/config/company/knowledge";
+import { NAMED_HANDBOOK, PINNED_KNOWLEDGE_ROLES } from "@/config/company/knowledge";
 import { COMPANY_REPORT_LOADERS } from "@/config/company/reports.server";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_MAX_TOKENS, RETRIEVAL } from "@/lib/config/models";
 import { MissingConfigurationError, liveReadiness } from "@/lib/config/server-env";
+import { answersFormClarification } from "@/lib/forms/form-clarification";
 import { buildFormInventory, publishedEntries } from "@/lib/forms/inventory";
 import { detectInventoryQuestion, type InventoryQuestion } from "@/lib/forms/inventory-question";
 import {
@@ -14,6 +15,7 @@ import {
 import { listTemplateSummaries, type TemplateSummary } from "@/lib/forms/repository";
 import { detectTemplateIntent } from "@/lib/forms/template-intent";
 import { rowToCitation, type MatchedChunkRow } from "@/lib/knowledge/mappers";
+import { buildHandbookNote, namesHandbook, selectHandbookCoverage } from "@/lib/knowledge/named-handbook";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { RoleGrounding } from "@/lib/knowledge/role-grounding";
 import { reportById, routeReportQuestion } from "@/lib/reporting/registry";
@@ -21,6 +23,7 @@ import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
 import { callClaude } from "./call-claude";
+import { gateTexts, retrievalPlan, searchWithPlan } from "./continuation";
 import { AiError } from "./errors";
 import {
   answerInventoryQuestion,
@@ -45,8 +48,13 @@ import type { AskRequest, AskResponse } from "./types";
  *
  *   question
  *     -> answer from the FORMS LIBRARY  (inventory / proposal gates, first)
- *     -> embed + retrieve top-k chunks  (match_knowledge_chunks / pgvector)
- *     -> pin required rule documents    (company knowledge config)
+ *     -> embed + retrieve top-k chunks  (match_knowledge_chunks / pgvector;
+ *                                        a follow-up that finds nothing is
+ *                                        retried with its anchor)
+ *     -> pin required rule documents    (company knowledge config; a
+ *                                        follow-up keeps its anchor's)
+ *     -> pin a named handbook           (by identity, when the question
+ *                                        names it; degrades)
  *     -> REFUSE if a required one is unhealthy      <- no model call at all
  *     -> attach report figures          (company report registry, when routed)
  *     -> merge into one ordered set     (assembleGrounding)
@@ -132,7 +140,9 @@ export async function answerQuestion(
   const formsTurn =
     inventoryQuestion.kind !== "none" ||
     spokenIntent.kind !== "none" ||
-    Boolean(request.continueProposalTemplateKey);
+    Boolean(request.continueProposalTemplateKey) ||
+    // "The form", answering "guidance, or a … Form?".
+    answersFormClarification(request.history, request.question);
 
   if (formsTurn) {
     const settled = await summariesPromise;
@@ -186,9 +196,16 @@ export async function answerQuestion(
   /*
    * PINNED RULE DOCUMENTS. Configured per company; each names the questions
    * that need it and whether its absence refuses the turn or degrades it.
+   *
+   * A FOLLOW-UP KEEPS ITS ANCHOR'S DOCUMENTS. "And for part-timers?" after a
+   * question that pinned a rule document needs the same rules, so a fragment
+   * is tested together with the nearest standalone manager turn — the
+   * reference platform's continuation walk, bounded and never reading an
+   * assistant turn. See `continuation.ts`.
    */
+  const texts = gateTexts(request.question, request.history);
   const pinnedWanted = PINNED_KNOWLEDGE_ROLES.filter((entry) =>
-    entry.triggers.some((trigger) => trigger.test(request.question)),
+    entry.triggers.some((trigger) => texts.some((text) => trigger.test(text))),
   );
   const pinnedPromise = Promise.all(
     pinnedWanted.map(async (entry) => ({
@@ -197,13 +214,31 @@ export async function answerQuestion(
     })),
   );
 
+  /*
+   * A HANDBOOK THE QUESTION NAMES, read by identity. Degrades: a failed lookup
+   * leaves ordinary retrieval standing and adds no note. Off unless the
+   * company configures `NAMED_HANDBOOK`.
+   */
+  const handbookPromise = namesHandbook(request.question, NAMED_HANDBOOK)
+    ? knowledge.fetchNamedHandbook(NAMED_HANDBOOK!.identity, request.scopeId)
+    : Promise.resolve(null);
+
+  /*
+   * A FOLLOW-UP THAT FINDS NOTHING ON ITS OWN IS SEARCHED WITH ITS ANCHOR —
+   * "and for part-timers?" then finds the part-time attendance guidance. Only
+   * the query changes: the model is still given the question as typed. See
+   * `retrievalPlan`.
+   */
+  const plan = retrievalPlan(request.question, request.history);
+  const limit = pinnedWanted.length > 0 ? RETRIEVAL.roleAugmentedTopK : RETRIEVAL.topK;
+
   let rows: MatchedChunkRow[];
   try {
-    rows = await knowledge.match({
-      query: request.question,
-      scopeId: request.scopeId,
-      limit: pinnedWanted.length > 0 ? RETRIEVAL.roleAugmentedTopK : RETRIEVAL.topK,
-    });
+    rows = await searchWithPlan(
+      plan,
+      (query) => knowledge.match({ query, scopeId: request.scopeId, limit }),
+      limit,
+    );
   } catch (error) {
     if (error instanceof MissingConfigurationError) {
       throw new AiError("not_configured", error.message, 503, error.missing);
@@ -216,6 +251,7 @@ export async function answerQuestion(
   }
 
   const pinnedResults = await pinnedPromise;
+  const handbook = await handbookPromise;
 
   /*
    * A MANDATORY SOURCE THAT CANNOT BE GUARANTEED STOPS THE TURN. An answer
@@ -237,14 +273,35 @@ export async function answerQuestion(
     result.ok ? [result.grounding] : [],
   );
 
+  const handbookCoverage = handbook?.ok
+    ? selectHandbookCoverage({
+        question: request.question,
+        documentId: handbook.documentId,
+        documentTitle: handbook.documentTitle,
+        documentCategory: handbook.documentCategory,
+        chunks: handbook.chunks,
+        notATopic: NAMED_HANDBOOK?.notATopic ?? [],
+      })
+    : null;
+
   const assembled = assembleGrounding({
-    mandatory: pinned.flatMap((entry) => entry.rows),
+    /* The handbook AFTER the rule documents, and not a role document itself. */
+    mandatory: [...pinned.flatMap((entry) => entry.rows), ...(handbookCoverage?.rows ?? [])],
     retrieved: rows,
     roleDocumentIds: pinned.map((entry) => entry.documentId),
     evidenceBudget: RETRIEVAL.contextChunks,
   });
 
   const used = assembled.rows;
+
+  /* Where the pinned handbook rows landed, so the note names real markers only. */
+  const handbookChunkIds = new Set((handbookCoverage?.rows ?? []).map((row) => row.chunk_id));
+  const handbookNote = handbookCoverage
+    ? buildHandbookNote(
+        handbookCoverage,
+        used.flatMap((row, index) => (handbookChunkIds.has(row.chunk_id) ? [index + 1] : [])),
+      )
+    : null;
   const grounding: GroundingChunk[] = used.map((row, index) => ({
     marker: index + 1,
     documentTitle: row.document_title,
@@ -276,6 +333,7 @@ export async function answerQuestion(
     hasMissingReports: (briefing?.missing.length ?? 0) > 0,
     hasFormsLibrary: formInventoryBlock !== null,
     pinnedDocumentTitles: pinnedTitles,
+    handbookNote,
   });
 
   const answer = await callClaude({

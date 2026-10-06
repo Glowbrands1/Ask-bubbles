@@ -1,4 +1,5 @@
 import type { KnowledgeDocumentRole } from "@/lib/knowledge/document-roles";
+import type { NamedHandbookConfig } from "@/lib/knowledge/named-handbook";
 
 /**
  * ============================================================================
@@ -53,3 +54,23 @@ export interface PinnedKnowledgeRole {
 }
 
 export const PINNED_KNOWLEDGE_ROLES: readonly PinnedKnowledgeRole[] = [];
+
+/**
+ * ============================================================================
+ * A HANDBOOK THE QUESTION NAMES — read whole by identity, not by similarity
+ * ============================================================================
+ *
+ * When a question names the company's handbook ("what's in the Buff team
+ * handbook?", "what does the handbook say about breaks?"), the platform pins
+ * its table of contents or the sections whose printed headings match, instead
+ * of hoping one of its many chunks ranks. See `lib/knowledge/named-handbook.ts`.
+ *
+ *   identity   how the document is recognised: a tag (preferred), then a
+ *              file-name or title prefix
+ *   namedBy    patterns that must ALL match for a question to name it
+ *   notATopic  the company's own words that are never a section topic
+ *
+ * NULL FOR BUFF CITY SOAP. No Buff handbook has been supplied. When one is,
+ * tag it (e.g. "team-handbook") and fill this in; nothing else needs to change.
+ */
+export const NAMED_HANDBOOK: NamedHandbookConfig | null = null;

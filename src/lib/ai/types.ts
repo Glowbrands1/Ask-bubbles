@@ -189,7 +189,7 @@ export interface AskResponse {
   formSelection?: ChatFormSelection;
   /**
    * A form already created in this conversation that this turn corrected —
-   * "change her new location to location 24". The id and the field keys only; the
+   * "change the date to yesterday". The id and the field keys only; the
    * inline editor re-reads the canonical instance rather than trusting values
    * carried here. See `lib/forms/chat-correction.ts`.
    */

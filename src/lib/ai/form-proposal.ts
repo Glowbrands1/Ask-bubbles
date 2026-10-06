@@ -12,7 +12,9 @@ import {
   settledNameQuestions,
 } from "@/lib/forms/employee-match";
 import { loadScopedRoster } from "@/lib/forms/employee-roster";
+import { formChosenByClarification, formOrGuidanceQuestion } from "@/lib/forms/form-clarification";
 import { extractFormDate } from "@/lib/forms/form-date-answer";
+import { describesIncident } from "@/lib/forms/incident-reading";
 import { inlineDraftVariantKey, supportsInlineDraft } from "@/lib/forms/inline-draft";
 import {
   buildProposal,
@@ -23,6 +25,7 @@ import {
   type ManagerContext,
 } from "@/lib/forms/proposal";
 import { endsIntake } from "@/lib/forms/proposal-continuation";
+import { isQuestion } from "@/lib/forms/question";
 import { type TemplateSummary } from "@/lib/forms/repository";
 import { detectTemplateIntent, type TemplateIntent } from "@/lib/forms/template-intent";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
@@ -161,7 +164,35 @@ export async function proposeFormForTurn(input: ProposalTurn): Promise<AskRespon
     );
   }
 
+  if (intent.kind === "clarify") return clarifyFormOrGuidance(input, match);
+
   return proposeTemplate(input, match);
+}
+
+/**
+ * ============================================================================
+ * "COACH AVERY": ADVICE, OR THE FORM? ASKED, NOT GUESSED
+ * ============================================================================
+ *
+ * Ported from the reference platform. The verb means the conversation as
+ * often as the record, so neither is chosen for the manager: one short
+ * question, and two chips that are each an ordinary turn through the ordinary
+ * path. Asked only after the form has been validated as published and
+ * creatable by this actor — a question offering a form they cannot start
+ * would be a dead end.
+ */
+function clarifyFormOrGuidance(input: ProposalTurn, match: TemplateSummary): AskResponse {
+  const employee = resolveEmployee(
+    managerContext(input.history, { id: input.questionMessageId, content: input.question }),
+  );
+  const who = employee.kind === "resolved" ? employee.employeeName : null;
+  const noun = companyFormFor(match.key)?.clarifyOn?.noun ?? "guidance";
+  return {
+    ...turn(formOrGuidanceQuestion(match.name, who)),
+    followUpSuggestions: who
+      ? [`Start a ${match.name} for ${who}`, `Give me ${noun} guidance for ${who}`]
+      : [`Start a ${match.name}`, `Give me ${noun} guidance`],
+  };
 }
 
 async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Promise<AskResponse> {
@@ -285,7 +316,19 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
     return spoken;
   }
 
+  /*
+   * "COACH AVERY" WHILE THAT FORM'S INTAKE IS OPEN names the person for the
+   * form already on screen; with none open it is the question advice-or-form.
+   */
+  if (spoken.kind === "clarify") {
+    return continued === spoken.templateKey ? { kind: "explicit", templateKey: continued } : spoken;
+  }
+
   if (spoken.kind !== "none") return spoken;
+
+  /* "The form", in reply to "guidance, or a … Form?". */
+  const clarified = formChosenByClarification(input.history, input.question);
+  if (clarified) return { kind: "explicit", templateKey: clarified };
 
   if (!continued) return { kind: "none" };
 
@@ -300,13 +343,13 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
 }
 
 const ASKS_FOR_ADVICE =
-  /^(?:so\s+|and\s+|ok\s+|okay\s+)?(?:what|what's|whats|how|why|when|where|which|who)\b|\b(?:how\s+(?:do|should|can|could|would)\s+(?:i|we)|what\s+should\s+(?:i|we)|tips?|advice|guidance)\b/i;
+  /^(?:so\s+|and\s+|ok\s+|okay\s+)?(?:what|what's|whats|how|why|when|where|which|who)\b|\b(?:coach\s+(?:me|us)|how\s+(?:do|should|can|could|would)\s+(?:i|we)|what\s+should\s+(?:i|we)|tips?|advice|guidance)\b/i;
 
 const TOPIC_STATEMENT =
   /\b(?:topic|subject|reason|issue|concern|details?|behaviou?r|observed|observation)\s*(?:is|was|are|were|:|-|=)/i;
 
 const CARRIES_ON =
-  /\b(?:same\s+form|this\s+form|continue|go\s+ahead|that'?s\s+(?:it|all|everything|right)|yes|yep|yeah|correct)\b/i;
+  /\b(?:keep\s+(?:this|it)\s+as|same\s+form|this\s+form|continue|go\s+ahead|that'?s\s+(?:it|all|everything|right)|yes|yep|yeah|correct)\b/i;
 
 const ABOUT_THE_EMPLOYEE = /^(?:and\s+|also\s+|then\s+)?(?:she|he|they)(?:['’](?:s|d|ve|re|ll))?\b/i;
 
@@ -319,8 +362,15 @@ function continuesIntake(input: ProposalTurn): boolean {
   const question = input.question.trim();
   if (endsIntake(question) || ASKS_FOR_ADVICE.test(question)) return false;
   if (extractEmployeeNames(question).length > 0) return true;
-  if (/\?\s*$/.test(question)) return false;
+  if (isQuestion(question)) return false;
   return (
+    /*
+     * WHAT HAPPENED, WITH NOBODY NAMED. "Missed the opening checklist today"
+     * answers the intake as surely as a name does; without this it went to
+     * retrieval and the manager had to start the form again. Ported from the
+     * reference platform's production QA fix.
+     */
+    describesIncident(question) ||
     extractFormDate(question, input.today ?? businessToday()) !== null ||
     TOPIC_STATEMENT.test(question) ||
     CARRIES_ON.test(question) ||
@@ -421,7 +471,14 @@ function openingQuestions(proposal: ChatFormProposal, context: ManagerContext): 
   if (!proposal.formDate) {
     asks.push(`The date for the form (if you say "today," I'll use ${todayInWords()}).`);
   }
-  asks.push("What the form should cover, in your own words.");
+  /*
+   * NOT ASKED TWICE. A manager who has already said what happened is not asked
+   * to say it again — the reference platform's "ask only for what the
+   * conversation does not already know".
+   */
+  if (!describesIncident(context.text)) {
+    asks.push("What the form should cover, in your own words.");
+  }
   if (!proposal.employeeRole) {
     asks.push("The employee's job title (optional but helpful).");
   }
