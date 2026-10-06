@@ -1,6 +1,6 @@
 import type { SourceRecord } from "../../../types";
 import { htmlText } from "../../html";
-import { BCS_CAPABILITY, COMMUNICATION_COLUMNS, COMMUNICATION_STATUS, TEAM_POSITION_AUDIENCE } from "../contract";
+import { BCS_CAPABILITY, COMMUNICATION_COLUMNS, COMMUNICATION_STATUS, PUBLIC_AUDIENCE, TEAM_POSITION_AUDIENCE } from "../contract";
 import { WovenShapeError, assertUnique, blockedPart, requireColumns, requireList, resolveStatus, validId } from "./shared";
 
 /**
@@ -45,7 +45,7 @@ export function parseCommunicationRows(body: unknown): CommunicationRow[] {
 
     const status = resolveStatus(row[COMMUNICATION_COLUMNS.status], COMMUNICATION_STATUS, "communication");
     const audience = htmlText(row[COMMUNICATION_COLUMNS.audience]);
-    if (audience && !TEAM_POSITION_AUDIENCE.test(audience) && !/^n\/?a$/i.test(audience)) {
+    if (audience && !TEAM_POSITION_AUDIENCE.test(audience) && !PUBLIC_AUDIENCE.test(audience) && !/^n\/?a$/i.test(audience)) {
       throw new WovenShapeError("schema_drift", "A communication row's audience was not in a verified form.");
     }
     rows.push({

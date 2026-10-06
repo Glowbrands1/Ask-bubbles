@@ -134,16 +134,20 @@ export const HANDBOOK_STATUS: Record<string, { label: RegExp; publication: "publ
 
 /** VERIFIED_WEB_APP_INTERNAL_ROUTE: POST JSON; answers `{ Success: true, HTML }`. */
 export const PROCEDURE_SEARCH_PATH = "/KnowledgeCenter/_Search_Procedures";
-/** VERIFIED body. Empty `Categories` answers CATEGORY cards; one category answers its procedure cards. */
-export const procedureSearchBody = (categories: string[]) => ({
-  pModel: { FilterText: "", Categories: categories, Frequencies: [], Positions: [], Tags: [] },
-});
 /**
- * VERIFIED: category cards carry `data-procedure-category-name` and an
- * indicator count; the per-category counts matched the procedures each
- * category returned. The indicator's exact markup was not captured, so the
- * count is read from an element whose class names an indicator and whose text
- * is a whole number — exactly one per card, or the listing fails.
+ * VERIFIED_LIVE body. Empty `Categories` answers the whole listing: every
+ * category card AND every procedure card. (A one-category search with the
+ * category's slug answered no cards live, so none is sent.)
+ */
+export const PROCEDURE_SEARCH_BODY = {
+  pModel: { FilterText: "", Categories: [] as string[], Frequencies: [] as string[], Positions: [] as string[], Tags: [] as string[] },
+} as const;
+/**
+ * VERIFIED_LIVE: category cards carry `data-procedure-category-name` (a slug)
+ * and one `<div class="indicator">n</div>`; each procedure card carries that
+ * slug as a class. The count is read from an element whose class names an
+ * indicator and whose text is a whole number — exactly one per card, or the
+ * listing fails.
  */
 export const PROCEDURE_CATEGORY_ATTR = "data-procedure-category-name";
 export const PROCEDURE_CATEGORY_INDICATOR_CLASS = /indicator/i;
@@ -239,7 +243,8 @@ export const COMMUNICATION_STATUS: Record<string, { label: RegExp; publication: 
 
 /**
  * The audiences that mean "everyone in the company":
- *   "Public"                   VERIFIED for Handbooks.
+ *   "Public"                   VERIFIED for Handbooks; VERIFIED_LIVE as a File
+ *                              Library and communication audience value.
  *   "All Teams All Positions"  VERIFIED for the File Library; the handoff's
  *                              model treats it as ALL.
  * Nothing else is company-wide without an administrator's decision.
@@ -248,6 +253,14 @@ export const BCS_COMPANY_WIDE_AUDIENCE_LABELS = ["Public", "All Teams All Positi
 
 /** VERIFIED display form of a team/position audience: "8 Teams 21 Positions", "All Teams 3 Positions". */
 export const TEAM_POSITION_AUDIENCE = /^(all|\d+)\s+teams?\s+(all|\d+)\s+positions?$/i;
+/**
+ * VERIFIED_LIVE: "Public" is a listed audience value (6 File Library rows and
+ * 1 communication for Midwest Soap Makers). Recognising it only lets those
+ * listings PARSE; what it grants is decided by the audience rules (it is one
+ * of `BCS_COMPANY_WIDE_AUDIENCE_LABELS`), and File Library downloads and
+ * non-visible communications stay blocked regardless.
+ */
+export const PUBLIC_AUDIENCE = /^public$/i;
 
 /* ----------------------------------------------------- capabilities -- */
 

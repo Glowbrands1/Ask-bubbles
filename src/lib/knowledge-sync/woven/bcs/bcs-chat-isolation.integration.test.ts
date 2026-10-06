@@ -69,7 +69,7 @@ class Harness {
     this.fake.content[OTHER_ID] = {
       policies: [],
       handbooks: [],
-      procedures: [{ id: bcsId(8301), title: "Other Company Opening", categories: ["General Operations"], badges: [], positions: "All Positions", steps: [{ id: bcsId(83011), text: "Other company opening steps." }] }],
+      procedures: [{ id: bcsId(8301), title: "Other Company Opening", category: "general-operations", badges: [], positions: "All Positions", steps: [{ id: bcsId(83011), text: "Other company opening steps." }] }],
       fileLibrary: [],
       communications: [],
     };

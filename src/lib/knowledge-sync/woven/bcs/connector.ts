@@ -20,7 +20,7 @@ import { communicationRecord, parseCommunicationRows } from "./adapters/communic
 import { fileLibraryRecord, parseFileLibraryRows } from "./adapters/file-library";
 import { handbookRecord, parseHandbookRows } from "./adapters/handbooks";
 import { parsePolicyCards, parsePolicyDetail, policyRecord } from "./adapters/policies";
-import { parseProcedureCards, parseProcedureCategories, parseProcedureDetail, procedureRecord, procedureText, unionProcedureCards } from "./adapters/procedures";
+import { parseProcedureDetail, parseProcedureSearch, procedureRecord, procedureText } from "./adapters/procedures";
 import { CompanyGuardError, companyIdSelector, deferToCompanyPage, verifyCompany } from "./company-guard";
 import {
   COMMUNICATION_LIST_BODY,
@@ -34,7 +34,7 @@ import {
   fileLibraryDownloadPath,
   policyDetailPath,
   procedureDetailPath,
-  procedureSearchBody,
+  PROCEDURE_SEARCH_BODY,
 } from "./contract";
 
 /**
@@ -198,12 +198,8 @@ export class BuffCitySoapWovenConnector implements KnowledgeSourceConnector {
         return { records: rows.map(handbookRecord), diagnostics: { rows: rows.length } };
       }
       case "procedure": {
-        const categories = parseProcedureCategories(await this.withSession(() => client.postJson(PROCEDURE_SEARCH_PATH, procedureSearchBody([]))));
-        const perCategory = [];
-        for (const category of categories) {
-          perCategory.push(parseProcedureCards(await this.withSession(() => client.postJson(PROCEDURE_SEARCH_PATH, procedureSearchBody([category.name]))), category));
-        }
-        const cards = unionProcedureCards(perCategory);
+        /* VERIFIED_LIVE: one response holds every category and every card; completeness is reconciled there. */
+        const { categories, cards } = parseProcedureSearch(await this.withSession(() => client.postJson(PROCEDURE_SEARCH_PATH, PROCEDURE_SEARCH_BODY)));
         const records: SourceRecord[] = [];
         let unpublished = 0;
         for (const card of cards) {

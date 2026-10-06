@@ -27,23 +27,32 @@ import { WovenShapeError, assertUnique, blockedPart, digest, requireSuccessHtml,
 
 /**
  * ============================================================================
- * PROCEDURES — `POST /KnowledgeCenter/_Search_Procedures`, by category
+ * PROCEDURES — `POST /KnowledgeCenter/_Search_Procedures`, ONE response
  * ============================================================================
  *
- * VERIFIED for Buff City Soap:
+ * VERIFIED_LIVE for Midwest Soap Makers (sanitized structure probe):
  *
- *   * an empty `Categories` search answers CATEGORY cards, each with its
- *     indicator count; a one-category search answers that category's
- *     procedure cards. All 12 categories gave 51 unique procedures, and every
- *     category's count matched its indicator.
+ *   * the empty-`Categories` search answers BOTH halves of the page in one
+ *     `{ Success, HTML }`: 12 category cards (`data-procedure-category-name`,
+ *     a slug such as "general-operations", with one `.indicator` count) and,
+ *     after them in `#procedures-container`, all 51 procedure cards
+ *     (`data-procedure-id`). Each procedure card names its category as one of
+ *     its classes (the isotope filter). The indicators sum to 51.
+ *   * a one-category search with that slug answers NO procedure cards, so the
+ *     earlier per-category enumeration cannot prove anything and is not used.
  *   * drafts ARE returned to the admin session: 46 of 51 carry the
- *     "Unpublished" badge. A card without it reads as published (the
- *     handoff's enumeration plan).
- *   * the position line: "All Positions", or the positions it is limited to.
+ *     "Unpublished" badge. A card without it reads as published.
+ *   * the position line: `<div><img id="positions-assigned-image"></div>`
+ *     followed by a sibling `<div>` with "All Positions" or the positions it
+ *     is limited to.
  *
- * COMPLETENESS IS PROVED. A category whose cards do not number exactly its
- * indicator count fails the whole listing (`procedure_count_mismatch`): a
- * partial list is never read as the collection.
+ * COMPLETENESS IS PROVED, OR THE LISTING FAILS. Every procedure card must
+ * carry exactly one known category class; every category's cards must number
+ * exactly its indicator; the distinct procedures must number the indicators'
+ * sum. A missing or unreadable indicator, a card in no category or in two, a
+ * repeated procedure, a card nested in a category card (or the reverse), or
+ * any disagreement fails the whole listing: a partial or ambiguous list is
+ * never read as the collection.
  *
  * A BADGE THAT IS NEITHER "Unpublished" NOR A FREQUENCY is an unknown
  * publication state: the listing fails rather than guess what it means.
@@ -60,37 +69,6 @@ export interface ProcedureCategory {
   count: number;
 }
 
-export function parseProcedureCategories(body: unknown): ProcedureCategory[] {
-  const fragment = parseHtmlFragment(requireSuccessHtml(body, "procedure category"));
-  if (elementsWithAttr(fragment, PROCEDURE_CARD.idAttr).length > 0) {
-    throw new WovenShapeError("schema_drift", "Woven's procedure search answered procedures where categories were expected.");
-  }
-  const categories: ProcedureCategory[] = [];
-  for (const card of elementsWithAttr(fragment, PROCEDURE_CATEGORY_ATTR)) {
-    const name = (attr(card, PROCEDURE_CATEGORY_ATTR) ?? "").trim();
-    if (!name || name.length > 120) throw new WovenShapeError("schema_drift", "A procedure category had no usable name.");
-    const indicators = [...walk(card)]
-      .filter((el) => (attr(el, "class") ?? "").split(/\s+/).some((c) => PROCEDURE_CATEGORY_INDICATOR_CLASS.test(c)))
-      .map((el) => textOf(el))
-      .filter((t) => /^\d+$/.test(t));
-    if (indicators.length !== 1) {
-      throw new WovenShapeError(
-        "procedure_category_count_unreadable",
-        `The procedure category "${name.slice(0, 60)}" did not show one readable count, so the procedure list could not be proved complete.`,
-      );
-    }
-    categories.push({ name, count: Number(indicators[0]) });
-  }
-  if (categories.length === 0) {
-    throw new WovenShapeError("procedure_categories_missing", "Woven's procedure search returned no categories, so no procedure could be listed.");
-  }
-  assertUnique(
-    categories.map((c) => c.name),
-    "procedure category",
-  );
-  return categories;
-}
-
 export interface ProcedureCard {
   id: string;
   title: string;
@@ -103,6 +81,32 @@ export interface ProcedureCard {
   positions: string[] | null;
 }
 
+export interface ProcedureListing {
+  categories: ProcedureCategory[];
+  cards: ProcedureCard[];
+}
+
+function isInside(element: HtmlElement, ancestor: HtmlElement): boolean {
+  for (let node = element.parentNode ?? null; node; node = node.parentNode ?? null) if (node === ancestor) return true;
+  return false;
+}
+
+function readCategory(card: HtmlElement): ProcedureCategory {
+  const name = (attr(card, PROCEDURE_CATEGORY_ATTR) ?? "").trim();
+  if (!name || name.length > 120) throw new WovenShapeError("schema_drift", "A procedure category had no usable name.");
+  const indicators = [...walk(card)]
+    .filter((el) => (attr(el, "class") ?? "").split(/\s+/).some((c) => PROCEDURE_CATEGORY_INDICATOR_CLASS.test(c)))
+    .map((el) => textOf(el))
+    .filter((t) => /^\d+$/.test(t));
+  if (indicators.length !== 1) {
+    throw new WovenShapeError(
+      "procedure_category_count_unreadable",
+      `The procedure category "${name.slice(0, 60)}" did not show one readable count, so the procedure list could not be proved complete.`,
+    );
+  }
+  return { name, count: Number(indicators[0]) };
+}
+
 function badgesOf(card: HtmlElement): string[] {
   return elementsByTag(card, PROCEDURE_CARD.badgeTag)
     .filter((el) => hasClass(el, PROCEDURE_CARD.badgeClass))
@@ -111,12 +115,21 @@ function badgesOf(card: HtmlElement): string[] {
     .filter(Boolean);
 }
 
-/** The text beside `#positions-assigned-image`: its parent's own text. */
+/**
+ * The text beside `#positions-assigned-image`. VERIFIED_LIVE: the image sits
+ * alone in a wrapper and the text in that wrapper's sibling, so an empty
+ * wrapper reads its row instead — never further up than the row, and never
+ * the card itself.
+ */
 function positionsOf(card: HtmlElement): string[] | null {
   const image = byId(card, PROCEDURE_CARD.positionsImageId);
   const holder = image?.parentNode as HtmlElement | undefined;
   if (!image || !holder || !(holder as { tagName?: string }).tagName) return null;
-  const text = textOf(holder).trim();
+  let text = textOf(holder).trim();
+  if (!text && holder !== card) {
+    const row = holder.parentNode as HtmlElement | undefined;
+    if (row && (row as { tagName?: string }).tagName && row !== card && isInside(row, card)) text = textOf(row).trim();
+  }
   if (!text) return null;
   if (PROCEDURE_ALL_POSITIONS.test(text)) return ["All Positions"];
   return text
@@ -125,50 +138,101 @@ function positionsOf(card: HtmlElement): string[] | null {
     .filter(Boolean);
 }
 
-/** One category's procedure cards. The count must equal the category's indicator. */
-export function parseProcedureCards(body: unknown, category: ProcedureCategory): ProcedureCard[] {
-  const fragment = parseHtmlFragment(requireSuccessHtml(body, "procedure"));
-  const cards: ProcedureCard[] = [];
-  const seen = new Set<string>();
-  for (const card of elementsWithAttr(fragment, PROCEDURE_CARD.idAttr)) {
-    const id = validId(attr(card, PROCEDURE_CARD.idAttr));
-    if (!id) throw new WovenShapeError("schema_drift", "A procedure card had no usable id.");
-    /* A link or button inside a card may repeat the id; one card per procedure. */
-    if (seen.has(id.toLowerCase())) continue;
-    seen.add(id.toLowerCase());
-    const titleEl = elementsByClass(card, PROCEDURE_CARD.titleClass)[0];
-    const title = titleEl ? textOf(titleEl) : "";
-    if (!title) throw new WovenShapeError("schema_drift", "A procedure card had no title: Woven's procedure list has changed shape.");
+function readCard(card: HtmlElement, id: string, category: string): ProcedureCard {
+  const titleEl = elementsByClass(card, PROCEDURE_CARD.titleClass)[0];
+  const title = titleEl ? textOf(titleEl) : "";
+  if (!title) throw new WovenShapeError("schema_drift", "A procedure card had no title: Woven's procedure list has changed shape.");
 
-    const badges = badgesOf(card);
-    let unpublished = false;
-    let frequency: string | null = null;
-    for (const badge of badges) {
-      if (PROCEDURE_UNPUBLISHED_BADGE.test(badge)) unpublished = true;
-      else if (PROCEDURE_FREQUENCY_BADGES.test(badge)) frequency = frequency ?? badge;
-      else {
-        throw new WovenShapeError(
-          "unknown_publication_state",
-          `A procedure carries a badge Ask Bubbles has not verified ("${badge.slice(0, 40)}"), so the procedure list was not used.`,
-        );
-      }
+  const badges = badgesOf(card);
+  let unpublished = false;
+  let frequency: string | null = null;
+  for (const badge of badges) {
+    if (PROCEDURE_UNPUBLISHED_BADGE.test(badge)) unpublished = true;
+    else if (PROCEDURE_FREQUENCY_BADGES.test(badge)) frequency = frequency ?? badge;
+    else {
+      throw new WovenShapeError(
+        "unknown_publication_state",
+        `A procedure carries a badge Ask Bubbles has not verified ("${badge.slice(0, 40)}"), so the procedure list was not used.`,
+      );
     }
-    cards.push({ id, title, category: category.name, badges, unpublished, frequency, positions: positionsOf(card) });
   }
-  if (cards.length !== category.count) {
-    throw new WovenShapeError(
-      "procedure_count_mismatch",
-      `Woven's "${category.name.slice(0, 60)}" procedures numbered ${cards.length}, not the ${category.count} its category shows, so the procedure list was not used.`,
-    );
-  }
-  return cards;
+  return { id, title, category, badges, unpublished, frequency, positions: positionsOf(card) };
 }
 
-/** Cards of every category, one per procedure (a procedure in two categories keeps its first). */
-export function unionProcedureCards(perCategory: ProcedureCard[][]): ProcedureCard[] {
-  const byId = new Map<string, ProcedureCard>();
-  for (const cards of perCategory) for (const card of cards) if (!byId.has(card.id.toLowerCase())) byId.set(card.id.toLowerCase(), card);
-  return [...byId.values()];
+/**
+ * The whole procedure listing from the one search response: its categories
+ * and every procedure card, reconciled against the category counts.
+ */
+export function parseProcedureSearch(body: unknown): ProcedureListing {
+  const fragment = parseHtmlFragment(requireSuccessHtml(body, "procedure"));
+
+  const categoryCards = elementsWithAttr(fragment, PROCEDURE_CATEGORY_ATTR);
+  const categories = categoryCards.map(readCategory);
+  if (categories.length === 0) {
+    throw new WovenShapeError("procedure_categories_missing", "Woven's procedure search returned no categories, so no procedure could be listed.");
+  }
+  assertUnique(
+    categories.map((c) => c.name),
+    "procedure category",
+  );
+  const categoryByKey = new Map(categories.map((c) => [c.name.toLowerCase(), c]));
+
+  /* One element per procedure: an inner link repeating its card's id is the same card. */
+  const procedureCards: { element: HtmlElement; id: string }[] = [];
+  for (const element of elementsWithAttr(fragment, PROCEDURE_CARD.idAttr)) {
+    const id = validId(attr(element, PROCEDURE_CARD.idAttr));
+    if (!id) throw new WovenShapeError("schema_drift", "A procedure card had no usable id.");
+    const outer = procedureCards.find((c) => isInside(element, c.element));
+    if (outer) {
+      if (outer.id.toLowerCase() !== id.toLowerCase()) throw ambiguous("A procedure card held another procedure's card.");
+      continue;
+    }
+    procedureCards.push({ element, id });
+  }
+  assertUnique(
+    procedureCards.map((c) => c.id),
+    "procedure",
+  );
+
+  for (const { element } of procedureCards) {
+    if (attr(element, PROCEDURE_CATEGORY_ATTR) !== null || categoryCards.some((c) => isInside(element, c) || isInside(c, element))) {
+      throw ambiguous("A procedure card and a category card were mixed together.");
+    }
+  }
+
+  const perCategory = new Map<string, number>();
+  const cards = procedureCards.map(({ element, id }) => {
+    const classes = new Set((attr(element, "class") ?? "").split(/\s+/).filter(Boolean).map((c) => c.toLowerCase()));
+    const memberOf = [...classes].map((c) => categoryByKey.get(c)).filter((c): c is ProcedureCategory => c !== undefined);
+    if (memberOf.length !== 1) {
+      throw ambiguous(memberOf.length === 0 ? "A procedure card named none of the listed categories." : "A procedure card named more than one category.");
+    }
+    const category = memberOf[0]!;
+    perCategory.set(category.name, (perCategory.get(category.name) ?? 0) + 1);
+    return readCard(element, id, category.name);
+  });
+
+  for (const category of categories) {
+    const found = perCategory.get(category.name) ?? 0;
+    if (found !== category.count) {
+      throw new WovenShapeError(
+        "procedure_count_mismatch",
+        `Woven's "${category.name.slice(0, 60)}" procedures numbered ${found}, not the ${category.count} its category shows, so the procedure list was not used.`,
+      );
+    }
+  }
+  const total = categories.reduce((sum, c) => sum + c.count, 0);
+  if (cards.length !== total) {
+    throw new WovenShapeError(
+      "procedure_count_mismatch",
+      `Woven listed ${cards.length} procedures, not the ${total} its categories show, so the procedure list was not used.`,
+    );
+  }
+  return { categories, cards };
+}
+
+function ambiguous(what: string): WovenShapeError {
+  return new WovenShapeError("procedure_listing_ambiguous", `${what} The procedure list could not be proved complete, so it was not used.`);
 }
 
 export interface ProcedureStep {

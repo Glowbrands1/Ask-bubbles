@@ -4,7 +4,7 @@ import { communicationRecord, parseCommunicationRows } from "./adapters/communic
 import { fileLibraryRecord, parseFileLibraryRows } from "./adapters/file-library";
 import { handbookRecord, parseHandbookRows } from "./adapters/handbooks";
 import { parsePolicyCards, parsePolicyDetail, policyRecord, withPolicyDetail } from "./adapters/policies";
-import { parseProcedureCards, parseProcedureCategories, parseProcedureDetail, procedureRecord, unionProcedureCards } from "./adapters/procedures";
+import { parseProcedureDetail, parseProcedureSearch, procedureRecord } from "./adapters/procedures";
 import { ticksToIso } from "./adapters/shared";
 import { assertCompanyPage, companyIdsOnPage, companyReadingsOnPage } from "./company-guard";
 import { bcsAudienceRestriction, bcsOwnershipHold } from "./policy";
@@ -80,29 +80,63 @@ describe("handbooks", () => {
   });
 });
 
-const categoryCards = (cats: [string, string][]) =>
-  cats.map(([name, n]) => `<div data-procedure-category-name="${name}"><h4>${name}</h4><span class="indicator">${n}</span></div>`).join("");
-const procedureCard = (id: string, title: string, badges: string[] = [], positions: string | null = "All Positions") =>
-  `<div class="woven-summary-container" data-procedure-id="${id}"><div class="entity-name">${title}</div><div>Safety</div>${badges.map((b) => `<span class="badge">${b}</span>`).join("")}${positions === null ? "" : `<div><img id="positions-assigned-image"> ${positions}</div>`}<a data-procedure-id="${id}">Open</a></div>`;
+/*
+ * The procedure search's VERIFIED_LIVE structure (sanitized probe of the
+ * Midwest Soap Makers response): one `{ Success, HTML }` with every category
+ * card, then every procedure card in `#procedures-container`; each card names
+ * its category slug as a class; the position text sits in the image wrapper's
+ * sibling.
+ */
+const liveCategory = (slug: string, indicator: string) =>
+  `<div class="col-md-6"><div class="woven-summary-container woven-summary-container-display medium-left-display has-action mb-sm" data-procedure-category-name="${slug}"><div class="card-left"><img src="/i.svg" alt="" /></div><div class="card-center flex-center-content flex-hcenter"><div class="entity-name">${slug.replace(/-/g, " ")}</div></div><div class="card-right"><div class="indicator">${indicator}</div><div class="chevron"><i class="fas fa-chevron-right"></i></div></div></div></div>`;
+const liveProcedure = (id: string, title: string, classes: string, badges: string[] = [], positions: string | null = "All Positions") =>
+  `<div class="woven-summary-container woven-summary-container-display isotope-grid-item medium-left-display has-action mb-sm ${classes}" data-procedure-id="${id}"><div class="card-left"><img src="/p.svg" alt="" /></div><div class="card-center flex-center-content"><div class="entity-name">${title}</div><div class="mb-xs">Some Line</div><div class="mb-xs">${badges.map((b) => `<span class="badge badge-red-primary mr-sm">${b}</span>`).join("")}</div>${positions === null ? "" : `<div class="flex flex-vcenter"><div><img id="positions-assigned-image" src="/pos.svg" alt="" /></div><div class="mt-2xs ml-sm">${positions}</div></div>`}</div><div class="card-right"><div class="chevron"><i class="fas fa-chevron-right"></i></div></div></div>`;
+const liveSearch = (categories: string, cards: string) => ({
+  Success: true,
+  HTML: `<div class="row">${categories}</div><div id="procedures-container" class="col-xs-12 hidden"><div class="procedure-grid">${cards}</div></div>`,
+});
 
-describe("procedures", () => {
-  it("reads categories with their indicator counts, and refuses a list that cannot be proved complete", () => {
-    expect(parseProcedureCategories({ Success: true, HTML: categoryCards([["Safety", "2"], ["Training", "12"]]) })).toEqual([
-      { name: "Safety", count: 2 },
-      { name: "Training", count: 12 },
+describe("procedures (VERIFIED_LIVE single-response structure)", () => {
+  it("reads every category and every procedure card from the one response, reconciled per category and in total", () => {
+    const listing = parseProcedureSearch(
+      liveSearch(
+        liveCategory("general-operations", "2") + liveCategory("safety", "1"),
+        liveProcedure(bcsId(1), "Opening", "general-operations") + liveProcedure(bcsId(2), "Closing", "general-operations", ["Unpublished"]) + liveProcedure(bcsId(3), "Fire", "safety"),
+      ),
+    );
+    expect(listing.categories).toEqual([
+      { name: "general-operations", count: 2 },
+      { name: "safety", count: 1 },
     ]);
-    expect(() => parseProcedureCategories({ Success: true, HTML: categoryCards([["Safety", "many"]]) })).toThrow(/one readable count/);
-    expect(() => parseProcedureCategories({ Success: true, HTML: "" })).toThrow(/no categories/);
-    expect(() => parseProcedureCategories({ Success: true, HTML: procedureCard(bcsId(1), "X") })).toThrow(/procedures where categories/);
+    expect(listing.cards.map((c) => [c.id, c.title, c.category, c.unpublished])).toEqual([
+      [bcsId(1), "Opening", "general-operations", false],
+      [bcsId(2), "Closing", "general-operations", true],
+      [bcsId(3), "Fire", "safety", false],
+    ]);
+  });
+
+  it("reads the live position line (text in the image wrapper's sibling) as the audience", () => {
+    const { cards } = parseProcedureSearch(
+      liveSearch(
+        liveCategory("safety", "3"),
+        liveProcedure(bcsId(1), "A", "safety") + liveProcedure(bcsId(2), "B", "safety", [], "General Manager, Trainer") + liveProcedure(bcsId(3), "C", "safety", [], null),
+      ),
+    );
+    expect(cards.map((c) => c.positions)).toEqual([["All Positions"], ["General Manager", "Trainer"], null]);
+    /* The position text is read from the card's own row only, never from a neighbouring card. */
+    const lone = `<div class="woven-summary-container safety" data-procedure-id="${bcsId(9)}"><div class="entity-name">Lone</div><div><img id="positions-assigned-image" /></div></div>`;
+    expect(parseProcedureSearch(liveSearch(liveCategory("safety", "1"), lone)).cards[0]!.positions).toBeNull();
   });
 
   it("reads publication from the badges: Unpublished (also beside a frequency) is a draft; no badge is published", () => {
-    const cards = parseProcedureCards(
-      {
-        Success: true,
-        HTML: procedureCard(bcsId(1), "Published One") + procedureCard(bcsId(2), "Draft", ["Unpublished"]) + procedureCard(bcsId(3), "Monthly Draft", ["Unpublished | Monthly"]) + procedureCard(bcsId(4), "Monthly", ["Monthly"]),
-      },
-      { name: "Safety", count: 4 },
+    const { cards } = parseProcedureSearch(
+      liveSearch(
+        liveCategory("safety", "4"),
+        liveProcedure(bcsId(1), "Published One", "safety") +
+          liveProcedure(bcsId(2), "Draft", "safety", ["Unpublished"]) +
+          liveProcedure(bcsId(3), "Monthly Draft", "safety", ["Unpublished | Monthly"]) +
+          liveProcedure(bcsId(4), "Monthly", "safety", ["Monthly"]),
+      ),
     );
     expect(cards.map((c) => [c.title, c.unpublished, c.frequency])).toEqual([
       ["Published One", false, null],
@@ -111,32 +145,76 @@ describe("procedures", () => {
       ["Monthly", false, "Monthly"],
     ]);
     expect(procedureRecord(cards[1]!, null)).toMatchObject({ publication: "unpublished", publicationReason: "unpublished", status: "Unpublished" });
+    expect(procedureRecord(cards[0]!, null)).toMatchObject({ publication: "published", audience: ["All Positions"] });
   });
 
-  it("an unknown badge, or a count that does not match the indicator, fails the listing", () => {
-    expect(() => parseProcedureCards({ Success: true, HTML: procedureCard(bcsId(1), "X", ["Archived"]) }, { name: "Safety", count: 1 })).toThrow(/badge Ask Bubbles has not verified/);
-    expect(() => parseProcedureCards({ Success: true, HTML: procedureCard(bcsId(1), "X") }, { name: "Safety", count: 2 })).toThrow(/not the 2 its category shows/);
+  it("an unknown badge fails the listing (publication filtering is not loosened)", () => {
+    expect(() => parseProcedureSearch(liveSearch(liveCategory("safety", "1"), liveProcedure(bcsId(1), "X", "safety", ["Archived"])))).toThrow(/badge Ask Bubbles has not verified/);
   });
 
-  it("reads the position line as the audience", () => {
-    const [all, limited, none] = parseProcedureCards(
-      { Success: true, HTML: procedureCard(bcsId(1), "A") + procedureCard(bcsId(2), "B", [], "General Manager, Trainer") + procedureCard(bcsId(3), "C", [], null) },
-      { name: "Safety", count: 3 },
+  it("fails closed when a category's cards do not number its indicator", () => {
+    const tooFew = liveSearch(liveCategory("safety", "2") + liveCategory("training", "1"), liveProcedure(bcsId(1), "A", "safety") + liveProcedure(bcsId(2), "B", "training"));
+    expect(() => parseProcedureSearch(tooFew)).toThrow(/"safety" procedures numbered 1, not the 2/);
+    const tooMany = liveSearch(liveCategory("safety", "1"), liveProcedure(bcsId(1), "A", "safety") + liveProcedure(bcsId(2), "B", "safety"));
+    expect(() => parseProcedureSearch(tooMany)).toThrow(/numbered 2, not the 1/);
+  });
+
+  it("fails closed on the old categories-only answer: the indicators promise procedures that are not there", () => {
+    expect(() => parseProcedureSearch(liveSearch(liveCategory("safety", "2"), ""))).toThrow(/numbered 0, not the 2/);
+  });
+
+  it("fails closed when categories are missing, or a count is unreadable", () => {
+    expect(() => parseProcedureSearch(liveSearch("", liveProcedure(bcsId(1), "A", "safety")))).toThrow(/no categories/);
+    expect(() => parseProcedureSearch({ Success: true, HTML: "" })).toThrow(/no categories/);
+    expect(() => parseProcedureSearch(liveSearch(liveCategory("safety", "many"), liveProcedure(bcsId(1), "A", "safety")))).toThrow(/one readable count/);
+    const twoIndicators = liveCategory("safety", "1").replace('<div class="chevron">', '<div class="indicator">1</div><div class="chevron">');
+    expect(() => parseProcedureSearch(liveSearch(twoIndicators, liveProcedure(bcsId(1), "A", "safety")))).toThrow(/one readable count/);
+    /* A card whose category has no category card: it is missing, never quietly dropped. */
+    expect(() => parseProcedureSearch(liveSearch(liveCategory("safety", "1"), liveProcedure(bcsId(1), "A", "safety") + liveProcedure(bcsId(2), "B", "recipes")))).toThrow(
+      /named none of the listed categories/,
     );
-    expect([all!.positions, limited!.positions, none!.positions]).toEqual([["All Positions"], ["General Manager", "Trainer"], null]);
   });
 
-  it("a procedure in two categories is one procedure", () => {
-    const a = parseProcedureCards({ Success: true, HTML: procedureCard(bcsId(1), "A") }, { name: "Safety", count: 1 });
-    const b = parseProcedureCards({ Success: true, HTML: procedureCard(bcsId(1), "A") + procedureCard(bcsId(2), "B") }, { name: "Training", count: 2 });
-    expect(unionProcedureCards([a, b]).map((c) => c.id)).toEqual([bcsId(1), bcsId(2)]);
+  it("fails closed on an ambiguous structure", () => {
+    const cats = liveCategory("safety", "1") + liveCategory("training", "1");
+    /* A card in two categories. */
+    expect(() => parseProcedureSearch(liveSearch(cats, liveProcedure(bcsId(1), "A", "safety training") + liveProcedure(bcsId(2), "B", "training")))).toThrow(/more than one category/);
+    /* The same procedure on two cards. */
+    expect(() => parseProcedureSearch(liveSearch(cats, liveProcedure(bcsId(1), "A", "safety") + liveProcedure(bcsId(1), "A", "training")))).toThrow(/same item twice/);
+    /* A procedure card inside a category card. */
+    const nested = liveCategory("safety", "1").replace('<div class="card-left">', `${liveProcedure(bcsId(1), "A", "safety")}<div class="card-left">`);
+    expect(() => parseProcedureSearch(liveSearch(nested, ""))).toThrow(/mixed together/);
+    /* A card that is also a category card. */
+    const hybrid = liveProcedure(bcsId(1), "A", "safety").replace("data-procedure-id=", 'data-procedure-category-name="safety" data-procedure-id=');
+    expect(() => parseProcedureSearch(liveSearch(liveCategory("safety", "1"), hybrid))).toThrow();
+    /* A card holding another procedure's card. */
+    const inner = liveProcedure(bcsId(1), "A", "safety").replace('<div class="card-right">', `<a data-procedure-id="${bcsId(2)}">x</a><div class="card-right">`);
+    expect(() => parseProcedureSearch(liveSearch(liveCategory("safety", "1"), inner))).toThrow(/held another procedure/);
+  });
+
+  it("an inner link repeating its own card's id is the same card", () => {
+    const withLink = liveProcedure(bcsId(1), "A", "safety").replace('<div class="card-right">', `<a href="/KnowledgeCenter/Procedure/${bcsId(1)}" data-procedure-id="${bcsId(1)}">Open</a><div class="card-right">`);
+    expect(parseProcedureSearch(liveSearch(liveCategory("safety", "1"), withLink)).cards.map((c) => c.id)).toEqual([bcsId(1)]);
+  });
+
+  it("the live totals reconcile: 12 categories summing to 51, with 51 cards (46 drafts)", () => {
+    const counts: [string, number][] = [
+      ["cash-management", 1], ["cleaning", 1], ["customer-service", 1], ["daily-tasks", 1], ["general-operations", 17], ["inventory", 1],
+      ["management", 3], ["ordering", 1], ["recipes", 6], ["safety", 6], ["technology", 1], ["training", 12],
+    ];
+    let n = 0;
+    const cards = counts.flatMap(([slug, count]) => Array.from({ length: count }, () => (n += 1)).map((i) => liveProcedure(bcsId(1000 + i), `P${i}`, slug, i <= 46 ? ["Unpublished"] : [])));
+    const listing = parseProcedureSearch(liveSearch(counts.map(([slug, count]) => liveCategory(slug, String(count))).join(""), cards.join("")));
+    expect(listing.categories).toHaveLength(12);
+    expect(listing.cards).toHaveLength(51);
+    expect(listing.cards.filter((c) => !c.unpublished)).toHaveLength(5);
   });
 
   it("reads the detail page's steps once each, without the 'Not Provided' placeholder", () => {
     const steps = `<div data-procedure-step-id="${bcsId(11)}"><div id="procedure-step-content"><p>Do one.</p></div></div><div data-procedure-step-id="${bcsId(12)}"><div id="procedure-step-content">Not Provided</div></div>`;
     const html = `<html><head><title>Procedures - Opening</title></head><body><div id="procedure-steps-container">${steps}</div><div id="procedure-steps-carousel">${steps}</div></body></html>`;
     expect(parseProcedureDetail(html)).toEqual({ title: "Opening", steps: [{ stepId: bcsId(11), text: "Do one." }, { stepId: bcsId(12), text: "" }] });
-    const [card] = parseProcedureCards({ Success: true, HTML: procedureCard(bcsId(1), "Opening") }, { name: "Safety", count: 1 });
+    const [card] = parseProcedureSearch(liveSearch(liveCategory("safety", "1"), liveProcedure(bcsId(1), "Opening", "safety"))).cards;
     const record = procedureRecord(card!, html);
     expect(record.parts).toHaveLength(1);
     expect(record.parts[0]!.retrieval).toEqual({ kind: "available", locator: { procedureId: bcsId(1) } });
@@ -182,6 +260,18 @@ describe("File Library", () => {
   it("a list naming the same file twice is refused", () => {
     expect(() => parseFileLibraryRows({ list: [row(), row()] })).toThrow(/same item twice/);
   });
+
+  it("VERIFIED_LIVE 'Public' audience parses; it stays BLOCKED while downloads are off; unknown audiences still fail", () => {
+    const [publicRow] = parseFileLibraryRows({ list: [row({ id: bcsId(7), audience: "Public" })] });
+    expect(publicRow).toMatchObject({ audience: ["Public"], publication: "published" });
+    expect(fileLibraryRecord(publicRow!, { downloadEnabled: false }).parts[0]!.retrieval).toEqual({ kind: "blocked", capability: "file_library_download_unverified" });
+    /* Every live audience shape parses in one listing. */
+    const live = ["N/A", "All Teams All Positions", "Public", "All Teams 3 Positions", "9 Teams 21 Positions", "10 Teams 21 Positions"];
+    expect(parseFileLibraryRows({ list: live.map((audience, i) => row({ id: bcsId(10 + i), audience })) })).toHaveLength(6);
+    for (const audience of ["Public Everyone", "Publicly", "Everyone", "Managers"]) {
+      expect(() => parseFileLibraryRows({ list: [row({ audience })] })).toThrow(/audience was not in a verified form/);
+    }
+  });
 });
 
 describe("Communications", () => {
@@ -200,6 +290,26 @@ describe("Communications", () => {
     expect(record.parts[0]!.retrieval).toEqual({ kind: "blocked", capability: "communication_detail_unverified" });
     /* "Created By" is a person: never carried. */
     expect(JSON.stringify(record)).not.toContain("A Person");
+  });
+
+  it("VERIFIED_LIVE 'Public' audience parses, and stays held out by its non-visible or draft status; unknown audiences still fail", () => {
+    const rows = parseCommunicationRows({
+      list: [
+        communicationRow({ id: bcsId(1), title: "All Hands", key: "3", label: "Published – Not Visible", audience: "Public" }),
+        communicationRow({ id: bcsId(2), title: "Draft Note", key: "1", label: "Draft", audience: "Public" }),
+      ],
+    });
+    expect(rows.map((r) => [r.audience, r.publication, r.publicationReason])).toEqual([
+      [["Public"], "unpublished", "published_not_visible"],
+      [["Public"], "unpublished", "draft"],
+    ]);
+    expect(communicationRecord(rows[0]!)).toMatchObject({ publication: "unpublished" });
+    expect(communicationRecord(rows[0]!).parts[0]!.retrieval).toEqual({ kind: "blocked", capability: "communication_detail_unverified" });
+    /* A Public audience does not make the unobserved visible status acceptable. */
+    expect(() => parseCommunicationRows({ list: [communicationRow({ id: bcsId(3), title: "X", key: "2", label: "Published", audience: "Public" })] })).toThrow(/status Ask Bubbles has not verified/);
+    for (const audience of ["Public Everyone", "Everyone"]) {
+      expect(() => parseCommunicationRows({ list: [communicationRow({ id: bcsId(4), title: "X", key: "3", label: "Published – Not Visible", audience })] })).toThrow(/audience was not in a verified form/);
+    }
   });
 
   it("the unobserved published-and-visible status fails the listing until it is verified", () => {

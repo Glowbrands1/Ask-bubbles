@@ -127,9 +127,9 @@ The integration login must therefore be able to open the Company page.
 |---|---|---|
 | Policies (12) | list + detail structure | **Inventory only.** Publication state is unverified, so every policy is excluded as `publication_unverified`. |
 | Handbooks (1) | list | **Inventory only.** No handbook content/download route is verified for this company, so the part is BLOCKED. The one handbook is a JBA-titled manual → held for ownership review. |
-| Procedures (51) | category enumeration, badges, positions, detail steps | Drafts (`Unpublished`) excluded; their pages are never fetched. Each category's count must equal its indicator or the listing fails. Step text is ingested once the "All Positions" audience is shared by an administrator. Step attachments are not read (unverified). |
-| File Library (264) | list, columns, status keys, audiences | Unpublished excluded. Columns proved on every row (schema drift fails the listing). PDF/DOCX only. Download BLOCKED unless `WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED`. |
-| Communications (133) | list | **Inventory only.** Drafts and "Published – Not Visible" excluded; detail unverified → BLOCKED. A published-and-visible status has not been observed and fails the listing until verified. |
+| Procedures (51) | one search response (12 category cards + 51 procedure cards, verified live), badges, positions, detail steps | Drafts (`Unpublished`) excluded; their pages are never fetched. Every card must name exactly one listed category; each category's cards must equal its indicator and the total must equal the indicators' sum, or the listing fails (also on a repeated procedure or mixed-up markup). Step text is ingested once the "All Positions" audience is shared by an administrator. Step attachments are not read (unverified). |
+| File Library (264) | list, columns, status keys, audiences (`Public` verified live) | Unpublished excluded. Columns proved on every row (schema drift fails the listing). PDF/DOCX only. Download BLOCKED unless `WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED`. |
+| Communications (133) | list (`Public` audience verified live) | **Inventory only.** Drafts and "Published – Not Visible" excluded; detail unverified → BLOCKED. A published-and-visible status has not been observed and fails the listing until verified. |
 
 ### Audience rules
 
@@ -194,8 +194,6 @@ WOVEN_KNOWLEDGE_LIVE_DRY_RUN=1 WOVEN_KNOWLEDGE_SYNC_ENABLED=true npm run dry-run
 - Policy publication state and audience; procedure team/location limits and
   updated dates; per-item team/position ids; Communications detail and
   attachments; procedure attachment downloads; Shared Links.
-- The procedure category indicator's exact markup (read from an element whose
-  class names an indicator; a sanitized real response should confirm it).
 - The Woven web app's sign-in and account-chooser steps were captured with
   the same login by the reference platform and not re-captured for BCS; they
   are tenant-neutral, and the company is chosen by the pinned id and proved on

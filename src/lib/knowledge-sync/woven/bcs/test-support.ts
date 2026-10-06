@@ -62,7 +62,8 @@ export interface FakeHandbookRow {
 export interface FakeProcedure {
   id: string;
   title: string;
-  categories: string[];
+  /** The category slug, as Woven names it on the category card and as the card's class. */
+  category: string;
   badges: string[];
   /** "All Positions" or a comma-separated list. Null: no position line. */
   positions: string | null;
@@ -130,7 +131,7 @@ export function bcsContent(): FakeCompanyContent {
       {
         id: bcsId(301),
         title: "Opening the Makery",
-        categories: ["General Operations", "Training"],
+        category: "general-operations",
         badges: [],
         positions: "All Positions",
         steps: [
@@ -139,18 +140,18 @@ export function bcsContent(): FakeCompanyContent {
           { id: bcsId(3013), text: "Not Provided" },
         ],
       },
-      { id: bcsId(302), title: "Closing Checklist", categories: ["General Operations"], badges: ["Unpublished"], positions: "All Positions", steps: [{ id: bcsId(3021), text: "Draft text." }] },
-      { id: bcsId(303), title: "Barrel Delivery", categories: ["General Operations"], badges: ["Unpublished", "Monthly"], positions: "All Positions", steps: [{ id: bcsId(3031), text: "Draft text." }] },
-      { id: bcsId(304), title: "Fire Extinguisher Use", categories: ["Safety"], badges: [], positions: "All Positions", steps: [{ id: bcsId(3041), text: "Pull the pin, aim at the base, squeeze, sweep." }] },
+      { id: bcsId(302), title: "Closing Checklist", category: "general-operations", badges: ["Unpublished"], positions: "All Positions", steps: [{ id: bcsId(3021), text: "Draft text." }] },
+      { id: bcsId(303), title: "Barrel Delivery", category: "general-operations", badges: ["Unpublished", "Monthly"], positions: "All Positions", steps: [{ id: bcsId(3031), text: "Draft text." }] },
+      { id: bcsId(304), title: "Fire Extinguisher Use", category: "safety", badges: [], positions: "All Positions", steps: [{ id: bcsId(3041), text: "Pull the pin, aim at the base, squeeze, sweep." }] },
       {
         id: bcsId(305),
         title: "Chemical Handling",
-        categories: ["Safety"],
+        category: "safety",
         badges: [],
         positions: "General Manager, District Manager",
         steps: [{ id: bcsId(3051), text: "Lye is handled by managers only." }],
       },
-      { id: bcsId(306), title: "New Hire Orientation", categories: ["Training"], badges: ["Unpublished"], positions: "All Positions", steps: [{ id: bcsId(3061), text: "Draft text." }] },
+      { id: bcsId(306), title: "New Hire Orientation", category: "training", badges: ["Unpublished"], positions: "All Positions", steps: [{ id: bcsId(3061), text: "Draft text." }] },
     ],
     fileLibrary: [
       fileRow({ id: bcsId(401), title: "Soap Loaf Cutting Guide", ext: "pdf", status: "Published", audience: "All Teams All Positions", library: "Brand", updated: "2026-09-01T00:00:00Z" }),
@@ -173,7 +174,7 @@ export function jbaContent(): FakeCompanyContent {
   return {
     policies: [{ id: bcsId(9101), title: "Tanning Bed Safety", version: 4, updated: "1/1/2026", body: "Sun Tan City text." }],
     handbooks: [],
-    procedures: [{ id: bcsId(9301), title: "Bed Cleaning", categories: ["Operations"], badges: [], positions: "All Positions", steps: [{ id: bcsId(93011), text: "Sun Tan City steps." }] }],
+    procedures: [{ id: bcsId(9301), title: "Bed Cleaning", category: "operations", badges: [], positions: "All Positions", steps: [{ id: bcsId(93011), text: "Sun Tan City steps." }] }],
     fileLibrary: [fileRow({ id: bcsId(9401), title: "Spray Tan Guide", ext: "pdf", status: "Published", audience: "All Teams All Positions", library: "Account", updated: "2026-01-01T00:00:00Z" })],
     communications: [],
   };
@@ -438,28 +439,31 @@ export class FakeBcsWoven {
       });
     }
     if (path === "/KnowledgeCenter/_Search_Procedures" && method === "POST") {
+      /* VERIFIED_LIVE shape: one response, category cards first, then every procedure card in #procedures-container. */
       const wanted = (JSON.parse(body) as { pModel: { Categories: string[] } }).pModel.Categories;
-      if (wanted.length === 0) {
-        const names = [...new Set(c.procedures.flatMap((p) => p.categories))];
-        const cards = names
-          .map((name) => {
-            const n = this.indicatorOverride.get(name) ?? c.procedures.filter((p) => p.categories.includes(name)).length;
-            const indicator = this.indicatorUnreadable.has(name) ? `<span class="woven-indicator">many</span>` : `<span class="woven-indicator">${n}</span>`;
-            return `<div class="category-card" data-procedure-category-name="${esc(name)}"><h4>${esc(name)}</h4>${indicator}</div>`;
-          })
-          .join("");
-        return json({ Success: true, HTML: cards });
-      }
+      if (wanted.length > 0) return json({ Success: true, HTML: "" });
+      const names = [...new Set(c.procedures.map((p) => p.category))];
+      const categories = names
+        .map((name) => {
+          const n = this.indicatorOverride.get(name) ?? c.procedures.filter((p) => p.category === name).length;
+          const indicator = this.indicatorUnreadable.has(name) ? `<div class="indicator">many</div>` : `<div class="indicator">${n}</div>`;
+          return `<div class="col-md-6"><div class="woven-summary-container woven-summary-container-display medium-left-display has-action mb-sm" data-procedure-category-name="${esc(name)}">
+            <div class="card-left"><img src="/img/category.svg" alt="" /></div>
+            <div class="card-center flex-center-content flex-hcenter"><div class="entity-name">${esc(name.replace(/-/g, " "))}</div></div>
+            <div class="card-right">${indicator}<div class="chevron"><i class="fas fa-chevron-right"></i></div></div></div></div>`;
+        })
+        .join("");
       const cards = c.procedures
-        .filter((p) => p.categories.includes(wanted[0]!))
         .map(
-          (p) => `<div class="woven-summary-container" data-procedure-id="${p.id}"><div class="entity-name">${esc(p.title)}</div><div>${esc(wanted[0]!)}</div>
-            ${p.badges.map((b) => `<span class="badge">${esc(b)}</span>`).join("")}
-            ${p.positions === null ? "" : `<div><img id="positions-assigned-image" src="/img/positions.svg"> ${esc(p.positions)}</div>`}
-            <a href="/KnowledgeCenter/Procedure/${p.id}" data-procedure-id="${p.id}">Open</a></div>`,
+          (p) => `<div class="woven-summary-container woven-summary-container-display isotope-grid-item medium-left-display has-action mb-sm ${esc(p.category)}" data-procedure-id="${p.id}">
+            <div class="card-left"><img src="/img/procedure.svg" alt="" /></div>
+            <div class="card-center flex-center-content"><div class="entity-name">${esc(p.title)}</div><div class="mb-xs">${esc(p.category.replace(/-/g, " "))}</div>
+            <div class="mb-xs">${p.badges.map((b) => `<span class="badge badge-red-primary mr-sm">${esc(b)}</span>`).join("")}</div>
+            ${p.positions === null ? "" : `<div class="flex flex-vcenter"><div><img id="positions-assigned-image" src="/img/positions.svg" alt="" /></div><div class="mt-2xs ml-sm">${esc(p.positions)}</div></div>`}
+            </div><div class="card-right"><div class="chevron"><i class="fas fa-chevron-right"></i></div></div></div>`,
         )
         .join("");
-      return json({ Success: true, HTML: cards });
+      return json({ Success: true, HTML: `<div class="row">${categories}</div><div id="procedures-container" class="col-xs-12 hidden"><div class="procedure-grid">${cards}</div></div>` });
     }
     const proc = /^\/KnowledgeCenter\/Procedure\/([^/]+)$/.exec(path);
     if (proc) {

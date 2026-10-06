@@ -365,7 +365,7 @@ describe("sync, change detection and reconciliation", () => {
   it("an incomplete procedure list (count below its category's indicator) fails that listing and removes nothing", async () => {
     const h = new Harness();
     await h.initial();
-    h.fake.indicatorOverride.set("Safety", 3);
+    h.fake.indicatorOverride.set("safety", 3);
     const outcome = await h.run("sync");
     expect(report(outcome).byType.procedure).toMatchObject({ listing: "failed", listingCode: "woven_procedure_count_mismatch" });
     expect(h.searchableTitles()).toEqual(["Fire Extinguisher Use", "Opening the Makery"]);

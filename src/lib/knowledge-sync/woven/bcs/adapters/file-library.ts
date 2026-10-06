@@ -1,7 +1,7 @@
 import { SUPPORTED_KINDS } from "@/lib/ingestion/validation";
 import type { SourcePart, SourceRecord } from "../../../types";
 import { htmlText } from "../../html";
-import { BCS_CAPABILITY, FILE_LIBRARY_COLUMNS, FILE_LIBRARY_LEVELS, FILE_LIBRARY_STATUS, TEAM_POSITION_AUDIENCE } from "../contract";
+import { BCS_CAPABILITY, FILE_LIBRARY_COLUMNS, FILE_LIBRARY_LEVELS, FILE_LIBRARY_STATUS, PUBLIC_AUDIENCE, TEAM_POSITION_AUDIENCE } from "../contract";
 import { WovenShapeError, assertUnique, badgeLabels, digest, keyedCell, requireColumns, requireList, resolveStatus, ticksToIso, validId } from "./shared";
 
 /**
@@ -39,7 +39,7 @@ export interface FileLibraryRow {
   libraryLevel: (typeof FILE_LIBRARY_LEVELS)[number];
 }
 
-const AUDIENCE_SHAPES = [TEAM_POSITION_AUDIENCE, /^n\/?a$/i];
+const AUDIENCE_SHAPES = [TEAM_POSITION_AUDIENCE, PUBLIC_AUDIENCE, /^n\/?a$/i];
 
 export function parseFileLibraryRows(body: unknown): FileLibraryRow[] {
   const rows: FileLibraryRow[] = [];
