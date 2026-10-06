@@ -8,7 +8,7 @@ import {
   LOGIN_FIELDS,
   LOGIN_FORM_MARKER,
   LOGIN_PATH_PREFIXES,
-} from "./contract";
+} from "./web-app";
 import { attr, elementsByTag, parseHtmlDocument } from "./html";
 
 type ParsedPage = ReturnType<typeof parseHtmlDocument>;

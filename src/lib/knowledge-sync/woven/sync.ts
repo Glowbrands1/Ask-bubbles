@@ -5,11 +5,12 @@ import { MemoryKnowledgeSyncStore } from "../memory-store";
 import { SinkError, type KnowledgeSink, type KnowledgeSyncStore } from "../ports";
 import { createSupabaseKnowledgeSink } from "../sink";
 import { createSupabaseKnowledgeSyncStore, KnowledgeSyncStoreError } from "../store";
-import { CONTENT_TYPES, type ContentType, type KnowledgeSourceConnector, type ManifestItem, type RunMode, type RunTrigger, type SyncSettings } from "../types";
-import { parseHandbookList } from "./adapters";
-import { readWovenKnowledgeConfig, WOVEN_KNOWLEDGE_SYNC_ENABLED_ENV, WOVEN_TEAM_COMPANY_ENV, type WovenKnowledgeConfig } from "./config";
-import { COMPANY_WIDE_AUDIENCE_LABELS, HANDBOOK_LIST_PATH } from "./contract";
-import { WovenConnectorError, WovenKnowledgeConnector } from "./connector";
+import type { ContentType, KnowledgeSourceConnector, ManifestItem, RunMode, RunTrigger, SyncSettings } from "../types";
+import { BcsConnectorError, BuffCitySoapWovenConnector } from "./bcs/connector";
+import { BCS_COMPANY_WIDE_AUDIENCE_LABELS, BCS_CONTENT_TYPES } from "./bcs/contract";
+import { bcsAudienceRestriction, bcsOwnershipHold } from "./bcs/policy";
+import { WOVEN_TENANT } from "@/config/company/woven";
+import { readWovenKnowledgeConfig, WOVEN_KNOWLEDGE_SYNC_ENABLED_ENV, type WovenKnowledgeConfig } from "./config";
 import { describeWovenItem } from "./describe";
 import { WovenTeamClient } from "./http";
 
@@ -37,6 +38,28 @@ export type WovenRunOutcome =
   | (RunOutcome & { previewTestMode?: true })
   | { status: "disabled"; reason: string }
   | { status: "not_configured"; missing: string[] };
+
+/** The content types this deployment reads: Buff City Soap's (no Courses or Knowledge Elements). */
+export const WOVEN_CONTENT_TYPES: readonly ContentType[] = BCS_CONTENT_TYPES;
+
+/**
+ * The rules a run classifies with. Production always uses Buff City Soap's
+ * (`BCS_SYNC_POLICY`); tests of the shared engine against the reference
+ * platform's fixtures may pass that platform's rules instead.
+ */
+export interface WovenSyncPolicy {
+  contentTypes: readonly ContentType[];
+  companyWideLabels: readonly string[];
+  hold?: EngineDeps["hold"];
+  audienceRestriction?: EngineDeps["audienceRestriction"];
+}
+
+export const BCS_SYNC_POLICY: WovenSyncPolicy = {
+  contentTypes: WOVEN_CONTENT_TYPES,
+  companyWideLabels: BCS_COMPANY_WIDE_AUDIENCE_LABELS,
+  hold: bcsOwnershipHold,
+  audienceRestriction: bcsAudienceRestriction,
+};
 
 /**
  * The sink used in PREVIEW TEST MODE. A preview never writes to Ask Bubbles —
@@ -91,22 +114,29 @@ export interface WovenSyncOverrides {
   connector?: KnowledgeSourceConnector;
   now?: () => Date;
   contentTypes?: readonly ContentType[];
+  /** Tests only: classify with other rules than Buff City Soap's. */
+  policy?: WovenSyncPolicy;
 }
 
 function gate(config: WovenKnowledgeConfig): Extract<WovenRunOutcome, { status: "disabled" | "not_configured" }> | null {
   if (!config.enabled) return { status: "disabled", reason: `${WOVEN_KNOWLEDGE_SYNC_ENABLED_ENV} is not on, so nothing reaches Woven.` };
+  /* The pinned tenant first: any company variable naming another company never reaches Woven. */
+  if (config.tenantProblem) return { status: "disabled", reason: config.tenantProblem };
   if (!config.credentials) return { status: "not_configured", missing: config.missingCredentials };
-  /* The company is required. An empty one would match any active company on the page, so a config built any other way is refused too. */
-  if (!config.company.trim()) return { status: "not_configured", missing: [WOVEN_TEAM_COMPANY_ENV] };
   return null;
 }
 
-function buildConnector(config: WovenKnowledgeConfig, startedAt: number): WovenKnowledgeConnector {
-  return new WovenKnowledgeConnector({
-    client: new WovenTeamClient({ baseUrl: config.baseUrl, deadlineAt: startedAt + REQUEST_BUDGET_MS }),
-    credentials: config.credentials!,
-    company: config.company,
-  });
+/**
+ * THE ONLY CONNECTOR FACTORY. It returns the Buff City Soap connector, which
+ * reads exactly `WOVEN_TENANT` and proves it by Company ID. There is no
+ * switch, setting or argument that returns any other connector or company.
+ */
+export function createWovenKnowledgeConnector(config: WovenKnowledgeConfig, client: WovenTeamClient): BuffCitySoapWovenConnector {
+  return new BuffCitySoapWovenConnector({ client, credentials: config.credentials!, downloads: config.downloads });
+}
+
+function buildConnector(config: WovenKnowledgeConfig, startedAt: number): BuffCitySoapWovenConnector {
+  return createWovenKnowledgeConnector(config, new WovenTeamClient({ baseUrl: config.baseUrl, deadlineAt: startedAt + REQUEST_BUDGET_MS }));
 }
 
 export async function runWovenKnowledgeSync(
@@ -123,15 +153,18 @@ export async function runWovenKnowledgeSync(
     ? { store: overrides.store, testMode: false }
     : await storeForRun(options.mode, config, overrides.supabaseStore ?? createSupabaseKnowledgeSyncStore);
   const sink = overrides.sink ?? createSupabaseKnowledgeSink("woven");
+  const policy = overrides.policy ?? BCS_SYNC_POLICY;
   const deps: EngineDeps = {
     connector: overrides.connector ?? buildConnector(config, startedAt),
     store,
     sink: testMode ? readOnlySink(sink) : sink,
     describe: describeWovenItem,
-    companyWideLabels: COMPANY_WIDE_AUDIENCE_LABELS,
-    contentTypes: overrides.contentTypes ?? CONTENT_TYPES,
+    companyWideLabels: policy.companyWideLabels,
+    contentTypes: overrides.contentTypes ?? policy.contentTypes,
     now,
     deadlineAt: startedAt + ITEM_BUDGET_MS,
+    hold: policy.hold,
+    audienceRestriction: policy.audienceRestriction,
   };
   const outcome = await runKnowledgeSync(deps, options);
   return testMode && "runId" in outcome ? { ...outcome, previewTestMode: true } : outcome;
@@ -140,26 +173,32 @@ export async function runWovenKnowledgeSync(
 /* ------------------------------------------------------ test connection -- */
 
 export type ConnectionTest =
-  | { status: "ok"; company: string; handbooksVisible: number }
+  | { status: "ok"; company: string; companyId: string; handbooksVisible: number }
   | { status: "failed"; code: string; reason: string }
   | Extract<WovenRunOutcome, { status: "disabled" | "not_configured" }>;
 
 /**
- * Signs in, confirms the company and reads one small list. Writes nothing
- * anywhere. What "Test Connection" does.
+ * Signs in, proves the company by its ID and reads one small list. Writes
+ * nothing anywhere. What "Test Connection" does.
  */
 export async function testWovenConnection(overrides: { config?: WovenKnowledgeConfig; client?: WovenTeamClient } = {}): Promise<ConnectionTest> {
   const config = overrides.config ?? readWovenKnowledgeConfig();
   const closed = gate(config);
   if (closed) return closed;
   const client = overrides.client ?? new WovenTeamClient({ baseUrl: config.baseUrl, deadlineAt: Date.now() + 60_000 });
-  const connector = new WovenKnowledgeConnector({ client, credentials: config.credentials!, company: config.company });
+  const connector = createWovenKnowledgeConnector(config, client);
   try {
     const info = await connector.connect();
-    const handbooks = parseHandbookList(await client.postJson(HANDBOOK_LIST_PATH, undefined));
-    return { status: "ok", company: info.companyLabel ?? config.company, handbooksVisible: handbooks.length };
+    const handbooks = await connector.list("handbook");
+    if (!handbooks.ok) return { status: "failed", code: handbooks.code, reason: handbooks.message };
+    return {
+      status: "ok",
+      company: info.companyLabel ?? WOVEN_TENANT.companyName,
+      companyId: info.companyId ?? WOVEN_TENANT.companyId,
+      handbooksVisible: handbooks.records.length,
+    };
   } catch (error) {
-    if (error instanceof WovenConnectorError) return { status: "failed", code: error.code, reason: error.message };
+    if (error instanceof BcsConnectorError) return { status: "failed", code: error.code, reason: error.message };
     return {
       status: "failed",
       code: (error as { code?: string }).code ? `woven_${(error as { code: string }).code}` : "woven_unexpected",

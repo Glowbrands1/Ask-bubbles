@@ -5,6 +5,7 @@ import { readWovenConfig } from "./config";
 import {
   createFakeWoven,
   FAKE_COMPANY_ID,
+  OTHER_COMPANY_ID,
   FAKE_CREDENTIALS,
   FAKE_ENUMS,
   FAKE_STATUS,
@@ -118,18 +119,26 @@ describe("a matching API", () => {
     expect(report.passes[1].statusCodes).toEqual({ 1: 40, 2: 30 });
   });
 
-  it("discovers the CompanyID when none is configured", async () => {
-    const { report } = await validate();
+  it("names the pinned Buff City Soap company even with no WOVEN_COMPANY_ID, and reports it — Woven never chooses", async () => {
+    const { report, fake } = await validate();
     expect(report.token.ok && report.token.companyId).toBe(FAKE_COMPANY_ID);
-    expect(report.token.ok && report.token.companyIdSent).toBe(false);
+    expect(report.token.ok && report.token.companyIdSent).toBe(true);
+    expect(JSON.parse(fake.calls[0].body ?? "{}").CompanyID).toBe("55839f24-9241-418c-8405-37baf9a42a87");
     expect(message(report, "Company")).toContain(FAKE_COMPANY_ID);
+    expect(verdicts(report, "Company")).toEqual(["pass"]);
+  });
+
+  it("a sign-in that lands in another company is refused before any employee is read", async () => {
+    const { report, fake } = await validate({ issuedCompanyId: OTHER_COMPANY_ID });
+    expect(report.token).toMatchObject({ ok: false, code: "company_mismatch" });
+    expect(fake.calls.map((c) => c.path)).toEqual(["/tokens/v2"]);
   });
 
   it("sends a configured CompanyID and says so", async () => {
     const { report, fake } = await validate({ requiredCompanyId: FAKE_COMPANY_ID }, { WOVEN_COMPANY_ID: FAKE_COMPANY_ID });
     expect(report.token.ok && report.token.companyIdSent).toBe(true);
     expect(JSON.parse(fake.calls[0].body ?? "{}").CompanyID).toBe(FAKE_COMPANY_ID);
-    expect(verdicts(report, "Company")).toEqual([]);
+    expect(verdicts(report, "Company")).toEqual(["pass"]);
   });
 
   it("samples all-location and multi-location employees first, and keeps an empty all-location list as unknown", async () => {
@@ -438,7 +447,7 @@ describe("a sign-in that yields no token", () => {
 });
 
 describe("a company chooser on sign-in", () => {
-  it("lists the company options in the report, chooses none, and says to set WOVEN_COMPANY_ID", async () => {
+  it("lists the company options in the report and chooses none: the request named only the pinned company", async () => {
     const { report, fake } = await validate({}, {}, (fake) =>
       fake.override(
         (c) => c.path === "/tokens/v2",
@@ -453,23 +462,23 @@ describe("a company chooser on sign-in", () => {
             TwoFactorAuthentication: { EmailAddress: "person@example.test", TwoFactorAuthenticationCellPhone: "555-201-8844", Use2FA: false },
             CompanyLoginOptions: [
               { CompanyID: "11111111-2222-3333-4444-555555555555", CompanyName: "Example Soap Co", BrandFriendlyName: "ESC", AccountStatus: 1, IsBrandCompany: false, BrandLogoUrl: "https://cdn.woven.test/a.png" },
-              { CompanyID: "66666666-7777-8888-9999-000000000000", CompanyName: "Glow Brands", BrandFriendlyName: null, AccountStatus: 1, IsBrandCompany: true, BrandLogoUrl: "https://cdn.woven.test/b.png" },
+              { CompanyID: "66666666-7777-8888-9999-000000000000", CompanyName: "Another Example Co", BrandFriendlyName: null, AccountStatus: 1, IsBrandCompany: true, BrandLogoUrl: "https://cdn.woven.test/b.png" },
             ],
           }),
       ),
     );
     expect(report.token).toMatchObject({ ok: false, code: "login_refused", status: 200 });
     const d = report.token.ok ? null : report.token.diagnostics;
-    expect(d?.companyIdAppearsRequired).toBe(true);
+    expect(d?.companyIdAppearsRequired).toBeNull();
     expect(d?.companyOptions.map((o) => [o.companyName, o.companyId])).toEqual([
       ["Example Soap Co", "11111111-2222-3333-4444-555555555555"],
-      ["Glow Brands", "66666666-7777-8888-9999-000000000000"],
+      ["Another Example Co", "66666666-7777-8888-9999-000000000000"],
     ]);
-    expect(message(report, "Sign-in")).toContain("set WOVEN_COMPANY_ID to the right one");
-    /* Nothing was chosen: exactly one sign-in attempt, and it carried no CompanyID. */
+    expect(message(report, "Sign-in")).not.toContain("set WOVEN_COMPANY_ID");
+    /* Nothing was chosen: exactly one sign-in attempt, naming only the pinned company. */
     const tokenCalls = fake.calls.filter((c) => c.path === "/tokens/v2");
     expect(tokenCalls).toHaveLength(1);
-    expect(JSON.parse(tokenCalls[0].body ?? "{}")).not.toHaveProperty("CompanyID");
+    expect(JSON.parse(tokenCalls[0].body ?? "{}").CompanyID).toBe(FAKE_COMPANY_ID);
     const text = JSON.stringify(report);
     for (const forbidden of [FAKE_CREDENTIALS.subscriptionKey, FAKE_CREDENTIALS.username, FAKE_CREDENTIALS.password, "Quinlan", "8d3a7c1e-5b2f", "person@example.test", "555-201-8844", "cdn.woven.test"]) {
       expect(text, forbidden).not.toContain(forbidden);

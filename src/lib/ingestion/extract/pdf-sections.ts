@@ -56,7 +56,7 @@ const MIN_TITLE_CASE_RATIO = 0.6;
  * of every sheet. It does two jobs here.
  *
  * IT IS THE HUMAN PAGE NUMBER, which is the one a citation wants. A PDF carries
- * two numberings and they are not the same: the JBA manual's dress code is on
+ * two numberings and they are not the same: a policy manual's dress code is on
  * the sheet a viewer calls 16, and that sheet prints "15 | P a g e" because the
  * cover is unnumbered. Somebody checking a citation against a printed copy, a
  * contents page, or a colleague's quotation is working in the printed one. So

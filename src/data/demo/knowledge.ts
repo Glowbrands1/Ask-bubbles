@@ -10,7 +10,7 @@ import { estimateCharacterCount } from "@/lib/utils/format";
 /**
  * Seeded knowledge corpus — DEMO CONTENT.
  *
- * Scale and shape mirror the corpus JBA runs today (~56 focused documents
+ * Scale and shape mirror the reference platform's corpus (~56 focused documents
  * across ~11 categories), NOT the full Woven library (600+ documents, much of
  * it maintenance and SDS material they explicitly do not want ingested).
  *

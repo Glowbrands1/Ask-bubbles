@@ -10,7 +10,7 @@ import { parse, parseFragment } from "parse5";
  * inline variables `contract.ts` names. Nothing is rendered, no script runs,
  * and markup is never passed on as HTML: only extracted text leaves this file.
  *
- * Inline page variables (`var mPolicyAttachments = [...]`) are read as JSON
+ * Inline page variables (`var mSomething = [...]`) are read as JSON
  * literals by bracket matching. A value that is not plain JSON is a parse
  * failure, never an `eval`.
  */

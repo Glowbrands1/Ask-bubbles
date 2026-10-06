@@ -185,7 +185,7 @@ describe("across a draft", () => {
   ];
 
   it("rewrites the assistant's prose and nothing else", () => {
-    const quoted = "Employees must notify their manager before they leave. Source: JBA Policy Manual, p. 12";
+    const quoted = "Employees must notify their manager before they leave. Source: Team Policy Manual, p. 12";
     const result = applyEmployeeName({
       values: {
         observation: "Observed:\nShe arrived late.",

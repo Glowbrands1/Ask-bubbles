@@ -3,16 +3,16 @@ import { __setEmbeddingProvider } from "@/lib/embeddings";
 import { __setSupabaseAdmin } from "@/lib/supabase/server";
 import { bagOfWordsEmbedding, createKnowledgeTestDatabase, type KnowledgeTestDatabase } from "@/test/pglite-knowledge-db";
 
-import { MemoryKnowledgeSyncStore } from "../memory-store";
-import type { KnowledgeSyncStore } from "../ports";
-import { createSupabaseKnowledgeSink } from "../sink";
-import { createSupabaseKnowledgeSyncStore } from "../store";
-import { CONTENT_TYPES, type ContentType, type ManifestItem } from "../types";
-import type { WovenKnowledgeConfig } from "./config";
+import { MemoryKnowledgeSyncStore } from "../../memory-store";
+import type { KnowledgeSyncStore } from "../../ports";
+import { createSupabaseKnowledgeSink } from "../../sink";
+import { createSupabaseKnowledgeSyncStore } from "../../store";
+import { CONTENT_TYPES, type ContentType, type ManifestItem } from "../../types";
+import type { WovenKnowledgeConfig } from "../config";
 import { WovenKnowledgeConnector } from "./connector";
-import { WovenTeamClient } from "./http";
-import { runWovenKnowledgeSync } from "./sync";
-import { COMPANY, FakeWoven, PASSWORD, USERNAME, noSleep, uuid } from "./test-support";
+import { WovenTeamClient } from "../http";
+import { runWovenKnowledgeSync } from "../sync";
+import { COMPANY, FakeWoven, PASSWORD, USERNAME, noSleep, uuid, REFERENCE_SYNC_POLICY } from "./test-support";
 
 /**
  * ============================================================================
@@ -33,7 +33,8 @@ import { COMPANY, FakeWoven, PASSWORD, USERNAME, noSleep, uuid } from "./test-su
 export const CONFIG: WovenKnowledgeConfig = {
   enabled: true,
   baseUrl: "https://app.woven.team",
-  company: COMPANY,
+  tenantProblem: null,
+  downloads: { fileLibrary: false },
   credentials: { username: USERNAME, password: PASSWORD },
   missingCredentials: [],
   problems: [],
@@ -94,7 +95,7 @@ export class WovenIntoKnowledge {
     });
     const outcome = await runWovenKnowledgeSync(
       { mode, trigger: "manual", requestedBy: "admin:test" },
-      { config: CONFIG, store: this.store, sink: createSupabaseKnowledgeSink("woven"), connector, now: () => this.clock, contentTypes: this.contentTypes },
+      { config: CONFIG, store: this.store, sink: createSupabaseKnowledgeSink("woven"), connector, now: () => this.clock, contentTypes: this.contentTypes, policy: REFERENCE_SYNC_POLICY },
     );
     if (!/^succeeded/.test(outcome.status)) throw new Error(`the ${mode} run ended ${outcome.status}: ${JSON.stringify({ errorCode: (outcome as { errorCode?: unknown }).errorCode, reason: (outcome as { reason?: unknown }).reason, attention: (outcome as { report?: { attention?: unknown } }).report?.attention })}`);
     this.clock = new Date(this.clock.getTime() + 86_400_000);

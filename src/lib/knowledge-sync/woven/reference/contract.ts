@@ -3,6 +3,17 @@
  * THE WOVEN TEAM WEB-APP CONTRACT — every assumed Woven name, in one file
  * ============================================================================
  *
+ * REFERENCE PLATFORM — TEST ONLY. Nothing outside `reference/` may import it
+ * (`../bcs/tenant-isolation.test.ts` enforces that).
+ *
+ * WHICH COMPANY THIS EVIDENCE IS FOR. Everything here was verified against the
+ * reference platform's company (JB & Associates), not Buff City Soap. The
+ * Buff City Soap connector (`./bcs`) uses its OWN verified contract
+ * (`./bcs/contract.ts`) and takes from this file only the sign-in and
+ * account-chooser steps (same Woven web app, same login) and the handbook
+ * download flow behind WOVEN_HANDBOOK_DOWNLOAD_ENABLED. The reference
+ * connector (`./connector.ts`) is kept for the shared engine's tests.
+ *
  * SOURCE OF TRUTH: the reference platform's read-only Woven Team connector
  * handoff, compiled from authenticated Woven Team pages and the JavaScript
  * those pages served. These are Woven Team's INTERNAL, authenticated web-app
@@ -24,125 +35,17 @@
  * creates, edits, publishes, acknowledges or deletes anything in Woven.
  */
 
-export const DEFAULT_WOVEN_TEAM_BASE_URL = "https://app.woven.team";
 
-/*
- * THE TENANT IS NOT A DEFAULT. A Woven login can see more than one company
- * (the account chooser lists every company the user belongs to), so the
- * company this deployment syncs MUST be named in WOVEN_TEAM_COMPANY and is
- * checked after sign-in. With it unset, knowledge sync stays disabled.
- */
 
-/* ------------------------------------------------------ authentication -- */
-
-/** VERIFIED: `GET /Login` returns the login form. */
-export const LOGIN_PAGE_PATH = "/Login";
-/** VERIFIED: the form posts here, `application/x-www-form-urlencoded`. */
-export const LOGIN_SUBMIT_PATH = "/Login/Authenticate";
-/** VERIFIED: form field names. */
-export const LOGIN_FIELDS = {
-  username: "AuthenticationRequestUser",
-  password: "AuthenticationRequestPass",
-  isLocationLogin: "IsLocationLogin",
-  setTermsSignedDate: "SetTermsSignedDate",
-  antiForgery: "__RequestVerificationToken",
-} as const;
+/* The tenant-neutral sign-in names live in `../web-app.ts`. */
+export * from "../web-app";
 
 /**
- * VERIFIED: signs of a login page. Any authenticated read that answers with
- * one of these is an expired session, never "no content".
- */
-export const LOGIN_PATH_PREFIXES = ["/login"];
-export const LOGIN_FORM_MARKER = /action\s*=\s*["']\/Login\/Authenticate["']/i;
-
-/**
- * VERIFIED (browser evidence, Sept 2026): after sign-in, the authenticated
- * account dropdown `a.dropdown-toggle` carries the active company's name. This is the post-login company check
- * against WOVEN_TEAM_COMPANY.
+ * Reference platform only: its account dropdown carried the active company's
+ * name, and it checked the company there. Ask Bubbles never does.
  */
 export const ACTIVE_COMPANY_TAG = "a";
 export const ACTIVE_COMPANY_CLASS = "dropdown-toggle";
-
-/**
- * VERIFIED (live Production test, 29 Sept 2026): with correct credentials,
- * `POST /Login/Authenticate` answers 200 at `/Login/Authenticate?ReturnUrl=%2F`
- * with the ACCOUNT CHOOSER, not a login error. Its visible heading is "Select
- * account for login" (the tab title reads "Select Company"), with a searchable
- * "Account" table listing every company the login belongs to. The
- * credentials were accepted: this is never `login_failed`.
- *
- * VERIFIED (browser evidence, 29 Sept 2026): how a chooser row submits.
- * Each account is `<a class="select-company" href="javascript:void(0)"
- * data-company-id="<uuid>" data-company-name="" data-account-status="1">`. A
- * delegated click handler reads those three attributes and calls
- * `SelectCompany(id, name, status, true)`, which sets `CompanyID` and
- * `CompanyName` on `#continue-login-form` and submits it natively: POST
- * `/Login/Authenticate`, `application/x-www-form-urlencoded`, with
- * `AuthenticationRequestUser`, `AuthenticationRequestPass`, `ReturnUrl`,
- * `CompanyID`, `CompanyName` and `__RequestVerificationToken`. The session
- * does exactly that, reading the id from the entry every time. (The Switch
- * Account route `/Account/_Change_EmployeeCompany` is NOT this flow.)
- */
-export const CHOOSER_ENTRY_CLASS = "select-company";
-export const CHOOSER_ENTRY_ATTRS = {
-  companyId: "data-company-id",
-  companyName: "data-company-name",
-  accountStatus: "data-account-status",
-} as const;
-export const CONTINUE_LOGIN_FORM_ID = "continue-login-form";
-export const CONTINUE_LOGIN_FIELDS = {
-  companyId: "CompanyID",
-  companyName: "CompanyName",
-  returnUrl: "ReturnUrl",
-} as const;
-export const CONTINUE_LOGIN_REQUIRED = [
-  "AuthenticationRequestUser",
-  "AuthenticationRequestPass",
-  "ReturnUrl",
-  "CompanyID",
-  "CompanyName",
-  "__RequestVerificationToken",
-] as const;
-
-/**
- * VERIFIED: a completed sign-in lands on `/`, titled "Dashboard", with the
- * account dropdown (`a.dropdown-toggle`) showing the active company.
- */
-export const DASHBOARD_PATH = "/";
-export const DASHBOARD_TITLE = /^\s*dashboard\b/i;
-export const COMPANY_CHOOSER_TEXT = /select\s+(?:company|account\s+for\s+login)/i;
-export const COMPANY_CHOOSER_TITLE = /select\s+(?:company|account)/i;
-
-/**
- * VERIFIED (live, 29 Sept 2026): Woven may answer at `/Login/Authenticate`
- * with an "Add Profile Photo" interstitial. Its "Ask me later" link
- * (`onclick="blur(); ReturnToLogin(); return false;"`) sets
- * `SkipAddEmployeeProfileImage=true` and submits `#add-profile-image-form`:
- * POST `/Login/Authenticate`, `application/x-www-form-urlencoded`, with the
- * fields below, values as the page rendered them. The separate "Don't ask me
- * again" preference is never used: skipping changes nothing in Woven.
- */
-export const PROFILE_PHOTO_FORM_ID = "add-profile-image-form";
-export const PROFILE_PHOTO_SKIP_FIELD = "SkipAddEmployeeProfileImage";
-export const PROFILE_PHOTO_FIELDS = [
-  "AuthenticationRequestUser",
-  "AuthenticationRequestPass",
-  "EmployeeID",
-  "CompanyID",
-  PROFILE_PHOTO_SKIP_FIELD,
-  "__RequestVerificationToken",
-] as const;
-
-/**
- * UNVERIFIED: whether list POSTs need an anti-forgery HEADER in addition to
- * the session cookie. Null sends none. If Woven turns out to require one, set
- * the header name here and the client sends the page's
- * `__RequestVerificationToken` value with every POST.
- */
-export const ANTIFORGERY_HEADER: string | null = null;
-
-/** Recognised in error pages, so an anti-forgery refusal is named as such. */
-export const ANTIFORGERY_ERROR_MARKER = /anti-?forgery|RequestVerificationToken/i;
 
 /* --------------------------------------------------------------- policies -- */
 
@@ -389,17 +292,6 @@ export const LEARNING_UNPUBLISHED_STATUSES = ["draft", "archived", "retired"];
  * treated as company-wide without an administrator's decision.
  */
 export const COMPANY_WIDE_AUDIENCE_LABELS = ["Public"];
-
-/* -------------------------------------------------------------- downloads -- */
-
-/**
- * Temporary signed storage URLs are fetched only from these hosts, over HTTPS,
- * WITHOUT the Woven session cookie. VERIFIED: policy attachments are on
- * `woven.blob.core.windows.net` with SAS parameters; File Library originals on
- * `wovenversioned.blob.core.windows.net`. The handbook `DownloadURL` host was
- * not recorded, so it is held to the same allowlist.
- */
-export const DOWNLOAD_HOST_PATTERN = /^[a-z0-9-]+\.blob\.core\.windows\.net$/i;
 
 /**
  * The capabilities not yet established. A part that needs one is BLOCKED —

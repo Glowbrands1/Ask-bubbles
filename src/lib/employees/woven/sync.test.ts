@@ -7,6 +7,7 @@ import { outcomeHttpStatus, runWovenEmployeeSync, validateRead, type SyncOutcome
 import {
   createFakeWoven,
   FAKE_COMPANY_ID,
+  OTHER_COMPANY_ID,
   FAKE_CREDENTIALS,
   FAKE_ENUMS,
   FAKE_STATUS,
@@ -61,6 +62,7 @@ function setup(
       store,
       now: NOW,
       client: new WovenClient({
+      companyId: FAKE_COMPANY_ID,
         baseUrl: CONFIG.baseUrl,
         credentials: FAKE_CREDENTIALS,
         fetch: fake.fetch,
@@ -116,14 +118,17 @@ describe("switches and configuration", () => {
       WOVEN_USERNAME: FAKE_CREDENTIALS.username,
       WOVEN_PASSWORD: FAKE_CREDENTIALS.password,
     });
-    /* A config built by hand, claiming the sync is on, is refused all the same. */
-    const handBuilt = { ...CONFIG, companyId: null };
-    for (const config of [noCompany, handBuilt]) {
-      for (const dryRun of [true, false]) {
-        const outcome = await run({ config, dryRun });
-        expect(outcome.status).toBe("disabled");
-        expect((outcome as { reason: string }).reason).toContain("WOVEN_COMPANY_ID");
-      }
+    for (const dryRun of [true, false]) {
+      const outcome = await run({ config: noCompany, dryRun });
+      expect(outcome.status).toBe("disabled");
+      expect((outcome as { reason: string }).reason).toContain("WOVEN_COMPANY_ID");
+    }
+    /* A config built by hand naming another company, claiming the sync is on, is refused all the same. */
+    const handBuilt = { ...CONFIG, companyId: OTHER_COMPANY_ID };
+    for (const dryRun of [true, false]) {
+      const outcome = await run({ config: handBuilt, dryRun });
+      expect(outcome.status).toBe("disabled");
+      expect((outcome as { reason: string }).reason).toContain("pinned Buff City Soap company");
     }
     expect(fake.calls).toHaveLength(0);
     expect(store.runs).toHaveLength(0);
@@ -466,6 +471,7 @@ describe("API failures fail the run cleanly", () => {
     const { run, store } = setup(estate(5));
     const outcome = await run({
       client: new WovenClient({
+      companyId: FAKE_COMPANY_ID,
         baseUrl: CONFIG.baseUrl,
         credentials: { ...FAKE_CREDENTIALS, password: "wrong" },
         fetch: createFakeWoven({ employees: estate(5) }).fetch,

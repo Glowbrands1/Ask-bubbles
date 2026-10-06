@@ -1,7 +1,4 @@
-import "server-only";
-
 import { UPLOAD_LIMITS } from "@/lib/config/models";
-import { SUPPORTED_KINDS, extensionOf, normalizeMimeType } from "@/lib/ingestion/validation";
 import {
   PartFetchError,
   type ConnectionInfo,
@@ -10,7 +7,7 @@ import {
   type KnowledgeSourceConnector,
   type ListingResult,
   type SourceRecord,
-} from "../types";
+} from "../../types";
 import {
   WovenShapeError,
   handbookRecord,
@@ -35,7 +32,7 @@ import {
   textDocument,
   withKnowledgeElementContent,
 } from "./adapters";
-import type { WovenTeamCredentials } from "./config";
+import type { WovenTeamCredentials } from "../config";
 import {
   COURSE_LIST_BODY,
   COURSE_LIST_PATH,
@@ -58,14 +55,24 @@ import {
   procedureDetailPath,
   procedureManagementPath,
 } from "./contract";
-import { HtmlShapeError } from "./html";
-import { WovenTeamClient, WovenTeamError } from "./http";
-import { establishSession, type CompanySelector, type CompanyVerifier } from "./session";
+import { HtmlShapeError } from "../html";
+import { WovenTeamClient, WovenTeamError } from "../http";
+import { establishSession, type CompanySelector, type CompanyVerifier } from "../session";
+import { indexableFile, verifiedFile } from "../shared";
+import { dropdownCompanyVerifier, wovenCompanySelector } from "./session";
 
 /**
  * ============================================================================
  * THE WOVEN KNOWLEDGE CONNECTOR — the Woven side of the source-neutral engine
  * ============================================================================
+ *
+ * REFERENCE PLATFORM — TEST ONLY. The connector Ask Bubbles was ported from,
+ * against that platform's own company routes (`./contract.ts`), choosing its
+ * company BY NAME. Ask Bubbles never runs it: production builds only the
+ * Buff City Soap connector (`../bcs/connector.ts`, via
+ * `createWovenKnowledgeConnector`). It is kept so the shared engine's tests run
+ * against these fixtures; `../bcs/tenant-isolation.test.ts` fails if any
+ * production module imports anything under `reference/`.
  *
  *   connect()    sign in, select and CONFIRM the company, or throw
  *   list(type)   read one content type completely, or report exactly why not
@@ -130,13 +137,23 @@ export class WovenKnowledgeConnector implements KnowledgeSourceConnector {
     this.options = options;
   }
 
+  /** The reference platform's name-based choice and account-menu check. Test fixtures only. */
+  private sessionOptions() {
+    return {
+      credentials: this.options.credentials,
+      company: this.options.company,
+      selector: this.options.selector ?? wovenCompanySelector,
+      verifier: this.options.verifier ?? dropdownCompanyVerifier,
+    };
+  }
+
   get requestsMade(): number {
     return this.options.client.requestsMade;
   }
 
   async connect(): Promise<ConnectionInfo> {
     try {
-      const session = await establishSession(this.options.client, this.options);
+      const session = await establishSession(this.options.client, this.sessionOptions());
       this.connection = { companyLabel: session.companyLabel, companyVerified: true };
       return this.connection;
     } catch (error) {
@@ -151,7 +168,7 @@ export class WovenKnowledgeConnector implements KnowledgeSourceConnector {
     } catch (error) {
       if (!(error instanceof WovenTeamError) || error.code !== "session_expired") throw error;
       try {
-        await establishSession(this.options.client, this.options);
+        await establishSession(this.options.client, this.sessionOptions());
       } catch (again) {
         throw new WovenConnectorError(codeOf(again), messageOf(again), true);
       }
@@ -240,6 +257,9 @@ export class WovenKnowledgeConnector implements KnowledgeSourceConnector {
         const records = parseCourseList(await this.withSession(() => client.postJson(COURSE_LIST_PATH, COURSE_LIST_BODY)));
         return { records, diagnostics: {} };
       }
+      case "communication":
+        /* Communications are read only by the Buff City Soap connector (`./bcs`), from its verified route. */
+        throw new WovenConnectorError("woven_unsupported_content_type", "This Woven connector does not read Communications.");
     }
   }
 
@@ -403,43 +423,4 @@ export class WovenKnowledgeConnector implements KnowledgeSourceConnector {
   }
 }
 
-/** The leading bytes each indexable binary format must start with. */
-const MAGIC: Record<string, readonly number[][]> = {
-  pdf: [[0x25, 0x50, 0x44, 0x46]],
-  docx: [[0x50, 0x4b, 0x03, 0x04]],
-};
-
-/**
- * A downloaded file's bytes must BE the file its name claims: a PDF starts
- * "%PDF", a Word document is a zip. An error or sign-in page served with a
- * file's name is refused here — per item, retryable — and never indexed.
- */
-export function verifiedFile(file: FetchedFile): FetchedFile {
-  const signatures = MAGIC[extensionOf(file.fileName)];
-  if (signatures && !signatures.some((sig) => sig.every((b, i) => file.bytes[i] === b))) {
-    throw new PartFetchError("woven_not_a_file", "Woven did not return the file for this item.", true);
-  }
-  return file;
-}
-
-/**
- * Settles the file name and MIME type Ask Bubbles' validator will accept, from
- * the extension first and the declared type second. A file Ask Bubbles cannot
- * index is a permanent, per-item outcome, not a retry.
- */
-export function indexableFile(bytes: Uint8Array, fileName: string, declaredMime: string): FetchedFile {
-  const ext = extensionOf(fileName);
-  const mime = normalizeMimeType(declaredMime);
-  const byExt = SUPPORTED_KINDS.find((k) => k.extensions.includes(ext));
-  const byMime = SUPPORTED_KINDS.find((k) => k.mimeTypes.includes(mime));
-  const kind = byExt ?? byMime;
-  if (!kind) {
-    throw new PartFetchError("unsupported_format", "This Woven file is not a format Ask Bubbles can read.", false);
-  }
-  if (bytes.byteLength === 0) throw new PartFetchError("empty_file", "Woven returned an empty file.", true);
-  return {
-    bytes,
-    fileName: byExt ? fileName : `${fileName.replace(/\.[^.]*$/, "")}.${kind.extensions[0]}`,
-    mimeType: kind.mimeTypes.includes(mime) ? mime : kind.mimeTypes[0]!,
-  };
-}
+export { indexableFile, verifiedFile };

@@ -12,12 +12,13 @@
     "bootstrap:admin": "node scripts/bootstrap-admin.mjs",
     "verify:bundle": "node scripts/verify-no-demo-in-bundle.mjs",
     "probe:woven": "vitest run src/lib/employees/woven/live-probe.dry-run.test.ts --disableConsoleIntercept",
+    "dry-run:woven-knowledge": "vitest run src/lib/knowledge-sync/woven/bcs/live-dry-run.dry-run.test.ts --disableConsoleIntercept",
     "stack:up": "bash scripts/local-stack/up.sh",
     "stack:down": "bash scripts/local-stack/down.sh",
     "test:local-stack": "bash -c 'set -a && . ${LOCAL_STACK_DIR:-/tmp/ask-bubbles-local-stack}/env && set +a && vitest run --no-file-parallelism src/lib/auth/revocation.local-stack.test.ts src/lib/employees/woven/access/access.local-stack.test.ts'",
     "typecheck": "tsc --noEmit -p .",
     "verify:migrations": "bash scripts/db/verify-migrations.sh",
-    "verify:secrets": "SUPABASE_SECRET_KEY=sb_secret_CANARYcanary0000 ANTHROPIC_API_KEY=sk-ant-CANARYcanary0000 CRON_SECRET=cron-canary-0000000000000000 WOVEN_PASSWORD=woven-canary-000000 WOVEN_TEAM_PASSWORD=woventeam-canary-0000 WOVEN_SUBSCRIPTION_KEY=wovensub-canary-0000 REPORTING_INGEST_SECRET=ingest-canary-000000000000000 NEXT_PUBLIC_DEMO_MODE=false next build && SUPABASE_SECRET_KEY=sb_secret_CANARYcanary0000 ANTHROPIC_API_KEY=sk-ant-CANARYcanary0000 CRON_SECRET=cron-canary-0000000000000000 WOVEN_PASSWORD=woven-canary-000000 WOVEN_TEAM_PASSWORD=woventeam-canary-0000 WOVEN_SUBSCRIPTION_KEY=wovensub-canary-0000 REPORTING_INGEST_SECRET=ingest-canary-000000000000000 node scripts/verify-no-secrets-in-bundle.mjs"
+    "verify:secrets": "SUPABASE_SECRET_KEY=sb_secret_CANARYcanary0000 ANTHROPIC_API_KEY=sk-ant-CANARYcanary0000 CRON_SECRET=cron-canary-0000000000000000 WOVEN_PASSWORD=woven-canary-000000 WOVEN_TEAM_PASSWORD=woventeam-canary-0000 WOVEN_BCS_PASSWORD=wovenbcs-canary-00000 WOVEN_SUBSCRIPTION_KEY=wovensub-canary-0000 REPORTING_INGEST_SECRET=ingest-canary-000000000000000 NEXT_PUBLIC_DEMO_MODE=false next build && SUPABASE_SECRET_KEY=sb_secret_CANARYcanary0000 ANTHROPIC_API_KEY=sk-ant-CANARYcanary0000 CRON_SECRET=cron-canary-0000000000000000 WOVEN_PASSWORD=woven-canary-000000 WOVEN_TEAM_PASSWORD=woventeam-canary-0000 WOVEN_BCS_PASSWORD=wovenbcs-canary-00000 WOVEN_SUBSCRIPTION_KEY=wovensub-canary-0000 REPORTING_INGEST_SECRET=ingest-canary-000000000000000 node scripts/verify-no-secrets-in-bundle.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",

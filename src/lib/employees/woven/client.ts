@@ -67,7 +67,11 @@ export type WovenErrorCode =
   | "pagination_runaway"
   | "pagination_not_advancing"
   /** POST /tokens/v2 answered 200 with a documented login state but no AccessToken. */
-  | "login_refused";
+  | "login_refused"
+  /** The token was issued for another Woven company than the one requested (the pinned one). */
+  | "company_mismatch"
+  /** The token response named no company, so the company could not be proved. */
+  | "company_not_verified";
 
 export class WovenApiError extends Error {
   readonly code: WovenErrorCode;
@@ -135,8 +139,12 @@ type Transport = { -readonly [K in keyof typeof WOVEN_TRANSPORT]: number };
 export interface WovenClientOptions {
   baseUrl: string;
   credentials: WovenCredentials;
-  /** Optional token-request fields (`contract.ts` → `tokenRequestBody`). */
-  companyId?: string | null;
+  /**
+   * The Woven CompanyID every token request names, and the ONLY company a
+   * token is accepted for. Production passes `config.companyId`, which is
+   * always the pinned `WOVEN_TENANT.companyId`.
+   */
+  companyId: string;
   platform?: number | null;
   fetch?: typeof fetch;
   now?: () => number;
@@ -229,7 +237,7 @@ function pageFingerprint(items: unknown[]): string | null {
 export class WovenClient {
   private readonly baseUrl: string;
   private readonly credentials: WovenCredentials;
-  private readonly companyId: string | null;
+  private readonly companyId: string;
   private readonly platform: number | null;
   private readonly fetchImpl: typeof fetch;
   private readonly now: () => number;
@@ -246,7 +254,10 @@ export class WovenClient {
   constructor(options: WovenClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
     this.credentials = options.credentials;
-    this.companyId = options.companyId ?? null;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(options.companyId ?? "")) {
+      throw new Error("A Woven CompanyID is required: Woven is never left to choose the company.");
+    }
+    this.companyId = options.companyId.toLowerCase();
     this.platform = options.platform ?? null;
     this.fetchImpl = options.fetch ?? fetch;
     this.now = options.now ?? Date.now;
@@ -545,8 +556,24 @@ export class WovenClient {
         .map((o) => ({ companyId: guid(o.CompanyID), companyName: name(o.CompanyName) }))
         .filter((o): o is { companyId: string; companyName: string | null } => o.companyId !== null)
         .slice(0, 25),
-      companyIdSent: this.companyId !== null,
+      companyIdSent: true,
     };
+    /*
+     * THE TENANT GUARD. A token is used only when Woven says it was issued for
+     * exactly the company requested. No company named, or another one: the
+     * token is discarded and every read fails. Never a fallback.
+     */
+    const issued = this.tokenInfoValue.companyId;
+    if (issued === null) {
+      throw new WovenApiError("company_not_verified", "Woven's sign-in response did not name the company it signed in to, so Ask Bubbles did not use it.", { status: response.status, path: TOKEN_PATH });
+    }
+    if (issued !== this.companyId) {
+      throw new WovenApiError(
+        "company_mismatch",
+        `Woven signed in to company ${issued.slice(0, 8).toUpperCase()}…, not the requested ${this.companyId.slice(0, 8).toUpperCase()}…, so Ask Bubbles did not use it.`,
+        { status: response.status, path: TOKEN_PATH },
+      );
+    }
     /* Refresh early, but never so early that a short-lived token is never used. */
     const skew = Math.min(TOKEN_REFRESH_SKEW_MS, lifetimeMs / 2);
     return { value: value.trim(), expiresAt: this.now() + lifetimeMs - skew };

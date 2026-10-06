@@ -13,6 +13,7 @@ const CATEGORY: Record<ContentType, string> = {
   file_library: "other",
   knowledge_element: "training",
   course: "training",
+  communication: "other",
 };
 
 const SINGULAR: Record<ContentType, string> = {
@@ -22,6 +23,7 @@ const SINGULAR: Record<ContentType, string> = {
   file_library: "File Library document",
   knowledge_element: "Knowledge Element",
   course: "Course",
+  communication: "Communication",
 };
 
 export function describeWovenItem(item: ManifestItem): SinkMetadata {

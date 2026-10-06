@@ -1,3 +1,5 @@
+import { WOVEN_TENANT } from "@/config/company/woven";
+
 /**
  * ============================================================================
  * MOCK WOVEN — fixtures and a fake Operations API, for tests only
@@ -219,6 +221,12 @@ export interface FakeWovenOptions {
   password?: string;
   /** When set, the token request must carry exactly this CompanyID. */
   requiredCompanyId?: string;
+  /**
+   * The company Woven says it issued the token for. Default: the one the
+   * request named. A string issues it for that company instead (a login that
+   * lands in another company); null names no company at all.
+   */
+  issuedCompanyId?: string | null;
 }
 
 export const FAKE_CREDENTIALS = {
@@ -227,7 +235,10 @@ export const FAKE_CREDENTIALS = {
   password: "test-password-not-real",
 };
 
-export const FAKE_COMPANY_ID = "11111111-1111-1111-1111-111111111111";
+/** The pinned Buff City Soap company (lower-cased, as requests carry it). */
+export const FAKE_COMPANY_ID = WOVEN_TENANT.companyId.toLowerCase();
+/** Invented: another company the same login can open. */
+export const OTHER_COMPANY_ID = "1ba00000-0000-4000-8000-0000000000aa";
 
 function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...headers } });
@@ -296,10 +307,13 @@ export function createFakeWoven(options: FakeWovenOptions) {
           ? {}
           : { TokenExpirationDate: new Date(clock() + options.tokenLifetimeSeconds * 1000).toISOString() }),
         RefreshToken: "SENSITIVE-REFRESH-TOKEN",
-        CompanyID: FAKE_COMPANY_ID,
-        CompanyName: "Example Soap Co (test)",
-        HasMultipleCompanyAccess: false,
-        CompanyLoginOptions: [{ CompanyID: FAKE_COMPANY_ID, CompanyName: "Example Soap Co (test)" }],
+        ...(options.issuedCompanyId === null ? {} : { CompanyID: options.issuedCompanyId ?? (typeof body.CompanyID === "string" ? body.CompanyID : FAKE_COMPANY_ID) }),
+        CompanyName: "Midwest Soap Makers (test)",
+        HasMultipleCompanyAccess: true,
+        CompanyLoginOptions: [
+          { CompanyID: FAKE_COMPANY_ID, CompanyName: "Midwest Soap Makers (test)" },
+          { CompanyID: OTHER_COMPANY_ID, CompanyName: "Other Example Co (test)" },
+        ],
         FirstName: "SENSITIVE-APP-USER-FIRST",
       });
     }

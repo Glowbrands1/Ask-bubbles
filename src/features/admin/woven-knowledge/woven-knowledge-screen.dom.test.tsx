@@ -80,8 +80,8 @@ describe("Woven Knowledge Sync screen", () => {
   });
 
   it("asks for credentials by variable name only when they are missing", () => {
-    render(<WovenKnowledgeScreen liveMode status={status({ headline: "not_set_up", setupStep: "connect", missingCredentials: ["WOVEN_TEAM_PASSWORD"] })} />);
-    expect(screen.getByText(/WOVEN_TEAM_PASSWORD/)).toBeTruthy();
+    render(<WovenKnowledgeScreen liveMode status={status({ headline: "not_set_up", setupStep: "connect", missingCredentials: ["WOVEN_BCS_PASSWORD"] })} />);
+    expect(screen.getByText(/WOVEN_BCS_PASSWORD/)).toBeTruthy();
     expect(screen.getByTestId("headline").textContent).toContain("Not set up");
   });
 

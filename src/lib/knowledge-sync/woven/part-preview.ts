@@ -8,8 +8,8 @@ import type { KnowledgeSyncStore } from "../ports";
 import { createSupabaseKnowledgeSyncStore } from "../store";
 import type { ContentType, KnowledgeSourceConnector } from "../types";
 import { readWovenKnowledgeConfig, type WovenKnowledgeConfig } from "./config";
-import { WovenKnowledgeConnector } from "./connector";
 import { WovenTeamClient } from "./http";
+import { createWovenKnowledgeConnector } from "./sync";
 
 /**
  * ============================================================================
@@ -69,6 +69,10 @@ export async function previewWovenPart(
   if (target.state === "BLOCKED" || target.reason === "unsupported_format") {
     return { status: "not_previewable", reason: "Ask Bubbles can't read this kind of Woven item yet, so there is nothing to preview." };
   }
+  /* A draft, an unpublished item or one whose audience can never be shared is not read from Woven at all. */
+  if (target.state === "UNPUBLISHED" || (target.state === "EXCLUDED" && target.reason !== "audience_excluded")) {
+    return { status: "not_previewable", reason: "This Woven item is not published, or not shareable with everyone, so Ask Bubbles does not read it." };
+  }
 
   const sourceName = (target.recordTitle ?? "").trim() || target.title;
   const base = { title: target.title, contentType: target.contentType, sourceName, fileName: target.fileName };
@@ -77,16 +81,11 @@ export async function previewWovenPart(
   }
 
   const config = overrides.config ?? readWovenKnowledgeConfig();
-  if (!overrides.connector && (!config.enabled || !config.credentials)) {
+  if (!overrides.connector && (!config.enabled || !config.credentials || config.tenantProblem)) {
     return { status: "failed", reason: "The Woven connection is not configured, so the item cannot be read." };
   }
   const connector =
-    overrides.connector ??
-    new WovenKnowledgeConnector({
-      client: new WovenTeamClient({ baseUrl: config.baseUrl, deadlineAt: Date.now() + 50_000 }),
-      credentials: config.credentials!,
-      company: config.company,
-    });
+    overrides.connector ?? createWovenKnowledgeConnector(config, new WovenTeamClient({ baseUrl: config.baseUrl, deadlineAt: Date.now() + 50_000 }));
 
   try {
     await connector.connect();

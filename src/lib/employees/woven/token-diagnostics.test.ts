@@ -132,7 +132,7 @@ describe("Woven answering 200 without a token — documented login states", () =
           },
           {
             CompanyID: "66666666-7777-8888-9999-00000000000A",
-            CompanyName: "Glow Brands East",
+            CompanyName: "Another Example Co",
             BrandFriendlyName: null,
             IsBrandCompany: true,
             BrandLogoUrl: "https://cdn.woven.test/logo/east.png",
@@ -146,9 +146,9 @@ describe("Woven answering 200 without a token — documented login states", () =
     /* Exactly the five company-level fields; the logo URL is never read. CompanyIDs are lower-cased, never masked. */
     expect(d.companyOptions).toEqual([
       { companyId: "11111111-2222-3333-4444-555555555555", companyName: "Other Example Co", brandFriendlyName: "Example Soap Co", accountStatus: 1, isBrandCompany: false },
-      { companyId: "66666666-7777-8888-9999-00000000000a", companyName: "Glow Brands East", brandFriendlyName: null, accountStatus: 2, isBrandCompany: true },
+      { companyId: "66666666-7777-8888-9999-00000000000a", companyName: "Another Example Co", brandFriendlyName: null, accountStatus: 2, isBrandCompany: true },
     ]);
-    expect(describeTokenDiagnostics(d)).toContain("Woven offered 2 companies (listed under Company options); set WOVEN_COMPANY_ID to the right one");
+    expect(describeTokenDiagnostics(d)).toContain("Woven offered 2 companies (listed under Company options); Ask Bubbles always names the pinned Buff City Soap company in its sign-in");
   });
 
   it("company options: an invalid CompanyID is not passed off as one, labels are scrubbed and capped, at most 25", () => {

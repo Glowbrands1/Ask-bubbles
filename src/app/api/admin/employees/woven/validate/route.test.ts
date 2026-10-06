@@ -132,7 +132,7 @@ const post = (body?: unknown) =>
 /* A made-up test value; the real one is set only in Vercel. */
 const CODE = "test-access-code-7f3a9c2e41b8";
 /** The sync really on: the switch and the CompanyID it requires. */
-const SYNC_ON = { WOVEN_SYNC_ENABLED: "true", WOVEN_COMPANY_ID: "11111111-1111-1111-1111-111111111111" };
+const SYNC_ON = { WOVEN_SYNC_ENABLED: "true", WOVEN_COMPANY_ID: "55839F24-9241-418C-8405-37BAF9A42A87" };
 /** Demo-mode Preview, as it will be configured for the connection test. */
 const DEMO_READY = { ...VALIDATION_ONLY, WOVEN_VALIDATION_ACCESS_CODE: CODE };
 

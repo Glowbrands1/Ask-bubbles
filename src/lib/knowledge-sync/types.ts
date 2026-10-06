@@ -29,6 +29,7 @@ export const CONTENT_TYPES = [
   "file_library",
   "knowledge_element",
   "course",
+  "communication",
 ] as const;
 export type ContentType = (typeof CONTENT_TYPES)[number];
 
@@ -39,6 +40,7 @@ export const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
   file_library: "File Library",
   knowledge_element: "Knowledge Elements",
   course: "Courses",
+  communication: "Communications",
 };
 
 /**
@@ -119,6 +121,12 @@ export interface SourceRecord {
   status: string | null;
   /** The adapter's verdict on that label. Only `published` is ever synced. */
   publication: Publication;
+  /**
+   * Why a record that is not `published` is held out, as a reason code
+   * (`draft`, `published_not_visible`, `publication_unverified`). Null: the
+   * generic `not_published` / `status_not_recognised`.
+   */
+  publicationReason?: string | null;
   /** Audience labels as the source states them. Null: the source gave none. */
   audience: string[] | null;
   version: string | null;
@@ -161,6 +169,13 @@ export interface KnowledgeSourceConnector {
   connect(): Promise<ConnectionInfo>;
   /** Reads one content type. Never throws for an adapter-level failure: returns `ok: false`. */
   list(contentType: ContentType): Promise<ListingResult>;
+  /**
+   * Re-proves the session is still in the configured tenant. The engine calls
+   * it after every listing and before anything is applied; a throw aborts the
+   * run before reconciliation, so nothing read can be attributed to the wrong
+   * company. Optional for sources with no tenant to confuse.
+   */
+  assertTenant?(): Promise<ConnectionInfo>;
   /** Obtains one part's bytes, fresh. Throws `PartFetchError` when it cannot. */
   fetchPart(item: {
     contentType: ContentType;
@@ -179,6 +194,8 @@ export interface ConnectionInfo {
   /** The tenant the session is operating in, as the source displayed it. */
   companyLabel: string | null;
   companyVerified: boolean;
+  /** The tenant's own id, when the source shows one and it was checked. */
+  companyId?: string | null;
 }
 
 /** Why one part could not be fetched. `category` is a code; `message` is a user-safe sentence. */
@@ -314,7 +331,11 @@ export interface TypeReport {
   excludedUnpublished: number;
   excludedUnsupported: number;
   excludedByDecision: number;
+  /** Excluded because the audience is narrower than (or unclear against) "everyone in Ask Bubbles". Never shareable. */
+  excludedRestricted: number;
   needsReview: number;
+  /** Held until a person confirms the record belongs to this company (`ownership_review`). Not an audience choice. */
+  heldForOwnership?: number;
   blocked: number;
   blockedCapabilities: string[];
   statusValues: Record<string, number>;
@@ -376,6 +397,8 @@ export interface SyncReport {
     deferred: number;
     /** Removals held back by the mass-removal guard. */
     removalsHeld: number;
+    /** Items held for an ownership check, not counted in `needsReview`. */
+    heldForOwnership?: number;
   };
   audiences: { audienceKey: string; label: string; items: number; decision: AudienceDecision["decision"] | "public" | null }[];
   /** Eligible items whose title matches a document uploaded to Ask Bubbles by hand. */
@@ -387,8 +410,50 @@ export interface SyncReport {
    */
   duplicates?: DuplicateOutcome;
   attention: AttentionItem[];
+  /** What a dry run found, item by item. Present on previews. See `dry-run.ts`. */
+  plan?: DryRunPlan;
   requestsMade: number;
   durationMs: number;
+}
+
+/** One item part in a dry-run plan: identity, title and a reason code. Never content, a URL or a person's data. */
+export interface PlanEntry {
+  contentType: ContentType;
+  entityId: string;
+  partKey: string;
+  title: string;
+  status: string | null;
+  reason: string | null;
+}
+
+/**
+ * A dry run's answer to "what WOULD this sync do?". Built from the same
+ * reconciliation a real sync applies, so it cannot drift from it.
+ */
+export interface DryRunPlan {
+  /** Records and parts each listing returned. */
+  sourceCounts: Partial<Record<ContentType, { records: number; parts: number }>>;
+  /** Records the source marks published (before audience and ownership). */
+  publishedRecords: Partial<Record<ContentType, number>>;
+  /** Every part not headed for Ask Bubbles, by reason code. */
+  excludedByReason: Record<string, number>;
+  new: PlanEntry[];
+  changed: PlanEntry[];
+  unchanged: number;
+  removals: PlanEntry[];
+  permissionChanges: PlanEntry[];
+  /** Parts the run would ingest (text and files). */
+  wouldIngest: PlanEntry[];
+  /** Of those, the ones that are a file download. */
+  wouldDownload: PlanEntry[];
+  /** Eligible in every respect but a capability that is switched off or unverified. */
+  wouldDownloadOnceEnabled: PlanEntry[];
+  /** Held for an ownership check (content that may belong to another company). */
+  flaggedOwnership: PlanEntry[];
+  /** Listings that failed: no item of that type was reconciled. */
+  errors: { contentType: ContentType; code: string; message: string }[];
+  /** Entries per list are capped; true when any list was cut. */
+  truncated: boolean;
 }
 
 export interface DuplicateOutcome {

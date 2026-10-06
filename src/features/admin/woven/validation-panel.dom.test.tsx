@@ -64,7 +64,7 @@ async function realReport(includeLocationReview: boolean): Promise<ValidationRep
   });
   return runWovenLiveValidation({
     config,
-    client: new WovenClient({ baseUrl: config.baseUrl, credentials: FAKE_CREDENTIALS, fetch: fake.fetch, sleep: async () => {} }),
+    client: new WovenClient({ companyId: FAKE_COMPANY_ID, baseUrl: config.baseUrl, credentials: FAKE_CREDENTIALS, fetch: fake.fetch, sleep: async () => {} }),
     now: () => new Date("2026-09-28T15:00:00Z"),
     locations: { outcome: "loaded", locations: [{ number: "0306", name: "Location 306" }, { number: "0412", name: "Location 412" }] },
     includeLocationReview,

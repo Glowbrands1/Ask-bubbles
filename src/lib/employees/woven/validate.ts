@@ -436,15 +436,11 @@ export async function runWovenLiveValidation(options: ValidationOptions): Promis
   const token = client.tokenInfo!;
   report.token = { ...token, ok: true };
   findings.push({ verdict: "pass", area: "Sign-in", message: "Woven issued an access token and accepted it on /employees." });
-  if (!token.companyIdSent) {
-    findings.push({
-      verdict: token.companyId ? "pass" : "warn",
-      area: "Company",
-      message: token.companyId
-        ? `No WOVEN_COMPANY_ID was sent; Woven chose company ${token.companyId}${token.companyName ? ` (${token.companyName})` : ""}${token.hasMultipleCompanyAccess ? `, and this user can also sign in to ${token.companyOptions.length} compan${token.companyOptions.length === 1 ? "y" : "ies"} listed in the report` : ""}. Confirm it is the right one, then set WOVEN_COMPANY_ID.`
-        : "No WOVEN_COMPANY_ID was sent and the token response named no CompanyID. Find it in the Woven portal.",
-    });
-  }
+  findings.push({
+    verdict: "pass",
+    area: "Company",
+    message: `Woven issued the token for the pinned company ${token.companyId}${token.companyName ? ` (${token.companyName})` : ""}, the only Woven company Ask Bubbles reads.`,
+  });
   if (token.tokenFrom === "header") {
     spec("The AccessToken came back in a response header, not in the /tokens/v2 response body the spec describes.");
   }

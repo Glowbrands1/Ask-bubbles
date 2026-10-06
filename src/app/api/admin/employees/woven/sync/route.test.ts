@@ -273,7 +273,7 @@ async function loadRouteAgainstFakeWoven(env: Record<string, string>) {
 
 /* The real client paces Woven requests ~650ms apart, so a real dry run takes several seconds. */
 describe("POST /api/admin/employees/woven/sync with WOVEN_SYNC_ENABLED=true and WOVEN_SYNC_WRITES_ENABLED off", { timeout: 60_000 }, () => {
-  const SYNC_ON = { WOVEN_SYNC_ENABLED: "true", WOVEN_COMPANY_ID: "11111111-1111-1111-1111-111111111111" };
+  const SYNC_ON = { WOVEN_SYNC_ENABLED: "true", WOVEN_COMPANY_ID: "55839F24-9241-418C-8405-37BAF9A42A87" };
 
   it("without WOVEN_COMPANY_ID the sync stays off: every body — dry run or confirmed save — is disabled, no store, no Woven call", async () => {
     for (const body of [{}, { dryRun: true }, { dryRun: false, confirmSave: true }]) {

@@ -4,6 +4,7 @@ import { WovenApiError, WovenClient } from "./client";
 import {
   NEW_HIRE_WINDOW_DAYS,
   readWovenConfig,
+  PINNED_COMPANY_ID,
   WOVEN_COMPANY_ID_ENV,
   WOVEN_SYNC_ENABLED_ENV,
   WOVEN_SYNC_WRITES_ENABLED_ENV,
@@ -278,29 +279,27 @@ export function listSettlesLocations(employee: NormalizedEmployee, previous: Dir
 /* -------------------------------------------------------------- the run -- */
 
 /** A refused sign-in stops the run wherever it surfaces; it is never read as "that endpoint was unavailable". */
-const SIGN_IN_FAILURES = new Set(["auth_failed", "forbidden", "login_refused"]);
+const SIGN_IN_FAILURES = new Set(["auth_failed", "forbidden", "login_refused", "company_mismatch", "company_not_verified"]);
 
 export async function runWovenEmployeeSync(options: SyncOptions): Promise<SyncOutcome> {
   const config = options.config ?? readWovenConfig();
   const now = options.now ?? (() => new Date());
   const dryRun = options.dryRun === true;
 
+  /* The pinned company first: a WOVEN_COMPANY_ID naming any other company never reaches Woven. */
+  if (config.tenantProblem) return { status: "disabled", reason: config.tenantProblem };
   if (!config.enabled) {
     return {
       status: "disabled",
-      reason:
-        config.companyId === null
-          ? `${WOVEN_SYNC_ENABLED_ENV} is not on, or ${WOVEN_COMPANY_ID_ENV} (which a sync requires) is not set, so nothing reaches Woven.`
-          : `${WOVEN_SYNC_ENABLED_ENV} is not on, so nothing reaches Woven.`,
+      reason: `${WOVEN_SYNC_ENABLED_ENV} is not on, or ${WOVEN_COMPANY_ID_ENV} does not yet confirm the pinned company, so nothing reaches Woven.`,
     };
   }
   /*
-   * A SYNC NEEDS AN EXPLICIT COMPANY. `readWovenConfig` already keeps the
-   * sync off without WOVEN_COMPANY_ID; this refuses a config built any other
-   * way, so Woven never chooses the company for a sync.
+   * THE COMPANY IS NEVER WOVEN'S CHOICE. The token request always names the
+   * pinned company, and a config built any other way is refused here.
    */
-  if (config.companyId === null) {
-    return { status: "disabled", reason: `${WOVEN_COMPANY_ID_ENV} is not set, so nothing reaches Woven.` };
+  if (config.companyId !== PINNED_COMPANY_ID) {
+    return { status: "disabled", reason: "The Woven company is not the pinned Buff City Soap company, so nothing reaches Woven." };
   }
   /*
    * THE WRITE SWITCH, ENFORCED HERE — THE ONE PLACE EVERY SYNC PASSES. A save

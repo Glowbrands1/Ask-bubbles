@@ -63,7 +63,7 @@ function setup(extra: Partial<Parameters<typeof createFakeWoven>[0]> = {}) {
       store,
       now: NOW,
       dryRun,
-      client: new WovenClient({ baseUrl: CONFIG.baseUrl, credentials: FAKE_CREDENTIALS, fetch: fake.fetch, sleep: async () => {} }),
+      client: new WovenClient({ companyId: FAKE_COMPANY_ID, baseUrl: CONFIG.baseUrl, credentials: FAKE_CREDENTIALS, fetch: fake.fetch, sleep: async () => {} }),
     });
     if (outcome.status !== "succeeded") throw new Error(JSON.stringify(outcome));
     return outcome.summary;

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/controls";
 import { Notice } from "@/components/ui/feedback";
 import { PageHeader, PageShell, SectionHeader } from "@/components/ui/layout";
-import { CONTENT_TYPES, CONTENT_TYPE_LABEL, type SyncReport } from "@/lib/knowledge-sync/types";
+import { CONTENT_TYPES, CONTENT_TYPE_LABEL, type DryRunPlan, type SyncReport } from "@/lib/knowledge-sync/types";
 import { CONTENT_SYNC_STATE_LABEL } from "@/lib/knowledge-sync/inventory";
 import type { AttentionDetail, AttentionItem } from "@/lib/knowledge-sync/types";
 import type { AudienceReview, HeadlineState, WovenKnowledgeStatus } from "@/lib/knowledge-sync/woven/status";
@@ -46,6 +46,10 @@ const CAPABILITY_LABEL: Record<string, string> = {
   knowledge_element_content: "Knowledge Elements of a content type not yet supported",
   course_content: "Course items",
   handbook_no_current_version: "Handbooks with no published version",
+  file_library_download_unverified: "File Library files (download not yet verified for this company — switched off)",
+  handbook_download_unverified: "Handbook files (download not yet verified for this company — switched off)",
+  procedure_attachment_download_unverified: "Procedure attachment files (download not yet verified for this company)",
+  communication_detail_unverified: "Communications (their content page is not yet verified)",
 };
 
 const DATE = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", year: "numeric" });
@@ -739,6 +743,8 @@ function PreviewSummary({ report, awaitingAudience }: { report: SyncReport; awai
               <th className="py-1 pr-3 font-medium">Will sync</th>
               <th className="py-1 pr-3 font-medium">Drafts / unpublished</th>
               <th className="py-1 pr-3 font-medium">Audience choice</th>
+              <th className="py-1 pr-3 font-medium">Not shareable</th>
+              <th className="py-1 pr-3 font-medium">Ownership check</th>
               <th className="py-1 font-medium">Not yet supported</th>
             </tr>
           </thead>
@@ -758,13 +764,85 @@ function PreviewSummary({ report, awaitingAudience }: { report: SyncReport; awai
                 <td className="py-1 pr-3">{r!.new + r!.updated + r!.unchanged}</td>
                 <td className="py-1 pr-3">{r!.excludedUnpublished}</td>
                 <td className="py-1 pr-3">{r!.needsReview}</td>
+                <td className="py-1 pr-3">{r!.excludedRestricted ?? 0}</td>
+                <td className="py-1 pr-3">{r!.heldForOwnership ?? 0}</td>
                 <td className="py-1">{r!.blocked + r!.excludedUnsupported}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {report.plan ? <DryRunPlanDetails plan={report.plan} /> : null}
     </div>
+  );
+}
+
+const PLAN_REASON_LABEL: Record<string, string> = {
+  publication_unverified: "Policies — whether they are published is not yet verified",
+  unpublished: "Unpublished in Woven",
+  draft: "Drafts",
+  published_not_visible: "Published but outside their visibility window",
+  audience_restricted: "Limited to some teams or positions (cannot be shared with everyone)",
+  audience_unclear: "Audience unclear (N/A or not stated)",
+  audience_needs_review: "Waiting for an audience choice",
+  audience_excluded: "Kept out by an audience choice",
+  ownership_review: "May belong to another company — waiting for a person to confirm",
+  unsupported_format: "A format Ask Bubbles cannot read (video, spreadsheet, slides, image)",
+};
+
+/** The dry run's own answer to "what would this sync do?" — titles and reasons, never content. */
+function DryRunPlanDetails({ plan }: { plan: DryRunPlan }) {
+  const reasons = Object.entries(plan.excludedByReason).sort((a, b) => b[1] - a[1]);
+  const list = (entries: DryRunPlan["wouldIngest"]) => (
+    <ul className="mt-1 list-disc pl-5">
+      {entries.slice(0, 50).map((e) => (
+        <li key={`${e.contentType}:${e.entityId}:${e.partKey}`}>
+          {e.title} <span className="text-muted-foreground">({CONTENT_TYPE_LABEL[e.contentType]})</span>
+        </li>
+      ))}
+      {entries.length > 50 ? <li className="text-muted-foreground">and {entries.length - 50} more</li> : null}
+    </ul>
+  );
+  return (
+    <details className="mt-3 text-[13px]">
+      <summary className="cursor-pointer font-medium">What this dry run would do</summary>
+      <div className="mt-2 space-y-3">
+        <p>
+          Would add or update <strong>{plan.wouldIngest.length}</strong>, of which <strong>{plan.wouldDownload.length}</strong> are file downloads.{" "}
+          {plan.removals.length > 0 ? `${plan.removals.length} would leave Ask Bubbles. ` : ""}
+          {plan.permissionChanges.length > 0 ? `${plan.permissionChanges.length} changed who may see them. ` : ""}
+        </p>
+        {plan.wouldIngest.length > 0 ? <div>Would add or update{list(plan.wouldIngest)}</div> : null}
+        {plan.flaggedOwnership.length > 0 ? <div>May belong to another company (held){list(plan.flaggedOwnership)}</div> : null}
+        {plan.wouldDownloadOnceEnabled.length > 0 ? (
+          <div>Would be downloaded once their download is verified and switched on{list(plan.wouldDownloadOnceEnabled)}</div>
+        ) : null}
+        {reasons.length > 0 ? (
+          <div>
+            Not added, by reason
+            <ul className="mt-1 list-disc pl-5 tabular-nums">
+              {reasons.map(([reason, n]) => (
+                <li key={reason}>
+                  {PLAN_REASON_LABEL[reason] ?? CAPABILITY_LABEL[reason] ?? reason}: {n}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {plan.errors.length > 0 ? (
+          <div>
+            Could not be read
+            <ul className="mt-1 list-disc pl-5">
+              {plan.errors.map((e) => (
+                <li key={e.contentType}>
+                  {CONTENT_TYPE_LABEL[e.contentType]}: {e.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+    </details>
   );
 }
 
