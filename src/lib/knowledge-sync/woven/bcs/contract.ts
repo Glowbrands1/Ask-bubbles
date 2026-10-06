@@ -37,14 +37,33 @@
 /* ----------------------------------------------------------- company -- */
 
 /**
- * VERIFIED_UI: `/Company` shows Brand, Company and Company ID. The page's
- * markup was not captured, so the guard reads it two ways and requires every
- * reading to agree: the GUID that follows a "Company ID" label in the page
- * text, and the value of any input named or id'd `CompanyID`. Ids carried by
- * `data-company-id` attributes are NEVER read here: the Switch Account list
- * can carry every company the login belongs to.
+ * `GET /Company`. VERIFIED BY LIVE DIAGNOSTIC (6 October 2026, the Buff City
+ * Soap integration login, structure only): the server answers 200 with the
+ * "Account Management" page. The Company ID is NOT in its visible text; the
+ * session's company is carried in the page's own inline scripts, as the value
+ * of exactly these keys — `companyid` (a head script), `wovenCompanyID` and
+ * `companyId` (body scripts) — each followed within a few characters by the
+ * id. Those three were the only company-id keys in the page, and all held
+ * 55839F24-9241-418C-8405-37BAF9A42A87. The company NAME is visible in the
+ * account menu (`a.dropdown-toggle … small`).
+ *
+ * The guard collects EVERY reading — script keys, plus the "Company ID" label
+ * text and a `CompanyID` input should Woven ever render them — and requires at
+ * least one and that ALL equal the pinned id. Ids carried by `data-company-id`
+ * attributes are NEVER read: the Switch Account list carries every company the
+ * login belongs to.
  */
 export const COMPANY_PAGE_PATH = "/Company";
+/**
+ * A company-id key in an inline script and the GUID it is set to. The keys are
+ * the three the live page uses (case-insensitive, whole identifier only — a
+ * `parentCompanyId` is not one); the separators are an assignment, a property
+ * or an argument (`key = '…'`, `"key": "…"`, `('key', '…')`).
+ */
+export const COMPANY_ID_SCRIPT_KEY =
+  /\b(?:woven)?companyid\b\s*["']?\s*[:=,]\s*["'(]?\s*\{?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\}?/gi;
+/** VERIFIED: the account menu, whose `small` text names the active company. */
+export const ACCOUNT_MENU = { toggleClass: "dropdown-toggle", nameTag: "small" } as const;
 export const COMPANY_ID_LABEL = /\bCompany\s*ID\b\s*[:#]?\s*\{?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\}?/gi;
 export const COMPANY_ID_INPUT = /^CompanyID$/i;
 export const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

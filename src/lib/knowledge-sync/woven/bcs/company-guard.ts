@@ -1,10 +1,10 @@
 import { WOVEN_TENANT } from "@/config/company/woven";
 import { sameCompanyId } from "../config";
-import { attr, elementsByTag, hasClass, parseHtmlDocument, textOf } from "../html";
+import { attr, elementsByTag, hasClass, inlineScripts, parseHtmlDocument, textOf } from "../html";
 import { WovenTeamError, safePath, type PageResponse, type WovenTeamClient } from "../http";
 import { continueLoginSubmission, hasVerifiedChooser, type CompanySelector, type CompanyVerifier } from "../session";
 import { CHOOSER_ENTRY_ATTRS, CHOOSER_ENTRY_CLASS } from "../web-app";
-import { COMPANY_ID_INPUT, COMPANY_ID_LABEL, COMPANY_PAGE_PATH } from "./contract";
+import { ACCOUNT_MENU, COMPANY_ID_INPUT, COMPANY_ID_LABEL, COMPANY_ID_SCRIPT_KEY, COMPANY_PAGE_PATH } from "./contract";
 
 /**
  * ============================================================================
@@ -39,10 +39,18 @@ export class CompanyGuardError extends Error {
   }
 }
 
-/** The ids `/Company` shows: after a "Company ID" label, and in any `CompanyID` input. Never `data-company-id`. */
+/**
+ * Every reading of the session's company id on `/Company`: the value of a
+ * company-id key in the page's inline scripts (the verified form), the id after
+ * a "Company ID" label in the text, and any `CompanyID` input. Never
+ * `data-company-id`.
+ */
 export function companyIdsOnPage(html: string): string[] {
   const doc = parseHtmlDocument(html);
   const ids = new Set<string>();
+  for (const script of inlineScripts(doc)) {
+    for (const match of script.matchAll(COMPANY_ID_SCRIPT_KEY)) ids.add(match[1]!.toLowerCase());
+  }
   const body = elementsByTag(doc, "body")[0] ?? doc;
   for (const match of textOf(body).matchAll(COMPANY_ID_LABEL)) ids.add(match[1]!.toLowerCase());
   for (const input of elementsByTag(doc, "input")) {
@@ -86,16 +94,27 @@ export function assertCompanyPage(html: string): void {
     );
   }
   /*
-   * The name must follow a "Company" label. Anywhere else would prove nothing:
+   * The name must be where the ACTIVE company is named — the account menu
+   * (verified), or after a "Company" label. Anywhere else would prove nothing:
    * the Switch Account list on every page names every company of the login.
+   * This is checked IN ADDITION to the id, never instead of it.
    */
   const escaped = companyName.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  if (!new RegExp(`\\bcompany(?:\\s+name)?\\s*:?\\s*${escaped}\\b`).test(pageText(html))) {
+  const labelled = new RegExp(`\\bcompany(?:\\s+name)?\\s*:?\\s*${escaped}\\b`).test(pageText(html));
+  if (!labelled && !accountMenuNames(html, companyName)) {
     throw new CompanyGuardError(
       "woven_company_not_verified",
       `Woven's Company page shows the right Company ID but not the name ${companyName}, so Ask Bubbles did not proceed.`,
     );
   }
+}
+
+/** Whether the account menu (`a.dropdown-toggle … small`) names this company. */
+function accountMenuNames(html: string, companyName: string): boolean {
+  const want = companyName.toLowerCase();
+  return elementsByTag(parseHtmlDocument(html), "a")
+    .filter((a) => hasClass(a, ACCOUNT_MENU.toggleClass))
+    .some((a) => elementsByTag(a, ACCOUNT_MENU.nameTag).some((s) => textOf(s).replace(/\s+/g, " ").toLowerCase().includes(want)));
 }
 
 /** Reads `/Company` with the session and proves the pinned company. */

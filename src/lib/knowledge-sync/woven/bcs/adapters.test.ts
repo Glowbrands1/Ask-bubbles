@@ -231,6 +231,57 @@ describe("audience and ownership rules", () => {
   });
 });
 
+/**
+ * The /Company structure the LIVE read-only diagnostic found (6 October 2026),
+ * sanitized: an "Account Management" page with no visible Company ID; the id
+ * only in inline scripts under `companyid` (head), `wovenCompanyID` and
+ * `companyId` (body); the company name in the account menu; other ids under
+ * other keys; the Switch Account list carrying every company's id. Values are
+ * invented except the pinned id.
+ */
+function liveCompanyPage(o: { companyid?: string; wovenCompanyID?: string; companyId?: string; menuName?: string; extraScript?: string } = {}) {
+  const userId = bcsId(77001);
+  const head = o.companyid === undefined ? "" : `<script defer>window.wovenAnalytics && wovenAnalytics.group({ companyid: '${o.companyid}', userid: '${userId}' });</script>`;
+  const woven = o.wovenCompanyID === undefined ? "" : `var wovenCompanyID = '${o.wovenCompanyID}'; `;
+  const chat = o.companyId === undefined ? "" : `initChat({ companyId: "${o.companyId}", userId: "${userId}" });`;
+  return `<!DOCTYPE html><html><head><title>Account Management</title>${head}</head>
+    <body class="nav-static chat-sidebar-container checking-nav-xs ">
+    <ul><li class="dropdown"><a href="#" class="dropdown-toggle fw-500 flex flex-vcenter color-primary" data-toggle="dropdown"><div class="ml-sm visible-lg"><div>Integration User</div><div><small class="text-grey fw-300">${o.menuName ?? "Midwest Soap Makers"}</small></div></div></a></li></ul>
+    <main><h1>Account Management</h1><input type="hidden" name="SecurityDummyField" id="SecurityDummyField" value=""></main>
+    <div class="modal"><a data-company-id="${JBA_COMPANY_ID}">JB &amp; Associates</a><a data-company-id="${BCS_COMPANY_ID}">Midwest Soap Makers</a></div>
+    <script defer>${woven}var wovenUserID = '${userId}';</script><script>${chat}${o.extraScript ?? ""}</script></body></html>`;
+}
+
+describe("the Company page — the live structure (inline script keys + account menu)", () => {
+  const all = { companyid: BCS_COMPANY_ID, wovenCompanyID: BCS_COMPANY_ID.toLowerCase(), companyId: BCS_COMPANY_ID };
+
+  it("proves the pinned company from the script keys, with no visible Company ID, ignoring other ids and the Switch Account list", () => {
+    expect(companyIdsOnPage(liveCompanyPage(all))).toEqual([BCS_COMPANY_ID.toLowerCase()]);
+    expect(() => assertCompanyPage(liveCompanyPage(all))).not.toThrow();
+    /* Each verified key on its own is a reading. */
+    for (const key of ["companyid", "wovenCompanyID", "companyId"] as const) {
+      expect(() => assertCompanyPage(liveCompanyPage({ [key]: BCS_COMPANY_ID }))).not.toThrow();
+    }
+  });
+
+  it("any script key naming another company fails the run (mismatch), whichever key it is", () => {
+    for (const key of ["companyid", "wovenCompanyID", "companyId"] as const) {
+      expect(() => assertCompanyPage(liveCompanyPage({ ...all, [key]: JBA_COMPANY_ID }))).toThrow(/not in Midwest Soap Makers/);
+    }
+    expect(() => assertCompanyPage(liveCompanyPage({ ...all, extraScript: `config.companyId = '${JBA_COMPANY_ID}';` }))).toThrow(/not in Midwest Soap Makers/);
+  });
+
+  it("the pinned id only under an unrelated key, or no company key at all, is not proof", () => {
+    expect(() => assertCompanyPage(liveCompanyPage({ extraScript: `var parentCompanyId = '${BCS_COMPANY_ID}'; var userId = '${BCS_COMPANY_ID}';` }))).toThrow(/could not find the Company ID/);
+    expect(() => assertCompanyPage(liveCompanyPage({}))).toThrow(/could not find the Company ID/);
+  });
+
+  it("the right id with another company named in the account menu fails; the name alone never passes", () => {
+    expect(() => assertCompanyPage(liveCompanyPage({ ...all, menuName: "JB &amp; Associates - Corporate" }))).toThrow(/not the name Midwest Soap Makers/);
+    expect(() => assertCompanyPage(liveCompanyPage({ menuName: "Midwest Soap Makers" }))).toThrow(/could not find the Company ID/);
+  });
+});
+
 describe("the Company page", () => {
   const page = (inner: string) =>
     `<html><body><main>${inner}</main><div class="modal"><a data-company-id="${JBA_COMPANY_ID}">JB &amp; Associates</a><a data-company-id="${BCS_COMPANY_ID}">Midwest Soap Makers</a></div></body></html>`;
