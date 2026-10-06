@@ -133,15 +133,16 @@ The integration login must therefore be able to open the Company page.
 
 Ask Bubbles shows every knowledge document to everyone signed in. So:
 
-- **Shared automatically:** `Public` on a **Handbook**, `All Teams All Positions`.
+- **Shared automatically (Production launch rule):** only `All Teams All Positions`
+  on a **File Library** item. Nothing else is company-wide until separately verified.
 - **Waits for an administrator's decision:** `All Positions` (procedures — no
   position limit, but team/location limits are unverified).
 - **Never shared, not even by a decision:** anything narrower
   (`8 Teams 21 Positions`, `All Teams 3 Positions`, a list of positions) →
   `audience_restricted`; anything unclear (`N/A`, no audience) → `audience_unclear`;
-  `Public` on a File Library item or a communication → `audience_unverified`
-  (the label is verified there; what it grants is not — it may not mean the
-  whole company, so it is not treated as if it did).
+  `Public` (any content type, Handbooks included), and `All Teams All Positions`
+  outside the File Library → `audience_unverified` (the label is verified; what
+  it grants there is not, so it is not treated as company-wide).
 
 ### Records inside Midwest Soap Makers that name another company
 

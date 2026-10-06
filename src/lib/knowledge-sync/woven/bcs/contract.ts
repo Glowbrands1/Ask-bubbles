@@ -200,11 +200,18 @@ export const FILE_LIBRARY_STATUS: Record<string, { label: RegExp; publication: "
 /** VERIFIED: Column8 library level. */
 export const FILE_LIBRARY_LEVELS = ["Brand", "Account"] as const;
 /**
- * VERIFIED download route (from page JS DownloadFileLibraryDocument). Its
- * RESPONSE is UNVERIFIED (direct bytes or a redirect to storage; no download
- * was performed) and it may record a download event in Woven's engagement
- * analytics. Executed only with WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED, after one
- * approved sample download.
+ * VERIFIED download route (page JS DownloadFileLibraryDocument) and RESPONSE
+ * (one owner-approved sample download, 2026-10-06, a 24 KB published PDF):
+ *   GET with the session cookie, query `pFileLibraryID` + `pDownloadedFromEntityType=FileLibrary`
+ *   → 200, `application/pdf`, the bytes DIRECTLY (no redirect, no signed
+ *     storage URL), `Content-Length`, `Content-Disposition: attachment` with
+ *     `filename` and `filename*` (a name that may differ from the title, e.g.
+ *     "… (1).pdf" — the record's title-based name is used instead),
+ *     `Cache-Control: no-store`.
+ *   Without a session → 302 to `/Login` (read as `session_expired`).
+ * It may record a download event in Woven's engagement analytics (not
+ * observable from the response). Still executed only with
+ * WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED.
  */
 export const fileLibraryDownloadPath = (fileLibraryId: string) =>
   `/Dashboard/_FileLibrary_Download?pFileLibraryID=${encodeURIComponent(fileLibraryId)}&pDownloadedFromEntityType=FileLibrary`;
@@ -236,13 +243,16 @@ export const COMMUNICATION_STATUS: Record<string, { label: RegExp; publication: 
 /* --------------------------------------------------------- audience -- */
 
 /**
- * The audiences that mean "everyone in the company":
- *   "Public"                   VERIFIED for Handbooks.
- *   "All Teams All Positions"  VERIFIED for the File Library; the handoff's
- *                              model treats it as ALL.
- * Nothing else is company-wide without an administrator's decision.
+ * THE ONLY AUDIENCE SHARED AUTOMATICALLY (owner's decision for the Production
+ * launch, 2026-10-06): "All Teams All Positions" on a FILE LIBRARY item. It
+ * is the File Library's verified label for no team and no position limit.
+ *
+ * Nothing else is company-wide: not "Public" (any content type, including
+ * Handbooks), not "N/A", not "All Teams All Positions" on another content
+ * type, not any team or position limit. Those stay excluded until verified.
  */
-export const BCS_COMPANY_WIDE_AUDIENCE_LABELS = ["Public", "All Teams All Positions"];
+export const BCS_COMPANY_WIDE_AUDIENCE = { label: "All Teams All Positions", contentTypes: ["file_library"] } as const;
+export const BCS_COMPANY_WIDE_AUDIENCE_LABELS: readonly string[] = [BCS_COMPANY_WIDE_AUDIENCE.label];
 
 /**
  * VERIFIED display form of a team/position audience: "8 Teams 21 Positions",
@@ -256,12 +266,10 @@ export const NOT_APPLICABLE_AUDIENCE = /^n\/?a$/i;
 /**
  * VERIFIED display form "Public": Handbooks; and (2026-10-06) 6 File Library
  * rows and 1 communication, as a single `span.badge`. Its ACCESS MEANING is
- * verified only for Handbooks. Elsewhere it is parsed, never shared:
- * `audience_unverified` (see `../policy.ts`).
+ * not verified for this launch: it is parsed, never shared
+ * (`audience_unverified`, see `../policy.ts`).
  */
 export const PUBLIC_AUDIENCE = /^public$/i;
-/** The content types whose "Public" audience is verified to mean the whole company. */
-export const PUBLIC_MEANS_COMPANY_WIDE: readonly string[] = ["handbook"];
 
 /* ----------------------------------------------------- capabilities -- */
 

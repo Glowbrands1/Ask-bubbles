@@ -508,7 +508,17 @@ export class FakeBcsWoven {
     if (path === "/Dashboard/_FileLibrary_Download" && method === "GET") {
       const f = this.fileBytes[url.searchParams.get("pFileLibraryID") ?? ""];
       if (!f) return html("Not found", 404);
-      return new Response(new TextEncoder().encode(f.bytes), { status: 200, headers: { "content-type": f.contentType ?? "application/pdf" } });
+      /* The VERIFIED live response (one approved sample, 2026-10-06): direct bytes from the same route, an attachment with filename and filename*. */
+      const name = `${url.searchParams.get("pFileLibraryID")} (1).pdf`;
+      return new Response(new TextEncoder().encode(f.bytes), {
+        status: 200,
+        headers: {
+          "content-type": f.contentType ?? "application/pdf",
+          "content-disposition": `attachment; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+          "cache-control": "no-cache, max-age=0, must-revalidate, no-store",
+          "x-content-type-options": "nosniff",
+        },
+      });
     }
     if (path === "/Communication/_List_ForDataTable" && method === "POST") return json({ list: c.communications });
     return html("Not found", 404);

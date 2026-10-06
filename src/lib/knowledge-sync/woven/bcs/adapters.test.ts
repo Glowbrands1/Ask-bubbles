@@ -302,10 +302,8 @@ describe("Communications", () => {
 
 describe("audience and ownership rules", () => {
   it("only company-wide audiences pass; narrower ones are restricted; unclear ones are unclear; 'All Positions' waits for a decision", () => {
-    const handbook = { contentType: "handbook" } as const;
     const file = { contentType: "file_library" } as const;
     const procedure = { contentType: "procedure" } as const;
-    expect(bcsAudienceRestriction(["Public"], handbook)).toBeNull();
     expect(bcsAudienceRestriction(["All Teams All Positions"], file)).toBeNull();
     expect(bcsAudienceRestriction(["All Positions"], procedure)).toBeNull();
     expect(bcsAudienceRestriction(["8 Teams 21 Positions"], file)).toBe("audience_restricted");
@@ -316,11 +314,21 @@ describe("audience and ownership rules", () => {
     expect(bcsAudienceRestriction(null, file)).toBe("audience_unclear");
   });
 
-  it("'Public' is company-wide ONLY on a Handbook; anywhere else it is unverified and never shared", () => {
-    for (const contentType of ["file_library", "communication", "procedure", "policy"] as const) {
+  it("Production launch rule: ONLY 'All Teams All Positions' on a File Library item is shared automatically", () => {
+    /* "Public" is never company-wide for this launch — not even on a Handbook. */
+    for (const contentType of ["file_library", "communication", "procedure", "policy", "handbook"] as const) {
       expect(bcsAudienceRestriction(["Public"], { contentType })).toBe("audience_unverified");
     }
-    expect(bcsAudienceRestriction(["public"], { contentType: "handbook" })).toBeNull();
+    /* "All Teams All Positions" outside the File Library is unverified. */
+    for (const contentType of ["communication", "procedure", "policy", "handbook"] as const) {
+      expect(bcsAudienceRestriction(["All Teams All Positions"], { contentType })).toBe("audience_unverified");
+    }
+    /* "All Positions" is reviewable only on a procedure. */
+    expect(bcsAudienceRestriction(["All Positions"], { contentType: "handbook" })).toBe("audience_unverified");
+    /* A mix is never more than its narrowest label. */
+    const file = { contentType: "file_library" } as const;
+    expect(bcsAudienceRestriction(["All Teams All Positions", "2 Teams 3 Positions"], file)).toBe("audience_restricted");
+    expect(bcsAudienceRestriction(["All Teams All Positions", "N/A"], file)).toBe("audience_unclear");
   });
 
   it("JB & Associates / Sun Tan City titles are held for an ownership check", () => {

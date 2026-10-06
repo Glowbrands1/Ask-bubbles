@@ -457,6 +457,25 @@ describe("File Library downloads", () => {
     expect(h.item("file_library", bcsId(403), "file").reason).toBe("audience_restricted");
   });
 
+  it("the VERIFIED download contract: direct bytes with a session, a login redirect without one, the record's own file name", async () => {
+    const h = new Harness();
+    const client = h.client();
+    /* Without a session: 302 to /Login — a lost session, never a file. */
+    await expect(client.downloadAuthenticated(`/Dashboard/_FileLibrary_Download?pFileLibraryID=${bcsId(401)}&pDownloadedFromEntityType=FileLibrary`, 1_000_000)).rejects.toMatchObject({
+      code: "session_expired",
+      sessionLost: true,
+    });
+    h.config.downloads.fileLibrary = true;
+    await h.initial();
+    const request = h.fake.log.find((r) => r.path === "/Dashboard/_FileLibrary_Download")!;
+    expect(request.method).toBe("GET");
+    expect([...new URLSearchParams(request.query).keys()]).toEqual(["pFileLibraryID", "pDownloadedFromEntityType"]);
+    expect(new URLSearchParams(request.query).get("pDownloadedFromEntityType")).toBe("FileLibrary");
+    /* The disposition name ("… (1).pdf") is not used: the stored document keeps the title. */
+    expect(h.searchableTitles()).toContain("Soap Loaf Cutting Guide");
+    expect(JSON.stringify([...h.store.items.values()])).not.toContain("(1).pdf");
+  });
+
   it("a new Updated date with identical bytes is a metadata-only update", async () => {
     const h = new Harness();
     h.config.downloads.fileLibrary = true;
