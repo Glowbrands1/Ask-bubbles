@@ -114,7 +114,7 @@ export class MockAIProvider implements AIProvider {
      */
     const intent = detectTemplateIntent(request.question).kind;
     // "Coach Avery" asks advice-or-form; preview answers it as advice.
-    if (intent !== "none") {
+    if (intent !== "none" && intent !== "clarify") {
       return {
         content: [
           "I can't propose a form in preview mode.",

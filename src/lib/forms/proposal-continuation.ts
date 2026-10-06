@@ -176,7 +176,7 @@ export function isProposalSuperseded(messages: readonly ChatMessage[], proposalI
  * ============================================================================
  *
  * The most recent form created in this conversation, by instance id — the
- * target of "change her new location to location 24". None once a newer, not yet
+ * target of "change the date to yesterday". None once a newer, not yet
  * created proposal is on screen: the manager is talking about that one now,
  * and the continuation above carries it.
  *

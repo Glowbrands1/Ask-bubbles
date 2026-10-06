@@ -175,8 +175,8 @@ export function InlineForm({
   const [edits, setEdits] = React.useState<ResponsiveFormValues>({ values: {}, checked: {} });
   const [save, setSave] = React.useState<SaveState>({ kind: "clean" });
   /*
-   * BUMPED WHEN A CHAT TURN CORRECTED THIS FORM ("change her new location to
-   * location 24"), so the fetch below re-reads the canonical instance. See
+   * BUMPED WHEN A CHAT TURN CORRECTED THIS FORM ("change the date to
+   * yesterday"), so the fetch below re-reads the canonical instance. See
    * `form-update-events.ts`.
    */
   const [externalRevision, setExternalRevision] = React.useState(0);

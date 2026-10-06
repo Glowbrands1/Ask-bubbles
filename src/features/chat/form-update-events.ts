@@ -3,7 +3,7 @@
  * "BUBBLES CHANGED THIS FORM" — FROM THE CHAT TURN TO THE EDITOR SHOWING IT
  * ============================================================================
  *
- * A correction typed in chat ("change her new location to location 24") is saved
+ * A correction typed in chat ("change the date to yesterday") is saved
  * on the server by the chat route. The inline editor showing that form is a
  * different component, possibly several messages up, and it must re-read the
  * canonical instance rather than keep showing the old value.

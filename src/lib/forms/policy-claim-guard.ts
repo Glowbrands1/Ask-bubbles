@@ -463,7 +463,7 @@ const NOT_EVIDENCE = new Set([
   "required", "requires", "say", "says", "specifies", "specify", "state",
   "states", "stipulate", "stipulates",
   // The source nouns.
-  "code", "company", "conduct", "handbook", "jba", "manual", "policies",
+  "code", "company", "conduct", "handbook", "manual", "policies",
   "policy", "rule", "rules", "standard", "standards",
 ]);
 

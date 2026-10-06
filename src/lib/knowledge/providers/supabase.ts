@@ -21,7 +21,23 @@ import {
   roleIdentityFailure,
   type RoleGroundingResult,
 } from "../role-grounding";
+import {
+  resolveHandbook,
+  type HandbookChunk,
+  type HandbookIdentity,
+} from "../named-handbook";
 import type { KnowledgeProvider, KnowledgeQuery } from "../types";
+
+/** The configured handbook's chunks, or why none could be read. */
+export type NamedHandbookResult =
+  | {
+      readonly ok: true;
+      readonly documentId: string;
+      readonly documentTitle: string;
+      readonly documentCategory: string;
+      readonly chunks: readonly HandbookChunk[];
+    }
+  | { readonly ok: false; readonly reason: string; readonly problem?: "not_found" | "ambiguous" };
 
 /** The manual's rows, or why none could be cited. */
 interface RoleDocumentRow {
@@ -252,6 +268,81 @@ export class SupabaseKnowledgeProvider implements KnowledgeProvider {
       matchedBy: resolution.matchedBy,
       chunks,
     });
+  }
+
+  /**
+   * ==========================================================================
+   * A NAMED HANDBOOK, READ BY IDENTITY
+   * ==========================================================================
+   *
+   * Ported from the reference platform's `fetchOfficialPolicyManual`, with the
+   * identity passed in from company configuration. The document is resolved
+   * the way pinned roles are — tag, then file name, then title — inside this
+   * corpus only, and its current version's chunks are read WHOLE. No
+   * similarity is involved, which is the point: see `named-handbook.ts`.
+   *
+   * NEVER THROWS. A handbook is evidence that degrades, so every failure is a
+   * reason the caller can drop.
+   */
+  async fetchNamedHandbook(identity: HandbookIdentity, scopeId: string): Promise<NamedHandbookResult> {
+    const client = getSupabaseAdmin();
+
+    let documents: RoleDocumentRow[];
+    try {
+      const { data, error } = await client
+        .from("knowledge_documents")
+        .select("id, title, category, original_filename, tags, version, source")
+        .eq("knowledge_scope_id", scopeId)
+        .eq("indexed", true)
+        .eq("status", "indexed");
+      if (error) throw new Error(error.message);
+      documents = await withInheritedTags(client, scopeId, (data ?? []) as RoleDocumentRow[]);
+    } catch {
+      return { ok: false, reason: "The handbook could not be looked up." };
+    }
+
+    const resolution = resolveHandbook(documents, identity);
+    if (!resolution.ok) {
+      return {
+        ok: false,
+        problem: resolution.problem,
+        reason:
+          resolution.problem === "ambiguous"
+            ? "More than one document claims to be the handbook, so none was pinned."
+            : "The handbook is not in the knowledge base.",
+      };
+    }
+    const document = resolution.document as RoleDocumentRow;
+
+    let chunks: RoleChunkRow[];
+    try {
+      const { data, error } = await client
+        .from("knowledge_chunks")
+        .select("id, chunk_index, locator, page, section, content, metadata")
+        .eq("document_id", document.id)
+        .eq("version", document.version)
+        .order("chunk_index", { ascending: true });
+      if (error) throw new Error(error.message);
+      chunks = (data ?? []) as RoleChunkRow[];
+    } catch {
+      return { ok: false, reason: `The sections of "${document.title}" could not be read.` };
+    }
+
+    return {
+      ok: true,
+      documentId: document.id,
+      documentTitle: document.title,
+      documentCategory: document.category,
+      chunks: chunks.map((chunk) => ({
+        chunkIndex: chunk.chunk_index,
+        chunkId: chunk.id,
+        locator: chunk.locator,
+        page: readPrintedPage(chunk.metadata) ?? chunk.page,
+        content: chunk.content,
+        section: chunk.section,
+        sections: readSections(chunk.metadata),
+      })),
+    };
   }
 
   async listDocuments(scopeId?: string): Promise<KnowledgeDocument[]> {

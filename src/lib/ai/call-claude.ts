@@ -146,7 +146,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
     // text. Only the class name is kept — never the body.
     throw new AiError(
       "model_failed",
-      "Bubbles could not reach the language model. No answer was generated.",
+      `${ACTIVE_BRAND.assistantName} could not reach the language model. No answer was generated.`,
       502,
     );
   }

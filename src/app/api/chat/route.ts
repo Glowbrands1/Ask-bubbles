@@ -134,6 +134,23 @@ export async function POST(request: Request) {
     try {
       const parsed = parseAskRequest(body);
       /*
+       * A CORRECTION TO A FORM THIS CONVERSATION ALREADY CREATED — "change the
+       * date to yesterday". Tried first, and only where the browser named such
+       * a form; `correctActiveForm` re-authorizes the instance and returns null
+       * for anything that is not a correction, so every other turn is answered
+       * exactly as before. Ahead of the revision below because "change" is
+       * also a revision verb, and a header line is not a drafted field. See
+       * `lib/forms/chat-correction.ts`.
+       */
+      const correction = parsed.activeFormInstanceId
+        ? await (await import("@/lib/forms/chat-correction")).correctActiveForm({
+            request,
+            instanceId: parsed.activeFormInstanceId,
+            question: parsed.question,
+            today: parsed.context.todayIso,
+          })
+        : null;
+      /*
        * "CHANGE THE SUMMARY TO …" on a form this conversation created — the
        * open record, revised in place, rather than a new form drafted from
        * scratch. `reviseActiveForm` re-authorizes the instance and returns null
@@ -142,7 +159,7 @@ export async function POST(request: Request) {
        * load the forms write path. See `lib/forms/chat-revision.ts`.
        */
       const revision =
-        parsed.activeFormInstanceId
+        !correction && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/chat-revision")).reviseActiveForm({
               request,
               instanceId: parsed.activeFormInstanceId,
@@ -152,6 +169,7 @@ export async function POST(request: Request) {
             })
           : null;
       answer =
+        correction ??
         revision ??
         (await answerQuestion(parsed, {
           role: context.identity.role,
