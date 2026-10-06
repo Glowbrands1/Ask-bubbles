@@ -104,9 +104,17 @@ So, on every run:
 2. On the account chooser, the entry is chosen **by its `data-company-id`** —
    the pinned Company ID — and its visible name must be "Midwest Soap Makers".
    No other entry is ever chosen; if it is not offered, the run fails.
-3. `GET /Company` must show exactly the pinned Company ID — every reading of
-   it, none other — and "Midwest Soap Makers" after its Company label. A
-   missing, different or second id fails the run before anything is read.
+3. `GET /Company` must prove the pinned company from the **session details**
+   the served page carries (verified live, 6 October 2026 — the on-screen
+   "Company ID" field is loaded after render and is not in the served HTML):
+   the analytics `companyid`, the `wovenCompanyID` session value, the
+   `company-<id>` realtime group and the context object's `companyId`. At
+   least **two independent** readings must name the pinned Company ID, **no**
+   reading may name another (the chat initialiser's positional id may only
+   fail the check, never pass it), and the session's `companyName` must be
+   "Midwest Soap Makers". The Switch Account list's `data-company-id` is never
+   read. A missing, different or second id, a single reading, or another name
+   fails the run before anything is read.
 4. After every automatic re-sign-in, step 3 again.
 5. After every listing, before anything is classified, saved or applied,
    step 3 again. Any mismatch aborts the run with nothing written.

@@ -37,14 +37,45 @@
 /* ----------------------------------------------------------- company -- */
 
 /**
- * VERIFIED_UI: `/Company` shows Brand, Company and Company ID. The page's
- * markup was not captured, so the guard reads it two ways and requires every
- * reading to agree: the GUID that follows a "Company ID" label in the page
- * text, and the value of any input named or id'd `CompanyID`. Ids carried by
- * `data-company-id` attributes are NEVER read here: the Switch Account list
- * can carry every company the login belongs to.
+ * VERIFIED_UI: `/Company` shows Brand, Company and Company ID on screen.
+ *
+ * VERIFIED_LIVE (6 October 2026, read-only probe of the served HTML): the
+ * page is titled "Account Management", and its served HTML carries NO
+ * "Company ID" label and no `CompanyID` input — the on-screen details are
+ * loaded after render. What the served page DOES carry is the session's own
+ * description of the ACTIVE company, in four independent, labelled places,
+ * all of which named Midwest Soap Makers' id on the live probe:
+ *
+ *   analytics        `.setOnce('companyid', '<id>')`
+ *   session storage  `WovenApp.setWithExpiry("wovenCompanyID", "<id>", …)`
+ *   realtime group   `WovenBroadcastChannel.joinSignalRGroups(["company-<id>"])`
+ *   context object   `{ brandName: '…', companyId: '<id>', companyName: '…' }`
+ *
+ * and the active company's name as `companyName` in that context object.
+ * No other company's id appeared anywhere on the page. These are what the
+ * guard reads (`SESSION_COMPANY_READINGS`). The earlier label / input
+ * readings are kept as further readings in case Woven renders them later.
+ *
+ * NEVER READ AS PROOF: `data-company-id` attributes (the Switch Account list
+ * can carry every company the login belongs to), and the positional first
+ * argument of `WovenApp.initWovenChat(…)` — its meaning rests on argument
+ * order only, so it may make the guard FAIL (a different id there is a
+ * conflict) but never helps it pass.
  */
 export const COMPANY_PAGE_PATH = "/Company";
+const GUID_SOURCE = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+export const SESSION_COMPANY_READINGS: readonly { readonly kind: string; readonly pattern: RegExp }[] = [
+  { kind: "analytics", pattern: new RegExp(String.raw`\.setOnce\(\s*(['"])companyid\1\s*,\s*(['"])(${GUID_SOURCE})\2\s*\)`, "gi") },
+  { kind: "session_storage", pattern: new RegExp(String.raw`\.setWithExpiry\(\s*(['"])wovenCompanyID\1\s*,\s*(['"])(${GUID_SOURCE})\2`, "gi") },
+  { kind: "realtime_group", pattern: new RegExp(String.raw`joinSignalRGroups\(\s*\[\s*(['"])company-(${GUID_SOURCE})\1`, "gi") },
+  { kind: "context_object", pattern: new RegExp(String.raw`\bcompanyId\s*:\s*(['"])(${GUID_SOURCE})\1`, "gi") },
+];
+/** May only CONFLICT, never prove: the positional first argument of the chat initialiser. */
+export const SESSION_COMPANY_CONFLICT_ONLY = new RegExp(String.raw`initWovenChat\(\s*(['"])(${GUID_SOURCE})\1`, "gi");
+/** The active company's name in the session's context object. */
+export const SESSION_COMPANY_NAME = /\bcompanyName\s*:\s*(['"])((?:(?!\1).){1,120})\1/gi;
+/** How many independent kinds of reading must agree before the company is proven. */
+export const MIN_INDEPENDENT_COMPANY_READINGS = 2;
 export const COMPANY_ID_LABEL = /\bCompany\s*ID\b\s*[:#]?\s*\{?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\}?/gi;
 export const COMPANY_ID_INPUT = /^CompanyID$/i;
 export const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

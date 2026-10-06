@@ -4,7 +4,16 @@ import { attr, elementsByTag, hasClass, parseHtmlDocument, textOf } from "../htm
 import { WovenTeamError, safePath, type PageResponse, type WovenTeamClient } from "../http";
 import { continueLoginSubmission, hasVerifiedChooser, type CompanySelector, type CompanyVerifier } from "../session";
 import { CHOOSER_ENTRY_ATTRS, CHOOSER_ENTRY_CLASS } from "../web-app";
-import { COMPANY_ID_INPUT, COMPANY_ID_LABEL, COMPANY_PAGE_PATH } from "./contract";
+import {
+  COMPANY_ID_INPUT,
+  COMPANY_ID_LABEL,
+  COMPANY_PAGE_PATH,
+  GUID,
+  MIN_INDEPENDENT_COMPANY_READINGS,
+  SESSION_COMPANY_CONFLICT_ONLY,
+  SESSION_COMPANY_NAME,
+  SESSION_COMPANY_READINGS,
+} from "./contract";
 
 /**
  * ============================================================================
@@ -19,9 +28,10 @@ import { COMPANY_ID_INPUT, COMPANY_ID_LABEL, COMPANY_PAGE_PATH } from "./contrac
  *   1. SIGN-IN. On the account chooser, the entry selected is the one whose
  *      `data-company-id` IS the pinned id (and whose name is the pinned
  *      name) — never chosen by name, position or Woven's default.
- *   2. BEFORE READING. `GET /Company` (VERIFIED_UI: it shows the Company ID)
- *      must show exactly the pinned id — every reading of it, none other —
- *      and the pinned name.
+ *   2. BEFORE READING. `GET /Company` must name exactly the pinned id in at
+ *      least two independent session-detail readings (VERIFIED_LIVE — see
+ *      `SESSION_COMPANY_READINGS`), no reading may name another, and the
+ *      session's company name must be the pinned name.
  *   3. AFTER READING, BEFORE ANYTHING IS APPLIED, and after every automatic
  *      re-sign-in: the same check again (`assertTenant`).
  *
@@ -39,18 +49,74 @@ export class CompanyGuardError extends Error {
   }
 }
 
-/** The ids `/Company` shows: after a "Company ID" label, and in any `CompanyID` input. Never `data-company-id`. */
-export function companyIdsOnPage(html: string): string[] {
+export interface CompanyReading {
+  /** Which independent place on the page it came from. */
+  readonly kind: string;
+  /** Lower-cased GUID. */
+  readonly id: string;
+}
+
+export interface CompanyPageReadings {
+  /** Readings that may PROVE the active company (all must agree). */
+  readonly proofs: readonly CompanyReading[];
+  /** Readings that may only CONFLICT: a different id here fails, a matching one proves nothing. */
+  readonly conflictOnly: readonly CompanyReading[];
+  /** The active company's name, as the session's context object states it. */
+  readonly names: readonly string[];
+}
+
+const lastGuid = (match: RegExpMatchArray): string | null => {
+  for (let i = match.length - 1; i > 0; i -= 1) {
+    const group = match[i];
+    if (group && GUID.test(group)) return group.toLowerCase();
+  }
+  return null;
+};
+
+const decodeEntities = (value: string): string =>
+  value.replace(/&amp;/g, "&").replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"').trim();
+
+/**
+ * Every reading of the ACTIVE company on the `/Company` response.
+ *
+ * The session-detail readings (`SESSION_COMPANY_READINGS`, verified live)
+ * come from the page's own description of its session; the "Company ID"
+ * label and `CompanyID` input are kept as further readings. NEVER read:
+ * `data-company-id` (the Switch Account list carries every company of the
+ * login).
+ */
+export function companyReadingsOnPage(html: string): CompanyPageReadings {
+  const proofs: CompanyReading[] = [];
+  for (const { kind, pattern } of SESSION_COMPANY_READINGS) {
+    for (const match of html.matchAll(pattern)) {
+      const id = lastGuid(match);
+      if (id) proofs.push({ kind, id });
+    }
+  }
+
   const doc = parseHtmlDocument(html);
-  const ids = new Set<string>();
   const body = elementsByTag(doc, "body")[0] ?? doc;
-  for (const match of textOf(body).matchAll(COMPANY_ID_LABEL)) ids.add(match[1]!.toLowerCase());
+  for (const match of textOf(body).matchAll(COMPANY_ID_LABEL)) proofs.push({ kind: "label", id: match[1]!.toLowerCase() });
   for (const input of elementsByTag(doc, "input")) {
     const named = COMPANY_ID_INPUT.test(attr(input, "name") ?? "") || COMPANY_ID_INPUT.test(attr(input, "id") ?? "");
     const value = (attr(input, "value") ?? "").trim().replace(/^\{|\}$/g, "");
-    if (named && value) ids.add(value.toLowerCase());
+    if (named && value) proofs.push({ kind: "input", id: value.toLowerCase() });
   }
-  return [...ids];
+
+  const conflictOnly: CompanyReading[] = [];
+  for (const match of html.matchAll(SESSION_COMPANY_CONFLICT_ONLY)) {
+    const id = lastGuid(match);
+    if (id) conflictOnly.push({ kind: "chat_initialiser", id });
+  }
+
+  const names = [...html.matchAll(SESSION_COMPANY_NAME)].map((match) => decodeEntities(match[2]!));
+  return { proofs, conflictOnly, names };
+}
+
+/** The distinct ids the page's readings name — proofs and conflict-only alike. Never `data-company-id`. */
+export function companyIdsOnPage(html: string): string[] {
+  const { proofs, conflictOnly } = companyReadingsOnPage(html);
+  return [...new Set([...proofs, ...conflictOnly].map((reading) => reading.id))];
 }
 
 /** First eight characters of an id, for a message: enough to recognise, not the whole value. */
@@ -58,39 +124,66 @@ function shortId(id: string): string {
   return `${id.slice(0, 8).toUpperCase()}…`;
 }
 
-/** Normalised visible text, for the name check. */
+/** Normalised visible text, for the legacy name check. */
 function pageText(html: string): string {
   const doc = parseHtmlDocument(html);
   return textOf(elementsByTag(doc, "body")[0] ?? doc).replace(/\s+/g, " ").toLowerCase();
 }
 
 /**
- * Throws unless the `/Company` page shows EXACTLY the pinned Company ID —
- * every reading of it, none other — and the pinned company name. Missing,
- * different or conflicting ids, or a missing name: the run fails.
+ * Throws unless the `/Company` response proves the pinned company:
+ *
+ *   1. at least one reading of the active company exists;
+ *   2. EVERY reading — proof or conflict-only — names the pinned Company ID;
+ *   3. at least `MIN_INDEPENDENT_COMPANY_READINGS` DIFFERENT KINDS of proof
+ *      agree on it (one place on the page is not proof);
+ *   4. the active company's name is the pinned name: every `companyName`
+ *      the session states equals it, and at least one name reading exists.
+ *
+ * Anything else — no reading, a different or second id, too few kinds, a
+ * missing or different name — fails the run before anything is read.
  */
 export function assertCompanyPage(html: string): void {
   const { companyId, companyName } = WOVEN_TENANT;
-  const ids = companyIdsOnPage(html);
-  if (ids.length === 0) {
+  const { proofs, conflictOnly, names } = companyReadingsOnPage(html);
+
+  if (proofs.length === 0) {
     throw new CompanyGuardError(
       "woven_company_not_verified",
       `Ask Bubbles could not find the Company ID on Woven's Company page, so it could not prove the session is in ${companyName}. Nothing was read.`,
     );
   }
-  const others = ids.filter((id) => !sameCompanyId(id, companyId));
+  const others = [...new Set([...proofs, ...conflictOnly].map((r) => r.id).filter((id) => !sameCompanyId(id, companyId)))];
   if (others.length > 0) {
     throw new CompanyGuardError(
       "woven_company_mismatch",
       `Woven's session is not in ${companyName}: its Company page shows Company ID ${others.map(shortId).join(", ")}, not ${shortId(companyId)}. Nothing was synced.`,
     );
   }
+  const kinds = new Set(proofs.map((r) => r.kind));
+  if (kinds.size < MIN_INDEPENDENT_COMPANY_READINGS) {
+    throw new CompanyGuardError(
+      "woven_company_not_verified",
+      `Woven's Company page names ${shortId(companyId)} in only ${kinds.size} place, so Ask Bubbles could not prove the session is in ${companyName}. Nothing was read.`,
+    );
+  }
+
   /*
-   * The name must follow a "Company" label. Anywhere else would prove nothing:
-   * the Switch Account list on every page names every company of the login.
+   * THE NAME. The session's own `companyName` when it states one — and every
+   * one it states must be the pinned name. Otherwise the name must follow a
+   * "Company" label. Anywhere else would prove nothing: the Switch Account
+   * list on every page names every company of the login.
    */
-  const escaped = companyName.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  if (!new RegExp(`\\bcompany(?:\\s+name)?\\s*:?\\s*${escaped}\\b`).test(pageText(html))) {
+  const pinnedName = companyName.toLowerCase();
+  if (names.some((name) => name.toLowerCase() !== pinnedName)) {
+    throw new CompanyGuardError(
+      "woven_company_not_verified",
+      `Woven's Company page shows the right Company ID under another company name, so Ask Bubbles did not proceed.`,
+    );
+  }
+  const escaped = pinnedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const labelled = new RegExp(`\\bcompany(?:\\s+name)?\\s*:?\\s*${escaped}\\b`).test(pageText(html));
+  if (names.length === 0 && !labelled) {
     throw new CompanyGuardError(
       "woven_company_not_verified",
       `Woven's Company page shows the right Company ID but not the name ${companyName}, so Ask Bubbles did not proceed.`,

@@ -266,7 +266,14 @@ export class FakeBcsWoven {
   requireCompanySelection = true;
   defaultCompanyId: string = BCS_COMPANY_ID;
   /** How `/Company` renders: the verified text; an input; no id; or the id twice, differently. */
-  companyPage: "text" | "input" | "missing" | "conflicting" | "forbidden" = "text";
+  /*
+   * How `/Company` renders. "session" is the VERIFIED_LIVE shape: the active
+   * company in four session-detail readings and a `companyName`, nothing
+   * after a "Company ID" label. The rest are the ways it can fail to prove
+   * the company: no readings, one reading only, a reading naming the other
+   * company, the legacy label/input layout alone, a refused page.
+   */
+  companyPage: "session" | "input" | "missing" | "single" | "conflicting" | "forbidden" = "session";
   /** After this many more content reads, the session moves to the other company. */
   switchCompanyAfter: number | null = null;
   /** After this many more authenticated requests, the session ends. */
@@ -363,15 +370,29 @@ export class FakeBcsWoven {
       const found = this.accounts.find((a) => a.id === companyId) ?? { id: companyId, name: "Unlisted Co" };
       const account = { id: this.companyPageOverride?.id ?? found.id, name: this.companyPageOverride?.name ?? found.name };
       const brand = companyId === BCS_COMPANY_ID ? "Buff City Soap" : "Sun Tan City";
-      const idBlock =
-        this.companyPage === "missing"
-          ? ""
-          : this.companyPage === "input"
-            ? `<label for="CompanyID">Company ID</label><input id="CompanyID" name="CompanyID" type="text" readonly value="${account.id}">`
-            : this.companyPage === "conflicting"
-              ? `<div><span>Company ID</span> <span>${account.id}</span></div><div><span>Company ID</span> <span>${JBA_COMPANY_ID}</span></div>`
-              : `<div class="form-group"><label>Company ID</label><div class="read-only-label">${account.id}</div></div>`;
-      return html(page(`<h1>Company</h1><div><label>Brand</label><div>${brand}</div></div><div><label>Company</label><div>${esc(account.name)}</div></div>${idBlock}`));
+      const employee = "e0e0e0e0-0000-4000-8000-0000000000e1";
+      const id = account.id.toLowerCase();
+      const readings = {
+        analytics: `amplitude.getInstance().identify(new amplitude.Identify().setOnce('employeeid', '${employee}').setOnce('companyid', '${id}').set('companyname', '${esc(account.name)}'));`,
+        storage: `WovenApp.setWithExpiry("wovenEmployeeID", "${employee}", 172800); WovenApp.setWithExpiry("wovenCompanyID", "${this.companyPage === "conflicting" ? JBA_COMPANY_ID.toLowerCase() : id}", 172800);`,
+        realtime: `WovenBroadcastChannel.joinSignalRGroups(["timeclocks-${id}"]); WovenBroadcastChannel.joinSignalRGroups(["company-${id}"]);`,
+        chat: `WovenApp.initWovenChat('${id}', '${employee}', 'Integration User');`,
+      };
+      const context = `window.knowledgeContext = { brandName: '${brand}', companyId: '${id}', companyName: '${esc(account.name)}', };`;
+      const scripts =
+        this.companyPage === "session" || this.companyPage === "conflicting"
+          ? `<script>${readings.analytics}</script><script>$(function () { WovenApp.initAutosaveIndexed(); ${readings.chat} });</script><script>${readings.storage}</script><script>${readings.realtime}</script><div id="knowledge-overlay-sources-list"><script>${context}</script></div>`
+          : this.companyPage === "single"
+            ? `<div id="knowledge-overlay-sources-list"><script>${context}</script></div>`
+            : this.companyPage === "missing"
+              ? `<script>WovenApp.setWithExpiry("wovenEmployeeID", "${employee}", 172800);</script><script>window.knowledgeContext = { brandName: '${brand}', companyName: '${esc(account.name)}', };</script>`
+              : "";
+      const legacy =
+        this.companyPage === "input"
+          ? `<div><label>Company</label><div>${esc(account.name)}</div></div><label for="CompanyID">Company ID</label><input id="CompanyID" name="CompanyID" type="text" readonly value="${account.id}">`
+          : "";
+      const profile = `<div class="ml-sm visible-lg"><h5 class="m-0 fw-500">Integration User</h5><div><small class="text-grey fw-300">${esc(account.name)}</small></div></div>`;
+      return html(page(`<h1>Account Management</h1>${profile}${legacy}${scripts}`, "Account Management"));
     }
 
     if (this.failures.has(path)) return html("<h1>Error</h1>", this.failures.get(path));

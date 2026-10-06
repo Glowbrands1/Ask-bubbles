@@ -6,7 +6,7 @@ import { handbookRecord, parseHandbookRows } from "./adapters/handbooks";
 import { parsePolicyCards, parsePolicyDetail, policyRecord, withPolicyDetail } from "./adapters/policies";
 import { parseProcedureCards, parseProcedureCategories, parseProcedureDetail, procedureRecord, unionProcedureCards } from "./adapters/procedures";
 import { ticksToIso } from "./adapters/shared";
-import { assertCompanyPage, companyIdsOnPage } from "./company-guard";
+import { assertCompanyPage, companyIdsOnPage, companyReadingsOnPage } from "./company-guard";
 import { bcsAudienceRestriction, bcsOwnershipHold } from "./policy";
 import { BCS_COMPANY_ID, JBA_COMPANY_ID, bcsId, communicationRow, fileRow, ticks } from "./test-support";
 
@@ -231,22 +231,72 @@ describe("audience and ownership rules", () => {
   });
 });
 
-describe("the Company page", () => {
-  const page = (inner: string) =>
-    `<html><body><main>${inner}</main><div class="modal"><a data-company-id="${JBA_COMPANY_ID}">JB &amp; Associates</a><a data-company-id="${BCS_COMPANY_ID}">Midwest Soap Makers</a></div></body></html>`;
+describe("the Company page (VERIFIED_LIVE structure, sanitized)", () => {
+  const BCS = BCS_COMPANY_ID.toLowerCase();
+  const JB = JBA_COMPANY_ID.toLowerCase();
+  const EMPLOYEE = "e0e0e0e0-0000-4000-8000-0000000000e1";
+  /* The Switch Account list names BOTH companies on every page; it must never count. */
+  const shell = (inner: string) =>
+    `<html><head><title>Account Management</title></head><body><main>${inner}</main><div class="modal"><a class="switch-account" data-company-id="${JBA_COMPANY_ID}">JB &amp; Associates</a><a class="switch-account" data-company-id="${BCS_COMPANY_ID}">Midwest Soap Makers</a></div></body></html>`;
+  const readings = (o: { analytics?: string; storage?: string; realtime?: string; context?: string; chat?: string; name?: string } = {}) => {
+    const v = { analytics: BCS, storage: BCS, realtime: BCS, context: BCS, chat: BCS, name: "Midwest Soap Makers", ...o };
+    return [
+      `<script>amplitude.getInstance().identify(new amplitude.Identify().setOnce('employeeid', '${EMPLOYEE}').setOnce('companyid', '${v.analytics}'));</script>`,
+      `<script>$(function () { WovenApp.initWovenChat('${v.chat}', '${EMPLOYEE}', 'Integration User'); });</script>`,
+      `<script>WovenApp.setWithExpiry("wovenEmployeeID", "${EMPLOYEE}", 172800); WovenApp.setWithExpiry("wovenCompanyID", "${v.storage}", 172800);</script>`,
+      `<script>WovenBroadcastChannel.joinSignalRGroups(["timeclocks-${v.realtime}"]); WovenBroadcastChannel.joinSignalRGroups(["company-${v.realtime}"]);</script>`,
+      `<div id="knowledge-overlay-sources-list"><script>window.k = { brandName: 'Buff City Soap', companyId: '${v.context}', companyName: '${v.name}', };</script></div>`,
+    ];
+  };
+  const realPage = (o?: Parameters<typeof readings>[0]) => shell(readings(o).join(""));
 
-  it("reads the id after the 'Company ID' label or in a CompanyID input — never from data-company-id", () => {
-    expect(companyIdsOnPage(page(`<label>Company ID</label><div>${BCS_COMPANY_ID}</div>`))).toEqual([BCS_COMPANY_ID.toLowerCase()]);
-    expect(companyIdsOnPage(page(`<input name="CompanyID" value="${BCS_COMPANY_ID}">`))).toEqual([BCS_COMPANY_ID.toLowerCase()]);
-    expect(companyIdsOnPage(page("<p>No id here</p>"))).toEqual([]);
+  it("reads the four session-detail readings and the session's company name — never data-company-id", () => {
+    const r = companyReadingsOnPage(realPage());
+    expect(r.proofs.map((p) => p.kind).sort()).toEqual(["analytics", "context_object", "realtime_group", "session_storage"]);
+    expect(new Set(r.proofs.map((p) => p.id))).toEqual(new Set([BCS]));
+    expect(r.conflictOnly).toEqual([{ kind: "chat_initialiser", id: BCS }]);
+    expect(r.names).toEqual(["Midwest Soap Makers"]);
+    expect(companyIdsOnPage(realPage())).toEqual([BCS]);
+    /* The switch list's JB id is on the page and is not read. */
+    expect(companyIdsOnPage(shell("<p>nothing</p>"))).toEqual([]);
   });
 
-  it("passes only when every id shown is the expected one", () => {
-    expect(() => assertCompanyPage(page(`<label>Company</label> Midwest Soap Makers <label>Company ID</label> ${BCS_COMPANY_ID.toLowerCase()}`))).not.toThrow();
-    expect(() => assertCompanyPage(page(`<label>Company ID</label> ${JBA_COMPANY_ID}`))).toThrow(/not in Midwest Soap Makers/);
-    expect(() => assertCompanyPage(page("<p>nothing</p>"))).toThrow(/could not find the Company ID/);
-    expect(() =>
-      assertCompanyPage(page(`<label>Company ID</label> ${BCS_COMPANY_ID} <label>Company ID</label> ${JBA_COMPANY_ID}`)),
-    ).toThrow(/not in Midwest Soap Makers/);
+  it("the real page passes", () => {
+    expect(() => assertCompanyPage(realPage())).not.toThrow();
+  });
+
+  it.each(["analytics", "storage", "realtime", "context", "chat"] as const)("JB & Associates' id in the %s reading fails as a mismatch", (where) => {
+    expect(() => assertCompanyPage(realPage({ [where]: JB }))).toThrow(/not in Midwest Soap Makers/);
+  });
+
+  it("the other company everywhere fails as a mismatch", () => {
+    expect(() => assertCompanyPage(realPage({ analytics: JB, storage: JB, realtime: JB, context: JB, chat: JB, name: "JB & Associates" }))).toThrow(/not in Midwest Soap Makers/);
+  });
+
+  it("one kind of reading is not proof; two agreeing kinds are", () => {
+    const one = shell(readings()[4]!);
+    expect(() => assertCompanyPage(one)).toThrow(/in only 1 place/);
+    const two = shell(readings()[2]! + readings()[4]!);
+    expect(() => assertCompanyPage(two)).not.toThrow();
+  });
+
+  it("the conflict-only chat reading never proves anything on its own", () => {
+    expect(() => assertCompanyPage(shell(readings()[1]!))).toThrow(/could not find the Company ID/);
+  });
+
+  it("no reading of the active company fails closed", () => {
+    expect(() => assertCompanyPage(shell("<p>nothing</p>"))).toThrow(/could not find the Company ID/);
+  });
+
+  it("the right id under another company name fails; a missing name fails", () => {
+    expect(() => assertCompanyPage(realPage({ name: "JB &amp; Associates" }))).toThrow(/under another company name/);
+    const noName = shell(readings().slice(0, 4).join(""));
+    expect(() => assertCompanyPage(noName)).toThrow(/not the name Midwest Soap Makers/);
+  });
+
+  it("the legacy label and input are further readings: they must agree, and alone they are one place", () => {
+    expect(() => assertCompanyPage(shell(`<label>Company</label> Midwest Soap Makers <label>Company ID</label> ${BCS}`))).toThrow(/in only 1 place/);
+    expect(() => assertCompanyPage(realPage() .replace("<main>", `<main><label>Company ID</label> ${JB}`))).toThrow(/not in Midwest Soap Makers/);
+    expect(() => assertCompanyPage(shell(`<label>Company</label> Midwest Soap Makers <label>Company ID</label> ${BCS} <input name="CompanyID" value="${BCS}">`))).not.toThrow();
   });
 });
