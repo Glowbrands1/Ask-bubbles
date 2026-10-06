@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { CONTENT_TYPES, PartFetchError, type ListingResult } from "../types";
+import { PartFetchError, type ListingResult } from "../types";
 import { WovenConnectorError, WovenKnowledgeConnector } from "./connector";
 import { WovenTeamClient } from "./http";
 import type { CompanySelector } from "./session";
-import { COMPANY, FakeWoven, PASSWORD, USERNAME, defaultState, noSleep, uuid } from "./test-support";
+import { COMPANY, FakeWoven, PASSWORD, USERNAME, defaultState, noSleep, uuid, REFERENCE_SYNC_POLICY } from "./test-support";
 
 function connectorFor(fake: FakeWoven, options: { password?: string; company?: string; selector?: CompanySelector; maxBytes?: number } = {}) {
   const client = new WovenTeamClient({ baseUrl: "https://app.woven.team", fetch: fake.fetch, sleep: noSleep, transport: { minIntervalMs: 0, baseBackoffMs: 0 } });
@@ -635,7 +635,7 @@ describe("the six adapters, against the handoff's shapes", () => {
     const fake = new FakeWoven();
     const { connector } = connectorFor(fake);
     await connector.connect();
-    for (const type of CONTENT_TYPES) ok(await connector.list(type));
+    for (const type of REFERENCE_SYNC_POLICY.contentTypes) ok(await connector.list(type));
     const body = (path: string) => fake.log.find((r) => r.path === path)?.body;
     expect(JSON.parse(body("/KnowledgeCenter/_Search_Procedures")!)).toEqual({ pModel: { FilterText: "", Categories: [], Frequencies: [], Positions: [], Tags: [] } });
     expect(JSON.parse(body("/KnowledgeElement/_KnowledgeElement_List_ForDataTable")!)).toEqual({ pModel: { LearningElementStatus: "null", Tags: [] } });

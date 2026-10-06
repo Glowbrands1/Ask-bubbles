@@ -7,7 +7,8 @@ import { WovenKnowledgeConnector } from "./connector";
 import { WovenTeamClient } from "./http";
 import { readWovenKnowledgeContent, readWovenKnowledgeStatus } from "./status";
 import { runWovenKnowledgeSync } from "./sync";
-import { COMPANY, FakeWoven, PASSWORD, USERNAME, noSleep, uuid } from "./test-support";
+import { COMPANY, FakeWoven, PASSWORD, USERNAME, noSleep, uuid, REFERENCE_SYNC_POLICY } from "./test-support";
+import { WOVEN_KNOWLEDGE_TENANT } from "@/config/company/woven";
 
 /**
  * ============================================================================
@@ -24,6 +25,9 @@ const CONFIG: WovenKnowledgeConfig = {
   enabled: true,
   baseUrl: "https://app.woven.team",
   company: COMPANY,
+  companyId: WOVEN_KNOWLEDGE_TENANT.companyId,
+  tenantProblem: null,
+  downloads: { fileLibrary: false, handbook: false },
   credentials: { username: USERNAME, password: PASSWORD },
   missingCredentials: [],
   problems: [],
@@ -49,7 +53,7 @@ class Harness {
       credentials: CONFIG.credentials!,
       company: COMPANY,
     });
-    return runWovenKnowledgeSync({ mode, trigger: "manual", requestedBy: "admin:test" }, { config: CONFIG, store: this.store, sink: this.sink, connector, now: () => this.clock });
+    return runWovenKnowledgeSync({ mode, trigger: "manual", requestedBy: "admin:test" }, { config: CONFIG, store: this.store, sink: this.sink, connector, now: () => this.clock, policy: REFERENCE_SYNC_POLICY });
   }
 
   status() {

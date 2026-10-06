@@ -48,6 +48,22 @@ import type {
  *   3. Across the run, if more than `MASS_REMOVAL_FLOOR` items AND more than
  *      `MASS_REMOVAL_SHARE` of what is in Ask Bubbles would leave at once, every
  *      removal is held until an administrator confirms it.
+ *   4. If ANY listing in the run failed or was not trusted, no item of ANY
+ *      type is removed for being absent (`removal_held_incomplete`). Absence
+ *      is only evidence when the whole read was complete. Retirements backed
+ *      by positive evidence — the source now says unpublished, or the
+ *      audience narrowed — still apply.
+ *
+ * TWO SOURCE-SUPPLIED GATES, both checked before any audience decision:
+ *
+ *   hold                 a record that must be confirmed by a person before it
+ *                        may enter Ask Bubbles at all (content that appears to
+ *                        belong to another company). NEEDS_REVIEW, never
+ *                        ingested, never offered as an audience choice.
+ *   audienceRestriction  an audience that is narrower than, or unclear
+ *                        against, "everyone signed in to Ask Bubbles". Ask
+ *                        Bubbles cannot honour it, so it is EXCLUDED, and an
+ *                        administrator's audience decision cannot share it.
  */
 
 export const LISTING_SHRINK_BASELINE = 10;
@@ -65,6 +81,10 @@ export interface ReconcileInput {
   now: string;
   /** An administrator confirmed a large removal this run. */
   confirmLargeRemoval?: boolean;
+  /** A reason code when this record must be confirmed by a person before it may be synced. */
+  hold?: (record: SourceRecord) => string | null;
+  /** A reason code when this audience can never be shared with every Ask Bubbles user. */
+  audienceRestriction?: (audience: readonly string[] | null) => string | null;
 }
 
 export interface ReconcileOutput {
@@ -74,6 +94,14 @@ export interface ReconcileOutput {
   audiences: SyncReport["audiences"];
   removalsHeld: number;
   attention: AttentionItem[];
+  /**
+   * Manifest keys of BLOCKED parts that would otherwise be ingested: published,
+   * not held, audience shareable. What a dry run reports as "would download
+   * once enabled".
+   */
+  blockedEligible: string[];
+  /** Manifest keys of parts held by `hold`, with the reason. */
+  held: string[];
 }
 
 export function manifestKey(item: { contentType: string; entityId: string; partKey: string }): string {
@@ -117,6 +145,7 @@ export function emptyTypeReport(listing: TypeReport["listing"] = "not_read"): Ty
     excludedUnpublished: 0,
     excludedUnsupported: 0,
     excludedByDecision: 0,
+    excludedRestricted: 0,
     needsReview: 0,
     blocked: 0,
     blockedCapabilities: [],
@@ -131,11 +160,16 @@ export function emptyTypeReport(listing: TypeReport["listing"] = "not_read"): Ty
   };
 }
 
+const RESTRICTED_REASONS = new Set(["audience_restricted", "audience_unclear"]);
+
 function isRetiredForAccess(item: ManifestItem | undefined): boolean {
   return (
     item !== undefined &&
     item.syncedFingerprint !== null &&
-    (item.reason === "audience_needs_review" || item.reason === "audience_excluded")
+    (item.reason === "audience_needs_review" ||
+      item.reason === "audience_excluded" ||
+      item.reason === "ownership_review" ||
+      (item.reason !== null && RESTRICTED_REASONS.has(item.reason)))
   );
 }
 
@@ -153,10 +187,36 @@ function plan(
   });
 
   if (record.publication !== "published") {
-    return retire("UNPUBLISHED", record.publication === "unknown" ? "status_not_recognised" : "not_published");
+    return retire(
+      "UNPUBLISHED",
+      record.publicationReason ?? (record.publication === "unknown" ? "status_not_recognised" : "not_published"),
+    );
   }
+
+  /*
+   * OWNERSHIP BEFORE EVERYTHING ELSE. A record that may belong to another
+   * company is not put in front of anyone as an audience choice, and a copy
+   * already in Ask Bubbles is withdrawn until a person confirms it.
+   */
+  const held = input.hold?.(record) ?? null;
+  if (held) {
+    if (live) return { state: "PERMISSION_CHANGED", pendingAction: "retire", reason: held };
+    return { state: "NEEDS_REVIEW", pendingAction: "none", reason: held };
+  }
+
   if (part.retrieval.kind === "unsupported_format") {
     return retire("EXCLUDED", "unsupported_format");
+  }
+
+  /*
+   * NEVER-SHAREABLE, BEFORE BLOCKED: an audience Ask Bubbles cannot honour is
+   * never shared — not even by an administrator's decision — and that is a
+   * final answer whatever capability the part is still waiting for.
+   */
+  const restricted = input.audienceRestriction?.(record.audience) ?? null;
+  if (restricted) {
+    if (live) return { state: "PERMISSION_CHANGED", pendingAction: "retire", reason: restricted };
+    return { state: "EXCLUDED", pendingAction: "none", reason: restricted };
   }
 
   /*
@@ -223,11 +283,13 @@ function count(report: TypeReport, state: SyncState, reason: string | null): voi
       report.errors += 1;
       break;
     case "NEEDS_REVIEW":
-      report.needsReview += 1;
+      if (reason === "ownership_review") report.heldForOwnership = (report.heldForOwnership ?? 0) + 1;
+      else report.needsReview += 1;
       break;
     case "EXCLUDED":
       if (reason === "unsupported_format") report.excludedUnsupported += 1;
       else if (reason === "audience_excluded") report.excludedByDecision += 1;
+      else if (reason !== null && RESTRICTED_REASONS.has(reason)) report.excludedRestricted += 1;
       else report.excludedUnpublished += 1;
       break;
   }
@@ -239,6 +301,9 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
   const attention: AttentionItem[] = [];
   const items: ManifestItem[] = [];
   const audiences = new Map<string, SyncReport["audiences"][number]>();
+  const blockedEligible: string[] = [];
+  const held: string[] = [];
+  let restrictedParts = 0;
 
   for (const listing of input.listings) {
     if (!listing.ok) {
@@ -302,8 +367,22 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
 
         const eligible = record.publication === "published" && part.retrieval.kind !== "unsupported_format";
         if (eligible) report.eligible += 1;
-        /* Only parts Ask Bubbles could actually hold need an audience decision. */
-        if (eligible && part.retrieval.kind === "available") {
+        /* Flagged whatever its publication, so a dry run lists every record that may belong to another company. */
+        const heldReason = input.hold?.(record) ?? null;
+        if (heldReason) held.push(key);
+        const restrictedReason = eligible && !heldReason ? (input.audienceRestriction?.(record.audience) ?? null) : null;
+        if (restrictedReason) restrictedParts += 1;
+        if (
+          eligible &&
+          !heldReason &&
+          !restrictedReason &&
+          part.retrieval.kind === "blocked" &&
+          decideAccess(record.audience, input.companyWideLabels, input.decisions).kind === "company_wide"
+        ) {
+          blockedEligible.push(key);
+        }
+        /* Only parts Ask Bubbles could actually hold — and may ever share — need an audience decision. */
+        if (eligible && !heldReason && !restrictedReason && part.retrieval.kind === "available") {
           const akey = audienceKey(record.audience);
           const entry = audiences.get(akey) ?? {
             audienceKey: akey,
@@ -385,8 +464,32 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     }
   }
 
+  /*
+   * Guard 4: absence is evidence only when the whole read was complete. One
+   * failed or untrusted listing holds every absence-based removal of the run.
+   */
+  const incomplete =
+    input.listings.some((l) => !l.ok) || Object.values(byType).some((r) => r !== undefined && r.listing === "not_trusted");
+  let absenceHeld = 0;
+  if (incomplete) {
+    for (const item of items) {
+      if (item.pendingAction === "retire" && item.reason === "not_in_source") {
+        item.pendingAction = "none";
+        item.reason = "removal_held_incomplete";
+        absenceHeld += 1;
+      }
+    }
+    if (absenceHeld > 0) {
+      attention.push({
+        code: "removals_held_incomplete",
+        message: `${absenceHeld} document${absenceHeld === 1 ? "" : "s"} no longer listed in Woven ${absenceHeld === 1 ? "was" : "were"} kept, because part of this sync's read of Woven was incomplete. They will be checked again on the next complete sync.`,
+        count: absenceHeld,
+      });
+    }
+  }
+
   /* Guard 3: hold a mass removal. */
-  let removalsHeld = 0;
+  let removalsHeld = absenceHeld;
   const retiring = items.filter((item) => item.pendingAction === "retire");
   const live = input.manifest.filter((item) => item.inKnowledgeBase).length;
   if (
@@ -398,7 +501,7 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
       item.pendingAction = "none";
       item.reason = "removal_held";
     }
-    removalsHeld = retiring.length;
+    removalsHeld += retiring.length;
     attention.push({
       code: "mass_removal_held",
       message: `${retiring.length} documents disappeared from Woven or stopped being shared at once. They are still in Ask Bubbles until you confirm the removal.`,
@@ -416,11 +519,28 @@ export function reconcile(input: ReconcileInput): ReconcileOutput {
     });
   }
 
+  if (restrictedParts > 0) {
+    attention.push({
+      code: "restricted_audience_excluded",
+      message: `${restrictedParts} published item${restrictedParts === 1 ? " is" : "s are"} limited to specific teams or positions (or has an unclear audience) in Woven, so ${restrictedParts === 1 ? "it was" : "they were"} kept out of Ask Bubbles. Ask Bubbles shows every document to everyone signed in, so these cannot be shared.`,
+      count: restrictedParts,
+    });
+  }
+  if (held.length > 0) {
+    attention.push({
+      code: "ownership_review",
+      message: `${held.length} item${held.length === 1 ? " looks" : "s look"} like ${held.length === 1 ? "it belongs" : "they belong"} to another company and ${held.length === 1 ? "was" : "were"} held out of Ask Bubbles until someone confirms ${held.length === 1 ? "it is" : "they are"} meant for this company.`,
+      count: held.length,
+    });
+  }
+
   return {
     items,
     byType,
     audiences: [...audiences.values()].sort((a, b) => b.items - a.items || a.label.localeCompare(b.label)),
     removalsHeld,
     attention,
+    blockedEligible,
+    held,
   };
 }

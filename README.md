@@ -75,7 +75,7 @@ company decides lives in `src/config/company/`:
 | `reports.ts`, `reports.server.ts` | The report registry and its server-side data loaders (empty) |
 | `knowledge.ts` | Knowledge sources and pinned-document roles |
 | `assistant.ts` | Assistant purpose, voice and quick questions |
-| `woven.ts` | Woven access-preview policy |
+| `woven.ts` | Woven access-preview policy; the pinned knowledge-sync company and its ownership-review rules |
 | `features.ts` | Feature flags for each section |
 | `analytics.ts`, `job-titles.ts` | Topic vocabulary and job titles |
 
@@ -109,7 +109,7 @@ sidebar only hides what a role cannot open; it is not the boundary.
 | Forms | One placeholder, *Team Member Check-In (Example)*, labelled "EXAMPLE FORM — not an approved Buff City Soap form" |
 | Reports | **None.** The framework is in place; no KPIs are invented |
 | Knowledge | No documents. Upload or Woven Team sync |
-| Woven | Adapter ready, **off** until credentials and company identifiers are set |
+| Woven | Adapters ready, **off** until credentials are set. Knowledge company pinned to Midwest Soap Makers (`55839F24-…`); downloads off until verified |
 | Role matrix | Sensible defaults in `access.ts`, to be confirmed |
 
 ## Access model
@@ -179,8 +179,11 @@ Two adapters, both **observe-only** and **off by default**:
   people, positions and locations; person-reviewed location and position
   mappings; an access preview (`WOVEN_ACCESS_MODE=off|shadow`; there is no
   apply mode).
-- **Knowledge** (`src/lib/knowledge-sync/woven`) — Woven Team handbooks into the
-  knowledge base, with administrator audience decisions.
+- **Knowledge** (`src/lib/knowledge-sync/woven/bcs`) — Buff City Soap's Woven
+  company (Midwest Soap Makers, pinned by Company ID) into the knowledge base:
+  Policies, Handbooks, Procedures, File Library and Communications, with
+  publication, audience and ownership rules, a dry-run plan, and a company
+  guard that fails the sync unless the session is provably in that company.
 
 See [docs/woven.md](docs/woven.md) for exactly what is needed from Buff.
 

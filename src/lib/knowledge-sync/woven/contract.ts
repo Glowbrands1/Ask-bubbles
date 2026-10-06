@@ -3,6 +3,14 @@
  * THE WOVEN TEAM WEB-APP CONTRACT — every assumed Woven name, in one file
  * ============================================================================
  *
+ * WHICH COMPANY THIS EVIDENCE IS FOR. Everything here was verified against the
+ * reference platform's company (JB & Associates), not Buff City Soap. The
+ * Buff City Soap connector (`./bcs`) uses its OWN verified contract
+ * (`./bcs/contract.ts`) and takes from this file only the sign-in and
+ * account-chooser steps (same Woven web app, same login) and the handbook
+ * download flow behind WOVEN_HANDBOOK_DOWNLOAD_ENABLED. The reference
+ * connector (`./connector.ts`) is kept for the shared engine's tests.
+ *
  * SOURCE OF TRUTH: the reference platform's read-only Woven Team connector
  * handoff, compiled from authenticated Woven Team pages and the JavaScript
  * those pages served. These are Woven Team's INTERNAL, authenticated web-app

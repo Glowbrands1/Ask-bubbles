@@ -1,5 +1,6 @@
 import "server-only";
 
+import { WOVEN_KNOWLEDGE_TENANT } from "@/config/company/woven";
 import { DEFAULT_WOVEN_TEAM_BASE_URL } from "./contract";
 
 /**
@@ -28,6 +29,15 @@ export const WOVEN_TEAM_USERNAME_ENV = "WOVEN_TEAM_USERNAME";
 export const WOVEN_TEAM_PASSWORD_ENV = "WOVEN_TEAM_PASSWORD";
 export const WOVEN_TEAM_COMPANY_ENV = "WOVEN_TEAM_COMPANY";
 export const WOVEN_TEAM_BASE_URL_ENV = "WOVEN_TEAM_BASE_URL";
+/** The Woven Company ID (GUID) to sync. Must equal the pinned `WOVEN_KNOWLEDGE_TENANT.companyId`. */
+export const WOVEN_TEAM_COMPANY_ID_ENV = "WOVEN_TEAM_COMPANY_ID";
+/**
+ * DOWNLOADS NOT YET VERIFIED FOR THIS COMPANY. Each stays OFF until one
+ * approved sample download has been checked (see docs/woven.md). Off, the
+ * part is BLOCKED: tracked and reported, never fetched.
+ */
+export const WOVEN_FILE_LIBRARY_DOWNLOAD_ENABLED_ENV = "WOVEN_FILE_LIBRARY_DOWNLOAD_ENABLED";
+export const WOVEN_HANDBOOK_DOWNLOAD_ENABLED_ENV = "WOVEN_HANDBOOK_DOWNLOAD_ENABLED";
 
 export interface WovenTeamCredentials {
   username: string;
@@ -37,8 +47,18 @@ export interface WovenTeamCredentials {
 export interface WovenKnowledgeConfig {
   enabled: boolean;
   baseUrl: string;
-  /** The Woven company this build syncs. */
+  /** The Woven company this build syncs, by name (the account chooser and menu show it). */
   company: string;
+  /**
+   * The Woven Company ID (GUID) the session must prove before anything is
+   * read. Empty when unset; `tenantProblem` says when it is set but is not the
+   * pinned company.
+   */
+  companyId: string;
+  /** Set when `companyId` is not the company this build is pinned to. The sync refuses to start. */
+  tenantProblem: string | null;
+  /** Downloads switched on after their route was verified for this company. Default off. */
+  downloads: { fileLibrary: boolean; handbook: boolean };
   credentials: WovenTeamCredentials | null;
   missingCredentials: string[];
   problems: string[];
@@ -107,10 +127,20 @@ export function readWovenKnowledgeConfig(env: Env = process.env): WovenKnowledge
   /* The company is required: a login can see several, and guessing one is how the wrong tenant gets synced. */
   const company = (env[WOVEN_TEAM_COMPANY_ENV] ?? "").trim();
 
+  const companyId = (env[WOVEN_TEAM_COMPANY_ID_ENV] ?? "").trim();
+
   const missingCredentials: string[] = [];
   if (!username) missingCredentials.push(WOVEN_TEAM_USERNAME_ENV);
   if (password.length === 0) missingCredentials.push(WOVEN_TEAM_PASSWORD_ENV);
   if (!company) missingCredentials.push(WOVEN_TEAM_COMPANY_ENV);
+  if (!companyId) missingCredentials.push(WOVEN_TEAM_COMPANY_ID_ENV);
+
+  /* The id is pinned in company config: an environment variable alone cannot point this build at another company. */
+  const tenantProblem =
+    companyId && !sameCompanyId(companyId, WOVEN_KNOWLEDGE_TENANT.companyId)
+      ? `${WOVEN_TEAM_COMPANY_ID_ENV} is not the ${WOVEN_KNOWLEDGE_TENANT.brand} company (${WOVEN_KNOWLEDGE_TENANT.companyName}) this build syncs, so knowledge sync will not start.`
+      : null;
+  if (tenantProblem) problems.push(tenantProblem);
 
   const enabled = readFlag(env, WOVEN_KNOWLEDGE_SYNC_ENABLED_ENV);
   if (enabled && missingCredentials.length > 0) {
@@ -125,9 +155,22 @@ export function readWovenKnowledgeConfig(env: Env = process.env): WovenKnowledge
     enabled,
     baseUrl: readBaseUrl(env, problems),
     company,
-    credentials: missingCredentials.length === 0 ? { username, password } : null,
+    companyId,
+    tenantProblem,
+    downloads: {
+      fileLibrary: readFlag(env, WOVEN_FILE_LIBRARY_DOWNLOAD_ENABLED_ENV),
+      handbook: readFlag(env, WOVEN_HANDBOOK_DOWNLOAD_ENABLED_ENV),
+    },
+    /* A foreign Company ID withholds the credentials too: nothing can sign in on its behalf. */
+    credentials: missingCredentials.length === 0 && !tenantProblem ? { username, password } : null,
     missingCredentials,
     problems,
     previewTestModeAllowed: previewTestModeAllowed(env),
   };
+}
+
+/** GUIDs compare without case or braces: Woven shows them upper-case, a page may not. */
+export function sameCompanyId(a: string, b: string): boolean {
+  const norm = (v: string) => v.trim().replace(/^\{|\}$/g, "").toLowerCase();
+  return norm(a).length > 0 && norm(a) === norm(b);
 }

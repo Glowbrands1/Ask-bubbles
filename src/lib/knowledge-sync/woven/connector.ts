@@ -67,6 +67,11 @@ import { establishSession, type CompanySelector, type CompanyVerifier } from "./
  * THE WOVEN KNOWLEDGE CONNECTOR — the Woven side of the source-neutral engine
  * ============================================================================
  *
+ * THE REFERENCE PLATFORM'S CONNECTOR, against its own company's verified
+ * routes (`./contract.ts`). Production syncs Buff City Soap with
+ * `./bcs/connector.ts`; this one is kept for the shared engine's tests and
+ * for its file helpers (`verifiedFile`, `indexableFile`).
+ *
  *   connect()    sign in, select and CONFIRM the company, or throw
  *   list(type)   read one content type completely, or report exactly why not
  *   fetchPart()  obtain a FRESH temporary link and the bytes, immediately
@@ -240,6 +245,9 @@ export class WovenKnowledgeConnector implements KnowledgeSourceConnector {
         const records = parseCourseList(await this.withSession(() => client.postJson(COURSE_LIST_PATH, COURSE_LIST_BODY)));
         return { records, diagnostics: {} };
       }
+      case "communication":
+        /* Communications are read only by the Buff City Soap connector (`./bcs`), from its verified route. */
+        throw new WovenConnectorError("woven_unsupported_content_type", "This Woven connector does not read Communications.");
     }
   }
 

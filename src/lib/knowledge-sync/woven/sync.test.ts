@@ -15,12 +15,16 @@ import type { WovenKnowledgeConfig } from "./config";
 import { WovenKnowledgeConnector } from "./connector";
 import { WovenTeamClient } from "./http";
 import { decideScheduledWork, nextAutomaticSyncAt, readOnlySink, runScheduledWovenKnowledgeTick, runWovenKnowledgeSync, testWovenConnection, type WovenRunOutcome } from "./sync";
-import { COMPANY, FakeWoven, PASSWORD, USERNAME, noSleep, uuid } from "./test-support";
+import { COMPANY, FakeWoven, PASSWORD, USERNAME, noSleep, uuid, REFERENCE_SYNC_POLICY } from "./test-support";
+import { WOVEN_KNOWLEDGE_TENANT } from "@/config/company/woven";
 
 const CONFIG: WovenKnowledgeConfig = {
   enabled: true,
   baseUrl: "https://app.woven.team",
   company: COMPANY,
+  companyId: WOVEN_KNOWLEDGE_TENANT.companyId,
+  tenantProblem: null,
+  downloads: { fileLibrary: false, handbook: false },
   credentials: { username: USERNAME, password: PASSWORD },
   missingCredentials: [],
   problems: [],
@@ -52,7 +56,7 @@ class Harness {
   }
 
   overrides() {
-    return { config: CONFIG, store: this.store, sink: this.sink, connector: this.connector(), now: () => this.clock };
+    return { config: CONFIG, store: this.store, sink: this.sink, connector: this.connector(), now: () => this.clock, policy: REFERENCE_SYNC_POLICY };
   }
 
   run(mode: "preview" | "sync" | "continue", extra: { trigger?: "manual" | "schedule"; confirmLargeRemoval?: boolean } = {}) {
@@ -109,6 +113,7 @@ describe("setup safety", () => {
       WOVEN_KNOWLEDGE_SYNC_ENABLED: "true",
       WOVEN_TEAM_USERNAME: USERNAME,
       WOVEN_TEAM_PASSWORD: PASSWORD,
+      WOVEN_TEAM_COMPANY_ID: WOVEN_KNOWLEDGE_TENANT.companyId,
     });
     expect(config.company).toBe("");
     expect(config.credentials).toBeNull();
@@ -652,30 +657,11 @@ describe("scheduling every 30 days", () => {
   });
 });
 
-describe("test connection", () => {
-  it("signs in, confirms the company, reads one list, writes nothing", async () => {
-    const fake = new FakeWoven();
-    const client = new WovenTeamClient({ baseUrl: CONFIG.baseUrl, fetch: fake.fetch, sleep: noSleep, transport: { minIntervalMs: 0 } });
-    expect(await testWovenConnection({ config: CONFIG, client })).toEqual({ status: "ok", company: COMPANY, handbooksVisible: 2 });
-    expect(fake.log.every((r) => r.method === "GET" || r.path === "/Login/Authenticate" || r.path.includes("_List_"))).toBe(true);
-  });
-
-  it("passes through the verified account chooser and the photo prompt to Example Soap Co", async () => {
-    const fake = new FakeWoven();
-    fake.state.requireCompanySelection = true;
-    fake.state.photoPrompt = true;
-    const client = new WovenTeamClient({ baseUrl: CONFIG.baseUrl, fetch: fake.fetch, sleep: noSleep, transport: { minIntervalMs: 0 } });
-    expect(await testWovenConnection({ config: CONFIG, client })).toEqual({ status: "ok", company: COMPANY, handbooksVisible: 2 });
-  });
-
-  it("names the company-selection gap when the chooser is not the verified kind", async () => {
-    const fake = new FakeWoven();
-    fake.state.requireCompanySelection = true;
-    fake.state.chooserMechanism = "script";
-    const client = new WovenTeamClient({ baseUrl: CONFIG.baseUrl, fetch: fake.fetch, sleep: noSleep, transport: { minIntervalMs: 0 } });
-    expect(await testWovenConnection({ config: CONFIG, client })).toMatchObject({ status: "failed", code: "woven_company_selection_unverified" });
-  });
-});
+/*
+ * "Test Connection" runs the Buff City Soap connector (company guard by
+ * Company ID included); it is tested against the Buff City Soap fixtures in
+ * `bcs/bcs-sync.test.ts`.
+ */
 
 /** A Supabase store in a database where the migration has not been applied. */
 const missingTables = (): KnowledgeSyncStore =>

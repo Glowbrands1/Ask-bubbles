@@ -330,6 +330,12 @@ export function continueLoginSubmission(
   html: string,
   pagePath: string,
   company: string,
+  /**
+   * When given, the entry is chosen by its `data-company-id` — the identity —
+   * and its visible name must also be `company`. Without it, by name (the
+   * reference platform's behaviour).
+   */
+  expectedCompanyId?: string,
 ): { path: string; fields: Record<string, string> } {
   const doc = parseHtmlDocument(html);
   const changed = (why: string) =>
@@ -339,7 +345,17 @@ export function continueLoginSubmission(
 
   const entries = elementsByTag(doc, "a").filter((a) => hasClass(a, CHOOSER_ENTRY_CLASS));
   const want = normalizeCompany(company);
-  const matches = entries.filter((a) => normalizeCompany(textOf(a)) === want);
+  const wantId = expectedCompanyId?.trim().toLowerCase();
+  const matches = wantId
+    ? entries.filter((a) => (attr(a, CHOOSER_ENTRY_ATTRS.companyId) ?? "").trim().toLowerCase() === wantId)
+    : entries.filter((a) => normalizeCompany(textOf(a)) === want);
+  if (wantId && matches.length === 1 && normalizeCompany(textOf(matches[0]!)) !== want) {
+    throw new WovenTeamError(
+      "company_not_verified",
+      `Woven's account chooser names the configured Company ID something other than ${company}, so Ask Bubbles did not choose it.`,
+      { path: safePath(pagePath) },
+    );
+  }
   if (matches.length === 0) {
     throw new WovenTeamError("company_not_listed", `Woven accepted the sign-in, but ${company} is not one of the accounts it offers this login.`, {
       path: safePath(pagePath),

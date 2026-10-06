@@ -677,3 +677,15 @@ export class FakeWoven {
 }
 
 export const noSleep = async () => {};
+
+/**
+ * The REFERENCE PLATFORM's classification rules: every content type, "Public"
+ * as the only company-wide label, no ownership hold, no audience that can
+ * never be shared. The fixtures in this file follow that platform's Woven
+ * shapes, so the shared engine is tested against them under its own rules.
+ * Production classifies with `BCS_SYNC_POLICY`.
+ */
+export const REFERENCE_SYNC_POLICY = {
+  contentTypes: ["policy", "handbook", "procedure", "file_library", "knowledge_element", "course"] as const,
+  companyWideLabels: ["Public"],
+};

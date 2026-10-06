@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
-import { manifestKey, reconcile } from "./reconcile";
+import { buildDryRunPlan } from "./dry-run";
+import { manifestKey, reconcile, type ReconcileInput } from "./reconcile";
 import { SinkError, type DescribeItem, type KnowledgeSink, type KnowledgeSyncStore } from "./ports";
 import {
   PartFetchError,
@@ -44,6 +45,11 @@ import {
  * manifest only once ingestion has created the document, because the
  * manifest's `knowledge_document_id` is a foreign key to it.
  *
+ * THE TENANT IS PROVED TWICE. `connect()` proves it before anything is read,
+ * and `assertTenant()` (when the connector has one) proves it again after
+ * every listing and BEFORE reconciliation: a session that changed company
+ * mid-run aborts the run with nothing saved, classified or applied.
+ *
  * NOTHING SECRET PASSES THROUGH HERE. Connectors resolve temporary download
  * URLs internally and hand back bytes; the engine never sees a URL, a cookie
  * or a token, so none can reach the manifest, the audit log or a report.
@@ -64,6 +70,10 @@ export interface EngineDeps {
   now?: () => Date;
   /** Epoch ms after which no new item is started. Planned work carries over to a `continue` run. */
   deadlineAt?: number | null;
+  /** Records a person must confirm before they may be synced (see `reconcile`). */
+  hold?: ReconcileInput["hold"];
+  /** Audiences that can never be shared with every Ask Bubbles user (see `reconcile`). */
+  audienceRestriction?: ReconcileInput["audienceRestriction"];
 }
 
 export interface RunOptions {
@@ -248,6 +258,18 @@ export async function runKnowledgeSync(deps: EngineDeps, options: RunOptions): P
         throw new RunAborted(first?.code ?? "listing_failed", first?.message ?? "No Woven content could be read.");
       }
 
+      /* The tenant, again: nothing read is used unless the session is still in the right company. */
+      if (deps.connector.assertTenant) {
+        try {
+          report.company = await deps.connector.assertTenant();
+        } catch (error) {
+          throw new RunAborted(
+            (error as { code?: string }).code ?? "tenant_not_verified",
+            error instanceof Error ? error.message : "The source company could not be confirmed again after reading.",
+          );
+        }
+      }
+
       const scan = reconcile({
         source,
         listings,
@@ -256,6 +278,8 @@ export async function runKnowledgeSync(deps: EngineDeps, options: RunOptions): P
         companyWideLabels: deps.companyWideLabels,
         now: now().toISOString(),
         confirmLargeRemoval: options.confirmLargeRemoval,
+        hold: deps.hold,
+        audienceRestriction: deps.audienceRestriction,
       });
       report.byType = scan.byType;
       report.audiences = scan.audiences;
@@ -280,6 +304,7 @@ export async function runKnowledgeSync(deps: EngineDeps, options: RunOptions): P
 
       if (options.mode === "preview") {
         tally(report, [...merged.values()], new Set(scan.items.map(manifestKey)));
+        report.plan = buildDryRunPlan(listings, scan);
         /*
          * The inventory: what was found, as display metadata only, so the
          * screen can list it and take the audience choices before the initial
@@ -580,7 +605,8 @@ function tally(report: SyncReport, items: ManifestItem[], scanned: Set<string> |
         t.excluded += 1;
         break;
       case "NEEDS_REVIEW":
-        t.needsReview += 1;
+        if (item.reason === "ownership_review") t.heldForOwnership = (t.heldForOwnership ?? 0) + 1;
+        else t.needsReview += 1;
         break;
       case "BLOCKED":
         t.blocked += 1;

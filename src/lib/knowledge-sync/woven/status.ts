@@ -352,6 +352,7 @@ const TYPE_LABEL: Record<ContentType, string> = {
   file_library: "File Library",
   knowledge_element: "Knowledge Elements",
   course: "Courses",
+  communication: "Communications",
 };
 
 /** What a scan could not read, in plain sentences — the parser and capability problems an admin should know before Sync Now. */
