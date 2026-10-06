@@ -334,26 +334,45 @@ file is cheaper to keep in step than a dependency.
 
 ## 8. Buff City Soap Woven knowledge behind this chat
 
-The Woven connector for Buff City Soap (Midwest Soap Makers) is being built in
-a separate session on `claude/practical-allen-5gjnfh` (commit `294775b` at the
-time of writing; see that branch's `docs/woven.md`). It plugs into the
-existing knowledge-sync engine and writes into the same
-`knowledge_documents` / `knowledge_chunks` the chat already reads, so **no
-chat-side change is needed for Woven content**: grounding, citations,
-follow-ups and refusals apply to it exactly as to an upload.
+The Midwest Soap Makers connector (`294775b`, `f7d018a`, built in its own
+session) is merged into this branch. Its own documentation is
+[docs/woven.md](woven.md). It plugs into the existing knowledge-sync engine and
+writes into the same `knowledge_documents` / `knowledge_chunks` the chat
+already reads, so **the chat route and answer path contain no Woven or
+company-specific code**: grounding, citations, follow-ups and refusals apply to
+synced Woven content exactly as to an upload.
 
-Verified by merging that commit with this branch locally (not pushed): the
-connector's sanitized BCS fixtures, through the real connector, company guard,
-sync store and sink, ingestion and `match_knowledge_chunks` on PGlite, then
-the real `answerQuestion`:
+```
+Woven (Midwest Soap Makers only; Company ID proved on /Company)
+  → BCS connector + company guard → publication / audience / ownership rules
+  → sync engine + reconciliation → knowledge sink → ingestion
+  → Ask Bubbles Supabase (knowledge_documents / knowledge_chunks)
+  → match_knowledge_chunks (+ follow-up fallback, §7) → answerQuestion → /api/chat
+```
 
-| # | Question | Result |
-|---|---|---|
-| Q1 | Opening procedure | Grounded, cited "Opening the Makery" |
-| Q2 | Fire extinguisher | Cited "Fire Extinguisher Use" only |
-| Q3 | "and then what?" after Q1 | Retrieved via the anchor fallback |
-| Q4 | Managers-only procedure (Chemical Handling) | Never retrieved |
-| Q5 | Draft procedure (Closing Checklist) | Never retrieved |
-| Q6 | JB & Associates / Sun Tan City content, JBA manual | Never retrieved |
-| Q7 | Policies, File Library (restricted and unverified) | Never retrieved |
-| Q8 | No supported answer | Nothing cited, `insufficient` |
+### End-to-end QA — FIXTURES, NOT LIVE
+
+`src/lib/knowledge-sync/woven/bcs/bcs-chat-isolation.integration.test.ts`
+drives the connector's sanitized fake Woven — three companies on one login —
+through the real connector, guard, engine, reconciliation, Supabase sync store
+and sink, ingestion and `match_knowledge_chunks` (the repository's migrations
+on PGlite), then asks through the real `answerQuestion`. Only the model call
+and the embedder are replaced; "never retrieved" is checked on what actually
+reached the model.
+
+| Area | Cases |
+|---|---|
+| Knowledge | named procedure (cited by Woven title; invalid marker never a card); multi-source; no answer; "and then what?" (retrieved via the manager's question, never the answer text); unrelated whole question after a topic |
+| Fails closed | managers-only procedure; draft; unpublished File Library item; ambiguous-audience item; JBA document; Sun Tan City document; a third company's document; policy awaiting publication verification; File Library document while downloads are disabled; an administrator trying to share the managers-only audience |
+| Company guard | sign-in that lands in JB & Associates or a third company (at the scan and at the sync): no content read, nothing ingested; session that switches to JB mid-run: nothing of it ingested and nothing of ours removed |
+| Reconciliation | unpublished, restricted to managers, moved to an unclear audience, deleted, approval withdrawn by an administrator: each leaves chat after the next sync; a newly shared procedure enters it |
+
+**Mutation-tested.** Each safeguard was disabled in turn and the suite had to
+fail: the company-page guard (3 tests fail), the rule that an administrator
+cannot share a narrow audience (1), the publication filter (3), and retirement
+on a withdrawn approval (1). Two first attempts did not fail, and that found a
+vacuous test (a sync run before any scan was refused before signing in) and a
+mutation of a display-only field; both were corrected.
+
+Live QA against the real Midwest Soap Makers account has **not** been run: it
+needs the `WOVEN_BCS_*` credentials and the Ask Bubbles server keys.

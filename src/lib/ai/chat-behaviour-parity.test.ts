@@ -133,6 +133,20 @@ describe("the intake survives across turns, and nothing is asked twice", () => {
     expect(replies[0]!.content).toMatch(/What the form should cover/);
   });
 
+  it("multi-turn: the form, the person, what happened and when each arrive in their own turn and are all kept", async () => {
+    const { replies } = await converse([
+      "I need a coaching note",
+      "it's for avery testperson",
+      "she was late twice this week",
+      "the date is 10/5",
+    ]);
+    const last = replies[3]!;
+    expect(last.formProposal?.templateKey).toBe("fixture-coaching");
+    expect(last.formProposal?.employeeName?.toLowerCase()).toBe("avery testperson");
+    expect(last.formProposal?.formDate).toBe("2026-10-05");
+    expect(last.content).not.toMatch(/Who is this form for|employee's full name|What the form should cover/);
+  });
+
   it("a question in the middle of an intake is answered, not swallowed", async () => {
     const { replies } = await converse(["coaching note for Avery Testperson", "what does the attendance policy say?"]);
     expect(replies[1]).toBeNull();
@@ -145,6 +159,7 @@ describe("names as managers type them", () => {
     ["coaching note for avery testperson", "avery testperson"],
     ['coaching note for "Avery Testperson"', "Avery Testperson"],
     ["coaching note for AVERY TESTPERSON", "AVERY TESTPERSON"],
+    ["coaching note for Avery", "Avery"],
   ])("%s", async (question, name) => {
     const { replies } = await converse([question]);
     expect(replies[0]!.formProposal?.employeeName).toBe(name);
