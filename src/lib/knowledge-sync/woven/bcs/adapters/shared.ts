@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { Publication, SourcePart } from "../../../types";
-import { WovenShapeError } from "../../adapters";
+import { WovenShapeError } from "../../shared";
 import { attr, hasClass, htmlText, parseHtmlFragment, shownText, textOf, walk } from "../../html";
 
 /**

@@ -12,13 +12,13 @@
  *
  *   VERIFIED_WEB_APP_INTERNAL_ROUTE  seen in the authenticated BCS session.
  *   VERIFIED_UI                      seen on screen only.
- *   VERIFIED_OTHER_TENANT            verified in the SAME Woven web app for the
- *                                    JB & Associates company (the reference
- *                                    platform's connector, `../contract.ts`),
- *                                    not yet for Buff City Soap. Used only for
- *                                    the sign-in / account chooser — the one
- *                                    step the BCS handoff did not capture — and
- *                                    behind gates for downloads.
+ *   WEB_APP_SIGN_IN                  the Woven web app's own sign-in and
+ *                                    account chooser (`../web-app.ts`):
+ *                                    tenant-neutral, captured with the same
+ *                                    login by the reference platform; the BCS
+ *                                    handoff did not re-capture it. The company
+ *                                    is chosen by the pinned id and proved on
+ *                                    /Company, so a wrong step fails closed.
  *   UNVERIFIED                       not checked. Never executed; a part that
  *                                    needs it is BLOCKED, tracked by its
  *                                    capability code below.
@@ -174,7 +174,7 @@ export const FILE_LIBRARY_LEVELS = ["Brand", "Account"] as const;
  * VERIFIED download route (from page JS DownloadFileLibraryDocument). Its
  * RESPONSE is UNVERIFIED (direct bytes or a redirect to storage; no download
  * was performed) and it may record a download event in Woven's engagement
- * analytics. Executed only with WOVEN_FILE_LIBRARY_DOWNLOAD_ENABLED, after one
+ * analytics. Executed only with WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED, after one
  * approved sample download.
  */
 export const fileLibraryDownloadPath = (fileLibraryId: string) =>
@@ -224,7 +224,6 @@ export const TEAM_POSITION_AUDIENCE = /^(all|\d+)\s+teams?\s+(all|\d+)\s+positio
 export const BCS_CAPABILITY = {
   fileLibraryDownload: "file_library_download_unverified",
   handbookDownload: "handbook_download_unverified",
-  procedureAttachment: "procedure_attachment_download_unverified",
   procedureContent: "procedure_content",
   policyBody: "policy_body",
   communicationDetail: "communication_detail_unverified",

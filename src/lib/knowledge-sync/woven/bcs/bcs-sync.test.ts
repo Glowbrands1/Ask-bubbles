@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { WOVEN_KNOWLEDGE_TENANT } from "@/config/company/woven";
 import { audienceKey } from "../../access";
 import { MemoryKnowledgeSink, MemoryKnowledgeSyncStore } from "../../memory-store";
 import type { DryRunPlan, ManifestItem, SyncReport } from "../../types";
-import { readWovenKnowledgeConfig, type WovenKnowledgeConfig } from "../config";
+import { type WovenKnowledgeConfig } from "../config";
 import { WovenTeamClient } from "../http";
 import { createWovenKnowledgeConnector, runWovenKnowledgeSync, testWovenConnection, type WovenRunOutcome } from "../sync";
 import { BCS_COMPANY, BCS_COMPANY_ID, FakeBcsWoven, JBA_COMPANY, JBA_COMPANY_ID, PASSWORD, USERNAME, bcsId, fileRow, noSleep } from "./test-support";
@@ -24,10 +23,8 @@ const BASE = "https://app.woven.team";
 const CONFIG: WovenKnowledgeConfig = {
   enabled: true,
   baseUrl: BASE,
-  company: BCS_COMPANY,
-  companyId: BCS_COMPANY_ID,
   tenantProblem: null,
-  downloads: { fileLibrary: false, handbook: false },
+  downloads: { fileLibrary: false },
   credentials: { username: USERNAME, password: PASSWORD },
   missingCredentials: [],
   problems: [],
@@ -57,7 +54,7 @@ class Harness {
         store: this.store,
         sink: this.sink,
         /* Built only for a config the gate would pass, as production builds it only after the gate. */
-        connector: this.config.companyId && this.config.credentials ? createWovenKnowledgeConnector(this.config, this.client()) : undefined,
+        connector: this.config.credentials && !this.config.tenantProblem ? createWovenKnowledgeConnector(this.config, this.client()) : undefined,
         now: () => this.clock,
       },
     );
@@ -463,43 +460,10 @@ describe("File Library downloads", () => {
   });
 });
 
-/* =================================================== configuration gate == */
+/* =================================================== Test Connection == */
 
-describe("configuration", () => {
-  it("WOVEN_TEAM_COMPANY_ID must be the pinned Buff City Soap company: another company's id never reaches Woven", async () => {
-    const env = {
-      WOVEN_KNOWLEDGE_SYNC_ENABLED: "true",
-      WOVEN_TEAM_USERNAME: USERNAME,
-      WOVEN_TEAM_PASSWORD: PASSWORD,
-      WOVEN_TEAM_COMPANY: JBA_COMPANY,
-      WOVEN_TEAM_COMPANY_ID: JBA_COMPANY_ID,
-    };
-    const config = readWovenKnowledgeConfig(env);
-    expect(config.tenantProblem).toMatch(/not the Buff City Soap company/);
-    const h = new Harness();
-    h.config = config;
-    expect(await h.run("preview")).toMatchObject({ status: "disabled" });
-    expect(await testWovenConnection({ config, client: h.client() })).toMatchObject({ status: "disabled" });
-    expect(h.fake.log).toHaveLength(0);
-    expect(JSON.stringify(config)).not.toContain(PASSWORD);
-  });
-
-  it("without a Company ID nothing runs", async () => {
-    const config = readWovenKnowledgeConfig({ WOVEN_KNOWLEDGE_SYNC_ENABLED: "true", WOVEN_TEAM_USERNAME: USERNAME, WOVEN_TEAM_PASSWORD: PASSWORD, WOVEN_TEAM_COMPANY: BCS_COMPANY });
-    expect(config.missingCredentials).toEqual(["WOVEN_TEAM_COMPANY_ID"]);
-    const h = new Harness();
-    h.config = config;
-    expect(await h.run("preview")).toEqual({ status: "not_configured", missing: ["WOVEN_TEAM_COMPANY_ID"] });
-    expect(h.fake.log).toHaveLength(0);
-  });
-
-  it("downloads are off unless switched on; the pinned id matches whatever its case", () => {
-    const base = { WOVEN_TEAM_COMPANY_ID: WOVEN_KNOWLEDGE_TENANT.companyId.toLowerCase() };
-    expect(readWovenKnowledgeConfig(base)).toMatchObject({ tenantProblem: null, downloads: { fileLibrary: false, handbook: false } });
-    expect(readWovenKnowledgeConfig({ ...base, WOVEN_FILE_LIBRARY_DOWNLOAD_ENABLED: "true" }).downloads).toEqual({ fileLibrary: true, handbook: false });
-  });
-
-  it("Test Connection signs in, proves the Company ID and reads one list, writing nothing", async () => {
+describe("Test Connection", () => {
+  it("signs in, proves the Company ID and reads one list, writing nothing", async () => {
     const h = new Harness();
     expect(await testWovenConnection({ config: h.config, client: h.client() })).toEqual({ status: "ok", company: BCS_COMPANY, companyId: BCS_COMPANY_ID, handbooksVisible: 1 });
     h.fake.requireCompanySelection = false;

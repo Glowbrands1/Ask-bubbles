@@ -1,4 +1,22 @@
-# Woven — the Buff City Soap adapter
+# Woven — Buff City Soap / Midwest Soap Makers only
+
+**Ask Bubbles' Woven integration is a Buff City Soap connector, not a
+multi-company one.** The one Woven company it may operate against is pinned in
+code, `WOVEN_TENANT` in `src/config/company/woven.ts`:
+
+| | |
+|---|---|
+| Brand | Buff City Soap |
+| Company | Midwest Soap Makers |
+| Company ID | `55839F24-9241-418C-8405-37BAF9A42A87` |
+
+The Company ID is the identity. No environment variable, setting, default or
+fallback selects a company: variables can only *confirm* the pinned values,
+and any other value disables the integration. If Woven cannot be shown to be
+in Midwest Soap Makers, the run fails. Ask Bubbles was ported from another
+product's platform; that product's connector survives only as test fixtures
+under `src/lib/knowledge-sync/woven/reference/`, which no production module
+may import (`bcs/tenant-isolation.test.ts` enforces it).
 
 Ask Bubbles has two Woven integrations. Both are **observe-only** and both are
 **off** until switched on with environment variables. Nothing in this build
@@ -20,17 +38,18 @@ what a future provisioning stage *would* do.
 |---|---|---|
 | Woven API portal subscription key | `WOVEN_SUBSCRIPTION_KEY` | Sensitive |
 | Integration account username / password | `WOVEN_USERNAME`, `WOVEN_PASSWORD` | A dedicated read-only account. Sensitive |
-| Buff's Woven CompanyID (GUID) | `WOVEN_COMPANY_ID` | **Required before any sync.** Run the read-only validation (below) to discover it |
+| Confirmation of the pinned company | `WOVEN_COMPANY_ID` | Must be `55839F24-9241-418C-8405-37BAF9A42A87`; required for a sync. Any other value turns the integration off. Every sign-in names the pinned company whatever this says, and a token issued for any other company — or naming none — is refused |
 | API base URL, if not the default | `WOVEN_API_BASE_URL` | |
 | Login-eligible email domains | `WOVEN_LOGIN_EMAIL_DOMAINS` | Unset = nobody is eligible to sign in from Woven data |
 
 ### Switching it on, in order
 
 1. Set the credentials and `WOVEN_VALIDATION_ENABLED=true`. Run **Test Woven
-   connection** on the Woven screen. It is read-only and reports Buff's
-   company, enum vocabularies, position and location catalogue and how the
-   locations compare with the configured roster.
-2. Set `WOVEN_COMPANY_ID` from that report.
+   connection** on the Woven screen. It is read-only, signs in to Midwest Soap
+   Makers by its Company ID (it fails if Woven issues the token for any other
+   company) and reports enum vocabularies, the position and location catalogue
+   and how the locations compare with the configured roster.
+2. Set `WOVEN_COMPANY_ID=55839F24-9241-418C-8405-37BAF9A42A87`.
 3. Fill `src/config/company/locations.ts` with Buff's locations (codes as Woven
    numbers them), districts and regions.
 4. `WOVEN_SYNC_ENABLED=true` (dry runs only), then `WOVEN_SYNC_WRITES_ENABLED=true`
@@ -78,18 +97,19 @@ official API can replace it later without touching the engine.
 ### The company guard
 
 Woven's content requests carry no company id — the company is server-side
-session state — and the same login also opens JB & Associates (Sun Tan City).
-So:
+session state — and the integration login can open other Woven companies.
+So, on every run:
 
-1. The Company ID is **pinned** in `src/config/company/woven.ts`
-   (`WOVEN_KNOWLEDGE_TENANT`). `WOVEN_TEAM_COMPANY_ID` must equal it, or the
-   sync is disabled and the credentials are withheld.
-2. On the account chooser, the entry is chosen by its `data-company-id`, and
-   its name must be `WOVEN_TEAM_COMPANY`.
-3. `GET /Company` must show exactly that Company ID — every reading of it —
-   before anything is read. Missing, different, or two ids: the run fails.
-4. The check runs again after every automatic re-sign-in, and after every
-   listing **before** anything is classified or applied.
+1. The session is established (sign-in, profile-photo prompt skipped).
+2. On the account chooser, the entry is chosen **by its `data-company-id`** —
+   the pinned Company ID — and its visible name must be "Midwest Soap Makers".
+   No other entry is ever chosen; if it is not offered, the run fails.
+3. `GET /Company` must show exactly the pinned Company ID — every reading of
+   it, none other — and "Midwest Soap Makers" after its Company label. A
+   missing, different or second id fails the run before anything is read.
+4. After every automatic re-sign-in, step 3 again.
+5. After every listing, before anything is classified, saved or applied,
+   step 3 again. Any mismatch aborts the run with nothing written.
 
 The integration login must therefore be able to open the Company page.
 
@@ -98,9 +118,9 @@ The integration login must therefore be able to open the Company page.
 | Source | Verified for BCS | What happens |
 |---|---|---|
 | Policies (12) | list + detail structure | **Inventory only.** Publication state is unverified, so every policy is excluded as `publication_unverified`. |
-| Handbooks (1) | list | Published + `Public` is shareable. Download unverified → BLOCKED unless `WOVEN_HANDBOOK_DOWNLOAD_ENABLED`. The one handbook is a JBA manual → held for ownership review. |
-| Procedures (51) | category enumeration, badges, positions, detail steps | Drafts (`Unpublished`) excluded; their pages are never fetched. Each category's count must equal its indicator or the listing fails. Step text is ingested once the "All Positions" audience is shared by an administrator. Step attachments: BLOCKED (download unverified). |
-| File Library (264) | list, columns, status keys, audiences | Unpublished excluded. Columns proved on every row (schema drift fails the listing). PDF/DOCX only. Download BLOCKED unless `WOVEN_FILE_LIBRARY_DOWNLOAD_ENABLED`. |
+| Handbooks (1) | list | **Inventory only.** No handbook content/download route is verified for this company, so the part is BLOCKED. The one handbook is a JBA-titled manual → held for ownership review. |
+| Procedures (51) | category enumeration, badges, positions, detail steps | Drafts (`Unpublished`) excluded; their pages are never fetched. Each category's count must equal its indicator or the listing fails. Step text is ingested once the "All Positions" audience is shared by an administrator. Step attachments are not read (unverified). |
+| File Library (264) | list, columns, status keys, audiences | Unpublished excluded. Columns proved on every row (schema drift fails the listing). PDF/DOCX only. Download BLOCKED unless `WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED`. |
 | Communications (133) | list | **Inventory only.** Drafts and "Published – Not Visible" excluded; detail unverified → BLOCKED. A published-and-visible status has not been observed and fails the listing until verified. |
 
 ### Audience rules
@@ -114,15 +134,19 @@ Ask Bubbles shows every knowledge document to everyone signed in. So:
   (`8 Teams 21 Positions`, `All Teams 3 Positions`, a list of positions) →
   `audience_restricted`; anything unclear (`N/A`, no audience) → `audience_unclear`.
 
-### Ownership review (JB & Associates / Sun Tan City content)
+### Records inside Midwest Soap Makers that name another company
 
-Records whose titles name JBA / JB & Associates / Sun Tan City, and
-"NE Sick Time", are held as `ownership_review`: never ingested, never offered
-as an audience choice, withdrawn if ever synced. Found so far: policies
-"JBA Policy Manual 2025", "NE Sick Time"; handbook "2025 JBA Policy Manual -
-Edited 5-2025". To release one, confirm with Buff City Soap that it is meant
-for their team members and add its Woven id to
-`WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW.confirmedEntityIds`.
+The investigation found these records **inside the Midwest Soap Makers
+company**: policies "JBA Policy Manual 2025" and "NE Sick Time", and the
+handbook "2025 JBA Policy Manual - Edited 5-2025". Their presence is not a
+reason to connect Ask Bubbles to any other Woven company, and it does not.
+
+Records whose titles match the patterns in
+`WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW` are held as `ownership_review`: never
+ingested, never offered as an audience choice, withdrawn if ever synced. The
+patterns only exclude; they select nothing. There is no automatic allowlist:
+`confirmedEntityIds` is empty, and a record is released only after Buff City
+Soap explicitly approves it, by adding its Woven id there in a reviewed change.
 
 ### Fail closed
 
@@ -145,10 +169,9 @@ verified, flagged ownership records and errors.
 From a terminal, with no database at all:
 
 ```bash
-read -r  WOVEN_TEAM_USERNAME && export WOVEN_TEAM_USERNAME
-read -rs WOVEN_TEAM_PASSWORD && export WOVEN_TEAM_PASSWORD
-export WOVEN_TEAM_COMPANY="Midwest Soap Makers"
-export WOVEN_TEAM_COMPANY_ID=55839F24-9241-418C-8405-37BAF9A42A87
+read -r  WOVEN_BCS_USERNAME && export WOVEN_BCS_USERNAME
+read -rs WOVEN_BCS_PASSWORD && export WOVEN_BCS_PASSWORD
+export WOVEN_BCS_COMPANY_ID=55839F24-9241-418C-8405-37BAF9A42A87
 WOVEN_KNOWLEDGE_LIVE_DRY_RUN=1 WOVEN_KNOWLEDGE_SYNC_ENABLED=true npm run dry-run:woven-knowledge
 ```
 
@@ -157,34 +180,39 @@ WOVEN_KNOWLEDGE_LIVE_DRY_RUN=1 WOVEN_KNOWLEDGE_SYNC_ENABLED=true npm run dry-run
 - The File Library download response (`/Dashboard/_FileLibrary_Download`):
   bytes or redirect, headers, naming; and whether it records a download event
   in Woven's engagement analytics. Verify with ONE approved sample download,
-  then set `WOVEN_FILE_LIBRARY_DOWNLOAD_ENABLED=true` on a Preview first.
-- Handbook content/download for this company (the flow behind
-  `WOVEN_HANDBOOK_DOWNLOAD_ENABLED` was verified for another company).
+  then set `WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED=true` on a Preview first.
+- Handbook content/download for this company (no route borrowed from any
+  other integration is used).
 - Policy publication state and audience; procedure team/location limits and
   updated dates; per-item team/position ids; Communications detail and
   attachments; procedure attachment downloads; Shared Links.
 - The procedure category indicator's exact markup (read from an element whose
   class names an indicator; a sanitized real response should confirm it).
-- The sign-in and account-chooser steps for this account (verified on the
-  same login by the reference platform; not re-captured for BCS).
+- The Woven web app's sign-in and account-chooser steps were captured with
+  the same login by the reference platform and not re-captured for BCS; they
+  are tenant-neutral, and the company is chosen by the pinned id and proved on
+  `/Company`, so a deviation fails the sign-in.
 - An official Woven API for this account.
 
 ### Needed from Buff City Soap
 
 | Item | Variable | Notes |
 |---|---|---|
-| Dedicated read-only Woven Team login (able to open the Company page) | `WOVEN_TEAM_USERNAME`, `WOVEN_TEAM_PASSWORD` | Sensitive |
-| Company name / ID | `WOVEN_TEAM_COMPANY`, `WOVEN_TEAM_COMPANY_ID` | `Midwest Soap Makers` / `55839F24-9241-418C-8405-37BAF9A42A87` |
-| Base URL, if not `https://app.woven.team` | `WOVEN_TEAM_BASE_URL` | |
+| Dedicated read-only Woven login (able to open the Company page) | `WOVEN_BCS_USERNAME`, `WOVEN_BCS_PASSWORD` | Sensitive |
+| Confirmation of the pinned company | `WOVEN_BCS_COMPANY_ID` (required), `WOVEN_BCS_COMPANY_NAME` (optional) | `55839F24-9241-418C-8405-37BAF9A42A87` / `Midwest Soap Makers`; anything else disables the sync |
+
+Woven is read at `https://app.woven.team` only. The reference platform's
+`WOVEN_TEAM_*` variables configure nothing; a `WOVEN_TEAM_COMPANY`,
+`WOVEN_TEAM_COMPANY_ID` or `WOVEN_TEAM_BASE_URL` holding anything but the
+pinned value disables the connector.
 
 Then `WOVEN_KNOWLEDGE_SYNC_ENABLED=true`, run the dry run, review it, decide
 the "All Positions" audience, and only then run the initial sync.
 
 ## Isolation
 
-- The knowledge sync's company is pinned by Company ID in
-  `src/config/company/woven.ts` and proved against Woven before and during
-  every run; the employee directory's company is required configuration.
-  Neither can sync another company's people or documents by default.
+- Both integrations' company is pinned by Company ID in
+  `src/config/company/woven.ts` and proved against Woven on every run. No
+  configuration can point either at another company.
 - Credentials are server-only and never reach the browser
   (`npm run verify:secrets`).

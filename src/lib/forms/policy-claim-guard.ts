@@ -402,7 +402,7 @@ export function stripUnsupportedPolicyRequirements(
 /** The sentence the fill screen shows when a requirement was removed. */
 /**
  * ============================================================================
- * "JBA POLICY REQUIRES EMPLOYEES TO DEMONSTRATE INITIATIVE"
+ * "COMPANY POLICY REQUIRES EMPLOYEES TO DEMONSTRATE INITIATIVE"
  * ============================================================================
  *
  * A third failure, and the two guards above both miss it by construction.
@@ -417,7 +417,7 @@ export function stripUnsupportedPolicyRequirements(
  * IT IS THE COMMONEST WAY A MANAGER'S OPINION BECOMES A COMPANY RULE. "She
  * doesn't have enough initiative" is a fair observation and a fair thing to
  * coach. There is no initiative policy, there never was, and a sentence
- * beginning "JBA policy requires" is indistinguishable, to the person reading
+ * beginning "Company policy requires" is indistinguishable, to the person reading
  * the form, from one that quotes a real section.
  *
  * ============================================================================
@@ -428,11 +428,11 @@ export function stripUnsupportedPolicyRequirements(
  * attributed appears in the policy that was really retrieved. That is
  * deliberately strict, and strict in the safe direction:
  *
- *   "JBA policy requires employees to be on time"  — with the Attendance
+ *   "Company policy requires employees to be on time"  — with the Attendance
  *   section retrieved, "employees" and "time" are both in it, so the sentence
  *   stands. The manual did say this.
  *
- *   "JBA policy requires employees to demonstrate initiative" — "demonstrate"
+ *   "Company policy requires employees to demonstrate initiative" — "demonstrate"
  *   and "initiative" appear in nothing that was retrieved, so the sentence
  *   goes and the plan keeps the observation without the false authority.
  *
@@ -463,7 +463,7 @@ const NOT_EVIDENCE = new Set([
   "required", "requires", "say", "says", "specifies", "specify", "state",
   "states", "stipulate", "stipulates",
   // The source nouns.
-  "code", "company", "conduct", "handbook", "jba", "manual", "policies",
+  "code", "company", "conduct", "handbook", "manual", "policies",
   "policy", "rule", "rules", "standard", "standards",
 ]);
 

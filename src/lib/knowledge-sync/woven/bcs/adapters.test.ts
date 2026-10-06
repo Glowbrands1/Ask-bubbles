@@ -64,11 +64,10 @@ const handbookRow = (over: Record<string, string> = {}) => ({
 });
 
 describe("handbooks", () => {
-  it("parses a published, public handbook; its download stays blocked unless switched on", () => {
+  it("parses a published, public handbook; its content is always BLOCKED (no route verified for this company)", () => {
     const [row] = parseHandbookRows({ list: [handbookRow()] });
     expect(row).toMatchObject({ id: bcsId(201), title: "Team Handbook", status: "Published", publication: "published", audience: ["Public"], updatedAt: "2026-03-24T10:15:00" });
-    expect(handbookRecord(row!, null).parts[0]!.retrieval).toEqual({ kind: "blocked", capability: "handbook_download_unverified" });
-    expect(handbookRecord(row!, { currentVersionId: bcsId(2011) }).parts[0]!.retrieval).toEqual({ kind: "available", locator: { handbookId: bcsId(201), versionId: bcsId(2011) } });
+    expect(handbookRecord(row!).parts[0]!.retrieval).toEqual({ kind: "blocked", capability: "handbook_download_unverified" });
   });
 
   it("fails on an unknown status, a link to another handbook, or a missing column", () => {
@@ -243,11 +242,11 @@ describe("the Company page", () => {
   });
 
   it("passes only when every id shown is the expected one", () => {
-    expect(() => assertCompanyPage(page(`<label>Company ID</label> ${BCS_COMPANY_ID.toLowerCase()}`), BCS_COMPANY_ID, "Midwest Soap Makers")).not.toThrow();
-    expect(() => assertCompanyPage(page(`<label>Company ID</label> ${JBA_COMPANY_ID}`), BCS_COMPANY_ID, "Midwest Soap Makers")).toThrow(/not in Midwest Soap Makers/);
-    expect(() => assertCompanyPage(page("<p>nothing</p>"), BCS_COMPANY_ID, "Midwest Soap Makers")).toThrow(/could not find the Company ID/);
+    expect(() => assertCompanyPage(page(`<label>Company</label> Midwest Soap Makers <label>Company ID</label> ${BCS_COMPANY_ID.toLowerCase()}`))).not.toThrow();
+    expect(() => assertCompanyPage(page(`<label>Company ID</label> ${JBA_COMPANY_ID}`))).toThrow(/not in Midwest Soap Makers/);
+    expect(() => assertCompanyPage(page("<p>nothing</p>"))).toThrow(/could not find the Company ID/);
     expect(() =>
-      assertCompanyPage(page(`<label>Company ID</label> ${BCS_COMPANY_ID} <label>Company ID</label> ${JBA_COMPANY_ID}`), BCS_COMPANY_ID, "Midwest Soap Makers"),
+      assertCompanyPage(page(`<label>Company ID</label> ${BCS_COMPANY_ID} <label>Company ID</label> ${JBA_COMPANY_ID}`)),
     ).toThrow(/not in Midwest Soap Makers/);
   });
 });

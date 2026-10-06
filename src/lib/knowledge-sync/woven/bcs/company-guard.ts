@@ -1,8 +1,9 @@
+import { WOVEN_TENANT } from "@/config/company/woven";
 import { sameCompanyId } from "../config";
 import { attr, elementsByTag, hasClass, parseHtmlDocument, textOf } from "../html";
 import { WovenTeamError, safePath, type PageResponse, type WovenTeamClient } from "../http";
 import { continueLoginSubmission, hasVerifiedChooser, type CompanySelector, type CompanyVerifier } from "../session";
-import { CHOOSER_ENTRY_ATTRS, CHOOSER_ENTRY_CLASS } from "../contract";
+import { CHOOSER_ENTRY_ATTRS, CHOOSER_ENTRY_CLASS } from "../web-app";
 import { COMPANY_ID_INPUT, COMPANY_ID_LABEL, COMPANY_PAGE_PATH } from "./contract";
 
 /**
@@ -11,16 +12,16 @@ import { COMPANY_ID_INPUT, COMPANY_ID_LABEL, COMPANY_PAGE_PATH } from "./contrac
  * ============================================================================
  *
  * Woven keeps the active company in server-side session state: none of the
- * content requests carries a company id (VERIFIED). The same login can open
- * JB & Associates (Sun Tan City). So the sync proves WHICH company the session
- * is in, by id, at three points:
+ * content requests carries a company id (VERIFIED), and the integration login
+ * can open other Woven companies. So the sync proves WHICH company the session
+ * is in — the pinned `WOVEN_TENANT` — by id, at three points:
  *
  *   1. SIGN-IN. On the account chooser, the entry selected is the one whose
- *      `data-company-id` IS the configured id (and whose name is the
- *      configured name) — never chosen by name alone. (Chooser structure:
- *      VERIFIED for this same login by the reference platform.)
+ *      `data-company-id` IS the pinned id (and whose name is the pinned
+ *      name) — never chosen by name, position or Woven's default.
  *   2. BEFORE READING. `GET /Company` (VERIFIED_UI: it shows the Company ID)
- *      must show exactly the configured id — every reading of it, none other.
+ *      must show exactly the pinned id — every reading of it, none other —
+ *      and the pinned name.
  *   3. AFTER READING, BEFORE ANYTHING IS APPLIED, and after every automatic
  *      re-sign-in: the same check again (`assertTenant`).
  *
@@ -57,8 +58,19 @@ function shortId(id: string): string {
   return `${id.slice(0, 8).toUpperCase()}…`;
 }
 
-/** Throws unless the `/Company` page shows exactly the expected id. */
-export function assertCompanyPage(html: string, expectedId: string, companyName: string): void {
+/** Normalised visible text, for the name check. */
+function pageText(html: string): string {
+  const doc = parseHtmlDocument(html);
+  return textOf(elementsByTag(doc, "body")[0] ?? doc).replace(/\s+/g, " ").toLowerCase();
+}
+
+/**
+ * Throws unless the `/Company` page shows EXACTLY the pinned Company ID —
+ * every reading of it, none other — and the pinned company name. Missing,
+ * different or conflicting ids, or a missing name: the run fails.
+ */
+export function assertCompanyPage(html: string): void {
+  const { companyId, companyName } = WOVEN_TENANT;
   const ids = companyIdsOnPage(html);
   if (ids.length === 0) {
     throw new CompanyGuardError(
@@ -66,55 +78,65 @@ export function assertCompanyPage(html: string, expectedId: string, companyName:
       `Ask Bubbles could not find the Company ID on Woven's Company page, so it could not prove the session is in ${companyName}. Nothing was read.`,
     );
   }
-  const others = ids.filter((id) => !sameCompanyId(id, expectedId));
+  const others = ids.filter((id) => !sameCompanyId(id, companyId));
   if (others.length > 0) {
     throw new CompanyGuardError(
       "woven_company_mismatch",
-      `Woven's session is not in ${companyName}: its Company page shows Company ID ${others.map(shortId).join(", ")}, not ${shortId(expectedId)}. Nothing was synced.`,
+      `Woven's session is not in ${companyName}: its Company page shows Company ID ${others.map(shortId).join(", ")}, not ${shortId(companyId)}. Nothing was synced.`,
+    );
+  }
+  /*
+   * The name must follow a "Company" label. Anywhere else would prove nothing:
+   * the Switch Account list on every page names every company of the login.
+   */
+  const escaped = companyName.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (!new RegExp(`\\bcompany(?:\\s+name)?\\s*:?\\s*${escaped}\\b`).test(pageText(html))) {
+    throw new CompanyGuardError(
+      "woven_company_not_verified",
+      `Woven's Company page shows the right Company ID but not the name ${companyName}, so Ask Bubbles did not proceed.`,
     );
   }
 }
 
-/** Reads `/Company` with the session and proves the id. */
-export async function verifyCompany(client: WovenTeamClient, expectedId: string, companyName: string): Promise<void> {
-  assertCompanyPage(await client.getHtml(COMPANY_PAGE_PATH), expectedId, companyName);
+/** Reads `/Company` with the session and proves the pinned company. */
+export async function verifyCompany(client: WovenTeamClient): Promise<void> {
+  assertCompanyPage(await client.getHtml(COMPANY_PAGE_PATH));
 }
 
 /**
- * The account chooser, answered BY ID: the one `a.select-company` entry whose
- * `data-company-id` is the configured id. Its visible name must also be the
- * configured name, or nothing is submitted.
+ * The account chooser, answered BY THE PINNED ID: the one `a.select-company`
+ * entry whose `data-company-id` is `WOVEN_TENANT.companyId`. Its visible name
+ * must also be `WOVEN_TENANT.companyName`, or nothing is submitted. There is
+ * no other selector, no name-based choice and no fallback to another entry.
  */
-export function companyIdSelector(companyId: string): CompanySelector {
-  return {
-    async select(page: PageResponse, company: string, client: WovenTeamClient) {
-      if (!hasVerifiedChooser(page.text)) {
-        throw new WovenTeamError(
-          "company_selection_unverified",
-          "Woven showed an account chooser Ask Bubbles does not recognise, so no account was chosen.",
-          { path: safePath(page.path) },
-        );
-      }
-      const entries = elementsByTag(parseHtmlDocument(page.text), "a").filter(
-        (a) => hasClass(a, CHOOSER_ENTRY_CLASS) && sameCompanyId(attr(a, CHOOSER_ENTRY_ATTRS.companyId) ?? "", companyId),
+export const companyIdSelector: CompanySelector = {
+  async select(page: PageResponse, _company: string, client: WovenTeamClient) {
+    const { companyId, companyName } = WOVEN_TENANT;
+    if (!hasVerifiedChooser(page.text)) {
+      throw new WovenTeamError(
+        "company_selection_unverified",
+        "Woven showed an account chooser Ask Bubbles does not recognise, so no account was chosen.",
+        { path: safePath(page.path) },
       );
-      if (entries.length === 0) {
-        throw new WovenTeamError("company_not_listed", `Woven accepted the sign-in, but ${company} (${shortId(companyId)}) is not one of the accounts it offers this login.`, {
-          path: safePath(page.path),
-        });
-      }
-      const submission = continueLoginSubmission(page.text, page.path, company, companyId);
-      return client.request("POST", submission.path, { kind: "form", value: submission.fields });
-    },
-  };
-}
+    }
+    const entries = elementsByTag(parseHtmlDocument(page.text), "a").filter(
+      (a) => hasClass(a, CHOOSER_ENTRY_CLASS) && sameCompanyId(attr(a, CHOOSER_ENTRY_ATTRS.companyId) ?? "", companyId),
+    );
+    if (entries.length === 0) {
+      throw new WovenTeamError("company_not_listed", `Woven accepted the sign-in, but ${companyName} (${shortId(companyId)}) is not one of the accounts it offers this login.`, {
+        path: safePath(page.path),
+      });
+    }
+    const submission = continueLoginSubmission(page.text, page.path, companyName, companyId);
+    return client.request("POST", submission.path, { kind: "form", value: submission.fields });
+  },
+};
 
 /**
  * The dashboard check after sign-in. The account menu's text is NOT trusted as
- * the company for Buff City Soap (the handoff saw it show a location of the
- * other company); the `/Company` id check that follows is the proof.
+ * the company (the handoff saw it show a location of another company); the
+ * `/Company` check that follows is the proof.
  */
 export const deferToCompanyPage: CompanyVerifier = {
   activeCompany: (_page, expected) => expected,
 };
-

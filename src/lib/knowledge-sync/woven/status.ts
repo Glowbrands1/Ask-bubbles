@@ -1,5 +1,7 @@
 import "server-only";
 
+import { WOVEN_TENANT } from "@/config/company/woven";
+
 import vercelConfig from "../../../../vercel.json";
 import { MAX_AUTOMATIC_RETRIES } from "../engine";
 import { audienceGroups, contentRows, effectiveInventory, heldForAudience, type AudienceGroup, type ContentRow } from "../inventory";
@@ -122,7 +124,7 @@ export async function readWovenKnowledgeStatus(
   const base = {
     enabled: config.enabled,
     missingCredentials: config.missingCredentials,
-    company: config.company,
+    company: WOVEN_TENANT.companyName,
   };
   const empty: WovenKnowledgeStatus = {
     ...base,

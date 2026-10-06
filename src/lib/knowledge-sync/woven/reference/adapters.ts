@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 
+import { WovenShapeError, textDocument } from "../shared";
+export { WovenShapeError, textDocument };
+
 import { SUPPORTED_KINDS, normalizeMimeType } from "@/lib/ingestion/validation";
-import type { Publication, SourcePart, SourceRecord } from "../types";
+import type { Publication, SourcePart, SourceRecord } from "../../types";
 import {
   CAPABILITY,
   COURSE_COLUMNS,
@@ -50,7 +53,7 @@ import {
   shownText,
   textOf,
   type HtmlElement,
-} from "./html";
+} from "../html";
 
 /**
  * ============================================================================
@@ -69,15 +72,6 @@ import {
  * NO SIGNED URL SURVIVES PARSING. `AzureFileURL` is read only by
  * `policyAttachmentUrl`, at download time, and is never put on a record.
  */
-
-export class WovenShapeError extends Error {
-  readonly code: string;
-  constructor(code: string, message: string) {
-    super(message);
-    this.name = "WovenShapeError";
-    this.code = code;
-  }
-}
 
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9-]{0,199}$/;
 
@@ -471,11 +465,6 @@ function textPart(partKey: string, title: string, contentDigest: string, locator
     contentDigest,
     retrieval: { kind: "available", locator },
   };
-}
-
-/** A synced text document: the title, then the body. */
-export function textDocument(title: string, body: string): Uint8Array {
-  return new TextEncoder().encode(`${title.trim()}\n\n${body.trim()}\n`);
 }
 
 /* -------------------------------------------------------------- handbook -- */

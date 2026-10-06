@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { WovenApiError, WovenClient, extractPage } from "./client";
-import { createFakeWoven, FAKE_COMPANY_ID, FAKE_CREDENTIALS, wovenEmployee, type FakeWovenOptions } from "./test-support";
+import { createFakeWoven, FAKE_COMPANY_ID, FAKE_CREDENTIALS, OTHER_COMPANY_ID, wovenEmployee, type FakeWovenOptions } from "./test-support";
 
 /**
  * ============================================================================
@@ -35,6 +35,7 @@ function fakeWoven(options: FakeWovenOptions) {
 function harness(fake: ReturnType<typeof createFakeWoven>, extra: Partial<ConstructorParameters<typeof WovenClient>[0]> = {}) {
   const sleeps: number[] = [];
   const client = new WovenClient({
+      companyId: FAKE_COMPANY_ID,
     baseUrl: BASE,
     credentials: FAKE_CREDENTIALS,
     fetch: fake.fetch,
@@ -196,14 +197,35 @@ describe("headers and the token exchange", () => {
 });
 
 describe("the token request, as the OpenAPI export defines it", () => {
-  it("sends Username and Password, and no CompanyID or Platform unless configured", async () => {
+  it("always names the pinned Buff City Soap company, and no Platform unless configured", async () => {
     const fake = fakeWoven({ employees: employees(1) });
     const { client } = harness(fake);
     await client.get("/employees");
 
     const body = JSON.parse(fake.calls[0].body ?? "{}");
-    expect(body).toEqual({ Username: FAKE_CREDENTIALS.username, Password: FAKE_CREDENTIALS.password });
-    expect(client.tokenInfo?.companyIdSent).toBe(false);
+    expect(body).toEqual({ Username: FAKE_CREDENTIALS.username, Password: FAKE_CREDENTIALS.password, CompanyID: FAKE_COMPANY_ID });
+    expect(FAKE_COMPANY_ID).toBe("55839f24-9241-418c-8405-37baf9a42a87");
+    expect(client.tokenInfo?.companyIdSent).toBe(true);
+  });
+
+  it("refuses to be built without a valid CompanyID: Woven is never left to choose", () => {
+    for (const companyId of ["", "not-a-guid"]) {
+      expect(() => new WovenClient({ companyId, baseUrl: BASE, credentials: FAKE_CREDENTIALS, fetch: fakeWoven({ employees: [] }).fetch })).toThrow(/CompanyID is required/);
+    }
+  });
+
+  it("a token issued for another company is refused, and no read is made with it", async () => {
+    const fake = fakeWoven({ employees: employees(1), issuedCompanyId: OTHER_COMPANY_ID });
+    const { client } = harness(fake);
+    await expect(client.get("/employees")).rejects.toMatchObject({ code: "company_mismatch" });
+    expect(fake.calls.map((c) => c.path)).toEqual(["/tokens/v2"]);
+  });
+
+  it("a token response naming no company is refused (fail closed)", async () => {
+    const fake = fakeWoven({ employees: employees(1), issuedCompanyId: null });
+    const { client } = harness(fake);
+    await expect(client.get("/employees")).rejects.toMatchObject({ code: "company_not_verified" });
+    expect(fake.calls.map((c) => c.path)).toEqual(["/tokens/v2"]);
   });
 
   it("sends a configured CompanyID and Platform", async () => {
@@ -226,15 +248,18 @@ describe("the token request, as the OpenAPI export defines it", () => {
     expect(client.tokenInfo?.lifetimeSeconds).toBe(3600);
   });
 
-  it("reports the company Woven chose, so WOVEN_COMPANY_ID can be discovered — and never the token", async () => {
+  it("reports the company the token was issued for — and never the token", async () => {
     const fake = fakeWoven({ employees: employees(1) });
     const { client } = harness(fake);
     await client.get("/employees");
 
     const info = client.tokenInfo!;
     expect(info.companyId).toBe(FAKE_COMPANY_ID);
-    expect(info.companyName).toBe("Example Soap Co (test)");
-    expect(info.companyOptions).toEqual([{ companyId: FAKE_COMPANY_ID, companyName: "Example Soap Co (test)" }]);
+    expect(info.companyName).toBe("Midwest Soap Makers (test)");
+    expect(info.companyOptions).toEqual([
+      { companyId: FAKE_COMPANY_ID, companyName: "Midwest Soap Makers (test)" },
+      { companyId: OTHER_COMPANY_ID, companyName: "Other Example Co (test)" },
+    ]);
     expect(JSON.stringify(info)).not.toContain("token-1");
     expect(JSON.stringify(info)).not.toContain("SENSITIVE-REFRESH-TOKEN");
   });
@@ -450,6 +475,7 @@ describe("rate limits, server errors and timeouts", () => {
     let clock = 0;
     const starts: number[] = [];
     const client = new WovenClient({
+      companyId: FAKE_COMPANY_ID,
       baseUrl: BASE,
       credentials: FAKE_CREDENTIALS,
       fetch: ((input: RequestInfo | URL, init?: RequestInit) => {
@@ -476,6 +502,7 @@ describe("rate limits, server errors and timeouts", () => {
     const fake = fakeWoven({ employees: employees(500) });
     let clock = 0;
     const client = new WovenClient({
+      companyId: FAKE_COMPANY_ID,
       baseUrl: BASE,
       credentials: FAKE_CREDENTIALS,
       fetch: fake.fetch,
@@ -493,7 +520,7 @@ describe("rate limits, server errors and timeouts", () => {
 });
 
 describe("the sign-in request, exactly as the OpenAPI spec documents it", () => {
-  it("sends Subscription-Key (not Ocp-Apim-Subscription-Key) and ApiVersion 1.0 as headers, and only Username/Password in the body", async () => {
+  it("sends Subscription-Key (not Ocp-Apim-Subscription-Key) and ApiVersion 1.0 as headers, and only Username/Password and the pinned CompanyID in the body", async () => {
     const fake = fakeWoven({ employees: employees(1) });
     const seen: { url: string; method: string; headers: Record<string, string>; body: string | null }[] = [];
     const recordingFetch: typeof fetch = async (input, init) => {
@@ -515,7 +542,7 @@ describe("the sign-in request, exactly as the OpenAPI spec documents it", () => 
     expect(token.headers["Subscription-Key"]).toBe(FAKE_CREDENTIALS.subscriptionKey);
     expect(token.headers.ApiVersion).toBe("1.0");
     expect(token.headers["Content-Type"]).toBe("application/json");
-    expect(Object.keys(JSON.parse(token.body!)).sort()).toEqual(["Password", "Username"]);
+    expect(Object.keys(JSON.parse(token.body!)).sort()).toEqual(["CompanyID", "Password", "Username"]);
     for (const r of seen) {
       expect(Object.keys(r.headers).map((h) => h.toLowerCase())).not.toContain("ocp-apim-subscription-key");
       expect(r.url).not.toContain("subscription-key=");

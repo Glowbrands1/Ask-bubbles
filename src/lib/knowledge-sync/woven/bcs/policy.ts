@@ -44,7 +44,7 @@ export function bcsAudienceRestriction(audience: readonly string[] | null): stri
 }
 
 /**
- * Content that may belong to another company (JB & Associates / Sun Tan City):
+ * Records INSIDE Midwest Soap Makers whose titles name another company:
  * held as NEEDS_REVIEW (`ownership_review`) until its id is confirmed in
  * `WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW.confirmedEntityIds`.
  */

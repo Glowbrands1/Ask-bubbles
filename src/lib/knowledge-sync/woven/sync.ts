@@ -9,13 +9,8 @@ import type { ContentType, KnowledgeSourceConnector, ManifestItem, RunMode, RunT
 import { BcsConnectorError, BuffCitySoapWovenConnector } from "./bcs/connector";
 import { BCS_COMPANY_WIDE_AUDIENCE_LABELS, BCS_CONTENT_TYPES } from "./bcs/contract";
 import { bcsAudienceRestriction, bcsOwnershipHold } from "./bcs/policy";
-import {
-  readWovenKnowledgeConfig,
-  WOVEN_KNOWLEDGE_SYNC_ENABLED_ENV,
-  WOVEN_TEAM_COMPANY_ENV,
-  WOVEN_TEAM_COMPANY_ID_ENV,
-  type WovenKnowledgeConfig,
-} from "./config";
+import { WOVEN_TENANT } from "@/config/company/woven";
+import { readWovenKnowledgeConfig, WOVEN_KNOWLEDGE_SYNC_ENABLED_ENV, type WovenKnowledgeConfig } from "./config";
 import { describeWovenItem } from "./describe";
 import { WovenTeamClient } from "./http";
 
@@ -125,24 +120,19 @@ export interface WovenSyncOverrides {
 
 function gate(config: WovenKnowledgeConfig): Extract<WovenRunOutcome, { status: "disabled" | "not_configured" }> | null {
   if (!config.enabled) return { status: "disabled", reason: `${WOVEN_KNOWLEDGE_SYNC_ENABLED_ENV} is not on, so nothing reaches Woven.` };
-  /* The pinned tenant first: a Company ID for any other company never reaches Woven. */
+  /* The pinned tenant first: any company variable naming another company never reaches Woven. */
   if (config.tenantProblem) return { status: "disabled", reason: config.tenantProblem };
   if (!config.credentials) return { status: "not_configured", missing: config.missingCredentials };
-  /* The company is required. An empty one would match any active company on the page, so a config built any other way is refused too. */
-  if (!config.company.trim()) return { status: "not_configured", missing: [WOVEN_TEAM_COMPANY_ENV] };
-  if (!config.companyId.trim()) return { status: "not_configured", missing: [WOVEN_TEAM_COMPANY_ID_ENV] };
   return null;
 }
 
-/** The connector this deployment syncs with: Buff City Soap's, guarded by its Company ID. */
+/**
+ * THE ONLY CONNECTOR FACTORY. It returns the Buff City Soap connector, which
+ * reads exactly `WOVEN_TENANT` and proves it by Company ID. There is no
+ * switch, setting or argument that returns any other connector or company.
+ */
 export function createWovenKnowledgeConnector(config: WovenKnowledgeConfig, client: WovenTeamClient): BuffCitySoapWovenConnector {
-  return new BuffCitySoapWovenConnector({
-    client,
-    credentials: config.credentials!,
-    company: config.company,
-    companyId: config.companyId,
-    downloads: config.downloads,
-  });
+  return new BuffCitySoapWovenConnector({ client, credentials: config.credentials!, downloads: config.downloads });
 }
 
 function buildConnector(config: WovenKnowledgeConfig, startedAt: number): BuffCitySoapWovenConnector {
@@ -203,8 +193,8 @@ export async function testWovenConnection(overrides: { config?: WovenKnowledgeCo
     if (!handbooks.ok) return { status: "failed", code: handbooks.code, reason: handbooks.message };
     return {
       status: "ok",
-      company: info.companyLabel ?? config.company,
-      companyId: info.companyId ?? config.companyId,
+      company: info.companyLabel ?? WOVEN_TENANT.companyName,
+      companyId: info.companyId ?? WOVEN_TENANT.companyId,
       handbooksVisible: handbooks.records.length,
     };
   } catch (error) {

@@ -1,5 +1,4 @@
 import type { SourcePart, SourceRecord } from "../../../types";
-import { parseProcedureStepAttachments } from "../../adapters";
 import {
   attr,
   blockText,
@@ -52,8 +51,8 @@ import { WovenShapeError, assertUnique, blockedPart, digest, requireSuccessHtml,
  * DETAIL: the full procedure page (`/KnowledgeCenter/Procedure/<id>`), read
  * only for published procedures. Steps carry `data-procedure-step-id` and
  * `#procedure-step-content`. A page without them leaves the text BLOCKED
- * (`procedure_content`). Step attachments are inventoried as BLOCKED: their
- * download is unverified for this company.
+ * (`procedure_content`). Step attachments are not read: neither their markup
+ * nor their download has been verified for this company.
  */
 
 export interface ProcedureCategory {
@@ -216,7 +215,6 @@ export function procedureText(steps: ProcedureStep[]): string {
 export function procedureRecord(card: ProcedureCard, detailHtml: string | null): SourceRecord {
   const parts: SourcePart[] = [];
   let steps: ProcedureStep[] | null = null;
-  let attachments = 0;
   if (detailHtml !== null) {
     const detail = parseProcedureDetail(detailHtml);
     if (detail.title === null) throw new WovenShapeError("schema_drift", "A procedure page was not the verified procedure page.");
@@ -224,16 +222,6 @@ export function procedureRecord(card: ProcedureCard, detailHtml: string | null):
     const text = steps ? procedureText(steps) : "";
     if (!steps) parts.push(blockedPart("content", card.title, BCS_CAPABILITY.procedureContent));
     else if (text) parts.push(textPart("content", card.title, digest(text), { procedureId: card.id }));
-    /* Attachments are inventoried, not fetched: the download is unverified for this company. */
-    for (const a of parseProcedureStepAttachments(detailHtml)) {
-      attachments += 1;
-      parts.push(
-        blockedPart(`attachment:${a.stepId ?? "none"}:${a.storedFileName}`.slice(0, 240), `${card.title} — ${a.fileName ?? "attachment"}`, BCS_CAPABILITY.procedureAttachment, {
-          fileName: a.fileName,
-          versionId: a.stepId,
-        }),
-      );
-    }
   } else {
     parts.push(textPart("content", card.title, null, { procedureId: card.id }));
   }
@@ -254,7 +242,7 @@ export function procedureRecord(card: ProcedureCard, detailHtml: string | null):
     documentIds: [],
     attachmentIds: [],
     contentFingerprint: null,
-    sourceMetadata: { category: card.category, frequency: card.frequency, steps: steps?.length ?? null, attachments },
+    sourceMetadata: { category: card.category, frequency: card.frequency, steps: steps?.length ?? null },
     parts,
   };
 }

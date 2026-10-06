@@ -360,7 +360,7 @@ export function describeTokenDiagnostics(d: TokenDiagnostics): string {
   if (d.companyIdAppearsRequired) {
     causes.push(
       d.companyOptions.length > 0
-        ? `a CompanyID appears to be required — Woven offered ${d.companyOptions.length} compan${d.companyOptions.length === 1 ? "y" : "ies"} (listed under Company options); set WOVEN_COMPANY_ID to the right one`
+        ? `a CompanyID appears to be required — Woven offered ${d.companyOptions.length} compan${d.companyOptions.length === 1 ? "y" : "ies"} (listed under Company options); Ask Bubbles always names the pinned Buff City Soap company in its sign-in, so check that request reached Woven`
         : "a CompanyID appears to be required",
     );
   }

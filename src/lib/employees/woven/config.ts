@@ -1,5 +1,6 @@
 import "server-only";
 
+import { WOVEN_TENANT } from "@/config/company/woven";
 import { DEFAULT_WOVEN_API_BASE_URL } from "./contract";
 
 /**
@@ -60,9 +61,12 @@ export const WOVEN_MIN_COMPLETENESS_ENV = "WOVEN_MIN_COMPLETENESS_PERCENT";
  */
 export const WOVEN_LOGIN_EMAIL_DOMAINS_ENV = "WOVEN_LOGIN_EMAIL_DOMAINS";
 /**
- * Woven's CompanyID (a GUID). REQUIRED for a sync: without it the sync stays
- * off. The read-only validation runs without it and reports which company
- * Woven would choose, which is how the id is found.
+ * A CONFIRMATION of the pinned Woven company, not a choice of one. The company
+ * every token request names is always `WOVEN_TENANT.companyId`
+ * (`src/config/company/woven.ts` — Buff City Soap / Midwest Soap Makers).
+ * This variable must equal it: unset, the sync stays off; any other value
+ * disables the whole Woven employee integration (sync and validation) and
+ * withholds its credentials. Woven is never left to choose the company.
  */
 export const WOVEN_COMPANY_ID_ENV = "WOVEN_COMPANY_ID";
 /** Optional. The token request's `Platform` integer (1–4, unnamed in the spec). */
@@ -149,8 +153,13 @@ export interface WovenConfig {
   minCompletenessPercent: number;
   /** Lower-cased login-eligible domains. Empty means NOBODY is login-eligible. Never filters storage. */
   loginEmailDomains: string[];
-  /** Woven CompanyID for the token request. Required for a sync. Not a secret. */
-  companyId: string | null;
+  /**
+   * The Woven CompanyID every token request names: ALWAYS the pinned
+   * `WOVEN_TENANT.companyId`, lower-cased. Not configurable. Not a secret.
+   */
+  companyId: string;
+  /** Set when WOVEN_COMPANY_ID names anything but the pinned company. Everything is then off. */
+  tenantProblem: string | null;
   /** The token request's Platform integer, when configured. */
   platform: number | null;
   /** Misconfiguration, by variable name. Never a value. */
@@ -213,14 +222,17 @@ function readBaseUrl(env: Env, problems: string[]): string {
 const DOMAIN_PATTERN = /^(?=.{3,253}$)[a-z0-9-]+(\.[a-z0-9-]+)+$/;
 const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function readCompanyId(env: Env, problems: string[]): string | null {
-  const raw = (env[WOVEN_COMPANY_ID_ENV] ?? "").trim();
-  if (raw.length === 0) return null;
-  if (!GUID_PATTERN.test(raw)) {
-    problems.push(`${WOVEN_COMPANY_ID_ENV} is not a GUID. It was ignored, so Woven will choose the company.`);
-    return null;
+/** The pinned company, as every token request names it. */
+export const PINNED_COMPANY_ID = WOVEN_TENANT.companyId.toLowerCase();
+
+/** Whether WOVEN_COMPANY_ID confirms the pin: "confirmed", "unset", or a problem sentence. */
+function readCompanyConfirmation(env: Env): "confirmed" | "unset" | string {
+  const raw = (env[WOVEN_COMPANY_ID_ENV] ?? "").trim().replace(/^\{|\}$/g, "");
+  if (raw.length === 0) return "unset";
+  if (!GUID_PATTERN.test(raw) || raw.toLowerCase() !== PINNED_COMPANY_ID) {
+    return `${WOVEN_COMPANY_ID_ENV} is not the ${WOVEN_TENANT.brand} company (${WOVEN_TENANT.companyName}, ${WOVEN_TENANT.companyId}), the only Woven company Ask Bubbles reads. The Woven employee integration is off.`;
   }
-  return raw.toLowerCase();
+  return "confirmed";
 }
 
 function readPlatform(env: Env, problems: string[]): number | null {
@@ -260,26 +272,27 @@ export function readWovenConfig(env: Env = process.env): WovenConfig {
   const password = env[WOVEN_PASSWORD_ENV] ?? "";
 
   const missingCredentials: string[] = [];
+  const confirmation = readCompanyConfirmation(env);
+  const tenantProblem = confirmation === "confirmed" || confirmation === "unset" ? null : confirmation;
+  if (tenantProblem) problems.push(tenantProblem);
   if (!subscriptionKey) missingCredentials.push(WOVEN_SUBSCRIPTION_KEY_ENV);
   if (!username) missingCredentials.push(WOVEN_USERNAME_ENV);
   if (password.length === 0) missingCredentials.push(WOVEN_PASSWORD_ENV);
 
-  const companyId = readCompanyId(env, problems);
   /*
-   * A SYNC NEEDS AN EXPLICIT COMPANY. Without WOVEN_COMPANY_ID, Woven chooses
-   * the company for a login that can see several — and a shared login could
-   * then pull another company's people into this deployment. So the sync
-   * stays off until the id is set; the read-only validation (which is how the
-   * id is discovered) still runs.
+   * THE COMPANY IS PINNED. Every token request names WOVEN_TENANT.companyId,
+   * and the client refuses a token issued for any other company. A sync also
+   * needs WOVEN_COMPANY_ID to CONFIRM the pin; a foreign value turns the whole
+   * integration off.
    */
   const syncRequested = readFlag(env, WOVEN_SYNC_ENABLED_ENV);
-  if (syncRequested && companyId === null) {
+  if (syncRequested && confirmation === "unset") {
     problems.push(
-      `${WOVEN_SYNC_ENABLED_ENV} is on but ${WOVEN_COMPANY_ID_ENV} is not set, so the sync stays off. Run the read-only validation to find the CompanyID.`,
+      `${WOVEN_SYNC_ENABLED_ENV} is on but ${WOVEN_COMPANY_ID_ENV} is not set, so the sync stays off. Set it to ${WOVEN_TENANT.companyId} (${WOVEN_TENANT.companyName}).`,
     );
   }
-  const enabled = syncRequested && companyId !== null;
-  const validationEnabled = readFlag(env, WOVEN_VALIDATION_ENABLED_ENV);
+  const enabled = syncRequested && confirmation === "confirmed";
+  const validationEnabled = readFlag(env, WOVEN_VALIDATION_ENABLED_ENV) && !tenantProblem;
   const writesEnabled = readFlag(env, WOVEN_SYNC_WRITES_ENABLED_ENV);
   const scheduleEnabled = readFlag(env, WOVEN_SYNC_SCHEDULE_ENABLED_ENV);
 
@@ -314,8 +327,9 @@ export function readWovenConfig(env: Env = process.env): WovenConfig {
     validationEnabled,
     scheduleEnabled,
     baseUrl: readBaseUrl(env, problems),
+    /* A foreign company withholds the credentials: nothing can sign in on its behalf. */
     credentials:
-      missingCredentials.length === 0 ? { subscriptionKey, username, password } : null,
+      missingCredentials.length === 0 && !tenantProblem ? { subscriptionKey, username, password } : null,
     missingCredentials,
     pageSize: readBoundedInteger(env, WOVEN_PAGE_SIZE_ENV, DEFAULTS.pageSize, BOUNDS.pageSize, problems),
     maxDetailRequestsPerRun: readBoundedInteger(
@@ -333,7 +347,8 @@ export function readWovenConfig(env: Env = process.env): WovenConfig {
       problems,
     ),
     loginEmailDomains: readDomains(env, problems),
-    companyId,
+    companyId: PINNED_COMPANY_ID,
+    tenantProblem,
     platform: readPlatform(env, problems),
     problems,
   };

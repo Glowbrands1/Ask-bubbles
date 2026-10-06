@@ -97,7 +97,7 @@ function setup(employees: Record<string, unknown>[], details: Record<string, Rec
       config: CONFIG,
       store,
       now: NOW,
-      client: new WovenClient({ baseUrl: CONFIG.baseUrl, credentials: FAKE_CREDENTIALS, fetch: fake.fetch, sleep: async () => {} }),
+      client: new WovenClient({ companyId: FAKE_COMPANY_ID, baseUrl: CONFIG.baseUrl, credentials: FAKE_CREDENTIALS, fetch: fake.fetch, sleep: async () => {} }),
     });
   return { fake, store, run };
 }

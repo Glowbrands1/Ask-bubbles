@@ -81,7 +81,7 @@ export async function previewWovenPart(
   }
 
   const config = overrides.config ?? readWovenKnowledgeConfig();
-  if (!overrides.connector && (!config.enabled || !config.credentials || !config.companyId || config.tenantProblem)) {
+  if (!overrides.connector && (!config.enabled || !config.credentials || config.tenantProblem)) {
     return { status: "failed", reason: "The Woven connection is not configured, so the item cannot be read." };
   }
   const connector =

@@ -7,8 +7,9 @@ import { testWovenConnection } from "@/lib/knowledge-sync/woven/sync";
 /**
  * POST /api/admin/knowledge-sync/woven/test — "Test Connection".
  *
- * Signs in to Woven Team with the configured integration account, confirms the
- * company is the one named in WOVEN_TEAM_COMPANY, and reads one small list. Writes nothing to Woven
+ * Signs in to Woven with the integration account, selects and proves the pinned
+ * Buff City Soap company (Midwest Soap Makers) by its Company ID, and reads one
+ * small list. Writes nothing to Woven
  * or to Ask Bubbles. The answer is a status, the company name and a count.
  */
 export const runtime = "nodejs";

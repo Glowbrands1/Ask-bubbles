@@ -20,13 +20,16 @@
  * a path that is not a verified read or the sign-in, which tests assert empty.
  */
 
-import { WOVEN_KNOWLEDGE_TENANT } from "@/config/company/woven";
+import { WOVEN_TENANT } from "@/config/company/woven";
 
-export const BCS_COMPANY_ID = WOVEN_KNOWLEDGE_TENANT.companyId;
-export const BCS_COMPANY = WOVEN_KNOWLEDGE_TENANT.companyName;
+export const BCS_COMPANY_ID = WOVEN_TENANT.companyId;
+export const BCS_COMPANY = WOVEN_TENANT.companyName;
 /** Invented: the other company on the same login. */
 export const JBA_COMPANY_ID = "1BA00000-0000-4000-8000-0000000000AA";
 export const JBA_COMPANY = "JB & Associates";
+/** Invented: a third company the login could be offered, known to nobody. */
+export const UNKNOWN_COMPANY_ID = "0aaa0000-0000-4000-8000-0000000000bb";
+export const UNKNOWN_COMPANY = "Unknown Example Co";
 export const USERNAME = "ask-bubbles-integration@example.test";
 export const PASSWORD = "fixture-password-not-real";
 
@@ -245,13 +248,20 @@ const ALLOWED = [
 ];
 
 export class FakeBcsWoven {
-  readonly content: Record<string, FakeCompanyContent> = { [BCS_COMPANY_ID]: bcsContent(), [JBA_COMPANY_ID]: jbaContent() };
+  readonly content: Record<string, FakeCompanyContent> = {
+    [BCS_COMPANY_ID]: bcsContent(),
+    [JBA_COMPANY_ID]: jbaContent(),
+    [UNKNOWN_COMPANY_ID]: { policies: [], handbooks: [], procedures: [], fileLibrary: [], communications: [] },
+  };
   readonly log: LoggedRequest[] = [];
   /** Accounts the chooser lists. */
   accounts = [
     { id: JBA_COMPANY_ID, name: JBA_COMPANY },
     { id: BCS_COMPANY_ID, name: BCS_COMPANY },
+    { id: UNKNOWN_COMPANY_ID, name: UNKNOWN_COMPANY },
   ];
+  /** Overrides what `/Company` shows, per company the session is in: another id or name than its own. */
+  companyPageOverride: { id?: string; name?: string } | null = null;
   /** False: the login lands straight in `defaultCompanyId` with no chooser. */
   requireCompanySelection = true;
   defaultCompanyId: string = BCS_COMPANY_ID;
@@ -350,16 +360,17 @@ export class FakeBcsWoven {
     if (path === "/") return html(page("<h1>Dashboard</h1>", "Dashboard"));
     if (path === "/Company") {
       if (this.companyPage === "forbidden") return html("<h1>Forbidden</h1>", 403);
-      const account = this.accounts.find((a) => a.id === companyId)!;
+      const found = this.accounts.find((a) => a.id === companyId) ?? { id: companyId, name: "Unlisted Co" };
+      const account = { id: this.companyPageOverride?.id ?? found.id, name: this.companyPageOverride?.name ?? found.name };
       const brand = companyId === BCS_COMPANY_ID ? "Buff City Soap" : "Sun Tan City";
       const idBlock =
         this.companyPage === "missing"
           ? ""
           : this.companyPage === "input"
-            ? `<label for="CompanyID">Company ID</label><input id="CompanyID" name="CompanyID" type="text" readonly value="${companyId}">`
+            ? `<label for="CompanyID">Company ID</label><input id="CompanyID" name="CompanyID" type="text" readonly value="${account.id}">`
             : this.companyPage === "conflicting"
-              ? `<div><span>Company ID</span> <span>${companyId}</span></div><div><span>Company ID</span> <span>${JBA_COMPANY_ID}</span></div>`
-              : `<div class="form-group"><label>Company ID</label><div class="read-only-label">${companyId}</div></div>`;
+              ? `<div><span>Company ID</span> <span>${account.id}</span></div><div><span>Company ID</span> <span>${JBA_COMPANY_ID}</span></div>`
+              : `<div class="form-group"><label>Company ID</label><div class="read-only-label">${account.id}</div></div>`;
       return html(page(`<h1>Company</h1><div><label>Brand</label><div>${brand}</div></div><div><label>Company</label><div>${esc(account.name)}</div></div>${idBlock}`));
     }
 

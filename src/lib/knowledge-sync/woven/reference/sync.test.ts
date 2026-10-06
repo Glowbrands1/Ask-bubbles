@@ -3,28 +3,25 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { MAX_AUTOMATIC_RETRIES, knowledgeDocumentIdFor, type RunOutcome } from "../engine";
-import { MemoryKnowledgeSink, MemoryKnowledgeSyncStore } from "../memory-store";
-import { MASS_REMOVAL_FLOOR } from "../reconcile";
-import { SinkError, type KnowledgeSyncStore } from "../ports";
-import { KnowledgeSyncStoreError } from "../store";
-import { previewTestModeAllowed, readWovenKnowledgeConfig } from "./config";
-import { readWovenKnowledgeStatus } from "./status";
-import type { ManifestItem } from "../types";
-import type { WovenKnowledgeConfig } from "./config";
+import { MAX_AUTOMATIC_RETRIES, knowledgeDocumentIdFor, type RunOutcome } from "../../engine";
+import { MemoryKnowledgeSink, MemoryKnowledgeSyncStore } from "../../memory-store";
+import { MASS_REMOVAL_FLOOR } from "../../reconcile";
+import { SinkError, type KnowledgeSyncStore } from "../../ports";
+import { KnowledgeSyncStoreError } from "../../store";
+import { previewTestModeAllowed } from "../config";
+import { readWovenKnowledgeStatus } from "../status";
+import type { ManifestItem } from "../../types";
+import type { WovenKnowledgeConfig } from "../config";
 import { WovenKnowledgeConnector } from "./connector";
-import { WovenTeamClient } from "./http";
-import { decideScheduledWork, nextAutomaticSyncAt, readOnlySink, runScheduledWovenKnowledgeTick, runWovenKnowledgeSync, testWovenConnection, type WovenRunOutcome } from "./sync";
+import { WovenTeamClient } from "../http";
+import { decideScheduledWork, nextAutomaticSyncAt, readOnlySink, runScheduledWovenKnowledgeTick, runWovenKnowledgeSync, type WovenRunOutcome } from "../sync";
 import { COMPANY, FakeWoven, PASSWORD, USERNAME, noSleep, uuid, REFERENCE_SYNC_POLICY } from "./test-support";
-import { WOVEN_KNOWLEDGE_TENANT } from "@/config/company/woven";
 
 const CONFIG: WovenKnowledgeConfig = {
   enabled: true,
   baseUrl: "https://app.woven.team",
-  company: COMPANY,
-  companyId: WOVEN_KNOWLEDGE_TENANT.companyId,
   tenantProblem: null,
-  downloads: { fileLibrary: false, handbook: false },
+  downloads: { fileLibrary: false },
   credentials: { username: USERNAME, password: PASSWORD },
   missingCredentials: [],
   problems: [],
@@ -101,38 +98,9 @@ describe("setup safety", () => {
     expect(off.status).toBe("disabled");
     const missing = await runWovenKnowledgeSync(
       { mode: "sync", trigger: "manual", requestedBy: "x" },
-      { ...h.overrides(), config: { ...CONFIG, credentials: null, missingCredentials: ["WOVEN_TEAM_PASSWORD"] } },
+      { ...h.overrides(), config: { ...CONFIG, credentials: null, missingCredentials: ["WOVEN_BCS_PASSWORD"] } },
     );
-    expect(missing).toEqual({ status: "not_configured", missing: ["WOVEN_TEAM_PASSWORD"] });
-    expect(h.fake.log).toHaveLength(0);
-  });
-
-  it("WOVEN_TEAM_COMPANY is required: without it the credentials are incomplete, and no sync, preview or connection test reaches Woven", async () => {
-    const h = new Harness();
-    const config = readWovenKnowledgeConfig({
-      WOVEN_KNOWLEDGE_SYNC_ENABLED: "true",
-      WOVEN_TEAM_USERNAME: USERNAME,
-      WOVEN_TEAM_PASSWORD: PASSWORD,
-      WOVEN_TEAM_COMPANY_ID: WOVEN_KNOWLEDGE_TENANT.companyId,
-    });
-    expect(config.company).toBe("");
-    expect(config.credentials).toBeNull();
-    expect(config.missingCredentials).toEqual(["WOVEN_TEAM_COMPANY"]);
-    expect(config.problems.join(" ")).toContain("WOVEN_TEAM_COMPANY");
-    expect(JSON.stringify(config)).not.toContain(PASSWORD);
-    for (const mode of ["preview", "sync"] as const) {
-      expect(await runWovenKnowledgeSync({ mode, trigger: "manual", requestedBy: "x" }, { ...h.overrides(), config })).toEqual({
-        status: "not_configured",
-        missing: ["WOVEN_TEAM_COMPANY"],
-      });
-    }
-    expect(await testWovenConnection({ config })).toEqual({ status: "not_configured", missing: ["WOVEN_TEAM_COMPANY"] });
-    /* A config built by hand with credentials but no company is refused the same way. */
-    const handBuilt = { ...CONFIG, company: " " };
-    expect(await runWovenKnowledgeSync({ mode: "sync", trigger: "manual", requestedBy: "x" }, { ...h.overrides(), config: handBuilt })).toEqual({
-      status: "not_configured",
-      missing: ["WOVEN_TEAM_COMPANY"],
-    });
+    expect(missing).toEqual({ status: "not_configured", missing: ["WOVEN_BCS_PASSWORD"] });
     expect(h.fake.log).toHaveLength(0);
   });
 

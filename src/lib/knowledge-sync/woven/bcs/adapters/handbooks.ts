@@ -22,11 +22,10 @@ import {
  * VERIFIED for Buff City Soap: the list and its four columns. Column1's link
  * must carry the row's own `EntityID` — a mismatch is schema drift.
  *
- * NOT VERIFIED for Buff City Soap: how a handbook's content is downloaded.
- * The reference platform verified a manage page + download-link request for
- * another company; that flow is used only when WOVEN_HANDBOOK_DOWNLOAD_ENABLED
- * is on (the connector supplies the version). Otherwise the handbook part is
- * BLOCKED (`handbook_download_unverified`).
+ * NOT VERIFIED for Buff City Soap: how a handbook's content is read or
+ * downloaded. No route is borrowed from another company's integration; the
+ * handbook part is BLOCKED (`handbook_download_unverified`) until one is
+ * verified for Midwest Soap Makers.
  */
 
 export interface HandbookRow {
@@ -75,24 +74,11 @@ export function parseHandbookRows(body: unknown): HandbookRow[] {
 }
 
 /**
- * One handbook. `currentVersionId` is supplied only when handbook downloads
- * are switched on and the manage page named one; otherwise the part is
- * BLOCKED, tracked and reported, never fetched.
+ * One handbook. Its content is NOT readable yet: no handbook detail or
+ * download route has been verified for this company, so the part is BLOCKED
+ * (`handbook_download_unverified`) — tracked, reported, never fetched.
  */
-export function handbookRecord(row: HandbookRow, download: { currentVersionId: string | null } | null): SourceRecord {
-  const part =
-    download && download.currentVersionId
-      ? {
-          partKey: "current-version",
-          title: row.title,
-          fileName: null,
-          documentId: null,
-          versionId: download.currentVersionId,
-          mimeType: null,
-          sizeBytes: null,
-          retrieval: { kind: "available" as const, locator: { handbookId: row.id, versionId: download.currentVersionId } },
-        }
-      : blockedPart("current-version", row.title, download ? "handbook_no_current_version" : BCS_CAPABILITY.handbookDownload);
+export function handbookRecord(row: HandbookRow): SourceRecord {
   return {
     source: "woven",
     contentType: "handbook",
@@ -103,12 +89,12 @@ export function handbookRecord(row: HandbookRow, download: { currentVersionId: s
     publicationReason: row.publicationReason,
     audience: row.audience,
     version: null,
-    versionId: download?.currentVersionId ?? null,
+    versionId: null,
     updatedAt: row.updatedAt,
     documentIds: [],
     attachmentIds: [],
     contentFingerprint: null,
     sourceMetadata: {},
-    parts: [part],
+    parts: [blockedPart("current-version", row.title, BCS_CAPABILITY.handbookDownload)],
   };
 }

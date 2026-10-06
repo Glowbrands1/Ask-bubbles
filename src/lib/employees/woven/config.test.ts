@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { readWovenConfig } from "./config";
 
-const COMPANY_ID = "11111111-1111-1111-1111-111111111111";
+const COMPANY_ID = "55839F24-9241-418C-8405-37BAF9A42A87";
 
 /** Configuration: off by default, credentials by name only, and no insecure base URL. */
 
@@ -107,24 +107,29 @@ describe("readWovenConfig", () => {
     expect(readWovenConfig({ WOVEN_WORK_EMAIL_DOMAINS: "example.com" }).loginEmailDomains).toEqual([]);
   });
 
-  it("reads an optional CompanyID and Platform, refusing malformed ones by name", () => {
-    const good = readWovenConfig({ WOVEN_COMPANY_ID: "11111111-1111-1111-1111-111111111111", WOVEN_PLATFORM: "2" });
-    expect(good.companyId).toBe("11111111-1111-1111-1111-111111111111");
-    expect(good.platform).toBe(2);
-    const bad = readWovenConfig({ WOVEN_COMPANY_ID: "not-a-guid", WOVEN_PLATFORM: "9" });
-    expect(bad.companyId).toBeNull();
-    expect(bad.platform).toBeNull();
-    expect(bad.problems.join(" ")).toContain("WOVEN_COMPANY_ID");
-    expect(bad.problems.join(" ")).not.toContain("not-a-guid");
+  it("the company is always the pinned Buff City Soap company; WOVEN_COMPANY_ID only confirms it", () => {
+    for (const env of [{}, { WOVEN_COMPANY_ID: "55839F24-9241-418C-8405-37BAF9A42A87" }, { WOVEN_COMPANY_ID: "55839f24-9241-418c-8405-37baf9a42a87" }]) {
+      const config = readWovenConfig({ ...env, WOVEN_PLATFORM: "2" });
+      expect(config.companyId).toBe("55839f24-9241-418c-8405-37baf9a42a87");
+      expect(config.tenantProblem).toBeNull();
+      expect(config.platform).toBe(2);
+    }
   });
 
-  it("leaves CompanyID unset by default, so Woven chooses and the live check reports it", () => {
-    expect(readWovenConfig({}).companyId).toBeNull();
+  it("any other WOVEN_COMPANY_ID — another company, or not a GUID — turns the whole integration off and withholds the credentials", () => {
+    const creds = { WOVEN_SUBSCRIPTION_KEY: "k", WOVEN_USERNAME: "u", WOVEN_PASSWORD: "p", WOVEN_SYNC_ENABLED: "true", WOVEN_VALIDATION_ENABLED: "true" };
+    for (const companyId of ["1BA00000-0000-4000-8000-0000000000AA", "not-a-guid"]) {
+      const config = readWovenConfig({ ...creds, WOVEN_COMPANY_ID: companyId });
+      expect(config.companyId).toBe("55839f24-9241-418c-8405-37baf9a42a87");
+      expect(config.tenantProblem).toMatch(/not the Buff City Soap company/);
+      expect(config).toMatchObject({ enabled: false, validationEnabled: false, credentials: null });
+      expect(JSON.stringify(config.problems)).not.toContain(companyId);
+    }
   });
 
-  it("keeps the sync OFF while WOVEN_SYNC_ENABLED is on without a valid WOVEN_COMPANY_ID, and says why by name", () => {
+  it("keeps the sync OFF while WOVEN_SYNC_ENABLED is on without WOVEN_COMPANY_ID confirming the pin, and says why by name", () => {
     const creds = { WOVEN_SUBSCRIPTION_KEY: "k", WOVEN_USERNAME: "u", WOVEN_PASSWORD: "p" };
-    for (const companyId of [undefined, "", "not-a-guid"]) {
+    for (const companyId of [undefined, ""]) {
       const config = readWovenConfig({
         ...creds,
         WOVEN_SYNC_ENABLED: "true",
@@ -133,16 +138,15 @@ describe("readWovenConfig", () => {
         ...(companyId === undefined ? {} : { WOVEN_COMPANY_ID: companyId }),
       });
       expect(config.enabled).toBe(false);
-      expect(config.companyId).toBeNull();
       expect(config.problems.join(" ")).toContain("WOVEN_SYNC_ENABLED is on but WOVEN_COMPANY_ID is not set, so the sync stays off");
-      expect(JSON.stringify(config.problems)).not.toContain("not-a-guid");
     }
   });
 
-  it("the read-only validation still runs without WOVEN_COMPANY_ID — that is how the id is found", () => {
+  it("the read-only validation runs without WOVEN_COMPANY_ID — and still names only the pinned company", () => {
     const config = readWovenConfig({ WOVEN_SUBSCRIPTION_KEY: "k", WOVEN_USERNAME: "u", WOVEN_PASSWORD: "p", WOVEN_VALIDATION_ENABLED: "true" });
     expect(config.validationEnabled).toBe(true);
     expect(config.enabled).toBe(false);
     expect(config.problems).toEqual([]);
+    expect(config.companyId).toBe("55839f24-9241-418c-8405-37baf9a42a87");
   });
 });

@@ -9,7 +9,7 @@ import { createSupabaseKnowledgeSink } from "../../sink";
 import { createSupabaseKnowledgeSyncStore } from "../../store";
 import { WovenTeamClient } from "../http";
 import { createWovenKnowledgeConnector, runWovenKnowledgeSync } from "../sync";
-import { BCS_COMPANY, BCS_COMPANY_ID, FakeBcsWoven, PASSWORD, USERNAME, noSleep } from "./test-support";
+import { FakeBcsWoven, PASSWORD, USERNAME, noSleep } from "./test-support";
 
 vi.setConfig({ hookTimeout: 60_000, testTimeout: 60_000 });
 
@@ -51,10 +51,8 @@ describe("Buff City Soap sync, in the database", () => {
     const config = {
       enabled: true,
       baseUrl: "https://app.woven.team",
-      company: BCS_COMPANY,
-      companyId: BCS_COMPANY_ID,
       tenantProblem: null,
-      downloads: { fileLibrary: false, handbook: false },
+      downloads: { fileLibrary: false },
       credentials: { username: USERNAME, password: PASSWORD },
       missingCredentials: [],
       problems: [],

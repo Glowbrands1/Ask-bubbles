@@ -8,12 +8,12 @@ import type { KnowledgeDocumentRole } from "@/lib/knowledge/document-roles";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import { minimalPdf } from "@/test/minimal-pdf";
 
-import type { SyncReport } from "../types";
+import type { SyncReport } from "../../types";
 import { WovenIntoKnowledge } from "./integration-support";
-import { partRef } from "../inventory";
+import { partRef } from "../../inventory";
 import { WovenKnowledgeConnector } from "./connector";
-import { WovenTeamClient } from "./http";
-import { previewWovenPart } from "./part-preview";
+import { WovenTeamClient } from "../http";
+import { previewWovenPart } from "../part-preview";
 import { COMPANY, LIVE_STATUS, PASSWORD, USERNAME, noSleep, uuid } from "./test-support";
 
 /* A fresh PGlite database per test: its start-up is slow under a parallel suite. */
@@ -453,6 +453,6 @@ describe("Preview: what Ask Bubbles would read, before a choice or a sync", () =
     const file = await h.item(FILE(401));
     expect(await preview(partRef(file))).toMatchObject({ status: "ok", preview: { knowledgeDocumentIdInBase: file.knowledgeDocumentId } });
     expect(await preview("0000000000000000")).toMatchObject({ status: "not_found" });
-    expect(await preview("../../etc")).toMatchObject({ status: "not_found" });
+    expect(await preview("../../../etc")).toMatchObject({ status: "not_found" });
   });
 });

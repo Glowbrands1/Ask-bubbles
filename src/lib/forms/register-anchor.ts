@@ -444,9 +444,9 @@ function namedKnowledgeDocuments(text: string): Set<string> {
     if (!DOCUMENT_KINDS.has(words[index])) continue;
 
     /*
-     * "JBA Policy Manual" holds two kind words, and it is ONE document. The
-     * inner one is skipped so the title is not counted twice, once as "jba
-     * policy" and again as "jba policy manual".
+     * "Team Policy Manual" holds two kind words, and it is ONE document. The
+     * inner one is skipped so the title is not counted twice, once as "team
+     * policy" and again as "team policy manual".
      */
     if (index + 1 < words.length && DOCUMENT_KINDS.has(words[index + 1])) continue;
 

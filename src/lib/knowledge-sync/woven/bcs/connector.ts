@@ -10,13 +10,12 @@ import {
   type ListingResult,
   type SourceRecord,
 } from "../../types";
-import { WovenShapeError, parseHandbookDownload, parseHandbookManage, textDocument } from "../adapters";
+import { WOVEN_TENANT } from "@/config/company/woven";
 import type { WovenTeamCredentials } from "../config";
-import { HANDBOOK_DOWNLOAD_FIELDS, HANDBOOK_DOWNLOAD_PATH, handbookManagePath } from "../contract";
-import { indexableFile, verifiedFile } from "../connector";
 import { HtmlShapeError } from "../html";
 import { WovenTeamClient, WovenTeamError } from "../http";
 import { establishSession } from "../session";
+import { WovenShapeError, indexableFile, textDocument, verifiedFile } from "../shared";
 import { communicationRecord, parseCommunicationRows } from "./adapters/communications";
 import { fileLibraryRecord, parseFileLibraryRows } from "./adapters/file-library";
 import { handbookRecord, parseHandbookRows } from "./adapters/handbooks";
@@ -69,14 +68,15 @@ import {
  * listing failed, removes nothing for being absent.
  */
 
+/**
+ * What the connector is given. There is NO company here: the connector reads
+ * exactly one Woven company, `WOVEN_TENANT` (`src/config/company/woven.ts`),
+ * and cannot be pointed at another.
+ */
 export interface BcsConnectorOptions {
   client: WovenTeamClient;
   credentials: WovenTeamCredentials;
-  /** The company's name as the chooser shows it ("Midwest Soap Makers"). */
-  company: string;
-  /** The Company ID the session must prove (pinned in company config). */
-  companyId: string;
-  downloads: { fileLibrary: boolean; handbook: boolean };
+  downloads: { fileLibrary: boolean };
   maxBytes?: number;
 }
 
@@ -120,7 +120,6 @@ export class BuffCitySoapWovenConnector implements KnowledgeSourceConnector {
   private connection: ConnectionInfo | null = null;
 
   constructor(options: BcsConnectorOptions) {
-    if (!options.companyId.trim()) throw new Error("The Woven Company ID is required.");
     this.options = options;
   }
 
@@ -130,10 +129,10 @@ export class BuffCitySoapWovenConnector implements KnowledgeSourceConnector {
 
   /** Signs in (choosing the account by id) and proves the company. Throws on any doubt. */
   private async signIn(): Promise<ConnectionInfo> {
-    const { client, credentials, company, companyId } = this.options;
-    await establishSession(client, { credentials, company, selector: companyIdSelector(companyId), verifier: deferToCompanyPage });
-    await verifyCompany(client, companyId, company);
-    return { companyLabel: company, companyVerified: true, companyId: companyId.toUpperCase() };
+    const { client, credentials } = this.options;
+    await establishSession(client, { credentials, company: WOVEN_TENANT.companyName, selector: companyIdSelector, verifier: deferToCompanyPage });
+    await verifyCompany(client);
+    return { companyLabel: WOVEN_TENANT.companyName, companyVerified: true, companyId: WOVEN_TENANT.companyId };
   }
 
   async connect(): Promise<ConnectionInfo> {
@@ -150,7 +149,7 @@ export class BuffCitySoapWovenConnector implements KnowledgeSourceConnector {
   async assertTenant(): Promise<ConnectionInfo> {
     if (!this.connection) throw new BcsConnectorError("woven_not_connected", "Not signed in to Woven.");
     try {
-      await this.withSession(() => verifyCompany(this.options.client, this.options.companyId, this.options.company));
+      await this.withSession(() => verifyCompany(this.options.client));
       return this.connection;
     } catch (error) {
       this.connection = null;
@@ -195,17 +194,8 @@ export class BuffCitySoapWovenConnector implements KnowledgeSourceConnector {
       }
       case "handbook": {
         const rows = parseHandbookRows(await this.withSession(() => client.postJson(HANDBOOK_LIST_PATH, undefined)));
-        const records: SourceRecord[] = [];
-        for (const row of rows) {
-          /* The manage page is read only when handbook downloads are switched on, and only for a published handbook. */
-          if (this.options.downloads.handbook && row.publication === "published") {
-            const manage = parseHandbookManage(await this.withSession(() => client.getHtml(handbookManagePath(row.id))), row.id);
-            records.push(handbookRecord(row, { currentVersionId: manage.currentVersionId }));
-          } else {
-            records.push(handbookRecord(row, null));
-          }
-        }
-        return { records, diagnostics: { rows: rows.length } };
+        /* Inventory only: the handbook download is not verified for this company, so each part is BLOCKED. */
+        return { records: rows.map(handbookRecord), diagnostics: { rows: rows.length } };
       }
       case "procedure": {
         const categories = parseProcedureCategories(await this.withSession(() => client.postJson(PROCEDURE_SEARCH_PATH, procedureSearchBody([]))));
@@ -250,7 +240,6 @@ export class BuffCitySoapWovenConnector implements KnowledgeSourceConnector {
       if (item.partKey === "content" && item.contentType === "procedure") return await this.fetchProcedureText(item.locator, item.entityId, item.title);
       if (item.partKey === "content" && item.contentType === "policy") return await this.fetchPolicyText(item.locator, item.entityId, item.title);
       if (item.partKey === "file" && item.contentType === "file_library") return await this.fetchFileLibrary(item.locator, item.fileName, item.mimeType);
-      if (item.partKey === "current-version" && item.contentType === "handbook") return await this.fetchHandbook(item.locator);
       throw new PartFetchError("capability_unavailable", "Ask Bubbles does not download this kind of Woven item for this company.", false);
     } catch (error) {
       if (error instanceof PartFetchError) throw error;
@@ -284,7 +273,7 @@ export class BuffCitySoapWovenConnector implements KnowledgeSourceConnector {
     return this.textFile("policy", entityId, title, detail.body);
   }
 
-  /** Gated: reached only with WOVEN_FILE_LIBRARY_DOWNLOAD_ENABLED (parts are BLOCKED otherwise). */
+  /** Gated: reached only with WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED (parts are BLOCKED otherwise). */
   private async fetchFileLibrary(locator: Record<string, string>, fileName: string | null, mimeType: string | null): Promise<FetchedFile> {
     if (!this.options.downloads.fileLibrary) {
       throw new PartFetchError("file_library_download_unverified", "File Library downloads are switched off for this company.", false);
@@ -293,31 +282,5 @@ export class BuffCitySoapWovenConnector implements KnowledgeSourceConnector {
     if (!fileLibraryId) throw new PartFetchError("no_locator", "This File Library item cannot be located.", false);
     const file = await this.withSession(() => this.options.client.downloadAuthenticated(fileLibraryDownloadPath(fileLibraryId), this.maxBytes()));
     return verifiedFile(indexableFile(file.bytes, fileName ?? file.fileName ?? `file-library-${fileLibraryId}.pdf`, mimeType ?? file.contentType));
-  }
-
-  /** Gated: reached only with WOVEN_HANDBOOK_DOWNLOAD_ENABLED. The reference platform's verified flow. */
-  private async fetchHandbook(locator: Record<string, string>): Promise<FetchedFile> {
-    if (!this.options.downloads.handbook) {
-      throw new PartFetchError("handbook_download_unverified", "Handbook downloads are switched off for this company.", false);
-    }
-    const { handbookId, versionId } = locator;
-    if (!handbookId || !versionId) throw new PartFetchError("no_locator", "This handbook has no version to download.", false);
-    for (let attempt = 0; ; attempt += 1) {
-      const link = parseHandbookDownload(
-        await this.withSession(() =>
-          this.options.client.postForm(HANDBOOK_DOWNLOAD_PATH, {
-            [HANDBOOK_DOWNLOAD_FIELDS.handbookId]: handbookId,
-            [HANDBOOK_DOWNLOAD_FIELDS.versionId]: versionId,
-          }),
-        ),
-      );
-      try {
-        const file = await this.options.client.downloadSigned(link.url, this.maxBytes());
-        return verifiedFile(indexableFile(file.bytes, link.fileName, file.contentType));
-      } catch (error) {
-        if (attempt === 0 && error instanceof WovenTeamError && error.code === "download_link_expired") continue;
-        throw error;
-      }
-    }
   }
 }

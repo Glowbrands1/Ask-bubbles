@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { contentRows, effectiveInventory } from "../inventory";
-import { MemoryKnowledgeSink, MemoryKnowledgeSyncStore } from "../memory-store";
-import type { WovenKnowledgeConfig } from "./config";
+import { contentRows, effectiveInventory } from "../../inventory";
+import { MemoryKnowledgeSink, MemoryKnowledgeSyncStore } from "../../memory-store";
+import type { WovenKnowledgeConfig } from "../config";
 import { WovenKnowledgeConnector } from "./connector";
-import { WovenTeamClient } from "./http";
-import { readWovenKnowledgeContent, readWovenKnowledgeStatus } from "./status";
-import { runWovenKnowledgeSync } from "./sync";
+import { WovenTeamClient } from "../http";
+import { readWovenKnowledgeContent, readWovenKnowledgeStatus } from "../status";
+import { runWovenKnowledgeSync } from "../sync";
 import { COMPANY, FakeWoven, PASSWORD, USERNAME, noSleep, uuid, REFERENCE_SYNC_POLICY } from "./test-support";
-import { WOVEN_KNOWLEDGE_TENANT } from "@/config/company/woven";
 
 /**
  * ============================================================================
@@ -24,10 +23,8 @@ import { WOVEN_KNOWLEDGE_TENANT } from "@/config/company/woven";
 const CONFIG: WovenKnowledgeConfig = {
   enabled: true,
   baseUrl: "https://app.woven.team",
-  company: COMPANY,
-  companyId: WOVEN_KNOWLEDGE_TENANT.companyId,
   tenantProblem: null,
-  downloads: { fileLibrary: false, handbook: false },
+  downloads: { fileLibrary: false },
   credentials: { username: USERNAME, password: PASSWORD },
   missingCredentials: [],
   problems: [],

@@ -3,17 +3,16 @@ import { __setEmbeddingProvider } from "@/lib/embeddings";
 import { __setSupabaseAdmin } from "@/lib/supabase/server";
 import { bagOfWordsEmbedding, createKnowledgeTestDatabase, type KnowledgeTestDatabase } from "@/test/pglite-knowledge-db";
 
-import { MemoryKnowledgeSyncStore } from "../memory-store";
-import type { KnowledgeSyncStore } from "../ports";
-import { createSupabaseKnowledgeSink } from "../sink";
-import { createSupabaseKnowledgeSyncStore } from "../store";
-import { CONTENT_TYPES, type ContentType, type ManifestItem } from "../types";
-import type { WovenKnowledgeConfig } from "./config";
+import { MemoryKnowledgeSyncStore } from "../../memory-store";
+import type { KnowledgeSyncStore } from "../../ports";
+import { createSupabaseKnowledgeSink } from "../../sink";
+import { createSupabaseKnowledgeSyncStore } from "../../store";
+import { CONTENT_TYPES, type ContentType, type ManifestItem } from "../../types";
+import type { WovenKnowledgeConfig } from "../config";
 import { WovenKnowledgeConnector } from "./connector";
-import { WovenTeamClient } from "./http";
-import { runWovenKnowledgeSync } from "./sync";
+import { WovenTeamClient } from "../http";
+import { runWovenKnowledgeSync } from "../sync";
 import { COMPANY, FakeWoven, PASSWORD, USERNAME, noSleep, uuid, REFERENCE_SYNC_POLICY } from "./test-support";
-import { WOVEN_KNOWLEDGE_TENANT } from "@/config/company/woven";
 
 /**
  * ============================================================================
@@ -34,10 +33,8 @@ import { WOVEN_KNOWLEDGE_TENANT } from "@/config/company/woven";
 export const CONFIG: WovenKnowledgeConfig = {
   enabled: true,
   baseUrl: "https://app.woven.team",
-  company: COMPANY,
-  companyId: WOVEN_KNOWLEDGE_TENANT.companyId,
   tenantProblem: null,
-  downloads: { fileLibrary: false, handbook: false },
+  downloads: { fileLibrary: false },
   credentials: { username: USERNAME, password: PASSWORD },
   missingCredentials: [],
   problems: [],

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { PartFetchError, type ListingResult } from "../types";
+import { PartFetchError, type ListingResult } from "../../types";
 import { WovenConnectorError, WovenKnowledgeConnector } from "./connector";
-import { WovenTeamClient } from "./http";
-import type { CompanySelector } from "./session";
+import { WovenTeamClient } from "../http";
+import type { CompanySelector } from "../session";
 import { COMPANY, FakeWoven, PASSWORD, USERNAME, defaultState, noSleep, uuid, REFERENCE_SYNC_POLICY } from "./test-support";
 
 function connectorFor(fake: FakeWoven, options: { password?: string; company?: string; selector?: CompanySelector; maxBytes?: number } = {}) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { audienceKey, decideAccess } from "../access";
+import { audienceKey, decideAccess } from "../../access";
 import {
   WovenShapeError,
   unmatchedManagementEntries,
@@ -17,9 +17,10 @@ import {
   statusCell,
   toIsoDate,
 } from "./adapters";
-import { WovenTeamError } from "./http";
-import { HtmlShapeError, parseHtmlDocument, readInlineVar } from "./html";
-import { chooserAction, continueLoginSubmission, isAccountChooser, isCredentialForm, isProfilePhotoPrompt, profilePhotoSkip, readLoginForm } from "./session";
+import { WovenTeamError } from "../http";
+import { HtmlShapeError, parseHtmlDocument, readInlineVar } from "../html";
+import { isAccountChooser, isCredentialForm, isProfilePhotoPrompt, profilePhotoSkip, readLoginForm } from "../session";
+import { chooserAction, nameContinueLoginSubmission as continueLoginSubmission } from "./session";
 import { PASSWORD, USERNAME, accountChooserHtml, defaultState, loginPageHtml, profilePhotoHtml, uuid, verifiedChooserHtml } from "./test-support";
 
 describe("dates, statuses and audiences", () => {

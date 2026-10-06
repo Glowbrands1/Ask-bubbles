@@ -14,13 +14,16 @@ import type { Role } from "@/types";
  * account is created, disabled, re-scoped or re-roled from Woven by this
  * build, whatever these say. Confirm them before any apply stage is built.
  *
- * Credentials and the tenant are environment variables, never source:
+ * THE TENANT IS NOT AN ENVIRONMENT VARIABLE. Both Woven integrations read
+ * exactly one Woven company, `WOVEN_TENANT` below, and prove it on every run.
+ * Credentials are environment variables:
  *   employee directory   WOVEN_API_BASE_URL, WOVEN_SUBSCRIPTION_KEY,
- *                        WOVEN_USERNAME, WOVEN_PASSWORD, WOVEN_COMPANY_ID
- *   knowledge sync       WOVEN_TEAM_USERNAME, WOVEN_TEAM_PASSWORD,
- *                        WOVEN_TEAM_COMPANY and WOVEN_TEAM_COMPANY_ID
- *                        (required — a login can see several companies; the
- *                        id must equal WOVEN_KNOWLEDGE_TENANT below)
+ *                        WOVEN_USERNAME, WOVEN_PASSWORD; WOVEN_COMPANY_ID is
+ *                        a confirmation that must equal WOVEN_TENANT.companyId
+ *   knowledge sync       WOVEN_BCS_USERNAME, WOVEN_BCS_PASSWORD;
+ *                        WOVEN_BCS_COMPANY_ID (required) and
+ *                        WOVEN_BCS_COMPANY_NAME (optional) are confirmations
+ *                        that must equal WOVEN_TENANT
  * Everything is off until WOVEN_SYNC_ENABLED / WOVEN_KNOWLEDGE_SYNC_ENABLED
  * are set. See docs/woven.md.
  */
@@ -33,23 +36,27 @@ export const WOVEN_LOCATION_MANAGED_ROLES: readonly Role[] = ["location_manager"
 
 /**
  * ============================================================================
- * THE WOVEN KNOWLEDGE TENANT — pinned
+ * THE WOVEN TENANT — Buff City Soap / Midwest Soap Makers, and nothing else
  * ============================================================================
  *
- * The one Woven company Ask Bubbles' knowledge sync may read. VERIFIED in the
- * Woven browser investigation of 6 October 2026 (Codex handoff): the Company
- * settings page shows Brand "Buff City Soap", Company "Midwest Soap Makers"
- * and this Company ID.
+ * The ONE Woven company Ask Bubbles may operate against, for both Woven
+ * integrations (knowledge sync and employee directory). VERIFIED in the Woven
+ * browser investigation of 6 October 2026: the Company settings page shows
+ * Brand "Buff City Soap", Company "Midwest Soap Makers" and this Company ID.
  *
- * WHY IT IS PINNED IN CODE. The same Woven login can also open JB & Associates
- * (Sun Tan City), and Woven's content requests carry no company id — the
- * company lives only in the server-side session. So the sync proves the
- * session's company by its ID before every run and after every listing, and
- * `WOVEN_TEAM_COMPANY_ID` must equal this value or the sync refuses to start.
- * Pointing this deployment at another company takes a code change here, not
- * an environment variable.
+ * THE COMPANY ID IS THE IDENTITY. The name is checked too, but a session is
+ * accepted only when Woven shows THIS id.
+ *
+ * WHY IT IS IN CODE. The integration login can also open other Woven
+ * companies, and Woven's content requests carry no company id — the company
+ * lives only in the server-side session. So there is no tenant setting, no
+ * default and no fallback: Ask Bubbles selects this company by its id, proves
+ * it before reading, after every re-sign-in and before anything is written,
+ * and fails otherwise. Environment variables can only CONFIRM these values;
+ * any other value disables the integration. Pointing Ask Bubbles at another
+ * Woven company would take a code change here, reviewed like any other.
  */
-export const WOVEN_KNOWLEDGE_TENANT = {
+export const WOVEN_TENANT = {
   brand: "Buff City Soap",
   companyName: "Midwest Soap Makers",
   companyId: "55839F24-9241-418C-8405-37BAF9A42A87",
@@ -60,16 +67,19 @@ export const WOVEN_KNOWLEDGE_TENANT = {
  * CONTENT THAT MAY BELONG TO ANOTHER COMPANY — held for a person
  * ============================================================================
  *
- * The investigation found records in the Buff City Soap company whose titles
- * name JB & Associates (Sun Tan City): "JBA Policy Manual 2025", "NE Sick
- * Time" and the handbook "2025 JBA Policy Manual - Edited 5-2025". Nothing in
- * Woven's metadata proves they are meant for Buff City Soap team members.
+ * The investigation found records INSIDE the Midwest Soap Makers company whose
+ * titles name another company ("JBA Policy Manual 2025", "NE Sick Time" and
+ * the handbook "2025 JBA Policy Manual - Edited 5-2025"). Their presence is
+ * not a reason to read any other Woven company — Ask Bubbles never does — and
+ * nothing in Woven's metadata proves they are meant for Buff City Soap team
+ * members. So these patterns only HOLD such records; they select nothing.
  *
  * A published record whose title matches one of these patterns is held as
  * NEEDS_REVIEW (`ownership_review`): never ingested, never offered as an
- * audience choice, and withdrawn if it was ever in Ask Bubbles. To release
- * one, a person confirms it belongs to Buff City Soap and its Woven id (the
- * GUID in the sync's dry-run report) is added to `confirmedEntityIds`.
+ * audience choice, and withdrawn if it was ever in Ask Bubbles. There is no
+ * automatic release: one is released only when Buff City Soap explicitly
+ * approves it and its Woven id (from the dry-run report) is added to
+ * `confirmedEntityIds` in a reviewed code change. The list is empty.
  */
 export const WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW: {
   readonly titlePatterns: readonly RegExp[];
