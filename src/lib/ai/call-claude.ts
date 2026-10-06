@@ -3,7 +3,7 @@ import "server-only";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_EFFORT, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
-import { getAnthropicClient } from "./anthropic";
+import { Anthropic, getAnthropicClient } from "./anthropic";
 import { AiError } from "./errors";
 
 /**
@@ -144,10 +144,47 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
     }
     // The SDK error can echo the request, which carries confidential grounding
     // text. Only the class name is kept — never the body.
+    logAnthropicFailure(error);
+    if (error instanceof Anthropic.APIError && rejectsConfiguration(error.status)) {
+      throw new AiError(
+        "not_configured",
+        `${ACTIVE_BRAND.assistantName} could not reach the language model: Anthropic rejected this deployment's API key or model (HTTP ${error.status}). An administrator needs to check the Anthropic settings. No answer was generated.`,
+        503,
+      );
+    }
     throw new AiError(
       "model_failed",
       `${ACTIVE_BRAND.assistantName} could not reach the language model. No answer was generated.`,
       502,
     );
   }
+}
+
+/**
+ * A REJECTION THAT ASKING AGAIN CANNOT FIX: the key is invalid (401), the key
+ * may not use this model (403), or the model id does not exist (404). Reported
+ * as configuration, so the manager is not told to "try again in a moment" about
+ * a deployment setting.
+ */
+function rejectsConfiguration(status: number | undefined): boolean {
+  return status === 401 || status === 403 || status === 404;
+}
+
+/**
+ * ONE LINE AN OPERATOR CAN ACT ON, AND NOTHING FROM THE REQUEST.
+ *
+ * Every failure used to be discarded here, so a deployment whose key or model
+ * Anthropic refused answered "could not produce an answer" with no trace in any
+ * log. Logged: the HTTP status, Anthropic's error type and request id, and the
+ * configured model and effort (JSON-quoted, so stray whitespace in an override
+ * shows). Never the SDK message or body, which can echo grounding text.
+ */
+function logAnthropicFailure(error: unknown): void {
+  const detail =
+    error instanceof Anthropic.APIError
+      ? `status=${error.status ?? "none"} type=${error.type ?? "unknown"} request_id=${error.requestID ?? "none"}`
+      : `class=${error instanceof Error ? error.name : typeof error}`;
+  console.error(
+    `[callClaude] Anthropic request failed: ${detail} model=${JSON.stringify(CLAUDE_MODEL)} effort=${JSON.stringify(CLAUDE_EFFORT)}`,
+  );
 }
