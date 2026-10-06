@@ -212,7 +212,8 @@ Knowledge (`src/test/parity/knowledge-parity.qa.test.ts`) uses:
 | K2 | Several possible sources | Both attendance documents, both cited | **identical** |
 | K3 | No reliable source | Nothing cited, `insufficient`, "no documents matched" | **identical** |
 | K4 | Follow-up on a new subject | History sent (2), Break Policy | **identical** |
-| K5 | "and for part-timers?" | History sent; **nothing retrieved** | **identical** (shared limitation; see §5) |
+| K5 | "and for part-timers?" | History sent; **nothing retrieved** | **intentionally different** since §7: the part-time attendance guidance is retrieved and cited (identical to the reference with `KNOWLEDGE_FOLLOW_UP_RETRIEVAL=off`) |
+| K5b | A whole new question after an attendance answer | Dress Code only | **identical** |
 | K6 | Citation rendering, with an invalid `[S9]` | Only real rows cited; markers stripped | **identical** |
 | K7 | "What's the policy?" | Nothing retrieved, `insufficient` | **identical** |
 | K8 | Correcting the previous message | Dress Code found | **identical** |
@@ -254,11 +255,9 @@ Access restrictions are covered by the existing suites (`actor-authority`,
 
 ## 5. Remaining differences and blockers
 
-1. **Follow-up retrieval (both apps).** Only the latest question is embedded,
-   so an elliptical follow-up retrieves nothing and the model works only from
-   the earlier answer's text. Recommended as a shared improvement: when
-   `isElliptical`, embed the anchor plus the question. It is not done here,
-   because it would diverge from the reference platform.
+1. **Follow-up retrieval — fixed in Ask Bubbles, not yet in the reference
+   platform.** See §7. "and for part-timers?" now retrieves; every other
+   side-by-side scenario is unchanged.
 2. **Correction scope differs on purpose.** The reference platform corrects
    name and date only on its employment-change, exit and payroll forms.
    Bubbles corrects header lines on any form that opts in.
@@ -288,3 +287,73 @@ variable. To make use of it:
 
 The existing handoff blockers are unchanged: Vercel project, secrets, Woven
 credentials and Buff content (`docs/HANDOFF.md`).
+
+---
+
+## 7. History-aware retrieval (Ask Bubbles only, switchable)
+
+**The limitation.** Both apps embedded only the newest message, so "and for
+part-timers?" searched for "part-timers" alone and retrieved nothing.
+
+**The change** (`lib/ai/continuation.ts`: `retrievalPlan`, `searchWithPlan`;
+used in `server-ask.ts`):
+
+1. A question that stands on its own is searched exactly as typed — no change.
+2. A FRAGMENT ("and…", "what about…", "why?", a bare name — the reference
+   platform's own `isEllipticalFollowUp`) is searched as typed FIRST.
+3. Only if that finds nothing is it searched again as *anchor + question*,
+   where the anchor is the nearest standalone MANAGER turn (the same bounded
+   walk the pinned-document gates use). An assistant answer is never embedded,
+   so a model's wording can never steer retrieval.
+4. Only the query changes. The model is given the question as typed;
+   citations are built from retrieved rows; corpus, scope and similarity
+   floor are unchanged.
+
+Why a fallback rather than always merging: "What about breaks during a
+shift?" is a fragment by its opening but names its own subject. Always adding
+the anchor pulled the previous topic's Attendance Policy into an answer about
+breaks; as a fallback, that question is searched exactly as the reference
+platform searches it, and only the turns that found nothing are rescued.
+
+**Switch:** `KNOWLEDGE_FOLLOW_UP_RETRIEVAL=off` (server environment) restores
+single-message retrieval with no code change. Default: on.
+
+**Sharing it with the reference platform later.** The reference platform
+already has `isEllipticalFollowUp` and `findContinuationAnchor` (in its
+employee-performance gate). Porting is: lift those two into a shared module as
+here, add `retrievalPlan` / `searchWithPlan`, and replace its single
+`knowledge.match({ query: request.question, … })` in `answerQuestion` with
+`searchWithPlan(retrievalPlan(question, history), …)`, behind the same
+variable. Its side-by-side harness (`src/test/parity/knowledge-parity.qa.test.ts`,
+which runs unchanged in both repositories) then shows K5 change and nothing
+else. A shared package is not recommended yet: the two apps' `server-ask.ts`
+have diverged by design, and a copied 150-line pure module with a shared test
+file is cheaper to keep in step than a dependency.
+
+---
+
+## 8. Buff City Soap Woven knowledge behind this chat
+
+The Woven connector for Buff City Soap (Midwest Soap Makers) is being built in
+a separate session on `claude/practical-allen-5gjnfh` (commit `294775b` at the
+time of writing; see that branch's `docs/woven.md`). It plugs into the
+existing knowledge-sync engine and writes into the same
+`knowledge_documents` / `knowledge_chunks` the chat already reads, so **no
+chat-side change is needed for Woven content**: grounding, citations,
+follow-ups and refusals apply to it exactly as to an upload.
+
+Verified by merging that commit with this branch locally (not pushed): the
+connector's sanitized BCS fixtures, through the real connector, company guard,
+sync store and sink, ingestion and `match_knowledge_chunks` on PGlite, then
+the real `answerQuestion`:
+
+| # | Question | Result |
+|---|---|---|
+| Q1 | Opening procedure | Grounded, cited "Opening the Makery" |
+| Q2 | Fire extinguisher | Cited "Fire Extinguisher Use" only |
+| Q3 | "and then what?" after Q1 | Retrieved via the anchor fallback |
+| Q4 | Managers-only procedure (Chemical Handling) | Never retrieved |
+| Q5 | Draft procedure (Closing Checklist) | Never retrieved |
+| Q6 | JB & Associates / Sun Tan City content, JBA manual | Never retrieved |
+| Q7 | Policies, File Library (restricted and unverified) | Never retrieved |
+| Q8 | No supported answer | Nothing cited, `insufficient` |

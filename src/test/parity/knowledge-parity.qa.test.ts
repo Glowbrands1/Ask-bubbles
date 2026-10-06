@@ -210,6 +210,27 @@ describe(`knowledge chat parity (${APP})`, () => {
     ];
     const { entry } = await ask("K5", "and for part-timers?", history);
     expect(entry.historySent).toBe(2);
+    /*
+     * HISTORY-AWARE RETRIEVAL. The reference platform embeds only the newest
+     * message, so this finds nothing there; Ask Bubbles also searches the
+     * fragment with its anchor (`retrievalPlan`) unless switched off.
+     */
+    const contextual = APP === "bubbles" && process.env.KNOWLEDGE_FOLLOW_UP_RETRIEVAL !== "off";
+    if (contextual) {
+      expect(entry.groundingTitles).toContain("Attendance FAQ for Part-Time Team Members");
+      expect(entry.coverage).toBe("grounded");
+    } else {
+      expect(entry.groundingTitles).toEqual([]);
+    }
+  });
+
+  it("K5b a follow-up never inherits the anchor when it stands on its own", async () => {
+    const history: Turn[] = [
+      { role: "user", content: "What does the attendance policy say about arriving late for a shift?" },
+      { role: "assistant", content: "Team members must arrive on time." },
+    ];
+    const { entry } = await ask("K5b", "What is the dress code for shoes on the sales floor?", history);
+    expect(entry.groundingTitles).toEqual(["Dress Code"]);
   });
 
   it("K6 citations come from retrieved rows; an invalid marker never becomes a card", async () => {

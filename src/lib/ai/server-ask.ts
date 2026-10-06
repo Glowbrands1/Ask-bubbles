@@ -23,7 +23,7 @@ import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
 import { callClaude } from "./call-claude";
-import { gateTexts } from "./continuation";
+import { gateTexts, retrievalPlan, searchWithPlan } from "./continuation";
 import { AiError } from "./errors";
 import {
   answerInventoryQuestion,
@@ -48,7 +48,9 @@ import type { AskRequest, AskResponse } from "./types";
  *
  *   question
  *     -> answer from the FORMS LIBRARY  (inventory / proposal gates, first)
- *     -> embed + retrieve top-k chunks  (match_knowledge_chunks / pgvector)
+ *     -> embed + retrieve top-k chunks  (match_knowledge_chunks / pgvector;
+ *                                        a follow-up that finds nothing is
+ *                                        retried with its anchor)
  *     -> pin required rule documents    (company knowledge config; a
  *                                        follow-up keeps its anchor's)
  *     -> pin a named handbook           (by identity, when the question
@@ -221,13 +223,22 @@ export async function answerQuestion(
     ? knowledge.fetchNamedHandbook(NAMED_HANDBOOK!.identity, request.scopeId)
     : Promise.resolve(null);
 
+  /*
+   * A FOLLOW-UP THAT FINDS NOTHING ON ITS OWN IS SEARCHED WITH ITS ANCHOR —
+   * "and for part-timers?" then finds the part-time attendance guidance. Only
+   * the query changes: the model is still given the question as typed. See
+   * `retrievalPlan`.
+   */
+  const plan = retrievalPlan(request.question, request.history);
+  const limit = pinnedWanted.length > 0 ? RETRIEVAL.roleAugmentedTopK : RETRIEVAL.topK;
+
   let rows: MatchedChunkRow[];
   try {
-    rows = await knowledge.match({
-      query: request.question,
-      scopeId: request.scopeId,
-      limit: pinnedWanted.length > 0 ? RETRIEVAL.roleAugmentedTopK : RETRIEVAL.topK,
-    });
+    rows = await searchWithPlan(
+      plan,
+      (query) => knowledge.match({ query, scopeId: request.scopeId, limit }),
+      limit,
+    );
   } catch (error) {
     if (error instanceof MissingConfigurationError) {
       throw new AiError("not_configured", error.message, 503, error.missing);

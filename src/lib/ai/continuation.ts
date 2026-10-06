@@ -109,3 +109,93 @@ export function gateTexts(question: string, history: readonly ClaudeTurn[]): str
   const anchor = findContinuationAnchor(history);
   return anchor ? [question, anchor] : [question];
 }
+
+/**
+ * ============================================================================
+ * WHAT RETRIEVAL SEARCHES FOR A FOLLOW-UP
+ * ============================================================================
+ *
+ * Retrieval used to embed only the newest message, so "and for part-timers?"
+ * after an attendance question searched for "part-timers" alone, matched
+ * nothing, and the answer said the knowledge base had nothing — in both this
+ * platform and the reference one.
+ *
+ * THE RULE, kept as narrow as the gates' walk above:
+ *
+ *   - only a FRAGMENT gets context; a question that stands on its own is
+ *     searched exactly as typed;
+ *   - the context is the nearest standalone MANAGER turn, found by the same
+ *     bounded walk — never an assistant answer, so a model's wording can never
+ *     steer what is retrieved;
+ *   - the fragment is searched ON ITS OWN FIRST, and the anchored query is a
+ *     FALLBACK used only when that found nothing. "What about breaks during a
+ *     shift?" names its own subject and finds the Break Policy alone; adding
+ *     the attendance anchor there only brought the previous topic's documents
+ *     back into an answer about breaks. "And for part-timers?" finds nothing
+ *     alone, and that is the turn context exists to rescue.
+ *
+ * Only the QUERY changes. The model is still given the question as typed;
+ * citations are still built from the rows retrieval returned; the corpus and
+ * similarity floor are unchanged.
+ *
+ * SWITCHABLE: `KNOWLEDGE_FOLLOW_UP_RETRIEVAL=off` restores single-message
+ * retrieval without a deploy of code.
+ */
+export function followUpRetrievalEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return (env.KNOWLEDGE_FOLLOW_UP_RETRIEVAL ?? "on").trim().toLowerCase() !== "off";
+}
+
+export interface RetrievalPlan {
+  /** The question as typed: always searched, always first. */
+  readonly queries: readonly string[];
+  /** The anchored query, searched only when the question alone found nothing. Null when there is none. */
+  readonly fallback: string | null;
+  /** The manager turn a fragment was read against, or null. */
+  readonly anchor: string | null;
+}
+
+export function retrievalPlan(
+  question: string,
+  history: readonly ClaudeTurn[],
+  enabled: boolean = followUpRetrievalEnabled(),
+): RetrievalPlan {
+  if (!enabled || !isEllipticalFollowUp(question)) return { queries: [question], fallback: null, anchor: null };
+  const anchor = findContinuationAnchor(history);
+  if (!anchor || anchor.trim() === question.trim()) return { queries: [question], fallback: null, anchor: null };
+  return { queries: [question], fallback: `${anchor.trim()}\n${question.trim()}`, anchor };
+}
+
+/**
+ * Runs a plan: the question as typed, then — only if that found nothing — the
+ * anchored fallback. `search` is the retriever, so the corpus, the similarity
+ * floor and the scope are exactly those of an ordinary search.
+ */
+export async function searchWithPlan<T extends { chunk_id: string; similarity: number }>(
+  plan: RetrievalPlan,
+  search: (query: string) => Promise<readonly T[]>,
+  limit: number,
+): Promise<T[]> {
+  const sets = await Promise.all(plan.queries.map(search));
+  const direct = mergeRetrieved(sets, limit);
+  if (direct.length > 0 || !plan.fallback) return direct;
+  return mergeRetrieved([await search(plan.fallback)], limit);
+}
+
+/**
+ * Several result sets as one: each chunk once, at its best similarity, most
+ * similar first, no more than `limit`. Rows come from retrieval only, so a
+ * merged row is exactly a row the database returned.
+ */
+export function mergeRetrieved<T extends { chunk_id: string; similarity: number }>(
+  sets: readonly (readonly T[])[],
+  limit: number,
+): T[] {
+  const best = new Map<string, T>();
+  for (const rows of sets) {
+    for (const row of rows) {
+      const seen = best.get(row.chunk_id);
+      if (!seen || row.similarity > seen.similarity) best.set(row.chunk_id, row);
+    }
+  }
+  return [...best.values()].sort((a, b) => b.similarity - a.similarity).slice(0, limit);
+}
