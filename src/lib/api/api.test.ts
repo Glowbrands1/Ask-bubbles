@@ -367,3 +367,19 @@ describe("assertLiveMode", () => {
     },
   );
 });
+
+describe("parseHistory bounds each message, not only the number of them", () => {
+  it("truncates a forged, oversized message to LIMITS.historyMessage", async () => {
+    const { parseHistory, LIMITS } = await import("./validation");
+    const huge = "x".repeat(LIMITS.historyMessage + 5_000);
+    const parsed = parseHistory([{ role: "user", content: huge }, { role: "assistant", content: "ok" }]);
+    expect(parsed[0]!.content.length).toBe(LIMITS.historyMessage);
+    expect(parsed[1]!.content).toBe("ok");
+  });
+
+  it("leaves an ordinary detailed answer whole", async () => {
+    const { parseHistory } = await import("./validation");
+    const answer = "A detailed answer. ".repeat(1_500); // ~28,500 characters
+    expect(parseHistory([{ role: "assistant", content: answer }])[0]!.content).toBe(answer);
+  });
+});
