@@ -141,6 +141,12 @@ export async function createInlineForm({
       locationId: proposal.locationId,
       source: "assistant",
       /*
+       * WHICH CARD THIS IS. A second press of the same card — after a lost
+       * response, or from another tab — gets back the draft it already made.
+       * A different card always files a new form.
+       */
+      proposalId: proposal.proposalId,
+      /*
        * THE CONVERSATION AS IT STANDS NOW, not as it stood when the card was
        * drawn. The server re-reads who and which form it now names and
        * refuses a card the manager has since corrected.
@@ -167,7 +173,7 @@ export async function createInlineForm({
   /*
    * A DRAFT THAT ALREADY EXISTED IS NOT DRAFTED AGAIN. The server returned the
    * draft this manager started from chat moments ago (a lost response, a
-   * second tab — see `findRecentAssistantDraft`). Its prefill already ran, and
+   * second tab, from the same card — see `findRecentAssistantDraft`). Its prefill already ran, and
    * the manager may already have edited it; prefilling again would spend a
    * model call to overwrite their work.
    */

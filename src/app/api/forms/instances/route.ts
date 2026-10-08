@@ -18,6 +18,7 @@ import {
 } from "@/lib/forms/instances";
 import { instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-scope";
 import { authorizeLocation } from "@/lib/forms/location-scope";
+import { isProposalId } from "@/lib/forms/proposal-id";
 import { checkProposalIsCurrent } from "@/lib/forms/proposal-currency";
 import { allowsTeamSubject, isTeamSubject } from "@/lib/forms/team-subject";
 import { isDemoMode } from "@/lib/config/runtime";
@@ -122,6 +123,8 @@ export async function POST(request: Request) {
       payrollDeduct?: unknown;
       /** The chat the proposal came from, for `checkProposalIsCurrent`. Ask Bubbles only. */
       conversation?: unknown;
+      /** The card's id: a repeated press of the same card returns its draft. */
+      proposalId?: unknown;
     } | null;
 
     if (!body?.templateKey || !body.employeeName?.trim()) {
@@ -212,16 +215,20 @@ export async function POST(request: Request) {
     const locationName = resolveLocationName(locationId, body.locationName ?? null);
 
     /*
-     * ONE DRAFT, NOT TWO. A create from chat whose response was lost, or the
-     * same card pressed in another tab, returns the draft that already exists
-     * instead of filing a second record. See `findRecentAssistantDraft`.
+     * ONE DRAFT PER CARD. A press of a card whose create already succeeded —
+     * the response was lost, or the card was pressed in another tab — returns
+     * that draft instead of filing a second record. A new card (a new request,
+     * a second incident for the same person) always creates. See
+     * `findRecentAssistantDraft`.
      */
-    if (body.source === "assistant") {
+    const proposalId = body.source === "assistant" && isProposalId(body.proposalId) ? body.proposalId : undefined;
+    if (proposalId) {
       const existing = await findRecentAssistantDraft({
         templateKey: body.templateKey,
         employeeName: body.employeeName.trim().slice(0, 120),
         createdBy: actor.id,
         locationId,
+        proposalId,
       });
       if (existing) return NextResponse.json({ instance: existing, reused: true });
     }
@@ -238,6 +245,7 @@ export async function POST(request: Request) {
       source: body.source === "assistant" ? "assistant" : "manual",
       // A real calendar day or nothing, in which case the form is dated today.
       formDate: isIsoCalendarDate(body.formDate) ? body.formDate : undefined,
+      proposalId,
     });
 
     /*

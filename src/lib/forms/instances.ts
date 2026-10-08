@@ -1,6 +1,7 @@
 import "server-only";
 
 import { businessToday } from "@/lib/business-date";
+import { isProposalId } from "./proposal-id";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import {
@@ -327,38 +328,47 @@ export interface NewInstance {
   createdByRole?: string | null;
   source: InstanceSource;
   formDate?: string;
+  /** The chat card this form was created from; recorded so a repeated press finds it. */
+  proposalId?: string;
 }
 
 /**
  * ============================================================================
- * THE SAME DRAFT, ASKED FOR TWICE, IS ONE DRAFT
+ * THE SAME CHAT CARD, PRESSED TWICE, IS ONE DRAFT
  * ============================================================================
  *
  * The browser stops a second click while a create is in flight, and marks the
  * card created the instant the row exists. What it cannot stop is a create
  * whose RESPONSE was lost — a dropped connection, a timeout, a reload — or the
- * same proposal pressed in a second tab: the row exists, the browser does not
- * know, and the next press files a second disciplinary record for the same
- * person.
+ * same card pressed in a second tab: the row exists, the browser does not
+ * know, and the next press files a second disciplinary record.
  *
- * So the server answers the question itself: has THIS manager, from chat,
- * started a draft of THIS form for THIS person at THIS location in the last few
- * minutes? If so, that draft is the answer and nothing new is written.
+ * KEYED ON THE CARD, NOT ON THE PERSON. Every proposal card carries a
+ * `proposalId`, recorded on the form's `created` event. A press of the SAME
+ * card returns the draft it already made. A NEW request — a second incident
+ * for the same employee, minutes later — is a new card with a new id and
+ * always files a new draft. (A first version matched form, person and
+ * location inside ten minutes, which handed a manager documenting two
+ * separate incidents the first draft back. Release review caught it.)
  *
  * NARROW ON PURPOSE. Only the caller's own drafts (never another manager's,
  * so nothing is revealed that they could not already open), only drafts (a
  * finalized form is never handed back for editing), only assistant-created
- * ones, and only inside `DUPLICATE_DRAFT_WINDOW_MINUTES`.
+ * ones, only the same person and location, and only inside
+ * `DUPLICATE_DRAFT_WINDOW_HOURS`, which bounds the lookup rather than defining
+ * the duplicate. A create without a card id is never matched.
  */
-export const DUPLICATE_DRAFT_WINDOW_MINUTES = 10;
+export const DUPLICATE_DRAFT_WINDOW_HOURS = 24;
 
 export async function findRecentAssistantDraft(input: {
   templateKey: string;
   employeeName: string;
   createdBy: string;
   locationId: string | null;
+  proposalId: string;
   now?: Date;
 }): Promise<InstanceRow | null> {
+  if (!isProposalId(input.proposalId)) return null;
   const supabase = getSupabaseAdmin();
   const { data: template, error: templateError } = await supabase
     .from("form_templates")
@@ -367,7 +377,7 @@ export async function findRecentAssistantDraft(input: {
     .maybeSingle();
   if (templateError || !template) return null;
 
-  const since = new Date((input.now ?? new Date()).getTime() - DUPLICATE_DRAFT_WINDOW_MINUTES * 60_000);
+  const since = new Date((input.now ?? new Date()).getTime() - DUPLICATE_DRAFT_WINDOW_HOURS * 3_600_000);
   const { data, error } = await supabase
     .from("form_instances")
     .select("id, employee_name, location_id, created_at")
@@ -377,18 +387,31 @@ export async function findRecentAssistantDraft(input: {
     .eq("status", "draft")
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(25);
   // A guard that cannot read is no guard: the create goes ahead as before.
   if (error || !Array.isArray(data)) return null;
 
   const wanted = input.employeeName.trim().replace(/\s+/g, " ").toLowerCase();
-  const match = (data as { id: unknown; employee_name: unknown; location_id: unknown }[]).find(
-    (row) =>
-      String(row.employee_name ?? "").trim().replace(/\s+/g, " ").toLowerCase() === wanted &&
-      (row.location_id ?? null) === (input.locationId ?? null),
+  const candidates = (data as { id: unknown; employee_name: unknown; location_id: unknown }[])
+    .filter(
+      (row) =>
+        String(row.employee_name ?? "").trim().replace(/\s+/g, " ").toLowerCase() === wanted &&
+        (row.location_id ?? null) === (input.locationId ?? null),
+    )
+    .map((row) => String(row.id));
+  if (candidates.length === 0) return null;
+
+  const { data: events, error: eventsError } = await supabase
+    .from("form_instance_events")
+    .select("instance_id, detail")
+    .in("instance_id", candidates)
+    .eq("kind", "created");
+  if (eventsError || !Array.isArray(events)) return null;
+  const same = (events as { instance_id: unknown; detail: unknown }[]).find(
+    (event) => (event.detail as { proposalId?: unknown } | null)?.proposalId === input.proposalId,
   );
-  if (!match) return null;
-  const loaded = await loadInstance(String(match.id));
+  if (!same) return null;
+  const loaded = await loadInstance(String(same.instance_id));
   return loaded?.instance ?? null;
 }
 
@@ -482,6 +505,7 @@ export async function createInstance(input: NewInstance): Promise<InstanceRow> {
     variantKey: input.variantKey,
     source: input.source,
     seededFromRecord: Object.keys(seeded),
+    ...(isProposalId(input.proposalId) ? { proposalId: input.proposalId } : {}),
   });
 
   const loaded = await loadInstance(String(data.id));

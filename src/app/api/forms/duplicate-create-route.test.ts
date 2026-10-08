@@ -11,9 +11,10 @@ import type { AccessScope } from "@/types";
  * tests drive the real route with the body `createInlineForm` sends and assert
  * the side effect that matters: whether a second record is created.
  *
- * The lookup is keyed on the AUTHENTICATED manager, never on anything in the
- * body, and runs only after the stale-card and location checks — so a reused
- * draft is never a way around either.
+ * The lookup is keyed on the AUTHENTICATED manager and the CARD the create
+ * came from (`proposalId`), runs only after the stale-card and location
+ * checks, and never runs without a card id — so a reused draft is never a way
+ * around either check, and a new request for the same person always creates.
  */
 
 const ORIGINAL = { ...process.env };
@@ -74,6 +75,7 @@ const BODY = {
   source: "assistant",
   // A forged identity in the body is ignored; the lookup uses the session.
   createdBy: "someone-else",
+  proposalId: "proposal-1111",
   conversation: [{ id: "m1", role: "user", content: "coaching form for Avery Testperson" }],
 };
 
@@ -94,7 +96,7 @@ describe("a create from chat that repeats one just made", () => {
     expect(body.reused).toBe(true);
     expect(created).toEqual([]);
     expect(lookups).toEqual([
-      { templateKey: "coaching", employeeName: "Avery Testperson", createdBy: "manager-1", locationId: null },
+      { templateKey: "coaching", employeeName: "Avery Testperson", createdBy: "manager-1", locationId: null, proposalId: "proposal-1111" },
     ]);
   });
 
@@ -121,6 +123,23 @@ describe("a create from chat that repeats one just made", () => {
     expect(response.status).toBe(409);
     expect(lookups).toEqual([]);
     expect(created).toEqual([]);
+  });
+
+  it("a create without a card id is never matched, and records nothing to match later", async () => {
+    const { route, created, lookups } = await load({ id: "inst-existing" });
+    const withoutCard: Record<string, unknown> = { ...BODY };
+    delete withoutCard.proposalId;
+    const response = await route.POST(post(withoutCard));
+    expect(response.status).toBe(200);
+    expect(lookups).toEqual([]);
+    expect(created).toHaveLength(1);
+    expect(created[0]!.proposalId).toBeUndefined();
+  });
+
+  it("the new form records its card, so a repeated press can find it", async () => {
+    const { route, created } = await load(null);
+    await route.POST(post(BODY));
+    expect(created[0]!.proposalId).toBe("proposal-1111");
   });
 
   it("a manual create never reuses a draft", async () => {

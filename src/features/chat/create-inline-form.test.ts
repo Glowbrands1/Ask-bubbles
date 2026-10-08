@@ -118,16 +118,22 @@ describe("13. the proposal selects an intent and supplies nothing else", () => {
      * route pins; the job title is free text on the record, exactly as the
      * employee's name has always been, and it is null unless the MANAGER said
      * it — see `extractJobTitle`.
+     *
+     * `proposalId` widens nothing either: it only lets a repeated press of the
+     * SAME card find the draft that card already made, for the same signed-in
+     * manager — see `findRecentAssistantDraft`.
      */
     expect(Object.keys(calls[0]!.body).sort()).toEqual([
       "conversation",
       "employeeName",
       "employeeRole",
       "locationId",
+      "proposalId",
       "source",
       "templateKey",
       "variantKey",
     ]);
+    expect(calls[0]!.body.proposalId).toBe("prop-1");
   });
 
   it("sends the conversation as it stands, so the server can refuse a superseded card", async () => {

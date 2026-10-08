@@ -13,11 +13,12 @@ import type { FormDocument } from "./document";
  *
  *   1. DUPLICATES. A chat create whose response was lost, or the same card
  *      pressed in a second tab, used to file a second record. The server now
- *      finds the draft this manager started from chat for this form, person
- *      and location in the last few minutes and returns it
- *      (`findRecentAssistantDraft`). Another manager's draft, a finalized
- *      form, a different person, a different location or an older draft is
- *      never returned.
+ *      finds the draft made from THAT CARD (its `proposalId`, recorded on the
+ *      `created` event) and returns it (`findRecentAssistantDraft`). A new
+ *      card — a second incident for the same employee, a minute later —
+ *      always files a new draft. Another manager's draft, a finalized form, a
+ *      different person or location, or a create with no card id is never
+ *      returned.
  *
  *   2. THE DATE. A form with no typed date was dated by the database's
  *      `current_date` — the UTC day — so a form started at 9:30pm Eastern was
@@ -39,7 +40,7 @@ vi.mock("@/lib/supabase/server", () => ({
   getSupabaseAdmin: () => fakeSupabase(store),
 }));
 
-const { createInstance, findRecentAssistantDraft, DUPLICATE_DRAFT_WINDOW_MINUTES } = await import("./instances");
+const { createInstance, findRecentAssistantDraft, DUPLICATE_DRAFT_WINDOW_HOURS } = await import("./instances");
 
 const TEMPLATE_ID = "tpl-coaching";
 const V2 = "version-2";
@@ -116,6 +117,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const CARD = "proposal-1111";
+
 function start(overrides: Partial<Parameters<typeof createInstance>[0]> = {}) {
   return createInstance({
     templateKey: "coaching",
@@ -126,6 +129,7 @@ function start(overrides: Partial<Parameters<typeof createInstance>[0]> = {}) {
     createdBy: "manager-a",
     createdByRole: "location_manager",
     source: "assistant",
+    proposalId: CARD,
     ...overrides,
   });
 }
@@ -136,40 +140,69 @@ const lookup = (overrides: Partial<Parameters<typeof findRecentAssistantDraft>[0
     employeeName: "Avery Testperson",
     createdBy: "manager-a",
     locationId: "loc-0101",
+    proposalId: CARD,
     ...overrides,
   });
 
-describe("the same draft, asked for twice, is one draft", () => {
-  it("finds the draft this manager just started, in any case and spacing of the name", async () => {
+describe("the same card, pressed twice, is one draft", () => {
+  it("finds the draft that card made, in any case and spacing of the name", async () => {
     const first = await start();
     expect((await lookup())?.id).toBe(first.id);
     expect((await lookup({ employeeName: "  avery   TESTPERSON " }))?.id).toBe(first.id);
     expect(store.form_instances).toHaveLength(1);
   });
 
+  it("records the card on the form's created event", async () => {
+    const first = await start();
+    const created = store.form_instance_events.find((event) => event.instance_id === first.id && event.kind === "created");
+    expect((created?.detail as { proposalId?: string }).proposalId).toBe(CARD);
+  });
+});
+
+describe("a separate incident for the same employee is always a new draft", () => {
+  it("a second card for Avery a minute later is not matched to the first draft", async () => {
+    await start({ proposalId: "proposal-incident-1" });
+    expect(await lookup({ proposalId: "proposal-incident-2" })).toBeNull();
+    await start({ proposalId: "proposal-incident-2" });
+    expect(store.form_instances).toHaveLength(2);
+    expect((await lookup({ proposalId: "proposal-incident-1" }))?.id).not.toBe((await lookup({ proposalId: "proposal-incident-2" }))?.id);
+  });
+
+  it("a create without a card id is never matched", async () => {
+    await start({ proposalId: undefined });
+    expect(await lookup()).toBeNull();
+  });
+
+  it.each(["", "x".repeat(65), "has spaces", "<script>"])("an invalid card id %j is never matched", async (id) => {
+    await start();
+    expect(await lookup({ proposalId: id })).toBeNull();
+  });
+});
+
+describe("what the same card never reaches", () => {
   it.each([
     ["another manager", { createdBy: "manager-b" }],
     ["another person", { employeeName: "Jordan Testperson" }],
     ["another location", { locationId: "loc-0202" }],
     ["another form", { templateKey: "dpoa" }],
-  ])("never returns a draft for %s", async (_label, overrides) => {
+  ])("%s", async (_label, overrides) => {
     await start();
     expect(await lookup(overrides as never)).toBeNull();
   });
 
-  it("never returns a finalized form, or one created outside chat", async () => {
+  it("a finalized form, or one created outside chat", async () => {
     const finalized = await start();
     store.form_instances.find((row) => row.id === finalized.id)!.status = "finalized";
     await start({ source: "manual" });
     expect(await lookup()).toBeNull();
   });
 
-  it(`only inside the ${DUPLICATE_DRAFT_WINDOW_MINUTES}-minute window`, async () => {
+  it(`a draft older than the ${DUPLICATE_DRAFT_WINDOW_HOURS}-hour lookup bound`, async () => {
     const first = await start();
     const row = store.form_instances.find((entry) => entry.id === first.id)!;
-    row.created_at = new Date(Date.now() - (DUPLICATE_DRAFT_WINDOW_MINUTES + 1) * 60_000).toISOString();
+    row.created_at = new Date(Date.now() - (DUPLICATE_DRAFT_WINDOW_HOURS + 1) * 3_600_000).toISOString();
     expect(await lookup()).toBeNull();
-    row.created_at = new Date(Date.now() - (DUPLICATE_DRAFT_WINDOW_MINUTES - 1) * 60_000).toISOString();
+    row.created_at = new Date(Date.now() - (DUPLICATE_DRAFT_WINDOW_HOURS - 1) * 3_600_000).toISOString();
     expect((await lookup())?.id).toBe(first.id);
   });
 
