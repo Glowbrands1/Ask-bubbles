@@ -9,6 +9,7 @@ import { isIsoCalendarDate } from "@/lib/forms/form-date-answer";
 import {
   applyStatedFacts,
   createInstance,
+  findRecentAssistantDraft,
   deleteDemoInstances,
   findDemoInstances,
   InstanceProtectedError,
@@ -209,6 +210,21 @@ export async function POST(request: Request) {
 
     /* See `resolveLocationName`. */
     const locationName = resolveLocationName(locationId, body.locationName ?? null);
+
+    /*
+     * ONE DRAFT, NOT TWO. A create from chat whose response was lost, or the
+     * same card pressed in another tab, returns the draft that already exists
+     * instead of filing a second record. See `findRecentAssistantDraft`.
+     */
+    if (body.source === "assistant") {
+      const existing = await findRecentAssistantDraft({
+        templateKey: body.templateKey,
+        employeeName: body.employeeName.trim().slice(0, 120),
+        createdBy: actor.id,
+        locationId,
+      });
+      if (existing) return NextResponse.json({ instance: existing, reused: true });
+    }
 
     const instance = await createInstance({
       templateKey: body.templateKey,

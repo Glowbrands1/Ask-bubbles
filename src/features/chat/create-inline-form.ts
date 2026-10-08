@@ -51,6 +51,12 @@ export interface CreateInlineFormResult {
   reference: ChatFormInstanceRef;
   /** Set when the instance was created but Bubbles could not prefill it. */
   draftWarning: string | null;
+  /**
+   * The server returned a draft this manager had already started (and
+   * prefilled) moments ago instead of creating a second one. The editor shows
+   * it as stored; nothing was drafted again.
+   */
+  reused?: boolean;
 }
 
 export const DRAFT_FAILED_WARNING =
@@ -98,7 +104,7 @@ export async function createInlineForm({
    * docs/chat-phase-3.md. A validated id with no name is honest; a validated id
    * with a demo name beside it is not.
    */
-  const created = await call<{ instance: { id: string } }>("/api/forms/instances", {
+  const created = await call<{ instance: { id: string }; reused?: boolean }>("/api/forms/instances", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -157,6 +163,15 @@ export async function createInlineForm({
    * real form exists.
    */
   onCreated(reference);
+
+  /*
+   * A DRAFT THAT ALREADY EXISTED IS NOT DRAFTED AGAIN. The server returned the
+   * draft this manager started from chat moments ago (a lost response, a
+   * second tab — see `findRecentAssistantDraft`). Its prefill already ran, and
+   * the manager may already have edited it; prefilling again would spend a
+   * model call to overwrite their work.
+   */
+  if (created.reused) return { reference, draftWarning: null, reused: true };
 
   /*
    * THE DRAFT. Manager turns only, resolved from the ids the server retained —

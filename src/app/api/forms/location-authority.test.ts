@@ -145,6 +145,8 @@ async function load(options: {
       created.push(input);
       return { id: "inst-1", ...input };
     },
+    // No earlier draft of this form for this person: every create here is new.
+    findRecentAssistantDraft: async () => null,
     listInstances: async () => [],
     findDemoInstances: async () => ({ deletable: [], protected: [] }),
     deleteDemoInstances: async () => ({ deleted: 0 }),

@@ -486,3 +486,28 @@ describe("no second drafting path was built", () => {
     }
   });
 });
+
+describe("a draft the server already had is not drafted again", () => {
+  it("reports the existing draft at once and never calls the drafting route", async () => {
+    const calls: { url: string }[] = [];
+    const call = vi.fn().mockImplementation(async (url: string) => {
+      calls.push({ url });
+      if (url.endsWith("/draft")) throw new Error("must not draft a reused form");
+      return { instance: { id: "inst-existing" }, reused: true };
+    });
+    const seen: string[] = [];
+    const result = await createInlineForm({
+      proposal: proposal(),
+      messages: [ACCOUNT],
+      call,
+      onCreated: (reference) => seen.push(reference.instanceId),
+    });
+    expect(seen).toEqual(["inst-existing"]);
+    expect(result).toEqual({
+      reference: { instanceId: "inst-existing", proposalId: "prop-1", templateName: expect.any(String) },
+      draftWarning: null,
+      reused: true,
+    });
+    expect(calls.map((entry) => entry.url)).toEqual(["/api/forms/instances"]);
+  });
+});

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { businessToday } from "@/lib/business-date";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import {
@@ -329,6 +330,69 @@ export interface NewInstance {
 }
 
 /**
+ * ============================================================================
+ * THE SAME DRAFT, ASKED FOR TWICE, IS ONE DRAFT
+ * ============================================================================
+ *
+ * The browser stops a second click while a create is in flight, and marks the
+ * card created the instant the row exists. What it cannot stop is a create
+ * whose RESPONSE was lost — a dropped connection, a timeout, a reload — or the
+ * same proposal pressed in a second tab: the row exists, the browser does not
+ * know, and the next press files a second disciplinary record for the same
+ * person.
+ *
+ * So the server answers the question itself: has THIS manager, from chat,
+ * started a draft of THIS form for THIS person at THIS location in the last few
+ * minutes? If so, that draft is the answer and nothing new is written.
+ *
+ * NARROW ON PURPOSE. Only the caller's own drafts (never another manager's,
+ * so nothing is revealed that they could not already open), only drafts (a
+ * finalized form is never handed back for editing), only assistant-created
+ * ones, and only inside `DUPLICATE_DRAFT_WINDOW_MINUTES`.
+ */
+export const DUPLICATE_DRAFT_WINDOW_MINUTES = 10;
+
+export async function findRecentAssistantDraft(input: {
+  templateKey: string;
+  employeeName: string;
+  createdBy: string;
+  locationId: string | null;
+  now?: Date;
+}): Promise<InstanceRow | null> {
+  const supabase = getSupabaseAdmin();
+  const { data: template, error: templateError } = await supabase
+    .from("form_templates")
+    .select("id")
+    .eq("key", input.templateKey)
+    .maybeSingle();
+  if (templateError || !template) return null;
+
+  const since = new Date((input.now ?? new Date()).getTime() - DUPLICATE_DRAFT_WINDOW_MINUTES * 60_000);
+  const { data, error } = await supabase
+    .from("form_instances")
+    .select("id, employee_name, location_id, created_at")
+    .eq("template_id", template.id)
+    .eq("created_by", input.createdBy)
+    .eq("source", "assistant")
+    .eq("status", "draft")
+    .gte("created_at", since.toISOString())
+    .order("created_at", { ascending: false })
+    .limit(10);
+  // A guard that cannot read is no guard: the create goes ahead as before.
+  if (error || !Array.isArray(data)) return null;
+
+  const wanted = input.employeeName.trim().replace(/\s+/g, " ").toLowerCase();
+  const match = (data as { id: unknown; employee_name: unknown; location_id: unknown }[]).find(
+    (row) =>
+      String(row.employee_name ?? "").trim().replace(/\s+/g, " ").toLowerCase() === wanted &&
+      (row.location_id ?? null) === (input.locationId ?? null),
+  );
+  if (!match) return null;
+  const loaded = await loadInstance(String(match.id));
+  return loaded?.instance ?? null;
+}
+
+/**
  * Starts a form from the template's CURRENT published version.
  *
  * The version id is copied onto the form at creation and never re-resolved.
@@ -364,7 +428,14 @@ export async function createInstance(input: NewInstance): Promise<InstanceRow> {
       created_by_role: input.createdByRole ?? null,
       source: input.source,
       status: "draft",
-      ...(input.formDate ? { form_date: input.formDate } : {}),
+      /*
+       * THE BUSINESS DAY, NOT THE DATABASE'S. The column defaults to
+       * `current_date`, which is the database server's (UTC) day — so a form
+       * started after about 8pm Eastern was dated tomorrow, while the chat
+       * card, the follow-ups and "yesterday" all used the business day. The
+       * date is now always written, from the same clock everything else uses.
+       */
+      form_date: input.formDate ?? businessToday(),
     })
     .select("id")
     .single();
@@ -391,8 +462,8 @@ export async function createInstance(input: NewInstance): Promise<InstanceRow> {
     employee_role: input.employeeRole,
     job_title: input.employeeRole,
     location: input.locationName,
-    form_date: input.formDate ?? new Date().toISOString().slice(0, 10),
-    date: input.formDate ?? new Date().toISOString().slice(0, 10),
+    form_date: input.formDate ?? businessToday(),
+    date: input.formDate ?? businessToday(),
   };
 
   const seeded: Record<string, string> = {};
