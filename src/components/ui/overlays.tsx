@@ -200,7 +200,7 @@ export const DropdownMenuItem = React.forwardRef<
       "flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-xs)] px-2.5 py-2 text-[13px] outline-none transition-colors select-none",
       tone === "danger"
         ? "text-status-failed data-highlighted:bg-status-failed-bg"
-        : "text-foreground data-highlighted:bg-surface-muted",
+        : "text-foreground data-highlighted:bg-hover-surface",
       "[&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
       className,
     )}
@@ -216,7 +216,7 @@ export const DropdownMenuCheckboxItem = React.forwardRef<
   <DropdownMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      "flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-xs)] py-2 pr-2.5 pl-8 text-[13px] text-foreground outline-none transition-colors select-none data-highlighted:bg-surface-muted",
+      "flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-xs)] py-2 pr-2.5 pl-8 text-[13px] text-foreground outline-none transition-colors select-none data-highlighted:bg-hover-surface",
       className,
     )}
     {...props}

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { Check, LogOut, RotateCcw, Settings, UserCog } from "lucide-react";
+import { Check, ChevronUp, LogOut, RotateCcw, Settings, UserCog } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -85,22 +85,25 @@ export function UserMenu({
           <button
             type="button"
             className={cn(
-              "flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] p-2 text-left transition-colors hover:bg-hover-surface",
-              collapsed && "justify-center p-1.5",
+              "flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border border-rail-border p-2 text-left transition-colors hover:bg-rail-hover data-[state=open]:bg-rail-hover",
+              collapsed && "justify-center border-transparent p-1.5",
             )}
           >
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[11px] font-semibold text-primary-soft-foreground">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-accent text-[12px] font-bold text-brand-accent-foreground">
               {user.avatarInitials}
             </span>
             {!collapsed ? (
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] font-medium text-sidebar-foreground">
-                  {user.name}
+              <>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] font-bold text-sidebar-foreground">
+                    {user.name}
+                  </span>
+                  <span className="block truncate text-[11px] text-sidebar-muted">
+                    {ROLE_LABEL[role]}
+                  </span>
                 </span>
-                <span className="block truncate text-[11px] text-sidebar-muted">
-                  {ROLE_LABEL[role]}
-                </span>
-              </span>
+                <ChevronUp className="size-4 shrink-0 text-sidebar-muted" aria-hidden />
+              </>
             ) : (
               <span className="sr-only">
                 {user.name} — {ROLE_LABEL[role]}
@@ -109,9 +112,9 @@ export function UserMenu({
           </button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="start" side="top" className="w-64">
+        <DropdownMenuContent align="start" side="top" className="w-[14.5rem]">
           <div className="px-2.5 pt-1.5 pb-2">
-            <p className="truncate text-[13px] font-semibold text-foreground">
+            <p className="truncate text-[13px] font-bold text-foreground">
               {user.name}
             </p>
             <p className="truncate text-xs text-muted-foreground">{user.email}</p>

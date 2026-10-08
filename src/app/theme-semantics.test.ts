@@ -524,9 +524,11 @@ describe("the Ask Bubbles brand", () => {
   const APP_SHELL = codeOf(join(SOURCE_DIR, "components", "shell", "app-shell.tsx"));
   const BRAND = codeOf(join(SOURCE_DIR, "components", "brand-mark.tsx"));
 
-  it("puts the dark bar in the SHELL, not on one page", () => {
+  it("puts the top bar in the SHELL, not on one page", () => {
     expect(APP_SHELL).toContain("bg-chrome");
     expect(APP_SHELL).toContain("<header");
+    // The parent brand's official logo, not a typeset stand-in.
+    expect(APP_SHELL).toContain("<BuffCitySoapLogo");
 
     const reportingPages = sourceFiles(join(SOURCE_DIR, "app")).filter((path) =>
       path.includes("reports"),
@@ -563,8 +565,13 @@ describe("the Ask Bubbles brand", () => {
   });
 
   it("shows one wordmark at a time", () => {
-    const sidebar = readFileSync(join(SOURCE_DIR, "components", "shell", "sidebar.tsx"), "utf8");
-    expect(sidebar).toContain('variant === "desktop" && "hidden"');
+    /*
+     * The rail leads with the Ask Bubbles logo on desktop; the top bar repeats
+     * the wordmark only below `lg`, where the rail is a closed drawer.
+     */
+    const sidebar = codeOf(join(SOURCE_DIR, "components", "shell", "sidebar.tsx"));
+    expect(sidebar).toMatch(/<BrandMark[^>]*\bstacked\b/);
+    expect(APP_SHELL).toMatch(/className="shrink-0 lg:hidden"\s*>\s*<BrandMark/);
   });
 
   it("uses the selected token for generic selected state", () => {
@@ -602,7 +609,8 @@ describe("the Ask Bubbles brand", () => {
       );
     }
 
-    expect(sidebar).toContain("hover:bg-hover-surface");
+    // The Charcoal rail hovers to its own lighter step, keeping white text.
+    expect(sidebar).toContain("hover:bg-rail-hover");
     expect(sidebar).toContain("bg-sidebar-active");
   });
 
