@@ -7,7 +7,7 @@
  * skirt today", the assistant wrote into Observation of Offense:
  *
  *   "On September 10, Sarah Test was observed wearing a mini skirt at the
- *    Kearny salon location, WHICH IS NOT IN COMPLIANCE WITH THE SUN TAN CITY
+ *    Kearny salon location, WHICH IS NOT IN COMPLIANCE WITH THE <COMPANY>
  *    DRESS CODE POLICY."
  *
  * The first clause is a fact a manager reported. The second is a legal-shaped
@@ -225,7 +225,7 @@ export const POLICY_CLAIM_REMOVED_NOTICE =
  *
  * The QA run produced that in the Action Plan of a form whose Policy Violated
  * and Direct policy fields were both blank, because no approved dress code had
- * been retrieved. Nothing in the corpus says Sun Tan City requires trousers.
+ * been retrieved. Nothing in the corpus says the company requires trousers.
  * The sentence is an invented rule, and it is worse than the invented
  * quotation the other guards catch — a quotation at least looks like a claim
  * about a document, while this reads as the manager's own instruction and is

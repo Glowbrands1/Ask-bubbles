@@ -456,7 +456,7 @@ export function tanningConsultantInterviewDocument(): FormDocument {
       { kind: "section", label: "Interview Questions" },
       ...question(
         "about_yourself",
-        "1. Tell me about yourself and why you’re interested in working at Sun Tan City.",
+        "1. Tell me about yourself and why you’re interested in working at Buff City Soap.",
       ),
       ...question(
         "resume",
@@ -588,7 +588,7 @@ export function prescreenPhoneInterviewDocument(): FormDocument {
         kind: "field",
         field: field(
           "why_interested",
-          "Why are you interested in working for Sun Tan City?",
+          "Why are you interested in working for Buff City Soap?",
           "manager",
           "long_text",
         ),

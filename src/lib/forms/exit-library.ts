@@ -1,3 +1,5 @@
+import { FORM_LETTERHEAD_BRAND_NAME } from "@/config/company/forms/letterhead";
+
 import { field, type TemplateSeed } from "./catalog";
 import type { AnswerStatementLine, FormBlock, FormDocument } from "./document";
 
@@ -6,11 +8,11 @@ import type { AnswerStatementLine, FormBlock, FormDocument } from "./document";
  * THE RESIGNATION/EXIT FORM — THE PAPERWORK FOR SOMEBODY WHO IS LEAVING
  * ============================================================================
  *
- * Transcribed block for block from `STC Exit.docx`, the exit form the business
- * issues today. Its page header reads "Resignation/Exit Form" over "Sun Tan
- * City", so that is the letterhead and the name the library shows; "STC Exit"
- * is the file's name and is kept as a way to ASK for it (see
- * `template-intent.ts`), not as a title nobody printed.
+ * Transcribed block for block (on the reference platform) from the source
+ * company's exit form .docx. Its page header reads "Resignation/Exit Form"
+ * over the company name, so that is the letterhead and the name the library
+ * shows. In this deployment the company name is printed in plain text and the
+ * template is stored under the key `resignation-exit`.
  *
  * A SEPARATE FILE FROM `library.ts` for the reason `hiring-library.ts` is one:
  * the nine HR forms document somebody who is staying and being coached, and
@@ -250,26 +252,24 @@ export function exitFormDocument(): FormDocument {
     /*
      * THE WORD SOURCE'S OWN LOOK, the same one the Coaching Form's source has:
      * centred headings over rules, the title and brand stacked in the header,
-     * the Sun Tan City mark top right and a 1in page. The logo in this file is
-     * a smaller copy of the same approved mark, so it resolves to the asset
-     * already lifted from the Coaching Form rather than to a second copy of
-     * the brand. The width is the file's own: 962025 EMU is 76pt.
+     * the source company's mark top right and a 1in page. This deployment has
+     * no approved logo asset, so `logo` is omitted and the centred letterhead
+     * prints the company name in plain text; the rest of the look is unchanged.
      */
     style: {
       headingStyle: "rule",
       letterhead: "centered",
       margins: "wide",
       signatureLayout: "ruled",
-      logo: { assetKey: "sun-tan-city", placement: "top-right", widthPt: 76 },
       /*
        * Revision 2: every date on this form — Date, Last Day Worked, the two
        * notice dates, Resignation Date and the footer — is shown MM/DD/YYYY,
-       * the way STC writes dates. Stored ISO, as every date is.
+       * the way the business writes dates. Stored ISO, as every date is.
        */
       dateFormat: "us",
     },
     blocks: [
-      { kind: "letterhead", brand: "Sun Tan City", title: "Resignation/Exit Form" },
+      { kind: "letterhead", brand: FORM_LETTERHEAD_BRAND_NAME, title: "Resignation/Exit Form" },
 
       { kind: "section", label: "Employee Information" },
       {
@@ -415,11 +415,11 @@ export function exitFormDocument(): FormDocument {
 }
 
 /**
- * The key the exit form is stored under. Taken from the source file's name,
- * which is how the business refers to it, and stable across any rename of the
- * display title.
+ * The key the exit form is stored under, stable across any rename of the
+ * display title. (The reference platform stores the same form under a key
+ * taken from its source file's name; this deployment uses a neutral key.)
  */
-export const EXIT_TEMPLATE_KEY = "stc-exit";
+export const EXIT_TEMPLATE_KEY = "resignation-exit";
 
 /**
  * The Separation & Exit library.
@@ -435,7 +435,7 @@ export const EXIT_TEMPLATE_SEEDS: TemplateSeed[] = [
     name: "Resignation/Exit Form",
     shortName: "Exit Form",
     description:
-      "The STC exit paperwork for an employee who is leaving: how they left, their last day and notice, the payroll and rehire questions, and the steps to finish the termination.",
+      "The exit paperwork for an employee who is leaving: how they left, their last day and notice, the payroll and rehire questions, and the steps to finish the termination.",
     category: "separation",
     layoutFamily: "exit",
     requiredPermission: "create_exit_form",

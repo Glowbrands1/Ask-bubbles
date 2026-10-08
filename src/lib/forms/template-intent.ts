@@ -25,6 +25,7 @@
 
 import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { asksForTeamCoaching } from "./team-subject";
+import { EXIT_TEMPLATE_KEY } from "./exit-library";
 
 export type TemplateIntent =
   /** The manager named a template. Still validated against the library. */
@@ -140,10 +141,10 @@ const TEMPLATE_INTENT: { key: string; matchers: string[] }[] = [
      * THE RESIGNATION/EXIT FORM, BY EVERY NAME MANAGERS GIVE IT
      * ========================================================================
      *
-     * Its printed title is "Resignation/Exit Form"; the business files it as
-     * "STC Exit"; managers call it the exit form, the resignation paperwork or
-     * the termination paperwork. All of them name THIS document — there is no
-     * other exit form in the library — so each is an explicit naming.
+     * Its printed title is "Resignation/Exit Form"; managers call it the exit
+     * form, the resignation paperwork or the termination paperwork. All of
+     * them name THIS document — there is no other exit form in the library —
+     * so each is an explicit naming.
      *
      * EVERY MATCHER NAMES PAPERWORK, never the act. "Termination" alone stays
      * out: "what's the termination policy?" and "should Sarah be terminated?"
@@ -153,12 +154,10 @@ const TEMPLATE_INTENT: { key: string; matchers: string[] }[] = [
      * interview is a conversation, and "do you have an exit interview
      * document?" has to be answered honestly rather than with this form.
      */
-    key: "stc-exit",
+    key: EXIT_TEMPLATE_KEY,
     matchers: [
       "resignation/exit form",
       "resignation / exit form",
-      "stc exit form",
-      "stc exit",
       "exit form",
       "exit forms",
       "exit paperwork",
@@ -348,7 +347,7 @@ const TEMPLATE_INTENT: { key: string; matchers: string[] }[] = [
    * LAST IN THE LIST, so a sentence that also names an existing form ("a
    * corrective action form for a demotion") resolves exactly as it did before.
    *
-   * The Resignation/Exit Form is not among them: it is `stc-exit`, named by its
+   * The Resignation/Exit Form is not among them: it is `resignation-exit`, named by its
    * own entry above (main #44), and its wording is its own.
    */
   {
@@ -478,8 +477,9 @@ const CORRECTIVE_ACTION_REQUEST = ["corrective action", "corrective actions"];
  * spellings of its name, not a second template.
  *
  *   "ca", "c.a."            whole words only, so "cash", "can" and "call" are
- *                           untouched. Sun Tan City has no California salons,
- *                           so the state abbreviation is not a live reading.
+ *                           untouched. (The reference platform found the state
+ *                           abbreviation is not a live reading there; a
+ *                           company with California stores should revisit it.)
  *   "corrective-action"     the hyphen people put in.
  *   misspellings            a word that starts "cor" and is within two edits
  *                           of "corrective", followed by a word within one
@@ -1223,7 +1223,7 @@ function formsNamed(q: string): number {
   for (const entry of TEMPLATE_INTENT) if (entry.matchers.some((phrase) => mentions(q, phrase))) keys.add(entry.key);
   if (CORRECTIVE_ACTION_REQUEST.some((phrase) => mentions(q, phrase))) keys.add("dpoa");
   if (/\bcoach(?:ing)?\b/.test(q)) keys.add("coaching");
-  if (/\bexit\b/.test(q)) keys.add("stc-exit");
+  if (/\bexit\b/.test(q)) keys.add(EXIT_TEMPLATE_KEY);
   return keys.size;
 }
 

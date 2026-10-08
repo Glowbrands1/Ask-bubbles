@@ -907,7 +907,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * ========================================================================
      *
      * "…wearing a mini skirt at the Kearny salon, WHICH IS NOT IN COMPLIANCE
-     * WITH THE SUN TAN CITY DRESS CODE POLICY." — written into Observation of
+     * WITH THE <COMPANY> DRESS CODE POLICY." — written into Observation of
      * Offense on a form whose Policy Violated field was blank, because nothing
      * had been retrieved to put in it. The record asserted a breach and
      * declined to name the rule.

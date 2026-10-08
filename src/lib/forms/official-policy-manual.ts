@@ -711,14 +711,14 @@ export const OFFENSE_MANUAL_SECTIONS: Readonly<Record<string, OffenseSections>> 
   /*
    * THE ONE THE BUSINESS SPELLED OUT. The JBA manual states the dress code once
    * for the whole company and then varies it by BRAND — Crunch Fitness, Buff
-   * City Soap, Sun Tan City, the JBA office — rather than by role.
+   * City Soap, the tanning brand, the JBA office — rather than by role.
    *
    * THE COMPANY-WIDE SECTION IS WHAT IS CITED, and the brand sub-sections are
    * deliberately not. It is the section that states the rule a corrective
    * action rests on — a neat, clean, professional appearance, and being sent
    * home to change — and it governs everybody. A brand sub-section states what
    * a shirt may look like in one brand, under a heading ("Shirts", "Pants",
-   * "Sun Tan City") that names no policy on its own and would read as a
+   * a brand's name) that names no policy on its own and would read as a
    * citation of nothing on an employment record.
    */
   dress_code: {

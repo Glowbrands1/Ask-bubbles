@@ -767,8 +767,8 @@ export const CORRECTABLE_KEYS: ReadonlySet<string> = new Set([
  * "Will" rewrote "he will start". So a value is rewritten only where the
  * mention is structurally that value:
  *
- *   a salon            any usual spelling ("salon 23", "STC 23", "Sun Tan
- *                      City 23", "store #23"), never inside "salon 230"
+ *   a location         any usual spelling ("salon 23", "store 23",
+ *                      "location 23", "store #23"), never inside "salon 230"
  *   a pay rate         however it was written ("$12", "$12.00/hr", "12 an
  *                      hour"), never inside "$12.50" or "$120"
  *   two or more words  exactly as the field held it, case included

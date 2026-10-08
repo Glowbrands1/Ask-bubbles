@@ -6,7 +6,7 @@ import type { FormBlock, FormDocument } from "./document";
  * EMPLOYMENT CHANGE FORMS — DEMOTION AND POSITION TRANSFER
  * ============================================================================
  *
- * THE RESIGNATION/EXIT FORM IS NOT HERE. It is `stc-exit` in `exit-library.ts`
+ * THE RESIGNATION/EXIT FORM IS NOT HERE. It is `resignation-exit` in `exit-library.ts`
  * (main #44), with its own category, permission and fact reader. This file once
  * carried a second Exit Form of its own; it was removed when the two branches
  * met so that the library has exactly one.
@@ -51,7 +51,7 @@ import type { FormBlock, FormDocument } from "./document";
  * the business's own wording — including "dd/mm/yyyy" on a U.S. form — is not
  * corrected.
  *
- * `STC Demotion Example.docx` is NOT a template. It is the same document as the
+ * The source company's "Demotion Example" .docx is NOT a template. It is the same document as the
  * Demotion Form (the text is identical; only the title's line break differs),
  * kept by the business as a reference for how a completed one reads. It shapes
  * how the reason is drafted and nothing else — there is exactly one Demotion
@@ -250,14 +250,14 @@ const DEMOTION_SEED: TemplateSeed = {
   requiredPermission: "create_employment_change_form",
   /*
    * 16 and up: display_order is written only on insert, and the Resignation/Exit
-   * Form (`stc-exit`, main #44) already holds 15.
+   * Form (`resignation-exit`) already holds 15.
    */
   displayOrder: 16,
   document: demotionDocument(),
   variants: [],
   revision: 1,
   revisionNote:
-    "Published from the GlowBrands Demotion Form source document. The STC Demotion Example is the same document, kept as a reference for the reason's wording; it is not a separate template.",
+    "Published from the GlowBrands Demotion Form source document. The source company's Demotion Example is the same document, kept as a reference for the reason's wording; it is not a separate template.",
   bundledPdfName: "Demotion Form.pdf",
 };
 

@@ -20,8 +20,8 @@ import { checkboxGroupsForVariant, type FormDocument } from "./document";
  * THE SECOND IS AUTHORITY, and no amount of reasoning satisfies it. The
  * framework's leadership escalation rule is unconditional: termination,
  * demotion, suspension and any final or sensitive employment action go through
- * the Sun Tan City leadership process, and Ask Bubbles never replaces DM, HR or
- * LP approval. A manager asking "should we terminate Sarah?" is asking for
+ * the company leadership process, and Ask Bubbles never replaces DM, HR or LP
+ * approval. A manager asking "should we terminate Sarah?" is asking for
  * exactly the decision the framework reserves — so the answer is the leadership
  * route, not a ticked Termination box.
  *
@@ -168,6 +168,6 @@ export const PERFORMANCE_MANAGEMENT_DRAFT_RULES: readonly string[] = [
    * happened — and the whole progression escalates on that field.
    */
   "A REPEATED BEHAVIOUR IS NOT A PRIOR CORRECTIVE ACTION. \"again\", \"keeps\", \"still\" and \"repeatedly\" tell you the conduct recurred. They do NOT tell you the employee was ever coached, warned, written up or put on a plan. Record a previous corrective action only where the manager SAID one happened — \"I gave her a verbal warning last week\" — and record \"None — first occurrence\" only where they said there was none. Otherwise leave the previous-action fields EMPTY for the manager, and never invent a date for one.",
-  "NEVER SELECT A TERMINATION, DEMOTION OR SUSPENSION, and never write that one is warranted. Those are final employment decisions reserved to the Sun Tan City leadership process — District Manager, HR or Loss Prevention as applicable. If the manager asks whether to take one, draft the rest of the form and say the decision goes to leadership review.",
+  "NEVER SELECT A TERMINATION, DEMOTION OR SUSPENSION, and never write that one is warranted. Those are final employment decisions reserved to the company leadership process — District Manager, HR or Loss Prevention as applicable. If the manager asks whether to take one, draft the rest of the form and say the decision goes to leadership review.",
   "IF THE MANAGER'S ACCOUNT DOES NOT SUPPORT A CHOICE, LEAVE THE STEP UNSET and say what you would need to choose one. A guessed rung on somebody's record is worse than a blank line the manager fills in deliberately.",
 ];

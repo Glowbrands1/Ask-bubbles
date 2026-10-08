@@ -816,7 +816,7 @@ function withoutAnswerLead(answer: string): string {
  *
  * A bare "name is …" counts only where it OPENS the message or a clause —
  * "name is avery testperson, today wearing slippers", found in production —
- * so "the company name is Sun Tan City" is still nobody.
+ * so "the company name is Buff City Soap" is still nobody.
  *
  * A copula ("the employee is …") is weaker than a colon, because what follows
  * is as often a description — "the employee is always late" — so there the

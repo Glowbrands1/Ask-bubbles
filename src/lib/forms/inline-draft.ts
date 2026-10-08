@@ -106,7 +106,7 @@ const INLINE_DRAFT_TEMPLATE_KEYS: ReadonlySet<string> = new Set([
    * reach, and the involuntary box is refused by the leadership-authority
    * guard. See `exit-library.ts`.
    */
-  "stc-exit",
+  "resignation-exit",
   /*
    * The Demotion and Position Transfer forms. No variants; the facts are
    * `manager` fields filled only from the manager's own words

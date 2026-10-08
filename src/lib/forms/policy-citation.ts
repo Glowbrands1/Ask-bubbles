@@ -19,7 +19,7 @@ import { manualDisplayTitle, type ManualChunk, type ManualSection } from "./offi
  * knowledge document's; the section and page come from the manual's own
  * printed heading (a pinned manual) or from the retrieved chunk's locator.
  * What is not known is left out — "Source: JBA Policy Manual — Attendance"
- * without a page, "Source: STC Dress Code" without either — and nothing is
+ * without a page, "Source: Dress Code" without either — and nothing is
  * filled in to make the line look complete.
  *
  * INTERNAL LABELS ARE NOT SECTIONS. A plain-text document's chunks are

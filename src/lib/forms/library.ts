@@ -1,3 +1,6 @@
+import { EXAMPLE_CHECK_IN_SEED } from "@/config/company/forms/example-check-in";
+import { FORM_LETTERHEAD_BRAND_NAME } from "@/config/company/forms/letterhead";
+
 import { BRAND, field, type TemplateSeed } from "./catalog";
 import type {
   FormBlock,
@@ -127,27 +130,27 @@ export function coachingDocument(): FormDocument {
      *
      * The document the business issues is not laid out like the rest of the
      * library: centred headings over hairlines rather than black bars, the
-     * form's name and the brand stacked and centred, the Sun Tan City mark in
-     * the top right, and a 1in page. Those are facts about THIS version of THIS
+     * form's name and the brand stacked and centred, the source company's mark
+     * in the top right, and a 1in page. Those are facts about THIS version of THIS
      * document, so they are stored with it — the renderer reads them
      * generically and knows nothing about coaching. Every other template omits
      * `style` and keeps the black bars it was measured with.
      *
-     * The logo is named, not embedded: `sun-tan-city` resolves through the
-     * approved asset registry to the exact bitmap lifted out of the Word file.
-     * See `lib/forms/assets`.
+     * BRANDING. The source document carried the source company's logo; this
+     * deployment has no approved logo asset, so `logo` is omitted and the
+     * centred letterhead prints the company name in plain text. Everything
+     * else about the look is unchanged. See `lib/forms/assets`.
      */
     style: {
       headingStyle: "rule",
       letterhead: "centered",
       margins: "wide",
       signatureLayout: "ruled",
-      logo: { assetKey: "sun-tan-city", placement: "top-right", widthPt: 76 },
     },
     blocks: [
       // The subtitle is set in title case in the source, so it is stored that
       // way. The upper-case `BRAND` belongs to the chip the other forms use.
-      { kind: "letterhead", brand: "Sun Tan City", title: "Coaching Form" },
+      { kind: "letterhead", brand: FORM_LETTERHEAD_BRAND_NAME, title: "Coaching Form" },
 
       { kind: "section", label: "Employee Information" },
       {
@@ -244,8 +247,7 @@ export function coachingDocument(): FormDocument {
  * THIS IS THE ONE TEMPLATE IN THE LIBRARY WITH NO APPROVED PAPER SOURCE, and
  * that fact is load-bearing rather than incidental. Every other form here is a
  * reading of a document the business issues — a .docx or a printed form somebody
- * signs. This one is specified by ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK
- * §9.2, "Template: Create a follow-up coaching form", which names the form and
+ * signs. This one is specified by the PERFORMANCE MANAGEMENT FRAMEWORK §9.2, "Template: Create a follow-up coaching form", which names the form and
  * lists its fields and its two option sets exactly:
  *
  *   Original Coaching Topic / Original Expectation / Follow-Up Observation /
@@ -798,8 +800,8 @@ export function eppDocument(title: string): FormDocument {
  * ============================================================================
  *
  * The paper SDIT EPP the business has been issuing states this expectation as
- * "Uphold Sun Tan City policies per Driven to Shine manual." Ask Bubbles does not
- * use that manual and has no access to it: the authoritative source for every
+ * "Uphold <source company> policies per Driven to Shine manual." Ask Bubbles
+ * does not use that manual and has no access to it: the authoritative source for every
  * policy this product cites is the JB & Associates Employment Policy Manual,
  * which is the document `official-policy-manual.ts` pins by identity and the
  * only policy manual in the corpus.
@@ -809,7 +811,7 @@ export function eppDocument(title: string): FormDocument {
  * manager can open, rather than one Ask Bubbles would be citing blind.
  */
 export const JBA_POLICY_EXPECTATION =
-  "Uphold Sun Tan City and JB & Associates company policies per the JB & Associates Employment Policy Manual.";
+  "Uphold Buff City Soap and JB & Associates company policies per the JB & Associates Employment Policy Manual.";
 
 /**
  * The seven standing expectations the SDIT EPP marks against.
@@ -820,7 +822,7 @@ export const JBA_POLICY_EXPECTATION =
  * the label and keeps every mark already stored against it.
  */
 export const SDIT_EPP_EXPECTATIONS: readonly { key: string; label: string }[] = [
-  { key: "uphold_experience", label: "Uphold the Sun Tan City Experience." },
+  { key: "uphold_experience", label: "Uphold the Buff City Soap Experience." },
   { key: "client_service", label: "Personally, provide excellent client service." },
   { key: "company_policies", label: JBA_POLICY_EXPECTATION },
   { key: "bonus_viewer", label: "Determine focuses based on the Bonus Viewer." },
@@ -1110,15 +1112,15 @@ export function eppVariant(role: string, roleAbbr: string, label: string): FormV
  * THE COMPANY-POLICY EXPECTATION, NAMED AGAINST THE MANUAL ASK BUBBLES CAN READ
  * ============================================================================
  *
- * The paper form states this one as "Uphold Sun Tan City policies per Driven
- * to Shine manual and hold team accountable to this manual". That manual is
+ * The paper form states this one as "Uphold <source company> policies per
+ * Driven to Shine manual and hold team accountable to this manual". That manual is
  * not in the corpus and Ask Bubbles cannot read it, so citing it would be a
  * reference to a document nobody checked. Same expectation, named against the
  * JB & Associates manual — which is what `official-policy-manual.ts` pins and
  * the only policy manual this product has.
  */
 export const TSD_JBA_POLICY_EXPECTATION =
-  "Uphold Sun Tan City and JB & Associates company policies per the JB & Associates Employment Policy Manual, and hold the team accountable to company policy.";
+  "Uphold Buff City Soap and JB & Associates company policies per the JB & Associates Employment Policy Manual, and hold the team accountable to company policy.";
 
 /**
  * The nine standing expectations a Training Salon Director is measured against.
@@ -1133,7 +1135,7 @@ export const TSD_JBA_POLICY_EXPECTATION =
  * and leading by example, none of which the SDIT plan asks about.
  */
 export const TSD_EPP_EXPECTATIONS: readonly { key: string; label: string }[] = [
-  { key: "uphold_experience", label: "Uphold the Sun Tan City Experience." },
+  { key: "uphold_experience", label: "Uphold the Buff City Soap Experience." },
   {
     key: "coach_client_service",
     label: "Coach team to provide, and personally provide, excellent client service.",
@@ -1268,7 +1270,7 @@ export function tsdEppDocument(): FormDocument {
         kind: "reference",
         label: "To be reviewed with District Manager",
         body: [
-          "First, we need to understand what the purpose and responsibilities are for your role with Sun Tan City.",
+          "First, we need to understand what the purpose and responsibilities are for your role with Buff City Soap.",
         ],
       },
 
@@ -1514,7 +1516,7 @@ export function dmitEppDocument(): FormDocument {
         variantKey: "tsd",
         body: [
           "To be reviewed with District Manager",
-          "First we need to understand what the purpose and responsibilities are for a District Manager with Sun Tan City:",
+          "First we need to understand what the purpose and responsibilities are for a District Manager with Buff City Soap:",
           "General Purpose of Position",
           "The District Manager is responsible for overseeing several salons. Responsibilities include managing sales and operations, driving revenue, controlling expenses and payroll budgets, handling personnel issues, accounting, merchandising, and loss prevention. District Managers are also ultimately responsible for ensuring the highest level of client service throughout the salons.",
         ],
@@ -1525,7 +1527,7 @@ export function dmitEppDocument(): FormDocument {
         variantKey: "dmit",
         body: [
           "To be reviewed with District Manager in Training",
-          "First we need to understand what the purpose and responsibilities are for a District Manager in Training with Sun Tan City:",
+          "First we need to understand what the purpose and responsibilities are for a District Manager in Training with Buff City Soap:",
           "General Purpose of Position",
           "The District Manager in Training is learning to oversee several salons: sales and operations, revenue, expense and payroll control, personnel, accounting, merchandising and loss prevention, while being assessed against the District Manager standard.",
         ],
@@ -1879,7 +1881,7 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     variants: [],
     revision: 2,
     revisionNote:
-      "Published from ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK §9.2 (Template: Create a follow-up coaching form). Framework-defined: there is no approved paper or PDF source form for this document, and no acknowledgement or signature wording was specified for it. Revision 2 renames the Next Step option `dpoa` to read \"Corrective Action\"; the option key is unchanged, so every box already ticked still resolves.",
+      "Published from the PERFORMANCE MANAGEMENT FRAMEWORK §9.2 (Template: Create a follow-up coaching form). Framework-defined: there is no approved paper or PDF source form for this document, and no acknowledgement or signature wording was specified for it. Revision 2 renames the Next Step option `dpoa` to read \"Corrective Action\"; the option key is unchanged, so every box already ticked still resolves.",
     /*
      * The filename the structured renderer prints under. The bundled default IS
      * the renderer rather than an uploaded file — true of every template here —
@@ -1889,7 +1891,7 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     bundledPdfName: "Follow-Up Coaching Form.pdf",
     provenance: {
       kind: "framework",
-      document: "ASK_SUNNY_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT",
+      document: "PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT",
       locator: "§9.2 Template: Create a follow-up coaching form",
       note: "Framework-defined form. Fields and option lists are taken verbatim from §9.2 of the approved Performance Management Framework. This form did NOT originate from an uploaded business PDF, and no paper source form exists for it.",
     },
@@ -1905,13 +1907,20 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
  * it lands in, the page section it renders under and the permission it needs
  * all come from the seed itself.
  */
-export const TEMPLATE_SEEDS: TemplateSeed[] = [
+export const MIGRATED_TEMPLATE_SEEDS: TemplateSeed[] = [
   ...HR_TEMPLATE_SEEDS,
   ...EXIT_TEMPLATE_SEEDS,
   /* Demotion and Position Transfer. */
   ...EMPLOYMENT_CHANGE_TEMPLATE_SEEDS,
   ...HIRING_TEMPLATE_SEEDS,
 ];
+
+/**
+ * Everything the seeder installs: the migrated library, then this deployment's
+ * original placeholder form, which is kept (never deleted) so the rows and any
+ * forms already filed against it stay intact.
+ */
+export const TEMPLATE_SEEDS: TemplateSeed[] = [...MIGRATED_TEMPLATE_SEEDS, EXAMPLE_CHECK_IN_SEED];
 
 /** The default variant a new form of this template starts on. */
 export function defaultVariantKey(seedKey: string): string | null {
