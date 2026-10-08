@@ -91,7 +91,7 @@ export interface IntakeItem {
  */
 export const CORRECTIVE_ACTION_INTAKE: readonly IntakeItem[] = [
   { key: "employee_name", prompt: "Employee's full name", optional: false },
-  { key: "salon", prompt: "Salon location", optional: false },
+  { key: "salon", prompt: "Location", optional: false },
   {
     /*
      * THE DATE LINE NAMES THE DATE. "Say today and I'll use today's date" is a

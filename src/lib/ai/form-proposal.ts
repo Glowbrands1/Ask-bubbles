@@ -717,7 +717,7 @@ async function checkTypedEmployee(
 
   if (result.kind === "none") {
     return {
-      note: `I didn't find **${typed.employeeName}** in the employee list for your salons, so the form will use the name exactly as you typed it. Check the spelling before you file it.`,
+      note: `I didn't find **${typed.employeeName}** in the employee list for your locations, so the form will use the name exactly as you typed it. Check the spelling before you file it.`,
     };
   }
 
@@ -1235,7 +1235,7 @@ const CHANGE_INTAKE: Record<EmploymentChangeKind, { items: string[]; example: st
       "A short reason",
     ],
     example:
-      "Jane Doe is a PT TC at $12/hr, transferring from salon 12 to salon 18, same title and pay, voluntary — she moved closer to home.",
+      "Jane Doe is a PT TC at $12/hr, transferring from location 12 to location 18, same title and pay, voluntary — she moved closer to home.",
   },
 };
 
@@ -1315,7 +1315,7 @@ function employmentChangeContent(
   lines.push(
     proposal.supportsInlineDraft
       ? proposal.locationResolution === "not_applicable"
-        ? "Your account covers every salon, so the form won't name one unless you did. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
+        ? "Your account covers every location, so the form won't name one unless you did. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
         : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do."
       : "**Nothing has been created.** This is a proposal, not a form. To file one today, use Create a Form.",
   );
@@ -1620,8 +1620,8 @@ function proposalContent(
       const who = proposal.subject === "team" ? "This one is for the whole team" : "I have the employee";
       lines.push(
         proposal.locationResolution === "not_applicable"
-          ? `${who}. Your account covers every salon, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do.`
-          : `${who}${proposal.subject === "team" ? ", and I have the salon" : " and the salon"}. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`,
+          ? `${who}. Your account covers every location, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do.`
+          : `${who}${proposal.subject === "team" ? ", and I have the location" : " and the location"}. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`,
       );
     } else {
       /*
@@ -1759,7 +1759,7 @@ function correctiveActionReady(
   lines.push(
     proposal.supportsInlineDraft
       ? proposal.locationResolution === "not_applicable"
-        ? "Your account covers every salon, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
+        ? "Your account covers every location, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
         : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do."
       : "**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.",
   );
@@ -1834,7 +1834,7 @@ function eppReady(
   lines.push(
     proposal.supportsInlineDraft
       ? proposal.locationResolution === "not_applicable"
-        ? "Your account covers every salon, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
+        ? "Your account covers every location, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
         : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do."
       : "**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.",
   );
@@ -1874,7 +1874,7 @@ function openingQuestions(proposal: ChatFormProposal, context: ManagerContext): 
       : "The employee's full name.",
   ];
   if (proposal.locationResolution === "needs_selection") {
-    asks.push("Which of your salons this is about.");
+    asks.push("Which of your locations this is about.");
   }
   if (!proposal.formDate) {
     asks.push(`The date for the form (if you say "today," I'll use ${todayInWords()}).`);
@@ -1907,13 +1907,13 @@ function locationQuestion(proposal: ChatFormProposal): string {
      * filled in: one would file outside their assignment, the other would
      * quietly overrule what they said.
      */
-    return `**${proposal.namedLocationOutOfScope}** isn't a salon on your assignment, so I can't file a form against it. Which of your salons is this about?`;
+    return `**${proposal.namedLocationOutOfScope}** isn't a location on your assignment, so I can't file a form against it. Which of your locations is this about?`;
   }
   if (proposal.locationResolution === "needs_selection") {
     // Deliberately says nothing about HOW MANY salons the actor covers: this
     // branch is reached both by a manager assigned to several and by a global
     // actor whose salons cannot be enumerated at all.
-    return "I won't choose which salon this belongs to. Which salon is this about?";
+    return "I won't choose which location this belongs to. Which location is this about?";
   }
-  return "I can't confirm which salon this would be filed against, so the proposal has none. A form can only name a salon Ask Bubbles can verify you're assigned to.";
+  return "I can't confirm which location this would be filed against, so the proposal has none. A form can only name a location Ask Bubbles can verify you're assigned to.";
 }

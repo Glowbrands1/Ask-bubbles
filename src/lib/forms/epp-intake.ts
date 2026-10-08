@@ -85,7 +85,7 @@ export interface EppIntakeItem {
  */
 export const SDIT_EPP_INTAKE: readonly EppIntakeItem[] = [
   { key: "employee_name", prompt: "The employee's full name", optional: false },
-  { key: "salon", prompt: "The salon location", optional: false },
+  { key: "salon", prompt: "The location", optional: false },
   {
     /*
      * THE DATE LINE NAMES THE DATE. "Say today and I'll use today's date" is a
@@ -167,7 +167,7 @@ export const SDIT_EPP_INTAKE: readonly EppIntakeItem[] = [
  */
 export const TSD_EPP_INTAKE: readonly EppIntakeItem[] = [
   { key: "employee_name", prompt: "The employee's full name", optional: false },
-  { key: "salon", prompt: "The salon location", optional: false },
+  { key: "salon", prompt: "The location", optional: false },
   {
     key: "form_date",
     prompt: "The date for the form (if you say \u201ctoday,\u201d I'll use today's date)",

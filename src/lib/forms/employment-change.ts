@@ -894,7 +894,7 @@ const bounded = (body: string, flags: string) => new RegExp(`(?<![\\w$.])(?:${bo
 /** A salon's number and a rate's amount, when the value is one. */
 function structuralAlternatives(value: string): string[] | null {
   const salon = /^(?:salon|stc|sun\s+tan\s+city|store)\s*#?\s*0*(\d+)$/i.exec(value.trim());
-  if (salon) return [String.raw`(?:salon|stc|sun\s+tan\s+city|store)\s*#?\s*0*${salon[1]}`];
+  if (salon) return [String.raw`(?:salon|store|location|shop|makery)\s*#?\s*0*${salon[1]}`];
   const rate = /^\$?(\d+)(?:\.(\d{2}))?(?:\s*\/\s*hr)?$/i.exec(value.trim());
   if (rate) {
     const cents = rate[2] && rate[2] !== "00" ? `\\.${rate[2]}` : "(?:\\.00)?";
