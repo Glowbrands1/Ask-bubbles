@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, Search, X } from "lucide-react";
 
 import { BrandMark, BuffCitySoapLogo } from "@/components/brand-mark";
@@ -13,6 +14,7 @@ import { useSession } from "@/lib/session/session-context";
 import { cn } from "@/lib/utils/cn";
 import { usePreference, writePreference } from "@/lib/utils/client-store";
 import { SidebarNav } from "./sidebar";
+import { backdropForPath } from "./backdrop";
 import { GlobalSearch } from "./global-search";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { defaultLandingForRole } from "@/lib/permissions";
@@ -32,6 +34,7 @@ export function AppShell({
 }) {
   const { hydrated, signedIn, demoMode, role } = useSession();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const pathname = usePathname();
 
   // Escape closes the mobile drawer, as it closes every other overlay.
   useEffect(() => {
@@ -70,6 +73,13 @@ export function AppShell({
   return (
     <div className="flex min-h-dvh bg-background">
       {/*
+        THE BRAND BACKGROUND, behind everything: fixed to the viewport, faded
+        toward the bottom-right, and absent on chat and the form editor. The
+        page column below sits above it (z-[1]), and every card, table and
+        field in it is opaque, so it only shows in the gaps. Decoration only.
+      */}
+      <div aria-hidden className="canvas-pattern" data-backdrop={backdropForPath(pathname)} />
+      {/*
         THE RAIL RUNS THE FULL HEIGHT, led by the Ask Bubbles logo — the
         approved layout. It is Charcoal, the darker of the two shell surfaces,
         so the white top bar beside it reads as part of the page.
@@ -87,7 +97,7 @@ export function AppShell({
         />
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="relative z-[1] flex min-w-0 flex-1 flex-col">
         {/*
           THE SHARED TOP BAR, owned by the shell rather than any one page:
           White with a Cloud hairline, search in the middle, and the official

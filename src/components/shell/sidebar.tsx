@@ -56,7 +56,9 @@ export function SidebarNav({
   const isCollapsed = variant === "desktop" && collapsed;
 
   return (
-    <div className="flex h-full flex-col bg-sidebar">
+    // `rail-pattern` draws the faint brand pattern behind the rail (globals.css,
+    // BRAND BACKGROUNDS); `isolate` keeps it above the Charcoal and below the links.
+    <div className="rail-pattern relative isolate flex h-full flex-col bg-sidebar">
       {/*
         THE ASK BUBBLES LOGO LEADS THE RAIL, on desktop and in the drawer — the
         approved layout. The shell's white top bar carries the Buff City Soap

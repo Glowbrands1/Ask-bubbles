@@ -285,6 +285,18 @@
      used once to close the Tokyo Green band. */
   --wave-edge: url("/brand/wave-edge.png");
 
+  /* BRAND BACKGROUNDS — the approved "edge-weighted" option. Official Buff
+     City Soap product drawings at very low opacity, behind opaque surfaces
+     only. Each opacity is the highest that keeps muted text at 4.5:1 or more
+     even if it lands on a drawing's line; theme-semantics.test.ts pins them. */
+  --pattern-sidebar: url("/brand/patterns/bcs-pattern-sidebar.png");
+  --pattern-canvas: url("/brand/patterns/bcs-pattern-canvas.png");
+  --pattern-band-art: url("/brand/bcs-product-lineup-white.png");
+  --pattern-sidebar-opacity: 0.065;
+  --pattern-canvas-opacity: 0.1;
+  --pattern-canvas-home-opacity: 0.12;
+  --pattern-band-art-opacity: 0.34;
+
   /* SHADOWS. Neutral Charcoal, low and soft. */
   --shadow-soft: 0 1px 2px rgb(61 58 56 / 0.06);
   --shadow-raised: 0 1px 2px rgb(61 58 56 / 0.06), 0 2px 8px rgb(61 58 56 / 0.08);
@@ -754,6 +766,101 @@
     -webkit-mask: var(--wave-edge) repeat-x 0 0 / auto 100%;
     mask: var(--wave-edge) repeat-x 0 0 / auto 100%;
     pointer-events: none;
+  }
+
+  /*
+   * BRAND BACKGROUNDS — the approved "edge-weighted" option.
+   *
+   * Decoration only: every layer is aria-hidden, takes no pointer events and
+   * sits UNDER opaque surfaces (cards, tables, fields, messages, menus), so it
+   * shows only in the gaps between them.
+   *
+   *   sidebar   the official pattern, faded out under the Ask Bubbles logo and
+   *             above the collapse button and user chip
+   *   canvas    the pattern toward the bottom-right of the viewport, away from
+   *             page titles; none on chat or the form editor; none on phones
+   *   Home band the official product line-up, beside the ask bar on wide
+   *             screens and below the chips on narrow ones, so it never sits
+   *             behind the translucent chips or any text
+   */
+  .rail-pattern::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: var(--pattern-sidebar) 0 0 / 280px 340px repeat;
+    opacity: var(--pattern-sidebar-opacity);
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 96px,
+      #000 168px,
+      #000 calc(100% - 210px),
+      transparent calc(100% - 140px)
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 96px,
+      #000 168px,
+      #000 calc(100% - 210px),
+      transparent calc(100% - 140px)
+    );
+  }
+  .canvas-pattern {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: var(--pattern-canvas) 0 0 / 440px 420px repeat;
+    opacity: var(--pattern-canvas-opacity);
+    -webkit-mask-image: radial-gradient(150% 125% at 100% 100%, #000 0, #000 42%, transparent 78%);
+    mask-image: radial-gradient(150% 125% at 100% 100%, #000 0, #000 42%, transparent 78%);
+  }
+  .canvas-pattern[data-backdrop="home"] {
+    opacity: var(--pattern-canvas-home-opacity);
+  }
+  .canvas-pattern[data-backdrop="none"] {
+    display: none;
+  }
+  .band-art-host {
+    container: band / inline-size;
+  }
+  .band-art {
+    display: block;
+    width: min(56%, 240px);
+    aspect-ratio: 1044 / 204;
+    margin: 14px 0 -8px auto;
+    background: var(--pattern-band-art) right bottom / contain no-repeat;
+    opacity: var(--pattern-band-art-opacity);
+    pointer-events: none;
+  }
+  /* Wide enough to sit beside the 820px ask bar and chips with room to spare.
+     The query measures the band's CONTENT box (padding excluded); the width
+     below is a share of its padding box, so the art always keeps 32px clear of
+     the 820px column and is at least 200px wide when it appears. */
+  @container band (min-width: 1060px) {
+    .band-art {
+      position: absolute;
+      right: 32px;
+      bottom: 6px;
+      margin: 0;
+      width: min(380px, calc(100% - 916px));
+    }
+  }
+  @media (max-width: 767px) {
+    .canvas-pattern {
+      display: none;
+    }
+  }
+  /* High-contrast, forced-colours and print get no decoration at all. */
+  @media (forced-colors: active), (prefers-contrast: more), print {
+    .rail-pattern::before,
+    .canvas-pattern,
+    .band-art {
+      display: none;
+    }
   }
 
   /* ==========================================================================

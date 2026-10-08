@@ -180,7 +180,7 @@ export function AskBand({
         brand-colour surface on Home. Everything written on it is Charcoal
         (5.71:1); white text would be 1.98:1.
       */}
-      <div className="wave-edge mb-[13px] bg-band px-4 pt-6 pb-7 sm:px-8 sm:pt-8 sm:pb-8">
+      <div className="wave-edge band-art-host mb-[13px] bg-band px-4 pt-6 pb-7 sm:px-8 sm:pt-8 sm:pb-8">
         {/* ---------------------------------------------------- band head -- */}
         <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-end sm:gap-4">
           <div className="min-w-0">
@@ -303,6 +303,14 @@ export function AskBand({
             {documents.length === 1 ? "document" : "documents"} in your knowledge base
           </p>
         ) : null}
+
+        {/*
+          THE OFFICIAL PRODUCT LINE-UP, White at low opacity on the Tokyo Green
+          band (globals.css, BRAND BACKGROUNDS). Last in the band so that, on
+          narrow screens, it drops BELOW the chips rather than behind them; on
+          wide ones it sits beside the 820px ask column. Decoration only.
+        */}
+        <div aria-hidden className="band-art" />
       </div>
 
       {/* -------------------------------------------------------- answers -- */}
