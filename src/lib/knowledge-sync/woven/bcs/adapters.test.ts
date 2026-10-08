@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { communicationRecord, parseCommunicationRows } from "./adapters/communications";
 import { fileLibraryRecord, parseFileLibraryRows } from "./adapters/file-library";
-import { handbookRecord, parseHandbookRows } from "./adapters/handbooks";
+import { handbookRecord, parseHandbookDownload, parseHandbookManage, parseHandbookRows } from "./adapters/handbooks";
 import { parsePolicyCards, parsePolicyDetail, policyRecord, withPolicyDetail } from "./adapters/policies";
 import { parseProcedureDetail, parseProcedureListing, procedureRecord } from "./adapters/procedures";
 import { ticksToIso } from "./adapters/shared";
@@ -64,10 +64,38 @@ const handbookRow = (over: Record<string, string> = {}) => ({
 });
 
 describe("handbooks", () => {
-  it("parses a published, public handbook; its content is always BLOCKED (no route verified for this company)", () => {
+  const managePage = (id: string, version: string | null) =>
+    `<html><body><script>var mHandbookID = "${id}"; var mHandbookName = "Team Handbook"; var mUpdatedOn = "2026-03-24T20:52:34.4500000"; var mCurrentVersionID = ${version ? `"${version}"` : "null"}; var mDraftVersionID = null;</script></body></html>`;
+
+  it("parses a published, public handbook; its current version is the downloadable part", () => {
     const [row] = parseHandbookRows({ list: [handbookRow()] });
     expect(row).toMatchObject({ id: bcsId(201), title: "Team Handbook", status: "Published", publication: "published", audience: ["Public"], updatedAt: "2026-03-24T10:15:00" });
-    expect(handbookRecord(row!).parts[0]!.retrieval).toEqual({ kind: "blocked", capability: "handbook_download_unverified" });
+    const manage = parseHandbookManage(managePage(bcsId(201), bcsId(202)), bcsId(201));
+    expect(manage).toEqual({ currentVersionId: bcsId(202), draftVersionId: null, updatedOn: "2026-03-24T20:52:34", name: "Team Handbook" });
+    const record = handbookRecord(row!, manage);
+    expect(record).toMatchObject({ publication: "published", versionId: bcsId(202), updatedAt: "2026-03-24T20:52:34" });
+    expect(record.parts[0]!.retrieval).toEqual({ kind: "available", locator: { handbookId: bcsId(201), versionId: bcsId(202) } });
+  });
+
+  it("a published handbook with no current version, or never opened, has nothing to download", () => {
+    const [row] = parseHandbookRows({ list: [handbookRow()] });
+    const none = handbookRecord(row!, parseHandbookManage(managePage(bcsId(201), null), bcsId(201)));
+    expect(none.publication).toBe("unpublished");
+    expect(none.parts[0]!.retrieval).toEqual({ kind: "blocked", capability: "handbook_no_current_version" });
+    // Never opened (unpublished, or held for ownership review): listed publication kept, nothing to download.
+    const unopened = handbookRecord(row!, null);
+    expect(unopened.publication).toBe("published");
+    expect(unopened.parts[0]!.retrieval).toEqual({ kind: "blocked", capability: "handbook_not_opened" });
+  });
+
+  it("refuses a manage page for a different handbook, and a refused download", () => {
+    expect(() => parseHandbookManage(managePage(bcsId(999), bcsId(202)), bcsId(201))).toThrow(/different handbook/);
+    expect(() => parseHandbookManage("<html></html>", bcsId(201))).toThrow(/did not carry its handbook id/);
+    expect(() => parseHandbookDownload({ Success: false })).toThrow(/did not provide a download/);
+    expect(parseHandbookDownload({ Success: true, Download: { DownloadURL: "https://woven.blob.core.windows.net/x", FileName: "Manual.pdf" } })).toEqual({
+      url: "https://woven.blob.core.windows.net/x",
+      fileName: "Manual.pdf",
+    });
   });
 
   it("fails on an unknown status, a link to another handbook, or a missing column", () => {
@@ -302,33 +330,46 @@ describe("Communications", () => {
 
 describe("audience and ownership rules", () => {
   it("only company-wide audiences pass; narrower ones are restricted; unclear ones are unclear; 'All Positions' waits for a decision", () => {
-    const file = { contentType: "file_library" } as const;
-    const procedure = { contentType: "procedure" } as const;
+    const file = { contentType: "file_library", entityId: bcsId(1) } as const;
+    const procedure = { contentType: "procedure", entityId: bcsId(1) } as const;
     expect(bcsAudienceRestriction(["All Teams All Positions"], file)).toBeNull();
     expect(bcsAudienceRestriction(["All Positions"], procedure)).toBeNull();
     expect(bcsAudienceRestriction(["8 Teams 21 Positions"], file)).toBe("audience_restricted");
     expect(bcsAudienceRestriction(["All Teams 3 Positions"], file)).toBe("audience_restricted");
-    expect(bcsAudienceRestriction(["1 Team 1 Position"], { contentType: "communication" })).toBe("audience_restricted");
+    expect(bcsAudienceRestriction(["1 Team 1 Position"], { contentType: "communication", entityId: bcsId(1) })).toBe("audience_restricted");
     expect(bcsAudienceRestriction(["General Manager", "Trainer"], procedure)).toBe("audience_restricted");
     expect(bcsAudienceRestriction(["N/A"], file)).toBe("audience_unclear");
     expect(bcsAudienceRestriction(null, file)).toBe("audience_unclear");
   });
 
   it("Production launch rule: ONLY 'All Teams All Positions' on a File Library item is shared automatically", () => {
-    /* "Public" is never company-wide for this launch — not even on a Handbook. */
+    /* "Public" is never company-wide — not even on a Handbook, unless the owner confirmed that one (below). */
     for (const contentType of ["file_library", "communication", "procedure", "policy", "handbook"] as const) {
-      expect(bcsAudienceRestriction(["Public"], { contentType })).toBe("audience_unverified");
+      expect(bcsAudienceRestriction(["Public"], { contentType, entityId: bcsId(1) })).toBe("audience_unverified");
     }
     /* "All Teams All Positions" outside the File Library is unverified. */
     for (const contentType of ["communication", "procedure", "policy", "handbook"] as const) {
-      expect(bcsAudienceRestriction(["All Teams All Positions"], { contentType })).toBe("audience_unverified");
+      expect(bcsAudienceRestriction(["All Teams All Positions"], { contentType, entityId: bcsId(1) })).toBe("audience_unverified");
     }
     /* "All Positions" is reviewable only on a procedure. */
-    expect(bcsAudienceRestriction(["All Positions"], { contentType: "handbook" })).toBe("audience_unverified");
+    expect(bcsAudienceRestriction(["All Positions"], { contentType: "handbook", entityId: bcsId(1) })).toBe("audience_unverified");
     /* A mix is never more than its narrowest label. */
-    const file = { contentType: "file_library" } as const;
+    const file = { contentType: "file_library", entityId: bcsId(1) } as const;
     expect(bcsAudienceRestriction(["All Teams All Positions", "2 Teams 3 Positions"], file)).toBe("audience_restricted");
     expect(bcsAudienceRestriction(["All Teams All Positions", "N/A"], file)).toBe("audience_unclear");
+  });
+
+  it("the owner-confirmed handbook: released from the ownership hold, and its Public audience shared — that record only", () => {
+    const confirmed = "42486200-20b0-415c-9bad-c4425bc096ce";
+    expect(bcsOwnershipHold({ entityId: confirmed, title: "2025 JBA Policy Manual - Edited 5-2025" })).toBeNull();
+    expect(bcsOwnershipHold({ entityId: confirmed.toUpperCase(), title: "2025 JBA Policy Manual - Edited 5-2025" })).toBeNull();
+    expect(bcsAudienceRestriction(["Public"], { contentType: "handbook", entityId: confirmed })).toBeNull();
+    // Not as any other content type, and never wider than a narrower label beside it.
+    expect(bcsAudienceRestriction(["Public"], { contentType: "file_library", entityId: confirmed })).toBe("audience_unverified");
+    expect(bcsAudienceRestriction(["Public", "2 Teams 3 Positions"], { contentType: "handbook", entityId: confirmed })).toBe("audience_restricted");
+    // Every other handbook titled after the manual stays held, and its Public audience unverified.
+    expect(bcsOwnershipHold({ entityId: bcsId(202), title: "2025 JBA Policy Manual - Edited 5-2025" })).toBe("ownership_review");
+    expect(bcsAudienceRestriction(["Public"], { contentType: "handbook", entityId: bcsId(202) })).toBe("audience_unverified");
   });
 
   it("JB & Associates / Sun Tan City titles are held for an ownership check", () => {

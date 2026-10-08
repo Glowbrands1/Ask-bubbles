@@ -22,7 +22,9 @@
  *
  *   A BRAND BULLET                      "o <Brand> – MyGlow", "o <Brand>:
  *                                       50% off …". Only that bullet is
- *                                       dropped.
+ *                                       dropped — with the lines the page
+ *                                       wrapped it onto, which begin in lower
+ *                                       case ("… 25% off non-" / "tanning.").
  *
  * Plus the few passages that address another brand's staff in running prose
  * (`otherBrandPassages`), which open an other-brand block until the next
@@ -126,8 +128,13 @@ export function readManualForBrand(
     }
 
     const kept: string[] = [];
+    // True while the lines that follow are the wrapped rest of a dropped brand bullet.
+    let inDroppedBullet = false;
     for (const rawLine of text.split("\n")) {
       const line = rawLine.trim();
+      // Lower case, and not the next bullet (whose marker is a lower-case "o").
+      if (inDroppedBullet && /^\p{Ll}/u.test(line) && !/^o\s/.test(line)) continue;
+      inDroppedBullet = false;
       if (line === "") {
         if (!state.sectionExcluded && !state.otherBrandBlock) kept.push(rawLine);
         continue;
@@ -153,7 +160,10 @@ export function readManualForBrand(
         continue;
       }
 
-      if (OTHER_BULLET.test(line)) continue;
+      if (OTHER_BULLET.test(line)) {
+        inDroppedBullet = true;
+        continue;
+      }
 
       if (!state.sectionExcluded && !state.otherBrandBlock) kept.push(rawLine);
     }

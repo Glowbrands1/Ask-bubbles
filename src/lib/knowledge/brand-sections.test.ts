@@ -60,6 +60,14 @@ describe("reading the JBA manual as Buff City Soap", () => {
     expect(byIndex.get(91)).not.toMatch(/February 1 and June 1|January 1 and February 28/);
   });
 
+  it("drops the wrapped rest of another brand's bullet, and keeps the next bullet whole", () => {
+    // "o Sun Tan City: … and 25% off non-" wraps onto "tanning." — both lines are that bullet.
+    const discounts = byIndex.get(93)!;
+    expect(discounts.split("\n").map((line) => line.trim())).not.toContain("tanning.");
+    expect(discounts).toContain("o Buff City Soap: 50% off products, 25% off bath bomb parties.");
+    expect(discounts).toContain("The following is a list of what Employees are eligible for");
+  });
+
   it("keeps the corporate office and Buff holiday lists, drops the other brands' lists across the chunk boundary", () => {
     expect(byIndex.get(92)).toContain("The Corporate Office is closed on the below listed holidays.");
     expect(byIndex.get(92)).not.toMatch(/is closed on the below listed holidays\. These holidays are paid holidays for salaried\nmanagers/);
@@ -105,5 +113,28 @@ describe("reading the JBA manual as Buff City Soap", () => {
       const trimmed = line.trim();
       if (trimmed) expect(source).toContain(trimmed.replace(/\s+/g, " "));
     }
+  });
+});
+
+describe("headings as today's extractor records them", () => {
+  /*
+   * The reference index recorded the dress code's item headings ("Shirts",
+   * "Pants") as plain lines; the current PDF extractor records them as
+   * section headings. A brand block must still run through its own items.
+   */
+  const ITEM = /^(?:Shirts|Pants)$/;
+  const recorded = fixture.chunks.map((entry) => ({
+    content: entry.c,
+    headings: [...entry.h, ...entry.c.split("\n").map((line) => line.trim()).filter((line) => ITEM.test(line))],
+  }));
+  const reread = new Map(fixture.chunks.map((entry, position) => [entry.i, readManualForBrand(recorded, POLICY_MANUAL_BRAND_SCOPE)[position]!]));
+
+  it("still drops Crunch's and Sun Tan City's shirt and pants rules, and keeps Buff City Soap's and the office's", () => {
+    expect(recorded.some((entry) => entry.headings.includes("Shirts"))).toBe(true);
+    expect(reread.get(36)).not.toMatch(/Two uniform shirts|Zumba|Instructors ONLY/);
+    expect(reread.get(37)).toContain("Any BCS Employee can wear any plain black, white, or gray t-shirt");
+    expect(reread.get(38)).toContain("Full length black or blue jean-colored pants are acceptable.");
+    expect(reread.get(38)).not.toMatch(/Any STC Employee|ASD and above|consistent tanning schedule|Bermuda shorts or Capris\. Tanning/);
+    expect(reread.get(38)).toContain("Any JBA franchise Branded top");
   });
 });

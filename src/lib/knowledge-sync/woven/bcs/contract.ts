@@ -125,6 +125,27 @@ export const HANDBOOK_LIST_PATH = "/KnowledgeCenter/_Handbooks_List_ForDataTable
 export const HANDBOOK_COLUMNS = { id: "EntityID", name: "Column1", status: "Column2", audience: "Column3", updated: "Column4" } as const;
 /** VERIFIED: Column1's anchor `href` is this, carrying the same GUID as `EntityID`. */
 export const HANDBOOK_MANAGE_HREF = /^\/KnowledgeCenter\/Handbooks\/([0-9a-f-]{36})\/manage$/i;
+/*
+ * HANDBOOK CONTENT — VERIFIED for Midwest Soap Makers on 8 Oct 2026, read-only,
+ * against its one published handbook: the manage page carries the inline
+ * version variables below, and `_Handbook_DownloadVersion` answered
+ * `{ Success, Download: { DownloadURL, FileName } }` with a signed link on a
+ * `*.blob.core.windows.net` host (the hosts `downloadSigned` accepts). Woven's
+ * own routes, read in this company's session; nothing is borrowed from another
+ * company's integration.
+ */
+export const handbookManagePath = (id: string) => `/KnowledgeCenter/Handbooks/${encodeURIComponent(id)}/manage`;
+/** VERIFIED: inline variables on the manage page. */
+export const HANDBOOK_VARS = {
+  id: "mHandbookID",
+  name: "mHandbookName",
+  updatedOn: "mUpdatedOn",
+  currentVersionId: "mCurrentVersionID",
+  draftVersionId: "mDraftVersionID",
+} as const;
+/** VERIFIED: form POST `pHandbookID`, `pHandbookVersionID`; answers `{ Success, Download: { DownloadURL, FileName } }`. */
+export const HANDBOOK_DOWNLOAD_PATH = "/KnowledgeCenter/_Handbook_DownloadVersion";
+export const HANDBOOK_DOWNLOAD_FIELDS = { handbookId: "pHandbookID", versionId: "pHandbookVersionID" } as const;
 /** VERIFIED: Column2's hidden numeric key and visible label. Only `2 Published` was observed. */
 export const HANDBOOK_STATUS: Record<string, { label: RegExp; publication: "published" | "unpublished"; reason: string | null }> = {
   "2": { label: /^published$/i, publication: "published", reason: null },
@@ -288,7 +309,11 @@ export const PUBLIC_AUDIENCE = /^public$/i;
 /** Why a part is BLOCKED: a capability not verified (or not switched on) for this company. */
 export const BCS_CAPABILITY = {
   fileLibraryDownload: "file_library_download_unverified",
+  /** Kept for items synced before the route was verified; no new part is blocked with it. */
   handbookDownload: "handbook_download_unverified",
+  handbookNoCurrentVersion: "handbook_no_current_version",
+  /** Unpublished, or held for ownership review: its manage page is never opened. */
+  handbookNotOpened: "handbook_not_opened",
   procedureContent: "procedure_content",
   policyBody: "policy_body",
   communicationDetail: "communication_detail_unverified",

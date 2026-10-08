@@ -1,6 +1,6 @@
 import type { SourceRecord } from "../../../types";
-import { htmlText } from "../../html";
-import { BCS_CAPABILITY, HANDBOOK_COLUMNS, HANDBOOK_MANAGE_HREF, HANDBOOK_STATUS } from "../contract";
+import { htmlText, parseHtmlDocument, readInlineVar } from "../../html";
+import { BCS_CAPABILITY, HANDBOOK_COLUMNS, HANDBOOK_MANAGE_HREF, HANDBOOK_STATUS, HANDBOOK_VARS } from "../contract";
 import {
   WovenShapeError,
   assertUnique,
@@ -22,10 +22,12 @@ import {
  * VERIFIED for Buff City Soap: the list and its four columns. Column1's link
  * must carry the row's own `EntityID` — a mismatch is schema drift.
  *
- * NOT VERIFIED for Buff City Soap: how a handbook's content is read or
- * downloaded. No route is borrowed from another company's integration; the
- * handbook part is BLOCKED (`handbook_download_unverified`) until one is
- * verified for Midwest Soap Makers.
+ * VERIFIED for Buff City Soap on 8 Oct 2026: the manage page's version
+ * variables and the version download (`contract.ts`). A handbook's current
+ * version is a downloadable part. Whether it is ever ingested is still
+ * decided elsewhere: a title naming another company is held for ownership
+ * review until its id is confirmed (`WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW`), and
+ * the audience rules apply as to every other item.
  */
 
 export interface HandbookRow {
@@ -73,28 +75,81 @@ export function parseHandbookRows(body: unknown): HandbookRow[] {
   return rows;
 }
 
+export interface HandbookManage {
+  currentVersionId: string | null;
+  draftVersionId: string | null;
+  updatedOn: string | null;
+  name: string | null;
+}
+
+/** `GET /KnowledgeCenter/Handbooks/{id}/manage` — the inline version variables. */
+export function parseHandbookManage(html: string, expectedId: string): HandbookManage {
+  const doc = parseHtmlDocument(html);
+  const id = validId(readInlineVar(doc, HANDBOOK_VARS.id));
+  if (!id) throw new WovenShapeError("unexpected_shape", "A handbook page did not carry its handbook id.");
+  if (id.toLowerCase() !== expectedId.toLowerCase()) throw new WovenShapeError("unexpected_shape", "A handbook page was for a different handbook.");
+  const text = (name: string) => {
+    const value = readInlineVar(doc, name);
+    return typeof value === "string" && value.trim() ? value.trim() : null;
+  };
+  const updated = text(HANDBOOK_VARS.updatedOn);
+  return {
+    currentVersionId: validId(readInlineVar(doc, HANDBOOK_VARS.currentVersionId)),
+    draftVersionId: validId(readInlineVar(doc, HANDBOOK_VARS.draftVersionId)),
+    updatedOn: updated ? (/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/.exec(updated)?.[1] ?? null) : null,
+    name: text(HANDBOOK_VARS.name),
+  };
+}
+
+/** `POST /KnowledgeCenter/_Handbook_DownloadVersion` — a fresh, short-lived download link. */
+export function parseHandbookDownload(body: unknown): { url: string; fileName: string } {
+  const record = body as { Success?: unknown; Download?: { DownloadURL?: unknown; FileName?: unknown } } | null;
+  if (!record || record.Success !== true || !record.Download || typeof record.Download.DownloadURL !== "string") {
+    throw new WovenShapeError("download_refused", "Woven did not provide a download for this handbook version.");
+  }
+  const fileName = typeof record.Download.FileName === "string" && record.Download.FileName.trim() ? record.Download.FileName.trim() : "handbook.pdf";
+  return { url: record.Download.DownloadURL, fileName };
+}
+
 /**
- * One handbook. Its content is NOT readable yet: no handbook detail or
- * download route has been verified for this company, so the part is BLOCKED
- * (`handbook_download_unverified`) — tracked, reported, never fetched.
+ * One handbook. Its current version is the part to download. A handbook that
+ * was opened and has no current version has nothing to read; one that was
+ * never opened (unpublished, or held for ownership review) keeps its listed
+ * publication and a blocked part.
  */
-export function handbookRecord(row: HandbookRow): SourceRecord {
+export function handbookRecord(row: HandbookRow, manage: HandbookManage | null): SourceRecord {
+  const versionId = manage?.currentVersionId ?? null;
+  const noVersion = manage !== null && versionId === null && row.publication === "published";
+  const publication: SourceRecord["publication"] = noVersion ? "unpublished" : row.publication;
   return {
     source: "woven",
     contentType: "handbook",
     entityId: row.id,
     title: row.title,
     status: row.status,
-    publication: row.publication,
-    publicationReason: row.publicationReason,
+    publication,
+    publicationReason: noVersion ? BCS_CAPABILITY.handbookNoCurrentVersion : row.publicationReason,
     audience: row.audience,
     version: null,
-    versionId: null,
-    updatedAt: row.updatedAt,
+    versionId,
+    updatedAt: manage?.updatedOn ?? row.updatedAt,
     documentIds: [],
     attachmentIds: [],
     contentFingerprint: null,
-    sourceMetadata: {},
-    parts: [blockedPart("current-version", row.title, BCS_CAPABILITY.handbookDownload)],
+    sourceMetadata: manage ? { hasDraft: manage.draftVersionId !== null } : {},
+    parts: [
+      versionId
+        ? {
+            partKey: "current-version",
+            title: row.title,
+            fileName: null,
+            documentId: null,
+            versionId,
+            mimeType: null,
+            sizeBytes: null,
+            retrieval: { kind: "available", locator: { handbookId: row.id, versionId } },
+          }
+        : blockedPart("current-version", row.title, manage ? BCS_CAPABILITY.handbookNoCurrentVersion : BCS_CAPABILITY.handbookNotOpened),
+    ],
   };
 }

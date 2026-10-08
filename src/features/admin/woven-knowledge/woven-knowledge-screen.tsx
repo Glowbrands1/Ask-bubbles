@@ -46,6 +46,7 @@ const CAPABILITY_LABEL: Record<string, string> = {
   knowledge_element_content: "Knowledge Elements of a content type not yet supported",
   course_content: "Course items",
   handbook_no_current_version: "Handbooks with no published version",
+  handbook_not_opened: "Handbooks not opened (unpublished, or held for ownership review)",
   file_library_download_unverified: "File Library files (download not yet verified for this company — switched off)",
   handbook_download_unverified: "Handbook files (download not yet verified for this company — switched off)",
   procedure_attachment_download_unverified: "Procedure attachment files (download not yet verified for this company)",

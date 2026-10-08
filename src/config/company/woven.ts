@@ -79,7 +79,7 @@ export const WOVEN_TENANT = {
  * audience choice, and withdrawn if it was ever in Ask Bubbles. There is no
  * automatic release: one is released only when Buff City Soap explicitly
  * approves it and its Woven id (from the dry-run report) is added to
- * `confirmedEntityIds` in a reviewed code change. The list is empty.
+ * `confirmedEntityIds` in a reviewed code change.
  */
 export const WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW: {
   readonly titlePatterns: readonly RegExp[];
@@ -92,5 +92,14 @@ export const WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW: {
     /\bSTC\b/,
     /^\s*NE\s+Sick\s+Time\s*$/i,
   ],
-  confirmedEntityIds: [],
+  confirmedEntityIds: [
+    /*
+     * The handbook "2025 JBA Policy Manual - Edited 5-2025" (Published,
+     * audience Public), confirmed for Buff City Soap by the owner on 8 Oct
+     * 2026. Released only when this change is merged and the next sync runs;
+     * the content verification the owner asked for is recorded in the PR.
+     * The policy record "JBA Policy Manual 2025" and "NE Sick Time" stay held.
+     */
+    "42486200-20b0-415c-9bad-c4425bc096ce",
+  ],
 };

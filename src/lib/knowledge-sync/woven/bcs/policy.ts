@@ -25,6 +25,13 @@ import { BCS_COMPANY_WIDE_AUDIENCE, PROCEDURE_ALL_POSITIONS, PUBLIC_AUDIENCE, TE
  *               Teams All Positions" outside the File Library) →
  *               `audience_unverified`. EXCLUDED, and an administrator's
  *               audience decision cannot share it.
+ *
+ * ONE EXCEPTION, BY IDENTITY: a HANDBOOK the owner confirmed for Buff City
+ * Soap (`WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW.confirmedEntityIds`) whose audience
+ * is "Public" is SHARED. "Public" is Woven's broadest audience, so sharing it
+ * with everyone signed in to Ask Bubbles is no wider than Woven's own; and the
+ * confirmation is a reviewed code change naming that one record. Every other
+ * "Public" item, of any type, stays `audience_unverified`.
  */
 
 function norm(label: string): string {
@@ -33,7 +40,7 @@ function norm(label: string): string {
 
 const COMPANY_WIDE = norm(BCS_COMPANY_WIDE_AUDIENCE.label);
 
-export function bcsAudienceRestriction(audience: readonly string[] | null, record: Pick<SourceRecord, "contentType">): string | null {
+export function bcsAudienceRestriction(audience: readonly string[] | null, record: Pick<SourceRecord, "contentType" | "entityId">): string | null {
   const labels = (audience ?? []).map(norm).filter(Boolean);
   if (labels.length === 0) return "audience_unclear";
   for (const label of labels) {
@@ -45,7 +52,10 @@ export function bcsAudienceRestriction(audience: readonly string[] | null, recor
       if (record.contentType === "procedure") continue;
       return "audience_unverified";
     }
-    if (PUBLIC_AUDIENCE.test(label)) return "audience_unverified";
+    if (PUBLIC_AUDIENCE.test(label)) {
+      if (record.contentType === "handbook" && isConfirmed(record.entityId)) continue;
+      return "audience_unverified";
+    }
     if (/^n\/?a$/.test(label)) return "audience_unclear";
     if (TEAM_POSITION_AUDIENCE.test(label)) return "audience_restricted";
     /* A named position (or anything else not verified as company-wide): narrower than everyone. */
@@ -60,7 +70,11 @@ export function bcsAudienceRestriction(audience: readonly string[] | null, recor
  * `WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW.confirmedEntityIds`.
  */
 export function bcsOwnershipHold(record: Pick<SourceRecord, "entityId" | "title">): string | null {
-  const confirmed = WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW.confirmedEntityIds.some((id) => id.toLowerCase() === record.entityId.toLowerCase());
-  if (confirmed) return null;
+  if (isConfirmed(record.entityId)) return null;
   return WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW.titlePatterns.some((pattern) => pattern.test(record.title)) ? "ownership_review" : null;
+}
+
+/** Whether the owner confirmed this Woven record for Buff City Soap in a reviewed code change. */
+function isConfirmed(entityId: string): boolean {
+  return WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW.confirmedEntityIds.some((id) => id.toLowerCase() === entityId.toLowerCase());
 }
