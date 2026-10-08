@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Menu, Search, X } from "lucide-react";
 
-import { BrandMark, ParentBrandLockup } from "@/components/brand-mark";
+import { BrandMark, BuffCitySoapLogo } from "@/components/brand-mark";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/overlays";
@@ -118,7 +118,7 @@ export function AppShell({
             first pass raised this to `lg` on an estimate; the measurement said
             that was unnecessary, so it stayed at `sm`.
           */}
-          <ParentBrandLockup className="hidden sm:inline-flex" />
+          <BuffCitySoapLogo className="hidden h-11 sm:block" />
         </div>
       </header>
 

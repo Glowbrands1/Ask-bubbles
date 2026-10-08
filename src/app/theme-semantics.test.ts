@@ -32,15 +32,21 @@ const GLOBALS = readFileSync(join(SOURCE_DIR, "app", "globals.css"), "utf8");
 /** globals.css with its comments removed, so prose cannot satisfy a check. */
 const GLOBALS_CODE = GLOBALS.replace(/\/\*[\s\S]*?\*\//g, "");
 
-/** The agreed raw palette. */
+/**
+ * The agreed raw palette — the Buff City Soap 2023 Brand Guidelines' main
+ * colours ("Color codes", p.30) and the two scent colours the UI uses for
+ * status, plus the one derived ink the follow-up fill depends on.
+ */
 const PALETTE = {
-  "--bcs-wine": "#5e1a33",
-  "--bcs-orange": "#f26522",
-  "--bcs-orange-cta": "#b8460f",
-  "--bcs-aqua": "#2bb5b0",
-  "--bcs-canvas": "#fbf5ec",
-  "--bcs-ink": "#2b2a2e",
-  "--bcs-attention": "#c43c4a",
+  "--bcs-tokyo": "#66c9ba",
+  "--bcs-tokyo-dark": "#3e7f75",
+  "--bcs-charcoal": "#3d3a38",
+  "--bcs-cotton": "#f6f6f6",
+  "--bcs-cloud": "#dfdfde",
+  "--bcs-love-potion": "#e5554f",
+  "--bcs-beast": "#ffa06a",
+  // Derived: 65% Love Potion + 35% Charcoal — white on Love Potion is 3.66:1.
+  "--bcs-attention": "#aa4c47",
 } as const;
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
@@ -150,16 +156,16 @@ describe("the raw palette is present and unaltered", () => {
   });
 
   it("points the settled meanings at the palette they were agreed on", () => {
-    expect(ROOT.get("--background")).toBe("var(--bcs-canvas)");
-    expect(ROOT.get("--foreground")).toBe("var(--bcs-ink)");
-    // The CTA fill is the deep orange: raw #f26522 never carries white text.
-    expect(ROOT.get("--primary")).toBe("var(--bcs-orange-cta)");
-    expect(ROOT.get("--brand-accent")).toBe("var(--bcs-orange)");
-    expect(ROOT.get("--accent")).toBe("var(--bcs-aqua)");
+    expect(ROOT.get("--background")).toBe("var(--bcs-cotton)");
+    expect(ROOT.get("--foreground")).toBe("var(--bcs-charcoal)");
+    // The CTA fill is Dark Tokyo Green: Tokyo Green never carries white text.
+    expect(ROOT.get("--primary")).toBe("var(--bcs-tokyo-dark)");
+    expect(ROOT.get("--brand-accent")).toBe("var(--bcs-tokyo)");
+    expect(ROOT.get("--accent")).toBe("var(--bcs-tokyo)");
     expect(ROOT.get("--followup-attention")).toBe("var(--bcs-attention)");
-    expect(ROOT.get("--rail")).toBe("var(--bcs-rail)");
-    expect(resolveHex("--rail")).toBe(PALETTE["--bcs-wine"]);
-    // Chart data is aqua — never the attention red, so a bar is never an alarm.
+    expect(ROOT.get("--rail")).toBe("var(--bcs-charcoal)");
+    expect(resolveHex("--rail")).toBe(PALETTE["--bcs-charcoal"]);
+    // Chart data is teal — never the attention red, so a bar is never an alarm.
     expect(resolveHex("--measure-data")).not.toBe(resolveHex("--followup-attention"));
   });
 
@@ -216,7 +222,7 @@ describe("components never see a raw palette value", () => {
     ];
     expect(literals.length).toBeGreaterThan(Object.keys(PALETTE).length);
 
-    const canvas = PALETTE["--bcs-canvas"];
+    const canvas = PALETTE["--bcs-cotton"];
     const offenders = sourceFiles(SOURCE_DIR)
       .filter((path) => !path.endsWith("globals.css"))
       .flatMap((path) => {
@@ -241,7 +247,7 @@ describe("components never see a raw palette value", () => {
 
   it("sets the browser theme colour to the canvas", () => {
     const layout = codeOf(join(SOURCE_DIR, "app", "layout.tsx"));
-    expect(layout).toContain(`themeColor: "${PALETTE["--bcs-canvas"]}"`);
+    expect(layout).toContain(`themeColor: "${PALETTE["--bcs-cotton"]}"`);
   });
 });
 
@@ -397,9 +403,20 @@ describe("the key text pairings clear WCAG AA", () => {
     ["--sidebar-muted", "--sidebar"],
     ["--sidebar-active-foreground", "--sidebar-active"],
     ["--accent-foreground", "--accent"],
+    ["--accent-soft-foreground", "--accent-soft"],
     ["--followup-attention-foreground", "--followup-attention"],
+    ["--followup-attention-soft-foreground", "--followup-attention-soft"],
     ["--brand-accent-foreground", "--brand-accent"],
     ["--selected-foreground", "--selected"],
+    // The Tokyo Green band and everything written on it.
+    ["--band-foreground", "--band"],
+    ["--band-muted-foreground", "--band"],
+    // Teal text (links, the wordmark's trail) on the grounds it sits on.
+    ["--primary", "--surface"],
+    ["--primary-foreground", "--primary-hover"],
+    ["--primary-soft-foreground", "--primary-soft"],
+    ["--status-attention", "--status-attention-bg"],
+    ["--status-failed", "--status-failed-bg"],
   ];
 
   it.each(PAIRINGS)("%s on %s is at least 4.5:1", (foreground, background) => {
@@ -413,37 +430,52 @@ describe("the key text pairings clear WCAG AA", () => {
   it("measures contrast the way WCAG does", () => {
     // Guard on the guard: black on white is 21:1 and a colour on itself is 1:1.
     expect(contrast("#000000", "#ffffff")).toBeCloseTo(21, 5);
-    expect(contrast("#5e1a33", "#5e1a33")).toBeCloseTo(1, 5);
-    // And raw orange is the reason the CTA uses the deeper fill.
-    expect(contrast("#ffffff", PALETTE["--bcs-orange"])).toBeLessThan(4.5);
+    expect(contrast("#3d3a38", "#3d3a38")).toBeCloseTo(1, 5);
+    // And these are the reasons for the derived shades: white text fails on
+    // Tokyo Green and on Love Potion, so neither ever carries it.
+    expect(contrast("#ffffff", PALETTE["--bcs-tokyo"])).toBeLessThan(4.5);
+    expect(contrast("#ffffff", PALETTE["--bcs-love-potion"])).toBeLessThan(4.5);
   });
 });
 
 /* ======================================================== typography ==== */
 
 describe("typography keeps the display face out of body copy", () => {
-  it("loads both faces through next/font", () => {
+  it("loads both fallback faces through next/font", () => {
     const layout = readFileSync(join(SOURCE_DIR, "app", "layout.tsx"), "utf8");
-    expect(layout).toMatch(/import \{[^}]*\bFredoka\b[^}]*\} from "next\/font\/google"/);
-    expect(layout).toMatch(/import \{[^}]*\bLato\b[^}]*\} from "next\/font\/google"/);
+    expect(layout).toMatch(/import \{[^}]*\bArchivo\b[^}]*\} from "next\/font\/google"/);
+    expect(layout).toMatch(/import \{[^}]*\bFigtree\b[^}]*\} from "next\/font\/google"/);
     // Self-hosted at build time, and text stays visible while a face loads.
     expect((layout.match(/display: "swap"/g) ?? []).length).toBeGreaterThanOrEqual(2);
-    expect(layout).toContain('variable: "--font-fredoka"');
-    expect(layout).toContain('variable: "--font-lato"');
+    expect(layout).toContain('variable: "--font-archivo"');
+    expect(layout).toContain('variable: "--font-figtree"');
+  });
+
+  it("names the licensed brand faces first, so they win wherever installed", () => {
+    /*
+     * The 2023 guidelines: Supria Sans Black for headlines, Avenir Next Regular
+     * for sub-headlines and body. Archivo and Figtree are the labelled
+     * stand-ins until the licensed files are self-hosted.
+     */
+    const stackOf = (token: string) => new RegExp(`${token}:([^;]+);`).exec(GLOBALS_CODE)?.[1] ?? "";
+    expect(stackOf("--font-display").trim()).toMatch(/^"Supria Sans",/);
+    expect(stackOf("--font-wordmark").trim()).toMatch(/^"Supria Sans",/);
+    expect(stackOf("--font-sans").trim()).toMatch(/^"Avenir Next",/);
   });
 
   it("drives UI text with the readable face, not the display one", () => {
     /*
-     * Fredoka is a display face: right for a heading or a wordmark, wrong for
+     * Supria Sans (stand-in: Archivo) is a headline face: right for a heading or a wordmark, wrong for
      * a paragraph, a label or a table cell. `--font-sans` is what all of those
      * resolve to, so it must never point at it.
      */
     const sans = /--font-sans:([^;]+);/.exec(GLOBALS_CODE)?.[1] ?? "";
-    expect(sans).toContain("--font-lato");
-    expect(sans).not.toContain("fredoka");
+    expect(sans).toContain("--font-figtree");
+    expect(sans).not.toContain("archivo");
+    expect(sans).not.toContain("Supria");
 
-    expect(/--font-display:([^;]+);/.exec(GLOBALS_CODE)?.[1] ?? "").toContain("--font-fredoka");
-    expect(/--font-wordmark:([^;]+);/.exec(GLOBALS_CODE)?.[1] ?? "").toContain("--font-fredoka");
+    expect(/--font-display:([^;]+);/.exec(GLOBALS_CODE)?.[1] ?? "").toContain("--font-archivo");
+    expect(/--font-wordmark:([^;]+);/.exec(GLOBALS_CODE)?.[1] ?? "").toContain("--font-archivo");
 
     // The body element itself is set in the readable face.
     const body = /\n\s*body \{([^}]+)\}/.exec(GLOBALS_CODE)?.[1] ?? "";
@@ -519,9 +551,12 @@ describe("the Ask Bubbles brand", () => {
   it("colours the mark and the wordmark from the brand tokens", () => {
     expect(BRAND).toContain("var(--brand-accent)");
     expect(BRAND).toContain("var(--accent)");
+    // Tokyo Green is text only on the Charcoal rail (5.71:1); on a light
+    // ground the trail word takes Dark Tokyo Green.
     expect(BRAND).toContain("text-brand-accent");
-    // On the dark bar the lead word takes the bar's own foreground.
-    expect(BRAND).toContain("text-topbar-foreground");
+    expect(BRAND).toContain("text-primary");
+    // On the rail the lead word takes the rail's own foreground.
+    expect(BRAND).toContain("text-sidebar-foreground");
     // And the words come from the brand config, not from this file.
     expect(BRAND).toContain("ACTIVE_BRAND.wordmark.lead");
     expect(BRAND).toContain("ACTIVE_BRAND.wordmark.trail");
@@ -533,7 +568,8 @@ describe("the Ask Bubbles brand", () => {
   });
 
   it("uses the selected token for generic selected state", () => {
-    expect(ROOT.get("--selected")).toBe("var(--bcs-wine)");
+    // Charcoal: a chosen filter, a pressed segment, the ink button.
+    expect(ROOT.get("--selected")).toBe("var(--bcs-charcoal)");
     const button = readFileSync(join(SOURCE_DIR, "components", "ui", "button.tsx"), "utf8");
     expect(button).toContain("bg-selected");
   });
@@ -544,7 +580,7 @@ describe("the Ask Bubbles brand", () => {
      * keeps the two in step: a component that hard-codes the canvas passes a
      * colour check and still drifts the next time the canvas moves.
      */
-    expect(ROOT.get("--hover-surface")).toBe("var(--bcs-canvas)");
+    expect(ROOT.get("--hover-surface")).toBe("var(--bcs-tokyo-tint)");
 
     const button = readFileSync(join(SOURCE_DIR, "components", "ui", "button.tsx"), "utf8");
     const sidebar = codeOf(join(SOURCE_DIR, "components", "shell", "sidebar.tsx"));

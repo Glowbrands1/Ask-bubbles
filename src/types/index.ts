@@ -775,6 +775,17 @@ export interface BrandConfig {
    * Applied at the app shell, so a second brand is a config swap.
    */
   paletteTokens: Record<string, string>;
+  /**
+   * The parent brand's official logo artwork, served from `public/`. One file
+   * per approved colour, so the logo is never recoloured in CSS. All three are
+   * the same artwork at the same intrinsic size.
+   */
+  logo: {
+    /** Approved logo colours only — see the brand guidelines' logo rules. */
+    stacked: Record<"tokyoGreen" | "white" | "charcoal", string>;
+    width: number;
+    height: number;
+  };
   /** Scopes knowledge retrieval to one brand's corpus. */
   knowledgeScopeId: string;
   vocabulary: {
