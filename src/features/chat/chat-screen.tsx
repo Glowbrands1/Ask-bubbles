@@ -699,10 +699,9 @@ export function ChatScreen() {
         */}
         <div
           className={cn(
-            "flex shrink-0 flex-wrap items-center justify-between gap-3 border-b-4 border-brand-accent bg-band px-4 sm:px-6",
-            isEmpty ? "py-5" : "py-3.5",
+            "flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-4 sm:px-6",
+            isEmpty ? "py-5" : "py-3",
           )}
-          style={isEmpty ? { backgroundImage: "var(--band-glow)" } : undefined}
         >
           <div
             className={cn(
@@ -719,12 +718,15 @@ export function ChatScreen() {
               <div className="min-w-0">
                 {/*
                   THE ONLY HEADLINE ON THE SCREEN, so it can carry the weight
-                  the Overview greeting carries: the display face at 30px with
-                  the assistant's name in yellow.
+                  the Overview greeting carries: the headline face, with the
+                  assistant's name under a soft Tokyo Green marker. Charcoal
+                  throughout — Tokyo Green is never text on White.
                 */}
-                <h1 className="display text-[26px] text-band-foreground sm:text-[30px]">
+                <h1 className="display text-[26px] text-foreground sm:text-[30px]">
                   How can{" "}
-                  <span className="text-brand-accent">{brand.assistantName}</span>{" "}
+                  <span className="bg-[linear-gradient(transparent_62%,var(--marker)_62%)]">
+                    {brand.assistantName}
+                  </span>{" "}
                   help today?
                 </h1>
                 {/*
@@ -733,14 +735,14 @@ export function ChatScreen() {
                   — "Store Manager — Example Location 101" — so concatenating it
                   with the location rendered the location twice.
                 */}
-                <p className="mt-1.5 text-[12px] text-band-muted-foreground">
+                <p className="mt-1.5 text-[13px] text-muted-foreground">
                   {managerDisplayName.includes(primaryLocationName)
                     ? managerDisplayName
                     : `${primaryLocationName} · ${managerDisplayName}`}
                 </p>
               </div>
             ) : (
-              <p className="display hidden truncate text-[19px] text-band-foreground xl:block">
+              <p className="hidden truncate text-[16px] font-bold text-foreground sm:block">
                 {activeConversation ? activeConversation.title : "New conversation"}
               </p>
             )}
@@ -750,19 +752,21 @@ export function ChatScreen() {
               is no context to name and an empty chip is furniture.
             */}
             {reportContext ? (
-              <span className="hidden shrink-0 rounded-[22px] border border-band-pill-border px-2.5 py-[5px] text-[8.5px] font-black tracking-[0.1em] whitespace-nowrap uppercase text-band-muted-foreground lg:inline-block">
+              <span className="hidden shrink-0 rounded-full border border-border px-2.5 py-[5px] text-[11px] font-semibold whitespace-nowrap text-muted-foreground lg:inline-block">
                 {reportById(reportContext.reportId)?.label ?? "Report"}
               </span>
             ) : null}
           </div>
           <div className="flex items-center gap-3">
             {/* The connection line, moved out of the composer stack. */}
-            <span className="hidden items-center gap-1.5 text-[10px] font-bold whitespace-nowrap text-band-label sm:flex">
+            <span className="hidden items-center gap-2 text-[12px] whitespace-nowrap text-muted-foreground sm:flex">
               <span
                 aria-hidden
                 className={cn(
-                  "size-[7px] rounded-full",
-                  providerStatus.connected ? "bg-delta-up" : "bg-band-label",
+                  "size-2 rounded-full",
+                  providerStatus.connected
+                    ? "bg-brand-accent ring-[3px] ring-brand-accent-soft"
+                    : "bg-border-strong",
                 )}
               />
               {providerStatus.name} · {providerStatus.connected ? "connected" : "offline"}
@@ -784,7 +788,7 @@ export function ChatScreen() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-band-chip-foreground hover:bg-hover-surface hover:text-hover-surface-foreground lg:hidden"
+                className="lg:hidden"
                 onClick={createFormFromConversation}
                 disabled={busy}
                 title={busy ? "Bubbles is answering. This will be ready the moment that finishes." : undefined}
@@ -796,7 +800,7 @@ export function ChatScreen() {
             <Button
               variant="ghost"
               size="sm"
-              className="hidden text-band-chip-foreground hover:bg-hover-surface hover:text-hover-surface-foreground lg:inline-flex"
+              className="hidden lg:inline-flex"
               onClick={() => setContextOpen((open) => !open)}
               aria-pressed={contextOpen}
             >
@@ -900,7 +904,7 @@ export function ChatScreen() {
                       key={prompt}
                       type="button"
                       onClick={() => void send(prompt)}
-                      className="rounded-[22px] border border-border-strong bg-surface px-3.5 py-2 text-left text-[12px] font-bold text-foreground shadow-soft transition-colors hover:border-brand-accent"
+                      className="rounded-full border border-border-strong bg-surface px-3.5 py-2 text-left text-[13px] font-medium text-foreground transition-colors hover:border-primary hover:bg-hover-surface"
                     >
                       {prompt}
                     </button>
@@ -1059,7 +1063,6 @@ function ThreadControls({
       <Button
         variant="ghost"
         size="sm"
-        className="text-band-chip-foreground hover:bg-hover-surface hover:text-hover-surface-foreground"
         onClick={onHistory}
         aria-expanded={historyOpen}
       >

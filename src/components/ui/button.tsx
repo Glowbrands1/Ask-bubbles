@@ -7,46 +7,50 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils/cn";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-sm)] font-medium transition-[background-color,color,border-color,box-shadow,transform] duration-150 disabled:pointer-events-none disabled:opacity-45 [&_svg]:shrink-0 active:translate-y-px",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-sm)] font-semibold transition-[background-color,color,border-color,box-shadow,transform] duration-150 disabled:pointer-events-none [&_svg]:shrink-0 active:translate-y-px",
   {
     variants: {
       variant: {
         /*
-         * A GENERIC PRIMARY CONTROL, so it carries the navy rather than the
-         * brand brown. `primary` here means "the main action on this screen",
-         * which is a UI state and not a category — the semantic colours stay
-         * reserved for things that mean something (follow-up attention,
-         * wellness, warnings).
-         */
-        /*
-         * HOVER IS ONE COLOUR EVERYWHERE: the canvas, #fff6f0. Every variant
-         * lands on it, so "the pointer is on this" reads the same on a navy
-         * primary, a bordered secondary and a bare ghost.
+         * THE PRIMARY ACTION IS DARK TOKYO GREEN with white text (4.67:1).
+         * Tokyo Green itself cannot carry white text (1.98:1), which is why the
+         * fill is the darker official green. Hover and press step darker
+         * through derived shades, so the control never fades toward the page.
          *
-         * THE FOREGROUND HAS TO INVERT WITH IT on the dark variants. A navy
-         * button whose background goes near-white while its text stays
-         * near-white is an invisible button, so those variants also take the
-         * navy foreground on hover — and keep a ring, because a button that
-         * loses its fill entirely stops looking like a button.
+         * DISABLED FILLS GO FLAT: Cotton-grey with a muted label, rather than a
+         * translucent primary that still reads as pressable.
          */
         primary:
-          "bg-selected text-selected-foreground shadow-soft hover:bg-hover-surface hover:text-hover-surface-foreground hover:ring-1 hover:ring-selected",
+          "bg-primary text-primary-foreground shadow-soft hover:bg-primary-hover active:bg-primary-active disabled:bg-surface-muted disabled:text-placeholder-foreground disabled:shadow-none",
+        /*
+         * INK: Charcoal, for the one decisive action on a photographic ground —
+         * the sign-in panels, as in the approved login. Generic "selected"
+         * colour, so it carries no category meaning.
+         */
+        ink: "bg-selected text-selected-foreground shadow-soft hover:bg-primary active:bg-primary-active disabled:bg-surface-muted disabled:text-placeholder-foreground disabled:shadow-none",
         secondary:
-          "bg-surface text-foreground border border-border-strong shadow-soft hover:bg-hover-surface",
+          "bg-surface text-foreground border border-border-strong shadow-soft hover:border-primary hover:bg-hover-surface disabled:opacity-50",
+        /* THE BRAND FILL: Tokyo Green with Charcoal text (5.71:1). */
         accent:
-          "bg-accent text-accent-foreground shadow-soft hover:bg-hover-surface hover:text-hover-surface-foreground hover:ring-1 hover:ring-accent",
-        soft: "bg-primary-soft text-primary-soft-foreground hover:bg-hover-surface",
-        ghost: "text-muted-foreground hover:bg-hover-surface hover:text-foreground",
+          "bg-accent text-accent-foreground shadow-soft hover:bg-accent-hover disabled:bg-surface-muted disabled:text-placeholder-foreground disabled:shadow-none",
+        soft: "bg-primary-soft text-primary-soft-foreground hover:bg-accent-hover disabled:opacity-50",
+        ghost:
+          "text-muted-foreground hover:bg-hover-surface hover:text-foreground disabled:opacity-50",
         outline:
-          "border border-border-strong bg-transparent text-foreground hover:bg-hover-surface",
+          "border border-border-strong bg-transparent text-foreground hover:border-primary hover:bg-hover-surface disabled:opacity-50",
+        /*
+         * DESTRUCTIVE is the derived Love Potion ink with white text (5.48:1):
+         * the status-failed colour, not the follow-up colour, so pressing never
+         * looks like an overdue alarm.
+         */
         destructive:
-          "bg-status-failed-bg text-status-failed border border-[color-mix(in_srgb,var(--status-failed)_28%,transparent)] hover:bg-hover-surface",
-        link: "text-primary underline-offset-4 hover:underline p-0 h-auto",
+          "bg-status-failed text-surface shadow-soft hover:bg-[color-mix(in_srgb,var(--status-failed)_82%,var(--foreground))] disabled:bg-surface-muted disabled:text-placeholder-foreground disabled:shadow-none",
+        link: "text-primary underline underline-offset-4 decoration-1 hover:text-primary-hover hover:decoration-2 p-0 h-auto",
       },
       size: {
         sm: "h-8 px-3 text-[13px] [&_svg]:size-3.5",
-        md: "h-9.5 px-4 text-sm [&_svg]:size-4",
-        lg: "h-11 px-5 text-[15px] [&_svg]:size-4",
+        md: "h-10 px-4 text-sm [&_svg]:size-4",
+        lg: "h-12 px-6 text-[15px] [&_svg]:size-4",
         icon: "h-9 w-9 [&_svg]:size-4",
         iconSm: "h-8 w-8 [&_svg]:size-3.5",
       },

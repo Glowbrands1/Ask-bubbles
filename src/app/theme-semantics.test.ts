@@ -581,11 +581,16 @@ describe("the Ask Bubbles brand", () => {
     expect(button).toContain("bg-selected");
   });
 
-  it("lands every hover on the canvas, from one token", () => {
+  it("gives every control a hover drawn from the tokens", () => {
     /*
-     * Asserted through the TOKEN rather than the hex, because that is what
-     * keeps the two in step: a component that hard-codes the canvas passes a
-     * colour check and still drifts the next time the canvas moves.
+     * Asserted through TOKENS rather than hex values, because that is what
+     * keeps them in step with the palette.
+     *
+     * LIGHT CONTROLS lift to the one hover surface, the Tokyo tint, so "the
+     * pointer is on this" reads the same on a bordered secondary, an outline
+     * and a bare ghost. DARK FILLS (primary, ink, accent, destructive) step to
+     * their own darker or lighter shade instead — fading a dark button to a
+     * pale tint would leave white text on white.
      */
     expect(ROOT.get("--hover-surface")).toBe("var(--bcs-tokyo-tint)");
 
@@ -604,7 +609,16 @@ describe("the Ask Bubbles brand", () => {
     expect(entries.length).toBeGreaterThan(3);
     for (const entry of entries) {
       if (entry.name === "link") continue;
-      expect(entry.classes, `${entry.name} must hover to the canvas`).toContain(
+      const hovers = [...entry.classes.matchAll(/hover:bg-([a-z][a-z0-9-]*)/g)].map((m) => m[1]);
+      const mixed = /hover:bg-\[color-mix\(in_srgb,var\(--[a-z0-9-]+\)/.test(entry.classes);
+      expect(hovers.length > 0 || mixed, `${entry.name} has no hover state`).toBe(true);
+      for (const hover of hovers) {
+        expect(THEME_COLOURS.has(hover), `${entry.name} hovers to an undeclared colour ${hover}`).toBe(true);
+      }
+    }
+    for (const light of ["secondary", "ghost", "outline"]) {
+      const entry = entries.find((candidate) => candidate.name === light);
+      expect(entry?.classes, `${light} must hover to the shared hover surface`).toContain(
         "hover:bg-hover-surface",
       );
     }

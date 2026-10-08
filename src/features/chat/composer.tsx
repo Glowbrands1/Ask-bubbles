@@ -155,11 +155,10 @@ export function Composer({
       disabled={!value.trim() || busy}
       aria-label="Send message"
       /*
-        THE ROUND YELLOW SEND. Yellow is a fill here rather than an encoded
-        value, and it is one of the two filled blocks the direction allows a
-        screen.
+        THE ROUND SEND, in the primary action colour: Dark Tokyo Green with a
+        white arrow (4.67:1).
       */
-      className="grid size-[38px] shrink-0 place-items-center rounded-full bg-brand-accent text-brand-accent-foreground transition-opacity disabled:opacity-40"
+      className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-40"
     >
       <ArrowUp className="size-[15px]" strokeWidth={2.5} />
     </button>
@@ -167,13 +166,13 @@ export function Composer({
 
   return (
     /*
-      THE DOCK. Near-black with the 4px yellow top edge, so the page is
-      bookended in dark chrome and the conversation between them reads as a
-      document on paper.
+      THE DOCK: White with a Cloud hairline above it, as approved. The field
+      is a bordered box that takes the Dark Tokyo Green border and a soft
+      Tokyo halo while you type.
     */
-    <div className="shrink-0 border-t-4 border-brand-accent bg-band px-4 pt-4 pb-3.5 sm:px-6">
-      <div className="flex items-center gap-3.5 rounded-[var(--radius-lg)] bg-surface py-3 pr-3.5 pl-4.5 shadow-ask focus-within:shadow-ask-focus">
-        <BubbleMark className="size-[26px] shrink-0" onDark />
+    <div className="shrink-0 border-t border-border bg-surface px-4 pt-3.5 pb-3 sm:px-6">
+      <div className="flex items-center gap-3 rounded-[var(--radius-2xl)] border-[1.5px] border-border-strong bg-surface py-2 pr-2 pl-3.5 transition-shadow focus-within:border-primary focus-within:shadow-[0_0_0_3px_var(--marker)]">
+        <BubbleMark className="size-[26px] shrink-0" />
         <div className="flex min-w-0 flex-1 items-center">{field}</div>
         {sendButton}
       </div>
@@ -191,7 +190,7 @@ export function Composer({
       */}
       <div className="mt-2.5 flex flex-wrap items-center gap-3.5">
         <AnswerModeControl mode={mode} onModeChange={onModeChange} />
-        <p className="min-w-50 flex-1 text-[10.5px] leading-snug text-band-label">
+        <p className="min-w-50 flex-1 text-[12px] leading-snug text-muted-foreground">
           {MANAGER_NOTE_SHORT}
         </p>
       </div>
@@ -259,7 +258,7 @@ export function AnswerModeControl({
           size="iconSm"
           type="button"
           aria-label="About answer modes and Bubbles' limits"
-          className="shrink-0 text-band-muted-foreground hover:text-hover-surface-foreground"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
         >
           <Info />
         </Button>

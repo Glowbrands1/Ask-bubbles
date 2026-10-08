@@ -218,6 +218,8 @@
   --wordmark-muted: var(--bcs-rail-muted);
 
   --clear-surface: var(--bcs-cotton);
+  /* A highlighter stroke under a word in a headline — 30% Tokyo Green. */
+  --marker: var(--bcs-tokyo-tint-strong);
 
   /* MEASURES. Neutral until a measure is short of plan; data in Dark Tokyo
      Green, never in the follow-up red. */

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { ArrowUp, X } from "lucide-react";
+import { ArrowUp, MapPin, X } from "lucide-react";
 
 import { BubbleMark } from "@/components/brand-mark";
 import { quickQuestionsFor } from "@/lib/ai/quick-questions";
@@ -173,21 +173,23 @@ export function AskBand({
   return (
     <section
       aria-label="Ask Bubbles"
-      className={cn("shrink-0 border-b-4 border-brand-accent bg-band", className)}
-      /* The corner glow: the one sanctioned appearance of the red-light red. */
-      style={{ backgroundImage: "var(--band-glow)" }}
+      className={cn("shrink-0", className)}
     >
-      <div className="px-5 pt-6 pb-7 sm:px-6">
+      {/*
+        THE TOKYO GREEN BAND, closed by the brand's wavy edge — the one large
+        brand-colour surface on Home. Everything written on it is Charcoal
+        (5.71:1); white text would be 1.98:1.
+      */}
+      <div className="wave-edge mb-[13px] bg-band px-4 pt-6 pb-7 sm:px-8 sm:pt-8 sm:pb-8">
         {/* ---------------------------------------------------- band head -- */}
-        <div className="mb-4 flex flex-col gap-3 sm:mb-[18px] sm:flex-row sm:items-end sm:gap-4">
+        <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-end sm:gap-4">
           <div className="min-w-0">
-            <h1 className="display text-[26px] text-band-foreground sm:text-[30px]">
-              {greeting},{" "}
-              <span className="text-brand-accent">{greetingName}</span>
-            </h1>
-            <p className="mt-1.5 text-xs text-band-muted-foreground">
+            <p className="mb-2 text-[13px] font-semibold text-band-muted-foreground">
               {formatLongDate(businessToday())}
             </p>
+            <h1 className="display text-[30px] text-band-foreground sm:text-[44px]">
+              {greeting}, {greetingName}
+            </h1>
           </div>
 
           {/*
@@ -205,7 +207,7 @@ export function AskBand({
             <div
               role="radiogroup"
               aria-label="Answer length"
-              className="flex shrink-0 gap-0.5 rounded-full border border-band-pill-border bg-band-chip-surface p-[3px] sm:ml-auto"
+              className="flex shrink-0 gap-0.5 self-start rounded-full bg-band-chip-surface p-[3px] sm:ml-auto sm:self-auto"
             >
               {MODES.map((option) => {
                 const on = option.value === mode;
@@ -223,10 +225,10 @@ export function AskBand({
                       inputRef.current?.focus();
                     }}
                     className={cn(
-                      "rounded-full px-2.5 py-1.5 text-[9px] font-black tracking-[0.07em] uppercase transition-colors",
+                      "rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors",
                       on
-                        ? "bg-brand-accent text-brand-accent-foreground"
-                        : "text-band-muted-foreground hover:text-band-chip-foreground",
+                        ? "bg-surface text-foreground shadow-raised"
+                        : "text-band-muted-foreground hover:bg-surface/60",
                     )}
                   >
                     {option.label}
@@ -235,7 +237,8 @@ export function AskBand({
               })}
             </div>
           ) : (
-            <span className="pill-action shrink-0 self-start border border-band-pill-border text-brand-accent sm:ml-auto sm:self-auto">
+            <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full bg-band-chip-surface px-3 py-1 text-[13px] font-semibold text-band-chip-foreground sm:ml-auto sm:self-auto">
+              <MapPin className="size-3.5" aria-hidden />
               {primaryLocationName}
             </span>
           )}
@@ -282,7 +285,7 @@ export function AskBand({
               {[1, 0.55, 0.28].map((opacity, index) => (
                 <span
                   key={index}
-                  className="size-1.5 rounded-full bg-brand-accent"
+                  className="size-1.5 rounded-full bg-band-foreground"
                   style={{
                     opacity,
                     animation: "bubbles-pulse-dot 1.1s ease-in-out infinite",
@@ -417,57 +420,35 @@ function AskCard({
   const showPlaceholderBlock = !typing && !resettable && value.length === 0;
 
   return (
-    <div
-      className={cn(
-        "flex gap-4 rounded-[18px] bg-surface transition-shadow duration-200",
-        /*
-         * The controls align to the LINE BEING TYPED ON, not to the middle of
-         * the card. Whenever the suggestion chips are showing, the card is tall
-         * and centring floats the send button halfway down the chip stack —
-         * which reads as belonging to the chips rather than to the input.
-         */
-        "items-start",
-        showPlaceholderBlock ? "p-[18px] pl-5" : "p-[17px] pl-5",
-      )}
-      /*
-        The hard yellow underline is the ask bar at rest; focus ADDS the glow
-        rather than replacing it, so the bar never changes shape as you type.
-      */
-      style={{ boxShadow: typing ? "var(--shadow-ask-focus)" : "var(--shadow-ask)" }}
-    >
+    <div className="max-w-[820px]">
       {/*
-        The sun inside the card is brand, not function, and at 390px it costs
-        50px of the line a manager is typing on — which pushed the text and the
-        suggestion chips into a narrow column. The mark is already in the chrome
-        directly above, so below `sm` the input gets the width instead.
-
-        The direction specifies no mobile behaviour at all (every mockup is
-        min-width 960), so this is a judgement call rather than the artifact's.
+        THE INVITATION sits on the band above the bar, at cold start only — a
+        two-line invitation above an exchange already underway would ask the
+        manager to start something they are in the middle of. It is the
+        field's LABEL, so clicking it focuses the input.
       */}
-      <BubbleMark
-        className={cn("hidden shrink-0 sm:block", showPlaceholderBlock && "mt-0.5", "size-[34px]")}
-        onDark
-      />
+      {showPlaceholderBlock ? (
+        <label
+          htmlFor="band-ask"
+          className="mb-3 block cursor-text text-[15px] font-semibold text-band-foreground"
+        >
+          Ask Bubbles anything about running your location
+        </label>
+      ) : null}
 
-      <div className="min-w-0 flex-1">
-        {showPlaceholderBlock ? (
-          <label htmlFor="band-ask" className="block cursor-text">
-            <span className="display mb-0.5 block text-[18px] text-foreground">
-              Ask Bubbles anything about running your location
-            </span>
-            <span className="block text-[15px] text-placeholder-foreground">
-              Policy, coaching, operations, performance, training — with the
-              source shown every time.
-            </span>
-          </label>
-        ) : null}
+      <div
+        className="flex items-center gap-3 rounded-[var(--radius-2xl)] bg-surface py-2 pr-2 pl-4 transition-shadow duration-200"
+        /*
+          The Dark Tokyo Green underline is the ask bar at rest; focus turns it
+          Charcoal and adds a white halo, so the bar never changes shape.
+        */
+        style={{ boxShadow: typing ? "var(--shadow-ask-focus)" : "var(--shadow-ask)" }}
+      >
+        <BubbleMark className="hidden size-7 shrink-0 sm:block" />
 
         {/*
-          One real textarea in every state. The at-rest treatment is a LABEL
-          above it rather than a placeholder attribute, because the direction
-          sets that line in the display face at 18px and a placeholder cannot
-          carry two type treatments — but it is a label, so clicking it focuses
-          the field and screen readers still get one named input.
+          One real textarea in every state. Its accessible name is constant, so
+          screen readers always meet the same field.
         */}
         <textarea
           id="band-ask"
@@ -486,70 +467,58 @@ function AskCard({
             if (event.key === "Escape") onClear();
           }}
           aria-label="Ask Bubbles a question"
-          placeholder={showPlaceholderBlock ? undefined : "Ask Bubbles a question"}
-          className={cn(
-            "w-full resize-none bg-transparent text-foreground outline-none placeholder:text-placeholder-foreground",
+          placeholder={
             showPlaceholderBlock
-              ? "mt-2 h-6 text-[15px]"
-              : "text-base font-bold",
-            /*
-              THE CARET IS CORAL. The one place the attention colour appears
-              without meaning attention — it is the text cursor, and the
-              direction draws it that way because a 2px yellow caret on white
-              is invisible.
-            */
-            "caret-measure-flagged",
-          )}
+              ? "Policy, coaching, operations, performance, training…"
+              : "Ask Bubbles a question"
+          }
+          className="h-11 min-w-0 flex-1 resize-none bg-transparent py-[11px] text-base text-foreground caret-primary outline-none placeholder:text-placeholder-foreground"
         />
 
-        {/* Suggestions are CONTENT, so they live inside the card and align to
-            the words above them — not to the card's outer edge. They stay
-            reachable while typing, which is the point of putting them here. */}
-        {prompts.length > 0 ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {prompts.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                disabled={busy}
-                /* mousedown, not click: a blur would drop the typing state
-                   before the click ever landed. */
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  onPrompt(prompt);
-                }}
-                className="rounded-full border border-border-strong bg-background px-3.5 py-1.5 text-[11.5px] font-bold text-foreground transition-colors hover:border-brand-accent disabled:opacity-50"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
+        {typing || resettable || value.length > 0 ? (
+          <button
+            type="button"
+            onClick={onClear}
+            aria-label={value.length > 0 ? "Clear" : "Clear this conversation"}
+            className="grid size-8 shrink-0 place-items-center rounded-full bg-clear-surface text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <X className="size-3.5" aria-hidden />
+          </button>
         ) : null}
-      </div>
 
-      {typing || resettable || value.length > 0 ? (
         <button
           type="button"
-          onClick={onClear}
-          aria-label={value.length > 0 ? "Clear" : "Clear this conversation"}
-          className="grid size-[26px] shrink-0 place-items-center rounded-full bg-clear-surface text-muted-foreground transition-colors hover:text-foreground"
+          onClick={onSubmit}
+          disabled={busy || value.trim().length === 0}
+          aria-label="Ask Bubbles"
+          className="grid size-11 shrink-0 place-items-center rounded-full bg-selected text-selected-foreground transition-colors hover:bg-primary disabled:opacity-60"
         >
-          <X className="size-3.5" aria-hidden />
+          <ArrowUp className="size-[17px]" strokeWidth={2.4} aria-hidden />
         </button>
-      ) : null}
+      </div>
 
-      <button
-        type="button"
-        onClick={onSubmit}
-        disabled={busy || value.trim().length === 0}
-        aria-label="Ask Bubbles"
-        className={cn(
-          "grid size-11 shrink-0 place-items-center rounded-full bg-brand-accent text-brand-accent-foreground transition-opacity disabled:opacity-45",
-          showPlaceholderBlock && "mt-0.5",
-        )}
-      >
-        <ArrowUp className="size-[17px]" strokeWidth={2.4} aria-hidden />
-      </button>
+      {/* Suggestions sit under the bar, on the band, and stay reachable while
+          typing. */}
+      {prompts.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {prompts.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              disabled={busy}
+              /* mousedown, not click: a blur would drop the typing state
+                 before the click ever landed. */
+              onMouseDown={(event) => {
+                event.preventDefault();
+                onPrompt(prompt);
+              }}
+              className="rounded-full bg-band-chip-surface px-3.5 py-1.5 text-left text-[13px] font-medium text-band-chip-foreground transition-colors hover:bg-surface disabled:opacity-50"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
