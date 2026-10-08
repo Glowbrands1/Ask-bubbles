@@ -204,11 +204,20 @@ export const NAMED_HANDBOOK: NamedHandbookConfig | null = {
 export const PERFORMANCE_MANAGEMENT_FRAMEWORK: KnowledgeDocumentRole = {
   id: "performance_management_framework",
   tag: "performance-management-framework",
+  /*
+   * The approved document is the reference platform's framework prepared by
+   * `scripts/knowledge/prepare-performance-framework.mjs` (the app's name
+   * removed, nothing else), uploaded as the file below and tagged
+   * `performance-management-framework`. The tag is what identifies it; the
+   * file name and title are the bridge until it is tagged.
+   */
   fallbackFilenames: [
+    "ASK_BUBBLES_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT.txt",
     "PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT.txt",
     "PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT.txt",
   ],
   fallbackTitles: [
+    "ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT",
     "PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT",
     "PERFORMANCE MANAGEMENT FRAMEWORK",
     "Performance Management Framework",
@@ -266,7 +275,7 @@ export const PERFORMANCE_MANAGEMENT_FRAMEWORK: KnowledgeDocumentRole = {
       id: "escalation_authority",
       label: "the leadership escalation rule and the framework's own terms",
       headings: [
-        "PERFORMANCE MANAGEMENT FRAMEWORK",
+        // The document's own title heading, as the prepared framework prints it.
         "ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK",
         "2.8 Further Leadership Review",
       ],
