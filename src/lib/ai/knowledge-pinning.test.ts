@@ -22,7 +22,8 @@ const config = vi.hoisted(() => ({
   headings: [] as string[],
 }));
 
-vi.mock("@/config/company/knowledge", () => ({
+vi.mock("@/config/company/knowledge", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/config/company/knowledge")>()),
   KNOWLEDGE_SOURCES: [],
   PINNED_KNOWLEDGE_ROLES: [
     {

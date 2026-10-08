@@ -209,12 +209,12 @@ describe("the exit form is the one Resignation/Exit Form", () => {
 describe("found in hands-on QA: the chat copy", () => {
   it("does not read capitalised title and status abbreviations as other people", async () => {
     const response = await ask(
-      "Create a demotion form for MARLOWE CO. She's a FT SD at $18/hr at STC 12 and asked to step down to a PT TC at $14/hr effective 10/5/26",
+      "Create a demotion form for MARLOWE CO. She's a FT SD at $18/hr at store 12 and asked to step down to a PT TC at $14/hr effective 10/5/26",
     );
     expect(response!.formProposal!.employeeName).toBe("MARLOWE CO");
     expect(response!.formProposal!.status).toBe("ready");
     expect(response!.content).toContain(
-      "FT Salon Director at $18.00/hr at STC 12 → PT Tanning Consultant at $14.00/hr, effective October 5, 2026, voluntary",
+      "FT Salon Director at $18.00/hr at Store 12 → PT Tanning Consultant at $14.00/hr, effective October 5, 2026, voluntary",
     );
   });
 });
@@ -224,11 +224,11 @@ describe("found in hands-on QA: facts from another employee's form never carry o
     const history = [
       manager(
         "m1",
-        "Create a demotion form for MARLOWE CO. She's a FT SD at $18/hr at STC 12 and asked to step down to a PT TC at $14/hr effective 10/5/26",
+        "Create a demotion form for MARLOWE CO. She's a FT SD at $18/hr at store 12 and asked to step down to a PT TC at $14/hr effective 10/5/26",
       ),
     ];
     const response = await ask(
-      "pull up a transfer form for jane doe, she is a pt tc at $12/hr, transferring from stc 12 to salon 18 effective oct 5, same title, voluntary",
+      "pull up a transfer form for jane doe, she is a pt tc at $12/hr, transferring from store 12 to salon 18 effective oct 5, same title, voluntary",
       { history },
     );
     const proposal = response!.formProposal!;
@@ -237,7 +237,7 @@ describe("found in hands-on QA: facts from another employee's form never carry o
     // Only Jane's own turn is sent to the draft, so the form cannot pick up Marlowe's $14.00/hr.
     expect(proposal.sourceMessageIds).toEqual(["msg-now"]);
     expect(response!.content).not.toContain("$14.00");
-    expect(response!.content).toContain("PT Tanning Consultant at $12.00/hr at STC 12 → Salon 18, effective October 5, 2026, voluntary");
+    expect(response!.content).toContain("PT Tanning Consultant at $12.00/hr at Store 12 → Salon 18, effective October 5, 2026, voluntary");
   });
 
   it("keeps earlier turns about the same employee", async () => {

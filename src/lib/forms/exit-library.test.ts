@@ -33,7 +33,7 @@ import { enforceResponsibilities } from "./responsibility";
 
 const seed = TEMPLATE_SEEDS.find((entry) => entry.key === EXIT_TEMPLATE_KEY)!;
 const document = parseFormDocument(seed.document);
-const SOURCE = new Uint8Array(readFileSync("src/test/fixtures/forms/resignation-exit.docx"));
+const SOURCE = new Uint8Array(readFileSync("src/test/fixtures/forms/stc-exit.docx"));
 
 /** Every visible string the template prints. */
 function printed(blocks: readonly FormBlock[]): string[] {
@@ -108,6 +108,11 @@ describe("the Resignation/Exit Form is the STC Exit document", () => {
     const flat = strip(source);
     for (const text of printed(document.blocks).filter(Boolean)) {
       if (HR_ADDED.has(text)) continue;
+      // Approved branding change: the letterhead names this company, in plain text.
+      if (text === "Buff City Soap") {
+        expect(flat).toContain("Sun Tan City");
+        continue;
+      }
       expect(flat, text).toContain(strip(text));
     }
   });
@@ -298,14 +303,17 @@ describe("where it is offered, and to whom", () => {
     expect(hasPermission(DEFAULT_PERMISSION_MATRIX, "location_manager", "create_exit_form")).toBe(true);
   });
 
-  it("needs a migration for its layout family, and the migration only adds the value", () => {
-    const sql = readFileSync(
-      "supabase/migrations/20260928001000_forms_exit_layout_family.sql",
-      "utf8",
-    );
+  it("needs a migration for its layout family, and the migration only adds", () => {
+    // This deployment adds the migrated library's three families and the
+    // reference-copy bucket in one migration; nothing is dropped or renamed.
+    const sql = readFileSync("supabase/migrations/20261008001000_forms_library_migration.sql", "utf8");
     expect(sql).toMatch(/alter type public\.form_layout_family add value if not exists 'exit'/i);
     const statements = sql.replace(/--.*$/gm, "").split(";").map((part) => part.trim()).filter(Boolean);
-    expect(statements).toHaveLength(1);
+    expect(statements).toHaveLength(4);
+    for (const statement of statements) {
+      expect(statement).toMatch(/^(?:alter type public\.form_layout_family add value if not exists|insert into storage\.buckets)/i);
+      expect(statement).not.toMatch(/\b(?:drop|rename|delete|truncate)\b/i);
+    }
   });
 });
 

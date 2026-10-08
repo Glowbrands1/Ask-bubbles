@@ -265,7 +265,7 @@ describe("a populated draft", () => {
       "Jane Smith gave two weeks notice on 9/14 and worked out her notice. Her last day was Sept 26. She is not eligible for rehire. The form was signed.";
     const { result } = await fromConversation([
       said("m1", "Jane Smith is one of my TCs. She worked at lincoln o street and gave her two weeks notice on 9/14."),
-      said("m2", "She worked out her notice and her last day was Sept 26. Create an STC exit for jane."),
+      said("m2", "She worked out her notice and her last day was Sept 26. Create an exit form for jane."),
     ]);
     expect(result.draftWarning).toBeNull();
     expect(state.modelCalls).toBe(1);
@@ -363,7 +363,7 @@ const HR_CONVERSATION = [
   ),
   said(
     "m2",
-    "She returned her shirts but not her key. Payroll deduction applies. She won't be dropped to minimum wage or forfeit her bonus. She is eligible for rehire. Create an STC exit for jane.",
+    "She returned her shirts but not her key. Payroll deduction applies. She won't be dropped to minimum wage or forfeit her bonus. She is eligible for rehire. Create an exit form for jane.",
   ),
 ];
 
@@ -434,7 +434,7 @@ describe("the Details section HR asked for", () => {
   it("asks only for what is missing, then a correction updates the same form in place", async () => {
     state.details = "";
     const { response, result } = await fromConversation([
-      said("m1", "Create an STC exit for Jane Smith at lincoln o street. She quit on the spot by text on 9/20, last day 9/19. She returned her key."),
+      said("m1", "Create an exit form for Jane Smith at lincoln o street. She quit on the spot by text on 9/20, last day 9/19. She returned her key."),
     ]);
     const content = response!.content;
     expect(content).toMatch(/- \*\*Salon Key Returned:\*\* Salon key was returned\./);

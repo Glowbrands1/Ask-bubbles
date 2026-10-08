@@ -178,7 +178,7 @@ describe("the document the business recognises", () => {
 
   it("names the nine the business names, and not the SDIT's seven", () => {
     expect(TSD_EPP_EXPECTATIONS.map((expectation) => expectation.label)).toEqual([
-      "Uphold the Sun Tan City Experience.",
+      "Uphold the Buff City Soap Experience.",
       "Coach team to provide, and personally provide, excellent client service.",
       "Bench planning and ability to lead management.",
       "Quality hiring and employee retention.",

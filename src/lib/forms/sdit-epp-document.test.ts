@@ -301,9 +301,9 @@ describe("the rest of the library is where it was", () => {
       "follow-up-coaching",
       "policy-review",
       "position-transfer",
-      "sdit-epp",
       // The Resignation/Exit Form, whose workflow shipped with it.
       "resignation-exit",
+      "sdit-epp",
       "tsd-epp",
     ]);
   });
@@ -333,8 +333,9 @@ describe("the rest of the library is where it was", () => {
   });
 
   it("keeps the official manual pinned to the JB & Associates document", () => {
-    expect(OFFICIAL_POLICY_MANUAL.fallbackFilenames).toEqual(["JBA-Policy-Manual"]);
-    expect(OFFICIAL_POLICY_MANUAL.fallbackTitles).toEqual(["JBA Policy Manual"]);
+    // Plus the edition-year spelling this company's Woven copy is filed under.
+    expect(OFFICIAL_POLICY_MANUAL.fallbackFilenames).toEqual(["JBA-Policy-Manual", "2025-JBA-Policy-Manual"]);
+    expect(OFFICIAL_POLICY_MANUAL.fallbackTitles).toEqual(["JBA Policy Manual", "2025 JBA Policy Manual"]);
   });
 });
 
@@ -344,7 +345,8 @@ describe("the policy this form names is the JB & Associates manual", () => {
   it("states the company-policy expectation against the manual Ask Bubbles can read", () => {
     expect(SDIT_EPP_EXPECTATIONS[2]!.label).toBe(JBA_POLICY_EXPECTATION);
     expect(JBA_POLICY_EXPECTATION).toContain("JB & Associates Employment Policy Manual");
-    expect(JBA_POLICY_EXPECTATION).toContain("Sun Tan City");
+    // Approved branding change: the company is named as Buff City Soap; the manual is unchanged.
+    expect(JBA_POLICY_EXPECTATION).toContain("Buff City Soap");
   });
 
   it("names the legacy manual nowhere in any shipped code path", () => {

@@ -591,7 +591,7 @@ describe("checking the typed name against the manager's own team", () => {
     expect(all).not.toContain('"e-4"');
     // Nobody close in scope: the name is used as typed, and the manager is told.
     expect(response!.formProposal!.employeeName).toBe("Kaitlynn Brookall");
-    expect(response!.content).toContain("didn't find **Kaitlynn Brookall** in the employee list for your salons");
+    expect(response!.content).toContain("didn't find **Kaitlynn Brookall** in the employee list for your locations");
   });
 });
 

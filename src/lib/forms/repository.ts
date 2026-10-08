@@ -1,5 +1,7 @@
 import "server-only";
 
+import { RETIRED_TEMPLATE_KEYS } from "@/config/company/forms/retired";
+
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import {
@@ -180,11 +182,41 @@ export interface LibrarySeedResult {
    */
   heldBack: { key: string; reason: string }[];
   /**
+   * Templates this deployment has retired (`RETIRED_TEMPLATE_KEYS`) and that
+   * were switched off on this run. Present only when one was: a retired
+   * template is deactivated, never deleted — its versions, assets and every
+   * form filed against it stay exactly as they are.
+   */
+  retired?: string[];
+  /**
    * Set when this deployment may not write the library at all — a Vercel
    * Preview, which shares Production's database. Nothing was read or written;
    * the four lists above are empty. See `template-sync-policy.ts`.
    */
   skipped?: { environment: string; reason: string };
+}
+
+/**
+ * Switches off the templates this deployment has retired. ACTIVE = FALSE AND
+ * NOTHING ELSE: no row, version, asset or filed form is removed or changed, so
+ * a form already filed against one still opens and prints against the version
+ * it was pinned to. A retired template can no longer be chosen for a new form
+ * (`createInstance` refuses an inactive template; chat and the inventory only
+ * offer active ones).
+ */
+async function retireTemplates(known: Map<string, Record<string, unknown>>): Promise<string[]> {
+  const retired: string[] = [];
+  for (const key of RETIRED_TEMPLATE_KEYS) {
+    const row = known.get(key);
+    if (!row || row.active === false) continue;
+    const { error } = await getSupabaseAdmin()
+      .from("form_templates")
+      .update({ active: false })
+      .eq("id", String(row.id));
+    if (error) throw new Error(`Could not retire ${key}: ${error.message}`);
+    retired.push(key);
+  }
+  return retired;
 }
 
 /**
@@ -250,7 +282,7 @@ export async function ensureTemplateLibrary(
 
   const { data: rows, error } = await supabase
     .from("form_templates")
-    .select("id, key, name, short_name, description");
+    .select("id, key, name, short_name, description, active");
   if (error) throw new Error(`Could not read the template library: ${error.message}`);
   const known = new Map(
     (rows ?? []).map((row) => [String(row.key), row as Record<string, unknown>]),
@@ -364,7 +396,9 @@ export async function ensureTemplateLibrary(
     created.push(seed.key);
   }
 
-  return { created, existing, revised, renamed, heldBack };
+  const retired = await retireTemplates(known);
+
+  return { created, existing, revised, renamed, heldBack, ...(retired.length > 0 ? { retired } : {}) };
 }
 
 /**

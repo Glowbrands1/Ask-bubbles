@@ -1,12 +1,10 @@
-import { createHash } from "node:crypto";
 import { getDocumentProxy } from "unpdf";
 import { describe, expect, it } from "vitest";
 
-import { imageAssetBytes, resolveImageAsset } from "./assets";
+import { resolveImageAsset } from "./assets";
 import { parseFormDocument, type FormDocument } from "./document";
 import { TEMPLATE_SEEDS, coachingDocument } from "./library";
 import { renderFormPdf, type RenderMeta } from "./pdf-render";
-import { decodePng } from "./png";
 
 /**
  * ============================================================================
@@ -316,51 +314,26 @@ describe("Coaching v3 content matches the Word source", () => {
   it("survives being stored and read back with its style intact", () => {
     const stored = parseFormDocument(JSON.parse(JSON.stringify(document)));
     expect(stored.style).toEqual(document.style);
-    expect(stored.style?.logo?.assetKey).toBe("sun-tan-city");
+    // Approved branding change: the source company's logo is not carried over.
+    expect(stored.style?.logo).toBeUndefined();
   });
 });
 
 /* ============================================================ the asset === */
 
-describe("the logo is the one embedded in the Word document", () => {
-  const asset = resolveImageAsset("sun-tan-city");
-
-  it("resolves, and its bytes hash to the digest taken from the .docx", () => {
-    expect(asset).not.toBeNull();
-    const bytes = imageAssetBytes(asset!);
-    /*
-     * This digest was computed from `word/media/image1.png` inside
-     * `01.) Coaching Form.docx`. If these bytes are ever swapped, re-encoded or
-     * "optimised", this fails — which is the point: nobody should be able to
-     * change the logo on a signed HR record without the suite saying so.
-     */
-    expect(createHash("sha256").update(bytes).digest("hex")).toBe(
-      "3014f7d7c48a39ef701346139fa24b13cf80aedd107b85538f6183d4bb7b05c3",
-    );
+describe("the source company's logo is not carried over (approved branding change)", () => {
+  /*
+   * The reference platform prints its company's logo top right, lifted from
+   * the Word source. This deployment has no approved logo asset, so the
+   * centred letterhead prints the company name in plain text and the asset
+   * registry holds no mark at all.
+   */
+  it("is not in the asset registry", () => {
+    expect(resolveImageAsset("sun-tan-city")).toBeNull();
   });
 
-  it("is the full-resolution original, not the PDF's downsample", () => {
-    // The exported PDF carries a 198x180 copy; the Word package has 317x284.
-    expect(asset!.width).toBe(317);
-    expect(asset!.height).toBe(284);
-    const decoded = decodePng(imageAssetBytes(asset!));
-    expect([decoded.width, decoded.height]).toEqual([317, 284]);
-  });
-
-  it("decodes to a mark that is mostly dark on a white ground", () => {
-    /*
-     * A cheap shape check that a garbled decode cannot pass. The logo is a black
-     * rounded square with white type, so the centre must be dark and the very
-     * corner — outside the rounding, transparent in the source — must be white.
-     */
-    const image = decodePng(imageAssetBytes(asset!));
-    const at = (x: number, y: number) => {
-      const i = (y * image.width + x) * 3;
-      return (image.rgb[i] + image.rgb[i + 1] + image.rgb[i + 2]) / 3;
-    };
-    expect(at(4, 4)).toBeGreaterThan(200);
-    expect(at(image.width - 5, 4)).toBeGreaterThan(200);
-    expect(at(Math.floor(image.width / 2), 20)).toBeLessThan(60);
+  it("is not named by the document", () => {
+    expect(coachingDocument().style?.logo).toBeUndefined();
   });
 });
 
@@ -375,23 +348,9 @@ describe("the printed Coaching v3", () => {
     expect(page.pages).toBe(1);
   });
 
-  it("carries the exact logo, in the top right, against the top edge", async () => {
+  it("prints no logo: the letterhead is plain text", async () => {
     const page = await readPage(render());
-    expect(page.images).toHaveLength(1);
-    const [logo] = page.images;
-
-    // The bitmap that reached the file is the full-resolution original.
-    expect([logo.sourceWidth, logo.sourceHeight]).toEqual([317, 284]);
-
-    // 1.06 x 0.95in in the source; within a point of it here.
-    expect(logo.width).toBeCloseTo(76, 0);
-    expect(logo.height).toBeCloseTo(68.1, 0);
-
-    // Top right: past the horizontal middle, and touching the top of the sheet.
-    expect(logo.x).toBeGreaterThan(612 / 2);
-    expect(logo.x + logo.width).toBeLessThanOrEqual(612);
-    expect(logo.x + logo.width).toBeGreaterThan(612 - 45);
-    expect(logo.y + logo.height).toBeCloseTo(792, 0);
+    expect(page.images).toHaveLength(0);
   });
 
   it("has NO black section bars", async () => {
@@ -428,7 +387,7 @@ describe("the printed Coaching v3", () => {
   it("stacks the masthead, centred, above everything else", async () => {
     const page = await readPage(render());
     const title = lineFor(page.lines, "Coaching Form");
-    const brand = lineFor(page.lines, "Sun Tan City");
+    const brand = lineFor(page.lines, "Buff City Soap");
 
     expect((title.x0 + title.x1) / 2).toBeCloseTo(306, 0);
     expect((brand.x0 + brand.x1) / 2).toBeCloseTo(306, 0);

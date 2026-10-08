@@ -654,9 +654,9 @@ describe("P4-RC. a global actor can create a coaching form", () => {
 
     expect(response!.formProposal!.locationId).toBeNull();
     expect(response!.formProposal!.locationResolution).toBe("not_applicable");
-    expect(response!.content).toMatch(/covers every salon, so this form won't name one/i);
+    expect(response!.content).toMatch(/covers every location, so this form won't name one/i);
     // The question that had nothing to answer it is gone.
-    expect(response!.content).not.toMatch(/which salon is this about/i);
+    expect(response!.content).not.toMatch(/which (?:salon|location) is this about/i);
   });
 
   it("does not send them to the standalone builder", async () => {
@@ -1046,7 +1046,7 @@ describe("CA-INTAKE. the opening depends on whether the manager has described an
     // which this one-salon account already settles.
     expect(content).toMatch(/I can help you create a \*\*Corrective Action Form\*\*/);
     expect(content).toMatch(/^1\. Employee's full name$/m);
-    expect(content).not.toMatch(/Salon location/);
+    expect(content).not.toMatch(/^\d+\. (?:Salon )?location$/im);
     expect(content).toMatch(/^2\. Date for the form/m);
     expect(content).toMatch(/^3\. What happened/m);
     expect(content).toMatch(/^4\. Whether this is a verbal or written warning$/m);
@@ -1124,7 +1124,7 @@ describe("CA-INTAKE. the opening depends on whether the manager has described an
     expect(response!.content).toMatch(/I can help you create a \*\*Corrective Action Form\*\*/);
     // Sarah Test was named and the salon is the account's: neither is asked.
     expect(response!.content).not.toMatch(/Employee's full name/);
-    expect(response!.content).not.toMatch(/Salon location/);
+    expect(response!.content).not.toMatch(/^\d+\. (?:Salon )?location$/im);
     expect(response!.content).toMatch(/^1\. Date for the form/m);
   });
 });

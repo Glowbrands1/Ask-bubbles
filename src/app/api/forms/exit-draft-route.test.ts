@@ -165,7 +165,7 @@ afterEach(() => {
 });
 
 const NOTES =
-  "Create an STC exit for Sarah Jones. She gave her two weeks notice on 9/1, worked her full two weeks, and her last day was 9/15.";
+  "Create an exit form for Sarah Jones. She gave her two weeks notice on 9/1, worked her full two weeks, and her last day was 9/15.";
 
 describe("what the model is shown", () => {
   it("only Details — never the derived facts, the yes/no questions or a signature", async () => {

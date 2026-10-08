@@ -6,6 +6,8 @@ vi.mock("@/config/company/locations", () => ({
   COMPANY_LOCATION_ENTRIES: [{ code: "0306", name: "Example Location 306", state: null, districtId: null }],
   COMPANY_DISTRICT_ENTRIES: [],
   COMPANY_REGION_ENTRIES: [],
+  COMPANY_LOCATION_NICKNAMES: {},
+  COMPANY_LOCATION_ABBREVIATIONS: {},
 }));
 
 import {

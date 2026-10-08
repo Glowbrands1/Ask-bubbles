@@ -173,7 +173,7 @@ describe("1. a manager with one salon is never asked for it", () => {
     expect(response.formProposal!.locationId).toBe(WORNALL);
     expect(response.formProposal!.locationResolution).toBe("resolved");
     expect(response.content).toMatch(/^1\. Employee's full name$/m);
-    expect(response.content).not.toMatch(/Salon location/i);
+    expect(response.content).not.toMatch(/^\d+\. (?:Salon )?location$/im);
   });
 
   it("leaves it off the coaching questions too", async () => {
@@ -196,7 +196,7 @@ describe("1. a manager with one salon is never asked for it", () => {
 
     expect(response.formProposal!.status).toBe("ready");
     expect(response.formProposal!.supportsInlineDraft).toBe(true);
-    expect(response.content).not.toMatch(/which salon|salon location/i);
+    expect(response.content).not.toMatch(/which (?:salon|location)|salon location/i);
   });
 });
 
@@ -207,12 +207,12 @@ describe("2. a manager with several salons is asked only when it is genuinely op
     expect(response.formProposal!.status).toBe("needs_location");
     expect(response.formProposal!.supportsInlineDraft).toBe(false);
     expect(response.formProposal!.authorizedLocationIds).toEqual([WORNALL, LIBERTY]);
-    expect(response.content).toMatch(/Which salon is this about\?/);
+    expect(response.content).toMatch(/Which location is this about\?/);
   });
 
   it("keeps the salon on the corrective-action questions while it is open", async () => {
     const response = await ask("Create a corrective action form", salons(WORNALL, LIBERTY));
-    expect(response.content).toMatch(/^2\. Salon location$/m);
+    expect(response.content).toMatch(/^2\. Location$/m);
   });
 
   it("does not ask when the manager named one of them", async () => {
@@ -223,7 +223,7 @@ describe("2. a manager with several salons is asked only when it is genuinely op
 
     expect(response.formProposal!.locationId).toBe(LIBERTY);
     expect(response.formProposal!.status).toBe("ready");
-    expect(response.content).not.toMatch(/which salon/i);
+    expect(response.content).not.toMatch(/which (?:salon|location)/i);
   });
 
   it("asks, from only the salons that fit, when the name fits more than one", async () => {
@@ -304,7 +304,7 @@ describe("4. a salon outside the manager's assignment is never accepted", () => 
     // Their own salon is offered to confirm, never substituted silently.
     expect(response.formProposal!.authorizedLocationIds).toEqual([WORNALL]);
     expect(response.formProposal!.namedLocationOutOfScope).toBe("KS Lawrence");
-    expect(response.content).toMatch(/\*\*KS Lawrence\*\* isn't a salon on your assignment/);
+    expect(response.content).toMatch(/\*\*KS Lawrence\*\* isn't a location on your assignment/);
   });
 
   it("does the same for a manager with several salons", async () => {
@@ -352,7 +352,7 @@ describe("the other details are not asked for once they are given", () => {
       salons(WORNALL),
     );
 
-    expect(response.content).not.toMatch(/Employee's full name|Salon location/);
+    expect(response.content).not.toMatch(/Employee's full name|^\d+\. (?:Salon )?location$/im);
     expect(response.content).not.toMatch(/Date for the form|job title/i);
     expect(response.content).toMatch(/What happened|verbal or written warning/);
   });

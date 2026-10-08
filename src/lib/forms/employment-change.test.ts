@@ -296,7 +296,7 @@ describe("the facts of the change", () => {
 
   it.each([
     ["salon 12", "Salon 12"],
-    ["STC 12", "STC 12"],
+    ["store 12", "Store 12"],
     ["sun tan city 12", "Sun Tan City 12"],
     ["lawrence", "KS Lawrence"],
     ["ks lawrence", "KS Lawrence"],
@@ -526,7 +526,7 @@ describe("found in production QA: the Demotion Form's Location", () => {
 
   it.each([
     ["location: salon 12", "Salon 12"],
-    ["her location is STC 12", "STC 12"],
+    ["her location is store 12", "Store 12"],
   ])("reads %s", (text, location) => {
     expect(read(text).current.location).toBe(location);
   });
@@ -605,7 +605,7 @@ describe("found in production QA: the reason paragraph follows a correction", ()
   it.each([
     ["$12.00/hr", "$13.25/hr", "moving to $12/hr on October 5", "moving to $13.25/hr on October 5"],
     ["$12.00/hr", "$13.25/hr", "pay drops to 12 an hour", "pay drops to $13.25/hr"],
-    ["Salon 23", "Salon 24", "moving to STC 23 next week", "moving to Salon 24 next week"],
+    ["Salon 23", "Salon 24", "moving to store 23 next week", "moving to Salon 24 next week"],
     ["Beta Test", "Transfer Beta Test", "Transfer Beta Test, known as Beta Test, is moving", "Transfer Beta Test, known as Transfer Beta Test, is moving"],
   ])("replaces %s with %s however the paragraph wrote it", (from, to, before, after) => {
     expect(syncNarrative({ narrative: before, changes: [{ from, to }], unchanged: [] }).text).toBe(after);

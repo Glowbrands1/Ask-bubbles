@@ -1107,7 +1107,7 @@ describe("the fast path — a draft from what the manager already said", () => {
     // None of the seven is asked.
     for (const asked of [
       /Employee's full name/i,
-      /Salon location/i,
+      /^\d+\. (?:Salon )?location$/im,
       /Date for the form/i,
       /What happened —/i,
       /Whether this is a verbal or written warning/i,
@@ -1195,7 +1195,7 @@ describe("the fast path — a draft from what the manager already said", () => {
     expect(answer.content).toMatch(/I can help you create a \*\*Corrective Action Form\*\*/);
     expect(answer.content).toMatch(/^1\. Employee's full name$/m);
     // The account is assigned one salon, so the salon is not asked for again.
-    expect(answer.content).not.toMatch(/Salon location/);
+    expect(answer.content).not.toMatch(/^\d+\. (?:Salon )?location$/im);
     expect(answer.content).toMatch(/^6\. Is payroll deduct applicable\? \(Yes or No\)$/m);
     expect(answer.content).toMatch(/^7\. The employee's job title/m);
     // And never under the name the business retired.
@@ -1210,7 +1210,7 @@ describe("the fast path — a draft from what the manager already said", () => {
     expect(answer.content).toMatch(/Who is this \*\*Corrective Action Form\*\* for\?/);
     // ONE question. Not seven, and not the generic five either.
     expect(answer.content).not.toMatch(/^1\. /m);
-    expect(answer.content).not.toMatch(/Salon location/i);
+    expect(answer.content).not.toMatch(/^\d+\. (?:Salon )?location$/im);
     expect(answer.content).not.toMatch(/Date for the form/i);
   });
 
@@ -1256,7 +1256,7 @@ describe("the fast path — a draft from what the manager already said", () => {
       expect(answer.content, String(line)).toMatch(line);
     }
     // Settled by the one-salon account, so never asked.
-    expect(answer.content).not.toMatch(/Salon location/);
+    expect(answer.content).not.toMatch(/^\d+\. (?:Salon )?location$/im);
     expect(answer.content).toMatch(/check the applicable company policy/i);
   });
 

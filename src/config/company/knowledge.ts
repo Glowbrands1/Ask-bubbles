@@ -1,3 +1,5 @@
+import type { ClaudeTurn } from "@/lib/ai/call-claude";
+import { classifyPerformanceManagementIntent } from "@/lib/ai/performance-management-gate";
 import type { ManualBrandScope } from "@/lib/knowledge/brand-sections";
 import type { KnowledgeDocumentRole } from "@/lib/knowledge/document-roles";
 import type { NamedHandbookConfig } from "@/lib/knowledge/named-handbook";
@@ -50,11 +52,37 @@ export const KNOWLEDGE_SOURCES = [
 export interface PinnedKnowledgeRole {
   readonly role: KnowledgeDocumentRole;
   readonly triggers: readonly RegExp[];
+  /**
+   * A classifier that decides instead of `triggers`, for a role whose gate is
+   * more than a word list (the Performance Management Framework's).
+   */
+  readonly isWanted?: (input: { question: string; history: readonly ClaudeTurn[] }) => boolean;
   readonly onUnavailable: "refuse" | "degrade";
   readonly unavailableMessage: string;
 }
 
-export const PINNED_KNOWLEDGE_ROLES: readonly PinnedKnowledgeRole[] = [];
+export const PINNED_KNOWLEDGE_ROLES: readonly PinnedKnowledgeRole[] = [
+  {
+    /*
+     * THE CORRECTIVE-ACTION LADDER, AS THE REFERENCE PLATFORM PINS IT. A
+     * question about progression ("what comes after coaching?", "what is
+     * corrective action?") is answered from the Performance Management
+     * Framework or not at all: the gate is the reference platform's own
+     * classifier, and the answer FAILS CLOSED when the document is absent,
+     * because a plausible general-HR progression is the wrong thing to act on.
+     * A request to CREATE a form is answered from the forms library before
+     * this runs.
+     */
+    get role() {
+      return PERFORMANCE_MANAGEMENT_FRAMEWORK;
+    },
+    triggers: [],
+    isWanted: (input) => classifyPerformanceManagementIntent(input).active,
+    onUnavailable: "refuse",
+    unavailableMessage:
+      "The Performance Management Framework that defines our corrective-action progression is currently unavailable, so I won't set out the steps or tell you which one applies — a plausible-sounding sequence that is not our company's is the wrong thing to act on, and nothing was answered from memory. Ask an administrator to check that the framework document is present and indexed in the Knowledge Base. I can still tell you which forms exist and create one for you if you know which you need.",
+  },
+];
 
 /**
  * ============================================================================

@@ -3,7 +3,6 @@ import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 
 export { COMPANY_FORM_CATEGORIES } from "./categories";
 
-import { EXAMPLE_CHECK_IN_SEED } from "./example-check-in";
 
 /**
  * ============================================================================
@@ -30,8 +29,9 @@ import { EXAMPLE_CHECK_IN_SEED } from "./example-check-in";
  *                   correction readers found nothing in the turn.
  *   status          "placeholder" forms are labelled as such everywhere.
  *
- * The original placeholder, "Team Member Check-In (Example)", stays in the
- * seed list so its rows are never deleted.
+ * The original placeholder, "Team Member Check-In (Example)", is no longer
+ * seeded; it is retired (switched off, never deleted) through
+ * `RETIRED_TEMPLATE_KEYS` in `retired.ts`.
  */
 
 export type CompanyFormStatus = "placeholder" | "approved";
@@ -45,10 +45,10 @@ export interface CompanyFormDefinition {
   readonly status: CompanyFormStatus;
 }
 
-export const COMPANY_FORMS: readonly CompanyFormDefinition[] = TEMPLATE_SEEDS.map((seed) => ({
+export const COMPANY_FORMS: readonly CompanyFormDefinition[] = TEMPLATE_SEEDS.map((seed): CompanyFormDefinition => ({
   seed,
   chatCorrectableFields: ["employee_name", "form_date"],
-  status: seed.key === EXAMPLE_CHECK_IN_SEED.key ? "placeholder" : "approved",
+  status: "approved",
 }));
 
 export function companyFormFor(key: string): CompanyFormDefinition | undefined {

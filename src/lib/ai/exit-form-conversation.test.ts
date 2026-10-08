@@ -48,7 +48,7 @@ const exitForm = (overrides: Record<string, unknown> = {}) =>
     key: "resignation-exit",
     name: "Resignation/Exit Form",
     shortName: "Exit Form",
-    description: "The STC exit paperwork for an employee who is leaving.",
+    description: "The exit paperwork for an employee who is leaving.",
     category: "separation",
     layoutFamily: "exit",
     requiredPermission: "create_exit_form",
@@ -109,8 +109,8 @@ describe("asking for it by any of its names", () => {
   it.each([
     "pull up the exit form",
     "Pull up the Exit Form",
-    "create an STC exit for Sarah Jones",
-    "I need the STC Exit form",
+    "create an exit form for Sarah Jones",
+    "I need the Exit form",
     "resignation paperwork for Maria",
     "where's the termination/exit form",
     "termination paperwork please",
@@ -145,9 +145,9 @@ describe("asking for it by any of its names", () => {
 
 describe("the employee, in any case and by first name", () => {
   it.each([
-    ["create an STC exit for sarah jones", "sarah jones"],
-    ["CREATE AN STC EXIT FOR SARAH JONES", "SARAH JONES"],
-    ["Create an STC exit for Sarah Jones. She walked out mid-shift.", "Sarah Jones"],
+    ["create an exit form for sarah jones", "sarah jones"],
+    ["CREATE AN EXIT FORM FOR SARAH JONES", "SARAH JONES"],
+    ["Create an exit form for Sarah Jones. She walked out mid-shift.", "Sarah Jones"],
     ["exit form for marlowe because she quit", "marlowe"],
     ["resignation paperwork for (Maria)", "Maria"],
     ["Sarah Jones was a No Call No Show on Saturday", "Sarah Jones"],
@@ -202,7 +202,7 @@ describe("the chat form picker and permissions", () => {
       expect(names).not.toContain("resignation-exit");
 
       for (const alias of [
-        "create an STC exit for Sarah Jones",
+        "create an exit form for Sarah Jones",
         "resignation paperwork for Sarah Jones",
         "termination/exit form for Sarah",
         "Create a Resignation/Exit Form from this conversation.",
@@ -221,7 +221,7 @@ describe("the chat form picker and permissions", () => {
     async (role) => {
       const proposals = await load([exitForm()]);
       const response = await proposals.proposeFormForTurn(
-        turn("create an STC exit for Sarah Jones", { role, scope: null }),
+        turn("create an exit form for Sarah Jones", { role, scope: null }),
       );
       expect(response!.formProposal!.templateKey).toBe("resignation-exit");
     },
@@ -276,7 +276,7 @@ describe("what Ask Bubbles says beside the proposal", () => {
     const proposals = await load([exitForm()]);
     const response = await proposals.proposeFormForTurn(
       turn(
-        "Create an STC exit for sarah jones, she's a TC. She gave her two weeks notice on 9/1, worked her full two weeks, and her last day was 9/15.",
+        "Create an exit form for sarah jones, she's a TC. She gave her two weeks notice on 9/1, worked her full two weeks, and her last day was 9/15.",
       ),
     );
     const content = response!.content;
@@ -304,7 +304,7 @@ describe("what Ask Bubbles says beside the proposal", () => {
     const proposals = await load([exitForm()]);
     const response = await proposals.proposeFormForTurn(
       turn(
-        "Create an STC exit for sarah jones, she's a TC. She gave her two weeks notice on 9/1 by email, worked her full two weeks, and her last day was 9/15. She left for another job. She returned her store items and her key. No payroll deduction. She won't be dropped to minimum wage or forfeit her bonus. She is eligible for rehire.",
+        "Create an exit form for sarah jones, she's a TC. She gave her two weeks notice on 9/1 by email, worked her full two weeks, and her last day was 9/15. She left for another job. She returned her store items and her key. No payroll deduction. She won't be dropped to minimum wage or forfeit her bonus. She is eligible for rehire.",
       ),
     );
     const proposal = response!.formProposal!;
@@ -337,7 +337,7 @@ describe("what Ask Bubbles says beside the proposal", () => {
   it("reads the facts across the manager's turns, and never from Bubbles'", async () => {
     const proposals = await load([exitForm()]);
     const response = await proposals.proposeFormForTurn(
-      turn("create an STC exit for her", {
+      turn("create an exit form for her", {
         history: [
           said("m1", "Dan Smith quit on the spot last Friday."),
           { id: "a1", role: "assistant", content: "Her last day was 9/1.", createdAt: "2026-09-28T15:00:01Z" },
@@ -354,7 +354,7 @@ describe("what Ask Bubbles says beside the proposal", () => {
 
   it("asks for the last day and how they left when neither was said", async () => {
     const proposals = await load([exitForm()]);
-    const response = await proposals.proposeFormForTurn(turn("create an STC exit for Sarah Jones"));
+    const response = await proposals.proposeFormForTurn(turn("create an exit form for Sarah Jones"));
     expect(response!.content).toMatch(/Before you create it:/);
     expect(response!.content).toMatch(/- What was their last day worked\?/);
     expect(response!.content).toMatch(/- How did they leave/);
@@ -366,7 +366,7 @@ describe("what Ask Bubbles says beside the proposal", () => {
   it("takes the answer to its own question, and still answers an unrelated one", async () => {
     const proposals = await load([exitForm()]);
     const history: ChatMessage[] = [
-      said("m1", "create an STC exit for Sarah Jones"),
+      said("m1", "create an exit form for Sarah Jones"),
       {
         id: "a1",
         role: "assistant",
@@ -500,7 +500,7 @@ describe("HR feedback 30 Sep — the Harper exit form", () => {
 describe("QA 1 — natural-language retrieval", () => {
   it.each([
     ["pull up the exit form", null],
-    ["create an STC exit for jane smith", "jane smith"],
+    ["create an exit form for jane smith", "jane smith"],
     ["resignation paperwork for JANE SMITH", "JANE SMITH"],
     ["termination/exit form for Jane", "Jane"],
     ["I need the exit paperwork for Jane Smith", "Jane Smith"],
@@ -517,7 +517,7 @@ describe("QA 1 — natural-language retrieval", () => {
 describe("QA 2 — the employee", () => {
   it("normal mixed case", async () => {
     const proposals = await load([exitForm()]);
-    const response = await proposals.proposeFormForTurn(turn("create an STC exit for Jane Smith"));
+    const response = await proposals.proposeFormForTurn(turn("create an exit form for Jane Smith"));
     expect(response!.formProposal!.employeeName).toBe("Jane Smith");
   });
 
@@ -580,7 +580,7 @@ describe("QA 3 — location, title and dates", () => {
     expect(response!.formProposal!.locationId).toBeNull();
     expect(response!.formProposal!.status).toBe("needs_location");
     // The salon they named is said back, and only their own are offered.
-    expect(response!.content).toMatch(/\*\*KS Lawrence\*\* isn't a salon on your/);
+    expect(response!.content).toMatch(/\*\*KS Lawrence\*\* isn't a location on your/);
     expect(response!.formProposal!.authorizedLocationIds.sort()).toEqual(["loc-0309", "loc-0310", "loc-0311"]);
   });
 
@@ -709,7 +709,7 @@ describe("QA 4 — what the manager said is filled; nothing else is inferred", (
 
   it("continues the open proposal with a reply that only answers HR's questions", async () => {
     const proposals = await load([exitForm()]);
-    const history: ChatMessage[] = [said("m1", "create an STC exit for Sarah Jones, she quit on the spot 9/20, last day 9/19")];
+    const history: ChatMessage[] = [said("m1", "create an exit form for Sarah Jones, she quit on the spot 9/20, last day 9/19")];
     const response = await proposals.proposeFormForTurn({
       ...turn("store items yes, key no, payroll deduction: yes, min wage: no, bonus: no, rehire: yes", { history }),
       continueTemplateKey: "resignation-exit",
@@ -758,7 +758,7 @@ describe("QA 9 — exit, resignation and termination in ordinary conversation", 
 
   it("a question asked while an exit proposal is open still goes to retrieval", async () => {
     const proposals = await load([exitForm()]);
-    const history: ChatMessage[] = [said("m1", "create an STC exit for Sarah Jones")];
+    const history: ChatMessage[] = [said("m1", "create an exit form for Sarah Jones")];
     for (const question of [
       "how many no call no shows do we allow before it counts as quitting?",
       "what's the termination policy?",

@@ -141,7 +141,7 @@ describe("choosing a salon", () => {
   it("offers the salons by name, not by id", () => {
     const { container } = bubble(
       assistant({
-        content: "I won't choose which salon this belongs to.",
+        content: "I won't choose which location this belongs to.",
         formProposal: proposal({
           templateKey: "coaching",
           templateName: "Coaching Form",

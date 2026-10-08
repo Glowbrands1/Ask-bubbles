@@ -128,7 +128,7 @@ describe("46. a missing fact reads as missing, not as a blank", () => {
         status: "needs_location",
       }),
     });
-    expect(container.textContent).toMatch(/say which salon this is about/i);
+    expect(container.textContent).toMatch(/say which location this is about/i);
   });
 });
 

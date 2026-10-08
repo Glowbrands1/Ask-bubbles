@@ -160,7 +160,7 @@ describe("found in hands-on QA: the correction summary", () => {
 
 describe("found in hands-on QA: a new request is not a correction", () => {
   it.each([
-    "pull up a transfer form for jane doe, she is a pt tc at $12/hr, transferring from stc 12 to salon 18 effective oct 5, same title, voluntary",
+    "pull up a transfer form for jane doe, she is a pt tc at $12/hr, transferring from store 12 to salon 18 effective oct 5, same title, voluntary",
     "create a demotion form for maria lopez, going from SD to TC",
     "maria lopez is transferring from salon 12 to salon 18",
     "create another position transfer form for jane doe, new location salon 30",

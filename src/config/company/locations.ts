@@ -50,3 +50,17 @@ export const COMPANY_LOCATION_ENTRIES: readonly CompanyLocationEntry[] = [];
 export const COMPANY_DISTRICT_ENTRIES: readonly CompanyDistrictEntry[] = [];
 
 export const COMPANY_REGION_ENTRIES: readonly CompanyAreaEntry[] = [];
+
+/**
+ * What managers call a location other than by its roster name, keyed to its
+ * code: "downtown" → "101". Each entry is a reviewed one-line addition, read
+ * only where the sentence says it is a place (`location-mention.ts`). Empty
+ * until Buff City Soap confirms them.
+ */
+export const COMPANY_LOCATION_NICKNAMES: Readonly<Record<string, string>> = {};
+
+/**
+ * Abbreviations managers type for a word in several location names, folded
+ * before matching: "kc" → "kansas city". Empty until confirmed.
+ */
+export const COMPANY_LOCATION_ABBREVIATIONS: Readonly<Record<string, string>> = {};

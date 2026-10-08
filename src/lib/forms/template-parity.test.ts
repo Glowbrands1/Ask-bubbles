@@ -106,11 +106,11 @@ describe("the migrated templates are the reference platform's published template
     }
   });
 
-  it("the library ships all 17, once each, plus the original placeholder", () => {
+  it("the library ships all 17, once each, and nothing else", () => {
     const keys = MIGRATED_TEMPLATE_SEEDS.map((seed) => seed.key).sort();
     expect(keys).toEqual(TEMPLATES.map((template) => RENAMED[template.key] ?? template.key).sort());
     expect(new Set(keys).size).toBe(17);
-    expect(TEMPLATE_SEEDS.map((seed) => seed.key)).toContain("example-check-in");
+    expect(TEMPLATE_SEEDS.map((seed) => seed.key).sort()).toEqual(keys);
   });
 
   it("every difference from the published version is on the approved list, and every approved change is present", () => {

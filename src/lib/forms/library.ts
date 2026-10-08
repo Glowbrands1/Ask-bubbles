@@ -1,4 +1,3 @@
-import { EXAMPLE_CHECK_IN_SEED } from "@/config/company/forms/example-check-in";
 import { FORM_LETTERHEAD_BRAND_NAME } from "@/config/company/forms/letterhead";
 
 import { BRAND, field, type TemplateSeed } from "./catalog";
@@ -1916,11 +1915,11 @@ export const MIGRATED_TEMPLATE_SEEDS: TemplateSeed[] = [
 ];
 
 /**
- * Everything the seeder installs: the migrated library, then this deployment's
- * original placeholder form, which is kept (never deleted) so the rows and any
- * forms already filed against it stay intact.
+ * Everything the seeder installs: the migrated library, exactly. This
+ * deployment's original placeholder ("Team Member Check-In (Example)") is not
+ * reseeded; it is retired through `RETIRED_TEMPLATE_KEYS`, never deleted.
  */
-export const TEMPLATE_SEEDS: TemplateSeed[] = [...MIGRATED_TEMPLATE_SEEDS, EXAMPLE_CHECK_IN_SEED];
+export const TEMPLATE_SEEDS: TemplateSeed[] = MIGRATED_TEMPLATE_SEEDS;
 
 /** The default variant a new form of this template starts on. */
 export function defaultVariantKey(seedKey: string): string | null {

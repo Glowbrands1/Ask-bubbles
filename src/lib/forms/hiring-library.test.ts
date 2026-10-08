@@ -89,7 +89,8 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
     const letterhead = stored(document).blocks[0];
     expect(letterhead).toEqual({
       kind: "letterhead",
-      brand: "Sun Tan City",
+      // Approved branding change: the company name, in plain text, in the source's title case.
+      brand: "Buff City Soap",
       title: "Coaching Form",
       variantKey: undefined,
     });
@@ -426,7 +427,7 @@ describe("the Tanning Consultant Interview matches its source", () => {
 
   it("asks all twelve numbered questions, numbered as the source numbers them", () => {
     expect(paragraphs(document)).toEqual([
-      "1. Tell me about yourself and why you’re interested in working at Sun Tan City.",
+      "1. Tell me about yourself and why you’re interested in working at Buff City Soap.",
       "2. Can you walk me through your resume and highlight your most recent roles?",
       "3. Describe your availability and any scheduling restrictions.",
       "4. Describe a time you delivered excellent customer service and what made it stand out.",
@@ -494,7 +495,7 @@ describe("the Prescreen / Phone Interview matches its source", () => {
   it("keeps the four written questions in the source's words and order", () => {
     const labels = fieldLabels(document);
     expect(labels.get("why_interested")).toBe(
-      "Why are you interested in working for Sun Tan City?",
+      "Why are you interested in working for Buff City Soap?",
     );
     expect(labels.get("uniform_services")).toBe(
       "Are you willing to use our services as part of your Sun Tan City uniform? (Must agree to UV, Sunless and Spa usage to proceed with employment)",

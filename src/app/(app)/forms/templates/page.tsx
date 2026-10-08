@@ -93,7 +93,8 @@ export default async function FormTemplatesPage() {
       const sync = await ensureTemplateLibrary("system");
       syncSkipped = sync.skipped?.reason ?? null;
       const summaries = await listTemplateSummaries();
-      templates = summaries.map((summary) => {
+      // A retired template (switched off, never deleted) is not offered here.
+      templates = summaries.filter((summary) => summary.active).map((summary) => {
         const version = summary.currentVersion ?? summary.draftVersion;
         const variantKey = version?.variants[0]?.key ?? null;
         const fields = version ? fieldsForVariant(version.document, variantKey) : [];

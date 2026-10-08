@@ -401,7 +401,7 @@ describe("5. what Ask Bubbles actually says", () => {
         "Great, I can help you create a **Corrective Action Form**. To get started, please provide me with these details:",
         "",
         "1. Employee's full name",
-        "2. Salon location",
+        "2. Location",
         "3. Date for the form (if you say \u201Ctoday,\u201D I'll use September 11, 2026)",
         "4. What happened — a clear description of the incident(s) with dates and specifics",
         "5. Whether this is a verbal or written warning",

@@ -51,7 +51,7 @@ describe.each(FORMS)("$name", ({ document }) => {
       />,
     );
     // The letterhead, which is how an interviewer knows which form they opened.
-    expect(screen.getByText("SUN TAN CITY")).toBeTruthy();
+    expect(screen.getByText("BUFF CITY SOAP")).toBeTruthy();
     for (const block of document.blocks) {
       if (block.kind === "section") {
         expect(screen.getByText(block.label), block.label).toBeTruthy();

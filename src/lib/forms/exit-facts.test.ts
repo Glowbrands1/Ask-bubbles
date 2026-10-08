@@ -60,7 +60,7 @@ describe("the dates, each on its own line", () => {
     const facts = read("She quit on 9/20.");
     expect(facts.lastDayWorked).toBeNull();
     expect(facts.noticeGiven).toBeNull();
-    expect(read("Create an STC exit for Sarah, the incident was 9/20").lastDayWorked).toBeNull();
+    expect(read("Create an exit form for Sarah, the incident was 9/20").lastDayWorked).toBeNull();
   });
 
   it("does not read a follow-on sentence's cue into the previous date", () => {
@@ -215,7 +215,7 @@ describe("the values the draft carries", () => {
   });
 
   it("nothing at all for a bare request", () => {
-    expect(exitFactValues(read("create an STC exit for Sarah"))).toEqual({
+    expect(exitFactValues(read("create an exit form for Sarah"))).toEqual({
       values: {},
       checked: {},
     });

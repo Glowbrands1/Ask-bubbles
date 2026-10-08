@@ -30,12 +30,6 @@ export const COMPANY_FORM_CATEGORIES = [
     blurb:
       "Prescreening and interview forms, used while a candidate is still a candidate.",
   },
-  {
-    key: "examples",
-    label: "Examples — not approved Buff forms",
-    blurb:
-      "Placeholder forms that exercise the forms workflow. Not Buff City Soap policy; replace before rollout.",
-  },
 ] as const;
 
 /** Where a template with no recorded category is shown. */

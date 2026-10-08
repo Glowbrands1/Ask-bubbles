@@ -81,6 +81,8 @@ vi.mock("@/config/company/locations", () => ({
     { id: "dist-west", name: "West", regionId: null },
   ],
   COMPANY_REGION_ENTRIES: [],
+  COMPANY_LOCATION_NICKNAMES: {},
+  COMPANY_LOCATION_ABBREVIATIONS: {},
 }));
 
 /* The turn recorder's telemetry is a log line; it is not what is under test. */

@@ -1,3 +1,4 @@
+import { COMPANY_LOCATION_ABBREVIATIONS, COMPANY_LOCATION_NICKNAMES } from "@/config/company/locations";
 import { COMPANY_LOCATIONS, locationById, locationNameKey, type CompanyLocation } from "@/lib/locations";
 
 /**
@@ -13,9 +14,9 @@ import { COMPANY_LOCATIONS, locationById, locationNameKey, type CompanyLocation 
  * THE REFERENCE PLATFORM'S READER, ON THIS ROSTER. The algorithm is the one the
  * reference platform's forms chat proved in production (state prefix, shared
  * city, "at … today" cues, store numbers); only the roster it reads is this
- * company's `COMPANY_LOCATIONS`. The reference roster's own nicknames were
- * company data, not algorithm, and are not carried over: a nickname a manager
- * really uses is added to `SHORT_NAMES` below in a reviewed change.
+ * company's `COMPANY_LOCATIONS`. Nicknames and abbreviations are company
+ * data, not algorithm: they live in `COMPANY_LOCATION_NICKNAMES` and
+ * `COMPANY_LOCATION_ABBREVIATIONS` beside the roster.
  *
  * NORMALIZED THE WAY THE ROSTER IS. `locationNameKey` folds case, spacing,
  * `&`/`and`, commas and periods, so "Testville Downtown." and "testville
@@ -45,8 +46,15 @@ export interface LocationMention {
 /** The words that say "this is a place", in any company's vocabulary. */
 const PLACE_NOUNS = "salon|store|location|studio|shop|makery";
 
+const ABBREVIATIONS = Object.entries(COMPANY_LOCATION_ABBREVIATIONS).map(([short, full]) => ({
+  pattern: new RegExp(`\\b${short.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g"),
+  full: full.toLowerCase(),
+}));
+
 function key(text: string): string {
-  return ` ${locationNameKey(text)} `
+  let folded = ` ${locationNameKey(text)} `;
+  for (const abbreviation of ABBREVIATIONS) folded = folded.replace(abbreviation.pattern, abbreviation.full);
+  return folded
     .replace(/\bsaint\b/g, "st")
     .replace(/\bstreet\b/g, "st")
     .replace(/\bparkway\b/g, "pkwy")
@@ -72,11 +80,8 @@ const SHARED_CITIES: readonly string[] = (() => {
   return shared.filter((head) => !shared.some((other) => other !== head && other.startsWith(`${head} `)));
 })();
 
-/**
- * Nicknames managers use for one location, keyed to its roster code. Empty
- * until the business confirms them — each is a reviewed one-line addition.
- */
-const SHORT_NAMES: Readonly<Record<string, string>> = {};
+/** Nicknames managers use for one location, keyed to its roster code. */
+const SHORT_NAMES: Readonly<Record<string, string>> = COMPANY_LOCATION_NICKNAMES;
 
 interface Alias {
   readonly phrase: string;
@@ -132,7 +137,11 @@ const CITY_ENDS = `(?=\\s*$|\\s*[,.;:!?)]|\\s+(?:${CARRIES_ON})\\b)`;
 
 const CITY_PATTERNS: readonly { pattern: RegExp; locationIds: readonly string[] }[] = SHARED_CITIES.map(
   (city) => {
-    const spelled = city.split(" ").join("\\s+");
+    const words = city.split(" ").join("\\s+");
+    const shorts = Object.entries(COMPANY_LOCATION_ABBREVIATIONS)
+      .filter(([, full]) => full.toLowerCase() === city)
+      .map(([short]) => short.toLowerCase());
+    const spelled = shorts.length > 0 ? `(?:${words}|${shorts.join("|")})` : words;
     return {
       pattern: new RegExp(
         `(?:\\b(?:at|in)\\s+(?:the\\s+)?${spelled}${CITY_ENDS}|\\b${spelled}\\s+(?:${PLACE_NOUNS})\\b)`,

@@ -52,5 +52,8 @@ export function referenceRosterModule() {
     COMPANY_LOCATION_ENTRIES: REFERENCE_LOCATION_ENTRIES,
     COMPANY_DISTRICT_ENTRIES: REFERENCE_DISTRICT_ENTRIES,
     COMPANY_REGION_ENTRIES: REFERENCE_REGION_ENTRIES,
+    // The reference platform's reviewed nicknames and abbreviation.
+    COMPANY_LOCATION_NICKNAMES: { shawnee: "0463", "shawnee mission": "0463", "st joe": "0495" },
+    COMPANY_LOCATION_ABBREVIATIONS: { kc: "kansas city" },
   };
 }
