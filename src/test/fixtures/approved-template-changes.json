@@ -1,0 +1,271 @@
+{
+ "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description). Anything not listed here fails template-parity.test.ts.",
+ "changes": [
+  {
+   "sourceKey": "coaching",
+   "path": ".document.style.logo",
+   "from": {
+    "assetKey": "sun-tan-city",
+    "placement": "top-right",
+    "widthPt": 76
+   },
+   "to": null
+  },
+  {
+   "sourceKey": "coaching",
+   "path": ".document.blocks[0].brand",
+   "from": "Sun Tan City",
+   "to": "Buff City Soap"
+  },
+  {
+   "sourceKey": "dpoa",
+   "path": ".document.blocks[0].brand",
+   "from": "SUN TAN CITY",
+   "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "policy-review",
+   "path": ".document.blocks[0].brand",
+   "from": "SUN TAN CITY",
+   "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".document.blocks[0].brand",
+   "from": "SUN TAN CITY",
+   "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".document.blocks[5].options[0].label",
+   "from": "Uphold the Sun Tan City Experience.",
+   "to": "Uphold the Buff City Soap Experience."
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".document.blocks[5].options[2].label",
+   "from": "Uphold Sun Tan City and JB & Associates company policies per the JB & Associates Employment Policy Manual.",
+   "to": "Uphold Buff City Soap and JB & Associates company policies per the JB & Associates Employment Policy Manual."
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".document.blocks[18].options[0].label",
+   "from": "Uphold the Sun Tan City Experience.",
+   "to": "Uphold the Buff City Soap Experience."
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".document.blocks[18].options[2].label",
+   "from": "Uphold Sun Tan City and JB & Associates company policies per the JB & Associates Employment Policy Manual.",
+   "to": "Uphold Buff City Soap and JB & Associates company policies per the JB & Associates Employment Policy Manual."
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".document.blocks[40].label",
+   "from": "Ask Sunny Draft Details",
+   "to": "Ask Bubbles Draft Details"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[0].brand",
+   "from": "SUN TAN CITY",
+   "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[4].body[0]",
+   "from": "First, we need to understand what the purpose and responsibilities are for your role with Sun Tan City.",
+   "to": "First, we need to understand what the purpose and responsibilities are for your role with Buff City Soap."
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[9].options[0].label",
+   "from": "Uphold the Sun Tan City Experience.",
+   "to": "Uphold the Buff City Soap Experience."
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[9].options[4].label",
+   "from": "Uphold Sun Tan City and JB & Associates company policies per the JB & Associates Employment Policy Manual, and hold the team accountable to company policy.",
+   "to": "Uphold Buff City Soap and JB & Associates company policies per the JB & Associates Employment Policy Manual, and hold the team accountable to company policy."
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[20].text",
+   "from": "This section is the manager's own assessment, completed in the review conversation. Ask Sunny never answers it.",
+   "to": "This section is the manager's own assessment, completed in the review conversation. Ask Bubbles never answers it."
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[22].options[0].label",
+   "from": "Uphold the Sun Tan City Experience.",
+   "to": "Uphold the Buff City Soap Experience."
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[22].options[4].label",
+   "from": "Uphold Sun Tan City and JB & Associates company policies per the JB & Associates Employment Policy Manual, and hold the team accountable to company policy.",
+   "to": "Uphold Buff City Soap and JB & Associates company policies per the JB & Associates Employment Policy Manual, and hold the team accountable to company policy."
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[45].label",
+   "from": "Ask Sunny Draft Details",
+   "to": "Ask Bubbles Draft Details"
+  },
+  {
+   "sourceKey": "asd-sdit-epp",
+   "path": ".document.blocks[0].brand",
+   "from": "SUN TAN CITY",
+   "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "fttc-epp",
+   "path": ".document.blocks[0].brand",
+   "from": "SUN TAN CITY",
+   "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "dmit-epp-tsd",
+   "path": ".document.blocks[0].brand",
+   "from": "SUN TAN CITY",
+   "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "dmit-epp-tsd",
+   "path": ".document.blocks[4].body[1]",
+   "from": "First we need to understand what the purpose and responsibilities are for a District Manager with Sun Tan City:",
+   "to": "First we need to understand what the purpose and responsibilities are for a District Manager with Buff City Soap:"
+  },
+  {
+   "sourceKey": "dmit-epp-tsd",
+   "path": ".document.blocks[5].body[1]",
+   "from": "First we need to understand what the purpose and responsibilities are for a District Manager in Training with Sun Tan City:",
+   "to": "First we need to understand what the purpose and responsibilities are for a District Manager in Training with Buff City Soap:"
+  },
+  {
+   "sourceKey": "dmit-epp-tsd",
+   "path": ".document.blocks[15].text",
+   "from": "This section is completed by hand, in the conversation. Ask Sunny does not draft it.",
+   "to": "This section is completed by hand, in the conversation. Ask Bubbles does not draft it."
+  },
+  {
+   "sourceKey": "dmit-epp-dmit",
+   "path": ".document.blocks[0].brand",
+   "from": "SUN TAN CITY",
+   "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "dmit-epp-dmit",
+   "path": ".document.blocks[4].body[1]",
+   "from": "First we need to understand what the purpose and responsibilities are for a District Manager with Sun Tan City:",
+   "to": "First we need to understand what the purpose and responsibilities are for a District Manager with Buff City Soap:"
+  },
+  {
+   "sourceKey": "dmit-epp-dmit",
+   "path": ".document.blocks[5].body[1]",
+   "from": "First we need to understand what the purpose and responsibilities are for a District Manager in Training with Sun Tan City:",
+   "to": "First we need to understand what the purpose and responsibilities are for a District Manager in Training with Buff City Soap:"
+  },
+  {
+   "sourceKey": "dmit-epp-dmit",
+   "path": ".document.blocks[15].text",
+   "from": "This section is completed by hand, in the conversation. Ask Sunny does not draft it.",
+   "to": "This section is completed by hand, in the conversation. Ask Bubbles does not draft it."
+  },
+  {
+   "sourceKey": "follow-up-coaching",
+   "path": ".revisionNote",
+   "from": "Published from ASK SUNNY PERFORMANCE MANAGEMENT FRAMEWORK §9.2 (Template: Create a follow-up coaching form). Framework-defined: there is no approved paper or PDF source form for this document, and no acknowledgement or signature wording was specified for it. Revision 2 renames the Next Step option `dpoa` to read \"Corrective Action\"; the option key is unchanged, so every box already ticked still resolves.",
+   "to": "Published from the PERFORMANCE MANAGEMENT FRAMEWORK §9.2 (Template: Create a follow-up coaching form). Framework-defined: there is no approved paper or PDF source form for this document, and no acknowledgement or signature wording was specified for it. Revision 2 renames the Next Step option `dpoa` to read \"Corrective Action\"; the option key is unchanged, so every box already ticked still resolves."
+  },
+  {
+   "sourceKey": "follow-up-coaching",
+   "path": ".provenance.document",
+   "from": "ASK_SUNNY_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT",
+   "to": "PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT"
+  },
+  {
+   "sourceKey": "follow-up-coaching",
+   "path": ".document.blocks[0].brand",
+   "from": "SUN TAN CITY",
+   "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "stc-exit",
+   "path": ".key",
+   "from": "stc-exit",
+   "to": "resignation-exit"
+  },
+  {
+   "sourceKey": "stc-exit",
+   "path": ".description",
+   "from": "The STC exit paperwork for an employee who is leaving: how they left, their last day and notice, the payroll and rehire questions, and the steps to finish the termination.",
+   "to": "The exit paperwork for an employee who is leaving: how they left, their last day and notice, the payroll and rehire questions, and the steps to finish the termination."
+  },
+  {
+   "sourceKey": "stc-exit",
+   "path": ".document.style.logo",
+   "from": {
+    "assetKey": "sun-tan-city",
+    "placement": "top-right",
+    "widthPt": 76
+   },
+   "to": null
+  },
+  {
+   "sourceKey": "stc-exit",
+   "path": ".document.blocks[0].brand",
+   "from": "Sun Tan City",
+   "to": "Buff City Soap"
+  },
+  {
+   "sourceKey": "stc-exit",
+   "path": ".document.blocks[19].field.help",
+   "from": "The reason the employee gave, in the manager's words. Never supplied by Ask Sunny.",
+   "to": "The reason the employee gave, in the manager's words. Never supplied by Ask Bubbles."
+  },
+  {
+   "sourceKey": "demotion",
+   "path": ".revisionNote",
+   "from": "Published from the GlowBrands Demotion Form source document. The STC Demotion Example is the same document, kept as a reference for the reason's wording; it is not a separate template.",
+   "to": "Published from the GlowBrands Demotion Form source document. The source company's Demotion Example is the same document, kept as a reference for the reason's wording; it is not a separate template."
+  },
+  {
+   "sourceKey": "prescreen-phone-interview",
+   "path": ".document.blocks[0].brand",
+   "from": "SUN TAN CITY",
+   "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "prescreen-phone-interview",
+   "path": ".document.blocks[6].field.label",
+   "from": "Why are you interested in working for Sun Tan City?",
+   "to": "Why are you interested in working for Buff City Soap?"
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
+   "path": ".document.blocks[0].brand",
+   "from": "SUN TAN CITY",
+   "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
+   "path": ".document.blocks[7].text",
+   "from": "1. Tell me about yourself and why you’re interested in working at Sun Tan City.",
+   "to": "1. Tell me about yourself and why you’re interested in working at Buff City Soap."
+  },
+  {
+   "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[0].brand",
+   "from": "SUN TAN CITY",
+   "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "management-interview-round-2",
+   "path": ".document.blocks[0].brand",
+   "from": "SUN TAN CITY",
+   "to": "BUFF CITY SOAP"
+  }
+ ]
+}
