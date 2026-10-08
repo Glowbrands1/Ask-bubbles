@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fredoka, Lato } from "next/font/google";
+import { Archivo, Figtree } from "next/font/google";
 
 import { ACTIVE_BRAND, brandStyle } from "@/lib/brand";
 import { pageAuthorizationEnforced, pageIdentity } from "@/lib/auth/page";
@@ -7,25 +7,35 @@ import { Providers } from "./providers";
 import "./globals.css";
 
 /**
- * TYPE: Fredoka for display headings and the wordmarks — rounded and friendly,
- * a temporary stand-in for Buff City Soap's brand face until a brand kit is
- * supplied — and Lato for everything else.
+ * TYPE — the Buff City Soap 2023 brand fonts, with TEMPORARY FALLBACKS.
  *
- * Both through `next/font`: the files are downloaded at BUILD time and served
- * from this origin, so there is no runtime request to a font CDN. Fredoka is
- * a display face and is never used for body copy, labels or table cells.
+ *   Headlines      Supria Sans Black      fallback: Archivo (900, width axis)
+ *   Sub + body     Avenir Next Regular    fallback: Figtree
+ *
+ * The licensed brand files are not in this repository yet (the guidelines link
+ * a packaged-fonts folder on Buff City Soap's SharePoint, and web embedding
+ * needs a web licence for each). Until they arrive, `globals.css` names the
+ * brand face FIRST in every stack and these open-source faces second: a device
+ * with the brand face installed uses it — macOS and iOS ship Avenir Next —
+ * and everyone else gets the fallback below.
+ *
+ * TO SWITCH TO THE LICENSED FILES: load them with `next/font/local` under the
+ * same two CSS variables and delete these two calls. Nothing else changes.
+ *
+ * Both are fetched at BUILD time and served from this origin, so there is no
+ * runtime request to a font CDN. Archivo is a headline face and is never used
+ * for body copy, labels or table cells.
  */
-const fredoka = Fredoka({
+const archivo = Archivo({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-fredoka",
+  axes: ["wdth"],
+  variable: "--font-archivo",
   display: "swap",
 });
 
-const lato = Lato({
+const figtree = Figtree({
   subsets: ["latin"],
-  weight: ["400", "700", "900"],
-  variable: "--font-lato",
+  variable: "--font-figtree",
   display: "swap",
 });
 
@@ -38,7 +48,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#fbf5ec",
+  themeColor: "#f6f6f6",
   width: "device-width",
   initialScale: 1,
 };
@@ -69,7 +79,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${lato.variable} ${fredoka.variable}`}
+      className={`${figtree.variable} ${archivo.variable}`}
       // Brand palette overrides from the BrandConfig are applied here.
       style={brandStyle(ACTIVE_BRAND)}
     >

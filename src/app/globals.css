@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   ASK BUBBLES — DESIGN TOKENS · BUFF CITY SOAP (TEMPORARY REFERENCE PALETTE)
+   ASK BUBBLES — DESIGN TOKENS · BUFF CITY SOAP 2023 BRAND GUIDELINES
    ----------------------------------------------------------------------------
    Two layers, deliberately:
 
@@ -12,425 +12,288 @@
 
    To re-skin the product, replace the raw palette and re-point the semantic
    aliases in this one file, plus the BrandConfig in src/config/company/brand.ts.
-   No component changes required.
 
-   THE PALETTE is taken from the public Buff City Soap site as a TEMPORARY
-   reference until an approved brand kit is supplied:
+   THE OFFICIAL COLOURS come from the Buff City Soap 2023 Brand Guidelines,
+   "Color codes" (p.30). "Main colors: use these 90% of the time":
 
-     wine      #5e1a33  navigation and strong surfaces (rail, top bar, band)
-     orange    #f26522  the brand accent; #b8460f is the CTA fill (white text
-                        5.36:1). Raw #f26522 never carries white text (3.15:1).
-     aqua      #2bb5b0  accents and chart data; #0e6b67 when it is text
-     cream     #fbf5ec  the canvas
-     charcoal  #2b2a2e  text
+     Tokyo Green       #66C9BA  Pantone 570 C — the iconic brand colour
+     Dark Tokyo Green  #3E7F75  new in 2023
+     Charcoal          #3D3A38  ("Cleansing Charcoal" in the 2021 guide)
+     Pure Cotton       #F6F6F6
+     White             #FFFFFF
+     Immaculate Cloud  #DFDFDE  2021 main palette; still an approved logo colour
+                                in the 2023 logo rules — used here for borders
 
-   Attention (follow-ups) is a separate red, #c43c4a, so "somebody has to act"
-   never looks like a button or like the brand. Every text pairing below was
-   measured against WCAG AA (4.5:1) on the grounds it is used on.
+   Secondary scent colours are "10% of the time, very rarely". Only two appear,
+   and only for status: Love Potion #E5554F (overdue, errors) and Beast #FFA06A
+   (due soon). Magnolia #ABD9E5 tints the information notice.
+
+   DERIVED SHADES are NOT new brand colours. Each is a mix of two official
+   colours, made because an official colour fails WCAG AA for the job (Tokyo
+   Green carries white text at only 1.98:1; Love Potion at 3.66:1) or because a
+   state needs a hover or a tint. The recipe is written next to each one.
+
+   CONTRAST RULES THE SYSTEM KEEPS — measured in theme-semantics.test.ts:
+     - Text on Tokyo Green is Charcoal (5.71:1), never white.
+     - Tokyo Green is never text on a light ground; teal text is Dark Tokyo
+       Green (4.67:1 on white) or its derived ink (6.09:1).
+     - Error text is the derived Love Potion ink (5.48:1), not Love Potion.
    ========================================================================== */
 
 :root {
-  /* ---- Raw palette: Buff City Soap ------------------------------------- */
+  /* ---- Raw palette: official Buff City Soap colours --------------------- */
 
-  /* Surfaces and chrome */
-  --bcs-wine: #5e1a33;
-  --bcs-wine-deep: #47122a;
-  --bcs-rail: #5e1a33;
-  --bcs-rail-border: #74304b;
-  --bcs-orange: #f26522;
-  --bcs-orange-cta: #b8460f;
-  --bcs-attention: #c43c4a;
-  --bcs-glow: #f26522;
-  --bcs-canvas: #fbf5ec;
+  --bcs-tokyo: #66c9ba;
+  --bcs-tokyo-dark: #3e7f75;
+  --bcs-charcoal: #3d3a38;
+  --bcs-cotton: #f6f6f6;
   --bcs-card: #ffffff;
-  --bcs-surface-warm: #f3e9da;
-  --bcs-orange-tint: #fdece2;
-  --bcs-clear-surface: #f1ebe2;
-  --bcs-aqua: #2bb5b0;
-  --bcs-aqua-tint: #d9f2f0;
+  --bcs-cloud: #dfdfde;
+  --bcs-love-potion: #e5554f;
+  --bcs-beast: #ffa06a;
+  --bcs-magnolia: #abd9e5;
 
-  /* Borders and dividers */
-  --bcs-border-card: #eadfce;
-  --bcs-border-hairline: #f1e7d9;
-  --bcs-border-row: #f5ede2;
-  --bcs-border-strong: #dccbb4;
-  --bcs-border-band: #74304b;
-  --bcs-border-band-pill: #84405b;
-  --bcs-border-chrome: #5a1d36;
+  /* ---- Derived shades (mixes of the official colours above) ------------- */
 
-  /* Text */
-  --bcs-ink: #2b2a2e;
-  --bcs-ink-body: #4a474d;
-  --bcs-ink-muted: #66626a;
-  --bcs-ink-light: #66615b;
-  --bcs-ink-placeholder: #8d8890;
-  --bcs-rail-ink: #fbf5ec;
-  --bcs-rail-label: #e9d3db;
-  --bcs-rail-icon: #c9a7b4;
-  --bcs-band-muted: #d8b3c1;
-  --bcs-band-chip-ink: #f3dfe6;
-  --bcs-band-label: #c9a7b4;
-  --bcs-band-prompt-ink: #fbf5ec;
-  --bcs-chrome-chip-ink: #f3dfe6;
-  --bcs-wordmark: #e9d3db;
-
-  /* Orange system (the accent) */
-  --bcs-orange-ink: #3a1406;
-  --bcs-orange-label: #8a3510;
-
-  /* Aqua system */
-  --bcs-aqua-ink: #0e6b67;
-
-  /* Attention system */
-  --bcs-attention-soft-ink: #ffe1e1;
-  --bcs-attention-ink: #a8322f;
-  --bcs-delta-down: #b8323d;
-  /* The one green, for a stated good direction only. 5.81:1 on the canvas. */
-  --bcs-delta-up: #2f6b4f;
-
-  /* ---- Chart data and the status ladder --------------------------------- */
-
-  /* Chart data is aqua — never the attention red, so a bar is never an alarm. */
-  --bcs-data: #1b8a85;
-  --bcs-data-track: #e3f4f3;
-  --bcs-track-warm: #f6eee3;
-  --bcs-track-zero: #cbbba6;
-
-  /* The four-state status ladder; each carries a glyph and a word too. */
-  --bcs-outperforming: var(--bcs-delta-up);
-  --bcs-below-market: #9a6d10;
-  --bcs-at-market-edge: #cbbba6;
-  --bcs-capacity: #dccbb4;
-  --bcs-capacity-ink: #5e4a3a;
-
-  /* A goal drawn across a chart: a 2px dashed rule, not text. */
-  --bcs-goal-line: #b07d12;
-
-  /* Measures */
-  --bcs-measure-track: #efe4d5;
-  --bcs-measure-fill: #cbbba6;
-
-  /* Band furniture */
-  --bcs-band-tile: #6d2742;
-  --bcs-band-tile-border: #84405b;
+  /* 70% Dark Tokyo Green + 30% Charcoal — teal text, primary hover. */
+  --bcs-tokyo-ink: #3e6a63;
+  /* 55% Dark Tokyo Green + 45% Charcoal — pressed primary. */
+  --bcs-tokyo-active: #3e605a;
+  /* 14% / 30% Tokyo Green on White — hover rows, selection, focus halo. */
+  --bcs-tokyo-tint: #eaf7f5;
+  --bcs-tokyo-tint-strong: #d1efea;
+  /* Charcoal on White at 92% / 78% / 58% / 35% / 22% / 9% / 6% / 4%. */
+  --bcs-ink-body: #4d4a48;
+  --bcs-ink-muted: #686564;
+  --bcs-line-strong: #8e8d8c;
+  --bcs-rail-muted: #bbbab9;
+  --bcs-measure-fill: #d2d1d0;
+  --bcs-surface-muted: #ececeb;
+  --bcs-border-hairline: #eeeeed;
+  --bcs-border-row: #f3f3f2;
+  /* 8% White on Charcoal — the rail's hover and divider. */
+  --bcs-rail-hover: #4d4a48;
+  /* 65% Love Potion + 35% Charcoal — the follow-up / error ink and fill. */
+  --bcs-attention: #aa4c47;
+  /* 10% Love Potion on White — the follow-up / error tint. */
+  --bcs-attention-tint: #fceeed;
+  /* 35% Beast + 65% Charcoal, and 14% Beast on White — warnings. */
+  --bcs-warn-ink: #815e4a;
+  --bcs-warn-tint: #fff2ea;
+  /* 40% Magnolia on White — information notices. */
+  --bcs-info-tint: #ddf0f5;
 
   /* ---- Semantic aliases — components consume ONLY these ----------------- */
 
-  /* The approved canvas: the "daylight" half of the direction. */
-  --background: var(--bcs-canvas);
-  --foreground: var(--bcs-ink);
+  /* Pure Cotton canvas, Charcoal ink, White cards. */
+  --background: var(--bcs-cotton);
+  --foreground: var(--bcs-charcoal);
 
   --surface: var(--bcs-card);
-  --surface-muted: var(--bcs-surface-warm);
+  --surface-muted: var(--bcs-surface-muted);
   --surface-raised: var(--bcs-card);
 
-  /* The approved left rail: a warm mid-gray, which is what gives the
-     direction its structure without the weight of a black bar running down
-     the page. Rail text and labels are the two values that clear 4.5:1 on it;
-     anything lighter on this rail does not. */
+  /* THE RAIL IS CHARCOAL, and its one colour is the Tokyo Green pill that says
+     where you are. Text on that pill is Charcoal (5.71:1) — never white. */
   --sidebar: var(--rail);
-  --sidebar-foreground: var(--bcs-rail-ink);
-  --sidebar-muted: var(--bcs-rail-label);
-  /* THE SELECTED RAIL ITEM IS THE YELLOW PILL.
-     The direction is explicit that the rail keeps exactly one colour and this
-     is what it spends it on: "the yellow pill that says where you are". It also
-     settles a complaint the previous pass could not — selected and hovered were
-     BOTH the canvas, so hovering an item barely changed it and the selected one
-     did not stand out at all. Now hover is the canvas and active is the yellow,
-     which are impossible to confuse. */
-  --sidebar-active: var(--bcs-canvas);
-  --sidebar-active-foreground: var(--bcs-wine);
-  --sidebar-icon: var(--bcs-rail-icon);
+  --sidebar-foreground: var(--bcs-card);
+  --sidebar-muted: var(--bcs-rail-muted);
+  --sidebar-active: var(--bcs-tokyo);
+  --sidebar-active-foreground: var(--bcs-charcoal);
+  --sidebar-icon: var(--bcs-rail-muted);
+  --rail-hover: var(--bcs-rail-hover);
 
-  --muted: var(--bcs-surface-warm);
+  --muted: var(--bcs-surface-muted);
   --muted-foreground: var(--bcs-ink-muted);
-  --subtle-foreground: var(--bcs-ink-light);
+  --subtle-foreground: var(--bcs-ink-muted);
   --body-foreground: var(--bcs-ink-body);
-  --placeholder-foreground: var(--bcs-ink-placeholder);
+  --placeholder-foreground: var(--bcs-line-strong);
 
-  --border: var(--bcs-border-card);
-  --border-strong: var(--bcs-border-strong);
+  --border: var(--bcs-cloud);
+  /* Control borders (inputs, checkboxes) clear 3:1 against white. */
+  --border-strong: var(--bcs-line-strong);
   --border-hairline: var(--bcs-border-hairline);
   --border-row: var(--bcs-border-row);
 
-  /* THE DAYLIGHT PRIMARY BUTTON IS NEAR-BLACK, and that is a decision the
-     direction forces rather than a preference: coral is committed to
-     attention, so it cannot also mean "press me". Yellow is capped at two
-     filled blocks a screen, so it cannot carry every primary action either.
-     Near-black is what is left, and it is the strongest of the three anyway. */
-  --primary: var(--bcs-orange-cta);
-  --primary-hover: color-mix(in srgb, var(--bcs-orange-cta) 86%, var(--bcs-orange-ink));
+  /* THE PRIMARY ACTION IS DARK TOKYO GREEN with white text (4.67:1). */
+  --primary: var(--bcs-tokyo-dark);
+  --primary-hover: var(--bcs-tokyo-ink);
+  --primary-active: var(--bcs-tokyo-active);
   --primary-foreground: var(--bcs-card);
-  --primary-soft: var(--bcs-orange-tint);
-  --primary-soft-foreground: var(--bcs-orange-label);
+  --primary-soft: var(--bcs-tokyo-tint);
+  --primary-soft-foreground: var(--bcs-tokyo-ink);
 
-  /* WAS SAGE GREEN. The accent slot now carries the brand yellow with the
-     approved ink on top, which is the direction's one filled emphasis
-     treatment. Green is not in this system at all. */
-  --accent: var(--bcs-aqua);
-  --accent-hover: color-mix(in srgb, var(--bcs-aqua) 88%, var(--bcs-ink));
-  --accent-foreground: var(--bcs-ink);
-  --accent-soft: var(--bcs-aqua-tint);
-  --accent-soft-foreground: var(--bcs-aqua-ink);
+  /* THE BRAND FILL: Tokyo Green with Charcoal on top. */
+  --accent: var(--bcs-tokyo);
+  --accent-hover: var(--bcs-tokyo-tint-strong);
+  --accent-foreground: var(--bcs-charcoal);
+  --accent-soft: var(--bcs-tokyo-tint);
+  --accent-soft-foreground: var(--bcs-tokyo-ink);
 
-  /* A quiet warm tone. Was a blush pink, which competed with the attention
-     coral for no gain — a decorative pink next to a meaningful one is exactly
-     how a semantic colour stops meaning anything. */
-  --blush-soft: var(--bcs-surface-warm);
-  --blush-soft-foreground: var(--bcs-ink);
+  --blush-soft: var(--bcs-surface-muted);
+  --blush-soft-foreground: var(--bcs-charcoal);
 
   --highlight: var(--bcs-attention);
-  --highlight-deep: var(--bcs-attention-ink);
+  --highlight-deep: var(--bcs-attention);
 
-  /* The yellow system, under its established names. */
-  --gold: var(--bcs-orange);
-  --gold-deep: var(--bcs-orange-label);
-  --gold-soft: var(--bcs-orange-tint);
+  /* The warning system, under its established names. */
+  --gold: var(--bcs-beast);
+  --gold-deep: var(--bcs-warn-ink);
+  --gold-soft: var(--bcs-warn-tint);
 
-  /* Status tones. Everything that is not demanding action is neutral, which
-     is the point of the direction rather than a shortcut: a dashboard where
-     something is always coloured teaches managers to ignore the colour. */
+  /* Status tones. Everything that is not demanding action stays neutral. */
   --status-ready: var(--bcs-ink-muted);
-  --status-ready-bg: var(--bcs-surface-warm);
+  --status-ready-bg: var(--bcs-surface-muted);
   --status-processing: var(--bcs-ink-muted);
-  --status-processing-bg: var(--bcs-canvas);
-  --status-attention: var(--bcs-orange-label);
-  --status-attention-bg: var(--bcs-orange-tint);
-  --status-failed: var(--bcs-attention-ink);
-  --status-failed-bg: var(--bcs-canvas);
+  --status-processing-bg: var(--bcs-cotton);
+  --status-attention: var(--bcs-warn-ink);
+  --status-attention-bg: var(--bcs-warn-tint);
+  --status-failed: var(--bcs-attention);
+  --status-failed-bg: var(--bcs-attention-tint);
   --status-neutral: var(--bcs-ink-muted);
-  --status-neutral-bg: var(--bcs-surface-warm);
+  --status-neutral-bg: var(--bcs-surface-muted);
 
   /* ============================ SEMANTIC COLOUR ============================
-     EACH OF THESE MEANS SOMETHING. That is the whole point, and it is a
-     requirement rather than a preference: the same category must read the same
-     colour wherever it appears, so a manager learns the colour once.
-
-     The rule that keeps it true: a token below is used ONLY for the state it
-     names. `--followup-attention` is not a spare accent to reach for when a
-     card needs livening up — the moment it appears on an unrelated sales
-     figure, coral stops meaning "somebody has to do something" and the system
-     is back to decoration.
+     EACH OF THESE MEANS SOMETHING, and is used ONLY for the state it names.
      ====================================================================== */
 
   /* FOLLOW-UPS THAT NEED A PERSON TO ACT — overdue, late, due imminently, and
-     the counts and badges that summarise them. Used on the Overview follow-up
-     card and the Form Monitoring overdue status, and nowhere else.
-
-     NEVER A BUTTON. The fill is for the state; the soft pairing is the same
-     meaning where a fill would shout — canvas with a coral edge and the
-     text-weight coral on top. */
+     the counts and badges that summarise them. Never a button. The fill is the
+     derived Love Potion ink, because white on Love Potion is only 3.66:1. */
   --followup-attention: var(--bcs-attention);
   --followup-attention-foreground: var(--bcs-card);
-  --followup-attention-soft: var(--bcs-canvas);
-  --followup-attention-soft-foreground: var(--bcs-attention-ink);
-  /* Secondary copy sitting ON the coral fill. Declared so that the next
-     coral surface that needs a second line reaches for this instead of
-     inventing a pink; nothing renders sub-copy on a coral fill today. */
-  --followup-attention-muted-foreground: var(--bcs-attention-soft-ink);
+  --followup-attention-soft: var(--bcs-attention-tint);
+  --followup-attention-soft-foreground: var(--bcs-attention);
+  --followup-attention-muted-foreground: var(--bcs-attention-tint);
+  /* The raw Love Potion, for marks that carry no text: an overdue row's edge
+     stripe, an alarm dot. */
+  --followup-attention-mark: var(--bcs-love-potion);
 
-  /* RED LIGHT / WELLNESS. In this direction the red is not a category colour
-     at all: its single sanctioned appearance is the band's corner glow, via
-     `--band-glow` below. Never errors, never text, never a fill. */
-  --glow-accent: var(--bcs-glow);
+  /* A decorative glow colour. Love Potion, never a selection or a fill. */
+  --glow-accent: var(--bcs-love-potion);
 
-  /* BRAND YELLOW. Brand marks, genuine warnings, and the reviews block. Not a
-     third accent for general use: at this chroma it outshouts everything near
-     it, and the direction caps it at two filled blocks per screen. */
-  --brand-accent: var(--bcs-orange);
-  --brand-accent-foreground: var(--bcs-orange-ink);
-  --brand-accent-soft: var(--bcs-orange-tint);
-  --brand-accent-soft-foreground: var(--bcs-orange-label);
+  /* TOKYO GREEN. Brand marks, the ask band, the active rail item, the focus
+     halo. As a FILL it carries Charcoal; it is never text on a light ground. */
+  --brand-accent: var(--bcs-tokyo);
+  --brand-accent-foreground: var(--bcs-charcoal);
+  --brand-accent-soft: var(--bcs-tokyo-tint);
+  --brand-accent-soft-foreground: var(--bcs-tokyo-ink);
 
-  /* THE HOVER SURFACE. One colour for "the pointer is on this control",
-     across every button variant, so hover means the same thing everywhere.
+  /* RATING STARS. A star is an icon, so it needs 3:1 against its ground (WCAG
+     1.4.11); Tokyo Green alone is 1.98:1 on White. Every star is OUTLINED in
+     Dark Tokyo Green (4.67:1); a chosen star keeps its Tokyo Green fill, an
+     unchosen one is a grey outline (3.3:1). */
+  --rating-star: var(--bcs-tokyo-dark);
+  --rating-star-fill: var(--bcs-tokyo);
+  --rating-star-empty: var(--bcs-line-strong);
 
-     It is the CANVAS, which makes it read as the control lifting off the page
-     rather than as a new state being entered. On the dark variants the
-     foreground has to invert with it — near-white text on a near-white hover
-     would be invisible — so `--hover-surface-foreground` travels with it.
+  /* THE HOVER SURFACE on light grounds: the Tokyo tint, so a hovered row or
+     control lifts toward the brand rather than toward grey. Dark controls
+     (primary, ink) hover to their own darker shade instead. */
+  --hover-surface: var(--bcs-tokyo-tint);
+  --hover-surface-foreground: var(--bcs-charcoal);
 
-     The direction defines NO hover palette, so nothing here is a new brand
-     colour: every hover is the approved canvas, or a mix of the control's own
-     approved base. */
-  --hover-surface: var(--bcs-canvas);
-  --hover-surface-foreground: var(--bcs-wine);
-
-  /* GENERIC SELECTED / ACTIVE UI. The near-black, not a semantic colour.
-     "This control is the one that's on" — a segmented control's chosen option,
-     the active report tab, a primary button, a filter trigger holding a
-     selection. It carries no other meaning, which is exactly why it is the
-     neutral near-black: the moment a selected state is coral or yellow it
-     competes with the states that DO mean something.
-
-     Deliberately NOT the chart series colour. Bars encode data, not
-     selection, and they stay on the measure neutrals in chart-palette.ts. */
-  --selected: var(--bcs-wine);
+  /* GENERIC SELECTED / ACTIVE UI: Charcoal. A chosen filter, a pressed
+     segment, the ink button. Deliberately not a semantic colour. */
+  --selected: var(--bcs-charcoal);
   --selected-foreground: var(--bcs-card);
-  --selected-hover: color-mix(in srgb, var(--bcs-wine) 86%, var(--bcs-card));
-  --selected-soft: var(--bcs-surface-warm);
-  --selected-soft-foreground: var(--bcs-ink);
+  --selected-hover: var(--bcs-ink-body);
+  --selected-soft: var(--bcs-tokyo-tint);
+  --selected-soft-foreground: var(--bcs-charcoal);
 
-  /* Chrome from the approved direction. The band is a surface with real area —
-     roughly the top third of the Overview — which is what lets yellow and
-     coral run at full strength instead of floating on peach. The chrome bar
-     above it sits one step deeper. */
-  --topbar: var(--bcs-wine);
-  --topbar-foreground: var(--bcs-chrome-chip-ink);
-  --chrome: var(--bcs-wine-deep);
-  --chrome-foreground: var(--bcs-chrome-chip-ink);
-  --chrome-border: var(--bcs-border-chrome);
-  --rail: var(--bcs-rail);
-  --rail-border: var(--bcs-rail-border);
+  /* CHROME. The top bar is White with a Cloud hairline; the rail is Charcoal. */
+  --topbar: var(--bcs-card);
+  --topbar-foreground: var(--bcs-charcoal);
+  --chrome: var(--bcs-card);
+  --chrome-foreground: var(--bcs-charcoal);
+  --chrome-border: var(--bcs-cloud);
+  --rail: var(--bcs-charcoal);
+  --rail-border: var(--bcs-rail-hover);
 
-  --band: var(--bcs-wine);
-  --band-foreground: var(--bcs-card);
-  --band-muted-foreground: var(--bcs-band-muted);
-  --band-label: var(--bcs-band-label);
-  --band-border: var(--bcs-border-band);
-  --band-pill-border: var(--bcs-border-band-pill);
-  --band-chip-foreground: var(--bcs-band-chip-ink);
-  --band-chip-surface: rgb(255 255 255 / 0.04);
-  --band-prompt-foreground: var(--bcs-band-prompt-ink);
-  --band-tile: var(--bcs-band-tile);
-  --band-tile-border: var(--bcs-band-tile-border);
-  --wordmark-muted: var(--bcs-wordmark);
+  /* THE BAND — the one large Tokyo Green surface (Home's ask band, the report
+     header). Everything on it is Charcoal: 5.71:1. */
+  --band: var(--bcs-tokyo);
+  --band-foreground: var(--bcs-charcoal);
+  --band-muted-foreground: var(--bcs-charcoal);
+  --band-label: var(--bcs-charcoal);
+  --band-border: var(--bcs-tokyo-dark);
+  --band-pill-border: var(--bcs-tokyo-dark);
+  --band-chip-foreground: var(--bcs-charcoal);
+  --band-chip-surface: rgb(255 255 255 / 0.55);
+  --band-prompt-foreground: var(--bcs-charcoal);
+  --band-tile: var(--bcs-tokyo-tint);
+  --band-tile-border: var(--bcs-tokyo-dark);
+  --wordmark-muted: var(--bcs-rail-muted);
 
-  --clear-surface: var(--bcs-clear-surface);
+  --clear-surface: var(--bcs-cotton);
+  /* A highlighter stroke under a word in a headline — 30% Tokyo Green. */
+  --marker: var(--bcs-tokyo-tint-strong);
 
-  /* MEASURES. Direction and target are different questions. Colouring by
-     direction says which way the arrow points; colouring by target says where
-     to spend the shift — so the flag is driven by target, and a measure is
-     neutral until it is actually short of plan.
-
-     WHAT THE CURRENT ARTIFACTS CHANGED. `--measure-series` used to be the one
-     colour a single-series chart used, and it carried NO hue: a lightness ramp,
-     on the argument that no hue was free to encode identity. The Reports
-     artifact settles that differently and shows its working — coral is the data
-     fill, and the near-black the ramp used was REFUSED for "reading as grey
-     rather than as a colour". So `--measure-data` is what a bar takes now, and
-     the ramp tokens below survive for the two jobs that are still ordinal:
-     a recessive baseline, and the neutral series on a chart that is genuinely
-     comparing two periods.
-
-     IDENTITY IS STILL NEVER CARRIED BY HUE ALONE. Every chart that uses these
-     names its series in a legend and labels its bars directly, and the movers
-     chart encodes polarity by POSITION across zero first — colour is the second
-     cue, which is what makes it readable at protan dE 9.6 and in greyscale. */
-  --measure-track: var(--bcs-measure-track);
+  /* MEASURES. Neutral until a measure is short of plan; data in Dark Tokyo
+     Green, never in the follow-up red. */
+  --measure-track: var(--bcs-surface-muted);
   --measure-fill: var(--bcs-measure-fill);
   --measure-flagged: var(--bcs-attention);
-  --measure-flagged-foreground: var(--bcs-attention-ink);
-  /* THE DATA FILL. One colour for every bar in a ranking — rank never changes
-     a colour, because a colour that follows rank instead of the location moves
-     when a filter changes the line-up. */
-  --measure-data: var(--bcs-data);
-  --measure-data-track: var(--bcs-data-track);
-  /* The warm track and zero rule a diverging bar runs on. */
-  --measure-diverging-track: var(--bcs-track-warm);
-  --measure-zero: var(--bcs-track-zero);
-  /* A NAMED COMPARISON DRAWN ON THE BAR ITSELF — the prior period as a 3px
-     tick with a white ring, and a reference average as a dashed rule. The
-     near-black is the widest separation from the coral available in the
-     palette (protan dE 35.2), so the comparison reads at a glance without
-     taking area from the measure. This is what let the artifact fold three
-     charts into two: the prior year stops being a second bar. */
-  --measure-benchmark: var(--bcs-wine);
-  --measure-goal: var(--bcs-goal-line);
-  --measure-goal-foreground: var(--bcs-orange-label);
+  --measure-flagged-foreground: var(--bcs-attention);
+  --measure-data: var(--bcs-tokyo-dark);
+  --measure-data-track: var(--bcs-tokyo-tint);
+  --measure-diverging-track: var(--bcs-border-hairline);
+  --measure-zero: var(--bcs-line-strong);
+  --measure-benchmark: var(--bcs-charcoal);
+  --measure-goal: var(--bcs-warn-ink);
+  --measure-goal-foreground: var(--bcs-warn-ink);
   --measure-series: var(--bcs-ink-muted);
-  --measure-series-strong: var(--bcs-ink);
+  --measure-series-strong: var(--bcs-charcoal);
   --measure-series-recessive: var(--bcs-measure-fill);
 
   /* ===================== THE FOUR-STATE STATUS LADDER =====================
-     One vocabulary, shared by the Bed Usage equipment levels, the two spa tabs
-     and the Google Reviews leaderboard, so a chip means the same thing wherever
-     a district manager sees it.
+     Colour is never the only cue: each state carries a glyph and a word.
 
-     COLOUR IS NEVER THE ONLY CUE. Each state carries a glyph and a word as
-     well — the artifact's own rule, and the reason the ladder survives
-     colour blindness and greyscale printing:
-
-       outperforming / at goal      green fill      ▲
+       outperforming / at goal      teal ink fill   ▲
        at market / on track         white, edged    ●
-       below market / behind        deep amber      ▬
-       significantly under          deep coral      ▼
-       tracked for capacity         warm neutral    ◇
-
-     "Tracked for capacity" is not a performance state at all — it is the Bed
-     Usage FAST level, held apart because its reductions are intentional. It
-     takes the quietest chip in the set for that reason. */
-  --status-outperforming: var(--bcs-outperforming);
+       below market / behind        warning ink     ▬
+       significantly under          follow-up ink   ▼
+       tracked for capacity         cloud           ◇                       */
+  --status-outperforming: var(--bcs-tokyo-ink);
   --status-outperforming-foreground: var(--bcs-card);
   --status-at-market: var(--bcs-card);
   --status-at-market-foreground: var(--bcs-ink-body);
-  --status-at-market-edge: var(--bcs-at-market-edge);
-  --status-below-market: var(--bcs-below-market);
+  --status-at-market-edge: var(--bcs-cloud);
+  --status-below-market: var(--bcs-warn-ink);
   --status-below-market-foreground: var(--bcs-card);
-  --status-under: var(--bcs-attention-ink);
+  --status-under: var(--bcs-attention);
   --status-under-foreground: var(--bcs-card);
-  --status-capacity: var(--bcs-capacity);
-  --status-capacity-foreground: var(--bcs-capacity-ink);
-  --delta-down: var(--bcs-delta-down);
-  /* A CHANGE AGAINST A NAMED COMPARISON, where the business has stated which
-     way is better: green for the good direction, the flag ink for the bad one.
+  --status-capacity: var(--bcs-cloud);
+  --status-capacity-foreground: var(--bcs-charcoal);
+  --delta-down: var(--bcs-attention);
+  /* The good direction of a stated comparison: the derived teal ink. */
+  --delta-up: var(--bcs-tokyo-ink);
+  --meter-track-on-accent: rgb(61 58 56 / 0.22);
 
-     THIS IS THE ONE PLACE GREEN IS ALLOWED, and it is narrower than it looks. A
-     measure is still NEUTRAL until it is behind everywhere else in the app —
-     status, chart series, band classification, stat panels. What earns colour
-     here is a delta that already names both sides of its comparison ("+5.11%
-     vs 2025") on a measure whose `higher_is_better` the catalogue actually
-     states; where that is null nothing is coloured at all.
+  /* FOCUS: a Dark Tokyo Green ring (4.67:1 on white) with a Tokyo halo. */
+  --ring: var(--bcs-tokyo-dark);
+  --ring-glow: rgb(102 201 186 / 0.35);
 
-     The DOWN direction deliberately reuses the flag ink rather than
-     `--delta-down`: one red meaning "behind" across the app, and #d4405f
-     measures 4.47:1 on white, under the floor for text this size. */
-  --delta-up: var(--bcs-delta-up);
-  --meter-track-on-accent: rgb(58 20 6 / 0.22);
+  /* GRADIENTS. The approved design draws none; the names stay so the surfaces
+     that read them keep a valid value. */
+  --band-glow: none;
+  --band-glow-slim: none;
+  --callout-glow: none;
+  --brand-glow: none;
 
-  /* The focus ring is the yellow, because the one focus treatment the
-     direction actually draws is the ask bar's yellow glow. */
-  --ring: var(--bcs-orange);
-  --ring-glow: rgb(242 101 34 / 0.22);
+  /* THE WAVY EDGE — the brand's torn-paper wave (2023 guidelines, Patterns),
+     used once to close the Tokyo Green band. */
+  --wave-edge: url("/brand/wave-edge.png");
 
-  /* GRADIENTS. Exactly two in the whole direction, both radial. The corner
-     glow is the only place the red-light red is allowed to appear. */
-  --band-glow: radial-gradient(
-    110% 150% at 100% 0%,
-    rgb(242 101 34 / 0.4) 0%,
-    rgb(94 26 51 / 0) 56%
-  );
-  /* THE SAME GLOW, FOR THE SLIM BAND. The Reports artifact runs the report
-     band's corner glow a step quieter and taller than the Overview and Chat
-     hero band — 0.34 over 160% rather than 0.4 over 150% — because the strip is
-     a third of the height and the full-strength glow reads as a red wash on it
-     rather than as a corner. Same red, same single sanctioned use. */
-  --band-glow-slim: radial-gradient(
-    110% 160% at 100% 0%,
-    rgb(242 101 34 / 0.34) 0%,
-    rgb(94 26 51 / 0) 56%
-  );
-  /* The dark callout's glow: the band's shape in YELLOW, for the two panels the
-     artifacts draw on near-black inside the daylight half — the FAST capacity
-     note and the period-integrity warning. */
-  --callout-glow: radial-gradient(
-    120% 165% at 100% 0%,
-    rgb(242 101 34 / 0.15) 0%,
-    rgb(94 26 51 / 0) 60%
-  );
-  --brand-glow: radial-gradient(circle, rgb(242 101 34 / 0.22) 0%, rgb(242 101 34 / 0) 68%);
-
-  /* SHADOWS. Warm-brown rather than neutral black, so a lifted card reads as
-     paper on peach instead of as a grey box on a warm field. */
-  --shadow-soft: 0 1px 2px rgb(120 80 70 / 0.05);
-  --shadow-raised: 0 1px 2px rgb(120 80 70 / 0.05), 0 14px 30px -18px rgb(120 80 70 / 0.5);
-  --shadow-float: 0 4px 12px rgb(120 80 70 / 0.08), 0 20px 48px -20px rgb(120 80 70 / 0.55);
-  /* Coral-tinted, and ONLY for attention surfaces. */
-  --shadow-attention: 0 1px 2px rgb(120 80 70 / 0.05), 0 14px 30px -18px rgb(196 60 74 / 0.55);
-  --shadow-rail-active: 0 1px 3px rgb(60 58 54 / 0.28);
-  /* The ask bar's hard yellow underline, and the glow it gains on focus. */
-  --shadow-ask: 0 4px 0 var(--bcs-orange);
-  --shadow-ask-focus: 0 4px 0 var(--bcs-orange), 0 0 0 4px var(--ring-glow);
+  /* SHADOWS. Neutral Charcoal, low and soft. */
+  --shadow-soft: 0 1px 2px rgb(61 58 56 / 0.06);
+  --shadow-raised: 0 1px 2px rgb(61 58 56 / 0.06), 0 2px 8px rgb(61 58 56 / 0.08);
+  --shadow-float: 0 2px 6px rgb(61 58 56 / 0.08), 0 12px 32px rgb(61 58 56 / 0.16);
+  --shadow-attention: 0 1px 2px rgb(61 58 56 / 0.06), 0 8px 24px -12px rgb(170 76 71 / 0.45);
+  --shadow-rail-active: 0 1px 3px rgb(0 0 0 / 0.25);
+  /* The ask bar's hard Dark Tokyo Green underline; Charcoal while focused. */
+  --shadow-ask: 0 4px 0 var(--bcs-tokyo-dark), 0 2px 8px rgb(61 58 56 / 0.08);
+  --shadow-ask-focus: 0 4px 0 var(--bcs-charcoal), 0 0 0 4px rgb(255 255 255 / 0.7);
   --halo-alarm-dot: 0 0 0 4px rgb(255 255 255 / 0.3);
 }
 
@@ -448,6 +311,7 @@
   --color-sidebar-active: var(--sidebar-active);
   --color-sidebar-active-foreground: var(--sidebar-active-foreground);
   --color-sidebar-icon: var(--sidebar-icon);
+  --color-rail-hover: var(--rail-hover);
 
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
@@ -462,6 +326,7 @@
 
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
   --color-primary-soft-foreground: var(--primary-soft-foreground);
@@ -498,11 +363,15 @@
   --color-followup-attention-soft: var(--followup-attention-soft);
   --color-followup-attention-soft-foreground: var(--followup-attention-soft-foreground);
   --color-followup-attention-muted-foreground: var(--followup-attention-muted-foreground);
+  --color-followup-attention-mark: var(--followup-attention-mark);
   --color-glow-accent: var(--glow-accent);
   --color-brand-accent: var(--brand-accent);
   --color-brand-accent-foreground: var(--brand-accent-foreground);
   --color-brand-accent-soft: var(--brand-accent-soft);
   --color-brand-accent-soft-foreground: var(--brand-accent-soft-foreground);
+  --color-rating-star: var(--rating-star);
+  --color-rating-star-fill: var(--rating-star-fill);
+  --color-rating-star-empty: var(--rating-star-empty);
   --color-topbar: var(--topbar);
   --color-topbar-foreground: var(--topbar-foreground);
   --color-rail: var(--rail);
@@ -559,17 +428,31 @@
 
   --color-ring: var(--ring);
 
-  --font-display: var(--font-fredoka), ui-sans-serif, system-ui, sans-serif;
-  /* Logotypes only — see the note in layout.tsx. */
-  --font-wordmark: var(--font-fredoka), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-lato), ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", sans-serif;
+  /*
+   * BRAND FACES FIRST, TEMPORARY FALLBACKS AFTER — see layout.tsx.
+   *
+   *   Headlines   Supria Sans Black  -> fallback: Archivo 900 (OFL)
+   *   Body        Avenir Next        -> fallback: Figtree (OFL)
+   *
+   * Neither licensed face is self-hosted yet. A device that has one installed
+   * (Avenir Next ships with macOS and iOS) uses it; everyone else gets the
+   * labelled fallback. Swap the fallback for next/font/local once the web
+   * licences and files arrive — nothing else changes.
+   */
+  --font-display: "Supria Sans", var(--font-archivo), "Arial Black", ui-sans-serif,
+    system-ui, sans-serif;
+  /* Logotypes only — the Ask Bubbles wordmark. */
+  --font-wordmark: "Supria Sans", var(--font-archivo), "Arial Black", ui-sans-serif,
+    system-ui, sans-serif;
+  --font-sans: "Avenir Next", "Avenir", var(--font-figtree), ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", sans-serif;
 
   --radius-xs: 0.375rem;
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
   --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
 
   --shadow-soft: var(--shadow-soft);
   --shadow-raised: var(--shadow-raised);
@@ -602,17 +485,21 @@
     font-weight: 600;
   }
 
-  /* Visible, calm focus ring everywhere. */
   /*
-   * The direction defines exactly one focus treatment — the ask bar's yellow
-   * glow — so every focusable thing gets that same yellow, and the glow with
-   * it. No new colour is invented for focus.
+   * Visible focus everywhere: a Dark Tokyo Green ring (4.67:1 on white) with
+   * a soft Tokyo Green halo. On the Charcoal rail the ring switches to Tokyo
+   * Green, which is the colour that clears 3:1 there (5.71:1).
    */
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
     border-radius: 0.375rem;
     box-shadow: 0 0 0 4px var(--ring-glow);
+  }
+
+  .bg-sidebar :focus-visible,
+  .bg-rail :focus-visible {
+    outline-color: var(--brand-accent);
   }
 
   ::selection {
@@ -753,25 +640,23 @@
   }
 
   /* ==========================================================================
-     THE DISPLAY TREATMENT
+     THE DISPLAY TREATMENT — Supria Sans Black (fallback Archivo 900)
 
-     Passion One at 400, uppercase, with POSITIVE tracking and a line-height at
-     or under 1 — the opposite of the tight-tracked semibold sans the build used
-     before, and the thing that lets a 38px figure out-rank a 30px greeting
-     instead of tying with it.
+     The brand guidelines: "Use Supria Sans as a headline font the majority of
+     the time. Supria Sans is clearer and easier to read. It also works better
+     in sentence long headlines." So headings are sentence case at weight 900,
+     slightly widened (`font-stretch` reaches Archivo's width axis and is
+     ignored by a face without one), with tight tracking.
 
-     Applied as classes rather than a blanket `h1,h2,h3` rule on purpose. The
-     direction demonstrates the face on specific objects — the greeting, card
-     titles, section labels, figures, answer headings — and a global element
-     rule would also uppercase every admin table caption and form label the
-     artifact never shows, at sizes where this face stops being readable.
+     Applied as classes rather than a blanket `h1,h2,h3` rule on purpose: the
+     face is for headings and figures, never for labels or table cells.
      ====================================================================== */
   .display {
     font-family: var(--font-display);
-    font-weight: 400;
-    letter-spacing: 0.014em;
-    line-height: 1;
-    text-transform: uppercase;
+    font-weight: 900;
+    font-stretch: 112%;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
     text-wrap: balance;
   }
 
@@ -779,40 +664,43 @@
      that hold their column when the value changes. */
   .display-figure {
     font-family: var(--font-display);
-    font-weight: 400;
-    letter-spacing: 0.012em;
+    font-weight: 900;
+    font-stretch: 110%;
+    letter-spacing: -0.01em;
     line-height: 0.9;
     font-variant-numeric: tabular-nums;
   }
 
-  /* The logotype. Wide-tracked geometric sans, and never anything but a mark. */
+  /* The Ask Bubbles logotype, set in the headline face. Never anything but a
+     mark. */
   .wordmark {
     font-family: var(--font-wordmark);
-    font-weight: 500;
-    letter-spacing: 0.22em;
-    line-height: 1;
+    font-weight: 900;
+    font-stretch: 118%;
+    letter-spacing: 0.03em;
+    line-height: 0.95;
     text-transform: uppercase;
     white-space: nowrap;
   }
   .wordmark-sub {
     font-family: var(--font-wordmark);
-    font-weight: 500;
-    letter-spacing: 0.17em;
+    font-weight: 900;
+    font-stretch: 112%;
+    letter-spacing: 0.04em;
     line-height: 1;
     text-transform: uppercase;
     white-space: nowrap;
   }
 
   /*
-   * Eyebrow: smaller, heavier and much wider than before. At 900 and .14em it
-   * reads as a label rather than as small body copy, which is what keeps it
-   * from competing with the figure underneath it.
+   * Eyebrow: a small, bold, widely tracked label in the body face. Large enough
+   * to read (11px) — the approved design dropped the old 8px size.
    */
   .eyebrow {
     font-family: var(--font-sans);
-    font-size: 0.5rem;
-    font-weight: 900;
-    letter-spacing: 0.14em;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--muted-foreground);
   }
@@ -820,8 +708,8 @@
   /* A slightly larger eyebrow for places that carry no figure beneath them. */
   .eyebrow-lg {
     font-family: var(--font-sans);
-    font-size: 0.5625rem;
-    font-weight: 900;
+    font-size: 0.75rem;
+    font-weight: 700;
     letter-spacing: 0.13em;
     text-transform: uppercase;
     color: var(--muted-foreground);
@@ -839,12 +727,33 @@
     border-radius: 22px;
     padding: 0.5rem 0.875rem;
     font-family: var(--font-sans);
-    font-size: 0.5625rem;
-    font-weight: 900;
-    letter-spacing: 0.08em;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     white-space: nowrap;
     line-height: 1;
+  }
+
+  /*
+   * THE WAVY EDGE under a Tokyo Green band — the brand's torn-paper wave from
+   * the 2023 guidelines' pattern page, drawn once per screen at most. The wave
+   * image is used as a MASK, so it always takes the band's own colour.
+   */
+  .wave-edge {
+    position: relative;
+  }
+  .wave-edge::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: -13px;
+    height: 14px;
+    background: var(--band);
+    transform: scaleY(-1);
+    -webkit-mask: var(--wave-edge) repeat-x 0 0 / auto 100%;
+    mask: var(--wave-edge) repeat-x 0 0 / auto 100%;
+    pointer-events: none;
   }
 
   /* ==========================================================================
@@ -870,9 +779,9 @@
 
   .data-table thead th {
     font-family: var(--font-sans);
-    font-size: 0.5rem;
-    font-weight: 900;
-    letter-spacing: 0.14em;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--subtle-foreground);
     text-align: left;

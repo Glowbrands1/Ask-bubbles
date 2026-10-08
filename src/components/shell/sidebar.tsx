@@ -58,25 +58,24 @@ export function SidebarNav({
   return (
     <div className="flex h-full flex-col bg-sidebar">
       {/*
-        THE DRAWER ONLY. On desktop the shell's navy top bar carries the
-        wordmark, so repeating it here would put two Ask Bubbles marks on screen.
-        The drawer slides over the content with no bar above it, so it still
-        needs one.
+        THE ASK BUBBLES LOGO LEADS THE RAIL, on desktop and in the drawer — the
+        approved layout. The shell's white top bar carries the Buff City Soap
+        logo instead, so the two marks never compete; the top bar shows the
+        product wordmark only on small screens, where this rail is a drawer.
       */}
       <div
         className={cn(
-          "flex h-16 shrink-0 items-center border-b border-border",
-          isCollapsed ? "justify-center px-2" : "justify-between px-5",
-          variant === "desktop" && "hidden",
+          "flex shrink-0 items-center border-b border-rail-border",
+          isCollapsed ? "h-16 justify-center px-2" : "px-5 pt-[22px] pb-[18px]",
         )}
       >
         {isCollapsed ? (
           <Link href={homeHref} aria-label={`${ACTIVE_BRAND.productName} — start`} onClick={onNavigate}>
-            <BubbleMark className="size-6" />
+            <BubbleMark className="size-8" onDark />
           </Link>
         ) : (
           <Link href={homeHref} onClick={onNavigate} aria-label={`${ACTIVE_BRAND.productName} — start`}>
-            <BrandMark size="md" />
+            <BrandMark size="md" onDark stacked />
           </Link>
         )}
       </div>
@@ -92,12 +91,12 @@ export function SidebarNav({
                 className={cn(
                   /*
                     THE RAIL'S OWN INK, not the canvas muted `.eyebrow` paints
-                    itself with — that lands at 1.92:1 on #b2aeaa. Of the
-                    approved values only #2b2926 and #454240 clear 4.5:1 on this
-                    surface, and section labels take the lighter of the two.
+                    itself with, which is too dark on Charcoal. The rail label
+                    (35% Charcoal on White) clears 5.8:1 here — the admin label
+                    included, which used to take a teal ink that would land at
+                    1.85:1 on this rail.
                   */
                   "eyebrow mb-2 flex items-center gap-1.5 px-2.5 text-sidebar-muted",
-                  section.admin && "text-brand-accent-soft-foreground",
                 )}
               >
                 {section.admin ? <Lock className="size-2.5" aria-hidden /> : null}
@@ -117,30 +116,23 @@ export function SidebarNav({
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "group relative flex items-center gap-2.5 rounded-[var(--radius-sm)] text-[13px] font-medium transition-colors",
-                      isCollapsed ? "justify-center px-0 py-2.5" : "px-2.5 py-2",
+                      "group relative flex items-center gap-3 rounded-[var(--radius-sm)] text-[14px] transition-colors",
+                      isCollapsed ? "justify-center px-0 py-2.5" : "px-3 py-[9px]",
                       /*
-                       * SELECTED AND HOVERED BOTH LAND ON THE CANVAS, which is
-                       * what the approved mockup shows: a pale pill on the grey
-                       * rail. The previous pair was two greys a shade apart, so
-                       * hovering an item barely changed it and the selected one
-                       * still read as dark.
-                       *
-                       * What separates them is depth and weight, not hue — the
-                       * selected item keeps its shadow and its coloured icon,
-                       * so a hover never impersonates the current page.
+                       * THE CURRENT PAGE IS THE TOKYO GREEN PILL with Charcoal
+                       * text (5.71:1) — the rail's one colour. A hover is a
+                       * step lighter Charcoal and keeps the white text, so it
+                       * can never be mistaken for the current page.
                        */
                       active
-                        ? "bg-sidebar-active text-sidebar-active-foreground shadow-rail-active"
-                        : "text-sidebar-foreground hover:bg-hover-surface hover:text-foreground",
+                        ? "bg-sidebar-active font-bold text-sidebar-active-foreground shadow-rail-active"
+                        : "font-medium text-sidebar-foreground hover:bg-rail-hover",
                     )}
                   >
                     <Icon
                       className={cn(
-                        "size-4 shrink-0",
-                        active
-                          ? "text-sidebar-active-foreground"
-                          : "text-sidebar-foreground group-hover:text-foreground",
+                        "size-[18px] shrink-0",
+                        active ? "text-sidebar-active-foreground" : "text-sidebar-foreground",
                       )}
                       aria-hidden
                     />
@@ -164,7 +156,7 @@ export function SidebarNav({
                     {item.href === "/forms/monitoring" && overdueFollowUps > 0 ? (
                       <span
                         className={cn(
-                          "grid h-4 min-w-4 shrink-0 place-items-center rounded-full bg-followup-attention px-1.5 text-[8px] font-black text-followup-attention-foreground",
+                          "grid h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full bg-followup-attention px-1.5 text-[11px] font-bold text-followup-attention-foreground tabular-nums",
                           isCollapsed
                             ? "absolute top-1 right-1"
                             : "ml-auto",
@@ -177,7 +169,12 @@ export function SidebarNav({
                     {!isCollapsed && section.admin ? (
                       <span
                         aria-hidden
-                        className="ml-auto rounded-full bg-primary-soft px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-primary-soft-foreground uppercase"
+                        className={cn(
+                          "ml-auto rounded-full border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase",
+                          active
+                            ? "border-sidebar-active-foreground/30 text-sidebar-active-foreground"
+                            : "border-rail-border text-sidebar-muted",
+                        )}
                       >
                         Admin
                       </span>
@@ -202,14 +199,18 @@ export function SidebarNav({
         ))}
       </nav>
 
-      <div className="shrink-0 border-t border-border p-3">
-        <UserMenu collapsed={isCollapsed} onNavigate={onNavigate} />
+      {/*
+        THE SIGNED-IN PERSON, at the foot of the rail. Name, role, email and
+        scope all come from the session (the server-resolved profile), never
+        from fixed copy. The menu opens upward from here.
+      */}
+      <div className="shrink-0 space-y-1.5 border-t border-rail-border p-3">
         {variant === "desktop" && onToggleCollapse ? (
           <button
             type="button"
             onClick={onToggleCollapse}
             className={cn(
-              "mt-2 flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-2 text-xs font-medium text-sidebar-muted transition-colors hover:bg-hover-surface hover:text-foreground",
+              "flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium text-sidebar-muted transition-colors hover:bg-rail-hover hover:text-sidebar-foreground",
               isCollapsed && "justify-center px-0",
             )}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -224,6 +225,7 @@ export function SidebarNav({
             {!isCollapsed ? "Collapse sidebar" : null}
           </button>
         ) : null}
+        <UserMenu collapsed={isCollapsed} onNavigate={onNavigate} />
       </div>
     </div>
   );

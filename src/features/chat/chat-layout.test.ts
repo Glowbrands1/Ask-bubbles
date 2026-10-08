@@ -100,12 +100,12 @@ describe("the conversation is the flexible region and the composer is not", () =
     // `shrink-0` is what stops a flex sibling from compressing it; without it a
     // long answer would squeeze the input rather than scroll.
     //
-    // THE BORDER IS NO LONGER PART OF THIS ASSERTION. It pinned the literal
-    // `border-t border-border`, and the Marquee Chat artifact docks the composer
-    // on near-black behind a 4px yellow top edge — so the old string described a
-    // hairline that is deliberately gone. The layout guarantee is `shrink-0`,
-    // which is what this test is for and what is checked.
-    expect(COMPOSER_CODE).toMatch(/className="shrink-0 border-t-4 border-brand-accent/);
+    // THE BORDER IS ONLY THE ANCHOR, not the guarantee. The approved Buff City
+    // Soap design docks the composer on White behind a Cloud hairline, so the
+    // dock's class list starts `shrink-0 border-t border-border`. The layout
+    // guarantee is `shrink-0`, which is what this test is for and what is
+    // checked.
+    expect(COMPOSER_CODE).toMatch(/className="shrink-0 border-t border-border/);
     /*
      * `flex-1` IS PERMITTED INSIDE THE DOCK, on the disclaimer that shares a
      * row with the mode control — it is not on the dock's own container, which
@@ -114,7 +114,7 @@ describe("the conversation is the flexible region and the composer is not", () =
      * reason.
      */
     const container = COMPOSER_CODE.slice(
-      COMPOSER_CODE.indexOf('className="shrink-0 border-t-4'),
+      COMPOSER_CODE.indexOf('className="shrink-0 border-t border-border'),
     ).slice(0, 200);
     expect(container).not.toMatch(/\bflex-1\b/);
   });

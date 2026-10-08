@@ -939,8 +939,8 @@ function RatingStars({ rating }: { rating: number }) {
           className={cn(
             "size-3.5",
             value <= rating
-              ? "fill-brand-accent text-brand-accent"
-              : "text-border-strong",
+              ? "fill-rating-star-fill text-rating-star"
+              : "text-rating-star-empty",
           )}
         />
       ))}

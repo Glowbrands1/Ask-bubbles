@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils/cn";
 import { formatDate } from "@/lib/utils/date";
 import { formatNumber, pluralize } from "@/lib/utils/format";
 
+import { JumpToRow } from "@/components/shell/jump-to-row";
 import { AskBand } from "./ask-band";
 import { OverviewStrip } from "./overview-strip";
 
@@ -96,6 +97,8 @@ export function OverviewScreen({ followUps: followUpData }: { followUps: Overvie
       ) : null}
 
       <PageShell className={cn(askActive && "hidden")}>
+        <JumpToRow className="mb-6" />
+
         {showForms ? (
           <>
             <SectionRule label="Follow-ups" className="mb-4" />

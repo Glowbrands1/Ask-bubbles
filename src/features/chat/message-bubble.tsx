@@ -81,17 +81,17 @@ export function MessageBubble({
      */
     return (
       <div className="flex items-start justify-end gap-3">
-        <div className="max-w-[44ch] rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3 shadow-soft">
-          <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap text-foreground">
+        <div className="max-w-[44ch] rounded-[18px] rounded-br-[4px] bg-selected px-4 py-3">
+          <p className="text-[14px] leading-relaxed whitespace-pre-wrap text-selected-foreground">
             {message.content}
           </p>
-          <p className="mt-1.5 text-[9.5px] text-muted-foreground">
+          <p className="mt-1.5 text-[11px] text-sidebar-muted">
             {formatChatTime(message.createdAt)}
           </p>
         </div>
         {/* The warm neutral, not the grey: the manager's initials on the peach
             ground need a tint that belongs to it. */}
-        <span className="mt-0.5 flex size-[30px] shrink-0 items-center justify-center rounded-full bg-border-strong text-[10px] font-black text-primary-soft-foreground">
+        <span className="mt-0.5 flex size-[30px] shrink-0 items-center justify-center rounded-full bg-accent-soft text-[11px] font-bold text-foreground">
           {user.avatarInitials}
         </span>
       </div>
@@ -130,7 +130,7 @@ export function MessageBubble({
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <span className="display text-[16px] text-foreground">Bubbles</span>
             {message.mode ? (
-              <span className="rounded-[var(--radius-xs)] bg-brand-accent px-2 py-[3px] text-[8.5px] font-black tracking-[0.08em] uppercase text-brand-accent-foreground">
+              <span className="rounded-full border border-accent-hover bg-accent-soft px-2 py-[3px] text-[11px] font-bold text-accent-soft-foreground">
                 {ANSWER_MODE_LABEL[message.mode]}
               </span>
             ) : null}

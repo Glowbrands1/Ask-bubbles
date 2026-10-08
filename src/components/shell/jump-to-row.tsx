@@ -13,6 +13,7 @@ import {
 
 import { DASHBOARD_QUICK_ACTIONS } from "@/data/quick-actions";
 import { useSession } from "@/lib/session/session-context";
+import { cn } from "@/lib/utils/cn";
 
 export const QUICK_ACTION_ICONS: Record<string, LucideIcon> = {
   "message-circle": MessageCircle,
@@ -22,35 +23,19 @@ export const QUICK_ACTION_ICONS: Record<string, LucideIcon> = {
 };
 
 /**
- * THE SHORTCUT ROW, IN THE CHROME.
+ * THE HOME SHORTCUTS — a quiet row of equal secondary buttons directly under
+ * the Tokyo Green ask band, as in the approved design. Every one of them also
+ * exists in the rail, so they are navigation, not calls to action: White with
+ * a Charcoal-tint border, and no colour of their own, so they never compete
+ * with the band above them.
  *
- * They used to be white elevated cards on the canvas, directly above the Ask
- * Bubbles card — which made the quietest content on the page the loudest object
- * on it. The direction's argument is that they are NAVIGATION: every one
- * of them already exists in the left rail, so they belong in the dark chrome as
- * one uniform row, out of the hero's way.
+ * ONE TREATMENT FOR THE WHOLE ROW. No single highlighted chip: the row is a
+ * set of equal shortcuts, and if one needs to lead it leads by being first.
  *
- * ONE TREATMENT FOR THE WHOLE ROW. No single highlighted chip: the row is a set
- * of equal shortcuts, and if one needs to lead it leads by being first.
- *
- * THE OUTLINE AND THE ICONS ARE YELLOW, asked for directly after seeing the
- * hovered chip and preferring it to the resting one. So the hover treatment is
- * now the resting treatment, and hover keeps somewhere to go: the LABEL turns
- * yellow on hover, which lands the hovered chip exactly where the requested
- * screenshot had it.
- *
- * THE LABEL STAYS LIGHT AT REST for the same reason the row is in the chrome at
- * all. A row of solid yellow text is the whole row shouting, and it would
- * out-weigh the band's yellow send button directly beneath it. An outline and a
- * 12px glyph are enough to carry the colour.
- *
- * OVERVIEW ONLY. The direction places this row structurally in the chrome but
- * only ever demonstrates it above the band, and a permanent row on every screen
- * would duplicate the rail over dense report tables the artifact never shows.
- * If the click data justifies it later, widening the condition is a one-line
- * change; the row can also come out entirely, which the direction anticipates.
+ * OVERVIEW ONLY. A permanent row on every screen would duplicate the rail. The
+ * path check stays so the component is safe wherever it is placed.
  */
-export function JumpToRow() {
+export function JumpToRow({ className }: { className?: string }) {
   const pathname = usePathname();
   const { can } = useSession();
   if (pathname !== "/") return null;
@@ -58,7 +43,7 @@ export function JumpToRow() {
   return (
     <nav
       aria-label="Shortcuts"
-      className="hidden shrink-0 flex-wrap items-center gap-1.5 border-b border-chrome-border bg-chrome px-5 py-2.5 lg:flex"
+      className={cn("flex flex-wrap items-center gap-2", className)}
     >
       {DASHBOARD_QUICK_ACTIONS
         /*
@@ -70,11 +55,11 @@ export function JumpToRow() {
         .map((action) => {
         const Icon = QUICK_ACTION_ICONS[action.iconKey] ?? Sparkles;
         const className =
-          "inline-flex items-center gap-2 rounded-full border border-brand-accent px-3 py-1.5 text-[10.5px] font-bold text-band-chip-foreground transition-colors hover:text-brand-accent";
+          "inline-flex h-8 items-center gap-2 rounded-[var(--radius-sm)] border border-border-strong bg-surface px-3 text-[12px] font-semibold text-foreground transition-colors hover:border-primary hover:bg-hover-surface";
 
         const content = (
           <>
-            <Icon className="size-3 shrink-0 text-brand-accent" aria-hidden />
+            <Icon className="size-3.5 shrink-0 text-foreground" aria-hidden />
             {action.label}
           </>
         );

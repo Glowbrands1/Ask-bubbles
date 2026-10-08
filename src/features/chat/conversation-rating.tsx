@@ -256,8 +256,8 @@ export function ConversationRating({
                   className={cn(
                     "size-3.5",
                     value <= saved.rating
-                      ? "fill-brand-accent text-brand-accent"
-                      : "text-border-strong",
+                      ? "fill-rating-star-fill text-rating-star"
+                      : "text-rating-star-empty",
                   )}
                 />
               ))}
@@ -366,8 +366,8 @@ export function ConversationRating({
                   className={cn(
                     "size-5 transition-colors",
                     active
-                      ? "fill-brand-accent text-brand-accent"
-                      : "text-border-strong",
+                      ? "fill-rating-star-fill text-rating-star"
+                      : "text-rating-star-empty",
                   )}
                 />
                 <span className="sr-only">

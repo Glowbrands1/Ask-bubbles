@@ -4,11 +4,11 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils/cn";
 
 const badgeVariants = cva(
-  "inline-flex items-center gap-1.5 rounded-full border font-medium leading-none whitespace-nowrap",
+  "inline-flex items-center gap-1.5 rounded-full border font-semibold leading-none whitespace-nowrap",
   {
     variants: {
       tone: {
-        neutral: "border-border-strong bg-surface-muted text-muted-foreground",
+        neutral: "border-border bg-surface-muted text-muted-foreground",
         primary:
           "border-[color-mix(in_srgb,var(--primary)_22%,transparent)] bg-primary-soft text-primary-soft-foreground",
         accent:

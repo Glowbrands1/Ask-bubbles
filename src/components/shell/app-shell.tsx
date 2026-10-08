@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Menu, Search, X } from "lucide-react";
 
-import { BrandMark, ParentBrandLockup } from "@/components/brand-mark";
+import { BrandMark, BuffCitySoapLogo } from "@/components/brand-mark";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/overlays";
@@ -12,7 +12,6 @@ import { LoginScreen } from "@/features/auth/login-screen";
 import { useSession } from "@/lib/session/session-context";
 import { cn } from "@/lib/utils/cn";
 import { usePreference, writePreference } from "@/lib/utils/client-store";
-import { JumpToRow } from "./jump-to-row";
 import { SidebarNav } from "./sidebar";
 import { GlobalSearch } from "./global-search";
 import { ACTIVE_BRAND } from "@/lib/brand";
@@ -33,6 +32,16 @@ export function AppShell({
 }) {
   const { hydrated, signedIn, demoMode, role } = useSession();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Escape closes the mobile drawer, as it closes every other overlay.
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDrawerOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
 
   // Read straight from the external store — no effect, no cascading render.
   const collapsed = usePreference("local", COLLAPSE_KEY, "0") === "1";
@@ -59,83 +68,15 @@ export function AppShell({
   if (!signedIn) return <LoginScreen />;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
+    <div className="flex min-h-dvh bg-background">
       {/*
-        THE SHARED TOP BAR. Navy, full width, above BOTH the rail and the
-        content — the approved storefront structure, and it belongs to the shell
-        rather than to any one page. Putting it on the reporting page alone
-        would have made reporting look like a different product.
+        THE RAIL RUNS THE FULL HEIGHT, led by the Ask Bubbles logo — the
+        approved layout. It is Charcoal, the darker of the two shell surfaces,
+        so the white top bar beside it reads as part of the page.
       */}
-      <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 bg-chrome px-4 sm:px-5">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Open navigation"
-          onClick={() => setDrawerOpen(true)}
-          className="text-topbar-foreground hover:bg-hover-surface hover:text-hover-surface-foreground lg:hidden"
-        >
-          <Menu />
-        </Button>
-
-        <Link href={defaultLandingForRole(role)} aria-label={`${ACTIVE_BRAND.productName} — start`} className="shrink-0">
-          <BrandMark size="md" onDark />
-        </Link>
-
-        <div className="ml-auto flex items-center gap-1.5">
-          {demoMode ? (
-            <Badge tone="primary" size="sm">
-              Demo
-            </Badge>
-          ) : null}
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Search ${ACTIVE_BRAND.productName}`}
-                className="text-chrome-foreground hover:bg-hover-surface hover:text-hover-surface-foreground"
-              >
-                <Search />
-              </Button>
-            </DialogTrigger>
-            <DialogContent
-              title={`Search ${ACTIVE_BRAND.productName}`}
-              description="Documents, videos, forms, locations and screens."
-              wide
-            >
-              <GlobalSearch />
-            </DialogContent>
-          </Dialog>
-          {/*
-            The parent brand is present without competing: hidden on the
-            narrowest widths, where the product mark has to win outright.
-
-            THE BREAKPOINT DID NOT NEED TO MOVE WHEN THE LOCKUP GREW TO 18px,
-            and it was measured rather than guessed. In Jost at .22em the lockup
-            is 179px and Ask Bubbles is 178px, so at the `sm` floor of 640px —
-            with the mobile menu button also present — there is still ~190px of
-            clear space between the two marks and the bar does not scroll. A
-            first pass raised this to `lg` on an estimate; the measurement said
-            that was unnecessary, so it stayed at `sm`.
-          */}
-          <ParentBrandLockup className="hidden sm:inline-flex" />
-        </div>
-      </header>
-
-      {/*
-        THE SHORTCUTS LIVE IN THE CHROME. All six already exist in the left
-        rail, so as one quiet uniform row above the content they read as
-        navigation instead of competing with the page's hero. They were six
-        white elevated cards on the canvas, which made them the loudest object
-        on the Overview.
-      */}
-      <JumpToRow />
-
-      <div className="flex min-h-0 min-w-0 flex-1">
-      {/* Desktop sidebar */}
       <aside
         className={cn(
-          "sticky top-16 hidden h-[calc(100dvh-4rem)] shrink-0 border-r border-rail-border transition-[width] duration-200 lg:block",
+          "sticky top-0 hidden h-dvh shrink-0 transition-[width] duration-200 lg:block",
           collapsed ? "w-[68px]" : "w-64",
         )}
       >
@@ -147,21 +88,83 @@ export function AppShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {/*
+          THE SHARED TOP BAR, owned by the shell rather than any one page:
+          White with a Cloud hairline, search in the middle, and the official
+          Buff City Soap logo on the right in Tokyo Green. On small screens it
+          also carries the menu button and the product wordmark, because the
+          rail that holds the Ask Bubbles logo is a drawer there.
+        */}
+        <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b border-chrome-border bg-chrome px-3 text-chrome-foreground sm:gap-3 sm:px-6">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Open navigation"
+            onClick={() => setDrawerOpen(true)}
+            className="lg:hidden"
+          >
+            <Menu />
+          </Button>
+
+          <Link
+            href={defaultLandingForRole(role)}
+            aria-label={`${ACTIVE_BRAND.productName} — start`}
+            className="shrink-0 lg:hidden"
+          >
+            <BrandMark size="sm" />
+          </Link>
+
+          <DesktopSearchLauncher className="mx-auto" />
+
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
+            {demoMode ? (
+              <Badge tone="primary" size="sm">
+                Demo
+              </Badge>
+            ) : null}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Search ${ACTIVE_BRAND.productName}`}
+                  className="lg:hidden"
+                >
+                  <Search />
+                </Button>
+              </DialogTrigger>
+              <DialogContent
+                title={`Search ${ACTIVE_BRAND.productName}`}
+                description="Documents, videos, forms, locations and screens."
+                wide
+              >
+                <GlobalSearch />
+              </DialogContent>
+            </Dialog>
+            {/*
+              THE PARENT BRAND, in its own approved colour on White, with no box
+              around it — the logo rules forbid one. Sized by height so the
+              artwork keeps its proportions.
+            */}
+            <BuffCitySoapLogo priority className="h-10 sm:h-[50px]" />
+          </div>
+        </header>
+
         {/* Mobile drawer */}
         {drawerOpen ? (
           <div className="fixed inset-0 z-50 lg:hidden">
             <button
               type="button"
               aria-label="Close navigation"
-              className="absolute inset-0 bg-[color-mix(in_srgb,var(--foreground)_32%,transparent)] backdrop-blur-[2px]"
+              className="absolute inset-0 bg-[color-mix(in_srgb,var(--foreground)_45%,transparent)]"
               onClick={() => setDrawerOpen(false)}
             />
-            <div className="animate-in-fade absolute inset-y-0 left-0 w-[min(19rem,86vw)] border-r border-border shadow-float">
+            <div className="animate-in-fade absolute inset-y-0 left-0 w-[min(19rem,86vw)] shadow-float">
               <Button
                 variant="ghost"
                 size="iconSm"
                 aria-label="Close navigation"
-                className="absolute top-3.5 right-3 z-10"
+                className="absolute top-4 right-3 z-10 text-sidebar-foreground hover:bg-rail-hover hover:text-sidebar-foreground"
                 onClick={() => setDrawerOpen(false)}
               >
                 <X />
@@ -179,7 +182,6 @@ export function AppShell({
           {children}
         </main>
       </div>
-      </div>
     </div>
   );
 }
@@ -192,12 +194,17 @@ export function DesktopSearchLauncher({ className }: { className?: string }) {
         <button
           type="button"
           className={cn(
-            "hidden w-56 items-center gap-2 rounded-[var(--radius-sm)] border border-border bg-surface px-3 py-2 text-left text-[13px] text-muted-foreground shadow-soft transition-colors hover:border-border-strong lg:flex",
+            "hidden h-10 w-full max-w-[460px] items-center gap-2.5 rounded-full border border-border bg-surface-muted px-4 text-left text-[14px] text-muted-foreground transition-colors hover:border-border-strong lg:flex",
             className,
           )}
         >
-          <Search className="size-3.5 shrink-0" aria-hidden />
-          <span className="flex-1 truncate">Search {ACTIVE_BRAND.productName}</span>
+          <Search className="size-4 shrink-0" aria-hidden />
+          <span className="flex-1 truncate">
+            Search documents, forms, locations and screens
+            {/* Names the product for screen readers, after the visible words so
+                the accessible name still begins with what a voice user reads. */}
+            <span className="sr-only"> in {ACTIVE_BRAND.productName}</span>
+          </span>
         </button>
       </DialogTrigger>
       <DialogContent

@@ -213,7 +213,7 @@ export function SegmentedControl({
       }}
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-full border border-border bg-surface-muted p-0.5",
+        "inline-flex items-center gap-0.5 rounded-full border border-border bg-surface-muted p-[3px]",
         className,
       )}
     >
@@ -222,10 +222,10 @@ export function SegmentedControl({
           key={option.value}
           value={option.value}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-bold tracking-[0.04em] uppercase transition-colors",
+            "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-bold transition-colors",
             "text-muted-foreground hover:text-foreground",
             tone === "brand"
-              ? "data-[state=on]:bg-brand-accent data-[state=on]:text-brand-accent-foreground"
+              ? "data-[state=on]:bg-surface data-[state=on]:text-foreground data-[state=on]:shadow-raised"
               : "data-[state=on]:bg-selected data-[state=on]:text-selected-foreground",
           )}
         >
