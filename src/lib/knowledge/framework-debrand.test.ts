@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 // A plain ES module script, used by the CLI and tested here.
-import { prepareFramework } from "../../../scripts/knowledge/framework-debrand.mjs";
+import { prepareFramework, restoreAppName } from "../../../scripts/knowledge/framework-debrand.mjs";
 
 /**
  * The framework is prepared for Ask Bubbles by removing the source app's name
@@ -23,7 +23,7 @@ describe("preparing the framework", () => {
     expect(text).not.toMatch(/Sunny/);
     expect(text).toContain("# ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK");
     expect(text).toContain("This framework teaches Ask Bubbles how to think");
-    expect(text).toContain("Bubbles should never replace DM, HR, LP, or senior leadership approval. Bubbles’ role is to draft.");
+    expect(text).toContain("Bubbles should never replace DM, HR, LP, or senior leadership approval. Bubbles' role is to draft.");
     expect(text).toContain("ASK_BUBBLES_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT.txt");
     expect(text).toContain("### 10.7 Final operating rule for Ask Bubbles");
     expect(report.appNameLeft).toBe(0);
@@ -31,14 +31,24 @@ describe("preparing the framework", () => {
   });
 
   it("changes nothing else: undoing the app-name changes gives back the original exactly", () => {
-    const undone = text
-      .replace(/ASK BUBBLES/g, "ASK SUNNY")
-      .replace(/ASK_BUBBLES/g, "ASK_SUNNY")
-      .replace(/Ask Bubbles/g, "Ask Sunny")
-      .replace(/Bubbles’/g, "Sunny's")
-      .replace(/\bBubbles\b/g, "Sunny");
-    expect(undone).toBe(SAMPLE);
+    expect(restoreAppName(text)).toBe(SAMPLE);
+    expect(report.restoresExactly).toBe(true);
+    expect(report.targetNameInSource).toBe(0);
     expect(report.linesAfter).toBe(report.linesBefore);
+  });
+
+  it("keeps the source's bytes: line endings, a byte-order mark and its apostrophe style", () => {
+    const original = "\uFEFFAsk Sunny drafts.\r\nSunny's role; Sunny’s rule.\r\n";
+    const prepared = prepareFramework(original);
+    expect(prepared.text).toBe("\uFEFFAsk Bubbles drafts.\r\nBubbles' role; Bubbles’ rule.\r\n");
+    expect(restoreAppName(prepared.text)).toBe(original);
+    expect(prepared.report.restoresExactly).toBe(true);
+  });
+
+  it("says so when the round trip cannot be trusted: the source already says Bubbles", () => {
+    const { report: clash } = prepareFramework("Ask Sunny and Bubbles.");
+    expect(clash.targetNameInSource).toBe(1);
+    expect(clash.restoresExactly).toBe(false);
   });
 
   it("keeps the source company and its operational wording verbatim, and reports each for a decision", () => {

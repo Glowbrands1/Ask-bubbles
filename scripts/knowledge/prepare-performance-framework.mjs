@@ -22,9 +22,13 @@ if (!input || !outDir) {
   console.error("usage: prepare-performance-framework.mjs <original.txt> <out-dir>");
   process.exit(2);
 }
-const { text, report } = prepareFramework(readFileSync(input, "utf8").replace(/^﻿/, ""));
+const { text, report } = prepareFramework(readFileSync(input, "utf8"));
 if (report.appNameLeft !== 0) {
   console.error(`The app's name is still in the text ${report.appNameLeft} time(s); nothing was written.`);
+  process.exit(1);
+}
+if (report.targetNameInSource !== 0 || !report.restoresExactly) {
+  console.error("Undoing the app-name changes does not give back the original exactly; nothing was written.");
   process.exit(1);
 }
 mkdirSync(outDir, { recursive: true });

@@ -9,11 +9,16 @@
  * NAME removed. This module is that transformation, and nothing else:
  *
  *   "ASK SUNNY" → "ASK BUBBLES", "Ask Sunny" → "Ask Bubbles", and a bare
- *   "Sunny" (the app, named on its own) → "Bubbles", possessives included.
+ *   "Sunny" (the app, named on its own) → "Bubbles", possessives included
+ *   with the source's own apostrophe ("Sunny's" → "Bubbles'").
  *
- * NOTHING ELSE IS REWRITTEN. The source company's name, its operational
- * terms and every rule stay verbatim; the report lists them so a person can
- * decide on each (`flags`). Pure: text in, text and report out.
+ * NOTHING ELSE IS REWRITTEN — not a word, and not a byte: line endings, a
+ * byte-order mark and the apostrophe style are the source's. The source
+ * company's name, its operational terms, its role titles and every rule stay
+ * verbatim; the report lists them so a person can decide on each (`flags`).
+ * `restoreAppName` undoes the changes, and the original must come back exactly
+ * — that round trip is how "nothing else" is checked rather than assumed.
+ * Pure: text in, text and report out.
  */
 
 /** The app-name rules, applied in this order. */
@@ -21,9 +26,28 @@ export const APP_NAME_RULES = [
   { id: "ask_sunny_upper", pattern: /ASK SUNNY/g, replacement: "ASK BUBBLES" },
   { id: "ask_sunny_filename", pattern: /ASK_SUNNY/g, replacement: "ASK_BUBBLES" },
   { id: "ask_sunny", pattern: /Ask Sunny/g, replacement: "Ask Bubbles" },
-  { id: "sunny_possessive", pattern: /\bSunny['’]s\b/g, replacement: "Bubbles’" },
+  { id: "sunny_possessive", pattern: /\bSunny(['’])s\b/g, replacement: "Bubbles$1" },
   { id: "sunny_bare", pattern: /\bSunny\b/g, replacement: "Bubbles" },
 ];
+
+/** The inverse of `APP_NAME_RULES`, for the round-trip check. Reverse order. */
+const RESTORE_RULES = [
+  { pattern: /\bBubbles(['’])(?!\w)/g, replacement: "Sunny$1s" },
+  { pattern: /\bBubbles\b/g, replacement: "Sunny" },
+  { pattern: /Ask Bubbles/g, replacement: "Ask Sunny" },
+  { pattern: /ASK_BUBBLES/g, replacement: "ASK_SUNNY" },
+  { pattern: /ASK BUBBLES/g, replacement: "ASK SUNNY" },
+];
+
+/**
+ * Undoes the app-name changes. Meaningful only for text that did not already
+ * say "Bubbles" — `prepareFramework` reports that (`targetNameInSource`).
+ */
+export function restoreAppName(text) {
+  let out = text;
+  for (const rule of RESTORE_RULES) out = out.replace(rule.pattern, rule.replacement);
+  return out;
+}
 
 /** Wording kept verbatim and reported for a decision: the source company and its operations. */
 export const FLAGGED_TERMS = [
@@ -47,13 +71,15 @@ function lineOf(text, index) {
  * line it is on. `text` is the whole original file.
  */
 export function prepareFramework(text) {
-  const normalized = text.replace(/\r\n?/g, "\n");
   const changes = [];
-  let out = normalized;
+  let out = text;
   for (const rule of APP_NAME_RULES) {
-    out = out.replace(rule.pattern, (match, offset, whole) => {
-      changes.push({ rule: rule.id, line: lineOf(whole, offset), from: match, to: rule.replacement });
-      return rule.replacement;
+    out = out.replace(rule.pattern, (match, ...rest) => {
+      const offset = rest.at(-2);
+      const whole = rest.at(-1);
+      const to = match.replace(new RegExp(rule.pattern.source), rule.replacement);
+      changes.push({ rule: rule.id, line: lineOf(whole, offset), from: match, to });
+      return to;
     });
   }
   const flags = FLAGGED_TERMS.map((term) => {
@@ -71,7 +97,9 @@ export function prepareFramework(text) {
       appNameChanges: changes.length,
       byRule: Object.fromEntries(APP_NAME_RULES.map((rule) => [rule.id, changes.filter((change) => change.rule === rule.id).length])),
       appNameLeft: (out.match(/Sunny/g) ?? []).length,
-      linesBefore: normalized.split("\n").length,
+      targetNameInSource: (text.match(/Bubbles/g) ?? []).length,
+      restoresExactly: restoreAppName(out) === text,
+      linesBefore: text.split("\n").length,
       linesAfter: out.split("\n").length,
       changes,
       flags,
