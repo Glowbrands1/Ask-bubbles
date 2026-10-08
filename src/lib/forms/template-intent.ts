@@ -115,6 +115,9 @@ const TEMPLATE_INTENT: { key: string; matchers: string[] }[] = [
       "written warning",
       "verbal warning",
       "final warning",
+      // "Final written" is how managers say the final written warning.
+      "final written warning",
+      "final written",
       /*
        * "WRITE HER UP" NAMES THE ACT, AND THE ACT HAS ONE DOCUMENT.
        *
@@ -310,11 +313,17 @@ const TEMPLATE_INTENT: { key: string; matchers: string[] }[] = [
       "pre-screen form",
       "phone interview form",
       "prescreen interview",
+      // How managers say it: "phone screen for Sam", "pre-screen a candidate".
+      "phone screen",
+      "phone screening",
+      "phone interview",
+      "pre-screen",
+      "prescreen",
     ],
   },
   {
     key: "tanning-consultant-interview",
-    matchers: ["tanning consultant interview"],
+    matchers: ["tanning consultant interview", "tc interview"],
   },
   {
     key: "management-interview-round-1",
@@ -410,7 +419,7 @@ const EMPLOYMENT_CHANGE_SUBJECTS: { key: string; subjects: RegExp }[] = [
   {
     key: "demotion",
     subjects:
-      /\b(?:demot(?:e|ed|es|ing|ion|ions)|step(?:ping|s)?[\s-]+down|stepped\s+down|move\s+down\s+from\s+(?:manager|management)|moving\s+down\s+from\s+(?:manager|management)|step\s+back\s+from\s+management)\b/,
+      /\b(?:demot(?:e|ed|es|ing|ion|ions)|step(?:ping|s)?[\s-]+down|step\s+[a-z'’-]+(?:\s+[a-z'’-]+)?\s+down\s+(?:to|from)|stepped\s+down|move\s+down\s+from\s+(?:manager|management)|moving\s+down\s+from\s+(?:manager|management)|step\s+back\s+from\s+management)\b/,
   },
   {
     key: "position-transfer",
@@ -422,7 +431,7 @@ const EMPLOYMENT_CHANGE_SUBJECTS: { key: string; subjects: RegExp }[] = [
 const CHANGE_REQUEST_VERBS =
   /\b(?:create|make|start|draft|open|fill\s+out|fill\s+in|generate|prepare|pull\s+up|bring\s+up|get\s+me|need|needs|do\s+(?:a|an|the)|process|document|write\s+up|handle)\b/;
 
-const CHANGE_INSTRUCTION = /^(?:please\s+)?(?:demote|transfer|move)\s+[^\s.,!?;:]+/;
+const CHANGE_INSTRUCTION = /^(?:please\s+)?(?:demote|transfer|move|step)\s+[^\s.,!?;:]+/;
 
 const CHANGE_PARTICULARS =
   /\bfrom\b[^.?!\n]*\bto\b|→|->|\beffective\b|\blast\s+day\b|\bto\s+(?:salon|store|stc|sun\s+tan\s+city|location|#\s?\d)|\b\d{1,2}[/-]\d{1,2}\b|\b(?:yesterday|today|this\s+morning|last\s+night|this\s+week)\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b/;
@@ -486,7 +495,7 @@ const CORRECTIVE_ACTION_REQUEST = ["corrective action", "corrective actions"];
  *                           edit of "action(s)". "cor" is required so that
  *                           "collective action" — two edits away — is not.
  */
-const CA_SHORTHAND = /(?<![\w.])(?:c\.a\.?|ca)(?![\w])/gi;
+const CA_SHORTHAND = /(?<![\w./])(?:c\.a\.?|c\/a|ca)(?![\w/])/gi;
 
 /** Edits between two words, a swapped pair of letters ("actoin") counting as one. */
 function editDistance(a: string, b: string): number {
@@ -729,6 +738,8 @@ const AMBIGUOUS_FORM_REQUEST = [
   "get me a form",
   "send me a form",
   "pull up a form",
+  // Four interview forms are published; which one is the manager's choice.
+  "interview form",
   "write up",
   "write-up",
 ];
@@ -1120,7 +1131,7 @@ function requestedNaming(q: string, original: string): { key: string; phrase: st
  * `requestedNaming`.
  */
 const DECLINES_FORM =
-  /\b(?:(?:don'?t|do\s+not|doesn'?t|does\s+not|didn'?t)\s+(?:want|need)|not\s+(?:ready\s+for|looking\s+for)|no\s+need\s+for)\s+(?:(?:a|an|the|any)\s+)?(?:actual\s+|real\s+|official\s+)?(?:[a-z-]+\s+){0,2}?(?:form|forms|document|paperwork|write[- ]?up)\b|\bno\s+(?:actual\s+)?(?:form|forms|paperwork)\b|\bnot\s+(?:a|an)\s+(?:actual\s+)?form\b|\b(?:never\s*mind|forget)\s+(?:the|this|that)\s+form\b|\b(?:form|forms|paperwork)\s+not\s+yet\b/;
+  /\b(?:(?:don'?t|dont|do\s+not|doesn'?t|does\s+not|didn'?t)\s+(?:want|need|make|create|start|draft|file|open)|not\s+(?:ready\s+for|looking\s+for|doing|filing|making)|no\s+need\s+for|(?:skip|hold\s+off\s+on))\s+(?:(?:a|an|the|any)\s+)?(?:actual\s+|real\s+|official\s+)?(?:[a-z-]+\s+){0,2}?(?:form|forms|document|paperwork|write[- ]?up)\b|\bno\s+(?:actual\s+)?(?:form|forms|paperwork)\b|\bnot\s+(?:a|an)\s+(?:actual\s+)?form\b|\b(?:never\s*mind|forget)\s+(?:the|this|that)\s+form\b|\b(?:form|forms|paperwork)\s+not\s+yet\b/;
 
 function declinesForm(q: string): boolean {
   return DECLINES_FORM.test(q);

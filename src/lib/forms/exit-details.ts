@@ -2,6 +2,7 @@ import { JOIN } from "./bounded-context";
 import { isQuestion } from "./employment-change";
 import { EXIT_DETAIL_FIELDS, EXIT_NOTICE_GROUP, EXIT_TYPE_GROUP } from "./exit-library";
 import { EXIT_DERIVED_KEYS, exitFactValues, readExitFacts, type ExitFacts } from "./exit-facts";
+import { repairContractions } from "./typed-contractions";
 
 /**
  * ============================================================================
@@ -79,7 +80,7 @@ export const EXIT_STATED_KEYS: ReadonlySet<string> = new Set([
 /* ------------------------------------------------------------ the words -- */
 
 function normalize(text: string): string {
-  return (text ?? "").replace(/[‘’‛]/g, "'").replace(/[“”]/g, '"');
+  return repairContractions((text ?? "").replace(/[‘’‛]/g, "'").replace(/[“”]/g, '"'));
 }
 
 /** A negation close enough before a word to reverse it. */

@@ -97,7 +97,7 @@ export const CONTINUATION_ANSWER_LOOKBACK = 3;
  * that", "no form", "forget the form".
  */
 const ENDS_INTAKE =
-  /\b(?:never\s*mind|nevermind|cancel(?:\s+(?:it|that|this|the\s+form))?|forget\s+(?:it|that|the\s+form|about\s+it)|no\s+form|don'?t\s+(?:want|need)\s+(?:a|an|the)?\s*form|stop\s+(?:it|that|this|the\s+form))\b/i;
+  /\b(?:never\s*mind|nevermind|cancel(?:\s+(?:it|that|this|the\s+form))?|forget\s+(?:it|that|the\s+form|about\s+it)|no\s+form|(?:don'?t|dont|do\s+not)\s+(?:want|need|make|create|start|draft|file|do|open)\s+(?:a|an|the|this|that|any)?\s*(?:form|paperwork|one)|(?:don'?t|dont|do\s+not)\s+(?:make|create|start|draft|file)\s+(?:it|that|this)|no\s+need\s+for\s+(?:a|the)\s+form|(?:skip|drop|hold\s+off\s+on)\s+(?:the|this|that)\s+form|not\s+(?:doing|filing|making)\s+(?:a|the)\s+form|stop\s+(?:it|that|this|the\s+form))\b/i;
 
 export function endsIntake(text: string): boolean {
   return ENDS_INTAKE.test(text);

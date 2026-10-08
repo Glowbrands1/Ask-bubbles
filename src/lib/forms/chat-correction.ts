@@ -244,7 +244,8 @@ async function correctFromFormReaders(input: {
     .map((key) => describe(document, variantKey, key, submitted, { before, after }))
     .filter((line): line is string => line !== null);
   const lines = [
-    `Updated the ${who}: ${described.length > 0 ? described.join("; ") : "Resignation Details boxes cleared"}.`,
+    // A Details line is its own sentence ("…eligible for rehire."), so no second full stop.
+    `Updated the ${who}: ${described.length > 0 ? described.join("; ") : "Resignation Details boxes cleared"}.`.replace(/\.\.$/, "."),
   ];
   if (rewritten) {
     written.push(rewritten);
@@ -289,10 +290,12 @@ function samePerson(named: string, employee: string): boolean {
  * save, and a reply in the form's own labels with a `formUpdate` the browser
  * uses to refresh the open form.
  *
- * WHAT WAS NOT is the reference company's own field readers (its transfer,
- * demotion, exit and payroll lines). Here a form opts in through the company
- * registry, `chatCorrectableFields`, and only the header lines the platform
- * can read generically are offered: the employee's name and the form's date.
+ * THE FORMS' OWN READERS were ported too, unchanged, as
+ * `correctFromFormReaders` (the transfer, demotion, exit and payroll lines);
+ * they run first. This header reader is the generic fallback: a form opts in
+ * through the company registry, `chatCorrectableFields`, and only the header
+ * lines the platform can read generically are offered — the employee's name
+ * and the form's date.
  *
  * EVERYTHING IS RE-CHECKED. The browser names the instance; this loads it and
  * runs `authorizeInstance` with the "edit" action, which applies the
@@ -346,6 +349,29 @@ export function readHeaderCorrection(text: string, today: string): HeaderCorrect
   }
 
   return Object.keys(values).length > 0 ? { values } : null;
+}
+
+/*
+ * ============================================================================
+ * "CHANGE THE DATE TO YESTERDAY AND SHORTEN THE SUMMARY" IS TWO REQUESTS
+ * ============================================================================
+ *
+ * The header reader saves the date and answers, and the turn ends there — so
+ * the second half of the message would be dropped without a word. Nothing is
+ * guessed about it either way: the date is still saved (it was stated
+ * plainly), and the reply says the rest was not done and how to ask for it.
+ */
+const OTHER_INSTRUCTION =
+  /\b(?:rewrite|reword|shorten|lengthen|expand|add|remove|delete|drop|include|mention|change|update|fix|make|put|set|correct|tick|untick|check|uncheck|name|date)\b/i;
+
+/** Whether `text` asks for something besides the header lines just read. */
+export function hasOtherInstruction(text: string, today: string): boolean {
+  const clauses = text
+    .split(/\s*(?:[.;!?]+\s+|,\s*|\s+(?:and|also|then|plus)\s+)/i)
+    .map((clause) => clause.trim())
+    .filter(Boolean);
+  if (clauses.length < 2) return false;
+  return clauses.some((clause) => OTHER_INSTRUCTION.test(clause) && !readHeaderCorrection(clause, today));
 }
 
 /** A turn that asks for a form — this one again, or another — is never a correction. */
@@ -442,6 +468,12 @@ async function correctHeaderLines(input: {
   );
   if (drafted && written.includes("employee_name")) {
     lines.push("", "The drafted text was written before this change — give it a quick read to make sure it still names the right person.");
+  }
+  if (hasOtherInstruction(input.question, input.today)) {
+    lines.push(
+      "",
+      "That's the only change I made from that message. Send the rest of it as its own message and I'll apply it to this draft.",
+    );
   }
 
   return { ...reply(lines.join("\n")), formUpdate: { instanceId: input.instanceId, updated: written } };
