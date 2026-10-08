@@ -427,6 +427,39 @@ describe("the key text pairings clear WCAG AA", () => {
     ).toBeGreaterThanOrEqual(4.5);
   });
 
+  /*
+   * ICONS, not text: WCAG 1.4.11 asks 3:1 of a graphic against what it sits
+   * on. The rating stars are the icon whose meaning is its colour.
+   */
+  const ICON_PAIRINGS: readonly [foreground: string, background: string][] = [
+    ["--rating-star", "--surface"],
+    ["--rating-star", "--background"],
+    ["--rating-star-empty", "--surface"],
+    ["--rating-star-empty", "--background"],
+  ];
+
+  it.each(ICON_PAIRINGS)("%s on %s is at least 3:1", (foreground, background) => {
+    const ratio = contrast(resolveHex(foreground), resolveHex(background));
+    expect(
+      ratio,
+      `${foreground} (${resolveHex(foreground)}) on ${background} (${resolveHex(background)}) is ${ratio.toFixed(2)}:1`,
+    ).toBeGreaterThanOrEqual(3);
+  });
+
+  it("never draws a rating star in Tokyo Green alone", () => {
+    // The defect this replaced: Tokyo Green stars, 1.98:1 on White.
+    expect(contrast(PALETTE["--bcs-tokyo"], "#ffffff")).toBeLessThan(3);
+    for (const file of [
+      "src/features/chat/conversation-rating.tsx",
+      "src/features/admin/analytics/feedback-queue.tsx",
+      "src/features/admin/analytics/feedback-summary.tsx",
+    ]) {
+      const source = readFileSync(file, "utf8");
+      expect(source, file).toContain("text-rating-star");
+      expect(source, file).not.toMatch(/fill-brand-accent text-brand-accent/);
+    }
+  });
+
   it("measures contrast the way WCAG does", () => {
     // Guard on the guard: black on white is 21:1 and a colour on itself is 1:1.
     expect(contrast("#000000", "#ffffff")).toBeCloseTo(21, 5);

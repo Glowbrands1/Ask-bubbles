@@ -179,6 +179,14 @@
   --brand-accent-soft: var(--bcs-tokyo-tint);
   --brand-accent-soft-foreground: var(--bcs-tokyo-ink);
 
+  /* RATING STARS. A star is an icon, so it needs 3:1 against its ground (WCAG
+     1.4.11); Tokyo Green alone is 1.98:1 on White. Every star is OUTLINED in
+     Dark Tokyo Green (4.67:1); a chosen star keeps its Tokyo Green fill, an
+     unchosen one is a grey outline (3.3:1). */
+  --rating-star: var(--bcs-tokyo-dark);
+  --rating-star-fill: var(--bcs-tokyo);
+  --rating-star-empty: var(--bcs-line-strong);
+
   /* THE HOVER SURFACE on light grounds: the Tokyo tint, so a hovered row or
      control lifts toward the brand rather than toward grey. Dark controls
      (primary, ink) hover to their own darker shade instead. */
@@ -361,6 +369,9 @@
   --color-brand-accent-foreground: var(--brand-accent-foreground);
   --color-brand-accent-soft: var(--brand-accent-soft);
   --color-brand-accent-soft-foreground: var(--brand-accent-soft-foreground);
+  --color-rating-star: var(--rating-star);
+  --color-rating-star-fill: var(--rating-star-fill);
+  --color-rating-star-empty: var(--rating-star-empty);
   --color-topbar: var(--topbar);
   --color-topbar-foreground: var(--topbar-foreground);
   --color-rail: var(--rail);

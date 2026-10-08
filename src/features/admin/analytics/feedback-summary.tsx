@@ -79,7 +79,7 @@ export function ConversationFeedbackSummary({
               ? summary.averageRating.toFixed(1)
               : "—"}
           </span>
-          <Star className="size-6 fill-brand-accent text-brand-accent" aria-hidden />
+          <Star className="size-6 fill-rating-star-fill text-rating-star" aria-hidden />
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           average rating · open feedback
