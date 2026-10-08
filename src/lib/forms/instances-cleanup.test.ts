@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 
+vi.mock("@/config/company/locations", async () =>
+  (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
+);
+
 /**
  * REMOVING A FORM — the rules that decide whether a record may be destroyed.
  *
@@ -55,11 +59,11 @@ function instance(overrides: Record<string, unknown>) {
     template_version_id: VERSION_ID,
     template_version: 1,
     variant_key: null,
-    employee_name: "Morgan Blake (test)",
+    employee_name: "Jordan Vance (test)",
     employee_role: null,
     location_id: null,
-    location_name: "TN Testville Downtown",
-    created_by: "demo:location_manager:TN Testville Downtown",
+    location_name: "MO Kansas City Wornall",
+    created_by: "demo:salon_director:MO Kansas City Wornall",
     created_by_role: "location_manager",
     source: "manual",
     status: "draft",
@@ -186,7 +190,7 @@ describe("archiving a form", () => {
 
 describe("which rows count as demo data", () => {
   it("reads provenance, and never the employee's name", () => {
-    expect(isDemoInstance({ createdBy: "demo:location_manager:QA" })).toBe(true);
+    expect(isDemoInstance({ createdBy: "demo:salon_director:QA" })).toBe(true);
     // A REAL person can be called this. The name is not evidence.
     expect(isDemoInstance({ createdBy: "auth0|4821" })).toBe(false);
   });

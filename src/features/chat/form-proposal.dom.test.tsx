@@ -7,6 +7,10 @@ import { readFileSync } from "node:fs";
 import { MessageBubble } from "./message-bubble";
 import type { ChatFormProposal, ChatMessage } from "@/types";
 
+vi.mock("@/config/company/locations", async () =>
+  (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
+);
+
 /**
  * ============================================================================
  * REQUIREMENTS 45–48 — WHAT THE MANAGER ACTUALLY SEES
@@ -63,6 +67,7 @@ function message(overrides: Partial<ChatMessage> = {}): ChatMessage {
     mode: "standard",
     coverage: "not_applicable",
     citations: [],
+
     ...overrides,
   };
 }
@@ -74,7 +79,7 @@ function bubble(overrides: Partial<ChatMessage> = {}) {
 }
 
 describe("45. the card shows what Bubbles established", () => {
-  it("names the template, the employee and the location it verified", () => {
+  it("names the template, the employee and the salon it verified", () => {
     const { container } = bubble({ formProposal: proposal() });
     // Scoped to the card itself: the answer prose above it names the template
     // too, and an unscoped query would pass on that alone.
@@ -102,7 +107,7 @@ describe("46. a missing fact reads as missing, not as a blank", () => {
     expect(container.textContent).not.toMatch(/Jane|Kowalski/i);
   });
 
-  it("says the location is not set, and shows no invented location name", () => {
+  it("says the salon is not set, and shows no invented salon name", () => {
     const { container } = bubble({
       formProposal: proposal({
         locationId: null,
@@ -112,10 +117,10 @@ describe("46. a missing fact reads as missing, not as a blank", () => {
     });
 
     expect(container.textContent).toMatch(/Not set — Ask Bubbles could not verify one/);
-    expect(container.textContent).not.toMatch(/Buff City Soap —/);
+    expect(container.textContent).not.toMatch(/Sun Tan City —/);
   });
 
-  it("asks which location when the manager covers more than one", () => {
+  it("asks which salon when the manager covers more than one", () => {
     const { container } = bubble({
       formProposal: proposal({
         locationId: null,
@@ -123,18 +128,18 @@ describe("46. a missing fact reads as missing, not as a blank", () => {
         status: "needs_location",
       }),
     });
-    expect(container.textContent).toMatch(/say which location this is about/i);
+    expect(container.textContent).toMatch(/say which salon this is about/i);
   });
 });
 
-describe("the location picker offers only the manager's own locations", () => {
-  it("lets a one-location manager confirm their own after naming another", () => {
+describe("the salon picker offers only the manager's own salons", () => {
+  it("lets a one-salon manager confirm their own after naming another", () => {
     const { container } = bubble({
       formProposal: proposal({
         locationId: null,
         locationResolution: "needs_selection",
         authorizedLocationIds: ["loc-0306"],
-        namedLocationOutOfScope: "Example Location 104",
+        namedLocationOutOfScope: "KS Lawrence",
         status: "needs_location",
       }),
     });
@@ -144,7 +149,7 @@ describe("the location picker offers only the manager's own locations", () => {
     expect(container.textContent).not.toContain("loc-0468");
   });
 
-  it("shows no picker once the location is settled", () => {
+  it("shows no picker once the salon is settled", () => {
     const { container } = bubble({
       formProposal: proposal({ authorizedLocationIds: ["loc-0306"], locationId: "loc-0306" }),
     });
@@ -183,7 +188,7 @@ describe("48. a pre-Phase-2 turn still renders, and leads nowhere", () => {
     templateName: "Coaching Form",
     values: {
       employee_name: "Jane Kowalski",
-      employee_role: "Soap Maker",
+      employee_role: "Tanning Consultant",
       follow_up_date: "2026-01-19",
     },
     checkedOptions: { coaching_type: ["Documented coaching"] },
@@ -214,7 +219,7 @@ describe("48. a pre-Phase-2 turn still renders, and leads nowhere", () => {
   it("never puts the stored values back on screen", () => {
     const { container } = bubble({ formHandoff: legacy });
 
-    for (const invented of ["Jane Kowalski", "Soap Maker", "Documented coaching"]) {
+    for (const invented of ["Jane Kowalski", "Tanning Consultant", "Documented coaching"]) {
       expect(container.textContent, invented).not.toContain(invented);
     }
   });

@@ -11,11 +11,11 @@ import {
  * THE OBSERVATION KEEPS THE FACT AND LOSES THE FINDING
  * ============================================================================
  *
- * The failure this guard exists for, in the shape QA reported it:
+ * The failure this guard exists for, from QA, verbatim:
  *
  *   "On September 10, 2026, Sarah Test was observed wearing a mini skirt at
- *    the Testville location location, which is not in compliance with the Buff
- *    City Soap dress code policy."
+ *    the Kearny salon location, which is not in compliance with the Sun Tan
+ *    City dress code policy."
  *
  * on a form whose Policy Violated field was blank, because retrieval had found
  * nothing to put in it. The record asserted a breach and declined to name the
@@ -37,13 +37,13 @@ function strip(values: Record<string, string>, skip: ReadonlySet<string> = NONE)
 
 describe("1. the QA sentence", () => {
   const OBSERVED =
-    "On September 10, 2026, Sarah Test was observed wearing a mini skirt at the Testville location location, which is not in compliance with the Buff City Soap dress code policy.";
+    "On September 10, 2026, Sarah Test was observed wearing a mini skirt at the Kearny salon location, which is not in compliance with the Sun Tan City dress code policy.";
 
   it("keeps what was seen and drops what was concluded", () => {
     const result = strip({ observation: OBSERVED });
 
     expect(result.values.observation).toBe(
-      "On September 10, 2026, Sarah Test was observed wearing a mini skirt at the Testville location location.",
+      "On September 10, 2026, Sarah Test was observed wearing a mini skirt at the Kearny salon location.",
     );
     expect(result.adjusted).toEqual(["observation"]);
     expect(result.emptied).toEqual([]);
@@ -109,7 +109,7 @@ describe("3. what it must not touch", () => {
     ],
     [
       "an account with no rule in it at all",
-      "Sarah left the location floor unattended for fifteen minutes during her closing shift.",
+      "Sarah left the salon floor unattended for fifteen minutes during her closing shift.",
     ],
   ])("%s", (_label, text) => {
     const result = strip({ observation: text });
@@ -190,7 +190,7 @@ describe("4. the same separation, said to the model", () => {
  */
 describe("5. unsourced requirements in the Action Plan", () => {
   const FALLBACK =
-    "Sarah Test is expected to comply with the current Buff City Soap requirements for each scheduled shift. Management will review the applicable expectation with Sarah Test, confirm understanding, and monitor compliance.";
+    "Sarah Test is expected to comply with the current Sun Tan City requirements for each scheduled shift. Management will review the applicable expectation with Sarah Test, confirm understanding, and monitor compliance.";
 
   function strip(values: Record<string, string>, retrieved = "") {
     return stripUnsupportedPolicyRequirements(values, NONE, retrieved, FALLBACK);
@@ -207,7 +207,7 @@ describe("5. unsourced requirements in the Action Plan", () => {
   });
 
   it.each([
-    ["prohibition", "Skirts are prohibited on the location floor."],
+    ["prohibition", "Skirts are prohibited on the salon floor."],
     ["name badge", "Sarah must wear her name badge at all times."],
     ["tucked in", "Her shirt must be tucked in for every shift."],
     ["footwear", "Sarah is required to wear closed-toe shoes."],
@@ -233,7 +233,7 @@ describe("5. unsourced requirements in the Action Plan", () => {
     ["the safe generic", FALLBACK],
     [
       "generic compliance with a named rule",
-      "Sarah is expected to comply with the current Buff City Soap dress code requirements for each scheduled shift.",
+      "Sarah is expected to comply with the current Sun Tan City dress code requirements for each scheduled shift.",
     ],
     [
       "management's own commitment",
@@ -247,7 +247,7 @@ describe("5. unsourced requirements in the Action Plan", () => {
   });
 
   it("keeps a requirement the retrieved policy actually states", () => {
-    const retrieved = "Skirts and dresses must reach mid-thigh or longer while on the location floor.";
+    const retrieved = "Skirts and dresses must reach mid-thigh or longer while on the salon floor.";
     const sentence = "Sarah must ensure skirts reach mid-thigh or longer on every shift.";
 
     const result = strip({ action_plan: sentence }, retrieved);
@@ -259,7 +259,7 @@ describe("5. unsourced requirements in the Action Plan", () => {
   it("still removes a requirement the retrieved policy does NOT state", () => {
     // The manual covers hemlines. It says nothing about footwear, and one
     // sourced requirement does not license a second.
-    const retrieved = "Skirts and dresses must reach mid-thigh or longer while on the location floor.";
+    const retrieved = "Skirts and dresses must reach mid-thigh or longer while on the salon floor.";
 
     const result = strip(
       { action_plan: "Sarah must wear closed-toe shoes on every shift." },

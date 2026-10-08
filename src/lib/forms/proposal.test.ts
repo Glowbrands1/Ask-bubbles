@@ -1,18 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-/*
- * The fixture forms registry and the fixture location roster: the shipped
- * registry holds one placeholder form and the shipped roster is empty, and
- * these rules read both. See `src/test/forms/fixture-forms.ts` and
- * `src/test/fixture-locations.ts`.
- */
-vi.mock("@/config/company/forms", async () =>
-  (await import("@/test/forms/fixture-forms")).fixtureFormsModule(),
-);
-vi.mock("@/config/company/locations", async () =>
-  (await import("@/test/fixture-locations")).fixtureLocationsModule(),
-);
-
 import {
   MANAGER_CONTEXT_CHARS,
   MANAGER_CONTEXT_TURNS,
@@ -22,6 +9,10 @@ import {
   resolveEmployee,
 } from "./proposal";
 import type { AccessScope, ChatMessage } from "@/types";
+
+vi.mock("@/config/company/locations", async () =>
+  (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
+);
 
 /**
  * ============================================================================
@@ -34,7 +25,7 @@ import type { AccessScope, ChatMessage } from "@/types";
  *
  *     employee_name  -> "Jane Kowalski"
  *     topic          -> "repeated tardiness"
- *     employee_role  -> "Team Member"
+ *     employee_role  -> "Tanning Consultant"
  *     details        -> "Arrived after the start of a scheduled shift on three
  *                        occasions in the past two weeks..."
  *     follow_up_date -> today + 14
@@ -63,7 +54,7 @@ function assistantTurn(content: string): ChatMessage {
   };
 }
 
-const LOCATION: AccessScope = {
+const SALON: AccessScope = {
   level: "location",
   primaryAreaId: "loc-0101",
   alsoCoversAreaIds: [],
@@ -72,13 +63,13 @@ const LOCATION: AccessScope = {
 function propose(
   history: ChatMessage[],
   question: string,
-  scope: AccessScope | null = LOCATION,
+  scope: AccessScope | null = SALON,
   inlineDraftSupported = true,
 ) {
   return buildProposal({
     proposalId: "prop-1",
-    templateKey: "fixture-coaching",
-    templateName: "Fixture Coaching Note",
+    templateKey: "coaching",
+    templateName: "Coaching Form",
     context: managerContext(history, { id: "msg-current", content: question }),
     scope,
     inlineDraftSupported,
@@ -151,7 +142,7 @@ describe("8. the window is bounded", () => {
  */
 describe("R1. the current correction survives character pressure", () => {
   /*
-   * A manager's own shape of conversation, with the budget deliberately
+   * Marissa's own shape of conversation, with the budget deliberately
    * exhausted by the earlier statement. Before the fix the correction was
    * dropped and "three times" was the only occurrence count in the context.
    */
@@ -327,7 +318,7 @@ describe("11. a name the manager actually gave is used verbatim", () => {
   it.each([
     ["I need a coaching form for Sarah Jones", "Sarah Jones"],
     ["this is about Marcus Webb", "Marcus Webb"],
-    ["Morgan Blake", "Morgan Blake"],
+    ["Jordan Vance", "Jordan Vance"],
   ])("%s", (sentence, expected) => {
     expect(extractEmployeeNames(sentence)).toContain(expected);
   });
@@ -339,11 +330,11 @@ describe("11. a name the manager actually gave is used verbatim", () => {
   });
 
   it.each([
-    "please draft a form for Jane Test, Location Test, she was late today",
-    "coaching form for Jane Test at Location Test",
+    "please draft a form for Jane Test, Salon Test, she was late today",
+    "coaching form for Jane Test at Salon Test",
     "Jane Test, Location Test — late again",
-  ])("a location named alongside the employee is not a second candidate: %s", (sentence) => {
-    // "Location Test" reads as a capitalised full name, so the turn resolved as
+  ])("a salon named alongside the employee is not a second candidate: %s", (sentence) => {
+    // "Salon Test" reads as a capitalised full name, so the turn resolved as
     // ambiguous and Bubbles re-asked for a name the manager had just given.
     expect(extractEmployeeNames(sentence)).toEqual(["Jane Test"]);
   });
@@ -369,7 +360,7 @@ describe("11. a name the manager actually gave is used verbatim", () => {
  * surname given as a single initial was invisible and the turn produced no
  * employee at all.
  *
- * First name plus last initial is how half a location refers to people, so this
+ * First name plus last initial is how half a salon refers to people, so this
  * was never an edge case.
  */
 describe("11b. a surname given as an initial", () => {
@@ -458,7 +449,7 @@ describe("11c. capitalisation does not decide whether a name is read", () => {
   });
 
   it.each(NAMES)("as item 1 of a numbered answer: %s", (name) => {
-    expect(extractEmployeeNames(`1. ${name}\n2. testville\n3. today\n4. she wore slippers`)).toEqual([
+    expect(extractEmployeeNames(`1. ${name}\n2. kearney\n3. today\n4. she wore slippers`)).toEqual([
       name,
     ]);
   });
@@ -606,11 +597,11 @@ describe("11f. the intake answered on one line, as a comma-separated list", () =
    * names; the manager's shape.
    */
   it.each([
-    ["dana moss, TN testville, she is the store manager. we can use todays date.", ["dana moss"]],
-    ["Dana Moss, TN Testville, she is the store manager. we can use todays date.", ["Dana Moss"]],
-    ["dana moss, TN Testville Uptown, today, she was late", ["dana moss"]],
-    ["dana, MS Sampleton, 9/11, late again", ["dana"]],
-    ["DANA MOSS, TN testville, today", ["DANA MOSS"]],
+    ["dana moss, KS shawnee, she is the salon director. we can use todays date.", ["dana moss"]],
+    ["Dana Moss, KS Shawnee, she is the salon director. we can use todays date.", ["Dana Moss"]],
+    ["dana moss, NE Kearney, today, she was late", ["dana moss"]],
+    ["dana, MO St Joseph, 9/11, late again", ["dana"]],
+    ["DANA MOSS, KS shawnee, today", ["DANA MOSS"]],
   ])("reads the first item as the employee: %s", (text, names) => {
     expect(extractEmployeeNames(text)).toEqual(names);
   });
@@ -621,14 +612,14 @@ describe("11f. the intake answered on one line, as a comma-separated list", () =
     "thanks, that helps, bye",
     "great, perfect, thank you",
     "she was late, again, today",
-    "dana moss, TN testville",
+    "dana moss, KS shawnee",
   ])("reads nothing that is not a list answer led by a name: %s", (text) => {
     expect(extractEmployeeNames(text)).toEqual([]);
   });
 
-  it("reads a roster location as a place, not as a second person", () => {
-    expect(extractEmployeeNames("Sarah Jones was late at TN Testville Downtown")).toEqual(["Sarah Jones"]);
-    expect(extractEmployeeNames("MS Sampleton Square")).toEqual([]);
+  it("reads a roster salon as a place, not as a second person", () => {
+    expect(extractEmployeeNames("Sarah Jones was late at KS Shawnee Mission Pkwy")).toEqual(["Sarah Jones"]);
+    expect(extractEmployeeNames("NE Kearney")).toEqual([]);
   });
 
   it("still reads a person whose name only looks like a prefix", () => {
@@ -673,8 +664,8 @@ describe("13. a missing employee stays missing", () => {
 
 /* ======================================================== location == */
 
-describe("14. the location comes from the authenticated scope", () => {
-  it("fills in the one location a manager is assigned to", () => {
+describe("14. the salon comes from the authenticated scope", () => {
+  it("fills in the one salon a manager is assigned to", () => {
     const proposal = propose([], "coaching form for Sarah Jones");
 
     expect(proposal.locationId).toBe("loc-0101");
@@ -706,11 +697,11 @@ describe("14. the location comes from the authenticated scope", () => {
   });
 });
 
-describe("15. no location DISPLAY NAME is invented", () => {
+describe("15. no salon DISPLAY NAME is invented", () => {
   it("leaves locationName null even when the id resolved", () => {
     /*
-     * There is no location roster to resolve a name from, and `DEMO_LOCATIONS` is
-     * seeded demo data rather than an authority. A fictional location name in
+     * There is no salon roster to resolve a name from, and `DEMO_LOCATIONS` is
+     * seeded demo data rather than an authority. A fictional salon name in
      * front of a manager about to file a disciplinary record is exactly the
      * class of thing this phase removes.
      */
@@ -730,21 +721,21 @@ describe("a first name plus a stated role names the employee", () => {
     const proposal = propose(
       [
         userTurn(
-          "Jessica is a Shift Lead at Testville Downtown. She's great with guests but she's been late several times.",
+          "Jessica is an SDIT at Lincoln South. She's great with customers but she's been late several times.",
         ),
       ],
-      "Create a Fixture Role Review from this conversation.",
+      "Create an Employee Performance Plan from this conversation.",
     );
     expect(proposal.employeeName).toBe("Jessica");
-    expect(proposal.employeeRole).toBe("Shift Lead");
+    expect(proposal.employeeRole).toBe("SDIT");
     expect(proposal.status).toBe("ready");
   });
 
   it("takes the role in the words the business uses", () => {
     for (const [sentence, name] of [
-      ["Marco is a Soap Maker", "Marco"],
-      ["Dana was a Team Member last year", "Dana"],
-      ["Priya is our new Store Manager", "Priya"],
+      ["Marco is a Tanning Consultant", "Marco"],
+      ["Dana was an FTTC last year", "Dana"],
+      ["Priya is our new Salon Director", "Priya"],
     ] as const) {
       expect(propose([userTurn(sentence)], "coaching form please").employeeName, sentence).toBe(
         name,
@@ -760,8 +751,8 @@ describe("a first name plus a stated role names the employee", () => {
      */
     for (const [turnText, question] of [
       ["", "Create a coaching form for a performance concern"],
-      ["She is a Shift Lead at Testville Downtown", "coaching form please"],
-      ["He was a Store Manager before this", "coaching form please"],
+      ["She is an SDIT at Lincoln South", "coaching form please"],
+      ["He was a Salon Director before this", "coaching form please"],
       ["Coaching Form is the one I need", "coaching form please"],
       ["Tuesday was a difficult shift for the team", "coaching form please"],
     ] as const) {
@@ -782,19 +773,19 @@ describe("a first name plus a stated role names the employee", () => {
   });
 });
 
-describe("a location named in two words is not a second employee", () => {
+describe("a salon named in two words is not a second employee", () => {
   it("does not ask which of them the form is for", () => {
     /*
-     * REPORTED SHAPE: "Riley Hartman is a Shift Lead at Testville Downtown.
-     * She's been late several times." Two capitalised pairs,
-     * one of them the location — and the answer used to be "which of them is this
+     * REPORTED SHAPE: "Jessica Vance is an SDIT at Lincoln South. She's great
+     * with clients but she's been late several times." Two capitalised pairs,
+     * one of them the salon — and the answer used to be "which of them is this
      * for?", asked of somebody who had just said.
      */
     const proposal = propose(
-      [userTurn("Riley Hartman is a Shift Lead at Testville Downtown. She's been late several times.")],
+      [userTurn("Jessica Vance is an SDIT at Lincoln South. She's been late several times.")],
       "coaching form please",
     );
-    expect(proposal.employeeName).toBe("Riley Hartman");
+    expect(proposal.employeeName).toBe("Jessica Vance");
     expect(proposal.status).toBe("ready");
   });
 
@@ -845,7 +836,7 @@ describe("16. a proposal carries no HR field values at all", () => {
 
     /*
      * `employeeRole` IS THE FIELD THIS TEST IS NAMED AFTER, and it is here
-     * because the prototype DEFAULTED it to "Team Member". It carries a
+     * because the prototype DEFAULTED it to "Tanning Consultant". It carries a
      * job title only where the manager stated one, and this manager did not —
      * so it is null, and the forbidden list below still holds.
      */
@@ -856,7 +847,7 @@ describe("16. a proposal carries no HR field values at all", () => {
 
     const serialized = JSON.stringify(proposal);
     for (const invented of [
-      "Team Member",
+      "Tanning Consultant",
       "repeated tardiness",
       "Documented coaching",
       "three occasions",
@@ -875,7 +866,7 @@ describe("P3-1. inline creation is offered only when nothing is missing", () => 
     expect(proposal.supportsInlineDraft).toBe(false);
   });
 
-  it("is false while the location is unverified", () => {
+  it("is false while the salon is unverified", () => {
     const proposal = propose([], "coaching form for Sarah Jones", {
       level: "district",
       primaryAreaId: "dist-01",
@@ -887,7 +878,7 @@ describe("P3-1. inline creation is offered only when nothing is missing", () => 
 
   it("is false for a template the inline editor does not support", () => {
     // Ready in every other respect. The template is the reason.
-    const proposal = propose([], "coaching form for Sarah Jones", LOCATION, false);
+    const proposal = propose([], "coaching form for Sarah Jones", SALON, false);
     expect(proposal.status).toBe("ready");
     expect(proposal.supportsInlineDraft).toBe(false);
   });
@@ -899,10 +890,10 @@ describe("P3-1. inline creation is offered only when nothing is missing", () => 
   });
 });
 
-describe("17. asking order is employee first, then location", () => {
+describe("17. asking order is employee first, then salon", () => {
   it("does not ask two questions at once", () => {
     // A manager who has not said who the form is about cannot usefully answer
-    // which location it belongs to, and two questions get one answer.
+    // which salon it belongs to, and two questions get one answer.
     const proposal = propose([], "coaching form please", {
       level: "location",
       primaryAreaId: "loc-0101",
@@ -920,26 +911,26 @@ describe("17. asking order is employee first, then location", () => {
  * THE NAME GIVEN WITH THE FORM'S NAME, FOR EVERY FORM
  * ============================================================================
  *
- * A form named by one of its registry phrases, then the person: the form
- * was selected and no employee read, because the phrase was missing from a
- * hand-written list of form words. The lead words now come from the
- * library's own namings — here, the fixture registry's.
+ * Production: "create ca for marlowe co she was late today, got verbal warning
+ * on september 21" selected the Corrective Action Form and read no employee,
+ * because "ca" was missing from a hand-written list of form words. The lead
+ * words now come from the library's own namings.
  */
 describe("the employee named with the form, across the library", () => {
   it.each([
-    ["create corrective notice for marlowe co she was late today, got verbal warning on september 21", "marlowe co"],
-    ["Corrective Notice for marlowe co", "marlowe co"],
-    ["corrective notice for marlowe co she was late today", "marlowe co"],
-    ["corrective notice for Dana Moss", "Dana Moss"],
+    ["create ca for marlowe co she was late today, got verbal warning on september 21", "marlowe co"],
+    ["CA for marlowe co", "marlowe co"],
+    ["CA for marlowe co she was late today", "marlowe co"],
+    ["ca for Dana Moss", "Dana Moss"],
     ["Coaching for dana moss", "dana moss"],
     ["coaching Dana Moss", "Dana Moss"],
-    ["Role Review jane smith", "jane smith"],
-    ["Role Review for Jane Smith", "Jane Smith"],
-    ["Separation Record for Mary Cruz", "Mary Cruz"],
-    ["Separation record for mary anne cruz to location 24", "mary anne cruz"],
-    ["Follow-up note for john michael doe effective october 2", "john michael doe"],
-    ["Peer Review John Doe", "John Doe"],
-    ["Interview guide for John Doe", "John Doe"],
+    ["Demotion jane smith", "jane smith"],
+    ["Demotion for Jane Smith", "Jane Smith"],
+    ["Position Transfer for Mary Cruz", "Mary Cruz"],
+    ["Transfer for mary anne cruz to salon 24", "mary anne cruz"],
+    ["Exit for john michael doe effective october 2", "john michael doe"],
+    ["Exit John Doe", "John Doe"],
+    ["Resignation for John Doe", "John Doe"],
     ["verbal warning for marlowe co", "marlowe co"],
   ])("%s -> %s", (text, name) => {
     expect(extractEmployeeNames(text)).toEqual([name]);
@@ -947,10 +938,10 @@ describe("the employee named with the form, across the library", () => {
 
   it("stops the name where the sentence goes on", () => {
     expect(extractEmployeeNames("coaching for marlowe co wore slippers today")).toEqual(["marlowe co"]);
-    expect(extractEmployeeNames("corrective notice for dana moss late again")).toEqual(["dana moss"]);
+    expect(extractEmployeeNames("CA for dana moss late again")).toEqual(["dana moss"]);
   });
 
-  it.each(["coaching tips for new managers", "what is a coaching form?", "separation process", "coaching went well today"])(
+  it.each(["coaching tips for new managers", "what is a coaching form?", "exit process", "coaching went well today"])(
     "%s names nobody",
     (text) => {
       expect(extractEmployeeNames(text)).toEqual([]);

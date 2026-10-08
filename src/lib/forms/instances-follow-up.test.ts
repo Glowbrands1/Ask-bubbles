@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 
+vi.mock("@/config/company/locations", async () =>
+  (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
+);
+
 /**
  * FOLLOW-UP WRITES, AND THE ONE THING THEY MUST NEVER DO.
  *
@@ -33,7 +37,7 @@ const {
 } = await import("./instances");
 
 const VERSION_ID = "version-1";
-const ACTOR = "demo:location_manager:QA";
+const ACTOR = "demo:salon_director:QA";
 
 function instance(overrides: Record<string, unknown>) {
   return {
@@ -46,10 +50,10 @@ function instance(overrides: Record<string, unknown>) {
     template_version_id: VERSION_ID,
     template_version: 1,
     variant_key: null,
-    employee_name: "Morgan Blake (test)",
+    employee_name: "Jordan Vance (test)",
     employee_role: null,
     location_id: null,
-    location_name: "TN Testville Downtown",
+    location_name: "MO Kansas City Wornall",
     created_by: ACTOR,
     created_by_role: "location_manager",
     source: "manual",

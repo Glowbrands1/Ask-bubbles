@@ -1,16 +1,7 @@
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
-import {
-  FIXTURE_COACHING_KEY,
-  FIXTURE_TEMPLATE_SEEDS,
-  fixtureCoachingDocument as coachingDocument,
-} from "@/test/forms/fixture-forms";
-import { buildLegacyDoc, fixtureCoachingDocx, fixtureCoachingPdf } from "@/test/forms/source-fixtures";
-
-vi.mock("@/config/company/forms", async () =>
-  (await import("@/test/forms/fixture-forms")).fixtureFormsModule(),
-);
 
 /**
  * ============================================================================
@@ -49,16 +40,11 @@ const {
 } = await import("../repository");
 const { ingestSourceDocument } = await import("./index");
 const { loadInstance } = await import("../instances");
+const { coachingDocument } = await import("../library");
 const { proposalNeedsAttention } = await import("./proposal");
 
-/** Real files, generated in memory from the fixture coaching note. */
-const FILES: Record<string, () => Uint8Array> = {
-  "coaching-form.pdf": fixtureCoachingPdf,
-  "coaching-form.docx": fixtureCoachingDocx,
-  "legacy-form.doc": () => buildLegacyDoc(),
-};
-const fixture = (name: string) => FILES[name]!();
-const COACHING = FIXTURE_COACHING_KEY;
+const fixture = (name: string) =>
+  new Uint8Array(readFileSync(`src/test/fixtures/forms/${name}`));
 
 function templateId(key: string) {
   return String(store.form_templates!.find((row) => row.key === key)!.id);
@@ -70,7 +56,7 @@ function currentVersionId(key: string) {
 }
 
 async function proposeFromFixture(name: string) {
-  const current = await getCurrentVersion(templateId(COACHING));
+  const current = await getCurrentVersion(templateId("coaching"));
   const read = await ingestSourceDocument({
     bytes: fixture(name),
     fileName: name,
@@ -79,7 +65,7 @@ async function proposeFromFixture(name: string) {
   });
   if (!read.ok) throw new Error(`fixture did not read: ${read.reason}`);
   return openProposalDraft(
-    templateId(COACHING),
+    templateId("coaching"),
     {
       document: read.document,
       proposal: {
@@ -109,7 +95,7 @@ beforeEach(async () => {
 
 describe("uploading a document against an existing form", () => {
   it("creates a DRAFT and does not touch the live version", async () => {
-    const before = currentVersionId(COACHING);
+    const before = currentVersionId("coaching");
 
     const opened = await proposeFromFixture("coaching-form.pdf");
 
@@ -117,21 +103,24 @@ describe("uploading a document against an existing form", () => {
     if (!("draft" in opened)) return;
     expect(opened.draft.status).toBe("draft");
     // The one that matters: the template still points where it pointed.
-    expect(currentVersionId(COACHING)).toBe(before);
+    expect(currentVersionId("coaching")).toBe(before);
     expect(opened.draft.id).not.toBe(before);
   });
 
-  it("stays the same template — no second coaching form appears", async () => {
+  it("stays the same template — no second Coaching form appears", async () => {
     await proposeFromFixture("coaching-form.pdf");
 
-    expect(store.form_templates!.filter((row) => row.key === COACHING)).toHaveLength(1);
+    expect(store.form_templates!.filter((row) => row.key === "coaching")).toHaveLength(1);
     /*
-     * One row per seed, and no more: a template appearing by accident — a
-     * seeder that inserts on a key it should have matched — is caught here.
+     * Seventeen: the thirteen paper-sourced templates, the framework-defined
+     * Follow-Up Coaching Form, the Resignation/Exit Form, and the Demotion and
+     * Position Transfer forms. The number is asserted rather than derived so
+     * that a template appearing by accident — a seeder that inserts on a key it
+     * should have matched — is caught here.
      */
-    expect(store.form_templates).toHaveLength(FIXTURE_TEMPLATE_SEEDS.length);
+    expect(store.form_templates).toHaveLength(17);
     // Two versions of one template, addressed by the same stable key.
-    expect(await listVersions(templateId(COACHING))).toHaveLength(2);
+    expect(await listVersions(templateId("coaching"))).toHaveLength(2);
   });
 
   it("records which upload the draft came from, and what to check", async () => {
@@ -167,7 +156,7 @@ describe("uploading a document against an existing form", () => {
   });
 
   it("refuses rather than destroying a draft somebody is working on", async () => {
-    const { draft } = await openDraft(templateId(COACHING), "priya");
+    const { draft } = await openDraft(templateId("coaching"), "priya");
 
     const opened = await proposeFromFixture("coaching-form.pdf");
 
@@ -175,20 +164,20 @@ describe("uploading a document against an existing form", () => {
       refused: expect.stringContaining(`version ${draft.version}`),
     });
     // Their draft is untouched, and no proposal was written.
-    expect(await listVersions(templateId(COACHING))).toHaveLength(2);
+    expect(await listVersions(templateId("coaching"))).toHaveLength(2);
   });
 });
 
 describe("publishing a proposal", () => {
   it("makes it the live version, and archives the one it replaced", async () => {
-    const replaced = currentVersionId(COACHING);
+    const replaced = currentVersionId("coaching");
     const opened = await proposeFromFixture("coaching-form.pdf");
     if (!("draft" in opened)) throw new Error("refused");
 
     await publishDraft(opened.draft.id, "dana");
 
-    expect(currentVersionId(COACHING)).toBe(opened.draft.id);
-    const versions = await listVersions(templateId(COACHING));
+    expect(currentVersionId("coaching")).toBe(opened.draft.id);
+    const versions = await listVersions(templateId("coaching"));
     expect(versions.find((version) => version.id === replaced)).toMatchObject({
       status: "archived",
     });
@@ -207,13 +196,13 @@ describe("publishing a proposal", () => {
   });
 
   it("leaves a form signed against the old version reading against it", async () => {
-    const signedAgainst = currentVersionId(COACHING);
+    const signedAgainst = currentVersionId("coaching");
     store.form_instances.push({
       id: "old-form",
-      template_id: templateId(COACHING),
+      template_id: templateId("coaching"),
       template_version_id: signedAgainst,
       variant_key: null,
-      employee_name: "Pat Example",
+      employee_name: "Priya Placeholder",
       status: "finalized",
       source: "manual",
       created_by: "dana",
@@ -224,7 +213,7 @@ describe("publishing a proposal", () => {
       instance_id: "old-form",
       field_key: "coaching_topics",
       value: null,
-      checked: ["greeting_guests"],
+      checked: ["store_tours"],
       filled_by: "ai",
       provenance: {},
     });
@@ -238,7 +227,7 @@ describe("publishing a proposal", () => {
     expect(loaded!.instance.status).toBe("finalized");
     expect(
       loaded!.values.find((value) => value.fieldKey === "coaching_topics")?.checked,
-    ).toEqual(["greeting_guests"]);
+    ).toEqual(["store_tours"]);
   });
 });
 
@@ -261,8 +250,8 @@ describe("when extraction fails", () => {
 
   it("refuses a Word 97-2003 file, and says how to make it readable", async () => {
     const read = await ingestSourceDocument({
-      bytes: fixture("legacy-form.doc"),
-      fileName: "legacy-form.doc",
+      bytes: fixture("prescreen-form.doc"),
+      fileName: "prescreen-form.doc",
       current: null,
       refine: false,
     });

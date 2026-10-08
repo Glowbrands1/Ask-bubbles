@@ -8,12 +8,12 @@ import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
  * ============================================================================
  *
  * THE DEFECT. `listInstances` ordered the WHOLE COMPANY by recency, took the
- * first 200, and the route filtered that page down to the caller's own location.
+ * first 200, and the route filtered that page down to the caller's own salon.
  * Confidential enough — no foreign row ever reached the browser — and wrong as
  * a history.
  *
  * With 22 locations it is a matter of time: 200 newer records exist across
- * other locations, one location's own still-relevant record is number 201 by date, it
+ * other salons, one salon's own still-relevant record is number 201 by date, it
  * never enters the page, and no filter can return what the query never
  * fetched. Its manager opens Form Monitoring to find their own history has
  * quietly lost rows — with nothing on screen saying so.
@@ -79,19 +79,19 @@ function row(overrides: Record<string, unknown>) {
   };
 }
 
-const OLD_LOCATION_A = "the-record-that-vanished";
+const OLD_SALON_A = "the-record-that-vanished";
 
 beforeEach(() => {
   store.form_instances.length = 0;
 
   /*
    * THE ADVERSARIAL SHAPE, and it is deliberately just over the boundary: 260
-   * foreign records, every one of them NEWER than the location-A record that
-   * matters. Under the old ordering the location-A row is beyond the 200 the query
+   * foreign records, every one of them NEWER than the salon-A record that
+   * matters. Under the old ordering the salon-A row is beyond the 200 the query
    * fetched, so nothing downstream could ever return it.
    */
   store.form_instances.push(
-    row({ id: OLD_LOCATION_A, location_id: "loc-a", created_at: at(1), updated_at: at(1) }),
+    row({ id: OLD_SALON_A, location_id: "loc-a", created_at: at(1), updated_at: at(1) }),
   );
   for (let index = 0; index < 260; index += 1) {
     store.form_instances.push(
@@ -106,14 +106,14 @@ beforeEach(() => {
   }
 });
 
-describe("R2-F3. the fixture really does bury the location's record", () => {
+describe("R2-F3. the fixture really does bury the salon's record", () => {
   it("puts 260 newer foreign rows in front of it", async () => {
     // The guard on the guard: without a filter it is genuinely off the page,
     // so the test below is measuring the query and not the fixture.
     const unrestricted = await listInstances("active", 200);
 
     expect(unrestricted).toHaveLength(200);
-    expect(unrestricted.map((entry) => entry.id)).not.toContain(OLD_LOCATION_A);
+    expect(unrestricted.map((entry) => entry.id)).not.toContain(OLD_SALON_A);
   });
 });
 
@@ -124,7 +124,7 @@ describe("R2-F3. an authorized record survives any volume of foreign ones", () =
       ownNullLocationCreatedBy: "user-a",
     });
 
-    expect(visible.map((entry) => entry.id)).toContain(OLD_LOCATION_A);
+    expect(visible.map((entry) => entry.id)).toContain(OLD_SALON_A);
   });
 
   it("returns no foreign row at all", async () => {
@@ -138,9 +138,9 @@ describe("R2-F3. an authorized record survives any volume of foreign ones", () =
     }
   });
 
-  it("includes the caller's own record that names no location", async () => {
+  it("includes the caller's own record that names no salon", async () => {
     store.form_instances.push(
-      row({ id: "mine-no-location", location_id: null, created_by: "user-a", created_at: at(2) }),
+      row({ id: "mine-no-salon", location_id: null, created_by: "user-a", created_at: at(2) }),
     );
 
     const visible = await listInstances("active", 200, {
@@ -148,13 +148,13 @@ describe("R2-F3. an authorized record survives any volume of foreign ones", () =
       ownNullLocationCreatedBy: "user-a",
     });
 
-    expect(visible.map((entry) => entry.id)).toContain("mine-no-location");
-    expect(visible.map((entry) => entry.id)).toContain(OLD_LOCATION_A);
+    expect(visible.map((entry) => entry.id)).toContain("mine-no-salon");
+    expect(visible.map((entry) => entry.id)).toContain(OLD_SALON_A);
   });
 
-  it("excludes somebody else's record that names no location", async () => {
+  it("excludes somebody else's record that names no salon", async () => {
     store.form_instances.push(
-      row({ id: "theirs-no-location", location_id: null, created_by: "user-b", created_at: at(3) }),
+      row({ id: "theirs-no-salon", location_id: null, created_by: "user-b", created_at: at(3) }),
     );
 
     const visible = await listInstances("active", 200, {
@@ -162,7 +162,7 @@ describe("R2-F3. an authorized record survives any volume of foreign ones", () =
       ownNullLocationCreatedBy: "user-a",
     });
 
-    expect(visible.map((entry) => entry.id)).not.toContain("theirs-no-location");
+    expect(visible.map((entry) => entry.id)).not.toContain("theirs-no-salon");
   });
 });
 
@@ -209,8 +209,8 @@ describe("R2-F3. the limit applies to the VISIBLE set", () => {
 });
 
 describe("R2-F3. district and region stay fail-closed on the list too", () => {
-  it("returns nothing for an empty authorized-location set", async () => {
-    // `authorizedLocationIds` yields nothing for any level but `location`, so an
+  it("returns nothing for an empty authorized-salon set", async () => {
+    // `authorizedSalonIds` yields nothing for any level but `salon`, so an
     // empty list is how a district manager's read is expressed.
     const visible = await listInstances("active", 200, { locationIds: [] });
     expect(visible).toEqual([]);
@@ -249,7 +249,7 @@ describe("R2-F3. a global actor keeps the ordinary bounded read", () => {
 });
 
 describe("R2-F3. the archived view is filtered the same way", () => {
-  it("narrows by location before limiting", async () => {
+  it("narrows by salon before limiting", async () => {
     store.form_instances.push(
       row({
         id: "archived-mine",

@@ -6,6 +6,7 @@ import {
   employeeNameRules,
   nameInsteadOfPronouns,
 } from "./employee-reference";
+import { TEAM_SUBJECT_LABEL } from "./team-subject";
 
 /**
  * HR feedback, 3 Oct 2026: "Stop using pronouns in verbiage for forms — site
@@ -28,6 +29,7 @@ describe("the employee's first name", () => {
   });
 
   it("is nobody on a team form, or with no subject", () => {
+    expect(employeeFirstName(TEAM_SUBJECT_LABEL)).toBeNull();
     expect(employeeFirstName("")).toBeNull();
     expect(employeeFirstName(null)).toBeNull();
   });
@@ -43,6 +45,9 @@ describe("the drafting rule every form prompt carries", () => {
     expect(rules).toMatch(/quotation marks.*stays exactly as it was written/);
   });
 
+  it("is absent on a team-wide form", () => {
+    expect(employeeNameRules(TEAM_SUBJECT_LABEL)).toEqual([]);
+  });
 });
 
 describe("pronouns become the first name", () => {
@@ -80,10 +85,10 @@ describe("pronouns become the first name", () => {
 
   it("rewrites the whole Action Plan the drafting prompt asks for", () => {
     const plan =
-      "Jessica is expected to adhere to the Buff City Soap attendance policy by arriving on time. Moving forward, she should arrive ready to work at the start of her shift. Management will monitor compliance and provide coaching as needed.";
-    const result = nameInsteadOfPronouns(plan, "Jessica Moss", ["Buff City Soap"]);
+      "Jessica is expected to adhere to the Sun Tan City attendance policy by arriving on time. Moving forward, she should arrive ready to work at the start of her shift. Management will monitor compliance and provide coaching as needed.";
+    const result = nameInsteadOfPronouns(plan, "Jessica Moss", ["Sun Tan City"]);
     expect(result.text).toBe(
-      "Jessica is expected to adhere to the Buff City Soap attendance policy by arriving on time. Moving forward, Jessica should arrive ready to work at the start of the shift. Management will monitor compliance and provide coaching as needed.",
+      "Jessica is expected to adhere to the Sun Tan City attendance policy by arriving on time. Moving forward, Jessica should arrive ready to work at the start of the shift. Management will monitor compliance and provide coaching as needed.",
     );
     expect(result.replaced).toBe(2);
     expect(result.text).not.toMatch(/\b(?:she|her|he|his|they|their)\b/i);
@@ -147,7 +152,7 @@ describe("what is never rewritten", () => {
     expect(rewrite('She said "he told me I could leave early" before her shift.')).toBe(
       'Jessica said "he told me I could leave early" before the shift.',
     );
-    const manual = "“An employee must notify her manager before she leaves the location.”";
+    const manual = "“An employee must notify her manager before she leaves the salon.”";
     expect(rewrite(manual)).toBe(manual);
   });
 
@@ -172,6 +177,9 @@ describe("what is never rewritten", () => {
     expect(rewrite(sentence)).toBe(sentence);
   });
 
+  it("anything at all on a team-wide form", () => {
+    expect(nameInsteadOfPronouns("She arrived late.", TEAM_SUBJECT_LABEL).text).toBe("She arrived late.");
+  });
 });
 
 describe("across a draft", () => {
@@ -185,7 +193,7 @@ describe("across a draft", () => {
   ];
 
   it("rewrites the assistant's prose and nothing else", () => {
-    const quoted = "Employees must notify their manager before they leave. Source: Team Policy Manual, p. 12";
+    const quoted = "Employees must notify their manager before they leave. Source: JBA Policy Manual, p. 12";
     const result = applyEmployeeName({
       values: {
         observation: "Observed:\nShe arrived late.",
