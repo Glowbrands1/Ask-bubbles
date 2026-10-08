@@ -269,7 +269,7 @@ function samePerson(named: string, employee: string): boolean {
 }
 
 function reply(content: string): AskResponse {
-  return { content, citations: [], coverage: "not_applicable", recommendedVideoIds: [] };
+  return { content, citations: [], coverage: "not_applicable" };
 }
 
 /**

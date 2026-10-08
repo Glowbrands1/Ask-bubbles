@@ -329,7 +329,7 @@ function turn(
     // show under a question Bubbles answered correctly.
     citations: [],
     coverage: "not_applicable",
-    recommendedVideoIds: [],
+
     formProposal,
     formSelection,
   };
@@ -562,7 +562,7 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
 
   const proposal = buildProposal({
     ...(directory.resolution ? { employee: directory.resolution } : {}),
-    employeeSalonIds: directory.salonIds ?? [],
+    employeeLocationIds: directory.locationIds ?? [],
     /*
      * SERVER-GENERATED, never taken from the request. A proposal id is how a
      * later confirmation step will name the thing being confirmed; a
@@ -685,7 +685,7 @@ interface DirectoryCheck {
   /** Replaces the conversation's own reading of the employee. */
   resolution?: EmployeeResolution;
   /** The employee's salons, in scope — for `proposeLocation`. */
-  salonIds?: readonly string[];
+  locationIds?: readonly string[];
   /** Asked INSTEAD of the proposal text: the form is not offered yet. */
   question?: string;
   /** Said AFTER the proposal text. */
@@ -707,7 +707,7 @@ async function checkTypedEmployee(
   if (result.kind === "exact") {
     return {
       resolution: { kind: "resolved", employeeName: result.name },
-      salonIds: result.employee.salonIds,
+      locationIds: result.employee.locationIds,
     };
   }
 
@@ -732,7 +732,7 @@ async function checkTypedEmployee(
   if (accepted) {
     return {
       resolution: { kind: "resolved", employeeName: accepted.name },
-      salonIds: accepted.employee.salonIds,
+      locationIds: accepted.employee.locationIds,
     };
   }
 

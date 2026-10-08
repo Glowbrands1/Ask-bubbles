@@ -1,33 +1,37 @@
-import { PRODUCTION_SALONS } from "@/data/salons";
-import { storeNameKey } from "@/lib/reporting/store-identity";
+import { COMPANY_LOCATIONS, locationNameKey as storeNameKey, type CompanyLocation } from "@/lib/locations";
 
 /**
  * ============================================================================
  * A SALON AS A MANAGER TYPES IT
  * ============================================================================
  *
- * "salon 12", "STC 12", "sun tan city 12", "lawrence", "KS Lawrence", "#468".
- * None of these should be refused, and none should be rewritten into a salon
- * the manager did not mean.
+ * "store 12", "location 12", "downtown", "TN Testville Downtown", "#12".
+ * None of these should be refused, and none should be rewritten into a
+ * location the manager did not mean. (The module keeps the reference
+ * platform's name; it reads this company's `COMPANY_LOCATIONS`.)
  *
  * TWO OUTCOMES, AND NO THIRD:
  *
  *   A ROSTER MATCH, which must be UNIQUE. The whole name ("ks lawrence"), the
  *   name without its state prefix ("lawrence"), or the salon number, padded
- *   the way reporting pads it ("468", "#0468", "salon 468"). Compared through
- *   `storeNameKey`, reporting's own normalisation, so case, spacing and the
- *   punctuation the sources disagree on do not matter. The display value is
- *   the roster's name.
+ *   compared by number so leading zeros do not matter ("12", "#012",
+ *   "store 12"). Compared through `locationNameKey`, so case, spacing and
+ *   punctuation do not matter. The display value is the roster's name.
  *
  *   ANYTHING ELSE IS KEPT AS TYPED, cleaned: whitespace collapsed, words
- *   capitalised, "STC" in capitals. "salon 12" is not a roster number, so it
- *   prints as "Salon 12" — the manager's words, legible — rather than as a
- *   guess at which of the fifteen they meant. The field stays editable.
+ *   capitalised, role abbreviations in capitals. "store 12" that is not a
+ *   roster code prints as "Store 12" — the manager's words, legible — rather
+ *   than as a guess at which location they meant. The field stays editable.
  */
 
 const SMALL_WORDS = new Set(["in", "of", "and", "the", "at", "for"]);
 
-const ABBREVIATIONS = new Set(["stc", "ks", "mo", "ne", "sd", "asd", "tsd", "dm", "tc"]);
+const ABBREVIATIONS = new Set([
+  "sd", "asd", "tsd", "dm", "tc",
+  ...COMPANY_LOCATIONS.map((location) => location.state?.toLowerCase()).filter(
+    (state): state is string => Boolean(state),
+  ),
+]);
 
 /** Capitalises each word, keeping known abbreviations in capitals. */
 export function tidyWords(text: string): string {
@@ -47,30 +51,37 @@ export function tidyWords(text: string): string {
     .join(" ");
 }
 
-function withoutPrefix(name: string): string {
-  return name.replace(/^[A-Z]{2}\s+/, "");
+function withoutPrefix(location: CompanyLocation): string {
+  if (!location.state) return location.name;
+  return location.name.replace(new RegExp(`^${location.state}\\s+`, "i"), "");
 }
 
+const NUMBERED = /^(?:(?:salon|store|location|loc|shop|makery)\s*)?#?\s*(\d{1,6})$/;
+
 /**
- * The roster salon a typed phrase names, when it names exactly one.
+ * The roster location a typed phrase names, when it names exactly one.
  */
-export function rosterSalonFor(text: string): (typeof PRODUCTION_SALONS)[number] | null {
-  const key = storeNameKey(text.replace(/^(?:the|our)\s+/i, "").replace(/\s+(?:salon|store|location)$/i, ""));
+export function rosterSalonFor(text: string): CompanyLocation | null {
+  const key = storeNameKey(
+    text.replace(/^(?:the|our)\s+/i, "").replace(/\s+(?:salon|store|location|shop|makery)$/i, ""),
+  );
   if (!key) return null;
 
-  const number = /^(?:(?:salon|store|stc|sun tan city|location|loc)\s*)?#?\s*(\d{1,4})$/.exec(key)?.[1];
+  const number = NUMBERED.exec(key)?.[1];
   if (number) {
-    const padded = number.padStart(4, "0");
-    return PRODUCTION_SALONS.find((salon) => salon.salonNumber === padded) ?? null;
+    const hits = COMPANY_LOCATIONS.filter(
+      (location) => /^\d+$/.test(location.code) && Number(location.code) === Number(number),
+    );
+    return hits.length === 1 ? hits[0]! : null;
   }
 
-  const byName = PRODUCTION_SALONS.filter(
-    (salon) => storeNameKey(salon.name) === key || storeNameKey(withoutPrefix(salon.name)) === key,
+  const byName = COMPANY_LOCATIONS.filter(
+    (location) => storeNameKey(location.name) === key || storeNameKey(withoutPrefix(location)) === key,
   );
   return byName.length === 1 ? byName[0]! : null;
 }
 
-/** The salon as it should print: the roster name when unique, otherwise the tidied text. */
+/** The location as it should print: the roster name when unique, otherwise the tidied text. */
 export function resolveSalonText(text: string): string | null {
   const cleaned = text
     .replace(/^[\s,:;-]+|[\s,.;:!?]+$/g, "")
@@ -83,14 +94,15 @@ export function resolveSalonText(text: string): string | null {
 }
 
 /**
- * A regular-expression fragment matching a salon as typed: a numbered salon
- * ("salon 12", "STC #12", "sun tan city 12", "#12") or a roster name, with or
- * without its state prefix, longest first so "Lincoln O Street" is not read as
- * "Lincoln".
+ * A regular-expression fragment matching a location as typed: a numbered one
+ * ("store 12", "location #12", "#12") or a roster name, with or without its
+ * state prefix, longest first so "Testville Downtown" is not read as
+ * "Testville".
  */
 export const SALON_PHRASE: string = (() => {
-  const names = PRODUCTION_SALONS.flatMap((salon) => [salon.name, withoutPrefix(salon.name)])
+  const names = COMPANY_LOCATIONS.flatMap((location) => [location.name, withoutPrefix(location)])
     .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"))
     .sort((a, b) => b.length - a.length);
-  return `(?:(?:salon|store|stc|sun\\s+tan\\s+city|location|loc)\\s*#?\\s*\\d{1,4}|#\\s?\\d{1,4}|${names.join("|")})`;
+  const named = names.length > 0 ? `|${names.join("|")}` : "";
+  return `(?:(?:salon|store|location|loc|shop|makery)\\s*#?\\s*\\d{1,6}|#\\s?\\d{1,6}${named})`;
 })();

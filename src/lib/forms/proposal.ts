@@ -1,8 +1,8 @@
 import "server-only";
 
 import { businessToday } from "@/lib/business-date";
-import { PRODUCTION_SALONS } from "@/data/salons";
-import { storeNameKey } from "@/lib/reporting/store-identity";
+import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
+import { COMPANY_LOCATIONS, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, isFormVocabulary, leadingFormRequest } from "./template-intent";
@@ -195,7 +195,9 @@ const INTAKE_LIST = /^\s*([^,\n]+),[^,\n]*,/;
  * in capitals, followed by a word that is not. "Mo Smith" is a person, and so
  * is "MO SMITH" in an all-caps sentence; neither matches.
  */
-const ROSTER_STATES = new Set(PRODUCTION_SALONS.map((salon) => salon.state));
+const ROSTER_STATES = new Set(
+  COMPANY_LOCATIONS.map((location) => location.state).filter((state): state is string => Boolean(state)),
+);
 
 /**
  * A NAME THAT IS A SALON ON THE ROSTER IS A PLACE, in any case.
@@ -209,15 +211,15 @@ const ROSTER_STATES = new Set(PRODUCTION_SALONS.map((salon) => salon.state));
  * never a candidate unless it is the whole message, and is left alone.
  */
 const ROSTER_NAME_KEYS: ReadonlySet<string> = new Set(
-  PRODUCTION_SALONS.flatMap((salon) => {
-    const full = storeNameKey(salon.name);
+  COMPANY_LOCATIONS.flatMap((salon) => {
+    const full = locationNameKey(salon.name);
     const short = full.replace(/^[a-z]{2} /, "");
     return short.includes(" ") ? [full, short] : [full];
   }),
 );
 
 function isRosterSalonName(candidate: string): boolean {
-  return ROSTER_NAME_KEYS.has(storeNameKey(candidate));
+  return ROSTER_NAME_KEYS.has(locationNameKey(candidate));
 }
 
 function opensWithRosterState(candidate: string): boolean {
@@ -1005,7 +1007,7 @@ function formSubjectNames(text: string): string[] {
  */
 const TITLE_HEAD = /^(?:managers?|directors?|consultants?|supervisors?|leads?|trainers?|coordinators?|specialists?)$/i;
 const TITLE_MODIFIER =
-  /^(?:salon|district|regional|area|store|general|assistant|shift|training|operations|tanning|spa|senior|junior|head|key)$/i;
+  /^(?:salon|location|district|regional|area|store|makery|general|assistant|shift|training|operations|tanning|spa|senior|junior|head|key)$/i;
 
 function isJobTitlePhrase(candidate: string): boolean {
   if (JOB_TITLES.some((entry) => entry.pattern.test(candidate) && candidate.replace(entry.pattern, "").trim() === "")) {
@@ -1279,7 +1281,7 @@ export interface ProposalInput {
    */
   employee?: EmployeeResolution;
   /** The employee's salons, from the directory, already in the actor's scope. */
-  employeeSalonIds?: readonly string[];
+  employeeLocationIds?: readonly string[];
 }
 
 /**
@@ -1302,20 +1304,7 @@ export interface ProposalInput {
  * because that is how they are printed on the form — not because the manager
  * typed them that way.
  */
-export const JOB_TITLES: { pattern: RegExp; title: string }[] = [
-  /*
-   * PLURALS COUNT. "One of my TCs" states the title as plainly as "a TC", and
-   * managers say it that way about their own team.
-   */
-  { pattern: /\b(?:sdits?|salon directors? in training)\b/i, title: "SDIT" },
-  { pattern: /\b(?:tsds?|training salon directors?)\b/i, title: "TSD" },
-  { pattern: /\b(?:dmits?|district managers? in training)\b/i, title: "DMIT" },
-  { pattern: /\b(?:fttcs?|full[- ]time tanning consultants?)\b/i, title: "FTTC" },
-  { pattern: /\b(?:asds?|assistant salon directors?)\b/i, title: "ASD" },
-  { pattern: /\b(?:tcs?|tanning consultants?)\b/i, title: "Tanning Consultant" },
-  { pattern: /\b(?:sds?|salon directors?)\b/i, title: "Salon Director" },
-  { pattern: /\b(?:dm|district managers?)\b/i, title: "District Manager" },
-];
+export const JOB_TITLES: readonly { pattern: RegExp; title: string }[] = COMPANY_JOB_TITLES;
 
 /**
  * The job title the manager stated, or null.
@@ -1361,7 +1350,7 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
   const location = proposeLocation(
     input.scope,
     input.context.text,
-    team ? [] : (input.employeeSalonIds ?? []),
+    team ? [] : (input.employeeLocationIds ?? []),
   );
 
   const employeeName = team
@@ -1413,7 +1402,7 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
     locationId,
     /*
      * NO DISPLAY NAME. There is no salon roster to resolve one from an id, and
-     * `PRODUCTION_SALONS` is the roster rather than a per-record authority — putting a
+     * `COMPANY_LOCATIONS` is the roster rather than a per-record authority — putting a
      * fictional salon name in front of a manager about to file a disciplinary
      * record is exactly the class of thing this phase exists to stop.
      */

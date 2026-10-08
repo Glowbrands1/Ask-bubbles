@@ -488,12 +488,12 @@ export function InlineForm({
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
         <dt className="text-subtle-foreground">Employee</dt>
         <dd className="min-w-0 text-foreground">{loaded.instance.employeeName}</dd>
-        <dt className="text-subtle-foreground">Salon</dt>
+        <dt className="text-subtle-foreground">Location</dt>
         <dd className="min-w-0 text-foreground">
           {/*
             THE ID, OR NOTHING. `location_name` is only set when a caller
             supplied one, and chat deliberately supplies none: the only source
-            of a salon display name in this app is `PRODUCTION_SALONS`, which is
+            of a location display name in this app is `COMPANY_LOCATIONS`, which is
             seeded demo data. See docs/chat-phase-3.md.
           */}
           {loaded.instance.locationName ?? (

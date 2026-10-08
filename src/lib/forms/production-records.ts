@@ -1,6 +1,6 @@
 import "server-only";
 
-import { PRODUCTION_SALONS } from "@/data/salons";
+import { COMPANY_LOCATIONS } from "@/lib/locations";
 
 /**
  * ============================================================================
@@ -10,8 +10,8 @@ import { PRODUCTION_SALONS } from "@/data/salons";
  * THE FINDING THIS ANSWERS, from the 14 September review:
  *
  *   "The Overview follow-up queue includes 'Jordan Vance (test)', 'suzy
- *    sunshine', 'Ace Test', and a salon called Maple Crossing, which is not one
- *    of our 15 salons."
+ *    sunshine', 'Ace Test', and a location called Maple Crossing, which is not one
+ *    of our 15 locations."
  *
  * Those are real rows in `form_instances`, created by real test submissions
  * against the live deployment. They are not seeded data — nothing in this
@@ -32,14 +32,14 @@ import { PRODUCTION_SALONS } from "@/data/salons";
  *    rather than a deployment's — see `docs/stakeholder-review-2026-09-14.md`.
  *
  * 2. THE ROSTER GUARD BELOW, which is structural and needs nobody to remember
- *    anything. A form filed against a salon that is not on the roster cannot be
- *    a production record for a salon this business operates, because the
- *    business operates those fifteen salons. "Maple Crossing" is caught by this
- *    without being named anywhere, which is the point: the next invented salon
+ *    anything. A form filed against a location that is not on the roster cannot be
+ *    a production record for a location this business operates, because the
+ *    business operates those fifteen locations. "Maple Crossing" is caught by this
+ *    without being named anywhere, which is the point: the next invented location
  *    is caught too.
  *
  * 3. AN EXPLICIT, CONFIGURED EXCLUSION for anything the first two do not cover
- *    — a test employee filed against a real salon, say. It is EMPTY BY DEFAULT
+ *    — a test employee filed against a real location, say. It is EMPTY BY DEFAULT
  *    and read from the environment, because the alternative is a list of
  *    somebody's names compiled into the product. A name in a source file is a
  *    guess that ages badly and cannot be changed without a deploy; a name in
@@ -54,14 +54,14 @@ import { PRODUCTION_SALONS } from "@/data/salons";
 /** Environment variable holding the explicit exclusions. Empty by default. */
 export const EXCLUDED_EMPLOYEE_NAMES_ENV = "ASK_BUBBLES_EXCLUDED_EMPLOYEE_NAMES";
 
-/** The salon names this business operates, normalized for comparison. */
+/** The location names this business operates, normalized for comparison. */
 function rosterNames(): Set<string> {
-  return new Set(PRODUCTION_SALONS.map((location) => normalize(location.name)));
+  return new Set(COMPANY_LOCATIONS.map((location) => normalize(location.name)));
 }
 
-/** The salon IDs this business operates. */
+/** The location IDs this business operates. */
 function rosterIds(): Set<string> {
-  return new Set(PRODUCTION_SALONS.map((location) => location.id));
+  return new Set(COMPANY_LOCATIONS.map((location) => location.id));
 }
 
 function normalize(value: string): string {
@@ -94,13 +94,13 @@ export interface ProductionRecordFacts {
   readonly employeeName: string;
   readonly locationName: string | null;
   /**
-   * The salon's ID, which is populated on rows where the NAME is not.
+   * The location's ID, which is populated on rows where the NAME is not.
    *
    * WHY BOTH FIELDS ARE CHECKED. The roster guard originally read the name
    * only, and against the live table that catches almost nothing: of the
    * sixteen outstanding follow-ups on 14 September, thirteen carry a null
    * `location_name`. One of those — `suzy sunshine`, which the review named —
-   * carries `loc-109`, a salon id from the retired twelve-store demo roster.
+   * carries `loc-109`, a location id from the retired twelve-store demo roster.
    * The same roster rule applied to the id catches it; applied to the name it
    * could not, because there was no name to apply it to.
    */
@@ -108,16 +108,16 @@ export interface ProductionRecordFacts {
 }
 
 export type NonProductionReason =
-  /** Filed against a salon this business does not operate. */
-  | "salon_not_on_roster"
+  /** Filed against a location this business does not operate. */
+  | "location_not_on_roster"
   /** Named in the configured exclusion list. */
   | "excluded_by_configuration";
 
 /**
  * Why a record is not production data, or null when it is.
  *
- * A RECORD WITH NO SALON IS PRODUCTION DATA. A form can legitimately be filed
- * without one — an administrator's account covers every salon rather than one,
+ * A RECORD WITH NO LOCATION IS PRODUCTION DATA. A form can legitimately be filed
+ * without one — an administrator's account covers every location rather than one,
  * and `proposeLocation` fills in nothing for them — so treating a blank as
  * suspicious would hide an administrator's own real work.
  */
@@ -131,21 +131,21 @@ export function nonProductionReason(
   }
 
   if (record.locationName && !rosterNames().has(normalize(record.locationName))) {
-    return "salon_not_on_roster";
+    return "location_not_on_roster";
   }
 
   /*
    * THE SAME RULE, ON THE FIELD THAT IS ACTUALLY POPULATED. A record filed
-   * against a salon id this business does not operate is as much a
+   * against a location id this business does not operate is as much a
    * non-production record as one filed against a name it does not operate, and
    * on the live table the id is the field that survives.
    *
    * A NULL ID IS NOT AN OFFENCE. An administrator's form legitimately carries
-   * no salon — see `proposeLocation` — so an absent id says nothing either way
+   * no location — see `proposeLocation` — so an absent id says nothing either way
    * and the record is kept. Only an id that is PRESENT and UNKNOWN is refused.
    */
   if (record.locationId && !rosterIds().has(record.locationId.trim())) {
-    return "salon_not_on_roster";
+    return "location_not_on_roster";
   }
 
   return null;
@@ -163,7 +163,7 @@ export function isProductionRecord(
 export function excludedRecordsNote(count: number): string {
   return `${count} ${
     count === 1 ? "record is" : "records are"
-  } filed against a salon that is not on the roster, or named in this deployment's exclusion list, so ${
+  } filed against a location that is not on the roster, or named in this deployment's exclusion list, so ${
     count === 1 ? "it is" : "they are"
   } not counted here. They are still in Form Monitoring, where they can be reviewed and archived.`;
 }

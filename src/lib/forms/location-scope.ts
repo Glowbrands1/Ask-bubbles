@@ -1,275 +1,121 @@
-import "server-only";
-
-import { PRODUCTION_SALONS } from "@/data/salons";
+import { COMPANY_LOCATIONS, locationIdsInArea } from "@/lib/locations";
 import type { AccessScope } from "@/types";
 
-import { readSalonMentions, rosterSalonName } from "./salon-mention";
+import { readLocationMentions, rosterLocationName } from "./location-mention";
 
 /**
  * ============================================================================
- * WHICH SALON A FORM MAY BE WRITTEN AGAINST
+ * WHICH LOCATION A FORM MAY BE WRITTEN AGAINST
  * ============================================================================
  *
- * THE GAP THIS CLOSES. `POST /api/forms/instances` accepted `locationId` and
- * `locationName` from the request and stored them unchecked. The authenticated
- * identity carried an `AccessScope` the whole time — `authorizeForms` simply
- * dropped it — so nothing compared the salon on a disciplinary record against
- * the salons the person filing it actually covers.
+ * `POST /api/forms/instances` accepts a `locationId` from the request. The
+ * authenticated actor's scope decides whether they may file against it — the
+ * request body never does.
  *
- * ============================================================================
- * WHY DISTRICT AND REGIONAL ACTORS FAIL CLOSED
- * ============================================================================
+ *   global      any location on the roster
+ *   location    the locations their assignment names
+ *   district    the roster locations inside their district(s)
+ *   region      the roster locations inside their region(s)
  *
- * A salon-scoped manager's authorized set is knowable from authenticated data
- * alone: their primary area plus the areas they also cover ARE salon ids.
- *
- * A district manager's `primaryAreaId` is a DISTRICT id, and nothing in this
- * system maps a district to its salons — there is no salon roster table, and
- * `PRODUCTION_SALONS` is the roster, not a per-record authority. So for a district or
- * regional actor the question "is this salon in your district?" currently has no
- * truthful answer.
- *
- * The honest options were to accept it and record that it was unverified, or to
- * refuse. THIS REFUSES. An accepted-but-unverified salon on an HR record reads
- * exactly like a verified one to everybody who opens it later, and the record
- * outlives the caveat. A refusal is visible today and fixable by connecting a
- * roster; a wrong salon on a disciplinary document is neither.
- *
- * THE COST IS REAL AND IS NOT HIDDEN: until a roster exists, a district or
- * regional manager cannot create a form that names a salon. They can still ask
- * Bubbles anything, and a salon-scoped manager is unaffected.
- *
- * ============================================================================
- * DEMO MODE IS NOT A SECURITY CONTROL
- * ============================================================================
- *
- * A demo actor has no verified identity and therefore no scope. Enforcing
- * against a scope the browser asserted about itself would be theatre, and would
- * break preview QA for nothing. `null` scope means "not enforced", and the demo
- * screens already carry the standing notice that says so.
+ * Area scopes resolve through the configured roster, and an area the roster
+ * does not know resolves to NO locations. Fail closed, never open.
  */
 
-/** Salon ids an authenticated scope proves membership of. */
-export function authorizedSalonIds(scope: AccessScope): string[] {
-  if (scope.level !== "salon") return [];
-  const ids = [scope.primaryAreaId, ...scope.alsoCoversAreaIds].filter(
+/** The location ids this scope may file a form against. */
+export function authorizedLocationIds(scope: AccessScope): string[] {
+  const areas = [scope.primaryAreaId, ...scope.alsoCoversAreaIds].filter(
     (id): id is string => typeof id === "string" && id.length > 0,
   );
-  return [...new Set(ids)];
+  if (scope.level === "global") return COMPANY_LOCATIONS.map((location) => location.id);
+  if (scope.level === "location") return [...new Set(areas)];
+  return [...new Set(areas.flatMap((area) => locationIdsInArea(area)))];
 }
 
 export type LocationAuthorization =
-  /** Verified: this actor may file against this salon. */
   | { kind: "authorized"; locationId: string }
-  /** No location was requested. Nothing to authorize; the form carries none. */
   | { kind: "no_location" }
-  /** Requested a salon this actor's scope does not prove membership of. */
   | { kind: "refused"; reason: string };
 
-/**
- * The one decision every form-creating path must make.
- *
- * @param scope `null` for an unverified (demo) actor — not enforced, see above.
- */
 export function authorizeLocation(
   scope: AccessScope | null,
   requestedLocationId: string | null | undefined,
 ): LocationAuthorization {
   const requested = requestedLocationId?.trim() || null;
 
-  // Nothing was asked for, so there is nothing to refuse. A form with no salon
-  // is a form with no salon — that is a product decision, not a bypass.
   if (!requested) return { kind: "no_location" };
 
-  // Demo: unverified identity, no scope, no enforcement.
+  // No scope means demo/preview: nothing is persisted against a real location.
   if (!scope) return { kind: "authorized", locationId: requested };
 
-  if (scope.level === "global") {
-    /*
-     * A global actor is not restricted BY SCOPE — that is what global means.
-     * This is not a claim that the id names a real salon: there is no roster to
-     * check it against. It is a claim that this actor's scope does not exclude
-     * it.
-     */
+  if (scope.level === "global") return { kind: "authorized", locationId: requested };
+
+  if (authorizedLocationIds(scope).includes(requested)) {
     return { kind: "authorized", locationId: requested };
   }
-
-  if (scope.level === "salon") {
-    const allowed = authorizedSalonIds(scope);
-    if (allowed.includes(requested)) return { kind: "authorized", locationId: requested };
-    return {
-      kind: "refused",
-      // Never echoes the requested id — it came from the caller and naming it
-      // back confirms nothing useful while making the message noisier.
-      reason:
-        "That salon is not one you are assigned to. A form can only be filed against a salon on your own assignment.",
-    };
-  }
-
-  // district | region — see the note above.
   return {
     kind: "refused",
     reason:
-      "Ask Bubbles cannot yet verify which salons are in your district, so it will not file a form against one. This needs the salon roster to be connected.",
+      "That location is not on your assignment. A form can only be filed against a location you are assigned to.",
   };
 }
 
 export type LocationProposal =
-  /** Exactly one authorized salon, so it can be filled in without guessing. */
   | { resolution: "resolved"; locationId: string }
-  /**
-   * The manager picks; Bubbles does not.
-   *
-   * `authorizedIds` EMPTY MEANS "NOT ENUMERABLE", not "none": a global actor is
-   * restricted by nothing and belongs to no salon list. A salon-scoped actor
-   * with no assignment is `unavailable` instead, so the two never collide.
-   */
   | {
       resolution: "needs_selection";
       authorizedIds: string[];
-      /**
-       * The roster name of a salon the manager NAMED that their scope does not
-       * cover. Set only when nothing they named is theirs, so the question can
-       * say why it is being asked instead of silently filing elsewhere.
-       */
       outOfScopeName?: string;
     }
-  /**
-   * This actor has no salon assignment to fill in, and does not need one.
-   *
-   * DISTINCT FROM `unavailable`, which means "the answer exists and cannot be
-   * verified". A global actor is not assigned to a salon at all, and
-   * `authorizeLocation` already permits them a form without one — so blocking
-   * them would be inventing a requirement the server does not have.
-   */
   | { resolution: "not_applicable"; reason: string }
-  /** No authoritative answer is available for this actor yet. */
   | { resolution: "unavailable"; reason: string };
 
 /**
- * What chat may fill in on a proposal, before anything is created.
- *
- * DELIBERATELY NARROWER THAN `authorizeLocation`. That one answers "may this
- * actor file here?"; this one answers "can Bubbles fill this in without guessing?"
- * — and the answer is only yes when exactly one salon is authorized. Two
- * authorized salons is a question for the manager, not a coin toss on an HR
- * record.
+ * The location a PROPOSED form would carry: the manager's own words first,
+ * then the employee's directory locations, then the account's assignment.
+ * Never a guess — several candidates is a question.
  */
 export function proposeLocation(
   scope: AccessScope | null,
-  /**
-   * The manager's own turns. A salon they NAME is used when — and only when —
-   * it is one their scope proves; see `fromNamedSalons`.
-   */
   managerText = "",
-  /**
-   * The salons the form's EMPLOYEE is assigned to, from the employee
-   * directory — empty when the employee was not matched there (or the form is
-   * team-wide). See `fromEmployeeSalons` for where it sits in the order.
-   */
-  employeeSalonIds: readonly string[] = [],
+  employeeLocationIds: readonly string[] = [],
 ): LocationProposal {
   if (!scope) {
     return {
       resolution: "unavailable",
-      reason: "Preview mode cannot verify a salon, so no location is filled in.",
-    };
-  }
-
-  if (scope.level === "salon") {
-    const allowed = authorizedSalonIds(scope);
-    const named = fromNamedSalons(allowed, managerText);
-    if (named) return named;
-    const employees = fromEmployeeSalons(allowed, employeeSalonIds);
-    if (employees) return employees;
-    if (allowed.length === 1) return { resolution: "resolved", locationId: allowed[0]! };
-    if (allowed.length > 1) return { resolution: "needs_selection", authorizedIds: allowed };
-    return {
-      resolution: "unavailable",
-      reason: "Your account has no salon assigned yet, so Ask Bubbles cannot fill one in.",
+      reason: "Preview mode cannot verify a location, so none is filled in.",
     };
   }
 
   if (scope.level === "global") {
-    /*
-     * ========================================================================
-     * NOT RESTRICTED, AND NOT ASSIGNED TO A SALON EITHER
-     * ========================================================================
-     *
-     * THIS RETURNED `needs_selection` WITH AN EMPTY LIST, and that one line
-     * made the entire inline-creation feature unreachable for the only kind of
-     * account that exists on the live project. `needs_selection` means the
-     * proposal is not `ready`, `ready` is what gates "Create draft", so an
-     * administrator asking for a coaching form got a card with no action, the
-     * "use Create a Form instead" escape copy, and a question about a salon
-     * they could not answer — with nothing to pick from.
-     *
-     * The mistake was treating "no salon to fill in" as "a missing answer". For
-     * a global actor it is neither missing nor unverifiable: they are not
-     * assigned to a salon, and `authorizeLocation` already lets them file a
-     * form that names none. Demanding one invents a requirement the server does
-     * not have.
-     *
-     * So the form is created WITHOUT a salon and the card says so plainly. What
-     * is still refused is INVENTING one — there is no roster, and a fictional
-     * salon on a disciplinary record is the thing this workstream exists to
-     * stop.
-     *
-     * A SALON THE MANAGER NAMES IS NOT INVENTED. The roster is the business's
-     * fifteen, a global scope excludes none of them, and the server authorizes
-     * the id again — so "at Wornall" puts Wornall on the form, and "at Lincoln"
-     * (three salons) asks which.
-     */
-    const named = fromNamedSalons(
-      PRODUCTION_SALONS.map((salon) => salon.id),
-      managerText,
-    );
+    const all = COMPANY_LOCATIONS.map((location) => location.id);
+    const named = fromNamedLocations(all, managerText);
     if (named) return named;
-    /*
-     * THE EMPLOYEE'S OWN SALON IS NOT INVENTED EITHER. A global actor filing
-     * about somebody the directory places at exactly one salon gets that salon
-     * on the form; several is a question, among those.
-     */
-    const employees = fromEmployeeSalons(
-      PRODUCTION_SALONS.map((salon) => salon.id),
-      employeeSalonIds,
-    );
+    const employees = fromEmployeeLocations(all, employeeLocationIds);
     if (employees) return employees;
     return {
       resolution: "not_applicable",
-      reason:
-        "Your account covers every salon rather than one, so Ask Bubbles will not put a salon on this form.",
+      reason: "Your account covers every location rather than one, so no location is put on this form.",
     };
   }
 
+  const allowed = authorizedLocationIds(scope);
+  const named = fromNamedLocations(allowed, managerText);
+  if (named) return named;
+  const employees = fromEmployeeLocations(allowed, employeeLocationIds);
+  if (employees) return employees;
+  if (allowed.length === 1) return { resolution: "resolved", locationId: allowed[0]! };
+  if (allowed.length > 1) return { resolution: "needs_selection", authorizedIds: allowed };
   return {
     resolution: "unavailable",
-    reason:
-      "Ask Bubbles can't verify the salon for your district yet. Choose a verified salon once the location roster is connected.",
+    reason: "Your account has no verified location assigned yet, so none can be filled in.",
   };
 }
 
-/**
- * ============================================================================
- * A SALON THE MANAGER NAMED, CHECKED AGAINST THE SALONS THEY MAY FILE AGAINST
- * ============================================================================
- *
- * `null` when they named none, so the caller falls back to the account alone.
- *
- *   ONE NAMED SALON IN SCOPE  → resolved. "At Liberty" from a manager who
- *                               covers Wornall and Liberty is not a question.
- *   SEVERAL IN SCOPE          → asked, from just those. "At Kansas City" from
- *                               the same manager is genuinely ambiguous.
- *   NONE IN SCOPE             → asked, from their OWN salons, saying why. A
- *                               salon outside their assignment is never filled
- *                               in — and neither is their own salon silently
- *                               substituted for the one they actually named.
- */
-function fromNamedSalons(allowed: readonly string[], managerText: string): LocationProposal | null {
-  const mentions = readSalonMentions(managerText);
+function fromNamedLocations(allowed: readonly string[], managerText: string): LocationProposal | null {
+  const mentions = readLocationMentions(managerText);
   if (mentions.length === 0) return null;
 
-  const named = [...new Set(mentions.flatMap((mention) => mention.salonIds))];
+  const named = [...new Set(mentions.flatMap((mention) => mention.locationIds))];
   const inScope = named.filter((id) => allowed.includes(id));
 
   if (inScope.length === 1) return { resolution: "resolved", locationId: inScope[0]! };
@@ -277,7 +123,7 @@ function fromNamedSalons(allowed: readonly string[], managerText: string): Locat
   if (allowed.length === 0) return null;
 
   const outOfScopeName =
-    mentions.length === 1 && named.length === 1 ? rosterSalonName(named[0]!) : null;
+    mentions.length === 1 && named.length === 1 ? rosterLocationName(named[0]!) : null;
   return {
     resolution: "needs_selection",
     authorizedIds: [...allowed],
@@ -285,32 +131,11 @@ function fromNamedSalons(allowed: readonly string[], managerText: string): Locat
   };
 }
 
-/**
- * ============================================================================
- * THE EMPLOYEE'S OWN SALON, WHERE THE DIRECTORY KNOWS IT
- * ============================================================================
- *
- * THE ORDER, AND WHY:
- *
- *   1. A salon the manager NAMED (`fromNamedSalons`). They said where it
- *      happened; an employee who covers two salons was at the one they named.
- *   2. THE EMPLOYEE'S ASSIGNMENT, from the Woven directory through the
- *      person-reviewed location map, restricted to the actor's own salons.
- *      Exactly one is the answer — the manager should not have to type what
- *      Ask Bubbles already knows. Several is a question, from just those.
- *   3. THE ACTOR'S OWN SCOPE, exactly as before: one salon is the answer,
- *      several is a question, global files with no salon.
- *
- * `null` when the employee's salons give no answer — none are known, or none
- * of them is one this actor may file against — so the caller falls through to
- * the account. A salon outside the actor's scope is never proposed, whatever
- * the directory says.
- */
-function fromEmployeeSalons(
+function fromEmployeeLocations(
   allowed: readonly string[],
-  employeeSalonIds: readonly string[],
+  employeeLocationIds: readonly string[],
 ): LocationProposal | null {
-  const inScope = [...new Set(employeeSalonIds)].filter((id) => allowed.includes(id));
+  const inScope = [...new Set(employeeLocationIds)].filter((id) => allowed.includes(id));
   if (inScope.length === 1) return { resolution: "resolved", locationId: inScope[0]! };
   if (inScope.length > 1) return { resolution: "needs_selection", authorizedIds: inScope };
   return null;

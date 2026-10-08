@@ -158,7 +158,6 @@ function turn(content: string): AskResponse {
      */
     citations: [],
     coverage: "not_applicable",
-    recommendedVideoIds: [],
   };
 }
 

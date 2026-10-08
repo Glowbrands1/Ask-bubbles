@@ -111,6 +111,19 @@ export type Permission =
    * `src/config/company/access.ts`.
    */
   | "create_forms"
+  /**
+   * PER-FORM CREATION, carried over from the reference platform's forms
+   * library. Each migrated template names one of these as its
+   * `requiredPermission`; `create_forms` remains the generic grant for the
+   * registry's other forms.
+   */
+  | "create_coaching_form"
+  | "create_corrective_action"
+  | "create_policy_review"
+  | "create_epp"
+  | "create_hiring_form"
+  | "create_exit_form"
+  | "create_employment_change_form"
   | "view_form_monitoring"
   | "manage_form_templates"
   /**

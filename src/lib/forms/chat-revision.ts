@@ -549,5 +549,5 @@ function followUpNote(keys: readonly string[], labelled: readonly { key: string;
 }
 
 function reply(content: string): AskResponse {
-  return { content, citations: [], coverage: "not_applicable", recommendedVideoIds: [] };
+  return { content, citations: [], coverage: "not_applicable" };
 }

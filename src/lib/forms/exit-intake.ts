@@ -1,4 +1,4 @@
-import { salonById } from "@/data/salons";
+import { locationById as salonById } from "@/lib/locations";
 import type { ChatFormProposal } from "@/types";
 
 import { answerStatementText } from "./document";

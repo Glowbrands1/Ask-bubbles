@@ -412,3 +412,6 @@ export function missingGroupLabels(
     .filter((group) => missingGroups.includes(group.id))
     .map((group) => group.label);
 }
+
+/** The corrective-action ladder document — company configuration. */
+export { PERFORMANCE_MANAGEMENT_FRAMEWORK } from "@/config/company/knowledge";

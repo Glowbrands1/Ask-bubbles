@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { salonById } from "@/data/salons";
+import { locationById as salonById } from "@/lib/locations";
 
 import { errorResponse } from "@/lib/api/respond";
 import { parseHistory } from "@/lib/api/validation";
