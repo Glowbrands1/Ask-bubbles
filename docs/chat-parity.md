@@ -376,3 +376,39 @@ mutation of a display-only field; both were corrected.
 
 Live QA against the real Midwest Soap Makers account has **not** been run: it
 needs the `WOVEN_BCS_*` credentials and the Ask Bubbles server keys.
+
+---
+
+## 9. Conversation stress QA and fixes (2026-10-08)
+
+Every case below was first run against **both** apps through the same real
+form path (`proposeFormForTurn` + `continuationFor`); the two behaved
+identically, so each failure was shared with the reference platform. Ask
+Bubbles now handles them; the reference platform is unchanged.
+
+| Area | Before | Now | Where |
+|---|---|---|---|
+| Person on the form | "needs a written warning for cash handling" → employee "cash handling"; "for avery testperson dated 10/2" → "avery testperson dated"; "Avery Testperson Sept 28" → asked to choose "Avery Testperson" or "Avery Testperson Sept" | The person, or a question; a topic word can never START a typed name (`NOT_A_NAME_LEAD`), so "jamie cash" is still a name | `name-words.ts`, `proposal.ts` |
+| Correction before the draft | "actually make it jordan testperson", "no wait, not avery, jordan testperson", "wrong person - its …" → advice; the old card stayed live | New card for the corrected person; the old card is superseded | `proposal.ts` (`sentenceAnswers` reads clauses; answer frames) |
+| Change of intent | "actually don't make a form" kept the Coaching card | Ends the intake | `template-intent.ts` (`DECLINES_FORM`), `proposal-continuation.ts` |
+| Jargon | "c/a", "final written", "phone screen", "TC interview", "step X down to …", "interview form" → advice | The form (or the picker for "interview form"); questions about them stay questions | `template-intent.ts` |
+| Phone typing | "yest", "tmrw", "2 days ago", "wouldnt rehire" not read | Read, relative to the business day; more than 31 days back is never guessed | `relative-date.ts`, `exit-facts.ts`, `typed-contractions.ts` |
+| Correcting a created draft | "change the date to yesterday" on Coaching/transfer went to the AI revision path | Deterministic header correction on every form **except the Corrective Action Form**, which keeps the reference platform's rule (payroll answer only); a second request in the same message is named as not done, never silently dropped | `config/company/forms/index.ts`, `chat-correction.ts` |
+| Duplicate drafts | A create whose response was lost, or a second tab, filed a second record | The server returns this manager's own matching chat draft from the last 10 minutes (`reused: true`) and the browser does not re-draft it | `instances.ts` (`findRecentAssistantDraft`), `api/forms/instances/route.ts`, `create-inline-form.ts` |
+| Form date | No typed date → database `current_date` (UTC): a form started at 9:30pm Eastern was dated tomorrow | Always the business day | `instances.ts`, template preview route |
+| Retrieval vocabulary | "OT rules for mgrs?", "pto", "harrasment" embedded as typed and often missed the policy | Also searched as "OT (overtime) rules for mgrs (managers)?"; the original query is always searched first and the model still sees the question as typed | `query-vocabulary.ts`, `continuation.ts` |
+| Pronoun follow-ups | "does that apply to part-timers?", "can I carry it over?" searched alone | Fall back to the previous manager question when they find nothing alone (retrieval only; pinned-document gates unchanged) | `continuation.ts` |
+| Coverage | Any retrieved row made the turn "grounded", even when the answer cited nothing | Grounded only when the answer cites a row (or stands on report figures, or is about the forms library) | `server-ask.ts` (`answerCoverage`) |
+| Citation markers | "[S2][S3]" left "[S2]" in the prose; "[S1, S2]" was neither cited nor stripped | Both cited and stripped | `prompts.ts` (`normalizeMarkers`) |
+| Prompt | Date only; no clarification or metrics rule; browser-typed name/location placed verbatim | Weekday, business time zone and yesterday's date; one-clarifying-question rule; no discipline on metrics alone; keep allegations as allegations; resolve relative dates out loud; labels sanitised to one line | `prompts.ts` |
+| Pinned document lookup failing | "Ask an administrator", no Retry | Retryable `retrieval_failed`; a genuinely missing document still refuses as configured | `server-ask.ts` |
+| History | Message count capped, length not | Each history message capped at 40,000 characters | `validation.ts` |
+
+**Suites:** `lib/ai/conversation-stress-qa.test.ts` (70),
+`lib/forms/chat-correction-stress.test.ts` (34),
+`test/qa/chat-grounding-stress.qa.test.ts` (15, PGlite + pgvector),
+`lib/forms/duplicate-draft.test.ts`, `app/api/forms/duplicate-create-route.test.ts`,
+`lib/ai/pinned-failure-recovery.test.ts`, `lib/ai/query-vocabulary.test.ts`,
+`lib/ai/prompts-stress.test.ts`, `lib/forms/typed-shorthand.test.ts`, and
+`e2e/chat-intent.spec.ts` (browser). Run against the pre-change source, 76 of
+the new unit tests fail.
