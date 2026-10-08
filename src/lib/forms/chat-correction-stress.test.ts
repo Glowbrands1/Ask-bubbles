@@ -217,31 +217,89 @@ describe("what is never written", () => {
   });
 });
 
-describe("a header correction with a second request in the same message", () => {
-  it("saves the date, and says the rest was not done instead of dropping it", async () => {
+describe("nothing in the message is silently dropped (release review)", () => {
+  const NOTE = "I haven't done this part of your message yet";
+
+  it("saves the date, and names the part it did not do", async () => {
     state.templateKey = "coaching";
     const response = await correct("change the date to yesterday and shorten the summary");
     expect(state.saved).toEqual([{ values: { form_date: "2026-09-29" }, checked: {} }]);
-    expect(response!.content).toContain("That's the only change I made from that message");
+    expect(response!.content).toContain(NOTE);
+    expect(response!.content).toContain('- "shorten the summary"');
   });
 
-  it("'…and the name to Jordan' names someone else, so nothing is written here at all", async () => {
+  it("'…and the name to Jordan Testperson' saves the date and flags the name, never renaming to someone else", async () => {
     state.templateKey = "coaching";
-    // Another person in the message: the "somebody else" guard hands the turn on untouched.
-    expect(await correct("change the date to yesterday and the name to Jordan Testperson")).toBeNull();
+    const response = await correct("change the date to yesterday and the name to Jordan Testperson");
+    expect(state.saved).toEqual([{ values: { form_date: "2026-09-29" }, checked: {} }]);
+    expect(response!.content).toContain('- "the name to Jordan Testperson"');
+  });
+
+  it("a question after a correction no longer stops the correction, and is named back", async () => {
+    state.templateKey = "position-transfer";
+    const response = await correct("new location salon 24. also what is the transfer policy?");
+    expect(state.saved).toEqual([{ values: { new_location: "Salon 24" }, checked: {} }]);
+    expect(response!.content).toContain('- "what is the transfer policy?"');
+  });
+
+  it("a correction the form's reader could not read whole is applied clause by clause, and the rest named", async () => {
+    state.templateKey = "position-transfer";
+    const response = await correct("change her new location to salon 24 and rewrite the reason to mention her schedule");
+    expect(state.saved).toEqual([{ values: { new_location: "Salon 24" }, checked: {} }]);
+    expect(response!.content).toContain('- "rewrite the reason to mention her schedule"');
+  });
+
+  it("two corrections the reader takes together are both saved, with no note", async () => {
+    state.templateKey = "position-transfer";
+    const response = await correct("change her new location to salon 24 and her new pay rate to $15");
+    expect(state.saved).toEqual([{ values: { new_location: "Salon 24", new_pay_rate: "$15.00" }, checked: {} }]);
+    expect(response!.content).not.toContain(NOTE);
+  });
+
+  it.each([
+    ["dpoa", "payroll deduct is not applicable and add that she was late twice", "add that she was late twice"],
+    ["resignation-exit", "last day was yesterday and change the date to today", "change the date to today"],
+  ])("%s: '%s' names '%s'", async (key, question, leftover) => {
+    state.templateKey = key;
+    const response = await correct(question);
+    expect(state.saved).toHaveLength(1);
+    expect(response!.content).toContain(`- "${leftover}"`);
+  });
+
+  it("a request that is only a revision still goes to the revision path untouched", async () => {
+    state.templateKey = "position-transfer";
+    expect(await correct("rewrite the reason to say she starts at salon 24")).toBeNull();
     expect(state.saved).toEqual([]);
   });
 
-  it("'…and add that she apologised' is flagged rather than silently skipped", async () => {
-    state.templateKey = "coaching";
-    const response = await correct("change the date to yesterday and add that she apologised");
-    expect(state.saved).toEqual([{ values: { form_date: "2026-09-29" }, checked: {} }]);
-    expect(response!.content).toContain("Send the rest of it as its own message");
-  });
-
-  it("a plain correction gets no such note", async () => {
+  it("a plain correction gets no note", async () => {
     state.templateKey = "coaching";
     const response = await correct("change the date to yesterday, thanks");
-    expect(response!.content).not.toContain("only change I made");
+    expect(response!.content).not.toContain(NOTE);
+  });
+});
+
+describe("the exit form: one clause's 'not' never reaches the next (release review, both platforms)", () => {
+  it("'shes not eligible for rehire and add that she returned her key' records the key as RETURNED", async () => {
+    state.templateKey = "resignation-exit";
+    await correct("shes not eligible for rehire and add that she returned her key");
+    expect(state.saved).toEqual([
+      { values: {}, checked: { salon_key_returned: ["yes"], eligible_for_rehire: ["no"] } },
+    ]);
+  });
+
+  it("a negation that covers both halves still does: 'didn't return the key or the apron'", async () => {
+    state.templateKey = "resignation-exit";
+    await correct("she didn't return the key or the apron");
+    expect(state.saved[0]!.checked.salon_key_returned).toEqual(["no"]);
+  });
+});
+
+describe("a statement that opens like a question is still a statement", () => {
+  it("'she quit. will be dropped to min wage' — the second sentence is read, not set aside", async () => {
+    state.templateKey = "resignation-exit";
+    const response = await correct("she is not eligible for rehire. will be dropped to min wage");
+    expect(state.saved[0]!.checked).toMatchObject({ eligible_for_rehire: ["no"], dropped_to_minimum_wage: ["yes"] });
+    expect(response!.content).not.toContain("I haven't done this part");
   });
 });

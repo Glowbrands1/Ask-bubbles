@@ -19,6 +19,7 @@ import { isExitDocumentKeys } from "./exit-draft";
 import { authorizeInstance } from "./instance-scope";
 import { PAYROLL_DEDUCT_KEY, payrollDeductChecked, payrollDeductCorrection } from "./payroll-deduct";
 import { extractEmployeeNames, samePerson as samePersonByName } from "./proposal";
+import { clausesOf, LEAD_IN, separateQuestions } from "./message-parts";
 import { isQuestion } from "./question";
 import { singleSpokenDate } from "./relative-date";
 import { detectTemplateIntent } from "./template-intent";
@@ -47,12 +48,15 @@ import { enforcePersonEdit } from "./responsibility";
  * path as typing into the field — so it is recorded as the manager's, refused
  * on a finalized form, and limited to fields a person may edit.
  */
-async function correctFromFormReaders(input: {
-  request: Request;
-  instanceId: string;
-  question: string;
-  today: string;
-}): Promise<AskResponse | null> {
+async function correctFromFormReaders(
+  input: {
+    request: Request;
+    instanceId: string;
+    question: string;
+    today: string;
+  },
+  applied: AppliedBy = {},
+): Promise<AskResponse | null> {
   // A cheap first reading, before anything is loaded: most turns are not corrections.
   const employmentCorrection = correctionValues(input.question, input.today);
   const exitCorrection = exitCorrectionValues(input.question, input.today);
@@ -262,6 +266,13 @@ async function correctFromFormReaders(input: {
     lines.push("", `The ${paragraph} was written before this change — give it a quick read to make sure it still matches.`);
   }
 
+  // What THIS form's readers take from a clause — the test for "was that part done?".
+  applied.reads = (clause) =>
+    Boolean(
+      (kind && correctionValues(clause, input.today)) ||
+        (isExit && exitCorrectionValues(clause, input.today)) ||
+        (asksPayroll && payrollDeductCorrection(clause)),
+    );
   return { ...reply(lines.join("\n")), formUpdate: { instanceId: input.instanceId, updated: written } };
 }
 
@@ -353,34 +364,60 @@ export function readHeaderCorrection(text: string, today: string): HeaderCorrect
 
 /*
  * ============================================================================
- * "CHANGE THE DATE TO YESTERDAY AND SHORTEN THE SUMMARY" IS TWO REQUESTS
+ * NOTHING IN THE MESSAGE IS SILENTLY DROPPED
  * ============================================================================
  *
- * The header reader saves the date and answers, and the turn ends there — so
- * the second half of the message would be dropped without a word. Nothing is
- * guessed about it either way: the date is still saved (it was stated
- * plainly), and the reply says the rest was not done and how to ask for it.
+ * A correction ends the turn: whatever it saved is answered, and nothing else
+ * in the message reaches revision or retrieval. Release QA found what that
+ * lost, on both platforms:
+ *
+ *   "change the date to yesterday and shorten the summary"   summary ignored
+ *   "payroll deduct is not applicable and add that she was
+ *    late twice"                                              addition ignored
+ *   "last day was yesterday and change the date to today"     date ignored
+ *   "new location salon 24. also what is the transfer policy?"
+ *                                     NOTHING saved: the question made the
+ *                                     whole message read as a question
+ *
+ * So the message is taken apart first. Its questions are set aside (they no
+ * longer stop the statements around them from being read); the statements are
+ * read as one, as before; and if that reads nothing, the clauses that say
+ * "change/update/set/fix …" are read on their own. Whatever the applied path
+ * did not read — an instruction or a question — is NAMED in the reply, word
+ * for word, with how to get it done. Nothing is guessed about it.
  */
-const OTHER_INSTRUCTION =
-  /\b(?:rewrite|reword|shorten|lengthen|expand|add|remove|delete|drop|include|mention|change|update|fix|make|put|set|correct|tick|untick|check|uncheck|name|date)\b/i;
+interface AppliedBy {
+  /** Whether the readers that saved this correction read `clause`. Set on success. */
+  reads?: (clause: string) => boolean;
+}
 
-/** Whether `text` asks for something besides the header lines just read. */
-export function hasOtherInstruction(text: string, today: string): boolean {
-  const clauses = text
-    .split(/\s*(?:[.;!?]+\s+|,\s*|\s+(?:and|also|then|plus)\s+)/i)
-    .map((clause) => clause.trim())
-    .filter(Boolean);
-  if (clauses.length < 2) return false;
-  return clauses.some((clause) => OTHER_INSTRUCTION.test(clause) && !readHeaderCorrection(clause, today));
+/** An instruction, or the name/date a header correction is about. */
+const INSTRUCTION =
+  /\b(?:rewrite|reword|shorten|lengthen|expand|add|remove|delete|drop|include|mention|change|update|fix|make|put|set|correct|tick|untick|check|uncheck|name|date)\b/i;
+/** What only a correction says: an explicit verb that sets a value. */
+const CORRECTION_VERB = /\b(?:change|update|correct|fix|set|make)\b/i;
+/** The instruction clauses of `statements` that `reads` did not take. */
+export function unreadInstructions(statements: string, reads: (clause: string) => boolean): string[] {
+  const clauses = clausesOf(statements);
+  if (clauses.length < 2) return [];
+  return clauses.filter((clause) => INSTRUCTION.test(clause) && !reads(clause));
+}
+
+function leftoverNote(parts: readonly string[]): string {
+  const quoted = parts.map((part) => `- "${part.replace(LEAD_IN, "")}"`).join("\n");
+  return `I haven't done this part of your message yet:\n${quoted}\n\nSend ${parts.length === 1 ? "it" : "each one"} as its own message and I'll take care of it.`;
 }
 
 /** A turn that asks for a form — this one again, or another — is never a correction. */
-async function correctHeaderLines(input: {
-  request: Request;
-  instanceId: string;
-  question: string;
-  today: string;
-}): Promise<AskResponse | null> {
+async function correctHeaderLines(
+  input: {
+    request: Request;
+    instanceId: string;
+    question: string;
+    today: string;
+  },
+  applied: AppliedBy = {},
+): Promise<AskResponse | null> {
   // A cheap first reading, before anything is loaded: most turns are not corrections.
   const correction = readHeaderCorrection(input.question, input.today);
   if (!correction) return null;
@@ -469,12 +506,7 @@ async function correctHeaderLines(input: {
   if (drafted && written.includes("employee_name")) {
     lines.push("", "The drafted text was written before this change — give it a quick read to make sure it still names the right person.");
   }
-  if (hasOtherInstruction(input.question, input.today)) {
-    lines.push(
-      "",
-      "That's the only change I made from that message. Send the rest of it as its own message and I'll apply it to this draft.",
-    );
-  }
+  applied.reads = (clause) => readHeaderCorrection(clause, input.today) !== null;
 
   return { ...reply(lines.join("\n")), formUpdate: { instanceId: input.instanceId, updated: written } };
 }
@@ -498,7 +530,38 @@ export async function correctActiveForm(input: {
   question: string;
   today: string;
 }): Promise<AskResponse | null> {
-  return (await correctFromFormReaders(input)) ?? (await correctHeaderLines(input));
+  const { statements, questions } = separateQuestions(input.question);
+  if (!statements) return null;
+
+  const attempt = async (question: string) => {
+    const applied: AppliedBy = {};
+    const response =
+      (await correctFromFormReaders({ ...input, question }, applied)) ??
+      (await correctHeaderLines({ ...input, question }, applied));
+    return { response, applied };
+  };
+
+  let { response, applied } = await attempt(statements);
+  /*
+   * "Change her new location to salon 24 and rewrite the reason …" reads as
+   * nothing whole. Its explicit correction clauses are read alone — never a
+   * clause without a correction verb, so a request that is all revision
+   * ("rewrite the reason to say she starts at salon 24") still goes to the
+   * revision path untouched.
+   */
+  if (!response) {
+    const clauses = clausesOf(statements);
+    const explicit = clauses.filter((clause) => CORRECTION_VERB.test(clause));
+    if (explicit.length === 0 || explicit.length === clauses.length) return null;
+    ({ response, applied } = await attempt(explicit.join(". ")));
+  }
+  if (!response) return null;
+  // Nothing was changed (a finalized form): there is no "rest" to speak of.
+  if (!response.formUpdate) return response;
+
+  const leftovers = [...unreadInstructions(statements, applied.reads ?? (() => false)), ...questions];
+  if (leftovers.length === 0) return response;
+  return { ...response, content: `${response.content}\n\n${leftoverNote(leftovers)}` };
 }
 
 function reply(content: string): AskResponse {

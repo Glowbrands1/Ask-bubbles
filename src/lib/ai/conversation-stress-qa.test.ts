@@ -358,3 +358,74 @@ describe("6. the exit form reads rehire, last day and notice as typed", () => {
     expect(content).not.toContain("**Last Day Worked:**");
   });
 });
+
+/* ======================== 7. several requests in one message (release review) === */
+
+describe("7. a message with more than one request never loses one", () => {
+  it("two forms for two people: both are named back, neither card is guessed", async () => {
+    const replay = await converse("coaching form for avery testperson and a CA for jordan testperson");
+    expectAdvice(replay);
+    expect(replay.last.content).toContain("**Coaching Form** for **avery testperson**");
+    expect(replay.last.content).toContain("**Corrective Action Form** for **jordan testperson**");
+    expect(replay.last.content).toContain("one at a time");
+  });
+
+  it("'transfer form for avery … and an exit form for jordan …' — the same", async () => {
+    const replay = await converse("make a transfer form for avery testperson and an exit form for jordan testperson");
+    expectAdvice(replay);
+    expect(replay.last.content).toContain("**Position Transfer Form** for **avery testperson**");
+    expect(replay.last.content).toContain("**Resignation/Exit Form** for **jordan testperson**");
+  });
+
+  it.each([
+    ["coaching - policy review", "coaching"],
+    ["coaching form for avery testperson, actually make it a policy review", "policy-review"],
+    ["coaching form for avery testperson, not a CA", "coaching"],
+    ["make it a CA instead of a coaching form for avery testperson", "dpoa"],
+  ])("'%s' is one request (a topic, a switch or a negation), not two", async (turn, key) => {
+    const replay = await converse(turn);
+    expect(replay.last.formProposal?.templateKey).toBe(key);
+  });
+
+  it("a question beside a form request: the card, AND the question named back", async () => {
+    const replay = await converse("coaching form for avery testperson. what is the attendance policy?");
+    expectCard(replay, "coaching", "avery testperson");
+    expect(replay.last.content).toContain('You also asked "what is the attendance policy?"');
+  });
+
+  it("a correction and a question in one turn: the corrected card, and the question named back", async () => {
+    const replay = await converse("coaching form for avery testperson", "actually its jordan testperson. also whats the attendance policy?");
+    expectCard(replay, "coaching", "jordan testperson");
+    expect(replay.last.content).toContain("whats the attendance policy?");
+  });
+
+  it("'make it jordan testperson and change it to a CA' changes BOTH the person and the form", async () => {
+    expectCard(
+      await converse("coaching form for avery testperson", "make it jordan testperson and change it to a CA"),
+      "dpoa",
+      "jordan testperson",
+    );
+  });
+
+  it("'make it a CA' alone keeps the person", async () => {
+    expectCard(await converse("coaching form for avery testperson", "make it a CA"), "dpoa", "avery testperson");
+  });
+
+  it("two people joined by 'and', in lower case, are asked about — never the first one silently", async () => {
+    for (const turn of ["coaching form for avery testperson and jordan testperson", "coaching form for avery testperson & jordan testperson"]) {
+      const replay = await converse(turn);
+      expectCard(replay, "coaching", null);
+      expect(replay.last.content).toContain("Which of them");
+    }
+  });
+
+  it("'and' followed by a pronoun or the team is not a second person", async () => {
+    expectCard(await converse("coaching form for avery testperson and she was late"), "coaching", "avery testperson");
+  });
+
+  it("a polite question that IS the request gets no extra note", async () => {
+    const replay = await converse("can you make a coaching form for avery testperson?");
+    expectCard(replay, "coaching", "avery testperson");
+    expect(replay.last.content).not.toContain("You also asked");
+  });
+});

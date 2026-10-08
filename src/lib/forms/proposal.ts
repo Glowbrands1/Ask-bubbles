@@ -925,17 +925,18 @@ function negatedNames(text: string): string[] {
  * actually covered for Jordan" does not.
  */
 const CORRECTION_CUE =
-  /(?:^|[.!?\n]\s*)(?:(?:sorry|oops|actually|correction)\b|no\s*[,.!]|no\s+not\b)|\b(?:i\s+meant|meant\s+to\s+say|wrong\s+(?:name|person|employee)|(?:name|employee|it|that)\s+should\s+(?:be|say|read)\s+\S|i\s+(?:already\s+)?said|like\s+i\s+said|as\s+i\s+said)\b|\binstead\s*[.!]?\s*$/i;
+  /(?:^|[.!?\n]\s*)(?:(?:sorry|oops|actually|correction)\b|no\s*[,.!]|no\s+not\b|(?:make|change|switch)\s+(?:it|that|this|the\s+name)\s+(?:to\s+)?(?!a\b|an\b|the\b))|\b(?:i\s+meant|meant\s+to\s+say|wrong\s+(?:name|person|employee)|(?:name|employee|it|that)\s+should\s+(?:be|say|read)\s+\S|i\s+(?:already\s+)?said|like\s+i\s+said|as\s+i\s+said)\b|\binstead\s*[.!]?\s*$/i;
 
 /**
  * In a correction, a sentence that is only a name is the answer: "No, not
  * Jordan. Avery." So is a CLAUSE — "no wait, not avery, jordan testperson",
- * "wrong person - its jordan testperson" — because a correction typed on a
- * phone runs its parts together with commas and dashes, not full stops.
+ * "wrong person - its jordan testperson", "make it jordan testperson and
+ * change it to a CA" — because a correction typed on a phone runs its parts
+ * together with commas, dashes and "and", not full stops.
  */
 function sentenceAnswers(text: string): string[] {
   const names: string[] = [];
-  for (const sentence of text.split(/(?<=[.!?])\s+|\n+|\s*[,;]\s*|\s+[-–—]\s+/)) {
+  for (const sentence of text.split(/(?<=[.!?])\s+|\n+|\s*[,;]\s*|\s+[-–—]\s+|\s+(?:and|but|then)\s+/)) {
     const words = withoutAnswerLead(sentence.trim().replace(/[.?!]+$/, "")).split(/\s+/).filter(Boolean);
     const candidate = words.length > 0 && words.length <= 2 ? readTypedName(words, true) : null;
     if (candidate && !opensWithRosterState(candidate)) names.push(candidate);
@@ -1033,6 +1034,17 @@ function formSubjectNames(text: string): string[] {
       .slice(candidate.split(/\s+/).length);
     if (/^(?:employee|team|staff|named)$/i.test(following[0] ?? "")) continue;
     subjects.push(candidate);
+    /*
+     * "COACHING FORM FOR AVERY TESTPERSON AND JORDAN TESTPERSON", typed in
+     * lower case, named only Avery: the reader stops at "and", so Jordan was
+     * dropped and the form went to the first person without a word. A second
+     * name joined by "and" / "&" is a second candidate, so the manager is
+     * asked which of them — never handed one of the two.
+     */
+    if (/^(?:and|&)$/i.test(following[0] ?? "")) {
+      const second = readTypedName(following.slice(1, 5), false);
+      if (second && typedNameAllowed(second) && !opensWithRosterState(second)) subjects.push(second);
+    }
   }
   return subjects;
 }

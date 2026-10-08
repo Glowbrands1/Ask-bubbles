@@ -394,7 +394,7 @@ Bubbles now handles them; the reference platform is unchanged.
 | Jargon | "c/a", "final written", "phone screen", "TC interview", "step X down to …", "interview form" → advice | The form (or the picker for "interview form"); questions about them stay questions | `template-intent.ts` |
 | Phone typing | "yest", "tmrw", "2 days ago", "wouldnt rehire" not read | Read, relative to the business day; more than 31 days back is never guessed | `relative-date.ts`, `exit-facts.ts`, `typed-contractions.ts` |
 | Correcting a created draft | "change the date to yesterday" on Coaching/transfer went to the AI revision path | Deterministic header correction on every form **except the Corrective Action Form**, which keeps the reference platform's rule (payroll answer only); a second request in the same message is named as not done, never silently dropped | `config/company/forms/index.ts`, `chat-correction.ts` |
-| Duplicate drafts | A create whose response was lost, or a second tab, filed a second record | The server returns this manager's own matching chat draft from the last 10 minutes (`reused: true`) and the browser does not re-draft it | `instances.ts` (`findRecentAssistantDraft`), `api/forms/instances/route.ts`, `create-inline-form.ts` |
+| Duplicate drafts | A create whose response was lost, or a second tab, filed a second record | A repeated press of the SAME card (its `proposalId`, recorded on the form's `created` event) returns the draft it made (`reused: true`) and the browser does not re-draft it. A new card — a second incident for the same employee — always files a new draft | `instances.ts` (`findRecentAssistantDraft`), `proposal-id.ts`, `api/forms/instances/route.ts`, `create-inline-form.ts` |
 | Form date | No typed date → database `current_date` (UTC): a form started at 9:30pm Eastern was dated tomorrow | Always the business day | `instances.ts`, template preview route |
 | Retrieval vocabulary | "OT rules for mgrs?", "pto", "harrasment" embedded as typed and often missed the policy | Also searched as "OT (overtime) rules for mgrs (managers)?"; the original query is always searched first and the model still sees the question as typed | `query-vocabulary.ts`, `continuation.ts` |
 | Pronoun follow-ups | "does that apply to part-timers?", "can I carry it over?" searched alone | Fall back to the previous manager question when they find nothing alone (retrieval only; pinned-document gates unchanged) | `continuation.ts` |
@@ -404,8 +404,25 @@ Bubbles now handles them; the reference platform is unchanged.
 | Pinned document lookup failing | "Ask an administrator", no Retry | Retryable `retrieval_failed`; a genuinely missing document still refuses as configured | `server-ask.ts` |
 | History | Message count capped, length not | Each history message capped at 40,000 characters | `validation.ts` |
 
-**Suites:** `lib/ai/conversation-stress-qa.test.ts` (70),
-`lib/forms/chat-correction-stress.test.ts` (34),
+### Release review (multi-request messages)
+
+A second pass looked for messages whose parts were dropped without a word. All of these were shared with the reference platform:
+
+| Message | Before | Now |
+|---|---|---|
+| "coaching form for avery testperson and a CA for jordan testperson" | Coaching card asking "Avery or Jordan?"; the CA vanished | Both forms named back with their people; one at a time, no card guessed |
+| "coaching form for avery testperson. what is the attendance policy?" | Card; question vanished | Card, and the question named back to ask on its own |
+| "make it jordan testperson and change it to a CA" | **CA for Avery** | CA for Jordan |
+| "coaching form for avery testperson and jordan testperson" (lower case) | Form for Avery; Jordan dropped | "Which of them?" |
+| "new location salon 24. also what is the transfer policy?" (draft open) | Nothing saved | Location saved; question named back |
+| "change her new location to salon 24 and rewrite the reason …" | Nothing saved | Location saved (clause by clause); the rewrite named back |
+| "payroll deduct is not applicable and add that she was late twice" | Addition dropped | Addition named back |
+| "shes not eligible for rehire and add that she returned her key" | **Key recorded NOT returned** | Key returned; rehire no |
+
+`lib/forms/message-parts.ts` takes a message apart; `correctActiveForm` and `proposeFormForTurn` do the part they understand and name the rest, word for word.
+
+**Suites:** `lib/ai/conversation-stress-qa.test.ts` (83),
+`lib/forms/chat-correction-stress.test.ts` (42),
 `test/qa/chat-grounding-stress.qa.test.ts` (15, PGlite + pgvector),
 `lib/forms/duplicate-draft.test.ts`, `app/api/forms/duplicate-create-route.test.ts`,
 `lib/ai/pinned-failure-recovery.test.ts`, `lib/ai/query-vocabulary.test.ts`,

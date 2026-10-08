@@ -67,6 +67,7 @@ import {
 import { businessToday } from "@/lib/business-date";
 import { extractFormDate } from "@/lib/forms/form-date-answer";
 import { endsIntake } from "@/lib/forms/proposal-continuation";
+import { clausesOf, LEAD_IN, separateQuestions } from "@/lib/forms/message-parts";
 import {
   answersNameConfirmation,
   matchEmployeeName,
@@ -342,7 +343,86 @@ function turn(
  * @returns `null` when the turn is not a form request, so the caller falls
  *          through to the ordinary grounded-answer path.
  */
+/*
+ * ============================================================================
+ * ONE FORM PER TURN — AND THE REST OF THE MESSAGE IS NEVER DROPPED
+ * ============================================================================
+ *
+ * Release QA, both platforms. The form path answers one request per turn, so:
+ *
+ *   "coaching form for avery testperson and a CA for jordan testperson"
+ *        → a Coaching card asking "Avery or Jordan?"; the CA vanished
+ *   "actually its jordan testperson. also whats the attendance policy?"
+ *        → a card for Jordan; the question vanished
+ *
+ * Two DIFFERENT forms in one message are not guessed between, and not merged
+ * into one card whose person is ambiguous: the manager is told both were
+ * heard and asked to send them one at a time, each named with its own person
+ * where the clause names exactly one. A question beside a form request gets
+ * the card AND a line naming the question, so it can be asked on its own.
+ */
 export async function proposeFormForTurn(input: ProposalTurn): Promise<AskResponse | null> {
+  const several = severalFormsRequested(input);
+  if (several) return several;
+  const answer = await proposeOneForm(input);
+  if (!answer?.formProposal) return answer;
+  const questions = separateQuestions(input.question).questions.filter(
+    (sentence) => detectTemplateIntent(sentence).kind === "none" && !extractEmployeeNames(sentence).length,
+  );
+  if (questions.length === 0) return answer;
+  const quoted = questions.map((question) => `"${question.replace(LEAD_IN, "")}"`).join(" and ");
+  return {
+    ...answer,
+    content: `${answer.content}\n\nYou also asked ${quoted} — ask that again on its own and I'll answer it.`,
+  };
+}
+
+/*
+ * A clause is a SEPARATE request only when it reads as one on its own: it
+ * names who the form is for, or asks for it with a verb. "coaching - policy
+ * review" names a topic; "…, actually make it a policy review" REPLACES the
+ * form (`detectTemplateIntent` reads the whole message for that); neither is a
+ * second request.
+ */
+const ASKS_FOR_IT =
+  /\b(?:create|make|start|draft|do|file|write|need|needs|pull\s+up|open|prepare|get\s+me|fill\s+out)\b/i;
+const REPLACES_IT =
+  /\b(?:actually|instead|rather|switch|change\s+it|make\s+it|swap|not\s+(?:a|an|the)\b)/i;
+
+/** The forms a message asks for in separate clauses, when there is more than one. */
+function severalFormsRequested(input: ProposalTurn): AskResponse | null {
+  const requests: { key: string; clause: string }[] = [];
+  for (const clause of clausesOf(input.question)) {
+    if (REPLACES_IT.test(clause)) return null;
+    if (!ASKS_FOR_IT.test(clause) && extractEmployeeNames(clause).length === 0) continue;
+    const intent = detectTemplateIntent(clause);
+    const key =
+      intent.kind === "explicit"
+        ? intent.templateKey
+        : intent.kind === "corrective_action" && intent.requestedCreation
+          ? "dpoa"
+          : null;
+    if (!key || requests.some((request) => request.key === key)) continue;
+    if (!input.summaries.some((summary) => summary.key === key)) continue;
+    requests.push({ key, clause });
+  }
+  if (requests.length < 2) return null;
+
+  const described = requests.map(({ key, clause }) => {
+    const name = input.summaries.find((summary) => summary.key === key)!.name;
+    const people = extractEmployeeNames(clause);
+    return people.length === 1 ? `a **${name}** for **${people[0]}**` : `a **${name}**`;
+  });
+  const list = `${described.slice(0, -1).join(", ")} and ${described[described.length - 1]}`;
+  const first = input.summaries.find((summary) => summary.key === requests[0]!.key)!.name;
+  return {
+    content: `You asked for ${requests.length === 2 ? "two" : String(requests.length)} forms in one message: ${list}. I'll do them one at a time, so nothing from one ends up on the other. Send the first on its own — for example "${first}${extractEmployeeNames(requests[0]!.clause).length === 1 ? ` for ${extractEmployeeNames(requests[0]!.clause)[0]}` : ""}" — and the next one after it.`,
+    citations: [],
+    coverage: "not_applicable",
+  };
+}
+
+async function proposeOneForm(input: ProposalTurn): Promise<AskResponse | null> {
   const intent = intentForTurn(input);
   if (intent.kind === "none") return null;
 
