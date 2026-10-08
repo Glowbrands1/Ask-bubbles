@@ -7,6 +7,7 @@ import { MULTI_BRAND_MANUAL_TITLES, POLICY_MANUAL_BRAND_SCOPE } from "@/config/c
 import { WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW } from "@/config/company/woven";
 import { chunkSegments } from "@/lib/ingestion/chunking";
 import { extractDocument } from "@/lib/ingestion/extract";
+import { hashChunks } from "@/lib/ingestion/pipeline";
 import { isMultiBrandManual, readManualForBrand } from "@/lib/knowledge/brand-sections";
 import { findManualSection, manualDisplayTitle } from "@/lib/forms/official-policy-manual";
 import { manualGroundedPolicies, policyFieldValue } from "@/lib/forms/policy-citation";
@@ -42,10 +43,23 @@ const TITLE = "2025 JBA Policy Manual - Edited 5-2025";
 
 /**
  * THE APPROVED COPY: the reference platform's Woven copy of the "Edited
- * 5.2025" manual — 712,866 bytes, this SHA-256 of its bytes (the same file the
- * reference platform's handbook and its policy attachment both carry).
+ * 5.2025" manual — the same file its handbook and its policy attachment both
+ * carry — as its storage and knowledge records describe it (read 8 Oct 2026).
+ *
+ * Bytes are compared first. A different record can carry the same edition
+ * re-saved (different bytes, same text), so the TEXT is compared too: the
+ * extractor and chunker here are the same code as there, so the same text
+ * gives the same chunk hash, the same character count and the same pages.
  */
-const APPROVED = { sizeBytes: 712_866, sha256: "7eaa18c063824dcc943567663c0face187247f035901475295bea4da79cdc080" } as const;
+const APPROVED = {
+  sizeBytes: 712_866,
+  sha256: "7eaa18c063824dcc943567663c0face187247f035901475295bea4da79cdc080",
+  pdfPages: 51,
+  lastPrintedPage: 50,
+  characterCount: 139_485,
+  chunkCount: 166,
+  chunkHash: "e6cfba82280ebfe346a2a75f2ab5ad940fd5af5ae123aaf69733ad998cb0dab1",
+} as const;
 
 describe.skipIf(!enabled)("the confirmed JBA handbook, read-only", () => {
   it("is Buff City Soap's, the approved edition, and reads as Buff City Soap with page-cited sections", { timeout: 300_000 }, async () => {
@@ -90,14 +104,31 @@ describe.skipIf(!enabled)("the confirmed JBA handbook, read-only", () => {
       report.file = { fileName: file.fileName, mimeType: file.mimeType, sizeBytes: file.bytes.length, sha256 };
       report.identicalToApproved = file.bytes.length === APPROVED.sizeBytes && sha256 === APPROVED.sha256;
 
-      /* 4. THE EDITION, read off the document itself. */
+      /* 4. THE EDITION, read off the document itself, and compared with the approved copy's. */
       const extracted = await extractDocument("pdf", file.bytes);
       const text = extracted.segments.map((segment) => segment.text).join("\n");
-      report.pages = extracted.pageCount ?? null;
-      report.editionMarkers = ["Edited 5.2025", "Edited 5-2025", "5/2025", "2025 JBA Policy Manual"].filter((marker) => text.includes(marker) || record!.title.includes(marker));
+      const chunks = chunkSegments(extracted.segments);
+      const printedPages = chunks.map((chunk) => chunk.printedPage).filter((page): page is number => typeof page === "number");
+      report.edition = {
+        pdfPages: extracted.pageCount ?? null,
+        lastPrintedPage: printedPages.length > 0 ? Math.max(...printedPages) : null,
+        characterCount: extracted.characterCount,
+        chunkCount: chunks.length,
+        chunkHash: hashChunks(chunks),
+        markers: ["Edited 5.2025", "Edited 5-2025", "5/2025", "2025 JBA Policy Manual"].filter((marker) => text.includes(marker) || record!.title.includes(marker)),
+      };
+      const edition = report.edition as { pdfPages: number | null; lastPrintedPage: number | null; characterCount: number; chunkCount: number; chunkHash: string };
+      report.comparedWithApproved = {
+        sameBytes: report.identicalToApproved,
+        samePageCount: edition.pdfPages === APPROVED.pdfPages && edition.lastPrintedPage === APPROVED.lastPrintedPage,
+        sameText: edition.chunkHash === APPROVED.chunkHash && edition.characterCount === APPROVED.characterCount && edition.chunkCount === APPROVED.chunkCount,
+      };
+      /* The edition must match in pages and text; identical bytes are reported, and are the strongest result. */
+      expect(edition.pdfPages, "PDF pages").toBe(APPROVED.pdfPages);
+      expect(edition.lastPrintedPage, "last printed page number").toBe(APPROVED.lastPrintedPage);
+      expect(edition.chunkHash, "the approved edition's text").toBe(APPROVED.chunkHash);
 
       /* 5. AS BUFF CITY SOAP READS IT — the same reading the provider applies. */
-      const chunks = chunkSegments(extracted.segments);
       expect(isMultiBrandManual(record!.title, MULTI_BRAND_MANUAL_TITLES)).toBe(true);
       const read = readManualForBrand(chunks.map((chunk) => ({ content: chunk.content, headings: chunk.sections.map((section) => section.heading) })), POLICY_MANUAL_BRAND_SCOPE);
       const kept = read.join("\n");
