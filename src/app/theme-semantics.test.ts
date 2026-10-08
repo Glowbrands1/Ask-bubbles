@@ -703,3 +703,107 @@ describe("the Ask Bubbles brand", () => {
     expect(palette).not.toContain("brand-accent");
   });
 });
+
+/* ============================================== brand backgrounds ======= */
+
+describe("the brand backgrounds stay decorative", () => {
+  /*
+   * THE APPROVED "EDGE-WEIGHTED" OPTION: the official product drawings at very
+   * low opacity behind the sidebar, the page canvas and the Home band. These
+   * tests hold the line the approval drew: faint enough that text stays
+   * readable even if it lands on a line, absent where people read and type,
+   * and invisible to assistive technology.
+   */
+  const opacity = (token: string) => {
+    const value = Number.parseFloat(ROOT.get(token) ?? "");
+    expect(value, `${token} is declared as a number`).toBeGreaterThan(0);
+    return value;
+  };
+
+  /** One drawing's line, `alpha` of `ink` over `ground`, as a hex colour. */
+  function onLine(ink: string, ground: string, alpha: number): string {
+    const channel = (hex: string, at: number) => parseInt(hex.slice(at, at + 2), 16);
+    return (
+      "#" +
+      [1, 3, 5]
+        .map((at) => Math.round(alpha * channel(ink, at) + (1 - alpha) * channel(ground, at)))
+        .map((value) => value.toString(16).padStart(2, "0"))
+        .join("")
+    );
+  }
+
+  it("keeps each layer under its approved ceiling", () => {
+    expect(opacity("--pattern-sidebar-opacity")).toBeLessThanOrEqual(0.07);
+    expect(opacity("--pattern-canvas-opacity")).toBeLessThanOrEqual(0.12);
+    expect(opacity("--pattern-canvas-home-opacity")).toBeLessThanOrEqual(0.12);
+    expect(opacity("--pattern-band-art-opacity")).toBeLessThanOrEqual(0.36);
+  });
+
+  it("keeps sidebar text readable even on a pattern line", () => {
+    // The sidebar drawings are White.
+    const line = onLine("#ffffff", resolveHex("--sidebar"), opacity("--pattern-sidebar-opacity"));
+    expect(contrast(resolveHex("--sidebar-foreground"), line)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(resolveHex("--sidebar-muted"), line)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("keeps canvas text readable even on a pattern line", () => {
+    // The canvas drawings are the two greens; Dark Tokyo Green is the worst case.
+    for (const token of ["--pattern-canvas-opacity", "--pattern-canvas-home-opacity"]) {
+      const line = onLine(PALETTE["--bcs-tokyo-dark"], resolveHex("--background"), opacity(token));
+      expect(contrast(resolveHex("--foreground"), line), token).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(resolveHex("--muted-foreground"), line), token).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("only lightens the Home band behind its Charcoal text", () => {
+    const line = onLine("#ffffff", resolveHex("--band"), opacity("--pattern-band-art-opacity"));
+    expect(contrast(resolveHex("--band-foreground"), line)).toBeGreaterThanOrEqual(
+      contrast(resolveHex("--band-foreground"), resolveHex("--band")),
+    );
+  });
+
+  it("never takes a click and hides for high contrast, forced colours and print", () => {
+    const block = (selector: string) => {
+      const at = GLOBALS_CODE.indexOf(`${selector} {`);
+      expect(at, selector).toBeGreaterThan(-1);
+      return GLOBALS_CODE.slice(at, GLOBALS_CODE.indexOf("}", at));
+    };
+    expect(block(".rail-pattern::before")).toContain("pointer-events: none");
+    expect(block(".canvas-pattern")).toContain("pointer-events: none");
+    expect(block(".band-art")).toContain("pointer-events: none");
+    expect(GLOBALS_CODE).toMatch(
+      /@media \(forced-colors: active\), \(prefers-contrast: more\), print \{\s*\.rail-pattern::before,\s*\.canvas-pattern,\s*\.band-art \{\s*display: none;/,
+    );
+  });
+
+  it("keeps phones, chat and the form editor plain", () => {
+    expect(GLOBALS_CODE).toMatch(/@media \(max-width: 767px\) \{\s*\.canvas-pattern \{\s*display: none;/);
+    expect(GLOBALS_CODE).toMatch(/\.canvas-pattern\[data-backdrop="none"\] \{\s*display: none;/);
+  });
+
+  it("keeps the band line-up clear of the 820px ask column", () => {
+    // Beside the column only when the band is wide enough; below the chips otherwise.
+    expect(GLOBALS_CODE).toMatch(/@container band \(min-width: 1060px\)/);
+    expect(GLOBALS_CODE).toContain("width: min(380px, calc(100% - 916px))");
+  });
+
+  it("is wired into the shell, the sidebar and the Home band as decoration", () => {
+    const shell = codeOf(join(SOURCE_DIR, "components", "shell", "app-shell.tsx"));
+    expect(shell).toMatch(/<div aria-hidden className="canvas-pattern" data-backdrop=\{backdropForPath\(pathname\)\} \/>/);
+    // The page column sits above the fixed layer.
+    expect(shell).toContain('className="relative z-[1] flex min-w-0 flex-1 flex-col"');
+    const sidebar = codeOf(join(SOURCE_DIR, "components", "shell", "sidebar.tsx"));
+    expect(sidebar).toContain('className="rail-pattern relative isolate flex h-full flex-col bg-sidebar"');
+    const band = codeOf(join(SOURCE_DIR, "features", "dashboard", "ask-band.tsx"));
+    expect(band).toContain("band-art-host");
+    expect(band).toContain('<div aria-hidden className="band-art" />');
+  });
+
+  it("uses artwork files that exist", () => {
+    for (const token of ["--pattern-sidebar", "--pattern-canvas", "--pattern-band-art"]) {
+      const path = /url\("([^"]+)"\)/.exec(ROOT.get(token) ?? "")?.[1];
+      expect(path, token).toBeTruthy();
+      expect(statSync(join(process.cwd(), "public", path!)).size, path).toBeGreaterThan(1000);
+    }
+  });
+});

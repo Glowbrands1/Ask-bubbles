@@ -65,6 +65,13 @@ test.describe("visual", () => {
     await snap(page, "history");
   });
 
+  test("forms register", async ({ page }) => {
+    await pinClock(page);
+    await signInAsDemo(page, "location_manager");
+    await page.goto("/forms/monitoring");
+    await snap(page, "forms-register");
+  });
+
   test("navigation open (drawer on mobile)", async ({ page, isMobile }) => {
     test.skip(!isMobile, "the desktop rail is already in every desktop baseline");
     await pinClock(page);
