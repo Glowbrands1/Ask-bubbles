@@ -1,3 +1,4 @@
+import type { ManualBrandScope } from "@/lib/knowledge/brand-sections";
 import type { KnowledgeDocumentRole } from "@/lib/knowledge/document-roles";
 import type { NamedHandbookConfig } from "@/lib/knowledge/named-handbook";
 
@@ -73,7 +74,23 @@ export const PINNED_KNOWLEDGE_ROLES: readonly PinnedKnowledgeRole[] = [];
  * NULL FOR BUFF CITY SOAP. No Buff handbook has been supplied. When one is,
  * tag it (e.g. "team-handbook") and fill this in; nothing else needs to change.
  */
-export const NAMED_HANDBOOK: NamedHandbookConfig | null = null;
+/**
+ * THE JBA POLICY MANUAL, NAMED IN A QUESTION. "What does the JBA Policy
+ * Manual say about attendance?" reads the manual by identity and pins its
+ * table of contents or the matching sections, exactly as the reference
+ * platform does: "JBA" or "JB & Associates", plus "manual" or "handbook".
+ * Its text arrives as Buff City Soap reads it (`POLICY_MANUAL_BRAND_SCOPE`).
+ * The identity matches the forms' official manual (`official-policy-manual.ts`).
+ */
+export const NAMED_HANDBOOK: NamedHandbookConfig | null = {
+  identity: {
+    tag: "official-policy-manual",
+    fallbackFilenames: ["JBA-Policy-Manual", "2025-JBA-Policy-Manual"],
+    fallbackTitles: ["JBA Policy Manual", "2025 JBA Policy Manual"],
+  },
+  namedBy: [/\b(?:jba|jb\s*(?:&|and)\s*associates)\b/i, /\b(?:manual|handbook)\b/i],
+  notATopic: ["jba", "jb", "associates", "buff", "city", "soap", "bcs"],
+};
 
 /*
  * ============================================================================
@@ -363,4 +380,54 @@ export const PERFORMANCE_MANAGEMENT_FRAMEWORK: KnowledgeDocumentRole = {
    * one and leave the set looking complete.
    */
   maxMandatoryChunks: 16,
+};
+
+/*
+ * ============================================================================
+ * THE JBA POLICY MANUAL, READ AS BUFF CITY SOAP
+ * ============================================================================
+ *
+ * The manual covers every brand JB & Associates operates. Ask Bubbles reads
+ * the company-wide sections and the Buff City Soap ones; another brand's
+ * sections, labelled blocks and bullets are left out of retrieval, of the
+ * named-handbook coverage and of every policy citation on a form
+ * (`lib/knowledge/brand-sections.ts`). What is kept is verbatim.
+ *
+ * Every heading below is the manual's own (JBA Policy Manual, revised May
+ * 2025). The brand names are regular-expression sources.
+ */
+
+/** Documents this scope applies to: the multi-brand JBA manual, by title. */
+export const MULTI_BRAND_MANUAL_TITLES: readonly RegExp[] = [/\bJBA\s+Policy\s+Manual\b/i];
+
+export const POLICY_MANUAL_BRAND_SCOPE: ManualBrandScope = {
+  otherBrands: [String.raw`Sun\s+Tan\s+City`, String.raw`STC`, String.raw`Crunch(?:\s+Fitness)?`],
+  keptLabels: [
+    String.raw`Buff\s+City\s+Soap`,
+    String.raw`BCS`,
+    String.raw`Corporate\s+Office`,
+    String.raw`JB\s+&\s+Associates\s+Office`,
+    String.raw`All\s+Locations(?:\s+Dress\s+Code)?`,
+  ],
+  excludedSections: [
+    // "Buddy Passes (<tanning brand> Employees ONLY)", p.44.
+    /^Buddy Passes \(.*\bONLY\)$/i,
+    // "Client Tanning Policies and Regulations (STC & Crunch ONLY)", p.48–50, and its sub-sections.
+    /^Client Tanning Policies and Regulations \(.*\bONLY\)$/i,
+    /^Protecting the Client from Overexposing$/i,
+    /^Consent Forms \(New Client Release Forms\)$/i,
+    /^Eye Protection$/i,
+    /^VersaSpa® Recommendations$/i,
+    /^Tanning While Pregnant$/i,
+    /^Tanning with Skin Cancer$/i,
+    /^Minors$/i,
+    /^Children Left Unattended$/i,
+    /^One Tanner per Room$/i,
+  ],
+  // The tanning brand's dress-code sub-heading, inside that brand's block.
+  subHeadings: [/^Tanning$/i],
+  otherBrandPassages: [
+    // Under "Employee Discounts": the employee tanning-privilege rules.
+    /^Please keep in mind that The Company preaches tanning in moderation/i,
+  ],
 };

@@ -115,8 +115,11 @@ export interface PolicyManualIdentity {
 export const OFFICIAL_POLICY_MANUAL: PolicyManualIdentity = {
   id: "official_policy_manual",
   tag: "official-policy-manual",
-  fallbackFilenames: ["JBA-Policy-Manual"],
-  fallbackTitles: ["JBA Policy Manual"],
+  fallbackFilenames: ["JBA-Policy-Manual", "2025-JBA-Policy-Manual"],
+  // The Woven handbook in this company's account is titled "2025 JBA Policy
+  // Manual - Edited 5-2025". Tagging the document `official-policy-manual`
+  // in the Knowledge Base remains the preferred identification.
+  fallbackTitles: ["JBA Policy Manual", "2025 JBA Policy Manual"],
   readsContentsPage: false,
 };
 
@@ -143,16 +146,26 @@ export const OFFICIAL_POLICY_MANUAL: PolicyManualIdentity = {
 const REVISION_WORD = /^(?:edited|revised|updated|revision|version|final|draft|rev|v)$/i;
 const REVISION_NUMBER = /^v?\d[\d.\-_/]*$/i;
 
+/** A dash standing between a title and its revision: "Manual - Edited 5-2025". */
+const SEPARATOR = /^[-–—]$/;
+/** An edition year in front of the name: "2025 JBA Policy Manual". */
+const LEADING_YEAR = /^(?:19|20)\d{2}$/;
+
 export function manualDisplayTitle(documentTitle: string): string {
   const words = documentTitle.trim().split(/\s+/).filter(Boolean);
 
   while (
     words.length > 2 &&
     (REVISION_NUMBER.test(words[words.length - 1]!) ||
-      REVISION_WORD.test(words[words.length - 1]!))
+      REVISION_WORD.test(words[words.length - 1]!) ||
+      SEPARATOR.test(words[words.length - 1]!))
   ) {
     words.pop();
   }
+  // The Woven copy is titled "2025 JBA Policy Manual - Edited 5-2025": its
+  // edition year leads. Dropped on the same terms, so the citation reads as
+  // the document's name.
+  if (words.length > 3 && LEADING_YEAR.test(words[0]!)) words.shift();
 
   return words.join(" ") || documentTitle.trim();
 }
