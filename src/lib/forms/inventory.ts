@@ -4,7 +4,7 @@ import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import type { AccessScope, Permission, Role } from "@/types";
 
 import { FORM_CATEGORIES, formCategoryLabel } from "./catalog";
-import { companyFormFor } from "@/config/company/forms";
+import { offeredInChooser } from "./chooser";
 import { supportsInlineDraft } from "./inline-draft";
 import type { TemplateSummary } from "./repository";
 
@@ -40,11 +40,12 @@ import type { TemplateSummary } from "./repository";
  *   THE KNOWLEDGE BASE     policies, guides, frameworks. You read them. They are
  *                          retrieved and cited by the ordinary grounded path.
  *
- *   WORKFLOW STEPS         the rungs of a coaching progression — for example
- *                          observation, coaching, follow-up, a performance
- *                          review, corrective action. A step is NOT
- *                          automatically a form: a rung can have no template,
- *                          or be a section inside another form.
+ *   WORKFLOW STEPS         Observation, Coaching, Role Play, Follow-Up Coaching,
+ *                          EPP, Follow-Up Review, Corrective Action, Leadership
+ *                          Review — the
+ *                          approved progression. A step is NOT automatically a
+ *                          form: Role Play is a rung with no template, and
+ *                          Follow-Up Review is a section inside the EPP.
  *
  * Nothing here describes the second or the third. What it does is make the first
  * one exact, so the prompt can state the boundary and mean it.
@@ -155,7 +156,7 @@ export function creatable(inventory: FormInventory): InventoryEntry[] {
  * for by name. It is only never the one Bubbles brings up first.
  */
 export function offerable(inventory: FormInventory): InventoryEntry[] {
-  return creatable(inventory).filter((entry) => companyFormFor(entry.templateKey)?.offeredInChooser === true);
+  return creatable(inventory).filter((entry) => offeredInChooser(entry.templateKey));
 }
 
 /** Published templates, whoever is asking. */
@@ -236,7 +237,7 @@ function grouped(
  *
  *   Forms → Form Templates     needs `manage_form_templates`. The template
  *                              library itself — the blank documents and their
- *                              versions. A Location Director does NOT have this,
+ *                              versions. A Salon Director does NOT have this,
  *                              and telling one to go there is the small wrong
  *                              answer that makes the whole reply untrustworthy.
  *

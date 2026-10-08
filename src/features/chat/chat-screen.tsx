@@ -30,7 +30,6 @@ import {
   chatReportContextFromParams,
   type ChatReportContext,
 } from "@/lib/reporting/report-context";
-import { reportById } from "@/lib/reporting/registry";
 import { toChatTurnError } from "./chat-error";
 import { Composer } from "./composer";
 import { ContextPanel } from "./context-panel";
@@ -100,7 +99,7 @@ export function ChatScreen() {
    * every turn forever once it arrives. Without this the second question in a
    * report conversation would lose the report.
    *
-   * POINTERS ONLY. Which family, which period, which locations, which measure.
+   * POINTERS ONLY. Which family, which period, which salons, which measure.
    * There is nowhere in it to put a figure, so nothing this browser rendered
    * can be sent as a fact; the server re-reads the rows. See
    * `reporting/read/chat-report-context.ts`.
@@ -264,8 +263,8 @@ export function ChatScreen() {
            */
           continueProposalTemplateKey: continuationFor(history)?.templateKey,
           /*
-           * The form this conversation last created, so "change the date to
-           * yesterday" can correct it. Revalidated server-side.
+           * The form this conversation last created, so "change her new
+           * location to salon 24" can correct it. Revalidated server-side.
            */
           activeFormInstanceId: activeFormInstanceFor(history),
           /*
@@ -309,6 +308,7 @@ export function ChatScreen() {
           turnId: response.turnId,
           citations: response.citations,
           coverage: response.coverage ?? "not_applicable",
+          recommendedVideoIds: response.recommendedVideoIds,
           followUpSuggestions: response.followUpSuggestions,
           /*
            * WHAT BUBBLES IS OFFERING, NOT WHAT IT DREW UP.
@@ -492,7 +492,7 @@ export function ChatScreen() {
    * A CARD CLICK IS THE DECISION, AND IT SHOULD NOT HAVE TO BE MADE TWICE
    * ==========================================================================
    *
-   * Choosing a review form from the picker sends the same sentence a manager
+   * Choosing "SDIT EPP" from the picker sends the same sentence a manager
    * could have typed, and the answer comes back as a proposal card with its
    * own "Create draft" button — asking them to confirm a form they just
    * named.
@@ -500,8 +500,8 @@ export function ChatScreen() {
    * So the CHOICE is remembered for exactly one turn, and a proposal that
    * comes back ready and inline-draftable creates itself. Nothing is widened
    * by this: the create route re-resolves the template, re-applies its
-   * permission and re-authorises the location, and a proposal that is missing
-   * the employee or the location is not `ready` and still asks.
+   * permission and re-authorises the salon, and a proposal that is missing
+   * the employee or the salon is not `ready` and still asks.
    *
    * THE CHOICE TRAVELS WITH THE SEND, rather than being armed beside it. See
    * `autoDraftMessageId` above for the two ways the old arrangement created
@@ -729,9 +729,9 @@ export function ChatScreen() {
                 </h1>
                 {/*
                   LOCATION AND WHO IS ASKING, and NOT the same name twice.
-                  `managerDisplayName` is the account's title for a location login
-                  — "Store Manager — Example Location 101" — so concatenating it
-                  with the location rendered the location twice.
+                  `managerDisplayName` is the account's title for a salon login
+                  — "Salon Director — MO Kansas City Wornall" — so concatenating it
+                  with the location rendered the salon twice.
                 */}
                 <p className="mt-1.5 text-[12px] text-band-muted-foreground">
                   {managerDisplayName.includes(primaryLocationName)
@@ -751,7 +751,7 @@ export function ChatScreen() {
             */}
             {reportContext ? (
               <span className="hidden shrink-0 rounded-[22px] border border-band-pill-border px-2.5 py-[5px] text-[8.5px] font-black tracking-[0.1em] whitespace-nowrap uppercase text-band-muted-foreground lg:inline-block">
-                {reportById(reportContext.reportId)?.label ?? "Report"}
+                {reportContext.family.replace(/-/g, " ")}
               </span>
             ) : null}
           </div>
@@ -1005,7 +1005,7 @@ export function ChatScreen() {
         <aside className="hidden w-76 shrink-0 border-l border-border bg-background lg:block">
           <ContextPanel
             messages={messages}
-            onCreateForm={can("create_forms") ? createFormFromConversation : undefined}
+            onCreateForm={createFormFromConversation}
             busy={busy}
           />
         </aside>

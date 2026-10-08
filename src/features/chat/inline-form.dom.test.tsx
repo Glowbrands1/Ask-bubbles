@@ -27,7 +27,7 @@ import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types
 
 vi.mock("@/lib/session/session-context", () => ({
   useSession: () => ({
-    user: { avatarInitials: "PC", name: "Paulyne" },
+    user: { avatarInitials: "PC", name: "Marlowe" },
     role: "location_manager",
     isAdmin: false,
   }),

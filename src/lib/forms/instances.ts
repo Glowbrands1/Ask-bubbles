@@ -8,7 +8,6 @@ import {
   parseFormDocument,
   parseFormVariants,
   type FieldResponsibility,
-  type FormDocument,
 } from "./document";
 import { refuseUnverifiedPolicyValues } from "./policy-grounding";
 import {
@@ -22,6 +21,13 @@ import {
   enforceResponsibilities,
   type DraftValues,
 } from "./responsibility";
+import { selectStatedFacts } from "./employment-change";
+import {
+  LEGACY_PREVIOUS_ACTION_DATE_KEY,
+  LEGACY_PREVIOUS_ACTION_KEY,
+  PRIOR_ACTIONS_KEY,
+  legacyPriorActions,
+} from "./prior-actions";
 import { applyRequiredClosings } from "./required-closing";
 import { getCurrentVersion, getVersion, type TemplateVersionRow } from "./repository";
 
@@ -154,10 +160,10 @@ export type InstanceView = "active" | "archived" | "all";
  *
  * THE DEFECT THIS EXISTS FOR. `listInstances` ordered the WHOLE COMPANY by
  * recency, took the first 200, and the route filtered that page down to the
- * caller's own location. Confidential enough — no foreign row ever reached the
+ * caller's own salon. Confidential enough — no foreign row ever reached the
  * browser — and wrong as a history:
  *
- *   22 locations file forms. 200 newer records exist elsewhere. A location's own
+ *   22 salons file forms. 200 newer records exist elsewhere. A salon's own
  *   still-relevant record is number 201 by date. It never enters the page, so
  *   the filter cannot return it, and its manager opens Form Monitoring to find
  *   their own history has silently lost rows.
@@ -170,13 +176,13 @@ export type InstanceView = "active" | "archived" | "all";
  */
 export interface InstanceListFilter {
   /**
-   * Location ids this caller may see. `undefined` means unrestricted (global or
+   * Salon ids this caller may see. `undefined` means unrestricted (global or
    * preview); an EMPTY ARRAY means no location-bearing row qualifies, which is
    * how district and region fail closed.
    */
   locationIds?: string[];
   /**
-   * Also include rows with NO location that this actor created. The narrow
+   * Also include rows with NO salon that this actor created. The narrow
    * exception for an absent location — see `instance-scope.ts`.
    */
   ownNullLocationCreatedBy?: string;
@@ -216,7 +222,7 @@ export async function listInstances(
    * of the two tops. Neither is a company-wide scan, and nothing extra reaches
    * the browser: the merge is limited again before it is returned.
    *
-   * The location query is SKIPPED ENTIRELY on an empty id list rather than issued
+   * The salon query is SKIPPED ENTIRELY on an empty id list rather than issued
    * as `in.()`, which PostgREST does not accept — and which would be an odd way
    * to express "nothing qualifies" even if it did.
    */
@@ -375,7 +381,7 @@ export async function createInstance(input: NewInstance): Promise<InstanceRow> {
    * belonged.
    *
    * The mapping below is EXPLICIT and small. It is not inference from a label —
-   * "location" meaning the location is a fact about how these nine templates were
+   * "location" meaning the salon is a fact about how these nine templates were
    * authored, not a rule that would hold for a field somebody adds tomorrow. A
    * key that is not in this map, or is in it but is not a `system` field in this
    * version, is left alone for whoever the template says owns it.
@@ -452,18 +458,25 @@ async function writeValues(
  * THE MANAGER'S OWN STATEMENTS, PUT ON THE FORM
  * ============================================================================
  *
- * Some facts on a form are `manager` fields the model cannot write. When a
- * deterministic reader has taken one from the manager's own words, it is
- * written here as `system` (the assistant filling a line from what it was
- * told) with provenance saying so, and ONLY into empty fields, and ONLY for
- * the keys the caller names — see `selectStatedFacts`.
+ * On a demotion, transfer or exit form the facts — statuses, pay, the new
+ * title and salon, voluntary or involuntary, every yes/no — are `manager`
+ * fields the model cannot write. What fills them is the manager's own words,
+ * read deterministically by `employment-change.ts` from the same notes the
+ * draft is written from.
+ *
+ * Written as `system` (Ask Bubbles filling a line from what it was told) with
+ * provenance saying so, and ONLY into empty fields — see `selectStatedFacts`.
+ * A template with none of these fields gets nothing written and no event.
  */
 export async function applyStatedFacts(
   instanceId: string,
   stated: DraftValues,
   actor: string,
-  /** The keys a statement may reach. Nothing else is written. */
-  allowedKeys: ReadonlySet<string>,
+  /**
+   * The keys a statement may reach. Defaults to the employment change facts;
+   * the Corrective Action Form's payroll-deduct answer passes its own one key.
+   */
+  allowedKeys?: ReadonlySet<string>,
 ): Promise<string[]> {
   const loaded = await loadInstance(instanceId);
   if (!loaded || loaded.instance.status !== "draft") return [];
@@ -473,7 +486,7 @@ export async function applyStatedFacts(
     variantKey: loaded.instance.variantKey,
     stated,
     existing: loaded.values,
-    keys: allowedKeys,
+    ...(allowedKeys ? { keys: allowedKeys } : {}),
   });
   const keys = [...Object.keys(selected.values), ...Object.keys(selected.checked)];
   if (keys.length === 0) return [];
@@ -482,37 +495,6 @@ export async function applyStatedFacts(
   await writeValues(instanceId, selected, "system", provenance);
   await recordEvent(instanceId, "drafted", actor, { statedFacts: keys });
   return keys;
-}
-
-/**
- * The stated facts that may be written: only keys on the caller's list, only
- * into fields still empty, and only where a PERSON could have written them —
- * a statement never fills a signature or a hand-filled line.
- */
-export function selectStatedFacts(input: {
-  document: FormDocument;
-  variantKey: string | null;
-  stated: { values: Record<string, string>; checked: Record<string, string[]> };
-  existing: readonly { fieldKey: string; value: string | null; checked: string[] }[];
-  keys: ReadonlySet<string>;
-}): { values: Record<string, string>; checked: Record<string, string[]> } {
-  const filled = new Set(
-    input.existing
-      .filter((row) => (row.value ?? "").trim() !== "" || row.checked.length > 0)
-      .map((row) => row.fieldKey),
-  );
-  const onList = <T,>(entries: Record<string, T>) =>
-    Object.fromEntries(
-      Object.entries(entries).filter(([key]) => input.keys.has(key) && !filled.has(key)),
-    );
-  const allowed = enforcePersonEdit(input.document, input.variantKey, {
-    values: onList(input.stated.values),
-    checked: onList(input.stated.checked),
-  });
-  return {
-    values: Object.fromEntries(Object.entries(allowed.values).filter(([, value]) => value.trim() !== "")),
-    checked: Object.fromEntries(Object.entries(allowed.checked).filter(([, options]) => options.length > 0)),
-  };
 }
 
 /** A person's edit. Hand-filled lines and signatures are refused. */
@@ -827,10 +809,10 @@ export async function markExported(instanceId: string, actor: string): Promise<v
 }
 
 /**
- * A revision, or the re-evaluation stage of a review form.
+ * A revision, or the re-evaluation stage of an EPP.
  *
- * The new form copies the old one's values and points back at it, so a review
- * lifecycle — review, plan, follow-up, re-evaluation — reads as one
+ * The new form copies the old one's values and points back at it, so the
+ * DMIT lifecycle — review, plan, follow-up, re-evaluation — reads as one
  * history instead of unrelated documents that happen to share a name. The
  * original is marked `revised` and stays exactly as it was signed.
  */
@@ -880,11 +862,47 @@ export async function reviseInstance(
   }));
 
   /*
-   * A REVISION ONTO A NEWER VERSION keeps what the original said, and a
-   * carried value gets any closing the NEW version requires.
+   * ==========================================================================
+   * A REVISION ONTO A NEWER VERSION KEEPS WHAT THE ORIGINAL SAID
+   * ==========================================================================
+   *
+   * The revision is filled against the CURRENT version, so a Corrective
+   * Action filed on revision 4 is revised onto revision 5 — where its two
+   * previous-action lines are one list, and its Action Plan has a required
+   * closing. The original is untouched; on the revision:
+   *
+   *   the two old lines are carried into the new list as one entry, when the
+   *   new version has the list and the original had something on those lines
+   *   (the old rows are carried too, as every value always was);
+   *   a carried value gets any closing the NEW version requires.
    */
   if (version) {
     const target = parseFormDocument(version.document);
+    const targetKeys = new Set(
+      fieldsForVariant(target, loaded.instance.variantKey).map((field) => field.key),
+    );
+    const byKey = new Map(rows.map((row) => [row.field_key, row]));
+    if (targetKeys.has(PRIOR_ACTIONS_KEY) && !(byKey.get(PRIOR_ACTIONS_KEY)?.value ?? "").trim()) {
+      const legacyAction = byKey.get(LEGACY_PREVIOUS_ACTION_KEY);
+      const legacyDate = byKey.get(LEGACY_PREVIOUS_ACTION_DATE_KEY);
+      const combined = legacyPriorActions(legacyAction?.value, legacyDate?.value);
+      if (combined) {
+        const row = {
+          instance_id: data.id,
+          field_key: PRIOR_ACTIONS_KEY,
+          value: combined,
+          checked: [] as string[],
+          filled_by: (legacyAction ?? legacyDate)!.filled_by,
+          provenance: {
+            source: "carried_from_previous_version",
+            fromKeys: [LEGACY_PREVIOUS_ACTION_KEY, LEGACY_PREVIOUS_ACTION_DATE_KEY],
+          } as Record<string, unknown>,
+        };
+        const existing = rows.findIndex((entry) => entry.field_key === PRIOR_ACTIONS_KEY);
+        if (existing >= 0) rows[existing] = row;
+        else rows.push(row);
+      }
+    }
     const textValues = Object.fromEntries(
       rows.flatMap((row) => (typeof row.value === "string" ? [[row.field_key, row.value]] : [])),
     );
@@ -1231,16 +1249,16 @@ async function readInstance(id: string): Promise<InstanceRow> {
 export async function listOutstandingFollowUps(
   limit = 50,
   /**
-   * The caller's authorized locations as LOCATION IDS, or null for unrestricted.
+   * The caller's authorized salons as LOCATION IDS, or null for unrestricted.
    *
    * The 14 September review found a restricted account shown "the same 11
-   * overdue records labelled 'Across every location you cover'" — the whole
+   * overdue records labelled 'Across every salon you cover'" — the whole
    * estate's queue under a heading claiming it was theirs. Narrowed in the
    * query so the refused rows are never read.
    *
-   * A FORM WITH NO LOCATION IS STILL SHOWN to a restricted reader only when they
-   * created it. An administrator's forms legitimately carry no location (see
-   * `proposeLocation`), and a manager scoped to one location has no claim on
+   * A FORM WITH NO SALON IS STILL SHOWN to a restricted reader only when they
+   * created it. An administrator's forms legitimately carry no salon (see
+   * `proposeLocation`), and a manager scoped to one salon has no claim on
    * somebody else's unattributed record.
    */
   locationIds: readonly string[] | null = null,

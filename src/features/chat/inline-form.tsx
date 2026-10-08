@@ -17,6 +17,7 @@ import {
 } from "@/features/forms/document/responsive-form";
 import { useSession } from "@/lib/session/session-context";
 import { checkboxGroupsForVariant, fieldsForVariant } from "@/lib/forms/document";
+import { planSummary } from "@/lib/forms/plan-summary";
 import {
   POLICY_ACKNOWLEDGEMENT_MESSAGE,
   unverifiedPolicyFields,
@@ -31,7 +32,7 @@ import { displayLocator } from "@/lib/knowledge/locator";
 
 /**
  * ============================================================================
- * WHERE BUBBLES'S PREFILL HAS GOT TO
+ * WHERE BUBBLES' PREFILL HAS GOT TO
  * ============================================================================
  *
  * The instance reference is persisted the instant the row exists — that is the
@@ -175,8 +176,8 @@ export function InlineForm({
   const [edits, setEdits] = React.useState<ResponsiveFormValues>({ values: {}, checked: {} });
   const [save, setSave] = React.useState<SaveState>({ kind: "clean" });
   /*
-   * BUMPED WHEN A CHAT TURN CORRECTED THIS FORM ("change the date to
-   * yesterday"), so the fetch below re-reads the canonical instance. See
+   * BUMPED WHEN A CHAT TURN CORRECTED THIS FORM ("change her new location to
+   * salon 24"), so the fetch below re-reads the canonical instance. See
    * `form-update-events.ts`.
    */
   const [externalRevision, setExternalRevision] = React.useState(0);
@@ -487,12 +488,12 @@ export function InlineForm({
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
         <dt className="text-subtle-foreground">Employee</dt>
         <dd className="min-w-0 text-foreground">{loaded.instance.employeeName}</dd>
-        <dt className="text-subtle-foreground">Location</dt>
+        <dt className="text-subtle-foreground">Salon</dt>
         <dd className="min-w-0 text-foreground">
           {/*
             THE ID, OR NOTHING. `location_name` is only set when a caller
             supplied one, and chat deliberately supplies none: the only source
-            of a location display name in this app is `PRODUCTION_LOCATIONS`, which is
+            of a salon display name in this app is `PRODUCTION_SALONS`, which is
             seeded demo data. See docs/chat-phase-3.md.
           */}
           {loaded.instance.locationName ?? (
@@ -961,17 +962,50 @@ export function policyVerificationNoticeFor(
 }
 
 /**
- * A closing line after a plan-type form is drafted. None of the company's
- * current forms is a plan written before the conversation, so there is
- * nothing to add; the hook stays for when one is.
+ * ============================================================================
+ * WHAT ASK BUBBLES SAYS BACK ONCE A PERFORMANCE PLAN IS DRAFTED
+ * ============================================================================
+ *
+ * A coaching record documents a conversation that already happened. A
+ * PERFORMANCE PLAN is written before one: the employee fills in their own
+ * section, the plan of action is agreed together, and both signatures go on
+ * afterwards. A manager who signs a drafted plan at their desk has skipped the
+ * thing the document is for — so the closing line says so.
+ *
+ * AND IT SAYS WHAT THE PLAN CAME OUT AS, in the form's own words. See
+ * `lib/forms/plan-summary.ts`: every phrase is copied from a value stored
+ * against this instance or from an option label the template declares. There
+ * is no second drafting pass and nothing is read from the original
+ * conversation, so the sentence cannot say something the page below it does
+ * not.
+ *
+ * IT IS DERIVED FROM WHAT WAS JUST FETCHED, on every render. Edit the plan and
+ * the summary follows, because it is a reading of the form rather than a copy
+ * of it.
  */
 export function reviewConversationNoticeFor(
   loaded: LoadedInstance,
   prefilling: boolean,
 ): string | null {
-  void loaded;
-  void prefilling;
-  return null;
+  /* While Bubbles is still writing there is nothing final to summarise. */
+  if (prefilling) return null;
+  if (loaded.instance.status !== "draft") return null;
+
+  const values: Record<string, string> = {};
+  const checked: Record<string, string[]> = {};
+  for (const row of loaded.values) {
+    if (row.value !== null) values[row.fieldKey] = row.value;
+    if (row.checked.length > 0) checked[row.fieldKey] = row.checked;
+  }
+
+  return planSummary({
+    templateName: loaded.instance.templateName,
+    employeeName: loaded.instance.employeeName,
+    document: loaded.version.document,
+    variantKey: loaded.instance.variantKey,
+    values,
+    checked,
+  });
 }
 
 function prefillNoticeFor(

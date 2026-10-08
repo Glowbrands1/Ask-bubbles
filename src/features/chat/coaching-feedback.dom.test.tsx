@@ -24,7 +24,7 @@ import type { ChatFormProposal, ChatMessage } from "@/types";
  */
 
 vi.mock("@/lib/session/session-context", () => ({
-  useSession: () => ({ user: { avatarInitials: "PC", name: "Paulyne" }, role: "location_manager", isAdmin: false }),
+  useSession: () => ({ user: { avatarInitials: "PC", name: "Marlowe" }, role: "location_manager", isAdmin: false }),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 /* The fixture location roster: the shipped roster is empty until Buff confirms its stores. */

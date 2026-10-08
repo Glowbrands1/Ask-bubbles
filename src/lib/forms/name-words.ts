@@ -19,9 +19,9 @@ export const NOT_A_NAME = new Set([
    * THE SUBJECT PRONOUNS. They could not reach a candidate before: a full name
    * needs two capitalised parts and the preposed pattern needs "for"/"about",
    * so a sentence-initial "She" matched nothing. `NAMED_ROLE` below reads
-   * "<Name> is a Shift Lead", and "She is a Shift Lead" is that shape exactly —
-   * so the pronouns have to be named here or the employee on a performance
-   * plan becomes "She".
+   * "<Name> is an SDIT", and "She is an SDIT" is that shape exactly — so the
+   * pronouns have to be named here or the employee on a performance plan
+   * becomes "She".
    */
   "she", "he", "they", "we", "you",
   /*
@@ -39,15 +39,15 @@ export const NOT_A_NAME = new Set([
  * ============================================================================
  *
  * The capital letter used to be the ONLY evidence that a word was a name, so
- * "Corrective Action form for paulyne", "paulyne co" typed as the answer to
+ * "Corrective Action form for marlowe", "marlowe co" typed as the answer to
  * "who is this for?", and "test test" all produced no employee — and the form
  * could not be created. Managers type names in lower case (and in capitals) all
  * the time; the casing is not what makes something a name.
  *
  * Without capitals the POSITION is the evidence — see `readTypedName` — and
  * this list is what stops that position from swallowing the rest of the
- * sentence: "form for paulyne because she was late" is the name "paulyne",
- * not "paulyne because". It is also what keeps an ordinary reply ("thanks",
+ * sentence: "form for marlowe because she was late" is the name "marlowe",
+ * not "marlowe because". It is also what keeps an ordinary reply ("thanks",
  * "ok") or an incident topic ("a form about attendance") from being read as a
  * person. It is never consulted for a capitalised name the existing patterns
  * found, so none of those change.
@@ -83,7 +83,7 @@ export const NOT_A_TYPED_NAME = new Set([
   "performance", "went", "going", "goes",
   /*
    * COACHING FEEDBACK, 1 OCTOBER 2026. "since our coaching on bed sanitizing"
-   * named an employee "bed sanitizing". The location-floor topics a coaching
+   * named an employee "bed sanitizing". The salon-floor topics a coaching
    * form is about are never who it is for.
    */
   "bed", "beds", "sanitizing", "sanitising", "sanitize", "sanitise",
@@ -94,7 +94,7 @@ export const NOT_A_TYPED_NAME = new Set([
    * name is read (`maskTeamSubjectPhrases`); these are the same words on
    * their own, so a variant the mask does not cover still names nobody.
    */
-  "general", "group", "whole", "entire", "refresher", "team-wide", "location-wide",
+  "general", "group", "whole", "entire", "refresher", "team-wide", "salon-wide",
   "store-wide", "company-wide", "teamwide", "everyone's",
   /*
    * What people ask ABOUT a form rather than who it is for: "coaching tips",

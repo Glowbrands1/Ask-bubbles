@@ -1,6 +1,6 @@
-import { ACTIVE_BRAND } from "@/lib/brand";
 import { demoRuntime } from "@/lib/demo/runtime";
 import type { DemoAnswer } from "@/lib/demo/types";
+import type { VideoResource } from "@/types";
 import { detectTemplateIntent } from "@/lib/forms/template-intent";
 import { getLocalKnowledgeProvider } from "@/lib/knowledge";
 import { truncate } from "@/lib/utils/format";
@@ -10,6 +10,7 @@ import type { AIProvider, ClientAskRequest, AskResponse } from "./types";
 interface DemoSeed {
   readonly answers: readonly DemoAnswer[];
   readonly fallback: Record<ClientAskRequest["mode"], string>;
+  readonly videos: readonly VideoResource[];
 }
 
 /**
@@ -39,6 +40,33 @@ function scoreAnswer(answer: DemoAnswer, question: string): number {
     }
   });
   return score;
+}
+
+function matchVideos(
+  question: string,
+  preferred: string[],
+  library: readonly VideoResource[],
+): string[] {
+  if (preferred.length) return preferred.slice(0, 3);
+  const q = normalize(question);
+  const scored = library.map((video) => {
+    const haystack = [
+      ...video.keywords,
+      ...video.tags,
+      ...video.equipment,
+      video.category,
+      video.title,
+    ]
+      .join(" ")
+      .toLowerCase();
+    const hits = haystack
+      .split(/[\s,]+/)
+      .filter((token) => token.length > 3 && q.includes(token)).length;
+    return { id: video.id, hits };
+  })
+    .filter((entry) => entry.hits > 0)
+    .sort((a, b) => b.hits - a.hits);
+  return scored.slice(0, 2).map((entry) => entry.id);
 }
 
 export class MockAIProvider implements AIProvider {
@@ -103,7 +131,7 @@ export class MockAIProvider implements AIProvider {
      *
      * A REAL PROPOSAL NEEDS TWO THINGS THIS PROVIDER CANNOT HAVE: the published
      * template library, which lives behind the privileged key on the server,
-     * and a verified scope saying which locations the person covers. Preview mode
+     * and a verified scope saying which salons the person covers. Preview mode
      * has neither. Producing a convincing coaching document from neither is
      * exactly the behaviour Phase 2 exists to remove, so the honest answer is
      * to name the limitation.
@@ -119,10 +147,11 @@ export class MockAIProvider implements AIProvider {
         content: [
           "I can't propose a form in preview mode.",
           "",
-          `Proposing one means checking which forms are actually published and which ${ACTIVE_BRAND.vocabulary.locationNoun} you're assigned to, and preview mode can't verify either — so anything I filled in would be made up. Ask me again once ${ACTIVE_BRAND.productName} is connected to live data and I'll propose one here.`,
+          "Proposing one means checking which forms are actually published and which salon you're assigned to, and preview mode can't verify either — so anything I filled in would be made up. Ask me again once Ask Bubbles is connected to live data and I'll propose one here.",
         ].join("\n"),
         citations: [],
         coverage: "not_applicable",
+        recommendedVideoIds: [],
       };
     }
 
@@ -155,7 +184,11 @@ export class MockAIProvider implements AIProvider {
         // Nothing in the seeded corpus matched, which is the demo's version of
         // the same honest state live mode reports.
         coverage: "insufficient",
-        followUpSuggestions: ["How do I open the store for the day?"],
+        recommendedVideoIds: matchVideos(request.question, [], seed.videos),
+        followUpSuggestions: [
+          "Show me the most recent Daily Stats and what I need to focus on today.",
+          "Help me prepare for a coaching conversation.",
+        ],
       };
     }
 
@@ -164,10 +197,16 @@ export class MockAIProvider implements AIProvider {
         ? knowledge.citationsForChunkIds(best.citationChunkIds.slice(0, 1))
         : knowledge.citationsForChunkIds(best.citationChunkIds);
 
+    const videos =
+      request.mode === "quick"
+        ? best.videoIds.slice(0, 1)
+        : matchVideos(request.question, best.videoIds, seed.videos);
+
     return {
       content: best[request.mode],
       citations,
       coverage: citations.length > 0 ? "grounded" : "insufficient",
+      recommendedVideoIds: videos,
       followUpSuggestions: best.followUps,
     };
   }

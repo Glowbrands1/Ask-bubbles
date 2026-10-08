@@ -1,9 +1,11 @@
 "use client";
 
-import { FileStack, Info } from "lucide-react";
+import { FileStack, Info, PlayCircle } from "lucide-react";
 
+import { VideoSuggestionCard } from "@/components/video-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useVideoLookup } from "@/lib/videos/use-video-lookup";
 import { aiProviderStatus } from "@/lib/ai";
 import type { ChatMessage } from "@/types";
 
@@ -41,6 +43,29 @@ export function ContextPanel({
    */
   busy?: boolean;
 }) {
+  /*
+   * BEFORE ANY EARLY RETURN. The lookup is a hook, so it has to run on
+   * every render of this component or the hook order changes between
+   * the error branch and the normal one.
+   */
+  const videoLookup = useVideoLookup();
+  const lastAssistant = [...messages]
+    .reverse()
+    .find((message) => message.role === "assistant");
+
+  /*
+     THE SECOND SOURCE SURFACE, ALSO REMOVED.
+     This rail rendered "Sources for this answer" with a card per excerpt —
+     the same material as the block under the answer, in a second place. It
+     was the one Phase 1 did not touch, which is why removing the in-thread
+     block alone would have left the request half-done.
+
+     `lastAssistant` is still read for the training recommendations below.
+  */
+  const videos = (lastAssistant?.recommendedVideoIds ?? [])
+    .map((id) => videoLookup(id))
+    .filter((video): video is NonNullable<typeof video> => Boolean(video));
+
   const provider = aiProviderStatus();
 
   return (
@@ -60,8 +85,20 @@ export function ContextPanel({
         </p>
       </div>
 
-      {/* Only for a role that may create forms; the server refuses anyone else regardless. */}
-      {onCreateForm ? (
+      {videos.length > 0 ? (
+        <section className="mt-6">
+          <div className="mb-2 flex items-center gap-2">
+            <PlayCircle className="size-3.5 text-muted-foreground" aria-hidden />
+            <p className="eyebrow">Recommended training</p>
+          </div>
+          <div className="space-y-2">
+            {videos.map((video) => (
+              <VideoSuggestionCard key={video.id} video={video} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="mt-6">
         <div className="mb-2 flex items-center gap-2">
           <FileStack className="size-3.5 text-muted-foreground" aria-hidden />
@@ -104,7 +141,6 @@ export function ContextPanel({
           */}
         </div>
       </section>
-      ) : null}
     </div>
   );
 }

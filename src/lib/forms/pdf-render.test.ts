@@ -595,13 +595,13 @@ describe("naming the download", () => {
 
 /*
  * A NAME TYPED IN ANY CASE, OR A FIRST NAME ALONE, PRINTS. Chat creates a
- * corrective record for "paulyne" or "PAULYNE CO"; the printed record carries
+ * corrective record for "marlowe" or "MARLOWE CO"; the printed record carries
  * the name exactly as it was given.
  */
 describe("a corrective notice for a name typed without title case", () => {
   const document = parseFormDocument(seed("fixture-corrective").document);
 
-  it.each(["paulyne", "PAULYNE CO", "test test"])("renders and names the download: %s", async (name) => {
+  it.each(["marlowe", "MARLOWE CO", "test test"])("renders and names the download: %s", async (name) => {
     const meta = { ...META, templateName: "Fixture Corrective Notice", employeeName: name, status: "draft" as const };
     const bytes = renderFormPdf(document, null, { values: { employee_name: name }, checked: {} }, meta);
     const { text, totalPages } = await readBack(bytes);

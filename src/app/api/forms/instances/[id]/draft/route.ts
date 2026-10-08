@@ -10,17 +10,44 @@ import {
 } from "@/lib/api/respond";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_MAX_TOKENS, CLAUDE_MODEL } from "@/lib/config/models";
-import { interpolate, parseFormVariants, type FormField } from "@/lib/forms/document";
-import { stripPlaceholdersFromDraft } from "@/lib/forms/drafted-text";
-import { applyEmployeeName, employeeNameRules } from "@/lib/forms/employee-reference";
-import {
-  correctDraftedDates,
-  formDateBrief,
-  groundedSourceWithFormDate,
-  resolveFormDate,
-} from "@/lib/forms/form-date-grounding";
 import { authorizeInstance, InstanceNotVisibleError } from "@/lib/forms/instance-scope";
-import { applyAssistantDraft } from "@/lib/forms/instances";
+import {
+  parseFormVariants,
+  interpolate,
+  objectiveRowFields,
+  type FormField,
+} from "@/lib/forms/document";
+import { applyAssistantDraft, applyStatedFacts } from "@/lib/forms/instances";
+import {
+  employmentChangeKind,
+  readEmploymentChange,
+  statedFactValues,
+} from "@/lib/forms/employment-change";
+import {
+  PERFORMANCE_MANAGEMENT_DRAFT_RULES,
+  SENSITIVE_ACTION_NOTICE,
+  refuseSensitiveSelections,
+} from "@/lib/forms/escalation-guard";
+import {
+  PM_DRAFT_UNAVAILABLE_NOTICE,
+  performanceManagementGovernance,
+} from "@/lib/forms/pm-governance";
+import { PERFORMANCE_MANAGEMENT_FRAMEWORK } from "@/lib/knowledge/document-roles";
+import {
+  SupabaseKnowledgeProvider,
+  type OfficialPolicyManualResult,
+} from "@/lib/knowledge/providers/supabase";
+import {
+  draftableCheckboxGroups,
+  draftableFields,
+  draftableNumberedLists,
+  enforceResponsibilities,
+} from "@/lib/forms/responsibility";
+import { stripPlaceholdersFromDraft } from "@/lib/forms/drafted-text";
+import {
+  FOLLOW_UP_TIMEFRAME_RULES,
+  guardFollowUpTimeframe,
+} from "@/lib/forms/follow-up-timeframe";
 import {
   EXPECTATION_LABEL,
   GOING_FORWARD_LABEL,
@@ -30,67 +57,160 @@ import {
   guardNarrativeDraft,
 } from "@/lib/forms/narrative-draft";
 import {
-  POLICY_CLAIM_REMOVED_NOTICE,
-  POLICY_SEPARATION_RULES,
-  stripUnsupportedPolicyClaims,
-} from "@/lib/forms/policy-claim-guard";
-import {
   dropUngroundedPolicy,
   groundPolicy,
   groundingNotice,
   provenanceFor,
+  refuseOffenseLabelEchoes,
 } from "@/lib/forms/policy-grounding";
 import {
-  draftableCheckboxGroups,
-  draftableFields,
-  draftableNumberedLists,
-  enforceResponsibilities,
-} from "@/lib/forms/responsibility";
+  POLICY_ATTRIBUTION_REMOVED_NOTICE,
+  POLICY_CLAIM_REMOVED_NOTICE,
+  POLICY_REQUIREMENT_REMOVED_NOTICE,
+  POLICY_SEPARATION_RULES,
+  genericCompliancePlan,
+  stripUnsupportedPolicyAttributions,
+  stripUnsupportedPolicyClaims,
+  stripUnsupportedPolicyRequirements,
+} from "@/lib/forms/policy-claim-guard";
+import {
+  DERIVED_POLICY_FIELD_KEYS,
+  applyDerivedPolicyFields,
+  formDerivedProvenance,
+} from "@/lib/forms/policy-fields";
+import {
+  manualSectionsFor,
+  officialManualProvenance,
+} from "@/lib/forms/official-policy-manual";
+import { manualGroundedPolicies, policyFieldValue } from "@/lib/forms/policy-citation";
+import {
+  EPP_POLICY_REFERENCE_KEY,
+  EPP_POLICY_RULES,
+  eppPolicyBlock,
+  eppPolicyPassages,
+  eppPolicyReference,
+  eppPolicyTopics,
+} from "@/lib/forms/epp-policy";
+import {
+  EXIT_DETAILS_TRIMMED_NOTICE,
+  EXIT_DRAFT_RULES,
+  applyExitDraft,
+  isExitDocumentKeys,
+  withoutDerivedKeys,
+} from "@/lib/forms/exit-draft";
+import { EXIT_DERIVED_KEYS } from "@/lib/forms/exit-facts";
+import {
+  STANDARDS_OF_CONDUCT,
+  caPolicyAmbiguousNotice,
+  groundConductPolicy,
+  readCaPolicy,
+  statedOffenseKeys,
+  withConductOffense,
+  withStatedOffense,
+} from "@/lib/forms/ca-policy";
+import { priorStepDate } from "@/lib/forms/form-date-answer";
+import {
+  COACHING_CONTEXT_RULES,
+  LANGUAGE_CLEANUP_RULES,
+  guardCoachingFraming,
+} from "@/lib/forms/coaching-framing";
+import {
+  MANAGER_FOLLOW_UP_RULES,
+  guardManagerFollowUp,
+  hasManagerFollowUpKeys,
+} from "@/lib/forms/follow-up-observation";
+import { TEAM_SUBJECT_RULES, isTeamSubject } from "@/lib/forms/team-subject";
+import { applyEmployeeName, employeeNameRules } from "@/lib/forms/employee-reference";
+import {
+  LEGACY_PREVIOUS_ACTION_DATE_KEY,
+  NO_PRIOR_ACTION,
+  PRIOR_ACTIONS_KEY,
+  groundPriorActions,
+} from "@/lib/forms/prior-actions";
 
+/**
+ * The revision-4 Corrective Action Form's "Date of previous corrective action"
+ * line. Still filled on drafts pinned to that version; revision 5 replaced it
+ * with the prior-actions list (`prior-actions.ts`).
+ */
+const PREVIOUS_ACTION_DATE_KEY = LEGACY_PREVIOUS_ACTION_DATE_KEY;
+import { EXIT_STATED_KEYS, exitDetailValues, readExitDetails } from "@/lib/forms/exit-details";
+import { businessToday } from "@/lib/business-date";
+import {
+  correctDraftedDates,
+  formDateBrief,
+  groundedSourceWithFormDate,
+  resolveFormDate,
+} from "@/lib/forms/form-date-grounding";
+
+/**
+ * POST /api/forms/instances/[id]/draft
+ *
+ * Ask Bubbles drafts a form the manager has already started. It is the SAME
+ * assistant as the rest of the app — same client, same model configuration —
+ * doing a different job, not a second chatbot.
+ *
+ * WHAT THE MODEL IS AND IS NOT TRUSTED WITH:
+ *
+ *   The field list comes from the STORED TEMPLATE VERSION, not from the
+ *   request. A client cannot widen what may be written by sending a longer
+ *   list, which is exactly what the previous prototype allowed.
+ *
+ *   Only fields the template marks `ai` are described to it, and whatever comes
+ *   back is filtered again by `applyAssistantDraft` before anything is stored.
+ *   Signature fields have no key to address in the first place.
+ *
+ *   Policy-quoting fields are drafted only from retrieved approved policy. When
+ *   retrieval finds nothing, those fields are withheld — the response says so
+ *   and the manager writes them. An invented policy quotation on a disciplinary
+ *   record is the single worst thing this feature could produce.
+ */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
-/**
- * ============================================================================
- * POST /api/forms/instances/[id]/draft — the assistant drafts a form
- * ============================================================================
- *
- * The model drafts ONLY the fields the template marks `ai`, through a forced
- * tool call, and every value it returns goes through the same guards before
- * anything is stored:
- *
- *   placeholders       "[Employee Name]" and friends are removed, never stored
- *   form date          a drafted date that is not the form's or the manager's
- *                      is corrected
- *   narrative          sentences carrying specifics the manager never gave are
- *                      dropped from narrative fields
- *   policy             a `policyGrounded` field is filled only from approved
- *                      policy retrieved from the knowledge base, verbatim; with
- *                      none found, the field stays the manager's to complete.
- *                      Policy CLAIMS ("this violates policy X") are stripped
- *                      from every other field
- *   employee name      pronouns become the employee's first name on their own
- *                      record
- *   responsibilities   `enforceResponsibilities` drops anything written to a
- *                      field the assistant may not fill — a signature, a
- *                      manager's field — whatever the model returned
- *
- * Which forms exist, and what their fields are, is company configuration. This
- * route knows only the engine.
- */
-
 interface DraftBody {
+  /** What the manager described, in their own words. */
   notes?: string;
   topic?: string;
 }
 
 function fieldBrief(field: FormField, variantLabel: string | null): string {
   const label = interpolate(field.label, null).replace(/\{\{\w+\}\}/g, variantLabel ?? "the employee");
+  /*
+   * A NARRATIVE FIELD'S SHAPE COMES FROM THE RULES, NOT FROM ITS HELP TEXT.
+   *
+   * `help` is manager-facing guidance stored on the version, and a published
+   * version is immutable — so a form published before the section contract
+   * changed still carries the older wording. Sending both would put two
+   * different instructions in front of the model about the same field. The
+   * rules below are the contract; the marker is what points at them.
+   */
   const help = field.help && !field.narrative ? ` (${field.help})` : "";
   const grounded = field.policyGrounded ? " [quote approved policy only]" : "";
   const narrative = field.narrative ? ` [${field.narrative}]` : "";
   return `- ${field.key}: ${label}${help}${grounded}${narrative}`;
+}
+
+/**
+ * The pinned manual's rows, or a reason there are none.
+ *
+ * WRAPPED SO A KNOWLEDGE-BASE OUTAGE CANNOT FAIL A DRAFT. Every other field on
+ * the form is still draftable without a citation, and the manager gets the
+ * blank policy line and the notice that goes with it — which is the same
+ * outcome as a manual that is not in the corpus, and the right one.
+ */
+async function readOfficialPolicyManual(
+  wanted: boolean,
+): Promise<OfficialPolicyManualResult> {
+  if (!wanted) return { ok: false, reason: "" };
+  try {
+    return await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(
+      ACTIVE_BRAND.knowledgeScopeId,
+    );
+  } catch {
+    return { ok: false, reason: "The official policy manual could not be read." };
+  }
 }
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -98,6 +218,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     assertLiveMode();
     assertNoConfigurationProblems();
     const { id } = await context.params;
+    /*
+     * The TEMPLATE'S OWN permission, and the form's salon. This asked for
+     * `create_coaching_form` on every template, so a role that may draft a
+     * coaching form could have Ask Bubbles write into a Disciplinary Plan of
+     * Action — at any salon, on a guessed UUID.
+     */
     const { actor, loaded } = await authorizeInstance(request, id, "edit");
     assertWithinRateLimit(request, "chat");
 
@@ -113,10 +239,31 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (notes.length < 10) {
       throw new AiError(
         "bad_request",
-        `Tell ${ACTIVE_BRAND.assistantName} what happened before asking for a draft.`,
+        "Tell Ask Bubbles what happened before asking for a draft.",
         400,
       );
     }
+
+    /*
+     * ========================================================================
+     * THE FACTS OF A DEMOTION OR TRANSFER COME FROM THE MANAGER'S WORDS
+     * ========================================================================
+     *
+     * Before the model runs, so the facts land even if drafting fails, and
+     * never through the model: they are `manager` fields it cannot write. The
+     * reading is deterministic over these same notes, and only empty fields
+     * are filled — see `applyStatedFacts`. Keyed on the template because
+     * reading "she's an SD" onto a coaching form's blank Job Title would be a
+     * change to forms nobody asked about.
+     */
+    const changeKind = employmentChangeKind(loaded.instance.templateKey);
+    const statedFacts = changeKind
+      ? await applyStatedFacts(
+          id,
+          statedFactValues(readEmploymentChange([notes], businessToday())),
+          actor.id,
+        )
+      : [];
 
     const document = loaded.version.document;
     const variantKey = loaded.instance.variantKey;
@@ -126,14 +273,204 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const fields = draftableFields(document, variantKey);
     const groups = draftableCheckboxGroups(document, variantKey);
     const lists = draftableNumberedLists(document, variantKey);
+    /*
+     * The plan rows of an objective table, which are ordinary fields in
+     * `fields` above — this is only how many there are and what they are
+     * called, for the rule that keeps the unsupported ones blank.
+     */
+    const objectiveRows = objectiveRowFields(document, variantKey).filter((row) =>
+      fields.some((field) => field.key === row.key),
+    );
     if (fields.length === 0 && groups.length === 0 && lists.length === 0) {
-      return NextResponse.json({ values: {}, checked: {}, withheld: [], notice: null });
+      return NextResponse.json({ values: {}, checked: {}, withheld: [], notice: null, statedFacts });
     }
 
-    const needsPolicy = fields.some((field) => field.policyGrounded);
+    /*
+     * ========================================================================
+     * THE RESIGNATION/EXIT FORM'S FACTS ARE NOT THE MODEL'S TO WRITE
+     * ========================================================================
+     *
+     * Read off the stored version's KEYS, the way the derived policy fields
+     * are, so no template key is special-cased here. The dates and the
+     * Resignation Details ticks are taken out of what the model is shown and
+     * computed from the manager's notes after it answers — see
+     * `lib/forms/exit-draft.ts`. Every other template is untouched: none of
+     * them carries these keys.
+     */
+    const isExitForm = isExitDocumentKeys([
+      ...fields.map((field) => field.key),
+      ...groups.map((group) => group.key),
+    ]);
+    const promptFields = fields.filter((field) => !EXIT_DERIVED_KEYS.has(field.key));
+    const promptGroups = groups.filter((group) => !EXIT_DERIVED_KEYS.has(group.key));
+
+    /*
+     * THE EXIT FORM'S DETAILS LINES, FROM THE MANAGER'S OWN WORDS — the
+     * resignation date, how and why they left, and the yes/no answers they
+     * gave (items and key returned, payroll deduction, minimum wage, bonus,
+     * rehire). The same path as a demotion's facts above: `manager` fields
+     * the model never sees, read deterministically from these notes by
+     * `exit-details.ts`, written before the model runs and only into empty
+     * lines. Anything the manager did not say stays blank.
+     */
+    const exitStatedFacts = isExitForm
+      ? await applyStatedFacts(
+          id,
+          exitDetailValues(readExitDetails(notes, businessToday())),
+          actor.id,
+          EXIT_STATED_KEYS,
+        )
+      : [];
+
+    /*
+     * ========================================================================
+     * DOES THE PROGRESSION FRAMEWORK GOVERN THIS FORM?
+     * ========================================================================
+     *
+     * DERIVED FROM THE STORED VERSION, never from the request. Drafting a
+     * Follow-Up Coaching Form means choosing a Next Step from Continue,
+     * Role-play, EPP, DPOA and Leadership Review; drafting a DPOA means choosing
+     * a Type of Warning. Those are positions on the approved ladder, and until
+     * now the document that defines that ladder governed the chat answer path
+     * and not the one place Ask Bubbles writes an escalation onto a record.
+     *
+     * See `pm-governance.ts` for the three signals and for why the plain
+     * Coaching Form is deliberately NOT governed.
+     */
+    const governance = performanceManagementGovernance({
+      layoutFamily: loaded.instance.layoutFamily,
+      document,
+      variantKey,
+    });
+
+    const progression = governance.governed
+      ? await new SupabaseKnowledgeProvider()
+          .fetchRoleGrounding(
+            PERFORMANCE_MANAGEMENT_FRAMEWORK,
+            ACTIVE_BRAND.knowledgeScopeId,
+          )
+          .catch(() => null)
+      : null;
+
+    /*
+     * FAILS CLOSED, AND THE FORM STAYS USABLE.
+     *
+     * No AI draft, a controlled response, and no general-HR fallback — a
+     * progression described from general knowledge is the failure being
+     * refused, not a lesser service. What the manager keeps is the blank form,
+     * which is fully editable by hand, so nobody is blocked from filing today.
+     *
+     * `.catch(() => null)` above collapses a retrieval OUTAGE into the same
+     * unavailable state rather than a 500, so this branch covers both.
+     */
+    if (governance.governed && (progression === null || !progression.ok)) {
+      return NextResponse.json({
+        values: {},
+        checked: {},
+        withheld: [],
+        rejected: [],
+        placeholders: { cleaned: [], emptied: [] },
+        narrative: { adjusted: [], emptied: [] },
+        notice: PM_DRAFT_UNAVAILABLE_NOTICE,
+        sources: [],
+      });
+    }
+
+    /*
+     * The framework's own rows, with their provenance. Real chunks from the
+     * indexed document — same document id, same locators the Knowledge Base
+     * shows — so the model is reasoning from the approved text rather than from
+     * a paraphrase of it that lives in this file.
+     */
+    const progressionBlock = progression?.ok
+      ? `\nPERFORMANCE MANAGEMENT FRAMEWORK (the approved progression; reason from this, do not restate it):\n${progression.grounding.rows
+          .map((row) => `[${row.document_title} — ${row.locator}]\n${row.content}`)
+          .join("\n\n")}`
+      : "";
+
+    /*
+     * Policy is retrieved from the MANAGER'S words, before the model runs — so
+     * the quotation the model is allowed to use cannot be steered by anything
+     * the model itself produced.
+     */
+    /*
+     * ========================================================================
+     * TWO DIFFERENT QUESTIONS ABOUT POLICY, AND THEY ARE ANSWERED DIFFERENTLY
+     * ========================================================================
+     *
+     * "WHICH RULE WAS BROKEN, AND WHAT DOES IT SAY" is the corrective forms'
+     * question. It is answered by a similarity search over every approved
+     * category, gated at the match floor, and the retrieved passage is the only
+     * text the model may quote. That is `needsPolicy` and it is unchanged.
+     *
+     * "WHAT DOES THE COMPANY EXPECT ABOUT THIS" is the EPP's question, and a
+     * similarity search is the wrong instrument for it. A manager writing
+     * "she's been late several times" is not writing in the manual's
+     * vocabulary, and an EPP is not asserting that anybody broke anything. So
+     * the manual is reached the way the corrective form reaches it for its
+     * CITATION — pinned by identity — and the SECTION comes from the topic the
+     * manager's own words raise. See `epp-policy.ts`.
+     *
+     * `policy_references` is therefore held out of `needsPolicy`: sending "quote
+     * only from this" and "APPROVED POLICY: none found" to a performance plan
+     * would turn a coaching document into a policy review, and the value is
+     * derived by this route rather than written by the model either way.
+     */
+    const wantsEppPolicy = fields.some((field) => field.key === EPP_POLICY_REFERENCE_KEY);
+    const needsPolicy = fields.some(
+      (field) => field.policyGrounded && field.key !== EPP_POLICY_REFERENCE_KEY,
+    );
     const grounding = needsPolicy
       ? await groundPolicy(`${body.topic ?? ""} ${notes}`.trim())
       : { passages: [], sources: [], unverified: false, reason: null };
+
+    /*
+     * THE PINNED MANUAL, READ ONCE AND EARLY.
+     *
+     * It used to be read after the model call, because the only thing that
+     * needed it was a citation built from a ticked box. The EPP needs the
+     * manual's TEXT in front of the model, so the read moves up — one call,
+     * both uses, and `manualSectionsFor` below still runs on what the manager
+     * ticked because that is not known until the model has answered.
+     */
+    const manual = await readOfficialPolicyManual(
+      wantsEppPolicy || fields.some((field) => field.key === "policy_language"),
+    );
+
+    /*
+     * THE STANDARDS OF CONDUCT, WHERE THE MANAGER'S ACCOUNT POINTS AT IT.
+     *
+     * HR feedback, 30 Sep 2026: a Corrective Action for a missed Woven deadline
+     * came back ticked Under Performance with no policy, until the manager said
+     * "the policy violated is the standards of conduct". The manager's words
+     * are read deterministically — a missed deadline, assigned work or Woven
+     * items not completed, a direction not followed, or the policy named
+     * outright — and Standards of Conduct is ticked ONLY when the pinned
+     * manual's section, as it reads now, lists that infraction. Otherwise the
+     * model's box stands and the policy is left blank, as before. Keyed on a
+     * version whose Type of Offense offers the box and that has the policy
+     * field. See `ca-policy.ts`.
+     */
+    const offersConductPolicy =
+      fields.some((field) => field.key === "policy_language") &&
+      groups.some(
+        (group) =>
+          group.key === "offense_type" && group.options.some((option) => option.key === STANDARDS_OF_CONDUCT),
+      );
+    const caPolicy = offersConductPolicy ? readCaPolicy(notes) : null;
+
+    /*
+     * THE SECTIONS THE MANAGER'S OWN WORDS POINT AT — never the model's, so the
+     * policy a plan is reasoned against cannot be steered by an earlier
+     * hallucination. Empty when the observation raises no topic this manual
+     * states a section for, and an empty list is a plan written as ordinary
+     * coaching with no policy named.
+     */
+    const eppTopics = wantsEppPolicy ? eppPolicyTopics(`${body.topic ?? ""} ${notes}`) : [];
+    const eppPassages =
+      wantsEppPolicy && manual.ok
+        ? eppPolicyPassages({ chunks: manual.chunks, topics: eppTopics })
+        : [];
 
     const policyBlock = grounding.passages.length
       ? `\nAPPROVED POLICY (quote only from this, verbatim):\n${grounding.passages
@@ -143,65 +480,311 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         ? "\nAPPROVED POLICY: none found. Leave every policy field empty."
         : "";
 
-    const resolvedFormDate = resolveFormDate(loaded.instance.formDate);
+    const hasTimeframeField = fields.some(
+      (field) => field.semantics === "follow_up_timeframe",
+    );
+
+    /*
+     * ========================================================================
+     * THE FORM'S OWN DATE, RESOLVED ONCE AND TREATED AS A FACT
+     * ========================================================================
+     *
+     * SCOPED TO THE `corrective` FAMILY — the Corrective Action Form and the
+     * Policy Review. Both open with a narrative Observation of Offense whose
+     * first sentence is the whole factual record, and both are the forms where
+     * losing that sentence to a mis-formatted date costs the most. Every other
+     * template drafts exactly as it did; this changes no behaviour outside the
+     * two documents it names.
+     *
+     * `form_date` is set when the record is created and defaults to today — so
+     * a manager answering the intake's third question with "today" has already
+     * had it resolved, server-side, from the application's clock. Nothing here
+     * calculates a date and nothing asks the model to. See
+     * `form-date-grounding.ts`.
+     */
+    const resolvedFormDate =
+      loaded.instance.layoutFamily === "corrective"
+        ? resolveFormDate(loaded.instance.formDate)
+        : null;
+
+    /*
+     * The narrative fields, named once: the date correction runs on exactly
+     * the set the narrative guard would otherwise gut.
+     */
     const narrativeKeys = new Set(
       fields.filter((field) => field.narrative !== undefined).map((field) => field.key),
     );
+
+    /*
+     * WHAT THE GUARD TREATS AS SUPPLIED. The manager wrote "today"; the
+     * application resolved it. They are the same fact, so the resolved
+     * spellings travel with the notes — and a correctly-written date can no
+     * longer cost the sentence around it.
+     */
     const groundingSource = groundedSourceWithFormDate(notes, resolvedFormDate);
-    const hasObservedExpectation = fields.some((field) => field.narrative === OBSERVED_EXPECTATION);
+
+    /*
+     * THE PLAN-OF-ACTION CONTRACT IS CONDITIONAL, and the condition is the
+     * stored version rather than the template's name. Only the two corrective
+     * forms declare the shape today; sending its rules to the Coaching Form
+     * would put a second, differently-worded instruction about prose in front
+     * of the model on a form that has no plan field to apply it to.
+     */
     const hasPlanOfAction = fields.some((field) => field.narrative === PLAN_OF_ACTION);
 
+    /*
+     * THE PRIOR-ACTIONS LIST (Corrective Action Form, revision 5). Its history
+     * is the manager's: the rules say so, and `groundPriorActions` holds it
+     * after the model answers.
+     */
+    const hasPriorActions = fields.some((field) => field.key === PRIOR_ACTIONS_KEY);
+    const PRIOR_ACTIONS_RULES = [
+      `The field ${PRIOR_ACTIONS_KEY} lists every coaching or corrective action the employee PREVIOUSLY received, as the manager described it — one per line, each written as "<what it was> — signed <MM/DD/YYYY>".`,
+      "List only steps and dates the manager actually gave. Never invent a prior step or a date; a step whose date the manager did not give is listed without one.",
+      `If the manager said this is the first occurrence, write "${NO_PRIOR_ACTION}". If they said nothing about history, leave it empty.`,
+      "A behaviour that happened again is not a prior coaching or corrective action.",
+    ];
+
+    const isCoachingFamily = loaded.instance.layoutFamily === "coaching";
+    const hasFollowUpFindings = hasManagerFollowUpKeys([
+      ...fields.map((field) => field.key),
+      ...groups.map((group) => group.key),
+    ]);
+    const teamSubject = isTeamSubject(loaded.instance.employeeName);
+
     const system = [
-      `You prepare drafts of ${ACTIVE_BRAND.brandName} forms for a manager to review.`,
+      `You prepare drafts of ${ACTIVE_BRAND.brandName} management forms for a manager to review.`,
       "You are drafting, not deciding. A manager edits everything you write and signs it.",
+      /*
+       * THE MANAGER SUPPLIES THE INCIDENT; ASK BUBBLES SUPPLIES THE COACHING.
+       *
+       * The line between the two is FACTS versus GUIDANCE, and it is the whole
+       * shape of this prompt. Facts about what happened come from the manager
+       * and nowhere else. The professional standard, and what the employee
+       * should do differently, are ordinary coaching and are this assistant's
+       * job to write — a manager who has to type the expectation themselves is
+       * doing the work the feature exists to remove.
+       */
       "FACTS come only from what the manager described: what happened, to whom, when, how many, where.",
+      "COACHING GUIDANCE is yours to write: the standard an employee is expected to meet, and what good looks like next time.",
       "Complete the form. Do not leave a field you can reasonably fill empty, and do not ask the manager for wording you can write yourself.",
       "Never invent dates, figures, policy names or policy wording.",
+      /*
+       * SAID EXPLICITLY BECAUSE THE MODEL DID IT. A bracketed placeholder is
+       * how a language model writes "somebody fills this in later", and on a
+       * form that is exactly the wrong instinct: the field IS the place it gets
+       * filled in.
+       */
       "Never write a placeholder such as [Follow-Up Date] or [Employee Name]. If you do not have a value, leave the field empty.",
-      "Do not mention follow-up dates or scheduling at all: the follow-up date is recorded separately by the manager, not in these fields.",
+      /*
+       * CONDITIONAL, because §9.2 defines a Follow-Up Coaching field that asks
+       * for exactly this. The blanket prohibition made that field come back
+       * empty on every draft — see `follow-up-timeframe.ts` for the two
+       * different things called "follow-up".
+       */
+      ...(hasTimeframeField
+        ? FOLLOW_UP_TIMEFRAME_RULES
+        : [
+            "Do not mention follow-up dates or scheduling at all: the follow-up date is recorded separately by the manager, not in these fields.",
+          ]),
       "If you cannot support a field from what you were given, return it empty.",
       "Return only the fields you were asked for.",
-      "Never add a disciplinary step, a warning level, a suspension, a termination, an amount, a count of prior incidents, or a date the manager did not give you.",
-      ...(hasObservedExpectation
-        ? [
-            `A field marked [${OBSERVED_EXPECTATION}] is written as labelled sections, each label on its own line, separated by blank lines: "${OBSERVED_LABEL}" then what happened, from the manager's account only; "${EXPECTATION_LABEL}" then the standard expected, stated neutrally; "${GOING_FORWARD_LABEL}" then what should happen differently, as practical behaviour.`,
-            "The expectation is general workplace practice, NOT a quotation of any written rule. Never write that company policy, a handbook or a manual requires something.",
-          ]
-        : []),
+      /*
+       * THE OBSERVED / EXPECTATION SHAPE, asked for only by the fields whose
+       * stored version requests it. A record that names the event and not the
+       * expectation cannot show that anything was communicated to the employee.
+       */
+      `A field marked [${OBSERVED_EXPECTATION}] is written as three labelled sections, each label on its own line, separated by blank lines:`,
+      `"${OBSERVED_LABEL}" then what happened, from the manager's account only.`,
+      `"${EXPECTATION_LABEL}" then the standard the employee is expected to meet, stated neutrally and in the present tense.`,
+      `"${GOING_FORWARD_LABEL}" then what the employee should do differently, as practical behaviour.`,
+      "WRITE THE EXPECTATION YOURSELF. Infer a reasonable, neutral, behavioural standard for the issue described — for lateness, that an employee is expected to arrive on time and be ready to work at the start of their scheduled shift; for an unfinished task, that assigned work is expected to be completed within the shift; for weak client engagement, that clients are engaged with relevant questions and recommendations.",
+      "This is general workplace coaching, NOT a quotation of any written rule. Never write that company policy, a handbook or a manual requires something, and never cite a policy section or attendance points.",
+      "Keep every specific the manager gave — twenty minutes late stays twenty minutes late — and add none of your own.",
+      "Never add a corrective step, a warning level, a suspension, a termination, an amount, a count of prior incidents, or a date the manager did not give you.",
+      `"${GOING_FORWARD_LABEL}" is about the employee's behaviour, never about arranging a meeting: no follow-up, no check-in, no review date.`,
+      `Only if the incident is too vague to infer a safe expectation, write the "${OBSERVED_LABEL}" section alone.`,
+      /*
+       * THE OBSERVATION / CATEGORY / POLICY SEPARATION, on the forms that have
+       * policy fields to separate FROM. See `policy-claim-guard.ts`: the guard
+       * that runs on the output is what holds, and these are what stop the
+       * text being written in the first place.
+       */
+      ...(needsPolicy ? POLICY_SEPARATION_RULES : []),
+      /*
+       * THE CHEAPEST OF THE THREE DATE FIXES, and the only one that prevents
+       * rather than repairs: a model told the date does not invent one.
+       */
+      ...(resolvedFormDate ? [formDateBrief(resolvedFormDate)] : []),
+      /*
+       * THE PLAN OF ACTION — three beats, in order, and nothing else.
+       *
+       * Written as the order of a paragraph rather than as a list of
+       * prohibitions because the failure was not that the model broke a rule:
+       * it was that a field labelled "Plan of Action" with no shape at all
+       * invited a plan, and the only material the model had for one was
+       * invention. Saying what the three sentences ARE leaves nothing for a
+       * follow-up date and a policy quotation to fill.
+       */
       ...(hasPlanOfAction
         ? [
-            `A field marked [${PLAN_OF_ACTION}] is one short paragraph — no labels, no bullets — describing the agreed way forward in general terms. No dates, no disciplinary level, and no quoted or paraphrased policy wording.`,
+            /*
+             * ================================================================
+             * THE WORDING THE BUSINESS ASKED FOR, IN THREE SENTENCES
+             * ================================================================
+             *
+             * The previous shape opened by naming the document, and the example
+             * that illustrated it named the WRONG document — a Corrective
+             * Action Form came back announcing itself as a policy review,
+             * because the model copied the illustration.
+             *
+             * This is the wording the business actually wants, which is also
+             * the one their managers already recognise: what the employee is
+             * expected to do, what that means going forward, and that
+             * management will monitor it. No document is named, so none can be
+             * named wrongly.
+             *
+             * IT IS STILL POLICY-NEUTRAL. "Adhere to the dress code" names the
+             * rule; it does not state what the rule REQUIRES, which is the
+             * distinction `policy-claim-guard.ts` enforces and the reason a
+             * generic sentence is safe where "must wear pants" is not.
+             */
+            `A field marked [${PLAN_OF_ACTION}] is ONE PARAGRAPH — no labels, no bullets, no headings — of exactly three sentences, in this order:`,
+            `FIRST: "<employee> is expected to adhere to the ${ACTIVE_BRAND.brandName} <topic> policy by <what meeting it looks like, in general terms>." Use the topic the manager described — dress code, attendance, standards of conduct — and never state what the policy specifically requires.`,
+            /*
+             * THE EMPLOYEE'S FIRST NAME, NOT "<he/she/they>". HR feedback, 3
+             * Oct 2026: forms name the employee rather than using a pronoun.
+             */
+            "SECOND: \"Moving forward, <the employee's first name> should <the practical behaviour, as something done on a shift>.\"",
+            "THIRD: \"Management will monitor compliance and provide coaching as needed.\"",
+            "NOTHING ELSE BELONGS IN THIS PARAGRAPH. No date and no timeframe, no follow-up review, meeting or check-in, no disciplinary level, no consequence of a further occurrence, no quoted or paraphrased policy wording, no named manual, and no bracketed placeholder.",
+            /*
+             * THE CLOSING IS THE FORM'S, NOT THE MODEL'S. A field whose
+             * version requires one gets it from code after every guard (see
+             * `required-closing.ts`); a model paraphrase of it would print
+             * next to the real one.
+             */
+            ...(fields.some((field) => field.narrative === PLAN_OF_ACTION && field.requiredClosing)
+              ? [
+                  "Do not write any sentence about future violations or their consequences: the form adds its own required closing sentence to this paragraph automatically.",
+                ]
+              : []),
           ]
         : []),
-      ...(needsPolicy ? POLICY_SEPARATION_RULES : []),
-      ...(resolvedFormDate ? [formDateBrief(resolvedFormDate)] : []),
-      ...employeeNameRules(loaded.instance.employeeName),
+      /*
+       * ======================================================================
+       * A PLAN WRITTEN AS FIXED CATEGORIES: ONLY THE SUPPORTED ONES
+       * ======================================================================
+       *
+       * The TSD Management Performance Plan's plan of action is EIGHT named
+       * objectives — Bench, Management Bench, the three productivity ones,
+       * Coaching and Development, District Outreach, Salon Standards — and
+       * every one of them is a field the model can see. Eight empty boxes in
+       * front of a model asked to write a plan is eight invitations to invent
+       * a weakness: a manager who described lateness would get a bench plan,
+       * a hiring plan and a district-outreach plan for somebody nobody said
+       * anything about.
+       *
+       * OMISSION IS THE CORRECT ANSWER, and the tool already says so ("Omit a
+       * field you cannot support"). This says it again where it is easiest to
+       * get wrong, because a blank row on this form reads as "not part of
+       * this plan" — which is true — while a fabricated one reads as a
+       * finding about the manager's work.
+       *
+       * DERIVED FROM THE DOCUMENT, not from a template key: any plan
+       * published with `objective_rows` gets the rule.
+       */
+      ...(objectiveRows.length > 0
+        ? [
+            `A field labelled "${objectiveRows[0]!.label.split(" — ")[0]} — <category>" is one of ${objectiveRows.length} FIXED objectives printed on this form.`,
+            "Write a plan ONLY for the categories the manager's own description actually supports, and omit every other one — an omitted category stays blank on the form, which is what a category outside this plan is supposed to look like.",
+            "Never write a plan for a category merely because the row exists. A punctuality concern supports none of the bench, hiring, outreach or expense categories, and inventing a weakness to fill a row puts a finding on somebody's record that nobody made.",
+            "Each plan you do write is one or two sentences, tied to what the manager described and to the objective printed beside the category. No dates, no disciplinary step, no quoted policy wording.",
+          ]
+        : []),
+      ...(governance.governed ? PERFORMANCE_MANAGEMENT_DRAFT_RULES : []),
+      /*
+       * THE EPP'S OWN RULES, on the versions that have the appendix field.
+       * They say what a performance plan IS — coaching, not a warning — and
+       * they draw the line between an observation, a policy, a printed
+       * expectation, a coaching suggestion and a supplied figure. See
+       * `epp-policy.ts`.
+       */
+      ...(wantsEppPolicy ? EPP_POLICY_RULES : []),
+      ...(isExitForm ? EXIT_DRAFT_RULES : []),
+      /*
+       * THE COACHING DOCUMENTS' OWN RULES, by layout family: the register
+       * (coaching is not always a concern), the language cleanup a manager
+       * should not have to ask for, the follow-up findings that stay the
+       * manager's, and a team-wide subject. See `coaching-framing.ts`,
+       * `follow-up-observation.ts` and `team-subject.ts`. No other family
+       * receives any of them.
+       */
+      ...(isCoachingFamily ? COACHING_CONTEXT_RULES : []),
+      ...(isCoachingFamily ? LANGUAGE_CLEANUP_RULES : []),
+      ...(hasFollowUpFindings ? MANAGER_FOLLOW_UP_RULES : []),
+      ...(teamSubject ? TEAM_SUBJECT_RULES : []),
+      /*
+       * THE EMPLOYEE BY NAME, ON EVERY FORM. Shared by every template rather
+       * than bolted onto one: the feedback was about form language, not about
+       * the Corrective Action Form. Empty on a team-wide form. The rewrite
+       * after the model answers is the backstop — see `employee-reference.ts`.
+       */
+      ...(teamSubject ? [] : employeeNameRules(loaded.instance.employeeName)),
+      ...(hasPriorActions ? PRIOR_ACTIONS_RULES : []),
     ].join(" ");
 
     const prompt = [
       `FORM: ${loaded.instance.templateName}`,
       variant ? `REVIEWER: ${variant.role}. SUBJECT: ${variant.roleAbbr}.` : "",
-      `EMPLOYEE: ${loaded.instance.employeeName}`,
+      teamSubject
+        ? "SUBJECT: the whole team. This is team-wide coaching and is not about any one employee."
+        : `EMPLOYEE: ${loaded.instance.employeeName}`,
       loaded.instance.locationName ? `LOCATION: ${loaded.instance.locationName}` : "",
       "",
       "WHAT THE MANAGER DESCRIBED:",
       notes,
+      progressionBlock,
       policyBlock,
+      /*
+       * THE APPLICABLE JBA SECTIONS, and only those. Targeted rather than the
+       * whole manual: an EPP that was handed all 110 chunks would read as a
+       * policy review of everything the company has ever written down.
+       */
+      manual.ok ? eppPolicyBlock(manual.documentTitle, eppPassages) : "",
       "",
       "FIELDS YOU MAY WRITE:",
-      ...fields.map((field) => fieldBrief(field, variant?.roleAbbr ?? null)),
+      ...promptFields.map((field) => fieldBrief(field, variant?.roleAbbr ?? null)),
       ...lists.map(
         (list) =>
           `- ${list.key}: ${interpolate(list.label, variant)} (up to ${list.count} items, one per line)`,
       ),
       "",
-      groups.length
-        ? `CHECKBOXES TO TICK (use the option keys). Tick the options that match what the manager described; leave a group empty only when nothing in it fits:\n${groups
+      /*
+       * "MAY TICK" LEFT THESE BLANK. Read alongside the never-invent rules, a
+       * permission to tick is safest declined, so a clear tardiness case came
+       * back with no type, no topic and no write-in — a form the manager still
+       * had to finish by hand. Choosing the option that matches what the
+       * manager described is classification, not invention.
+       */
+      promptGroups.length
+        ? `CHECKBOXES TO TICK (use the option keys). Tick the options that match what the manager described; leave a group empty only when nothing in it fits:\n${promptGroups
             .map(
               (group) =>
                 `- ${group.key}: ${group.options.map((option) => `${option.key} = ${option.label}`).join("; ")}`,
             )
             .join("\n")}`
+        : "",
+      /*
+       * The "Other" pair. The option and its write-in field are two separate
+       * things on the document, and ticking one without filling the other
+       * prints a ticked box with no label beside it.
+       */
+      promptGroups.some((group) => group.options.some((option) => option.key === "other"))
+        ? 'When no listed option fits, tick "other" AND name the topic in the matching write-in field — for lateness that write-in is "Punctuality".'
+        : "",
+      offersConductPolicy
+        ? `Type of Offense: assigned work, a required deadline, or required Woven items or training not completed, and a manager's direction not followed, are ${STANDARDS_OF_CONDUCT}. under_performance is for results against a sales or performance target.`
         : "",
     ]
       .filter(Boolean)
@@ -246,34 +829,611 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       checked?: Record<string, string[]>;
     };
 
+    /*
+     * UNRESOLVED PLACEHOLDERS GO BEFORE ANYTHING IS STORED.
+     *
+     * Asked to draft Details, the model wrote "I will check in with Sarah on
+     * [Follow-Up Date]" — and that string became a canonical field value, an
+     * editor row and a line in the printed PDF. The prompt already forbids it;
+     * this is the guard that runs on what came back, because a model
+     * instruction is a request and not a boundary.
+     *
+     * See `lib/forms/drafted-text.ts` for why the whole sentence goes rather
+     * than the bracket, and why follow-up belongs to instance metadata rather
+     * than to a paragraph in Details.
+     */
     const cleaned = stripPlaceholdersFromDraft(drafted.values ?? {});
-    const dated = correctDraftedDates(cleaned.values, narrativeKeys, notes, resolvedFormDate);
+
+    /*
+     * THEN THE NARRATIVE GUARD, on the fields whose stored version asks for the
+     * Observed/Expectation shape.
+     *
+     * Run against the MANAGER'S OWN NOTES, which is what makes it a grounding
+     * check rather than a style check: a date, an amount, a count of prior
+     * occurrences or a disciplinary consequence survives only if the manager
+     * supplied it, and an Expectation section survives only if their words
+     * carried an expectation at all. Scheduling talk goes unconditionally —
+     * follow-up is instance metadata with its own control, and a sentence
+     * narrating it here is the same failure as `[Follow-Up Date]` without the
+     * brackets. See `lib/forms/narrative-draft`.
+     */
+    /*
+     * THE DATE CORRECTION RUNS FIRST, so what the narrative guard sees is a
+     * grounded date and a sentence it can keep. A date the manager actually
+     * gave is left exactly as they wrote it; one they did not is replaced by
+     * the form's own, so the invented value never reaches the record AND the
+     * fact around it survives. See `form-date-grounding.ts` for why a date is
+     * the one unsupported value worth replacing rather than removing.
+     */
+    const dated = correctDraftedDates(
+      cleaned.values,
+      narrativeKeys,
+      notes,
+      resolvedFormDate,
+    );
+
     const narrated = guardNarrativeDraft(dated.values, fields, groundingSource);
 
-    const groundedKeys = new Set(fields.filter((field) => field.policyGrounded).map((field) => field.key));
-    const claims = stripUnsupportedPolicyClaims(narrated.values, groundedKeys);
-    const policyChecked = dropUngroundedPolicy(fields, claims.values, grounding);
-    const provenance = provenanceFor(fields, policyChecked.values, grounding);
+    /*
+     * THEN THE TIMEFRAME GUARD. A drafted "Next Follow-Up" survives only if the
+     * manager's own notes referred to a time at all — otherwise it is an
+     * agreement between a manager and an employee that neither of them made.
+     * Untouched on the thirteen templates that declare no timeframe field.
+     */
+    const timeframe = guardFollowUpTimeframe(narrated.values, fields, notes);
 
-    const named = applyEmployeeName({
-      values: policyChecked.values,
-      fields,
-      employeeName: loaded.instance.employeeName,
-      skipKeys: groundedKeys,
-      knownWords: [
-        ACTIVE_BRAND.brandName,
-        ...(loaded.instance.locationName ? [loaded.instance.locationName] : []),
-      ],
+    /*
+     * THEN THE FOLLOW-UP FINDINGS AND THE COACHING REGISTER.
+     *
+     * A Follow-Up Observation, Progress Level or Next Step survives only when
+     * the manager's notes describe a follow-up that has actually happened —
+     * see `follow-up-observation.ts`. And on the Coaching Form, notes with no
+     * sign of a shortfall do not come back ticked "Underperformance" or
+     * described as a concern — see `coaching-framing.ts`. Both are keyed on
+     * fields only the coaching documents carry, so neither touches any other
+     * template's draft.
+     */
+    const followUp = guardManagerFollowUp(
+      { values: timeframe.values, checked: drafted.checked ?? {} },
+      notes,
+    );
+    const framing = isCoachingFamily
+      ? guardCoachingFraming({ values: followUp.values, checked: followUp.checked }, notes)
+      : { values: followUp.values, checked: followUp.checked, adjusted: [] as string[], underperformanceRefused: false };
+
+    /*
+     * ========================================================================
+     * THEN THE POLICY-FINDING GUARD, ON THE FIELDS THAT ARE NOT POLICY FIELDS
+     * ========================================================================
+     *
+     * "…wearing a mini skirt at the Kearny salon, WHICH IS NOT IN COMPLIANCE
+     * WITH THE SUN TAN CITY DRESS CODE POLICY." — written into Observation of
+     * Offense on a form whose Policy Violated field was blank, because nothing
+     * had been retrieved to put in it. The record asserted a breach and
+     * declined to name the rule.
+     *
+     * The two guards above could not reach it: `policy-grounding` protects the
+     * fields MARKED `policyGrounded`, and Observation is deliberately not one
+     * of them; `guardNarrativeDraft` carries the right rule but runs only on
+     * fields whose stored version asks for the Observed/Expectation shape,
+     * which this one does not.
+     *
+     * SKIPS THE GROUNDED FIELDS, because `dropUngroundedPolicy` below refuses
+     * them outright when the grounding is unverified — a stronger rule than
+     * this one, and tidying a value that is about to be refused would only risk
+     * making it look keepable.
+     *
+     * RUNS ONLY WHEN THE POLICY IS UNVERIFIED. With approved policy retrieved
+     * the finding is supportable and the form is meant to make it.
+     */
+    /*
+     * WHAT THE PROSE GUARDS LEAVE ALONE: the fields `policy-grounding.ts` owns,
+     * AND the two the server derives. Running a finding or requirement check
+     * over a value that is about to be overwritten by a tick or a retrieval
+     * only puts misleading noise in the response — "Dress Code Violation" reads
+     * as a breach claim to a guard that has no idea it is a category label.
+     */
+    const groundedKeys = new Set([
+      ...fields.filter((field) => field.policyGrounded).map((field) => field.key),
+      ...DERIVED_POLICY_FIELD_KEYS,
+    ]);
+    /*
+     * ========================================================================
+     * AN EPP NEVER ASSERTS A BREACH, WHATEVER WAS RETRIEVED
+     * ========================================================================
+     *
+     * On a corrective form the condition is right: with approved policy
+     * retrieved the finding is supportable and the document is MEANT to make
+     * it — that is what Policy Violated and the quotation are for.
+     *
+     * A performance plan is the opposite document. It records where somebody
+     * is and what they will work on, and "which is not in compliance with the
+     * attendance policy" on a development plan converts coaching into a
+     * finding nobody reviewed. Retrieving the Attendance section does not
+     * license that sentence; it licenses saying what the company expects. So
+     * the guard runs on every EPP draft, retrieved policy or not.
+     */
+    const claims =
+      grounding.unverified || wantsEppPolicy
+        ? stripUnsupportedPolicyClaims(framing.values, groundedKeys)
+        : { values: framing.values, adjusted: [] as string[], emptied: [] as string[] };
+
+    /*
+     * ========================================================================
+     * THEN THE REQUIREMENT GUARD: A PLAN MAY SET AN EXPECTATION, NOT A RULE
+     * ========================================================================
+     *
+     * "Sarah must wear pants instead of skirts" — written into the Action Plan
+     * of a form whose policy fields were blank because nothing had been
+     * retrieved. Nothing in the corpus says this company requires trousers.
+     *
+     * The claim guard above cannot see it: the sentence asserts no breach,
+     * cites no manual and names no policy. It is a REQUIREMENT rather than a
+     * finding, and it is the more dangerous of the two — it reads as the
+     * manager's own instruction and is what the employee gets held to.
+     *
+     * UNLIKE THE CLAIM GUARD, THIS RUNS EVEN WHEN POLICY WAS RETRIEVED, because
+     * a retrieved passage licenses only what it actually says: "skirts must
+     * reach mid-thigh" is supportable once the manual says so, and "shoes must
+     * be closed-toe" is not, on the same draft. The retrieved text is passed
+     * in and the check is per requirement.
+     *
+     * WHAT REPLACES IT is the sentence that is always safe — the employee is
+     * expected to meet the CURRENT requirement, and management will review it
+     * with them — which is the step that makes the record defensible while the
+     * manual is still to be read.
+     */
+    /*
+     * THE SUPPORTING TEXT IS WHICHEVER RETRIEVAL THIS FORM ACTUALLY USED. A
+     * requirement survives only where the text in front of the model states
+     * it, and on an EPP that text is the pinned JBA sections rather than a
+     * similarity search. "She should show more initiative" is the case this
+     * catches: nothing in the manual makes initiative a requirement, so the
+     * sentence is replaced by the generic one rather than becoming a rule the
+     * employee is held to.
+     */
+    const requirements =
+      needsPolicy || wantsEppPolicy
+        ? stripUnsupportedPolicyRequirements(
+            claims.values,
+            groundedKeys,
+            (wantsEppPolicy
+              ? eppPassages.map((passage) => passage.text)
+              : grounding.passages.map((passage) => passage.text)
+            ).join(" "),
+            genericCompliancePlan({
+              employeeName: loaded.instance.employeeName,
+              brandName: ACTIVE_BRAND.brandName,
+              topic: null,
+            }),
+          )
+        : { values: claims.values, adjusted: [] as string[], replaced: [] as string[] };
+
+    /*
+     * ========================================================================
+     * AND THEN: DID THE MANUAL ACTUALLY SAY THAT?
+     * ========================================================================
+     *
+     * "JBA policy requires employees to demonstrate initiative" asserts no
+     * breach and names no policy artifact, so both guards above pass it
+     * through — and it is the commonest way a manager's opinion becomes a
+     * company rule on a development plan. It survives only where every
+     * substantive word of what is being attributed is in the policy that was
+     * really retrieved. See `stripUnsupportedPolicyAttributions`.
+     *
+     * SCOPED TO THE FORMS THAT REACH THE MANUAL BY TOPIC. The corrective forms
+     * retrieve a passage in order to QUOTE it, under guards written for that
+     * job, and adding a fourth pass over their output is a change to two
+     * documents nobody asked about.
+     */
+    const attributions = wantsEppPolicy
+      ? stripUnsupportedPolicyAttributions(
+          requirements.values,
+          groundedKeys,
+          eppPassages.map((passage) => passage.text).join(" "),
+        )
+      : { values: requirements.values, adjusted: [] as string[], emptied: [] as string[] };
+
+    /*
+     * ========================================================================
+     * EVERY GUARD RUNS IN MEMORY. THE WRITE HAPPENS ONCE, AT THE END.
+     * ========================================================================
+     *
+     * THE DEFECT THIS ORDERING REPLACES was not a style problem. The route used
+     * to call `applyAssistantDraft` here — WRITING the model's output to
+     * `form_instance_values` — and then run `dropUngroundedPolicy` on what came
+     * back, blanking the ungrounded policy fields with a second write of empty
+     * strings.
+     *
+     * That second write did nothing. `enforceResponsibilities` drops empty
+     * strings rather than treating them as a clear, so the empty values never
+     * reached the table and the row kept whatever the model had invented. An
+     * unverified "Policy Violated" and a fabricated quotation under "Direct
+     * policy from official manual" were persisted on a disciplinary record, and
+     * the code that looked like it removed them removed nothing.
+     *
+     * So the order is now: validate the shape, then check the grounding, then
+     * write what survived both. There is no window in which an unverified
+     * policy quotation exists in the database, because it is never sent.
+     *
+     * `enforceResponsibilities` is called HERE rather than relied on inside the
+     * write, so the policy check operates on the same values the write will —
+     * a field the template does not allow must not be able to influence what
+     * the policy filter sees. `applyAssistantDraft` enforces both again at the
+     * write; see the guard there for why that redundancy is deliberate.
+     */
+    /*
+     * ========================================================================
+     * A TERMINATION IS NEVER AI-SELECTED
+     * ========================================================================
+     *
+     * Runs on the model's OUTPUT and before validation, so a ticked Termination
+     * has no path to `form_instance_values` and none to the printed PDF, which
+     * renders from the stored values.
+     *
+     * The options stay on the template — they are legitimate parts of the
+     * business form and a manager acting on a leadership decision ticks them by
+     * hand. What is refused is the ASSISTANT selecting one. The prompt says so
+     * too; this is the half that holds, because a prompt instruction is a
+     * request and this is a box whose meaning is that somebody lost their job.
+     */
+    /*
+     * THE EXIT FORM'S FACTS, PUT IN BY CODE — before the sensitive-selection
+     * guard and the responsibility check, so both still run over what is about
+     * to be stored. The model's own values for those keys never survive this.
+     */
+    /*
+     * THE GUARD SEES THE MODEL'S TICKS, AND ONLY THOSE. On the exit form the
+     * model's Resignation Details ticks are discarded before the guard runs —
+     * they would be replaced anyway — so a code-derived "Immediate involuntary
+     * separation", taken from a manager who said it already happened, is
+     * never mistaken for the model deciding a termination. The model still
+     * cannot select it: its output never reaches the box.
+     */
+    const sensitive = refuseSensitiveSelections({
+      document,
+      variantKey,
+      checked: isExitForm ? withoutDerivedKeys(framing.checked) : framing.checked,
     });
+
+    const exit = isExitForm
+      ? applyExitDraft({
+          values: attributions.values,
+          checked: sensitive.checked,
+          notes,
+          today: businessToday(),
+          header: {
+            jobTitle: loaded.instance.employeeRole,
+            locationName: loaded.instance.locationName,
+          },
+        })
+      : null;
+
+    /*
+     * ========================================================================
+     * "GOT VERBAL WARNING ON SEPTEMBER 21" IS THE PREVIOUS ACTION'S DATE
+     * ========================================================================
+     *
+     * Production: the prior warning's date reached the Observation narrative
+     * and the Date of previous corrective action line stayed blank, because
+     * that line was left to the model. Where the manager's own notes state a
+     * date for an earlier warning, write-up, coaching or corrective action,
+     * that date fills the line — read by the same rule that keeps it off the
+     * form's own date (`priorStepDate`). Nothing is filled when they gave no
+     * such date, and a stated date replaces anything else the model put there.
+     * Keyed on the field, so only a version that has the line is touched.
+     */
+    const priorDate = fields.some((field) => field.key === PREVIOUS_ACTION_DATE_KEY)
+      ? priorStepDate(notes, businessToday())
+      : null;
+    /*
+     * REVISION 5'S LIST, held to the manager's words the same way: a dated
+     * step they described is listed even if the model left it out, and a date
+     * they never gave does not survive. See `prior-actions.ts`.
+     */
+    const priorActions = hasPriorActions
+      ? groundPriorActions({
+          drafted: (exit?.values ?? attributions.values)[PRIOR_ACTIONS_KEY] ?? "",
+          notes,
+          today: businessToday(),
+        })
+      : null;
+    const draftedValues = (() => {
+      const base = { ...(exit?.values ?? attributions.values) };
+      if (priorActions) {
+        if (priorActions.value.trim() !== "") base[PRIOR_ACTIONS_KEY] = priorActions.value;
+        else delete base[PRIOR_ACTIONS_KEY];
+      }
+      return base;
+    })();
 
     const enforced = enforceResponsibilities(document, variantKey, {
-      values: named.values,
-      checked: drafted.checked ?? {},
+      values: priorDate ? { ...draftedValues, [PREVIOUS_ACTION_DATE_KEY]: priorDate } : draftedValues,
+      checked: exit?.checked ?? sensitive.checked,
     });
+
+    /*
+     * THE OFFENSE BOX, GROUNDED BEFORE THE POLICY IS DERIVED FROM IT. Under
+     * Performance and Other give way to Standards of Conduct only when the
+     * manual supports it; every other box the model ticked stays.
+     */
+    /*
+     * A POLICY THE MANAGER NAMED is ticked as named, whatever the model chose.
+     * Otherwise a conduct incident ticks Standards of Conduct where the manual
+     * supports it.
+     */
+    const statedKeys = caPolicy ? statedOffenseKeys(caPolicy, notes) : null;
+    const statedOffense = statedKeys
+      ? withStatedOffense({
+          checked: enforced.checked,
+          values: enforced.values,
+          keys: statedKeys,
+          offered:
+            groups.find((group) => group.key === "offense_type")?.options.map((option) => option.key) ?? [],
+        })
+      : null;
+    const conduct =
+      caPolicy && !statedOffense
+        ? groundConductPolicy({
+            reading: caPolicy,
+            chunks: manual.ok ? manual.chunks : null,
+            jobTitle: loaded.instance.employeeRole,
+          })
+        : null;
+    const conductOffense = conduct?.ok
+      ? withConductOffense({ checked: enforced.checked, values: enforced.values })
+      : null;
+    const offenseChange = statedOffense ?? conductOffense;
+    const validated = offenseChange
+      ? { ...enforced, values: offenseChange.values, checked: offenseChange.checked }
+      : enforced;
+
+    /*
+     * ========================================================================
+     * A CATEGORY IS NOT A POLICY
+     * ========================================================================
+     *
+     * Ticking "Dress Code Violation" under Type of Offense is a
+     * classification. Writing those same three words into Policy Violated
+     * invents a policy out of a category name, and QA caught the model doing
+     * exactly that. It only happens when retrieval SUCCEEDED — with nothing
+     * retrieved the field is withheld below and there is nothing to echo — so
+     * it needs its own check, against the text that was actually retrieved
+     * rather than against a list of forbidden words. A real policy title that
+     * resembles an option label survives, because the passage that named it
+     * contains it.
+     */
+    const echoes = refuseOffenseLabelEchoes(
+      fields,
+      validated.values,
+      groups.flatMap((group) => group.options.map((option) => option.label)),
+      grounding,
+    );
+
+    /*
+     * ========================================================================
+     * THE TWO POLICY FIELDS ARE DERIVED, NOT TAKEN FROM THE MODEL
+     * ========================================================================
+     *
+     * The business settled what these mean on their form: Policy Violated is
+     * the offense CATEGORY ticked above it, and Direct policy names the
+     * approved manual the category was checked against, with its section and
+     * page.
+     *
+     * Both are facts the server already holds — a ticked option key and a
+     * retrieved document's title — and asking a model to restate a fact it was
+     * handed is how the fact acquires variations. So they are computed here and
+     * OVERRIDE whatever came back, which is precisely the case this exists for:
+     * a plausible policy title that matched no manual, and a placeholder where
+     * the reference belonged.
+     *
+     * RUNS AFTER `enforceResponsibilities`, so a field this version does not
+     * have cannot be conjured onto it, and BEFORE `provenanceFor`, so the
+     * derived reference carries the same verified provenance as anything else
+     * sourced from retrieval. See `policy-fields.ts`.
+     */
+    /*
+     * ========================================================================
+     * THE MANUAL IS NAMED BY IDENTITY, NOT FOUND BY SIMILARITY
+     * ========================================================================
+     *
+     * "For corrective action please refer always to this" — so the official
+     * policy manual is pinned the way the Performance Management Framework is,
+     * and the ticked offense box says which of its sections to cite. Both the
+     * section heading and the page come from the sheet's own opening lines.
+     *
+     * THIS IS WHAT FILLED A FIELD THAT HAD BEEN BLANK. The reference used to be
+     * built from a general semantic search over every approved category, gated
+     * at the similarity floor the OPEN-ENDED CHAT path uses. A manager writing
+     * "she was wearing slippers today" does not write in the manual's
+     * vocabulary, so the one document the form needs did not clear a bar tuned
+     * for a different job — and the form correctly, uselessly, reported that no
+     * approved policy had matched.
+     *
+     * IT STILL FAILS CLOSED, per offense. Only the offense boxes whose section
+     * this manual prints as a page heading resolve; everything else yields
+     * nothing, the field stays empty, and the manager completes it. See
+     * `official-policy-manual.ts`, which holds the whole decision and is pure.
+     *
+     * THE OBSERVATION IS NOT AFFECTED. What licenses a statement that a rule
+     * was BROKEN is still `grounding` — retrieved passages the model may quote
+     * — and that guard is untouched here. Naming the manual a category was
+     * checked against is a different claim from asserting a breach of it.
+     */
+    /*
+     * ONLY FOR A VERSION THAT HAS THE FIELD. The twelve templates that cite no
+     * manual never reach the knowledge base for one.
+     */
+    const manualSections = manual.ok
+      ? manualSectionsFor({
+          chunks: manual.chunks,
+          offenseKeys: validated.checked.offense_type ?? [],
+          /*
+           * THE ROLE RECORDED ON THE INSTANCE, which is the only place it can
+           * come from: Job Title is a SYSTEM field, so the model cannot write
+           * it and `enforceResponsibilities` would drop it if it tried. Unknown
+           * reads as front-line — see `isManagementTitle`.
+           */
+          jobTitle: loaded.instance.employeeRole,
+        })
+      : [];
+
+    const derivedPolicy = applyDerivedPolicyFields({
+      document,
+      variantKey,
+      values: echoes.values,
+      checked: validated.checked,
+      grounding,
+      fieldKeys: new Set(fields.map((field) => field.key)),
+      /*
+       * THE MANUAL'S OWN WORDING FOR EACH TICKED SECTION, THEN ITS SOURCE —
+       * "Source: JBA Policy Manual — Dress Code for The Company, p. 15" — every
+       * part copied from the pinned manual's rows. See `policy-citation.ts`.
+       */
+      manualReference:
+        manual.ok && manualSections.length > 0
+          ? policyFieldValue(manualGroundedPolicies(manual, manualSections))
+          : null,
+      manualAmbiguous: !manual.ok && manual.problem === "ambiguous",
+      /*
+       * NARROWS THE RETRIEVAL FALLBACK to the manual itself. Without it, a form
+       * ticked for an offense the manual states no section for could fall
+       * through to a retrieval hit in another approved category — the live
+       * corpus files twenty equipment troubleshooting guides under `safety` —
+       * and name one of them as the policy violated.
+       */
+      officialManualDocumentId: manual.ok ? manual.documentId : null,
+      /*
+       * THE EPP APPENDIX LINE. Null when no topic resolved to a section this
+       * manual states, which removes the field and reports it — a blank
+       * "Relevant JBA Policy" is a manager's to fill, and a named policy
+       * nobody checked is not.
+       */
+      wantsEppPolicyReference: wantsEppPolicy,
+      eppPolicyReference: manual.ok
+        ? eppPolicyReference(manual.documentTitle, eppPassages)
+        : null,
+    });
+
+    /*
+     * ========================================================================
+     * THE RETRIEVAL GATE DOES NOT RUN OVER A VALUE TAKEN OFF THE FORM
+     * ========================================================================
+     *
+     * `policy_violated` is the offense box the manager ticked. Both guards
+     * below exist to stop an UNSOURCED CLAIM ABOUT A MANUAL reaching the
+     * record, and a restatement of a tick box is not one — so it is held out of
+     * the gate and carries its own provenance instead.
+     *
+     * THIS IS WHAT MADE THE FIELD COME BACK BLANK. An instance is pinned to the
+     * published version it was created under, and on the version published
+     * before the field was redefined `policy_violated` is still
+     * `policyGrounded`. The gate therefore ran over it, found no verified
+     * retrieval behind a value that never needed one, and withheld it — on
+     * forms whose offense box was ticked in plain sight above the empty line.
+     * Re-publishing cannot reach those instances, and should not: a pinned
+     * version is immutable. So the exemption is keyed on the FIELD'S MEANING,
+     * which does not change with the version. See `FORM_DERIVED_POLICY_KEYS`,
+     * which is what `formDerivedProvenance` below is keyed on.
+     *
+     * `policy_language` is not exempt and must never be: it names an approved
+     * manual, so it still fails closed, is still reported as withheld, and
+     * still holds up finalization without an acknowledgement.
+     */
+    /*
+     * The provenance a value carries because of WHERE IT CAME FROM rather than
+     * because a retrieval scored well: the ticked box, and the pinned manual.
+     * Both are evidence; neither is a similarity score.
+     */
+    const pinnedProvenance: Record<string, Record<string, unknown>> = {
+      ...formDerivedProvenance(derivedPolicy.derived),
+      ...(manual.ok &&
+      manualSections.length > 0 &&
+      derivedPolicy.derived.includes("policy_language")
+        ? {
+            policy_language: {
+              ...officialManualProvenance({
+                documentId: manual.documentId,
+                documentTitle: manual.documentTitle,
+                matchedBy: manual.matchedBy,
+                sections: manualSections,
+              }),
+              /* The structured citation the value was rendered from. */
+              citation: manualGroundedPolicies(manual, manualSections),
+            },
+          }
+        : {}),
+      /*
+       * THE SAME PROVENANCE SHAPE FOR THE EPP'S REFERENCE, because it rests on
+       * the same evidence: a manual settled by identity, and sections found by
+       * the headings that manual prints. `verified: true` is what the
+       * write-time guard reads, and it is earned — the value exists only
+       * because `eppPolicyPassages` resolved real sections in real rows.
+       */
+      ...(manual.ok &&
+      eppPassages.length > 0 &&
+      derivedPolicy.derived.includes(EPP_POLICY_REFERENCE_KEY)
+        ? {
+            [EPP_POLICY_REFERENCE_KEY]: officialManualProvenance({
+              documentId: manual.documentId,
+              documentTitle: manual.documentTitle,
+              matchedBy: manual.matchedBy,
+              sections: eppPassages.map((passage) => passage.section),
+            }),
+          }
+        : {}),
+    };
+
+    const gatedFields = fields.filter((field) => !(field.key in pinnedProvenance));
+
+    const provenance = {
+      ...provenanceFor(gatedFields, derivedPolicy.values, grounding),
+      /*
+       * MERGED RATHER THAN SUBSTITUTED, and it goes second so a pinned key
+       * cannot be left with a retrieval's provenance. `applyAssistantDraft`
+       * re-runs the write-time guard against the INSTANCE'S OWN fields, where
+       * the key may still be grounded on an older pinned version, and absent
+       * provenance is refusal there.
+       */
+      ...pinnedProvenance,
+    };
+
+    // The policy rule, on validated values, BEFORE anything is stored.
+    const policyChecked = dropUngroundedPolicy(gatedFields, derivedPolicy.values, grounding);
+
+    /*
+     * ========================================================================
+     * LAST: THE EMPLOYEE BY FIRST NAME, NOT BY PRONOUN
+     * ========================================================================
+     *
+     * The prompt asks for the name; this replaces a pronoun that came back
+     * anyway, where it can only mean the employee. Never in a policy field or
+     * a value the server derived — those are the manual's words or the form's
+     * own facts — never inside quotation marks, and never on a team-wide form.
+     * Runs last so no guard after it can reintroduce one. See
+     * `employee-reference.ts`.
+     */
+    const named = teamSubject
+      ? { values: policyChecked.values, adjusted: [] as string[] }
+      : applyEmployeeName({
+          values: policyChecked.values,
+          fields,
+          employeeName: loaded.instance.employeeName,
+          skipKeys: new Set<string>([
+            ...DERIVED_POLICY_FIELD_KEYS,
+            EPP_POLICY_REFERENCE_KEY,
+            ...EXIT_DERIVED_KEYS,
+            ...Object.keys(pinnedProvenance),
+          ]),
+          knownWords: [
+            ACTIVE_BRAND.brandName,
+            ...(loaded.instance.locationName ? [loaded.instance.locationName] : []),
+          ],
+        });
 
     const guarded = await applyAssistantDraft(
       id,
-      { values: enforced.values, checked: enforced.checked },
+      { values: named.values, checked: validated.checked },
       actor.id,
       provenance,
     );
@@ -281,21 +1441,139 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({
       values: guarded.accepted.values,
       checked: guarded.accepted.checked,
-      withheld: [...new Set([...policyChecked.withheld, ...guarded.policyRefused])],
+      /*
+       * What the policy rule withheld, plus anything the write itself refused.
+       * The second list should always be empty — the filter above already
+       * removed them — and it is surfaced rather than dropped so that a
+       * disagreement between the two is visible instead of silent.
+       */
+      /*
+       * `derivedPolicy.unresolved` is here because a field that could not be
+       * derived is a field the manager now has to fill: no approved policy
+       * matched, or no offense box was ticked. Reporting it keeps `withheld`
+       * meaning "wanted, and not written" whichever guard made that true.
+       */
+      withheld: [
+        ...new Set([
+          ...echoes.withheld,
+          ...derivedPolicy.unresolved,
+          ...policyChecked.withheld,
+          ...guarded.policyRefused,
+        ]),
+        /*
+         * A FIELD THAT WAS FILLED IS NOT A FIELD THAT WAS WITHHELD, whichever
+         * earlier guard had an opinion about the model's version of it. On an
+         * older pinned version the echo check runs over `policy_violated` and
+         * refuses what the model wrote — correctly — and the derived value then
+         * replaces it. Reporting both would tell the manager to go and fill in
+         * a line that is already filled.
+         */
+      ].filter((key) => !derivedPolicy.derived.includes(key)),
       rejected: guarded.rejected,
+      /** Fields the placeholder guard rewrote, and those it emptied entirely. */
       placeholders: { cleaned: cleaned.cleaned, emptied: cleaned.emptied },
+      /** Same, for the ungrounded-narrative guard. */
       narrative: { adjusted: narrated.adjusted, emptied: narrated.emptied },
+      /** Fields an unsupported policy finding was cut out of, or emptied by. */
       policyClaims: { adjusted: claims.adjusted, emptied: claims.emptied },
+      /** Fields an unsourced policy REQUIREMENT was removed from. */
+      policyRequirements: {
+        adjusted: requirements.adjusted,
+        replaced: requirements.replaced,
+      },
+      /** Fields a rule attributed to a manual that does not state it was cut from. */
+      policyAttributions: {
+        adjusted: attributions.adjusted,
+        emptied: attributions.emptied,
+      },
+      /** Narrative fields whose date was corrected to the form's own. */
       datesCorrected: dated.corrected,
+      /** Policy fields filled from the form and the retrieval, not the model. */
+      policyDerived: derivedPolicy.derived,
+      /** Timeframe fields emptied for want of anything to base one on. */
+      timeframeEmptied: timeframe.emptied,
+      /** Follow-up findings emptied because no follow-up has been described yet. */
+      followUpEmptied: followUp.emptied,
+      /** Coaching Form fields a concern label was removed from, for notes that described none. */
+      framingAdjusted: framing.adjusted,
+      /** Fields where a pronoun for the employee was replaced by their first name. */
       employeeNamed: named.adjusted,
-      notice:
-        [
-          groundingNotice(grounding),
-          claims.adjusted.length + claims.emptied.length > 0 ? POLICY_CLAIM_REMOVED_NOTICE : null,
-        ]
-          .filter((line): line is string => Boolean(line))
-          .join(" ") || null,
+      /** The prior-actions list: steps added from the manager's words, lines with an unstated date removed. */
+      ...(priorActions
+        ? { priorActions: { added: priorActions.added, removed: priorActions.removed } }
+        : {}),
+      /*
+       * All three notices can apply at once — a Corrective Action Form whose
+       * policy could not be verified, whose observation lost an unsupported
+       * finding, AND whose Termination box was refused — so they are joined
+       * rather than one winning. A refused sensitive action must never be
+       * silent: an unticked box reads as "Ask Bubbles judged this not to apply",
+       * which is the opposite of what happened.
+       */
+      notice: [
+        groundingNotice(grounding),
+        /*
+         * SAID OUT LOUD. A silently shortened observation is a change to an HR
+         * record nobody signed off, and the manager may well be right that a
+         * policy was broken — what is missing is the approved source saying so,
+         * which is something they can go and check.
+         */
+        claims.adjusted.length + claims.emptied.length > 0
+          ? POLICY_CLAIM_REMOVED_NOTICE
+          : null,
+        requirements.adjusted.length > 0 ? POLICY_REQUIREMENT_REMOVED_NOTICE : null,
+        attributions.adjusted.length + attributions.emptied.length > 0
+          ? POLICY_ATTRIBUTION_REMOVED_NOTICE
+          : null,
+        sensitive.anyRefused ? SENSITIVE_ACTION_NOTICE : null,
+        exit && exit.detailsRemoved.length > 0 ? EXIT_DETAILS_TRIMMED_NOTICE : null,
+        caPolicy ? caPolicyAmbiguousNotice(caPolicy) : null,
+      ]
+        .filter((line): line is string => Boolean(line))
+        .join(" ") || null,
+      /** Group key -> option keys the leadership-authority guard refused. */
+      sensitiveRefused: sensitive.refused,
+      /**
+       * Corrective Action only: whether Standards of Conduct was ticked from
+       * the manager's words, the manual line it rests on, and why not when not.
+       */
+      ...(caPolicy
+        ? {
+            caPolicy: statedOffense
+              ? {
+                  applied: true,
+                  source: "stated",
+                  stated: caPolicy.stated,
+                  ticked: statedOffense.ticked,
+                  replaced: statedOffense.replaced,
+                }
+              : conduct?.ok
+              ? {
+                  applied: true,
+                  source: caPolicy.source,
+                  section: conduct.section.heading,
+                  page: conduct.section.page,
+                  anchor: conduct.anchor,
+                  replaced: conductOffense?.replaced ?? [],
+                }
+              : {
+                  applied: false,
+                  reason: conduct && !conduct.ok ? conduct.reason : "no_suggestion",
+                  ambiguous: caPolicy.ambiguous,
+                },
+          }
+        : {}),
+      /** Exit form only: the facts filled from the manager's words, and what Details lost. */
+      ...(exit
+        ? {
+            exitDerived: exit.derived,
+            exitDetailsRemoved: exit.detailsRemoved,
+            exitHeaderRestated: exit.headerRestated,
+          }
+        : {}),
       sources: grounding.sources,
+      /** Fields filled from the manager's own statements, not by the model. */
+      statedFacts: [...statedFacts, ...exitStatedFacts],
     });
   } catch (error) {
     if (error instanceof InstanceNotVisibleError) {

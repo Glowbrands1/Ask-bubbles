@@ -7,12 +7,14 @@ import { AlertTriangle, FilePlus2, Loader2, RotateCcw, Settings2 } from "lucide-
 import { BubbleMark } from "@/components/brand-mark";
 import { RichText } from "@/components/rich-text";
 import { SourceList } from "@/components/source-list";
+import { VideoSuggestionCard } from "@/components/video-card";
 import { Badge } from "@/components/ui/badge";
-import { locationById } from "@/lib/locations";
+import { salonById } from "@/data/salons";
 import { Button } from "@/components/ui/button";
 import { Label, Select } from "@/components/ui/field";
 import { ANSWER_MODE_LABEL } from "@/data/answer-modes";
 import { Notice } from "@/components/ui/feedback";
+import { useVideoLookup } from "@/lib/videos/use-video-lookup";
 import { useSession } from "@/lib/session/session-context";
 import { cn } from "@/lib/utils/cn";
 import { formatChatTime } from "@/lib/chat/history-time";
@@ -64,6 +66,7 @@ export function MessageBubble({
    * every render of this component or the hook order changes between
    * the error branch and the normal one.
    */
+  const videoLookup = useVideoLookup();
 
   if (message.role === "user") {
     /*
@@ -103,6 +106,10 @@ export function MessageBubble({
   if (message.error) {
     return <ChatErrorBubble message={message} onRetry={onRetry} isAdmin={isAdmin} />;
   }
+
+  const videos = (message.recommendedVideoIds ?? [])
+    .map((id) => videoLookup(id))
+    .filter((video): video is NonNullable<typeof video> => Boolean(video));
 
   return (
     /*
@@ -213,6 +220,21 @@ export function MessageBubble({
         */}
         <SourceList citations={message.citations ?? []} className="mt-4" />
 
+        {videos.length > 0 ? (
+          <div className="mt-3">
+            <p className="eyebrow mb-2">
+              {videos.length === 1
+                ? "Here is a training video that may help"
+                : "Training that may help"}
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {videos.map((video) => (
+                <VideoSuggestionCard key={video.id} video={video} />
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         {message.followUpSuggestions && message.followUpSuggestions.length > 0 ? (
           <div className="mt-4 flex flex-wrap gap-2">
             {message.followUpSuggestions.map((suggestion) => {
@@ -301,7 +323,7 @@ function FormProposalCard({
   const [creating, setCreating] = React.useState(false);
   const [problem, setProblem] = React.useState<string | null>(null);
   /*
-   * WHERE BUBBLES'S PREFILL HAS GOT TO, for the editor below.
+   * WHERE BUBBLES' PREFILL HAS GOT TO, for the editor below.
    *
    * `unknown` is the honest default: a card rendering an `instanceRef` that
    * came back from IndexedDB did not watch that prefill happen and cannot say
@@ -322,9 +344,9 @@ function FormProposalCard({
    */
   const [created, setCreated] = React.useState<ChatFormInstanceRef | null>(null);
   /*
-   * WHICH LOCATION, WHEN THE ACTOR COVERS SEVERAL.
+   * WHICH SALON, WHEN THE ACTOR COVERS SEVERAL.
    *
-   * Ids, not names: there is no location roster, and the only source of a display
+   * Ids, not names: there is no salon roster, and the only source of a display
    * name in this app is seeded demo data — see docs/chat-phase-3.md. Offering
    * the ids the scope actually proves is honest and answerable; offering
    * invented names would not be.
@@ -332,7 +354,7 @@ function FormProposalCard({
    * Whatever is chosen is re-authorized against the AccessScope by
    * `POST /api/forms/instances`, so an edited list buys nothing.
    */
-  const [location, setLocation] = React.useState("");
+  const [salon, setSalon] = React.useState("");
 
   /*
    * ==========================================================================
@@ -377,21 +399,21 @@ function FormProposalCard({
    * A FORM THE MANAGER PICKED BY NAME DOES NOT ASK THEM TO PICK IT AGAIN
    * ==========================================================================
    *
-   * Clicking a form in the picker IS the decision. Coming back with a
+   * Clicking "SDIT EPP" in the picker IS the decision. Coming back with a
    * card that says "Create draft" asks for the same decision a second time,
    * which is the friction this workstream exists to remove.
    *
    * EVERY CONDITION HERE HAS TO HOLD. The turn came from a card
    * (`consumePickerChoice`, which clears itself so a re-render cannot make a
    * second form and the next ordinary turn cannot inherit the intent); the
-   * proposal is READY, so the employee and the location are settled; the
-   * template supports being created here; no location choice is outstanding; and
+   * proposal is READY, so the employee and the salon are settled; the
+   * template supports being created here; no salon choice is outstanding; and
    * nothing has been created from this card already. A proposal missing any
    * of that still renders its button and still asks.
    *
    * THE SERVER IS UNCHANGED AND STILL DECIDES. `POST /api/forms/instances`
    * re-resolves the template, re-applies its own permission and re-authorises
-   * the location against the AccessScope. This removes a click, not a check.
+   * the salon against the AccessScope. This removes a click, not a check.
    */
   React.useEffect(() => {
     if (!consumePickerChoice?.()) return;
@@ -422,7 +444,7 @@ function FormProposalCard({
 
     try {
       const result = await createInlineForm({
-        proposal: location ? { ...proposal, locationId: location } : proposal,
+        proposal: salon ? { ...proposal, locationId: salon } : proposal,
         messages: conversation,
         call: (url, init) => formsFetch(url, role, user.name, init),
         /*
@@ -536,22 +558,22 @@ function FormProposalCard({
             <Missing>Not yet — tell Bubbles who this form is about</Missing>
           )}
         </ProposalRow>
-        <ProposalRow label="Location">
-          {location ? (
-            <span className="font-mono text-[11px] text-foreground">{location}</span>
+        <ProposalRow label="Salon">
+          {salon ? (
+            <span className="font-mono text-[11px] text-foreground">{salon}</span>
           ) : proposal.locationResolution === "not_applicable" ? (
             /*
-             * NOT A GAP. A global actor is not assigned to a location, and the
+             * NOT A GAP. A global actor is not assigned to a salon, and the
              * server permits a form that names none — so this is an answer, and
              * the card says which answer rather than asking a question with
              * nothing to pick from.
              */
-            <Missing>Not recorded — your account covers every location</Missing>
+            <Missing>Not recorded — your account covers every salon</Missing>
           ) : proposal.locationId ? (
             /*
-             * THE VERIFIED ID, NOT AN INVENTED NAME. There is no location roster
-             * to resolve a display name from. the company location roster is the authority, but a
-             * demo data — putting a fictional location name in front of somebody
+             * THE VERIFIED ID, NOT AN INVENTED NAME. There is no salon roster
+             * to resolve a display name from. `PRODUCTION_SALONS` is the roster, but a
+             * demo data — putting a fictional salon name in front of somebody
              * about to file a disciplinary record is the class of thing this
              * phase exists to stop. `locationName` stays null until a roster
              * exists; see docs/chat-phase-3.md.
@@ -562,7 +584,7 @@ function FormProposalCard({
           ) : (
             <Missing>
               {proposal.locationResolution === "needs_selection"
-                ? "Not set — say which location this is about"
+                ? "Not set — say which salon this is about"
                 : "Not set — Ask Bubbles could not verify one"}
             </Missing>
           )}
@@ -574,7 +596,7 @@ function FormProposalCard({
 
         `supportsInlineDraft` is set server-side and is true only for a template
         the inline editor supports AND a proposal with nothing missing. A
-        proposal still needing the employee or the location gets no button — not a
+        proposal still needing the employee or the salon gets no button — not a
         disabled one, because the gap is the reason it is not offered, and a
         greyed-out control invites the manager to hunt for what would enable it.
 
@@ -583,34 +605,34 @@ function FormProposalCard({
         exactly the "Coming later" problem this workstream just removed.
       */}
       {/*
-        THE ONE QUESTION THE CARD CAN ANSWER FOR ITSELF. Shown when the location is
+        THE ONE QUESTION THE CARD CAN ANSWER FOR ITSELF. Shown when the salon is
         still open and the choices are known: a manager assigned to several
-        locations who has not named one of them, or one who named a location outside
-        their assignment (then even a single-location manager confirms their own
-        rather than having it substituted silently). Only their own locations are
+        salons who has not named one of them, or one who named a salon outside
+        their assignment (then even a single-salon manager confirms their own
+        rather than having it substituted silently). Only their own salons are
         offered, and the server re-authorizes whichever is picked.
       */}
       {!superseded && proposal.authorizedLocationIds.length > 0 && !proposal.locationId ? (
         <div className="mt-4 min-w-0 space-y-1.5">
-          <Label htmlFor={`location-${proposal.proposalId}`}>Which location is this about?</Label>
+          <Label htmlFor={`salon-${proposal.proposalId}`}>Which salon is this about?</Label>
           <Select
-            id={`location-${proposal.proposalId}`}
+            id={`salon-${proposal.proposalId}`}
             className="min-w-0"
-            value={location}
-            onChange={(event) => setLocation(event.target.value)}
+            value={salon}
+            onChange={(event) => setSalon(event.target.value)}
           >
-            <option value="">Choose a location…</option>
+            <option value="">Choose a salon…</option>
             {proposal.authorizedLocationIds.map((id) => (
               <option key={id} value={id}>
                 {/* The roster's name for the id; the id itself only if the roster does not know it. */}
-                {locationById(id)?.name ?? id}
+                {salonById(id)?.name ?? id}
               </option>
             ))}
           </Select>
         </div>
       ) : null}
 
-      {!superseded && (proposal.supportsInlineDraft || (location && proposal.status === "needs_location")) ? (
+      {!superseded && (proposal.supportsInlineDraft || (salon && proposal.status === "needs_location")) ? (
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <Button size="sm" onClick={() => void create()} disabled={creating}>
             {creating ? <Loader2 className="animate-spin" /> : null}

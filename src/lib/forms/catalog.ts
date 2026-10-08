@@ -1,21 +1,18 @@
 import type { FormDocument, FormField, FormVariant } from "./document";
 
-import {
-  COMPANY_FORM_CATEGORIES,
-  DEFAULT_COMPANY_FORM_CATEGORY,
-  FORM_LAYOUT_FAMILIES,
-} from "@/config/company/forms/categories";
-import { FORM_LETTERHEAD_BRAND } from "@/config/company/forms/letterhead";
-
 /**
  * WHAT A TEMPLATE IS, AND WHERE IT SITS IN THE LIBRARY.
  *
- * Platform types and helpers only. WHICH forms exist, and how they are grouped,
- * is company configuration under `src/config/company/forms/`.
+ * A leaf module on purpose. `library.ts` holds the forms an employee is the
+ * subject of; `hiring-library.ts` holds the forms a CANDIDATE is the subject
+ * of, and it is a separate file because the two are answerable to different
+ * source documents and grow at different times. Both need the same seed shape
+ * and the same `field` helper, so those live here rather than in one of them —
+ * a shared helper imported from a sibling that imports you back is a module
+ * cycle, and a cycle here would fail at the first `field(...)` call.
  */
 
-/** The letterhead brand line, as the editor's new-block default uses it. */
-export const BRAND = FORM_LETTERHEAD_BRAND;
+export const BRAND = "SUN TAN CITY";
 
 /**
  * One field, spelled short.
@@ -34,13 +31,72 @@ export const field = (
 
 /* ---------------------------------------------------------- categories --- */
 
-/** The categories the forms page groups by, in display order (company config). */
-export const FORM_CATEGORIES = COMPANY_FORM_CATEGORIES;
+/**
+ * THE CATEGORIES THE FORMS PAGE GROUPS BY.
+ *
+ * Ordered — this array is the display order, so a category moves by moving a
+ * line here rather than by a number somebody has to keep unique.
+ *
+ * WHY THIS IS CODE AND NOT A LOOKUP TABLE. A category is a fact about the
+ * library the app ships, the same way the templates themselves are: adding one
+ * means adding forms to it, which is a code change either way. The `category`
+ * COLUMN on `form_templates` exists so the database can answer "which category"
+ * without the app, and it is plain text checked against this list — so a new
+ * category needs no migration, only a new entry here.
+ *
+ * `hr_performance` is where the nine forms that already existed live. They were
+ * never grouped before; naming the group they were already in is not moving
+ * them, and nothing about Coaching, the corrective forms or the EPPs changes
+ * because this constant now exists.
+ */
+export const FORM_CATEGORIES = [
+  {
+    key: "hr_performance",
+    label: "HR & Performance Forms",
+    blurb:
+      "Coaching, corrective action and performance plans for people already on the team.",
+  },
+  /*
+   * BEFORE HIRING, AND NOT ONLY FOR READING ORDER. `groupTemplatesByCategory`
+   * puts a category this build does not know into the LAST section, and that
+   * has always been Hiring & Interview. Appending this one would quietly move
+   * every unknown row under an exit heading instead.
+   */
+  {
+    key: "separation",
+    label: "Separation & Exit Forms",
+    blurb: "Resignation and exit paperwork for an employee who is leaving the team.",
+  },
+  {
+    /*
+     * Demotion and Position Transfer. Their own heading
+     * because they record a change to somebody's employment rather than
+     * coaching them, and a manager looking for "the transfer paperwork" should
+     * not have to read past nine performance forms to find it.
+     */
+    key: "employment_changes",
+    label: "Employment Change Forms",
+    blurb:
+      "Demotions and position transfers for people already on the team.",
+  },
+  {
+    key: "hiring",
+    label: "Hiring & Interview Forms",
+    blurb:
+      "Prescreening and interview forms, used while a candidate is still a candidate.",
+  },
+] as const;
 
 export type FormCategoryKey = (typeof FORM_CATEGORIES)[number]["key"];
 
-/** The category a row with none recorded falls back to. */
-export const DEFAULT_FORM_CATEGORY = DEFAULT_COMPANY_FORM_CATEGORY as FormCategoryKey;
+/**
+ * The category a template falls back to when the database has not been migrated
+ * yet, or when a row predates the column.
+ *
+ * The nine original forms, so an un-migrated deployment shows exactly the page
+ * it showed before — one group, everything in it — rather than an empty one.
+ */
+export const DEFAULT_FORM_CATEGORY: FormCategoryKey = "hr_performance";
 
 export function isFormCategory(value: unknown): value is FormCategoryKey {
   return FORM_CATEGORIES.some((category) => category.key === value);
@@ -79,7 +135,14 @@ export function groupTemplatesByCategory<T extends { category: string }>(
 
 /* ---------------------------------------------------------------- seed --- */
 
-export type FormLayoutFamily = (typeof FORM_LAYOUT_FAMILIES)[number];
+export type FormLayoutFamily =
+  | "coaching"
+  | "corrective"
+  | "epp"
+  | "dmit_epp"
+  | "interview"
+  /** The Resignation/Exit Form. Not a rung of the performance ladder. */
+  | "exit";
 
 /**
  * WHERE A TEMPLATE'S SCHEMA WAS READ FROM, WHEN IT WAS NOT A PAPER FORM.

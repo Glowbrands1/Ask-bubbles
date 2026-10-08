@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { PermissionGate } from "@/components/permission-gate";
+import { FormsAccessNotice } from "@/features/forms/forms-gate";
 import { Notice } from "@/components/ui/feedback";
 import { PageHeader, PageShell } from "@/components/ui/layout";
 import { SYNTHETIC_DATA_NOTICE, formsIdentityIsUnverified } from "@/lib/forms/access";
@@ -19,8 +19,8 @@ import {
   type MonitoringView,
 } from "@/features/forms/monitoring-table";
 import { pageCan, requirePagePermission } from "@/lib/auth/page";
-import { readPermissionHolder, withoutUnreadable } from "@/lib/forms/instance-scope";
-import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
+import { withoutUnreadable } from "@/lib/forms/instance-scope";
+import type { Permission } from "@/types";
 
 export const metadata: Metadata = { title: "Form Monitoring" };
 export const dynamic = "force-dynamic";
@@ -68,63 +68,66 @@ export default async function FormMonitoringPage({
   let attention = { overdue: 0, dueThisWeek: 0, needsAttention: 0 };
   let demo = { deletable: 0, protected: 0 };
   let failure: string | null = null;
-  const connected = supabaseSecretKeyConfigured();
 
-  if (connected) {
-    try {
-      // Forms whose family restricts reading are kept from readers without that permission.
-      const holds = await readPermissionHolder(pageCan);
-      const instances = withoutUnreadable(await listInstances(view satisfies InstanceView), holds);
-      forms = instances.map((instance) => ({
-        id: instance.id,
-        templateName: instance.templateName,
-        templateShortName: instance.templateShortName,
-        templateVersion: instance.templateVersion,
-        variantKey: instance.variantKey,
-        employeeName: instance.employeeName,
-        locationName: instance.locationName,
-        createdBy: instance.createdBy,
-        createdByRole: instance.createdByRole,
-        source: instance.source,
-        status: instance.status,
-        formDate: instance.formDate,
-        followUpDate: instance.followUpDate,
-        followedUpAt: instance.followedUpAt,
-        followedUpBy: instance.followedUpBy,
-        finalizedAt: instance.finalizedAt,
-        exportedAt: instance.exportedAt,
-        revisesInstanceId: instance.revisesInstanceId,
-        archivedAt: instance.archivedAt,
-        /*
-         * PROVENANCE, NOT A NAME MATCH. `isDemoInstance` reads the `demo:` actor
-         * prefix the server wrote when the row was created. A real employee
-         * called "… (test)" is not demo data and is not marked as such here.
-         */
-        isDemo: isDemoInstance(instance),
-        updatedAt: instance.updatedAt,
-      }));
-
+  try {
+    /*
+     * EXIT FORMS ONLY FOR THOSE WHO MAY CREATE THEM. The Resignation/Exit Form
+     * carries payroll, bonus, minimum-wage and rehire answers, so a reader
+     * without `create_exit_form` does not get its rows, its counts or its
+     * follow-ups. See `withoutUnreadable`.
+     */
+    const readsExit = await pageCan("create_exit_form");
+    const holds = (permission: Permission) => (permission === "create_exit_form" ? readsExit : false);
+    const instances = withoutUnreadable(await listInstances(view satisfies InstanceView), holds);
+    forms = instances.map((instance) => ({
+      id: instance.id,
+      templateName: instance.templateName,
+      templateShortName: instance.templateShortName,
+      templateVersion: instance.templateVersion,
+      variantKey: instance.variantKey,
+      employeeName: instance.employeeName,
+      locationName: instance.locationName,
+      createdBy: instance.createdBy,
+      createdByRole: instance.createdByRole,
+      source: instance.source,
+      status: instance.status,
+      formDate: instance.formDate,
+      followUpDate: instance.followUpDate,
+      followedUpAt: instance.followedUpAt,
+      followedUpBy: instance.followedUpBy,
+      finalizedAt: instance.finalizedAt,
+      exportedAt: instance.exportedAt,
+      revisesInstanceId: instance.revisesInstanceId,
+      archivedAt: instance.archivedAt,
       /*
-       * The banner counts OUTSTANDING WORK ACROSS THE ACTIVE SET, from the same
-       * query the Overview uses — not from `forms`, which is shelf-filtered. A
-       * manager looking at Followed up still needs to be told what is overdue.
+       * PROVENANCE, NOT A NAME MATCH. `isDemoInstance` reads the `demo:` actor
+       * prefix the server wrote when the row was created. A real employee
+       * called "… (test)" is not demo data and is not marked as such here.
        */
-      attention = attentionSummary(withoutUnreadable(await listOutstandingFollowUps(), holds), today);
+      isDemo: isDemoInstance(instance),
+      updatedAt: instance.updatedAt,
+    }));
 
-      /*
-       * Counted on the server across EVERY shelf, so the sweep button can state a
-       * real number. Counting the rows on screen would be wrong — this page is
-       * filtered, and the count would change with the view.
-       */
-      const sweep = await findDemoInstances();
-      demo = { deletable: sweep.deletable.length, protected: sweep.protected.length };
-    } catch (error) {
-      failure = (error as Error).message;
-    }
+    /*
+     * The banner counts OUTSTANDING WORK ACROSS THE ACTIVE SET, from the same
+     * query the Overview uses — not from `forms`, which is shelf-filtered. A
+     * manager looking at Followed up still needs to be told what is overdue.
+     */
+    attention = attentionSummary(withoutUnreadable(await listOutstandingFollowUps(), holds), today);
+
+    /*
+     * Counted on the server across EVERY shelf, so the sweep button can state a
+     * real number. Counting the rows on screen would be wrong — this page is
+     * filtered, and the count would change with the view.
+     */
+    const sweep = await findDemoInstances();
+    demo = { deletable: sweep.deletable.length, protected: sweep.protected.length };
+  } catch (error) {
+    failure = (error as Error).message;
   }
 
   return (
-    <PermissionGate permission="view_form_monitoring">
+    <>
       <PageShell>
         <PageHeader
           eyebrow="Forms"
@@ -132,11 +135,9 @@ export default async function FormMonitoringPage({
           description="Every form created in Ask Bubbles, the template version it was filled from, and what is still outstanding."
         />
 
-        {!connected ? (
-          <Notice tone="neutral" title="Forms are not connected in this deployment">
-            Forms are stored in the live database, and this deployment has none connected. Nothing here is sample data.
-          </Notice>
-        ) : failure ? (
+        <FormsAccessNotice permission="view_form_monitoring" />
+
+        {failure ? (
           <Notice tone="attention" title="Form history could not be read">
             {failure}
           </Notice>
@@ -152,6 +153,6 @@ export default async function FormMonitoringPage({
           />
         )}
       </PageShell>
-    </PermissionGate>
+    </>
   );
 }

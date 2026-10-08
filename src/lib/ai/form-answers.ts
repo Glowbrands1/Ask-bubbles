@@ -1,7 +1,6 @@
 import "server-only";
 
-import { companyFormFor } from "@/config/company/forms";
-import { ACTIVE_BRAND } from "@/lib/brand";
+import { offeredInChooser } from "@/lib/forms/chooser";
 import {
   entryFor,
   formsLocationFor,
@@ -45,14 +44,97 @@ import type { AskResponse } from "./types";
 
 /* ------------------------------------------------------------- the ladder -- */
 
+/**
+ * ============================================================================
+ * THE APPROVED CORRECTIVE-ACTION PROGRESSION, AND WHICH RUNGS ARE FORMS
+ * ============================================================================
+ *
+ * Read off §2 of the Performance Management Framework — §2.1 Observation
+ * through §2.8 Further Leadership Review — and specifically off each rung's own
+ * "Appropriate documentation" list, which is what settles the question the
+ * reference platform got wrong: a step in the progression is NOT automatically a
+ * form.
+ *
+ * Three rungs have no template of their own, and each is a different reason:
+ *
+ *   ROLE PLAY (§2.3) names a "role-play evaluation form" in its documentation
+ *   list, and no source document anywhere gives that form's fields — no paper
+ *   form, and no output template in §9. Building one would mean inventing every
+ *   label and option, so Ask Bubbles does not carry it and says so. §2.3 also
+ *   lists "Coaching Form notes" and "EPP task completion notes", which is where
+ *   role-play is recorded today.
+ *
+ *   FOLLOW-UP REVIEW (§2.6) is documented by "EPP re-evaluation section" — a
+ *   section INSIDE the performance plan, not a document beside it. The DMIT EPP
+ *   carries Follow-up, Acknowledgement, Re-evaluation and a second
+ *   acknowledgement in one form, which is the same fact in the template.
+ *
+ *   OBSERVATION (§2.1) and FURTHER LEADERSHIP REVIEW (§2.8) are a manager
+ *   noticing something and a manager escalating. Neither is paperwork Ask Bubbles
+ *   issues; §2.8's documentation list is copies of what already exists.
+ *
+ * `templateKeys` and `selector` are two ways of naming the same thing. A key is
+ * used where one form records a rung; the selector is used for the EPPs, where
+ * naming six keys in this file would mean editing it every time the library
+ * gains or loses a performance plan. Both resolve through the inventory.
+ */
+interface LadderRung {
+  /** The rung's name, as §2 names it. */
+  step: string;
+  /** Forms that record it, by library key. */
+  templateKeys?: string[];
+  /** Or, forms chosen from the library by a property rather than by name. */
+  selector?: (entry: InventoryEntry) => boolean;
+  /** What records it when no template does. Taken from the rung's own §2 list. */
+  documentedBy?: string;
+}
 
+const CORRECTIVE_ACTION_LADDER: LadderRung[] = [
+  {
+    step: "Observation",
+    documentedBy: "a manager's own note. Nothing is filed yet.",
+  },
+  { step: "Coaching", templateKeys: ["coaching"] },
+  {
+    step: "Role Play",
+    documentedBy:
+      "the Coaching Form, or EPP task-completion notes. Ask Bubbles has no separate role-play template.",
+  },
+  { step: "Follow-Up Coaching", templateKeys: ["follow-up-coaching"] },
+  {
+    step: "Employee Performance Plan (EPP)",
+    selector: (entry) => entry.requiredPermission === "create_epp",
+  },
+  {
+    step: "Follow-Up Review",
+    documentedBy: "the re-evaluation section of the EPP itself, not a separate form.",
+  },
+  {
+    /*
+     * THE RUNG THE BUSINESS NOW CALLS CORRECTIVE ACTION. The template key it
+     * maps to is still `dpoa`, which is the stored identity of the form and
+     * not a name anybody reads — the form's own name is looked up from the
+     * library row, so this line never restates it.
+     */
+    step: "Corrective Action",
+    templateKeys: ["dpoa"],
+  },
+  {
+    step: "Further Leadership Review",
+    documentedBy:
+      "a summary of the history for District or Regional leadership. Not a form Ask Bubbles issues.",
+  },
+];
+
+/** The Policy Review sits beside the ladder rather than on a rung of it. */
+const RELATED_TEMPLATE_KEYS = ["policy-review"];
 
 /* -------------------------------------------------------------- rendering -- */
 
 function creationNote(entry: InventoryEntry): string {
   if (!entry.canCreate) return "your role cannot create this one";
-  if (entry.inlineCreation) return `${ACTIVE_BRAND.assistantName} can create this one here in the conversation`;
-  return `not available yet — ${ACTIVE_BRAND.assistantName} cannot create this one in chat`;
+  if (entry.inlineCreation) return "Bubbles can create this one here in the conversation";
+  return "not available yet — Bubbles cannot create this one in chat";
 }
 
 /** One form, as a bullet: real name, stored description, honest availability. */
@@ -76,6 +158,7 @@ function turn(content: string): AskResponse {
      */
     citations: [],
     coverage: "not_applicable",
+    recommendedVideoIds: [],
   };
 }
 
@@ -84,7 +167,7 @@ const REGISTER_NOTE =
   "The **templates** are in Forms. The **guidance** — how to coach, when to escalate, what the progression is — is Knowledge Base material, and I cite it when I answer from it.";
 
 const NOTHING_PUBLISHED =
-  `There are no forms published in ${ACTIVE_BRAND.productName} that your role can start. An Owner or Administrator publishes templates and sets which roles may use them.`;
+  "There are no forms published in Ask Bubbles that your role can start. An Owner or Administrator publishes templates and sets which roles may use them.";
 
 /* ------------------------------------------------------ inventory answers -- */
 
@@ -127,7 +210,7 @@ function listAnswer(inventory: FormInventory, role: Role | null): AskResponse {
 
   return turn(
     [
-      `These are the forms published in ${ACTIVE_BRAND.productName} that you can use:`,
+      "These are the forms published in Ask Bubbles that you can use:",
       "",
       sections,
       "",
@@ -181,7 +264,7 @@ function availabilityAnswer(
     const mine = offerable(inventory);
     return turn(
       [
-        `Not as a form in ${ACTIVE_BRAND.productName} — there is no published template for that, and I won't stand in for it with a different one.`,
+        "Not as a form in Ask Bubbles — there is no published template for that, and I won't stand in for it with a different one.",
         "",
         mine.length > 0
           ? `Here is the whole list of what you can start:\n\n${bulletList(mine)}`
@@ -259,7 +342,167 @@ export function answerRegisterClarification(input: {
   );
 }
 
-/* ------------------------------------------------- forms library block -- */
+/* ----------------------------------------------- corrective action answer -- */
+
+/**
+ * The reply to "I need to do a corrective action for Sarah".
+ *
+ * WHEN THIS IS REACHED, AND WHEN IT IS NOT. Since the rename, a manager asking
+ * to create a corrective action is asking for the Corrective Action Form and
+ * gets its intake — `form-proposal.ts` routes there. This answer is what is
+ * left, and it is two situations rather than one:
+ *
+ *   THE BASIS IS A METRIC ALONE. "Their Club Close is low, create a corrective
+ *   action." §7 of the framework puts underperformance on the ladder at
+ *   coaching, so the honest answer is the progression and where this sits on
+ *   it — not a formal warning issued off a scorecard.
+ *
+ *   THE FORM IS NOT AVAILABLE to this role or this deployment. Then the ladder
+ *   and the forms that DO exist is the most useful thing there is to say.
+ *
+ * Nothing is created and nothing is proposed in either. Once the manager says
+ * which document they want, the ordinary explicit path takes over and
+ * re-derives every fact from their turns.
+ */
+export function answerCorrectiveAction(input: {
+  inventory: FormInventory;
+  role: Role | null;
+  /**
+   * Whether the Performance Management Framework resolved healthy for this
+   * turn. The ladder below is a MAP from the framework's rungs to template
+   * keys, and a map is only as authoritative as the thing it maps.
+   */
+  progressionAvailable: boolean;
+  /**
+   * Whether the manager's stated grounds were a metric and nothing else.
+   *
+   * It changes the OPENING SENTENCE and nothing else, because it is a different
+   * reason for the same answer. A manager who asked for a document and got the
+   * ladder is owed the reason: not "I can't tell which form you mean" — they
+   * were perfectly clear — but that a number on its own is not what the
+   * approved progression escalates on.
+   */
+  metricOnly?: boolean;
+}): AskResponse {
+  const { inventory, role, progressionAvailable } = input;
+  const metricOnly = input.metricOnly ?? false;
+
+  /*
+   * The opening line, which is the only part these two situations disagree
+   * about. Everything below — the ladder, the library, where to find it — is
+   * the same answer to both.
+   */
+  const opening = metricOnly
+    ? "A low number on its own isn't what our progression escalates on, so I won't open formal corrective action off a metric. Underperformance enters the ladder at coaching, and it reaches formal accountability through what happens after that."
+    : "\"Corrective action\" covers the whole progression rather than one document, so I won't pick a form for you — the wrong one in someone's file is harder to undo than asking.";
+  const published = publishedEntries(inventory);
+  /*
+   * The ladder below names the forms that record each rung, by key, and that
+   * list is the framework's rather than a shortlist — it uses `published`. The
+   * closing "which one do you need?" IS a shortlist, so it uses `offerable`.
+   */
+  const mine = offerable(inventory);
+
+  if (mine.length === 0) return turn(NOTHING_PUBLISHED);
+
+  /*
+   * ==========================================================================
+   * THE FORMS ARE OURS TO STATE. THE ORDER IS THE FRAMEWORK'S.
+   * ==========================================================================
+   *
+   * Three different kinds of fact reach a manager through this one answer, and
+   * they have three different authorities:
+   *
+   *   WHICH FORMS EXIST is `form_templates`, read for this user. Deterministic,
+   *   current, and ours to assert.
+   *
+   *   WHAT THE PROGRESSION IS, and what order its rungs come in, is the
+   *   Performance Management Framework. `CORRECTIVE_ACTION_LADDER` is a map
+   *   onto it, written from §2 and checked against §2 — but a map in a source
+   *   file is a COPY, and a copy cannot know that §2 was re-issued last week.
+   *
+   *   WHAT A POLICY SAYS is retrieval, and is not asserted here at all.
+   *
+   * SO WHEN THE FRAMEWORK IS UNAVAILABLE, the ladder is not shown. Not shown
+   * with a caveat, not shown unnumbered — not shown. "The approved sequence" is
+   * a claim about a document nobody could read on this turn, and the forms
+   * list answers the manager's actual question ("which one do I need?") without
+   * it.
+   *
+   * The alternative was a hedge — the same eight rungs under "this may be out
+   * of date" — and a manager reads that as the sequence anyway. A copy
+   * presented as a copy is still the thing being trusted.
+   */
+
+  const rungs = CORRECTIVE_ACTION_LADDER.map((rung) => {
+    const forms = rung.selector
+      ? published.filter(rung.selector)
+      : (rung.templateKeys ?? [])
+          .map((key) => entryFor(inventory, key))
+          .filter((entry): entry is InventoryEntry => Boolean(entry) && entry!.published);
+
+    if (forms.length === 0) {
+      /*
+       * A rung with no template. Either it never had one — Observation, Role
+       * Play, Follow-Up Review, Leadership Review — or the template that records
+       * it is not published in this deployment. Both are said plainly; neither
+       * borrows another form's name.
+       */
+      return `${rung.step} — ${rung.documentedBy ?? "no template for this step is published in Ask Bubbles."}`;
+    }
+    return `${rung.step} — ${forms.map((entry) => `**${entry.name}**`).join(", ")}`;
+  })
+    .map((line, index) => `${index + 1}. ${line}`)
+    .join("\n");
+
+  const related = RELATED_TEMPLATE_KEYS.map((key) => entryFor(inventory, key)).filter(
+    (entry): entry is InventoryEntry => Boolean(entry) && entry!.published,
+  );
+
+  if (!progressionAvailable) {
+    return turn(
+      [
+        opening,
+        "",
+        "I can't set out the approved progression right now: the Performance Management Framework isn't available to me on this turn, and I won't recite a sequence from memory when the document that defines it is the thing that settles it. Check the Knowledge Base for the framework itself.",
+        "",
+        `What I can tell you is which forms exist, which is read from the library. These are the ones you can start:\n\n${bulletList(mine)}`,
+        "",
+        `You will find them in ${formsLocationFor(role)}`,
+      ].join("\n"),
+    );
+  }
+
+  return turn(
+    [
+      opening,
+      "",
+      "The approved sequence, and what records each step:",
+      "",
+      rungs,
+      related.length > 0
+        ? `\nAlso available, when the issue is a policy someone misunderstood or breached: ${related
+            .map((entry) => `**${entry.name}**`)
+            .join(", ")}.`
+        : "",
+      "",
+      `Which one do you need? These are the ones you can start:\n\n${bulletList(mine)}`,
+      "",
+      /*
+       * WHERE, as well as WHICH. A manager who has just been asked to choose a
+       * document is about to go looking for it, and the answer is
+       * role-dependent — a Salon Director cannot open Form Templates.
+       */
+      `You will find them in ${formsLocationFor(role)}`,
+      "",
+      "The progression itself is Knowledge Base guidance — ask me about it and I will answer from the documents and cite them.",
+    ]
+      .filter((line) => line !== "")
+      .join("\n"),
+  );
+}
+
+/* --------------------------------------------------------- prompt context -- */
 
 /**
  * ============================================================================
@@ -305,7 +548,7 @@ export function buildFormInventoryBlock(inventory: FormInventory): string {
        * because a marker beside the name is the version a model does not have
        * to remember three sections later.
        */
-      const withheld = companyFormFor(entry.templateKey)?.offeredInChooser === true
+      const withheld = offeredInChooser(entry.templateKey)
         ? ""
         : "; NOT OFFERED — never suggest this form or include it when listing forms to choose from";
       return `- ${entry.name} (short name: ${entry.shortName}; category: ${entry.categoryLabel}; ${availability}${withheld})\n  ${entry.description}`;
@@ -314,7 +557,7 @@ export function buildFormInventoryBlock(inventory: FormInventory): string {
 
   return `FORMS LIBRARY
 
-This is the COMPLETE list of form templates published in ${ACTIVE_BRAND.productName}. It is read from the database for this user, and it is the only list of forms that exists.
+This is the COMPLETE list of form templates published in Ask Bubbles. It is read from the database for this user, and it is the only list of forms that exists.
 
 An entry marked NOT OFFERED still exists and is still published: answer honestly if the user asks about it by name, and say where it is opened. Never put it forward yourself — leave it out when you ask which form somebody needs, when you list the forms they can use, and when you recommend one.
 
