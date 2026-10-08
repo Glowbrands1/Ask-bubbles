@@ -125,7 +125,8 @@ describe("P4-1. the drafting route runs the guard before storing anything", () =
      * responsibility validation, then the policy filter — and `policyChecked`
      * is what is written. See the route.
      */
-    expect(handler).toContain("guardFollowUpTimeframe(narrated.values");
+    expect(handler).toContain("guardEvidenceBasis(narrated.values");
+    expect(handler).toContain("guardFollowUpTimeframe(evidence.values");
     expect(handler).toContain("values: timeframe.values");
     expect(handler).toContain("values: policyChecked.values");
     expect(handler).not.toContain("values: drafted.values");

@@ -40,6 +40,8 @@ const state = vi.hoisted(() => ({
   revise: {} as { values?: Record<string, unknown>; checked?: Record<string, unknown>; clear?: unknown },
   calls: [] as { tool: string; system: string; prompt: string }[],
   directory: [] as unknown[],
+  /** Stop reasons the revise call returns, in order; the last repeats. Empty = complete. */
+  reviseStops: [] as string[],
 }));
 
 vi.mock("@/lib/supabase/server", () => ({ getSupabaseAdmin: () => fakeSupabase(store) }));
@@ -88,7 +90,13 @@ vi.mock("@/lib/ai/anthropic", () => ({
       }) => {
         const tool = request.tool_choice.name;
         state.calls.push({ tool, system: request.system, prompt: request.messages[0]!.content });
+        const reviseCall = state.calls.filter((entry) => entry.tool === "revise_form_fields").length;
+        const stop =
+          tool === "revise_form_fields" && state.reviseStops.length > 0
+            ? state.reviseStops[Math.min(reviseCall - 1, state.reviseStops.length - 1)]!
+            : "tool_use";
         return {
+          stop_reason: stop,
           content: [
             {
               type: "tool_use",
@@ -269,6 +277,7 @@ beforeEach(async () => {
   state.revise = { values: {} };
   state.calls = [];
   state.directory = DIRECTORY;
+  state.reviseStops = [];
   turn = 0;
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-01T15:00:00Z"));
@@ -621,5 +630,81 @@ describe("P7 — shared and service accounts are never a name suggestion", () =>
     state.role = "admin";
     const response = await propose([said("Create a coaching form for Katlyn Brook, she was late today.")]);
     expect(response!.content).toMatch(/^Did you mean \*\*Kaitlyn Brook\*\*\?/);
+  });
+});
+
+/* ================================= improvement D: a revision cut off at the budget == */
+
+describe("a revision cut off at the token budget", () => {
+  it("is revised again with more room, and only the complete change is saved", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { id, history } = await filledFollowUpForm();
+    const before = await snapshot(id);
+    state.reviseStops = ["max_tokens", "tool_use"];
+    state.revise = { values: {}, checked: { progress_level: ["partially_improved"] } };
+    await revise(id, history, "Change only Progress Level to Partially Improved.");
+    const after = await snapshot(id);
+    expect(modelCalls("revise_form_fields")).toBe(2);
+    expect(changedKeys(before, after)).toEqual(["progress_level"]);
+  });
+
+  it("changes nothing on the form when the retry is cut off too, and says so", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { id, history } = await filledFollowUpForm();
+    const before = await snapshot(id);
+    state.reviseStops = ["max_tokens", "max_tokens"];
+    state.revise = { values: { follow_up_observation: "She has improved and now sanitizes every be" } };
+    const error = await revise(id, history, "Change the follow-up observation to say she has improved.").catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ code: "truncated" });
+    expect((error as Error).message).toMatch(/cut off before it finished, so the form was not changed/);
+    expect(modelCalls("revise_form_fields")).toBe(2);
+    expect(await snapshot(id)).toEqual(before);
+  });
+});
+
+/* ======================= improvement A: reported allegations are not established facts == */
+
+describe("a reported allegation drafted onto the Coaching Form", () => {
+  const NOTES = "Create a coaching form for Kaitlyn Brook. A client complained that she was short with them at the front counter today.";
+
+  async function draftedWith(details: string) {
+    state.draft = { values: { coaching_details: details }, checked: { coaching_topics: ["other"] } };
+    const messages = [said(NOTES)];
+    const created = await createFrom(messages);
+    const response = await call<{ notice: string | null; evidenceBasis: { adjusted: string[]; unattributed: boolean } }>(
+      `/api/forms/instances/${created.id}/draft`,
+      { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ notes: NOTES }) },
+    );
+    return { response, stored: (await snapshot(created.id)).coaching_details?.value ?? "" };
+  }
+
+  it("never stores evidence or an admission the manager did not give, and says so", async () => {
+    const { response, stored } = await draftedWith(
+      "A client reported that Kaitlyn was short with them at the front counter. Camera footage confirms the exchange. Kaitlyn admitted she was rude. Every guest is greeted warmly and patiently.",
+    );
+    expect(stored).toContain("A client reported that Kaitlyn was short with them at the front counter.");
+    expect(stored).not.toMatch(/footage|admitted/i);
+    expect(response.evidenceBasis.adjusted).toEqual(["coaching_details"]);
+    expect(response.notice).toMatch(/named evidence, a confirmation or an admission your notes did not mention/);
+  });
+
+  it("flags a draft that states the complaint as established, and leaves the wording to the manager", async () => {
+    const { response, stored } = await draftedWith("Kaitlyn was short with a client at the front counter today. Every guest is greeted warmly.");
+    expect(stored).toContain("Kaitlyn was short with a client at the front counter today.");
+    expect(response.evidenceBasis.unattributed).toBe(true);
+    expect(response.notice).toMatch(/describe something reported to you, not something you saw/);
+  });
+
+  it("raises nothing when the draft keeps it a report", async () => {
+    const { response } = await draftedWith("A client reported that Kaitlyn was short with them at the front counter. Every guest is greeted warmly.");
+    expect(response.evidenceBasis).toMatchObject({ adjusted: [], unattributed: false });
+    expect(response.notice ?? "").not.toMatch(/reported to you|evidence, a confirmation/);
+  });
+
+  it("asks the model for the standing of each statement", async () => {
+    await draftedWith("A client reported that Kaitlyn was short with them.");
+    const system = state.calls.find((entry) => entry.tool === "write_form_fields")!.system;
+    expect(system).toContain("never as something that is established to have happened");
+    expect(system).toContain("Never add evidence.");
   });
 });

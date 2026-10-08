@@ -51,6 +51,7 @@ import { TEAM_SUBJECT_RULES, isTeamSubject } from "./team-subject";
 import { applyEmployeeName, employeeNameRules } from "./employee-reference";
 import { detectTemplateIntent } from "./template-intent";
 import { withTruncationRetry } from "@/lib/ai/truncation";
+import { EVIDENCE_BASIS_RULES, guardEvidenceBasis } from "./evidence-basis";
 
 /**
  * ============================================================================
@@ -281,6 +282,8 @@ export async function reviseActiveForm(input: {
     // The same rule every form-drafting prompt carries — see `employee-reference.ts`.
     ...(team ? [] : employeeNameRules(instance.employeeName)),
     "Never select a termination, demotion or suspension.",
+    // Reported vs observed vs documented vs confirmed — see `evidence-basis.ts`.
+    ...EVIDENCE_BASIS_RULES,
     scopeInstruction(scope, labelOf),
   ].join(" ");
 
@@ -366,7 +369,9 @@ export async function reviseActiveForm(input: {
   const grounding = `${notes}\n${currentText}`;
   const cleaned = stripPlaceholdersFromDraft(plan.values);
   const narrated = guardNarrativeDraft(cleaned.values, fields, grounding);
-  const timeframe = guardFollowUpTimeframe(narrated.values, fields, notes);
+  // The form's own text counts as grounded here too: the manager has already kept it.
+  const evidence = guardEvidenceBasis(narrated.values, grounding, notes);
+  const timeframe = guardFollowUpTimeframe(evidence.values, fields, notes);
   /*
    * THE TIMEFRAME NEVER CARRIES A DATE THE MANAGER DID NOT GIVE. "Check back
    * in 10 days" is the agreement; "10/12" in Next Follow-Up is a date the

@@ -138,7 +138,10 @@ describe("the guard chain still runs on what comes back", () => {
     );
     // The chain continues past the narrative guard now — timeframe, then
     // responsibilities, then policy — and its END is what is stored.
-    expect(handler).toContain("guardFollowUpTimeframe(narrated.values");
+    // The evidence-basis guard (improvement A) sits between the narrative and
+    // timeframe guards: every drafted field passes through it.
+    expect(handler).toContain("guardEvidenceBasis(narrated.values");
+    expect(handler).toContain("guardFollowUpTimeframe(evidence.values");
     expect(handler).toContain("values: policyChecked.values");
   });
 

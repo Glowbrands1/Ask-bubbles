@@ -4,6 +4,12 @@ import { getAnthropicClient } from "@/lib/ai/anthropic";
 import { AiError } from "@/lib/ai/errors";
 import { withTruncationRetry } from "@/lib/ai/truncation";
 import {
+  EVIDENCE_BASIS_RULES,
+  EVIDENCE_REMOVED_NOTICE,
+  guardEvidenceBasis,
+  UNATTRIBUTED_REPORT_NOTICE,
+} from "@/lib/forms/evidence-basis";
+import {
   assertLiveMode,
   assertNoConfigurationProblems,
   assertWithinRateLimit,
@@ -542,6 +548,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const PRIOR_ACTIONS_RULES = [
       `The field ${PRIOR_ACTIONS_KEY} lists every coaching or corrective action the employee PREVIOUSLY received, as the manager described it — one per line, each written as "<what it was> — signed <MM/DD/YYYY>".`,
       "List only steps and dates the manager actually gave. Never invent a prior step or a date; a step whose date the manager did not give is listed without one.",
+      "List them oldest first. Keep each step exactly as the manager named it and what they said it was for; never upgrade a step (a verbal warning is not a written warning).",
       `If the manager said this is the first occurrence, write "${NO_PRIOR_ACTION}". If they said nothing about history, leave it empty.`,
       "A behaviour that happened again is not a prior coaching or corrective action.",
     ];
@@ -589,6 +596,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
             "Do not mention follow-up dates or scheduling at all: the follow-up date is recorded separately by the manager, not in these fields.",
           ]),
       "If you cannot support a field from what you were given, return it empty.",
+      // Reported vs observed vs documented vs confirmed — see `evidence-basis.ts`.
+      ...EVIDENCE_BASIS_RULES,
       "Return only the fields you were asked for.",
       /*
        * THE OBSERVED / EXPECTATION SHAPE, asked for only by the fields whose
@@ -894,7 +903,15 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * agreement between a manager and an employee that neither of them made.
      * Untouched on the thirteen templates that declare no timeframe field.
      */
-    const timeframe = guardFollowUpTimeframe(narrated.values, fields, notes);
+    /*
+     * THEN THE EVIDENCE BASIS, on every drafted field: a sentence naming
+     * evidence, a confirmation or an admission the manager never mentioned is
+     * removed, and a draft that states as established what the manager only
+     * relayed is flagged to them. See `lib/forms/evidence-basis.ts`.
+     */
+    const evidence = guardEvidenceBasis(narrated.values, groundingSource, notes);
+
+    const timeframe = guardFollowUpTimeframe(evidence.values, fields, notes);
 
     /*
      * THEN THE FOLLOW-UP FINDINGS AND THE COACHING REGISTER.
@@ -1488,6 +1505,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       placeholders: { cleaned: cleaned.cleaned, emptied: cleaned.emptied },
       /** Same, for the ungrounded-narrative guard. */
       narrative: { adjusted: narrated.adjusted, emptied: narrated.emptied },
+      /** Fields a sentence naming unmentioned evidence or a confirmation was cut from; whether a relayed report reads as established. */
+      evidenceBasis: { adjusted: evidence.adjusted, emptied: evidence.emptied, unattributed: evidence.unattributed },
       /** Fields an unsupported policy finding was cut out of, or emptied by. */
       policyClaims: { adjusted: claims.adjusted, emptied: claims.emptied },
       /** Fields an unsourced policy REQUIREMENT was removed from. */
@@ -1540,6 +1559,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           ? POLICY_ATTRIBUTION_REMOVED_NOTICE
           : null,
         sensitive.anyRefused ? SENSITIVE_ACTION_NOTICE : null,
+        evidence.removed.length > 0 ? EVIDENCE_REMOVED_NOTICE : null,
+        evidence.unattributed ? UNATTRIBUTED_REPORT_NOTICE : null,
         exit && exit.detailsRemoved.length > 0 ? EXIT_DETAILS_TRIMMED_NOTICE : null,
         caPolicy ? caPolicyAmbiguousNotice(caPolicy) : null,
       ]

@@ -157,7 +157,8 @@ describe("the draft route resolves and enforces the framework itself", () => {
   });
 
   it("guards the follow-up timeframe on the way back", () => {
-    expect(body).toContain("guardFollowUpTimeframe(narrated.values, fields, notes)");
+    expect(body).toContain("guardEvidenceBasis(narrated.values, groundingSource, notes)");
+    expect(body).toContain("guardFollowUpTimeframe(evidence.values, fields, notes)");
     expect(body).toContain("values: timeframe.values");
   });
 });
