@@ -34,13 +34,13 @@ export function RecoveryContinueForm({
 
   if (!hasLink) {
     return (
-      <div className="mt-8 space-y-4">
+      <div className="space-y-4">
         <Notice tone="attention" title="Open the link from your email">
           This page continues a password reset, but no reset link is open in
           this browser. Use the link in the most recent reset email, or request
           a new one.
         </Notice>
-        <Button asChild className="w-full">
+        <Button asChild variant="ink" size="lg" className="w-full tracking-[0.08em] uppercase">
           <Link href="/forgot-password">Request a new link</Link>
         </Button>
         <p className="text-center text-xs">
@@ -57,7 +57,7 @@ export function RecoveryContinueForm({
 
   return (
     <form
-      className="mt-8 space-y-4"
+      className="space-y-4"
       method="post"
       action={RECOVERY_START_PATH}
       onSubmit={(event) => {
@@ -79,7 +79,7 @@ export function RecoveryContinueForm({
         password. The link can be used once.
       </p>
 
-      <Button type="submit" className="w-full" disabled={busy}>
+      <Button type="submit" variant="ink" size="lg" className="w-full tracking-[0.08em] uppercase" disabled={busy}>
         {busy ? <Loader2 className="animate-spin" /> : <ArrowRight />}
         {busy ? "Opening…" : "Continue to reset password"}
       </Button>

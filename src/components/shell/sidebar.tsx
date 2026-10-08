@@ -169,7 +169,12 @@ export function SidebarNav({
                     {!isCollapsed && section.admin ? (
                       <span
                         aria-hidden
-                        className="ml-auto rounded-full border border-rail-border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-sidebar-muted uppercase"
+                        className={cn(
+                          "ml-auto rounded-full border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase",
+                          active
+                            ? "border-sidebar-active-foreground/30 text-sidebar-active-foreground"
+                            : "border-rail-border text-sidebar-muted",
+                        )}
                       >
                         Admin
                       </span>

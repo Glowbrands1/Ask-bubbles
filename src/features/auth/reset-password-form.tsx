@@ -444,7 +444,7 @@ export function ResetPasswordForm() {
   if (phase.kind === "checking") {
     return (
       <p
-        className="mt-8 flex items-center gap-2 text-sm text-muted-foreground"
+        className="flex items-center gap-2 text-sm text-muted-foreground"
         role="status"
       >
         <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -457,7 +457,7 @@ export function ResetPasswordForm() {
 
   if (phase.kind === "invalid") {
     return (
-      <div className="mt-8 space-y-4">
+      <div className="space-y-4">
         <Notice
           tone="attention"
           title={
@@ -473,7 +473,7 @@ export function ResetPasswordForm() {
           Request a new one and we will email you a fresh link. Your current
           password has not been changed.
         </p>
-        <Button asChild className="w-full">
+        <Button asChild variant="ink" size="lg" className="w-full tracking-[0.08em] uppercase">
           <Link href="/forgot-password">Request a new link</Link>
         </Button>
         <p className="text-center text-xs">
@@ -492,7 +492,7 @@ export function ResetPasswordForm() {
 
   if (phase.kind === "done") {
     return (
-      <div className="mt-8 space-y-4">
+      <div className="space-y-4">
         <Notice tone="accent" icon={<ShieldCheck />} title="Password updated">
           Your new password is saved. Any other devices signed in to this
           account have been signed out.
@@ -511,7 +511,7 @@ export function ResetPasswordForm() {
   /* ----------------------------------------------------------- the form */
 
   return (
-    <form className="mt-8 space-y-4" onSubmit={handleSubmit} noValidate>
+    <form className="space-y-4" onSubmit={handleSubmit} noValidate>
       {error ? (
         <Notice tone="attention" title="Could not set your password">
           {error}
@@ -554,7 +554,7 @@ export function ResetPasswordForm() {
        * the button is unavailable — never which rule they are failing — and the
        * checklist above is the affordance that belongs to that job.
        */}
-      <Button type="submit" className="w-full" disabled={busy || !password || !confirm}>
+      <Button type="submit" variant="ink" size="lg" className="w-full tracking-[0.08em] uppercase" disabled={busy || !password || !confirm}>
         {busy ? <Loader2 className="animate-spin" /> : <KeyRound />}
         {busy ? "Saving…" : "Set password and continue"}
       </Button>

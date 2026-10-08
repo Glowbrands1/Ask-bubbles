@@ -186,7 +186,7 @@ export function AcceptSessionForm() {
 
   if (phase.kind === "failed") {
     return (
-      <div className="mt-8 space-y-4">
+      <div className="space-y-4">
         <Notice tone="attention" title="This link did not work">
           {phase.message}
         </Notice>
@@ -195,7 +195,7 @@ export function AcceptSessionForm() {
           <strong>Forgot your password?</strong> on the sign-in screen if you
           have signed in before.
         </p>
-        <Button asChild className="w-full">
+        <Button asChild variant="ink" size="lg" className="w-full tracking-[0.08em] uppercase">
           <Link href="/login">Back to sign in</Link>
         </Button>
       </div>
@@ -203,7 +203,7 @@ export function AcceptSessionForm() {
   }
 
   return (
-    <p className="mt-8 flex items-center gap-2 text-sm text-muted-foreground">
+    <p className="flex items-center gap-2 text-sm text-muted-foreground">
       <Loader2 className="size-4 animate-spin" aria-hidden />
       Opening your invitation…
     </p>

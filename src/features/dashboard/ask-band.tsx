@@ -472,7 +472,7 @@ function AskCard({
               ? "Policy, coaching, operations, performance, training…"
               : "Ask Bubbles a question"
           }
-          className="h-11 min-w-0 flex-1 resize-none bg-transparent py-[11px] text-base text-foreground caret-primary outline-none placeholder:text-placeholder-foreground"
+          className="max-h-40 min-h-11 min-w-0 flex-1 resize-none bg-transparent py-[11px] text-base text-foreground caret-primary outline-none [field-sizing:content] placeholder:text-placeholder-foreground"
         />
 
         {typing || resettable || value.length > 0 ? (

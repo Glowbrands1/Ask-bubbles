@@ -99,7 +99,7 @@ export function ForgotPasswordForm() {
 
   if (sent) {
     return (
-      <div className="mt-8 space-y-4">
+      <div className="space-y-4">
         <Notice tone="accent" icon={<MailCheck />} title="Check your email">
           If <strong>{email.trim()}</strong> has an Ask Bubbles account, a
           password reset link is on its way. The link can be used once and
@@ -117,7 +117,7 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
+    <form className="space-y-4" onSubmit={handleSubmit}>
       {configError ? (
         <Notice tone="attention" title="Password reset could not be requested">
           {configError}
@@ -143,7 +143,7 @@ export function ForgotPasswordForm() {
         />
       </FieldGroup>
 
-      <Button type="submit" className="w-full" disabled={busy || !email}>
+      <Button type="submit" variant="ink" size="lg" className="w-full tracking-[0.08em] uppercase" disabled={busy || !email}>
         {busy ? <Loader2 className="animate-spin" /> : <Send />}
         {busy ? "Sending…" : "Send reset link"}
       </Button>

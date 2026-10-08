@@ -2,9 +2,8 @@
 
 import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Info, Lock, ShieldCheck } from "lucide-react";
+import { ArrowRight, Info, Lock } from "lucide-react";
 
-import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { FieldGroup, Input, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/feedback";
@@ -15,6 +14,7 @@ import { supabasePublicConfigured } from "@/lib/config/runtime";
 import { ROLE_DESCRIPTION, ROLE_LABEL, defaultLandingForRole } from "@/lib/permissions";
 import { useSession } from "@/lib/session/session-context";
 import type { Role } from "@/types";
+import { AuthFrame } from "./auth-panel";
 import { SignInForm } from "./sign-in-form";
 
 /**
@@ -64,184 +64,124 @@ export function LoginScreen({
     if (navigateOnSignIn) router.push(defaultLandingForRole(selectedRole));
   };
 
+  /*
+   * THE APPROVED BUFF CITY SOAP LOGIN — see `AuthFrame`. The circle holds
+   * exactly one of the three states below; the not-configured notice is too
+   * long for a circle, so that state uses the rounded card.
+   */
   return (
-    <main
-      id="main"
-      className="grid min-h-dvh grid-cols-1 bg-background lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]"
+    <AuthFrame
+      title="Sign in"
+      subtitle={
+        <>
+          to <b className="font-semibold text-foreground">{ACTIVE_BRAND.productName}</b> ·{" "}
+          {ACTIVE_BRAND.tagline}
+        </>
+      }
+      shape={realAuth || demoMode ? "circle" : "card"}
+      footer={
+        realAuth ? null : (
+          <>
+            Preview build. Content shown throughout the app is seeded demo data — it is not
+            real company policy or real location performance.
+          </>
+        )
+      }
     >
-      {/* Left — the sign-in panel */}
-      <div className="flex items-center justify-center px-5 py-12 sm:px-10">
-        <div className="w-full max-w-sm">
-          <BrandMark size="lg" />
-          <h1 className="mt-9 text-[28px] leading-tight font-semibold text-foreground">
-            Sign in to {ACTIVE_BRAND.productName}
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {brandLine()}
-          </p>
-
-          {realAuth ? (
-            /*
-             * `SignInForm` reads `useSearchParams`, so it needs a Suspense
-             * boundary — without one this whole route would be forced to render
-             * dynamically at the framework's insistence rather than at ours.
-             */
-            <Suspense fallback={<div className="mt-8 h-64" aria-hidden />}>
-              <SignInForm />
-            </Suspense>
-          ) : (
-            <form
-              className="mt-8 space-y-4"
-              onSubmit={(event) => event.preventDefault()}
-              aria-describedby="auth-note"
+      {realAuth ? (
+        /*
+         * `SignInForm` reads `useSearchParams`, so it needs a Suspense
+         * boundary — without one this whole route would be forced to render
+         * dynamically at the framework's insistence rather than at ours.
+         */
+        <Suspense fallback={<div className="h-64" aria-hidden />}>
+          <SignInForm />
+        </Suspense>
+      ) : demoMode ? (
+        /*
+         * DEMO MODE: the role picker, and only the role picker. The disabled
+         * email and password fields this state used to show alongside it do
+         * nothing here and would not fit the circle; real sign-in is unaffected.
+         */
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[13px] font-semibold text-foreground">Preview the demo</p>
+            <Badge tone="primary">Demo mode</Badge>
+          </div>
+          <FieldGroup label="Sign in as" htmlFor="demo-role">
+            <Select
+              id="demo-role"
+              value={selectedRole}
+              onChange={(event) => setSelectedRole(event.target.value as Role)}
             >
-              <FieldGroup label="Work email" htmlFor="login-email">
-                <Input
-                  id="login-email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  disabled
-                />
-              </FieldGroup>
-
-              <FieldGroup label="Password" htmlFor="login-password">
-                <Input
-                  id="login-password"
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder="••••••••••"
-                  disabled
-                />
-              </FieldGroup>
-
-              <Button type="submit" className="w-full" disabled>
-                <Lock />
-                Sign in
-              </Button>
-
-              <p id="auth-note" className="text-xs leading-relaxed text-muted-foreground">
-                Sign-in is not configured for this deployment, so these fields
-                are disabled. No password is stored, checked or transmitted
-                anywhere.
-              </p>
-            </form>
-          )}
-
-          {realAuth ? null : demoMode ? (
-            <div className="mt-8 rounded-[var(--radius-lg)] border border-border bg-surface p-5 shadow-soft">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[13px] font-semibold text-foreground">
-                  Preview the demo
-                </p>
-                <Badge tone="primary">Demo mode</Badge>
-              </div>
-              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                Choose a role to see how navigation and permissions change. You
-                can switch again at any time from the profile menu.
-              </p>
-
-              <div className="mt-4 space-y-3">
-                <FieldGroup label="Sign in as" htmlFor="demo-role">
-                  <Select
-                    id="demo-role"
-                    value={selectedRole}
-                    onChange={(event) =>
-                      setSelectedRole(event.target.value as Role)
-                    }
-                  >
-                    {DEMO_SWITCHABLE_ROLES.map((demoRole) => (
-                      <option key={demoRole} value={demoRole}>
-                        {ROLE_LABEL[demoRole]}
-                      </option>
-                    ))}
-                  </Select>
-                </FieldGroup>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  {ROLE_DESCRIPTION[selectedRole]}
-                </p>
-                <Button className="w-full" onClick={handlePreview}>
-                  Preview demo
-                  <ArrowRight />
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Notice tone="neutral" icon={<Info />} className="mt-8" title="Sign-in is not configured">
-              This deployment asked for live mode but has no identity provider,
-              so nobody can sign in. Set{" "}
-              <code>NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
-              <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> to enable
-              Supabase Auth, or <code>NEXT_PUBLIC_DEMO_MODE=true</code> for
-              preview access.
-            </Notice>
-          )}
-        </div>
-      </div>
-
-      {/* Right — what the platform is */}
-      <aside className="hidden flex-col justify-center border-l border-border bg-surface-muted px-12 py-16 lg:flex">
-        <p className="eyebrow">{ACTIVE_BRAND.tagline}</p>
-        <h2 className="mt-4 max-w-md text-[26px] leading-snug font-semibold text-foreground">
-          Everything a manager needs to run their day, in one place.
-        </h2>
-        <ul className="mt-8 max-w-md space-y-3.5">
-          {[
-            {
-              title: "Ask Bubbles",
-              body: "Grounded answers from your own knowledge base, with the source shown every time.",
-            },
-            {
-              title: "Forms and follow-ups",
-              body: "Start a form in a conversation, review every field, and never lose the follow-up.",
-            },
-            {
-              title: "Reports and history in one place",
-              body: "Your past conversations, and the reports your company publishes, beside the assistant.",
-            },
-            /*
-              "TRAINING THAT FINDS YOU" IS GONE, and it is a promise this
-              product does not keep. The 14 September review: "Remove the fourth
-              bullet on the right panel, 'Training that finds you'. We are not
-              hosting training within the site, and the first three points are
-              enough."
-
-              Training lives in Teams and Woven. The Overview now links there
-              rather than implying a library here — see
-              `lib/config/training-links.ts` — and a sign-in screen that
-              advertises one would be the same claim in the one place a new user
-              forms their expectations.
-            */
-          ].map((item) => (
-            <li key={item.title} className="flex gap-3">
-              <span className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-soft-foreground">
-                <ShieldCheck className="size-3" aria-hidden />
-              </span>
-              <span>
-                <span className="block text-[13px] font-semibold text-foreground">
-                  {item.title}
-                </span>
-                <span className="mt-0.5 block text-[13px] leading-relaxed text-muted-foreground">
-                  {item.body}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
-
-        {realAuth ? null : (
-          <p className="mt-10 max-w-md text-xs leading-relaxed text-subtle-foreground">
-            Preview build. Content shown throughout the app is seeded demo data
-            — it is not real company policy or real location performance.
+              {DEMO_SWITCHABLE_ROLES.map((demoRole) => (
+                <option key={demoRole} value={demoRole}>
+                  {ROLE_LABEL[demoRole]}
+                </option>
+              ))}
+            </Select>
+          </FieldGroup>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {ROLE_DESCRIPTION[selectedRole]}
           </p>
-        )}
-      </aside>
-    </main>
-  );
-}
+          <Button
+            variant="ink"
+            size="lg"
+            className="w-full tracking-[0.08em] uppercase"
+            onClick={handlePreview}
+          >
+            Preview demo
+            <ArrowRight />
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <form
+            className="space-y-3"
+            onSubmit={(event) => event.preventDefault()}
+            aria-describedby="auth-note"
+          >
+            <FieldGroup label="Work email" htmlFor="login-email">
+              <Input
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                disabled
+              />
+            </FieldGroup>
 
-/** The operator and the brand, once each — they are often the same name. */
-function brandLine(): string {
-  const { operatorName, brandName } = ACTIVE_BRAND;
-  return operatorName === brandName ? brandName : `${operatorName} · ${brandName}`;
+            <FieldGroup label="Password" htmlFor="login-password">
+              <Input
+                id="login-password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="••••••••••"
+                disabled
+              />
+            </FieldGroup>
+
+            <Button type="submit" variant="ink" size="lg" className="w-full tracking-[0.08em] uppercase" disabled>
+              <Lock />
+              Sign in
+            </Button>
+
+            <p id="auth-note" className="text-xs leading-relaxed text-muted-foreground">
+              Sign-in is not configured for this deployment, so these fields
+              are disabled. No password is stored, checked or transmitted
+              anywhere.
+            </p>
+          </form>
+          <Notice tone="neutral" icon={<Info />} title="Sign-in is not configured">
+            This deployment asked for live mode but has no identity provider,
+            so nobody can sign in. Set{" "}
+            <code>NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
+            <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> to enable
+            Supabase Auth, or <code>NEXT_PUBLIC_DEMO_MODE=true</code> for
+            preview access.
+          </Notice>
+        </div>
+      )}
+    </AuthFrame>
+  );
 }

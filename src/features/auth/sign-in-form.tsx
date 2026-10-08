@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Lock } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { FieldGroup, Input } from "@/components/ui/field";
@@ -51,6 +51,8 @@ export function SignInForm({ redirectTo = "/" }: { redirectTo?: string }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /* Presentation only: whether the password field shows its characters. */
+  const [showPassword, setShowPassword] = useState(false);
 
   /*
    * Messages this screen may have been SENT here with, rather than ones it
@@ -144,7 +146,7 @@ export function SignInForm({ redirectTo = "/" }: { redirectTo?: string }) {
   }
 
   return (
-    <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
+    <form className="space-y-3" onSubmit={handleSubmit}>
       {signedOut ? (
         <Notice tone="neutral">You have been signed out.</Notice>
       ) : null}
@@ -171,31 +173,55 @@ export function SignInForm({ redirectTo = "/" }: { redirectTo?: string }) {
       </FieldGroup>
 
       <FieldGroup label="Password" htmlFor="login-password">
-        <Input
-          id="login-password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          disabled={busy}
-        />
+        <div className="relative">
+          <Input
+            id="login-password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            disabled={busy}
+            className="pr-11"
+          />
+          {/*
+            SHOW / HIDE. It changes how the field draws its characters and
+            nothing else: the value stays in the same state, and is cleared on
+            success exactly as before.
+          */}
+          <button
+            type="button"
+            onClick={() => setShowPassword((shown) => !shown)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            disabled={busy}
+            className="absolute top-1/2 right-1 grid size-9 -translate-y-1/2 place-items-center rounded-[var(--radius-xs)] text-muted-foreground transition-colors hover:bg-hover-surface hover:text-foreground"
+          >
+            {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+          </button>
+        </div>
       </FieldGroup>
 
-      <Button type="submit" className="w-full" disabled={busy || !email || !password}>
-        {busy ? <Loader2 className="animate-spin" /> : <Lock />}
-        {busy ? "Signing in…" : "Sign in"}
-      </Button>
-
-      <p className="text-center text-xs">
+      <p className="-mt-1 text-right text-[13px]">
         <Link
           href="/forgot-password"
-          className="font-medium text-primary underline-offset-2 hover:underline"
+          className="font-semibold text-primary underline decoration-1 underline-offset-[3px] hover:text-primary-hover hover:decoration-2"
         >
           Forgot your password?
         </Link>
       </p>
+
+      <Button
+        type="submit"
+        variant="ink"
+        size="lg"
+        className="w-full tracking-[0.08em] uppercase"
+        disabled={busy || !email || !password}
+      >
+        {busy ? <Loader2 className="animate-spin" /> : null}
+        {busy ? "Signing in…" : "Sign in"}
+      </Button>
     </form>
   );
 }
