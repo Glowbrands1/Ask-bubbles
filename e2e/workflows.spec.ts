@@ -71,7 +71,13 @@ test.describe("workflows", () => {
 
   test("global search opens from the top bar", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: /Search Ask Bubbles/ }).filter({ visible: true }).first().click();
+    // Mobile: "Search Ask Bubbles" (icon button). Desktop: the search pill,
+    // "Search documents, forms, locations and screens in Ask Bubbles".
+    await page
+      .getByRole("button", { name: /^Search\b.*\bAsk Bubbles$/ })
+      .filter({ visible: true })
+      .first()
+      .click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toBeHidden();

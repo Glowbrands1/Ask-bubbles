@@ -199,7 +199,12 @@ export function DesktopSearchLauncher({ className }: { className?: string }) {
           )}
         >
           <Search className="size-4 shrink-0" aria-hidden />
-          <span className="flex-1 truncate">Search documents, forms, locations and screens</span>
+          <span className="flex-1 truncate">
+            Search documents, forms, locations and screens
+            {/* Names the product for screen readers, after the visible words so
+                the accessible name still begins with what a voice user reads. */}
+            <span className="sr-only"> in {ACTIVE_BRAND.productName}</span>
+          </span>
         </button>
       </DialogTrigger>
       <DialogContent
