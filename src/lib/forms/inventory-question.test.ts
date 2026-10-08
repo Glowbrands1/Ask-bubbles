@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { detectInventoryQuestion } from "./inventory-question";
 import { detectTemplateIntent } from "./template-intent";
-import { EXAMPLE_CHECK_IN_KEY } from "@/config/company/forms/example-check-in";
 
 /**
  * ============================================================================
@@ -27,7 +26,7 @@ describe("questions about the library", () => {
     "what documents are you referring to in the knowledge base or forms?",
     "and what forms are you using for this?",
     "what form should I use?",
-    "what forms are under Examples?",
+    "what forms are under HR & Performance?",
     "list of forms please",
   ])("%s -> list", (question) => {
     expect(detectInventoryQuestion(question).kind).toBe("list");
@@ -37,7 +36,7 @@ describe("questions about the library", () => {
     "where are those forms?",
     "where do I find the coaching form?",
     "i need to find those documents",
-    "which category is the corrective notice form under?",
+    "which category is the DPOA form under?",
     "where are the templates kept?",
   ])("%s -> location", (question) => {
     expect(detectInventoryQuestion(question).kind).toBe("location");
@@ -68,11 +67,11 @@ describe("it stands down for everything else", () => {
     "what should I focus on in today's Daily Stats?",
     // The questions the Overview band now offers. A reporting question must
     // never be answered with the Forms menu.
-    "Which locations need my attention today?",
+    "Which salons need my attention today?",
     "Where is my district losing revenue based on the latest data?",
     "Where is my region losing revenue based on the latest data?",
     "Where are we losing revenue based on the latest data?",
-    "Which locations need attention today?",
+    "Which salons need attention today?",
     "Show me the most recent Daily Stats and what I need to focus on today.",
     // Guidance about a process, not a template.
     "do we have an evaluation process?",
@@ -88,7 +87,7 @@ describe("it stands down for everything else", () => {
   it.each([
     "create a coaching form for Sarah",
     "start a form",
-    "draft a corrective notice for Marcus",
+    "draft a DPOA for Marcus",
     "I need a policy review form for Dana",
     "fill out a coaching form",
     "make a form",
@@ -99,28 +98,28 @@ describe("it stands down for everything else", () => {
 
 describe("the two readers agree about the same sentence", () => {
   /*
-   * The pairing that matters: a question about the check-in form must be read as
+   * The pairing that matters: a question about the Coaching Form must be read as
    * a question by THIS module even though `detectTemplateIntent` still reads the
    * template out of it. The template key is what makes the availability answer
-   * specific — "yes, the check-in form" rather than "yes, something" — so both
+   * specific — "yes, the Coaching Form" rather than "yes, something" — so both
    * readings are wanted, and the ORDER in `answerQuestion` is what decides which
    * one answers.
    */
-  it("reads both a question and a template out of \"do we have a check-in form?\"", () => {
-    const question = "do we have a check-in form?";
+  it("reads both a question and a template out of \"do we have a coaching form?\"", () => {
+    const question = "do we have a coaching form?";
     expect(detectInventoryQuestion(question).kind).toBe("availability");
     expect(detectTemplateIntent(question)).toEqual({
       kind: "explicit",
-      templateKey: EXAMPLE_CHECK_IN_KEY,
+      templateKey: "coaching",
     });
   });
 
-  it("reads only a creation intent out of \"create a check-in form for Sarah\"", () => {
-    const question = "create a check-in form for Sarah";
+  it("reads only a creation intent out of \"create a coaching form for Sarah\"", () => {
+    const question = "create a coaching form for Sarah";
     expect(detectInventoryQuestion(question).kind).toBe("none");
     expect(detectTemplateIntent(question)).toEqual({
       kind: "explicit",
-      templateKey: EXAMPLE_CHECK_IN_KEY,
+      templateKey: "coaching",
     });
   });
 

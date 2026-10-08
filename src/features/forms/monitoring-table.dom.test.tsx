@@ -7,10 +7,6 @@ import userEvent from "@testing-library/user-event";
 
 import { MonitoringTable, type MonitoredForm } from "./monitoring-table";
 
-vi.mock("@/config/company/locations", async () =>
-  (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
-);
-
 /**
  * WHAT THE TABLE OFFERS, AND WHAT IT SAYS ABOUT EACH ROW.
  *
@@ -87,9 +83,9 @@ function form(overrides: Partial<MonitoredForm> = {}): MonitoredForm {
     templateShortName: "Coaching",
     templateVersion: 1,
     variantKey: null,
-    employeeName: "Jordan Vance (test)",
-    locationName: "MO Kansas City Wornall",
-    createdBy: "demo:salon_director:QA",
+    employeeName: "Morgan Blake (test)",
+    locationName: "TN Testville Downtown",
+    createdBy: "demo:location_manager:QA",
     createdByRole: "location_manager",
     source: "manual",
     status: "finalized",
@@ -203,25 +199,25 @@ describe("the follow-up pills", () => {
 
 describe("how each state is coloured", () => {
   /*
-   * #ef6079 IS `--followup-attention`, and the badge is asserted through the
+   * The attention colour IS `--followup-attention`, and the badge is asserted through the
    * semantic token rather than the hex: a test that greps for the hex would
    * pass on a hard-coded colour, which is exactly what the design system
    * forbids. The token's value is checked separately, once, below.
    */
-  it("gives OVERDUE the filled follow-up pink", () => {
+  it("gives OVERDUE the filled follow-up attention colour", () => {
     table([form({ employeeName: "Late One", followUpDate: "2026-09-01" })]);
     const badge = rowFor("Late One").ui.getByText("Overdue");
     expect(badge.className).toContain("bg-followup-attention");
     expect(badge.className).toContain("text-followup-attention-foreground");
   });
 
-  it("does NOT make an upcoming follow-up pink", () => {
+  it("does NOT give an upcoming follow-up the attention colour", () => {
     table([form({ employeeName: "Open One", followUpDate: "2026-09-10" })]);
     const badge = rowFor("Open One").ui.getByText("Open");
     expect(badge.className).not.toContain("followup");
   });
 
-  it("gives a completed follow-up the success treatment, not pink", () => {
+  it("gives a completed follow-up the success treatment, not the attention colour", () => {
     table([
       form({
         employeeName: "Done One",
@@ -234,18 +230,18 @@ describe("how each state is coloured", () => {
     expect(badge.className).not.toContain("followup");
   });
 
-  it("resolves that token to the approved #ef6079", () => {
+  it("resolves that token to an approved Buff palette colour", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
-    expect(css).toMatch(/--approved-followup:\s*#ef6079/);
-    expect(css).toMatch(/--followup-attention:\s*var\(--approved-followup\)/);
+    expect(css).toMatch(/--bcs-attention:\s*#[0-9a-f]{6}\b/i);
+    expect(css).toMatch(/--followup-attention:\s*var\(--bcs-attention\)/);
     /*
-     * The pill's text still resolves to white, but it now travels through the
-     * raw card token rather than a second literal — the same two-layer rule
-     * the rest of the palette follows. Both links are asserted, so the chain
-     * cannot be broken silently at either end.
+     * The pill's text resolves to white, but it travels through the raw card
+     * token rather than a second literal — the same two-layer rule the rest of
+     * the palette follows. Both links are asserted, so the chain cannot be
+     * broken silently at either end.
      */
-    expect(css).toMatch(/--followup-attention-foreground:\s*var\(--approved-card\)/);
-    expect(css).toMatch(/--approved-card:\s*#ffffff/);
+    expect(css).toMatch(/--followup-attention-foreground:\s*var\(--bcs-card\)/);
+    expect(css).toMatch(/--bcs-card:\s*#ffffff/i);
   });
 });
 

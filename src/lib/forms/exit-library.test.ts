@@ -309,9 +309,11 @@ describe("where it is offered, and to whom", () => {
     const sql = readFileSync("supabase/migrations/20261008001000_forms_library_migration.sql", "utf8");
     expect(sql).toMatch(/alter type public\.form_layout_family add value if not exists 'exit'/i);
     const statements = sql.replace(/--.*$/gm, "").split(";").map((part) => part.trim()).filter(Boolean);
-    expect(statements).toHaveLength(4);
+    expect(statements).toHaveLength(5);
     for (const statement of statements) {
-      expect(statement).toMatch(/^(?:alter type public\.form_layout_family add value if not exists|insert into storage\.buckets)/i);
+      expect(statement).toMatch(
+        /^(?:alter type public\.form_layout_family add value if not exists|insert into storage\.buckets|alter table public\.form_templates alter column category set default 'hr_performance')/i,
+      );
       expect(statement).not.toMatch(/\b(?:drop|rename|delete|truncate)\b/i);
     }
   });

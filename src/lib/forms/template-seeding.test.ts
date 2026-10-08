@@ -498,14 +498,21 @@ describe("the migration the seeding depends on", () => {
    * SQL itself — which is the artefact that has to be applied for any of this
    * to work on a real database.
    */
-  const sql = readFileSync(
-    "supabase/migrations/20260907001000_forms_hiring_interview_category.sql",
-    "utf8",
-  );
+  // This deployment's equivalents: the base enum already carries 'interview',
+  // the category column and seed revision arrive in 20260907001000, and the
+  // migrated library's default category in 20261008001000.
+  const sql = [
+    "supabase/migrations/20260904001000_forms_engine.sql",
+    "supabase/migrations/20260907001000_forms_template_category.sql",
+    "supabase/migrations/20261008001000_forms_library_migration.sql",
+  ]
+    .map((path) => readFileSync(path, "utf8"))
+    .join("\n");
 
   it("adds the layout family the four hiring templates are seeded with", () => {
+    // Created with the enum in this deployment's forms engine migration.
     expect(sql).toMatch(
-      /alter type public\.form_layout_family add value if not exists 'interview'/i,
+      /alter type public\.form_layout_family add value if not exists 'interview'|create type public\.form_layout_family as enum \([^)]*'interview'/i,
     );
   });
 

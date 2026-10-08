@@ -21,6 +21,12 @@
 --    or `authenticated`; the server-side route reads and writes with the
 --    service role. 25 MB matches the upload route's own limit.
 
+-- 3. THE DEFAULT CATEGORY IS THE MIGRATED LIBRARY'S. The column defaulted to
+--    the placeholder's own group; the reference library's default group is
+--    'hr_performance'. Only the default changes — no row is updated.
+
+alter table public.form_templates alter column category set default 'hr_performance';
+
 alter type public.form_layout_family add value if not exists 'epp';
 alter type public.form_layout_family add value if not exists 'dmit_epp';
 alter type public.form_layout_family add value if not exists 'exit';
