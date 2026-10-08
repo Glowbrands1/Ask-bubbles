@@ -9,6 +9,7 @@ import { ChatStoreError } from "@/lib/chat/errors";
 import { isDemoMode } from "@/lib/config/runtime";
 import { configurationProblems, MissingConfigurationError } from "@/lib/config/server-env";
 import { EmbeddingError } from "@/lib/embeddings/types";
+import { TemplatePublishRefusedError } from "@/lib/forms/template-sync-policy";
 import { IngestionError } from "@/lib/ingestion/errors";
 import { ReportValidationError } from "@/lib/reporting/errors";
 import { logRouteError, redact } from "./redact";
@@ -49,6 +50,18 @@ export function errorResponse(error: unknown, route = "route"): NextResponse {
     return NextResponse.json(
       { error: error.message, code: "turn_unavailable" satisfies AiErrorCode },
       { status: 503 },
+    );
+  }
+
+  /*
+   * A PUBLISH THIS DEPLOYMENT MAY NOT MAKE. A Preview shares the live
+   * database, so publishing there is refused before anything is written. The
+   * message names the deployment kind and nothing else.
+   */
+  if (error instanceof TemplatePublishRefusedError) {
+    return NextResponse.json(
+      { error: error.message, code: "publish_not_allowed_here", environment: error.environment },
+      { status: 409 },
     );
   }
 

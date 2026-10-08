@@ -42,7 +42,7 @@ function documentFixture(overrides: Partial<KnowledgeDocument> = {}): KnowledgeD
     source: "upload",
     version: 1,
     previousVersions: [],
-    uploadedBy: "Paulyne Camacho",
+    uploadedBy: "Marlowe Example",
     uploadedAt: "2026-09-07T12:00:00Z",
     updatedAt: "2026-09-07T12:00:00Z",
     indexed: true,

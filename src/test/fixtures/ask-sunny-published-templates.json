@@ -1,0 +1,4852 @@
+{
+ "source": "Ask Sunny database (project \"Ask Sunny Dev\"), form_template_current, read 2026-10-08. Template definitions only — no employee data.",
+ "templates": [
+  {
+   "key": "coaching",
+   "publishedVersion": 3,
+   "documentMd5": "1be6dc01f464cce9dbcd34e77688c30d",
+   "variantsMd5": "d751713988987e9331980363e24189ce",
+   "name": "Coaching Form",
+   "shortName": "Coaching",
+   "description": "The everyday documented coaching conversation. Names the gap, the expectation and the follow-up.",
+   "category": "hr_performance",
+   "layoutFamily": "coaching",
+   "requiredPermission": "create_coaching_form",
+   "displayOrder": 1,
+   "revisionNote": "Published from the authoritative 01. Coaching Form source document.",
+   "provenance": null,
+   "bundledPdfName": "Coaching Form.pdf",
+   "document": {
+    "paper": "letter",
+    "style": {
+     "headingStyle": "rule",
+     "letterhead": "centered",
+     "margins": "wide",
+     "signatureLayout": "ruled",
+     "logo": {
+      "assetKey": "sun-tan-city",
+      "placement": "top-right",
+      "widthPt": 76
+     }
+    },
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "Sun Tan City",
+      "title": "Coaching Form"
+     },
+     {
+      "kind": "section",
+      "label": "Employee Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "job_title",
+        "label": "Job Title",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "location",
+        "label": "Location",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "section",
+      "label": "Type of Coaching"
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "coaching_type",
+      "options": [
+       {
+        "key": "underperformance",
+        "label": "Underperformance"
+       },
+       {
+        "key": "training_plan_of_action",
+        "label": "Training Plan of Action"
+       },
+       {
+        "key": "retraining",
+        "label": "Retraining"
+       }
+      ],
+      "responsibility": "ai",
+      "columns": 3
+     },
+     {
+      "kind": "section",
+      "label": "Topic of Coaching"
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "coaching_topics",
+      "options": [
+       {
+        "key": "store_tours",
+        "label": "Store Tours"
+       },
+       {
+        "key": "engaging_conversation",
+        "label": "Engaging Conversation"
+       },
+       {
+        "key": "engaging_questions",
+        "label": "Engaging Questions"
+       },
+       {
+        "key": "relevant_recommendations",
+        "label": "Relevant Recommendations"
+       },
+       {
+        "key": "overcoming_objections",
+        "label": "Overcoming Objections"
+       },
+       {
+        "key": "product_basics",
+        "label": "Product Basics"
+       },
+       {
+        "key": "completing_the_engagement",
+        "label": "Completing the Engagement"
+       },
+       {
+        "key": "sales_strategies_upselling",
+        "label": "Sales Strategies/Upselling"
+       },
+       {
+        "key": "cleaning_tasks",
+        "label": "Cleaning Tasks"
+       },
+       {
+        "key": "new_client_documents",
+        "label": "New Client Documents"
+       },
+       {
+        "key": "other",
+        "label": "Other"
+       }
+      ],
+      "responsibility": "ai",
+      "columns": 3
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "other_topic",
+       "label": "Other",
+       "input": "text",
+       "responsibility": "ai",
+       "help": "Only when the Other box is ticked. Left empty otherwise."
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Details of Coaching"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "coaching_details",
+       "label": "Details of Coaching",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "Written as \"Observed:\" — what happened — then \"Expectation:\" — what the manager told the employee to do differently. One field, two labelled sections.",
+       "narrative": "observed_expectation"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement of Coaching"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "I confirm that my supervisor and I have discussed this training and plan for improvement."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     }
+    ]
+   },
+   "variants": []
+  },
+  {
+   "key": "dpoa",
+   "publishedVersion": 6,
+   "documentMd5": "2499c60516335dc75f0f988ec0073711",
+   "variantsMd5": "d751713988987e9331980363e24189ce",
+   "name": "Corrective Action Form",
+   "shortName": "Corrective Action",
+   "description": "The formal corrective step after coaching. Records the warning, the policy breached in the manual's own words, and the plan.",
+   "category": "hr_performance",
+   "layoutFamily": "corrective",
+   "requiredPermission": "create_corrective_action",
+   "displayOrder": 2,
+   "revisionNote": "Renamed to Corrective Action Form, and Observation of Offense drafts as Observed/Expectation/Going Forward with the Action Plan as the plan-of-action paragraph. Revision 3 sets the two policy fields to the business's own reading of them: Policy Violated is the offense category ticked on the form, and Direct policy names the approved manual with its section and page. Revision 4 adds \"Is payroll deduct applicable?\" as a Yes / No the manager answers (one answer, unanswered until they give it). Revision 5 (HR feedback, 3 Oct 2026) replaces \"Previous corrective action for this policy or issue\" and \"Date of previous corrective action\" with one multi-line field, \"List previously received coaching and/or corrective action with date signed\", and ends every Action Plan with \"Future policy violations may be subject to additional corrective action up to and including termination of employment.\" Forms filed against earlier versions keep the document they were signed on; the template key and every stored value are unchanged.",
+   "provenance": null,
+   "bundledPdfName": "Corrective Action Form.pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "SUN TAN CITY",
+      "title": "Corrective Action Form"
+     },
+     {
+      "kind": "section",
+      "label": "Employee Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Employee Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "job_title",
+        "label": "Job Title",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "location",
+        "label": "Location",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "section",
+      "label": "Type of Warning"
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "warning_type",
+      "options": [
+       {
+        "key": "verbal",
+        "label": "Verbal Warning"
+       },
+       {
+        "key": "written",
+        "label": "Written Warning"
+       },
+       {
+        "key": "termination",
+        "label": "Termination"
+       },
+       {
+        "key": "demotion",
+        "label": "Demotion"
+       }
+      ],
+      "responsibility": "ai",
+      "columns": 2
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "prior_actions",
+       "label": "List previously received coaching and/or corrective action with date signed",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "One per line: each coaching or corrective action previously received, with the date it was signed. Write \"None — first occurrence\" when there has been none.",
+       "minLines": 4
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Type of Offense"
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "offense_type",
+      "options": [
+       {
+        "key": "tardiness",
+        "label": "Tardiness/Leaving Early"
+       },
+       {
+        "key": "absenteeism",
+        "label": "Absenteeism"
+       },
+       {
+        "key": "standards_of_conduct",
+        "label": "Standards of Conduct"
+       },
+       {
+        "key": "under_performance",
+        "label": "Under Performance"
+       },
+       {
+        "key": "dress_code",
+        "label": "Dress Code Violation"
+       },
+       {
+        "key": "company_policies",
+        "label": "Violation of Company Policies"
+       }
+      ],
+      "responsibility": "ai",
+      "columns": 2
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "other_offense",
+       "label": "Other",
+       "input": "text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Details"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "observation",
+       "label": "Observation of Offense",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "Written as \"Observed:\" — what happened — then \"Expectation:\" — the standard the employee is expected to meet — then \"Going Forward:\" — what they do differently. One field, three labelled sections.",
+       "narrative": "observed_expectation"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "policy_violated",
+       "label": "Policy Violated",
+       "input": "text",
+       "responsibility": "ai",
+       "help": "The offense category ticked above. Filled from the form itself, not composed."
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "policy_language",
+       "label": "Direct policy from official manual",
+       "input": "long_text",
+       "responsibility": "ai",
+       "policyGrounded": true,
+       "help": "The approved manual this was checked against, with its section and page. Left for the manager when no approved policy matches."
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "action_plan",
+       "label": "Action Plan",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "One paragraph: what is being done, what the employee does going forward, and that the manual's own wording is reviewed with them. No dates and no follow-up meeting. It always ends with the form's closing sentence, which is added automatically.",
+       "narrative": "plan_of_action",
+       "requiredClosing": "Future policy violations may be subject to additional corrective action up to and including termination of employment."
+      }
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "payroll_deduct",
+      "label": "Is payroll deduct applicable?",
+      "options": [
+       {
+        "key": "yes",
+        "label": "Yes"
+       },
+       {
+        "key": "no",
+        "label": "No"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2,
+      "single": true
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement of Receipt of Warning"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "Employee and supervisor discussed the warning and plan for improvement. Further violations may result in additional action."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     }
+    ]
+   },
+   "variants": []
+  },
+  {
+   "key": "policy-review",
+   "publishedVersion": 3,
+   "documentMd5": "921d54c5e5058216e1b2fae7e76f62e8",
+   "variantsMd5": "d751713988987e9331980363e24189ce",
+   "name": "Policy Review",
+   "shortName": "Policy Review",
+   "description": "A documented review of a policy with an employee, quoting the approved manual.",
+   "category": "hr_performance",
+   "layoutFamily": "corrective",
+   "requiredPermission": "create_policy_review",
+   "displayOrder": 3,
+   "revisionNote": "Observation drafts as Observed/Expectation/Going Forward, and the Plan of Action as the plan-of-action paragraph.",
+   "provenance": null,
+   "bundledPdfName": "Policy Review Form.pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "SUN TAN CITY",
+      "title": "Policy Review Form"
+     },
+     {
+      "kind": "section",
+      "label": "Employee Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Employee Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "job_title",
+        "label": "Job Title",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "location",
+        "label": "Location",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "section",
+      "label": "Type"
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "review_types",
+      "options": [
+       {
+        "key": "under_performance",
+        "label": "Under Performance"
+       },
+       {
+        "key": "tpoa",
+        "label": "TPOA"
+       },
+       {
+        "key": "policy_review",
+        "label": "Policy Review"
+       }
+      ],
+      "responsibility": "ai",
+      "columns": 3
+     },
+     {
+      "kind": "section",
+      "label": "Topic"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "topic",
+       "label": "Topic",
+       "input": "text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Details"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "observation",
+       "label": "Observation",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "Written as \"Observed:\" — what happened — then \"Expectation:\" — the standard the employee is expected to meet — then \"Going Forward:\" — what they do differently. One field, three labelled sections.",
+       "narrative": "observed_expectation"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "policy_violated",
+       "label": "Policy Violated",
+       "input": "text",
+       "responsibility": "ai",
+       "policyGrounded": true,
+       "help": "Named from the approved manual. Left for the manager when no approved policy matches."
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "policy_language",
+       "label": "Direct policy from official manual",
+       "input": "long_text",
+       "responsibility": "ai",
+       "policyGrounded": true,
+       "help": "Quoted verbatim from the manual. Never paraphrased and never invented."
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "plan_of_action",
+       "label": "Plan of Action",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "One paragraph: what is being done, what the employee does going forward, and that the manual's own wording is reviewed with them. No dates, no follow-up meeting, no consequence of a further occurrence.",
+       "narrative": "plan_of_action"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement of Training"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "I confirm that my supervisor and I have discussed this training and plan for improvement."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     }
+    ]
+   },
+   "variants": []
+  },
+  {
+   "key": "sdit-epp",
+   "publishedVersion": 3,
+   "documentMd5": "0e7bf6cb08d5c22277a575b46263ced1",
+   "variantsMd5": "22d69ab2c5f06dfa98f889509b926d13",
+   "name": "SDIT EPP",
+   "shortName": "SDIT EPP",
+   "description": "Employee Performance Plan for a Salon Director in training.",
+   "category": "hr_performance",
+   "layoutFamily": "epp",
+   "requiredPermission": "create_epp",
+   "displayOrder": 4,
+   "revisionNote": "The standing SDIT expectations, the productivity table, the employee's own section and the re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual. The form addresses the SDIT rather than the ASD.",
+   "provenance": null,
+   "bundledPdfName": "Employee EPP (SDIT).pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "SUN TAN CITY",
+      "title": "Employee Performance Plan - SDIT"
+     },
+     {
+      "kind": "section",
+      "label": "Employee Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Employee Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "job_title",
+        "label": "Job Title",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "location",
+        "label": "Location",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "section",
+      "label": "To be filled out by {{role}}"
+     },
+     {
+      "kind": "expectation_checklist",
+      "successKey": "expectations_success",
+      "improvementKey": "expectations_improvement",
+      "label": "{{roleAbbr}} expectations",
+      "legend": "Mark each expectation as an area of success or an area needing improvement. Leave a row unmarked when it has not been evaluated.",
+      "options": [
+       {
+        "key": "uphold_experience",
+        "label": "Uphold the Sun Tan City Experience."
+       },
+       {
+        "key": "client_service",
+        "label": "Personally, provide excellent client service."
+       },
+       {
+        "key": "company_policies",
+        "label": "Uphold Sun Tan City and JB & Associates company policies per the JB & Associates Employment Policy Manual."
+       },
+       {
+        "key": "bonus_viewer",
+        "label": "Determine focuses based on the Bonus Viewer."
+       },
+       {
+        "key": "fact_based_decisions",
+        "label": "Make fact based decisions when the Salon Director is not present."
+       },
+       {
+        "key": "client_engagement",
+        "label": "Follow through with Client Engagement Strategies with every client."
+       },
+       {
+        "key": "positive_atmosphere",
+        "label": "Promote a positive atmosphere and create \"buy-in\"."
+       }
+      ],
+      "responsibility": "ai"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "where_succeeding",
+       "label": "In what areas is the {{roleAbbr}} currently succeeding?",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "needs_improvement",
+       "label": "In what areas does the {{roleAbbr}} currently need improvement?",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "numbered_list",
+      "key": "top_strengths",
+      "label": "Overall top three strengths",
+      "count": 3,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "improvement_areas",
+      "label": "Overall two biggest areas of improvement",
+      "count": 2,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "section",
+      "label": "Salon's current productivity"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "salon_ppta",
+        "label": "PPTA",
+        "input": "text",
+        "responsibility": "ai"
+       },
+       {
+        "key": "salon_lpsva",
+        "label": "LPSVA",
+        "input": "text",
+        "responsibility": "ai"
+       },
+       {
+        "key": "salon_upta",
+        "label": "UPTA",
+        "input": "text",
+        "responsibility": "ai"
+       }
+      ]
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "salon_productivity",
+       "label": "Salon figures, as provided",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "Only what the manager supplied. Left blank when no figures were given."
+      }
+     },
+     {
+      "kind": "section",
+      "label": "{{roleAbbr}}'s personal productivity"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_ppta",
+        "label": "PPTA",
+        "input": "text",
+        "responsibility": "ai"
+       },
+       {
+        "key": "employee_lpsva",
+        "label": "LPSVA",
+        "input": "text",
+        "responsibility": "ai"
+       },
+       {
+        "key": "employee_upta",
+        "label": "UPTA",
+        "input": "text",
+        "responsibility": "ai"
+       }
+      ]
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "employee_productivity",
+       "label": "{{roleAbbr}} figures, as provided",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "Only what the manager supplied. Left blank when no figures were given."
+      }
+     },
+     {
+      "kind": "page_break"
+     },
+     {
+      "kind": "section",
+      "label": "To be filled out by the {{roleAbbr}}"
+     },
+     {
+      "kind": "expectation_checklist",
+      "successKey": "employee_expectations_success",
+      "improvementKey": "employee_expectations_improvement",
+      "label": "Your expectations",
+      "legend": "Mark each expectation as an area of success or an area needing improvement. Leave a row unmarked when it has not been evaluated.",
+      "options": [
+       {
+        "key": "uphold_experience",
+        "label": "Uphold the Sun Tan City Experience."
+       },
+       {
+        "key": "client_service",
+        "label": "Personally, provide excellent client service."
+       },
+       {
+        "key": "company_policies",
+        "label": "Uphold Sun Tan City and JB & Associates company policies per the JB & Associates Employment Policy Manual."
+       },
+       {
+        "key": "bonus_viewer",
+        "label": "Determine focuses based on the Bonus Viewer."
+       },
+       {
+        "key": "fact_based_decisions",
+        "label": "Make fact based decisions when the Salon Director is not present."
+       },
+       {
+        "key": "client_engagement",
+        "label": "Follow through with Client Engagement Strategies with every client."
+       },
+       {
+        "key": "positive_atmosphere",
+        "label": "Promote a positive atmosphere and create \"buy-in\"."
+       }
+      ],
+      "responsibility": "employee"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "employee_self_review",
+       "label": "Self review",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "Drafted from the conversation, then reviewed with the employee before signing."
+      }
+     },
+     {
+      "kind": "numbered_list",
+      "key": "employee_strengths",
+      "label": "What are your overall top strengths?",
+      "count": 2,
+      "responsibility": "employee"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "employee_improvements",
+      "label": "What are your overall biggest areas of improvement?",
+      "count": 2,
+      "responsibility": "employee"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "salon_goals",
+      "label": "Salon Goals: current top three goals",
+      "count": 3,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "section",
+      "label": "Plan of Action"
+     },
+     {
+      "kind": "note",
+      "text": "Create the action plan together after the employee has completed their portion of the EPP."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "plan_of_action",
+       "label": "Plan, objectives and goals",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Follow-up"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "follow_up_week",
+       "label": "{{role}} and {{roleAbbr}} will meet and re-evaluate the week of",
+       "input": "date",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "section",
+      "label": "Re-Evaluation"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "objectives_met",
+       "label": "Which objectives were met?",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "reevaluation_plan",
+       "label": "Plan of Action",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "page_break"
+     },
+     {
+      "kind": "draft_details",
+      "label": "Ask Sunny Draft Details",
+      "note": "Reference for the EPP conversation — editable; not part of the official form pages above.",
+      "entries": [
+       {
+        "label": "Areas Succeeding",
+        "key": "where_succeeding"
+       },
+       {
+        "label": "Areas Needing Improvement",
+        "key": "needs_improvement"
+       },
+       {
+        "label": "Overall Top Strengths",
+        "key": "top_strengths"
+       },
+       {
+        "label": "Biggest Areas of Improvement",
+        "key": "improvement_areas"
+       },
+       {
+        "label": "Salon Goals",
+        "key": "salon_goals"
+       },
+       {
+        "label": "Objectives and Plan of Action",
+        "key": "plan_of_action"
+       },
+       {
+        "label": "Personal Productivity (as provided)",
+        "key": "employee_productivity"
+       },
+       {
+        "label": "Salon Productivity (as provided)",
+        "key": "salon_productivity"
+       }
+      ]
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "policy_references",
+       "label": "Relevant JBA Policy",
+       "input": "long_text",
+       "responsibility": "ai",
+       "policyGrounded": true,
+       "help": "Named from the JB & Associates Employment Policy Manual. Left blank when no section applies."
+      }
+     }
+    ]
+   },
+   "variants": [
+    {
+     "key": "default",
+     "label": "SDIT review",
+     "role": "Training Salon Director",
+     "roleAbbr": "SDIT"
+    }
+   ]
+  },
+  {
+   "key": "tsd-epp",
+   "publishedVersion": 2,
+   "documentMd5": "ba7cf3a952e0bc36790440345177aca1",
+   "variantsMd5": "24f844d1b281fc6293c4bcae60a5d0a0",
+   "name": "TSD EPP",
+   "shortName": "TSD EPP",
+   "description": "Employee Performance Plan for a Training Salon Director.",
+   "category": "hr_performance",
+   "layoutFamily": "epp",
+   "requiredPermission": "create_epp",
+   "displayOrder": 5,
+   "revisionNote": "The Management Performance Plan the business issues: the nine management expectations marked twice, five metrics for the manager and five for the salon, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual.",
+   "provenance": null,
+   "bundledPdfName": "Management EPP (TSD).pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "SUN TAN CITY",
+      "title": "Management Performance Plan"
+     },
+     {
+      "kind": "section",
+      "label": "Employee Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Employee Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "job_title",
+        "label": "Job Title",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "location",
+        "label": "Location",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "reference",
+      "label": "To be reviewed with District Manager",
+      "body": [
+       "First, we need to understand what the purpose and responsibilities are for your role with Sun Tan City."
+      ]
+     },
+     {
+      "kind": "page_break"
+     },
+     {
+      "kind": "section",
+      "label": "To be filled out by District Manager"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "where_succeeding",
+       "label": "In what areas is the manager currently succeeding?",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "needs_improvement",
+       "label": "In what areas does the manager currently need improvement?",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "expectation_checklist",
+      "successKey": "expectations_success",
+      "improvementKey": "expectations_improvement",
+      "label": "Management expectations",
+      "legend": "Mark each expectation as an area of success or an area needing improvement. Leave a row unmarked when it has not been assessed.",
+      "options": [
+       {
+        "key": "uphold_experience",
+        "label": "Uphold the Sun Tan City Experience."
+       },
+       {
+        "key": "coach_client_service",
+        "label": "Coach team to provide, and personally provide, excellent client service."
+       },
+       {
+        "key": "bench_planning",
+        "label": "Bench planning and ability to lead management."
+       },
+       {
+        "key": "quality_hiring",
+        "label": "Quality hiring and employee retention."
+       },
+       {
+        "key": "company_policies",
+        "label": "Uphold Sun Tan City and JB & Associates company policies per the JB & Associates Employment Policy Manual, and hold the team accountable to company policy."
+       },
+       {
+        "key": "expense_control",
+        "label": "Control expenses by tracking secondary productivity through KPI."
+       },
+       {
+        "key": "fact_based_decisions",
+        "label": "Makes fact based decisions and judgement calls without emotion."
+       },
+       {
+        "key": "lead_by_example",
+        "label": "Lead by example at all times."
+       },
+       {
+        "key": "positive_atmosphere",
+        "label": "Promote a positive atmosphere and create \"buy-in\"."
+       }
+      ],
+      "responsibility": "ai"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "top_strengths",
+      "label": "What are the manager's overall top three strengths?",
+      "count": 3,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "improvement_areas",
+      "label": "What are the manager's overall two biggest areas of improvement?",
+      "count": 2,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "section",
+      "label": "Manager's current productivity"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "manager_ppta",
+        "label": "PPTA",
+        "input": "text",
+        "responsibility": "ai"
+       },
+       {
+        "key": "manager_lpsva",
+        "label": "LPSVA",
+        "input": "text",
+        "responsibility": "ai"
+       },
+       {
+        "key": "manager_upta",
+        "label": "UPTA",
+        "input": "text",
+        "responsibility": "ai"
+       },
+       {
+        "key": "manager_club_close",
+        "label": "Club Close",
+        "input": "text",
+        "responsibility": "ai"
+       },
+       {
+        "key": "manager_average_club_dollar",
+        "label": "Average Club Dollar",
+        "input": "text",
+        "responsibility": "ai"
+       }
+      ]
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "employee_productivity",
+       "label": "Manager figures, as provided",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "Only what the manager supplied. Left blank when no figures were given."
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Salon's current productivity"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "salon_ppta",
+        "label": "PPTA",
+        "input": "text",
+        "responsibility": "ai"
+       },
+       {
+        "key": "salon_lpsva",
+        "label": "LPSVA",
+        "input": "text",
+        "responsibility": "ai"
+       },
+       {
+        "key": "salon_upta",
+        "label": "UPTA",
+        "input": "text",
+        "responsibility": "ai"
+       },
+       {
+        "key": "salon_club_close",
+        "label": "Club Close",
+        "input": "text",
+        "responsibility": "ai"
+       },
+       {
+        "key": "salon_average_club_dollar",
+        "label": "Average Club Dollar",
+        "input": "text",
+        "responsibility": "ai"
+       }
+      ]
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "salon_productivity",
+       "label": "Salon figures, as provided",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "Only what the manager supplied. Left blank when no figures were given."
+      }
+     },
+     {
+      "kind": "page_break"
+     },
+     {
+      "kind": "section",
+      "label": "To be filled out by Manager"
+     },
+     {
+      "kind": "note",
+      "text": "This section is the manager's own assessment, completed in the review conversation. Ask Sunny never answers it."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "self_important_skill",
+       "label": "What do you feel is the most important skill for a Salon Director to possess?",
+       "input": "long_text",
+       "responsibility": "employee"
+      }
+     },
+     {
+      "kind": "expectation_checklist",
+      "successKey": "self_expectations_success",
+      "improvementKey": "self_expectations_improvement",
+      "label": "In what areas do you feel you are currently succeeding, and where do you need improvement?",
+      "legend": "Mark each expectation as an area of success or an area needing improvement. Leave a row unmarked when it has not been assessed.",
+      "options": [
+       {
+        "key": "uphold_experience",
+        "label": "Uphold the Sun Tan City Experience."
+       },
+       {
+        "key": "coach_client_service",
+        "label": "Coach team to provide, and personally provide, excellent client service."
+       },
+       {
+        "key": "bench_planning",
+        "label": "Bench planning and ability to lead management."
+       },
+       {
+        "key": "quality_hiring",
+        "label": "Quality hiring and employee retention."
+       },
+       {
+        "key": "company_policies",
+        "label": "Uphold Sun Tan City and JB & Associates company policies per the JB & Associates Employment Policy Manual, and hold the team accountable to company policy."
+       },
+       {
+        "key": "expense_control",
+        "label": "Control expenses by tracking secondary productivity through KPI."
+       },
+       {
+        "key": "fact_based_decisions",
+        "label": "Makes fact based decisions and judgement calls without emotion."
+       },
+       {
+        "key": "lead_by_example",
+        "label": "Lead by example at all times."
+       },
+       {
+        "key": "positive_atmosphere",
+        "label": "Promote a positive atmosphere and create \"buy-in\"."
+       }
+      ],
+      "responsibility": "employee"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "self_strengths",
+      "label": "What are your overall top three strengths?",
+      "count": 3,
+      "responsibility": "employee"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "self_improvements",
+      "label": "What are your overall two biggest areas of improvement?",
+      "count": 2,
+      "responsibility": "employee"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "salon_goals",
+      "label": "Salon Goals: what are your salon's current top three goals?",
+      "count": 3,
+      "responsibility": "employee"
+     },
+     {
+      "kind": "page_break"
+     },
+     {
+      "kind": "section",
+      "label": "Plan of Action"
+     },
+     {
+      "kind": "objective_rows",
+      "planLabel": "Plan of Action",
+      "rows": [
+       {
+        "key": "bench",
+        "category": "Bench",
+        "objective": "Ability to find and select quality talent, and retain at bench goals set by DM"
+       },
+       {
+        "key": "management_bench",
+        "category": "Management Bench",
+        "objective": "Ability to coach advanced staff, develop leaders, and delegate appropriately"
+       },
+       {
+        "key": "personal_primary_productivity",
+        "category": "Personal Primary Productivity",
+        "objective": "Ability to self-motivate and keep metrics at or above standard"
+       },
+       {
+        "key": "salon_primary_productivity",
+        "category": "Salon Primary Productivity",
+        "objective": "Ability to identify improvement areas and filter to team"
+       },
+       {
+        "key": "salon_secondary_productivity",
+        "category": "Salon Secondary Productivity",
+        "objective": "Ability to utilize KPI report to control expenses to salon that effect bottom line revenue"
+       },
+       {
+        "key": "coaching_and_development",
+        "category": "Coaching and Development",
+        "objective": "Ability to consistently coach team and follow-up, making an impact on primary productivity"
+       },
+       {
+        "key": "district_outreach",
+        "category": "District Outreach",
+        "objective": "Shares ideas with the District and reaches out to others with little or no direction"
+       },
+       {
+        "key": "salon_standards",
+        "category": "Salon Standards of Cleanliness and Safety",
+        "objective": "Aware of all items on the SVC and able to describe to DM"
+       }
+      ],
+      "responsibility": "ai"
+     },
+     {
+      "kind": "section",
+      "label": "Follow-up"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "follow_up_week",
+       "label": "Manager and Supervisor will meet and re-evaluate the week of",
+       "input": "date",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "page_break"
+     },
+     {
+      "kind": "section",
+      "label": "Re-Evaluation"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "objectives_met",
+       "label": "Which objectives were met?",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "expectation_checklist",
+      "successKey": "reevaluation_met",
+      "improvementKey": "reevaluation_not_met",
+      "label": "Objectives",
+      "legend": "Mark each objective met or not met at the re-evaluation. Leave a row unmarked until it has been reviewed.",
+      "successLabel": "Met",
+      "improvementLabel": "Not met",
+      "options": [
+       {
+        "key": "bench",
+        "label": "Bench — Ability to find and select quality talent, and retain at bench goals set by DM"
+       },
+       {
+        "key": "management_bench",
+        "label": "Management Bench — Ability to coach advanced staff, develop leaders, and delegate appropriately"
+       },
+       {
+        "key": "personal_primary_productivity",
+        "label": "Personal Primary Productivity — Ability to self-motivate and keep metrics at or above standard"
+       },
+       {
+        "key": "salon_primary_productivity",
+        "label": "Salon Primary Productivity — Ability to identify improvement areas and filter to team"
+       },
+       {
+        "key": "salon_secondary_productivity",
+        "label": "Salon Secondary Productivity — Ability to utilize KPI report to control expenses to salon that effect bottom line revenue"
+       },
+       {
+        "key": "coaching_and_development",
+        "label": "Coaching and Development — Ability to consistently coach team and follow-up, making an impact on primary productivity"
+       },
+       {
+        "key": "district_outreach",
+        "label": "District Outreach — Shares ideas with the District and reaches out to others with little or no direction"
+       },
+       {
+        "key": "salon_standards",
+        "label": "Salon Standards of Cleanliness and Safety — Aware of all items on the SVC and able to describe to DM"
+       }
+      ],
+      "responsibility": "manager"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "reevaluation_plan",
+       "label": "Plan of Action",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "page_break"
+     },
+     {
+      "kind": "draft_details",
+      "label": "Ask Sunny Draft Details",
+      "note": "Reference for the EPP conversation — editable; not part of the official form pages above.",
+      "entries": [
+       {
+        "label": "Areas Succeeding",
+        "key": "where_succeeding"
+       },
+       {
+        "label": "Areas Needing Improvement",
+        "key": "needs_improvement"
+       },
+       {
+        "label": "Overall Top Strengths",
+        "key": "top_strengths"
+       },
+       {
+        "label": "Biggest Areas of Improvement",
+        "key": "improvement_areas"
+       },
+       {
+        "label": "Salon Goals",
+        "key": "salon_goals"
+       },
+       {
+        "label": "Plan of Action — Bench",
+        "key": "bench"
+       },
+       {
+        "label": "Plan of Action — Management Bench",
+        "key": "management_bench"
+       },
+       {
+        "label": "Plan of Action — Personal Primary Productivity",
+        "key": "personal_primary_productivity"
+       },
+       {
+        "label": "Plan of Action — Salon Primary Productivity",
+        "key": "salon_primary_productivity"
+       },
+       {
+        "label": "Plan of Action — Salon Secondary Productivity",
+        "key": "salon_secondary_productivity"
+       },
+       {
+        "label": "Plan of Action — Coaching and Development",
+        "key": "coaching_and_development"
+       },
+       {
+        "label": "Plan of Action — District Outreach",
+        "key": "district_outreach"
+       },
+       {
+        "label": "Plan of Action — Salon Standards of Cleanliness and Safety",
+        "key": "salon_standards"
+       },
+       {
+        "label": "Manager Productivity (as provided)",
+        "key": "employee_productivity"
+       },
+       {
+        "label": "Salon Productivity (as provided)",
+        "key": "salon_productivity"
+       }
+      ]
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "policy_references",
+       "label": "Relevant JBA Policy",
+       "input": "long_text",
+       "responsibility": "ai",
+       "policyGrounded": true,
+       "help": "Named from the JB & Associates Employment Policy Manual. Left blank when no section applies."
+      }
+     }
+    ]
+   },
+   "variants": [
+    {
+     "key": "default",
+     "label": "TSD review",
+     "role": "District Manager",
+     "roleAbbr": "TSD"
+    }
+   ]
+  },
+  {
+   "key": "asd-sdit-epp",
+   "publishedVersion": 1,
+   "documentMd5": "5d9fbb57fdafce0302f02778324d9e2f",
+   "variantsMd5": "c085d4ffedd801f4feb8dbaeb16a224a",
+   "name": "ASD-SDIT Performance EPP",
+   "shortName": "ASD-SDIT",
+   "description": "Performance plan covering the ASD to SDIT development track.",
+   "category": "hr_performance",
+   "layoutFamily": "epp",
+   "requiredPermission": "create_epp",
+   "displayOrder": 6,
+   "revisionNote": "Seeded from the approved reference forms.",
+   "provenance": null,
+   "bundledPdfName": "ASD-SDIT Performance EPP.pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "SUN TAN CITY",
+      "title": "Performance EPP - ASD/SDIT"
+     },
+     {
+      "kind": "section",
+      "label": "Employee Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Employee Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "job_title",
+        "label": "Job Title",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "location",
+        "label": "Location",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "section",
+      "label": "To be filled out by {{role}}"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "where_succeeding",
+       "label": "In what areas is the {{roleAbbr}} currently succeeding?",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "needs_improvement",
+       "label": "In what areas does the {{roleAbbr}} currently need improvement?",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "numbered_list",
+      "key": "top_strengths",
+      "label": "Overall top three strengths",
+      "count": 3,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "improvement_areas",
+      "label": "Overall two biggest areas of improvement",
+      "count": 2,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "employee_productivity",
+       "label": "{{roleAbbr}}'s current productivity",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "salon_productivity",
+       "label": "Salon's current productivity",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "{{roleAbbr}} Thoughts"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "employee_self_review",
+       "label": "Self review",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "Drafted from the conversation, then reviewed with the employee before signing."
+      }
+     },
+     {
+      "kind": "numbered_list",
+      "key": "salon_goals",
+      "label": "Salon Goals: current top three goals",
+      "count": 3,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "section",
+      "label": "Plan of Action"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "plan_of_action",
+       "label": "Plan, objectives and goals",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "follow_up_week",
+       "label": "{{role}} and {{roleAbbr}} will meet and re-evaluate the week of",
+       "input": "date",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     }
+    ]
+   },
+   "variants": [
+    {
+     "key": "default",
+     "label": "ASD/SDIT review",
+     "role": "Training Salon Director",
+     "roleAbbr": "ASD"
+    }
+   ]
+  },
+  {
+   "key": "fttc-epp",
+   "publishedVersion": 1,
+   "documentMd5": "51ffdc1181ebb8987173966ba22e8f48",
+   "variantsMd5": "409eb221d7d1fbaeb0e6257c646942e5",
+   "name": "FTTC Performance EPP",
+   "shortName": "FTTC",
+   "description": "Performance plan for a full-time Tanning Consultant.",
+   "category": "hr_performance",
+   "layoutFamily": "epp",
+   "requiredPermission": "create_epp",
+   "displayOrder": 7,
+   "revisionNote": "Seeded from the approved reference forms.",
+   "provenance": null,
+   "bundledPdfName": "FTTC Performance EPP.pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "SUN TAN CITY",
+      "title": "Performance EPP - FTTC"
+     },
+     {
+      "kind": "section",
+      "label": "Employee Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Employee Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "job_title",
+        "label": "Job Title",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "location",
+        "label": "Location",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "section",
+      "label": "To be filled out by {{role}}"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "where_succeeding",
+       "label": "In what areas is the {{roleAbbr}} currently succeeding?",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "needs_improvement",
+       "label": "In what areas does the {{roleAbbr}} currently need improvement?",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "numbered_list",
+      "key": "top_strengths",
+      "label": "Overall top three strengths",
+      "count": 3,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "improvement_areas",
+      "label": "Overall two biggest areas of improvement",
+      "count": 2,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "employee_productivity",
+       "label": "{{roleAbbr}}'s current productivity",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "salon_productivity",
+       "label": "Salon's current productivity",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "{{roleAbbr}} Thoughts"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "employee_self_review",
+       "label": "Self review",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "Drafted from the conversation, then reviewed with the employee before signing."
+      }
+     },
+     {
+      "kind": "numbered_list",
+      "key": "salon_goals",
+      "label": "Salon Goals: current top three goals",
+      "count": 3,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "section",
+      "label": "Plan of Action"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "plan_of_action",
+       "label": "Plan, objectives and goals",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "follow_up_week",
+       "label": "{{role}} and {{roleAbbr}} will meet and re-evaluate the week of",
+       "input": "date",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     }
+    ]
+   },
+   "variants": [
+    {
+     "key": "default",
+     "label": "FTTC review",
+     "role": "Salon Director",
+     "roleAbbr": "TC"
+    }
+   ]
+  },
+  {
+   "key": "dmit-epp-tsd",
+   "publishedVersion": 1,
+   "documentMd5": "6a2f6d83ff2a1748865d8c9217d74f96",
+   "variantsMd5": "3762a24e72488fc52e9f2506e3215439",
+   "name": "DMIT EPP — TSD Review",
+   "shortName": "DMIT / TSD",
+   "description": "The TSD reading of the DMIT Employee Performance Plan, through re-evaluation.",
+   "category": "hr_performance",
+   "layoutFamily": "dmit_epp",
+   "requiredPermission": "create_epp",
+   "displayOrder": 8,
+   "revisionNote": "Seeded from the approved reference forms.",
+   "provenance": null,
+   "bundledPdfName": "DMIT EPP - TSD Review.pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "SUN TAN CITY",
+      "title": "Employee Performance Plan"
+     },
+     {
+      "kind": "section",
+      "label": "Employee Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Employee Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "job_title",
+        "label": "Job Title",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "location",
+        "label": "Location",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "reference",
+      "label": "Printed for the reviewed position — TSD",
+      "variantKey": "tsd",
+      "body": [
+       "To be reviewed with District Manager",
+       "First we need to understand what the purpose and responsibilities are for a District Manager with Sun Tan City:",
+       "General Purpose of Position",
+       "The District Manager is responsible for overseeing several salons. Responsibilities include managing sales and operations, driving revenue, controlling expenses and payroll budgets, handling personnel issues, accounting, merchandising, and loss prevention. District Managers are also ultimately responsible for ensuring the highest level of client service throughout the salons."
+      ]
+     },
+     {
+      "kind": "reference",
+      "label": "Printed for the reviewed position — DMIT",
+      "variantKey": "dmit",
+      "body": [
+       "To be reviewed with District Manager in Training",
+       "First we need to understand what the purpose and responsibilities are for a District Manager in Training with Sun Tan City:",
+       "General Purpose of Position",
+       "The District Manager in Training is learning to oversee several salons: sales and operations, revenue, expense and payroll control, personnel, accounting, merchandising and loss prevention, while being assessed against the District Manager standard."
+      ]
+     },
+     {
+      "kind": "section",
+      "label": "To be filled out by {{role}}"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "where_succeeding",
+       "label": "In what areas is the {{roleAbbr}} currently succeeding?",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "needs_improvement",
+       "label": "In what areas does the {{roleAbbr}} currently need improvement?",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "numbered_list",
+      "key": "top_strengths",
+      "label": "What are the {{roleAbbr}}'s overall top three strengths?",
+      "count": 3,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "improvement_areas",
+      "label": "What are the {{roleAbbr}}'s overall two biggest areas of improvement?",
+      "count": 2,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "employee_productivity",
+       "label": "{{role}}'s current productivity",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "salon_productivity",
+       "label": "Salon's current productivity",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "page_break"
+     },
+     {
+      "kind": "section",
+      "label": "To be filled out by {{role}}"
+     },
+     {
+      "kind": "note",
+      "text": "This section is completed by hand, in the conversation. Ask Sunny does not draft it."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "most_important_skill",
+       "label": "What do you feel is the most important skill for a {{role}} to possess?",
+       "input": "text",
+       "responsibility": "manual"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "self_succeeding",
+       "label": "In what areas do you feel you are currently succeeding?",
+       "input": "long_text",
+       "responsibility": "manual"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "self_improvement",
+       "label": "In what areas do you feel you need improvement?",
+       "input": "long_text",
+       "responsibility": "manual"
+      }
+     },
+     {
+      "kind": "numbered_list",
+      "key": "self_strengths",
+      "label": "What are your overall top three strengths?",
+      "count": 3,
+      "responsibility": "manual"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "self_improvement_areas",
+      "label": "What are your overall two biggest areas of improvement?",
+      "count": 2,
+      "responsibility": "manual"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "salon_goals",
+      "label": "Salon Goals: What are your salon's current top three goals?",
+      "count": 3,
+      "responsibility": "manual"
+     },
+     {
+      "kind": "section",
+      "label": "Plan of Action"
+     },
+     {
+      "kind": "paragraph",
+      "text": "Review and adjust together with the employee."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "plan_of_action",
+       "label": "Plan, objectives and goals",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "page_break"
+     },
+     {
+      "kind": "section",
+      "label": "Follow-up"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "follow_up_week",
+       "label": "{{role}} and {{roleAbbr}} will meet and re-evaluate the week of",
+       "input": "date",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "section",
+      "label": "Re-Evaluation"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "objectives_met",
+       "label": "Which objectives were met?",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "reevaluation_plan",
+       "label": "Plan of Action",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     }
+    ]
+   },
+   "variants": [
+    {
+     "key": "tsd",
+     "label": "TSD Review",
+     "role": "District Manager",
+     "roleAbbr": "TSD",
+     "reviewedPosition": "TSD"
+    },
+    {
+     "key": "dmit",
+     "label": "DMIT Review",
+     "role": "District Manager",
+     "roleAbbr": "DMIT",
+     "reviewedPosition": "DMIT"
+    }
+   ]
+  },
+  {
+   "key": "dmit-epp-dmit",
+   "publishedVersion": 1,
+   "documentMd5": "6a2f6d83ff2a1748865d8c9217d74f96",
+   "variantsMd5": "3762a24e72488fc52e9f2506e3215439",
+   "name": "DMIT EPP — DMIT Review",
+   "shortName": "DMIT / DMIT",
+   "description": "The DMIT reading of the DMIT Employee Performance Plan, through re-evaluation.",
+   "category": "hr_performance",
+   "layoutFamily": "dmit_epp",
+   "requiredPermission": "create_epp",
+   "displayOrder": 9,
+   "revisionNote": "Seeded from the approved reference forms.",
+   "provenance": null,
+   "bundledPdfName": "DMIT EPP - DMIT Review.pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "SUN TAN CITY",
+      "title": "Employee Performance Plan"
+     },
+     {
+      "kind": "section",
+      "label": "Employee Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Employee Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "job_title",
+        "label": "Job Title",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "location",
+        "label": "Location",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "reference",
+      "label": "Printed for the reviewed position — TSD",
+      "variantKey": "tsd",
+      "body": [
+       "To be reviewed with District Manager",
+       "First we need to understand what the purpose and responsibilities are for a District Manager with Sun Tan City:",
+       "General Purpose of Position",
+       "The District Manager is responsible for overseeing several salons. Responsibilities include managing sales and operations, driving revenue, controlling expenses and payroll budgets, handling personnel issues, accounting, merchandising, and loss prevention. District Managers are also ultimately responsible for ensuring the highest level of client service throughout the salons."
+      ]
+     },
+     {
+      "kind": "reference",
+      "label": "Printed for the reviewed position — DMIT",
+      "variantKey": "dmit",
+      "body": [
+       "To be reviewed with District Manager in Training",
+       "First we need to understand what the purpose and responsibilities are for a District Manager in Training with Sun Tan City:",
+       "General Purpose of Position",
+       "The District Manager in Training is learning to oversee several salons: sales and operations, revenue, expense and payroll control, personnel, accounting, merchandising and loss prevention, while being assessed against the District Manager standard."
+      ]
+     },
+     {
+      "kind": "section",
+      "label": "To be filled out by {{role}}"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "where_succeeding",
+       "label": "In what areas is the {{roleAbbr}} currently succeeding?",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "needs_improvement",
+       "label": "In what areas does the {{roleAbbr}} currently need improvement?",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "numbered_list",
+      "key": "top_strengths",
+      "label": "What are the {{roleAbbr}}'s overall top three strengths?",
+      "count": 3,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "improvement_areas",
+      "label": "What are the {{roleAbbr}}'s overall two biggest areas of improvement?",
+      "count": 2,
+      "responsibility": "ai"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "employee_productivity",
+       "label": "{{role}}'s current productivity",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "salon_productivity",
+       "label": "Salon's current productivity",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "page_break"
+     },
+     {
+      "kind": "section",
+      "label": "To be filled out by {{role}}"
+     },
+     {
+      "kind": "note",
+      "text": "This section is completed by hand, in the conversation. Ask Sunny does not draft it."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "most_important_skill",
+       "label": "What do you feel is the most important skill for a {{role}} to possess?",
+       "input": "text",
+       "responsibility": "manual"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "self_succeeding",
+       "label": "In what areas do you feel you are currently succeeding?",
+       "input": "long_text",
+       "responsibility": "manual"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "self_improvement",
+       "label": "In what areas do you feel you need improvement?",
+       "input": "long_text",
+       "responsibility": "manual"
+      }
+     },
+     {
+      "kind": "numbered_list",
+      "key": "self_strengths",
+      "label": "What are your overall top three strengths?",
+      "count": 3,
+      "responsibility": "manual"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "self_improvement_areas",
+      "label": "What are your overall two biggest areas of improvement?",
+      "count": 2,
+      "responsibility": "manual"
+     },
+     {
+      "kind": "numbered_list",
+      "key": "salon_goals",
+      "label": "Salon Goals: What are your salon's current top three goals?",
+      "count": 3,
+      "responsibility": "manual"
+     },
+     {
+      "kind": "section",
+      "label": "Plan of Action"
+     },
+     {
+      "kind": "paragraph",
+      "text": "Review and adjust together with the employee."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "plan_of_action",
+       "label": "Plan, objectives and goals",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "page_break"
+     },
+     {
+      "kind": "section",
+      "label": "Follow-up"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "follow_up_week",
+       "label": "{{role}} and {{roleAbbr}} will meet and re-evaluate the week of",
+       "input": "date",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "section",
+      "label": "Re-Evaluation"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "objectives_met",
+       "label": "Which objectives were met?",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "reevaluation_plan",
+       "label": "Plan of Action",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     }
+    ]
+   },
+   "variants": [
+    {
+     "key": "tsd",
+     "label": "TSD Review",
+     "role": "District Manager",
+     "roleAbbr": "TSD",
+     "reviewedPosition": "TSD"
+    },
+    {
+     "key": "dmit",
+     "label": "DMIT Review",
+     "role": "District Manager",
+     "roleAbbr": "DMIT",
+     "reviewedPosition": "DMIT"
+    }
+   ]
+  },
+  {
+   "key": "follow-up-coaching",
+   "publishedVersion": 2,
+   "documentMd5": "1c9f29bd43ac1e21c70afc293756879e",
+   "variantsMd5": "d751713988987e9331980363e24189ce",
+   "name": "Follow-Up Coaching Form",
+   "shortName": "Follow-Up Coaching",
+   "description": "Records what changed after a coaching conversation — the original expectation, what was observed since, the progress level, and the next step.",
+   "category": "hr_performance",
+   "layoutFamily": "coaching",
+   "requiredPermission": "create_coaching_form",
+   "displayOrder": 14,
+   "revisionNote": "Published from ASK SUNNY PERFORMANCE MANAGEMENT FRAMEWORK §9.2 (Template: Create a follow-up coaching form). Framework-defined: there is no approved paper or PDF source form for this document, and no acknowledgement or signature wording was specified for it. Revision 2 renames the Next Step option `dpoa` to read \"Corrective Action\"; the option key is unchanged, so every box already ticked still resolves.",
+   "provenance": {
+    "kind": "framework",
+    "document": "ASK_SUNNY_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT",
+    "locator": "§9.2 Template: Create a follow-up coaching form",
+    "note": "Framework-defined form. Fields and option lists are taken verbatim from §9.2 of the approved Performance Management Framework. This form did NOT originate from an uploaded business PDF, and no paper source form exists for it."
+   },
+   "bundledPdfName": "Follow-Up Coaching Form.pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "SUN TAN CITY",
+      "title": "Follow-Up Coaching Form"
+     },
+     {
+      "kind": "section",
+      "label": "Original Coaching"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "original_topic",
+       "label": "Original Coaching Topic",
+       "input": "text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "original_expectation",
+       "label": "Original Expectation",
+       "input": "long_text",
+       "responsibility": "ai"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Follow-Up"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "follow_up_observation",
+       "label": "Follow-Up Observation",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "What the manager observed after the original coaching."
+      }
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "progress_level",
+      "label": "Progress Level",
+      "options": [
+       {
+        "key": "improved",
+        "label": "Improved"
+       },
+       {
+        "key": "partially_improved",
+        "label": "Partially Improved"
+       },
+       {
+        "key": "no_improvement",
+        "label": "No Improvement"
+       }
+      ],
+      "responsibility": "ai",
+      "columns": 3
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "specific_evidence",
+       "label": "Specific Evidence",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "What was seen, heard, or measured."
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "additional_coaching",
+       "label": "Additional Coaching Completed",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "If any. Left empty when no further coaching was given."
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Next Step"
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "next_step",
+      "options": [
+       {
+        "key": "continue",
+        "label": "Continue"
+       },
+       {
+        "key": "role_play",
+        "label": "Role-play"
+       },
+       {
+        "key": "epp",
+        "label": "EPP"
+       },
+       {
+        "key": "dpoa",
+        "label": "Corrective Action"
+       },
+       {
+        "key": "leadership_review",
+        "label": "Leadership Review"
+       }
+      ],
+      "responsibility": "ai",
+      "columns": 3
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "next_follow_up",
+       "label": "Next Follow-Up",
+       "input": "text",
+       "responsibility": "ai",
+       "help": "The timeframe agreed for the next follow-up.",
+       "semantics": "follow_up_timeframe"
+      }
+     }
+    ]
+   },
+   "variants": []
+  },
+  {
+   "key": "stc-exit",
+   "publishedVersion": 2,
+   "documentMd5": "1c09e2900a3f59e74a03880d052f41fa",
+   "variantsMd5": "d751713988987e9331980363e24189ce",
+   "name": "Resignation/Exit Form",
+   "shortName": "Exit Form",
+   "description": "The STC exit paperwork for an employee who is leaving: how they left, their last day and notice, the payroll and rehire questions, and the steps to finish the termination.",
+   "category": "separation",
+   "layoutFamily": "exit",
+   "requiredPermission": "create_exit_form",
+   "displayOrder": 15,
+   "revisionNote": "Details section: resignation date, how and why the employee resigned, salon key returned, and the returned-items, payroll deduction, minimum wage/bonus and rehire answers as statements (HR request, 28 Sep 2026).",
+   "provenance": null,
+   "bundledPdfName": "Resignation Exit Form.pdf",
+   "document": {
+    "paper": "letter",
+    "style": {
+     "headingStyle": "rule",
+     "letterhead": "centered",
+     "margins": "wide",
+     "signatureLayout": "ruled",
+     "logo": {
+      "assetKey": "sun-tan-city",
+      "placement": "top-right",
+      "widthPt": 76
+     },
+     "dateFormat": "us"
+    },
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "Sun Tan City",
+      "title": "Resignation/Exit Form"
+     },
+     {
+      "kind": "section",
+      "label": "Employee Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "job_title",
+        "label": "Job Title",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "location",
+        "label": "Location",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "permanent_address",
+        "label": "Permanent Address",
+        "input": "text",
+        "responsibility": "manager"
+       },
+       {
+        "key": "last_day_worked",
+        "label": "Last Day Worked",
+        "input": "date",
+        "responsibility": "ai",
+        "help": "Filled only from a date the manager stated in the conversation. Left blank otherwise."
+       }
+      ]
+     },
+     {
+      "kind": "section",
+      "label": "Resignation Details"
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "resignation_notice",
+      "options": [
+       {
+        "key": "submitted_fulfilled_notice",
+        "label": "Submitted & Fulfilled Notice"
+       }
+      ],
+      "responsibility": "ai",
+      "columns": 2
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "notice_given_date",
+        "label": "Date that notice was given",
+        "input": "date",
+        "responsibility": "ai",
+        "help": "Filled only from a date the manager stated in the conversation. Left blank otherwise."
+       },
+       {
+        "key": "notice_fulfilled_date",
+        "label": "Date that notice was fulfilled",
+        "input": "date",
+        "responsibility": "ai",
+        "help": "Filled only from a date the manager stated in the conversation. Left blank otherwise."
+       }
+      ]
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "resignation_type",
+      "options": [
+       {
+        "key": "immediate_voluntary_resignation",
+        "label": "Immediate Voluntary Resignation"
+       },
+       {
+        "key": "immediate_involuntary_separation",
+        "label": "Immediate involuntary separation"
+       },
+       {
+        "key": "notice_not_fulfilled",
+        "label": "Did not fulfill required 14 day / 30 day notice"
+       },
+       {
+        "key": "no_call_no_show",
+        "label": "No Call No Show"
+       }
+      ],
+      "responsibility": "ai",
+      "columns": 2
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "store_items_returned",
+      "label": "All store items were returned",
+      "options": [
+       {
+        "key": "yes",
+        "label": "Yes"
+       },
+       {
+        "key": "no",
+        "label": "No"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "salon_key_returned",
+      "label": "Salon key was returned",
+      "options": [
+       {
+        "key": "yes",
+        "label": "Yes"
+       },
+       {
+        "key": "no",
+        "label": "No"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "payroll_deduction_applicable",
+      "label": "Is Payroll Deduction applicable? *",
+      "options": [
+       {
+        "key": "yes",
+        "label": "Yes"
+       },
+       {
+        "key": "no",
+        "label": "No"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "forfeit_bonus",
+      "label": "*Do they forfeit their bonus?",
+      "options": [
+       {
+        "key": "yes",
+        "label": "Yes"
+       },
+       {
+        "key": "no",
+        "label": "No"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "dropped_to_minimum_wage",
+      "label": "*Are they to be dropped to minimum wage?",
+      "options": [
+       {
+        "key": "yes",
+        "label": "Yes"
+       },
+       {
+        "key": "no",
+        "label": "No"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "written_notice_attached",
+      "label": "Written notice attached?",
+      "options": [
+       {
+        "key": "yes",
+        "label": "Yes"
+       },
+       {
+        "key": "no",
+        "label": "No"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "eligible_for_rehire",
+      "label": "Is this employee eligible for rehire?",
+      "options": [
+       {
+        "key": "yes",
+        "label": "Yes"
+       },
+       {
+        "key": "no",
+        "label": "No"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "section",
+      "label": "Details"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "resignation_date",
+       "label": "Resignation Date",
+       "input": "date",
+       "responsibility": "manager",
+       "help": "The date the employee quit or resigned, as the manager gave it."
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "resignation_method",
+       "label": "How Employee Resigned",
+       "input": "text",
+       "responsibility": "manager",
+       "help": "In person, phone call, text message, email, no call/no show, and so on."
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "resignation_reason",
+       "label": "Reason for Resignation",
+       "input": "text",
+       "responsibility": "manager",
+       "help": "The reason the employee gave, in the manager's words. Never supplied by Ask Sunny."
+      }
+     },
+     {
+      "kind": "answer_statements",
+      "lines": [
+       {
+        "label": "Store Items Returned",
+        "parts": [
+         {
+          "key": "store_items_returned",
+          "statements": {
+           "yes": "Store items were returned.",
+           "no": "Store items were not returned."
+          }
+         }
+        ]
+       },
+       {
+        "label": "Salon Key Returned",
+        "parts": [
+         {
+          "key": "salon_key_returned",
+          "statements": {
+           "yes": "Salon key was returned.",
+           "no": "Salon key was not returned. Employee will be payroll deducted $25 for the salon key."
+          }
+         }
+        ]
+       },
+       {
+        "label": "Payroll Deduction",
+        "parts": [
+         {
+          "key": "payroll_deduction_applicable",
+          "statements": {
+           "yes": "Payroll deduction is applicable.",
+           "no": "Payroll deduction is not applicable."
+          }
+         }
+        ]
+       },
+       {
+        "label": "Minimum Wage / Bonus Forfeiture",
+        "parts": [
+         {
+          "key": "dropped_to_minimum_wage",
+          "statements": {
+           "yes": "Employee will be dropped to minimum wage.",
+           "no": "Employee will not be dropped to minimum wage."
+          }
+         },
+         {
+          "key": "forfeit_bonus",
+          "statements": {
+           "yes": "Employee will forfeit bonus.",
+           "no": "Employee will not forfeit bonus."
+          }
+         }
+        ],
+        "combined": {
+         "yes+yes": "Employee will be dropped to minimum wage and forfeit bonus.",
+         "yes+no": "Employee will be dropped to minimum wage and will not forfeit bonus.",
+         "no+yes": "Employee will not be dropped to minimum wage and will forfeit bonus.",
+         "no+no": "Employee will not be dropped to minimum wage and will not forfeit bonus."
+        }
+       },
+       {
+        "label": "Eligible for Rehire",
+        "parts": [
+         {
+          "key": "eligible_for_rehire",
+          "statements": {
+           "yes": "Employee is eligible for rehire.",
+           "no": "Employee is not eligible for rehire."
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "details",
+       "label": "Additional Details",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "Anything else the manager described about the departure, in their own facts. Never an answer to the yes/no questions above, and never a statement that the form was signed or a step below was done."
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement of Receipt"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "By signing this form, I confirm that I understand the information in this resignation/exit form. Signing this form does not necessarily indicate that I agree with the information (use the back of this form for comments). I also confirm that my supervisor and I have discussed the resignation/exit."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "District Manager/Witness Signature (when required)",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "section",
+      "label": "Steps to Finish Termination"
+     },
+     {
+      "kind": "paragraph",
+      "text": "Upload Exit Form to employee’s personal file and remove employee from MyGlow."
+     },
+     {
+      "kind": "paragraph",
+      "text": "Notify home office of employee’s final date of employment for HR, Payroll, and Security System purposes."
+     },
+     {
+      "kind": "paragraph",
+      "text": "Place comment on employee’s Sunlync account stating they are no longer employed, verify tanning has been removed."
+     }
+    ]
+   },
+   "variants": []
+  },
+  {
+   "key": "demotion",
+   "publishedVersion": 1,
+   "documentMd5": "0c4366c5d3969bb3bb778ef5d60ebc13",
+   "variantsMd5": "d751713988987e9331980363e24189ce",
+   "name": "Demotion Form",
+   "shortName": "Demotion",
+   "description": "Records a move to a lower title, status or pay — current and new details, voluntary or involuntary, and the reason.",
+   "category": "employment_changes",
+   "layoutFamily": "coaching",
+   "requiredPermission": "create_employment_change_form",
+   "displayOrder": 16,
+   "revisionNote": "Published from the GlowBrands Demotion Form source document. The STC Demotion Example is the same document, kept as a reference for the reason's wording; it is not a separate template.",
+   "provenance": null,
+   "bundledPdfName": "Demotion Form.pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "GlowBrands",
+      "title": "Demotion Form"
+     },
+     {
+      "kind": "section",
+      "label": "Current Employee Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Employee Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "current_status",
+      "label": "Employment Status",
+      "options": [
+       {
+        "key": "part_time",
+        "label": "Part Time"
+       },
+       {
+        "key": "full_time",
+        "label": "Full Time"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "job_title",
+        "label": "Job Title",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "location",
+        "label": "Location",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "current_pay_rate",
+       "label": "Rate of Pay",
+       "input": "text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "New Employee Information"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "new_job_title",
+       "label": "New Job Title",
+       "input": "text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "new_location",
+       "label": "New Location, if applicable",
+       "input": "text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "new_status",
+      "label": "New Employment Status",
+      "options": [
+       {
+        "key": "part_time",
+        "label": "Part Time"
+       },
+       {
+        "key": "full_time",
+        "label": "Full Time"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "new_pay_rate",
+       "label": "New Rate of Pay",
+       "input": "text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "demotion_type",
+      "label": "Type of Demotion",
+      "options": [
+       {
+        "key": "voluntary",
+        "label": "Voluntary"
+       },
+       {
+        "key": "involuntary",
+        "label": "Involuntary"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "section",
+      "label": "Reason (please attach corrective action if given)"
+     },
+     {
+      "kind": "note",
+      "text": "On dd/mm/yyyy (employee first name) requested a voluntary demotion because......"
+     },
+     {
+      "kind": "note",
+      "text": "(Employee) is moving from a FT (Job Title) at $x.xx /hr at (location, State abbr.) to a PT Tanning Consultant at $x.xx /hr at (location,State abbr.) effective dd/mm/yyyy. (**Effective date must be the start of a pay period)."
+     },
+     {
+      "kind": "note",
+      "text": "Any elected benefits will terminate effective dd/mm/yyyy (last date of the month). As a PT employee, (Name) will not be eligible for benefits or the monthly manager bonus."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "reason",
+       "label": "Please provide a brief summary/ reason for demotion",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "One short paragraph in the style of the form's own example, using only what the manager said: if the employee asked for it, \"On <date> <first name> requested a voluntary demotion because <reason>.\"; then \"<Name> is moving from a <FT/PT> <current title> at <rate> at <location> to a <FT/PT> <new title> at <rate> at <location> effective <date>.\" Leave out any part the manager did not give — never supply a status, rate, location, date or reason yourself — and never write the benefits or eligibility sentence."
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement of Receipt of Demotion"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "By signing this form, I confirm that I understand the information in this document is correct and that a demotion is desired. I also confirm that my supervisor and I have discussed all options for demotion and have decided on the best option for all parties involved. Furthermore, I understand if I am currently a full-time employee and change my status to part-time, I will lose my PTO benefits as of the status change date and will lose my insurance benefits at the end of the current month of the status change date. In addition, I understand that my pay rate may be reduced, and my pay type may be changed to hourly from salary due to this demotion. If an employee is moving from management to a part-time position, they may be required to transfer locations to maintain morale and business functions. Note:  Employees who were full-time and changed their status to part-time for more than 90 calendar days before returning to full-time status will restart their benefits eligibility waiting period and years of service calculation based on their new full-time date. Those who are part-time 90 days or less and return to full-time status, will resume their benefits from their original full-time accrual date, and will retain any unused PTO hours that existed at the time they initially changed to part time status."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Witness Signature",
+      "dateLabel": "Date"
+     }
+    ]
+   },
+   "variants": []
+  },
+  {
+   "key": "position-transfer",
+   "publishedVersion": 1,
+   "documentMd5": "b961a9e273f0c9674ea7906bbfd644a8",
+   "variantsMd5": "d751713988987e9331980363e24189ce",
+   "name": "Position Transfer Form",
+   "shortName": "Position Transfer",
+   "description": "Records a move to another salon or position — current and new title, location, status and pay, voluntary or involuntary, and the reason.",
+   "category": "employment_changes",
+   "layoutFamily": "coaching",
+   "requiredPermission": "create_employment_change_form",
+   "displayOrder": 17,
+   "revisionNote": "Published from the GlowBrands Position Transfer Form source document.",
+   "provenance": null,
+   "bundledPdfName": "Position Transfer Form.pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "GlowBrands",
+      "title": "Position Transfer Form"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Employee Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "current_status",
+      "label": "Employment Status",
+      "options": [
+       {
+        "key": "part_time",
+        "label": "Part Time"
+       },
+       {
+        "key": "full_time",
+        "label": "Full Time"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "job_title",
+        "label": "Job Title",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "location",
+        "label": "Location",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "current_pay_rate",
+       "label": "Rate of Pay",
+       "input": "text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "New Employee Information"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "new_job_title",
+       "label": "New Job Title",
+       "input": "text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "new_location",
+       "label": "New Location, if applicable",
+       "input": "text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "new_status",
+      "label": "New Employment Status",
+      "options": [
+       {
+        "key": "part_time",
+        "label": "PT"
+       },
+       {
+        "key": "full_time",
+        "label": "FT"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "new_pay_rate",
+       "label": "New Pay Rate",
+       "input": "text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "transfer_type",
+      "label": "Type of Transfer",
+      "options": [
+       {
+        "key": "voluntary",
+        "label": "Voluntary"
+       },
+       {
+        "key": "involuntary",
+        "label": "Involuntary"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "section",
+      "label": "Reason"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "reason",
+       "label": "Please provide a brief summary / reason for transfer",
+       "input": "long_text",
+       "responsibility": "ai",
+       "help": "One short paragraph using only what the manager said: why the employee is transferring, and \"<Name> is transferring from <current title> at <location> to <new title> at <new location>\", with statuses, rates and a date only where the manager gave them. Never supply a status, rate, location, date or reason yourself."
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Acknowledgement of Receipt of Transfer"
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "By signing this form, I confirm that I understand the information in this document is correct. I also confirm that my supervisor and I have discussed all options for transfer and have decided on the best option for all parties involved."
+     },
+     {
+      "kind": "acknowledgement",
+      "text": "Furthermore, I understand that if I am currently a full-time employee and change my status to part-time, I will lose my PTO benefits as of the status change date and will lose my insurance benefits at the end of the current month of the status change date. Note: Employees who were full-time and changed their status to part-time for more than 90 calendar days before returning to full-time status will restart their benefits eligibility waiting period and years of service calculation based on their new full-time date. Those who are part-time 90 days or less and return to full-time status, will resume their benefits from their original full-time accrual date, and will retain any unused PTO hours that existed at the time they initially changed to part time status."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Employee Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Supervisor Signature",
+      "dateLabel": "Date"
+     },
+     {
+      "kind": "signature_row",
+      "label": "Witness Signature",
+      "dateLabel": "Date"
+     }
+    ]
+   },
+   "variants": []
+  },
+  {
+   "key": "prescreen-phone-interview",
+   "publishedVersion": 1,
+   "documentMd5": "72cdecf65fc1a547317cb90314b98580",
+   "variantsMd5": "d751713988987e9331980363e24189ce",
+   "name": "Prescreen / Phone Interview Form",
+   "shortName": "Prescreen",
+   "description": "The prescreening call, before anyone is booked for an interview. Age, interest, uniform agreement, experience and availability, signed off by the interviewer.",
+   "category": "hiring",
+   "layoutFamily": "interview",
+   "requiredPermission": "create_hiring_form",
+   "displayOrder": 10,
+   "revisionNote": "Published from the 04. Prescreen Form - Phone Interview source document.",
+   "provenance": null,
+   "bundledPdfName": "Prescreen Form - Phone Interview.pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "SUN TAN CITY",
+      "title": "Prescreening / Phone Interview"
+     },
+     {
+      "kind": "section",
+      "label": "Applicant Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Applicant Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "job_title",
+       "label": "Position Applied For",
+       "input": "text",
+       "responsibility": "system"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Questions"
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "at_least_18",
+      "label": "Are you at least 18 years old?",
+      "options": [
+       {
+        "key": "yes",
+        "label": "Yes"
+       },
+       {
+        "key": "no",
+        "label": "No"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "why_interested",
+       "label": "Why are you interested in working for Sun Tan City?",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "uniform_services",
+       "label": "Are you willing to use our services as part of your Sun Tan City uniform? (Must agree to UV, Sunless and Spa usage to proceed with employment)",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "previous_experience",
+       "label": "Previous Work Experience",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "availability",
+       "label": "Availability",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Prescreening Assessment"
+     },
+     {
+      "kind": "note",
+      "text": "If the response to these questions best fits our business culture, goals, and if the person sounds friendly, you can then schedule an in-person interview with them or encourage them to apply at a neighboring salon if you do not have open positions."
+     },
+     {
+      "kind": "note",
+      "text": "If you do not receive quality answers to these questions (as per our pre-screening process) or the person does not seem “qualified”, you can tell them \"Thank you for your interest, I will keep you in mind for future positions we may have available.\""
+     },
+     {
+      "kind": "note",
+      "text": "Attach this completed form to the online application email and file in your “Applications” folder."
+     },
+     {
+      "kind": "signature_row",
+      "label": "Interviewer Signature",
+      "dateLabel": "Date"
+     }
+    ]
+   },
+   "variants": []
+  },
+  {
+   "key": "tanning-consultant-interview",
+   "publishedVersion": 1,
+   "documentMd5": "cd668fec7fac0e0ac5b5ef55becb08f8",
+   "variantsMd5": "d751713988987e9331980363e24189ce",
+   "name": "Tanning Consultant Interview Form",
+   "shortName": "TC Interview",
+   "description": "The in-salon interview for a Tanning Consultant. Twelve questions through service, sales, accountability, the core values and the essential job functions.",
+   "category": "hiring",
+   "layoutFamily": "interview",
+   "requiredPermission": "create_hiring_form",
+   "displayOrder": 11,
+   "revisionNote": "Published from the 03. Tanning Consultant Interview Form source document.",
+   "provenance": null,
+   "bundledPdfName": "Tanning Consultant Interview Form.pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "SUN TAN CITY",
+      "title": "Tanning Consultant Interview Form"
+     },
+     {
+      "kind": "section",
+      "label": "Applicant Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Applicant Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "interviewed_by",
+        "label": "Interviewed By",
+        "input": "text",
+        "responsibility": "manager"
+       },
+       {
+        "key": "location",
+        "label": "Salon Name",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "section",
+      "label": "Qualities to Observe Throughout Interview"
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "qualities_observed",
+      "options": [
+       {
+        "key": "outgoing",
+        "label": "Outgoing"
+       },
+       {
+        "key": "competitive",
+        "label": "Competitive"
+       },
+       {
+        "key": "likeable",
+        "label": "Likeable"
+       },
+       {
+        "key": "hard_working",
+        "label": "Hard Working"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "section",
+      "label": "Interview Questions"
+     },
+     {
+      "kind": "paragraph",
+      "text": "1. Tell me about yourself and why you’re interested in working at Sun Tan City."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "about_yourself_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "2. Can you walk me through your resume and highlight your most recent roles?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "resume_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "3. Describe your availability and any scheduling restrictions."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "availability_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "4. Describe a time you delivered excellent customer service and what made it stand out."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "customer_service_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "5. Think back to a busy day when you were helping several customers at once. How did you keep things running smoothly and make sure everyone felt taken care of?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "busy_day_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "6. This role includes recommending products and services to clients. How comfortable are you with sales, and what’s your approach?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "sales_approach_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "7. Give me an example of a time you were accountable for your results—what was the situation and outcome?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "accountability_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "8. Our company has five core values. Id like to hear about a time in your past experiences--work, school, or personal where youve shown one of these in action."
+     },
+     {
+      "kind": "reference",
+      "label": "Sun Tan City Core Values",
+      "body": [
+       "Nothing’s Impossible – We approach challenges with creativity and determination instead of excuses.",
+       "Work Hard, Have Fun – We bring energy, positivity, and joy to doing our best work.",
+       "We Speak Up – We share ideas, concerns, and feedback openly and respectfully.",
+       "Own the Outcome – We take responsibility for results, not just tasks.",
+       "Win Together – We succeed as a team, celebrating collective achievements over individual credit."
+      ]
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "core_values_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "9. Give me an example of a time when you and a teammate disagreed on how to get something done. How did you handle it, and what was the outcome?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "teammate_disagreement_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "10. Give me an example of when you faced a challenge without your manager immediately available. How did you handle it, and what was the outcome?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "manager_unavailable_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "11. What skills or experiences make you confident you’ll succeed in this role?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "skills_for_the_role_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "12. This position requires key functions such as standing for extended periods, lifting up to 25 lbs., operating a computer, and overseeing daily salon operations. Are you able to perform these essential functions, with or without reasonable accommodation?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "essential_functions_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Closing"
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "closing_checklist",
+      "options": [
+       {
+        "key": "reviewed_duties",
+        "label": "Reviewed job duties, cleaning requirements, and sales expectations"
+       },
+       {
+        "key": "reviewed_pay",
+        "label": "Reviewed pay structure and bonus potential"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "final_recommendation",
+      "label": "Final Recommendation",
+      "options": [
+       {
+        "key": "proceed",
+        "label": "Hire"
+       },
+       {
+        "key": "no_hire",
+        "label": "No Hire"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "update_in_careerplug",
+      "label": "Update In Careerplug",
+      "options": [
+       {
+        "key": "yes",
+        "label": "Yes"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     }
+    ]
+   },
+   "variants": []
+  },
+  {
+   "key": "management-interview-round-1",
+   "publishedVersion": 1,
+   "documentMd5": "01175c0d01a3c37551eb03c64840d39d",
+   "variantsMd5": "d751713988987e9331980363e24189ce",
+   "name": "First Round Management Interview Form",
+   "shortName": "Mgmt Round 1",
+   "description": "The first management interview, through leadership, sales, operations and a role play, then the salon walkthrough and job shadow.",
+   "category": "hiring",
+   "layoutFamily": "interview",
+   "requiredPermission": "create_hiring_form",
+   "displayOrder": 12,
+   "revisionNote": "Published from the 02. First Round Managment Interview Form source document.",
+   "provenance": null,
+   "bundledPdfName": "First Round Management Interview Form.pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "SUN TAN CITY",
+      "title": "Management Interview Form Round 1"
+     },
+     {
+      "kind": "section",
+      "label": "Applicant Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Applicant Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "interviewed_by",
+        "label": "Interviewed By",
+        "input": "text",
+        "responsibility": "manager"
+       },
+       {
+        "key": "location",
+        "label": "Salon Name",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "section",
+      "label": "Qualities to Observe Throughout Interview"
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "qualities_observed",
+      "options": [
+       {
+        "key": "leadership_ability",
+        "label": "Leadership ability"
+       },
+       {
+        "key": "confidence_professionalism",
+        "label": "Confidence and professionalism"
+       },
+       {
+        "key": "sales_drive_client_service",
+        "label": "Sales drive and client service focus"
+       },
+       {
+        "key": "work_ethic_flexibility",
+        "label": "Strong work ethic and flexibility"
+       },
+       {
+        "key": "management_experience",
+        "label": "Management experience"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "section",
+      "label": "Intro & Motivation"
+     },
+     {
+      "kind": "paragraph",
+      "text": "How did your professional journey lead you here, and where do you see it going next?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "journey_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "Can you walk me through your resume and highlight your most recent roles?"
+     },
+     {
+      "kind": "note",
+      "text": "Please note :- Why did you leave your last position (or why are you considering leaving your current one) and What are you hoping to find in your next role that you haven’t had before?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "resume_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "Can you share one or two accomplishments you’re most proud of in your career so far?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "accomplishments_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "Confirm Pay/Salary expectations & schedule availability:"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "pay_and_availability_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Leadership & Team Management"
+     },
+     {
+      "kind": "paragraph",
+      "text": "Describe a time you successfully built and motivated a team. What specific actions did you take?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "built_a_team_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "Tell me about a time when you had to have a difficult conversation with an employee about performance or behavior. How did you prepare, and what steps did you take to ensure it was constructive?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "difficult_conversation_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "Give me an example of when you took initiative on something important. How did you balance moving forward independently with keeping leadership informed?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "took_initiative_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "Everyone responds differently to leadership styles. What type of communication and guidance do you find most effective from a manager?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "leadership_style_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Sales & Client Service"
+     },
+     {
+      "kind": "paragraph",
+      "text": "How do you drive sales performance while maintaining excellent client service?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "drive_sales_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "What were your sales targets in your last position? How consistently did you meet or exceed them?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "sales_targets_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "Tell me about a time you turned an unhappy client into a satisfied one."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "unhappy_client_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Operational Excellence"
+     },
+     {
+      "kind": "paragraph",
+      "text": "What systems or processes have you used to manage staffing, scheduling, and labor costs?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "staffing_systems_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "This role involves hands-on work like cleaning beds and doing laundry. How do you lead by example in these tasks?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "hands_on_work_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "How do you ensure your team is consistently trained to meet both performance expectations and company compliance standards?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "team_training_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Role Play Scenario"
+     },
+     {
+      "kind": "paragraph",
+      "text": "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the salon. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "role_play_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "Why should we select you for this position?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "why_select_you_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Required Information for the Applicant"
+     },
+     {
+      "kind": "note",
+      "text": "Explain each section thoroughly and allow the applicant to ask questions."
+     },
+     {
+      "kind": "paragraph",
+      "text": "1. Job Description and Job Requirements and Duties: Have printed to review."
+     },
+     {
+      "kind": "paragraph",
+      "text": "2. Pay Structure: Explain the pay structure and the earning potential with bonuses. Let the applicant know that bonuses depend on reaching certain levels of sales performance."
+     },
+     {
+      "kind": "paragraph",
+      "text": "3. Review the Dress Code with the applicant."
+     },
+     {
+      "kind": "paragraph",
+      "text": "4. Core Values Speech: While reviewing the Core Values Speech with the candidate, ask for examples (personally or professionally) that they have demonstrated each of the 4 Core Values."
+     },
+     {
+      "kind": "paragraph",
+      "text": "5. Questions: Give the applicant a chance to ask any questions. Ask the applicant if they understand the job requirements, if they can perform the job duties required and if they see themselves able to embody our Core Values."
+     },
+     {
+      "kind": "paragraph",
+      "text": "6. Notification: Notify the applicant that we will contact them if we choose to offer them the position and provide them with a timeline of hiring decisions to be made."
+     },
+     {
+      "kind": "note",
+      "text": "If interview goes well, proceed to next step and give applicant a walkthrough of the salon. If you wish to pass on this applicant, stop here."
+     },
+     {
+      "kind": "section",
+      "label": "Qualities to Observe Throughout Interview & Walkthrough"
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "walkthrough_qualities_observed",
+      "options": [
+       {
+        "key": "strategic_leadership",
+        "label": "Strategic leadership ability"
+       },
+       {
+        "key": "coaching_development",
+        "label": "Coaching & development skills"
+       },
+       {
+        "key": "operational_compliance",
+        "label": "Operational & compliance knowledge"
+       },
+       {
+        "key": "sales_revenue_focus",
+        "label": "Sales & revenue focus"
+       },
+       {
+        "key": "client_service_leadership",
+        "label": "Client service leadership"
+       },
+       {
+        "key": "cultural_alignment",
+        "label": "Cultural alignment"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "section",
+      "label": "Store Walkthrough & Job Shadow"
+     },
+     {
+      "kind": "note",
+      "text": "Observe candidate during a guided walkthrough/job shadow in an operating salon. Evaluate: cleanliness, safety, compliance, staff interaction, and sales focus."
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "walkthrough_observed",
+      "label": "✔ / X",
+      "options": [
+       {
+        "key": "cleanliness",
+        "label": "Cleanliness & organization"
+       },
+       {
+        "key": "equipment_safety",
+        "label": "Equipment maintenance & safety"
+       },
+       {
+        "key": "client_service",
+        "label": "Client service interactions"
+       },
+       {
+        "key": "staff_engagement",
+        "label": "Staff engagement & leadership presence"
+       },
+       {
+        "key": "sales_focus",
+        "label": "Sales focus & promotions"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "walkthrough_cleanliness",
+       "label": "Cleanliness & organization",
+       "input": "long_text",
+       "responsibility": "manager",
+       "help": "Key Notes"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "walkthrough_equipment_safety",
+       "label": "Equipment maintenance & safety",
+       "input": "long_text",
+       "responsibility": "manager",
+       "help": "Key Notes"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "walkthrough_client_service",
+       "label": "Client service interactions",
+       "input": "long_text",
+       "responsibility": "manager",
+       "help": "Key Notes"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "walkthrough_staff_engagement",
+       "label": "Staff engagement & leadership presence",
+       "input": "long_text",
+       "responsibility": "manager",
+       "help": "Key Notes"
+      }
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "walkthrough_sales_focus",
+       "label": "Sales focus & promotions",
+       "input": "long_text",
+       "responsibility": "manager",
+       "help": "Key Notes"
+      }
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "final_recommendation",
+      "label": "Final Recommendation",
+      "options": [
+       {
+        "key": "proceed",
+        "label": "Proceed to 2nd Round IV"
+       },
+       {
+        "key": "no_hire",
+        "label": "No Hire"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "update_in_careerplug",
+      "label": "Update In Careerplug",
+      "options": [
+       {
+        "key": "yes",
+        "label": "Yes"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     }
+    ]
+   },
+   "variants": []
+  },
+  {
+   "key": "management-interview-round-2",
+   "publishedVersion": 1,
+   "documentMd5": "8111a243282b1193c3343842addbc285",
+   "variantsMd5": "d751713988987e9331980363e24189ce",
+   "name": "Second Round Management Interview Form",
+   "shortName": "Mgmt Round 2",
+   "description": "The second management interview and job preview. Strategic thinking, compliance, two role plays and the 30-60-90 day training plan.",
+   "category": "hiring",
+   "layoutFamily": "interview",
+   "requiredPermission": "create_hiring_form",
+   "displayOrder": 13,
+   "revisionNote": "Published from the 03. Second Round Managment Interview Form source document.",
+   "provenance": null,
+   "bundledPdfName": "Second Round Management Interview Form.pdf",
+   "document": {
+    "paper": "letter",
+    "blocks": [
+     {
+      "kind": "letterhead",
+      "brand": "SUN TAN CITY",
+      "title": "Second Round Management Interview and Job Preview"
+     },
+     {
+      "kind": "section",
+      "label": "Applicant Information"
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "employee_name",
+        "label": "Applicant Name",
+        "input": "text",
+        "responsibility": "system"
+       },
+       {
+        "key": "form_date",
+        "label": "Date",
+        "input": "date",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "field_row",
+      "fields": [
+       {
+        "key": "interviewed_by",
+        "label": "Interviewed By",
+        "input": "text",
+        "responsibility": "manager"
+       },
+       {
+        "key": "location",
+        "label": "Salon Name",
+        "input": "text",
+        "responsibility": "system"
+       }
+      ]
+     },
+     {
+      "kind": "section",
+      "label": "Intro and Overview"
+     },
+     {
+      "kind": "paragraph",
+      "text": "After going through the interview process so far, how would you describe what this job is really about?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "what_the_job_is_about_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "Based on what you know now, what skills or qualities do you think will matter most in this role?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "skills_that_matter_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "Confirm Salary Expectations and Availability:"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "salary_and_availability_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Leadership & Strategic Thinking"
+     },
+     {
+      "kind": "paragraph",
+      "text": "Describe your approach to setting and communicating performance goals for your team."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "performance_goals_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "How do you identify and develop future leaders within your salon team?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "future_leaders_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Operational Management & Compliance"
+     },
+     {
+      "kind": "paragraph",
+      "text": "How do you ensure all team members follow company policies, procedures, and safety guidelines?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "policy_compliance_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "If you were given direction as a Salon Director to reduce expenses, what would be the first three areas you would focus on, and why?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "reduce_expenses_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "Tell me about a time you used performance results or key metrics to adjust your approach and improve outcomes."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "metrics_adjustment_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Role Play Scenarios"
+     },
+     {
+      "kind": "paragraph",
+      "text": "Scenario 1: Let’s pretend that during your walkthrough in the salon, a staff member fails to greet a client promptly. Demonstrate how you would address this in real-time."
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "scenario_one_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "Scenario 2: Customer visits have dropped 20% over the past month and lotions and memberships sales are at their lowest in six months. One long-time team member is resistant to promoting add-ons, saying, “Customers don’t want to be pushed.” What are your next steps?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "scenario_two_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "section",
+      "label": "Training & Development"
+     },
+     {
+      "kind": "paragraph",
+      "text": "How would you create a 30–60–90 day training plan for a new Assistant Salon Director or Tanning Consultant?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "training_plan_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "paragraph",
+      "text": "How do you follow up to ensure training is being applied consistently?"
+     },
+     {
+      "kind": "field",
+      "field": {
+       "key": "training_follow_up_notes",
+       "label": "Notes",
+       "input": "long_text",
+       "responsibility": "manager"
+      }
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "final_recommendation",
+      "label": "Final Recommendation",
+      "options": [
+       {
+        "key": "proceed",
+        "label": "Hire"
+       },
+       {
+        "key": "no_hire",
+        "label": "No Hire"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     },
+     {
+      "kind": "checkbox_group",
+      "key": "update_in_careerplug",
+      "label": "Update In Careerplug",
+      "options": [
+       {
+        "key": "yes",
+        "label": "Yes"
+       }
+      ],
+      "responsibility": "manager",
+      "columns": 2
+     }
+    ]
+   },
+   "variants": []
+  }
+ ]
+}

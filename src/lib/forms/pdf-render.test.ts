@@ -1,11 +1,7 @@
 import { extractText, getDocumentProxy } from "unpdf";
 
 import { answersBeside } from "@/test/pdf-ticks";
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("@/config/company/forms", async () =>
-  (await import("@/test/forms/fixture-forms")).fixtureFormsModule(),
-);
+import { describe, expect, it } from "vitest";
 
 import {
   parseFormDocument,
@@ -13,12 +9,7 @@ import {
   type FormDocument,
   type FormVariant,
 } from "./document";
-import { TEMPLATE_SEEDS } from "./library";
-import {
-  FIXTURE_REVIEW_VARIANTS,
-  FIXTURE_TRAINEE_DESCRIPTION,
-  FIXTURE_YES_NO_QUESTION,
-} from "@/test/forms/fixture-forms";
+import { TEMPLATE_SEEDS, DMIT_VARIANTS } from "./library";
 
 import {
   asciiOnly,
@@ -41,9 +32,6 @@ import { PAGE, SIZE, pageLayout } from "./paper";
  * The two that matter most are negative: no editor furniture on the page, and
  * nothing on a signature line. Those are the ways a form stops being a usable
  * business record.
- *
- * The library is the FIXTURE registry (`src/test/forms/fixture-forms.ts`), so
- * every block kind the engine prints is measured, on every layout family.
  */
 
 const seed = (key: string) => {
@@ -53,9 +41,9 @@ const seed = (key: string) => {
 };
 
 const META: RenderMeta = {
-  templateName: "Fixture Coaching Note",
+  templateName: "Coaching Form",
   templateVersion: 1,
-  employeeName: "Pat Example",
+  employeeName: "Jordan Vance",
   formDate: "2026-09-04",
   locationName: "Invented Store Alpha",
   reference: "form-0001",
@@ -68,21 +56,21 @@ async function readBack(bytes: Uint8Array) {
   return { text, totalPages };
 }
 
-describe("a rendered coaching note", () => {
-  const document = parseFormDocument(seed("fixture-coaching").document);
+describe("a rendered coaching form", () => {
+  const document = parseFormDocument(seed("coaching").document);
   const values = {
     values: {
-      employee_name: "Pat Example",
+      employee_name: "Jordan Vance",
       form_date: "2026-09-04",
-      job_title: "Team Member",
+      job_title: "Tanning Consultant",
       location: "Invented Store Alpha",
       coaching_details:
-        "Observed three guests who were not offered a product demonstration. Agreed to demonstrate one product to every guest this week.",
+        "Observed three tours where the membership options were not offered. Agreed to shadow two tours daily this week.",
       other_topic: "",
     },
     checked: {
-      coaching_type: ["skill_building"],
-      coaching_topics: ["greeting_guests", "product_demonstrations"],
+      coaching_type: ["underperformance"],
+      coaching_topics: ["store_tours", "engaging_conversation"],
     },
   };
 
@@ -97,14 +85,15 @@ describe("a rendered coaching note", () => {
     const bytes = renderFormPdf(document, null, values, META);
     const { text } = await readBack(bytes);
 
-    // The document itself. The masthead is title case, which is how its
-    // version stores it.
+    // The document itself. The Coaching Form's masthead is title case, which
+    // is how its version stores it.
+    // Approved branding change: the company name in plain text.
     expect(text).toContain("Buff City Soap");
-    expect(text).toContain("Fixture Coaching Note");
-    expect(text).toContain("Team Member Information");
+    expect(text).toContain("Coaching Form");
+    expect(text).toContain("Employee Information");
     expect(text).toContain("Type of Coaching");
-    expect(text).toContain("Pat Example");
-    expect(text).toContain("not offered a product demonstration");
+    expect(text).toContain("Jordan Vance");
+    expect(text).toContain("membership options were not offered");
 
     // THE EDITOR'S FURNITURE MUST NOT BE THERE. These are the chips and copy an
     // administrator sees on screen; on a signed HR record they would be noise
@@ -113,7 +102,6 @@ describe("a rendered coaching note", () => {
       "AI FILLS",
       "FILLED BY HAND",
       "Ask Bubbles fills",
-      "Ask Bubbles drafts",
       "Edit template",
       "STANDARD FORM",
       "All templates",
@@ -129,10 +117,10 @@ describe("a rendered coaching note", () => {
     const { text } = await readBack(bytes);
     // Every option prints, ticked or not — a checkbox list with the unticked
     // options removed is not the same form.
-    expect(text).toContain("Skill Building");
-    expect(text).toContain("Recognition");
-    expect(text).toContain("Greeting Guests");
-    expect(text).toContain("Restocking Shelves");
+    expect(text).toContain("Underperformance");
+    expect(text).toContain("Retraining");
+    expect(text).toContain("Store Tours");
+    expect(text).toContain("New Client Documents");
   });
 
   it("leaves the signature lines blank, with nothing to fill them", async () => {
@@ -142,7 +130,7 @@ describe("a rendered coaching note", () => {
     expect(text).toContain("Supervisor Signature");
     // The captions are there; the employee's name never appears ON one, because
     // a signature block carries no field key at all.
-    expect(text).not.toContain("Pat Example Employee Signature");
+    expect(text).not.toContain("Jordan Vance Employee Signature");
   });
 
   it("footers every page with the template version and the page count", async () => {
@@ -160,32 +148,32 @@ describe("a rendered coaching note", () => {
   });
 });
 
-describe("the multi-page role review", () => {
-  const document = parseFormDocument(seed("fixture-role-review").document);
+describe("the six-page DMIT EPP", () => {
+  const document = parseFormDocument(seed("dmit-epp-tsd").document);
 
   it("prints the reviewed position for the chosen variant, and only that one", async () => {
-    const lead = renderFormPdf(
+    const tsd = renderFormPdf(
       document,
-      FIXTURE_REVIEW_VARIANTS[0],
+      DMIT_VARIANTS[0],
       { values: {}, checked: {} },
-      { ...META, templateName: "Fixture Role Review — SL" },
+      { ...META, templateName: "DMIT EPP — TSD Review" },
     );
-    const { text } = await readBack(lead);
+    const { text } = await readBack(tsd);
 
-    expect(text).toContain("Store Lead");
-    // The trainee reading's own description must not appear on a lead review.
-    expect(text).not.toContain(FIXTURE_TRAINEE_DESCRIPTION);
+    expect(text).toContain("District Manager");
+    // The DMIT reading's own description must not appear on a TSD review.
+    expect(text).not.toContain("District Manager in Training is learning");
   });
 
   it("resolves every role placeholder", async () => {
-    const bytes = renderFormPdf(document, FIXTURE_REVIEW_VARIANTS[1], { values: {}, checked: {} }, META);
+    const bytes = renderFormPdf(document, DMIT_VARIANTS[1], { values: {}, checked: {} }, META);
     const { text } = await readBack(bytes);
     expect(text).not.toContain("{{role}}");
     expect(text).not.toContain("{{roleAbbr}}");
   });
 
   it("keeps its explicit page breaks and reaches the re-evaluation", async () => {
-    const bytes = renderFormPdf(document, FIXTURE_REVIEW_VARIANTS[0], { values: {}, checked: {} }, META);
+    const bytes = renderFormPdf(document, DMIT_VARIANTS[0], { values: {}, checked: {} }, META);
     const { text, totalPages } = await readBack(bytes);
     expect(totalPages).toBeGreaterThanOrEqual(3);
     expect(text).toContain("Follow-up");
@@ -196,7 +184,7 @@ describe("the multi-page role review", () => {
   });
 
   it("prints the hand-filled section as empty ruled lines", async () => {
-    const bytes = renderFormPdf(document, FIXTURE_REVIEW_VARIANTS[0], { values: {}, checked: {} }, META);
+    const bytes = renderFormPdf(document, DMIT_VARIANTS[0], { values: {}, checked: {} }, META);
     const { text } = await readBack(bytes);
     expect(text).toContain("What are your overall top three strengths?");
     expect(text).toContain("This section is completed by hand");
@@ -206,7 +194,7 @@ describe("the multi-page role review", () => {
 /**
  * EVERY LINE OF TYPE, MEASURED AGAINST THE PAPER IT IS DRAWN ON.
  *
- * The bug this guards was reported off a printed corrective record: the last words of a
+ * The bug this guards was reported off a printed DPOA: the last words of a
  * wrapped sentence sat past the end of the ruled line, and on the longer
  * paragraphs past the right margin of the page. It was invisible to every test
  * here, because a PDF text extractor returns the words whether or not they are
@@ -306,9 +294,9 @@ const CLEAR_ABOVE = 0.6;
 
 /** A value long enough to wrap several times in every column on every form. */
 const LONG_ANSWER =
-  "Team members are expected to greet every guest within a minute of arrival, offer " +
-  "a product to try, and keep the shelves faced and stocked for the entire scheduled " +
-  "shift, including any time spent at the register with guests and coworkers.";
+  "Employees are expected to be in appropriate, professional salon attire that " +
+  "meets dress code standards for the entire scheduled shift, including any time " +
+  "spent at the front counter with clients and coworkers.";
 
 /** Every field on a document filled with that value, and every box ticked. */
 function filledToTheEdges(document: ReturnType<typeof parseFormDocument>, variant: FormVariant | null) {
@@ -508,7 +496,7 @@ describe("what must not be split over a page break", () => {
 });
 
 describe("every template renders", () => {
-  it("produces a readable PDF for every template, empty and filled", async () => {
+  it("produces a readable PDF for all nine, empty and filled", async () => {
     for (const template of TEMPLATE_SEEDS) {
       const document = parseFormDocument(template.document);
       const variant = template.variants[0] ?? null;
@@ -566,8 +554,8 @@ describe("text layout", () => {
      * the column it was given.
      */
     const sentence =
-      "Team members are expected to greet every guest within a minute of arrival " +
-      "and keep the shelves faced and stocked for the entire scheduled shift.";
+      "Employees are expected to be in appropriate, professional salon attire " +
+      "that meets dress code standards for the entire scheduled shift.";
     for (const line of wrapText(sentence, 504, 10, "bold")) {
       expect(textWidth(line, 10, "bold")).toBeLessThanOrEqual(504);
     }
@@ -582,42 +570,42 @@ describe("text layout", () => {
 
 describe("naming the download", () => {
   it("names it after the form, the employee and the date", () => {
-    expect(pdfFileName(META)).toBe("Fixture-Coaching-Note-Pat-Example-2026-09-04.pdf");
+    expect(pdfFileName(META)).toBe("Coaching-Form-Jordan-Vance-2026-09-04.pdf");
   });
 
   it("takes the title from the document, resolved for the variant", () => {
-    const document = parseFormDocument(seed("fixture-role-review").document);
-    expect(documentTitle(document, seed("fixture-role-review").variants[1])).toBe(
-      "Fixture Role Review - LIT",
+    const document = parseFormDocument(seed("sdit-epp").document);
+    expect(documentTitle(document, seed("sdit-epp").variants[0])).toBe(
+      "Employee Performance Plan - SDIT",
     );
   });
 });
 
 /*
- * A NAME TYPED IN ANY CASE, OR A FIRST NAME ALONE, PRINTS. Chat creates a
- * corrective record for "paulyne" or "PAULYNE CO"; the printed record carries
- * the name exactly as it was given.
+ * A NAME TYPED IN ANY CASE, OR A FIRST NAME ALONE, PRINTS. Chat now creates a
+ * Corrective Action Form for "marlowe" or "MARLOWE CO" where it used to refuse
+ * to; the printed record carries the name exactly as it was given.
  */
-describe("a corrective notice for a name typed without title case", () => {
-  const document = parseFormDocument(seed("fixture-corrective").document);
+describe("a corrective action form for a name typed without title case", () => {
+  const document = parseFormDocument(seed("dpoa").document);
 
-  it.each(["paulyne", "PAULYNE CO", "test test"])("renders and names the download: %s", async (name) => {
-    const meta = { ...META, templateName: "Fixture Corrective Notice", employeeName: name, status: "draft" as const };
+  it.each(["marlowe", "MARLOWE CO", "test test"])("renders and names the download: %s", async (name) => {
+    const meta = { ...META, templateName: "Corrective Action Form", employeeName: name, status: "draft" as const };
     const bytes = renderFormPdf(document, null, { values: { employee_name: name }, checked: {} }, meta);
     const { text, totalPages } = await readBack(bytes);
 
     expect(totalPages).toBeGreaterThanOrEqual(1);
     expect(text).toContain(name);
-    expect(pdfFileName(meta)).toBe(`Fixture-Corrective-Notice-${name.replace(/ /g, "-")}-2026-09-04.pdf`);
+    expect(pdfFileName(meta)).toBe(`Corrective-Action-Form-${name.replace(/ /g, "-")}-2026-09-04.pdf`);
   });
 });
 
 describe("a checkbox group's question prints above its boxes", () => {
   it("prints every labelled group's label on every template", async () => {
     /*
-     * The renderer drew the boxes and never the question, so a form's Yes/No
-     * rows printed as bare "Yes  No" with nothing saying what was being
-     * answered. Found in hands-on QA of the generated PDF.
+     * The renderer drew the boxes and never the question, so the exit form's
+     * six Yes/No rows printed as bare "Yes  No" with nothing saying what was
+     * being answered. Found in hands-on QA of the generated PDF.
      */
     for (const template of TEMPLATE_SEEDS) {
       const document = parseFormDocument(template.document);
@@ -637,57 +625,71 @@ describe("a checkbox group's question prints above its boxes", () => {
 });
 
 describe("a checkbox group's question prints, on every form family", () => {
-  const render = (key: string) =>
-    renderFormPdf(parseFormDocument(seed(key).document), null, { values: {}, checked: {} }, {
-      ...META,
-      templateName: seed(key).name,
-    });
-
-  it("prints an interview guide's yes/no and recommendation questions", async () => {
-    const interview = (await readBack(render("fixture-interview"))).text;
-    expect(interview).toContain("Is the applicant of working age?");
-    expect(interview).toContain("Final Recommendation");
+  it("prints the hiring forms' yes/no and recommendation questions, and no mangled tick", async () => {
+    const render = (key: string) =>
+      renderFormPdf(parseFormDocument(seed(key).document), null, { values: {}, checked: {} }, {
+        ...META,
+        templateName: seed(key).name,
+      });
+    const prescreen = (await readBack(render("prescreen-phone-interview"))).text;
+    expect(prescreen).toContain("Are you at least 18 years old?");
+    const round1 = (await readBack(render("management-interview-round-1"))).text;
+    expect(round1).toContain("Final Recommendation");
+    expect(round1).toContain("Update In Careerplug");
+    expect(round1).toContain("Tick / X");
+    expect(round1).not.toContain("? / X");
   });
 
-  it("prints every one of a separation record's yes/no questions", async () => {
-    const text = (await readBack(render("fixture-separation"))).text;
+  it("prints all six of the exit form's yes/no questions", async () => {
+    const text = (
+      await readBack(
+        renderFormPdf(parseFormDocument(seed("resignation-exit").document), null, { values: {}, checked: {} }, {
+          ...META,
+          templateName: seed("resignation-exit").name,
+        }),
+      )
+    ).text;
     for (const question of [
       "All store items were returned",
-      "Is this team member eligible for rehire?",
+      "Is Payroll Deduction applicable? *",
+      "*Do they forfeit their bonus?",
+      "*Are they to be dropped to minimum wage?",
+      "Written notice attached?",
+      "Is this employee eligible for rehire?",
     ]) {
       expect(text, question).toContain(question);
     }
   });
 
   it("leaves a group with no question exactly as it was", async () => {
-    const text = (await readBack(render("fixture-coaching"))).text;
-    expect(text).toContain("Skill Building");
+    const text = (await readBack(renderFormPdf(parseFormDocument(seed("coaching").document), null, { values: {}, checked: {} }, META))).text;
+    expect(text).toContain("Underperformance");
   });
 });
 
-describe("a single-answer Yes / No question", () => {
-  const corrective = seed("fixture-corrective");
+describe("the Corrective Action Form's payroll-deduct question", () => {
+  const corrective = seed("dpoa");
   const document = parseFormDocument(corrective.document);
   const meta = { ...META, templateName: corrective.name, status: "draft" as const };
   const render = (checked: Record<string, string[]>) =>
-    renderFormPdf(document, null, { values: { employee_name: "Casey Sample" }, checked }, meta);
-  const question = FIXTURE_YES_NO_QUESTION;
+    renderFormPdf(document, null, { values: { employee_name: "Dana Moss" }, checked }, meta);
+  const question = "Is payroll deduct applicable?";
 
-  it("prints the question, in the form's own words, with both answers", async () => {
+  it("prints the question, in Operations' words, with both answers", async () => {
     const { text } = await readBack(render({}));
     expect(text).toContain(question);
     expect(answersBeside(render({}), question, ["Yes", "No"]).map((entry) => entry.label)).toEqual(["Yes", "No"]);
   });
 
   it("ticks Yes, and only Yes, when the answer is yes", () => {
-    expect(answersBeside(render({ retraining_required: ["yes"] }), question, ["Yes", "No"])).toEqual([
+    expect(answersBeside(render({ payroll_deduct: ["yes"] }), question, ["Yes", "No"])).toEqual([
       { label: "Yes", ticked: true },
       { label: "No", ticked: false },
     ]);
   });
 
   it("ticks No, and only No, when the answer is no", () => {
-    expect(answersBeside(render({ retraining_required: ["no"] }), question, ["Yes", "No"])).toEqual([
+    expect(answersBeside(render({ payroll_deduct: ["no"] }), question, ["Yes", "No"])).toEqual([
       { label: "Yes", ticked: false },
       { label: "No", ticked: true },
     ]);
@@ -701,8 +703,8 @@ describe("a single-answer Yes / No question", () => {
   });
 
   it("follows the value it is given, so regenerating after a change prints the change", () => {
-    const before = answersBeside(render({ retraining_required: ["yes"] }), question, ["Yes", "No"]);
-    const after = answersBeside(render({ retraining_required: ["no"] }), question, ["Yes", "No"]);
+    const before = answersBeside(render({ payroll_deduct: ["yes"] }), question, ["Yes", "No"]);
+    const after = answersBeside(render({ payroll_deduct: ["no"] }), question, ["Yes", "No"]);
     expect(before.find((entry) => entry.ticked)?.label).toBe("Yes");
     expect(after.find((entry) => entry.ticked)?.label).toBe("No");
   });

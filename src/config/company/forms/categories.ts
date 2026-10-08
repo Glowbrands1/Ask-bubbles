@@ -8,15 +8,32 @@
  */
 export const COMPANY_FORM_CATEGORIES = [
   {
-    key: "examples",
-    label: "Examples — not approved Buff forms",
+    key: "hr_performance",
+    label: "HR & Performance Forms",
     blurb:
-      "Placeholder forms that exercise the forms workflow. Not Buff City Soap policy; replace before rollout.",
+      "Coaching, corrective action and performance plans for people already on the team.",
+  },
+  {
+    key: "separation",
+    label: "Separation & Exit Forms",
+    blurb: "Resignation and exit paperwork for an employee who is leaving the team.",
+  },
+  {
+    key: "employment_changes",
+    label: "Employment Change Forms",
+    blurb:
+      "Demotions and position transfers for people already on the team.",
+  },
+  {
+    key: "hiring",
+    label: "Hiring & Interview Forms",
+    blurb:
+      "Prescreening and interview forms, used while a candidate is still a candidate.",
   },
 ] as const;
 
 /** Where a template with no recorded category is shown. */
-export const DEFAULT_COMPANY_FORM_CATEGORY = "examples";
+export const DEFAULT_COMPANY_FORM_CATEGORY = "hr_performance";
 
 /**
  * Layout families a FORM may declare. A family is how the engine groups
@@ -24,24 +41,28 @@ export const DEFAULT_COMPANY_FORM_CATEGORY = "examples";
  * Mirrored by the `form_layout_family` enum.
  */
 export const FORM_LAYOUT_FAMILIES = [
-  "standard",
+  // The migrated HR library's families (database enum values).
   "coaching",
   "corrective",
-  "review",
+  "epp",
+  "dmit_epp",
   "interview",
+  "exit",
+  // This deployment's original generic families, kept for existing rows.
+  "standard",
+  "review",
   "separation",
 ] as const;
 
-/**
- * How the template library names each family. Keyed by the family union, so a
- * family added above without a label here fails the type check.
- */
 export const FORM_LAYOUT_FAMILY_LABEL: Readonly<Record<(typeof FORM_LAYOUT_FAMILIES)[number], string>> = {
-  standard: "Standard",
   coaching: "Coaching",
   corrective: "Corrective",
-  review: "Review",
+  epp: "EPP",
+  dmit_epp: "DMIT EPP",
   interview: "Interview",
+  exit: "Exit",
+  standard: "Standard",
+  review: "Review",
   separation: "Separation",
 };
 
@@ -49,4 +70,7 @@ export const FORM_LAYOUT_FAMILY_LABEL: Readonly<Record<(typeof FORM_LAYOUT_FAMIL
  * Families whose filed instances need an extra permission to READ, on top of
  * the ordinary register permission. Empty: no Buff form restricts reading yet.
  */
-export const FORM_FAMILY_READ_PERMISSIONS: Readonly<Record<string, string>> = {};
+export const FORM_FAMILY_READ_PERMISSIONS: Readonly<Record<string, string>> = {
+  // An exit record carries payroll, rehire and termination answers.
+  exit: "create_exit_form",
+};

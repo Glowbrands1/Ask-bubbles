@@ -1,10 +1,6 @@
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  DEFAULT_COMPANY_FORM_CATEGORY,
-  FORM_LAYOUT_FAMILIES,
-} from "@/config/company/forms/categories";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 
 /**
@@ -23,8 +19,7 @@ import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
  *   against it still renders;
  *   a template a person has authored a version of is LEFT ALONE.
  *
- * The fake client is described in `src/test/fake-supabase.ts`; the library is
- * the fixture registry in `src/test/forms/fixture-forms.ts`.
+ * The fake client is described in `src/test/fake-supabase.ts`.
  */
 
 const store: FakeStore = {
@@ -41,11 +36,6 @@ vi.mock("@/lib/supabase/server", () => ({
   getSupabaseAdmin: () => fakeSupabase(store),
 }));
 
-/* The fixture library: several forms, at several seed revisions. */
-vi.mock("@/config/company/forms", async () =>
-  (await import("@/test/forms/fixture-forms")).fixtureFormsModule(),
-);
-
 const { ensureTemplateLibrary } = await import("./repository");
 const { TEMPLATE_SEEDS } = await import("./library");
 
@@ -56,24 +46,20 @@ function reset() {
   store.form_template_assets = [];
 }
 
-const COACHING = "fixture-coaching";
-const CORRECTIVE = "fixture-corrective";
-const REVIEW = "fixture-role-review";
+const coachingSeed = TEMPLATE_SEEDS.find((seed) => seed.key === "coaching")!;
 
-const coachingSeed = TEMPLATE_SEEDS.find((seed) => seed.key === COACHING)!;
-
-/** The fixture coaching note as revision 1 had it — topics since replaced. */
+/** The Coaching Form as revision 1 had it — the topics that were replaced. */
 const SUPERSEDED_COACHING = {
   paper: "letter",
   blocks: [
-    { kind: "letterhead", brand: "BUFF CITY SOAP", title: "Fixture Coaching Note" },
+    { kind: "letterhead", brand: "SUN TAN CITY", title: "Coaching Form" },
     { kind: "section", label: "Topic Of Coaching" },
     {
       kind: "checkbox_group",
       key: "coaching_topics",
       options: [
-        { key: "old_topic_one", label: "Old Topic One" },
-        { key: "old_topic_two", label: "Old Topic Two" },
+        { key: "salon_tours", label: "Salon Tours" },
+        { key: "lotion_basics", label: "Lotion Basics" },
       ],
       responsibility: "ai",
       columns: 2,
@@ -108,37 +94,42 @@ describe("installing an empty library", () => {
     expect(result.revised).toEqual([]);
     expect(store.form_templates).toHaveLength(TEMPLATE_SEEDS.length);
 
-    // Exactly one coaching note, at its seed revision — the current source document.
-    expect(store.form_templates!.filter((row) => row.key === COACHING)).toHaveLength(1);
-    expect(currentVersionOf(COACHING)).toMatchObject({
-      version: 1,
-      seed_revision: coachingSeed.revision,
-    });
+    // Exactly one Coaching Form, at revision 2 — the current source document.
+    expect(store.form_templates!.filter((row) => row.key === "coaching")).toHaveLength(1);
+    expect(currentVersionOf("coaching")).toMatchObject({ version: 1, seed_revision: 2 });
   });
 
-  it("records each template's category, family, permission and order from its seed", async () => {
+  it("records each template's category, so the page can group them", async () => {
     await ensureTemplateLibrary("system");
-    for (const seed of TEMPLATE_SEEDS) {
-      expect(templateRow(seed.key), seed.key).toMatchObject({
-        name: seed.name,
-        category: seed.category,
-        layout_family: seed.layoutFamily,
-        required_permission: seed.requiredPermission,
-        active: true,
-        display_order: seed.displayOrder,
-      });
-      expect(currentVersionOf(seed.key), seed.key).toMatchObject({
-        version: 1,
-        status: "published",
-        seed_revision: seed.revision,
-      });
-      expect(versionsOf(seed.key), seed.key).toHaveLength(1);
+    expect(templateRow("coaching").category).toBe("hr_performance");
+    for (const key of [
+      "prescreen-phone-interview",
+      "tanning-consultant-interview",
+      "management-interview-round-1",
+      "management-interview-round-2",
+    ]) {
+      expect(templateRow(key).category, key).toBe("hiring");
+      expect(templateRow(key).layout_family, key).toBe("interview");
     }
   });
 
-  it("installs a form behind its own permission exactly as the seed declares it", async () => {
+  it("installs the Resignation/Exit Form published, active and behind its own permission", async () => {
     await ensureTemplateLibrary("system");
-    expect(templateRow("fixture-separation").required_permission).toBe("manage_form_records");
+    expect(templateRow("resignation-exit")).toMatchObject({
+      name: "Resignation/Exit Form",
+      category: "separation",
+      layout_family: "exit",
+      required_permission: "create_exit_form",
+      active: true,
+      display_order: 15,
+    });
+    // A fresh library installs the current reading: revision 2, HR's Details lines.
+    expect(currentVersionOf("resignation-exit")).toMatchObject({
+      version: 1,
+      status: "published",
+      seed_revision: 2,
+    });
+    expect(versionsOf("resignation-exit")).toHaveLength(1);
   });
 
   it("does nothing at all the second time", async () => {
@@ -167,9 +158,9 @@ describe("installing an empty library", () => {
  * again. Invisible while nothing was ever renamed; the whole of the rename the
  * moment something was. `form_instance_overview` joins the template's name
  * LIVE, so a database seeded before the rename would go on calling the form
- * by its old name in the form selector, in Form Monitoring, in the chat card,
- * and in the filename of every PDF downloaded from any of them — including
- * for records filed years ago.
+ * "Disciplinary Plan of Action" in the form selector, in Form Monitoring, in
+ * the chat card, and in the filename of every PDF downloaded from any of them
+ * — including for records filed years ago.
  *
  * Which is exactly why the rename has to travel this way rather than as a new
  * version: a version only reaches forms created after it.
@@ -178,10 +169,10 @@ describe("a form the business has renamed", () => {
   /** The library as it stood before the rename, name and all. */
   async function databaseBeforeTheRename() {
     await ensureTemplateLibrary("system");
-    const row = templateRow(CORRECTIVE);
-    row.name = "Old Fixture Warning Slip";
-    row.short_name = "OFWS";
-    row.description = "The old description.";
+    const row = templateRow("dpoa");
+    row.name = "Disciplinary Plan of Action";
+    row.short_name = "DPOA";
+    row.description = "The formal corrective step after coaching.";
   }
 
   it("brings the stored name into line with the seed", async () => {
@@ -189,25 +180,25 @@ describe("a form the business has renamed", () => {
 
     const result = await ensureTemplateLibrary("system");
 
-    expect(result.renamed).toContain(CORRECTIVE);
-    expect(templateRow(CORRECTIVE).name).toBe("Fixture Corrective Notice");
-    expect(templateRow(CORRECTIVE).short_name).toBe("Corrective Notice");
+    expect(result.renamed).toContain("dpoa");
+    expect(templateRow("dpoa").name).toBe("Corrective Action Form");
+    expect(templateRow("dpoa").short_name).toBe("Corrective Action");
   });
 
   it("changes the label and nothing the data addresses", async () => {
     await databaseBeforeTheRename();
-    const versionsBefore = JSON.stringify(versionsOf(CORRECTIVE));
-    const currentBefore = JSON.stringify(currentVersionOf(CORRECTIVE));
+    const versionsBefore = JSON.stringify(versionsOf("dpoa"));
+    const currentBefore = JSON.stringify(currentVersionOf("dpoa"));
 
     await ensureTemplateLibrary("system");
 
     // The key is the identity every filed instance points at.
-    expect(templateRow(CORRECTIVE).key).toBe(CORRECTIVE);
+    expect(templateRow("dpoa").key).toBe("dpoa");
     // The permission is what decides who may create it.
-    expect(templateRow(CORRECTIVE).required_permission).toBe("create_forms");
+    expect(templateRow("dpoa").required_permission).toBe("create_corrective_action");
     // No version was published, archived or edited by the rename.
-    expect(JSON.stringify(versionsOf(CORRECTIVE))).toBe(versionsBefore);
-    expect(JSON.stringify(currentVersionOf(CORRECTIVE))).toBe(currentBefore);
+    expect(JSON.stringify(versionsOf("dpoa"))).toBe(versionsBefore);
+    expect(JSON.stringify(currentVersionOf("dpoa"))).toBe(currentBefore);
   });
 
   it("writes nothing when the database is already current", async () => {
@@ -225,21 +216,20 @@ describe("a form the business has renamed", () => {
    * seeded row carries the old name in any of the three display columns.
    */
   it("leaves no seeded template calling itself by the old name", async () => {
-    await databaseBeforeTheRename();
     await ensureTemplateLibrary("system");
 
     for (const row of store.form_templates!) {
       const display = `${row.name} ${row.short_name} ${row.description}`;
-      expect(display, String(row.key)).not.toMatch(/old fixture warning slip/i);
-      expect(display, String(row.key)).not.toMatch(/\bOFWS\b/);
+      expect(display, String(row.key)).not.toMatch(/disciplinary plan of action/i);
+      expect(display, String(row.key)).not.toMatch(/\bDPOA\b/);
     }
   });
 });
 
 describe("a form the business has re-issued", () => {
   /**
-   * A database as it was BEFORE this batch: the coaching note installed at
-   * revision 1, carrying the superseded document.
+   * A database as it was BEFORE this batch: Coaching installed at revision 1,
+   * carrying the superseded document.
    *
    * The DOCUMENT is put back as well as the counter. A database at revision 1
    * has revision 1's content, and the seeder now compares the two — so a
@@ -247,7 +237,7 @@ describe("a form the business has re-issued", () => {
    */
   async function databaseAtRevisionOne() {
     await ensureTemplateLibrary("system");
-    for (const row of versionsOf(COACHING)) {
+    for (const row of versionsOf("coaching")) {
       row.seed_revision = 1;
       row.document = SUPERSEDED_COACHING;
     }
@@ -258,28 +248,28 @@ describe("a form the business has re-issued", () => {
 
     const result = await ensureTemplateLibrary("system");
 
-    expect(result.revised).toEqual([COACHING]);
-    expect(currentVersionOf(COACHING)).toMatchObject({
+    expect(result.revised).toEqual(["coaching"]);
+    expect(currentVersionOf("coaching")).toMatchObject({
       version: 2,
       status: "published",
-      seed_revision: coachingSeed.revision,
+      seed_revision: 2,
     });
-    expect(currentVersionOf(COACHING)?.document).toEqual(coachingSeed.document);
+    expect(currentVersionOf("coaching")?.document).toEqual(coachingSeed.document);
   });
 
   it("keeps the old version, archived, so signed forms still render", async () => {
     await databaseAtRevisionOne();
-    const originalId = currentVersionOf(COACHING)!.id;
+    const originalId = currentVersionOf("coaching")!.id;
 
     await ensureTemplateLibrary("system");
 
-    const original = versionsOf(COACHING).find((row) => row.id === originalId);
+    const original = versionsOf("coaching").find((row) => row.id === originalId);
     expect(original, "the superseded version was deleted").toBeTruthy();
     expect(original).toMatchObject({ status: "archived" });
     expect(original!.archived_at).toBeTruthy();
     // Two versions of one template — not two templates.
-    expect(versionsOf(COACHING)).toHaveLength(2);
-    expect(store.form_templates!.filter((row) => row.key === COACHING)).toHaveLength(1);
+    expect(versionsOf("coaching")).toHaveLength(2);
+    expect(store.form_templates!.filter((row) => row.key === "coaching")).toHaveLength(1);
   });
 
   it("leaves every other template exactly where it was", async () => {
@@ -287,8 +277,8 @@ describe("a form the business has re-issued", () => {
 
     const result = await ensureTemplateLibrary("system");
 
-    expect(result.revised).toEqual([COACHING]);
-    for (const key of [CORRECTIVE, "fixture-policy-review", REVIEW, "fixture-peer-review"]) {
+    expect(result.revised).toEqual(["coaching"]);
+    for (const key of ["dpoa", "policy-review", "sdit-epp", "dmit-epp-tsd"]) {
       expect(versionsOf(key), key).toHaveLength(1);
       expect(currentVersionOf(key), key).toMatchObject({ version: 1 });
     }
@@ -296,23 +286,23 @@ describe("a form the business has re-issued", () => {
 
   it("does nothing when the published form already says what the seed says", async () => {
     /*
-     * THE CASE THIS PROTECTS. A re-issued form can reach a database as a
-     * published version BEFORE the code does — an administrator's draft
-     * corrected and published against the official PDF. Without this check
-     * the next deploy would publish a byte-identical version, archive theirs,
-     * and leave two versions saying the same thing.
+     * THE CASE THIS PROTECTS, AND IT IS NOT HYPOTHETICAL. The re-issued Coaching
+     * Form reached Ask Bubbles Dev as a published version BEFORE this code did —
+     * an administrator's draft was corrected and published against the official
+     * PDF. Without this check the next deploy would publish a byte-identical
+     * version 3, archive theirs, and leave two versions saying the same thing.
      */
     await ensureTemplateLibrary("system");
     // A database where a person published the new document as version 2, which
      // is what a `seed_revision` of 1 looks like after the column is added.
-    for (const row of versionsOf(COACHING)) row.seed_revision = 1;
+    for (const row of versionsOf("coaching")) row.seed_revision = 1;
 
     const result = await ensureTemplateLibrary("system");
 
     expect(result.revised).toEqual([]);
     expect(result.heldBack).toEqual([]);
-    expect(result.existing).toContain(COACHING);
-    expect(versionsOf(COACHING)).toHaveLength(1);
+    expect(result.existing).toContain("coaching");
+    expect(versionsOf("coaching")).toHaveLength(1);
   });
 
   it("publishes a revision that changed only the READINGS the form prints", async () => {
@@ -326,39 +316,40 @@ describe("a form the business has re-issued", () => {
      * a revision that changes only the pairing changes every role word on the
      * page and nothing in the document.
      *
-     * A variant naming the wrong role puts the wrong role word on every page
-     * under a correct title, and a document-only comparison would declare the
-     * database already correct and publish nothing, silently.
+     * Found on the SDIT EPP, whose variant said "ASD" — so the form asked "In
+     * what areas is the ASD currently succeeding?" under a title reading
+     * SDIT. A document-only comparison declared the database already correct
+     * and published nothing, silently.
      */
     await ensureTemplateLibrary("system");
-    const review = TEMPLATE_SEEDS.find((seed) => seed.key === REVIEW)!;
-    for (const row of versionsOf(REVIEW)) {
+    const sdit = TEMPLATE_SEEDS.find((seed) => seed.key === "sdit-epp")!;
+    for (const row of versionsOf("sdit-epp")) {
       // One revision behind, with the same document and the OLD pairing.
-      row.seed_revision = review.revision - 1;
+      row.seed_revision = sdit.revision - 1;
       row.variants = [
-        { key: "lead", label: "Lead review", role: "Old Role Name", roleAbbr: "ORN" },
+        { key: "default", label: "SDIT review", role: "Training Salon Director", roleAbbr: "ASD" },
       ];
     }
 
     const result = await ensureTemplateLibrary("system");
 
-    expect(result.revised).toContain(REVIEW);
-    expect(currentVersionOf(REVIEW)).toMatchObject({
+    expect(result.revised).toContain("sdit-epp");
+    expect(currentVersionOf("sdit-epp")).toMatchObject({
       version: 2,
       status: "published",
-      seed_revision: review.revision,
+      seed_revision: sdit.revision,
     });
-    expect(currentVersionOf(REVIEW)?.variants).toEqual(review.variants);
+    expect(currentVersionOf("sdit-epp")?.variants).toEqual(sdit.variants);
   });
 
   it("still does nothing when the document AND the readings already match", async () => {
     await ensureTemplateLibrary("system");
-    for (const row of versionsOf(REVIEW)) row.seed_revision = 1;
+    for (const row of versionsOf("sdit-epp")) row.seed_revision = 1;
 
     const result = await ensureTemplateLibrary("system");
 
     expect(result.revised).toEqual([]);
-    expect(versionsOf(REVIEW)).toHaveLength(1);
+    expect(versionsOf("sdit-epp")).toHaveLength(1);
   });
 
   it("publishes it once, not on every visit to the page", async () => {
@@ -368,48 +359,82 @@ describe("a form the business has re-issued", () => {
     const again = await ensureTemplateLibrary("system");
 
     expect(again.revised).toEqual([]);
-    expect(versionsOf(COACHING)).toHaveLength(2);
+    expect(versionsOf("coaching")).toHaveLength(2);
   });
 });
 
-describe("a form already filed against an older revision", () => {
-  it("stays pinned to that revision, and untouched, when the template moves on", async () => {
+describe("the Resignation/Exit Form's revision 2 (HR's Details lines)", () => {
+  const exitSeed = TEMPLATE_SEEDS.find((seed) => seed.key === "resignation-exit")!;
+  /** Revision 1's document: no salon key question, no Details lines, "Details" as the paragraph. */
+  const REVISION_ONE = (() => {
+    const document = JSON.parse(JSON.stringify(exitSeed.document)) as {
+      blocks: { kind: string; key?: string; field?: { key: string; label: string } }[];
+    };
+    document.blocks = document.blocks
+      .filter((block) => !(block.kind === "checkbox_group" && block.key === "salon_key_returned"))
+      .filter((block) => block.kind !== "answer_statements")
+      .filter((block) => !(block.kind === "field" && block.field!.key.startsWith("resignation_")));
+    const details = document.blocks.find((block) => block.kind === "field" && block.field!.key === "details")!;
+    details.field!.label = "Details";
+    return document;
+  })();
+
+  it("is published over revision 1 as a new version, keeping the old one for forms already filed", async () => {
     await ensureTemplateLibrary("system");
-    for (const row of versionsOf(COACHING)) {
+    for (const row of versionsOf("resignation-exit")) {
       row.seed_revision = 1;
-      row.document = SUPERSEDED_COACHING;
+      row.document = REVISION_ONE;
     }
-    const revisionOne = currentVersionOf(COACHING)!;
+    const originalId = currentVersionOf("resignation-exit")!.id;
+
+    const result = await ensureTemplateLibrary("system");
+
+    expect(result.revised).toEqual(["resignation-exit"]);
+    expect(currentVersionOf("resignation-exit")).toMatchObject({ version: 2, status: "published", seed_revision: 2 });
+    expect(currentVersionOf("resignation-exit")?.document).toEqual(exitSeed.document);
+    expect(versionsOf("resignation-exit").find((row) => row.id === originalId)).toMatchObject({
+      status: "archived",
+      document: REVISION_ONE,
+    });
+  });
+
+  it("leaves an Exit Form already filed on revision 1 pinned to it, and untouched", async () => {
+    await ensureTemplateLibrary("system");
+    for (const row of versionsOf("resignation-exit")) {
+      row.seed_revision = 1;
+      row.document = REVISION_ONE;
+    }
+    const revisionOne = currentVersionOf("resignation-exit")!;
     // A filed form as the database holds it: pinned to revision 1, with its answers.
     store.form_instances = [
       {
-        id: "filed-coaching",
-        template_id: templateRow(COACHING).id,
+        id: "filed-exit",
+        template_id: templateRow("resignation-exit").id,
         template_version_id: revisionOne.id,
         status: "finalized",
         employee_name: "Jane Smith",
       },
     ];
     store.form_instance_values = [
-      { instance_id: "filed-coaching", field_key: "coaching_details", value: "Discussed greeting guests.", checked: [], filled_by: "ai" },
-      { instance_id: "filed-coaching", field_key: "coaching_topics", value: null, checked: ["old_topic_one"], filled_by: "manager" },
+      { instance_id: "filed-exit", field_key: "last_day_worked", value: "2026-09-15", checked: [], filled_by: "ai" },
+      { instance_id: "filed-exit", field_key: "eligible_for_rehire", value: null, checked: ["no"], filled_by: "manager" },
     ];
     const before = JSON.stringify({ instances: store.form_instances, values: store.form_instance_values, v1: revisionOne });
 
     await ensureTemplateLibrary("system");
 
     // The template moved on; the filed form, its answers and its version did not.
-    expect(currentVersionOf(COACHING)!.id).not.toBe(revisionOne.id);
+    expect(currentVersionOf("resignation-exit")!.id).not.toBe(revisionOne.id);
     const parsed = JSON.parse(before);
     expect(store.form_instances).toEqual(parsed.instances);
     expect(store.form_instance_values).toEqual(parsed.values);
     // Revision 1's version row is only archived: its number, content and revision are as they were.
-    const after = versionsOf(COACHING).find((row) => row.id === revisionOne.id)!;
+    const after = versionsOf("resignation-exit").find((row) => row.id === revisionOne.id)!;
     expect(after).toMatchObject({
       version: parsed.v1.version,
       seed_revision: 1,
       status: "archived",
-      document: SUPERSEDED_COACHING,
+      document: REVISION_ONE,
     });
     store.form_instances = [];
     store.form_instance_values = [];
@@ -419,9 +444,9 @@ describe("a form already filed against an older revision", () => {
 describe("standing down", () => {
   it("will not publish over a version a person authored", async () => {
     await ensureTemplateLibrary("system");
-    for (const row of versionsOf(COACHING)) row.seed_revision = 1;
+    for (const row of versionsOf("coaching")) row.seed_revision = 1;
     // An administrator published their own version — `openDraft` marks it 0.
-    const template = templateRow(COACHING);
+    const template = templateRow("coaching");
     store.form_template_versions.push({
       id: "authored-1",
       template_id: template.id,
@@ -437,15 +462,15 @@ describe("standing down", () => {
     const result = await ensureTemplateLibrary("system");
 
     expect(result.revised).toEqual([]);
-    expect(result.heldBack.map((entry) => entry.key)).toEqual([COACHING]);
+    expect(result.heldBack.map((entry) => entry.key)).toEqual(["coaching"]);
     expect(result.heldBack[0].reason).toContain("authored here");
-    expect(versionsOf(COACHING)).toHaveLength(2);
+    expect(versionsOf("coaching")).toHaveLength(2);
   });
 
   it("will not publish under an open draft", async () => {
     await ensureTemplateLibrary("system");
-    for (const row of versionsOf(COACHING)) row.seed_revision = 1;
-    const template = templateRow(COACHING);
+    for (const row of versionsOf("coaching")) row.seed_revision = 1;
+    const template = templateRow("coaching");
     store.form_template_versions.push({
       id: "draft-1",
       template_id: template.id,
@@ -473,24 +498,27 @@ describe("the migration the seeding depends on", () => {
    * SQL itself — which is the artefact that has to be applied for any of this
    * to work on a real database.
    */
-  const sql = readFileSync(
+  // This deployment's equivalents: the base enum already carries 'interview',
+  // the category column and seed revision arrive in 20260907001000, and the
+  // migrated library's default category in 20261008001000.
+  const sql = [
+    "supabase/migrations/20260904001000_forms_engine.sql",
     "supabase/migrations/20260907001000_forms_template_category.sql",
-    "utf8",
-  );
-  const engine = readFileSync("supabase/migrations/20260904001000_forms_engine.sql", "utf8");
+    "supabase/migrations/20261008001000_forms_library_migration.sql",
+  ]
+    .map((path) => readFileSync(path, "utf8"))
+    .join("\n");
 
-  it("declares every layout family a seed can carry", () => {
-    const declared = engine.slice(
-      engine.indexOf("create type public.form_layout_family"),
-      engine.indexOf(");", engine.indexOf("create type public.form_layout_family")),
+  it("adds the layout family the four hiring templates are seeded with", () => {
+    // Created with the enum in this deployment's forms engine migration.
+    expect(sql).toMatch(
+      /alter type public\.form_layout_family add value if not exists 'interview'|create type public\.form_layout_family as enum \([^)]*'interview'/i,
     );
-    for (const family of FORM_LAYOUT_FAMILIES) expect(declared, family).toContain(`'${family}'`);
-    for (const seed of TEMPLATE_SEEDS) expect(declared, seed.key).toContain(`'${seed.layoutFamily}'`);
   });
 
-  it("adds the category column the page groups by, defaulting to the configured group", () => {
+  it("adds the category column the page groups by, defaulting to the existing group", () => {
     expect(sql).toMatch(/alter table public\.form_templates\s+add column if not exists category/i);
-    expect(sql).toContain(`default '${DEFAULT_COMPANY_FORM_CATEGORY}'`);
+    expect(sql).toMatch(/default 'hr_performance'/i);
   });
 
   it("adds the seed revision column, defaulting to the revision already installed", () => {

@@ -6,6 +6,7 @@ import {
   employeeNameRules,
   nameInsteadOfPronouns,
 } from "./employee-reference";
+import { TEAM_SUBJECT_LABEL } from "./team-subject";
 
 /**
  * HR feedback, 3 Oct 2026: "Stop using pronouns in verbiage for forms — site
@@ -18,16 +19,17 @@ const rewrite = (text: string, name = "Jessica Moss") => nameInsteadOfPronouns(t
 describe("the employee's first name", () => {
   it("is the first word of the record's subject", () => {
     expect(employeeFirstName("Jessica Moss")).toBe("Jessica");
-    expect(employeeFirstName("Paulyne Test")).toBe("Paulyne");
+    expect(employeeFirstName("Marlowe Test")).toBe("Marlowe");
   });
 
   it("is written as a name even when the record was typed in one case", () => {
-    expect(employeeFirstName("colene schildt")).toBe("Colene");
+    expect(employeeFirstName("harper samples")).toBe("Harper");
     expect(employeeFirstName("DANA MOSS")).toBe("Dana");
     expect(employeeFirstName("McKenna Ray")).toBe("McKenna");
   });
 
   it("is nobody on a team form, or with no subject", () => {
+    expect(employeeFirstName(TEAM_SUBJECT_LABEL)).toBeNull();
     expect(employeeFirstName("")).toBeNull();
     expect(employeeFirstName(null)).toBeNull();
   });
@@ -43,6 +45,9 @@ describe("the drafting rule every form prompt carries", () => {
     expect(rules).toMatch(/quotation marks.*stays exactly as it was written/);
   });
 
+  it("is absent on a team-wide form", () => {
+    expect(employeeNameRules(TEAM_SUBJECT_LABEL)).toEqual([]);
+  });
 });
 
 describe("pronouns become the first name", () => {
@@ -80,10 +85,10 @@ describe("pronouns become the first name", () => {
 
   it("rewrites the whole Action Plan the drafting prompt asks for", () => {
     const plan =
-      "Jessica is expected to adhere to the Buff City Soap attendance policy by arriving on time. Moving forward, she should arrive ready to work at the start of her shift. Management will monitor compliance and provide coaching as needed.";
-    const result = nameInsteadOfPronouns(plan, "Jessica Moss", ["Buff City Soap"]);
+      "Jessica is expected to adhere to the Sun Tan City attendance policy by arriving on time. Moving forward, she should arrive ready to work at the start of her shift. Management will monitor compliance and provide coaching as needed.";
+    const result = nameInsteadOfPronouns(plan, "Jessica Moss", ["Sun Tan City"]);
     expect(result.text).toBe(
-      "Jessica is expected to adhere to the Buff City Soap attendance policy by arriving on time. Moving forward, Jessica should arrive ready to work at the start of the shift. Management will monitor compliance and provide coaching as needed.",
+      "Jessica is expected to adhere to the Sun Tan City attendance policy by arriving on time. Moving forward, Jessica should arrive ready to work at the start of the shift. Management will monitor compliance and provide coaching as needed.",
     );
     expect(result.replaced).toBe(2);
     expect(result.text).not.toMatch(/\b(?:she|her|he|his|they|their)\b/i);
@@ -98,8 +103,8 @@ describe("natural sentences, not mechanical substitution", () => {
       .some((sentence) => new RegExp(`\\b${first}\\b.*\\b${first}'s\\b`).test(sentence));
 
   it.each([
-    ["Colene provided her resignation to management.", "Colene provided a resignation to management.", "Colene Schildt"],
-    ["Colene submitted her resignation.", "Colene submitted a resignation.", "Colene Schildt"],
+    ["Harper provided her resignation to management.", "Harper provided a resignation to management.", "Harper Samples"],
+    ["Harper submitted her resignation.", "Harper submitted a resignation.", "Harper Samples"],
     ["Jessica gave her two week notice on 9/1.", "Jessica gave the two week notice on 9/1.", "Jessica Moss"],
     ["Jessica worked out her notice.", "Jessica worked out the notice.", "Jessica Moss"],
     ["Jessica returned her keys and uniform.", "Jessica returned the keys and uniform.", "Jessica Moss"],
@@ -123,7 +128,7 @@ describe("natural sentences, not mechanical substitution", () => {
 
   it("names the employee once per sentence, never as subject and possessive together", () => {
     const corpus: [string, string][] = [
-      ["Colene Schildt", "Colene provided her resignation to management. She gave and worked a two week notice, and her last day worked was 9-28-26."],
+      ["Harper Samples", "Harper provided her resignation to management. She gave and worked a two week notice, and her last day worked was 9-28-26."],
       ["Sarah Jones", "Sarah quit on the spot on 9/20. She returned her keys and uniform."],
       ["Jane Smith", "Jane Smith gave two weeks notice on 9/14 and worked out her notice. Her last day was Sept 26."],
       ["Jessica Moss", "Observed:\nShe arrived 30 minutes late for her scheduled shift.\n\nGoing Forward:\nShe should plan her commute and leave early."],
@@ -137,8 +142,8 @@ describe("natural sentences, not mechanical substitution", () => {
   });
 
   it("leaves text that is already natural exactly as it is", () => {
-    const natural = "On 9-15-26, Colene submitted a resignation to management via Woven. Colene gave and worked a two week notice; the last day worked was 9-28-26.";
-    expect(nameInsteadOfPronouns(natural, "Colene Schildt")).toEqual({ text: natural, replaced: 0 });
+    const natural = "On 9-15-26, Harper submitted a resignation to management via Woven. Harper gave and worked a two week notice; the last day worked was 9-28-26.";
+    expect(nameInsteadOfPronouns(natural, "Harper Samples")).toEqual({ text: natural, replaced: 0 });
   });
 });
 
@@ -147,7 +152,7 @@ describe("what is never rewritten", () => {
     expect(rewrite('She said "he told me I could leave early" before her shift.')).toBe(
       'Jessica said "he told me I could leave early" before the shift.',
     );
-    const manual = "“An employee must notify her manager before she leaves the location.”";
+    const manual = "“An employee must notify her manager before she leaves the salon.”";
     expect(rewrite(manual)).toBe(manual);
   });
 
@@ -172,6 +177,9 @@ describe("what is never rewritten", () => {
     expect(rewrite(sentence)).toBe(sentence);
   });
 
+  it("anything at all on a team-wide form", () => {
+    expect(nameInsteadOfPronouns("She arrived late.", TEAM_SUBJECT_LABEL).text).toBe("She arrived late.");
+  });
 });
 
 describe("across a draft", () => {
@@ -185,7 +193,7 @@ describe("across a draft", () => {
   ];
 
   it("rewrites the assistant's prose and nothing else", () => {
-    const quoted = "Employees must notify their manager before they leave. Source: Team Policy Manual, p. 12";
+    const quoted = "Employees must notify their manager before they leave. Source: JBA Policy Manual, p. 12";
     const result = applyEmployeeName({
       values: {
         observation: "Observed:\nShe arrived late.",

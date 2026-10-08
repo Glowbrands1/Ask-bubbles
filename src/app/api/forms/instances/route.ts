@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 
-import { locationById } from "@/lib/locations";
+import { locationById as salonById } from "@/lib/locations";
 
 import { errorResponse } from "@/lib/api/respond";
 import { parseHistory } from "@/lib/api/validation";
 import { authorizeForms } from "@/lib/forms/access";
 import { isIsoCalendarDate } from "@/lib/forms/form-date-answer";
 import {
+  applyStatedFacts,
   createInstance,
   deleteDemoInstances,
   findDemoInstances,
@@ -17,8 +18,14 @@ import {
 import { instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-scope";
 import { authorizeLocation } from "@/lib/forms/location-scope";
 import { checkProposalIsCurrent } from "@/lib/forms/proposal-currency";
+import { allowsTeamSubject, isTeamSubject } from "@/lib/forms/team-subject";
 import { isDemoMode } from "@/lib/config/runtime";
 import { getTemplateByKey } from "@/lib/forms/repository";
+import {
+  isPayrollDeductAnswer,
+  PAYROLL_DEDUCT_STATED_KEYS,
+  payrollDeductChecked,
+} from "@/lib/forms/payroll-deduct";
 import type { Permission } from "@/types";
 
 /**
@@ -27,7 +34,7 @@ import type { Permission } from "@/types";
  * POST   /api/forms/instances   starts a form from a template's current version
  * DELETE /api/forms/instances   removes every DEMO DRAFT, by provenance
  *
- * The permission is the TEMPLATE's, not a blanket "forms" one: a Location Director
+ * The permission is the TEMPLATE's, not a blanket "forms" one: a Salon Director
  * may create a coaching form and not a disciplinary plan of action, and that
  * distinction is data on the template rather than a rule written here.
  */
@@ -49,9 +56,9 @@ export async function GET(request: Request) {
      * ==========================================================================
      *
      * This listed EVERY form in the company to anybody holding
-     * `view_form_monitoring` — which is every manager role. A Location Director at
-     * one location read the employee names, coaching topics and disciplinary
-     * history of every other location.
+     * `view_form_monitoring` — which is every manager role. A Salon Director at
+     * one salon read the employee names, coaching topics and disciplinary
+     * history of every other salon.
      *
      * Filtered HERE rather than in the screen, because a client-side filter is
      * a presentation choice and this is an access boundary: the rows would
@@ -64,7 +71,7 @@ export async function GET(request: Request) {
      *
      * This read the whole company ordered by recency, took 200, and filtered
      * that page. Confidential — no foreign row reached the browser — and wrong
-     * as a history: across 22 locations, an authorized record older than 200
+     * as a history: across 22 salons, an authorized record older than 200
      * foreign ones never entered the page, so the filter could not return it
      * and a manager's own history silently lost rows.
      *
@@ -111,6 +118,7 @@ export async function POST(request: Request) {
       locationName?: string | null;
       source?: "manual" | "assistant";
       formDate?: string;
+      payrollDeduct?: unknown;
       /** The chat the proposal came from, for `checkProposalIsCurrent`. Ask Bubbles only. */
       conversation?: unknown;
     } | null;
@@ -144,6 +152,18 @@ export async function POST(request: Request) {
     const actor = await authorizeForms(request, template.requiredPermission as Permission);
 
     /*
+     * A TEAM-WIDE SUBJECT ONLY WHERE THE TEMPLATE ALLOWS ONE. "All team
+     * members" on a Corrective Action Form or an EPP would file a disciplinary
+     * document against nobody in particular. See `lib/forms/team-subject.ts`.
+     */
+    if (isTeamSubject(body.employeeName) && !allowsTeamSubject(body.templateKey)) {
+      return NextResponse.json(
+        { error: "This form is about one employee. Tell Bubbles who it is for." },
+        { status: 400 },
+      );
+    }
+
+    /*
      * A PROPOSAL CARD IS ONLY AS CURRENT AS THE CONVERSATION BEHIND IT.
      *
      * After the permission check, so a caller who may not create this form
@@ -165,20 +185,20 @@ export async function POST(request: Request) {
 
     /*
      * ==========================================================================
-     * THE LOCATION IS THE SERVER'S DECISION, NOT THE CALLER'S
+     * THE SALON IS THE SERVER'S DECISION, NOT THE CALLER'S
      * ==========================================================================
      *
      * This route accepted `locationId` and `locationName` and stored them
      * unchecked. The authenticated identity has carried an `AccessScope` all
-     * along — `authorizeForms` was discarding it — so nothing compared the location
-     * on a disciplinary record against the locations the person filing it covers.
+     * along — `authorizeForms` was discarding it — so nothing compared the salon
+     * on a disciplinary record against the salons the person filing it covers.
      *
      * ENFORCED HERE, AT THE ROUTE EVERY CALLER GOES THROUGH, rather than in the
      * chat orchestration that will use it next. A check that lives in one
      * caller is a check the next caller does not have.
      *
      * A REFUSAL IS A 403 WITH A REASON, not a silently dropped field. Quietly
-     * storing the form without its location would file an HR document against
+     * storing the form without its salon would file an HR document against
      * nobody's location and tell the manager it worked.
      */
     const location = authorizeLocation(actor.scope, body.locationId ?? null);
@@ -203,6 +223,25 @@ export async function POST(request: Request) {
       // A real calendar day or nothing, in which case the form is dated today.
       formDate: isIsoCalendarDate(body.formDate) ? body.formDate : undefined,
     });
+
+    /*
+     * "IS PAYROLL DEDUCT APPLICABLE?", AS THE MANAGER ANSWERED IT IN CHAT.
+     *
+     * Written as the manager's own statement — the path the employment change
+     * forms use for their stated facts — and only where the pinned version
+     * has the group: `applyStatedFacts` validates the key and the option
+     * against it, and a version without the question (or any other template)
+     * gets nothing. No answer sent means nothing written; it is never
+     * defaulted. See `lib/forms/payroll-deduct.ts`.
+     */
+    if (isPayrollDeductAnswer(body.payrollDeduct)) {
+      await applyStatedFacts(
+        String(instance.id),
+        { values: {}, checked: payrollDeductChecked(body.payrollDeduct) },
+        actor.id,
+        PAYROLL_DEDUCT_STATED_KEYS,
+      );
+    }
 
     return NextResponse.json({ instance });
   } catch (error) {
@@ -257,7 +296,7 @@ export async function DELETE(request: Request) {
 
 /**
  * ============================================================================
- * A LOCATION NAME NOBODY VERIFIED DOES NOT GO ON A LIVE HR RECORD
+ * A SALON NAME NOBODY VERIFIED DOES NOT GO ON A LIVE HR RECORD
  * ============================================================================
  *
  * THE NAME FOLLOWS THE ID, AND IS DROPPED WHEN THE ID IS. A location id and a
@@ -270,7 +309,7 @@ export async function DELETE(request: Request) {
  * again, and neither is bound to the validated location by anything
  * trustworthy. The name printed on the form is looked up from the production
  * roster by the VALIDATED ID, server-side; an id the roster does not know gets
- * no name. A wrong location NAME on a disciplinary record is worse than no name.
+ * no name. A wrong salon NAME on a disciplinary record is worse than no name.
  *
  * DEMO MODE KEEPS THE CALLER'S NAME, EXPLICITLY AS SYNTHETIC. Preview carries
  * the standing notice that only synthetic data belongs there, and nothing in
@@ -284,12 +323,12 @@ function resolveLocationName(
   /*
    * THE ROSTER EXISTS NOW, so the name is what the paragraph above said it
    * would become: resolved SERVER-SIDE from the validated id, never read from
-   * the request. the company location roster is the authority, validated
-   * against reporting (`locationRosterMatches`). An id the roster does not know
+   * the request. `PRODUCTION_SALONS` is the production roster, validated
+   * against reporting (`salonRosterMatches`). An id the roster does not know
    * gets no name rather than a guess, and a name the caller typed is still
    * ignored in live mode.
    */
-  const rostered = locationById(locationId)?.name ?? null;
+  const rostered = salonById(locationId)?.name ?? null;
   if (!isDemoMode()) return rostered;
   return requested ?? rostered;
 }

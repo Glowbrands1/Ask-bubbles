@@ -50,7 +50,7 @@ export function slugify(label: string): string {
  * exact defect `instances.ts` documents having already fixed once.
  *
  * So this is a NAMING map, not an inference about meaning: a line labelled
- * "Name" on an HR form is the person the form is about, and these are
+ * "Name" on one of the business's forms is the person the form is about, and these are
  * the engine's words for that. Anything not on this short list gets a derived
  * key and belongs to whoever the reviewer says.
  */
@@ -60,7 +60,7 @@ const CANONICAL: { match: RegExp; key: string }[] = [
   { match: /^date$/i, key: "form_date" },
   { match: /^job\s*title$/i, key: "job_title" },
   { match: /^position\s+applied\s+for$/i, key: "job_title" },
-  { match: /^(location|location\s*name)$/i, key: "location" },
+  { match: /^(location|salon\s*name)$/i, key: "location" },
 ];
 
 function canonicalKey(label: string): string | null {

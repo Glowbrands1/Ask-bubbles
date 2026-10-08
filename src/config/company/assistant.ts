@@ -50,4 +50,10 @@ export const QUICK_QUESTIONS: readonly QuickQuestion[] = [
   { text: "What should I tell a guest who asks about an ingredient?", needs: "view_knowledge", levels: null },
   { text: "Help me prepare for a conversation with a team member.", needs: "view_overview", levels: null },
   { text: "Which forms can I create here?", needs: "view_forms_workspace", levels: null },
+  /*
+   * The reference platform's forms shortcut, carried over with the forms
+   * library: a coaching form is the everyday documented conversation, and the
+   * shortcut does not call it a concern.
+   */
+  { text: "Create a coaching form.", needs: "create_coaching_form", levels: null },
 ];

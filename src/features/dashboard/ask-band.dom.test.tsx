@@ -39,11 +39,11 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/session/session-context", () => ({
   useSession: () => ({
-    user: { name: "Paulyne Camacho", isLocationAccount: false, title: "Owner", scope: {} },
+    user: { name: "Marlowe Example", isLocationAccount: false, title: "Owner", scope: {} },
     role: "owner",
     can: () => true,
     primaryLocationName: "Testville Downtown",
-    managerDisplayName: "Paulyne",
+    managerDisplayName: "Marlowe",
     demoMode: true,
     brand: { knowledgeScopeId: "bcs-core" },
   }),

@@ -26,7 +26,31 @@ import {
   type HandbookChunk,
   type HandbookIdentity,
 } from "../named-handbook";
+import {
+  resolvePolicyManual,
+  type ManualChunk,
+} from "@/lib/forms/official-policy-manual";
+import { MULTI_BRAND_MANUAL_TITLES, POLICY_MANUAL_BRAND_SCOPE } from "@/config/company/knowledge";
+import { isMultiBrandManual, readManualForBrand } from "../brand-sections";
 import type { KnowledgeProvider, KnowledgeQuery } from "../types";
+
+/** The manual's rows, or why none could be cited. */
+export type OfficialPolicyManualResult =
+  | {
+      readonly ok: true;
+      readonly documentId: string;
+      readonly documentTitle: string;
+      /** The document's category, for a chat source card. Forms ignore it. */
+      readonly documentCategory?: string;
+      readonly matchedBy: "tag" | "fallback";
+      readonly chunks: readonly ManualChunk[];
+    }
+  | {
+      readonly ok: false;
+      readonly reason: string;
+      /** Why no manual: none claims to be it, or more than one does. Absent on a read failure. */
+      readonly problem?: "not_found" | "ambiguous";
+    };
 
 /** The configured handbook's chunks, or why none could be read. */
 export type NamedHandbookResult =
@@ -120,6 +144,34 @@ function readSections(
 }
 
 /**
+ * ============================================================================
+ * A MULTI-BRAND MANUAL, AS THIS COMPANY READS IT
+ * ============================================================================
+ *
+ * The JBA Policy Manual covers several brands. Every path that hands its text
+ * to the assistant or to a form — similarity retrieval, the official-manual
+ * read behind policy citations, the named-handbook read — goes through here,
+ * so another brand's sections never reach an answer or an HR record. See
+ * `brand-sections.ts`; kept text is verbatim. A chunk with nothing left is
+ * dropped. Any other document passes through untouched.
+ */
+function readChunksForBrand(title: string, chunks: RoleChunkRow[]): RoleChunkRow[] {
+  if (!isMultiBrandManual(title, MULTI_BRAND_MANUAL_TITLES)) return chunks;
+  const read = readManualForBrand(
+    chunks.map((chunk) => ({
+      content: chunk.content,
+      headings: readSections(chunk.metadata).map((section) => section.heading),
+    })),
+    POLICY_MANUAL_BRAND_SCOPE,
+  );
+  return chunks.flatMap((chunk, index) => (read[index] ? [{ ...chunk, content: read[index]! }] : []));
+}
+
+/** Per manual document: chunk id -> this company's reading of it. */
+const BRAND_READINGS = new Map<string, ReadonlyMap<string, string>>();
+const BRAND_READINGS_LIMIT = 8;
+
+/**
  * The real retriever: pgvector similarity search over ingested chunks.
  *
  * Server-side only — it holds a service-role client. The browser reaches it
@@ -170,8 +222,70 @@ export class SupabaseKnowledgeProvider implements KnowledgeProvider {
       throw new Error(`Knowledge retrieval failed: ${error.message}`);
     }
 
-    this.lastRows = (data ?? []) as MatchedChunkRow[];
+    this.lastRows = await this.readRowsForBrand((data ?? []) as MatchedChunkRow[]);
     return this.lastRows;
+  }
+
+  /**
+   * Retrieved rows from a multi-brand manual, replaced by this company's
+   * reading of their chunks. The reading needs the whole document in order
+   * (a brand block can span chunks), so it is computed once per document and
+   * kept. FAILS CLOSED: if the manual cannot be read in full, its rows are
+   * dropped rather than passed on unfiltered.
+   */
+  private async readRowsForBrand(rows: MatchedChunkRow[]): Promise<MatchedChunkRow[]> {
+    const manuals = [
+      ...new Set(
+        rows
+          .filter((row) => isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES))
+          .map((row) => row.document_id),
+      ),
+    ];
+    if (manuals.length === 0) return rows;
+
+    const readings = new Map<string, ReadonlyMap<string, string> | null>();
+    for (const documentId of manuals) {
+      const cached = BRAND_READINGS.get(documentId);
+      const wanted = rows.filter((row) => row.document_id === documentId).map((row) => row.chunk_id);
+      if (cached && wanted.every((id) => cached.has(id))) {
+        readings.set(documentId, cached);
+        continue;
+      }
+      readings.set(documentId, await this.loadBrandReading(documentId));
+    }
+
+    return rows.flatMap((row) => {
+      if (!readings.has(row.document_id)) return [row];
+      const reading = readings.get(row.document_id);
+      const text = reading?.get(row.chunk_id);
+      return text ? [{ ...row, content: text }] : [];
+    });
+  }
+
+  private async loadBrandReading(documentId: string): Promise<ReadonlyMap<string, string> | null> {
+    try {
+      const client = getSupabaseAdmin();
+      const { data: document, error: documentError } = await client
+        .from("knowledge_documents")
+        .select("title, version")
+        .eq("id", documentId)
+        .single();
+      if (documentError || !document) return null;
+      const { data, error } = await client
+        .from("knowledge_chunks")
+        .select("id, chunk_index, locator, page, section, content, metadata")
+        .eq("document_id", documentId)
+        .eq("version", document.version)
+        .order("chunk_index", { ascending: true });
+      if (error) return null;
+      const chunks = readChunksForBrand(String(document.title), (data ?? []) as RoleChunkRow[]);
+      const reading = new Map(chunks.map((chunk) => [chunk.id, chunk.content]));
+      if (BRAND_READINGS.size >= BRAND_READINGS_LIMIT) BRAND_READINGS.clear();
+      BRAND_READINGS.set(documentId, reading);
+      return reading;
+    } catch {
+      return null;
+    }
   }
 
   toCitations(results: SearchResult[]): SourceCitation[] {
@@ -272,6 +386,107 @@ export class SupabaseKnowledgeProvider implements KnowledgeProvider {
 
   /**
    * ==========================================================================
+   * THE OFFICIAL POLICY MANUAL, PINNED BY IDENTITY
+   * ==========================================================================
+   *
+   * A Corrective Action Form cites one document, and the business named it:
+   * "for corrective action please refer always to this". So it is resolved the
+   * way the frameworks are — by tag, with the filename and title as a fallback
+   * — and its chunks are fetched WHOLE rather than retrieved.
+   *
+   * NO SIMILARITY IS INVOLVED, deliberately. The blank citations that prompted
+   * this came from a semantic search gated at the threshold the open-ended chat
+   * path uses: a manager writing "she was wearing slippers today" does not
+   * write in the manual's vocabulary, so the one document the form needs did
+   * not clear a bar tuned for a different job. Identity does not have that
+   * failure mode.
+   *
+   * WHAT IS RETURNED IS ROWS, not a citation. Which section the ticked offense
+   * points at, and what the reference then reads, is decided by
+   * `lib/forms/official-policy-manual.ts` — which is pure, so the decision is
+   * testable against the manual's own text.
+   */
+  async fetchOfficialPolicyManual(
+    scopeId: string,
+  ): Promise<OfficialPolicyManualResult> {
+    const client = getSupabaseAdmin();
+
+    let documents: RoleDocumentRow[];
+    try {
+      const { data, error } = await client
+        .from("knowledge_documents")
+        .select("id, title, category, original_filename, tags, version, source")
+        .eq("knowledge_scope_id", scopeId)
+        .eq("indexed", true)
+        .eq("status", "indexed");
+
+      if (error) throw new Error(error.message);
+      documents = await withInheritedTags(client, scopeId, (data ?? []) as RoleDocumentRow[]);
+    } catch {
+      return { ok: false, reason: "The official policy manual could not be looked up." };
+    }
+
+    const resolution = resolvePolicyManual(documents);
+    if (!resolution.ok) {
+      return {
+        ok: false,
+        problem: resolution.problem,
+        reason:
+          resolution.problem === "ambiguous"
+            ? "More than one document claims to be the official policy manual, so none was cited."
+            : "The official policy manual is not in the knowledge base, so no policy was cited.",
+      };
+    }
+
+    const document = resolution.document as RoleDocumentRow;
+
+    let chunks: RoleChunkRow[];
+    try {
+      const { data, error } = await client
+        .from("knowledge_chunks")
+        .select("id, chunk_index, locator, page, section, content, metadata")
+        .eq("document_id", document.id)
+        .eq("version", document.version)
+        .order("chunk_index", { ascending: true });
+
+      if (error) throw new Error(error.message);
+      chunks = readChunksForBrand(document.title, (data ?? []) as RoleChunkRow[]);
+    } catch {
+      return { ok: false, reason: `The sections of "${document.title}" could not be read.` };
+    }
+
+    return {
+      ok: true,
+      documentId: document.id,
+      documentTitle: document.title,
+      documentCategory: document.category,
+      matchedBy: resolution.matchedBy,
+      chunks: chunks.map((chunk) => ({
+        chunkIndex: chunk.chunk_index,
+        chunkId: chunk.id,
+        locator: chunk.locator,
+        page: chunk.page,
+        content: chunk.content,
+        /*
+         * The heading ingestion read off the sheet. Null on anything indexed
+         * before PDF extraction learned to recognise one, which the section
+         * lookup handles by reading the chunk's own lines instead.
+         */
+        section: chunk.section,
+        /*
+         * The document's OWN page number and its printed headings, written by
+         * ingestion into `metadata` — no column, so an existing corpus can be
+         * backfilled without a migration. Absent on anything not yet re-indexed
+         * or backfilled, and the lookup falls back to the PDF sheet.
+         */
+        printedPage: readPrintedPage(chunk.metadata),
+        sections: readSections(chunk.metadata),
+      })),
+    };
+  }
+
+  /**
+   * ==========================================================================
    * A NAMED HANDBOOK, READ BY IDENTITY
    * ==========================================================================
    *
@@ -323,7 +538,7 @@ export class SupabaseKnowledgeProvider implements KnowledgeProvider {
         .eq("version", document.version)
         .order("chunk_index", { ascending: true });
       if (error) throw new Error(error.message);
-      chunks = (data ?? []) as RoleChunkRow[];
+      chunks = readChunksForBrand(document.title, (data ?? []) as RoleChunkRow[]);
     } catch {
       return { ok: false, reason: `The sections of "${document.title}" could not be read.` };
     }

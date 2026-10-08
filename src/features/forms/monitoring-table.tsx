@@ -217,7 +217,7 @@ export function MonitoringTable({
    * is ordinary forms work, where deleting a filed record is not.
    */
   const mayManage = demoMode || can("manage_form_records");
-  const mayTrack = demoMode || can("create_forms");
+  const mayTrack = demoMode || can("create_coaching_form");
 
   const call = React.useCallback(
     <T,>(url: string, init: RequestInit = {}) => formsFetch<T>(url, role, user.name, init),

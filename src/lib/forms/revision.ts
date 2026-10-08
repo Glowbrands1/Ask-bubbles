@@ -1,5 +1,3 @@
-import { companyFormFor } from "@/config/company/forms";
-
 /**
  * ============================================================================
  * A REDRAFT CHANGES WHAT WAS ASKED FOR, AND NOTHING ELSE
@@ -41,13 +39,8 @@ import { companyFormFor } from "@/config/company/forms";
  * PURE: no I/O. `chat-revision.ts` loads, calls the model and saves.
  */
 
-/**
- * Whether chat may revise this template's drafted fields — declared per form
- * in the company forms registry (`revisable`).
- */
-export function isRevisableTemplate(templateKey: string): boolean {
-  return companyFormFor(templateKey)?.revisable === true;
-}
+/** The coaching documents. A revision of any other family is not handled here. */
+export const REVISABLE_LAYOUT_FAMILIES: ReadonlySet<string> = new Set(["coaching"]);
 
 const REVISE_VERB =
   /\b(?:re-?draft|re-?write|rewrite|revise|redo|re-?do|update|edit|change|amend|modify|fix|tweak|adjust|add|include|insert|put|mention|remove|delete|drop|take out|clear|replace|swap|correct|clean up|set|mark|tick|untick|select|unselect|reword|rephrase|shorten|lengthen|expand|tighten|soften|polish|rework|tidy(?:\s+up)?|make (?:it|the|this|that))\b|\bclean\s+(?:this|it|that)\s+up\b/i;

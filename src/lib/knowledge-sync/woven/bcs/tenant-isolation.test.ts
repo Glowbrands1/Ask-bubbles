@@ -266,6 +266,22 @@ describe("10. an automatic re-sign-in into JB & Associates is detected before re
   });
 });
 
+/**
+ * WORDING RETAINED FOR HR REVIEW, EXACTLY. Two lines of the migrated hiring
+ * forms name the source company in a way that cannot be rebranded without
+ * changing what they require (a tanning-services uniform condition; that
+ * company's own core values). The business asked for them to be kept, unedited,
+ * and flagged rather than rewritten. Only these exact strings are exempt.
+ */
+const RETAINED_FOR_REVIEW: readonly string[] = [
+  "Are you willing to use our services as part of your Sun Tan City uniform? (Must agree to UV, Sunless and Spa usage to proceed with employment)",
+  "Sun Tan City Core Values",
+];
+
+function withoutRetainedForReview(text: string): string {
+  return RETAINED_FOR_REVIEW.reduce((rest, line) => rest.split(line).join(""), text);
+}
+
 describe("11–12. production builds only the Buff City Soap connector", () => {
   it("11. the factory returns the BCS connector, whatever the configuration — it has no tenant input", () => {
     const configs: WovenKnowledgeConfig[] = [
@@ -291,8 +307,32 @@ describe("11–12. production builds only the Buff City Soap connector", () => {
   it("12. no production module reads an inherited tenant variable except to refuse it, and none names another company", () => {
     const readers = productionSources().filter(({ text }) => /WOVEN_TEAM_COMPANY|WOVEN_TEAM_BASE_URL/.test(text));
     expect(readers.map((r) => r.path)).toEqual(["src/lib/knowledge-sync/woven/config.ts"]);
-    const naming = productionSources().filter(({ text }) => /JB\s*&(?:amp;)?\s*Associates|Sun\s*Tan\s*City|Ask\s*Sunny|1BA00000/i.test(text));
+    const naming = productionSources().filter(({ text }) =>
+      /Sun\s*Tan\s*City|Ask\s*Sunny|1BA00000/i.test(withoutRetainedForReview(text)),
+    );
     expect(naming.map((n) => n.path)).toEqual([]);
+  });
+
+  it("12. JB & Associates is named only as the approved policy manual's author — never by the Woven integrations", () => {
+    /*
+     * The JBA Policy Manual is Ask Bubbles' approved policy source (8 Oct
+     * 2026), so the forms library and the policy code may name "JB &
+     * Associates". The Woven integrations may not: that is another Woven
+     * company, and nothing that selects, signs in to or reads a Woven account
+     * names it.
+     */
+    const woven = productionSources().filter(
+      ({ path, text }) =>
+        /^src\/lib\/(?:knowledge-sync|employees\/woven)\//.test(path) && /JB\s*&(?:amp;)?\s*Associates/i.test(text),
+    );
+    expect(woven.map((n) => n.path)).toEqual([]);
+  });
+
+  it("12. the source company's name survives only in the two hiring-form lines retained for HR review", () => {
+    const survivors = productionSources().flatMap(({ path, text }) =>
+      RETAINED_FOR_REVIEW.filter((line) => text.includes(line)).map((line) => `${path}: ${line}`),
+    );
+    expect(survivors).toEqual(RETAINED_FOR_REVIEW.map((line) => `src/lib/forms/hiring-library.ts: ${line}`));
   });
 });
 

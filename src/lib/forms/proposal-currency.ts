@@ -1,8 +1,7 @@
 import "server-only";
 
-import { ACTIVE_BRAND } from "@/lib/brand";
-
 import { acceptedNameSuggestions } from "./employee-match";
+import { isQuestion } from "./employment-change";
 import { employeeState, managerContext, samePerson } from "./proposal";
 import { detectTemplateIntent } from "./template-intent";
 import type { ChatMessage } from "@/types";
@@ -27,21 +26,12 @@ import type { ChatMessage } from "@/types";
  *                  nothing). A different form — refused.
  *
  * WHAT THIS IS NOT. It is not an authorization check; the template's own
- * permission and the location scope are enforced by the route as before, and the
+ * permission and the salon scope are enforced by the route as before, and the
  * manual builder may still file for any name typed into it. It answers one
  * question — is this proposal still the one the conversation stands behind? —
  * and where the conversation cannot say (the turns that named the person have
  * scrolled out of the window), it does not refuse on a guess.
  */
-const QUESTION_OPENER =
-  /^\s*(?:what|how|when|where|why|who|which|does|do|did|is|are|can|could|should|would|will|may|has|have)\b/i;
-
-/** True when a sentence asks rather than states. Questions are never read as facts. */
-function isQuestion(text: string): boolean {
-  const trimmed = text.trim();
-  return trimmed.endsWith("?") || QUESTION_OPENER.test(trimmed);
-}
-
 export type ProposalCurrency = { current: true } | { current: false; reason: string };
 
 export function checkProposalIsCurrent(input: {
@@ -63,7 +53,7 @@ export function checkProposalIsCurrent(input: {
   if (resolution.kind === "ambiguous") {
     return {
       current: false,
-      reason: `This proposal is out of date: the conversation now names more than one person (${resolution.candidates.join(", ")}). Tell ${ACTIVE_BRAND.assistantName} which one the form is for, then use the newest proposal.`,
+      reason: `This proposal is out of date: the conversation now names more than one person (${resolution.candidates.join(", ")}). Tell Bubbles which one the form is for, then use the newest proposal.`,
     };
   }
   /*
@@ -89,14 +79,19 @@ export function checkProposalIsCurrent(input: {
   if (resolution.kind === "missing" && excluded.some((not) => samePerson(not, input.employeeName))) {
     return {
       current: false,
-      reason: `This proposal is out of date: you said the form is not for ${input.employeeName}. Tell ${ACTIVE_BRAND.assistantName} who it is for.`,
+      reason: `This proposal is out of date: you said the form is not for ${input.employeeName}. Tell Bubbles who it is for.`,
     };
   }
 
   for (const message of [...context.messages].reverse()) {
     if (isQuestion(message.content)) continue;
     const intent = detectTemplateIntent(message.content);
-    const asked = intent.kind === "explicit" ? intent.templateKey : null;
+    const asked =
+      intent.kind === "explicit"
+        ? intent.templateKey
+        : intent.kind === "corrective_action" && intent.requestedCreation
+          ? "dpoa"
+          : null;
     if (asked === null) continue;
     if (asked !== input.templateKey) {
       return {

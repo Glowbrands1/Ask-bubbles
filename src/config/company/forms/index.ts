@@ -1,43 +1,37 @@
 import type { TemplateSeed } from "@/lib/forms/catalog";
+import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 
 export { COMPANY_FORM_CATEGORIES } from "./categories";
 
-import { EXAMPLE_CHECK_IN_SEED } from "./example-check-in";
 
 /**
  * ============================================================================
  * BUFF CITY SOAP — FORMS REGISTRY (COMPANY CONFIGURATION)
  * ============================================================================
  *
- * THE ONE PLACE THE FORM CATALOG IS DECLARED. The forms ENGINE — documents,
- * field responsibilities, drafting, versioning, PDF rendering, the register,
- * follow-ups, and the chat workflow that proposes, drafts and revises a form —
- * is platform code and does not know which forms exist. Everything it needs to
- * know about one form is on its entry here:
+ * THE CATALOG IS THE MIGRATED HR LIBRARY. The seventeen templates — coaching,
+ * follow-up coaching, corrective action, policy review, the six EPP templates,
+ * demotion, position transfer, resignation/exit and the four hiring forms —
+ * are the reference platform's current published versions, carried over with
+ * only the approved branding changes (`src/lib/forms/library.ts` and the
+ * exit, employment-change and hiring libraries beside it). Chat intent, inline
+ * drafting, the chooser and revision follow those forms' own rules, ported
+ * unchanged (`template-intent.ts`, `inline-draft.ts`, `chooser.ts`,
+ * `revision.ts`).
  *
- *   seed            the template: document schema, permission, category.
- *                   Written into `form_templates` by `ensureTemplateLibrary`.
- *   intentPhrases   how a manager NAMES this form in chat ("check-in form").
- *                   Explicit namings only — never the bare word "form".
- *   inlineDraft     whether chat creates and drafts it in the thread.
- *   offeredInChooser whether it appears on "which form do you need?".
- *   checkEmployeeName whether a typed name is checked against the employee
- *                   directory before the form is proposed.
- *   revisable       whether chat may rewrite its drafted fields afterwards.
+ * What this registry adds per form:
+ *
  *   chatCorrectableFields
  *                   the header lines a manager may correct by saying so in
  *                   chat after the draft exists ("change the date to
- *                   yesterday", "change the name to Jane Doe-Smith"). Saved as
- *                   the manager's own edit. Empty: no chat corrections.
- *   clarifyOn       the verb and noun that mean advice as often as this
- *                   form — { verb: "coach", noun: "coaching" } makes "coach
- *                   Avery" and "Avery needs coaching" one question: guidance,
- *                   or this form? Null: never asked. At most one form should
- *                   claim a given verb.
+ *                   yesterday", "her name is actually Jane Doe-Smith"). Saved
+ *                   as the manager's own edit. Read only when the form's own
+ *                   correction readers found nothing in the turn.
  *   status          "placeholder" forms are labelled as such everywhere.
  *
- * TO REPLACE THE CATALOG: add one file per Buff form beside this one, list it
- * below, and delete the example. Nothing else in the codebase names a form.
+ * The original placeholder, "Team Member Check-In (Example)", is no longer
+ * seeded; it is retired (switched off, never deleted) through
+ * `RETIRED_TEMPLATE_KEYS` in `retired.ts`.
  */
 
 export type CompanyFormStatus = "placeholder" | "approved";
@@ -47,43 +41,17 @@ export type ChatCorrectableField = "employee_name" | "form_date";
 
 export interface CompanyFormDefinition {
   readonly seed: TemplateSeed;
-  readonly intentPhrases: readonly string[];
-  readonly inlineDraft: boolean;
-  readonly offeredInChooser: boolean;
-  readonly checkEmployeeName: boolean;
-  readonly revisable: boolean;
   readonly chatCorrectableFields: readonly ChatCorrectableField[];
-  readonly clarifyOn: { readonly verb: string; readonly noun: string } | null;
   readonly status: CompanyFormStatus;
 }
 
-export const COMPANY_FORMS: readonly CompanyFormDefinition[] = [
-  {
-    seed: EXAMPLE_CHECK_IN_SEED,
-    intentPhrases: [
-      "check-in form",
-      "check in form",
-      "checkin form",
-      "team member check-in",
-      "team member check in",
-      "example check-in",
-      "example form",
-    ],
-    inlineDraft: true,
-    offeredInChooser: true,
-    checkEmployeeName: true,
-    revisable: true,
-    chatCorrectableFields: ["employee_name", "form_date"],
-    clarifyOn: null,
-    status: "placeholder",
-  },
-];
-
-/**
- * The form the chooser leads with when a manager asks for "a form" without
- * naming one. Null leads with the first offered form.
- */
-export const PRIMARY_FORM_KEY: string | null = null;
+export const COMPANY_FORMS: readonly CompanyFormDefinition[] = TEMPLATE_SEEDS.map((seed): CompanyFormDefinition => ({
+  seed,
+  // None: the migrated forms take a stated name or date change through their
+  // own revision path, exactly as on the reference platform.
+  chatCorrectableFields: [],
+  status: "approved",
+}));
 
 export function companyFormFor(key: string): CompanyFormDefinition | undefined {
   return COMPANY_FORMS.find((entry) => entry.seed.key === key);

@@ -2,20 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { parseFormDocument, type FormDocument } from "../document";
-import {
-  FIXTURE_COACHING_ACKNOWLEDGEMENT,
-  FIXTURE_COACHING_TOPICS,
-  FIXTURE_COACHING_TYPES,
-  fixtureCoachingDocument as coachingDocument,
-} from "@/test/forms/fixture-forms";
-import {
-  FIXTURE_COACHING_BRAND,
-  FIXTURE_COACHING_TITLE,
-  buildLegacyDoc,
-  fixtureCoachingDocx,
-  fixtureCoachingPageText,
-  fixtureCoachingPdf,
-} from "@/test/forms/source-fixtures";
+import { coachingDocument } from "../library";
 import { alignToCurrent } from "./align";
 import { buildOutline, line, readFieldLine, stripPlaceholders } from "./outline";
 import { readDocxHtml, splitCheckboxes } from "./read-docx";
@@ -29,28 +16,23 @@ import { isWordArchive, readZipText } from "./zip";
  * READING A BUSINESS DOCUMENT INTO A FORM
  * ============================================================================
  *
- * The end-to-end cases run against REAL files in both formats — a genuine
- * .docx archive and a genuine flat PDF — generated in memory from the fixture
- * coaching note by `src/test/forms/source-fixtures.ts`, shaped the way Word
- * writes a form (header title, bold sections, Word's placeholders, checkbox
- * controls and box glyphs).
+ * The end-to-end cases run against the REAL Coaching Form, in both formats,
+ * from `src/test/fixtures/forms`. That is the point of keeping the files: the
+ * reported defect was about those exact documents, and a parser tested only on
+ * lines written to suit it proves nothing about them.
  *
  * The acceptance bar is deliberately absolute. Both formats must produce a
- * document EQUAL to the hand-written fixture coaching note — not "close", not
- * "has the right topics", equal. Anything less and the difference is a
- * question nobody would answer until a manager noticed it on a signed record.
+ * document EQUAL to the hand-written Coaching Form — not "close", not "has the
+ * right topics", equal. Anything less and the difference is a question nobody
+ * would answer until a manager noticed it on a signed record.
  */
 
-const FILES: Record<string, () => Uint8Array> = {
-  "coaching-form.pdf": fixtureCoachingPdf,
-  "coaching-form.docx": fixtureCoachingDocx,
-  "legacy-form.doc": () => buildLegacyDoc(),
-};
-const fixture = (name: string) => FILES[name]!();
+const fixture = (name: string) =>
+  new Uint8Array(readFileSync(`src/test/fixtures/forms/${name}`));
 
 /** The pipeline, minus the parts that need a database or a network. */
 function pipeline(lines: ReturnType<typeof line>[], current: FormDocument | null) {
-  const outline = buildOutline(lines, { brand: FIXTURE_COACHING_BRAND });
+  const outline = buildOutline(lines, { brand: "Sun Tan City" });
   const generated = outlineToDocument(outline);
   const aligned = alignToCurrent(generated.document, current);
   return {
@@ -63,17 +45,38 @@ function pipeline(lines: ReturnType<typeof line>[], current: FormDocument | null
 
 /* ====================================================== the PDF, for real === */
 
-describe("the fixture coaching note as a flat PDF", () => {
+describe("the Coaching Form as a flat PDF", () => {
   /*
    * ZERO ACROFORM FIELDS. This is the document that was uploaded, succeeded,
    * and changed nothing — and the reason it changed nothing is that there is no
    * fillable field in it to read. Everything below is read from the page text.
    */
-  const PAGE_TEXT = fixtureCoachingPageText().join("\n");
+  const PAGE_TEXT = [
+    "Coaching Form",
+    "Sun Tan City",
+    "Employee Information",
+    "Name: Click or tap here to enter text. Date: Click or tap to enter a date.",
+    "Job Title: Click or tap here to enter text. Location: Click or tap here to enter text.",
+    "Type of Coaching",
+    "☐ Underperformance ☐ Training Plan of Action ☐ Retraining",
+    "Topic of Coaching",
+    "☐ Store Tours ☐ Engaging Conversation ☐ Engaging Questions",
+    "☐ Relevant Recommendations ☐Overcoming Objections ☐ Product Basics",
+    "☐ Completing the Engagement ☐ Sales Strategies/Upselling ☐ Cleaning Tasks",
+    "☐ New Client Documents ☐ Other: Click or tap here to enter text.",
+    "Details of Coaching",
+    "Click or tap here to enter text.",
+    "Acknowledgement of Coaching",
+    "I confirm that my supervisor and I have discussed this training and plan for improvement.",
+    "Click or tap here to enter text. Click or tap to enter a date.",
+    "Employee Signature Date",
+    "Click or tap here to enter text. Click or tap to enter a date.",
+    "Supervisor Signature Date",
+  ].join("\n");
 
   const result = pipeline(readPdfText(PAGE_TEXT), coachingDocument());
 
-  it("produces exactly the published coaching note", () => {
+  it("produces exactly the published Coaching Form", () => {
     expect(result.document).toEqual(parseFormDocument(coachingDocument()));
   });
 
@@ -91,11 +94,27 @@ describe("the fixture coaching note as a flat PDF", () => {
   });
 
   it("reads the three types of coaching", () => {
-    expect(optionLabels(result.document, 0)).toEqual(FIXTURE_COACHING_TYPES);
+    expect(optionLabels(result.document, 0)).toEqual([
+      "Underperformance",
+      "Training Plan of Action",
+      "Retraining",
+    ]);
   });
 
   it("reads all eleven topics, over four printed rows, as ONE group", () => {
-    expect(optionLabels(result.document, 1)).toEqual(FIXTURE_COACHING_TOPICS);
+    expect(optionLabels(result.document, 1)).toEqual([
+      "Store Tours",
+      "Engaging Conversation",
+      "Engaging Questions",
+      "Relevant Recommendations",
+      "Overcoming Objections",
+      "Product Basics",
+      "Completing the Engagement",
+      "Sales Strategies/Upselling",
+      "Cleaning Tasks",
+      "New Client Documents",
+      "Other",
+    ]);
     const groups = result.document.blocks.filter((block) => block.kind === "checkbox_group");
     expect(groups, "four rows of ticks are one question, not four").toHaveLength(2);
   });
@@ -114,7 +133,9 @@ describe("the fixture coaching note as a flat PDF", () => {
     const acknowledgement = result.document.blocks.find(
       (block) => block.kind === "acknowledgement",
     );
-    expect(acknowledgement).toMatchObject({ text: FIXTURE_COACHING_ACKNOWLEDGEMENT });
+    expect(acknowledgement).toMatchObject({
+      text: "I confirm that my supervisor and I have discussed this training and plan for improvement.",
+    });
   });
 
   it("reads both signature pairs, and puts no input behind them", () => {
@@ -128,11 +149,27 @@ describe("the fixture coaching note as a flat PDF", () => {
     const keys = allKeys(result.document);
     expect(keys.some((key) => /signature/i.test(key))).toBe(false);
   });
+
+  it("introduces none of the superseded options", () => {
+    const everything = JSON.stringify(result.document);
+    for (const stale of [
+      "Salon Tours",
+      "Open-ended Questions",
+      "Closing the Sale",
+      "Client Engagement",
+      "Selling Memberships",
+      "Upgrading Options",
+      "Making Recommendations",
+      "Lotion Basics",
+    ]) {
+      expect(everything, stale).not.toContain(stale);
+    }
+  });
 });
 
 /* ================================================ the real files on disk === */
 
-describe("the generated files, read end to end", () => {
+describe("the supplied files, read end to end", () => {
   it("is a PDF with no fillable fields at all", async () => {
     const { getDocumentProxy } = await import("unpdf");
     const pdf = await getDocumentProxy(Uint8Array.from(fixture("coaching-form.pdf")));
@@ -145,7 +182,7 @@ describe("the generated files, read end to end", () => {
     expect(count, "the regression case is a FLAT PDF").toBe(0);
   });
 
-  it("reads the PDF into the published coaching note", async () => {
+  it("reads the real PDF into the published Coaching Form", async () => {
     const { readPdf } = await import("./read-pdf");
     const reading = await readPdf(fixture("coaching-form.pdf"));
     const result = pipeline(reading.lines, coachingDocument());
@@ -153,7 +190,7 @@ describe("the generated files, read end to end", () => {
     expect(result.outline.unresolved).toEqual([]);
   });
 
-  it("reads the DOCX into the same form", async () => {
+  it("reads the real DOCX into the same form", async () => {
     const { readDocx } = await import("./read-docx");
     const reading = await readDocx(fixture("coaching-form.docx"));
     const result = pipeline(reading.lines, coachingDocument());
@@ -166,14 +203,14 @@ describe("the generated files, read end to end", () => {
     // Mammoth reports the BODY only, so without this the form would have no
     // name on it — the header is where Word keeps the title.
     expect(readHeaderLines(fixture("coaching-form.docx"))).toEqual([
-      FIXTURE_COACHING_TITLE,
-      FIXTURE_COACHING_BRAND,
+      "Coaching Form",
+      "Sun Tan City",
     ]);
   });
 
   it("knows the .docx is a Word archive and the .doc is not one", () => {
     expect(isWordArchive(fixture("coaching-form.docx"))).toBe(true);
-    expect(isWordArchive(fixture("legacy-form.doc"))).toBe(false);
+    expect(isWordArchive(fixture("prescreen-form.doc"))).toBe(false);
     expect(readZipText(fixture("coaching-form.docx"), "word/document.xml")).toContain("w:document");
     expect(readZipText(fixture("coaching-form.docx"), "nope.xml")).toBeNull();
   });
@@ -183,9 +220,9 @@ describe("the generated files, read end to end", () => {
 
 describe("what the rules read", () => {
   it("splits a tick row into its options, glyphs and all", () => {
-    expect(splitGlyphCheckboxes("☐ Greeting Guests ☐Product Demonstrations ☑ Done")).toEqual([
-      "Greeting Guests",
-      "Product Demonstrations",
+    expect(splitGlyphCheckboxes("☐ Store Tours ☐Engaging Conversation ☑ Done")).toEqual([
+      "Store Tours",
+      "Engaging Conversation",
       "Done",
     ]);
     expect(splitGlyphCheckboxes("no ticks here")).toEqual([]);
@@ -229,7 +266,7 @@ describe("what the rules read", () => {
   });
 
   it("makes a stable key from a label", () => {
-    expect(slugify("Gift Ideas/Upselling")).toBe("gift_ideas_upselling");
+    expect(slugify("Sales Strategies/Upselling")).toBe("sales_strategies_upselling");
     expect(slugify("  ")).toBe("field");
   });
 
@@ -301,9 +338,9 @@ describe("Word structure", () => {
         '<p><input type="checkbox" /> Outgoing <input type="checkbox" /> Competitive</p>',
         "<table><tr><td><p>Observation Area</p></td><td><p>Key Notes</p></td></tr></table>",
       ].join(""),
-      [FIXTURE_COACHING_TITLE, FIXTURE_COACHING_BRAND],
+      ["Coaching Form", "Sun Tan City"],
     );
-    expect(lines[0]).toMatchObject({ text: FIXTURE_COACHING_TITLE, chrome: true });
+    expect(lines[0]).toMatchObject({ text: "Coaching Form", chrome: true });
     expect(lines[2]).toMatchObject({ text: "Interview", headingLevel: 1 });
     expect(lines[3]).toMatchObject({ text: "Applicant Information", emphasised: true });
     expect(lines[4]!.text).toContain("Click or tap here to enter text.");
@@ -313,8 +350,8 @@ describe("Word structure", () => {
   });
 
   it("decodes entities rather than printing them", () => {
-    const { lines } = readDocxHtml("<p>Guests &amp; Product Service &#8212; notes</p>");
-    expect(lines[0]!.text).toBe("Guests & Product Service — notes");
+    const { lines } = readDocxHtml("<p>Sales &amp; Client Service &#8212; notes</p>");
+    expect(lines[0]!.text).toBe("Sales & Client Service — notes");
   });
 });
 
@@ -367,7 +404,7 @@ describe("aligning a re-issued form to the one it replaces", () => {
 
   it("keeps the version's visual style, which no source document can express", () => {
     /*
-     * Re-issuing the coaching note from the very Word file it was built from
+     * Re-issuing the Coaching Form from the very Word file it was built from
      * must not strip its logo and put the black bars back. The style belongs to
      * the version, and alignment carries it the same way it carries `help`.
      */
@@ -376,11 +413,13 @@ describe("aligning a re-issued form to the one it replaces", () => {
       current,
     );
     expect(result.document.style).toEqual(current.style);
-    expect(result.document.style?.logo?.assetKey).toBe("fixture-logo");
+    // The source company's logo was not carried over; the plain-text masthead is the style.
+    expect(result.document.style?.logo).toBeUndefined();
+    expect(result.document.style?.letterhead).toBe("centered");
   });
 
   it("matches a checkbox group through a wholesale change of options", () => {
-    // The topics changed completely and it is still the same question.
+    // The topics changed almost completely and it is still the same question.
     const result = pipeline(
       readPdfText("Coaching Form\nTopic of Coaching\n☐ Something New ☐ Something Else"),
       current,
@@ -403,21 +442,20 @@ describe("aligning a re-issued form to the one it replaces", () => {
   it("keeps the published brand rather than the document's spelling of it", () => {
     /*
      * THE BRAND COMES FROM THE FORM BEING REPLACED, not off the page. The
-     * coaching note's masthead is title case; a capture that shouts it must not
+     * Coaching Form's masthead is title case; a capture that shouts it must not
      * re-case the published form on the next publish.
      *
      * GUARD ON THE GUARD: the two spellings really are different, so a run that
      * simply echoed the page would fail this rather than pass it by accident.
      */
-    const shouted = FIXTURE_COACHING_BRAND.toUpperCase();
-    const page = `Coaching Form\n${shouted}\nEmployee Information\nName: ____`;
-    expect(shouted).not.toBe(FIXTURE_COACHING_BRAND);
-    expect(current.blocks[0]).toMatchObject({ kind: "letterhead", brand: FIXTURE_COACHING_BRAND });
+    const page = "Coaching Form\nBUFF CITY SOAP\nEmployee Information\nName: ____";
+    expect(page).toContain("BUFF CITY SOAP");
+    expect(current.blocks[0]).toMatchObject({ kind: "letterhead", brand: "Buff City Soap" });
 
     const result = pipeline(readPdfText(page), current);
     expect(result.document.blocks[0]).toMatchObject({
       kind: "letterhead",
-      brand: FIXTURE_COACHING_BRAND,
+      brand: "Buff City Soap",
     });
   });
 

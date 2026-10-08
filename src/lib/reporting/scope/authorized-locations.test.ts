@@ -11,6 +11,8 @@ vi.mock("@/config/company/locations", () => ({
     { id: "dist-west", name: "West", regionId: "reg-south" },
   ],
   COMPANY_REGION_ENTRIES: [{ id: "reg-south", name: "South" }],
+  COMPANY_LOCATION_NICKNAMES: {},
+  COMPANY_LOCATION_ABBREVIATIONS: {},
 }));
 
 import {

@@ -2,12 +2,18 @@ import "server-only";
 
 import { businessToday } from "@/lib/business-date";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
-import { COMPANY_LOCATIONS, locationById, locationNameKey } from "@/lib/locations";
+import { COMPANY_LOCATIONS, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, isFormVocabulary, leadingFormRequest } from "./template-intent";
 import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { boundManagerTurns, type BoundedContext } from "./bounded-context";
+import {
+  allowsTeamSubject,
+  maskTeamSubjectPhrases,
+  readsAsTeamSubject,
+  TEAM_SUBJECT_LABEL,
+} from "./team-subject";
 import { proposeLocation } from "./location-scope";
 import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
 
@@ -16,7 +22,7 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
  * FROM A CONVERSATION TO A FORM PROPOSAL — DETERMINISTICALLY
  * ============================================================================
  *
- * WHICH FORM, WHO IT IS ABOUT, AND WHICH LOCATION ARE CODE DECISIONS. A language
+ * WHICH FORM, WHO IT IS ABOUT, AND WHICH SALON ARE CODE DECISIONS. A language
  * model is excellent at drafting the prose inside a coaching form and has no
  * business choosing the frame around it: the template, the employee's identity
  * and the location on a disciplinary record are facts, and a model that is
@@ -99,8 +105,8 @@ export function managerContext(
 /* ------------------------------------------------------- employee intent -- */
 
 /*
- * PUNCTUATION AROUND A NAME IS NOT PART OF IT. "(paulyne)", "\"paulyne co\""
- * and "'paulyne'" are the same answer as "paulyne", and a manager should not
+ * PUNCTUATION AROUND A NAME IS NOT PART OF IT. "(marlowe)", "\"marlowe co\""
+ * and "'marlowe'" are the same answer as "marlowe", and a manager should not
  * have to retype it bare. Only the OUTSIDE edges are stripped — opening
  * brackets and quotes before the first word, closing ones and sentence
  * punctuation after the last — so the apostrophe in O'Connor and the hyphen in
@@ -115,7 +121,7 @@ const WRAPPER_AFTER = /[)\]}"”’'»,.;:!?]+$/;
  *
  * At most TWO words — a first name and a surname or initial. Without capitals
  * nothing marks where a name ends, and a third lower-case word is more often
- * the start of the sentence ("paulyne co wore slippers") than a middle name. A
+ * the start of the sentence ("marlowe co wore slippers") than a middle name. A
  * capitalised name of any length is still read by the patterns above.
  *
  * `whole` requires every word to be part of the name: it is the test for a
@@ -149,8 +155,8 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
   }
   /*
    * A MIDDLE NAME IS KEPT ONLY WHERE THE NAME VISIBLY ENDS AFTER IT. "for mary
-   * anne cruz to location 24" and "for john michael doe effective october 2" are
-   * three-part names, because what follows is plainly not a name; "for paulyne
+   * anne cruz to salon 24" and "for john michael doe effective october 2" are
+   * three-part names, because what follows is plainly not a name; "for marlowe
    * co wore slippers" is a two-part name and the start of a sentence. So a
    * third word stays only when it ends the message, carries the punctuation,
    * or is followed by a word that cannot be part of a name.
@@ -175,17 +181,17 @@ const INTAKE_LIST = /^\s*([^,\n]+),[^,\n]*,/;
 
 /*
  * ============================================================================
- * "TN TESTVILLE" IS A LOCATION, WHEN THE ROSTER'S NAMES SAY SO
+ * "KS SHAWNEE" IS A SALON, BECAUSE EVERY SALON'S NAME SAYS SO
  * ============================================================================
  *
- * Where store names in the roster open with their state — "TN Example Ave",
- * "TN Testville Downtown" — managers shorten the rest but keep the prefix. A
- * capitalised pair was otherwise a person, so "<name>, TN Testville, today"
- * made the LOCATION the employee when the name was in lower case, and made the
- * turn ambiguous when it was not.
+ * Every store name in the production roster opens with its state — "KS
+ * Shawnee Mission Pkwy", "NE Kearney", "MO St Joseph" — and managers shorten
+ * the rest but keep the prefix. A capitalised pair was otherwise a person, so
+ * "<name>, NE Kearney, today" made the SALON the employee when the name was in
+ * lower case, and made the turn ambiguous when it was not.
  *
  * THE ROSTER IS THE EVIDENCE, not a list of the fifty states: only the prefixes
- * the business's own locations carry, and only written as a prefix is written —
+ * the business's own salons carry, and only written as a prefix is written —
  * in capitals, followed by a word that is not. "Mo Smith" is a person, and so
  * is "MO SMITH" in an all-caps sentence; neither matches.
  */
@@ -194,26 +200,25 @@ const ROSTER_STATES = new Set(
 );
 
 /**
- * A NAME THAT IS A LOCATION ON THE ROSTER IS A PLACE, in any case.
+ * A NAME THAT IS A SALON ON THE ROSTER IS A PLACE, in any case.
  *
  * `opensWithRosterState` deliberately lets an all-caps "MO SMITH" through as a
- * person, so an all-caps "TN TESTVILLE" came through too and made the turn
- * ambiguous between the employee and a location. This is exact rather than a
+ * person, so an all-caps "NE KEARNEY" came through too and made the turn
+ * ambiguous between the employee and a salon. This is exact rather than a
  * shape: the candidate, normalised the way reporting normalises store names,
- * IS one of the roster's locations — with or without its state prefix, when
- * that leaves more than one word. "Testville Downtown" is a location;
- * "Testville" alone is never a candidate unless it is the whole message, and
- * is left alone.
+ * IS one of the fifteen salons — with or without its state prefix, when that
+ * leaves more than one word. "Lincoln O Street" is a salon; "Kearney" alone is
+ * never a candidate unless it is the whole message, and is left alone.
  */
 const ROSTER_NAME_KEYS: ReadonlySet<string> = new Set(
-  COMPANY_LOCATIONS.flatMap((location) => {
-    const full = locationNameKey(location.name);
+  COMPANY_LOCATIONS.flatMap((salon) => {
+    const full = locationNameKey(salon.name);
     const short = full.replace(/^[a-z]{2} /, "");
     return short.includes(" ") ? [full, short] : [full];
   }),
 );
 
-function isRosterLocationName(candidate: string): boolean {
+function isRosterSalonName(candidate: string): boolean {
   return ROSTER_NAME_KEYS.has(locationNameKey(candidate));
 }
 
@@ -248,7 +253,7 @@ export type EmployeeResolution =
  *
  * CASE IS NOT REQUIRED where the position says a name is being given — the
  * whole message, item 1 of a numbered answer, or directly after "<form> for".
- * There "paulyne", "paulyne co" and "PAULYNE CO" read exactly as "Paulyne Co"
+ * There "marlowe", "marlowe co" and "MARLOWE CO" read exactly as "Marlowe Co"
  * does, and a first name alone is a name. See `readTypedName`.
  */
 export function extractEmployeeNames(text: string): string[] {
@@ -262,7 +267,7 @@ export function extractEmployeeNames(text: string): string[] {
  *
  * PRODUCTION QA, 30 September 2026, with a confirmed employee on screen:
  *
- *   "This is a policy review coaching about opening the location late."
+ *   "This is a policy review coaching about opening the salon late."
  *        → the employee became "opening"
  *   "No, not Jordan Testperson. Avery Testperson."
  *        → two candidates, so the correction produced no employee at all
@@ -297,9 +302,9 @@ export interface EmployeeMentions {
 
 export function readEmployeeMentions(typed: string): EmployeeMentions {
   // "pls", "u", "frm" are never names and never end one; read them as words.
-  // "general training", "team-wide", "everyone at the location" describe the team,
+  // "general training", "team-wide", "everyone at the salon" describe the team,
   // never a person — they are taken out first. See `maskTeamSubjectPhrases`.
-  const text = canonicalShorthand(typed);
+  const text = maskTeamSubjectPhrases(canonicalShorthand(typed));
   /* Names read from a position that says a person is being given on purpose. */
   const strong: string[] = [];
   /* Names read from the narrative: a capitalised pair, "with Jordan". */
@@ -324,22 +329,22 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * A SURNAME GIVEN AS AN INITIAL IS STILL A NAME
    * ==========================================================================
    *
-   * `NAME` requires two characters, so "Paulyne C" matched nothing at all. A
+   * `NAME` requires two characters, so "Marlowe C" matched nothing at all. A
    * manager answering "who is this form for?" with
    *
-   *     "Paulyne C she was wearing slippers today and was already given
+   *     "Marlowe C she was wearing slippers today and was already given
    *      verbal warning on aug 21"
    *
    * got the identical question back, having just answered it — and everything
    * else in that sentence, the incident and the prior warning, was read
-   * correctly. First name plus last initial is how half the location refers to
+   * correctly. First name plus last initial is how half the salon refers to
    * people, so this was not an edge case.
    *
    * TRAILING ONLY, AND NEVER ON ITS OWN. The first part must still be a real
-   * word: "C Paulyne" is not a name, and a lone capital anywhere would turn
+   * word: "C Marlowe" is not a name, and a lone capital anywhere would turn
    * every sentence-initial "I" into somebody's employee. `(?![a-zA-Z])` is what
    * keeps the initial distinct from the first letter of a longer surname, so
-   * "Paulyne Camacho" still matches `NAME` and not this.
+   * "Marlowe Example" still matches `NAME` and not this.
    *
    * The two lone capitals that ARE ordinary English — "I" and "A" — are in
    * NOT_A_NAME, which is checked on every part below.
@@ -348,20 +353,20 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
   const PART = `(?:${NAME}|${INITIAL})`;
   /*
    * ==========================================================================
-   * "AT RIVER MARKET" IS A LOCATION, AND IT WAS BEING READ AS A SECOND PERSON
+   * "AT LINCOLN SOUTH" IS A SALON, AND IT WAS BEING READ AS A SECOND PERSON
    * ==========================================================================
    *
-   * "Riley Hartman is a Shift Lead at River Market" yields TWO capitalised
-   * pairs, so the request was ambiguous and Ask Bubbles asked which of them the
-   * form was for — having just been told, in a sentence where one of the two is
-   * plainly a place. Every location whose name is two words had this: River
-   * Market, Union Square, West End.
+   * "Jessica Vance is an SDIT at Lincoln South" yields TWO capitalised pairs,
+   * so the request was ambiguous and Ask Bubbles asked which of them the form
+   * was for — having just been told, in a sentence where one of the two is
+   * plainly a place. Every salon whose name is two words had this: Lincoln
+   * South, Kansas City, Union Square.
    *
    * THE PREPOSITION IS THE EVIDENCE, and it is the manager's own. A capitalised
    * pair introduced by "at" or "in" is where something happened; a person is
    * introduced by "for", "about", "with" or "regarding", and those are the
    * prepositions the person pattern below reads. Nothing here guesses from the
-   * words themselves — there is no location roster to check a name against, and
+   * words themselves — there is no salon roster to check a name against, and
    * inventing one is what this module refuses to do.
    *
    * IT ONLY EVER REMOVES A CANDIDATE THE SENTENCE PATTERN FOUND. A name that
@@ -377,15 +382,15 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
     ).test(text);
   /*
    * ==========================================================================
-   * "SARAH JOHNSON, RIVER MARKET, TODAY" IS AN ANSWER TO THE INTAKE
+   * "SARAH JOHNSON, LINCOLN SOUTH, TODAY" IS AN ANSWER TO THE INTAKE
    * ==========================================================================
    *
-   * The intake asks for the name, then the location, then the date, in that
+   * The intake asks for the name, then the salon, then the date, in that
    * order, and managers answer it on one line exactly as it was asked — which
    * is the whole point of asking it as a list. That line carries no
    * preposition, so `AT_A_PLACE` above saw nothing, and the second item came
    * back as a SECOND CAPITALISED PAIR: Ask Bubbles asked whether the form was
-   * for Sarah Johnson or for River Market, one message after asking for both.
+   * for Sarah Johnson or for Lincoln South, one message after asking for both.
    *
    * THE SHAPE IS THE EVIDENCE, and it is as specific as the preposition was.
    * The whole message must OPEN with `<Name>, <Two capitalised words>, ` and
@@ -394,9 +399,9 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * is anchored at the start, and a sentence describing somebody does not
    * reach a date by its second comma.
    *
-   * SINGLE-WORD LOCATIONS NEVER NEEDED THIS. "Testville" is one capitalised word,
+   * SINGLE-WORD SALONS NEVER NEEDED THIS. "Kearney" is one capitalised word,
    * and a lone capitalised word is not a candidate unless it is the entire
-   * message — so only the two-word locations were ever affected, which is the
+   * message — so only the two-word salons were ever affected, which is the
    * same set `AT_A_PLACE` was written for.
    *
    * IT ONLY EVER REMOVES A CANDIDATE, and one that is named as a person
@@ -404,14 +409,14 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    */
   const DATEISH =
     "(?:[Tt]oday|[Yy]esterday|[Tt]onight|[Tt]his morning|\\d{1,2}/\\d{1,2}|\\d{4}-\\d{2}-\\d{2}|(?:[Jj]an|[Ff]eb|[Mm]ar|[Aa]pr|[Mm]ay|[Jj]un|[Jj]ul|[Aa]ug|[Ss]ep|[Oo]ct|[Nn]ov|[Dd]ec)[a-z]*\\.?\\s+\\d{1,2})";
-  const intakeLocation = new RegExp(
+  const intakeSalon = new RegExp(
     `^\\s*${NAME}(?:\\s+${PART})*\\s*,\\s*(${NAME}(?:\\s+${PART})+)\\s*,\\s*${DATEISH}\\b`,
   ).exec(text)?.[1];
 
   const places = new Set(
     [
       ...[...text.matchAll(AT_A_PLACE)].map((match) => match[1]!.trim()),
-      ...(intakeLocation ? [intakeLocation.trim()] : []),
+      ...(intakeSalon ? [intakeSalon.trim()] : []),
     ]
       // Named as a person somewhere too, so the position is not the whole story.
       .filter((candidate) => !AS_A_PERSON(candidate)),
@@ -423,7 +428,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * ==========================================================================
    *
    * Found in production QA. "Create a Demotion Form for a synthetic test
-   * employee named Demo Alpha Test at location 12 … current position is District
+   * employee named Demo Alpha Test at salon 12 … current position is District
    * Manager … for QA" was asked whether the form was for Demo Alpha Test,
    * District Manager or QA. "The employee is Demo Alpha Test. … District
    * Manager is the current position" got the same question again. And
@@ -467,7 +472,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
     }
   }
   marked.push(...labelledNames(text));
-  // "employee named paulyne co": the same marker, for a name typed without capitals.
+  // "employee named marlowe co": the same marker, for a name typed without capitals.
   if (marked.length === 0) {
     for (const match of text.matchAll(/\b(?:employee|team member|staff member)\s+named\s+(\S+(?:\s+\S+)?)/gi)) {
       const candidate = readTypedName(match[1]!.split(/\s+/), false);
@@ -491,7 +496,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * "Position Transfer Form for Transfer Beta Test". That position already
    * says a person follows, and the form has already been named. Kept only
    * where at least two ordinary name words follow the form word. A message
-   * that merely STARTS with a form word ("Demote Paulyne Co", "Exit Jane
+   * that merely STARTS with a form word ("Demote Marlowe Co", "Exit Jane
    * Smith") is never read this way.
    */
   // Case-sensitive on the name; the form noun before "for" is checked in any case.
@@ -520,7 +525,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
     const candidate = withoutConversationalLead(run);
     if (candidate === null) continue;
     if (opensWithRosterState(candidate) && !AS_A_PERSON(candidate)) continue;
-    if (isRosterLocationName(candidate)) continue;
+    if (isRosterSalonName(candidate)) continue;
     if (isJobTitlePhrase(candidate)) continue;
     if (!candidate.split(/\s+/).some(notAName)) {
       // Led by a reply ("It's …"), the run IS the answer.
@@ -536,7 +541,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
 
   /*
    * ==========================================================================
-   * "RILEY IS A SHIFT LEAD AT RIVER MARKET" NAMES RILEY
+   * "JESSICA IS AN SDIT AT LINCOLN SOUTH" NAMES JESSICA
    * ==========================================================================
    *
    * A FIRST NAME ON ITS OWN IS HOW MANAGERS REFER TO THEIR TEAM, and it was
@@ -555,15 +560,15 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    *
    * WHAT IT STILL REFUSES. "Create a coaching form for a performance concern"
    * has no copula-plus-role and yields nothing, which is the defect this whole
-   * module was written to remove. "She is a Shift Lead" yields nothing, because the
+   * module was written to remove. "She is an SDIT" yields nothing, because the
    * pronouns are in `NOT_A_NAME`. A form's own name yields nothing, because
    * `isFormVocabulary` rejects it.
    */
   /*
    * THE WHOLE NAME BEFORE THE COPULA, not its last word. Anchored on `NAME`
-   * alone this matched "Hartman is a Shift Lead" inside "Riley Hartman is a
-   * Shift Lead" and produced a SECOND candidate — so a manager who gave a full
-   * name was asked to choose between it and its own surname.
+   * alone this matched "Vance is an SDIT" inside "Jessica Vance is an SDIT"
+   * and produced a SECOND candidate — so a manager who gave a full name was
+   * asked to choose between it and its own surname.
    */
   const NAMED_ROLE = new RegExp(
     `\\b(${NAME}(?:\\s+${PART})*)\\s+(?:is|was)\\s+(?:an?|our|the)\\s+(?:new\\s+)?([A-Za-z][A-Za-z ]{0,28}?)(?=[,.;!?]|\\s+(?:at|in|on|and|who|but)\\b|$)`,
@@ -582,17 +587,17 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * ==========================================================================
    *
    * Everything above reads a capital letter as the evidence. That made
-   * "Create a Corrective Action form for paulyne", "paulyne co" and "test test"
-   * unreadable — no employee, so no form — while "Paulyne Co" worked. It also
-   * lost names in an all-caps sentence ("…FORM FOR PAULYNE CO", where the full
+   * "Create a Corrective Action form for marlowe", "marlowe co" and "test test"
+   * unreadable — no employee, so no form — while "Marlowe Co" worked. It also
+   * lost names in an all-caps sentence ("…FORM FOR MARLOWE CO", where the full
    * pattern swallowed the whole line) and dropped a surname followed by a
-   * capitalised word ("for Paulyne Co She wore…" yielded "Paulyne").
+   * capitalised word ("for Marlowe Co She wore…" yielded "Marlowe").
    *
    * Without capitals, THE POSITION IS THE EVIDENCE, and only three positions
    * are strong enough to carry it:
    *
    *   1. directly after a FORM plus "for" / "about" / "regarding" —
-   *      "corrective action form for paulyne", "coaching for test test";
+   *      "corrective action form for marlowe", "coaching for test test";
    *   2. the WHOLE MESSAGE, optionally introduced as "for …" / "it's for …" —
    *      the answer a manager types when Bubbles has asked who the form is for;
    *   3. item 1 of a NUMBERED answer, which is the employee's name because the
@@ -629,8 +634,8 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * 1b. THE PERSON A CHANGE IS DONE TO, OR WHO IS MAKING ONE
    * ==========================================================================
    *
-   * "demote paulyne from manager to TC" and "transfer jane to location 18" put the
-   * name straight after the verb; "Jane is transferring from location 12" and
+   * "demote marlowe from manager to TC" and "transfer jane to salon 18" put the
+   * name straight after the verb; "Jane is transferring from salon 12" and
    * "mike quit, last day was 9/25" put it at the start of the sentence, before
    * the change. Both positions are as strong as "<form> for <name>": the verb
    * says a person comes next, or the sentence opens with who it is about.
@@ -704,10 +709,10 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * ==========================================================================
    *
    * REPORTED FROM THE ROLLOUT as "Create a form from this conversation
-   * is failing". The intake asks for the name, the location, the date and the
+   * is failing". The intake asks for the name, the salon, the date and the
    * concern as a numbered list, and a manager answered it the way people do:
    *
-   *     "<first last>, KS <city>, she is the location director. we can use todays
+   *     "<first last>, KS <city>, she is the salon director. we can use todays
    *      date. the concern is …"
    *
    * In lower case, followed by a comma, the name was in none of the positions
@@ -743,7 +748,7 @@ function markedName(raw: string): string | null {
   if (words.some((word) => NOT_A_NAME.has(word.toLowerCase()))) return null;
   if (words.some((word) => DOCUMENT_WORDS.has(word.toLowerCase()))) return null;
   const candidate = words.join(" ");
-  if (isJobTitlePhrase(candidate) || isRosterLocationName(candidate)) return null;
+  if (isJobTitlePhrase(candidate) || isRosterSalonName(candidate)) return null;
   const ordinary = words.filter((word) => !isFormVocabulary(word)).length;
   if (ordinary === 0 || (ordinary < words.length && ordinary < 2)) return null;
   return candidate;
@@ -811,7 +816,7 @@ function withoutAnswerLead(answer: string): string {
  *
  * A bare "name is …" counts only where it OPENS the message or a clause —
  * "name is avery testperson, today wearing slippers", found in production —
- * so "the company name is Example Company" is still nobody.
+ * so "the company name is Buff City Soap" is still nobody.
  *
  * A copula ("the employee is …") is weaker than a colon, because what follows
  * is as often a description — "the employee is always late" — so there the
@@ -847,10 +852,10 @@ function labelledNames(text: string): string[] {
   return names;
 }
 
-/** A typed name that is not a job title, a location, or a document's name. */
+/** A typed name that is not a job title, a salon, or a document's name. */
 function typedNameAllowed(candidate: string): boolean {
   const words = candidate.toLowerCase().split(/\s+/);
-  return !isJobTitlePhrase(candidate) && !isRosterLocationName(candidate) && !words.some((word) => DOCUMENT_WORDS.has(word));
+  return !isJobTitlePhrase(candidate) && !isRosterSalonName(candidate) && !words.some((word) => DOCUMENT_WORDS.has(word));
 }
 
 /*
@@ -950,7 +955,7 @@ const FORM_NOUNS =
  * THE PERSON A FORM IS FOR: "<FORM> FOR <NAME>"
  * ============================================================================
  *
- * "corrective action form for paulyne", "coaching for test test": directly
+ * "corrective action form for marlowe", "coaching for test test": directly
  * after a form plus "for" / "about" / "regarding", in any case. Also the
  * subject a marked name ("employee named …") must agree with before it is
  * taken alone. A description of the person that leads into the marked name
@@ -965,7 +970,7 @@ function formSubjectNames(text: string): string[] {
   );
   for (const match of text.matchAll(FORM_THEN_PERSON)) {
     /*
-     * "COACHING ABOUT OPENING THE LOCATION LATE" IS A TOPIC. Found in production
+     * "COACHING ABOUT OPENING THE SALON LATE" IS A TOPIC. Found in production
      * QA: "about" + a word ending "-ing" put "opening" on the form in place of
      * the confirmed employee. A form is ABOUT an activity far more often than
      * about a person; "for" is how a person is introduced, and it is unchanged.
@@ -998,11 +1003,11 @@ function formSubjectNames(text: string): string[] {
  * "District Manager" a candidate beside the employee, and Ask Bubbles asked
  * which of the two the form was for. A capitalised pair that is wholly a job
  * title (one the business uses, or a title word such as Manager or Director
- * led only by words like Location, District or Assistant) is never a person.
+ * led only by words like Salon, District or Assistant) is never a person.
  */
 const TITLE_HEAD = /^(?:managers?|directors?|consultants?|supervisors?|leads?|trainers?|coordinators?|specialists?)$/i;
 const TITLE_MODIFIER =
-  /^(?:location|district|regional|area|store|makery|general|assistant|shift|training|operations|senior|junior|head|key)$/i;
+  /^(?:salon|location|district|regional|area|store|makery|general|assistant|shift|training|operations|tanning|spa|senior|junior|head|key)$/i;
 
 function isJobTitlePhrase(candidate: string): boolean {
   if (JOB_TITLES.some((entry) => entry.pattern.test(candidate) && candidate.replace(entry.pattern, "").trim() === "")) {
@@ -1020,10 +1025,10 @@ function distinctNames(found: readonly string[]): string[] {
   /*
    * ONE SPELLING PER PERSON, BEFORE ANYTHING IS COUNTED.
    *
-   * "Paulyne C." matches both the sentence pattern and the whole-message one,
+   * "Marlowe C." matches both the sentence pattern and the whole-message one,
    * with and without the full stop, and the de-duplication below compares a
    * bare first name against a full one — it would have let those through as
-   * TWO candidates and asked the manager which of the two Paulynes they meant.
+   * TWO candidates and asked the manager which of the two Marlowes they meant.
    * Dropping the stop off a trailing initial makes them the same string.
    */
   const spellings = found.map((name) =>
@@ -1033,8 +1038,8 @@ function distinctNames(found: readonly string[]): string[] {
   /*
    * De-duplicated, and a bare first name that is part of a full name already
    * found is the same person rather than a second candidate. COMPARED WITHOUT
-   * CASE: "PAULYNE CO" found by the capitalised pattern and by the typed-name
-   * one is one person, and "Paulyne" beside "paulyne co" is not two.
+   * CASE: "MARLOWE CO" found by the capitalised pattern and by the typed-name
+   * one is one person, and "Marlowe" beside "marlowe co" is not two.
    */
   const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
   const first = (name: string) => name.split(/\s+/)[0]!;
@@ -1108,7 +1113,7 @@ export interface EmployeeState {
  *   TWO PEOPLE        named on purpose in one turn is a question, never a
  *                     choice — as it always was.
  *
- * Topic words, dates, locations and pronouns name nobody, so they cannot reach
+ * Topic words, dates, salons and pronouns name nobody, so they cannot reach
  * any of this. There is no employee directory: every value is the manager's
  * own words, in the manager's own spelling.
  */
@@ -1204,7 +1209,7 @@ function completePartialName(
   /*
    * "BETA TEST" AFTER "EMPLOYEE TRANSFER BETA TEST" IS TRANSFER BETA TEST. A
    * bare "Transfer Beta Test." reads "Transfer" as the verb, as "Demote
-   * Paulyne Co" must. Where the manager's own earlier turn named the full
+   * Marlowe Co" must. Where the manager's own earlier turn named the full
    * name, and the only extra words are form words, that is who they mean.
    */
   if (/\s/.test(name.trim())) {
@@ -1275,7 +1280,7 @@ export interface ProposalInput {
    * Absent: the conversation's own reading, as it always was.
    */
   employee?: EmployeeResolution;
-  /** The employee's locations, from the directory, already in the actor's scope. */
+  /** The employee's salons, from the directory, already in the actor's scope. */
   employeeLocationIds?: readonly string[];
 }
 
@@ -1289,9 +1294,9 @@ export interface ProposalInput {
  * it if it tried. That leaves exactly one honest source — the manager's own
  * words — and this reads them.
  *
- * WHY NOT INFER IT FROM THE TEMPLATE. A review form written for a role is not
- * proof that the employee holds that title: managers write one for somebody
- * being developed toward the role, and the abbreviations vary by district. A title printed on somebody's
+ * WHY NOT INFER IT FROM THE TEMPLATE. An SDIT EPP is not proof that the
+ * employee's title is "SDIT": managers write one for an ASD on the SDIT track,
+ * and the abbreviations vary by district. A title printed on somebody's
  * employment record because a template was chosen is a fabricated fact, and the
  * blank line it replaces is one the manager can fill in a second.
  *
@@ -1305,10 +1310,10 @@ export const JOB_TITLES: readonly { pattern: RegExp; title: string }[] = COMPANY
  * The job title the manager stated, or null.
  *
  * FIRST MATCH IN THIS FILE'S ORDER, which runs from the most specific title to
- * the least: "assistant store manager" contains "store manager", and
+ * the least: "salon director in training" contains "salon director", and
  * reading it as the latter would print the wrong role on the form. Two
  * different titles in one conversation is not refused the way two employee
- * names are — a manager comparing a Shift Lead to her Store Manager has still told
+ * names are — a manager comparing an SDIT to her Salon Director has still told
  * us what the subject is, and the field is editable — but the ORDER means the
  * most specific one wins rather than whichever came first in the sentence.
  */
@@ -1330,41 +1335,54 @@ export function extractJobTitle(text: string): string | null {
 export function buildProposal(input: ProposalInput): ChatFormProposal {
   const employee = input.employee ?? resolveEmployee(input.context);
   /*
-   * THE MANAGER'S WORDS, THEN THE EMPLOYEE'S LOCATION, THEN THE ACCOUNT. A
-   * location is used only where their scope proves it; see `proposeLocation`.
+   * A TEAM-WIDE COACHING FORM. Only where nobody is named, only on a template
+   * that allows it, and only on the manager's own words — see `team-subject.ts`.
+   */
+  const team =
+    employee.kind === "missing" &&
+    allowsTeamSubject(input.templateKey) &&
+    // Per turn: two turns joined ("…for the team" + "coaching form please") are not one phrase.
+    input.context.messages.some((message) => readsAsTeamSubject(message.content));
+  /*
+   * THE MANAGER'S WORDS, THEN THE EMPLOYEE'S SALON, THEN THE ACCOUNT. A salon
+   * is used only where their scope proves it; see `proposeLocation`.
    */
   const location = proposeLocation(
     input.scope,
     input.context.text,
-    input.employeeLocationIds ?? [],
+    team ? [] : (input.employeeLocationIds ?? []),
   );
 
-  const employeeName = employee.kind === "resolved" ? employee.employeeName : null;
+  const employeeName = team
+    ? TEAM_SUBJECT_LABEL
+    : employee.kind === "resolved"
+      ? employee.employeeName
+      : null;
   const locationId = location.resolution === "resolved" ? location.locationId : null;
   /*
    * `not_applicable` IS AN ANSWER, NOT A GAP. A global actor is not assigned to
-   * a location, and the server already permits a form that names none — so the
-   * proposal is ready, and the card says the form will carry no location. Only
-   * `needs_selection` (several to choose between) and `unavailable` (a location
+   * a salon, and the server already permits a form that names none — so the
+   * proposal is ready, and the card says the form will carry no salon. Only
+   * `needs_selection` (several to choose between) and `unavailable` (a salon
    * exists and cannot be verified) leave a question outstanding.
    */
-  const locationSettled =
+  const salonSettled =
     location.resolution === "resolved" || location.resolution === "not_applicable";
 
   /*
-   * ORDER MATTERS: the employee is asked for before the location. A manager who
-   * has not said who the form is about cannot usefully be asked which location it
+   * ORDER MATTERS: the employee is asked for before the salon. A manager who
+   * has not said who the form is about cannot usefully be asked which salon it
    * belongs to, and asking two questions at once gets one answer.
    */
   const status: ChatFormProposal["status"] =
-    employeeName === null ? "needs_employee" : locationSettled ? "ready" : "needs_location";
+    employeeName === null ? "needs_employee" : salonSettled ? "ready" : "needs_location";
 
   return {
     proposalId: input.proposalId,
     templateKey: input.templateKey,
     templateName: input.templateName,
     /*
-     * READY, AND SUPPORTED. A proposal still missing the employee or the location
+     * READY, AND SUPPORTED. A proposal still missing the employee or the salon
      * offers no create action — not a disabled one, and not one that opens a
      * form with a gap in it. The gap is the reason it is not offered.
      */
@@ -1375,7 +1393,7 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
      * FROM THE MANAGER'S TURNS, like the employee name and through the same
      * bounded window — never from the assistant's, and never from the template.
      */
-    employeeRole: extractJobTitle(input.context.text),
+    employeeRole: team ? null : extractJobTitle(input.context.text),
     /* Same rule: the manager's own words, read as U.S. month/day. */
     formDate:
       input.formDateFromConversation === false
@@ -1383,12 +1401,12 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
         : extractFormDate(input.context.text, input.today ?? businessToday()),
     locationId,
     /*
-     * NO DISPLAY NAME. There is no location roster to resolve one from an id, and
-     * `PRODUCTION_LOCATIONS` is the roster rather than a per-record authority — putting a
-     * fictional location name in front of a manager about to file a disciplinary
+     * NO DISPLAY NAME. There is no salon roster to resolve one from an id, and
+     * `COMPANY_LOCATIONS` is the roster rather than a per-record authority — putting a
+     * fictional salon name in front of a manager about to file a disciplinary
      * record is exactly the class of thing this phase exists to stop.
      */
-    locationName: locationId ? (locationById(locationId)?.name ?? null) : null,
+    locationName: null,
     locationResolution: location.resolution,
     authorizedLocationIds:
       location.resolution === "needs_selection" ? location.authorizedIds : [],
@@ -1398,5 +1416,6 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
       : {}),
     status,
     sourceMessageIds: input.context.ids,
+    ...(team ? { subject: "team" as const } : {}),
   };
 }

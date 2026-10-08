@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/config/company/locations", async () =>
+  (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
+);
+
 /**
  * ============================================================================
  * THE CHAT ROUTE SENDS "REDRAFT IT" TO THE OPEN FORM
  * ============================================================================
  *
- * The revision itself is proven in the forms engine tests.
+ * The revision itself is proven in `api/forms/coaching-feedback-e2e.test.ts`.
  * This proves the wiring: with a created form named by the browser, the route
  * tries the correction, then the revision, and only then an ordinary answer —
  * and without a named form it never tries the revision at all.
@@ -87,9 +91,10 @@ afterEach(() => {
 describe("a revision of the open form", () => {
   it("is answered by the revision, with the form update the editor listens for", async () => {
     const { route, seen } = await load({
-      content: "Updated the **Check-In (Example)** for **Pat Example**: Next Follow-Up.",
+      content: "Updated the **Coaching Form** for **Kaitlyn Brook**: Next Follow-Up.",
       citations: [],
       coverage: "not_applicable",
+
       formUpdate: { instanceId: INSTANCE, updated: ["next_follow_up"] },
     });
     const response = await route.POST(ask({ activeFormInstanceId: INSTANCE, history: [] }));
@@ -106,6 +111,7 @@ describe("a revision of the open form", () => {
       content: "Set the follow-up date to **Thursday, October 15, 2026**.",
       citations: [],
       coverage: "not_applicable",
+
       formUpdate: { instanceId: INSTANCE, updated: ["follow_up_date"] },
     });
     const response = await route.POST(
@@ -113,18 +119,14 @@ describe("a revision of the open form", () => {
         activeFormInstanceId: INSTANCE,
         history: [],
         question: "Change the follow-up date to 10/15",
-        // A client-asserted day is ignored: what day it is comes from the
-        // server, in the business timezone (see the chat route).
-        context: { userName: "Dana", locationName: "Testville Downtown", todayIso: "2001-01-01" },
+        context: { userName: "Dana", locationName: "NE Lincoln O Street", todayIso: "2026-10-02" },
       }),
     );
     expect(response.status).toBe(200);
+    // The server's business day, not the caller's `todayIso` (the reference
+    // copy pinned the day it was written, and fails on any other day).
     const { businessToday } = await import("@/lib/business-date");
-    expect(seen.revised[0]).toMatchObject({
-      question: "Change the follow-up date to 10/15",
-      today: businessToday(),
-    });
-    expect(seen.revised[0]).not.toMatchObject({ today: "2001-01-01" });
+    expect(seen.revised[0]).toMatchObject({ question: "Change the follow-up date to 10/15", today: businessToday() });
   });
 
   it("falls through to an ordinary answer when the turn is not a revision", async () => {

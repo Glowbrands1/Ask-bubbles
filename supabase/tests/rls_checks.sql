@@ -254,6 +254,8 @@ declare n integer;
 begin
   select count(*) into n from storage.buckets where public;
   if n <> 0 then raise exception 'FAIL [buckets-private]: % public bucket(s)', n; end if;
+  select count(*) into n from storage.buckets where id = 'forms-templates' and not public;
+  if n <> 1 then raise exception 'FAIL [forms-bucket]: the private forms-templates bucket is missing'; end if;
   select count(*) into n from pg_policies
    where schemaname = 'storage' and (roles && array['anon', 'authenticated', 'public']::name[]);
   if n <> 0 then raise exception 'FAIL [storage-policies]: % browser storage policies', n; end if;

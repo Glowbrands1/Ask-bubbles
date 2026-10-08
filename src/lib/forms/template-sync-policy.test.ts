@@ -5,7 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 
-import { TEMPLATE_SYNC_ENABLED_ENV, templateSyncDecision } from "./template-sync-policy";
+import {
+  TEMPLATE_SYNC_ENABLED_ENV,
+  TemplatePublishRefusedError,
+  templatePublishDecision,
+  templateSyncDecision,
+} from "./template-sync-policy";
 
 /**
  * ============================================================================
@@ -15,10 +20,9 @@ import { TEMPLATE_SYNC_ENABLED_ENV, templateSyncDecision } from "./template-sync
  * Preview and Production read one Supabase database. Opening Forms → Form
  * Templates runs `ensureTemplateLibrary`, which installs and publishes the
  * library THIS BUILD ships — so on a Preview it would publish a PR's template
- * revision into Production before Production runs the code it needs. See
- * `template-sync-policy.ts`. The library is the fixture registry
- * (`src/test/forms/fixture-forms.ts`), whose corrective notice is at a seed
- * revision above 1.
+ * revision into Production before Production runs the code it needs. Found in
+ * the PR #84 review (Corrective Action revision 5). See
+ * `template-sync-policy.ts`.
  */
 
 const store: FakeStore = {
@@ -52,20 +56,14 @@ vi.mock("@/lib/api/respond", async (importOriginal) => ({
   assertWithinRateLimit: () => {},
 }));
 vi.mock("@/features/forms/template-library", () => ({ TemplateLibrary: () => null }));
-// The page skips the library entirely when no database is configured; these
-// tests are about what it does when one is.
+// This deployment's page also checks that a database is connected before it
+// reads anything; the fake database below is that database.
 vi.mock("@/lib/config/server-env", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/config/server-env")>()),
   supabaseSecretKeyConfigured: () => true,
 }));
-vi.mock("@/components/permission-gate", () => ({
-  PermissionGate: ({ children }: { children: unknown }) => children,
-}));
-vi.mock("@/config/company/forms", async () =>
-  (await import("@/test/forms/fixture-forms")).fixtureFormsModule(),
-);
 
-const { ensureTemplateLibrary, openDraft, publishDraft, getTemplateByKey, getCurrentVersion } =
+const { ensureTemplateLibrary, openDraft, publishDraft, getTemplateByKey, getCurrentVersion, activateAssetVersion } =
   await import("./repository");
 const { TEMPLATE_SEEDS } = await import("./library");
 const templatesRoute = await import("@/app/api/forms/templates/route");
@@ -88,11 +86,10 @@ function snapshot() {
 const PRODUCTION = { VERCEL: "1", VERCEL_ENV: "production", NODE_ENV: "production" };
 const PREVIEW = { VERCEL: "1", VERCEL_ENV: "preview", NODE_ENV: "production" };
 
-const CORRECTIVE = "fixture-corrective";
-const caSeed = TEMPLATE_SEEDS.find((seed) => seed.key === CORRECTIVE)!;
+const caSeed = TEMPLATE_SEEDS.find((seed) => seed.key === "dpoa")!;
 
-/** The corrective notice as the previous revision published it: two previous-action lines, no closing. */
-function previousRevisionDocument() {
+/** The Corrective Action Form as revision 4 published it: two previous-action lines, no closing. */
+function revision4Document() {
   const document = JSON.parse(JSON.stringify(caSeed.document)) as { blocks: Record<string, unknown>[] };
   document.blocks = document.blocks.flatMap((block) => {
     const field = block.field as Record<string, unknown> | undefined;
@@ -113,17 +110,17 @@ function previousRevisionDocument() {
 }
 
 /**
- * Production's library: everything installed, and the corrective notice's
- * current version one seed revision behind the code — the state in which a
- * Preview of the next revision would publish it.
+ * Production's library as it stands today: everything installed, and the
+ * Corrective Action Form's current version at seed revision 4 — the state in
+ * which a Preview of PR #84 would publish revision 5.
  */
-async function productionLibraryOneRevisionBehind() {
+async function productionLibraryAtRevision4() {
   await ensureTemplateLibrary("system", PRODUCTION);
-  const template = store.form_templates!.find((row) => row.key === CORRECTIVE)!;
+  const template = store.form_templates!.find((row) => row.key === "dpoa")!;
   const current = store.form_template_current!.find((row) => row.template_id === template.id)!;
   const version = store.form_template_versions.find((row) => row.id === current.version_id)!;
-  version.seed_revision = caSeed.revision - 1;
-  version.document = previousRevisionDocument();
+  version.seed_revision = 4;
+  version.document = revision4Document();
   supabaseCalls.count = 0;
   return { templateId: String(template.id), versionId: String(version.id) };
 }
@@ -191,12 +188,12 @@ describe("ensureTemplateLibrary on Production", () => {
     expect(result.created.sort()).toEqual(TEMPLATE_SEEDS.map((seed) => seed.key).sort());
   });
 
-  it("still publishes a newer seed revision over the one Production has", async () => {
-    const { templateId, versionId } = await productionLibraryOneRevisionBehind();
+  it("still publishes a newer seed revision — Corrective Action revision 5 over 4", async () => {
+    const { templateId, versionId } = await productionLibraryAtRevision4();
 
     const result = await ensureTemplateLibrary("system", PRODUCTION);
 
-    expect(result.revised).toEqual([CORRECTIVE]);
+    expect(result.revised).toEqual(["dpoa"]);
     const current = await getCurrentVersion(templateId);
     expect(current?.seedRevision).toBe(caSeed.revision);
     expect(current?.id).not.toBe(versionId);
@@ -220,8 +217,8 @@ describe("ensureTemplateLibrary on a Preview", () => {
     expect(store.form_templates).toEqual([]);
   });
 
-  it("does not publish the newer seed revision over Production's", async () => {
-    const { templateId, versionId } = await productionLibraryOneRevisionBehind();
+  it("does not publish Corrective Action revision 5 over Production's revision 4", async () => {
+    const { templateId, versionId } = await productionLibraryAtRevision4();
     const before = snapshot();
 
     const result = await ensureTemplateLibrary("system", PREVIEW);
@@ -248,7 +245,7 @@ describe("POST /api/forms/templates", () => {
     templatesRoute.POST(new Request("https://app.test/api/forms/templates", { method: "POST" }));
 
   it("is refused on a Preview, with a 409 that says why, and writes nothing", async () => {
-    await productionLibraryOneRevisionBehind();
+    await productionLibraryAtRevision4();
     const before = snapshot();
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv("VERCEL_ENV", "preview");
@@ -264,14 +261,14 @@ describe("POST /api/forms/templates", () => {
   });
 
   it("still syncs on Production", async () => {
-    await productionLibraryOneRevisionBehind();
+    await productionLibraryAtRevision4();
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv("VERCEL_ENV", "production");
 
     const response = await post();
 
     expect(response.status).toBe(200);
-    expect(((await response.json()) as { revised: string[] }).revised).toEqual([CORRECTIVE]);
+    expect(((await response.json()) as { revised: string[] }).revised).toEqual(["dpoa"]);
   });
 });
 
@@ -286,7 +283,7 @@ function textOf(node: unknown): string {
 
 describe("opening Forms → Form Templates", () => {
   it("on a Preview, shows the library without installing or publishing anything, and says so", async () => {
-    await productionLibraryOneRevisionBehind();
+    await productionLibraryAtRevision4();
     const before = snapshot();
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv("VERCEL_ENV", "preview");
@@ -298,7 +295,7 @@ describe("opening Forms → Form Templates", () => {
   });
 
   it("on Production, still publishes the newer revision on the visit, with no notice", async () => {
-    const { templateId } = await productionLibraryOneRevisionBehind();
+    const { templateId } = await productionLibraryAtRevision4();
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv("VERCEL_ENV", "production");
 
@@ -348,20 +345,92 @@ describe("nothing else can publish the code's library", () => {
   });
 });
 
-/* -------------------------------------------- what is deliberately unchanged --- */
+/* ------------------------------ a person's publish (improvement C) --- */
 
-describe("a person's own template work, which this does not govern", () => {
-  it("still opens and publishes an authored draft on a Preview", async () => {
-    const { templateId } = await productionLibraryOneRevisionBehind();
+/**
+ * PUBLISHING A PERSON'S DRAFT FROM A PREVIEW IS REFUSED. The reference
+ * platform left this open: an administrator reviewing a pull request on its
+ * Preview could click Publish and put the draft live in the one database
+ * Preview shares with Production. Editing and saving a draft still work there.
+ */
+describe("a person's publish, from a Preview", () => {
+  it("still opens and saves a draft, but refuses to publish it and writes nothing", async () => {
+    const { templateId, versionId } = await productionLibraryAtRevision4();
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv("VERCEL_ENV", "preview");
 
-    const template = await getTemplateByKey(CORRECTIVE);
+    const template = await getTemplateByKey("dpoa");
+    const { draft } = await openDraft(template!.id, "admin-1");
+    const before = snapshot();
+
+    await expect(publishDraft(draft.id, "admin-1")).rejects.toBeInstanceOf(TemplatePublishRefusedError);
+    expect(snapshot()).toBe(before);
+    expect((await getCurrentVersion(templateId))?.id).toBe(versionId);
+  });
+
+  it("is a 409 from the Publish route, naming the deployment, with the draft kept", async () => {
+    await productionLibraryAtRevision4();
+    const template = await getTemplateByKey("dpoa");
+    const { draft } = await openDraft(template!.id, "admin-1");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    const before = snapshot();
+
+    const { POST } = await import("@/app/api/forms/templates/[key]/publish/route");
+    const response = await POST(
+      new Request("http://localhost/api/forms/templates/dpoa/publish", {
+        method: "POST",
+        body: JSON.stringify({ versionId: draft.id }),
+      }),
+      { params: Promise.resolve({ key: "dpoa" }) },
+    );
+
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as { error: string; code: string; environment: string };
+    expect(body).toMatchObject({ code: "publish_not_allowed_here", environment: "preview" });
+    expect(body.error).toMatch(/Publishing is off on this Preview deployment/);
+    expect(body.error).toMatch(/nothing was published/);
+    expect(snapshot()).toBe(before);
+    expect(store.form_template_versions.find((row) => row.id === draft.id)?.status).toBe("draft");
+  });
+
+  it("refuses to activate a reference copy, which every live form prints beside", async () => {
+    const { templateId } = await productionLibraryAtRevision4();
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    const before = snapshot();
+
+    await expect(activateAssetVersion(templateId, "any-asset")).rejects.toBeInstanceOf(TemplatePublishRefusedError);
+    expect(snapshot()).toBe(before);
+    expect(supabaseCalls.count).toBe(0);
+  });
+
+  it.each([
+    ["a Vercel development deployment", { VERCEL: "1", VERCEL_ENV: "development" }],
+    ["a Vercel deployment that cannot say which it is", { VERCEL: "1" }],
+    ["a local build that did not opt in", { NODE_ENV: "production" }],
+  ])("is refused on %s", (_, env) => {
+    expect(templatePublishDecision(env).allowed).toBe(false);
+  });
+
+  it.each([
+    ["the Production deployment", PRODUCTION],
+    ["the test runner", { NODE_ENV: "test" }],
+    ["a local build that opted in", { NODE_ENV: "production", [TEMPLATE_SYNC_ENABLED_ENV]: "true" }],
+  ])("is allowed on %s", (_, env) => {
+    expect(templatePublishDecision(env).allowed).toBe(true);
+  });
+
+  it("still publishes an authored draft on Production", async () => {
+    const { templateId } = await productionLibraryAtRevision4();
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("VERCEL_ENV", "production");
+
+    const template = await getTemplateByKey("dpoa");
     const { draft } = await openDraft(template!.id, "admin-1");
     const published = await publishDraft(draft.id, "admin-1");
 
     expect(published.status).toBe("published");
-    expect(published.seedRevision).toBe(0);
     expect((await getCurrentVersion(templateId))?.id).toBe(draft.id);
   });
 });

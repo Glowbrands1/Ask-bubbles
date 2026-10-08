@@ -5,11 +5,15 @@ import { fieldsForVariant, type FormDocument, type FormField } from "./document"
  * A SENTENCE EVERY RECORD ENDS WITH, PUT THERE BY CODE
  * ============================================================================
  *
- * Some forms require a field to END with a fixed sentence — an acknowledgement
- * or a standard closing the business has approved.
+ * HR feedback, 3 Oct 2026: every Corrective Action Action Plan ends with
  *
- * WHY THIS IS NOT A PROMPT INSTRUCTION. A closing the model was asked to
- * write could be paraphrased, dropped or stripped by a guard. And a
+ *   "Future policy violations may be subject to additional corrective action
+ *    up to and including termination of employment."
+ *
+ * WHY THIS IS NOT A PROMPT INSTRUCTION. The narrative guard removes any
+ * sentence naming a corrective action or a termination the manager did not
+ * supply — correctly, for anything the MODEL writes — so a closing the model
+ * was asked to write would be stripped by the guard that runs on it. And a
  * manager's edit, a redraft or a chat correction would each be one more chance
  * to lose it. So the sentence is a property of the field in the stored
  * version (`FormField.requiredClosing`) and this module puts it at the end of
@@ -25,6 +29,10 @@ import { fieldsForVariant, type FormDocument, type FormField } from "./document"
  *
  * Pure and browser-safe.
  */
+
+/** The Corrective Action Form's Action Plan closing, in the business's words. */
+export const CA_ACTION_PLAN_CLOSING =
+  "Future policy violations may be subject to additional corrective action up to and including termination of employment.";
 
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

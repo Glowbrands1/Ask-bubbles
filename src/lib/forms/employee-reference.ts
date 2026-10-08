@@ -1,4 +1,5 @@
 import { NOT_A_NAME } from "./name-words";
+import { TEAM_SUBJECT_LABEL } from "./team-subject";
 
 /**
  * ============================================================================
@@ -43,11 +44,11 @@ import { NOT_A_NAME } from "./name-words";
  */
 export function employeeFirstName(employeeName: string | null | undefined): string | null {
   const name = (employeeName ?? "").trim();
-  if (name === "") return null;
+  if (name === "" || name === TEAM_SUBJECT_LABEL) return null;
   const first = name.split(/\s+/)[0]!.replace(/[,.;:]+$/, "");
   if (!/^[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'’-]*$/.test(first)) return null;
   if (NOT_A_NAME.has(first.toLowerCase())) return null;
-  // A name typed as "colene" or "COLENE" is still written "Colene" on the form;
+  // A name typed as "harper" or "HARPER" is still written "Harper" on the form;
   // one with its own mixed case ("McKenna", "DeShawn") is left as given.
   const single = first === first.toLowerCase() || first === first.toUpperCase();
   return single ? first[0]!.toUpperCase() + first.slice(1).toLowerCase() : first;
@@ -83,7 +84,7 @@ const OTHER_PERSON =
   /\b(?:clients?|guests?|customers?|members?|co-?workers?|colleagues?|team\s?mates?|associates?|someone|somebody|anyone|anybody|everyone|everybody|person|people|another|other|managers?|supervisors?|directors?|leaders?|consultants?|trainees?|trainers?|mom|dad|mother|father|sons?|daughters?|child|children|kids?|boyfriend|girlfriend|husband|wife|partner|friends?|family|parents?|sister|brother)\b/gi;
 
 /** Groups that can be "they" but never "he" or "she". */
-const COLLECTIVE = /\b(?:team|staff|management|leadership|employees|everyone|people|crew|location|company)\b/i;
+const COLLECTIVE = /\b(?:team|staff|management|leadership|employees|everyone|people|crew|salon|company)\b/i;
 
 /**
  * Capitalised words that are not a person — form vocabulary, the calendar and
@@ -97,10 +98,11 @@ const NOT_A_PERSON = new Set(
     "january", "february", "march", "april", "may", "june", "july", "august", "september",
     "october", "november", "december", "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep",
     "sept", "oct", "nov", "dec", "monday", "tuesday", "wednesday", "thursday", "friday",
-    "saturday", "sunday", "buff", "city", "soap", "makery", "woven", "close",
-    "policy", "policies", "manual", "handbook", "standards", "standard", "conduct", "dress", "code",
+    "saturday", "sunday", "sun", "tan", "city", "jba", "woven", "spa", "club", "close",
+    "policy", "policies", "manual", "standards", "standard", "conduct", "dress", "code",
     "attendance", "company", "corrective", "action", "form", "plan", "coaching", "verbal",
-    "written", "warning", "bonus", "check-in", "hr", "ok", "i", "dm", "location", "future",
+    "written", "warning", "epp", "ppta", "upta", "lpsva", "bonus", "viewer", "uv", "sunless",
+    "hr", "ok", "i", "tc", "asd", "sd", "sdit", "tsd", "dmit", "fttc", "dm", "salon", "future",
     "none", "first", "occurrence", "signed", "termination", "employment", "source",
   ],
 );
@@ -224,7 +226,7 @@ interface SentenceResult {
 
 /**
  * Nouns that read naturally with "a" rather than "the" once the possessive is
- * gone — "Colene submitted a resignation", not "the resignation".
+ * gone — "Harper submitted a resignation", not "the resignation".
  */
 const INDEFINITE_NOUNS = new Set([
   "resignation", "request", "complaint", "letter", "apology", "explanation", "statement",
@@ -242,7 +244,7 @@ const PRONOUN_TOKEN = /\b(she|he|him|his|hers|her|they|them|their|theirs)(?:['�
  * NATURAL, NOT MECHANICAL
  * ============================================================================
  *
- * Swapping every pronoun for the name produces "Colene provided Colene's
+ * Swapping every pronoun for the name produces "Harper provided Harper's
  * resignation" — no pronoun, and no person would write it. So the sentence is
  * read left to right, knowing whether the employee has ALREADY been named in
  * it, and each pronoun is restructured rather than substituted:
@@ -251,7 +253,7 @@ const PRONOUN_TOKEN = /\b(she|he|him|his|hers|her|they|them|their|theirs)(?:['�
  *     "Her last day was Sept 26."            -> "Jane's last day was Sept 26."
  *   POSSESSIVE, name already in the sentence   an article — whose it is, is
  *                                              already said
- *     "Colene provided her resignation."     -> "Colene provided a resignation."
+ *     "Harper provided her resignation."     -> "Harper provided a resignation."
  *     "Jessica did not clock in for her shift." -> "... for the shift."
  *   SUBJECT after "and" / "but" / "then", name already the subject
  *                                              dropped — one subject, two verbs
@@ -414,7 +416,7 @@ export interface EmployeeNameResult {
  * that is unambiguous. See the header for what is never touched.
  *
  * `knownWords` are capitalised words that are not people in this form's
- * context — the brand, the location — so naming them does not hold a sentence
+ * context — the brand, the salon — so naming them does not hold a sentence
  * back.
  */
 export function nameInsteadOfPronouns(

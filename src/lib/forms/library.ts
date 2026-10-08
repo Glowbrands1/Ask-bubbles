@@ -1,18 +1,1930 @@
-import { COMPANY_FORMS } from "@/config/company/forms";
+import { FORM_LETTERHEAD_BRAND_NAME } from "@/config/company/forms/letterhead";
 
-import type { TemplateSeed } from "./catalog";
+import { BRAND, field, type TemplateSeed } from "./catalog";
+import type {
+  FormBlock,
+  FormDocument,
+  FormVariant,
+} from "./document";
+import { EMPLOYMENT_CHANGE_TEMPLATE_SEEDS } from "./employment-change-library";
+import { EXIT_TEMPLATE_SEEDS } from "./exit-library";
+import { HIRING_TEMPLATE_SEEDS } from "./hiring-library";
+import {
+  PAYROLL_DEDUCT_KEY,
+  PAYROLL_DEDUCT_LABEL,
+  PAYROLL_DEDUCT_OPTIONS,
+} from "./payroll-deduct";
+import { PRIOR_ACTIONS_KEY, PRIOR_ACTIONS_LABEL } from "./prior-actions";
+import { CA_ACTION_PLAN_CLOSING } from "./required-closing";
 
 /**
- * THE TEMPLATE SEEDS THIS BUILD SHIPS — read from the company forms registry.
+ * THE TEMPLATE LIBRARY — nine forms, four layouts.
  *
- * `ensureTemplateLibrary` writes these into `form_templates`. The list itself
- * is company configuration (`src/config/company/forms/`); this module is the
- * platform's single read of it.
+ * Built from the nine reference captures, and grouped the way those captures
+ * actually group rather than one template per file:
+ *
+ *   coaching    Coaching Form
+ *   corrective  Corrective Action Form, Policy Review
+ *   epp         SDIT EPP, TSD EPP, ASD-SDIT Performance EPP, FTTC Performance EPP
+ *   dmit_epp    DMIT EPP — TSD Review, DMIT EPP — DMIT Review
+ *
+ * The EPP four are the same three-page document with a different title and a
+ * different pairing of reviewer and subject — pixel-diffed at 0.06%–0.07% on
+ * pages 2 and 3. The two DMIT reviews are ONE six-page document read two ways;
+ * their captures differ by 0.96% on page 1 and 0.19% on page 3 and by nothing
+ * anywhere else. So they are variants, not templates, and the misspelled
+ * filenames (`REVIVIEW`, `TSd`) name no additional form.
+ *
+ * RESPONSIBILITIES ARE COPIED FROM THE REFERENCES, FIELD BY FIELD, not inferred
+ * from what a field is called. The DMIT EPP's self-assessment is marked FILLED
+ * BY HAND on the capture and is `manual` here; the SDIT EPP's "Assistant Salon
+ * Director Thoughts" carries an AI FILLS chip and is `ai`. Two questions that
+ * read almost identically, two different answers, because the business decided
+ * so and not because a rule was inferred.
  */
-export const TEMPLATE_SEEDS: readonly TemplateSeed[] = COMPANY_FORMS.map((entry) => entry.seed);
 
-/** The variant chat drafts by default, when a template declares variants. */
-export function defaultVariantKey(templateKey: string): string | null {
-  const seed = TEMPLATE_SEEDS.find((entry) => entry.key === templateKey);
+/* ------------------------------------------------------------- helpers --- */
+
+/**
+ * `BRAND` and `field` come from `catalog.ts` so the hiring library can use the
+ * same two without importing this file — which imports it. See that module.
+ */
+
+/** The header block every one of the nine HR forms opens with. */
+function employeeInformation(): FormBlock[] {
+  return [
+    { kind: "section", label: "Employee Information" },
+    {
+      kind: "field_row",
+      fields: [
+        field("employee_name", "Employee Name", "system"),
+        field("form_date", "Date", "system", "date"),
+      ],
+    },
+    {
+      kind: "field_row",
+      fields: [
+        field("job_title", "Job Title", "system"),
+        field("location", "Location", "system"),
+      ],
+    },
+  ];
+}
+
+/**
+ * The acknowledgement and its two signature pairs.
+ *
+ * `signature` fields have no key by design — see `responsibility.ts`. Nothing
+ * can write into them because there is nothing to write into.
+ */
+function acknowledgement(text: string): FormBlock[] {
+  return [
+    { kind: "section", label: "Acknowledgement" },
+    { kind: "acknowledgement", text },
+    { kind: "signature_row", label: "Employee Signature", dateLabel: "Date" },
+    { kind: "signature_row", label: "Supervisor Signature", dateLabel: "Date" },
+  ];
+}
+
+/* ------------------------------------------------------------ coaching --- */
+
+/**
+ * THE COACHING FORM, as the business now issues it.
+ *
+ * Reproduced block for block from `01. Coaching Form.docx` — the authoritative
+ * copy — which differs from the capture the library was first built against in
+ * three ways that matter and in nothing else:
+ *
+ *   the Employee Information line reads "Name", not "Employee Name";
+ *   Type of Coaching is Underperformance / Training Plan of Action /
+ *   Retraining, spelled as one word where the old capture hyphenated;
+ *   Topic of Coaching is ELEVEN topics about the salon floor — tours,
+ *   conversation, questions, recommendations, objections, product, the
+ *   engagement, upselling, cleaning, new client documents, other — where the
+ *   old ten were about memberships and lotion.
+ *
+ * IT IS THE SAME TEMPLATE, NOT A SECOND ONE. Same key, same route, same
+ * permission, same field keys for everything the header carries, so a link to
+ * `/forms/templates/coaching` still lands here and a stored `employee_name`
+ * still means what it meant. The document becomes revision 2 of `coaching`;
+ * revision 1 stays published-then-archived in `form_template_versions`, and
+ * every form already filled from it still renders against it. Nothing about a
+ * signed coaching record changes because the blank form did.
+ *
+ * The topic OPTION keys are new, because the topics are new — `store_tours` is
+ * not a rename of `salon_tours`, it is a different list. That is safe for
+ * history precisely because a finalized form is read against the version it was
+ * signed on: the old keys still exist on the old version, which still exists.
+ *
+ * The employee-information block is written out here rather than taken from
+ * `employeeInformation()`: this form says "Name" and the other eight say
+ * "Employee Name", and quietly changing all nine to match one source document
+ * would be editing eight forms nobody asked about.
+ */
+export function coachingDocument(): FormDocument {
+  return {
+    paper: "letter",
+    /*
+     * THE WORD SOURCE'S OWN LOOK, CARRIED BY THE VERSION.
+     *
+     * The document the business issues is not laid out like the rest of the
+     * library: centred headings over hairlines rather than black bars, the
+     * form's name and the brand stacked and centred, the source company's mark
+     * in the top right, and a 1in page. Those are facts about THIS version of THIS
+     * document, so they are stored with it — the renderer reads them
+     * generically and knows nothing about coaching. Every other template omits
+     * `style` and keeps the black bars it was measured with.
+     *
+     * BRANDING. The source document carried the source company's logo; this
+     * deployment has no approved logo asset, so `logo` is omitted and the
+     * centred letterhead prints the company name in plain text. Everything
+     * else about the look is unchanged. See `lib/forms/assets`.
+     */
+    style: {
+      headingStyle: "rule",
+      letterhead: "centered",
+      margins: "wide",
+      signatureLayout: "ruled",
+    },
+    blocks: [
+      // The subtitle is set in title case in the source, so it is stored that
+      // way. The upper-case `BRAND` belongs to the chip the other forms use.
+      { kind: "letterhead", brand: FORM_LETTERHEAD_BRAND_NAME, title: "Coaching Form" },
+
+      { kind: "section", label: "Employee Information" },
+      {
+        kind: "field_row",
+        fields: [
+          field("employee_name", "Name", "system"),
+          field("form_date", "Date", "system", "date"),
+        ],
+      },
+      {
+        kind: "field_row",
+        fields: [
+          field("job_title", "Job Title", "system"),
+          field("location", "Location", "system"),
+        ],
+      },
+
+      { kind: "section", label: "Type of Coaching" },
+      {
+        kind: "checkbox_group",
+        key: "coaching_type",
+        options: [
+          { key: "underperformance", label: "Underperformance" },
+          { key: "training_plan_of_action", label: "Training Plan of Action" },
+          { key: "retraining", label: "Retraining" },
+        ],
+        responsibility: "ai",
+        columns: 3,
+      },
+
+      { kind: "section", label: "Topic of Coaching" },
+      {
+        kind: "checkbox_group",
+        key: "coaching_topics",
+        options: [
+          { key: "store_tours", label: "Store Tours" },
+          { key: "engaging_conversation", label: "Engaging Conversation" },
+          { key: "engaging_questions", label: "Engaging Questions" },
+          { key: "relevant_recommendations", label: "Relevant Recommendations" },
+          { key: "overcoming_objections", label: "Overcoming Objections" },
+          { key: "product_basics", label: "Product Basics" },
+          { key: "completing_the_engagement", label: "Completing the Engagement" },
+          { key: "sales_strategies_upselling", label: "Sales Strategies/Upselling" },
+          { key: "cleaning_tasks", label: "Cleaning Tasks" },
+          { key: "new_client_documents", label: "New Client Documents" },
+          { key: "other", label: "Other" },
+        ],
+        responsibility: "ai",
+        columns: 3,
+      },
+      {
+        kind: "field",
+        field: field("other_topic", "Other", "ai", "text", {
+          help: "Only when the Other box is ticked. Left empty otherwise.",
+        }),
+      },
+
+      { kind: "section", label: "Details of Coaching" },
+      {
+        kind: "field",
+        field: field("coaching_details", "Details of Coaching", "ai", "long_text", {
+          help:
+            'Written as "Observed:" — what happened — then "Expectation:" — what the ' +
+            "manager told the employee to do differently. One field, two labelled sections.",
+          /*
+           * The one narrative field on this form. A record that names the event
+           * but not the expectation cannot show that anything was communicated,
+           * which is the part a coaching form exists to evidence. See
+           * `lib/forms/narrative-draft` — including why the Expectation section
+           * disappears rather than being invented when the manager gave none.
+           */
+          narrative: "observed_expectation",
+        }),
+      },
+
+      { kind: "section", label: "Acknowledgement of Coaching" },
+      {
+        kind: "acknowledgement",
+        text: "I confirm that my supervisor and I have discussed this training and plan for improvement.",
+      },
+      { kind: "signature_row", label: "Employee Signature", dateLabel: "Date" },
+      { kind: "signature_row", label: "Supervisor Signature", dateLabel: "Date" },
+    ],
+  };
+}
+
+/* ------------------------------------------------- follow-up coaching --- */
+
+/**
+ * ============================================================================
+ * THE FOLLOW-UP COACHING FORM — DEFINED BY THE FRAMEWORK, NOT BY A PAPER FORM
+ * ============================================================================
+ *
+ * THIS IS THE ONE TEMPLATE IN THE LIBRARY WITH NO APPROVED PAPER SOURCE, and
+ * that fact is load-bearing rather than incidental. Every other form here is a
+ * reading of a document the business issues — a .docx or a printed form somebody
+ * signs. This one is specified by the PERFORMANCE MANAGEMENT FRAMEWORK §9.2, "Template: Create a follow-up coaching form", which names the form and
+ * lists its fields and its two option sets exactly:
+ *
+ *   Original Coaching Topic / Original Expectation / Follow-Up Observation /
+ *   Progress Level [Improved / Partially Improved / No Improvement] /
+ *   Specific Evidence / Additional Coaching Completed /
+ *   Next Step [Continue / Role-play / EPP / Corrective Action / Leadership Review] /
+ *   Next Follow-Up [Timeframe]
+ *
+ * WHAT IS DELIBERATELY ABSENT, AND WHY EACH ABSENCE IS THE POINT.
+ *
+ *   NO ACKNOWLEDGEMENT PARAGRAPH AND NO SIGNATURE ROWS. Every other form in
+ *   this library ends in one, and copying that here for visual consistency
+ *   would be inventing the wording of an employee acknowledgement — on a
+ *   document that goes in an employment file. §9.2 specifies neither. If the
+ *   business issues a paper Follow-Up Coaching Form later, its acknowledgement
+ *   arrives with it as revision 2.
+ *
+ *   NO POLICY FIELDS, NO WARNING LEVEL, NO DISCIPLINARY STEP. §9.2 has none.
+ *   "Next Step" NAMES the escalation the manager is choosing — it does not
+ *   impose one, and it is not the same thing as the Corrective Action Form's
+ *   Type of Warning.
+ *
+ *   NO JOB TITLE AND NO LOCATION. §9.1 lists Job Title for the Coaching Form;
+ *   §9.2 lists neither for this one, so neither is here.
+ *
+ * NOTHING IS PRESENT BEYOND §9.2 — INCLUDING THE EMPLOYEE AND THE DATE.
+ *
+ * An earlier version of this document opened with `employee_name` and
+ * `form_date` as `system` fields, on the reasoning that a printed page carrying
+ * no name is not a record of anything. That reasoning was right about the need
+ * and wrong about where to meet it: §9.2 lists neither, and adding a field to a
+ * framework-defined schema is the same class of act as adding an
+ * acknowledgement to it.
+ *
+ * THEY ARE RECORD METADATA, AND THE ENGINE ALREADY RENDERS THEM AS SUCH. The
+ * employee, the form date, the template name and the draft status print in the
+ * footer of EVERY page from `RenderMeta`, sourced from the `form_instances` row
+ * rather than from any field; the inline editor shows the employee from the
+ * same row, above the document. So the subject
+ * is identified on screen and on paper without the field schema claiming a
+ * field the framework does not define.
+ *
+ * If the business wants the employee and the date ON THE FORM as fields, that
+ * is a change to a framework-defined document and needs explicit approval —
+ * it is reported as a proposed business change rather than made here.
+ *
+ * PROGRESS LEVEL AND NEXT STEP ARE CHECKBOX GROUPS because a checkbox group is
+ * this document model's only construct for a named option list. The framework
+ * writes them as bracketed alternatives; ticking one is the faithful reading.
+ *
+ * THE COACHING FORM IS UNTOUCHED BY THIS. Follow-up is documented two ways in
+ * the approved framework and they are different workflows, not duplicates:
+ * §2.4 lists both a "follow-up coaching note" — this form — and an "updated
+ * Coaching Form", which is a REVISION of the original coaching instance and is
+ * already supported (`openRevision`, `revises_instance_id`). Neither replaces
+ * the other, and nothing here changes the Coaching Form's document or version.
+ */
+export function followUpCoachingDocument(): FormDocument {
+  return {
+    paper: "letter",
+    blocks: [
+      { kind: "letterhead", brand: BRAND, title: "Follow-Up Coaching Form" },
+
+      { kind: "section", label: "Original Coaching" },
+      {
+        kind: "field",
+        field: field("original_topic", "Original Coaching Topic", "ai"),
+      },
+      {
+        kind: "field",
+        field: field("original_expectation", "Original Expectation", "ai", "long_text"),
+      },
+
+      { kind: "section", label: "Follow-Up" },
+      {
+        kind: "field",
+        field: field("follow_up_observation", "Follow-Up Observation", "ai", "long_text", {
+          help: "What the manager observed after the original coaching.",
+        }),
+      },
+      {
+        kind: "checkbox_group",
+        key: "progress_level",
+        label: "Progress Level",
+        options: [
+          { key: "improved", label: "Improved" },
+          { key: "partially_improved", label: "Partially Improved" },
+          { key: "no_improvement", label: "No Improvement" },
+        ],
+        responsibility: "ai",
+        columns: 3,
+      },
+      {
+        kind: "field",
+        field: field("specific_evidence", "Specific Evidence", "ai", "long_text", {
+          help: "What was seen, heard, or measured.",
+        }),
+      },
+      {
+        kind: "field",
+        field: field("additional_coaching", "Additional Coaching Completed", "ai", "long_text", {
+          help: "If any. Left empty when no further coaching was given.",
+        }),
+      },
+
+      { kind: "section", label: "Next Step" },
+      {
+        kind: "checkbox_group",
+        key: "next_step",
+        options: [
+          { key: "continue", label: "Continue" },
+          { key: "role_play", label: "Role-play" },
+          { key: "epp", label: "EPP" },
+          /*
+           * THE KEY IS `dpoa`; THE LABEL IS NOT. The rung the business now names
+           * "Corrective Action" is recorded by the template whose stored key has
+           * always been `dpoa`, and that key is what every saved value, every
+           * guard in `pm-governance.ts` and every already-filled follow-up form
+           * addresses. Renaming the label renames what a manager reads;
+           * renaming the key would orphan every box already ticked.
+           */
+          { key: "dpoa", label: "Corrective Action" },
+          { key: "leadership_review", label: "Leadership Review" },
+        ],
+        responsibility: "ai",
+        columns: 3,
+      },
+      {
+        /*
+         * A TIMEFRAME, NOT A DATE. §9.2 says "[Timeframe]", and a `date` input
+         * would quietly turn "in two weeks, on her next closing shift" into a
+         * calendar day nobody agreed to. The instance's own follow-up date is
+         * tracked separately and has its own control.
+         */
+        kind: "field",
+        field: field("next_follow_up", "Next Follow-Up", "ai", "text", {
+          help: "The timeframe agreed for the next follow-up.",
+          /*
+           * MARKED AS A TIMEFRAME, because the generic drafting prompt forbids
+           * scheduling talk and would otherwise leave this §9.2 field empty on
+           * every draft. Two different things wear the same word:
+           *
+           *   the INSTANCE's `follow_up_date`  a calendar date, managed by the
+           *                                    manager through its own control,
+           *                                    and what drives Form Monitoring.
+           *
+           *   THIS FIELD                       the timeframe the manager and
+           *                                    employee agreed, in their words
+           *                                    — "in two weeks, on her next
+           *                                    closing shift". §9.2 calls it
+           *                                    "[Timeframe]".
+           *
+           * The marker lets the prompt permit the second while still forbidding
+           * the first, and lets a guard refuse a calendar date the manager never
+           * gave. See `follow-up-timeframe.ts`.
+           */
+          semantics: "follow_up_timeframe",
+        }),
+      },
+    ],
+  };
+}
+
+/* ---------------------------------------------------------- corrective --- */
+
+/**
+ * ============================================================================
+ * THE CORRECTIVE ACTION FORM — `dpoa` INTERNALLY, FOR AS LONG AS THE DATA IS
+ * ============================================================================
+ *
+ * The business renamed this document. What a manager reads is "Corrective
+ * Action Form"; what the database, the API and every already-filed record
+ * address is still the key `dpoa`, and that split is deliberate rather than
+ * unfinished work:
+ *
+ *   `form_templates.key`            addressed by every stored instance, every
+ *                                   route, and `INLINE_DRAFT_TEMPLATE_KEYS`.
+ *   `form_instances.template_id`    points at the row that key identifies.
+ *   `next_step` option `dpoa`       already ticked on filed Follow-Up Coaching
+ *                                   Forms.
+ *
+ * Renaming the key would orphan all three for a word nobody outside the code
+ * ever sees. The DISPLAY name is data on the row — `form_instance_overview`
+ * joins it live rather than snapshotting it — so renaming it here renames the
+ * form everywhere a person meets it, including on records filed last month.
+ *
+ * The policy trio — what was observed, which policy it breached, and the manual's
+ * own words — is the part that must never be improvised. `policyGrounded` marks
+ * the two that quote policy; the assistant may only fill those from a knowledge
+ * match and leaves them for the manager when it has none.
+ *
+ * THE TWO PROSE FIELDS EITHER SIDE OF THAT TRIO NOW CARRY SHAPES TOO, because
+ * the trio failing closed is what exposed them. With the policy fields left
+ * correctly empty, an unshaped Action Plan filled the silence with the very
+ * things the policy fields had just refused — a policy paraphrased from
+ * memory, a review date nobody set, a consequence nobody decided. The
+ * observation asks for the coaching narrative and the plan asks for the
+ * plan-of-action paragraph; see `lib/forms/narrative-draft` for both, and for
+ * the guard that runs on whichever comes back.
+ */
+export function correctiveActionDocument(): FormDocument {
+  return {
+    paper: "letter",
+    blocks: [
+      { kind: "letterhead", brand: BRAND, title: "Corrective Action Form" },
+      ...employeeInformation(),
+
+      { kind: "section", label: "Type of Warning" },
+      {
+        kind: "checkbox_group",
+        key: "warning_type",
+        options: [
+          { key: "verbal", label: "Verbal Warning" },
+          { key: "written", label: "Written Warning" },
+          { key: "termination", label: "Termination" },
+          { key: "demotion", label: "Demotion" },
+        ],
+        responsibility: "ai",
+        columns: 2,
+      },
+      {
+        /*
+         * ====================================================================
+         * ONE LIST OF EVERYTHING PREVIOUSLY RECEIVED — REVISION 5
+         * ====================================================================
+         *
+         * HR feedback, 3 Oct 2026: the two lines "Previous corrective action
+         * for this policy or issue" and "Date of previous corrective action"
+         * are replaced by this one, in the business's words exactly. Two
+         * single lines held one prior step and one date; an employee with a
+         * coaching AND a verbal warning behind them had nowhere to put the
+         * second. So this is a `long_text`, one entry per line, each with the
+         * date it was signed, and it prints with room to write several.
+         *
+         * A NEW KEY, NOT A RENAME. `previous_action` and `previous_action_date`
+         * stay what they are on the versions that have them — every form filed
+         * against revision 4 prints its two lines exactly as signed. A revision
+         * of such a form carries the two old values into this one; see
+         * `prior-actions.ts`.
+         *
+         * "None — first occurrence" is still a real answer, for the reason it
+         * always was: a blank line here reads as a history nobody checked.
+         */
+        kind: "field",
+        field: field(PRIOR_ACTIONS_KEY, PRIOR_ACTIONS_LABEL, "ai", "long_text", {
+          help: 'One per line: each coaching or corrective action previously received, with the date it was signed. Write "None — first occurrence" when there has been none.',
+          minLines: 4,
+        }),
+      },
+
+      { kind: "section", label: "Type of Offense" },
+      {
+        kind: "checkbox_group",
+        key: "offense_type",
+        options: [
+          { key: "tardiness", label: "Tardiness/Leaving Early" },
+          { key: "absenteeism", label: "Absenteeism" },
+          { key: "standards_of_conduct", label: "Standards of Conduct" },
+          { key: "under_performance", label: "Under Performance" },
+          { key: "dress_code", label: "Dress Code Violation" },
+          { key: "company_policies", label: "Violation of Company Policies" },
+        ],
+        responsibility: "ai",
+        columns: 2,
+      },
+      { kind: "field", field: field("other_offense", "Other", "ai") },
+
+      { kind: "section", label: "Details" },
+      {
+        kind: "field",
+        field: field("observation", "Observation of Offense", "ai", "long_text", {
+          help:
+            'Written as "Observed:" — what happened — then "Expectation:" — the ' +
+            'standard the employee is expected to meet — then "Going Forward:" — ' +
+            "what they do differently. One field, three labelled sections.",
+          /*
+           * THE SAME SHAPE THE COACHING FORM USES, for the same reason. A
+           * corrective record that names the offence and not the standard
+           * cannot show the employee was told what to do instead, which is the
+           * part the signature is for.
+           *
+           * WHAT THE SHAPE DOES NOT LICENSE IS A FINDING. "Observed:" is what
+           * was seen or heard; whether it broke a rule is settled by the two
+           * policy fields below, from the approved manual, and by nothing else
+           * on this form. `policy-claim-guard.ts` is what holds that when the
+           * manual could not be searched or did not match.
+           */
+          narrative: "observed_expectation",
+        }),
+      },
+      {
+        /*
+         * ====================================================================
+         * THE TWO POLICY FIELDS, AS THE BUSINESS USES THEM
+         * ====================================================================
+         *
+         * These were briefly modelled as "policy title" and "verbatim quote",
+         * and the business corrected it: on their form,
+         *
+         *   POLICY VIOLATED       is the offense CATEGORY — whichever box is
+         *                         ticked under Type of Offense above.
+         *   DIRECT POLICY         names the approved manual the category was
+         *                         checked against, with its section and page.
+         *
+         * BOTH ARE NOW DERIVED RATHER THAN WRITTEN, which is what makes the
+         * change safe. Policy Violated is copied from the tick, so it cannot
+         * disagree with the box beside it; Direct policy is built from the
+         * document retrieval actually returned, so it cannot name a manual
+         * nobody read. Neither is prose a model composes — see
+         * `policy-fields.ts`.
+         *
+         * `policyGrounded` MOVES WITH THAT. Policy Violated is no longer a
+         * claim about a manual, so it does not fail closed against retrieval;
+         * Direct policy still is, and still does.
+         */
+        kind: "field",
+        field: field("policy_violated", "Policy Violated", "ai", "text", {
+          help: "The offense category ticked above. Filled from the form itself, not composed.",
+        }),
+      },
+      {
+        kind: "field",
+        field: field("policy_language", "Direct policy from official manual", "ai", "long_text", {
+          policyGrounded: true,
+          help: "The approved manual this was checked against, with its section and page. Left for the manager when no approved policy matches.",
+        }),
+      },
+      {
+        kind: "field",
+        field: field("action_plan", "Action Plan", "ai", "long_text", {
+          help:
+            "One paragraph: what is being done, what the employee does going " +
+            "forward, and that the manual's own wording is reviewed with them. " +
+            "No dates and no follow-up meeting. It always ends with the form's " +
+            "closing sentence, which is added automatically.",
+          narrative: "plan_of_action",
+          /*
+           * THE CLOSING THE BUSINESS REQUIRES, REVISION 5. Put on by code at
+           * every write and every render — never the model's to write, and
+           * the narrative guard would remove it if it were. See
+           * `required-closing.ts`.
+           */
+          requiredClosing: CA_ACTION_PLAN_CLOSING,
+        }),
+      },
+      {
+        /*
+         * ====================================================================
+         * "IS PAYROLL DEDUCT APPLICABLE?" — REVISION 4
+         * ====================================================================
+         *
+         * Added at Operations' request, in their words exactly. One answer,
+         * Yes or No (`single`), and it starts unanswered: two empty boxes are
+         * what an unanswered question prints, never a No by default.
+         *
+         * THE MANAGER'S ANSWER, NOT THE MODEL'S. A `manager` group, so the
+         * drafting model cannot tick it. It is filled from what the manager
+         * said in chat — read by `payroll-deduct.ts` and written as their
+         * statement — or ticked by them on the form. See `payroll-deduct.ts`.
+         */
+        kind: "checkbox_group",
+        key: PAYROLL_DEDUCT_KEY,
+        label: PAYROLL_DEDUCT_LABEL,
+        options: PAYROLL_DEDUCT_OPTIONS.map((option) => ({ ...option })),
+        responsibility: "manager",
+        columns: 2,
+        single: true,
+      },
+
+      { kind: "section", label: "Acknowledgement of Receipt of Warning" },
+      {
+        kind: "acknowledgement",
+        text: "Employee and supervisor discussed the warning and plan for improvement. Further violations may result in additional action.",
+      },
+      { kind: "signature_row", label: "Employee Signature", dateLabel: "Date" },
+      { kind: "signature_row", label: "Supervisor Signature", dateLabel: "Date" },
+    ],
+  };
+}
+
+/**
+ * The Policy Review Form.
+ *
+ * Structurally the DPOA's Details block without the warning: an observation,
+ * the same two policy-grounded lines, and a plan. It carries the same two
+ * narrative shapes for the same reason — a policy review whose plan invents a
+ * follow-up date and a consequence has reviewed nothing.
+ */
+export function policyReviewDocument(): FormDocument {
+  return {
+    paper: "letter",
+    blocks: [
+      { kind: "letterhead", brand: BRAND, title: "Policy Review Form" },
+      ...employeeInformation(),
+
+      { kind: "section", label: "Type" },
+      {
+        kind: "checkbox_group",
+        key: "review_types",
+        options: [
+          { key: "under_performance", label: "Under Performance" },
+          { key: "tpoa", label: "TPOA" },
+          { key: "policy_review", label: "Policy Review" },
+        ],
+        responsibility: "ai",
+        columns: 3,
+      },
+
+      { kind: "section", label: "Topic" },
+      { kind: "field", field: field("topic", "Topic", "ai") },
+
+      { kind: "section", label: "Details" },
+      {
+        kind: "field",
+        field: field("observation", "Observation", "ai", "long_text", {
+          help:
+            'Written as "Observed:" — what happened — then "Expectation:" — the ' +
+            'standard the employee is expected to meet — then "Going Forward:" — ' +
+            "what they do differently. One field, three labelled sections.",
+          narrative: "observed_expectation",
+        }),
+      },
+      {
+        kind: "field",
+        field: field("policy_violated", "Policy Violated", "ai", "text", {
+          policyGrounded: true,
+          help: "Named from the approved manual. Left for the manager when no approved policy matches.",
+        }),
+      },
+      {
+        kind: "field",
+        field: field("policy_language", "Direct policy from official manual", "ai", "long_text", {
+          policyGrounded: true,
+          help: "Quoted verbatim from the manual. Never paraphrased and never invented.",
+        }),
+      },
+      {
+        kind: "field",
+        field: field("plan_of_action", "Plan of Action", "ai", "long_text", {
+          help:
+            "One paragraph: what is being done, what the employee does going " +
+            "forward, and that the manual's own wording is reviewed with them. " +
+            "No dates, no follow-up meeting, no consequence of a further occurrence.",
+          narrative: "plan_of_action",
+        }),
+      },
+
+      { kind: "section", label: "Acknowledgement of Training" },
+      {
+        kind: "acknowledgement",
+        text: "I confirm that my supervisor and I have discussed this training and plan for improvement.",
+      },
+      { kind: "signature_row", label: "Employee Signature", dateLabel: "Date" },
+      { kind: "signature_row", label: "Supervisor Signature", dateLabel: "Date" },
+    ],
+  };
+}
+
+/* ----------------------------------------------------------------- EPP --- */
+
+/**
+ * The three-page Employee Performance Plan, shared by four templates.
+ *
+ * `{{role}}` is the reviewer — Training Salon Director, District Manager, Salon
+ * Director — and `{{roleAbbr}}` is who is being reviewed: ASD, SD, TC. The four
+ * templates differ in their title and in that pairing, and in nothing else,
+ * which is why they are one builder taking two arguments rather than four
+ * copies that can drift.
+ *
+ * Only the FIRST line of each numbered list carries an AI chip on the captures;
+ * the rest are ruled lines the manager fills in conversation. That is preserved
+ * — the list is one `ai` field whose drafted lines populate downward.
+ */
+export function eppDocument(title: string): FormDocument {
+  return {
+    paper: "letter",
+    blocks: [
+      { kind: "letterhead", brand: BRAND, title },
+      ...employeeInformation(),
+
+      { kind: "section", label: "To be filled out by {{role}}" },
+      {
+        kind: "field",
+        field: field("where_succeeding", "In what areas is the {{roleAbbr}} currently succeeding?", "ai", "long_text"),
+      },
+      {
+        kind: "field",
+        field: field("needs_improvement", "In what areas does the {{roleAbbr}} currently need improvement?", "ai", "long_text"),
+      },
+      {
+        kind: "numbered_list",
+        key: "top_strengths",
+        label: "Overall top three strengths",
+        count: 3,
+        responsibility: "ai",
+      },
+      {
+        kind: "numbered_list",
+        key: "improvement_areas",
+        label: "Overall two biggest areas of improvement",
+        count: 2,
+        responsibility: "ai",
+      },
+      {
+        kind: "field",
+        field: field("employee_productivity", "{{roleAbbr}}'s current productivity", "ai", "long_text"),
+      },
+      {
+        kind: "field",
+        field: field("salon_productivity", "Salon's current productivity", "ai", "long_text"),
+      },
+
+      { kind: "section", label: "{{roleAbbr}} Thoughts" },
+      {
+        kind: "field",
+        field: field("employee_self_review", "Self review", "ai", "long_text", {
+          help: "Drafted from the conversation, then reviewed with the employee before signing.",
+        }),
+      },
+      {
+        kind: "numbered_list",
+        key: "salon_goals",
+        label: "Salon Goals: current top three goals",
+        count: 3,
+        responsibility: "ai",
+      },
+
+      { kind: "section", label: "Plan of Action" },
+      {
+        kind: "field",
+        field: field("plan_of_action", "Plan, objectives and goals", "ai", "long_text"),
+      },
+      {
+        kind: "field",
+        field: field("follow_up_week", "{{role}} and {{roleAbbr}} will meet and re-evaluate the week of", "ai", "date"),
+      },
+
+      ...acknowledgement(
+        "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+      ),
+    ],
+  };
+}
+
+/* ------------------------------------------------------------ SDIT EPP --- */
+
+/**
+ * ============================================================================
+ * THE COMPANY POLICY LINE, AND WHY IT DOES NOT NAME THE OLD MANUAL
+ * ============================================================================
+ *
+ * The paper SDIT EPP the business has been issuing states this expectation as
+ * "Uphold <source company> policies per Driven to Shine manual." Ask Bubbles
+ * does not use that manual and has no access to it: the authoritative source for every
+ * policy this product cites is the JB & Associates Employment Policy Manual,
+ * which is the document `official-policy-manual.ts` pins by identity and the
+ * only policy manual in the corpus.
+ *
+ * So the expectation is stated against the manual that actually governs. It is
+ * the SAME expectation — uphold company policy — named against a document a
+ * manager can open, rather than one Ask Bubbles would be citing blind.
+ */
+export const JBA_POLICY_EXPECTATION =
+  "Uphold Buff City Soap and JB & Associates company policies per the JB & Associates Employment Policy Manual.";
+
+/**
+ * The seven standing expectations the SDIT EPP marks against.
+ *
+ * TAKEN FROM THE BUSINESS'S OWN FORM, in its order and its wording, with the
+ * single substitution above. Option KEYS are stable identifiers and deliberately
+ * say nothing about the manual: a re-issue that rewords an expectation changes
+ * the label and keeps every mark already stored against it.
+ */
+export const SDIT_EPP_EXPECTATIONS: readonly { key: string; label: string }[] = [
+  { key: "uphold_experience", label: "Uphold the Buff City Soap Experience." },
+  { key: "client_service", label: "Personally, provide excellent client service." },
+  { key: "company_policies", label: JBA_POLICY_EXPECTATION },
+  { key: "bonus_viewer", label: "Determine focuses based on the Bonus Viewer." },
+  {
+    key: "fact_based_decisions",
+    label: "Make fact based decisions when the Salon Director is not present.",
+  },
+  {
+    key: "client_engagement",
+    label: "Follow through with Client Engagement Strategies with every client.",
+  },
+  {
+    key: "positive_atmosphere",
+    label: 'Promote a positive atmosphere and create "buy-in".',
+  },
+];
+
+const EXPECTATION_LEGEND =
+  "Mark each expectation as an area of success or an area needing improvement. Leave a row unmarked when it has not been evaluated.";
+
+/**
+ * ============================================================================
+ * THE SDIT EPP, AS THE BUSINESS ACTUALLY ISSUES IT
+ * ============================================================================
+ *
+ * A SEPARATE BUILDER FROM `eppDocument`, and that separation is the point.
+ * `eppDocument` prints four templates — SDIT, TSD, ASD/SDIT and FTTC — from one
+ * definition because the four reference captures differ only in a title and a
+ * reviewer pairing. This document does NOT differ only in that: it carries the
+ * standing expectations a Salon Director in Training is marked against, the
+ * productivity table the business fills from the Ops Dashboard, the section the
+ * EMPLOYEE completes in the conversation, and the re-evaluation that closes the
+ * plan out. Folding those into the shared builder would put an SDIT's
+ * expectations onto a Tanning Consultant's performance plan, which is three
+ * forms nobody asked to change.
+ *
+ * WHAT IS CARRIED OVER UNCHANGED is every field key the shared builder already
+ * used — `where_succeeding`, `needs_improvement`, `top_strengths`,
+ * `improvement_areas`, `employee_productivity`, `salon_productivity`,
+ * `employee_self_review`, `salon_goals`, `plan_of_action`, `follow_up_week`. A
+ * stored value still means what it meant, and a manager reading an older filed
+ * SDIT EPP beside a new one is reading the same lines.
+ *
+ * NOTHING HERE IS SIGNED BY THE APPLICATION. Both acknowledgements carry
+ * signature rows, which have no key at all — see `responsibility.ts`.
+ */
+export function sditEppDocument(title: string): FormDocument {
+  return {
+    paper: "letter",
+    blocks: [
+      { kind: "letterhead", brand: BRAND, title },
+      ...employeeInformation(),
+
+      { kind: "section", label: "To be filled out by {{role}}" },
+      {
+        kind: "expectation_checklist",
+        successKey: "expectations_success",
+        improvementKey: "expectations_improvement",
+        label: "{{roleAbbr}} expectations",
+        legend: EXPECTATION_LEGEND,
+        options: [...SDIT_EPP_EXPECTATIONS],
+        responsibility: "ai",
+      },
+      {
+        kind: "field",
+        field: field(
+          "where_succeeding",
+          "In what areas is the {{roleAbbr}} currently succeeding?",
+          "ai",
+          "long_text",
+        ),
+      },
+      {
+        kind: "field",
+        field: field(
+          "needs_improvement",
+          "In what areas does the {{roleAbbr}} currently need improvement?",
+          "ai",
+          "long_text",
+        ),
+      },
+      {
+        kind: "numbered_list",
+        key: "top_strengths",
+        label: "Overall top three strengths",
+        count: 3,
+        responsibility: "ai",
+      },
+      {
+        kind: "numbered_list",
+        key: "improvement_areas",
+        label: "Overall two biggest areas of improvement",
+        count: 2,
+        responsibility: "ai",
+      },
+
+      /*
+       * THE PRODUCTIVITY TABLE, AS THREE NAMED COLUMNS AND A LINE FOR THE REST.
+       *
+       * The paper form rules a Month / PPTA / LPSVA / UPTA grid and says "add
+       * the employee's raw data from the Ops Dashboard here". Managers supply
+       * it both ways — three figures off the dashboard, or "personal is 10 and
+       * the salon is 20" typed into chat — so the form takes both: named lines
+       * for the three metrics it asks for by name, and a free line for whatever
+       * else was given. Every one of them stays EMPTY when nothing was
+       * supplied; there is no default and nothing is computed.
+       */
+      { kind: "section", label: "Salon's current productivity" },
+      {
+        kind: "field_row",
+        fields: [
+          field("salon_ppta", "PPTA", "ai"),
+          field("salon_lpsva", "LPSVA", "ai"),
+          field("salon_upta", "UPTA", "ai"),
+        ],
+      },
+      {
+        kind: "field",
+        field: field("salon_productivity", "Salon figures, as provided", "ai", "long_text", {
+          help: "Only what the manager supplied. Left blank when no figures were given.",
+        }),
+      },
+
+      { kind: "section", label: "{{roleAbbr}}'s personal productivity" },
+      {
+        kind: "field_row",
+        fields: [
+          field("employee_ppta", "PPTA", "ai"),
+          field("employee_lpsva", "LPSVA", "ai"),
+          field("employee_upta", "UPTA", "ai"),
+        ],
+      },
+      {
+        kind: "field",
+        field: field(
+          "employee_productivity",
+          "{{roleAbbr}} figures, as provided",
+          "ai",
+          "long_text",
+          { help: "Only what the manager supplied. Left blank when no figures were given." },
+        ),
+      },
+
+      /*
+       * THE EMPLOYEE'S OWN SHEET, on its own page exactly as the reference
+       * breaks it. Their marks and their two lists are `employee`, which is not
+       * in `AI_WRITABLE` — Ask Bubbles can never answer for them. The self review
+       * stays `ai`, because that is what the SDIT capture marks it and the
+       * distinction between this form and the DMIT EPP's hand-filled one is a
+       * business decision recorded in this file since the library was seeded.
+       */
+      { kind: "page_break" },
+      { kind: "section", label: "To be filled out by the {{roleAbbr}}" },
+      {
+        kind: "expectation_checklist",
+        successKey: "employee_expectations_success",
+        improvementKey: "employee_expectations_improvement",
+        label: "Your expectations",
+        legend: EXPECTATION_LEGEND,
+        options: [...SDIT_EPP_EXPECTATIONS],
+        responsibility: "employee",
+      },
+      {
+        kind: "field",
+        field: field("employee_self_review", "Self review", "ai", "long_text", {
+          help: "Drafted from the conversation, then reviewed with the employee before signing.",
+        }),
+      },
+      {
+        kind: "numbered_list",
+        key: "employee_strengths",
+        label: "What are your overall top strengths?",
+        count: 2,
+        responsibility: "employee",
+      },
+      {
+        kind: "numbered_list",
+        key: "employee_improvements",
+        label: "What are your overall biggest areas of improvement?",
+        count: 2,
+        responsibility: "employee",
+      },
+      {
+        kind: "numbered_list",
+        key: "salon_goals",
+        label: "Salon Goals: current top three goals",
+        count: 3,
+        responsibility: "ai",
+      },
+
+      { kind: "section", label: "Plan of Action" },
+      {
+        kind: "note",
+        text: "Create the action plan together after the employee has completed their portion of the EPP.",
+      },
+      {
+        kind: "field",
+        field: field("plan_of_action", "Plan, objectives and goals", "ai", "long_text"),
+      },
+
+      { kind: "section", label: "Follow-up" },
+      {
+        kind: "field",
+        field: field(
+          "follow_up_week",
+          "{{role}} and {{roleAbbr}} will meet and re-evaluate the week of",
+          "ai",
+          "date",
+        ),
+      },
+
+      ...acknowledgement(
+        "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+      ),
+
+      /*
+       * THE RE-EVALUATION IS PART OF THIS FORM, not a second one — the same
+       * decision the DMIT EPP records, and for the same reason: the plan and
+       * the review of the plan belong on one document. Both lines are the
+       * MANAGER'S, written at the follow-up meeting; Ask Bubbles has nothing to
+       * say about objectives that have not been reviewed yet.
+       */
+      { kind: "section", label: "Re-Evaluation" },
+      {
+        kind: "field",
+        field: field("objectives_met", "Which objectives were met?", "manager", "long_text"),
+      },
+      {
+        kind: "field",
+        field: field("reevaluation_plan", "Plan of Action", "manager", "long_text"),
+      },
+      ...acknowledgement(
+        "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+      ),
+
+      /*
+       * ======================================================================
+       * THE APPENDIX, AND THE SENTENCE THAT SAYS IT IS NOT THE FORM
+       * ======================================================================
+       *
+       * Every entry ECHOES a value from the pages above — there is one copy of
+       * each — so this sheet can gather what was drafted for the review
+       * conversation without becoming a second version of the record.
+       *
+       * `policy_references` is the one value that lives only here, and it is
+       * DERIVED BY THE SERVER from the pinned JB & Associates manual: the
+       * sections the manager's observation actually pointed at, named with
+       * their pages. It is `policyGrounded`, so if no section resolved it stays
+       * empty rather than naming a policy nobody checked.
+       */
+      { kind: "page_break" },
+      {
+        kind: "draft_details",
+        label: "Ask Bubbles Draft Details",
+        note: "Reference for the EPP conversation — editable; not part of the official form pages above.",
+        entries: [
+          { label: "Areas Succeeding", key: "where_succeeding" },
+          { label: "Areas Needing Improvement", key: "needs_improvement" },
+          { label: "Overall Top Strengths", key: "top_strengths" },
+          { label: "Biggest Areas of Improvement", key: "improvement_areas" },
+          { label: "Salon Goals", key: "salon_goals" },
+          { label: "Objectives and Plan of Action", key: "plan_of_action" },
+          { label: "Personal Productivity (as provided)", key: "employee_productivity" },
+          { label: "Salon Productivity (as provided)", key: "salon_productivity" },
+        ],
+      },
+      {
+        kind: "field",
+        field: field("policy_references", "Relevant JBA Policy", "ai", "long_text", {
+          policyGrounded: true,
+          help: "Named from the JB & Associates Employment Policy Manual. Left blank when no section applies.",
+        }),
+      },
+    ],
+  };
+}
+
+/** The reviewer/subject pairing each EPP template is printed for. */
+export function eppVariant(role: string, roleAbbr: string, label: string): FormVariant[] {
+  return [{ key: "default", label, role, roleAbbr }];
+}
+
+/* ------------------------------------------------------------- TSD EPP --- */
+
+/**
+ * ============================================================================
+ * THE COMPANY-POLICY EXPECTATION, NAMED AGAINST THE MANUAL ASK BUBBLES CAN READ
+ * ============================================================================
+ *
+ * The paper form states this one as "Uphold <source company> policies per
+ * Driven to Shine manual and hold team accountable to this manual". That manual is
+ * not in the corpus and Ask Bubbles cannot read it, so citing it would be a
+ * reference to a document nobody checked. Same expectation, named against the
+ * JB & Associates manual — which is what `official-policy-manual.ts` pins and
+ * the only policy manual this product has.
+ */
+export const TSD_JBA_POLICY_EXPECTATION =
+  "Uphold Buff City Soap and JB & Associates company policies per the JB & Associates Employment Policy Manual, and hold the team accountable to company policy.";
+
+/**
+ * The nine standing expectations a Training Salon Director is measured against.
+ *
+ * TAKEN FROM THE BUSINESS'S OWN FORM, in its order and its wording, with the
+ * single substitution above. Option KEYS are stable identifiers: a re-issue
+ * that rewords an expectation changes the label and keeps every mark already
+ * stored against it.
+ *
+ * THESE ARE NOT THE SDIT'S SEVEN. This is a management-development plan — it
+ * measures bench planning, hiring and retention, expense control through KPI,
+ * and leading by example, none of which the SDIT plan asks about.
+ */
+export const TSD_EPP_EXPECTATIONS: readonly { key: string; label: string }[] = [
+  { key: "uphold_experience", label: "Uphold the Buff City Soap Experience." },
+  {
+    key: "coach_client_service",
+    label: "Coach team to provide, and personally provide, excellent client service.",
+  },
+  { key: "bench_planning", label: "Bench planning and ability to lead management." },
+  { key: "quality_hiring", label: "Quality hiring and employee retention." },
+  { key: "company_policies", label: TSD_JBA_POLICY_EXPECTATION },
+  {
+    key: "expense_control",
+    label: "Control expenses by tracking secondary productivity through KPI.",
+  },
+  {
+    key: "fact_based_decisions",
+    label: "Makes fact based decisions and judgement calls without emotion.",
+  },
+  { key: "lead_by_example", label: "Lead by example at all times." },
+  {
+    key: "positive_atmosphere",
+    label: 'Promote a positive atmosphere and create "buy-in".',
+  },
+];
+
+const TSD_EXPECTATION_LEGEND =
+  "Mark each expectation as an area of success or an area needing improvement. Leave a row unmarked when it has not been assessed.";
+
+/**
+ * The eight Plan of Action categories, with the objective the business wrote
+ * for each.
+ *
+ * FIXED TEXT, AND FIXED ORDER. The categories and their objectives are the
+ * form talking — identical on every copy — and only the plan against each is
+ * a value. Shared between the Plan of Action table and the Re-Evaluation,
+ * because they are the same eight objectives read twice: once as "what will
+ * you do" and once as "was it met".
+ */
+export const TSD_PLAN_CATEGORIES: readonly {
+  key: string;
+  category: string;
+  objective: string;
+}[] = [
+  {
+    key: "bench",
+    category: "Bench",
+    objective:
+      "Ability to find and select quality talent, and retain at bench goals set by DM",
+  },
+  {
+    key: "management_bench",
+    category: "Management Bench",
+    objective:
+      "Ability to coach advanced staff, develop leaders, and delegate appropriately",
+  },
+  {
+    key: "personal_primary_productivity",
+    category: "Personal Primary Productivity",
+    objective: "Ability to self-motivate and keep metrics at or above standard",
+  },
+  {
+    key: "salon_primary_productivity",
+    category: "Salon Primary Productivity",
+    objective: "Ability to identify improvement areas and filter to team",
+  },
+  {
+    key: "salon_secondary_productivity",
+    category: "Salon Secondary Productivity",
+    objective:
+      "Ability to utilize KPI report to control expenses to salon that effect bottom line revenue",
+  },
+  {
+    key: "coaching_and_development",
+    category: "Coaching and Development",
+    objective:
+      "Ability to consistently coach team and follow-up, making an impact on primary productivity",
+  },
+  {
+    key: "district_outreach",
+    category: "District Outreach",
+    objective:
+      "Shares ideas with the District and reaches out to others with little or no direction",
+  },
+  {
+    key: "salon_standards",
+    category: "Salon Standards of Cleanliness and Safety",
+    objective: "Aware of all items on the SVC and able to describe to DM",
+  },
+];
+
+/**
+ * The line above both signature blocks.
+ *
+ * ONE STRING, USED TWICE, because it is one sentence printed twice on the
+ * paper: the plan is acknowledged when it is agreed and again when it is
+ * re-evaluated. Two near-identical literals would be two strings to keep in
+ * step, and the one that drifted would be the one nobody read.
+ */
+const TSD_ACKNOWLEDGEMENT =
+  "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.";
+
+/** The five metrics this plan measures, for the manager and for the salon. */
+const TSD_METRICS = ["PPTA", "LPSVA", "UPTA", "Club Close", "Average Club Dollar"] as const;
+
+/**
+ * ============================================================================
+ * THE MANAGEMENT PERFORMANCE PLAN, AS THE BUSINESS ISSUES IT
+ * ============================================================================
+ *
+ * A SEPARATE BUILDER, for the reason the SDIT EPP has one: this is not the
+ * shared three-page plan with a different title. It is a management-
+ * development document reviewed with a District Manager, and it carries four
+ * things the shared builder has no notion of — nine standing expectations
+ * marked twice, five metrics for the manager and five for the salon, a
+ * self-assessment the EMPLOYEE fills, and eight fixed Plan of Action
+ * objectives that are reviewed again at the re-evaluation.
+ *
+ * ITS TITLE IS THE FORM'S OWN. "Management Performance Plan" is what the
+ * paper says, and managers call it the TSD EPP — which is the template's
+ * NAME, not its title. Both are true and they are different strings.
+ *
+ * THE SELF-ASSESSMENT IS THE EMPLOYEE'S, AND ASK BUBBLES NEVER ANSWERS IT. Every
+ * field in that section is `employee`, which is not in `AI_WRITABLE`, so
+ * there is no path by which a draft could put words in their mouth. That is a
+ * structural guarantee rather than a prompt instruction — see
+ * `responsibility.ts`.
+ */
+export function tsdEppDocument(): FormDocument {
+  return {
+    paper: "letter",
+    blocks: [
+      { kind: "letterhead", brand: BRAND, title: "Management Performance Plan" },
+      ...employeeInformation(),
+      {
+        kind: "reference",
+        label: "To be reviewed with District Manager",
+        body: [
+          "First, we need to understand what the purpose and responsibilities are for your role with Buff City Soap.",
+        ],
+      },
+
+      /* ---------------------------------- the District Manager's reading -- */
+      { kind: "page_break" },
+      { kind: "section", label: "To be filled out by District Manager" },
+      {
+        kind: "field",
+        field: field(
+          "where_succeeding",
+          "In what areas is the manager currently succeeding?",
+          "ai",
+          "long_text",
+        ),
+      },
+      {
+        kind: "field",
+        field: field(
+          "needs_improvement",
+          "In what areas does the manager currently need improvement?",
+          "ai",
+          "long_text",
+        ),
+      },
+      {
+        kind: "expectation_checklist",
+        successKey: "expectations_success",
+        improvementKey: "expectations_improvement",
+        label: "Management expectations",
+        legend: TSD_EXPECTATION_LEGEND,
+        options: [...TSD_EPP_EXPECTATIONS],
+        responsibility: "ai",
+      },
+      {
+        kind: "numbered_list",
+        key: "top_strengths",
+        label: "What are the manager's overall top three strengths?",
+        count: 3,
+        responsibility: "ai",
+      },
+      {
+        kind: "numbered_list",
+        key: "improvement_areas",
+        label: "What are the manager's overall two biggest areas of improvement?",
+        count: 2,
+        responsibility: "ai",
+      },
+
+      /*
+       * FIVE METRICS, NAMED. The SDIT plan asks for three; this one asks for
+       * five, and Club Close and Average Club Dollar are the two a management
+       * plan turns on. Every one stays EMPTY when nothing was supplied.
+       */
+      { kind: "section", label: "Manager's current productivity" },
+      {
+        kind: "field_row",
+        fields: TSD_METRICS.map((metric) =>
+          field(`manager_${metric.toLowerCase().replace(/\s+/g, "_")}`, metric, "ai"),
+        ),
+      },
+      {
+        kind: "field",
+        field: field("employee_productivity", "Manager figures, as provided", "ai", "long_text", {
+          help: "Only what the manager supplied. Left blank when no figures were given.",
+        }),
+      },
+      { kind: "section", label: "Salon's current productivity" },
+      {
+        kind: "field_row",
+        fields: TSD_METRICS.map((metric) =>
+          field(`salon_${metric.toLowerCase().replace(/\s+/g, "_")}`, metric, "ai"),
+        ),
+      },
+      {
+        kind: "field",
+        field: field("salon_productivity", "Salon figures, as provided", "ai", "long_text", {
+          help: "Only what the manager supplied. Left blank when no figures were given.",
+        }),
+      },
+
+      /* ------------------------------------------ the manager's own page -- */
+      { kind: "page_break" },
+      { kind: "section", label: "To be filled out by Manager" },
+      {
+        kind: "note",
+        text: "This section is the manager's own assessment, completed in the review conversation. Ask Bubbles never answers it.",
+      },
+      {
+        kind: "field",
+        field: field(
+          "self_important_skill",
+          "What do you feel is the most important skill for a Salon Director to possess?",
+          "employee",
+          "long_text",
+        ),
+      },
+      {
+        kind: "expectation_checklist",
+        successKey: "self_expectations_success",
+        improvementKey: "self_expectations_improvement",
+        label: "In what areas do you feel you are currently succeeding, and where do you need improvement?",
+        legend: TSD_EXPECTATION_LEGEND,
+        options: [...TSD_EPP_EXPECTATIONS],
+        responsibility: "employee",
+      },
+      {
+        kind: "numbered_list",
+        key: "self_strengths",
+        label: "What are your overall top three strengths?",
+        count: 3,
+        responsibility: "employee",
+      },
+      {
+        kind: "numbered_list",
+        key: "self_improvements",
+        label: "What are your overall two biggest areas of improvement?",
+        count: 2,
+        responsibility: "employee",
+      },
+      {
+        kind: "numbered_list",
+        key: "salon_goals",
+        label: "Salon Goals: what are your salon's current top three goals?",
+        count: 3,
+        responsibility: "employee",
+      },
+
+      /* ------------------------------------------------- the plan itself -- */
+      { kind: "page_break" },
+      { kind: "section", label: "Plan of Action" },
+      {
+        kind: "objective_rows",
+        planLabel: "Plan of Action",
+        rows: [...TSD_PLAN_CATEGORIES],
+        responsibility: "ai",
+      },
+
+      { kind: "section", label: "Follow-up" },
+      {
+        kind: "field",
+        field: field(
+          "follow_up_week",
+          "Manager and Supervisor will meet and re-evaluate the week of",
+          "ai",
+          "date",
+        ),
+      },
+      ...acknowledgement(TSD_ACKNOWLEDGEMENT),
+
+      /*
+       * THE RE-EVALUATION IS THE SAME EIGHT OBJECTIVES, READ BACK. Met, not
+       * met, or not yet reviewed — the same three states an expectation row
+       * has, which is why it is the same block with its own mark wording. All
+       * three are blank on a new plan: nothing has been reviewed yet.
+       */
+      { kind: "page_break" },
+      { kind: "section", label: "Re-Evaluation" },
+      {
+        kind: "field",
+        field: field("objectives_met", "Which objectives were met?", "manager", "long_text"),
+      },
+      {
+        kind: "expectation_checklist",
+        successKey: "reevaluation_met",
+        improvementKey: "reevaluation_not_met",
+        label: "Objectives",
+        legend:
+          "Mark each objective met or not met at the re-evaluation. Leave a row unmarked until it has been reviewed.",
+        successLabel: "Met",
+        improvementLabel: "Not met",
+        options: TSD_PLAN_CATEGORIES.map((row) => ({
+          key: row.key,
+          label: `${row.category} — ${row.objective}`,
+        })),
+        responsibility: "manager",
+      },
+      {
+        kind: "field",
+        field: field("reevaluation_plan", "Plan of Action", "manager", "long_text"),
+      },
+      ...acknowledgement(TSD_ACKNOWLEDGEMENT),
+
+      /* ----------------------------------------------------- the appendix -- */
+      { kind: "page_break" },
+      {
+        kind: "draft_details",
+        label: "Ask Bubbles Draft Details",
+        note: "Reference for the EPP conversation — editable; not part of the official form pages above.",
+        entries: [
+          { label: "Areas Succeeding", key: "where_succeeding" },
+          { label: "Areas Needing Improvement", key: "needs_improvement" },
+          { label: "Overall Top Strengths", key: "top_strengths" },
+          { label: "Biggest Areas of Improvement", key: "improvement_areas" },
+          { label: "Salon Goals", key: "salon_goals" },
+          ...TSD_PLAN_CATEGORIES.map((row) => ({
+            label: `Plan of Action — ${row.category}`,
+            key: row.key,
+          })),
+          { label: "Manager Productivity (as provided)", key: "employee_productivity" },
+          { label: "Salon Productivity (as provided)", key: "salon_productivity" },
+        ],
+      },
+      {
+        kind: "field",
+        field: field("policy_references", "Relevant JBA Policy", "ai", "long_text", {
+          policyGrounded: true,
+          help: "Named from the JB & Associates Employment Policy Manual. Left blank when no section applies.",
+        }),
+      },
+    ],
+  };
+}
+
+/* ------------------------------------------------------------ DMIT EPP --- */
+
+/**
+ * The six-page DMIT Employee Performance Plan, in two readings.
+ *
+ * What the reference shows and this reproduces:
+ *
+ *   a boxed POSITION DESCRIPTION printed for the reviewed position, different
+ *   per variant and marked as such on the page;
+ *   an explicit PAGE BREAK before the section the employee completes;
+ *   a whole section marked FILLED BY HAND — the employee's own answers, which
+ *   the assistant never drafts;
+ *   Follow-up, Acknowledgement, then RE-EVALUATION and a SECOND acknowledgement,
+ *   all in the one document.
+ *
+ * The re-evaluation is part of this form rather than a separate one, which is
+ * why a form instance carries the whole lifecycle and a revision points back at
+ * what it revised.
+ */
+export function dmitEppDocument(): FormDocument {
+  return {
+    paper: "letter",
+    blocks: [
+      { kind: "letterhead", brand: BRAND, title: "Employee Performance Plan" },
+      ...employeeInformation(),
+
+      {
+        kind: "reference",
+        label: "Printed for the reviewed position — TSD",
+        variantKey: "tsd",
+        body: [
+          "To be reviewed with District Manager",
+          "First we need to understand what the purpose and responsibilities are for a District Manager with Buff City Soap:",
+          "General Purpose of Position",
+          "The District Manager is responsible for overseeing several salons. Responsibilities include managing sales and operations, driving revenue, controlling expenses and payroll budgets, handling personnel issues, accounting, merchandising, and loss prevention. District Managers are also ultimately responsible for ensuring the highest level of client service throughout the salons.",
+        ],
+      },
+      {
+        kind: "reference",
+        label: "Printed for the reviewed position — DMIT",
+        variantKey: "dmit",
+        body: [
+          "To be reviewed with District Manager in Training",
+          "First we need to understand what the purpose and responsibilities are for a District Manager in Training with Buff City Soap:",
+          "General Purpose of Position",
+          "The District Manager in Training is learning to oversee several salons: sales and operations, revenue, expense and payroll control, personnel, accounting, merchandising and loss prevention, while being assessed against the District Manager standard.",
+        ],
+      },
+
+      { kind: "section", label: "To be filled out by {{role}}" },
+      {
+        kind: "field",
+        field: field("where_succeeding", "In what areas is the {{roleAbbr}} currently succeeding?", "ai", "long_text"),
+      },
+      {
+        kind: "field",
+        field: field("needs_improvement", "In what areas does the {{roleAbbr}} currently need improvement?", "ai", "long_text"),
+      },
+      {
+        kind: "numbered_list",
+        key: "top_strengths",
+        label: "What are the {{roleAbbr}}'s overall top three strengths?",
+        count: 3,
+        responsibility: "ai",
+      },
+      {
+        kind: "numbered_list",
+        key: "improvement_areas",
+        label: "What are the {{roleAbbr}}'s overall two biggest areas of improvement?",
+        count: 2,
+        responsibility: "ai",
+      },
+      {
+        kind: "field",
+        field: field("employee_productivity", "{{role}}'s current productivity", "ai", "long_text"),
+      },
+      {
+        kind: "field",
+        field: field("salon_productivity", "Salon's current productivity", "ai", "long_text"),
+      },
+
+      { kind: "page_break" },
+
+      { kind: "section", label: "To be filled out by {{role}}" },
+      {
+        kind: "note",
+        text: "This section is completed by hand, in the conversation. Ask Bubbles does not draft it.",
+      },
+      {
+        kind: "field",
+        field: field("most_important_skill", "What do you feel is the most important skill for a {{role}} to possess?", "manual"),
+      },
+      {
+        kind: "field",
+        field: field("self_succeeding", "In what areas do you feel you are currently succeeding?", "manual", "long_text"),
+      },
+      {
+        kind: "field",
+        field: field("self_improvement", "In what areas do you feel you need improvement?", "manual", "long_text"),
+      },
+      {
+        kind: "numbered_list",
+        key: "self_strengths",
+        label: "What are your overall top three strengths?",
+        count: 3,
+        responsibility: "manual",
+      },
+      {
+        kind: "numbered_list",
+        key: "self_improvement_areas",
+        label: "What are your overall two biggest areas of improvement?",
+        count: 2,
+        responsibility: "manual",
+      },
+      {
+        kind: "numbered_list",
+        key: "salon_goals",
+        label: "Salon Goals: What are your salon's current top three goals?",
+        count: 3,
+        responsibility: "manual",
+      },
+
+      { kind: "section", label: "Plan of Action" },
+      { kind: "paragraph", text: "Review and adjust together with the employee." },
+      {
+        kind: "field",
+        field: field("plan_of_action", "Plan, objectives and goals", "ai", "long_text"),
+      },
+
+      { kind: "page_break" },
+
+      { kind: "section", label: "Follow-up" },
+      {
+        kind: "field",
+        field: field("follow_up_week", "{{role}} and {{roleAbbr}} will meet and re-evaluate the week of", "ai", "date"),
+      },
+      ...acknowledgement(
+        "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+      ),
+
+      { kind: "section", label: "Re-Evaluation" },
+      {
+        kind: "field",
+        field: field("objectives_met", "Which objectives were met?", "ai", "long_text"),
+      },
+      {
+        kind: "field",
+        field: field("reevaluation_plan", "Plan of Action", "ai", "long_text"),
+      },
+      ...acknowledgement(
+        "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+      ),
+    ],
+  };
+}
+
+export const DMIT_VARIANTS: FormVariant[] = [
+  {
+    key: "tsd",
+    label: "TSD Review",
+    role: "District Manager",
+    roleAbbr: "TSD",
+    reviewedPosition: "TSD",
+  },
+  {
+    key: "dmit",
+    label: "DMIT Review",
+    role: "District Manager",
+    roleAbbr: "DMIT",
+    reviewedPosition: "DMIT",
+  },
+];
+
+/* -------------------------------------------------------- the library --- */
+
+export type { TemplateSeed } from "./catalog";
+
+/**
+ * THE NINE HR & PERFORMANCE FORMS.
+ *
+ * `HR_TEMPLATE_SEEDS` is this file's own list; `TEMPLATE_SEEDS` below is the
+ * whole library, this list followed by the hiring one. A form is added to a
+ * category by being added to that category's list — there is no separate place
+ * where the grouping is decided a second time.
+ */
+export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
+  {
+    key: "coaching",
+    name: "Coaching Form",
+    shortName: "Coaching",
+    description:
+      "The everyday documented coaching conversation. Names the gap, the expectation and the follow-up.",
+    category: "hr_performance",
+    layoutFamily: "coaching",
+    requiredPermission: "create_coaching_form",
+    displayOrder: 1,
+    document: coachingDocument(),
+    variants: [],
+    revision: 2,
+    revisionNote: "Published from the authoritative 01. Coaching Form source document.",
+    bundledPdfName: "Coaching Form.pdf",
+  },
+  {
+    /*
+     * THE KEY STAYS `dpoa`. See `correctiveActionDocument` for why: it is what
+     * every filed instance, every route and every ticked Next Step box already
+     * addresses, and the name a manager reads is a column on the row rather
+     * than the row's identity.
+     */
+    key: "dpoa",
+    name: "Corrective Action Form",
+    shortName: "Corrective Action",
+    description:
+      "The formal corrective step after coaching. Records the warning, the policy breached in the manual's own words, and the plan.",
+    category: "hr_performance",
+    layoutFamily: "corrective",
+    requiredPermission: "create_corrective_action",
+    displayOrder: 2,
+    document: correctiveActionDocument(),
+    variants: [],
+    revision: 5,
+    revisionNote:
+      "Renamed to Corrective Action Form, and Observation of Offense drafts as Observed/Expectation/Going Forward with the Action Plan as the plan-of-action paragraph. Revision 3 sets the two policy fields to the business's own reading of them: Policy Violated is the offense category ticked on the form, and Direct policy names the approved manual with its section and page. Revision 4 adds \"Is payroll deduct applicable?\" as a Yes / No the manager answers (one answer, unanswered until they give it). Revision 5 (HR feedback, 3 Oct 2026) replaces \"Previous corrective action for this policy or issue\" and \"Date of previous corrective action\" with one multi-line field, \"List previously received coaching and/or corrective action with date signed\", and ends every Action Plan with \"Future policy violations may be subject to additional corrective action up to and including termination of employment.\" Forms filed against earlier versions keep the document they were signed on; the template key and every stored value are unchanged.",
+    bundledPdfName: "Corrective Action Form.pdf",
+  },
+  {
+    key: "policy-review",
+    name: "Policy Review",
+    shortName: "Policy Review",
+    description:
+      "A documented review of a policy with an employee, quoting the approved manual.",
+    category: "hr_performance",
+    layoutFamily: "corrective",
+    requiredPermission: "create_policy_review",
+    displayOrder: 3,
+    document: policyReviewDocument(),
+    variants: [],
+    revision: 2,
+    revisionNote:
+      "Observation drafts as Observed/Expectation/Going Forward, and the Plan of Action as the plan-of-action paragraph.",
+    bundledPdfName: "Policy Review Form.pdf",
+  },
+  {
+    key: "sdit-epp",
+    name: "SDIT EPP",
+    shortName: "SDIT EPP",
+    description: "Employee Performance Plan for a Salon Director in training.",
+    category: "hr_performance",
+    layoutFamily: "epp",
+    requiredPermission: "create_epp",
+    displayOrder: 4,
+    document: sditEppDocument("Employee Performance Plan - SDIT"),
+    /*
+     * ========================================================================
+     * THE SUBJECT OF AN SDIT EPP IS AN SDIT, AND THE FORM HAS TO SAY SO
+     * ========================================================================
+     *
+     * `roleAbbr` was "ASD", inherited from the original reference pairing, and
+     * it is what every `{{roleAbbr}}` on the page resolves to. So a manager
+     * filling an SDIT EPP read "In what areas is the ASD currently
+     * succeeding?" — a different role, on a document whose own title says
+     * SDIT. Reported from the live form.
+     *
+     * THE ASD-SDIT PLAN IS NOT THIS PLAN and is deliberately untouched below:
+     * its subject really is an ASD on the development track, which is what its
+     * name says.
+     */
+    variants: eppVariant("Training Salon Director", "SDIT", "SDIT review"),
+    revision: 3,
+    revisionNote:
+      "The standing SDIT expectations, the productivity table, the employee's own section and the re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual. The form addresses the SDIT rather than the ASD.",
+    bundledPdfName: "Employee EPP (SDIT).pdf",
+  },
+  {
+    key: "tsd-epp",
+    name: "TSD EPP",
+    shortName: "TSD EPP",
+    description: "Employee Performance Plan for a Training Salon Director.",
+    category: "hr_performance",
+    layoutFamily: "epp",
+    requiredPermission: "create_epp",
+    displayOrder: 5,
+    document: tsdEppDocument(),
+    /*
+     * THE SUBJECT IS THE TSD, reviewed by a District Manager. It was "SD", so
+     * the form asked "In what areas is the SD currently succeeding?" about a
+     * Training Salon Director — the same wrong-role defect the SDIT plan had.
+     * The document names the role in its own words throughout, so no label
+     * here depends on the interpolation either way.
+     */
+    variants: eppVariant("District Manager", "TSD", "TSD review"),
+    revision: 2,
+    revisionNote:
+      "The Management Performance Plan the business issues: the nine management expectations marked twice, five metrics for the manager and five for the salon, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual.",
+    bundledPdfName: "Management EPP (TSD).pdf",
+  },
+  {
+    key: "asd-sdit-epp",
+    name: "ASD-SDIT Performance EPP",
+    shortName: "ASD-SDIT",
+    description: "Performance plan covering the ASD to SDIT development track.",
+    category: "hr_performance",
+    layoutFamily: "epp",
+    requiredPermission: "create_epp",
+    displayOrder: 6,
+    document: eppDocument("Performance EPP - ASD/SDIT"),
+    variants: eppVariant("Training Salon Director", "ASD", "ASD/SDIT review"),
+    revision: 1,
+    revisionNote: "Seeded from the approved reference forms.",
+    bundledPdfName: "ASD-SDIT Performance EPP.pdf",
+  },
+  {
+    key: "fttc-epp",
+    name: "FTTC Performance EPP",
+    shortName: "FTTC",
+    description: "Performance plan for a full-time Tanning Consultant.",
+    category: "hr_performance",
+    layoutFamily: "epp",
+    requiredPermission: "create_epp",
+    displayOrder: 7,
+    document: eppDocument("Performance EPP - FTTC"),
+    variants: eppVariant("Salon Director", "TC", "FTTC review"),
+    revision: 1,
+    revisionNote: "Seeded from the approved reference forms.",
+    bundledPdfName: "FTTC Performance EPP.pdf",
+  },
+  {
+    key: "dmit-epp-tsd",
+    name: "DMIT EPP — TSD Review",
+    shortName: "DMIT / TSD",
+    description:
+      "The TSD reading of the DMIT Employee Performance Plan, through re-evaluation.",
+    category: "hr_performance",
+    layoutFamily: "dmit_epp",
+    requiredPermission: "create_epp",
+    displayOrder: 8,
+    document: dmitEppDocument(),
+    variants: DMIT_VARIANTS,
+    revision: 1,
+    revisionNote: "Seeded from the approved reference forms.",
+    bundledPdfName: "DMIT EPP - TSD Review.pdf",
+  },
+  {
+    key: "dmit-epp-dmit",
+    name: "DMIT EPP — DMIT Review",
+    shortName: "DMIT / DMIT",
+    description:
+      "The DMIT reading of the DMIT Employee Performance Plan, through re-evaluation.",
+    category: "hr_performance",
+    layoutFamily: "dmit_epp",
+    requiredPermission: "create_epp",
+    displayOrder: 9,
+    document: dmitEppDocument(),
+    variants: DMIT_VARIANTS,
+    revision: 1,
+    revisionNote: "Seeded from the approved reference forms.",
+    bundledPdfName: "DMIT EPP - DMIT Review.pdf",
+  },
+  {
+    /*
+     * ========================================================================
+     * THE FOLLOW-UP COACHING FORM
+     * ========================================================================
+     *
+     * See `followUpCoachingDocument` for what it contains and, more
+     * importantly, for what it deliberately does not.
+     *
+     * WHY `displayOrder` IS 14 AND NOT 2. Reading order would put it beside the
+     * Coaching Form, and it cannot go there: `display_order` is written only on
+     * INSERT, so renumbering the eight forms below it in this file would leave
+     * the code saying one order and every already-seeded database saying
+     * another. 14 is the next free number after the four hiring forms, so it is
+     * the same on a database seeded today and on one seeded last month, and it
+     * sorts last inside HR & Performance rather than tying with the Corrective
+     * Action Form for second place. A tie would order the two by whatever the database happened
+     * to return.
+     *
+     * `create_coaching_form`, because this documents the follow-up to a
+     * coaching conversation and whoever may open the coaching record is who
+     * follows it up. It is NOT `create_corrective_action`: naming an escalation
+     * as the next step is not taking one, and gating the follow-up behind the
+     * disciplinary permission would mean the manager who did the coaching could
+     * not close the loop on it.
+     */
+    key: "follow-up-coaching",
+    name: "Follow-Up Coaching Form",
+    shortName: "Follow-Up Coaching",
+    description:
+      "Records what changed after a coaching conversation — the original expectation, what was observed since, the progress level, and the next step.",
+    category: "hr_performance",
+    layoutFamily: "coaching",
+    requiredPermission: "create_coaching_form",
+    displayOrder: 14,
+    document: followUpCoachingDocument(),
+    variants: [],
+    revision: 2,
+    revisionNote:
+      "Published from the PERFORMANCE MANAGEMENT FRAMEWORK §9.2 (Template: Create a follow-up coaching form). Framework-defined: there is no approved paper or PDF source form for this document, and no acknowledgement or signature wording was specified for it. Revision 2 renames the Next Step option `dpoa` to read \"Corrective Action\"; the option key is unchanged, so every box already ticked still resolves.",
+    /*
+     * The filename the structured renderer prints under. The bundled default IS
+     * the renderer rather than an uploaded file — true of every template here —
+     * and for this one there is additionally no paper form it could ever be. The
+     * `provenance` below is what says so on the row itself.
+     */
+    bundledPdfName: "Follow-Up Coaching Form.pdf",
+    provenance: {
+      kind: "framework",
+      document: "PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT",
+      locator: "§9.2 Template: Create a follow-up coaching form",
+      note: "Framework-defined form. Fields and option lists are taken verbatim from §9.2 of the approved Performance Management Framework. This form did NOT originate from an uploaded business PDF, and no paper source form exists for it.",
+    },
+  },
+];
+
+/**
+ * THE WHOLE LIBRARY, IN CATEGORY ORDER.
+ *
+ * One array, because everything that installs, lists or authorizes a template
+ * reads exactly this. Adding a Hiring & Interview form means appending to
+ * `HIRING_TEMPLATE_SEEDS` in `hiring-library.ts` and nothing here: the category
+ * it lands in, the page section it renders under and the permission it needs
+ * all come from the seed itself.
+ */
+export const MIGRATED_TEMPLATE_SEEDS: TemplateSeed[] = [
+  ...HR_TEMPLATE_SEEDS,
+  ...EXIT_TEMPLATE_SEEDS,
+  /* Demotion and Position Transfer. */
+  ...EMPLOYMENT_CHANGE_TEMPLATE_SEEDS,
+  ...HIRING_TEMPLATE_SEEDS,
+];
+
+/**
+ * Everything the seeder installs: the migrated library, exactly. This
+ * deployment's original placeholder ("Team Member Check-In (Example)") is not
+ * reseeded; it is retired through `RETIRED_TEMPLATE_KEYS`, never deleted.
+ */
+export const TEMPLATE_SEEDS: TemplateSeed[] = MIGRATED_TEMPLATE_SEEDS;
+
+/** The default variant a new form of this template starts on. */
+export function defaultVariantKey(seedKey: string): string | null {
+  if (seedKey === "dmit-epp-tsd") return "tsd";
+  if (seedKey === "dmit-epp-dmit") return "dmit";
+  const seed = TEMPLATE_SEEDS.find((entry) => entry.key === seedKey);
   return seed?.variants[0]?.key ?? null;
 }

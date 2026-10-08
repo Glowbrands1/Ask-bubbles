@@ -88,10 +88,27 @@ const ASSISTANT_MANAGER: Permission[] = [
   "view_reports",
 ];
 
-const LOCATION_MANAGER: Permission[] = [...ASSISTANT_MANAGER, "create_forms"];
+/**
+ * THE MIGRATED HR FORMS FOLLOW THE REFERENCE PLATFORM'S MATRIX. The location
+ * manager holds what a Salon Director held there — coaching, corrective
+ * action, policy review, hiring, exit and employment-change forms — and the
+ * district manager adds the performance plans (EPPs). The assistant manager,
+ * like the Assistant Salon Director, can see the register but create none.
+ */
+const LOCATION_MANAGER: Permission[] = [
+  ...ASSISTANT_MANAGER,
+  "create_forms",
+  "create_coaching_form",
+  "create_corrective_action",
+  "create_policy_review",
+  "create_hiring_form",
+  "create_exit_form",
+  "create_employment_change_form",
+];
 
 const DISTRICT_MANAGER: Permission[] = [
   ...LOCATION_MANAGER,
+  "create_epp",
   "manage_form_templates",
   "manage_form_records",
   "manage_knowledge",
@@ -107,6 +124,13 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   "manage_knowledge",
   "view_forms_workspace",
   "create_forms",
+  "create_coaching_form",
+  "create_corrective_action",
+  "create_policy_review",
+  "create_epp",
+  "create_hiring_form",
+  "create_exit_form",
+  "create_employment_change_form",
   "view_form_monitoring",
   "manage_form_templates",
   "manage_form_records",

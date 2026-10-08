@@ -92,7 +92,8 @@ export const EXAMPLE_CHECK_IN_SEED: TemplateSeed = {
   shortName: "Check-In (Example)",
   description:
     "EXAMPLE ONLY — not an approved Buff City Soap form. Exercises the forms workflow until the real catalog is supplied.",
-  category: "examples",
+  // RETIRED (not seeded): kept so the placeholder's definition is on record.
+  category: "hr_performance",
   layoutFamily: "standard",
   requiredPermission: "create_forms",
   displayOrder: 1,

@@ -1,5 +1,14 @@
-/** The brand line printed at the top of every form this company issues. */
-export const FORM_LETTERHEAD_BRAND = "Buff City Soap";
+/**
+ * The brand line printed in the black chip at the top of a form, upper-case as
+ * the source forms print theirs. Plain text: there is no approved logo asset.
+ */
+export const FORM_LETTERHEAD_BRAND = "BUFF CITY SOAP";
+
+/**
+ * The company name as a centred letterhead prints it, in title case under the
+ * form's name (the Coaching and Resignation/Exit forms). Plain text: no logo.
+ */
+export const FORM_LETTERHEAD_BRAND_NAME = "Buff City Soap";
 
 /**
  * The image printed beside the letterhead, by asset key, or null for none.

@@ -7,7 +7,7 @@
  * skirt today", the assistant wrote into Observation of Offense:
  *
  *   "On September 10, Sarah Test was observed wearing a mini skirt at the
- *    Example Location 101 location, WHICH IS NOT IN COMPLIANCE WITH THE COMPANY
+ *    Kearny salon location, WHICH IS NOT IN COMPLIANCE WITH THE <COMPANY>
  *    DRESS CODE POLICY."
  *
  * The first clause is a fact a manager reported. The second is a legal-shaped
@@ -67,7 +67,7 @@
  * Trailing clauses that convert an observation into a finding.
  *
  * Each pattern eats to the end of its clause — the next `.`, `;` or `—` — so
- * "…wearing a mini skirt at the Kearny location, which is not in compliance with
+ * "…wearing a mini skirt at the Kearny salon, which is not in compliance with
  * the dress code policy." loses exactly the part after the comma.
  */
 const CLAIM_CLAUSE: readonly RegExp[] = [
@@ -98,7 +98,7 @@ const BREACH_WORD =
  * What survives as a statement.
  *
  * A clause cut can leave "On September 10, Sarah Test was observed wearing a
- * mini skirt at the Kearny location location." — which is the whole point — or it
+ * mini skirt at the Kearny salon location." — which is the whole point — or it
  * can leave a stub like "This was." A stub is dropped: a fragment on an HR
  * record is worse than a shorter paragraph.
  */
@@ -280,7 +280,7 @@ const OBLIGATION =
  *
  * SHORT ON PURPOSE, and every entry is a thing somebody could only know by
  * reading the manual. A bare "phone" is deliberately absent — "Sarah must
- * answer the location phone promptly" is a behaviour — while "personal phone" and
+ * answer the salon phone promptly" is a behaviour — while "personal phone" and
  * "locker" are the dress-and-devices policy's own vocabulary.
  */
 const REQUIREMENT_OBJECT: readonly RegExp[] = [
@@ -402,7 +402,7 @@ export function stripUnsupportedPolicyRequirements(
 /** The sentence the fill screen shows when a requirement was removed. */
 /**
  * ============================================================================
- * "COMPANY POLICY REQUIRES EMPLOYEES TO DEMONSTRATE INITIATIVE"
+ * "JBA POLICY REQUIRES EMPLOYEES TO DEMONSTRATE INITIATIVE"
  * ============================================================================
  *
  * A third failure, and the two guards above both miss it by construction.
@@ -417,7 +417,7 @@ export function stripUnsupportedPolicyRequirements(
  * IT IS THE COMMONEST WAY A MANAGER'S OPINION BECOMES A COMPANY RULE. "She
  * doesn't have enough initiative" is a fair observation and a fair thing to
  * coach. There is no initiative policy, there never was, and a sentence
- * beginning "Company policy requires" is indistinguishable, to the person reading
+ * beginning "JBA policy requires" is indistinguishable, to the person reading
  * the form, from one that quotes a real section.
  *
  * ============================================================================
@@ -428,11 +428,11 @@ export function stripUnsupportedPolicyRequirements(
  * attributed appears in the policy that was really retrieved. That is
  * deliberately strict, and strict in the safe direction:
  *
- *   "Company policy requires employees to be on time"  — with the Attendance
+ *   "JBA policy requires employees to be on time"  — with the Attendance
  *   section retrieved, "employees" and "time" are both in it, so the sentence
  *   stands. The manual did say this.
  *
- *   "Company policy requires employees to demonstrate initiative" — "demonstrate"
+ *   "JBA policy requires employees to demonstrate initiative" — "demonstrate"
  *   and "initiative" appear in nothing that was retrieved, so the sentence
  *   goes and the plan keeps the observation without the false authority.
  *
@@ -463,7 +463,7 @@ const NOT_EVIDENCE = new Set([
   "required", "requires", "say", "says", "specifies", "specify", "state",
   "states", "stipulate", "stipulates",
   // The source nouns.
-  "code", "company", "conduct", "handbook", "manual", "policies",
+  "code", "company", "conduct", "handbook", "jba", "manual", "policies",
   "policy", "rule", "rules", "standard", "standards",
 ]);
 
@@ -547,7 +547,7 @@ export function stripUnsupportedPolicyAttributions(
 
 /** The sentence a manager sees when an unsupported attribution was removed. */
 export const POLICY_ATTRIBUTION_REMOVED_NOTICE =
-  "A sentence saying company policy requires something was removed: the company manual sections that were checked do not state it. The coaching point is still on the form — add the requirement yourself if the manual does say so.";
+  "A sentence saying company policy requires something was removed: the JB & Associates manual sections that were checked do not state it. The coaching point is still on the form — add the requirement yourself if the manual does say so.";
 
 export const POLICY_REQUIREMENT_REMOVED_NOTICE =
   "Ask Bubbles kept the plan to what it can support. It removed a specific requirement — the kind of detail that only the manual can settle — because no approved policy was retrieved to back it, and replaced it with the general expectation. Add the exact requirement once you have confirmed it in the official manual.";
@@ -569,7 +569,7 @@ export const POLICY_REQUIREMENT_REMOVED_NOTICE =
  * and thirteen of the templates have no policy field at all.
  */
 export const POLICY_SEPARATION_RULES: readonly string[] = [
-  "An observation states WHAT WAS SEEN OR HEARD and never whether it broke a rule. Write 'was observed wearing a mini skirt at the location', never 'which is not in compliance with the dress code policy'.",
+  "An observation states WHAT WAS SEEN OR HEARD and never whether it broke a rule. Write 'was observed wearing a mini skirt at the salon', never 'which is not in compliance with the dress code policy'.",
   "Never write that something violates, breaches, contravenes or is not in compliance with a policy, a dress code, a handbook or a standard. Whether a rule was broken is settled by the policy fields, from the approved manual, and nowhere else on this form.",
   "The Type of Offense boxes are CATEGORIES you may tick. They are not policies. Never copy an offense category — 'Dress Code Violation', 'Standards of Conduct', 'Absenteeism' — into a policy field: a policy field takes the policy's own title or section from the approved manual, and nothing else.",
   "Never state a specific rule the approved policy in front of you does not state. Without a retrieved requirement, write the expectation generally — that the employee is expected to meet the current company requirement and that management will review it with them — rather than inventing what the requirement is.",

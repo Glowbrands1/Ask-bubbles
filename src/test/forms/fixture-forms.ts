@@ -653,21 +653,10 @@ export const FIXTURE_INTERVIEW_SEED: TemplateSeed = {
 
 /* --------------------------------------------------------- the registry --- */
 
-const entry = (
-  seed: TemplateSeed,
-  intentPhrases: string[],
-  overrides: Partial<Omit<CompanyFormDefinition, "seed" | "intentPhrases">> = {},
-): CompanyFormDefinition => ({
+const entry = (seed: TemplateSeed): CompanyFormDefinition => ({
   seed,
-  intentPhrases,
-  inlineDraft: true,
-  offeredInChooser: true,
-  checkEmployeeName: true,
-  revisable: true,
   chatCorrectableFields: ["employee_name", "form_date"],
-  clarifyOn: null,
   status: "placeholder",
-  ...overrides,
 });
 
 /**
@@ -675,23 +664,15 @@ const entry = (
  * stays in it, so a test against the fixtures still sees the real entry.
  */
 export const FIXTURE_COMPANY_FORMS: readonly CompanyFormDefinition[] = [
-  entry(FIXTURE_COACHING_SEED, ["coaching note", "coaching form", "coaching"], {
-    clarifyOn: { verb: "coach", noun: "coaching" },
-  }),
-  entry(FIXTURE_CORRECTIVE_SEED, ["corrective notice", "corrective action", "written warning", "verbal warning"]),
-  entry(FIXTURE_POLICY_REVIEW_SEED, ["policy review form"], { inlineDraft: false }),
-  entry(FIXTURE_ROLE_REVIEW_SEED, ["role review"], { revisable: false }),
-  entry(FIXTURE_PEER_REVIEW_SEED, ["peer review"], { inlineDraft: false }),
-  entry(FIXTURE_FOLLOW_UP_SEED, ["follow-up note", "follow up note"]),
-  entry(FIXTURE_SEPARATION_SEED, ["separation record", "separation form"], { checkEmployeeName: false }),
-  /* Published, but WITHHELD from what Bubbles offers: not in the chooser. */
-  entry(FIXTURE_INTERVIEW_SEED, ["interview guide"], {
-    inlineDraft: false,
-    offeredInChooser: false,
-    checkEmployeeName: false,
-    revisable: false,
-  }),
-  entry(EXAMPLE_CHECK_IN_SEED, ["check-in form", "check in form", "example check-in"]),
+  entry(FIXTURE_COACHING_SEED),
+  entry(FIXTURE_CORRECTIVE_SEED),
+  entry(FIXTURE_POLICY_REVIEW_SEED),
+  entry(FIXTURE_ROLE_REVIEW_SEED),
+  entry(FIXTURE_PEER_REVIEW_SEED),
+  entry(FIXTURE_FOLLOW_UP_SEED),
+  entry(FIXTURE_SEPARATION_SEED),
+  entry(FIXTURE_INTERVIEW_SEED),
+  entry(EXAMPLE_CHECK_IN_SEED),
 ];
 
 export const FIXTURE_TEMPLATE_SEEDS: readonly TemplateSeed[] = FIXTURE_COMPANY_FORMS.map(

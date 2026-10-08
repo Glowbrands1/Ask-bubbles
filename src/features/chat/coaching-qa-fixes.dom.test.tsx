@@ -5,12 +5,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { announceFormUpdate } from "./form-update-events";
 import { MessageBubble } from "./message-bubble";
-import { FIXTURE_TEMPLATE_SEEDS as TEMPLATE_SEEDS } from "@/test/forms/fixture-forms";
+import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 import type { ChatMessage } from "@/types";
+
+vi.mock("@/config/company/locations", async () =>
+  (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
+);
 
 /**
  * ============================================================================
- * A CHAT CHANGE SHOWS ON THE FORM AT ONCE
+ * PRODUCTION QA OF PR #81 — A CHAT CHANGE SHOWS ON THE FORM AT ONCE
  * ============================================================================
  *
  * A revision or a follow-up date set from chat returns `formUpdate`; the chat
@@ -20,13 +24,9 @@ import type { ChatMessage } from "@/types";
  */
 
 vi.mock("@/lib/session/session-context", () => ({
-  useSession: () => ({ user: { avatarInitials: "PC", name: "Paulyne" }, role: "location_manager", isAdmin: false }),
+  useSession: () => ({ user: { avatarInitials: "PC", name: "Marlowe" }, role: "location_manager", isAdmin: false }),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
-/* The fixture location roster: the shipped roster is empty until Buff confirms its stores. */
-vi.mock("@/config/company/locations", async () =>
-  (await import("@/test/fixture-locations")).fixtureLocationsModule(),
-);
 
 afterEach(() => {
   cleanup();
@@ -35,20 +35,20 @@ afterEach(() => {
 
 describe("the inline form after a chat change", () => {
   it("re-reads the record when the chat announces an update", async () => {
-    const template = TEMPLATE_SEEDS.find((entry) => entry.key === "fixture-follow-up")!;
+    const template = TEMPLATE_SEEDS.find((entry) => entry.key === "follow-up-coaching")!;
     const server = { followUpDate: null as string | null, timeframe: "within 2 weeks" };
     const fetchMock = vi.fn().mockImplementation(async () => ({
       ok: true,
       json: async () => ({
         instance: {
           id: "inst-1",
-          templateKey: "fixture-follow-up",
+          templateKey: "follow-up-coaching",
           templateName: template.name,
           templateVersion: 1,
           templateVersionId: "ver-1",
           variantKey: null,
-          employeeName: "Pat Example",
-          locationId: "loc-101",
+          employeeName: "Kaitlyn Brook",
+          locationId: "loc-0310",
           locationName: null,
           source: "assistant",
           status: "draft",
@@ -61,7 +61,7 @@ describe("the inline form after a chat change", () => {
     }));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const user: ChatMessage = { id: "m-1", role: "user", content: "Follow-up form for Pat Example.", createdAt: "2026-10-01T12:00:00Z" };
+    const user: ChatMessage = { id: "m-1", role: "user", content: "Follow-up form for Kaitlyn Brook.", createdAt: "2026-10-01T12:00:00Z" };
     const message: ChatMessage = {
       id: "a-1",
       role: "assistant",
@@ -70,22 +70,23 @@ describe("the inline form after a chat change", () => {
       mode: "standard",
       coverage: "not_applicable",
       citations: [],
+
       formProposal: {
         proposalId: "prop-1",
-        templateKey: "fixture-follow-up",
-        templateName: "Fixture Follow-Up Note",
+        templateKey: "follow-up-coaching",
+        templateName: "Follow-Up Coaching Form",
         supportsInlineDraft: true,
         variantKey: null,
         employeeRole: null,
-        employeeName: "Pat Example",
-        locationId: "loc-101",
+        employeeName: "Kaitlyn Brook",
+        locationId: "loc-0310",
         locationName: null,
         locationResolution: "resolved",
         authorizedLocationIds: [],
         status: "ready",
         sourceMessageIds: ["m-1"],
       },
-      formInstanceRef: { instanceId: "inst-1", proposalId: "prop-1", templateName: "Fixture Follow-Up Note" },
+      formInstanceRef: { instanceId: "inst-1", proposalId: "prop-1", templateName: "Follow-Up Coaching Form" },
     };
     render(<MessageBubble message={message} conversation={[user, message]} onSuggestion={() => {}} onFormCreated={vi.fn()} />);
     await waitFor(() => expect(screen.getByDisplayValue("within 2 weeks")).toBeTruthy());

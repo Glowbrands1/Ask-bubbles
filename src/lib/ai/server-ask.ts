@@ -14,6 +14,8 @@ import {
 } from "@/lib/forms/register-anchor";
 import { listTemplateSummaries, type TemplateSummary } from "@/lib/forms/repository";
 import { detectTemplateIntent } from "@/lib/forms/template-intent";
+import { PERFORMANCE_MANAGEMENT_FRAMEWORK } from "@/lib/knowledge/document-roles";
+import { isFrameworkAvailable } from "@/lib/knowledge/framework-availability";
 import { rowToCitation, type MatchedChunkRow } from "@/lib/knowledge/mappers";
 import { buildHandbookNote, namesHandbook, selectHandbookCoverage } from "@/lib/knowledge/named-handbook";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
@@ -171,6 +173,19 @@ export async function answerQuestion(
       continueTemplateKey: request.continueProposalTemplateKey,
       summaries,
       today: request.context.todayIso,
+      /*
+       * WHETHER THE CORRECTIVE-ACTION LADDER CAN BE SHOWN, asked only when a
+       * turn needs it (a metric on its own, "what comes after coaching?").
+       * Read from the Performance Management Framework's own identity, as the
+       * reference platform does; without the document the ladder is not
+       * described from general knowledge.
+       */
+      progressionAvailable: () =>
+        isFrameworkAvailable(
+          new SupabaseKnowledgeProvider(),
+          PERFORMANCE_MANAGEMENT_FRAMEWORK,
+          ACTIVE_BRAND.knowledgeScopeId,
+        ),
     });
     if (proposal) return proposal;
   }
@@ -205,7 +220,9 @@ export async function answerQuestion(
    */
   const texts = gateTexts(request.question, request.history);
   const pinnedWanted = PINNED_KNOWLEDGE_ROLES.filter((entry) =>
-    entry.triggers.some((trigger) => texts.some((text) => trigger.test(text))),
+    entry.isWanted
+      ? entry.isWanted({ question: request.question, history: request.history })
+      : entry.triggers.some((trigger) => texts.some((text) => trigger.test(text))),
   );
   const pinnedPromise = Promise.all(
     pinnedWanted.map(async (entry) => ({

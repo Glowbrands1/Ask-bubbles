@@ -7,7 +7,6 @@ import {
   stripPlaceholdersFromDraft,
 } from "./drafted-text";
 import { TEMPLATE_SEEDS } from "./library";
-import { EXAMPLE_CHECK_IN_KEY } from "@/config/company/forms/example-check-in";
 import { fieldsForVariant } from "./document";
 
 /**
@@ -15,7 +14,7 @@ import { fieldsForVariant } from "./document";
  * "[Follow-Up Date]" MUST NEVER REACH A CANONICAL FIELD
  * ============================================================================
  *
- * QA caught this on a drafted coaching record. Asked to draft Details, the model
+ * QA caught this on a real coaching form. Asked to draft Details, the model
  * wrote "I will check in with Sarah on [Follow-Up Date] to review her
  * attendance", and that string became a stored value, an editor row and a line
  * in the printed PDF — a sentence that reads as a commitment while naming no
@@ -26,7 +25,7 @@ describe("P4-1. an unresolved placeholder is detected whatever it is called", ()
   it.each([
     "I will check in on [Follow-Up Date].",
     "Discussed with [Employee Name].",
-    "At [Location] on [Date].",
+    "At [Salon] on [Date].",
     "Reviewed with {{manager}}.",
   ])("%s", (text) => {
     expect(containsPlaceholder(text)).toBe(true);
@@ -122,19 +121,14 @@ describe("P4-1. the drafting route runs the guard before storing anything", () =
     /*
      * THE CHAIN GREW, and the property is unchanged: what reaches the store is
      * the output of the whole chain, never the raw set. Placeholders, then the
-     * date correction, then the narrative guard, then the policy-claim and
-     * ungrounded-policy filters, then the employee name, then the
-     * responsibility validation — and `enforced` is what is written. See the
-     * route.
+     * narrative guard, then the follow-up timeframe guard, then the
+     * responsibility validation, then the policy filter — and `policyChecked`
+     * is what is written. See the route.
      */
-    expect(handler).toContain("correctDraftedDates(cleaned.values");
-    expect(handler).toContain("stripUnsupportedPolicyClaims(narrated.values");
+    expect(handler).toContain("guardEvidenceBasis(narrated.values");
+    expect(handler).toContain("guardFollowUpTimeframe(evidence.values");
+    expect(handler).toContain("values: timeframe.values");
     expect(handler).toContain("values: policyChecked.values");
-    expect(handler).toContain("values: named.values");
-    expect(handler).toContain("{ values: enforced.values, checked: enforced.checked }");
-    expect(handler.indexOf("enforceResponsibilities(")).toBeLessThan(
-      handler.indexOf("applyAssistantDraft("),
-    );
     expect(handler).not.toContain("values: drafted.values");
   });
 
@@ -146,33 +140,34 @@ describe("P4-1. the drafting route runs the guard before storing anything", () =
   });
 });
 
-describe("P4-1. follow-up is not a field on the shipped check-in form", () => {
+describe("P4-1. follow-up is not a field on the Coaching Form", () => {
   it("has no follow-up field, so narrating one duplicates an authority", () => {
     /*
      * The reason the guard removes follow-up sentences rather than tidying
-     * them: the shipped form has nowhere to put a follow-up date.
+     * them: the published Coaching Form has nowhere to put a follow-up date.
      * It is instance metadata with its own route and its own control, and a
      * paragraph repeating it would disagree the moment a manager moved it.
      */
-    const coaching = TEMPLATE_SEEDS.find((seed) => seed.key === EXAMPLE_CHECK_IN_KEY)!;
+    const coaching = TEMPLATE_SEEDS.find((seed) => seed.key === "coaching")!;
     const keys = fieldsForVariant(coaching.document, null).map((field) => field.key);
 
     expect(keys.some((key) => key.includes("follow"))).toBe(false);
   });
 });
 
-describe("P4-1. no policy can reach the shipped check-in form through the form path", () => {
+describe("P4-1. no policy can reach a Coaching Form through the form path", () => {
   it("has no policy-grounded field at all", () => {
     /*
-     * `groundPolicy` runs only when some drafted field is marked
-     * `policyGrounded`, and the check-in form marks none — so retrieval never
+     * THE $25 ASSIGNED-OPENER PARAGRAPH QA SAW CAME FROM THE RAG PATH, NOT
+     * FROM DRAFTING. `groundPolicy` runs only when some drafted field is marked
+     * `policyGrounded`, and the Coaching Form marks none — so retrieval never
      * runs for it and no policy text can enter the record this way.
      *
      * Pinned here because it is load-bearing: a future template edit that
-     * marked a field policy-grounded would open that path, and should have to
-     * come past this test to do it.
+     * marked a coaching field policy-grounded would open that path, and should
+     * have to come past this test to do it.
      */
-    const coaching = TEMPLATE_SEEDS.find((seed) => seed.key === EXAMPLE_CHECK_IN_KEY)!;
+    const coaching = TEMPLATE_SEEDS.find((seed) => seed.key === "coaching")!;
     const grounded = fieldsForVariant(coaching.document, null).filter(
       (field) => field.policyGrounded,
     );
