@@ -60,6 +60,14 @@ describe("reading the JBA manual as Buff City Soap", () => {
     expect(byIndex.get(91)).not.toMatch(/February 1 and June 1|January 1 and February 28/);
   });
 
+  it("drops the wrapped rest of another brand's bullet, and keeps the next bullet whole", () => {
+    // "o Sun Tan City: … and 25% off non-" wraps onto "tanning." — both lines are that bullet.
+    const discounts = byIndex.get(93)!;
+    expect(discounts.split("\n").map((line) => line.trim())).not.toContain("tanning.");
+    expect(discounts).toContain("o Buff City Soap: 50% off products, 25% off bath bomb parties.");
+    expect(discounts).toContain("The following is a list of what Employees are eligible for");
+  });
+
   it("keeps the corporate office and Buff holiday lists, drops the other brands' lists across the chunk boundary", () => {
     expect(byIndex.get(92)).toContain("The Corporate Office is closed on the below listed holidays.");
     expect(byIndex.get(92)).not.toMatch(/is closed on the below listed holidays\. These holidays are paid holidays for salaried\nmanagers/);

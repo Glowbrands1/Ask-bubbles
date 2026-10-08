@@ -132,19 +132,30 @@ describe.skipIf(!enabled)("the confirmed JBA handbook, read-only", () => {
       expect(isMultiBrandManual(record!.title, MULTI_BRAND_MANUAL_TITLES)).toBe(true);
       const read = readManualForBrand(chunks.map((chunk) => ({ content: chunk.content, headings: chunk.sections.map((section) => section.heading) })), POLICY_MANUAL_BRAND_SCOPE);
       const kept = read.join("\n");
-      const otherBrandRules = kept
-        .split("\n")
-        .filter((line) => /Sun Tan City|\bSTC\b|Crunch/.test(line))
+      /*
+       * THE TABLE OF CONTENTS IS NOT POLICY. Its entries name every chapter,
+       * the other brands' included ("Crunch Fitness Specific Dress Code ....
+       * 15"), with dot leaders and a page number. They are counted and
+       * reported, not treated as a rule that survived the brand reading.
+       */
+      const isContentsEntry = (line: string) => /\.{8,}/.test(line);
+      const otherBrand = (line: string) => /Sun Tan City|\bSTC\b|Crunch/.test(line);
+      const policyLines = kept.split("\n").filter((line) => !isContentsEntry(line));
+      const otherBrandRules = policyLines
+        .filter(otherBrand)
         .filter((line) => !/hired through Sun Tan|City, Crunch Fitness, and Buff City Soap|Group Fitness/.test(line));
+      const tanningChapter = /Client Tanning Policies|Protecting the Client from Overexposing|One Tanner per Room/;
       report.brandReading = {
         chunks: chunks.length,
         keptChunks: read.filter(Boolean).length,
         buffCitySoapBlocks: (kept.match(/^Buff City Soap:/gm) ?? []).length,
         officeBlocks: (kept.match(/^JB & Associates Office:/gm) ?? []).length,
         otherBrandLinesLeft: otherBrandRules.length,
-        clientTanningChapterLeft: /Client Tanning Policies|Protecting the Client from Overexposing|One Tanner per Room/.test(kept),
+        clientTanningChapterLeft: policyLines.some((line) => tanningChapter.test(line)),
+        contentsEntriesNamingOtherBrands: kept.split("\n").filter((line) => isContentsEntry(line) && (otherBrand(line) || tanningChapter.test(line))).length,
       };
       expect(otherBrandRules, "other brands' rules left after the brand reading").toEqual([]);
+      expect((report.brandReading as { clientTanningChapterLeft: boolean }).clientTanningChapterLeft, "the client-tanning chapter").toBe(false);
 
       /* 6. A FORM'S CITATION: the dress code, verbatim, with the page the manual prints. */
       const manualChunks = chunks
@@ -157,6 +168,60 @@ describe.skipIf(!enabled)("the confirmed JBA handbook, read-only", () => {
       report.citation = { displayTitle: manualDisplayTitle(record!.title), source, wordingStartsWith: wording!.slice(0, 90), verbatim: text.replace(/\s+/g, " ").includes(wording!.replace(/\s+/g, " ").trim()) };
       expect((report.citation as { verbatim: boolean }).verbatim).toBe(true);
       expect(source).toMatch(/^JBA Policy Manual — Dress Code for The Company, p\. \d+$/);
+
+      /*
+       * 7. EVERY SECTION BUFF CITY SOAP KEEPS IS CITABLE, with the page the
+       *    manual prints for that heading, and every line it quotes is the
+       *    manual's own (other brands' lines between them are left out, so the
+       *    quotation as a whole need not be one unbroken passage). A heading
+       *    with no text of its own — a chapter title followed at once by its
+       *    first sub-section, a brand label, a cover line — cites its source
+       *    only; those are listed, not failed.
+       */
+      const flat = (value: string) => value.replace(/\s+/g, " ").trim();
+      const wholeText = flat(text);
+      const keptHeadings = new Map<string, number>();
+      for (const chunk of manualChunks) {
+        for (const entry of chunk.sections ?? []) {
+          if (entry.heading !== "Table of Contents" && !keptHeadings.has(entry.heading)) keptHeadings.set(entry.heading, entry.page);
+        }
+      }
+      const uncitable: string[] = [];
+      const notVerbatim: string[] = [];
+      const wrongPage: string[] = [];
+      const headingOnly: string[] = [];
+      for (const [heading, page] of keptHeadings) {
+        const found = findManualSection(manualChunks, [heading]);
+        if (!found) {
+          uncitable.push(heading);
+          continue;
+        }
+        const cited = policyFieldValue(manualGroundedPolicies({ documentId: "live", documentTitle: record!.title, chunks: manualChunks }, [found]))!;
+        const parts = cited.split("\n\nSource: ");
+        const body = parts.length > 1 ? parts[0]! : "";
+        const line = parts.length > 1 ? parts[1]! : cited.replace(/^Source: /, "");
+        if (body.trim() === "") headingOnly.push(heading);
+        const foreign = body.split("\n").map(flat).filter((entry) => entry !== "" && !wholeText.includes(entry));
+        if (foreign.length > 0) notVerbatim.push(`${heading}: ${foreign.length} line(s)`);
+        if (line !== `JBA Policy Manual — ${heading}, p. ${page}`) wrongPage.push(`${heading}: "${line}" (expected p. ${page})`);
+      }
+      const otherBrandChapters = [
+        "Crunch Fitness Specific Dress Code",
+        "Buddy Passes (Sun Tan City Employees ONLY)",
+        "Client Tanning Policies and Regulations (STC & Crunch ONLY)",
+        "Protecting the Client from Overexposing",
+      ];
+      const otherBrandCitable = otherBrandChapters.filter((heading) => {
+        const found = findManualSection(manualChunks, [heading]);
+        if (!found) return false;
+        const cited = policyFieldValue(manualGroundedPolicies({ documentId: "live", documentTitle: record!.title, chunks: manualChunks }, [found])) ?? "";
+        return cited.split("\n\nSource: ")[0]!.trim() !== "";
+      });
+      report.allSections = { sectionsKept: keptHeadings.size, cited: keptHeadings.size - uncitable.length, withWording: keptHeadings.size - uncitable.length - headingOnly.length, headingOnly, uncitable, notVerbatim, wrongPage, otherBrandCitable };
+      expect(uncitable, "kept sections that cannot be cited").toEqual([]);
+      expect(notVerbatim, "citations that are not the manual's own words").toEqual([]);
+      expect(wrongPage, "citations with the wrong page").toEqual([]);
+      expect(otherBrandCitable, "other brands' chapters cited with their wording").toEqual([]);
     } finally {
       finish();
     }
