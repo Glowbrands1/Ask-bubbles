@@ -84,7 +84,7 @@ export interface ReconcileInput {
   /** A reason code when this record must be confirmed by a person before it may be synced. */
   hold?: (record: SourceRecord) => string | null;
   /** A reason code when this record's audience can never be shared with every Ask Bubbles user. */
-  audienceRestriction?: (audience: readonly string[] | null, record: Pick<SourceRecord, "contentType">) => string | null;
+  audienceRestriction?: (audience: readonly string[] | null, record: Pick<SourceRecord, "contentType" | "entityId">) => string | null;
 }
 
 export interface ReconcileOutput {

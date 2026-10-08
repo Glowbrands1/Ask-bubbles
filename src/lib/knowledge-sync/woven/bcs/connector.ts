@@ -18,20 +18,24 @@ import { establishSession } from "../session";
 import { WovenShapeError, indexableFile, textDocument, verifiedFile } from "../shared";
 import { communicationRecord, parseCommunicationRows } from "./adapters/communications";
 import { fileLibraryRecord, parseFileLibraryRows } from "./adapters/file-library";
-import { handbookRecord, parseHandbookRows } from "./adapters/handbooks";
+import { handbookRecord, parseHandbookDownload, parseHandbookManage, parseHandbookRows } from "./adapters/handbooks";
 import { parsePolicyCards, parsePolicyDetail, policyRecord } from "./adapters/policies";
 import { parseProcedureDetail, parseProcedureListing, procedureRecord, procedureText } from "./adapters/procedures";
+import { bcsOwnershipHold } from "./policy";
 import { CompanyGuardError, companyIdSelector, deferToCompanyPage, verifyCompany } from "./company-guard";
 import {
   COMMUNICATION_LIST_BODY,
   COMMUNICATION_LIST_PATH,
   FILE_LIBRARY_LIST_BODY,
   FILE_LIBRARY_LIST_PATH,
+  HANDBOOK_DOWNLOAD_FIELDS,
+  HANDBOOK_DOWNLOAD_PATH,
   HANDBOOK_LIST_PATH,
   POLICY_LIST_BODY,
   POLICY_LIST_PATH,
   PROCEDURE_SEARCH_PATH,
   fileLibraryDownloadPath,
+  handbookManagePath,
   policyDetailPath,
   procedureDetailPath,
   procedureSearchBody,
@@ -194,8 +198,18 @@ export class BuffCitySoapWovenConnector implements KnowledgeSourceConnector {
       }
       case "handbook": {
         const rows = parseHandbookRows(await this.withSession(() => client.postJson(HANDBOOK_LIST_PATH, undefined)));
-        /* Inventory only: the handbook download is not verified for this company, so each part is BLOCKED. */
-        return { records: rows.map(handbookRecord), diagnostics: { rows: rows.length } };
+        /*
+         * A published handbook's manage page names its current version. An
+         * unpublished one, or one held for ownership review, is never opened:
+         * there is nothing of it to read until a person confirms it.
+         */
+        const records: SourceRecord[] = [];
+        for (const row of rows) {
+          const open = row.publication === "published" && bcsOwnershipHold({ entityId: row.id, title: row.title }) === null;
+          const manage = open ? parseHandbookManage(await this.withSession(() => client.getHtml(handbookManagePath(row.id))), row.id) : null;
+          records.push(handbookRecord(row, manage));
+        }
+        return { records, diagnostics: { rows: rows.length } };
       }
       case "procedure": {
         /* One request: the empty-category search carries every category count AND every procedure card. */
@@ -236,6 +250,7 @@ export class BuffCitySoapWovenConnector implements KnowledgeSourceConnector {
       if (item.partKey === "content" && item.contentType === "procedure") return await this.fetchProcedureText(item.locator, item.entityId, item.title);
       if (item.partKey === "content" && item.contentType === "policy") return await this.fetchPolicyText(item.locator, item.entityId, item.title);
       if (item.partKey === "file" && item.contentType === "file_library") return await this.fetchFileLibrary(item.locator, item.fileName, item.mimeType);
+      if (item.partKey === "current-version" && item.contentType === "handbook") return await this.fetchHandbook(item.locator);
       throw new PartFetchError("capability_unavailable", "Ask Bubbles does not download this kind of Woven item for this company.", false);
     } catch (error) {
       if (error instanceof PartFetchError) throw error;
@@ -267,6 +282,32 @@ export class BuffCitySoapWovenConnector implements KnowledgeSourceConnector {
     if (!locator.policyId) throw new PartFetchError("no_locator", "This policy cannot be located.", false);
     const detail = parsePolicyDetail(await this.withSession(() => this.options.client.getHtml(policyDetailPath(locator.policyId!))), locator.policyId);
     return this.textFile("policy", entityId, title, detail.body);
+  }
+
+  /**
+   * Handbook: ask Woven for a fresh download link for this exact version, and
+   * use it at once. An expired link is asked for again, once.
+   */
+  private async fetchHandbook(locator: Record<string, string>): Promise<FetchedFile> {
+    const { handbookId, versionId } = locator;
+    if (!handbookId || !versionId) throw new PartFetchError("no_locator", "This handbook has no version to download.", false);
+    for (let attempt = 0; ; attempt += 1) {
+      const link = parseHandbookDownload(
+        await this.withSession(() =>
+          this.options.client.postForm(HANDBOOK_DOWNLOAD_PATH, {
+            [HANDBOOK_DOWNLOAD_FIELDS.handbookId]: handbookId,
+            [HANDBOOK_DOWNLOAD_FIELDS.versionId]: versionId,
+          }),
+        ),
+      );
+      try {
+        const file = await this.options.client.downloadSigned(link.url, this.maxBytes());
+        return verifiedFile(indexableFile(file.bytes, link.fileName, file.contentType));
+      } catch (error) {
+        if (attempt === 0 && error instanceof WovenTeamError && error.code === "download_link_expired") continue;
+        throw error;
+      }
+    }
   }
 
   /** Gated: reached only with WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED (parts are BLOCKED otherwise). */

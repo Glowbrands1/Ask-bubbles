@@ -452,8 +452,14 @@ export const POLICY_MANUAL_BRAND_SCOPE: ManualBrandScope = {
     /^Children Left Unattended$/i,
     /^One Tanner per Room$/i,
   ],
-  // The tanning brand's dress-code sub-heading, inside that brand's block.
-  subHeadings: [/^Tanning$/i],
+  /*
+   * The dress code's item headings INSIDE each brand's block ("<Brand>:" then
+   * "Shirts", "Pants", and the tanning brand's "Tanning"). Today's PDF
+   * extractor records "Shirts" and "Pants" as section headings, so without
+   * these a brand block would end at its first item and another brand's
+   * shirt and pants rules would be read as company-wide.
+   */
+  subHeadings: [/^Tanning$/i, /^Shirts$/i, /^Pants$/i],
   otherBrandPassages: [
     // Under "Employee Discounts": the employee tanning-privilege rules.
     /^Please keep in mind that The Company preaches tanning in moderation/i,

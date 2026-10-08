@@ -107,3 +107,26 @@ describe("reading the JBA manual as Buff City Soap", () => {
     }
   });
 });
+
+describe("headings as today's extractor records them", () => {
+  /*
+   * The reference index recorded the dress code's item headings ("Shirts",
+   * "Pants") as plain lines; the current PDF extractor records them as
+   * section headings. A brand block must still run through its own items.
+   */
+  const ITEM = /^(?:Shirts|Pants)$/;
+  const recorded = fixture.chunks.map((entry) => ({
+    content: entry.c,
+    headings: [...entry.h, ...entry.c.split("\n").map((line) => line.trim()).filter((line) => ITEM.test(line))],
+  }));
+  const reread = new Map(fixture.chunks.map((entry, position) => [entry.i, readManualForBrand(recorded, POLICY_MANUAL_BRAND_SCOPE)[position]!]));
+
+  it("still drops Crunch's and Sun Tan City's shirt and pants rules, and keeps Buff City Soap's and the office's", () => {
+    expect(recorded.some((entry) => entry.headings.includes("Shirts"))).toBe(true);
+    expect(reread.get(36)).not.toMatch(/Two uniform shirts|Zumba|Instructors ONLY/);
+    expect(reread.get(37)).toContain("Any BCS Employee can wear any plain black, white, or gray t-shirt");
+    expect(reread.get(38)).toContain("Full length black or blue jean-colored pants are acceptable.");
+    expect(reread.get(38)).not.toMatch(/Any STC Employee|ASD and above|consistent tanning schedule|Bermuda shorts or Capris\. Tanning/);
+    expect(reread.get(38)).toContain("Any JBA franchise Branded top");
+  });
+});

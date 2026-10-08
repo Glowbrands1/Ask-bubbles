@@ -262,6 +262,9 @@ const ALLOWED = [
   /^POST \/KnowledgeCenter\/_Policies_List$/,
   /^GET \/KnowledgeCenter\/_Policy_Detail$/,
   /^POST \/KnowledgeCenter\/_Handbooks_List_ForDataTable$/,
+  /^GET \/KnowledgeCenter\/Handbooks\/[^/]+\/manage$/,
+  /^POST \/KnowledgeCenter\/_Handbook_DownloadVersion$/,
+  /^GET \/handbooks\/[^/]+\/[^/]+$/,
   /^POST \/KnowledgeCenter\/_Search_Procedures$/,
   /^GET \/KnowledgeCenter\/Procedure\/[^/]+$/,
   /^POST \/FileLibrary\/_FileLibrary_Management_List_ForDataTable$/,
@@ -313,6 +316,12 @@ export class FakeBcsWoven {
   fileBytes: Record<string, { bytes: string; contentType?: string }> = {
     [bcsId(401)]: { bytes: "%PDF-1.4 Soap loaf cutting: use the wire cutter at 1 inch." },
   };
+  /**
+   * Handbook id → its current version and the file that version downloads as.
+   * A handbook with no entry has no current version. The file is served from a
+   * signed link on `woven.blob.core.windows.net`, as Woven serves it.
+   */
+  handbookFiles: Record<string, { versionId: string; fileName: string; bytes: Uint8Array }> = {};
   logins = 0;
   private session: { token: string; companyId: string | null } | null = null;
 
@@ -372,6 +381,14 @@ export class FakeBcsWoven {
     };
     const cookie = headers.get("cookie") ?? "";
     const hasSession = this.session !== null && cookie.includes(`FixtureSession=${this.session.token}`);
+
+    /* ------------------------------------------ signed handbook file -- */
+    if (url.hostname === "woven.blob.core.windows.net") {
+      const signed = /^\/handbooks\/([^/]+)\/([^/]+)$/.exec(path);
+      const file = signed ? this.handbookFiles[signed[1]!] : undefined;
+      if (!file || file.versionId !== signed![2] || url.searchParams.get("sig") !== "fixture") return html("Not found", 404);
+      return new Response(new Uint8Array(file.bytes), { status: 200, headers: { "content-type": "application/pdf" } });
+    }
 
     /* --------------------------------------------------- sign-in -- */
     if (path === "/Login" && method === "GET") return html(loginPage());
@@ -482,6 +499,25 @@ export class FakeBcsWoven {
           Column4: `<span class="hidden">${h.updated}</span>${h.updated.slice(0, 10)}`,
         })),
       });
+    }
+    const manage = /^\/KnowledgeCenter\/Handbooks\/([^/]+)\/manage$/.exec(path);
+    if (manage && method === "GET") {
+      const h = c.handbooks.find((x) => x.id === manage[1]);
+      if (!h) return html("Not found", 404);
+      const version = this.handbookFiles[h.id]?.versionId ?? null;
+      return html(
+        page(
+          `<h1>${esc(h.name)}</h1><script>var mHandbookID = "${h.id}"; var mHandbookName = "${esc(h.name)}"; var mUpdatedOn = "${h.updated.replace(" ", "T")}.0000000"; var mCurrentVersionID = ${version ? `"${version}"` : "null"}; var mDraftVersionID = null;</script>`,
+          h.name,
+        ),
+      );
+    }
+    if (path === "/KnowledgeCenter/_Handbook_DownloadVersion" && method === "POST") {
+      const form = new URLSearchParams(body);
+      const id = form.get("pHandbookID") ?? "";
+      const file = c.handbooks.some((x) => x.id === id) ? this.handbookFiles[id] : undefined;
+      if (!file || file.versionId !== form.get("pHandbookVersionID")) return json({ Success: false });
+      return json({ Success: true, Download: { DownloadURL: `https://woven.blob.core.windows.net/handbooks/${id}/${file.versionId}?sig=fixture`, FileName: file.fileName } });
     }
     if (path === "/KnowledgeCenter/_Search_Procedures" && method === "POST") {
       const wanted = (JSON.parse(body) as { pModel: { Categories: string[] } }).pModel.Categories;
