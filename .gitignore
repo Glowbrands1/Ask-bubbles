@@ -61,3 +61,7 @@ next-env.d.ts
 # Written by `next dev` on every start; not part of the project.
 /AGENTS.md
 /CLAUDE.md
+
+# browser tests (Playwright) — reports, traces and captures; baselines live in e2e/__screenshots__
+/test-results
+/playwright-report

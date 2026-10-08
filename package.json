@@ -9,6 +9,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e": "playwright test",
+    "e2e:update": "playwright test --update-snapshots",
+    "e2e:build": "NEXT_PUBLIC_DEMO_MODE=true next build",
     "bootstrap:admin": "node scripts/bootstrap-admin.mjs",
     "verify:bundle": "node scripts/verify-no-demo-in-bundle.mjs",
     "probe:woven": "vitest run src/lib/employees/woven/live-probe.dry-run.test.ts --disableConsoleIntercept",
@@ -56,6 +59,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
     "@electric-sql/pglite-pgvector": "^0.0.9",
+    "@playwright/test": "1.56.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.6",
