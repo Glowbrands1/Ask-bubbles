@@ -413,7 +413,9 @@ describe("aligning a re-issued form to the one it replaces", () => {
       current,
     );
     expect(result.document.style).toEqual(current.style);
-    expect(result.document.style?.logo?.assetKey).toBe("sun-tan-city");
+    // The source company's logo was not carried over; the plain-text masthead is the style.
+    expect(result.document.style?.logo).toBeUndefined();
+    expect(result.document.style?.letterhead).toBe("centered");
   });
 
   it("matches a checkbox group through a wholesale change of options", () => {
@@ -446,14 +448,14 @@ describe("aligning a re-issued form to the one it replaces", () => {
      * GUARD ON THE GUARD: the two spellings really are different, so a run that
      * simply echoed the page would fail this rather than pass it by accident.
      */
-    const page = "Coaching Form\nSUN TAN CITY\nEmployee Information\nName: ____";
-    expect(page).toContain("SUN TAN CITY");
-    expect(current.blocks[0]).toMatchObject({ kind: "letterhead", brand: "Sun Tan City" });
+    const page = "Coaching Form\nBUFF CITY SOAP\nEmployee Information\nName: ____";
+    expect(page).toContain("BUFF CITY SOAP");
+    expect(current.blocks[0]).toMatchObject({ kind: "letterhead", brand: "Buff City Soap" });
 
     const result = pipeline(readPdfText(page), current);
     expect(result.document.blocks[0]).toMatchObject({
       kind: "letterhead",
-      brand: "Sun Tan City",
+      brand: "Buff City Soap",
     });
   });
 

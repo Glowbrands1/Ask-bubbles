@@ -182,7 +182,7 @@ describe("the role's identity", () => {
   it("prefers the durable tag, with the filename only as a bridge", () => {
     expect(PERFORMANCE_MANAGEMENT_FRAMEWORK.tag).toBe("performance-management-framework");
     expect(PERFORMANCE_MANAGEMENT_FRAMEWORK.fallbackFilenames).toContain(
-      "ASK_SUNNY_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT.txt",
+      "PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT.txt",
     );
   });
 

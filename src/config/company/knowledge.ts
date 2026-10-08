@@ -113,7 +113,7 @@ export const PINNED_KNOWLEDGE_ROLES: readonly PinnedKnowledgeRole[] = [
 export const NAMED_HANDBOOK: NamedHandbookConfig | null = {
   identity: {
     tag: "official-policy-manual",
-    fallbackFilenames: ["JBA-Policy-Manual", "2025-JBA-Policy-Manual"],
+    fallbackFilenames: ["JBA-Policy-Manual"],
     fallbackTitles: ["JBA Policy Manual", "2025 JBA Policy Manual"],
   },
   namedBy: [/\b(?:jba|jb\s*(?:&|and)\s*associates)\b/i, /\b(?:manual|handbook)\b/i],

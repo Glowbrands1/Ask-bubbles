@@ -138,7 +138,7 @@ describe("the agreed timeframe and the scheduled date", () => {
 });
 
 describe("choosing a salon", () => {
-  it("offers the salons by name, not by id", () => {
+  it("offers the locations by name, not by id", () => {
     const { container } = bubble(
       assistant({
         content: "I won't choose which location this belongs to.",
@@ -155,8 +155,8 @@ describe("choosing a salon", () => {
     );
     const options = [...container.querySelectorAll("option")].map((option) => option.textContent);
     expect(options).not.toContain("loc-0310");
-    expect(options.filter((text) => text && text !== "Choose a salon…").length).toBe(2);
-    for (const text of options.filter((entry) => entry !== "Choose a salon…")) {
+    expect(options.filter((text) => text && text !== "Choose a location…").length).toBe(2);
+    for (const text of options.filter((entry) => entry !== "Choose a location…")) {
       expect(text).not.toMatch(/^loc-/);
     }
   });

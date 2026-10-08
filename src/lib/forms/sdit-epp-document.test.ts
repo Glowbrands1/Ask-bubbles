@@ -334,7 +334,7 @@ describe("the rest of the library is where it was", () => {
 
   it("keeps the official manual pinned to the JB & Associates document", () => {
     // Plus the edition-year spelling this company's Woven copy is filed under.
-    expect(OFFICIAL_POLICY_MANUAL.fallbackFilenames).toEqual(["JBA-Policy-Manual", "2025-JBA-Policy-Manual"]);
+    expect(OFFICIAL_POLICY_MANUAL.fallbackFilenames).toEqual(["JBA-Policy-Manual"]);
     expect(OFFICIAL_POLICY_MANUAL.fallbackTitles).toEqual(["JBA Policy Manual", "2025 JBA Policy Manual"]);
   });
 });

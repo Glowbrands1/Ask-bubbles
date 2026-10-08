@@ -144,8 +144,11 @@ describe("the permission model is unchanged", () => {
      *
      * The list is pinned by name rather than by count, so a swap of one key
      * for another is caught too. Forms are gated per template by
-     * `create_forms` and the template's own role list, not by a permission
-     * per form.
+     * `create_forms` and the template's own role list. The migrated HR
+     * library adds one permission per form family (coaching, corrective
+     * action, policy review, EPP, hiring, exit, employment change), as the
+     * reference platform gates them; `create_exit_form` also gates reading
+     * exit records.
      */
     expect([...PERMISSIONS].sort()).toEqual(
       [
@@ -155,6 +158,13 @@ describe("the permission model is unchanged", () => {
         "manage_knowledge",
         "view_forms_workspace",
         "create_forms",
+        "create_coaching_form",
+        "create_corrective_action",
+        "create_policy_review",
+        "create_epp",
+        "create_hiring_form",
+        "create_exit_form",
+        "create_employment_change_form",
         "view_form_monitoring",
         "manage_form_templates",
         "manage_form_records",

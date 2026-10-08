@@ -5,7 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 
-import { TEMPLATE_SYNC_ENABLED_ENV, templateSyncDecision } from "./template-sync-policy";
+import {
+  TEMPLATE_SYNC_ENABLED_ENV,
+  TemplatePublishRefusedError,
+  templatePublishDecision,
+  templateSyncDecision,
+} from "./template-sync-policy";
 
 /**
  * ============================================================================
@@ -58,7 +63,7 @@ vi.mock("@/lib/config/server-env", async (importOriginal) => ({
   supabaseSecretKeyConfigured: () => true,
 }));
 
-const { ensureTemplateLibrary, openDraft, publishDraft, getTemplateByKey, getCurrentVersion } =
+const { ensureTemplateLibrary, openDraft, publishDraft, getTemplateByKey, getCurrentVersion, activateAssetVersion } =
   await import("./repository");
 const { TEMPLATE_SEEDS } = await import("./library");
 const templatesRoute = await import("@/app/api/forms/templates/route");
@@ -340,20 +345,92 @@ describe("nothing else can publish the code's library", () => {
   });
 });
 
-/* -------------------------------------------- what is deliberately unchanged --- */
+/* ------------------------------ a person's publish (improvement C) --- */
 
-describe("a person's own template work, which this does not govern", () => {
-  it("still opens and publishes an authored draft on a Preview", async () => {
+/**
+ * PUBLISHING A PERSON'S DRAFT FROM A PREVIEW IS REFUSED. The reference
+ * platform left this open: an administrator reviewing a pull request on its
+ * Preview could click Publish and put the draft live in the one database
+ * Preview shares with Production. Editing and saving a draft still work there.
+ */
+describe("a person's publish, from a Preview", () => {
+  it("still opens and saves a draft, but refuses to publish it and writes nothing", async () => {
+    const { templateId, versionId } = await productionLibraryAtRevision4();
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("VERCEL_ENV", "preview");
+
+    const template = await getTemplateByKey("dpoa");
+    const { draft } = await openDraft(template!.id, "admin-1");
+    const before = snapshot();
+
+    await expect(publishDraft(draft.id, "admin-1")).rejects.toBeInstanceOf(TemplatePublishRefusedError);
+    expect(snapshot()).toBe(before);
+    expect((await getCurrentVersion(templateId))?.id).toBe(versionId);
+  });
+
+  it("is a 409 from the Publish route, naming the deployment, with the draft kept", async () => {
+    await productionLibraryAtRevision4();
+    const template = await getTemplateByKey("dpoa");
+    const { draft } = await openDraft(template!.id, "admin-1");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    const before = snapshot();
+
+    const { POST } = await import("@/app/api/forms/templates/[key]/publish/route");
+    const response = await POST(
+      new Request("http://localhost/api/forms/templates/dpoa/publish", {
+        method: "POST",
+        body: JSON.stringify({ versionId: draft.id }),
+      }),
+      { params: Promise.resolve({ key: "dpoa" }) },
+    );
+
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as { error: string; code: string; environment: string };
+    expect(body).toMatchObject({ code: "publish_not_allowed_here", environment: "preview" });
+    expect(body.error).toMatch(/Publishing is off on this Preview deployment/);
+    expect(body.error).toMatch(/nothing was published/);
+    expect(snapshot()).toBe(before);
+    expect(store.form_template_versions.find((row) => row.id === draft.id)?.status).toBe("draft");
+  });
+
+  it("refuses to activate a reference copy, which every live form prints beside", async () => {
     const { templateId } = await productionLibraryAtRevision4();
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv("VERCEL_ENV", "preview");
+    const before = snapshot();
+
+    await expect(activateAssetVersion(templateId, "any-asset")).rejects.toBeInstanceOf(TemplatePublishRefusedError);
+    expect(snapshot()).toBe(before);
+    expect(supabaseCalls.count).toBe(0);
+  });
+
+  it.each([
+    ["a Vercel development deployment", { VERCEL: "1", VERCEL_ENV: "development" }],
+    ["a Vercel deployment that cannot say which it is", { VERCEL: "1" }],
+    ["a local build that did not opt in", { NODE_ENV: "production" }],
+  ])("is refused on %s", (_, env) => {
+    expect(templatePublishDecision(env).allowed).toBe(false);
+  });
+
+  it.each([
+    ["the Production deployment", PRODUCTION],
+    ["the test runner", { NODE_ENV: "test" }],
+    ["a local build that opted in", { NODE_ENV: "production", [TEMPLATE_SYNC_ENABLED_ENV]: "true" }],
+  ])("is allowed on %s", (_, env) => {
+    expect(templatePublishDecision(env).allowed).toBe(true);
+  });
+
+  it("still publishes an authored draft on Production", async () => {
+    const { templateId } = await productionLibraryAtRevision4();
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("VERCEL_ENV", "production");
 
     const template = await getTemplateByKey("dpoa");
     const { draft } = await openDraft(template!.id, "admin-1");
     const published = await publishDraft(draft.id, "admin-1");
 
     expect(published.status).toBe("published");
-    expect(published.seedRevision).toBe(0);
     expect((await getCurrentVersion(templateId))?.id).toBe(draft.id);
   });
 });

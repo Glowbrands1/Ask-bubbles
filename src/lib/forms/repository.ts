@@ -19,7 +19,7 @@ import {
 } from "./document";
 import { readProposal, type FormProposal } from "./ingest/proposal";
 import { TEMPLATE_SEEDS } from "./library";
-import { templateSyncDecision } from "./template-sync-policy";
+import { assertTemplatePublishAllowed, templateSyncDecision } from "./template-sync-policy";
 
 /**
  * THE FORMS SYSTEM OF RECORD.
@@ -846,6 +846,9 @@ export async function publishDraft(
   versionId: string,
   actor: string,
 ): Promise<TemplateVersionRow> {
+  // Before any read or write: a Preview shares the live database. See
+  // `template-sync-policy.ts`.
+  assertTemplatePublishAllowed();
   const supabase = getSupabaseAdmin();
 
   const draft = await getVersion(versionId);
@@ -1000,6 +1003,9 @@ export async function activateAssetVersion(
   templateId: string,
   assetId: string,
 ): Promise<TemplateAssetRow> {
+  // The active reference copy is what every live form of this template prints
+  // beside: activating one is publishing. See `template-sync-policy.ts`.
+  assertTemplatePublishAllowed();
   const supabase = getSupabaseAdmin();
   const assets = await listAssets(templateId);
   const target = assets.find((entry) => entry.id === assetId);

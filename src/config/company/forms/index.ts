@@ -47,7 +47,9 @@ export interface CompanyFormDefinition {
 
 export const COMPANY_FORMS: readonly CompanyFormDefinition[] = TEMPLATE_SEEDS.map((seed): CompanyFormDefinition => ({
   seed,
-  chatCorrectableFields: ["employee_name", "form_date"],
+  // None: the migrated forms take a stated name or date change through their
+  // own revision path, exactly as on the reference platform.
+  chatCorrectableFields: [],
   status: "approved",
 }));
 

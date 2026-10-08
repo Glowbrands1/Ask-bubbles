@@ -50,6 +50,7 @@ import {
 import { TEAM_SUBJECT_RULES, isTeamSubject } from "./team-subject";
 import { applyEmployeeName, employeeNameRules } from "./employee-reference";
 import { detectTemplateIntent } from "./template-intent";
+import { withTruncationRetry } from "@/lib/ai/truncation";
 
 /**
  * ============================================================================
@@ -303,40 +304,51 @@ export async function reviseActiveForm(input: {
     .join("\n");
 
   const client = getAnthropicClient();
-  const response = await client.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: CLAUDE_MAX_TOKENS.detailed,
-    system,
-    messages: [{ role: "user", content: prompt }],
-    tools: [
-      {
-        name: "revise_form_fields",
-        description: "Write ONLY the fields the requested change alters.",
-        input_schema: {
-          type: "object",
-          properties: {
-            values: {
+  /*
+   * CUT OFF IS NOT A REVISION. A tool call stopped at the budget parses into
+   * whatever fields were finished, and one ending mid-sentence would be saved.
+   * Retried once with more room; refused if cut off again. See
+   * `lib/ai/truncation.ts`.
+   */
+  const response = await withTruncationRetry(
+    CLAUDE_MAX_TOKENS.detailed,
+    (maxTokens) =>
+      client.messages.create({
+        model: CLAUDE_MODEL,
+        max_tokens: maxTokens,
+        system,
+        messages: [{ role: "user", content: prompt }],
+        tools: [
+          {
+            name: "revise_form_fields",
+            description: "Write ONLY the fields the requested change alters.",
+            input_schema: {
               type: "object",
-              additionalProperties: { type: "string" },
-              description: "Field key to its new text. Only fields the request changes.",
-            },
-            checked: {
-              type: "object",
-              additionalProperties: { type: "array", items: { type: "string" } },
-              description: "Checkbox group key to its new option keys. Only groups the request changes.",
-            },
-            clear: {
-              type: "array",
-              items: { type: "string" },
-              description: "Keys the manager asked to have removed. Usually empty.",
+              properties: {
+                values: {
+                  type: "object",
+                  additionalProperties: { type: "string" },
+                  description: "Field key to its new text. Only fields the request changes.",
+                },
+                checked: {
+                  type: "object",
+                  additionalProperties: { type: "array", items: { type: "string" } },
+                  description: "Checkbox group key to its new option keys. Only groups the request changes.",
+                },
+                clear: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Keys the manager asked to have removed. Usually empty.",
+                },
+              },
+              required: ["values"],
             },
           },
-          required: ["values"],
-        },
-      },
-    ],
-    tool_choice: { type: "tool", name: "revise_form_fields" },
-  });
+        ],
+        tool_choice: { type: "tool", name: "revise_form_fields" },
+      }),
+    "The change was cut off before it finished, so the form was not changed. Try again, or ask for one change at a time.",
+  );
 
   const call = response.content.find(
     (block): block is Extract<typeof block, { type: "tool_use" }> => block.type === "tool_use",

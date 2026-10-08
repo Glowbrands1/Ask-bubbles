@@ -29,6 +29,16 @@ export function toChatTurnError(error: unknown, question: string): ChatTurnError
           question,
         };
 
+      case "truncated":
+        // Cut off twice: nothing was shown or stored. The server's message
+        // says what was not done; asking again usually fits.
+        return {
+          kind: "model_failed",
+          message: error.message,
+          retryable: true,
+          question,
+        };
+
       case "refused":
         return {
           kind: "model_failed",

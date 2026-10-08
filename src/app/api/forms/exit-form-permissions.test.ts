@@ -357,9 +357,13 @@ describe("the server pages apply the same rule", () => {
       "src/app/(app)/layout.tsx",
     ]) {
       const source = readFileSync(file, "utf8");
-      expect(source, file).toMatch(/pageCan\("create_exit_form"\)/);
+      // This deployment reads the family's permission from config
+      // (`FORM_FAMILY_READ_PERMISSIONS`) rather than naming it on each page.
+      expect(source, file).toMatch(/readPermissionHolder\(pageCan\)/);
       expect(source, file).toMatch(/withoutUnreadable\(/);
     }
+    const { FORM_FAMILY_READ_PERMISSIONS } = await import("@/config/company/forms/categories");
+    expect(FORM_FAMILY_READ_PERMISSIONS).toMatchObject({ exit: "create_exit_form" });
   });
 
   it("withoutUnreadable keeps exit rows only for a reader holding create_exit_form", async () => {

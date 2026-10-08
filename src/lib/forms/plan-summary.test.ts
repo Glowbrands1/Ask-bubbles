@@ -89,7 +89,7 @@ describe("the summary a manager reads after the plan is drafted", () => {
     )!;
     // Read back as a clause, so the label's opening capital goes.
     expect(summary).toContain("build on personally, provide excellent client service");
-    expect(summary).toContain("focuses on uphold Sun Tan City and JB & Associates");
+    expect(summary).toContain("focuses on uphold Buff City Soap and JB & Associates");
   });
 
   it("never reads the employee's own marks, which are theirs to make", () => {

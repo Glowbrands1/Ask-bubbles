@@ -115,7 +115,7 @@ export interface PolicyManualIdentity {
 export const OFFICIAL_POLICY_MANUAL: PolicyManualIdentity = {
   id: "official_policy_manual",
   tag: "official-policy-manual",
-  fallbackFilenames: ["JBA-Policy-Manual", "2025-JBA-Policy-Manual"],
+  fallbackFilenames: ["JBA-Policy-Manual"],
   // The Woven handbook in this company's account is titled "2025 JBA Policy
   // Manual - Edited 5-2025". Tagging the document `official-policy-manual`
   // in the Knowledge Base remains the preferred identification.

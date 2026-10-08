@@ -152,7 +152,16 @@ describe("uploading a document against an existing form", () => {
     const fromDocx = await proposeFromFixture("coaching-form.docx");
     if (!("draft" in fromDocx)) throw new Error("refused");
 
-    expect(fromDocx.draft.document).toEqual(pdfDocument);
+    // The fixtures are the source company's own files: the PDF prints that
+    // company's name as text where the Word file has a logo image. This form's
+    // letterhead is Buff City Soap, so that one line is not absorbed into the
+    // letterhead and stands as a heading of its own. Everything else is equal.
+    const withoutSourceMasthead = {
+      ...pdfDocument,
+      blocks: pdfDocument.blocks.filter((block) => !(block.kind === "section" && block.label === "Sun Tan City")),
+    };
+    expect(pdfDocument.blocks.length - withoutSourceMasthead.blocks.length).toBe(1);
+    expect(fromDocx.draft.document).toEqual(withoutSourceMasthead);
   });
 
   it("refuses rather than destroying a draft somebody is working on", async () => {

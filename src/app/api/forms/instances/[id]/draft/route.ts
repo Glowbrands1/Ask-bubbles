@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getAnthropicClient } from "@/lib/ai/anthropic";
 import { AiError } from "@/lib/ai/errors";
+import { withTruncationRetry } from "@/lib/ai/truncation";
 import {
   assertLiveMode,
   assertNoConfigurationProblems,
@@ -791,35 +792,48 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       .join("\n");
 
     const client = getAnthropicClient();
-    const response = await client.messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: CLAUDE_MAX_TOKENS.detailed,
-      system,
-      messages: [{ role: "user", content: prompt }],
-      tools: [
-        {
-          name: "write_form_fields",
-          description: "Write the drafted values for the fields you were given.",
-          input_schema: {
-            type: "object",
-            properties: {
-              values: {
+    /*
+     * CUT OFF IS NOT A DRAFT. A tool call stopped at the budget parses into
+     * whatever fields were finished, and one ending mid-sentence would be
+     * stored on the record and printed. Retried once with more room; refused
+     * if cut off again, with none of the drafted text written. See
+     * `lib/ai/truncation.ts`. (Facts the manager stated, recorded above, are
+     * their own words and stand.)
+     */
+    const response = await withTruncationRetry(
+      CLAUDE_MAX_TOKENS.detailed,
+      (maxTokens) =>
+        client.messages.create({
+          model: CLAUDE_MODEL,
+          max_tokens: maxTokens,
+          system,
+          messages: [{ role: "user", content: prompt }],
+          tools: [
+            {
+              name: "write_form_fields",
+              description: "Write the drafted values for the fields you were given.",
+              input_schema: {
                 type: "object",
-                additionalProperties: { type: "string" },
-                description: "Field key to drafted text. Omit a field you cannot support.",
-              },
-              checked: {
-                type: "object",
-                additionalProperties: { type: "array", items: { type: "string" } },
-                description: "Checkbox group key to the option keys that apply.",
+                properties: {
+                  values: {
+                    type: "object",
+                    additionalProperties: { type: "string" },
+                    description: "Field key to drafted text. Omit a field you cannot support.",
+                  },
+                  checked: {
+                    type: "object",
+                    additionalProperties: { type: "array", items: { type: "string" } },
+                    description: "Checkbox group key to the option keys that apply.",
+                  },
+                },
+                required: ["values"],
               },
             },
-            required: ["values"],
-          },
-        },
-      ],
-      tool_choice: { type: "tool", name: "write_form_fields" },
-    });
+          ],
+          tool_choice: { type: "tool", name: "write_form_fields" },
+        }),
+      "The drafted text was cut off before it finished, so none of it was written to the form. Try again; if it happens again, shorten the notes or draft fewer fields at once.",
+    );
 
     const call = response.content.find(
       (block): block is Extract<typeof block, { type: "tool_use" }> => block.type === "tool_use",
