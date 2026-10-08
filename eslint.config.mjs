@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Deno source for the Supabase Edge Runtime — see tsconfig.json.
     "supabase/functions/**",
+    // Playwright output (reports and traces), generated and gitignored.
+    "test-results/**",
+    "playwright-report/**",
   ]),
 ]);
 
