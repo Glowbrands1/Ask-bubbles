@@ -15,6 +15,7 @@ import {
 import { authorizeRequest } from "@/lib/auth/server";
 import { activeKnowledgeCorpus } from "@/lib/knowledge/corpus";
 import { RETRIEVAL } from "@/lib/config/models";
+import { withoutCredentials } from "@/lib/knowledge/credential-redaction";
 import { rowToCitation, rowToSearchResult } from "@/lib/knowledge/mappers";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { KnowledgeQuery } from "@/lib/knowledge/types";
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
 
     const body = await parseJsonBody<KnowledgeQuery>(request);
 
-    const rows = await new SupabaseKnowledgeProvider().match({
+    const matched = await new SupabaseKnowledgeProvider().match({
       query: requireString(body.query, "A search query", LIMITS.searchQuery),
       /*
        * THE CORPUS IS NOT A SEARCH PARAMETER. Query, category and limit are the
@@ -54,6 +55,12 @@ export async function POST(request: Request) {
         fallback: RETRIEVAL.topK,
       }),
     });
+
+    /*
+     * Document text goes to the browser here, so credentials are withheld
+     * exactly as they are for an answer and its source cards.
+     */
+    const rows = matched.map(withoutCredentials);
 
     return NextResponse.json({
       results: rows.map(rowToSearchResult),
