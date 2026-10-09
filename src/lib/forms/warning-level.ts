@@ -336,6 +336,8 @@ function classify(text: string, start: number, end: number, today: string, cued:
   if (
     opensTurn &&
     OPENING.test(before) &&
+    // "…for the same thing" points back at an earlier one, not at who this is for.
+    !/^\s*for\s+(?:the\s+same|that|it|this\s+same|same)\b/i.test(after) &&
     (/^\s*(?:for\b|[-—–,:]|$|this\s+time\b|please\b)/.test(after) ||
       TODAY_ATTACHED.test(after) ||
       (when === "today" && datesInText(after.slice(0, 16), today)[0]?.index !== undefined))
