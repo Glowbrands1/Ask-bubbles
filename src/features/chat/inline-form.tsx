@@ -468,8 +468,13 @@ export function InlineForm({
   }
 
   return (
-    <div className="mt-4 min-w-0 rounded-[var(--radius-md)] border border-border bg-surface-muted p-4">
-      <div className="flex flex-wrap items-center gap-2">
+    /*
+      THE DRAFT, OUTLINED IN DARK TOKYO GREEN with a tinted title bar
+      (approved 9 Oct 2026), so it reads as its own object inside the answer
+      card. Styling only: fields, order and actions are unchanged.
+    */
+    <div className="mt-4 min-w-0 overflow-hidden rounded-[var(--radius-md)] border-[1.5px] border-primary bg-surface p-4">
+      <div className="-mx-4 -mt-4 mb-1 flex flex-wrap items-center gap-2 border-b border-accent-hover bg-primary-soft px-4 py-3">
         <p className="text-[13px] font-semibold text-foreground">
           {loaded.instance.templateName}
         </p>

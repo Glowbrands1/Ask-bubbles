@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { FileStack, History, PanelRightClose, PanelRightOpen, Plus, X } from "lucide-react";
 
+import { BuffCitySoapLogo } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { SOURCE_PROMISE } from "@/data/answer-modes";
 import { aiProviderStatus, getAIProvider } from "@/lib/ai";
@@ -590,6 +591,12 @@ export function ChatScreen() {
      * THE WORKSPACE IS EXACTLY THE VIEWPORT MINUS THE SHELL HEADER
      * ======================================================================
      *
+     * SINCE 9 OCT 2026 CHAT IS A "BAND" ROUTE (shell/backdrop.ts): the shell
+     * draws its 64px bar here only below `lg`. So the workspace subtracts 4rem
+     * below `lg` and claims the whole dynamic viewport at `lg` and up, where
+     * there is no bar above it. chat-layout.test.ts pins both halves to the
+     * shell's own classes.
+     *
      * THE NUMBER TRACKS THE SHELL HEADER, which the Marquee direction takes to
      * 64px — so this is `4rem`, not the `3.5rem` it was. A test pins the pair
      * together rather than trusting them to stay in step, and it caught exactly
@@ -610,7 +617,7 @@ export function ChatScreen() {
      * `overflow-y-auto` on the message list never engages and the composer is
      * pushed off-screen by a long answer.
      */
-    <div className="flex h-[calc(100dvh-4rem)] min-h-0">
+    <div className="flex h-[calc(100dvh-4rem)] min-h-0 flex-col lg:h-dvh">
       {/*
         ==================================================================
         CHAT HISTORY IS CLOSED UNTIL SOMEBODY ASKS FOR IT
@@ -681,135 +688,149 @@ export function ChatScreen() {
         </div>
       ) : null}
 
-      {/* Conversation */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {/*
-          THE SLIM HEADER — the collapsed band. Near-black with the same 4px
-          yellow edge the hero band carries, so the two states read as one
-          object at two heights rather than as two different headers. The
-          connection status moves here from the composer stack, which is where
-          the artifact puts it: "in the active state the connection moves to the
-          slim header and the disclaimer sits beside the mode selector."
+      {/*
+        THE HEADER IS THE TOKYO GREEN BAND (approved 9 Oct 2026), across the
+        conversation and the context rail, closed by the wavy edge hanging
+        into the chat canvas below. Everything written on it is Charcoal.
 
-          IT IS ALWAYS RENDERED, AT TWO HEIGHTS. A fresh conversation carries
-          the 30px headline and the location; a thread carries the thread's own
-          title at 19px. It used to be suppressed entirely on the empty state,
-          because the empty state held its own taller band with the composer
-          inside it — and that is what put the chatbox at the top of the page.
-        */}
+        Before that it was the slim header — the collapsed band. Near-black with the same 4px
+        yellow edge the hero band carries, so the two states read as one
+        object at two heights rather than as two different headers. The
+        connection status moves here from the composer stack, which is where
+        the artifact puts it: "in the active state the connection moves to the
+        slim header and the disclaimer sits beside the mode selector."
+
+        IT IS ALWAYS RENDERED, AT TWO HEIGHTS. A fresh conversation carries
+        the 30px headline and the location; a thread carries the thread's own
+        title at 19px. It used to be suppressed entirely on the empty state,
+        because the empty state held its own taller band with the composer
+        inside it — and that is what put the chatbox at the top of the page.
+      */}
+      <header
+        className={cn(
+          "wave-edge relative z-[2] flex shrink-0 flex-wrap items-center justify-between gap-3 bg-band px-4 text-band-foreground sm:px-6",
+          isEmpty ? "py-5" : "py-3",
+        )}
+      >
         <div
           className={cn(
-            "flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-4 sm:px-6",
-            isEmpty ? "py-5" : "py-3",
+            "flex min-w-0 gap-2",
+            isEmpty ? "flex-col items-start" : "items-center",
           )}
         >
-          <div
-            className={cn(
-              "flex min-w-0 gap-2",
-              isEmpty ? "flex-col items-start" : "items-center",
-            )}
-          >
-            <ThreadControls
-              onNew={startNewChat}
-              onHistory={() => setHistoryOpen((open) => !open)}
-              historyOpen={historyOpen}
-            />
-            {isEmpty ? (
-              <div className="min-w-0">
-                {/*
-                  THE ONLY HEADLINE ON THE SCREEN, so it can carry the weight
-                  the Overview greeting carries: the headline face, with the
-                  assistant's name under a soft Tokyo Green marker. Charcoal
-                  throughout — Tokyo Green is never text on White.
-                */}
-                <h1 className="display text-[26px] text-foreground sm:text-[30px]">
-                  How can{" "}
-                  <span className="bg-[linear-gradient(transparent_62%,var(--marker)_62%)]">
-                    {brand.assistantName}
-                  </span>{" "}
-                  help today?
-                </h1>
-                {/*
-                  LOCATION AND WHO IS ASKING, and NOT the same name twice.
-                  `managerDisplayName` is the account's title for a location login
-                  — "Store Manager — Example Location 101" — so concatenating it
-                  with the location rendered the location twice.
-                */}
-                <p className="mt-1.5 text-[13px] text-muted-foreground">
-                  {managerDisplayName.includes(primaryLocationName)
-                    ? managerDisplayName
-                    : `${primaryLocationName} · ${managerDisplayName}`}
-                </p>
-              </div>
-            ) : (
-              <p className="hidden truncate text-[16px] font-bold text-foreground sm:block">
-                {activeConversation ? activeConversation.title : "New conversation"}
+          <ThreadControls
+            onNew={startNewChat}
+            onHistory={() => setHistoryOpen((open) => !open)}
+            historyOpen={historyOpen}
+          />
+          {isEmpty ? (
+            <div className="min-w-0">
+              {/*
+                THE ONLY HEADLINE ON THE SCREEN, so it can carry the weight
+                the Overview greeting carries: the headline face, with the
+                assistant's name under a soft Tokyo Green marker. Charcoal
+                throughout — Tokyo Green is never text on White.
+              */}
+              <h1 className="display-lettering text-[27px] text-band-foreground sm:text-[34px]">
+                How can {brand.assistantName} help today?
+              </h1>
+              {/*
+                LOCATION AND WHO IS ASKING, and NOT the same name twice.
+                `managerDisplayName` is the account's title for a location login
+                — "Store Manager — Example Location 101" — so concatenating it
+                with the location rendered the location twice.
+              */}
+              <p className="mt-1.5 text-[13px] font-medium text-band-muted-foreground">
+                {managerDisplayName.includes(primaryLocationName)
+                  ? managerDisplayName
+                  : `${primaryLocationName} · ${managerDisplayName}`}
               </p>
-            )}
-            {/*
-              THE REPORT THIS THREAD IS ABOUT, as the artifact's `.ctx` chip.
-              Only when the manager arrived from a report tab — otherwise there
-              is no context to name and an empty chip is furniture.
-            */}
-            {reportContext ? (
-              <span className="hidden shrink-0 rounded-full border border-border px-2.5 py-[5px] text-[11px] font-semibold whitespace-nowrap text-muted-foreground lg:inline-block">
-                {reportById(reportContext.reportId)?.label ?? "Report"}
-              </span>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-3">
-            {/* The connection line, moved out of the composer stack. */}
-            <span className="hidden items-center gap-2 text-[12px] whitespace-nowrap text-muted-foreground sm:flex">
-              <span
-                aria-hidden
-                className={cn(
-                  "size-2 rounded-full",
-                  providerStatus.connected
-                    ? "bg-brand-accent ring-[3px] ring-brand-accent-soft"
-                    : "bg-border-strong",
-                )}
-              />
-              {providerStatus.name} · {providerStatus.connected ? "connected" : "offline"}
+            </div>
+          ) : (
+            <p className="hidden truncate text-[16px] font-bold text-band-foreground sm:block">
+              {activeConversation ? activeConversation.title : "New conversation"}
+            </p>
+          )}
+          {/*
+            THE REPORT THIS THREAD IS ABOUT, as the artifact's `.ctx` chip.
+            Only when the manager arrived from a report tab — otherwise there
+            is no context to name and an empty chip is furniture.
+          */}
+          {reportContext ? (
+            <span className="hidden shrink-0 rounded-full bg-band-chip-surface px-2.5 py-[5px] text-[11px] font-semibold whitespace-nowrap text-band-chip-foreground lg:inline-block">
+              {reportById(reportContext.reportId)?.label ?? "Report"}
             </span>
-            {/*
-              THE RAIL'S ACTION, BELOW THE RAIL'S BREAKPOINT.
+          ) : null}
+        </div>
+        <div className="flex items-center gap-3">
+          {/* The connection line, moved out of the composer stack. */}
+          <span className="hidden items-center gap-2 rounded-full bg-band-chip-surface px-3 py-1 text-[12px] font-semibold whitespace-nowrap text-band-chip-foreground sm:flex">
+            <span
+              aria-hidden
+              className={cn(
+                "size-2 rounded-full ring-2 ring-surface",
+                providerStatus.connected ? "bg-primary" : "bg-border-strong",
+              )}
+            />
+            {providerStatus.name} · {providerStatus.connected ? "connected" : "offline"}
+          </span>
+          {/*
+            THE RAIL'S ACTION, BELOW THE RAIL'S BREAKPOINT.
 
-              "Create a form from this conversation" lives in the context rail,
-              and the rail — with its Show context toggle — is `lg:` only. So
-              below 1024px the action was not on the page at all, and the only
-              way to it was typing the sentence by hand. This is the same
-              handler, disabled for the same in-flight turn; desktop keeps the
-              rail and does not see this.
+            "Create a form from this conversation" lives in the context rail,
+            and the rail — with its Show context toggle — is `lg:` only. So
+            below 1024px the action was not on the page at all, and the only
+            way to it was typing the sentence by hand. This is the same
+            handler, disabled for the same in-flight turn; desktop keeps the
+            rail and does not see this.
 
-              Offered once there is a conversation, because that is what it
-              acts on.
-            */}
-            {!isEmpty ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="lg:hidden"
-                onClick={createFormFromConversation}
-                disabled={busy}
-                title={busy ? "Bubbles is answering. This will be ready the moment that finishes." : undefined}
-              >
-                <FileStack />
-                Create a form
-              </Button>
-            ) : null}
+            Offered once there is a conversation, because that is what it
+            acts on.
+          */}
+          {!isEmpty ? (
             <Button
               variant="ghost"
               size="sm"
-              className="hidden lg:inline-flex"
-              onClick={() => setContextOpen((open) => !open)}
-              aria-pressed={contextOpen}
+              className="lg:hidden text-band-foreground hover:bg-band-chip-surface hover:text-band-foreground"
+              onClick={createFormFromConversation}
+              disabled={busy}
+              title={busy ? "Bubbles is answering. This will be ready the moment that finishes." : undefined}
             >
-              {contextOpen ? <PanelRightClose /> : <PanelRightOpen />}
-              {contextOpen ? "Hide context" : "Show context"}
+              <FileStack />
+              Create a form
             </Button>
-          </div>
+          ) : null}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="hidden lg:inline-flex text-band-foreground hover:bg-band-chip-surface hover:text-band-foreground"
+            onClick={() => setContextOpen((open) => !open)}
+            aria-pressed={contextOpen}
+          >
+            {contextOpen ? <PanelRightClose /> : <PanelRightOpen />}
+            {contextOpen ? "Hide context" : "Show context"}
+          </Button>
+          {/*
+            THE PARENT BRAND, White on the band, desktop only — below `lg`
+            the shell's Tokyo Green top bar carries it.
+          */}
+          <BuffCitySoapLogo
+            tone="white"
+            className={cn("ml-2 hidden w-auto lg:block", isEmpty ? "h-18" : "h-14")}
+          />
         </div>
+      </header>
 
+      {/*
+        THE CHAT CANVAS: Tokyo Green at 55% on White with the official drawing
+        pattern over it (approved 9 Oct 2026), under the conversation and the
+        context rail. Every word on it is Charcoal or sits on White.
+      */}
+      <div className="relative isolate flex min-h-0 flex-1 bg-chat-canvas">
+      <div aria-hidden className="chat-pattern" />
+
+      {/* Conversation */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {/*
           ======================================================================
           ONE BODY, ONE DOCK — THE CHATBOX IS ALWAYS AT THE BOTTOM
@@ -835,7 +856,7 @@ export function ChatScreen() {
         */}
         <div
           ref={scrollRef}
-          className="scroll-slim min-h-0 flex-1 overflow-y-auto bg-background"
+          className="scroll-slim min-h-0 flex-1 overflow-y-auto pt-3"
         >
           {/*
             ==================================================================
@@ -874,7 +895,7 @@ export function ChatScreen() {
             {historyError ? (
               <p
                 role="alert"
-                className="mb-3 text-[12px] leading-relaxed text-status-failed"
+                className="mb-3 rounded-[var(--radius-sm)] bg-surface px-3.5 py-2.5 text-[12px] leading-relaxed text-status-failed"
               >
                 {historyError}
               </p>
@@ -897,14 +918,14 @@ export function ChatScreen() {
                   Still uniform — none is highlighted, because if one needs to
                   lead it leads by being first.
                 */}
-                <p className="eyebrow">Start with one of these</p>
+                <p className="eyebrow text-foreground">Start with one of these</p>
                 <div className="flex flex-wrap gap-2">
                   {quickQuestions.map((prompt) => (
                     <button
                       key={prompt}
                       type="button"
                       onClick={() => void send(prompt)}
-                      className="rounded-full border border-border-strong bg-surface px-3.5 py-2 text-left text-[13px] font-medium text-foreground transition-colors hover:border-primary hover:bg-hover-surface"
+                      className="rounded-full border border-border bg-surface px-3.5 py-2 text-left text-[13px] font-medium text-foreground transition-colors hover:border-primary hover:bg-hover-surface"
                     >
                       {prompt}
                     </button>
@@ -919,7 +940,7 @@ export function ChatScreen() {
                   composer." On the paper rather than in the band, because the
                   band no longer has room for them at this height.
                 */}
-                <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] text-subtle-foreground">
+                <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 self-start rounded-full bg-surface px-3 py-1 text-[11px] text-muted-foreground">
                   <span
                     aria-hidden
                     className={cn(
@@ -976,6 +997,7 @@ export function ChatScreen() {
                   loss the save-failure path goes out of its way to avoid.
                 */}
                 {ratingTarget && activeId ? (
+                  <div className="self-start rounded-[var(--radius-lg)] bg-surface px-3.5">
                   <ConversationRating
                     turnId={ratingTarget.turnId}
                     messageId={ratingTarget.messageId}
@@ -988,6 +1010,7 @@ export function ChatScreen() {
                     }
                     className="mt-1"
                   />
+                  </div>
                 ) : null}
               </>
             )}
@@ -1006,7 +1029,7 @@ export function ChatScreen() {
 
       {/* Context rail */}
       {contextOpen ? (
-        <aside className="hidden w-76 shrink-0 border-l border-border bg-background lg:block">
+        <aside className="hidden w-76 shrink-0 lg:block">
           <ContextPanel
             messages={messages}
             onCreateForm={can("create_forms") ? createFormFromConversation : undefined}
@@ -1014,6 +1037,7 @@ export function ChatScreen() {
           />
         </aside>
       ) : null}
+      </div>
     </div>
   );
 }
@@ -1056,13 +1080,15 @@ function ThreadControls({
 }) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <Button size="sm" onClick={onNew}>
+      <Button size="sm" variant="ink" onClick={onNew}>
         <Plus />
         New chat
       </Button>
+      {/* Charcoal: the pair sits on the Tokyo Green header, where grey is 2.9:1. */}
       <Button
         variant="ghost"
         size="sm"
+        className="text-band-foreground hover:bg-band-chip-surface hover:text-band-foreground"
         onClick={onHistory}
         aria-expanded={historyOpen}
       >

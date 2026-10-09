@@ -91,7 +91,7 @@ export function MessageBubble({
         </div>
         {/* The warm neutral, not the grey: the manager's initials on the peach
             ground need a tint that belongs to it. */}
-        <span className="mt-0.5 flex size-[30px] shrink-0 items-center justify-center rounded-full bg-accent-soft text-[11px] font-bold text-foreground">
+        <span className="mt-0.5 flex size-[30px] shrink-0 items-center justify-center rounded-full bg-surface text-[11px] font-bold text-foreground">
           {user.avatarInitials}
         </span>
       </div>
@@ -122,10 +122,15 @@ export function MessageBubble({
         them and only the lenses survive — the smudge this codebase already hit
         once on the empty state. `onBrand` swaps the two inks.
       */}
-      <span className="mt-0.5 grid size-[30px] shrink-0 place-items-center rounded-full bg-brand-accent">
-        <BubbleMark className="size-[19px]" onBrand />
+      <span className="mt-0.5 grid size-[34px] shrink-0 place-items-center rounded-full bg-surface shadow-soft">
+        <BubbleMark className="size-[22px]" />
       </span>
-      <div className="min-w-0 max-w-[78ch] flex-1">
+      {/*
+        THE ANSWER IS A WHITE CARD on the chat canvas (approved 9 Oct 2026), so
+        every word, badge, source and link in it keeps the colours it was
+        designed against.
+      */}
+      <div className="min-w-0 max-w-[78ch] flex-1 rounded-[var(--radius-lg)] rounded-tl-sm bg-surface px-4 py-3.5 shadow-soft sm:px-5 sm:py-4">
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <span className="display text-[16px] text-foreground">Bubbles</span>
@@ -513,7 +518,7 @@ function FormProposalCard({
   }
 
   return (
-    <div className="mt-4 min-w-0 rounded-[var(--radius-md)] border border-border bg-surface-muted px-4 py-3">
+    <div className="mt-4 min-w-0 rounded-[var(--radius-md)] border-[1.5px] border-primary bg-surface px-4 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-surface text-muted-foreground">
           <FilePlus2 className="size-3.5" aria-hidden />
@@ -700,7 +705,7 @@ function ChatErrorBubble({
           </div>
         </Notice>
 
-        <p className="mt-2 text-xs text-subtle-foreground">
+        <p className="mt-2 rounded-[var(--radius-sm)] bg-surface px-3 py-2 text-xs text-muted-foreground">
           Nothing was answered from memory. Bubbles does not guess when it cannot
           reach the knowledge base.
         </p>
@@ -712,7 +717,7 @@ function ChatErrorBubble({
 export function ThinkingBubble() {
   return (
     <div className="flex gap-3" aria-live="polite">
-      <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-soft">
+      <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-surface">
         <BubbleMark className="size-4" />
       </span>
       <div className="rounded-[var(--radius-lg)] rounded-tl-sm border border-border bg-surface px-4 py-3.5 shadow-soft">

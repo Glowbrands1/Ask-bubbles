@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { ArrowUp, MapPin, X } from "lucide-react";
 
-import { BubbleMark } from "@/components/brand-mark";
+import { BubbleMark, BuffCitySoapLogo } from "@/components/brand-mark";
 import { quickQuestionsFor } from "@/lib/ai/quick-questions";
 import { useSession } from "@/lib/session/session-context";
 import { useAppStore } from "@/lib/store/app-store";
@@ -176,21 +176,41 @@ export function AskBand({
       className={cn("shrink-0", className)}
     >
       {/*
-        THE TOKYO GREEN BAND, closed by the brand's wavy edge — the one large
-        brand-colour surface on Home. Everything written on it is Charcoal
-        (5.71:1); white text would be 1.98:1.
+        THE TOKYO GREEN BAND, closed by the brand's wavy edge hanging down into
+        the page — the one large brand-colour surface on Home. Since 9 Oct 2026
+        it starts at the very top (the shell draws no bar above it on desktop,
+        and a Tokyo Green one on phones), carries the official Buff City Soap
+        logo in White and the product drawings behind its content. Everything
+        written on it is Charcoal (5.71:1); white text would be 1.98:1.
       */}
-      <div className="wave-edge band-art-host mb-[13px] bg-band px-4 pt-6 pb-7 sm:px-8 sm:pt-8 sm:pb-8">
+      <div className="wave-edge relative isolate mb-[13px] bg-band px-4 pt-6 pb-8 sm:px-8 sm:pt-8 sm:pb-10">
+        {/* The official drawings, White, behind everything below. Decoration only. */}
+        <div aria-hidden className="hero-art">
+          <span className="hero-art-lineup" />
+          <span className="hero-art-spray" />
+          <span className="hero-art-bomb" />
+          <span className="hero-art-bar" />
+          <span className="hero-art-tub" />
+        </div>
+
+        {/*
+          THE PARENT BRAND, White on the band, top-right, about the height of
+          the rail's Ask Bubbles lockup. Desktop only: below `lg` the shell's
+          Tokyo Green top bar carries it. No box, no stretching — sized by
+          height so the artwork keeps its own proportions.
+        */}
+        <BuffCitySoapLogo
+          tone="white"
+          priority
+          className="absolute top-6 right-8 hidden h-[100px] lg:block"
+        />
+
         {/* ---------------------------------------------------- band head -- */}
-        <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-end sm:gap-4">
-          <div className="min-w-0">
-            <p className="mb-2 text-[13px] font-semibold text-band-muted-foreground">
+        <div className="mb-4 min-w-0 sm:mb-5 lg:pr-[200px]">
+          <div className="mb-2 flex min-h-8 flex-wrap items-center gap-x-3 gap-y-2">
+            <p className="text-[13px] font-semibold text-band-muted-foreground">
               {formatLongDate(businessToday())}
             </p>
-            <h1 className="display text-[30px] text-band-foreground sm:text-[44px]">
-              {greeting}, {greetingName}
-            </h1>
-          </div>
 
           {/*
             THE ANSWER LENGTH SELECTOR TAKES THE LOCATION PILL'S PLACE while
@@ -207,7 +227,7 @@ export function AskBand({
             <div
               role="radiogroup"
               aria-label="Answer length"
-              className="flex shrink-0 gap-0.5 self-start rounded-full bg-band-chip-surface p-[3px] sm:ml-auto sm:self-auto"
+              className="flex shrink-0 gap-0.5 rounded-full bg-band-chip-surface p-[3px]"
             >
               {MODES.map((option) => {
                 const on = option.value === mode;
@@ -237,11 +257,16 @@ export function AskBand({
               })}
             </div>
           ) : (
-            <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full bg-band-chip-surface px-3 py-1 text-[13px] font-semibold text-band-chip-foreground sm:ml-auto sm:self-auto">
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-band-chip-surface px-3 py-1 text-[13px] font-semibold text-band-chip-foreground">
               <MapPin className="size-3.5" aria-hidden />
               {primaryLocationName}
             </span>
           )}
+          </div>
+          {/* The approved rounded hand-lettered greeting (option 2). */}
+          <h1 className="display-lettering text-[31px] text-band-foreground sm:text-[48px]">
+            {greeting}, {greetingName}
+          </h1>
         </div>
 
         {/* -------------------------------------------------------- the ask -- */}
@@ -304,13 +329,6 @@ export function AskBand({
           </p>
         ) : null}
 
-        {/*
-          THE OFFICIAL PRODUCT LINE-UP, White at low opacity on the Tokyo Green
-          band (globals.css, BRAND BACKGROUNDS). Last in the band so that, on
-          narrow screens, it drops BELOW the chips rather than behind them; on
-          wide ones it sits beside the 820px ask column. Decoration only.
-        */}
-        <div aria-hidden className="band-art" />
       </div>
 
       {/* -------------------------------------------------------- answers -- */}
