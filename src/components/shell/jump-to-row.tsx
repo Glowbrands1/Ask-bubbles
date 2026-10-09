@@ -23,14 +23,18 @@ export const QUICK_ACTION_ICONS: Record<string, LucideIcon> = {
 };
 
 /**
- * THE HOME SHORTCUTS — a quiet row of equal secondary buttons directly under
- * the Tokyo Green ask band, as in the approved design. Every one of them also
- * exists in the rail, so they are navigation, not calls to action: White with
- * a Charcoal-tint border, and no colour of their own, so they never compete
- * with the band above them.
+ * THE HOME SHORTCUTS — a row of branded buttons directly under the Tokyo Green
+ * ask band (approved 9 Oct 2026). They read as buttons rather than labels on
+ * the Cotton page:
  *
- * ONE TREATMENT FOR THE WHOLE ROW. No single highlighted chip: the row is a
- * set of equal shortcuts, and if one needs to lead it leads by being first.
+ *   first     solid Dark Tokyo Green, White text (4.67:1) — it leads by
+ *             being first, as before
+ *   the rest  Tokyo tint with a Dark Tokyo Green outline and Tokyo ink text
+ *             (5.55:1; the outline is 4.32:1 against Cotton)
+ *
+ * Hover fills every one Dark Tokyo Green (the first steps darker); keyboard
+ * focus adds a Charcoal ring that shows on Cotton and on the band alike. Flat:
+ * no shadow, no 3D. Every one of them also exists in the rail.
  *
  * OVERVIEW ONLY. A permanent row on every screen would duplicate the rail. The
  * path check stays so the component is safe wherever it is placed.
@@ -43,7 +47,7 @@ export function JumpToRow({ className }: { className?: string }) {
   return (
     <nav
       aria-label="Shortcuts"
-      className={cn("flex flex-wrap items-center gap-2", className)}
+      className={cn("flex flex-wrap items-center gap-3", className)}
     >
       {DASHBOARD_QUICK_ACTIONS
         /*
@@ -52,14 +56,18 @@ export function JumpToRow({ className }: { className?: string }) {
           route that re-checks the same permission server-side.
         */
         .filter((action) => !action.permission || can(action.permission))
-        .map((action) => {
+        .map((action, index) => {
         const Icon = QUICK_ACTION_ICONS[action.iconKey] ?? Sparkles;
-        const className =
-          "inline-flex h-8 items-center gap-2 rounded-[var(--radius-sm)] border border-border-strong bg-surface px-3 text-[12px] font-semibold text-foreground transition-colors hover:border-primary hover:bg-hover-surface";
+        const className = cn(
+          "inline-flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border-[1.5px] border-primary px-4 text-[14px] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foreground max-sm:w-full",
+          index === 0
+            ? "bg-primary text-primary-foreground hover:border-primary-hover hover:bg-primary-hover"
+            : "bg-primary-soft text-primary-soft-foreground hover:bg-primary hover:text-primary-foreground",
+        );
 
         const content = (
           <>
-            <Icon className="size-3.5 shrink-0 text-foreground" aria-hidden />
+            <Icon className="size-4 shrink-0" aria-hidden />
             {action.label}
           </>
         );
