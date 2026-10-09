@@ -606,6 +606,22 @@ describe("the Ask Bubbles brand", () => {
     expect(localBars, "the top bar is the shell's, not a page's").toEqual([]);
   });
 
+  it("keeps the follow-up alert's action readable on its own pill", () => {
+    /*
+     * Reported 9 Oct 2026: "Open the forms register" was White on a White
+     * pill (the alarm's own ink), so it only showed when selected. The pill's
+     * text and ground are read from its class list and must clear 4.5:1.
+     */
+    const marquee = codeOf(join(SOURCE_DIR, "components", "ui", "marquee.tsx"));
+    const alarm = marquee.slice(marquee.indexOf("export function AlarmBar"));
+    const pill = /className="(pill-action[^"]*)"/.exec(alarm)?.[1] ?? "";
+    expect(pill).not.toBe("");
+    const ground = /(?:^|\s)bg-([a-z-]+)/.exec(pill)?.[1];
+    const ink = /(?:^|\s)text-([a-z-]+)/.exec(pill)?.[1];
+    expect(ground && ink, pill).toBeTruthy();
+    expect(contrast(resolveHex(`--${ink}`), resolveHex(`--${ground}`))).toBeGreaterThanOrEqual(4.5);
+  });
+
   it("draws the bubble mark as a vector, never an emoji", () => {
     /*
      * An emoji renders as whatever the viewer's OS ships — a different glyph on

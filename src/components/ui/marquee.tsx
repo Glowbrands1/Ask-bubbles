@@ -203,9 +203,14 @@ export function AlarmBar({
         ) : null}
       </div>
       {action ? (
+        /*
+          White pill, Charcoal words (11.3:1). The words used to take the
+          alarm's own White ink, which on this White pill was 1:1 — the label
+          only showed when selected.
+        */
         <Link
           href={action.href}
-          className="pill-action ml-auto bg-chrome text-followup-attention-foreground"
+          className="pill-action ml-auto bg-surface text-foreground transition-colors hover:bg-hover-surface focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-surface"
         >
           {action.label}
         </Link>
