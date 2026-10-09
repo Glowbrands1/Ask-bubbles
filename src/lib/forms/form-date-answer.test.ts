@@ -127,6 +127,33 @@ describe("the date of the earlier step", () => {
     ["she was late on 9/20", null],
     ["give her a written warning on 10/2", null],
     ["verbal warning, first time", null],
+    /* A step that is already hers, with no past-tense verb (owner's acceptance list, 9 Oct 2026). */
+    ["despite her written warning on 9/15, give her a verbal warning", "2026-09-15"],
+    ["late again after his verbal warning on 9/21", "2026-09-21"],
+    ["her verbal warning on 9/21 did not change anything", "2026-09-21"],
+    ["following their coaching on 9/2 she was late again", "2026-09-02"],
+    /* ...and still not an instruction about this form. */
+    ["give her written warning on 10/2", null],
+    ["issue him a written warning on 10/2", null],
+    ["she needs her written warning on 10/2", null],
+    /* An incident's "was" or "after" before an instruction about THIS form is not an earlier step. */
+    ["she was late, give her a written warning on 10/2", null],
+    ["she was late again after lunch, give her a written warning on 10/9", null],
+    ["she was coached and given a written warning on 9/21", "2026-09-21"],
+    /* This form's own warning, scheduled or dated — never an earlier step (pre-merge review). */
+    ["her written warning should be dated 10/9", null],
+    ["her written warning will be delivered 10/12", null],
+    ["her written warning is dated 10/9", null],
+    ["her written warning for 10/9", null],
+    ["her written warning effective 10/10", null],
+    ["deliver her written warning on 10/12", null],
+    ["she will receive her written warning on 10/12", null],
+    ["schedule her written warning meeting for 10/12", null],
+    ["her coaching session is set for 10/15", null],
+    ["this is her written warning on 10/9", null],
+    ["since she was late again, a written warning on 10/9", null],
+    ["following the meeting, written warning on 10/9", null],
+    ["after today she gets a written warning on 10/12", null],
   ])("%s -> %s", (text, expected) => {
     expect(priorStepDate(text, TODAY)).toBe(expected);
   });

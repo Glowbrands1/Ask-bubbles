@@ -178,3 +178,34 @@ describe("no invented history", () => {
     expect(result.removed).toHaveLength(2);
   });
 });
+
+describe("an earlier step is never dated in the future", () => {
+  // A month and day with no year take the current one; read in January, "12/20" is last December.
+  it("reads a December step, mentioned in January, as last year's", () => {
+    const grounded = groundPriorActions({
+      drafted: "",
+      notes: "late again today. got verbal warning on 12/20",
+      today: "2027-01-05",
+    });
+    expect(grounded.value).toBe("Verbal warning — signed 12/20/2026");
+  });
+
+  it("keeps the model's correctly-dated line for that step", () => {
+    const grounded = groundPriorActions({
+      drafted: "Verbal warning — signed 12/20/2026",
+      notes: "late again today. got verbal warning on 12/20",
+      today: "2027-01-05",
+    });
+    expect(grounded.value).toBe("Verbal warning — signed 12/20/2026");
+    expect(grounded.removed).toEqual([]);
+  });
+
+  it("keeps a year the manager typed, as typed", () => {
+    const grounded = groundPriorActions({
+      drafted: "",
+      notes: "late again today. got verbal warning on 12/20/2026",
+      today: "2027-01-05",
+    });
+    expect(grounded.value).toBe("Verbal warning — signed 12/20/2026");
+  });
+});

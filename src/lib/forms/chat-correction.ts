@@ -25,6 +25,13 @@ import { singleSpokenDate } from "./relative-date";
 import { detectTemplateIntent } from "./template-intent";
 import { saveInstanceValues } from "./instances";
 import { enforcePersonEdit } from "./responsibility";
+import { namesIncidentTopic } from "./corrective-action-intake";
+import {
+  WARNING_LEVEL_KEYS,
+  WARNING_TYPE_KEY,
+  warningLevelChecked,
+  warningLevelCorrection,
+} from "./warning-level";
 
 /**
  * ============================================================================
@@ -54,6 +61,8 @@ async function correctFromFormReaders(
     instanceId: string;
     question: string;
     today: string;
+    /** The whole message, when `question` is one clause of it. */
+    message?: string;
   },
   applied: AppliedBy = {},
 ): Promise<AskResponse | null> {
@@ -61,7 +70,28 @@ async function correctFromFormReaders(
   const employmentCorrection = correctionValues(input.question, input.today);
   const exitCorrection = exitCorrectionValues(input.question, input.today);
   const payroll = payrollDeductCorrection(input.question);
-  if (!employmentCorrection && !exitCorrection && !payroll) return null;
+  /*
+   * "CHANGE WRITTEN WARNING TO VERBAL", "make it verbal" — the Type of
+   * Warning on a Corrective Action Form, as the manager now states it. A
+   * warning described as already given is history and corrects nothing.
+   */
+  /*
+   * ANOTHER INCIDENT IS NOT A CORRECTION. "sarah was late today, make it a
+   * verbal warning" names somebody's conduct and asks for a level; with no
+   * change verb it is a new request, and the ordinary flow proposes it.
+   */
+  /*
+   * Read against the WHOLE message, not just the clause being retried
+   * (`correctActiveForm` retries correction clauses on their own): "sarah was
+   * late again today, make it a written warning" is about Sarah however it is
+   * split.
+   */
+  const whole = input.message ?? input.question;
+  const warning =
+    namesIncidentTopic(whole) && !/\b(?:change|switch|set|update|correct)\b/i.test(whole)
+      ? null
+      : warningLevelCorrection(input.question, input.today);
+  if (!employmentCorrection && !exitCorrection && !payroll && !warning) return null;
 
   let authorized: Awaited<ReturnType<typeof authorizeInstance>>;
   try {
@@ -84,9 +114,35 @@ async function correctFromFormReaders(
   const asksPayroll = checkboxGroupsForVariant(document, variantKey).some(
     (group) => group.key === PAYROLL_DEDUCT_KEY,
   );
+  /*
+   * THE TYPE OF WARNING, on a version whose group offers the level stated —
+   * read off the version's keys, like the payroll question.
+   */
+  const warningOptions =
+    checkboxGroupsForVariant(document, variantKey)
+      .find((group) => group.key === WARNING_TYPE_KEY)
+      ?.options.map((option) => option.key) ?? [];
+  /*
+   * Only the LEVEL changes. A Termination or Demotion a manager ticked by hand
+   * on a leadership decision stays exactly as they left it.
+   */
+  const existingWarning = loaded.values.find((row) => row.fieldKey === WARNING_TYPE_KEY)?.checked ?? [];
+  const level = warningLevelChecked(warning, warningOptions)[WARNING_TYPE_KEY];
+  const warningChecked: Record<string, string[]> = level
+    ? { [WARNING_TYPE_KEY]: [...existingWarning.filter((option) => !WARNING_LEVEL_KEYS.has(option)), ...level] }
+    : {};
+  /*
+   * SOMEBODY ELSE, NAMED THE WAY MANAGERS TYPE: "kim was late too. change it
+   * to verbal", "change it to verbal for sarah". A lowercase first name is not
+   * caught by `extractEmployeeNames`, so the level is not changed on this
+   * form when the message's subject, or who it is "for", is somebody else.
+   */
+  const correctsWarning =
+    Object.keys(warningChecked).length > 0 &&
+    !aboutSomebodyElse(input.message ?? input.question, loaded.instance.employeeName);
   // The Exit Form, read off the pinned version's keys as the drafting route does.
   const isExit = !kind && isExitDocumentKeys(responsibilityMap(document, variantKey).keys());
-  if (!kind && !isExit && !(asksPayroll && payroll)) return null;
+  if (!kind && !isExit && !(asksPayroll && payroll) && !correctsWarning) return null;
   /*
    * ==========================================================================
    * A NEW REQUEST IS NEVER A CORRECTION TO THE LAST FORM
@@ -100,17 +156,26 @@ async function correctFromFormReaders(
    * which proposes the new form.
    */
   const intent = detectTemplateIntent(input.question);
+  /*
+   * "Verbal warning" and "written warning" NAME this form, so a correction of
+   * its level reads as an explicit request for it. "Make it a verbal warning"
+   * is still a correction; "make a new written warning for Jordan" is not.
+   */
+  const asksNewForm = correctsWarning
+    ? /\b(?:create|start|pull up|new|another)\b|\bmake\s+(?:a|an)\b|\bneed\s+(?:a|an)\b/i.test(input.question)
+    : /\b(?:create|make|start|pull up|new|another|need)\b/i.test(input.question);
   if (
     intent.kind === "ambiguous" ||
     intent.kind === "corrective_action" ||
     (intent.kind === "explicit" && intent.templateKey !== loaded.instance.templateKey) ||
-    (intent.kind === "explicit" && /\b(?:create|make|start|pull up|new|another|need)\b/i.test(input.question))
+    (intent.kind === "explicit" && asksNewForm)
   ) {
     return null;
   }
   // "change the name to …" is the one correction that names somebody new, on purpose.
   const renaming = /\b(?:change|update|correct|fix|set|make)\s+(?:the\s+|her\s+|his\s+|their\s+)?(?:employee(?:'s)?\s+)?name\b/i.test(input.question);
-  const named = renaming ? [] : extractEmployeeNames(input.question);
+  // The WHOLE message: "Jordan Smith was late. Change it to verbal" is about Jordan, however it is split.
+  const named = renaming ? [] : extractEmployeeNames(input.message ?? input.question);
   if (named.length > 0 && !named.some((name) => samePerson(name, loaded.instance.employeeName))) {
     return null;
   }
@@ -135,7 +200,13 @@ async function correctFromFormReaders(
     ? employmentCorrection
     : isExit
       ? exitValues
-      : { values: {}, checked: payrollDeductChecked(payroll) };
+      : {
+          values: {},
+          checked: {
+            ...(asksPayroll ? payrollDeductChecked(payroll) : {}),
+            ...warningChecked,
+          },
+        };
   if (!correction) return null;
 
   const who = `**${loaded.instance.templateName}** for **${loaded.instance.employeeName}**`;
@@ -149,7 +220,7 @@ async function correctFromFormReaders(
     ? CORRECTABLE_KEYS
     : isExit
       ? EXIT_CORRECTABLE_KEYS
-      : new Set([PAYROLL_DEDUCT_KEY]);
+      : new Set([PAYROLL_DEDUCT_KEY, WARNING_TYPE_KEY]);
   const restrict = <T,>(entries: Record<string, T>) =>
     Object.fromEntries(Object.entries(entries).filter(([key]) => correctable.has(key)));
   const values = restrict(correction.values);
@@ -276,9 +347,62 @@ async function correctFromFormReaders(
   return { ...reply(lines.join("\n")), formUpdate: { instanceId: input.instanceId, updated: written } };
 }
 
+/** Words that can stand where a person would and are not one. */
+const NOT_A_PERSON = new Set([
+  "she", "he", "they", "her", "him", "them", "it", "this", "that", "there", "i", "we", "you", "me", "us",
+  "the", "a", "an", "today", "now", "being", "everyone", "nobody", "someone", "same",
+  "attendance", "tardiness", "lateness", "absence", "conduct", "policy", "performance", "cash", "dress",
+  "uniform", "safety", "warning", "verbal", "written", "also", "and", "too", "then", "actually",
+  "but", "so", "my", "our", "your", "his", "their", "its", "traffic", "manager", "mistake", "sure", "real",
+  "bus", "car", "hr", "nobody", "everybody", "everything", "nothing", "something", "store", "shift",
+  "good", "it's", "that's", "what", "who", "which", "one", "please", "form", "draft", "change",
+  "consistency", "fairness", "schedule", "dm", "payroll", "policy", "it", "everyone's", "team", "notes",
+]);
+
+/**
+ * Whether the message is about a person other than `employee`: a sentence
+ * whose subject is another first name ("kim was late too"), or a level asked
+ * "for" another name ("change it to verbal for sarah").
+ */
+function aboutSomebodyElse(message: string, employee: string): boolean {
+  const own = new Set(employee.toLowerCase().split(/\s+/).filter(Boolean));
+  const other = (word: string) => {
+    const w = word.toLowerCase().replace(/['’]s$/, "");
+    return !NOT_A_PERSON.has(w) && !own.has(w) && !namesIncidentTopic(w);
+  };
+  // "kim was late", "and jo was late", "jordan smith was late": either word of the subject.
+  const subjects = message.matchAll(
+    /(?:^|[.!?;,]\s*|\b(?:and|also|too|but)\s+)([a-z][a-z'’-]+)(?:\s+([a-z][a-z'’-]+))?\s+(?:was|were|is|are|has|had|got|did|left|came|showed|called|didn'?t|wasn'?t|isn'?t|keeps|kept|needs|deserves)\b/gi,
+  );
+  for (const match of subjects) if (other(match[1]!) || (match[2] && other(match[2]))) return true;
+  // "also jo.", "kim too, make it verbal" — a bare first name added on.
+  for (const match of message.matchAll(/(?:^|[.!?;,]\s*)(?:also|and)\s+([a-z][a-z'’-]+)\s*(?:[.,!:]|too\b|$)|\b([a-z][a-z'’-]+)\s+too\b/gi)) {
+    const word = match[1] ?? match[2]!;
+    if (other(word)) return true;
+  }
+  // "kim's late too", "kim's out today".
+  for (const match of message.matchAll(/\b([a-z][a-z-]+)['’]s\s+(?:late|absent|out|rude|also|been|not|on)\b/gi)) {
+    if (other(match[1]!)) return true;
+  }
+  // "change kim to verbal".
+  for (const match of message.matchAll(/\b(?:change|set|make|switch|move|put)\s+([a-z][a-z'’-]+)\s+(?:to|as|on)\b/gi)) {
+    if (other(match[1]!)) return true;
+  }
+  // "…for kim", "for jordan:", "for kim please", "for kim's form".
+  for (const match of message.matchAll(/\bfor\s+([a-z][a-z-]+)(?:['’]s\b|\s*(?:[.!:,]|$)|\s+(?:please|too|instead)\b)/gi)) {
+    if (other(match[1]!)) return true;
+  }
+  return false;
+}
+
 /** "jane", "Jane Doe" and "JANE DOE" name the employee on a form for "Jane Doe". */
 function samePerson(named: string, employee: string): boolean {
-  const a = named.toLowerCase().replace(/['’]s$/, "").split(/\s+/);
+  // "change paulyne's warning to verbal" names Paulyne; the verb is not part of the name.
+  const a = named
+    .toLowerCase()
+    .replace(/^(?:change|update|set|make|fix|correct|switch)\s+/, "")
+    .replace(/['’]s$/, "")
+    .split(/\s+/);
   const b = employee.toLowerCase().split(/\s+/);
   return a.join(" ") === b.join(" ") || (a.length === 1 && a[0] === b[0]);
 }
@@ -541,7 +665,7 @@ export async function correctActiveForm(input: {
   const attempt = async (question: string) => {
     const applied: AppliedBy = {};
     const response =
-      (await correctFromFormReaders({ ...input, question }, applied)) ??
+      (await correctFromFormReaders({ ...input, question, message: statements }, applied)) ??
       (await correctHeaderLines({ ...input, question }, applied));
     return { response, applied };
   };
@@ -606,8 +730,28 @@ function describe(
     return was.length > 0 ? `Unticked ${was.map(label).join(", ")}` : null;
   }
   const options = (submitted.checked[key] ?? []).map(label).join(", ");
+  /*
+   * A group printed under a section heading — the Corrective Action Form's
+   * Type of Warning — is described by that heading, and a box the correction
+   * unticked is named, so "Written Warning" visibly went.
+   */
+  const heading = group?.label || (key === WARNING_TYPE_KEY ? sectionHeading(document, variantKey, key) : null);
+  const unticked = (ticks.before[key] ?? []).filter((option) => !(submitted.checked[key] ?? []).includes(option));
+  if (heading && key === WARNING_TYPE_KEY && unticked.length > 0) {
+    return `${heading} → ${options} (${unticked.map(label).join(", ")} unticked)`;
+  }
   // The separation boxes have no question of their own; the ticked box says it all.
-  return group?.label ? `${group.label} → ${options}` : `Ticked ${options}`;
+  return heading ? `${heading} → ${options}` : `Ticked ${options}`;
+}
+
+/** The section heading a group is printed under, where it has no label of its own. */
+function sectionHeading(document: FormDocument, variantKey: string | null, key: string): string | null {
+  let heading: string | null = null;
+  for (const block of blocksForVariant(document, variantKey)) {
+    if (block.kind === "section") heading = block.label;
+    if (block.kind === "checkbox_group" && block.key === key) return heading;
+  }
+  return null;
 }
 
 /**

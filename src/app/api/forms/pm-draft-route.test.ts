@@ -39,6 +39,8 @@ const state = vi.hoisted(() => ({
     /* The write-time guard reads this, so it is asserted rather than assumed. */
     provenance: Record<string, Record<string, unknown>>;
   }[],
+  /** Manager statements written by `applyStatedFacts` (e.g. the Type of Warning). */
+  stated: [] as { checked: Record<string, string[]>; keys: string[] }[],
   /** Approved policy `groundPolicy` should find. Empty means none. */
   policyHits: [] as unknown[],
   /** Every call `groundPolicy` made, so the filter itself is assertable. */
@@ -146,6 +148,15 @@ vi.mock("@/lib/knowledge", () => ({
 }));
 
 vi.mock("@/lib/forms/instances", () => ({
+  applyStatedFacts: async (
+    _id: string,
+    stated: { values: Record<string, string>; checked: Record<string, string[]> },
+    _actor: string,
+    keys?: ReadonlySet<string>,
+  ) => {
+    state.stated.push({ checked: stated.checked ?? {}, keys: [...(keys ?? [])] });
+    return Object.keys(stated.checked ?? {});
+  },
   applyAssistantDraft: async (
     _id: string,
     draft: { values: Record<string, string>; checked: Record<string, string[]> },
@@ -254,6 +265,7 @@ beforeEach(() => {
   state.roleCalls = [];
   state.roleResults = { [PROGRESSION_ID]: healthyProgression() };
   state.persisted = [];
+  state.stated = [];
   state.policyHits = [];
   state.policySearches = [];
   state.templateKey = "follow-up-coaching";
@@ -395,8 +407,9 @@ describe("a sensitive final action never reaches the persistence call", () => {
     const payload = await post(NOTES);
 
     expect(state.persisted).toHaveLength(1);
-    expect(state.persisted[0]!.checked.warning_type).toEqual(["written"]);
-    expect(state.persisted[0]!.checked.warning_type).not.toContain("termination");
+    // Neither box is the model's: the level is discarded, the termination refused.
+    expect(state.persisted[0]!.checked.warning_type).toBeUndefined();
+    expect(payload.warningLevel).toEqual({ stated: null, modelDiscarded: ["written"] });
 
     // And the manager is told, because a silently unticked box reads as "Ask
     // Bubbles judged this not to apply".
@@ -415,7 +428,13 @@ describe("a sensitive final action never reaches the persistence call", () => {
     expect(state.persisted[0]!.checked.warning_type).toBeUndefined();
   });
 
-  it("leaves a legitimate written warning alone", async () => {
+  /*
+   * THE WARNING LEVEL IS THE MANAGER'S. Production, 9 Oct 2026: a prior
+   * verbal warning and "again" came back ticked Written. The model is not
+   * shown the group, a level it ticks anyway is discarded, and the level the
+   * manager stated is written as their statement.
+   */
+  it("discards a written warning the manager never stated", async () => {
     state.toolInput = {
       values: { observation: "Third occurrence after documented coaching." },
       checked: { warning_type: ["written"] },
@@ -423,8 +442,53 @@ describe("a sensitive final action never reaches the persistence call", () => {
 
     const payload = await post(NOTES);
 
-    expect(state.persisted[0]!.checked.warning_type).toEqual(["written"]);
+    expect(state.persisted[0]!.checked.warning_type).toBeUndefined();
+    expect(state.stated).toEqual([]);
     expect(payload.sensitiveRefused).toEqual({});
+    expect(payload.warningLevel).toEqual({ stated: null, modelDiscarded: ["written"] });
+  });
+
+  it("never shows the model the Type of Warning", async () => {
+    state.toolInput = { values: { observation: "Late again." }, checked: {} };
+
+    await post(NOTES);
+
+    expect(prompt()).not.toMatch(/warning_type/);
+    expect(prompt()).toMatch(/offense_type/);
+  });
+
+  it("writes the level the manager stated, as their statement, whatever the model ticked", async () => {
+    state.toolInput = {
+      values: { observation: "Late again." },
+      checked: { warning_type: ["written"], offense_type: ["tardiness"] },
+    };
+
+    const payload = await post(
+      "She was late again for 30 mins today. Given verbal warning on 9/21. Give her a verbal warning for today.",
+    );
+
+    expect(state.stated).toEqual([{ checked: { warning_type: ["verbal"] }, keys: ["warning_type"] }]);
+    expect(state.persisted[0]!.checked.warning_type).toBeUndefined();
+    expect(state.persisted[0]!.checked.offense_type).toEqual(["tardiness"]);
+    expect(payload.warningLevel).toEqual({ stated: "verbal", modelDiscarded: ["written"] });
+    expect(payload.statedFacts).toContain("warning_type");
+  });
+
+  it("reads the production report's earlier verbal warning as history, not this form's level", async () => {
+    state.toolInput = {
+      values: { observation: "Late again." },
+      checked: { warning_type: ["written"], offense_type: ["tardiness"] },
+    };
+
+    const payload = await post(
+      "create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 9/21",
+    );
+
+    expect(state.stated).toEqual([]);
+    expect(state.persisted[0]!.checked.warning_type).toBeUndefined();
+    expect(payload.warningLevel).toEqual({ stated: null, modelDiscarded: ["written"] });
+    // The history itself still reaches the prior-actions list.
+    expect(state.persisted[0]!.values.prior_actions).toMatch(/^Verbal warning — signed 09\/21\/\d{4}$/);
   });
 });
 
@@ -965,7 +1029,9 @@ describe("the mini-skirt case, end to end", () => {
     await post(NOTES);
 
     expect(state.persisted[0]!.checked.offense_type).toEqual(["dress_code"]);
-    expect(state.persisted[0]!.checked.warning_type).toEqual(["verbal"]);
+    // "5. verbal warning" is the manager's answer, written as their statement — not the model's tick.
+    expect(state.stated).toEqual([{ checked: { warning_type: ["verbal"] }, keys: ["warning_type"] }]);
+    expect(state.persisted[0]!.checked.warning_type).toBeUndefined();
     expect(state.persisted[0]!.values.prior_actions).toBe("None - first occurrence");
   });
 

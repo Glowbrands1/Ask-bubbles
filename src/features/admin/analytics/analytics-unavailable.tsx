@@ -13,6 +13,7 @@ export function AnalyticsUnavailable({ reason }: { reason: "not_connected" | "fa
   return (
     <PageShell>
       <PageHeader
+        band
         title="Analytics"
         description={`Who is using ${ACTIVE_BRAND.productName}, from which location, how often, and what for.`}
       />
