@@ -591,6 +591,14 @@ describe("review: a level said about another form, or as history, never lands on
     `${REPORT}.\nPrevious actions:\n- verbal warning\n- written warning`,
     `${REPORT}. she has a written warning from august`,
     `${REPORT}. she is on a written warning`,
+    "create a ca form for paulyne test, late again today. she did get a written warning in august",
+    "create a ca form for paulyne test, late again today. she did get a written warning on 9/21",
+    "create a ca form for paulyne test, late again today. she gets a written warning 10/1",
+    "create a ca form for paulyne test, late again today. 10/1 she gets a written warning",
+    "create a ca form for paulyne test, late again today. first verbal warning 9/21 second written warning 10/1",
+    "create a ca form for paulyne test, late again today. she's on her second written warning",
+    "create a ca form for paulyne test, late again today. she'd get a written warning back then",
+    "create a ca form for paulyne test, late again today. she always gets a written warning",
   ])("%s -> nothing ticked, asked", async (opening) => {
     const { proposal, content, result } = await conversation([opening]);
 

@@ -140,7 +140,7 @@ const HISTORY_CUE =
  * is "late earlier today, written warning".
  */
 const ADJACENT_HISTORY =
-  /\b(?:last|previous|prior|earlier|past|recent|most\s+recent|after|following|despite|since|from|even\s+with|has|had|have|is\s+on|was\s+on|'s\s+on|been\s+on|still\s+on|already\s+on|been\s+(?:getting|given|receiving|issued)|(?:first|last|previous|that|one)\s+was)\s+(?:(?:a|an|the|her|his|their|that|this|another)\s+)?(?:(?:last|previous|prior|recent|earlier|formal|documented)\s+)?$/i;
+  /\b(?:last|previous|prior|earlier|past|recent|most\s+recent|after|following|despite|since|from|even\s+with|has|had|have|is\s+on|was\s+on|'s\s+on|been\s+on|still\s+on|already\s+on|been\s+(?:getting|given|receiving|issued)|(?:first|last|previous|that|one)\s+was)\s+(?:(?:a|an|the|her|his|their|that|this|another)\s+)?(?:(?:last|previous|prior|recent|earlier|formal|documented|first|second|third|final)\s+)?$/i;
 
 /** "Prior actions: …", "history - …", "steps so far: …" — a list of what already happened. */
 const HISTORY_HEADING =
@@ -148,14 +148,36 @@ const HISTORY_HEADING =
 
 /** It happened — this form, or an earlier one; the time beside it decides. */
 const PAST_CUE =
-  /\b(?:gave|given|got|gotten|received|receiving|issued|was\s+given|were\s+given|been\s+given|wrote)\b/gi;
+  /\b(?:gave|given|got|gotten|received|issued|was\s+given|were\s+given|been\s+given|wrote)\b/gi;
 
 /**
- * A level being set for THIS form, RIGHT BEFORE the warning — "give her a
- * written warning on 10/2" is this form even though a date follows.
+ * A level being SET for THIS form, RIGHT BEFORE the warning — "give her a
+ * written warning on 10/2" is this form even though a date follows. Only
+ * verbs that issue, document or decide a warning belong here.
  */
 const ADJACENT_CURRENT =
-  /\b(?:give|giving|issue|issuing|create|creating|write|writing|make|making|do|doing|document|documenting|prepare|draft|file|filing|start|need|needs|want|wants|(?:this|it|that)(?:\s+one)?\s+(?:is|will\s+be|should\s+be|would\s+be|needs\s+to\s+be)|it'?s|should\s+be|will\s+be|would\s+be|to\s+be|go\s+with|going\s+with|keep|use|current|new|another|second|third|today'?s|put\s+(?:her|him|them)\s+on|get|gets|getting|receive|receives|(?:will|'ll|is|'s|are|'re)\s+(?:be\s+)?(?:getting|receiving|get|receive))\s+(?:(?:her|him|them|it|this)\s+)?(?:(?:a|an|the|as|to|at)\s+)?(?:(?:formal|official|documented|new|second|third|another|final)\s+)?$/i;
+  /\b(?:give|giving|issue|issuing|create|creating|write|writing|make|making|do|doing|document|documenting|prepare|draft|file|filing|start|need|needs|want|wants|(?:this|it|that)(?:\s+one)?\s+(?:is|will\s+be|should\s+be|would\s+be|needs\s+to\s+be)|it'?s|should\s+be|will\s+be|to\s+be|go\s+with|going\s+with|keep|use|put\s+(?:her|him|them)\s+on)\s+(?:(?:her|him|them|it|this)\s+)?(?:(?:a|an|the|as|to|at)\s+)?(?:(?:formal|official|documented|new|second|third|another|final)\s+)?$/i;
+
+/**
+ * Words that point at THIS form only when nothing dates the warning — "she
+ * gets a verbal warning this time", "another written warning", "she'll get a
+ * written warning". The same words with a date ("she gets a written warning
+ * 10/1"), a past or habitual frame ("she did get…", "every time she
+ * gets…") or a hypothetical ("…would be her third") are history.
+ */
+const WEAK_CURRENT =
+  /\b(?:current|new|another|today'?s|get|gets|getting|receive|receives|receiving|(?:will|'ll|is|'s|are|'re|going\s+to)\s+(?:be\s+)?(?:getting|receiving|get|receive))\s+(?:(?:her|him|them)\s+)?(?:(?:a|an|the)\s+)?(?:(?:formal|official|documented|new|second|third|another|final)\s+)?$/i;
+
+/** "she did get", "she'd get", "every time she gets", "when he receives" — past or habitual. */
+const PAST_OR_HABITUAL =
+  /\b(?:did|didn'?t|'d|would|used\s+to|always|usually|often|never|every\s+time|whenever|each\s+time|any\s*time|when|if)\s+(?:(?:she|he|they|it|not|ever|also|already)\s+){0,2}(?:get|gets|got|getting|receive|receives|received|receiving)\b/i;
+
+/** "…every month", "…all the time" — a habit, not this form. */
+const HABITUAL_AFTER =
+  /^[^.;!?\n]{0,30}?\b(?:(?:every|each)\s+(?:time|week|month|year|shift)|all\s+the\s+time|again\s+and\s+again)\b/i;
+
+/** "…would be her third" — a hypothetical, not a decision. */
+const HYPOTHETICAL_AFTER = /^\s*(?:would|could|might|may)\b/i;
 
 /** "change written warning to verbal warning" — the new level, after the change. */
 const CHANGED_TO =
@@ -168,7 +190,7 @@ const OPENING = new RegExp(String.raw`^\s*${LEAD_IN}(?:please\s+)?(?:(?:a|an|new
 const RECIPIENT = /\b(?:give|giving|issue|issuing|gave|given)\s+(?:her|him|them)\s+$/i;
 
 /** "her verbal warning", "his last written warning" — one already on file. */
-const POSSESSIVE = /\b(?:her|his|their)\s+(?:(?:last|previous|prior|recent|earlier|first|1st|most\s+recent)\s+)?$/i;
+const POSSESSIVE = /\b(?:her|his|their)\s+(?:(?:last|previous|prior|recent|earlier|first|1st|second|2nd|third|3rd|most\s+recent)\s+)?$/i;
 
 /** "not a written warning", "instead of written", "untick written". */
 const NEGATED =
@@ -242,6 +264,15 @@ function timing(after: string, today: string): "earlier" | "today" | "other" | n
   return null;
 }
 
+/** A date written right before the mention — "10/1 she gets a written warning". */
+function dateBefore(before: string, today: string): "earlier" | "today" | "other" | null {
+  const window = before.slice(-30);
+  const found = datesInText(window, today);
+  const last = found[found.length - 1];
+  if (!last) return null;
+  return last.iso < today ? "earlier" : last.iso === today ? "today" : "other";
+}
+
 function classify(text: string, start: number, end: number, today: string, cued: boolean): MentionKind | null {
   const { before, after, question, opensTurn } = clauseAround(text, start, end);
   // A question about a level decides nothing: "should this be a written warning?"
@@ -263,18 +294,31 @@ function classify(text: string, start: number, end: number, today: string, cued:
     return "current";
   }
   if (POSSESSIVE.test(before) || ADJACENT_HISTORY.test(before)) return "historical";
+  if (PAST_OR_HABITUAL.test(before.slice(-60))) return "historical";
   if (ADJACENT_CURRENT.test(before) || CHANGED_TO.test(before)) return "current";
-  // Dated on another day, by a date or a time phrase in its own clause: history.
-  if (when === "earlier" || when === "other") return "historical";
+  // Dated on another day — after it, or right before it: history.
+  const dated = when ?? dateBefore(before, today);
+  if (dated === "earlier" || dated === "other") return "historical";
+  if (HABITUAL_AFTER.test(after)) return "historical";
+  if (HYPOTHETICAL_AFTER.test(after)) return "unclear";
+  // "she gets a verbal warning this time", "another written warning" — undated.
+  if (WEAK_CURRENT.test(before)) return "current";
 
   const cue = nearestCue(before);
   if (cue === "history") return "historical";
   // A past act today is the one being documented; on no stated day it is asked about.
   if (cue === "past") return when === "today" ? "current" : "unclear";
   // "Verbal warning for Sarah Test" — the turn opens by naming this form's
-  // level, as a request: followed by who it is for, today, a pause, or nothing.
+  // level, as a request: followed by who it is for, today, a pause, or
+  // nothing ("verbal warning issued today" too).
   // "Written warning wasn't enough" opens the same way and is an account.
-  if (opensTurn && OPENING.test(before) && /^\s*(?:for\b|[-—–,:]|$|today\b|this\s+time\b|please\b)/.test(after)) return "current";
+  if (
+    opensTurn &&
+    OPENING.test(before) &&
+    (/^\s*(?:for\b|[-—–,:]|$|today\b|this\s+time\b|please\b)/.test(after) || when === "today")
+  ) {
+    return "current";
+  }
   // Nothing says whether this is the warning being issued now: ask.
   return "unclear";
 }
