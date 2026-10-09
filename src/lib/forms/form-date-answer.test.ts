@@ -140,6 +140,20 @@ describe("the date of the earlier step", () => {
     ["she was late, give her a written warning on 10/2", null],
     ["she was late again after lunch, give her a written warning on 10/9", null],
     ["she was coached and given a written warning on 9/21", "2026-09-21"],
+    /* This form's own warning, scheduled or dated — never an earlier step (pre-merge review). */
+    ["her written warning should be dated 10/9", null],
+    ["her written warning will be delivered 10/12", null],
+    ["her written warning is dated 10/9", null],
+    ["her written warning for 10/9", null],
+    ["her written warning effective 10/10", null],
+    ["deliver her written warning on 10/12", null],
+    ["she will receive her written warning on 10/12", null],
+    ["schedule her written warning meeting for 10/12", null],
+    ["her coaching session is set for 10/15", null],
+    ["this is her written warning on 10/9", null],
+    ["since she was late again, a written warning on 10/9", null],
+    ["following the meeting, written warning on 10/9", null],
+    ["after today she gets a written warning on 10/12", null],
   ])("%s -> %s", (text, expected) => {
     expect(priorStepDate(text, TODAY)).toBe(expected);
   });
