@@ -477,3 +477,47 @@ and mobile).
 **Open decision.** A name typed in lower case is kept as typed ("jordan
 testperson"), as the existing tests require; title-casing it is a one-line
 change if wanted.
+
+## 11. Owner's retest, 9 Oct 2026 — which deployment, and what was still wrong
+
+**The screenshots came from the PR #9 preview, not PR #8.** Vercel runtime
+logs: the retest turns at 10:24 UTC were served by
+`askbubbles-git-claude-port-sunny-fixes-glo-brands.vercel.app`
+(`dpl_J6qHvRmFqu9Q45Gmmq9VbjkLhxrA`, commit `5a57803`). That branch was cut
+from production `68f9c40` and carried none of PR #8's chat fixes, so it
+behaved exactly like production. The PR #8 preview received no traffic.
+
+**Stored conversations are not re-read.** A message's proposal is stored with
+the message (the browser's IndexedDB, synced to `chat_messages.metadata`) and
+is rendered as it was produced. A new build changes NEW answers only; an old
+card keeps the employee it was given. An old, never-created card cannot file
+a wrong record on a new build: the create route re-reads the conversation
+with the current code (`checkProposalIsCurrent`) and refuses it as out of
+date. History cannot steer a new request beyond the turns about the same form
+and person (§10), and each conversation continues only itself.
+
+**Fixed in this round** (each from the owner's variant list, proven through
+`POST /api/chat` and the create/draft routes in
+`src/app/api/forms/owner-retest-e2e.test.ts`; 14 of its 20 tests fail on the
+previous head):
+
+| Variant | Before | Now |
+|---|---|---|
+| "actually it's for avery testperson" after a CA for Jordan | Avery's card lost the written warning and the issue | The account is kept, under the corrected name; a later "make it a verbal warning" keeps it too |
+| "needs a writen warning for cash handeling" | Answered as a question | Corrective Action, Written Warning |
+| "jordan testperson was $40 short on her drawer last night, needs a written warning" | "Who is this for?"; the level read as history | Jordan Testperson, Written Warning |
+| "jordan testperson cash handling written warning" | "Who is this for?" | Jordan Testperson, Written Warning |
+| "written warning for jordan testperson - cash handling", "CA for jordan testperson, cash handling" | No issue | Issue: cash handling |
+| Names typed all lower case or ALL CAPS | Kept as typed | Name case on the card and the form ("Jordan Testperson"); a name typed with its own capitals is kept |
+
+**Business time zone is US Central** (owner: "it should always be in CT").
+`NEXT_PUBLIC_BUSINESS_TIMEZONE` is not set in Vercel, so the code default
+decides: it is now `America/Chicago` for form dates, "today" in the prompt and
+analytics. The analytics SQL function `analytics_when` keeps an Eastern
+fallback for an omitted or unknown zone; every call passes the application's
+zone, and aligning that fallback needs a migration (not included).
+
+**Known, not changed:** "ww" is not read as "written warning" (too ambiguous);
+the analytics feedback window ends at a UTC midnight rather than a Central one,
+so between about 7pm and midnight CT that day's ratings are outside it —
+pre-existing, outside chat.

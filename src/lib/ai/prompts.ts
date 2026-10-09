@@ -189,7 +189,7 @@ ${ASSISTANT_VOICE_RULES}`;
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 
 /**
- * "Today is Thursday, 2026-10-08 (business time zone America/New_York;
+ * "Today is Thursday, 2026-10-08 (business time zone America/Chicago;
  * yesterday was 2026-10-07)."
  *
  * The date alone left the model to work out the weekday — and so "last

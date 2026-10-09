@@ -130,7 +130,7 @@ const CONDUCT_TOPICS: { topic: ConductTopic; pattern: RegExp }[] = [
      */
     topic: "cash",
     pattern:
-      /\bcash[- ]handling\b|\b(?:register|drawer|till|bank|deposit|cash)\s+(?:was\s+|were\s+|came\s+up\s+|is\s+)?(?:short|shortages?|over|overages?|discrepanc\w*|count\s+(?:was\s+)?(?:off|wrong))\b|\b(?:short|shortages?)\s+(?:in|on|from)\s+(?:the\s+|her\s+|his\s+|their\s+)?(?:register|drawer|till|bank|deposit)\b|\bmishandl\w*\s+(?:the\s+)?(?:cash|money|deposits?|register)\b/,
+      /\bcash[- ]?hand[a-z]*\b|\b(?:register|drawer|till|bank|deposit|cash)\s+(?:was\s+|were\s+|came\s+up\s+|is\s+)?(?:short|shortages?|over|overages?|discrepanc\w*|count\s+(?:was\s+)?(?:off|wrong))\b|\b(?:short|shortages?)\s+(?:in|on|from)\s+(?:the\s+|her\s+|his\s+|their\s+)?(?:register|drawer|till|bank|deposit)\b|\bmishandl\w*\s+(?:the\s+)?(?:cash|money|deposits?|register)\b/,
   },
   {
     topic: "direction",

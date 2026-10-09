@@ -5,7 +5,7 @@ import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 import { COMPANY_LOCATIONS, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
-import { FORM_NAME_PATTERN, canonicalShorthand, isFormVocabulary, leadingFormRequest } from "./template-intent";
+import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
 import { NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { boundManagerTurns, type BoundedContext } from "./bounded-context";
 import {
@@ -323,7 +323,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
   // "pls", "u", "frm" are never names and never end one; read them as words.
   // "general training", "team-wide", "everyone at the salon" describe the team,
   // never a person — they are taken out first. See `maskTeamSubjectPhrases`.
-  const text = maskTeamSubjectPhrases(canonicalShorthand(typed));
+  const text = maskTeamSubjectPhrases(canonicalShorthand(canonicalWarningWording(typed)));
   /* Names read from a position that says a person is being given on purpose. */
   const strong: string[] = [];
   /* Names read from the narrative: a capitalised pair, "with Jordan". */
@@ -717,6 +717,33 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
   }
 
   /*
+   * THE PERSON AN ACCOUNT OPENS WITH, in any case: "jordan testperson was $40
+   * short on her drawer last night, needs a written warning", "jordan
+   * testperson cash handling written warning". Found in the owner's retest
+   * variants, 9 Oct 2026: both were asked "who is this for?" although the
+   * message opens with the person. A first AND last name only — two words
+   * the name readers accept — followed by what they did, or by the topic or
+   * the form itself. Narrative strength, so a name given on purpose outranks
+   * it; "the store was", "my lead was" and "shift lead cash" name nobody.
+   */
+  const PERSON_THEN_ACCOUNT =
+    /^(\S+)\s+(\S+)\s+(?:(?:was|wasn['’]?t|is|isn['’]?t|has|hasn['’]?t|had|hadn['’]?t|did|didn['’]?t|does|doesn['’]?t|came|left|called|showed|clocked|missed|forgot|refused|failed|took|keeps|kept|walked|arrived|ncns['’]?d|no[- ]?showed|got|gave|used|broke|lost|mishandled|miscounted|skipped)\b|(\S+))/i;
+  for (const sentence of text.split(/(?<=[.!?])\s+|\n+/)) {
+    const trimmed = sentence.trim();
+    // A question, or a sentence about "we" or "she", opens with nobody.
+    if (/\?\s*$/.test(trimmed) || /^(?:what|what's|whats|how|why|when|where|who|which|is|are|can|could|should|do|does)\b/i.test(trimmed)) continue;
+    const match = PERSON_THEN_ACCOUNT.exec(trimmed);
+    if (!match) continue;
+    if (/^(?:i|i['’]m|i['’]ll|i['’]ve|we|we['’]ll|we['’]re|we['’]ve|she|he|they|they['’]re|you|it|it['’]s|this|that|there|her|his|their|our|my|the|a|an)$/i.test(match[1]!)) continue;
+    // A third word that is not a verb must be the topic or the warning: "cash", "written", "ca".
+    if (match[3] && !(NOT_A_NAME_LEAD.has(match[3].toLowerCase()) || /^(?:ca|c\/a|written|verbal|warning|write[- ]?up)$/i.test(match[3]))) continue;
+    // Only in a sentence that is about a form or a warning, so a chatty opening names nobody.
+    if (!/\b(?:ca|c\/a|coaching|corrective|written|verbal|warning|write[- ]?up|form|epp|policy\s+review|document)\b/i.test(text)) continue;
+    const candidate = readTypedName([match[1]!, match[2]!], true);
+    if (candidate && candidate.split(/\s+/).length === 2 && !opensWithRosterState(candidate)) found.push(candidate);
+  }
+
+  /*
    * THE PERSON A CONVERSATION WAS WITH, in any case: "i coached avery
    * testperson on client tours", "coach Avery", "talked to jordan". Narrative,
    * so it never outranks a name given on purpose — but it is somebody, and a
@@ -942,6 +969,28 @@ function sentenceAnswers(text: string): string[] {
     if (candidate && !opensWithRosterState(candidate)) names.push(candidate);
   }
   return names;
+}
+
+/**
+ * A name as it goes on the form: "jordan testperson" and "JORDAN TESTPERSON"
+ * become "Jordan Testperson" (owner's acceptance criteria, 9 Oct 2026). A name
+ * typed with any capital letters of its own ("McKenzie", "DeShawn") is kept
+ * exactly as typed — the manager chose that spelling. Hyphens and apostrophes
+ * start a new capital ("Mary-Kate O'Neil"). Always editable on the form.
+ */
+export function displayPersonName(name: string): string {
+  const letters = name.replace(/[^a-z]/gi, "");
+  const typedAllOneCase = letters === letters.toLowerCase() || letters === letters.toUpperCase();
+  if (!typedAllOneCase) return name;
+  return name.toLowerCase().replace(/(^|[\s'’-])([a-z])/g, (_, lead: string, letter: string) => `${lead}${letter.toUpperCase()}`);
+}
+
+/**
+ * Whether a turn corrects WHO the form is for: "actually it's for avery
+ * testperson", "no, not Jordan — Avery", "wrong person, it's Avery".
+ */
+export function correctsTheEmployee(text: string): boolean {
+  return CORRECTION_CUE.test(text) || negatedNames(text).length > 0;
 }
 
 function settle(strong: string[], weak: string[], text: string): EmployeeMentions {
@@ -1411,7 +1460,7 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
   const employeeName = team
     ? TEAM_SUBJECT_LABEL
     : employee.kind === "resolved"
-      ? employee.employeeName
+      ? displayPersonName(employee.employeeName)
       : null;
   const locationId = location.resolution === "resolved" ? location.locationId : null;
   /*

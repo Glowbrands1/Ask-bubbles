@@ -21,6 +21,13 @@ describe("statedWarningLevel — the level the manager SAID, never inferred", ()
     ["written statement from jordan", null],
     ["CA for jordan testperson for cash handling", null],
     ["does she need a written warning?", null],
+    // Owner's retest variants, 9 Oct 2026: a history word earlier in the sentence is not this level's history.
+    ["jordan was $40 short on her drawer last night, needs a written warning", "written"],
+    ["she got a verbal last month, give her a written warning", "written"],
+    ["give her a verbal for being late", "verbal"],
+    ["needs a writen warning for cash handling", "written"],
+    ["verbel warnig for jordan", "verbal"],
+    ["she is writing warnings on the board", null],
   ])("%s → %s", (text, level) => {
     expect(statedWarningLevel(text)).toBe(level);
   });

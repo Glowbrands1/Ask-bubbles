@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { displayPersonName } from "@/lib/forms/proposal";
 
 import { correctiveActionDocument } from "@/lib/forms/library";
 import { continuationFor } from "@/lib/forms/proposal-continuation";
@@ -155,7 +156,7 @@ describe("QA 1 — the employee is read the same way whatever the capitals", () 
     const replay = await converse(question);
     expectCard(replay, "coaching", employee);
     // THE SPELLING IS THE MANAGER'S, not a normalised copy.
-    expect(replay.last.formProposal!.employeeName).toBe(employee);
+    expect(replay.last.formProposal!.employeeName).toBe(displayPersonName(employee));
   });
 
   it.each([

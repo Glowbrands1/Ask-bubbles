@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { displayPersonName } from "@/lib/forms/proposal";
 
 import type { AccessScope, ChatMessage } from "@/types";
 
@@ -84,7 +85,7 @@ describe("a demotion asked for in one sentence", () => {
     const proposal = response!.formProposal!;
 
     expect(proposal.templateKey).toBe("demotion");
-    expect(proposal.employeeName).toBe("marlowe");
+    expect(proposal.employeeName).toBe(displayPersonName("marlowe"));
     // The title they are moving FROM, never the one they are moving to.
     expect(proposal.employeeRole).toBe("Manager");
     // The effective date is not the form's date.
@@ -114,7 +115,7 @@ describe("a demotion asked for in one sentence", () => {
 describe("the three ways of naming the employee", () => {
   it.each(["marlowe co", "MARLOWE CO", "Marlowe Co"])("%s", async (name) => {
     const response = await ask(`Create a demotion form for ${name}`);
-    expect(response!.formProposal!.employeeName).toBe(name);
+    expect(response!.formProposal!.employeeName).toBe(displayPersonName(name));
   });
 });
 
@@ -155,7 +156,7 @@ describe("answering the grouped question", () => {
       continueTemplateKey: "demotion",
     });
     expect(response!.formProposal!.templateKey).toBe("demotion");
-    expect(response!.formProposal!.employeeName).toBe("marlowe");
+    expect(response!.formProposal!.employeeName).toBe(displayPersonName("marlowe"));
     expect(response!.content).toContain(
       "FT Manager at $18.00/hr → PT Tanning Consultant at $12.00/hr, effective October 5, 2026, voluntary",
     );
@@ -200,7 +201,7 @@ describe("the exit form is the one Resignation/Exit Form", () => {
   it("proposes resignation-exit, not an employment change form", async () => {
     const response = await ask("I need an exit form for JOHN SMITH");
     expect(response!.formProposal!.templateKey).toBe("resignation-exit");
-    expect(response!.formProposal!.employeeName).toBe("JOHN SMITH");
+    expect(response!.formProposal!.employeeName).toBe(displayPersonName("JOHN SMITH"));
     expect(response!.formProposal!.supportsInlineDraft).toBe(true);
     expect(response!.content).not.toContain("not published");
   });
@@ -211,7 +212,7 @@ describe("found in hands-on QA: the chat copy", () => {
     const response = await ask(
       "Create a demotion form for MARLOWE CO. She's a FT SD at $18/hr at store 12 and asked to step down to a PT TC at $14/hr effective 10/5/26",
     );
-    expect(response!.formProposal!.employeeName).toBe("MARLOWE CO");
+    expect(response!.formProposal!.employeeName).toBe(displayPersonName("MARLOWE CO"));
     expect(response!.formProposal!.status).toBe("ready");
     expect(response!.content).toContain(
       "FT Salon Director at $18.00/hr at Store 12 → PT Tanning Consultant at $14.00/hr, effective October 5, 2026, voluntary",
@@ -233,7 +234,7 @@ describe("found in hands-on QA: facts from another employee's form never carry o
     );
     const proposal = response!.formProposal!;
     expect(proposal.templateKey).toBe("position-transfer");
-    expect(proposal.employeeName).toBe("jane doe");
+    expect(proposal.employeeName).toBe(displayPersonName("jane doe"));
     // Only Jane's own turn is sent to the draft, so the form cannot pick up Marlowe's $14.00/hr.
     expect(proposal.sourceMessageIds).toEqual(["msg-now"]);
     expect(response!.content).not.toContain("$14.00");

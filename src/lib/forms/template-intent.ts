@@ -554,7 +554,26 @@ export function canonicalShorthand(text: string): string {
 
 /** Every rewrite a form request goes through before it is read. */
 export function canonicalFormWording(text: string): string {
-  return canonicalCorrectiveAction(canonicalShorthand(text));
+  return canonicalCorrectiveAction(canonicalShorthand(canonicalWarningWording(text)));
+}
+
+/**
+ * "writen warning", "written warnig", "verbel warning" — the warning levels as
+ * they get typed on a phone, spelled out. Owner's retest variants, 9 Oct 2026:
+ * "jordan testperson needs a writen warning for cash handling" was answered as
+ * a question. Both words must be close (one edit for the level, two for
+ * "warning"), so "writing warnings" and "verbal warmup" are left alone.
+ */
+export function canonicalWarningWording(text: string): string {
+  return text.replace(/\b([a-z]{5,8})\s+(w[a-z]{4,8})\b/gi, (match, first: string, second: string) => {
+    const a = first.toLowerCase();
+    const b = second.toLowerCase();
+    if (editDistance(b, "warning") > 2 || b === "warnings" || b.startsWith("warm")) return match;
+    if (a !== "writing" && a !== "written" && editDistance(a, "written") <= 1) return "written warning";
+    if (a !== "verbal" && editDistance(a, "verbal") <= 1) return "verbal warning";
+    if ((a === "written" || a === "verbal") && b !== "warning") return `${a} warning`;
+    return match;
+  });
 }
 
 /** "corrective action" however it was typed; everything else unchanged. */

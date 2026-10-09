@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import {
   buildProposal,
+  correctsTheEmployee,
   extractEmployeeNames,
   managerContext,
   resolveEmployee,
@@ -795,9 +796,11 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
    */
   const scoped = turnsAboutThisForm(context, match.key, proposal.employeeName);
   proposal.sourceMessageIds = scoped.ids;
-  if (input.oneOfSeveral && input.questionMessageId) {
-    proposal.sourceExcerpts = { [input.questionMessageId]: input.oneOfSeveral.clause };
-  }
+  const excerpts = {
+    ...scoped.excerpts,
+    ...(input.oneOfSeveral && input.questionMessageId ? { [input.questionMessageId]: input.oneOfSeveral.clause } : {}),
+  };
+  if (Object.keys(excerpts).length > 0) proposal.sourceExcerpts = excerpts;
   const facts = changeKind
     ? readEmploymentChange(
         scoped.messages.map((message) => message.content),
@@ -1312,7 +1315,7 @@ function turnsAboutThisForm(
   context: ManagerContext,
   templateKey: string,
   employeeName: string | null,
-): ManagerContext {
+): ManagerContext & { excerpts: Record<string, string> } {
   const same = (name: string) => {
     if (!employeeName) return true;
     const a = name.toLowerCase().split(/\s+/);
@@ -1331,7 +1334,18 @@ function turnsAboutThisForm(
   };
   let start = 0;
   const last = context.messages.length - 1;
-  context.messages.forEach((message, index) => {
+  /*
+   * A CORRECTION OF THE PERSON KEEPS THE ACCOUNT. Owner's retest variants,
+   * 9 Oct 2026: "jordan testperson needs a written warning for cash handling",
+   * then "actually it's for avery testperson", gave Avery a card with no
+   * warning level and no issue — the first turn named somebody else, so it
+   * was cut. The manager corrected who the form is for, not what happened.
+   * When the current turn corrects the person and the turns before it name
+   * exactly one other person, those turns stay, read with the corrected name
+   * (`excerpts`), so the draft never puts the wrong name on the record.
+   */
+  let formStart = 0;
+  const readings = context.messages.map((message, index) => {
     const intent = detectTemplateIntent(message.content);
     const otherForm =
       (intent.kind === "explicit" && intent.templateKey !== templateKey) ||
@@ -1340,7 +1354,41 @@ function turnsAboutThisForm(
     // A turn that also names somebody else is about them too, and stays off this form.
     const otherPerson = names.length > 0 && !names.every(same);
     if (index < last && (otherForm || otherPerson)) start = index + 1;
+    if (index < last && otherForm) formStart = index + 1;
+    return { names, otherForm, otherPerson };
   });
+  /* The latest turn of this form that corrected the person TO this employee. */
+  let correctionAt = -1;
+  if (employeeName !== null) {
+    for (let index = last; index >= formStart; index -= 1) {
+      const message = context.messages[index]!;
+      if (correctsTheEmployee(message.content) && readings[index]!.names.some(same)) {
+        correctionAt = index;
+        break;
+      }
+    }
+  }
+  const others = new Set<string>();
+  for (let index = formStart; index < correctionAt; index += 1) {
+    for (const name of readings[index]!.names.filter((name) => !same(name))) others.add(name.toLowerCase());
+  }
+  const anotherAfter = readings
+    .slice(Math.max(correctionAt, 0) + 1, last)
+    .some((reading) => reading.otherPerson || reading.otherForm);
+  const excerpts: Record<string, string> = {};
+  let source = context.messages;
+  if (correctionAt > formStart && others.size === 1 && !anotherAfter && formStart < start) {
+    const replaced = [...others][0]!;
+    const pattern = new RegExp(`\\b${replaced.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+")}\\b`, "gi");
+    source = context.messages.map((message, index) => {
+      if (index < formStart || index >= correctionAt || !pattern.test(message.content)) return message;
+      pattern.lastIndex = 0;
+      const content = message.content.replace(pattern, employeeName!);
+      if (message.id) excerpts[message.id] = content;
+      return { ...message, content };
+    });
+    start = formStart;
+  }
   /*
    * A QUESTION THAT NAMES NOBODY IS NOT PART OF THE ACCOUNT. "What does the
    * manual say about shirts?" asked before "jordan needs a written warning"
@@ -1348,7 +1396,7 @@ function turnsAboutThisForm(
    * policy on a disciplinary record. The current turn always stays.
    */
   // The current turn is always the last one, so there is always at least it.
-  const messages = context.messages
+  const messages = source
     .slice(Math.min(start, last))
     .filter(
       (message, index, kept) =>
@@ -1361,6 +1409,9 @@ function turnsAboutThisForm(
     messages,
     ids: messages.map((message) => message.id).filter((id): id is string => Boolean(id)),
     text: messages.map((message) => message.content).join("\n\n"),
+    excerpts: Object.fromEntries(
+      Object.entries(excerpts).filter(([id]) => messages.some((message) => message.id === id)),
+    ),
   };
 }
 

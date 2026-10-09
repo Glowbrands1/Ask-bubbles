@@ -1,4 +1,5 @@
 import { JOIN } from "./bounded-context";
+import { canonicalWarningWording } from "./template-intent";
 
 /**
  * ============================================================================
@@ -36,7 +37,15 @@ const MENTION =
 
 /** Words just before a mention that make it something already received. */
 const HISTORY_BEFORE =
-  /\b(?:got|gotten|had|has\s+had|have\s+had|received|receiving|gave\s+(?:her|him|them)|given|issued|was\s+given|already|previous|previously|prior|earlier|last|before|after|since|from)\b(?:\s+\S+){0,3}\s*$/i;
+  /\b(?:got|gotten|had|has\s+had|have\s+had|received|receiving|gave\s+(?:her|him|them)|given|issued|was\s+given|already|previous|previously|prior|earlier|last|before|after|since|from)\b(?:\s+[^\s,;:.!?]+){0,2}\s*$/i;
+/*
+ * WHAT IS BEING ASKED FOR NOW, directly before the level: "needs a written
+ * warning", "give her a verbal", "make it a written". Wins over a history cue
+ * earlier in the sentence — "was $40 short last night, needs a written warning"
+ * is this warning, not a prior one (owner's retest variants, 9 Oct 2026).
+ */
+const ASKED_NOW_BEFORE =
+  /\b(?:needs?|needed|give|giving|issue|issuing|make\s+it|do|start|write\s+up|deserves?|requires?|wants?|getting|gets)\s+(?:(?:her|him|them)\s+)?(?:(?:a|an)\s+)?(?:final\s+)?$/i;
 /** Words just after a mention that make it history. */
 const HISTORY_AFTER = /^\s*(?:\S+\s+){0,2}?(?:last|ago|earlier|already|previously|before|in\s+(?:january|february|march|april|may|june|july|august|september|october|november|december))\b/i;
 
@@ -52,7 +61,7 @@ function levelIn(turn: string): StatedWarningLevel | null {
     const before = turn.slice(0, match.index);
     const after = turn.slice(match.index! + match[0].length);
     if (NEGATED_BEFORE.test(before)) continue;
-    if (HISTORY_BEFORE.test(before) || HISTORY_AFTER.test(after)) continue;
+    if (!ASKED_NOW_BEFORE.test(before) && (HISTORY_BEFORE.test(before) || HISTORY_AFTER.test(after))) continue;
     // A bare "written" before a noun that is not a warning: "written statement".
     if (!noun && /^\s+(?:statement|notice|policy|policies|request|record|records|note|notes|test|up)\b/i.test(after)) continue;
     found.add(level!.toLowerCase() as StatedWarningLevel);
@@ -67,7 +76,7 @@ function levelIn(turn: string): StatedWarningLevel | null {
  *             proposal's context or the draft's notes.
  */
 export function statedWarningLevel(text: string): StatedWarningLevel | null {
-  const turns = (text ?? "")
+  const turns = canonicalWarningWording(text ?? "")
     .replace(/[‘’‛]/g, "'")
     .split(JOIN)
     .map((turn) => turn.trim())

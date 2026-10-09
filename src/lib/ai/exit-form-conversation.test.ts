@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { displayPersonName } from "@/lib/forms/proposal";
 
 import { detectTemplateIntent, formRequestPhrase } from "@/lib/forms/template-intent";
 import { extractEmployeeNames } from "@/lib/forms/proposal";
@@ -308,14 +309,14 @@ describe("what Ask Bubbles says beside the proposal", () => {
       ),
     );
     const proposal = response!.formProposal!;
-    expect(proposal.employeeName).toBe("sarah jones");
+    expect(proposal.employeeName).toBe(displayPersonName("sarah jones"));
     expect(proposal.employeeRole).toBe("Tanning Consultant");
     // The form is dated the day it is completed, never the first date in the chat.
     expect(proposal.formDate).toBeNull();
     expect(proposal.supportsInlineDraft).toBe(true);
 
     const content = response!.content;
-    expect(content).toMatch(/- \*\*Name:\*\* sarah jones/);
+    expect(content).toMatch(/- \*\*Name:\*\* Sarah Jones/);
     expect(content).toMatch(/- \*\*Job Title:\*\* Tanning Consultant/);
     expect(content).toMatch(/- \*\*Last Day Worked:\*\* September 15, 2026/);
     expect(content).toMatch(/- \*\*Date that notice was given:\*\* September 1, 2026/);
@@ -510,7 +511,7 @@ describe("QA 1 — natural-language retrieval", () => {
     const proposals = await load([template(), exitForm()]);
     const response = await proposals.proposeFormForTurn(turn(question));
     expect(response!.formProposal!.templateKey).toBe("resignation-exit");
-    expect(response!.formProposal!.employeeName).toBe(employee);
+    expect(response!.formProposal!.employeeName).toBe(employee === null ? null : displayPersonName(employee));
   });
 });
 

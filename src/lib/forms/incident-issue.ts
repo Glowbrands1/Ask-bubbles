@@ -34,13 +34,15 @@ export function correctiveActionIssue(text: string, employeeName: string | null)
   for (const turn of [...turns].reverse()) {
     let found: string | null = null;
     for (const match of turn.matchAll(REQUEST)) {
-      let issue = match[1]!.split(CUT)[0]!.trim().replace(/[\s"'”’)]+$/, "");
-      // "a CA for Jordan Testperson for cash handling": the person, then the issue.
+      let raw = match[1]!;
+      // "a CA for Jordan Testperson for cash handling", "… for jordan testperson - cash handling",
+      // "CA for jordan testperson, cash handling": the person, then the issue.
       if (person) {
         const words = [...personWords].map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-        const after = new RegExp(`^(?:(?:${words})\\s+)+(?:for|about|over|regarding)\\s+(.+)$`, "i").exec(issue);
-        if (after) issue = after[1]!.trim();
+        const after = new RegExp(`^(?:(?:${words})\\s*)+(?:\\s+(?:for|about|over|regarding)\\s+|\\s*[-—–:,]\\s*)(.+)$`, "i").exec(raw.trim());
+        if (after) raw = after[1]!;
       }
+      const issue = raw.split(CUT)[0]!.trim().replace(/[\s"'”’)]+$/, "");
       const lower = issue.toLowerCase();
       if (issue.length < 3 || issue.length > 80 || NOT_AN_ISSUE.test(issue)) continue;
       // "a CA for Jordan Testperson" names the person, not the issue.

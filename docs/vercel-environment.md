@@ -40,7 +40,7 @@ Legacy alternative: `SUPABASE_SERVICE_ROLE_KEY` is read only when
 
 | Variable | Purpose | Visibility |
 |---|---|---|
-| `NEXT_PUBLIC_BUSINESS_TIMEZONE` | Business "today"; default `America/New_York` | public |
+| `NEXT_PUBLIC_BUSINESS_TIMEZONE` | Business "today"; default `America/Chicago` (US Central) | public |
 | `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT` | Override defaults in `src/lib/config/models.ts` | server |
 | `NEXT_PUBLIC_DEMO_MODE` | `true` = labelled demo build. Ignored on Production | public |
 | `NEXT_PUBLIC_ALLOW_DEMO_IN_PRODUCTION` | Deliberate override to allow demo on Production | public |
