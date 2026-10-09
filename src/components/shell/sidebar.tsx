@@ -214,7 +214,6 @@ export function SidebarNav({
         from fixed copy. The menu opens upward from here.
       */}
       <div className="shrink-0 space-y-1.5 border-t border-rail-border p-3">
-        {showAppSwitcher ? <AppSwitcher collapsed={isCollapsed} /> : null}
         {variant === "desktop" && onToggleCollapse ? (
           <button
             type="button"
@@ -236,6 +235,8 @@ export function SidebarNav({
           </button>
         ) : null}
         <UserMenu collapsed={isCollapsed} onNavigate={onNavigate} />
+        {/* Below the profile, the last thing on the rail: administrators only. */}
+        {showAppSwitcher ? <AppSwitcher collapsed={isCollapsed} /> : null}
       </div>
     </div>
   );
