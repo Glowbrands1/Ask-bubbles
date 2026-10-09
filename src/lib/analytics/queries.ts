@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { businessToday } from "@/lib/business-date";
+import { businessToday, BUSINESS_TIMEZONE } from "@/lib/business-date";
 import type { Role } from "@/types";
 import { COMPANY_DISTRICTS, COMPANY_LOCATIONS, locationById } from "@/lib/locations";
 import {
@@ -137,6 +137,24 @@ function toNumber(value: unknown): number {
  * dashboard showing eight real panels and one silently empty one is worse than
  * one that says it could not load.
  */
+/**
+ * The usage trend, bucketed in business days.
+ *
+ * `p_timezone` arrived with migration 20261009001000. Until that migration is
+ * applied, the database only has the old signature and PostgREST answers
+ * PGRST202 ("no function matches"); the call is then repeated without the zone
+ * so the page keeps working, with the old UTC buckets, instead of failing.
+ * Once the migration is in, the first call succeeds and this never retries.
+ */
+async function loadTrend(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  args: Record<string, unknown>,
+) {
+  const zoned = await supabase.rpc("analytics_trend", { ...args, p_timezone: BUSINESS_TIMEZONE });
+  if (zoned.error?.code !== "PGRST202") return zoned;
+  return supabase.rpc("analytics_trend", args);
+}
+
 export async function loadAnalytics(
   filters: AnalyticsFilters,
 ): Promise<AnalyticsSnapshot> {
@@ -162,10 +180,7 @@ export async function loadAnalytics(
   ] = await Promise.all([
     supabase.rpc("analytics_totals", args),
     supabase.rpc("analytics_totals", previousArgs),
-    supabase.rpc("analytics_trend", {
-      ...args,
-      p_bucket: bucketFor(window.days),
-    }),
+    loadTrend(supabase, { ...args, p_bucket: bucketFor(window.days) }),
     supabase.rpc("analytics_breakdown", { ...args, p_dimension: "role" }),
     supabase.rpc("analytics_breakdown", { ...args, p_dimension: "category" }),
     supabase.rpc("analytics_breakdown", { ...args, p_dimension: "feature" }),

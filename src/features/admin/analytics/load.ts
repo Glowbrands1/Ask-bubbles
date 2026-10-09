@@ -7,7 +7,7 @@ import {
   loadFeedbackPage,
 } from "@/lib/analytics/feedback-queries";
 import { parseFeedbackFilters } from "@/lib/analytics/feedback-filters";
-import { businessToday } from "@/lib/business-date";
+import { businessToday, shiftDays } from "@/lib/business-date";
 import type { AnalyticsView } from "./analytics-screen";
 
 /**
@@ -50,13 +50,13 @@ export async function loadAnalyticsPage(
   const window = resolveWindow(filters, businessToday());
   const previousSnapshot = await loadAnalytics({
     ...filters,
-    from: window.previousFrom.slice(0, 10),
+    from: window.previousFromDate,
     /*
      * `previousTo` is EXCLUSIVE and `filters.to` is inclusive, so a day is
      * subtracted. Without it the prior period would borrow the first day of the
      * current one and every "vs prior" would be quietly wrong by a day.
      */
-    to: isoDayBefore(window.previousTo),
+    to: shiftDays(window.previousToDate, -1),
   });
 
   /*
@@ -78,9 +78,4 @@ export async function loadAnalyticsPage(
     queueFilters,
     feedbackPage,
   };
-}
-
-function isoDayBefore(iso: string): string {
-  const day = new Date(Date.parse(iso) - 24 * 60 * 60 * 1000);
-  return day.toISOString().slice(0, 10);
 }

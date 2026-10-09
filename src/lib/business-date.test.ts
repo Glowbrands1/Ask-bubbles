@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   BUSINESS_TIMEZONE,
+  businessDayStart,
   businessHour,
   businessToday,
   businessWeekEnd,
@@ -148,5 +149,44 @@ describe("the hour of the business day", () => {
       process.env.TZ = zone;
       expect(businessHour(instant), zone).toBe(21);
     }
+  });
+});
+
+describe("the instant a business day begins", () => {
+  const start = (date: string, zone?: string) => businessDayStart(date, zone).toISOString();
+
+  it("is Central midnight: 05:00 UTC in daylight time, 06:00 UTC in standard time", () => {
+    expect(start("2026-10-09")).toBe("2026-10-09T05:00:00.000Z");
+    expect(start("2026-12-15")).toBe("2026-12-15T06:00:00.000Z");
+    expect(start("2026-01-01")).toBe("2026-01-01T06:00:00.000Z");
+  });
+
+  it("follows the changeover days: the 23-hour 8 March and the 25-hour 1 November", () => {
+    expect(start("2026-03-08")).toBe("2026-03-08T06:00:00.000Z");
+    expect(start("2026-03-09")).toBe("2026-03-09T05:00:00.000Z");
+    expect(start("2026-11-01")).toBe("2026-11-01T05:00:00.000Z");
+    expect(start("2026-11-02")).toBe("2026-11-02T06:00:00.000Z");
+  });
+
+  it("is the start of the day businessToday names, at every hour of a changeover day", () => {
+    for (const date of ["2026-03-08", "2026-11-01", "2026-07-04"]) {
+      const from = businessDayStart(date).getTime();
+      const to = businessDayStart(shiftDays(date, 1)).getTime();
+      for (let t = from; t < to; t += 15 * 60_000) {
+        expect(businessToday(new Date(t))).toBe(date);
+      }
+      expect(businessToday(new Date(from - 1))).toBe(shiftDays(date, -1));
+      expect(businessToday(new Date(to))).toBe(shiftDays(date, 1));
+    }
+  });
+
+  it("works for any zone it is given", () => {
+    expect(start("2026-10-09", "America/New_York")).toBe("2026-10-09T04:00:00.000Z");
+    expect(start("2026-10-09", "UTC")).toBe("2026-10-09T00:00:00.000Z");
+    expect(start("2026-10-09", "Asia/Kolkata")).toBe("2026-10-08T18:30:00.000Z");
+  });
+
+  it("is an invalid date for an invalid input, never a wrong one", () => {
+    expect(Number.isNaN(businessDayStart("not-a-date").getTime())).toBe(true);
   });
 });

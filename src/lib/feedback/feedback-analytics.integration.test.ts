@@ -51,7 +51,7 @@ const ALL_MIGRATIONS = readdirSync(MIGRATIONS_DIR)
  * and including it is applied, in order. The guard test below fails if a later
  * migration redefines any of these objects, so this cannot silently go stale.
  */
-const LAST_FEEDBACK_MIGRATION = "20260915002000_assistant_feedback";
+const LAST_FEEDBACK_MIGRATION = "20261009001000_analytics_business_timezone";
 const APPLIED = ALL_MIGRATIONS.slice(0, ALL_MIGRATIONS.indexOf(LAST_FEEDBACK_MIGRATION) + 1);
 
 /** Supabase platform objects the earlier migrations reach for. */
