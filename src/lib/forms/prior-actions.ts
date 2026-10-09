@@ -144,8 +144,12 @@ export function groundPriorActions(input: {
   notes: string;
   today: string;
 }): { value: string; added: string[]; removed: string[] } {
-  const stated = new Set(datesInText(input.notes, input.today).map((found) => found.iso));
   const managerSteps = priorSteps(input.notes, input.today);
+  // The dates the manager gave, with a step's date read as last year's where it would be ahead of today.
+  const stated = new Set([
+    ...datesInText(input.notes, input.today).map((found) => found.iso),
+    ...managerSteps.map((step) => step.iso),
+  ]);
   const stepOn = new Map(managerSteps.map((step) => [step.iso, stepLabel(step.named)]));
   const mentioned = new Set(STEPS.filter(([pattern]) => pattern.test(input.notes)).map(([, label]) => label));
   const removed: string[] = [];

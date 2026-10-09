@@ -1,8 +1,12 @@
+import { businessToday } from "@/lib/business-date";
+
 import {
   PAYROLL_DEDUCT_LABEL,
   statedPayrollDeduct,
   type PayrollDeductAnswer,
 } from "./payroll-deduct";
+import { INCIDENT_TOPIC_PATTERNS } from "./incident-topic";
+import { statedWarningLevel, type WarningLevel } from "./warning-level";
 
 /**
  * ============================================================================
@@ -188,18 +192,24 @@ const DATE_GIVEN: readonly RegExp[] = [
 ];
 
 /**
- * The warning level, which is the Type of Warning box on the form.
+ * ============================================================================
+ * THE WARNING LEVEL IS THE ONE BEING ISSUED NOW
+ * ============================================================================
  *
- * The bare adjectives are accepted only as a WHOLE ANSWER — "5. verbal" — and
- * never mid-sentence, because "he gave her a verbal heads-up" is an account of
- * what happened rather than a decision about the document's warning level.
+ * This used to be a list of patterns that fired on ANY "verbal warning" in
+ * the manager's words. Production, 9 Oct 2026: "she was late again for 30
+ * mins today. given verbal warning on 9/21" answered "is this a verbal or
+ * written warning?" with the PREVIOUS warning, the question was never asked,
+ * and the draft came back ticked Written. A warning that was already given is
+ * the prior-actions line's business, not this one's.
+ *
+ * So the level is read by `warning-level.ts`, which tells the two apart, and
+ * only a level stated for THIS form answers the item. The final actions still
+ * count as an answer — not because they are a level, but because a manager
+ * asking for one is routed to leadership review rather than asked "verbal or
+ * written?" about a decision that is not Ask Bubbles' to draft.
  */
-const WARNING_LEVEL_GIVEN: readonly RegExp[] = [
-  /\b(?:verbal|written|final)(?:\s+written)?\s+warning\b/,
-  /\bwarning\s*(?:level|type)?\s*[:\-=]\s*(?:verbal|written|final)\b/,
-  /\b(?:termination|terminate|demotion|demote|suspension|suspend)\b/,
-  /(?:^|\n)\s*\d*[.)]?\s*(?:verbal|written)\s*[.?!]?\s*(?:$|\n)/,
-];
+const FINAL_ACTION_NAMED = /\b(?:termination|terminate|demotion|demote|suspension|suspend)\b/;
 
 /** "First time", "no prior write-ups" — a stated ABSENCE is a stated answer. */
 const PREVIOUS_NONE: readonly RegExp[] = [
@@ -306,19 +316,7 @@ export function statesRepeatedBehaviour(text: string): boolean {
  * guards. It is only the difference between a manager who has described
  * something and one who has typed nothing but the form's name.
  */
-const INCIDENT_TOPIC: readonly RegExp[] = [
-  /\b(?:late|lateness|tardy|tardiness|overslept)\b/,
-  /\b(?:left early|leaving early|clocked out early)\b/,
-  /\b(?:absent|absence|absenteeism|no[- ]call|no[- ]show|called out|call[- ]?off|missed (?:her|his|their|the) shift)\b/,
-  /\b(?:dress code|uniform|attire|skirt|shorts|leggings|jeans|sandals|flip[- ]?flops|name tag|nametag|piercing|hoodie)\b/,
-  /\b(?:phone|cell phone|on her phone|on his phone|social media)\b/,
-  /\b(?:rude|unprofessional|argued|arguing|shouted|yelled|swore|swearing|disrespect\w*)\b/,
-  /\b(?:refus\w+|insubordinat\w+|would not follow|didn't follow|did not follow|ignored (?:my|the) (?:direction|instruction))\b/,
-  /\b(?:cash|drawer|register|till|deposit|void|refund|discount)\b/,
-  /\b(?:safety|injur\w+|hazard|spill|chemical|sanitiz\w+|sanitis\w+|cleaning|closing duties|opening duties)\b/,
-  /\b(?:harass\w+|theft|stole|stealing|dishonest\w*|falsif\w+)\b/,
-  /\b(?:standards of conduct|policy violation|violated (?:the|our) polic)\b/,
-];
+const INCIDENT_TOPIC: readonly RegExp[] = INCIDENT_TOPIC_PATTERNS;
 
 const OBSERVATIONAL_CLAUSE: readonly RegExp[] = [
   /\b(?:she|he|they|the employee|[a-z]+)\s+(?:was|were|has been|have been|had been)\s+\w+/,
@@ -397,15 +395,27 @@ export function readCorrectiveActionIntake(input: {
    * means it does — the current library.
    */
   readonly asksPayrollDeduct?: boolean;
+  /**
+   * The level the conversation stated for THIS form, where the caller read it
+   * turn by turn (`warningLevelFromConversation`). Absent, the text is read
+   * as one, against `today`.
+   */
+  readonly warningLevel?: WarningLevel | null;
+  /** The business day, `YYYY-MM-DD` — a warning dated before it is history. */
+  readonly today?: string;
 }): IntakeReading {
   const text = normalize(input.text);
+  const level =
+    input.warningLevel !== undefined
+      ? input.warningLevel
+      : statedWarningLevel(input.text, input.today ?? businessToday());
 
   const answered: Record<IntakeItemKey, boolean> = {
     employee_name: input.employeeKnown,
     salon: input.salonSettled,
     form_date: any(text, DATE_GIVEN),
     what_happened: any(text, INCIDENT_TOPIC) || any(text, OBSERVATIONAL_CLAUSE),
-    warning_level: any(text, WARNING_LEVEL_GIVEN),
+    warning_level: level !== null || FINAL_ACTION_NAMED.test(text),
     /*
      * A STATED ABSENCE ("first time") or a STATED HISTORY ("already warned
      * her last week"). A repeated incident is neither — see
@@ -441,6 +451,17 @@ export function readCorrectiveActionIntake(input: {
 export function describesIncident(text: string): boolean {
   const normalized = normalize(text);
   return any(normalized, INCIDENT_TOPIC) || any(normalized, OBSERVATIONAL_CLAUSE);
+}
+
+/**
+ * Whether the text names an incident TOPIC — lateness, an absence, the dress
+ * code, a cash or safety issue. Narrower than `describesIncident`, which also
+ * accepts any "<someone> was …" clause: the chat correction uses this to tell
+ * "jordan was late today, make it a verbal warning" (a new incident) from "it
+ * should have been verbal" (a correction).
+ */
+export function namesIncidentTopic(text: string): boolean {
+  return any(normalize(text), INCIDENT_TOPIC);
 }
 
 /**

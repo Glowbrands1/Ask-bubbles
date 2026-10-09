@@ -46,6 +46,15 @@ import {
   payrollDeductFromConversation,
 } from "@/lib/forms/payroll-deduct";
 import { checkboxGroupsForVariant } from "@/lib/forms/document";
+import {
+  WARNING_LEVEL_KEYS,
+  WARNING_LEVEL_QUESTION,
+  WARNING_TYPE_KEY,
+  mentionsEarlierWarning,
+  warningLevelFromConversation,
+  warningLevelLabel,
+  type WarningLevel,
+} from "@/lib/forms/warning-level";
 import { exitFactsSupplied, readExitFacts } from "@/lib/forms/exit-facts";
 import {
   exitEmployeeQuestion,
@@ -102,7 +111,6 @@ import type {
   Role,
 } from "@/types";
 
-import { WARNING_LEVEL_LABEL, statedWarningLevel } from "@/lib/forms/warning-level";
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
@@ -175,6 +183,20 @@ function asksPayrollDeduct(summary: TemplateSummary): boolean {
   return checkboxGroupsForVariant(version.document, inlineDraftVariantKey(version.variants ?? [])).some(
     (group) => group.key === PAYROLL_DEDUCT_KEY,
   );
+}
+
+/**
+ * The warning levels the PUBLISHED version's Type of Warning offers — read off
+ * the version a created form would pin, like `asksPayrollDeduct`. Empty on a
+ * version without the box, which is then never asked about.
+ */
+function offeredWarningLevels(summary: TemplateSummary): string[] {
+  const version = summary.currentVersion;
+  if (!version?.document) return [];
+  const group = checkboxGroupsForVariant(version.document, inlineDraftVariantKey(version.variants ?? [])).find(
+    (entry) => entry.key === WARNING_TYPE_KEY,
+  );
+  return (group?.options ?? []).map((option) => option.key).filter((key) => WARNING_LEVEL_KEYS.has(key));
 }
 
 /**
@@ -801,6 +823,28 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     ...(input.oneOfSeveral && input.questionMessageId ? { [input.questionMessageId]: input.oneOfSeveral.clause } : {}),
   };
   if (Object.keys(excerpts).length > 0) proposal.sourceExcerpts = excerpts;
+
+  /*
+   * THE WARNING LEVEL FOR THIS FORM, FROM THE MANAGER'S OWN WORDS — and only a
+   * level they stated for it. "Given verbal warning on 9/21" is history and
+   * goes on the prior-actions line; it never sets this box, and neither does
+   * "again". Unstated stays null, and the reply asks. See `warning-level.ts`.
+   *
+   * Read turn by turn from THIS FORM'S turns about THIS person — the same
+   * scope the draft is written from, each turn's own clause where one message
+   * asked for several forms — so a level said for somebody else cannot land.
+   */
+  if (isCorrectiveActionForm(match)) {
+    const offered = offeredWarningLevels(match);
+    const stated = warningLevelFromConversation(
+      scoped.messages.map((message) => ({
+        role: "user",
+        content: (message.id ? excerpts[message.id] : undefined) ?? message.content,
+      })),
+      input.today ?? businessToday(),
+    );
+    proposal.warningLevel = stated && offered.includes(stated) ? stated : null;
+  }
   const facts = changeKind
     ? readEmploymentChange(
         scoped.messages.map((message) => message.content),
@@ -1158,6 +1202,23 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
       { role: "user", content: input.question },
     ]);
     if (replied) return { kind: "explicit", templateKey: continued };
+  }
+
+  /*
+   * AND BY ITS WARNING-LEVEL QUESTION. Bubbles asks "Is this new corrective
+   * action a Verbal Warning or a Written Warning?" and "verbal" names nobody.
+   * A reply that states this form's level continues the open proposal, which
+   * re-reads the level itself; a question ("what's the difference?") does not.
+   */
+  if (open && isCorrectiveActionForm(open) && !/\?\s*$/.test(input.question)) {
+    const lastAssistant = [...input.history].reverse().find((message) => message.role === "assistant");
+    // Asked, or read back for the manager to change ("Type of Warning: …").
+    const askedLevel =
+      typeof lastAssistant?.content === "string" &&
+      (lastAssistant.content.includes(WARNING_LEVEL_QUESTION) || /type of warning:/i.test(lastAssistant.content));
+    if (askedLevel && warningLevelFromConversation([{ role: "user", content: input.question }], input.today ?? businessToday())) {
+      return { kind: "explicit", templateKey: continued };
+    }
   }
 
   /*
@@ -1743,7 +1804,6 @@ function proposalContent(
   }
 
   if (isCorrectiveActionForm(match)) {
-    proposal.warningLevel = statedWarningLevel(context.text);
     proposal.issue = correctiveActionIssue(context.text, proposal.employeeName);
     const intake = readCorrectiveActionIntake({
       text: context.text,
@@ -1753,6 +1813,8 @@ function proposalContent(
         proposal.locationResolution === "not_applicable",
       payrollDeduct: proposal.payrollDeduct ?? null,
       asksPayrollDeduct: asksPayrollDeduct(match),
+      warningLevel: proposal.warningLevel ?? null,
+      today,
     });
 
     /*
@@ -1794,7 +1856,10 @@ function proposalContent(
      * being stopped for it.
      */
     if (proposal.status !== "needs_location") {
-      return correctiveActionReady(proposal, intake, asksPayrollDeduct(match), readCaPolicy(context.text));
+      return correctiveActionReady(proposal, intake, asksPayrollDeduct(match), readCaPolicy(context.text), {
+        offersLevel: offeredWarningLevels(match).length > 0,
+        earlierWarning: mentionsEarlierWarning(context.text, today),
+      });
     }
   }
 
@@ -1918,10 +1983,17 @@ function correctiveActionEmployeeQuestion(
 /**
  * The prose beside a Corrective Action Form that is ready to be created.
  *
- * IT NAMES WHAT IS UNRESOLVED AND ASKS FOR NONE OF IT. That distinction is the
- * whole change: a manager who has not said whether this is verbal or written
- * should see that the tick boxes are theirs, not be stopped and asked. The
- * form has controls for every one of these; the chat does not.
+ * NOTHING HOLDS THE CARD UP. What is still unknown is either named for the
+ * manager to set on the form (the prior history) or asked as a question they
+ * can answer here or on the form (the warning level, payroll deduct) — and
+ * none of it is answered for them.
+ *
+ * THE WARNING LEVEL IS ASKED, NOT NAMED. Production, 9 Oct 2026: a manager who
+ * mentioned an earlier verbal warning got a form ticked Written. The fix that
+ * holds is in code — the level is never the model's, see `warning-level.ts`
+ * — and this is the half the manager sees: when they have not said which this
+ * is, they are asked, in so many words, and an earlier warning they mentioned
+ * is acknowledged as history rather than silently weighed.
  *
  * The job title is never mentioned, because the document has no field for it.
  */
@@ -1930,12 +2002,12 @@ function correctiveActionReady(
   intake: IntakeReading,
   asksPayroll: boolean,
   policy: CaPolicyReading,
+  warning: { offersLevel: boolean; earlierWarning: boolean } = { offersLevel: true, earlierWarning: false },
 ): string {
+  const levelOpen = warning.offersLevel && intake.missingRequired.some((item) => item.key === "warning_level");
   const outstanding = intake.missingRequired
-    .filter((item) => (item.key === "warning_level" && !proposal.warningLevel) || item.key === "previous_action")
-    .map((item) =>
-      item.key === "warning_level" ? "the verbal/written warning level" : "any prior coaching or corrective action",
-    );
+    .filter((item) => item.key === "previous_action")
+    .map(() => "any prior coaching or corrective action");
 
   const lines = [
     `I'll draft a **${proposal.templateName}** for **${proposal.employeeName}** from what you've described, and check the applicable company policy before anything policy-related goes on it.`,
@@ -1948,7 +2020,9 @@ function correctiveActionReady(
    */
   const stated: string[] = [];
   if (proposal.issue) stated.push(`**Issue:** ${proposal.issue}`);
-  if (proposal.warningLevel) stated.push(`**Type of warning:** ${WARNING_LEVEL_LABEL[proposal.warningLevel]}, as you said`);
+  if (warning.offersLevel && proposal.warningLevel) {
+    stated.push(`**Type of warning:** ${warningLevelLabel(proposal.warningLevel as WarningLevel)}, as you said — tell me if that should change`);
+  }
   if (stated.length > 0) lines.push("", stated.join(" · "));
 
   /*
@@ -1961,6 +2035,20 @@ function correctiveActionReady(
    */
   const policyLine = caPolicyProposalLine(policy);
   if (policyLine) lines.push("", policyLine);
+
+  /*
+   * THE LEVEL, ASKED WHEN IT WAS NOT STATED (a stated one is read back above).
+   * An earlier warning the manager mentioned is said to be history, so nobody
+   * reads its presence as the reason for whichever box ends up ticked.
+   */
+  if (!proposal.warningLevel && levelOpen) {
+    lines.push(
+      "",
+      warning.earlierWarning
+        ? `I've treated the earlier warning you mentioned as previous corrective action history — it doesn't decide this one. ${WARNING_LEVEL_QUESTION} Tell me here, or tick it on the form — I won't choose it for you.`
+        : `${WARNING_LEVEL_QUESTION} Tell me here, or tick it on the form — I won't choose it for you.`,
+    );
+  }
 
   if (outstanding.length > 0) {
     lines.push(
