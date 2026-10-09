@@ -135,6 +135,50 @@ export function shiftDays(date: string, days: number): string {
 }
 
 /**
+ * The instant a business day begins: midnight of `date` in the business zone.
+ *
+ * FOR QUERYING TIMESTAMPS BY BUSINESS DAY. A stored `timestamptz` is an
+ * instant, and "everything on 9 October" in Central Time is the instants from
+ * 9 October 00:00 CDT (05:00 UTC) up to 10 October 00:00 CDT — not from UTC
+ * midnight, which is 7pm the evening before in summer and 6pm in winter. A
+ * window bounded at UTC midnight drops every evening rating after 7pm into the
+ * next day, which is exactly what the Conversation Feedback panel did.
+ *
+ * DAYLIGHT SAVING IS INTL'S PROBLEM, NOT ARITHMETIC'S. The zone's offset is
+ * read at a first guess and then again at the corrected instant, because the
+ * offset at UTC midnight and at local midnight differ on a changeover date.
+ * Two passes settle it in every zone whose transitions are not at midnight,
+ * which includes every US zone (they change at 2am). A zone that springs
+ * forward AT midnight has no local midnight on that one day; it is not a
+ * business zone this product supports.
+ */
+export function businessDayStart(date: string, timeZone: string = BUSINESS_TIMEZONE): Date {
+  const utcMidnight = Date.parse(`${date}T00:00:00Z`);
+  if (Number.isNaN(utcMidnight)) return new Date(Number.NaN);
+  let instant = utcMidnight - zoneOffsetMs(utcMidnight, timeZone);
+  instant = utcMidnight - zoneOffsetMs(instant, timeZone);
+  return new Date(instant);
+}
+
+/** The zone's offset from UTC at `instant`, in ms (Central: -5h or -6h). */
+function zoneOffsetMs(instant: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(new Date(instant));
+  const read = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((part) => part.type === type)?.value ?? 0);
+  const asIfUtc = Date.UTC(read("year"), read("month") - 1, read("day"), read("hour"), read("minute"), read("second"));
+  return asIfUtc - Math.floor(instant / 1000) * 1000;
+}
+
+/**
  * The last day of the business week containing `date`.
  *
  * SUNDAY TO SATURDAY, the US retail week — the one location schedules and weekly

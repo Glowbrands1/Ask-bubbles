@@ -11,6 +11,7 @@
  * Client-safe. No database client, no secret, no server-only import.
  */
 
+import { businessDayStart, daysBetween, shiftDays } from "@/lib/business-date";
 import { COMPANY_DISTRICTS, locationIdsInArea } from "@/lib/locations";
 import { ROLES } from "@/lib/permissions";
 import type { Role } from "@/types";
@@ -174,13 +175,21 @@ export function serializeFilters(filters: AnalyticsFilters): string {
 /* ------------------------------------------------------------ windows ---- */
 
 export interface ResolvedWindow {
-  /** Inclusive start, as an ISO instant. */
+  /** Inclusive start, as an ISO instant: business-zone midnight of `fromDate`. */
   from: string;
   /** EXCLUSIVE end — the queries use `< to`, so a day is never double-counted. */
   to: string;
   /** The comparable preceding window, for "vs the prior period". */
   previousFrom: string;
   previousTo: string;
+  /**
+   * The same four bounds as business-zone CALENDAR DATES. `toDate` and
+   * `previousToDate` are exclusive, like `to` and `previousTo`.
+   */
+  fromDate: string;
+  toDate: string;
+  previousFromDate: string;
+  previousToDate: string;
   /** Whole days covered, which decides the trend bucket. */
   days: number;
   label: string;
@@ -195,41 +204,47 @@ export interface ResolvedWindow {
  * a 30-day window is compared against the 30 days before it, not against a
  * calendar month of a different length.
  *
- * `anchor` is the business day, not the host's: the app decides what "today" is
- * in the locations' timezone, and an analytics window that rolled over at 8pm
- * Eastern would put this evening's activity into tomorrow.
+ * BUSINESS DAYS, NOT UTC DAYS. `anchor` is the business date, and every bound
+ * is business-zone midnight of a calendar date (`businessDayStart`). The
+ * windows used to start and end at UTC midnight, which is 7pm Central in
+ * summer and 6pm in winter: a rating left at 9pm on the 9th fell outside a
+ * window ending "after the 9th", and showed up the next day. Lengths are
+ * counted in calendar days, so a window spanning a daylight-saving change is
+ * still "7 days" although one of them is 23 or 25 hours long.
  */
 export function resolveWindow(
   filters: AnalyticsFilters,
   anchorIsoDate: string,
 ): ResolvedWindow {
-  const endExclusive = startOfUtcDay(addDays(anchorIsoDate, 1));
-
+  let fromDate: string;
+  let toDate: string;
+  let label: string;
   if (filters.from && filters.to) {
-    const from = startOfUtcDay(filters.from);
+    fromDate = filters.from;
     /* Inclusive to the user, exclusive to the query: they picked a last day. */
-    const to = startOfUtcDay(addDays(filters.to, 1));
-    const days = Math.max(1, Math.round((to - from) / DAY_MS));
-    return {
-      from: new Date(from).toISOString(),
-      to: new Date(to).toISOString(),
-      previousFrom: new Date(from - days * DAY_MS).toISOString(),
-      previousTo: new Date(from).toISOString(),
-      days,
-      label: `${filters.from} to ${filters.to}`,
-    };
+    toDate = shiftDays(filters.to, 1);
+    label = `${filters.from} to ${filters.to}`;
+  } else {
+    toDate = shiftDays(anchorIsoDate, 1);
+    fromDate = windowStartDate(filters.range, anchorIsoDate, toDate);
+    label = rangeLabel(filters.range);
   }
-
-  const start = windowStart(filters.range, anchorIsoDate, endExclusive);
-  const days = Math.max(1, Math.round((endExclusive - start) / DAY_MS));
+  const days = Math.max(1, daysBetween(fromDate, toDate));
+  const previousFromDate = shiftDays(fromDate, -days);
+  const previousToDate = fromDate;
+  const instant = (date: string) => businessDayStart(date).toISOString();
 
   return {
-    from: new Date(start).toISOString(),
-    to: new Date(endExclusive).toISOString(),
-    previousFrom: new Date(start - days * DAY_MS).toISOString(),
-    previousTo: new Date(start).toISOString(),
+    from: instant(fromDate),
+    to: instant(toDate),
+    previousFrom: instant(previousFromDate),
+    previousTo: instant(previousToDate),
+    fromDate,
+    toDate,
+    previousFromDate,
+    previousToDate,
     days,
-    label: rangeLabel(filters.range),
+    label,
   };
 }
 
@@ -245,26 +260,15 @@ export function bucketFor(days: number): "day" | "week" | "month" {
   return "month";
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function startOfUtcDay(isoDate: string): number {
-  return Date.parse(`${isoDate}T00:00:00.000Z`);
-}
-
-function addDays(isoDate: string, days: number): string {
-  const shifted = new Date(startOfUtcDay(isoDate) + days * DAY_MS);
-  return shifted.toISOString().slice(0, 10);
-}
-
-function windowStart(
+function windowStartDate(
   range: DateRangeKey,
   anchorIsoDate: string,
-  endExclusive: number,
-): number {
+  toDate: string,
+): string {
   const fixed = DATE_RANGES.find((entry) => entry.key === range)?.days ?? null;
-  if (fixed !== null) return endExclusive - fixed * DAY_MS;
+  if (fixed !== null) return shiftDays(toDate, -fixed);
 
   const [year, month] = anchorIsoDate.split("-");
-  if (range === "mtd") return startOfUtcDay(`${year}-${month}-01`);
-  return startOfUtcDay(`${year}-01-01`);
+  if (range === "mtd") return `${year}-${month}-01`;
+  return `${year}-01-01`;
 }

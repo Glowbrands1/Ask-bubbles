@@ -513,11 +513,34 @@ previous head):
 **Business time zone is US Central** (owner: "it should always be in CT").
 `NEXT_PUBLIC_BUSINESS_TIMEZONE` is not set in Vercel, so the code default
 decides: it is now `America/Chicago` for form dates, "today" in the prompt and
-analytics. The analytics SQL function `analytics_when` keeps an Eastern
-fallback for an omitted or unknown zone; every call passes the application's
-zone, and aligning that fallback needs a migration (not included).
+analytics. (The analytics SQL fallback, formerly Eastern, is Central from
+migration 20261009001000 — see "Analytics days are Central days" below.)
 
-**Known, not changed:** "ww" is not read as "written warning" (too ambiguous);
-the analytics feedback window ends at a UTC midnight rather than a Central one,
-so between about 7pm and midnight CT that day's ratings are outside it —
-pre-existing, outside chat.
+**Known, not changed:** "ww" is not read as "written warning" (too ambiguous).
+
+## Analytics days are Central days (9 Oct 2026)
+
+Admin → Analytics bounded every window at UTC midnight, which is 7pm Central in
+summer and 6pm in winter. A rating left at 9:30pm on the 9th was outside "the
+9th" and inside "the 10th"; "Last 7 days" read in the evening left that evening
+out; and the usage trend's days split at the same moment, because
+`date_trunc` on a `timestamptz` truncates in the database session zone (UTC).
+
+- `resolveWindow` (`src/lib/analytics/filters.ts`) now works in business-zone
+  calendar dates and turns each bound into that date's Central midnight
+  (`businessDayStart` in `src/lib/business-date.ts`). Lengths are counted in
+  days, so a week across a daylight-saving change is still 7 days (one of them
+  23 or 25 hours).
+- Migration `20261009001000_analytics_business_timezone` gives
+  `analytics_trend` a `p_timezone` (default `America/Chicago`) and truncates the
+  local time; `analytics_when`'s default and fallback are Central, no longer
+  Eastern. Privileges are restated (service role only).
+- Release order: apply the migration, then deploy. If the code is deployed
+  first the trend call falls back to the old signature (PGRST202) rather than
+  failing, with UTC buckets until the migration is applied.
+
+Tests: `feedback-analytics-business-day.integration.test.ts` (real loaders and
+SQL on PGlite; CDT, CST, both 2026 changeover days, month boundary, a "Last 7
+days" read at 9:45pm CDT), `business-date.test.ts`, `analytics.test.ts`,
+`trend-release-order.test.ts`. 17 of the new tests fail without the fix.
+

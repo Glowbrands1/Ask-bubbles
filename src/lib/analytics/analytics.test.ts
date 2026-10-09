@@ -496,17 +496,28 @@ describe("filters survive the round trip through a URL", () => {
 });
 
 describe("the window and the one before it", () => {
-  it("covers the anchor day and ends exclusively after it", () => {
+  /*
+   * BUSINESS-ZONE MIDNIGHTS, NOT UTC MIDNIGHTS. These expected values used to
+   * be "T00:00:00.000Z", which is 7pm Central the evening before: the windows
+   * dropped every evening's activity into the next day. Central Daylight Time
+   * is UTC-5 (midnight = 05:00Z), Central Standard Time UTC-6 (06:00Z).
+   */
+  it("covers the anchor day and ends exclusively at the next Central midnight", () => {
     const window = resolveWindow({ ...EMPTY_FILTERS, range: "7d" }, "2026-09-11");
     expect(window.days).toBe(7);
-    expect(window.from).toBe("2026-09-05T00:00:00.000Z");
+    expect(window.from).toBe("2026-09-05T05:00:00.000Z");
+    expect(window.fromDate).toBe("2026-09-05");
     /* Exclusive: the 12th is the boundary, so the 11th is fully included. */
-    expect(window.to).toBe("2026-09-12T00:00:00.000Z");
+    expect(window.to).toBe("2026-09-12T05:00:00.000Z");
+    expect(window.toDate).toBe("2026-09-12");
   });
 
-  it("compares against an equally long window immediately before", () => {
+  it("compares against the same number of days immediately before", () => {
     const window = resolveWindow({ ...EMPTY_FILTERS, range: "30d" }, "2026-09-11");
     expect(window.previousTo).toBe(window.from);
+    expect(window.previousToDate).toBe(window.fromDate);
+    expect(window.fromDate).toBe("2026-08-13");
+    expect(window.previousFromDate).toBe("2026-07-14");
     const length =
       Date.parse(window.previousTo) - Date.parse(window.previousFrom);
     expect(length).toBe(Date.parse(window.to) - Date.parse(window.from));
@@ -518,16 +529,49 @@ describe("the window and the one before it", () => {
       "2026-09-11",
     );
     expect(window.days).toBe(7);
-    expect(window.to).toBe("2026-09-08T00:00:00.000Z");
+    expect(window.from).toBe("2026-09-01T05:00:00.000Z");
+    expect(window.to).toBe("2026-09-08T05:00:00.000Z");
   });
 
-  it("starts this month and this year on their first day", () => {
+  it("a single custom day is that Central day: midnight to midnight", () => {
+    const window = resolveWindow(
+      { ...EMPTY_FILTERS, from: "2026-10-09", to: "2026-10-09" },
+      "2026-10-09",
+    );
+    expect(window.days).toBe(1);
+    expect(window.from).toBe("2026-10-09T05:00:00.000Z");
+    expect(window.to).toBe("2026-10-10T05:00:00.000Z");
+    /* Yesterday, as the prior period. */
+    expect(window.previousFrom).toBe("2026-10-08T05:00:00.000Z");
+    expect(window.previousTo).toBe("2026-10-09T05:00:00.000Z");
+  });
+
+  it("uses Central Standard Time in winter", () => {
+    const window = resolveWindow({ ...EMPTY_FILTERS, range: "7d" }, "2026-12-15");
+    expect(window.from).toBe("2026-12-09T06:00:00.000Z");
+    expect(window.to).toBe("2026-12-16T06:00:00.000Z");
+  });
+
+  it("counts days, not hours, across a daylight-saving change", () => {
+    /* 1 November 2026 is 25 hours long; the week is still 7 days. */
+    const fall = resolveWindow({ ...EMPTY_FILTERS, range: "7d" }, "2026-11-03");
+    expect(fall.days).toBe(7);
+    expect(fall.from).toBe("2026-10-28T05:00:00.000Z");
+    expect(fall.to).toBe("2026-11-04T06:00:00.000Z");
+    expect(fall.previousFromDate).toBe("2026-10-21");
+    /* 8 March 2026 is 23 hours long. */
+    const spring = resolveWindow({ ...EMPTY_FILTERS, from: "2026-03-08", to: "2026-03-08" }, "2026-03-10");
+    expect(spring.days).toBe(1);
+    expect(Date.parse(spring.to) - Date.parse(spring.from)).toBe(23 * 3_600_000);
+  });
+
+  it("starts this month and this year at Central midnight on their first day", () => {
     expect(
       resolveWindow({ ...EMPTY_FILTERS, range: "mtd" }, "2026-09-11").from,
-    ).toBe("2026-09-01T00:00:00.000Z");
+    ).toBe("2026-09-01T05:00:00.000Z");
     expect(
       resolveWindow({ ...EMPTY_FILTERS, range: "ytd" }, "2026-09-11").from,
-    ).toBe("2026-01-01T00:00:00.000Z");
+    ).toBe("2026-01-01T06:00:00.000Z");
   });
 
   it("coarsens the bucket as the window grows", () => {
