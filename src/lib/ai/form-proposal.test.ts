@@ -1457,3 +1457,33 @@ describe("HIDE. the hiring forms are not offered as choices", () => {
     expect(response!.content).toMatch(/your role cannot create/i);
   });
 });
+
+/* ======================== ported reference fix: topic connectors (6 Oct) == */
+
+describe("a topic connector is never who the form is for", () => {
+  it("asks who a coaching form is for instead of filing it for 'based'", async () => {
+    const { proposals } = await load([template(), dpoa()]);
+    const response = await proposals.proposeFormForTurn(turn("coacing form based on uniform"));
+
+    expect(response!.formProposal!.employeeName).toBeNull();
+    expect(response!.formProposal!.status).not.toBe("ready");
+  });
+
+  it("an earlier team-wide coaching request is the subject, not 'based'", async () => {
+    const { proposals } = await load([template(), dpoa()]);
+    const response = await proposals.proposeFormForTurn(
+      turn("coacing form based on uniform", {
+        history: [managerTurn("msg-1", "I need team-wide coaching for everyone at the shop about the apron and uniform standard")],
+      }),
+    );
+
+    expect(response!.formProposal!.employeeName).toBe("All team members");
+  });
+
+  it("keeps the named employee beside a topic connector", async () => {
+    const { proposals } = await load([template(), dpoa()]);
+    const response = await proposals.proposeFormForTurn(turn("coaching form for Jordan Testperson related to cell phones"));
+
+    expect(response!.formProposal!.employeeName).toBe("Jordan Testperson");
+  });
+});
