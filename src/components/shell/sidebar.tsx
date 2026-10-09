@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogTrigger, Tooltip } from "@/components/ui/o
 import { useSession } from "@/lib/session/session-context";
 import { cn } from "@/lib/utils/cn";
 import { GlobalSearch } from "./global-search";
+import { AppSwitcher } from "./app-switcher";
 import { NAV_SECTIONS, isActivePath } from "./navigation";
 import { UserMenu } from "./user-menu";
 import { ACTIVE_BRAND } from "@/lib/brand";
@@ -21,6 +22,7 @@ export function SidebarNav({
   onNavigate,
   variant = "desktop",
   overdueFollowUps = 0,
+  showAppSwitcher = false,
 }: {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -28,6 +30,8 @@ export function SidebarNav({
   variant?: "desktop" | "drawer";
   /** Counted on the server by the (app) layout. Zero hides the badge. */
   overdueFollowUps?: number;
+  /** Decided on the server by the (app) layout: administrators only. */
+  showAppSwitcher?: boolean;
 }) {
   const pathname = usePathname();
   const { can, isAdmin, role } = useSession();
@@ -210,6 +214,7 @@ export function SidebarNav({
         from fixed copy. The menu opens upward from here.
       */}
       <div className="shrink-0 space-y-1.5 border-t border-rail-border p-3">
+        {showAppSwitcher ? <AppSwitcher collapsed={isCollapsed} /> : null}
         {variant === "desktop" && onToggleCollapse ? (
           <button
             type="button"
