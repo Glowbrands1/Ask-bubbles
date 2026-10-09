@@ -131,7 +131,15 @@ async function correctFromFormReaders(
   const warningChecked: Record<string, string[]> = level
     ? { [WARNING_TYPE_KEY]: [...existingWarning.filter((option) => !WARNING_LEVEL_KEYS.has(option)), ...level] }
     : {};
-  const correctsWarning = Object.keys(warningChecked).length > 0;
+  /*
+   * SOMEBODY ELSE, NAMED THE WAY MANAGERS TYPE: "kim was late too. change it
+   * to verbal", "change it to verbal for sarah". A lowercase first name is not
+   * caught by `extractEmployeeNames`, so the level is not changed on this
+   * form when the message's subject, or who it is "for", is somebody else.
+   */
+  const correctsWarning =
+    Object.keys(warningChecked).length > 0 &&
+    !aboutSomebodyElse(input.message ?? input.question, loaded.instance.employeeName);
   // The Exit Form, read off the pinned version's keys as the drafting route does.
   const isExit = !kind && isExitDocumentKeys(responsibilityMap(document, variantKey).keys());
   if (!kind && !isExit && !(asksPayroll && payroll) && !correctsWarning) return null;
@@ -337,6 +345,33 @@ async function correctFromFormReaders(
         (asksPayroll && payrollDeductCorrection(clause)),
     );
   return { ...reply(lines.join("\n")), formUpdate: { instanceId: input.instanceId, updated: written } };
+}
+
+/** Words that can stand where a person would and are not one. */
+const NOT_A_PERSON = new Set([
+  "she", "he", "they", "her", "him", "them", "it", "this", "that", "there", "i", "we", "you", "me", "us",
+  "the", "a", "an", "today", "now", "being", "everyone", "nobody", "someone", "same",
+  "attendance", "tardiness", "lateness", "absence", "conduct", "policy", "performance", "cash", "dress",
+  "uniform", "safety", "warning", "verbal", "written", "also", "and", "too", "then", "actually",
+]);
+
+/**
+ * Whether the message is about a person other than `employee`: a sentence
+ * whose subject is another first name ("kim was late too"), or a level asked
+ * "for" another name ("change it to verbal for sarah").
+ */
+function aboutSomebodyElse(message: string, employee: string): boolean {
+  const own = new Set(employee.toLowerCase().split(/\s+/).filter(Boolean));
+  const other = (word: string) => {
+    const w = word.toLowerCase().replace(/['’]s$/, "");
+    return !NOT_A_PERSON.has(w) && !own.has(w) && !namesIncidentTopic(w);
+  };
+  const subjects = message.matchAll(
+    /(?:^|[.!?;]\s*|\b(?:and|also|too|but)\s+)([a-z][a-z'’-]+)(?:\s+[a-z][a-z'’-]+)?\s+(?:was|is|has|had|got|did|left|came|showed|called|didn'?t|wasn'?t|isn'?t|keeps|kept|needs|deserves)\b/gi,
+  );
+  for (const match of subjects) if (other(match[1]!)) return true;
+  for (const match of message.matchAll(/\bfor\s+([a-z][a-z'’-]+)\s*(?:[.!:,]|$)/gi)) if (other(match[1]!)) return true;
+  return false;
 }
 
 /** "jane", "Jane Doe" and "JANE DOE" name the employee on a form for "Jane Doe". */

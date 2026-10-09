@@ -107,8 +107,6 @@ describe("a level stated for THIS form", () => {
     ["verbal warning 10/9", "verbal"],
     ["verbal warning (today)", "verbal"],
     // The level as the last word of the turn (owner's retest variants, PR #8).
-    ["She was 30 minutes late today, verbal warning.", "verbal"],
-    ["she was late last night, verbal warning", "verbal"],
     ["jordan testperson cash handling written warning", "written"],
     ["need a CA for jordan testperson. she mishandled cash at close yesterday. written warning", "written"],
     ["verbal warning this morning", "verbal"],
@@ -246,6 +244,18 @@ describe("history phrasings found in review never become this form's level", () 
     "she had one. written warning",
     "late again after receiving a written warning",
     "update it, last month written warning",
+    // Re-check at 2ed5961: past phrasings outside any word list.
+    "late again today. back in the summer, written warning",
+    "late again today. earlier this year written warning",
+    "late again today. over the summer written warning",
+    "late again today. at her 90 day review written warning",
+    "late again today. when she started written warning",
+    "late again today. a while back written warning",
+    "late again today. same deal as spring: written warning",
+    "late again today. her old manager did a written warning",
+    // A level after a clause with its own structure is asked, not read.
+    "She was 30 minutes late today, verbal warning.",
+    "she was late last night, verbal warning",
     // Final re-check (PR #10): history opening a reply, then "now/today" in the next clause.
     "written warning on the 21st, now late again",
     "written warning 2 weeks back, now late again",

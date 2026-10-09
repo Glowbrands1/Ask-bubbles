@@ -376,9 +376,17 @@ function classify(text: string, start: number, end: number, today: string, cued:
    * "warned", "written up", "prior"), where a trailing level reads as one more
    * item of history and is asked about instead.
    */
-  const endsTurn = /^[\s.!]*$/.test(text.slice(end));
   const ownSentence = before.trim() === "" && after.trim() === "";
-  if ((endsTurn || ownSentence) && !pointsToThePast(text.slice(0, start), today)) return "current";
+  /*
+   * At the end of a clause, only after a bare name-and-incident run of words
+   * — "jordan testperson cash handling written warning". Any preposition,
+   * time word, verb, pronoun or punctuation in front of it ("back in the
+   * summer, written warning", "her old manager did a written warning") makes
+   * it a statement about something else, and it is asked about. Structural,
+   * so a past phrasing nobody listed cannot slip through.
+   */
+  const bareTrail = /^[\s.!]*$/.test(text.slice(end)) && !CLAUSE_HAS_STRUCTURE.test(before);
+  if ((ownSentence || bareTrail) && !pointsToThePast(text.slice(0, start), today)) return "current";
   // Nothing says whether this is the warning being issued now: ask.
   return "unclear";
 }
@@ -393,6 +401,10 @@ function classify(text: string, start: number, end: number, today: string, cued:
  */
 const LISTS_EARLIER_STEPS =
   /\b(?:coach(?:ed|ing)?|warned|warnings?|written\s+up|write[- ]?ups?|disciplin\w*|previous(?:ly)?|prior|history|already|before|last\s+(?:week|month|year|time|ca|one|warning|corrective)|ago|first\s+(?:time|offen[cs]e|one)|record|file|shows|had|has|got|received|given|issued|was\s+(?:a|an|her|his)|remember|same\s+(?:as|thing)|like\s+the|january|february|march|april|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept?|oct|nov|dec)\b/i;
+
+/** Function words and punctuation that give a clause a structure of its own. */
+const CLAUSE_HAS_STRUCTURE =
+  /\b(?:in|on|at|during|when|whenever|since|back|over|after|before|from|for|with|by|about|ago|while|until|last|earlier|this|that|then|as|like|than|same|was|were|did|do|does|had|has|have|got|gave|given|is|are|been|be|she|he|they|her|his|their|i|we|my|our|it|its|there|which|who|old|previous|prior|time)\b|[,:;–—-]/i;
 
 function pointsToThePast(textBefore: string, today: string): boolean {
   if (LISTS_EARLIER_STEPS.test(textBefore)) return true;
