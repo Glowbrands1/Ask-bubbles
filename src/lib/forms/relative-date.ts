@@ -25,6 +25,29 @@ import { datesInText } from "./form-date-answer";
 const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 const WEEKDAY = WEEKDAYS.join("|");
 
+/*
+ * HOW "YESTERDAY" IS TYPED ON A PHONE. "last day yest", "dated tmrw", "late
+ * 2 days ago". Each spelling below is that word and nothing else. Shared with
+ * the exit reader (`exit-facts.ts`) so the two can never disagree about which
+ * day "yest" is.
+ */
+export const YESTERDAY_WORD = /\b(?:yesterday|yesterdy|yesturday|yest|yday|ystrdy)\b/gi;
+export const TOMORROW_WORD = /\b(?:tomorrow|tomorow|tommorow|tommorrow|tmrw|tmrrw|tmr)\b/gi;
+const COUNT_WORDS: Record<string, number> = {
+  a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+};
+/** "2 days ago", "three days ago", "a week ago", "2 wks ago" — never more than a few weeks back. */
+export const AGO = /\b(\d{1,2}|a|an|one|two|three|four|five|six|seven|eight|nine|ten)\s+(days?|wks?|weeks?)\s+ago\b/gi;
+
+/** The ISO date an `AGO` match names, or null for one too far back to be a slip of memory. */
+export function agoDate(match: RegExpMatchArray, today: string): string | null {
+  const raw = match[1]!.toLowerCase();
+  const count = /^\d+$/.test(raw) ? Number(raw) : COUNT_WORDS[raw];
+  if (!count) return null;
+  const days = /^(?:wk|week)/i.test(match[2]!) ? count * 7 : count;
+  return days > 0 && days <= 31 ? shiftDays(today, -days) : null;
+}
+
 export interface SpokenDate {
   /** Null for a weekday that names no particular week. */
   readonly iso: string | null;
@@ -54,8 +77,9 @@ export function spokenDates(text: string, today: string): SpokenDate[] {
 
   // "today", "today's" and the "todays date" managers actually type.
   add(/\btoday(?:'?s)?(?:\s+date)?\b/gi, () => today);
-  add(/\byesterday\b/gi, () => shiftDays(today, -1));
-  add(/\btomorrow\b/gi, () => shiftDays(today, 1));
+  add(YESTERDAY_WORD, () => shiftDays(today, -1));
+  add(TOMORROW_WORD, () => shiftDays(today, 1));
+  add(AGO, (match) => agoDate(match, today));
   add(new RegExp(String.raw`\b(?:last|this past|past)\s+(${WEEKDAY})\b`, "gi"), (match) => {
     const target = WEEKDAYS.indexOf(match[1]!.toLowerCase());
     const back = ((weekdayOf(today) - target + 7) % 7) || 7;

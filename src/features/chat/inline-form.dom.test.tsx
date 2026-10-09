@@ -1607,3 +1607,71 @@ describe("the Corrective Action Form's payroll-deduct Yes / No", () => {
     expect((patch.body.checked as Record<string, string[]>).payroll_deduct).toEqual(["no"]);
   });
 });
+
+/* ===================================== several forms asked for in one message */
+
+/*
+ * Owner's signed-in QA, 8 Oct 2026: "coaching form for Avery Testperson and a
+ * CA for Jordan Testperson". One message, two proposals: two cards, each with
+ * its own Create, each creating only its own form from only its own words.
+ */
+describe("two forms in one message render as two independent cards", () => {
+  const TWO: ChatMessage = {
+    id: "msg-two",
+    role: "user",
+    content: "coaching form for Avery Testperson and a CA for Jordan Testperson",
+    createdAt: "2026-10-08T23:29:09Z",
+  };
+  const coaching = proposal({
+    proposalId: "prop-avery",
+    employeeName: "Avery Testperson",
+    sourceMessageIds: ["msg-two"],
+    sourceExcerpts: { "msg-two": "coaching form for Avery Testperson" },
+  });
+  const ca = proposal({
+    proposalId: "prop-jordan",
+    templateKey: "dpoa",
+    templateName: "Corrective Action Form",
+    employeeName: "Jordan Testperson",
+    sourceMessageIds: ["msg-two"],
+    sourceExcerpts: { "msg-two": "a CA for Jordan Testperson" },
+  });
+
+  it("shows both people and a Create for each", () => {
+    happyPath();
+    const message = assistantTurn({ formProposal: coaching, formProposals: [coaching, ca] });
+    bubble(message, [TWO, message]);
+    expect(screen.getAllByRole("button", { name: /create draft/i })).toHaveLength(2);
+    expect(screen.getAllByText(/Avery Testperson/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Jordan Testperson/).length).toBeGreaterThan(0);
+  });
+
+  it("creating one card creates that form only, drafted from its own clause, and leaves the other card's Create", async () => {
+    happyPath();
+    const message = assistantTurn({ formProposal: coaching, formProposals: [coaching, ca] });
+    bubble(message, [TWO, message]);
+    fireEvent.click(screen.getAllByRole("button", { name: /create draft/i })[1]!);
+
+    await waitFor(() => expect(onFormCreated).toHaveBeenCalledTimes(1));
+    const [, reference] = onFormCreated.mock.calls[0]!;
+    expect(reference.proposalId).toBe("prop-jordan");
+    const creates = recorded.filter((made) => made.url === "/api/forms/instances" && made.method === "POST");
+    expect(creates).toHaveLength(1);
+    expect(creates[0]!.body).toMatchObject({ templateKey: "dpoa", employeeName: "Jordan Testperson", proposalId: "prop-jordan" });
+    await waitFor(() => expect(recorded.some((made) => made.url.endsWith("/draft"))).toBe(true));
+    expect(recorded.find((made) => made.url.endsWith("/draft"))!.body.notes).toBe("a CA for Jordan Testperson");
+    // Avery's card still offers its own Create.
+    expect(screen.getAllByRole("button", { name: /create draft/i })).toHaveLength(1);
+  });
+
+  it("a card whose own form exists offers nothing more; its sibling still offers Create", () => {
+    happyPath();
+    const message = assistantTurn({
+      formProposal: coaching,
+      formProposals: [coaching, ca],
+      formInstanceRefs: [{ instanceId: "inst-42", proposalId: "prop-avery", templateName: "Coaching Form" }],
+    });
+    bubble(message, [TWO, message]);
+    expect(screen.getAllByRole("button", { name: /create draft/i })).toHaveLength(1);
+  });
+});

@@ -48,10 +48,22 @@ export interface DraftNotes {
 export function draftNotesFromConversation(
   messages: Pick<ChatMessage, "id" | "role" | "content" | "error">[],
   sourceMessageIds: readonly string[],
+  /**
+   * The part of a message a proposal was read from, by id — set when one
+   * message asked for several forms. That message contributes its excerpt
+   * only, so "and a CA for Jordan" never reaches Avery's coaching draft.
+   */
+  sourceExcerpts?: Readonly<Record<string, string>>,
 ): DraftNotes {
   const wanted = new Set(sourceMessageIds);
 
-  const eligible = messages.filter(
+  const eligible = messages
+    .map((message) =>
+      sourceExcerpts && typeof sourceExcerpts[message.id] === "string"
+        ? { ...message, content: sourceExcerpts[message.id]! }
+        : message,
+    )
+    .filter(
     (message) =>
       wanted.has(message.id) &&
       message.role === "user" &&

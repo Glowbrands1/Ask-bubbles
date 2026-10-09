@@ -1,6 +1,7 @@
 import { NOT_A_NAME } from "@/lib/forms/name-words";
 
 import type { ClaudeTurn } from "./call-claude";
+import { normalizeRetrievalQuery } from "./query-vocabulary";
 
 /**
  * ============================================================================
@@ -159,10 +160,45 @@ export function retrievalPlan(
   history: readonly ClaudeTurn[],
   enabled: boolean = followUpRetrievalEnabled(),
 ): RetrievalPlan {
-  if (!enabled || !isEllipticalFollowUp(question)) return { queries: [question], fallback: null, anchor: null };
+  /*
+   * "OT RULES FOR MGRS?" IS ALSO SEARCHED AS "OT (OVERTIME) RULES FOR MGRS
+   * (MANAGERS)?". The question as typed is always searched first and always
+   * kept; the rewrite only adds rows. See `query-vocabulary.ts`.
+   */
+  const normalized = normalizeRetrievalQuery(question);
+  const queries = normalized ? [question, normalized] : [question];
+  if (!enabled || !refersBack(question)) return { queries, fallback: null, anchor: null };
   const anchor = findContinuationAnchor(history);
-  if (!anchor || anchor.trim() === question.trim()) return { queries: [question], fallback: null, anchor: null };
-  return { queries: [question], fallback: `${anchor.trim()}\n${question.trim()}`, anchor };
+  if (!anchor || anchor.trim() === question.trim()) return { queries, fallback: null, anchor: null };
+  const anchored = `${anchor.trim()}\n${question.trim()}`;
+  return { queries, fallback: normalizeRetrievalQuery(anchored) ?? anchored, anchor };
+}
+
+/*
+ * ============================================================================
+ * "DOES THAT APPLY TO PART-TIMERS?" HANGS OFF THE LAST QUESTION TOO
+ * ============================================================================
+ *
+ * `isEllipticalFollowUp` reads openings that point backwards — "and…", "what
+ * about…". A question can point backwards with a pronoun instead: "does that
+ * apply to part-timers?", "is it the same for managers?", "can I carry it
+ * over?". Searched alone, those name no subject and find nothing.
+ *
+ * FOR RETRIEVAL'S FALLBACK ONLY. The gates that pin documents keep the
+ * narrower reading: a pronoun question that names its own subject ("is it ok
+ * to wear jeans?") must not pull the previous topic's rule document in. Here
+ * the anchored query is used only when the question alone found nothing, so a
+ * question that stands on its own is unaffected.
+ */
+const POINTS_BACK: readonly RegExp[] = [
+  /^\s*(?:does|do|did|is|are|was|were|will|would|can|could|should)\s+(?:that|this|it|those|these|they|the\s+same)\b[^?]*\b(?:apply|applies|count|counts|cover|covers|include|includes|same|work|change|mean|matter|affect|carry|roll)\b/i,
+  /\b(?:carry|roll)\s+(?:it|that|them|those)\s+over\b/i,
+  /^\s*(?:is|are)\s+there\s+(?:an?\s+|any\s+)?(?:exceptions?|limits?|caps?|deadlines?)\s*\??\s*$/i,
+  /^\s*(?:how|what)\s+(?:about|if)\s+(?:it|that|this)\b/i,
+];
+
+function refersBack(question: string): boolean {
+  return isEllipticalFollowUp(question) || POINTS_BACK.some((pattern) => pattern.test(question));
 }
 
 /**

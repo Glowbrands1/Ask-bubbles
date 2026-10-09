@@ -3,6 +3,7 @@ import "server-only";
 import { acceptedNameSuggestions } from "./employee-match";
 import { isQuestion } from "./employment-change";
 import { employeeState, managerContext, samePerson } from "./proposal";
+import { readFormRequests } from "./form-requests";
 import { detectTemplateIntent } from "./template-intent";
 import type { ChatMessage } from "@/types";
 
@@ -47,6 +48,28 @@ export function checkProposalIsCurrent(input: {
 
   // An id is provenance only; one the history arrived without is simply absent.
   const prior = turns.slice(0, -1).map((turn) => ({ id: turn.id ?? "", role: turn.role, content: turn.content }));
+  /*
+   * ONE OF SEVERAL FORMS ASKED FOR IN THE LATEST MESSAGE. "coaching form for
+   * Avery and a CA for Jordan" names two people and two forms on purpose; each
+   * card is current when the message asked for exactly its form for exactly
+   * its person. See `form-requests.ts`.
+   */
+  const several = readFormRequests(last.content);
+  if (several && several.requests.length >= 2) {
+    const mine = several.requests.some(
+      (request) =>
+        request.templateKey === input.templateKey &&
+        request.employeeName !== null &&
+        samePerson(request.employeeName, input.employeeName),
+    );
+    return mine
+      ? { current: true }
+      : {
+          current: false,
+          reason: "This proposal is out of date: your latest message asked for different forms. Use the newest proposals.",
+        };
+  }
+
   const context = managerContext(prior, { id: last.id, content: last.content });
   const { resolution, excluded } = employeeState(context);
 

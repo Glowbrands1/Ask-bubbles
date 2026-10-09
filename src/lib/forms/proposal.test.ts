@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { displayPersonName } from "@/lib/forms/proposal";
 
 import {
   MANAGER_CONTEXT_CHARS,
@@ -524,7 +525,7 @@ describe("11c. capitalisation does not decide whether a name is read", () => {
 describe("11d. a first name alone is enough to create the draft", () => {
   it.each(["marlowe", "MARLOWE", "Marlowe"])("%s", (name) => {
     const proposal = propose([], `Create a Corrective Action form for ${name}`);
-    expect(proposal.employeeName).toBe(name);
+    expect(proposal.employeeName).toBe(displayPersonName(name));
     expect(proposal.status).toBe("ready");
     expect(proposal.supportsInlineDraft).toBe(true);
   });
@@ -534,7 +535,7 @@ describe("11d. a first name alone is enough to create the draft", () => {
       [userTurn("I need a coaching form"), assistantTurn("Who is this form for?")],
       "marlowe co",
     );
-    expect(proposal.employeeName).toBe("marlowe co");
+    expect(proposal.employeeName).toBe(displayPersonName("marlowe co"));
     expect(proposal.status).toBe("ready");
   });
 });

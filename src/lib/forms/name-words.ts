@@ -140,6 +140,45 @@ export const NOT_A_TYPED_NAME = new Set([
   "flops", "jeans", "shorts", "toed", "open", "opened", "closed", "smoking", "vaping",
   "language", "profanity", "gum", "food", "eating", "drinking", "sleeping", "callout",
   "callouts", "call-out", "call-outs", "no-show", "no-shows",
+  /*
+   * "COACHING FORM FOR AVERY TESTPERSON DATED 10/2" named "avery testperson
+   * dated": a third word followed by a number was kept as a middle name. The
+   * words that introduce a form's date are never part of a name.
+   */
+  "dated", "dates", "due", "happened", "occurred", "ago",
+  "yest", "yday", "ystrdy", "tmrw", "tmr", "tmrrw", "tomorow", "tommorow",
+  // "step jordan testperson down to associate": the particle ends the name.
+  "down", "up", "out", "over", "back", "off",
+]);
+
+/*
+ * ============================================================================
+ * WORDS THAT CANNOT OPEN A NAME, THOUGH THEY MAY CLOSE ONE
+ * ============================================================================
+ *
+ * "jordan testperson needs a written warning for cash handling" put "cash
+ * handling" on a Corrective Action Form: "written warning for …" is a form-
+ * subject position, and nothing said the incident topic after it was not a
+ * person. These are the topics managers write warnings ABOUT — the till, the
+ * schedule, the floor, the product.
+ *
+ * ONLY AS THE FIRST WORD. Several are also surnames ("Jamie Cash", "Pat
+ * Short", "Lee Price"), so a name that merely ends in one is kept whole; what
+ * is refused is a "name" that starts with the topic, which no person's does.
+ */
+export const NOT_A_NAME_LEAD = new Set([
+  "cash", "handling", "register", "registers", "drawer", "drawers", "till", "shortage",
+  "shortages", "short", "overage", "count", "counts", "deposit", "deposits", "money",
+  "refund", "refunds", "returns", "discount", "discounts", "coupon", "coupons", "pricing",
+  "inventory", "stock", "stocking", "restocking", "merchandising",
+  "insubordination", "tardies", "ncns", "nc/ns", "no-call", "scheduling", "schedule",
+  "shift", "shifts", "break", "breaks", "lunch", "overtime", "ot", "pto", "timecard",
+  "timecards", "time-card", "punch", "punches", "clocking", "rudeness", "rude",
+  "disrespect", "disrespectful", "gossip", "gossiping", "phone", "texting", "social",
+  "media", "quality", "productivity", "grooming", "appearance", "injury", "accident",
+  "damage", "damaged", "waste", "candle", "candles", "soap", "soaps", "makery",
+  "cleanup", "spill", "spills", "training", "compliance", "standards", "hours", "coverage",
+  "handling", "procedures",
 ]);
 
 /** A word a lower-case or all-caps name can be made of: letters, ' and -. */
