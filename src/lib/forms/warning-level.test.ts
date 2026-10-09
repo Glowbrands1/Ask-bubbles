@@ -94,6 +94,13 @@ describe("a level stated for THIS form", () => {
     ["I gave her a verbal warning today", "verbal"],
     ["give her a written warning on 10/2", "written"],
     ["issue a formal written warning", "written"],
+    ["she's getting a written warning", "written"],
+    ["she'll get a verbal warning", "verbal"],
+    ["she will receive a verbal warning", "verbal"],
+    ["she gets a verbal warning this time", "verbal"],
+    ["verbal warning today", "verbal"],
+    ["documenting a verbal warning for today", "verbal"],
+    ["1. Sarah\n2. Kearny\n3. today\n4. late\n5. verbal\n6. first time", "verbal"],
   ] as const)("%s -> %s", (text, level) => {
     expect(statedWarningLevel(text, TODAY)).toBe(level);
   });

@@ -155,7 +155,7 @@ const PAST_CUE =
  * written warning on 10/2" is this form even though a date follows.
  */
 const ADJACENT_CURRENT =
-  /\b(?:give|giving|issue|issuing|create|creating|write|writing|make|making|do|doing|document|documenting|prepare|draft|file|filing|start|need|needs|want|wants|(?:this|it|that)(?:\s+one)?\s+(?:is|will\s+be|should\s+be|would\s+be|needs\s+to\s+be)|it'?s|should\s+be|will\s+be|would\s+be|to\s+be|go\s+with|going\s+with|keep|use|current|new|another|second|third|today'?s|put\s+(?:her|him|them)\s+on)\s+(?:(?:her|him|them|it|this)\s+)?(?:(?:a|an|the|as|to|at)\s+)?(?:(?:formal|official|documented|new|second|third|another|final)\s+)?$/i;
+  /\b(?:give|giving|issue|issuing|create|creating|write|writing|make|making|do|doing|document|documenting|prepare|draft|file|filing|start|need|needs|want|wants|(?:this|it|that)(?:\s+one)?\s+(?:is|will\s+be|should\s+be|would\s+be|needs\s+to\s+be)|it'?s|should\s+be|will\s+be|would\s+be|to\s+be|go\s+with|going\s+with|keep|use|current|new|another|second|third|today'?s|put\s+(?:her|him|them)\s+on|get|gets|getting|receive|receives|(?:will|'ll|is|'s|are|'re)\s+(?:be\s+)?(?:getting|receiving|get|receive))\s+(?:(?:her|him|them|it|this)\s+)?(?:(?:a|an|the|as|to|at)\s+)?(?:(?:formal|official|documented|new|second|third|another|final)\s+)?$/i;
 
 /** "change written warning to verbal warning" — the new level, after the change. */
 const CHANGED_TO =
@@ -272,9 +272,9 @@ function classify(text: string, start: number, end: number, today: string, cued:
   // A past act today is the one being documented; on no stated day it is asked about.
   if (cue === "past") return when === "today" ? "current" : "unclear";
   // "Verbal warning for Sarah Test" — the turn opens by naming this form's
-  // level, as a request: followed by who it is for, a pause, or nothing.
+  // level, as a request: followed by who it is for, today, a pause, or nothing.
   // "Written warning wasn't enough" opens the same way and is an account.
-  if (opensTurn && OPENING.test(before) && /^\s*(?:for\b|[-—–,:]|$)/.test(after)) return "current";
+  if (opensTurn && OPENING.test(before) && /^\s*(?:for\b|[-—–,:]|$|today\b|this\s+time\b|please\b)/.test(after)) return "current";
   // Nothing says whether this is the warning being issued now: ask.
   return "unclear";
 }
