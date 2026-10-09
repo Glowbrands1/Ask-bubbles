@@ -807,6 +807,37 @@
    * the 2023 guidelines' pattern page, drawn once per screen at most. The wave
    * image is used as a MASK, so it always takes the band's own colour.
    */
+  /*
+   * THE BAND PAGE HEADER (PageHeader `band`, ReportBand): the Tokyo Green
+   * ground and the hanging wave run past the page's max-width to both edges
+   * of the main column, which clips them (`overflow-x-clip` on <main>).
+   */
+  .page-band {
+    position: relative;
+    isolation: isolate;
+  }
+  .page-band::before,
+  .page-band::after {
+    content: "";
+    position: absolute;
+    left: -100vw;
+    right: -100vw;
+    z-index: -1;
+    background: var(--band);
+    pointer-events: none;
+  }
+  .page-band::before {
+    top: 0;
+    bottom: 0;
+  }
+  .page-band::after {
+    bottom: -13px;
+    height: 14px;
+    transform: scaleY(-1);
+    -webkit-mask: var(--wave-edge) repeat-x 0 0 / auto 100%;
+    mask: var(--wave-edge) repeat-x 0 0 / auto 100%;
+  }
+
   .wave-edge {
     position: relative;
   }
@@ -878,6 +909,21 @@
   }
   .canvas-pattern[data-backdrop="none"] {
     display: none;
+  }
+  /* The band pages: the chat canvas — the same pattern, whole page, no fade. */
+  .canvas-pattern[data-backdrop="band"] {
+    opacity: var(--pattern-chat-opacity);
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  /*
+   * Grey text on the soft-tint canvas would be 3.7:1, so on the band pages
+   * muted and subtle ink take the body ink (4.8:1 even on a drawing line;
+   * 8.8:1 on White cards).
+   */
+  [data-canvas="band"] {
+    --muted-foreground: var(--bcs-ink-body);
+    --subtle-foreground: var(--bcs-ink-body);
   }
   /*
    * THE CHAT CANVAS PATTERN — the same drawings as the page canvas, across the
@@ -975,7 +1021,7 @@
     }
   }
   @media (max-width: 767px) {
-    .canvas-pattern {
+    .canvas-pattern:not([data-backdrop="band"]) {
       display: none;
     }
   }

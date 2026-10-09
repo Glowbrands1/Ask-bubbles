@@ -518,9 +518,13 @@ describe("typography keeps the display face out of body copy", () => {
       .filter((path) => /\bdisplay-lettering\b/.test(codeOf(path)))
       .map((path) => path.slice(path.indexOf("src/")))
       .sort();
+    // Plus the band page headers (9 Oct 2026: "apply the same header" to the
+    // work screens), drawn once in PageHeader and once in ReportBand.
     expect(users).toEqual([
+      "src/components/ui/layout.tsx",
       "src/features/chat/chat-screen.tsx",
       "src/features/dashboard/ask-band.tsx",
+      "src/features/reports/report-frame.tsx",
     ]);
   });
 
@@ -820,9 +824,33 @@ describe("the brand backgrounds stay decorative", () => {
     );
   });
 
-  it("keeps phones' page canvas and the form editor plain", () => {
-    expect(GLOBALS_CODE).toMatch(/@media \(max-width: 767px\) \{\s*\.canvas-pattern \{\s*display: none;/);
+  it("keeps phones' page canvas and the form editor plain, except on the band pages", () => {
+    expect(GLOBALS_CODE).toMatch(
+      /@media \(max-width: 767px\) \{\s*\.canvas-pattern:not\(\[data-backdrop="band"\]\) \{\s*display: none;/,
+    );
     expect(GLOBALS_CODE).toMatch(/\.canvas-pattern\[data-backdrop="none"\] \{\s*display: none;/);
+  });
+
+  it("gives the band pages the chat canvas, with readable grey ink", () => {
+    // The whole canvas, at the chat opacity, with no edge fade.
+    const band = /\.canvas-pattern\[data-backdrop="band"\] \{([^}]+)\}/.exec(GLOBALS_CODE)?.[1] ?? "";
+    expect(band).toContain("opacity: var(--pattern-chat-opacity)");
+    expect(band).toContain("mask-image: none");
+    // Grey ink becomes body ink there, and holds 4.5:1 on a drawing line.
+    const scope = /\[data-canvas="band"\] \{([^}]+)\}/.exec(GLOBALS_CODE)?.[1] ?? "";
+    expect(scope).toContain("--muted-foreground: var(--bcs-ink-body)");
+    expect(scope).toContain("--subtle-foreground: var(--bcs-ink-body)");
+    const line = onLine(
+      PALETTE["--bcs-tokyo-dark"],
+      resolveHex("--chat-canvas"),
+      opacity("--pattern-chat-opacity"),
+    );
+    expect(contrast(resolveHex("--bcs-ink-body"), line)).toBeGreaterThanOrEqual(4.5);
+
+    const shell = codeOf(join(SOURCE_DIR, "components", "shell", "app-shell.tsx"));
+    expect(shell).toContain('backdrop === "band" ? "bg-chat-canvas" : "bg-background"');
+    expect(shell).toContain('data-canvas={backdrop === "band" ? "band" : undefined}');
+    expect(shell).toContain('<main id="main" className="min-w-0 flex-1 overflow-x-clip">');
   });
 
   it("keeps the hero and chat drawings behind their content", () => {
@@ -842,7 +870,8 @@ describe("the brand backgrounds stay decorative", () => {
 
   it("is wired into the shell, the sidebar, the Home band and the chat as decoration", () => {
     const shell = codeOf(join(SOURCE_DIR, "components", "shell", "app-shell.tsx"));
-    expect(shell).toMatch(/<div aria-hidden className="canvas-pattern" data-backdrop=\{backdropForPath\(pathname\)\} \/>/);
+    expect(shell).toContain("const backdrop = backdropForPath(pathname);");
+    expect(shell).toContain('<div aria-hidden className="canvas-pattern" data-backdrop={backdrop} />');
     // The page column sits above the fixed layer.
     expect(shell).toContain('className="relative z-[1] flex min-w-0 flex-1 flex-col"');
     const sidebar = codeOf(join(SOURCE_DIR, "components", "shell", "sidebar.tsx"));
