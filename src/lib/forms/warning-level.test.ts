@@ -108,6 +108,8 @@ describe("a level stated for THIS form", () => {
     ["verbal warning (today)", "verbal"],
     // The level as the last word of the turn (owner's retest variants, PR #8).
     ["jordan testperson cash handling written warning", "written"],
+    // Positive evidence: the level right after today's incident.
+    ["She was 30 minutes late today, verbal warning.", "verbal"],
     ["need a CA for jordan testperson. she mishandled cash at close yesterday. written warning", "written"],
     ["verbal warning this morning", "verbal"],
     ["she's going to get a written warning", "written"],
@@ -253,8 +255,17 @@ describe("history phrasings found in review never become this form's level", () 
     "late again today. a while back written warning",
     "late again today. same deal as spring: written warning",
     "late again today. her old manager did a written warning",
+    // Re-check at a73ef6c: the own-sentence branch, and one modifier before the level.
+    ...[
+      "back in the summer", "a while back", "earlier this year", "over the summer", "when she started",
+      "same deal as spring", "she messed up in the spring", "her old manager did one", "we talked at her review",
+      "spring was rough", "q3 review", "annual review", "old manager", "2025", "this summer",
+    ].map((sentence) => `create a ca form for paulyne test, she was late again for 30 mins today. ${sentence}. written warning`),
+    ...[
+      "prev", "former", "orig", "existing", "outstanding", "active", "spring", "summer", "q3", "2025", "monday",
+      "wk1", "review", "probation", "onboarding", "90 day",
+    ].map((word) => `create a ca form for paulyne test, she was late again for 30 mins today. ${word} written warning`),
     // A level after a clause with its own structure is asked, not read.
-    "She was 30 minutes late today, verbal warning.",
     "she was late last night, verbal warning",
     // Final re-check (PR #10): history opening a reply, then "now/today" in the next clause.
     "written warning on the 21st, now late again",

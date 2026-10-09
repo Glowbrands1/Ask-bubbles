@@ -1,6 +1,7 @@
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
+import { namesIncidentTopicIn } from "./incident-topic";
 import { canonicalWarningWording, detectTemplateIntent } from "./template-intent";
 
 /**
@@ -106,7 +107,7 @@ const LEAD_IN = String.raw`(?:(?:actually|no|nope|sorry|oops|wait|correction|ok|
  * heads-up", "a written statement").
  */
 const BARE_AFTER_CUE =
-  /\b(?:make\s+(?:it|this|that)(?:\s+a)?|keep\s+(?:it|this)(?:\s+(?:at|as))?(?:\s+a)?|should\s+(?:have\s+)?be(?:en)?(?:\s+a)?|needs?\s+to\s+be(?:\s+a)?|it'?s(?:\s+a)?|it\s+is(?:\s+a)?|this\s+is(?:\s+a)?|go(?:ing)?\s+with(?:\s+a)?|just(?:\s+a)?|only(?:\s+a)?|mark\s+(?:it\s+)?as(?:\s+a)?|tick|check|select|meant|mean)\s+(verbal|written)\b(?=\s*(?:$|[.,;!?\n)]|one\b|please\b|instead\b|not\b|this\s+time\b|for\s+(?:this|today|now)\b|rather\b|then\b|thanks?\b))/gi;
+  /\b(?:make\s+(?:it|this|that)(?:\s+a)?|keep\s+(?:it|this)(?:\s+(?:at|as))?(?:\s+a)?|should\s+(?:have\s+)?be(?:en)?(?:\s+a)?|needs?\s+to\s+be(?:\s+a)?|it'?s(?:\s+a)?|it\s+is(?:\s+a)?|this\s+is(?:\s+a)?|go(?:ing)?\s+with(?:\s+a)?|just(?:\s+a)?|only(?:\s+a)?|mark\s+(?:it\s+)?as(?:\s+a)?|tick|check|select|meant|mean)\s+(verbal|written)\b(?=\s*(?:$|[.,;!?\n)]|one\b|please\b|instead\b|not\b|this\s+time\b|for\s+(?:this|today|now|sure|real)\b|rather\b|then\b|thanks?\b))/gi;
 
 /**
  * "give jordan a verbal for being late", "needs a written", "deserves a final
@@ -371,22 +372,21 @@ function classify(text: string, start: number, end: number, today: string, cued:
   /*
    * THE LEVEL AS THE LAST WORD, OR AS A SENTENCE OF ITS OWN — "jordan
    * testperson cash handling written warning", "…at close yesterday. written
-   * warning." (owner's retest variants, PR #8). That is the manager naming this
-   * form's level, unless the same turn lists earlier steps ("coached",
-   * "warned", "written up", "prior"), where a trailing level reads as one more
-   * item of history and is asked about instead.
+   * warning." (owner's retest variants, PR #8). Read only on POSITIVE
+   * evidence that it follows an account of THIS incident: the words right
+   * before it name an incident ("cash handling", "late", "no call no show"),
+   * and carry no time other than today or yesterday. Anything else — "back in
+   * the summer. written warning", "prev written warning", "q3 review. written
+   * warning" — is asked about. A list of past phrasings would always miss one.
    */
-  const ownSentence = before.trim() === "" && after.trim() === "";
-  /*
-   * At the end of a clause, only after a bare name-and-incident run of words
-   * — "jordan testperson cash handling written warning". Any preposition,
-   * time word, verb, pronoun or punctuation in front of it ("back in the
-   * summer, written warning", "her old manager did a written warning") makes
-   * it a statement about something else, and it is asked about. Structural,
-   * so a past phrasing nobody listed cannot slip through.
-   */
-  const bareTrail = /^[\s.!]*$/.test(text.slice(end)) && !CLAUSE_HAS_STRUCTURE.test(before);
-  if ((ownSentence || bareTrail) && !pointsToThePast(text.slice(0, start), today)) return "current";
+  if (/^[\s.!]*$/.test(text.slice(end)) || (before.trim() === "" && after.trim() === "")) {
+    const account = before.trim() !== "" ? before : previousSentence(text, start);
+    const lastWords = account.trim().split(/\s+/).slice(-2).join(" ");
+    const followsIncident = before.trim() === "" ? namesIncidentTopicIn(account) : namesIncidentTopicIn(lastWords);
+    if (followsIncident && !OTHER_TIME.test(account) && !pointsToThePast(text.slice(0, start), today)) {
+      return "current";
+    }
+  }
   // Nothing says whether this is the warning being issued now: ask.
   return "unclear";
 }
@@ -402,9 +402,20 @@ function classify(text: string, start: number, end: number, today: string, cued:
 const LISTS_EARLIER_STEPS =
   /\b(?:coach(?:ed|ing)?|warned|warnings?|written\s+up|write[- ]?ups?|disciplin\w*|previous(?:ly)?|prior|history|already|before|last\s+(?:week|month|year|time|ca|one|warning|corrective)|ago|first\s+(?:time|offen[cs]e|one)|record|file|shows|had|has|got|received|given|issued|was\s+(?:a|an|her|his)|remember|same\s+(?:as|thing)|like\s+the|january|february|march|april|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept?|oct|nov|dec)\b/i;
 
-/** Function words and punctuation that give a clause a structure of its own. */
-const CLAUSE_HAS_STRUCTURE =
-  /\b(?:in|on|at|during|when|whenever|since|back|over|after|before|from|for|with|by|about|ago|while|until|last|earlier|this|that|then|as|like|than|same|was|were|did|do|does|had|has|have|got|gave|given|is|are|been|be|she|he|they|her|his|their|i|we|my|our|it|its|there|which|who|old|previous|prior|time)\b|[,:;–—-]/i;
+/**
+ * A time in an account that is not today's or yesterday's — a season, a year,
+ * a quarter, a review, "back", "when she started" — which makes a level after
+ * it a statement about then.
+ */
+const OTHER_TIME =
+  /\b(?:spring|summer|fall|autumn|winter|q[1-4]|(?:19|20)\d\d|review|probation|onboarding|started|while|back|earlier|ago|last\s+(?:week|month|year|time)|old|former|prev|orig\w*|existing|outstanding|active|\d+\s*(?:-\s*)?days?|wk\d*|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
+
+/** The sentence before the one `index` sits in. */
+function previousSentence(text: string, index: number): string {
+  const head = text.slice(0, index).replace(/[\s.!]+$/, "");
+  const breakAt = Math.max(...[".", ";", "!", "?", "\n"].map((mark) => head.lastIndexOf(mark)));
+  return head.slice(breakAt + 1);
+}
 
 function pointsToThePast(textBefore: string, today: string): boolean {
   if (LISTS_EARLIER_STEPS.test(textBefore)) return true;

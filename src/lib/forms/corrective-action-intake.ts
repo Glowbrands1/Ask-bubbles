@@ -5,6 +5,7 @@ import {
   statedPayrollDeduct,
   type PayrollDeductAnswer,
 } from "./payroll-deduct";
+import { INCIDENT_TOPIC_PATTERNS } from "./incident-topic";
 import { statedWarningLevel, type WarningLevel } from "./warning-level";
 
 /**
@@ -315,19 +316,7 @@ export function statesRepeatedBehaviour(text: string): boolean {
  * guards. It is only the difference between a manager who has described
  * something and one who has typed nothing but the form's name.
  */
-const INCIDENT_TOPIC: readonly RegExp[] = [
-  /\b(?:late|lateness|tardy|tardiness|overslept)\b/,
-  /\b(?:left early|leaving early|clocked out early)\b/,
-  /\b(?:absent|absence|absenteeism|no[- ]call|no[- ]show|called out|call[- ]?off|missed (?:her|his|their|the) shift)\b/,
-  /\b(?:dress code|uniform|attire|skirt|shorts|leggings|jeans|sandals|flip[- ]?flops|name tag|nametag|piercing|hoodie)\b/,
-  /\b(?:phone|cell phone|on her phone|on his phone|social media)\b/,
-  /\b(?:rude|unprofessional|argued|arguing|shouted|yelled|swore|swearing|disrespect\w*)\b/,
-  /\b(?:refus\w+|insubordinat\w+|would not follow|didn't follow|did not follow|ignored (?:my|the) (?:direction|instruction))\b/,
-  /\b(?:cash|drawer|register|till|deposit|void|refund|discount)\b/,
-  /\b(?:safety|injur\w+|hazard|spill|chemical|sanitiz\w+|sanitis\w+|cleaning|closing duties|opening duties)\b/,
-  /\b(?:harass\w+|theft|stole|stealing|dishonest\w*|falsif\w+)\b/,
-  /\b(?:standards of conduct|policy violation|violated (?:the|our) polic)\b/,
-];
+const INCIDENT_TOPIC: readonly RegExp[] = INCIDENT_TOPIC_PATTERNS;
 
 const OBSERVATIONAL_CLAUSE: readonly RegExp[] = [
   /\b(?:she|he|they|the employee|[a-z]+)\s+(?:was|were|has been|have been|had been)\s+\w+/,

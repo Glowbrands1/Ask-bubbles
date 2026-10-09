@@ -353,6 +353,9 @@ const NOT_A_PERSON = new Set([
   "the", "a", "an", "today", "now", "being", "everyone", "nobody", "someone", "same",
   "attendance", "tardiness", "lateness", "absence", "conduct", "policy", "performance", "cash", "dress",
   "uniform", "safety", "warning", "verbal", "written", "also", "and", "too", "then", "actually",
+  "but", "so", "my", "our", "your", "his", "their", "its", "traffic", "manager", "mistake", "sure", "real",
+  "bus", "car", "hr", "nobody", "everybody", "everything", "nothing", "something", "store", "shift",
+  "real", "good", "now", "it's", "that's", "what", "who", "which", "one", "please", "form", "draft", "change",
 ]);
 
 /**
@@ -366,11 +369,23 @@ function aboutSomebodyElse(message: string, employee: string): boolean {
     const w = word.toLowerCase().replace(/['’]s$/, "");
     return !NOT_A_PERSON.has(w) && !own.has(w) && !namesIncidentTopic(w);
   };
+  // "kim was late", "and jo was late", "jordan smith was late": either word of the subject.
   const subjects = message.matchAll(
-    /(?:^|[.!?;]\s*|\b(?:and|also|too|but)\s+)([a-z][a-z'’-]+)(?:\s+[a-z][a-z'’-]+)?\s+(?:was|is|has|had|got|did|left|came|showed|called|didn'?t|wasn'?t|isn'?t|keeps|kept|needs|deserves)\b/gi,
+    /(?:^|[.!?;,]\s*|\b(?:and|also|too|but)\s+)([a-z][a-z'’-]+)(?:\s+([a-z][a-z'’-]+))?\s+(?:was|were|is|are|has|had|got|did|left|came|showed|called|didn'?t|wasn'?t|isn'?t|keeps|kept|needs|deserves)\b/gi,
   );
-  for (const match of subjects) if (other(match[1]!)) return true;
-  for (const match of message.matchAll(/\bfor\s+([a-z][a-z'’-]+)\s*(?:[.!:,]|$)/gi)) if (other(match[1]!)) return true;
+  for (const match of subjects) if (other(match[1]!) || (match[2] && other(match[2]))) return true;
+  // "kim's late too", "kim's out today".
+  for (const match of message.matchAll(/\b([a-z][a-z-]+)['’]s\s+(?:late|absent|out|rude|also|been|not|on)\b/gi)) {
+    if (other(match[1]!)) return true;
+  }
+  // "change kim to verbal".
+  for (const match of message.matchAll(/\b(?:change|set|make|switch|move|put)\s+([a-z][a-z'’-]+)\s+(?:to|as|on)\b/gi)) {
+    if (other(match[1]!)) return true;
+  }
+  // "…for kim", "for jordan:", "for kim please", "for kim's form".
+  for (const match of message.matchAll(/\bfor\s+([a-z][a-z-]+)(?:['’]s\b|\s*(?:[.!:,]|$)|\s+(?:please|too|instead)\b)/gi)) {
+    if (other(match[1]!)) return true;
+  }
   return false;
 }
 
