@@ -182,6 +182,11 @@ describe("history phrasings found in review never become this form's level", () 
     "verbal warning in the past",
     "this is her second offense, first was a verbal warning",
     "she's on final warning",
+    "she's been getting verbal warnings",
+    "she's been getting a written warning every month",
+    "she gets warnings all the time",
+    "she received a verbal warning on 9/21",
+    "she has been given a written warning",
     "create a ca form for paulyne test, she was late again for 30 mins today.\nPrevious actions:\n- verbal warning\n- written warning",
   ])("%s", (text) => {
     expect(statedWarningLevel(text, TODAY)).toBeNull();

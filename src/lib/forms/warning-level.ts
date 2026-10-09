@@ -140,7 +140,7 @@ const HISTORY_CUE =
  * is "late earlier today, written warning".
  */
 const ADJACENT_HISTORY =
-  /\b(?:last|previous|prior|earlier|past|recent|most\s+recent|after|following|despite|since|from|even\s+with|has|had|have|is\s+on|was\s+on|'s\s+on|been\s+on|still\s+on|already\s+on|(?:first|last|previous|that|one)\s+was)\s+(?:(?:a|an|the|her|his|their|that|this|another)\s+)?(?:(?:last|previous|prior|recent|earlier|formal|documented)\s+)?$/i;
+  /\b(?:last|previous|prior|earlier|past|recent|most\s+recent|after|following|despite|since|from|even\s+with|has|had|have|is\s+on|was\s+on|'s\s+on|been\s+on|still\s+on|already\s+on|been\s+(?:getting|given|receiving|issued)|(?:first|last|previous|that|one)\s+was)\s+(?:(?:a|an|the|her|his|their|that|this|another)\s+)?(?:(?:last|previous|prior|recent|earlier|formal|documented)\s+)?$/i;
 
 /** "Prior actions: …", "history - …", "steps so far: …" — a list of what already happened. */
 const HISTORY_HEADING =
@@ -338,7 +338,9 @@ export function warningMentions(text: string, today: string): WarningMention[] {
     }
   }
   for (const match of source.matchAll(NAMED)) {
-    push(levelOf(match[1]!), match.index, match.index + match[0].length, false);
+    // "verbal warnings" is a pattern of past ones; this form issues one.
+    const plural = /warnings$/i.test(match[0]);
+    push(levelOf(match[1]!), match.index, match.index + match[0].length, false, plural ? "historical" : undefined);
   }
 
   return found.sort((a, b) => a.index - b.index);
