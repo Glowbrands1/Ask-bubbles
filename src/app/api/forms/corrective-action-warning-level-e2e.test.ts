@@ -576,6 +576,18 @@ describe("7. ambiguous descriptions of disciplinary history", () => {
  * ============================================================================
  */
 describe("review: a level said about another form, or as history, never lands on this one", () => {
+  it.each([
+    "written warning on the 21st, now late again",
+    "written warning 2 weeks back, now late again",
+    "written warning at her review, now late again today",
+    "written warning issued, she's late again today",
+  ])("a reply opening with past history, then the new incident: %s", async (reply) => {
+    const { proposal, result } = await conversation(["create a ca form for paulyne test, late again today", reply]);
+
+    expect(proposal.warningLevel).toBeNull();
+    expect(await ticked(result.reference.instanceId)).toEqual([]);
+  });
+
   it("a written warning stated for Jordan earlier in the chat does not tick Paulyne's form", async () => {
     const { proposal, result } = await conversation([
       "create a ca form for jordan smith, no call no show today. give a written warning",

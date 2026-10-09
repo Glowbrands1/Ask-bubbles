@@ -207,8 +207,23 @@ const ALTERNATIVE_BEFORE = /\b(?:verbal|written)(?:\s+warning)?\s+(?:or|\/)\s+(?
 const EARLIER_AFTER =
   /^[^.;!?\n]{0,30}?\b(?:last\s+(?:week|month|year|time|night|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|ago|yesterday|previously|before|already|recently|back\s+(?:in|on|then)|on\s+file|on\s+record|earlier\s+this\s+(?:week|month|year)|in\s+the\s+past|the\s+other\s+day|a\s+while\s+back|(?:in|from|since)\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*)\b/i;
 
-/** A time phrase right after the mention that places it today. */
-const TODAY_AFTER = /^[^.;!?\n]{0,30}?\b(?:today|this\s+(?:morning|afternoon|evening)|tonight|just\s+now|right\s+now|now)\b/i;
+/**
+ * A time phrase right after the mention that places it today — in the
+ * mention's own phrase, never across a comma: "written warning on the 21st,
+ * now late again" is a past warning and a new incident.
+ */
+const TODAY_AFTER = /^[^.;!?\n,]{0,30}?\b(?:today|this\s+(?:morning|afternoon|evening)|tonight|just\s+now|right\s+now|now)\b/i;
+
+/** "today" ATTACHED to the level: "verbal warning today", "issued today", "given this morning". */
+const TODAY_ATTACHED =
+  /^\s*(?:\(?\s*)?(?:(?:issued|given|delivered|done|for)\s+)?(?:today|this\s+(?:morning|afternoon|evening)|tonight)\b/i;
+
+/** "2 weeks back", "a few days earlier" — a relative past the date reader does not know. */
+const RELATIVE_EARLIER_AFTER =
+  /^[^.;!?\n]{0,30}?\b(?:\d+|a|an|one|two|three|four|few|couple(?:\s+of)?)\s+(?:days?|weeks?|months?|years?)\s+(?:back|ago|earlier|before)\b/i;
+
+/** "on the 21st" — a day of the month with no month. */
+const DAY_OF_MONTH_AFTER = /^[^.;!?\n]{0,15}?\bthe\s+(\d{1,2})(?:st|nd|rd|th)\b/i;
 
 function levelOf(word: string): WarningLevel {
   const w = word.toLowerCase().replace(/\s+/g, " ");
@@ -258,8 +273,14 @@ function nearestCue(before: string): "history" | "past" | null {
 function timing(after: string, today: string): "earlier" | "today" | "other" | null {
   const window = after.slice(0, 40);
   const dated = datesInText(window, today)[0];
-  if (dated && dated.index <= 30) return dated.iso < today ? "earlier" : dated.iso === today ? "today" : "other";
-  if (EARLIER_AFTER.test(after)) return "earlier";
+  if (dated && dated.index <= 30) {
+    // A date across a comma is another clause's ("written warning, late again on 10/9").
+    if (dated.iso === today && /,/.test(window.slice(0, dated.index))) return null;
+    return dated.iso < today ? "earlier" : dated.iso === today ? "today" : "other";
+  }
+  if (EARLIER_AFTER.test(after) || RELATIVE_EARLIER_AFTER.test(after)) return "earlier";
+  const day = DAY_OF_MONTH_AFTER.exec(after);
+  if (day) return Number(day[1]) === Number(today.slice(8, 10)) ? "today" : "earlier";
   if (TODAY_AFTER.test(after)) return "today";
   return null;
 }
@@ -315,7 +336,9 @@ function classify(text: string, start: number, end: number, today: string, cued:
   if (
     opensTurn &&
     OPENING.test(before) &&
-    (/^\s*(?:for\b|[-—–,:]|$|today\b|this\s+time\b|please\b)/.test(after) || when === "today")
+    (/^\s*(?:for\b|[-—–,:]|$|this\s+time\b|please\b)/.test(after) ||
+      TODAY_ATTACHED.test(after) ||
+      (when === "today" && datesInText(after.slice(0, 16), today)[0]?.index !== undefined))
   ) {
     return "current";
   }

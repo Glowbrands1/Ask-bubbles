@@ -102,6 +102,8 @@ describe("a level stated for THIS form", () => {
     ["verbal warning issued today", "verbal"],
     ["verbal warning given today", "verbal"],
     ["verbal warning 10/9", "verbal"],
+    ["verbal warning (today)", "verbal"],
+    ["verbal warning this morning", "verbal"],
     ["she's going to get a written warning", "written"],
     ["another written warning", "written"],
     ["documenting a verbal warning for today", "verbal"],
@@ -212,6 +214,15 @@ describe("history phrasings found in review never become this form's level", () 
     "she receives a verbal warning every month",
     "she keeps getting verbal warnings",
     "she used to get a verbal warning every month",
+    // Final re-check (PR #10): history opening a reply, then "now/today" in the next clause.
+    "written warning on the 21st, now late again",
+    "written warning 2 weeks back, now late again",
+    "written warning at her review, now late again today",
+    "written warning issued, she's late again today",
+    "verbal warning done, now late again",
+    "verbal warning complete, now need next",
+    "verbal warning given 21st, late again today",
+    "I gave her a verbal warning, now she's late again",
     "create a ca form for paulyne test, she was late again for 30 mins today.\nPrevious actions:\n- verbal warning\n- written warning",
   ])("%s", (text) => {
     expect(statedWarningLevel(text, TODAY)).toBeNull();
