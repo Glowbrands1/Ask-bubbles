@@ -201,7 +201,7 @@ export function useInlineAsk({ reportContext, onActiveChange, surface }: InlineA
            * The form this conversation last created, so "change the date to
            * yesterday" can correct it. Revalidated server-side.
            */
-          activeFormInstanceId: activeFormInstanceFor(history),
+          activeFormInstanceId: activeFormInstanceFor(history, text),
           /* Pointers at the view. Never a figure — see the header. */
           reportContext: reportContext ?? null,
           /* Reporting only — see `AskRequest.surface`. */
@@ -235,6 +235,9 @@ export function useInlineAsk({ reportContext, onActiveChange, surface }: InlineA
             coverage: response.coverage ?? "not_applicable",
             followUpSuggestions: response.followUpSuggestions,
             formProposal: response.formProposal,
+            ...(response.formProposals && response.formProposals.length > 1
+              ? { formProposals: response.formProposals }
+              : {}),
             formSelection: response.formSelection,
           },
         ]);

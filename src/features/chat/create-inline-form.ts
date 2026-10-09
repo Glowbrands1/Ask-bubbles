@@ -184,7 +184,7 @@ export async function createInlineForm({
    * see `draftNotesFromConversation`. An assistant turn cannot reach this, and
    * neither can a turn the bounded window dropped.
    */
-  const notes = draftNotesFromConversation(messages, proposal.sourceMessageIds);
+  const notes = draftNotesFromConversation(messages, proposal.sourceMessageIds, proposal.sourceExcerpts);
   if (!draftNotesAreUsable(notes)) {
     return { reference, draftWarning: NO_NOTES_WARNING };
   }

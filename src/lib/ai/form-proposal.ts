@@ -67,7 +67,7 @@ import {
 import { businessToday } from "@/lib/business-date";
 import { extractFormDate } from "@/lib/forms/form-date-answer";
 import { endsIntake } from "@/lib/forms/proposal-continuation";
-import { clausesOf, LEAD_IN, separateQuestions } from "@/lib/forms/message-parts";
+import { LEAD_IN, separateQuestions } from "@/lib/forms/message-parts";
 import {
   answersNameConfirmation,
   matchEmployeeName,
@@ -101,6 +101,9 @@ import type {
   Role,
 } from "@/types";
 
+import { WARNING_LEVEL_LABEL, statedWarningLevel } from "@/lib/forms/warning-level";
+import { correctiveActionIssue } from "@/lib/forms/incident-issue";
+import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
 import type { AskResponse } from "./types";
 
@@ -296,6 +299,13 @@ export interface ProposalTurn {
    * form date typed as month and day. See `lib/forms/form-date-answer.ts`.
    */
   today?: string;
+  /**
+   * Set when this turn is ONE of several forms asked for in one message. The
+   * draft's sources are then only the manager's turns about this person alone
+   * — a turn naming anybody else is left out — and this request's own clause.
+   * See `lib/forms/form-requests.ts`.
+   */
+  oneOfSeveral?: { clause: string };
 }
 
 /** A template a real person may actually start today. */
@@ -362,7 +372,7 @@ function turn(
  * the card AND a line naming the question, so it can be asked on its own.
  */
 export async function proposeFormForTurn(input: ProposalTurn): Promise<AskResponse | null> {
-  const several = severalFormsRequested(input);
+  const several = await severalFormsRequested(input);
   if (several) return several;
   const answer = await proposeOneForm(input);
   if (!answer?.formProposal) return answer;
@@ -378,47 +388,108 @@ export async function proposeFormForTurn(input: ProposalTurn): Promise<AskRespon
 }
 
 /*
- * A clause is a SEPARATE request only when it reads as one on its own: it
- * names who the form is for, or asks for it with a verb. "coaching - policy
- * review" names a topic; "…, actually make it a policy review" REPLACES the
- * form (`detectTemplateIntent` reads the whole message for that); neither is a
- * second request.
+ * ============================================================================
+ * SEVERAL FORMS IN ONE MESSAGE — ONE PROPOSAL EACH
+ * ============================================================================
+ *
+ * Signed-in QA, 8 Oct 2026: "coaching form for Avery Testperson and a CA for
+ * Jordan Testperson" came back as ONE Coaching card asking which of the two it
+ * was for, and the Corrective Action was dropped. Each request is now its own
+ * proposal, read from ITS OWN CLAUSE only — its person, its date, its issue —
+ * with its own id, its own card and its own draft (`sourceExcerpts`). Nothing
+ * said about one employee is read into the other's form.
+ *
+ * Declined and conditional requests are named back, never proposed: "but no
+ * CA for Jordan" and "if Jordan is late again, a CA" create nothing. A
+ * request whose person the message does not settle is not guessed: the
+ * manager is asked who each form is for, and no card is offered until then.
  */
-const ASKS_FOR_IT =
-  /\b(?:create|make|start|draft|do|file|write|need|needs|pull\s+up|open|prepare|get\s+me|fill\s+out)\b/i;
-const REPLACES_IT =
-  /\b(?:actually|instead|rather|switch|change\s+it|make\s+it|swap|not\s+(?:a|an|the)\b)/i;
+async function severalFormsRequested(input: ProposalTurn): Promise<AskResponse | null> {
+  const reading = readFormRequests(input.question);
+  if (!reading) return null;
+  const known = (key: string) => input.summaries.some((summary) => summary.key === key);
+  const nameOf = (key: string) =>
+    input.summaries.find((summary) => summary.key === key)?.name ?? "form";
+  const requests = reading.requests.filter((request) => known(request.templateKey));
+  const named = (request: FormRequest) =>
+    `**${nameOf(request.templateKey)}**${request.employeeName ? ` for **${request.employeeName}**` : ""}`;
 
-/** The forms a message asks for in separate clauses, when there is more than one. */
-function severalFormsRequested(input: ProposalTurn): AskResponse | null {
-  const requests: { key: string; clause: string }[] = [];
-  for (const clause of clausesOf(input.question)) {
-    if (REPLACES_IT.test(clause)) return null;
-    if (!ASKS_FOR_IT.test(clause) && extractEmployeeNames(clause).length === 0) continue;
-    const intent = detectTemplateIntent(clause);
-    const key =
-      intent.kind === "explicit"
-        ? intent.templateKey
-        : intent.kind === "corrective_action" && intent.requestedCreation
-          ? "dpoa"
-          : null;
-    if (!key || requests.some((request) => request.key === key)) continue;
-    if (!input.summaries.some((summary) => summary.key === key)) continue;
-    requests.push({ key, clause });
+  const notes: string[] = [];
+  for (const request of reading.declined.filter((entry) => known(entry.templateKey))) {
+    notes.push(`I haven't started a ${named(request)}, as you said.`);
   }
-  if (requests.length < 2) return null;
+  for (const request of reading.conditional.filter((entry) => known(entry.templateKey))) {
+    notes.push(
+      `I haven't started a ${named(request)} — that depends on something that hasn't happened yet. If it does, tell me and I'll set it up.`,
+    );
+  }
 
-  const described = requests.map(({ key, clause }) => {
-    const name = input.summaries.find((summary) => summary.key === key)!.name;
-    const people = extractEmployeeNames(clause);
-    return people.length === 1 ? `a **${name}** for **${people[0]}**` : `a **${name}**`;
-  });
-  const list = `${described.slice(0, -1).join(", ")} and ${described[described.length - 1]}`;
-  const first = input.summaries.find((summary) => summary.key === requests[0]!.key)!.name;
+  if (requests.length === 0) {
+    if (reading.conditional.length === 0 || notes.length === 0) return null;
+    return { content: notes.join("\n\n"), citations: [], coverage: "not_applicable" };
+  }
+
+  if (requests.length === 1) {
+    const only = await proposeOneForm({
+      ...input,
+      question: requests[0]!.clause,
+      continueTemplateKey: undefined,
+      oneOfSeveral: { clause: requests[0]!.clause },
+    });
+    if (!only) return null;
+    return notes.length > 0 ? { ...only, content: `${only.content}\n\n${notes.join("\n\n")}` } : only;
+  }
+
+  /* Two forms, and the message does not say who one of them is for: ask, propose nothing. */
+  if (requests.some((request) => request.employeeName === null)) {
+    const list = requests.map(named);
+    return {
+      content: `You asked for ${requests.length === 2 ? "two" : String(requests.length)} forms: ${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}. Who is each one for? For example: "${nameOf(requests[0]!.templateKey)} for Avery Testperson and ${nameOf(requests[1]!.templateKey)} for Jordan Testperson".${notes.length > 0 ? `\n\n${notes.join("\n\n")}` : ""}`,
+      citations: [],
+      coverage: "not_applicable",
+    };
+  }
+
+  const answers: { request: FormRequest; answer: AskResponse | null }[] = [];
+  for (const request of requests) {
+    /*
+     * "A coaching form and a CA for Jordan": the bare clause is for the one
+     * person the message names, so it is read with them — and drafted from
+     * those words, which say nothing about anybody else.
+     */
+    const own =
+      request.employeeName && !extractEmployeeNames(request.clause).length
+        ? `${request.clause} for ${request.employeeName}`
+        : request.clause;
+    answers.push({
+      request,
+      answer: await proposeOneForm({
+        ...input,
+        question: own,
+        continueTemplateKey: undefined,
+        oneOfSeveral: { clause: own },
+      }),
+    });
+  }
+
+  const proposals = answers
+    .map(({ answer }) => answer?.formProposal)
+    .filter((proposal): proposal is ChatFormProposal => Boolean(proposal));
+  const sections = answers.map(
+    ({ request, answer }, index) =>
+      `**${index + 1}. ${nameOf(request.templateKey)} — ${request.employeeName}**\n\n${
+        answer?.content ?? "I couldn't set this one up from that message — ask for it on its own."
+      }`,
+  );
   return {
-    content: `You asked for ${requests.length === 2 ? "two" : String(requests.length)} forms in one message: ${list}. I'll do them one at a time, so nothing from one ends up on the other. Send the first on its own — for example "${first}${extractEmployeeNames(requests[0]!.clause).length === 1 ? ` for ${extractEmployeeNames(requests[0]!.clause)[0]}` : ""}" — and the next one after it.`,
+    content: [
+      `You asked for ${requests.length === 2 ? "two" : String(requests.length)} forms, so here ${proposals.length === 1 ? "is" : "are"} ${proposals.length === 1 ? "one card" : `${proposals.length === 2 ? "two" : proposals.length} separate cards`} — each is created and drafted on its own, only from what you said about that person.`,
+      ...sections,
+      ...notes,
+    ].join("\n\n"),
     citations: [],
     coverage: "not_applicable",
+    ...(proposals.length > 0 ? { formProposal: proposals[0], formProposals: proposals } : {}),
   };
 }
 
@@ -714,9 +785,19 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
    * because the facts, and the notes the draft is written from, were read from
    * every recent manager turn. See `turnsAboutThisForm`.
    */
-  const scoped = changeKind
-    ? turnsAboutThisForm(context, match.key, proposal.employeeName)
-    : context;
+  /*
+   * EVERY FORM, NOT ONLY THE EMPLOYMENT CHANGES. Found in signed-in QA: a
+   * Corrective Action asked for after three policy questions and a Coaching
+   * Form for somebody else was drafted from all six of those turns — the other
+   * employee's request and the shirt policy question included. The draft is
+   * written from `sourceMessageIds`, so that list is now the turns about this
+   * form and this person, and nothing else.
+   */
+  const scoped = turnsAboutThisForm(context, match.key, proposal.employeeName);
+  proposal.sourceMessageIds = scoped.ids;
+  if (input.oneOfSeveral && input.questionMessageId) {
+    proposal.sourceExcerpts = { [input.questionMessageId]: input.oneOfSeveral.clause };
+  }
   const facts = changeKind
     ? readEmploymentChange(
         scoped.messages.map((message) => message.content),
@@ -726,7 +807,6 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   if (changeKind && facts) {
     proposal.employeeRole = facts.current.title ?? null;
     proposal.formDate = formDateFor(scoped.text, input.today ?? businessToday());
-    proposal.sourceMessageIds = scoped.ids;
   }
 
   if (directory.question) return turn(directory.question, proposal);
@@ -734,7 +814,7 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   const content =
     changeKind && facts
       ? employmentChangeContent(changeKind, facts, proposal, context)
-      : proposalContent(proposal, context, match, input.today ?? businessToday());
+      : proposalContent(proposal, scoped, match, input.today ?? businessToday());
   return turn(directory.note ? `${content}\n\n${directory.note}` : content, proposal);
 }
 
@@ -1250,17 +1330,32 @@ function turnsAboutThisForm(
     return a.join(" ") === b.join(" ") || a[0] === b[0] || trimmedLead;
   };
   let start = 0;
+  const last = context.messages.length - 1;
   context.messages.forEach((message, index) => {
     const intent = detectTemplateIntent(message.content);
     const otherForm =
       (intent.kind === "explicit" && intent.templateKey !== templateKey) ||
       intent.kind === "corrective_action";
     const names = extractEmployeeNames(message.content);
-    const otherPerson = names.length > 0 && !names.some(same);
-    if (otherForm || otherPerson) start = index + 1;
+    // A turn that also names somebody else is about them too, and stays off this form.
+    const otherPerson = names.length > 0 && !names.every(same);
+    if (index < last && (otherForm || otherPerson)) start = index + 1;
   });
+  /*
+   * A QUESTION THAT NAMES NOBODY IS NOT PART OF THE ACCOUNT. "What does the
+   * manual say about shirts?" asked before "jordan needs a written warning"
+   * says nothing about Jordan, and a draft written from it puts the shirt
+   * policy on a disciplinary record. The current turn always stays.
+   */
   // The current turn is always the last one, so there is always at least it.
-  const messages = context.messages.slice(Math.min(start, context.messages.length - 1));
+  const messages = context.messages
+    .slice(Math.min(start, last))
+    .filter(
+      (message, index, kept) =>
+        index === kept.length - 1 ||
+        !isQuestion(message.content) ||
+        extractEmployeeNames(message.content).some(same),
+    );
   return {
     ...context,
     messages,
@@ -1597,6 +1692,8 @@ function proposalContent(
   }
 
   if (isCorrectiveActionForm(match)) {
+    proposal.warningLevel = statedWarningLevel(context.text);
+    proposal.issue = correctiveActionIssue(context.text, proposal.employeeName);
     const intake = readCorrectiveActionIntake({
       text: context.text,
       employeeKnown: proposal.employeeName !== null,
@@ -1784,7 +1881,7 @@ function correctiveActionReady(
   policy: CaPolicyReading,
 ): string {
   const outstanding = intake.missingRequired
-    .filter((item) => item.key === "warning_level" || item.key === "previous_action")
+    .filter((item) => (item.key === "warning_level" && !proposal.warningLevel) || item.key === "previous_action")
     .map((item) =>
       item.key === "warning_level" ? "the verbal/written warning level" : "any prior coaching or corrective action",
     );
@@ -1792,6 +1889,16 @@ function correctiveActionReady(
   const lines = [
     `I'll draft a **${proposal.templateName}** for **${proposal.employeeName}** from what you've described, and check the applicable company policy before anything policy-related goes on it.`,
   ];
+
+  /*
+   * WHAT THE MANAGER SAID, READ BACK before anything is created: the issue and
+   * the warning level. Signed-in QA, 8 Oct 2026, found both lost — the issue
+   * became the employee's name and the stated level was left unticked.
+   */
+  const stated: string[] = [];
+  if (proposal.issue) stated.push(`**Issue:** ${proposal.issue}`);
+  if (proposal.warningLevel) stated.push(`**Type of warning:** ${WARNING_LEVEL_LABEL[proposal.warningLevel]}, as you said`);
+  if (stated.length > 0) lines.push("", stated.join(" · "));
 
   /*
    * THE POLICY, SUGGESTED OR ASKED — never left silently to the drafting

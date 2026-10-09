@@ -168,9 +168,22 @@ export async function POST(request: Request) {
               today: parsed.context.todayIso,
             })
           : null;
+      /*
+       * Two forms from one message, and a correction that names neither: ask
+       * which, change nothing. See `askWhichFormToCorrect`.
+       */
+      const which =
+        !correction && !revision && !parsed.activeFormInstanceId && (parsed.activeFormCandidateIds?.length ?? 0) > 1
+          ? await (await import("@/lib/forms/chat-correction")).askWhichFormToCorrect({
+              request,
+              instanceIds: parsed.activeFormCandidateIds!,
+              question: parsed.question,
+            })
+          : null;
       answer =
         correction ??
         revision ??
+        which ??
         (await answerQuestion(parsed, {
           role: context.identity.role,
           scope: context.identity.scope,
@@ -249,6 +262,13 @@ function parseAskRequest(body: Partial<AskRequest>): AskRequest {
     // An id and nothing more; malformed ones are dropped rather than looked up.
     activeFormInstanceId: UUID.test(String(body.activeFormInstanceId ?? ""))
       ? String(body.activeFormInstanceId)
+      : undefined,
+    // Ids and nothing more, at most six; malformed ones are dropped.
+    activeFormCandidateIds: Array.isArray(body.activeFormCandidateIds)
+      ? body.activeFormCandidateIds
+          .slice(0, 6)
+          .map((id: unknown) => String(id ?? ""))
+          .filter((id: string) => UUID.test(id))
       : undefined,
     /*
      * THE MOST IMPORTANT OF THE SIX. Chat retrieves knowledge without the

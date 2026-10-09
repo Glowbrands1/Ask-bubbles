@@ -115,6 +115,7 @@ import {
   withConductOffense,
   withStatedOffense,
 } from "@/lib/forms/ca-policy";
+import { statedWarningLevel } from "@/lib/forms/warning-level";
 import { priorStepDate } from "@/lib/forms/form-date-answer";
 import {
   COACHING_CONTEXT_RULES,
@@ -1215,9 +1216,23 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       ? withConductOffense({ checked: enforced.checked, values: enforced.values })
       : null;
     const offenseChange = statedOffense ?? conductOffense;
-    const validated = offenseChange
+    const offenseApplied = offenseChange
       ? { ...enforced, values: offenseChange.values, checked: offenseChange.checked }
       : enforced;
+
+    /*
+     * THE WARNING LEVEL THE MANAGER STATED is the one ticked, whatever the
+     * model chose — "needs a written warning" is not the model's decision to
+     * make. Nothing is ticked for them when they stated none. See
+     * `warning-level.ts`.
+     */
+    const statedLevel = statedWarningLevel(notes);
+    const offersLevel =
+      statedLevel !== null &&
+      groups.some((group) => group.key === "warning_type" && group.options.some((option) => option.key === statedLevel));
+    const validated = offersLevel
+      ? { ...offenseApplied, checked: { ...offenseApplied.checked, warning_type: [statedLevel!] } }
+      : offenseApplied;
 
     /*
      * ========================================================================
@@ -1326,6 +1341,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           ? policyFieldValue(manualGroundedPolicies(manual, manualSections))
           : null,
       manualAmbiguous: !manual.ok && manual.problem === "ambiguous",
+      /*
+       * Only for a version whose policy follows a Type of Offense box (the
+       * Corrective Action). The Policy Review has no offense to match a section
+       * to, and keeps its retrieval-built reference.
+       */
+      manualPinned: manual.ok && groups.some((group) => group.key === "offense_type"),
       /*
        * NARROWS THE RETRIEVAL FALLBACK to the manual itself. Without it, a form
        * ticked for an offense the manual states no section for could fall

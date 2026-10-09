@@ -327,8 +327,13 @@ const NAME_CORRECTION = new RegExp(
 /* "Actually her name is Jane Doe-Smith." — the correction said as a statement. */
 const NAME_STATEMENT =
   /^(?:(?:sorry|oops|actually|no)[,.!\s]+)*(?:her|his|their|the employee'?s|the team member'?s)\s+(?:full\s+)?name\s+is\s+(?:actually\s+)?(.+?)\s*[.!]?$/i;
+/*
+ * "Change Avery's date to …" / "change the date for Avery to …" — the person
+ * named is how one of several open forms is picked (`activeFormInstanceFor`),
+ * and the guard below still refuses it on anybody else's form.
+ */
 const DATE_CORRECTION = new RegExp(
-  String.raw`\b${VERB}\s+(?:the\s+)?(?:form(?:'s)?\s+)?date\s+(?:to|is|should be|as)\s+`,
+  String.raw`\b${VERB}\s+(?:the\s+|[a-z][a-z-]*(?:\s+[a-z][a-z-]*)?['’]s\s+)?(?:form(?:'s)?\s+)?date\s+(?:(?:for|on)\s+[a-z][a-z-]*(?:\s+[a-z][a-z-]*)?(?:['’]s)?(?:\s+form)?\s+)?(?:to|is|should be|as)\s+`,
   "i",
 );
 const DATE_STATEMENT =
@@ -603,4 +608,47 @@ function describe(
   const options = (submitted.checked[key] ?? []).map(label).join(", ");
   // The separation boxes have no question of their own; the ticked box says it all.
   return group?.label ? `${group.label} → ${options}` : `Ticked ${options}`;
+}
+
+/**
+ * ============================================================================
+ * TWO FORMS FROM ONE MESSAGE, AND A CORRECTION THAT NAMES NEITHER
+ * ============================================================================
+ *
+ * "Coaching form for Avery and a CA for Jordan" can leave two drafts open at
+ * once. "Change the date to yesterday" is then a correction to ONE of them,
+ * and which is not something to guess: the wrong employee's record would be
+ * changed. Nor may it be dropped. So it is answered with the question, naming
+ * the forms the manager can actually edit, and nothing is changed until they
+ * say whose. A correction that names the person is routed by the browser to
+ * that form (`activeFormInstanceFor`) and never reaches this.
+ *
+ * Every id is re-authorized for "edit" — a forged one is simply not named.
+ */
+export async function askWhichFormToCorrect(input: {
+  request: Request;
+  instanceIds: readonly string[];
+  question: string;
+}): Promise<AskResponse | null> {
+  const { statements } = separateQuestions(input.question);
+  if (!statements || !INSTRUCTION.test(statements)) return null;
+  if (detectTemplateIntent(statements).kind !== "none") return null;
+
+  const forms: string[] = [];
+  for (const instanceId of input.instanceIds.slice(0, 6)) {
+    try {
+      const { loaded } = await authorizeInstance(input.request, instanceId, "edit");
+      forms.push(
+        `**${loaded.instance.templateName}**${loaded.instance.employeeName ? ` for **${loaded.instance.employeeName}**` : ""}`,
+      );
+    } catch {
+      // Not visible to this person: not offered.
+    }
+  }
+  if (forms.length < 2) return null;
+  return {
+    content: `You have ${forms.length === 2 ? "two" : String(forms.length)} forms open from that message — ${forms.slice(0, -1).join(", ")} or ${forms[forms.length - 1]}. Which one should I change? Say it again with the person's name, and I'll change only that form. Nothing has been changed yet.`,
+    citations: [],
+    coverage: "not_applicable",
+  };
 }

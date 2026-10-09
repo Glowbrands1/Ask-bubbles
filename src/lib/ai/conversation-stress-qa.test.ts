@@ -104,6 +104,7 @@ async function converse(...turns: string[]): Promise<Replay> {
       content: answer?.content ?? "Here is some general guidance on handling that conversation.",
       createdAt: "2026-09-30T12:00:00Z",
       ...(answer?.formProposal ? { formProposal: answer.formProposal } : {}),
+      ...(answer?.formProposals ? { formProposals: answer.formProposals } : {}),
       ...(answer?.formSelection ? { formSelection: answer.formSelection } : {}),
     });
   }
@@ -362,19 +363,33 @@ describe("6. the exit form reads rehire, last day and notice as typed", () => {
 /* ======================== 7. several requests in one message (release review) === */
 
 describe("7. a message with more than one request never loses one", () => {
-  it("two forms for two people: both are named back, neither card is guessed", async () => {
+  /*
+   * CHANGED 8 Oct 2026, owner's signed-in QA: two forms for two people are TWO
+   * cards — not one card asking "Avery or Jordan?", and not "one at a time".
+   * Each is read from its own clause, with its own id and its own sources.
+   */
+  it("two forms for two people: two independent cards, nobody asked which", async () => {
     const replay = await converse("coaching form for avery testperson and a CA for jordan testperson");
-    expectAdvice(replay);
-    expect(replay.last.content).toContain("**Coaching Form** for **avery testperson**");
-    expect(replay.last.content).toContain("**Corrective Action Form** for **jordan testperson**");
-    expect(replay.last.content).toContain("one at a time");
+    const cards = replay.last.formProposals ?? [];
+    expect(cards.map((card) => [card.templateKey, card.employeeName?.toLowerCase()])).toEqual([
+      ["coaching", "avery testperson"],
+      ["dpoa", "jordan testperson"],
+    ]);
+    expect(new Set(cards.map((card) => card.proposalId)).size).toBe(2);
+    expect(cards.every((card) => card.status === "ready")).toBe(true);
+    expect(replay.last.content).not.toContain("Which of them");
+    const userId = replay.thread[replay.thread.length - 2]!.id;
+    expect(cards[0]!.sourceExcerpts?.[userId]).toBe("coaching form for avery testperson");
+    expect(cards[1]!.sourceExcerpts?.[userId]).toBe("a CA for jordan testperson");
   });
 
-  it("'transfer form for avery … and an exit form for jordan …' — the same", async () => {
+  it("'transfer form for avery … and an exit form for jordan …' — two cards too", async () => {
     const replay = await converse("make a transfer form for avery testperson and an exit form for jordan testperson");
-    expectAdvice(replay);
-    expect(replay.last.content).toContain("**Position Transfer Form** for **avery testperson**");
-    expect(replay.last.content).toContain("**Resignation/Exit Form** for **jordan testperson**");
+    const cards = replay.last.formProposals ?? [];
+    expect(cards.map((card) => [card.templateKey, card.employeeName?.toLowerCase()])).toEqual([
+      ["position-transfer", "avery testperson"],
+      ["resignation-exit", "jordan testperson"],
+    ]);
   });
 
   it.each([

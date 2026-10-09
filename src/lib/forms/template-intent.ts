@@ -1032,6 +1032,8 @@ const TOPIC_BEFORE =
   /(?:\btopics?(?:\s+(?:is|was|=))?\s*:?|\bsubject(?:\s+(?:is|was))?\s*:?|\breason(?:\s+(?:is|was))?\s*:?|\babout|\bregarding|\bre:?|\bconcerning|\bover)\s+(?:(?:a|an|the|her|his|their|our)\s+)?$/;
 
 /** "Make it a …", "switch to …", "change it to …": the manager changing which form. */
+const SWITCH_TO_CA =
+  /(?:\bmake\s+(?:it|this|that)|\bswitch(?:\s+(?:it|this|that))?\s+to|\bchange\s+(?:it|this|that)\s+to|\binstead(?:\s+do)?|\bactually(?:\s+(?:do|use|want))?)\s+(?:(?:a|an|the)\s+)?corrective action(?:\s+form)?\b/;
 const SWITCH_BEFORE =
   /(?:\bmake\s+(?:it|this|that)|\bswitch(?:\s+(?:it|this|that))?\s+to|\bchange\s+(?:it|this|that)\s+to|\binstead(?:\s+do)?|\bactually(?:\s+(?:do|use|want))?)\s+(?:(?:a|an|the)\s+)?$/;
 
@@ -1093,6 +1095,16 @@ function requestedNaming(q: string, original: string): { key: string; phrase: st
     return !NEGATED_BEFORE.test(before) && !TOPIC_BEFORE.test(before);
   });
   if (wanted.length === 0) return null;
+
+  /*
+   * 3b. A SWITCH TO THE CORRECTIVE ACTION, said out loud in the same message:
+   * "coaching form for Avery, actually make it a CA". "Corrective action" is
+   * deliberately not a naming of the form on its own (it names the ladder),
+   * but after "make it a" / "switch to" / "instead" it can only be the form.
+   */
+  if (SWITCH_TO_CA.test(q) && !wanted.some((naming) => naming.key === "dpoa" && SWITCH_BEFORE.test(q.slice(0, naming.start)))) {
+    return { key: "dpoa", phrase: "corrective action" };
+  }
 
   // 4. "<form> coaching": the head noun is the coaching.
   for (const naming of wanted) {

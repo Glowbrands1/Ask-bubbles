@@ -429,3 +429,51 @@ A second pass looked for messages whose parts were dropped without a word. All o
 `lib/ai/prompts-stress.test.ts`, `lib/forms/typed-shorthand.test.ts`, and
 `e2e/chat-intent.spec.ts` (browser). Run against the pre-change source, 76 of
 the new unit tests fail.
+
+## 10. Owner's signed-in QA, 8 Oct 2026 — two release-blocking cases
+
+**Where they were seen.** Vercel runtime logs for 23:28–23:30 UTC show every
+test turn served by **Production** (`askbubbles.vercel.app`, deployment
+`dpl_AsSEUXgUmko317ULMDP3NKYgPmbi`, commit `68f9c40`), not the PR #8 preview,
+which logged no traffic after 22:00. Two draft records were created in
+Production by pressing Create (a typed turn never auto-creates; only a form
+chosen from the picker does). The four pre-existing drafts are unchanged.
+
+**Case 1 — "jordan testperson needs a written warning for cash handling".**
+Production filed a Corrective Action for an employee called "cash handling",
+with no Type of Warning and the manual's cover page (p. 1) and Background
+Checks (p. 21) as Direct policy. Root causes:
+
+| Symptom | Root cause | Fix |
+|---|---|---|
+| Employee "cash handling" | 68f9c40's name reader took a topic phrase as a name (fixed earlier on this branch, §9) | — (already fixed; now proven through the routes) |
+| Draft written from unrelated turns | `sourceMessageIds` was the last six manager turns for every form except demotion/transfer — the shirt-policy question and Avery's coaching request were in the CA's notes | `turnsAboutThisForm` now scopes every form: turns about this form and this person only; a turn naming anybody else, and questions naming nobody, stay out |
+| Written Warning not ticked | Nothing read a stated level; `warning_type` was the model's alone | `warning-level.ts` reads "verbal/written warning", "final written" (not history, not negated, latest wins); the draft ticks it over the model; the card reads it back |
+| Issue not shown | Not read | `incident-issue.ts` reads "for cash handling"; the card shows **Issue:** |
+| Cover page / Background Checks cited | With no offense box ticked, Direct policy fell back to a similarity search of the manual | With the official manual pinned, Direct policy is a section matched to the ticked offense **or blank** (the form then says no approved policy matched). Cash handling is suggested as Standards of Conduct and applied **only** where the manual's own section lists "Register / Bank shortages" — the live JBA manual does (chunk 37) |
+
+**Case 2 — "coaching form for Avery Testperson and a CA for Jordan
+Testperson".** Production gave one Coaching card asking "Avery or Jordan?" and
+dropped the CA. Now each request is its own proposal (`form-requests.ts`): its
+own id, person, date, issue and level, read from its own clause, with
+`sourceExcerpts` so each draft is written from its own words only. The message
+carries `formProposals`; each card has its own Create and its own
+`formInstanceRefs` entry; the create route's currency check accepts each card
+of a multi-form turn. Declined ("but no CA for Jordan") and conditional ("if
+Jordan is late again, a CA") forms are named back and never proposed; a
+same-message switch ("…, actually make it a CA") is one form; "coaching form
+for Avery and Jordan" (one form, two people) is still asked about (QA F18),
+while "coaching forms for…" gives one each. After two drafts exist, a
+correction naming a person changes only that person's form, and one naming
+nobody is answered with "which one?" and changes nothing.
+
+**Evidence.** `src/app/api/forms/multi-form-chat-e2e.test.ts` drives both
+cases through `POST /api/chat` → `createInlineForm` → `POST
+/api/forms/instances` → `POST …/draft` → the stored rows (20 tests);
+`inline-form.dom.test.tsx` (two independent cards); `form-requests.test.ts`,
+`warning-level.test.ts`; `e2e/multi-form-cards.spec.ts` (built demo, desktop
+and mobile).
+
+**Open decision.** A name typed in lower case is kept as typed ("jordan
+testperson"), as the existing tests require; title-casing it is a one-line
+change if wanted.
