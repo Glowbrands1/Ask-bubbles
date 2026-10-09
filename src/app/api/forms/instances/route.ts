@@ -14,6 +14,7 @@ import {
   findDemoInstances,
   InstanceProtectedError,
   listInstances,
+  loadInstance,
   type InstanceView,
 } from "@/lib/forms/instances";
 import { instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-scope";
@@ -28,6 +29,15 @@ import {
   PAYROLL_DEDUCT_STATED_KEYS,
   payrollDeductChecked,
 } from "@/lib/forms/payroll-deduct";
+import {
+  WARNING_LEVEL_STATED_KEYS,
+  WARNING_TYPE_KEY,
+  isWarningLevel,
+  warningLevelChecked,
+  warningLevelFromConversation,
+} from "@/lib/forms/warning-level";
+import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
+import { businessToday } from "@/lib/business-date";
 import type { Permission } from "@/types";
 
 /**
@@ -121,6 +131,7 @@ export async function POST(request: Request) {
       source?: "manual" | "assistant";
       formDate?: string;
       payrollDeduct?: unknown;
+      warningLevel?: unknown;
       /** The chat the proposal came from, for `checkProposalIsCurrent`. Ask Bubbles only. */
       conversation?: unknown;
       /** The card's id: a repeated press of the same card returns its draft. */
@@ -264,6 +275,38 @@ export async function POST(request: Request) {
         { values: {}, checked: payrollDeductChecked(body.payrollDeduct) },
         actor.id,
         PAYROLL_DEDUCT_STATED_KEYS,
+      );
+    }
+
+    /*
+     * THE TYPE OF WARNING, AS THE MANAGER STATED IT FOR THIS FORM IN CHAT.
+     *
+     * The same path as the payroll answer: the manager's own statement, only
+     * where the pinned version offers that level, never a default. It is
+     * written only when the conversation the card was built from is sent and,
+     * re-read here, states the same level — a level the client asserts
+     * without that conversation is dropped, and the box starts empty. See
+     * `lib/forms/warning-level.ts`.
+     */
+    const warningLevel =
+      isWarningLevel(body.warningLevel) &&
+      body.source === "assistant" &&
+      Array.isArray(body.conversation) &&
+      warningLevelFromConversation(parseHistory(body.conversation), businessToday()) === body.warningLevel
+        ? body.warningLevel
+        : null;
+    if (warningLevel) {
+      const loaded = await loadInstance(String(instance.id));
+      const offered = loaded
+        ? (checkboxGroupsForVariant(parseFormDocument(loaded.version.document), loaded.instance.variantKey)
+            .find((group) => group.key === WARNING_TYPE_KEY)
+            ?.options.map((option) => option.key) ?? [])
+        : [];
+      await applyStatedFacts(
+        String(instance.id),
+        { values: {}, checked: warningLevelChecked(warningLevel, offered) },
+        actor.id,
+        WARNING_LEVEL_STATED_KEYS,
       );
     }
 

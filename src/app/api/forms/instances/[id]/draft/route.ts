@@ -115,7 +115,6 @@ import {
   withConductOffense,
   withStatedOffense,
 } from "@/lib/forms/ca-policy";
-import { statedWarningLevel } from "@/lib/forms/warning-level";
 import { priorStepDate } from "@/lib/forms/form-date-answer";
 import {
   COACHING_CONTEXT_RULES,
@@ -143,6 +142,15 @@ import {
  */
 const PREVIOUS_ACTION_DATE_KEY = LEGACY_PREVIOUS_ACTION_DATE_KEY;
 import { EXIT_STATED_KEYS, exitDetailValues, readExitDetails } from "@/lib/forms/exit-details";
+import {
+  WARNING_LEVEL_KEYS,
+  WARNING_LEVEL_STATED_KEYS,
+  WARNING_TYPE_KEY,
+  warningLevelChecked,
+  warningLevelFromConversation,
+  withoutModelWarningLevel,
+} from "@/lib/forms/warning-level";
+import { JOIN } from "@/lib/forms/bounded-context";
 import { businessToday } from "@/lib/business-date";
 import {
   correctDraftedDates,
@@ -309,8 +317,59 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       ...fields.map((field) => field.key),
       ...groups.map((group) => group.key),
     ]);
+    /*
+     * ========================================================================
+     * THE TYPE OF WARNING IS THE MANAGER'S, NEVER THE MODEL'S
+     * ========================================================================
+     *
+     * Production, 9 Oct 2026: "she was late again for 30 mins today. given
+     * verbal warning on 9/21" came back ticked WRITTEN. The model was handed a
+     * progression ladder, an earlier verbal warning and the word "again", and
+     * it climbed one rung — the reasoning the framework asks for when a rung
+     * is being CHOSEN, applied to a box whose level is the manager's decision.
+     *
+     * So the group is taken out of what the model is shown, any level it ticks
+     * anyway is discarded below, and the box is filled from the manager's own
+     * words by `warning-level.ts` — which reads a warning already given as
+     * history, never as this form's level — as the manager's statement, and
+     * only into an empty box. Unstated stays empty: the chat asks.
+     *
+     * Read off the stored version's keys: any version whose Type of Warning
+     * offers a verbal / written level, and no other template.
+     */
+    const warningGroup =
+      groups.find(
+        (group) =>
+          group.key === WARNING_TYPE_KEY && group.options.some((option) => WARNING_LEVEL_KEYS.has(option.key)),
+      ) ?? null;
+    /*
+     * TURN BY TURN, AND ONLY THIS FORM'S TURNS. The notes are the manager's
+     * recent turns joined (`boundManagerTurns`), and reading them as one text
+     * let "give a written warning" said about somebody else's form earlier in
+     * the chat tick this one. The same reading the proposal used.
+     */
+    const statedLevel = warningGroup
+      ? warningLevelFromConversation(
+          notes.split(JOIN).map((content) => ({ role: "user", content })),
+          businessToday(),
+        )
+      : null;
+    const statedWarning = warningGroup
+      ? warningLevelChecked(
+          statedLevel,
+          warningGroup.options.map((option) => option.key),
+          warningGroup.key,
+        )
+      : {};
+    const warningStatedFacts =
+      Object.keys(statedWarning).length > 0
+        ? await applyStatedFacts(id, { values: {}, checked: statedWarning }, actor.id, WARNING_LEVEL_STATED_KEYS)
+        : [];
+
     const promptFields = fields.filter((field) => !EXIT_DERIVED_KEYS.has(field.key));
-    const promptGroups = groups.filter((group) => !EXIT_DERIVED_KEYS.has(group.key));
+    const promptGroups = groups.filter(
+      (group) => !EXIT_DERIVED_KEYS.has(group.key) && group.key !== warningGroup?.key,
+    );
 
     /*
      * THE EXIT FORM'S DETAILS LINES, FROM THE MANAGER'S OWN WORDS — the
@@ -1122,10 +1181,19 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * never mistaken for the model deciding a termination. The model still
      * cannot select it: its output never reaches the box.
      */
+    /*
+     * A WARNING LEVEL THE MODEL TICKED ANYWAY IS DISCARDED — it was never shown
+     * the group, and the level is the manager's (see `warningGroup` above).
+     * Termination and Demotion, in the same group, are still refused by the
+     * guard below and reported as such.
+     */
+    const modelWarning = warningGroup
+      ? withoutModelWarningLevel(framing.checked, warningGroup.key)
+      : { checked: framing.checked, dropped: [] as string[] };
     const sensitive = refuseSensitiveSelections({
       document,
       variantKey,
-      checked: isExitForm ? withoutDerivedKeys(framing.checked) : framing.checked,
+      checked: isExitForm ? withoutDerivedKeys(modelWarning.checked) : modelWarning.checked,
     });
 
     const exit = isExitForm
@@ -1221,18 +1289,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       : enforced;
 
     /*
-     * THE WARNING LEVEL THE MANAGER STATED is the one ticked, whatever the
-     * model chose — "needs a written warning" is not the model's decision to
-     * make. Nothing is ticked for them when they stated none. See
-     * `warning-level.ts`.
+     * THE WARNING LEVEL THE MANAGER STATED is already on the form — written
+     * above as their statement, read turn by turn from this form's turns —
+     * and the model's own level was discarded. Nothing is ticked here: an AI
+     * write of the level would overwrite a box the manager set.
      */
-    const statedLevel = statedWarningLevel(notes);
-    const offersLevel =
-      statedLevel !== null &&
-      groups.some((group) => group.key === "warning_type" && group.options.some((option) => option.key === statedLevel));
-    const validated = offersLevel
-      ? { ...offenseApplied, checked: { ...offenseApplied.checked, warning_type: [statedLevel!] } }
-      : offenseApplied;
+    const validated = offenseApplied;
 
     /*
      * ========================================================================
@@ -1629,7 +1691,15 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         : {}),
       sources: grounding.sources,
       /** Fields filled from the manager's own statements, not by the model. */
-      statedFacts: [...statedFacts, ...exitStatedFacts],
+      statedFacts: [...statedFacts, ...exitStatedFacts, ...warningStatedFacts],
+      /**
+       * Type of Warning: the level the manager stated for THIS form (null when
+       * they did not, and the box is left for them), and any level the model
+       * ticked that was discarded.
+       */
+      ...(warningGroup
+        ? { warningLevel: { stated: statedLevel, modelDiscarded: modelWarning.dropped } }
+        : {}),
     });
   } catch (error) {
     if (error instanceof InstanceNotVisibleError) {
