@@ -522,6 +522,16 @@ export interface ChatFormProposal {
    * See `lib/forms/payroll-deduct.ts`.
    */
   payrollDeduct?: "yes" | "no" | null;
+  /**
+   * The Corrective Action Form's Type of Warning for THIS form, where the
+   * MANAGER stated one — "give her a verbal warning", "make it written". A
+   * warning they described as already given ("got a verbal warning on 9/21")
+   * is history, never this. Null (or absent) when they have not said: it is
+   * never inferred and never defaulted, and Ask Bubbles asks. Sent at
+   * creation, revalidated by the create route against the pinned version, and
+   * written as the manager's statement. See `lib/forms/warning-level.ts`.
+   */
+  warningLevel?: "verbal" | "written" | "final_warning" | null;
   /** Null unless the authenticated scope proves exactly one location. */
   locationId: string | null;
   /**

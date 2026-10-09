@@ -712,11 +712,16 @@ describe("\"Create a corrective action for Sarah.\"", () => {
     expect(answer.content).toMatch(/create the draft here/i);
 
     /*
-     * WHAT IS UNRESOLVED IS NAMED, NOT REQUESTED — the manager sets it on the
-     * form, which has tick boxes for it and a chat does not.
+     * THE PRIOR HISTORY IS NAMED, NOT REQUESTED — the manager sets it on the
+     * form. THE WARNING LEVEL IS ASKED, as one question and never answered
+     * for them (production, 9 Oct 2026: an unasked level came back ticked
+     * Written). Neither holds the card up.
      */
-    expect(answer.content).toMatch(/You'll set .*warning level.* on the form/i);
+    expect(answer.content).toMatch(/You'll set any prior coaching or corrective action on the form/i);
     expect(answer.content).toMatch(/won't guess/i);
+    expect(answer.content).toContain("Is this new corrective action a **Verbal Warning** or a **Written Warning**?");
+    expect(answer.content).toMatch(/I won't choose it for you/);
+    expect(answer.formProposal!.warningLevel).toBeNull();
   });
 
   /*
@@ -1158,13 +1163,15 @@ describe("the fast path — a draft from what the manager already said", () => {
     expect(answer.formProposal!.status).toBe("ready");
   });
 
-  it("5. leaves the warning level for the form, and says so without asking", async () => {
+  it("5. asks whether the new warning is verbal or written, without holding the card up", async () => {
     const answer = await ask("Create a corrective action for Sarah Test. She wore a mini skirt today.");
 
-    // Named as the manager's to set...
-    expect(answer.content).toMatch(/You'll set the verbal\/written warning level/);
-    // ...and not asked as a question.
+    // Asked as one plain question — not the numbered intake item...
+    expect(answer.content).toContain("Is this new corrective action a **Verbal Warning** or a **Written Warning**?");
     expect(answer.content).not.toMatch(/Whether this is a verbal or written warning/);
+    // ...never answered for them, and the draft can still be created now.
+    expect(answer.formProposal!.warningLevel).toBeNull();
+    expect(answer.formProposal!.status).toBe("ready");
     expect(answer.formProposal!.supportsInlineDraft).toBe(true);
   });
 
@@ -1824,9 +1831,16 @@ describe("a form's name leading the message, across the library", () => {
     expect(answer.formSelection).toBeUndefined();
     expect(answer.content).not.toMatch(/who is this/i);
     expect(answer.content).toMatch(/I'll draft a \*\*Corrective Action Form\*\* for \*\*marlowe co\*\*/);
-    // What happened, the warning and the prior warning were all given: none is asked again.
+    // What happened and the prior warning were given: no numbered intake.
     expect(answer.content).not.toMatch(/^\d\. /m);
-    expect(answer.content).not.toMatch(/warning level/i);
+    /*
+     * THE SEPTEMBER 21 VERBAL WARNING IS HISTORY, NOT THIS FORM'S LEVEL
+     * (production, 9 Oct 2026). It is acknowledged as history, and the level
+     * of the new one is asked rather than inferred from it.
+     */
+    expect(answer.formProposal?.warningLevel).toBeNull();
+    expect(answer.content).toMatch(/treated the earlier warning you mentioned as previous corrective action history/);
+    expect(answer.content).toContain("Is this new corrective action a **Verbal Warning** or a **Written Warning**?");
   });
 
   it.each(["what is a CA?", "what is a coaching form?", "how does a demotion work?", "when should I use a demotion form?", "how does the exit process work?", "what information is needed for a transfer form?"])(

@@ -24,6 +24,12 @@ import { singleSpokenDate } from "./relative-date";
 import { detectTemplateIntent } from "./template-intent";
 import { saveInstanceValues } from "./instances";
 import { enforcePersonEdit } from "./responsibility";
+import {
+  WARNING_LEVEL_KEYS,
+  WARNING_TYPE_KEY,
+  warningLevelChecked,
+  warningLevelCorrection,
+} from "./warning-level";
 
 /**
  * ============================================================================
@@ -57,7 +63,13 @@ async function correctFromFormReaders(input: {
   const employmentCorrection = correctionValues(input.question, input.today);
   const exitCorrection = exitCorrectionValues(input.question, input.today);
   const payroll = payrollDeductCorrection(input.question);
-  if (!employmentCorrection && !exitCorrection && !payroll) return null;
+  /*
+   * "CHANGE WRITTEN WARNING TO VERBAL", "make it verbal" — the Type of
+   * Warning on a Corrective Action Form, as the manager now states it. A
+   * warning described as already given is history and corrects nothing.
+   */
+  const warning = warningLevelCorrection(input.question, input.today);
+  if (!employmentCorrection && !exitCorrection && !payroll && !warning) return null;
 
   let authorized: Awaited<ReturnType<typeof authorizeInstance>>;
   try {
@@ -80,9 +92,27 @@ async function correctFromFormReaders(input: {
   const asksPayroll = checkboxGroupsForVariant(document, variantKey).some(
     (group) => group.key === PAYROLL_DEDUCT_KEY,
   );
+  /*
+   * THE TYPE OF WARNING, on a version whose group offers the level stated —
+   * read off the version's keys, like the payroll question.
+   */
+  const warningOptions =
+    checkboxGroupsForVariant(document, variantKey)
+      .find((group) => group.key === WARNING_TYPE_KEY)
+      ?.options.map((option) => option.key) ?? [];
+  /*
+   * Only the LEVEL changes. A Termination or Demotion a manager ticked by hand
+   * on a leadership decision stays exactly as they left it.
+   */
+  const existingWarning = loaded.values.find((row) => row.fieldKey === WARNING_TYPE_KEY)?.checked ?? [];
+  const level = warningLevelChecked(warning, warningOptions)[WARNING_TYPE_KEY];
+  const warningChecked: Record<string, string[]> = level
+    ? { [WARNING_TYPE_KEY]: [...existingWarning.filter((option) => !WARNING_LEVEL_KEYS.has(option)), ...level] }
+    : {};
+  const correctsWarning = Object.keys(warningChecked).length > 0;
   // The Exit Form, read off the pinned version's keys as the drafting route does.
   const isExit = !kind && isExitDocumentKeys(responsibilityMap(document, variantKey).keys());
-  if (!kind && !isExit && !(asksPayroll && payroll)) return null;
+  if (!kind && !isExit && !(asksPayroll && payroll) && !correctsWarning) return null;
   /*
    * ==========================================================================
    * A NEW REQUEST IS NEVER A CORRECTION TO THE LAST FORM
@@ -96,11 +126,19 @@ async function correctFromFormReaders(input: {
    * which proposes the new form.
    */
   const intent = detectTemplateIntent(input.question);
+  /*
+   * "Verbal warning" and "written warning" NAME this form, so a correction of
+   * its level reads as an explicit request for it. "Make it a verbal warning"
+   * is still a correction; "make a new written warning for Jordan" is not.
+   */
+  const asksNewForm = correctsWarning
+    ? /\b(?:create|start|pull up|new|another)\b|\bmake\s+(?:a|an)\b|\bneed\s+(?:a|an)\b/i.test(input.question)
+    : /\b(?:create|make|start|pull up|new|another|need)\b/i.test(input.question);
   if (
     intent.kind === "ambiguous" ||
     intent.kind === "corrective_action" ||
     (intent.kind === "explicit" && intent.templateKey !== loaded.instance.templateKey) ||
-    (intent.kind === "explicit" && /\b(?:create|make|start|pull up|new|another|need)\b/i.test(input.question))
+    (intent.kind === "explicit" && asksNewForm)
   ) {
     return null;
   }
@@ -131,7 +169,13 @@ async function correctFromFormReaders(input: {
     ? employmentCorrection
     : isExit
       ? exitValues
-      : { values: {}, checked: payrollDeductChecked(payroll) };
+      : {
+          values: {},
+          checked: {
+            ...(asksPayroll ? payrollDeductChecked(payroll) : {}),
+            ...warningChecked,
+          },
+        };
   if (!correction) return null;
 
   const who = `**${loaded.instance.templateName}** for **${loaded.instance.employeeName}**`;
@@ -145,7 +189,7 @@ async function correctFromFormReaders(input: {
     ? CORRECTABLE_KEYS
     : isExit
       ? EXIT_CORRECTABLE_KEYS
-      : new Set([PAYROLL_DEDUCT_KEY]);
+      : new Set([PAYROLL_DEDUCT_KEY, WARNING_TYPE_KEY]);
   const restrict = <T,>(entries: Record<string, T>) =>
     Object.fromEntries(Object.entries(entries).filter(([key]) => correctable.has(key)));
   const values = restrict(correction.values);
@@ -506,6 +550,26 @@ function describe(
     return was.length > 0 ? `Unticked ${was.map(label).join(", ")}` : null;
   }
   const options = (submitted.checked[key] ?? []).map(label).join(", ");
+  /*
+   * A group printed under a section heading — the Corrective Action Form's
+   * Type of Warning — is described by that heading, and a box the correction
+   * unticked is named, so "Written Warning" visibly went.
+   */
+  const heading = group?.label || (key === WARNING_TYPE_KEY ? sectionHeading(document, variantKey, key) : null);
+  const unticked = (ticks.before[key] ?? []).filter((option) => !(submitted.checked[key] ?? []).includes(option));
+  if (heading && key === WARNING_TYPE_KEY && unticked.length > 0) {
+    return `${heading} → ${options} (${unticked.map(label).join(", ")} unticked)`;
+  }
   // The separation boxes have no question of their own; the ticked box says it all.
-  return group?.label ? `${group.label} → ${options}` : `Ticked ${options}`;
+  return heading ? `${heading} → ${options}` : `Ticked ${options}`;
+}
+
+/** The section heading a group is printed under, where it has no label of its own. */
+function sectionHeading(document: FormDocument, variantKey: string | null, key: string): string | null {
+  let heading: string | null = null;
+  for (const block of blocksForVariant(document, variantKey)) {
+    if (block.kind === "section") heading = block.label;
+    if (block.kind === "checkbox_group" && block.key === key) return heading;
+  }
+  return null;
 }

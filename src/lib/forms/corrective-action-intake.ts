@@ -1,8 +1,11 @@
+import { businessToday } from "@/lib/business-date";
+
 import {
   PAYROLL_DEDUCT_LABEL,
   statedPayrollDeduct,
   type PayrollDeductAnswer,
 } from "./payroll-deduct";
+import { statedWarningLevel, type WarningLevel } from "./warning-level";
 
 /**
  * ============================================================================
@@ -188,18 +191,24 @@ const DATE_GIVEN: readonly RegExp[] = [
 ];
 
 /**
- * The warning level, which is the Type of Warning box on the form.
+ * ============================================================================
+ * THE WARNING LEVEL IS THE ONE BEING ISSUED NOW
+ * ============================================================================
  *
- * The bare adjectives are accepted only as a WHOLE ANSWER — "5. verbal" — and
- * never mid-sentence, because "he gave her a verbal heads-up" is an account of
- * what happened rather than a decision about the document's warning level.
+ * This used to be a list of patterns that fired on ANY "verbal warning" in
+ * the manager's words. Production, 9 Oct 2026: "she was late again for 30
+ * mins today. given verbal warning on 9/21" answered "is this a verbal or
+ * written warning?" with the PREVIOUS warning, the question was never asked,
+ * and the draft came back ticked Written. A warning that was already given is
+ * the prior-actions line's business, not this one's.
+ *
+ * So the level is read by `warning-level.ts`, which tells the two apart, and
+ * only a level stated for THIS form answers the item. The final actions still
+ * count as an answer — not because they are a level, but because a manager
+ * asking for one is routed to leadership review rather than asked "verbal or
+ * written?" about a decision that is not Ask Bubbles' to draft.
  */
-const WARNING_LEVEL_GIVEN: readonly RegExp[] = [
-  /\b(?:verbal|written|final)(?:\s+written)?\s+warning\b/,
-  /\bwarning\s*(?:level|type)?\s*[:\-=]\s*(?:verbal|written|final)\b/,
-  /\b(?:termination|terminate|demotion|demote|suspension|suspend)\b/,
-  /(?:^|\n)\s*\d*[.)]?\s*(?:verbal|written)\s*[.?!]?\s*(?:$|\n)/,
-];
+const FINAL_ACTION_NAMED = /\b(?:termination|terminate|demotion|demote|suspension|suspend)\b/;
 
 /** "First time", "no prior write-ups" — a stated ABSENCE is a stated answer. */
 const PREVIOUS_NONE: readonly RegExp[] = [
@@ -397,15 +406,27 @@ export function readCorrectiveActionIntake(input: {
    * means it does — the current library.
    */
   readonly asksPayrollDeduct?: boolean;
+  /**
+   * The level the conversation stated for THIS form, where the caller read it
+   * turn by turn (`warningLevelFromConversation`). Absent, the text is read
+   * as one, against `today`.
+   */
+  readonly warningLevel?: WarningLevel | null;
+  /** The business day, `YYYY-MM-DD` — a warning dated before it is history. */
+  readonly today?: string;
 }): IntakeReading {
   const text = normalize(input.text);
+  const level =
+    input.warningLevel !== undefined
+      ? input.warningLevel
+      : statedWarningLevel(input.text, input.today ?? businessToday());
 
   const answered: Record<IntakeItemKey, boolean> = {
     employee_name: input.employeeKnown,
     salon: input.salonSettled,
     form_date: any(text, DATE_GIVEN),
     what_happened: any(text, INCIDENT_TOPIC) || any(text, OBSERVATIONAL_CLAUSE),
-    warning_level: any(text, WARNING_LEVEL_GIVEN),
+    warning_level: level !== null || FINAL_ACTION_NAMED.test(text),
     /*
      * A STATED ABSENCE ("first time") or a STATED HISTORY ("already warned
      * her last week"). A repeated incident is neither — see
