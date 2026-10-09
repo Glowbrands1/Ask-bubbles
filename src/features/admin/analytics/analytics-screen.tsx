@@ -138,6 +138,7 @@ export function AnalyticsScreen({
   return (
     <PageShell className="space-y-6">
       <PageHeader
+        band
         title="Analytics"
         description={`Who is using ${ACTIVE_BRAND.productName}, from which location, how often, and what for.`}
       />

@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { BuffCitySoapLogo } from "@/components/brand-mark";
 import { cn } from "@/lib/utils/cn";
 
 /** Standard page frame: consistent max width, gutters and vertical rhythm. */
@@ -23,14 +24,57 @@ export function PageHeader({
   title,
   description,
   actions,
+  band = false,
   className,
 }: {
   eyebrow?: string;
   title: string;
   description?: React.ReactNode;
   actions?: React.ReactNode;
+  /**
+   * The Tokyo Green page header (approved 9 Oct 2026, the chat look): full
+   * width, closed by the wave, the White Buff City Soap logo top-right on
+   * desktop and the title in the lettering face. For the band pages
+   * (`isBandPage`), whose shell draws no bar above them on desktop.
+   */
+  band?: boolean;
   className?: string;
 }) {
+  if (band) {
+    return (
+      <header
+        className={cn(
+          /*
+           * `-mt-7 lg:-mt-9` cancels PageShell's top padding so the band starts
+           * at the top of the page; `page-band` paints it edge to edge and
+           * hangs the wave below it (globals.css). Grey ink is Charcoal on the
+           * band, so ghost buttons in `actions` stay readable (5.7:1).
+           */
+          "page-band -mt-7 mb-9 flex flex-col gap-4 pt-6 pb-7 [--muted-foreground:var(--band-muted-foreground)] sm:flex-row sm:items-end sm:justify-between lg:-mt-9 lg:pt-8",
+          className,
+        )}
+      >
+        <div className="min-w-0">
+          {eyebrow ? (
+            <p className="eyebrow mb-2 text-band-muted-foreground">{eyebrow}</p>
+          ) : null}
+          <h1 className="display-lettering text-[28px] text-band-foreground sm:text-[36px]">
+            {title}
+          </h1>
+          {description ? (
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed font-medium text-band-muted-foreground">
+              {description}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 flex-col items-start gap-3 sm:items-end">
+          <BuffCitySoapLogo tone="white" className="hidden h-18 lg:block" />
+          {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header
       className={cn(
