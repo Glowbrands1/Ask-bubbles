@@ -258,19 +258,19 @@ export async function POST(request: Request) {
      * THE TYPE OF WARNING, AS THE MANAGER STATED IT FOR THIS FORM IN CHAT.
      *
      * The same path as the payroll answer: the manager's own statement, only
-     * where the pinned version offers that level, never a default. The value
-     * is re-read on the server from the conversation the card was built from
-     * when there is one, so a client cannot assert a level the manager never
-     * said; a level only the client claims is dropped. See
+     * where the pinned version offers that level, never a default. It is
+     * written only when the conversation the card was built from is sent and,
+     * re-read here, states the same level — a level the client asserts
+     * without that conversation is dropped, and the box starts empty. See
      * `lib/forms/warning-level.ts`.
      */
-    const warningLevel = isWarningLevel(body.warningLevel)
-      ? Array.isArray(body.conversation)
-        ? warningLevelFromConversation(parseHistory(body.conversation), businessToday()) === body.warningLevel
-          ? body.warningLevel
-          : null
-        : body.warningLevel
-      : null;
+    const warningLevel =
+      isWarningLevel(body.warningLevel) &&
+      body.source === "assistant" &&
+      Array.isArray(body.conversation) &&
+      warningLevelFromConversation(parseHistory(body.conversation), businessToday()) === body.warningLevel
+        ? body.warningLevel
+        : null;
     if (warningLevel) {
       const loaded = await loadInstance(String(instance.id));
       const offered = loaded

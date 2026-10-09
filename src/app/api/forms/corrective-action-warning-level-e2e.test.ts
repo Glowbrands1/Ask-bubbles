@@ -569,3 +569,104 @@ describe("7. ambiguous descriptions of disciplinary history", () => {
     expect(await ticked(forged.instance.id)).toEqual([]);
   });
 });
+
+/*
+ * ============================================================================
+ * THE INDEPENDENT REVIEW'S SCENARIOS (PR #10)
+ * ============================================================================
+ */
+describe("review: a level said about another form, or as history, never lands on this one", () => {
+  it("a written warning stated for Jordan earlier in the chat does not tick Paulyne's form", async () => {
+    const { proposal, result } = await conversation([
+      "create a ca form for jordan smith, no call no show today. give a written warning",
+      REPORT,
+    ]);
+
+    expect(proposal.employeeName).toBe("paulyne test");
+    expect(proposal.warningLevel).toBeNull();
+    expect(await ticked(result.reference.instanceId)).toEqual([]);
+  });
+
+  it.each([
+    `${REPORT}.\nPrevious actions:\n- verbal warning\n- written warning`,
+    `${REPORT}. she has a written warning from august`,
+    `${REPORT}. she is on a written warning`,
+  ])("%s -> nothing ticked, asked", async (opening) => {
+    const { proposal, content, result } = await conversation([opening]);
+
+    expect(proposal.warningLevel).toBeNull();
+    expect(content).toContain(QUESTION);
+    expect(await ticked(result.reference.instanceId)).toEqual([]);
+  });
+});
+
+describe("review: corrections apply only to this form, and never from history", () => {
+  it.each([
+    "she also has a written warning from august",
+    "fyi she is on a written warning",
+    "Previous actions:\n- verbal warning\n- written warning",
+    "jordan was late today, give him a verbal warning",
+    "also marcus no call no show, give him a written warning",
+    "for the other girl it's a written warning",
+    "kim was late too - written warning",
+    "sarah was late again today, make it a written warning",
+  ])("%s leaves the draft's Verbal tick alone", async (question) => {
+    const { result } = await conversation([`${REPORT}. give her a verbal warning for today`]);
+    const id = result.reference.instanceId;
+    expect(await ticked(id)).toEqual(["verbal"]);
+
+    expect(await correct(id, question)).toBeNull();
+    expect(await ticked(id)).toEqual(["verbal"]);
+  });
+
+  it.each([
+    "change written warning to verbal",
+    "change the written warning to verbal",
+    "change written warning to verbal for paulyne",
+    "set the warning type to verbal",
+    "verbal not written",
+    "no, verbal",
+    "actually verbal",
+    "oops i meant verbal",
+    "it should have been verbal",
+    "change paulyne's warning to verbal",
+  ])("%s updates the same draft", async (question) => {
+    const { result } = await conversation([`${REPORT}. this one is a written warning`]);
+    const id = result.reference.instanceId;
+
+    const reply = await correct(id, question);
+
+    expect(reply?.formUpdate).toEqual({ instanceId: id, updated: ["warning_type"] });
+    expect(await ticked(id)).toEqual(["verbal"]);
+    expect(store.form_instances).toHaveLength(1);
+  });
+
+  it("a level with no conversation behind it is not written at creation", async () => {
+    const forged = await call<{ instance: { id: string } }>("/api/forms/instances", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        templateKey: "dpoa",
+        employeeName: "paulyne test",
+        locationId: "loc-0310",
+        source: "assistant",
+        warningLevel: "written",
+      }),
+    });
+    expect(await ticked(forged.instance.id)).toEqual([]);
+  });
+});
+
+describe("review: the history line across the year boundary", () => {
+  it("a December warning, mentioned in January, is last December's and is not this form's level", async () => {
+    vi.setSystemTime(new Date("2027-01-05T15:00:00Z"));
+    const { proposal, result } = await conversation([
+      "create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 12/20",
+    ]);
+
+    expect(proposal.warningLevel).toBeNull();
+    const id = result.reference.instanceId;
+    expect(await ticked(id)).toEqual([]);
+    expect((await row(id, "prior_actions"))?.value).toBe("Verbal warning — signed 12/20/2026");
+  });
+});

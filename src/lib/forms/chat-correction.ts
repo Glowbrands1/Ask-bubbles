@@ -24,6 +24,7 @@ import { singleSpokenDate } from "./relative-date";
 import { detectTemplateIntent } from "./template-intent";
 import { saveInstanceValues } from "./instances";
 import { enforcePersonEdit } from "./responsibility";
+import { namesIncidentTopic } from "./corrective-action-intake";
 import {
   WARNING_LEVEL_KEYS,
   WARNING_TYPE_KEY,
@@ -68,7 +69,15 @@ async function correctFromFormReaders(input: {
    * Warning on a Corrective Action Form, as the manager now states it. A
    * warning described as already given is history and corrects nothing.
    */
-  const warning = warningLevelCorrection(input.question, input.today);
+  /*
+   * ANOTHER INCIDENT IS NOT A CORRECTION. "sarah was late today, make it a
+   * verbal warning" names somebody's conduct and asks for a level; with no
+   * change verb it is a new request, and the ordinary flow proposes it.
+   */
+  const warning =
+    namesIncidentTopic(input.question) && !/\b(?:change|switch|set|update|correct)\b/i.test(input.question)
+      ? null
+      : warningLevelCorrection(input.question, input.today);
   if (!employmentCorrection && !exitCorrection && !payroll && !warning) return null;
 
   let authorized: Awaited<ReturnType<typeof authorizeInstance>>;

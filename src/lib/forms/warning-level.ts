@@ -75,8 +75,18 @@ export interface WarningMention {
 
 /* ---------------------------------------------------------------- shapes --- */
 
+/**
+ * The most a reading looks at: one turn's worth, the bound the chat route
+ * already puts on a question. History turns are not bounded by length on
+ * their way in, and nothing here needs more than this to decide.
+ */
+const MAX_TEXT = 4000;
+
 /** A named warning, longest first so "final written warning" is one mention. */
 const NAMED = /\b(final\s+written|final|written|verbal)\s+warn(?:ing|ings)?\b/gi;
+
+/** "no, verbal", "actually verbal", "oops i meant verbal" — a correction's lead-in. */
+const LEAD_IN = String.raw`(?:(?:actually|no|nope|sorry|oops|wait|correction|ok|okay|so|rather|i\s+meant|i\s+mean|make\s+that)[\s,.:!-]*)*`;
 
 /**
  * The bare adjective, as the level of THIS form — "make it verbal", "should be
@@ -85,11 +95,26 @@ const NAMED = /\b(final\s+written|final|written|verbal)\s+warn(?:ing|ings)?\b/gi
  * heads-up", "a written statement").
  */
 const BARE_AFTER_CUE =
-  /\b(?:make\s+(?:it|this|that)(?:\s+a)?|keep\s+(?:it|this)(?:\s+(?:at|as))?(?:\s+a)?|(?:change|switch|set|move|update|correct)\s+(?:it|this|that|the\s+(?:warning|level|type))?\s*(?:to|as)(?:\s+a)?|should\s+be(?:\s+a)?|needs?\s+to\s+be(?:\s+a)?|it'?s(?:\s+a)?|it\s+is(?:\s+a)?|this\s+is(?:\s+a)?|go(?:ing)?\s+with(?:\s+a)?|just(?:\s+a)?|only(?:\s+a)?|mark\s+(?:it\s+)?as(?:\s+a)?|tick|check|select)\s+(verbal|written)\b(?=\s*(?:$|[.,;!?\n)]|one\b|please\b|instead\b|not\b|this\s+time\b|for\s+(?:this|today|now)\b|rather\b|then\b|thanks?\b))/gi;
+  /\b(?:make\s+(?:it|this|that)(?:\s+a)?|keep\s+(?:it|this)(?:\s+(?:at|as))?(?:\s+a)?|should\s+(?:have\s+)?be(?:en)?(?:\s+a)?|needs?\s+to\s+be(?:\s+a)?|it'?s(?:\s+a)?|it\s+is(?:\s+a)?|this\s+is(?:\s+a)?|go(?:ing)?\s+with(?:\s+a)?|just(?:\s+a)?|only(?:\s+a)?|mark\s+(?:it\s+)?as(?:\s+a)?|tick|check|select|meant|mean)\s+(verbal|written)\b(?=\s*(?:$|[.,;!?\n)]|one\b|please\b|instead\b|not\b|this\s+time\b|for\s+(?:this|today|now)\b|rather\b|then\b|thanks?\b))/gi;
 
-/** A whole line that is only the level — "verbal", "5. written", "Verbal warning." */
-const WHOLE_LINE =
-  /^\s*(?:\d+\s*[.):-]\s*)?(?:(?:type\s+of\s+)?warning\s*(?:level|type)?\s*[:=-]\s*)?(?:a\s+)?(final\s+written|verbal|written)(?:\s+warning)?(?:\s+(?:one|please))?\s*[.!]?\s*$/i;
+/**
+ * "change written warning to verbal", "set the warning type to verbal",
+ * "change paulyne's warning to verbal for paulyne" — the new level after a
+ * change verb, whatever follows it. The level being replaced is dropped by
+ * `REPLACED`.
+ */
+const BARE_CHANGED_TO =
+  /\b(?:change|changed|switch|switched|set|move|update|correct)\b[^.;!?\n]{0,40}?\s(?:to|into|as)\s+(?:a\s+)?(verbal|written)\b(?!\s+(?:warning\s+)?or\b)/gi;
+
+/**
+ * A whole line that is only the level — "verbal", "5. written", "Verbal
+ * warning.", "no, verbal", "verbal not written". Written without adjacent
+ * optional whitespace runs, so a long line cannot make it backtrack.
+ */
+const WHOLE_LINE = new RegExp(
+  String.raw`^\s*(?:\d+\s*[.):-]\s*)?${LEAD_IN}(?:(?:type\s+of\s+)?warning(?:\s*(?:level|type))?\s*[:=-]\s*)?(?:(?:it'?s|it\s+is|make\s+it|just|only)\s+)?(?:a\s+)?(final\s+written|verbal|written)(?:\s+warning)?(?:\s+(?:one|please))?(?:[\s,]+not\s+(?:a\s+)?(?:verbal|written)(?:\s+warning)?)?[\s.!]*$`,
+  "i",
+);
 
 /** "warning level: written", "type of warning - verbal". */
 const LABELLED =
@@ -98,14 +123,16 @@ const LABELLED =
 /* ------------------------------------------------------------------ cues --- */
 
 /*
- * The word NEAREST the mention decides it. "create ca for marlowe co she was
- * late today, got verbal warning on september 21" opens with a request, but the
- * warning is governed by "got", not by "create".
+ * A LEVEL IS THIS FORM'S ONLY WHERE SOMETHING SAYS SO. A warning named with
+ * no cue either way — "she has a written warning from august", a list under
+ * "Prior actions:", "verbal warning didn't help" — is not read as this form's
+ * level: it is unclear, and the manager is asked. Defaulting the other way is
+ * how history became a level in the first place.
  */
 
 /** It already happened, whatever date follows — anywhere in the few words before. */
 const HISTORY_CUE =
-  /\b(?:previous(?:ly)?|prior|already|has\s+had|have\s+had|had\s+had|had(?!\s+to\b)|history\s+of|on\s+file)\b/gi;
+  /\b(?:previous(?:ly)?|prior|already|has\s+had|have\s+had|had\s+had|had(?!\s+to\b)|history\s+of|on\s+file|in\s+the\s+past)\b/gi;
 
 /**
  * It already happened — but only RIGHT BEFORE the warning. "her last verbal
@@ -113,22 +140,29 @@ const HISTORY_CUE =
  * is "late earlier today, written warning".
  */
 const ADJACENT_HISTORY =
-  /\b(?:last|previous|prior|earlier|past|recent|most\s+recent|after|following|despite|since|from)\s+(?:(?:a|an|the|her|his|their|that|this)\s+)?(?:(?:last|previous|prior|recent|earlier)\s+)?$/i;
+  /\b(?:last|previous|prior|earlier|past|recent|most\s+recent|after|following|despite|since|from|even\s+with|has|had|have|is\s+on|was\s+on|'s\s+on|been\s+on|still\s+on|already\s+on|(?:first|last|previous|that|one)\s+was)\s+(?:(?:a|an|the|her|his|their|that|this|another)\s+)?(?:(?:last|previous|prior|recent|earlier|formal|documented)\s+)?$/i;
+
+/** "Prior actions: …", "history - …", "steps so far: …" — a list of what already happened. */
+const HISTORY_HEADING =
+  /\b(?:(?:prior|previous|past|earlier)\s+(?:actions?|warnings?|discipline|disciplinary(?:\s+actions?)?|corrective\s+actions?|steps|history|write[- ]?ups?)|history|steps\s+so\s+far|so\s+far|on\s+file)\s*(?:[:\-–—]|includes?\b)/i;
 
 /** It happened — this form, or an earlier one; the time beside it decides. */
 const PAST_CUE =
   /\b(?:gave|given|got|gotten|received|receiving|issued|was\s+given|were\s+given|been\s+given|wrote)\b/gi;
-
-/** A level being set for THIS form, somewhere in the few words before. */
-const CURRENT_CUE =
-  /\b(?:give|giving|issue|issuing|create|creating|write|writing|make|making|do|doing|document|documenting|prepare|draft|file|filing|start|need|needs|want|wants|this\s+is|it'?s|it\s+is|should\s+be|will\s+be|would\s+be|to\s+be|change|switch|set|mark|go\s+with|going\s+with|keep|use)\b/gi;
 
 /**
  * A level being set for THIS form, RIGHT BEFORE the warning — "give her a
  * written warning on 10/2" is this form even though a date follows.
  */
 const ADJACENT_CURRENT =
-  /\b(?:give|giving|issue|issuing|create|creating|write|writing|make|making|do|doing|document|documenting|prepare|draft|file|filing|start|need|needs|want|wants|this\s+is|it'?s|it\s+is|should\s+be|will\s+be|would\s+be|to\s+be|change|switch|set|mark|go\s+with|going\s+with|keep|use|current|new|another|second|third|today'?s)\s+(?:(?:her|him|them|it|this)\s+)?(?:(?:a|an|the|as|to|at)\s+)?(?:(?:formal|official|documented|new|second|third|another)\s+)?$/i;
+  /\b(?:give|giving|issue|issuing|create|creating|write|writing|make|making|do|doing|document|documenting|prepare|draft|file|filing|start|need|needs|want|wants|(?:this|it|that)(?:\s+one)?\s+(?:is|will\s+be|should\s+be|would\s+be|needs\s+to\s+be)|it'?s|should\s+be|will\s+be|would\s+be|to\s+be|go\s+with|going\s+with|keep|use|current|new|another|second|third|today'?s|put\s+(?:her|him|them)\s+on)\s+(?:(?:her|him|them|it|this)\s+)?(?:(?:a|an|the|as|to|at)\s+)?(?:(?:formal|official|documented|new|second|third|another|final)\s+)?$/i;
+
+/** "change written warning to verbal warning" — the new level, after the change. */
+const CHANGED_TO =
+  /\b(?:change|changed|switch|switched|set|move|update|correct|make)\b[^.;!?\n]{0,40}?\s(?:to|into|as)\s+(?:(?:a|an)\s+)?$/i;
+
+/** The turn opens with the level: "Verbal warning for Sarah", "actually, written warning". */
+const OPENING = new RegExp(String.raw`^\s*${LEAD_IN}(?:please\s+)?(?:(?:a|an|new)\s+)?$`, "i");
 
 /** "give her", "issue him" — the pronoun is the recipient, not a possessive. */
 const RECIPIENT = /\b(?:give|giving|issue|issuing|gave|given)\s+(?:her|him|them)\s+$/i;
@@ -149,7 +183,7 @@ const ALTERNATIVE_BEFORE = /\b(?:verbal|written)(?:\s+warning)?\s+(?:or|\/)\s+(?
 
 /** A time phrase right after the mention that places it before today. */
 const EARLIER_AFTER =
-  /^[^.;!?\n]{0,30}?\b(?:last\s+(?:week|month|year|time|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|ago|yesterday|previously|before|already|back\s+in|on\s+file|on\s+record|in\s+(?:january|february|march|april|may|june|july|august|september|october|november|december))\b/i;
+  /^[^.;!?\n]{0,30}?\b(?:last\s+(?:week|month|year|time|night|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|ago|yesterday|previously|before|already|recently|back\s+(?:in|on|then)|on\s+file|on\s+record|earlier\s+this\s+(?:week|month|year)|in\s+the\s+past|the\s+other\s+day|a\s+while\s+back|(?:in|from|since)\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*)\b/i;
 
 /** A time phrase right after the mention that places it today. */
 const TODAY_AFTER = /^[^.;!?\n]{0,30}?\b(?:today|this\s+(?:morning|afternoon|evening)|tonight|just\s+now|right\s+now|now)\b/i;
@@ -161,39 +195,43 @@ function levelOf(word: string): WarningLevel {
 }
 
 /** The sentence a mention sits in: from the last break before it to the next. */
-function clauseAround(text: string, start: number, end: number): { before: string; after: string; question: boolean } {
+function clauseAround(
+  text: string,
+  start: number,
+  end: number,
+): { before: string; after: string; question: boolean; opensTurn: boolean } {
   const head = text.slice(0, start);
   const breakAt = Math.max(...[".", ";", "!", "?", "\n"].map((mark) => head.lastIndexOf(mark)));
   // A date like 9/21 has no break characters; a decimal "2.5" does, and is rare in these notes.
-  const before = head.slice(breakAt + 1);
-  const tail = text.slice(end);
+  // Only the last stretch before the mention is ever tested, so a long clause costs nothing.
+  const before = head.slice(Math.max(breakAt + 1, start - 160));
+  const tail = text.slice(end, end + 160);
   const stop = tail.search(/[.;!?\n]/);
   const after = stop === -1 ? tail : tail.slice(0, stop);
   const question = stop !== -1 && tail[stop] === "?";
-  return { before, after, question };
+  return { before, after, question, opensTurn: breakAt === -1 && start <= 160 };
 }
 
-/** The cue nearest the end of `before`, within a few words of the mention. */
-function nearestCue(before: string): "history" | "past" | "current" | null {
+/** The history or past-tense cue nearest the end of `before`, within a few words. */
+function nearestCue(before: string): "history" | "past" | null {
   const window = before.slice(-48);
-  let best: { end: number; kind: "history" | "past" | "current" } | null = null;
-  const consider = (pattern: RegExp, kind: "history" | "past" | "current") => {
+  let best: { end: number; kind: "history" | "past" } | null = null;
+  const consider = (pattern: RegExp, kind: "history" | "past") => {
     for (const match of window.matchAll(pattern)) {
       const end = match.index + match[0].length;
       if (!best || end >= best.end) best = { end, kind };
     }
   };
-  // Order matters only on a tie at the same offset: the more specific reading wins.
-  consider(CURRENT_CUE, "current");
+  // On a tie at the same offset, history wins.
   consider(PAST_CUE, "past");
   consider(HISTORY_CUE, "history");
-  return (best as { kind: "history" | "past" | "current" } | null)?.kind ?? null;
+  return (best as { kind: "history" | "past" } | null)?.kind ?? null;
 }
 
 /**
  * When the clause places the mention in time: before today, today, on another
- * day ("other" — a date after today, which beside a past-tense verb is a year
- * the manager left off), or not at all.
+ * day ("other" — a date after today, which beside a warning already named is
+ * a year the manager left off: "12/20" read in January), or not at all.
  */
 function timing(after: string, today: string): "earlier" | "today" | "other" | null {
   const window = after.slice(0, 40);
@@ -205,12 +243,14 @@ function timing(after: string, today: string): "earlier" | "today" | "other" | n
 }
 
 function classify(text: string, start: number, end: number, today: string, cued: boolean): MentionKind | null {
-  const { before, after, question } = clauseAround(text, start, end);
+  const { before, after, question, opensTurn } = clauseAround(text, start, end);
   // A question about a level decides nothing: "should this be a written warning?"
   if (question) return "unclear";
   if (NEGATED.test(before)) return null;
   if (REPLACED.test(after)) return null;
   if (ALTERNATIVE_AFTER.test(after) || ALTERNATIVE_BEFORE.test(before)) return "unclear";
+  // "Prior actions: verbal warning, written warning" — a list of what already happened.
+  if (HISTORY_HEADING.test(before)) return "historical";
   // A bare adjective was only matched after a phrase that sets this form's level.
   if (cued) return "current";
 
@@ -223,17 +263,20 @@ function classify(text: string, start: number, end: number, today: string, cued:
     return "current";
   }
   if (POSSESSIVE.test(before) || ADJACENT_HISTORY.test(before)) return "historical";
-  if (ADJACENT_CURRENT.test(before)) return "current";
-  // Dated before today, by a date or a time phrase in its own clause: history.
-  if (when === "earlier") return "historical";
+  if (ADJACENT_CURRENT.test(before) || CHANGED_TO.test(before)) return "current";
+  // Dated on another day, by a date or a time phrase in its own clause: history.
+  if (when === "earlier" || when === "other") return "historical";
 
   const cue = nearestCue(before);
   if (cue === "history") return "historical";
-  // A past act on another day is history; on no stated day it is asked about.
-  if (cue === "past") return when === "today" ? "current" : when === null ? "unclear" : "historical";
-  // A level named with nothing placing it in the past — "late today, verbal
-  // warning", "written warning for Sarah" — is the manager naming this form's.
-  return "current";
+  // A past act today is the one being documented; on no stated day it is asked about.
+  if (cue === "past") return when === "today" ? "current" : "unclear";
+  // "Verbal warning for Sarah Test" — the turn opens by naming this form's
+  // level, as a request: followed by who it is for, a pause, or nothing.
+  // "Written warning wasn't enough" opens the same way and is an account.
+  if (opensTurn && OPENING.test(before) && /^\s*(?:for\b|[-—–,:]|$)/.test(after)) return "current";
+  // Nothing says whether this is the warning being issued now: ask.
+  return "unclear";
 }
 
 /**
@@ -243,33 +286,56 @@ function classify(text: string, start: number, end: number, today: string, cued:
  * history, one dated today is the form being written.
  */
 export function warningMentions(text: string, today: string): WarningMention[] {
-  const source = (text ?? "").replace(/[’‘]/g, "'");
+  const source = (text ?? "").slice(0, MAX_TEXT).replace(/[’‘]/g, "'");
   const found: WarningMention[] = [];
   const seen = new Set<number>();
 
-  const push = (level: WarningLevel, start: number, end: number, cued: boolean) => {
+  const push = (level: WarningLevel, start: number, end: number, cued: boolean, kind?: MentionKind) => {
     if (seen.has(start)) return;
     seen.add(start);
-    const kind = classify(source, start, end, today, cued);
-    if (kind) found.push({ level, kind, index: start });
+    const read = kind ?? classify(source, start, end, today, cued);
+    if (read) found.push({ level, kind: read, index: start });
   };
 
   for (const match of source.matchAll(LABELLED)) {
     const start = match.index + match[0].length - match[1]!.length;
     push(levelOf(match[1]!), start, match.index + match[0].length, true);
   }
+
+  /*
+   * WHOLE-LINE ANSWERS. One is an answer ("5. verbal"); two in one turn are a
+   * list, and a list is not a decision ("1. verbal warning\n2. written
+   * warning"). Lines under a "Prior actions:" heading are history.
+   */
+  const wholeLines: { level: WarningLevel; start: number; end: number; underHeading: boolean }[] = [];
   let offset = 0;
+  let underHeading = false;
   for (const line of source.split("\n")) {
     const whole = WHOLE_LINE.exec(line);
     if (whole) {
       const start = offset + line.toLowerCase().indexOf(whole[1]!.toLowerCase());
-      push(levelOf(whole[1]!), start, offset + line.length, true);
+      wholeLines.push({ level: levelOf(whole[1]!), start, end: offset + line.length, underHeading });
+    } else if (HISTORY_HEADING.test(line) && /[:\-–—]\s*$/.test(line)) {
+      underHeading = true;
+    } else if (line.trim() !== "" && !/^\s*(?:[-*•]|\d+\s*[.)])/.test(line)) {
+      underHeading = false;
     }
     offset += line.length + 1;
   }
-  for (const match of source.matchAll(BARE_AFTER_CUE)) {
-    const start = match.index + match[0].length - match[1]!.length;
-    push(levelOf(match[1]!), start, match.index + match[0].length, true);
+  for (const entry of wholeLines) {
+    const kind: MentionKind | undefined = entry.underHeading
+      ? "historical"
+      : wholeLines.length > 1
+        ? "unclear"
+        : undefined;
+    push(entry.level, entry.start, entry.end, true, kind);
+  }
+
+  for (const pattern of [BARE_CHANGED_TO, BARE_AFTER_CUE]) {
+    for (const match of source.matchAll(pattern)) {
+      const start = match.index + match[0].length - match[1]!.length;
+      push(levelOf(match[1]!), start, match.index + match[0].length, true);
+    }
   }
   for (const match of source.matchAll(NAMED)) {
     push(levelOf(match[1]!), match.index, match.index + match[0].length, false);
@@ -389,16 +455,27 @@ export function warningLevelChecked(
  * ============================================================================
  *
  * The correction flow calls this on every turn once a form with a Type of
- * Warning exists in the conversation. A statement of this form's level is a
- * correction; a question, a piece of history ("she had a verbal warning in
- * August") or an undecided "verbal or written" is not.
+ * Warning exists in the conversation, so it is narrow on purpose. A turn
+ * corrects the level only when it is SHAPED like a correction — a change
+ * verb ("change", "switch", "set", "make it", "should be", "tick"), a
+ * correction's lead-in ("actually", "no", "oops"), or the level as the whole
+ * reply ("verbal") — AND states a level for this form.
  *
- * A one-word reply ("verbal") is a whole-line answer and counts: on a form
- * whose open question is this one, that is what it answers.
+ * Not a correction: a question, history ("she also has a written warning from
+ * August"), an undecided "verbal or written", and another person's incident
+ * ("jordan was late today, give him a verbal warning") — that last one is a
+ * new request, and the ordinary flow proposes a form for it.
  */
+const CORRECTION_SHAPED =
+  /\b(?:change|changed|switch|switched|set|update|correct|fix|make\s+(?:it|this|that)|should\s+(?:have\s+)?be(?:en)?|needs?\s+to\s+be|un-?tick|un-?check|uncheck|tick|check|mark|select|meant|instead)\b|^\s*(?:actually|no|nope|sorry|oops|wait|correction)\b/i;
+
 export function warningLevelCorrection(text: string, today: string): WarningLevel | null {
-  if (text.trim().endsWith("?")) return null;
-  return statedWarningLevel(text, today);
+  const trimmed = (text ?? "").trim();
+  if (trimmed === "" || trimmed.endsWith("?")) return null;
+  const wholeAnswer = !trimmed.includes("\n") && (WHOLE_LINE.test(trimmed) || LABELLED.test(trimmed));
+  LABELLED.lastIndex = 0;
+  if (!wholeAnswer && !CORRECTION_SHAPED.test(trimmed)) return null;
+  return statedWarningLevel(trimmed, today);
 }
 
 /** The question Ask Bubbles asks when the level has not been stated. */

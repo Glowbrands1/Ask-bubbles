@@ -465,6 +465,17 @@ export function describesIncident(text: string): boolean {
 }
 
 /**
+ * Whether the text names an incident TOPIC — lateness, an absence, the dress
+ * code, a cash or safety issue. Narrower than `describesIncident`, which also
+ * accepts any "<someone> was …" clause: the chat correction uses this to tell
+ * "jordan was late today, make it a verbal warning" (a new incident) from "it
+ * should have been verbal" (a correction).
+ */
+export function namesIncidentTopic(text: string): boolean {
+  return any(normalize(text), INCIDENT_TOPIC);
+}
+
+/**
  * Whether the manager said this is a first occurrence.
  *
  * Read separately from the intake because it answers a FIELD rather than a

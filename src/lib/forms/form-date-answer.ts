@@ -112,8 +112,24 @@ export function priorSteps(text: string, today: string): { iso: string; named: s
   return datesInText(text, today).flatMap((found) => {
     const before = text.slice(0, found.index);
     const match = PRIOR_STEP_BEFORE.exec(before);
-    return match ? [{ iso: found.iso, named: match[0] }] : [];
+    return match ? [{ iso: earlierYearIfAhead(found, text, today), named: match[0] }] : [];
   });
+}
+
+/**
+ * AN EARLIER STEP CANNOT BE IN THE FUTURE. A month and day with no year take
+ * the current one, so "got a verbal warning on 12/20", read on January 5,
+ * came out as next December. Where the manager gave no year and the date is
+ * after today, it is last year's. A year they typed is kept as typed.
+ */
+function earlierYearIfAhead(found: DateInText, text: string, today: string): string {
+  if (found.iso <= today) return found.iso;
+  const typed = text.slice(found.index, found.end);
+  const hasYear = /\d{4}/.test(typed) || (typed.match(/[/-]/g)?.length ?? 0) >= 2;
+  if (hasYear) return found.iso;
+  const year = Number(found.iso.slice(0, 4)) - 1;
+  const earlier = `${String(year).padStart(4, "0")}${found.iso.slice(4)}`;
+  return isIsoCalendarDate(earlier) ? earlier : found.iso;
 }
 
 /** A real `YYYY-MM-DD` on the calendar — no February 30th. */

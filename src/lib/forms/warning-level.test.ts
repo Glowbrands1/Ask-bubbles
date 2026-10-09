@@ -82,7 +82,6 @@ describe("a level stated for THIS form", () => {
     ["give her a verbal warning", "verbal"],
     ["create a written warning for Sarah, late today", "written"],
     ["Verbal warning for Sarah Test — late today", "verbal"],
-    ["She was 30 minutes late today, verbal warning.", "verbal"],
     ["this is a written warning", "written"],
     ["it should be a verbal warning", "verbal"],
     ["make it verbal", "verbal"],
@@ -95,7 +94,6 @@ describe("a level stated for THIS form", () => {
     ["I gave her a verbal warning today", "verbal"],
     ["give her a written warning on 10/2", "written"],
     ["issue a formal written warning", "written"],
-    ["she was late last night, verbal warning", "verbal"],
   ] as const)("%s -> %s", (text, level) => {
     expect(statedWarningLevel(text, TODAY)).toBe(level);
   });
@@ -124,6 +122,9 @@ describe("a level stated for THIS form", () => {
 
 describe("ambiguous history is asked about, not guessed", () => {
   it.each([
+    // A level named with nothing saying it is this form's: asked, not assumed.
+    "She was 30 minutes late today, verbal warning.",
+    "she was late last night, verbal warning",
     "I gave her a verbal warning",
     "she got a verbal warning",
     "should this be a verbal or written warning?",
@@ -146,6 +147,57 @@ describe("ambiguous history is asked about, not guessed", () => {
   });
 });
 
+/*
+ * THE INDEPENDENT REVIEW'S INPUTS (PR #10). Each of these read as this form's
+ * level before the default became "ask"; none may now.
+ */
+describe("history phrasings found in review never become this form's level", () => {
+  it.each([
+    "Prior actions:\n- verbal warning\n- written warning",
+    "prior actions:\nverbal\nwritten",
+    "late again today.\n1. verbal warning\n2. written warning",
+    "history - verbal warning, written warning",
+    "Steps so far: coaching, verbal warning, written warning.",
+    "she has a written warning from august",
+    "she has a written warning",
+    "she is on a written warning",
+    "late again. was on written warning",
+    "written warning wasn't enough",
+    "verbal warning didn't help",
+    "late again even with a written warning",
+    "late today, written warning in aug",
+    "written warning on the 21st",
+    "written warning back on the 21st",
+    "verbal warning on 21 September",
+    "verbal warning given in Sept",
+    "verbal warning recently",
+    "verbal warning earlier this month",
+    "verbal warning in the past",
+    "this is her second offense, first was a verbal warning",
+    "she's on final warning",
+    "create a ca form for paulyne test, she was late again for 30 mins today.\nPrevious actions:\n- verbal warning\n- written warning",
+  ])("%s", (text) => {
+    expect(statedWarningLevel(text, TODAY)).toBeNull();
+  });
+
+  it.each(["late again today. verbal warning on 12/20", "written warning on Dec 20", "verbal warning issued 12/20"])(
+    "across the year boundary: %s, read on January 5",
+    (text) => {
+      expect(statedWarningLevel(text, "2027-01-05")).toBeNull();
+      expect(mentionsEarlierWarning(text, "2027-01-05")).toBe(true);
+    },
+  );
+
+  it("reads a long adversarial turn in linear time", () => {
+    for (const text of [`change${" ".repeat(80_000)}x`, `warning${" ".repeat(80_000)}x`, `verbal${" ".repeat(80_000)}x`]) {
+      const started = performance.now();
+      warningMentions(text, TODAY);
+      warningLevelCorrection(text, TODAY);
+      expect(performance.now() - started).toBeLessThan(250);
+    }
+  });
+});
+
 describe("corrections", () => {
   it.each([
     ["change written warning to verbal warning", "verbal"],
@@ -156,6 +208,18 @@ describe("corrections", () => {
     ["switch it to written", "written"],
     ["actually, written warning", "written"],
     ["uncheck written warning and check verbal", "verbal"],
+    ["change written warning to verbal", "verbal"],
+    ["change the written warning to verbal", "verbal"],
+    ["change written warning to verbal for paulyne", "verbal"],
+    ["set the warning type to verbal", "verbal"],
+    ["verbal not written", "verbal"],
+    ["no, verbal", "verbal"],
+    ["actually verbal", "verbal"],
+    ["oops i meant verbal", "verbal"],
+    ["it should have been verbal", "verbal"],
+    ["change paulyne's warning to verbal", "verbal"],
+    ["verbal", "verbal"],
+    ["Written warning.", "written"],
   ] as const)("%s -> %s", (text, level) => {
     expect(warningLevelCorrection(text, TODAY)).toBe(level);
   });
@@ -164,6 +228,14 @@ describe("corrections", () => {
     "should it be verbal?",
     "she had a verbal warning in August too",
     "what's the difference between a verbal and written warning?",
+    "she also has a written warning from august",
+    "fyi she is on a written warning",
+    "Previous actions:\n- verbal warning\n- written warning",
+    // Another person's incident is a new request, not a change to this form.
+    "jordan was late today, give him a verbal warning",
+    "also marcus no call no show, give him a written warning",
+    "for the other girl it's a verbal warning",
+    "kim was late too - verbal warning",
   ])("%s is not a correction", (text) => {
     expect(warningLevelCorrection(text, TODAY)).toBeNull();
   });

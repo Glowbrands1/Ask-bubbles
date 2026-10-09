@@ -146,10 +146,11 @@ import {
   WARNING_LEVEL_KEYS,
   WARNING_LEVEL_STATED_KEYS,
   WARNING_TYPE_KEY,
-  statedWarningLevel,
   warningLevelChecked,
+  warningLevelFromConversation,
   withoutModelWarningLevel,
 } from "@/lib/forms/warning-level";
+import { JOIN } from "@/lib/forms/bounded-context";
 import { businessToday } from "@/lib/business-date";
 import {
   correctDraftedDates,
@@ -341,7 +342,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         (group) =>
           group.key === WARNING_TYPE_KEY && group.options.some((option) => WARNING_LEVEL_KEYS.has(option.key)),
       ) ?? null;
-    const statedLevel = warningGroup ? statedWarningLevel(notes, businessToday()) : null;
+    /*
+     * TURN BY TURN, AND ONLY THIS FORM'S TURNS. The notes are the manager's
+     * recent turns joined (`boundManagerTurns`), and reading them as one text
+     * let "give a written warning" said about somebody else's form earlier in
+     * the chat tick this one. The same reading the proposal used.
+     */
+    const statedLevel = warningGroup
+      ? warningLevelFromConversation(
+          notes.split(JOIN).map((content) => ({ role: "user", content })),
+          businessToday(),
+        )
+      : null;
     const statedWarning = warningGroup
       ? warningLevelChecked(
           statedLevel,
