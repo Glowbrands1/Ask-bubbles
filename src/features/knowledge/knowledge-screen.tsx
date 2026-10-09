@@ -199,6 +199,7 @@ export function KnowledgeScreen() {
   return (
     <PageShell>
       <PageHeader
+        band
         eyebrow="Knowledge"
         title="Knowledge Base"
         description="Every document Bubbles answers from. Upload once, and every manager gets the same answer from the same source."

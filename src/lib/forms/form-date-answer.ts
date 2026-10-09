@@ -83,9 +83,27 @@ const FOLLOW_UP_BEFORE =
 const PRIOR_STEP_BEFORE =
   /\b(?:got|gotten|received|was given|were given|been given|given|had|issued|gave|was|were|previous(?:ly)?|prior|already|last time)\b[^.;\n]{0,40}\b(?:warn(?:ing|ings|ed)|write[- ]?ups?|written up|coach(?:ed|ing)?|corrective actions?|disciplin\w*)\b[^.;\n]{0,20}$/i;
 
+/**
+ * A step that is hers already, with no past-tense verb: "despite / after /
+ * since / following her written warning on 9/15", "her verbal warning on
+ * 9/21". The warning-level reader reads these as history, and the history
+ * line agrees — but ONLY for a date before today (`priorSteps`): "her
+ * written warning should be dated 10/9" or "…will be delivered 10/12" is
+ * this form's warning, and must never become a step nobody took. The cue
+ * must sit right before the warning, and "give her a written warning on
+ * 10/2" (an article, or an issuing verb) is this form.
+ */
+const OWNED_STEP_BEFORE = new RegExp(
+  [
+    String.raw`\b(?:despite|after|since|following)\s+(?:(?:her|his|their|the|a|an)\s+)?(?:(?:last|previous|prior|recent|verbal|written|final|formal)\s+){0,2}(?:warn(?:ing|ings)|write[- ]?ups?|coaching|corrective actions?)\b[^.;\n]{0,20}$`,
+    String.raw`(?<!\b(?:give|gives|giving|issue|issues|issuing|write|writes|writing|needs?|get|gets|getting|make|deserves?)\s+)\b(?:her|his|their)\s+(?!a\b|an\b)(?:[a-z]+\s+){0,2}?(?:warn(?:ing|ings)|write[- ]?ups?|coaching|corrective actions?)\b[^.;\n]{0,20}$`,
+  ].join("|"),
+  "i",
+);
+
 function isOtherDate(text: string, index: number): boolean {
   const before = text.slice(0, index);
-  return FOLLOW_UP_BEFORE.test(before) || PRIOR_STEP_BEFORE.test(before);
+  return FOLLOW_UP_BEFORE.test(before) || PRIOR_STEP_BEFORE.test(before) || OWNED_STEP_BEFORE.test(before);
 }
 
 /**
@@ -112,8 +130,38 @@ export function priorSteps(text: string, today: string): { iso: string; named: s
   return datesInText(text, today).flatMap((found) => {
     const before = text.slice(0, found.index);
     const match = PRIOR_STEP_BEFORE.exec(before);
-    return match ? [{ iso: found.iso, named: match[0] }] : [];
+    // "she was late, give her a written warning on 10/2": the cue was the incident's, the warning is this form's.
+    if (match && !ISSUES_THIS_FORM.test(match[0])) {
+      // A date ahead of today is last year's only after a verb of receiving one ("got … on 12/20" in
+      // January); after a bare "was/were" it is a date still to come, and not an earlier step.
+      if (found.iso > today && /^(?:was|were)\b/i.test(match[0])) return [];
+      return [{ iso: earlierYearIfAhead(found, text, today), named: match[0] }];
+    }
+    // A step that is hers already counts only on a day before today — never rolled back a year.
+    const owned = OWNED_STEP_BEFORE.exec(before);
+    if (owned && !ISSUES_THIS_FORM.test(owned[0]) && found.iso < today) return [{ iso: found.iso, named: owned[0] }];
+    return [];
   });
+}
+
+/** An issuing verb between the cue and the warning: the warning is the one being issued now. */
+const ISSUES_THIS_FORM =
+  /\b(?:give|gives|giving|issue|issues|issuing|needs?|deserves?|requires?|make\s+(?:it|this)|document(?:ing)?|write\s+(?:her|him|them)\s+(?:up|a)|do\s+a|should|will|is\s+dated|dated|effective|deliver\w*|present\w*|sign(?:ing|s)?|schedul\w*|meet(?:ing)?|set\s+for|receive|receives|receiving|this\s+is)\b/i;
+
+/**
+ * AN EARLIER STEP CANNOT BE IN THE FUTURE. A month and day with no year take
+ * the current one, so "got a verbal warning on 12/20", read on January 5,
+ * came out as next December. Where the manager gave no year and the date is
+ * after today, it is last year's. A year they typed is kept as typed.
+ */
+function earlierYearIfAhead(found: DateInText, text: string, today: string): string {
+  if (found.iso <= today) return found.iso;
+  const typed = text.slice(found.index, found.end);
+  const hasYear = /\d{4}/.test(typed) || (typed.match(/[/-]/g)?.length ?? 0) >= 2;
+  if (hasYear) return found.iso;
+  const year = Number(found.iso.slice(0, 4)) - 1;
+  const earlier = `${String(year).padStart(4, "0")}${found.iso.slice(4)}`;
+  return isIsoCalendarDate(earlier) ? earlier : found.iso;
 }
 
 /** A real `YYYY-MM-DD` on the calendar — no February 30th. */

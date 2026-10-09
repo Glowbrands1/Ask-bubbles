@@ -534,12 +534,15 @@ export interface ChatFormProposal {
    */
   payrollDeduct?: "yes" | "no" | null;
   /**
-   * The Corrective Action's Type of Warning, where the MANAGER stated it —
-   * "needs a written warning". Absent or null when they did not; never
-   * defaulted. Read back on the card, and ticked by the draft from the same
-   * words. See `lib/forms/warning-level.ts`.
+   * The Corrective Action Form's Type of Warning for THIS form, where the
+   * MANAGER stated one — "give her a verbal warning", "make it written". A
+   * warning they described as already given ("got a verbal warning on 9/21")
+   * is history, never this. Null (or absent) when they have not said: it is
+   * never inferred and never defaulted, and Ask Bubbles asks. Sent at
+   * creation, revalidated by the create route against the pinned version, and
+   * written as the manager's statement. See `lib/forms/warning-level.ts`.
    */
-  warningLevel?: "verbal" | "written" | null;
+  warningLevel?: "verbal" | "written" | "final_warning" | null;
   /**
    * What the Corrective Action is FOR, in the manager's words — "cash
    * handling". Read back on the card so the issue is checked before anything is

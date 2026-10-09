@@ -127,6 +127,7 @@ export default async function FormMonitoringPage({
     <PermissionGate permission="view_form_monitoring">
       <PageShell>
         <PageHeader
+          band
           eyebrow="Forms"
           title="Form Monitoring"
           description="Every form created in Ask Bubbles, the template version it was filled from, and what is still outstanding."

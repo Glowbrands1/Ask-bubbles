@@ -28,6 +28,7 @@ export function HistoryScreen() {
   return (
     <PageShell>
       <PageHeader
+        band
         eyebrow="Assistant"
         title="History"
         description={`Your conversations with ${ACTIVE_BRAND.assistantName}. Only you can see them.`}
