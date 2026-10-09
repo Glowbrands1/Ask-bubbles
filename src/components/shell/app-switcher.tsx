@@ -91,8 +91,14 @@ export function AppSwitcher({
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
-        align="start"
+        /*
+          The switcher is the last item on the rail, so it opens UPWARD (or to the
+          right, growing upward, on the collapsed rail), and the collision padding
+          keeps it inside the viewport on a short window or a phone.
+        */
+        align={collapsed ? "end" : "start"}
         side={collapsed ? "right" : "top"}
+        collisionPadding={8}
         className="w-[14.5rem] max-w-[calc(100vw-2rem)]"
       >
         <DropdownMenuLabel>Switch app</DropdownMenuLabel>
