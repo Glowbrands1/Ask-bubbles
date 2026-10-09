@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, Figtree } from "next/font/google";
+import { Archivo, Figtree, Grandstander } from "next/font/google";
 
 import { ACTIVE_BRAND, brandStyle } from "@/lib/brand";
 import { pageAuthorizationEnforced, pageIdentity } from "@/lib/auth/page";
@@ -25,6 +25,12 @@ import "./globals.css";
  * Both are fetched at BUILD time and served from this origin, so there is no
  * runtime request to a font CDN. Archivo is a headline face and is never used
  * for body copy, labels or table cells.
+ *
+ * LETTERING — Grandstander (OFL), approved on 9 October 2026 for the Ask
+ * Bubbles wordmark and the two greeting headlines (Home and the empty chat).
+ * It carries the rounded, hand-made feel of the Buff City Soap logo without
+ * copying its letters. It is not a brand body or headline face and is used
+ * nowhere else.
  */
 const archivo = Archivo({
   subsets: ["latin"],
@@ -36,6 +42,12 @@ const archivo = Archivo({
 const figtree = Figtree({
   subsets: ["latin"],
   variable: "--font-figtree",
+  display: "swap",
+});
+
+const grandstander = Grandstander({
+  subsets: ["latin"],
+  variable: "--font-grandstander",
   display: "swap",
 });
 
@@ -79,7 +91,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${figtree.variable} ${archivo.variable}`}
+      className={`${figtree.variable} ${archivo.variable} ${grandstander.variable}`}
       // Brand palette overrides from the BrandConfig are applied here.
       style={brandStyle(ACTIVE_BRAND)}
     >

@@ -3,19 +3,17 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Search, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 import { BrandMark, BuffCitySoapLogo } from "@/components/brand-mark";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/overlays";
 import { LoginScreen } from "@/features/auth/login-screen";
 import { useSession } from "@/lib/session/session-context";
 import { cn } from "@/lib/utils/cn";
 import { usePreference, writePreference } from "@/lib/utils/client-store";
 import { SidebarNav } from "./sidebar";
-import { backdropForPath } from "./backdrop";
-import { GlobalSearch } from "./global-search";
+import { backdropForPath, chromeForPath } from "./backdrop";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { defaultLandingForRole } from "@/lib/permissions";
 
@@ -35,6 +33,7 @@ export function AppShell({
   const { hydrated, signedIn, demoMode, role } = useSession();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const pathname = usePathname();
+  const band = chromeForPath(pathname) === "band";
 
   // Escape closes the mobile drawer, as it closes every other overlay.
   useEffect(() => {
@@ -99,19 +98,34 @@ export function AppShell({
 
       <div className="relative z-[1] flex min-w-0 flex-1 flex-col">
         {/*
-          THE SHARED TOP BAR, owned by the shell rather than any one page:
-          White with a Cloud hairline, search in the middle, and the official
-          Buff City Soap logo on the right in Tokyo Green. On small screens it
-          also carries the menu button and the product wordmark, because the
-          rail that holds the Ask Bubbles logo is a drawer there.
+          THE SHARED TOP BAR, owned by the shell rather than any one page.
+
+          ON HOME AND CHAT ("band", approved 9 Oct 2026) the page itself opens
+          with a Tokyo Green header that carries the Buff City Soap logo, so on
+          desktop there is no bar at all. Below `lg` the rail is a drawer, so
+          a Tokyo Green bar carries the menu button, the wordmark in Charcoal
+          and the White logo, and runs straight into the page's header.
+
+          EVERYWHERE ELSE ("plain") it is the slim White bar with a Cloud
+          hairline and the official logo in Tokyo Green.
+
+          Search is not in this bar any more: it opens from the top of the rail
+          and the drawer (sidebar.tsx), on every route.
         */}
-        <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b border-chrome-border bg-chrome px-3 text-chrome-foreground sm:gap-3 sm:px-6">
+        <header
+          className={cn(
+            "sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-6",
+            band
+              ? "bg-band text-band-foreground lg:hidden"
+              : "border-b border-chrome-border bg-chrome text-chrome-foreground",
+          )}
+        >
           <Button
             variant="ghost"
             size="icon"
             aria-label="Open navigation"
             onClick={() => setDrawerOpen(true)}
-            className="lg:hidden"
+            className={cn("lg:hidden", band && "text-band-foreground hover:bg-band-chip-surface")}
           >
             <Menu />
           </Button>
@@ -121,10 +135,8 @@ export function AppShell({
             aria-label={`${ACTIVE_BRAND.productName} — start`}
             className="shrink-0 lg:hidden"
           >
-            <BrandMark size="sm" />
+            <BrandMark size="sm" stacked onBand={band} />
           </Link>
-
-          <DesktopSearchLauncher className="mx-auto" />
 
           <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
             {demoMode ? (
@@ -132,31 +144,16 @@ export function AppShell({
                 Demo
               </Badge>
             ) : null}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Search ${ACTIVE_BRAND.productName}`}
-                  className="lg:hidden"
-                >
-                  <Search />
-                </Button>
-              </DialogTrigger>
-              <DialogContent
-                title={`Search ${ACTIVE_BRAND.productName}`}
-                description="Documents, videos, forms, locations and screens."
-                wide
-              >
-                <GlobalSearch />
-              </DialogContent>
-            </Dialog>
             {/*
-              THE PARENT BRAND, in its own approved colour on White, with no box
-              around it — the logo rules forbid one. Sized by height so the
-              artwork keeps its proportions.
+              THE PARENT BRAND, in an approved colour with no box around it —
+              the logo rules forbid one. White on the band, Tokyo Green on
+              White. Sized by height so the artwork keeps its proportions.
             */}
-            <BuffCitySoapLogo priority className="h-10 sm:h-[50px]" />
+            <BuffCitySoapLogo
+              priority
+              tone={band ? "white" : "tokyoGreen"}
+              className="h-10 sm:h-[50px]"
+            />
           </div>
         </header>
 
@@ -193,37 +190,5 @@ export function AppShell({
         </main>
       </div>
     </div>
-  );
-}
-
-/** Desktop-only utility bar used on pages with a global search affordance. */
-export function DesktopSearchLauncher({ className }: { className?: string }) {
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            "hidden h-10 w-full max-w-[460px] items-center gap-2.5 rounded-full border border-border bg-surface-muted px-4 text-left text-[14px] text-muted-foreground transition-colors hover:border-border-strong lg:flex",
-            className,
-          )}
-        >
-          <Search className="size-4 shrink-0" aria-hidden />
-          <span className="flex-1 truncate">
-            Search documents, forms, locations and screens
-            {/* Names the product for screen readers, after the visible words so
-                the accessible name still begins with what a voice user reads. */}
-            <span className="sr-only"> in {ACTIVE_BRAND.productName}</span>
-          </span>
-        </button>
-      </DialogTrigger>
-      <DialogContent
-        title={`Search ${ACTIVE_BRAND.productName}`}
-        description="Documents, videos, forms, locations and screens."
-        wide
-      >
-        <GlobalSearch />
-      </DialogContent>
-    </Dialog>
   );
 }

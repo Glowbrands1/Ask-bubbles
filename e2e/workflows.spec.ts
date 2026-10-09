@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { signInAsDemo } from "./support";
+import { openNav, signInAsDemo } from "./support";
 
 /**
  * KEY WORKFLOWS, end to end in the demo build: asking Bubbles, the forms
@@ -69,17 +69,24 @@ test.describe("workflows", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("global search opens from the top bar", async ({ page }) => {
+  test("search opens from the sidebar, and a result closes it", async ({ page }) => {
+    // Moved from the top bar to the top of the rail (the drawer on phones) on
+    // 9 Oct 2026, so it is on every route; Home and Chat have no bar on desktop.
     await page.goto("/");
-    // Mobile: "Search Ask Bubbles" (icon button). Desktop: the search pill,
-    // "Search documents, forms, locations and screens in Ask Bubbles".
-    await page
-      .getByRole("button", { name: /^Search\b.*\bAsk Bubbles$/ })
-      .filter({ visible: true })
-      .first()
-      .click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog")).toBeHidden();
+    const nav = await openNav(page);
+    await nav.getByRole("button", { name: "Search Ask Bubbles" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("textbox").fill("history");
+    await dialog.getByRole("link").first().click();
+    await expect(page).toHaveURL(/\/history/);
+    await expect(dialog).toBeHidden();
   });
+
+  test("Home and Chat have no top search bar", async ({ page }) => {
+    for (const path of ["/", "/chat"]) {
+      await page.goto(path);
+      await expect(page.getByRole("button", { name: /Search documents, forms/ })).toHaveCount(0);
+    }
+});
 });

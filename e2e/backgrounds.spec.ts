@@ -7,24 +7,21 @@ import { openNav, signInAsDemo } from "./support";
  * THE BRAND BACKGROUNDS stay decoration.
  * ============================================================================
  *
- * The approved "edge-weighted" option draws official Buff City Soap product
- * drawings behind the sidebar, the page canvas and the Home band. These checks
- * hold the rules the approval set, in a real browser at both widths:
+ * The approved "edge-weighted" option, made stronger on 9 Oct 2026, draws
+ * official Buff City Soap product drawings behind the sidebar, the page
+ * canvas, the chat canvas and the Home band. These checks hold the rules the
+ * approvals set, in a real browser at both widths:
  *
  *   - hidden from assistive technology and never in the way of a click
  *   - the approved opacities
- *   - no canvas pattern on chat or on phones
- *   - the Home line-up never overlaps the greeting, the ask bar or a chip
+ *   - the page canvas stays plain on phones; chat has its own patterned canvas
+ *   - the Home drawings sit behind the band's content, never over it
  */
 
 async function box(locator: Locator) {
   const b = await locator.boundingBox();
   expect(b, "element is rendered").not.toBeNull();
   return b!;
-}
-
-function overlaps(a: { x: number; y: number; width: number; height: number }, b: typeof a) {
-  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }
 
 async function canvasStyle(page: Page) {
@@ -50,18 +47,26 @@ test.describe("brand backgrounds", () => {
     if (isMobile) {
       expect(style.display, "phones keep a plain canvas").toBe("none");
     } else {
-      expect(style.opacity).toBe("0.12");
+      expect(style.opacity).toBe("0.22");
     }
 
     await page.goto("/history");
     await expect(layer).toHaveAttribute("data-backdrop", "work");
     style = await canvasStyle(page);
-    if (!isMobile) expect(style.opacity).toBe("0.1");
+    if (!isMobile) expect(style.opacity).toBe("0.22");
 
+    // Chat draws its own pattern over the soft-tint canvas instead.
     await page.goto("/chat");
     await expect(layer).toHaveAttribute("data-backdrop", "none");
     style = await canvasStyle(page);
-    expect(style.display, "chat keeps a plain canvas").toBe("none");
+    expect(style.display, "the page canvas steps aside on chat").toBe("none");
+    const chat = page.locator(".chat-pattern");
+    await expect(chat).toHaveAttribute("aria-hidden", "true");
+    const chatStyle = await chat.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { display: s.display, opacity: s.opacity, pointer: s.pointerEvents };
+    });
+    expect(chatStyle).toEqual({ display: "block", opacity: "0.22", pointer: "none" });
   });
 
   test("the sidebar pattern is faint and keeps the logo clear", async ({ page }) => {
@@ -80,26 +85,50 @@ test.describe("brand backgrounds", () => {
     expect(before.mask).toContain("rgba(0, 0, 0, 0) calc(100% - 140px)");
   });
 
-  test("the Home line-up never sits behind text, the ask bar or a chip", async ({ page }) => {
+  test("the Home drawings sit behind the band's content and take no clicks", async ({ page, isMobile }) => {
     await page.goto("/");
-    const art = page.locator(".band-art");
+    const art = page.locator(".hero-art");
     await expect(art).toHaveAttribute("aria-hidden", "true");
-    expect(await art.evaluate((el) => getComputedStyle(el).opacity)).toBe("0.34");
-    const artBox = await box(art);
-    expect(artBox.width).toBeGreaterThan(100);
+    expect(await art.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe("none");
+    expect(await art.evaluate((el) => getComputedStyle(el).zIndex)).toBe("-1");
+    const lineup = page.locator(".hero-art-lineup");
+    const lineupBox = await box(lineup);
+    expect(lineupBox.width, "the line-up is drawn large").toBeGreaterThan(isMobile ? 200 : 400);
 
-    const band = page.locator(".band-art-host");
+    // Everything in the band is still the thing under the pointer.
+    const band = page.locator("section[aria-label='Ask Bubbles']");
     const things = [
       band.getByRole("heading", { level: 1 }),
       band.getByRole("textbox", { name: "Ask Bubbles a question" }),
       ...(await band.getByRole("button").filter({ visible: true }).all()),
-      ...(await band.locator("p").filter({ visible: true }).all()),
     ];
     for (const thing of things) {
       const b = await box(thing);
-      expect(overlaps(artBox, b), `line-up overlaps ${await thing.textContent()}`).toBe(false);
+      const hit = await page.evaluate(
+        ([x, y]) => document.elementFromPoint(x, y)?.closest(".hero-art") !== null,
+        [b.x + b.width / 2, b.y + b.height / 2],
+      );
+      expect(hit, `a drawing is over ${await thing.textContent()}`).toBe(false);
     }
   });
+
+  test("the Buff City Soap logo is White, in the band on desktop and the top bar on phones", async ({ page, isMobile }) => {
+    for (const path of ["/", "/chat"]) {
+      await page.goto(path);
+      const logo = page.getByRole("img", { name: "Buff City Soap" }).filter({ visible: true });
+      await expect(logo).toHaveCount(1);
+      await expect(logo).toHaveAttribute("src", /bcs-logo-stacked-white/);
+      const b = await box(logo);
+      if (isMobile) {
+        expect(b.height).toBeCloseTo(40, 0);
+      } else {
+        expect(b.height).toBeGreaterThanOrEqual(56);
+        // No shell bar above the band on desktop.
+        await expect(page.locator("header.sticky").filter({ visible: true })).toHaveCount(0);
+      }
+    }
+  });
+
 });
 
 /*
@@ -119,13 +148,27 @@ test.describe("brand backgrounds, pictured", () => {
     await signInAsDemo(page, "location_manager");
   });
 
-  test("Home band line-up", async ({ page }) => {
+  test("Home band drawings", async ({ page }) => {
     await page.goto("/");
     await page.evaluate(() => document.fonts.ready);
-    const band = page.locator(".band-art-host");
-    await expect(band).toHaveScreenshot("band-lineup.png", {
+    const band = page.locator("section[aria-label='Ask Bubbles'] > div").first();
+    await expect(band).toHaveScreenshot("band-drawings.png", {
       ...STRICT,
-      mask: [band.locator("h1, p, button, textarea, a, span, svg, img")],
+      // Every child of the band except the drawings layer: text, the ask bar,
+      // the chips and the logo are covered by the page baselines.
+      mask: [band.locator(":scope > *:not(.hero-art)")],
+    });
+  });
+
+  test("chat canvas", async ({ page, isMobile }) => {
+    test.skip(isMobile, "the phone layout fills this area with starter prompts; asserted above");
+    await page.goto("/chat");
+    await page.evaluate(() => document.fonts.ready);
+    const view = page.viewportSize()!;
+    // An empty stretch of the canvas between the starter prompts and the composer.
+    await expect(page).toHaveScreenshot("chat-canvas.png", {
+      ...STRICT,
+      clip: { x: view.width - 360, y: view.height - 480, width: 320, height: 240 },
     });
   });
 
