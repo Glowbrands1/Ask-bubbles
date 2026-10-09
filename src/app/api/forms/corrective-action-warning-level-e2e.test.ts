@@ -611,6 +611,12 @@ describe("review: a level said about another form, or as history, never lands on
     "create a ca form for paulyne test, late again today. she's on her second written warning",
     "create a ca form for paulyne test, late again today. she'd get a written warning back then",
     "create a ca form for paulyne test, late again today. she always gets a written warning",
+    `${REPORT}. last month written warning`,
+    `${REPORT}. 2 weeks ago, written warning`,
+    `${REPORT}. last CA: written warning`,
+    `${REPORT}. in august: written warning`,
+    `${REPORT}. the first time was a verbal warning`,
+    `${REPORT}. she had one on 10/1. written warning`,
   ])("%s -> nothing ticked, asked", async (opening) => {
     const { proposal, content, result } = await conversation([opening]);
 
@@ -630,6 +636,8 @@ describe("review: corrections apply only to this form, and never from history", 
     "for the other girl it's a written warning",
     "kim was late too - written warning",
     "sarah was late again today, make it a written warning",
+    "Jordan Smith was late. Change it to written",
+    "update it, last month written warning",
   ])("%s leaves the draft's Verbal tick alone", async (question) => {
     const { result } = await conversation([`${REPORT}. give her a verbal warning for today`]);
     const id = result.reference.instanceId;

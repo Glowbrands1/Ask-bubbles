@@ -166,7 +166,8 @@ async function correctFromFormReaders(
   }
   // "change the name to …" is the one correction that names somebody new, on purpose.
   const renaming = /\b(?:change|update|correct|fix|set|make)\s+(?:the\s+|her\s+|his\s+|their\s+)?(?:employee(?:'s)?\s+)?name\b/i.test(input.question);
-  const named = renaming ? [] : extractEmployeeNames(input.question);
+  // The WHOLE message: "Jordan Smith was late. Change it to verbal" is about Jordan, however it is split.
+  const named = renaming ? [] : extractEmployeeNames(input.message ?? input.question);
   if (named.length > 0 && !named.some((name) => samePerson(name, loaded.instance.employeeName))) {
     return null;
   }

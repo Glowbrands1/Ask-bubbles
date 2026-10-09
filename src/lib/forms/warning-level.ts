@@ -159,7 +159,7 @@ const HISTORY_CUE =
  * is "late earlier today, written warning".
  */
 const ADJACENT_HISTORY =
-  /\b(?:last|previous|prior|earlier|past|recent|most\s+recent|after|following|despite|since|from|even\s+with|has|had|have|is\s+on|was\s+on|'s\s+on|been\s+on|still\s+on|already\s+on|been\s+(?:getting|given|receiving|issued)|(?:first|last|previous|that|one)\s+was)\s+(?:(?:a|an|the|her|his|their|that|this|another)\s+)?(?:(?:last|previous|prior|recent|earlier|formal|documented|first|second|third|final)\s+)?$/i;
+  /\b(?:last|previous|prior|earlier|past|recent|most\s+recent|after|following|despite|since|from|even\s+with|(?:after|following|despite|since)\s+(?:receiving|getting|being\s+given|having\s+(?:had|received|gotten))|has|had|have|is\s+on|was\s+on|'s\s+on|been\s+on|still\s+on|already\s+on|been\s+(?:getting|given|receiving|issued)|(?:first|last|previous|that|one)\s+was)\s+(?:(?:a|an|the|her|his|their|that|this|another)\s+)?(?:(?:last|previous|prior|recent|earlier|formal|documented|first|second|third|final)\s+)?$/i;
 
 /** "Prior actions: …", "history - …", "steps so far: …" — a list of what already happened. */
 const HISTORY_HEADING =
@@ -378,14 +378,26 @@ function classify(text: string, start: number, end: number, today: string, cued:
    */
   const endsTurn = /^[\s.!]*$/.test(text.slice(end));
   const ownSentence = before.trim() === "" && after.trim() === "";
-  if ((endsTurn || ownSentence) && !LISTS_EARLIER_STEPS.test(text.slice(0, start))) return "current";
+  if ((endsTurn || ownSentence) && !pointsToThePast(text.slice(0, start), today)) return "current";
   // Nothing says whether this is the warning being issued now: ask.
   return "unclear";
 }
 
-/** Words that make a level at the end of a turn one more item of history. */
+/**
+ * Anything earlier in the turn that makes a trailing level one more item of
+ * history: earlier steps ("coached", "warned", "prior"), a past time ("last
+ * month", "2 weeks ago", "in august", a date before today), a record ("file
+ * shows", "last CA", "first offense"), or a past "had / got / was a".
+ * "Yesterday" is not one of them — it is when the incident happened ("she
+ * mishandled cash at close yesterday. written warning").
+ */
 const LISTS_EARLIER_STEPS =
-  /\b(?:coach(?:ed|ing)?|warned|warnings?|written\s+up|write[- ]?ups?|disciplin\w*|previous(?:ly)?|prior|history|already|before)\b/i;
+  /\b(?:coach(?:ed|ing)?|warned|warnings?|written\s+up|write[- ]?ups?|disciplin\w*|previous(?:ly)?|prior|history|already|before|last\s+(?:week|month|year|time|ca|one|warning|corrective)|ago|first\s+(?:time|offen[cs]e|one)|record|file|shows|had|has|got|received|given|issued|was\s+(?:a|an|her|his)|remember|same\s+(?:as|thing)|like\s+the|january|february|march|april|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept?|oct|nov|dec)\b/i;
+
+function pointsToThePast(textBefore: string, today: string): boolean {
+  if (LISTS_EARLIER_STEPS.test(textBefore)) return true;
+  return datesInText(textBefore, today).some((found) => found.iso !== today);
+}
 
 /**
  * Every warning level the text names, in order, with how each one reads.
