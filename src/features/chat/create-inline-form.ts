@@ -51,6 +51,12 @@ export interface CreateInlineFormResult {
   reference: ChatFormInstanceRef;
   /** Set when the instance was created but Bubbles could not prefill it. */
   draftWarning: string | null;
+  /**
+   * The server returned a draft this manager had already started (and
+   * prefilled) moments ago instead of creating a second one. The editor shows
+   * it as stored; nothing was drafted again.
+   */
+  reused?: boolean;
 }
 
 export const DRAFT_FAILED_WARNING =
@@ -98,7 +104,7 @@ export async function createInlineForm({
    * docs/chat-phase-3.md. A validated id with no name is honest; a validated id
    * with a demo name beside it is not.
    */
-  const created = await call<{ instance: { id: string } }>("/api/forms/instances", {
+  const created = await call<{ instance: { id: string }; reused?: boolean }>("/api/forms/instances", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -135,6 +141,12 @@ export async function createInlineForm({
       locationId: proposal.locationId,
       source: "assistant",
       /*
+       * WHICH CARD THIS IS. A second press of the same card — after a lost
+       * response, or from another tab — gets back the draft it already made.
+       * A different card always files a new form.
+       */
+      proposalId: proposal.proposalId,
+      /*
        * THE CONVERSATION AS IT STANDS NOW, not as it stood when the card was
        * drawn. The server re-reads who and which form it now names and
        * refuses a card the manager has since corrected.
@@ -159,11 +171,20 @@ export async function createInlineForm({
   onCreated(reference);
 
   /*
+   * A DRAFT THAT ALREADY EXISTED IS NOT DRAFTED AGAIN. The server returned the
+   * draft this manager started from chat moments ago (a lost response, a
+   * second tab, from the same card — see `findRecentAssistantDraft`). Its prefill already ran, and
+   * the manager may already have edited it; prefilling again would spend a
+   * model call to overwrite their work.
+   */
+  if (created.reused) return { reference, draftWarning: null, reused: true };
+
+  /*
    * THE DRAFT. Manager turns only, resolved from the ids the server retained —
    * see `draftNotesFromConversation`. An assistant turn cannot reach this, and
    * neither can a turn the bounded window dropped.
    */
-  const notes = draftNotesFromConversation(messages, proposal.sourceMessageIds);
+  const notes = draftNotesFromConversation(messages, proposal.sourceMessageIds, proposal.sourceExcerpts);
   if (!draftNotesAreUsable(notes)) {
     return { reference, draftWarning: NO_NOTES_WARNING };
   }

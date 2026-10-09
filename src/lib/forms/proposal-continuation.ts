@@ -1,4 +1,4 @@
-import type { ChatMessage } from "@/types";
+import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types";
 
 /**
  * ============================================================================
@@ -97,7 +97,7 @@ export const CONTINUATION_ANSWER_LOOKBACK = 3;
  * that", "no form", "forget the form".
  */
 const ENDS_INTAKE =
-  /\b(?:never\s*mind|nevermind|cancel(?:\s+(?:it|that|this|the\s+form))?|forget\s+(?:it|that|the\s+form|about\s+it)|no\s+form|don'?t\s+(?:want|need)\s+(?:a|an|the)?\s*form|stop\s+(?:it|that|this|the\s+form))\b/i;
+  /\b(?:never\s*mind|nevermind|cancel(?:\s+(?:it|that|this|the\s+form))?|forget\s+(?:it|that|the\s+form|about\s+it)|no\s+form|(?:don'?t|dont|do\s+not)\s+(?:want|need|make|create|start|draft|file|do|open)\s+(?:a|an|the|this|that|any)?\s*(?:form|paperwork|one)|(?:don'?t|dont|do\s+not)\s+(?:make|create|start|draft|file)\s+(?:it|that|this)|no\s+need\s+for\s+(?:a|the)\s+form|(?:skip|drop|hold\s+off\s+on)\s+(?:the|this|that)\s+form|not\s+(?:doing|filing|making)\s+(?:a|the)\s+form|stop\s+(?:it|that|this|the\s+form))\b/i;
 
 export function endsIntake(text: string): boolean {
   return ENDS_INTAKE.test(text);
@@ -138,6 +138,12 @@ export function continuationFor(messages: ChatMessage[]): ProposalContinuation |
     if (message.role !== "assistant") continue;
     if (message.error) return null;
     if (message.formInstanceRef) return null;
+    /*
+     * SEVERAL CARDS ARE NOT ONE INTAKE. A reply after "coaching form for Avery
+     * and a CA for Jordan" could be about either, so it continues neither:
+     * each card is created and edited on its own.
+     */
+    if ((message.formProposals?.length ?? 0) > 1) return null;
     if (message.formProposal) return { templateKey: message.formProposal.templateKey };
     if (message.formSelection) return null;
     answers += 1;
@@ -162,12 +168,66 @@ export function continuationFor(messages: ChatMessage[]): ProposalContinuation |
  * because a card in browser storage is not proof of anything.
  */
 export function isProposalSuperseded(messages: readonly ChatMessage[], proposalId: string): boolean {
-  const index = messages.findIndex((message) => message.formProposal?.proposalId === proposalId);
+  const index = messages.findIndex((message) =>
+    proposalsOf(message).some((proposal) => proposal.proposalId === proposalId),
+  );
   if (index < 0) return false;
-  if (messages[index]!.formInstanceRef) return false;
+  if (instanceRefFor(messages[index]!, proposalId)) return false;
+  // A sibling card in the SAME message is not newer; only a later turn's card is.
   return messages
     .slice(index + 1)
-    .some((message) => message.role === "assistant" && !message.error && message.formProposal && message.formProposal.proposalId !== proposalId);
+    .some(
+      (message) =>
+        message.role === "assistant" &&
+        !message.error &&
+        proposalsOf(message).some((proposal) => proposal.proposalId !== proposalId),
+    );
+}
+
+/** Every proposal a message carries: one card, or one per form it was asked for. */
+export function proposalsOf(message: Pick<ChatMessage, "formProposal" | "formProposals">): ChatFormProposal[] {
+  if (message.formProposals && message.formProposals.length > 0) return message.formProposals;
+  return message.formProposal ? [message.formProposal] : [];
+}
+
+/**
+ * The form created from ONE card of a message, or null.
+ *
+ * A single-card message keeps its pointer in `formInstanceRef`, as it always
+ * has; a message with several cards keeps one per proposal in
+ * `formInstanceRefs`, so creating one card never marks its sibling created.
+ */
+export function instanceRefFor(
+  message: Pick<ChatMessage, "formProposal" | "formProposals" | "formInstanceRef" | "formInstanceRefs">,
+  proposalId: string,
+): ChatFormInstanceRef | null {
+  const several = (message.formProposals?.length ?? 0) > 1;
+  const listed = message.formInstanceRefs?.find((ref) => ref.proposalId === proposalId);
+  if (listed) return listed;
+  if (!message.formInstanceRef) return null;
+  if (!several) return message.formInstanceRef;
+  return message.formInstanceRef.proposalId === proposalId ? message.formInstanceRef : null;
+}
+
+/** Every form created from a message's cards. */
+export function instanceRefsOf(
+  message: Pick<ChatMessage, "formProposal" | "formProposals" | "formInstanceRef" | "formInstanceRefs">,
+): ChatFormInstanceRef[] {
+  const refs = [...(message.formInstanceRefs ?? [])];
+  if (message.formInstanceRef && !refs.some((ref) => ref.instanceId === message.formInstanceRef!.instanceId)) {
+    refs.push(message.formInstanceRef);
+  }
+  return refs;
+}
+
+/**
+ * The message once one of its cards became a form. A single card keeps using
+ * `formInstanceRef`; several record each card's own pointer.
+ */
+export function withInstanceRef(message: ChatMessage, reference: ChatFormInstanceRef): Partial<ChatMessage> {
+  if ((message.formProposals?.length ?? 0) <= 1) return { formInstanceRef: reference };
+  const others = (message.formInstanceRefs ?? []).filter((ref) => ref.proposalId !== reference.proposalId);
+  return { formInstanceRefs: [...others, reference] };
 }
 
 /**
@@ -184,12 +244,47 @@ export function isProposalSuperseded(messages: readonly ChatMessage[], proposalI
  * template's own edit permission and the location scope). A forged one reaches
  * nothing the manager could not already edit in the inline form.
  */
-export function activeFormInstanceFor(messages: ChatMessage[]): string | undefined {
+export function activeFormInstanceFor(messages: ChatMessage[], question?: string): string | undefined {
+  const candidates = activeFormCandidates(messages);
+  if (candidates.length === 1) return candidates[0]!.instanceId;
+  if (candidates.length === 0 || !question) return undefined;
+  /*
+   * SEVERAL FORMS FROM ONE MESSAGE: the correction names whose. "Change
+   * Jordan's date to yesterday" is Jordan's form; a correction that names
+   * nobody, or both, reaches neither — the server asks which
+   * (`activeFormCandidates`), it never guesses.
+   */
+  const words = new Set((question.toLowerCase().match(/[a-z][a-z'-]*/g) ?? []).map((word) => word.replace(/'s$/, "")));
+  const named = candidates.filter((candidate) =>
+    (candidate.employeeName ?? "")
+      .toLowerCase()
+      .split(/\s+/)
+      .some((part) => part.length > 1 && words.has(part)),
+  );
+  return named.length === 1 ? named[0]!.instanceId : undefined;
+}
+
+/**
+ * The forms a correction could be for: the one form the latest created card
+ * became, or every form created from the latest message that carried several.
+ * Empty once a newer card that is not yet a form is on screen.
+ */
+export function activeFormCandidates(
+  messages: ChatMessage[],
+): { instanceId: string; templateName: string; employeeName: string | null }[] {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index]!;
     if (message.role !== "assistant" || message.error) continue;
-    if (message.formInstanceRef) return message.formInstanceRef.instanceId;
-    if (message.formProposal) return undefined;
+    const refs = instanceRefsOf(message);
+    if (refs.length > 0) {
+      const proposals = proposalsOf(message);
+      return refs.map((ref) => ({
+        instanceId: ref.instanceId,
+        templateName: ref.templateName,
+        employeeName: proposals.find((proposal) => proposal.proposalId === ref.proposalId)?.employeeName ?? null,
+      }));
+    }
+    if (message.formProposal) return [];
   }
-  return undefined;
+  return [];
 }

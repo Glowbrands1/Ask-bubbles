@@ -2,6 +2,7 @@ import { JOIN } from "./bounded-context";
 import { isQuestion } from "./employment-change";
 import { EXIT_DETAIL_FIELDS, EXIT_NOTICE_GROUP, EXIT_TYPE_GROUP } from "./exit-library";
 import { EXIT_DERIVED_KEYS, exitFactValues, readExitFacts, type ExitFacts } from "./exit-facts";
+import { repairContractions } from "./typed-contractions";
 
 /**
  * ============================================================================
@@ -79,7 +80,7 @@ export const EXIT_STATED_KEYS: ReadonlySet<string> = new Set([
 /* ------------------------------------------------------------ the words -- */
 
 function normalize(text: string): string {
-  return (text ?? "").replace(/[‘’‛]/g, "'").replace(/[“”]/g, '"');
+  return repairContractions((text ?? "").replace(/[‘’‛]/g, "'").replace(/[“”]/g, '"'));
 }
 
 /** A negation close enough before a word to reverse it. */
@@ -121,11 +122,17 @@ function statements(turn: string): string[] {
  * A sentence cut where a new fact begins: at commas, semicolons and "but",
  * and at "and"/"so" when a new subject or fact follows. "Or" is deliberately
  * NOT a boundary — negation distributes over it.
+ *
+ * "…AND ADD THAT SHE RETURNED HER KEY" IS A NEW FACT TOO. An instruction verb
+ * ("add", "note", "mention", "change" …) or a bare "that" after "and" starts
+ * a new statement, so "she's not eligible for rehire and add that she
+ * returned her key" no longer lends its "not" to the key (it recorded the key
+ * as NOT returned — the opposite of what the manager said).
  */
 function clauses(sentence: string): string[] {
   return sentence
     .split(
-      /\s*,\s*|\s*;\s*|\s+but\s+|\s+(?:and|so|also|plus)\s+(?=(?:she|he|they|her|his|their|the|i|we|payroll|no|not|is|isn't|was|wasn't|will|won't|would|wouldn't|should|shouldn't|did|didn't|has|hasn't|returned|kept|still|eligible)\b)/,
+      /\s*,\s*|\s*;\s*|\s+but\s+|\s+(?:and|so|also|plus)\s+(?=(?:she|he|they|her|his|their|the|i|we|payroll|no|not|is|isn't|was|wasn't|will|won't|would|wouldn't|should|shouldn't|did|didn't|has|hasn't|returned|kept|still|eligible|add|note|mention|include|put|write|change|update|make|set|mark|say|that)\b)/,
     )
     .map((part) => part.trim())
     .filter(Boolean);

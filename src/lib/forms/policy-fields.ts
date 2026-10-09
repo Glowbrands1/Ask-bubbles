@@ -296,6 +296,18 @@ export function applyDerivedPolicyFields(input: {
   /** More than one document claims to be the official manual: the retrieval fallback names nothing. */
   readonly manualAmbiguous?: boolean;
   /**
+   * The official manual was READ — pinned and resolved — for this draft.
+   *
+   * Then Direct policy names one of its sections matched to the ticked offense
+   * (`manualReference`) or nothing: the similarity fallback is closed. Found in
+   * signed-in QA, 8 Oct 2026: a cash-handling Corrective Action with no offense
+   * box ticked was given the manual's COVER PAGE and its Background Checks page
+   * as the policy violated, because those passages were the nearest the search
+   * found to "cash handling". Near is not applicable. The field stays blank and
+   * the form says no approved policy matched.
+   */
+  readonly manualPinned?: boolean;
+  /**
    * The EPP appendix's reference, built from the PINNED manual's sections for
    * the topics the manager's observation raised.
    *
@@ -338,7 +350,9 @@ export function applyDerivedPolicyFields(input: {
     "policy_language",
     (input.manualReference ?? "").trim() !== ""
       ? input.manualReference!.trim()
-      : manualReferenceValue(input.grounding, input.officialManualDocumentId, { manualAmbiguous: input.manualAmbiguous }),
+      : input.manualPinned
+        ? null
+        : manualReferenceValue(input.grounding, input.officialManualDocumentId, { manualAmbiguous: input.manualAmbiguous }),
   );
 
   /*

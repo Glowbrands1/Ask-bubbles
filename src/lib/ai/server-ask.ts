@@ -13,7 +13,7 @@ import {
   resolveRegisterAnchor,
 } from "@/lib/forms/register-anchor";
 import { listTemplateSummaries, type TemplateSummary } from "@/lib/forms/repository";
-import { detectTemplateIntent } from "@/lib/forms/template-intent";
+import { asksAboutForms, detectTemplateIntent } from "@/lib/forms/template-intent";
 import { PERFORMANCE_MANAGEMENT_FRAMEWORK } from "@/lib/knowledge/document-roles";
 import { isFrameworkAvailable } from "@/lib/knowledge/framework-availability";
 import { rowToCitation, type MatchedChunkRow } from "@/lib/knowledge/mappers";
@@ -280,6 +280,23 @@ export async function answerQuestion(
     ({ entry, result }) => entry.onUnavailable === "refuse" && !result.ok,
   );
   if (refused) {
+    /*
+     * A QUERY THAT FAILED IS NOT A DOCUMENT THAT IS MISSING. A momentary
+     * database error used to answer "this document is unavailable — ask an
+     * administrator", with no Retry, on a turn that would have worked a
+     * second later. A failed lookup is now the same retryable failure as a
+     * failed search; a document that is genuinely absent, ambiguous or
+     * incomplete still refuses with the configured wording, and in neither
+     * case is anything answered from memory.
+     */
+    const failure = refused.result.ok ? null : refused.result.failure;
+    if (failure && (failure.code === "role_document_query_failed" || failure.code === "role_chunk_query_failed")) {
+      throw new AiError(
+        "retrieval_failed",
+        "A company document this answer depends on could not be read just now, so no answer was produced. Nothing was answered from memory.",
+        502,
+      );
+    }
     return {
       content: refused.entry.unavailableMessage,
       citations: [],
@@ -382,9 +399,42 @@ export async function answerQuestion(
     content: suggested ? `${stripMarkers(answer)}\n\n${suggested.lead}` : stripMarkers(answer),
     formSelection: suggested?.selection,
     citations,
-    coverage:
-      grounding.length === 0 && (briefing?.present.length ?? 0) === 0 ? "insufficient" : "grounded",
+    coverage: answerCoverage({
+      retrieved: grounding.length,
+      cited: citations.length,
+      reportBacked: (briefing?.present.length ?? 0) > 0,
+      aboutForms: asksAboutForms(request.question),
+    }),
   };
+}
+
+/**
+ * ============================================================================
+ * AN ANSWER THAT CITES NOTHING IS NOT GROUNDED, WHATEVER WAS RETRIEVED
+ * ============================================================================
+ *
+ * Coverage used to be "was anything retrieved?". A tangential chunk just over
+ * the similarity floor — the Break Policy for "how much PTO do I get?" — made
+ * the turn "grounded", the model answered from memory with no marker, and the
+ * manager saw a confident entitlement with no sources AND no "not covered"
+ * notice. Nothing on screen said it was not company policy.
+ *
+ * So a turn is grounded only when the answer actually cites a retrieved row,
+ * or stands on report figures (which carry their period, not a marker).
+ * Questions about the forms library are the one exception: forms-library
+ * facts are deliberately unmarked (see the prompt's taxonomy), and the
+ * library is exhaustive, so an uncited answer about a form is not general
+ * guidance.
+ */
+export function answerCoverage(input: {
+  retrieved: number;
+  cited: number;
+  reportBacked: boolean;
+  aboutForms: boolean;
+}): "grounded" | "insufficient" {
+  if (input.reportBacked) return "grounded";
+  if (input.retrieved === 0) return "insufficient";
+  return input.cited > 0 || input.aboutForms ? "grounded" : "insufficient";
 }
 
 interface ReportBriefings {

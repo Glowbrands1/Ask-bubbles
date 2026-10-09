@@ -7,6 +7,8 @@ import {
   EXIT_TYPE_GROUP,
 } from "./exit-library";
 import { datesInText } from "./form-date-answer";
+import { AGO, agoDate, TOMORROW_WORD, YESTERDAY_WORD } from "./relative-date";
+import { repairContractions } from "./typed-contractions";
 
 /**
  * ============================================================================
@@ -118,7 +120,7 @@ export const EXIT_ROLE_LABEL: Record<ExitDateRole, string> = {
 
 /** Curly apostrophes are how phones type "didn't". */
 function normalize(text: string): string {
-  return (text ?? "").replace(/[‘’‛]/g, "'").replace(/[“”]/g, '"');
+  return repairContractions((text ?? "").replace(/[‘’‛]/g, "'").replace(/[“”]/g, '"'));
 }
 
 const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
@@ -247,8 +249,9 @@ function dateTokens(text: string, today: string): DateToken[] {
 
   // "today", "today's" and the "todays date" managers actually type.
   add(/\btoday(?:'?s)?(?:\s+date)?\b/gi, () => today);
-  add(/\byesterday\b/gi, () => shiftDays(today, -1));
-  add(/\btomorrow\b/gi, () => shiftDays(today, 1));
+  add(YESTERDAY_WORD, () => shiftDays(today, -1));
+  add(TOMORROW_WORD, () => shiftDays(today, 1));
+  add(AGO, (match) => agoDate(match, today));
   add(new RegExp(String.raw`\b(?:last|this past|past)\s+(${WEEKDAY})\b`, "gi"), (match) => {
     const target = WEEKDAYS.indexOf(match[1]!.toLowerCase());
     const back = ((weekdayOf(today) - target + 7) % 7) || 7;

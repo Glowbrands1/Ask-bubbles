@@ -315,6 +315,11 @@ export interface ChatMessage {
    */
   formProposal?: ChatFormProposal;
   /**
+   * Every proposal, when one message asked for more than one form. The first
+   * is also `formProposal`. Each renders as its own card with its own Create.
+   */
+  formProposals?: ChatFormProposal[];
+  /**
    * The form choices offered when the request named no form.
    *
    * Present INSTEAD of a proposal: an ambiguous request produces a question,
@@ -327,6 +332,12 @@ export interface ChatMessage {
    * A POINTER, NOT A COPY — see `ChatFormInstanceRef`.
    */
   formInstanceRef?: ChatFormInstanceRef;
+  /**
+   * The forms created from THIS message's cards when it carried more than one
+   * (`formProposals`), one per proposal, matched by `proposalId`. Pointers,
+   * like `formInstanceRef`.
+   */
+  formInstanceRefs?: ChatFormInstanceRef[];
   /**
    * Set instead of `content` when the turn failed. The chat surface renders
    * this as a distinct, actionable state rather than as an answer — a failure
@@ -522,6 +533,26 @@ export interface ChatFormProposal {
    * See `lib/forms/payroll-deduct.ts`.
    */
   payrollDeduct?: "yes" | "no" | null;
+  /**
+   * The Corrective Action's Type of Warning, where the MANAGER stated it —
+   * "needs a written warning". Absent or null when they did not; never
+   * defaulted. Read back on the card, and ticked by the draft from the same
+   * words. See `lib/forms/warning-level.ts`.
+   */
+  warningLevel?: "verbal" | "written" | null;
+  /**
+   * What the Corrective Action is FOR, in the manager's words — "cash
+   * handling". Read back on the card so the issue is checked before anything is
+   * created; the draft is still written from the manager's turns.
+   */
+  issue?: string | null;
+  /**
+   * THE PART OF A MESSAGE THIS PROPOSAL WAS READ FROM, by message id, when one
+   * message asked for more than one form. "coaching form for Avery and a CA for
+   * Jordan" is one message and two proposals; each drafts from its own clause
+   * only, so nothing said about one employee reaches the other's form.
+   */
+  sourceExcerpts?: Record<string, string>;
   /** Null unless the authenticated scope proves exactly one location. */
   locationId: string | null;
   /**

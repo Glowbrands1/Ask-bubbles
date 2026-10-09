@@ -67,7 +67,7 @@ export const CA_POLICY_LABEL: Record<CaPolicyName, string> = {
 };
 
 /** What an incident was, in the terms the suggestion is explained in. */
-export type ConductTopic = "task" | "deadline" | "direction";
+export type ConductTopic = "task" | "deadline" | "direction" | "cash";
 
 export interface CaPolicyReading {
   /** The policy the manager named, latest turn first. */
@@ -118,6 +118,19 @@ const CONDUCT_TOPICS: { topic: ConductTopic; pattern: RegExp }[] = [
     pattern: new RegExp(
       String.raw`\b${FAILED}\s+(?:\S+\s+){0,2}?(?:complete|completed|finish|finished|do|done|turn in|turned in|submit|submitted)\b[^.;!?\n]{0,40}?\b${TASK_NOUN}|\b(?:incomplete|unfinished|uncompleted|left undone|left unfinished)\s+(?:\S+\s+){0,2}?${TASK_NOUN}|\b${TASK_NOUN}\s+(?:\S+\s+){0,3}?(?:incomplete|unfinished|not (?:completed|finished|done))\b`,
     ),
+  },
+  {
+    /*
+     * CASH HANDLING. Signed-in QA, 8 Oct 2026: "jordan testperson needs a
+     * written warning for cash handling" got no offense box, and Direct policy
+     * fell through to a similarity search that cited the manual's cover page
+     * and Background Checks. The manual's Standards of Conduct lists
+     * "Register / Bank shortages" — that line, and only that line, is what
+     * this may rest on (see `ANCHORS`). A manual without it cites nothing.
+     */
+    topic: "cash",
+    pattern:
+      /\bcash[- ]?hand[a-z]*\b|\b(?:register|drawer|till|bank|deposit|cash)\s+(?:was\s+|were\s+|came\s+up\s+|is\s+)?(?:short|shortages?|over|overages?|discrepanc\w*|count\s+(?:was\s+)?(?:off|wrong))\b|\b(?:short|shortages?)\s+(?:in|on|from)\s+(?:the\s+|her\s+|his\s+|their\s+)?(?:register|drawer|till|bank|deposit)\b|\bmishandl\w*\s+(?:the\s+)?(?:cash|money|deposits?|register)\b/,
   },
   {
     topic: "direction",
@@ -287,6 +300,7 @@ const TOPIC_WORDS: Record<ConductTopic, string> = {
   task: "assigned work that wasn't completed",
   deadline: "a required deadline that was missed",
   direction: "a manager's direction that wasn't followed",
+  cash: "cash handling",
 };
 
 const ALTERNATIVE_WORDS: Record<CaPolicyReading["alternatives"][number], string> = {
@@ -337,6 +351,11 @@ const ANCHORS: Record<ConductTopic, RegExp[]> = {
   task: [/failing to follow the policies and procedures/i],
   deadline: [/failing to follow the policies and procedures/i],
   direction: [/insubordination/i, /refusal to follow the directions/i, /failing to follow the policies and procedures/i],
+  /*
+   * NOT the generic "failing to follow the policies" line: cash handling rests
+   * on the manual saying something about cash, or on nothing.
+   */
+  cash: [/register\s*\/\s*bank\s+shortages?/i],
 };
 
 /** How many chunks a section may run across before another heading must have begun. */
