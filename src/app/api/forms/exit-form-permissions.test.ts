@@ -129,6 +129,8 @@ async function load(role: string, scope: AccessScope = SALON) {
   };
 
   vi.doMock("@/lib/forms/instances", () => ({
+    // No earlier draft of this form for this person: every create here is new.
+    findRecentAssistantDraft: async () => null,
     createInstance: async (input: Record<string, unknown>) => {
       calls.created.push(input);
       return { id: "inst-new", ...input };

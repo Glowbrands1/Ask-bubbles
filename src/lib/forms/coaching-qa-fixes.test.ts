@@ -353,3 +353,29 @@ describe("P7 — shared and service accounts are never a name suggestion", () =>
     expect(roster.map((row) => `${row.firstName} ${row.lastName}`)).toEqual(["Hayley Cooper"]);
   });
 });
+
+/*
+ * PORTED FROM THE REFERENCE PLATFORM'S FEEDBACK FIX (6 OCT 2026). "coacing
+ * form based on uniform" created a Coaching Form for an employee called
+ * "based". The words that tie a form to its topic are never who it is for.
+ * All people are synthetic.
+ */
+describe("topic connectors are never an employee's name", () => {
+  it.each([
+    "coacing form based on uniform",
+    "coaching form based on uniform",
+    "coaching form related to cell phones",
+    "coaching form relating to break times",
+    "CA due to tardiness",
+    "coaching form according to the dress code",
+    "coaching form pertaining to cash handling",
+    "coaching form concerning the closing checklist",
+  ])("%j names nobody", (text) => {
+    expect(extractEmployeeNames(text)).toEqual([]);
+  });
+
+  it("still reads the person beside a topic connector", () => {
+    expect(extractEmployeeNames("coaching form for jane doe based on uniform")).toEqual(["jane doe"]);
+    expect(extractEmployeeNames("CA for Jordan Testperson due to tardiness")).toEqual(["Jordan Testperson"]);
+  });
+});

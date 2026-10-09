@@ -5,8 +5,8 @@ import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 import { COMPANY_LOCATIONS, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
-import { FORM_NAME_PATTERN, canonicalShorthand, isFormVocabulary, leadingFormRequest } from "./template-intent";
-import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
+import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
+import { NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { boundManagerTurns, type BoundedContext } from "./bounded-context";
 import {
   allowsTeamSubject,
@@ -142,6 +142,8 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
       TYPED_NAME_WORD.test(word) &&
       // The first part is a real word; a trailing initial ("C") may follow it.
       (parts.length > 0 || word.length > 1) &&
+      // "for cash handling" is a topic; "for jamie cash" is a person.
+      (parts.length > 0 || !NOT_A_NAME_LEAD.has(lower)) &&
       !NOT_A_NAME.has(lower) &&
       !NOT_A_TYPED_NAME.has(lower) &&
       !isFormVocabulary(lower);
@@ -163,6 +165,14 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
    */
   if (parts.length === 3 && !endedOnPunctuation) {
     const next = words[3]?.replace(WRAPPER_AFTER, "").toLowerCase();
+    /*
+     * "for avery testperson sept 28" is a name and a date, not a three-part
+     * name: a month followed by a day number starts the form's date.
+     */
+    if (MONTH_WORD.test(parts[2]!) && next !== undefined && /^\d{1,2}(?:st|nd|rd|th)?\b/.test(next)) {
+      parts.pop();
+      return parts.join(" ");
+    }
     const boundary =
       next === undefined ||
       NOT_A_NAME.has(next) ||
@@ -175,6 +185,15 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
   if (whole && parts.length !== words.length) return null;
   return parts.join(" ");
 }
+
+/** A word that names what a form is ABOUT, or glue, never part of a person's name. */
+function isTopicWord(raw: string): boolean {
+  const word = raw.replace(WRAPPER_AFTER, "").toLowerCase();
+  return NOT_A_NAME_LEAD.has(word) || NOT_A_TYPED_NAME.has(word) || NOT_A_NAME.has(word);
+}
+
+/** A month's name or its abbreviation, as managers type it before a day. */
+const MONTH_WORD = /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?$/i;
 
 /** The first item of a one-line answer with at least three comma-separated items. */
 const INTAKE_LIST = /^\s*([^,\n]+),[^,\n]*,/;
@@ -304,7 +323,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
   // "pls", "u", "frm" are never names and never end one; read them as words.
   // "general training", "team-wide", "everyone at the salon" describe the team,
   // never a person — they are taken out first. See `maskTeamSubjectPhrases`.
-  const text = maskTeamSubjectPhrases(canonicalShorthand(typed));
+  const text = maskTeamSubjectPhrases(canonicalShorthand(canonicalWarningWording(typed)));
   /* Names read from a position that says a person is being given on purpose. */
   const strong: string[] = [];
   /* Names read from the narrative: a capitalised pair, "with Jordan". */
@@ -515,7 +534,17 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
 
   const FULL = new RegExp(`\\b(${NAME}(?:\\s+${PART})+)`, "g");
   for (const match of text.matchAll(FULL)) {
-    const run = match[1]!.trim();
+    /*
+     * "Avery Testperson Sept 28": the month that starts the date is not a
+     * third name, or the manager is asked to choose between "Avery
+     * Testperson" and "Avery Testperson Sept".
+     */
+    const after = text.slice((match.index ?? 0) + match[0].length);
+    const words = match[1]!.trim().split(/\s+/);
+    if (words.length > 2 && MONTH_WORD.test(words[words.length - 1]!) && /^\s+\d{1,2}(?:st|nd|rd|th)?\b/.test(after)) {
+      words.pop();
+    }
+    const run = words.join(" ");
     if (places.has(run)) continue;
     /*
      * "It's Avery Testperson", "Sorry Avery Testperson": the capitalised run
@@ -527,6 +556,12 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
     if (opensWithRosterState(candidate) && !AS_A_PERSON(candidate)) continue;
     if (isRosterSalonName(candidate)) continue;
     if (isJobTitlePhrase(candidate)) continue;
+    /*
+     * "…a written warning for Cash Handling": capitalised, still a topic. A
+     * capital is evidence of a name, so here every word must be a topic or
+     * stop word — "Price Smith" and "Jamie Cash" are people.
+     */
+    if (candidate.split(/\s+/).every((word) => isTopicWord(word))) continue;
     if (!candidate.split(/\s+/).some(notAName)) {
       // Led by a reply ("It's …"), the run IS the answer.
       (candidate === run ? found : strong).push(candidate);
@@ -536,6 +571,9 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
   const PREPOSED = new RegExp(`\\b(?:for|about|with|regarding)\\s+(${NAME})\\b`, "g");
   for (const match of text.matchAll(PREPOSED)) {
     const candidate = match[1]!.trim();
+    // "for Cash Handling": a topic word followed by another is the topic, not "Cash".
+    const next = text.slice((match.index ?? 0) + match[0].length).trim().split(/\s+/)[0] ?? "";
+    if (NOT_A_NAME_LEAD.has(candidate.toLowerCase()) && (next === "" || isTopicWord(next))) continue;
     if (!notAName(candidate)) found.push(candidate);
   }
 
@@ -645,7 +683,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * opener must be the name ALONE — "I think jane is leaving" is three words
    * before the verb and is not read.
    */
-  const CHANGE_VERB_THEN_PERSON = /\b(?:demote|demoting|transfer|transferring|transfering)\s+(\S+(?:\s+\S+){0,3})/gi;
+  const CHANGE_VERB_THEN_PERSON = /\b(?:demote|demoting|transfer|transferring|transfering|step)\s+(\S+(?:\s+\S+){0,3})/gi;
   for (const match of text.matchAll(CHANGE_VERB_THEN_PERSON)) {
     const candidate = readTypedName(match[1]!.split(/\s+/), false);
     if (candidate) strong.push(candidate);
@@ -670,12 +708,39 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * itself, so "Punctuality needs work" names nobody either.
    */
   const PERSON_THEN_NEEDS =
-    /^(\S+?)(?:['’]s)?(?:\s+(\S+?))?\s+(?:needs|need|requires|should\s+get|could\s+use|has\s+to\s+(?:get|have|do))\s+(?:(?:a|an|the|some|more|another|new)\s+)?(?:coaching|coached|forms?|documents?|documentation|write[- ]?ups?|ca|corrective|epp|plan|review|policy|exit|demotion|transfer|follow[- ]?up|to\s+be\s+(?:coached|written|documented))\b/i;
+    /^(\S+?)(?:['’]s)?(?:\s+(\S+?))?\s+(?:needs|need|requires|should\s+get|could\s+use|has\s+to\s+(?:get|have|do))\s+(?:(?:a|an|the|some|more|another|new)\s+)?(?:coaching|coached|forms?|documents?|documentation|write[- ]?ups?|ca|corrective|epp|plan|review|policy|exit|demotion|transfer|follow[- ]?up|(?:final\s+)?(?:written|verbal)(?:\s+warning)?|(?:final\s+)?warning|to\s+be\s+(?:coached|written|documented))\b/i;
   for (const sentence of text.split(/(?<=[.!?])\s+|\n+/)) {
     const match = PERSON_THEN_NEEDS.exec(sentence.trim());
     if (!match) continue;
     const candidate = readTypedName([match[1]!, ...(match[2] ? [match[2]] : [])], true);
     if (candidate && !opensWithRosterState(candidate)) strong.push(candidate);
+  }
+
+  /*
+   * THE PERSON AN ACCOUNT OPENS WITH, in any case: "jordan testperson was $40
+   * short on her drawer last night, needs a written warning", "jordan
+   * testperson cash handling written warning". Found in the owner's retest
+   * variants, 9 Oct 2026: both were asked "who is this for?" although the
+   * message opens with the person. A first AND last name only — two words
+   * the name readers accept — followed by what they did, or by the topic or
+   * the form itself. Narrative strength, so a name given on purpose outranks
+   * it; "the store was", "my lead was" and "shift lead cash" name nobody.
+   */
+  const PERSON_THEN_ACCOUNT =
+    /^(\S+)\s+(\S+)\s+(?:(?:was|wasn['’]?t|is|isn['’]?t|has|hasn['’]?t|had|hadn['’]?t|did|didn['’]?t|does|doesn['’]?t|came|left|called|showed|clocked|missed|forgot|refused|failed|took|keeps|kept|walked|arrived|ncns['’]?d|no[- ]?showed|got|gave|used|broke|lost|mishandled|miscounted|skipped)\b|(\S+))/i;
+  for (const sentence of text.split(/(?<=[.!?])\s+|\n+/)) {
+    const trimmed = sentence.trim();
+    // A question, or a sentence about "we" or "she", opens with nobody.
+    if (/\?\s*$/.test(trimmed) || /^(?:what|what's|whats|how|why|when|where|who|which|is|are|can|could|should|do|does)\b/i.test(trimmed)) continue;
+    const match = PERSON_THEN_ACCOUNT.exec(trimmed);
+    if (!match) continue;
+    if (/^(?:i|i['’]m|i['’]ll|i['’]ve|we|we['’]ll|we['’]re|we['’]ve|she|he|they|they['’]re|you|it|it['’]s|this|that|there|her|his|their|our|my|the|a|an)$/i.test(match[1]!)) continue;
+    // A third word that is not a verb must be the topic or the warning: "cash", "written", "ca".
+    if (match[3] && !(NOT_A_NAME_LEAD.has(match[3].toLowerCase()) || /^(?:ca|c\/a|written|verbal|warning|write[- ]?up)$/i.test(match[3]))) continue;
+    // Only in a sentence that is about a form or a warning, so a chatty opening names nobody.
+    if (!/\b(?:ca|c\/a|coaching|corrective|written|verbal|warning|write[- ]?up|form|epp|policy\s+review|document)\b/i.test(text)) continue;
+    const candidate = readTypedName([match[1]!, match[2]!], true);
+    if (candidate && candidate.split(/\s+/).length === 2 && !opensWithRosterState(candidate)) found.push(candidate);
   }
 
   /*
@@ -796,9 +861,9 @@ function withoutConversationalLead(run: string): string | null {
 
 /** The whole-message answer without the reply around it: "it's for …" → "…". */
 const ANSWER_OPENER =
-  /^(?:(?:sorry|oops|no|nope|actually|ok|okay|yes|yeah|oh|um|hmm|again|correction|like\s+i\s+said|as\s+i\s+said|i\s+(?:already\s+)?said|i\s+meant)\b[,.!:;\s-]*)+/i;
+  /^(?:(?:sorry|oops|no|nope|actually|ok|okay|yes|yeah|oh|um|hmm|again|correction|wait|my\s+bad|scratch\s+that|wrong\s+(?:person|name|employee)|like\s+i\s+said|as\s+i\s+said|i\s+(?:already\s+)?said|i\s+meant)\b[,.!:;\s-]*)+/i;
 const ANSWER_FRAME =
-  /^(?:(?:it'?s|it’s|it\s+is|its|this\s+is|this\s+one\s+is|that'?s|that\s+is|(?:the\s+)?(?:employee(?:['’]s)?\s+)?name\s+is|(?:her|his|their)\s+name\s+is|(?:the\s+)?employee\s+is|(?:the\s+)?person\s+is)\s+)?(?:(?:for|about)\s+)?/i;
+  /^(?:(?:it'?s|it’s|it\s+is|its|this\s+is|this\s+one\s+is|that'?s|that\s+is|(?:the\s+)?(?:employee(?:['’]s)?\s+)?name\s+is|(?:her|his|their)\s+name\s+is|(?:the\s+)?employee\s+is|(?:the\s+)?person\s+is|(?:make|change|switch)\s+(?:it|that|this|the\s+name)(?:\s+to)?|(?:it|that|this|the\s+name)\s+should\s+(?:be|say)|(?:it|this)\s+(?:was|is)\s+supposed\s+to\s+be)\s+)?(?:(?:for|about)\s+)?/i;
 
 function withoutAnswerLead(answer: string): string {
   return answer.replace(ANSWER_OPENER, "").replace(ANSWER_FRAME, "");
@@ -887,17 +952,45 @@ function negatedNames(text: string): string[] {
  * actually covered for Jordan" does not.
  */
 const CORRECTION_CUE =
-  /(?:^|[.!?\n]\s*)(?:(?:sorry|oops|actually|correction)\b|no\s*[,.!]|no\s+not\b)|\b(?:i\s+meant|meant\s+to\s+say|wrong\s+(?:name|person|employee)|(?:name|employee|it|that)\s+should\s+(?:be|say|read)\s+\S|i\s+(?:already\s+)?said|like\s+i\s+said|as\s+i\s+said)\b|\binstead\s*[.!]?\s*$/i;
+  /(?:^|[.!?\n]\s*)(?:(?:sorry|oops|actually|correction)\b|no\s*[,.!]|no\s+not\b|(?:make|change|switch)\s+(?:it|that|this|the\s+name)\s+(?:to\s+)?(?!a\b|an\b|the\b))|\b(?:i\s+meant|meant\s+to\s+say|wrong\s+(?:name|person|employee)|(?:name|employee|it|that)\s+should\s+(?:be|say|read)\s+\S|i\s+(?:already\s+)?said|like\s+i\s+said|as\s+i\s+said)\b|\binstead\s*[.!]?\s*$/i;
 
-/** In a correction, a sentence that is only a name is the answer: "No, not Jordan. Avery." */
+/**
+ * In a correction, a sentence that is only a name is the answer: "No, not
+ * Jordan. Avery." So is a CLAUSE — "no wait, not avery, jordan testperson",
+ * "wrong person - its jordan testperson", "make it jordan testperson and
+ * change it to a CA" — because a correction typed on a phone runs its parts
+ * together with commas, dashes and "and", not full stops.
+ */
 function sentenceAnswers(text: string): string[] {
   const names: string[] = [];
-  for (const sentence of text.split(/(?<=[.!?])\s+|\n+/)) {
+  for (const sentence of text.split(/(?<=[.!?])\s+|\n+|\s*[,;]\s*|\s+[-–—]\s+|\s+(?:and|but|then)\s+/)) {
     const words = withoutAnswerLead(sentence.trim().replace(/[.?!]+$/, "")).split(/\s+/).filter(Boolean);
     const candidate = words.length > 0 && words.length <= 2 ? readTypedName(words, true) : null;
     if (candidate && !opensWithRosterState(candidate)) names.push(candidate);
   }
   return names;
+}
+
+/**
+ * A name as it goes on the form: "jordan testperson" and "JORDAN TESTPERSON"
+ * become "Jordan Testperson" (owner's acceptance criteria, 9 Oct 2026). A name
+ * typed with any capital letters of its own ("McKenzie", "DeShawn") is kept
+ * exactly as typed — the manager chose that spelling. Hyphens and apostrophes
+ * start a new capital ("Mary-Kate O'Neil"). Always editable on the form.
+ */
+export function displayPersonName(name: string): string {
+  const letters = name.replace(/[^a-z]/gi, "");
+  const typedAllOneCase = letters === letters.toLowerCase() || letters === letters.toUpperCase();
+  if (!typedAllOneCase) return name;
+  return name.toLowerCase().replace(/(^|[\s'’-])([a-z])/g, (_, lead: string, letter: string) => `${lead}${letter.toUpperCase()}`);
+}
+
+/**
+ * Whether a turn corrects WHO the form is for: "actually it's for avery
+ * testperson", "no, not Jordan — Avery", "wrong person, it's Avery".
+ */
+export function correctsTheEmployee(text: string): boolean {
+  return CORRECTION_CUE.test(text) || negatedNames(text).length > 0;
 }
 
 function settle(strong: string[], weak: string[], text: string): EmployeeMentions {
@@ -965,7 +1058,7 @@ const FORM_NOUNS =
 function formSubjectNames(text: string): string[] {
   const subjects: string[] = [];
   const FORM_THEN_PERSON = new RegExp(
-    `\\b(?:${FORM_NAME_PATTERN}|c\\.a\\.?|ca|${FORM_NOUNS})\\s+(for|about|regarding|on)\\s+(\\S+(?:\\s+\\S+){0,3})`,
+    `\\b(?:${FORM_NAME_PATTERN}|c\\.a\\.?|c\\/a|ca|${FORM_NOUNS})\\s+(for|about|regarding|on)\\s+(\\S+(?:\\s+\\S+){0,3})`,
     "gi",
   );
   for (const match of text.matchAll(FORM_THEN_PERSON)) {
@@ -990,6 +1083,17 @@ function formSubjectNames(text: string): string[] {
       .slice(candidate.split(/\s+/).length);
     if (/^(?:employee|team|staff|named)$/i.test(following[0] ?? "")) continue;
     subjects.push(candidate);
+    /*
+     * "COACHING FORM FOR AVERY TESTPERSON AND JORDAN TESTPERSON", typed in
+     * lower case, named only Avery: the reader stops at "and", so Jordan was
+     * dropped and the form went to the first person without a word. A second
+     * name joined by "and" / "&" is a second candidate, so the manager is
+     * asked which of them — never handed one of the two.
+     */
+    if (/^(?:and|&)$/i.test(following[0] ?? "")) {
+      const second = readTypedName(following.slice(1, 5), false);
+      if (second && typedNameAllowed(second) && !opensWithRosterState(second)) subjects.push(second);
+    }
   }
   return subjects;
 }
@@ -1356,7 +1460,7 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
   const employeeName = team
     ? TEAM_SUBJECT_LABEL
     : employee.kind === "resolved"
-      ? employee.employeeName
+      ? displayPersonName(employee.employeeName)
       : null;
   const locationId = location.resolution === "resolved" ? location.locationId : null;
   /*

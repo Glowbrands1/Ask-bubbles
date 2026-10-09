@@ -376,3 +376,148 @@ mutation of a display-only field; both were corrected.
 
 Live QA against the real Midwest Soap Makers account has **not** been run: it
 needs the `WOVEN_BCS_*` credentials and the Ask Bubbles server keys.
+
+---
+
+## 9. Conversation stress QA and fixes (2026-10-08)
+
+Every case below was first run against **both** apps through the same real
+form path (`proposeFormForTurn` + `continuationFor`); the two behaved
+identically, so each failure was shared with the reference platform. Ask
+Bubbles now handles them; the reference platform is unchanged.
+
+| Area | Before | Now | Where |
+|---|---|---|---|
+| Person on the form | "needs a written warning for cash handling" → employee "cash handling"; "for avery testperson dated 10/2" → "avery testperson dated"; "Avery Testperson Sept 28" → asked to choose "Avery Testperson" or "Avery Testperson Sept" | The person, or a question; a topic word can never START a typed name (`NOT_A_NAME_LEAD`), so "jamie cash" is still a name | `name-words.ts`, `proposal.ts` |
+| Correction before the draft | "actually make it jordan testperson", "no wait, not avery, jordan testperson", "wrong person - its …" → advice; the old card stayed live | New card for the corrected person; the old card is superseded | `proposal.ts` (`sentenceAnswers` reads clauses; answer frames) |
+| Change of intent | "actually don't make a form" kept the Coaching card | Ends the intake | `template-intent.ts` (`DECLINES_FORM`), `proposal-continuation.ts` |
+| Jargon | "c/a", "final written", "phone screen", "TC interview", "step X down to …", "interview form" → advice | The form (or the picker for "interview form"); questions about them stay questions | `template-intent.ts` |
+| Phone typing | "yest", "tmrw", "2 days ago", "wouldnt rehire" not read | Read, relative to the business day; more than 31 days back is never guessed | `relative-date.ts`, `exit-facts.ts`, `typed-contractions.ts` |
+| Correcting a created draft | "change the date to yesterday" on Coaching/transfer went to the AI revision path | Deterministic header correction on every form **except the Corrective Action Form**, which keeps the reference platform's rule (payroll answer only); a second request in the same message is named as not done, never silently dropped | `config/company/forms/index.ts`, `chat-correction.ts` |
+| Duplicate drafts | A create whose response was lost, or a second tab, filed a second record | A repeated press of the SAME card (its `proposalId`, recorded on the form's `created` event) returns the draft it made (`reused: true`) and the browser does not re-draft it. A new card — a second incident for the same employee — always files a new draft | `instances.ts` (`findRecentAssistantDraft`), `proposal-id.ts`, `api/forms/instances/route.ts`, `create-inline-form.ts` |
+| Form date | No typed date → database `current_date` (UTC): a form started at 9:30pm Eastern was dated tomorrow | Always the business day | `instances.ts`, template preview route |
+| Retrieval vocabulary | "OT rules for mgrs?", "pto", "harrasment" embedded as typed and often missed the policy | Also searched as "OT (overtime) rules for mgrs (managers)?"; the original query is always searched first and the model still sees the question as typed | `query-vocabulary.ts`, `continuation.ts` |
+| Pronoun follow-ups | "does that apply to part-timers?", "can I carry it over?" searched alone | Fall back to the previous manager question when they find nothing alone (retrieval only; pinned-document gates unchanged) | `continuation.ts` |
+| Coverage | Any retrieved row made the turn "grounded", even when the answer cited nothing | Grounded only when the answer cites a row (or stands on report figures, or is about the forms library) | `server-ask.ts` (`answerCoverage`) |
+| Citation markers | "[S2][S3]" left "[S2]" in the prose; "[S1, S2]" was neither cited nor stripped | Both cited and stripped | `prompts.ts` (`normalizeMarkers`) |
+| Prompt | Date only; no clarification or metrics rule; browser-typed name/location placed verbatim | Weekday, business time zone and yesterday's date; one-clarifying-question rule; no discipline on metrics alone; keep allegations as allegations; resolve relative dates out loud; labels sanitised to one line | `prompts.ts` |
+| Pinned document lookup failing | "Ask an administrator", no Retry | Retryable `retrieval_failed`; a genuinely missing document still refuses as configured | `server-ask.ts` |
+| History | Message count capped, length not | Each history message capped at 40,000 characters | `validation.ts` |
+
+### Release review (multi-request messages)
+
+A second pass looked for messages whose parts were dropped without a word. All of these were shared with the reference platform:
+
+| Message | Before | Now |
+|---|---|---|
+| "coaching form for avery testperson and a CA for jordan testperson" | Coaching card asking "Avery or Jordan?"; the CA vanished | Both forms named back with their people; one at a time, no card guessed |
+| "coaching form for avery testperson. what is the attendance policy?" | Card; question vanished | Card, and the question named back to ask on its own |
+| "make it jordan testperson and change it to a CA" | **CA for Avery** | CA for Jordan |
+| "coaching form for avery testperson and jordan testperson" (lower case) | Form for Avery; Jordan dropped | "Which of them?" |
+| "new location salon 24. also what is the transfer policy?" (draft open) | Nothing saved | Location saved; question named back |
+| "change her new location to salon 24 and rewrite the reason …" | Nothing saved | Location saved (clause by clause); the rewrite named back |
+| "payroll deduct is not applicable and add that she was late twice" | Addition dropped | Addition named back |
+| "shes not eligible for rehire and add that she returned her key" | **Key recorded NOT returned** | Key returned; rehire no |
+
+`lib/forms/message-parts.ts` takes a message apart; `correctActiveForm` and `proposeFormForTurn` do the part they understand and name the rest, word for word.
+
+**Suites:** `lib/ai/conversation-stress-qa.test.ts` (83),
+`lib/forms/chat-correction-stress.test.ts` (42),
+`test/qa/chat-grounding-stress.qa.test.ts` (15, PGlite + pgvector),
+`lib/forms/duplicate-draft.test.ts`, `app/api/forms/duplicate-create-route.test.ts`,
+`lib/ai/pinned-failure-recovery.test.ts`, `lib/ai/query-vocabulary.test.ts`,
+`lib/ai/prompts-stress.test.ts`, `lib/forms/typed-shorthand.test.ts`, and
+`e2e/chat-intent.spec.ts` (browser). Run against the pre-change source, 76 of
+the new unit tests fail.
+
+## 10. Owner's signed-in QA, 8 Oct 2026 — two release-blocking cases
+
+**Where they were seen.** Vercel runtime logs for 23:28–23:30 UTC show every
+test turn served by **Production** (`askbubbles.vercel.app`, deployment
+`dpl_AsSEUXgUmko317ULMDP3NKYgPmbi`, commit `68f9c40`), not the PR #8 preview,
+which logged no traffic after 22:00. Two draft records were created in
+Production by pressing Create (a typed turn never auto-creates; only a form
+chosen from the picker does). The four pre-existing drafts are unchanged.
+
+**Case 1 — "jordan testperson needs a written warning for cash handling".**
+Production filed a Corrective Action for an employee called "cash handling",
+with no Type of Warning and the manual's cover page (p. 1) and Background
+Checks (p. 21) as Direct policy. Root causes:
+
+| Symptom | Root cause | Fix |
+|---|---|---|
+| Employee "cash handling" | 68f9c40's name reader took a topic phrase as a name (fixed earlier on this branch, §9) | — (already fixed; now proven through the routes) |
+| Draft written from unrelated turns | `sourceMessageIds` was the last six manager turns for every form except demotion/transfer — the shirt-policy question and Avery's coaching request were in the CA's notes | `turnsAboutThisForm` now scopes every form: turns about this form and this person only; a turn naming anybody else, and questions naming nobody, stay out |
+| Written Warning not ticked | Nothing read a stated level; `warning_type` was the model's alone | `warning-level.ts` reads "verbal/written warning", "final written" (not history, not negated, latest wins); the draft ticks it over the model; the card reads it back |
+| Issue not shown | Not read | `incident-issue.ts` reads "for cash handling"; the card shows **Issue:** |
+| Cover page / Background Checks cited | With no offense box ticked, Direct policy fell back to a similarity search of the manual | With the official manual pinned, Direct policy is a section matched to the ticked offense **or blank** (the form then says no approved policy matched). Cash handling is suggested as Standards of Conduct and applied **only** where the manual's own section lists "Register / Bank shortages" — the live JBA manual does (chunk 37) |
+
+**Case 2 — "coaching form for Avery Testperson and a CA for Jordan
+Testperson".** Production gave one Coaching card asking "Avery or Jordan?" and
+dropped the CA. Now each request is its own proposal (`form-requests.ts`): its
+own id, person, date, issue and level, read from its own clause, with
+`sourceExcerpts` so each draft is written from its own words only. The message
+carries `formProposals`; each card has its own Create and its own
+`formInstanceRefs` entry; the create route's currency check accepts each card
+of a multi-form turn. Declined ("but no CA for Jordan") and conditional ("if
+Jordan is late again, a CA") forms are named back and never proposed; a
+same-message switch ("…, actually make it a CA") is one form; "coaching form
+for Avery and Jordan" (one form, two people) is still asked about (QA F18),
+while "coaching forms for…" gives one each. After two drafts exist, a
+correction naming a person changes only that person's form, and one naming
+nobody is answered with "which one?" and changes nothing.
+
+**Evidence.** `src/app/api/forms/multi-form-chat-e2e.test.ts` drives both
+cases through `POST /api/chat` → `createInlineForm` → `POST
+/api/forms/instances` → `POST …/draft` → the stored rows (20 tests);
+`inline-form.dom.test.tsx` (two independent cards); `form-requests.test.ts`,
+`warning-level.test.ts`; `e2e/multi-form-cards.spec.ts` (built demo, desktop
+and mobile).
+
+**Open decision.** A name typed in lower case is kept as typed ("jordan
+testperson"), as the existing tests require; title-casing it is a one-line
+change if wanted.
+
+## 11. Owner's retest, 9 Oct 2026 — which deployment, and what was still wrong
+
+**The screenshots came from the PR #9 preview, not PR #8.** Vercel runtime
+logs: the retest turns at 10:24 UTC were served by
+`askbubbles-git-claude-port-sunny-fixes-glo-brands.vercel.app`
+(`dpl_J6qHvRmFqu9Q45Gmmq9VbjkLhxrA`, commit `5a57803`). That branch was cut
+from production `68f9c40` and carried none of PR #8's chat fixes, so it
+behaved exactly like production. The PR #8 preview received no traffic.
+
+**Stored conversations are not re-read.** A message's proposal is stored with
+the message (the browser's IndexedDB, synced to `chat_messages.metadata`) and
+is rendered as it was produced. A new build changes NEW answers only; an old
+card keeps the employee it was given. An old, never-created card cannot file
+a wrong record on a new build: the create route re-reads the conversation
+with the current code (`checkProposalIsCurrent`) and refuses it as out of
+date. History cannot steer a new request beyond the turns about the same form
+and person (§10), and each conversation continues only itself.
+
+**Fixed in this round** (each from the owner's variant list, proven through
+`POST /api/chat` and the create/draft routes in
+`src/app/api/forms/owner-retest-e2e.test.ts`; 14 of its 20 tests fail on the
+previous head):
+
+| Variant | Before | Now |
+|---|---|---|
+| "actually it's for avery testperson" after a CA for Jordan | Avery's card lost the written warning and the issue | The account is kept, under the corrected name; a later "make it a verbal warning" keeps it too |
+| "needs a writen warning for cash handeling" | Answered as a question | Corrective Action, Written Warning |
+| "jordan testperson was $40 short on her drawer last night, needs a written warning" | "Who is this for?"; the level read as history | Jordan Testperson, Written Warning |
+| "jordan testperson cash handling written warning" | "Who is this for?" | Jordan Testperson, Written Warning |
+| "written warning for jordan testperson - cash handling", "CA for jordan testperson, cash handling" | No issue | Issue: cash handling |
+| Names typed all lower case or ALL CAPS | Kept as typed | Name case on the card and the form ("Jordan Testperson"); a name typed with its own capitals is kept |
+
+**Business time zone is US Central** (owner: "it should always be in CT").
+`NEXT_PUBLIC_BUSINESS_TIMEZONE` is not set in Vercel, so the code default
+decides: it is now `America/Chicago` for form dates, "today" in the prompt and
+analytics. The analytics SQL function `analytics_when` keeps an Eastern
+fallback for an omitted or unknown zone; every call passes the application's
+zone, and aligning that fallback needs a migration (not included).
+
+**Known, not changed:** "ww" is not read as "written warning" (too ambiguous);
+the analytics feedback window ends at a UTC midnight rather than a Central one,
+so between about 7pm and midnight CT that day's ratings are outside it —
+pre-existing, outside chat.

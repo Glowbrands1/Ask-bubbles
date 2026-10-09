@@ -23,7 +23,9 @@ import type {
 } from "@/types";
 import {
   CREATE_FORM_FROM_CONVERSATION,
+  activeFormCandidates,
   activeFormInstanceFor,
+  withInstanceRef,
   continuationFor,
 } from "@/lib/forms/proposal-continuation";
 import { announceFormUpdate } from "./form-update-events";
@@ -268,7 +270,15 @@ export function ChatScreen() {
            * The form this conversation last created, so "change the date to
            * yesterday" can correct it. Revalidated server-side.
            */
-          activeFormInstanceId: activeFormInstanceFor(history),
+          activeFormInstanceId: activeFormInstanceFor(history, text),
+          /*
+           * SEVERAL FORMS FROM ONE MESSAGE, and this turn names neither: their
+           * ids, so a correction is answered with "which one?" rather than
+           * applied to a guess or dropped. Revalidated server-side.
+           */
+          ...(activeFormInstanceFor(history, text) === undefined && activeFormCandidates(history).length > 1
+            ? { activeFormCandidateIds: activeFormCandidates(history).map((candidate) => candidate.instanceId) }
+            : {}),
           /*
            * Sent on every turn, not just the first. Pointers at rows; the
            * server re-reads them and never trusts a rendered number.
@@ -321,6 +331,10 @@ export function ChatScreen() {
            * defaults. A proposal carries no field values at all.
            */
           formProposal: response.formProposal,
+          /* Every card, when one message asked for several forms. */
+          ...(response.formProposals && response.formProposals.length > 1
+            ? { formProposals: response.formProposals }
+            : {}),
           /*
            * The choices for a request that named no form. Data, not a decision:
            * nothing is created until the manager clicks a card, which sends an
@@ -455,7 +469,12 @@ export function ChatScreen() {
        * created was erased by the reference landing. `patchConversationMessage`
        * does the map inside the store's own updater, against current state.
        */
-      patchConversationMessage(activeId, messageId, { formInstanceRef: reference });
+      /*
+       * PER CARD. A message that proposed several forms records each card's
+       * form beside the others (`withInstanceRef`), computed against the
+       * message as it is now, so two cards created together both land.
+       */
+      patchConversationMessage(activeId, messageId, (message) => withInstanceRef(message, reference));
     },
     [activeId, patchConversationMessage],
   );

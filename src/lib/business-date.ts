@@ -44,11 +44,12 @@
  * the render and the server and the browser can never disagree about what day
  * it is.
  *
- * The default is US Eastern. The locations span US time zones, so no
- * single choice is exactly local everywhere; what matters is that it is a
- * BUSINESS zone rather than UTC, and that it is one value everything agrees on.
- * A location an hour west sees a form become overdue an hour before its own
- * midnight, which is an hour of skew instead of four or five.
+ * The default is US Central (owner's instruction, 9 Oct 2026: "it should
+ * always be in CT"). The locations span US time zones, so no single choice is
+ * exactly local everywhere; what matters is that it is a BUSINESS zone rather
+ * than UTC, and that it is one value everything agrees on. A location an hour
+ * east or west sees a form become overdue an hour from its own midnight, which
+ * is an hour of skew instead of five or six.
  */
 
 /**
@@ -59,7 +60,7 @@
  * than a code path, and nothing anywhere else needs to know.
  */
 export const BUSINESS_TIMEZONE =
-  process.env.NEXT_PUBLIC_BUSINESS_TIMEZONE?.trim() || "America/New_York";
+  process.env.NEXT_PUBLIC_BUSINESS_TIMEZONE?.trim() || "America/Chicago";
 
 /**
  * The business date as ISO `yyyy-mm-dd`.

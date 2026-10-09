@@ -344,10 +344,21 @@ describe("the feedback read functions", () => {
      */
     const businessDate = readFileSync(join(process.cwd(), "src/lib/business-date.ts"), "utf8");
     const fallback = /NEXT_PUBLIC_BUSINESS_TIMEZONE\?\.trim\(\) \|\| "([^"]+)"/.exec(businessDate)?.[1];
-    expect(fallback, "business-date.ts declares a fallback zone").toBeTruthy();
-    /* The SQL default and its own fallback are the application's zone, not another. */
-    expect(sql).toContain(`p_timezone text default '${fallback}'`);
-    expect(sql).toContain(`else '${fallback}'`);
+    expect(fallback, "business-date.ts declares a fallback zone").toBe("America/Chicago");
+    /*
+     * THE APPLICATION'S ZONE DECIDES, ON EVERY CALL. The business zone moved to
+     * US Central on 9 Oct 2026 (owner's instruction). The function's own
+     * default and invalid-zone fallback, written with the Eastern zone in the
+     * applied migration, are reached only when a caller omits the zone or
+     * passes one Postgres does not know — so every call passes
+     * `BUSINESS_TIMEZONE`, and that is what is held here. Aligning the SQL
+     * fallback needs a migration; see docs/chat-parity.md §11.
+     */
+    const queries = readFileSync(join(process.cwd(), "src/lib/analytics/feedback-queries.ts"), "utf8");
+    const calls = queries.split('rpc("analytics_when"').slice(1);
+    expect(calls.length).toBeGreaterThan(0);
+    for (const call of calls) expect(call.slice(0, call.indexOf("})"))).toContain("p_timezone: BUSINESS_TIMEZONE");
+    expect(sql).toMatch(/p_timezone text default '[A-Za-z_]+\/[A-Za-z_]+'/);
     expect(sql).toContain("from pg_timezone_names where name = p_timezone");
   });
 

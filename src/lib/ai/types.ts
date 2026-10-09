@@ -83,6 +83,13 @@ export interface AskRequest {
    */
   activeFormInstanceId?: string;
   /**
+   * The forms created from ONE message's several cards, when this turn names
+   * none of their people — so a correction is answered with "which one?"
+   * rather than guessed or dropped. Ids only, re-authorized server-side; see
+   * `askWhichFormToCorrect`.
+   */
+  activeFormCandidateIds?: string[];
+  /**
    * What the manager was looking at when they asked, when they came from a
    * report tab's "Ask Bubbles about this report".
    *
@@ -178,6 +185,14 @@ export interface AskResponse {
    * `lib/ai/form-proposal.ts`.
    */
   formProposal?: ChatFormProposal;
+  /**
+   * EVERY proposal, when one message asked for more than one form — "coaching
+   * form for Avery and a CA for Jordan". `formProposal` is the first of them,
+   * so a reader that knows only one card still shows a real one. Each has its
+   * own `proposalId`, its own person and its own draft sources. Absent for a
+   * single-form turn. See `lib/forms/form-requests.ts`.
+   */
+  formProposals?: ChatFormProposal[];
   /**
    * The form choices, when the request named no form.
    *

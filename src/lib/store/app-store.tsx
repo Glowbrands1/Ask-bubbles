@@ -101,7 +101,12 @@ interface AppStoreValue {
   patchConversationMessage: (
     conversationId: string,
     messageId: string,
-    patch: Partial<ChatMessage>,
+    /**
+     * The fields to set, or a function of the message AS IT IS NOW — for a
+     * patch that depends on it, such as recording one card's form beside a
+     * sibling's that landed a moment earlier.
+     */
+    patch: Partial<ChatMessage> | ((message: ChatMessage) => Partial<ChatMessage>),
   ) => void;
   /**
    * Removes a conversation from the ACCOUNT and then from this browser.
@@ -862,7 +867,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
    * the right answer is to write nothing.
    */
   const patchConversationMessage = useCallback(
-    (conversationId: string, messageId: string, patch: Partial<ChatMessage>) => {
+    (
+      conversationId: string,
+      messageId: string,
+      patch: Partial<ChatMessage> | ((message: ChatMessage) => Partial<ChatMessage>),
+    ) => {
       setConversations((current) =>
         current.map((conversation) => {
           if (conversation.id !== conversationId) return conversation;
@@ -872,7 +881,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           return {
             ...conversation,
             messages: conversation.messages.map((message) =>
-              message.id === messageId ? { ...message, ...patch } : message,
+              message.id === messageId
+                ? { ...message, ...(typeof patch === "function" ? patch(message) : patch) }
+                : message,
             ),
             updatedAt: activityNowIso(),
           };

@@ -31,6 +31,13 @@ export const LIMITS = {
   tag: 48,
   tagCount: 24,
   historyTurns: 20,
+  /**
+   * One history message. Generous — a detailed answer that needed the
+   * truncation retry is about 8,000 tokens, roughly 32,000 characters — but
+   * bounded, so a forged history cannot carry megabytes into every model
+   * call and every form reader that re-reads the thread.
+   */
+  historyMessage: 40_000,
   documentIds: 20,
   /** Opaque browser-local message id, echoed back as provenance only. */
   messageId: 64,
@@ -155,8 +162,9 @@ export function parseHistory(
        */
       const id = (entry as { id?: unknown }).id;
       const usable = typeof id === "string" && id.length > 0 && id.length <= LIMITS.messageId;
+      const content = entry.content.slice(0, LIMITS.historyMessage);
       return usable
-        ? { id: id as string, role: entry.role, content: entry.content }
-        : { role: entry.role, content: entry.content };
+        ? { id: id as string, role: entry.role, content }
+        : { role: entry.role, content };
     });
 }

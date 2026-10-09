@@ -118,16 +118,22 @@ describe("13. the proposal selects an intent and supplies nothing else", () => {
      * route pins; the job title is free text on the record, exactly as the
      * employee's name has always been, and it is null unless the MANAGER said
      * it — see `extractJobTitle`.
+     *
+     * `proposalId` widens nothing either: it only lets a repeated press of the
+     * SAME card find the draft that card already made, for the same signed-in
+     * manager — see `findRecentAssistantDraft`.
      */
     expect(Object.keys(calls[0]!.body).sort()).toEqual([
       "conversation",
       "employeeName",
       "employeeRole",
       "locationId",
+      "proposalId",
       "source",
       "templateKey",
       "variantKey",
     ]);
+    expect(calls[0]!.body.proposalId).toBe("prop-1");
   });
 
   it("sends the conversation as it stands, so the server can refuse a superseded card", async () => {
@@ -484,5 +490,30 @@ describe("no second drafting path was built", () => {
     for (const forbidden of ["anthropic", "Anthropic", "messages.create", "CLAUDE_MODEL"]) {
       expect(chat, forbidden).not.toContain(forbidden);
     }
+  });
+});
+
+describe("a draft the server already had is not drafted again", () => {
+  it("reports the existing draft at once and never calls the drafting route", async () => {
+    const calls: { url: string }[] = [];
+    const call = vi.fn().mockImplementation(async (url: string) => {
+      calls.push({ url });
+      if (url.endsWith("/draft")) throw new Error("must not draft a reused form");
+      return { instance: { id: "inst-existing" }, reused: true };
+    });
+    const seen: string[] = [];
+    const result = await createInlineForm({
+      proposal: proposal(),
+      messages: [ACCOUNT],
+      call,
+      onCreated: (reference) => seen.push(reference.instanceId),
+    });
+    expect(seen).toEqual(["inst-existing"]);
+    expect(result).toEqual({
+      reference: { instanceId: "inst-existing", proposalId: "prop-1", templateName: expect.any(String) },
+      draftWarning: null,
+      reused: true,
+    });
+    expect(calls.map((entry) => entry.url)).toEqual(["/api/forms/instances"]);
   });
 });

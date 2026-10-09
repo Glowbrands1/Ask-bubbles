@@ -22,10 +22,10 @@ import { authorizedLocationIds } from "./location-scope";
  *   location     employees with an active, person-mapped affiliation at one of the
  *             actor's own locations. Nobody else is ever a candidate.
  *   global    every active employee — a global scope excludes no location.
- *   district  NOBODY, for the same reason form creation fails closed for these
- *   region    scopes (`location-scope.ts`): the forms path cannot yet verify
- *             which locations an area contains. An empty roster means the typed
- *             name is used as typed, exactly as before.
+ *   district  employees at the locations the area contains, resolved through
+ *   region    the location roster (`authorizedLocationIds`). An area the roster
+ *             does not know resolves to no location, so to NOBODY — and an
+ *             empty roster means the typed name is used as typed.
  *   demo      NOBODY. A demo actor has no verified scope.
  *
  * FAILS TO "UNCHECKED", NEVER TO "EVERYONE". Any read error returns an empty

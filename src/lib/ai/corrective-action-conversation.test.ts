@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { displayPersonName } from "@/lib/forms/proposal";
 
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 
@@ -1368,7 +1369,7 @@ describe("a Corrective Action Form for a name typed in any case", () => {
 
     expect(answer.formProposal).toBeDefined();
     expect(answer.formProposal!.templateKey).toBe("dpoa");
-    expect(answer.formProposal!.employeeName).toBe(name);
+    expect(answer.formProposal!.employeeName).toBe(displayPersonName(name));
     expect(answer.formProposal!.status).toBe("ready");
     expect(answer.formProposal!.supportsInlineDraft).toBe(true);
     expect(answer.content).toMatch(/create the draft here/i);
@@ -1384,7 +1385,7 @@ describe("a Corrective Action Form for a name typed in any case", () => {
     });
 
     expect(answer.formProposal).toBeDefined();
-    expect(answer.formProposal!.employeeName).toBe(name);
+    expect(answer.formProposal!.employeeName).toBe(displayPersonName(name));
     expect(answer.formProposal!.status).toBe("ready");
     expect(answer.formProposal!.supportsInlineDraft).toBe(true);
   });
@@ -1433,7 +1434,7 @@ describe("a Corrective Action Form for a name wrapped in punctuation", () => {
     const answer = await ask(`Create a Corrective Action form for ${typed} She wore slippers today.`);
 
     expect(answer.formProposal).toBeDefined();
-    expect(answer.formProposal!.employeeName).toBe(name);
+    expect(answer.formProposal!.employeeName).toBe(displayPersonName(name));
     expect(answer.formProposal!.status).toBe("ready");
     expect(answer.formProposal!.supportsInlineDraft).toBe(true);
   });
@@ -1448,7 +1449,7 @@ describe("a Corrective Action Form for a name wrapped in punctuation", () => {
     });
 
     expect(answer.formProposal).toBeDefined();
-    expect(answer.formProposal!.employeeName).toBe(name);
+    expect(answer.formProposal!.employeeName).toBe(displayPersonName(name));
     expect(answer.formProposal!.status).toBe("ready");
     expect(answer.formProposal!.supportsInlineDraft).toBe(true);
   });
@@ -1573,7 +1574,7 @@ describe("the coaching intake answered on one line", () => {
 
     expect(answer.formProposal).toBeDefined();
     expect(answer.formProposal!.templateKey).toBe("coaching");
-    expect(answer.formProposal!.employeeName).toBe(name);
+    expect(answer.formProposal!.employeeName).toBe(displayPersonName(name));
     expect(answer.formProposal!.employeeRole).toBe(title);
     expect(answer.formProposal!.status).toBe("ready");
   });
@@ -1592,7 +1593,7 @@ describe("the coaching intake answered on one line", () => {
       { role: "admin" as never, scope: { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] } },
     );
 
-    expect(answer.formProposal?.employeeName).toBe("dana moss");
+    expect(answer.formProposal?.employeeName).toBe(displayPersonName("dana moss"));
     expect(answer.formProposal?.status).toBe("ready");
     expect(answer.formProposal?.supportsInlineDraft).toBe(true);
   });
@@ -1791,7 +1792,7 @@ describe("a form's name leading the message, across the library", () => {
     const answer = await ask(question);
 
     expect(answer.formProposal?.templateKey).toBe(key);
-    expect(answer.formProposal?.employeeName).toBe(employee);
+    expect(answer.formProposal?.employeeName).toBe(displayPersonName(employee));
     expect(answer.formProposal?.status).toBe("ready");
     expect(answer.formSelection).toBeUndefined();
     expect(answer.content).not.toMatch(/which form/i);
@@ -1801,10 +1802,10 @@ describe("a form's name leading the message, across the library", () => {
 
   it("keeps a middle name, and the details that follow it", async () => {
     const transfer = await ask("Transfer for mary anne cruz to salon 24");
-    expect(transfer.formProposal?.employeeName).toBe("mary anne cruz");
+    expect(transfer.formProposal?.employeeName).toBe(displayPersonName("mary anne cruz"));
 
     const exit = await ask("Exit for john michael doe effective october 2");
-    expect(exit.formProposal?.employeeName).toBe("john michael doe");
+    expect(exit.formProposal?.employeeName).toBe(displayPersonName("john michael doe"));
   });
 
   /*
@@ -1818,12 +1819,12 @@ describe("a form's name leading the message, across the library", () => {
     const answer = await ask(question);
 
     expect(answer.formProposal?.templateKey).toBe("dpoa");
-    expect(answer.formProposal?.employeeName).toBe("marlowe co");
+    expect(answer.formProposal?.employeeName).toBe(displayPersonName("marlowe co"));
     expect(answer.formProposal?.status).toBe("ready");
     expect(answer.formProposal?.formDate ?? null).toBeNull();
     expect(answer.formSelection).toBeUndefined();
     expect(answer.content).not.toMatch(/who is this/i);
-    expect(answer.content).toMatch(/I'll draft a \*\*Corrective Action Form\*\* for \*\*marlowe co\*\*/);
+    expect(answer.content).toMatch(/I'll draft a \*\*Corrective Action Form\*\* for \*\*Marlowe Co\*\*/);
     // What happened, the warning and the prior warning were all given: none is asked again.
     expect(answer.content).not.toMatch(/^\d\. /m);
     expect(answer.content).not.toMatch(/warning level/i);

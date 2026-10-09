@@ -17,7 +17,7 @@ import { useSession } from "@/lib/session/session-context";
 import { cn } from "@/lib/utils/cn";
 import { formatChatTime } from "@/lib/chat/history-time";
 import { formsFetch } from "@/features/forms/forms-fetch";
-import { isProposalSuperseded } from "@/lib/forms/proposal-continuation";
+import { instanceRefFor, isProposalSuperseded, proposalsOf } from "@/lib/forms/proposal-continuation";
 import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types";
 import { chatErrorTitle } from "./chat-error";
 import { FormPicker } from "./form-picker";
@@ -158,16 +158,24 @@ export function MessageBubble({
             />
           ) : null}
 
-          {message.formProposal ? (
+          {/*
+            ONE CARD PER FORM ASKED FOR. "Coaching form for Avery and a CA for
+            Jordan" is two proposals with their own ids, people and draft
+            sources; each card creates and drafts only its own form, and
+            records only its own reference (`instanceRefFor`).
+          */}
+          {proposalsOf(message).map((proposal, index) => (
             <FormProposalCard
-              proposal={message.formProposal}
-              instanceRef={message.formInstanceRef ?? null}
+              key={proposal.proposalId}
+              proposal={proposal}
+              instanceRef={instanceRefFor(message, proposal.proposalId)}
               conversation={conversation ?? []}
-              consumePickerChoice={consumePickerChoice}
+              // A picker choice names one form; it can only ever be the first card.
+              consumePickerChoice={index === 0 ? consumePickerChoice : undefined}
               onCreated={(reference) => onFormCreated?.(message.id, reference)}
               onStartAnother={onStartAnother}
             />
-          ) : null}
+          ))}
 
           {/*
             A CONVERSATION FROM BEFORE PHASE 2.
