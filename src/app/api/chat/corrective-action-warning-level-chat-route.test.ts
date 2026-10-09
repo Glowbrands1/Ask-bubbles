@@ -319,7 +319,7 @@ describe("the exact production sentence, through POST /api/chat", () => {
 
     // The proposal: the right form, the right person, no level, and the question.
     expect(answer.formProposal?.templateKey).toBe("dpoa");
-    expect(answer.formProposal?.employeeName).toBe("paulyne test");
+    expect(answer.formProposal?.employeeName).toBe("Paulyne Test");
     expect(answer.formProposal?.warningLevel).toBeNull();
     expect(answer.content).toContain(QUESTION);
     expect(answer.content).toMatch(/treated the earlier warning you mentioned as previous corrective action history/);
@@ -351,7 +351,7 @@ describe("the exact production sentence, through POST /api/chat", () => {
     await thread.say(SENTENCE);
     const answer = await thread.say("give her a verbal warning");
     expect(answer.formProposal?.warningLevel).toBe("verbal");
-    expect(answer.content).toContain("Type of Warning: **Verbal Warning**");
+    expect(answer.content).toContain("**Type of warning:** Verbal Warning, as you said");
 
     const id = await thread.create();
     const form = await values(id);

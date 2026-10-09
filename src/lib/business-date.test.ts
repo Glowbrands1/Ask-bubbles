@@ -33,9 +33,9 @@ describe("the business date", () => {
   });
 
   it("is still the previous day late in the evening, when UTC has already moved on", () => {
-    // 2026-09-04T23:30Z is 7:30pm Eastern on the 4th. UTC agrees here...
+    // 2026-09-04T23:30Z is 6:30pm Central on the 4th. UTC agrees here...
     expect(businessToday(new Date("2026-09-04T23:30:00Z"))).toBe("2026-09-04");
-    // ...and 2026-09-05T02:00Z is 10pm Eastern, STILL the 4th at the location.
+    // ...and 2026-09-05T02:00Z is 9pm Central, STILL the 4th at the location.
     // A naive UTC slice would say the 5th, and every follow-up due on the 5th
     // would read as due today four hours early.
     expect(new Date("2026-09-05T02:00:00Z").toISOString().slice(0, 10)).toBe("2026-09-05");
@@ -43,15 +43,19 @@ describe("the business date", () => {
   });
 
   it("rolls over at business midnight, not at UTC midnight", () => {
-    // 04:30Z in September is 00:30 Eastern — the new day has started there.
-    expect(businessToday(new Date("2026-09-05T04:30:00Z"))).toBe("2026-09-05");
+    // 05:30Z in September is 00:30 Central — the new day has started there...
+    expect(businessToday(new Date("2026-09-05T05:30:00Z"))).toBe("2026-09-05");
+    // ...and 04:30Z is still 11:30pm on the 4th. The business zone is US Central
+    // (owner's instruction, 9 Oct 2026), so Eastern's midnight is not the rollover.
+    expect(businessToday(new Date("2026-09-05T04:30:00Z"))).toBe("2026-09-04");
   });
 
   it("handles the daylight-saving change, because Intl does", () => {
-    // Eastern is UTC-4 in summer and UTC-5 in winter; 04:30Z is the 5th in
+    // Central is UTC-5 in summer and UTC-6 in winter; 05:30Z is the 5th in
     // summer and still the 4th in winter. Hard-coded arithmetic gets this
     // wrong twice a year.
-    expect(businessToday(new Date("2026-12-05T04:30:00Z"))).toBe("2026-12-04");
+    expect(businessToday(new Date("2026-09-05T05:30:00Z"))).toBe("2026-09-05");
+    expect(businessToday(new Date("2026-12-05T05:30:00Z"))).toBe("2026-12-04");
   });
 
   it("does not depend on the host's timezone", () => {
@@ -119,30 +123,30 @@ describe("the business week", () => {
 
 describe("the hour of the business day", () => {
   it("is the business zone's hour, not UTC's", () => {
-    // 2026-09-05T02:00Z is 10pm Eastern on the 4th. UTC would say 2am, which
+    // 2026-09-05T02:00Z is 9pm Central on the 4th. UTC would say 2am, which
     // greets a manager who is closing up with "Good morning".
-    expect(businessHour(new Date("2026-09-05T02:00:00Z"))).toBe(22);
-    expect(businessHour(new Date("2026-09-04T14:00:00Z"))).toBe(10);
+    expect(businessHour(new Date("2026-09-05T02:00:00Z"))).toBe(21);
+    expect(businessHour(new Date("2026-09-04T14:00:00Z"))).toBe(9);
   });
 
   it("reports midnight as 0, not 24", () => {
     // `hour12: false` alone formats midnight as "24" in several locales, which
     // would sort after every evening hour instead of before every morning one.
-    expect(businessHour(new Date("2026-09-05T04:00:00Z"))).toBe(0);
+    expect(businessHour(new Date("2026-09-05T05:00:00Z"))).toBe(0);
   });
 
   it("follows the daylight-saving offset, like every other date here", () => {
-    // 04:30Z is 00:30 Eastern in September and 23:30 the previous day in
+    // 05:30Z is 00:30 Central in September and 23:30 the previous day in
     // December.
-    expect(businessHour(new Date("2026-09-05T04:30:00Z"))).toBe(0);
-    expect(businessHour(new Date("2026-12-05T04:30:00Z"))).toBe(23);
+    expect(businessHour(new Date("2026-09-05T05:30:00Z"))).toBe(0);
+    expect(businessHour(new Date("2026-12-05T05:30:00Z"))).toBe(23);
   });
 
   it("does not depend on the host's timezone", () => {
     const instant = new Date("2026-09-05T02:00:00Z");
     for (const zone of ["UTC", "Pacific/Kiritimati", "Asia/Tokyo"]) {
       process.env.TZ = zone;
-      expect(businessHour(instant), zone).toBe(22);
+      expect(businessHour(instant), zone).toBe(21);
     }
   });
 });

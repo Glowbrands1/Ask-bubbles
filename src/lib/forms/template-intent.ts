@@ -115,6 +115,9 @@ const TEMPLATE_INTENT: { key: string; matchers: string[] }[] = [
       "written warning",
       "verbal warning",
       "final warning",
+      // "Final written" is how managers say the final written warning.
+      "final written warning",
+      "final written",
       /*
        * "WRITE HER UP" NAMES THE ACT, AND THE ACT HAS ONE DOCUMENT.
        *
@@ -310,11 +313,17 @@ const TEMPLATE_INTENT: { key: string; matchers: string[] }[] = [
       "pre-screen form",
       "phone interview form",
       "prescreen interview",
+      // How managers say it: "phone screen for Sam", "pre-screen a candidate".
+      "phone screen",
+      "phone screening",
+      "phone interview",
+      "pre-screen",
+      "prescreen",
     ],
   },
   {
     key: "tanning-consultant-interview",
-    matchers: ["tanning consultant interview"],
+    matchers: ["tanning consultant interview", "tc interview"],
   },
   {
     key: "management-interview-round-1",
@@ -410,7 +419,7 @@ const EMPLOYMENT_CHANGE_SUBJECTS: { key: string; subjects: RegExp }[] = [
   {
     key: "demotion",
     subjects:
-      /\b(?:demot(?:e|ed|es|ing|ion|ions)|step(?:ping|s)?[\s-]+down|stepped\s+down|move\s+down\s+from\s+(?:manager|management)|moving\s+down\s+from\s+(?:manager|management)|step\s+back\s+from\s+management)\b/,
+      /\b(?:demot(?:e|ed|es|ing|ion|ions)|step(?:ping|s)?[\s-]+down|step\s+[a-z'’-]+(?:\s+[a-z'’-]+)?\s+down\s+(?:to|from)|stepped\s+down|move\s+down\s+from\s+(?:manager|management)|moving\s+down\s+from\s+(?:manager|management)|step\s+back\s+from\s+management)\b/,
   },
   {
     key: "position-transfer",
@@ -422,7 +431,7 @@ const EMPLOYMENT_CHANGE_SUBJECTS: { key: string; subjects: RegExp }[] = [
 const CHANGE_REQUEST_VERBS =
   /\b(?:create|make|start|draft|open|fill\s+out|fill\s+in|generate|prepare|pull\s+up|bring\s+up|get\s+me|need|needs|do\s+(?:a|an|the)|process|document|write\s+up|handle)\b/;
 
-const CHANGE_INSTRUCTION = /^(?:please\s+)?(?:demote|transfer|move)\s+[^\s.,!?;:]+/;
+const CHANGE_INSTRUCTION = /^(?:please\s+)?(?:demote|transfer|move|step)\s+[^\s.,!?;:]+/;
 
 const CHANGE_PARTICULARS =
   /\bfrom\b[^.?!\n]*\bto\b|→|->|\beffective\b|\blast\s+day\b|\bto\s+(?:salon|store|stc|sun\s+tan\s+city|location|#\s?\d)|\b\d{1,2}[/-]\d{1,2}\b|\b(?:yesterday|today|this\s+morning|last\s+night|this\s+week)\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b/;
@@ -486,7 +495,7 @@ const CORRECTIVE_ACTION_REQUEST = ["corrective action", "corrective actions"];
  *                           edit of "action(s)". "cor" is required so that
  *                           "collective action" — two edits away — is not.
  */
-const CA_SHORTHAND = /(?<![\w.])(?:c\.a\.?|ca)(?![\w])/gi;
+const CA_SHORTHAND = /(?<![\w./])(?:c\.a\.?|c\/a|ca)(?![\w/])/gi;
 
 /** Edits between two words, a swapped pair of letters ("actoin") counting as one. */
 function editDistance(a: string, b: string): number {
@@ -545,7 +554,26 @@ export function canonicalShorthand(text: string): string {
 
 /** Every rewrite a form request goes through before it is read. */
 export function canonicalFormWording(text: string): string {
-  return canonicalCorrectiveAction(canonicalShorthand(text));
+  return canonicalCorrectiveAction(canonicalShorthand(canonicalWarningWording(text)));
+}
+
+/**
+ * "writen warning", "written warnig", "verbel warning" — the warning levels as
+ * they get typed on a phone, spelled out. Owner's retest variants, 9 Oct 2026:
+ * "jordan testperson needs a writen warning for cash handling" was answered as
+ * a question. Both words must be close (one edit for the level, two for
+ * "warning"), so "writing warnings" and "verbal warmup" are left alone.
+ */
+export function canonicalWarningWording(text: string): string {
+  return text.replace(/\b([a-z]{5,8})\s+(w[a-z]{4,8})\b/gi, (match, first: string, second: string) => {
+    const a = first.toLowerCase();
+    const b = second.toLowerCase();
+    if (editDistance(b, "warning") > 2 || b === "warnings" || b.startsWith("warm")) return match;
+    if (a !== "writing" && a !== "written" && editDistance(a, "written") <= 1) return "written warning";
+    if (a !== "verbal" && editDistance(a, "verbal") <= 1) return "verbal warning";
+    if ((a === "written" || a === "verbal") && b !== "warning") return `${a} warning`;
+    return match;
+  });
 }
 
 /** "corrective action" however it was typed; everything else unchanged. */
@@ -729,6 +757,8 @@ const AMBIGUOUS_FORM_REQUEST = [
   "get me a form",
   "send me a form",
   "pull up a form",
+  // Four interview forms are published; which one is the manager's choice.
+  "interview form",
   "write up",
   "write-up",
 ];
@@ -1021,6 +1051,8 @@ const TOPIC_BEFORE =
   /(?:\btopics?(?:\s+(?:is|was|=))?\s*:?|\bsubject(?:\s+(?:is|was))?\s*:?|\breason(?:\s+(?:is|was))?\s*:?|\babout|\bregarding|\bre:?|\bconcerning|\bover)\s+(?:(?:a|an|the|her|his|their|our)\s+)?$/;
 
 /** "Make it a …", "switch to …", "change it to …": the manager changing which form. */
+const SWITCH_TO_CA =
+  /(?:\bmake\s+(?:it|this|that)|\bswitch(?:\s+(?:it|this|that))?\s+to|\bchange\s+(?:it|this|that)\s+to|\binstead(?:\s+do)?|\bactually(?:\s+(?:do|use|want))?)\s+(?:(?:a|an|the)\s+)?corrective action(?:\s+form)?\b/;
 const SWITCH_BEFORE =
   /(?:\bmake\s+(?:it|this|that)|\bswitch(?:\s+(?:it|this|that))?\s+to|\bchange\s+(?:it|this|that)\s+to|\binstead(?:\s+do)?|\bactually(?:\s+(?:do|use|want))?)\s+(?:(?:a|an|the)\s+)?$/;
 
@@ -1083,6 +1115,16 @@ function requestedNaming(q: string, original: string): { key: string; phrase: st
   });
   if (wanted.length === 0) return null;
 
+  /*
+   * 3b. A SWITCH TO THE CORRECTIVE ACTION, said out loud in the same message:
+   * "coaching form for Avery, actually make it a CA". "Corrective action" is
+   * deliberately not a naming of the form on its own (it names the ladder),
+   * but after "make it a" / "switch to" / "instead" it can only be the form.
+   */
+  if (SWITCH_TO_CA.test(q) && !wanted.some((naming) => naming.key === "dpoa" && SWITCH_BEFORE.test(q.slice(0, naming.start)))) {
+    return { key: "dpoa", phrase: "corrective action" };
+  }
+
   // 4. "<form> coaching": the head noun is the coaching.
   for (const naming of wanted) {
     if (naming.key !== "coaching" && /^\s+coaching\b/.test(q.slice(naming.end)) && !/^\s+coaching\s+(?:follow[- ]?up)/.test(q.slice(naming.end))) {
@@ -1120,7 +1162,7 @@ function requestedNaming(q: string, original: string): { key: string; phrase: st
  * `requestedNaming`.
  */
 const DECLINES_FORM =
-  /\b(?:(?:don'?t|do\s+not|doesn'?t|does\s+not|didn'?t)\s+(?:want|need)|not\s+(?:ready\s+for|looking\s+for)|no\s+need\s+for)\s+(?:(?:a|an|the|any)\s+)?(?:actual\s+|real\s+|official\s+)?(?:[a-z-]+\s+){0,2}?(?:form|forms|document|paperwork|write[- ]?up)\b|\bno\s+(?:actual\s+)?(?:form|forms|paperwork)\b|\bnot\s+(?:a|an)\s+(?:actual\s+)?form\b|\b(?:never\s*mind|forget)\s+(?:the|this|that)\s+form\b|\b(?:form|forms|paperwork)\s+not\s+yet\b/;
+  /\b(?:(?:don'?t|dont|do\s+not|doesn'?t|does\s+not|didn'?t)\s+(?:want|need|make|create|start|draft|file|open)|not\s+(?:ready\s+for|looking\s+for|doing|filing|making)|no\s+need\s+for|(?:skip|hold\s+off\s+on))\s+(?:(?:a|an|the|any)\s+)?(?:actual\s+|real\s+|official\s+)?(?:[a-z-]+\s+){0,2}?(?:form|forms|document|paperwork|write[- ]?up)\b|\bno\s+(?:actual\s+)?(?:form|forms|paperwork)\b|\bnot\s+(?:a|an)\s+(?:actual\s+)?form\b|\b(?:never\s*mind|forget)\s+(?:the|this|that)\s+form\b|\b(?:form|forms|paperwork)\s+not\s+yet\b/;
 
 function declinesForm(q: string): boolean {
   return DECLINES_FORM.test(q);

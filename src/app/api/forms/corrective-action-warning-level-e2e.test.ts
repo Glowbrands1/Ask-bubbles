@@ -319,7 +319,7 @@ describe("1. previous verbal warning, current warning unspecified (the productio
   it("asks verbal or written, records the history, and ticks nothing", async () => {
     const { proposal, content, result } = await conversation([REPORT]);
 
-    expect(proposal.employeeName).toBe("paulyne test");
+    expect(proposal.employeeName).toBe("Paulyne Test");
     expect(proposal.warningLevel).toBeNull();
     // Asked, and the earlier warning acknowledged as history rather than weighed.
     expect(content).toContain(QUESTION);
@@ -340,8 +340,8 @@ describe("1. previous verbal warning, current warning unspecified (the productio
     const { proposal, content } = await conversation([REPORT, "verbal"]);
 
     expect(proposal.warningLevel).toBe("verbal");
-    expect(proposal.employeeName).toBe("paulyne test");
-    expect(content).toContain("Type of Warning: **Verbal Warning**");
+    expect(proposal.employeeName).toBe("Paulyne Test");
+    expect(content).toContain("**Type of warning:** Verbal Warning, as you said");
     expect(content).not.toContain(QUESTION);
   });
 
@@ -366,7 +366,7 @@ describe("2. previous verbal warning, current verbal warning explicitly requeste
     ]);
 
     expect(proposal.warningLevel).toBe("verbal");
-    expect(content).toContain("Type of Warning: **Verbal Warning**");
+    expect(content).toContain("**Type of warning:** Verbal Warning, as you said");
     expect(content).not.toContain(QUESTION);
 
     const id = result.reference.instanceId;
@@ -454,9 +454,9 @@ describe("5. the manager changes Written Warning to Verbal Warning through chat"
       "actually change it to verbal",
     ]);
 
-    expect(proposal.employeeName).toBe("paulyne test");
+    expect(proposal.employeeName).toBe("Paulyne Test");
     expect(proposal.warningLevel).toBe("verbal");
-    expect(content).toContain("Type of Warning: **Verbal Warning**");
+    expect(content).toContain("**Type of warning:** Verbal Warning, as you said");
     const id = result.reference.instanceId;
     expect(await ticked(id)).toEqual(["verbal"]);
     expect((await row(id, "prior_actions"))?.value).toBe("Verbal warning — signed 09/21/2026");
@@ -594,7 +594,7 @@ describe("review: a level said about another form, or as history, never lands on
       REPORT,
     ]);
 
-    expect(proposal.employeeName).toBe("paulyne test");
+    expect(proposal.employeeName).toBe("Paulyne Test");
     expect(proposal.warningLevel).toBeNull();
     expect(await ticked(result.reference.instanceId)).toEqual([]);
   });

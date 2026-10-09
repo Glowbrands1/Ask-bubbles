@@ -1284,9 +1284,17 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       ? withConductOffense({ checked: enforced.checked, values: enforced.values })
       : null;
     const offenseChange = statedOffense ?? conductOffense;
-    const validated = offenseChange
+    const offenseApplied = offenseChange
       ? { ...enforced, values: offenseChange.values, checked: offenseChange.checked }
       : enforced;
+
+    /*
+     * THE WARNING LEVEL THE MANAGER STATED is already on the form — written
+     * above as their statement, read turn by turn from this form's turns —
+     * and the model's own level was discarded. Nothing is ticked here: an AI
+     * write of the level would overwrite a box the manager set.
+     */
+    const validated = offenseApplied;
 
     /*
      * ========================================================================
@@ -1395,6 +1403,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           ? policyFieldValue(manualGroundedPolicies(manual, manualSections))
           : null,
       manualAmbiguous: !manual.ok && manual.problem === "ambiguous",
+      /*
+       * Only for a version whose policy follows a Type of Offense box (the
+       * Corrective Action). The Policy Review has no offense to match a section
+       * to, and keeps its retrieval-built reference.
+       */
+      manualPinned: manual.ok && groups.some((group) => group.key === "offense_type"),
       /*
        * NARROWS THE RETRIEVAL FALLBACK to the manual itself. Without it, a form
        * ticked for an offense the manual states no section for could fall

@@ -1858,3 +1858,30 @@ describe("HR feedback 30 Sep — the Corrective Action's policy, from the manage
     expect(payload.caPolicy).toMatchObject({ applied: false, reason: "no_suggestion" });
   });
 });
+
+/*
+ * The cash-handling fix closed the similarity fallback for Direct policy on the
+ * Corrective Action, whose policy follows a ticked offense. The Policy Review
+ * has no offense box: it keeps citing the passage retrieval returned, from the
+ * pinned manual, as before.
+ */
+describe("Owner's QA 8 Oct — the Policy Review keeps its retrieved reference", () => {
+  it("cites the retrieved manual passage with the manual pinned", async () => {
+    state.templateKey = "policy-review";
+    state.policyManual = {
+      ok: true,
+      documentId: "doc-manual",
+      documentTitle: "JBA Policy Manual",
+      matchedBy: "fallback",
+      chunks: [
+        { chunkIndex: 40, page: 15, printedPage: 14, sections: [{ heading: "Attendance", page: 14 }], section: "Attendance", content: "Attendance\nIt is the responsibility of each employee to know his or her work schedule" },
+      ],
+    };
+    state.policyHits = [
+      { chunkId: "c40", documentId: "doc-manual", documentTitle: "JBA Policy Manual", locator: "Page 14 — Attendance", content: "It is the responsibility of each employee to know his or her work schedule", score: 0.9 },
+    ];
+    state.toolInput = { values: {}, checked: {} };
+    await post("Policy review with Harper about the attendance policy and her schedule.");
+    expect(state.persisted[0]!.values.policy_language ?? "").toContain("work schedule");
+  });
+});

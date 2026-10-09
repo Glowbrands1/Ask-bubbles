@@ -1,5 +1,7 @@
+import { businessToday } from "@/lib/business-date";
+
 import { datesInText } from "./form-date-answer";
-import { detectTemplateIntent } from "./template-intent";
+import { canonicalWarningWording, detectTemplateIntent } from "./template-intent";
 
 /**
  * ============================================================================
@@ -58,6 +60,15 @@ export function isWarningLevel(value: unknown): value is WarningLevel {
 /** The one key a stated warning level may write — see `applyStatedFacts`. */
 export const WARNING_LEVEL_STATED_KEYS: ReadonlySet<string> = new Set([WARNING_TYPE_KEY]);
 
+/** The two levels the Corrective Action Form offers, as the manager states them. */
+export type StatedWarningLevel = "verbal" | "written";
+
+/** The level in the form's own wording — the card's "Type of warning" readback. */
+export const WARNING_LEVEL_LABEL: Record<StatedWarningLevel, string> = {
+  verbal: "Verbal Warning",
+  written: "Written Warning",
+};
+
 /** The level in the form's own wording, for chat replies. */
 export function warningLevelLabel(level: WarningLevel): string {
   return level === "verbal" ? "Verbal Warning" : level === "written" ? "Written Warning" : "Final Written Warning";
@@ -83,7 +94,7 @@ export interface WarningMention {
 const MAX_TEXT = 4000;
 
 /** A named warning, longest first so "final written warning" is one mention. */
-const NAMED = /\b(final\s+written|final|written|verbal)\s+warn(?:ing|ings)?\b/gi;
+const NAMED = /\b(final\s+written|final|written|verbal)\s+warn(?:ing|ings)?\b|\b(final\s+written)\b(?!\s+(?:statement|notice|test|exam|request|record|note|policy|up)\b)/gi;
 
 /** "no, verbal", "actually verbal", "oops i meant verbal" — a correction's lead-in. */
 const LEAD_IN = String.raw`(?:(?:actually|no|nope|sorry|oops|wait|correction|ok|okay|so|rather|i\s+meant|i\s+mean|make\s+that)[\s,.:!-]*)*`;
@@ -96,6 +107,14 @@ const LEAD_IN = String.raw`(?:(?:actually|no|nope|sorry|oops|wait|correction|ok|
  */
 const BARE_AFTER_CUE =
   /\b(?:make\s+(?:it|this|that)(?:\s+a)?|keep\s+(?:it|this)(?:\s+(?:at|as))?(?:\s+a)?|should\s+(?:have\s+)?be(?:en)?(?:\s+a)?|needs?\s+to\s+be(?:\s+a)?|it'?s(?:\s+a)?|it\s+is(?:\s+a)?|this\s+is(?:\s+a)?|go(?:ing)?\s+with(?:\s+a)?|just(?:\s+a)?|only(?:\s+a)?|mark\s+(?:it\s+)?as(?:\s+a)?|tick|check|select|meant|mean)\s+(verbal|written)\b(?=\s*(?:$|[.,;!?\n)]|one\b|please\b|instead\b|not\b|this\s+time\b|for\s+(?:this|today|now)\b|rather\b|then\b|thanks?\b))/gi;
+
+/**
+ * "give jordan a verbal for being late", "needs a written", "deserves a final
+ * written" — the level as the object of a verb that issues or calls for one,
+ * with the noun left off (owner's QA, PR #8).
+ */
+const BARE_GIVEN =
+  /\b(?:give|giving|issue|issuing|needs?|deserves?|requires?)\s+(?:[a-z']+\s+){0,2}?an?\s+(?:final\s+)?(verbal|written)\b(?!\s+(?:warn\w*|statement|notice|test|exam|up|record|note|request|policy)\b)/gi;
 
 /**
  * "change written warning to verbal", "set the warning type to verbal",
@@ -156,7 +175,7 @@ const PAST_CUE =
  * verbs that issue, document or decide a warning belong here.
  */
 const ADJACENT_CURRENT =
-  /\b(?:give|giving|issue|issuing|create|creating|write|writing|make|making|do|doing|document|documenting|prepare|draft|file|filing|start|need|needs|want|wants|(?:this|it|that)(?:\s+one)?\s+(?:is|will\s+be|should\s+be|would\s+be|needs\s+to\s+be)|it'?s|should\s+be|will\s+be|to\s+be|go\s+with|going\s+with|keep|use|put\s+(?:her|him|them)\s+on)\s+(?:(?:her|him|them|it|this)\s+)?(?:(?:a|an|the|as|to|at)\s+)?(?:(?:formal|official|documented|new|second|third|another|final)\s+)?$/i;
+  /\b(?:give|giving|issue|issuing|create|creating|write|writing|make|making|do|doing|document|documenting|prepare|draft|file|filing|start|need|needs|needed|deserves?|requires?|want|wants|(?:this|it|that)(?:\s+one)?\s+(?:is|will\s+be|should\s+be|would\s+be|needs\s+to\s+be)|it'?s|should\s+be|will\s+be|to\s+be|go\s+with|going\s+with|keep|use|put\s+(?:her|him|them)\s+on)\s+(?:(?:her|him|them|it|this)\s+)?(?:(?:a|an|the|as|to|at)\s+)?(?:(?:formal|official|documented|new|first|1st|second|third|another|final)\s+)?$/i;
 
 /**
  * Words that point at THIS form only when nothing dates the warning — "she
@@ -190,7 +209,7 @@ const OPENING = new RegExp(String.raw`^\s*${LEAD_IN}(?:please\s+)?(?:(?:a|an|new
 const RECIPIENT = /\b(?:give|giving|issue|issuing|gave|given)\s+(?:her|him|them)\s+$/i;
 
 /** "her verbal warning", "his last written warning" — one already on file. */
-const POSSESSIVE = /\b(?:her|his|their)\s+(?:(?:last|previous|prior|recent|earlier|first|1st|second|2nd|third|3rd|most\s+recent)\s+)?$/i;
+const POSSESSIVE = /\b(?:her|his|their)\s+(?:(?:last|previous|prior|recent|earlier|second|2nd|third|3rd|most\s+recent)\s+)?$/i;
 
 /** "not a written warning", "instead of written", "untick written". */
 const NEGATED =
@@ -225,9 +244,14 @@ const RELATIVE_EARLIER_AFTER =
 /** "on the 21st" — a day of the month with no month. */
 const DAY_OF_MONTH_AFTER = /^[^.;!?\n]{0,15}?\bthe\s+(\d{1,2})(?:st|nd|rd|th)\b/i;
 
+/**
+ * "Final written" is a written warning: the Corrective Action Form offers
+ * Verbal and Written only, and a manager who said "final written" asked for
+ * the written level (owner's QA, PR #8). A bare "final" names no level.
+ */
 function levelOf(word: string): WarningLevel {
   const w = word.toLowerCase().replace(/\s+/g, " ");
-  if (w.startsWith("final")) return "final_warning";
+  if (w === "final") return "final_warning";
   return w === "verbal" ? "verbal" : "written";
 }
 
@@ -344,9 +368,24 @@ function classify(text: string, start: number, end: number, today: string, cued:
   ) {
     return "current";
   }
+  /*
+   * THE LEVEL AS THE LAST WORD, OR AS A SENTENCE OF ITS OWN — "jordan
+   * testperson cash handling written warning", "…at close yesterday. written
+   * warning." (owner's retest variants, PR #8). That is the manager naming this
+   * form's level, unless the same turn lists earlier steps ("coached",
+   * "warned", "written up", "prior"), where a trailing level reads as one more
+   * item of history and is asked about instead.
+   */
+  const endsTurn = /^[\s.!]*$/.test(text.slice(end));
+  const ownSentence = before.trim() === "" && after.trim() === "";
+  if ((endsTurn || ownSentence) && !LISTS_EARLIER_STEPS.test(text.slice(0, start))) return "current";
   // Nothing says whether this is the warning being issued now: ask.
   return "unclear";
 }
+
+/** Words that make a level at the end of a turn one more item of history. */
+const LISTS_EARLIER_STEPS =
+  /\b(?:coach(?:ed|ing)?|warned|warnings?|written\s+up|write[- ]?ups?|disciplin\w*|previous(?:ly)?|prior|history|already|before)\b/i;
 
 /**
  * Every warning level the text names, in order, with how each one reads.
@@ -355,7 +394,8 @@ function classify(text: string, start: number, end: number, today: string, cued:
  * history, one dated today is the form being written.
  */
 export function warningMentions(text: string, today: string): WarningMention[] {
-  const source = (text ?? "").slice(0, MAX_TEXT).replace(/[’‘]/g, "'");
+  // "writen warnig", "verbel warning" — spelled out first, as the form request is (PR #8).
+  const source = canonicalWarningWording((text ?? "").slice(0, MAX_TEXT).replace(/[’‘‛]/g, "'"));
   const found: WarningMention[] = [];
   const seen = new Set<number>();
 
@@ -400,7 +440,7 @@ export function warningMentions(text: string, today: string): WarningMention[] {
     push(entry.level, entry.start, entry.end, true, kind);
   }
 
-  for (const pattern of [BARE_CHANGED_TO, BARE_AFTER_CUE]) {
+  for (const pattern of [BARE_CHANGED_TO, BARE_AFTER_CUE, BARE_GIVEN]) {
     for (const match of source.matchAll(pattern)) {
       const start = match.index + match[0].length - match[1]!.length;
       push(levelOf(match[1]!), start, match.index + match[0].length, true);
@@ -409,7 +449,7 @@ export function warningMentions(text: string, today: string): WarningMention[] {
   for (const match of source.matchAll(NAMED)) {
     // "verbal warnings" is a pattern of past ones; this form issues one.
     const plural = /warnings$/i.test(match[0]);
-    push(levelOf(match[1]!), match.index, match.index + match[0].length, false, plural ? "historical" : undefined);
+    push(levelOf(match[1] ?? match[2]!), match.index, match.index + match[0].length, false, plural ? "historical" : undefined);
   }
 
   return found.sort((a, b) => a.index - b.index);
@@ -423,7 +463,7 @@ export function warningMentions(text: string, today: string): WarningMention[] {
  * unclear mention ("I gave her a verbal warning", no date) is not one either:
  * the manager is asked rather than guessed for.
  */
-export function statedWarningLevel(text: string, today: string): WarningLevel | null {
+export function statedWarningLevel(text: string, today: string = businessToday()): WarningLevel | null {
   const current = warningMentions(text, today).filter((mention) => mention.kind === "current");
   return current.length > 0 ? current[current.length - 1]!.level : null;
 }

@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import {
   buildProposal,
+  correctsTheEmployee,
   extractEmployeeNames,
   managerContext,
   resolveEmployee,
@@ -76,6 +77,7 @@ import {
 import { businessToday } from "@/lib/business-date";
 import { extractFormDate } from "@/lib/forms/form-date-answer";
 import { endsIntake } from "@/lib/forms/proposal-continuation";
+import { LEAD_IN, separateQuestions } from "@/lib/forms/message-parts";
 import {
   answersNameConfirmation,
   matchEmployeeName,
@@ -109,6 +111,8 @@ import type {
   Role,
 } from "@/types";
 
+import { correctiveActionIssue } from "@/lib/forms/incident-issue";
+import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
 import type { AskResponse } from "./types";
 
@@ -318,6 +322,13 @@ export interface ProposalTurn {
    * form date typed as month and day. See `lib/forms/form-date-answer.ts`.
    */
   today?: string;
+  /**
+   * Set when this turn is ONE of several forms asked for in one message. The
+   * draft's sources are then only the manager's turns about this person alone
+   * — a turn naming anybody else is left out — and this request's own clause.
+   * See `lib/forms/form-requests.ts`.
+   */
+  oneOfSeveral?: { clause: string };
 }
 
 /** A template a real person may actually start today. */
@@ -365,7 +376,147 @@ function turn(
  * @returns `null` when the turn is not a form request, so the caller falls
  *          through to the ordinary grounded-answer path.
  */
+/*
+ * ============================================================================
+ * ONE FORM PER TURN — AND THE REST OF THE MESSAGE IS NEVER DROPPED
+ * ============================================================================
+ *
+ * Release QA, both platforms. The form path answers one request per turn, so:
+ *
+ *   "coaching form for avery testperson and a CA for jordan testperson"
+ *        → a Coaching card asking "Avery or Jordan?"; the CA vanished
+ *   "actually its jordan testperson. also whats the attendance policy?"
+ *        → a card for Jordan; the question vanished
+ *
+ * Two DIFFERENT forms in one message are not guessed between, and not merged
+ * into one card whose person is ambiguous: the manager is told both were
+ * heard and asked to send them one at a time, each named with its own person
+ * where the clause names exactly one. A question beside a form request gets
+ * the card AND a line naming the question, so it can be asked on its own.
+ */
 export async function proposeFormForTurn(input: ProposalTurn): Promise<AskResponse | null> {
+  const several = await severalFormsRequested(input);
+  if (several) return several;
+  const answer = await proposeOneForm(input);
+  if (!answer?.formProposal) return answer;
+  const questions = separateQuestions(input.question).questions.filter(
+    (sentence) => detectTemplateIntent(sentence).kind === "none" && !extractEmployeeNames(sentence).length,
+  );
+  if (questions.length === 0) return answer;
+  const quoted = questions.map((question) => `"${question.replace(LEAD_IN, "")}"`).join(" and ");
+  return {
+    ...answer,
+    content: `${answer.content}\n\nYou also asked ${quoted} — ask that again on its own and I'll answer it.`,
+  };
+}
+
+/*
+ * ============================================================================
+ * SEVERAL FORMS IN ONE MESSAGE — ONE PROPOSAL EACH
+ * ============================================================================
+ *
+ * Signed-in QA, 8 Oct 2026: "coaching form for Avery Testperson and a CA for
+ * Jordan Testperson" came back as ONE Coaching card asking which of the two it
+ * was for, and the Corrective Action was dropped. Each request is now its own
+ * proposal, read from ITS OWN CLAUSE only — its person, its date, its issue —
+ * with its own id, its own card and its own draft (`sourceExcerpts`). Nothing
+ * said about one employee is read into the other's form.
+ *
+ * Declined and conditional requests are named back, never proposed: "but no
+ * CA for Jordan" and "if Jordan is late again, a CA" create nothing. A
+ * request whose person the message does not settle is not guessed: the
+ * manager is asked who each form is for, and no card is offered until then.
+ */
+async function severalFormsRequested(input: ProposalTurn): Promise<AskResponse | null> {
+  const reading = readFormRequests(input.question);
+  if (!reading) return null;
+  const known = (key: string) => input.summaries.some((summary) => summary.key === key);
+  const nameOf = (key: string) =>
+    input.summaries.find((summary) => summary.key === key)?.name ?? "form";
+  const requests = reading.requests.filter((request) => known(request.templateKey));
+  const named = (request: FormRequest) =>
+    `**${nameOf(request.templateKey)}**${request.employeeName ? ` for **${request.employeeName}**` : ""}`;
+
+  const notes: string[] = [];
+  for (const request of reading.declined.filter((entry) => known(entry.templateKey))) {
+    notes.push(`I haven't started a ${named(request)}, as you said.`);
+  }
+  for (const request of reading.conditional.filter((entry) => known(entry.templateKey))) {
+    notes.push(
+      `I haven't started a ${named(request)} — that depends on something that hasn't happened yet. If it does, tell me and I'll set it up.`,
+    );
+  }
+
+  if (requests.length === 0) {
+    if (reading.conditional.length === 0 || notes.length === 0) return null;
+    return { content: notes.join("\n\n"), citations: [], coverage: "not_applicable" };
+  }
+
+  if (requests.length === 1) {
+    const only = await proposeOneForm({
+      ...input,
+      question: requests[0]!.clause,
+      continueTemplateKey: undefined,
+      oneOfSeveral: { clause: requests[0]!.clause },
+    });
+    if (!only) return null;
+    return notes.length > 0 ? { ...only, content: `${only.content}\n\n${notes.join("\n\n")}` } : only;
+  }
+
+  /* Two forms, and the message does not say who one of them is for: ask, propose nothing. */
+  if (requests.some((request) => request.employeeName === null)) {
+    const list = requests.map(named);
+    return {
+      content: `You asked for ${requests.length === 2 ? "two" : String(requests.length)} forms: ${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}. Who is each one for? For example: "${nameOf(requests[0]!.templateKey)} for Avery Testperson and ${nameOf(requests[1]!.templateKey)} for Jordan Testperson".${notes.length > 0 ? `\n\n${notes.join("\n\n")}` : ""}`,
+      citations: [],
+      coverage: "not_applicable",
+    };
+  }
+
+  const answers: { request: FormRequest; answer: AskResponse | null }[] = [];
+  for (const request of requests) {
+    /*
+     * "A coaching form and a CA for Jordan": the bare clause is for the one
+     * person the message names, so it is read with them — and drafted from
+     * those words, which say nothing about anybody else.
+     */
+    const own =
+      request.employeeName && !extractEmployeeNames(request.clause).length
+        ? `${request.clause} for ${request.employeeName}`
+        : request.clause;
+    answers.push({
+      request,
+      answer: await proposeOneForm({
+        ...input,
+        question: own,
+        continueTemplateKey: undefined,
+        oneOfSeveral: { clause: own },
+      }),
+    });
+  }
+
+  const proposals = answers
+    .map(({ answer }) => answer?.formProposal)
+    .filter((proposal): proposal is ChatFormProposal => Boolean(proposal));
+  const sections = answers.map(
+    ({ request, answer }, index) =>
+      `**${index + 1}. ${nameOf(request.templateKey)} — ${request.employeeName}**\n\n${
+        answer?.content ?? "I couldn't set this one up from that message — ask for it on its own."
+      }`,
+  );
+  return {
+    content: [
+      `You asked for ${requests.length === 2 ? "two" : String(requests.length)} forms, so here ${proposals.length === 1 ? "is" : "are"} ${proposals.length === 1 ? "one card" : `${proposals.length === 2 ? "two" : proposals.length} separate cards`} — each is created and drafted on its own, only from what you said about that person.`,
+      ...sections,
+      ...notes,
+    ].join("\n\n"),
+    citations: [],
+    coverage: "not_applicable",
+    ...(proposals.length > 0 ? { formProposal: proposals[0], formProposals: proposals } : {}),
+  };
+}
+
+async function proposeOneForm(input: ProposalTurn): Promise<AskResponse | null> {
   const intent = intentForTurn(input);
   if (intent.kind === "none") return null;
 
@@ -649,21 +800,6 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     ]);
   }
 
-  /*
-   * THE WARNING LEVEL FOR THIS FORM, FROM THE MANAGER'S OWN WORDS — and only a
-   * level they stated for it. "Given verbal warning on 9/21" is history and
-   * goes on the prior-actions line; it never sets this box, and neither does
-   * "again". Unstated stays null, and the reply asks. See `warning-level.ts`.
-   */
-  if (isCorrectiveActionForm(match)) {
-    const offered = offeredWarningLevels(match);
-    const stated = warningLevelFromConversation(
-      [...input.history, { role: "user", content: input.question }],
-      input.today ?? businessToday(),
-    );
-    proposal.warningLevel = stated && offered.includes(stated) ? stated : null;
-  }
-
   const changeKind = employmentChangeKind(match.key);
   /*
    * ONLY THE TURNS ABOUT THIS FORM AND THIS PERSON. Found in hands-on QA: a
@@ -672,9 +808,43 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
    * because the facts, and the notes the draft is written from, were read from
    * every recent manager turn. See `turnsAboutThisForm`.
    */
-  const scoped = changeKind
-    ? turnsAboutThisForm(context, match.key, proposal.employeeName)
-    : context;
+  /*
+   * EVERY FORM, NOT ONLY THE EMPLOYMENT CHANGES. Found in signed-in QA: a
+   * Corrective Action asked for after three policy questions and a Coaching
+   * Form for somebody else was drafted from all six of those turns — the other
+   * employee's request and the shirt policy question included. The draft is
+   * written from `sourceMessageIds`, so that list is now the turns about this
+   * form and this person, and nothing else.
+   */
+  const scoped = turnsAboutThisForm(context, match.key, proposal.employeeName);
+  proposal.sourceMessageIds = scoped.ids;
+  const excerpts = {
+    ...scoped.excerpts,
+    ...(input.oneOfSeveral && input.questionMessageId ? { [input.questionMessageId]: input.oneOfSeveral.clause } : {}),
+  };
+  if (Object.keys(excerpts).length > 0) proposal.sourceExcerpts = excerpts;
+
+  /*
+   * THE WARNING LEVEL FOR THIS FORM, FROM THE MANAGER'S OWN WORDS — and only a
+   * level they stated for it. "Given verbal warning on 9/21" is history and
+   * goes on the prior-actions line; it never sets this box, and neither does
+   * "again". Unstated stays null, and the reply asks. See `warning-level.ts`.
+   *
+   * Read turn by turn from THIS FORM'S turns about THIS person — the same
+   * scope the draft is written from, each turn's own clause where one message
+   * asked for several forms — so a level said for somebody else cannot land.
+   */
+  if (isCorrectiveActionForm(match)) {
+    const offered = offeredWarningLevels(match);
+    const stated = warningLevelFromConversation(
+      scoped.messages.map((message) => ({
+        role: "user",
+        content: (message.id ? excerpts[message.id] : undefined) ?? message.content,
+      })),
+      input.today ?? businessToday(),
+    );
+    proposal.warningLevel = stated && offered.includes(stated) ? stated : null;
+  }
   const facts = changeKind
     ? readEmploymentChange(
         scoped.messages.map((message) => message.content),
@@ -684,7 +854,6 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   if (changeKind && facts) {
     proposal.employeeRole = facts.current.title ?? null;
     proposal.formDate = formDateFor(scoped.text, input.today ?? businessToday());
-    proposal.sourceMessageIds = scoped.ids;
   }
 
   if (directory.question) return turn(directory.question, proposal);
@@ -692,7 +861,7 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   const content =
     changeKind && facts
       ? employmentChangeContent(changeKind, facts, proposal, context)
-      : proposalContent(proposal, context, match, input.today ?? businessToday());
+      : proposalContent(proposal, scoped, match, input.today ?? businessToday());
   return turn(directory.note ? `${content}\n\n${directory.note}` : content, proposal);
 }
 
@@ -1046,7 +1215,7 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
     // Asked, or read back for the manager to change ("Type of Warning: …").
     const askedLevel =
       typeof lastAssistant?.content === "string" &&
-      (lastAssistant.content.includes(WARNING_LEVEL_QUESTION) || lastAssistant.content.includes("Type of Warning:"));
+      (lastAssistant.content.includes(WARNING_LEVEL_QUESTION) || /type of warning:/i.test(lastAssistant.content));
     if (askedLevel && warningLevelFromConversation([{ role: "user", content: input.question }], input.today ?? businessToday())) {
       return { kind: "explicit", templateKey: continued };
     }
@@ -1207,7 +1376,7 @@ function turnsAboutThisForm(
   context: ManagerContext,
   templateKey: string,
   employeeName: string | null,
-): ManagerContext {
+): ManagerContext & { excerpts: Record<string, string> } {
   const same = (name: string) => {
     if (!employeeName) return true;
     const a = name.toLowerCase().split(/\s+/);
@@ -1225,22 +1394,85 @@ function turnsAboutThisForm(
     return a.join(" ") === b.join(" ") || a[0] === b[0] || trimmedLead;
   };
   let start = 0;
-  context.messages.forEach((message, index) => {
+  const last = context.messages.length - 1;
+  /*
+   * A CORRECTION OF THE PERSON KEEPS THE ACCOUNT. Owner's retest variants,
+   * 9 Oct 2026: "jordan testperson needs a written warning for cash handling",
+   * then "actually it's for avery testperson", gave Avery a card with no
+   * warning level and no issue — the first turn named somebody else, so it
+   * was cut. The manager corrected who the form is for, not what happened.
+   * When the current turn corrects the person and the turns before it name
+   * exactly one other person, those turns stay, read with the corrected name
+   * (`excerpts`), so the draft never puts the wrong name on the record.
+   */
+  let formStart = 0;
+  const readings = context.messages.map((message, index) => {
     const intent = detectTemplateIntent(message.content);
     const otherForm =
       (intent.kind === "explicit" && intent.templateKey !== templateKey) ||
       intent.kind === "corrective_action";
     const names = extractEmployeeNames(message.content);
-    const otherPerson = names.length > 0 && !names.some(same);
-    if (otherForm || otherPerson) start = index + 1;
+    // A turn that also names somebody else is about them too, and stays off this form.
+    const otherPerson = names.length > 0 && !names.every(same);
+    if (index < last && (otherForm || otherPerson)) start = index + 1;
+    if (index < last && otherForm) formStart = index + 1;
+    return { names, otherForm, otherPerson };
   });
+  /* The latest turn of this form that corrected the person TO this employee. */
+  let correctionAt = -1;
+  if (employeeName !== null) {
+    for (let index = last; index >= formStart; index -= 1) {
+      const message = context.messages[index]!;
+      if (correctsTheEmployee(message.content) && readings[index]!.names.some(same)) {
+        correctionAt = index;
+        break;
+      }
+    }
+  }
+  const others = new Set<string>();
+  for (let index = formStart; index < correctionAt; index += 1) {
+    for (const name of readings[index]!.names.filter((name) => !same(name))) others.add(name.toLowerCase());
+  }
+  const anotherAfter = readings
+    .slice(Math.max(correctionAt, 0) + 1, last)
+    .some((reading) => reading.otherPerson || reading.otherForm);
+  const excerpts: Record<string, string> = {};
+  let source = context.messages;
+  if (correctionAt > formStart && others.size === 1 && !anotherAfter && formStart < start) {
+    const replaced = [...others][0]!;
+    const pattern = new RegExp(`\\b${replaced.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+")}\\b`, "gi");
+    source = context.messages.map((message, index) => {
+      if (index < formStart || index >= correctionAt || !pattern.test(message.content)) return message;
+      pattern.lastIndex = 0;
+      const content = message.content.replace(pattern, employeeName!);
+      if (message.id) excerpts[message.id] = content;
+      return { ...message, content };
+    });
+    start = formStart;
+  }
+  /*
+   * A QUESTION THAT NAMES NOBODY IS NOT PART OF THE ACCOUNT. "What does the
+   * manual say about shirts?" asked before "jordan needs a written warning"
+   * says nothing about Jordan, and a draft written from it puts the shirt
+   * policy on a disciplinary record. The current turn always stays.
+   */
   // The current turn is always the last one, so there is always at least it.
-  const messages = context.messages.slice(Math.min(start, context.messages.length - 1));
+  const messages = source
+    .slice(Math.min(start, last))
+    .filter(
+      (message, index, kept) =>
+        index === kept.length - 1 ||
+        !isQuestion(message.content) ||
+        extractEmployeeNames(message.content).some(same),
+    );
   return {
     ...context,
     messages,
     ids: messages.map((message) => message.id).filter((id): id is string => Boolean(id)),
     text: messages.map((message) => message.content).join("\n\n"),
+    excerpts: Object.fromEntries(
+      Object.entries(excerpts).filter(([id]) => messages.some((message) => message.id === id)),
+    ),
   };
 }
 
@@ -1572,6 +1804,7 @@ function proposalContent(
   }
 
   if (isCorrectiveActionForm(match)) {
+    proposal.issue = correctiveActionIssue(context.text, proposal.employeeName);
     const intake = readCorrectiveActionIntake({
       text: context.text,
       employeeKnown: proposal.employeeName !== null,
@@ -1781,6 +2014,18 @@ function correctiveActionReady(
   ];
 
   /*
+   * WHAT THE MANAGER SAID, READ BACK before anything is created: the issue and
+   * the warning level. Signed-in QA, 8 Oct 2026, found both lost — the issue
+   * became the employee's name and the stated level was left unticked.
+   */
+  const stated: string[] = [];
+  if (proposal.issue) stated.push(`**Issue:** ${proposal.issue}`);
+  if (warning.offersLevel && proposal.warningLevel) {
+    stated.push(`**Type of warning:** ${warningLevelLabel(proposal.warningLevel as WarningLevel)}, as you said — tell me if that should change`);
+  }
+  if (stated.length > 0) lines.push("", stated.join(" · "));
+
+  /*
    * THE POLICY, SUGGESTED OR ASKED — never left silently to the drafting
    * model's offense box. A missed deadline, unfinished assigned work, Woven
    * items not completed or a direction not followed reads as the Standards of
@@ -1792,16 +2037,11 @@ function correctiveActionReady(
   if (policyLine) lines.push("", policyLine);
 
   /*
-   * THE LEVEL, READ BACK OR ASKED. An earlier warning the manager mentioned
-   * is said to be history, so nobody reads its presence as the reason for
-   * whichever box ends up ticked.
+   * THE LEVEL, ASKED WHEN IT WAS NOT STATED (a stated one is read back above).
+   * An earlier warning the manager mentioned is said to be history, so nobody
+   * reads its presence as the reason for whichever box ends up ticked.
    */
-  if (warning.offersLevel && proposal.warningLevel) {
-    lines.push(
-      "",
-      `Type of Warning: **${warningLevelLabel(proposal.warningLevel as WarningLevel)}** — tell me if that should change.`,
-    );
-  } else if (levelOpen) {
+  if (!proposal.warningLevel && levelOpen) {
     lines.push(
       "",
       warning.earlierWarning

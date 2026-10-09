@@ -19,6 +19,7 @@ import { isExitDocumentKeys } from "./exit-draft";
 import { authorizeInstance } from "./instance-scope";
 import { PAYROLL_DEDUCT_KEY, payrollDeductChecked, payrollDeductCorrection } from "./payroll-deduct";
 import { extractEmployeeNames, samePerson as samePersonByName } from "./proposal";
+import { clausesOf, LEAD_IN, separateQuestions } from "./message-parts";
 import { isQuestion } from "./question";
 import { singleSpokenDate } from "./relative-date";
 import { detectTemplateIntent } from "./template-intent";
@@ -54,12 +55,17 @@ import {
  * path as typing into the field — so it is recorded as the manager's, refused
  * on a finalized form, and limited to fields a person may edit.
  */
-async function correctFromFormReaders(input: {
-  request: Request;
-  instanceId: string;
-  question: string;
-  today: string;
-}): Promise<AskResponse | null> {
+async function correctFromFormReaders(
+  input: {
+    request: Request;
+    instanceId: string;
+    question: string;
+    today: string;
+    /** The whole message, when `question` is one clause of it. */
+    message?: string;
+  },
+  applied: AppliedBy = {},
+): Promise<AskResponse | null> {
   // A cheap first reading, before anything is loaded: most turns are not corrections.
   const employmentCorrection = correctionValues(input.question, input.today);
   const exitCorrection = exitCorrectionValues(input.question, input.today);
@@ -74,8 +80,15 @@ async function correctFromFormReaders(input: {
    * verbal warning" names somebody's conduct and asks for a level; with no
    * change verb it is a new request, and the ordinary flow proposes it.
    */
+  /*
+   * Read against the WHOLE message, not just the clause being retried
+   * (`correctActiveForm` retries correction clauses on their own): "sarah was
+   * late again today, make it a written warning" is about Sarah however it is
+   * split.
+   */
+  const whole = input.message ?? input.question;
   const warning =
-    namesIncidentTopic(input.question) && !/\b(?:change|switch|set|update|correct)\b/i.test(input.question)
+    namesIncidentTopic(whole) && !/\b(?:change|switch|set|update|correct)\b/i.test(whole)
       ? null
       : warningLevelCorrection(input.question, input.today);
   if (!employmentCorrection && !exitCorrection && !payroll && !warning) return null;
@@ -297,7 +310,8 @@ async function correctFromFormReaders(input: {
     .map((key) => describe(document, variantKey, key, submitted, { before, after }))
     .filter((line): line is string => line !== null);
   const lines = [
-    `Updated the ${who}: ${described.length > 0 ? described.join("; ") : "Resignation Details boxes cleared"}.`,
+    // A Details line is its own sentence ("…eligible for rehire."), so no second full stop.
+    `Updated the ${who}: ${described.length > 0 ? described.join("; ") : "Resignation Details boxes cleared"}.`.replace(/\.\.$/, "."),
   ];
   if (rewritten) {
     written.push(rewritten);
@@ -314,12 +328,24 @@ async function correctFromFormReaders(input: {
     lines.push("", `The ${paragraph} was written before this change — give it a quick read to make sure it still matches.`);
   }
 
+  // What THIS form's readers take from a clause — the test for "was that part done?".
+  applied.reads = (clause) =>
+    Boolean(
+      (kind && correctionValues(clause, input.today)) ||
+        (isExit && exitCorrectionValues(clause, input.today)) ||
+        (asksPayroll && payrollDeductCorrection(clause)),
+    );
   return { ...reply(lines.join("\n")), formUpdate: { instanceId: input.instanceId, updated: written } };
 }
 
 /** "jane", "Jane Doe" and "JANE DOE" name the employee on a form for "Jane Doe". */
 function samePerson(named: string, employee: string): boolean {
-  const a = named.toLowerCase().replace(/['’]s$/, "").split(/\s+/);
+  // "change paulyne's warning to verbal" names Paulyne; the verb is not part of the name.
+  const a = named
+    .toLowerCase()
+    .replace(/^(?:change|update|set|make|fix|correct|switch)\s+/, "")
+    .replace(/['’]s$/, "")
+    .split(/\s+/);
   const b = employee.toLowerCase().split(/\s+/);
   return a.join(" ") === b.join(" ") || (a.length === 1 && a[0] === b[0]);
 }
@@ -342,10 +368,12 @@ function samePerson(named: string, employee: string): boolean {
  * save, and a reply in the form's own labels with a `formUpdate` the browser
  * uses to refresh the open form.
  *
- * WHAT WAS NOT is the reference company's own field readers (its transfer,
- * demotion, exit and payroll lines). Here a form opts in through the company
- * registry, `chatCorrectableFields`, and only the header lines the platform
- * can read generically are offered: the employee's name and the form's date.
+ * THE FORMS' OWN READERS were ported too, unchanged, as
+ * `correctFromFormReaders` (the transfer, demotion, exit and payroll lines);
+ * they run first. This header reader is the generic fallback: a form opts in
+ * through the company registry, `chatCorrectableFields`, and only the header
+ * lines the platform can read generically are offered — the employee's name
+ * and the form's date.
  *
  * EVERYTHING IS RE-CHECKED. The browser names the instance; this loads it and
  * runs `authorizeInstance` with the "edit" action, which applies the
@@ -366,8 +394,13 @@ const NAME_CORRECTION = new RegExp(
 /* "Actually her name is Jane Doe-Smith." — the correction said as a statement. */
 const NAME_STATEMENT =
   /^(?:(?:sorry|oops|actually|no)[,.!\s]+)*(?:her|his|their|the employee'?s|the team member'?s)\s+(?:full\s+)?name\s+is\s+(?:actually\s+)?(.+?)\s*[.!]?$/i;
+/*
+ * "Change Avery's date to …" / "change the date for Avery to …" — the person
+ * named is how one of several open forms is picked (`activeFormInstanceFor`),
+ * and the guard below still refuses it on anybody else's form.
+ */
 const DATE_CORRECTION = new RegExp(
-  String.raw`\b${VERB}\s+(?:the\s+)?(?:form(?:'s)?\s+)?date\s+(?:to|is|should be|as)\s+`,
+  String.raw`\b${VERB}\s+(?:the\s+|[a-z][a-z-]*(?:\s+[a-z][a-z-]*)?['’]s\s+)?(?:form(?:'s)?\s+)?date\s+(?:(?:for|on)\s+[a-z][a-z-]*(?:\s+[a-z][a-z-]*)?(?:['’]s)?(?:\s+form)?\s+)?(?:to|is|should be|as)\s+`,
   "i",
 );
 const DATE_STATEMENT =
@@ -401,13 +434,62 @@ export function readHeaderCorrection(text: string, today: string): HeaderCorrect
   return Object.keys(values).length > 0 ? { values } : null;
 }
 
+/*
+ * ============================================================================
+ * NOTHING IN THE MESSAGE IS SILENTLY DROPPED
+ * ============================================================================
+ *
+ * A correction ends the turn: whatever it saved is answered, and nothing else
+ * in the message reaches revision or retrieval. Release QA found what that
+ * lost, on both platforms:
+ *
+ *   "change the date to yesterday and shorten the summary"   summary ignored
+ *   "payroll deduct is not applicable and add that she was
+ *    late twice"                                              addition ignored
+ *   "last day was yesterday and change the date to today"     date ignored
+ *   "new location salon 24. also what is the transfer policy?"
+ *                                     NOTHING saved: the question made the
+ *                                     whole message read as a question
+ *
+ * So the message is taken apart first. Its questions are set aside (they no
+ * longer stop the statements around them from being read); the statements are
+ * read as one, as before; and if that reads nothing, the clauses that say
+ * "change/update/set/fix …" are read on their own. Whatever the applied path
+ * did not read — an instruction or a question — is NAMED in the reply, word
+ * for word, with how to get it done. Nothing is guessed about it.
+ */
+interface AppliedBy {
+  /** Whether the readers that saved this correction read `clause`. Set on success. */
+  reads?: (clause: string) => boolean;
+}
+
+/** An instruction, or the name/date a header correction is about. */
+const INSTRUCTION =
+  /\b(?:rewrite|reword|shorten|lengthen|expand|add|remove|delete|drop|include|mention|change|update|fix|make|put|set|correct|tick|untick|check|uncheck|name|date)\b/i;
+/** What only a correction says: an explicit verb that sets a value. */
+const CORRECTION_VERB = /\b(?:change|update|correct|fix|set|make)\b/i;
+/** The instruction clauses of `statements` that `reads` did not take. */
+export function unreadInstructions(statements: string, reads: (clause: string) => boolean): string[] {
+  const clauses = clausesOf(statements);
+  if (clauses.length < 2) return [];
+  return clauses.filter((clause) => INSTRUCTION.test(clause) && !reads(clause));
+}
+
+function leftoverNote(parts: readonly string[]): string {
+  const quoted = parts.map((part) => `- "${part.replace(LEAD_IN, "")}"`).join("\n");
+  return `I haven't done this part of your message yet:\n${quoted}\n\nSend ${parts.length === 1 ? "it" : "each one"} as its own message and I'll take care of it.`;
+}
+
 /** A turn that asks for a form — this one again, or another — is never a correction. */
-async function correctHeaderLines(input: {
-  request: Request;
-  instanceId: string;
-  question: string;
-  today: string;
-}): Promise<AskResponse | null> {
+async function correctHeaderLines(
+  input: {
+    request: Request;
+    instanceId: string;
+    question: string;
+    today: string;
+  },
+  applied: AppliedBy = {},
+): Promise<AskResponse | null> {
   // A cheap first reading, before anything is loaded: most turns are not corrections.
   const correction = readHeaderCorrection(input.question, input.today);
   if (!correction) return null;
@@ -496,6 +578,7 @@ async function correctHeaderLines(input: {
   if (drafted && written.includes("employee_name")) {
     lines.push("", "The drafted text was written before this change — give it a quick read to make sure it still names the right person.");
   }
+  applied.reads = (clause) => readHeaderCorrection(clause, input.today) !== null;
 
   return { ...reply(lines.join("\n")), formUpdate: { instanceId: input.instanceId, updated: written } };
 }
@@ -519,7 +602,38 @@ export async function correctActiveForm(input: {
   question: string;
   today: string;
 }): Promise<AskResponse | null> {
-  return (await correctFromFormReaders(input)) ?? (await correctHeaderLines(input));
+  const { statements, questions } = separateQuestions(input.question);
+  if (!statements) return null;
+
+  const attempt = async (question: string) => {
+    const applied: AppliedBy = {};
+    const response =
+      (await correctFromFormReaders({ ...input, question, message: statements }, applied)) ??
+      (await correctHeaderLines({ ...input, question }, applied));
+    return { response, applied };
+  };
+
+  let { response, applied } = await attempt(statements);
+  /*
+   * "Change her new location to salon 24 and rewrite the reason …" reads as
+   * nothing whole. Its explicit correction clauses are read alone — never a
+   * clause without a correction verb, so a request that is all revision
+   * ("rewrite the reason to say she starts at salon 24") still goes to the
+   * revision path untouched.
+   */
+  if (!response) {
+    const clauses = clausesOf(statements);
+    const explicit = clauses.filter((clause) => CORRECTION_VERB.test(clause));
+    if (explicit.length === 0 || explicit.length === clauses.length) return null;
+    ({ response, applied } = await attempt(explicit.join(". ")));
+  }
+  if (!response) return null;
+  // Nothing was changed (a finalized form): there is no "rest" to speak of.
+  if (!response.formUpdate) return response;
+
+  const leftovers = [...unreadInstructions(statements, applied.reads ?? (() => false)), ...questions];
+  if (leftovers.length === 0) return response;
+  return { ...response, content: `${response.content}\n\n${leftoverNote(leftovers)}` };
 }
 
 function reply(content: string): AskResponse {
@@ -581,4 +695,47 @@ function sectionHeading(document: FormDocument, variantKey: string | null, key: 
     if (block.kind === "checkbox_group" && block.key === key) return heading;
   }
   return null;
+}
+
+/**
+ * ============================================================================
+ * TWO FORMS FROM ONE MESSAGE, AND A CORRECTION THAT NAMES NEITHER
+ * ============================================================================
+ *
+ * "Coaching form for Avery and a CA for Jordan" can leave two drafts open at
+ * once. "Change the date to yesterday" is then a correction to ONE of them,
+ * and which is not something to guess: the wrong employee's record would be
+ * changed. Nor may it be dropped. So it is answered with the question, naming
+ * the forms the manager can actually edit, and nothing is changed until they
+ * say whose. A correction that names the person is routed by the browser to
+ * that form (`activeFormInstanceFor`) and never reaches this.
+ *
+ * Every id is re-authorized for "edit" — a forged one is simply not named.
+ */
+export async function askWhichFormToCorrect(input: {
+  request: Request;
+  instanceIds: readonly string[];
+  question: string;
+}): Promise<AskResponse | null> {
+  const { statements } = separateQuestions(input.question);
+  if (!statements || !INSTRUCTION.test(statements)) return null;
+  if (detectTemplateIntent(statements).kind !== "none") return null;
+
+  const forms: string[] = [];
+  for (const instanceId of input.instanceIds.slice(0, 6)) {
+    try {
+      const { loaded } = await authorizeInstance(input.request, instanceId, "edit");
+      forms.push(
+        `**${loaded.instance.templateName}**${loaded.instance.employeeName ? ` for **${loaded.instance.employeeName}**` : ""}`,
+      );
+    } catch {
+      // Not visible to this person: not offered.
+    }
+  }
+  if (forms.length < 2) return null;
+  return {
+    content: `You have ${forms.length === 2 ? "two" : String(forms.length)} forms open from that message — ${forms.slice(0, -1).join(", ")} or ${forms[forms.length - 1]}. Which one should I change? Say it again with the person's name, and I'll change only that form. Nothing has been changed yet.`,
+    citations: [],
+    coverage: "not_applicable",
+  };
 }

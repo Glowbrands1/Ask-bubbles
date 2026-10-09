@@ -47,9 +47,23 @@ export interface CompanyFormDefinition {
 
 export const COMPANY_FORMS: readonly CompanyFormDefinition[] = TEMPLATE_SEEDS.map((seed): CompanyFormDefinition => ({
   seed,
-  // None: the migrated forms take a stated name or date change through their
-  // own revision path, exactly as on the reference platform.
-  chatCorrectableFields: [],
+  /*
+   * EVERY FORM'S NAME AND DATE LINES. "Change the date to yesterday" or "her
+   * name is actually Jane Doe-Smith", typed after a Coaching or Corrective
+   * Action draft exists, used to reach the AI revision path, which rewrites
+   * DRAFTED text and has no business re-dating a record. The header reader is
+   * deterministic, re-authorised for edit, refuses a finalized form, another
+   * person or a new request, and writes only a line the template has and a
+   * person may edit (`chat-correction.ts`). A form's own readers (transfer,
+   * demotion, exit, payroll) still run first.
+   *
+   * EXCEPT THE CORRECTIVE ACTION FORM, whose chat corrections are limited to
+   * the payroll-deduct answer by an explicit decision on the reference
+   * platform (its `corrective-action-ca-alias-and-payroll-deduct.md`: "for the
+   * CA form this is the only thing chat corrects"). A formal disciplinary
+   * record keeps that rule until the business decides otherwise.
+   */
+  chatCorrectableFields: seed.key === "dpoa" ? [] : ["employee_name", "form_date"],
   status: "approved",
 }));
 

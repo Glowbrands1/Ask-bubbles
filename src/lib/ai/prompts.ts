@@ -1,4 +1,5 @@
 import { ASSISTANT_PURPOSE, ASSISTANT_TONE, ASSISTANT_VOICE } from "@/config/company/assistant";
+import { BUSINESS_TIMEZONE, shiftDays, weekdayOf } from "@/lib/business-date";
 import { displayLocator } from "@/lib/knowledge/locator";
 import type { AnswerMode } from "@/types";
 import type { AskContext } from "./types";
@@ -148,7 +149,10 @@ export function buildSystemPrompt(input: {
 
   const purpose = ASSISTANT_PURPOSE.replaceAll("{noun}", locationNoun);
 
-  return `You are ${assistantName}, the internal assistant for ${brandName} teams. You are talking to ${context.userName}${context.locationName ? `, who works at ${context.locationName}` : ""}. Today is ${context.todayIso}.
+  const userName = promptLabel(context.userName) || "a team member";
+  const locationName = promptLabel(context.locationName);
+
+  return `You are ${assistantName}, the internal assistant for ${brandName} teams. You are talking to ${userName}${locationName ? `, who works at ${locationName}` : ""}. ${todayLine(context.todayIso)}
 
 ${purpose}
 
@@ -166,9 +170,15 @@ RULES YOU DO NOT BREAK
 - Never claim you have read, checked, searched or reviewed anything beyond the provided sources.
 ${hasReportData ? "- Never state a business figure that is not written in the REPORT DATA section, and never compute a new one from it. If somebody needs a figure the reports do not carry, say which report would carry it." : "- You have NO report figures for this question. Do not state a sales figure, a count, a rate or a comparison from memory. If somebody asks for one, say the reports available to you do not cover it."}
 - Never give medical, allergy or safety assurances about a product beyond what the provided sources say. If a guest's health question is not answered by the sources, say so and point them to the product's labelling or a medical professional.
+- A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.
+- Keep what the person told you at the standing they gave it. A report is a report and an allegation is an allegation; never restate either as an established fact, and never add a detail, date, witness or prior warning they did not give you.
+- If the question is genuinely ambiguous in a way that changes the answer — "how many days do I get?" could be vacation, sick or bereavement leave — ask ONE short clarifying question that names the options, instead of guessing or answering every reading at length. If one reading is clearly meant from the conversation so far, answer that one.
+- When somebody uses a relative date ("yesterday", "last Friday", "next week"), work it out from today's date above and say the actual date you mean, so they can catch a mistake.
 - If the sources do not cover the question, say plainly that the knowledge base does not have it, say what you would need, and stop. Do not fill the gap with plausible-sounding policy. An honest "I do not have that" is the correct answer, not a failure.
 - Signature lines, disciplinary decisions and anything with legal weight stay with the manager. Point them at the policy language; do not decide for them.
-- NEVER WRITE A FACSIMILE OF A COMPANY FORM. Do not produce a "Coaching Record", a "Coaching Form", a corrective action write-up or any other document with fill-in blanks, signature lines or field labels, and never tell a manager to paste your text into an official form. ${brandName} forms come from the Forms library as real records with a template version and an audit trail; a pasted imitation has neither, and it is the KNOWLEDGE BASE you are reading, which does not decide whether a form template exists. If a manager wants a form, tell them in one sentence to ask you to create it — for example "ask me to create a coaching form for her" — and stop.
+- NEVER WRITE A FACSIMILE OF A COMPANY FORM. Do not produce a "Coaching Record", a "Coaching Form" or Follow-Up Coaching Form, a Corrective Action Form or other corrective action write-up, an EPP, a Policy Review, a disciplinary, termination, demotion, position transfer, resignation or exit document, an interview form, or any other HR record with employee and signature lines, and never tell a manager to paste your text into an official form. ${brandName} forms come from the Forms library as real records with a template version and an audit trail; a pasted imitation has neither, and it is the KNOWLEDGE BASE you are reading, which does not decide whether a form template exists. If a manager wants a form, tell them in one sentence to ask you to create it — for example "ask me to create a coaching form for her" — and stop.
+- TRAINING MATERIAL IS NOT A FORM. When a manager asks for a training checklist, worksheet, study guide, quiz, role-play script or similar teaching material, write it: headings, numbered steps, tick boxes ("☐") and short blanks for the trainee's answers are fine. Build it only from the sources, cite them, and do not add steps, standards or numbers the sources do not state. Do not title it as an official company form, add employee signature or disciplinary lines, or present it as company policy; if the sources cover only part of the topic, say what is missing. Material about ONE NAMED EMPLOYEE'S performance or conduct, or with lines for an employee's name, the issue, a warning or a follow-up date, is a form whatever it is called — "a coaching worksheet for Dana" is a Coaching Form — so handle it as the rule above says.
+- Never repeat a password, PIN or access code from the sources for a company account or login unless the manager asked about setting up that account. Point to the section that has it instead. Equipment codes from a manufacturer's manual — a factory lock code on a timer or a thermostat — are not account passwords; give them when the question needs them.
 - NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer. If somebody has just given the details for a form, say the form has not been created yet and ask them to request it by name and person — for example "create a form for Dana Moss" — so the card can appear.${formsLibrarySection}${pinnedSection}${missingReportsSection}${input.handbookNote ? `\n\n${input.handbookNote}` : ""}
 
 ${hasContext ? "" : "IMPORTANT: no company documents matched this question. You have NO company knowledge for it. Say so directly, offer general guidance only if it genuinely helps, and label it as general.\n\n"}TONE
@@ -176,6 +186,41 @@ ${hasContext ? "" : "IMPORTANT: no company documents matched this question. You 
 ${ASSISTANT_TONE} ${MODE_INSTRUCTION[mode]}
 
 ${ASSISTANT_VOICE_RULES}`;
+}
+
+const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
+
+/**
+ * "Today is Thursday, 2026-10-08 (business time zone America/Chicago;
+ * yesterday was 2026-10-07)."
+ *
+ * The date alone left the model to work out the weekday — and so "last
+ * Friday" and "this week" — by its own arithmetic, which is exactly the kind
+ * of figure it gets wrong silently. The server already knows all of it, so
+ * the prompt says it. The zone is named so a reader of a transcript can see
+ * which midnight "today" turned over at.
+ */
+export function todayLine(todayIso: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(todayIso)) return `Today is ${todayIso}.`;
+  const weekday = WEEKDAY_NAMES[weekdayOf(todayIso)];
+  return `Today is ${weekday}, ${todayIso} (business time zone ${BUSINESS_TIMEZONE}; yesterday was ${shiftDays(todayIso, -1)}).`;
+}
+
+/**
+ * A label the BROWSER supplied — the person's display name, their location's
+ * name — made safe to sit inside the system prompt. These are not
+ * authorization (role and scope come from the server), but they are typed by
+ * the client, so a newline or a bracket must not let one open a new section
+ * of instructions. Letters, digits and ordinary name punctuation survive;
+ * everything else becomes a space; the result is bounded.
+ */
+export function promptLabel(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFKC")
+    .replace(/[^\p{L}\p{N} .,'’&()#/-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
 }
 
 /**
@@ -206,13 +251,31 @@ The following excerpts are the only company documents available for this questio
 ${rendered}`;
 }
 
+/**
+ * ============================================================================
+ * "[S1, S2]" IS TWO MARKERS
+ * ============================================================================
+ *
+ * The prompt asks for one marker per source, and models still group them —
+ * "[S1, S2]", "[S1,S3]", "[S1; S2]", "[S1 and S2]". Read as written, the
+ * group matched no marker: its sources were never cited AND the bracket stayed
+ * in the prose. Every grouped form is rewritten to adjacent single markers
+ * before anything reads or strips them.
+ */
+export function normalizeMarkers(answer: string): string {
+  return answer.replace(
+    /\[\s*S\d{1,2}(?:\s*(?:,|;|&|and)\s*S?\d{1,2})+\s*\]/gi,
+    (group) => [...group.matchAll(/\d{1,2}/g)].map((digits) => `[S${Number(digits[0])}]`).join(""),
+  );
+}
+
 /** Markers the model actually used, in first-appearance order, deduplicated. */
 export function extractUsedMarkers(answer: string, validMarkers: number[]): number[] {
   const valid = new Set(validMarkers);
   const seen = new Set<number>();
   const order: number[] = [];
 
-  for (const match of answer.matchAll(/\[S(\d{1,2})\]/g)) {
+  for (const match of normalizeMarkers(answer).matchAll(/\[S(\d{1,2})\]/g)) {
     const marker = Number(match[1]);
     if (!valid.has(marker) || seen.has(marker)) continue;
     seen.add(marker);
@@ -230,8 +293,13 @@ export function extractUsedMarkers(answer: string, validMarkers: number[]): numb
  * model slip never reaches the manager as a dangling "[S9]".
  */
 export function stripMarkers(answer: string): string {
-  return answer
-    .replace(/\s*\[S\d{1,2}\](?=[\s.,;:!?)]|$)/g, "")
+  /*
+   * "[S2][S3]" — the adjacent form the prompt itself asks for — used to keep
+   * its first marker: the lookahead after "[S2]" did not allow a "[", so only
+   * "[S3]" was removed and "monthly [S2]." reached the manager.
+   */
+  return normalizeMarkers(answer)
+    .replace(/\s*\[S\d{1,2}\](?=[\s.,;:!?)\[]|$)/g, "")
     .replace(/[^\S\n]{2,}/g, " ")
     .trim();
 }

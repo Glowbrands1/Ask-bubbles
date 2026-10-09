@@ -26,6 +26,12 @@ type Row = Record<string, unknown>;
 
 /** Stands in for the schema's `gen_random_uuid()` default. */
 let insertCounter = 0;
+/*
+ * UUID-SHAPED, like the real column default, so a route that validates an id
+ * (the chat route does, for the forms a correction may reach) accepts one the
+ * fake issued. Distinct and stable within a run.
+ */
+const fakeId = () => `00000000-0000-4000-8000-${String((insertCounter += 1)).padStart(12, "0")}`;
 type Predicate = (row: Row) => boolean;
 
 export interface FakeStore {
@@ -159,6 +165,10 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
     this.filters.push((row) => String(row[column] ?? "").startsWith(prefix));
     return this;
   }
+  gte(column: string, value: string | number) {
+    this.filters.push((row) => row[column] !== undefined && row[column] !== null && String(row[column]) >= String(value));
+    return this;
+  }
   in(column: string, values: unknown[]) {
     this.filters.push((row) => values.includes(row[column]));
     return this;
@@ -197,7 +207,7 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
           this.conflictKeys.every((key) => row[key] === incoming[key]),
         );
         if (existing) Object.assign(existing, incoming);
-        else rows.push({ id: `fake-${(insertCounter += 1)}`, ...incoming });
+        else rows.push({ id: fakeId(), ...incoming });
       }
       return { data: null, error: null };
     }
@@ -209,7 +219,7 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
        * cannot be loaded back by id.
        */
       const stamped = (payload: Row): Row => ({
-        id: `fake-${(insertCounter += 1)}`,
+        id: fakeId(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...payload,
