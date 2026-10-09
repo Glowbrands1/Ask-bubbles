@@ -492,8 +492,36 @@ describe("typography keeps the display face out of body copy", () => {
      */
     const stackOf = (token: string) => new RegExp(`${token}:([^;]+);`).exec(GLOBALS_CODE)?.[1] ?? "";
     expect(stackOf("--font-display").trim()).toMatch(/^"Supria Sans",/);
-    expect(stackOf("--font-wordmark").trim()).toMatch(/^"Supria Sans",/);
     expect(stackOf("--font-sans").trim()).toMatch(/^"Avenir Next",/);
+  });
+
+  it("sets the wordmark and the greetings in the approved lettering face, and nothing else", () => {
+    /*
+     * Approved 9 Oct 2026: hand-lettered caps for the Ask Bubbles wordmark
+     * (option B) and the rounded hand-lettered greeting (option 2), both in
+     * Grandstander (OFL), self-hosted. It is inspired by the Buff City Soap
+     * logo, not a brand headline or body face, so it is confined to the
+     * wordmark and the two greeting headlines.
+     */
+    const stackOf = (token: string) => new RegExp(`${token}:([^;]+);`).exec(GLOBALS_CODE)?.[1] ?? "";
+    expect(stackOf("--font-wordmark").trim()).toMatch(/^var\(--font-grandstander\),/);
+    expect(stackOf("--font-lettering").trim()).toMatch(/^var\(--font-grandstander\),/);
+
+    const layout = readFileSync(join(SOURCE_DIR, "app", "layout.tsx"), "utf8");
+    expect(layout).toMatch(/import \{[^}]*\bGrandstander\b[^}]*\} from "next\/font\/google"/);
+    expect(layout).toContain('variable: "--font-grandstander"');
+    expect((layout.match(/display: "swap"/g) ?? []).length).toBeGreaterThanOrEqual(3);
+
+    // Used by the wordmark and the two greeting headlines only.
+    const users = sourceFiles(SOURCE_DIR)
+      .filter((path) => /\.tsx$/.test(path))
+      .filter((path) => /\bdisplay-lettering\b/.test(codeOf(path)))
+      .map((path) => path.slice(path.indexOf("src/")))
+      .sort();
+    expect(users).toEqual([
+      "src/features/chat/chat-screen.tsx",
+      "src/features/dashboard/ask-band.tsx",
+    ]);
   });
 
   it("drives UI text with the readable face, not the display one", () => {
@@ -508,7 +536,7 @@ describe("typography keeps the display face out of body copy", () => {
     expect(sans).not.toContain("Supria");
 
     expect(/--font-display:([^;]+);/.exec(GLOBALS_CODE)?.[1] ?? "").toContain("--font-archivo");
-    expect(/--font-wordmark:([^;]+);/.exec(GLOBALS_CODE)?.[1] ?? "").toContain("--font-archivo");
+    expect(sans).not.toContain("grandstander");
 
     // The body element itself is set in the readable face.
     const body = /\n\s*body \{([^}]+)\}/.exec(GLOBALS_CODE)?.[1] ?? "";
@@ -523,7 +551,7 @@ describe("typography keeps the display face out of body copy", () => {
   });
 
   it("gives every face a real fallback stack", () => {
-    for (const token of ["--font-sans", "--font-display", "--font-wordmark"]) {
+    for (const token of ["--font-sans", "--font-display", "--font-wordmark", "--font-lettering"]) {
       const stack = new RegExp(`${token}:([^;]+);`).exec(GLOBALS_CODE)?.[1] ?? "";
       expect(stack, `${token} has no fallback`).toMatch(/sans-serif|system-ui/);
     }
@@ -539,6 +567,8 @@ describe("typography keeps the display face out of body copy", () => {
       ".display {",
       ".display-figure {",
       ".wordmark {",
+      ".wordmark-letter {",
+      ".display-lettering {",
       ".eyebrow {",
       ".pill-action {",
       ".stat-cell {",
@@ -708,11 +738,11 @@ describe("the Ask Bubbles brand", () => {
 
 describe("the brand backgrounds stay decorative", () => {
   /*
-   * THE APPROVED "EDGE-WEIGHTED" OPTION: the official product drawings at very
-   * low opacity behind the sidebar, the page canvas and the Home band. These
-   * tests hold the line the approval drew: faint enough that text stays
-   * readable even if it lands on a line, absent where people read and type,
-   * and invisible to assistive technology.
+   * THE APPROVED "EDGE-WEIGHTED" OPTION, made stronger on 9 Oct 2026: the
+   * official product drawings behind the sidebar, the page canvas, the chat
+   * canvas and the Home band. These tests hold the line the approvals drew:
+   * text stays readable even where it lands on a line, the editor stays
+   * plain, and none of it takes a click or reaches assistive technology.
    */
   const opacity = (token: string) => {
     const value = Number.parseFloat(ROOT.get(token) ?? "");
@@ -734,9 +764,10 @@ describe("the brand backgrounds stay decorative", () => {
 
   it("keeps each layer under its approved ceiling", () => {
     expect(opacity("--pattern-sidebar-opacity")).toBeLessThanOrEqual(0.07);
-    expect(opacity("--pattern-canvas-opacity")).toBeLessThanOrEqual(0.12);
-    expect(opacity("--pattern-canvas-home-opacity")).toBeLessThanOrEqual(0.12);
-    expect(opacity("--pattern-band-art-opacity")).toBeLessThanOrEqual(0.36);
+    expect(opacity("--pattern-canvas-opacity")).toBeLessThanOrEqual(0.22);
+    expect(opacity("--pattern-canvas-home-opacity")).toBeLessThanOrEqual(0.22);
+    expect(opacity("--pattern-chat-opacity")).toBeLessThanOrEqual(0.22);
+    expect(opacity("--hero-art-max-opacity")).toBeLessThanOrEqual(0.32);
   });
 
   it("keeps sidebar text readable even on a pattern line", () => {
@@ -755,8 +786,20 @@ describe("the brand backgrounds stay decorative", () => {
     }
   });
 
+  it("keeps Charcoal readable on the chat canvas, even on a pattern line", () => {
+    // Every word on the chat canvas is Charcoal or sits on White.
+    const line = onLine(
+      PALETTE["--bcs-tokyo-dark"],
+      resolveHex("--chat-canvas"),
+      opacity("--pattern-chat-opacity"),
+    );
+    expect(contrast(resolveHex("--foreground"), line)).toBeGreaterThanOrEqual(4.5);
+    // The canvas is a tint of Tokyo Green, not a new hue.
+    expect(ROOT.get("--chat-canvas")).toBe("var(--bcs-tokyo-mist)");
+  });
+
   it("only lightens the Home band behind its Charcoal text", () => {
-    const line = onLine("#ffffff", resolveHex("--band"), opacity("--pattern-band-art-opacity"));
+    const line = onLine("#ffffff", resolveHex("--band"), opacity("--hero-art-max-opacity"));
     expect(contrast(resolveHex("--band-foreground"), line)).toBeGreaterThanOrEqual(
       contrast(resolveHex("--band-foreground"), resolveHex("--band")),
     );
@@ -770,24 +813,34 @@ describe("the brand backgrounds stay decorative", () => {
     };
     expect(block(".rail-pattern::before")).toContain("pointer-events: none");
     expect(block(".canvas-pattern")).toContain("pointer-events: none");
-    expect(block(".band-art")).toContain("pointer-events: none");
+    expect(block(".chat-pattern")).toContain("pointer-events: none");
+    expect(block(".hero-art")).toContain("pointer-events: none");
     expect(GLOBALS_CODE).toMatch(
-      /@media \(forced-colors: active\), \(prefers-contrast: more\), print \{\s*\.rail-pattern::before,\s*\.canvas-pattern,\s*\.band-art \{\s*display: none;/,
+      /@media \(forced-colors: active\), \(prefers-contrast: more\), print \{\s*\.rail-pattern::before,\s*\.canvas-pattern,\s*\.chat-pattern,\s*\.hero-art \{\s*display: none;/,
     );
   });
 
-  it("keeps phones, chat and the form editor plain", () => {
+  it("keeps phones' page canvas and the form editor plain", () => {
     expect(GLOBALS_CODE).toMatch(/@media \(max-width: 767px\) \{\s*\.canvas-pattern \{\s*display: none;/);
     expect(GLOBALS_CODE).toMatch(/\.canvas-pattern\[data-backdrop="none"\] \{\s*display: none;/);
   });
 
-  it("keeps the band line-up clear of the 820px ask column", () => {
-    // Beside the column only when the band is wide enough; below the chips otherwise.
-    expect(GLOBALS_CODE).toMatch(/@container band \(min-width: 1060px\)/);
-    expect(GLOBALS_CODE).toContain("width: min(380px, calc(100% - 916px))");
+  it("keeps the hero and chat drawings behind their content", () => {
+    // Painted below the content of an isolated parent, so text and controls
+    // always sit over them.
+    const block = (selector: string) => {
+      const at = GLOBALS_CODE.indexOf(`${selector} {`);
+      return GLOBALS_CODE.slice(at, GLOBALS_CODE.indexOf("}", at));
+    };
+    expect(block(".hero-art")).toContain("z-index: -1");
+    expect(block(".chat-pattern")).toContain("z-index: -1");
+    // Phones keep only the line-up and the spray bottle in the band.
+    expect(GLOBALS_CODE).toMatch(
+      /@media \(max-width: 639px\) \{[\s\S]*?\.hero-art-bomb,\s*\.hero-art-bar,\s*\.hero-art-tub \{\s*display: none;/,
+    );
   });
 
-  it("is wired into the shell, the sidebar and the Home band as decoration", () => {
+  it("is wired into the shell, the sidebar, the Home band and the chat as decoration", () => {
     const shell = codeOf(join(SOURCE_DIR, "components", "shell", "app-shell.tsx"));
     expect(shell).toMatch(/<div aria-hidden className="canvas-pattern" data-backdrop=\{backdropForPath\(pathname\)\} \/>/);
     // The page column sits above the fixed layer.
@@ -795,15 +848,27 @@ describe("the brand backgrounds stay decorative", () => {
     const sidebar = codeOf(join(SOURCE_DIR, "components", "shell", "sidebar.tsx"));
     expect(sidebar).toContain('className="rail-pattern relative isolate flex h-full flex-col bg-sidebar"');
     const band = codeOf(join(SOURCE_DIR, "features", "dashboard", "ask-band.tsx"));
-    expect(band).toContain("band-art-host");
-    expect(band).toContain('<div aria-hidden className="band-art" />');
+    expect(band).toContain('<div aria-hidden className="hero-art">');
+    expect(band).toMatch(/className="wave-edge relative isolate [^"]*bg-band/);
+    const chat = codeOf(join(SOURCE_DIR, "features", "chat", "chat-screen.tsx"));
+    expect(chat).toContain('<div aria-hidden className="chat-pattern" />');
+    expect(chat).toContain('className="relative isolate flex min-h-0 flex-1 bg-chat-canvas"');
   });
 
   it("uses artwork files that exist", () => {
-    for (const token of ["--pattern-sidebar", "--pattern-canvas", "--pattern-band-art"]) {
+    for (const token of [
+      "--pattern-sidebar",
+      "--pattern-canvas",
+      "--hero-art-lineup",
+      "--hero-art-spray",
+      "--hero-art-bomb",
+      "--hero-art-bar",
+      "--hero-art-tub",
+    ]) {
       const path = /url\("([^"]+)"\)/.exec(ROOT.get(token) ?? "")?.[1];
       expect(path, token).toBeTruthy();
       expect(statSync(join(process.cwd(), "public", path!)).size, path).toBeGreaterThan(1000);
     }
   });
 });
+
