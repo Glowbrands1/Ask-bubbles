@@ -34,6 +34,7 @@ export function AppShell({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const pathname = usePathname();
   const band = chromeForPath(pathname) === "band";
+  const backdrop = backdropForPath(pathname);
 
   // Escape closes the mobile drawer, as it closes every other overlay.
   useEffect(() => {
@@ -70,14 +71,14 @@ export function AppShell({
   if (!signedIn) return <LoginScreen />;
 
   return (
-    <div className="flex min-h-dvh bg-background">
+    <div className={cn("flex min-h-dvh", backdrop === "band" ? "bg-chat-canvas" : "bg-background")}>
       {/*
         THE BRAND BACKGROUND, behind everything: fixed to the viewport, faded
         toward the bottom-right, and absent on chat and the form editor. The
         page column below sits above it (z-[1]), and every card, table and
         field in it is opaque, so it only shows in the gaps. Decoration only.
       */}
-      <div aria-hidden className="canvas-pattern" data-backdrop={backdropForPath(pathname)} />
+      <div aria-hidden className="canvas-pattern" data-backdrop={backdrop} />
       {/*
         THE RAIL RUNS THE FULL HEIGHT, led by the Ask Bubbles logo — the
         approved layout. It is Charcoal, the darker of the two shell surfaces,
@@ -96,7 +97,14 @@ export function AppShell({
         />
       </aside>
 
-      <div className="relative z-[1] flex min-w-0 flex-1 flex-col">
+      {/*
+        On the band pages the column sits on the soft-tint canvas, so its grey
+        text takes the darker body ink there (`data-canvas`, globals.css).
+      */}
+      <div
+        className="relative z-[1] flex min-w-0 flex-1 flex-col"
+        data-canvas={backdrop === "band" ? "band" : undefined}
+      >
         {/*
           THE SHARED TOP BAR, owned by the shell rather than any one page.
 
@@ -185,7 +193,8 @@ export function AppShell({
           </div>
         ) : null}
 
-        <main id="main" className="min-w-0 flex-1">
+        {/* `overflow-x-clip` lets a band page header run full width without a sideways scroll. */}
+        <main id="main" className="min-w-0 flex-1 overflow-x-clip">
           {children}
         </main>
       </div>

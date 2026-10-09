@@ -167,6 +167,7 @@ export default async function FormTemplatesPage() {
     <PermissionGate permission="manage_form_templates">
       <PageShell>
         <PageHeader
+          band
           eyebrow="Authorized admin"
           title="Form Templates"
           description="Two layers: the document template Ask Bubbles fills, and the official PDF or Word copy each form was issued as."

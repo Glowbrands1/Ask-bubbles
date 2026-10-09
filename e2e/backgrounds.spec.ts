@@ -50,10 +50,11 @@ test.describe("brand backgrounds", () => {
       expect(style.opacity).toBe("0.22");
     }
 
+    // The band pages carry the chat canvas: the whole page, phones included.
     await page.goto("/history");
-    await expect(layer).toHaveAttribute("data-backdrop", "work");
+    await expect(layer).toHaveAttribute("data-backdrop", "band");
     style = await canvasStyle(page);
-    if (!isMobile) expect(style.opacity).toBe("0.22");
+    expect(style).toEqual({ display: "block", opacity: "0.22", pointer: "none" });
 
     // Chat draws its own pattern over the soft-tint canvas instead.
     await page.goto("/chat");
@@ -131,6 +132,37 @@ test.describe("brand backgrounds", () => {
 
 });
 
+test.describe("band pages", () => {
+  // The owner may open every band page, the admin-only Analytics included.
+  test.beforeEach(async ({ page }) => {
+    await signInAsDemo(page, "owner");
+  });
+
+  for (const path of ["/history", "/knowledge", "/forms/monitoring", "/forms/templates", "/reports", "/admin/analytics"]) {
+    test(`${path} opens with the Tokyo Green header and the White logo`, async ({ page, isMobile }) => {
+      await page.goto(path);
+      const title = page.getByRole("heading", { level: 1 });
+      await expect(title).toBeVisible();
+      // The title sits on the band, in the lettering face.
+      const band = title.locator("xpath=ancestor::*[contains(@class,'page-band')][1]");
+      await expect(band).toHaveCount(1);
+      expect(await title.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/grandstander/i);
+
+      const logo = page.getByRole("img", { name: "Buff City Soap" }).filter({ visible: true });
+      await expect(logo).toHaveCount(1);
+      await expect(logo).toHaveAttribute("src", /bcs-logo-stacked-white/);
+      if (!isMobile) {
+        await expect(page.locator("header.sticky").filter({ visible: true })).toHaveCount(0);
+      }
+
+      // Full width, but never a sideways scroll.
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+      ).toBe(true);
+    });
+  }
+});
+
 /*
  * STRICT PICTURES OF THE DECORATION ITSELF. The page baselines in
  * visual.spec.ts use Playwright's default per-pixel threshold, which a
@@ -182,7 +214,7 @@ test.describe("brand backgrounds, pictured", () => {
     });
   });
 
-  test("work-screen canvas", async ({ page, isMobile }) => {
+  test("band-page canvas", async ({ page, isMobile }) => {
     test.skip(isMobile, "phones keep a plain canvas; asserted in the test above");
     await page.goto("/forms/monitoring");
     await page.evaluate(() => document.fonts.ready);

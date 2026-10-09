@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { BuffCitySoapLogo } from "@/components/brand-mark";
 import { cn } from "@/lib/utils/cn";
 import { ReportTabs } from "./report-tabs";
 import type { ReportRoute } from "./reports-routes";
@@ -148,23 +149,34 @@ export function ReportBand({
   return (
     <div
       className={cn(
-        "border-b-4 border-brand-accent bg-band bg-[image:var(--band-glow-slim)] px-5 pt-4 pb-5 sm:px-6",
+        /*
+         * THE BAND PAGE HEADER (approved 9 Oct 2026, the chat look): Tokyo
+         * Green to both edges with the wave hanging below (`page-band`), the
+         * White logo top-right on desktop, and the title in the lettering
+         * face. Everything written on it is Charcoal (5.71:1).
+         */
+        "page-band mb-[13px] px-5 pt-5 pb-6 [--muted-foreground:var(--band-muted-foreground)] sm:px-6 lg:pt-6",
         className,
       )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
         <div className="min-w-0">
-          <h1 className="display text-[24px] tracking-[0.012em] text-band-foreground sm:text-[28px]">
+          <h1 className="display-lettering text-[28px] text-band-foreground sm:text-[34px]">
             {lead ? `${lead} ` : ""}
-            <span className="text-brand-accent">{accent}</span>
+            {/*
+              The last word was Tokyo Green, which on this Tokyo Green band
+              was 1:1 — invisible. It is Charcoal like the rest of the title.
+            */}
+            <span>{accent}</span>
           </h1>
           {description ? (
-            <p className="mt-1.5 text-[11.5px] leading-snug text-band-muted-foreground">
+            <p className="mt-1.5 text-[13px] leading-snug font-medium text-band-muted-foreground">
               {description}
             </p>
           ) : null}
         </div>
         {provenance}
+        <BuffCitySoapLogo tone="white" className="ml-auto hidden h-18 self-start lg:block" />
       </div>
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
