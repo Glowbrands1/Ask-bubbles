@@ -126,9 +126,15 @@ export function priorSteps(text: string, today: string): { iso: string; named: s
   return datesInText(text, today).flatMap((found) => {
     const before = text.slice(0, found.index);
     const match = PRIOR_STEP_BEFORE.exec(before);
-    return match ? [{ iso: earlierYearIfAhead(found, text, today), named: match[0] }] : [];
+    // "she was late, give her a written warning on 10/2": the cue was the incident's, the warning is this form's.
+    if (!match || ISSUES_THIS_FORM.test(match[0])) return [];
+    return [{ iso: earlierYearIfAhead(found, text, today), named: match[0] }];
   });
 }
+
+/** An issuing verb between the cue and the warning: the warning is the one being issued now. */
+const ISSUES_THIS_FORM =
+  /\b(?:give|gives|giving|issue|issues|issuing|needs?|deserves?|requires?|make\s+(?:it|this)|document(?:ing)?|write\s+(?:her|him|them)\s+(?:up|a)|do\s+a)\b/i;
 
 /**
  * AN EARLIER STEP CANNOT BE IN THE FUTURE. A month and day with no year take

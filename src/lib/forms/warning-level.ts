@@ -383,7 +383,16 @@ function classify(text: string, start: number, end: number, today: string, cued:
     const account = before.trim() !== "" ? before : previousSentence(text, start);
     const lastWords = account.trim().split(/\s+/).slice(-2).join(" ");
     const followsIncident = before.trim() === "" ? namesIncidentTopicIn(account) : namesIncidentTopicIn(lastWords);
-    if (followsIncident && !OTHER_TIME.test(account) && !pointsToThePast(text.slice(0, start), today)) {
+    /*
+     * ONE INCIDENT, AND IT IS THIS ONE. A turn that already described an
+     * incident and then another ("late again today. she was rude to a client
+     * that time. written warning") has a level after an earlier account: asked.
+     */
+    const accounts = text
+      .slice(0, start)
+      .split(/[.;!?\n]/)
+      .filter((sentence) => namesIncidentTopicIn(sentence)).length;
+    if (followsIncident && accounts <= 1 && !OTHER_TIME.test(account) && !pointsToThePast(text.slice(0, start), today)) {
       return "current";
     }
   }
@@ -408,7 +417,7 @@ const LISTS_EARLIER_STEPS =
  * it a statement about then.
  */
 const OTHER_TIME =
-  /\b(?:spring|summer|fall|autumn|winter|q[1-4]|(?:19|20)\d\d|review|probation|onboarding|started|while|back|earlier|ago|last\s+(?:week|month|year|time)|old|former|prev|orig\w*|existing|outstanding|active|\d+\s*(?:-\s*)?days?|wk\d*|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
+  /\b(?:spring|summer|fall|autumn|winter|q[1-4]|(?:19|20)\d\d|review|probation|onboarding|started|while|back|earlier|ago|last\s+(?:week|month|year|time)|old|former|prev|orig\w*|existing|outstanding|active|\d+\s*(?:-\s*)?days?|wk\d*|monday|tuesday|wednesday|thursday|friday|saturday|sunday|that\s+time|one\s+time|then|(?:last|old|previous|other)\s+(?:job|store|salon|role)|first\s+(?:week|day|month|shift)|trainee|training)\b/i;
 
 /** The sentence before the one `index` sits in. */
 function previousSentence(text: string, index: number): string {

@@ -136,6 +136,10 @@ describe("the date of the earlier step", () => {
     ["give her written warning on 10/2", null],
     ["issue him a written warning on 10/2", null],
     ["she needs her written warning on 10/2", null],
+    /* An incident's "was" or "after" before an instruction about THIS form is not an earlier step. */
+    ["she was late, give her a written warning on 10/2", null],
+    ["she was late again after lunch, give her a written warning on 10/9", null],
+    ["she was coached and given a written warning on 9/21", "2026-09-21"],
   ])("%s -> %s", (text, expected) => {
     expect(priorStepDate(text, TODAY)).toBe(expected);
   });

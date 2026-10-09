@@ -182,7 +182,6 @@ const chatRoute = await import("./route");
 const instancesRoute = await import("../forms/instances/route");
 const instanceRoute = await import("../forms/instances/[id]/route");
 const draftRoute = await import("../forms/instances/[id]/draft/route");
-const pdfRoute = await import("../forms/instances/[id]/pdf/route");
 
 const QUESTION = "Is this new corrective action a **Verbal Warning** or a **Written Warning**?";
 

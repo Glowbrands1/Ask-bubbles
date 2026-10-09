@@ -355,7 +355,8 @@ const NOT_A_PERSON = new Set([
   "uniform", "safety", "warning", "verbal", "written", "also", "and", "too", "then", "actually",
   "but", "so", "my", "our", "your", "his", "their", "its", "traffic", "manager", "mistake", "sure", "real",
   "bus", "car", "hr", "nobody", "everybody", "everything", "nothing", "something", "store", "shift",
-  "real", "good", "now", "it's", "that's", "what", "who", "which", "one", "please", "form", "draft", "change",
+  "good", "it's", "that's", "what", "who", "which", "one", "please", "form", "draft", "change",
+  "consistency", "fairness", "schedule", "dm", "payroll", "policy", "it", "everyone's", "team", "notes",
 ]);
 
 /**
@@ -374,6 +375,11 @@ function aboutSomebodyElse(message: string, employee: string): boolean {
     /(?:^|[.!?;,]\s*|\b(?:and|also|too|but)\s+)([a-z][a-z'’-]+)(?:\s+([a-z][a-z'’-]+))?\s+(?:was|were|is|are|has|had|got|did|left|came|showed|called|didn'?t|wasn'?t|isn'?t|keeps|kept|needs|deserves)\b/gi,
   );
   for (const match of subjects) if (other(match[1]!) || (match[2] && other(match[2]))) return true;
+  // "also jo.", "kim too, make it verbal" — a bare first name added on.
+  for (const match of message.matchAll(/(?:^|[.!?;,]\s*)(?:also|and)\s+([a-z][a-z'’-]+)\s*(?:[.,!:]|too\b|$)|\b([a-z][a-z'’-]+)\s+too\b/gi)) {
+    const word = match[1] ?? match[2]!;
+    if (other(word)) return true;
+  }
   // "kim's late too", "kim's out today".
   for (const match of message.matchAll(/\b([a-z][a-z-]+)['’]s\s+(?:late|absent|out|rude|also|been|not|on)\b/gi)) {
     if (other(match[1]!)) return true;

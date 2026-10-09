@@ -267,6 +267,20 @@ describe("history phrasings found in review never become this form's level", () 
     ].map((word) => `create a ca form for paulyne test, she was late again for 30 mins today. ${word} written warning`),
     // A level after a clause with its own structure is asked, not read.
     "she was late last night, verbal warning",
+    // Re-check at 7352f3b: an earlier incident before a bare level.
+    ...[
+      "she was rude to a client that time. written warning",
+      "same lateness issue at her last job. written warning",
+      "late that one time. written warning",
+      "the uniform thing then. written warning",
+      "late her first week. written warning",
+      "late her first day. written warning",
+      "late as a trainee. written warning",
+      "first week tardiness written warning",
+      "trainee lateness written warning",
+      "late at christmas. written warning",
+      "late during inventory. written warning",
+    ].map((tail) => `create a ca form for paulyne test, she was late again for 30 mins today. ${tail}`),
     // Final re-check (PR #10): history opening a reply, then "now/today" in the next clause.
     "written warning on the 21st, now late again",
     "written warning 2 weeks back, now late again",

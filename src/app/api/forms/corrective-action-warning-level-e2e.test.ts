@@ -651,6 +651,8 @@ describe("review: corrections apply only to this form, and never from history", 
     "change kim to written",
     "change it to written for kim please",
     "change it to written for kim's form",
+    "also jo. change it to written",
+    "kim too, make it written",
   ])("%s leaves the draft's Verbal tick alone", async (question) => {
     const { result } = await conversation([`${REPORT}. give her a verbal warning for today`]);
     const id = result.reference.instanceId;
@@ -680,6 +682,11 @@ describe("review: corrections apply only to this form, and never from history", 
     "make it verbal for sure",
     "change it to verbal for real",
     "verbal please",
+    "change it to verbal for consistency",
+    "change it to verbal for fairness",
+    "the schedule was wrong, change it to verbal",
+    "my dm was clear, change it to verbal",
+    "payroll was wrong, change it to verbal",
   ])("%s updates the same draft", async (question) => {
     const { result } = await conversation([`${REPORT}. this one is a written warning`]);
     const id = result.reference.instanceId;
