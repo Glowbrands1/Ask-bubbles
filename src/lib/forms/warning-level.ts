@@ -206,6 +206,10 @@ const CHANGED_TO =
 /** The turn opens with the level: "Verbal warning for Sarah", "actually, written warning". */
 const OPENING = new RegExp(String.raw`^\s*${LEAD_IN}(?:please\s+)?(?:(?:a|an|new)\s+)?$`, "i");
 
+/** "given verbal warning", "gave her a written warning", "was given a verbal warning", "give a verbal warning". */
+const GIVEN_LEVEL =
+  /\b(?:give|gave|given|giving|was\s+given|were\s+given|been\s+given|got\s+given)\s+(?:(?:her|him|them)\s+)?(?:(?:a|an|the)\s+)?(?:(?:formal|official|final)\s+)?$/i;
+
 /** "give her", "issue him" — the pronoun is the recipient, not a possessive. */
 const RECIPIENT = /\b(?:give|giving|issue|issuing|gave|given)\s+(?:her|him|them)\s+$/i;
 
@@ -332,13 +336,16 @@ function classify(text: string, start: number, end: number, today: string, cued:
   if (cued) return "current";
 
   const when = timing(after, today);
-  if (RECIPIENT.test(before)) {
-    // "gave her a verbal warning" is a past act; "give her a verbal warning" is this form.
-    if (/\b(?:gave|given)\s+\S+\s+$/i.test(before)) {
-      return when === "today" ? "current" : when === null ? "unclear" : "historical";
-    }
-    return "current";
-  }
+  /*
+   * "GAVE / GIVEN / GIVE" + THE LEVEL TICKS IT — the owner's rule, 9 Oct 2026,
+   * after seeing "given verbal warning on 9/21" asked about. The manager who
+   * says a verbal warning was given is documenting that verbal warning, so
+   * this form records it at that level, whatever date it carries (the date
+   * still goes on the prior-actions line). It ticks the level SAID, never a
+   * higher one. "Given her previous verbal warning…" names an older one and
+   * is still history.
+   */
+  if (RECIPIENT.test(before) || GIVEN_LEVEL.test(before)) return "current";
   if (POSSESSIVE.test(before) || ADJACENT_HISTORY.test(before)) return "historical";
   if (PAST_OR_HABITUAL.test(before.slice(-60))) return "historical";
   if (ADJACENT_CURRENT.test(before) || CHANGED_TO.test(before)) return "current";

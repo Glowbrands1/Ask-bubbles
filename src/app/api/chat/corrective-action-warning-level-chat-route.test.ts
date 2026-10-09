@@ -313,16 +313,16 @@ beforeEach(async () => {
 });
 
 describe("the exact production sentence, through POST /api/chat", () => {
-  it("lists the 9/21 verbal warning as history, ticks neither box, asks verbal or written, and never escalates", async () => {
+  it("ticks Verbal from \"given verbal warning\", lists the 9/21 history, and never escalates to Written", async () => {
     const thread = new Thread();
     const answer = await thread.say(SENTENCE);
 
-    // The proposal: the right form, the right person, no level, and the question.
+    // The owner's rule (9 Oct 2026): "given verbal warning" is the level this form records.
     expect(answer.formProposal?.templateKey).toBe("dpoa");
     expect(answer.formProposal?.employeeName).toBe("Paulyne Test");
-    expect(answer.formProposal?.warningLevel).toBeNull();
-    expect(answer.content).toContain(QUESTION);
-    expect(answer.content).toMatch(/treated the earlier warning you mentioned as previous corrective action history/);
+    expect(answer.formProposal?.warningLevel).toBe("verbal");
+    expect(answer.content).toContain("**Type of warning:** Verbal Warning, as you said");
+    expect(answer.content).not.toContain(QUESTION);
     expect(state.chatModelCalls).toBe(0);
 
     const id = await thread.create();
@@ -333,9 +333,9 @@ describe("the exact production sentence, through POST /api/chat", () => {
     // Current offense: tardiness, 30 minutes late.
     expect(form.offense_type?.checked).toEqual(["tardiness"]);
     expect(form.observation?.value).toMatch(/30 minutes late/);
-    // Verbal and Written both unchecked — the model's Written tick never landed.
+    // Verbal only — the model's Written tick never landed.
     expect(state.modelCalls).toBe(1);
-    expect(form.warning_type?.checked ?? []).toEqual([]);
+    expect(form.warning_type?.checked).toEqual(["verbal"]);
     expect(store.form_instances).toHaveLength(1);
 
     // The printed form carries the history line.

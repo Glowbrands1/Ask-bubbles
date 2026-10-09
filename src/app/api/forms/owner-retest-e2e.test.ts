@@ -417,9 +417,10 @@ describe("capitalisation, misspellings, shorthand and word order", () => {
     expect(brief(await say(prompt))).toEqual([{ form: "dpoa", employee, warning, issue }]);
   });
 
-  it("a prior verbal warning is history, not this form's level", async () => {
+  // The owner's rule, 9 Oct 2026: "given verbal warning" ticks Verbal — the level given, never a higher one.
+  it("'given verbal warning on 9/21' → Verbal, never Written", async () => {
     expect(brief(await say("create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 9/21"))).toEqual([
-      { form: "dpoa", employee: "Paulyne Test", warning: null, issue: null },
+      { form: "dpoa", employee: "Paulyne Test", warning: "verbal", issue: null },
     ]);
   });
 

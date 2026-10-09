@@ -384,13 +384,23 @@ describe("the owner's acceptance list for PR #10", () => {
     ["she got a verbal warning yesterday", "verbal"],
     ["she got a written warning two weeks ago", "written"],
     ["she received a verbal warning last month", "verbal"],
-    ["she was given a written warning on september 21", "written"],
   ])("7. a dated or relative prior warning does not set this form's level: %j", async (history) => {
     const thread = new Thread();
     const answer = await thread.say(`create a ca for jordan testperson, late again today. ${history}`);
     expect(answer.formProposal?.warningLevel ?? null).toBeNull();
     const form = await values(await thread.create());
     expect(checked(form, "warning_type")).toEqual([]);
+  });
+
+  /* The owner's rule, 9 Oct 2026: "gave / given / give" + a level ticks that level, whatever its date. */
+  it("7b. \"she was given a written warning on september 21\" ticks Written, and the date is history", async () => {
+    const thread = new Thread();
+    const answer = await thread.say(
+      "create a ca for jordan testperson, late again today. she was given a written warning on september 21",
+    );
+    expect(answer.formProposal?.warningLevel).toBe("written");
+    const form = await values(await thread.create());
+    expect(checked(form, "warning_type")).toEqual(["written"]);
   });
 
   it("8. a correction to the current level persists across later turns and a reopen", async () => {

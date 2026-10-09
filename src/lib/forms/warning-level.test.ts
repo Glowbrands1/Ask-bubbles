@@ -27,12 +27,14 @@ describe("the production report", () => {
   const REPORT =
     "create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 9/21";
 
-  it("reads the 9/21 verbal warning as history, and no level for this form", () => {
-    expect(warningMentions(REPORT, TODAY)).toEqual([
-      expect.objectContaining({ level: "verbal", kind: "historical" }),
-    ]);
-    expect(statedWarningLevel(REPORT, TODAY)).toBeNull();
-    expect(mentionsEarlierWarning(REPORT, TODAY)).toBe(true);
+  /*
+   * THE OWNER'S RULE, 9 Oct 2026: "gave / given / give" + a level ticks that
+   * level, whatever date it carries. The 9/21 date still goes on the
+   * prior-actions line (`prior-actions.ts`).
+   */
+  it("reads \"given verbal warning\" as the level this form records — Verbal, never Written", () => {
+    expect(warningMentions(REPORT, TODAY)).toEqual([expect.objectContaining({ level: "verbal", kind: "current" })]);
+    expect(statedWarningLevel(REPORT, TODAY)).toBe("verbal");
   });
 
   it("never escalates: nothing in it reads as a written warning", () => {
@@ -40,9 +42,34 @@ describe("the production report", () => {
   });
 });
 
+describe("\"gave / given / give\" + a level ticks that level, whatever its date (owner's rule)", () => {
+  it.each([
+    ["she was late again today. given verbal warning on 9/21", "verbal"],
+    ["given verbal warning on 9/21", "verbal"],
+    ["she was given a written warning on september 21", "written"],
+    ["I gave her a verbal warning", "verbal"],
+    ["I gave her a verbal warning last week", "verbal"],
+    ["she has been given a written warning", "written"],
+    ["I gave her a verbal warning, now she's late again", "verbal"],
+    ["give her a written warning", "written"],
+    ["gave a verbal warning", "verbal"],
+  ] as const)("%s -> %s", (text, level) => {
+    expect(statedWarningLevel(text, TODAY)).toBe(level);
+  });
+
+  it("never escalates: a later older written warning does not override the verbal that was given", () => {
+    const text =
+      "create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 9/21. she has a written warning from august";
+    expect(statedWarningLevel(text, TODAY)).toBe("verbal");
+  });
+
+  it("still reads \"given her previous verbal warning\" as history", () => {
+    expect(statedWarningLevel("given her previous verbal warning, she should know better", TODAY)).toBeNull();
+  });
+});
+
 describe("history is never this form's level", () => {
   it.each([
-    "she was late again today. given verbal warning on 9/21",
     "late today, got verbal warning on september 21",
     "she got a verbal warning on 9/21 and was late again today",
     "previous verbal warning on 09/21/2026, late again today",
@@ -145,7 +172,6 @@ describe("a level stated for THIS form", () => {
 describe("ambiguous history is asked about, not guessed", () => {
   it.each([
     // A level named with nothing saying it is this form's: asked, not assumed.
-    "I gave her a verbal warning",
     "she got a verbal warning",
     "should this be a verbal or written warning?",
     "should I give her a written warning?",
@@ -199,7 +225,6 @@ describe("history phrasings found in review never become this form's level", () 
     "she's been getting a written warning every month",
     "she gets warnings all the time",
     "she received a verbal warning on 9/21",
-    "she has been given a written warning",
     // Re-verification (PR #10): the get/receive cues with a date, a past or habitual frame.
     "she did get a written warning in august",
     "she did get a written warning on 9/21",
@@ -289,7 +314,6 @@ describe("history phrasings found in review never become this form's level", () 
     "verbal warning done, now late again",
     "verbal warning complete, now need next",
     "verbal warning given 21st, late again today",
-    "I gave her a verbal warning, now she's late again",
     "written warning for the same thing, now late today",
     "verbal warning for that, late again today",
     "create a ca form for paulyne test, she was late again for 30 mins today.\nPrevious actions:\n- verbal warning\n- written warning",
@@ -364,7 +388,8 @@ describe("corrections", () => {
         TODAY,
       ),
     ).toBe("verbal");
-    expect(warningLevelFromTurns(["late today. given verbal warning on 9/21", "no payroll deduct"], TODAY)).toBeNull();
+    expect(warningLevelFromTurns(["late today. given verbal warning on 9/21", "no payroll deduct"], TODAY)).toBe("verbal");
+    expect(warningLevelFromTurns(["late today, got verbal warning on 9/21", "no payroll deduct"], TODAY)).toBeNull();
   });
 });
 

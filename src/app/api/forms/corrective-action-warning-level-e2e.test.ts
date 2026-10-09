@@ -316,24 +316,36 @@ const REPORT =
 /* ------------------------------------------------------------------------ */
 
 describe("1. previous verbal warning, current warning unspecified (the production report)", () => {
-  it("asks verbal or written, records the history, and ticks nothing", async () => {
+  /*
+   * THE OWNER'S RULE, 9 Oct 2026: "given verbal warning on 9/21" ticks Verbal
+   * — the level that was given — and the 9/21 date is the history line. The
+   * model's Written tick never lands.
+   */
+  it("ticks Verbal from \"given verbal warning\", records the 9/21 history, and never Written", async () => {
     const { proposal, content, result } = await conversation([REPORT]);
 
     expect(proposal.employeeName).toBe("Paulyne Test");
-    expect(proposal.warningLevel).toBeNull();
-    // Asked, and the earlier warning acknowledged as history rather than weighed.
-    expect(content).toContain(QUESTION);
-    expect(content).toMatch(/treated the earlier warning you mentioned as previous corrective action history/);
-    expect(requests[0]!.body).not.toHaveProperty("warningLevel");
+    expect(proposal.warningLevel).toBe("verbal");
+    expect(content).toContain("**Type of warning:** Verbal Warning, as you said");
+    expect(content).not.toContain(QUESTION);
 
     const id = result.reference.instanceId;
-    // The model ticked Written; the record holds no level at all.
-    expect(await ticked(id)).toEqual([]);
+    expect(await ticked(id)).toEqual(["verbal"]);
     expect((await row(id, "prior_actions"))?.value).toBe("Verbal warning — signed 09/21/2026");
     expect((await row(id, "offense_type"))?.checked).toEqual(["tardiness"]);
 
     const text = await download(id);
     expect(text).toContain("Verbal warning - signed 09/21/2026");
+  });
+
+  it("with no level given at all, asks and ticks nothing", async () => {
+    const { proposal, content, result } = await conversation([
+      "create a ca form for paulyne test, she was late again for 30 mins today. got a verbal warning on 9/21",
+    ]);
+
+    expect(proposal.warningLevel).toBeNull();
+    expect(content).toContain(QUESTION);
+    expect(await ticked(result.reference.instanceId)).toEqual([]);
   });
 
   it("takes a one-word answer to the question onto the same open proposal", async () => {
@@ -533,7 +545,6 @@ describe("6. no prior corrective action", () => {
 
 describe("7. ambiguous descriptions of disciplinary history", () => {
   it.each([
-    "create a ca for sarah test, late again today. I gave her a verbal warning",
     "create a ca for sarah test, late again today. she's been warned before",
     "create a ca for sarah test, late again today. she got a written warning",
     "create a ca for sarah test, late again today, not sure if verbal or written",
@@ -595,8 +606,9 @@ describe("review: a level said about another form, or as history, never lands on
     ]);
 
     expect(proposal.employeeName).toBe("Paulyne Test");
-    expect(proposal.warningLevel).toBeNull();
-    expect(await ticked(result.reference.instanceId)).toEqual([]);
+    // Paulyne's own "given verbal warning", never Jordan's written one.
+    expect(proposal.warningLevel).toBe("verbal");
+    expect(await ticked(result.reference.instanceId)).toEqual(["verbal"]);
   });
 
   it.each([
@@ -620,9 +632,15 @@ describe("review: a level said about another form, or as history, never lands on
     `${REPORT}. back in the summer, written warning`,
     `${REPORT}. at her 90 day review written warning`,
     `${REPORT}. her old manager did a written warning`,
-  ])("%s -> nothing ticked, asked", async (opening) => {
+  ])("%s -> no level from the history (Verbal only where \"given verbal warning\" said so)", async (opening) => {
     const { proposal, content, result } = await conversation([opening]);
 
+    if (opening.startsWith(REPORT)) {
+      // The report's own "given verbal warning" is the level; the history after it never escalates it.
+      expect(proposal.warningLevel).toBe("verbal");
+      expect(await ticked(result.reference.instanceId)).toEqual(["verbal"]);
+      return;
+    }
     expect(proposal.warningLevel).toBeNull();
     expect(content).toContain(QUESTION);
     expect(await ticked(result.reference.instanceId)).toEqual([]);
@@ -715,15 +733,15 @@ describe("review: corrections apply only to this form, and never from history", 
 });
 
 describe("review: the history line across the year boundary", () => {
-  it("a December warning, mentioned in January, is last December's and is not this form's level", async () => {
+  it("a December warning, mentioned in January, is dated last December", async () => {
     vi.setSystemTime(new Date("2027-01-05T15:00:00Z"));
     const { proposal, result } = await conversation([
       "create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 12/20",
     ]);
 
-    expect(proposal.warningLevel).toBeNull();
+    expect(proposal.warningLevel).toBe("verbal");
     const id = result.reference.instanceId;
-    expect(await ticked(id)).toEqual([]);
+    expect(await ticked(id)).toEqual(["verbal"]);
     expect((await row(id, "prior_actions"))?.value).toBe("Verbal warning — signed 12/20/2026");
   });
 });

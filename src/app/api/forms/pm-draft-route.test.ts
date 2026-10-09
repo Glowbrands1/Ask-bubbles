@@ -474,7 +474,7 @@ describe("a sensitive final action never reaches the persistence call", () => {
     expect(payload.statedFacts).toContain("warning_type");
   });
 
-  it("reads the production report's earlier verbal warning as history, not this form's level", async () => {
+  it("ticks the level the production report says was given, as the manager's statement, never the model's Written", async () => {
     state.toolInput = {
       values: { observation: "Late again." },
       checked: { warning_type: ["written"], offense_type: ["tardiness"] },
@@ -484,9 +484,9 @@ describe("a sensitive final action never reaches the persistence call", () => {
       "create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 9/21",
     );
 
-    expect(state.stated).toEqual([]);
+    expect(state.stated).toEqual([{ checked: { warning_type: ["verbal"] }, keys: ["warning_type"] }]);
     expect(state.persisted[0]!.checked.warning_type).toBeUndefined();
-    expect(payload.warningLevel).toEqual({ stated: null, modelDiscarded: ["written"] });
+    expect(payload.warningLevel).toEqual({ stated: "verbal", modelDiscarded: ["written"] });
     // The history itself still reaches the prior-actions list.
     expect(state.persisted[0]!.values.prior_actions).toMatch(/^Verbal warning — signed 09\/21\/\d{4}$/);
   });
