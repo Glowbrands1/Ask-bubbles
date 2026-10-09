@@ -1,13 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronsLeft, Lock } from "lucide-react";
+import { ChevronsLeft, Lock, Search } from "lucide-react";
 
 import { BrandMark, BubbleMark } from "@/components/brand-mark";
-import { Tooltip } from "@/components/ui/overlays";
+import { Dialog, DialogContent, DialogTrigger, Tooltip } from "@/components/ui/overlays";
 import { useSession } from "@/lib/session/session-context";
 import { cn } from "@/lib/utils/cn";
+import { GlobalSearch } from "./global-search";
 import { NAV_SECTIONS, isActivePath } from "./navigation";
 import { UserMenu } from "./user-menu";
 import { ACTIVE_BRAND } from "@/lib/brand";
@@ -86,6 +88,7 @@ export function SidebarNav({
         aria-label="Main"
         className="scroll-slim flex-1 overflow-y-auto px-3 py-4"
       >
+        <SearchLauncher collapsed={isCollapsed} onNavigate={onNavigate} />
         {sections.map((section) => (
           <div key={section.id} className="mb-5 last:mb-0">
             {!isCollapsed ? (
@@ -230,5 +233,67 @@ export function SidebarNav({
         <UserMenu collapsed={isCollapsed} onNavigate={onNavigate} />
       </div>
     </div>
+  );
+}
+
+/**
+ * SEARCH, AT THE TOP OF THE RAIL AND THE DRAWER.
+ *
+ * It used to be the pill in the White top bar. The approved Home and Chat
+ * design (9 Oct 2026) has no bar on desktop, and search is still the only way
+ * to find a form by a team member's name — the Forms Register filters by
+ * follow-up state, not by text — so it moved here, where it is on every route
+ * and every width. Same search, same window; only where it opens changed.
+ *
+ * Choosing a result closes the window, and the drawer with it on a phone.
+ */
+function SearchLauncher({
+  collapsed,
+  onNavigate,
+}: {
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const name = `Search ${ACTIVE_BRAND.productName}`;
+
+  const trigger = (
+    <DialogTrigger asChild>
+      <button
+        type="button"
+        aria-label={name}
+        className={cn(
+          "mb-4 flex w-full items-center gap-3 rounded-[var(--radius-sm)] border border-rail-border text-[14px] font-medium text-sidebar-foreground transition-colors hover:bg-rail-hover",
+          collapsed ? "justify-center px-0 py-2.5" : "px-3 py-[8px]",
+        )}
+      >
+        <Search className="size-[18px] shrink-0" aria-hidden />
+        {!collapsed ? <span className="truncate">Search</span> : null}
+      </button>
+    </DialogTrigger>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      {collapsed ? (
+        <Tooltip content="Search" side="right">
+          {trigger}
+        </Tooltip>
+      ) : (
+        trigger
+      )}
+      <DialogContent title={name} description="Documents, videos, forms, locations and screens." wide>
+        <div
+          onClick={(event) => {
+            if ((event.target as HTMLElement).closest("a[href]")) {
+              setOpen(false);
+              onNavigate?.();
+            }
+          }}
+        >
+          <GlobalSearch />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

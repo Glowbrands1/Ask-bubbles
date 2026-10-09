@@ -62,9 +62,14 @@
   /* 14% / 30% Tokyo Green on White — hover rows, selection, focus halo. */
   --bcs-tokyo-tint: #eaf7f5;
   --bcs-tokyo-tint-strong: #d1efea;
+  /* Tokyo Green at 55% on White — the chat canvas (approved 9 Oct 2026). A
+     tint of the brand green, not a new hue. */
+  --bcs-tokyo-mist: #abe1d9;
   /* Charcoal on White at 92% / 78% / 58% / 35% / 22% / 9% / 6% / 4%. */
   --bcs-ink-body: #4d4a48;
-  --bcs-ink-muted: #686564;
+  /* Darkened from #686564 on 9 Oct 2026 so muted text keeps 4.5:1 over the
+     stronger (22%) page pattern; 6.74:1 on White. */
+  --bcs-ink-muted: #5e5b59;
   --bcs-line-strong: #8e8d8c;
   --bcs-rail-muted: #bbbab9;
   --bcs-measure-fill: #d2d1d0;
@@ -213,6 +218,8 @@
   /* THE BAND — the one large Tokyo Green surface (Home's ask band, the report
      header). Everything on it is Charcoal: 5.71:1. */
   --band: var(--bcs-tokyo);
+  /* The chat canvas under the band header: Tokyo Green at 55% on White. */
+  --chat-canvas: var(--bcs-tokyo-mist);
   --band-foreground: var(--bcs-charcoal);
   --band-muted-foreground: var(--bcs-charcoal);
   --band-label: var(--bcs-charcoal);
@@ -285,17 +292,27 @@
      used once to close the Tokyo Green band. */
   --wave-edge: url("/brand/wave-edge.png");
 
-  /* BRAND BACKGROUNDS — the approved "edge-weighted" option. Official Buff
-     City Soap product drawings at very low opacity, behind opaque surfaces
-     only. Each opacity is the highest that keeps muted text at 4.5:1 or more
-     even if it lands on a drawing's line; theme-semantics.test.ts pins them. */
+  /* BRAND BACKGROUNDS — the approved "edge-weighted" option, made stronger on
+     9 Oct 2026. Official Buff City Soap product drawings behind opaque
+     surfaces only. Each opacity keeps the text that sits on it at 4.5:1 or
+     more even where it lands on a drawing's line; theme-semantics.test.ts
+     pins them. */
   --pattern-sidebar: url("/brand/patterns/bcs-pattern-sidebar.png");
   --pattern-canvas: url("/brand/patterns/bcs-pattern-canvas.png");
-  --pattern-band-art: url("/brand/bcs-product-lineup-white.png");
   --pattern-sidebar-opacity: 0.065;
-  --pattern-canvas-opacity: 0.1;
-  --pattern-canvas-home-opacity: 0.12;
-  --pattern-band-art-opacity: 0.34;
+  --pattern-canvas-opacity: 0.22;
+  --pattern-canvas-home-opacity: 0.22;
+  --pattern-chat-opacity: 0.22;
+
+  /* THE HOME HERO DRAWINGS — single products cut whole from the official
+     line-up, White on the Tokyo Green band. White only ever lightens the band
+     behind its Charcoal text. */
+  --hero-art-lineup: url("/brand/art/bcs-art-lineup-white.png");
+  --hero-art-spray: url("/brand/art/bcs-art-spray-white.png");
+  --hero-art-bomb: url("/brand/art/bcs-art-bath-bomb-white.png");
+  --hero-art-bar: url("/brand/art/bcs-art-bar-white.png");
+  --hero-art-tub: url("/brand/art/bcs-art-tub-white.png");
+  --hero-art-max-opacity: 0.32;
 
   /* SHADOWS. Neutral Charcoal, low and soft. */
   --shadow-soft: 0 1px 2px rgb(61 58 56 / 0.06);
@@ -393,6 +410,7 @@
   --color-chrome-border: var(--chrome-border);
   --color-band: var(--band);
   --color-band-foreground: var(--band-foreground);
+  --color-chat-canvas: var(--chat-canvas);
   --color-band-muted-foreground: var(--band-muted-foreground);
   --color-band-label: var(--band-label);
   --color-band-border: var(--band-border);
@@ -453,9 +471,16 @@
    */
   --font-display: "Supria Sans", var(--font-archivo), "Arial Black", ui-sans-serif,
     system-ui, sans-serif;
-  /* Logotypes only — the Ask Bubbles wordmark. */
-  --font-wordmark: "Supria Sans", var(--font-archivo), "Arial Black", ui-sans-serif,
-    system-ui, sans-serif;
+  /*
+   * LETTERING — the approved hand-lettered face (Grandstander, OFL), inspired
+   * by the Buff City Soap logo without copying it. Two uses only: the Ask
+   * Bubbles wordmark, and the greeting headlines on Home and the empty chat.
+   */
+  --font-lettering: var(--font-grandstander), ui-rounded, "Arial Rounded MT Bold", system-ui,
+    sans-serif;
+  /* Logotypes only — the Ask Bubbles wordmark, hand-lettered caps. */
+  --font-wordmark: var(--font-grandstander), ui-rounded, "Arial Rounded MT Bold", system-ui,
+    sans-serif;
   --font-sans: "Avenir Next", "Avenir", var(--font-figtree), ui-sans-serif, system-ui,
     -apple-system, "Segoe UI", sans-serif;
 
@@ -683,16 +708,46 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* The Ask Bubbles logotype, set in the headline face. Never anything but a
-     mark. */
+  /* The Ask Bubbles logotype: hand-lettered caps (approved 9 Oct 2026, option
+     B). Never anything but a mark. */
   .wordmark {
     font-family: var(--font-wordmark);
     font-weight: 900;
-    font-stretch: 118%;
     letter-spacing: 0.03em;
     line-height: 0.95;
     text-transform: uppercase;
     white-space: nowrap;
+  }
+
+  /*
+   * THE HAND-LETTERED BOUNCE. Each letter sits a little off the line and a
+   * little off square, like lettering drawn by hand. Fixed offsets in an
+   * eight-letter cycle, so the word looks the same on every render; small
+   * enough (at most 2px and 3 degrees) that it never changes how it reads.
+   */
+  .wordmark-letter {
+    display: inline-block;
+  }
+  .wordmark-letter:nth-child(8n + 1) { transform: translateY(-1.5px) rotate(-3deg); }
+  .wordmark-letter:nth-child(8n + 2) { transform: translateY(1.2px) rotate(2deg); }
+  .wordmark-letter:nth-child(8n + 3) { transform: translateY(-0.8px) rotate(-1deg); }
+  .wordmark-letter:nth-child(8n + 4) { transform: translateY(2px) rotate(1.5deg); }
+  .wordmark-letter:nth-child(8n + 5) { transform: translateY(-1px) rotate(-2.5deg); }
+  .wordmark-letter:nth-child(8n + 6) { transform: translateY(1.5px) rotate(1deg); }
+  .wordmark-letter:nth-child(8n + 7) { transform: translateY(-2px) rotate(-1.5deg); }
+  .wordmark-letter:nth-child(8n + 8) { transform: translateY(0.8px) rotate(2deg); }
+
+  /*
+   * THE GREETING HEADLINES — "Good morning, <name>" on Home and "How can
+   * Bubbles help today?" on the empty chat — in the lettering face (approved
+   * option 2, rounded hand-lettered). Every other heading stays `.display`.
+   */
+  .display-lettering {
+    font-family: var(--font-lettering);
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 1.06;
+    text-wrap: balance;
   }
   .wordmark-sub {
     font-family: var(--font-wordmark);
@@ -779,9 +834,9 @@
    *             above the collapse button and user chip
    *   canvas    the pattern toward the bottom-right of the viewport, away from
    *             page titles; none on chat or the form editor; none on phones
-   *   Home band the official product line-up, beside the ask bar on wide
-   *             screens and below the chips on narrow ones, so it never sits
-   *             behind the translucent chips or any text
+   *   chat      the same pattern across the soft-tint chat canvas
+   *   Home band larger single products and the line-up, White, spread across
+   *             the band behind its content
    */
   .rail-pattern::before {
     content: "";
@@ -824,29 +879,99 @@
   .canvas-pattern[data-backdrop="none"] {
     display: none;
   }
-  .band-art-host {
-    container: band / inline-size;
+  /*
+   * THE CHAT CANVAS PATTERN — the same drawings as the page canvas, across the
+   * whole soft-tint chat canvas below its Tokyo Green header (approved 9 Oct
+   * 2026). Every word on this canvas is Charcoal or sits on White, and
+   * Charcoal keeps 6.2:1 on a drawing's line.
+   */
+  .chat-pattern {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: var(--pattern-canvas) 0 0 / 440px 420px repeat;
+    opacity: var(--pattern-chat-opacity);
   }
-  .band-art {
-    display: block;
-    width: min(56%, 240px);
-    aspect-ratio: 1044 / 204;
-    margin: 14px 0 -8px auto;
-    background: var(--pattern-band-art) right bottom / contain no-repeat;
-    opacity: var(--pattern-band-art-opacity);
+
+  /*
+   * THE HOME HERO DRAWINGS — larger and spread across the band (approved 9 Oct
+   * 2026): the official line-up bottom-right, single products further in.
+   * Behind the band's content (`isolate` on the band, `z-index: -1` here), so
+   * the ask bar and chips sit over them; the drawings that pass behind text
+   * are the faintest. Phones keep only the line-up and the spray bottle.
+   */
+  .hero-art {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
     pointer-events: none;
   }
-  /* Wide enough to sit beside the 820px ask bar and chips with room to spare.
-     The query measures the band's CONTENT box (padding excluded); the width
-     below is a share of its padding box, so the art always keeps 32px clear of
-     the 820px column and is at least 200px wide when it appears. */
-  @container band (min-width: 1060px) {
-    .band-art {
-      position: absolute;
-      right: 32px;
-      bottom: 6px;
-      margin: 0;
-      width: min(380px, calc(100% - 916px));
+  .hero-art > span {
+    position: absolute;
+    background-position: center;
+    background-size: contain;
+    background-repeat: no-repeat;
+  }
+  .hero-art-lineup {
+    right: 34px;
+    bottom: -4px;
+    width: min(560px, 44%);
+    aspect-ratio: 715 / 283;
+    background-image: var(--hero-art-lineup);
+    opacity: var(--hero-art-max-opacity);
+  }
+  .hero-art-spray {
+    left: 60%;
+    top: 22px;
+    height: 150px;
+    aspect-ratio: 55 / 195;
+    background-image: var(--hero-art-spray);
+    opacity: 0.24;
+  }
+  .hero-art-bomb {
+    left: 41%;
+    top: 20px;
+    height: 58px;
+    aspect-ratio: 60 / 52;
+    background-image: var(--hero-art-bomb);
+    opacity: 0.16;
+  }
+  .hero-art-bar {
+    left: -14px;
+    bottom: 8px;
+    height: 86px;
+    aspect-ratio: 72 / 78;
+    background-image: var(--hero-art-bar);
+    opacity: 0.16;
+  }
+  .hero-art-tub {
+    left: 47%;
+    bottom: 4px;
+    height: 76px;
+    aspect-ratio: 147 / 80;
+    background-image: var(--hero-art-tub);
+    opacity: 0.18;
+  }
+  @media (max-width: 639px) {
+    .hero-art-lineup {
+      right: -10px;
+      bottom: -6px;
+      width: 72%;
+      opacity: 0.22;
+    }
+    .hero-art-spray {
+      left: auto;
+      right: 8px;
+      top: 64px;
+      height: 110px;
+      opacity: 0.18;
+    }
+    .hero-art-bomb,
+    .hero-art-bar,
+    .hero-art-tub {
+      display: none;
     }
   }
   @media (max-width: 767px) {
@@ -858,7 +983,8 @@
   @media (forced-colors: active), (prefers-contrast: more), print {
     .rail-pattern::before,
     .canvas-pattern,
-    .band-art {
+    .chat-pattern,
+    .hero-art {
       display: none;
     }
   }

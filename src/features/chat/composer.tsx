@@ -166,12 +166,14 @@ export function Composer({
 
   return (
     /*
-      THE DOCK: White with a Cloud hairline above it, as approved. The field
-      is a bordered box that takes the Dark Tokyo Green border and a soft
-      Tokyo halo while you type.
+      THE DOCK sits on the chat canvas (approved 9 Oct 2026): no strip of its
+      own, so the canvas runs to the bottom. The field is White with a Dark
+      Tokyo Green border and a soft shadow, so it is the most prominent thing
+      at the foot of the screen; while you type it takes a White halo that
+      shows against the canvas.
     */
-    <div className="shrink-0 border-t border-border bg-surface px-4 pt-3.5 pb-3 sm:px-6">
-      <div className="flex items-center gap-3 rounded-[var(--radius-2xl)] border-[1.5px] border-border-strong bg-surface py-2 pr-2 pl-3.5 transition-shadow focus-within:border-primary focus-within:shadow-[0_0_0_3px_var(--marker)]">
+    <div className="shrink-0 px-4 pt-3.5 pb-3 sm:px-6">
+      <div className="mx-auto flex max-w-3xl items-center gap-3 rounded-[var(--radius-2xl)] border-2 border-primary bg-surface py-2 pr-2 pl-3.5 shadow-raised transition-shadow focus-within:shadow-[0_0_0_3px_var(--surface)]">
         <BubbleMark className="size-[26px] shrink-0" />
         <div className="flex min-w-0 flex-1 items-center">{field}</div>
         {sendButton}
@@ -188,9 +190,10 @@ export function Composer({
         accepting questions. Both are gone: rating is a passive action at the
         foot of the conversation and nothing in the composer consults it.
       */}
-      <div className="mt-2.5 flex flex-wrap items-center gap-3.5">
+      <div className="mx-auto mt-2.5 flex max-w-3xl flex-wrap items-center gap-3.5">
         <AnswerModeControl mode={mode} onModeChange={onModeChange} />
-        <p className="min-w-50 flex-1 text-[12px] leading-snug text-muted-foreground">
+        {/* Charcoal: it sits on the chat canvas, where grey would be 3.7:1. */}
+        <p className="min-w-50 flex-1 text-[12px] leading-snug font-medium text-foreground">
           {MANAGER_NOTE_SHORT}
         </p>
       </div>
@@ -258,7 +261,7 @@ export function AnswerModeControl({
           size="iconSm"
           type="button"
           aria-label="About answer modes and Bubbles' limits"
-          className="shrink-0 text-muted-foreground hover:text-foreground"
+          className="shrink-0 text-foreground"
         >
           <Info />
         </Button>

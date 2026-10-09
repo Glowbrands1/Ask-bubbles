@@ -18,3 +18,23 @@ export function backdropForPath(pathname: string | null | undefined): Backdrop {
   if (/^\/forms\/templates\/[^/]+/.test(pathname)) return "none";
   return "work";
 }
+
+/**
+ * Which top bar the shell draws on a given route.
+ *
+ *   band    Home and Chat: the page itself starts with a Tokyo Green header,
+ *           so there is no bar on desktop (the rail carries the Ask Bubbles
+ *           logo and the page carries the Buff City Soap logo), and the
+ *           phone/tablet bar is Tokyo Green so it runs straight into it
+ *   plain   every other screen: the slim White bar with the Tokyo Green logo
+ *
+ * Approved 9 October 2026. Search moved from the bar to the rail on every
+ * route, so no screen loses it.
+ */
+export type Chrome = "band" | "plain";
+
+export function chromeForPath(pathname: string | null | undefined): Chrome {
+  if (!pathname || pathname === "/") return "band";
+  if (pathname === "/chat" || pathname.startsWith("/chat/")) return "band";
+  return "plain";
+}

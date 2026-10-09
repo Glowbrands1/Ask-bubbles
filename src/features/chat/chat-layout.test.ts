@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { chromeForPath } from "@/components/shell/backdrop";
+
 /**
  * ============================================================================
  * THE CHAT WORKSPACE HEIGHT CONTRACT
@@ -46,23 +48,34 @@ const SCREEN_CODE = code(SCREEN);
 const COMPOSER_CODE = code(COMPOSER);
 
 describe("the workspace is the viewport minus the shell header", () => {
-  it("still renders a 4rem shell header above it", () => {
-    // The number in the calc below is only correct while this is true, so it
-    // is checked rather than assumed. The bar went from h-14 to h-16 when the
-    // Marquee direction took the chrome to 64px, and this assertion is what
-    // caught the workspace calc still subtracting the old height.
-    expect(code(SHELL)).toMatch(/<header[^>]*className="[^"]*\bh-16\b/);
-    expect(code(SHELL)).toMatch(/<header[^>]*className="[^"]*\bshrink-0\b/);
+  it("still renders a 4rem shell header, and hides it at lg on chat", () => {
+    // The numbers in the classes below are only correct while this is true,
+    // so it is checked rather than assumed. The bar went from h-14 to h-16
+    // when the Marquee direction took the chrome to 64px, and this assertion
+    // is what caught the workspace calc still subtracting the old height.
+    //
+    // Since 9 Oct 2026 chat is a "band" route: the shell hides its bar at lg
+    // and up there, which is the only thing that makes `lg:h-dvh` below safe.
+    const shell = code(SHELL);
+    expect(shell).toMatch(/<header[\s\S]{0,120}"sticky top-0 z-40 flex h-16 shrink-0 /);
+    expect(shell).toMatch(/band\s*\?\s*"bg-band text-band-foreground lg:hidden"/);
+    expect(chromeForPath("/chat")).toBe("band");
+    expect(chromeForPath("/chat/some-conversation")).toBe("band");
   });
 
-  it("subtracts exactly that header height", () => {
+  it("subtracts exactly that header height below lg", () => {
     expect(SCREEN_CODE).toContain("h-[calc(100dvh-4rem)]");
   });
 
-  it("never claims the whole viewport at any breakpoint", () => {
-    // The regression. `lg:h-dvh` below the header overflows the page by
-    // exactly the header's height.
-    expect(SCREEN_CODE).not.toMatch(/\b(?:sm|md|lg|xl|2xl):h-dvh\b/);
+  it("claims the whole viewport only at lg, where there is no header", () => {
+    // The old regression was `lg:h-dvh` UNDER a visible header, overflowing
+    // the page by the header's height. It is right now only because the
+    // header is hidden at exactly that breakpoint (asserted above); no other
+    // breakpoint may claim the full viewport.
+    const root = SCREEN_CODE.slice(SCREEN_CODE.indexOf("h-[calc(100dvh-4rem)]")).slice(0, 80);
+    expect(root).toContain("lg:h-dvh");
+    expect(SCREEN_CODE).not.toMatch(/\b(?:sm|md|xl|2xl):h-dvh\b/);
+    expect(SCREEN_CODE.match(/\blg:h-dvh\b/g)?.length).toBe(1);
     expect(SCREEN_CODE).not.toMatch(/\bh-screen\b/);
   });
 
@@ -100,12 +113,11 @@ describe("the conversation is the flexible region and the composer is not", () =
     // `shrink-0` is what stops a flex sibling from compressing it; without it a
     // long answer would squeeze the input rather than scroll.
     //
-    // THE BORDER IS ONLY THE ANCHOR, not the guarantee. The approved Buff City
-    // Soap design docks the composer on White behind a Cloud hairline, so the
-    // dock's class list starts `shrink-0 border-t border-border`. The layout
-    // guarantee is `shrink-0`, which is what this test is for and what is
-    // checked.
-    expect(COMPOSER_CODE).toMatch(/className="shrink-0 border-t border-border/);
+    // THE PADDING IS ONLY THE ANCHOR, not the guarantee. Since 9 Oct 2026 the
+    // dock sits straight on the chat canvas with no strip of its own, so its
+    // class list starts `shrink-0 px-4`. The layout guarantee is `shrink-0`,
+    // which is what this test is for and what is checked.
+    expect(COMPOSER_CODE).toMatch(/className="shrink-0 px-4/);
     /*
      * `flex-1` IS PERMITTED INSIDE THE DOCK, on the disclaimer that shares a
      * row with the mode control — it is not on the dock's own container, which
@@ -114,8 +126,8 @@ describe("the conversation is the flexible region and the composer is not", () =
      * reason.
      */
     const container = COMPOSER_CODE.slice(
-      COMPOSER_CODE.indexOf('className="shrink-0 border-t border-border'),
-    ).slice(0, 200);
+      COMPOSER_CODE.indexOf('className="shrink-0 px-4'),
+    ).slice(0, 60);
     expect(container).not.toMatch(/\bflex-1\b/);
   });
 });
