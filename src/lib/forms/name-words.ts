@@ -107,6 +107,13 @@ export const NOT_A_TYPED_NAME = new Set([
   "meeting", "meetings", "questions", "effective", "starting", "template",
   "templates", "example", "examples", "sample",
   /*
+   * PORTED FROM THE REFERENCE PLATFORM'S FEEDBACK FIX (6 OCT 2026). "coaching
+   * form based on uniform" created a form for an employee called "based". The
+   * words that tie a form to its topic — "based on", "related to", "due to",
+   * "according to", "pertaining to", "concerning" — are never a name.
+   */
+  "based", "related", "relating", "due", "according", "pertaining", "concerning",
+  /*
    * PRODUCTION QA, 30 SEPTEMBER 2026. Words that reached a name position in
    * the way managers actually type — "coaching for avery testperson pls",
    * "the employee is always late", "coaching guidance for new hires", "I

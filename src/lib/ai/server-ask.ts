@@ -33,6 +33,7 @@ import {
   buildFormInventoryBlock,
 } from "./form-answers";
 import { proposeFormForTurn, suggestFormsForTurn, type ChatActor } from "./form-proposal";
+import { rowsForQuestion } from "@/lib/knowledge/credential-redaction";
 import { assembleGrounding } from "./grounding-assembly";
 import {
   buildGroundingBlock,
@@ -326,7 +327,13 @@ export async function answerQuestion(
     evidenceBudget: RETRIEVAL.contextChunks,
   });
 
-  const used = assembled.rows;
+  /*
+   * Default account passwords withheld unless the question is about them —
+   * from the grounding and the source cards alike, since both derive from
+   * these rows. Ported from the reference platform; see
+   * `knowledge/credential-redaction.ts`.
+   */
+  const used = rowsForQuestion(request.question, assembled.rows);
 
   /* Where the pinned handbook rows landed, so the note names real markers only. */
   const handbookChunkIds = new Set((handbookCoverage?.rows ?? []).map((row) => row.chunk_id));
