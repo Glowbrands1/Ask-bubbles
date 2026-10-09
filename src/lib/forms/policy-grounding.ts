@@ -6,6 +6,7 @@ import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { KnowledgeCategory, SearchResult } from "@/types";
 
 import type { FormField } from "./document";
+import { redactCredentials } from "@/lib/knowledge/credential-redaction";
 
 /**
  * POLICY-GROUNDED FIELDS FAIL CLOSED.
@@ -177,7 +178,8 @@ export async function groundPolicy(topic: string): Promise<PolicyGrounding> {
 
   return {
     passages: strong.map((result) => ({
-      text: result.content.trim().slice(0, 1200),
+      /* A policy quoted onto a form never carries a credential value. */
+      text: redactCredentials(result.content.trim().slice(0, 1200)),
       source: toSource(result),
     })),
     sources: strong.map(toSource),

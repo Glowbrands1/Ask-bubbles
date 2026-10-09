@@ -33,7 +33,7 @@ import {
   buildFormInventoryBlock,
 } from "./form-answers";
 import { proposeFormForTurn, suggestFormsForTurn, type ChatActor } from "./form-proposal";
-import { rowsForQuestion } from "@/lib/knowledge/credential-redaction";
+import { redactCredentials, rowsForQuestion } from "@/lib/knowledge/credential-redaction";
 import { assembleGrounding } from "./grounding-assembly";
 import {
   buildGroundingBlock,
@@ -328,10 +328,9 @@ export async function answerQuestion(
   });
 
   /*
-   * Default account passwords withheld unless the question is about them —
-   * from the grounding and the source cards alike, since both derive from
-   * these rows. Ported from the reference platform; see
-   * `knowledge/credential-redaction.ts`.
+   * Every credential value withheld, whoever asks and however — from the
+   * grounding and the source cards alike, since both derive from these rows.
+   * See `knowledge/credential-redaction.ts`.
    */
   const used = rowsForQuestion(request.question, assembled.rows);
 
@@ -395,8 +394,15 @@ export async function answerQuestion(
 
   const suggested = await suggestedFormsFor({ summariesPromise, request, actor });
 
+  /*
+   * THE ANSWER IS REDACTED TOO. The model never sees a value (the rows above
+   * are redacted), but the conversation history comes from the browser and
+   * could carry one, and a deterministic last pass is what makes "the model
+   * explained it" no route around the rule.
+   */
+  const text = redactCredentials(stripMarkers(answer));
   return {
-    content: suggested ? `${stripMarkers(answer)}\n\n${suggested.lead}` : stripMarkers(answer),
+    content: suggested ? `${text}\n\n${suggested.lead}` : text,
     formSelection: suggested?.selection,
     citations,
     coverage: answerCoverage({
