@@ -282,6 +282,15 @@ function withoutRetainedForReview(text: string): string {
   return RETAINED_FOR_REVIEW.reduce((rest, line) => rest.split(line).join(""), text);
 }
 
+/*
+ * THE APP SWITCHER NAMES THE OTHER APP ON PURPOSE (owner-approved, 9 Oct 2026).
+ * It is an administrators-only link to Ask Sunny's production URL and names it
+ * only as a destination: it reads no tenant variable, holds no company ID and
+ * passes nothing across. So this ONE file is exempt from the cross-brand NAME
+ * check below, and from nothing else — the company-ID check still applies to it.
+ */
+const APP_SWITCHER = "src/components/shell/app-switcher.tsx";
+
 describe("11–12. production builds only the Buff City Soap connector", () => {
   it("11. the factory returns the BCS connector, whatever the configuration — it has no tenant input", () => {
     const configs: WovenKnowledgeConfig[] = [
@@ -307,8 +316,10 @@ describe("11–12. production builds only the Buff City Soap connector", () => {
   it("12. no production module reads an inherited tenant variable except to refuse it, and none names another company", () => {
     const readers = productionSources().filter(({ text }) => /WOVEN_TEAM_COMPANY|WOVEN_TEAM_BASE_URL/.test(text));
     expect(readers.map((r) => r.path)).toEqual(["src/lib/knowledge-sync/woven/config.ts"]);
-    const naming = productionSources().filter(({ text }) =>
-      /Sun\s*Tan\s*City|Ask\s*Sunny|1BA00000/i.test(withoutRetainedForReview(text)),
+    const naming = productionSources().filter(({ path, text }) =>
+      (path === APP_SWITCHER ? /1BA00000/i : /Sun\s*Tan\s*City|Ask\s*Sunny|1BA00000/i).test(
+        withoutRetainedForReview(text),
+      ),
     );
     expect(naming.map((n) => n.path)).toEqual([]);
   });
