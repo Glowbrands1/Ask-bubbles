@@ -80,8 +80,22 @@ const FOLLOW_UP_BEFORE =
  * past-tense or "previous/prior/already" marker, so "give her a written
  * warning on 10/2" — an instruction about this form — is not affected.
  */
-const PRIOR_STEP_BEFORE =
-  /\b(?:got|gotten|received|was given|were given|been given|given|had|issued|gave|was|were|previous(?:ly)?|prior|already|last time)\b[^.;\n]{0,40}\b(?:warn(?:ing|ings|ed)|write[- ]?ups?|written up|coach(?:ed|ing)?|corrective actions?|disciplin\w*)\b[^.;\n]{0,20}$/i;
+const PRIOR_STEP_BEFORE = new RegExp(
+  [
+    String.raw`\b(?:got|gotten|received|was given|were given|been given|given|had|issued|gave|was|were|previous(?:ly)?|prior|already|last time)\b[^.;\n]{0,40}\b(?:warn(?:ing|ings|ed)|write[- ]?ups?|written up|coach(?:ed|ing)?|corrective actions?|disciplin\w*)\b[^.;\n]{0,20}$`,
+    /*
+     * "despite / after / since / following her written warning on 9/15" and
+     * "her verbal warning on 9/21": a step that is hers already, with no
+     * past-tense verb. The warning-level reader reads these as history; the
+     * history line and the form's own date must agree with it. NOT "give her a
+     * written warning on 10/2" or "issue him written warning on 10/2": an
+     * article after the pronoun, or an issuing verb before it, is this form.
+     */
+    String.raw`\b(?:despite|after|since|following)\b[^.;\n]{0,40}\b(?:warn(?:ing|ings|ed)|write[- ]?ups?|coach(?:ing)?|corrective actions?)\b[^.;\n]{0,20}$`,
+    String.raw`(?<!\b(?:give|gives|giving|issue|issues|issuing|write|writes|writing|needs?|get|gets|getting|make|deserves?)\s+)\b(?:her|his|their)\s+(?!a\b|an\b)(?:[a-z]+\s+){0,2}?(?:warn(?:ing|ings)|write[- ]?ups?|coaching|corrective actions?)\b[^.;\n]{0,20}$`,
+  ].join("|"),
+  "i",
+);
 
 function isOtherDate(text: string, index: number): boolean {
   const before = text.slice(0, index);

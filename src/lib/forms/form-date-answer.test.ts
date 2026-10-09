@@ -127,6 +127,15 @@ describe("the date of the earlier step", () => {
     ["she was late on 9/20", null],
     ["give her a written warning on 10/2", null],
     ["verbal warning, first time", null],
+    /* A step that is already hers, with no past-tense verb (owner's acceptance list, 9 Oct 2026). */
+    ["despite her written warning on 9/15, give her a verbal warning", "2026-09-15"],
+    ["late again after his verbal warning on 9/21", "2026-09-21"],
+    ["her verbal warning on 9/21 did not change anything", "2026-09-21"],
+    ["following their coaching on 9/2 she was late again", "2026-09-02"],
+    /* ...and still not an instruction about this form. */
+    ["give her written warning on 10/2", null],
+    ["issue him a written warning on 10/2", null],
+    ["she needs her written warning on 10/2", null],
   ])("%s -> %s", (text, expected) => {
     expect(priorStepDate(text, TODAY)).toBe(expected);
   });
