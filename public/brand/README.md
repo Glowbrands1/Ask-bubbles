@@ -11,9 +11,10 @@ redrawn or generated.
 | `wave-edge.png` | 2021 Brand Guidelines PDF, "wavy edge" motif (alpha only) | Used as a CSS mask, so it takes the band's colour |
 | `login-soap-powder.jpg` | 2023 Brand Guidelines, p.6 (product photo, cropped to remove slide text) | Login background |
 | `login-soap-loaves.jpg` | 2023 Brand Guidelines, p.3 (product photo, cropped to remove slide text) | Login accent circles |
-| `bcs-product-lineup-white.png` | Official Buff City Soap product illustration sheet (Tokyo Green ground), supplied by the owner | Its Tokyo Green ground removed, so only the White drawings remain; shown at 34% in the Home band |
+| `art/bcs-art-lineup-white.png` | Official Buff City Soap product illustration sheet (Tokyo Green ground), supplied by the owner — the arranged group at the top of the sheet | Ground removed so only the White drawing remains; Home band, bottom-right, at 32% |
+| `art/bcs-art-spray-white.png`, `art/bcs-art-bath-bomb-white.png`, `art/bcs-art-bar-white.png`, `art/bcs-art-tub-white.png` | Same sheet — single products from its bottom row, each cut whole | Ground removed, not redrawn, recoloured or stretched; spread across the Home band at 16–24% |
 | `patterns/bcs-pattern-sidebar.png` | Official Buff City Soap product pattern, supplied by the owner | Six outline drawings cut whole from the pattern and re-spaced at about a third of its density so the tile repeats seamlessly; White, shown at 6.5% on the sidebar |
-| `patterns/bcs-pattern-canvas.png` | Same pattern | Seven outline drawings, recoloured to Dark Tokyo Green and Tokyo Green; shown at 10–12% toward the page's bottom-right |
+| `patterns/bcs-pattern-canvas.png` | Same pattern | Seven outline drawings, recoloured to Dark Tokyo Green and Tokyo Green; shown at 22% toward the page's bottom-right and across the chat canvas |
 
 ## Interim — replace when the originals arrive
 
@@ -22,7 +23,7 @@ redrawn or generated.
   keeping the file names.
 - **Photos:** replace with full-resolution, text-free originals from the
   approved photography folder.
-- **Background artwork:** the pattern tiles and the line-up were extracted from
+- **Background artwork:** the pattern tiles and the `art/` drawings were extracted from
   screen-resolution copies of the official illustrations. Replace them with the
   vector or full-resolution originals from Marketing, keeping the file names and
   the same White / green colouring; the CSS and opacities do not change.

@@ -45,7 +45,7 @@ export function ContextPanel({
 
   return (
     <div className="scroll-slim h-full overflow-y-auto p-4">
-      <div className="rounded-[var(--radius-md)] border border-border bg-surface-muted p-3.5">
+      <div className="rounded-[var(--radius-lg)] bg-surface p-3.5 shadow-soft">
         <div className="flex items-center gap-2">
           <Info className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
           <p className="text-[13px] font-semibold text-foreground">
@@ -64,8 +64,9 @@ export function ContextPanel({
       {onCreateForm ? (
       <section className="mt-6">
         <div className="mb-2 flex items-center gap-2">
-          <FileStack className="size-3.5 text-muted-foreground" aria-hidden />
-          <p className="eyebrow">Take it further</p>
+          {/* Charcoal: on the chat canvas, where grey would be 3.7:1. */}
+          <FileStack className="size-3.5 text-foreground" aria-hidden />
+          <p className="eyebrow text-foreground">Take it further</p>
         </div>
         <div className="space-y-1.5">
           {/*
@@ -85,7 +86,7 @@ export function ContextPanel({
             Create a form from this conversation
           </Button>
           {busy ? (
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
+            <p className="text-[11px] leading-relaxed font-medium text-foreground">
               Bubbles is answering. This will be ready the moment that finishes.
             </p>
           ) : null}
