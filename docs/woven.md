@@ -101,7 +101,11 @@ the API's schema but **not yet observed live** for this company.
 3. Fill `src/config/company/locations.ts` with Buff's locations (codes as Woven
    numbers them), districts and regions.
 4. `WOVEN_SYNC_ENABLED=true` (dry runs only), then `WOVEN_SYNC_WRITES_ENABLED=true`
-   to save, then `WOVEN_SYNC_SCHEDULE_ENABLED=true` for the daily cron.
+   to save. The daily cron is switched by **Auto Sync** on the Woven screen
+   (`/admin/integrations/woven`, section "Auto Sync"), not by an environment
+   variable: it is stored in the database (migration `20261014001000`), defaults
+   to off, and can be turned on only after a stored sync has saved the directory.
+   `WOVEN_SYNC_SCHEDULE_ENABLED` is no longer read by the cron.
 5. Review the location and position mappings on the Woven screen.
 6. Optionally `WOVEN_ACCESS_MODE=shadow` to record the access plan each run.
 
