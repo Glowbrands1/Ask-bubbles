@@ -76,7 +76,8 @@ export function directoryRowFromView(row: Record<string, unknown>): DirectoryRow
     primaryLocationMappingStatus: ["unmapped", "mapped", "ignored"].includes(String(row.primary_location_mapping_status))
       ? (row.primary_location_mapping_status as LocationMapStatus)
       : null,
-    primaryLocationCode: str(row.primary_location_code),
+    /* The Ask Bubbles location the Woven primary is mapped to (`woven_location_map.location_id`). */
+    primaryLocationCode: str(row.primary_location_id),
     additionalLocations: locationsFrom(row.additional_locations),
     temporaryOrExpiringLocations: locationsFrom(row.temporary_or_expiring_locations),
     activeLocationCount: num(row.active_location_count),

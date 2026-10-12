@@ -13,7 +13,7 @@ const base = {
   position_mapping_confirmed: true,
   mapped_role: "employee",
   mapped_scope_level: "location",
-  mapped_primary_location_code: null,
+  mapped_primary_location_id: null,
   app_user_id: "u1",
   app_user_role: "admin",
   app_user_status: "active",
@@ -34,6 +34,11 @@ describe("accessPreviewRowFromView", () => {
   it("an unprotected employee: the position's role, source 'position'", () => {
     const row = accessPreviewRowFromView({ ...base, app_user_role: "employee", role_override: null, effective_role: "employee", effective_scope_level: "location", role_source: "position" }, "Peer", []);
     expect(row).toMatchObject({ roleOverride: null, effectiveRole: "employee", roleSource: "position" });
+  });
+
+  it("reads the mapped primary location from the column the view has (mapped_primary_location_id)", () => {
+    expect(accessPreviewRowFromView({ ...base, mapped_primary_location_id: "loc-219" }, "X", []).mappedPrimaryLocationCode).toBe("loc-219");
+    expect(accessPreviewRowFromView(base, "X", []).mappedPrimaryLocationCode).toBeNull();
   });
 
   it("an unknown or missing role_source reads as 'none', never as an override", () => {
