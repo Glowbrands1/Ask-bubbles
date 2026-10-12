@@ -88,7 +88,7 @@ export function accessPreviewRowFromView(
     positionMappingConfirmed: row.position_mapping_confirmed === true,
     mappedRole: str(row.mapped_role),
     mappedScopeLevel: str(row.mapped_scope_level),
-    mappedPrimaryLocationCode: str(row.mapped_primary_location_code),
+    mappedPrimaryLocationCode: str(row.mapped_primary_location_id),
     appUserRole: str(row.app_user_role),
     appUserStatus: str(row.app_user_status),
     appUserScopeLevel: str(row.app_user_scope_level),

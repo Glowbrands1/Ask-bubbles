@@ -16,6 +16,11 @@ describe("directoryRowFromView: primary location mapping status", () => {
     expect(directoryRowFromView(row("ignored")).primaryLocationMappingStatus).toBe("ignored");
   });
 
+  it("reads the mapped Ask Bubbles location from the view's primary_location_id", () => {
+    expect(directoryRowFromView({ ...row("mapped"), primary_location_id: "loc-219" }).primaryLocationCode).toBe("loc-219");
+    expect(directoryRowFromView(row("unmapped")).primaryLocationCode).toBeNull();
+  });
+
   it("anything else, including no map row, is null — never read as the Corporate exception", () => {
     for (const bad of [null, undefined, "Ignored", "", 3]) expect(directoryRowFromView(row(bad)).primaryLocationMappingStatus, String(bad)).toBeNull();
   });
