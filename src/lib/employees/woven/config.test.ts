@@ -150,3 +150,56 @@ describe("readWovenConfig", () => {
     expect(config.companyId).toBe("55839f24-9241-418c-8405-37baf9a42a87");
   });
 });
+
+describe("readWovenConfig: the knowledge sync's login as a fallback", () => {
+  const PIN = "55839F24-9241-418C-8405-37BAF9A42A87";
+  const base = { WOVEN_SYNC_ENABLED: "true", WOVEN_COMPANY_ID: PIN, WOVEN_SUBSCRIPTION_KEY: "sub-key" };
+  const knowledge = { WOVEN_BCS_USERNAME: "bcs-user", WOVEN_BCS_PASSWORD: "bcs-pass", WOVEN_BCS_COMPANY_ID: PIN };
+
+  it("uses WOVEN_BCS_USERNAME / WOVEN_BCS_PASSWORD when the employee sync's own pair is absent", () => {
+    const config = readWovenConfig({ ...base, ...knowledge });
+    expect(config.credentials).toEqual({ subscriptionKey: "sub-key", username: "bcs-user", password: "bcs-pass" });
+    expect(config.credentialSource).toBe("knowledge_login");
+    expect(config.missingCredentials).toEqual([]);
+  });
+
+  it("prefers WOVEN_USERNAME / WOVEN_PASSWORD whenever they are set", () => {
+    const config = readWovenConfig({ ...base, ...knowledge, WOVEN_USERNAME: "app-user", WOVEN_PASSWORD: "app-pass" });
+    expect(config.credentials).toMatchObject({ username: "app-user", password: "app-pass" });
+    expect(config.credentialSource).toBe("employee");
+  });
+
+  it("never mixes sources: one of the employee sync's own pair set means that pair, and the other half is missing", () => {
+    const config = readWovenConfig({ ...base, ...knowledge, WOVEN_USERNAME: "app-user" });
+    expect(config.credentials).toBeNull();
+    expect(config.missingCredentials).toEqual(["WOVEN_PASSWORD"]);
+  });
+
+  it("does not fall back unless WOVEN_BCS_COMPANY_ID confirms Midwest Soap Makers", () => {
+    for (const company of [undefined, "", "1ba00000-0000-4000-8000-0000000000aa"]) {
+      const config = readWovenConfig({ ...base, ...knowledge, WOVEN_BCS_COMPANY_ID: company });
+      expect(config.credentials, String(company)).toBeNull();
+      expect(config.missingCredentials).toEqual(["WOVEN_USERNAME", "WOVEN_PASSWORD"]);
+      expect(config.credentialSource).toBeNull();
+    }
+    /* Case and braces do not matter, as for WOVEN_COMPANY_ID. */
+    expect(readWovenConfig({ ...base, ...knowledge, WOVEN_BCS_COMPANY_ID: `{${PIN.toLowerCase()}}` }).credentialSource).toBe("knowledge_login");
+  });
+
+  it("does not fall back to half of the knowledge login", () => {
+    expect(readWovenConfig({ ...base, WOVEN_BCS_USERNAME: "bcs-user", WOVEN_BCS_COMPANY_ID: PIN }).credentials).toBeNull();
+  });
+
+  it("still withholds every credential when WOVEN_COMPANY_ID names another company", () => {
+    const config = readWovenConfig({ ...base, ...knowledge, WOVEN_COMPANY_ID: "1ba00000-0000-4000-8000-0000000000aa" });
+    expect(config.credentials).toBeNull();
+    expect(config.enabled).toBe(false);
+  });
+
+  it("never puts a value in a problem or a missing-credential name", () => {
+    const config = readWovenConfig({ ...base, WOVEN_VALIDATION_ENABLED: "true", WOVEN_BCS_USERNAME: "bcs-user", WOVEN_BCS_COMPANY_ID: PIN });
+    const text = JSON.stringify([config.problems, config.missingCredentials]);
+    expect(text).not.toContain("bcs-user");
+    expect(text).not.toContain("sub-key");
+  });
+});

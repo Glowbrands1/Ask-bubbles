@@ -35,6 +35,7 @@ const BASE: WovenSyncPageProps = {
   scheduleDeployed: false,
   liveMode: true,
   missingCredentials: ["WOVEN_SUBSCRIPTION_KEY", "WOVEN_USERNAME", "WOVEN_PASSWORD"],
+  credentialSource: null,
   loginEmailDomains: [],
   database: { state: "missing" },
   overview: null,

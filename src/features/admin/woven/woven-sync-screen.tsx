@@ -137,7 +137,16 @@ export function stepsFor(props: WovenSyncPageProps): Step[] {
         : { key: "subscription", title: "Woven subscription", state: "reported", label: "Reported active", detail: "Shown as Active in the Woven API portal. Ask Bubbles confirms it the first time it signs in." };
 
   const credentials: Step = credentialsReady
-    ? { key: "credentials", title: "Server-side credentials", state: "done", label: "Configured", detail: "The subscription key and the Woven application user are set for this deployment." }
+    ? {
+        key: "credentials",
+        title: "Server-side credentials",
+        state: "done",
+        label: "Configured",
+        detail:
+          props.credentialSource === "knowledge_login"
+            ? "The subscription key is set, and the Woven login is the knowledge sync's (WOVEN_BCS_USERNAME / WOVEN_BCS_PASSWORD), confirmed for Midwest Soap Makers by WOVEN_BCS_COMPANY_ID."
+            : "The subscription key and the Woven application user are set for this deployment.",
+      }
     : {
         key: "credentials",
         title: "Server-side credentials",

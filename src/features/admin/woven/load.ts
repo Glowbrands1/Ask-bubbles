@@ -81,6 +81,8 @@ export interface WovenSyncPageProps {
   liveMode: boolean;
   /** Credential variable names not yet set. Never values. */
   missingCredentials: string[];
+  /** Which variables supplied the Woven login (names only), or null when none is configured. */
+  credentialSource: "employee" | "knowledge_login" | null;
   /** Login-eligible email domains. Not secret. Empty: nobody is login-eligible. */
   loginEmailDomains: string[];
   database: DatabaseState;
@@ -106,6 +108,7 @@ export async function loadWovenSyncPage(): Promise<WovenSyncPageProps> {
     scheduleDeployed: cronDeployed(vercelConfig as { crons?: { path: string }[] }),
     liveMode: !isDemoMode(),
     missingCredentials: config.missingCredentials,
+    credentialSource: config.credentialSource,
     loginEmailDomains: sample ? [...sample.loginEmailDomains] : config.loginEmailDomains,
     overview: sample?.overview ?? null,
     sampleLabel: sample?.label ?? null,

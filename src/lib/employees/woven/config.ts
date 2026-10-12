@@ -72,6 +72,31 @@ export const WOVEN_COMPANY_ID_ENV = "WOVEN_COMPANY_ID";
 /** Optional. The token request's `Platform` integer (1–4, unnamed in the spec). */
 export const WOVEN_PLATFORM_ENV = "WOVEN_PLATFORM";
 
+/**
+ * THE KNOWLEDGE SYNC'S WOVEN LOGIN, AS A FALLBACK FOR THE APPLICATION USER.
+ *
+ * Buff City Soap's Woven login is already set for the knowledge sync as
+ * WOVEN_BCS_USERNAME / WOVEN_BCS_PASSWORD, and the owner confirmed (12 Oct
+ * 2026) that the same login signs in to the Operations API for Midwest Soap
+ * Makers. The employee sync uses it ONLY when:
+ *
+ *   - neither WOVEN_USERNAME nor WOVEN_PASSWORD is set (the two always come
+ *     from one source as a pair, never one from each), and
+ *   - WOVEN_BCS_COMPANY_ID confirms the pinned company, as it must for the
+ *     knowledge sync to run at all.
+ *
+ * The token request still names the pinned company and the client still
+ * refuses a token for any other, whichever variables supplied the login. The
+ * names are the knowledge sync's (`src/lib/knowledge-sync/woven/config.ts`),
+ * restated here because that module is server-only.
+ */
+export const WOVEN_KNOWLEDGE_USERNAME_ENV = "WOVEN_BCS_USERNAME";
+export const WOVEN_KNOWLEDGE_PASSWORD_ENV = "WOVEN_BCS_PASSWORD";
+export const WOVEN_KNOWLEDGE_COMPANY_ID_ENV = "WOVEN_BCS_COMPANY_ID";
+
+/** Which variables supplied the Woven login. Names only, for the setup screen. */
+export type WovenCredentialSource = "employee" | "knowledge_login";
+
 /** The three values without which no call can be made. */
 export const WOVEN_CREDENTIAL_ENV = [
   WOVEN_SUBSCRIPTION_KEY_ENV,
@@ -148,6 +173,12 @@ export interface WovenConfig {
   credentials: WovenCredentials | null;
   /** Names of the credential variables that are missing. Never values. */
   missingCredentials: string[];
+  /**
+   * Which variables supplied the username and password: the employee sync's
+   * own (WOVEN_USERNAME / WOVEN_PASSWORD) or the knowledge sync's login
+   * (WOVEN_BCS_*). Null when no login is configured.
+   */
+  credentialSource: WovenCredentialSource | null;
   pageSize: number;
   maxDetailRequestsPerRun: number;
   minCompletenessPercent: number;
@@ -263,13 +294,32 @@ function readDomains(env: Env, problems: string[]): string[] {
   return domains;
 }
 
+/**
+ * The username and password, as one pair from one source. The employee sync's
+ * own variables win whenever either is set; the knowledge sync's login is
+ * used only when both of the employee sync's are absent AND
+ * WOVEN_BCS_COMPANY_ID confirms the pinned company.
+ */
+function readLogin(env: Env): { username: string; password: string; source: WovenCredentialSource } {
+  const ownUsername = (env[WOVEN_USERNAME_ENV] ?? "").trim();
+  /* A password is not trimmed: surrounding whitespace can be part of it. */
+  const ownPassword = env[WOVEN_PASSWORD_ENV] ?? "";
+  if (ownUsername || ownPassword.length > 0) return { username: ownUsername, password: ownPassword, source: "employee" };
+
+  const knowledgeCompany = (env[WOVEN_KNOWLEDGE_COMPANY_ID_ENV] ?? "").trim().replace(/^\{|\}$/g, "").toLowerCase();
+  if (knowledgeCompany !== PINNED_COMPANY_ID) return { username: "", password: "", source: "employee" };
+  const username = (env[WOVEN_KNOWLEDGE_USERNAME_ENV] ?? "").trim();
+  const password = env[WOVEN_KNOWLEDGE_PASSWORD_ENV] ?? "";
+  if (!username || password.length === 0) return { username: "", password: "", source: "employee" };
+  return { username, password, source: "knowledge_login" };
+}
+
 export function readWovenConfig(env: Env = process.env): WovenConfig {
   const problems: string[] = [];
 
   const subscriptionKey = (env[WOVEN_SUBSCRIPTION_KEY_ENV] ?? "").trim();
-  const username = (env[WOVEN_USERNAME_ENV] ?? "").trim();
-  /* A password is not trimmed: surrounding whitespace can be part of it. */
-  const password = env[WOVEN_PASSWORD_ENV] ?? "";
+  const login = readLogin(env);
+  const { username, password } = login;
 
   const missingCredentials: string[] = [];
   const confirmation = readCompanyConfirmation(env);
@@ -331,6 +381,7 @@ export function readWovenConfig(env: Env = process.env): WovenConfig {
     credentials:
       missingCredentials.length === 0 && !tenantProblem ? { subscriptionKey, username, password } : null,
     missingCredentials,
+    credentialSource: username && password.length > 0 ? login.source : null,
     pageSize: readBoundedInteger(env, WOVEN_PAGE_SIZE_ENV, DEFAULTS.pageSize, BOUNDS.pageSize, problems),
     maxDetailRequestsPerRun: readBoundedInteger(
       env,

@@ -18,6 +18,10 @@ const ENV = [
   "WOVEN_SUBSCRIPTION_KEY",
   "WOVEN_USERNAME",
   "WOVEN_PASSWORD",
+  /* The knowledge sync's login, which the employee sync falls back to: cleared so the machine's own setting cannot leak in. */
+  "WOVEN_BCS_USERNAME",
+  "WOVEN_BCS_PASSWORD",
+  "WOVEN_BCS_COMPANY_ID",
 ] as const;
 const saved = Object.fromEntries(ENV.map((k) => [k, process.env[k]]));
 
