@@ -123,6 +123,29 @@ describe("employment status comes only from the Status integer, via /lists/enums
     expect(e.issues).toContain("unknown_status");
   });
 
+  it("names ActiveHidden and Vendor for the directory, and still reads them as unknown — never active", () => {
+    const named = statusResolver(
+      parseEnums([
+        ...FAKE_ENUMS,
+        { EnumerationName: "EmployeeStatus", PropertyName: "ActiveHidden", PropertyDisplayName: "Active Hidden", PropertyValue: 100 },
+        { EnumerationName: "EmployeeStatus", PropertyName: "Vendor", PropertyDisplayName: "Vendor", PropertyValue: 10 },
+      ]),
+    );
+    const read = (status: number) => {
+      const result = normalizeEmployee(wovenEmployee(String(status), { status }), { statuses: named, today: TODAY });
+      if (!result.ok) throw new Error("not normalised");
+      return result.employee;
+    };
+    const hidden = read(100);
+    expect(hidden.employmentStatus).toBe("unknown");
+    expect(hidden.issues).toEqual(expect.arrayContaining(["unknown_status", "status_active_hidden"]));
+    const vendor = read(10);
+    expect(vendor.employmentStatus).toBe("unknown");
+    expect(vendor.issues).toEqual(expect.arrayContaining(["unknown_status", "status_vendor"]));
+    expect(read(FAKE_STATUS.onLeave).issues).not.toContain("status_active_hidden");
+    expect(read(FAKE_STATUS.active).issues).not.toContain("unknown_status");
+  });
+
   it("reads an integer the enum list does not name as unknown", () => {
     expect(ok(wovenEmployee("4", { status: 99 })).employmentStatus).toBe("unknown");
   });

@@ -11,7 +11,7 @@ import {
   type DirectoryQuery,
   type DirectoryRow,
 } from "@/lib/employees/woven/view-types";
-import { centralToday, changeLabel, employeeName, mappingSummary, scheduledDeparture } from "@/lib/employees/woven/views";
+import { centralToday, changeLabel, employeeName, mappingSummary, scheduledDeparture, wovenStatusName } from "@/lib/employees/woven/views";
 import { cn } from "@/lib/utils/cn";
 import { day, label, when } from "./format";
 
@@ -229,6 +229,9 @@ export function DirectoryTable({ page, query, sample }: { page: DirectoryPage; q
                       <StatusDot />
                       {row.employmentStatus}
                     </Badge>
+                    {wovenStatusName(row) ? (
+                      <span className="mt-0.5 block text-[11px] text-muted-foreground">Woven: {wovenStatusName(row)}</span>
+                    ) : null}
                     {scheduledDeparture(row, today) ? (
                       <span className="mt-0.5 block text-[11px] text-muted-foreground">leaving {day(row.terminationDate)}</span>
                     ) : null}

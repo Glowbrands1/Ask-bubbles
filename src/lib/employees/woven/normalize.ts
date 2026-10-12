@@ -1,5 +1,5 @@
 import { DOTNET_MIN_DATE_PREFIX, EMPTY_GUID, FIELD, LOCATION_FIELD } from "./contract";
-import type { StatusResolver } from "./enums";
+import { statusKind, type StatusResolver } from "./enums";
 import type {
   AccessType,
   EmployeeIssue,
@@ -133,7 +133,13 @@ function readEmail(value: unknown, issues: EmployeeIssue[]): string | null {
 function readStatus(record: Record<string, unknown>, options: NormalizeOptions, issues: EmployeeIssue[]) {
   const code = readInteger(pick(record, FIELD.status));
   const status: EmploymentStatus = options.statuses.resolve(code);
-  if (status === "unknown") issues.push("unknown_status");
+  if (status === "unknown") {
+    issues.push("unknown_status");
+    /* Named for the directory, never acted on: an ActiveHidden or Vendor employee stays `unknown`. */
+    const kind = statusKind(options.statuses, code);
+    if (kind === "active_hidden") issues.push("status_active_hidden");
+    if (kind === "vendor") issues.push("status_vendor");
+  }
   return { status, code };
 }
 

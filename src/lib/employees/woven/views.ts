@@ -92,6 +92,17 @@ export function terminationDatePassedWhileActive(row: Pick<DirectoryRow, "employ
   return row.employmentStatus === "active" && row.terminationDate !== null && row.terminationDate.slice(0, 10) <= today;
 }
 
+/**
+ * WHAT WOVEN CALLS AN UNKNOWN STATUS, when it names one we recognise. For
+ * display only: the row stays `unknown` and nothing acts on the name.
+ */
+export function wovenStatusName(row: Pick<DirectoryRow, "employmentStatus" | "dataIssues">): "ActiveHidden" | "Vendor" | null {
+  if (row.employmentStatus !== "unknown") return null;
+  if (row.dataIssues.includes("status_active_hidden")) return "ActiveHidden";
+  if (row.dataIssues.includes("status_vendor")) return "Vendor";
+  return null;
+}
+
 export function matchesFilter(row: DirectoryRow, filter: DirectoryFilter, today: string = centralToday()): boolean {
   switch (filter) {
     case "active":
