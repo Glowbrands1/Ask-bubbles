@@ -9,6 +9,10 @@
     {
       "path": "/api/employees/woven/cron",
       "schedule": "17 11 * * *"
+    },
+    {
+      "path": "/api/google-reviews/cron",
+      "schedule": "23 */6 * * *"
     }
   ]
 }
