@@ -22,6 +22,13 @@ import { WOVEN_TENANT } from "@/config/company/woven";
 
 export const SENSITIVE_MARKER = "SENSITIVE-";
 
+/**
+ * The CompanyID every fixture record carries: the pinned Midwest Soap Makers
+ * id, as the spec says every Employee, EmployeeDetail and Location carries
+ * its company. A test proving the company guard overrides it.
+ */
+export const FIXTURE_COMPANY_ID = WOVEN_TENANT.companyId;
+
 /** Sensitive fields `GET /employees` rows carry, per the spec. */
 export function sensitiveListFields(): Record<string, unknown> {
   return {
@@ -121,7 +128,7 @@ export function wovenEmployee(id: string, options: FixtureEmployeeOptions = {}):
     AllLocationAccess: pick(options.allLocationAccess, false),
     IsLoginAllowed: true,
     VendorID: pick(options.vendorId, "00000000-0000-0000-0000-000000000000"),
-    CompanyID: "11111111-1111-1111-1111-111111111111",
+    CompanyID: FIXTURE_COMPANY_ID,
     ...sensitiveListFields(),
   };
   for (const key of Object.keys(row)) if (row[key] === null) delete row[key];
@@ -139,10 +146,11 @@ export interface FixtureLocation {
 export function wovenDetails(id: string, locations: FixtureLocation[]): Record<string, unknown> {
   return {
     EmployeeID: id,
+    CompanyID: FIXTURE_COMPANY_ID,
     ...sensitiveDetailFields(),
     Locations: locations.map((l) => ({
       LocationID: l.id,
-      CompanyID: "11111111-1111-1111-1111-111111111111",
+      CompanyID: FIXTURE_COMPANY_ID,
       Name: l.name ?? `Location ${l.id}`,
       DisplayName: l.name ?? `Location ${l.id}`,
       Number: l.number ?? null,
@@ -158,7 +166,7 @@ export function wovenDetails(id: string, locations: FixtureLocation[]): Record<s
 export function wovenLocation(id: string, options: Partial<{ name: string; number: string; district: string; region: string; closed: boolean; nonLocation: boolean }> = {}) {
   return {
     LocationID: id,
-    CompanyID: "11111111-1111-1111-1111-111111111111",
+    CompanyID: FIXTURE_COMPANY_ID,
     Name: options.name ?? `Location ${id}`,
     DisplayName: options.name ?? `Location ${id}`,
     Number: options.number ?? null,

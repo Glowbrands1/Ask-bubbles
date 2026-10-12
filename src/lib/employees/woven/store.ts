@@ -94,6 +94,12 @@ export interface CommitLocation extends Partial<Omit<LocationCatalogEntry, "wove
 
 export interface CommitInput {
   runId: string;
+  /**
+   * The Woven company every record in this commit was proved to belong to
+   * (`company-scope.ts`). Always the pinned company; the commit function
+   * refuses any other value, or none, and stamps it on every row it writes.
+   */
+  wovenCompanyId: string;
   employees: EmployeeWrite[];
   changes: DirectoryChange[];
   locations: CommitLocation[];
@@ -410,7 +416,7 @@ export function createSupabaseDirectoryStore(client?: SupabaseClient): EmployeeD
         p_employees: input.employees.map(employeeToRow),
         p_changes: input.changes.map(changeToRow),
         p_locations: input.locations.map(locationToRow),
-        p_stats: statsToRow(input.stats),
+        p_stats: { ...statsToRow(input.stats), woven_company_id: input.wovenCompanyId },
       });
       if (error) throw storeFailure("save this sync", error);
       const result = (data ?? {}) as Record<string, unknown>;

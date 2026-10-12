@@ -5,6 +5,8 @@ import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { WOVEN_TENANT } from "@/config/company/woven";
+
 /**
  * ============================================================================
  * STAGE 1 AGAINST REAL POSTGRES — links, the planner's view, shadow records
@@ -90,18 +92,20 @@ describe.skipIf(!ENABLED)("stage 1 on real Postgres (local stack)", { timeout: 6
       ('${ids.candidate2}', 'candidate2-${run}@gmail.test', 'Candidate Two', 'district_manager', 'active', 'global', null)`);
 
     /* Locations are roster ids (`loc-<code>`), not rows: there is no locations table. */
-    sql(`insert into public.woven_location_map (woven_location_id, woven_location_name, status, location_id, reviewed_by, reviewed_at)
-         values ('WL-GI-${run}', 'Example Location 307', 'mapped', 'loc-0307', 'test', now()),
-                ('WL-LIB-${run}', 'Example Location 394', 'mapped', 'loc-0394', 'test', now())`);
+    /* Every Woven row is Midwest Soap Makers: the column has no default (20261012001000_woven_employee_company_scope). */
+    const company = WOVEN_TENANT.companyId.toLowerCase();
+    sql(`insert into public.woven_location_map (woven_location_id, woven_location_name, status, location_id, reviewed_by, reviewed_at, woven_company_id)
+         values ('WL-GI-${run}', 'Example Location 307', 'mapped', 'loc-0307', 'test', now(), '${company}'),
+                ('WL-LIB-${run}', 'Example Location 394', 'mapped', 'loc-0394', 'test', now(), '${company}')`);
     sql(`insert into public.woven_position_map (woven_position_id, woven_position_name, status, mapped_role, mapped_scope_level, hierarchy_rank, reviewed_by, reviewed_at)
          values ('WP-SD-${run}', 'Location Manager', 'mapped', 'location_manager', 'location', 30, 'test', now()),
                 ('WP-OWN-${run}', 'Owner', 'unmapped', null, null, null, null, null)`);
 
     const hash = "0".repeat(64);
     const row = (suffix: string, email: string, position: string, location: string, status = "active") =>
-      `('woven', '${employee(suffix)}', '${email}', '${status}', 'WP-${position}-${run}', '${position}', 'WL-${location}-${run}', '${location}', '${hash}', 'Pat', 'Person-${suffix}')`;
+      `('woven', '${employee(suffix)}', '${email}', '${status}', 'WP-${position}-${run}', '${position}', 'WL-${location}-${run}', '${location}', '${hash}', 'Pat', 'Person-${suffix}', '${company}')`;
     sql(`insert into public.employee_access_directory
-         (source_system, external_employee_id, email_address, employment_status, position_id, position_name, primary_woven_location_id, primary_location_name, record_hash, first_name, last_name)
+         (source_system, external_employee_id, email_address, employment_status, position_id, position_name, primary_woven_location_id, primary_location_name, record_hash, first_name, last_name, woven_company_id)
          values
          ${row("OWNER", `owner-${run}@local.test`, "OWN", "GI")},
          ${row("CAND", `candidate-${run}@gmail.test`, "SD", "GI")},

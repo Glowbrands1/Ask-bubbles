@@ -18,6 +18,14 @@ product's platform; that product's connector survives only as test fixtures
 under `src/lib/knowledge-sync/woven/reference/`, which no production module
 may import (`bcs/tenant-isolation.test.ts` enforces it).
 
+### Credential status (12 October 2026)
+
+| | Status |
+|---|---|
+| Employee API (`WOVEN_SUBSCRIPTION_KEY`, `WOVEN_USERNAME`, `WOVEN_PASSWORD`, `WOVEN_COMPANY_ID`, `WOVEN_SYNC_*`) | **Not configured** in the Ask Bubbles Vercel project. No Buff City Soap Operations API subscription or API user is on record. Nothing reaches the employee API |
+| Knowledge sync (`WOVEN_BCS_*`) | Configured (Production and Preview). A Woven **web-app** login that can open more than one Woven company. Not an API credential, and not to be used as one |
+| Reference platform (`WOVEN_TEAM_*`) | Not set, and ignored if set |
+
 Ask Bubbles has two Woven integrations. Both are **observe-only** and both are
 **off** until switched on with environment variables. Nothing in this build
 creates, disables, re-roles or re-scopes an Ask Bubbles account from Woven.
@@ -36,14 +44,54 @@ what a future provisioning stage *would* do.
 
 | Item | Variable | Notes |
 |---|---|---|
-| Woven API portal subscription key | `WOVEN_SUBSCRIPTION_KEY` | Sensitive |
-| Integration account username / password | `WOVEN_USERNAME`, `WOVEN_PASSWORD` | A dedicated read-only account. Sensitive |
+| Woven API portal subscription key | `WOVEN_SUBSCRIPTION_KEY` | Buff City Soap's OWN approved Operations API subscription — never the reference platform's (Ask Sunny / Sun Tan City) key. Sensitive |
+| Integration account username / password | `WOVEN_USERNAME`, `WOVEN_PASSWORD` | A dedicated read-only Woven user that belongs to Midwest Soap Makers only (ideally `HasMultipleCompanyAccess=false`), with all locations affiliated. Not a person's login, not the knowledge-sync login (`WOVEN_BCS_*`) and not the reference platform's. Sensitive |
 | Confirmation of the pinned company | `WOVEN_COMPANY_ID` | Must be `55839F24-9241-418C-8405-37BAF9A42A87`; required for a sync. Any other value turns the integration off. Every sign-in names the pinned company whatever this says, and a token issued for any other company — or naming none — is refused |
 | API base URL, if not the default | `WOVEN_API_BASE_URL` | |
+| Sign-in platform | `WOVEN_PLATFORM` | Recommended `1`. Woven's authentication guide says integrations send `Platform: 1` (API; 2 Web, 3 iOS, 4 Android). Optional: unset, the sign-in sends no `Platform` field (the behaviour so far, which the reference platform's production sync signs in with). Values other than 1–4 are ignored with a configuration warning |
 | Login-eligible email domains | `WOVEN_LOGIN_EMAIL_DOMAINS` | Unset = nobody is eligible to sign in from Woven data |
+
+### Every record is Midwest Soap Makers, or nothing is saved
+
+Two layers, both fail closed:
+
+1. **The token.** `POST /tokens/v2` always names the pinned CompanyID, and a
+   token Woven issues for another company — or naming none — is refused
+   (`company_mismatch`, `company_not_verified`), on every sign-in and re-sign-in.
+2. **Every record.** Each employee (all three list reads, including the
+   terminated-status read), each employee-details body, every entry of its
+   `Locations[]`, and each `GET /locations` entry must carry the pinned
+   `CompanyID` (`src/lib/employees/woven/company-scope.ts`). One record naming
+   another company refuses the run as `company_scope_mismatch`; one naming no
+   company (absent, not a GUID, the all-zero GUID) as `company_scope_missing`.
+   Reading stops there; a dry run is refused the same way. This holds even
+   for reads whose other failures a run tolerates (the terminated-status
+   read, the location catalog, details).
+
+A refused run saves nothing: the directory, affiliations, change history and
+both maps stay exactly as the last good run left them. The only trace is the
+run's own row, marked `rejected` with the code, which also releases the run
+lock.
+
+**In the database** (`supabase/migrations/20261012001000_woven_employee_company_scope.sql`,
+NOT YET APPLIED): `employee_sync_runs`, `employee_access_directory` and
+`woven_location_map` carry `woven_company_id`, `NOT NULL` with a `CHECK` that
+it is the pinned id. `employee_sync_commit_run` refuses — as one transaction,
+writing nothing — a commit that does not state the pinned company or states
+one other than its run's, and stamps it on every row it writes. Affiliations
+and changes belong to a directory row by foreign key. Proven against Postgres
+by `supabase/tests/woven_company_scope_checks.sql` (`npm run verify:migrations`).
+
+The read-only connection check reports, per record kind, how many records
+named the pinned company, another company or none (`companyScope`, counts
+only), and fails if any would refuse a sync. Run it first with real
+credentials: whether Woven puts `CompanyID` on every record is documented in
+the API's schema but **not yet observed live** for this company.
 
 ### Switching it on, in order
 
+0. With approval, apply `20261012001000_woven_employee_company_scope.sql`
+   (the code works either side of it; a stored sync should not run before it).
 1. Set the credentials and `WOVEN_VALIDATION_ENABLED=true`. Run **Test Woven
    connection** on the Woven screen. It is read-only, signs in to Midwest Soap
    Makers by its Company ID (it fails if Woven issues the token for any other
@@ -226,5 +274,10 @@ the "All Positions" audience, and only then run the initial sync.
 - Both integrations' company is pinned by Company ID in
   `src/config/company/woven.ts` and proved against Woven on every run. No
   configuration can point either at another company.
+- The employee directory proves the company on every record it reads, and
+  (once the 12 Oct 2026 migration is applied) the database refuses any row
+  for another company.
+- No credential is shared with the reference platform (Ask Sunny / Sun Tan
+  City). Its Woven subscription key, API user and web login stay there.
 - Credentials are server-only and never reach the browser
   (`npm run verify:secrets`).

@@ -60,7 +60,9 @@ export function isAllowedReadPath(path: string): boolean {
  * of which ONLY `Username` and `Password` are required. `CompanyID` is sent
  * when configured; without it Woven answers with the company it chose and the
  * companies the user may choose from, which is how the live check discovers it.
- * `Platform` is an unnamed integer (1–4) and is sent only when configured.
+ * `Platform` is an integer (1–4) the spec leaves unnamed; Woven's
+ * authentication guide names 1 as API, the value an integration sends
+ * (`WOVEN_PLATFORM=1`). It is sent only when configured.
  */
 export function tokenRequestBody(input: {
   username: string;
@@ -147,6 +149,11 @@ export const PAGE_TOTAL_KEYS = [] as const satisfies readonly string[];
  */
 export const FIELD = {
   employeeId: ["EmployeeID"],
+  /**
+   * The company the record belongs to. Read ONLY to prove it is the pinned
+   * company (`company-scope.ts`); a run stops on any other value or none.
+   */
+  companyId: ["CompanyID"],
   employeeLoginId: ["EmployeeLoginID"],
   externalHrisId: ["ExternalHRISID"],
   firstName: ["FirstName"],
@@ -177,6 +184,8 @@ export const FIELD = {
 /** SPEC `EmployeeLocationAccess` (details `Locations[]`) and `Location` (`GET /locations`). */
 export const LOCATION_FIELD = {
   locationId: ["LocationID"],
+  /** As `FIELD.companyId`: proved to be the pinned company, never stored as data. */
+  companyId: ["CompanyID"],
   name: ["Name"],
   displayName: ["DisplayName"],
   number: ["Number"],
