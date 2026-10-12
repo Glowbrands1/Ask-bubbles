@@ -10,10 +10,11 @@ import type {
   ChangeRow,
   DirectoryLocation,
   DirectoryRow,
+  EmployeeDetail,
   ReviewStatus,
   RunRow,
 } from "./view-types";
-import { CHANGE_PAGE_SIZE, emptyKindCounts, employeeName } from "./views";
+import { CHANGE_PAGE_SIZE, EMPLOYEE_CHANGE_LIMIT, emptyKindCounts, employeeName } from "./views";
 
 /**
  * ============================================================================
@@ -113,6 +114,38 @@ export async function loadDirectoryRows(): Promise<DirectoryRow[]> {
   return rows;
 }
 
+const CHANGE_COLUMNS =
+  "id, change_kind, field_name, classification, from_value, to_value, effective_date, detected_at, sync_run_id, review_status, employee_access_directory(external_employee_id, first_name, last_name, preferred_first_name)";
+
+/**
+ * ONE EMPLOYEE: their directory row and their own change history, newest
+ * first, capped at `limit` (one more is read to know whether it was cut).
+ * Null when no row has that id; an id that is not a UUID is never queried.
+ */
+export async function loadEmployeeDetail(id: string, limit = EMPLOYEE_CHANGE_LIMIT): Promise<EmployeeDetail | null> {
+  if (!UUID.test(id)) return null;
+  const db = getSupabaseAdmin();
+  const [row, changes] = await Promise.all([
+    db.from("employee_directory_view").select("*").eq("id", id).maybeSingle(),
+    db
+      .from("employee_directory_changes")
+      .select(CHANGE_COLUMNS)
+      .eq("employee_id", id)
+      .order("detected_at", { ascending: false })
+      .order("id", { ascending: true })
+      .limit(limit + 1),
+  ]);
+  const failed = row.error ?? changes.error;
+  if (failed) throw classifyStatusError(failed);
+  if (!row.data) return null;
+  const list = ((changes.data ?? []) as Record<string, unknown>[]).map(changeRowFromTable);
+  return {
+    row: directoryRowFromView(row.data as Record<string, unknown>),
+    changes: list.slice(0, limit),
+    changesTruncated: list.length > limit,
+  };
+}
+
 export function changeRowFromTable(row: Record<string, unknown>): ChangeRow {
   const employee = (Array.isArray(row.employee_access_directory) ? row.employee_access_directory[0] : row.employee_access_directory) as
     | Record<string, unknown>
@@ -149,10 +182,7 @@ export async function loadChangePage(query: ChangeQuery): Promise<ChangePage> {
   const from = (query.page - 1) * CHANGE_PAGE_SIZE;
   let request = db
     .from("employee_directory_changes")
-    .select(
-      "id, change_kind, field_name, classification, from_value, to_value, effective_date, detected_at, sync_run_id, review_status, employee_access_directory(external_employee_id, first_name, last_name, preferred_first_name)",
-      { count: "exact" },
-    )
+    .select(CHANGE_COLUMNS, { count: "exact" })
     .order("detected_at", { ascending: false })
     .order("id", { ascending: true })
     .range(from, from + CHANGE_PAGE_SIZE - 1);

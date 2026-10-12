@@ -10,6 +10,7 @@ import {
   type DirectoryQuery,
   type DirectoryRow,
   type EligibilityResult,
+  type EmployeeDetail,
   type ReviewStatus,
 } from "./view-types";
 
@@ -68,7 +69,30 @@ export function employeeName(row: {
   return name.length > 0 ? name : "(no name in Woven)";
 }
 
-export function matchesFilter(row: DirectoryRow, filter: DirectoryFilter): boolean {
+const CENTRAL_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" });
+
+/** Today as YYYY-MM-DD in Central time, where the locations are. */
+export function centralToday(now: Date = new Date()): string {
+  return CENTRAL_DAY.format(now);
+}
+
+/**
+ * WOVEN SAYS ACTIVE, AND STATES A TERMINATION DATE STILL TO COME.
+ *
+ * Information for a manager, never an action: the person stays Active until
+ * Woven's own Status says otherwise. A termination date that has PASSED while
+ * Woven still says Active is not this either — `terminationDatePassedWhileActive`.
+ */
+export function scheduledDeparture(row: Pick<DirectoryRow, "employmentStatus" | "terminationDate">, today: string): boolean {
+  return row.employmentStatus === "active" && row.terminationDate !== null && row.terminationDate.slice(0, 10) > today;
+}
+
+/** Woven still says Active though the termination date it states has passed. Shown, never acted on. */
+export function terminationDatePassedWhileActive(row: Pick<DirectoryRow, "employmentStatus" | "terminationDate">, today: string): boolean {
+  return row.employmentStatus === "active" && row.terminationDate !== null && row.terminationDate.slice(0, 10) <= today;
+}
+
+export function matchesFilter(row: DirectoryRow, filter: DirectoryFilter, today: string = centralToday()): boolean {
   switch (filter) {
     case "active":
       return row.employmentStatus === "active";
@@ -88,6 +112,8 @@ export function matchesFilter(row: DirectoryRow, filter: DirectoryFilter): boole
       return row.positionId !== null && (row.positionMappingStatus === null || row.positionMappingStatus === "unmapped");
     case "unmapped_location":
       return row.hasUnmappedLocation;
+    case "scheduled_departure":
+      return scheduledDeparture(row, today);
   }
 }
 
@@ -184,9 +210,14 @@ export function parseDirectoryQuery(params: Params): DirectoryQuery {
   };
 }
 
-export function queryDirectory(rows: readonly DirectoryRow[], query: DirectoryQuery, pageSize = DIRECTORY_PAGE_SIZE): DirectoryPage {
+export function queryDirectory(
+  rows: readonly DirectoryRow[],
+  query: DirectoryQuery,
+  pageSize = DIRECTORY_PAGE_SIZE,
+  today: string = centralToday(),
+): DirectoryPage {
   const filterCounts = Object.fromEntries(
-    DIRECTORY_FILTERS.map((f) => [f.key, rows.filter((row) => matchesFilter(row, f.key)).length]),
+    DIRECTORY_FILTERS.map((f) => [f.key, rows.filter((row) => matchesFilter(row, f.key, today)).length]),
   ) as Record<DirectoryFilter, number>;
 
   const statusCounts = Object.fromEntries(
@@ -196,7 +227,7 @@ export function queryDirectory(rows: readonly DirectoryRow[], query: DirectoryQu
   const matching = rows
     .filter((row) => query.status === null || row.employmentStatus === query.status)
     .filter((row) => matchesSearch(row, query.search))
-    .filter((row) => query.filters.every((f) => matchesFilter(row, f)))
+    .filter((row) => query.filters.every((f) => matchesFilter(row, f, today)))
     .filter((row) => query.locationId === null || locationIds(row).includes(query.locationId))
     .filter((row) => query.positionId === null || row.positionId === query.positionId)
     .sort((a, b) => employeeName(a).localeCompare(employeeName(b)) || a.externalEmployeeId.localeCompare(b.externalEmployeeId));
@@ -228,6 +259,34 @@ export function queryDirectory(rows: readonly DirectoryRow[], query: DirectoryQu
     locations: [...locations].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label)),
     positions: [...positions].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label)),
   };
+}
+
+/* ---------------------------------------------------- one employee -- */
+
+/** How much of one employee's change history their page shows. */
+export const EMPLOYEE_CHANGE_LIMIT = 100;
+
+/** A directory row id from the URL: the stored UUID, or a sample id. Anything else is not looked up. */
+export function parseEmployeeRowId(value: string): string | null {
+  return ID.test(value) ? value : null;
+}
+
+/**
+ * One employee's page over rows already in memory — the sample set, or a
+ * test. The live page reads the same shape from the database (`directory.ts`).
+ */
+export function employeeDetailFrom(
+  rows: readonly DirectoryRow[],
+  changes: readonly ChangeRow[],
+  id: string,
+  limit = EMPLOYEE_CHANGE_LIMIT,
+): EmployeeDetail | null {
+  const row = rows.find((r) => r.id === id);
+  if (!row) return null;
+  const own = changes
+    .filter((c) => c.externalEmployeeId === row.externalEmployeeId)
+    .sort((a, b) => b.detectedAt.localeCompare(a.detectedAt));
+  return { row, changes: own.slice(0, limit), changesTruncated: own.length > limit };
 }
 
 const REVIEW_STATUSES = new Set<string>(["unreviewed", "acknowledged", "dismissed"]);

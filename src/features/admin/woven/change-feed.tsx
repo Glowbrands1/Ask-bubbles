@@ -4,7 +4,7 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/feedback";
 import { ScrollTable } from "@/components/ui/layout";
 import { CHANGE_KINDS } from "@/lib/employees/woven/types";
-import type { ChangePage, ChangeQuery, ReviewStatus } from "@/lib/employees/woven/view-types";
+import type { ChangePage, ChangeQuery, ChangeRow, ReviewStatus } from "@/lib/employees/woven/view-types";
 import { cn } from "@/lib/utils/cn";
 import { ChangeReviewButtons } from "./change-review-buttons";
 import { day, describeValue, label, when } from "./format";
@@ -56,6 +56,84 @@ function Chip({ href, on, children }: { href: string; on: boolean; children: Rea
   );
 }
 
+/**
+ * The change rows themselves, shared by the Change Feed and one employee's
+ * page. On an employee's page the Employee column is left out: it is them.
+ */
+export function ChangeTable({
+  rows,
+  actionsDisabled,
+  showEmployee = true,
+}: {
+  rows: readonly ChangeRow[];
+  actionsDisabled: boolean;
+  showEmployee?: boolean;
+}) {
+  return (
+    <ScrollTable>
+      <table className="w-full text-left text-[12.5px]">
+        <thead className="bg-surface-muted text-[11px] tracking-wide text-muted-foreground uppercase">
+          <tr>
+            {[
+              ...(showEmployee ? ["Employee"] : []),
+              "Change type",
+              "Classification",
+              "Old value",
+              "New value",
+              "Effective date",
+              "Detected at",
+              "Sync run",
+              "Review",
+            ].map((h) => (
+              <th key={h} scope="col" className="px-3 py-2 font-semibold whitespace-nowrap">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {rows.map((row) => (
+            <tr key={row.id} className="align-top">
+              {showEmployee ? (
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <span className="font-semibold text-foreground">{row.employeeName}</span>
+                  <br />
+                  <span className="font-mono text-[11px] text-muted-foreground">{row.externalEmployeeId}</span>
+                </td>
+              ) : null}
+              <td className="px-3 py-2 font-mono text-[11.5px] whitespace-nowrap">{row.kind}</td>
+              <td className="px-3 py-2 whitespace-nowrap">
+                {row.classification ? (
+                  <Badge tone={classificationTone(row.classification)} size="sm">
+                    {row.classification}
+                  </Badge>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </td>
+              <td className="min-w-40 px-3 py-2">{describeValue(row.fromValue)}</td>
+              <td className="min-w-40 px-3 py-2">{describeValue(row.toValue)}</td>
+              <td className="px-3 py-2 whitespace-nowrap">
+                {row.effectiveDate ? day(row.effectiveDate) : <span className="text-muted-foreground">Not stated by Woven</span>}
+              </td>
+              <td className="px-3 py-2 whitespace-nowrap tabular-nums">{when(row.detectedAt)}</td>
+              <td className="px-3 py-2 font-mono text-[11px] whitespace-nowrap text-muted-foreground">{row.syncRunId.slice(0, 12)}</td>
+              <td className="px-3 py-2">
+                <div className="flex flex-col gap-1">
+                  <Badge tone={REVIEW_TONE[row.reviewStatus]} size="sm" className="self-start">
+                    {row.reviewStatus}
+                  </Badge>
+                  <ChangeReviewButtons changeId={row.id} status={row.reviewStatus} disabled={actionsDisabled} />
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </ScrollTable>
+  );
+}
+
 export function ChangeFeed({
   page,
   query,
@@ -98,55 +176,7 @@ export function ChangeFeed({
       {page.rows.length === 0 ? (
         <EmptyState title="No changes to show" description="Changes appear after the second successful sync; the first records everyone as an initial load." />
       ) : (
-        <ScrollTable>
-          <table className="w-full text-left text-[12.5px]">
-            <thead className="bg-surface-muted text-[11px] tracking-wide text-muted-foreground uppercase">
-              <tr>
-                {["Employee", "Change type", "Classification", "Old value", "New value", "Effective date", "Detected at", "Sync run", "Review"].map((h) => (
-                  <th key={h} scope="col" className="px-3 py-2 font-semibold whitespace-nowrap">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {page.rows.map((row) => (
-                <tr key={row.id} className="align-top">
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <span className="font-semibold text-foreground">{row.employeeName}</span>
-                    <br />
-                    <span className="font-mono text-[11px] text-muted-foreground">{row.externalEmployeeId}</span>
-                  </td>
-                  <td className="px-3 py-2 font-mono text-[11.5px] whitespace-nowrap">{row.kind}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    {row.classification ? (
-                      <Badge tone={classificationTone(row.classification)} size="sm">
-                        {row.classification}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="min-w-40 px-3 py-2">{describeValue(row.fromValue)}</td>
-                  <td className="min-w-40 px-3 py-2">{describeValue(row.toValue)}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    {row.effectiveDate ? day(row.effectiveDate) : <span className="text-muted-foreground">Not stated by Woven</span>}
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap tabular-nums">{when(row.detectedAt)}</td>
-                  <td className="px-3 py-2 font-mono text-[11px] whitespace-nowrap text-muted-foreground">{row.syncRunId.slice(0, 12)}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-col gap-1">
-                      <Badge tone={REVIEW_TONE[row.reviewStatus]} size="sm" className="self-start">
-                        {row.reviewStatus}
-                      </Badge>
-                      <ChangeReviewButtons changeId={row.id} status={row.reviewStatus} disabled={actionsDisabled} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </ScrollTable>
+        <ChangeTable rows={page.rows} actionsDisabled={actionsDisabled} />
       )}
 
       <nav aria-label="Pages" className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-muted-foreground">

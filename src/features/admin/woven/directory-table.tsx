@@ -11,7 +11,7 @@ import {
   type DirectoryQuery,
   type DirectoryRow,
 } from "@/lib/employees/woven/view-types";
-import { changeLabel, employeeName, mappingSummary } from "@/lib/employees/woven/views";
+import { centralToday, changeLabel, employeeName, mappingSummary, scheduledDeparture } from "@/lib/employees/woven/views";
 import { cn } from "@/lib/utils/cn";
 import { day, label, when } from "./format";
 
@@ -27,6 +27,11 @@ import { day, label, when } from "./format";
  */
 
 const BASE = "/admin/integrations/woven/directory";
+
+/** One employee's page. */
+export function employeeHref(id: string): string {
+  return `${BASE}/${encodeURIComponent(id)}`;
+}
 
 export function directoryHref(query: DirectoryQuery, change: Partial<DirectoryQuery>): string {
   const next = { ...query, ...change };
@@ -45,13 +50,13 @@ function toggled(filters: DirectoryFilter[], f: DirectoryFilter): DirectoryFilte
   return filters.includes(f) ? filters.filter((x) => x !== f) : [...filters, f];
 }
 
-const STATUS_TONE: Record<DirectoryRow["employmentStatus"], BadgeTone> = {
+export const STATUS_TONE: Record<DirectoryRow["employmentStatus"], BadgeTone> = {
   active: "ready",
   terminated: "neutral",
   unknown: "attention",
 };
 
-function MappingBadge({ row }: { row: DirectoryRow }) {
+export function MappingBadge({ row }: { row: DirectoryRow }) {
   const summary = mappingSummary(row);
   return (
     <Badge tone={summary.tone} size="sm" title={summary.note ?? undefined}>
@@ -60,7 +65,7 @@ function MappingBadge({ row }: { row: DirectoryRow }) {
   );
 }
 
-function Locations({ list, expiring }: { list: DirectoryRow["additionalLocations"]; expiring?: boolean }) {
+export function Locations({ list, expiring }: { list: DirectoryRow["additionalLocations"]; expiring?: boolean }) {
   if (list.length === 0) return <span className="text-muted-foreground">—</span>;
   return (
     <span className="block min-w-40 whitespace-normal">
@@ -73,6 +78,7 @@ function Locations({ list, expiring }: { list: DirectoryRow["additionalLocations
 
 export function DirectoryTable({ page, query, sample }: { page: DirectoryPage; query: DirectoryQuery; sample: boolean }) {
   const lastPage = Math.max(1, Math.ceil(page.total / page.pageSize));
+  const today = centralToday();
 
   return (
     <section aria-label="Employee Directory" className="flex flex-col gap-4">
@@ -179,8 +185,8 @@ export function DirectoryTable({ page, query, sample }: { page: DirectoryPage; q
             <thead className="bg-surface-muted text-[11px] tracking-wide text-muted-foreground uppercase">
               <tr>
                 {[
-                  "Woven ID",
                   "Name",
+                  "Woven ID",
                   "Work email",
                   "Status",
                   "Position",
@@ -195,7 +201,11 @@ export function DirectoryTable({ page, query, sample }: { page: DirectoryPage; q
                   "Last change",
                   "Mapping",
                 ].map((h) => (
-                  <th key={h} scope="col" className="px-3 py-2 font-semibold whitespace-nowrap">
+                  <th
+                    key={h}
+                    scope="col"
+                    className={cn("px-3 py-2 font-semibold whitespace-nowrap", h === "Name" && "sticky left-0 z-10 bg-surface-muted shadow-[inset_-1px_0_0_var(--border)]")}
+                  >
                     {h}
                   </th>
                 ))}
@@ -204,8 +214,13 @@ export function DirectoryTable({ page, query, sample }: { page: DirectoryPage; q
             <tbody className="divide-y divide-border">
               {page.rows.map((row) => (
                 <tr key={row.id} className="align-top whitespace-nowrap">
+                  {/* The name stays put while the table scrolls sideways, so a phone always shows whose row it is. */}
+                  <th scope="row" className="sticky left-0 z-10 bg-surface px-3 py-2 text-left font-semibold shadow-[inset_-1px_0_0_var(--border)]">
+                    <Link href={employeeHref(row.id)} className="text-foreground underline decoration-1 underline-offset-[3px] hover:text-primary">
+                      {employeeName(row)}
+                    </Link>
+                  </th>
                   <td className="px-3 py-2 font-mono text-[11.5px] text-muted-foreground">{row.externalEmployeeId}</td>
-                  <td className="px-3 py-2 font-semibold text-foreground">{employeeName(row)}</td>
                   <td className="px-3 py-2">
                     {row.emailAddress ?? <Badge tone="failed" size="sm">missing</Badge>}
                   </td>
@@ -214,6 +229,9 @@ export function DirectoryTable({ page, query, sample }: { page: DirectoryPage; q
                       <StatusDot />
                       {row.employmentStatus}
                     </Badge>
+                    {scheduledDeparture(row, today) ? (
+                      <span className="mt-0.5 block text-[11px] text-muted-foreground">leaving {day(row.terminationDate)}</span>
+                    ) : null}
                   </td>
                   <td className="px-3 py-2">{row.positionName ?? "—"}</td>
                   <td className="px-3 py-2 font-mono text-[11.5px] text-muted-foreground">{row.positionId ?? "—"}</td>

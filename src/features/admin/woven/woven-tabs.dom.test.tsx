@@ -39,8 +39,8 @@ describe("Employee Directory", () => {
     renderView(sampleProps(data()));
     const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
     expect(headers).toEqual([
-      "Woven ID",
       "Name",
+      "Woven ID",
       "Work email",
       "Status",
       "Position",
@@ -58,7 +58,7 @@ describe("Employee Directory", () => {
     expect(screen.getAllByRole("row")).toHaveLength(SAMPLE.directory.length + 1);
   });
 
-  it("offers the nine filters as links that toggle, with counts", () => {
+  it("offers the ten filters as links that toggle, with counts", () => {
     renderView(sampleProps(data({ filter: "active" })), { filter: "active" });
     const filters = screen.getByRole("list", { name: "Filters" });
     const links = within(filters).getAllByRole("link");
@@ -72,6 +72,7 @@ describe("Employee Directory", () => {
       "Missing email",
       "Unmapped position",
       "Unmapped location",
+      "Scheduled departure",
     ]);
     const active = links[0];
     expect(active.getAttribute("aria-pressed")).toBe("true");
