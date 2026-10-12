@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { employeeWebhookTriggers, parseEnums, statusResolver, terminationTypeLabels, webhookTriggerVocabulary } from "./enums";
+import { employeeWebhookTriggers, parseEnums, statusKind, statusResolver, terminationTypeLabels, webhookTriggerVocabulary } from "./enums";
 import { FAKE_ENUMS } from "./test-support";
 
 describe("parseEnums", () => {
@@ -66,5 +66,30 @@ describe("labels and webhook vocabulary", () => {
       { EnumerationName: "CompanyWebhookNotificationTrigger", PropertyName: "TeamMemberHired", PropertyValue: 72 },
     ]);
     expect(employeeWebhookTriggers(entries)).toEqual(["Employee Terminated", "TeamMemberHired"]);
+  });
+});
+
+describe("statusKind — Woven's real EmployeeStatus vocabulary (Active=1, Terminated=2, Vendor=10, ActiveHidden=100)", () => {
+  const real = statusResolver(
+    parseEnums([
+      { EnumerationName: "EmployeeStatus", PropertyName: "Active", PropertyDisplayName: "Active", PropertyValue: 1 },
+      { EnumerationName: "EmployeeStatus", PropertyName: "Terminated", PropertyDisplayName: "Terminated", PropertyValue: 2 },
+      { EnumerationName: "EmployeeStatus", PropertyName: "Vendor", PropertyDisplayName: "Vendor", PropertyValue: 10 },
+      { EnumerationName: "EmployeeStatus", PropertyName: "ActiveHidden", PropertyDisplayName: "Active Hidden", PropertyValue: 100 },
+    ]),
+  );
+
+  it("names each status for reporting", () => {
+    expect(statusKind(real, 1)).toBe("active");
+    expect(statusKind(real, 2)).toBe("terminated");
+    expect(statusKind(real, 10)).toBe("vendor");
+    expect(statusKind(real, 100)).toBe("active_hidden");
+    expect(statusKind(real, 7)).toBe("unknown");
+    expect(statusKind(real, null)).toBe("unknown");
+  });
+
+  it("ActiveHidden and Vendor stay unknown to every decision: never active, never terminated", () => {
+    expect(real.resolve(100)).toBe("unknown");
+    expect(real.resolve(10)).toBe("unknown");
   });
 });

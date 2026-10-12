@@ -53,6 +53,21 @@ Legacy alternative: `SUPABASE_SERVICE_ROLE_KEY` is read only when
 `ASK_BUBBLES_SITE_URL` is read only by `scripts/bootstrap-admin.mjs`, run
 from a terminal — it is not a Vercel variable.
 
+
+### Google Reviews (all optional; read-only against Google)
+
+| Variable | Purpose | Visibility |
+|---|---|---|
+| `GOOGLE_OAUTH_CLIENT_ID` | OAuth client of the Google Cloud project approved for the Business Profile APIs | public-safe, set as plain |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | The client's secret | **secret** (Sensitive) |
+| `GOOGLE_TOKEN_ENCRYPTION_KEY` | 32 random bytes, base64; seals the stored refresh token (AES-256-GCM) | **secret** (Sensitive) |
+| `GOOGLE_OAUTH_REDIRECT_URI` | Optional; defaults to `NEXT_PUBLIC_SITE_URL` + `/api/admin/google-reviews/callback` | public |
+| `GOOGLE_REVIEWS_SYNC_ENABLED` | Master switch; off means nothing reaches Google | flag |
+| `GOOGLE_REVIEWS_WRITES_ENABLED` | A sync may save; off means dry runs only | flag |
+| `GOOGLE_REVIEWS_SCHEDULE_ENABLED` | The 6-hourly cron (`/api/google-reviews/cron`, needs `CRON_SECRET`) may run | flag |
+
+Full runbook: `docs/google-reviews.md`.
+
 ## Supabase Auth settings (not env vars, but required for login)
 
 In Supabase → Authentication → URL Configuration for `dyurgwieyltnhphihwwj`:

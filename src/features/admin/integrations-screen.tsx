@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { BookOpen, Info, Settings2, Users } from "lucide-react";
+import { BookOpen, Info, Settings2, Star, Users } from "lucide-react";
 
 import { Badge, StatusDot } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,6 +70,18 @@ export function IntegrationsScreen() {
           Open the Woven Knowledge Sync screen
         </Link>{" "}
         to set it up or check on it.
+      </Notice>
+
+      <Notice tone="accent" icon={<Star />} className="mb-6">
+        <span className="font-semibold">Google Reviews</span> reads reviews for Buff City Soap&apos;s seven
+        approved Business Profiles, read-only.{" "}
+        <Link
+          href="/admin/integrations/google-reviews"
+          className="font-semibold underline underline-offset-4"
+        >
+          Open the Google Reviews screen
+        </Link>{" "}
+        to connect Google and see reviews by store.
       </Notice>
 
       <SectionHeader
