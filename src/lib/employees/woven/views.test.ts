@@ -4,15 +4,20 @@ import { WOVEN_SAMPLE_DATASET } from "@/data/demo/woven";
 import type { AccessPreviewRow, DirectoryRow } from "./view-types";
 import {
   accessDrift,
+  centralToday,
   changeLabel,
   domainEligible,
+  employeeDetailFrom,
   evaluateEligibility,
   mappingSummary,
   matchesFilter,
   parseChangeQuery,
   parseDirectoryQuery,
+  parseEmployeeRowId,
   queryChanges,
   queryDirectory,
+  scheduledDeparture,
+  terminationDatePassedWhileActive,
 } from "./views";
 
 /**
@@ -295,5 +300,78 @@ describe("the sample set is honest", () => {
     expect(all).not.toMatch(/borrow/i);
     expect(WOVEN_SAMPLE_DATASET.label).toMatch(/^Sample data/);
     expect(byName("Theo Vantongeren").temporaryOrExpiringLocations[0].expiresOn).toBe("2026-10-12");
+  });
+});
+
+describe("scheduled departures: information, never an action", () => {
+  const today = "2026-10-12";
+  const active = { ...rows.find((r) => r.employmentStatus === "active")!, terminationDate: null };
+
+  it("is an Active employee whose stated termination date is still to come", () => {
+    expect(scheduledDeparture({ ...active, terminationDate: "2026-10-20" }, today)).toBe(true);
+    expect(scheduledDeparture({ ...active, terminationDate: "2026-10-20T00:00:00" }, today)).toBe(true);
+  });
+
+  it("is not today's or a past date, not a terminated employee, and not an Active employee with no date", () => {
+    expect(scheduledDeparture({ ...active, terminationDate: "2026-10-12" }, today)).toBe(false);
+    expect(scheduledDeparture({ ...active, terminationDate: "2026-09-01" }, today)).toBe(false);
+    expect(scheduledDeparture({ ...active, employmentStatus: "terminated", terminationDate: "2026-10-20" }, today)).toBe(false);
+    expect(scheduledDeparture(active, today)).toBe(false);
+  });
+
+  it("names a passed date on an Active employee separately — Woven's Status still decides", () => {
+    expect(terminationDatePassedWhileActive({ ...active, terminationDate: "2026-09-01" }, today)).toBe(true);
+    expect(terminationDatePassedWhileActive({ ...active, terminationDate: "2026-10-20" }, today)).toBe(false);
+    expect(terminationDatePassedWhileActive({ ...active, employmentStatus: "terminated", terminationDate: "2026-09-01" }, today)).toBe(false);
+  });
+
+  it("is a directory filter with its own count, and the status counts do not move", () => {
+    const leaving = { ...active, id: "ROW-LEAVING", externalEmployeeId: "EMP-LEAVING", terminationDate: "2026-11-01" };
+    const set = [...rows, leaving];
+    expect(matchesFilter(leaving, "scheduled_departure", today)).toBe(true);
+    const page = queryDirectory(set, parseDirectoryQuery({ filter: "scheduled_departure" }), 50, today);
+    expect(page.rows.map((r) => r.id)).toEqual(["ROW-LEAVING"]);
+    expect(page.filterCounts.scheduled_departure).toBe(1);
+    expect(page.statusCounts.active).toBe(set.filter((r) => r.employmentStatus === "active").length);
+  });
+
+  it("reads today in Central time", () => {
+    /* 03:00 UTC on the 13th is still the 12th in Chicago. */
+    expect(centralToday(new Date("2026-10-13T03:00:00Z"))).toBe("2026-10-12");
+  });
+});
+
+describe("one employee's page", () => {
+  const changes = WOVEN_SAMPLE_DATASET.changes;
+  const withChanges = rows.find((r) => changes.some((c) => c.externalEmployeeId === r.externalEmployeeId))!;
+
+  it("is their row and only their changes, newest first", () => {
+    const detail = employeeDetailFrom(rows, changes, withChanges.id)!;
+    expect(detail.row).toBe(withChanges);
+    expect(detail.changes.length).toBeGreaterThan(0);
+    expect(detail.changes.every((c) => c.externalEmployeeId === withChanges.externalEmployeeId)).toBe(true);
+    const times = detail.changes.map((c) => c.detectedAt);
+    expect(times).toEqual([...times].sort().reverse());
+    expect(detail.changesTruncated).toBe(false);
+  });
+
+  it("says when the history was cut at the limit", () => {
+    const detail = employeeDetailFrom(rows, changes, withChanges.id, 1)!;
+    const all = changes.filter((c) => c.externalEmployeeId === withChanges.externalEmployeeId).length;
+    expect(detail.changes).toHaveLength(1);
+    expect(detail.changesTruncated).toBe(all > 1);
+  });
+
+  it("is null for an id nobody has", () => {
+    expect(employeeDetailFrom(rows, changes, "SAMPLE-EMP-ROW-9999")).toBeNull();
+  });
+
+  it("accepts a stored or sample id from the URL and nothing else", () => {
+    expect(parseEmployeeRowId("3f2b8c1e-5d4a-4b7e-9c2f-1a2b3c4d5e6f")).toBe("3f2b8c1e-5d4a-4b7e-9c2f-1a2b3c4d5e6f");
+    expect(parseEmployeeRowId("SAMPLE-EMP-ROW-1")).toBe("SAMPLE-EMP-ROW-1");
+    expect(parseEmployeeRowId("../etc")).toBeNull();
+    expect(parseEmployeeRowId("a b")).toBeNull();
+    expect(parseEmployeeRowId("%2e%2e")).toBeNull();
+    expect(parseEmployeeRowId("")).toBeNull();
   });
 });

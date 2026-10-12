@@ -67,7 +67,9 @@ export type DirectoryFilter =
   | "multiple_locations"
   | "missing_email"
   | "unmapped_position"
-  | "unmapped_location";
+  | "unmapped_location"
+  /* Woven says Active and states a termination date still to come. Information only: nothing acts on it. */
+  | "scheduled_departure";
 
 export const DIRECTORY_FILTERS: readonly { key: DirectoryFilter; label: string }[] = [
   { key: "active", label: "Active" },
@@ -79,6 +81,7 @@ export const DIRECTORY_FILTERS: readonly { key: DirectoryFilter; label: string }
   { key: "missing_email", label: "Missing email" },
   { key: "unmapped_position", label: "Unmapped position" },
   { key: "unmapped_location", label: "Unmapped location" },
+  { key: "scheduled_departure", label: "Scheduled departure" },
 ];
 
 export interface DirectoryQuery {
@@ -125,6 +128,17 @@ export interface ChangeQuery {
   kind: ChangeKind | null;
   review: ReviewStatus | null;
   page: number;
+}
+
+/**
+ * ONE EMPLOYEE'S PAGE: their directory row and their own change history,
+ * newest first. `changesTruncated` says the history was cut at the page's
+ * limit, so the screen never implies it shows everything when it does not.
+ */
+export interface EmployeeDetail {
+  row: DirectoryRow;
+  changes: ChangeRow[];
+  changesTruncated: boolean;
 }
 
 export interface ChangePage {

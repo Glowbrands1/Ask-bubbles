@@ -8,7 +8,7 @@ import { readWovenAccessMode, type WovenAccessMode } from "@/lib/employees/woven
 import { loadAccessPlan, type AccessPlan } from "@/lib/employees/woven/access/load";
 import { readWovenConfig } from "@/lib/employees/woven/config";
 import { validationAccessCodeConfigured } from "@/lib/employees/woven/validation-access";
-import { loadChangePage, loadDirectoryRows, loadRuns } from "@/lib/employees/woven/directory";
+import { loadChangePage, loadDirectoryRows, loadEmployeeDetail, loadRuns } from "@/lib/employees/woven/directory";
 import { listWovenLocations } from "@/lib/employees/woven/locations";
 import { listWovenPositions } from "@/lib/employees/woven/positions";
 import {
@@ -21,14 +21,17 @@ import type {
   AccessPreviewRow,
   ChangePage,
   DirectoryPage,
+  EmployeeDetail,
   LocationMappingRow,
   OverviewCounts,
   PositionMappingRow,
   RunRow,
 } from "@/lib/employees/woven/view-types";
 import {
+  employeeDetailFrom,
   parseChangeQuery,
   parseDirectoryQuery,
+  parseEmployeeRowId,
   queryChanges,
   queryDirectory,
 } from "@/lib/employees/woven/views";
@@ -234,6 +237,47 @@ export async function loadWovenView(view: WovenView, params: Params): Promise<Wo
       }
     })();
     return { ...common, content: { state: "ready", data } };
+  } catch (error) {
+    if (error instanceof WovenStatusError && error.reason === "missing") return { ...common, content: { state: "missing" } };
+    return { ...common, content: { state: "unavailable", code: error instanceof WovenStatusError ? error.code : null } };
+  }
+}
+
+/* ------------------------------------------------------ one employee -- */
+
+export type EmployeeState =
+  | { state: "ready"; detail: EmployeeDetail }
+  | { state: "not_found" }
+  | { state: "missing" }
+  | { state: "unavailable"; code: string | null }
+  | { state: "unconfigured" };
+
+export interface WovenEmployeeProps {
+  sampleLabel: string | null;
+  liveMode: boolean;
+  content: EmployeeState;
+}
+
+/**
+ * One employee's page. The same rules as the tabs: sample OR real, never
+ * both; a missing migration and a database that did not answer are told apart;
+ * an id that is not well-formed is "not found" without a query.
+ */
+export async function loadWovenEmployee(rawId: string): Promise<WovenEmployeeProps> {
+  const sample = await wovenSampleForThisDeployment();
+  const common = { sampleLabel: sample?.label ?? null, liveMode: !isDemoMode() };
+  const id = parseEmployeeRowId(rawId);
+
+  if (sample) {
+    const detail = id ? employeeDetailFrom(sample.directory, sample.changes, id) : null;
+    return { ...common, content: detail ? { state: "ready", detail } : { state: "not_found" } };
+  }
+  if (!supabaseReadiness().ready) return { ...common, content: { state: "unconfigured" } };
+  if (!id) return { ...common, content: { state: "not_found" } };
+
+  try {
+    const detail = await loadEmployeeDetail(id);
+    return { ...common, content: detail ? { state: "ready", detail } : { state: "not_found" } };
   } catch (error) {
     if (error instanceof WovenStatusError && error.reason === "missing") return { ...common, content: { state: "missing" } };
     return { ...common, content: { state: "unavailable", code: error instanceof WovenStatusError ? error.code : null } };
