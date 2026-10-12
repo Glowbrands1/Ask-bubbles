@@ -4,7 +4,7 @@ import { WovenClient } from "./client";
 import { readWovenConfig } from "./config";
 import { statusResolver, parseEnums } from "./enums";
 import { MemoryDirectoryStore } from "./memory-store";
-import { resolveStatusAcrossReads, terminatedStatusCodes } from "./status-evidence";
+import { hasPastTermination, hasScheduledDeparture, resolveStatusAcrossReads, terminatedStatusCodes } from "./status-evidence";
 import type { EmployeeWrite } from "./store";
 import { runWovenEmployeeSync, type SyncOutcome } from "./sync";
 import { createFakeWoven, FAKE_COMPANY_ID, FAKE_CREDENTIALS, FAKE_ENUMS, FAKE_STATUS, wovenDetails, wovenEmployee } from "./test-support";
@@ -286,3 +286,21 @@ describe("the sync: an explicit Terminated result wins for the same EmployeeID",
   });
 });
 
+
+describe("scheduled departures and past terminations never decide status", () => {
+  it("a future TerminationDate is a scheduled departure, not a past termination", () => {
+    const versions = [{ terminationDate: "2026-12-01" }];
+    expect(hasScheduledDeparture(versions, "2026-10-12")).toBe(true);
+    expect(hasPastTermination(versions, "2026-10-12")).toBe(false);
+  });
+
+  it("a past or empty TerminationDate is not a scheduled departure", () => {
+    expect(hasScheduledDeparture([{ terminationDate: "2026-01-01" }, { terminationDate: null }], "2026-10-12")).toBe(false);
+  });
+
+  it("REGRESSION: Active by Status with a past TerminationDate stays active — the date alone terminates no one", () => {
+    const resolved = resolveStatusAcrossReads([{ read: "current", status: "active", code: 1 }]);
+    expect(resolved.status).toBe("active");
+    expect(hasPastTermination([{ terminationDate: "2026-01-01" }], "2026-10-12")).toBe(true);
+  });
+});

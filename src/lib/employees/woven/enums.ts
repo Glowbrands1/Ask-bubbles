@@ -100,6 +100,30 @@ export function statusResolver(entries: readonly WovenEnumEntry[] | null): Statu
   };
 }
 
+/**
+ * WHAT A STATUS INTEGER IS CALLED, for reporting only.
+ *
+ * `resolve()` above answers the one question the sync acts on (active,
+ * terminated, or unknown). Woven has two more employee statuses that are real
+ * but must NOT be treated as active people: `ActiveHidden` (hidden from the
+ * directory) and `Vendor`. They stay `unknown` to every decision, and this
+ * names them so a count can say "16 hidden" instead of "16 unknown".
+ *
+ * Naming never grants anything: nothing is provisioned, invited, enabled or
+ * disabled from this value.
+ */
+export type StatusKind = "active" | "terminated" | "active_hidden" | "vendor" | "other" | "unknown";
+
+export function statusKind(statuses: Pick<StatusResolver, "labels" | "resolve">, code: number | null): StatusKind {
+  if (code === null) return "unknown";
+  const resolved = statuses.resolve(code);
+  if (resolved === "active" || resolved === "terminated") return resolved;
+  const label = (statuses.labels[code] ?? "").replace(/[\s_-]/g, "").toLowerCase();
+  if (label === "activehidden") return "active_hidden";
+  if (label === "vendor") return "vendor";
+  return label ? "other" : "unknown";
+}
+
 /** TerminationType integer → Woven's label, when the enumeration is present. */
 export function terminationTypeLabels(entries: readonly WovenEnumEntry[] | null): Record<number, string> {
   const out: Record<number, string> = {};

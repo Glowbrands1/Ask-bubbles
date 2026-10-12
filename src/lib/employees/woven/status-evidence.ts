@@ -76,6 +76,16 @@ export function hasPastTermination(versions: readonly { terminationDate: string 
 }
 
 /**
+ * A TerminationDate still in the future is a SCHEDULED DEPARTURE: information
+ * for a manager, never an action. The person is Active until Woven's own
+ * `Status` says otherwise, and nothing is disabled, scheduled or changed for
+ * the date.
+ */
+export function hasScheduledDeparture(versions: readonly { terminationDate: string | null }[], today: string): boolean {
+  return versions.some((v) => v.terminationDate !== null && v.terminationDate > today);
+}
+
+/**
  * THE STATUS ASK BUBBLES MAY ACT ON, from one directory row.
  *
  *   active      Woven's own Status, read in the latest stored run, is Active.
