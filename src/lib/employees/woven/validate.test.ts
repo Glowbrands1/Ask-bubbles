@@ -485,3 +485,40 @@ describe("a company chooser on sign-in", () => {
     }
   });
 });
+
+describe("company scope: every record's CompanyID, counted as the sync's guard reads it", () => {
+  it("passes when every employee, details body, details location and catalog location names the pinned company", async () => {
+    const { report } = await validate();
+    expect(report.companyScope.employee.pinned).toBeGreaterThan(0);
+    expect(report.companyScope.employee_detail.pinned).toBeGreaterThan(0);
+    expect(report.companyScope.employee_location.pinned).toBeGreaterThan(0);
+    expect(report.companyScope.location.pinned).toBe(2);
+    for (const counts of Object.values(report.companyScope)) expect(counts).toMatchObject({ other: 0, missing: 0 });
+    expect(report.findings.find((f) => f.area === "Company scope")?.verdict).toBe("pass");
+  });
+
+  it("fails, with counts only, when any record names another company or none", async () => {
+    const { employees, details } = estate();
+    employees[5] = { ...employees[5]!, CompanyID: OTHER_COMPANY_ID };
+    const noCompany = { ...employees[6]! };
+    delete noCompany.CompanyID;
+    employees[6] = noCompany;
+    const { report } = await validate({
+      employees,
+      details,
+      locations: [wovenLocation("WL-0", { number: "0306" }), { ...wovenLocation("WL-X"), CompanyID: OTHER_COMPANY_ID }],
+    });
+    /* Both list reads return the two active records. */
+    expect(report.companyScope.employee).toMatchObject({ other: 2, missing: 2 });
+    expect(report.companyScope.location).toMatchObject({ pinned: 1, other: 1, missing: 0 });
+    const finding = report.findings.find((f) => f.area === "Company scope")!;
+    expect(finding.verdict).toBe("fail");
+    expect(finding.message).toContain("company_scope_mismatch");
+    expect(report.ok).toBe(false);
+    /* The new section and the findings: counts and kinds only. (The token section lists the login's company options by design.) */
+    const text = JSON.stringify({ scope: report.companyScope, findings: report.findings }).toLowerCase();
+    expect(text).not.toContain(OTHER_COMPANY_ID);
+    expect(text).not.toContain("quinlan5");
+    expect(text).not.toContain("a5");
+  });
+});

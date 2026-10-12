@@ -19,6 +19,8 @@ import {
   webhookTriggerVocabulary,
   type WovenEnumEntry,
 } from "./enums";
+import { readRecordCompanyId, type CompanyScopedKind } from "./company-scope";
+import { PINNED_COMPANY_ID } from "./config";
 import { normalizeEmployee, readAffiliations, readCatalogLocation, readId } from "./normalize";
 import { describeTokenDiagnostics, type TokenDiagnostics } from "./token-diagnostics";
 
@@ -164,6 +166,9 @@ export interface LocationReview {
   locationsWithoutWovenLocation: { number: string; name: string }[];
 }
 
+/** Per record kind: how many named the pinned company, another company, or none. Counts only. */
+export type CompanyScopeReport = Record<CompanyScopedKind, { pinned: number; other: number; missing: number }>;
+
 export interface ValidationReport {
   ok: boolean;
   checkedAt: string;
@@ -208,6 +213,12 @@ export interface ValidationReport {
    * codes, statuses and key names. Empty means none was seen.
    */
   specDiscrepancies: string[];
+  /**
+   * The CompanyID on every record read: what the sync's per-record company
+   * guard (`company-scope.ts`) would decide. Any `other` or `missing` means a
+   * sync would be refused.
+   */
+  companyScope: CompanyScopeReport;
   findings: Finding[];
 }
 
@@ -260,6 +271,17 @@ function statusCodes(records: unknown[]): Record<string, number> {
 function recordId(record: unknown): string | null {
   if (!isRecord(record)) return null;
   return readId(record[FIELD.employeeId[0]]);
+}
+
+/** Tallies one record's CompanyID against the pinned company, as the sync's guard reads it. */
+function tallyCompany(report: CompanyScopeReport, record: unknown, kind: CompanyScopedKind) {
+  if (!isRecord(record)) return;
+  const keys = kind === "employee" || kind === "employee_detail" ? FIELD.companyId : LOCATION_FIELD.companyId;
+  const companyId = readRecordCompanyId(record, keys);
+  const bucket = report[kind];
+  if (companyId === null) bucket.missing += 1;
+  else if (companyId === PINNED_COMPANY_ID) bucket.pinned += 1;
+  else bucket.other += 1;
 }
 
 function sensitiveKeys(keys: Iterable<string>): string[] {
@@ -400,6 +422,12 @@ export async function runWovenLiveValidation(options: ValidationOptions): Promis
     locationReview: null,
     sensitiveKeysReturned: [],
     specDiscrepancies: [],
+    companyScope: {
+      employee: { pinned: 0, other: 0, missing: 0 },
+      employee_detail: { pinned: 0, other: 0, missing: 0 },
+      employee_location: { pinned: 0, other: 0, missing: 0 },
+      location: { pinned: 0, other: 0, missing: 0 },
+    },
     findings,
   };
   const spec = (message: string) => report.specDiscrepancies.push(message);
@@ -534,6 +562,7 @@ export async function runWovenLiveValidation(options: ValidationOptions): Promis
     keys.forEach((k) => allKeys.add(k));
     idsByPass.set(pass.label, new Set(result.records.map(recordId).filter((id): id is string => id !== null)));
     records.push(...result.records);
+    for (const record of result.records) tallyCompany(report.companyScope, record, "employee");
 
     report.passes.push({
       label: pass.label,
@@ -671,6 +700,7 @@ export async function runWovenLiveValidation(options: ValidationOptions): Promis
         continue;
       }
       d.sampled += 1;
+      tallyCompany(report.companyScope, body, "employee_detail");
       const top = isRecord(body) ? body : {};
       Object.keys(top).forEach((k) => detailKeys.add(k));
       const locations = Array.isArray(top[FIELD.locations[0]]) ? (top[FIELD.locations[0]] as unknown[]) : null;
@@ -686,6 +716,7 @@ export async function runWovenLiveValidation(options: ValidationOptions): Promis
         if (distinct.size > 1) d.withMoreThanOneLocation += 1;
         for (const entry of locations) {
           if (!isRecord(entry)) continue;
+          tallyCompany(report.companyScope, entry, "employee_location");
           Object.keys(entry).forEach((k) => entryKeys.add(k));
           if (has(entry, LOCATION_FIELD.expiresOn) && !String(entry[LOCATION_FIELD.expiresOn[0]]).startsWith("0001-01-01")) d.entriesWithExpiresOn += 1;
         }
@@ -741,6 +772,7 @@ export async function runWovenLiveValidation(options: ValidationOptions): Promis
   try {
     const body = await client.listLocations();
     const list = Array.isArray(body) ? body : [];
+    for (const entry of list) tallyCompany(report.companyScope, entry, "location");
     const parsed = list.map(readCatalogLocation).filter((l) => l !== null);
     const keys = keysOf(list);
     keys.forEach((k) => allKeys.add(k));
@@ -789,7 +821,25 @@ export async function runWovenLiveValidation(options: ValidationOptions): Promis
     if (SPEC_ERROR_CODES.has(code)) spec(`GET /locations did not answer as the spec describes (${errorLabel(failure)}).`);
   }
 
-  /* ---- 7. what came back that should not have ---- */
+  /* ---- 7. every record's company, as the sync's guard would read it ---- */
+  const scope = Object.entries(report.companyScope) as [CompanyScopedKind, CompanyScopeReport[CompanyScopedKind]][];
+  const outside = scope.filter(([, c]) => c.other > 0 || c.missing > 0);
+  const tally = ([kind, c]: (typeof scope)[number]) => `${kind}: ${c.pinned} Midwest Soap Makers, ${c.other} another company, ${c.missing} no CompanyID`;
+  findings.push(
+    outside.length > 0
+      ? {
+          verdict: "fail",
+          area: "Company scope",
+          message: `Not every record read names the pinned company (${outside.map(tally).join("; ")}). A sync would be refused (company_scope_mismatch / company_scope_missing) and save nothing. Ask Woven why this user's reads reach outside Midwest Soap Makers, or omit CompanyID, before any sync.`,
+        }
+      : {
+          verdict: "pass",
+          area: "Company scope",
+          message: `Every record read names the pinned company (${scope.map(tally).join("; ")}).`,
+        },
+  );
+
+  /* ---- 8. what came back that should not have ---- */
   report.sensitiveKeysReturned = sensitiveKeys(allKeys);
   findings.push(
     report.sensitiveKeysReturned.length > 0

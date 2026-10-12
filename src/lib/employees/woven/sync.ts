@@ -1,6 +1,7 @@
 import "server-only";
 
 import { WovenApiError, WovenClient } from "./client";
+import { assertDetailsCompany, assertRecordCompany, CompanyScopeError } from "./company-scope";
 import {
   NEW_HIRE_WINDOW_DAYS,
   readWovenConfig,
@@ -55,6 +56,12 @@ import {
  *      employee details for anyone whose location list is not settled.
  *   7. Normalise, flag data-quality issues, and diff against the directory.
  *   8. Save everything in ONE database transaction.
+ *
+ * EVERY RECORD IS PROVED TO BE MIDWEST SOAP MAKERS AS IT IS READ (steps 4
+ * and 6): each employee, employee-details body, details location and catalog
+ * location must carry the pinned CompanyID (`company-scope.ts`). One foreign
+ * or company-less record refuses the whole run before step 8, so nothing of
+ * it is saved — not even from reads whose other failures are tolerated.
  *
  * WHAT A FAILED OR REFUSED RUN LEAVES BEHIND: its own run row, marked failed
  * or rejected with a code, and NOTHING ELSE.
@@ -406,6 +413,7 @@ export async function runWovenEmployeeSync(options: SyncOptions): Promise<SyncOu
       rejectedByPass.push(rejected);
 
       for (const record of result.records) {
+        assertRecordCompany(record, "employee");
         const normalized = normalizeEmployee(record, { statuses, today });
         if (!normalized.ok) {
           bump(rejected, `record_${normalized.reason}`);
@@ -466,6 +474,8 @@ export async function runWovenEmployeeSync(options: SyncOptions): Promise<SyncOu
         stats.pagesFetched += result.pages;
         bump(stats.issueCounts, "terminated_status_read_records", result.records.length);
         for (const record of result.records) {
+          /* Former staff are still records Woven returned for this token: proved like any other. */
+          assertRecordCompany(record, "employee");
           const normalized = normalizeEmployee(record, { statuses, today });
           if (!normalized.ok) continue;
           const id = normalized.employee.externalEmployeeId;
@@ -490,6 +500,7 @@ export async function runWovenEmployeeSync(options: SyncOptions): Promise<SyncOu
           bump(stats.issueCounts, `terminated_status_read_status_${normalized.employee.employmentStatus}`);
         }
       } catch (error) {
+        if (error instanceof CompanyScopeError) throw error;
         if (error instanceof WovenApiError && SIGN_IN_FAILURES.has(error.code)) throw error;
         const failure = error instanceof WovenApiError ? error.code : "unexpected";
         stats.issueCounts[`terminated_status_read_failed_${failure}`] = 1;
@@ -558,10 +569,12 @@ export async function runWovenEmployeeSync(options: SyncOptions): Promise<SyncOu
     try {
       const body = await client.listLocations();
       for (const entry of Array.isArray(body) ? body : []) {
+        assertRecordCompany(entry, "location");
         const location = readCatalogLocation(entry);
         if (location) catalog.set(location.wovenLocationId, location);
       }
     } catch (error) {
+      if (error instanceof CompanyScopeError) throw error;
       if (error instanceof WovenApiError && SIGN_IN_FAILURES.has(error.code)) throw error;
       stats.issueCounts.locations_catalog_unavailable = 1;
     }
@@ -591,6 +604,7 @@ export async function runWovenEmployeeSync(options: SyncOptions): Promise<SyncOu
       detailOutcomes.attempted += 1;
       try {
         const details = await client.getEmployeeDetails(candidate.externalEmployeeId);
+        assertDetailsCompany(details);
         const detailsCode = readStatusCode(details);
         if (detailsCode !== null) {
           statusFromDetails.set(candidate.externalEmployeeId, { status: statuses.resolve(detailsCode), code: detailsCode });
@@ -605,6 +619,8 @@ export async function runWovenEmployeeSync(options: SyncOptions): Promise<SyncOu
           detailOutcomes.noUsableLocationList += 1;
         }
       } catch (error) {
+        /* A details body from another company, or naming none, is never an enrichment failure. */
+        if (error instanceof CompanyScopeError) throw error;
         /*
          * DETAILS ARE AN ENRICHMENT, NOT THE READ. A details failure keeps the
          * affected employees' locations as they are on file and stops further
@@ -859,6 +875,8 @@ export async function runWovenEmployeeSync(options: SyncOptions): Promise<SyncOu
     stats.requestsMade = client.requestsMade;
     const committed = await store.commitRun({
       runId: runId!,
+      /* Every record above was proved to carry exactly this company; the database checks it again. */
+      wovenCompanyId: PINNED_COMPANY_ID,
       employees: writes,
       changes,
       locations: [...locations.values()],
@@ -906,6 +924,10 @@ export async function runWovenEmployeeSync(options: SyncOptions): Promise<SyncOu
       code = error.code;
       reason = error.message;
       summary = error.summary;
+    } else if (error instanceof CompanyScopeError) {
+      status = "rejected";
+      code = error.code;
+      reason = error.message;
     } else if (error instanceof WovenApiError) {
       code = `woven_${error.code}`;
       reason = error.message;

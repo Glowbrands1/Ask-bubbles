@@ -1,3 +1,4 @@
+import { PINNED_COMPANY_ID } from "./config";
 import type {
   AbandonInput,
   ClaimResult,
@@ -21,8 +22,9 @@ import type {
  * It mirrors what `employee_sync_commit_run` and its siblings do in SQL, so the
  * sync's decisions — idempotency, never deleting, the miss count, the lock,
  * affiliation reconciliation — can be exercised end to end without a
- * database. It is NOT evidence that the SQL behaves the same way; the PGlite
- * verifier (`scripts/verify-woven-migration.mjs`) checks the real functions.
+ * database. It is NOT evidence that the SQL behaves the same way; the SQL
+ * checks in `supabase/tests/` (`npm run verify:migrations`) run the real
+ * functions against Postgres.
  */
 
 export interface MemoryRun {
@@ -98,6 +100,7 @@ export class MemoryDirectoryStore implements EmployeeDirectoryStore {
       throw new Error("simulated connection loss");
     }
     /* All-or-nothing, like the SQL transaction: validate before touching anything. */
+    if (input.wovenCompanyId?.toLowerCase() !== PINNED_COMPANY_ID) throw new Error("company_scope_violation");
     const incoming = new Set(input.employees.map((e) => e.externalEmployeeId));
     if (incoming.size !== input.employees.length) throw new Error("duplicate_employee_in_payload");
     for (const change of input.changes) {
