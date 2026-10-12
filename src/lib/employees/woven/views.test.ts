@@ -18,6 +18,7 @@ import {
   queryDirectory,
   scheduledDeparture,
   terminationDatePassedWhileActive,
+  wovenStatusName,
 } from "./views";
 
 /**
@@ -373,5 +374,17 @@ describe("one employee's page", () => {
     expect(parseEmployeeRowId("a b")).toBeNull();
     expect(parseEmployeeRowId("%2e%2e")).toBeNull();
     expect(parseEmployeeRowId("")).toBeNull();
+  });
+});
+
+describe("Woven's name for an unknown status", () => {
+  const unknown = { ...rows[0]!, employmentStatus: "unknown" as const, dataIssues: ["unknown_status"] };
+
+  it("is ActiveHidden or Vendor when the sync named it, for an unknown row only", () => {
+    expect(wovenStatusName({ ...unknown, dataIssues: ["unknown_status", "status_active_hidden"] })).toBe("ActiveHidden");
+    expect(wovenStatusName({ ...unknown, dataIssues: ["unknown_status", "status_vendor"] })).toBe("Vendor");
+    expect(wovenStatusName(unknown)).toBeNull();
+    /* A name never overrides Woven's resolved status. */
+    expect(wovenStatusName({ ...unknown, employmentStatus: "active", dataIssues: ["status_active_hidden"] })).toBeNull();
   });
 });

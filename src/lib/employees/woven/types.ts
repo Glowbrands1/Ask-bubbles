@@ -63,6 +63,13 @@ export type EmployeeIssue =
   | "unmapped_location"
   | "unmapped_position"
   | "unknown_status"
+  /*
+   * Woven names the unknown status ActiveHidden or Vendor. Reporting only:
+   * the employee stays `unknown` to every decision (never active, never
+   * provisioned), and `unknown_status` is still set alongside.
+   */
+  | "status_active_hidden"
+  | "status_vendor"
   | "status_termination_conflict"
   | "vendor_employee"
   | "affiliations_not_verified"
@@ -91,6 +98,8 @@ export const EMPLOYEE_ISSUES = [
   "unmapped_location",
   "unmapped_position",
   "unknown_status",
+  "status_active_hidden",
+  "status_vendor",
   "status_termination_conflict",
   "vendor_employee",
   "affiliations_not_verified",

@@ -11,6 +11,7 @@ import {
   employeeName,
   scheduledDeparture,
   terminationDatePassedWhileActive,
+  wovenStatusName,
 } from "@/lib/employees/woven/views";
 import { ChangeTable } from "./change-feed";
 import { Locations, MappingBadge, STATUS_TONE } from "./directory-table";
@@ -53,6 +54,7 @@ export function EmployeeDetailView({
   const { row, changes, changesTruncated } = detail;
   const leaving = scheduledDeparture(row, today);
   const datePassed = terminationDatePassedWhileActive(row, today);
+  const statusName = wovenStatusName(row);
 
   return (
     <article aria-labelledby="employee-name" className="flex flex-col gap-8">
@@ -97,7 +99,14 @@ export function EmployeeDetailView({
             {row.positionName ?? none}
             {row.positionId ? <span className="block font-mono text-[11px] text-muted-foreground">{row.positionId}</span> : null}
           </Field>
-          <Field term="Woven status">{row.employmentStatus}</Field>
+          <Field term="Woven status">
+            {row.employmentStatus}
+            {statusName ? (
+              <span className="block text-[11px] text-muted-foreground">
+                Woven calls it {statusName}. Not treated as active: no account is created or changed from it.
+              </span>
+            ) : null}
+          </Field>
           <Field term="Hire date">{day(row.hireDate)}</Field>
           <Field term="Termination date">{day(row.terminationDate)}</Field>
           <Field term="Last change">

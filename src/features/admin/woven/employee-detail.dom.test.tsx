@@ -92,6 +92,12 @@ describe("Employee page", () => {
     expect(screen.queryByText(/Scheduled departure/)).toBeNull();
   });
 
+  it("names an ActiveHidden employee and says it is not treated as active", () => {
+    const hidden = { ...withChanges, employmentStatus: "unknown" as const, dataIssues: ["unknown_status", "status_active_hidden"] };
+    const { container } = render(<EmployeeDetailView detail={{ row: hidden, changes: [], changesTruncated: false }} actionsDisabled />);
+    expect(container.textContent).toContain("Woven calls it ActiveHidden. Not treated as active");
+  });
+
   it("says plainly when the history was cut at the limit", () => {
     render(<EmployeeDetailView detail={{ ...detail, changes: detail.changes.slice(0, 1), changesTruncated: true }} actionsDisabled />);
     expect(screen.getByText("The 1 most recent changes. Older ones are in the Change Feed.")).toBeTruthy();
