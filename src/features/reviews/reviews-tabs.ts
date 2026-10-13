@@ -1,8 +1,7 @@
 export const REVIEW_TABS = [
   { key: "overview", label: "Overview" },
-  { key: "leaderboard", label: "Salon Leaderboard" },
   { key: "reviews", label: "Google Reviews" },
-  { key: "needs", label: "Needs Response" },
+  { key: "leaderboard", label: "Salon Leaderboard" },
 ] as const;
 
 export type ReviewsTab = (typeof REVIEW_TABS)[number]["key"];

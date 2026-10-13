@@ -157,7 +157,9 @@ export function DisabledPill({
       aria-disabled="true"
       className="inline-flex cursor-not-allowed items-center gap-2 rounded-[22px] border border-border-strong bg-surface px-3.5 py-[7px] text-[11.5px] opacity-60 shadow-soft"
     >
-      <span className="eyebrow text-subtle-foreground">{label}</span>
+      {label ? (
+        <span className="eyebrow text-subtle-foreground">{label}</span>
+      ) : null}
       <span className="font-bold whitespace-nowrap">{value}</span>
     </span>
   );
@@ -225,7 +227,11 @@ export function DisabledChips({
   );
 }
 
-/** A table head whose body is the single not-connected row. */
+/**
+ * A table head with the not-connected message BELOW it, outside the scrolling
+ * region. Inside the table the message sat in a row as wide as the columns and
+ * was clipped off-screen on a phone.
+ */
 export function TableShell({
   label,
   columns,
@@ -236,35 +242,87 @@ export function TableShell({
   status: ReviewsIntegrationStatus;
 }) {
   return (
-    <div className="scroll-slim relative w-full min-w-0 overflow-x-auto">
-      <table
-        aria-label={label}
-        className="w-full min-w-[44rem] border-collapse text-left"
-      >
-        <thead>
-          <tr className="border-b border-border bg-surface-muted">
-            {columns.map((column) => (
-              <th
-                key={column.label + (column.align ?? "")}
-                scope="col"
-                className={cn(
-                  "px-4 py-2.5 text-[8px] font-black tracking-[0.14em] whitespace-nowrap text-subtle-foreground uppercase",
-                  column.align === "right" && "text-right",
-                )}
-              >
-                {column.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td colSpan={columns.length} className="px-4">
-              <DataArea status={status} />
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <>
+      <div className="scroll-slim relative w-full min-w-0 overflow-x-auto">
+        <table
+          aria-label={label}
+          className="w-full min-w-[44rem] border-collapse text-left"
+        >
+          <thead>
+            <tr className="border-b border-border bg-surface-muted">
+              {columns.map((column) => (
+                <th
+                  key={column.label + (column.align ?? "")}
+                  scope="col"
+                  className={cn(
+                    "px-4 py-2.5 text-[8px] font-black tracking-[0.14em] whitespace-nowrap text-subtle-foreground uppercase",
+                    column.align === "right" && "text-right",
+                  )}
+                >
+                  {column.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+        </table>
+      </div>
+      <DataArea status={status} />
+    </>
+  );
+}
+
+/**
+ * THE FILTER STRIP UNDER THE TABS, as on the connected page: a "Filters" label
+ * and the pills that narrow what is read. Drawn and disabled — see the note on
+ * the disabled controls above.
+ */
+export function FilterBar({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-b border-border-hairline px-5 py-3 sm:px-6">
+      <span className="eyebrow mr-1 text-subtle-foreground">Filters</span>
+      {children}
     </div>
+  );
+}
+
+/** The column heads of the ranking, drawn above its not-connected message. */
+export function RankingHead() {
+  return (
+    <div
+      aria-hidden
+      className="hidden grid-cols-[3.5rem_minmax(0,1.6fr)_6rem_7rem_minmax(0,2fr)_8rem] gap-3 border-b border-border bg-surface-muted px-4 py-2.5 text-[8px] font-black tracking-[0.14em] text-subtle-foreground uppercase lg:grid"
+    >
+      <span>Rank</span>
+      <span>Salon</span>
+      <span className="text-right">This week</span>
+      <span className="text-right">Month to date</span>
+      <span>Progress toward target</span>
+      <span>Status</span>
+    </div>
+  );
+}
+
+/** A footnote strip at the foot of a table or ranking. */
+export function Footnote({ children }: { children: ReactNode }) {
+  return (
+    <p className="border-t border-border-hairline px-4 py-3 text-[11px] leading-snug text-muted-foreground">
+      {children}
+    </p>
+  );
+}
+
+/** A legend entry: a swatch in the sister page's colours, and its words. */
+export function LegendItem({
+  swatch,
+  children,
+}: {
+  swatch: string;
+  children: ReactNode;
+}) {
+  return (
+    <li className="flex items-center gap-1.5">
+      <span aria-hidden className={cn("h-2 w-3.5 rounded-[2px]", swatch)} />
+      {children}
+    </li>
   );
 }

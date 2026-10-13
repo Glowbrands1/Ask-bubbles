@@ -14,9 +14,13 @@ import {
   DisabledPill,
   DisabledSearch,
   DisabledSegments,
+  FilterBar,
+  Footnote,
   GoalTile,
+  LegendItem,
   MeasureTile,
   Panel,
+  RankingHead,
   TableShell,
   WindowTag,
 } from "./reviews-parts";
@@ -29,7 +33,7 @@ import type { ReviewsTab } from "./reviews-tabs";
  * ============================================================================
  *
  * The sister app's Google Reviews goal-dashboard layout, UI only: header band,
- * four views, the goal tiles, the salon goal-progress table, the district table, the
+ * three views, the goal tiles, the salon goal-progress table, the district table, the
  * leaderboard and the review lists.
  *
  * IT CARRIES NO REVIEW DATA OF ANY KIND — no counts, names, districts, ranks,
@@ -64,11 +68,24 @@ export function ReviewsDashboard({
 
       <ReviewsTabNav current={tab} />
 
+      <FilterBar>
+        <DisabledPill label="Location" value="All locations" />
+        {tab !== "leaderboard" ? (
+          <DisabledPill label="Rating" value="All ratings" />
+        ) : null}
+        {tab === "reviews" ? (
+          <>
+            <DisabledPill label="Response" value="All" />
+            <DisabledSearch label="Name, comment or location" />
+          </>
+        ) : null}
+        <DisabledPill label="" value="More filters" />
+      </FilterBar>
+
       <div className="flex min-w-0 flex-col gap-5 px-5 py-5 pb-7 sm:px-6">
         {tab === "overview" ? <OverviewView status={status} /> : null}
-        {tab === "leaderboard" ? <LeaderboardView status={status} /> : null}
         {tab === "reviews" ? <RecordsView status={status} /> : null}
-        {tab === "needs" ? <NeedsResponseView status={status} /> : null}
+        {tab === "leaderboard" ? <LeaderboardView status={status} /> : null}
       </div>
     </div>
   );
@@ -136,6 +153,11 @@ function OverviewView({ status }: { status: ReviewsIntegrationStatus }) {
             { label: "Status" },
           ]}
         />
+        <Footnote>
+          Qualifying means a 3-, 4- or 5-star Google review counted after the
+          salon&rsquo;s baseline. 1–2 star reviews and imported history never
+          count.
+        </Footnote>
       </Panel>
 
       <Panel title="District goal progress">
@@ -152,7 +174,17 @@ function OverviewView({ status }: { status: ReviewsIntegrationStatus }) {
         />
       </Panel>
 
-      <Panel title="Google Reviews over time">
+      <Panel
+        title="Google Reviews over time"
+        controls={
+          <div className="ml-auto">
+            <DisabledSegments
+              label="Chart period"
+              options={["Weekly", "Monthly"]}
+            />
+          </div>
+        }
+      >
         <DataArea status={status} />
       </Panel>
 
@@ -187,16 +219,35 @@ function LeaderboardView({ status }: { status: ReviewsIntegrationStatus }) {
     <>
       <SectionRule label="Salon leaderboard" className="mt-1" />
       <p className={SECTION_NOTE}>
-        Salons ranked by qualifying reviews this month against their goal;
+        Ranked by qualifying reviews this month against each salon&rsquo;s goal;
         salons on the same count share a rank.
       </p>
 
-      <Panel title="Goal progress this month">
-        <DataArea status={status} />
+      <Panel>
+        <div className="px-4 py-4">
+          <p className="eyebrow">Month to date</p>
+          <DataArea status={status} size="value" className="mt-2" />
+          <span
+            aria-hidden
+            className="mt-2.5 block h-2 rounded-[4px] bg-surface-muted"
+          />
+        </div>
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border-hairline px-4 py-3 text-[11.5px] text-muted-foreground">
+          <LegendItem swatch="bg-measure-data">
+            Month to date vs target
+          </LegendItem>
+          <LegendItem swatch="bg-status-outperforming">Goal met</LegendItem>
+          <li className="flex items-center gap-1.5">
+            <span
+              aria-hidden
+              className="h-3 w-0 border-l-2 border-dashed border-measure-goal"
+            />
+            Pace mark
+          </li>
+        </ul>
       </Panel>
 
       <Panel
-        title="Ranking"
         controls={
           <>
             <DisabledSegments
@@ -204,7 +255,7 @@ function LeaderboardView({ status }: { status: ReviewsIntegrationStatus }) {
               options={["Rank by month to date", "Rank by this week"]}
             />
             <DisabledPill label="District" value="All districts" />
-            <DisabledSearch label="Search salons" />
+            <DisabledSearch label="Find a salon, store code or district" />
             <div className="basis-full">
               <DisabledChips
                 label="Filter by status"
@@ -220,7 +271,13 @@ function LeaderboardView({ status }: { status: ReviewsIntegrationStatus }) {
           </>
         }
       >
+        <RankingHead />
         <DataArea status={status} />
+        <Footnote>
+          Salons on the same count share a rank. Progress can pass the target:
+          the bar stops at full width and the overage is shown separately. A
+          salon without a review baseline isn&rsquo;t ranked.
+        </Footnote>
       </Panel>
     </>
   );
@@ -234,17 +291,7 @@ function RecordsView({ status }: { status: ReviewsIntegrationStatus }) {
         The actual review records behind every number on this page.
       </p>
 
-      <Panel
-        title="Filters"
-        controls={
-          <>
-            <DisabledPill label="Location" value="All locations" />
-            <DisabledPill label="Rating" value="All ratings" />
-            <DisabledPill label="Status" value="All" />
-            <DisabledSearch label="Search reviews" />
-          </>
-        }
-      >
+      <Panel title="Reviews">
         <DataArea status={status} />
       </Panel>
 
@@ -254,30 +301,6 @@ function RecordsView({ status }: { status: ReviewsIntegrationStatus }) {
           City Soap. Until then no review records are held or shown.
         </p>
       </Notice>
-    </>
-  );
-}
-
-function NeedsResponseView({ status }: { status: ReviewsIntegrationStatus }) {
-  return (
-    <>
-      <SectionRule label="Needs a response" className="mt-1" />
-      <p className={SECTION_NOTE}>
-        Reviews waiting for a reply, unanswered first, then the lowest rating,
-        then the longest waiting.
-      </p>
-
-      <Panel
-        title="Response queue"
-        controls={
-          <>
-            <DisabledPill label="Location" value="All locations" />
-            <DisabledPill label="Rating" value="All ratings" />
-          </>
-        }
-      >
-        <DataArea status={status} />
-      </Panel>
     </>
   );
 }

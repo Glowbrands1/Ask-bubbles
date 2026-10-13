@@ -42,7 +42,7 @@ describe("the Google Reviews dashboard with nothing connected", () => {
     expect(resolveReviewsIntegrationStatus()).toBe("not_connected");
   });
 
-  it("offers the four views in order", () => {
+  it("offers the three views in order", () => {
     view("overview");
     const nav = screen.getByRole("navigation", {
       name: "Google Reviews views",
@@ -51,12 +51,7 @@ describe("the Google Reviews dashboard with nothing connected", () => {
       within(nav)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual([
-      "Overview",
-      "Salon Leaderboard",
-      "Google Reviews",
-      "Needs Response",
-    ]);
+    ).toEqual(["Overview", "Google Reviews", "Salon Leaderboard"]);
     expect(within(nav).getByRole("link", { name: "Overview" })).toHaveProperty(
       "href",
     );
@@ -65,7 +60,7 @@ describe("the Google Reviews dashboard with nothing connected", () => {
   it("an unknown tab lands on the Overview", () => {
     expect(parseReviewsTab("nope")).toBe("overview");
     expect(parseReviewsTab(undefined)).toBe("overview");
-    expect(parseReviewsTab(["needs"])).toBe("needs");
+    expect(parseReviewsTab(["needs"])).toBe("overview");
   });
 
   it.each(TABS)("%s says Not connected yet and shows no figures", (tab) => {

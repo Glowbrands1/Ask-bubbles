@@ -9,12 +9,11 @@ import { signInAsDemo } from "./support";
  */
 const TABS = [
   ["overview", "Overview"],
-  ["leaderboard", "Salon Leaderboard"],
   ["reviews", "Google Reviews"],
-  ["needs", "Needs Response"],
+  ["leaderboard", "Salon Leaderboard"],
 ] as const;
 
-test("Google Reviews renders four views, all not connected, with no overflow", async ({
+test("Google Reviews renders three views, all not connected, with no overflow", async ({
   page,
 }, info) => {
   const googleRequests: string[] = [];
