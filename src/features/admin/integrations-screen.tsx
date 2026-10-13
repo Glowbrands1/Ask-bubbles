@@ -62,7 +62,7 @@ export function IntegrationsScreen() {
 
       <Notice tone="accent" icon={<BookOpen />} className="mb-6">
         <span className="font-semibold">Woven</span> knowledge sync keeps the knowledge base&apos;s policies,
-        handbooks and training current from Woven, every 30 days.{" "}
+        handbooks and training current from Woven, every week.{" "}
         <Link
           href="/admin/integrations/woven-knowledge"
           className="font-semibold underline underline-offset-4"
