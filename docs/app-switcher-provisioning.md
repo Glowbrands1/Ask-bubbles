@@ -44,8 +44,25 @@ check) gives these facts, all currently **unmapped** to the Bubbles roster:
 
 Neither person has a district in Woven, and DJ has no region. Nothing here can
 be assigned without a decision from Buff City Soap, so the script refuses
-placeholders. Options, simplest first:
+placeholders. Options:
 
+0. **No geographic assignment at all (needs a schema change, NOT in this PR).**
+   Checked in code and on the local stack: the app already fails closed for a
+   manager with `scope_level = location`, no primary area and no extra areas.
+   That profile signs in, sees the switcher, sees no forms (`GET /api/forms/instances`
+   returns an empty list), is refused `/admin/*`, and raised no page errors. The
+   *only* thing that stops it is the database rule `app_users_scope_area_coherent`
+   (a non-global profile must name an area). The smallest supported change is one
+   Ask Bubbles-only migration replacing that CHECK so that
+   `scope_level = 'location' AND scope_primary_area_id IS NULL AND scope_also_covers_area_ids = '{}'`
+   is also allowed (optionally limited to the manager roles), plus: letting
+   `normalizeScope` (`src/lib/admin/user-directory.ts`) accept an explicit "no
+   assignment" choice, an `--no-area` option in the provisioning script, a SQL
+   assertion, and fixing the misleading "All areas" label that such a profile
+   currently shows (`areaLabel(null)`). A new enum value was rejected (two
+   migrations, ~12-18 files, silently widens the Woven mapping columns). This
+   loosens a deliberate safety rail, so it needs your explicit approval; Ask Sunny
+   does not need it (DJ and Colene stay global there).
 1. **Add the real Woven regions to the roster, with no stores** and give each
    person a `region` scope on the one you choose. Region ids come from the
    existing `regionIdOf` helper: `reg-kc`, `reg-nebraska`, `reg-south-dakota`.
@@ -113,10 +130,28 @@ with every migration applied:
   admin APIs, change their password in the UI, and the temporary one stops
   working; an unrelated DM sees no switcher; an admin sees it and the admin pages.
 
+## Other checks
+
+- **Existing Woven mappings and other users are not touched.** Locally, with a
+  Woven directory row whose email matches the new account and an unmapped
+  position, provisioning changed exactly two public tables (`app_users` +1,
+  `app_user_audit` +1; plus `auth.users` +1). Every Woven table
+  (`employee_*`, `woven_*`) and every other `app_users` row hashed identical
+  before and after. The Woven view `employee_directory_login_matches` then shows
+  the email match, read-only. Code review agrees: no trigger fires on insert, the
+  Woven sync never reads or writes `app_users`/`auth.users`, the access planner
+  has no apply mode (`WOVEN_ACCESS_MODE` is `off`/`shadow` only) and never changes
+  Regional/District Managers. Unverified: anything on the live project that is not
+  in the repo (dashboard-created triggers, hooks, the actual `WOVEN_*` values).
+- Switching was tested both ways in two isolated stacks (below); production URLs
+  were mapped onto the local apps by the test browser, so the real production sites
+  were not contacted.
+
 ## Not covered / known
 
-- Not yet tested: the same browser run for Ask Sunny, real clicks through to the
-  other production app, and the script run against a real project.
+- Not yet tested: real clicks through to the other *production* app, and the
+  script run against a real project. (Ask Sunny's browser run and both switching
+  directions were run locally; see the PR.)
 - The signed-in menu has no "Change password" link; `/reset-password` is the
   existing route. Adding a link is a separate UI change.
 - Forms Register scoping (company-wide list shown to any `view_form_monitoring`
