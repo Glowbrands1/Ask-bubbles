@@ -10,6 +10,7 @@ import {
   MessageCircle,
   PlugZap,
   Sparkles,
+  Star,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -144,6 +145,13 @@ const ALL_SECTIONS: NavSection[] = [
         icon: BarChart3,
         permission: "view_reports",
         feature: "reports",
+      },
+      {
+        label: "Google Reviews",
+        href: "/reviews",
+        icon: Star,
+        permission: "view_reports",
+        feature: "reviews",
       },
     ],
   },
