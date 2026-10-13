@@ -14,6 +14,7 @@ export const COMPANY_FEATURES = {
   knowledge: true,
   forms: true,
   reports: true,
+  reviews: true,
   history: true,
   analytics: true,
   aiUsage: true,
