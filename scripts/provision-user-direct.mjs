@@ -42,7 +42,8 @@ import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 import {
-  generateTemporaryPassword,
+  DirectProvisionError,
+  runDirectProvision,
   validateDirectProvision,
 } from "../src/lib/admin/direct-provision.ts";
 import {
@@ -108,26 +109,12 @@ console.log(`  role    : ${plan.role}`);
 console.log(`  scope   : ${plan.scopeLevel} ${plan.areaId}`);
 console.log(`  switcher: ${plan.grantSwitch ? "can_switch_apps = true" : "not granted"}\n`);
 
-// 1. No duplicate profile.
-const profile = await admin.from("app_users").select("id, role, status").ilike("email", plan.email).maybeSingle();
-if (profile.error) fail(`Could not read app_users: ${profile.error.message}`);
-if (profile.data) fail(`A profile already exists for ${plan.email} (${profile.data.role}, ${profile.data.status}). Nothing changed.`);
-
-// 2. No duplicate credential.
-let page = 1;
-for (;;) {
-  const listed = await admin.auth.admin.listUsers({ page, perPage: 200 });
-  if (listed.error) fail(`Could not list auth users: ${listed.error.message}`);
-  if (listed.data.users.some((u) => u.email?.toLowerCase() === plan.email)) {
-    fail(`An auth account already exists for ${plan.email} with no profile. Resolve it deliberately (nothing was changed); this script will not adopt or duplicate it.`);
-  }
-  if (listed.data.users.length < 200) break;
-  page += 1;
-}
-
-if (plan.grantSwitch) {
-  const column = await admin.from("app_users").select("can_switch_apps").limit(1);
-  if (column.error) fail("app_users.can_switch_apps is missing. Apply migration 20261013002000_app_switcher_grant.sql first.");
+let result;
+try {
+  result = await runDirectProvision(admin, plan, { dryRun: !apply, randomByte: () => randomBytes(1)[0] });
+} catch (error) {
+  if (error instanceof DirectProvisionError) fail(error.message);
+  throw error;
 }
 
 if (!apply) {
@@ -136,45 +123,10 @@ if (!apply) {
   process.exit(0);
 }
 
-// 3. Create the credential, then the profile.
-const password = generateTemporaryPassword(() => randomBytes(1)[0]);
-const made = await admin.auth.admin.createUser({ email: plan.email, password, email_confirm: true });
-if (made.error || !made.data?.user) fail(`Supabase refused to create the account: ${made.error?.message ?? "no user returned"}`);
-const subject = made.data.user.id;
-
-const inserted = await admin
-  .from("app_users")
-  .insert({
-    id: subject,
-    email: plan.email,
-    display_name: plan.displayName,
-    role: plan.role,
-    status: "active",
-    scope_level: plan.scopeLevel,
-    scope_primary_area_id: plan.areaId,
-    scope_also_covers_area_ids: [],
-    ...(plan.grantSwitch ? { can_switch_apps: true } : {}),
-  })
-  .select("id, email, role, status, scope_level, scope_primary_area_id")
-  .single();
-
-if (inserted.error) {
-  await admin.auth.admin.deleteUser(subject).catch(() => {});
-  fail(`The profile could not be created, so the auth account was removed again: ${inserted.error.message}`);
-}
-
-await admin.from("app_user_audit").insert({
-  target_user_id: subject,
-  target_email: plan.email,
-  actor_user_id: null,
-  actor_email: "direct-provision script",
-  action: "invited",
-  to_value: plan.role,
-});
-
 console.log("✓ Created.");
-console.log(`    profile : ${inserted.data.id}`);
-console.log(`    role    : ${inserted.data.role} (${inserted.data.status})`);
-console.log(`    scope   : ${inserted.data.scope_level} ${inserted.data.scope_primary_area_id}`);
-console.log(`\n  Temporary password (shown once — hand it over out-of-band, then clear this terminal):\n\n    ${password}\n`);
+console.log(`    profile : ${result.profile.id}`);
+console.log(`    role    : ${result.profile.role} (${result.profile.status})`);
+console.log(`    scope   : ${result.profile.scope_level} ${result.profile.scope_primary_area_id}`);
+for (const warning of result.warnings) console.log(`    ! ${warning}`);
+console.log(`\n  Temporary password (shown once — hand it over out-of-band, then clear this terminal):\n\n    ${result.temporaryPassword}\n`);
 console.log("  First sign-in: /login, then change it at /reset-password before doing anything else.\n");
