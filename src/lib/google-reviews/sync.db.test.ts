@@ -77,8 +77,8 @@ describe("a full, healthy sync", () => {
     // nothing from another brand reached the database, in any column
     const dump = JSON.stringify(await q(`select * from public.google_reviews`)) + JSON.stringify(await q(`select * from public.google_review_locations`)) + JSON.stringify(await q(`select * from public.google_review_audit`));
     expect(dump).not.toMatch(/SUNTANCITY|Sun Tan City|stc-/);
-    // and the reviewer's identity was never stored
-    expect(dump).not.toMatch(/Zzreviewer|example\.invalid\/p\.jpg|isAnonymous/);
+    // and no reviewer photo or profile URL was stored (the display name is)
+    expect(dump).not.toMatch(/example\.invalid\/p\.jpg|isAnonymous/);
     // the Google review endpoint was requested for the seven stores only
     const reviewCalls = fake.calls.filter((c) => c.host === "mybusiness.googleapis.com");
     expect(new Set(reviewCalls.map((c) => c.path)).size).toBe(7);
@@ -135,6 +135,20 @@ describe("reconciliation of changed reviews", () => {
     const back = await sync(fake);
     expect(back.stores.find((s) => s.storeCode === "66")!.applied).toMatchObject({ restored: 1, removed: 0 });
     expect(await q(`select 1 from public.google_reviews where removed_at is not null`)).toHaveLength(0);
+  });
+
+  it("never lets an older read overwrite newer data, and records Google's reported total", async () => {
+    await connect();
+    const loc = buffLocation("66", Array.from({ length: 6 }, (_, i) => ({ id: `n${i}`, comment: `text ${i}` })));
+    const fake = createGoogleFake([loc]);
+    await sync(fake);
+    loc.reviews[0] = { id: "n0", comment: "newer", rating: "TWO", updateTime: "2026-10-05T00:00:00Z" };
+    await sync(fake);
+    loc.reviews[0] = { id: "n0", comment: "stale", rating: "FIVE", updateTime: "2026-09-01T00:00:00Z" };
+    const out = await sync(fake);
+    expect(out.stores.find((s) => s.storeCode === "66")!.applied).toMatchObject({ updated: 0 });
+    expect((await q(`select comment, star_rating from public.google_reviews where google_review_id = 'n0'`))[0]).toMatchObject({ comment: "newer", star_rating: 2 });
+    expect(Number((await q(`select api_total_review_count from public.google_review_locations where store_code = '66'`))[0]!.api_total_review_count)).toBeGreaterThanOrEqual(6);
   });
 
   it("never marks anything removed after an INCOMPLETE read (a looping page token) — and reports the store as incomplete", async () => {

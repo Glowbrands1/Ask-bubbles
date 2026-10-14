@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils/cn";
 import {
+  NOT_CONFIGURED_MESSAGE,
   NOT_CONNECTED_MESSAGE,
   type ReviewsIntegrationStatus,
 } from "./integration-status";
@@ -10,9 +11,11 @@ import {
 export function NotConnected({
   size = "panel",
   className,
+  message = NOT_CONNECTED_MESSAGE,
 }: {
   size?: "value" | "panel";
   className?: string;
+  message?: string;
 }) {
   return (
     <p
@@ -24,7 +27,7 @@ export function NotConnected({
         className,
       )}
     >
-      {NOT_CONNECTED_MESSAGE}
+      {message}
     </p>
   );
 }
@@ -48,5 +51,7 @@ export function DataArea({
 }) {
   if (status === "not_connected")
     return <NotConnected size={size} className={className} />;
+  if (status === "not_configured")
+    return <NotConnected size={size} className={className} message={NOT_CONFIGURED_MESSAGE} />;
   return <>{children}</>;
 }

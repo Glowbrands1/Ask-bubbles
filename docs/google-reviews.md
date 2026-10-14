@@ -8,7 +8,7 @@ Read-only ingestion of Google reviews for Buff City Soap's **seven** approved Bu
 - **Never** replies to, edits or deletes a review. Only `GET` requests are made; no route exists for anything else.
 - Never ingests Sun Tan City profiles, even though the same Google account holds 15 of them. Brand isolation is structural: an allowlist table of the seven stores, a foreign key from every review to it, a trigger that checks the review's resource name against the linked location, and a matcher that blocks titles containing Sun Tan City.
 - Links a store to a Google profile only when **both the store code and the street address match** (or an administrator explicitly confirms the one stored candidate). Woven IDs are never used to infer a Google link.
-- Stores no reviewer identity (name, photo, profile URL).
+- Stores the reviewer's display name only (no photo, profile URL or id); anonymous reviewers keep none.
 
 ## The seven stores
 
@@ -30,7 +30,7 @@ Google location resource IDs are recorded in `google_review_locations` the first
 
 ## Go-live checklist (human steps)
 
-1. Apply migration `supabase/migrations/20261013001000_google_reviews.sql` (rollback: `supabase/rollbacks/20261013001000_google_reviews_down.sql`).
+1. Apply migrations `20261013001000_google_reviews.sql` and `20261014001000_google_reviews_history.sql` (rollback: `supabase/rollbacks/20261013001000_google_reviews_down.sql` removes both).
 2. In Google Cloud, request/confirm access to the Business Profile APIs for the project (a zero-quota 429 means not yet approved; the screen says so), enable the Account Management, Business Information and My Business APIs, and create an OAuth client with the redirect URI shown on the screen.
 3. Set `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_TOKEN_ENCRYPTION_KEY` and redeploy.
 4. Set `GOOGLE_REVIEWS_SYNC_ENABLED=true`, an administrator clicks **Connect Google account** using the account that manages the Buff City Soap profiles.
@@ -42,3 +42,19 @@ Google location resource IDs are recorded in `google_review_locations` the first
 - A review Google stops returning is marked removed, not deleted, and only after a *complete* read; a read that returns far fewer reviews than are saved is refused (`removal_guard`).
 - Reads are paged, rate-limited, retried with backoff, and idempotent (content-hash upserts).
 - The refresh token is sealed with AES-256-GCM; tokens, secrets and review text never appear in logs or run records (codes and counts only).
+
+## Historical backfill, counts and ordering
+
+- The first **Sync and save** is the backfill: every store's reviews are read from the newest page to the last `nextPageToken` (up to 10,000 per store), keeping Google's original `createTime`/`updateTime`. Each store commits in its own transaction, so an interrupted run loses nothing and the next run simply continues (already-saved reviews are no-ops).
+- Google's own `totalReviewCount` is saved per store on every read; the admin screen shows "Google reports N" under the imported count (highlighted when they differ). A read is only "complete" when imported ≥ Google's total.
+- A read that carries an **older** `updateTime` than what is stored never overwrites it (it only confirms the review still exists); upserts are keyed on the Google review ID per location.
+- Dashboard (`/reviews`) shows imported counts, average, rating spread, monthly trend (by original review date) and a filterable review list. The goal/target tiles stay "Not connected yet": no salon targets or baselines exist yet.
+
+## Near-real-time: Pub/Sub
+
+`POST /api/google-reviews/notify?token=<GOOGLE_PUBSUB_VERIFICATION_TOKEN>` is the push endpoint. It runs the same sync (so duplicates/out-of-order messages are harmless); the 6-hourly cron stays as the reconciliation fallback.
+
+1. Set `GOOGLE_PUBSUB_VERIFICATION_TOKEN` (long random string) in Vercel and redeploy.
+2. In the approved Google Cloud project: create a topic, grant `mybusiness-api-pubsub@system.gserviceaccount.com` the Pub/Sub Publisher role on it, and create a **push** subscription to `https://<site>/api/google-reviews/notify?token=<token>`.
+3. Register the topic for the Business Profile account (Account Management API):
+   `PATCH https://mybusinessnotifications.googleapis.com/v1/accounts/{accountId}/notificationSetting?updateMask=pubsubTopic,notificationTypes` with `{"pubsubTopic":"projects/<project>/topics/<topic>","notificationTypes":["NEW_REVIEW","UPDATED_REVIEW"]}`.

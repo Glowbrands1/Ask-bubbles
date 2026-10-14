@@ -16,9 +16,11 @@
  * loaded snapshot as the children of the `DataArea` that should show it. The
  * tabs, tiles, tables and filters need no rebuilding.
  */
-export type ReviewsIntegrationStatus = "not_connected" | "connected";
+/** "not_configured": reviews are connected, but the goal inputs (targets, baselines, districts) have not been set. */
+export type ReviewsIntegrationStatus = "not_connected" | "not_configured" | "connected";
 
 export const NOT_CONNECTED_MESSAGE = "Not connected yet";
+export const NOT_CONFIGURED_MESSAGE = "Goal not configured yet";
 
 /**
  * The one place the status is decided. It deliberately reads nothing: no

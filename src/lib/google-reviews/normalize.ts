@@ -7,8 +7,8 @@ import type { NormalizedReview } from "./types";
  *
  * The ONLY place a Google review's fields are read. It builds the result field
  * by field from a closed list; the response object is never spread, copied or
- * stored, so the reviewer's display name, profile photo and any other field
- * Google adds are dropped simply by never being read.
+ * stored. Of the reviewer only the display name is kept (never the photo or
+ * profile URL); anonymous reviewers keep none.
  *
  * A review is REJECTED (never half-saved) when:
  *   - its `name` is not exactly `{account}/{location}/reviews/{reviewId}` for the
@@ -46,15 +46,16 @@ export function contentHash(parts: {
   updateTime: string;
   replyComment: string | null;
   replyUpdateTime: string | null;
+  reviewerName?: string | null;
 }): string {
   return createHash("sha256")
-    .update(JSON.stringify([parts.starRating, parts.comment, parts.updateTime, parts.replyComment, parts.replyUpdateTime]))
+    .update(JSON.stringify([parts.starRating, parts.comment, parts.updateTime, parts.replyComment, parts.replyUpdateTime, parts.reviewerName ?? null]))
     .digest("hex");
 }
 
 export function normalizeReview(raw: unknown, expected: { accountName: string; locationName: string }): NormalizeResult {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { ok: false, reason: "not_an_object" };
-  const r = raw as { reviewId?: unknown; name?: unknown; starRating?: unknown; comment?: unknown; createTime?: unknown; updateTime?: unknown; reviewReply?: unknown };
+  const r = raw as { reviewId?: unknown; name?: unknown; starRating?: unknown; comment?: unknown; createTime?: unknown; updateTime?: unknown; reviewReply?: unknown; reviewer?: unknown };
 
   const googleReviewId = typeof r.reviewId === "string" ? r.reviewId : "";
   if (!REVIEW_ID.test(googleReviewId)) return { ok: false, reason: "bad_id" };
@@ -74,6 +75,9 @@ export function normalizeReview(raw: unknown, expected: { accountName: string; l
   const replyComment = reply ? text(reply.comment) : null;
   const replyUpdateTime = replyComment && reply ? instant(reply.updateTime) : null;
 
+  const reviewer = r.reviewer && typeof r.reviewer === "object" ? (r.reviewer as { displayName?: unknown; isAnonymous?: unknown }) : null;
+  const reviewerName = reviewer && reviewer.isAnonymous !== true ? (text(reviewer.displayName)?.slice(0, 200) ?? null) : null;
+
   return {
     ok: true,
     review: {
@@ -85,7 +89,8 @@ export function normalizeReview(raw: unknown, expected: { accountName: string; l
       updateTime,
       replyComment,
       replyUpdateTime,
-      contentHash: contentHash({ starRating, comment, updateTime, replyComment, replyUpdateTime }),
+      reviewerName,
+      contentHash: contentHash({ starRating, comment, updateTime, replyComment, replyUpdateTime, reviewerName }),
     },
   };
 }

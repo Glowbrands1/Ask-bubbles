@@ -37,12 +37,14 @@ export function GoalTile({
   label,
   detail,
   accent,
+  children,
 }: {
   status: ReviewsIntegrationStatus;
   tag?: ReactNode;
   label: string;
   detail: string;
   accent?: boolean;
+  children?: ReactNode;
 }) {
   return (
     <div
@@ -64,7 +66,9 @@ export function GoalTile({
           status={status}
           size="value"
           className={cn("pt-2.5", accent && "text-brand-accent-foreground")}
-        />
+        >
+          {children}
+        </DataArea>
       </div>
       <p
         className={cn(
@@ -83,12 +87,18 @@ export function MeasureTile({
   status,
   label,
   detail,
+  children,
 }: {
   status: ReviewsIntegrationStatus;
   label: string;
   detail: string;
+  children?: ReactNode;
 }) {
-  return <GoalTile status={status} label={label} detail={detail} />;
+  return (
+    <GoalTile status={status} label={label} detail={detail}>
+      {children}
+    </GoalTile>
+  );
 }
 
 /** A framed section with a heading, for tables, charts and lists. */

@@ -8,6 +8,16 @@ import {
 import { Info } from "lucide-react";
 
 import { DataArea } from "./data-area";
+import type { ReviewsData } from "./load";
+import {
+  Figure,
+  LiveFilters,
+  RatingsPanel,
+  ReviewsList,
+  TrendPanel,
+  totals,
+} from "./reviews-data";
+import { rating as fmtRating } from "@/features/admin/google-reviews/format";
 import type { ReviewsIntegrationStatus } from "./integration-status";
 import {
   DisabledChips,
@@ -44,15 +54,18 @@ import type { ReviewsTab } from "./reviews-tabs";
 export function ReviewsDashboard({
   tab,
   status,
+  data = null,
 }: {
   tab: ReviewsTab;
   status: ReviewsIntegrationStatus;
+  /** Imported Google reviews. Null: nothing imported yet, every data area says so. */
+  data?: ReviewsData | null;
 }) {
   return (
     <div
       className="min-w-0"
       data-testid="reviews-dashboard"
-      data-integration-status={status}
+      data-integration-status={data ? "connected" : status}
     >
       <ReportBand
         title="Google Reviews"
@@ -60,7 +73,9 @@ export function ReviewsDashboard({
         provenance={
           <ProvenanceChips>
             <ProvenanceChip emphasis>
-              Google Reviews: not connected yet
+              {data
+                ? `Google Reviews: ${data.stores.reduce((a, s) => a + s.reviewCount, 0)} reviews imported`
+                : "Google Reviews: not connected yet"}
             </ProvenanceChip>
           </ProvenanceChips>
         }
@@ -69,23 +84,31 @@ export function ReviewsDashboard({
       <ReviewsTabNav current={tab} />
 
       <FilterBar>
-        <DisabledPill label="Location" value="All locations" />
-        {tab !== "leaderboard" ? (
-          <DisabledPill label="Rating" value="All ratings" />
-        ) : null}
-        {tab === "reviews" ? (
+        {data ? (
+          <LiveFilters tab={tab} data={data} />
+        ) : (
           <>
-            <DisabledPill label="Response" value="All" />
-            <DisabledSearch label="Name, comment or location" />
+            <DisabledPill label="Location" value="All locations" />
+            {tab !== "leaderboard" ? (
+              <DisabledPill label="Rating" value="All ratings" />
+            ) : null}
+            {tab === "reviews" ? (
+              <>
+                <DisabledPill label="Response" value="All" />
+                <DisabledSearch label="Name, comment or location" />
+              </>
+            ) : null}
+            <DisabledPill label="" value="More filters" />
           </>
-        ) : null}
-        <DisabledPill label="" value="More filters" />
+        )}
       </FilterBar>
 
       <div className="flex min-w-0 flex-col gap-5 px-5 py-5 pb-7 sm:px-6">
-        {tab === "overview" ? <OverviewView status={status} /> : null}
-        {tab === "reviews" ? <RecordsView status={status} /> : null}
-        {tab === "leaderboard" ? <LeaderboardView status={status} /> : null}
+        {tab === "overview" ? (
+          <OverviewView status={status} data={data} />
+        ) : null}
+        {tab === "reviews" ? <RecordsView status={status} data={data} /> : null}
+        {tab === "leaderboard" ? <LeaderboardView status={data ? "not_configured" : status} /> : null}
       </div>
     </div>
   );
@@ -93,7 +116,16 @@ export function ReviewsDashboard({
 
 const SECTION_NOTE = "-mt-2 text-[11.5px] text-muted-foreground";
 
-function OverviewView({ status }: { status: ReviewsIntegrationStatus }) {
+function OverviewView({
+  status,
+  data,
+}: {
+  status: ReviewsIntegrationStatus;
+  data: ReviewsData | null;
+}) {
+  const live: ReviewsIntegrationStatus = data ? "connected" : status;
+  const goal: ReviewsIntegrationStatus = data ? "not_configured" : status;
+  const t = data ? totals(data.stores) : null;
   return (
     <>
       <SectionRule label="Monthly review goal" className="mt-1" />
@@ -105,26 +137,26 @@ function OverviewView({ status }: { status: ReviewsIntegrationStatus }) {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <GoalTile
-          status={status}
+          status={goal}
           tag={<WindowTag window="week">This week</WindowTag>}
           label="Qualifying reviews"
           detail="3–5★ reviews counted this week, compared with last week"
         />
         <GoalTile
-          status={status}
+          status={goal}
           tag={<WindowTag window="month">Month to date</WindowTag>}
           label="Qualifying reviews"
           detail="Against the combined monthly target of every salon counting"
         />
         <GoalTile
-          status={status}
+          status={goal}
           accent
           tag={<WindowTag window="month">Month to date</WindowTag>}
           label="Salons at goal"
           detail="Salons that have reached their monthly target"
         />
         <GoalTile
-          status={status}
+          status={goal}
           tag={<WindowTag window="month">Month to date</WindowTag>}
           label="Reviews still needed"
           detail="To bring every salon to its target. One salon's overage doesn't cover another's shortfall."
@@ -141,7 +173,7 @@ function OverviewView({ status }: { status: ReviewsIntegrationStatus }) {
         }
       >
         <TableShell
-          status={status}
+          status={goal}
           label="Salon goal progress"
           columns={[
             { label: "Salon" },
@@ -162,7 +194,7 @@ function OverviewView({ status }: { status: ReviewsIntegrationStatus }) {
 
       <Panel title="District goal progress">
         <TableShell
-          status={status}
+          status={goal}
           label="District goal progress"
           columns={[
             { label: "District" },
@@ -185,30 +217,40 @@ function OverviewView({ status }: { status: ReviewsIntegrationStatus }) {
           </div>
         }
       >
-        <DataArea status={status} />
+        <DataArea status={live}>
+          {data ? <TrendPanel trend={data.trend} /> : null}
+        </DataArea>
       </Panel>
 
       <SectionRule label="Everything Ask Bubbles holds" />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <MeasureTile
-          status={status}
+          status={live}
           label="All imported reviews"
           detail="Every Google review Ask Bubbles holds, counted and historical alike."
-        />
+        >
+          {t ? <Figure>{t.reviews}</Figure> : null}
+        </MeasureTile>
         <MeasureTile
-          status={status}
+          status={goal}
           label="Historical — not yet counted"
           detail="Imported before a salon had a baseline. Stored and searchable, in no weekly total."
         />
         <MeasureTile
-          status={status}
+          status={live}
           label="Average rating"
           detail="Across every review held, counted and historical alike"
-        />
+        >
+          {t ? <Figure>{fmtRating(t.average)}</Figure> : null}
+        </MeasureTile>
       </div>
 
       <Panel title="Reviews by rating">
-        <DataArea status={status} />
+        <DataArea status={live}>
+          {data ? (
+            <RatingsPanel stores={data.stores} store={data.query.store} />
+          ) : null}
+        </DataArea>
       </Panel>
     </>
   );
@@ -283,7 +325,13 @@ function LeaderboardView({ status }: { status: ReviewsIntegrationStatus }) {
   );
 }
 
-function RecordsView({ status }: { status: ReviewsIntegrationStatus }) {
+function RecordsView({
+  status,
+  data,
+}: {
+  status: ReviewsIntegrationStatus;
+  data: ReviewsData | null;
+}) {
   return (
     <>
       <SectionRule label="Google reviews" className="mt-1" />
@@ -292,15 +340,23 @@ function RecordsView({ status }: { status: ReviewsIntegrationStatus }) {
       </p>
 
       <Panel title="Reviews">
-        <DataArea status={status} />
+        <DataArea status={data ? "connected" : status}>
+          {data ? <ReviewsList data={data} /> : null}
+        </DataArea>
       </Panel>
 
-      <Notice tone="neutral" icon={<Info />} title="Where this data comes from">
-        <p>
-          Reviews will appear here once Google Reviews is connected for Buff
-          City Soap. Until then no review records are held or shown.
-        </p>
-      </Notice>
+      {data ? null : (
+        <Notice
+          tone="neutral"
+          icon={<Info />}
+          title="Where this data comes from"
+        >
+          <p>
+            Reviews will appear here once Google Reviews is connected for Buff
+            City Soap. Until then no review records are held or shown.
+          </p>
+        </Notice>
+      )}
     </>
   );
 }

@@ -109,7 +109,14 @@ function StoresTable({ stores }: { stores: StoreSummary[] }) {
                     {s.reason ? <p className="mt-1 max-w-xs text-[12px] text-muted-foreground">{REASON_TEXT[s.reason] ?? ""}</p> : null}
                     {s.candidate ? <p className="mt-1 max-w-xs text-[12px] text-foreground">Google lists: {[s.candidate.title, s.candidate.street, s.candidate.city].filter(Boolean).join(", ")}</p> : null}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums">{s.reviewCount}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    {s.reviewCount}
+                    {s.apiTotalReviewCount !== null ? (
+                      <p className={s.apiTotalReviewCount === s.reviewCount ? "text-[11px] text-muted-foreground" : "text-[11px] font-bold text-status-attention"}>
+                        Google reports {s.apiTotalReviewCount}
+                      </p>
+                    ) : null}
+                  </td>
                   <td className="px-4 py-3 text-right tabular-nums">{rating(s.averageRating)}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{s.unansweredCount}</td>
                   <td className="px-4 py-3">

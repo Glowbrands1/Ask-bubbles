@@ -15,7 +15,7 @@ import type { GoogleFailureCode } from "./types";
  * and pages that have already required the Manage integrations permission:
  * review TEXT appears in `ReviewRow`, which is why.
  *
- * NO REVIEWER IS EVER INCLUDED: the schema has no column for one.
+ * Only the reviewer's display name is held (no photo, URL or id).
  */
 
 export const PAGE_SIZE = 20;
@@ -32,6 +32,10 @@ export interface StoreSummary {
   unansweredCount: number;
   ratings: [number, number, number, number, number];
   latestReviewAt: string | null;
+  oldestReviewAt: string | null;
+  /** Google's own reported total for the profile, as of the last read. */
+  apiTotalReviewCount: number | null;
+  apiTotalCheckedAt: string | null;
   lastSyncAt: string | null;
   lastSyncStatus: "complete" | "incomplete" | "failed" | null;
   lastSyncError: string | null;
@@ -47,6 +51,7 @@ export interface ReviewRow {
   storeName: string;
   starRating: number;
   comment: string | null;
+  reviewerName: string | null;
   createdAt: string;
   updatedAt: string;
   replyComment: string | null;
@@ -193,6 +198,9 @@ export async function readStoreSummaries(client: SupabaseClient = getSupabaseAdm
         unansweredCount: num(row.unanswered_count),
         ratings: [num(row.rating_1), num(row.rating_2), num(row.rating_3), num(row.rating_4), num(row.rating_5)],
         latestReviewAt: str(row.latest_review_at),
+        oldestReviewAt: str(row.oldest_review_at),
+        apiTotalReviewCount: row.api_total_review_count === null || row.api_total_review_count === undefined ? null : num(row.api_total_review_count),
+        apiTotalCheckedAt: str(row.api_total_checked_at),
         lastSyncAt: str(row.last_sync_at),
         lastSyncStatus: (str(row.last_sync_status) as StoreSummary["lastSyncStatus"]) ?? null,
         lastSyncError: str(row.last_sync_error),
@@ -230,6 +238,7 @@ export async function readReviewPage(query: ReviewQuery, client: SupabaseClient 
       storeName: String(r.store_name),
       starRating: num(r.star_rating),
       comment: str(r.comment),
+      reviewerName: str(r.reviewer_name),
       createdAt: String(r.review_create_time),
       updatedAt: String(r.review_update_time),
       replyComment: str(r.reply_comment),
@@ -238,6 +247,20 @@ export async function readReviewPage(query: ReviewQuery, client: SupabaseClient 
       removedAt: str(r.removed_at),
     })),
   };
+}
+
+export interface MonthlyPoint {
+  /** First day of the month, YYYY-MM-DD, Central time. */
+  month: string;
+  reviewCount: number;
+  averageRating: number;
+}
+
+/** Reviews per month by ORIGINAL review date, for one store or all. */
+export async function readMonthlyTrend(storeCode: string | null = null, client: SupabaseClient = getSupabaseAdmin()): Promise<MonthlyPoint[]> {
+  const { data, error } = await client.rpc("google_reviews_monthly", { p_store_code: storeCode });
+  check(error);
+  return ((data ?? []) as Record<string, unknown>[]).map((r) => ({ month: String(r.month), reviewCount: num(r.review_count), averageRating: num(r.average_rating) }));
 }
 
 export async function readRecentRuns(limit = 10, client: SupabaseClient = getSupabaseAdmin()): Promise<RunRow[]> {

@@ -65,7 +65,7 @@ export interface GoogleReviewsStore {
   recordLink(storeCode: string, account: string | null, location: string | null, status: MatchStatus | "confirmed", confidence: MatchConfidence, evidence: Record<string, unknown>, actor: string): Promise<string>;
   claimRun(requestedBy: string, mode: "dry_run" | "save"): Promise<string | null>;
   finishRun(runId: string, status: "succeeded" | "partial" | "failed" | "refused", stats: RunStats, errorCode: string | null, errorSummary: string | null): Promise<void>;
-  applyReviews(runId: string, locationId: string, reviews: readonly NormalizedReview[], complete: boolean): Promise<ApplyResult>;
+  applyReviews(runId: string, locationId: string, reviews: readonly NormalizedReview[], complete: boolean, apiTotals?: { total: number | null; average: number | null }): Promise<ApplyResult>;
   noteLocationFailure(runId: string, locationId: string, code: string): Promise<void>;
 }
 
@@ -154,7 +154,7 @@ export function createSupabaseGoogleStore(client: SupabaseClient = getSupabaseAd
       );
     },
 
-    async applyReviews(runId, locationId, reviews, complete) {
+    async applyReviews(runId, locationId, reviews, complete, apiTotals) {
       const payload = reviews.map((r) => ({
         google_review_id: r.googleReviewId,
         review_resource_name: r.resourceName,
@@ -164,11 +164,12 @@ export function createSupabaseGoogleStore(client: SupabaseClient = getSupabaseAd
         review_update_time: r.updateTime,
         reply_comment: r.replyComment,
         reply_update_time: r.replyUpdateTime,
+        reviewer_name: r.reviewerName,
         content_hash: r.contentHash,
       }));
       const result = await rpc<Partial<ApplyResult> | null>(
         "google_review_apply_reviews",
-        { p_run: runId, p_location: locationId, p_reviews: payload, p_complete: complete },
+        { p_run: runId, p_location: locationId, p_reviews: payload, p_complete: complete, p_api_total: apiTotals?.total ?? null, p_api_average: apiTotals?.average ?? null },
         "save a store's reviews",
       );
       return { inserted: result?.inserted ?? 0, updated: result?.updated ?? 0, unchanged: result?.unchanged ?? 0, removed: result?.removed ?? 0, restored: result?.restored ?? 0 };

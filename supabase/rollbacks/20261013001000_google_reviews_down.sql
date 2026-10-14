@@ -20,6 +20,8 @@ drop function if exists public.google_review_set_connection(text, text[], text);
 drop function if exists public.google_review_clear_link(text, text);
 drop function if exists public.google_review_note_location_failure(uuid, uuid, text);
 drop function if exists public.google_review_apply_reviews(uuid, uuid, jsonb, boolean);
+drop function if exists public.google_review_apply_reviews(uuid, uuid, jsonb, boolean, integer, numeric);
+drop function if exists public.google_reviews_monthly(text);
 drop function if exists public.google_review_record_link(text, text, text, text, text, jsonb, text);
 drop function if exists public.google_review_finish_run(uuid, text, jsonb, text, text);
 drop function if exists public.google_review_claim_run(text, text);

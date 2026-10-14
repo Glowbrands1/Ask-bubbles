@@ -56,7 +56,7 @@ async function postgrestRpc(db: PGlite, fn: string, args: Record<string, unknown
 }
 
 export async function createGoogleTestDatabase(): Promise<GoogleTestDatabase> {
-  const t = await createMigratedTestDatabase([...BASE, GOOGLE_MIGRATION]);
+  const t = await createMigratedTestDatabase([...BASE, GOOGLE_MIGRATION, "20261014001000_google_reviews_history"]);
   const client = {
     from: (table: string) => (t.client as unknown as { from: (name: string) => unknown }).from(table),
     rpc: (fn: string, args: Record<string, unknown>) => postgrestRpc(t.db, fn, args),
