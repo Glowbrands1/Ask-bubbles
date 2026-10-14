@@ -5,11 +5,12 @@ import {
   PAGE_SIZE,
   parseReviewQuery,
   readGoalData,
-  readMonthlyTrend,
+  readPeriodTrend,
   readReviewPage,
   readStoreSummaries,
   type GoalData,
-  type MonthlyPoint,
+  type PeriodPoint,
+  type PeriodUnit,
   type ReviewPage,
   type ReviewQuery,
   type StoreSummary,
@@ -18,7 +19,9 @@ import {
 export interface ReviewsData {
   query: ReviewQuery;
   stores: StoreSummary[];
-  trend: MonthlyPoint[];
+  /** Reviews per week or month (see `period`), by original review date. */
+  trend: PeriodPoint[];
+  period: PeriodUnit;
   /** Only loaded for the Reviews view. */
   page: ReviewPage | null;
   /** Goal counts; null when they cannot be read (the goal areas then say "not configured"). */
@@ -41,12 +44,15 @@ export async function loadReviewsData(
     if (!stores.some((s) => s.reviewCount > 0)) return null;
     const rankParam = params.rank;
     const rank: RankMetric = (Array.isArray(rankParam) ? rankParam[0] : rankParam) === "week" ? "week" : "month";
+    const periodParam = params.period;
+    const period: PeriodUnit = (Array.isArray(periodParam) ? periodParam[0] : periodParam) === "week" ? "week" : "month";
     const [trend, page, goals] = await Promise.all([
-      readMonthlyTrend(query.store),
+      readPeriodTrend(period, query.store),
       withList ? readReviewPage(query) : Promise.resolve(null),
       readGoalData().catch(() => null),
     ]);
-    return { query, stores, trend, page, goals, rank };
+    // Weekly is the latest year of weeks; monthly is every month held.
+    return { query, stores, trend: period === "week" ? trend.slice(-52) : trend, period, page, goals, rank };
   } catch {
     return null;
   }

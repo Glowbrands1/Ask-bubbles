@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { goalContext, goalProgress, goalStatus, goalSummary, isPartialMonth, paceTargetFor, partialMonthNote, rankRows, weekStartOf, type GoalRow } from "./goals";
+import { centralMidnight, goalContext, goalProgress, goalStatus, goalSummary, isPartialMonth, paceTargetFor, partialMonthNote, rankRows, weekStartOf, type GoalRow } from "./goals";
 
 const row = (over: Partial<GoalRow> = {}): GoalRow => ({
   storeCode: "219",
@@ -8,6 +8,7 @@ const row = (over: Partial<GoalRow> = {}): GoalRow => ({
   monthlyTarget: 10,
   baselineReviewId: "b1",
   baselineReviewTime: "2026-10-01T00:00:00Z",
+  countFrom: null,
   qualifyingThisWeek: 0,
   qualifyingLastWeek: 0,
   qualifyingMonthToDate: 0,
@@ -16,11 +17,24 @@ const row = (over: Partial<GoalRow> = {}): GoalRow => ({
 });
 
 describe("goal context (Central, Sunday weeks)", () => {
-  it("opens the week on Sunday and the month on the 1st", () => {
+  it("runs Monday–Sunday weeks and calendar months in Central time", () => {
     const c = goalContext("2026-10-14"); // a Wednesday
-    expect(c).toMatchObject({ weekStart: "2026-10-11", prevWeekStart: "2026-10-04", monthStart: "2026-10-01", daysInMonth: 31, daysElapsed: 13 });
-    expect(weekStartOf("2026-10-11")).toBe("2026-10-11");
-    expect(weekStartOf("2026-10-17")).toBe("2026-10-11");
+    expect(c).toMatchObject({
+      weekStart: "2026-10-12", weekEnd: "2026-10-18", // this week: Mon Oct 12 – Sun Oct 18
+      prevWeekStart: "2026-10-05", prevWeekEnd: "2026-10-11", // last week: Oct 5–11
+      monthStart: "2026-10-01", monthEnd: "2026-10-31", daysInMonth: 31, daysElapsed: 13,
+      monthStartInstant: "2026-10-01T05:00:00.000Z", // midnight CDT
+    });
+    expect(weekStartOf("2026-10-12")).toBe("2026-10-12"); // Monday opens its own week
+    expect(weekStartOf("2026-10-18")).toBe("2026-10-12"); // Sunday closes it
+    expect(weekStartOf("2026-10-11")).toBe("2026-10-05"); // the Sunday before belongs to the previous week
+    expect(weekStartOf("2026-10-19")).toBe("2026-10-19");
+  });
+
+  it("finds Central midnight across daylight saving", () => {
+    expect(centralMidnight("2026-10-12")).toBe("2026-10-12T05:00:00.000Z"); // CDT
+    expect(centralMidnight("2026-12-01")).toBe("2026-12-01T06:00:00.000Z"); // CST
+    expect(goalContext("2026-12-15").monthStartInstant).toBe("2026-12-01T06:00:00.000Z");
   });
 
   it("paces a straight line to the target, read at the close of yesterday, rounded up", () => {
@@ -93,6 +107,18 @@ describe("a partial October is never presented as a full month", () => {
     expect(goalStatus(partial, ctx)).toBe("partial_month");
     expect(goalStatus(full, ctx)).toBe("behind_pace");
     expect(goalStatus({ ...partial, qualifyingMonthToDate: 10 }, ctx)).toBe("met");
+  });
+
+  it("a reporting cutoff at midnight on the 1st is a FULL month, not a partial one", () => {
+    const cutoff = row({ baselineReviewTime: "2026-10-13T21:00:00Z", countFrom: "2026-10-01T05:00:00Z" });
+    expect(isPartialMonth(cutoff, ctx)).toBe(false);
+    expect(goalStatus({ ...cutoff, qualifyingMonthToDate: 4 }, ctx)).toBe("behind_pace");
+    expect(isPartialMonth({ ...cutoff, countFrom: "2026-10-01T05:00:01Z" }, ctx)).toBe(true); // one second after the 1st opens
+    expect(isPartialMonth({ ...cutoff, countFrom: "2026-09-15T05:00:00Z" }, ctx)).toBe(false);
+  });
+
+  it("a salon with a cutoff but no baseline still counts", () => {
+    expect(goalStatus(row({ baselineReviewId: null, baselineReviewTime: null, countFrom: "2026-10-01T05:00:00Z", qualifyingMonthToDate: 3 }), ctx)).toBe("behind_pace");
   });
 
   it("summarises which salons are partial, and when counting began", () => {

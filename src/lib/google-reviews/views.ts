@@ -6,7 +6,7 @@ import { APPROVED_GOOGLE_STORES } from "@/config/company/google-reviews";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import { classifyDatabaseError } from "./database-error";
-import { centralToday, goalContext, type GoalContext, type GoalRow } from "./goals";
+import { centralMidnight, centralToday, goalContext, type GoalContext, type GoalRow } from "./goals";
 import type { GoogleFailureCode } from "./types";
 
 /**
@@ -139,14 +139,7 @@ export function parseReviewQuery(params: Params): ReviewQuery {
 
 /** The instant a calendar day starts in Central time (handles daylight saving), as an ISO string. */
 export function centralDayStart(day: string): string {
-  const [y, m, d] = day.split("-").map(Number) as [number, number, number];
-  const fmt = new Intl.DateTimeFormat("en-US", { timeZone: CENTRAL, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" });
-  for (const offsetHours of [5, 6]) {
-    const candidate = new Date(Date.UTC(y, m - 1, d, offsetHours));
-    const parts = Object.fromEntries(fmt.formatToParts(candidate).map((p) => [p.type, p.value]));
-    if (Number(parts.year) === y && Number(parts.month) === m && Number(parts.day) === d && Number(parts.hour) === 0) return candidate.toISOString();
-  }
-  return new Date(Date.UTC(y, m - 1, d, 6)).toISOString();
+  return centralMidnight(day);
 }
 
 /** The first instant AFTER the end day (exclusive bound), in Central time. */
@@ -250,18 +243,27 @@ export async function readReviewPage(query: ReviewQuery, client: SupabaseClient 
   };
 }
 
-export interface MonthlyPoint {
-  /** First day of the month, YYYY-MM-DD, Central time. */
-  month: string;
+export type PeriodUnit = "week" | "month";
+
+export interface PeriodPoint {
+  /** First day of the period, YYYY-MM-DD, Central: the Monday of a week, or the 1st of a month. */
+  start: string;
   reviewCount: number;
+  /** 3–5★ reviews in the period. */
+  qualifyingCount: number;
   averageRating: number;
 }
 
-/** Reviews per month by ORIGINAL review date, for one store or all. */
-export async function readMonthlyTrend(storeCode: string | null = null, client: SupabaseClient = getSupabaseAdmin()): Promise<MonthlyPoint[]> {
-  const { data, error } = await client.rpc("google_reviews_monthly", { p_store_code: storeCode });
+/** Reviews per Monday–Sunday week or calendar month by ORIGINAL review date (Central), for one store or all. */
+export async function readPeriodTrend(unit: PeriodUnit, storeCode: string | null = null, client: SupabaseClient = getSupabaseAdmin()): Promise<PeriodPoint[]> {
+  const { data, error } = await client.rpc("google_reviews_periods", { p_store_code: storeCode, p_unit: unit });
   check(error);
-  return ((data ?? []) as Record<string, unknown>[]).map((r) => ({ month: String(r.month), reviewCount: num(r.review_count), averageRating: num(r.average_rating) }));
+  return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+    start: String(r.period_start),
+    reviewCount: num(r.review_count),
+    qualifyingCount: num(r.qualifying_count),
+    averageRating: num(r.average_rating),
+  }));
 }
 
 export async function readRecentRuns(limit = 10, client: SupabaseClient = getSupabaseAdmin()): Promise<RunRow[]> {
@@ -359,7 +361,7 @@ export interface GoalData {
 /** Per-salon goal counts for the current Central week and month. Null-safe: nothing here reads Google. */
 export async function readGoalData(now: Date = new Date(), client: SupabaseClient = getSupabaseAdmin()): Promise<GoalData> {
   const context = goalContext(centralToday(now));
-  const { data, error } = await client.rpc("google_review_goal_counts", {
+  const { data, error } = await client.rpc("google_review_goal_counts_v2", {
     p_prev_week_start: centralDayStart(context.prevWeekStart),
     p_week_start: centralDayStart(context.weekStart),
     p_month_start: centralDayStart(context.monthStart),
@@ -373,6 +375,7 @@ export async function readGoalData(now: Date = new Date(), client: SupabaseClien
       monthlyTarget: num(r.monthly_target),
       baselineReviewId: str(r.baseline_review_id),
       baselineReviewTime: str(r.baseline_review_time),
+      countFrom: str(r.count_from),
       qualifyingThisWeek: num(r.week_count),
       qualifyingLastWeek: num(r.last_week_count),
       qualifyingMonthToDate: num(r.month_count),
