@@ -6,6 +6,7 @@ import { APPROVED_GOOGLE_STORES } from "@/config/company/google-reviews";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import { classifyDatabaseError } from "./database-error";
+import { centralToday, goalContext, type GoalContext, type GoalRow } from "./goals";
 import type { GoogleFailureCode } from "./types";
 
 /**
@@ -346,4 +347,38 @@ export function deriveBlocker(input: {
   if (code === "authorization_expired") return { code: "authorization_expired" };
   if (code && code !== "busy") return { code: "last_run_failed", errorCode: code };
   return null;
+}
+
+/* ------------------------------------------------------------- goal counts -- */
+
+export interface GoalData {
+  context: GoalContext;
+  rows: GoalRow[];
+}
+
+/** Per-salon goal counts for the current Central week and month. Null-safe: nothing here reads Google. */
+export async function readGoalData(now: Date = new Date(), client: SupabaseClient = getSupabaseAdmin()): Promise<GoalData> {
+  const context = goalContext(centralToday(now));
+  const { data, error } = await client.rpc("google_review_goal_counts", {
+    p_prev_week_start: centralDayStart(context.prevWeekStart),
+    p_week_start: centralDayStart(context.weekStart),
+    p_month_start: centralDayStart(context.monthStart),
+    p_now: now.toISOString(),
+  });
+  check(error);
+  const rows = ((data ?? []) as Record<string, unknown>[]).map(
+    (r): GoalRow => ({
+      storeCode: String(r.store_code),
+      displayName: String(r.display_name),
+      monthlyTarget: num(r.monthly_target),
+      baselineReviewId: str(r.baseline_review_id),
+      baselineReviewTime: str(r.baseline_review_time),
+      qualifyingThisWeek: num(r.week_count),
+      qualifyingLastWeek: num(r.last_week_count),
+      qualifyingMonthToDate: num(r.month_count),
+      historical: num(r.historical_count),
+    }),
+  );
+  rows.sort((a, b) => APPROVED_GOOGLE_STORES.findIndex((s) => s.code === a.storeCode) - APPROVED_GOOGLE_STORES.findIndex((s) => s.code === b.storeCode));
+  return { context, rows };
 }

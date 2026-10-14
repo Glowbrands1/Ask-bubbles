@@ -6,15 +6,20 @@ import {
   ProvenanceChips,
 } from "@/components/ui/marquee";
 import { Info } from "lucide-react";
+import { NotConnected } from "./data-area";
 
 import { DataArea } from "./data-area";
 import type { ReviewsData } from "./load";
 import {
   Figure,
+  GoalTable,
+  Leaderboard,
   LiveFilters,
+  RankSegments,
   RatingsPanel,
   ReviewsList,
   TrendPanel,
+  goalView,
   totals,
 } from "./reviews-data";
 import { rating as fmtRating } from "@/features/admin/google-reviews/format";
@@ -108,7 +113,9 @@ export function ReviewsDashboard({
           <OverviewView status={status} data={data} />
         ) : null}
         {tab === "reviews" ? <RecordsView status={status} data={data} /> : null}
-        {tab === "leaderboard" ? <LeaderboardView status={data ? "not_configured" : status} /> : null}
+        {tab === "leaderboard" ? (
+          <LeaderboardView status={status} data={data} />
+        ) : null}
       </div>
     </div>
   );
@@ -124,15 +131,18 @@ function OverviewView({
   data: ReviewsData | null;
 }) {
   const live: ReviewsIntegrationStatus = data ? "connected" : status;
-  const goal: ReviewsIntegrationStatus = data ? "not_configured" : status;
+  const g = goalView(data);
+  const goal: ReviewsIntegrationStatus = data ? (g ? "connected" : "not_configured") : status;
   const t = data ? totals(data.stores) : null;
+  const sm = g?.summary ?? null;
   return (
     <>
       <SectionRule label="Monthly review goal" className="mt-1" />
       <p className={SECTION_NOTE}>
-        Every salon&rsquo;s monthly target and progress toward it will appear
-        here. Weekly figures cover the current reporting week; monthly figures
-        cover the month to date.
+        Every salon&rsquo;s monthly target and progress toward it. Weekly
+        figures cover the current week (Sunday–Saturday, Central); monthly
+        figures cover the month to date. Counts use Google&rsquo;s original
+        review dates.
       </p>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -140,27 +150,47 @@ function OverviewView({
           status={goal}
           tag={<WindowTag window="week">This week</WindowTag>}
           label="Qualifying reviews"
-          detail="3–5★ reviews counted this week, compared with last week"
-        />
+          detail={
+            sm
+              ? `3–5★ reviews counted this week; ${sm.qualifyingLastWeek} last week`
+              : "3–5★ reviews counted this week, compared with last week"
+          }
+        >
+          {sm ? <Figure>{sm.qualifyingThisWeek}</Figure> : null}
+        </GoalTile>
         <GoalTile
           status={goal}
           tag={<WindowTag window="month">Month to date</WindowTag>}
           label="Qualifying reviews"
-          detail="Against the combined monthly target of every salon counting"
-        />
+          detail={
+            sm
+              ? `Of a combined monthly target of ${sm.combinedTarget} across ${sm.counting} salons counting`
+              : "Against the combined monthly target of every salon counting"
+          }
+        >
+          {sm ? <Figure>{sm.qualifyingMonthToDate}</Figure> : null}
+        </GoalTile>
         <GoalTile
           status={goal}
           accent
           tag={<WindowTag window="month">Month to date</WindowTag>}
           label="Salons at goal"
           detail="Salons that have reached their monthly target"
-        />
+        >
+          {sm ? (
+            <Figure>
+              {sm.atGoal} of {sm.counting}
+            </Figure>
+          ) : null}
+        </GoalTile>
         <GoalTile
           status={goal}
           tag={<WindowTag window="month">Month to date</WindowTag>}
           label="Reviews still needed"
           detail="To bring every salon to its target. One salon's overage doesn't cover another's shortfall."
-        />
+        >
+          {sm ? <Figure>{sm.stillNeeded}</Figure> : null}
+        </GoalTile>
       </div>
 
       <Panel
@@ -172,19 +202,23 @@ function OverviewView({
           </>
         }
       >
-        <TableShell
-          status={goal}
-          label="Salon goal progress"
-          columns={[
-            { label: "Salon" },
-            { label: "Store code", align: "right" },
-            { label: "Qualifying · this week", align: "right" },
-            { label: "Qualifying · month to date", align: "right" },
-            { label: "Monthly target", align: "right" },
-            { label: "Progress toward target" },
-            { label: "Status" },
-          ]}
-        />
+        {g ? (
+          <GoalTable rows={g.rows} context={g.context} />
+        ) : (
+          <TableShell
+            status={goal}
+            label="Salon goal progress"
+            columns={[
+              { label: "Salon" },
+              { label: "Store code", align: "right" },
+              { label: "Qualifying · this week", align: "right" },
+              { label: "Qualifying · month to date", align: "right" },
+              { label: "Monthly target", align: "right" },
+              { label: "Progress toward target" },
+              { label: "Status" },
+            ]}
+          />
+        )}
         <Footnote>
           Qualifying means a 3-, 4- or 5-star Google review counted after the
           salon&rsquo;s baseline. 1–2 star reviews and imported history never
@@ -193,17 +227,7 @@ function OverviewView({
       </Panel>
 
       <Panel title="District goal progress">
-        <TableShell
-          status={goal}
-          label="District goal progress"
-          columns={[
-            { label: "District" },
-            { label: "Salons", align: "right" },
-            { label: "Qualifying · this week", align: "right" },
-            { label: "Qualifying · month to date", align: "right" },
-            { label: "Progress toward target" },
-          ]}
-        />
+        <NotConnected message="Districts not configured yet" />
       </Panel>
 
       <Panel
@@ -232,10 +256,17 @@ function OverviewView({
           {t ? <Figure>{t.reviews}</Figure> : null}
         </MeasureTile>
         <MeasureTile
-          status={goal}
+          status={data ? "connected" : status}
           label="Historical — not yet counted"
-          detail="Imported before a salon had a baseline. Stored and searchable, in no weekly total."
-        />
+          detail="Imported at or before a salon's baseline (or with no baseline yet). Stored and searchable, in no goal total."
+        >
+          {data?.goals ? (
+            <Figure>
+              {goalView(data)?.summary.historical ??
+                data.goals.rows.reduce((a, r) => a + r.historical, 0)}
+            </Figure>
+          ) : null}
+        </MeasureTile>
         <MeasureTile
           status={live}
           label="Average rating"
@@ -256,7 +287,15 @@ function OverviewView({
   );
 }
 
-function LeaderboardView({ status }: { status: ReviewsIntegrationStatus }) {
+function LeaderboardView({
+  status,
+  data,
+}: {
+  status: ReviewsIntegrationStatus;
+  data: ReviewsData | null;
+}) {
+  const g = goalView(data);
+  const goal: ReviewsIntegrationStatus = data ? (g ? "connected" : "not_configured") : status;
   return (
     <>
       <SectionRule label="Salon leaderboard" className="mt-1" />
@@ -268,11 +307,26 @@ function LeaderboardView({ status }: { status: ReviewsIntegrationStatus }) {
       <Panel>
         <div className="px-4 py-4">
           <p className="eyebrow">Month to date</p>
-          <DataArea status={status} size="value" className="mt-2" />
+          <DataArea status={goal} size="value" className="mt-2">
+            {g ? (
+              <p className="display-figure text-[26px] leading-tight text-foreground">
+                {g.summary.qualifyingMonthToDate} of {g.summary.combinedTarget}
+              </p>
+            ) : null}
+          </DataArea>
           <span
             aria-hidden
             className="mt-2.5 block h-2 rounded-[4px] bg-surface-muted"
-          />
+          >
+            {g ? (
+              <span
+                className="block h-2 rounded-[4px] bg-measure-data"
+                style={{
+                  width: `${Math.min(100, g.summary.combinedTarget > 0 ? (g.summary.qualifyingMonthToDate / g.summary.combinedTarget) * 100 : 0)}%`,
+                }}
+              />
+            ) : null}
+          </span>
         </div>
         <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border-hairline px-4 py-3 text-[11.5px] text-muted-foreground">
           <LegendItem swatch="bg-measure-data">
@@ -292,10 +346,14 @@ function LeaderboardView({ status }: { status: ReviewsIntegrationStatus }) {
       <Panel
         controls={
           <>
-            <DisabledSegments
-              label="Rank by"
-              options={["Rank by month to date", "Rank by this week"]}
-            />
+            {data && g ? (
+              <RankSegments data={data} />
+            ) : (
+              <DisabledSegments
+                label="Rank by"
+                options={["Rank by month to date", "Rank by this week"]}
+              />
+            )}
             <DisabledPill label="District" value="All districts" />
             <DisabledSearch label="Find a salon, store code or district" />
             <div className="basis-full">
@@ -314,7 +372,11 @@ function LeaderboardView({ status }: { status: ReviewsIntegrationStatus }) {
         }
       >
         <RankingHead />
-        <DataArea status={status} />
+        <DataArea status={goal}>
+          {g ? (
+            <Leaderboard rows={g.rows} context={g.context} metric={data?.rank ?? "month"} />
+          ) : null}
+        </DataArea>
         <Footnote>
           Salons on the same count share a rank. Progress can pass the target:
           the bar stops at full width and the overage is shown separately. A
