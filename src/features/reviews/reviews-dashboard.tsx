@@ -108,7 +108,7 @@ export function ReviewsDashboard({
           <OverviewView status={status} data={data} />
         ) : null}
         {tab === "reviews" ? <RecordsView status={status} data={data} /> : null}
-        {tab === "leaderboard" ? <LeaderboardView status={status} /> : null}
+        {tab === "leaderboard" ? <LeaderboardView status={data ? "not_configured" : status} /> : null}
       </div>
     </div>
   );
@@ -124,6 +124,7 @@ function OverviewView({
   data: ReviewsData | null;
 }) {
   const live: ReviewsIntegrationStatus = data ? "connected" : status;
+  const goal: ReviewsIntegrationStatus = data ? "not_configured" : status;
   const t = data ? totals(data.stores) : null;
   return (
     <>
@@ -136,26 +137,26 @@ function OverviewView({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <GoalTile
-          status={status}
+          status={goal}
           tag={<WindowTag window="week">This week</WindowTag>}
           label="Qualifying reviews"
           detail="3–5★ reviews counted this week, compared with last week"
         />
         <GoalTile
-          status={status}
+          status={goal}
           tag={<WindowTag window="month">Month to date</WindowTag>}
           label="Qualifying reviews"
           detail="Against the combined monthly target of every salon counting"
         />
         <GoalTile
-          status={status}
+          status={goal}
           accent
           tag={<WindowTag window="month">Month to date</WindowTag>}
           label="Salons at goal"
           detail="Salons that have reached their monthly target"
         />
         <GoalTile
-          status={status}
+          status={goal}
           tag={<WindowTag window="month">Month to date</WindowTag>}
           label="Reviews still needed"
           detail="To bring every salon to its target. One salon's overage doesn't cover another's shortfall."
@@ -172,7 +173,7 @@ function OverviewView({
         }
       >
         <TableShell
-          status={status}
+          status={goal}
           label="Salon goal progress"
           columns={[
             { label: "Salon" },
@@ -193,7 +194,7 @@ function OverviewView({
 
       <Panel title="District goal progress">
         <TableShell
-          status={status}
+          status={goal}
           label="District goal progress"
           columns={[
             { label: "District" },
@@ -231,7 +232,7 @@ function OverviewView({
           {t ? <Figure>{t.reviews}</Figure> : null}
         </MeasureTile>
         <MeasureTile
-          status={status}
+          status={goal}
           label="Historical — not yet counted"
           detail="Imported before a salon had a baseline. Stored and searchable, in no weekly total."
         />
