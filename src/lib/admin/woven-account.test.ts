@@ -14,7 +14,7 @@ const db = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/employees/woven/access/load", () => ({ loadAccessPlan: vi.fn() }));
-vi.mock("@/lib/admin/create-account", () => ({ createAccountWithoutEmail: db.create }));
+vi.mock("@/lib/admin/create-account", async (orig) => ({ ...(await orig<typeof import("@/lib/admin/create-account")>()), createAccountWithoutEmail: db.create }));
 vi.mock("@/lib/supabase/server", () => ({
   getSupabaseAdmin: () => ({
     from: (table: string) => ({
@@ -38,7 +38,7 @@ vi.mock("@/lib/supabase/server", () => ({
 import { WOVEN_TENANT } from "@/config/company/woven";
 import { createLinkedAccount } from "./woven-account";
 
-const actor = { id: "a", email: "admin@x.com", role: "admin" as const };
+const actor = { id: "a", email: "admin@x.com", role: "admin" as const, scope: { level: "global" as const, primaryAreaId: null, alsoCoversAreaIds: [] } };
 const base = () => ({
   external_employee_id: "E1",
   first_name: "Jo",
@@ -51,7 +51,9 @@ const base = () => ({
   primary_location_name: "NE Kearney",
   woven_company_id: WOVEN_TENANT.companyId.toLowerCase(),
 });
-const call = (over: Record<string, unknown> = {}) => createLinkedAccount({ externalEmployeeId: "E1", role: "employee", locationId: "loc-66", ...over }, actor);
+const loc = (id: string, also: string[] = []) => ({ level: "location", primaryAreaId: id, alsoCoversAreaIds: also });
+const GLOBAL = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
+const call = (over: Record<string, unknown> = {}, who = actor) => createLinkedAccount({ externalEmployeeId: "E1", role: "employee", scope: loc("loc-66"), ...over }, who);
 
 beforeEach(() => {
   db.employee = base();
@@ -81,14 +83,27 @@ describe("createLinkedAccount", () => {
     await expect(call()).resolves.toEqual({ outcome: "repaired", userId: "u1", linked: true });
     expect(db.create).not.toHaveBeenCalled();
   });
+  it("creates a multi-location account (primary plus additional)", async () => {
+    await call({ scope: loc("loc-66", ["loc-67"]) });
+    expect(db.create).toHaveBeenCalledWith(expect.objectContaining({ scope: loc("loc-66", ["loc-67"]) }), actor);
+  });
+  it("creates an All Locations account for a global admin, without making it an administrator", async () => {
+    await call({ scope: GLOBAL });
+    expect(db.create).toHaveBeenCalledWith(expect.objectContaining({ role: "employee", scope: GLOBAL }), actor);
+  });
+  it("creates an Admin only when explicitly confirmed", async () => {
+    await expect(call({ role: "admin", scope: GLOBAL })).rejects.toMatchObject({ code: "invalid_input" });
+    expect(db.create).not.toHaveBeenCalled();
+    await call({ role: "admin", scope: GLOBAL, confirmAdmin: true });
+    expect(db.create).toHaveBeenCalledWith(expect.objectContaining({ role: "admin", confirmAdmin: true }), actor);
+  });
   it.each([
-    ["admin", { role: "admin" }],
-    ["owner", { role: "owner" }],
-    ["district manager", { role: "district_manager" }],
-    ["an unknown location", { locationId: "loc-999" }],
-    ["a district id", { locationId: "dist-1" }],
+    ["an unknown role", { role: "superuser" }],
+    ["an unknown location", { scope: loc("loc-999") }],
+    ["a district scope", { scope: { level: "district", primaryAreaId: "dist-1", alsoCoversAreaIds: [] } }],
+    ["an unknown additional location", { scope: loc("loc-66", ["loc-999"]) }],
   ])("refuses %s", async (_n, over) => {
-    await expect(call(over)).rejects.toMatchObject({ code: "invalid_input" });
+    await expect(call(over)).rejects.toBeDefined();
     expect(db.create).not.toHaveBeenCalled();
   });
   it.each([

@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const result = await runProvisioning({
       apply: body.apply === true,
       batchSize,
-      actor: { id: context.identity.subject, email: context.identity.email, role: context.identity.role },
+      actor: { id: context.identity.subject, email: context.identity.email, role: context.identity.role, scope: context.identity.scope },
     });
     return NextResponse.json(result, { headers: NO_STORE });
   } catch (error) {

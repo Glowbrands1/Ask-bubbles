@@ -3,13 +3,16 @@ import { NextResponse } from "next/server";
 import { assertLiveMode, assertNoConfigurationProblems, assertWithinRateLimit, errorResponse } from "@/lib/api/respond";
 import { parseJsonBody } from "@/lib/api/validation";
 import { DirectoryError } from "@/lib/admin/user-directory";
+import { suggestLocations } from "@/lib/admin/woven-account-suggest";
+import { loadDirectoryRows } from "@/lib/employees/woven/directory";
+import { listWovenLocations } from "@/lib/employees/woven/locations";
 import { loadAccessPlan } from "@/lib/employees/woven/access/load";
 import { createLinkedAccount } from "@/lib/admin/woven-account";
 import { authorizeWovenPeopleRequest, NO_STORE, wovenStoreFailureResponse } from "@/lib/employees/woven/route-auth";
 
 /**
  * GET  /api/admin/employees/woven/accounts   every synced employee, mapped or not, with account state
- * POST /api/admin/employees/woven/accounts   { externalEmployeeId, role, locationId } create (or repair the link of) ONE account
+ * POST /api/admin/employees/woven/accounts   { externalEmployeeId, role, scope: {level, primaryAreaId, alsoCoversAreaIds}, confirmAdmin? } create (or repair the link of) ONE account
  *
  * `manage_users` AND `manage_integrations`. No email, invitation, code or
  * password is involved; the account is created disabled. See `provision.ts`.
@@ -22,7 +25,8 @@ export async function GET(request: Request) {
     assertLiveMode();
     assertNoConfigurationProblems();
     await authorizeWovenPeopleRequest(request);
-    const plan = await loadAccessPlan();
+    const [plan, directory, maps] = await Promise.all([loadAccessPlan(), loadDirectoryRows(), listWovenLocations()]);
+    const directoryById = new Map(directory.map((d) => [d.externalEmployeeId, d]));
     const employees = plan.rows
       .filter((r) => r.externalEmployeeId !== null && r.wovenStatus !== null)
       .map((r) => ({
@@ -33,7 +37,8 @@ export async function GET(request: Request) {
         position: r.wovenPosition,
         primaryLocation: r.wovenPrimaryLocation,
         suggestedRole: r.proposedRole,
-        suggestedLocationId: r.proposedPrimaryAreaId,
+        /* Woven's own assignments (all shown, matched or not) and a scope suggestion — never a grant. */
+        locations: directoryById.has(r.externalEmployeeId as string) ? suggestLocations(directoryById.get(r.externalEmployeeId as string)!, maps) : null,
         /* none: no account · linked: account linked to this employee · unlinked: an account with this email exists, link missing (repairable) */
         account: r.account === null ? "none" : r.account.via === "link" ? "linked" : "unlinked",
         notes: r.reasons,
@@ -52,13 +57,13 @@ export async function POST(request: Request) {
     const context = await authorizeWovenPeopleRequest(request);
     assertWithinRateLimit(request, "mutate");
 
-    const body = await parseJsonBody<{ externalEmployeeId?: unknown; role?: unknown; locationId?: unknown }>(request);
+    const body = await parseJsonBody<{ externalEmployeeId?: unknown; role?: unknown; scope?: unknown; confirmAdmin?: unknown }>(request);
     if (typeof body.externalEmployeeId !== "string" || body.externalEmployeeId.length === 0) {
       return NextResponse.json({ error: "Choose an employee.", code: "invalid_input" }, { status: 400, headers: NO_STORE });
     }
     const result = await createLinkedAccount(
-      { externalEmployeeId: body.externalEmployeeId, role: body.role, locationId: body.locationId },
-      { id: context.identity.subject, email: context.identity.email, role: context.identity.role },
+      { externalEmployeeId: body.externalEmployeeId, role: body.role, scope: body.scope, confirmAdmin: body.confirmAdmin },
+      { id: context.identity.subject, email: context.identity.email, role: context.identity.role, scope: context.identity.scope },
     );
     return NextResponse.json(result, { status: result.outcome === "created" ? 201 : 200, headers: NO_STORE });
   } catch (error) {
