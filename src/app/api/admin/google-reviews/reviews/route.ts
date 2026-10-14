@@ -13,7 +13,7 @@ import { GoogleViewError, parseReviewQuery, readReviewPage } from "@/lib/google-
  * page. Anything else is ignored, never passed to the database.
  *
  * `manage_integrations`: review text is customer-written content, shown to
- * administrators only. No reviewer name, photo or id exists to return.
+ * administrators only. Of the reviewer only the display name is returned (null when anonymous).
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
