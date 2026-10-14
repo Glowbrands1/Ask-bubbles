@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FieldGroup, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/feedback";
-import { readRecoveryLink } from "@/lib/auth/recovery-link";
+import { linkWasAlreadyUsed, readRecoveryLink } from "@/lib/auth/recovery-link";
 import { safeInternalPath } from "@/lib/auth/safe-navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
@@ -93,7 +93,7 @@ type Phase =
    * a CONFIGURATION failure, which is a different sentence from a dead link and
    * must not be dressed up as one.
    */
-  | { kind: "invalid"; message?: string }
+  | { kind: "invalid"; message?: string; usedUp?: boolean }
   /** The password is changed. Say so before navigating away. */
   | { kind: "done" };
 
@@ -225,6 +225,7 @@ export function ResetPasswordForm() {
     if (typeof window === "undefined") return;
 
     const link = readRecoveryLink(window.location.search, window.location.hash);
+    const usedUp = linkWasAlreadyUsed(window.location.search, window.location.hash);
 
     /*
      * SCRUB FIRST, before any `await`, and whatever was found — a refused link
@@ -234,7 +235,7 @@ export function ResetPasswordForm() {
     window.history.replaceState(null, "", window.location.pathname);
 
     if (link.kind === "rejected") {
-      setPhase({ kind: "invalid" });
+      setPhase({ kind: "invalid", usedUp });
       return;
     }
 
@@ -469,6 +470,13 @@ export function ResetPasswordForm() {
           {phase.message ??
             "Password reset links can be used once and expire shortly after they are sent."}
         </Notice>
+        {phase.usedUp ? (
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            This usually means the link was already opened — often by an email
+            security tool that checks links before you click them. Request a new
+            link, then open it straight away from the newest email.
+          </p>
+        ) : null}
         <p className="text-sm leading-relaxed text-muted-foreground">
           Request a new one and we will email you a fresh link. Your current
           password has not been changed.

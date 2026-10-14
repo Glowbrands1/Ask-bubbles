@@ -148,6 +148,23 @@ test.describe("links that cannot work", () => {
     });
   }
 
+  test("the exact 2026-10-14 production failure: a scanner spent the one-time token, then the person's own click came back as #error=otp_expired on the site root", async ({ page }) => {
+    await mockSupabase(page);
+
+    // Supabase redirected to the bare Site URL with this fragment (auth log: "403: Email link is invalid or has expired").
+    await page.goto(
+      "/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired",
+    );
+
+    await expect(page).toHaveURL(/\/reset-password$/);
+    await expect(page.getByText("This reset link is no longer valid")).toBeVisible();
+    await expect(page.getByText(/already opened/i)).toBeVisible();
+    await expect(page.getByText(/security tool/i)).toBeVisible();
+    // Nothing technical leaks to the screen, and the way forward is one click.
+    await expect(page.getByText(/otp_expired|access_denied|One-time token/)).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Request a new link" })).toBeVisible();
+  });
+
   test("an unusable token (Supabase refuses the session) shows the same friendly screen", async ({ page }) => {
     await page.route(`${SUPABASE}/auth/v1/**`, (route) =>
       route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ code: 401, msg: "invalid JWT" }) }),

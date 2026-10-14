@@ -17,14 +17,16 @@ const template = readFileSync(
 describe("docs/supabase-reset-password-template.html", () => {
   it("links to the app's recovery-start route with the token hash, not a one-click Supabase /verify link", () => {
     expect(template).toContain(
-      `{{ .SiteURL }}${RECOVERY_START_PATH}?token_hash={{ .TokenHash }}&type=recovery`,
+      `https://askbubbles.vercel.app${RECOVERY_START_PATH}?token_hash={{ .TokenHash }}&type=recovery`,
     );
     expect(template).not.toContain("{{ .ConfirmationURL }}");
   });
 
-  it("hard-codes no host, so the Supabase Site URL alone decides where the link points", () => {
+  it("names the production host explicitly (not {{ .SiteURL }}, whose trailing slash or value is outside our control) and never localhost", () => {
     expect(template).not.toMatch(/localhost|127\.0\.0\.1/);
-    expect(template).not.toMatch(/https?:\/\/(?!\{\{)/);
+    expect(template).not.toContain("{{ .SiteURL }}");
+    const hosts = [...template.matchAll(/https?:\/\/[^/"\s]+/g)].map((m) => m[0]);
+    expect(new Set(hosts)).toEqual(new Set(["https://askbubbles.vercel.app"]));
   });
 
   it("points at a route that exists", () => {
