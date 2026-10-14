@@ -89,7 +89,7 @@ describe("Google Reviews screen states", () => {
     expect(screen.getByText(/Waiting for Google's approval/)).toBeTruthy();
   });
 
-  it("lists reviews with stars, reply state and no reviewer identity", () => {
+  it("lists reviews with stars, reply state and the reviewer's display name", () => {
     const props = ready({
       totals: { reviews: 2, average: 4.5, unanswered: 1, storesLinked: 1, storesTotal: 7 },
       reviews: {
@@ -108,6 +108,8 @@ describe("Google Reviews screen states", () => {
     expect(within(list).getByText("Unanswered")).toBeTruthy();
     expect(within(list).getByRole("img", { name: "5 out of 5 stars" })).toBeTruthy();
     expect(within(list).getByText(/Rating only/)).toBeTruthy();
+    expect(within(list).getByText("Ann B.")).toBeTruthy();
+    expect(within(list).getByText("Anonymous reviewer")).toBeTruthy();
     expect(screen.getByText("4.5")).toBeTruthy();
   });
 
