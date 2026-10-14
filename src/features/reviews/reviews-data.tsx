@@ -261,7 +261,7 @@ export function ReviewsList({ data }: { data: ReviewsData }) {
                   {reviewDate(r.createdAt)}
                 </td>
                 <td className="px-4 py-2.5">{r.storeName}</td>
-                <td className="px-4 py-2.5">{r.reviewerName ?? "Anonymous"}</td>
+                <td className="px-4 py-2.5">{r.reviewerName ?? "Anonymous reviewer"}</td>
                 <td className="px-4 py-2.5 font-bold whitespace-nowrap">
                   {r.starRating} ★
                 </td>

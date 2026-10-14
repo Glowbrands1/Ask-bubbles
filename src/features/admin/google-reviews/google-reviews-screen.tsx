@@ -210,7 +210,8 @@ function ReviewList({ page, query }: { page: ReviewPage; query: ReviewQuery }) {
           <li key={r.id + r.storeCode} className="rounded-[var(--radius-lg)] border border-border bg-surface p-4 shadow-soft">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <Stars value={r.starRating} />
-              <span className="text-[13px] font-semibold text-foreground">{r.storeName}</span>
+              <span className="text-[13px] font-semibold text-foreground">{r.reviewerName ?? "Anonymous reviewer"}</span>
+              <span className="text-[13px] text-muted-foreground">{r.storeName}</span>
               <span className="text-[12px] text-muted-foreground">Store {r.storeCode} · {reviewDate(r.createdAt)}</span>
               <Badge tone={r.hasReply ? "ready" : "attention"}>{r.hasReply ? "Answered" : "Unanswered"}</Badge>
               {r.removedAt ? <Badge tone="neutral">No longer returned by Google</Badge> : null}
