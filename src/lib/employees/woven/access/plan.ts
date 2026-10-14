@@ -1,3 +1,4 @@
+import { OTHER_BRAND_TITLE_MARKERS } from "@/config/company/google-reviews";
 import { WOVEN_AUTO_PROVISION_ROLES, WOVEN_LOCATION_MANAGED_ROLES } from "@/config/company/woven";
 import { ADMIN_CONSOLE_ROLES } from "@/lib/permissions";
 import type { Role } from "@/types";
@@ -377,6 +378,18 @@ function planWithoutAccount(
   if (employee.issues.includes("status_termination_conflict")) {
     actions.push("FLAG_STATUS_CONFLICT");
     reasons.push("woven_shows_past_termination_date");
+    return row();
+  }
+  /* Wider-than-one-location evidence, or another brand's location, is never narrowed into a guess. */
+  const squash = (v: string | null) => (v ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (OTHER_BRAND_TITLE_MARKERS.some((m) => squash(employee.primaryLocationName).includes(squash(m)))) {
+    actions.push("FLAG_UNMAPPED_LOCATION");
+    reasons.push("other_brand_location");
+    return row();
+  }
+  if (employee.hasAllLocationAccess === true || employee.issues.includes("affiliations_not_verified")) {
+    actions.push("FLAG_LOCATION_REVIEW");
+    reasons.push(employee.hasAllLocationAccess === true ? "all_location_access_not_provisioned" : "affiliations_not_verified");
     return row();
   }
   const email = lower(employee.emailAddress);
