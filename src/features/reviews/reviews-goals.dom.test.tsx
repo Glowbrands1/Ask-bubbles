@@ -60,6 +60,17 @@ describe("goal tracking on the dashboard", () => {
     expect(items[0]!.textContent).toContain("1");
   });
 
+  it("labels a part-way baseline as a partial month, with the dates, instead of a pace verdict", () => {
+    const d = data([goalRow("219", { baselineReviewTime: "2026-10-10T18:40:49Z", qualifyingMonthToDate: 2 }), goalRow("225", { baselineReviewTime: "2026-10-12T19:26:49Z", qualifyingMonthToDate: 12 })]);
+    render(<ReviewsDashboard tab="overview" status="not_connected" data={d} />);
+    const table = screen.getByRole("table", { name: "Salon goal progress" });
+    expect(within(table).getByText("Partial month")).toBeTruthy();
+    expect(within(table).getByText("Goal met")).toBeTruthy();
+    expect(within(table).queryByText("Behind pace")).toBeNull();
+    expect(within(table).getByText(/Counting since Oct 10 · partial month/)).toBeTruthy();
+    expect(screen.getByText(/Partial month: counting for 2 salons began Oct 10–Oct 12/)).toBeTruthy();
+  });
+
   it("says the goal is not configured, and prints no figure, while no salon has a baseline", () => {
     render(<ReviewsDashboard tab="overview" status="not_connected" data={data([goalRow("219", { baselineReviewId: null, baselineReviewTime: null })])} />);
     expect(screen.getAllByText("Goal not configured yet").length).toBeGreaterThan(0);

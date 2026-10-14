@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { goalContext, goalProgress, goalStatus, goalSummary, paceTargetFor, rankRows, weekStartOf, type GoalRow } from "./goals";
+import { goalContext, goalProgress, goalStatus, goalSummary, isPartialMonth, paceTargetFor, partialMonthNote, rankRows, weekStartOf, type GoalRow } from "./goals";
 
 const row = (over: Partial<GoalRow> = {}): GoalRow => ({
   storeCode: "219",
@@ -70,5 +70,33 @@ describe("leaderboard", () => {
   it("can rank by this week", () => {
     const ranked = rankRows([row({ storeCode: "A", displayName: "A", qualifyingMonthToDate: 9, qualifyingThisWeek: 0 }), row({ storeCode: "B", displayName: "B", qualifyingMonthToDate: 1, qualifyingThisWeek: 4 })], "week");
     expect(ranked[0]!.row.storeCode).toBe("B");
+  });
+});
+
+describe("a partial October is never presented as a full month", () => {
+  const ctx = goalContext("2026-10-14");
+  const partial = row({ baselineReviewTime: "2026-10-10T18:40:49Z", qualifyingMonthToDate: 2 });
+  const full = row({ baselineReviewTime: "2026-09-28T12:00:00Z", qualifyingMonthToDate: 2 });
+
+  it("flags a baseline set during the current Central month, and not one set before it", () => {
+    expect(isPartialMonth(partial, ctx)).toBe(true);
+    expect(isPartialMonth(full, ctx)).toBe(false);
+    expect(isPartialMonth(row({ baselineReviewId: null, baselineReviewTime: null }), ctx)).toBe(false);
+  });
+
+  it("uses the Central date: 22:00 Central on Sep 30 is still last month, 00:30 Central on Oct 1 is this month", () => {
+    expect(isPartialMonth(row({ baselineReviewTime: "2026-10-01T03:00:00Z" }), ctx)).toBe(false); // 22:00 CDT, Sep 30
+    expect(isPartialMonth(row({ baselineReviewTime: "2026-10-01T05:30:00Z" }), ctx)).toBe(true); // 00:30 CDT, Oct 1
+  });
+
+  it("gives a salon short of target no pace verdict, while reaching the target still reads Goal met", () => {
+    expect(goalStatus(partial, ctx)).toBe("partial_month");
+    expect(goalStatus(full, ctx)).toBe("behind_pace");
+    expect(goalStatus({ ...partial, qualifyingMonthToDate: 10 }, ctx)).toBe("met");
+  });
+
+  it("summarises which salons are partial, and when counting began", () => {
+    expect(partialMonthNote([partial, full, row({ baselineReviewTime: "2026-10-13T21:00:00Z" })], ctx)).toEqual({ salons: 2, from: "2026-10-10", to: "2026-10-13" });
+    expect(partialMonthNote([full], ctx)).toBeNull();
   });
 });

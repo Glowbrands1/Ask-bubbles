@@ -318,6 +318,9 @@ import {
   GOAL_STATUS_LABEL,
   goalProgress,
   goalStatus,
+  baselineDay,
+  isPartialMonth,
+  partialMonthNote,
   goalSummary,
   rankRows,
   type GoalRow,
@@ -337,6 +340,7 @@ export function goalView(data: ReviewsData | null): { rows: GoalRow[]; summary: 
 
 const STATUS_STYLE: Record<GoalStatus, string> = {
   met: "bg-status-outperforming text-white",
+  partial_month: "bg-surface-muted text-body-foreground",
   on_pace: "bg-selected text-selected-foreground",
   behind_pace: "bg-status-attention text-white",
   not_counting: "bg-surface-muted text-muted-foreground",
@@ -380,7 +384,15 @@ export function GoalTable({ rows, context }: { rows: GoalRow[]; context: NonNull
             const counting = r.baselineReviewId !== null;
             return (
               <tr key={r.storeCode} className="border-b border-border-hairline">
-                <td className="px-4 py-2.5 font-bold">{r.displayName}</td>
+                <td className="px-4 py-2.5 font-bold">
+                  {r.displayName}
+                  {r.baselineReviewTime ? (
+                    <span className="block text-[10.5px] font-normal text-muted-foreground">
+                      Counting since {formatDay(baselineDay(r))}
+                      {isPartialMonth(r, context) ? " · partial month" : ""}
+                    </span>
+                  ) : null}
+                </td>
                 <td className="px-4 py-2.5 text-right tabular-nums">{r.storeCode}</td>
                 <td className="px-4 py-2.5 text-right tabular-nums">{counting ? r.qualifyingThisWeek : "—"}</td>
                 <td className="px-4 py-2.5 text-right tabular-nums">{counting ? r.qualifyingMonthToDate : "—"}</td>
@@ -444,4 +456,18 @@ export function Leaderboard({ rows, context, metric }: { rows: GoalRow[]; contex
       ))}
     </ol>
   );
+}
+
+const DAY_LABEL = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+export function formatDay(day: string | null): string {
+  return day ? DAY_LABEL.format(new Date(`${day}T00:00:00Z`)) : "—";
+}
+
+/** The honest caveat for a month whose baselines were set part-way through; null when every salon has a full month. */
+export function partialMonthText(g: ReturnType<typeof goalView>): string | null {
+  if (!g) return null;
+  const note = partialMonthNote(g.rows, g.context);
+  if (!note) return null;
+  const span = note.from === note.to ? formatDay(note.from) : `${formatDay(note.from)}–${formatDay(note.to)}`;
+  return `Partial month: counting for ${note.salons} salon${note.salons === 1 ? "" : "s"} began ${span}, so this month's totals cover only part of it. Salons short of target show "Partial month" rather than a pace verdict, and "reviews still needed" is measured against the full monthly target.`;
 }

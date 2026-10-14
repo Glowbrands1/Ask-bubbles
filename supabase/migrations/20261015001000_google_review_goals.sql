@@ -33,29 +33,101 @@ alter table public.google_review_goals force row level security;
 revoke all on public.google_review_goals from anon, authenticated;
 
 /*
- * SET BASELINES from the newest live imported review of each salon that has none.
- * Idempotent and never moves an existing baseline. Returns one row per salon touched.
+ * A BASELINE, ONCE SET, CANNOT BE CHANGED OR CLEARED BY ANY WRITER. Moving it would change what has
+ * counted, so the only way to a different baseline is a deliberate, reviewed migration that drops this trigger.
  */
-create or replace function public.google_review_set_baselines(p_actor text)
+create or replace function public.google_review_goals_guard_baseline()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if old.baseline_review_id is not null
+     and (new.baseline_review_id is distinct from old.baseline_review_id
+          or new.baseline_review_time is distinct from old.baseline_review_time) then
+    raise exception 'google_review_goals: store % already has a baseline; it cannot be overwritten', old.store_code
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists google_review_goals_guard_baseline on public.google_review_goals;
+create trigger google_review_goals_guard_baseline
+  before update on public.google_review_goals
+  for each row execute function public.google_review_goals_guard_baseline();
+
+/*
+ * SET BASELINES from an EXPLICIT, REVIEWED LIST. Nothing is chosen at execution time.
+ *
+ *   p_baselines  jsonb array of {store_code, review_id, review_time} — exactly what was approved.
+ *
+ * Every entry is verified first, and the whole call is one transaction (any failure changes nothing):
+ *   - the store has a goal row that has NO baseline yet (an existing baseline is never overwritten);
+ *   - the review is live and belongs to THAT store's own Google location;
+ *   - its creation time equals the approved review_time exactly.
+ * A store may appear once. Returns the rows written.
+ */
+create or replace function public.google_review_set_baselines(p_actor text, p_baselines jsonb)
 returns table (store_code text, baseline_review_id text, baseline_review_time timestamptz)
 language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  v_item jsonb;
+  v_store text;
+  v_rid text;
+  v_time timestamptz;
+  v_seen text[] := '{}';
+  v_goal public.google_review_goals%rowtype;
+  v_actual timestamptz;
 begin
-  return query
-  with newest as (
-    select distinct on (l.store_code) l.store_code as sc, r.google_review_id as rid, r.review_create_time as rt
-      from public.google_review_locations l
-      join public.google_reviews r on r.location_id = l.id and r.removed_at is null
-     order by l.store_code, r.review_create_time desc, r.google_review_id desc
-  )
-  update public.google_review_goals g
-     set baseline_review_id = n.rid, baseline_review_time = n.rt,
-         baseline_set_at = now(), baseline_set_by = left(p_actor, 200)
-    from newest n
-   where g.store_code = n.sc and g.baseline_review_id is null
-  returning g.store_code, g.baseline_review_id, g.baseline_review_time;
+  if p_actor is null or length(btrim(p_actor)) = 0 then
+    raise exception 'google_review_set_baselines: an actor is required' using errcode = 'invalid_parameter_value';
+  end if;
+  if p_baselines is null or jsonb_typeof(p_baselines) <> 'array' or jsonb_array_length(p_baselines) = 0 then
+    raise exception 'google_review_set_baselines: baselines must be a non-empty array' using errcode = 'invalid_parameter_value';
+  end if;
+
+  for v_item in select * from jsonb_array_elements(p_baselines) loop
+    v_store := v_item ->> 'store_code';
+    v_rid := v_item ->> 'review_id';
+    v_time := (v_item ->> 'review_time')::timestamptz;
+    if v_store is null or v_rid is null or v_time is null then
+      raise exception 'google_review_set_baselines: each entry needs store_code, review_id and review_time' using errcode = 'invalid_parameter_value';
+    end if;
+    if v_store = any (v_seen) then
+      raise exception 'google_review_set_baselines: store % appears twice', v_store using errcode = 'invalid_parameter_value';
+    end if;
+    v_seen := v_seen || v_store;
+
+    select * into v_goal from public.google_review_goals g where g.store_code = v_store for update;
+    if not found then
+      raise exception 'google_review_set_baselines: unknown store %', v_store using errcode = 'invalid_parameter_value';
+    end if;
+    if v_goal.baseline_review_id is not null then
+      raise exception 'google_review_set_baselines: store % already has a baseline and it is not overwritten', v_store using errcode = 'check_violation';
+    end if;
+
+    select r.review_create_time into v_actual
+      from public.google_reviews r
+      join public.google_review_locations l on l.id = r.location_id
+     where l.store_code = v_store and r.google_review_id = v_rid and r.removed_at is null;
+    if not found then
+      raise exception 'google_review_set_baselines: review % is not a live review of store %', v_rid, v_store using errcode = 'check_violation';
+    end if;
+    if v_actual <> v_time then
+      raise exception 'google_review_set_baselines: review % has creation time %, not the approved %', v_rid, v_actual, v_time using errcode = 'check_violation';
+    end if;
+
+    update public.google_review_goals g
+       set baseline_review_id = v_rid, baseline_review_time = v_actual,
+           baseline_set_at = now(), baseline_set_by = left(p_actor, 200)
+     where g.store_code = v_store;
+    store_code := v_store; baseline_review_id := v_rid; baseline_review_time := v_actual;
+    return next;
+  end loop;
 end;
 $$;
 
@@ -98,8 +170,9 @@ as $$
   order by l.store_code;
 $$;
 
-revoke all on function public.google_review_set_baselines(text) from public, anon, authenticated;
-grant execute on function public.google_review_set_baselines(text) to service_role;
+revoke all on function public.google_review_set_baselines(text, jsonb) from public, anon, authenticated;
+grant execute on function public.google_review_set_baselines(text, jsonb) to service_role;
+revoke all on function public.google_review_goals_guard_baseline() from public, anon, authenticated;
 revoke all on function public.google_review_goal_counts(timestamptz, timestamptz, timestamptz, timestamptz) from public, anon, authenticated;
 grant execute on function public.google_review_goal_counts(timestamptz, timestamptz, timestamptz, timestamptz) to service_role;
 

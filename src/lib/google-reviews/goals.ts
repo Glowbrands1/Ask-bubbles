@@ -72,20 +72,36 @@ export interface GoalRow {
   historical: number;
 }
 
-export type GoalStatus = "met" | "on_pace" | "behind_pace" | "not_counting";
+export type GoalStatus = "met" | "on_pace" | "behind_pace" | "partial_month" | "not_counting";
 
 export const GOAL_STATUS_LABEL: Record<GoalStatus, string> = {
   met: "Goal met",
   on_pace: "On pace",
   behind_pace: "Behind pace",
+  partial_month: "Partial month",
   not_counting: "Not counting",
 };
 
 export const isCounting = (row: Pick<GoalRow, "baselineReviewId">): boolean => row.baselineReviewId !== null;
 
+/** Central calendar date (`yyyy-mm-dd`) of a salon's baseline review, or null with no baseline. */
+export function baselineDay(row: Pick<GoalRow, "baselineReviewTime">): string | null {
+  return row.baselineReviewTime ? centralToday(new Date(row.baselineReviewTime)) : null;
+}
+
+/**
+ * A baseline set during the current month means only part of the month could be counted: the figure is
+ * real but it is NOT a full-month result, so it gets no pace or "behind" verdict (reaching the target still reads "Goal met").
+ */
+export function isPartialMonth(row: Pick<GoalRow, "baselineReviewId" | "baselineReviewTime">, context: Pick<GoalContext, "monthStart">): boolean {
+  const day = baselineDay(row);
+  return row.baselineReviewId !== null && day !== null && day >= context.monthStart;
+}
+
 export function goalStatus(row: GoalRow, context: GoalContext): GoalStatus {
   if (!isCounting(row)) return "not_counting";
   if (row.qualifyingMonthToDate >= row.monthlyTarget) return "met";
+  if (isPartialMonth(row, context)) return "partial_month";
   const pace = paceTargetFor(row.monthlyTarget, context.daysElapsed, context.daysInMonth);
   return row.qualifyingMonthToDate >= pace ? "on_pace" : "behind_pace";
 }
@@ -143,6 +159,20 @@ export interface GoalSummary {
   /** Sum of each counting salon's own remainder: one salon's overage never covers another's shortfall. */
   stillNeeded: number;
   historical: number;
+}
+
+export interface PartialMonthNote {
+  /** Counting salons whose baseline falls in the current month. */
+  salons: number;
+  /** The earliest and latest of those baseline dates, Central `yyyy-mm-dd`. */
+  from: string;
+  to: string;
+}
+
+/** Null when every counting salon has a full month to report. */
+export function partialMonthNote(rows: readonly GoalRow[], context: Pick<GoalContext, "monthStart">): PartialMonthNote | null {
+  const days = rows.filter((r) => isPartialMonth(r, context)).map((r) => baselineDay(r)!).sort();
+  return days.length === 0 ? null : { salons: days.length, from: days[0]!, to: days[days.length - 1]! };
 }
 
 export function goalSummary(rows: readonly GoalRow[]): GoalSummary {

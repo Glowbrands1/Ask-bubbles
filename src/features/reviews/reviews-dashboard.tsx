@@ -20,6 +20,7 @@ import {
   ReviewsList,
   TrendPanel,
   goalView,
+  partialMonthText,
   totals,
 } from "./reviews-data";
 import { rating as fmtRating } from "@/features/admin/google-reviews/format";
@@ -135,6 +136,7 @@ function OverviewView({
   const goal: ReviewsIntegrationStatus = data ? (g ? "connected" : "not_configured") : status;
   const t = data ? totals(data.stores) : null;
   const sm = g?.summary ?? null;
+  const pm = partialMonthText(g);
   return (
     <>
       <SectionRule label="Monthly review goal" className="mt-1" />
@@ -164,7 +166,7 @@ function OverviewView({
           label="Qualifying reviews"
           detail={
             sm
-              ? `Of a combined monthly target of ${sm.combinedTarget} across ${sm.counting} salons counting`
+              ? `Of a combined monthly target of ${sm.combinedTarget} across ${sm.counting} salons counting${pm ? " — partial month, see note below" : ""}`
               : "Against the combined monthly target of every salon counting"
           }
         >
@@ -223,6 +225,7 @@ function OverviewView({
           Qualifying means a 3-, 4- or 5-star Google review counted after the
           salon&rsquo;s baseline. 1–2 star reviews and imported history never
           count.
+          {pm ? ` ${pm}` : ""}
         </Footnote>
       </Panel>
 
@@ -295,6 +298,7 @@ function LeaderboardView({
   data: ReviewsData | null;
 }) {
   const g = goalView(data);
+  const pm = partialMonthText(g);
   const goal: ReviewsIntegrationStatus = data ? (g ? "connected" : "not_configured") : status;
   return (
     <>
@@ -381,6 +385,7 @@ function LeaderboardView({
           Salons on the same count share a rank. Progress can pass the target:
           the bar stops at full width and the overage is shown separately. A
           salon without a review baseline isn&rsquo;t ranked.
+          {pm ? ` ${pm}` : ""}
         </Footnote>
       </Panel>
     </>
