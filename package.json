@@ -11,7 +11,7 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "e2e:update": "playwright test --update-snapshots",
-    "e2e:build": "NEXT_PUBLIC_DEMO_MODE=true next build",
+    "e2e:build": "NEXT_PUBLIC_DEMO_MODE=true NEXT_PUBLIC_SUPABASE_URL=https://recovery-e2e.supabase.co NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_e2e_placeholder next build",
     "bootstrap:admin": "node scripts/bootstrap-admin.mjs",
     "verify:bundle": "node scripts/verify-no-demo-in-bundle.mjs",
     "probe:woven": "vitest run src/lib/employees/woven/live-probe.dry-run.test.ts --disableConsoleIntercept",

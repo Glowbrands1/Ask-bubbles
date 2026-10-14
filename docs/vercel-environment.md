@@ -31,7 +31,7 @@ the deployed site cannot sign anyone in.
 | `SUPABASE_SECRET_KEY` | All server reads/writes, admin user management, embeddings | **secret** (Sensitive) | Production, Preview | Supabase → Project Settings → API Keys → **Secret key** (`sb_secret_…`) for `dyurgwieyltnhphihwwj` |
 | `ANTHROPIC_API_KEY` | The assistant. Without it the assistant says it is unavailable | **secret** (Sensitive) | Production, Preview | Anthropic Console → API Keys (a key for Ask Bubbles) |
 | `CRON_SECRET` | Authenticates Vercel cron calls; cron routes refuse without it | **secret** (Sensitive) | Production | Generate: at least 24 random characters (e.g. `openssl rand -hex 32`) |
-| `NEXT_PUBLIC_SITE_URL` | Origin for invitation and password-reset links. Falls back to the request origin when unset | public | Production (recommended) | The production URL, e.g. `https://ask-bubbles.vercel.app` or a custom domain |
+| `NEXT_PUBLIC_SITE_URL` | Origin for invitation and password-reset links. Falls back to the request origin when unset | public | Production (recommended) | The production URL, e.g. `https://askbubbles.vercel.app` or a custom domain |
 
 Legacy alternative: `SUPABASE_SERVICE_ROLE_KEY` is read only when
 `SUPABASE_SECRET_KEY` is unset. Prefer the secret key.

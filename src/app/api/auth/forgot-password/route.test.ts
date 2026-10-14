@@ -122,6 +122,17 @@ describe("the request Supabase receives", () => {
     });
   });
 
+  it("targets the production host askbubbles.vercel.app and never localhost when NEXT_PUBLIC_SITE_URL is set", async () => {
+    const { call, seen } = await loadRoute();
+    process.env.NEXT_PUBLIC_SITE_URL = "https://askbubbles.vercel.app";
+    await call({ email: EMAIL }, "http://localhost:3000");
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+
+    expect(seen.calls[0].options).toEqual({
+      redirectTo: "https://askbubbles.vercel.app/reset-password",
+    });
+  });
+
   it("ignores any redirect the caller tries to supply", async () => {
     const { call, seen } = await loadRoute();
     await call({ email: EMAIL, redirectTo: "https://evil.example/steal" });
