@@ -318,8 +318,8 @@ describe("7. no employee-sync UI, route or library code can reach app_users, aut
       /* A Supabase write verb on a query chain (not crypto's hash.update). */
       for (const m of c.matchAll(/\.from\(\s*["'`]([a-z_]+)["'`]\)\s*\.(insert|update|upsert|delete)\(/g)) writers.push(`${m[1]}.${m[2]}`);
     }
-    /* A person's change review, and a person's link review (stage 2) — nothing else. */
-    expect(writers.sort()).toEqual(["employee_account_links.insert", "employee_directory_changes.update"]);
+    /* A person's change review, a person's link review, and the approved bulk provisioning's link record (provision.ts) — nothing else. */
+    expect(writers.sort()).toEqual(["employee_account_links.insert", "employee_account_links.insert", "employee_directory_changes.update"]);
   });
 
   it("locations is only ever read", () => {
@@ -363,14 +363,14 @@ describe("8. the access planner (stage 1) applies nothing", () => {
     expect(backfill).toMatch(/not exists \(\s*select 1 from public\.employee_access_directory d/);
   });
 
-  it("no access-planner module calls the auth API or names app_users; only link-store.ts writes, and only a link", () => {
+  it("no access-planner module calls the auth API or names app_users; only link-store.ts and provision.ts write, and only links", () => {
     const dir = join(repo, "src/lib/employees/woven/access");
     for (const name of readdirSync(dir).filter((n) => /\.ts$/.test(n) && !/\.test\./.test(n))) {
       const code = readFileSync(join(dir, name), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
       expect(code, name).not.toMatch(/\.auth\s*\.|auth\.admin|from\(\s*["'`]app_users|revokeAuthAccess|restoreAuthAccess/);
-      /* The one write: link-store.ts records a person's link review. */
+      /* link-store.ts records a link review; provision.ts (14 Oct 2026, approved) records the link for an account it invites through inviteUser. */
       const writes = [...code.matchAll(/\.from\(\s*["'`]([a-z_]+)["'`]\)\s*\.(insert|update|upsert|delete)\(/g)].map((m) => `${m[1]}.${m[2]}`);
-      expect(writes, name).toEqual(name === "link-store.ts" ? ["employee_account_links.insert"] : []);
+      expect(writes, name).toEqual(name === "link-store.ts" || name === "provision.ts" ? ["employee_account_links.insert"] : []);
     }
   });
 

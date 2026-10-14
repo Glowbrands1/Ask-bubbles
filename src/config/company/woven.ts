@@ -29,7 +29,12 @@ import type { Role } from "@/types";
  */
 
 /** Approved mapped roles the access preview may PROPOSE an account for. */
-export const WOVEN_AUTO_PROVISION_ROLES: readonly Role[] = ["location_manager", "assistant_manager"];
+/**
+ * Approved 14 Oct 2026: team members are provisioned too, at their single
+ * verified location. District and above are NOT here — they need a district
+ * scope, and no district is configured — so they stay excluded, never narrowed.
+ */
+export const WOVEN_AUTO_PROVISION_ROLES: readonly Role[] = ["location_manager", "assistant_manager", "employee"];
 
 /** Roles whose primary location and role the preview may propose following Woven. */
 export const WOVEN_LOCATION_MANAGED_ROLES: readonly Role[] = ["location_manager", "assistant_manager"];

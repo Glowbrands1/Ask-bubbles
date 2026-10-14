@@ -29,6 +29,7 @@ export function plannerEmployee(row: DirectoryRow): PlannerEmployee {
     primaryLocationName: row.primaryLocationName,
     additionalLocationNames: [...row.additionalLocations, ...row.temporaryOrExpiringLocations].map((l) => l.name ?? l.wovenLocationId),
     issues: row.dataIssues,
+    hasAllLocationAccess: row.hasAllLocationAccess,
     terminationDate: row.terminationDate,
     lastSyncedAt: row.lastSyncedAt || null,
   };

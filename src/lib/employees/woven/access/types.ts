@@ -64,6 +64,8 @@ export interface PlannerEmployee {
   /** Names only, for display. Additional and temporary locations never change access in this version. */
   additionalLocationNames: string[];
   issues: string[];
+  /** Woven's "all locations" flag. Never turned into wider Ask Bubbles access; the employee is held for review. */
+  hasAllLocationAccess?: boolean | null;
   terminationDate: string | null;
   lastSyncedAt: string | null;
 }
