@@ -3,6 +3,7 @@ import { Archivo, Figtree, Grandstander } from "next/font/google";
 
 import { ACTIVE_BRAND, brandStyle } from "@/lib/brand";
 import { pageAuthorizationEnforced, pageIdentity } from "@/lib/auth/page";
+import { RECOVERY_FORWARD_SCRIPT } from "@/lib/auth/recovery-forward";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -96,6 +97,9 @@ export default async function RootLayout({
       style={brandStyle(ACTIVE_BRAND)}
     >
       <body className="antialiased">
+        {/* Sends a recovery link that landed on the wrong page (e.g. `/#access_token=…`)
+            to /reset-password before anything renders. See lib/auth/recovery-forward.ts. */}
+        <script dangerouslySetInnerHTML={{ __html: RECOVERY_FORWARD_SCRIPT }} />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-100 focus:rounded-[var(--radius-sm)] focus:bg-surface focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-float"
