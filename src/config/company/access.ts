@@ -104,6 +104,8 @@ const LOCATION_MANAGER: Permission[] = [
   "create_hiring_form",
   "create_exit_form",
   "create_employment_change_form",
+  /** Answers Google reviews for the salons in their assignment. Server-enforced per salon. */
+  "reply_to_reviews",
 ];
 
 const DISTRICT_MANAGER: Permission[] = [
@@ -139,6 +141,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   "view_analytics",
   "manage_users",
   "manage_integrations",
+  "reply_to_reviews",
 ];
 
 export const COMPANY_PERMISSION_MATRIX: PermissionMatrix = {

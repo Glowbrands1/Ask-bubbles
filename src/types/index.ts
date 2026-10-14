@@ -141,7 +141,14 @@ export type Permission =
    */
   | "view_analytics"
   | "manage_users"
-  | "manage_integrations";
+  | "manage_integrations"
+  /**
+   * REPLY TO GOOGLE REVIEWS (draft, edit and — after an explicit confirmation —
+   * publish). A person holding it may only act on the salons their assignment
+   * covers; global scope (the admin roles) covers every approved salon. Seeing
+   * the Reviews page is `view_reports`; this adds the right to answer.
+   */
+  | "reply_to_reviews";
 
 export type PermissionMatrix = Record<Role, Permission[]>;
 

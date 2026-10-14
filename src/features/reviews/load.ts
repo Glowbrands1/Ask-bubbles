@@ -1,6 +1,8 @@
 import "server-only";
 
 import type { RankMetric } from "@/lib/google-reviews/goals";
+import type { ReplyState } from "@/lib/google-reviews/reply-view";
+import { loadReplyState } from "./load-replies";
 import {
   PAGE_SIZE,
   parseReviewQuery,
@@ -21,6 +23,8 @@ export interface ReviewsData {
   trend: MonthlyPoint[];
   /** Only loaded for the Reviews view. */
   page: ReviewPage | null;
+  /** Reply controls for the rows on this page (absent when there is no list, or the person may not reply). */
+  replies?: ReplyState | null;
   /** Goal counts; null when they cannot be read (the goal areas then say "not configured"). */
   goals: GoalData | null;
   rank: RankMetric;
@@ -46,7 +50,8 @@ export async function loadReviewsData(
       withList ? readReviewPage(query) : Promise.resolve(null),
       readGoalData().catch(() => null),
     ]);
-    return { query, stores, trend, page, goals, rank };
+    const replies = page ? await loadReplyState(page.rows) : null;
+    return { query, stores, trend, page, goals, rank, replies };
   } catch {
     return null;
   }

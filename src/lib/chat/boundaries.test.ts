@@ -173,6 +173,8 @@ describe("the permission model is unchanged", () => {
         "view_analytics",
         "manage_users",
         "manage_integrations",
+        // Answering Google reviews, per salon (location managers and above). Acknowledged deliberately.
+        "reply_to_reviews",
       ].sort(),
     );
   });

@@ -10,10 +10,11 @@ import { OAUTH_STATE_LABEL, open, safeEqual, seal } from "./crypto";
  * PKCE, offline access, one scope.
  *
  *   SCOPE     https://www.googleapis.com/auth/business.manage
- *             Google offers no read-only scope for Business Profile; this is the
- *             scope its reviews API requires. THIS CODE ONLY EVER READS: there is
- *             no function here or in `client.ts` that posts, edits or deletes a
- *             reply.
+ *             Google offers no read-only scope for Business Profile; this one scope
+ *             covers both reading reviews and answering them, so replying needs NO
+ *             change to the grant. The sync only ever reads (`client.ts`); the one
+ *             write is a person's confirmed owner reply (`reply-client.ts`,
+ *             switched on separately by GOOGLE_REVIEWS_REPLIES_ENABLED).
  *   PKCE      a fresh S256 verifier per attempt, kept only in a SEALED, HttpOnly
  *             cookie scoped to the callback path, with the `state`.
  *   STATE     compared in constant time; the attempt expires after 10 minutes.

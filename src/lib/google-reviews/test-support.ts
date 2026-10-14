@@ -56,7 +56,7 @@ async function postgrestRpc(db: PGlite, fn: string, args: Record<string, unknown
 }
 
 export async function createGoogleTestDatabase(): Promise<GoogleTestDatabase> {
-  const t = await createMigratedTestDatabase([...BASE, GOOGLE_MIGRATION, "20261014001000_google_reviews_history", "20261015001000_google_review_goals"]);
+  const t = await createMigratedTestDatabase([...BASE, GOOGLE_MIGRATION, "20261014001000_google_reviews_history", "20261015001000_google_review_goals", "20261016001000_google_review_replies"]);
   const client = {
     from: (table: string) => (t.client as unknown as { from: (name: string) => unknown }).from(table),
     rpc: (fn: string, args: Record<string, unknown>) => postgrestRpc(t.db, fn, args),
@@ -103,6 +103,14 @@ export interface GoogleFake {
     loopPagesFor: Set<string>; // location ids whose reviews endpoint never ends
     refreshes: number;
     accessTokensIssued: string[];
+    /** Reply writes: answer the PUT with this HTTP status instead of accepting it. */
+    replyPutStatus: number | null;
+    /** Reply writes: APPLY the reply, then drop the connection (the answer never arrives). */
+    replyPutDropAfterApply: boolean;
+    /** Single-review reads answer with this HTTP status. */
+    getReviewStatus: number | null;
+    /** Every accepted reply write, in order: review id and the comment. */
+    replyWrites: { reviewId: string; comment: string }[];
   };
 }
 
@@ -127,6 +135,7 @@ export function createGoogleFake(locations: FakeLocation[]): GoogleFake {
   const knobs: GoogleFake["knobs"] = {
     pageSize: 50, tokenStatus: 200, tokenError: null, quotaZero: false, unauthorizedOnce: false,
     failReviewsFor: new Set(), loopPagesFor: new Set(), refreshes: 0, accessTokensIssued: [],
+    replyPutStatus: null, replyPutDropAfterApply: false, getReviewStatus: null, replyWrites: [],
   };
   const fake: GoogleFake = { fetchImpl: async () => json(500, {}), calls, locations, knobs };
 
@@ -171,6 +180,24 @@ export function createGoogleFake(locations: FakeLocation[]): GoogleFake {
     }
 
     if (url.host === "mybusiness.googleapis.com") {
+      // one review (GET) and its owner reply (PUT)
+      const one = /\/v4\/accounts\/(\d+)\/locations\/(\d+)\/reviews\/([^/]+?)(\/reply)?$/.exec(url.pathname);
+      if (one) {
+        const loc1 = locations.find((l) => l.accountId === one[1] && l.locationId === one[2]);
+        const rev = loc1?.reviews.find((r) => r.id === one[3]);
+        if (!loc1 || !rev) return json(404, { error: { status: "NOT_FOUND" } });
+        if (one[4]) {
+          if ((init?.method ?? "GET") !== "PUT") return json(405, {});
+          if (knobs.replyPutStatus !== null) return json(knobs.replyPutStatus, { error: { status: "INTERNAL", message: "secret detail about accounts/10" } });
+          const comment = (JSON.parse(String(init?.body ?? "{}")) as { comment?: string }).comment ?? "";
+          rev.reply = comment;
+          knobs.replyWrites.push({ reviewId: rev.id, comment });
+          if (knobs.replyPutDropAfterApply) throw new TypeError("fetch failed https://mybusiness.googleapis.com/secret");
+          return json(200, { comment, updateTime: "2026-10-16T12:00:00Z" });
+        }
+        if (knobs.getReviewStatus !== null) return json(knobs.getReviewStatus, { error: { status: "INTERNAL" } });
+        return json(200, reviewJson(loc1, rev));
+      }
       const m = /\/v4\/accounts\/(\d+)\/locations\/(\d+)\/reviews$/.exec(url.pathname);
       const loc = locations.find((l) => l.accountId === m?.[1] && l.locationId === m?.[2]);
       if (!loc) return json(404, { error: { status: "NOT_FOUND" } });

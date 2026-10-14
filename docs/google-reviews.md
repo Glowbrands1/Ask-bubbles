@@ -1,11 +1,11 @@
 # Google Reviews
 
-Read-only ingestion of Google reviews for Buff City Soap's **seven** approved Business Profiles, shown to administrators at `/admin/integrations/google-reviews`.
+Ingestion of Google reviews for Buff City Soap's **seven** approved Business Profiles, shown to administrators at `/admin/integrations/google-reviews` and on the Reviews dashboard (`/reviews`). The **sync is read-only**; authorized staff can also answer reviews from the dashboard (see [Replying to reviews](#replying-to-reviews)).
 
 ## What it will and will not do
 
 - Reads accounts, locations and reviews through Google's official Business Profile APIs, using OAuth (PKCE, offline access, scope `business.manage`).
-- **Never** replies to, edits or deletes a review. Only `GET` requests are made; no route exists for anything else.
+- The **sync never** replies to, edits or deletes a review. It makes only `GET` requests (`client.ts`). The one write to Google is a person's confirmed owner reply, in its own module (`reply-client.ts`) that the sync does not import.
 - Never ingests Sun Tan City profiles, even though the same Google account holds 15 of them. Brand isolation is structural: an allowlist table of the seven stores, a foreign key from every review to it, a trigger that checks the review's resource name against the linked location, and a matcher that blocks titles containing Sun Tan City.
 - Links a store to a Google profile only when **both the store code and the street address match** (or an administrator explicitly confirms the one stored candidate). Woven IDs are never used to infer a Google link.
 - Stores the reviewer's display name only (no photo, profile URL or id); anonymous reviewers keep none.
@@ -58,3 +58,28 @@ Google location resource IDs are recorded in `google_review_locations` the first
 2. In the approved Google Cloud project: create a topic, grant `mybusiness-api-pubsub@system.gserviceaccount.com` the Pub/Sub Publisher role on it, and create a **push** subscription to `https://<site>/api/google-reviews/notify?token=<token>`.
 3. Register the topic for the Business Profile account (Account Management API):
    `PATCH https://mybusinessnotifications.googleapis.com/v1/accounts/{accountId}/notificationSetting?updateMask=pubsubTopic,notificationTypes` with `{"pubsubTopic":"projects/<project>/topics/<topic>","notificationTypes":["NEW_REVIEW","UPDATED_REVIEW"]}`.
+
+## Replying to reviews
+
+Authorized staff draft, edit and publish owner replies from the Reviews dashboard's **Google Reviews** tab, through the official Business Profile API (`PUT /v4/{review}/reply`, the same `business.manage` scope the sync already holds — **no OAuth change**).
+
+**Workflow.** *Reply* (or *Edit reply* when the review already has one) opens an editor. **Save draft** stores the text in Ask Bubbles only. **Publish to Google…** opens a confirmation showing the salon and the exact public text; only **Publish reply** inside it sends anything. Replacing an existing owner reply needs a second tick ("I understand this replaces the existing public reply"). Nobody and nothing writes the text for the person: there is no automatic posting and no AI-generated reply.
+
+**Who.** Permission `reply_to_reviews` (location managers, district managers, regional managers, admin, owner, developer), *and* the review's salon must be one the person's assignment covers; global scope (admin roles) covers all seven. Checked again on every API call, on the server. Seeing reviews is still `view_reports`.
+
+**Status.** One open reply per review: `draft → publishing → published`, or `failed` (the text is kept; edit or publish again). `discarded` drafts are history. Each change is written to the append-only `google_review_reply_events` (codes and lengths, never reply text).
+
+**Duplicate and overwrite protection.**
+- A double click, a second tab or a second person cannot send twice: publishing claims the row once in the database; the unique index allows one open reply per review.
+- A publish confirms a *version* of the text; if the draft was edited since, nothing is sent.
+- Before sending, Google is read for that review. If it already holds exactly this text (a lost response), it is recorded as published without sending again. If the reply on Google is not the one the draft started from (someone edited it elsewhere), nothing is sent (`reply_changed`).
+- The write is never retried automatically. A timeout or 5xx leaves it `failed` with an honest message; the next publish checks Google first.
+- A reply stuck `publishing` for more than 2 minutes is released as `outcome_unknown` and reconciled the same way.
+
+**Switch.** `GOOGLE_REVIEWS_REPLIES_ENABLED` (default **off**) also needs `GOOGLE_REVIEWS_SYNC_ENABLED`. While off, staff can write and save drafts but **Publish is disabled** and the API refuses (`replies_disabled`).
+
+**Go-live checklist (human steps; nothing here has been done in production).**
+1. Apply `supabase/migrations/20261016001000_google_review_replies.sql` (additive; rollback: `supabase/rollbacks/20261016001000_google_review_replies_down.sql`).
+2. Confirm in Google Cloud that the project's Business Profile API access includes the My Business v4 reviews methods (a zero-quota 429 means not approved; replies then fail as `api_access_pending` and nothing is posted). No OAuth client or scope change is needed; if the stored connection pre-dates `business.manage`, reconnect it.
+3. Deploy, test with one reply on one salon with the switch on for a short window, then leave it on.
+4. Review who holds `reply_to_reviews` in `src/config/company/access.ts` (default: location managers and up).
