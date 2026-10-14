@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Copy,
@@ -125,6 +125,7 @@ export function DirectoryScreen({
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNote, setActionNote] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [wovenOpen, setWovenOpen] = useState(false);
   /*
    * A generated reset link. A CREDENTIAL: held only while its dialog is open
    * and dropped the moment it closes. Never persisted, never logged.
@@ -311,6 +312,10 @@ export function DirectoryScreen({
             >
               {refreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
               Refresh
+            </Button>
+            <Button variant="outline" onClick={() => setWovenOpen(true)}>
+              <UserPlus />
+              Create account for a Woven employee
             </Button>
             <Button onClick={() => setInviteOpen(true)}>
               <UserPlus />
@@ -525,6 +530,15 @@ export function DirectoryScreen({
       <ResetLinkDialog
         link={resetLink}
         onClose={() => setResetLink(null)}
+      />
+
+      <WovenAccountDialog
+        open={wovenOpen}
+        onOpenChange={setWovenOpen}
+        onDone={(note) => {
+          setActionNote(note);
+          void load();
+        }}
       />
 
       <InviteDialog
@@ -790,6 +804,205 @@ function InviteDialog({
             <Button type="submit" disabled={busy || !email || !displayName}>
               {busy ? <Loader2 className="animate-spin" /> : <UserPlus />}
               {busy ? "Sending…" : "Send invitation"}
+            </Button>
+          </DialogActions>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ------------------------------------------------- Woven employee account -- */
+
+interface WovenEmployeeOption {
+  externalEmployeeId: string;
+  name: string;
+  email: string | null;
+  status: string | null;
+  position: string | null;
+  primaryLocation: string | null;
+  suggestedRole: Role | null;
+  suggestedLocationId: string | null;
+  account: "none" | "linked" | "unlinked";
+}
+
+/** The roles an administrator may give from here. Never administrative, never wider than one location. */
+const WOVEN_ACCOUNT_ROLES: Role[] = ["employee", "assistant_manager", "location_manager"];
+
+/**
+ * Creates ONE login for a synced Woven employee that the administrator picked.
+ * Name and email come from Woven; the role and location are the administrator's
+ * choice (a missing Woven mapping does not hide anyone). NO email, invitation
+ * or code is sent and no password is set: the account is created DISABLED, and
+ * to let the person in the administrator enables it and generates a reset link.
+ */
+function WovenAccountDialog({
+  open,
+  onOpenChange,
+  onDone,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onDone: (note: string) => void;
+}) {
+  const [employees, setEmployees] = useState<WovenEmployeeOption[] | null>(null);
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState("");
+  const [role, setRole] = useState<Role>("employee");
+  const [locationId, setLocationId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    void fetch("/api/admin/employees/woven/accounts", { cache: "no-store" })
+      .then(async (response) => {
+        const payload: unknown = await response.json().catch(() => null);
+        if (cancelled) return;
+        if (!response.ok) {
+          setError((payload as { error?: string; reason?: string } | null)?.error ?? "The synced employees could not be loaded.");
+          return;
+        }
+        setEmployees((payload as { employees: WovenEmployeeOption[] }).employees);
+      })
+      .catch(() => !cancelled && setError("The synced employees could not be loaded."));
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return (employees ?? []).filter(
+      (e) => !needle || e.name.toLowerCase().includes(needle) || (e.email ?? "").toLowerCase().includes(needle),
+    );
+  }, [employees, query]);
+  const employee = (employees ?? []).find((e) => e.externalEmployeeId === selected) ?? null;
+
+  function choose(id: string) {
+    setSelected(id);
+    const e = (employees ?? []).find((x) => x.externalEmployeeId === id);
+    /* Suggestions only when Woven's mappings exist; otherwise the administrator chooses. */
+    setRole(e?.suggestedRole && WOVEN_ACCOUNT_ROLES.includes(e.suggestedRole) ? e.suggestedRole : "employee");
+    setLocationId(e?.suggestedLocationId ?? "");
+    setError(null);
+  }
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (busy || !employee || !locationId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/employees/woven/accounts", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ externalEmployeeId: employee.externalEmployeeId, role, locationId }),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError((payload as { error?: string } | null)?.error ?? "The account could not be created.");
+        return;
+      }
+      const result = payload as { outcome: "created" | "repaired"; linked: boolean };
+      onDone(
+        result.outcome === "repaired"
+          ? `${employee.name}'s existing account was linked to Woven. Nothing was created or sent.`
+          : result.linked
+            ? `Account created for ${employee.name}, disabled, and nothing was sent. To let them sign in: enable the account, then Generate reset link and send it privately.`
+            : `Account created for ${employee.name}, but the Woven link was not saved. Choose them here again to repair the link — no second account is made.`,
+      );
+      setSelected("");
+      setEmployees(null);
+      onOpenChange(false);
+    } catch {
+      setError("The account could not be created. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const blocked = employee?.account === "linked";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        title="Create an account for a Woven employee"
+        description="No invitation, email or code is sent, and no password is set. The account starts disabled until you enable it and generate a reset link."
+      >
+        <form onSubmit={submit} className="space-y-4">
+          {error ? (
+            <Notice tone="attention" title="Could not continue">
+              {error}
+            </Notice>
+          ) : null}
+
+          <FieldGroup label="Find an employee" htmlFor="woven-search">
+            <Input id="woven-search" type="search" placeholder="Name or email" value={query} onChange={(e) => setQuery(e.target.value)} disabled={busy} />
+          </FieldGroup>
+          <FieldGroup label={`Synced employee${employees ? ` (${shown.length} of ${employees.length})` : ""}`} htmlFor="woven-employee">
+            <Select id="woven-employee" value={selected} onChange={(e) => choose(e.target.value)} disabled={busy || !employees}>
+              <option value="">{employees ? "Choose an employee…" : "Loading…"}</option>
+              {shown.map((e) => (
+                <option key={e.externalEmployeeId} value={e.externalEmployeeId}>
+                  {e.name} — {e.position ?? "no position"}, {e.primaryLocation ?? "no location"}
+                  {e.account === "linked" ? " (has account)" : e.account === "unlinked" ? " (account exists, not linked)" : ""}
+                </option>
+              ))}
+            </Select>
+          </FieldGroup>
+
+          {employee ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {employee.name} · {employee.email ?? "no email in Woven"} · Woven status: {employee.status}
+              </p>
+              {employee.account === "unlinked" ? (
+                <Notice tone="attention" title="An account with this email already exists">
+                  Continuing links it to this Woven employee. No second account is created.
+                </Notice>
+              ) : null}
+              {blocked ? (
+                <Notice tone="attention" title="Already has an account">
+                  This employee is already linked to an Ask Bubbles account.
+                </Notice>
+              ) : null}
+
+              <FieldGroup label="Role" htmlFor="woven-role">
+                <Select id="woven-role" value={role} onChange={(e) => setRole(e.target.value as Role)} disabled={busy}>
+                  {WOVEN_ACCOUNT_ROLES.map((entry) => (
+                    <option key={entry} value={entry}>
+                      {ROLE_LABEL[entry]}
+                    </option>
+                  ))}
+                </Select>
+              </FieldGroup>
+              <p className="text-xs leading-relaxed text-muted-foreground">{ROLE_DESCRIPTION[role]}</p>
+
+              <FieldGroup label="Location (one)" htmlFor="woven-location">
+                <Select id="woven-location" value={locationId} onChange={(e) => setLocationId(e.target.value)} disabled={busy}>
+                  <option value="">Choose a location…</option>
+                  {AREAS.location.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.name}
+                    </option>
+                  ))}
+                </Select>
+              </FieldGroup>
+              <p className="text-xs text-muted-foreground">Woven location: {employee.primaryLocation ?? "none"}. Confirm the Ask Bubbles location yourself.</p>
+            </>
+          ) : null}
+
+          <DialogActions>
+            <DialogClose asChild>
+              <Button variant="ghost" type="button">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={busy || !employee || !locationId || blocked}>
+              {busy ? <Loader2 className="animate-spin" /> : <UserPlus />}
+              {busy ? "Creating…" : employee?.account === "unlinked" ? "Link account" : "Create account"}
             </Button>
           </DialogActions>
         </form>

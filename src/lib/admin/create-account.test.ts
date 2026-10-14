@@ -33,10 +33,10 @@ beforeEach(() => {
 });
 
 describe("createAccountWithoutEmail", () => {
-  it("creates a password-less, confirmed credential and an active location-scoped profile; sends nothing", async () => {
+  it("creates a password-less, confirmed credential and an disabled (unusable) location-scoped profile; sends nothing", async () => {
     await createAccountWithoutEmail(input, actor);
     expect(state.createUser).toHaveBeenCalledWith({ email: "jo@example.com", email_confirm: true });
-    expect(state.insert).toHaveBeenCalledWith(expect.objectContaining({ role: "employee", status: "active", scope_level: "location", scope_primary_area_id: "loc-66" }));
+    expect(state.insert).toHaveBeenCalledWith(expect.objectContaining({ role: "employee", status: "disabled", scope_level: "location", scope_primary_area_id: "loc-66" }));
     const code = readFileSync("src/lib/admin/create-account.ts", "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
     expect(code).not.toMatch(/inviteUserByEmail|resetPasswordForEmail|generateLink|password\s*[:=]/);
   });

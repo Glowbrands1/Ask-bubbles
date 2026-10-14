@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { assertLiveMode, assertNoConfigurationProblems, assertWithinRateLimit, errorResponse } from "@/lib/api/respond";
 import { parseJsonBody } from "@/lib/api/validation";
-import { PROVISION_BATCH_MAX, runProvisioning } from "@/lib/employees/woven/access/provision";
+import { PROVISION_BATCH_MAX, runProvisioning } from "@/lib/admin/woven-account";
 import { authorizeWovenPeopleRequest, NO_STORE, wovenStoreFailureResponse } from "@/lib/employees/woven/route-auth";
 
 /**

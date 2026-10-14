@@ -26,10 +26,14 @@ import {
  * hands them a link with the existing "Generate reset link"
  * (`lib/admin/reset-link.ts`), which they use to choose their own password.
  *
- * The profile is `active` because that is the state the reset-link tool
- * requires. It is not a risk: no password exists, and the account is created
- * only by a person calling this (never by a Woven sync) with a role that is
- * not administrative and a location scope.
+ * THE PROFILE IS CREATED `disabled`, so the account is unusable and cannot even
+ * request its own password reset (`recoveryEligibility` refuses disabled
+ * accounts) until an administrator takes the two existing steps, in order:
+ * re-enable the account in User Management, then "Generate reset link" and
+ * send it privately. Credential setup is therefore administrator-controlled
+ * and nothing is sent automatically. The account is created only by a person
+ * calling this (never by a Woven sync), with a non-administrative role and a
+ * single-location scope.
  *
  * Duplicate protection is the same as the invite: an existing profile with the
  * email is refused, the unique index on lower(email) is the rule, and a
@@ -71,7 +75,7 @@ export async function createAccountWithoutEmail(
     email,
     display_name: displayName,
     role,
-    status: "active",
+    status: "disabled",
     scope_level: scope.level,
     scope_primary_area_id: scope.primaryAreaId,
     scope_also_covers_area_ids: scope.alsoCoversAreaIds,
