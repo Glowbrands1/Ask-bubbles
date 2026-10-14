@@ -13,6 +13,7 @@
     "e2e:update": "playwright test --update-snapshots",
     "e2e:build": "NEXT_PUBLIC_DEMO_MODE=true next build",
     "bootstrap:admin": "node scripts/bootstrap-admin.mjs",
+    "provision:user": "node scripts/provision-user-direct.mjs",
     "verify:bundle": "node scripts/verify-no-demo-in-bundle.mjs",
     "probe:woven": "vitest run src/lib/employees/woven/live-probe.dry-run.test.ts --disableConsoleIntercept",
     "dry-run:woven-knowledge": "vitest run src/lib/knowledge-sync/woven/bcs/live-dry-run.dry-run.test.ts --disableConsoleIntercept",
