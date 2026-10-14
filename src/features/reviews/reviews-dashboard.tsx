@@ -21,6 +21,7 @@ import {
   RatingsPanel,
   ReviewsList,
   TrendPanel,
+  goalStartDay,
   goalView,
   partialMonthText,
   totals,
@@ -283,7 +284,13 @@ function OverviewView({
         }
       >
         <DataArea status={live}>
-          {data ? <TrendPanel trend={data.trend} period={data.period} /> : null}
+          {data ? (
+            <TrendPanel
+              trend={data.trend}
+              period={data.period}
+              countingStart={goalStartDay(g)}
+            />
+          ) : null}
         </DataArea>
       </Panel>
 

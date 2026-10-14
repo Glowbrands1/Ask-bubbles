@@ -217,9 +217,12 @@ export function PeriodSegments({ data }: { data: ReviewsData }) {
 export function TrendPanel({
   trend,
   period,
+  countingStart = null,
 }: {
   trend: PeriodPoint[];
   period: PeriodUnit;
+  /** Central `yyyy-mm-dd` from which every counting salon in view counts toward its goal; null when none does. */
+  countingStart?: string | null;
 }) {
   const max = Math.max(1, ...trend.map((p) => p.qualifyingCount));
   const weekly = period === "week";
@@ -238,15 +241,18 @@ export function TrendPanel({
                 {weekly ? "Week (Mon–Sun)" : "Month"}
               </th>
               <th scope="col" className="px-4 py-2.5 text-right">
-                Reviews
+                All reviews
               </th>
               <th scope="col" className="px-4 py-2.5 text-right">
-                3–5★
+                3–5★ reviews
               </th>
               <th scope="col" className="px-4 py-2.5 text-right">
                 Average
               </th>
-              <th scope="col" className="w-1/3 px-4 py-2.5">
+              <th scope="col" className="px-4 py-2.5">
+                Goal
+              </th>
+              <th scope="col" className="w-1/4 px-4 py-2.5">
                 <span className="sr-only">3–5★ volume</span>
               </th>
             </tr>
@@ -268,6 +274,9 @@ export function TrendPanel({
                 <td className="px-4 py-2 text-right tabular-nums">
                   {rating(p.averageRating)}
                 </td>
+                <td className="px-4 py-2 text-[11px] whitespace-nowrap text-muted-foreground">
+                  {goalMark(p.start, period, countingStart)}
+                </td>
                 <td className="px-4 py-2">
                   <span
                     aria-hidden
@@ -285,8 +294,10 @@ export function TrendPanel({
         {weekly
           ? "Weeks run Monday–Sunday; the latest 52 are shown."
           : "Calendar months."}{" "}
-        3–5★ is the qualifying range; whether a review counts toward a
-        salon&rsquo;s goal also depends on its counting start date.
+        &ldquo;All reviews&rdquo; is every live review in the period;
+        &ldquo;3–5★ reviews&rdquo; is only the rating range and is not the goal
+        count. The goal counts 3–5★ reviews created on or after each
+        salon&rsquo;s counting start date, as marked in the Goal column.
       </p>
     </>
   );
@@ -404,6 +415,7 @@ import {
   goalProgress,
   goalStatus,
   baselineDay,
+  isCounting,
   isPartialMonth,
   partialMonthNote,
   goalSummary,
@@ -416,9 +428,7 @@ import { cn } from "@/lib/utils/cn";
 import { reviewsTabHref } from "./reviews-tabs";
 
 /** Goal rows in view (the Location filter narrows them) and their totals, or null while no salon has a baseline. */
-export function goalView(
-  data: ReviewsData | null,
-): {
+export function goalView(data: ReviewsData | null): {
   rows: GoalRow[];
   summary: GoalSummary;
   context: NonNullable<ReviewsData["goals"]>["context"];
@@ -680,4 +690,33 @@ export function partialMonthText(
 /** "Oct 12 – Oct 18" for two `yyyy-mm-dd` Central dates. */
 export function rangeLabel(from: string, to: string): string {
   return `${formatDay(from)} – ${formatDay(to)}`;
+}
+
+/** The last day (`yyyy-mm-dd`) of a Monday-start week or a month starting on `start`. */
+function periodEnd(start: string, period: PeriodUnit): string {
+  const from = new Date(`${start}T00:00:00Z`);
+  const end =
+    period === "week"
+      ? new Date(from.getTime() + 6 * 86_400_000)
+      : new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 0));
+  return end.toISOString().slice(0, 10);
+}
+
+/** Whether a trend period is before, across, or after the date goal counting starts. */
+export function goalMark(
+  start: string,
+  period: PeriodUnit,
+  countingStart: string | null,
+): string {
+  if (!countingStart) return "Goal not configured";
+  if (periodEnd(start, period) < countingStart) return "Before goal counting";
+  if (start < countingStart) return `Counting from ${formatDay(countingStart)}`;
+  return "Goal-eligible (3–5★)";
+}
+
+/** The date from which every counting salon in view counts toward its goal (the latest start among them). */
+export function goalStartDay(g: ReturnType<typeof goalView>): string | null {
+  if (!g) return null;
+  const days = g.rows.filter((r) => isCounting(r)).map((r) => baselineDay(r)!);
+  return days.length === 0 ? null : days.sort()[days.length - 1]!;
 }

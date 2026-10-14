@@ -115,4 +115,31 @@ describe("the Weekly / Monthly toggle", () => {
     expect(within(group).getByText("Weekly").getAttribute("aria-current")).toBe("true");
     expect(within(group).getByText("Monthly").getAttribute("href")).toBe("/reviews");
   });
+
+  it("keeps all reviews, 3–5★ reviews and the goal-eligible marker distinct in the trend", () => {
+    const cutoffRow = goalRow("219", { countFrom: "2026-10-01T05:00:00Z", baselineReviewTime: "2026-10-13T21:00:00Z" });
+    const week = { ...data([cutoffRow], "month", "week"), trend: [
+      { start: "2026-09-21", reviewCount: 9, qualifyingCount: 8, averageRating: 4.5 },
+      { start: "2026-09-28", reviewCount: 6, qualifyingCount: 5, averageRating: 4.6 },
+      { start: "2026-10-05", reviewCount: 7, qualifyingCount: 6, averageRating: 4.6 },
+    ] };
+    const { unmount } = render(<ReviewsDashboard tab="overview" status="not_connected" data={week} />);
+    const table = screen.getByRole("table", { name: "Google Reviews by week" });
+    expect(within(table).getByText("All reviews")).toBeTruthy();
+    expect(within(table).getByText("3–5★ reviews")).toBeTruthy();
+    expect(within(table).getByText("Before goal counting")).toBeTruthy(); // Sep 21–27
+    expect(within(table).getByText("Counting from Oct 1")).toBeTruthy(); // Sep 28 – Oct 4 contains the cutoff
+    expect(within(table).getByText("Goal-eligible (3–5★)")).toBeTruthy(); // Oct 5–11
+    expect(screen.getByText(/is only the rating range and is not the goal count/)).toBeTruthy();
+    unmount();
+
+    const month = { ...data([cutoffRow]), trend: [
+      { start: "2026-09-01", reviewCount: 30, qualifyingCount: 27, averageRating: 4.7 },
+      { start: "2026-10-01", reviewCount: 21, qualifyingCount: 21, averageRating: 4.9 },
+    ] };
+    render(<ReviewsDashboard tab="overview" status="not_connected" data={month} />);
+    const m = screen.getByRole("table", { name: "Google Reviews by month" });
+    expect(within(m).getByText("Before goal counting")).toBeTruthy(); // September
+    expect(within(m).getByText("Goal-eligible (3–5★)")).toBeTruthy(); // October starts on the cutoff day
+  });
 });
