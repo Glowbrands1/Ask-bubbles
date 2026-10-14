@@ -30,7 +30,7 @@ export function SidebarNav({
   variant?: "desktop" | "drawer";
   /** Counted on the server by the (app) layout. Zero hides the badge. */
   overdueFollowUps?: number;
-  /** Decided on the server by the (app) layout: administrators only. */
+  /** Decided on the server by the (app) layout: administrators and two named users. */
   showAppSwitcher?: boolean;
 }) {
   const pathname = usePathname();
@@ -235,7 +235,7 @@ export function SidebarNav({
           </button>
         ) : null}
         <UserMenu collapsed={isCollapsed} onNavigate={onNavigate} />
-        {/* Below the profile, the last thing on the rail: administrators only. */}
+        {/* Below the profile, the last thing on the rail: administrators and two named users. */}
         {showAppSwitcher ? <AppSwitcher collapsed={isCollapsed} /> : null}
       </div>
     </div>
