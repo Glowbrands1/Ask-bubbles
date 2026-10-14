@@ -1,7 +1,8 @@
 import "server-only";
 
 import { COMPANY_LOCATION_ENTRIES } from "@/config/company/locations";
-import { inviteUser, type DirectoryActor } from "@/lib/admin/user-directory";
+import { createAccountWithoutEmail } from "@/lib/admin/create-account";
+import type { DirectoryActor } from "@/lib/admin/user-directory";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import { loadAccessPlan } from "./load";
@@ -9,22 +10,25 @@ import { AUTO_PROVISION_ROLES } from "./plan";
 import type { PlannedRow } from "./types";
 
 /**
- * Bulk provisioning from the access plan. The plan decides who is READY; this
- * only sends it through `inviteUser` (duplicate-email refusal, auth user +
- * profile, audit row) and records the Woven link. Dry run by default.
+ * Bulk account creation from the access plan, run only by an administrator
+ * calling the route (never by a Woven sync). The plan decides who is READY;
+ * this creates each account through `createAccountWithoutEmail` — NO invitation,
+ * code or email, no password — and records the Woven link. Dry run by default.
+ * Each person then gets a private sign-in link from the existing "Generate
+ * reset link" tool.
  *
  * READY    = the plan says CREATE_USER and its values re-check here.
  * EXISTING = the plan found an Ask Bubbles account for the employee.
  * BLOCKED  = everything else, with the planner's reasons.
  *
- * A tripped mass-change guard blocks every invite. `creates_exceed_batch_limit`
+ * A tripped mass-change guard blocks every creation. `creates_exceed_batch_limit`
  * is the exception: it is met by sending at most `batchSize` per call.
  */
 
 export const PROVISION_BATCH_MAX = 25;
 const KNOWN_AREAS = new Set(COMPANY_LOCATION_ENTRIES.map((l) => `loc-${l.code}`));
 
-export type ProvisionOutcome = { externalEmployeeId: string; status: "invited" | "failed"; code?: string };
+export type ProvisionOutcome = { externalEmployeeId: string; status: "created" | "failed"; code?: string };
 
 const isReady = (r: PlannedRow) => {
   const a = r.after as Record<string, unknown> | null;
@@ -41,7 +45,7 @@ const isReady = (r: PlannedRow) => {
   );
 };
 
-export async function runProvisioning(opts: { apply: boolean; batchSize: number; actor: DirectoryActor; redirectTo: string }) {
+export async function runProvisioning(opts: { apply: boolean; batchSize: number; actor: DirectoryActor }) {
   const plan = await loadAccessPlan();
   const employees = plan.rows.filter((r) => r.externalEmployeeId !== null && r.wovenStatus !== null);
   const ready = employees.filter(isReady);
@@ -82,13 +86,12 @@ export async function runProvisioning(opts: { apply: boolean; batchSize: number;
     const a = row.after as Record<string, unknown>;
     const id = row.externalEmployeeId as string;
     try {
-      const user = await inviteUser(
+      const user = await createAccountWithoutEmail(
         {
           email: a.email,
           displayName: a.display_name,
           role: a.role,
           scope: { level: "location", primaryAreaId: a.scope_primary_area_id, alsoCoversAreaIds: [] },
-          redirectTo: opts.redirectTo,
         },
         opts.actor,
       );
@@ -105,7 +108,7 @@ export async function runProvisioning(opts: { apply: boolean; batchSize: number;
         reason: "Bulk provisioned from Woven",
         set_by: `admin:${opts.actor.email || opts.actor.id}`.slice(0, 120),
       });
-      outcomes.push(error ? { externalEmployeeId: id, status: "invited", code: "link_not_recorded" } : { externalEmployeeId: id, status: "invited" });
+      outcomes.push(error ? { externalEmployeeId: id, status: "created", code: "link_not_recorded" } : { externalEmployeeId: id, status: "created" });
     } catch (error) {
       const code = (error as { code?: string }).code ?? "failed";
       outcomes.push({ externalEmployeeId: id, status: "failed", code });

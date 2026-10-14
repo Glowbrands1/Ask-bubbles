@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 
 import { assertLiveMode, assertNoConfigurationProblems, assertWithinRateLimit, errorResponse } from "@/lib/api/respond";
 import { parseJsonBody } from "@/lib/api/validation";
-import { implicitRedirectTarget } from "@/lib/admin/redirect-target";
 import { PROVISION_BATCH_MAX, runProvisioning } from "@/lib/employees/woven/access/provision";
 import { authorizeWovenPeopleRequest, NO_STORE, wovenStoreFailureResponse } from "@/lib/employees/woven/route-auth";
 
@@ -10,9 +9,9 @@ import { authorizeWovenPeopleRequest, NO_STORE, wovenStoreFailureResponse } from
  * POST /api/admin/employees/woven/provision
  *
  *   { "apply": false }                    dry run: READY / EXISTING / BLOCKED + exceptions (default)
- *   { "apply": true, "batchSize": 25 }    invite up to batchSize READY employees
+ *   { "apply": true, "batchSize": 25 }    create up to batchSize READY accounts. NO email, invitation or code is sent
  *
- * `manage_users` AND `manage_integrations`. Re-run until `ready` is 0: invited
+ * `manage_users` AND `manage_integrations`. Re-run until `ready` is 0: created
  * people become EXISTING, so a rerun never duplicates anyone.
  */
 export const runtime = "nodejs";
@@ -31,7 +30,6 @@ export async function POST(request: Request) {
       apply: body.apply === true,
       batchSize,
       actor: { id: context.identity.subject, email: context.identity.email, role: context.identity.role },
-      redirectTo: implicitRedirectTarget(request),
     });
     return NextResponse.json(result, { headers: NO_STORE });
   } catch (error) {
