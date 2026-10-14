@@ -19,12 +19,14 @@ const DIR = join(process.cwd(), "src/lib/google-reviews");
 const sources = readdirSync(DIR)
   .filter((f) => f.endsWith(".ts") && !/\.test\.ts$/.test(f) && f !== "test-support.ts")
   .map((f) => ({ file: f, text: readFileSync(join(DIR, f), "utf8") }));
+/** Source without comments, so a sentence that NAMES a module is not mistaken for an import of it. */
+const code = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 const verbs = (text: string) => [...text.matchAll(/method:\s*"([A-Z]+)"|\b(?:call)\("(GET|PUT|POST|DELETE|PATCH)"/g)].map((m) => m[1] ?? m[2]);
 
 describe("the only write to Google is one reply", () => {
   it("the sync's client is GET-only and never imports the reply code", () => {
     for (const file of ["client.ts", "sync.ts", "matching.ts", "normalize.ts"]) {
-      const text = sources.find((s) => s.file === file)!.text;
+      const text = code(sources.find((s) => s.file === file)!.text);
       expect(text, file).not.toMatch(/reply-client|from "\.\/replies"|GoogleReplyClient/);
     }
     expect(verbs(sources.find((s) => s.file === "client.ts")!.text)).toEqual(["GET"]);
