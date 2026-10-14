@@ -6,7 +6,7 @@
  * Reviews at or before the baseline are historical and never count; a salon with no baseline is
  * "not counting": it stays on screen, is never ranked and is left out of every goal total.
  *
- * Weeks run Sunday–Saturday and months run from the 1st, both in Central time, dated by Google's
+ * Weeks run Monday–Sunday and months are calendar months, both in America/Chicago, dated by Google's
  * original review time. Client-safe: no database client, no secret.
  */
 
@@ -22,7 +22,20 @@ export function centralToday(now: Date = new Date()): string {
   return DAY.format(now);
 }
 
-export const weekStartOf = (day: string): string => shiftDays(day, -weekdayOf(day));
+/** `yyyy-mm-dd` of the MONDAY that opens the Monday–Sunday week containing `day` (`weekdayOf`: Sunday = 0). */
+export const weekStartOf = (day: string): string => shiftDays(day, -((weekdayOf(day) + 6) % 7));
+
+/** The instant a Central calendar day starts (DST-aware), as an ISO string. */
+export function centralMidnight(day: string): string {
+  const [y, m, d] = day.split("-").map(Number) as [number, number, number];
+  const fmt = new Intl.DateTimeFormat("en-US", { timeZone: REVIEWS_TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" });
+  for (const offsetHours of [5, 6]) {
+    const candidate = new Date(Date.UTC(y, m - 1, d, offsetHours));
+    const parts = Object.fromEntries(fmt.formatToParts(candidate).map((p) => [p.type, p.value]));
+    if (Number(parts.year) === y && Number(parts.month) === m && Number(parts.day) === d && Number(parts.hour) === 0) return candidate.toISOString();
+  }
+  return new Date(Date.UTC(y, m - 1, d, 6)).toISOString();
+}
 export const monthStartOf = (day: string): string => `${day.slice(0, 7)}-01`;
 
 export function daysInMonthOf(day: string): number {
@@ -38,11 +51,18 @@ export function paceTargetFor(target: number, daysElapsed: number, daysInMonth: 
 }
 
 export interface GoalContext {
-  /** `yyyy-mm-dd` of the Sunday opening this week / the week before, and the 1st, Central. */
+  /** `yyyy-mm-dd` (Central) of the Monday opening this week / the week before, and the 1st of the month. */
   today: string;
   weekStart: string;
+  /** The Sunday that closes this week and the Sunday that closes last week. */
+  weekEnd: string;
+  prevWeekEnd: string;
   prevWeekStart: string;
   monthStart: string;
+  /** The last day of the month. */
+  monthEnd: string;
+  /** The instant the month opens in Central. */
+  monthStartInstant: string;
   daysInMonth: number;
   daysElapsed: number;
 }
@@ -52,8 +72,12 @@ export function goalContext(today: string): GoalContext {
   return {
     today,
     weekStart,
+    weekEnd: shiftDays(weekStart, 6),
     prevWeekStart: shiftDays(weekStart, -7),
+    prevWeekEnd: shiftDays(weekStart, -1),
     monthStart: monthStartOf(today),
+    monthEnd: `${today.slice(0, 7)}-${String(daysInMonthOf(today)).padStart(2, "0")}`,
+    monthStartInstant: centralMidnight(monthStartOf(today)),
     daysInMonth: daysInMonthOf(today),
     daysElapsed: Number(today.slice(8, 10)) - 1,
   };
@@ -66,6 +90,8 @@ export interface GoalRow {
   monthlyTarget: number;
   baselineReviewId: string | null;
   baselineReviewTime: string | null;
+  /** The reporting cutoff, when one was set: reviews created at or after it count. */
+  countFrom: string | null;
   qualifyingThisWeek: number;
   qualifyingLastWeek: number;
   qualifyingMonthToDate: number;
@@ -82,20 +108,25 @@ export const GOAL_STATUS_LABEL: Record<GoalStatus, string> = {
   not_counting: "Not counting",
 };
 
-export const isCounting = (row: Pick<GoalRow, "baselineReviewId">): boolean => row.baselineReviewId !== null;
+export const isCounting = (row: Pick<GoalRow, "baselineReviewId" | "countFrom">): boolean => row.baselineReviewId !== null || row.countFrom !== null;
 
-/** Central calendar date (`yyyy-mm-dd`) of a salon's baseline review, or null with no baseline. */
-export function baselineDay(row: Pick<GoalRow, "baselineReviewTime">): string | null {
-  return row.baselineReviewTime ? centralToday(new Date(row.baselineReviewTime)) : null;
+/** When counting starts for a salon: its reporting cutoff, else its baseline review's time. */
+export const countingSince = (row: Pick<GoalRow, "baselineReviewTime" | "countFrom">): string | null => row.countFrom ?? row.baselineReviewTime;
+
+/** Central calendar date (`yyyy-mm-dd`) counting starts for a salon, or null when it has not started. */
+export function baselineDay(row: Pick<GoalRow, "baselineReviewTime" | "countFrom">): string | null {
+  const since = countingSince(row);
+  return since ? centralToday(new Date(since)) : null;
 }
 
 /**
- * A baseline set during the current month means only part of the month could be counted: the figure is
- * real but it is NOT a full-month result, so it gets no pace or "behind" verdict (reaching the target still reads "Goal met").
+ * Counting that starts AFTER the month opened means only part of the month could be counted: the figure is real but
+ * it is NOT a full-month result, so it gets no pace or "behind" verdict (reaching the target still reads "Goal met").
+ * A cutoff at the very start of the month (or earlier) is a full month.
  */
-export function isPartialMonth(row: Pick<GoalRow, "baselineReviewId" | "baselineReviewTime">, context: Pick<GoalContext, "monthStart">): boolean {
-  const day = baselineDay(row);
-  return row.baselineReviewId !== null && day !== null && day >= context.monthStart;
+export function isPartialMonth(row: Pick<GoalRow, "baselineReviewId" | "baselineReviewTime" | "countFrom">, context: Pick<GoalContext, "monthStartInstant">): boolean {
+  const since = countingSince(row);
+  return isCounting(row) && since !== null && new Date(since).getTime() > new Date(context.monthStartInstant).getTime();
 }
 
 export function goalStatus(row: GoalRow, context: GoalContext): GoalStatus {
@@ -170,7 +201,7 @@ export interface PartialMonthNote {
 }
 
 /** Null when every counting salon has a full month to report. */
-export function partialMonthNote(rows: readonly GoalRow[], context: Pick<GoalContext, "monthStart">): PartialMonthNote | null {
+export function partialMonthNote(rows: readonly GoalRow[], context: Pick<GoalContext, "monthStartInstant">): PartialMonthNote | null {
   const days = rows.filter((r) => isPartialMonth(r, context)).map((r) => baselineDay(r)!).sort();
   return days.length === 0 ? null : { salons: days.length, from: days[0]!, to: days[days.length - 1]! };
 }

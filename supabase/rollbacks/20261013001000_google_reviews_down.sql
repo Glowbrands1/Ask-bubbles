@@ -40,3 +40,9 @@ drop function if exists public.google_review_goal_counts(timestamptz, timestampt
 drop function if exists public.google_review_set_baselines(text, jsonb);
 drop function if exists public.google_review_goals_guard_baseline();
 drop table if exists public.google_review_goals;
+
+-- reporting cutoff (20261016001000)
+drop function if exists public.google_reviews_periods(text, text);
+drop function if exists public.google_review_goal_counts_v2(timestamptz, timestamptz, timestamptz, timestamptz);
+drop function if exists public.google_review_set_reporting_cutoff(text, timestamptz, text[]);
+drop function if exists public.google_review_goals_guard_count_from();

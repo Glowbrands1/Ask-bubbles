@@ -1,7 +1,8 @@
 import { reviewDate, rating } from "@/features/admin/google-reviews/format";
 import { APPROVED_GOOGLE_STORES } from "@/config/company/google-reviews";
 import type {
-  MonthlyPoint,
+  PeriodPoint,
+  PeriodUnit,
   ReviewRow,
   StoreSummary,
 } from "@/lib/google-reviews/views";
@@ -52,6 +53,9 @@ export function LiveFilters({
       ) : null}
       {tab === "leaderboard" && data.rank === "week" ? (
         <input type="hidden" name="rank" value="week" />
+      ) : null}
+      {tab === "overview" && data.period === "week" ? (
+        <input type="hidden" name="period" value="week" />
       ) : null}
       <select
         name="store"
@@ -158,54 +162,133 @@ const MONTH = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
-export function TrendPanel({ trend }: { trend: MonthlyPoint[] }) {
-  const max = Math.max(1, ...trend.map((p) => p.reviewCount));
+const WEEK_DAY = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "short",
+  day: "numeric",
+});
+
+/** "Oct 12 – Oct 18, 2026" for a Monday start. */
+function weekLabel(start: string): string {
+  const from = new Date(`${start}T00:00:00Z`);
+  const to = new Date(from.getTime() + 6 * 86_400_000);
+  return `${WEEK_DAY.format(from)} – ${WEEK_DAY.format(to)}, ${to.getUTCFullYear()}`;
+}
+
+function periodHref(data: ReviewsData, period: PeriodUnit): string {
+  const p = new URLSearchParams();
+  if (data.query.store) p.set("store", data.query.store);
+  if (period === "week") p.set("period", "week");
+  const qs = p.toString();
+  return qs ? `/reviews?${qs}` : "/reviews";
+}
+
+/** The Weekly / Monthly switch for "Google Reviews over time": plain links, so it works without scripting. */
+export function PeriodSegments({ data }: { data: ReviewsData }) {
+  const options = [
+    { key: "week" as const, label: "Weekly" },
+    { key: "month" as const, label: "Monthly" },
+  ];
   return (
-    <div className="scroll-slim max-h-80 overflow-y-auto">
-      <table
-        aria-label="Google Reviews by month"
-        className="w-full border-collapse text-left text-[12px]"
-      >
-        <thead>
-          <tr className="border-b border-border bg-surface-muted text-[8px] font-black tracking-[0.14em] text-subtle-foreground uppercase">
-            <th scope="col" className="px-4 py-2.5">
-              Month
-            </th>
-            <th scope="col" className="px-4 py-2.5 text-right">
-              Reviews
-            </th>
-            <th scope="col" className="px-4 py-2.5 text-right">
-              Average
-            </th>
-            <th scope="col" className="w-1/2 px-4 py-2.5">
-              <span className="sr-only">Volume</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {[...trend].reverse().map((p) => (
-            <tr key={p.month} className="border-b border-border-hairline">
-              <td className="px-4 py-2 font-bold">
-                {MONTH.format(new Date(`${p.month}T00:00:00Z`))}
-              </td>
-              <td className="px-4 py-2 text-right tabular-nums">
-                {p.reviewCount}
-              </td>
-              <td className="px-4 py-2 text-right tabular-nums">
-                {rating(p.averageRating)}
-              </td>
-              <td className="px-4 py-2">
-                <span
-                  aria-hidden
-                  className="block h-2 rounded-[4px] bg-measure-data"
-                  style={{ width: `${(p.reviewCount / max) * 100}%` }}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div
+      role="group"
+      aria-label="Chart period"
+      className="inline-flex rounded-[22px] border border-border-strong bg-surface p-0.5 shadow-soft"
+    >
+      {options.map((o) => (
+        <a
+          key={o.key}
+          href={periodHref(data, o.key)}
+          aria-current={data.period === o.key ? "true" : undefined}
+          className={cn(
+            "rounded-[20px] px-3 py-[5px] text-[11.5px] font-bold whitespace-nowrap",
+            data.period === o.key
+              ? "bg-selected text-selected-foreground"
+              : "text-muted-foreground",
+          )}
+        >
+          {o.label}
+        </a>
+      ))}
     </div>
+  );
+}
+
+export function TrendPanel({
+  trend,
+  period,
+}: {
+  trend: PeriodPoint[];
+  period: PeriodUnit;
+}) {
+  const max = Math.max(1, ...trend.map((p) => p.qualifyingCount));
+  const weekly = period === "week";
+  return (
+    <>
+      <div className="scroll-slim max-h-80 overflow-y-auto">
+        <table
+          aria-label={
+            weekly ? "Google Reviews by week" : "Google Reviews by month"
+          }
+          className="w-full border-collapse text-left text-[12px]"
+        >
+          <thead>
+            <tr className="border-b border-border bg-surface-muted text-[8px] font-black tracking-[0.14em] text-subtle-foreground uppercase">
+              <th scope="col" className="px-4 py-2.5">
+                {weekly ? "Week (Mon–Sun)" : "Month"}
+              </th>
+              <th scope="col" className="px-4 py-2.5 text-right">
+                Reviews
+              </th>
+              <th scope="col" className="px-4 py-2.5 text-right">
+                3–5★
+              </th>
+              <th scope="col" className="px-4 py-2.5 text-right">
+                Average
+              </th>
+              <th scope="col" className="w-1/3 px-4 py-2.5">
+                <span className="sr-only">3–5★ volume</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...trend].reverse().map((p) => (
+              <tr key={p.start} className="border-b border-border-hairline">
+                <td className="px-4 py-2 font-bold whitespace-nowrap">
+                  {weekly
+                    ? weekLabel(p.start)
+                    : MONTH.format(new Date(`${p.start}T00:00:00Z`))}
+                </td>
+                <td className="px-4 py-2 text-right tabular-nums">
+                  {p.reviewCount}
+                </td>
+                <td className="px-4 py-2 text-right tabular-nums">
+                  {p.qualifyingCount}
+                </td>
+                <td className="px-4 py-2 text-right tabular-nums">
+                  {rating(p.averageRating)}
+                </td>
+                <td className="px-4 py-2">
+                  <span
+                    aria-hidden
+                    className="block h-2 rounded-[4px] bg-measure-data"
+                    style={{ width: `${(p.qualifyingCount / max) * 100}%` }}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="border-t border-border-hairline px-4 py-3 text-[11px] leading-snug text-muted-foreground">
+        By Google&rsquo;s original review date, Central time.{" "}
+        {weekly
+          ? "Weeks run Monday–Sunday; the latest 52 are shown."
+          : "Calendar months."}{" "}
+        3–5★ is the qualifying range; whether a review counts toward a
+        salon&rsquo;s goal also depends on its counting start date.
+      </p>
+    </>
   );
 }
 
@@ -261,7 +344,9 @@ export function ReviewsList({ data }: { data: ReviewsData }) {
                   {reviewDate(r.createdAt)}
                 </td>
                 <td className="px-4 py-2.5">{r.storeName}</td>
-                <td className="px-4 py-2.5">{r.reviewerName ?? "Anonymous reviewer"}</td>
+                <td className="px-4 py-2.5">
+                  {r.reviewerName ?? "Anonymous reviewer"}
+                </td>
                 <td className="px-4 py-2.5 font-bold whitespace-nowrap">
                   {r.starRating} ★
                 </td>
@@ -331,11 +416,21 @@ import { cn } from "@/lib/utils/cn";
 import { reviewsTabHref } from "./reviews-tabs";
 
 /** Goal rows in view (the Location filter narrows them) and their totals, or null while no salon has a baseline. */
-export function goalView(data: ReviewsData | null): { rows: GoalRow[]; summary: GoalSummary; context: NonNullable<ReviewsData["goals"]>["context"] } | null {
+export function goalView(
+  data: ReviewsData | null,
+): {
+  rows: GoalRow[];
+  summary: GoalSummary;
+  context: NonNullable<ReviewsData["goals"]>["context"];
+} | null {
   if (!data?.goals) return null;
-  const rows = data.query.store ? data.goals.rows.filter((r) => r.storeCode === data.query.store) : data.goals.rows;
+  const rows = data.query.store
+    ? data.goals.rows.filter((r) => r.storeCode === data.query.store)
+    : data.goals.rows;
   const summary = goalSummary(rows);
-  return summary.counting > 0 ? { rows, summary, context: data.goals.context } : null;
+  return summary.counting > 0
+    ? { rows, summary, context: data.goals.context }
+    : null;
 }
 
 const STATUS_STYLE: Record<GoalStatus, string> = {
@@ -347,36 +442,82 @@ const STATUS_STYLE: Record<GoalStatus, string> = {
 };
 
 function StatusChip({ status }: { status: GoalStatus }) {
-  return <span className={cn("inline-flex rounded-[22px] px-2.5 py-[3px] text-[10.5px] font-bold whitespace-nowrap", STATUS_STYLE[status])}>{GOAL_STATUS_LABEL[status]}</span>;
+  return (
+    <span
+      className={cn(
+        "inline-flex rounded-[22px] px-2.5 py-[3px] text-[10.5px] font-bold whitespace-nowrap",
+        STATUS_STYLE[status],
+      )}
+    >
+      {GOAL_STATUS_LABEL[status]}
+    </span>
+  );
 }
 
 function Meter({ row }: { row: GoalRow }) {
   const p = goalProgress(row.qualifyingMonthToDate, row.monthlyTarget);
   return (
     <div className="flex items-center gap-2.5">
-      <span aria-hidden className="h-2 min-w-[6rem] flex-1 rounded-[4px] bg-surface-muted">
-        <span className={cn("block h-2 rounded-[4px]", p.percent >= 100 ? "bg-status-outperforming" : "bg-measure-data")} style={{ width: `${p.barPercent}%` }} />
+      <span
+        aria-hidden
+        className="h-2 min-w-[6rem] flex-1 rounded-[4px] bg-surface-muted"
+      >
+        <span
+          className={cn(
+            "block h-2 rounded-[4px]",
+            p.percent >= 100 ? "bg-status-outperforming" : "bg-measure-data",
+          )}
+          style={{ width: `${p.barPercent}%` }}
+        />
       </span>
       <span className="w-14 text-right text-[11.5px] font-bold tabular-nums">
-        {p.percent}%{p.over > 0 ? <span className="block text-[10px] font-normal text-muted-foreground">+{p.over} over</span> : null}
+        {p.percent}%
+        {p.over > 0 ? (
+          <span className="block text-[10px] font-normal text-muted-foreground">
+            +{p.over} over
+          </span>
+        ) : null}
       </span>
     </div>
   );
 }
 
-export function GoalTable({ rows, context }: { rows: GoalRow[]; context: NonNullable<ReviewsData["goals"]>["context"] }) {
+export function GoalTable({
+  rows,
+  context,
+}: {
+  rows: GoalRow[];
+  context: NonNullable<ReviewsData["goals"]>["context"];
+}) {
   return (
     <div className="scroll-slim w-full min-w-0 overflow-x-auto">
-      <table aria-label="Salon goal progress" className="w-full min-w-[44rem] border-collapse text-left text-[12px]">
+      <table
+        aria-label="Salon goal progress"
+        className="w-full min-w-[44rem] border-collapse text-left text-[12px]"
+      >
         <thead>
           <tr className="border-b border-border bg-surface-muted text-[8px] font-black tracking-[0.14em] text-subtle-foreground uppercase">
-            <th scope="col" className="px-4 py-2.5">Salon</th>
-            <th scope="col" className="px-4 py-2.5 text-right">Store code</th>
-            <th scope="col" className="px-4 py-2.5 text-right">Qualifying · this week</th>
-            <th scope="col" className="px-4 py-2.5 text-right">Qualifying · month to date</th>
-            <th scope="col" className="px-4 py-2.5 text-right">Monthly target</th>
-            <th scope="col" className="px-4 py-2.5">Progress toward target</th>
-            <th scope="col" className="px-4 py-2.5">Status</th>
+            <th scope="col" className="px-4 py-2.5">
+              Salon
+            </th>
+            <th scope="col" className="px-4 py-2.5 text-right">
+              Store code
+            </th>
+            <th scope="col" className="px-4 py-2.5 text-right">
+              Qualifying · this week
+            </th>
+            <th scope="col" className="px-4 py-2.5 text-right">
+              Qualifying · month to date
+            </th>
+            <th scope="col" className="px-4 py-2.5 text-right">
+              Monthly target
+            </th>
+            <th scope="col" className="px-4 py-2.5">
+              Progress toward target
+            </th>
+            <th scope="col" className="px-4 py-2.5">
+              Status
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -393,12 +534,30 @@ export function GoalTable({ rows, context }: { rows: GoalRow[]; context: NonNull
                     </span>
                   ) : null}
                 </td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{r.storeCode}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{counting ? r.qualifyingThisWeek : "—"}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{counting ? r.qualifyingMonthToDate : "—"}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{r.monthlyTarget}</td>
-                <td className="px-4 py-2.5">{counting ? <Meter row={r} /> : <span className="text-muted-foreground">No baseline yet</span>}</td>
-                <td className="px-4 py-2.5"><StatusChip status={goalStatus(r, context)} /></td>
+                <td className="px-4 py-2.5 text-right tabular-nums">
+                  {r.storeCode}
+                </td>
+                <td className="px-4 py-2.5 text-right tabular-nums">
+                  {counting ? r.qualifyingThisWeek : "—"}
+                </td>
+                <td className="px-4 py-2.5 text-right tabular-nums">
+                  {counting ? r.qualifyingMonthToDate : "—"}
+                </td>
+                <td className="px-4 py-2.5 text-right tabular-nums">
+                  {r.monthlyTarget}
+                </td>
+                <td className="px-4 py-2.5">
+                  {counting ? (
+                    <Meter row={r} />
+                  ) : (
+                    <span className="text-muted-foreground">
+                      No baseline yet
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-2.5">
+                  <StatusChip status={goalStatus(r, context)} />
+                </td>
               </tr>
             );
           })}
@@ -423,13 +582,22 @@ export function RankSegments({ data }: { data: ReviewsData }) {
     { key: "week" as const, label: "Rank by this week" },
   ];
   return (
-    <div role="group" aria-label="Rank by" className="inline-flex rounded-[22px] border border-border-strong bg-surface p-0.5 shadow-soft">
+    <div
+      role="group"
+      aria-label="Rank by"
+      className="inline-flex rounded-[22px] border border-border-strong bg-surface p-0.5 shadow-soft"
+    >
       {options.map((o) => (
         <a
           key={o.key}
           href={rankHref(data, o.key)}
           aria-current={data.rank === o.key ? "true" : undefined}
-          className={cn("rounded-[20px] px-3 py-[5px] text-[11.5px] font-bold whitespace-nowrap", data.rank === o.key ? "bg-selected text-selected-foreground" : "text-muted-foreground")}
+          className={cn(
+            "rounded-[20px] px-3 py-[5px] text-[11.5px] font-bold whitespace-nowrap",
+            data.rank === o.key
+              ? "bg-selected text-selected-foreground"
+              : "text-muted-foreground",
+          )}
         >
           {o.label}
         </a>
@@ -438,36 +606,78 @@ export function RankSegments({ data }: { data: ReviewsData }) {
   );
 }
 
-export function Leaderboard({ rows, context, metric }: { rows: GoalRow[]; context: NonNullable<ReviewsData["goals"]>["context"]; metric: "month" | "week" }) {
+export function Leaderboard({
+  rows,
+  context,
+  metric,
+}: {
+  rows: GoalRow[];
+  context: NonNullable<ReviewsData["goals"]>["context"];
+  metric: "month" | "week";
+}) {
   const ranked = rankRows(rows, metric);
   return (
     <ol className="divide-y divide-border-hairline">
       {ranked.map(({ row, rank, tied }) => (
-        <li key={row.storeCode} className="grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 px-4 py-3 text-[12px] lg:grid-cols-[3.5rem_minmax(0,1.6fr)_6rem_7rem_minmax(0,2fr)_8rem]">
-          <span className="font-black tabular-nums">{rank === null ? "—" : `${tied ? "T" : ""}${rank}`}</span>
-          <span className="font-bold">
-            {row.displayName} <span className="font-normal text-muted-foreground">#{row.storeCode}</span>
+        <li
+          key={row.storeCode}
+          className="grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 px-4 py-3 text-[12px] lg:grid-cols-[3.5rem_minmax(0,1.6fr)_6rem_7rem_minmax(0,2fr)_8rem]"
+        >
+          <span className="font-black tabular-nums">
+            {rank === null ? "—" : `${tied ? "T" : ""}${rank}`}
           </span>
-          <span className="text-right tabular-nums">{row.baselineReviewId ? row.qualifyingThisWeek : "—"}</span>
-          <span className="text-right tabular-nums">{row.baselineReviewId ? row.qualifyingMonthToDate : "—"}</span>
-          <span>{row.baselineReviewId ? <Meter row={row} /> : <span className="text-muted-foreground">No baseline yet</span>}</span>
-          <span><StatusChip status={goalStatus(row, context)} /></span>
+          <span className="font-bold">
+            {row.displayName}{" "}
+            <span className="font-normal text-muted-foreground">
+              #{row.storeCode}
+            </span>
+          </span>
+          <span className="text-right tabular-nums">
+            {row.baselineReviewId ? row.qualifyingThisWeek : "—"}
+          </span>
+          <span className="text-right tabular-nums">
+            {row.baselineReviewId ? row.qualifyingMonthToDate : "—"}
+          </span>
+          <span>
+            {row.baselineReviewId ? (
+              <Meter row={row} />
+            ) : (
+              <span className="text-muted-foreground">No baseline yet</span>
+            )}
+          </span>
+          <span>
+            <StatusChip status={goalStatus(row, context)} />
+          </span>
         </li>
       ))}
     </ol>
   );
 }
 
-const DAY_LABEL = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const DAY_LABEL = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  timeZone: "UTC",
+});
 export function formatDay(day: string | null): string {
   return day ? DAY_LABEL.format(new Date(`${day}T00:00:00Z`)) : "—";
 }
 
 /** The honest caveat for a month whose baselines were set part-way through; null when every salon has a full month. */
-export function partialMonthText(g: ReturnType<typeof goalView>): string | null {
+export function partialMonthText(
+  g: ReturnType<typeof goalView>,
+): string | null {
   if (!g) return null;
   const note = partialMonthNote(g.rows, g.context);
   if (!note) return null;
-  const span = note.from === note.to ? formatDay(note.from) : `${formatDay(note.from)}–${formatDay(note.to)}`;
+  const span =
+    note.from === note.to
+      ? formatDay(note.from)
+      : `${formatDay(note.from)}–${formatDay(note.to)}`;
   return `Partial month: counting for ${note.salons} salon${note.salons === 1 ? "" : "s"} began ${span}, so this month's totals cover only part of it. Salons short of target show "Partial month" rather than a pace verdict, and "reviews still needed" is measured against the full monthly target.`;
+}
+
+/** "Oct 12 – Oct 18" for two `yyyy-mm-dd` Central dates. */
+export function rangeLabel(from: string, to: string): string {
+  return `${formatDay(from)} – ${formatDay(to)}`;
 }

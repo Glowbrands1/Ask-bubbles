@@ -15,7 +15,9 @@ import {
   GoalTable,
   Leaderboard,
   LiveFilters,
+  PeriodSegments,
   RankSegments,
+  rangeLabel,
   RatingsPanel,
   ReviewsList,
   TrendPanel,
@@ -133,7 +135,11 @@ function OverviewView({
 }) {
   const live: ReviewsIntegrationStatus = data ? "connected" : status;
   const g = goalView(data);
-  const goal: ReviewsIntegrationStatus = data ? (g ? "connected" : "not_configured") : status;
+  const goal: ReviewsIntegrationStatus = data
+    ? g
+      ? "connected"
+      : "not_configured"
+    : status;
   const t = data ? totals(data.stores) : null;
   const sm = g?.summary ?? null;
   const pm = partialMonthText(g);
@@ -142,19 +148,26 @@ function OverviewView({
       <SectionRule label="Monthly review goal" className="mt-1" />
       <p className={SECTION_NOTE}>
         Every salon&rsquo;s monthly target and progress toward it. Weekly
-        figures cover the current week (Sunday–Saturday, Central); monthly
-        figures cover the month to date. Counts use Google&rsquo;s original
-        review dates.
+        figures cover the current week (Monday–Sunday, Central); monthly figures
+        cover the month to date. Counts use Google&rsquo;s original review
+        dates.
       </p>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <GoalTile
           status={goal}
-          tag={<WindowTag window="week">This week</WindowTag>}
+          tag={
+            <WindowTag window="week">
+              This week
+              {g
+                ? ` · ${rangeLabel(g.context.weekStart, g.context.weekEnd)}`
+                : ""}
+            </WindowTag>
+          }
           label="Qualifying reviews"
           detail={
             sm
-              ? `3–5★ reviews counted this week; ${sm.qualifyingLastWeek} last week`
+              ? `3–5★ reviews counted this week; ${sm.qualifyingLastWeek} last week (${rangeLabel(g!.context.prevWeekStart, g!.context.prevWeekEnd)})`
               : "3–5★ reviews counted this week, compared with last week"
           }
         >
@@ -162,7 +175,14 @@ function OverviewView({
         </GoalTile>
         <GoalTile
           status={goal}
-          tag={<WindowTag window="month">Month to date</WindowTag>}
+          tag={
+            <WindowTag window="month">
+              Month to date
+              {g
+                ? ` · ${rangeLabel(g.context.monthStart, g.context.monthEnd)}`
+                : ""}
+            </WindowTag>
+          }
           label="Qualifying reviews"
           detail={
             sm
@@ -175,7 +195,14 @@ function OverviewView({
         <GoalTile
           status={goal}
           accent
-          tag={<WindowTag window="month">Month to date</WindowTag>}
+          tag={
+            <WindowTag window="month">
+              Month to date
+              {g
+                ? ` · ${rangeLabel(g.context.monthStart, g.context.monthEnd)}`
+                : ""}
+            </WindowTag>
+          }
           label="Salons at goal"
           detail="Salons that have reached their monthly target"
         >
@@ -187,7 +214,14 @@ function OverviewView({
         </GoalTile>
         <GoalTile
           status={goal}
-          tag={<WindowTag window="month">Month to date</WindowTag>}
+          tag={
+            <WindowTag window="month">
+              Month to date
+              {g
+                ? ` · ${rangeLabel(g.context.monthStart, g.context.monthEnd)}`
+                : ""}
+            </WindowTag>
+          }
           label="Reviews still needed"
           detail="To bring every salon to its target. One salon's overage doesn't cover another's shortfall."
         >
@@ -237,15 +271,19 @@ function OverviewView({
         title="Google Reviews over time"
         controls={
           <div className="ml-auto">
-            <DisabledSegments
-              label="Chart period"
-              options={["Weekly", "Monthly"]}
-            />
+            {data ? (
+              <PeriodSegments data={data} />
+            ) : (
+              <DisabledSegments
+                label="Chart period"
+                options={["Weekly", "Monthly"]}
+              />
+            )}
           </div>
         }
       >
         <DataArea status={live}>
-          {data ? <TrendPanel trend={data.trend} /> : null}
+          {data ? <TrendPanel trend={data.trend} period={data.period} /> : null}
         </DataArea>
       </Panel>
 
@@ -299,7 +337,11 @@ function LeaderboardView({
 }) {
   const g = goalView(data);
   const pm = partialMonthText(g);
-  const goal: ReviewsIntegrationStatus = data ? (g ? "connected" : "not_configured") : status;
+  const goal: ReviewsIntegrationStatus = data
+    ? g
+      ? "connected"
+      : "not_configured"
+    : status;
   return (
     <>
       <SectionRule label="Salon leaderboard" className="mt-1" />
@@ -378,7 +420,11 @@ function LeaderboardView({
         <RankingHead />
         <DataArea status={goal}>
           {g ? (
-            <Leaderboard rows={g.rows} context={g.context} metric={data?.rank ?? "month"} />
+            <Leaderboard
+              rows={g.rows}
+              context={g.context}
+              metric={data?.rank ?? "month"}
+            />
           ) : null}
         </DataArea>
         <Footnote>

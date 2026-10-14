@@ -26,16 +26,27 @@ const goalRow = (code: string, over: Partial<GoalRow> = {}): GoalRow => ({
   monthlyTarget: 10,
   baselineReviewId: "b",
   baselineReviewTime: "2026-10-01T00:00:00Z",
+  countFrom: null,
   qualifyingThisWeek: 1,
   qualifyingLastWeek: 2,
   qualifyingMonthToDate: 4,
   historical: 96,
   ...over,
 });
-const data = (rows: GoalRow[], rank: "month" | "week" = "month"): ReviewsData => ({
+const data = (rows: GoalRow[], rank: "month" | "week" = "month", period: "month" | "week" = "month"): ReviewsData => ({
   query: { store: null, rating: null, reply: null, from: null, to: null, removed: false, page: 1 },
   stores: rows.map((r) => store(r.storeCode)),
-  trend: [],
+  trend:
+    period === "week"
+      ? [
+          { start: "2026-10-05", reviewCount: 7, qualifyingCount: 6, averageRating: 4.6 },
+          { start: "2026-10-12", reviewCount: 3, qualifyingCount: 3, averageRating: 5 },
+        ]
+      : [
+          { start: "2026-09-01", reviewCount: 30, qualifyingCount: 27, averageRating: 4.7 },
+          { start: "2026-10-01", reviewCount: 21, qualifyingCount: 21, averageRating: 4.9 },
+        ],
+  period,
   page: null,
   goals: { context: goalContext("2026-10-14"), rows },
   rank,
@@ -75,5 +86,33 @@ describe("goal tracking on the dashboard", () => {
     render(<ReviewsDashboard tab="overview" status="not_connected" data={data([goalRow("219", { baselineReviewId: null, baselineReviewTime: null })])} />);
     expect(screen.getAllByText("Goal not configured yet").length).toBeGreaterThan(0);
     expect(screen.queryByRole("table", { name: "Salon goal progress" })?.querySelector("tbody")).toBeNull();
+  });
+
+  it("shows Monday–Sunday week and calendar-month ranges on the cards", () => {
+    render(<ReviewsDashboard tab="overview" status="not_connected" data={data([goalRow("219", { baselineReviewTime: "2026-09-20T00:00:00Z" })])} />);
+    expect(screen.getByText(/This week · Oct 12 – Oct 18/)).toBeTruthy();
+    expect(screen.getAllByText(/Month to date · Oct 1 – Oct 31/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/last week \(Oct 5 – Oct 11\)/)).toBeTruthy();
+    expect(screen.queryByText(/Sunday–Saturday/)).toBeNull();
+  });
+});
+
+describe("the Weekly / Monthly toggle", () => {
+  it("defaults to monthly aggregates, and links to weekly", () => {
+    render(<ReviewsDashboard tab="overview" status="not_connected" data={data([goalRow("219")])} />);
+    expect(screen.getByRole("table", { name: "Google Reviews by month" })).toBeTruthy();
+    const group = screen.getByRole("group", { name: "Chart period" });
+    expect(within(group).getByText("Monthly").getAttribute("aria-current")).toBe("true");
+    expect(within(group).getByText("Weekly").getAttribute("href")).toBe("/reviews?period=week");
+  });
+
+  it("shows Monday–Sunday weekly aggregates when weekly is chosen, and links back to monthly", () => {
+    render(<ReviewsDashboard tab="overview" status="not_connected" data={data([goalRow("219")], "month", "week")} />);
+    const table = screen.getByRole("table", { name: "Google Reviews by week" });
+    expect(within(table).getByText("Oct 12 – Oct 18, 2026")).toBeTruthy();
+    expect(within(table).getByText("Oct 5 – Oct 11, 2026")).toBeTruthy();
+    const group = screen.getByRole("group", { name: "Chart period" });
+    expect(within(group).getByText("Weekly").getAttribute("aria-current")).toBe("true");
+    expect(within(group).getByText("Monthly").getAttribute("href")).toBe("/reviews");
   });
 });

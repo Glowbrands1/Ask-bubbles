@@ -158,6 +158,123 @@ describe("goal counts", () => {
   });
 });
 
+const countsV2 = async (code: string) =>
+  (
+    await q(
+      `select * from public.google_review_goal_counts_v2('2026-10-05T05:00:00Z', '2026-10-12T05:00:00Z', '2026-10-01T05:00:00Z', '2026-10-14T15:00:00Z') where store_code = $1`,
+      [code],
+    )
+  )[0]!;
+const CUTOFF = "2026-10-01T05:00:00Z"; // Oct 1, 2026 12:00 AM America/Chicago (CDT)
+const setCutoff = (stores: string[], cutoff = CUTOFF, actor = "approver") =>
+  q(`select * from public.google_review_set_reporting_cutoff($1, $2::timestamptz, $3::text[])`, [actor, cutoff, stores]);
+
+describe("reporting cutoff: October counts without touching the baseline", () => {
+  async function october() {
+    const loc = await link("219", "10");
+    await add(loc, "2026-09-20T10:00:00Z", 5); // history
+    await add(loc, "2026-10-01T04:59:59Z", 5); // one second before the cutoff: history
+    await add(loc, "2026-10-01T05:00:00Z", 5); // exactly at the cutoff: counts
+    await add(loc, "2026-10-05T10:00:00Z", 4); // last week
+    await add(loc, "2026-10-06T10:00:00Z", 2); // 2★: never counts
+    await add(loc, "2026-10-08T10:00:00Z", 5, { removed: true }); // removed: never counts
+    await add(loc, "2026-10-12T05:00:00Z", 3); // Monday 00:00 CDT: this week
+    const base = await add(loc, "2026-10-13T21:00:00Z", 5, { id: "BASE" }); // the newest review, pinned as the old baseline
+    await pin("219", base, "2026-10-13T21:00:00Z");
+    return { loc, base };
+  }
+
+  it("under the old baseline rule the October reviews before the baseline do not count", async () => {
+    await october();
+    expect(await countsV2("219")).toMatchObject({ month_count: 0, week_count: 0, count_from: null });
+  });
+
+  it("with the cutoff, counts 3–5★ reviews created at or after it — including the old baseline review — by Monday–Sunday windows", async () => {
+    await october();
+    await setCutoff(["219"]);
+    expect(await countsV2("219")).toMatchObject({
+      month_count: 4, // Oct 1 05:00, Oct 5, Oct 12, and the Oct 13 baseline review
+      week_count: 2, // Mon Oct 12 05:00Z and Oct 13
+      last_week_count: 1, // Oct 5 (the 2★ on Oct 6 never counts)
+      historical_count: 2, // 09-20 and 10-01 04:59:59 — before the cutoff
+    });
+  });
+
+  it("keeps the immutable baseline untouched and records what the cutoff superseded", async () => {
+    await october();
+    await setCutoff(["219"]);
+    const row = (await q(`select * from public.google_review_goals where store_code = '219'`))[0]!;
+    expect(row).toMatchObject({ baseline_review_id: "BASE", count_from_set_by: "approver", count_from_previous_baseline_id: "BASE" });
+    expect(new Date(row.baseline_review_time as string).toISOString()).toBe("2026-10-13T21:00:00.000Z");
+    expect(new Date(row.count_from as string).toISOString()).toBe(new Date(CUTOFF).toISOString());
+    // the baseline guard is exactly as before
+    await expect(q(`update public.google_review_goals set baseline_review_id = 'X', baseline_review_time = '2026-10-14T00:00:00Z' where store_code = '219'`)).rejects.toThrow(/cannot be overwritten/);
+  });
+
+  it("never overwrites a cutoff, by the function or a direct write", async () => {
+    await october();
+    await setCutoff(["219"]);
+    await expect(setCutoff(["219"], "2026-10-02T05:00:00Z")).rejects.toThrow(/already has a cutoff/);
+    await expect(q(`update public.google_review_goals set count_from = '2026-09-01T00:00:00Z' where store_code = '219'`)).rejects.toThrow(/cutoff; it cannot be overwritten/);
+    await expect(q(`update public.google_review_goals set count_from = null where store_code = '219'`)).rejects.toThrow(/cannot be overwritten/);
+  });
+
+  it("refuses a future cutoff, one later than the baseline, an unknown or repeated store, and is all-or-nothing", async () => {
+    await october();
+    const other = await link("225", "11");
+    const ob = await add(other, "2026-10-02T10:00:00Z", 5);
+    await pin("225", ob, "2026-10-02T10:00:00Z");
+    await expect(setCutoff(["219"], "2099-01-01T00:00:00Z")).rejects.toThrow(/not in the future/);
+    await expect(setCutoff(["225"], "2026-10-03T00:00:00Z")).rejects.toThrow(/not be later than store 225's baseline/);
+    await expect(setCutoff(["999"])).rejects.toThrow(/unknown store/);
+    await expect(setCutoff(["219", "219"])).rejects.toThrow(/twice/);
+    await expect(setCutoff([])).rejects.toThrow(/name the stores/);
+    await expect(q(`select * from public.google_review_set_reporting_cutoff('  ', $1::timestamptz, $2::text[])`, [CUTOFF, ["219"]])).rejects.toThrow(/actor/);
+    // all-or-nothing: 219 would accept this cutoff but 225's baseline (Oct 2 10:00) is earlier, so neither is written
+    await expect(setCutoff(["219", "225"], "2026-10-02T12:00:00Z")).rejects.toThrow(/later than store 225/);
+    expect(await q(`select 1 from public.google_review_goals where count_from is not null`)).toHaveLength(0);
+  });
+
+  it("a salon with no baseline can take a cutoff and then counts", async () => {
+    const loc = await link("236", "12");
+    await add(loc, "2026-10-03T10:00:00Z", 5);
+    await setCutoff(["236"]);
+    expect(await countsV2("236")).toMatchObject({ month_count: 1, baseline_review_id: null });
+  });
+});
+
+describe("weekly and monthly periods", () => {
+  it("groups by Central Monday–Sunday weeks and calendar months using original review dates", async () => {
+    const loc = await link("219", "10");
+    await add(loc, "2026-10-12T04:30:00Z", 5); // Sunday Oct 11, 23:30 CDT -> week of Oct 5
+    await add(loc, "2026-10-12T05:00:00Z", 4); // Monday Oct 12, 00:00 CDT -> week of Oct 12
+    await add(loc, "2026-10-18T04:59:00Z", 2); // Sunday Oct 18, 23:59 CDT -> week of Oct 12, a 2★
+    await add(loc, "2026-10-19T05:00:00Z", 5); // Monday Oct 19 -> next week
+    await add(loc, "2026-09-30T20:00:00Z", 5); // September
+    await add(loc, "2026-10-14T05:00:00Z", 5, { removed: true }); // removed: absent
+    const weeks = await q(`select period_start::text as s, review_count, qualifying_count, average_rating from public.google_reviews_periods(null, 'week') order by 1`);
+    expect(weeks.map((w) => [w.s, w.review_count, w.qualifying_count])).toEqual([
+      ["2026-09-28", 1, 1],
+      ["2026-10-05", 1, 1],
+      ["2026-10-12", 2, 1],
+      ["2026-10-19", 1, 1],
+    ]);
+    const months = await q(`select period_start::text as s, review_count, qualifying_count from public.google_reviews_periods(null, 'month') order by 1`);
+    expect(months.map((m) => [m.s, m.review_count, m.qualifying_count])).toEqual([["2026-09-01", 1, 1], ["2026-10-01", 4, 3]]);
+    expect(Number((await q(`select average_rating from public.google_reviews_periods(null, 'week') where period_start = '2026-10-12'`))[0]!.average_rating)).toBe(3);
+  });
+
+  it("filters by store and rejects an unknown unit", async () => {
+    const a = await link("219", "10");
+    const b = await link("225", "11");
+    await add(a, "2026-10-12T10:00:00Z", 5);
+    await add(b, "2026-10-12T10:00:00Z", 5);
+    await add(b, "2026-10-13T10:00:00Z", 5);
+    expect((await q(`select review_count from public.google_reviews_periods('225', 'month')`))[0]!.review_count).toBe(2);
+    await expect(q(`select * from public.google_reviews_periods(null, 'day')`)).rejects.toThrow(/unit must be/);
+  });
+});
+
 describe("the goals migration preserves existing review data", () => {
   it("leaves every imported review and salon mapping byte-for-byte unchanged", async () => {
     const { readFileSync } = await import("node:fs");
@@ -184,6 +301,8 @@ describe("the goals migration preserves existing review data", () => {
       await before.db.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261015001000_google_review_goals.sql"), "utf8"));
       expect(await snapshot()).toEqual(beforeSnap);
       expect((await run(`select count(*)::int as n from public.google_review_goals`))[0]).toMatchObject({ n: 7 });
+      await before.db.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261016001000_google_review_reporting_cutoff.sql"), "utf8"));
+      expect(await snapshot()).toEqual(beforeSnap);
     } finally {
       await before.close();
     }
