@@ -26,7 +26,7 @@ export function AppShell({
    * cannot disagree with the page it links to. Zero hides it.
    */
   overdueFollowUps = 0,
-  /** Administrators only, decided on the server by the layout. */
+  /** Administrators and two named users, decided on the server by the layout. */
   showAppSwitcher = false,
 }: {
   children: ReactNode;

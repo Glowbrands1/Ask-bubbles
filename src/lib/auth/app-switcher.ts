@@ -15,7 +15,7 @@ export const APP_SWITCHER_USER_IDS: readonly string[] = [
 ];
 
 /**
- * WHETHER THIS RENDER OFFERS THE APP SWITCHER — administrators only.
+ * WHETHER THIS RENDER OFFERS THE APP SWITCHER — administrators, plus two named users.
  *
  * Decided here, on the server, from the VERIFIED identity: the role comes from
  * the auth provider and this app's own profile record, never from the browser.
@@ -24,8 +24,9 @@ export const APP_SWITCHER_USER_IDS: readonly string[] = [
  *
  * It fails closed. Demo mode has no verified identity (its role is the
  * presenter's switcher), so the switcher is never shown there; an unverified or
- * missing identity, or any error, also answers false. A non-administrator's
- * page therefore never contains the switcher at all.
+ * missing identity, or any error, also answers false. Anyone who is
+ * neither an administrator nor one of the two named users never has the
+ * switcher in their page at all.
  *
  * ONE NAMED EXCEPTION. Two non-administrators are offered the switcher too, by
  * stable Supabase user id (`APP_SWITCHER_USER_IDS`), never by email or role. It
