@@ -58,6 +58,8 @@ export interface DirectoryActor {
   id: string;
   email: string;
   role: Role;
+  /** The actor's own access scope; needed only where a grant is compared with the actor's authority. */
+  scope?: AccessScope;
 }
 
 export class DirectoryError extends Error {
@@ -70,6 +72,7 @@ export class DirectoryError extends Error {
       | "last_admin"
       | "email_rate_limited"
       | "protected_account"
+      | "forbidden_grant"
       | "auth_revocation_incomplete"
       | "provider_failed",
     message: string,

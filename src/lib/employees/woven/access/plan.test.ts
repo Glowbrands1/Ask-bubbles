@@ -158,14 +158,29 @@ describe("provisioning", () => {
     expect(rowOf(plan([e]), e).actions).toEqual(["CREATE_USER"]);
   });
 
-  it.each([
-    ["Team Member", POS.tm],
-    ["District Manager", POS.dm],
-  ])("a %s gets NO account from Woven in this rollout", (_name, positionId) => {
-    const e = employee({ positionId });
+  it("a District Manager gets NO account from Woven (no district scope exists)", () => {
+    const e = employee({ positionId: POS.dm });
     const row = rowOf(plan([e]), e);
     expect(row.actions).toEqual(["NO_CHANGE"]);
     expect(row.reasons).toContain("position_not_auto_provisioned");
+  });
+
+  it("a Team Member is provisioned as employee at one location, never global", () => {
+    const e = employee({ positionId: POS.tm });
+    const row = rowOf(plan([e]), e);
+    expect(row.actions[0]).toBe("CREATE_USER");
+    expect(row.after).toMatchObject({ role: "employee", scope_level: "location", scope_also_covers_area_ids: [] });
+  });
+
+  it.each([
+    ["all-locations flag", { hasAllLocationAccess: true }, "all_location_access_not_provisioned"],
+    ["unverified affiliations", { issues: ["affiliations_not_verified"] }, "affiliations_not_verified"],
+    ["Sun Tan City location", { primaryLocationName: "Sun Tan City - Mesa" }, "other_brand_location"],
+  ])("%s is held, not provisioned", (_n, patch, reason) => {
+    const e = employee(patch as Partial<Parameters<typeof employee>[0]>);
+    const row = rowOf(plan([e]), e);
+    expect(row.actions).not.toContain("CREATE_USER");
+    expect(row.reasons).toContain(reason);
   });
 
   it("10. missing email → FLAG_MISSING_EMAIL, no account", () => {

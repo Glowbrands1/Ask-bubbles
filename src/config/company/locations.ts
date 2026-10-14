@@ -45,7 +45,21 @@ export interface CompanyDistrictEntry extends CompanyAreaEntry {
 /** What a store code may look like. Shared with the server-side scope checks. */
 export const LOCATION_CODE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9-]{0,15}$/;
 
-export const COMPANY_LOCATION_ENTRIES: readonly CompanyLocationEntry[] = [];
+/**
+ * The seven Buff City Soap stores, by Buff's own store number (the same codes
+ * as `APPROVED_GOOGLE_STORES`). These are NOT Woven numbers: Woven numbers
+ * three of these stores differently, so a Woven location reaches a store only
+ * through an explicit `woven_location_map` decision — never by matching digits.
+ */
+export const COMPANY_LOCATION_ENTRIES: readonly CompanyLocationEntry[] = [
+  { code: "66", name: "Kearney, NE", state: "NE", districtId: null },
+  { code: "67", name: "Bellevue, NE", state: "NE", districtId: null },
+  { code: "219", name: "Lee's Summit, MO", state: "MO", districtId: null },
+  { code: "225", name: "Sioux Falls, SD (W 41st St)", state: "SD", districtId: null },
+  { code: "236", name: "Grand Island, NE", state: "NE", districtId: null },
+  { code: "264", name: "Omaha, NE (West Dodge Rd)", state: "NE", districtId: null },
+  { code: "338", name: "Sioux Falls, SD (E 18th St)", state: "SD", districtId: null },
+];
 
 export const COMPANY_DISTRICT_ENTRIES: readonly CompanyDistrictEntry[] = [];
 
