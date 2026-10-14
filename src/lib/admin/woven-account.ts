@@ -2,12 +2,12 @@ import "server-only";
 
 import { WOVEN_TENANT } from "@/config/company/woven";
 import { OTHER_BRAND_TITLE_MARKERS } from "@/config/company/google-reviews";
-import { createAccountWithoutEmail } from "@/lib/admin/create-account";
+import { assertCanGrant, createAccountWithoutEmail } from "@/lib/admin/create-account";
 import { loadAccessPlan } from "@/lib/employees/woven/access/load";
 import { AUTO_PROVISION_ROLES } from "@/lib/employees/woven/access/plan";
 import type { PlannedRow } from "@/lib/employees/woven/access/types";
-import { DirectoryError, type DirectoryActor } from "@/lib/admin/user-directory";
-import { isKnownAreaId, LOCATION_ID_PREFIX } from "@/lib/locations";
+import { DirectoryError, isRole, normalizeScope, type DirectoryActor } from "@/lib/admin/user-directory";
+import { isKnownAreaId } from "@/lib/locations";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 
@@ -43,17 +43,14 @@ export type CreateOutcome = "created" | "repaired";
 const squash = (v: string | null) => (v ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export async function createLinkedAccount(
-  input: { externalEmployeeId: string; role: unknown; locationId: unknown },
+  input: { externalEmployeeId: string; role: unknown; scope: unknown; confirmAdmin?: unknown },
   actor: DirectoryActor,
 ): Promise<{ outcome: CreateOutcome; userId: string; linked: boolean }> {
-  const role = typeof input.role === "string" ? input.role : "";
-  if (!(MANUAL_ROLES as readonly string[]).includes(role)) {
-    throw new DirectoryError("invalid_input", "Choose Team Member, Assistant Manager or Location Manager. Other roles are not created here.");
-  }
-  const locationId = typeof input.locationId === "string" ? input.locationId : "";
-  if (!locationId.startsWith(LOCATION_ID_PREFIX) || !isKnownAreaId(locationId)) {
-    throw new DirectoryError("invalid_input", "Choose one of the Buff City Soap locations.");
-  }
+  /* Role and scope are validated by the same function the account creation uses; checked here first so a repair is held to it too. */
+  if (!isRole(input.role)) throw new DirectoryError("invalid_input", "Choose a role for this person.");
+  const role = input.role;
+  const scope = normalizeScope(input.scope);
+  assertCanGrant(actor, role, scope, input.confirmAdmin);
 
   const db = getSupabaseAdmin();
   const { data: emp, error: empError } = await db
@@ -117,6 +114,7 @@ export async function createLinkedAccount(
     if (["admin", "owner", "developer"].includes(String(existing.role))) {
       throw new DirectoryError("protected_account", "An administrator account has this email. It is not linked from here.", 403);
     }
+    /* A repair changes no access; the existing account keeps the role and scope it has. */
     const ok = await link(id, "admin_confirmed_email", false);
     if (!ok) throw new DirectoryError("provider_failed", "The existing account could not be linked. Try again.", 502);
     return { outcome: "repaired", userId: id, linked: true };
@@ -126,7 +124,7 @@ export async function createLinkedAccount(
   }
 
   const user = await createAccountWithoutEmail(
-    { email, displayName: name, role, scope: { level: "location", primaryAreaId: locationId, alsoCoversAreaIds: [] } },
+    { email, displayName: name, role, scope, confirmAdmin: input.confirmAdmin },
     actor,
   );
   const linked = await link(user.id, "provisioned", true);
@@ -198,7 +196,7 @@ export async function runProvisioning(opts: { apply: boolean; batchSize: number;
     const a = row.after as Record<string, unknown>;
     const id = row.externalEmployeeId as string;
     try {
-      const result = await createLinkedAccount({ externalEmployeeId: id, role: a.role, locationId: a.scope_primary_area_id }, opts.actor);
+      const result = await createLinkedAccount({ externalEmployeeId: id, role: a.role, scope: { level: "location", primaryAreaId: a.scope_primary_area_id, alsoCoversAreaIds: [] } }, opts.actor);
       outcomes.push(result.linked ? { externalEmployeeId: id, status: "created" } : { externalEmployeeId: id, status: "created", code: "link_not_recorded" });
     } catch (error) {
       outcomes.push({ externalEmployeeId: id, status: "failed", code: (error as { code?: string }).code ?? "failed" });

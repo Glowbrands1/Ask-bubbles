@@ -814,6 +814,12 @@ function InviteDialog({
 
 /* ------------------------------------------------- Woven employee account -- */
 
+interface WovenLocationView {
+  wovenLocationId: string;
+  name: string | null;
+  areaId: string | null;
+  expiresOn?: string | null;
+}
 interface WovenEmployeeOption {
   externalEmployeeId: string;
   name: string;
@@ -822,19 +828,25 @@ interface WovenEmployeeOption {
   position: string | null;
   primaryLocation: string | null;
   suggestedRole: Role | null;
-  suggestedLocationId: string | null;
   account: "none" | "linked" | "unlinked";
+  locations: {
+    primary: WovenLocationView | null;
+    additional: WovenLocationView[];
+    temporary: WovenLocationView[];
+    hasAllLocationAccess: boolean;
+    suggestion: { level: "global" | "location" | "none"; primaryAreaId: string | null; alsoCoversAreaIds: string[] };
+  } | null;
 }
 
-/** The roles an administrator may give from here. Never administrative, never wider than one location. */
-const WOVEN_ACCOUNT_ROLES: Role[] = ["employee", "assistant_manager", "location_manager"];
+type WovenAccess = "one" | "several" | "all";
 
 /**
  * Creates ONE login for a synced Woven employee that the administrator picked.
- * Name and email come from Woven; the role and location are the administrator's
- * choice (a missing Woven mapping does not hide anyone). NO email, invitation
- * or code is sent and no password is set: the account is created DISABLED, and
- * to let the person in the administrator enables it and generates a reset link.
+ * Name and email come from Woven; the role and access are the administrator's
+ * choice, and Woven's location assignments are shown and only SUGGESTED. NO
+ * email, invitation or code is sent and no password is set: the account is
+ * created DISABLED, and to let the person in the administrator enables it and
+ * generates a reset link. The server re-checks every role and scope.
  */
 function WovenAccountDialog({
   open,
@@ -845,13 +857,22 @@ function WovenAccountDialog({
   onOpenChange: (open: boolean) => void;
   onDone: (note: string) => void;
 }) {
+  const { user: me } = useSession();
   const [employees, setEmployees] = useState<WovenEmployeeOption[] | null>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState("");
   const [role, setRole] = useState<Role>("employee");
-  const [locationId, setLocationId] = useState("");
+  const [access, setAccess] = useState<WovenAccess>("one");
+  const [areaIds, setAreaIds] = useState<string[]>([]);
+  const [confirmAdmin, setConfirmAdmin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /* What this administrator may offer. Convenience only: the server decides. */
+  const aboveAdmin = me?.role === "owner" || me?.role === "developer";
+  const assignableRoles = ROLES.filter((r) => aboveAdmin || (r !== "owner" && r !== "developer"));
+  const canGrantAll = me?.scope?.level === "global";
+  const isAdminRole = (ADMIN_CONSOLE_ROLES as readonly string[]).includes(role);
 
   useEffect(() => {
     if (!open) return;
@@ -883,22 +904,42 @@ function WovenAccountDialog({
   function choose(id: string) {
     setSelected(id);
     const e = (employees ?? []).find((x) => x.externalEmployeeId === id);
-    /* Suggestions only when Woven's mappings exist; otherwise the administrator chooses. */
-    setRole(e?.suggestedRole && WOVEN_ACCOUNT_ROLES.includes(e.suggestedRole) ? e.suggestedRole : "employee");
-    setLocationId(e?.suggestedLocationId ?? "");
+    /* Preselect only what is confidently matched; "all locations" in Woven is shown, never preselected as a grant. */
+    setRole(e?.suggestedRole && assignableRoles.includes(e.suggestedRole) && !(ADMIN_CONSOLE_ROLES as readonly string[]).includes(e.suggestedRole) ? e.suggestedRole : "employee");
+    const s = e?.locations?.suggestion;
+    const ids = s?.level === "location" && s.primaryAreaId ? [s.primaryAreaId, ...s.alsoCoversAreaIds] : [];
+    setAreaIds(ids);
+    setAccess(ids.length > 1 ? "several" : "one");
+    setConfirmAdmin(false);
     setError(null);
   }
 
+  /* One Location holds exactly one location; Several keeps every selected one. */
+  function changeAccess(next: WovenAccess) {
+    setAccess(next);
+    if (next === "one") setAreaIds((current) => current.slice(0, 1));
+  }
+
+  function toggleArea(id: string) {
+    setAreaIds((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
+  }
+
+  const scope =
+    access === "all"
+      ? { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] as string[] }
+      : { level: "location", primaryAreaId: areaIds[0] ?? null, alsoCoversAreaIds: areaIds.slice(1) };
+  const scopeReady = access === "all" ? canGrantAll : access === "one" ? areaIds.length === 1 : areaIds.length >= 2;
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (busy || !employee || !locationId) return;
+    if (busy || !employee || !scopeReady) return;
     setBusy(true);
     setError(null);
     try {
       const response = await fetch("/api/admin/employees/woven/accounts", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ externalEmployeeId: employee.externalEmployeeId, role, locationId }),
+        body: JSON.stringify({ externalEmployeeId: employee.externalEmployeeId, role, scope, confirmAdmin: isAdminRole && confirmAdmin }),
       });
       const payload: unknown = await response.json().catch(() => null);
       if (!response.ok) {
@@ -924,6 +965,11 @@ function WovenAccountDialog({
   }
 
   const blocked = employee?.account === "linked";
+  const loc = employee?.locations ?? null;
+  const permanent = loc ? [loc.primary, ...loc.additional].filter((l): l is WovenLocationView => l !== null) : [];
+  const unmatchedCount = permanent.filter((l) => !l.areaId).length;
+  const matchedCount = new Set(permanent.filter((l) => l.areaId).map((l) => l.areaId)).size;
+  const showLoc = (l: WovenLocationView) => `${l.name ?? "Unnamed"} — ${l.areaId ? `matches ${areaName({ level: "location", primaryAreaId: l.areaId, alsoCoversAreaIds: [] })}` : "not matched to an Ask Bubbles location"}${l.expiresOn ? ` (expires ${l.expiresOn})` : ""}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -960,7 +1006,7 @@ function WovenAccountDialog({
               </p>
               {employee.account === "unlinked" ? (
                 <Notice tone="attention" title="An account with this email already exists">
-                  Continuing links it to this Woven employee. No second account is created.
+                  Continuing links it to this Woven employee. No second account is created and its access is not changed.
                 </Notice>
               ) : null}
               {blocked ? (
@@ -969,9 +1015,30 @@ function WovenAccountDialog({
                 </Notice>
               ) : null}
 
+              <div className="space-y-1 rounded-md border border-border p-3 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">Woven location assignments (kept as they are)</p>
+                <p>Primary: {loc?.primary ? showLoc(loc.primary) : "none"}</p>
+                {loc?.hasAllLocationAccess ? <p>Woven marks this person as having access to all locations (a suggestion only).</p> : null}
+                {(loc?.additional ?? []).map((l) => (
+                  <p key={`a-${l.wovenLocationId}`}>Additional: {showLoc(l)}</p>
+                ))}
+                {(loc?.temporary ?? []).map((l) => (
+                  <p key={`t-${l.wovenLocationId}`}>Temporary: {showLoc(l)} — not granted unless you select it below</p>
+                ))}
+                {unmatchedCount > 0 ? (
+                  <p className="text-foreground">
+                    {unmatchedCount} Woven location{unmatchedCount === 1 ? " is" : "s are"} not matched to an Ask Bubbles location, so
+                    {unmatchedCount === 1 ? " it is" : " they are"} not included. They stay recorded in Woven; map them or choose a location below.
+                  </p>
+                ) : null}
+                {access === "one" && matchedCount > 1 ? (
+                  <p className="text-foreground">Woven lists {matchedCount} matched locations. One Location gives access to only one of them; choose Several Locations to keep them all.</p>
+                ) : null}
+              </div>
+
               <FieldGroup label="Role" htmlFor="woven-role">
-                <Select id="woven-role" value={role} onChange={(e) => setRole(e.target.value as Role)} disabled={busy}>
-                  {WOVEN_ACCOUNT_ROLES.map((entry) => (
+                <Select id="woven-role" value={role} onChange={(e) => { setRole(e.target.value as Role); setConfirmAdmin(false); }} disabled={busy}>
+                  {assignableRoles.map((entry) => (
                     <option key={entry} value={entry}>
                       {ROLE_LABEL[entry]}
                     </option>
@@ -979,18 +1046,45 @@ function WovenAccountDialog({
                 </Select>
               </FieldGroup>
               <p className="text-xs leading-relaxed text-muted-foreground">{ROLE_DESCRIPTION[role]}</p>
+              {isAdminRole ? (
+                <label className="flex items-start gap-2 text-sm">
+                  <input type="checkbox" checked={confirmAdmin} onChange={(e) => setConfirmAdmin(e.target.checked)} disabled={busy} className="mt-1" />
+                  <span>I am deliberately giving this person administrator access. Woven does not decide this.</span>
+                </label>
+              ) : null}
 
-              <FieldGroup label="Location (one)" htmlFor="woven-location">
-                <Select id="woven-location" value={locationId} onChange={(e) => setLocationId(e.target.value)} disabled={busy}>
-                  <option value="">Choose a location…</option>
-                  {AREAS.location.map((entry) => (
-                    <option key={entry.id} value={entry.id}>
-                      {entry.name}
-                    </option>
-                  ))}
+              <FieldGroup label="Location access (separate from role)" htmlFor="woven-access">
+                <Select id="woven-access" value={access} onChange={(e) => changeAccess(e.target.value as WovenAccess)} disabled={busy}>
+                  <option value="one">One location</option>
+                  <option value="several">Several locations</option>
+                  {canGrantAll ? <option value="all">All locations</option> : null}
                 </Select>
               </FieldGroup>
-              <p className="text-xs text-muted-foreground">Woven location: {employee.primaryLocation ?? "none"}. Confirm the Ask Bubbles location yourself.</p>
+              {access === "all" ? (
+                <p className="text-xs text-muted-foreground">
+                  All locations is visibility only. It does not give administrator permissions; the role above does that.
+                  {loc?.suggestion.level === "global" ? " Woven suggests this." : ""}
+                </p>
+              ) : (
+                <fieldset className="space-y-1">
+                  <legend className="text-xs text-muted-foreground">
+                    {access === "one" ? "Choose one location" : "Choose two or more locations"}
+                    {loc?.suggestion.level === "location" ? " (matched locations are preselected)" : ""}
+                  </legend>
+                  {AREAS.location.map((entry) => (
+                    <label key={entry.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type={access === "one" ? "radio" : "checkbox"}
+                        name="woven-area"
+                        checked={areaIds.includes(entry.id)}
+                        onChange={() => (access === "one" ? setAreaIds([entry.id]) : toggleArea(entry.id))}
+                        disabled={busy}
+                      />
+                      {entry.name}
+                    </label>
+                  ))}
+                </fieldset>
+              )}
             </>
           ) : null}
 
@@ -1000,7 +1094,7 @@ function WovenAccountDialog({
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={busy || !employee || !locationId || blocked}>
+            <Button type="submit" disabled={busy || !employee || !scopeReady || blocked || (isAdminRole && !confirmAdmin)}>
               {busy ? <Loader2 className="animate-spin" /> : <UserPlus />}
               {busy ? "Creating…" : employee?.account === "unlinked" ? "Link account" : "Create account"}
             </Button>
