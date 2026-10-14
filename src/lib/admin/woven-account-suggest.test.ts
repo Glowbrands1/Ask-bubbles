@@ -21,6 +21,13 @@ describe("suggestLocations", () => {
     expect(r.additional[0]?.areaId).toBeNull();
     expect(r.suggestion.level).toBe("none");
   });
+  it("keeps every matched additional location even when the primary is unmatched", () => {
+    const r = suggestLocations(
+      row({ primaryLocationId: "W3", additionalLocations: [{ wovenLocationId: "W1", name: "NE Kearney", number: null, expiresOn: null }, { wovenLocationId: "W2", name: "NE Bellevue", number: null, expiresOn: null }] }),
+      maps,
+    );
+    expect(r.suggestion).toEqual({ level: "location", primaryAreaId: "loc-66", alsoCoversAreaIds: ["loc-67"] });
+  });
   it("lists temporary assignments separately and never suggests them", () => {
     const r = suggestLocations(row({ temporaryOrExpiringLocations: [{ wovenLocationId: "W2", name: "NE Bellevue", number: null, expiresOn: "2026-12-01" }] }), maps);
     expect(r.temporary).toHaveLength(1);

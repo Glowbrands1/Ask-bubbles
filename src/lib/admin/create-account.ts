@@ -93,7 +93,9 @@ export async function createAccountWithoutEmail(
 ): Promise<DirectoryUser> {
   const email = normalizeEmail(input.email);
   const displayName = normalizeDisplayName(input.displayName, email);
-  const scope = normalizeScope(input.scope);
+  const normalized = normalizeScope(input.scope);
+  /* The same location listed twice is one location. */
+  const scope = { ...normalized, alsoCoversAreaIds: [...new Set(normalized.alsoCoversAreaIds)].filter((id) => id !== normalized.primaryAreaId) };
 
   if (!isRole(input.role)) throw new DirectoryError("invalid_input", "Choose a role for this person.");
   const role = input.role;

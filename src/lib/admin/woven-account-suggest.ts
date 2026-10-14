@@ -51,7 +51,8 @@ export function suggestLocations(row: DirectoryRow, maps: readonly LocationMappi
   /* Temporary and expiring assignments never feed a suggestion. */
   const matched = [primary, ...additional].filter((l): l is WovenLocationView => l !== null && l.areaId !== null);
   const unique = [...new Set(matched.map((l) => l.areaId as string))];
-  const primaryArea = primary?.areaId ?? null;
+  /* If the Woven primary is unmatched but an additional one is, the first matched location leads: none is dropped. */
+  const primaryArea = primary?.areaId ?? unique[0] ?? null;
 
   let suggestion: WovenLocationSuggestion["suggestion"] = { level: "none", primaryAreaId: null, alsoCoversAreaIds: [] };
   if (hasAll) suggestion = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };

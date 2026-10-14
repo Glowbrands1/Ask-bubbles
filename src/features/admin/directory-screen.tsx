@@ -914,6 +914,12 @@ function WovenAccountDialog({
     setError(null);
   }
 
+  /* One Location holds exactly one location; Several keeps every selected one. */
+  function changeAccess(next: WovenAccess) {
+    setAccess(next);
+    if (next === "one") setAreaIds((current) => current.slice(0, 1));
+  }
+
   function toggleArea(id: string) {
     setAreaIds((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
   }
@@ -960,6 +966,9 @@ function WovenAccountDialog({
 
   const blocked = employee?.account === "linked";
   const loc = employee?.locations ?? null;
+  const permanent = loc ? [loc.primary, ...loc.additional].filter((l): l is WovenLocationView => l !== null) : [];
+  const unmatchedCount = permanent.filter((l) => !l.areaId).length;
+  const matchedCount = new Set(permanent.filter((l) => l.areaId).map((l) => l.areaId)).size;
   const showLoc = (l: WovenLocationView) => `${l.name ?? "Unnamed"} — ${l.areaId ? `matches ${areaName({ level: "location", primaryAreaId: l.areaId, alsoCoversAreaIds: [] })}` : "not matched to an Ask Bubbles location"}${l.expiresOn ? ` (expires ${l.expiresOn})` : ""}`;
 
   return (
@@ -1014,8 +1023,17 @@ function WovenAccountDialog({
                   <p key={`a-${l.wovenLocationId}`}>Additional: {showLoc(l)}</p>
                 ))}
                 {(loc?.temporary ?? []).map((l) => (
-                  <p key={`t-${l.wovenLocationId}`}>Temporary: {showLoc(l)}</p>
+                  <p key={`t-${l.wovenLocationId}`}>Temporary: {showLoc(l)} — not granted unless you select it below</p>
                 ))}
+                {unmatchedCount > 0 ? (
+                  <p className="text-foreground">
+                    {unmatchedCount} Woven location{unmatchedCount === 1 ? " is" : "s are"} not matched to an Ask Bubbles location, so
+                    {unmatchedCount === 1 ? " it is" : " they are"} not included. They stay recorded in Woven; map them or choose a location below.
+                  </p>
+                ) : null}
+                {access === "one" && matchedCount > 1 ? (
+                  <p className="text-foreground">Woven lists {matchedCount} matched locations. One Location gives access to only one of them; choose Several Locations to keep them all.</p>
+                ) : null}
               </div>
 
               <FieldGroup label="Role" htmlFor="woven-role">
@@ -1036,7 +1054,7 @@ function WovenAccountDialog({
               ) : null}
 
               <FieldGroup label="Location access (separate from role)" htmlFor="woven-access">
-                <Select id="woven-access" value={access} onChange={(e) => setAccess(e.target.value as WovenAccess)} disabled={busy}>
+                <Select id="woven-access" value={access} onChange={(e) => changeAccess(e.target.value as WovenAccess)} disabled={busy}>
                   <option value="one">One location</option>
                   <option value="several">Several locations</option>
                   {canGrantAll ? <option value="all">All locations</option> : null}
