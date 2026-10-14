@@ -331,7 +331,7 @@ export async function runGoogleReviewsSync(options: SyncOptions): Promise<SyncOu
 
         if (!dryRun) {
           try {
-            const applied = await store.applyReviews(runId, target.storeId, batch.reviews, complete);
+            const applied = await store.applyReviews(runId, target.storeId, batch.reviews, complete, { total: page.totalReviewCount, average: page.averageRating });
             result.applied = applied;
             outcome.totals.inserted += applied.inserted;
             outcome.totals.updated += applied.updated;

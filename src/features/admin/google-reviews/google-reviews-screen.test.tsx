@@ -24,6 +24,9 @@ const store = (over: Partial<StoreSummary> = {}): StoreSummary => ({
   unansweredCount: 0,
   ratings: [0, 0, 0, 0, 0],
   latestReviewAt: null,
+  oldestReviewAt: null,
+  apiTotalReviewCount: null,
+  apiTotalCheckedAt: null,
   lastSyncAt: null,
   lastSyncStatus: null,
   lastSyncError: null,
@@ -94,8 +97,8 @@ describe("Google Reviews screen states", () => {
         page: 1,
         pageSize: 20,
         rows: [
-          { id: "r1", storeCode: "219", storeName: "Buff City Soap Lee's Summit", starRating: 5, comment: "Lovely", createdAt: "2026-10-01T12:00:00Z", updatedAt: "2026-10-01T12:00:00Z", replyComment: "Thanks!", replyUpdatedAt: "2026-10-02T12:00:00Z", hasReply: true, removedAt: null },
-          { id: "r2", storeCode: "219", storeName: "Buff City Soap Lee's Summit", starRating: 4, comment: null, createdAt: "2026-10-03T12:00:00Z", updatedAt: "2026-10-03T12:00:00Z", replyComment: null, replyUpdatedAt: null, hasReply: false, removedAt: null },
+          { id: "r1", storeCode: "219", storeName: "Buff City Soap Lee's Summit", starRating: 5, comment: "Lovely", reviewerName: "Ann B.", createdAt: "2026-10-01T12:00:00Z", updatedAt: "2026-10-01T12:00:00Z", replyComment: "Thanks!", replyUpdatedAt: "2026-10-02T12:00:00Z", hasReply: true, removedAt: null },
+          { id: "r2", storeCode: "219", storeName: "Buff City Soap Lee's Summit", starRating: 4, comment: null, reviewerName: null, createdAt: "2026-10-03T12:00:00Z", updatedAt: "2026-10-03T12:00:00Z", replyComment: null, replyUpdatedAt: null, hasReply: false, removedAt: null },
         ],
       },
     });

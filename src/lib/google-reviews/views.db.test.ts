@@ -144,7 +144,7 @@ describe("reads over a real sync's data", () => {
     expect(all).toMatchObject({ total: 48, page: 1, pageSize: PAGE_SIZE });
     expect(all.rows).toHaveLength(PAGE_SIZE);
     expect(all.rows[0]).toMatchObject({ storeCode: "219", starRating: 5 }); // Oct 3 is the newest
-    expect(Object.keys(all.rows[0]!).sort()).toEqual(["comment", "createdAt", "hasReply", "id", "removedAt", "replyComment", "replyUpdatedAt", "starRating", "storeCode", "storeName", "updatedAt"]);
+    expect(Object.keys(all.rows[0]!).sort()).toEqual(["comment", "createdAt", "hasReply", "id", "removedAt", "replyComment", "replyUpdatedAt", "reviewerName", "starRating", "storeCode", "storeName", "updatedAt"]);
     const page3 = await readReviewPage({ ...EMPTY_QUERY, page: 3 }, d.client);
     expect(page3.rows).toHaveLength(8); // 48 − 40
     expect((await readReviewPage({ ...EMPTY_QUERY, store: "225" }, d.client)).total).toBe(45);

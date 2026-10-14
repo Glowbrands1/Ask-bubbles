@@ -22,13 +22,14 @@ const raw = (over: Record<string, unknown> = {}) => ({
 });
 
 describe("normalizeReview", () => {
-  it("keeps only the fields Ask Bubbles stores and DROPS the reviewer entirely", () => {
+  it("keeps only the fields Ask Bubbles stores and keeps only the reviewer's display name", () => {
     const result = normalizeReview(raw(), expected);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(Object.keys(result.review).sort()).toEqual(["comment", "contentHash", "createTime", "googleReviewId", "replyComment", "replyUpdateTime", "resourceName", "starRating", "updateTime"]);
+    expect(Object.keys(result.review).sort()).toEqual(["comment", "contentHash", "createTime", "googleReviewId", "replyComment", "replyUpdateTime", "resourceName", "reviewerName", "starRating", "updateTime"]);
     expect(result.review).toMatchObject({ googleReviewId: "AbC_123", starRating: 4, comment: "Great soap!", replyComment: "Thank you", createTime: "2026-10-01T12:00:00.123Z", updateTime: "2026-10-02T09:30:00.000Z", replyUpdateTime: "2026-10-02T10:00:00.000Z" });
-    expect(JSON.stringify(result.review)).not.toMatch(/Zzreviewer|photo|example\.invalid|isAnonymous/);
+    expect(result.review.reviewerName).toBe("Zzreviewer Person");
+    expect(JSON.stringify(result.review)).not.toMatch(/photo|example\.invalid|isAnonymous/);
   });
 
   it("maps all five ratings and refuses an unspecified or malformed one", () => {
@@ -61,9 +62,9 @@ describe("normalizeReview", () => {
     expect(normalizeReview(raw({ reviewReply: undefined }), expected)).toMatchObject({ ok: true, review: { replyComment: null } });
   });
 
-  it("hashes exactly the fields that can change: a new reply or an edited rating changes the hash, reviewer noise does not", () => {
+  it("hashes exactly the fields that can change: a new reply or an edited rating changes the hash, reviewer photo noise does not", () => {
     const a = normalizeReview(raw(), expected);
-    const sameWithNoise = normalizeReview(raw({ reviewer: { displayName: "Someone Else" } }), expected);
+    const sameWithNoise = normalizeReview(raw({ reviewer: { displayName: "Zzreviewer Person", profilePhotoUrl: "https://example.invalid/other.jpg" } }), expected);
     const replied = normalizeReview(raw({ reviewReply: { comment: "Updated reply", updateTime: "2026-10-03T00:00:00Z" } }), expected);
     const edited = normalizeReview(raw({ starRating: "ONE", updateTime: "2026-10-03T00:00:00Z" }), expected);
     const hash = (r: ReturnType<typeof normalizeReview>) => (r.ok ? r.review.contentHash : "");
@@ -220,5 +221,23 @@ describe("matchApprovedStores", () => {
     const one = g("Buff City Soap", "219", [`${s219.addressLine1}, ${s219.addressLine2}`], s219.city, s219.state, s219.postalCode);
     const linked = matchApprovedStores([one, ...buffProfiles().filter((x) => x.storeCode !== "219")]).stores.filter((s) => s.status === "matched");
     expect(new Set(linked.map((s) => s.locationName)).size).toBe(linked.length);
+  });
+});
+
+describe("reviewer display name", () => {
+  const expected = { accountName: "accounts/1", locationName: "locations/2" };
+  const base = { reviewId: "r1", name: "accounts/1/locations/2/reviews/r1", starRating: "FIVE", createTime: "2020-01-02T03:04:05Z", updateTime: "2020-01-02T03:04:05Z" };
+
+  it("keeps the display name only, never the photo or profile URL; anonymous keeps none", () => {
+    const named = normalizeReview({ ...base, reviewer: { displayName: " Ann B. ", profilePhotoUrl: "https://p", isAnonymous: false } }, expected);
+    expect(named.ok && named.review.reviewerName).toBe("Ann B.");
+    expect(JSON.stringify(named)).not.toContain("https://p");
+    const anon = normalizeReview({ ...base, reviewer: { displayName: "A Google user", isAnonymous: true } }, expected);
+    expect(anon.ok && anon.review.reviewerName).toBeNull();
+  });
+
+  it("preserves the original review dates", () => {
+    const r = normalizeReview(base, expected);
+    expect(r.ok && r.review.createTime).toBe("2020-01-02T03:04:05.000Z");
   });
 });

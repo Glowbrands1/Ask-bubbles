@@ -1,9 +1,7 @@
 /**
  * Shared shapes for the Google Reviews integration. Plain data only.
  *
- * NOTHING HERE CARRIES A REVIEWER'S IDENTITY. Google returns a reviewer display
- * name and photo with each review; `normalize.ts` drops them before anything is
- * built from the response, so no type below has a field they could land in.
+ * Of the reviewer only the display name is kept; the photo and profile URL are dropped in `normalize.ts`.
  */
 
 /** A Business Profile account the connected Google user can administer: `accounts/{id}`. */
@@ -31,7 +29,7 @@ export interface GoogleLocation {
   } | null;
 }
 
-/** One review, reduced to what Ask Bubbles keeps. No reviewer name, photo or id. */
+/** One review, reduced to what Ask Bubbles keeps. */
 export interface NormalizedReview {
   readonly googleReviewId: string;
   /** `accounts/{a}/locations/{l}/reviews/{id}` */
@@ -42,6 +40,8 @@ export interface NormalizedReview {
   readonly updateTime: string;
   readonly replyComment: string | null;
   readonly replyUpdateTime: string | null;
+  /** Reviewer display name only; null for anonymous reviewers. No photo, URL or id. */
+  readonly reviewerName: string | null;
   /** sha256 over the fields that can change; equal hash ⇒ nothing to update. */
   readonly contentHash: string;
 }
