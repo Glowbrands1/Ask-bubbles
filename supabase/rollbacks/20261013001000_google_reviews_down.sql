@@ -34,3 +34,9 @@ drop table if exists public.google_business_connections;
 
 drop function if exists public.google_reviews_check_location();
 drop function if exists public.google_review_audit_guard();
+
+-- goals (20261015001000)
+drop function if exists public.google_review_goal_counts(timestamptz, timestamptz, timestamptz, timestamptz);
+drop function if exists public.google_review_set_baselines(text, jsonb);
+drop function if exists public.google_review_goals_guard_baseline();
+drop table if exists public.google_review_goals;
