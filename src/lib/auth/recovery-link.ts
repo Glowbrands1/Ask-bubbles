@@ -124,3 +124,20 @@ export function readRecoveryLink(search: string, hash: string): RecoveryLink {
 
   return { kind: "none" };
 }
+
+/**
+ * True when the link was refused because its one-time token was ALREADY SPENT
+ * or had expired (`error_code=otp_expired`, or our own `?link=expired`).
+ *
+ * That is the signature of an email security scanner: Supabase's default
+ * recovery email carries a one-time URL that any GET consumes, and corporate
+ * mail filters open every link in a message before the person does. The auth
+ * log for such a link shows a login from an unfamiliar client seconds after
+ * the email was sent, then "One-time token not found" for the person's own
+ * click. Used only to pick a more helpful sentence; never to trust the link.
+ */
+export function linkWasAlreadyUsed(search: string, hash: string): boolean {
+  const code = params(hash).get("error_code") ?? params(search).get("error_code");
+  if (code === "otp_expired") return true;
+  return params(search).get(EXPIRED_MARKER) === "expired";
+}

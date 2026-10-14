@@ -249,6 +249,26 @@ describe("an invalid or expired recovery link", () => {
     expect(screen.queryByLabelText(/^New password$/i)).toBeNull();
   });
 
+  it("explains a spent one-time link (the scanner-consumed case seen in production) and still offers a new one", async () => {
+    // Exactly the fragment Supabase produced when /verify answered
+    // "One-time token not found" for the person's own click.
+    land("", "#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired");
+    render(<ResetPasswordForm />);
+
+    await waitFor(() => expect(screen.getByText(/already opened/i)).toBeTruthy());
+    expect(screen.getByText(/security tool/i)).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Request a new link/i }).getAttribute("href")).toBe("/forgot-password");
+    expect(screen.queryByLabelText(/^New password$/i)).toBeNull();
+  });
+
+  it("does not claim the link was opened when it is simply unrecognised", async () => {
+    supabase.getUser.mockResolvedValue({ data: { user: null }, error: { message: "x" } });
+    render(<ResetPasswordForm />);
+
+    await screen.findByRole("link", { name: /Request a new link/i });
+    expect(screen.queryByText(/already opened/i)).toBeNull();
+  });
+
   it("offers a way to request another reset email", async () => {
     supabase.getUser.mockResolvedValue({ data: { user: null }, error: { message: "x" } });
     render(<ResetPasswordForm />);
