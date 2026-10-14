@@ -20,7 +20,8 @@ import { GOOGLE_CHECK_BODY, GOOGLE_CONFIRMED_SAVE_BODY } from "@/lib/google-revi
  *                    once (a ref blocks a double submit before React re-renders).
  *                    The server also needs GOOGLE_REVIEWS_WRITES_ENABLED.
  *
- * Nothing here can reply to, edit or delete a Google review: no route exists for it.
+ * Nothing on this screen replies to, edits or deletes a Google review. Replies are written by staff on the
+ * Reviews dashboard (`/reviews`), through their own route, after an explicit confirmation.
  */
 
 type Outcome = { status: string; reason?: string | null; mode?: string; totals?: { fetched: number; inserted: number; updated: number; removed: number }; storesLinked?: number; storesTotal?: number; code?: string | null; missing?: string[] };

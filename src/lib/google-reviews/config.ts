@@ -15,8 +15,15 @@ import "server-only";
  *   GOOGLE_REVIEWS_SCHEDULE_ENABLED   the scheduled refresh. Off: manual runs
  *                                     still work, the cron tick starts nothing.
  *
- * THIS INTEGRATION IS READ-ONLY AGAINST GOOGLE. There is no switch that posts,
- * edits or deletes a review reply, because there is no code that can.
+ * A FOURTH SWITCH, SEPARATE AND OFF BY DEFAULT, GOVERNS THE ONLY WRITE TO GOOGLE:
+ *
+ *   GOOGLE_REVIEWS_REPLIES_ENABLED    staff may PUBLISH an owner reply to Google
+ *                                     (after an explicit confirmation). Off: drafts
+ *                                     can still be written and edited, but nothing
+ *                                     is ever sent. It also needs the master switch.
+ *
+ * The SYNC stays read-only against Google: `client.ts` has GET calls only, and
+ * replies go through their own module (`reply-client.ts`) that the sync never imports.
  *
  * CREDENTIALS
  *   GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET   the OAuth client of the
@@ -37,6 +44,7 @@ export const GOOGLE_OAUTH_REDIRECT_URI_ENV = "GOOGLE_OAUTH_REDIRECT_URI";
 export const GOOGLE_REVIEWS_SYNC_ENABLED_ENV = "GOOGLE_REVIEWS_SYNC_ENABLED";
 export const GOOGLE_REVIEWS_WRITES_ENABLED_ENV = "GOOGLE_REVIEWS_WRITES_ENABLED";
 export const GOOGLE_REVIEWS_SCHEDULE_ENABLED_ENV = "GOOGLE_REVIEWS_SCHEDULE_ENABLED";
+export const GOOGLE_REVIEWS_REPLIES_ENABLED_ENV = "GOOGLE_REVIEWS_REPLIES_ENABLED";
 
 export const CALLBACK_PATH = "/api/admin/google-reviews/callback";
 
@@ -63,6 +71,8 @@ export interface GoogleReviewsConfig {
   enabled: boolean;
   writesEnabled: boolean;
   scheduleEnabled: boolean;
+  /** Whether a reply may be published to Google. Drafting never needs it. */
+  repliesEnabled: boolean;
   /** Names of the OAuth/encryption variables not yet set. Never values. */
   missingCredentials: string[];
   /** Whether everything a live Google call needs is present. */
@@ -86,6 +96,7 @@ export function readGoogleReviewsConfig(env: EnvSource = process.env): GoogleRev
     enabled: flag(env, GOOGLE_REVIEWS_SYNC_ENABLED_ENV),
     writesEnabled: flag(env, GOOGLE_REVIEWS_WRITES_ENABLED_ENV),
     scheduleEnabled: flag(env, GOOGLE_REVIEWS_SCHEDULE_ENABLED_ENV),
+    repliesEnabled: flag(env, GOOGLE_REVIEWS_REPLIES_ENABLED_ENV),
     missingCredentials: missing,
     credentialsReady: missing.length === 0,
   };

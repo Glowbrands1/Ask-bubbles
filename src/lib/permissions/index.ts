@@ -66,6 +66,7 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
   view_analytics: "View adoption analytics",
   manage_users: "Manage users",
   manage_integrations: "Manage integrations",
+  reply_to_reviews: "Reply to Google reviews",
 };
 
 export const PERMISSION_GROUP: Record<Permission, string> = {
@@ -90,6 +91,7 @@ export const PERMISSION_GROUP: Record<Permission, string> = {
   view_analytics: "Administration",
   manage_users: "Administration",
   manage_integrations: "Administration",
+  reply_to_reviews: "Insights",
 };
 
 export const DEFAULT_PERMISSION_MATRIX: PermissionMatrix = COMPANY_PERMISSION_MATRIX;

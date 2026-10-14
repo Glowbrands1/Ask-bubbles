@@ -281,6 +281,16 @@ export function ReviewsList({ data }: { data: ReviewsData }) {
                       {r.replyComment}
                     </p>
                   ) : null}
+                  {data.replies?.access.available && data.replies.access.stores.includes(r.storeCode) && !r.removedAt ? (
+                    <ReplyControls
+                      key={r.id}
+                      reviewId={r.id}
+                      salon={r.storeName}
+                      existingReply={r.replyComment}
+                      open={data.replies.byReview[r.id] ?? null}
+                      publishingEnabled={data.replies.access.publishingEnabled}
+                    />
+                  ) : null}
                 </td>
               </tr>
             ))}
@@ -328,6 +338,7 @@ import {
   type GoalSummary,
 } from "@/lib/google-reviews/goals";
 import { cn } from "@/lib/utils/cn";
+import { ReplyControls } from "./reply-controls";
 import { reviewsTabHref } from "./reviews-tabs";
 
 /** Goal rows in view (the Location filter narrows them) and their totals, or null while no salon has a baseline. */

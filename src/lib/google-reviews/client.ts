@@ -11,7 +11,9 @@ import type { GoogleAccount, GoogleFailureCode, GoogleLocation } from "./types";
  *   listReviews(account, location)  My Business API v4          GET /v4/{account}/{location}/reviews
  *
  * There is no other method, and the HTTP verb is a literal "GET" in one place.
- * Posting, replying to or deleting a review is not something this class can do.
+ * This class cannot post, reply to or delete anything: the sync can never write to Google.
+ * The one write Ask Bubbles makes (a person's confirmed owner reply) lives in `reply-client.ts`,
+ * which this file and the sync do not import; a test keeps it that way.
  *
  * WHAT IT HANDLES
  *   PAGING     every list follows `nextPageToken`; a repeated token (a loop) or a
