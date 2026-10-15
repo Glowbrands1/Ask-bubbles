@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { centralMidnight, goalContext, goalProgress, goalStatus, goalSummary, isPartialMonth, paceTargetFor, partialMonthNote, rankRows, weekStartOf, type GoalRow } from "./goals";
+import { centralMidnight, goalContext, goalProgress, goalStatus, goalSummary, isPartialMonth, paceTargetFor, partialMonthNote, rankRows, weekStartOf, closedMonthContext, previousMonth, GOAL_TONE, paceMarkPercent, reviewEligibility, type GoalRow } from "./goals";
 
 const row = (over: Partial<GoalRow> = {}): GoalRow => ({
   storeCode: "219",
@@ -124,5 +124,102 @@ describe("a partial October is never presented as a full month", () => {
   it("summarises which salons are partial, and when counting began", () => {
     expect(partialMonthNote([partial, full, row({ baselineReviewTime: "2026-10-13T21:00:00Z" })], ctx)).toEqual({ salons: 2, from: "2026-10-10", to: "2026-10-13" });
     expect(partialMonthNote([full], ctx)).toBeNull();
+  });
+});
+
+const r = (code: string, over: Partial<GoalRow> = {}) => row({ storeCode: code, displayName: `Salon ${code}`, baselineReviewTime: "2026-09-01T00:00:00Z", ...over });
+const ctxDay = goalContext("2026-10-15"); // 14 of 31 days elapsed → pace target ceil(10*14/31) = 5
+
+describe("goal tones", () => {
+  it("maps met to green, on pace to amber, behind to red, and no-verdict states to gray", () => {
+    expect(GOAL_TONE[goalStatus(r("1", { qualifyingMonthToDate: 10 }), ctxDay)]).toBe("met");
+    expect(GOAL_TONE[goalStatus(r("2", { qualifyingMonthToDate: 5 }), ctxDay)]).toBe("pace");
+    expect(GOAL_TONE[goalStatus(r("3", { qualifyingMonthToDate: 3 }), ctxDay)]).toBe("behind");
+    expect(GOAL_TONE[goalStatus(r("4", { baselineReviewId: null, baselineReviewTime: null }), ctxDay)]).toBe("idle");
+    expect(GOAL_TONE[goalStatus(r("5", { baselineReviewTime: "2026-10-10T18:00:00Z", qualifyingMonthToDate: 2 }), ctxDay)]).toBe("idle");
+  });
+
+  it("places the pace mark where the pace target sits on the bar", () => {
+    expect(paceMarkPercent(10, ctxDay)).toBe(50);
+    expect(paceMarkPercent(0, ctxDay)).toBe(0);
+  });
+});
+
+describe("reviewEligibility mirrors the database rule", () => {
+  const baseline = r("1");
+  const created = (createdAt: string, starRating = 5) => ({ createdAt, starRating });
+
+  it("counts 3–5★ after the baseline, never 1–2★ and never history", () => {
+    expect(reviewEligibility(baseline, created("2026-10-02T12:00:00Z"))).toBe("counts");
+    expect(reviewEligibility(baseline, created("2026-10-02T12:00:00Z", 3))).toBe("counts");
+    expect(reviewEligibility(baseline, created("2026-10-02T12:00:00Z", 2))).toBe("low_rating");
+    expect(reviewEligibility(baseline, created("2026-08-30T12:00:00Z"))).toBe("historical");
+    expect(reviewEligibility(baseline, created("2026-09-01T00:00:00Z"))).toBe("historical");
+  });
+
+  it("a reporting cutoff counts reviews at or after it, whatever the baseline", () => {
+    const cut = r("1", { countFrom: "2026-10-01T05:00:00Z", baselineReviewTime: "2026-10-13T00:00:00Z" });
+    expect(reviewEligibility(cut, created("2026-10-01T05:00:00Z"))).toBe("counts");
+    expect(reviewEligibility(cut, created("2026-09-30T05:00:00Z"))).toBe("historical");
+  });
+
+  it("no review at the baseline's own instant counts — the baseline itself or a different review with the same timestamp", () => {
+    const at = created("2026-09-01T00:00:00Z"); // the baseline's exact time
+    expect(reviewEligibility(baseline, at)).toBe("historical");
+    expect(reviewEligibility(baseline, { ...at, starRating: 4 })).toBe("historical");
+    expect(reviewEligibility(baseline, created("2026-09-01T00:00:00.001Z"))).toBe("counts");
+  });
+
+  it("a salon with no baseline is not counting", () => {
+    expect(reviewEligibility(r("1", { baselineReviewId: null, baselineReviewTime: null }), created("2026-10-02T00:00:00Z"))).toBe("not_counting");
+    expect(reviewEligibility(undefined, created("2026-10-02T00:00:00Z"))).toBe("not_counting");
+  });
+});
+
+describe("rankRows ties", () => {
+  it("shares a rank between equal counts and skips the next one", () => {
+    const ranked = rankRows([r("a", { qualifyingMonthToDate: 10 }), r("b", { qualifyingMonthToDate: 10 }), r("c", { qualifyingMonthToDate: 5 })], "month");
+    expect(ranked.map((r) => [r.row.storeCode, r.rank, r.tied])).toEqual([["a", 1, true], ["b", 1, true], ["c", 3, false]]);
+  });
+});
+
+describe("a month that has ended", () => {
+  const sep = closedMonthContext("2026-09");
+  const counting = (over: Partial<GoalRow> = {}) => row({ baselineReviewTime: "2026-08-01T00:00:00Z", ...over });
+
+  it("is a final result: met, or missed — never a pace verdict", () => {
+    expect(goalStatus(counting({ qualifyingMonthToDate: 10 }), sep)).toBe("met");
+    expect(goalStatus(counting({ qualifyingMonthToDate: 9 }), sep)).toBe("missed");
+    expect(goalStatus(counting({ qualifyingMonthToDate: 0 }), sep)).toBe("missed");
+    expect(GOAL_TONE.missed).toBe("behind");
+  });
+
+  it("is gray 'before counting' when the salon only started counting after the month ended", () => {
+    const row1 = counting({ countFrom: "2026-10-01T05:00:00Z", qualifyingMonthToDate: 0 });
+    expect(goalStatus(row1, sep)).toBe("before_counting");
+    expect(GOAL_TONE.before_counting).toBe("idle");
+  });
+
+  it("is a partial month when counting began part-way through it", () => {
+    expect(goalStatus(counting({ countFrom: "2026-09-10T05:00:00Z", qualifyingMonthToDate: 3 }), sep)).toBe("partial_month");
+  });
+
+  it("closes at the instant the next month opens (Central, DST-aware)", () => {
+    expect(sep.monthStart).toBe("2026-09-01");
+    expect(sep.monthEndInstant).toBe("2026-10-01T05:00:00.000Z");
+    expect(closedMonthContext("2026-10").monthEndInstant).toBe("2026-11-01T05:00:00.000Z"); // Oct 1 is CDT, Nov 1 is CDT: DST ends Nov 1 at 2am
+    expect(closedMonthContext("2026-11").monthEndInstant).toBe("2026-12-01T06:00:00.000Z"); // CST
+  });
+
+  it("leaves the live month's verdicts exactly as they were", () => {
+    const live = goalContext("2026-10-15");
+    expect(live.closed).toBeUndefined();
+    expect(goalStatus(counting({ qualifyingMonthToDate: 3 }), live)).toBe("behind_pace");
+    expect(goalStatus(counting({ qualifyingMonthToDate: 5 }), live)).toBe("on_pace");
+  });
+
+  it("steps back a month across a year boundary", () => {
+    expect(previousMonth("2026-01")).toBe("2025-12");
+    expect(previousMonth("2026-10")).toBe("2026-09");
   });
 });

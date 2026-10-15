@@ -12,7 +12,7 @@ export function ReviewsTabNav({ current }: { current: ReviewsTab }) {
   return (
     <nav
       aria-label="Google Reviews views"
-      className="scroll-slim flex items-center gap-1 overflow-x-auto border-b border-border-strong bg-background px-5 sm:px-6"
+      className="scroll-slim flex items-center gap-1.5 overflow-x-auto border-b border-border-strong bg-background px-5 py-2.5 sm:px-6"
     >
       {REVIEW_TABS.map((tab) => {
         const active = tab.key === current;
@@ -22,10 +22,10 @@ export function ReviewsTabNav({ current }: { current: ReviewsTab }) {
             href={reviewsTabHref(tab.key)}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "-mb-px shrink-0 border-b-[3px] px-3.5 py-3.5 text-[10px] font-black tracking-[0.1em] whitespace-nowrap uppercase transition-colors",
+              "shrink-0 rounded-[22px] px-4 py-2 text-[10px] font-black tracking-[0.1em] whitespace-nowrap uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent",
               active
-                ? "border-brand-accent text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground",
+                ? "bg-selected text-selected-foreground shadow-soft"
+                : "text-muted-foreground hover:bg-brand-accent-soft hover:text-foreground",
             )}
           >
             {tab.label}

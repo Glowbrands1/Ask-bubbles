@@ -1,5 +1,5 @@
 /**
- * GOOGLE REVIEW GOALS — the Ask Sunny rules, applied to Buff City Soap's salons.
+ * GOOGLE REVIEW GOALS — the sister brand's goal rules, applied to Buff City Soap's salons.
  *
  * TEN QUALIFYING REVIEWS PER SALON PER CALENDAR MONTH. A qualifying review is a live 3-, 4- or 5-star
  * review created AFTER the salon's baseline review (counted in the database, `google_review_goal_counts`).
@@ -65,6 +65,10 @@ export interface GoalContext {
   monthStartInstant: string;
   daysInMonth: number;
   daysElapsed: number;
+  /** Set only when viewing a month that has already ended: the month is a final result, not a pace. */
+  closed?: boolean;
+  /** The instant the NEXT month opens in Central (the exclusive end of a closed month). */
+  monthEndInstant?: string;
 }
 
 export function goalContext(today: string): GoalContext {
@@ -83,6 +87,22 @@ export function goalContext(today: string): GoalContext {
   };
 }
 
+/** `yyyy-mm` of a Central date. */
+export const monthOf = (day: string): string => day.slice(0, 7);
+
+/** The month before `month` (`yyyy-mm`). */
+export function previousMonth(month: string): string {
+  const [y, m] = month.split("-").map(Number) as [number, number];
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+}
+
+/** The context for a month that has ENDED: every day elapsed, flagged closed, with its exclusive end instant. */
+export function closedMonthContext(month: string): GoalContext {
+  const first = `${month}-01`;
+  const last = `${month}-${String(daysInMonthOf(first)).padStart(2, "0")}`;
+  return { ...goalContext(last), daysElapsed: daysInMonthOf(first), closed: true, monthEndInstant: centralMidnight(shiftDays(last, 1)) };
+}
+
 /** One salon's goal row, as `google_review_goal_counts` returns it. */
 export interface GoalRow {
   storeCode: string;
@@ -98,7 +118,7 @@ export interface GoalRow {
   historical: number;
 }
 
-export type GoalStatus = "met" | "on_pace" | "behind_pace" | "partial_month" | "not_counting";
+export type GoalStatus = "met" | "on_pace" | "behind_pace" | "partial_month" | "not_counting" | "missed" | "before_counting";
 
 export const GOAL_STATUS_LABEL: Record<GoalStatus, string> = {
   met: "Goal met",
@@ -106,6 +126,21 @@ export const GOAL_STATUS_LABEL: Record<GoalStatus, string> = {
   behind_pace: "Behind pace",
   partial_month: "Partial month",
   not_counting: "Not counting",
+  missed: "Goal missed",
+  before_counting: "Before counting",
+};
+
+/** The colour family a goal status is drawn in: green met, amber on pace, red behind, gray when no verdict can be reached. */
+export type GoalTone = "met" | "pace" | "behind" | "idle";
+
+export const GOAL_TONE: Record<GoalStatus, GoalTone> = {
+  met: "met",
+  on_pace: "pace",
+  behind_pace: "behind",
+  partial_month: "idle",
+  not_counting: "idle",
+  missed: "behind",
+  before_counting: "idle",
 };
 
 export const isCounting = (row: Pick<GoalRow, "baselineReviewId" | "countFrom">): boolean => row.baselineReviewId !== null || row.countFrom !== null;
@@ -131,10 +166,36 @@ export function isPartialMonth(row: Pick<GoalRow, "baselineReviewId" | "baseline
 
 export function goalStatus(row: GoalRow, context: GoalContext): GoalStatus {
   if (!isCounting(row)) return "not_counting";
+  // A month that has ended before counting began is no verdict at all, never "missed".
+  if (context.closed && context.monthEndInstant && new Date(countingSince(row)!).getTime() >= new Date(context.monthEndInstant).getTime()) return "before_counting";
   if (row.qualifyingMonthToDate >= row.monthlyTarget) return "met";
+  if (context.closed && !isPartialMonth(row, context)) return "missed";
   if (isPartialMonth(row, context)) return "partial_month";
   const pace = paceTargetFor(row.monthlyTarget, context.daysElapsed, context.daysInMonth);
   return row.qualifyingMonthToDate >= pace ? "on_pace" : "behind_pace";
+}
+
+export type ReviewEligibility = "counts" | "low_rating" | "historical" | "not_counting";
+
+/**
+ * Whether one stored review counts toward its salon's goal. Mirrors `google_review_goal_counts_v2`: a cutoff counts reviews
+ * created at or after it, otherwise only those created after the baseline review; 1–2★ never count.
+ */
+export function reviewEligibility(
+  row: Pick<GoalRow, "baselineReviewId" | "baselineReviewTime" | "countFrom"> | undefined,
+  review: { starRating: number; createdAt: string },
+): ReviewEligibility {
+  if (!row || !isCounting(row)) return "not_counting";
+  const created = Date.parse(review.createdAt);
+  const after = row.countFrom ? created >= Date.parse(row.countFrom) : row.baselineReviewTime ? created > Date.parse(row.baselineReviewTime) : false;
+  if (!after) return "historical";
+  return review.starRating >= 3 ? "counts" : "low_rating";
+}
+
+/** Where a pace mark sits on a bar: the share of the target a salon should have by now, 0–100. */
+export function paceMarkPercent(target: number, context: Pick<GoalContext, "daysElapsed" | "daysInMonth">): number {
+  if (target <= 0) return 0;
+  return Math.min(100, Math.round((paceTargetFor(target, context.daysElapsed, context.daysInMonth) / target) * 100));
 }
 
 export interface GoalProgress {

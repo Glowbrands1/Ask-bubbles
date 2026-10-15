@@ -11,7 +11,7 @@ vi.mock("next/link", () => ({
 }));
 vi.mock("@/components/brand-mark", () => ({ BuffCitySoapLogo: () => null }));
 
-import { goalContext, type GoalRow } from "@/lib/google-reviews/goals";
+import { closedMonthContext, goalContext, type GoalRow } from "@/lib/google-reviews/goals";
 import type { StoreSummary } from "@/lib/google-reviews/views";
 import type { ReviewsData } from "./load";
 import { ReviewsDashboard } from "./reviews-dashboard";
@@ -141,5 +141,87 @@ describe("the Weekly / Monthly toggle", () => {
     const m = screen.getByRole("table", { name: "Google Reviews by month" });
     expect(within(m).getByText("Before goal counting")).toBeTruthy(); // September
     expect(within(m).getByText("Goal-eligible (3–5★)")).toBeTruthy(); // October starts on the cutoff day
+  });
+});
+
+describe("progress bar colours", () => {
+  const rows = [
+    goalRow("1", { qualifyingMonthToDate: 10 }),
+    goalRow("2", { qualifyingMonthToDate: 5 }),
+    goalRow("3", { qualifyingMonthToDate: 0 }),
+    goalRow("4", { baselineReviewId: null, baselineReviewTime: null }),
+  ];
+  const d = { ...data(rows), goals: { context: goalContext("2026-10-15"), rows } };
+  const tones = () =>
+    Object.fromEntries(
+      screen.getAllByRole("progressbar").map((bar) => [bar.getAttribute("aria-label")!.split(":")[0], bar.getAttribute("data-tone")]),
+    );
+
+  it("draws green met, amber on pace, red behind pace; a salon with no baseline gets no progress bar", () => {
+    render(<ReviewsDashboard tab="overview" status="not_connected" data={d} />);
+    expect(tones()).toEqual({ "Salon 1 #1": "met", "Salon 2 #2": "pace", "Salon 3 #3": "behind" });
+    const table = screen.getByRole("table", { name: "Salon goal progress" });
+    expect(within(table).getByText("Not tracking")).toBeTruthy();
+    expect(within(table).getByText("Behind pace").getAttribute("data-tone")).toBe("behind");
+  });
+
+  it("a red bar stays red at zero progress (its track is red-tinted, not neutral)", () => {
+    render(<ReviewsDashboard tab="overview" status="not_connected" data={d} />);
+    const red = screen.getAllByRole("progressbar").find((b) => b.getAttribute("data-tone") === "behind")!;
+    expect(red.className).toContain("bg-tone-behind-soft");
+    expect(red.querySelector('[data-testid="meter-fill"]')!.className).toContain("bg-tone-behind");
+  });
+
+  it("filters the leaderboard by status and search without changing anyone's rank", () => {
+    const filtered = { ...d, goalFilter: { q: "", status: "behind" as const } };
+    render(<ReviewsDashboard tab="leaderboard" status="not_connected" data={filtered} />);
+    const list = screen.getAllByRole("listitem").filter((li) => li.textContent?.includes("Salon "));
+    expect(list).toHaveLength(1);
+    expect(list[0]!.textContent).toContain("Salon 3");
+    expect(list[0]!.textContent).toContain("3"); // still ranked 3rd of the counting salons
+  });
+
+  it("shows an empty state when nothing matches", () => {
+    render(<ReviewsDashboard tab="leaderboard" status="not_connected" data={{ ...d, goalFilter: { q: "zzz", status: null } }} />);
+    expect(screen.getByText("No salons match these filters")).toBeTruthy();
+  });
+});
+
+describe("monthly goal eligibility per salon start date", () => {
+  it("marks a month partial when salons start counting on different days", () => {
+    const rows = [goalRow("1", { baselineReviewTime: "2026-10-01T05:00:00Z" }), goalRow("2", { baselineReviewTime: "2026-10-09T05:00:00Z" })];
+    render(<ReviewsDashboard tab="overview" status="not_connected" data={data(rows)} />);
+    const m = screen.getByRole("table", { name: "Google Reviews by month" });
+    expect(within(m).getByText("Before goal counting")).toBeTruthy();
+    expect(within(m).getByText("Counting from Oct 1–Oct 9")).toBeTruthy();
+  });
+});
+
+describe("the leaderboard month picker", () => {
+  const early = { baselineReviewTime: "2026-08-01T00:00:00Z" };
+  const rows = [goalRow("1", { ...early, qualifyingMonthToDate: 10 }), goalRow("2", { ...early, qualifyingMonthToDate: 4 }), goalRow("3", { baselineReviewTime: "2026-10-01T05:00:00Z", qualifyingMonthToDate: 0 })];
+
+  it("offers the current month and twelve before it, and keeps the chosen month selected", () => {
+    const d = { ...data(rows), month: "2026-09", goals: { context: closedMonthContext("2026-09"), rows } };
+    render(<ReviewsDashboard tab="leaderboard" status="not_connected" data={d} />);
+    const select = screen.getByRole("combobox", { name: "Month" }) as HTMLSelectElement;
+    expect(select.options).toHaveLength(13);
+    expect(select.options[0]!.textContent).toMatch(/\(current\)/);
+    expect(select.value).toBe("2026-09");
+  });
+
+  it("shows a closed month as a final result: met / missed / not counted, with no pace mark and no weekly figures", () => {
+    const d = { ...data(rows), month: "2026-09", goals: { context: closedMonthContext("2026-09"), rows } };
+    render(<ReviewsDashboard tab="leaderboard" status="not_connected" data={d} />);
+    expect(screen.getByText(/September 2026 · month closed/)).toBeTruthy();
+    const board = within(document.querySelector("ol")!);
+    expect(board.getAllByText("Goal met").length).toBeGreaterThan(0);
+    expect(board.getByText("Goal missed")).toBeTruthy();
+    expect(board.getByText("Before counting")).toBeTruthy();
+    expect(board.queryByText("Behind pace")).toBeNull();
+    expect(board.queryByText("On pace")).toBeNull();
+    expect(screen.getByText("Rank by this week").getAttribute("aria-disabled")).toBe("true");
+    const tones = screen.getAllByRole("progressbar").map((b) => b.getAttribute("data-tone"));
+    expect(tones).toEqual(["met", "behind"]); // the not-counted salon draws no bar
   });
 });

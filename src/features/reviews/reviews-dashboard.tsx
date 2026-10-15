@@ -5,23 +5,34 @@ import {
   ProvenanceChip,
   ProvenanceChips,
 } from "@/components/ui/marquee";
-import { Info } from "lucide-react";
+import {
+  CalendarDays,
+  CalendarRange,
+  Info,
+  ListChecks,
+  Target,
+} from "lucide-react";
 import { NotConnected } from "./data-area";
 
 import { DataArea } from "./data-area";
 import type { ReviewsData } from "./load";
 import {
   Figure,
+  GoalSearch,
   GoalTable,
   Leaderboard,
   LiveFilters,
+  monthName,
+  matchesGoalFilter,
   PeriodSegments,
   RankSegments,
   rangeLabel,
   RatingsPanel,
   ReviewsList,
+  StatusChips,
+  TONE_STYLE,
   TrendPanel,
-  goalStartDay,
+  goalStartSpan,
   goalView,
   partialMonthText,
   totals,
@@ -165,6 +176,7 @@ function OverviewView({
                 : ""}
             </WindowTag>
           }
+          icon={<CalendarDays />}
           label="Qualifying reviews"
           detail={
             sm
@@ -184,6 +196,14 @@ function OverviewView({
                 : ""}
             </WindowTag>
           }
+          icon={<CalendarRange />}
+          bar={
+            sm
+              ? sm.combinedTarget > 0
+                ? (sm.qualifyingMonthToDate / sm.combinedTarget) * 100
+                : 0
+              : null
+          }
           label="Qualifying reviews"
           detail={
             sm
@@ -196,6 +216,10 @@ function OverviewView({
         <GoalTile
           status={goal}
           accent
+          icon={<Target />}
+          bar={
+            sm ? (sm.counting > 0 ? (sm.atGoal / sm.counting) * 100 : 0) : null
+          }
           tag={
             <WindowTag window="month">
               Month to date
@@ -223,6 +247,8 @@ function OverviewView({
                 : ""}
             </WindowTag>
           }
+          tone="pace"
+          icon={<ListChecks />}
           label="Reviews still needed"
           detail="To bring every salon to its target. One salon's overage doesn't cover another's shortfall."
         >
@@ -233,14 +259,29 @@ function OverviewView({
       <Panel
         title="Salon goal progress"
         controls={
-          <>
+          data && g ? (
+            <div className="ml-auto">
+              <GoalSearch
+                data={data}
+                tab="overview"
+                placeholder="Find a salon or store code"
+              />
+            </div>
+          ) : (
             <DisabledSearch label="Search salons" />
-            <DisabledPill label="District" value="All districts" />
-          </>
+          )
         }
       >
         {g ? (
-          <GoalTable rows={g.rows} context={g.context} />
+          <GoalTable
+            rows={g.rows.filter((r) =>
+              matchesGoalFilter(r, g.context, {
+                q: data?.goalFilter?.q ?? "",
+                status: null,
+              }),
+            )}
+            context={g.context}
+          />
         ) : (
           <TableShell
             status={goal}
@@ -288,7 +329,7 @@ function OverviewView({
             <TrendPanel
               trend={data.trend}
               period={data.period}
-              countingStart={goalStartDay(g)}
+              countingStart={goalStartSpan(g)}
             />
           ) : null}
         </DataArea>
@@ -343,12 +384,21 @@ function LeaderboardView({
   data: ReviewsData | null;
 }) {
   const g = goalView(data);
-  const pm = partialMonthText(g);
+  // The partial-month caveat describes the live month's baselines; a closed month carries its own note.
+  const pm = g?.context.closed ? null : partialMonthText(g);
   const goal: ReviewsIntegrationStatus = data
     ? g
       ? "connected"
       : "not_configured"
     : status;
+  const closed = g?.context.closed === true;
+  const daysLeft = g
+    ? g.context.daysInMonth - Number(g.context.today.slice(8, 10))
+    : 0;
+  const atGoalPercent =
+    g && g.summary.counting > 0
+      ? (g.summary.atGoal / g.summary.counting) * 100
+      : 0;
   return (
     <>
       <SectionRule label="Salon leaderboard" className="mt-1" />
@@ -358,38 +408,54 @@ function LeaderboardView({
       </p>
 
       <Panel>
-        <div className="px-4 py-4">
-          <p className="eyebrow">Month to date</p>
+        <div className="px-5 py-4">
+          <p className="eyebrow">
+            {g
+              ? closed
+                ? `${monthName(g.context.monthStart.slice(0, 7))} · month closed`
+                : `${monthLabel(g.context.monthStart)} · day ${g.context.daysElapsed + 1} of ${g.context.daysInMonth}`
+              : "Month to date"}
+          </p>
           <DataArea status={goal} size="value" className="mt-2">
             {g ? (
-              <p className="display-figure text-[26px] leading-tight text-foreground">
-                {g.summary.qualifyingMonthToDate} of {g.summary.combinedTarget}
+              <p className="mt-1 flex flex-wrap items-baseline gap-x-2 text-foreground">
+                <span className="display-figure text-[30px] leading-tight">
+                  {g.summary.atGoal} of {g.summary.counting}
+                </span>
+                <span className="text-[12px] text-muted-foreground">
+                  salons {closed ? "reached" : "have reached"} their target ·{" "}
+                  {closed
+                    ? "final result"
+                    : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`}{" "}
+                  · {g.summary.qualifyingMonthToDate} of{" "}
+                  {g.summary.combinedTarget} qualifying reviews
+                </span>
               </p>
             ) : null}
           </DataArea>
           <span
             aria-hidden
-            className="mt-2.5 block h-2 rounded-[4px] bg-surface-muted"
+            className="mt-3 block h-3 rounded-full bg-tone-met-soft"
           >
             {g ? (
               <span
-                className="block h-2 rounded-[4px] bg-measure-data"
-                style={{
-                  width: `${Math.min(100, g.summary.combinedTarget > 0 ? (g.summary.qualifyingMonthToDate / g.summary.combinedTarget) * 100 : 0)}%`,
-                }}
+                className="block h-3 rounded-full bg-tone-met transition-[width] duration-500"
+                style={{ width: `${atGoalPercent}%` }}
               />
             ) : null}
           </span>
         </div>
-        <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border-hairline px-4 py-3 text-[11.5px] text-muted-foreground">
-          <LegendItem swatch="bg-measure-data">
-            Month to date vs target
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border-hairline bg-surface-muted/40 px-5 py-3 text-[11.5px] text-muted-foreground">
+          <LegendItem swatch={TONE_STYLE.met.swatch}>Goal met</LegendItem>
+          <LegendItem swatch={TONE_STYLE.pace.swatch}>On pace</LegendItem>
+          <LegendItem swatch={TONE_STYLE.behind.swatch}>Behind pace</LegendItem>
+          <LegendItem swatch={TONE_STYLE.idle.swatch}>
+            No verdict (partial month / not tracking)
           </LegendItem>
-          <LegendItem swatch="bg-status-outperforming">Goal met</LegendItem>
           <li className="flex items-center gap-1.5">
             <span
               aria-hidden
-              className="h-3 w-0 border-l-2 border-dashed border-measure-goal"
+              className="h-3 w-0 border-l-2 border-dashed border-measure-benchmark/70"
             />
             Pace mark
           </li>
@@ -407,19 +473,30 @@ function LeaderboardView({
                 options={["Rank by month to date", "Rank by this week"]}
               />
             )}
-            <DisabledPill label="District" value="All districts" />
-            <DisabledSearch label="Find a salon, store code or district" />
-            <div className="basis-full">
-              <DisabledChips
-                label="Filter by status"
-                options={[
-                  "All",
-                  "Goal met",
-                  "On pace",
-                  "Behind pace",
-                  "Not counting",
-                ]}
+            {data && g ? (
+              <GoalSearch
+                data={data}
+                tab="leaderboard"
+                placeholder="Find a salon or store code"
               />
+            ) : (
+              <DisabledSearch label="Find a salon or store code" />
+            )}
+            <div className="basis-full">
+              {data && g ? (
+                <StatusChips data={data} rows={g.rows} context={g.context} />
+              ) : (
+                <DisabledChips
+                  label="Filter by status"
+                  options={[
+                    "All",
+                    "Goal met",
+                    "On pace",
+                    "Behind pace",
+                    "No verdict",
+                  ]}
+                />
+              )}
             </div>
           </>
         }
@@ -431,18 +508,31 @@ function LeaderboardView({
               rows={g.rows}
               context={g.context}
               metric={data?.rank ?? "month"}
+              filter={data?.goalFilter}
             />
           ) : null}
         </DataArea>
         <Footnote>
           Salons on the same count share a rank. Progress can pass the target:
           the bar stops at full width and the overage is shown separately. A
-          salon without a review baseline isn&rsquo;t ranked.
+          salon without a review baseline isn&rsquo;t ranked and shows gray
+          &ldquo;Not tracking&rdquo;, not zero.
+          {closed
+            ? " This month has ended, so each salon shows its final count with the same rules as the live month; weekly figures only exist for the current month. A month that closed before a salon's counting began shows gray “Not counted”."
+            : ""}
           {pm ? ` ${pm}` : ""}
         </Footnote>
       </Panel>
     </>
   );
+}
+
+const MONTH_NAME = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  timeZone: "UTC",
+});
+function monthLabel(monthStart: string): string {
+  return MONTH_NAME.format(new Date(`${monthStart}T00:00:00Z`));
 }
 
 function RecordsView({
