@@ -1,6 +1,12 @@
 import "server-only";
 
+import {
+  cleanAdditionalLocations,
+  MAX_ADDITIONAL_LOCATIONS,
+  unknownAdditionalAreaIds,
+} from "@/lib/admin/additional-locations";
 import { AuthError } from "@/lib/auth/types";
+import { locationIdsInArea } from "@/lib/locations";
 import { APP_USER_COLUMNS, toAppUserProfile } from "@/lib/auth/app-user";
 import { revokeAuthAccess, restoreAuthAccess } from "@/lib/auth/revocation";
 import { ADMIN_CONSOLE_ROLES, ROLES } from "@/lib/permissions";
@@ -180,11 +186,10 @@ export function normalizeScope(value: unknown): AccessScope {
     ? (raw.level as ScopeLevel)
     : "location";
   const primary = typeof raw.primaryAreaId === "string" ? raw.primaryAreaId.slice(0, 80) : null;
-  const also = Array.isArray(raw.alsoCoversAreaIds)
+  const requestedAlso = Array.isArray(raw.alsoCoversAreaIds)
     ? raw.alsoCoversAreaIds
         .filter((entry): entry is string => typeof entry === "string")
         .map((entry) => entry.slice(0, 80))
-        .slice(0, 60)
     : [];
 
   /*
@@ -205,7 +210,57 @@ export function normalizeScope(value: unknown): AccessScope {
     );
   }
 
+  /*
+   * ADDITIONAL LOCATIONS. De-duplicated, the primary removed, none for a global
+   * scope — the same cleaning the form does, repeated here because the form is
+   * not a boundary. An id that is not a known location (or, on a district or
+   * region scope, a known area) is REFUSED rather than stored: it would sit in
+   * the column looking like an assignment while granting nothing.
+   */
+  const also = cleanAdditionalLocations(requestedAlso, { level, primaryAreaId: primary });
+  if (also.length > MAX_ADDITIONAL_LOCATIONS) {
+    throw new DirectoryError(
+      "invalid_input",
+      `An account can have at most ${MAX_ADDITIONAL_LOCATIONS} additional locations.`,
+    );
+  }
+  if (unknownAdditionalAreaIds(also, level).length > 0) {
+    throw new DirectoryError(
+      "invalid_input",
+      "One of the additional locations is not a location Ask Bubbles knows for this scope. Pick locations from the list.",
+    );
+  }
+
   return { level, primaryAreaId: primary, alsoCoversAreaIds: also };
+}
+
+/**
+ * AN ADMINISTRATOR CAN ONLY ADD LOCATIONS THEY CAN ACCESS THEMSELVES.
+ *
+ * Applied to the locations being ADDED (all of them on an invitation; only the
+ * new ones on an edit, so removing a location, or saving an unrelated change,
+ * is never blocked). A global actor may add any. Anyone else is limited to the
+ * locations inside their own primary and additional coverage; an actor whose
+ * scope is unknown is treated as having none, so the check fails closed.
+ */
+export function assertAdditionalWithinActor(actor: DirectoryActor, added: readonly string[]): void {
+  if (added.length === 0 || actor.scope?.level === "global") return;
+  const own = new Set(
+    [actor.scope?.primaryAreaId, ...(actor.scope?.alsoCoversAreaIds ?? [])]
+      .filter((id): id is string => typeof id === "string")
+      .flatMap((id) => locationIdsInArea(id)),
+  );
+  const outside = added.some((id) => {
+    const locations = locationIdsInArea(id);
+    return locations.length === 0 || locations.some((location) => !own.has(location));
+  });
+  if (outside) {
+    throw new DirectoryError(
+      "forbidden_grant",
+      "You can only give access to locations you can access yourself.",
+      403,
+    );
+  }
 }
 
 /* ------------------------------------------------------------------ read -- */
@@ -325,6 +380,7 @@ export async function inviteUser(
   const email = normalizeEmail(input.email);
   const displayName = normalizeDisplayName(input.displayName, email);
   const scope = normalizeScope(input.scope);
+  assertAdditionalWithinActor(actor, scope.alsoCoversAreaIds);
 
   if (!isRole(input.role)) {
     throw new DirectoryError("invalid_input", "Choose a role for this person.");
@@ -490,6 +546,10 @@ export async function patchUser(
 
   if (input.scope !== undefined) {
     const scope = normalizeScope(input.scope);
+    assertAdditionalWithinActor(
+      actor,
+      scope.alsoCoversAreaIds.filter((id) => !before.scope.alsoCoversAreaIds.includes(id)),
+    );
     patch.scope_level = scope.level;
     patch.scope_primary_area_id = scope.primaryAreaId;
     patch.scope_also_covers_area_ids = scope.alsoCoversAreaIds;
