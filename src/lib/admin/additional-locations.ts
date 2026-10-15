@@ -5,7 +5,8 @@ import {
   LOCATION_ID_PREFIX,
   locationById,
 } from "@/lib/locations";
-import type { ScopeLevel } from "@/types";
+import type { AccessScope, ScopeLevel } from "@/types";
+import { locationIdsInArea } from "@/lib/locations";
 
 /**
  * ============================================================================
@@ -89,4 +90,19 @@ export function unknownAdditionalAreaIds(ids: readonly string[], level: ScopeLev
     }
     return true;
   });
+}
+
+/**
+ * The locations an administrator may offer, from THEIR OWN scope — or null when
+ * nothing should be filtered (a global administrator, or a scope the browser
+ * does not know). Convenience only: the form hides what the server would refuse
+ * (`assertScopeWithinActor`), and the server remains the boundary.
+ */
+export function reachableLocationIds(scope: AccessScope | null | undefined): ReadonlySet<string> | null {
+  if (!scope || scope.level === "global") return null;
+  return new Set(
+    [scope.primaryAreaId, ...scope.alsoCoversAreaIds]
+      .filter((id): id is string => typeof id === "string")
+      .flatMap((id) => locationIdsInArea(id)),
+  );
 }

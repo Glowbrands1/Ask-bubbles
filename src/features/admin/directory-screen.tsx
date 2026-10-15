@@ -30,6 +30,7 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import {
   additionalLocationOptions,
   cleanAdditionalLocations,
+  reachableLocationIds,
 } from "@/lib/admin/additional-locations";
 import type { InviteSuggestion } from "@/lib/admin/woven-invite-suggestion";
 import {
@@ -721,6 +722,8 @@ function InviteDialog({
   onOpenChange: (open: boolean) => void;
   onInvited: (user: DirectoryUser) => void;
 }) {
+  const { user: me } = useSession();
+  const reach = reachableLocationIds(me?.scope);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   /*
@@ -729,8 +732,11 @@ function InviteDialog({
    * only recoverable by noticing it.
    */
   const [role, setRole] = useState<Role>("employee");
+  /* What THIS administrator may offer (null: no filtering). The server enforces it regardless. */
+  const reachable = (entries: { id: string; name: string }[]) =>
+    reach ? entries.filter((entry) => reach.has(entry.id)) : entries;
   const [level, setLevel] = useState<ScopeLevel>("location");
-  const [areaId, setAreaId] = useState<string>(AREAS.location[0]?.id ?? "");
+  const [areaId, setAreaId] = useState<string>(() => reachable(AREAS.location)[0]?.id ?? "");
   /*
    * ADDITIONAL LOCATIONS: optional, empty for somebody with one location. Held
    * as stable location ids; the names are only for display.
@@ -747,7 +753,7 @@ function InviteDialog({
     setDisplayName("");
     setRole("employee");
     setLevel("location");
-    setAreaId(AREAS.location[0]?.id ?? "");
+    setAreaId(reachable(AREAS.location)[0]?.id ?? "");
     setAdditional([]);
     setLookup({ state: "idle" });
     lookupSeq.current += 1;
@@ -1012,7 +1018,7 @@ function InviteDialog({
               onChange={(event) => {
                 const next = event.target.value as ScopeLevel;
                 setLevel(next);
-                const nextArea = next !== "global" ? (AREAS[next][0]?.id ?? "") : "";
+                const nextArea = next !== "global" ? (reachable(AREAS[next])[0]?.id ?? "") : "";
                 setAreaId(nextArea);
                 choosePrimary(next, nextArea);
               }}
@@ -1021,7 +1027,8 @@ function InviteDialog({
               <option value="location">One location</option>
               <option value="district">A district</option>
               <option value="region">A region</option>
-              <option value="global">Everything</option>
+              {/* Only somebody with access to everything can give it. */}
+              {reach === null ? <option value="global">Everything</option> : null}
             </Select>
           </FieldGroup>
 
@@ -1041,7 +1048,7 @@ function InviteDialog({
                     Choose a primary area…
                   </option>
                 ) : null}
-                {AREAS[level].map((entry) => (
+                {reachable(AREAS[level]).map((entry) => (
                   <option key={entry.id} value={entry.id}>
                     {entry.name}
                   </option>
@@ -1062,7 +1069,7 @@ function InviteDialog({
             >
               <MultiSelect
                 id="invite-additional"
-                options={additionalLocationOptions(level === "location" ? areaId : null)}
+                options={reachable(additionalLocationOptions(level === "location" ? areaId : null))}
                 value={additional}
                 onChange={setAdditional}
                 disabled={busy}
@@ -1131,6 +1138,8 @@ function EditLocationsForm({
   onSave: (user: DirectoryUser, alsoCoversAreaIds: string[]) => Promise<boolean>;
   error: string | null;
 }) {
+  const { user: me } = useSession();
+  const reach = reachableLocationIds(me?.scope);
   const initial = user.scope.alsoCoversAreaIds;
   const [selected, setSelected] = useState<string[]>(initial);
   const [busy, setBusy] = useState(false);
@@ -1144,8 +1153,10 @@ function EditLocationsForm({
   const options = useMemo(() => {
     const primary = user.scope.level === "location" ? user.scope.primaryAreaId : null;
     const held = initial.filter((id) => !id.startsWith("loc-")).map((id) => ({ id, name: areaLabel(id) }));
-    return [...additionalLocationOptions(primary), ...held];
-  }, [user, initial]);
+    /* Offer only locations the administrator can grant; what the person already holds stays visible and removable. */
+    const offered = additionalLocationOptions(primary).filter((o) => !reach || reach.has(o.id) || initial.includes(o.id));
+    return [...offered, ...held];
+  }, [user, initial, reach]);
 
   const cleaned = cleanAdditionalLocations(selected, {
     level: user.scope.level,

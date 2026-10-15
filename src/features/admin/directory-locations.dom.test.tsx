@@ -20,9 +20,18 @@ import { DirectoryScreen, type DirectoryUser } from "./directory-screen";
  * was on screen.
  */
 
+/** The signed-in administrator's own scope; tests change it. */
+const viewer = vi.hoisted(() => ({
+  scope: { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] } as {
+    level: string;
+    primaryAreaId: string | null;
+    alsoCoversAreaIds: string[];
+  },
+}));
+
 vi.mock("@/lib/session/session-context", () => ({
   useSession: () => ({
-    user: { id: "me-1", name: "Me", email: "me@example.test", avatarInitials: "ME" },
+    user: { id: "me-1", name: "Me", email: "me@example.test", avatarInitials: "ME", scope: viewer.scope },
     role: "admin" as Role,
     authenticated: true,
     demoMode: false,
@@ -58,6 +67,7 @@ let wovenStatus: number;
 let inviteStatus: number;
 
 beforeEach(() => {
+  viewer.scope = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
   calls = [];
   wovenAnswer = { status: "not_found" };
   wovenStatus = 200;
@@ -441,5 +451,57 @@ describe("editing locations after the account exists", () => {
     await ui.click(within(dialog).getByRole("button", { name: "Save locations" }));
     const patch = calls.find((c) => c.method === "PATCH")!;
     expect((patch.body?.scope as AccessScope).alsoCoversAreaIds).toEqual(["dist-b", "loc-67"]);
+  });
+});
+
+describe("what the form offers an administrator", () => {
+  const primaryChoices = (dialog: HTMLElement) =>
+    [...(within(dialog).getByLabelText("Primary area") as HTMLSelectElement).options].map((o) => o.value);
+
+  it("a global administrator is offered all 7 configured locations, and Everything", async () => {
+    const { ui, dialog } = await openInvite();
+    expect(primaryChoices(dialog)).toEqual(["loc-66", "loc-67", "loc-219", "loc-225", "loc-236", "loc-264", "loc-338"]);
+    expect([...(within(dialog).getByLabelText("Scope") as HTMLSelectElement).options].map((o) => o.value)).toContain("global");
+
+    // And every one of the 7 can be added as an additional location (the primary, loc-66, is the only exclusion).
+    await ui.click(within(dialog).getByRole("combobox", { name: /Additional locations/ }));
+    expect(pickerOptions(dialog).map((o) => o.textContent)).toEqual([
+      "Bellevue, NE",
+      "Lee's Summit, MO",
+      "Sioux Falls, SD (W 41st St)",
+      "Grand Island, NE",
+      "Omaha, NE (West Dodge Rd)",
+      "Sioux Falls, SD (E 18th St)",
+    ]);
+  });
+
+  it("a scoped administrator is offered only their own locations, and not Everything", async () => {
+    viewer.scope = { level: "location", primaryAreaId: "loc-66", alsoCoversAreaIds: ["loc-67", "loc-219"] };
+    const { ui, dialog } = await openInvite();
+    expect(primaryChoices(dialog)).toEqual(["loc-66", "loc-67", "loc-219"]);
+    expect([...(within(dialog).getByLabelText("Scope") as HTMLSelectElement).options].map((o) => o.value)).not.toContain("global");
+
+    await ui.click(within(dialog).getByRole("combobox", { name: /Additional locations/ }));
+    expect(pickerOptions(dialog).map((o) => o.textContent)).toEqual(["Bellevue, NE", "Lee's Summit, MO"]);
+  });
+
+  it("in Edit locations a scoped administrator is offered only their own, but still sees and can remove what the person holds", async () => {
+    viewer.scope = { level: "location", primaryAreaId: "loc-66", alsoCoversAreaIds: ["loc-67"] };
+    const ui = userEvent.setup();
+    render(
+      <DirectoryScreen
+        initialUsers={[user({ scope: { level: "location", primaryAreaId: "loc-66", alsoCoversAreaIds: ["loc-338"] } })]}
+      />,
+    );
+    await ui.click(screen.getByRole("button", { name: /Edit locations/ }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Sioux Falls, SD (E 18th St)")).toBeTruthy(); // held, outside their reach: visible
+    await ui.click(within(dialog).getByRole("combobox", { name: /Additional locations/ }));
+    expect(pickerOptions(dialog).map((o) => o.textContent)).toEqual(["Bellevue, NE"]);
+    await ui.click(within(dialog).getByRole("button", { name: "Remove Sioux Falls, SD (E 18th St)" }));
+    await ui.click(within(dialog).getByRole("button", { name: "Save locations" }));
+    expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({
+      scope: { level: "location", primaryAreaId: "loc-66", alsoCoversAreaIds: [] },
+    });
   });
 });

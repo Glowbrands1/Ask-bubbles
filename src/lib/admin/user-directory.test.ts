@@ -6,7 +6,7 @@ import type { AccessScope } from "@/types";
 
 import {
   DirectoryError,
-  assertAdditionalWithinActor,
+  assertScopeWithinActor,
   isRole,
   isStatus,
   normalizeEmail,
@@ -205,32 +205,77 @@ describe("additional locations", () => {
   });
 });
 
-describe("an administrator can only add locations they can access themselves", () => {
+describe("an administrator can only grant access inside their own reach", () => {
   const actor = (scope: AccessScope | undefined) => ({ id: "a", email: "a@x.test", role: "admin" as const, scope });
-
-  it("a global administrator may add any location", () => {
-    expect(() =>
-      assertAdditionalWithinActor(actor({ level: "global", primaryAreaId: null, alsoCoversAreaIds: [] }), ["loc-66", "loc-338"]),
-    ).not.toThrow();
+  const GLOBAL: AccessScope = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
+  const OWN: AccessScope = { level: "location", primaryAreaId: "loc-66", alsoCoversAreaIds: ["loc-67"] };
+  const next = (level: AccessScope["level"], primaryAreaId: string | null, alsoCoversAreaIds: string[] = []): AccessScope => ({
+    level,
+    primaryAreaId,
+    alsoCoversAreaIds,
   });
 
-  it("a location-scoped administrator may add only locations inside their own coverage", () => {
-    const own: AccessScope = { level: "location", primaryAreaId: "loc-66", alsoCoversAreaIds: ["loc-67"] };
-    expect(() => assertAdditionalWithinActor(actor(own), ["loc-67"])).not.toThrow();
-    expect(() => assertAdditionalWithinActor(actor(own), ["loc-67", "loc-338"])).toThrow(/locations you can access yourself/);
+  it("a global administrator may grant any scope and any area (legitimate access preserved)", () => {
+    for (const scope of [next("global", null), next("location", "loc-338", ["loc-219"]), next("district", "dist-x")]) {
+      expect(() => assertScopeWithinActor(actor(GLOBAL), scope), scope.level).not.toThrow();
+    }
   });
 
-  it("an actor whose scope is unknown can add nothing (fails closed)", () => {
-    expect(() => assertAdditionalWithinActor(actor(undefined), ["loc-66"])).toThrow(DirectoryError);
+  it("PRIMARY: a scoped administrator may grant a primary inside their reach, and not one outside it", () => {
+    expect(() => assertScopeWithinActor(actor(OWN), next("location", "loc-66"))).not.toThrow();
+    expect(() => assertScopeWithinActor(actor(OWN), next("location", "loc-67"))).not.toThrow();
+    expect(() => assertScopeWithinActor(actor(OWN), next("location", "loc-338"))).toThrow(/locations you can access yourself/);
   });
 
-  it("adding nothing is always allowed", () => {
-    expect(() => assertAdditionalWithinActor(actor(undefined), [])).not.toThrow();
+  it("ADDITIONAL: only locations inside their reach", () => {
+    expect(() => assertScopeWithinActor(actor(OWN), next("location", "loc-66", ["loc-67"]))).not.toThrow();
+    expect(() => assertScopeWithinActor(actor(OWN), next("location", "loc-66", ["loc-67", "loc-338"]))).toThrow(DirectoryError);
   });
 
-  it("an unknown id is refused even for a non-global actor", () => {
-    const own: AccessScope = { level: "location", primaryAreaId: "loc-66", alsoCoversAreaIds: [] };
-    expect(() => assertAdditionalWithinActor(actor(own), ["loc-9999"])).toThrow(DirectoryError);
+  it("a primary inside reach does not excuse an additional outside it, or the reverse", () => {
+    expect(() => assertScopeWithinActor(actor(OWN), next("location", "loc-338", ["loc-66"]))).toThrow(DirectoryError);
+    expect(() => assertScopeWithinActor(actor(OWN), next("location", "loc-66", ["loc-338"]))).toThrow(DirectoryError);
+  });
+
+  it("a scoped administrator can never grant a global scope", () => {
+    expect(() => assertScopeWithinActor(actor(OWN), next("global", null))).toThrow(/all locations/);
+    expect(() => assertScopeWithinActor(actor(undefined), next("global", null))).toThrow(DirectoryError);
+  });
+
+  it("an area that resolves to no location cannot be proved inside, so it is refused", () => {
+    expect(() => assertScopeWithinActor(actor(OWN), next("district", "dist-none"))).toThrow(DirectoryError);
+    expect(() => assertScopeWithinActor(actor(OWN), next("region", "reg-none"))).toThrow(DirectoryError);
+    expect(() => assertScopeWithinActor(actor(OWN), next("location", "loc-9999"))).toThrow(DirectoryError);
+  });
+
+  it("an actor whose scope is unknown can grant nothing (fails closed)", () => {
+    expect(() => assertScopeWithinActor(actor(undefined), next("location", "loc-66"))).toThrow(DirectoryError);
+    expect(() => assertScopeWithinActor(actor(undefined), next("location", "loc-66", ["loc-67"]))).toThrow(DirectoryError);
+  });
+
+  it("EDIT: only what changes is checked, so removals and unrelated edits are never blocked", () => {
+    const before = next("location", "loc-338", ["loc-219", "loc-264"]); // wider than OWN
+    // unchanged scope
+    expect(() => assertScopeWithinActor(actor(OWN), before, before)).not.toThrow();
+    // removing a location outside the actor's reach
+    expect(() => assertScopeWithinActor(actor(OWN), next("location", "loc-338", ["loc-219"]), before)).not.toThrow();
+    // ADDING one outside their reach is refused
+    expect(() => assertScopeWithinActor(actor(OWN), next("location", "loc-338", ["loc-219", "loc-264", "loc-225"]), before)).toThrow(DirectoryError);
+    // CHANGING the primary to one outside their reach is refused; to one inside is fine
+    expect(() => assertScopeWithinActor(actor(OWN), next("location", "loc-225", ["loc-219", "loc-264"]), before)).toThrow(DirectoryError);
+    expect(() => assertScopeWithinActor(actor(OWN), next("location", "loc-66", ["loc-219", "loc-264"]), before)).not.toThrow();
+  });
+
+  it("EDIT: widening the level on the same primary counts as a change", () => {
+    const before = next("location", "loc-66");
+    expect(() => assertScopeWithinActor(actor(OWN), next("district", "loc-66"), before)).not.toThrow(); // still only loc-66's reach
+    expect(() => assertScopeWithinActor(actor(OWN), next("district", "dist-none"), before)).toThrow(DirectoryError);
+  });
+
+  it("EDIT: a non-global actor cannot turn somebody into global, but a global person stays global", () => {
+    const global = next("global", null);
+    expect(() => assertScopeWithinActor(actor(OWN), global, next("location", "loc-66"))).toThrow(DirectoryError);
+    expect(() => assertScopeWithinActor(actor(OWN), global, global)).not.toThrow();
   });
 });
 
@@ -447,7 +492,7 @@ describe("the refusals, exercised against a fake database", () => {
     return import("./user-directory");
   }
 
-  const actor = { id: "admin-1", email: "admin@example.test", role: "admin" as const };
+  const actor = { id: "admin-1", email: "admin@example.test", role: "admin" as const, scope: { level: "global" as const, primaryAreaId: null, alsoCoversAreaIds: [] } };
 
   it("REFUSES a change to your own role", async () => {
     const fake = fakeAdmin({ adminCount: 5 });
@@ -611,7 +656,7 @@ describe("disabling revokes access at the AUTHENTICATION layer too", () => {
     created_at: "2026-09-01T00:00:00.000Z",
     updated_at: "2026-09-01T00:00:00.000Z",
   };
-  const actor = { id: "admin-1", email: "admin@example.test", role: "admin" as const };
+  const actor = { id: "admin-1", email: "admin@example.test", role: "admin" as const, scope: { level: "global" as const, primaryAreaId: null, alsoCoversAreaIds: [] } };
 
   function fakeFor(row: Record<string, unknown>, options: { banFails?: boolean; sessionsFail?: boolean; adminCount?: number } = {}) {
     const updates: Record<string, unknown>[] = [];

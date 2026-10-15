@@ -235,22 +235,54 @@ export function normalizeScope(value: unknown): AccessScope {
 }
 
 /**
- * AN ADMINISTRATOR CAN ONLY ADD LOCATIONS THEY CAN ACCESS THEMSELVES.
+ * AN ADMINISTRATOR CAN ONLY GRANT ACCESS WITHIN THEIR OWN REACH.
  *
- * Applied to the locations being ADDED (all of them on an invitation; only the
- * new ones on an edit, so removing a location, or saving an unrelated change,
- * is never blocked). A global actor may add any. Anyone else is limited to the
- * locations inside their own primary and additional coverage; an actor whose
- * scope is unknown is treated as having none, so the check fails closed.
+ * Applied to what a write would ADD — the PRIMARY area and the additional
+ * locations alike, on an invitation and on an edit. The rule, from the actor's
+ * own scope and never anything the request says:
+ *
+ *   a global actor        may grant any scope, any area (unchanged).
+ *   anyone else           may grant a GLOBAL scope to nobody, and an area only
+ *                         when every location inside it is inside their own
+ *                         primary and additional coverage. An area that resolves
+ *                         to no location (unknown, or a district with none
+ *                         configured) is refused — it cannot be proved inside.
+ *   an unknown actor scope has no coverage, so it fails closed.
+ *
+ * ON AN EDIT only what CHANGES is checked: the primary when the level or the
+ * primary differs from what the person already had, and only the newly added
+ * additional locations. So removing a location, or saving an unrelated change,
+ * is never blocked, and an administrator whose reach is narrower than somebody
+ * else's existing assignment can still edit that person's role or status.
  */
-export function assertAdditionalWithinActor(actor: DirectoryActor, added: readonly string[]): void {
-  if (added.length === 0 || actor.scope?.level === "global") return;
+export function assertScopeWithinActor(
+  actor: DirectoryActor,
+  next: AccessScope,
+  previous?: AccessScope,
+): void {
+  if (actor.scope?.level === "global") return;
+
+  if (next.level === "global") {
+    if (previous?.level === "global") return;
+    throw new DirectoryError(
+      "forbidden_grant",
+      "Only someone with access to all locations can give access to all locations.",
+      403,
+    );
+  }
+
+  const primaryChanged =
+    !previous || previous.level !== next.level || previous.primaryAreaId !== next.primaryAreaId;
+  const added = next.alsoCoversAreaIds.filter((id) => !previous?.alsoCoversAreaIds.includes(id));
+  const areas = [...(primaryChanged && next.primaryAreaId ? [next.primaryAreaId] : []), ...added];
+  if (areas.length === 0) return;
+
   const own = new Set(
     [actor.scope?.primaryAreaId, ...(actor.scope?.alsoCoversAreaIds ?? [])]
       .filter((id): id is string => typeof id === "string")
       .flatMap((id) => locationIdsInArea(id)),
   );
-  const outside = added.some((id) => {
+  const outside = areas.some((id) => {
     const locations = locationIdsInArea(id);
     return locations.length === 0 || locations.some((location) => !own.has(location));
   });
@@ -380,7 +412,7 @@ export async function inviteUser(
   const email = normalizeEmail(input.email);
   const displayName = normalizeDisplayName(input.displayName, email);
   const scope = normalizeScope(input.scope);
-  assertAdditionalWithinActor(actor, scope.alsoCoversAreaIds);
+  assertScopeWithinActor(actor, scope);
 
   if (!isRole(input.role)) {
     throw new DirectoryError("invalid_input", "Choose a role for this person.");
@@ -546,10 +578,7 @@ export async function patchUser(
 
   if (input.scope !== undefined) {
     const scope = normalizeScope(input.scope);
-    assertAdditionalWithinActor(
-      actor,
-      scope.alsoCoversAreaIds.filter((id) => !before.scope.alsoCoversAreaIds.includes(id)),
-    );
+    assertScopeWithinActor(actor, scope, before.scope);
     patch.scope_level = scope.level;
     patch.scope_primary_area_id = scope.primaryAreaId;
     patch.scope_also_covers_area_ids = scope.alsoCoversAreaIds;

@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 /** `GET /invite-suggestion`: who may ask, and that it changes nothing. */
 
+const seenTenantFilters: string[] = [];
+
 const MOCKED = [
   "@/lib/api/respond",
   "@/lib/auth/server",
@@ -15,7 +17,7 @@ afterEach(() => {
   for (const m of MOCKED) vi.doUnmock(m);
 });
 
-async function load(options: { deny?: string[]; role?: string } = {}) {
+async function load(options: { deny?: string[]; role?: string; rows?: unknown[]; tenant?: string[]; locations?: unknown[]; positions?: unknown[] } = {}) {
   vi.resetModules();
   const permissions: string[] = [];
   vi.doMock("@/lib/api/respond", async (importOriginal) => ({
@@ -37,19 +39,29 @@ async function load(options: { deny?: string[]; role?: string } = {}) {
     ...(await importOriginal<typeof import("@/lib/employees/woven/directory")>()),
     loadDirectoryRows: async () => {
       reads.directory += 1;
-      return [];
+      return (options.rows ?? []) as never[];
     },
   }));
   vi.doMock("@/lib/employees/woven/locations", async (importOriginal) => ({
     ...(await importOriginal<typeof import("@/lib/employees/woven/locations")>()),
-    listWovenLocations: async () => [],
+    listWovenLocations: async () => (options.locations ?? []) as never[],
   }));
   vi.doMock("@/lib/employees/woven/positions", async (importOriginal) => ({
     ...(await importOriginal<typeof import("@/lib/employees/woven/positions")>()),
-    listWovenPositions: async () => [],
+    listWovenPositions: async () => (options.positions ?? []) as never[],
   }));
   vi.doMock("@/lib/supabase/server", () => ({
-    getSupabaseAdmin: () => ({ from: () => ({ select: () => ({ not: async () => ({ data: [], error: null }) }) }) }),
+    getSupabaseAdmin: () => ({
+      from: () => ({
+        select: () => ({
+          not: async () => ({ data: [], error: null }),
+          eq: (column: string, value: string) => {
+            seenTenantFilters.push(`${column}=${value}`);
+            return { ilike: async () => ({ data: (options.tenant ?? []).map((id) => ({ external_employee_id: id })), error: null }) };
+          },
+        }),
+      }),
+    }),
   }));
   const { GET } = await import("./invite-suggestion/route");
   return { GET, permissions, reads };
@@ -84,5 +96,43 @@ describe("GET /invite-suggestion", () => {
     const { GET } = await load();
     expect((await GET(get(""))).status).toBe(400);
     expect((await GET(get(`?email=${"a".repeat(300)}`))).status).toBe(400);
+  });
+});
+
+describe("tenant boundary and reviewed mappings", () => {
+  const employee = {
+    externalEmployeeId: "E-1", firstName: "Kay", lastName: "Rowe", preferredFirstName: null, emailAddress: "kay@example.com",
+    employmentStatus: "active", positionId: "P-LM", positionName: "Location Manager", primaryLocationId: "W-66", primaryLocationName: "Kearney",
+    additionalLocations: [{ wovenLocationId: "W-67", name: "Bellevue", number: null }, { wovenLocationId: "W-NEW", name: "New", number: null }],
+    temporaryOrExpiringLocations: [], hasAllLocationAccess: false, dataIssues: [], missingSyncCount: 0,
+  };
+  const positions = [{ wovenPositionId: "P-LM", status: "mapped", role: "location_manager", scopeLevel: "location", isConfirmed: true }];
+  const locations = [
+    { wovenLocationId: "W-66", status: "mapped", locationCode: "66" },
+    { wovenLocationId: "W-67", status: "mapped", locationCode: "67" },
+    { wovenLocationId: "W-NEW", status: "unmapped", locationCode: null },
+  ];
+  const q = "?email=kay%40example.com";
+
+  it("filters to the pinned Woven company, and a record outside it yields nothing", async () => {
+    const { GET } = await load({ rows: [employee], tenant: [], positions, locations });
+    seenTenantFilters.length = 0;
+    const body = await (await GET(get(q))).json();
+    expect(body).toEqual({ status: "not_found" });
+    expect(seenTenantFilters).toEqual(["woven_company_id=55839f24-9241-418c-8405-37baf9a42a87"]);
+  });
+
+  it("suggests from a pinned-company record using only reviewed mappings", async () => {
+    const { GET } = await load({ rows: [employee], tenant: ["E-1"], positions, locations });
+    const body = await (await GET(get(q))).json();
+    expect(body.status).toBe("found");
+    expect(body.suggestion).toEqual({ displayName: "Kay Rowe", role: "location_manager", scopeLevel: "location", primaryAreaId: "loc-66", additionalAreaIds: ["loc-67"] });
+    expect(body.notes.join(" ")).toContain("New"); // the unmapped one is reported, not suggested
+  });
+
+  it("an unreviewed (unmapped) primary location suggests no primary area", async () => {
+    const { GET } = await load({ rows: [employee], tenant: ["E-1"], positions, locations: [{ wovenLocationId: "W-66", status: "unmapped", locationCode: "66" }, ...locations.slice(1)] });
+    const body = await (await GET(get(q))).json();
+    expect(body.suggestion.primaryAreaId).toBeNull();
   });
 });
