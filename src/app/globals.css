@@ -261,6 +261,20 @@
        below market / behind        warning ink     ▬
        significantly under          follow-up ink   ▼
        tracked for capacity         cloud           ◇                       */
+  /* Goal-progress tones: fill / soft background / readable ink. Green is the brand's Dark Tokyo Green,
+     amber is Beast, red is Love Potion — official colours, never the sister brand's. */
+  --tone-met: var(--bcs-tokyo-dark);
+  --tone-met-soft: var(--bcs-tokyo-tint);
+  --tone-met-ink: var(--bcs-tokyo-ink);
+  --tone-pace: var(--bcs-beast);
+  --tone-pace-soft: var(--bcs-warn-tint);
+  --tone-pace-ink: var(--bcs-warn-ink);
+  --tone-behind: var(--bcs-love-potion);
+  --tone-behind-soft: var(--bcs-attention-tint);
+  --tone-behind-ink: var(--bcs-attention);
+  --tone-idle: var(--bcs-measure-fill);
+  --tone-idle-soft: var(--bcs-surface-muted);
+  --tone-idle-ink: var(--bcs-ink-muted);
   --status-outperforming: var(--bcs-tokyo-ink);
   --status-outperforming-foreground: var(--bcs-card);
   --status-at-market: var(--bcs-card);
@@ -438,6 +452,18 @@
   --color-measure-benchmark: var(--measure-benchmark);
   --color-measure-goal: var(--measure-goal);
   --color-measure-goal-foreground: var(--measure-goal-foreground);
+  --color-tone-met: var(--tone-met);
+  --color-tone-met-soft: var(--tone-met-soft);
+  --color-tone-met-ink: var(--tone-met-ink);
+  --color-tone-pace: var(--tone-pace);
+  --color-tone-pace-soft: var(--tone-pace-soft);
+  --color-tone-pace-ink: var(--tone-pace-ink);
+  --color-tone-behind: var(--tone-behind);
+  --color-tone-behind-soft: var(--tone-behind-soft);
+  --color-tone-behind-ink: var(--tone-behind-ink);
+  --color-tone-idle: var(--tone-idle);
+  --color-tone-idle-soft: var(--tone-idle-soft);
+  --color-tone-idle-ink: var(--tone-idle-ink);
   --color-status-outperforming: var(--status-outperforming);
   --color-status-outperforming-foreground: var(--status-outperforming-foreground);
   --color-status-at-market: var(--status-at-market);

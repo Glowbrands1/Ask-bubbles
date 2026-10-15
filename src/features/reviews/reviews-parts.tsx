@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils/cn";
 import { DataArea } from "./data-area";
+import { BOARD_GRID } from "./reviews-data";
 import type { ReviewsIntegrationStatus } from "./integration-status";
 
 /** The week / month marker printed on each goal tile. Words, not just colour. */
@@ -29,7 +30,8 @@ export function WindowTag({
 /**
  * A SUMMARY TILE. The frame, label and explanation are layout and always show;
  * the figure is data and says "Not connected yet" until a source is connected.
- * The accent variant is the one-per-screen emphasis tile.
+ * `accent` is the one-per-screen brand-green tile; `tone="pace"` is the warm
+ * "still to do" tile. `bar` draws a thin progress strip under the figure.
  */
 export function GoalTile({
   status,
@@ -37,6 +39,9 @@ export function GoalTile({
   label,
   detail,
   accent,
+  tone,
+  icon,
+  bar,
   children,
 }: {
   status: ReviewsIntegrationStatus;
@@ -44,18 +49,44 @@ export function GoalTile({
   label: string;
   detail: string;
   accent?: boolean;
+  tone?: "pace";
+  icon?: ReactNode;
+  /** 0–100; drawn only once data is connected. */
+  bar?: number | null;
   children?: ReactNode;
 }) {
   return (
     <div
       className={cn(
-        "block rounded-[var(--radius-lg)] border p-[18px] shadow-raised",
+        "relative overflow-hidden rounded-[var(--radius-lg)] border p-[18px] shadow-raised transition duration-200 hover:-translate-y-0.5 hover:shadow-float motion-reduce:transition-none motion-reduce:hover:translate-y-0",
         accent
           ? "border-brand-accent bg-brand-accent"
-          : "border-border bg-surface",
+          : tone === "pace"
+            ? "border-tone-pace/50 bg-tone-pace-soft"
+            : "border-border bg-surface",
       )}
     >
-      {tag}
+      {accent || tone ? null : (
+        <span aria-hidden className="absolute inset-x-0 top-0 h-1 bg-brand-accent" />
+      )}
+      <div className="flex items-start justify-between gap-2">
+        {tag}
+        {icon ? (
+          <span
+            aria-hidden
+            className={cn(
+              "grid size-8 shrink-0 place-items-center rounded-full [&_svg]:size-4",
+              accent
+                ? "bg-white/50 text-brand-accent-foreground"
+                : tone === "pace"
+                  ? "bg-white/70 text-tone-pace-ink"
+                  : "bg-brand-accent-soft text-brand-accent-soft-foreground",
+            )}
+          >
+            {icon}
+          </span>
+        ) : null}
+      </div>
       <p
         className={cn("eyebrow mt-2", accent && "text-brand-accent-foreground")}
       >
@@ -70,9 +101,26 @@ export function GoalTile({
           {children}
         </DataArea>
       </div>
+      {bar !== undefined && bar !== null && status === "connected" ? (
+        <span
+          aria-hidden
+          className={cn(
+            "mt-2 block h-1.5 rounded-full",
+            accent ? "bg-white/50" : "bg-measure-data-track",
+          )}
+        >
+          <span
+            className={cn(
+              "block h-1.5 rounded-full transition-[width] duration-500",
+              accent ? "bg-brand-accent-foreground" : "bg-measure-data",
+            )}
+            style={{ width: `${Math.min(100, Math.max(0, bar))}%` }}
+          />
+        </span>
+      ) : null}
       <p
         className={cn(
-          "mt-1.5 text-[10.5px] leading-snug",
+          "mt-2 text-[10.5px] leading-snug",
           accent ? "text-brand-accent-foreground" : "text-muted-foreground",
         )}
       >
@@ -116,14 +164,14 @@ export function Panel({
   return (
     <section
       className={cn(
-        "min-w-0 overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface shadow-raised",
+        "min-w-0 overflow-hidden rounded-[var(--radius-xl)] border border-border bg-surface shadow-raised",
         className,
       )}
     >
       {title || controls ? (
-        <div className="flex flex-wrap items-center gap-2 border-b border-border-hairline px-4 py-3.5">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border-hairline bg-gradient-to-b from-surface to-surface-muted/30 px-4 py-3.5">
           {title ? (
-            <h3 className="mr-1 text-[13px] font-black text-foreground">
+            <h3 className="mr-1 text-[14px] font-black text-foreground">
               {title}
             </h3>
           ) : null}
@@ -295,17 +343,21 @@ export function FilterBar({ children }: { children: ReactNode }) {
   );
 }
 
-/** The column heads of the ranking, drawn above its not-connected message. */
+/** The column heads of the ranking, drawn above its rows (desktop; rows label their own figures on a phone). */
 export function RankingHead() {
   return (
     <div
       aria-hidden
-      className="hidden grid-cols-[3.5rem_minmax(0,1.6fr)_6rem_7rem_minmax(0,2fr)_8rem] gap-3 border-b border-border bg-surface-muted px-4 py-2.5 text-[8px] font-black tracking-[0.14em] text-subtle-foreground uppercase lg:grid"
+      className={cn(
+        "hidden gap-3 border-b border-border bg-surface-muted px-4 py-2.5 pl-5 text-[8px] font-black tracking-[0.14em] text-subtle-foreground uppercase lg:grid",
+        BOARD_GRID,
+      )}
     >
-      <span>Rank</span>
+      <span className="text-center">Rank</span>
       <span>Salon</span>
       <span className="text-right">This week</span>
       <span className="text-right">Month to date</span>
+      <span className="text-right">Target</span>
       <span>Progress toward target</span>
       <span>Status</span>
     </div>
@@ -331,7 +383,7 @@ export function LegendItem({
 }) {
   return (
     <li className="flex items-center gap-1.5">
-      <span aria-hidden className={cn("h-2 w-3.5 rounded-[2px]", swatch)} />
+      <span aria-hidden className={cn("h-2 w-3.5 rounded-full", swatch)} />
       {children}
     </li>
   );

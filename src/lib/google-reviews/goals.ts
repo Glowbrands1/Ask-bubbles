@@ -108,6 +108,17 @@ export const GOAL_STATUS_LABEL: Record<GoalStatus, string> = {
   not_counting: "Not counting",
 };
 
+/** The colour family a goal status is drawn in: green met, amber on pace, red behind, gray when no verdict can be reached. */
+export type GoalTone = "met" | "pace" | "behind" | "idle";
+
+export const GOAL_TONE: Record<GoalStatus, GoalTone> = {
+  met: "met",
+  on_pace: "pace",
+  behind_pace: "behind",
+  partial_month: "idle",
+  not_counting: "idle",
+};
+
 export const isCounting = (row: Pick<GoalRow, "baselineReviewId" | "countFrom">): boolean => row.baselineReviewId !== null || row.countFrom !== null;
 
 /** When counting starts for a salon: its reporting cutoff, else its baseline review's time. */
@@ -135,6 +146,29 @@ export function goalStatus(row: GoalRow, context: GoalContext): GoalStatus {
   if (isPartialMonth(row, context)) return "partial_month";
   const pace = paceTargetFor(row.monthlyTarget, context.daysElapsed, context.daysInMonth);
   return row.qualifyingMonthToDate >= pace ? "on_pace" : "behind_pace";
+}
+
+export type ReviewEligibility = "counts" | "low_rating" | "historical" | "not_counting";
+
+/**
+ * Whether one stored review counts toward its salon's goal. Mirrors `google_review_goal_counts_v2`: a cutoff counts reviews
+ * created at or after it, otherwise only those created after the baseline review; 1–2★ never count.
+ */
+export function reviewEligibility(
+  row: Pick<GoalRow, "baselineReviewId" | "baselineReviewTime" | "countFrom"> | undefined,
+  review: { starRating: number; createdAt: string },
+): ReviewEligibility {
+  if (!row || !isCounting(row)) return "not_counting";
+  const created = Date.parse(review.createdAt);
+  const after = row.countFrom ? created >= Date.parse(row.countFrom) : row.baselineReviewTime ? created > Date.parse(row.baselineReviewTime) : false;
+  if (!after) return "historical";
+  return review.starRating >= 3 ? "counts" : "low_rating";
+}
+
+/** Where a pace mark sits on a bar: the share of the target a salon should have by now, 0–100. */
+export function paceMarkPercent(target: number, context: Pick<GoalContext, "daysElapsed" | "daysInMonth">): number {
+  if (target <= 0) return 0;
+  return Math.min(100, Math.round((paceTargetFor(target, context.daysElapsed, context.daysInMonth) / target) * 100));
 }
 
 export interface GoalProgress {

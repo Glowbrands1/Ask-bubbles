@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { centralMidnight, goalContext, goalProgress, goalStatus, goalSummary, isPartialMonth, paceTargetFor, partialMonthNote, rankRows, weekStartOf, type GoalRow } from "./goals";
+import { centralMidnight, goalContext, goalProgress, goalStatus, goalSummary, isPartialMonth, paceTargetFor, partialMonthNote, rankRows, weekStartOf, GOAL_TONE, paceMarkPercent, reviewEligibility, type GoalRow } from "./goals";
 
 const row = (over: Partial<GoalRow> = {}): GoalRow => ({
   storeCode: "219",
@@ -124,5 +124,54 @@ describe("a partial October is never presented as a full month", () => {
   it("summarises which salons are partial, and when counting began", () => {
     expect(partialMonthNote([partial, full, row({ baselineReviewTime: "2026-10-13T21:00:00Z" })], ctx)).toEqual({ salons: 2, from: "2026-10-10", to: "2026-10-13" });
     expect(partialMonthNote([full], ctx)).toBeNull();
+  });
+});
+
+const r = (code: string, over: Partial<GoalRow> = {}) => row({ storeCode: code, displayName: `Salon ${code}`, baselineReviewTime: "2026-09-01T00:00:00Z", ...over });
+const ctxDay = goalContext("2026-10-15"); // 14 of 31 days elapsed → pace target ceil(10*14/31) = 5
+
+describe("goal tones", () => {
+  it("maps met to green, on pace to amber, behind to red, and no-verdict states to gray", () => {
+    expect(GOAL_TONE[goalStatus(r("1", { qualifyingMonthToDate: 10 }), ctxDay)]).toBe("met");
+    expect(GOAL_TONE[goalStatus(r("2", { qualifyingMonthToDate: 5 }), ctxDay)]).toBe("pace");
+    expect(GOAL_TONE[goalStatus(r("3", { qualifyingMonthToDate: 3 }), ctxDay)]).toBe("behind");
+    expect(GOAL_TONE[goalStatus(r("4", { baselineReviewId: null, baselineReviewTime: null }), ctxDay)]).toBe("idle");
+    expect(GOAL_TONE[goalStatus(r("5", { baselineReviewTime: "2026-10-10T18:00:00Z", qualifyingMonthToDate: 2 }), ctxDay)]).toBe("idle");
+  });
+
+  it("places the pace mark where the pace target sits on the bar", () => {
+    expect(paceMarkPercent(10, ctxDay)).toBe(50);
+    expect(paceMarkPercent(0, ctxDay)).toBe(0);
+  });
+});
+
+describe("reviewEligibility mirrors the database rule", () => {
+  const baseline = r("1");
+  const created = (createdAt: string, starRating = 5) => ({ createdAt, starRating });
+
+  it("counts 3–5★ after the baseline, never 1–2★ and never history", () => {
+    expect(reviewEligibility(baseline, created("2026-10-02T12:00:00Z"))).toBe("counts");
+    expect(reviewEligibility(baseline, created("2026-10-02T12:00:00Z", 3))).toBe("counts");
+    expect(reviewEligibility(baseline, created("2026-10-02T12:00:00Z", 2))).toBe("low_rating");
+    expect(reviewEligibility(baseline, created("2026-08-30T12:00:00Z"))).toBe("historical");
+    expect(reviewEligibility(baseline, created("2026-09-01T00:00:00Z"))).toBe("historical");
+  });
+
+  it("a reporting cutoff counts reviews at or after it, whatever the baseline", () => {
+    const cut = r("1", { countFrom: "2026-10-01T05:00:00Z", baselineReviewTime: "2026-10-13T00:00:00Z" });
+    expect(reviewEligibility(cut, created("2026-10-01T05:00:00Z"))).toBe("counts");
+    expect(reviewEligibility(cut, created("2026-09-30T05:00:00Z"))).toBe("historical");
+  });
+
+  it("a salon with no baseline is not counting", () => {
+    expect(reviewEligibility(r("1", { baselineReviewId: null, baselineReviewTime: null }), created("2026-10-02T00:00:00Z"))).toBe("not_counting");
+    expect(reviewEligibility(undefined, created("2026-10-02T00:00:00Z"))).toBe("not_counting");
+  });
+});
+
+describe("rankRows ties", () => {
+  it("shares a rank between equal counts and skips the next one", () => {
+    const ranked = rankRows([r("a", { qualifyingMonthToDate: 10 }), r("b", { qualifyingMonthToDate: 10 }), r("c", { qualifyingMonthToDate: 5 })], "month");
+    expect(ranked.map((r) => [r.row.storeCode, r.rank, r.tied])).toEqual([["a", 1, true], ["b", 1, true], ["c", 3, false]]);
   });
 });

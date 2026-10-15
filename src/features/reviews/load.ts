@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { RankMetric } from "@/lib/google-reviews/goals";
+import type { GoalTone, RankMetric } from "@/lib/google-reviews/goals";
 import {
   PAGE_SIZE,
   parseReviewQuery,
@@ -27,6 +27,22 @@ export interface ReviewsData {
   /** Goal counts; null when they cannot be read (the goal areas then say "not configured"). */
   goals: GoalData | null;
   rank: RankMetric;
+  /** Search text and status chip for the goal table and leaderboard. Optional: absent means no filter. */
+  goalFilter?: GoalFilter;
+}
+
+export interface GoalFilter {
+  q: string;
+  status: GoalTone | null;
+}
+
+const TONES: readonly GoalTone[] = ["met", "pace", "behind", "idle"];
+
+/** Never trusts a query string: an unknown status is "no filter" and the search text is trimmed and capped. */
+export function parseGoalFilter(params: Record<string, string | string[] | undefined>): GoalFilter {
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+  const status = one(params.status);
+  return { q: one(params.q).trim().slice(0, 80), status: TONES.find((t) => t === status) ?? null };
 }
 
 /**
@@ -52,7 +68,7 @@ export async function loadReviewsData(
       readGoalData().catch(() => null),
     ]);
     // Weekly is the latest year of weeks; monthly is every month held.
-    return { query, stores, trend: period === "week" ? trend.slice(-52) : trend, period, page, goals, rank };
+    return { query, stores, trend: period === "week" ? trend.slice(-52) : trend, period, page, goals, rank, goalFilter: parseGoalFilter(params) };
   } catch {
     return null;
   }
