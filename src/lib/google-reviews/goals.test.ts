@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { centralMidnight, goalContext, goalProgress, goalStatus, goalSummary, isPartialMonth, paceTargetFor, partialMonthNote, rankRows, weekStartOf, GOAL_TONE, paceMarkPercent, reviewEligibility, type GoalRow } from "./goals";
+import { centralMidnight, goalContext, goalProgress, goalStatus, goalSummary, isPartialMonth, paceTargetFor, partialMonthNote, rankRows, weekStartOf, closedMonthContext, previousMonth, GOAL_TONE, paceMarkPercent, reviewEligibility, type GoalRow } from "./goals";
 
 const row = (over: Partial<GoalRow> = {}): GoalRow => ({
   storeCode: "219",
@@ -180,5 +180,46 @@ describe("rankRows ties", () => {
   it("shares a rank between equal counts and skips the next one", () => {
     const ranked = rankRows([r("a", { qualifyingMonthToDate: 10 }), r("b", { qualifyingMonthToDate: 10 }), r("c", { qualifyingMonthToDate: 5 })], "month");
     expect(ranked.map((r) => [r.row.storeCode, r.rank, r.tied])).toEqual([["a", 1, true], ["b", 1, true], ["c", 3, false]]);
+  });
+});
+
+describe("a month that has ended", () => {
+  const sep = closedMonthContext("2026-09");
+  const counting = (over: Partial<GoalRow> = {}) => row({ baselineReviewTime: "2026-08-01T00:00:00Z", ...over });
+
+  it("is a final result: met, or missed — never a pace verdict", () => {
+    expect(goalStatus(counting({ qualifyingMonthToDate: 10 }), sep)).toBe("met");
+    expect(goalStatus(counting({ qualifyingMonthToDate: 9 }), sep)).toBe("missed");
+    expect(goalStatus(counting({ qualifyingMonthToDate: 0 }), sep)).toBe("missed");
+    expect(GOAL_TONE.missed).toBe("behind");
+  });
+
+  it("is gray 'before counting' when the salon only started counting after the month ended", () => {
+    const row1 = counting({ countFrom: "2026-10-01T05:00:00Z", qualifyingMonthToDate: 0 });
+    expect(goalStatus(row1, sep)).toBe("before_counting");
+    expect(GOAL_TONE.before_counting).toBe("idle");
+  });
+
+  it("is a partial month when counting began part-way through it", () => {
+    expect(goalStatus(counting({ countFrom: "2026-09-10T05:00:00Z", qualifyingMonthToDate: 3 }), sep)).toBe("partial_month");
+  });
+
+  it("closes at the instant the next month opens (Central, DST-aware)", () => {
+    expect(sep.monthStart).toBe("2026-09-01");
+    expect(sep.monthEndInstant).toBe("2026-10-01T05:00:00.000Z");
+    expect(closedMonthContext("2026-10").monthEndInstant).toBe("2026-11-01T05:00:00.000Z"); // Oct 1 is CDT, Nov 1 is CDT: DST ends Nov 1 at 2am
+    expect(closedMonthContext("2026-11").monthEndInstant).toBe("2026-12-01T06:00:00.000Z"); // CST
+  });
+
+  it("leaves the live month's verdicts exactly as they were", () => {
+    const live = goalContext("2026-10-15");
+    expect(live.closed).toBeUndefined();
+    expect(goalStatus(counting({ qualifyingMonthToDate: 3 }), live)).toBe("behind_pace");
+    expect(goalStatus(counting({ qualifyingMonthToDate: 5 }), live)).toBe("on_pace");
+  });
+
+  it("steps back a month across a year boundary", () => {
+    expect(previousMonth("2026-01")).toBe("2025-12");
+    expect(previousMonth("2026-10")).toBe("2026-09");
   });
 });

@@ -191,6 +191,9 @@
   --rating-star: var(--bcs-tokyo-dark);
   --rating-star-fill: var(--bcs-tokyo);
   --rating-star-empty: var(--bcs-line-strong);
+  /* Google review stars: gold fill with a deep amber edge (4.7:1 on white, 3.4:1 on Tokyo mist). */
+  --review-star-fill: #ffc72c;
+  --review-star-edge: #9c6700;
 
   /* THE HOVER SURFACE on light grounds: the Tokyo tint, so a hovered row or
      control lifts toward the brand rather than toward grey. Dark controls
@@ -415,6 +418,8 @@
   --color-rating-star: var(--rating-star);
   --color-rating-star-fill: var(--rating-star-fill);
   --color-rating-star-empty: var(--rating-star-empty);
+  --color-review-star-fill: var(--review-star-fill);
+  --color-review-star-edge: var(--review-star-edge);
   --color-topbar: var(--topbar);
   --color-topbar-foreground: var(--topbar-foreground);
   --color-rail: var(--rail);

@@ -11,7 +11,7 @@ vi.mock("next/link", () => ({
 }));
 vi.mock("@/components/brand-mark", () => ({ BuffCitySoapLogo: () => null }));
 
-import { goalContext, type GoalRow } from "@/lib/google-reviews/goals";
+import { closedMonthContext, goalContext, type GoalRow } from "@/lib/google-reviews/goals";
 import type { StoreSummary } from "@/lib/google-reviews/views";
 import type { ReviewsData } from "./load";
 import { ReviewsDashboard } from "./reviews-dashboard";
@@ -194,5 +194,34 @@ describe("monthly goal eligibility per salon start date", () => {
     const m = screen.getByRole("table", { name: "Google Reviews by month" });
     expect(within(m).getByText("Before goal counting")).toBeTruthy();
     expect(within(m).getByText("Counting from Oct 1–Oct 9")).toBeTruthy();
+  });
+});
+
+describe("the leaderboard month picker", () => {
+  const early = { baselineReviewTime: "2026-08-01T00:00:00Z" };
+  const rows = [goalRow("1", { ...early, qualifyingMonthToDate: 10 }), goalRow("2", { ...early, qualifyingMonthToDate: 4 }), goalRow("3", { baselineReviewTime: "2026-10-01T05:00:00Z", qualifyingMonthToDate: 0 })];
+
+  it("offers the current month and twelve before it, and keeps the chosen month selected", () => {
+    const d = { ...data(rows), month: "2026-09", goals: { context: closedMonthContext("2026-09"), rows } };
+    render(<ReviewsDashboard tab="leaderboard" status="not_connected" data={d} />);
+    const select = screen.getByRole("combobox", { name: "Month" }) as HTMLSelectElement;
+    expect(select.options).toHaveLength(13);
+    expect(select.options[0]!.textContent).toMatch(/\(current\)/);
+    expect(select.value).toBe("2026-09");
+  });
+
+  it("shows a closed month as a final result: met / missed / not counted, with no pace mark and no weekly figures", () => {
+    const d = { ...data(rows), month: "2026-09", goals: { context: closedMonthContext("2026-09"), rows } };
+    render(<ReviewsDashboard tab="leaderboard" status="not_connected" data={d} />);
+    expect(screen.getByText(/September 2026 · month closed/)).toBeTruthy();
+    const board = within(document.querySelector("ol")!);
+    expect(board.getAllByText("Goal met").length).toBeGreaterThan(0);
+    expect(board.getByText("Goal missed")).toBeTruthy();
+    expect(board.getByText("Before counting")).toBeTruthy();
+    expect(board.queryByText("Behind pace")).toBeNull();
+    expect(board.queryByText("On pace")).toBeNull();
+    expect(screen.getByText("Rank by this week").getAttribute("aria-disabled")).toBe("true");
+    const tones = screen.getAllByRole("progressbar").map((b) => b.getAttribute("data-tone"));
+    expect(tones).toEqual(["met", "behind"]); // the not-counted salon draws no bar
   });
 });

@@ -38,10 +38,19 @@ import type {
 } from "@/lib/google-reviews/views";
 import { cn } from "@/lib/utils/cn";
 
-import type { ReviewsData } from "./load";
+import { monthOptions, type ReviewsData } from "./load";
 import { reviewsTabHref, type ReviewsTab } from "./reviews-tabs";
 
 type GoalContextOf = NonNullable<ReviewsData["goals"]>["context"];
+
+const MONTH_NAME_LONG = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+/** "September 2026" for `2026-09`. */
+export const monthName = (month: string): string =>
+  MONTH_NAME_LONG.format(new Date(`${month}-01T00:00:00Z`));
 
 const SELECT =
   "h-[34px] rounded-[22px] border border-border-strong bg-surface px-3 text-[11.5px] font-bold text-foreground shadow-soft transition-colors hover:border-brand-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent";
@@ -116,6 +125,21 @@ export function LiveFilters({
           </option>
         ))}
       </select>
+      {tab === "leaderboard" ? (
+        <select
+          name="month"
+          defaultValue={data.month ?? monthOptions()[0]}
+          aria-label="Month"
+          className={SELECT}
+        >
+          {monthOptions().map((m, i) => (
+            <option key={m} value={m}>
+              {monthName(m)}
+              {i === 0 ? " (current)" : ""}
+            </option>
+          ))}
+        </select>
+      ) : null}
       {tab === "reviews" ? (
         <>
           <select
@@ -200,6 +224,11 @@ export function GoalSearch({
       {data.goalFilter?.status ? (
         <input type="hidden" name="status" value={data.goalFilter.status} />
       ) : null}
+      {tab === "leaderboard" &&
+      data.month &&
+      data.month !== monthOptions()[0] ? (
+        <input type="hidden" name="month" value={data.month} />
+      ) : null}
       <Search
         aria-hidden
         className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground"
@@ -238,7 +267,10 @@ export function RatingsPanel({
         <li key={n} className="flex items-center gap-3 text-[12px]">
           <span className="flex w-9 items-center gap-1 font-bold">
             {n}
-            <Star aria-hidden className="size-3 fill-brand-accent text-brand-accent-soft-foreground" />
+            <Star
+              aria-hidden
+              className="size-3 fill-review-star-fill text-review-star-edge"
+            />
           </span>
           <span
             aria-hidden
@@ -252,7 +284,9 @@ export function RatingsPanel({
                 "block h-2.5 rounded-full transition-[width] duration-500",
                 n >= 3 ? "bg-measure-data" : "bg-tone-behind",
               )}
-              style={{ width: `${c > 0 ? Math.max(1.5, (c / total) * 100) : 0}%` }}
+              style={{
+                width: `${c > 0 ? Math.max(1.5, (c / total) * 100) : 0}%`,
+              }}
             />
           </span>
           <span className="w-10 text-right font-bold tabular-nums">{c}</span>
@@ -299,7 +333,8 @@ const SEGMENT_GROUP =
 const SEGMENT =
   "rounded-[20px] px-3 py-[5px] text-[11.5px] font-bold whitespace-nowrap transition-colors";
 const SEGMENT_ON = "bg-selected text-selected-foreground";
-const SEGMENT_OFF = "text-muted-foreground hover:bg-brand-accent-soft hover:text-foreground";
+const SEGMENT_OFF =
+  "text-muted-foreground hover:bg-brand-accent-soft hover:text-foreground";
 
 /** The Weekly / Monthly switch for "Google Reviews over time": links that do not jump the page to the top. */
 export function PeriodSegments({ data }: { data: ReviewsData }) {
@@ -315,7 +350,10 @@ export function PeriodSegments({ data }: { data: ReviewsData }) {
           href={periodHref(data, o.key)}
           scroll={false}
           aria-current={data.period === o.key ? "true" : undefined}
-          className={cn(SEGMENT, data.period === o.key ? SEGMENT_ON : SEGMENT_OFF)}
+          className={cn(
+            SEGMENT,
+            data.period === o.key ? SEGMENT_ON : SEGMENT_OFF,
+          )}
         >
           {o.label}
         </Link>
@@ -351,12 +389,18 @@ export function goalMark(
   span: CountingSpan | string | null,
 ): { kind: GoalMarkKind; label: string } {
   if (!span) return { kind: "none", label: "Goal not configured" };
-  const { earliest, latest } = typeof span === "string" ? { earliest: span, latest: span } : span;
-  if (periodEnd(start, period) < earliest) return { kind: "before", label: "Before goal counting" };
-  if (start >= latest) return { kind: "eligible", label: "Goal-eligible (3–5★)" };
+  const { earliest, latest } =
+    typeof span === "string" ? { earliest: span, latest: span } : span;
+  if (periodEnd(start, period) < earliest)
+    return { kind: "before", label: "Before goal counting" };
+  if (start >= latest)
+    return { kind: "eligible", label: "Goal-eligible (3–5★)" };
   return {
     kind: "partial",
-    label: earliest === latest ? `Counting from ${formatDay(latest)}` : `Counting from ${formatDay(earliest)}–${formatDay(latest)}`,
+    label:
+      earliest === latest
+        ? `Counting from ${formatDay(latest)}`
+        : `Counting from ${formatDay(earliest)}–${formatDay(latest)}`,
   };
 }
 
@@ -368,13 +412,17 @@ const MARK_STYLE: Record<GoalMarkKind, string> = {
 };
 
 /** The first and last date goal counting starts across the counting salons in view (latest goes with every salon counting). */
-export function goalStartSpan(g: ReturnType<typeof goalView>): CountingSpan | null {
+export function goalStartSpan(
+  g: ReturnType<typeof goalView>,
+): CountingSpan | null {
   if (!g) return null;
   const days = g.rows
     .filter((r) => isCounting(r))
     .map((r) => baselineDay(r)!)
     .sort();
-  return days.length === 0 ? null : { earliest: days[0]!, latest: days[days.length - 1]! };
+  return days.length === 0
+    ? null
+    : { earliest: days[0]!, latest: days[days.length - 1]! };
 }
 
 export function TrendPanel({
@@ -393,7 +441,9 @@ export function TrendPanel({
     <>
       <div className="scroll-slim max-h-[28rem] w-full min-w-0 overflow-auto">
         <table
-          aria-label={weekly ? "Google Reviews by week" : "Google Reviews by month"}
+          aria-label={
+            weekly ? "Google Reviews by week" : "Google Reviews by month"
+          }
           className="w-full min-w-[42rem] border-collapse text-left text-[12px]"
         >
           <thead className="sticky top-0 z-10">
@@ -440,7 +490,10 @@ export function TrendPanel({
                   <td className="px-4 py-2.5 text-right tabular-nums">
                     <span className="inline-flex items-center gap-1">
                       {rating(p.averageRating)}
-                      <Star aria-hidden className="size-3 fill-brand-accent text-brand-accent-soft-foreground" />
+                      <Star
+                        aria-hidden
+                        className="size-3 fill-review-star-fill text-review-star-edge"
+                      />
                     </span>
                   </td>
                   <td className="px-4 py-2.5 whitespace-nowrap">
@@ -477,11 +530,17 @@ export function TrendPanel({
       </div>
       <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border-hairline px-4 pt-3 text-[11px] text-muted-foreground">
         <li className="flex items-center gap-1.5">
-          <span aria-hidden className="h-2 w-3.5 rounded-full bg-brand-accent" />
+          <span
+            aria-hidden
+            className="h-2 w-3.5 rounded-full bg-brand-accent"
+          />
           All reviews
         </li>
         <li className="flex items-center gap-1.5">
-          <span aria-hidden className="h-2 w-3.5 rounded-full bg-measure-data" />
+          <span
+            aria-hidden
+            className="h-2 w-3.5 rounded-full bg-measure-data"
+          />
           3–5★ reviews
         </li>
       </ul>
@@ -515,7 +574,11 @@ function pageHref(data: ReviewsData, page: number): string {
 
 function Stars({ value }: { value: number }) {
   return (
-    <span role="img" aria-label={`${value} out of 5 stars`} className="inline-flex gap-0.5">
+    <span
+      role="img"
+      aria-label={`${value} out of 5 stars`}
+      className="inline-flex gap-0.5"
+    >
       {[1, 2, 3, 4, 5].map((n) => (
         <Star
           key={n}
@@ -523,7 +586,7 @@ function Stars({ value }: { value: number }) {
           className={cn(
             "size-3.5",
             n <= value
-              ? "fill-brand-accent text-brand-accent-soft-foreground"
+              ? "fill-review-star-fill text-review-star-edge"
               : "fill-transparent text-border-strong",
           )}
         />
@@ -532,12 +595,22 @@ function Stars({ value }: { value: number }) {
   );
 }
 
-const ELIGIBILITY: Record<ReviewEligibility, { label: string; style: string }> = {
-  counts: { label: "Counts toward goal", style: "text-tone-met-ink" },
-  low_rating: { label: "Does not count — 1–2★", style: "text-tone-behind-ink" },
-  historical: { label: "Historical — not counted", style: "text-muted-foreground" },
-  not_counting: { label: "Salon not counting yet", style: "text-muted-foreground" },
-};
+const ELIGIBILITY: Record<ReviewEligibility, { label: string; style: string }> =
+  {
+    counts: { label: "Counts toward goal", style: "text-tone-met-ink" },
+    low_rating: {
+      label: "Does not count — 1–2★",
+      style: "text-tone-behind-ink",
+    },
+    historical: {
+      label: "Historical — not counted",
+      style: "text-muted-foreground",
+    },
+    not_counting: {
+      label: "Salon not counting yet",
+      style: "text-muted-foreground",
+    },
+  };
 
 const initials = (name: string | null) =>
   (name ?? "?")
@@ -551,13 +624,16 @@ export function ReviewsList({ data }: { data: ReviewsData }) {
   const page = data.page;
   if (!page) return null;
   const pages = Math.max(1, Math.ceil(page.total / page.pageSize));
-  const goalRows = new Map((data.goals?.rows ?? []).map((r) => [r.storeCode, r]));
+  const goalRows = new Map(
+    (data.goals?.rows ?? []).map((r) => [r.storeCode, r]),
+  );
   return (
     <>
       <ul aria-label="Google reviews" className="flex flex-col gap-3 p-4">
         {page.rows.map((r: ReviewRow) => {
           const low = r.starRating <= 2;
-          const eligibility = ELIGIBILITY[reviewEligibility(goalRows.get(r.storeCode), r)];
+          const eligibility =
+            ELIGIBILITY[reviewEligibility(goalRows.get(r.storeCode), r)];
           return (
             <li
               key={r.id}
@@ -600,7 +676,9 @@ export function ReviewsList({ data }: { data: ReviewsData }) {
                   <p className="flex items-center gap-1.5 font-bold text-brand-accent-soft-foreground">
                     <CornerDownRight aria-hidden className="size-3" />
                     Owner reply
-                    {r.replyUpdatedAt ? ` · ${reviewDate(r.replyUpdatedAt)}` : ""}
+                    {r.replyUpdatedAt
+                      ? ` · ${reviewDate(r.replyUpdatedAt)}`
+                      : ""}
                   </p>
                   <p className="mt-1">{r.replyComment}</p>
                 </div>
@@ -683,7 +761,8 @@ export function goalView(data: ReviewsData | null): {
     : null;
 }
 
-export const toneOf = (row: GoalRow, context: GoalContextOf): GoalTone => GOAL_TONE[goalStatus(row, context)];
+export const toneOf = (row: GoalRow, context: GoalContextOf): GoalTone =>
+  GOAL_TONE[goalStatus(row, context)];
 
 /** Search text and tone chip applied to the goal table and leaderboard (never to the rank itself). */
 export function matchesGoalFilter(
@@ -694,10 +773,15 @@ export function matchesGoalFilter(
   if (!filter) return true;
   if (filter.status && toneOf(row, context) !== filter.status) return false;
   const q = filter.q.trim().toLowerCase();
-  return q === "" || `${row.displayName} ${row.storeCode}`.toLowerCase().includes(q);
+  return (
+    q === "" || `${row.displayName} ${row.storeCode}`.toLowerCase().includes(q)
+  );
 }
 
-const TONE_STYLE: Record<GoalTone, { bar: string; track: string; chip: string; swatch: string; edge: string }> = {
+const TONE_STYLE: Record<
+  GoalTone,
+  { bar: string; track: string; chip: string; swatch: string; edge: string }
+> = {
   met: {
     bar: "bg-tone-met",
     track: "bg-tone-met-soft",
@@ -736,6 +820,8 @@ const STATUS_ICON: Record<GoalStatus, typeof Check> = {
   behind_pace: TrendingDown,
   partial_month: Minus,
   not_counting: Minus,
+  missed: TrendingDown,
+  before_counting: Minus,
 };
 
 export function StatusChip({ status }: { status: GoalStatus }) {
@@ -758,15 +844,26 @@ export function StatusChip({ status }: { status: GoalStatus }) {
  * The progress bar. Its colour is the goal status: green met, amber on pace, red behind pace, and gray where no verdict
  * can be reached (a part-way baseline, or a salon not counting yet — which is "no data", never zero performance).
  */
-export function Meter({ row, context }: { row: GoalRow; context: GoalContextOf }) {
+export function Meter({
+  row,
+  context,
+}: {
+  row: GoalRow;
+  context: GoalContextOf;
+}) {
   const status = goalStatus(row, context);
   const tone = GOAL_TONE[status];
   const style = TONE_STYLE[tone];
-  if (status === "not_counting") {
+  if (status === "not_counting" || status === "before_counting") {
     return (
       <div className="flex items-center gap-2.5">
-        <span aria-hidden className={cn("h-2.5 min-w-[6rem] flex-1 rounded-full", style.track)} />
-        <span className="w-14 text-right text-[11px] text-muted-foreground">Not tracking</span>
+        <span
+          aria-hidden
+          className={cn("h-2.5 min-w-[6rem] flex-1 rounded-full", style.track)}
+        />
+        <span className="w-14 text-right text-[11px] text-muted-foreground">
+          {status === "not_counting" ? "Not tracking" : "Not counted"}
+        </span>
       </div>
     );
   }
@@ -781,11 +878,17 @@ export function Meter({ row, context }: { row: GoalRow; context: GoalContextOf }
         aria-valuemax={row.monthlyTarget}
         aria-valuenow={Math.min(row.qualifyingMonthToDate, row.monthlyTarget)}
         data-tone={tone}
-        className={cn("relative h-2.5 min-w-[6rem] flex-1 rounded-full", style.track)}
+        className={cn(
+          "relative h-2.5 min-w-[6rem] flex-1 rounded-full",
+          style.track,
+        )}
       >
         <span
           data-testid="meter-fill"
-          className={cn("absolute inset-y-0 left-0 rounded-full transition-[width] duration-500", style.bar)}
+          className={cn(
+            "absolute inset-y-0 left-0 rounded-full transition-[width] duration-500",
+            style.bar,
+          )}
           style={{ width: `${p.barPercent}%` }}
         />
         {showPace ? (
@@ -800,7 +903,11 @@ export function Meter({ row, context }: { row: GoalRow; context: GoalContextOf }
       <span className="w-14 text-right text-[11.5px] leading-tight font-bold tabular-nums">
         {p.percent}%
         <span className="block text-[10px] font-normal text-muted-foreground">
-          {p.over > 0 ? `+${p.over} over` : p.remaining > 0 ? `${p.remaining} to go` : "Goal met"}
+          {p.over > 0
+            ? `+${p.over} over`
+            : p.remaining > 0
+              ? `${p.remaining} to go`
+              : "Goal met"}
         </span>
       </span>
     </div>
@@ -822,13 +929,27 @@ export function GoalTable({
       >
         <thead>
           <tr className="border-b border-border bg-surface-muted">
-            <th scope="col" className={TH}>Salon</th>
-            <th scope="col" className={cn(TH, "text-right")}>Store code</th>
-            <th scope="col" className={cn(TH, "text-right")}>Qualifying · this week</th>
-            <th scope="col" className={cn(TH, "text-right")}>Qualifying · month to date</th>
-            <th scope="col" className={cn(TH, "text-right")}>Monthly target</th>
-            <th scope="col" className={TH}>Progress toward target</th>
-            <th scope="col" className={TH}>Status</th>
+            <th scope="col" className={TH}>
+              Salon
+            </th>
+            <th scope="col" className={cn(TH, "text-right")}>
+              Store code
+            </th>
+            <th scope="col" className={cn(TH, "text-right")}>
+              Qualifying · this week
+            </th>
+            <th scope="col" className={cn(TH, "text-right")}>
+              Qualifying · month to date
+            </th>
+            <th scope="col" className={cn(TH, "text-right")}>
+              Monthly target
+            </th>
+            <th scope="col" className={TH}>
+              Progress toward target
+            </th>
+            <th scope="col" className={TH}>
+              Status
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -840,7 +961,12 @@ export function GoalTable({
                 key={r.storeCode}
                 className="border-b border-border-hairline transition-colors even:bg-surface-muted/40 hover:bg-brand-accent-soft"
               >
-                <td className={cn("border-l-4 px-4 py-3 font-bold", TONE_STYLE[GOAL_TONE[status]].edge)}>
+                <td
+                  className={cn(
+                    "border-l-4 px-4 py-3 font-bold",
+                    TONE_STYLE[GOAL_TONE[status]].edge,
+                  )}
+                >
                   {r.displayName}
                   {counting ? (
                     <span className="block text-[10.5px] font-normal text-muted-foreground">
@@ -849,14 +975,18 @@ export function GoalTable({
                     </span>
                   ) : null}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">{r.storeCode}</td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {r.storeCode}
+                </td>
                 <td className="px-4 py-3 text-right tabular-nums">
                   {counting ? r.qualifyingThisWeek : "—"}
                 </td>
                 <td className="px-4 py-3 text-right text-[14px] font-black tabular-nums">
                   {counting ? r.qualifyingMonthToDate : "—"}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">{r.monthlyTarget}</td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {r.monthlyTarget}
+                </td>
                 <td className="min-w-[11rem] px-4 py-3">
                   <Meter row={r} context={context} />
                 </td>
@@ -883,15 +1013,25 @@ export interface BoardLinkState {
   rank?: "month" | "week";
   status?: GoalTone | null;
   q?: string;
+  month?: string;
 }
 
 /** A leaderboard URL that keeps the Location, rank, status and search the page is showing unless overridden. */
-export function boardHref(data: ReviewsData, over: BoardLinkState = {}): string {
-  const rank = over.rank ?? data.rank;
-  const status = over.status === undefined ? (data.goalFilter?.status ?? null) : over.status;
+export function boardHref(
+  data: ReviewsData,
+  over: BoardLinkState = {},
+): string {
+  const rank =
+    data.goals?.context.closed && !over.month
+      ? "month"
+      : (over.rank ?? data.rank);
+  const status =
+    over.status === undefined ? (data.goalFilter?.status ?? null) : over.status;
   const q = over.q ?? data.goalFilter?.q ?? "";
+  const month = over.month ?? data.month;
   const p = new URLSearchParams();
   if (data.query.store) p.set("store", data.query.store);
+  if (month && month !== monthOptions()[0]) p.set("month", month);
   if (rank === "week") p.set("rank", "week");
   if (status) p.set("status", status);
   if (q) p.set("q", q);
@@ -911,17 +1051,34 @@ export function RankSegments({ data }: { data: ReviewsData }) {
   ];
   return (
     <div role="group" aria-label="Rank by" className={SEGMENT_GROUP}>
-      {options.map((o) => (
-        <Link
-          key={o.key}
-          href={rankHref(data, o.key)}
-          scroll={false}
-          aria-current={data.rank === o.key ? "true" : undefined}
-          className={cn(SEGMENT, data.rank === o.key ? SEGMENT_ON : SEGMENT_OFF)}
-        >
-          {o.label}
-        </Link>
-      ))}
+      {options.map((o) =>
+        o.key === "week" && data.goals?.context.closed ? (
+          <span
+            key={o.key}
+            aria-disabled="true"
+            title="Weekly figures only exist for the current month"
+            className={cn(
+              SEGMENT,
+              "cursor-not-allowed text-muted-foreground opacity-50",
+            )}
+          >
+            {o.label}
+          </span>
+        ) : (
+          <Link
+            key={o.key}
+            href={rankHref(data, o.key)}
+            scroll={false}
+            aria-current={data.rank === o.key ? "true" : undefined}
+            className={cn(
+              SEGMENT,
+              data.rank === o.key ? SEGMENT_ON : SEGMENT_OFF,
+            )}
+          >
+            {o.label}
+          </Link>
+        ),
+      )}
     </div>
   );
 }
@@ -946,9 +1103,15 @@ export function StatusChips({
 }) {
   const active = data.goalFilter?.status ?? null;
   const count = (key: GoalTone | null) =>
-    key === null ? rows.length : rows.filter((r) => toneOf(r, context) === key).length;
+    key === null
+      ? rows.length
+      : rows.filter((r) => toneOf(r, context) === key).length;
   return (
-    <div role="group" aria-label="Filter by status" className="flex flex-wrap gap-1.5">
+    <div
+      role="group"
+      aria-label="Filter by status"
+      className="flex flex-wrap gap-1.5"
+    >
       {STATUS_CHIPS.map((chip) => (
         <Link
           key={chip.label}
@@ -963,7 +1126,10 @@ export function StatusChips({
           )}
         >
           {chip.key ? (
-            <span aria-hidden className={cn("size-2 rounded-full", TONE_STYLE[chip.key].swatch)} />
+            <span
+              aria-hidden
+              className={cn("size-2 rounded-full", TONE_STYLE[chip.key].swatch)}
+            />
           ) : null}
           {chip.label}
           <span className="font-black tabular-nums">{count(chip.key)}</span>
@@ -989,7 +1155,10 @@ export function Leaderboard({
   filter?: ReviewsData["goalFilter"];
 }) {
   // Rank over every salon in view, THEN filter, so searching never changes anyone's rank.
-  const ranked = rankRows(rows, metric).filter(({ row }) => matchesGoalFilter(row, context, filter));
+  const closed = context.closed === true;
+  const ranked = rankRows(rows, closed ? "month" : metric).filter(({ row }) =>
+    matchesGoalFilter(row, context, filter),
+  );
   if (ranked.length === 0) {
     return (
       <p className="px-4 py-10 text-center text-[13px] font-bold text-muted-foreground">
@@ -1003,6 +1172,8 @@ export function Leaderboard({
         const counting = isCounting(row);
         const status = goalStatus(row, context);
         const style = TONE_STYLE[GOAL_TONE[status]];
+        // A salon that was not counting yet in a closed month has no standing to rank or tie.
+        const unranked = status === "before_counting";
         return (
           <li
             key={row.storeCode}
@@ -1016,14 +1187,14 @@ export function Leaderboard({
               <span
                 className={cn(
                   "grid size-9 place-items-center rounded-full text-[15px] font-black tabular-nums",
-                  rank !== null && rank <= 3
+                  rank !== null && !unranked && rank <= 3
                     ? "bg-brand-accent text-brand-accent-foreground"
                     : "bg-surface-muted text-body-foreground",
                 )}
               >
-                {rank === null ? "—" : rank}
+                {rank === null || unranked ? "—" : rank}
               </span>
-              {tied ? (
+              {tied && !unranked ? (
                 <span className="mt-0.5 text-[8px] font-black tracking-[0.1em] text-muted-foreground uppercase">
                   Tied
                 </span>
@@ -1031,18 +1202,28 @@ export function Leaderboard({
             </span>
             <span className="font-bold">
               {row.displayName}{" "}
-              <span className="font-normal text-muted-foreground">#{row.storeCode}</span>
+              <span className="font-normal text-muted-foreground">
+                #{row.storeCode}
+              </span>
             </span>
             <span className="col-span-2 flex gap-4 text-[11.5px] text-muted-foreground lg:hidden">
               <span>
-                This week <b className="text-foreground">{counting ? `+${row.qualifyingThisWeek}` : "—"}</b>
+                This week{" "}
+                <b className="text-foreground">
+                  {counting && !closed ? `+${row.qualifyingThisWeek}` : "—"}
+                </b>
               </span>
               <span>
-                Month <b className="text-foreground">{counting ? `${row.qualifyingMonthToDate} / ${row.monthlyTarget}` : "—"}</b>
+                Month{" "}
+                <b className="text-foreground">
+                  {counting
+                    ? `${row.qualifyingMonthToDate} / ${row.monthlyTarget}`
+                    : "—"}
+                </b>
               </span>
             </span>
             <span className="hidden text-right tabular-nums lg:block">
-              {counting ? `+${row.qualifyingThisWeek}` : "—"}
+              {counting && !closed ? `+${row.qualifyingThisWeek}` : "—"}
             </span>
             <span className="hidden text-right lg:block">
               <span className="display-figure text-[18px] tabular-nums">

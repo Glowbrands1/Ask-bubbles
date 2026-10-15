@@ -5,7 +5,13 @@ import {
   ProvenanceChip,
   ProvenanceChips,
 } from "@/components/ui/marquee";
-import { CalendarDays, CalendarRange, Info, ListChecks, Target } from "lucide-react";
+import {
+  CalendarDays,
+  CalendarRange,
+  Info,
+  ListChecks,
+  Target,
+} from "lucide-react";
 import { NotConnected } from "./data-area";
 
 import { DataArea } from "./data-area";
@@ -16,6 +22,7 @@ import {
   GoalTable,
   Leaderboard,
   LiveFilters,
+  monthName,
   matchesGoalFilter,
   PeriodSegments,
   RankSegments,
@@ -190,7 +197,13 @@ function OverviewView({
             </WindowTag>
           }
           icon={<CalendarRange />}
-          bar={sm ? (sm.combinedTarget > 0 ? (sm.qualifyingMonthToDate / sm.combinedTarget) * 100 : 0) : null}
+          bar={
+            sm
+              ? sm.combinedTarget > 0
+                ? (sm.qualifyingMonthToDate / sm.combinedTarget) * 100
+                : 0
+              : null
+          }
           label="Qualifying reviews"
           detail={
             sm
@@ -204,7 +217,9 @@ function OverviewView({
           status={goal}
           accent
           icon={<Target />}
-          bar={sm ? (sm.counting > 0 ? (sm.atGoal / sm.counting) * 100 : 0) : null}
+          bar={
+            sm ? (sm.counting > 0 ? (sm.atGoal / sm.counting) * 100 : 0) : null
+          }
           tag={
             <WindowTag window="month">
               Month to date
@@ -246,7 +261,11 @@ function OverviewView({
         controls={
           data && g ? (
             <div className="ml-auto">
-              <GoalSearch data={data} tab="overview" placeholder="Find a salon or store code" />
+              <GoalSearch
+                data={data}
+                tab="overview"
+                placeholder="Find a salon or store code"
+              />
             </div>
           ) : (
             <DisabledSearch label="Search salons" />
@@ -255,7 +274,12 @@ function OverviewView({
       >
         {g ? (
           <GoalTable
-            rows={g.rows.filter((r) => matchesGoalFilter(r, g.context, { q: data?.goalFilter?.q ?? "", status: null }))}
+            rows={g.rows.filter((r) =>
+              matchesGoalFilter(r, g.context, {
+                q: data?.goalFilter?.q ?? "",
+                status: null,
+              }),
+            )}
             context={g.context}
           />
         ) : (
@@ -360,14 +384,21 @@ function LeaderboardView({
   data: ReviewsData | null;
 }) {
   const g = goalView(data);
-  const pm = partialMonthText(g);
+  // The partial-month caveat describes the live month's baselines; a closed month carries its own note.
+  const pm = g?.context.closed ? null : partialMonthText(g);
   const goal: ReviewsIntegrationStatus = data
     ? g
       ? "connected"
       : "not_configured"
     : status;
-  const daysLeft = g ? g.context.daysInMonth - Number(g.context.today.slice(8, 10)) : 0;
-  const atGoalPercent = g && g.summary.counting > 0 ? (g.summary.atGoal / g.summary.counting) * 100 : 0;
+  const closed = g?.context.closed === true;
+  const daysLeft = g
+    ? g.context.daysInMonth - Number(g.context.today.slice(8, 10))
+    : 0;
+  const atGoalPercent =
+    g && g.summary.counting > 0
+      ? (g.summary.atGoal / g.summary.counting) * 100
+      : 0;
   return (
     <>
       <SectionRule label="Salon leaderboard" className="mt-1" />
@@ -379,7 +410,11 @@ function LeaderboardView({
       <Panel>
         <div className="px-5 py-4">
           <p className="eyebrow">
-            {g ? `${monthLabel(g.context.monthStart)} · day ${g.context.daysElapsed + 1} of ${g.context.daysInMonth}` : "Month to date"}
+            {g
+              ? closed
+                ? `${monthName(g.context.monthStart.slice(0, 7))} · month closed`
+                : `${monthLabel(g.context.monthStart)} · day ${g.context.daysElapsed + 1} of ${g.context.daysInMonth}`
+              : "Month to date"}
           </p>
           <DataArea status={goal} size="value" className="mt-2">
             {g ? (
@@ -388,8 +423,12 @@ function LeaderboardView({
                   {g.summary.atGoal} of {g.summary.counting}
                 </span>
                 <span className="text-[12px] text-muted-foreground">
-                  salons have reached their target · {daysLeft} day{daysLeft === 1 ? "" : "s"} left ·{" "}
-                  {g.summary.qualifyingMonthToDate} of {g.summary.combinedTarget} qualifying reviews
+                  salons {closed ? "reached" : "have reached"} their target ·{" "}
+                  {closed
+                    ? "final result"
+                    : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`}{" "}
+                  · {g.summary.qualifyingMonthToDate} of{" "}
+                  {g.summary.combinedTarget} qualifying reviews
                 </span>
               </p>
             ) : null}
@@ -410,7 +449,9 @@ function LeaderboardView({
           <LegendItem swatch={TONE_STYLE.met.swatch}>Goal met</LegendItem>
           <LegendItem swatch={TONE_STYLE.pace.swatch}>On pace</LegendItem>
           <LegendItem swatch={TONE_STYLE.behind.swatch}>Behind pace</LegendItem>
-          <LegendItem swatch={TONE_STYLE.idle.swatch}>No verdict (partial month / not tracking)</LegendItem>
+          <LegendItem swatch={TONE_STYLE.idle.swatch}>
+            No verdict (partial month / not tracking)
+          </LegendItem>
           <li className="flex items-center gap-1.5">
             <span
               aria-hidden
@@ -433,7 +474,11 @@ function LeaderboardView({
               />
             )}
             {data && g ? (
-              <GoalSearch data={data} tab="leaderboard" placeholder="Find a salon or store code" />
+              <GoalSearch
+                data={data}
+                tab="leaderboard"
+                placeholder="Find a salon or store code"
+              />
             ) : (
               <DisabledSearch label="Find a salon or store code" />
             )}
@@ -443,7 +488,13 @@ function LeaderboardView({
               ) : (
                 <DisabledChips
                   label="Filter by status"
-                  options={["All", "Goal met", "On pace", "Behind pace", "No verdict"]}
+                  options={[
+                    "All",
+                    "Goal met",
+                    "On pace",
+                    "Behind pace",
+                    "No verdict",
+                  ]}
                 />
               )}
             </div>
@@ -466,6 +517,9 @@ function LeaderboardView({
           the bar stops at full width and the overage is shown separately. A
           salon without a review baseline isn&rsquo;t ranked and shows gray
           &ldquo;Not tracking&rdquo;, not zero.
+          {closed
+            ? " This month has ended, so each salon shows its final count with the same rules as the live month; weekly figures only exist for the current month. A month that closed before a salon's counting began shows gray “Not counted”."
+            : ""}
           {pm ? ` ${pm}` : ""}
         </Footnote>
       </Panel>
@@ -473,7 +527,10 @@ function LeaderboardView({
   );
 }
 
-const MONTH_NAME = new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" });
+const MONTH_NAME = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  timeZone: "UTC",
+});
 function monthLabel(monthStart: string): string {
   return MONTH_NAME.format(new Date(`${monthStart}T00:00:00Z`));
 }

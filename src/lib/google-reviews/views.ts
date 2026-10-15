@@ -6,7 +6,7 @@ import { APPROVED_GOOGLE_STORES } from "@/config/company/google-reviews";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import { classifyDatabaseError } from "./database-error";
-import { centralMidnight, centralToday, goalContext, type GoalContext, type GoalRow } from "./goals";
+import { centralMidnight, centralToday, closedMonthContext, goalContext, monthOf, type GoalContext, type GoalRow } from "./goals";
 import type { GoogleFailureCode } from "./types";
 
 /**
@@ -358,16 +358,8 @@ export interface GoalData {
   rows: GoalRow[];
 }
 
-/** Per-salon goal counts for the current Central week and month. Null-safe: nothing here reads Google. */
-export async function readGoalData(now: Date = new Date(), client: SupabaseClient = getSupabaseAdmin()): Promise<GoalData> {
-  const context = goalContext(centralToday(now));
-  const { data, error } = await client.rpc("google_review_goal_counts_v2", {
-    p_prev_week_start: centralDayStart(context.prevWeekStart),
-    p_week_start: centralDayStart(context.weekStart),
-    p_month_start: centralDayStart(context.monthStart),
-    p_now: now.toISOString(),
-  });
-  check(error);
+/** Maps the v2 counts function's rows to goal rows, in the allowlist's order. */
+function goalRowsFrom(data: unknown): GoalRow[] {
   const rows = ((data ?? []) as Record<string, unknown>[]).map(
     (r): GoalRow => ({
       storeCode: String(r.store_code),
@@ -383,5 +375,38 @@ export async function readGoalData(now: Date = new Date(), client: SupabaseClien
     }),
   );
   rows.sort((a, b) => APPROVED_GOOGLE_STORES.findIndex((s) => s.code === a.storeCode) - APPROVED_GOOGLE_STORES.findIndex((s) => s.code === b.storeCode));
+  return rows;
+}
+
+/**
+ * Per-salon goal counts for a month that has ENDED (`yyyy-mm`): the same function and the same rules as the current
+ * month, with the month window closed at the instant the next month opens. The week figures are not meaningful for a
+ * closed month and are not shown.
+ */
+export async function readGoalDataForMonth(month: string, now: Date = new Date(), client: SupabaseClient = getSupabaseAdmin()): Promise<GoalData> {
+  if (month >= monthOf(centralToday(now))) return readGoalData(now, client);
+  const context = closedMonthContext(month);
+  const monthStart = centralDayStart(context.monthStart);
+  const { data, error } = await client.rpc("google_review_goal_counts_v2", {
+    p_prev_week_start: monthStart,
+    p_week_start: monthStart,
+    p_month_start: monthStart,
+    p_now: new Date(new Date(context.monthEndInstant!).getTime() - 1).toISOString(),
+  });
+  check(error);
+  return { context, rows: goalRowsFrom(data) };
+}
+
+/** Per-salon goal counts for the current Central week and month. Null-safe: nothing here reads Google. */
+export async function readGoalData(now: Date = new Date(), client: SupabaseClient = getSupabaseAdmin()): Promise<GoalData> {
+  const context = goalContext(centralToday(now));
+  const { data, error } = await client.rpc("google_review_goal_counts_v2", {
+    p_prev_week_start: centralDayStart(context.prevWeekStart),
+    p_week_start: centralDayStart(context.weekStart),
+    p_month_start: centralDayStart(context.monthStart),
+    p_now: now.toISOString(),
+  });
+  check(error);
+  const rows = goalRowsFrom(data);
   return { context, rows };
 }
