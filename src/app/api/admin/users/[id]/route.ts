@@ -60,6 +60,7 @@ export async function PATCH(
         id: context.identity.subject,
         email: context.identity.email,
         role: context.identity.role,
+        scope: context.identity.scope,
       },
     );
 

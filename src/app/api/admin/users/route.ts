@@ -41,6 +41,8 @@ function actorFrom(context: Awaited<ReturnType<typeof authorizeRequest>>): Direc
     id: context.identity.subject,
     email: context.identity.email,
     role: context.identity.role,
+    /* The actor's own reach, so a grant can be compared with it. Never from the body. */
+    scope: context.identity.scope,
   };
 }
 

@@ -135,7 +135,7 @@ async function loadDirectory(
   return { directory, trace };
 }
 
-const ACTOR = { id: "actor-1", email: "admin@glowbrands.com", role: "admin" as never };
+const ACTOR = { id: "actor-1", email: "admin@glowbrands.com", role: "admin" as never, scope: { level: "global" as const, primaryAreaId: null, alsoCoversAreaIds: [] } };
 
 function invitation() {
   return {
