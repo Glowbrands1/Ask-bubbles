@@ -163,6 +163,13 @@ describe("reviewEligibility mirrors the database rule", () => {
     expect(reviewEligibility(cut, created("2026-09-30T05:00:00Z"))).toBe("historical");
   });
 
+  it("no review at the baseline's own instant counts — the baseline itself or a different review with the same timestamp", () => {
+    const at = created("2026-09-01T00:00:00Z"); // the baseline's exact time
+    expect(reviewEligibility(baseline, at)).toBe("historical");
+    expect(reviewEligibility(baseline, { ...at, starRating: 4 })).toBe("historical");
+    expect(reviewEligibility(baseline, created("2026-09-01T00:00:00.001Z"))).toBe("counts");
+  });
+
   it("a salon with no baseline is not counting", () => {
     expect(reviewEligibility(r("1", { baselineReviewId: null, baselineReviewTime: null }), created("2026-10-02T00:00:00Z"))).toBe("not_counting");
     expect(reviewEligibility(undefined, created("2026-10-02T00:00:00Z"))).toBe("not_counting");

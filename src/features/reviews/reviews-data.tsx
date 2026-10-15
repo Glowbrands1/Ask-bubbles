@@ -111,7 +111,8 @@ export function LiveFilters({
         {APPROVED_GOOGLE_STORES.map((s) => (
           <option key={s.code} value={s.code}>
             {data.stores.find((x) => x.storeCode === s.code)?.displayName ??
-              s.code}
+              s.code}{" "}
+            · #{s.code}
           </option>
         ))}
       </select>
@@ -561,7 +562,7 @@ export function ReviewsList({ data }: { data: ReviewsData }) {
             <li
               key={r.id}
               className={cn(
-                "rounded-[var(--radius-md)] border border-border border-l-4 bg-surface p-4 shadow-soft transition-shadow hover:shadow-raised",
+                "rounded-[var(--radius-md)] border border-brand-accent/40 border-l-4 bg-chat-canvas p-4 shadow-soft transition-shadow hover:shadow-raised",
                 low ? "border-l-tone-behind" : "border-l-brand-accent",
               )}
             >
@@ -775,7 +776,7 @@ export function Meter({ row, context }: { row: GoalRow; context: GoalContextOf }
     <div className="flex items-center gap-2.5">
       <span
         role="progressbar"
-        aria-label={`${row.displayName}: ${row.qualifyingMonthToDate} of ${row.monthlyTarget} qualifying reviews, ${GOAL_STATUS_LABEL[status]}`}
+        aria-label={`${row.displayName} #${row.storeCode}: ${row.qualifyingMonthToDate} of ${row.monthlyTarget} qualifying reviews, ${GOAL_STATUS_LABEL[status]}`}
         aria-valuemin={0}
         aria-valuemax={row.monthlyTarget}
         aria-valuenow={Math.min(row.qualifyingMonthToDate, row.monthlyTarget)}

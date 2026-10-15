@@ -159,7 +159,7 @@ describe("progress bar colours", () => {
 
   it("draws green met, amber on pace, red behind pace; a salon with no baseline gets no progress bar", () => {
     render(<ReviewsDashboard tab="overview" status="not_connected" data={d} />);
-    expect(tones()).toEqual({ "Salon 1": "met", "Salon 2": "pace", "Salon 3": "behind" });
+    expect(tones()).toEqual({ "Salon 1 #1": "met", "Salon 2 #2": "pace", "Salon 3 #3": "behind" });
     const table = screen.getByRole("table", { name: "Salon goal progress" });
     expect(within(table).getByText("Not tracking")).toBeTruthy();
     expect(within(table).getByText("Behind pace").getAttribute("data-tone")).toBe("behind");
