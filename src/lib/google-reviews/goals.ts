@@ -1,5 +1,5 @@
 /**
- * GOOGLE REVIEW GOALS — the Ask Sunny rules, applied to Buff City Soap's salons.
+ * GOOGLE REVIEW GOALS — the sister brand's goal rules, applied to Buff City Soap's salons.
  *
  * TEN QUALIFYING REVIEWS PER SALON PER CALENDAR MONTH. A qualifying review is a live 3-, 4- or 5-star
  * review created AFTER the salon's baseline review (counted in the database, `google_review_goal_counts`).
