@@ -2,11 +2,8 @@ import { NextResponse } from "next/server";
 
 import { authorizeCronRequest, CRON_SECRET_ENV } from "@/lib/api/cron-auth";
 import { SUPABASE_URL_ENV, supabaseSecretKeyConfigured } from "@/lib/config/server-env";
-import {
-  readWovenConfig,
-  WOVEN_SYNC_ENABLED_ENV,
-  WOVEN_SYNC_SCHEDULE_ENABLED_ENV,
-} from "@/lib/employees/woven/config";
+import { AutoSyncError, readAutoSync } from "@/lib/employees/woven/auto-sync";
+import { readWovenConfig, WOVEN_SYNC_ENABLED_ENV } from "@/lib/employees/woven/config";
 import { CRON_REQUESTER, outcomeHttpStatus, runWovenEmployeeSync } from "@/lib/employees/woven/sync";
 import { recordAccessShadowRun } from "@/lib/employees/woven/access/shadow";
 
@@ -35,8 +32,12 @@ import { recordAccessShadowRun } from "@/lib/employees/woven/access/shadow";
  *   1. `CRON_SECRET` — Vercel's bearer credential for scheduled invocations.
  *      Absent: every call is refused, Vercel's included.
  *   2. `WOVEN_SYNC_ENABLED` — the master switch. Off: nothing reaches Woven.
- *   3. `WOVEN_SYNC_SCHEDULE_ENABLED` — the schedule's own switch. Off: manual
- *      runs from the admin route still work, and this tick starts nothing.
+ *   3. THE AUTO SYNC SETTING (database, `employee_sync_settings`) — switched by
+ *      an administrator on the Woven screen. Off, or unreadable (the route fails
+ *      CLOSED): manual runs from the admin route still work, and this tick
+ *      starts nothing. It defaults to OFF and cannot be turned on before a stored
+ *      sync has saved the directory. (The old WOVEN_SYNC_SCHEDULE_ENABLED
+ *      variable is no longer read here.)
  *   4. `WOVEN_SYNC_WRITES_ENABLED` — enforced inside `runWovenEmployeeSync`.
  *      Off: the tick is refused (409 `writes_disabled`) before Woven or the
  *      store is touched.
@@ -90,11 +91,21 @@ export async function GET(request: Request) {
       reason: `${WOVEN_SYNC_ENABLED_ENV} is not on, so nothing reaches Woven.`,
     });
   }
-  if (!config.scheduleEnabled) {
-    return NextResponse.json({
-      status: "schedule_disabled",
-      reason: `${WOVEN_SYNC_SCHEDULE_ENABLED_ENV} is not on, so the scheduled sync starts nothing. Manual runs are unaffected.`,
-    });
+
+  try {
+    const setting = await readAutoSync();
+    if (!setting.enabled) {
+      return NextResponse.json({
+        status: "schedule_disabled",
+        reason: "Auto Sync is switched off on the Woven screen, so the scheduled sync starts nothing. Manual runs are unaffected.",
+      });
+    }
+  } catch (error) {
+    const code = error instanceof AutoSyncError ? error.code : "store_unavailable";
+    return NextResponse.json(
+      { status: "schedule_unknown", code, reason: "The Auto Sync setting could not be read, so the scheduled sync starts nothing." },
+      { status: 503 },
+    );
   }
 
   const outcome = await runWovenEmployeeSync({ requestedBy: CRON_REQUESTER, config });

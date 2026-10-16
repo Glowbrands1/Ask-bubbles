@@ -199,7 +199,10 @@ describe("the schedule", () => {
   it("the scheduled route calls the one sync function, as `cron`, behind its own switch", () => {
     const route = stripTsComments(readFileSync(join(ROOT, "src", "app", "api", "employees", "woven", "cron", "route.ts"), "utf8"));
     expect(route).toContain("runWovenEmployeeSync({ requestedBy: CRON_REQUESTER, config })");
-    expect(route).toContain("config.scheduleEnabled");
+    /* Its own switch is the DATABASE setting (Auto Sync), read fail-closed; the env variable no longer gates it. */
+    expect(route).toContain("readAutoSync()");
+    expect(route).toContain("setting.enabled");
+    expect(route).toContain("schedule_unknown");
     expect(route).toContain("authorizeCronRequest(request)");
     /* No second implementation: the route never builds its own client or store, and never writes. */
     expect(route).not.toMatch(/WovenClient|createSupabaseDirectoryStore|getSupabaseAdmin|\.from\(|\.rpc\(/);
