@@ -4,7 +4,7 @@ import { isDemoMode } from "@/lib/config/runtime";
 import { AuthError } from "@/lib/auth/types";
 import { authorizeRequest } from "@/lib/auth/server";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
-import { formsVisibilityScope } from "./forms-visibility";
+import { resolveFormsVisibility } from "./forms-visibility";
 import type { AccessScope, Permission, Role } from "@/types";
 
 /**
@@ -121,7 +121,7 @@ export async function authorizeForms(
       // The whole point of this remediation: the assignment travels with the
       // actor, so a form-creating path can check it.
       scope: context.identity.scope,
-      visibility: context.identity.verified ? formsVisibilityScope(context.identity) : null,
+      visibility: context.identity.verified ? await resolveFormsVisibility(context.identity) : null,
       // `authorizeRequest` refuses anything a production-grade provider did not
       // vouch for, so reaching here means the identity really was verified —
       // but the flag is carried from the identity rather than asserted, so the

@@ -18,8 +18,12 @@ import {
   type MonitoredForm,
   type MonitoringView,
 } from "@/features/forms/monitoring-table";
-import { pageCan, requirePagePermission } from "@/lib/auth/page";
-import { readPermissionHolder, withoutUnreadable } from "@/lib/forms/instance-scope";
+import { requirePagePermission } from "@/lib/auth/page";
+import {
+  instanceListFilterFor,
+  visibleInstances,
+} from "@/lib/forms/instance-scope";
+import { pageFormsAccess } from "@/lib/forms/page-scope";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 
 export const metadata: Metadata = { title: "Form Monitoring" };
@@ -44,7 +48,7 @@ export default async function FormMonitoringPage({
 }: {
   searchParams: Promise<{ view?: string; followup?: string }>;
 }) {
-  await requirePagePermission("view_form_monitoring");
+  const identity = await requirePagePermission("view_form_monitoring");
 
   const { view: requestedView, followup: requestedFollowUp } = await searchParams;
   /*
@@ -69,12 +73,20 @@ export default async function FormMonitoringPage({
   let demo = { deletable: 0, protected: 0 };
   let failure: string | null = null;
   const connected = supabaseSecretKeyConfigured();
+  const access = connected ? await pageFormsAccess(identity) : null;
+  const noStore = access?.noStore === true;
 
-  if (connected) {
+  if (connected && access && !noStore) {
     try {
-      // Forms whose family restricts reading are kept from readers without that permission.
-      const holds = await readPermissionHolder(pageCan);
-      const instances = withoutUnreadable(await listInstances(view satisfies InstanceView), holds);
+      /*
+       * NARROWED IN THE QUERY AND AGAIN ON THE ROWS RETURNED. `instanceListFilterFor`
+       * is the same filter the API route applies; `visibleInstances` re-checks every
+       * row against the permission a restricted family needs and the reader's stores.
+       */
+      const instances = visibleInstances(
+        access.actor,
+        await listInstances(view satisfies InstanceView, undefined, instanceListFilterFor(access.actor)),
+      );
       forms = instances.map((instance) => ({
         id: instance.id,
         templateName: instance.templateName,
@@ -109,7 +121,10 @@ export default async function FormMonitoringPage({
        * query the Overview uses — not from `forms`, which is shelf-filtered. A
        * manager looking at Followed up still needs to be told what is overdue.
        */
-      attention = attentionSummary(withoutUnreadable(await listOutstandingFollowUps(), holds), today);
+      attention = attentionSummary(
+        visibleInstances(access.actor, await listOutstandingFollowUps(50, access.locationIds)),
+        today,
+      );
 
       /*
        * Counted on the server across EVERY shelf, so the sweep button can state a
@@ -117,7 +132,10 @@ export default async function FormMonitoringPage({
        * filtered, and the count would change with the view.
        */
       const sweep = await findDemoInstances();
-      demo = { deletable: sweep.deletable.length, protected: sweep.protected.length };
+      demo = {
+        deletable: visibleInstances(access.actor, sweep.deletable).length,
+        protected: visibleInstances(access.actor, sweep.protected).length,
+      };
     } catch (error) {
       failure = (error as Error).message;
     }
@@ -136,6 +154,10 @@ export default async function FormMonitoringPage({
         {!connected ? (
           <Notice tone="neutral" title="Forms are not connected in this deployment">
             Forms are stored in the live database, and this deployment has none connected. Nothing here is sample data.
+          </Notice>
+        ) : noStore ? (
+          <Notice tone="attention" title="No home store is assigned to your account">
+            Form Monitoring shows the forms for your own store, and your account has no store assigned yet. An administrator can fix this in User Management.
           </Notice>
         ) : failure ? (
           <Notice tone="attention" title="Form history could not be read">
