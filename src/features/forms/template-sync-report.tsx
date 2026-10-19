@@ -22,7 +22,11 @@ export function TemplateSyncReport({ result }: { result: LibrarySeedResult }) {
   if (result.skipped) return null;
 
   const changed =
-    result.created.length + result.revised.length + result.renamed.length + (result.retired?.length ?? 0);
+    result.created.length +
+    result.revised.length +
+    result.renamed.length +
+    (result.repaired?.length ?? 0) +
+    (result.retired?.length ?? 0);
   const needsAttention = result.failed.length > 0 || result.heldBack.length > 0;
   const tone = needsAttention ? "attention" : changed > 0 ? "accent" : "neutral";
 
@@ -30,6 +34,7 @@ export function TemplateSyncReport({ result }: { result: LibrarySeedResult }) {
     result.created.length > 0 ? `${result.created.length} installed` : null,
     result.revised.length > 0 ? `${result.revised.length} revised` : null,
     result.renamed.length > 0 ? `${result.renamed.length} renamed` : null,
+    result.repaired && result.repaired.length > 0 ? `${result.repaired.length} completed from an interrupted run` : null,
     result.heldBack.length > 0 ? `${result.heldBack.length} held back` : null,
     result.failed.length > 0 ? `${result.failed.length} failed` : null,
     `${result.existing.length} already up to date`,
@@ -48,6 +53,9 @@ export function TemplateSyncReport({ result }: { result: LibrarySeedResult }) {
         ) : null}
         {result.created.length > 0 ? <p>Installed: {result.created.join(", ")}.</p> : null}
         {result.renamed.length > 0 ? <p>Name or description updated: {result.renamed.join(", ")}.</p> : null}
+        {result.repaired && result.repaired.length > 0 ? (
+          <p>Completed after an earlier run was interrupted: {result.repaired.join(", ")}.</p>
+        ) : null}
         {result.retired && result.retired.length > 0 ? <p>Retired: {result.retired.join(", ")}.</p> : null}
         {result.heldBack.length > 0 ? (
           <ul className="list-disc pl-5">

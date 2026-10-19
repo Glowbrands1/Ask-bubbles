@@ -40,6 +40,10 @@ const supabaseCalls = vi.hoisted(() => ({ count: 0 }));
 const faults = vi.hoisted(() => ({
   /** Template keys whose NEW (version > 1) row insert fails, with the message. */
   failVersionInsertFor: new Map<string, string>(),
+  /** Template keys whose pointer move onto a version > 1 fails (the version row is already stored). */
+  failPointerFor: new Map<string, string>(),
+  /** Template keys whose archiving of a published version fails. */
+  failArchiveFor: new Map<string, string>(),
   /** When set, reading the template list fails with this message. */
   failLibraryRead: null as string | null,
 }));
@@ -64,6 +68,37 @@ vi.mock("@/lib/supabase/server", () => ({
               return { select: () => ({ single: async () => ({ data: null, error: { message } }) }) };
             }
             return insert(payload);
+          };
+        }
+        if (table === "form_template_current") {
+          const upsert = (query as unknown as { upsert: (...args: unknown[]) => unknown }).upsert.bind(query);
+          (query as unknown as { upsert: (...args: unknown[]) => unknown }).upsert = (...args: unknown[]) => {
+            const payload = args[0] as { template_id: unknown; version_id: unknown };
+            const template = store.form_templates!.find((row) => row.id === payload.template_id);
+            const target = store.form_template_versions.find((row) => row.id === payload.version_id);
+            const message = template ? faults.failPointerFor.get(String(template.key)) : undefined;
+            if (message !== undefined && Number(target?.version) > 1) {
+              return { then: (resolve: (value: unknown) => unknown) => resolve({ data: null, error: { message } }) };
+            }
+            return upsert(...args);
+          };
+        }
+        if (table === "form_template_versions") {
+          const update = (query as unknown as { update: (...args: unknown[]) => unknown }).update.bind(query);
+          (query as unknown as { update: (...args: unknown[]) => unknown }).update = (...args: unknown[]) => {
+            const patch = args[0] as { status?: string };
+            if (patch.status !== "archived") return update(...args);
+            return {
+              eq: (_column: string, id: unknown) => {
+                const version = store.form_template_versions.find((row) => row.id === id);
+                const template = store.form_templates!.find((row) => row.id === version?.template_id);
+                const message = template ? faults.failArchiveFor.get(String(template.key)) : undefined;
+                if (message !== undefined) {
+                  return { then: (resolve: (value: unknown) => unknown) => resolve({ data: null, error: { message } }) };
+                }
+                return (update(...args) as { eq: (c: string, v: unknown) => unknown }).eq("id", id);
+              },
+            };
           };
         }
         if (table === "form_templates" && faults.failLibraryRead !== null) {
@@ -186,6 +221,8 @@ beforeEach(() => {
   for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
   supabaseCalls.count = 0;
   faults.failVersionInsertFor.clear();
+  faults.failPointerFor.clear();
+  faults.failArchiveFor.clear();
   faults.failLibraryRead = null;
   errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
   infoLog = vi.spyOn(console, "info").mockImplementation(() => {});
@@ -514,5 +551,208 @@ describe("what the administrator sees on Forms → Form Templates", () => {
     const logged = loggedEvents().find((event) => event.event === "forms.template_sync.page_failed");
     expect(logged).toMatchObject({ level: "error" });
     expect(JSON.stringify(errorLog.mock.calls)).not.toMatch(/sb_secret_/);
+  });
+});
+
+/* ------------------------------------- an interrupted publish can always finish --- */
+
+/**
+ * The publish is three writes, not a transaction: insert the new version, point
+ * `form_template_current` at it, archive the old one. A failure between them
+ * must neither be reported as success, nor strand the template, nor let a retry
+ * duplicate a version, lose the current one or override an administrator.
+ */
+describe("a publish interrupted between its steps", () => {
+  const currentOf = (key: string) => {
+    const template = store.form_templates!.find((row) => row.key === key)!;
+    const pointer = store.form_template_current!.find((row) => row.template_id === template.id)!;
+    return store.form_template_versions.find((row) => row.id === pointer.version_id)!;
+  };
+  const statuses = (key: string) =>
+    versionsOf(key)
+      .map((row) => `${row.version}:${row.status}`)
+      .sort();
+
+  it("stored but not made current: reported as failed, the old version stays current, and a retry completes it", async () => {
+    await productionBeforeTheSync();
+    faults.failPointerFor.set("fttc-epp", "pointer write refused");
+
+    const first = await ensureTemplateLibrary("system", PRODUCTION);
+
+    expect(first.failed.map((entry) => entry.key)).toEqual(["fttc-epp"]);
+    expect(first.failed[0]!.reason).toMatch(/stored but could not be made current/);
+    expect(first.failed[0]!.reason).toMatch(/previous version is still current/);
+    expect(first.revised).not.toContain("fttc-epp");
+    // Forms are still filled from version 1; the stored version 2 is waiting beside it.
+    expect(currentOf("fttc-epp").version).toBe(1);
+    expect(statuses("fttc-epp")).toEqual(["1:published", "2:published"]);
+
+    faults.failPointerFor.clear();
+    const retry = await ensureTemplateLibrary("system", PRODUCTION);
+
+    expect(retry.failed).toEqual([]);
+    expect(retry.revised).toEqual(["fttc-epp"]);
+    expect(retry.repaired).toEqual(["fttc-epp"]);
+    expect(currentOf("fttc-epp").version).toBe(2);
+    // No duplicate was created, and the old version is archived, not deleted.
+    expect(statuses("fttc-epp")).toEqual(["1:archived", "2:published"]);
+
+    const again = await ensureTemplateLibrary("system", PRODUCTION);
+    expect(again).toMatchObject({ revised: [], failed: [] });
+    expect(again.repaired).toBeUndefined();
+    expect(statuses("fttc-epp")).toEqual(["1:archived", "2:published"]);
+  });
+
+  it("current but the old version not archived: reported as failed (not a success), the new version stays current, a retry archives the leftover", async () => {
+    await productionBeforeTheSync();
+    faults.failArchiveFor.set("fttc-epp", "archive refused");
+
+    const first = await ensureTemplateLibrary("system", PRODUCTION);
+
+    expect(first.failed.map((entry) => entry.key)).toEqual(["fttc-epp"]);
+    expect(first.failed[0]!.reason).toMatch(/is published and current, but the previous version could not be archived/);
+    expect(first.revised).not.toContain("fttc-epp");
+    expect(currentOf("fttc-epp").version).toBe(2);
+    expect(statuses("fttc-epp")).toEqual(["1:published", "2:published"]);
+
+    faults.failArchiveFor.clear();
+    const retry = await ensureTemplateLibrary("system", PRODUCTION);
+
+    expect(retry.failed).toEqual([]);
+    expect(retry.repaired).toEqual(["fttc-epp"]);
+    // Nothing new is published, and the current version is not lost or moved.
+    expect(retry.revised).not.toContain("fttc-epp");
+    expect(currentOf("fttc-epp").version).toBe(2);
+    expect(statuses("fttc-epp")).toEqual(["1:archived", "2:published"]);
+  });
+
+  it("a retry that fails again leaves the same state and reports it again", async () => {
+    await productionBeforeTheSync();
+    faults.failPointerFor.set("fttc-epp", "still refused");
+    await ensureTemplateLibrary("system", PRODUCTION);
+    const stuck = snapshot();
+
+    const second = await ensureTemplateLibrary("system", PRODUCTION);
+
+    expect(second.failed.map((entry) => entry.key)).toEqual(["fttc-epp"]);
+    expect(second.failed[0]!.reason).toMatch(/could not be made current/);
+    expect(snapshot()).toBe(stuck);
+  });
+
+  it("an installed template whose version was stored but never pointed at is completed, without a second version", async () => {
+    await productionBeforeTheSync();
+    const template = store.form_templates!.find((row) => row.key === "demotion")!;
+    store.form_template_current = store.form_template_current!.filter((row) => row.template_id !== template.id);
+
+    const result = await ensureTemplateLibrary("system", PRODUCTION);
+
+    expect(result.failed).toEqual([]);
+    expect(result.repaired).toEqual(["demotion"]);
+    expect(versionsOf("demotion")).toHaveLength(1);
+    expect(currentOf("demotion").version).toBe(1);
+  });
+
+  it("does not override an administrator: after an interruption, an authored current version is left as it is", async () => {
+    await productionBeforeTheSync();
+    faults.failPointerFor.set("fttc-epp", "pointer write refused");
+    await ensureTemplateLibrary("system", PRODUCTION);
+    faults.failPointerFor.clear();
+    // An administrator publishes their own version 3 in the meantime: it becomes current and archives version 1.
+    const template = store.form_templates!.find((row) => row.key === "fttc-epp")!;
+    store.form_template_versions.push({
+      id: "authored-v3",
+      template_id: template.id,
+      version: 3,
+      status: "published",
+      document: { paper: "letter", blocks: [] },
+      variants: [],
+      seed_revision: 0,
+      notes: "Authored here.",
+      created_by: "dana",
+      published_by: "dana",
+    });
+    store.form_template_current!.find((row) => row.template_id === template.id)!.version_id = "authored-v3";
+    versionsOf("fttc-epp").find((row) => row.version === 1)!.status = "archived";
+
+    const retry = await ensureTemplateLibrary("system", PRODUCTION);
+
+    expect(retry.failed).toEqual([]);
+    expect(retry.repaired).toBeUndefined();
+    expect(currentOf("fttc-epp").id).toBe("authored-v3");
+    // The stored seed version is left exactly as it was.
+    expect(versionsOf("fttc-epp").find((row) => row.version === 2)?.status).toBe("published");
+  });
+
+  it("does not move the current version under an open draft", async () => {
+    await productionBeforeTheSync();
+    faults.failPointerFor.set("fttc-epp", "pointer write refused");
+    await ensureTemplateLibrary("system", PRODUCTION);
+    faults.failPointerFor.clear();
+    const template = store.form_templates!.find((row) => row.key === "fttc-epp")!;
+    store.form_template_versions.push({
+      id: "draft-v3",
+      template_id: template.id,
+      version: 3,
+      status: "draft",
+      document: { paper: "letter", blocks: [] },
+      variants: [],
+      seed_revision: 1,
+      notes: "A draft.",
+      created_by: "dana",
+    });
+
+    const retry = await ensureTemplateLibrary("system", PRODUCTION);
+
+    expect(retry.repaired).toBeUndefined();
+    expect(currentOf("fttc-epp").version).toBe(1);
+    expect(versionsOf("fttc-epp").find((row) => row.id === "draft-v3")?.status).toBe("draft");
+  });
+
+  it("leaves a form already filed on the old version pinned to it, with its document unchanged", async () => {
+    await productionBeforeTheSync();
+    const template = store.form_templates!.find((row) => row.key === "fttc-epp")!;
+    const v1 = versionsOf("fttc-epp")[0]!;
+    const documentBefore = JSON.stringify(v1.document);
+    store.form_instances.push({ id: "filed-1", template_id: template.id, template_version_id: v1.id, status: "finalized" });
+    faults.failPointerFor.set("fttc-epp", "pointer write refused");
+    await ensureTemplateLibrary("system", PRODUCTION);
+    faults.failPointerFor.clear();
+
+    await ensureTemplateLibrary("system", PRODUCTION);
+
+    expect(store.form_instances.find((row) => row.id === "filed-1")?.template_version_id).toBe(v1.id);
+    expect(JSON.stringify(store.form_template_versions.find((row) => row.id === v1.id)!.document)).toBe(documentBefore);
+    expect(store.form_template_versions.find((row) => row.id === v1.id)?.status).toBe("archived");
+  });
+
+  it("is not repaired from a Preview: nothing is read or written", async () => {
+    await productionBeforeTheSync();
+    faults.failPointerFor.set("fttc-epp", "pointer write refused");
+    await ensureTemplateLibrary("system", PRODUCTION);
+    faults.failPointerFor.clear();
+    const stuck = snapshot();
+    supabaseCalls.count = 0;
+
+    const result = await ensureTemplateLibrary("system", PREVIEW);
+
+    expect(result.skipped).toBeDefined();
+    expect(supabaseCalls.count).toBe(0);
+    expect(snapshot()).toBe(stuck);
+  });
+
+  it("is shown to the administrator, and logged", async () => {
+    await productionBeforeTheSync();
+    faults.failPointerFor.set("fttc-epp", "pointer write refused");
+    await ensureTemplateLibrary("system", PRODUCTION);
+    faults.failPointerFor.clear();
+    errorLog.mockClear();
+    infoLog.mockClear();
+
+    const retry = await ensureTemplateLibrary("system", PRODUCTION);
+
+    expect(loggedEvents().find((event) => event.event === "forms.template_sync.completed")).toMatchObject({
+      repaired: ["fttc-epp"],
+    });
+    expect(textOf(TemplateSyncReport({ result: retry }))).toMatch(/Completed after an earlier run was interrupted:\s+fttc-epp/);
   });
 });
