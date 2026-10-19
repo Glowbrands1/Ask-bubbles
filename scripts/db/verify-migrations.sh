@@ -44,6 +44,16 @@ AS_POSTGRES=(psql -h 127.0.0.1 -p "$PORT" -U postgres -d postgres -v ON_ERROR_ST
 
 count=0
 for migration in "$REPO"/supabase/migrations/*.sql; do
+  # PRODUCTION PARITY: before the capture migration (20261017001000) the live database already holds the objects
+  # Ask Sunny's file created by hand (guard function + trigger, column-level grant, audit list of 12,
+  # auth_clear_user_credentials). Reproduce part A of production_parity_state.sql, so every check runs against what
+  # production really has. VERIFY_PARITY=0 builds from the repository alone. scripts/db/verify-production-parity.sh is
+  # the full production-reconciliation proof.
+  if [ "$(basename "$migration" | cut -d_ -f1)" = "20261017001000" ] && [ "${VERIFY_PARITY:-1}" != "0" ]; then
+    sed '/^-- -* C ---$/,$d' "$REPO/supabase/tests/fixtures/production_parity_state.sql" | "${AS_POSTGRES[@]}" -1 -f - >"$ROOT/migration.out" 2>"$ROOT/migration.err" || {
+      echo "FAILED: production_parity_state.sql (part A)"; cat "$ROOT/migration.err"; exit 1; }
+    echo "production-parity state applied (live-only Ask Sunny objects)"
+  fi
   if ! "${AS_POSTGRES[@]}" -1 -f "$migration" >"$ROOT/migration.out" 2>"$ROOT/migration.err"; then
     echo "FAILED: $(basename "$migration")"
     cat "$ROOT/migration.err"

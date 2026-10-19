@@ -1,5 +1,6 @@
 import { OTHER_BRAND_TITLE_MARKERS } from "@/config/company/google-reviews";
-import { WOVEN_AUTO_PROVISION_ROLES, WOVEN_LOCATION_MANAGED_ROLES } from "@/config/company/woven";
+import { WOVEN_AUTO_PROVISION_ROLES, WOVEN_LOCATION_MANAGED_ROLES, WOVEN_TERMINATION_PROTECTED_ROLES } from "@/config/company/woven";
+import { APP_SWITCHER_USER_IDS } from "@/lib/auth/app-switcher-users";
 import { ADMIN_CONSOLE_ROLES } from "@/lib/permissions";
 import type { Role } from "@/types";
 
@@ -33,8 +34,9 @@ import type { AccessAction, PlannedRow, PlannerAccount, PlannerEmployee, Planner
  *
  *   TERMINATION. Only Woven's own Terminated status, read in the latest run,
  *     disables a linked account whose status is Woven-managed. Absence from
- *     Woven is review only. Unknown status fails closed. Protected accounts
- *     and administrators are never disabled automatically.
+ *     Woven is review only. Unknown status fails closed. Protected accounts,
+ *     administrators, district and regional managers and the app-switcher
+ *     grant list are never disabled automatically (review only).
  *
  *   LOCATION AND ROLE. Only for a linked account in LOCATION_MANAGED_ROLES whose scope is a single location, with the matching managed flag:
  *     the PRIMARY location follows Woven's mapped primary location, and the role
@@ -84,6 +86,19 @@ function linkedIdOf(account: PlannerAccount): string | null {
 /** Protected: a role override, or an administrative role. Never managed by Woven, whatever the flags say. */
 function isProtected(account: PlannerAccount): boolean {
   return account.override !== null || (ADMIN_CONSOLE_ROLES as readonly Role[]).includes(account.role);
+}
+
+/**
+ * Termination-protected: protected (override / administrative role), a district or regional manager, or
+ * an account on the app-switcher grant list. Such an account is review-only when Woven says Terminated.
+ */
+export function isTerminationProtected(account: Pick<PlannerAccount, "appUserId" | "role" | "override">): boolean {
+  return (
+    account.override !== null ||
+    (ADMIN_CONSOLE_ROLES as readonly Role[]).includes(account.role) ||
+    WOVEN_TERMINATION_PROTECTED_ROLES.includes(account.role) ||
+    APP_SWITCHER_USER_IDS.includes(account.appUserId.toLowerCase())
+  );
 }
 
 function proposedLocation(employee: PlannerEmployee, locations: Map<string, PlannerLocation>) {
@@ -255,7 +270,7 @@ function planEmployee(employee: PlannerEmployee, ctx: Context): PlannedRow {
   if (status === "terminated") {
     if (linked.status === "disabled" && linked.accessRevokedAt) {
       reasons.push("access_already_revoked");
-    } else if (isProtected(linked)) {
+    } else if (isTerminationProtected(linked)) {
       actions.push("FLAG_PROTECTED_ACCOUNT");
       reasons.push("terminated_in_woven_protected_account");
     } else if (!linked.managedStatus) {

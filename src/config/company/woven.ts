@@ -11,8 +11,11 @@ import type { Role } from "@/types";
  * NOT YET CONFIRMED BY BUFF CITY SOAP. These values are the conservative
  * defaults carried over from the reference platform's access planner. They
  * only shape the ACCESS PREVIEW: WOVEN_ACCESS_MODE has no apply mode, so no
- * account is created, disabled, re-scoped or re-roled from Woven by this
- * build, whatever these say. Confirm them before any apply stage is built.
+ * account is created, re-scoped or re-roled from Woven by this build, whatever
+ * these say. The one exception is the separate, default-off
+ * WOVEN_TERMINATION_ENFORCEMENT switch, which can disable (never create or
+ * re-enable) the confirmed, unprotected account of a Woven-Terminated employee
+ * (docs/woven-termination-enforcement.md). Confirm them before any apply stage is built.
  *
  * THE TENANT IS NOT AN ENVIRONMENT VARIABLE. Both Woven integrations read
  * exactly one Woven company, `WOVEN_TENANT` below, and prove it on every run.
@@ -38,6 +41,18 @@ export const WOVEN_AUTO_PROVISION_ROLES: readonly Role[] = ["location_manager", 
 
 /** Roles whose primary location and role the preview may propose following Woven. */
 export const WOVEN_LOCATION_MANAGED_ROLES: readonly Role[] = ["location_manager", "assistant_manager"];
+
+/**
+ * Roles whose accounts Woven may NEVER disable automatically (termination
+ * enforcement): district and regional managers hold wider scope and, with the
+ * administrators, are reviewed by a person. Together with the administrative
+ * roles (admin, owner, developer), role overrides and the app-switcher grant
+ * list (`src/lib/auth/app-switcher-users.ts`), these are "termination
+ * protected": the planner shows FLAG_PROTECTED_ACCOUNT, the apply step skips
+ * them, and the database function refuses them on its own. The SQL carries
+ * the same role list (20261019001000) and a test keeps the two equal.
+ */
+export const WOVEN_TERMINATION_PROTECTED_ROLES: readonly Role[] = ["district_manager", "regional_manager"];
 
 /**
  * ============================================================================

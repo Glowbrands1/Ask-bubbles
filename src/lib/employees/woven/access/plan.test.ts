@@ -435,11 +435,29 @@ describe("termination", () => {
     expect(rowOf(rows, b).actions).toEqual(["FLAG_PROTECTED_ACCOUNT"]);
   });
 
-  it("a linked account whose status is NOT Woven-managed (e.g. a linked District Manager) is flagged on termination", () => {
-    const e = employee({ employmentStatus: "terminated", positionId: POS.dm });
-    const row = rowOf(plan([e], [linkedTo(e, { role: "district_manager", scopeLevel: "global", primaryAreaId: null, managedStatus: false })]), e);
+  it("a linked account whose status is NOT Woven-managed is flagged on termination", () => {
+    const e = employee({ employmentStatus: "terminated" });
+    const row = rowOf(plan([e], [linkedTo(e, { managedStatus: false })]), e);
     expect(row.actions).toEqual(["FLAG_PROTECTED_ACCOUNT"]);
     expect(row.reasons).toContain("terminated_in_woven_status_not_woven_managed");
+  });
+
+  it("DELIBERATE (termination enforcement): district and regional managers and the app-switcher grant list are review-only, never DISABLE_TERMINATED", () => {
+    const dm = employee({ employmentStatus: "terminated", positionId: POS.dm });
+    const rm = employee({ employmentStatus: "terminated", positionId: POS.dm });
+    const sw = employee({ employmentStatus: "terminated" });
+    const rows = plan(
+      [dm, rm, sw],
+      [
+        linkedTo(dm, { role: "district_manager", scopeLevel: "district", primaryAreaId: "dist-1" }),
+        linkedTo(rm, { role: "regional_manager", scopeLevel: "region", primaryAreaId: "reg-1" }),
+        linkedTo(sw, { appUserId: "4979fa8a-09ae-4b89-ad54-054be3acf6ba" }),
+      ],
+    );
+    for (const e of [dm, rm, sw]) {
+      expect(rowOf(rows, e).actions).toEqual(["FLAG_PROTECTED_ACCOUNT"]);
+      expect(rowOf(rows, e).reasons).toContain("terminated_in_woven_protected_account");
+    }
   });
 
   it("already revoked → NO_CHANGE (idempotent)", () => {

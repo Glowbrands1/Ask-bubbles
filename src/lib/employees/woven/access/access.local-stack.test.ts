@@ -321,10 +321,51 @@ describe.skipIf(!ENABLED)("stage 1 on real Postgres (local stack)", { timeout: 6
     expect(sql(`select count(*) from public.employee_account_links where app_user_id = '${ids.protectedAdmin}'`)).toBe("1");
   });
 
-  it("an apply mode does not exist in the database either", () => {
-    expect(sqlFails(`insert into public.employee_access_runs (mode, requested_by, policy_version, status) values ('apply', 'x', 'p', 'completed')`)).toMatch(
-      /check constraint/,
+  /*
+   * DELIBERATELY REWRITTEN (termination enforcement, migration 20261019001000).
+   * This test used to pin "no mode but shadow exists", and it passed because the
+   * run table's CHECK allowed only 'shadow'. That migration widens the CHECK to
+   * ('shadow', 'apply') so enforcement can RECORD its run, so the old insert is
+   * now a VALID row (the earlier failure was `sqlFails` returning null for a
+   * successful insert, which `toMatch` rejected as an object). What must still
+   * be true, and is pinned below instead:
+   *   - no mode other than shadow and the termination run record exists;
+   *   - the apply record vocabulary is closed (completed / aborted / partial /
+   *     failed; results shadow / applied / failed / skipped);
+   *   - the only function that writes an apply run records DISABLE_TERMINATED
+   *     outcomes and nothing else, and is executable by service_role only;
+   *   - WOVEN_ACCESS_MODE itself still has no apply value (config.ts, checked in
+   *     phase-one-guarantees.test.ts).
+   * Everything runs in rolled-back transactions so no run is left behind.
+   */
+  it("the only run modes are shadow and the termination run record; the record vocabulary is closed", () => {
+    expect(sql(`select pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.employee_access_runs'::regclass and conname = 'employee_access_runs_mode_check'`)).toMatch(
+      /mode = ANY \(ARRAY\['shadow'::text, 'apply'::text\]\)/,
     );
+    expect(sql(`select pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.employee_access_runs'::regclass and conname = 'employee_access_runs_status_check'`)).toMatch(
+      /completed.*aborted.*partial.*failed/,
+    );
+    expect(sql(`select pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.employee_access_actions'::regclass and conname = 'employee_access_actions_result_check'`)).toMatch(
+      /shadow.*applied.*failed.*skipped/,
+    );
+    for (const mode of ["applied", "apply_all", "generic", "enforce"]) {
+      expect(sqlFails(`begin; insert into public.employee_access_runs (mode, requested_by, policy_version, status) values ('${mode}', 'x', 'p', 'completed'); rollback`), mode).toMatch(
+        /check constraint/,
+      );
+    }
+    /* An apply run named `completed` with a failed account is refused by the only writer. */
+    expect(sqlFails(`begin; set local role service_role; select public.employee_access_record_apply_run('x', null, 'p', 'completed', '{}', '{}', '[{"action":"DISABLE_TERMINATED","result":"failed"}]'); rollback`)).toMatch(
+      /not completed/,
+    );
+    /* ...and it refuses every other action, through the real role. */
+    expect(sqlFails(`begin; set local role service_role; select public.employee_access_record_apply_run('x', null, 'p', 'completed', '{}', '{}', '[{"action":"UPDATE_ROLE","result":"applied"}]'); rollback`)).toMatch(
+      /only DISABLE_TERMINATED/,
+    );
+    /* The browser roles cannot call it at all. */
+    for (const role of ["anon", "authenticated"]) {
+      expect(sqlFails(`begin; set local role ${role}; select public.employee_access_record_apply_run('x', null, 'p', 'completed', '{}', '{}', '[]'); rollback`), role).toMatch(/permission denied/);
+    }
+    /* The stage-1 migration is unchanged: it still has no apply anywhere. */
     expect(readFileSync(MIGRATION, "utf8")).not.toMatch(/'applied'/);
     void randomUUID;
   });

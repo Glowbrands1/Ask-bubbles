@@ -29,7 +29,7 @@ import type { PlannedRow } from "./types";
  *
  * WHAT WOVEN MAY MANAGE IS OPT-IN, PER FIELD, AND BOUNDED HERE:
  *   - status:   never for an administrative or protected account;
- *   - location and role: only for a Location Director / Assistant Location Director
+ *   - location and role: only for a Location Manager / Assistant Manager
  *     whose scope is a single location — the only accounts the planner would
  *     ever change. For anyone else the flags are stored OFF whatever is asked.
  * All three default OFF. Linking changes nobody's access by itself.

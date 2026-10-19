@@ -9,6 +9,7 @@ import {
 } from "@/lib/employees/woven/config";
 import { CRON_REQUESTER, outcomeHttpStatus, runWovenEmployeeSync } from "@/lib/employees/woven/sync";
 import { recordAccessShadowRun } from "@/lib/employees/woven/access/shadow";
+import { runTerminationEnforcement } from "@/lib/employees/woven/access/termination-run";
 
 /**
  * GET /api/employees/woven/cron — the scheduled Woven employee sync.
@@ -44,7 +45,9 @@ import { recordAccessShadowRun } from "@/lib/employees/woven/access/shadow";
  *
  * WHAT A RUN DOES NOT DO, even when all five are open: change `app_users`, a
  * role, a scope, a location assignment or a login; delete anybody; or write to
- * Woven. See `src/lib/employees/woven/sync.ts`.
+ * Woven. (The ONE exception is the separate, default-off
+ * WOVEN_TERMINATION_ENFORCEMENT switch below, which can disable a terminated
+ * employee's confirmed, unprotected account — nothing else.) See `src/lib/employees/woven/sync.ts`.
  *
  * THE RESPONSE carries codes and counts only — never a name or an email.
  */
@@ -100,12 +103,33 @@ export async function GET(request: Request) {
   const outcome = await runWovenEmployeeSync({ requestedBy: CRON_REQUESTER, config });
 
   /*
+   * TERMINATION ENFORCEMENT (WOVEN_TERMINATION_ENFORCEMENT=on AND
+   * WOVEN_ACCESS_MODE=shadow) ONLY, default off. It runs BEFORE this tick
+   * records its own shadow run, so "the newest shadow run" it requires an
+   * administrator's review of is the one from the previous tick, which they
+   * had the day to review. See `access/terminate.ts`. It never re-enables
+   * anybody. Off, this returns at once and adds nothing to the response.
+   */
+  const termination = outcome.status === "succeeded" ? await runTerminationEnforcement(CRON_REQUESTER) : ({ status: "off" } as const);
+
+  /*
    * SHADOW MODE (WOVEN_ACCESS_MODE=shadow) ONLY: after a successful directory
    * sync, record what the access sync WOULD do. It applies nothing — see
    * `access/shadow.ts`. Off (the default), this returns at once and the
    * response is exactly the sync's outcome.
    */
   const shadow = outcome.status === "succeeded" ? await recordAccessShadowRun(CRON_REQUESTER) : ({ status: "off" } as const);
-  const body = shadow.status === "off" ? outcome : { ...outcome, accessShadow: shadow };
-  return NextResponse.json(body, { status: outcomeHttpStatus(outcome) });
+  const body = {
+    ...outcome,
+    ...(shadow.status === "off" ? {} : { accessShadow: shadow }),
+    ...(termination.status === "off" ? {} : { terminationEnforcement: termination }),
+  };
+  /*
+   * An enforcement run that did not complete every attempted account is NOT a
+   * success: partial / failed answer 500 so the invocation shows as failed, and
+   * the body carries `incompleteAccounts`. (Blocked / aborted / skipped-by-gate
+   * apply nothing and are not failures.)
+   */
+  const enforcementIncomplete = termination.status === "partial" || termination.status === "failed";
+  return NextResponse.json(body, { status: enforcementIncomplete ? 500 : outcomeHttpStatus(outcome) });
 }

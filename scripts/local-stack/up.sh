@@ -70,6 +70,14 @@ curl -fsS "http://127.0.0.1:$AUTH_PORT/health" >/dev/null || { docker logs ask-b
 echo "== migrations"
 count=0
 for migration in "$REPO"/supabase/migrations/*.sql; do
+  # PRODUCTION PARITY: before the capture migration (20261017001000) the live database already holds the objects Ask
+  # Sunny's file created by hand (see supabase/tests/fixtures/production_parity_state.sql, part A). LOCAL_STACK_PARITY=0
+  # builds from the repository alone.
+  if [ "$(basename "$migration" | cut -d_ -f1)" = "20261017001000" ] && [ "${LOCAL_STACK_PARITY:-1}" != "0" ]; then
+    sed '/^-- -* C ---$/,$d' "$REPO/supabase/tests/fixtures/production_parity_state.sql" | psql -h 127.0.0.1 -p "$PG_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -q -1 -f - >/dev/null 2>"$ROOT/migration.err" || {
+      echo "FAILED: production_parity_state.sql (part A)"; cat "$ROOT/migration.err"; exit 1; }
+    echo "   production-parity state applied"
+  fi
   source_file="$migration"
   psql -h 127.0.0.1 -p "$PG_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -q -1 -f "$source_file" >/dev/null 2>"$ROOT/migration.err" || {
     echo "FAILED: $(basename "$migration")"; cat "$ROOT/migration.err"; exit 1; }

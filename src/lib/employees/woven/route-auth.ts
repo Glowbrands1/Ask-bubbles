@@ -2,9 +2,11 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 
+import { assertLiveMode, assertNoConfigurationProblems, assertWithinRateLimit } from "@/lib/api/respond";
+import { assertSameOrigin } from "@/lib/api/same-origin";
 import { authorizeRequest } from "@/lib/auth/server";
 import { AuthError, type AuthorizedContext } from "@/lib/auth/types";
-import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
+import { canAccessAdminConsole, DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import { WovenStatusError } from "./status";
 import { EmployeeStoreError } from "./store";
 
@@ -26,6 +28,26 @@ export async function authorizeWovenPeopleRequest(request: Request): Promise<Aut
   if (!hasPermission(DEFAULT_PERMISSION_MATRIX, context.identity.role, "manage_integrations")) {
     throw new AuthError("forbidden", "Your role does not have permission to do that.");
   }
+  return context;
+}
+
+/**
+ * THE GUARD FOR AN ADMINISTRATOR'S ACCESS DECISION (shadow review, rehire):
+ * live mode, same-origin, both Woven permissions AND an administrator-console
+ * role (admin / owner / developer), rate-limited. The acting account is the
+ * VERIFIED SESSION's `identity.subject` — the only place an actor id ever comes
+ * from; no route reads one from the body. The database re-checks that this
+ * account is an active administrator.
+ */
+export async function authorizeWovenAdminDecision(request: Request): Promise<AuthorizedContext> {
+  assertLiveMode();
+  assertNoConfigurationProblems();
+  assertSameOrigin(request);
+  const context = await authorizeWovenPeopleRequest(request);
+  if (!canAccessAdminConsole(context.identity.role)) {
+    throw new AuthError("forbidden", "Only an administrator can make this decision.");
+  }
+  assertWithinRateLimit(request, "mutate");
   return context;
 }
 

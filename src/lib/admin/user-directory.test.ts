@@ -751,6 +751,60 @@ describe("disabling revokes access at the AUTHENTICATION layer too", () => {
     expect(fake.audits.map((a) => a.action)).toEqual(["status_changed", "access_revocation_incomplete"]);
   });
 
+  describe("an account Woven termination enforcement disabled is NOT re-enabled here (rehire needs the approval path)", () => {
+    const LINK_REVOKED = { terminated_at: "2026-10-19T12:00:00Z", reactivated_at: null };
+    function withLink(fake: ReturnType<typeof fakeFor>, result: { data: unknown; error: unknown }) {
+      const original = fake.client.from;
+      (fake.client as { from: unknown }).from = (table: string) =>
+        table === "employee_account_links"
+          ? { select: () => ({ eq: () => ({ maybeSingle: async () => result }) }) }
+          : original(table);
+    }
+
+    it("is refused with rehire_approval_required, before anything changes", async () => {
+      const fake = fakeFor({ ...MANAGER, status: "disabled" });
+      withLink(fake, { data: LINK_REVOKED, error: null });
+      const { patchUser } = await load(fake);
+      await expect(patchUser(MANAGER.id, { status: "active" }, actor)).rejects.toMatchObject({ code: "rehire_approval_required", status: 409 });
+      expect(fake.order).toEqual([]);
+      expect(fake.updates).toEqual([]);
+      expect(fake.audits).toEqual([]);
+    });
+
+    it("names the approval route in its message", async () => {
+      const fake = fakeFor({ ...MANAGER, status: "disabled" });
+      withLink(fake, { data: LINK_REVOKED, error: null });
+      const { patchUser } = await load(fake);
+      await expect(patchUser(MANAGER.id, { status: "active" }, actor)).rejects.toThrow(/\/api\/admin\/employees\/woven\/rehire/);
+    });
+
+    it("fails closed when the link cannot be read", async () => {
+      const fake = fakeFor({ ...MANAGER, status: "disabled" });
+      withLink(fake, { data: null, error: { message: "db down" } });
+      const { patchUser } = await load(fake);
+      await expect(patchUser(MANAGER.id, { status: "active" }, actor)).rejects.toMatchObject({ code: "provider_failed", status: 502 });
+      expect(fake.updates).toEqual([]);
+    });
+
+    it("an account already rehired through the approval path, or with no link, can be re-enabled as before", async () => {
+      for (const data of [{ terminated_at: "2026-10-19T12:00:00Z", reactivated_at: "2026-10-20T12:00:00Z" }, null]) {
+        const fake = fakeFor({ ...MANAGER, status: "disabled" });
+        withLink(fake, { data, error: null });
+        const { patchUser } = await load(fake);
+        await patchUser(MANAGER.id, { status: "active" }, actor);
+        expect(fake.order).toEqual(["profile_update", "ban:none"]);
+      }
+    });
+
+    it("disabling is never affected", async () => {
+      const fake = fakeFor(MANAGER);
+      withLink(fake, { data: LINK_REVOKED, error: null });
+      const { patchUser } = await load(fake);
+      await patchUser(MANAGER.id, { status: "disabled" }, actor);
+      expect(fake.updates[0]).toMatchObject({ status: "disabled" });
+    });
+  });
+
   it("a request that names status active on an already-active account never calls the auth layer", async () => {
     const fake = fakeFor(MANAGER);
     const { patchUser } = await load(fake);

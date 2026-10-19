@@ -284,12 +284,31 @@ describe("7. no employee-sync UI, route or library code can reach app_users, aut
     "employee_directory_login_matches", "employee_access_preview", "locations",
     /* The access planner (stage 1): accounts through a read-only VIEW, the links, and the shadow record. */
     "employee_access_accounts", "employee_account_links", "employee_access_runs", "employee_access_actions",
+    /* Termination enforcement: the designated-reviewer history, READ only by the admin route (writes go through the designate / revoke functions). */
+    "woven_enforcement_reviewers",
   ]);
   const RPCS = new Set([
     "employee_sync_claim_run", "employee_sync_commit_run", "employee_sync_abandon_run",
     "woven_location_map_review", "woven_position_map_review",
     /* Writes ONLY employee_access_runs / employee_access_actions, mode shadow (asserted below against the SQL). */
     "employee_access_record_shadow_run",
+    /*
+     * TERMINATION ENFORCEMENT (20261019001000, NOT APPLIED; default-off switch
+     * WOVEN_TERMINATION_ENFORCEMENT). The only functions that may change an
+     * account because of Woven: disable (enforcement), revocation stamp, run
+     * record; the administrator's shadow review and its gate read; and the
+     * administrator's REHIRE approval. Asserted against the SQL in
+     * termination-guarantees.test.ts.
+     */
+    "employee_access_disable_terminated",
+    "employee_access_record_revocation",
+    "employee_access_record_apply_run",
+    "employee_access_review_state",
+    "employee_access_record_shadow_review",
+    "employee_access_approve_rehire",
+    "employee_access_record_rehire",
+    "employee_access_designate_reviewer",
+    "employee_access_revoke_reviewer",
   ]);
 
   it("covers the whole employee-sync surface", () => {
@@ -315,6 +334,9 @@ describe("7. no employee-sync UI, route or library code can reach app_users, aut
     for (const file of files) {
       const c = code(file);
       expect(c, file).not.toMatch(/\.auth\s*\.|auth\.admin|app_user_audit|from\(\s*["'`]app_users/);
+      /* Revoking auth access is named only in the termination wiring, restoring it only in the rehire wiring. */
+      if (!file.endsWith(join("access", "termination-run.ts"))) expect(c, file).not.toMatch(/revokeAuthAccess/);
+      if (!file.endsWith(join("access", "rehire-run.ts"))) expect(c, file).not.toMatch(/restoreAuthAccess/);
       /* A Supabase write verb on a query chain (not crypto's hash.update). */
       for (const m of c.matchAll(/\.from\(\s*["'`]([a-z_]+)["'`]\)\s*\.(insert|update|upsert|delete)\(/g)) writers.push(`${m[1]}.${m[2]}`);
     }
@@ -367,7 +389,10 @@ describe("8. the access planner (stage 1) applies nothing", () => {
     const dir = join(repo, "src/lib/employees/woven/access");
     for (const name of readdirSync(dir).filter((n) => /\.ts$/.test(n) && !/\.test\./.test(n))) {
       const code = readFileSync(join(dir, name), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-      expect(code, name).not.toMatch(/\.auth\s*\.|auth\.admin|from\(\s*["'`]app_users|revokeAuthAccess|restoreAuthAccess/);
+      expect(code, name).not.toMatch(/\.auth\s*\.|auth\.admin|from\(\s*["'`]app_users/);
+      /* DELIBERATE (termination enforcement): exactly one module wires revokeAuthAccess and exactly one wires restoreAuthAccess (rehire). No other access module may name either. */
+      if (name !== "termination-run.ts") expect(code, name).not.toMatch(/revokeAuthAccess/);
+      if (name !== "rehire-run.ts") expect(code, name).not.toMatch(/restoreAuthAccess/);
       /* The one write: link-store.ts records a person's link review. */
       const writes = [...code.matchAll(/\.from\(\s*["'`]([a-z_]+)["'`]\)\s*\.(insert|update|upsert|delete)\(/g)].map((m) => `${m[1]}.${m[2]}`);
       expect(writes, name).toEqual(name === "link-store.ts" ? ["employee_account_links.insert"] : []);
@@ -396,3 +421,9 @@ describe("8. the access planner (stage 1) applies nothing", () => {
     expect(config).toMatch(/export type WovenAccessMode = "off" \| "shadow";/);
   });
 });
+
+/*
+ * Section 9 (termination enforcement: the one apply path, default off,
+ * reviewed, never restoring access) moved to `termination-guarantees.test.ts`,
+ * which also explains exactly what this file was deliberately changed to allow.
+ */
