@@ -18,9 +18,12 @@ import type { AccessScope, Role } from "@/types";
  *
  * THE RULE, by role and role alone — the stored scope level is not consulted:
  *
- *   all stores   an administrator role, or an account with an unrevoked row in
- *                `forms_all_store_access` (admin-managed, keyed to the account
- *                id; Colene and DJ). Independent of Woven verification.
+ *   all stores   an administrator role, or an account with an unrevoked
+ *                `forms_all_store_access` row of mode `all` (admin-managed, keyed
+ *                to the account id; Colene and DJ). Independent of Woven
+ *                verification.
+ *   Woven stores a row of mode `woven_affiliations` (Amber): the home store plus
+ *                the other stores Woven lists for the person, and no others.
  *   home store   everyone else, whatever their role: the stores on a `location`
  *                scope, else the primary store Woven maps to their account.
  *   nothing      no resolvable home store. Fails closed, never to "all".
@@ -44,18 +47,77 @@ export interface VisibilityIdentity {
   scope: AccessScope;
 }
 
-/** Whether an admin-managed designation grants this account all stores. Fails closed. */
-async function isDesignatedAllStores(subject: string): Promise<boolean> {
+/**
+ * What an unrevoked designation row grants. `all` reads every store;
+ * `woven_affiliations` reads the stores Woven lists for this person (their home
+ * store plus their additional mapped stores). No row, a revoked row or a failed
+ * lookup is `null` — which grants nothing.
+ */
+type Designation = "all" | "woven_affiliations" | null;
+
+async function designationOf(subject: string): Promise<Designation> {
   try {
     const { data, error } = await getSupabaseAdmin()
       .from("forms_all_store_access")
-      .select("app_user_id")
+      .select("visibility_mode")
       .eq("app_user_id", subject)
       .is("revoked_at", null)
       .maybeSingle();
-    return !error && data !== null;
+    if (error || !data) return null;
+    const mode = (data as { visibility_mode: unknown }).visibility_mode;
+    return mode === "all" || mode === "woven_affiliations" ? mode : null;
   } catch {
-    return false;
+    return null;
+  }
+}
+
+/**
+ * The stores Woven lists for this person: each ACTIVE, unexpired affiliation
+ * that Woven's location map has resolved to a company store. An affiliation
+ * Woven lists that is not a store (Corporate) is ignored by the map and so
+ * contributes nothing. Reads Woven data already synced; writes nothing.
+ */
+async function wovenAffiliatedStores(subject: string): Promise<string[]> {
+  try {
+    const db = getSupabaseAdmin();
+    const { data: people, error } = await db
+      .from("employee_access_preview")
+      .select("employee_id")
+      .eq("app_user_id", subject)
+      .limit(2);
+    if (error || !people || people.length !== 1) return [];
+    const employeeId = (people[0] as { employee_id: unknown }).employee_id;
+
+    const { data: affiliations, error: affiliationError } = await db
+      .from("employee_location_affiliations")
+      .select("woven_location_id, expires_on")
+      .eq("employee_id", employeeId)
+      .eq("active", true);
+    if (affiliationError || !affiliations) return [];
+    const today = new Date().toISOString().slice(0, 10);
+    const wovenIds = affiliations
+      .filter((row) => {
+        const expires = (row as { expires_on: string | null }).expires_on;
+        return !expires || expires >= today;
+      })
+      .map((row) => (row as { woven_location_id: string }).woven_location_id);
+    if (wovenIds.length === 0) return [];
+
+    const { data: mapped, error: mapError } = await db
+      .from("woven_location_map")
+      .select("location_id")
+      .eq("status", "mapped")
+      .in("woven_location_id", wovenIds);
+    if (mapError || !mapped) return [];
+    return [
+      ...new Set(
+        mapped
+          .map((row) => (row as { location_id: unknown }).location_id)
+          .filter((id): id is string => typeof id === "string" && id.length > 0),
+      ),
+    ];
+  } catch {
+    return [];
   }
 }
 
@@ -78,7 +140,21 @@ async function wovenHomeStore(subject: string): Promise<string | null> {
 /** The scope this verified identity may READ forms under. */
 export async function resolveFormsVisibility(identity: VisibilityIdentity): Promise<AccessScope> {
   if (canAccessAdminConsole(identity.role)) return ALL_STORES;
-  if (await isDesignatedAllStores(identity.subject)) return ALL_STORES;
+  const designation = await designationOf(identity.subject);
+  if (designation === "all") return ALL_STORES;
+
+  /*
+   * A Woven-affiliation designation reads the home store AND the person's other
+   * Woven stores, and nothing beyond them. The home store is always included,
+   * and an empty answer falls through to the ordinary home-store rule below.
+   */
+  if (designation === "woven_affiliations") {
+    const home = await wovenHomeStore(identity.subject);
+    const stores = [...new Set([...(home ? [home] : []), ...(await wovenAffiliatedStores(identity.subject))])];
+    if (stores.length > 0) {
+      return { level: "location", primaryAreaId: stores[0]!, alsoCoversAreaIds: stores.slice(1) };
+    }
+  }
 
   /*
    * A `location` scope IS a store assignment, so it is honoured as assigned —
