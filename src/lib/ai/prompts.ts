@@ -83,6 +83,8 @@ export function buildSystemPrompt(input: {
    * DISPOSITIVE: a form the library does not list does not exist.
    */
   hasFormsLibrary?: boolean;
+  /** A VERIFIED RECORDS section is attached: registered stores and Woven employee facts. */
+  hasVerifiedRecords?: boolean;
   /** Titles of pinned reasoning documents attached to this turn. */
   pinnedDocumentTitles?: readonly string[];
   /**
@@ -96,6 +98,7 @@ export function buildSystemPrompt(input: {
   const hasReportData = input.hasReportData ?? false;
   const hasMissingReports = input.hasMissingReports ?? false;
   const hasFormsLibrary = input.hasFormsLibrary ?? false;
+  const hasVerifiedRecords = input.hasVerifiedRecords ?? false;
   const pinned = input.pinnedDocumentTitles ?? [];
 
   /*
@@ -117,6 +120,12 @@ export function buildSystemPrompt(input: {
   if (hasFormsLibrary) {
     statementKinds.push(
       `Forms library facts — which form templates exist, what each is for, and whether this person may open one. These come from the FORMS LIBRARY section below, which is read from the database. Never mark them with a source marker: a template is not a document to cite. Never name a form that is not listed there.`,
+    );
+  }
+
+  if (hasVerifiedRecords) {
+    statementKinds.push(
+      `Verified records — an employee's job title, store assignment and employment status, and which registered store a name or number refers to. These come only from the VERIFIED RECORDS section below, which was read from Woven and the registered store list. Never mark them with a source marker. Never state any of them from anywhere else, from the way the question is worded, or from memory: if the section does not give it, or says NOT VERIFIED, say you could not verify it and why. Where it says to ask which store or person, ask rather than choose. Never invent a store.`,
     );
   }
 

@@ -88,12 +88,13 @@ import {
 } from "@/lib/forms/employee-match";
 import { loadScopedRosterResult } from "@/lib/forms/employee-roster";
 import { unverifiedWithoutRecord, verifyEmployee } from "@/lib/forms/employee-verification";
-import { readLocation } from "@/lib/forms/location-mention";
+import { namedStoreIds as namedStoreIdsFrom } from "@/lib/forms/location-scope";
+import { continuesStore, readStoreConfirmation, storeQuestionOpen } from "@/lib/forms/store-confirmation";
 import { locationById } from "@/lib/locations";
 import { describeStore, type StoreIndex } from "@/lib/stores/resolver";
 import { loadStoreIndex } from "@/lib/stores/woven-aliases";
 import { allowsTeamSubject } from "@/lib/forms/team-subject";
-import { extractJobTitle, type EmployeeResolution } from "@/lib/forms/proposal";
+import { extractJobTitle, type EmployeeResolution, type ProposalInput } from "@/lib/forms/proposal";
 import type { EmployeeVerification } from "@/types";
 import {
   CLARIFIED_TEMPLATE_KEY,
@@ -290,6 +291,8 @@ export interface ChatActor {
 }
 
 export interface ProposalTurn {
+  /** The store index, loaded by `proposeFormForTurn` when a form is open. */
+  storeIndex?: StoreIndex;
   history: Pick<ChatMessage, "id" | "role" | "content" | "error">[];
   question: string;
   /**
@@ -402,7 +405,12 @@ function turn(
  * where the clause names exactly one. A question beside a form request gets
  * the card AND a line naming the question, so it can be asked on its own.
  */
-export async function proposeFormForTurn(input: ProposalTurn): Promise<AskResponse | null> {
+export async function proposeFormForTurn(turnInput: ProposalTurn): Promise<AskResponse | null> {
+  // An open form can be answered by a store ("Omaha") or changed ("use the Omaha store"),
+  // which needs the same index the proposal reads — Woven names included.
+  const input: ProposalTurn = turnInput.continueTemplateKey
+    ? { ...turnInput, storeIndex: turnInput.storeIndex ?? (await loadStoreIndex()) }
+    : turnInput;
   const several = await severalFormsRequested(input);
   if (several) return several;
   const answer = await proposeOneForm(input);
@@ -740,14 +748,19 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
    * See `checkTypedEmployee`: an exact match takes the directory's spelling and
    * salon, a close one is asked about, and nothing is ever autocorrected.
    */
-  const storeIndex = await loadStoreIndex();
+  const storeIndex = input.storeIndex ?? (await loadStoreIndex());
+  const confirmedStore = readStoreConfirmation(input.history, input.question);
   const directory = await checkTypedEmployee(input, match, context, storeIndex);
 
-  const proposal = buildProposal({
+  const proposalInput: ProposalInput = {
     ...(directory.resolution ? { employee: directory.resolution } : {}),
     employeeLocationIds: directory.locationIds ?? [],
     storeIndex,
     reportUnmatchedStore: !employmentChangeKind(match.key),
+    storeReply: {
+      bareReply: storeQuestionOpen(input.history),
+      ...(confirmedStore ? { confirmedCode: confirmedStore.code } : {}),
+    },
     ...(directory.verification ? { employeeVerification: directory.verification } : {}),
     /*
      * SERVER-GENERATED, never taken from the request. A proposal id is how a
@@ -783,7 +796,8 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
      * them is not the form's.
      */
     formDateFromConversation: !isExitForm(match),
-  });
+  };
+  const proposal = buildProposal(proposalInput);
 
   /*
    * ==========================================================================
@@ -866,6 +880,26 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   if (changeKind && facts) {
     proposal.employeeRole = facts.current.title ?? null;
     proposal.formDate = formDateFor(scoped.text, input.today ?? businessToday());
+  }
+  /*
+   * A TRANSFER IS FILED AT THE STORE THE EMPLOYEE IS LEAVING. "From store 236 to
+   * store 67" names two stores, and reading both as the form's store is a
+   * question with one answer: the CURRENT one is where the form is filed, the
+   * new one is a fact printed on it. Read through the same resolver, scope
+   * check and confirmation rules as any other store.
+   */
+  if (changeKind && facts?.current.location) {
+    const relocated = buildProposal({ ...proposalInput, locationText: facts.current.location });
+    proposal.locationId = relocated.locationId;
+    proposal.locationName = relocated.locationName;
+    proposal.locationResolution = relocated.locationResolution;
+    proposal.authorizedLocationIds = relocated.authorizedLocationIds;
+    proposal.status = relocated.status;
+    proposal.supportsInlineDraft = relocated.supportsInlineDraft;
+    if (relocated.locationSelection) proposal.locationSelection = relocated.locationSelection;
+    else delete proposal.locationSelection;
+    if (relocated.namedLocationOutOfScope) proposal.namedLocationOutOfScope = relocated.namedLocationOutOfScope;
+    else delete proposal.namedLocationOutOfScope;
   }
   // WOVEN'S TITLE WINS where Woven verified the employee — over the manager's wording
   // and over a title read out of the conversation.
@@ -955,14 +989,19 @@ async function checkTypedEmployee(
   }
 
   // The store the manager named, firm readings only: it narrows between two people of one name.
-  const namedStoreIds = [
-    ...new Set(
-      readLocation(context.text, storeIndex)
-        .mentions.filter((mention) => !mention.confirm)
-        .flatMap((mention) => mention.locationIds),
-    ),
-  ];
-  const managerTitle = isChangeFormKey(match.key) ? null : extractJobTitle(context.text);
+  const namedStoreIds = namedStoreIdsFrom(
+    context.text,
+    context.messages.map((message) => message.content),
+    storeIndex,
+    storeQuestionOpen(input.history),
+  );
+  // On a demotion or transfer the title the manager stated is the one being left.
+  const managerTitle = isChangeFormKey(match.key)
+    ? (readEmploymentChange(
+        turnsAboutThisForm(context, match.key, typed.employeeName).messages.map((message) => message.content),
+        input.today ?? businessToday(),
+      ).current.title ?? null)
+    : extractJobTitle(context.text);
 
   const verified = (employee: RosterEmployee): DirectoryCheck => {
     const outcome = verifyEmployee({ employee, namedStoreIds, storeLabel, managerTitle });
@@ -1388,6 +1427,7 @@ function continuesIntake(continued: string, input: ProposalTurn): boolean {
   const question = input.question.trim();
   if (endsIntake(question) || ASKS_FOR_ADVICE.test(question)) return false;
   if (extractEmployeeNames(question).length > 0) return true;
+  if (continuesStore(question, input.history, input.storeIndex)) return true;
   if (answersEmploymentChange(continued, input)) return true;
   if (isQuestion(question)) return false;
   return (
@@ -2318,6 +2358,21 @@ function openingQuestions(proposal: ChatFormProposal, context: ManagerContext): 
   return `To draft a form, I'll need a few details first:\n\n${numbered}\n\nCould you please provide these?`;
 }
 
+/**
+ * One number, two numbering systems: Buff City Soap's store numbers are the
+ * primary system and are named first; Woven's numbers are said to be Woven's.
+ */
+export function numberingQuestion(
+  numbering: { number: string; buff: readonly string[]; woven: readonly string[] } | undefined,
+  typed: string,
+): string {
+  if (!numbering) return `That number is used for more than one store. Which store is this about?`;
+  const list = (ids: readonly string[]) => ids.map((id) => `**${storeLabel(id)}**`).join(" or ");
+  const number = `**${numbering.number}**`;
+  const wovenOnly = numbering.woven.filter((id) => !numbering.buff.includes(id));
+  return `${typed === "that" ? "That" : typed} is ambiguous because Buff City Soap and Woven number stores differently. In Buff City Soap's numbering, store ${number} is ${list(numbering.buff)}; in Woven, ${number} is ${list(wovenOnly)}. Which store do you mean?`;
+}
+
 function locationQuestion(proposal: ChatFormProposal): string {
   const selection = proposal.locationSelection;
   if (proposal.locationResolution === "needs_selection" && selection) {
@@ -2333,7 +2388,7 @@ function locationQuestion(proposal: ChatFormProposal): string {
       case "confirm":
         return `I read ${typed} as ${list} — is that the store? Choose it below to confirm, or tell me which store you meant.`;
       case "number_collision":
-        return `The store number ${typed} is used for different stores in different systems: ${list}. Which store is this about?`;
+        return numberingQuestion(selection.numbering, typed);
       case "ambiguous":
         return `${typed === "that" ? "That" : typed} could be ${list}. Which store is this about?`;
     }

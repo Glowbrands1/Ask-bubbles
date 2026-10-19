@@ -1,9 +1,10 @@
 import { COMPANY_LOCATIONS, locationIdsInArea } from "@/lib/locations";
 import type { AccessScope } from "@/types";
 
-import type { StoreIndex } from "@/lib/stores/resolver";
+import type { StoreIndex, StoreNumbering } from "@/lib/stores/resolver";
 
 import { ROSTER_STORE_INDEX, readLocation, rosterLocationName } from "./location-mention";
+import { CORRECTION, bareStoreReply } from "./store-confirmation";
 
 /**
  * ============================================================================
@@ -68,7 +69,11 @@ export type LocationProposal =
       authorizedIds: string[];
       outOfScopeName?: string;
       /** Why a store is still being asked for, when the manager named something. */
-      selection?: { reason: "ambiguous" | "number_collision" | "confirm" | "not_found"; typed: string | null };
+      selection?: {
+        reason: "ambiguous" | "number_collision" | "confirm" | "not_found";
+        typed: string | null;
+        numbering?: StoreNumbering;
+      };
     }
   | { resolution: "not_applicable"; reason: string }
   | { resolution: "unavailable"; reason: string };
@@ -83,9 +88,23 @@ export function proposeLocation(
   managerText = "",
   employeeLocationIds: readonly string[] = [],
   index: StoreIndex = ROSTER_STORE_INDEX,
-  options: { reportUnmatched?: boolean } = {},
+  options: {
+    reportUnmatched?: boolean;
+    /** The manager's turns, oldest first, so a later correction can replace an earlier store. */
+    turns?: readonly string[];
+    /** The previous assistant turn asked which store, so a bare "Omaha" is the answer. */
+    bareReply?: boolean;
+    /** A store the manager said yes to; used only if their scope allows it. */
+    confirmedStoreId?: string | undefined;
+  } = {},
 ): LocationProposal {
   const reportUnmatched = options.reportUnmatched ?? true;
+  const textToRead = (index_: StoreIndex) =>
+    correctedText(managerText, options.turns, index_, options.bareReply === true);
+  const confirmed = (allowedIds: readonly string[]): LocationProposal | null =>
+    options.confirmedStoreId && allowedIds.includes(options.confirmedStoreId)
+      ? { resolution: "resolved", locationId: options.confirmedStoreId }
+      : null;
   if (!scope) {
     return {
       resolution: "unavailable",
@@ -95,7 +114,7 @@ export function proposeLocation(
 
   if (scope.level === "global") {
     const all = COMPANY_LOCATIONS.map((location) => location.id);
-    const named = fromNamedLocations(all, managerText, index, reportUnmatched);
+    const named = confirmed(all) ?? fromNamedLocations(all, textToRead(index), index, reportUnmatched);
     if (named) return named;
     const employees = fromEmployeeLocations(all, employeeLocationIds);
     if (employees) return employees;
@@ -106,7 +125,7 @@ export function proposeLocation(
   }
 
   const allowed = authorizedLocationIds(scope);
-  const named = fromNamedLocations(allowed, managerText, index, reportUnmatched);
+  const named = confirmed(allowed) ?? fromNamedLocations(allowed, textToRead(index), index, reportUnmatched);
   if (named) return named;
   const employees = fromEmployeeLocations(allowed, employeeLocationIds);
   if (employees) return employees;
@@ -116,6 +135,48 @@ export function proposeLocation(
     resolution: "unavailable",
     reason: "Your account has no verified location assigned yet, so none can be filled in.",
   };
+}
+
+/**
+ * The registered stores the manager firmly named, after a later correction has
+ * replaced an earlier store. What an employee's Woven stores are checked against.
+ */
+export function namedStoreIds(
+  managerText: string,
+  turns: readonly string[] | undefined,
+  index: StoreIndex,
+  bareReply = false,
+): string[] {
+  const text = correctedText(managerText, turns, index, bareReply);
+  return [
+    ...new Set(
+      readLocation(text, index)
+        .mentions.filter((mention) => !mention.confirm)
+        .flatMap((mention) => mention.locationIds),
+    ),
+  ];
+}
+
+function correctedText(
+  managerText: string,
+  turns: readonly string[] | undefined,
+  index: StoreIndex,
+  bareReply: boolean,
+): string {
+  if (!turns || turns.length < 2) return managerText;
+  const last = turns.length - 1;
+  for (let at = last; at >= 0; at -= 1) {
+    const turn = turns[at]!;
+    const reading = readLocation(turn, index);
+    if (reading.mentions.length === 0 && reading.unmatched.length === 0) {
+      // "Omaha", said in answer to "Which store is this about?", names no cue — it IS the answer.
+      if (at === last && bareReply && bareStoreReply(turn, index)) return `at ${turn.trim().replace(/[.!]+$/, "")} store`;
+      continue;
+    }
+    // The newest turn that says anything about a store decides, if it is a change or the answer.
+    return at > 0 && (CORRECTION.test(turn) || (at === last && bareReply)) ? turn : managerText;
+  }
+  return managerText;
 }
 
 /**
@@ -151,6 +212,7 @@ function fromNamedLocations(
   const named = [...new Set(reading.flatMap((mention) => mention.locationIds))];
   const inScope = named.filter((id) => allowed.includes(id));
   const typed = reading[0]?.matched ?? null;
+  const numbering = reading.find((mention) => mention.numbering)?.numbering;
 
   if (inScope.length === 1 && !soft) return { resolution: "resolved", locationId: inScope[0]! };
   if (inScope.length >= 1) {
@@ -161,6 +223,7 @@ function fromNamedLocations(
       selection: {
         reason: soft && inScope.length === 1 ? "confirm" : collision ? "number_collision" : "ambiguous",
         typed,
+        ...(numbering && collision ? { numbering } : {}),
       },
     };
   }

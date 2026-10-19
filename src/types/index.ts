@@ -593,6 +593,8 @@ export interface ChatFormProposal {
   locationSelection?: {
     reason: "ambiguous" | "number_collision" | "confirm" | "not_found";
     typed: string | null;
+    /** For `number_collision`: which numbering system gives the number to which stores. */
+    numbering?: { number: string; buff: string[]; woven: string[] };
   };
   /** What Woven confirmed about the employee. Absent when nothing was checked. */
   employeeVerification?: EmployeeVerification;

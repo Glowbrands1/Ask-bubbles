@@ -68,8 +68,22 @@ export type StoreResolution =
       candidates: readonly CompanyLocation[];
       matched: string;
       reason: "multiple" | "number_collision";
+      numbering?: StoreNumbering;
     }
   | { kind: "not_found"; query: string };
+
+/**
+ * One number, two numbering systems. Buff City Soap's own store numbers are
+ * primary; Woven's numbers are secondary aliases, honoured only where a person
+ * mapped them. Where they disagree about a number the caller says so.
+ */
+export interface StoreNumbering {
+  readonly number: string;
+  /** Registered (Buff City Soap) stores with this number. */
+  readonly buff: readonly string[];
+  /** Stores a person mapped from a Woven location with this number. */
+  readonly woven: readonly string[];
+}
 
 export interface StoreMention {
   readonly locationIds: readonly string[];
@@ -77,6 +91,8 @@ export interface StoreMention {
   readonly confirm?: boolean;
   /** Two systems number different stores the same. */
   readonly collision?: boolean;
+  /** For a collision: the number typed and which stores each numbering system gives it to. */
+  readonly numbering?: StoreNumbering;
   /** What the manager typed for it. */
   readonly matched?: string;
 }
@@ -130,7 +146,7 @@ export function describeStore(store: Pick<CompanyLocation, "name" | "code">): st
 }
 
 function foldKey(text: string, abbreviations: StoreIndex["abbreviations"]): string {
-  let folded = ` ${locationNameKey(text).replace(/[()]/g, " ")} `;
+  let folded = ` ${locationNameKey(text).replace(/[()?!;:"“”]/g, " ")} `;
   for (const abbreviation of abbreviations) folded = folded.replace(abbreviation.pattern, abbreviation.full);
   return folded
     .replace(/\bsaint\b/g, "st")
@@ -291,14 +307,22 @@ function storesById(index: StoreIndex, ids: readonly string[]): CompanyLocation[
 }
 
 /** Store ids a typed number could mean, and whether two systems disagree about it. */
-function idsForNumber(index: StoreIndex, typed: string): { ids: string[]; collision: boolean; via: StoreMatchVia } {
+function idsForNumber(
+  index: StoreIndex,
+  typed: string,
+): { ids: string[]; collision: boolean; via: StoreMatchVia; numbering: StoreNumbering } {
   const registered = index.stores.filter((store) => sameCode(store.code, typed)).map((store) => store.id);
   const woven = [...index.wovenNumbers]
     .filter(([number]) => sameCode(number, typed))
     .flatMap(([, ids]) => ids);
   const ids = [...new Set([...registered, ...woven])];
   const collision = registered.length > 0 && woven.some((id) => !registered.includes(id));
-  return { ids, collision, via: registered.length > 0 ? "code" : "woven_number" };
+  return {
+    ids,
+    collision,
+    via: registered.length > 0 ? "code" : "woven_number",
+    numbering: { number: typed, buff: registered, woven: [...new Set(woven)] },
+  };
 }
 
 const NUMBERED = /^(?:(?:salon|store|location|loc|shop|makery|studio)\s*)?#?\s*([A-Za-z0-9][A-Za-z0-9-]{0,15})$/i;
@@ -343,11 +367,11 @@ export function resolveStoreText(query: string, index: StoreIndex = defaultStore
   const typed = query.replace(/^[\s,:;-]+|[\s,.;:!?]+$/g, "").trim();
   if (!typed) return { kind: "not_found", query };
 
-  const settle = (ids: readonly string[], via: StoreMatchVia, confirm: boolean, matched: string, collision = false): StoreResolution => {
+  const settle = (ids: readonly string[], via: StoreMatchVia, confirm: boolean, matched: string, numbering?: StoreNumbering): StoreResolution => {
     const candidates = storesById(index, ids);
     if (candidates.length === 1) return { kind: "resolved", store: candidates[0]!, via, confirm, matched };
     if (candidates.length > 1) {
-      return { kind: "ambiguous", candidates, matched, reason: collision ? "number_collision" : "multiple" };
+      return { kind: "ambiguous", candidates, matched, reason: numbering ? "number_collision" : "multiple", ...(numbering ? { numbering } : {}) };
     }
     return { kind: "not_found", query };
   };
@@ -360,7 +384,7 @@ export function resolveStoreText(query: string, index: StoreIndex = defaultStore
     // "12", "store 12", "#12": a number. "store kearney" is a name, handled below.
     if (/^\d+$/.test(token) || (labelled && /\d/.test(token))) {
       const found = idsForNumber(index, token);
-      if (found.ids.length > 0) return settle(found.ids, found.via, false, typed, found.collision);
+      if (found.ids.length > 0) return settle(found.ids, found.via, false, typed, found.collision ? found.numbering : undefined);
       return { kind: "not_found", query };
     }
   }
@@ -411,7 +435,7 @@ function cued(index: StoreIndex, before: string, after: string): boolean {
 }
 
 const NUMBER_MENTION = new RegExp(
-  `(?:\\b(?:${PLACE_NOUNS})\\s*#?\\s*|#\\s*)([A-Za-z0-9][A-Za-z0-9-]{0,15})\\b`,
+  `(?:\\b(?:${PLACE_NOUNS})\\s*(?:(?:is|are|was)\\s+)?(?:(?:number|no\\.?|num\\.?)\\s*)?#?\\s*|#\\s*)([A-Za-z0-9][A-Za-z0-9-]{0,15})\\b`,
   "gi",
 );
 
@@ -442,7 +466,12 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
     const typed = match[1]!;
     const found = idsForNumber(index, typed);
     if (found.ids.length > 0) {
-      mentions.push({ locationIds: found.ids, collision: found.collision, matched: match[0].trim() });
+      mentions.push({
+        locationIds: found.ids,
+        collision: found.collision,
+        ...(found.collision ? { numbering: found.numbering } : {}),
+        matched: match[0].trim(),
+      });
     } else if (/^\d+$/.test(typed)) {
       unmatched.push(match[0].replace(/^\s+/, "").trim());
     }
@@ -493,7 +522,12 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
           mentions.push({ locationIds: [resolution.store.id], confirm: resolution.confirm, matched: span });
         }
       } else if (resolution.kind === "ambiguous") {
-        mentions.push({ locationIds: resolution.candidates.map((store) => store.id), collision: resolution.reason === "number_collision", matched: span });
+        mentions.push({
+          locationIds: resolution.candidates.map((store) => store.id),
+          collision: resolution.reason === "number_collision",
+          ...(resolution.numbering ? { numbering: resolution.numbering } : {}),
+          matched: span,
+        });
       } else if (nounFollows && !words.some((word) => GENERIC_WORDS.has(word))) {
         if (!mentions.some((mention) => mention.matched && foldKey(mention.matched, index.abbreviations).includes(` ${normalized} `))) {
           unmatched.push(span);

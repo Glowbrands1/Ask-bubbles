@@ -153,7 +153,17 @@ export type ScopedRosterResult =
 
 export async function loadScopedRosterResult(scope: AccessScope | null): Promise<ScopedRosterResult> {
   if (!scope) return { status: "not_checked", reason: "no_scope" };
-  if (scope.level === "district" || scope.level === "region") return { status: "not_checked", reason: "area_scope" };
+  /*
+   * A DISTRICT OR REGION IS VERIFIED THROUGH THE STORES IT CONTAINS. The area
+   * resolves through the registered roster (`authorizedLocationIds`), and
+   * `scopeRoster` keeps only employees with an active, mapped assignment at one
+   * of them — so a district manager is checked against their whole district,
+   * not one store. An area the roster cannot resolve to any store stays
+   * unchecked: failing closed, never open to every employee.
+   */
+  if (scope.level !== "global" && authorizedLocationIds(scope).length === 0) {
+    return { status: "not_checked", reason: "area_scope" };
+  }
   try {
     return { status: "ok", roster: scopeRoster(await readDirectoryRoster(), scope) };
   } catch {

@@ -2,7 +2,7 @@ import "server-only";
 
 import { businessToday } from "@/lib/business-date";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
-import { COMPANY_LOCATIONS, locationNameKey } from "@/lib/locations";
+import { COMPANY_LOCATIONS, locationByCode, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
@@ -1399,6 +1399,18 @@ export interface ProposalInput {
    * store 18" as descriptive text they keep as typed, so they do not ask.
    */
   reportUnmatchedStore?: boolean;
+  /**
+   * How this turn answers a store question Bubbles asked: a bare "Omaha", or a
+   * "yes" to a proposed store (by its registered number — re-authorised against
+   * the manager's scope like any other).
+   */
+  storeReply?: { bareReply: boolean; confirmedCode?: string };
+  /**
+   * The words to read the store from, instead of the whole conversation. A
+   * transfer reads the store the employee is leaving; the destination is a
+   * fact on the form, not where it is filed.
+   */
+  locationText?: string;
   /** What Woven confirmed about the employee, when the caller checked. */
   employeeVerification?: EmployeeVerification;
 }
@@ -1468,10 +1480,17 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
    */
   const location = proposeLocation(
     input.scope,
-    input.context.text,
+    input.locationText ?? input.context.text,
     team ? [] : (input.employeeLocationIds ?? []),
     input.storeIndex,
-    { reportUnmatched: input.reportUnmatchedStore ?? true },
+    {
+      reportUnmatched: input.reportUnmatchedStore ?? true,
+      ...(input.locationText === undefined ? { turns: input.context.messages.map((message) => message.content) } : {}),
+      bareReply: input.storeReply?.bareReply ?? false,
+      ...(input.storeReply?.confirmedCode
+        ? { confirmedStoreId: locationByCode(input.storeReply.confirmedCode)?.id }
+        : {}),
+    },
   );
 
   const employeeName = team
@@ -1545,7 +1564,21 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
       ? { namedLocationOutOfScope: location.outOfScopeName }
       : {}),
     ...(location.resolution === "needs_selection" && location.selection
-      ? { locationSelection: location.selection }
+      ? {
+          locationSelection: {
+            reason: location.selection.reason,
+            typed: location.selection.typed,
+            ...(location.selection.numbering
+              ? {
+                  numbering: {
+                    number: location.selection.numbering.number,
+                    buff: [...location.selection.numbering.buff],
+                    woven: [...location.selection.numbering.woven],
+                  },
+                }
+              : {}),
+          },
+        }
       : {}),
     ...(input.employeeVerification && !team ? { employeeVerification: input.employeeVerification } : {}),
     status,
