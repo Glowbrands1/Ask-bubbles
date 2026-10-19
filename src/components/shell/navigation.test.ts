@@ -61,6 +61,17 @@ describe("the navigation's shape", () => {
     }
   });
 
+  it("orders the sections Home, Assistant, Insights, Knowledge, Forms, Admin", () => {
+    expect(NAV_SECTIONS.map((section) => section.id)).toEqual([
+      "home",
+      "assistant",
+      "insights",
+      "knowledge",
+      "forms",
+      "admin",
+    ]);
+  });
+
   it("points only at root-relative internal paths", () => {
     for (const { item } of ALL_ITEMS) {
       expect(item.href, item.label).toMatch(/^\//);
