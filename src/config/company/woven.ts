@@ -11,8 +11,11 @@ import type { Role } from "@/types";
  * NOT YET CONFIRMED BY BUFF CITY SOAP. These values are the conservative
  * defaults carried over from the reference platform's access planner. They
  * only shape the ACCESS PREVIEW: WOVEN_ACCESS_MODE has no apply mode, so no
- * account is created, disabled, re-scoped or re-roled from Woven by this
- * build, whatever these say. Confirm them before any apply stage is built.
+ * account is created, re-scoped or re-roled from Woven by this build, whatever
+ * these say. The one exception is the separate, default-off
+ * WOVEN_TERMINATION_ENFORCEMENT switch, which can disable (never create or
+ * re-enable) the confirmed, unprotected account of a Woven-Terminated employee
+ * (docs/woven-termination-enforcement.md). Confirm them before any apply stage is built.
  *
  * THE TENANT IS NOT AN ENVIRONMENT VARIABLE. Both Woven integrations read
  * exactly one Woven company, `WOVEN_TENANT` below, and prove it on every run.

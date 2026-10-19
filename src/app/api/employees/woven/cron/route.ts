@@ -9,6 +9,7 @@ import {
 } from "@/lib/employees/woven/config";
 import { CRON_REQUESTER, outcomeHttpStatus, runWovenEmployeeSync } from "@/lib/employees/woven/sync";
 import { recordAccessShadowRun } from "@/lib/employees/woven/access/shadow";
+import { runTerminationEnforcement } from "@/lib/employees/woven/access/termination-run";
 
 /**
  * GET /api/employees/woven/cron — the scheduled Woven employee sync.
@@ -44,7 +45,9 @@ import { recordAccessShadowRun } from "@/lib/employees/woven/access/shadow";
  *
  * WHAT A RUN DOES NOT DO, even when all five are open: change `app_users`, a
  * role, a scope, a location assignment or a login; delete anybody; or write to
- * Woven. See `src/lib/employees/woven/sync.ts`.
+ * Woven. (The ONE exception is the separate, default-off
+ * WOVEN_TERMINATION_ENFORCEMENT switch below, which can disable a terminated
+ * employee's confirmed, unprotected account — nothing else.) See `src/lib/employees/woven/sync.ts`.
  *
  * THE RESPONSE carries codes and counts only — never a name or an email.
  */
@@ -106,6 +109,18 @@ export async function GET(request: Request) {
    * response is exactly the sync's outcome.
    */
   const shadow = outcome.status === "succeeded" ? await recordAccessShadowRun(CRON_REQUESTER) : ({ status: "off" } as const);
-  const body = shadow.status === "off" ? outcome : { ...outcome, accessShadow: shadow };
+  /*
+   * TERMINATION ENFORCEMENT (WOVEN_TERMINATION_ENFORCEMENT=on) ONLY, default
+   * off: after a successful sync, disable + revoke the accounts of confirmed,
+   * in-scope, unprotected employees Woven calls Terminated. See
+   * `access/terminate.ts`. Off, this returns at once and adds nothing to the
+   * response.
+   */
+  const termination = outcome.status === "succeeded" ? await runTerminationEnforcement(CRON_REQUESTER) : ({ status: "off" } as const);
+  const body = {
+    ...outcome,
+    ...(shadow.status === "off" ? {} : { accessShadow: shadow }),
+    ...(termination.status === "off" ? {} : { terminationEnforcement: termination }),
+  };
   return NextResponse.json(body, { status: outcomeHttpStatus(outcome) });
 }
