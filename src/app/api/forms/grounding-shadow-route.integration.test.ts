@@ -88,7 +88,6 @@ vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
 const { EMBEDDING_DIMENSIONS } = await import("@/lib/config/models");
 const { __setEmbeddingProvider } = await import("@/lib/embeddings");
 const { bagOfWordsEmbedding, createKnowledgeTestDatabase } = await import("@/test/pglite-knowledge-db");
-const { PERFORMANCE_MANAGEMENT_FRAMEWORK } = await import("@/config/company/knowledge");
 const { ACTIVE_BRAND } = await import("@/lib/brand");
 const { ensureTemplateLibrary } = await import("@/lib/forms/repository");
 const { createInstance } = await import("@/lib/forms/instances");
