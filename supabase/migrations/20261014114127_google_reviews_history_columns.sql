@@ -13,8 +13,10 @@
 --     different, 222-line migration (functions, views, a dropped overload). It is NOT
 --     recorded as applied anywhere, and nothing in this file implies that it is. On
 --     production only part of it exists (see docs/migration-reconciliation-2026-10-19.md).
---   * It adds no behaviour. Every statement is re-runnable and is already satisfied by
---     20261014001000 and 20261013001000 on a fresh database, and by the live database.
+--   * It adds no behaviour. Every statement is re-runnable (`add column if not exists`).
+--     On a fresh database the columns come from 20261014001000 (they are NOT in
+--     20261013001000), so this file only does anything on a database that stopped before
+--     20261014001000; the live database already has all four columns.
 --
 -- Fresh databases apply this file after 20261014001000, where it changes nothing.
 

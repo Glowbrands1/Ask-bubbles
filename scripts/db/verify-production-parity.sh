@@ -180,6 +180,9 @@ for scenario in A B; do
   # The capture migration must not have touched the Ask Sunny-derived objects. Compared HERE, right after it, because a later
   # migration (for example the termination enforcement) may deliberately replace the guard.
   PC="$(mktemp)"; fingerprint >"$PC"
+  # Guard against a vacuous pass: the pattern must actually match the objects (11 lines: the audit constraint, the guard function,
+  # its trigger and privilege/comment lines, auth_clear_user_credentials and its lines, and the three column grants).
+  [ "$(grep -cE "$SUNNY_PATTERN" "$P0")" -ge 11 ] || fail "the Ask Sunny-derived objects were not all found in the production-like database ($(grep -cE "$SUNNY_PATTERN" "$P0") of 11)"
   if ! diff <(grep -E "$SUNNY_PATTERN" "$P0") <(grep -E "$SUNNY_PATTERN" "$PC"); then
     fail "scenario $scenario: the capture changed an Ask Sunny-derived object"
   fi

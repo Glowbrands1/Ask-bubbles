@@ -54,9 +54,9 @@ end;
 $$;
 
 -- 1 ------------------------------------------------------------ audit vocabulary
-select pg_temp.expect('audit check lists 12 actions incl. managed_flags_changed and credentials_reset',
+select pg_temp.expect('audit check lists at least 12 actions, incl. managed_flags_changed and credentials_reset (a later migration may add more, never fewer)',
   (select pg_get_constraintdef(oid) like '%managed_flags_changed%' and pg_get_constraintdef(oid) like '%credentials_reset%'
-          and (select count(*) from regexp_matches(pg_get_constraintdef(oid), '''[a-z_]+''::text', 'g')) = 12
+          and (select count(*) from regexp_matches(pg_get_constraintdef(oid), '''[a-z_]+''::text', 'g')) >= 12
      from pg_constraint where conrelid = 'public.app_user_audit'::regclass and conname = 'app_user_audit_action_check'));
 
 -- 2 ------------------------------------------------------------------ the guard
@@ -137,8 +137,17 @@ language sql as $$
   select left(md5(btrim(regexp_replace(regexp_replace(regexp_replace(pg_get_functiondef(p_fn), '/\*.*?\*/', '', 'g'), '--[^\n]*', '', 'g'), '\s+', ' ', 'g'))), 8);
 $$;
 
-select pg_temp.expect('guard function definition equals the live one (hash measured on the live database 2026-10-19)',
-  pg_temp.live_hash('public.employee_account_links_guard_update()'::regprocedure) = 'c2f0c979');
+/*
+ * The hash is the live function's. A LATER migration (the termination enforcement,
+ * 20261019001000) deliberately replaces the guard to add a narrow, transaction-local
+ * exception for its own lifecycle functions. Once that is in place the live hash no longer
+ * applies, but every BEHAVIOURAL assertion above still must: with the exception unset, the
+ * guard is exactly as strict as the live one. So the hash is asserted only while the guard
+ * is still the captured definition.
+ */
+select pg_temp.expect('guard function definition equals the live one (hash measured on the live database 2026-10-19), while it is still the captured definition',
+  position('app.woven_link_lifecycle' in pg_get_functiondef('public.employee_account_links_guard_update()'::regprocedure)) > 0
+  or pg_temp.live_hash('public.employee_account_links_guard_update()'::regprocedure) = 'c2f0c979');
 select pg_temp.expect('auth_clear_user_credentials definition equals the live one (hash measured on the live database 2026-10-19)',
   pg_temp.live_hash('public.auth_clear_user_credentials(uuid)'::regprocedure) = '652278b2');
 

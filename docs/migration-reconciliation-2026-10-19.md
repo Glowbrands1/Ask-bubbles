@@ -24,17 +24,18 @@ live database was changed to produce it. Prepared 2026-10-19 against the Ask Bub
 ## 2. How this was checked (all read-only)
 
 1. Listed the history table and the repo's `supabase/migrations` on `main`.
-2. Built a throwaway Postgres 16 + pgvector database from the repo's 39 migrations (`scripts/db/verify-migrations.sh`)
-   and compared it with the live database, object by object, using hashes of: every `public` table's columns
-   (name, type, nullability, default), indexes, constraints, policies, triggers, views and functions. Function bodies
-   were compared with SQL comments stripped and whitespace normalised.
+2. Built a throwaway Postgres 16 + pgvector database from the repo's migrations (`scripts/db/verify-migrations.sh`)
+   and compared it with the live database, object by object, using hashes (`scripts/db/fingerprint.sql`) of, for the `public` schema: every table's columns
+   (name, type, nullability, default), indexes, constraints, policies, triggers (and whether enabled), views, functions, **relation, column and function
+   privileges with ownership**, row-security flags, and table and function comments. Function bodies were compared with SQL comments stripped and whitespace normalised.
 3. Read the definitions of every object that differed, and the execute privileges of the ones that matter.
 4. Counted (never read) rows in `app_user_audit`, `employee_account_links` and `app_users` to see whether the extra
    objects were ever used.
 
-**Not checked:** table and function privileges in general (only the Google reviews functions and the three objects
-in 3.3), the `auth` and `storage` schemas, extensions, scheduled jobs, and row data. A hash match for a category
-is aggregate evidence, not a per-migration proof.
+**Not covered by the fingerprint** (so not proven equal): types, enums and domains; extensions; schema-level grants and default privileges; publications;
+the `auth` and `storage` schemas (including the `storage.objects` policies); rules; comments on columns, indexes and constraints; storage parameters, identity
+and collation attributes; scheduled jobs; and **row data** (the only data checked is the counts and the seven goal-row seeds named in 4.1). The function
+normaliser also strips text after `--` inside string literals. A hash match for a category is aggregate evidence, not a per-migration proof.
 
 ## 3. Findings
 
@@ -161,7 +162,23 @@ select count(*) = 0  from supabase_migrations.schema_migrations
 select (select count(*) from public.google_review_goals) = (select count(*) from public.google_review_locations);   -- 7 = 7 today
 select exists (select 1 from information_schema.columns where table_schema='public' and table_name='google_review_goals' and column_name='count_from');
 select (select count(*) from pg_proc where pronamespace='public'::regnamespace and proname='google_review_apply_reviews') = 2;  -- the leftover overload
+
+-- The "no-op on production" premise of 20261017001000, checked before it runs:
+select exists (select 1 from pg_proc p where p.oid = to_regprocedure('public.employee_account_links_guard_update()')
+                 and pg_get_userbyid(p.proowner) = 'postgres' and not p.prosecdef);                                  -- guard function exists, owned by postgres, invoker
+select exists (select 1 from pg_trigger where tgrelid = 'public.employee_account_links'::regclass
+                 and tgname = 'employee_account_links_guard_update' and tgenabled = 'O');                            -- guard trigger present and enabled
+select exists (select 1 from pg_constraint where conname = 'app_user_audit_action_check'
+                 and pg_get_constraintdef(oid) like '%managed_flags_changed%' and pg_get_constraintdef(oid) like '%credentials_reset%');
+select has_column_privilege('service_role', 'public.employee_account_links', 'managed_status', 'UPDATE')
+   and has_column_privilege('service_role', 'public.employee_account_links', 'managed_location', 'UPDATE')
+   and has_column_privilege('service_role', 'public.employee_account_links', 'managed_role', 'UPDATE');
+select to_regprocedure('public.auth_clear_user_credentials(uuid)') is not null;
+select pg_get_userbyid(relowner) = 'postgres' from pg_class where oid = 'public.employee_account_links'::regclass;   -- the migration role must be postgres
 ```
+**Result on the live database, 2026-10-19 (read-only, run by me): all 11 checks above return `true`**: 37 history entries; none of `20261014001000`, `20261015001000`, `20261016001000`, `20261017001000` recorded; 7 goal rows for 7 stores; `count_from` present; 2 `apply_reviews` overloads; the guard function exists, is owned by `postgres` and is an invoker function; its trigger is present and enabled; the audit check holds both extra actions; `service_role` can update the three flags; `auth_clear_user_credentials` exists; the links table is owned by `postgres`.
+
+If any of these returns `false`, stop: the capture migration would then **create** an object on production instead of doing nothing, and that needs a fresh review.
 
 **Step 1, history only, no schema change** (one transaction):
 ```sql
@@ -228,10 +245,21 @@ All of it ran on disposable local Postgres 16 + pgvector databases; nothing was 
 4. **The capture is a no-op on the Ask Sunny-derived objects:** the guard, its trigger, the column grant, the 12-action audit list and `auth_clear_user_credentials` are byte-for-byte unchanged after the reconciliation.
 5. **Re-applying every migration from `20261014001000` a second time changes nothing.**
 6. `supabase/tests/capture_live_objects_checks.sql` passes on both scenarios and on a fresh build, including that the definitions the migration creates hash-match the **live** definitions.
-7. Mutations caught: letting the guard accept a lifecycle stamp, and removing the column grant, each fail the check.
+7. Mutations caught (run by hand while developing; **not committed as tests**): letting the guard accept a lifecycle stamp, and removing the column grant, each fail `capture_live_objects_checks.sql`.
 8. `npm run verify:migrations`: 41 migrations apply, and the three SQL check files pass.
 
-Commands: `bash scripts/db/verify-production-parity.sh` and `bash scripts/db/verify-migrations.sh`.
+Commands: `bash scripts/db/verify-production-parity.sh` and `bash scripts/db/verify-migrations.sh`. Both print their counts (the 929 objects above).
+
+**To reproduce the comparison with the live database yourself:** run `scripts/db/fingerprint_categories.sql` (read-only) on the live database, for example in the
+Supabase SQL editor, and the same file on a production-like local database
+(`PARITY_DUMP_PRODUCTION_LIKE=/tmp/x.fp bash scripts/db/verify-production-parity.sh` builds and leaves one running; the harness prints its port). The 13 lines must match.
+On 2026-10-19 both gave: `acl_col 3`, `acl_fn 54`, `acl_rel 56`, `comment_fn 54`, `comment_rel 56`, `constraint 364`, `function 54`, `index 142`, `policy 1`, `rls 42`,
+`table 42`, `trigger 34`, `view 13`, with identical hashes.
+
+**What the harness cannot show.** It models the history table as `version` and `name` only; it does not run the Supabase CLI, so the CLI's ordering rule,
+its `--include-all` behaviour, what it stores in `statements`, and how it splits statements are **not verified** (the dry run in 4.2 is the guard). It runs as
+the owner role `postgres` on Postgres 16, so a privilege or ownership problem specific to the live Postgres 17 would not show. The production-like database is a model
+of the live one, validated by the 13 hashes; it is not a copy of it.
 
 ## 6. Risks
 
@@ -242,7 +270,12 @@ Commands: `bash scripts/db/verify-production-parity.sh` and `bash scripts/db/ver
 5. **The captured guard is only as faithful as the comparison.** Its definition hash-matches the live one, and the production-like database matches the live database on all categories; I have not byte-compared the CRLF text, and the live function's owner and privileges were read, not changed.
 6. **PR #54 depends on this ordering.** Its migration is `20261019001000` and builds on the captured guard (`20261017001000`). Applying #54 first would fail on production.
 7. **Process.** The Ask Sunny objects were applied by hand, with no history row. Nothing in either repository says who or when. Recommend migrations only through the repository and the CLI from here.
-8. **Postgres 17 versus the local 16** differ in the `MAINTAIN` privilege and in how the `vector` type is qualified. Both are accounted for in the comparison, but a local database is not production.
+8. **Statement splitting by the CLI.** `20261017001000` nests dollar-quoted bodies (`$fn$` inside `$capture$`). The harness applies files with `psql`, which handles this; I have not
+   verified that the Supabase CLI's statement splitter does. If the dry run or the apply rejects it, apply that one file with `psql -1 -f` as the `postgres` role and record its history row by hand.
+9. **Owner and privileges.** The unconditional `revoke` and `grant` in the capture assume the migration role owns `employee_account_links` and the guard function. On production both are owned by
+   `postgres` (read-only check), which the pre-flight in 4.2 re-confirms; if the CLI connects as a different role the statements could fail with "permission denied" and the file would roll back.
+10. **`auth_clear_user_credentials` fails only when called.** Its body is not checked at creation, so a difference in the `auth` tables would surface at first use, not at apply.
+11. **Postgres 17 versus the local 16** differ in the `MAINTAIN` privilege and in how the `vector` type is qualified. Both are accounted for in the comparison, but a local database is not production.
 
 ## 7. What needs an approval
 
