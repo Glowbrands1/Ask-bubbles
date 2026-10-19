@@ -2,7 +2,7 @@ import "server-only";
 
 import { businessToday } from "@/lib/business-date";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
-import { COMPANY_LOCATIONS, locationById, locationNameKey } from "@/lib/locations";
+import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
@@ -14,8 +14,10 @@ import {
   readsAsTeamSubject,
   TEAM_SUBJECT_LABEL,
 } from "./team-subject";
-import { proposeLocation } from "./location-scope";
-import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
+import { proposeLocationWithSource, type LocationProposal } from "./location-scope";
+import { ROSTER_STORE_INDEX, rosterLocationName } from "./location-mention";
+import { isStoreName, type StoreIndex } from "@/lib/stores/resolver";
+import type { AccessScope, ChatFormProposal, ChatMessage, EmployeeVerification } from "@/types";
 
 /**
  * ============================================================================
@@ -238,7 +240,7 @@ const ROSTER_NAME_KEYS: ReadonlySet<string> = new Set(
 );
 
 function isRosterSalonName(candidate: string): boolean {
-  return ROSTER_NAME_KEYS.has(locationNameKey(candidate));
+  return ROSTER_NAME_KEYS.has(locationNameKey(candidate)) || isStoreName(candidate, ROSTER_STORE_INDEX);
 }
 
 function opensWithRosterState(candidate: string): boolean {
@@ -1403,6 +1405,31 @@ export interface ProposalInput {
   employee?: EmployeeResolution;
   /** The employee's salons, from the directory, already in the actor's scope. */
   employeeLocationIds?: readonly string[];
+  /**
+   * The store resolver's index — the registered roster plus the Woven names a
+   * person has mapped to it. Absent: the registered roster alone.
+   */
+  storeIndex?: StoreIndex;
+  /**
+   * Whether a store the manager named that no registered store answers to is a
+   * question (default). The employment-change forms say "from store 12 to
+   * store 18" as descriptive text they keep as typed, so they do not ask.
+   */
+  reportUnmatchedStore?: boolean;
+  /**
+   * How this turn answers a store question Bubbles asked: a bare "Omaha", or a
+   * "yes" to a proposed store (by its registered number — re-authorised against
+   * the manager's scope like any other).
+   */
+  storeReply?: { bareReply: boolean; confirmedCode?: string };
+  /**
+   * The words to read the store from, instead of the whole conversation. A
+   * transfer reads the store the employee is leaving; the destination is a
+   * fact on the form, not where it is filed.
+   */
+  locationText?: string;
+  /** What Woven confirmed about the employee, when the caller checked. */
+  employeeVerification?: EmployeeVerification;
 }
 
 /**
@@ -1446,6 +1473,28 @@ export function extractJobTitle(text: string): string | null {
 }
 
 /**
+ * The store a proposal carries, read from the manager's words, then the
+ * employee's Woven stores, then the account — the one reading `buildProposal`
+ * and the form flow's read-back both use.
+ */
+export function locationFor(input: ProposalInput, team: boolean): LocationProposal {
+  return proposeLocationWithSource(
+    input.scope,
+    input.locationText ?? input.context.text,
+    team ? [] : (input.employeeLocationIds ?? []),
+    input.storeIndex,
+    {
+      reportUnmatched: input.reportUnmatchedStore ?? true,
+      ...(input.locationText === undefined ? { turns: input.context.messages.map((message) => message.content) } : {}),
+      bareReply: input.storeReply?.bareReply ?? false,
+      ...(input.storeReply?.confirmedCode
+        ? { confirmedStoreId: locationByCode(input.storeReply.confirmedCode)?.id }
+        : {}),
+    },
+  );
+}
+
+/**
  * Assembles the proposal from parts that were each established, not guessed.
  *
  * THE TEMPLATE IS ALREADY VALIDATED by the time this is called — the caller
@@ -1468,11 +1517,7 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
    * THE MANAGER'S WORDS, THEN THE EMPLOYEE'S SALON, THEN THE ACCOUNT. A salon
    * is used only where their scope proves it; see `proposeLocation`.
    */
-  const location = proposeLocation(
-    input.scope,
-    input.context.text,
-    team ? [] : (input.employeeLocationIds ?? []),
-  );
+  const location = locationFor(input, team);
 
   const employeeName = team
     ? TEAM_SUBJECT_LABEL
@@ -1514,7 +1559,16 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
      * FROM THE MANAGER'S TURNS, like the employee name and through the same
      * bounded window — never from the assistant's, and never from the template.
      */
-    employeeRole: team ? null : extractJobTitle(input.context.text),
+    /*
+     * WOVEN'S TITLE WHEN IT VERIFIED THE EMPLOYEE, otherwise the manager's own
+     * words — flagged unverified on the card. Never a model's, never the
+     * template's.
+     */
+    employeeRole: team
+      ? null
+      : input.employeeVerification?.status === "verified" && input.employeeVerification.title
+        ? input.employeeVerification.title
+        : extractJobTitle(input.context.text),
     /* Same rule: the manager's own words, read as U.S. month/day. */
     formDate:
       input.formDateFromConversation === false
@@ -1527,7 +1581,7 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
      * fictional salon name in front of a manager about to file a disciplinary
      * record is exactly the class of thing this phase exists to stop.
      */
-    locationName: null,
+    locationName: locationId ? rosterLocationName(locationId) : null,
     locationResolution: location.resolution,
     authorizedLocationIds:
       location.resolution === "needs_selection" ? location.authorizedIds : [],
@@ -1535,6 +1589,24 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
     ...(location.resolution === "needs_selection" && location.outOfScopeName
       ? { namedLocationOutOfScope: location.outOfScopeName }
       : {}),
+    ...(location.resolution === "needs_selection" && location.selection
+      ? {
+          locationSelection: {
+            reason: location.selection.reason,
+            typed: location.selection.typed,
+            ...(location.selection.numbering
+              ? {
+                  numbering: {
+                    number: location.selection.numbering.number,
+                    buff: [...location.selection.numbering.buff],
+                    woven: [...location.selection.numbering.woven],
+                  },
+                }
+              : {}),
+          },
+        }
+      : {}),
+    ...(input.employeeVerification && !team ? { employeeVerification: input.employeeVerification } : {}),
     ...(location.resolution === "needs_selection" && location.namedAmbiguous
       ? {
           locationCandidates: location.authorizedIds

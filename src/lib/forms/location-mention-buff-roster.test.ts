@@ -111,10 +111,11 @@ describe("ambiguous names are all of the stores, never one of them", () => {
   });
 
   it("is a question for the manager, naming only those stores", () => {
-    expect(proposeLocation(GLOBAL, "a form for Casey in Sioux Falls")).toEqual({
+    expect(proposeLocation(GLOBAL, "a form for Casey in Sioux Falls")).toMatchObject({
       resolution: "needs_selection",
       authorizedIds: ["loc-225", "loc-338"],
       namedAmbiguous: true,
+      selection: { reason: "ambiguous" },
     });
   });
 

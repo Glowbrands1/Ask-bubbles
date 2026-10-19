@@ -36,8 +36,12 @@ export interface RosterEmployee {
   readonly preferredFirstName?: string | null;
   /** Ask Bubbles location ids (`loc-NNNN`) the employee is actively assigned to. */
   readonly locationIds: readonly string[];
-  /** The employee's current Woven position, as Woven names it. Null when the directory has none. */
+  /** Woven's position for the employee, exactly as Woven names it. Never edited here. */
   readonly positionName?: string | null;
+  /** Woven's employment status: `active`, `terminated` or `unknown`. */
+  readonly employmentStatus?: string | null;
+  /** When the sync last evaluated this employee (ISO), so an old record is not trusted as current. */
+  readonly lastSyncedAt?: string | null;
 }
 
 export type NameMatch =
@@ -220,7 +224,7 @@ export function matchEmployeeName(typed: string, roster: readonly RosterEmployee
  */
 export function nameConfirmationQuestion(typed: string, candidates: readonly string[]): string {
   if (candidates.length === 1) {
-    return `Did you mean **${candidates[0]}**? I couldn't find **${typed}** exactly in the employee list for your locations, so I want to be sure before it goes on the form. Reply "yes" to use **${candidates[0]}**, or "no" to keep **${typed}** as you typed it.`;
+    return `Did you mean **${candidates[0]}**? I couldn't find **${typed}** exactly in the employee list for your stores, so I want to be sure before it goes on the form. Reply "yes" to use **${candidates[0]}**, or "no" to keep **${typed}** as you typed it.`;
   }
   const names = candidates.map((name) => `**${name}**`);
   return `Did you mean ${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}? More than one person on your team is a close match for **${typed}**, so tell me which one — or say "keep ${typed}" to use the name exactly as you typed it.`;
@@ -228,7 +232,7 @@ export function nameConfirmationQuestion(typed: string, candidates: readonly str
 
 const ASKED = /^Did you mean ((?:\*\*[^*]+\*\*(?:, | or )?)+)\?/;
 
-const AFFIRMATIVE =
+export const AFFIRMATIVE =
   /^\s*(?:yes|yeah|yep|yup|correct|right|that'?s (?:right|correct|her|him|them|the one)|exactly|y|sure|please do|use (?:that|it))\b[\s.!,]*(?:please|thanks?|thank you)?[\s.!]*$/i;
 const NEGATIVE =
   /^\s*(?:no|nope|nah|n|keep (?:it|that|the name)?(?: as (?:i )?typed| as is)?|keep\s+.+|leave it|as typed|that'?s (?:wrong|not (?:her|him|them|it|right)))\b/i;

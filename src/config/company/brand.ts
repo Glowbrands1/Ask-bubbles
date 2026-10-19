@@ -18,11 +18,10 @@ import type { BrandConfig } from "@/types";
  * README there for provenance. No Ask Bubbles logo exists; the product is
  * shown by its wordmark and bubble mark (`components/brand-mark.tsx`).
  *
- * `vocabulary.locationNoun` is "location" on purpose. The brand guidelines'
- * vocabulary prefers "Soap Makery" for a store, and that may well be the right
- * word for this app — but the underlying location model stays generic until
- * Buff's Woven structure confirms what a location is. Changing the word here
- * changes it in copy everywhere; nothing else needs to move.
+ * `vocabulary.locationNoun` is "store": Ask Bubbles says Store to people, never
+ * Salon or Location. Only the WORD is changed — the underlying location model,
+ * its ids (`loc-<code>`) and every database column keep their names. Changing
+ * the word here changes it in copy everywhere; nothing else needs to move.
  */
 export const BCS_BRAND: BrandConfig = {
   id: "bcs",
@@ -45,8 +44,8 @@ export const BCS_BRAND: BrandConfig = {
   },
   knowledgeScopeId: "bcs-core",
   vocabulary: {
-    locationNoun: "location",
-    locationNounPlural: "locations",
+    locationNoun: "store",
+    locationNounPlural: "stores",
   },
   // Empty = use the `--bcs-*` palette declared in globals.css.
   paletteTokens: {},

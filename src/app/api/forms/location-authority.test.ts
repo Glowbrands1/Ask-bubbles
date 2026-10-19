@@ -209,7 +209,7 @@ describe("28. a location the caller is not assigned to is refused", () => {
 
     const payload = (await response.json()) as { error: string };
     expect(payload.error).toMatch(/not on your assignment/i);
-    expect(payload.error).toMatch(/only be filed against a location you are assigned to/i);
+    expect(payload.error).toMatch(/only be filed against a store you are assigned to/i);
   });
 
   it("refuses even when a plausible location NAME is supplied alongside", async () => {

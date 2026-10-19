@@ -132,7 +132,7 @@ describe("a bare request", () => {
   it("works for the transfer form too", async () => {
     const response = await ask("make a transfer form");
     expect(response!.formProposal!.templateKey).toBe("position-transfer");
-    expect(response!.content).toContain("The new location");
+    expect(response!.content).toContain("The new store");
   });
 });
 

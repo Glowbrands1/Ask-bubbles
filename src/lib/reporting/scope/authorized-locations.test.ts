@@ -54,6 +54,6 @@ describe("reporting scope", () => {
 
   it("says plainly when an account has no location assigned", () => {
     const scope = reportingScopeOf({ level: "location", primaryAreaId: null, alsoCoversAreaIds: [] });
-    expect(scopeNoticeSentence(scope)).toMatch(/no location assigned/);
+    expect(scopeNoticeSentence(scope)).toMatch(/no store assigned/);
   });
 });

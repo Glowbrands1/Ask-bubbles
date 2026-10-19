@@ -1,3 +1,4 @@
+import { rosterResultFor } from "@/test/roster-result";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
@@ -148,6 +149,8 @@ vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
     ...actual,
     loadScopedRoster: async (scope: AccessScope | null) =>
       actual.scopeRoster(state.directory as never, scope),
+    loadScopedRosterResult: async (scope: AccessScope | null) =>
+      rosterResultFor(actual.scopeRoster, state.directory as never, scope),
   };
 });
 
@@ -591,7 +594,7 @@ describe("checking the typed name against the manager's own team", () => {
     expect(all).not.toContain('"e-4"');
     // Nobody close in scope: the name is used as typed, and the manager is told.
     expect(response!.formProposal!.employeeName).toBe("Kaitlynn Brookall");
-    expect(response!.content).toContain("didn't find **Kaitlynn Brookall** in the employee list for your locations");
+    expect(response!.content).toContain("didn't find **Kaitlynn Brookall** in the employee list for your stores");
   });
 });
 

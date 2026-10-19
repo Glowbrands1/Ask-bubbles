@@ -1,3 +1,4 @@
+import { rosterResultFor } from "@/test/roster-result";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
@@ -156,6 +157,8 @@ vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
     ...actual,
     loadScopedRoster: async (scope: AccessScope | null) =>
       actual.scopeRoster(state.directory as never, scope),
+    loadScopedRosterResult: async (scope: AccessScope | null) =>
+      rosterResultFor(actual.scopeRoster, state.directory as never, scope),
   };
 });
 

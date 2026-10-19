@@ -469,6 +469,22 @@ export interface ChatFormSelection {
   additional: ChatFormChoice[];
 }
 
+/**
+ * WHAT WOVEN CONFIRMED ABOUT THE EMPLOYEE A FORM NAMES. Read-only: the title is
+ * Woven's own `position_name`, never typed by a model and never written back.
+ * `unverified` carries the reason, and a card or reply says so plainly.
+ */
+export interface EmployeeVerification {
+  status: "verified" | "unverified";
+  /** Woven's job title, present only when verified. */
+  title: string | null;
+  reason?: "not_found" | "unavailable" | "not_checked" | "ambiguous" | "no_title" | "stale" | "not_active";
+  /** Woven lists the employee at stores other than the one the manager named. */
+  storeMismatch?: boolean;
+  /** Registered store ids Woven has the employee at, in the actor's scope. */
+  storeIds?: string[];
+}
+
 export interface ChatFormProposal {
   /** Identifies this proposal within the conversation. Not a form instance id. */
   proposalId: string;
@@ -567,6 +583,21 @@ export interface ChatFormProposal {
    */
   locationName: string | null;
   locationResolution: "resolved" | "needs_selection" | "not_applicable" | "unavailable";
+  /**
+   * WHY a store is still being asked for, when the manager named something:
+   * `ambiguous` (several stores answer to it), `number_collision` (two systems
+   * give that number to different stores), `confirm` (read as a typo or
+   * initialism, so confirmed before use) or `not_found` (no registered store).
+   * `typed` is what they wrote. Optional so stored conversations still read.
+   */
+  locationSelection?: {
+    reason: "ambiguous" | "number_collision" | "confirm" | "not_found";
+    typed: string | null;
+    /** For `number_collision`: which numbering system gives the number to which stores. */
+    numbering?: { number: string; buff: string[]; woven: string[] };
+  };
+  /** What Woven confirmed about the employee. Absent when nothing was checked. */
+  employeeVerification?: EmployeeVerification;
   /**
    * Location ids this actor is assigned to, when there is more than one.
    *
