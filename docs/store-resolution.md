@@ -29,9 +29,32 @@ Same-name employees are narrowed by the store the manager names, otherwise the m
 
 Exit and employment-change forms keep their own name handling: Woven is consulted only to verify an exact match.
 
+## Numbering
+
+Buff City Soap store numbers are primary. Woven numbers are secondary aliases, honoured only for Woven locations a person mapped. A number that
+means different stores in the two systems (registered 225 = Sioux Falls, Woven 225 = Omaha) is never resolved silently: the reply names both systems and asks.
+
+## General chat
+
+`src/lib/ai/entity-facts.ts` runs on every non-form question that names a store or a person in the asker's scope. A pure lookup ("What is Sarah Miller's
+job title?", "Which store is Dawley Farms?") is answered outright from Woven / the registered stores with no model call; other questions get a VERIFIED RECORDS
+block and a prompt rule that titles, store assignments and status come only from it. Out-of-scope employees are indistinguishable from unknown ones.
+
+## Follow-ups
+
+On an open form: "Actually, use the Omaha store" replaces the store (and the employee is re-verified against it); a bare "Omaha" or "yes" answers a store
+question; a store mentioned in passing is not a change (two stores is a question). A transfer is filed at the store being left.
+
+## Scope
+
+District/region accounts are verified across the stores their area contains (resolved through the registered roster, plus any additional stores granted).
+An area that resolves to no store stays unchecked — never open to everyone.
+
 ## Known limits
 
 - The registered roster has seven stores. Woven locations that are unmapped or ignored (e.g. ND Fargo, MO Raymore) are not recognised until a person maps them.
 - Titles come from the daily Woven sync, not a live call.
 - District/region scopes resolve to no stores (no area roster), so employee verification reports "not available" for them.
 - General Q&A chat that merely mentions an employee does not verify them; the form paths do.
+- Woven titles are printed as Woven spells them (e.g. "Team Member Part Time"). A manager typing a Title Case title the company job-title list does not know can still be misread as a second person.
+- Matching by Woven employee ID, and pronoun follow-ups in general chat ("what about her title?"), are not supported.

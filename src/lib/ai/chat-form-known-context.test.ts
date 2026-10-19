@@ -7,7 +7,7 @@ vi.mock("@/config/company/locations", async () =>
 );
 
 // These tests are about the form conversation, not Woven verification (covered in
-// employee-verification.test.ts and store-form-flow.test.ts): no directory to check against.
+// employee-verification.test.ts and store-woven-form-flow.test.ts): no directory to check against.
 vi.mock("@/lib/forms/employee-roster", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/forms/employee-roster")>()),
   loadScopedRosterResult: async () => ({ status: "not_checked", reason: "no_scope" }),
