@@ -271,6 +271,7 @@ create or replace function public.employee_access_review_state()
 returns jsonb
 language plpgsql
 stable
+security definer
 set search_path = ''
 as $$
 declare

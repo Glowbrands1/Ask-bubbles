@@ -146,10 +146,19 @@ describe.skipIf(!ENABLED)("termination on a real Supabase Auth server (local sta
     const context = await authorizeRequest(new Request("http://127.0.0.1:3000/api/x", { headers: { cookie: cookieA } }), "ask_questions");
     expect(context.identity.subject).toBe(targetId);
 
-    const { data } = await tokenClient(sessionA.access_token).from("knowledge_documents").select("id").eq("knowledge_scope_id", SCOPE);
-    expect(data?.map((d) => d.id)).toEqual([documentId]);
-    const { data: chunks } = await tokenClient(sessionA.access_token).from("knowledge_chunks").select("id").eq("knowledge_scope_id", SCOPE);
-    expect(chunks).toHaveLength(1);
+    /*
+     * Knowledge is SERVER-ONLY (20261003001000_knowledge_server_only): no signed-in account may read the
+     * knowledge tables directly with its own token, so "can use Ask Bubbles" is proved through the server's
+     * own gate (above) and through Supabase Auth accepting the access token (below). The direct-read denial
+     * is pinned for the active person here and for the colleague in CONTROL, so it is not mistaken later
+     * for the effect of termination.
+     */
+    const live = await anonClient().auth.getUser(sessionA.access_token);
+    expect(live.error).toBeNull();
+    expect(live.data.user?.id).toBe(targetId);
+    const direct = await tokenClient(sessionA.access_token).from("knowledge_documents").select("id").eq("knowledge_scope_id", SCOPE);
+    expect(direct.data ?? []).toEqual([]);
+    expect(direct.error?.message ?? "").toMatch(/permission denied/i);
 
     expect(Number(sql(`select count(*) from auth.sessions where user_id = '${targetId}'`))).toBe(2);
   });
@@ -189,7 +198,12 @@ describe.skipIf(!ENABLED)("termination on a real Supabase Auth server (local sta
     ).rejects.toMatchObject({ code: "unauthenticated" });
   });
 
-  it("cannot read the knowledge tables directly with that access token — RLS now requires an ACTIVE profile", async () => {
+  it("the old access token is no longer accepted by Supabase Auth, and the knowledge tables stay closed to it", async () => {
+    /* The session row is gone, so Auth refuses the still-unexpired JWT. */
+    const revoked = await anonClient().auth.getUser(sessionA.access_token);
+    expect(revoked.data.user).toBeNull();
+    expect(revoked.error).not.toBeNull();
+
     const client = tokenClient(sessionA.access_token);
     const documents = await client.from("knowledge_documents").select("id").eq("knowledge_scope_id", SCOPE);
     const chunks = await client.from("knowledge_chunks").select("id").eq("knowledge_scope_id", SCOPE);
@@ -202,10 +216,15 @@ describe.skipIf(!ENABLED)("termination on a real Supabase Auth server (local sta
     expect(matched.data ?? []).toEqual([]);
   });
 
-  it("CONTROL: an active colleague's token still reads knowledge, so the policy is not simply closed", async () => {
+  it("CONTROL: an active colleague's token still works for Ask Bubbles' API and at Auth, and the knowledge tables are closed to them too (server-only policy), so the denial above is not simply a closed policy", async () => {
     const { data } = await anonClient().auth.signInWithPassword({ email: CONTROL_EMAIL, password: CONTROL_PW });
-    const { data: documents } = await tokenClient(data.session!.access_token).from("knowledge_documents").select("id").eq("knowledge_scope_id", SCOPE);
-    expect(documents?.map((d) => d.id)).toEqual([documentId]);
+    const session = data.session!;
+    expect((await anonClient().auth.getUser(session.access_token)).data.user?.id).toBe(controlId);
+    const { authorizeRequest } = await import("@/lib/auth/server");
+    const context = await authorizeRequest(new Request("http://127.0.0.1:3000/api/x", { headers: { cookie: await cookieHeaderFor(session) } }), "ask_questions");
+    expect(context.identity.subject).toBe(controlId);
+    const direct = await tokenClient(session.access_token).from("knowledge_documents").select("id").eq("knowledge_scope_id", SCOPE);
+    expect(direct.error?.message ?? "").toMatch(/permission denied/i);
   });
 
   it("cannot use Forgot Password: our route sends nothing (and says the same thing), while a colleague's request does send", async () => {
@@ -257,8 +276,10 @@ describe.skipIf(!ENABLED)("termination on a real Supabase Auth server (local sta
     expect(sql(`select coalesce(banned_until < now(), true) from auth.users where id = '${targetId}'`)).toBe("t");
     const { data, error } = await anonClient().auth.signInWithPassword({ email: TARGET_EMAIL, password: TARGET_PW });
     expect(error).toBeNull();
-    const { data: documents } = await tokenClient(data.session!.access_token).from("knowledge_documents").select("id").eq("knowledge_scope_id", SCOPE);
-    expect(documents?.map((d) => d.id)).toEqual([documentId]);
+    /* Signed in again, and the server's own gate lets them use Ask Bubbles again (knowledge itself is server-only). */
+    const { authorizeRequest } = await import("@/lib/auth/server");
+    const context = await authorizeRequest(new Request("http://127.0.0.1:3000/api/x", { headers: { cookie: await cookieHeaderFor(data.session!) } }), "ask_questions");
+    expect(context.identity.subject).toBe(targetId);
   });
 
   it("the session function cannot be called by a signed-in user or anonymously", async () => {

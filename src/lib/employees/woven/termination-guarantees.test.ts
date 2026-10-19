@@ -80,7 +80,7 @@ describe("the migration", () => {
     expect(code).not.toMatch(/grant [^;]*(update|delete|truncate|all)[^;]* to/i);
     expect(code).toMatch(/revoke all on public\.employee_access_shadow_reviews from public, anon, authenticated, service_role;/);
     expect(code).toMatch(/alter table public\.employee_access_shadow_reviews force row level security;/);
-    for (const name of ["disable_terminated", "record_revocation", "record_apply_run", "record_shadow_review", "approve_rehire", "record_rehire"]) {
+    for (const name of ["disable_terminated", "record_revocation", "record_apply_run", "record_shadow_review", "approve_rehire", "record_rehire", "review_state"]) {
       const at = code.indexOf(`create or replace function public.employee_access_${name}`);
       expect(code.slice(at, at + 900), name).toMatch(/security definer\s+set search_path = ''/);
     }

@@ -627,6 +627,11 @@ $$;
 select pg_temp.expect_code('review rows cannot be changed',
   format('update public.employee_access_shadow_reviews set reason = ''x'' where id = %L', (select id from rev)), 'employee_access_actions is append-only');
 
+-- the gate read WORKS as service_role (the role the server really uses), though the predicates it calls are owner-only
+set local role service_role;
+do $$ begin perform pg_temp.assert('review_state callable by service_role', (public.employee_access_review_state() ->> 'code') is not null); end; $$;
+reset role;
+
 -- a browser role really is refused when it calls the function
 set local role authenticated;
 select pg_temp.expect_code('authenticated call',
