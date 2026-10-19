@@ -4,8 +4,9 @@ import { AppShell } from "@/components/shell/app-shell";
 import { businessToday } from "@/lib/business-date";
 import { attentionSummary } from "@/lib/forms/follow-up";
 import { pageShowsAppSwitcher } from "@/lib/auth/app-switcher";
-import { pageCan } from "@/lib/auth/page";
-import { readPermissionHolder, withoutUnreadable } from "@/lib/forms/instance-scope";
+import { pageIdentity } from "@/lib/auth/page";
+import { visibleInstances } from "@/lib/forms/instance-scope";
+import { pageFormsAccess } from "@/lib/forms/page-scope";
 import { listOutstandingFollowUps } from "@/lib/forms/instances";
 
 /**
@@ -31,9 +32,11 @@ async function overdueCount(): Promise<number> {
   try {
     const today = businessToday();
     // The badge counts only forms this reader may open; see `withoutUnreadable`.
-    const outstanding = withoutUnreadable(
-      await listOutstandingFollowUps(),
-      await readPermissionHolder(pageCan),
+    const access = await pageFormsAccess(await pageIdentity());
+    if (access.noStore) return 0;
+    const outstanding = visibleInstances(
+      access.actor,
+      await listOutstandingFollowUps(50, access.locationIds),
     );
     return attentionSummary(outstanding, today).overdue;
   } catch {

@@ -10,12 +10,11 @@ import { pageCan, requirePagePermission } from "@/lib/auth/page";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 import { businessToday } from "@/lib/business-date";
 import { attentionSummary, followUpState } from "@/lib/forms/follow-up";
-import { readPermissionHolder, withoutUnreadable } from "@/lib/forms/instance-scope";
+import { visibleInstances } from "@/lib/forms/instance-scope";
+import { pageFormsAccess } from "@/lib/forms/page-scope";
 import { listOutstandingFollowUps } from "@/lib/forms/instances";
 import { configuredExcludedNames, isProductionRecord } from "@/lib/forms/production-records";
 import { areaLabel } from "@/lib/locations";
-import { locationIdsForScope } from "@/lib/reporting/scope/authorized-locations";
-import { resolveScopeFor } from "@/lib/reporting/scope/server";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -45,13 +44,11 @@ export default async function HomePage() {
      forms record to read, which is not a failure, so nothing is attempted. */
   if (followUps.connected && (await pageCan("view_form_monitoring"))) {
     try {
-      const scope = identity?.verified ? identity.scope : null;
-      const access = await resolveScopeFor(scope);
-      const locationIds = locationIdsForScope(access);
-      const outstanding = withoutUnreadable(
-        await listOutstandingFollowUps(50, locationIds),
-        await readPermissionHolder(pageCan),
-      );
+      const access = await pageFormsAccess(identity);
+      const locationIds = access.locationIds;
+      const outstanding = access.noStore
+        ? []
+        : visibleInstances(access.actor, await listOutstandingFollowUps(50, locationIds));
 
       const excludedNames = configuredExcludedNames();
       const production = outstanding.filter((instance) =>
@@ -81,7 +78,8 @@ export default async function HomePage() {
         today,
         failure: null,
         excluded: outstanding.length - production.length,
-        scopeLabel: locationIds === null ? null : scope?.primaryAreaId ? areaLabel(scope.primaryAreaId) : null,
+        scopeLabel:
+          locationIds === null ? null : locationIds.length === 1 ? areaLabel(locationIds[0]) : null,
       };
     } catch (error) {
       followUps = { ...followUps, failure: (error as Error).message };

@@ -23,7 +23,7 @@ const D = "loc-264";
 const SORTED = [A, B, C].sort();
 const ABC: AccessScope = { level: "location", primaryAreaId: A, alsoCoversAreaIds: [B, C] };
 
-const actor = (role: FormsActor["role"], scope: AccessScope = ABC): FormsActor => ({ id: "u1", role, verified: true, scope }) as FormsActor;
+const actor = (role: FormsActor["role"], scope: AccessScope = ABC): FormsActor => ({ id: "u1", role, verified: true, scope, visibility: scope }) as FormsActor;
 const instance = (id: string, locationId: string | null, createdBy = "someone-else"): InstanceRow =>
   ({ id, layoutFamily: "none", locationId, createdBy }) as unknown as InstanceRow;
 const records = [instance("a", A), instance("b", B), instance("c", C), instance("d", D)];

@@ -1392,7 +1392,11 @@ export async function listOutstandingFollowUps(
     .order("follow_up_date", { ascending: true })
     .limit(limit);
 
-  if (locationIds !== null) query = query.in("location_id", locationIds);
+  if (locationIds !== null) {
+    // An empty list means no store qualifies; PostgREST does not accept `in.()`.
+    if (locationIds.length === 0) return [];
+    query = query.in("location_id", locationIds);
+  }
 
   const { data, error } = await query;
   if (error) throw new Error(`Could not read outstanding follow-ups: ${error.message}`);
