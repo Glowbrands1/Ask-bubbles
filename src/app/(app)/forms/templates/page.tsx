@@ -15,6 +15,8 @@ import { proposalNeedsAttention } from "@/lib/forms/ingest/proposal";
 import { requirePagePermission } from "@/lib/auth/page";
 import { PermissionGate } from "@/components/permission-gate";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
+import { describeError } from "@/lib/api/redact";
+import { TemplateSyncReport } from "@/features/forms/template-sync-report";
 
 /**
  * FORM TEMPLATES — the authorized administration screen.
@@ -85,6 +87,8 @@ export default async function FormTemplatesPage() {
    * `template-sync-policy.ts`.
    */
   let syncSkipped: string | null = null;
+  /** What the sync did this visit, shown to the administrator. See `TemplateSyncReport`. */
+  let syncResult: Awaited<ReturnType<typeof ensureTemplateLibrary>> | null = null;
 
   const connected = supabaseSecretKeyConfigured();
 
@@ -92,6 +96,7 @@ export default async function FormTemplatesPage() {
     try {
       const sync = await ensureTemplateLibrary("system");
       syncSkipped = sync.skipped?.reason ?? null;
+      syncResult = sync;
       const summaries = await listTemplateSummaries();
       // A retired template (switched off, never deleted) is not offered here.
       templates = summaries.filter((summary) => summary.active).map((summary) => {
@@ -159,7 +164,15 @@ export default async function FormTemplatesPage() {
         };
       });
     } catch (error) {
-      failure = (error as Error).message;
+      /*
+       * SHOWN ON SCREEN AND LOGGED. This used to be on screen only, so a failed
+       * run left nothing on the server. The message is redacted and truncated
+       * (`describeError`) before it is written or shown.
+       */
+      failure = describeError(error);
+      console.error(
+        JSON.stringify({ event: "forms.template_sync.page_failed", level: "error", reason: failure }),
+      );
     }
   }
 
@@ -178,6 +191,8 @@ export default async function FormTemplatesPage() {
             {syncSkipped}
           </Notice>
         ) : null}
+
+        {syncResult ? <TemplateSyncReport result={syncResult} /> : null}
 
         {!connected ? (
           <Notice tone="neutral" title="Forms are not connected in this deployment">
