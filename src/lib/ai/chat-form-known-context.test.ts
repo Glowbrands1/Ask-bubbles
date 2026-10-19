@@ -6,6 +6,14 @@ vi.mock("@/config/company/locations", async () =>
   (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
 );
 
+// These tests are about the form conversation, not Woven verification (covered in
+// employee-verification.test.ts and store-form-flow.test.ts): no directory to check against.
+vi.mock("@/lib/forms/employee-roster", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/forms/employee-roster")>()),
+  loadScopedRosterResult: async () => ({ status: "not_checked", reason: "no_scope" }),
+}));
+
+
 /**
  * ============================================================================
  * ASK ONLY FOR WHAT IS ACTUALLY MISSING
@@ -207,7 +215,7 @@ describe("2. a manager with several salons is asked only when it is genuinely op
     expect(response.formProposal!.status).toBe("needs_location");
     expect(response.formProposal!.supportsInlineDraft).toBe(false);
     expect(response.formProposal!.authorizedLocationIds).toEqual([WORNALL, LIBERTY]);
-    expect(response.content).toMatch(/Which location is this about\?/);
+    expect(response.content).toMatch(/Which store is this about\?/);
   });
 
   it("keeps the salon on the corrective-action questions while it is open", async () => {
@@ -304,7 +312,7 @@ describe("4. a salon outside the manager's assignment is never accepted", () => 
     // Their own salon is offered to confirm, never substituted silently.
     expect(response.formProposal!.authorizedLocationIds).toEqual([WORNALL]);
     expect(response.formProposal!.namedLocationOutOfScope).toBe("KS Lawrence");
-    expect(response.content).toMatch(/\*\*KS Lawrence\*\* isn't a location on your assignment/);
+    expect(response.content).toMatch(/\*\*KS Lawrence\*\* isn't a store on your assignment/);
   });
 
   it("does the same for a manager with several salons", async () => {

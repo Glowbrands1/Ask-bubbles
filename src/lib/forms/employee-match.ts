@@ -36,6 +36,12 @@ export interface RosterEmployee {
   readonly preferredFirstName?: string | null;
   /** Ask Bubbles location ids (`loc-NNNN`) the employee is actively assigned to. */
   readonly locationIds: readonly string[];
+  /** Woven's position for the employee, exactly as Woven names it. Never edited here. */
+  readonly positionName?: string | null;
+  /** Woven's employment status: `active`, `terminated` or `unknown`. */
+  readonly employmentStatus?: string | null;
+  /** When the sync last evaluated this employee (ISO), so an old record is not trusted as current. */
+  readonly lastSyncedAt?: string | null;
 }
 
 export type NameMatch =

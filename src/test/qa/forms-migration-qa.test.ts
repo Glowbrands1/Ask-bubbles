@@ -136,7 +136,11 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
 
 vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/forms/employee-roster")>();
-  return { ...actual, loadScopedRoster: async (scope: AccessScope | null) => actual.scopeRoster([], scope) };
+  return {
+    ...actual,
+    loadScopedRoster: async (scope: AccessScope | null) => actual.scopeRoster([], scope),
+    loadScopedRosterResult: async () => ({ status: "not_checked", reason: "no_scope" }),
+  };
 });
 
 const { ensureTemplateLibrary, getTemplateByKey, getCurrentVersion, listTemplateSummaries, listVersions, openDraft, saveDraft, publishDraft } =

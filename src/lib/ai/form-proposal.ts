@@ -80,13 +80,21 @@ import { endsIntake } from "@/lib/forms/proposal-continuation";
 import { LEAD_IN, separateQuestions } from "@/lib/forms/message-parts";
 import {
   answersNameConfirmation,
+  displayName,
   matchEmployeeName,
   nameConfirmationQuestion,
   settledNameQuestions,
+  type RosterEmployee,
 } from "@/lib/forms/employee-match";
-import { loadScopedRoster } from "@/lib/forms/employee-roster";
+import { loadScopedRosterResult } from "@/lib/forms/employee-roster";
+import { unverifiedWithoutRecord, verifyEmployee } from "@/lib/forms/employee-verification";
+import { readLocation } from "@/lib/forms/location-mention";
+import { locationById } from "@/lib/locations";
+import { describeStore, type StoreIndex } from "@/lib/stores/resolver";
+import { loadStoreIndex } from "@/lib/stores/woven-aliases";
 import { allowsTeamSubject } from "@/lib/forms/team-subject";
-import type { EmployeeResolution } from "@/lib/forms/proposal";
+import { extractJobTitle, type EmployeeResolution } from "@/lib/forms/proposal";
+import type { EmployeeVerification } from "@/types";
 import {
   CLARIFIED_TEMPLATE_KEY,
   FORM_OR_GUIDANCE_QUESTION,
@@ -732,11 +740,15 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
    * See `checkTypedEmployee`: an exact match takes the directory's spelling and
    * salon, a close one is asked about, and nothing is ever autocorrected.
    */
-  const directory = await checkTypedEmployee(input, match, context);
+  const storeIndex = await loadStoreIndex();
+  const directory = await checkTypedEmployee(input, match, context, storeIndex);
 
   const proposal = buildProposal({
     ...(directory.resolution ? { employee: directory.resolution } : {}),
     employeeLocationIds: directory.locationIds ?? [],
+    storeIndex,
+    reportUnmatchedStore: !employmentChangeKind(match.key),
+    ...(directory.verification ? { employeeVerification: directory.verification } : {}),
     /*
      * SERVER-GENERATED, never taken from the request. A proposal id is how a
      * later confirmation step will name the thing being confirmed; a
@@ -855,6 +867,11 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     proposal.employeeRole = facts.current.title ?? null;
     proposal.formDate = formDateFor(scoped.text, input.today ?? businessToday());
   }
+  // WOVEN'S TITLE WINS where Woven verified the employee — over the manager's wording
+  // and over a title read out of the conversation.
+  if (directory.verification?.status === "verified" && directory.verification.title) {
+    proposal.employeeRole = directory.verification.title;
+  }
 
   if (directory.question) return turn(directory.question, proposal);
 
@@ -897,34 +914,93 @@ interface DirectoryCheck {
   question?: string;
   /** Said AFTER the proposal text. */
   note?: string;
+  /** What Woven confirmed — or why it could not. Absent only where nothing was checked. */
+  verification?: EmployeeVerification;
 }
+
+const storeLabel = (id: string) => {
+  const store = locationById(id);
+  return store ? describeStore(store) : id;
+};
 
 async function checkTypedEmployee(
   input: ProposalTurn,
   match: TemplateSummary,
   context: ManagerContext,
+  storeIndex: StoreIndex,
 ): Promise<DirectoryCheck> {
-  if (!NAME_CHECKED_TEMPLATES.has(match.key)) return {};
   const typed = resolveEmployee(context);
   if (typed.kind !== "resolved") return {};
 
-  const roster = await loadScopedRoster(input.actor.scope);
-  const result = matchEmployeeName(typed.employeeName, roster);
-  if (result.kind === "unchecked") return {};
-  if (result.kind === "exact") {
-    return {
-      resolution: { kind: "resolved", employeeName: result.name },
-      locationIds: result.employee.locationIds,
-    };
+  /*
+   * THE EXIT AND EMPLOYMENT-CHANGE FORMS keep their own name handling (an
+   * employee leaving is not an employee to rename), so for them Woven is
+   * consulted only to VERIFY: an exact match fills the title and store, and
+   * anything else changes nothing.
+   */
+  const asks = NAME_CHECKED_TEMPLATES.has(match.key);
+
+  const loaded = await loadScopedRosterResult(input.actor.scope);
+  if (loaded.status !== "ok") {
+    // Preview mode has no Woven scope to speak of; everywhere else, say what was not checked.
+    if (!asks || (loaded.status === "not_checked" && loaded.reason === "no_scope")) return {};
+    const out = unverifiedWithoutRecord(loaded.status === "unavailable" ? "unavailable" : "not_checked", typed.employeeName);
+    return { verification: out.verification, note: out.note ?? undefined };
   }
+  const roster = loaded.roster;
+  if (roster.length === 0) {
+    if (!asks) return {};
+    const out = unverifiedWithoutRecord("unavailable", typed.employeeName);
+    return { verification: out.verification, note: out.note ?? undefined };
+  }
+
+  // The store the manager named, firm readings only: it narrows between two people of one name.
+  const namedStoreIds = [
+    ...new Set(
+      readLocation(context.text, storeIndex)
+        .mentions.filter((mention) => !mention.confirm)
+        .flatMap((mention) => mention.locationIds),
+    ),
+  ];
+  const managerTitle = isChangeFormKey(match.key) ? null : extractJobTitle(context.text);
+
+  const verified = (employee: RosterEmployee): DirectoryCheck => {
+    const outcome = verifyEmployee({ employee, namedStoreIds, storeLabel, managerTitle });
+    return {
+      resolution: { kind: "resolved", employeeName: displayName(employee) },
+      locationIds: employee.locationIds,
+      verification: outcome.verification,
+      ...(outcome.note ? { note: outcome.note } : {}),
+    };
+  };
+
+  let result = matchEmployeeName(typed.employeeName, roster);
+
+  if (result.kind === "confirm" && namedStoreIds.length > 0) {
+    const atNamed = result.candidates.filter((candidate) =>
+      candidate.employee.locationIds.some((id) => namedStoreIds.includes(id)),
+    );
+    if (atNamed.length > 0 && atNamed.length < result.candidates.length) {
+      const only = atNamed.length === 1 ? atNamed[0]! : null;
+      const sameName = only && only.name.trim().toLowerCase() === typed.employeeName.trim().toLowerCase();
+      result = sameName ? { kind: "exact", employee: only.employee, name: only.name } : { kind: "confirm", candidates: atNamed };
+    }
+  }
+
+  if (result.kind === "unchecked") return {};
+  if (result.kind === "exact") return verified(result.employee);
+
+  if (!asks) return {};
 
   const settled = settledNameQuestions([...input.history, { role: "user", content: input.question }]);
   const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
   if (settled.kept.some((name) => same(name, typed.employeeName))) return {};
 
   if (result.kind === "none") {
+    const out = unverifiedWithoutRecord("not_found", typed.employeeName);
     return {
-      note: `I didn't find **${typed.employeeName}** in the employee list for your locations, so the form will use the name exactly as you typed it. Check the spelling before you file it.`,
+      verification: out.verification,
+      note: `I didn't find **${typed.employeeName}** in the employee list for your stores, so the form will use the name exactly as you typed it, with no job title from Woven. Check the spelling before you file it.`,
     };
   }
 
@@ -936,18 +1012,34 @@ async function checkTypedEmployee(
   const accepted = result.candidates.find((candidate) =>
     settled.accepted.some((name) => same(name, candidate.name)),
   );
-  if (accepted) {
-    return {
-      resolution: { kind: "resolved", employeeName: accepted.name },
-      locationIds: accepted.employee.locationIds,
-    };
+  if (accepted && result.candidates.filter((candidate) => same(candidate.name, accepted.name)).length === 1) {
+    return verified(accepted.employee);
   }
 
   const names = result.candidates.map((candidate) => candidate.name);
+  const out = unverifiedWithoutRecord("ambiguous", typed.employeeName);
+
+  // TWO PEOPLE, ONE NAME: asking "Sarah Smith or Sarah Smith?" is no question. Ask for the store.
+  const duplicated = names.find((name, index) => names.findIndex((other) => same(other, name)) !== index);
+  if (duplicated) {
+    const stores = [...new Set(result.candidates.flatMap((candidate) => candidate.employee.locationIds))].map(storeLabel);
+    const where = stores.length > 0 ? ` — ${stores.join(" or ")}` : "";
+    return {
+      resolution: { kind: "ambiguous", candidates: names },
+      verification: out.verification,
+      question: `More than one **${duplicated}** works at your stores${where}. Which store is the one you mean? Tell me like "${duplicated} at ${stores[0] ?? "Store 000"}".`,
+    };
+  }
+
   return {
     resolution: { kind: "ambiguous", candidates: names },
+    verification: out.verification,
     question: nameConfirmationQuestion(typed.employeeName, names),
   };
+}
+
+function isChangeFormKey(key: string): boolean {
+  return employmentChangeKind(key) !== null;
 }
 
 /* ----------------------------------------------------------- proactive -- */
@@ -2227,19 +2319,38 @@ function openingQuestions(proposal: ChatFormProposal, context: ManagerContext): 
 }
 
 function locationQuestion(proposal: ChatFormProposal): string {
+  const selection = proposal.locationSelection;
+  if (proposal.locationResolution === "needs_selection" && selection) {
+    const typed = selection.typed ? `**${selection.typed}**` : "that";
+    const candidates = proposal.authorizedLocationIds.map((id) => storeLabel(id));
+    const list =
+      candidates.length <= 1
+        ? candidates.map((name) => `**${name}**`).join("")
+        : `${candidates.slice(0, -1).map((name) => `**${name}**`).join(", ")} or **${candidates[candidates.length - 1]}**`;
+    switch (selection.reason) {
+      case "not_found":
+        return `I couldn't find a store matching ${typed} in the registered stores, so I haven't picked one. Which store is this about?`;
+      case "confirm":
+        return `I read ${typed} as ${list} — is that the store? Choose it below to confirm, or tell me which store you meant.`;
+      case "number_collision":
+        return `The store number ${typed} is used for different stores in different systems: ${list}. Which store is this about?`;
+      case "ambiguous":
+        return `${typed === "that" ? "That" : typed} could be ${list}. Which store is this about?`;
+    }
+  }
   if (proposal.locationResolution === "needs_selection" && proposal.namedLocationOutOfScope) {
     /*
-     * THEY NAMED A SALON THAT IS NOT THEIRS. Neither it nor their own salon is
+     * THEY NAMED A STORE THAT IS NOT THEIRS. Neither it nor their own store is
      * filled in: one would file outside their assignment, the other would
      * quietly overrule what they said.
      */
-    return `**${proposal.namedLocationOutOfScope}** isn't a location on your assignment, so I can't file a form against it. Which of your locations is this about?`;
+    return `**${proposal.namedLocationOutOfScope}** isn't a store on your assignment, so I can't file a form against it. Which of your stores is this about?`;
   }
   if (proposal.locationResolution === "needs_selection") {
-    // Deliberately says nothing about HOW MANY salons the actor covers: this
+    // Deliberately says nothing about HOW MANY stores the actor covers: this
     // branch is reached both by a manager assigned to several and by a global
-    // actor whose salons cannot be enumerated at all.
-    return "I won't choose which location this belongs to. Which location is this about?";
+    // actor whose stores cannot be enumerated at all.
+    return "I won't choose which store this belongs to. Which store is this about?";
   }
-  return "I can't confirm which location this would be filed against, so the proposal has none. A form can only name a location Ask Bubbles can verify you're assigned to.";
+  return "I can't confirm which store this would be filed against, so the proposal has none. A form can only name a store Ask Bubbles can verify you're assigned to.";
 }

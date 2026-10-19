@@ -155,8 +155,8 @@ describe("choosing a salon", () => {
     );
     const options = [...container.querySelectorAll("option")].map((option) => option.textContent);
     expect(options).not.toContain("loc-0310");
-    expect(options.filter((text) => text && text !== "Choose a location…").length).toBe(2);
-    for (const text of options.filter((entry) => entry !== "Choose a location…")) {
+    expect(options.filter((text) => text && text !== "Choose a store…").length).toBe(2);
+    for (const text of options.filter((entry) => entry !== "Choose a store…")) {
       expect(text).not.toMatch(/^loc-/);
     }
   });

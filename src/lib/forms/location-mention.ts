@@ -1,5 +1,7 @@
 import { COMPANY_LOCATION_ABBREVIATIONS, COMPANY_LOCATION_NICKNAMES } from "@/config/company/locations";
-import { COMPANY_LOCATIONS, locationById, locationNameKey, type CompanyLocation } from "@/lib/locations";
+import { locationById } from "@/lib/locations";
+import { buildStoreIndex, readStoreMentions, type StoreIndex, type StoreMention } from "@/lib/stores/resolver";
+
 
 /**
  * ============================================================================
@@ -36,163 +38,34 @@ import { COMPANY_LOCATIONS, locationById, locationNameKey, type CompanyLocation 
  * NUMBERS. "store 12", "location #12", "#12" — matched to the roster code
  * exactly, or ignoring leading zeros.
  *
- * No fuzzy matching. A misspelt store is a question, not a guess.
+ * A MISSPELT STORE IS A QUESTION, NOT A GUESS. A typo or an initialism
+ * ("Kearny", "GI") comes back flagged `confirm`; the caller asks before using it.
+ *
+ * THE READING ITSELF LIVES IN `@/lib/stores/resolver`, shared with form
+ * autofill, so one phrase means one store everywhere. This module keeps the
+ * shape `proposeLocation` consumes.
  */
 
-export interface LocationMention {
-  readonly locationIds: readonly string[];
+export type LocationMention = StoreMention;
+
+export interface LocationReading {
+  readonly mentions: LocationMention[];
+  /** Store-shaped references ("Store 102") that no registered store answers to. */
+  readonly unmatched: string[];
 }
 
-/** The words that say "this is a place", in any company's vocabulary. */
-const PLACE_NOUNS = "salon|store|location|studio|shop|makery";
+/** The registered roster with the company's reviewed nicknames and abbreviations. */
+export const ROSTER_STORE_INDEX: StoreIndex = buildStoreIndex({
+  nicknames: COMPANY_LOCATION_NICKNAMES,
+  abbreviations: COMPANY_LOCATION_ABBREVIATIONS,
+});
 
-const ABBREVIATIONS = Object.entries(COMPANY_LOCATION_ABBREVIATIONS).map(([short, full]) => ({
-  pattern: new RegExp(`\\b${short.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g"),
-  full: full.toLowerCase(),
-}));
-
-function key(text: string): string {
-  let folded = ` ${locationNameKey(text)} `;
-  for (const abbreviation of ABBREVIATIONS) folded = folded.replace(abbreviation.pattern, abbreviation.full);
-  return folded
-    .replace(/\bsaint\b/g, "st")
-    .replace(/\bstreet\b/g, "st")
-    .replace(/\bparkway\b/g, "pkwy")
-    .replace(/\s+/g, " ");
+export function readLocation(text: string, index: StoreIndex = ROSTER_STORE_INDEX): LocationReading {
+  return readStoreMentions(text, index);
 }
 
-/** A roster name without its two-letter state prefix, when it has one. */
-function localName(location: CompanyLocation): string {
-  const prefix = location.state ? new RegExp(`^${location.state}\\s+`, "i") : null;
-  return prefix && prefix.test(location.name) ? location.name.replace(prefix, "") : location.name;
-}
-
-const SHARED_CITIES: readonly string[] = (() => {
-  const counts = new Map<string, number>();
-  for (const location of COMPANY_LOCATIONS) {
-    const words = key(localName(location)).trim().split(" ");
-    for (let length = 1; length < words.length; length += 1) {
-      const head = words.slice(0, length).join(" ");
-      counts.set(head, (counts.get(head) ?? 0) + 1);
-    }
-  }
-  const shared = [...counts].filter(([, count]) => count > 1).map(([head]) => head);
-  return shared.filter((head) => !shared.some((other) => other !== head && other.startsWith(`${head} `)));
-})();
-
-/** Nicknames managers use for one location, keyed to its roster code. */
-const SHORT_NAMES: Readonly<Record<string, string>> = COMPANY_LOCATION_NICKNAMES;
-
-interface Alias {
-  readonly phrase: string;
-  readonly locationIds: readonly string[];
-  readonly needsCue: boolean;
-}
-
-const ALIASES: readonly Alias[] = (() => {
-  const aliases: Alias[] = [];
-  const add = (phrase: string, locationIds: string[]) => {
-    const trimmed = phrase.trim();
-    if (!trimmed) return;
-    aliases.push({ phrase: trimmed, locationIds, needsCue: true });
-  };
-
-  for (const location of COMPANY_LOCATIONS) {
-    const full = key(location.name).trim();
-    const local = key(localName(location)).trim();
-    aliases.push({ phrase: full, locationIds: [location.id], needsCue: false });
-    if (local !== full) add(local, [location.id]);
-    const city = SHARED_CITIES.find((head) => local.startsWith(`${head} `));
-    if (city) add(local.slice(city.length), [location.id]);
-  }
-
-  for (const [phrase, code] of Object.entries(SHORT_NAMES)) {
-    const location = COMPANY_LOCATIONS.find((entry) => sameCode(entry.code, code));
-    if (location) add(phrase, [location.id]);
-  }
-
-  return aliases.sort((a, b) => b.phrase.length - a.phrase.length);
-})();
-
-const CARRIES_ON = `${PLACE_NOUNS}|and|but|or|on|today|yesterday|tonight|this|last|at|she|he|they|i|we|for|with|where|when|while|because|so|again|during|after|before|around|since|until|was|is|has|had`;
-
-const ROSTER_STATES = [
-  ...new Set(
-    COMPANY_LOCATIONS.map((location) => location.state?.toLowerCase()).filter(
-      (state): state is string => Boolean(state),
-    ),
-  ),
-];
-const STATE_BEFORE = ROSTER_STATES.length > 0 ? new RegExp(`\\b(?:${ROSTER_STATES.join("|")})\\s+$`) : null;
-const AT_BEFORE = /\b(?:at|in)\s+(?:the\s+)?$/;
-const PLACE_AFTER = new RegExp(`^\\s*(?:${PLACE_NOUNS})\\b`);
-const CARRIES_ON_AFTER = new RegExp(`^\\s*$|^\\s+(?:${CARRIES_ON})\\b`);
-
-function cued(before: string, after: string): boolean {
-  if ((STATE_BEFORE && STATE_BEFORE.test(before)) || PLACE_AFTER.test(after)) return true;
-  return AT_BEFORE.test(before) && CARRIES_ON_AFTER.test(after);
-}
-
-const CITY_ENDS = `(?=\\s*$|\\s*[,.;:!?)]|\\s+(?:${CARRIES_ON})\\b)`;
-
-const CITY_PATTERNS: readonly { pattern: RegExp; locationIds: readonly string[] }[] = SHARED_CITIES.map(
-  (city) => {
-    const words = city.split(" ").join("\\s+");
-    const shorts = Object.entries(COMPANY_LOCATION_ABBREVIATIONS)
-      .filter(([, full]) => full.toLowerCase() === city)
-      .map(([short]) => short.toLowerCase());
-    const spelled = shorts.length > 0 ? `(?:${words}|${shorts.join("|")})` : words;
-    return {
-      pattern: new RegExp(
-        `(?:\\b(?:at|in)\\s+(?:the\\s+)?${spelled}${CITY_ENDS}|\\b${spelled}\\s+(?:${PLACE_NOUNS})\\b)`,
-        "i",
-      ),
-      locationIds: COMPANY_LOCATIONS.filter((location) =>
-        key(localName(location)).trim().startsWith(`${city} `),
-      ).map((location) => location.id),
-    };
-  },
-);
-
-const NUMBER_MENTION = new RegExp(
-  `(?:\\b(?:${PLACE_NOUNS})\\s*#?\\s*|#\\s*)([A-Za-z0-9][A-Za-z0-9-]{0,15})\\b`,
-  "gi",
-);
-
-function sameCode(a: string, b: string): boolean {
-  if (a.toLowerCase() === b.toLowerCase()) return true;
-  return /^\d+$/.test(a) && /^\d+$/.test(b) && Number(a) === Number(b);
-}
-
-export function readLocationMentions(text: string): LocationMention[] {
-  const mentions: LocationMention[] = [];
-
-  for (const match of text.matchAll(NUMBER_MENTION)) {
-    const typed = match[1]!;
-    const hits = COMPANY_LOCATIONS.filter((location) => sameCode(location.code, typed));
-    if (hits.length > 0) mentions.push({ locationIds: hits.map((location) => location.id) });
-  }
-
-  let haystack = key(text);
-  for (const alias of ALIASES) {
-    const pattern = new RegExp(`(?<= )${alias.phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?= )`, "g");
-    let found = false;
-    haystack = haystack.replace(pattern, (phrase, offset: number) => {
-      const before = haystack.slice(0, offset);
-      const after = haystack.slice(offset + phrase.length);
-      if (alias.needsCue && !cued(before, after)) return phrase;
-      found = true;
-      return "_".repeat(phrase.length);
-    });
-    if (found) mentions.push({ locationIds: alias.locationIds });
-  }
-
-  const spaced = text.replace(/\s+/g, " ");
-  for (const city of CITY_PATTERNS) {
-    if (city.pattern.test(spaced)) mentions.push({ locationIds: city.locationIds });
-  }
-
-  return mentions;
+export function readLocationMentions(text: string, index: StoreIndex = ROSTER_STORE_INDEX): LocationMention[] {
+  return readStoreMentions(text, index).mentions;
 }
 
 export function rosterLocationName(id: string): string | null {

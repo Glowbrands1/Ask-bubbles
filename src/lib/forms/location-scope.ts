@@ -1,7 +1,9 @@
 import { COMPANY_LOCATIONS, locationIdsInArea } from "@/lib/locations";
 import type { AccessScope } from "@/types";
 
-import { readLocationMentions, rosterLocationName } from "./location-mention";
+import type { StoreIndex } from "@/lib/stores/resolver";
+
+import { ROSTER_STORE_INDEX, readLocation, rosterLocationName } from "./location-mention";
 
 /**
  * ============================================================================
@@ -65,6 +67,8 @@ export type LocationProposal =
       resolution: "needs_selection";
       authorizedIds: string[];
       outOfScopeName?: string;
+      /** Why a store is still being asked for, when the manager named something. */
+      selection?: { reason: "ambiguous" | "number_collision" | "confirm" | "not_found"; typed: string | null };
     }
   | { resolution: "not_applicable"; reason: string }
   | { resolution: "unavailable"; reason: string };
@@ -78,7 +82,10 @@ export function proposeLocation(
   scope: AccessScope | null,
   managerText = "",
   employeeLocationIds: readonly string[] = [],
+  index: StoreIndex = ROSTER_STORE_INDEX,
+  options: { reportUnmatched?: boolean } = {},
 ): LocationProposal {
+  const reportUnmatched = options.reportUnmatched ?? true;
   if (!scope) {
     return {
       resolution: "unavailable",
@@ -88,7 +95,7 @@ export function proposeLocation(
 
   if (scope.level === "global") {
     const all = COMPANY_LOCATIONS.map((location) => location.id);
-    const named = fromNamedLocations(all, managerText);
+    const named = fromNamedLocations(all, managerText, index, reportUnmatched);
     if (named) return named;
     const employees = fromEmployeeLocations(all, employeeLocationIds);
     if (employees) return employees;
@@ -99,7 +106,7 @@ export function proposeLocation(
   }
 
   const allowed = authorizedLocationIds(scope);
-  const named = fromNamedLocations(allowed, managerText);
+  const named = fromNamedLocations(allowed, managerText, index, reportUnmatched);
   if (named) return named;
   const employees = fromEmployeeLocations(allowed, employeeLocationIds);
   if (employees) return employees;
@@ -111,15 +118,52 @@ export function proposeLocation(
   };
 }
 
-function fromNamedLocations(allowed: readonly string[], managerText: string): LocationProposal | null {
-  const mentions = readLocationMentions(managerText);
-  if (mentions.length === 0) return null;
+/**
+ * WHAT THE MANAGER'S WORDS SAY ABOUT THE STORE, in this order of trust:
+ *
+ *   a firm reading     a registered code, name, partial name or reviewed alias
+ *   a soft reading     a typo or initialism — asked about, never used silently
+ *   nothing registered "Store 102" with no store 102 — said so, not skipped
+ *
+ * Several candidates is a question, and the candidates offered are only the
+ * ones the actor's scope allows.
+ */
+function fromNamedLocations(
+  allowed: readonly string[],
+  managerText: string,
+  index: StoreIndex,
+  reportUnmatched: boolean,
+): LocationProposal | null {
+  const { mentions, unmatched } = readLocation(managerText, index);
 
-  const named = [...new Set(mentions.flatMap((mention) => mention.locationIds))];
+  if (mentions.length === 0) {
+    if (!reportUnmatched || unmatched.length === 0 || allowed.length === 0) return null;
+    return {
+      resolution: "needs_selection",
+      authorizedIds: [...allowed],
+      selection: { reason: "not_found", typed: unmatched[0]! },
+    };
+  }
+
+  const firm = mentions.filter((mention) => !mention.confirm);
+  const reading = firm.length > 0 ? firm : mentions;
+  const soft = firm.length === 0;
+  const named = [...new Set(reading.flatMap((mention) => mention.locationIds))];
   const inScope = named.filter((id) => allowed.includes(id));
+  const typed = reading[0]?.matched ?? null;
 
-  if (inScope.length === 1) return { resolution: "resolved", locationId: inScope[0]! };
-  if (inScope.length > 1) return { resolution: "needs_selection", authorizedIds: inScope };
+  if (inScope.length === 1 && !soft) return { resolution: "resolved", locationId: inScope[0]! };
+  if (inScope.length >= 1) {
+    const collision = reading.some((mention) => mention.collision);
+    return {
+      resolution: "needs_selection",
+      authorizedIds: inScope,
+      selection: {
+        reason: soft && inScope.length === 1 ? "confirm" : collision ? "number_collision" : "ambiguous",
+        typed,
+      },
+    };
+  }
   if (allowed.length === 0) return null;
 
   const outOfScopeName =

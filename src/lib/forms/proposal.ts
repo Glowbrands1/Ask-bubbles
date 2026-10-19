@@ -15,7 +15,9 @@ import {
   TEAM_SUBJECT_LABEL,
 } from "./team-subject";
 import { proposeLocation } from "./location-scope";
-import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
+import { ROSTER_STORE_INDEX, rosterLocationName } from "./location-mention";
+import { isStoreName, type StoreIndex } from "@/lib/stores/resolver";
+import type { AccessScope, ChatFormProposal, ChatMessage, EmployeeVerification } from "@/types";
 
 /**
  * ============================================================================
@@ -238,7 +240,7 @@ const ROSTER_NAME_KEYS: ReadonlySet<string> = new Set(
 );
 
 function isRosterSalonName(candidate: string): boolean {
-  return ROSTER_NAME_KEYS.has(locationNameKey(candidate));
+  return ROSTER_NAME_KEYS.has(locationNameKey(candidate)) || isStoreName(candidate, ROSTER_STORE_INDEX);
 }
 
 function opensWithRosterState(candidate: string): boolean {
@@ -1386,6 +1388,19 @@ export interface ProposalInput {
   employee?: EmployeeResolution;
   /** The employee's salons, from the directory, already in the actor's scope. */
   employeeLocationIds?: readonly string[];
+  /**
+   * The store resolver's index — the registered roster plus the Woven names a
+   * person has mapped to it. Absent: the registered roster alone.
+   */
+  storeIndex?: StoreIndex;
+  /**
+   * Whether a store the manager named that no registered store answers to is a
+   * question (default). The employment-change forms say "from store 12 to
+   * store 18" as descriptive text they keep as typed, so they do not ask.
+   */
+  reportUnmatchedStore?: boolean;
+  /** What Woven confirmed about the employee, when the caller checked. */
+  employeeVerification?: EmployeeVerification;
 }
 
 /**
@@ -1455,6 +1470,8 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
     input.scope,
     input.context.text,
     team ? [] : (input.employeeLocationIds ?? []),
+    input.storeIndex,
+    { reportUnmatched: input.reportUnmatchedStore ?? true },
   );
 
   const employeeName = team
@@ -1497,7 +1514,16 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
      * FROM THE MANAGER'S TURNS, like the employee name and through the same
      * bounded window — never from the assistant's, and never from the template.
      */
-    employeeRole: team ? null : extractJobTitle(input.context.text),
+    /*
+     * WOVEN'S TITLE WHEN IT VERIFIED THE EMPLOYEE, otherwise the manager's own
+     * words — flagged unverified on the card. Never a model's, never the
+     * template's.
+     */
+    employeeRole: team
+      ? null
+      : input.employeeVerification?.status === "verified" && input.employeeVerification.title
+        ? input.employeeVerification.title
+        : extractJobTitle(input.context.text),
     /* Same rule: the manager's own words, read as U.S. month/day. */
     formDate:
       input.formDateFromConversation === false
@@ -1510,7 +1536,7 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
      * fictional salon name in front of a manager about to file a disciplinary
      * record is exactly the class of thing this phase exists to stop.
      */
-    locationName: null,
+    locationName: locationId ? rosterLocationName(locationId) : null,
     locationResolution: location.resolution,
     authorizedLocationIds:
       location.resolution === "needs_selection" ? location.authorizedIds : [],
@@ -1518,6 +1544,10 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
     ...(location.resolution === "needs_selection" && location.outOfScopeName
       ? { namedLocationOutOfScope: location.outOfScopeName }
       : {}),
+    ...(location.resolution === "needs_selection" && location.selection
+      ? { locationSelection: location.selection }
+      : {}),
+    ...(input.employeeVerification && !team ? { employeeVerification: input.employeeVerification } : {}),
     status,
     sourceMessageIds: input.context.ids,
     ...(team ? { subject: "team" as const } : {}),

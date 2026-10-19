@@ -85,7 +85,11 @@ vi.mock("@/lib/ai/anthropic", () => ({
 
 vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/forms/employee-roster")>();
-  return { ...actual, loadScopedRoster: async () => actual.scopeRoster([], null) };
+  return {
+    ...actual,
+    loadScopedRoster: async () => actual.scopeRoster([], null),
+    loadScopedRosterResult: async () => ({ status: "not_checked", reason: "no_scope" }),
+  };
 });
 
 const { EMBEDDING_DIMENSIONS } = await import("@/lib/config/models");

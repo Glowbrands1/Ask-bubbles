@@ -1,4 +1,7 @@
-import { COMPANY_LOCATIONS, locationNameKey as storeNameKey, type CompanyLocation } from "@/lib/locations";
+import { COMPANY_LOCATIONS, type CompanyLocation } from "@/lib/locations";
+import { resolveStoreText } from "@/lib/stores/resolver";
+
+import { ROSTER_STORE_INDEX } from "./location-mention";
 
 /**
  * ============================================================================
@@ -56,29 +59,15 @@ function withoutPrefix(location: CompanyLocation): string {
   return location.name.replace(new RegExp(`^${location.state}\\s+`, "i"), "");
 }
 
-const NUMBERED = /^(?:(?:salon|store|location|loc|shop|makery)\s*)?#?\s*(\d{1,6})$/;
-
 /**
- * The roster location a typed phrase names, when it names exactly one.
+ * The roster location a typed phrase names, when it names exactly one and the
+ * match needs no confirmation. Shares the resolver chat and form proposals
+ * read with — a typo or initialism stays as typed here rather than being
+ * rewritten onto a store the manager did not confirm.
  */
 export function rosterSalonFor(text: string): CompanyLocation | null {
-  const key = storeNameKey(
-    text.replace(/^(?:the|our)\s+/i, "").replace(/\s+(?:salon|store|location|shop|makery)$/i, ""),
-  );
-  if (!key) return null;
-
-  const number = NUMBERED.exec(key)?.[1];
-  if (number) {
-    const hits = COMPANY_LOCATIONS.filter(
-      (location) => /^\d+$/.test(location.code) && Number(location.code) === Number(number),
-    );
-    return hits.length === 1 ? hits[0]! : null;
-  }
-
-  const byName = COMPANY_LOCATIONS.filter(
-    (location) => storeNameKey(location.name) === key || storeNameKey(withoutPrefix(location)) === key,
-  );
-  return byName.length === 1 ? byName[0]! : null;
+  const resolution = resolveStoreText(text, ROSTER_STORE_INDEX);
+  return resolution.kind === "resolved" && !resolution.confirm ? resolution.store : null;
 }
 
 /** The location as it should print: the roster name when unique, otherwise the tidied text. */
