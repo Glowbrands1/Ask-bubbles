@@ -198,7 +198,11 @@ export const PROCEDURE_FREQUENCY_BADGES = /^(daily|weekly|bi-?weekly|semi-?month
 export const PROCEDURE_ALL_POSITIONS = /^all\s+positions$/i;
 /** VERIFIED_WEB_APP_INTERNAL_ROUTE: GET, a full application page. */
 export const procedureDetailPath = (procedureId: string) => `/KnowledgeCenter/Procedure/${encodeURIComponent(procedureId)}`;
-/** VERIFIED structure (1 of 51 sampled): title "Procedures - <name>"; steps carry `data-procedure-step-id` and `#procedure-step-content`. */
+/**
+ * VERIFIED structure (all 5 published pages, live read-only check 2026-10-19): title
+ * "Procedures - <name>"; each step is `id="procedure-step-<step id>"` holding `#procedure-step-content`.
+ * `data-procedure-step-id` is on a step's ATTACHMENT blocks, not on the step (see adapters/procedures.ts).
+ */
 export const PROCEDURE_DETAIL = {
   title: /^\s*Procedures\s*-\s*/i,
   stepIdAttr: "data-procedure-step-id",
@@ -315,6 +319,8 @@ export const BCS_CAPABILITY = {
   /** Unpublished, or held for ownership review: its manage page is never opened. */
   handbookNotOpened: "handbook_not_opened",
   procedureContent: "procedure_content",
+  /** The steps parse, but their only content is an attachment, and no attachment download is verified for this company. */
+  procedureAttachmentDownload: "procedure_attachment_download_unverified",
   policyBody: "policy_body",
   communicationDetail: "communication_detail_unverified",
 } as const;

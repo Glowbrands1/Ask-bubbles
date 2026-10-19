@@ -57,10 +57,16 @@ import { WovenShapeError, assertUnique, blockedPart, digest, requireSuccessHtml,
  * A card does not say which category it belongs to, so none is recorded.
  *
  * DETAIL: the full procedure page (`/KnowledgeCenter/Procedure/<id>`), read
- * only for published procedures. Steps carry `data-procedure-step-id` and
- * `#procedure-step-content`. A page without them leaves the text BLOCKED
- * (`procedure_content`). Step attachments are not read: neither their markup
- * nor their download has been verified for this company.
+ * only for published procedures. LIVE-VERIFIED (read-only check, 2026-10-19,
+ * all 5 published procedures): each step is a container
+ * `<div id="procedure-step-<step id>">` holding `#display-order`, a heading and
+ * `#procedure-step-content`, listed in `#procedure-step-scroll-view` and
+ * repeated, hidden, in the carousel as `.procedure-step-container` with a
+ * `summernote-<step id>` class. `data-procedure-step-id` is NOT a step
+ * container: it sits on the step's ATTACHMENT blocks, which hold no step text.
+ * A page with no readable step leaves the text BLOCKED (`procedure_content`).
+ * Step attachments are not read: neither their download nor their audience
+ * has been verified for this company.
  */
 
 export interface ProcedureCategory {
@@ -201,10 +207,52 @@ export interface ProcedureStep {
   text: string;
 }
 
+/*
+ * A step id is a GUID on the live pages. The prefix alone is not enough: the
+ * page also has `procedure-step-content` and `procedure-step-scroll-view`, which
+ * a looser pattern would read as steps called "content" and "scroll-view".
+ */
+const GUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+const STEP_CONTAINER_ID = new RegExp(`^procedure-step-(${GUID})$`, "i");
+const STEP_CAROUSEL_CLASS = new RegExp(`^summernote-(${GUID})$`, "i");
+
 /**
- * The detail page's steps: elements carrying `data-procedure-step-id` with a
- * `#procedure-step-content` inside, deduplicated by step id (a carousel may
- * repeat them). Null when there is none — the text is then BLOCKED.
+ * The step containers of a detail page, one pass per known layout, first pass
+ * that finds any step wins (never a union, so one step cannot appear twice
+ * under two layouts):
+ *   1. the live layout: `id="procedure-step-<step id>"` (the visible list);
+ *   2. the live carousel copy: `.procedure-step-container` carrying a
+ *      `summernote-<step id>` class;
+ *   3. the earlier layout this adapter first assumed: an element carrying
+ *      `data-procedure-step-id` that itself holds the step text. On the live
+ *      pages that attribute is on attachment blocks, which hold none, so this
+ *      pass finds nothing there and costs nothing.
+ */
+function stepContainers(doc: ReturnType<typeof parseHtmlDocument>): { stepId: string; el: HtmlElement }[] {
+  const idOf = (raw: string | null, re: RegExp) => {
+    const m = raw === null ? null : re.exec(raw);
+    return m ? validId(m[1]!) : null;
+  };
+  const passes: (() => { stepId: string | null; el: HtmlElement }[])[] = [
+    () => elementsWithAttr(doc, "id").map((el) => ({ stepId: idOf(attr(el, "id"), STEP_CONTAINER_ID), el })),
+    () =>
+      elementsByClass(doc, "procedure-step-container").map((el) => ({
+        stepId: (attr(el, "class") ?? "").split(/\s+/).map((c) => idOf(c, STEP_CAROUSEL_CLASS)).find((id) => id !== null) ?? null,
+        el,
+      })),
+    () => elementsWithAttr(doc, PROCEDURE_DETAIL.stepIdAttr).map((el) => ({ stepId: validId(attr(el, PROCEDURE_DETAIL.stepIdAttr)), el })),
+  ];
+  for (const pass of passes) {
+    const found = pass().filter((c): c is { stepId: string; el: HtmlElement } => c.stepId !== null && byId(c.el, PROCEDURE_DETAIL.stepContentId) !== null);
+    if (found.length > 0) return found;
+  }
+  return [];
+}
+
+/**
+ * The detail page's steps, in page order, deduplicated by step id (the live
+ * page lists every step twice). Null when there is none — the text is then
+ * BLOCKED.
  */
 export function parseProcedureDetail(html: string): { title: string | null; steps: ProcedureStep[] | null } {
   const doc = parseHtmlDocument(html);
@@ -214,15 +262,28 @@ export function parseProcedureDetail(html: string): { title: string | null; step
 
   const steps: ProcedureStep[] = [];
   const seen = new Set<string>();
-  for (const el of elementsWithAttr(doc, PROCEDURE_DETAIL.stepIdAttr)) {
-    const stepId = validId(attr(el, PROCEDURE_DETAIL.stepIdAttr));
+  for (const { stepId, el } of stepContainers(doc)) {
     const content = byId(el, PROCEDURE_DETAIL.stepContentId);
-    if (!stepId || !content || seen.has(stepId.toLowerCase())) continue;
+    if (!content || seen.has(stepId.toLowerCase())) continue;
     seen.add(stepId.toLowerCase());
     const text = blockText(content).trim();
     steps.push({ stepId, text: PROCEDURE_DETAIL.placeholderBody.test(text) ? "" : text });
   }
   return { title, steps: steps.length > 0 ? steps : null };
+}
+
+/**
+ * How many distinct attachment files the page's steps offer. The live page
+ * repeats every step (carousel and visible list), so a file is counted once.
+ * Only the NUMBER is used: attachments are not read.
+ */
+export function countStepAttachments(html: string): number {
+  const files = new Set<string>();
+  for (const a of elementsByTag(parseHtmlDocument(html), "a")) {
+    const m = /DownloadProcedureStepAttachment\(\s*'([^']+)'\s*\)/.exec(attr(a, "onclick") ?? "");
+    if (m) files.add(m[1]!);
+  }
+  return files.size;
 }
 
 /** The procedure's text: its steps in page order. */
@@ -247,6 +308,11 @@ export function procedureRecord(card: ProcedureCard, detailHtml: string | null):
     const text = steps ? procedureText(steps) : "";
     if (!steps) parts.push(blockedPart("content", card.title, BCS_CAPABILITY.procedureContent));
     else if (text) parts.push(textPart("content", card.title, digest(text), { procedureId: card.id }));
+    /*
+     * Steps that parse but say "Not Provided" while offering a file: the content is in the attachment, which is
+     * not read. BLOCKED and named, never dropped as if the procedure were empty (all 5 live published procedures).
+     */
+    else if (countStepAttachments(detailHtml) > 0) parts.push(blockedPart("content", card.title, BCS_CAPABILITY.procedureAttachmentDownload));
   } else {
     parts.push(textPart("content", card.title, null, { procedureId: card.id }));
   }
