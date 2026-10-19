@@ -245,7 +245,7 @@ async function conversation(turns: string[]) {
     create: async () => {
       const result = await createInlineForm({
         proposal: last.formProposal!,
-        messages: messages.filter((message) => message.role === "user"),
+        messages,
         call,
         onCreated: () => {},
       });
@@ -276,6 +276,18 @@ const MANUAL_CHUNKS = [
       "Dress Code for The Company\nThe Company Employees are to keep a neat, clean, professional appearance at all times. Anyone\nviolating their Brand's Dress code policy will be sent home to change into proper work attire and\nmay be subject to disciplinary action, up to and potentially including termination.",
   },
 ];
+
+const ATTENDANCE_CHUNK = {
+  chunkIndex: 33,
+  chunkId: "c-33",
+  locator: "Page 15",
+  page: 15,
+  printedPage: 14,
+  sections: [{ heading: "Attendance", page: 14 }],
+  section: "Attendance",
+  content:
+    "Attendance\nIt is the responsibility of each employee to know his or her work schedule and to always be on\ntime. Lack of punctuality or absenteeism has a negative impact on everyone's schedule and\ncreates a lack of service for the client.",
+};
 
 beforeEach(async () => {
   for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
@@ -585,6 +597,233 @@ describe("Issue 1 — the policy referenced on the form", () => {
 });
 
 /* ========================================================================= */
+/* THE FORM'S DATE: incident dates are not the creation date                  */
+/* ========================================================================= */
+
+describe("Issue 3 — which date goes on the form", () => {
+  const TWO_DATES = "Create a corrective action for Pat Rivera at Dodge. She was late on 10/5 and 10/15. This is a verbal warning.";
+
+  it("does not pick the first of two incident dates: it asks, once, and dates the form today meanwhile", async () => {
+    const { responses, proposal } = await conversation([TWO_DATES, "Payroll deduct is not applicable."]);
+    expect(responses[0]!.formProposal!.formDate).toBeNull();
+    expect(responses[0]!.formProposal!.formDateCandidates).toEqual(["2026-10-05", "2026-10-15"]);
+    expect(responses[0]!.content).toContain("Which date goes on the form?");
+    expect(responses[0]!.content).toMatch(/Every date stays in the description/);
+    // Asked once only.
+    expect(responses[1]!.content).not.toContain("Which date goes on the form?");
+    expect(proposal.formDate).toBeNull();
+  });
+
+  it.each([
+    ["most recent", "2026-10-15"],
+    ["use 10/5", "2026-10-05"],
+    ["today", null],
+  ])("settles on %j without asking again", async (answer, expected) => {
+    const { responses, proposal, create } = await conversation([TWO_DATES, answer]);
+    expect(proposal.formDate).toBe(expected);
+    expect(proposal.formDateCandidates).toBeUndefined();
+    expect(responses[1]!.content).not.toContain("Which date goes on the form?");
+    expect(proposal.employeeName).toBe("Pat Rivera");
+
+    state.draft = { values: { observation: "Observed:\nPat Rivera was late on 10/5 and 10/15." }, checked: {} };
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    // Both incidents stay in the description whichever date the form carries.
+    expect(field(form, "observation")!.value).toContain("10/5 and 10/15");
+    expect(field(form, "form_date")!.value).toBe(expected ?? "2026-10-16");
+  });
+
+  it("dates the form by a single incident date without asking", async () => {
+    const { proposal, last } = await conversation(["Create a corrective action for Pat Rivera at Dodge, she was late on 10/15. This is a verbal warning."]);
+    expect(proposal.formDate).toBe("2026-10-15");
+    expect(last.content).not.toContain("Which date goes on the form?");
+  });
+
+  it("does not count the earlier coaching date as an incident", async () => {
+    const { proposal, last } = await conversation(["Create a corrective action for Pat Rivera at Dodge, she was late on 10/15. I verbally coached her on 10/5. This is a verbal warning."]);
+    expect(proposal.formDate).toBe("2026-10-15");
+    expect(last.content).not.toContain("Which date goes on the form?");
+  });
+});
+
+/* ========================================================================= */
+/* VERIFIED BEFORE POPULATED: Woven store and position                         */
+/* ========================================================================= */
+
+describe("Woven store and position are verified, or asked for — never guessed", () => {
+  it("says a store came from Woven, not from the manager", async () => {
+    const { proposal, last } = await conversation(["Create a corrective action for Casey Brandt, out of dress code on 10/11. This is a verbal warning."]);
+    expect(proposal.locationId).toBe("loc-66");
+    expect(proposal.locationSource).toBe("woven");
+    expect(last.content).toMatch(/Location:\*\* Kearney, NE, from Woven \(where Casey Brandt is assigned\)/);
+    expect(last.content).not.toMatch(/Location:\*\* Kearney, NE, as you said/);
+  });
+
+  it("says a store came from the manager's own words", async () => {
+    const { proposal, last } = await conversation(["Create a corrective action for Casey Brandt at Kearney, out of dress code on 10/11. This is a verbal warning."]);
+    expect(proposal.locationSource).toBe("manager");
+    expect(last.content).toMatch(/Location:\*\* Kearney, NE, as you said/);
+  });
+
+  it("asks for the store once when none can be verified, and files nothing meanwhile", async () => {
+    const { responses, proposal } = await conversation([
+      "Create a corrective action for Sam Ortega, out of dress code on 10/11. This is a verbal warning.",
+      "Payroll deduct no",
+    ]);
+    expect(responses[0]!.content).toMatch(/which store they work at/);
+    expect(proposal.locationId).toBeNull();
+    expect(responses[1]!.content).not.toMatch(/which store they work at/);
+  });
+
+  it("asks for the store and the position when the directory cannot be read at all", async () => {
+    state.directory = [];
+    const { responses, proposal } = await conversation(["Create a corrective action for Casey Brandt, out of dress code on 10/11. This is a verbal warning."]);
+    expect(proposal.locationId).toBeNull();
+    expect(proposal.employeeRole).toBeNull();
+    expect(responses[0]!.content).toMatch(/couldn't verify a store/);
+    expect(responses[0]!.content).toMatch(/position \(job title\)\?/);
+  });
+
+  it("asks which store when Woven holds the employee at several and the manager named none", async () => {
+    state.directory = [
+      ...DIRECTORY,
+      { id: "e-9", firstName: "Dana", lastName: "Multi", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66", "loc-264"], positionName: "Shift Lead" },
+    ];
+    const { proposal, last } = await conversation(["Create a corrective action for Dana Multi, out of dress code on 10/11. This is a verbal warning."]);
+    expect(proposal.status).toBe("needs_location");
+    expect(proposal.locationId).toBeNull();
+    expect(last.content).toMatch(/Which location is this about/);
+  });
+});
+
+/* ========================================================================= */
+/* RECOMMENDATIONS AND POLICY REFERENCES                                      */
+/* ========================================================================= */
+
+describe("Issue 1 — the right form, and only real policy", () => {
+  it("cites the Attendance section — and only that — for lateness the manager calls an attendance violation", async () => {
+    state.manual = { chunks: [...MANUAL_CHUNKS, ATTENDANCE_CHUNK] };
+    state.draft = {
+      values: { observation: "Observed:\nPat Rivera was late on 10/5 and 10/15.", policy_language: "Invented tardiness rule 7." },
+      checked: { offense_type: ["tardiness"] },
+    };
+    const { create } = await conversation([
+      "Create a corrective action for Pat Rivera at Dodge. She was late on 10/15. This is a verbal warning. Payroll deduct no.",
+    ]);
+    const { reference } = await create();
+    const policy = field(await review(reference.instanceId), "policy_language")!.value!;
+    expect(policy).toContain("Lack of punctuality or absenteeism");
+    expect(policy).toMatch(/Source: JBA Policy Manual — Attendance, p\. 14/);
+    expect(policy).not.toMatch(/Invented/);
+    expect(policy).not.toMatch(/Dress Code/);
+  });
+
+  it("never puts a policy field on the Coaching Form without approval", async () => {
+    const { listTemplateSummaries: list } = await import("@/lib/forms/repository");
+    const coaching = (await list()).find((summary) => summary.key === "coaching")!;
+    const keys = JSON.stringify(coaching.currentVersion!.document).match(/"key":"([a-z_]+)"/g) ?? [];
+    expect(keys.join(" ")).not.toMatch(/policy/);
+  });
+
+  it("does not offer a Corrective Action Form for a first offence or for coaching that worked", async () => {
+    const { suggestFormsForTurn } = await import("@/lib/ai/form-proposal");
+    const base = { history: [], actor: { role: "admin" as const, scope: state.scope as AccessScope }, summaries: await listTemplateSummaries(), today: "2026-10-16" };
+    for (const question of [
+      "Casey Brandt was out of dress code today at Kearney",
+      "I coached Casey Brandt about dress code and she improved, but she is still a little late sometimes",
+    ]) {
+      const suggested = suggestFormsForTurn({ ...base, question });
+      expect(suggested?.selection.additional.map((card) => card.templateKey) ?? []).not.toContain("dpoa");
+    }
+  });
+});
+
+/* ========================================================================= */
+/* A COMPLETE CONVERSATION                                                    */
+/* ========================================================================= */
+
+describe("a manager who gives everything is never asked for it again", () => {
+  it("builds the correct populated form from details given across turns", async () => {
+    state.manual = { chunks: MANUAL_CHUNKS };
+    const asksFor = {
+      name: /who is this|give me their name/i,
+      store: /which location is this about|which store|more than one store/i,
+      position: /position \(job title\)\?/,
+      date: /Which date goes on the form\?/,
+      payroll: /payroll deduct\*\*? yes or no/i,
+      level: /verbal warning or a written warning/i,
+    };
+
+    const turns = [
+      "I need a corrective action for sam ortega. She's a makery associate and works at Kearney.",
+      "She was out of dress code on 10/11 and 10/12. I verbally coached her about it on 9/1. Use the dress code policy.",
+      "Use 10/12 for the form date.",
+      "This is a verbal warning and payroll deduct is not applicable.",
+    ];
+    const { responses, proposal, create } = await conversation(turns);
+
+    // Every fact is asked for at most once, and never after it was given.
+    const given = [
+      { after: 0, pattern: asksFor.name },
+      { after: 0, pattern: asksFor.store },
+      { after: 0, pattern: asksFor.position },
+      { after: 2, pattern: asksFor.date },
+      { after: 3, pattern: asksFor.payroll },
+      { after: 3, pattern: asksFor.level },
+    ];
+    for (const { after, pattern } of given) {
+      for (const response of responses.slice(after + (pattern === asksFor.date ? 0 : 0))) {
+        if (responses.indexOf(response) <= after && pattern !== asksFor.date) {
+          // before it was given, the reply may legitimately still need it — but only name/store/position were given in turn 0
+          if (after === 0) expect(response.content, String(pattern)).not.toMatch(pattern);
+        } else if (responses.indexOf(response) > after) {
+          expect(response.content, String(pattern)).not.toMatch(pattern);
+        }
+      }
+    }
+    expect(responses[1]!.content.match(/Which date goes on the form\?/g)?.length ?? 0).toBe(1);
+    expect(responses.slice(2).every((response) => !asksFor.date.test(response.content))).toBe(true);
+
+    expect(proposal).toMatchObject({
+      templateKey: "dpoa",
+      status: "ready",
+      employeeName: "Sam Ortega",
+      employeeRole: "Makery Associate",
+      employeeRoleSource: "manager",
+      locationId: "loc-66",
+      locationSource: "manager",
+      formDate: "2026-10-12",
+      warningLevel: "verbal",
+      payrollDeduct: "no",
+      supportsInlineDraft: true,
+    });
+
+    state.draft = {
+      values: {
+        observation: "Observed:\nSam Ortega was out of dress code on 10/11 and 10/12.",
+        action_plan: "Sam Ortega is expected to arrive in the required dress code.",
+        prior_actions: "Verbal coaching — signed 09/01/2026",
+      },
+      checked: { offense_type: ["dress_code"] },
+    };
+    const { reference, draftWarning } = await create();
+    expect(draftWarning).toBeNull();
+    const form = await review(reference.instanceId);
+
+    expect(form.instance.employeeName).toBe("Sam Ortega");
+    expect(form.instance.locationId).toBe("loc-66");
+    expect(field(form, "job_title")!.value).toBe("Makery Associate");
+    expect(field(form, "form_date")!.value).toBe("2026-10-12");
+    expect(field(form, "warning_type")!.checked).toEqual(["verbal"]);
+    expect(field(form, "payroll_deduct")!.checked).toEqual(["no"]);
+    expect(field(form, "offense_type")!.checked).toEqual(["dress_code"]);
+    expect(field(form, "observation")!.value).toContain("10/11 and 10/12");
+    expect(field(form, "policy_language")!.value).toMatch(/Source: JBA Policy Manual — Dress Code for The Company, p\. 15/);
+    expect(field(form, "policy_violated")!.value).toBe("Dress Code Violation");
+  });
+});
+
+/* ========================================================================= */
 /* THE BROWSER SPEC'S PROPOSALS ARE THE SERVER'S, NOT HAND-WRITTEN            */
 /* ========================================================================= */
 
@@ -614,5 +853,48 @@ describe("browser fixture", () => {
     const normalize = (value: unknown) =>
       JSON.parse(JSON.stringify(value).replace(/"sourceMessageIds":\[[^\]]*\]/g, '"sourceMessageIds":[]'));
     expect(normalize(produced)).toEqual(normalize(JSON.parse(readFileSync(path, "utf8"))));
+  });
+});
+
+describe("a bare answer is never taken for the employee's name", () => {
+  it.each([
+    ["which store?", "Kearney"],
+    ["which store?", "Dodge"],
+  ])("a bare %j answer %j keeps the employee", async (_q, store) => {
+    const { proposal } = await conversation([
+      "Create a corrective action for Sam Ortega, out of dress code on 10/11. This is a verbal warning.",
+      store,
+    ]);
+    expect(proposal.employeeName).toBe("Sam Ortega");
+    expect(proposal.locationId).toBe(store === "Kearney" ? "loc-66" : "loc-264");
+  });
+
+  it("a bare position answer sets the position, not the name", async () => {
+    const { proposal } = await conversation([
+      "Create a corrective action for Sam Ortega at Kearney, out of dress code on 10/11. This is a verbal warning.",
+      "barista",
+    ]);
+    expect(proposal.employeeName).toBe("Sam Ortega");
+    expect(proposal.employeeRole).toBe("Barista");
+  });
+
+  it("a bare date answer sets the date, not the name", async () => {
+    const { proposal } = await conversation([
+      "Create a corrective action for Sam Ortega at Kearney, late on 10/5 and 10/15. This is a verbal warning.",
+      "most recent",
+    ]);
+    expect(proposal.employeeName).toBe("Sam Ortega");
+    expect(proposal.formDate).toBe("2026-10-15");
+  });
+});
+
+describe("a real correction after one of Bubbles' questions is still a correction", () => {
+  it("changes the employee when the manager answers the position question with another person", async () => {
+    const { responses, proposal } = await conversation([
+      "Create a corrective action for Sam Ortega at Kearney, out of dress code on 10/11. This is a verbal warning.",
+      "actually make it Jordan Vance",
+    ]);
+    expect(responses[0]!.content).toMatch(/position \(job title\)\?/);
+    expect(proposal.employeeName).toBe("Jordan Vance");
   });
 });

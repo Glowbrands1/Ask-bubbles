@@ -593,6 +593,18 @@ export interface ChatFormProposal {
    */
   locationCandidates?: string[];
   /**
+   * Whose word a resolved `locationId` rests on: `manager` (they named it),
+   * `woven` (the matched employee's mapped Woven store) or `assignment` (the one
+   * location the account covers). Lets the read-back say so. Optional.
+   */
+  locationSource?: "manager" | "woven" | "assignment";
+  /**
+   * When the manager gave SEVERAL incident dates, the dates the form's Date could
+   * be — set while Ask Bubbles is asking which, so the form is dated on purpose
+   * rather than by whichever came first. Absent when there was one or none.
+   */
+  formDateCandidates?: string[];
+  /**
    * Where `employeeRole` came from: `manager` (they typed a title) or `woven`
    * (the matched employee's current Woven position). Null/absent when there is
    * no position at all, which is when Ask Bubbles asks for it. Optional so

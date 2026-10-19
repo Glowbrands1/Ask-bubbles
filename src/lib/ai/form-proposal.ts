@@ -87,6 +87,7 @@ import {
 } from "@/lib/forms/employee-match";
 import { loadScopedRoster } from "@/lib/forms/employee-roster";
 import { allowsTeamSubject } from "@/lib/forms/team-subject";
+import { STORE_QUESTION_TAG, answersToOpenQuestions } from "@/lib/forms/question-answers";
 import {
   answersPositionQuestion,
   positionAlreadyAsked,
@@ -95,6 +96,14 @@ import {
   samePosition,
 } from "@/lib/forms/employee-position";
 import { readLocationMentions } from "@/lib/forms/location-mention";
+import { proposeLocationWithSource } from "@/lib/forms/location-scope";
+import {
+  answersDateQuestion,
+  dateAlreadyAsked,
+  dateAnsweredIn,
+  dateQuestion,
+  incidentDates,
+} from "@/lib/forms/incident-dates";
 import type { EmployeeResolution } from "@/lib/forms/proposal";
 import {
   CLARIFIED_TEMPLATE_KEY,
@@ -741,10 +750,15 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
    * See `checkTypedEmployee`: an exact match takes the directory's spelling and
    * salon, a close one is asked about, and nothing is ever autocorrected.
    */
-  const directory = await checkTypedEmployee(input, match, context);
+  const employeeContext = withoutAnswersToQuestions(context, input.history, input.question);
+  const directory = await checkTypedEmployee(input, match, employeeContext);
 
   const proposal = buildProposal({
-    ...(directory.resolution ? { employee: directory.resolution } : {}),
+    ...(directory.resolution
+      ? { employee: directory.resolution }
+      : employeeContext !== context
+        ? { employee: resolveEmployee(employeeContext) }
+        : {}),
     employeeLocationIds: directory.locationIds ?? [],
     /*
      * SERVER-GENERATED, never taken from the request. A proposal id is how a
@@ -867,6 +881,11 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
 
   if (directory.question) return turn(directory.question, proposal);
 
+  if (proposal.locationResolution === "resolved" && proposal.subject !== "team") {
+    const detailed = proposeLocationWithSource(input.actor.scope, context.text, directory.locationIds ?? []);
+    if (detailed.resolution === "resolved" && detailed.source) proposal.locationSource = detailed.source;
+  }
+
   const notes: string[] = directory.note ? [directory.note] : [];
   notes.push(...directoryNotes(proposal, directory, match, input, context));
 
@@ -891,6 +910,27 @@ function withNotes(content: string, notes: readonly string[]): string {
   if (CLOSING_LINE.test(last)) blocks.splice(blocks.length - 1, 0, ...notes);
   else blocks.push(...notes);
   return blocks.join("\n\n");
+}
+
+/**
+ * A MANAGER'S ANSWER TO "WHAT IS THEIR POSITION / WHICH DATE / WHICH STORE" IS
+ * NEVER THE EMPLOYEE'S NAME. A bare "barista", "most recent" or "Kearney" is the
+ * whole message, and the typed-name reader takes a whole short message for a
+ * name — so the answer would replace the employee. The turns that directly
+ * answer one of those questions are left out of the EMPLOYEE reading only; the
+ * location, title and date readers still see them.
+ */
+function withoutAnswersToQuestions(context: ManagerContext, history: ProposalTurn["history"], question: string): ManagerContext {
+  const answered = answersToOpenQuestions([...history, { role: "user", content: question }]);
+  if (answered.size === 0) return context;
+  const messages = context.messages.filter((message) => !answered.has(message.content.trim()));
+  if (messages.length === 0) return context;
+  return {
+    ...context,
+    messages,
+    ids: messages.map((message) => message.id).filter((id): id is string => typeof id === "string" && id.length > 0),
+    text: messages.map((message) => message.content).join("\n\n"),
+  };
 }
 
 /** The templates whose Job Title is a record fact — not the plans, whose role decides the plan. */
@@ -927,6 +967,25 @@ function directoryNotes(
   if (proposal.employeeName === null || proposal.subject === "team") return notes;
   const first = proposal.employeeName.split(/\s+/)[0]!;
   const conversation = [...input.history, { role: "user", content: input.question }];
+  const today = input.today ?? businessToday();
+
+  /*
+   * SEVERAL INCIDENT DATES: the form's Date is chosen on purpose. One date dates
+   * the form (as always); several are asked about once, and until the manager
+   * chooses the form carries the day it is created — never whichever incident
+   * was typed first. See `incident-dates.ts`.
+   */
+  if (POSITION_TEMPLATES.has(match.key)) {
+    const dates = incidentDates(context.text, today);
+    if (dates.length > 1) {
+      const choice = dateAnsweredIn(conversation, dates, today);
+      proposal.formDate = choice?.kind === "date" ? choice.iso : null;
+      if (!choice) {
+        proposal.formDateCandidates = dates;
+        if (!dateAlreadyAsked(input.history)) notes.push(dateQuestion(dates));
+      }
+    }
+  }
 
   if (POSITION_TEMPLATES.has(match.key)) {
     const stated = proposal.employeeRole ?? positionAnsweredIn(conversation);
@@ -959,13 +1018,22 @@ function directoryNotes(
       );
     }
   } else if (
-    directory.matched &&
+    POSITION_TEMPLATES.has(match.key) &&
     (directory.locationIds?.length ?? 0) === 0 &&
     proposal.locationResolution !== "resolved" &&
-    readLocationMentions(context.text).length === 0
+    proposal.locationResolution !== "needs_selection" &&
+    readLocationMentions(context.text).length === 0 &&
+    !input.history.some((turn) => turn.role === "assistant" && turn.content.includes(STORE_QUESTION_TAG))
   ) {
+    /*
+     * NO VERIFIED STORE ANYWHERE — not the manager's words, not a mapped Woven
+     * store (or the directory could not be read). Asked once; the form is
+     * otherwise created without a location rather than with a guessed one.
+     */
     notes.push(
-      `Woven doesn't show a store I can match for **${first}**, so I haven't put one on the form. Tell me which store they work at.`,
+      directory.matched
+        ? `Woven doesn't show a store I can match for **${first}**, so I haven't put one on the form. Tell me ${STORE_QUESTION_TAG}, or leave Location blank on the form.`
+        : `I couldn't verify a store for **${first}** from Woven, so I haven't put one on the form. Tell me ${STORE_QUESTION_TAG}, or leave Location blank on the form.`,
     );
   }
   return notes;
@@ -1424,6 +1492,7 @@ function continuesIntake(continued: string, input: ProposalTurn): boolean {
    */
   if (!isQuestion(question) && readLocationMentions(question).length > 0) return true;
   if (answersPositionQuestion(input.history, question)) return true;
+  if (answersDateQuestion(input.history, question, incidentDates(managerContext(input.history, { content: question }).text, input.today ?? businessToday()), input.today ?? businessToday())) return true;
   if (ALREADY_SAID.test(question)) return true;
   if (isQuestion(question)) return false;
   return (
@@ -2152,7 +2221,15 @@ function correctiveActionReady(
     stated.push(`**Type of warning:** ${warningLevelLabel(proposal.warningLevel as WarningLevel)}, as you said — tell me if that should change`);
   }
   const store = resolvedStoreName(proposal);
-  if (store) stated.push(`**Location:** ${store}, as you said — tell me if that should change`);
+  if (store) {
+    stated.push(
+      proposal.locationSource === "woven"
+        ? `**Location:** ${store}, from Woven (where ${proposal.employeeName} is assigned) — tell me if that should change`
+        : proposal.locationSource === "assignment"
+          ? `**Location:** ${store}, your assigned location — tell me if that should change`
+          : `**Location:** ${store}, as you said — tell me if that should change`,
+    );
+  }
   if (stated.length > 0) lines.push("", stated.join(" · "));
 
   /*

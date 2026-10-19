@@ -78,6 +78,26 @@ topic words still refused — "my employee handbook" names nobody). A store, an
 answer to the position question, or "I already told you" now continues the
 open intake. See Issue 2 for stores and positions.
 
+### Follow-up: which date goes on the form
+
+"She was late on 10/5 and 10/15" dated the Corrective Action **10/5** — the form
+took the *first* non-follow-up date in the message, which for a repeated
+behaviour is the earlier incident. Three dates can be in a conversation and they
+are not the same thing:
+
+| | Example | What happens now |
+|---|---|---|
+| Incident dates | late on 10/5 and 10/15 | Every one stays in the written description. |
+| Earlier steps | "I verbally coached her on 10/5", "verbal warning on 9/21" | History only — never the form's date. (The "I coached her on …" phrasing was not recognised as history before; now it is.) |
+| The form's Date | the Date line | One date, chosen on purpose. |
+
+One incident date dates the form, as before. **Several** are asked about once
+("Which date goes on the form? Say 'most recent' (10/15), pick one, or say
+'today'") and until the manager chooses, the form carries the day it is created
+— never whichever incident was typed first. Dates after today, follow-up dates
+and earlier steps are not counted. A bare reply ("most recent") continues the
+open intake. *(`src/lib/forms/incident-dates.ts`, `form-date-answer.ts`)*
+
 ---
 
 ## Issue 2 — wrong stores, and "ask the position of the employee"
@@ -144,9 +164,20 @@ The one title Marissa did type ("makery associate") matched no title pattern.
    with no position — it is **asked once**, and the answer is taken from the next
    short reply ("she's a shift lead", "makery associate").
 
-It is never inferred from the template or the incident. A Woven store that
-differs from the one the manager named is stated; a matched employee with no
-mapped Woven store is told to the manager rather than guessed.
+It is never inferred from the template or the incident.
+
+**Verified before populated.** Woven data is used only for an employee the
+directory matched *exactly* (or the manager confirmed — a close spelling is a
+"Did you mean…?" question first), never a terminated one, and only through the
+reviewed `mapped` Woven→store decisions (an unmapped Woven location is never
+used). The read-back says whose word each fact rests on:
+"Location: Kearney, NE, **from Woven** (where X is assigned)" versus "…**as you
+said**". A Woven store that differs from the one the manager named is stated, and
+the manager's word stands. With **no verifiable store** — none named, none mapped
+in Woven, an employee with several stores, or the directory unreadable — the
+manager is asked once ("which store they work at") or, for several stores, which
+one; the form is otherwise created without a location rather than with a guessed
+one. Same for position.
 
 ---
 
@@ -187,6 +218,21 @@ deliberately policy-free (the drafting prompt forbids citing a policy there).
 
 ---
 
+## Defects found while verifying (fixed)
+
+* **A bare answer was read as the employee's name.** "barista", "most recent" or
+  "Kearney" typed in reply to a question is the whole message, and the name
+  reader takes a whole short message for a name — so the answer replaced the
+  employee, **and the create route's currency check then refused the card**
+  ("the conversation now says the form is for most recent"). The turns that
+  *really are* an answer to the position, date or store question are now skipped
+  by the name readers on both the proposal and the create route; a correction
+  ("actually make it Jordan Vance") or a two-word name is still a name.
+  *(`src/lib/forms/question-answers.ts`, `proposal-currency.ts`)*
+* A roster comma/line break lost the "this place has ended" boundary; "at
+  Kearney and Bellevue" dropped Bellevue; a later specific answer did not narrow
+  an earlier vague one (all under Issue 2).
+
 ## Code changes
 
 | File | Change |
@@ -199,16 +245,102 @@ deliberately policy-free (the drafting prompt forbids citing a policy there).
 | `src/lib/ai/form-proposal.ts` | Intake continuation; position + store notes from the directory; store read-back; ambiguous-store question |
 | `src/lib/forms/form-opportunity.ts` | Corrective Action offered after prior coaching + recurrence |
 | `src/config/company/job-titles.ts` | "Makery Associate" |
+| `src/lib/forms/incident-dates.ts` (new), `form-date-answer.ts` | Several incident dates are asked about once; "I coached her on …" is history |
+| `src/lib/forms/question-answers.ts` (new), `proposal-currency.ts` | Answers to the position / date / store questions are not names |
 | `src/features/chat/message-bubble.tsx` | Card shows the store by name and a Position row |
-| `src/types/index.ts` | `locationCandidates`, `employeeRoleSource` (optional; old stored conversations still read) |
+| `src/types/index.ts` | `locationCandidates`, `locationSource`, `employeeRoleSource`, `formDateCandidates` (all optional; old stored conversations still read) |
 | `src/lib/ai/corrective-action-conversation.test.ts` | Two tests asserted Ask Bubbles *never* mentions job title — the opposite of the request; updated to "asked once, never as a numbered questionnaire item" |
 
 No migration, no configuration change, no new dependency.
 
 ## Verification
 
-RESULTS_PLACEHOLDER
+All results are from the final state of the branch (commit following this
+document), run in this environment.
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit` | exit 0, no errors |
+| `npx eslint` (whole repo) | exit 0 — **0 errors**, 9 warnings, all in files this branch does not touch |
+| `npx vitest run` (whole suite) | **354 files passed, 6 skipped; 8,533 tests passed, 59 skipped; 0 failed** (baseline before this work: 348 files / 8,378 tests) |
+| New regression tests | `admin-feedback-oct16-e2e.test.ts` (real routes, real Buff roster, admin global scope, synthetic employees), `location-mention-buff-roster`, `employee-position`, `incident-dates`, `question-answers`, `form-opportunity-escalation`, plus lowercase-name cases in `employment-change.test.ts` |
+| Playwright (`e2e/admin-feedback-oct16.spec.ts`) | **6/6 passed** (3 scenarios × desktop and mobile) |
+| Playwright (entire suite) | 108 passed, 10 skipped (screenshot capture specs), **2 failed** — `backgrounds.spec.ts › sidebar pattern` on desktop and mobile. **Pre-existing:** the same two fail identically on the original commit `3d6a6e7` in a clean worktree; it is a pixel comparison of the nav rail, which this branch does not touch. |
+
+**Do the new tests guard the bugs?** Run against the original source, 18 of the
+first 23 end-to-end cases failed (the other five assert behaviour that already
+worked: the manual-cited policy, its fail-closed blank, and so on).
+
+### The complete conversation (requirement 5)
+
+`a manager who gives everything is never asked for it again` plays four turns:
+employee (lowercase) + position + store; incidents on two dates and an earlier
+coaching date and the policy to use; the date choice; warning level and payroll
+answer. It asserts each fact is asked for at most once and never after it was
+given, that the card ends `ready` with the right employee, position (the
+manager's, marked as theirs), store, date (10/12), warning level and payroll, and
+that the created form has `job_title`, `form_date`, `location`, `warning_type`,
+`payroll_deduct`, `offense_type`, the observation naming both incident dates, the
+prior-coaching line, and a policy block that is the official manual's own
+Dress Code section with its source line and printed page.
+
+### Browser verification — what it does and does not prove
+
+The demo build cannot run the server's proposal flow, so the Playwright spec
+seeds the exact assistant turns the end-to-end suite produces (the fixture
+`e2e/fixtures/admin-feedback-oct16.json` is asserted equal to the server's
+output by that suite, so it cannot drift) and checks the built chat screen on
+desktop and phone: the store shown **by name** (never `loc-264`), the position
+and "from Woven", the two-store question naming only those two with no Create
+button until one is chosen, and the missing-position prompt on the card and in
+the reply. **It does not exercise a live Supabase/Woven/Anthropic session** —
+no production credentials or data were used, as instructed. The server logic is
+covered by the end-to-end tests above, against the real create/draft/review
+routes with an in-memory database.
 
 ## Open items and dependencies
 
-OPEN_PLACEHOLDER
+1. **Coaching Form and policy — decision needed, nothing changed.** The Coaching
+   Form has no policy field and its drafting rules forbid citing a policy
+   (general coaching, not a quotation of a rule). This branch does **not** add one.
+   The fix for Issue 1 is routing: when coaching was already tried and the
+   behaviour repeats, the Corrective Action Form — which carries the policy,
+   quoted from the official manual — is offered next to Coaching. If Marissa
+   also wants a policy *reference* on Coaching, that is a template change for
+   you to approve.
+2. **Policy accuracy rests on one document.** The knowledge base has exactly one
+   `policies_compliance` document (the 2025 JBA Policy Manual). Citations come
+   from its own headings and printed pages; a section it does not contain stays
+   blank for the manager. A re-issued manual with different headings would be
+   followed without a code change, but a deployment where two documents claim
+   to be the official manual cites none.
+3. **Woven data gaps (data, not code).** One employee in Marissa's conversations
+   has no *mapped* Woven store, so Bubbles asks for it instead of guessing; the
+   Woven location map has seven `mapped` stores and six rows a person marked
+   `ignored` (none unmapped), so only those seven can ever supply a store. Three directory rows are
+   `terminated` and are deliberately never matched. Fixing the data would let
+   more forms be populated without a question.
+4. **Position values are Woven's wording** ("Operator", "Human Resources
+   Generalist"), shown to the manager for correction; the position→role map
+   (`woven_position_map`) is unchanged and unused here.
+5. **Nicknames and abbreviations remain empty by design** — aliases are derived
+   from the roster only. If managers use a nickname that is not in a store's
+   name (for example a neighbourhood), Buff would add it to
+   `COMPANY_LOCATION_NICKNAMES`.
+6. **Dates:** a date typed without a year takes the current year; a manager
+   writing in January about December must give the year (the Date field stays
+   editable). The form's Date is still one date; Bubbles does not create several.
+7. **Browser coverage is demo-mode plus seeded server output** (see above). A
+   signed-in retest by Marissa on a deployed preview is the one check this
+   environment cannot do.
+8. **Two pre-existing Playwright screenshot failures** (`sidebar pattern`) are
+   unrelated; they fail on the original commit too.
+
+## Feedback status
+
+All three feedback records remain **`pending`**. Nothing was marked resolved or
+dismissed, and nothing in the database, Woven or production configuration was
+modified. After deployment approval, Marissa should retest her three original
+scenarios (the lateness Corrective Action given in chat; the dress-code
+Corrective Action at a named store; the dress-code situation where coaching was
+already tried) and only her confirmation should move those records forward.
