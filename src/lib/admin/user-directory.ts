@@ -11,6 +11,7 @@ import { APP_USER_COLUMNS, toAppUserProfile } from "@/lib/auth/app-user";
 import { revokeAuthAccess, restoreAuthAccess } from "@/lib/auth/revocation";
 import { ADMIN_CONSOLE_ROLES, ROLES } from "@/lib/permissions";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { escapeLike } from "@/lib/supabase/like";
 import type { AccessScope, Role, ScopeLevel } from "@/types";
 
 /**
@@ -429,7 +430,7 @@ export async function inviteUser(
   const { data: existing } = await admin
     .from("app_users")
     .select("id")
-    .ilike("email", email)
+    .ilike("email", escapeLike(email))
     .maybeSingle();
   if (existing) {
     throw new DirectoryError(

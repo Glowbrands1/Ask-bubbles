@@ -128,6 +128,19 @@ describe("code exchange and refresh", () => {
     expect(body.get("redirect_uri")).toBe(settings.redirectUri);
   });
 
+  it("binds the attempt to the administrator who started it: another administrator, or none, cannot complete it", () => {
+    const now = 1_700_000_000_000;
+    const start = createAuthorization(settings, { key: KEY, now, subject: "admin-1" });
+    const state = new URL(start.url).searchParams.get("state")!;
+    expect(verifyAttempt(start.cookieValue, state, { key: KEY, now, subject: "admin-1" }).verifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(() => verifyAttempt(start.cookieValue, state, { key: KEY, now, subject: "admin-2" })).toThrowError(expect.objectContaining({ code: "attempt_invalid" }));
+    expect(() => verifyAttempt(start.cookieValue, state, { key: KEY, now })).toThrowError(expect.objectContaining({ code: "attempt_invalid" }));
+    // An attempt started with no subject cannot be completed by a named administrator either.
+    const anonymous = createAuthorization(settings, { key: KEY, now });
+    const anonymousState = new URL(anonymous.url).searchParams.get("state")!;
+    expect(() => verifyAttempt(anonymous.cookieValue, anonymousState, { key: KEY, now, subject: "admin-1" })).toThrowError(expect.objectContaining({ code: "attempt_invalid" }));
+  });
+
   it("refuses a grant with no refresh token or without the business scope, and maps Google errors to codes without echoing bodies", async () => {
     await expect(exchangeAuthorizationCode(settings, "c", "v", json(200, { access_token: "a", scope: BUSINESS_SCOPE }))).rejects.toMatchObject({ code: "no_refresh_token" });
     await expect(exchangeAuthorizationCode(settings, "c", "v", json(200, { refresh_token: "r", scope: "openid email" }))).rejects.toMatchObject({ code: "missing_scope" });

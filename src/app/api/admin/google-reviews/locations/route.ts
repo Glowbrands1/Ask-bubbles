@@ -4,6 +4,7 @@ import { approvedStoreByCode } from "@/config/company/google-reviews";
 import { assertLiveMode, assertNoConfigurationProblems, assertWithinRateLimit, errorResponse } from "@/lib/api/respond";
 import { parseJsonBody } from "@/lib/api/validation";
 import { authorizeRequest } from "@/lib/auth/server";
+import { isSameOriginRequest } from "@/lib/google-reviews/csrf";
 import { NO_STORE, actorOf } from "@/lib/google-reviews/route-helpers";
 import { GoogleStoreError, createSupabaseGoogleStore } from "@/lib/google-reviews/store";
 import { GoogleViewError, readStoreSummaries } from "@/lib/google-reviews/views";
@@ -45,6 +46,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if (!isSameOriginRequest(request)) {
+      return NextResponse.json({ status: "refused", reason: "Cross-site request refused." }, { status: 403, headers: NO_STORE });
+    }
     assertLiveMode();
     assertNoConfigurationProblems();
     const context = await authorizeRequest(request, "manage_integrations");

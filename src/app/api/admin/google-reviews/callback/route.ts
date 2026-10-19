@@ -50,7 +50,9 @@ export async function GET(request: Request) {
     const code = url.searchParams.get("code");
     if (!code) return done(request, "attempt_invalid");
 
-    const { verifier } = verifyAttempt(readCookie(request.headers.get("cookie"), OAUTH_COOKIE), url.searchParams.get("state"));
+    const { verifier } = verifyAttempt(readCookie(request.headers.get("cookie"), OAUTH_COOKIE), url.searchParams.get("state"), {
+      subject: context.identity.subject,
+    });
     const grant = await exchangeAuthorizationCode(settings, code, verifier);
 
     const store = createSupabaseGoogleStore();

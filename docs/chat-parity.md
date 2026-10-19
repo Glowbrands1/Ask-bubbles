@@ -150,9 +150,10 @@ The Status column describes Bubbles **after this change**.
 | `forms/corrective-action-intake.ts` (`describesIncident`) | "Already said what happened?" | **Ported** as `forms/incident-reading.ts`, without trade words | adapt |
 | `forms/proposal.ts`, `proposal-continuation.ts`, `proposal-currency.ts`, `employee-match.ts`, `employee-roster.ts`, `bounded-context.ts`, `form-date-*.ts`, `inline-draft.ts`, the draft route | Who, where, when; directory check; stale cards; drafting | Present (an earlier port) | copy (done earlier) |
 | `forms/form-opportunity.ts` | Offering forms without being asked | Hook present, returns none | Bubbles-specific until Buff defines the rules |
-| Corrective-action ladder, "CA" shorthand, EPP family, exit / demotion / transfer readers, payroll deduct, coaching framing, prior actions, policy manual sections | The reference company's HR process | Absent | reference-only |
+| Corrective-action ladder, EPP family, exit / demotion / transfer readers, payroll deduct, coaching framing, prior actions, policy manual sections | The reference company's HR process | Present in code (corrective action, EPP, exit, employment change, payroll deduct); their Sun Tan City wording is tracked in `docs/sun-tan-city-residue-review.md` | see that review |
+| "CA" shorthand | "CA", "ca form", "corrective-action" open the Corrective Action Form | **Present**: `CA_SHORTHAND` in `forms/template-intent.ts` rewrites it to "corrective action" before any matcher runs | done |
 | `forms/salon-mention.ts` short-name and city aliases | Shortened location names | Bubbles has only number / full-name matching | adapt, once Buff's roster exists |
-| `forms/team-subject.ts` | "Coaching for the whole team" | Absent | adapt, behind a registry flag, if Buff wants it |
+| `forms/team-subject.ts` | "Coaching for the whole team" | **Present**: coaching form only; the subject is the label "All team members" (`allowsTeamSubject` in `ai/form-proposal.ts`) | done |
 
 ### Authentication and access
 
@@ -239,7 +240,7 @@ The two differences:
 | Turn | Reference | Bubbles | Why |
 |---|---|---|---|
 | "missed the opening checklist today" (no pronoun) during an intake | Ends the intake | Continues it | Intentional: the incident reader also accepts a sentence that opens with the verb |
-| "CA for Avery" | Corrective Action Form | Ordinary answer | Intentional: "CA" is the reference company's shorthand. A Buff form adds it to `intentPhrases` if wanted |
+| "CA for Avery" | Corrective Action Form | Corrective Action Form | Same: `CA_SHORTHAND` in `forms/template-intent.ts` (this row once said otherwise) |
 
 ### Regression suites in Bubbles
 

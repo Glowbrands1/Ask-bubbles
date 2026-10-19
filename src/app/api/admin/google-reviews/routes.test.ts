@@ -36,7 +36,7 @@ interface FakeStore {
   evidence: Record<string, { matchStatus: string; evidence: Record<string, unknown> }>;
 }
 
-async function load(options: { permitted?: boolean; store?: Partial<FakeStore> } = {}) {
+async function load(options: { permitted?: boolean; subject?: string; store?: Partial<FakeStore> } = {}) {
   vi.resetModules();
   const seen = { permissions: [] as string[], syncs: [] as Record<string, unknown>[], rateLimited: 0 };
   const store: FakeStore = { saved: [], ended: [], links: [], cleared: [], connection: null, evidence: {}, ...options.store };
@@ -54,7 +54,7 @@ async function load(options: { permitted?: boolean; store?: Partial<FakeStore> }
         const { AuthError } = await import("@/lib/auth/types");
         throw new AuthError("forbidden", "Your role does not have permission to do that.");
       }
-      return { identity: { subject: "admin-1", email: "admin@example.test", role: "admin" } };
+      return { identity: { subject: options.subject ?? "admin-1", email: "admin@example.test", role: "admin" } };
     },
   }));
   vi.doMock("@/lib/google-reviews/store", async (importOriginal) => ({
@@ -357,5 +357,60 @@ describe("the scheduled refresh", () => {
   it("is registered in vercel.json on a six-hour schedule, off the hour", async () => {
     const vercel = (await import("../../../../../vercel.json")).default as { crons: { path: string; schedule: string }[] };
     expect(vercel.crons.find((c) => c.path === "/api/google-reviews/cron")).toEqual({ path: "/api/google-reviews/cron", schedule: "23 */6 * * *" });
+  });
+});
+
+describe("the administrator who starts a connection is the one who completes it", () => {
+  const grantOk = () => vi.fn(async () => new Response(JSON.stringify({ access_token: "A", refresh_token: "R", scope: "https://www.googleapis.com/auth/business.manage" }), { status: 200 }));
+
+  it("refuses a callback from a different administrator, saving nothing and never calling Google", async () => {
+    const starter = await load({ subject: "admin-1" });
+    const start = await starter.connect(get("/api/admin/google-reviews/connect"));
+    const cookie = start.headers.get("set-cookie")!.split(";")[0]!;
+    const state = new URL(start.headers.get("location")!).searchParams.get("state")!;
+
+    const other = await load({ subject: "admin-2" });
+    const fetchMock = grantOk();
+    vi.stubGlobal("fetch", fetchMock);
+    const res = await other.callback(get(`/api/admin/google-reviews/callback?code=THE-CODE&state=${state}`, { cookie }));
+    expect(res.headers.get("location")).toBe("https://askbubbles.example/admin/integrations/google-reviews?error=attempt_invalid");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(other.store.saved).toHaveLength(0);
+  });
+});
+
+describe("state-changing admin routes refuse cross-site requests", () => {
+  const withHeaders = (path: string, body: unknown, headers: Record<string, string>) =>
+    new Request(`https://askbubbles.example${path}`, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
+  const CROSS: Record<string, string>[] = [{ origin: "https://evil.example" }, { "sec-fetch-site": "cross-site" }, { "sec-fetch-site": "same-site" }, { origin: "not a url" }];
+
+  it.each(CROSS)("answers 403 before authorizing or touching anything: %j", async (headers) => {
+    const r = await load({ store: { connection: { refreshTokenSealed: "v1.x.y.z" } } });
+    const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    for (const [route, path, body] of [
+      [r.disconnect, "/api/admin/google-reviews/disconnect", {}],
+      [r.sync.POST, "/api/admin/google-reviews/sync", { dryRun: false, confirmSave: true }],
+      [r.locations.POST, "/api/admin/google-reviews/locations", { action: "clear", storeCode: "219" }],
+    ] as const) {
+      const res = await route(withHeaders(path, body, headers));
+      expect(res.status, path).toBe(403);
+      expect(await res.json()).toMatchObject({ status: "refused" });
+    }
+    expect(r.seen.permissions).toEqual([]);
+    expect(r.seen.syncs).toEqual([]);
+    expect(r.store.ended).toEqual([]);
+    expect(r.store.cleared).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("lets a same-origin browser request, and a header-less non-browser request, through to the normal checks", async () => {
+    const r = await load();
+    const same = await r.sync.POST(withHeaders("/api/admin/google-reviews/sync", {}, { origin: "https://askbubbles.example", "sec-fetch-site": "same-origin" }));
+    expect(same.status).toBe(200);
+    const bare = await r.sync.POST(withHeaders("/api/admin/google-reviews/sync", {}, {}));
+    expect(bare.status).toBe(200);
+    expect(r.seen.permissions).toEqual(["manage_integrations", "manage_integrations"]);
   });
 });
