@@ -130,7 +130,7 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
         options: [
           { key: "leadership_ability", label: "Leadership ability" },
           { key: "confidence_professionalism", label: "Confidence and professionalism" },
-          { key: "sales_drive_client_service", label: "Sales drive and client service focus" },
+          { key: "sales_drive_client_service", label: "Sales drive and guest service focus" },
           { key: "work_ethic_flexibility", label: "Strong work ethic and flexibility" },
           { key: "management_experience", label: "Management experience" },
         ],
@@ -179,10 +179,10 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
         "Everyone responds differently to leadership styles. What type of communication and guidance do you find most effective from a manager?",
       ),
 
-      { kind: "section", label: "Sales & Client Service" },
+      { kind: "section", label: "Sales & Guest Service" },
       ...question(
         "drive_sales",
-        "How do you drive sales performance while maintaining excellent client service?",
+        "How do you drive sales performance while maintaining excellent guest service?",
       ),
       ...question(
         "sales_targets",
@@ -190,7 +190,7 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
       ),
       ...question(
         "unhappy_client",
-        "Tell me about a time you turned an unhappy client into a satisfied one.",
+        "Tell me about a time you turned an unhappy guest into a satisfied one.",
       ),
 
       { kind: "section", label: "Operational Excellence" },
@@ -254,7 +254,7 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
           { key: "coaching_development", label: "Coaching & development skills" },
           { key: "operational_compliance", label: "Operational & compliance knowledge" },
           { key: "sales_revenue_focus", label: "Sales & revenue focus" },
-          { key: "client_service_leadership", label: "Client service leadership" },
+          { key: "client_service_leadership", label: "Guest service leadership" },
           { key: "cultural_alignment", label: "Cultural alignment" },
         ],
         responsibility: "manager",
@@ -284,7 +284,7 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
         options: [
           { key: "cleanliness", label: "Cleanliness & organization" },
           { key: "equipment_safety", label: "Equipment maintenance & safety" },
-          { key: "client_service", label: "Client service interactions" },
+          { key: "client_service", label: "Guest service interactions" },
           { key: "staff_engagement", label: "Staff engagement & leadership presence" },
           { key: "sales_focus", label: "Sales focus & promotions" },
         ],
@@ -311,7 +311,7 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
         kind: "field",
         field: field(
           "walkthrough_client_service",
-          "Client service interactions",
+          "Guest service interactions",
           "manager",
           "long_text",
           { help: "Key Notes" },
@@ -408,7 +408,7 @@ export function secondRoundManagementInterviewDocument(): FormDocument {
       { kind: "section", label: "Role Play Scenarios" },
       ...question(
         "scenario_one",
-        "Scenario 1: Let’s pretend that during your walkthrough in the store, a staff member fails to greet a client promptly. Demonstrate how you would address this in real-time.",
+        "Scenario 1: Let’s pretend that during your walkthrough in the store, a staff member fails to greet a guest promptly. Demonstrate how you would address this in real-time.",
       ),
       ...question(
         "scenario_two",
@@ -468,15 +468,15 @@ export function tanningConsultantInterviewDocument(): FormDocument {
       ),
       ...question(
         "customer_service",
-        "4. Describe a time you delivered excellent customer service and what made it stand out.",
+        "4. Describe a time you delivered excellent guest service and what made it stand out.",
       ),
       ...question(
         "busy_day",
-        "5. Think back to a busy day when you were helping several customers at once. How did you keep things running smoothly and make sure everyone felt taken care of?",
+        "5. Think back to a busy day when you were helping several guests at once. How did you keep things running smoothly and make sure everyone felt taken care of?",
       ),
       ...question(
         "sales_approach",
-        "6. This role includes recommending products and services to clients. How comfortable are you with sales, and what’s your approach?",
+        "6. This role includes recommending products and services to guests. How comfortable are you with sales, and what’s your approach?",
       ),
       ...question(
         "accountability",
@@ -665,7 +665,7 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 11,
     document: tanningConsultantInterviewDocument(),
     variants: [],
-    revision: 2,
+    revision: 3,
     revisionNote: "Published from the 03. Tanning Consultant Interview Form source document.",
     bundledPdfName: "Tanning Consultant Interview Form.pdf",
   },
@@ -681,7 +681,7 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 12,
     document: firstRoundManagementInterviewDocument(),
     variants: [],
-    revision: 2,
+    revision: 3,
     revisionNote: "Published from the 02. First Round Managment Interview Form source document.",
     bundledPdfName: "First Round Management Interview Form.pdf",
   },
@@ -697,7 +697,7 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 13,
     document: secondRoundManagementInterviewDocument(),
     variants: [],
-    revision: 2,
+    revision: 3,
     revisionNote: "Published from the 03. Second Round Managment Interview Form source document.",
     bundledPdfName: "Second Round Management Interview Form.pdf",
   },

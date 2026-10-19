@@ -284,7 +284,7 @@ describe("what Ask Bubbles says beside the proposal", () => {
     expect(content).toMatch(/- \*\*Last Day Worked:\*\* September 15, 2026/);
     // Handing in notice is resigning: the notice date is the resignation date.
     expect(content).toMatch(/- \*\*Resignation Date:\*\* September 1, 2026/);
-    expect(content).toMatch(/\*\*Left blank for you to review:\*\* Location, Permanent Address, Date that notice was fulfilled, written notice attached and all three signature lines\./);
+    expect(content).toMatch(/\*\*Left blank for you to review:\*\* Store, Permanent Address, Date that notice was fulfilled, written notice attached and all three signature lines\./);
     expect(content).toMatch(/Before you create it:/);
     for (const question of [
       /- How did they let you know — in person, phone call, text message, email, or no call\/no show\?/,
@@ -329,7 +329,7 @@ describe("what Ask Bubbles says beside the proposal", () => {
     expect(content).toMatch(/- \*\*Payroll Deduction:\*\* Payroll deduction is not applicable\./);
     expect(content).toMatch(/- \*\*Minimum Wage \/ Bonus Forfeiture:\*\* Employee will not be dropped to minimum wage and will not forfeit bonus\./);
     expect(content).toMatch(/- \*\*Eligible for Rehire:\*\* Employee is eligible for rehire\./);
-    expect(content).toMatch(/\*\*Left blank for you to review:\*\* Location, Permanent Address, Date that notice was fulfilled, written notice attached and all three signature lines\./);
+    expect(content).toMatch(/\*\*Left blank for you to review:\*\* Store, Permanent Address, Date that notice was fulfilled, written notice attached and all three signature lines\./);
     expect(content).not.toMatch(/\?\n/); // no question asked
     expect(content).not.toMatch(/Before you create it/);
     expect(content).toMatch(/doesn't sign anything, remove anyone from MyGlow, change payroll/);
@@ -556,7 +556,7 @@ describe("QA 3 — location, title and dates", () => {
       }),
     );
     expect(response!.formProposal!.locationId).toBe("loc-0309");
-    expect(response!.content).toMatch(/- \*\*Location:\*\* NE Kearney/);
+    expect(response!.content).toMatch(/- \*\*Store:\*\* NE Kearney/);
   });
 
   it.each([
@@ -570,7 +570,7 @@ describe("QA 3 — location, title and dates", () => {
     );
     expect(response!.formProposal!.locationId).toBe(id);
     expect(response!.formProposal!.status).toBe("ready");
-    expect(response!.content).toContain(`- **Location:** ${name}`);
+    expect(response!.content).toContain(`- **Store:** ${name}`);
   });
 
   it("a salon the manager is not assigned to is never proposed", async () => {
@@ -581,7 +581,7 @@ describe("QA 3 — location, title and dates", () => {
     expect(response!.formProposal!.locationId).toBeNull();
     expect(response!.formProposal!.status).toBe("needs_location");
     // The salon they named is said back, and only their own are offered.
-    expect(response!.content).toMatch(/\*\*KS Lawrence\*\* isn't a location on your/);
+    expect(response!.content).toMatch(/\*\*KS Lawrence\*\* isn't a store on your/);
     expect(response!.formProposal!.authorizedLocationIds.sort()).toEqual(["loc-0309", "loc-0310", "loc-0311"]);
   });
 

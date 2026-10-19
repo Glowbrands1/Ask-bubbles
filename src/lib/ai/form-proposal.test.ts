@@ -654,7 +654,7 @@ describe("P4-RC. a global actor can create a coaching form", () => {
 
     expect(response!.formProposal!.locationId).toBeNull();
     expect(response!.formProposal!.locationResolution).toBe("not_applicable");
-    expect(response!.content).toMatch(/covers every location, so this form won't name one/i);
+    expect(response!.content).toMatch(/covers every store, so this form won't name one/i);
     // The question that had nothing to answer it is gone.
     expect(response!.content).not.toMatch(/which (?:salon|location) is this about/i);
   });

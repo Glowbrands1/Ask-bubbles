@@ -32,6 +32,7 @@ import {
   answerRegisterClarification,
   buildFormInventoryBlock,
 } from "./form-answers";
+import { resolveChatEntities } from "./entity-facts";
 import { proposeFormForTurn, suggestFormsForTurn, type ChatActor } from "./form-proposal";
 import { rowsForQuestion } from "@/lib/knowledge/credential-redaction";
 import { assembleGrounding } from "./grounding-assembly";
@@ -190,6 +191,14 @@ export async function answerQuestion(
     });
     if (proposal) return proposal;
   }
+
+  /*
+   * WHO AND WHICH STORE THE QUESTION NAMES — answered outright when the question
+   * is only a lookup, otherwise attached as verified records. Deterministic and
+   * read-only; see `entity-facts.ts`.
+   */
+  const entities = await resolveChatEntities({ question: request.question, history: request.history, actor });
+  if (entities.direct) return entities.direct;
 
   /* ------------------------------------------------------- retrieve -- */
   /*
@@ -373,6 +382,7 @@ export async function answerQuestion(
     hasReportData: (briefing?.present.length ?? 0) > 0,
     hasMissingReports: (briefing?.missing.length ?? 0) > 0,
     hasFormsLibrary: formInventoryBlock !== null,
+    hasVerifiedRecords: entities.block !== null,
     pinnedDocumentTitles: pinnedTitles,
     handbookNote,
   });
@@ -382,6 +392,7 @@ export async function answerQuestion(
     grounding: buildGroundingBlock(grounding),
     reportData: briefing?.text ?? null,
     formsLibrary: formInventoryBlock,
+    verifiedRecords: entities.block,
     history: request.history,
     question: request.question,
     maxTokens: CLAUDE_MAX_TOKENS[request.mode],

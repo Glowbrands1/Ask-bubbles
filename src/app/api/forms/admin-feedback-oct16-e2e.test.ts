@@ -1,3 +1,4 @@
+import { rosterResultFor } from "@/test/roster-result";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
@@ -143,6 +144,8 @@ vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
   return {
     ...actual,
     loadScopedRoster: async (scope: AccessScope | null) => actual.scopeRoster(state.directory as never, scope),
+    loadScopedRosterResult: async (scope: AccessScope | null) =>
+      rosterResultFor(actual.scopeRoster, state.directory as never, scope),
   };
 });
 
@@ -434,11 +437,13 @@ describe("Issue 2 — the employee's position", () => {
     expect(last.content).toMatch(/Position:\*\* Makery Associate, from Woven — tell me if that has changed/);
   });
 
-  it("the manager's own title wins over Woven's, and the disagreement is said", async () => {
+  // POLICY, 19 Oct 2026: the synchronized Woven directory is the source of truth for a job title.
+  // A verified Woven position wins over the manager's wording, and the disagreement is said.
+  it("Woven's verified title wins over the manager's wording, and the disagreement is said", async () => {
     const { proposal, last } = await conversation(["Create a corrective action for Casey Brandt at Kearney, she is a shift lead, out of dress code on 10/11."]);
-    expect(proposal.employeeRole).toBe("Shift Lead");
-    expect(proposal.employeeRoleSource).toBe("manager");
-    expect(last.content).toMatch(/Woven lists \*\*Casey\*\* as \*\*Makery Associate\*\*/);
+    expect(proposal.employeeRole).toBe("Makery Associate");
+    expect(proposal.employeeRoleSource).toBe("woven");
+    expect(last.content).toMatch(/You described \*\*Casey Brandt\*\* as a Shift Lead, but Woven lists their job title as \*\*Makery Associate\*\*/);
   });
 
   it("asks once when there is no position anywhere, then uses the answer and stops asking", async () => {
@@ -519,7 +524,7 @@ describe("Issue 2 — the store the form is filed against", () => {
   it("says so when the manager's store is not where Woven has the employee", async () => {
     const { proposal, last } = await conversation(["Create a corrective action for Casey Brandt at Bellevue, out of dress code on 10/11."]);
     expect(proposal.locationId).toBe("loc-67");
-    expect(last.content).toMatch(/Woven shows \*\*Casey\*\* at \*\*Kearney, NE\*\*, but you said \*\*Bellevue, NE\*\*/);
+    expect(last.content).toMatch(/Woven has \*\*Casey Brandt\*\* at \*\*Kearney, NE \(Store 66\)\*\*, not \*\*Bellevue, NE \(Store 67\)\*\*/);
   });
 });
 
@@ -655,14 +660,14 @@ describe("Woven store and position are verified, or asked for — never guessed"
     const { proposal, last } = await conversation(["Create a corrective action for Casey Brandt, out of dress code on 10/11. This is a verbal warning."]);
     expect(proposal.locationId).toBe("loc-66");
     expect(proposal.locationSource).toBe("woven");
-    expect(last.content).toMatch(/Location:\*\* Kearney, NE, from Woven \(where Casey Brandt is assigned\)/);
-    expect(last.content).not.toMatch(/Location:\*\* Kearney, NE, as you said/);
+    expect(last.content).toMatch(/Store:\*\* Kearney, NE, from Woven \(where Casey Brandt is assigned\)/);
+    expect(last.content).not.toMatch(/Store:\*\* Kearney, NE, as you said/);
   });
 
   it("says a store came from the manager's own words", async () => {
     const { proposal, last } = await conversation(["Create a corrective action for Casey Brandt at Kearney, out of dress code on 10/11. This is a verbal warning."]);
     expect(proposal.locationSource).toBe("manager");
-    expect(last.content).toMatch(/Location:\*\* Kearney, NE, as you said/);
+    expect(last.content).toMatch(/Store:\*\* Kearney, NE, as you said/);
   });
 
   it("asks for the store once when none can be verified, and files nothing meanwhile", async () => {
@@ -692,7 +697,7 @@ describe("Woven store and position are verified, or asked for — never guessed"
     const { proposal, last } = await conversation(["Create a corrective action for Dana Multi, out of dress code on 10/11. This is a verbal warning."]);
     expect(proposal.status).toBe("needs_location");
     expect(proposal.locationId).toBeNull();
-    expect(last.content).toMatch(/Which location is this about/);
+    expect(last.content).toMatch(/Which store is this about/);
   });
 });
 

@@ -75,6 +75,13 @@ export interface CallClaudeInput {
    * template name look like something retrieved and therefore citable.
    */
   readonly formsLibrary?: string | null;
+  /**
+   * A FIFTH block: VERIFIED RECORDS — the registered store and the Woven
+   * employee facts the question touches. A record, not evidence: it takes no
+   * source marker, and it is the only place a job title, store assignment or
+   * employment status may come from.
+   */
+  readonly verifiedRecords?: string | null;
   readonly history: readonly ClaudeTurn[];
   readonly question: string;
   readonly maxTokens: number;
@@ -116,6 +123,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
                 input.grounding,
                 ...(input.reportData ? [input.reportData] : []),
                 ...(input.formsLibrary ? [input.formsLibrary] : []),
+                ...(input.verifiedRecords ? [input.verifiedRecords] : []),
                 `QUESTION\n\n${input.question}`,
               ].join("\n\n"),
             },

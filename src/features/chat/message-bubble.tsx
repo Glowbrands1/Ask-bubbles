@@ -9,6 +9,7 @@ import { RichText } from "@/components/rich-text";
 import { SourceList } from "@/components/source-list";
 import { Badge } from "@/components/ui/badge";
 import { locationById } from "@/lib/locations";
+import { describeStore } from "@/lib/stores/resolver";
 import { Button } from "@/components/ui/button";
 import { Label, Select } from "@/components/ui/field";
 import { ANSWER_MODE_LABEL } from "@/data/answer-modes";
@@ -337,10 +338,8 @@ function FormProposalCard({
   /*
    * WHICH LOCATION, WHEN THE ACTOR COVERS SEVERAL.
    *
-   * Ids, not names: there is no location roster, and the only source of a display
-   * name in this app is seeded demo data — see docs/chat-phase-3.md. Offering
-   * the ids the scope actually proves is honest and answerable; offering
-   * invented names would not be.
+   * Offered by the registered store's name and number, from the roster; only
+   * the ids the scope actually proves are offered.
    *
    * Whatever is chosen is re-authorized against the AccessScope by
    * `POST /api/forms/instances`, so an edited list buys nothing.
@@ -563,10 +562,31 @@ function FormProposalCard({
             )}
           </ProposalRow>
         ) : null}
-        <ProposalRow label="Location">
+        {proposal.employeeName && proposal.employeeVerification ? (
+          <ProposalRow label="Woven">
+            {proposal.employeeVerification.status === "verified" ? (
+              <span className="text-foreground">
+                Verified — {proposal.employeeVerification.title}
+                {proposal.employeeVerification.storeMismatch ? " (store differs from the one you named)" : ""}
+              </span>
+            ) : (
+              <Missing>
+                {{
+                  not_found: "Not verified — no matching employee in Woven",
+                  unavailable: "Not verified — Woven records were unavailable",
+                  not_checked: "Not verified — unavailable for your account",
+                  ambiguous: "Not verified — more than one possible match",
+                  no_title: "Not verified — no job title in Woven",
+                  stale: "Not verified — Woven record is out of date",
+                  not_active: "Not verified — Woven does not list them as employed",
+                }[proposal.employeeVerification.reason ?? "unavailable"]}
+              </Missing>
+            )}
+          </ProposalRow>
+        ) : null}
+        <ProposalRow label="Store">
           {location ? (
-            /* The roster's own name for the store, so the manager reads which one — the id only if the roster does not know it. */
-            <span className="text-foreground">{locationById(location)?.name ?? location}</span>
+            <span className="text-foreground">{storeText(location)}</span>
           ) : proposal.locationResolution === "not_applicable" ? (
             /*
              * NOT A GAP. A global actor is not assigned to a location, and the
@@ -576,19 +596,12 @@ function FormProposalCard({
              */
             <Missing>Not recorded — your account covers every location</Missing>
           ) : proposal.locationId ? (
-            /*
-             * THE VERIFIED ID, NOT AN INVENTED NAME. There is no location roster
-             * to resolve a display name from. the company location roster is the authority, but a
-             * demo data — putting a fictional location name in front of somebody
-             * about to file a disciplinary record is the class of thing this
-             * phase exists to stop. `locationName` stays null until a roster
-             * exists; see docs/chat-phase-3.md.
-             */
-            <span className="text-foreground">{locationById(proposal.locationId)?.name ?? proposal.locationId}</span>
+            /* The registered store's name and number, resolved from the verified id. */
+            <span className="text-foreground">{storeText(proposal.locationId)}</span>
           ) : (
             <Missing>
               {proposal.locationResolution === "needs_selection"
-                ? "Not set — say which location this is about"
+                ? "Not set — say which store this is about"
                 : "Not set — Ask Bubbles could not verify one"}
             </Missing>
           )}
@@ -618,18 +631,18 @@ function FormProposalCard({
       */}
       {!superseded && proposal.authorizedLocationIds.length > 0 && !proposal.locationId ? (
         <div className="mt-4 min-w-0 space-y-1.5">
-          <Label htmlFor={`location-${proposal.proposalId}`}>Which location is this about?</Label>
+          <Label htmlFor={`location-${proposal.proposalId}`}>Which store is this about?</Label>
           <Select
             id={`location-${proposal.proposalId}`}
             className="min-w-0"
             value={location}
             onChange={(event) => setLocation(event.target.value)}
           >
-            <option value="">Choose a location…</option>
+            <option value="">Choose a store…</option>
             {proposal.authorizedLocationIds.map((id) => (
               <option key={id} value={id}>
                 {/* The roster's name for the id; the id itself only if the roster does not know it. */}
-                {locationById(id)?.name ?? id}
+                {storeText(id)}
               </option>
             ))}
           </Select>
@@ -649,6 +662,12 @@ function FormProposalCard({
       ) : null}
     </div>
   );
+}
+
+/** A registered store as a manager reads it: "Kearney, NE (Store 66)". */
+function storeText(id: string): string {
+  const store = locationById(id);
+  return store ? describeStore(store) : id;
 }
 
 /** The forms whose Job Title is a record fact Bubbles fills from Woven or asks for. */

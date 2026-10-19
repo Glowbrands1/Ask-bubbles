@@ -179,7 +179,7 @@ describe("the document the business recognises", () => {
   it("names the nine the business names, and not the SDIT's seven", () => {
     expect(TSD_EPP_EXPECTATIONS.map((expectation) => expectation.label)).toEqual([
       "Uphold the Buff City Soap Experience.",
-      "Coach team to provide, and personally provide, excellent client service.",
+      "Coach team to provide, and personally provide, excellent guest service.",
       "Bench planning and ability to lead management.",
       "Quality hiring and employee retention.",
       TSD_JBA_POLICY_EXPECTATION,
@@ -570,8 +570,8 @@ describe("the rest of the library is where it was", () => {
       dpoa: 5,
       "policy-review": 2,
       "follow-up-coaching": 2,
-      "sdit-epp": 4,
-      "tsd-epp": 3,
+      "sdit-epp": 5,
+      "tsd-epp": 4,
       "resignation-exit": 3,
       // Salon -> Store wording re-issues.
       "asd-sdit-epp": 2,
@@ -579,9 +579,9 @@ describe("the rest of the library is where it was", () => {
       "dmit-epp-tsd": 2,
       "dmit-epp-dmit": 2,
       "prescreen-phone-interview": 2,
-      "tanning-consultant-interview": 2,
-      "management-interview-round-1": 2,
-      "management-interview-round-2": 2,
+      "tanning-consultant-interview": 3,
+      "management-interview-round-1": 3,
+      "management-interview-round-2": 3,
     };
     for (const entry of TEMPLATE_SEEDS) {
       expect(entry.revision, entry.key).toBe(expected[entry.key] ?? 1);

@@ -225,15 +225,14 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
       "dmit-epp-tsd",
       "dmit-epp-dmit",
       "prescreen-phone-interview",
-      "tanning-consultant-interview",
-      "management-interview-round-1",
-      "management-interview-round-2",
     ]);
+    // Re-issued twice: Salon -> Store, then client/customer -> guest.
+    const guestWording = new Set(["tanning-consultant-interview", "management-interview-round-1", "management-interview-round-2"]);
     for (const seed of TEMPLATE_SEEDS) {
       if (seed.key === "dpoa" || seed.key === "sdit-epp" || seed.key === "tsd-epp" || seed.key === "resignation-exit") continue;
-      expect(seed.revision, seed.key).toBe(reissued.has(seed.key) || storeWording.has(seed.key) ? 2 : 1);
+      expect(seed.revision, seed.key).toBe(guestWording.has(seed.key) ? 3 : reissued.has(seed.key) || storeWording.has(seed.key) ? 2 : 1);
     }
-    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "tsd-epp")?.revision).toBe(3);
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "tsd-epp")?.revision).toBe(4);
     expect(TEMPLATE_SEEDS.find((seed) => seed.key === "resignation-exit")?.revision).toBe(3);
     /*
      * THE SDIT EPP IS AT 3. Revision 2 published the form the business issues
@@ -242,7 +241,7 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
      * SDIT: `roleAbbr` was "ASD", so every `{{roleAbbr}}` on the page named
      * the wrong role.
      */
-    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "sdit-epp")?.revision).toBe(4);
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "sdit-epp")?.revision).toBe(5);
     /*
      * THE CORRECTIVE ACTION FORM IS AT 4. Revision 2 renamed it and gave its
      * observation the Observed/Expectation shape; revision 3 set the two policy
@@ -267,7 +266,7 @@ describe("the First Round Management Interview matches its source", () => {
       "Qualities to Observe Throughout Interview",
       "Intro & Motivation",
       "Leadership & Team Management",
-      "Sales & Client Service",
+      "Sales & Guest Service",
       "Operational Excellence",
       "Role Play Scenario",
       "Required Information for the Applicant",
@@ -280,7 +279,7 @@ describe("the First Round Management Interview matches its source", () => {
     expect(options(document, "qualities_observed")).toEqual([
       "Leadership ability",
       "Confidence and professionalism",
-      "Sales drive and client service focus",
+      "Sales drive and guest service focus",
       "Strong work ethic and flexibility",
       "Management experience",
     ]);
@@ -292,7 +291,7 @@ describe("the First Round Management Interview matches its source", () => {
       "Coaching & development skills",
       "Operational & compliance knowledge",
       "Sales & revenue focus",
-      "Client service leadership",
+      "Guest service leadership",
       "Cultural alignment",
     ]);
   });
@@ -307,9 +306,9 @@ describe("the First Round Management Interview matches its source", () => {
       "Tell me about a time when you had to have a difficult conversation with an employee about performance or behavior. How did you prepare, and what steps did you take to ensure it was constructive?",
       "Give me an example of when you took initiative on something important. How did you balance moving forward independently with keeping leadership informed?",
       "Everyone responds differently to leadership styles. What type of communication and guidance do you find most effective from a manager?",
-      "How do you drive sales performance while maintaining excellent client service?",
+      "How do you drive sales performance while maintaining excellent guest service?",
       "What were your sales targets in your last position? How consistently did you meet or exceed them?",
-      "Tell me about a time you turned an unhappy client into a satisfied one.",
+      "Tell me about a time you turned an unhappy guest into a satisfied one.",
       "What systems or processes have you used to manage staffing, scheduling, and labor costs?",
       "This role involves hands-on work like cleaning beds and doing laundry. How do you lead by example in these tasks?",
       "How do you ensure your team is consistently trained to meet both performance expectations and company compliance standards?",
@@ -337,7 +336,7 @@ describe("the First Round Management Interview matches its source", () => {
     const areas = [
       "Cleanliness & organization",
       "Equipment maintenance & safety",
-      "Client service interactions",
+      "Guest service interactions",
       "Staff engagement & leadership presence",
       "Sales focus & promotions",
     ];
@@ -389,7 +388,7 @@ describe("the Second Round Management Interview matches its source", () => {
       "How do you ensure all team members follow company policies, procedures, and safety guidelines?",
       "If you were given direction as a Store Director to reduce expenses, what would be the first three areas you would focus on, and why?",
       "Tell me about a time you used performance results or key metrics to adjust your approach and improve outcomes.",
-      "Scenario 1: Let’s pretend that during your walkthrough in the store, a staff member fails to greet a client promptly. Demonstrate how you would address this in real-time.",
+      "Scenario 1: Let’s pretend that during your walkthrough in the store, a staff member fails to greet a guest promptly. Demonstrate how you would address this in real-time.",
       "Scenario 2: Customer visits have dropped 20% over the past month and lotions and memberships sales are at their lowest in six months. One long-time team member is resistant to promoting add-ons, saying, “Customers don’t want to be pushed.” What are your next steps?",
       "How would you create a 30–60–90 day training plan for a new Assistant Store Director or Tanning Consultant?",
       "How do you follow up to ensure training is being applied consistently?",
@@ -448,9 +447,9 @@ describe("the Tanning Consultant Interview matches its source", () => {
       "1. Tell me about yourself and why you’re interested in working at Buff City Soap.",
       "2. Can you walk me through your resume and highlight your most recent roles?",
       "3. Describe your availability and any scheduling restrictions.",
-      "4. Describe a time you delivered excellent customer service and what made it stand out.",
-      "5. Think back to a busy day when you were helping several customers at once. How did you keep things running smoothly and make sure everyone felt taken care of?",
-      "6. This role includes recommending products and services to clients. How comfortable are you with sales, and what’s your approach?",
+      "4. Describe a time you delivered excellent guest service and what made it stand out.",
+      "5. Think back to a busy day when you were helping several guests at once. How did you keep things running smoothly and make sure everyone felt taken care of?",
+      "6. This role includes recommending products and services to guests. How comfortable are you with sales, and what’s your approach?",
       "7. Give me an example of a time you were accountable for your results—what was the situation and outcome?",
       "8. Our company has five core values. Id like to hear about a time in your past experiences--work, school, or personal where youve shown one of these in action.",
       "9. Give me an example of a time when you and a teammate disagreed on how to get something done. How did you handle it, and what was the outcome?",

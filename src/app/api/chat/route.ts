@@ -312,7 +312,7 @@ function parseAskRequest(body: Partial<AskRequest>): AskRequest {
       locationName: optionalString(
         context?.locationName,
         LIMITS.personName,
-        "your location",
+        "your store",
       ),
       /*
        * WHAT DAY IT IS COMES FROM THE SERVER, IN THE BUSINESS TIMEZONE.

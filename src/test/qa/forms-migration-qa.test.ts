@@ -136,7 +136,11 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
 
 vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/forms/employee-roster")>();
-  return { ...actual, loadScopedRoster: async (scope: AccessScope | null) => actual.scopeRoster([], scope) };
+  return {
+    ...actual,
+    loadScopedRoster: async (scope: AccessScope | null) => actual.scopeRoster([], scope),
+    loadScopedRosterResult: async () => ({ status: "not_checked", reason: "no_scope" }),
+  };
 });
 
 const { ensureTemplateLibrary, getTemplateByKey, getCurrentVersion, listTemplateSummaries, listVersions, openDraft, saveDraft, publishDraft } =
@@ -247,6 +251,10 @@ const neutral = (text: string) =>
     .replace(/\bsalons\b/g, "stores")
     .replace(/\bSalon\b/g, "Store")
     .replace(/\bsalon\b/g, "store")
+    .replace(/\bClients\b|\bCustomers\b/g, "Guests")
+    .replace(/\bclients\b|\bcustomers\b/g, "guests")
+    .replace(/\bClient\b|\bCustomer\b/g, "Guest")
+    .replace(/\bclient\b|\bcustomer\b/g, "guest")
     .replace(/\s+/g, " ")
     .trim();
 
