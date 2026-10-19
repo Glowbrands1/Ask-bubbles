@@ -327,3 +327,52 @@ describe("requireEnv", () => {
     expect(requireEnv("ANTHROPIC_API_KEY")).toBe("value");
   });
 });
+
+describe("demo mode never holds the privileged key", () => {
+  function demoWithProductionKey() {
+    process.env.NEXT_PUBLIC_DEMO_MODE = "true";
+    delete process.env.NEXT_PUBLIC_VERCEL_ENV;
+    process.env.SUPABASE_SECRET_KEY = "placeholder-production-key";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "placeholder-legacy-key";
+  }
+
+  it("refuses the key in demo mode even when the environment holds it, as a MissingConfigurationError", async () => {
+    demoWithProductionKey();
+    const { supabaseSecretKey, supabaseSecretKeyConfigured, MissingConfigurationError, DemoModeRefusesPrivilegedKeyError } =
+      await import("./server-env");
+    expect(() => supabaseSecretKey()).toThrow(DemoModeRefusesPrivilegedKeyError);
+    expect(() => supabaseSecretKey()).toThrow(MissingConfigurationError);
+    expect(supabaseSecretKeyConfigured()).toBe(false);
+    // The message names the switch to turn off, never the key's value.
+    expect(() => supabaseSecretKey()).toThrow(/NEXT_PUBLIC_DEMO_MODE=false/);
+    expect(() => supabaseSecretKey()).not.toThrow(/placeholder/);
+  });
+
+  it("readiness still reports instead of throwing in demo mode with a key set (regression: /api/health returned 500)", async () => {
+    demoWithProductionKey();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = URL_PLACEHOLDER;
+    const env = await import("./server-env");
+    expect(env.supabaseSecretKeySource()).toBeNull();
+    expect(() => env.liveReadiness()).not.toThrow();
+    expect(() => env.configurationProblems()).not.toThrow();
+    expect(env.liveReadiness().supabase.ready).toBe(false);
+    expect(env.liveReadiness().supabase.missing).toContain("SUPABASE_SECRET_KEY");
+    expect(env.liveReadiness().supabaseSecretKeySource).toBeNull();
+  });
+
+  it("still returns the key in live mode, and Production ignores a stray demo flag", async () => {
+    process.env.SUPABASE_SECRET_KEY = "placeholder-production-key";
+
+    process.env.NEXT_PUBLIC_DEMO_MODE = "false";
+    delete process.env.NEXT_PUBLIC_VERCEL_ENV;
+    let env = await import("./server-env");
+    expect(env.supabaseSecretKey()).toBe("placeholder-production-key");
+    expect(env.supabaseSecretKeyConfigured()).toBe(true);
+
+    vi.resetModules();
+    process.env.NEXT_PUBLIC_DEMO_MODE = "true";
+    process.env.NEXT_PUBLIC_VERCEL_ENV = "production";
+    env = await import("./server-env");
+    expect(env.supabaseSecretKey()).toBe("placeholder-production-key");
+  });
+});

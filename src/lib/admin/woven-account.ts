@@ -9,6 +9,7 @@ import type { PlannedRow } from "@/lib/employees/woven/access/types";
 import { DirectoryError, isRole, normalizeScope, type DirectoryActor } from "@/lib/admin/user-directory";
 import { isKnownAreaId } from "@/lib/locations";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { escapeLike } from "@/lib/supabase/like";
 
 
 /**
@@ -100,7 +101,7 @@ export async function createLinkedAccount(
   };
 
   /* Duplicate protection and repair: an account with this email is never created twice. */
-  const { data: existing } = await db.from("app_users").select("id, role").ilike("email", email).maybeSingle();
+  const { data: existing } = await db.from("app_users").select("id, role").ilike("email", escapeLike(email)).maybeSingle();
   const { data: linkedToEmployee } = await db.from("employee_account_links").select("app_user_id").eq("external_employee_id", input.externalEmployeeId).maybeSingle();
   if (existing) {
     const id = String(existing.id);

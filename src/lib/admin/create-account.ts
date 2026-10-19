@@ -4,6 +4,7 @@ import { isKnownAreaId, LOCATION_ID_PREFIX, locationIdsInArea } from "@/lib/loca
 import { ADMIN_CONSOLE_ROLES } from "@/lib/permissions";
 import type { AccessScope, Role } from "@/types";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { escapeLike } from "@/lib/supabase/like";
 import {
   DirectoryError,
   audit,
@@ -103,7 +104,7 @@ export async function createAccountWithoutEmail(
 
   const admin = getSupabaseAdmin();
 
-  const { data: existing } = await admin.from("app_users").select("id").ilike("email", email).maybeSingle();
+  const { data: existing } = await admin.from("app_users").select("id").ilike("email", escapeLike(email)).maybeSingle();
   if (existing) {
     throw new DirectoryError("duplicate_email", "Somebody already has an Ask Bubbles account with that email address.", 409);
   }

@@ -121,12 +121,40 @@ export const SUPABASE_SECRET_KEY_ENV_LEGACY = "SUPABASE_SERVICE_ROLE_KEY";
 export const SUPABASE_ENV = [SUPABASE_URL_ENV, SUPABASE_SECRET_KEY_ENV];
 
 /**
+ * DEMO MODE NEVER HOLDS THE PRIVILEGED KEY.
+ *
+ * Demo mode has no verified identity: page guards stand down and API requests
+ * resolve to whichever role a visitor picks. That is only safe while nothing
+ * behind them is real. A Preview deployment that sets NEXT_PUBLIC_DEMO_MODE=true
+ * (Production ignores it) while inheriting the Production key would serve
+ * Production rows to anonymous visitors through the service-role client, which
+ * bypasses row level security.
+ *
+ * So the key is refused here, the one place every privileged client obtains it,
+ * whatever the environment holds. A demo deployment then reads as "not
+ * configured" and falls back to its seeded data, the same as one with no key.
+ * It is a MissingConfigurationError, so every caller that already degrades on a
+ * missing key keeps doing so.
+ */
+export class DemoModeRefusesPrivilegedKeyError extends MissingConfigurationError {
+  constructor() {
+    super([SUPABASE_SECRET_KEY_ENV]);
+    this.name = "DemoModeRefusesPrivilegedKeyError";
+    this.message =
+      "Demo mode has no verified identity, so it never uses the privileged Supabase key. Turn demo mode off (NEXT_PUBLIC_DEMO_MODE=false) to read the database.";
+  }
+}
+
+/**
  * The privileged key, preferring the current name over the legacy one.
+ * Refused in demo mode (see DemoModeRefusesPrivilegedKeyError).
  *
  * Throws naming SUPABASE_SECRET_KEY — the variable a new project should set —
  * rather than the legacy name, so the error points at the right thing.
  */
 export function supabaseSecretKey(): string {
+  if (isDemoMode()) throw new DemoModeRefusesPrivilegedKeyError();
+
   const current = process.env[SUPABASE_SECRET_KEY_ENV]?.trim();
   if (current) return current;
 
@@ -137,14 +165,20 @@ export function supabaseSecretKey(): string {
 }
 
 export function supabaseSecretKeyConfigured(): boolean {
+  if (isDemoMode()) return false;
   return Boolean(
     process.env[SUPABASE_SECRET_KEY_ENV]?.trim() ||
       process.env[SUPABASE_SECRET_KEY_ENV_LEGACY]?.trim(),
   );
 }
 
-/** Which name supplied the key, for honest reporting. Never the value. */
+/**
+ * Which name supplied the key, for honest reporting. Never the value.
+ * Null in demo mode, like supabaseSecretKeyConfigured(): the key is never used
+ * there, and readiness must not try to read what supabaseSecretKey() refuses.
+ */
 export function supabaseSecretKeySource(): "current" | "legacy" | null {
+  if (isDemoMode()) return null;
   if (process.env[SUPABASE_SECRET_KEY_ENV]?.trim()) return "current";
   if (process.env[SUPABASE_SECRET_KEY_ENV_LEGACY]?.trim()) return "legacy";
   return null;
