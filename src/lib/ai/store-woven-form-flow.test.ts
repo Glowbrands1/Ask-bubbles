@@ -536,3 +536,39 @@ describe("every form type resolves the same store from every way of saying it", 
     });
   }
 });
+
+describe("names, stores and titles are read in any case — lower, UPPER or Mixed", () => {
+  const CASES: [string, (s: (text: string) => string) => string][] = [
+    ["coaching", (c) => c("create a coaching form for sarah miller at store 236")],
+    ["coaching, store by name", (c) => c("create a coaching form for sarah miller at the grand island store")],
+    ["follow-up-coaching", (c) => c("create a follow-up coaching form for sarah miller at ne grand island")],
+    ["dpoa", (c) => c("create a corrective action form for sarah miller at grand island, ne")],
+    ["policy-review", (c) => c("create a policy review for sarah miller at store 236")],
+    ["sdit-epp", (c) => c("create an sdit epp for sarah miller at store 236")],
+    ["tsd-epp", (c) => c("create a tsd epp for sarah miller at store 236")],
+    ["resignation-exit", (c) => c("create a resignation form for sarah miller at store 236")],
+    ["demotion", (c) => c("create a demotion form for sarah miller at store 236 from production associate to cleaner effective 10/5/26")],
+    ["position-transfer", (c) => c("create a transfer form for sarah miller, transferring from grand island to bellevue effective 10/5/26")],
+  ];
+  const cases: [string, "lower" | "UPPER"][] = CASES.flatMap(([name]) => [[name, "lower"], [name, "UPPER"]] as [string, "lower" | "UPPER"][]);
+
+  it.each(cases)("%s — %s case", async (name, mode) => {
+    const [, build] = CASES.find(([n]) => n === name)!;
+    const text = build((t) => t);
+    const question = mode === "UPPER" ? text.toUpperCase() : text;
+    const { formProposal: p } = await ask(question, ALL_STORES, SARAH, { role: "admin" });
+    expect(p, question).toMatchObject({
+      employeeName: "Sarah Miller",
+      locationId: "loc-236",
+      locationResolution: "resolved",
+      employeeRole: "Production Associate",
+      employeeVerification: { status: "verified" },
+    });
+  });
+
+  it("a title typed in lower case is still a title, and Woven's still wins", async () => {
+    const { formProposal: p, content } = await ask("create a coaching form for sarah miller at store 236, she is a shift lead", ALL_STORES, SARAH);
+    expect(p!.employeeRole).toBe("Production Associate");
+    expect(content).toContain("Woven lists their job title as **Production Associate**");
+  });
+});
