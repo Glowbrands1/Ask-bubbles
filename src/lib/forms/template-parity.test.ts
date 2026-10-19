@@ -149,9 +149,13 @@ describe("the migrated templates are the reference platform's published template
       const from = change.from as string;
       const to = change.to as string;
       // Salon -> Store is the other authorized substitution: Buff City Soap's locations are stores.
-      const SOURCE_TERM = /\b[Ss]alons?\b|\bSALONS?\b/;
+      const SOURCE_TERM = /\b[Ss]alons?\b|\bSALONS?\b|\b[Cc]lients?\b|\b[Cc]ustomers?\b/;
+      // The authorized terminology substitutions: Salon -> Store, and client/customer -> guest.
       const unsalon = (text: string) =>
-        text.replace(/\bSalons\b/g, "Stores").replace(/\bsalons\b/g, "stores").replace(/\bSalon\b/g, "Store").replace(/\bsalon\b/g, "store");
+        text
+          .replace(/\bSalons\b/g, "Stores").replace(/\bsalons\b/g, "stores").replace(/\bSalon\b/g, "Store").replace(/\bsalon\b/g, "store")
+          .replace(/\b[Cc]lients\b|\b[Cc]ustomers\b/g, (word) => (word[0] === word[0]!.toUpperCase() ? "Guests" : "guests"))
+          .replace(/\b[Cc]lient\b|\b[Cc]ustomer\b/g, (word) => (word[0] === word[0]!.toUpperCase() ? "Guest" : "guest"));
       expect(SOURCE_COMPANY.test(from) || SOURCE_APP.test(from) || SOURCE_TERM.test(from), where).toBe(true);
       expect(SOURCE_COMPANY.test(to) || SOURCE_APP.test(to), where).toBe(false);
       // Only the names change: undo the substitutions and the source text comes back.
@@ -163,7 +167,8 @@ describe("the migrated templates are the reference platform's published template
         .replace(/^PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT$/, "ASK_SUNNY_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT")
         .replace(/^The exit paperwork/, "The STC exit paperwork")
         .replace(/The source company's Demotion Example/, "The STC Demotion Example");
-      expect(restored, where).toBe(unsalon(from));
+      // Both sides are read through the authorized substitutions, so only those substitutions can differ.
+      expect(unsalon(restored), where).toBe(unsalon(from));
     }
   });
 });
