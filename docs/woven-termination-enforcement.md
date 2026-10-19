@@ -107,15 +107,17 @@ Table `employee_access_shadow_reviews`: append-only, RLS forced, service_role SE
 The LIVE Ask Bubbles database has objects that no repo migration creates (applied by hand, CRLF line endings, not in its migration history):
 
 1. **trigger `employee_account_links_guard_update`** (BEFORE UPDATE on `employee_account_links`) and
-2. **function `public.employee_account_links_guard_update()`** (plpgsql, not security definer, `search_path ''`, executable by PUBLIC), which allows ONLY
+2. **function `public.employee_account_links_guard_update()`** (plpgsql, not security definer, `search_path ''`, owned by `postgres`, **not executable** by `public`, `anon`, `authenticated` or `service_role` — checked read-only), which allows ONLY
    `managed_status`, `managed_location`, `managed_role` and `updated_at` to change.
 3. **function `public.auth_clear_user_credentials(uuid)`** (security definer, service_role-only). **Live-only; no repo code uses it; nothing here uses or
    depends on it, and it was deliberately not reproduced.**
 
 **Why it mattered.** Triggers fire inside SECURITY DEFINER functions, so on the live database the migration's functions (which stamp `terminated_at`, `reactivated_at`,
 `access_revoked_at`, `revoked_woven_status`, `last_synced_at`) were refused with `check_violation`, while every test passed against a database built only from the repo.
-**Reproduced** (before the fix) with the fixture present: `rls_checks.sql` failed (`anon may execute employee_account_links_guard_update()`, the live function is PUBLIC-executable) and
-`woven_disable_terminated_checks.sql` failed on the first stamp (`employee_account_links: only managed_status, managed_location and managed_role can change`).
+**Reproduced** (before the fix) with the fixture present: `woven_disable_terminated_checks.sql` failed on the first stamp (`employee_account_links: only managed_status, managed_location and managed_role can change`).
+
+*Correction:* an earlier version of this note said the live function is executable by PUBLIC. It is not: the live database grants it to nobody. That failure came from the fixture, which
+created the function with default privileges. The fixture now mirrors the live privileges (everything revoked), and the migration's own `revoke all` stays so that a fresh environment is also locked down.
 
 **Fix, inside the (still unapplied) migration.** It now takes the guard over: `create or replace function` + `drop trigger if exists` + `create trigger`, so the end state is identical whether or not
 the live copy exists. Allowed to change: the three flags, `updated_at`, and the five lifecycle stamps. Refused: the link's identity (`app_user_id`, `source_system`, `management`,

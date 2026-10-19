@@ -43,6 +43,12 @@ begin
 end;
 $$;
 
+-- Privileges as observed (read-only) on the live database: the function is owned by
+-- postgres and is NOT executable by public, anon, authenticated or service_role.
+-- Without this, a fresh CREATE FUNCTION would leave default PUBLIC execute and the
+-- fixture would not match production.
+revoke all on function public.employee_account_links_guard_update() from public, anon, authenticated, service_role;
+
 drop trigger if exists employee_account_links_guard_update on public.employee_account_links;
 create trigger employee_account_links_guard_update
   before update on public.employee_account_links
