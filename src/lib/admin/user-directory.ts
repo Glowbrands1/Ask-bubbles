@@ -80,6 +80,7 @@ export class DirectoryError extends Error {
       | "protected_account"
       | "forbidden_grant"
       | "auth_revocation_incomplete"
+      | "rehire_approval_required"
       | "provider_failed",
     message: string,
     readonly status = 400,
@@ -593,6 +594,19 @@ export async function patchUser(
     );
   }
 
+  /*
+   * REFUSAL 1b — an account Woven termination enforcement disabled is NOT
+   * re-enabled here. Re-enabling it is a REHIRE and needs the logged
+   * administrator approval path (POST /api/admin/employees/woven/rehire), which
+   * checks Woven's latest read, records the reason and the approving
+   * administrator, and lifts the ban. Refusing is safer than also logging a
+   * "rehire" from this generic endpoint: it has no reason field and no Woven
+   * check, so it could not be a real approval.
+   */
+  if (statusChange?.from === "disabled" && statusChange.to === "active") {
+    await assertNotAwaitingRehireApproval(id);
+  }
+
   /* REFUSAL 2 — the last administrative account keeps its access. */
   if (roleChange || statusChange) {
     await assertNotLastAdministrator(before, roleChange?.to, statusChange?.to);
@@ -708,6 +722,34 @@ export async function patchUser(
   const user = rowToDirectoryUser(data as Record<string, unknown>);
   if (!user) throw new DirectoryError("provider_failed", "The change was saved but could not be read back.", 502);
   return user;
+}
+
+/**
+ * Fails closed: a link row saying "terminated by Woven enforcement, not yet
+ * rehired" (terminated_at set, reactivated_at null), or a link that cannot be
+ * read, refuses the re-enable. An account with no link row is not affected.
+ */
+async function assertNotAwaitingRehireApproval(id: string): Promise<void> {
+  const { data, error } = await getSupabaseAdmin()
+    .from("employee_account_links")
+    .select("terminated_at, reactivated_at")
+    .eq("app_user_id", id)
+    .maybeSingle();
+  if (error) {
+    throw new DirectoryError(
+      "provider_failed",
+      "Whether this account was disabled by Woven could not be verified, so it was not re-enabled.",
+      502,
+    );
+  }
+  const link = data as { terminated_at: string | null; reactivated_at: string | null } | null;
+  if (link && link.terminated_at && !link.reactivated_at) {
+    throw new DirectoryError(
+      "rehire_approval_required",
+      "This account was disabled because Woven shows the employee as Terminated. Re-enabling it is a rehire and needs an administrator's approval with a reason: use the rehire approval (POST /api/admin/employees/woven/rehire).",
+      409,
+    );
+  }
 }
 
 /** A stable, compact rendering of a scope for the audit trail: level, primary, also-covers. */

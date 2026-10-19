@@ -292,12 +292,19 @@ describe("7. no employee-sync UI, route or library code can reach app_users, aut
     "employee_access_record_shadow_run",
     /*
      * TERMINATION ENFORCEMENT (20261019001000, NOT APPLIED; default-off switch
-     * WOVEN_TERMINATION_ENFORCEMENT). The only three functions that may change
-     * an account because of Woven. Asserted against the SQL in section 9.
+     * WOVEN_TERMINATION_ENFORCEMENT). The only functions that may change an
+     * account because of Woven: disable (enforcement), revocation stamp, run
+     * record; the administrator's shadow review and its gate read; and the
+     * administrator's REHIRE approval. Asserted against the SQL in
+     * termination-guarantees.test.ts.
      */
     "employee_access_disable_terminated",
     "employee_access_record_revocation",
     "employee_access_record_apply_run",
+    "employee_access_review_state",
+    "employee_access_record_shadow_review",
+    "employee_access_approve_rehire",
+    "employee_access_record_rehire",
   ]);
 
   it("covers the whole employee-sync surface", () => {
@@ -323,8 +330,9 @@ describe("7. no employee-sync UI, route or library code can reach app_users, aut
     for (const file of files) {
       const c = code(file);
       expect(c, file).not.toMatch(/\.auth\s*\.|auth\.admin|app_user_audit|from\(\s*["'`]app_users/);
-      /* Revoking auth access is named in exactly one place: the termination wiring (section 9). */
-      if (!file.endsWith(join("access", "termination-run.ts"))) expect(c, file).not.toMatch(/revokeAuthAccess|restoreAuthAccess/);
+      /* Revoking auth access is named only in the termination wiring, restoring it only in the rehire wiring. */
+      if (!file.endsWith(join("access", "termination-run.ts"))) expect(c, file).not.toMatch(/revokeAuthAccess/);
+      if (!file.endsWith(join("access", "rehire-run.ts"))) expect(c, file).not.toMatch(/restoreAuthAccess/);
       /* A Supabase write verb on a query chain (not crypto's hash.update). */
       for (const m of c.matchAll(/\.from\(\s*["'`]([a-z_]+)["'`]\)\s*\.(insert|update|upsert|delete)\(/g)) writers.push(`${m[1]}.${m[2]}`);
     }
@@ -377,9 +385,10 @@ describe("8. the access planner (stage 1) applies nothing", () => {
     const dir = join(repo, "src/lib/employees/woven/access");
     for (const name of readdirSync(dir).filter((n) => /\.ts$/.test(n) && !/\.test\./.test(n))) {
       const code = readFileSync(join(dir, name), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-      expect(code, name).not.toMatch(/\.auth\s*\.|auth\.admin|from\(\s*["'`]app_users|restoreAuthAccess/);
-      /* DELIBERATE (termination enforcement): exactly one module wires revokeAuthAccess. No other access module may name it. */
+      expect(code, name).not.toMatch(/\.auth\s*\.|auth\.admin|from\(\s*["'`]app_users/);
+      /* DELIBERATE (termination enforcement): exactly one module wires revokeAuthAccess and exactly one wires restoreAuthAccess (rehire). No other access module may name either. */
       if (name !== "termination-run.ts") expect(code, name).not.toMatch(/revokeAuthAccess/);
+      if (name !== "rehire-run.ts") expect(code, name).not.toMatch(/restoreAuthAccess/);
       /* The one write: link-store.ts records a person's link review. */
       const writes = [...code.matchAll(/\.from\(\s*["'`]([a-z_]+)["'`]\)\s*\.(insert|update|upsert|delete)\(/g)].map((m) => `${m[1]}.${m[2]}`);
       expect(writes, name).toEqual(name === "link-store.ts" ? ["employee_account_links.insert"] : []);
@@ -409,73 +418,8 @@ describe("8. the access planner (stage 1) applies nothing", () => {
   });
 });
 
-describe("9. termination enforcement is the ONE apply path, default off, and bounded", () => {
-  /*
-   * DELIBERATE CHANGE to this file (the access planner of section 8 stays
-   * apply-free; WOVEN_ACCESS_MODE still has no apply value). What changed:
-   *   - three database functions are allowed in section 7's RPC list;
-   *   - `revokeAuthAccess` may be named by access/termination-run.ts only;
-   *   - this section pins what that path may and may not do.
-   * Nothing else in sections 1-8 was loosened.
-   */
-  const repo = join(__dirname, "..", "..", "..", "..");
-  const SQL = readFileSync(join(repo, "supabase/migrations/20261019001000_woven_disable_terminated_apply.sql"), "utf8");
-  const code = SQL.replace(/--.*$/gm, "");
-  const accessDir = join(repo, "src/lib/employees/woven/access");
-  const read = (name: string) => readFileSync(join(accessDir, name), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-
-  it("the migration is a NEW file, later than every earlier one, and says it is not applied", () => {
-    const names = readdirSync(join(repo, "supabase/migrations")).sort();
-    expect(names[names.length - 1]).toBe("20261019001000_woven_disable_terminated_apply.sql");
-    expect(SQL).toMatch(/NOT APPLIED/);
-  });
-
-  it("the only app_users write is the status change to disabled, inside disable_terminated; nothing touches auth, roles, scope or deletes", () => {
-    const updates = [...code.matchAll(/\bupdate\s+public\.([a-z_]+)\s+set\s+([a-z_]+)/gi)].map((m) => `${m[1]}.${m[2]}`);
-    expect(updates.sort()).toEqual(["app_users.status", "employee_account_links.access_revoked_at", "employee_account_links.terminated_at"]);
-    expect(code).not.toMatch(/\b(delete\s+from|truncate|drop\s+table|drop\s+function)\b/i);
-    expect(code).not.toMatch(/\bauth\./i);
-    expect(code).not.toMatch(/set\s+(role|scope_|email|display_name)/i);
-    expect(code).not.toMatch(/status\s*=\s*'active'/);
-  });
-
-  it("every function is revoked from everyone including service_role, then EXECUTE goes to service_role for the three entry points only; no table grant", () => {
-    expect(code).toMatch(/revoke all on function %s from public, anon, authenticated, service_role/);
-    const grants = [...code.matchAll(/grant ([a-z, ]+) on (?:function )?public\.([a-z_]+)[^;]* to ([a-z_, ]+);/g)].map((m) => `${m[2]}:${m[1]}:${m[3]}`);
-    expect(grants.sort()).toEqual([
-      "employee_access_disable_terminated:execute:service_role",
-      "employee_access_record_apply_run:execute:service_role",
-      "employee_access_record_revocation:execute:service_role",
-    ]);
-    expect(code).not.toMatch(/grant [^;]*(update|delete|truncate|insert|all)[^;]* to/i);
-    for (const fn of ["disable_terminated", "record_revocation", "record_apply_run"]) {
-      const start = code.indexOf(`create or replace function public.employee_access_${fn}`);
-      expect(code.slice(start, start + 600), fn).toMatch(/security definer\s+set search_path = ''/);
-    }
-  });
-
-  it("the audit vocabulary is not widened: only existing actions are used", () => {
-    const used = [...code.matchAll(/'(status_changed|access_revoked|access_revocation_incomplete)'/g)].length;
-    expect(used).toBeGreaterThanOrEqual(3);
-    expect(code).not.toMatch(/app_user_audit_action_check/);
-  });
-
-  it("the switch module reads one variable and fails closed; the access mode type is unchanged", () => {
-    const config = read("termination-config.ts");
-    expect(config).toMatch(/raw !== "on"/);
-    expect(readFileSync(join(accessDir, "config.ts"), "utf8")).toMatch(/export type WovenAccessMode = "off" \| "shadow";/);
-  });
-
-  it("the orchestrator calls only the three functions, writes no table, and never re-enables", () => {
-    const c = read("terminate.ts");
-    const rpcs = [...c.matchAll(/(?:rpc\(\s*|fn\s*=\s*)["'`]([a-z_]+)["'`]/g)].map((m) => m[1]);
-    expect([...new Set(rpcs)].sort()).toEqual(["employee_access_disable_terminated", "employee_access_record_apply_run", "employee_access_record_revocation"]);
-    expect(c).not.toMatch(/\.from\(|\.auth\s*\.|restoreAuthAccess|status:\s*["']active["']/);
-  });
-
-  it("the cron route calls it only through the switch-guarded wiring, after a successful sync", () => {
-    const route = readFileSync(join(repo, "src/app/api/employees/woven/cron/route.ts"), "utf8");
-    expect(route).toMatch(/outcome\.status === "succeeded" \? await runTerminationEnforcement\(CRON_REQUESTER\)/);
-    expect(readFileSync(join(accessDir, "termination-run.ts"), "utf8")).toMatch(/if \(!config\.enabled\) return \{ status: "off" \};/);
-  });
-});
+/*
+ * Section 9 (termination enforcement: the one apply path, default off,
+ * reviewed, never restoring access) moved to `termination-guarantees.test.ts`,
+ * which also explains exactly what this file was deliberately changed to allow.
+ */

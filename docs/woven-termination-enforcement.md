@@ -1,109 +1,103 @@
-# Woven termination enforcement (DISABLE_TERMINATED)
+# Woven termination enforcement (DISABLE_TERMINATED) and rehire approval
 
-Status: implemented on branch `claude/busy-ride-ajkjzk-termination`, **not merged, not deployed**.
-Migration `20261019001000_woven_disable_terminated_apply.sql` is **NOT APPLIED** to any Supabase project.
-The switch `WOVEN_TERMINATION_ENFORCEMENT` is **off by default**; nothing changes until a person sets it to `on`.
+Status: implemented on branch `claude/busy-ride-ajkjzk-termination`, **not merged, not deployed, not enabled anywhere**.
 
-This is Ask Sunny's #89, adapted to Ask Bubbles (Buff City Soap / Midwest Soap Makers). Sunny's role names
-(Salon Director, ASD, SD, DM, RM) were not carried over; Bubbles' own roles are used.
+- Migration `20261019001000_woven_disable_terminated_apply.sql` is **NOT APPLIED** to any Supabase project. It was revised in place
+  (after the first review round) because it is unapplied; a second migration would have left the first, weaker function callable.
+- `WOVEN_TERMINATION_ENFORCEMENT` is **OFF by default**. Only the exact word `on` enables it; anything else is off and reported.
+- `WOVEN_ACCESS_MODE` is unchanged: `off | shadow`, no apply value.
 
-## 1. Review: what Ask Bubbles did before this change
+This is Ask Sunny's #89 adapted to Ask Bubbles (Buff City Soap / Midwest Soap Makers). Sunny's role names were not carried over;
+Bubbles' roles are employee, assistant_manager, location_manager, district_manager, regional_manager, admin, owner, developer.
 
-### Account lifecycle today
-- `WOVEN_ACCESS_MODE` is `off | shadow`. There is **no apply value**; anything else is reported and treated as off
-  (`access/config.ts`). Shadow records plans only (`access/shadow.ts` -> `employee_access_record_shadow_run`).
-- The planner (`access/plan.ts`) already **proposes** `DISABLE_TERMINATED`, and only when: the employee is linked by a
-  confirmed EmployeeID link, Woven's own `Terminated` status was read in the latest run (`status-evidence.ts`,
-  `observedStatus`), the link has `managed_status = true`, and the account is not protected (role override, or
-  role admin / owner / developer = `ADMIN_CONSOLE_ROLES`). Missing / unknown status is review only. A linked account
-  already disabled with `access_revoked_at` yields no action (idempotent). An Active employee on a revoked link is
-  `FLAG_REHIRE_REVIEW`, never re-enabled.
-- Mass-change guards (`access/guards.ts`): stale or failed directory sync, enum unresolved, terminated read failed, active
-  count drop under 80%, zero active, terminations over max(3, 5% of managed active linked accounts), mappings vanished.
-  One tripped guard blocks all mutations (previously: recorded `aborted` in shadow).
-- Links (`employee_account_links`, migration `20261002002000`): `woven_linked` / `not_woven_managed`, three managed flags
-  default OFF, `link_method` in override_backfill / unmatched_backfill / admin_confirmed_email / admin_manual / provisioned.
-  Only `link-store.ts` writes (insert of a person's link review, `link-review.ts`: exact single email match + explicit
-  "same person" tick; status flag refused for admin roles). service_role has SELECT/INSERT only on links/runs/actions.
-- Auth layer (`src/lib/auth/revocation.ts`, migration `20261002001000`): `revokeAuthAccess` = permanent ban + `auth_revoke_user_sessions`
-  (deletes refresh tokens + sessions); idempotent, both steps attempted; `restoreAuthAccess` lifts the ban. An access token
-  already issued stays valid up to the JWT expiry (default 1 h) but the app re-reads the profile on every request and RLS
-  requires an active profile, so a disabled account is refused immediately.
-- Manual admin path (`src/lib/admin/user-directory.ts` `patchUser`): profile first, then `revokeAuthAccess` / `restoreAuthAccess`,
-  audited (`status_changed`, `access_revoked`, `access_revocation_incomplete`, `access_restored`). Refuses self-change and
-  the last active administrator (also a DB trigger `app_users_keep_one_admin`, for every path).
-- Tenant: `WOVEN_TENANT` / `PINNED_COMPANY_ID` (`55839f24-9241-418c-8405-37baf9a42a87`, Midwest Soap Makers) is in code;
-  `company-scope.ts` rejects any record naming another/no company; migration `20261012001000` makes
-  `employee_sync_runs`, `employee_access_directory`, `woven_location_map` carry and CHECK that company.
-  The planner's `employee_directory_view` does NOT expose `woven_company_id`, so the company re-proof for enforcement is done
-  in the database function (see below).
-- How "Terminated" is determined (`enums.ts`, `normalize.ts`, `status-evidence.ts`, `sync.ts`): only the `Status` integer resolving to the
-  exact label Terminated; any read saying terminated wins over a stale Active read; TerminationDate/Type alone never terminate
-  (the Active-with-past-date conflict is stored Active with a flag). Phase-one tests pin this.
-- Roles (`src/lib/permissions/index.ts`): employee, assistant_manager, location_manager, district_manager, regional_manager,
-  admin, owner, developer. `ADMIN_CONSOLE_ROLES` = admin, owner, developer. App switcher (`src/lib/auth/app-switcher.ts`):
-  admins plus two named non-admins (a district_manager and a regional_manager by user id) - a disabled account never
-  reaches it (identity requires an active profile); enforcement changes nothing about who is offered it.
-- Existing doc debris noticed (not changed): `link-review.ts` comments still say "Location Director" (Sunny wording);
-  `access-preview.tsx` says "never applied" (see Follow-ups).
+## 1. What existed before (review findings)
 
-### What Sunny does (reference; read-only)
-Sunny's merged lifecycle (`src/lib/employees/woven/access/apply.ts`, migration `20261006002000_woven_account_lifecycle.sql`):
-an `apply` mode + `WOVEN_ACCESS_APPLY_ACTIONS` capability list + optional EmployeeID batch allowlist; a run lock; plan -> guards
--> per-row apply -> every row recorded; `employee_access_disable_terminated` re-checks link, `managed_status`, protection,
-directory currency and Terminated-in-latest-read under row locks, disables the profile + audits, then the server bans and
-revokes sessions, then `employee_access_record_revocation` stamps `access_revoked_at`; partial failure is retried next run.
-Sunny never re-enables automatically (rehire = review).
+- The planner (`access/plan.ts`) already proposed `DISABLE_TERMINATED` (confirmed link, `managed_status`, not protected, Woven's own
+  Terminated status read in the latest run). Nothing applied it; mass-change guards (`access/guards.ts`) gate every mutation.
+- Links (`employee_account_links`, `20261002002000`): `woven_linked` / `not_woven_managed`, managed flags default off, `link_method`,
+  `set_by`, `created_at`. `managed_*` can only be set at INSERT (service_role has SELECT, INSERT; no function updates them), so `set_by` and
+  `created_at` are the record of who approved managed status and when. No new column was needed.
+- Auth layer (`src/lib/auth/revocation.ts`): `revokeAuthAccess` (ban + session/refresh-token deletion), `restoreAuthAccess` (lift the ban).
+  The manual admin path (`patchUser`) disables/re-enables with both layers, audited, with self-change and last-admin refusals (also a DB trigger).
+- Tenant: `WOVEN_TENANT` / `PINNED_COMPANY_ID` = `55839f24-9241-418c-8405-37baf9a42a87` (Midwest Soap Makers); `company-scope.ts`;
+  migration `20261012001000` pins the company on sync runs, directory rows and the location map.
+- Terminated is Woven's `Status` integer resolving to exactly Terminated (`enums.ts`, `status-evidence.ts`); TerminationDate/Type alone never
+  terminate (Active + past date is stored Active with `status_termination_conflict`).
 
-**Could not verify:** Sunny's branch `origin/claude/woven-disable-terminated`, its `20261007001000_woven_disable_terminated_apply.sql`
-and commit `e946713` were not readable from this worktree (git access to the sibling checkout is blocked for this agent and its
-working tree is on main). The design above follows Sunny's merged lifecycle code only. The "reversible re-enable per e946713" item is
-therefore **not implemented** (see decisions).
+## 2. The gates, in order (all must hold; each refusal is a short code and changes nothing)
 
-## 2. What was implemented
+1. **Switch** `WOVEN_TERMINATION_ENFORCEMENT=on` (default off; `termination-config.ts`). Optional `..._EMPLOYEE_IDS` batch list.
+2. **Shadow mode** `WOVEN_ACCESS_MODE=shadow` (`shadow_mode_required` otherwise: nothing runs).
+3. **Mass-change guards** on today's plan (stale/failed directory sync, active count drop, termination wave, mappings gone). Tripped = `aborted`.
+4. **Protected accounts are review-only** (`terminate.ts`, planner `isTerminationProtected`, and the SQL function on its own): role override;
+   admin / owner / developer; **district_manager and regional_manager**; and every user id in the app-switcher grant list
+   (`src/lib/auth/app-switcher-users.ts`, which `app-switcher.ts` re-exports). The server passes the id list to the database
+   (`p_protected_user_ids`), which refuses an empty/missing list (`disable_protected_ids_required`) and refuses protected ids
+   (`disable_protected_account`). The planner shows `FLAG_PROTECTED_ACCOUNT`, so shadow runs never list them for review. A test keeps the TS and SQL
+   role lists equal. The acting account is skipped too.
+5. **Shadow review** (human gate). Enforcement acts only if the NEWEST shadow run is clean (completed, no tripped guard) and at most 48 hours old,
+   an active administrator recorded a review of THAT run (not an older one), the reviewer is still an active admin, and the employee is on the
+   review's approved list. No review / stale / guard-tripped / newer shadow run than the reviewed one / demoted reviewer = nothing is disabled and the
+   response says why (`gate`). The tick runs enforcement BEFORE recording its own shadow run, so "the newest shadow run" is the one the administrator
+   had the day to review; practically an administrator reviews each day's run before the next tick. Each review is one-shot by construction
+   (the next shadow run supersedes it).
+6. **Verified, person-approved link**: `link_method` admin_confirmed_email or admin_manual (never override_backfill, unmatched_backfill or
+   provisioned), `managed_status` true, and `set_by` names a person (not blank, not `migration:%`). Never by name/email.
+7. **Tenant**: the company stated by the server, the directory row's company and the latest sync run's company must all be the pinned id
+   (disable, rehire and review paths each; `*_company_scope`, `disable_directory_not_current`).
+8. **Terminated in the latest successful read** (not stale/unknown/missing).
+9. The database also re-checks everything under row locks. Exempt from gate 5 only: COMPLETING a revocation already started (account already disabled and stamped
+   terminated), which only tightens access; it still passes 3, 6, 7, 8 and protection.
 
-All conditions must hold; otherwise the row is recorded `skipped`/`failed` and nothing changes.
+### Attempted is not completed
+A run is `completed` only when no attempted account failed; otherwise `partial` (some applied) or `failed` (none). The run row (`employee_access_runs.status`),
+the per-account `employee_access_actions` rows (`result` and `result_code`) and the cron response (`terminationEnforcement.status`, `incompleteAccounts`) say
+so, and the cron answers **HTTP 500** for partial/failed so the invocation is not shown as a success. The database refuses to record a `completed` run that
+contains a failed account. A disabled account whose ban/sessions/stamp failed has no `access_revoked_at`, so the planner proposes it again next run and the
+completion path finishes it (no new review needed). The database function never reports success for an unfinished revocation: only `record_revocation(ok)`
+stamps `access_revoked_at`.
 
-| # | Condition | Where |
-|---|-----------|-------|
-| a | `WOVEN_TERMINATION_ENFORCEMENT=on` (exact word, case-insensitive). Unset/empty/off = off; any other value = off + reported problem. Optional `WOVEN_TERMINATION_ENFORCEMENT_EMPLOYEE_IDS` batch list (malformed = off). Independent of `WOVEN_ACCESS_MODE` (still no apply value). | `access/termination-config.ts` |
-| b | Reached through a confirmed EmployeeID link (`woven_linked`, link_method admin_confirmed_email / admin_manual / provisioned, `managed_status`). Never by name/email. | `terminate.ts` + SQL `disable_not_linked`, `disable_link_not_confirmed`, `disable_status_not_managed` |
-| c | Directory row, latest finished sync run and the server-stated company are all the pinned Midwest Soap Makers id. | SQL `disable_company_scope`, `directory_is_current`, `observed_status` |
-| d | Never admin/owner/developer or role-override accounts (so the last active admin is unreachable; the `app_users_keep_one_admin` trigger is still the backstop), never the acting account, never an unlinked account. Existing mass-change guards still stop the run. | `terminate.ts` `skipReason`, SQL `disable_protected_account` |
-| e | Idempotent (already-revoked = no action; half-finished = retried), audited: `app_user_audit` (`status_changed`, `access_revoked`, `access_revocation_incomplete`, actor `woven-termination:<requester>`, no actor user id), link stamps, and an `apply` row in `employee_access_runs` + one `employee_access_actions` row per DISABLE_TERMINATED outcome (result applied/failed/skipped + result_code). | SQL, `terminate.ts` |
+## 3. Rehire: only an administrator, explicitly, with a reason
 
-Order per account: DB disable (re-checked) -> `revokeAuthAccess` (ban + sessions) -> `employee_access_record_revocation`.
-Entry point: after a successful scheduled sync in `src/app/api/employees/woven/cron/route.ts` (via `access/termination-run.ts`, which is the only
-access module allowed to name `revokeAuthAccess`). Shadow and the Access Preview are unchanged.
+**Enforcement never restores access.** No cron, enforcement, shadow, sync or planner code imports the rehire module or names `restoreAuthAccess`
+(`termination-guarantees.test.ts` and `terminate.test.ts` enforce it). When Woven shows a revoked employee Active, the planner only flags
+`FLAG_REHIRE_REVIEW`.
 
-### Migration 20261019001000 (NOT APPLIED)
-New file, later than `20261016001000`, idempotent. Changes: `employee_access_runs.mode` also allows `apply`; `employee_access_actions`
-gains `result_code` and results `applied|failed|skipped`; helper predicates (owner-only); the three SECURITY DEFINER functions
-(empty `search_path`, EXECUTE to `service_role` only). No table grants change (still SELECT/INSERT only). No new audit action.
-Verify offline with `npm run verify:migrations` (needs local PostgreSQL 16), then apply only with approval.
+**Route:** `POST /api/admin/employees/woven/rehire` with `{ appUserId, externalEmployeeId, reason }`.
+Administrator-only (admin/owner/developer console role, plus `manage_users` and `manage_integrations`), same-origin guard (`src/lib/api/same-origin.ts`),
+rate-limited, actor = the verified session (`identity.subject`), never the body. The database (`employee_access_approve_rehire`) requires an ACTIVE
+admin/owner/developer approver who is not the account, a non-empty reason (1-300), the pinned company on the directory row and the latest run, a confirmed link whose
+account enforcement revoked, Woven's latest successful read showing the employee Active (and not Active-with-past-TerminationDate: `rehire_status_conflict`).
+Two phases, retryable: (1) enable the profile and audit `status_changed` + `woven_rehire_approved` naming the approver and reason; (2) lift the Auth ban
+(`restoreAuthAccess`), then `employee_access_record_rehire(ok)` clears `access_revoked_at` and audits `access_restored`. If the ban cannot be lifted the profile is put
+BACK to disabled (`access_revocation_incomplete` audited) and the route answers **502 `incomplete`**; a crash between phases resumes; a repeat of a completed rehire is
+`already_rehired`. Success is reported only when both phases completed.
 
-### Operating it
-1. Deploy code with the switch unset. 2. Review a shadow run / the Access Preview for expected `DISABLE_TERMINATED` rows.
-3. Apply the migration with approval. 4. Set `WOVEN_TERMINATION_ENFORCEMENT=on` and, for a first batch,
-`WOVEN_TERMINATION_ENFORCEMENT_EMPLOYEE_IDS`. 5. Turn it back to unset/off to stop; nothing is undone automatically.
+**Manual re-enable through User Management (`patchUser`) of an account enforcement disabled is REFUSED** (409 `rehire_approval_required`, pointing to the approval route),
+failing closed if the link cannot be read. Chosen over logging it as a rehire because that endpoint has no reason field and no Woven check, so it could not be a
+real approval. Accounts that were not disabled by enforcement are unaffected.
 
-## 3. Decisions needing human approval
-1. **Re-enable.** Not automated. A rehire stays `FLAG_REHIRE_REVIEW`; an admin re-enables in User Management (`patchUser` lifts the ban
-   and audits `access_restored`). That path does not clear the link's `access_revoked_at`/`terminated_at`, so a manually re-enabled
-   account that is Active in Woven keeps showing a rehire review, and one still Terminated in Woven would be re-disabled on the next run.
-   Decide whether to add a recorded, explicit re-enable function (Sunny e946713 could not be read).
-2. **Which roles.** District and regional managers, and the two app-switcher users, are not protected and can be disabled when
-   linked + status-managed. Say if district_manager/regional_manager should be review-only.
-3. **Switch is independent of `WOVEN_ACCESS_MODE`.** Alternative: also require shadow mode.
-4. **Company check lives in the database function**, because the planner's directory view has no company column.
-5. The `managed_status` flag is opt-in per link at link review; no existing link has it unless a person ticked it.
-6. Defaults carried from the reference platform (`WOVEN_AUTO_PROVISION_ROLES` etc.) are still unconfirmed by Buff City Soap.
+**Runbook:** (1) confirm the person is Active in Woven after the next directory sync; (2) an administrator POSTs the rehire with a reason; (3) on `incomplete`, read the code
+(`unban_failed_reverted`, `rehire_not_recorded`, ...) and POST again; (4) check `app_user_audit` for `woven_rehire_approved` + `access_restored`.
 
-## 4. Tests
-`access/terminate.test.ts`, `access/termination-config.test.ts`, and a deliberately extended `phase-one-guarantees.test.ts`
-(section 9; sections 1-8 only gain: three RPC names allowed, `revokeAuthAccess` allowed in one wiring file). See the PR/commit message for results.
+### Shadow review route
+`GET /api/admin/employees/woven/termination-review` shows the newest shadow run, the gate state and the EmployeeIDs it planned to disable (ids only).
+`POST` `{ shadowRunId, employeeIds, reason }` records the review (administrator-only, same-origin, rate-limited, reviewer = session); the server adds the sha256 of the sorted
+id list, the database re-checks the reviewer is an active admin, the run is the newest/clean/fresh, every id was planned by it, and the pinned company.
+Table `employee_access_shadow_reviews`: append-only, RLS forced, service_role SELECT/INSERT only.
 
-## 5. Follow-ups (not done)
-- Access Preview copy says plans are "never applied"; show the switch state when it is on (touches a DOM test).
-- No admin-triggered (manual) run exists; `actingUserId` support is in place for one.
-- The `local-stack` tests (real Postgres + Auth) were not extended or run here.
+## 4. What remains unapplied / off
+- Migration `20261019001000` is not applied anywhere. Apply only with approval, verbatim, in one transaction, after the code is deployed with the switch unset.
+- `WOVEN_TERMINATION_ENFORCEMENT` is unset by default; `WOVEN_ACCESS_MODE` must be `shadow` for it to do anything.
+- Operating order: deploy -> apply migration -> shadow runs accumulate -> administrator reviews a clean run -> set the switch (optionally with the batch list) -> turn it
+  back to unset/off to stop. Nothing is undone automatically; rehire is the explicit path back.
+
+## 5. Decisions and limits worth knowing
+- A review expires with the next shadow run, so a day's retry of a genuinely failed disable that never started (refused before the profile changed) needs a fresh review;
+  one that already disabled the profile completes without it.
+- An account an administrator disabled by hand that Woven also calls Terminated is not "started" by enforcement: it needs a reviewed approval before the link is stamped; until then it
+  appears as a refused (failed) attempt each tick.
+- No admin UI was added (optional): the two routes are the only paths. Follow-ups: a screen on the Access Preview for the gate state, the review and the rehire;
+  the Access Preview copy still says plans are "never applied".
+- The local-stack tests (real Auth) were not extended; the database half is executed on a throwaway Postgres by `supabase/tests/woven_disable_terminated_checks.sql`
+  through `bash scripts/db/verify-migrations.sh`.

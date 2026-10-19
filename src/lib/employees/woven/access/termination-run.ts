@@ -1,9 +1,11 @@
 import "server-only";
 
+import { APP_SWITCHER_USER_IDS } from "@/lib/auth/app-switcher-users";
 import { revokeAuthAccess } from "@/lib/auth/revocation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import { PINNED_COMPANY_ID } from "../config";
+import { readWovenAccessMode } from "./config";
 import { loadAccessPlan } from "./load";
 import { enforceTerminations, type TerminationOutcome } from "./terminate";
 import { readTerminationEnforcement } from "./termination-config";
@@ -23,15 +25,16 @@ export async function runTerminationEnforcement(requestedBy: string, actingUserI
   if (!config.enabled) return { status: "off" };
   try {
     return await enforceTerminations(
-      { requestedBy, actingUserId, config },
+      { requestedBy, actingUserId, config, accessMode: readWovenAccessMode().mode },
       {
         loadPlan: loadAccessPlan,
         rpc: (fn, args) => getSupabaseAdmin().rpc(fn, args) as unknown as PromiseLike<{ data: unknown; error: { message?: string; code?: string } | null }>,
         revokeAuth: (userId) => revokeAuthAccess(userId),
         pinnedCompanyId: PINNED_COMPANY_ID,
+        protectedUserIds: APP_SWITCHER_USER_IDS,
       },
     );
   } catch {
-    return { status: "failed", code: "enforcement_failed" };
+    return { status: "failed", tally: { applied: 0, failed: 0, skipped: 0 }, incompleteAccounts: 0, gate: null, accessRunId: null, code: "enforcement_failed" };
   }
 }

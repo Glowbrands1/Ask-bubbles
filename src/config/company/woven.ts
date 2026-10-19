@@ -43,6 +43,18 @@ export const WOVEN_AUTO_PROVISION_ROLES: readonly Role[] = ["location_manager", 
 export const WOVEN_LOCATION_MANAGED_ROLES: readonly Role[] = ["location_manager", "assistant_manager"];
 
 /**
+ * Roles whose accounts Woven may NEVER disable automatically (termination
+ * enforcement): district and regional managers hold wider scope and, with the
+ * administrators, are reviewed by a person. Together with the administrative
+ * roles (admin, owner, developer), role overrides and the app-switcher grant
+ * list (`src/lib/auth/app-switcher-users.ts`), these are "termination
+ * protected": the planner shows FLAG_PROTECTED_ACCOUNT, the apply step skips
+ * them, and the database function refuses them on its own. The SQL carries
+ * the same role list (20261019001000) and a test keeps the two equal.
+ */
+export const WOVEN_TERMINATION_PROTECTED_ROLES: readonly Role[] = ["district_manager", "regional_manager"];
+
+/**
  * ============================================================================
  * THE WOVEN TENANT — Buff City Soap / Midwest Soap Makers, and nothing else
  * ============================================================================
