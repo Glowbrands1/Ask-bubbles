@@ -383,7 +383,7 @@ describe("the Details section HR asked for", () => {
     // A new Exit Form is pinned to revision 2 of the template.
     const created = store.form_instances!.find((row) => row.id === result.reference.instanceId)!;
     const pinned = store.form_template_versions.find((row) => row.id === created.template_version_id)!;
-    expect(pinned.seed_revision).toBe(2);
+    expect(pinned.seed_revision).toBe(3);
     expect(JSON.stringify(pinned.document)).toContain("answer_statements");
 
     const { values } = await review(result.reference.instanceId);

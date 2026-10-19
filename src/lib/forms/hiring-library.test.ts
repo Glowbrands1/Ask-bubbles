@@ -212,11 +212,29 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
      *                       store key question, and the yes/no answers
      *                       printed as HR's statements.
      */
-    const reissued = new Set(["coaching", "policy-review", "follow-up-coaching", "tsd-epp", "resignation-exit"]);
+    const reissued = new Set(["coaching", "policy-review", "follow-up-coaching"]);
+    /*
+     * RE-ISSUED FOR THE SALON -> STORE TERMINOLOGY. A published version is
+     * immutable, so wording that reached a running database has to ship as a
+     * new revision; these templates' documents (or variants) changed and
+     * nothing else did. Field keys are unchanged.
+     */
+    const storeWording = new Set([
+      "asd-sdit-epp",
+      "fttc-epp",
+      "dmit-epp-tsd",
+      "dmit-epp-dmit",
+      "prescreen-phone-interview",
+      "tanning-consultant-interview",
+      "management-interview-round-1",
+      "management-interview-round-2",
+    ]);
     for (const seed of TEMPLATE_SEEDS) {
-      if (seed.key === "dpoa" || seed.key === "sdit-epp") continue;
-      expect(seed.revision, seed.key).toBe(reissued.has(seed.key) ? 2 : 1);
+      if (seed.key === "dpoa" || seed.key === "sdit-epp" || seed.key === "tsd-epp" || seed.key === "resignation-exit") continue;
+      expect(seed.revision, seed.key).toBe(reissued.has(seed.key) || storeWording.has(seed.key) ? 2 : 1);
     }
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "tsd-epp")?.revision).toBe(3);
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "resignation-exit")?.revision).toBe(3);
     /*
      * THE SDIT EPP IS AT 3. Revision 2 published the form the business issues
      * — the standing expectations, the productivity table, the employee's own
@@ -224,7 +242,7 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
      * SDIT: `roleAbbr` was "ASD", so every `{{roleAbbr}}` on the page named
      * the wrong role.
      */
-    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "sdit-epp")?.revision).toBe(3);
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "sdit-epp")?.revision).toBe(4);
     /*
      * THE CORRECTIVE ACTION FORM IS AT 4. Revision 2 renamed it and gave its
      * observation the Observed/Expectation shape; revision 3 set the two policy

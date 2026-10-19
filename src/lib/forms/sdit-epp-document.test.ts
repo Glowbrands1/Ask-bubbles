@@ -326,7 +326,15 @@ describe("the rest of the library is where it was", () => {
   it("moves no revision but the SDIT and TSD plans' among the performance plans", () => {
     const plans = TEMPLATE_SEEDS.filter((entry) => entry.requiredPermission === "create_epp");
     expect(plans.length).toBe(6);
-    const expected: Record<string, number> = { "sdit-epp": 3, "tsd-epp": 2 };
+    const expected: Record<string, number> = {
+      "sdit-epp": 4,
+      "tsd-epp": 3,
+      // Salon -> Store wording re-issues.
+      "asd-sdit-epp": 2,
+      "fttc-epp": 2,
+      "dmit-epp-tsd": 2,
+      "dmit-epp-dmit": 2,
+    };
     for (const plan of plans) {
       expect(plan.revision, plan.key).toBe(expected[plan.key] ?? 1);
     }

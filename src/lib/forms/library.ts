@@ -1751,7 +1751,7 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
      * name says.
      */
     variants: eppVariant("Training Store Director", "SDIT", "SDIT review"),
-    revision: 3,
+    revision: 4,
     revisionNote:
       "The standing SDIT expectations, the productivity table, the employee's own section and the re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual. The form addresses the SDIT rather than the ASD.",
     bundledPdfName: "Employee EPP (SDIT).pdf",
@@ -1774,7 +1774,7 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
      * here depends on the interpolation either way.
      */
     variants: eppVariant("District Manager", "TSD", "TSD review"),
-    revision: 2,
+    revision: 3,
     revisionNote:
       "The Management Performance Plan the business issues: the nine management expectations marked twice, five metrics for the manager and five for the store, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual.",
     bundledPdfName: "Management EPP (TSD).pdf",
@@ -1790,7 +1790,7 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 6,
     document: eppDocument("Performance EPP - ASD/SDIT"),
     variants: eppVariant("Training Store Director", "ASD", "ASD/SDIT review"),
-    revision: 1,
+    revision: 2,
     revisionNote: "Seeded from the approved reference forms.",
     bundledPdfName: "ASD-SDIT Performance EPP.pdf",
   },
@@ -1805,7 +1805,7 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 7,
     document: eppDocument("Performance EPP - FTTC"),
     variants: eppVariant("Store Director", "TC", "FTTC review"),
-    revision: 1,
+    revision: 2,
     revisionNote: "Seeded from the approved reference forms.",
     bundledPdfName: "FTTC Performance EPP.pdf",
   },
@@ -1821,7 +1821,7 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 8,
     document: dmitEppDocument(),
     variants: DMIT_VARIANTS,
-    revision: 1,
+    revision: 2,
     revisionNote: "Seeded from the approved reference forms.",
     bundledPdfName: "DMIT EPP - TSD Review.pdf",
   },
@@ -1837,7 +1837,7 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 9,
     document: dmitEppDocument(),
     variants: DMIT_VARIANTS,
-    revision: 1,
+    revision: 2,
     revisionNote: "Seeded from the approved reference forms.",
     bundledPdfName: "DMIT EPP - DMIT Review.pdf",
   },

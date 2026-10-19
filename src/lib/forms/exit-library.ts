@@ -446,8 +446,10 @@ export const EXIT_TEMPLATE_SEEDS: TemplateSeed[] = [
      * 2: HR's Details lines (resignation date, how and why they resigned, the
      * store key, and the yes/no answers as statements). A form already created
      * keeps the version it was pinned to; new ones get this one.
+     *
+     * 3: terminology only — Salon becomes Store in the key line. No field key changes.
      */
-    revision: 2,
+    revision: 3,
     revisionNote:
       "Details section: resignation date, how and why the employee resigned, store key returned, and the returned-items, payroll deduction, minimum wage/bonus and rehire answers as statements (HR request, 28 Sep 2026).",
     bundledPdfName: "Resignation Exit Form.pdf",

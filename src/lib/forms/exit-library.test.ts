@@ -94,7 +94,7 @@ describe("the Resignation/Exit Form is the STC Exit document", () => {
       layoutFamily: "exit",
       requiredPermission: "create_exit_form",
       variants: [],
-      revision: 2,
+      revision: 3,
     });
     expect(FORM_CATEGORIES.map((category) => category.key)).toContain("separation");
     const orders = TEMPLATE_SEEDS.map((entry) => entry.displayOrder);

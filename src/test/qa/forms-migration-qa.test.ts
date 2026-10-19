@@ -647,6 +647,23 @@ describe.each(FORMS)("$key", (form) => {
     }
   });
 
+  // The synthetic values are built from field keys ("Sample salon ppta"), which stay as stored; only printed text counts.
+  it(`${form.key} · 10b generated PDFs say Store, never Salon`, async () => {
+    for (const variant of seed.variants.length > 0 ? seed.variants : [null]) {
+      const document = parseFormDocument(seed.document);
+      const bytes = renderFormPdf(document, variant as never, syntheticValues(document, variant?.key ?? null), {
+        templateName: seed.name,
+        templateVersion: 1,
+        employeeName: "Avery Testperson",
+        formDate: "2026-10-01",
+        locationName: "Test Location 1",
+        reference: "qa-0001",
+        status: "finalized",
+      });
+      const found = (await pdfText(bytes)).text.match(/.{40}(?<!Sample )\bsalons?\b.{30}/gi); expect(found, String(found)).toBeNull();
+    }
+  });
+
   it(`${form.key} · 11 signature fields behave correctly`, () => {
     for (const variantKey of variantKeys) {
       const document = parseFormDocument(seed.document);
