@@ -67,6 +67,8 @@ describe.skipIf(!ENABLED)("termination enforcement and rehire on a real Supabase
   const people: Record<string, Person> = {};
   let reviewerId = "";
   let managerId = "";
+  let designatorId = "";
+  let otherAdminId = "";
   let recoveryHash = "";
   const savedEnv: Record<string, string | undefined> = {};
   /** The stack's other suites leave directory rows behind; their statuses are parked for this suite and restored after. */
@@ -177,8 +179,15 @@ describe.skipIf(!ENABLED)("termination enforcement and rehire on a real Supabase
     /* The administrator who reviews and approves, and an ordinary manager (not an administrator). */
     await make("reviewer", "admin");
     await make("manager", "location_manager");
+    /* The administrator who DESIGNATES reviewers, and a second administrator who is not (yet) designated. */
+    await make("designator", "admin");
+    await make("otheradmin", "admin");
     reviewerId = people.reviewer!.id;
     managerId = people.manager!.id;
+    designatorId = people.designator!.id;
+    otherAdminId = people.otheradmin!.id;
+    /* Nobody is designated at the start of the suite: close any designation an earlier run of this suite left on the stack. */
+    sql(`select public.employee_access_revoke_reviewer(user_id, '${designatorId}', 'synthetic: suite cleanup') from public.woven_enforcement_reviewers where revoked_at is null`);
 
     /* The accounts under test: linked, person-approved, status-managed, Terminated in Woven (except where noted). */
     await make("target", "location_manager", { linked: true });
@@ -227,14 +236,43 @@ describe.skipIf(!ENABLED)("termination enforcement and rehire on a real Supabase
     expect((await anonClient().auth.getUser(people.target!.sessions[0]!.access_token)).data.user?.id).toBe(people.target!.id);
   });
 
-  it("GATE CLOSED: switched on, Terminated in Woven, but no administrator review — nothing is disabled", async () => {
+  it("ZERO DESIGNATED REVIEWERS: switched on, Terminated in Woven, but nobody is designated — enforcement acts on nothing, and no administrator can review", async () => {
+    expect(sql(`select count(*) from public.woven_enforcement_reviewers where revoked_at is null`)).toBe("0");
+    const { recordAccessShadowRun } = await import("./shadow");
+    freshSync();
+    expect(await recordAccessShadowRun("cron")).toMatchObject({ status: "recorded", aborted: false });
+    const { loadShadowReviewCandidates, runShadowReview } = await import("./shadow-review-run");
+    const candidates = await loadShadowReviewCandidates();
+    expect(candidates.employeeIds).toContain(people.target!.employeeId);
+    expect(candidates.gate).toEqual({ ok: false, code: "no_designated_reviewer" });
+    /* An administrator who is not designated is refused. */
+    for (const admin of [reviewerId, otherAdminId, designatorId]) {
+      expect(await runShadowReview({ shadowRunId: candidates.shadowRunId!, employeeIds: [people.target!.employeeId], reason: "checked" }, admin)).toEqual({
+        status: "refused",
+        code: "review_not_designated",
+      });
+    }
     const { runTerminationEnforcement } = await import("./termination-run");
     const outcome = await runTerminationEnforcement("cron");
-    expect(outcome).toMatchObject({ status: "completed", tally: { applied: 0 } });
+    expect(outcome).toMatchObject({ status: "completed", tally: { applied: 0 }, gate: "no_designated_reviewer" });
     expect(profile("target")).toBe("active");
     expect(banned("target")).toBe("false");
     expect(sessionCount("target")).toBe(2);
     expect((await authorize(people.target!.cookies[0]!)).identity.subject).toBe(people.target!.id);
+  });
+
+  it("DESIGNATING: only an active administrator, another administrator, with a reason; nobody designates themselves; the list is audited", async () => {
+    const { runDesignateReviewer, listDesignations } = await import("./reviewers-run");
+    const reason = "synthetic test designation";
+    expect(await runDesignateReviewer({ userId: reviewerId, reason }, managerId)).toEqual({ status: "refused", code: "designate_actor_not_admin" });
+    expect(await runDesignateReviewer({ userId: designatorId, reason }, designatorId)).toEqual({ status: "refused", code: "designate_self" });
+    expect(await runDesignateReviewer({ userId: managerId, reason }, designatorId)).toEqual({ status: "refused", code: "designate_designee_not_admin" });
+    expect((await runDesignateReviewer({ userId: reviewerId, reason }, designatorId)).status).toBe("designated");
+    expect((await runDesignateReviewer({ userId: otherAdminId, reason }, designatorId)).status).toBe("designated");
+    expect(await runDesignateReviewer({ userId: reviewerId, reason }, designatorId)).toEqual({ status: "refused", code: "designate_already_designated" });
+    expect(sql(`select count(*) from public.app_user_audit where target_user_id = '${reviewerId}' and action = 'woven_reviewer_designated' and actor_user_id = '${designatorId}' and to_value like '%${reason}%'`)).toBe("1");
+    const active = (await listDesignations()).filter((d) => !d.revokedAt).map((d) => d.userId);
+    expect(active.sort()).toEqual([reviewerId, otherAdminId].sort());
   });
 
   it("SHADOW REVIEW: the shadow run lists the unprotected target ONLY; protected accounts are review-only; a non-administrator cannot review", async () => {
@@ -249,9 +287,41 @@ describe.skipIf(!ENABLED)("termination enforcement and rehire on a real Supabase
     }
     const input = { shadowRunId: candidates.shadowRunId!, employeeIds: [people.target!.employeeId], reason: "checked against HR" };
     expect(await runShadowReview(input, managerId)).toEqual({ status: "refused", code: "review_reviewer_not_admin" });
+    /* An administrator who is not designated cannot approve. */
+    expect(await runShadowReview(input, designatorId)).toEqual({ status: "refused", code: "review_not_designated" });
     expect(await runShadowReview({ ...input, employeeIds: [people.dm!.employeeId] }, reviewerId)).toEqual({ status: "refused", code: "review_unlisted_employee" });
     expect(await runShadowReview(input, reviewerId)).toMatchObject({ status: "recorded" });
     expect(profile("target")).toBe("active");
+  });
+
+  it("REVOKED DESIGNATION INVALIDATES A RECORDED REVIEW for good: enforcement acts on nothing, even after the person is designated again, until a fresh review", async () => {
+    const { runRevokeReviewer, runDesignateReviewer } = await import("./reviewers-run");
+    const { runTerminationEnforcement } = await import("./termination-run");
+    const { loadShadowReviewCandidates, runShadowReview } = await import("./shadow-review-run");
+    const untouched = async (gate: string) => {
+      const outcome = await runTerminationEnforcement("cron");
+      expect(outcome).toMatchObject({ status: "completed", tally: { applied: 0 }, gate });
+      expect(profile("target")).toBe("active");
+      expect(sessionCount("target")).toBe(2);
+      expect((await authorize(people.target!.cookies[0]!)).identity.subject).toBe(people.target!.id);
+    };
+
+    /* A recorded review is open ... */
+    expect((await loadShadowReviewCandidates()).gate).toEqual({ ok: true, code: "ok" });
+    /* ... a non-administrator and a blank reason cannot revoke ... */
+    expect(await runRevokeReviewer({ userId: reviewerId, reason: "synthetic" }, managerId)).toEqual({ status: "refused", code: "revoke_actor_not_admin" });
+    expect(await runRevokeReviewer({ userId: reviewerId, reason: " " }, designatorId)).toEqual({ status: "refused", code: "revoke_reason_required" });
+    /* ... an administrator revokes the reviewer who approved it: the review stops counting at once. */
+    expect((await runRevokeReviewer({ userId: reviewerId, reason: "synthetic: stepping down" }, designatorId)).status).toBe("revoked");
+    expect(sql(`select count(*) from public.app_user_audit where target_user_id = '${reviewerId}' and action = 'woven_reviewer_revoked'`)).toBe("1");
+    await untouched("reviewer_not_designated");
+    /* Designating the same person again does NOT revive the review made under the old designation. */
+    expect((await runDesignateReviewer({ userId: reviewerId, reason: "synthetic: designated again" }, designatorId)).status).toBe("designated");
+    await untouched("reviewer_not_designated");
+    /* Only a fresh review under the new designation reopens the gate. */
+    const candidates = await loadShadowReviewCandidates();
+    expect(await runShadowReview({ shadowRunId: candidates.shadowRunId!, employeeIds: [people.target!.employeeId], reason: "checked against HR again" }, reviewerId)).toMatchObject({ status: "recorded" });
+    expect((await loadShadowReviewCandidates()).gate).toEqual({ ok: true, code: "ok" });
   });
 
   it("TERMINATE through the real enforcement path: completed, one account applied", async () => {

@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
  * `rehire.test.ts` and supabase/tests/woven_disable_terminated_checks.sql.
  */
 
-const MOCKED = ["@/lib/api/respond", "@/lib/auth/server", "@/lib/employees/woven/access/rehire-run", "@/lib/employees/woven/access/shadow-review-run"];
+const MOCKED = ["@/lib/api/respond", "@/lib/auth/server", "@/lib/employees/woven/access/rehire-run", "@/lib/employees/woven/access/shadow-review-run", "@/lib/employees/woven/access/reviewers-run"];
 afterEach(() => {
   for (const m of MOCKED) vi.doUnmock(m);
 });
@@ -20,14 +20,15 @@ interface Seen {
   rateLimited: string[];
   approvals: { input: Record<string, unknown>; approver: string }[];
   reviews: { input: Record<string, unknown>; reviewer: string }[];
+  reviewers: { what: string; input: Record<string, unknown>; actor: string }[];
 }
 
 async function load(
-  route: "rehire" | "termination-review",
+  route: "rehire" | "termination-review" | "termination-reviewers" | "termination-reviewers/revoke",
   options: { role?: string; rehire?: unknown; review?: unknown; denyPermission?: string } = {},
 ) {
   vi.resetModules();
-  const seen: Seen = { permissions: [], rateLimited: [], approvals: [], reviews: [] };
+  const seen: Seen = { permissions: [], rateLimited: [], approvals: [], reviews: [], reviewers: [] };
   vi.doMock("@/lib/api/respond", async (importOriginal) => ({
     ...(await importOriginal<typeof import("@/lib/api/respond")>()),
     assertLiveMode: () => {},
@@ -55,6 +56,17 @@ async function load(
     runShadowReview: async (input: Record<string, unknown>, reviewer: string) => {
       seen.reviews.push({ input, reviewer });
       return options.review ?? { status: "recorded", reviewId: "99999999-9999-4999-8999-999999999999", employeeCount: 1, idsSha256: "0".repeat(64) };
+    },
+  }));
+  vi.doMock("@/lib/employees/woven/access/reviewers-run", () => ({
+    listDesignations: async () => [],
+    runDesignateReviewer: async (input: Record<string, unknown>, actor: string) => {
+      seen.reviewers.push({ what: "designate", input, actor });
+      return options.review ?? { status: "designated", designationId: "99999999-9999-4999-8999-999999999999" };
+    },
+    runRevokeReviewer: async (input: Record<string, unknown>, actor: string) => {
+      seen.reviewers.push({ what: "revoke", input, actor });
+      return options.review ?? { status: "revoked", designationId: "99999999-9999-4999-8999-999999999999" };
     },
   }));
   const handlers = (await import(`./${route}/route`)) as Record<string, (req: Request) => Promise<Response>>;
@@ -158,6 +170,62 @@ describe("termination-review", () => {
     expect(response.status).toBe(200);
     expect(seen.permissions).toEqual(["manage_users"]);
     const denied = await load("termination-review", { denyPermission: "manage_users" });
+    expect((await denied.handlers.GET!(new Request("https://ask-bubbles.test/x"))).status).toBe(403);
+  });
+});
+
+const REVIEWER = { userId: "00000000-0000-4000-8000-0000000000a1", reason: "synthetic test designation" };
+
+describe.each([
+  { route: "termination-reviewers" as const, what: "designate" },
+  { route: "termination-reviewers/revoke" as const, what: "revoke" },
+])("POST $route (who may review enforcement)", ({ route, what }) => {
+  it("refuses a cross-origin or origin-less request before anything runs", async () => {
+    for (const headers of [{ ...SAME, origin: "https://evil.example" }, { "content-type": "application/json" }, { ...SAME, "sec-fetch-site": "cross-site" }]) {
+      const { handlers, seen } = await load(route);
+      expect((await handlers.POST!(post(route, REVIEWER, headers))).status).toBe(403);
+      expect(seen.reviewers).toEqual([]);
+    }
+  });
+
+  it("is administrator-only", async () => {
+    for (const role of ["location_manager", "district_manager", "regional_manager", "assistant_manager", "employee"]) {
+      const { handlers, seen } = await load(route, { role });
+      expect((await handlers.POST!(post(route, REVIEWER))).status).toBe(403);
+      expect(seen.reviewers).toEqual([]);
+    }
+  });
+
+  it("is rate limited, takes the actor from the verified session and never the body, and needs a written reason", async () => {
+    const { handlers, seen } = await load(route);
+    const response = await handlers.POST!(post(route, { ...REVIEWER, actor: "attacker", designatedBy: "attacker", approver: "attacker" }));
+    expect(response.status).toBe(200);
+    expect(seen.rateLimited).toEqual(["mutate"]);
+    expect(seen.reviewers).toHaveLength(1);
+    expect(seen.reviewers[0]).toMatchObject({ what, actor: "11111111-2222-4333-8444-555555555555" });
+    expect(JSON.stringify(seen.reviewers[0]!.input)).not.toContain("attacker");
+
+    const blank = await load(route);
+    expect((await blank.handlers.POST!(post(route, { ...REVIEWER, reason: "  " }))).status).toBe(400);
+    expect(blank.seen.reviewers).toEqual([]);
+  });
+
+  it("a database refusal is 409 with the short code", async () => {
+    const { handlers } = await load(route, { review: { status: "refused", code: "designate_self" } });
+    const response = await handlers.POST!(post(route, REVIEWER));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ status: "refused", code: "designate_self" });
+  });
+});
+
+describe("GET termination-reviewers", () => {
+  it("lists designations to an authorised caller (manage_users + manage_integrations) and nobody else", async () => {
+    const { handlers, seen } = await load("termination-reviewers");
+    const response = await handlers.GET!(new Request("https://ask-bubbles.test/api/admin/employees/woven/termination-reviewers"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ designations: [] });
+    expect(seen.permissions).toEqual(["manage_users"]);
+    const denied = await load("termination-reviewers", { denyPermission: "manage_users" });
     expect((await denied.handlers.GET!(new Request("https://ask-bubbles.test/x"))).status).toBe(403);
   });
 });

@@ -143,7 +143,9 @@ $$;
 create temp table people as
 select pg_temp.mk(900, p_role => 'admin', p_link => false, p_status => null) as admin_a,
        pg_temp.mk(901, p_role => 'admin', p_link => false, p_status => null) as admin_b,
-       pg_temp.mk(902, p_role => 'location_manager', p_link => false, p_status => null) as manager;
+       pg_temp.mk(902, p_role => 'location_manager', p_link => false, p_status => null) as manager,
+       pg_temp.mk(903, p_role => 'admin', p_link => false, p_status => null) as designator,
+       pg_temp.mk(904, p_role => 'admin') as admin_c;  -- an administrator who is ALSO a linked, Terminated employee
 
 -- a current, pinned-company directory sync: finished, succeeded
 insert into public.employee_sync_runs (requested_by, status, started_at, finished_at)
@@ -217,6 +219,52 @@ $$;
 -- ======================================================== 3. the shadow-review gate
 create temp table s as select pg_temp.mk(40) as id, pg_temp.mk(41) as other, pg_temp.mk(42) as third;
 
+-- ============================================== who may review: NOBODY is assumed
+do $$
+begin
+  perform pg_temp.assert('the migration seeds no reviewer: the list is empty', (select count(*) from public.woven_enforcement_reviewers) = 0);
+end;
+$$;
+select pg_temp.expect_code('no designated reviewer: enforcement cannot act at all',
+  format('select pg_temp.disable(%L, %L)', (select id from s), 'EMP40'), 'disable_review_no_designated_reviewer');
+do $$ begin perform pg_temp.assert('gate: no_designated_reviewer', pg_temp.gate_code() = 'no_designated_reviewer'); end; $$;
+-- an administrator who is not designated cannot review (checked before anything about the run)
+select pg_temp.expect_code('review by an undesignated administrator',
+  format('select pg_temp.review(%L, %L, array[''EMP40''])', '99999999-9999-4999-8999-999999999999', (select admin_a from people)), 'review_not_designated');
+
+-- designating: an ACTIVE administrator, another administrator, with a written reason
+select pg_temp.expect_code('designate: actor is not an administrator',
+  format('select public.employee_access_designate_reviewer(%L, %L, ''synthetic'')', (select admin_a from people), (select manager from people)), 'designate_actor_not_admin');
+select pg_temp.expect_code('designate: nobody designates themselves',
+  format('select public.employee_access_designate_reviewer(%L, %L, ''synthetic'')', (select designator from people), (select designator from people)), 'designate_self');
+select pg_temp.expect_code('designate: designee is not an administrator',
+  format('select public.employee_access_designate_reviewer(%L, %L, ''synthetic'')', (select manager from people), (select designator from people)), 'designate_designee_not_admin');
+select pg_temp.expect_code('designate: reason required',
+  format('select public.employee_access_designate_reviewer(%L, %L, ''   '')', (select admin_a from people), (select designator from people)), 'designate_reason_required');
+create temp table desig as
+select public.employee_access_designate_reviewer((select admin_a from people), (select designator from people), 'synthetic test designation') as a,
+       public.employee_access_designate_reviewer((select admin_c from people), (select designator from people), 'synthetic test designation') as c;
+select pg_temp.expect_code('designate: already designated',
+  format('select public.employee_access_designate_reviewer(%L, %L, ''synthetic'')', (select admin_a from people), (select designator from people)), 'designate_already_designated');
+do $$
+begin
+  perform pg_temp.assert('designation audited with actor, target and reason',
+    (select count(*) from public.app_user_audit
+      where target_user_id = (select admin_a from people) and action = 'woven_reviewer_designated'
+        and actor_user_id = (select designator from people) and to_value like '%synthetic test designation%') = 1);
+  perform pg_temp.assert('one active designation each', (select count(*) from public.woven_enforcement_reviewers where revoked_at is null) = 2);
+end;
+$$;
+-- the history is append-only
+select pg_temp.expect_code('designation rows cannot be edited',
+  format('update public.woven_enforcement_reviewers set reason = ''x'' where id = %L', (select a from desig)),
+  'woven_enforcement_reviewers is append-only: a designation can only be revoked, once');
+select pg_temp.expect_code('designation rows cannot be deleted',
+  format('delete from public.woven_enforcement_reviewers where id = %L', (select a from desig)), 'woven_enforcement_reviewers is append-only');
+select pg_temp.expect_code('a second active designation for one user is refused',
+  format('insert into public.woven_enforcement_reviewers (user_id, designated_by, designated_by_email, reason) values (%L, %L, ''x'', ''x'')', (select admin_a from people), (select designator from people)),
+  'duplicate key value violates unique constraint "woven_enforcement_reviewers_one_active"');
+
 -- no shadow run at all
 select pg_temp.expect_code('no shadow run', format('select pg_temp.disable(%L, %L)', (select id from s), 'EMP40'), 'disable_review_no_shadow_run');
 
@@ -251,6 +299,11 @@ select pg_temp.expect_code('review: wrong stated company',
   format('select pg_temp.review(%L, %L, array[''EMP40''], ''ok'', %L)', (select id from r1), (select admin_a from people), '1ba00000-0000-4000-8000-0000000000aa'), 'review_company_scope');
 select pg_temp.expect_code('review: unknown run',
   format('select pg_temp.review(%L, %L, array[''EMP40''])', '99999999-9999-4999-8999-999999999999', (select admin_a from people)), 'review_run_not_found');
+-- a reviewer never approves their OWN account: admin_c is linked to EMP904, which this run planned to disable
+insert into public.employee_access_actions (access_run_id, external_employee_id, action, is_primary, result)
+select (select id from r1), 'EMP904', 'DISABLE_TERMINATED', true, 'shadow';
+select pg_temp.expect_code('review: own account on the list',
+  format('select pg_temp.review(%L, %L, array[''EMP40'', ''EMP904''])', (select id from r1), (select admin_c from people)), 'review_self_in_list');
 do $$ begin perform pg_temp.assert('gate still no_review', pg_temp.gate_code() = 'no_review'); end; $$;
 
 -- the review (approves EMP40 and EMP41 only)
@@ -266,6 +319,37 @@ begin
        from public.employee_access_shadow_reviews where id = (select id from rev)));
 end;
 $$;
+
+-- REVOKING A DESIGNATION INVALIDATES THE REVIEW MADE UNDER IT, for good
+select pg_temp.expect_code('revoke: actor is not an administrator',
+  format('select public.employee_access_revoke_reviewer(%L, %L, ''synthetic'')', (select admin_a from people), (select manager from people)), 'revoke_actor_not_admin');
+select pg_temp.expect_code('revoke: reason required',
+  format('select public.employee_access_revoke_reviewer(%L, %L, '' '')', (select admin_a from people), (select designator from people)), 'revoke_reason_required');
+select pg_temp.expect_code('revoke: not designated',
+  format('select public.employee_access_revoke_reviewer(%L, %L, ''synthetic'')', (select manager from people), (select designator from people)), 'revoke_not_designated');
+do $$
+begin
+  perform public.employee_access_revoke_reviewer((select admin_a from people), (select designator from people), 'synthetic: stepping down');
+  perform pg_temp.assert('revocation audited',
+    (select count(*) from public.app_user_audit where target_user_id = (select admin_a from people) and action = 'woven_reviewer_revoked' and to_value like '%stepping down%') = 1);
+  perform pg_temp.assert('gate closes: reviewer_not_designated', pg_temp.gate_code() = 'reviewer_not_designated');
+end;
+$$;
+select pg_temp.expect_code('a review made under a revoked designation does not count',
+  format('select pg_temp.disable(%L, %L, p_review => %L)', (select id from s), 'EMP40', (select id from rev)), 'disable_review_reviewer_not_designated');
+select pg_temp.expect_code('a revoked row cannot be changed again',
+  format('update public.woven_enforcement_reviewers set revoke_reason = ''changed'' where id = %L', (select a from desig)),
+  'woven_enforcement_reviewers is append-only: a designation can only be revoked, once');
+-- designating the same person AGAIN does not revive the old review (it is bound to the old designation)
+do $$
+begin
+  perform public.employee_access_designate_reviewer((select admin_a from people), (select designator from people), 'synthetic: designated again');
+  perform pg_temp.assert('still closed after a new designation', pg_temp.gate_code() = 'reviewer_not_designated');
+end;
+$$;
+-- only a fresh review under the new designation reopens it
+update rev set id = pg_temp.review((select id from r1), (select admin_a from people), array['EMP40', 'EMP41'], 'checked against HR again');
+do $$ begin perform pg_temp.assert('gate open again after a fresh review', (public.employee_access_review_state() ->> 'ok')::boolean); end; $$;
 
 -- an employee not on the reviewed list, and the wrong review id
 create temp table off_list as select pg_temp.mk(43) as id;
@@ -283,6 +367,7 @@ declare
   v_id uuid := (select id from s);
 begin
   perform pg_temp.assert('success returns disabled', pg_temp.disable(v_id, 'EMP40', p_review => (select id from rev)) = 'disabled');
+  perform pg_temp.assert('the lifecycle setting is turned off again', current_setting('app.woven_link_lifecycle', true) = 'off');
   perform pg_temp.assert('profile disabled', (select status::text from public.app_users where id = v_id) = 'disabled');
   perform pg_temp.assert('link stamped terminated, not yet revoked',
     (select terminated_at is not null and reactivated_at is null and revoked_woven_status = 'terminated' and access_revoked_at is null
@@ -337,6 +422,7 @@ end;
 $$;
 
 -- a reviewer who is no longer an administrator closes the gate
+select public.employee_access_designate_reviewer((select admin_b from people), (select designator from people), 'synthetic test designation');
 create temp table rev2 as select pg_temp.review((select id from r2), (select admin_b from people), array['EMP42']) as id;
 do $$ begin perform pg_temp.assert('gate reopened by a review of the newest run', (public.employee_access_review_state() ->> 'ok')::boolean); end; $$;
 update public.app_users set status = 'disabled' where id = (select admin_b from people);
@@ -581,6 +667,8 @@ begin
     'public.employee_access_record_revocation(uuid, boolean, text, text)',
     'public.employee_access_approve_rehire(uuid, text, uuid, uuid, text)',
     'public.employee_access_record_rehire(uuid, uuid, boolean, text)',
+    'public.employee_access_designate_reviewer(uuid, uuid, text)',
+    'public.employee_access_revoke_reviewer(uuid, uuid, text)',
     'public.employee_access_record_apply_run(text, uuid, text, text, text[], jsonb, jsonb)'
   ] loop
     foreach v_role in array array['anon', 'authenticated', 'public'] loop
@@ -603,6 +691,7 @@ begin
     'public.employee_access_observed_status(text)',
     'public.employee_access_is_protected(uuid, uuid[])',
     'public.employee_access_is_active_admin(uuid)',
+    'public.employee_access_is_designated_reviewer(uuid)',
     'public.employee_access_ids_hash(text[])'
   ] loop
     foreach v_role in array array['anon', 'authenticated', 'service_role'] loop
@@ -619,6 +708,13 @@ begin
      or has_table_privilege('authenticated', 'public.employee_access_shadow_reviews', 'select')
      or not has_table_privilege('service_role', 'public.employee_access_shadow_reviews', 'insert') then
     raise exception 'ENFORCEMENT CHECK FAILED (privileges): employee_access_shadow_reviews grants';
+  end if;
+  if has_table_privilege('service_role', 'public.woven_enforcement_reviewers', 'update')
+     or has_table_privilege('service_role', 'public.woven_enforcement_reviewers', 'delete')
+     or has_table_privilege('anon', 'public.woven_enforcement_reviewers', 'select')
+     or has_table_privilege('authenticated', 'public.woven_enforcement_reviewers', 'select')
+     or not has_table_privilege('service_role', 'public.woven_enforcement_reviewers', 'insert') then
+    raise exception 'ENFORCEMENT CHECK FAILED (privileges): woven_enforcement_reviewers grants';
   end if;
 end;
 $$;
@@ -640,11 +736,28 @@ select pg_temp.expect_code('authenticated call',
 reset role;
 
 -- ====================================================== 8. the links guard (production parity)
--- The live database has a hand-applied trigger of this name that allows ONLY the managed_* flags and updated_at to
--- change; this migration takes it over (create or replace + re-create the trigger). The harness builds the cluster
--- WITH that live copy (production_parity_links_guard.sql, the default) and WITHOUT it (VERIFY_PARITY=0); every check in
--- this file, including every stamp the functions above write, runs against the migration's end state in both builds.
+-- The live database has a hand-applied trigger of this name whose rule is STRICT: only the managed_* flags and
+-- updated_at may change. The migration keeps that rule for every caller; the five lifecycle stamps are allowed ONLY while
+-- a transaction-local setting, which the four lifecycle functions alone set around their own UPDATE, is 'on'. The harness
+-- builds the cluster WITH the live copy (production_parity_links_guard.sql, the default) and WITHOUT it (VERIFY_PARITY=0).
+-- the audit vocabulary after the migration keeps the TWELVE actions the live table allows, plus ours
+do $$
+declare
+  v_def text := (select pg_get_constraintdef(oid) from pg_constraint where conname = 'app_user_audit_action_check' and conrelid = 'public.app_user_audit'::regclass);
+  v_action text;
+begin
+  foreach v_action in array array[
+    'invited', 'invite_resent', 'invitation_accepted', 'reset_requested', 'role_changed', 'status_changed', 'scope_changed',
+    'access_revoked', 'access_restored', 'access_revocation_incomplete', 'managed_flags_changed', 'credentials_reset',
+    'woven_rehire_approved', 'woven_reviewer_designated', 'woven_reviewer_revoked'
+  ] loop
+    perform pg_temp.assert('audit action kept or added: ' || v_action, v_def like '%''' || v_action || '''%');
+  end loop;
+end;
+$$;
+
 create temp table g as select pg_temp.mk(70) as id;
+select set_config('t.g', (select id::text from g), false);
 do $$
 declare
   v_id uuid := (select id from g);
@@ -652,9 +765,8 @@ begin
   perform pg_temp.assert('guard trigger installed and enabled',
     exists (select 1 from pg_trigger where tgname = 'employee_account_links_guard_update'
              and tgrelid = 'public.employee_account_links'::regclass and not tgisinternal and tgenabled = 'O'));
-  perform pg_temp.assert('guard is the repo version (allows the lifecycle stamps)',
-    pg_get_functiondef('public.employee_account_links_guard_update()'::regprocedure) like '%access_revoked_at%'
-    and pg_get_functiondef('public.employee_account_links_guard_update()'::regprocedure) like '%last_synced_at%');
+  perform pg_temp.assert('guard is the lifecycle-aware version',
+    pg_get_functiondef('public.employee_account_links_guard_update()'::regprocedure) like '%app.woven_link_lifecycle%');
   perform pg_temp.assert('guard keeps its search_path pin and is not security definer',
     (select not prosecdef and proconfig @> array['search_path=""'] from pg_proc where oid = 'public.employee_account_links_guard_update()'::regprocedure));
   perform pg_temp.assert('guard is not executable by anyone',
@@ -663,31 +775,64 @@ begin
     and not has_function_privilege('service_role', 'public.employee_account_links_guard_update()', 'execute')
     and not exists (select 1 from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
                      where p.oid = 'public.employee_account_links_guard_update()'::regprocedure and a.grantee = 0));
+  perform pg_temp.assert('the setting is not on outside the lifecycle functions', coalesce(current_setting('app.woven_link_lifecycle', true), '') <> 'on');
 
-  -- what MAY change: the flags, updated_at and the five lifecycle stamps, one at a time
+  -- the strict rule is untouched: the flags and updated_at change freely
   update public.employee_account_links set managed_status = false where app_user_id = v_id;
   update public.employee_account_links set managed_status = true where app_user_id = v_id;
   update public.employee_account_links set managed_location = true where app_user_id = v_id;
   update public.employee_account_links set managed_role = true where app_user_id = v_id;
   update public.employee_account_links set updated_at = now() where app_user_id = v_id;
+end;
+$$;
+
+-- setting UNSET: every lifecycle stamp is refused, for the owner role and for service_role (which has no UPDATE at all)
+create function pg_temp.stamp_statements() returns text[] language sql as $$
+  select array[
+    'terminated_at = now()', 'reactivated_at = now()', 'revoked_woven_status = ''terminated''',
+    'access_revoked_at = now()', 'last_synced_at = now()'
+  ];
+$$;
+do $$
+declare
+  v_msg constant text := 'employee_account_links: only managed_status, managed_location and managed_role can change';
+  v_set text;
+begin
+  execute 'set local role postgres';
+  foreach v_set in array pg_temp.stamp_statements() loop
+    perform pg_temp.expect_code('unset, postgres: ' || v_set, format('update public.employee_account_links set %s where app_user_id = %L', v_set, current_setting('t.g')), v_msg);
+  end loop;
+  execute 'set local role service_role';
+  foreach v_set in array pg_temp.stamp_statements() loop
+    perform pg_temp.expect_code('unset, service_role: ' || v_set, format('update public.employee_account_links set %s where app_user_id = %L', v_set, current_setting('t.g')), 'permission denied for table employee_account_links');
+  end loop;
+  execute 'reset role';
+  -- anything but exactly 'on' fails closed
+  foreach v_set in array array['', 'off', 'ON', 'true', '1', 'yes'] loop
+    perform set_config('app.woven_link_lifecycle', v_set, true);
+    perform pg_temp.expect_code('setting "' || v_set || '" does not unlock a stamp', format('update public.employee_account_links set last_synced_at = now() where app_user_id = %L', current_setting('t.g')), v_msg);
+  end loop;
+end;
+$$;
+
+-- setting ON: ONLY the five stamps may also change; identity stays refused, alone or mixed into the same UPDATE
+do $$
+declare
+  v_id uuid := (select id from g);
+  v_other uuid := (select manager from people);
+  v_msg constant text := 'employee_account_links: only managed_status, managed_location and managed_role can change';
+  v_set text;
+begin
+  perform set_config('app.woven_link_lifecycle', 'on', true);
   update public.employee_account_links set terminated_at = now() where app_user_id = v_id;
   update public.employee_account_links set reactivated_at = now() where app_user_id = v_id;
   update public.employee_account_links set revoked_woven_status = 'terminated' where app_user_id = v_id;
   update public.employee_account_links set access_revoked_at = now() where app_user_id = v_id;
   update public.employee_account_links set last_synced_at = now() where app_user_id = v_id;
+  update public.employee_account_links set managed_role = false where app_user_id = v_id;
   update public.employee_account_links set access_revoked_at = null, reactivated_at = null, terminated_at = null, revoked_woven_status = null where app_user_id = v_id;
-  perform pg_temp.assert('allowed updates took effect', (select managed_status and managed_location and managed_role and terminated_at is null from public.employee_account_links where app_user_id = v_id));
-end;
-$$;
+  perform pg_temp.assert('stamps took effect and cleared', (select terminated_at is null and access_revoked_at is null from public.employee_account_links where app_user_id = v_id));
 
--- what may NEVER change: the link's identity (even for a superuser: the trigger fires for everyone)
-do $$
-declare
-  v_id uuid := (select id from g);
-  v_other uuid := (select manager from people);
-  v_msg constant text := 'employee_account_links: only managed_status, managed_location and managed_role can change (and, through the termination functions, the termination and rehire record); a link''s identity never does';
-  v_set text;
-begin
   foreach v_set in array array[
     'set_by = ''someone else''',
     'link_method = ''admin_manual''',
@@ -699,24 +844,17 @@ begin
     'provisioned_by_source = ''woven''',
     format('app_user_id = %L', v_other)
   ] loop
-    perform pg_temp.expect_code('identity: ' || v_set, format('update public.employee_account_links set %s where app_user_id = %L', v_set, v_id), v_msg);
+    perform pg_temp.expect_code('setting on, identity: ' || v_set, format('update public.employee_account_links set %s where app_user_id = %L', v_set, v_id), v_msg);
+    perform pg_temp.expect_code('setting on, mixed with a stamp: ' || v_set, format('update public.employee_account_links set last_synced_at = now(), %s where app_user_id = %L', v_set, v_id), v_msg);
   end loop;
-  -- a mixed update (an allowed column AND an identity column) is refused as a whole
-  perform pg_temp.expect_code('identity mixed with a stamp',
-    format('update public.employee_account_links set last_synced_at = now(), set_by = ''x'' where app_user_id = %L', v_id), v_msg);
   perform pg_temp.assert('nothing about the identity changed',
     (select set_by = 'admin:reviewer@example.test' and link_method = 'admin_confirmed_email' and external_employee_id = 'EMP70' and management = 'woven_linked'
        from public.employee_account_links where app_user_id = v_id));
+
+  -- turned off again, the stamps are refused again
+  perform set_config('app.woven_link_lifecycle', 'off', true);
+  perform pg_temp.expect_code('setting off again', format('update public.employee_account_links set last_synced_at = now() + interval ''1 day'' where app_user_id = %L', v_id), v_msg);
 end;
 $$;
-
--- service_role (the server's role) holds no UPDATE on links at all: the guard is the second lock
-select set_config('t.g', (select id::text from g), true);
-set local role service_role;
-select pg_temp.expect_code('service_role cannot update a link',
-  format('update public.employee_account_links set managed_status = false where app_user_id = %L', current_setting('t.g')), 'permission denied for table employee_account_links');
-select pg_temp.expect_code('service_role cannot update an identity column either',
-  format('update public.employee_account_links set set_by = ''x'' where app_user_id = %L', current_setting('t.g')), 'permission denied for table employee_account_links');
-reset role;
 
 rollback;

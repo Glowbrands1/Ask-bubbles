@@ -17,7 +17,9 @@
 --   B. employee_access_record_revocation    after the server banned the auth user
 --                                           and revoked its sessions: stamps the
 --                                           link's access_revoked_at; audits.
---   C. employee_access_record_shadow_review an ADMINISTRATOR records "I reviewed
+--   C. employee_access_record_shadow_review a DESIGNATED administrator (the list
+--                                           starts EMPTY, nobody is seeded; see
+--                                           designate/revoke_reviewer below) records "I reviewed
 --                                           THIS shadow run and approve THESE
 --                                           EmployeeIDs" (the list and its hash).
 --   D. employee_access_review_state         the gate: is there a clean, fresh,
@@ -69,7 +71,9 @@
 --   * the NEWEST shadow run (employee_access_runs, mode shadow) completed with
 --     no tripped mass-change guard  (review_gate: shadow_run_guard_tripped)
 --   * it is at most 48 hours old                       (shadow_run_stale)
---   * an active administrator recorded a review of THAT run — not an older one;
+--   * a DESIGNATED reviewer (still designated, still an active administrator, the
+--     designation the review was made under still open) recorded a review of THAT
+--     run — not an older one;
 --     a newer shadow run than the reviewed one reopens the gate
 --                                          (no_review / review_outdated / reviewer_not_admin)
 --   * the employee is on that review's approved list.
@@ -144,6 +148,13 @@ alter table public.employee_access_actions add constraint employee_access_action
 
 -- ------------------------------------------------- 2. the audit vocabulary ---
 -- ADDITIVE ONLY: every earlier value stays (src/test/audit-actions.ts reads this).
+-- THE LIVE CHECK ALLOWS 12 ACTIONS: the ten the repository's migrations define PLUS
+-- managed_flags_changed and credentials_reset (applied by hand, in no earlier
+-- migration). This list is those twelve plus ours, never shorter, so applying
+-- this migration cannot drop an action the live table already uses.
+-- Ours: woven_rehire_approved, and woven_reviewer_designated / woven_reviewer_revoked
+-- (the designation of who may review enforcement; no existing action says that
+-- honestly, and a trail that logs a designation as `role_changed` would mislead).
 
 alter table public.app_user_audit drop constraint if exists app_user_audit_action_check;
 alter table public.app_user_audit add constraint app_user_audit_action_check
@@ -158,20 +169,87 @@ alter table public.app_user_audit add constraint app_user_audit_action_check
     'access_revoked',
     'access_restored',
     'access_revocation_incomplete',
-    'woven_rehire_approved'
+    'managed_flags_changed',
+    'credentials_reset',
+    'woven_rehire_approved',
+    'woven_reviewer_designated',
+    'woven_reviewer_revoked'
   ));
 
 -- --------------------------------------------- 3. the administrator's review ---
+
+/*
+ * WHO MAY REVIEW — a DESIGNATED, authorised administrator, nobody assumed.
+ * The list starts EMPTY and this migration seeds NO person: until a person with
+ * an administrator-console role has been designated (by another such person,
+ * with a written reason) enforcement cannot act at all. History is append-only:
+ * a row is only ever closed (revoked_*), once, never edited or deleted; one
+ * active row per user. Who the designees should be is a Buff City Soap decision.
+ */
+create table if not exists public.woven_enforcement_reviewers (
+  id                uuid primary key default extensions.gen_random_uuid(),
+  user_id           uuid not null references public.app_users (id) on delete restrict,
+  designated_by     uuid not null,
+  designated_by_email text not null check (length(btrim(designated_by_email)) between 1 and 254),
+  designated_at     timestamptz not null default now(),
+  reason            text not null check (length(btrim(reason)) between 1 and 300),
+  revoked_at        timestamptz,
+  revoked_by        uuid,
+  revoked_by_email  text,
+  revoke_reason     text check (revoke_reason is null or length(btrim(revoke_reason)) between 1 and 300),
+  constraint woven_enforcement_reviewers_revoked_is_whole
+    check ((revoked_at is null) = (revoked_by is null) and (revoked_at is null) = (revoke_reason is null))
+);
+
+create unique index if not exists woven_enforcement_reviewers_one_active
+  on public.woven_enforcement_reviewers (user_id) where revoked_at is null;
+
+comment on table public.woven_enforcement_reviewers is
+  'Append-only history of who is designated to review termination enforcement. Empty by default: with no active designation, enforcement cannot act. A row is only ever closed (revoked_*), once.';
+
+create or replace function public.woven_enforcement_reviewers_guard()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if tg_op = 'DELETE' then
+    raise exception 'woven_enforcement_reviewers is append-only' using errcode = 'restrict_violation';
+  end if;
+  if old.revoked_at is not null
+     or new.revoked_at is null
+     or (to_jsonb(new) - array['revoked_at', 'revoked_by', 'revoked_by_email', 'revoke_reason'])
+        is distinct from (to_jsonb(old) - array['revoked_at', 'revoked_by', 'revoked_by_email', 'revoke_reason']) then
+    raise exception 'woven_enforcement_reviewers is append-only: a designation can only be revoked, once' using errcode = 'restrict_violation';
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.woven_enforcement_reviewers_guard() from public, anon, authenticated, service_role;
+
+drop trigger if exists woven_enforcement_reviewers_append_only on public.woven_enforcement_reviewers;
+create trigger woven_enforcement_reviewers_append_only
+  before update or delete on public.woven_enforcement_reviewers
+  for each row execute function public.woven_enforcement_reviewers_guard();
+
+alter table public.woven_enforcement_reviewers enable row level security;
+alter table public.woven_enforcement_reviewers force row level security;
+revoke all on public.woven_enforcement_reviewers from public, anon, authenticated, service_role;
+grant select, insert on public.woven_enforcement_reviewers to service_role;
 
 create table if not exists public.employee_access_shadow_reviews (
   id                  uuid primary key default extensions.gen_random_uuid(),
   shadow_run_id       uuid not null references public.employee_access_runs (id) on delete restrict,
   reviewed_by         uuid not null,
+  /* The designation the reviewer held WHEN reviewing: revoking it invalidates this review for good, even if they are designated again later. */
+  reviewer_designation_id uuid not null references public.woven_enforcement_reviewers (id) on delete restrict,
   reviewed_by_email   text not null check (length(btrim(reviewed_by_email)) between 1 and 254),
   approved_employee_ids text[] not null check (cardinality(approved_employee_ids) >= 1),
   approved_ids_sha256 text not null check (approved_ids_sha256 ~ '^[0-9a-f]{64}$'),
   reason              text not null check (length(btrim(reason)) between 1 and 300),
-  created_at          timestamptz not null default now()
+  /* clock_timestamp(), not now(): two reviews in one transaction still order, so "the latest review" is never a tie. */
+  created_at          timestamptz not null default clock_timestamp()
 );
 
 create index if not exists employee_access_shadow_reviews_by_run
@@ -255,6 +333,17 @@ as $$
                   where u.id = p_user_id and u.status::text = 'active' and u.role::text in ('admin', 'owner', 'developer'));
 $$;
 
+/* Currently designated to review enforcement, and still an ACTIVE administrator. */
+create or replace function public.employee_access_is_designated_reviewer(p_user_id uuid)
+returns boolean
+language sql
+stable
+set search_path = ''
+as $$
+  select exists (select 1 from public.woven_enforcement_reviewers d where d.user_id = p_user_id and d.revoked_at is null)
+     and public.employee_access_is_active_admin(p_user_id);
+$$;
+
 /* sha256 (hex) of the sorted, de-duplicated EmployeeIDs joined by newlines. The server computes the same. */
 create or replace function public.employee_access_ids_hash(p_ids text[])
 returns text
@@ -265,30 +354,39 @@ as $$
   select encode(sha256(convert_to(coalesce(array_to_string(array(select d.x from (select distinct x from unnest(p_ids) x) d order by d.x collate "C"), E'\n'), ''), 'UTF8')), 'hex');
 $$;
 
--- ------------------------------------------- 4b. the link-update guard (repo-managed) ---
+-- ------------------------------------------- 4b. the link-update guard (lifecycle-aware) ---
 --
--- PRODUCTION PARITY. The LIVE database already has a trigger of this name on
--- employee_account_links, applied by hand and in no migration, whose function
--- allows ONLY the three managed_* flags and updated_at to change. Triggers fire
--- inside SECURITY DEFINER functions too, so against that database the
--- stamps below (terminated_at, reactivated_at, access_revoked_at,
--- revoked_woven_status, last_synced_at) would be refused with check_violation.
--- So this migration takes the guard over: create-or-replace the function and
--- re-create the trigger, so that WHETHER OR NOT the live one exists the end state
--- is the same, and is in the repository:
+-- PRODUCTION PARITY. The LIVE database has a trigger of this name on
+-- employee_account_links (captured in the repository by an earlier migration,
+-- 20261017001000, exactly as production has it): its function lets ONLY
+-- managed_status, managed_location, managed_role and updated_at change.
+-- Triggers fire inside SECURITY DEFINER functions too, so that strict rule would
+-- refuse the stamps this file's four lifecycle functions write.
 --
---   may change   managed_status, managed_location, managed_role, updated_at,
---                and the lifecycle stamps this file's functions write
---   never change a link's identity: app_user_id, source_system, management,
---                external_employee_id, link_method, provisioned_by_source,
---                first_provisioned_at, reason, set_by, created_at
+-- THE RULE IS NOT WIDENED FOR ANYONE ELSE. Same function, same error message, same
+-- strict allowlist — except in a transaction in which one of the four lifecycle
+-- functions (disable_terminated, record_revocation, approve_rehire, record_rehire)
+-- has set the transaction-local setting app.woven_link_lifecycle = 'on' immediately
+-- before its own UPDATE and back to 'off' right after. While it is on, ONLY the
+-- five lifecycle stamps may ALSO change (terminated_at, reactivated_at,
+-- access_revoked_at, revoked_woven_status, last_synced_at). A link's identity
+-- (app_user_id, source_system, management, external_employee_id, link_method,
+-- provisioned_by_source, first_provisioned_at, reason, set_by, created_at) is
+-- refused regardless, alone or mixed into the same UPDATE. With the setting unset
+-- (every other caller, every other transaction: it is transaction-local and does
+-- not leak) the behaviour is exactly the live trigger's.
 --
--- It stays a plain (invoker) trigger function with the search_path pinned: it
--- reads only the OLD and NEW rows (to_jsonb), touches no table, and needs no
--- privilege, so there is nothing for SECURITY DEFINER to add. Its EXECUTE is
--- revoked from every role (a trigger function is not an API; the live one was
--- executable by PUBLIC). service_role still holds no UPDATE on the table, so
--- the guard is the second lock behind the missing grant.
+-- Create-or-replace + re-create the trigger make the end state the same whether or
+-- not the live (or captured) copy exists. The function stays a plain (invoker)
+-- trigger function with the search_path pinned (it reads only OLD/NEW and the
+-- setting; SECURITY DEFINER would add nothing) and EXECUTE revoked from everyone.
+--
+-- RESIDUAL RISK, stated plainly: a setting is not a credential. Any session that
+-- can run arbitrary SQL as a role allowed to UPDATE the table (the owner, a
+-- superuser) can set it. The real lock remains that service_role — the server's
+-- role — holds no UPDATE grant on the table at all and can reach it only through
+-- these SECURITY DEFINER functions; the guard stops a bug or a stray statement in
+-- those paths from touching a link's identity, not a hostile owner.
 
 create or replace function public.employee_account_links_guard_update()
 returns trigger
@@ -296,14 +394,13 @@ language plpgsql
 set search_path = ''
 as $$
 declare
-  v_mutable constant text[] := array[
-    'managed_status', 'managed_location', 'managed_role', 'updated_at',
-    'terminated_at', 'reactivated_at', 'access_revoked_at', 'revoked_woven_status', 'last_synced_at'
-  ];
+  v_flags constant text[] := array['managed_status', 'managed_location', 'managed_role', 'updated_at'];
+  v_stamps constant text[] := array['terminated_at', 'reactivated_at', 'access_revoked_at', 'revoked_woven_status', 'last_synced_at'];
+  v_allowed text[];
 begin
-  if (to_jsonb(new) - v_mutable) is distinct from (to_jsonb(old) - v_mutable) then
-    raise exception 'employee_account_links: only managed_status, managed_location and managed_role can change (and, through the termination functions, the termination and rehire record); a link''s identity never does'
-      using errcode = 'check_violation';
+  v_allowed := case when current_setting('app.woven_link_lifecycle', true) = 'on' then v_flags || v_stamps else v_flags end;
+  if (to_jsonb(new) - v_allowed) is distinct from (to_jsonb(old) - v_allowed) then
+    raise exception 'employee_account_links: only managed_status, managed_location and managed_role can change' using errcode = 'check_violation';
   end if;
   return new;
 end;
@@ -329,6 +426,14 @@ declare
   v_run    record;
   v_review record;
 begin
+  /* FAIL CLOSED: with nobody designated (the list starts empty) enforcement cannot act at all. */
+  if not exists (
+    select 1 from public.woven_enforcement_reviewers d
+     where d.revoked_at is null and public.employee_access_is_active_admin(d.user_id)
+  ) then
+    return jsonb_build_object('ok', false, 'code', 'no_designated_reviewer');
+  end if;
+
   select r.id, r.status, r.guard_codes, r.created_at into v_run
     from public.employee_access_runs r
    where r.mode = 'shadow'
@@ -344,7 +449,7 @@ begin
     return jsonb_build_object('ok', false, 'code', 'shadow_run_stale', 'shadow_run_id', v_run.id);
   end if;
 
-  select v.id, v.reviewed_by, v.approved_employee_ids into v_review
+  select v.id, v.reviewed_by, v.reviewer_designation_id, v.approved_employee_ids into v_review
     from public.employee_access_shadow_reviews v
    where v.shadow_run_id = v_run.id
    order by v.created_at desc, v.id desc
@@ -357,6 +462,10 @@ begin
   end if;
   if not public.employee_access_is_active_admin(v_review.reviewed_by) then
     return jsonb_build_object('ok', false, 'code', 'reviewer_not_admin', 'shadow_run_id', v_run.id, 'review_id', v_review.id);
+  end if;
+  /* Re-checked at enforcement time: the designation the review was made under must still be open. */
+  if not exists (select 1 from public.woven_enforcement_reviewers d where d.id = v_review.reviewer_designation_id and d.revoked_at is null) then
+    return jsonb_build_object('ok', false, 'code', 'reviewer_not_designated', 'shadow_run_id', v_run.id, 'review_id', v_review.id);
   end if;
   return jsonb_build_object(
     'ok', true, 'code', 'ok', 'shadow_run_id', v_run.id, 'review_id', v_review.id,
@@ -386,9 +495,15 @@ declare
   v_ids    text[];
   v_id     uuid;
   v_email  text;
+  v_desig  uuid;
 begin
   if not public.employee_access_is_active_admin(p_reviewer) then
     raise exception 'review_reviewer_not_admin' using errcode = 'check_violation';
+  end if;
+  /* Only a DESIGNATED reviewer: an administrator who is not on the list cannot approve. */
+  select d.id into v_desig from public.woven_enforcement_reviewers d where d.user_id = p_reviewer and d.revoked_at is null;
+  if v_desig is null then
+    raise exception 'review_not_designated' using errcode = 'check_violation';
   end if;
   if p_reason is null or length(btrim(p_reason)) not between 1 and 300 then
     raise exception 'review_reason_required' using errcode = 'check_violation';
@@ -419,6 +534,13 @@ begin
   if p_ids_sha256 is distinct from public.employee_access_ids_hash(v_ids) then
     raise exception 'review_hash_mismatch' using errcode = 'check_violation';
   end if;
+  /* A reviewer never approves their OWN account: no EmployeeID on the list is the one their account is linked to. */
+  if exists (
+    select 1 from public.employee_account_links l
+     where l.app_user_id = p_reviewer and l.external_employee_id = any (v_ids)
+  ) then
+    raise exception 'review_self_in_list' using errcode = 'check_violation';
+  end if;
   /* Every approved EmployeeID is a DISABLE_TERMINATED the reviewed run actually planned... */
   if exists (
     select 1 from unnest(v_ids) x
@@ -441,8 +563,8 @@ begin
 
   select u.email into v_email from public.app_users u where u.id = p_reviewer;
   insert into public.employee_access_shadow_reviews
-    (shadow_run_id, reviewed_by, reviewed_by_email, approved_employee_ids, approved_ids_sha256, reason)
-  values (p_shadow_run_id, p_reviewer, v_email, v_ids, public.employee_access_ids_hash(v_ids), btrim(p_reason))
+    (shadow_run_id, reviewed_by, reviewer_designation_id, reviewed_by_email, approved_employee_ids, approved_ids_sha256, reason)
+  values (p_shadow_run_id, p_reviewer, v_desig, v_email, v_ids, public.employee_access_ids_hash(v_ids), btrim(p_reason))
   returning id into v_id;
   return v_id;
 end;
@@ -536,6 +658,8 @@ begin
       from public.app_users u where u.id = p_app_user_id;
   end if;
 
+  /* The links guard permits the lifecycle stamps only while this transaction-local setting is on; it is turned off right after. */
+  perform set_config('app.woven_link_lifecycle', 'on', true);
   if not v_started then
     /* A new termination: it starts a new revocation record (a rehired-then-terminated-again account included). */
     update public.employee_account_links
@@ -547,6 +671,7 @@ begin
   else
     update public.employee_account_links set last_synced_at = now() where app_user_id = p_app_user_id;
   end if;
+  perform set_config('app.woven_link_lifecycle', 'off', true);
 
   return case when v_status = 'disabled' then 'already_disabled' else 'disabled' end;
 end;
@@ -569,6 +694,7 @@ set search_path = ''
 as $$
 begin
   if p_ok then
+    perform set_config('app.woven_link_lifecycle', 'on', true);
     update public.employee_account_links
        set access_revoked_at = coalesce(access_revoked_at, now()),
            revoked_woven_status = 'terminated'
@@ -576,6 +702,7 @@ begin
     if not found then
       raise exception 'record_revocation_not_terminated' using errcode = 'check_violation';
     end if;
+    perform set_config('app.woven_link_lifecycle', 'off', true);
   end if;
   insert into public.app_user_audit (target_user_id, target_email, actor_user_id, actor_email, action, from_value, to_value)
   select p_app_user_id, u.email, null, left(p_set_by, 120),
@@ -663,9 +790,11 @@ begin
 
   if v_status = 'disabled' then
     update public.app_users set status = 'active', updated_by = p_approver where id = p_app_user_id;
+    perform set_config('app.woven_link_lifecycle', 'on', true);
     update public.employee_account_links
        set reactivated_at = coalesce(reactivated_at, now()), last_synced_at = now()
      where app_user_id = p_app_user_id;
+    perform set_config('app.woven_link_lifecycle', 'off', true);
     insert into public.app_user_audit (target_user_id, target_email, actor_user_id, actor_email, action, from_value, to_value)
     select p_app_user_id, u.email, p_approver, a.email, 'status_changed', 'disabled', 'active'
       from public.app_users u, public.app_users a where u.id = p_app_user_id and a.id = p_approver;
@@ -711,7 +840,9 @@ begin
     if v_link.access_revoked_at is null then
       return 'already_recorded';
     end if;
+    perform set_config('app.woven_link_lifecycle', 'on', true);
     update public.employee_account_links set access_revoked_at = null where app_user_id = p_app_user_id;
+    perform set_config('app.woven_link_lifecycle', 'off', true);
     insert into public.app_user_audit (target_user_id, target_email, actor_user_id, actor_email, action, from_value, to_value)
     select p_app_user_id, u.email, p_approver, a.email, 'access_restored', 'woven:terminated', 'auth_ban_lifted'
       from public.app_users u, public.app_users a where u.id = p_app_user_id and a.id = p_approver;
@@ -723,7 +854,9 @@ begin
     if v_status = 'active' then
       update public.app_users set status = 'disabled', updated_by = p_approver where id = p_app_user_id;
     end if;
+    perform set_config('app.woven_link_lifecycle', 'on', true);
     update public.employee_account_links set reactivated_at = null where app_user_id = p_app_user_id;
+    perform set_config('app.woven_link_lifecycle', 'off', true);
   end if;
   insert into public.app_user_audit (target_user_id, target_email, actor_user_id, actor_email, action, from_value, to_value)
   select p_app_user_id, u.email, p_approver, a.email, 'access_revocation_incomplete', 'woven:rehire',
@@ -735,6 +868,94 @@ $$;
 
 comment on function public.employee_access_record_rehire(uuid, uuid, boolean, text) is
   'Server-only. Phase two of a rehire: ok = the Auth ban was lifted (clears access_revoked_at, audits access_restored); not ok = it was not, so the profile goes back to disabled and the approval is retryable.';
+
+-- ------------------------------------------- 7b. WHO MAY REVIEW: designate and revoke ---
+
+create or replace function public.employee_access_designate_reviewer(
+  p_user_id uuid,
+  p_actor   uuid,
+  p_reason  text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id          uuid;
+  v_actor_email text;
+  v_user_email  text;
+begin
+  if not public.employee_access_is_active_admin(p_actor) then
+    raise exception 'designate_actor_not_admin' using errcode = 'check_violation';
+  end if;
+  /* Separation of duties: nobody designates themselves. */
+  if p_actor = p_user_id then
+    raise exception 'designate_self' using errcode = 'check_violation';
+  end if;
+  if not public.employee_access_is_active_admin(p_user_id) then
+    raise exception 'designate_designee_not_admin' using errcode = 'check_violation';
+  end if;
+  if p_reason is null or length(btrim(p_reason)) not between 1 and 300 then
+    raise exception 'designate_reason_required' using errcode = 'check_violation';
+  end if;
+  if exists (select 1 from public.woven_enforcement_reviewers d where d.user_id = p_user_id and d.revoked_at is null) then
+    raise exception 'designate_already_designated' using errcode = 'check_violation';
+  end if;
+
+  select a.email into v_actor_email from public.app_users a where a.id = p_actor;
+  select u.email into v_user_email from public.app_users u where u.id = p_user_id;
+  insert into public.woven_enforcement_reviewers (user_id, designated_by, designated_by_email, reason)
+  values (p_user_id, p_actor, v_actor_email, btrim(p_reason))
+  returning id into v_id;
+  insert into public.app_user_audit (target_user_id, target_email, actor_user_id, actor_email, action, from_value, to_value)
+  values (p_user_id, v_user_email, p_actor, v_actor_email, 'woven_reviewer_designated', null, left('designated; reason: ' || btrim(p_reason), 200));
+  return v_id;
+end;
+$$;
+
+comment on function public.employee_access_designate_reviewer(uuid, uuid, text) is
+  'Server-only. An ACTIVE administrator, with a written reason, designates ANOTHER active administrator to review termination enforcement. Audited. The list starts empty; nobody is seeded.';
+
+create or replace function public.employee_access_revoke_reviewer(
+  p_user_id uuid,
+  p_actor   uuid,
+  p_reason  text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id          uuid;
+  v_actor_email text;
+  v_user_email  text;
+begin
+  if not public.employee_access_is_active_admin(p_actor) then
+    raise exception 'revoke_actor_not_admin' using errcode = 'check_violation';
+  end if;
+  if p_reason is null or length(btrim(p_reason)) not between 1 and 300 then
+    raise exception 'revoke_reason_required' using errcode = 'check_violation';
+  end if;
+  select d.id into v_id from public.woven_enforcement_reviewers d where d.user_id = p_user_id and d.revoked_at is null for update;
+  if v_id is null then
+    raise exception 'revoke_not_designated' using errcode = 'check_violation';
+  end if;
+
+  select a.email into v_actor_email from public.app_users a where a.id = p_actor;
+  select u.email into v_user_email from public.app_users u where u.id = p_user_id;
+  update public.woven_enforcement_reviewers
+     set revoked_at = now(), revoked_by = p_actor, revoked_by_email = v_actor_email, revoke_reason = btrim(p_reason)
+   where id = v_id;
+  insert into public.app_user_audit (target_user_id, target_email, actor_user_id, actor_email, action, from_value, to_value)
+  values (p_user_id, v_user_email, p_actor, v_actor_email, 'woven_reviewer_revoked', null, left('revoked; reason: ' || btrim(p_reason), 200));
+  return v_id;
+end;
+$$;
+
+comment on function public.employee_access_revoke_reviewer(uuid, uuid, text) is
+  'Server-only. An ACTIVE administrator, with a written reason, revokes a reviewer designation. Every review made under it stops counting immediately, for good. Audited.';
 
 -- ----------------------------------------------------- 8. the apply run record ---
 
@@ -828,6 +1049,7 @@ begin
     'public.employee_access_observed_status(text)',
     'public.employee_access_is_protected(uuid, uuid[])',
     'public.employee_access_is_active_admin(uuid)',
+    'public.employee_access_is_designated_reviewer(uuid)',
     'public.employee_access_ids_hash(text[])',
     'public.employee_access_review_state()',
     'public.employee_access_record_shadow_review(uuid, uuid, text[], text, uuid, text)',
@@ -835,6 +1057,8 @@ begin
     'public.employee_access_record_revocation(uuid, boolean, text, text)',
     'public.employee_access_approve_rehire(uuid, text, uuid, uuid, text)',
     'public.employee_access_record_rehire(uuid, uuid, boolean, text)',
+    'public.employee_access_designate_reviewer(uuid, uuid, text)',
+    'public.employee_access_revoke_reviewer(uuid, uuid, text)',
     'public.employee_access_record_apply_run(text, uuid, text, text, text[], jsonb, jsonb)'
   ] loop
     execute format('revoke all on function %s from public, anon, authenticated, service_role', v_fn);
@@ -848,4 +1072,6 @@ grant execute on function public.employee_access_disable_terminated(uuid, text, 
 grant execute on function public.employee_access_record_revocation(uuid, boolean, text, text) to service_role;
 grant execute on function public.employee_access_approve_rehire(uuid, text, uuid, uuid, text) to service_role;
 grant execute on function public.employee_access_record_rehire(uuid, uuid, boolean, text) to service_role;
+grant execute on function public.employee_access_designate_reviewer(uuid, uuid, text) to service_role;
+grant execute on function public.employee_access_revoke_reviewer(uuid, uuid, text) to service_role;
 grant execute on function public.employee_access_record_apply_run(text, uuid, text, text, text[], jsonb, jsonb) to service_role;

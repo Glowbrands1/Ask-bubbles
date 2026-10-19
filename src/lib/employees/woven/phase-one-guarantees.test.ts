@@ -284,6 +284,8 @@ describe("7. no employee-sync UI, route or library code can reach app_users, aut
     "employee_directory_login_matches", "employee_access_preview", "locations",
     /* The access planner (stage 1): accounts through a read-only VIEW, the links, and the shadow record. */
     "employee_access_accounts", "employee_account_links", "employee_access_runs", "employee_access_actions",
+    /* Termination enforcement: the designated-reviewer history, READ only by the admin route (writes go through the designate / revoke functions). */
+    "woven_enforcement_reviewers",
   ]);
   const RPCS = new Set([
     "employee_sync_claim_run", "employee_sync_commit_run", "employee_sync_abandon_run",
@@ -305,6 +307,8 @@ describe("7. no employee-sync UI, route or library code can reach app_users, aut
     "employee_access_record_shadow_review",
     "employee_access_approve_rehire",
     "employee_access_record_rehire",
+    "employee_access_designate_reviewer",
+    "employee_access_revoke_reviewer",
   ]);
 
   it("covers the whole employee-sync surface", () => {

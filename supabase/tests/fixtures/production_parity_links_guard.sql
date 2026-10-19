@@ -53,3 +53,14 @@ drop trigger if exists employee_account_links_guard_update on public.employee_ac
 create trigger employee_account_links_guard_update
   before update on public.employee_account_links
   for each row execute function public.employee_account_links_guard_update();
+
+-- The live app_user_audit CHECK allows TWELVE actions: the ten the repository's migrations define plus
+-- managed_flags_changed and credentials_reset (applied by hand). Reproduced so a migration that redefines the
+-- list is tested against it: a shorter list would silently drop two actions the live table already uses.
+alter table public.app_user_audit drop constraint if exists app_user_audit_action_check;
+alter table public.app_user_audit add constraint app_user_audit_action_check
+  check (action in (
+    'invited', 'invite_resent', 'invitation_accepted', 'reset_requested', 'role_changed', 'status_changed',
+    'scope_changed', 'access_revoked', 'access_restored', 'access_revocation_incomplete',
+    'managed_flags_changed', 'credentials_reset'
+  ));

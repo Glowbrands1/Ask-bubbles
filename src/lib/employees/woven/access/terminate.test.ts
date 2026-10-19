@@ -376,7 +376,7 @@ describe("PROTECTED accounts are review-only, in the planner, the apply step and
 });
 
 describe("THE SHADOW-REVIEW GATE", () => {
-  it.each(["no_shadow_run", "shadow_run_guard_tripped", "shadow_run_stale", "no_review", "review_outdated", "reviewer_not_admin"])(
+  it.each(["no_designated_reviewer", "no_shadow_run", "shadow_run_guard_tripped", "shadow_run_stale", "no_review", "review_outdated", "reviewer_not_admin", "reviewer_not_designated"])(
     "gate %s: nothing is disabled, the candidate is recorded skipped, and the response says why",
     async (code) => {
       const e = employee();
