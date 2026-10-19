@@ -30,7 +30,7 @@
 #   3. Applying the capture migration changes NOTHING about the Ask Sunny-derived
 #      objects on PRODUCTION: the guard, its trigger, the grant, the audit list and
 #      auth_clear_user_credentials are byte-for-byte what they were.
-#   4. Re-applying every pending migration a second time changes nothing.
+#   4. Re-applying 20261014001000 through the capture migration a second time changes nothing.
 #   5. supabase/tests/capture_live_objects_checks.sql passes on the result.
 #
 # PARITY_DUMP_PRODUCTION_LIKE=/path/file writes the production-like database's object
@@ -44,6 +44,7 @@ ROOT="${PARITY_DIR:-/tmp/ask-bubbles-parity}"
 PGBIN="${PGBIN:-/usr/lib/postgresql/16/bin}"
 PORT="${PARITY_PORT:-54449}"
 LAST_APPLIED_ON_PRODUCTION="20261016001000"
+CAPTURE="20261017001000"
 MIGRATIONS="$REPO/supabase/migrations"
 FINGERPRINT="$HERE/fingerprint.sql"
 
@@ -115,11 +116,15 @@ make_production_like() {
 record_in_history() { admin -c "insert into supabase_migrations.schema_migrations (version, name) values ('$1', '$2') on conflict do nothing;"; }
 
 apply_pending() {
+  local limit="${1:-99999999999999}"
   for f in "$MIGRATIONS"/*.sql; do
     v="$(version_of "$f")"
+    [ "$v" \> "$limit" ] && continue
     if [ "$(admin -At -c "select count(*) from supabase_migrations.schema_migrations where version = '$v'")" = "0" ]; then
       echo "   applying pending $(basename "$f")"
       apply_file "$f"
+      # Tooling records what it applies.
+      n="$(basename "$f" .sql)"; record_in_history "$v" "${n#*_}"
     fi
   done
 }
@@ -169,7 +174,28 @@ for scenario in A B; do
     record_in_history 20261015001000 google_review_goals
     record_in_history 20261016001000 google_review_reporting_cutoff
   fi
-  echo "   apply what is pending:"
+  echo "   apply what is pending, up to and including the capture migration ($CAPTURE):"
+  apply_pending "$CAPTURE"
+
+  # The capture migration must not have touched the Ask Sunny-derived objects. Compared HERE, right after it, because a later
+  # migration (for example the termination enforcement) may deliberately replace the guard.
+  PC="$(mktemp)"; fingerprint >"$PC"
+  if ! diff <(grep -E "$SUNNY_PATTERN" "$P0") <(grep -E "$SUNNY_PATTERN" "$PC"); then
+    fail "scenario $scenario: the capture changed an Ask Sunny-derived object"
+  fi
+  echo "   the Ask Sunny-derived objects are byte-for-byte unchanged by the capture"
+
+  echo "   re-applying every migration from 20261014001000 up to the capture a SECOND time:"
+  for f in "$MIGRATIONS"/*.sql; do
+    v="$(version_of "$f")"
+    { [ "$v" \< "20261014001000" ] || [ "$v" \> "$CAPTURE" ]; } && continue
+    apply_file "$f"
+  done
+  P2="$(mktemp)"; fingerprint >"$P2"
+  diff -q "$P2" "$PC" >/dev/null || { diff "$P2" "$PC" | head; fail "scenario $scenario: a second apply changed something"; }
+  echo "   unchanged"
+
+  echo "   apply anything later that is pending:"
   apply_pending
 
   P1="$(mktemp)"; fingerprint >"$P1"
@@ -178,21 +204,6 @@ for scenario in A B; do
     fail "scenario $scenario does not converge to a fresh build"
   fi
   echo "   converged: identical to FRESH ($(wc -l <"$P1") objects)"
-
-  # The capture migration must not have touched the Ask Sunny-derived objects.
-  if ! diff <(grep -E "$SUNNY_PATTERN" "$P0") <(grep -E "$SUNNY_PATTERN" "$P1"); then
-    fail "scenario $scenario: the capture changed an Ask Sunny-derived object"
-  fi
-  echo "   the Ask Sunny-derived objects are byte-for-byte unchanged by the reconciliation"
-
-  echo "   applying every migration from 20261014001000 on a SECOND time:"
-  for f in "$MIGRATIONS"/*.sql; do
-    [ "$(version_of "$f")" \< "20261014001000" ] && continue
-    apply_file "$f"
-  done
-  P2="$(mktemp)"; fingerprint >"$P2"
-  diff -q "$P2" "$FRESH_FP" >/dev/null || { diff "$P2" "$FRESH_FP" | head; fail "scenario $scenario: a second apply changed something"; }
-  echo "   unchanged"
 
   admin -f "$REPO/supabase/tests/capture_live_objects_checks.sql" >"$ROOT/check.out" 2>&1 \
     || { cat "$ROOT/check.out"; fail "capture_live_objects_checks.sql on scenario $scenario"; }
