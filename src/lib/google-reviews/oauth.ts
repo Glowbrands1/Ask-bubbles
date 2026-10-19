@@ -68,7 +68,7 @@ export interface AuthorizationStart {
 
 export function createAuthorization(
   settings: OAuthSettings,
-  options: { now?: number; key?: Buffer; random?: (n: number) => Buffer } = {},
+  options: { now?: number; key?: Buffer; random?: (n: number) => Buffer; subject?: string } = {},
 ): AuthorizationStart {
   const random = options.random ?? randomBytes;
   const verifier = b64url(random(32));
@@ -89,7 +89,7 @@ export function createAuthorization(
   url.searchParams.set("code_challenge", challenge);
   url.searchParams.set("code_challenge_method", "S256");
 
-  const cookieValue = seal(JSON.stringify({ state, verifier, exp: now + OAUTH_ATTEMPT_SECONDS * 1000 }), OAUTH_STATE_LABEL, options.key);
+  const cookieValue = seal(JSON.stringify({ state, verifier, exp: now + OAUTH_ATTEMPT_SECONDS * 1000, sub: options.subject ?? null }), OAUTH_STATE_LABEL, options.key);
   return { url: url.toString(), cookieValue, maxAgeSeconds: OAUTH_ATTEMPT_SECONDS };
 }
 
@@ -97,7 +97,7 @@ export function createAuthorization(
 export function verifyAttempt(
   cookieValue: string | undefined,
   returnedState: string | null,
-  options: { now?: number; key?: Buffer } = {},
+  options: { now?: number; key?: Buffer; subject?: string } = {},
 ): { verifier: string } {
   if (!cookieValue || !returnedState) throw new OAuthError("attempt_invalid");
   let parsed: unknown;
@@ -106,11 +106,13 @@ export function verifyAttempt(
   } catch {
     throw new OAuthError("attempt_invalid");
   }
-  const attempt = parsed as { state?: unknown; verifier?: unknown; exp?: unknown };
+  const attempt = parsed as { state?: unknown; verifier?: unknown; exp?: unknown; sub?: unknown };
   if (typeof attempt.state !== "string" || typeof attempt.verifier !== "string" || typeof attempt.exp !== "number") {
     throw new OAuthError("attempt_invalid");
   }
   if ((options.now ?? Date.now()) > attempt.exp) throw new OAuthError("attempt_expired");
+  /* The administrator who STARTED the connection must be the one who COMPLETES it. */
+  if ((typeof attempt.sub === "string" ? attempt.sub : null) !== (options.subject ?? null)) throw new OAuthError("attempt_invalid");
   if (!safeEqual(attempt.state, returnedState)) throw new OAuthError("state_mismatch");
   return { verifier: attempt.verifier };
 }

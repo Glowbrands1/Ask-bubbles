@@ -4,6 +4,7 @@ import { assertLiveMode, assertNoConfigurationProblems, assertWithinRateLimit, e
 import { authorizeRequest } from "@/lib/auth/server";
 import { REFRESH_TOKEN_LABEL, open } from "@/lib/google-reviews/crypto";
 import { revokeRefreshToken } from "@/lib/google-reviews/oauth";
+import { isSameOriginRequest } from "@/lib/google-reviews/csrf";
 import { NO_STORE, actorOf } from "@/lib/google-reviews/route-helpers";
 import { GoogleStoreError, createSupabaseGoogleStore } from "@/lib/google-reviews/store";
 
@@ -20,6 +21,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
+    if (!isSameOriginRequest(request)) {
+      return NextResponse.json({ status: "refused", reason: "Cross-site request refused." }, { status: 403, headers: NO_STORE });
+    }
     assertLiveMode();
     assertNoConfigurationProblems();
     const context = await authorizeRequest(request, "manage_integrations");

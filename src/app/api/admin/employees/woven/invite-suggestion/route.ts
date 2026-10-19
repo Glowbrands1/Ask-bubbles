@@ -8,6 +8,7 @@ import { listWovenLocations } from "@/lib/employees/woven/locations";
 import { listWovenPositions } from "@/lib/employees/woven/positions";
 import { authorizeWovenPeopleRequest, NO_STORE, wovenStoreFailureResponse } from "@/lib/employees/woven/route-auth";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { escapeLike } from "@/lib/supabase/like";
 
 /**
  * GET /api/admin/employees/woven/invite-suggestion?email=… — what Woven can
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
      * record of the pinned company. The address is escaped, so a `%` or `_` in it
      * cannot widen the match.
      */
-    const pattern = email.trim().replace(/[\\%_]/g, "\\$&");
+    const pattern = escapeLike(email.trim());
     const tenant = await getSupabaseAdmin()
       .from("employee_access_directory")
       .select("external_employee_id")

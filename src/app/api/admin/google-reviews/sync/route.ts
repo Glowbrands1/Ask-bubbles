@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { assertLiveMode, assertNoConfigurationProblems, assertWithinRateLimit, errorResponse } from "@/lib/api/respond";
 import { parseJsonBody } from "@/lib/api/validation";
 import { authorizeRequest } from "@/lib/auth/server";
+import { isSameOriginRequest } from "@/lib/google-reviews/csrf";
 import { NO_STORE, actorOf, parseSyncRequest } from "@/lib/google-reviews/route-helpers";
 import { readGoogleReviewsStatus } from "@/lib/google-reviews/status";
 import { GoogleStoreError } from "@/lib/google-reviews/store";
@@ -35,6 +36,9 @@ export const maxDuration = 300;
 
 export async function POST(request: Request) {
   try {
+    if (!isSameOriginRequest(request)) {
+      return NextResponse.json({ status: "refused", reason: "Cross-site request refused." }, { status: 403, headers: NO_STORE });
+    }
     assertLiveMode();
     assertNoConfigurationProblems();
     const context = await authorizeRequest(request, "manage_integrations");
