@@ -49,6 +49,8 @@ export interface DirectoryRosterRow {
   readonly preferredFirstName: string | null;
   readonly employmentStatus: string | null;
   readonly locationIds: readonly string[];
+  /** Woven's `position_name`, read so a form's Job Title can come from the record. */
+  readonly positionName?: string | null;
 }
 
 /** Restricts the directory to what this actor may see. Pure. */
@@ -77,6 +79,7 @@ export function scopeRoster(
       lastName: last,
       preferredFirstName: row.preferredFirstName?.trim() || null,
       locationIds,
+      positionName: row.positionName?.trim() || null,
     });
   }
   return roster;
@@ -92,7 +95,7 @@ export async function readDirectoryRoster(): Promise<DirectoryRosterRow[]> {
   const [people, affiliations, map] = await Promise.all([
     supabase
       .from("employee_access_directory")
-      .select("id, first_name, last_name, preferred_first_name, employment_status")
+      .select("id, first_name, last_name, preferred_first_name, employment_status, position_name")
       .limit(5000),
     supabase
       .from("employee_location_affiliations")
@@ -130,6 +133,7 @@ export async function readDirectoryRoster(): Promise<DirectoryRosterRow[]> {
     lastName: (row.last_name as string | null) ?? null,
     preferredFirstName: (row.preferred_first_name as string | null) ?? null,
     employmentStatus: (row.employment_status as string | null) ?? null,
+    positionName: (row.position_name as string | null) ?? null,
     locationIds: [...(locationsByEmployee.get(String(row.id)) ?? [])].sort(),
   }));
 }

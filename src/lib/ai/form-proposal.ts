@@ -75,6 +75,7 @@ import {
   type EmploymentChangeKind,
 } from "@/lib/forms/employment-change";
 import { businessToday } from "@/lib/business-date";
+import { locationById } from "@/lib/locations";
 import { extractFormDate } from "@/lib/forms/form-date-answer";
 import { endsIntake } from "@/lib/forms/proposal-continuation";
 import { LEAD_IN, separateQuestions } from "@/lib/forms/message-parts";
@@ -86,6 +87,14 @@ import {
 } from "@/lib/forms/employee-match";
 import { loadScopedRoster } from "@/lib/forms/employee-roster";
 import { allowsTeamSubject } from "@/lib/forms/team-subject";
+import {
+  answersPositionQuestion,
+  positionAlreadyAsked,
+  positionAnsweredIn,
+  positionQuestion,
+  samePosition,
+} from "@/lib/forms/employee-position";
+import { readLocationMentions } from "@/lib/forms/location-mention";
 import type { EmployeeResolution } from "@/lib/forms/proposal";
 import {
   CLARIFIED_TEMPLATE_KEY,
@@ -858,11 +867,108 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
 
   if (directory.question) return turn(directory.question, proposal);
 
+  const notes: string[] = directory.note ? [directory.note] : [];
+  notes.push(...directoryNotes(proposal, directory, match, input, context));
+
   const content =
     changeKind && facts
       ? employmentChangeContent(changeKind, facts, proposal, context)
       : proposalContent(proposal, scoped, match, input.today ?? businessToday());
-  return turn(directory.note ? `${content}\n\n${directory.note}` : content, proposal);
+  return turn(withNotes(content, notes), proposal);
+}
+
+/**
+ * The directory's sentences go BEFORE the closing line that invites the manager
+ * to create the draft, so the questions and read-backs are read first and the
+ * card's call to action stays last. Anything else is appended.
+ */
+const CLOSING_LINE = /^(?:Create the draft here|Your account covers every|\*\*Nothing has been created|I have the employee|This one is for the whole team)/;
+
+function withNotes(content: string, notes: readonly string[]): string {
+  if (notes.length === 0) return content;
+  const blocks = content.split("\n\n");
+  const last = blocks[blocks.length - 1] ?? "";
+  if (CLOSING_LINE.test(last)) blocks.splice(blocks.length - 1, 0, ...notes);
+  else blocks.push(...notes);
+  return blocks.join("\n\n");
+}
+
+/** The templates whose Job Title is a record fact — not the plans, whose role decides the plan. */
+const POSITION_TEMPLATES: ReadonlySet<string> = new Set(["coaching", "follow-up-coaching", "dpoa", "policy-review"]);
+
+/**
+ * ============================================================================
+ * WHAT THE DIRECTORY SAYS ABOUT THE EMPLOYEE, SAID OUT LOUD
+ * ============================================================================
+ *
+ * Admin feedback, 16 Oct 2026: wrong stores, and "ask the position of the
+ * employee". Two things the Woven directory knows were never reaching the
+ * form, and one it knows was never checked against what the manager said:
+ *
+ *   POSITION   the manager's own title (typed, or the answer to the question)
+ *              wins; otherwise the matched employee's Woven position goes on
+ *              the form's Job Title and is READ BACK so a stale one is caught;
+ *              with neither, it is asked once. Never inferred.
+ *   STORE      where the manager named a store the directory does not show the
+ *              employee at, the manager's word stands and the disagreement is
+ *              said — never a silent assignment either way.
+ *
+ * Mutates only the proposal's `employeeRole` / `employeeRoleSource`, which are
+ * the manager's statement or the directory's record, and returns the sentences.
+ */
+function directoryNotes(
+  proposal: ChatFormProposal,
+  directory: DirectoryCheck,
+  match: TemplateSummary,
+  input: ProposalTurn,
+  context: ManagerContext,
+): string[] {
+  const notes: string[] = [];
+  if (proposal.employeeName === null || proposal.subject === "team") return notes;
+  const first = proposal.employeeName.split(/\s+/)[0]!;
+  const conversation = [...input.history, { role: "user", content: input.question }];
+
+  if (POSITION_TEMPLATES.has(match.key)) {
+    const stated = proposal.employeeRole ?? positionAnsweredIn(conversation);
+    const woven = directory.matched ? (directory.positionName?.trim() || null) : null;
+    if (stated) {
+      proposal.employeeRole = stated;
+      proposal.employeeRoleSource = "manager";
+      if (woven && !samePosition(stated, woven)) {
+        notes.push(
+          `Woven lists **${first}** as **${woven}**. I've used **${stated}**, as you said — tell me if Woven's is the current one.`,
+        );
+      }
+    } else if (woven) {
+      proposal.employeeRole = woven;
+      proposal.employeeRoleSource = "woven";
+      notes.push(
+        `**Position:** ${woven}, from Woven — tell me if that has changed and I'll use the current one.`,
+      );
+    } else if (!positionAlreadyAsked(input.history)) {
+      notes.push(positionQuestion(proposal.employeeName));
+    }
+  }
+
+  const named = proposal.locationResolution === "resolved" ? proposal.locationId : null;
+  if (named && directory.matched && directory.locationIds && directory.locationIds.length > 0) {
+    if (!directory.locationIds.includes(named)) {
+      const where = directory.locationIds.map((id) => locationById(id)?.name).filter(Boolean);
+      notes.push(
+        `Woven shows **${first}** at ${where.map((name) => `**${name}**`).join(", ")}, but you said **${locationById(named)?.name ?? "that store"}**. I've used what you said — tell me if that's wrong.`,
+      );
+    }
+  } else if (
+    directory.matched &&
+    (directory.locationIds?.length ?? 0) === 0 &&
+    proposal.locationResolution !== "resolved" &&
+    readLocationMentions(context.text).length === 0
+  ) {
+    notes.push(
+      `Woven doesn't show a store I can match for **${first}**, so I haven't put one on the form. Tell me which store they work at.`,
+    );
+  }
+  return notes;
 }
 
 /**
@@ -893,6 +999,10 @@ interface DirectoryCheck {
   resolution?: EmployeeResolution;
   /** The employee's salons, in scope — for `proposeLocation`. */
   locationIds?: readonly string[];
+  /** The employee's current Woven position, when the directory matched them and has one. */
+  positionName?: string | null;
+  /** Whether the directory identified the employee (exactly, or by the manager's confirmation). */
+  matched?: boolean;
   /** Asked INSTEAD of the proposal text: the form is not offered yet. */
   question?: string;
   /** Said AFTER the proposal text. */
@@ -915,6 +1025,8 @@ async function checkTypedEmployee(
     return {
       resolution: { kind: "resolved", employeeName: result.name },
       locationIds: result.employee.locationIds,
+      positionName: result.employee.positionName ?? null,
+      matched: true,
     };
   }
 
@@ -940,6 +1052,8 @@ async function checkTypedEmployee(
     return {
       resolution: { kind: "resolved", employeeName: accepted.name },
       locationIds: accepted.employee.locationIds,
+      positionName: accepted.employee.positionName ?? null,
+      matched: true,
     };
   }
 
@@ -1290,6 +1404,8 @@ const TOPIC_STATEMENT =
 const CARRIES_ON =
   /\b(?:keep\s+(?:this|it)\s+as|still\s+(?:a\s+)?coaching|same\s+form|this\s+form|continue|go\s+ahead|that'?s\s+(?:it|all|everything|right)|yes|yep|yeah|correct)\b/i;
 
+const ALREADY_SAID = /\b(?:i|we)\s+(?:already|just)\s+(?:told|said|gave|mentioned|provided|wrote|typed|sent)\b|\balready\s+(?:told|gave)\s+(?:you|bubbles)\b/i;
+
 const ABOUT_THE_EMPLOYEE = /^(?:and\s+|also\s+|then\s+)?(?:she|he|they)(?:['’](?:s|d|ve|re|ll))?\b/i;
 
 function continuesIntake(continued: string, input: ProposalTurn): boolean {
@@ -1297,6 +1413,18 @@ function continuesIntake(continued: string, input: ProposalTurn): boolean {
   if (endsIntake(question) || ASKS_FOR_ADVICE.test(question)) return false;
   if (extractEmployeeNames(question).length > 0) return true;
   if (answersEmploymentChange(continued, input)) return true;
+  /*
+   * A STORE, A POSITION, OR "I ALREADY TOLD YOU" ARE ANSWERS TO THE INTAKE TOO.
+   * Admin feedback, 16 Oct 2026: with a Corrective Action intake open, "I
+   * already told you the employee name. She is at Dodge" named nobody, so the
+   * turn left the intake for free-form chat, which told the manager to retype
+   * their request — and the form was never built. Naming where she works,
+   * answering the position question, or objecting to being asked again each
+   * carry the open form forward; a question still does not.
+   */
+  if (!isQuestion(question) && readLocationMentions(question).length > 0) return true;
+  if (answersPositionQuestion(input.history, question)) return true;
+  if (ALREADY_SAID.test(question)) return true;
   if (isQuestion(question)) return false;
   return (
     describesIncident(question) ||
@@ -1914,7 +2042,7 @@ function proposalContent(
       lines.push(
         proposal.locationResolution === "not_applicable"
           ? `${who}. Your account covers every location, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do.`
-          : `${who}${proposal.subject === "team" ? ", and I have the location" : " and the location"}. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`,
+          : `${who}${proposal.subject === "team" ? ", and I have the location" : " and the location"}${resolvedStoreName(proposal) ? ` (**${resolvedStoreName(proposal)}**)` : ""}. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`,
       );
     } else {
       /*
@@ -2023,6 +2151,8 @@ function correctiveActionReady(
   if (warning.offersLevel && proposal.warningLevel) {
     stated.push(`**Type of warning:** ${warningLevelLabel(proposal.warningLevel as WarningLevel)}, as you said — tell me if that should change`);
   }
+  const store = resolvedStoreName(proposal);
+  if (store) stated.push(`**Location:** ${store}, as you said — tell me if that should change`);
   if (stated.length > 0) lines.push("", stated.join(" · "));
 
   /*
@@ -2226,6 +2356,16 @@ function openingQuestions(proposal: ChatFormProposal, context: ManagerContext): 
   return `To draft a form, I'll need a few details first:\n\n${numbered}\n\nCould you please provide these?`;
 }
 
+/**
+ * The roster's name for the store a proposal resolved to, so the manager READS
+ * BACK which store the form will carry before it is created. Null when none was
+ * resolved or the roster does not know the id — never a guess.
+ */
+function resolvedStoreName(proposal: ChatFormProposal): string | null {
+  if (proposal.locationResolution !== "resolved" || !proposal.locationId) return null;
+  return locationById(proposal.locationId)?.name ?? null;
+}
+
 function locationQuestion(proposal: ChatFormProposal): string {
   if (proposal.locationResolution === "needs_selection" && proposal.namedLocationOutOfScope) {
     /*
@@ -2234,6 +2374,15 @@ function locationQuestion(proposal: ChatFormProposal): string {
      * quietly overrule what they said.
      */
     return `**${proposal.namedLocationOutOfScope}** isn't a location on your assignment, so I can't file a form against it. Which of your locations is this about?`;
+  }
+  if (proposal.locationResolution === "needs_selection" && proposal.locationCandidates?.length) {
+    /*
+     * THE MANAGER NAMED A PLACE THAT IS SEVERAL STORES ("Sioux Falls"). Asking
+     * "which location?" blind makes them guess at the list; naming only the
+     * stores their own words could mean settles it in one word.
+     */
+    const names = proposal.locationCandidates.map((name) => `**${name}**`);
+    return `More than one store matches what you said — ${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}? Tell me which one and I won't guess.`;
   }
   if (proposal.locationResolution === "needs_selection") {
     // Deliberately says nothing about HOW MANY salons the actor covers: this

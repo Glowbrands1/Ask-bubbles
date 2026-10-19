@@ -829,3 +829,22 @@ describe("found in live QA: a new value the paragraph already uses for something
     expect(sync.left).toEqual(["Salon 23"]);
   });
 });
+
+describe("admin feedback 16 Oct 2026: a name typed in lower case after 'my employee'", () => {
+  it.each([
+    ["my employee tiffany lempka has was 10 minutes late on her last two shifts", ["tiffany lempka"]],
+    ["our team member jordan ellis was out of dress code", ["jordan ellis"]],
+  ])("%j", (text, expected) => {
+    expect(extractEmployeeNames(text).map((name) => name.toLowerCase())).toEqual(expected);
+  });
+
+  it.each([
+    "my employee handbook says dress code is required",
+    "our employee handbook was updated",
+    "the employee handbook says so",
+    "my employee was late again",
+    "my employee called out sick",
+  ])("names nobody in %j", (text) => {
+    expect(extractEmployeeNames(text)).toEqual([]);
+  });
+});

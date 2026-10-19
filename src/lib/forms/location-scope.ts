@@ -65,6 +65,8 @@ export type LocationProposal =
       resolution: "needs_selection";
       authorizedIds: string[];
       outOfScopeName?: string;
+      /** Several stores the manager's own words could mean — not their whole assignment. */
+      namedAmbiguous?: true;
     }
   | { resolution: "not_applicable"; reason: string }
   | { resolution: "unavailable"; reason: string };
@@ -115,11 +117,22 @@ function fromNamedLocations(allowed: readonly string[], managerText: string): Lo
   const mentions = readLocationMentions(managerText);
   if (mentions.length === 0) return null;
 
-  const named = [...new Set(mentions.flatMap((mention) => mention.locationIds))];
+  /*
+   * A MORE SPECIFIC MENTION NARROWS A LESS SPECIFIC ONE. "Sioux Falls" is two
+   * stores; a later "E 18th St" is one of them, and the conversation as a whole
+   * names that one. A mention whose stores strictly contain another mention's
+   * stores is the vaguer of the two and is dropped. Unrelated mentions all
+   * stand, so two different stores are still a question.
+   */
+  const sets = mentions.map((mention) => [...new Set(mention.locationIds)]);
+  const narrowed = sets.filter(
+    (ids) => !sets.some((other) => other.length < ids.length && other.every((id) => ids.includes(id))),
+  );
+  const named = [...new Set(narrowed.flat())];
   const inScope = named.filter((id) => allowed.includes(id));
 
   if (inScope.length === 1) return { resolution: "resolved", locationId: inScope[0]! };
-  if (inScope.length > 1) return { resolution: "needs_selection", authorizedIds: inScope };
+  if (inScope.length > 1) return { resolution: "needs_selection", authorizedIds: inScope, namedAmbiguous: true };
   if (allowed.length === 0) return null;
 
   const outOfScopeName =
