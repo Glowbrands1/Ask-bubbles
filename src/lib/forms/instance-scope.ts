@@ -85,9 +85,10 @@ export type InstanceAction =
  */
 export function actorMaySeeInstance(actor: FormsActor, instance: InstanceRow): boolean {
   // Demo: unverified identity, no scope, no enforcement. See `location-scope`.
-  if (!actor.scope) return true;
+  const visibility = actor.visibility;
+  if (!visibility) return true;
 
-  if (actor.scope.level === "global") return true;
+  if (visibility.level === "global") return true;
 
   /*
    * ==========================================================================
@@ -113,7 +114,7 @@ export function actorMaySeeInstance(actor: FormsActor, instance: InstanceRow): b
    */
   if (instance.locationId) {
     // Area scopes resolve through the roster; a location not on it fails closed.
-    return authorizedLocationIds(actor.scope).includes(instance.locationId);
+    return authorizedLocationIds(visibility).includes(instance.locationId);
   }
 
   /*
@@ -151,8 +152,9 @@ export function actorMaySeeInstance(actor: FormsActor, instance: InstanceRow): b
  */
 export function instanceListFilterFor(actor: FormsActor): InstanceListFilter | undefined {
   // Preview and global: unrestricted, one ordered bounded read.
-  if (!actor.scope) return undefined;
-  if (actor.scope.level === "global") return undefined;
+  const visibility = actor.visibility;
+  if (!visibility) return undefined;
+  if (visibility.level === "global") return undefined;
 
   return {
     /*
@@ -160,7 +162,7 @@ export function instanceListFilterFor(actor: FormsActor): InstanceListFilter | u
      * not know expands to nothing, and an empty list means no location query
      * is issued at all — which is how they fail closed.
      */
-    locationIds: authorizedLocationIds(actor.scope),
+    locationIds: authorizedLocationIds(visibility),
     // The narrow exception for an ABSENT location, matching `actorMaySeeInstance`.
     ownNullLocationCreatedBy: actor.id,
   };
