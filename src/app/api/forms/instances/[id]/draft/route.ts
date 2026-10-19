@@ -150,6 +150,7 @@ import {
   warningLevelFromConversation,
   withoutModelWarningLevel,
 } from "@/lib/forms/warning-level";
+import { runGroundingShadow } from "@/lib/forms/grounding-shadow";
 import { JOIN } from "@/lib/forms/bounded-context";
 import { businessToday } from "@/lib/business-date";
 import {
@@ -449,6 +450,19 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * shows — so the model is reasoning from the approved text rather than from
      * a paraphrase of it that lives in this file.
      */
+    /*
+     * SHADOW DIAGNOSTIC ONLY (`FORMS_GROUNDING_MODE=shadow`): counts what a
+     * source-aware prompt would withhold. The prompt below is unchanged and the
+     * report is never read again — see `grounding-shadow.ts`.
+     */
+    if (progression?.ok) {
+      runGroundingShadow({
+        templateKey: loaded.instance.templateKey,
+        rows: progression.grounding.rows,
+        role: PERFORMANCE_MANAGEMENT_FRAMEWORK,
+      });
+    }
+
     const progressionBlock = progression?.ok
       ? `\nPERFORMANCE MANAGEMENT FRAMEWORK (the approved progression; reason from this, do not restate it):\n${progression.grounding.rows
           .map((row) => `[${row.document_title} — ${row.locator}]\n${row.content}`)
