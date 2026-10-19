@@ -54,9 +54,15 @@ end;
 $$;
 
 -- 1 ------------------------------------------------------------ audit vocabulary
-select pg_temp.expect('audit check lists 12 actions incl. managed_flags_changed and credentials_reset',
+-- A LATER migration (20261019001000, termination enforcement) adds exactly three Woven actions to the twelve:
+-- woven_rehire_approved, woven_reviewer_designated, woven_reviewer_revoked. Before it: exactly 12. After it: those
+-- twelve plus all three (never some of them, never fewer than the twelve).
+select pg_temp.expect('audit check lists the 12 live actions incl. managed_flags_changed and credentials_reset (plus all three later Woven ones, or none)',
   (select pg_get_constraintdef(oid) like '%managed_flags_changed%' and pg_get_constraintdef(oid) like '%credentials_reset%'
-          and (select count(*) from regexp_matches(pg_get_constraintdef(oid), '''[a-z_]+''::text', 'g')) = 12
+          and (select count(*) from regexp_matches(pg_get_constraintdef(oid), '''[a-z_]+''::text', 'g'))
+              = 12 + (case when pg_get_constraintdef(oid) like '%woven_rehire_approved%' then 3 else 0 end)
+          and ((pg_get_constraintdef(oid) like '%woven_rehire_approved%') = (pg_get_constraintdef(oid) like '%woven_reviewer_designated%'))
+          and ((pg_get_constraintdef(oid) like '%woven_rehire_approved%') = (pg_get_constraintdef(oid) like '%woven_reviewer_revoked%'))
      from pg_constraint where conrelid = 'public.app_user_audit'::regclass and conname = 'app_user_audit_action_check'));
 
 -- 2 ------------------------------------------------------------------ the guard
@@ -137,8 +143,14 @@ language sql as $$
   select left(md5(btrim(regexp_replace(regexp_replace(regexp_replace(pg_get_functiondef(p_fn), '/\*.*?\*/', '', 'g'), '--[^\n]*', '', 'g'), '\s+', ' ', 'g'))), 8);
 $$;
 
-select pg_temp.expect('guard function definition equals the live one (hash measured on the live database 2026-10-19)',
-  pg_temp.live_hash('public.employee_account_links_guard_update()'::regprocedure) = 'c2f0c979');
+-- The live-hash assertion applies to the CAPTURED definition. The termination-enforcement migration (20261019001000)
+-- deliberately `create or replace`s the guard to add ONE narrow exception (the five lifecycle stamps, only while the
+-- transaction-local setting app.woven_link_lifecycle is 'on'), so once that body is present its hash intentionally differs.
+-- Everything BEHAVIOURAL above (strict with the setting unset: stamps and identity refused, flags allowed; invoker; search_path
+-- pinned; executable by nobody; enabled BEFORE UPDATE trigger) is still asserted in both states.
+select pg_temp.expect('guard function definition equals the live one (hash measured on the live database 2026-10-19), unless the lifecycle exception is present',
+  pg_get_functiondef('public.employee_account_links_guard_update()'::regprocedure) like '%app.woven_link_lifecycle%'
+  or pg_temp.live_hash('public.employee_account_links_guard_update()'::regprocedure) = 'c2f0c979');
 select pg_temp.expect('auth_clear_user_credentials definition equals the live one (hash measured on the live database 2026-10-19)',
   pg_temp.live_hash('public.auth_clear_user_credentials(uuid)'::regprocedure) = '652278b2');
 

@@ -376,17 +376,21 @@ $$;
 -- (every other caller, every other transaction: it is transaction-local and does
 -- not leak) the behaviour is exactly the live trigger's.
 --
--- Create-or-replace + re-create the trigger make the end state the same whether or
--- not the live (or captured) copy exists. The function stays a plain (invoker)
+-- ONLY the function body changes: `create or replace` keeps the captured/live
+-- function's owner and the existing trigger (the trigger is created below only if,
+-- on a database that somehow lacks it, it is absent). The function stays a plain (invoker)
 -- trigger function with the search_path pinned (it reads only OLD/NEW and the
 -- setting; SECURITY DEFINER would add nothing) and EXECUTE revoked from everyone.
 --
 -- RESIDUAL RISK, stated plainly: a setting is not a credential. Any session that
 -- can run arbitrary SQL as a role allowed to UPDATE the table (the owner, a
--- superuser) can set it. The real lock remains that service_role — the server's
--- role — holds no UPDATE grant on the table at all and can reach it only through
--- these SECURITY DEFINER functions; the guard stops a bug or a stray statement in
--- those paths from touching a link's identity, not a hostile owner.
+-- superuser) can set it. The real lock remains the privileges: service_role — the
+-- server's role — holds NO table-level UPDATE on the table; its only UPDATE is the
+-- column-level grant on exactly managed_status, managed_location and managed_role
+-- (captured by 20261017001000, as on production), so identity columns and the five
+-- lifecycle stamps are permission-denied to it and reachable only through these
+-- SECURITY DEFINER functions. The guard stops a bug or a stray statement in those
+-- paths from touching a link's identity, not a hostile owner.
 
 create or replace function public.employee_account_links_guard_update()
 returns trigger
@@ -408,10 +412,21 @@ $$;
 
 revoke all on function public.employee_account_links_guard_update() from public, anon, authenticated, service_role;
 
-drop trigger if exists employee_account_links_guard_update on public.employee_account_links;
-create trigger employee_account_links_guard_update
-  before update on public.employee_account_links
-  for each row execute function public.employee_account_links_guard_update();
+/* The trigger already exists (captured by 20261017001000 / live): keep it; create it only if absent. */
+do $guard$
+begin
+  if not exists (
+    select 1 from pg_trigger
+     where tgrelid = 'public.employee_account_links'::regclass
+       and tgname = 'employee_account_links_guard_update'
+       and not tgisinternal
+  ) then
+    create trigger employee_account_links_guard_update
+      before update on public.employee_account_links
+      for each row execute function public.employee_account_links_guard_update();
+  end if;
+end
+$guard$;
 
 -- --------------------------------------------- 5. the shadow-review gate (D) ---
 

@@ -739,7 +739,7 @@ reset role;
 -- The live database has a hand-applied trigger of this name whose rule is STRICT: only the managed_* flags and
 -- updated_at may change. The migration keeps that rule for every caller; the five lifecycle stamps are allowed ONLY while
 -- a transaction-local setting, which the four lifecycle functions alone set around their own UPDATE, is 'on'. The harness
--- builds the cluster WITH the live copy (production_parity_links_guard.sql, the default) and WITHOUT it (VERIFY_PARITY=0).
+-- builds the cluster WITH the live copy (production_parity_state.sql part A, the default) and WITHOUT it (VERIFY_PARITY=0).
 -- the audit vocabulary after the migration keeps the TWELVE actions the live table allows, plus ours
 do $$
 declare

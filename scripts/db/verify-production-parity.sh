@@ -135,9 +135,16 @@ fail() { echo "PARITY CHECK FAILED: $*"; stop_cluster; exit 1; }
 
 echo "== FRESH: every migration, in order"
 new_cluster
-apply_up_to "99999999999999"
+apply_up_to "$CAPTURE"
+# FRESH as it stands at the capture: what production's pre-capture state is compared with (step 1 below). Migrations AFTER the
+# capture (for example the termination enforcement) are still pending on production, so they are not "differences" yet.
+FRESH_CAP_FP="$(mktemp)"; fingerprint >"$FRESH_CAP_FP"
+for f in "$MIGRATIONS"/*.sql; do
+  [ "$(version_of "$f")" \> "$CAPTURE" ] || continue
+  apply_file "$f"
+done
 FRESH_FP="$(mktemp)"; fingerprint >"$FRESH_FP"
-echo "   $(wc -l <"$FRESH_FP") objects fingerprinted"
+echo "   $(wc -l <"$FRESH_FP") objects fingerprinted (full), $(wc -l <"$FRESH_CAP_FP") at the capture"
 
 ALLOWED="$(mktemp)"
 cat >"$ALLOWED" <<'LIST'
@@ -164,8 +171,8 @@ for scenario in A B; do
   fi
 
   echo "   how PRODUCTION differs from FRESH (what the reconciliation will change):"
-  diff_names "$P0" "$FRESH_FP" | sed 's/^/     - /'
-  UNEXPECTED="$(diff_names "$P0" "$FRESH_FP" | LC_ALL=C comm -23 - "$ALLOWED" || true)"
+  diff_names "$P0" "$FRESH_CAP_FP" | sed 's/^/     - /'
+  UNEXPECTED="$(diff_names "$P0" "$FRESH_CAP_FP" | LC_ALL=C comm -23 - "$ALLOWED" || true)"
   [ -z "$UNEXPECTED" ] || fail "production-like differs from fresh in more than the allow-listed objects: $UNEXPECTED"
   # The ONLY thing 'fresh' lacks is nothing: production's Ask Sunny objects exist in both once capture has run.
 

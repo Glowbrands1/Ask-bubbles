@@ -130,16 +130,21 @@ this migration closes that). The setting is transaction-local: a SQL check in it
 commit, a rollback or into the next statement.
 
 **Residual risk, stated plainly.** A setting is not a credential. Any session that can run arbitrary SQL as a role that may UPDATE the table (the owner, a superuser) can set it. The real
-lock remains that **service_role — the role the server uses — holds no UPDATE grant on `employee_account_links` at all** and reaches it only through these SECURITY DEFINER functions. The guard
+lock remains the privileges: **service_role — the role the server uses — holds no TABLE-level UPDATE on `employee_account_links`; its only UPDATE is the column-level grant on exactly `managed_status`,
+`managed_location` and `managed_role` (as on production, captured by `20261017001000`), so identity columns and the five lifecycle stamps are permission-denied to it** and reachable only through these SECURITY DEFINER functions. The guard
 stops a bug or a stray statement inside those paths from touching a link's identity; it is not a defence against a hostile owner. Applying this migration also redefines the body of a live
 object (until the capture migration lands, it creates it) — review it as such.
 
 **Audit vocabulary.** This migration's CHECK is the live **12** plus `woven_rehire_approved`, `woven_reviewer_designated` and `woven_reviewer_revoked`, never shorter. New actions were added
 rather than reusing an existing one because no existing action says "designated to review termination enforcement" honestly (logging it as `role_changed` would mislead).
 
-**Test fixture.** `supabase/tests/fixtures/production_parity_links_guard.sql` reproduces the live strict function and trigger and the live 12-action audit CHECK.
-`scripts/db/verify-migrations.sh` and `scripts/local-stack/up.sh` apply it right after `20261002002000_woven_account_links.sql`, before the migration under test, as in production
-(`VERIFY_PARITY=0` / `LOCAL_STACK_PARITY=0` build without it). Every check, SQL and real-auth, must pass in both builds. Do not apply the fixture to a real project.
+**Test harness.** Production's hand-applied state is reproduced by `supabase/tests/fixtures/production_parity_state.sql` (part A: the live guard and trigger, the column-level grant, the 12-action audit list,
+`auth_clear_user_credentials`). `scripts/db/verify-migrations.sh` and `scripts/local-stack/up.sh` apply part A right BEFORE the capture migration `20261017001000` (a no-op on production, which already has them),
+so every check, SQL and real-auth, runs against production reality; `VERIFY_PARITY=0` / `LOCAL_STACK_PARITY=0` build from the repository alone. Both builds must pass.
+`scripts/db/verify-production-parity.sh` is the full reconciliation proof and now includes this migration in the pending set (the capture leaves production's objects byte-for-byte unchanged; this migration then converges
+production to a fresh build). `supabase/tests/capture_live_objects_checks.sql` still asserts the guard is strict with the setting unset; its live-definition-hash and 12-action-count assertions are conditional only on this
+migration's deliberate changes (the lifecycle exception in the guard body, three more audit actions), nothing else was loosened. `service_role` privileges on the links, to be exact: no TABLE-level UPDATE; the only UPDATE is the
+column-level grant on `managed_status`, `managed_location`, `managed_role`; identity columns and the five stamps are permission-denied to it.
 
 ## 7. Who may review, and the daily runbook
 
