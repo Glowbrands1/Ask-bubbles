@@ -99,7 +99,7 @@ export const EPP_POLICY_TOPICS: readonly EppPolicyTopic[] = [
   },
   {
     key: "call_off",
-    label: "Calling off and notifying the salon",
+    label: "Calling off and notifying the store",
     patterns: [
       /\b(?:absent|absence|absenteeism|no[- ]call|no[- ]show|called out)\b/,
       /*
@@ -134,7 +134,7 @@ export const EPP_POLICY_TOPICS: readonly EppPolicyTopic[] = [
   },
   {
     key: "client_experience",
-    label: "Client service and salon culture",
+    label: "Client service and store culture",
     patterns: [
       /\b(?:client service|customer service|client experience|guest experience|clients?|customers?|greeting|greets?)\b/,
       /\b(?:friendly|welcoming|rapport|engagement strateg\w+|buy[- ]?in|atmosphere)\b/,

@@ -69,7 +69,7 @@ function printed(blocks: readonly FormBlock[]): string[] {
  */
 const HR_ADDED = new Set<string>([
   ...Object.values(EXIT_DETAIL_LABEL),
-  "Salon key was returned",
+  "Store key was returned",
   "Additional Details",
 ]);
 
@@ -117,7 +117,7 @@ describe("the Resignation/Exit Form is the STC Exit document", () => {
     }
   });
 
-  it("adds exactly HR's Details lines, inside the Details section, and the salon key question", () => {
+  it("adds exactly HR's Details lines, inside the Details section, and the store key question", () => {
     const added = printed(document.blocks).filter((text) => HR_ADDED.has(text));
     expect(new Set(added)).toEqual(HR_ADDED);
     const labels = (from: string, to: string) => {
@@ -131,7 +131,7 @@ describe("the Resignation/Exit Form is the STC Exit document", () => {
       "How Employee Resigned",
       "Reason for Resignation",
       "Store Items Returned",
-      "Salon Key Returned",
+      "Store Key Returned",
       "Payroll Deduction",
       "Minimum Wage / Bonus Forfeiture",
       "Eligible for Rehire",
@@ -141,7 +141,7 @@ describe("the Resignation/Exit Form is the STC Exit document", () => {
     const questions = labels("Resignation Details", "Details").filter((text) =>
       EXIT_YES_NO_QUESTIONS.some((question) => question.label === text),
     );
-    expect(questions.slice(0, 2)).toEqual(["All store items were returned", "Salon key was returned"]);
+    expect(questions.slice(0, 2)).toEqual(["All store items were returned", "Store key was returned"]);
   });
 
   it("leaves out nothing the source prints", () => {
@@ -361,16 +361,16 @@ describe("the Details lines", () => {
   it("state each answer in HR's words, and nothing for a question nobody answered", () => {
     expect(say("Store Items Returned", { store_items_returned: ["yes"] })).toBe("Store items were returned.");
     expect(say("Store Items Returned", { store_items_returned: ["no"] })).toBe("Store items were not returned.");
-    expect(say("Salon Key Returned", { salon_key_returned: ["yes"] })).toBe("Salon key was returned.");
-    expect(say("Salon Key Returned", { salon_key_returned: ["no"] })).toBe(
-      "Salon key was not returned. Employee will be payroll deducted $25 for the salon key.",
+    expect(say("Store Key Returned", { salon_key_returned: ["yes"] })).toBe("Store key was returned.");
+    expect(say("Store Key Returned", { salon_key_returned: ["no"] })).toBe(
+      "Store key was not returned. Employee will be payroll deducted $25 for the store key.",
     );
-    expect(SALON_KEY_DEDUCTION_STATEMENT).toBe("Employee will be payroll deducted $25 for the salon key.");
+    expect(SALON_KEY_DEDUCTION_STATEMENT).toBe("Employee will be payroll deducted $25 for the store key.");
     expect(say("Payroll Deduction", { payroll_deduction_applicable: ["yes"] })).toBe("Payroll deduction is applicable.");
     expect(say("Payroll Deduction", { payroll_deduction_applicable: ["no"] })).toBe("Payroll deduction is not applicable.");
     expect(say("Eligible for Rehire", { eligible_for_rehire: ["yes"] })).toBe("Employee is eligible for rehire.");
     expect(say("Eligible for Rehire", { eligible_for_rehire: ["no"] })).toBe("Employee is not eligible for rehire.");
-    for (const label of ["Store Items Returned", "Salon Key Returned", "Payroll Deduction", "Eligible for Rehire"]) {
+    for (const label of ["Store Items Returned", "Store Key Returned", "Payroll Deduction", "Eligible for Rehire"]) {
       expect(say(label, {}), label).toBe("");
       // Both boxes ticked by hand is not an answer either.
       const key = line(label).parts[0]!.key;
@@ -458,7 +458,7 @@ describe("the Details lines", () => {
           resignation_date: "2026-09-20",
           resignation_method: "Text message",
           resignation_reason: "Moving out of state.",
-          details: "Jordan texted the Salon Director before opening and did not return.",
+          details: "Jordan texted the Store Director before opening and did not return.",
         },
         checked,
       },
@@ -510,7 +510,7 @@ describe("the Details lines", () => {
     expect(flat).toContain("Reason for Resignation Going back to school.");
     expect(flat).toContain("Store Items Returned Store items were not returned.");
     expect(flat).toContain(
-      "Salon Key Returned Salon key was not returned. Employee will be payroll deducted $25 for the salon key.",
+      "Store Key Returned Store key was not returned. Employee will be payroll deducted $25 for the store key.",
     );
     expect(flat).toContain("Minimum Wage / Bonus Forfeiture Employee will be dropped to minimum wage and forfeit bonus.");
     expect(flat).toContain("Additional Details Jordan called the salon before opening.");

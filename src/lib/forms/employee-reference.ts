@@ -84,7 +84,7 @@ const OTHER_PERSON =
   /\b(?:clients?|guests?|customers?|members?|co-?workers?|colleagues?|team\s?mates?|associates?|someone|somebody|anyone|anybody|everyone|everybody|person|people|another|other|managers?|supervisors?|directors?|leaders?|consultants?|trainees?|trainers?|mom|dad|mother|father|sons?|daughters?|child|children|kids?|boyfriend|girlfriend|husband|wife|partner|friends?|family|parents?|sister|brother)\b/gi;
 
 /** Groups that can be "they" but never "he" or "she". */
-const COLLECTIVE = /\b(?:team|staff|management|leadership|employees|everyone|people|crew|salon|company)\b/i;
+const COLLECTIVE = /\b(?:team|staff|management|leadership|employees|everyone|people|crew|salon|store|company)\b/i;
 
 /**
  * Capitalised words that are not a person — form vocabulary, the calendar and
@@ -102,7 +102,7 @@ const NOT_A_PERSON = new Set(
     "policy", "policies", "manual", "standards", "standard", "conduct", "dress", "code",
     "attendance", "company", "corrective", "action", "form", "plan", "coaching", "verbal",
     "written", "warning", "epp", "ppta", "upta", "lpsva", "bonus", "viewer", "uv", "sunless",
-    "hr", "ok", "i", "tc", "asd", "sd", "sdit", "tsd", "dmit", "fttc", "dm", "salon", "future",
+    "hr", "ok", "i", "tc", "asd", "sd", "sdit", "tsd", "dmit", "fttc", "dm", "salon", "store", "future",
     "none", "first", "occurrence", "signed", "termination", "employment", "source",
   ],
 );

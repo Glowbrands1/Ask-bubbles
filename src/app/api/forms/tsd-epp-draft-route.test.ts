@@ -29,7 +29,7 @@ vi.mock("@/config/company/locations", async () =>
  * behaviour is asserted at the write.
  *
  * A SECTION ASK BUBBLES MAY NEVER ANSWER. The self-assessment is the Training
- * Salon Director's own, and every key in it is `employee` — which is not
+ * Store Director's own, and every key in it is `employee` — which is not
  * AI-writable. A model that writes into one has it dropped, and that is
  * asserted here rather than trusted to the prompt.
  *
@@ -334,7 +334,7 @@ describe("what the model is allowed to write, and what it never sees", () => {
     );
     expect(prompt()).toContain("- district_outreach: Plan of Action — District Outreach");
     expect(prompt()).toContain(
-      "- salon_standards: Plan of Action — Salon Standards of Cleanliness and Safety",
+      "- salon_standards: Plan of Action — Store Standards of Cleanliness and Safety",
     );
   });
 

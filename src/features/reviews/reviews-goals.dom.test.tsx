@@ -19,10 +19,10 @@ import { ReviewsDashboard } from "./reviews-dashboard";
 afterEach(cleanup);
 
 const store = (code: string): StoreSummary =>
-  ({ storeCode: code, displayName: `Salon ${code}`, reviewCount: 100, averageRating: 4.5, ratings: [1, 2, 3, 4, 90] }) as StoreSummary;
+  ({ storeCode: code, displayName: `Store ${code}`, reviewCount: 100, averageRating: 4.5, ratings: [1, 2, 3, 4, 90] }) as StoreSummary;
 const goalRow = (code: string, over: Partial<GoalRow> = {}): GoalRow => ({
   storeCode: code,
-  displayName: `Salon ${code}`,
+  displayName: `Store ${code}`,
   monthlyTarget: 10,
   baselineReviewId: "b",
   baselineReviewTime: "2026-10-01T00:00:00Z",
@@ -53,39 +53,39 @@ const data = (rows: GoalRow[], rank: "month" | "week" = "month", period: "month"
 });
 
 describe("goal tracking on the dashboard", () => {
-  it("shows real goal figures, per-salon rows and a ranked leaderboard once baselines exist", () => {
+  it("shows real goal figures, per-store rows and a ranked leaderboard once baselines exist", () => {
     const d = data([goalRow("219", { qualifyingMonthToDate: 12, qualifyingThisWeek: 3 }), goalRow("225"), goalRow("236", { baselineReviewId: null, baselineReviewTime: null })]);
     const { unmount } = render(<ReviewsDashboard tab="overview" status="not_connected" data={d} />);
-    const table = screen.getByRole("table", { name: "Salon goal progress" });
-    expect(within(table).getByText("Salon 219")).toBeTruthy();
+    const table = screen.getByRole("table", { name: "Store goal progress" });
+    expect(within(table).getByText("Store 219")).toBeTruthy();
     expect(within(table).getByText("Goal met")).toBeTruthy();
     expect(within(table).getByText("Not counting")).toBeTruthy();
-    expect(screen.getByText("16")).toBeTruthy(); // month to date across the two counting salons
-    expect(screen.getByText("1 of 2")).toBeTruthy(); // salons at goal
+    expect(screen.getByText("16")).toBeTruthy(); // month to date across the two counting stores
+    expect(screen.getByText("1 of 2")).toBeTruthy(); // stores at goal
     expect(screen.getByText("Districts not configured yet")).toBeTruthy();
     unmount();
 
     render(<ReviewsDashboard tab="leaderboard" status="not_connected" data={d} />);
-    const items = screen.getAllByRole("listitem").filter((li) => li.textContent?.includes("Salon 2"));
-    expect(items[0]!.textContent).toContain("Salon 219");
+    const items = screen.getAllByRole("listitem").filter((li) => li.textContent?.includes("Store 2"));
+    expect(items[0]!.textContent).toContain("Store 219");
     expect(items[0]!.textContent).toContain("1");
   });
 
   it("labels a part-way baseline as a partial month, with the dates, instead of a pace verdict", () => {
     const d = data([goalRow("219", { baselineReviewTime: "2026-10-10T18:40:49Z", qualifyingMonthToDate: 2 }), goalRow("225", { baselineReviewTime: "2026-10-12T19:26:49Z", qualifyingMonthToDate: 12 })]);
     render(<ReviewsDashboard tab="overview" status="not_connected" data={d} />);
-    const table = screen.getByRole("table", { name: "Salon goal progress" });
+    const table = screen.getByRole("table", { name: "Store goal progress" });
     expect(within(table).getByText("Partial month")).toBeTruthy();
     expect(within(table).getByText("Goal met")).toBeTruthy();
     expect(within(table).queryByText("Behind pace")).toBeNull();
     expect(within(table).getByText(/Counting since Oct 10 · partial month/)).toBeTruthy();
-    expect(screen.getByText(/Partial month: counting for 2 salons began Oct 10–Oct 12/)).toBeTruthy();
+    expect(screen.getByText(/Partial month: counting for 2 stores began Oct 10–Oct 12/)).toBeTruthy();
   });
 
-  it("says the goal is not configured, and prints no figure, while no salon has a baseline", () => {
+  it("says the goal is not configured, and prints no figure, while no store has a baseline", () => {
     render(<ReviewsDashboard tab="overview" status="not_connected" data={data([goalRow("219", { baselineReviewId: null, baselineReviewTime: null })])} />);
     expect(screen.getAllByText("Goal not configured yet").length).toBeGreaterThan(0);
-    expect(screen.queryByRole("table", { name: "Salon goal progress" })?.querySelector("tbody")).toBeNull();
+    expect(screen.queryByRole("table", { name: "Store goal progress" })?.querySelector("tbody")).toBeNull();
   });
 
   it("shows Monday–Sunday week and calendar-month ranges on the cards", () => {
@@ -157,10 +157,10 @@ describe("progress bar colours", () => {
       screen.getAllByRole("progressbar").map((bar) => [bar.getAttribute("aria-label")!.split(":")[0], bar.getAttribute("data-tone")]),
     );
 
-  it("draws green met, amber on pace, red behind pace; a salon with no baseline gets no progress bar", () => {
+  it("draws green met, amber on pace, red behind pace; a store with no baseline gets no progress bar", () => {
     render(<ReviewsDashboard tab="overview" status="not_connected" data={d} />);
-    expect(tones()).toEqual({ "Salon 1 #1": "met", "Salon 2 #2": "pace", "Salon 3 #3": "behind" });
-    const table = screen.getByRole("table", { name: "Salon goal progress" });
+    expect(tones()).toEqual({ "Store 1 #1": "met", "Store 2 #2": "pace", "Store 3 #3": "behind" });
+    const table = screen.getByRole("table", { name: "Store goal progress" });
     expect(within(table).getByText("Not tracking")).toBeTruthy();
     expect(within(table).getByText("Behind pace").getAttribute("data-tone")).toBe("behind");
   });
@@ -175,20 +175,20 @@ describe("progress bar colours", () => {
   it("filters the leaderboard by status and search without changing anyone's rank", () => {
     const filtered = { ...d, goalFilter: { q: "", status: "behind" as const } };
     render(<ReviewsDashboard tab="leaderboard" status="not_connected" data={filtered} />);
-    const list = screen.getAllByRole("listitem").filter((li) => li.textContent?.includes("Salon "));
+    const list = screen.getAllByRole("listitem").filter((li) => li.textContent?.includes("Store "));
     expect(list).toHaveLength(1);
-    expect(list[0]!.textContent).toContain("Salon 3");
-    expect(list[0]!.textContent).toContain("3"); // still ranked 3rd of the counting salons
+    expect(list[0]!.textContent).toContain("Store 3");
+    expect(list[0]!.textContent).toContain("3"); // still ranked 3rd of the counting stores
   });
 
   it("shows an empty state when nothing matches", () => {
     render(<ReviewsDashboard tab="leaderboard" status="not_connected" data={{ ...d, goalFilter: { q: "zzz", status: null } }} />);
-    expect(screen.getByText("No salons match these filters")).toBeTruthy();
+    expect(screen.getByText("No stores match these filters")).toBeTruthy();
   });
 });
 
-describe("monthly goal eligibility per salon start date", () => {
-  it("marks a month partial when salons start counting on different days", () => {
+describe("monthly goal eligibility per store start date", () => {
+  it("marks a month partial when stores start counting on different days", () => {
     const rows = [goalRow("1", { baselineReviewTime: "2026-10-01T05:00:00Z" }), goalRow("2", { baselineReviewTime: "2026-10-09T05:00:00Z" })];
     render(<ReviewsDashboard tab="overview" status="not_connected" data={data(rows)} />);
     const m = screen.getByRole("table", { name: "Google Reviews by month" });
@@ -222,6 +222,6 @@ describe("the leaderboard month picker", () => {
     expect(board.queryByText("On pace")).toBeNull();
     expect(screen.getByText("Rank by this week").getAttribute("aria-disabled")).toBe("true");
     const tones = screen.getAllByRole("progressbar").map((b) => b.getAttribute("data-tone"));
-    expect(tones).toEqual(["met", "behind"]); // the not-counted salon draws no bar
+    expect(tones).toEqual(["met", "behind"]); // the not-counted store draws no bar
   });
 });

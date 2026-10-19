@@ -243,6 +243,10 @@ const neutral = (text: string) =>
     .replace(/SUN TAN CITY/g, "BUFF CITY SOAP")
     .replace(/Sun Tan City/g, "Buff City Soap")
     .replace(/Ask Sunny/g, "Ask Bubbles")
+    .replace(/\bSalons\b/g, "Stores")
+    .replace(/\bsalons\b/g, "stores")
+    .replace(/\bSalon\b/g, "Store")
+    .replace(/\bsalon\b/g, "store")
     .replace(/\s+/g, " ")
     .trim();
 

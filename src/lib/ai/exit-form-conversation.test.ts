@@ -161,7 +161,7 @@ describe("the employee, in any case and by first name", () => {
 /* ========================================================== the picker == */
 
 describe("the chat form picker and permissions", () => {
-  it("is offered to a Salon Director asking for a form, behind See more forms", async () => {
+  it("is offered to a Store Director asking for a form, behind See more forms", async () => {
     const proposals = await load([template(), exitForm()]);
     const response = await proposals.proposeFormForTurn(turn("I need a form"));
     expect(response!.formSelection!.primary.templateKey).toBe("coaching");
@@ -249,7 +249,7 @@ describe("what Ask Bubbles says beside the proposal", () => {
     expect(response!.content).toMatch(/The date they resigned/);
     expect(response!.content).toMatch(/The reason they gave for leaving/);
     expect(response!.content).toMatch(
-      /store items and salon key were returned, whether payroll deduction applies, whether they'll be dropped to minimum wage and forfeit their bonus, and whether they're eligible for rehire/,
+      /store items and store key were returned, whether payroll deduction applies, whether they'll be dropped to minimum wage and forfeit their bonus, and whether they're eligible for rehire/,
     );
     expect(response!.content).toMatch(/I won't answer it for you/);
     expect(response!.content).toMatch(/signature lines stay blank/);
@@ -289,7 +289,7 @@ describe("what Ask Bubbles says beside the proposal", () => {
     for (const question of [
       /- How did they let you know — in person, phone call, text message, email, or no call\/no show\?/,
       /- What reason did they give for leaving\? \(If they didn't give one, just say so\.\)/,
-      /- Were their store items and salon key returned\?/,
+      /- Were their store items and store key returned\?/,
       /- Is payroll deduction applicable\?/,
       /- Will they be dropped to minimum wage and forfeit their bonus\?/,
       /- Are they eligible for rehire\?/,
@@ -325,7 +325,7 @@ describe("what Ask Bubbles says beside the proposal", () => {
     expect(content).toMatch(/- \*\*How Employee Resigned:\*\* Email/);
     expect(content).toMatch(/- \*\*Reason for Resignation:\*\* Another job\./);
     expect(content).toMatch(/- \*\*Store Items Returned:\*\* Store items were returned\./);
-    expect(content).toMatch(/- \*\*Salon Key Returned:\*\* Salon key was returned\./);
+    expect(content).toMatch(/- \*\*Store Key Returned:\*\* Store key was returned\./);
     expect(content).toMatch(/- \*\*Payroll Deduction:\*\* Payroll deduction is not applicable\./);
     expect(content).toMatch(/- \*\*Minimum Wage \/ Bonus Forfeiture:\*\* Employee will not be dropped to minimum wage and will not forfeit bonus\./);
     expect(content).toMatch(/- \*\*Eligible for Rehire:\*\* Employee is eligible for rehire\./);
@@ -617,7 +617,7 @@ describe("QA 3 — location, title and dates", () => {
     const proposals = await load([exitForm()]);
     for (const [said, title] of [
       ["she's an ASD", "ASD"],
-      ["he is a salon director", "Salon Director"],
+      ["he is a store director", "Store Director"],
       ["she's a tanning consultant", "Tanning Consultant"],
     ]) {
       const response = await proposals.proposeFormForTurn(turn(`exit form for Jane Smith, ${said}`));
@@ -659,7 +659,7 @@ describe("QA 4 — what the manager said is filled; nothing else is inferred", (
     const content = response!.content;
     const filled = content.slice(0, content.indexOf("**Left blank"));
     expect(filled).toMatch(/- \*\*Resignation Date:\*\* September 20, 2026/);
-    expect(filled).toMatch(/- \*\*Salon Key Returned:\*\* Salon key was returned\./);
+    expect(filled).toMatch(/- \*\*Store Key Returned:\*\* Store key was returned\./);
     expect(filled).toMatch(/- \*\*Payroll Deduction:\*\* Payroll deduction is applicable\./);
     expect(filled).toMatch(/- \*\*Minimum Wage \/ Bonus Forfeiture:\*\* Employee will be dropped to minimum wage and forfeit bonus\./);
     expect(filled).toMatch(/- \*\*Eligible for Rehire:\*\* Employee is not eligible for rehire\./);
@@ -678,7 +678,7 @@ describe("QA 4 — what the manager said is filled; nothing else is inferred", (
     );
     const content = response!.content;
     expect(content).toMatch(
-      /- \*\*Salon Key Returned:\*\* Salon key was not returned\. Employee will be payroll deducted \$25 for the salon key\./,
+      /- \*\*Store Key Returned:\*\* Store key was not returned\. Employee will be payroll deducted \$25 for the store key\./,
     );
     expect(content).not.toMatch(/- \*\*Payroll Deduction:\*\*/);
     expect(content).toMatch(/- Is payroll deduction applicable\?/);
@@ -689,8 +689,8 @@ describe("QA 4 — what the manager said is filled; nothing else is inferred", (
     const response = await proposals.proposeFormForTurn(
       turn("exit form for Jane Smith. She returned the key and she didn't return the key. Last day 9/15, she quit on the spot."),
     );
-    expect(response!.content).not.toMatch(/Salon Key Returned:/);
-    expect(response!.content).toMatch(/You answered \*\*salon key returned\*\* both yes and no\. Which is it\?/);
+    expect(response!.content).not.toMatch(/Store Key Returned:/);
+    expect(response!.content).toMatch(/You answered \*\*store key returned\*\* both yes and no\. Which is it\?/);
   });
 
   it("takes a later answer as the correction it is, before the form exists", async () => {
@@ -703,9 +703,9 @@ describe("QA 4 — what the manager said is filled; nothing else is inferred", (
     });
     expect(response!.formProposal!.employeeName).toBe("Jane Smith");
     expect(response!.content).toMatch(
-      /- \*\*Salon Key Returned:\*\* Salon key was not returned\. Employee will be payroll deducted \$25 for the salon key\./,
+      /- \*\*Store Key Returned:\*\* Store key was not returned\. Employee will be payroll deducted \$25 for the store key\./,
     );
-    expect(response!.content).not.toMatch(/Salon key was returned\./);
+    expect(response!.content).not.toMatch(/Store key was returned\./);
   });
 
   it("continues the open proposal with a reply that only answers HR's questions", async () => {
@@ -717,7 +717,7 @@ describe("QA 4 — what the manager said is filled; nothing else is inferred", (
     });
     const content = response!.content;
     expect(content).toMatch(/Store items were returned\./);
-    expect(content).toMatch(/Salon key was not returned\./);
+    expect(content).toMatch(/Store key was not returned\./);
     expect(content).toMatch(/Payroll deduction is applicable\./);
     expect(content).toMatch(/Employee will not be dropped to minimum wage and will not forfeit bonus\./);
     expect(content).toMatch(/Employee is eligible for rehire\./);

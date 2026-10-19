@@ -55,7 +55,7 @@ const TYPE_LABEL: Record<string, string> = {
 /** The yes/no questions, named the way a manager reads them in a sentence. */
 const YES_NO_SHORT: Record<ExitAnswerKey, string> = {
   store_items_returned: "store items returned",
-  salon_key_returned: "salon key returned",
+  salon_key_returned: "store key returned",
   payroll_deduction_applicable: "payroll deduction",
   dropped_to_minimum_wage: "minimum wage",
   forfeit_bonus: "bonus forfeiture",
@@ -92,7 +92,7 @@ export function exitIntakeRequest(formName: string): string {
     "3. How they left — gave notice and worked it, quit immediately, didn't finish their notice, no call no show, or was already let go — and how they told you (in person, phone call, text message or email).",
     "4. The date they resigned, their last day worked, and the dates notice was given and fulfilled if there was notice.",
     "5. The reason they gave for leaving.",
-    "6. Whether their store items and salon key were returned, whether payroll deduction applies, whether they'll be dropped to minimum wage and forfeit their bonus, and whether they're eligible for rehire.",
+    "6. Whether their store items and store key were returned, whether payroll deduction applies, whether they'll be dropped to minimum wage and forfeit their bonus, and whether they're eligible for rehire.",
     "7. Anything else that belongs under Details.",
     "",
     "Anything you don't know yet stays blank for you to answer on the form — I won't answer it for you. Permanent Address and written notice attached are yours to complete, and the signature lines stay blank.",
@@ -269,11 +269,11 @@ function detailQuestions(
     }
   }
   if (open("store_items_returned") && open("salon_key_returned")) {
-    questions.push("Were their store items and salon key returned?");
+    questions.push("Were their store items and store key returned?");
   } else if (open("store_items_returned")) {
     questions.push("Were their store items returned?");
   } else if (open("salon_key_returned")) {
-    questions.push("Was their salon key returned?");
+    questions.push("Was their store key returned?");
   }
   if (open("payroll_deduction_applicable")) questions.push("Is payroll deduction applicable?");
   if (open("dropped_to_minimum_wage") && open("forfeit_bonus")) {

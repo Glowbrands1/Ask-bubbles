@@ -29,7 +29,7 @@ vi.mock("@/config/company/locations", async () =>
  * THE MANAGEMENT PERFORMANCE PLAN, READ BACK OUT OF THE PDF IT PRODUCES
  * ============================================================================
  *
- * The reference is the business's own Training Salon Director plan: the
+ * The reference is the business's own Training Store Director plan: the
  * District Manager's assessment against nine management expectations, five
  * productivity metrics for the manager and five for the salon, the manager's
  * OWN self-assessment, eight fixed Plan of Action objectives, the follow-up
@@ -47,7 +47,7 @@ vi.mock("@/config/company/locations", async () =>
  * differ from the SDIT's.
  *
  * ASK BUBBLES ANSWERING THE MANAGER'S OWN PAGE. The self-assessment is what the
- * Training Salon Director says about themselves in the review conversation.
+ * Training Store Director says about themselves in the review conversation.
  * Nothing Ask Bubbles generates may reach it, and that is asserted structurally —
  * on the responsibility of every field and every mark column — rather than
  * trusted to a prompt.
@@ -131,7 +131,7 @@ describe("the document the business recognises", () => {
       "Employee Information",
       "To be filled out by District Manager",
       "Manager's current productivity",
-      "Salon's current productivity",
+      "Store's current productivity",
       "To be filled out by Manager",
       "Plan of Action",
       "Follow-up",
@@ -263,7 +263,7 @@ describe("the manager's own page, which Ask Bubbles never answers", () => {
   it("exists, under the heading the reference prints", () => {
     expect(sections(renderDocument(document, variant))).toContain("To be filled out by Manager");
     expect(field("self_important_skill")?.label).toBe(
-      "What do you feel is the most important skill for a Salon Director to possess?",
+      "What do you feel is the most important skill for a Store Director to possess?",
     );
   });
 
@@ -466,7 +466,7 @@ describe("Ask Bubbles Draft Details", () => {
      * A KEY NOBODY FILLED CONTRIBUTES NO HEADING AT ALL. Both of these are
      * appendix headings rather than anything the form itself prints, so
      * their absence is the appendix omitting a blank rather than the page
-     * being short of a label. ("Salon Goals" is deliberately not tested
+     * being short of a label. ("Store Goals" is deliberately not tested
      * this way: the self-assessment page prints that question whether or
      * not anybody answered it.)
      */
@@ -501,7 +501,7 @@ describe("the printed PDF", () => {
       "Management Performance Plan",
       "To be filled out by District Manager",
       "Manager's current productivity",
-      "Salon's current productivity",
+      "Store's current productivity",
       "To be filled out by Manager",
       "Plan of Action",
       "Follow-up",
@@ -510,7 +510,7 @@ describe("the printed PDF", () => {
       "Average Club Dollar",
       "Bench",
       "District Outreach",
-      "Salon Standards of Cleanliness and Safety",
+      "Store Standards of Cleanliness and Safety",
     ]) {
       expect(text, printed).toContain(printed);
     }
@@ -520,7 +520,7 @@ describe("the printed PDF", () => {
     expect(text).not.toContain("FILLED BY HAND");
   });
 
-  it("addresses the Training Salon Director, and never another role", () => {
+  it("addresses the Training Store Director, and never another role", () => {
     const printed = JSON.stringify(renderDocument(document, variant));
     expect(variant.roleAbbr).toBe("TSD");
     expect(variant.role).toBe("District Manager");

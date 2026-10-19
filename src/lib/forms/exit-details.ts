@@ -209,7 +209,7 @@ function returnsIn(clause: string): Returns {
   }
 
   const labelled =
-    /\b(store items?|items?|uniforms?|keys?|salon key)(?:\s+(?:were|was))?(?:\s+returned)?(?:\s*[:=–—-]\s*(yes|no|y|n)\b|\s+(yes|no|y|n)\s*$)/g;
+    /\b(store items?|items?|uniforms?|keys?|(?:salon|store) key)(?:\s+(?:were|was))?(?:\s+returned)?(?:\s*[:=–—-]\s*(yes|no|y|n)\b|\s+(yes|no|y|n)\s*$)/g;
   for (const match of clause.matchAll(labelled)) {
     match[2] ??= match[3];
     const answer: YesNo = match[2]!.startsWith("y") ? "yes" : "no";

@@ -561,6 +561,8 @@ const NOT_A_NAME = new Set(
     "Wellness",
     "Salon",
     "Salons",
+    "Store",
+    "Stores",
     "District",
     "Region",
     "EPP",
@@ -749,7 +751,7 @@ const LOOKUP_SHAPES: readonly RegExp[] = [
   /\btell me about\b/i,
   /\bused for\b/i,
   // Asking whether one exists.
-  /\bdo(?:es)? (?:we|you|i|they|the company|the salon) have (?:a|an|any)\b/i,
+  /\bdo(?:es)? (?:we|you|i|they|the company|the salon|the store) have (?:a|an|any)\b/i,
   /\bdo we keep\b/i,
   /*
    * Asking which document to USE. "Should we use the coaching form?" fired on

@@ -16,11 +16,11 @@ import type { FormBlock, FormDocument } from "./document";
  * it is not a stricter setting chosen for safety: `ai` would mean Ask Bubbles may
  * write an applicant's interview answers, which is the one thing an interview
  * record must never contain. Only the four header lines the app genuinely knows
- * — who the form is about, the date, the salon — are `system`.
+ * — who the form is about, the date, the store — are `system`.
  *
  * FOUR FORMS, FOUR DOCUMENTS, DELIBERATELY NOT ONE TEMPLATE WITH VARIANTS.
  * Round 1 and Round 2 look alike from a distance and are not: Round 1 runs a
- * salon walkthrough and a job shadow and ends in "proceed to 2nd round", Round 2
+ * store walkthrough and a job shadow and ends in "proceed to 2nd round", Round 2
  * opens with a job preview and ends in "hire". Folding them into one document
  * with a `{{round}}` placeholder would lose every question that differs, which
  * is most of them.
@@ -54,7 +54,7 @@ import type { FormBlock, FormDocument } from "./document";
  * The KEYS are the engine's, the LABELS are the interview's. `employee_name`,
  * `form_date` and `location` are the three keys `createInstance` fills from the
  * record, so an interviewer who has already named the applicant and picked the
- * salon does not type either again. Renaming them to `applicant_name` would
+ * store does not type either again. Renaming them to `applicant_name` would
  * read better in the JSON and would leave all three lines blank on the page.
  *
  * `interviewed_by` is `manager` on purpose: the app knows who is signed in, but
@@ -75,7 +75,7 @@ function applicantInformation(): FormBlock[] {
       kind: "field_row",
       fields: [
         field("interviewed_by", "Interviewed By", "manager"),
-        field("location", "Salon Name", "system"),
+        field("location", "Store Name", "system"),
       ],
     },
   ];
@@ -210,7 +210,7 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
       { kind: "section", label: "Role Play Scenario" },
       ...question(
         "role_play",
-        "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the salon. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause.",
+        "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the store. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause.",
       ),
       ...question("why_select_you", "Why should we select you for this position?"),
 
@@ -242,7 +242,7 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
       },
       {
         kind: "note",
-        text: "If interview goes well, proceed to next step and give applicant a walkthrough of the salon. If you wish to pass on this applicant, stop here.",
+        text: "If interview goes well, proceed to next step and give applicant a walkthrough of the store. If you wish to pass on this applicant, stop here.",
       },
 
       { kind: "section", label: "Qualities to Observe Throughout Interview & Walkthrough" },
@@ -264,7 +264,7 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
       { kind: "section", label: "Store Walkthrough & Job Shadow" },
       {
         kind: "note",
-        text: "Observe candidate during a guided walkthrough/job shadow in an operating salon. Evaluate: cleanliness, safety, compliance, staff interaction, and sales focus.",
+        text: "Observe candidate during a guided walkthrough/job shadow in an operating store. Evaluate: cleanliness, safety, compliance, staff interaction, and sales focus.",
       },
       /*
        * THE OBSERVATION TABLE, IN THE TWO BLOCKS THE ENGINE HAS.
@@ -388,7 +388,7 @@ export function secondRoundManagementInterviewDocument(): FormDocument {
       ),
       ...question(
         "future_leaders",
-        "How do you identify and develop future leaders within your salon team?",
+        "How do you identify and develop future leaders within your store team?",
       ),
 
       { kind: "section", label: "Operational Management & Compliance" },
@@ -398,7 +398,7 @@ export function secondRoundManagementInterviewDocument(): FormDocument {
       ),
       ...question(
         "reduce_expenses",
-        "If you were given direction as a Salon Director to reduce expenses, what would be the first three areas you would focus on, and why?",
+        "If you were given direction as a Store Director to reduce expenses, what would be the first three areas you would focus on, and why?",
       ),
       ...question(
         "metrics_adjustment",
@@ -408,7 +408,7 @@ export function secondRoundManagementInterviewDocument(): FormDocument {
       { kind: "section", label: "Role Play Scenarios" },
       ...question(
         "scenario_one",
-        "Scenario 1: Let’s pretend that during your walkthrough in the salon, a staff member fails to greet a client promptly. Demonstrate how you would address this in real-time.",
+        "Scenario 1: Let’s pretend that during your walkthrough in the store, a staff member fails to greet a client promptly. Demonstrate how you would address this in real-time.",
       ),
       ...question(
         "scenario_two",
@@ -418,7 +418,7 @@ export function secondRoundManagementInterviewDocument(): FormDocument {
       { kind: "section", label: "Training & Development" },
       ...question(
         "training_plan",
-        "How would you create a 30–60–90 day training plan for a new Assistant Salon Director or Tanning Consultant?",
+        "How would you create a 30–60–90 day training plan for a new Assistant Store Director or Tanning Consultant?",
       ),
       ...question(
         "training_follow_up",
@@ -519,7 +519,7 @@ export function tanningConsultantInterviewDocument(): FormDocument {
       ),
       ...question(
         "essential_functions",
-        "12. This position requires key functions such as standing for extended periods, lifting up to 25 lbs., operating a computer, and overseeing daily salon operations. Are you able to perform these essential functions, with or without reasonable accommodation?",
+        "12. This position requires key functions such as standing for extended periods, lifting up to 25 lbs., operating a computer, and overseeing daily store operations. Are you able to perform these essential functions, with or without reasonable accommodation?",
       ),
 
       { kind: "section", label: "Closing" },
@@ -611,7 +611,7 @@ export function prescreenPhoneInterviewDocument(): FormDocument {
       { kind: "section", label: "Prescreening Assessment" },
       {
         kind: "note",
-        text: "If the response to these questions best fits our business culture, goals, and if the person sounds friendly, you can then schedule an in-person interview with them or encourage them to apply at a neighboring salon if you do not have open positions.",
+        text: "If the response to these questions best fits our business culture, goals, and if the person sounds friendly, you can then schedule an in-person interview with them or encourage them to apply at a neighboring store if you do not have open positions.",
       },
       {
         kind: "note",
@@ -658,7 +658,7 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     name: "Tanning Consultant Interview Form",
     shortName: "TC Interview",
     description:
-      "The in-salon interview for a Tanning Consultant. Twelve questions through service, sales, accountability, the core values and the essential job functions.",
+      "The in-store interview for a Tanning Consultant. Twelve questions through service, sales, accountability, the core values and the essential job functions.",
     category: "hiring",
     layoutFamily: "interview",
     requiredPermission: "create_hiring_form",
@@ -674,7 +674,7 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     name: "First Round Management Interview Form",
     shortName: "Mgmt Round 1",
     description:
-      "The first management interview, through leadership, sales, operations and a role play, then the salon walkthrough and job shadow.",
+      "The first management interview, through leadership, sales, operations and a role play, then the store walkthrough and job shadow.",
     category: "hiring",
     layoutFamily: "interview",
     requiredPermission: "create_hiring_form",

@@ -569,7 +569,7 @@ export const POLICY_REQUIREMENT_REMOVED_NOTICE =
  * and thirteen of the templates have no policy field at all.
  */
 export const POLICY_SEPARATION_RULES: readonly string[] = [
-  "An observation states WHAT WAS SEEN OR HEARD and never whether it broke a rule. Write 'was observed wearing a mini skirt at the salon', never 'which is not in compliance with the dress code policy'.",
+  "An observation states WHAT WAS SEEN OR HEARD and never whether it broke a rule. Write 'was observed wearing a mini skirt at the store', never 'which is not in compliance with the dress code policy'.",
   "Never write that something violates, breaches, contravenes or is not in compliance with a policy, a dress code, a handbook or a standard. Whether a rule was broken is settled by the policy fields, from the approved manual, and nowhere else on this form.",
   "The Type of Offense boxes are CATEGORIES you may tick. They are not policies. Never copy an offense category — 'Dress Code Violation', 'Standards of Conduct', 'Absenteeism' — into a policy field: a policy field takes the policy's own title or section from the approved manual, and nothing else.",
   "Never state a specific rule the approved policy in front of you does not state. Without a retrieved requirement, write the expectation generally — that the employee is expected to meet the current company requirement and that management will review it with them — rather than inventing what the requirement is.",

@@ -148,7 +148,11 @@ describe("the migrated templates are the reference platform's published template
       expect(typeof change.to, where).toBe("string");
       const from = change.from as string;
       const to = change.to as string;
-      expect(SOURCE_COMPANY.test(from) || SOURCE_APP.test(from), where).toBe(true);
+      // Salon -> Store is the other authorized substitution: Buff City Soap's locations are stores.
+      const SOURCE_TERM = /\b[Ss]alons?\b|\bSALONS?\b/;
+      const unsalon = (text: string) =>
+        text.replace(/\bSalons\b/g, "Stores").replace(/\bsalons\b/g, "stores").replace(/\bSalon\b/g, "Store").replace(/\bsalon\b/g, "store");
+      expect(SOURCE_COMPANY.test(from) || SOURCE_APP.test(from) || SOURCE_TERM.test(from), where).toBe(true);
       expect(SOURCE_COMPANY.test(to) || SOURCE_APP.test(to), where).toBe(false);
       // Only the names change: undo the substitutions and the source text comes back.
       const restored = to
@@ -159,7 +163,7 @@ describe("the migrated templates are the reference platform's published template
         .replace(/^PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT$/, "ASK_SUNNY_PERFORMANCE_MANAGEMENT_FRAMEWORK_KB_TEXT")
         .replace(/^The exit paperwork/, "The STC exit paperwork")
         .replace(/The source company's Demotion Example/, "The STC Demotion Example");
-      expect(restored, where).toBe(from);
+      expect(restored, where).toBe(unsalon(from));
     }
   });
 });

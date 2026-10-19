@@ -369,7 +369,7 @@ const HR_CONVERSATION = [
 
 describe("the Details section HR asked for", () => {
   it("is filled from the manager's own words, shown on the form, and printed in the PDF", async () => {
-    state.details = "Jane texted her Salon Director on 9/20 to say she would not be back.";
+    state.details = "Jane texted her Store Director on 9/20 to say she would not be back.";
     const { response, result } = await fromConversation(HR_CONVERSATION);
 
     // What Bubbles says it filled is what the form prints, word for word.
@@ -377,7 +377,7 @@ describe("the Details section HR asked for", () => {
     expect(content).toMatch(/- \*\*Resignation Date:\*\* September 20, 2026/);
     expect(content).toMatch(/- \*\*How Employee Resigned:\*\* Text message/);
     expect(content).toMatch(/- \*\*Reason for Resignation:\*\* She's moving to Denver\./);
-    expect(content).toMatch(/- \*\*Salon Key Returned:\*\* Salon key was not returned\. Employee will be payroll deducted \$25 for the salon key\./);
+    expect(content).toMatch(/- \*\*Store Key Returned:\*\* Store key was not returned\. Employee will be payroll deducted \$25 for the store key\./);
     expect(content).not.toMatch(/Before you create it/);
 
     // A new Exit Form is pinned to revision 2 of the template.
@@ -411,12 +411,12 @@ describe("the Details section HR asked for", () => {
       "How Employee Resigned Text message",
       "Reason for Resignation She's moving to Denver.",
       "Store Items Returned Store items were returned.",
-      "Salon Key Returned Salon key was not returned. Employee will be payroll deducted $25 for the salon key.",
+      "Store Key Returned Store key was not returned. Employee will be payroll deducted $25 for the store key.",
       "Payroll Deduction Payroll deduction is applicable.",
       "Minimum Wage / Bonus Forfeiture Employee will not be dropped to minimum wage and will not forfeit bonus.",
       "Eligible for Rehire Employee is eligible for rehire.",
       "Additional Details",
-      "Jane texted her Salon Director on 9/20 to say she would not be back.",
+      "Jane texted her Store Director on 9/20 to say she would not be back.",
     ]) {
       expect(text, line).toContain(line);
     }
@@ -437,14 +437,14 @@ describe("the Details section HR asked for", () => {
       said("m1", "Create an exit form for Jane Smith at lincoln o street. She quit on the spot by text on 9/20, last day 9/19. She returned her key."),
     ]);
     const content = response!.content;
-    expect(content).toMatch(/- \*\*Salon Key Returned:\*\* Salon key was returned\./);
+    expect(content).toMatch(/- \*\*Store Key Returned:\*\* Store key was returned\./);
     expect(content).toMatch(/- What reason did they give for leaving\?/);
     expect(content).toMatch(/- Were their store items returned\?/);
     expect(content).toMatch(/- Is payroll deduction applicable\?/);
     expect(content).toMatch(/- Will they be dropped to minimum wage and forfeit their bonus\?/);
     expect(content).toMatch(/- Are they eligible for rehire\?/);
     // Already said: not asked again.
-    expect(content).not.toMatch(/What date did they resign|How did they let you know|salon key returned\?/i);
+    expect(content).not.toMatch(/What date did they resign|How did they let you know|store key returned\?/i);
 
     const id = result.reference.instanceId;
     const correct = (question: string) =>
@@ -459,7 +459,7 @@ describe("the Details section HR asked for", () => {
       "Actually she still has the key. She didn't give a reason. Store items were returned, no payroll deduction, drop her to minimum wage and she forfeits her bonus. Not eligible for rehire.",
     );
     expect(first!.formUpdate).toMatchObject({ instanceId: id });
-    expect(first!.content).toMatch(/Salon Key Returned → Salon key was not returned\. Employee will be payroll deducted \$25 for the salon key\./);
+    expect(first!.content).toMatch(/Store Key Returned → Store key was not returned\. Employee will be payroll deducted \$25 for the store key\./);
     expect(first!.content).toMatch(/Reason for Resignation → No reason given\./);
     expect(first!.content).toMatch(/Minimum Wage \/ Bonus Forfeiture → Employee will be dropped to minimum wage and forfeit bonus\./);
 
@@ -481,7 +481,7 @@ describe("the Details section HR asked for", () => {
     expect(await correct("is she eligible for rehire if she comes back?")).toBeNull();
 
     const text = (await download(id, "exit-corrected")).replace(/\s+/g, " ");
-    expect(text).toContain("Salon key was not returned. Employee will be payroll deducted $25 for the salon key.");
+    expect(text).toContain("Store key was not returned. Employee will be payroll deducted $25 for the store key.");
     expect(text).toContain("Reason for Resignation No reason given.");
     expect(text).toContain("Employee is not eligible for rehire.");
     expect(text).toContain("Last Day Worked 09/18/2026");
@@ -493,9 +493,9 @@ describe("the Details section HR asked for", () => {
     const { result } = await fromConversation([said("m1", "exit form for Jane Doe at lincoln o street, she quit by email on 9/20")]);
     const text = (await download(result.reference.instanceId, "exit-hr-blank")).replace(/\s+/g, " ");
     expect(text).toContain("How Employee Resigned Email");
-    expect(text).toContain("Salon Key Returned");
+    expect(text).toContain("Store Key Returned");
     for (const sentence of [
-      /Salon key was (?:not )?returned\./,
+      /Store key was (?:not )?returned\./,
       /Store items were/,
       /Payroll deduction is/,
       /Employee will (?:not )?be dropped/,
