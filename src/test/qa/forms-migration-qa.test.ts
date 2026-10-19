@@ -251,6 +251,10 @@ const neutral = (text: string) =>
     .replace(/\bsalons\b/g, "stores")
     .replace(/\bSalon\b/g, "Store")
     .replace(/\bsalon\b/g, "store")
+    .replace(/\bClients\b|\bCustomers\b/g, "Guests")
+    .replace(/\bclients\b|\bcustomers\b/g, "guests")
+    .replace(/\bClient\b|\bCustomer\b/g, "Guest")
+    .replace(/\bclient\b|\bcustomer\b/g, "guest")
     .replace(/\s+/g, " ")
     .trim();
 

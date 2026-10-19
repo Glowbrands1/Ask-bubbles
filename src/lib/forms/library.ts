@@ -822,7 +822,7 @@ export const JBA_POLICY_EXPECTATION =
  */
 export const SDIT_EPP_EXPECTATIONS: readonly { key: string; label: string }[] = [
   { key: "uphold_experience", label: "Uphold the Buff City Soap Experience." },
-  { key: "client_service", label: "Personally, provide excellent client service." },
+  { key: "client_service", label: "Personally, provide excellent guest service." },
   { key: "company_policies", label: JBA_POLICY_EXPECTATION },
   { key: "bonus_viewer", label: "Determine focuses based on the Bonus Viewer." },
   {
@@ -1137,7 +1137,7 @@ export const TSD_EPP_EXPECTATIONS: readonly { key: string; label: string }[] = [
   { key: "uphold_experience", label: "Uphold the Buff City Soap Experience." },
   {
     key: "coach_client_service",
-    label: "Coach team to provide, and personally provide, excellent client service.",
+    label: "Coach team to provide, and personally provide, excellent guest service.",
   },
   { key: "bench_planning", label: "Bench planning and ability to lead management." },
   { key: "quality_hiring", label: "Quality hiring and employee retention." },
@@ -1751,7 +1751,7 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
      * name says.
      */
     variants: eppVariant("Training Store Director", "SDIT", "SDIT review"),
-    revision: 4,
+    revision: 5,
     revisionNote:
       "The standing SDIT expectations, the productivity table, the employee's own section and the re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual. The form addresses the SDIT rather than the ASD.",
     bundledPdfName: "Employee EPP (SDIT).pdf",
@@ -1774,7 +1774,7 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
      * here depends on the interpolation either way.
      */
     variants: eppVariant("District Manager", "TSD", "TSD review"),
-    revision: 3,
+    revision: 4,
     revisionNote:
       "The Management Performance Plan the business issues: the nine management expectations marked twice, five metrics for the manager and five for the store, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual.",
     bundledPdfName: "Management EPP (TSD).pdf",

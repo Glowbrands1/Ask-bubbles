@@ -1,5 +1,5 @@
 {
- "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description, and Salon -> Store terminology). Anything not listed here fails template-parity.test.ts.",
+ "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description, Salon -> Store terminology, and client/customer -> guest terminology approved 2026-10-19 for SD-2, TS-5, TI-4, TI-5, M1-6 and X-1). Anything not listed here fails template-parity.test.ts.",
  "changes": [
   {
    "sourceKey": "coaching",
@@ -49,6 +49,12 @@
   },
   {
    "sourceKey": "sdit-epp",
+   "path": ".document.blocks[5].options[1].label",
+   "from": "Personally, provide excellent client service.",
+   "to": "Personally, provide excellent guest service."
+  },
+  {
+   "sourceKey": "sdit-epp",
    "path": ".document.blocks[5].options[2].label",
    "from": "Uphold Sun Tan City and JB & Associates company policies per the JB & Associates Employment Policy Manual.",
    "to": "Uphold Buff City Soap and JB & Associates company policies per the JB & Associates Employment Policy Manual."
@@ -76,6 +82,12 @@
    "path": ".document.blocks[18].options[0].label",
    "from": "Uphold the Sun Tan City Experience.",
    "to": "Uphold the Buff City Soap Experience."
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".document.blocks[18].options[1].label",
+   "from": "Personally, provide excellent client service.",
+   "to": "Personally, provide excellent guest service."
   },
   {
    "sourceKey": "sdit-epp",
@@ -151,6 +163,12 @@
   },
   {
    "sourceKey": "tsd-epp",
+   "path": ".document.blocks[9].options[1].label",
+   "from": "Coach team to provide, and personally provide, excellent client service.",
+   "to": "Coach team to provide, and personally provide, excellent guest service."
+  },
+  {
+   "sourceKey": "tsd-epp",
    "path": ".document.blocks[9].options[4].label",
    "from": "Uphold Sun Tan City and JB & Associates company policies per the JB & Associates Employment Policy Manual, and hold the team accountable to company policy.",
    "to": "Uphold Buff City Soap and JB & Associates company policies per the JB & Associates Employment Policy Manual, and hold the team accountable to company policy."
@@ -184,6 +202,12 @@
    "path": ".document.blocks[22].options[0].label",
    "from": "Uphold the Sun Tan City Experience.",
    "to": "Uphold the Buff City Soap Experience."
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[22].options[1].label",
+   "from": "Coach team to provide, and personally provide, excellent client service.",
+   "to": "Coach team to provide, and personally provide, excellent guest service."
   },
   {
    "sourceKey": "tsd-epp",
@@ -557,6 +581,24 @@
   },
   {
    "sourceKey": "tanning-consultant-interview",
+   "path": ".document.blocks[13].text",
+   "from": "4. Describe a time you delivered excellent customer service and what made it stand out.",
+   "to": "4. Describe a time you delivered excellent guest service and what made it stand out."
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
+   "path": ".document.blocks[15].text",
+   "from": "5. Think back to a busy day when you were helping several customers at once. How did you keep things running smoothly and make sure everyone felt taken care of?",
+   "to": "5. Think back to a busy day when you were helping several guests at once. How did you keep things running smoothly and make sure everyone felt taken care of?"
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
+   "path": ".document.blocks[17].text",
+   "from": "6. This role includes recommending products and services to clients. How comfortable are you with sales, and what’s your approach?",
+   "to": "6. This role includes recommending products and services to guests. How comfortable are you with sales, and what’s your approach?"
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
    "path": ".document.blocks[30].text",
    "from": "12. This position requires key functions such as standing for extended periods, lifting up to 25 lbs., operating a computer, and overseeing daily salon operations. Are you able to perform these essential functions, with or without reasonable accommodation?",
    "to": "12. This position requires key functions such as standing for extended periods, lifting up to 25 lbs., operating a computer, and overseeing daily store operations. Are you able to perform these essential functions, with or without reasonable accommodation?"
@@ -581,6 +623,30 @@
   },
   {
    "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[5].options[2].label",
+   "from": "Sales drive and client service focus",
+   "to": "Sales drive and guest service focus"
+  },
+  {
+   "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[25].label",
+   "from": "Sales & Client Service",
+   "to": "Sales & Guest Service"
+  },
+  {
+   "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[26].text",
+   "from": "How do you drive sales performance while maintaining excellent client service?",
+   "to": "How do you drive sales performance while maintaining excellent guest service?"
+  },
+  {
+   "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[30].text",
+   "from": "Tell me about a time you turned an unhappy client into a satisfied one.",
+   "to": "Tell me about a time you turned an unhappy guest into a satisfied one."
+  },
+  {
+   "sourceKey": "management-interview-round-1",
    "path": ".document.blocks[40].text",
    "from": "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the salon. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause.",
    "to": "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the store. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause."
@@ -593,9 +659,27 @@
   },
   {
    "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[54].options[4].label",
+   "from": "Client service leadership",
+   "to": "Guest service leadership"
+  },
+  {
+   "sourceKey": "management-interview-round-1",
    "path": ".document.blocks[56].text",
    "from": "Observe candidate during a guided walkthrough/job shadow in an operating salon. Evaluate: cleanliness, safety, compliance, staff interaction, and sales focus.",
    "to": "Observe candidate during a guided walkthrough/job shadow in an operating store. Evaluate: cleanliness, safety, compliance, staff interaction, and sales focus."
+  },
+  {
+   "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[57].options[2].label",
+   "from": "Client service interactions",
+   "to": "Guest service interactions"
+  },
+  {
+   "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[60].field.label",
+   "from": "Client service interactions",
+   "to": "Guest service interactions"
   },
   {
    "sourceKey": "management-interview-round-2",
@@ -625,7 +709,7 @@
    "sourceKey": "management-interview-round-2",
    "path": ".document.blocks[24].text",
    "from": "Scenario 1: Let’s pretend that during your walkthrough in the salon, a staff member fails to greet a client promptly. Demonstrate how you would address this in real-time.",
-   "to": "Scenario 1: Let’s pretend that during your walkthrough in the store, a staff member fails to greet a client promptly. Demonstrate how you would address this in real-time."
+   "to": "Scenario 1: Let’s pretend that during your walkthrough in the store, a staff member fails to greet a guest promptly. Demonstrate how you would address this in real-time."
   },
   {
    "sourceKey": "management-interview-round-2",
