@@ -348,6 +348,18 @@ describe("demo mode never holds the privileged key", () => {
     expect(() => supabaseSecretKey()).not.toThrow(/placeholder/);
   });
 
+  it("readiness still reports instead of throwing in demo mode with a key set (regression: /api/health returned 500)", async () => {
+    demoWithProductionKey();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = URL_PLACEHOLDER;
+    const env = await import("./server-env");
+    expect(env.supabaseSecretKeySource()).toBeNull();
+    expect(() => env.liveReadiness()).not.toThrow();
+    expect(() => env.configurationProblems()).not.toThrow();
+    expect(env.liveReadiness().supabase.ready).toBe(false);
+    expect(env.liveReadiness().supabase.missing).toContain("SUPABASE_SECRET_KEY");
+    expect(env.liveReadiness().supabaseSecretKeySource).toBeNull();
+  });
+
   it("still returns the key in live mode, and Production ignores a stray demo flag", async () => {
     process.env.SUPABASE_SECRET_KEY = "placeholder-production-key";
 

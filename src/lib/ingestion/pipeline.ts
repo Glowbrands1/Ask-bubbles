@@ -347,8 +347,14 @@ async function findByTitle(
     .eq("source", source)
     .ilike("title", escapeLike(title))
     .order("version", { ascending: false })
-    .limit(1);
-  return ((data ?? [])[0] as KnowledgeDocumentRow | undefined) ?? null;
+    .limit(20);
+  /*
+   * ILIKE is only the narrowing step: PostgREST also reads `*` in the pattern as a
+   * wildcard, which escapeLike cannot neutralise, so the match is made exact here.
+   */
+  const wanted = title.toLowerCase();
+  const rows = (data ?? []) as KnowledgeDocumentRow[];
+  return rows.find((row) => String(row.title ?? "").toLowerCase() === wanted) ?? null;
 }
 
 async function findById(

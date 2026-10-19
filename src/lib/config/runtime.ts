@@ -32,9 +32,9 @@ export type RuntimeMode = "demo" | "live";
  *            a real identity provider must be connected for anyone to sign in.
  *
  *   "true"   DEMO. Seeded content throughout, and the login screen offers the
- *            role-preview entry. Note that Location Performance still reads real
- *            reporting data: it queries Supabase directly and does not consult
- *            this flag.
+ *            role-preview entry. The privileged Supabase key is refused here
+ *            (`supabaseSecretKey`), so reports read no data in demo mode: they
+ *            show as not connected, never as seeded or Production figures.
  *
  *   unset    LIVE. See below — this was the default and is no longer.
  *
