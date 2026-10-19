@@ -45,7 +45,7 @@ import type { AccessScope, ChatFormProposal, ChatMessage, EmployeeVerification }
  *   incident details    -> "Arrived after the start of a scheduled shift on
  *                          three occasions in the past two weeks, between ten
  *                          and twenty minutes late each time."
- *   employee role       -> "Tanning Consultant"
+ *   employee role       -> "Team Member"
  *   expected action     -> a generated sentence about meeting the standard
  *   follow-up           -> today + 14 days
  *

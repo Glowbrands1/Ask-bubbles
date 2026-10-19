@@ -1851,7 +1851,7 @@ const CHANGE_INTAKE: Record<EmploymentChangeKind, { items: string[]; example: st
       "A short reason",
     ],
     example:
-      "Jane Doe, Store Director FT at $18/hr → Tanning Consultant PT at $12/hr, effective 10/5, voluntary — she asked to step down.",
+      "Jane Doe, Assistant General Manager FT at $18/hr → Team Member PT at $12/hr, effective 10/5, voluntary — she asked to step down.",
   },
   transfer: {
     items: [
