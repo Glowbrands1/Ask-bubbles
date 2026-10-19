@@ -19,13 +19,13 @@ export const COMPANY_JOB_TITLES: readonly { pattern: RegExp; title: string }[] =
   // the Demotion and Transfer examples, the hiring forms). Read first, in the
   // reference platform's order, so EPP routing and title extraction behave
   // exactly as the forms were tested.
-  { pattern: /\b(?:sdits?|salon directors? in training)\b/i, title: "SDIT" },
-  { pattern: /\b(?:tsds?|training salon directors?)\b/i, title: "TSD" },
+  { pattern: /\b(?:sdits?|(?:salon|store) directors? in training)\b/i, title: "SDIT" },
+  { pattern: /\b(?:tsds?|training (?:salon|store) directors?)\b/i, title: "TSD" },
   { pattern: /\b(?:dmits?|district managers? in training)\b/i, title: "DMIT" },
   { pattern: /\b(?:fttcs?|full[- ]time tanning consultants?)\b/i, title: "FTTC" },
-  { pattern: /\b(?:asds?|assistant salon directors?)\b/i, title: "ASD" },
+  { pattern: /\b(?:asds?|assistant (?:salon|store) directors?)\b/i, title: "ASD" },
   { pattern: /\b(?:tcs?|tanning consultants?)\b/i, title: "Tanning Consultant" },
-  { pattern: /\b(?:sds?|salon directors?)\b/i, title: "Salon Director" },
+  { pattern: /\b(?:sds?|(?:salon|store) directors?)\b/i, title: "Store Director" },
   { pattern: /\b(?:dm|district managers?)\b/i, title: "District Manager" },
   // Provisional Buff City Soap titles (to be confirmed by Buff).
   { pattern: /\b(?:asms?|assistant (?:store |location )?managers?)\b/i, title: "Assistant Manager" },

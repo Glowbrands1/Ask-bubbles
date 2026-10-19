@@ -44,7 +44,7 @@ import type { AnswerStatementLine, FormBlock, FormDocument } from "./document";
  *              signature, or say a termination step has been done.
  *
  *   `manager`  Permanent Address and EVERY yes/no question. Returned items,
- *              the salon key, payroll deduction, bonus forfeiture, minimum wage,
+ *              the store key, payroll deduction, bonus forfeiture, minimum wage,
  *              written notice and rehire eligibility are decisions or
  *              verifications a person makes, and a draft that pre-ticked them
  *              would be Ask Bubbles making an HR decision. `enforceResponsibilities`
@@ -132,13 +132,13 @@ export const EXIT_DATE_FIELDS = {
 /**
  * The yes/no questions, by key, in the form's order.
  *
- * Six are the Word document's. "Salon key was returned" is HR's (revision 2):
+ * Six are the Word document's. "Store key was returned" is HR's (revision 2):
  * the Details section has to say whether the key came back, because a key that
  * did not is a $25 payroll deduction, and a statement needs an answer to read.
  */
 export const EXIT_YES_NO_QUESTIONS: readonly { key: string; label: string }[] = [
   { key: "store_items_returned", label: "All store items were returned" },
-  { key: "salon_key_returned", label: "Salon key was returned" },
+  { key: "salon_key_returned", label: "Store key was returned" },
   { key: "payroll_deduction_applicable", label: "Is Payroll Deduction applicable? *" },
   { key: "forfeit_bonus", label: "*Do they forfeit their bonus?" },
   { key: "dropped_to_minimum_wage", label: "*Are they to be dropped to minimum wage?" },
@@ -163,7 +163,7 @@ export const EXIT_DETAIL_LABEL = {
   resignationMethod: "How Employee Resigned",
   resignationReason: "Reason for Resignation",
   storeItems: "Store Items Returned",
-  salonKey: "Salon Key Returned",
+  salonKey: "Store Key Returned",
   payrollDeduction: "Payroll Deduction",
   minimumWageBonus: "Minimum Wage / Bonus Forfeiture",
   rehire: "Eligible for Rehire",
@@ -171,7 +171,7 @@ export const EXIT_DETAIL_LABEL = {
 
 /** HR's required wording when the key did not come back. */
 export const SALON_KEY_DEDUCTION_STATEMENT =
-  "Employee will be payroll deducted $25 for the salon key.";
+  "Employee will be payroll deducted $25 for the store key.";
 
 const yesNoStatement = (key: string, yes: string, no: string) => ({
   key,
@@ -199,8 +199,8 @@ export const EXIT_ANSWER_LINES: AnswerStatementLine[] = [
     parts: [
       yesNoStatement(
         "salon_key_returned",
-        "Salon key was returned.",
-        `Salon key was not returned. ${SALON_KEY_DEDUCTION_STATEMENT}`,
+        "Store key was returned.",
+        `Store key was not returned. ${SALON_KEY_DEDUCTION_STATEMENT}`,
       ),
     ],
   },
@@ -346,7 +346,7 @@ export function exitFormDocument(): FormDocument {
        *
        * Revision 2, from HR (Harper Samples, 28 Sep 2026): Details must state
        * the resignation date, how and why the employee left, whether store
-       * items and the salon key came back (a missing key is a $25 payroll
+       * items and the store key came back (a missing key is a $25 payroll
        * deduction), whether payroll deduction applies, whether they are
        * dropped to minimum wage and forfeit the bonus, and rehire eligibility.
        *
@@ -444,12 +444,14 @@ export const EXIT_TEMPLATE_SEEDS: TemplateSeed[] = [
     variants: [],
     /*
      * 2: HR's Details lines (resignation date, how and why they resigned, the
-     * salon key, and the yes/no answers as statements). A form already created
+     * store key, and the yes/no answers as statements). A form already created
      * keeps the version it was pinned to; new ones get this one.
+     *
+     * 3: terminology only — Salon becomes Store in the key line. No field key changes.
      */
-    revision: 2,
+    revision: 3,
     revisionNote:
-      "Details section: resignation date, how and why the employee resigned, salon key returned, and the returned-items, payroll deduction, minimum wage/bonus and rehire answers as statements (HR request, 28 Sep 2026).",
+      "Details section: resignation date, how and why the employee resigned, store key returned, and the returned-items, payroll deduction, minimum wage/bonus and rehire answers as statements (HR request, 28 Sep 2026).",
     bundledPdfName: "Resignation Exit Form.pdf",
   },
 ];

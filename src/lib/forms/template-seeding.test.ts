@@ -127,7 +127,7 @@ describe("installing an empty library", () => {
     expect(currentVersionOf("resignation-exit")).toMatchObject({
       version: 1,
       status: "published",
-      seed_revision: 2,
+      seed_revision: 3,
     });
     expect(versionsOf("resignation-exit")).toHaveLength(1);
   });
@@ -390,7 +390,7 @@ describe("the Resignation/Exit Form's revision 2 (HR's Details lines)", () => {
     const result = await ensureTemplateLibrary("system");
 
     expect(result.revised).toEqual(["resignation-exit"]);
-    expect(currentVersionOf("resignation-exit")).toMatchObject({ version: 2, status: "published", seed_revision: 2 });
+    expect(currentVersionOf("resignation-exit")).toMatchObject({ version: 2, status: "published", seed_revision: 3 });
     expect(currentVersionOf("resignation-exit")?.document).toEqual(exitSeed.document);
     expect(versionsOf("resignation-exit").find((row) => row.id === originalId)).toMatchObject({
       status: "archived",
@@ -558,5 +558,104 @@ describe("the migration the proposal drafts depend on", () => {
     // Which version is current is not this column's business, and a migration
     // that touched that table would be changing live forms on deploy.
     expect(sql).not.toMatch(/form_template_current/i);
+  });
+});
+
+describe("the Salon -> Store terminology re-issue", () => {
+  const REISSUED = [
+    "sdit-epp",
+    "tsd-epp",
+    "asd-sdit-epp",
+    "fttc-epp",
+    "dmit-epp-tsd",
+    "dmit-epp-dmit",
+    "resignation-exit",
+    "prescreen-phone-interview",
+    "tanning-consultant-interview",
+    "management-interview-round-1",
+    "management-interview-round-2",
+  ];
+  /** A published version as a database seeded BEFORE the rename holds it: the same document, worded "Salon". */
+  const asSalon = <T,>(value: T): T =>
+    JSON.parse(
+      JSON.stringify(value)
+        .replace(/\bStores\b/g, "Salons")
+        .replace(/\bStore(?=[\s'’]|\\")/g, "Salon")
+        .replace(/\bstores\b/g, "salons")
+        .replace(/\bstore\b/g, "salon"),
+    ) as T;
+
+  async function previouslySeeded() {
+    await ensureTemplateLibrary("system");
+    for (const key of REISSUED) {
+      const seed = TEMPLATE_SEEDS.find((entry) => entry.key === key)!;
+      for (const row of versionsOf(key)) {
+        row.seed_revision = seed.revision - 1;
+        row.document = asSalon(seed.document);
+        row.variants = asSalon(seed.variants);
+      }
+    }
+  }
+
+  it("publishes the Store wording as a new version of each, archiving the Salon one", async () => {
+    await previouslySeeded();
+    const before = new Map(REISSUED.map((key) => [key, currentVersionOf(key)!.id]));
+
+    const result = await ensureTemplateLibrary("system");
+
+    expect([...result.revised].sort()).toEqual([...REISSUED].sort());
+    for (const key of REISSUED) {
+      const seed = TEMPLATE_SEEDS.find((entry) => entry.key === key)!;
+      const current = currentVersionOf(key)!;
+      expect(current, key).toMatchObject({ version: 2, status: "published", seed_revision: seed.revision });
+      expect(current.document, key).toEqual(seed.document);
+      // The old version is archived, not edited or deleted, so forms filed on it still print as signed.
+      const old = versionsOf(key).find((row) => row.id === before.get(key))!;
+      expect(old.status, key).toBe("archived");
+      expect(JSON.stringify(old.document), key).toBe(JSON.stringify(asSalon(seed.document)));
+    }
+  });
+
+  it("is idempotent: a second run publishes nothing", async () => {
+    await previouslySeeded();
+    await ensureTemplateLibrary("system");
+    const again = await ensureTemplateLibrary("system");
+    expect(again.revised).toEqual([]);
+    for (const key of REISSUED) expect(versionsOf(key), key).toHaveLength(2);
+  });
+
+  it("changes no stored field key, and leaves a template an administrator authored alone", async () => {
+    await previouslySeeded();
+    const keysOf = (document: unknown) => [...JSON.stringify(document).matchAll(/"key":"([\w-]+)"/g)].map((m) => m[1]);
+    const oldKeys = new Map(REISSUED.map((key) => [key, keysOf(currentVersionOf(key)!.document)]));
+    const template = templateRow("fttc-epp");
+    store.form_template_versions.push({
+      id: "authored-fttc",
+      template_id: template.id,
+      version: 2,
+      status: "published",
+      document: { paper: "letter", blocks: [] },
+      variants: [],
+      seed_revision: 0,
+      notes: "Authored here.",
+      created_by: "dana",
+    });
+
+    const result = await ensureTemplateLibrary("system");
+
+    expect(result.heldBack.map((entry) => entry.key)).toEqual(["fttc-epp"]);
+    expect(result.revised).not.toContain("fttc-epp");
+    for (const key of REISSUED.filter((entry) => entry !== "fttc-epp")) {
+      expect(keysOf(currentVersionOf(key)!.document), key).toEqual(oldKeys.get(key));
+    }
+  });
+
+  it("leaves no published template's current document wording a location 'Salon'", async () => {
+    await previouslySeeded();
+    await ensureTemplateLibrary("system");
+    for (const row of store.form_template_current ?? []) {
+      const version = store.form_template_versions.find((entry) => entry.id === row.version_id)!;
+      expect(JSON.stringify([version.document, version.variants]), String(row.template_id)).not.toMatch(/\bSalons?\b/);
+    }
   });
 });

@@ -13,7 +13,7 @@ import type { FormBlock, FormDocument } from "./document";
  * ============================================================================
  *
  * The forms that record a CHANGE to somebody's employment: their title, their
- * salon, their status or their pay. Separate from `library.ts`
+ * store, their status or their pay. Separate from `library.ts`
  * for the reason the hiring forms are: they answer to different source
  * documents (GlowBrands' own Word files) and grow at different times.
  *
@@ -28,7 +28,7 @@ import type { FormBlock, FormDocument } from "./document";
  *              the one they are moving TO. See `employment-change.ts`.
  *
  *   `manager`  Every fact about the change: statuses, pay rates, the new title
- *              and salon, voluntary or involuntary. A model is structurally
+ *              and store, voluntary or involuntary. A model is structurally
  *              unable to write these —
  *              `enforceResponsibilities` drops anything it returns for them —
  *              so a demotion cannot come back marked Involuntary, or a pay rate
@@ -266,7 +266,7 @@ const POSITION_TRANSFER_SEED: TemplateSeed = {
   name: "Position Transfer Form",
   shortName: "Position Transfer",
   description:
-    "Records a move to another salon or position — current and new title, location, status and pay, voluntary or involuntary, and the reason.",
+    "Records a move to another store or position — current and new title, location, status and pay, voluntary or involuntary, and the reason.",
   category: "employment_changes",
   layoutFamily: "coaching",
   requiredPermission: "create_employment_change_form",
@@ -292,7 +292,7 @@ export const EMPLOYMENT_CHANGE_TEMPLATE_SEEDS: TemplateSeed[] = [
  * An explicit list, the way `createInstance`'s record map is explicit — not an
  * inference from a label. A key here is written only when (1) the pinned
  * version has it, (2) a person could edit it, and (3) it is currently empty. So
- * a stated fact never overwrites anything, including the salon the record was
+ * a stated fact never overwrites anything, including the store the record was
  * filed against or a value the manager already typed.
  */
 export const STATED_FACT_KEYS: ReadonlySet<string> = new Set([

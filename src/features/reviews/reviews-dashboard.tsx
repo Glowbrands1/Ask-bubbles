@@ -63,7 +63,7 @@ import type { ReviewsTab } from "./reviews-tabs";
  * ============================================================================
  *
  * The sister app's Google Reviews goal-dashboard layout, UI only: header band,
- * three views, the goal tiles, the salon goal-progress table, the district table, the
+ * three views, the goal tiles, the store goal-progress table, the district table, the
  * leaderboard and the review lists.
  *
  * IT CARRIES NO REVIEW DATA OF ANY KIND — no counts, names, districts, ranks,
@@ -89,7 +89,7 @@ export function ReviewsDashboard({
     >
       <ReportBand
         title="Google Reviews"
-        description="Qualifying reviews and the monthly goal across every salon you cover"
+        description="Qualifying reviews and the monthly goal across every store you cover"
         provenance={
           <ProvenanceChips>
             <ProvenanceChip emphasis>
@@ -159,7 +159,7 @@ function OverviewView({
     <>
       <SectionRule label="Monthly review goal" className="mt-1" />
       <p className={SECTION_NOTE}>
-        Every salon&rsquo;s monthly target and progress toward it. Weekly
+        Every store&rsquo;s monthly target and progress toward it. Weekly
         figures cover the current week (Monday–Sunday, Central); monthly figures
         cover the month to date. Counts use Google&rsquo;s original review
         dates.
@@ -207,8 +207,8 @@ function OverviewView({
           label="Qualifying reviews"
           detail={
             sm
-              ? `Of a combined monthly target of ${sm.combinedTarget} across ${sm.counting} salons counting${pm ? " — partial month, see note below" : ""}`
-              : "Against the combined monthly target of every salon counting"
+              ? `Of a combined monthly target of ${sm.combinedTarget} across ${sm.counting} stores counting${pm ? " — partial month, see note below" : ""}`
+              : "Against the combined monthly target of every store counting"
           }
         >
           {sm ? <Figure>{sm.qualifyingMonthToDate}</Figure> : null}
@@ -228,8 +228,8 @@ function OverviewView({
                 : ""}
             </WindowTag>
           }
-          label="Salons at goal"
-          detail="Salons that have reached their monthly target"
+          label="Stores at goal"
+          detail="Stores that have reached their monthly target"
         >
           {sm ? (
             <Figure>
@@ -250,25 +250,25 @@ function OverviewView({
           tone="pace"
           icon={<ListChecks />}
           label="Reviews still needed"
-          detail="To bring every salon to its target. One salon's overage doesn't cover another's shortfall."
+          detail="To bring every store to its target. One store's overage doesn't cover another's shortfall."
         >
           {sm ? <Figure>{sm.stillNeeded}</Figure> : null}
         </GoalTile>
       </div>
 
       <Panel
-        title="Salon goal progress"
+        title="Store goal progress"
         controls={
           data && g ? (
             <div className="ml-auto">
               <GoalSearch
                 data={data}
                 tab="overview"
-                placeholder="Find a salon or store code"
+                placeholder="Find a store name or code"
               />
             </div>
           ) : (
-            <DisabledSearch label="Search salons" />
+            <DisabledSearch label="Search stores" />
           )
         }
       >
@@ -285,9 +285,9 @@ function OverviewView({
         ) : (
           <TableShell
             status={goal}
-            label="Salon goal progress"
+            label="Store goal progress"
             columns={[
-              { label: "Salon" },
+              { label: "Store" },
               { label: "Store code", align: "right" },
               { label: "Qualifying · this week", align: "right" },
               { label: "Qualifying · month to date", align: "right" },
@@ -299,7 +299,7 @@ function OverviewView({
         )}
         <Footnote>
           Qualifying means a 3-, 4- or 5-star Google review counted after the
-          salon&rsquo;s baseline. 1–2 star reviews and imported history never
+          store&rsquo;s baseline. 1–2 star reviews and imported history never
           count.
           {pm ? ` ${pm}` : ""}
         </Footnote>
@@ -347,7 +347,7 @@ function OverviewView({
         <MeasureTile
           status={data ? "connected" : status}
           label="Historical — not yet counted"
-          detail="Imported at or before a salon's baseline (or with no baseline yet). Stored and searchable, in no goal total."
+          detail="Imported at or before a store's baseline (or with no baseline yet). Stored and searchable, in no goal total."
         >
           {data?.goals ? (
             <Figure>
@@ -401,10 +401,10 @@ function LeaderboardView({
       : 0;
   return (
     <>
-      <SectionRule label="Salon leaderboard" className="mt-1" />
+      <SectionRule label="Store leaderboard" className="mt-1" />
       <p className={SECTION_NOTE}>
-        Ranked by qualifying reviews this month against each salon&rsquo;s goal;
-        salons on the same count share a rank.
+        Ranked by qualifying reviews this month against each store&rsquo;s goal;
+        stores on the same count share a rank.
       </p>
 
       <Panel>
@@ -423,7 +423,7 @@ function LeaderboardView({
                   {g.summary.atGoal} of {g.summary.counting}
                 </span>
                 <span className="text-[12px] text-muted-foreground">
-                  salons {closed ? "reached" : "have reached"} their target ·{" "}
+                  stores {closed ? "reached" : "have reached"} their target ·{" "}
                   {closed
                     ? "final result"
                     : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`}{" "}
@@ -477,10 +477,10 @@ function LeaderboardView({
               <GoalSearch
                 data={data}
                 tab="leaderboard"
-                placeholder="Find a salon or store code"
+                placeholder="Find a store name or code"
               />
             ) : (
-              <DisabledSearch label="Find a salon or store code" />
+              <DisabledSearch label="Find a store name or code" />
             )}
             <div className="basis-full">
               {data && g ? (
@@ -513,12 +513,12 @@ function LeaderboardView({
           ) : null}
         </DataArea>
         <Footnote>
-          Salons on the same count share a rank. Progress can pass the target:
+          Stores on the same count share a rank. Progress can pass the target:
           the bar stops at full width and the overage is shown separately. A
-          salon without a review baseline isn&rsquo;t ranked and shows gray
+          store without a review baseline isn&rsquo;t ranked and shows gray
           &ldquo;Not tracking&rdquo;, not zero.
           {closed
-            ? " This month has ended, so each salon shows its final count with the same rules as the live month; weekly figures only exist for the current month. A month that closed before a salon's counting began shows gray “Not counted”."
+            ? " This month has ended, so each store shows its final count with the same rules as the live month; weekly figures only exist for the current month. A month that closed before a store's counting began shows gray “Not counted”."
             : ""}
           {pm ? ` ${pm}` : ""}
         </Footnote>

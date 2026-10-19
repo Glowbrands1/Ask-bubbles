@@ -17,7 +17,7 @@ vi.mock("@/config/company/locations", async () =>
  *
  * WHAT IS DIFFERENT AND WHAT MUST NOT BE. The questions differ: eight rather
  * than eleven, five metrics rather than three, and no job-title question,
- * because this document is the Training Salon Director's own. The ENGINE does
+ * because this document is the Training Store Director's own. The ENGINE does
  * not differ, and that is most of what this file asserts: a card click and a
  * typed sentence resolve through the same `proposeFormForTurn`, with the same
  * template resolution, the same permission check and the same variant.
@@ -55,7 +55,7 @@ const tsdEpp = (overrides: Record<string, unknown> = {}) =>
     key: "tsd-epp",
     name: "TSD EPP",
     shortName: "TSD EPP",
-    description: "Employee Performance Plan for a Training Salon Director.",
+    description: "Employee Performance Plan for a Training Store Director.",
     layoutFamily: "epp",
     requiredPermission: "create_epp",
     displayOrder: 5,
@@ -75,7 +75,7 @@ const sditEpp = () =>
     key: "sdit-epp",
     name: "SDIT EPP",
     shortName: "SDIT EPP",
-    description: "Employee Performance Plan for a Salon Director in training.",
+    description: "Employee Performance Plan for a Store Director in training.",
     layoutFamily: "epp",
     requiredPermission: "create_epp",
     displayOrder: 4,
@@ -83,7 +83,7 @@ const sditEpp = () =>
       id: "v3",
       status: "published",
       variants: [
-        { key: "default", label: "SDIT review", role: "Training Salon Director", roleAbbr: "SDIT" },
+        { key: "default", label: "SDIT review", role: "Training Store Director", roleAbbr: "SDIT" },
       ],
     },
   });
@@ -102,7 +102,7 @@ const fttcEpp = () =>
       id: "v1",
       status: "published",
       variants: [
-        { key: "default", label: "FTTC review", role: "Salon Director", roleAbbr: "TC" },
+        { key: "default", label: "FTTC review", role: "Store Director", roleAbbr: "TC" },
       ],
     },
   });
@@ -163,8 +163,8 @@ describe("every way a manager names this plan reaches the same workflow", () => 
     "TSD EPP",
     "create a TSD EPP",
     "TSD performance plan",
-    "Training Salon Director EPP",
-    "Training Salon Director performance plan",
+    "Training Store Director EPP",
+    "Training Store Director performance plan",
     "Management Performance Plan for my TSD",
     "I need a TSD EPP for Sarah Johnson",
     "Create a TSD EPP from this conversation.",
@@ -257,7 +257,7 @@ describe("'Employee Performance Plan' plus a role the manager already gave", () 
     expect(response!.formProposal!.employeeName).toBe("Sarah");
     /*
      * THE MANAGER'S OWN WORDS, NOT THE TEMPLATE'S. They wrote "TSD", so the
-     * form's Job Title line reads TSD. Inferring "Training Salon Director"
+     * form's Job Title line reads TSD. Inferring "Training Store Director"
      * from the template chosen would be a title printed on an employment
      * record because a form was picked.
      */
@@ -276,7 +276,7 @@ describe("the Ask Vicki-style intake, for a manager who has said nothing", () =>
     const content = response!.content;
 
     expect(content).toContain(
-      "To create a Training Salon Director (TSD) Employee Performance Plan (EPP) form for you, I'll need a few details:",
+      "To create a Training Store Director (TSD) Employee Performance Plan (EPP) form for you, I'll need a few details:",
     );
     // The salon is the one-salon account's, so it is not asked for again.
     expect(content).not.toContain("The salon location");
@@ -286,7 +286,7 @@ describe("the Ask Vicki-style intake, for a manager who has said nothing", () =>
       "Where the manager is currently succeeding",
       "The biggest areas needing improvement",
       "The manager's productivity numbers",
-      "The salon's current productivity numbers",
+      "The store's current productivity numbers",
       "When the follow-up review should happen",
     ]) {
       expect(content, asked).toContain(asked);
@@ -298,7 +298,7 @@ describe("the Ask Vicki-style intake, for a manager who has said nothing", () =>
   it("asks for those eight and nothing else", async () => {
     /*
      * NOT THE SDIT'S ELEVEN. The job title is not a question on the Training
-     * Salon Director's own plan, and the nine expectation marks belong in the
+     * Store Director's own plan, and the nine expectation marks belong in the
      * review conversation rather than in an intake — reading a chat sentence
      * into nine tri-state marks is exactly the auto-marking this plan forbids.
      */

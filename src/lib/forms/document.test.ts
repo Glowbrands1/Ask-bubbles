@@ -236,7 +236,7 @@ describe("responsibility is per template, not per field name", () => {
      * THE ASSERTION THAT STOPS A TIDY-UP. Two questions that read almost the
      * same, answered differently by the business:
      *
-     *   SDIT EPP  "Assistant Salon Director Thoughts"  -> AI FILLS chip
+     *   SDIT EPP  "Assistant Store Director Thoughts"  -> AI FILLS chip
      *   DMIT EPP  "In what areas do you feel..."       -> FILLED BY HAND chip
      *
      * Both are copied from the reference captures. A rule like "self-review
@@ -401,7 +401,7 @@ describe("the library matches the verified inventory", () => {
      * The four were one layout because the four reference captures differed
      * only in a title and a reviewer pairing. That stopped being true of the
      * SDIT EPP: the form the business issues for it carries the standing
-     * expectations a Salon Director in Training is marked against, the
+     * expectations a Store Director in Training is marked against, the
      * PPTA/LPSVA/UPTA productivity table, the section the employee completes,
      * and the re-evaluation.
      *
@@ -449,7 +449,7 @@ describe("the library matches the verified inventory", () => {
      * succeeding?" on a page titled SDIT.
      */
     expect(pairings).toEqual([
-      "Training Salon Director/SDIT",
+      "Training Store Director/SDIT",
       /*
        * THE SUBJECT OF THE MANAGEMENT PERFORMANCE PLAN IS THE TSD. It was
        * "SD", inherited from the shared builder, so the form asked "In what
@@ -457,8 +457,8 @@ describe("the library matches the verified inventory", () => {
        * Director — the same wrong-role defect the SDIT plan had.
        */
       "District Manager/TSD",
-      "Training Salon Director/ASD",
-      "Salon Director/TC",
+      "Training Store Director/ASD",
+      "Store Director/TC",
     ]);
   });
 

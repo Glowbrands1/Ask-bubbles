@@ -294,7 +294,9 @@ const TEMPLATE_INTENT: { key: string; matchers: string[] }[] = [
       "tsd epp",
       "tsd performance plan",
       "training salon director epp",
+      "training store director epp",
       "training salon director performance plan",
+      "training store director performance plan",
       "management performance plan",
     ],
   },
@@ -1479,9 +1481,9 @@ export function detectTemplateIntent(question: string): TemplateIntent {
 const EPP_ROLE_TEMPLATES: { key: string; roles: string[] }[] = [
   {
     key: "sdit-epp",
-    roles: ["sdit", "salon director in training", "salon director-in-training"],
+    roles: ["sdit", "salon director in training", "salon director-in-training", "store director in training", "store director-in-training"],
   },
-  { key: "tsd-epp", roles: ["tsd", "training salon director"] },
+  { key: "tsd-epp", roles: ["tsd", "training salon director", "training store director"] },
   { key: "fttc-epp", roles: ["fttc", "full time tanning consultant", "full-time tanning consultant"] },
 ];
 

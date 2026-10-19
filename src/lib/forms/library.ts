@@ -37,7 +37,7 @@ import { CA_ACTION_PLAN_CLOSING } from "./required-closing";
  *
  * RESPONSIBILITIES ARE COPIED FROM THE REFERENCES, FIELD BY FIELD, not inferred
  * from what a field is called. The DMIT EPP's self-assessment is marked FILLED
- * BY HAND on the capture and is `manual` here; the SDIT EPP's "Assistant Salon
+ * BY HAND on the capture and is `manual` here; the SDIT EPP's "Assistant Store
  * Director Thoughts" carries an AI FILLS chip and is `ai`. Two questions that
  * read almost identically, two different answers, because the business decided
  * so and not because a rule was inferred.
@@ -98,7 +98,7 @@ function acknowledgement(text: string): FormBlock[] {
  *   the Employee Information line reads "Name", not "Employee Name";
  *   Type of Coaching is Underperformance / Training Plan of Action /
  *   Retraining, spelled as one word where the old capture hyphenated;
- *   Topic of Coaching is ELEVEN topics about the salon floor — tours,
+ *   Topic of Coaching is ELEVEN topics about the store floor — tours,
  *   conversation, questions, recommendations, objections, product, the
  *   engagement, upselling, cleaning, new client documents, other — where the
  *   old ten were about memberships and lotion.
@@ -710,7 +710,7 @@ export function policyReviewDocument(): FormDocument {
 /**
  * The three-page Employee Performance Plan, shared by four templates.
  *
- * `{{role}}` is the reviewer — Training Salon Director, District Manager, Salon
+ * `{{role}}` is the reviewer — Training Store Director, District Manager, Store
  * Director — and `{{roleAbbr}}` is who is being reviewed: ASD, SD, TC. The four
  * templates differ in their title and in that pairing, and in nothing else,
  * which is why they are one builder taking two arguments rather than four
@@ -756,7 +756,7 @@ export function eppDocument(title: string): FormDocument {
       },
       {
         kind: "field",
-        field: field("salon_productivity", "Salon's current productivity", "ai", "long_text"),
+        field: field("salon_productivity", "Store's current productivity", "ai", "long_text"),
       },
 
       { kind: "section", label: "{{roleAbbr}} Thoughts" },
@@ -769,7 +769,7 @@ export function eppDocument(title: string): FormDocument {
       {
         kind: "numbered_list",
         key: "salon_goals",
-        label: "Salon Goals: current top three goals",
+        label: "Store Goals: current top three goals",
         count: 3,
         responsibility: "ai",
       },
@@ -827,7 +827,7 @@ export const SDIT_EPP_EXPECTATIONS: readonly { key: string; label: string }[] = 
   { key: "bonus_viewer", label: "Determine focuses based on the Bonus Viewer." },
   {
     key: "fact_based_decisions",
-    label: "Make fact based decisions when the Salon Director is not present.",
+    label: "Make fact based decisions when the Store Director is not present.",
   },
   {
     key: "client_engagement",
@@ -851,7 +851,7 @@ const EXPECTATION_LEGEND =
  * `eppDocument` prints four templates — SDIT, TSD, ASD/SDIT and FTTC — from one
  * definition because the four reference captures differ only in a title and a
  * reviewer pairing. This document does NOT differ only in that: it carries the
- * standing expectations a Salon Director in Training is marked against, the
+ * standing expectations a Store Director in Training is marked against, the
  * productivity table the business fills from the Ops Dashboard, the section the
  * EMPLOYEE completes in the conversation, and the re-evaluation that closes the
  * plan out. Folding those into the shared builder would put an SDIT's
@@ -924,12 +924,12 @@ export function sditEppDocument(title: string): FormDocument {
        * The paper form rules a Month / PPTA / LPSVA / UPTA grid and says "add
        * the employee's raw data from the Ops Dashboard here". Managers supply
        * it both ways — three figures off the dashboard, or "personal is 10 and
-       * the salon is 20" typed into chat — so the form takes both: named lines
+       * the store is 20" typed into chat — so the form takes both: named lines
        * for the three metrics it asks for by name, and a free line for whatever
        * else was given. Every one of them stays EMPTY when nothing was
        * supplied; there is no default and nothing is computed.
        */
-      { kind: "section", label: "Salon's current productivity" },
+      { kind: "section", label: "Store's current productivity" },
       {
         kind: "field_row",
         fields: [
@@ -940,7 +940,7 @@ export function sditEppDocument(title: string): FormDocument {
       },
       {
         kind: "field",
-        field: field("salon_productivity", "Salon figures, as provided", "ai", "long_text", {
+        field: field("salon_productivity", "Store figures, as provided", "ai", "long_text", {
           help: "Only what the manager supplied. Left blank when no figures were given.",
         }),
       },
@@ -1007,7 +1007,7 @@ export function sditEppDocument(title: string): FormDocument {
       {
         kind: "numbered_list",
         key: "salon_goals",
-        label: "Salon Goals: current top three goals",
+        label: "Store Goals: current top three goals",
         count: 3,
         responsibility: "ai",
       },
@@ -1082,10 +1082,10 @@ export function sditEppDocument(title: string): FormDocument {
           { label: "Areas Needing Improvement", key: "needs_improvement" },
           { label: "Overall Top Strengths", key: "top_strengths" },
           { label: "Biggest Areas of Improvement", key: "improvement_areas" },
-          { label: "Salon Goals", key: "salon_goals" },
+          { label: "Store Goals", key: "salon_goals" },
           { label: "Objectives and Plan of Action", key: "plan_of_action" },
           { label: "Personal Productivity (as provided)", key: "employee_productivity" },
-          { label: "Salon Productivity (as provided)", key: "salon_productivity" },
+          { label: "Store Productivity (as provided)", key: "salon_productivity" },
         ],
       },
       {
@@ -1122,7 +1122,7 @@ export const TSD_JBA_POLICY_EXPECTATION =
   "Uphold Buff City Soap and JB & Associates company policies per the JB & Associates Employment Policy Manual, and hold the team accountable to company policy.";
 
 /**
- * The nine standing expectations a Training Salon Director is measured against.
+ * The nine standing expectations a Training Store Director is measured against.
  *
  * TAKEN FROM THE BUSINESS'S OWN FORM, in its order and its wording, with the
  * single substitution above. Option KEYS are stable identifiers: a re-issue
@@ -1194,14 +1194,14 @@ export const TSD_PLAN_CATEGORIES: readonly {
   },
   {
     key: "salon_primary_productivity",
-    category: "Salon Primary Productivity",
+    category: "Store Primary Productivity",
     objective: "Ability to identify improvement areas and filter to team",
   },
   {
     key: "salon_secondary_productivity",
-    category: "Salon Secondary Productivity",
+    category: "Store Secondary Productivity",
     objective:
-      "Ability to utilize KPI report to control expenses to salon that effect bottom line revenue",
+      "Ability to utilize KPI report to control expenses to store that effect bottom line revenue",
   },
   {
     key: "coaching_and_development",
@@ -1217,7 +1217,7 @@ export const TSD_PLAN_CATEGORIES: readonly {
   },
   {
     key: "salon_standards",
-    category: "Salon Standards of Cleanliness and Safety",
+    category: "Store Standards of Cleanliness and Safety",
     objective: "Aware of all items on the SVC and able to describe to DM",
   },
 ];
@@ -1233,7 +1233,7 @@ export const TSD_PLAN_CATEGORIES: readonly {
 const TSD_ACKNOWLEDGEMENT =
   "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.";
 
-/** The five metrics this plan measures, for the manager and for the salon. */
+/** The five metrics this plan measures, for the manager and for the store. */
 const TSD_METRICS = ["PPTA", "LPSVA", "UPTA", "Club Close", "Average Club Dollar"] as const;
 
 /**
@@ -1245,7 +1245,7 @@ const TSD_METRICS = ["PPTA", "LPSVA", "UPTA", "Club Close", "Average Club Dollar
  * shared three-page plan with a different title. It is a management-
  * development document reviewed with a District Manager, and it carries four
  * things the shared builder has no notion of — nine standing expectations
- * marked twice, five metrics for the manager and five for the salon, a
+ * marked twice, five metrics for the manager and five for the store, a
  * self-assessment the EMPLOYEE fills, and eight fixed Plan of Action
  * objectives that are reviewed again at the re-evaluation.
  *
@@ -1336,7 +1336,7 @@ export function tsdEppDocument(): FormDocument {
           help: "Only what the manager supplied. Left blank when no figures were given.",
         }),
       },
-      { kind: "section", label: "Salon's current productivity" },
+      { kind: "section", label: "Store's current productivity" },
       {
         kind: "field_row",
         fields: TSD_METRICS.map((metric) =>
@@ -1345,7 +1345,7 @@ export function tsdEppDocument(): FormDocument {
       },
       {
         kind: "field",
-        field: field("salon_productivity", "Salon figures, as provided", "ai", "long_text", {
+        field: field("salon_productivity", "Store figures, as provided", "ai", "long_text", {
           help: "Only what the manager supplied. Left blank when no figures were given.",
         }),
       },
@@ -1361,7 +1361,7 @@ export function tsdEppDocument(): FormDocument {
         kind: "field",
         field: field(
           "self_important_skill",
-          "What do you feel is the most important skill for a Salon Director to possess?",
+          "What do you feel is the most important skill for a Store Director to possess?",
           "employee",
           "long_text",
         ),
@@ -1392,7 +1392,7 @@ export function tsdEppDocument(): FormDocument {
       {
         kind: "numbered_list",
         key: "salon_goals",
-        label: "Salon Goals: what are your salon's current top three goals?",
+        label: "Store Goals: what are your store's current top three goals?",
         count: 3,
         responsibility: "employee",
       },
@@ -1463,13 +1463,13 @@ export function tsdEppDocument(): FormDocument {
           { label: "Areas Needing Improvement", key: "needs_improvement" },
           { label: "Overall Top Strengths", key: "top_strengths" },
           { label: "Biggest Areas of Improvement", key: "improvement_areas" },
-          { label: "Salon Goals", key: "salon_goals" },
+          { label: "Store Goals", key: "salon_goals" },
           ...TSD_PLAN_CATEGORIES.map((row) => ({
             label: `Plan of Action — ${row.category}`,
             key: row.key,
           })),
           { label: "Manager Productivity (as provided)", key: "employee_productivity" },
-          { label: "Salon Productivity (as provided)", key: "salon_productivity" },
+          { label: "Store Productivity (as provided)", key: "salon_productivity" },
         ],
       },
       {
@@ -1517,7 +1517,7 @@ export function dmitEppDocument(): FormDocument {
           "To be reviewed with District Manager",
           "First we need to understand what the purpose and responsibilities are for a District Manager with Buff City Soap:",
           "General Purpose of Position",
-          "The District Manager is responsible for overseeing several salons. Responsibilities include managing sales and operations, driving revenue, controlling expenses and payroll budgets, handling personnel issues, accounting, merchandising, and loss prevention. District Managers are also ultimately responsible for ensuring the highest level of client service throughout the salons.",
+          "The District Manager is responsible for overseeing several stores. Responsibilities include managing sales and operations, driving revenue, controlling expenses and payroll budgets, handling personnel issues, accounting, merchandising, and loss prevention. District Managers are also ultimately responsible for ensuring the highest level of client service throughout the stores.",
         ],
       },
       {
@@ -1528,7 +1528,7 @@ export function dmitEppDocument(): FormDocument {
           "To be reviewed with District Manager in Training",
           "First we need to understand what the purpose and responsibilities are for a District Manager in Training with Buff City Soap:",
           "General Purpose of Position",
-          "The District Manager in Training is learning to oversee several salons: sales and operations, revenue, expense and payroll control, personnel, accounting, merchandising and loss prevention, while being assessed against the District Manager standard.",
+          "The District Manager in Training is learning to oversee several stores: sales and operations, revenue, expense and payroll control, personnel, accounting, merchandising and loss prevention, while being assessed against the District Manager standard.",
         ],
       },
 
@@ -1561,7 +1561,7 @@ export function dmitEppDocument(): FormDocument {
       },
       {
         kind: "field",
-        field: field("salon_productivity", "Salon's current productivity", "ai", "long_text"),
+        field: field("salon_productivity", "Store's current productivity", "ai", "long_text"),
       },
 
       { kind: "page_break" },
@@ -1600,7 +1600,7 @@ export function dmitEppDocument(): FormDocument {
       {
         kind: "numbered_list",
         key: "salon_goals",
-        label: "Salon Goals: What are your salon's current top three goals?",
+        label: "Store Goals: What are your store's current top three goals?",
         count: 3,
         responsibility: "manual",
       },
@@ -1729,7 +1729,7 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     key: "sdit-epp",
     name: "SDIT EPP",
     shortName: "SDIT EPP",
-    description: "Employee Performance Plan for a Salon Director in training.",
+    description: "Employee Performance Plan for a Store Director in training.",
     category: "hr_performance",
     layoutFamily: "epp",
     requiredPermission: "create_epp",
@@ -1750,8 +1750,8 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
      * its subject really is an ASD on the development track, which is what its
      * name says.
      */
-    variants: eppVariant("Training Salon Director", "SDIT", "SDIT review"),
-    revision: 3,
+    variants: eppVariant("Training Store Director", "SDIT", "SDIT review"),
+    revision: 4,
     revisionNote:
       "The standing SDIT expectations, the productivity table, the employee's own section and the re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual. The form addresses the SDIT rather than the ASD.",
     bundledPdfName: "Employee EPP (SDIT).pdf",
@@ -1760,7 +1760,7 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     key: "tsd-epp",
     name: "TSD EPP",
     shortName: "TSD EPP",
-    description: "Employee Performance Plan for a Training Salon Director.",
+    description: "Employee Performance Plan for a Training Store Director.",
     category: "hr_performance",
     layoutFamily: "epp",
     requiredPermission: "create_epp",
@@ -1769,14 +1769,14 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     /*
      * THE SUBJECT IS THE TSD, reviewed by a District Manager. It was "SD", so
      * the form asked "In what areas is the SD currently succeeding?" about a
-     * Training Salon Director — the same wrong-role defect the SDIT plan had.
+     * Training Store Director — the same wrong-role defect the SDIT plan had.
      * The document names the role in its own words throughout, so no label
      * here depends on the interpolation either way.
      */
     variants: eppVariant("District Manager", "TSD", "TSD review"),
-    revision: 2,
+    revision: 3,
     revisionNote:
-      "The Management Performance Plan the business issues: the nine management expectations marked twice, five metrics for the manager and five for the salon, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual.",
+      "The Management Performance Plan the business issues: the nine management expectations marked twice, five metrics for the manager and five for the store, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual.",
     bundledPdfName: "Management EPP (TSD).pdf",
   },
   {
@@ -1789,8 +1789,8 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     requiredPermission: "create_epp",
     displayOrder: 6,
     document: eppDocument("Performance EPP - ASD/SDIT"),
-    variants: eppVariant("Training Salon Director", "ASD", "ASD/SDIT review"),
-    revision: 1,
+    variants: eppVariant("Training Store Director", "ASD", "ASD/SDIT review"),
+    revision: 2,
     revisionNote: "Seeded from the approved reference forms.",
     bundledPdfName: "ASD-SDIT Performance EPP.pdf",
   },
@@ -1804,8 +1804,8 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     requiredPermission: "create_epp",
     displayOrder: 7,
     document: eppDocument("Performance EPP - FTTC"),
-    variants: eppVariant("Salon Director", "TC", "FTTC review"),
-    revision: 1,
+    variants: eppVariant("Store Director", "TC", "FTTC review"),
+    revision: 2,
     revisionNote: "Seeded from the approved reference forms.",
     bundledPdfName: "FTTC Performance EPP.pdf",
   },
@@ -1821,7 +1821,7 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 8,
     document: dmitEppDocument(),
     variants: DMIT_VARIANTS,
-    revision: 1,
+    revision: 2,
     revisionNote: "Seeded from the approved reference forms.",
     bundledPdfName: "DMIT EPP - TSD Review.pdf",
   },
@@ -1837,7 +1837,7 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 9,
     document: dmitEppDocument(),
     variants: DMIT_VARIANTS,
-    revision: 1,
+    revision: 2,
     revisionNote: "Seeded from the approved reference forms.",
     bundledPdfName: "DMIT EPP - DMIT Review.pdf",
   },

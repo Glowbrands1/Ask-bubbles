@@ -372,11 +372,11 @@ function periodEnd(start: string, period: PeriodUnit): string {
   return end.toISOString().slice(0, 10);
 }
 
-/** The Central dates from which the salons in view start counting toward their goals. */
+/** The Central dates from which the stores in view start counting toward their goals. */
 export interface CountingSpan {
-  /** The first salon to start counting. */
+  /** The first store to start counting. */
   earliest: string;
-  /** The last salon to start counting: from here on, every counting salon is eligible. */
+  /** The last store to start counting: from here on, every counting store is eligible. */
   latest: string;
 }
 
@@ -411,7 +411,7 @@ const MARK_STYLE: Record<GoalMarkKind, string> = {
   none: "bg-tone-idle-soft text-tone-idle-ink",
 };
 
-/** The first and last date goal counting starts across the counting salons in view (latest goes with every salon counting). */
+/** The first and last date goal counting starts across the counting stores in view (latest goes with every store counting). */
 export function goalStartSpan(
   g: ReturnType<typeof goalView>,
 ): CountingSpan | null {
@@ -432,7 +432,7 @@ export function TrendPanel({
 }: {
   trend: PeriodPoint[];
   period: PeriodUnit;
-  /** Where counting starts for the salons in view; null when no salon counts yet. */
+  /** Where counting starts for the stores in view; null when no store counts yet. */
   countingStart?: CountingSpan | string | null;
 }) {
   const max = Math.max(1, ...trend.map((p) => p.reviewCount));
@@ -552,7 +552,7 @@ export function TrendPanel({
         &ldquo;All reviews&rdquo; is every live review in the period;
         &ldquo;3–5★ reviews&rdquo; is only the rating range and is not the goal
         count. The goal counts 3–5★ reviews created on or after each
-        salon&rsquo;s counting start date, as marked in the Goal column.
+        store&rsquo;s counting start date, as marked in the Goal column.
       </p>
     </>
   );
@@ -607,7 +607,7 @@ const ELIGIBILITY: Record<ReviewEligibility, { label: string; style: string }> =
       style: "text-muted-foreground",
     },
     not_counting: {
-      label: "Salon not counting yet",
+      label: "Store not counting yet",
       style: "text-muted-foreground",
     },
   };
@@ -745,7 +745,7 @@ export function ReviewsList({ data }: { data: ReviewsData }) {
 
 /* ------------------------------------------------------------------ goals -- */
 
-/** Goal rows in view (the Location filter narrows them) and their totals, or null while no salon has a baseline. */
+/** Goal rows in view (the Location filter narrows them) and their totals, or null while no store has a baseline. */
 export function goalView(data: ReviewsData | null): {
   rows: GoalRow[];
   summary: GoalSummary;
@@ -842,7 +842,7 @@ export function StatusChip({ status }: { status: GoalStatus }) {
 
 /**
  * The progress bar. Its colour is the goal status: green met, amber on pace, red behind pace, and gray where no verdict
- * can be reached (a part-way baseline, or a salon not counting yet — which is "no data", never zero performance).
+ * can be reached (a part-way baseline, or a store not counting yet — which is "no data", never zero performance).
  */
 export function Meter({
   row,
@@ -894,7 +894,7 @@ export function Meter({
         {showPace ? (
           <span
             aria-hidden
-            title="Pace mark: where this salon should be by now"
+            title="Pace mark: where this store should be by now"
             className="absolute -top-[3px] -bottom-[3px] w-0 border-l-2 border-dashed border-measure-benchmark/70"
             style={{ left: `${paceMarkPercent(row.monthlyTarget, context)}%` }}
           />
@@ -924,13 +924,13 @@ export function GoalTable({
   return (
     <div className="scroll-slim w-full min-w-0 overflow-x-auto">
       <table
-        aria-label="Salon goal progress"
+        aria-label="Store goal progress"
         className="w-full min-w-[46rem] border-collapse text-left text-[12px]"
       >
         <thead>
           <tr className="border-b border-border bg-surface-muted">
             <th scope="col" className={TH}>
-              Salon
+              Store
             </th>
             <th scope="col" className={cn(TH, "text-right")}>
               Store code
@@ -1000,7 +1000,7 @@ export function GoalTable({
       </table>
       {rows.length === 0 ? (
         <p className="px-4 py-8 text-center text-[13px] font-bold text-muted-foreground">
-          No salons match this search
+          No stores match this search
         </p>
       ) : null}
     </div>
@@ -1154,7 +1154,7 @@ export function Leaderboard({
   metric: "month" | "week";
   filter?: ReviewsData["goalFilter"];
 }) {
-  // Rank over every salon in view, THEN filter, so searching never changes anyone's rank.
+  // Rank over every store in view, THEN filter, so searching never changes anyone's rank.
   const closed = context.closed === true;
   const ranked = rankRows(rows, closed ? "month" : metric).filter(({ row }) =>
     matchesGoalFilter(row, context, filter),
@@ -1162,7 +1162,7 @@ export function Leaderboard({
   if (ranked.length === 0) {
     return (
       <p className="px-4 py-10 text-center text-[13px] font-bold text-muted-foreground">
-        No salons match these filters
+        No stores match these filters
       </p>
     );
   }
@@ -1172,7 +1172,7 @@ export function Leaderboard({
         const counting = isCounting(row);
         const status = goalStatus(row, context);
         const style = TONE_STYLE[GOAL_TONE[status]];
-        // A salon that was not counting yet in a closed month has no standing to rank or tie.
+        // A store that was not counting yet in a closed month has no standing to rank or tie.
         const unranked = status === "before_counting";
         return (
           <li
@@ -1257,7 +1257,7 @@ export function formatDay(day: string | null): string {
   return day ? DAY_LABEL.format(new Date(`${day}T00:00:00Z`)) : "—";
 }
 
-/** The honest caveat for a month whose baselines were set part-way through; null when every salon has a full month. */
+/** The honest caveat for a month whose baselines were set part-way through; null when every store has a full month. */
 export function partialMonthText(
   g: ReturnType<typeof goalView>,
 ): string | null {
@@ -1268,7 +1268,7 @@ export function partialMonthText(
     note.from === note.to
       ? formatDay(note.from)
       : `${formatDay(note.from)}–${formatDay(note.to)}`;
-  return `Partial month: counting for ${note.salons} salon${note.salons === 1 ? "" : "s"} began ${span}, so this month's totals cover only part of it. Salons short of target show "Partial month" rather than a pace verdict, and "reviews still needed" is measured against the full monthly target.`;
+  return `Partial month: counting for ${note.salons} store${note.salons === 1 ? "" : "s"} began ${span}, so this month's totals cover only part of it. Stores short of target show "Partial month" rather than a pace verdict, and "reviews still needed" is measured against the full monthly target.`;
 }
 
 /** "Oct 12 – Oct 18" for two `yyyy-mm-dd` Central dates. */

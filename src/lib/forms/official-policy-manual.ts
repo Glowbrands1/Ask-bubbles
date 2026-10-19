@@ -769,7 +769,7 @@ export const OFFENSE_MANUAL_SECTIONS: Readonly<Record<string, OffenseSections>> 
  * consultant section is the one that governs everybody who is not management.
  */
 const MANAGEMENT_TITLE =
-  /\b(?:sd|asd|dm|sdit|tsd|dmit|salon director|assistant salon director|district manager|regional manager|store manager|manager)\b/i;
+  /\b(?:sd|asd|dm|sdit|tsd|dmit|salon director|store director|assistant salon director|assistant store director|district manager|regional manager|store manager|manager)\b/i;
 
 export function isManagementTitle(jobTitle: string | null | undefined): boolean {
   const title = (jobTitle ?? "").trim();

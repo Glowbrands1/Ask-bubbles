@@ -10,7 +10,7 @@ import { signInAsDemo } from "./support";
 const TABS = [
   ["overview", "Overview"],
   ["reviews", "Google Reviews"],
-  ["leaderboard", "Salon Leaderboard"],
+  ["leaderboard", "Store Leaderboard"],
 ] as const;
 
 test("Google Reviews renders three views, all not connected, with no overflow", async ({

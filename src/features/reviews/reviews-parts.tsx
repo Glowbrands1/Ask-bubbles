@@ -354,7 +354,7 @@ export function RankingHead() {
       )}
     >
       <span className="text-center">Rank</span>
-      <span>Salon</span>
+      <span>Store</span>
       <span className="text-right">This week</span>
       <span className="text-right">Month to date</span>
       <span className="text-right">Target</span>

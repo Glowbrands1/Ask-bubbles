@@ -60,7 +60,7 @@ const CANONICAL: { match: RegExp; key: string }[] = [
   { match: /^date$/i, key: "form_date" },
   { match: /^job\s*title$/i, key: "job_title" },
   { match: /^position\s+applied\s+for$/i, key: "job_title" },
-  { match: /^(location|salon\s*name)$/i, key: "location" },
+  { match: /^(location|(?:salon|store)\s*name)$/i, key: "location" },
 ];
 
 function canonicalKey(label: string): string | null {
