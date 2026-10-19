@@ -639,4 +639,84 @@ select pg_temp.expect_code('authenticated call',
   'permission denied for function employee_access_approve_rehire');
 reset role;
 
+-- ====================================================== 8. the links guard (production parity)
+-- The live database has a hand-applied trigger of this name that allows ONLY the managed_* flags and updated_at to
+-- change; this migration takes it over (create or replace + re-create the trigger). The harness builds the cluster
+-- WITH that live copy (production_parity_links_guard.sql, the default) and WITHOUT it (VERIFY_PARITY=0); every check in
+-- this file, including every stamp the functions above write, runs against the migration's end state in both builds.
+create temp table g as select pg_temp.mk(70) as id;
+do $$
+declare
+  v_id uuid := (select id from g);
+begin
+  perform pg_temp.assert('guard trigger installed and enabled',
+    exists (select 1 from pg_trigger where tgname = 'employee_account_links_guard_update'
+             and tgrelid = 'public.employee_account_links'::regclass and not tgisinternal and tgenabled = 'O'));
+  perform pg_temp.assert('guard is the repo version (allows the lifecycle stamps)',
+    pg_get_functiondef('public.employee_account_links_guard_update()'::regprocedure) like '%access_revoked_at%'
+    and pg_get_functiondef('public.employee_account_links_guard_update()'::regprocedure) like '%last_synced_at%');
+  perform pg_temp.assert('guard keeps its search_path pin and is not security definer',
+    (select not prosecdef and proconfig @> array['search_path=""'] from pg_proc where oid = 'public.employee_account_links_guard_update()'::regprocedure));
+  perform pg_temp.assert('guard is not executable by anyone',
+    not has_function_privilege('anon', 'public.employee_account_links_guard_update()', 'execute')
+    and not has_function_privilege('authenticated', 'public.employee_account_links_guard_update()', 'execute')
+    and not has_function_privilege('service_role', 'public.employee_account_links_guard_update()', 'execute')
+    and not exists (select 1 from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                     where p.oid = 'public.employee_account_links_guard_update()'::regprocedure and a.grantee = 0));
+
+  -- what MAY change: the flags, updated_at and the five lifecycle stamps, one at a time
+  update public.employee_account_links set managed_status = false where app_user_id = v_id;
+  update public.employee_account_links set managed_status = true where app_user_id = v_id;
+  update public.employee_account_links set managed_location = true where app_user_id = v_id;
+  update public.employee_account_links set managed_role = true where app_user_id = v_id;
+  update public.employee_account_links set updated_at = now() where app_user_id = v_id;
+  update public.employee_account_links set terminated_at = now() where app_user_id = v_id;
+  update public.employee_account_links set reactivated_at = now() where app_user_id = v_id;
+  update public.employee_account_links set revoked_woven_status = 'terminated' where app_user_id = v_id;
+  update public.employee_account_links set access_revoked_at = now() where app_user_id = v_id;
+  update public.employee_account_links set last_synced_at = now() where app_user_id = v_id;
+  update public.employee_account_links set access_revoked_at = null, reactivated_at = null, terminated_at = null, revoked_woven_status = null where app_user_id = v_id;
+  perform pg_temp.assert('allowed updates took effect', (select managed_status and managed_location and managed_role and terminated_at is null from public.employee_account_links where app_user_id = v_id));
+end;
+$$;
+
+-- what may NEVER change: the link's identity (even for a superuser: the trigger fires for everyone)
+do $$
+declare
+  v_id uuid := (select id from g);
+  v_other uuid := (select manager from people);
+  v_msg constant text := 'employee_account_links: only managed_status, managed_location and managed_role can change (and, through the termination functions, the termination and rehire record); a link''s identity never does';
+  v_set text;
+begin
+  foreach v_set in array array[
+    'set_by = ''someone else''',
+    'link_method = ''admin_manual''',
+    'external_employee_id = ''EMP-ELSE''',
+    'management = ''not_woven_managed''',
+    'reason = ''edited''',
+    'created_at = now() - interval ''1 day''',
+    'first_provisioned_at = now()',
+    'provisioned_by_source = ''woven''',
+    format('app_user_id = %L', v_other)
+  ] loop
+    perform pg_temp.expect_code('identity: ' || v_set, format('update public.employee_account_links set %s where app_user_id = %L', v_set, v_id), v_msg);
+  end loop;
+  -- a mixed update (an allowed column AND an identity column) is refused as a whole
+  perform pg_temp.expect_code('identity mixed with a stamp',
+    format('update public.employee_account_links set last_synced_at = now(), set_by = ''x'' where app_user_id = %L', v_id), v_msg);
+  perform pg_temp.assert('nothing about the identity changed',
+    (select set_by = 'admin:reviewer@example.test' and link_method = 'admin_confirmed_email' and external_employee_id = 'EMP70' and management = 'woven_linked'
+       from public.employee_account_links where app_user_id = v_id));
+end;
+$$;
+
+-- service_role (the server's role) holds no UPDATE on links at all: the guard is the second lock
+select set_config('t.g', (select id::text from g), true);
+set local role service_role;
+select pg_temp.expect_code('service_role cannot update a link',
+  format('update public.employee_account_links set managed_status = false where app_user_id = %L', current_setting('t.g')), 'permission denied for table employee_account_links');
+select pg_temp.expect_code('service_role cannot update an identity column either',
+  format('update public.employee_account_links set set_by = ''x'' where app_user_id = %L', current_setting('t.g')), 'permission denied for table employee_account_links');
+reset role;
+
 rollback;

@@ -50,6 +50,14 @@ for migration in "$REPO"/supabase/migrations/*.sql; do
     exit 1
   fi
   count=$((count + 1))
+  # PRODUCTION PARITY: the live database has a hand-applied guard trigger on employee_account_links that no
+  # migration creates. Reproduce it right after the table exists, BEFORE later migrations, as in production.
+  # VERIFY_PARITY=0 builds without it.
+  if [ "$(basename "$migration")" = "20261002002000_woven_account_links.sql" ] && [ "${VERIFY_PARITY:-1}" != "0" ]; then
+    "${AS_POSTGRES[@]}" -1 -f "$REPO/supabase/tests/fixtures/production_parity_links_guard.sql" >"$ROOT/migration.out" 2>"$ROOT/migration.err" || {
+      echo "FAILED: production_parity_links_guard.sql"; cat "$ROOT/migration.err"; exit 1; }
+    echo "production-parity fixture applied (live-only links guard trigger)"
+  fi
 done
 echo "applied $count migrations"
 

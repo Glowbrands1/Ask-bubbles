@@ -101,3 +101,27 @@ Table `employee_access_shadow_reviews`: append-only, RLS forced, service_role SE
   the Access Preview copy still says plans are "never applied".
 - The local-stack tests (real Auth) were not extended; the database half is executed on a throwaway Postgres by `supabase/tests/woven_disable_terminated_checks.sql`
   through `bash scripts/db/verify-migrations.sh`.
+
+## 6. Production parity: live-only objects (found by a read-only comparison of the live DB with the repo migrations)
+
+The LIVE Ask Bubbles database has objects that no repo migration creates (applied by hand, CRLF line endings, not in its migration history):
+
+1. **trigger `employee_account_links_guard_update`** (BEFORE UPDATE on `employee_account_links`) and
+2. **function `public.employee_account_links_guard_update()`** (plpgsql, not security definer, `search_path ''`, executable by PUBLIC), which allows ONLY
+   `managed_status`, `managed_location`, `managed_role` and `updated_at` to change.
+3. **function `public.auth_clear_user_credentials(uuid)`** (security definer, service_role-only). **Live-only; no repo code uses it; nothing here uses or
+   depends on it, and it was deliberately not reproduced.**
+
+**Why it mattered.** Triggers fire inside SECURITY DEFINER functions, so on the live database the migration's functions (which stamp `terminated_at`, `reactivated_at`,
+`access_revoked_at`, `revoked_woven_status`, `last_synced_at`) were refused with `check_violation`, while every test passed against a database built only from the repo.
+**Reproduced** (before the fix) with the fixture present: `rls_checks.sql` failed (`anon may execute employee_account_links_guard_update()`, the live function is PUBLIC-executable) and
+`woven_disable_terminated_checks.sql` failed on the first stamp (`employee_account_links: only managed_status, managed_location and managed_role can change`).
+
+**Fix, inside the (still unapplied) migration.** It now takes the guard over: `create or replace function` + `drop trigger if exists` + `create trigger`, so the end state is identical whether or not
+the live copy exists. Allowed to change: the three flags, `updated_at`, and the five lifecycle stamps. Refused: the link's identity (`app_user_id`, `source_system`, `management`,
+`external_employee_id`, `link_method`, `provisioned_by_source`, `first_provisioned_at`, `reason`, `set_by`, `created_at`). It stays a plain (invoker) trigger function with the search_path pinned (it reads only
+OLD/NEW, so SECURITY DEFINER would add nothing) and its EXECUTE is revoked from everyone (a trigger function is not an API). service_role still holds no UPDATE on the table: the guard is the second lock.
+**Applying this migration therefore also changes a live-only object's body and grants** (and puts it under version control) — review it as such.
+
+**Test fixture.** `supabase/tests/fixtures/production_parity_links_guard.sql` reproduces exactly the live function and trigger. `scripts/db/verify-migrations.sh` and `scripts/local-stack/up.sh` apply it right after
+`20261002002000_woven_account_links.sql` (before the migration under test, as in production); `VERIFY_PARITY=0` / `LOCAL_STACK_PARITY=0` build without it. The checks pass in both builds. Do not apply the fixture to a real project.

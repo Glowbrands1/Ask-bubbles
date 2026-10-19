@@ -265,6 +265,57 @@ as $$
   select encode(sha256(convert_to(coalesce(array_to_string(array(select d.x from (select distinct x from unnest(p_ids) x) d order by d.x collate "C"), E'\n'), ''), 'UTF8')), 'hex');
 $$;
 
+-- ------------------------------------------- 4b. the link-update guard (repo-managed) ---
+--
+-- PRODUCTION PARITY. The LIVE database already has a trigger of this name on
+-- employee_account_links, applied by hand and in no migration, whose function
+-- allows ONLY the three managed_* flags and updated_at to change. Triggers fire
+-- inside SECURITY DEFINER functions too, so against that database the
+-- stamps below (terminated_at, reactivated_at, access_revoked_at,
+-- revoked_woven_status, last_synced_at) would be refused with check_violation.
+-- So this migration takes the guard over: create-or-replace the function and
+-- re-create the trigger, so that WHETHER OR NOT the live one exists the end state
+-- is the same, and is in the repository:
+--
+--   may change   managed_status, managed_location, managed_role, updated_at,
+--                and the lifecycle stamps this file's functions write
+--   never change a link's identity: app_user_id, source_system, management,
+--                external_employee_id, link_method, provisioned_by_source,
+--                first_provisioned_at, reason, set_by, created_at
+--
+-- It stays a plain (invoker) trigger function with the search_path pinned: it
+-- reads only the OLD and NEW rows (to_jsonb), touches no table, and needs no
+-- privilege, so there is nothing for SECURITY DEFINER to add. Its EXECUTE is
+-- revoked from every role (a trigger function is not an API; the live one was
+-- executable by PUBLIC). service_role still holds no UPDATE on the table, so
+-- the guard is the second lock behind the missing grant.
+
+create or replace function public.employee_account_links_guard_update()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_mutable constant text[] := array[
+    'managed_status', 'managed_location', 'managed_role', 'updated_at',
+    'terminated_at', 'reactivated_at', 'access_revoked_at', 'revoked_woven_status', 'last_synced_at'
+  ];
+begin
+  if (to_jsonb(new) - v_mutable) is distinct from (to_jsonb(old) - v_mutable) then
+    raise exception 'employee_account_links: only managed_status, managed_location and managed_role can change (and, through the termination functions, the termination and rehire record); a link''s identity never does'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.employee_account_links_guard_update() from public, anon, authenticated, service_role;
+
+drop trigger if exists employee_account_links_guard_update on public.employee_account_links;
+create trigger employee_account_links_guard_update
+  before update on public.employee_account_links
+  for each row execute function public.employee_account_links_guard_update();
+
 -- --------------------------------------------- 5. the shadow-review gate (D) ---
 
 create or replace function public.employee_access_review_state()
