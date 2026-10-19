@@ -73,7 +73,7 @@ const UNCHANGED: [string, string][] = [
   ["resignation-exit", "Notify home office of employee’s final date of employment for HR, Payroll, and Security System purposes."], // D11 held
   ["demotion", "or the monthly manager bonus"], // DE-3 held
   ["demotion", "Any elected benefits will terminate"],
-  ["prescreen-phone-interview", "Are you willing to use our services as part of your Sun Tan City uniform?"], // D14 is Phase 2B, a separate PR
+  // The prescreen uniform question (D14) was removed by Phase 2B (phase-2b-prescreen.test.ts), so it is no longer pinned here.
   ["tanning-consultant-interview", "Sun Tan City Core Values"], // D15 held
   ["tanning-consultant-interview", "Our company has five core values."], // D16 held
   ["tanning-consultant-interview", "overseeing daily store operations"], // D17 held
@@ -130,7 +130,7 @@ describe("the four approved wording changes", () => {
     expect(raw("sdit-epp")).toContain('"key":"client_engagement"');
     expect(raw("sdit-epp")).toContain('"key":"client_service"');
     expect(raw("management-interview-round-1")).toContain('"hands_on_work_notes"');
-    expect(raw("prescreen-phone-interview")).toContain('"uniform_services"'); // removed only by Phase 2B
+    expect(raw("prescreen-phone-interview")).not.toContain('"uniform_services"'); // removed by Phase 2B, not by this change
     expect(seed("sdit-epp").variants).toEqual([{ key: expect.any(String), label: "SDIT review", role: "Training Store Director", roleAbbr: "SDIT" }]);
     expect(seed("tsd-epp").variants).toEqual([{ key: expect.any(String), label: "TSD review", role: "District Manager", roleAbbr: "TSD" }]);
     expect(seed("fttc-epp").variants).toEqual([{ key: expect.any(String), label: "FTTC review", role: "Store Director", roleAbbr: "TC" }]);
@@ -161,7 +161,7 @@ describe("the four approved wording changes", () => {
       "management-interview-round-1": 4,
     });
     for (const key of ["coaching", "dpoa", "policy-review", "follow-up-coaching", "position-transfer", "prescreen-phone-interview", "resignation-exit", "tanning-consultant-interview", "management-interview-round-2"]) {
-      expect(seed(key).revision, key).toBe(({ coaching: 2, dpoa: 5, "policy-review": 2, "follow-up-coaching": 2, "position-transfer": 1, "prescreen-phone-interview": 2, "resignation-exit": 3, "tanning-consultant-interview": 3, "management-interview-round-2": 3 } as Record<string, number>)[key]);
+      expect(seed(key).revision, key).toBe(({ coaching: 2, dpoa: 5, "policy-review": 2, "follow-up-coaching": 2, "position-transfer": 1, "prescreen-phone-interview": 3, "resignation-exit": 3, "tanning-consultant-interview": 3, "management-interview-round-2": 3 } as Record<string, number>)[key]);
     }
   });
 });

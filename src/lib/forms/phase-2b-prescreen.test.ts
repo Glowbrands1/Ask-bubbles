@@ -118,7 +118,7 @@ describe("the prescreen without the uniform question", () => {
       "policy-review": 2,
       "follow-up-coaching": 2,
       "tanning-consultant-interview": 3,
-      "management-interview-round-1": 3,
+      "management-interview-round-1": 4, // Phase 2A re-issue
       "management-interview-round-2": 3,
       "resignation-exit": 3,
     });
