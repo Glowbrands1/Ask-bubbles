@@ -51,9 +51,47 @@ const FOLD = (text: string) =>
     .trim();
 
 const TITLE_ASK = /\b(?:job\s+)?(?:title|position|role)\b|\bwhat\s+does\s+\w+(?:\s+\w+)?\s+do\b/i;
-const LOOKUP_VERB = /\b(?:what|which|who|tell me|confirm|verify|check|look\s*up|find|is|are)\b/i;
+const LOOKUP_VERB = /\b(?:what|whats|what['’]s|which|who|whos|who['’]s|tell me|confirm|verify|check|look\s*up|find|is|are)\b/i;
+/** "sarah miller title?" — a bare name and the word title, nothing else. */
+const BARE_TITLE_LOOKUP = /^[\w'’ -]{3,40}\s+(?:job\s+)?(?:title|position|role)\s*\??$/i;
 const STORE_ASK = /\b(?:store|location)\b/i;
 const MAX_LOOKUP_WORDS = 22;
+
+/** Words that may stand right before a name or its title in a question, and are not part of it. */
+const NOT_NAME_WORDS = new Set(
+  "what whats what's which who whos whom how where when why is are was does do can could tell me check confirm verify find look up the a an of for about their his her job current currently title position role please and or to my our".split(
+    " ",
+  ),
+);
+
+/**
+ * A name typed without capitals: the one or two words just before "title",
+ * "position" or "role" ("whats paulyne camacho title"), or the two words that
+ * end "what about …" / "who is …". The roster decides whether it is anyone —
+ * this only says a name might be here, so the lookup is attempted at all.
+ */
+export function lowerCaseNames(text: string): string[] {
+  const clean = text.trim().replace(/[?!.]+$/g, "");
+  const words = (value: string) => value.split(/\s+/).filter(Boolean);
+  const pick = (candidates: string[]): string | null => {
+    const kept = candidates.filter((word) => !NOT_NAME_WORDS.has(word.toLowerCase()) && /^[A-Za-z][A-Za-z'’-]*$/.test(word));
+    return kept.length >= 2 ? kept.slice(-2).join(" ") : null;
+  };
+  const found: string[] = [];
+  const beforeTitle = /^(.*?)\s+(?:job\s+)?(?:title|position|role)\b/i.exec(clean);
+  if (beforeTitle) {
+    const name = pick(words(beforeTitle[1]!).slice(-3));
+    if (name) found.push(name);
+  }
+  const afterAbout = /\b(?:what about|how about|who is|who's|whos|tell me about|look up|lookup)\s+(.+)$/i.exec(clean);
+  if (afterAbout) {
+    const name = pick(words(afterAbout[1]!).slice(0, 3).filter((word) => !NOT_NAME_WORDS.has(word.toLowerCase())).slice(0, 2));
+    if (name && !found.includes(name)) found.push(name);
+  }
+  return found.map((name) =>
+    name.replace(/\b([a-z])/g, (letter) => letter.toUpperCase()),
+  );
+}
 const PRONOUN = /\b(?:she|he|they|her|hers|his|their|theirs|him|them)\b/i;
 const ABOUT_PERSON = /\b(?:store|stores|work|works|working|employed|employment|active|status|located|where)\b/i;
 const HISTORY_TURNS = 8;
@@ -125,9 +163,15 @@ async function resolve({ question: asked, history = [], actor, index: given, now
   // "Sarah Miller's title" names Sarah Miller; "What's" is not part of a name.
   const unpossessed = question.replace(/['’]s\b/gi, "");
   const capitalisedPair = /\b[A-Z][a-zA-Z'’-]+\s+[A-Z][a-zA-Z'’-]+\b/.test(unpossessed);
-  const typedNames = extractEmployeeNames(unpossessed)
+  const capitalised = extractEmployeeNames(unpossessed)
     .map((name) => name.replace(/^(?:what|which|who|whom|how|where|when|why|is|are|does|do|can|could|tell me|check|confirm|verify|find)\s+/i, "").trim())
     .filter((name) => name.length > 0);
+  // Names typed in lower case ("whats paulyne camacho's title") are names too.
+  const lowerNames = capitalised.length > 0 ? [] : lowerCaseNames(unpossessed);
+  const typedNames = capitalised.length > 0 ? capitalised : lowerNames;
+  // A lower-case name is only a guess that there is a name here ("attendance policy" is not
+  // anyone): it can find or nearly find an employee, but is never reported as "not found".
+  const speculative = lowerNames.length > 0;
   const index = given ?? (await loadStoreIndex());
   const reading = readStoreMentions(question, index);
   const namesStore = reading.mentions.length > 0 || reading.unmatched.length > 0;
@@ -268,7 +312,7 @@ async function resolve({ question: asked, history = [], actor, index: given, now
           direct.push(`Did you mean ${unique.map((name) => `**${name}**`).join(" or ")}? I want to be sure before I look up a job title.`);
         }
       }
-      if (matched.size === 0 && confirm.length === 0 && asksTitle && typedNames.length > 0) {
+      if (matched.size === 0 && confirm.length === 0 && asksTitle && typedNames.length > 0 && !speculative) {
         const out = unverifiedWithoutRecord("not_found", typedNames[0]!);
         employees.push(`Employee: ${out.note?.replace(/\*\*/g, "")}`);
         direct.push(out.note!);
@@ -280,7 +324,7 @@ async function resolve({ question: asked, history = [], actor, index: given, now
       );
       candidatesAsked = true;
       if (asksTitle) direct.push("Who do you mean? I can look up a job title once I know which employee — tell me their full name.");
-    } else if (asksTitle && (typedNames.length > 0 || capitalisedPair || pronounAsk)) {
+    } else if (asksTitle && !(speculative && !capitalisedPair && !pronounAsk) && (typedNames.length > 0 || capitalisedPair || pronounAsk)) {
       const unavailable = loaded.status === "unavailable";
       const out = unverifiedWithoutRecord(
         loaded.status === "ok" ? "not_found" : unavailable ? "unavailable" : "not_checked",
@@ -299,7 +343,7 @@ async function resolve({ question: asked, history = [], actor, index: given, now
 
   /* --------------------------------------------------- an outright answer */
   const words = question.trim().split(/\s+/).length;
-  const onlyAskingTitle = asksTitle && LOOKUP_VERB.test(question) && words <= MAX_LOOKUP_WORDS;
+  const onlyAskingTitle = asksTitle && (LOOKUP_VERB.test(question) || BARE_TITLE_LOOKUP.test(question.trim())) && words <= MAX_LOOKUP_WORDS;
   if (onlyAskingTitle && direct.length > 0 && (singleLookup || candidatesAsked || employees.length > 0)) {
     return { block: null, direct: { content: direct.join("\n\n"), citations: [], coverage: "not_applicable" } };
   }

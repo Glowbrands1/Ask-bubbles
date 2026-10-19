@@ -214,3 +214,70 @@ describe("a Woven job title in the question is not a person", () => {
     expect(block).toBeNull();
   });
 });
+
+describe("names typed in lower case are names too", () => {
+  it.each([
+    "whats sarah miller's title?",
+    "what is sarah miller job title",
+    "SARAH MILLER title?",
+  ])("%s", async (question) => {
+    const { direct } = await ask(question);
+    expect(direct!.content).toContain("**Sarah Miller**'s job title in Woven is **Production Associate**");
+  });
+
+  it.each(["what about sarah miller?", "who is sarah miller"])("%s — the verified record rides along for the model", async (question) => {
+    const { direct, block } = await ask(question);
+    expect(direct).toBeNull();
+    expect(block).toContain("Employee: Sarah Miller — Woven job title: Production Associate");
+  });
+
+  it("a possessive typed without its apostrophe is asked about, not guessed", async () => {
+    expect((await ask("whats sarah millers title")).direct!.content).toContain("Did you mean **Sarah Miller**");
+  });
+
+  it("a lower-case name Woven does not have gets nothing invented: no record, no title", async () => {
+    const out = await ask("whats zelda quinn's title?");
+    expect(out.block ?? "").not.toMatch(/Production Associate|Store Manager/);
+    expect(out.direct?.content ?? "").not.toMatch(/Production Associate|Store Manager/);
+  });
+
+  it("a lower-case close spelling is asked about", async () => {
+    const { direct } = await ask("whats sara miler's title?");
+    expect(direct!.content).toContain("Did you mean **Sarah Miller**");
+  });
+
+  it("lower-case names outside the asker's scope look like names Woven lacks", async () => {
+    const outside = await ask("whats dana moss's title?", ONE);
+    const missing = await ask("whats zelda quinn's title?", ONE);
+    expect(JSON.stringify(outside)).not.toContain("Store Manager");
+    expect(JSON.stringify(outside).replace("Dana Moss", "X")).toBe(JSON.stringify(missing).replace("Zelda Quinn", "X"));
+  });
+
+  it("ordinary lower-case questions still name nobody and read nothing", async () => {
+    // A possible name costs one read to check; it is not anyone, so nothing is said.
+    expect(await ask("whats the attendance policy title?")).toEqual({ block: null, direct: null });
+    reads.roster = 0;
+    expect(await ask("what is the dress code")).toEqual({ block: null, direct: null });
+    expect(reads.roster).toBe(0);
+  });
+});
+
+describe("stores, names and titles are read in any case in general chat", () => {
+  it.each([
+    ["which store is dawley farms", "Store 338"],
+    ["WHICH STORE IS DAWLEY FARMS?", "Store 338"],
+    ["what is store 236", "Grand Island, NE (Store 236)"],
+    ["what store is ne grand island", "Store 236"],
+  ])("%s", async (question, expected) => {
+    expect((await ask(question)).direct!.content).toContain(expected);
+  });
+
+  it.each(["WHATS SARAH MILLER'S TITLE?", "whats SARAH miller's title", "what is sarah miller's job title at store 236"])("%s", async (question) => {
+    expect((await ask(question)).direct!.content).toContain("**Production Associate**");
+  });
+
+  it("a lower-case title in the question does not turn into a person", async () => {
+    const { direct } = await ask("is sarah miller a production associate? whats her title");
+    expect(direct?.content ?? "").toContain("Production Associate");
+  });
+});
