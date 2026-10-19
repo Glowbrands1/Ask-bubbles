@@ -255,6 +255,12 @@ const neutral = (text: string) =>
     .replace(/\bclients\b|\bcustomers\b/g, "guests")
     .replace(/\bClient\b|\bCustomer\b/g, "Guest")
     .replace(/\bclient\b|\bcustomer\b/g, "guest")
+    // Phase 2A (approved 2026-10-19), exact phrases only: D3, D4, D12, D18. The reference text is read through
+    // the same four substitutions; anything else that differs still fails the layout/content comparison.
+    .replace(/Guest Engagement Strategies/g, "7G Service")
+    .replace(/this training document/g, "this Employee Performance Plan")
+    .replace(/PT Tanning Consultant/g, "PT (New Job Title)")
+    .replace(/cleaning beds and doing laundry/g, "cleaning the Makery and equipment and keeping the workspace organized")
     .replace(/\s+/g, " ")
     .trim();
 

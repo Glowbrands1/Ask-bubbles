@@ -200,7 +200,7 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
       ),
       ...question(
         "hands_on_work",
-        "This role involves hands-on work like cleaning beds and doing laundry. How do you lead by example in these tasks?",
+        "This role involves hands-on work like cleaning the Makery and equipment and keeping the workspace organized. How do you lead by example in these tasks?",
       ),
       ...question(
         "team_training",
@@ -681,7 +681,7 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 12,
     document: firstRoundManagementInterviewDocument(),
     variants: [],
-    revision: 3,
+    revision: 4,
     revisionNote: "Published from the 02. First Round Managment Interview Form source document.",
     bundledPdfName: "First Round Management Interview Form.pdf",
   },
