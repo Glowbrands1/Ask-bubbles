@@ -77,6 +77,17 @@ describe("general chat resolves stores and verifies employees", () => {
     expect(seen.system).toContain("Never state any of them from anywhere else");
   });
 
+  it("the prompt never lets the model state a title the deterministic records did not give it", async () => {
+    await answerQuestion(request("What is the attendance policy?"), actor);
+    // Always on, with or without a record attached.
+    expect(seen.system).toContain("Never state a particular employee's job title, store assignment or employment status unless a VERIFIED RECORDS section below gives it");
+    seen.entities = { block: "VERIFIED RECORDS (x)\n\nEmployee: Sarah Miller — NOT VERIFIED.", direct: null };
+    await answerQuestion(request("Is Sarah Miller eligible for the attendance bonus?"), actor);
+    // And where somebody's wording differs from the record, neither is silently adopted.
+    expect(seen.system).toContain("never silently adopt either");
+    expect(seen.system).toContain("Where it says to ask which store or person, ask rather than choose");
+  });
+
   it("leaves an ordinary question exactly as it was", async () => {
     await answerQuestion(request("What is the attendance policy?"), actor);
     expect(seen.model!.verifiedRecords).toBeNull();

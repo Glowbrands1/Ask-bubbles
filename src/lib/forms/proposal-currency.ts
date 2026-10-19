@@ -3,6 +3,7 @@ import "server-only";
 import { acceptedNameSuggestions } from "./employee-match";
 import { isQuestion } from "./employment-change";
 import { employeeState, managerContext, samePerson } from "./proposal";
+import { answersToOpenQuestions } from "./question-answers";
 import { readFormRequests } from "./form-requests";
 import { detectTemplateIntent } from "./template-intent";
 import type { ChatMessage } from "@/types";
@@ -40,8 +41,14 @@ export function checkProposalIsCurrent(input: {
   templateKey: string;
   employeeName: string;
 }): ProposalCurrency {
+  // An answer to the position / date / store question is not a name: see `question-answers.ts`.
+  const answers = answersToOpenQuestions(input.conversation);
   const turns = input.conversation.filter(
-    (message) => message.role === "user" && typeof message.content === "string" && message.content.trim() !== "",
+    (message) =>
+      message.role === "user" &&
+      typeof message.content === "string" &&
+      message.content.trim() !== "" &&
+      !answers.has(message.content.trim()),
   );
   const last = turns[turns.length - 1];
   if (!last) return { current: true };

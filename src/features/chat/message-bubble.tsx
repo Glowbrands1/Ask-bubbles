@@ -548,6 +548,20 @@ function FormProposalCard({
             <Missing>Not yet — tell Bubbles who this form is about</Missing>
           )}
         </ProposalRow>
+        {proposal.employeeRole || POSITION_FORMS.has(proposal.templateKey) ? (
+          <ProposalRow label="Position">
+            {proposal.employeeRole ? (
+              <>
+                {proposal.employeeRole}
+                {proposal.employeeRoleSource === "woven" ? (
+                  <span className="text-muted-foreground"> · from Woven — tell Bubbles if it has changed</span>
+                ) : null}
+              </>
+            ) : (
+              <Missing>Not set — tell Bubbles their position, or fill it in on the form</Missing>
+            )}
+          </ProposalRow>
+        ) : null}
         {proposal.employeeName && proposal.employeeVerification ? (
           <ProposalRow label="Woven">
             {proposal.employeeVerification.status === "verified" ? (
@@ -655,6 +669,9 @@ function storeText(id: string): string {
   const store = locationById(id);
   return store ? describeStore(store) : id;
 }
+
+/** The forms whose Job Title is a record fact Bubbles fills from Woven or asks for. */
+const POSITION_FORMS: ReadonlySet<string> = new Set(["coaching", "follow-up-coaching", "dpoa", "policy-review"]);
 
 function ProposalRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (

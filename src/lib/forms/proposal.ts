@@ -2,7 +2,7 @@ import "server-only";
 
 import { businessToday } from "@/lib/business-date";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
-import { COMPANY_LOCATIONS, locationByCode, locationNameKey } from "@/lib/locations";
+import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
@@ -14,7 +14,7 @@ import {
   readsAsTeamSubject,
   TEAM_SUBJECT_LABEL,
 } from "./team-subject";
-import { proposeLocation } from "./location-scope";
+import { proposeLocationWithSource, type LocationProposal } from "./location-scope";
 import { ROSTER_STORE_INDEX, rosterLocationName } from "./location-mention";
 import { isStoreName, type StoreIndex } from "@/lib/stores/resolver";
 import type { AccessScope, ChatFormProposal, ChatMessage, EmployeeVerification } from "@/types";
@@ -498,6 +498,23 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
     for (const match of text.matchAll(/\b(?:employee|team member|staff member)\s+named\s+(\S+(?:\s+\S+)?)/gi)) {
       const candidate = readTypedName(match[1]!.split(/\s+/), false);
       if (candidate) marked.push(candidate);
+    }
+  }
+  /*
+   * "my employee tiffany lempka has been late": the same marker as the manager
+   * says it, with the name typed in lower case. Admin feedback, 16 Oct 2026 —
+   * a Corrective Action asked for with exactly that sentence was answered "give
+   * me their name", and the manager had to say it again. Only after "my / our"
+   * plus a person noun, and `readTypedName` still refuses topic words,
+   * form words and verbs, so "my employee handbook" and "my employee was late"
+   * name nobody.
+   */
+  if (marked.length === 0) {
+    for (const match of text.matchAll(
+      /\b(?:my|our)\s+(?:employee|team member|staff member|associate|coworker)\s+(\S+(?:\s+\S+)?)/gi,
+    )) {
+      const candidate = readTypedName(match[1]!.split(/\s+/), false);
+      if (candidate && typedNameAllowed(candidate)) marked.push(candidate);
     }
   }
   if (marked.length > 0) {
@@ -1456,6 +1473,28 @@ export function extractJobTitle(text: string): string | null {
 }
 
 /**
+ * The store a proposal carries, read from the manager's words, then the
+ * employee's Woven stores, then the account — the one reading `buildProposal`
+ * and the form flow's read-back both use.
+ */
+export function locationFor(input: ProposalInput, team: boolean): LocationProposal {
+  return proposeLocationWithSource(
+    input.scope,
+    input.locationText ?? input.context.text,
+    team ? [] : (input.employeeLocationIds ?? []),
+    input.storeIndex,
+    {
+      reportUnmatched: input.reportUnmatchedStore ?? true,
+      ...(input.locationText === undefined ? { turns: input.context.messages.map((message) => message.content) } : {}),
+      bareReply: input.storeReply?.bareReply ?? false,
+      ...(input.storeReply?.confirmedCode
+        ? { confirmedStoreId: locationByCode(input.storeReply.confirmedCode)?.id }
+        : {}),
+    },
+  );
+}
+
+/**
  * Assembles the proposal from parts that were each established, not guessed.
  *
  * THE TEMPLATE IS ALREADY VALIDATED by the time this is called — the caller
@@ -1478,20 +1517,7 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
    * THE MANAGER'S WORDS, THEN THE EMPLOYEE'S SALON, THEN THE ACCOUNT. A salon
    * is used only where their scope proves it; see `proposeLocation`.
    */
-  const location = proposeLocation(
-    input.scope,
-    input.locationText ?? input.context.text,
-    team ? [] : (input.employeeLocationIds ?? []),
-    input.storeIndex,
-    {
-      reportUnmatched: input.reportUnmatchedStore ?? true,
-      ...(input.locationText === undefined ? { turns: input.context.messages.map((message) => message.content) } : {}),
-      bareReply: input.storeReply?.bareReply ?? false,
-      ...(input.storeReply?.confirmedCode
-        ? { confirmedStoreId: locationByCode(input.storeReply.confirmedCode)?.id }
-        : {}),
-    },
-  );
+  const location = locationFor(input, team);
 
   const employeeName = team
     ? TEAM_SUBJECT_LABEL
@@ -1581,6 +1607,13 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
         }
       : {}),
     ...(input.employeeVerification && !team ? { employeeVerification: input.employeeVerification } : {}),
+    ...(location.resolution === "needs_selection" && location.namedAmbiguous
+      ? {
+          locationCandidates: location.authorizedIds
+            .map((id) => locationById(id)?.name)
+            .filter((name): name is string => Boolean(name)),
+        }
+      : {}),
     status,
     sourceMessageIds: input.context.ids,
     ...(team ? { subject: "team" as const } : {}),

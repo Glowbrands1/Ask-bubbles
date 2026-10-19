@@ -5,7 +5,8 @@ import { unverifiedWithoutRecord, verifyEmployee } from "@/lib/forms/employee-ve
 import { namedStoreIds } from "@/lib/forms/location-scope";
 import { locationById } from "@/lib/locations";
 import { describeStore, readStoreMentions, type StoreIndex } from "@/lib/stores/resolver";
-import { loadStoreIndex } from "@/lib/stores/woven-aliases";
+import { loadKnownTitles, loadStoreIndex } from "@/lib/stores/woven-aliases";
+import { neutralizeTitles } from "@/lib/forms/known-titles";
 
 import type { ChatActor } from "./form-proposal";
 import type { AskResponse } from "./types";
@@ -53,6 +54,9 @@ const TITLE_ASK = /\b(?:job\s+)?(?:title|position|role)\b|\bwhat\s+does\s+\w+(?:
 const LOOKUP_VERB = /\b(?:what|which|who|tell me|confirm|verify|check|look\s*up|find|is|are)\b/i;
 const STORE_ASK = /\b(?:store|location)\b/i;
 const MAX_LOOKUP_WORDS = 22;
+const PRONOUN = /\b(?:she|he|they|her|hers|his|their|theirs|him|them)\b/i;
+const ABOUT_PERSON = /\b(?:store|stores|work|works|working|employed|employment|active|status|located|where)\b/i;
+const HISTORY_TURNS = 8;
 
 /** Whole-word, whole-name occurrences of roster employees in a question. */
 function employeesNamed(question: string, roster: readonly RosterEmployee[]): RosterEmployee[] {
@@ -95,6 +99,8 @@ const NONE: EntityFacts = { block: null, direct: null };
 
 export async function resolveChatEntities(input: {
   question: string;
+  /** The conversation so far, so "what about her title?" can be tied to the person already established. */
+  history?: readonly { role: string; content: string }[];
   actor: ChatActor;
   index?: StoreIndex;
   now?: number;
@@ -106,12 +112,16 @@ export async function resolveChatEntities(input: {
   }
 }
 
-async function resolve({ question, actor, index: given, now }: {
+async function resolve({ question: asked, history = [], actor, index: given, now }: {
   question: string;
+  history?: readonly { role: string; content: string }[];
   actor: ChatActor;
   index?: StoreIndex;
   now?: number;
 }): Promise<EntityFacts> {
+  // A Woven job title ("Assistant General Manager") is not a person.
+  const titles = await loadKnownTitles();
+  const question = neutralizeTitles(asked, titles);
   // "Sarah Miller's title" names Sarah Miller; "What's" is not part of a name.
   const unpossessed = question.replace(/['’]s\b/gi, "");
   const capitalisedPair = /\b[A-Z][a-zA-Z'’-]+\s+[A-Z][a-zA-Z'’-]+\b/.test(unpossessed);
@@ -122,7 +132,16 @@ async function resolve({ question, actor, index: given, now }: {
   const reading = readStoreMentions(question, index);
   const namesStore = reading.mentions.length > 0 || reading.unmatched.length > 0;
 
-  if (!namesStore && !capitalisedPair && typedNames.length === 0) return NONE;
+  /*
+   * "WHAT ABOUT HER TITLE?" — a pronoun about somebody the conversation has
+   * clearly established. Clear means the most recent turn that names anyone in
+   * the asker's scope names exactly one person. Anything less is not guessed:
+   * the model is told to ask who is meant.
+   */
+  const pronounAsk =
+    PRONOUN.test(question) && (TITLE_ASK.test(question) || ABOUT_PERSON.test(question)) && typedNames.length === 0 && !capitalisedPair;
+
+  if (!namesStore && !capitalisedPair && typedNames.length === 0 && !pronounAsk) return NONE;
 
   const lines: string[] = [];
   const direct: string[] = [];
@@ -160,11 +179,30 @@ async function resolve({ question, actor, index: given, now }: {
   let singleLookup: { employee: RosterEmployee; title: string | null; verified: boolean } | null = null;
   let candidatesAsked = false;
 
-  if (capitalisedPair || typedNames.length > 0) {
+  if (capitalisedPair || typedNames.length > 0 || pronounAsk) {
     const loaded = await loadScopedRosterResult(actor.scope);
     if (loaded.status === "ok" && loaded.roster.length > 0) {
       const matched = new Map<string, RosterEmployee>();
       for (const employee of employeesNamed(unpossessed, loaded.roster)) matched.set(employee.id, employee);
+      let unclearWho = false;
+      if (pronounAsk) {
+        for (const turn of [...history].reverse().slice(0, HISTORY_TURNS)) {
+          if (typeof turn.content !== "string") continue;
+          const people = employeesNamed(neutralizeTitles(turn.content, titles).replace(/['’]s\b/gi, ""), loaded.roster);
+          if (people.length === 0) continue;
+          if (people.length === 1) matched.set(people[0]!.id, people[0]!);
+          else unclearWho = true;
+          break;
+        }
+        if (matched.size === 0) unclearWho = true;
+      }
+      if (unclearWho) {
+        employees.push(
+          "Employee: the question refers to someone by a pronoun and the conversation does not clearly establish who. Ask who they mean; do not state a title, store or status for anyone.",
+        );
+        candidatesAsked = true;
+        if (asksTitle) direct.push("Who do you mean? I can look up a job title once I know which employee — tell me their full name.");
+      }
       const confirm: string[] = [];
       for (const typed of typedNames) {
         const result = matchEmployeeName(typed, loaded.roster);
@@ -235,7 +273,14 @@ async function resolve({ question, actor, index: given, now }: {
         employees.push(`Employee: ${out.note?.replace(/\*\*/g, "")}`);
         direct.push(out.note!);
       }
-    } else if (asksTitle && (typedNames.length > 0 || capitalisedPair)) {
+    } else if (pronounAsk && loaded.status === "ok") {
+      // Nobody in the asker's scope has been established, so nobody can be named.
+      employees.push(
+        "Employee: the question refers to someone by a pronoun and the conversation does not clearly establish who. Ask who they mean; do not state a title, store or status for anyone.",
+      );
+      candidatesAsked = true;
+      if (asksTitle) direct.push("Who do you mean? I can look up a job title once I know which employee — tell me their full name.");
+    } else if (asksTitle && (typedNames.length > 0 || capitalisedPair || pronounAsk)) {
       const unavailable = loaded.status === "unavailable";
       const out = unverifiedWithoutRecord(
         loaded.status === "ok" ? "not_found" : unavailable ? "unavailable" : "not_checked",

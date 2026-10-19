@@ -1,5 +1,5 @@
 import { COMPANY_LOCATIONS, type CompanyLocation } from "@/lib/locations";
-import { resolveStoreText } from "@/lib/stores/resolver";
+import { parseStoreName, resolveStoreText } from "@/lib/stores/resolver";
 
 import { ROSTER_STORE_INDEX } from "./location-mention";
 
@@ -89,7 +89,13 @@ export function resolveSalonText(text: string): string | null {
  * "Testville".
  */
 export const SALON_PHRASE: string = (() => {
-  const names = COMPANY_LOCATIONS.flatMap((location) => [location.name, withoutPrefix(location)])
+  // The registered names, the city as written ("Lee's Summit"), and every phrase the shared
+  // resolver answers to ("Grand Island", "Omaha West Dodge") — one vocabulary for every form.
+  const names = [
+    ...COMPANY_LOCATIONS.flatMap((location) => [location.name, withoutPrefix(location), parseStoreName(location).city]),
+    ...ROSTER_STORE_INDEX.aliases.filter((alias) => alias.via !== "initials").map((alias) => alias.phrase),
+  ]
+    .filter((name, index, all) => name.trim() !== "" && all.indexOf(name) === index)
     .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"))
     .sort((a, b) => b.length - a.length);
   const named = names.length > 0 ? `|${names.join("|")}` : "";

@@ -15,6 +15,7 @@ const reads = { roster: 0 };
 const state: { rows: DirectoryRosterRow[]; outcome: "ok" | "unavailable" | "not_checked" } = { rows: [], outcome: "ok" };
 
 vi.mock("@/lib/stores/woven-aliases", () => ({
+  loadKnownTitles: async () => ["Production Associate", "Store Manager"],
   loadStoreIndex: async () => buildStoreIndex({ stores: COMPANY_LOCATIONS, extraAliases: ALIASES }),
 }));
 vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
@@ -40,7 +41,8 @@ const row = (id: string, first: string, last: string, locationIds: string[], pos
 const ALL: AccessScope = { level: "location", primaryAreaId: "loc-236", alsoCoversAreaIds: ["loc-66", "loc-67", "loc-219", "loc-225", "loc-264", "loc-338"] };
 const ONE: AccessScope = { level: "location", primaryAreaId: "loc-66", alsoCoversAreaIds: [] };
 const actor = (scope: AccessScope | null = ALL) => ({ role: "location_manager" as never, scope });
-const ask = (question: string, scope: AccessScope | null = ALL) => resolveChatEntities({ question, actor: actor(scope), now: NOW });
+const ask = (question: string, scope: AccessScope | null = ALL, history: { role: string; content: string }[] = []) =>
+  resolveChatEntities({ question, history, actor: actor(scope), now: NOW });
 
 beforeEach(() => {
   reads.roster = 0;
@@ -157,5 +159,58 @@ describe("any other question that names someone rides along with the verified re
   it("never throws: a failure leaves the question to be answered as before", async () => {
     state.rows = null as never;
     expect(await ask("How should I coach Sarah Miller?")).toEqual({ block: null, direct: null });
+  });
+});
+
+describe("follow-ups about someone the conversation has established", () => {
+  const talk = (...lines: [string, string][]) => lines.map(([role, content]) => ({ role, content }));
+  const ABOUT_SARAH = talk(["user", "Can you tell me about Sarah Miller?"], ["assistant", "Sure — what would you like to know about Sarah Miller?"]);
+
+  it("'What about her title?' answers for the one person clearly in play", async () => {
+    const { direct } = await ask("What about her title?", ALL, ABOUT_SARAH);
+    expect(direct!.content).toContain("**Sarah Miller**'s job title in Woven is **Production Associate**");
+  });
+
+  it("works for 'his', 'their', and for a store question that rides along with the record", async () => {
+    expect((await ask("And what is their job title?", ALL, ABOUT_SARAH)).direct!.content).toContain("Production Associate");
+    const where = await ask("Where does she work?", ALL, ABOUT_SARAH);
+    expect(where.direct).toBeNull();
+    expect(where.block).toContain("Employee: Sarah Miller — Woven job title: Production Associate; Woven store: Grand Island, NE (Store 236)");
+  });
+
+  it("uses the most recent person, not an earlier one", async () => {
+    const history = talk(["user", "What is Sarah Miller's job title?"], ["assistant", "…"], ["user", "And Dana Moss?"], ["assistant", "Dana Moss is …"]);
+    expect((await ask("What about her title?", ALL, history)).direct!.content).toContain("**Dana Moss**");
+  });
+
+  it("asks who is meant when the last turn names two people — and states nothing", async () => {
+    const history = talk(["user", "Compare Sarah Miller and Dana Moss for me"]);
+    const { direct } = await ask("What about her title?", ALL, history);
+    expect(direct!.content).toContain("Who do you mean?");
+    expect(direct!.content).not.toMatch(/Production Associate|Store Manager/);
+  });
+
+  it("asks who is meant when nobody has been established", async () => {
+    const { direct } = await ask("What about her title?", ALL, talk(["user", "What is the attendance policy?"]));
+    expect(direct!.content).toContain("Who do you mean?");
+  });
+
+  it("never carries over somebody outside the asker's scope", async () => {
+    const history = talk(["user", "What is Dana Moss's job title?"]);
+    const { direct } = await ask("What about her title?", ONE, history);
+    expect(direct!.content).toContain("Who do you mean?");
+    expect(direct!.content).not.toContain("Store Manager");
+  });
+
+  it("does not treat an ordinary pronoun question as a lookup", async () => {
+    expect(await ask("Should she be coached about attendance?", ALL, ABOUT_SARAH)).toEqual({ block: null, direct: null });
+  });
+});
+
+describe("a Woven job title in the question is not a person", () => {
+  it("'What does the Store Manager do at store 236?' names nobody", async () => {
+    const { direct, block } = await ask("What is Sarah Miller's job title — is she the Production Associate?");
+    expect(direct!.content).toContain("**Production Associate**");
+    expect(block).toBeNull();
   });
 });

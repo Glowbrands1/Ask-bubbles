@@ -101,9 +101,24 @@ const OWNED_STEP_BEFORE = new RegExp(
   "i",
 );
 
+/**
+ * "I verbally coached her on 10/5", "talked to him on 9/1": an earlier step told
+ * as something the manager DID, which carries no "had / got / previous" marker.
+ * Requires an object pronoun, so "coaching form on 10/2" is unaffected.
+ * Admin feedback, 16 Oct 2026: with "late on 10/15 … I coached her on 10/5" the
+ * coaching date counted as a second incident date.
+ */
+const DID_STEP_BEFORE =
+  /\b(?:verbal(?:ly)?\s+)?(?:coached|counsel(?:ed|led)|warned|talked to|spoke (?:to|with)|discussed (?:it |this )?with|addressed (?:it|this) with)\s+(?:her|him|them|the employee)\b[^.;\n]{0,30}$/i;
+
 function isOtherDate(text: string, index: number): boolean {
   const before = text.slice(0, index);
-  return FOLLOW_UP_BEFORE.test(before) || PRIOR_STEP_BEFORE.test(before) || OWNED_STEP_BEFORE.test(before);
+  return (
+    FOLLOW_UP_BEFORE.test(before) ||
+    PRIOR_STEP_BEFORE.test(before) ||
+    OWNED_STEP_BEFORE.test(before) ||
+    DID_STEP_BEFORE.test(before)
+  );
 }
 
 /**

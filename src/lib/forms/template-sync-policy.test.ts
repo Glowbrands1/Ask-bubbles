@@ -211,6 +211,7 @@ describe("ensureTemplateLibrary on a Preview", () => {
       revised: [],
       renamed: [],
       heldBack: [],
+      failed: [],
       skipped: { environment: "preview", reason: expect.stringMatching(/Preview/) },
     });
     expect(supabaseCalls.count).toBe(0);

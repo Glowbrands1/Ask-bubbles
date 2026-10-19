@@ -1,0 +1,112 @@
+{
+  "complete": {
+    "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Type of warning:** Verbal Warning, as you said — tell me if that should change · **Location:** Omaha, NE (West Dodge Rd), as you said — tell me if that should change\n\nIs payroll deduct applicable? **No** — tell me if that should change.\n\nYou mentioned more than one date (**10/5**, **10/15**). Which date goes on the form? Say \"most recent\" (10/15), pick one, or say \"today\" for the day you create it. Every date stays in the description of what happened — this only sets the form's Date, and until you choose it is dated today.\n\n**Position:** Operator, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+    "proposal": {
+      "proposalId": "prop-complete",
+      "templateKey": "dpoa",
+      "templateName": "Corrective Action Form",
+      "supportsInlineDraft": true,
+      "variantKey": null,
+      "employeeName": "Pat Rivera",
+      "employeeRole": "Operator",
+      "formDate": null,
+      "locationId": "loc-264",
+      "locationName": "Omaha, NE (West Dodge Rd)",
+      "locationResolution": "resolved",
+      "authorizedLocationIds": [],
+      "employeeVerification": {
+        "status": "verified",
+        "title": "Operator",
+        "storeIds": [
+          "loc-264"
+        ]
+      },
+      "status": "ready",
+      "sourceMessageIds": [
+        "m1"
+      ],
+      "payrollDeduct": "no",
+      "warningLevel": "verbal",
+      "locationSource": "manager",
+      "formDateCandidates": [
+        "2026-10-05",
+        "2026-10-15"
+      ],
+      "employeeRoleSource": "woven",
+      "issue": null
+    }
+  },
+  "ambiguousStore": {
+    "content": "Here is what I would put on a **Corrective Action Form**.\n\nMore than one store matches what you said — **Sioux Falls, SD (W 41st St)** or **Sioux Falls, SD (E 18th St)**? Tell me which one and I won't guess.\n\n**Position:** Makery Associate, from Woven — tell me if that has changed and I'll flag it for review.\n\n**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.",
+    "proposal": {
+      "proposalId": "prop-ambiguousStore",
+      "templateKey": "dpoa",
+      "templateName": "Corrective Action Form",
+      "supportsInlineDraft": false,
+      "variantKey": null,
+      "employeeName": "Casey Brandt",
+      "employeeRole": "Makery Associate",
+      "formDate": "2026-10-11",
+      "locationId": null,
+      "locationName": null,
+      "locationResolution": "needs_selection",
+      "authorizedLocationIds": [
+        "loc-225",
+        "loc-338"
+      ],
+      "locationSelection": {
+        "reason": "ambiguous",
+        "typed": "sioux falls"
+      },
+      "employeeVerification": {
+        "status": "verified",
+        "title": "Makery Associate",
+        "storeIds": [
+          "loc-66"
+        ]
+      },
+      "locationCandidates": [
+        "Sioux Falls, SD (W 41st St)",
+        "Sioux Falls, SD (E 18th St)"
+      ],
+      "status": "needs_location",
+      "sourceMessageIds": [
+        "m2"
+      ],
+      "payrollDeduct": null,
+      "warningLevel": "verbal",
+      "employeeRoleSource": "woven",
+      "issue": null
+    }
+  },
+  "noPosition": {
+    "content": "I'll draft a **Corrective Action Form** for **Sam Ortega** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Type of warning:** Verbal Warning, as you said — tell me if that should change · **Location:** Kearney, NE, as you said — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\nI didn't find **Sam Ortega** in the employee list for your stores, so the form will use the name exactly as you typed it, with no job title from Woven. Check the spelling before you file it.\n\nWhat is **Sam Ortega**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+    "proposal": {
+      "proposalId": "prop-noPosition",
+      "templateKey": "dpoa",
+      "templateName": "Corrective Action Form",
+      "supportsInlineDraft": true,
+      "variantKey": null,
+      "employeeName": "Sam Ortega",
+      "employeeRole": null,
+      "formDate": "2026-10-11",
+      "locationId": "loc-66",
+      "locationName": "Kearney, NE",
+      "locationResolution": "resolved",
+      "authorizedLocationIds": [],
+      "employeeVerification": {
+        "status": "unverified",
+        "title": null,
+        "reason": "not_found"
+      },
+      "status": "ready",
+      "sourceMessageIds": [
+        "m3"
+      ],
+      "payrollDeduct": null,
+      "warningLevel": "verbal",
+      "locationSource": "manager",
+      "issue": null
+    }
+  }
+}

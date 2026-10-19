@@ -187,6 +187,28 @@ const GENERIC_WORDS = new Set(
   ),
 );
 
+const DIRECTIONALS = new Set(["n", "s", "e", "w", "ne", "nw", "se", "sw", "north", "south", "east", "west"]);
+const ROAD_SUFFIXES = new Set([
+  "rd", "road", "st", "ave", "avenue", "blvd", "boulevard", "dr", "drive", "hwy", "highway", "pkwy", "ln", "lane", "way",
+]);
+
+/**
+ * The ways a manager shortens a road: "West Dodge Rd" → "west dodge rd",
+ * "west dodge", "dodge rd", "dodge". Derived from the registered qualifier,
+ * never typed in by hand. `core` is the road's name alone, when it has one that
+ * is not just a number ("W 41st St" has none, and "41st" alone is a date).
+ */
+function qualifierVariants(words: string[]): { variants: string[]; core: string | null } {
+  const withoutDirection = words.filter((word, index) => !(index === 0 && DIRECTIONALS.has(word)));
+  const dropSuffix = (list: string[]) =>
+    list.length > 1 && ROAD_SUFFIXES.has(list[list.length - 1]!) ? list.slice(0, -1) : list;
+  const variants = [
+    ...new Set([words, dropSuffix(words), withoutDirection, dropSuffix(withoutDirection)].map((list) => list.join(" "))),
+  ].filter(Boolean);
+  const coreWords = dropSuffix(withoutDirection).filter((word) => !/\d/.test(word));
+  return { variants, core: coreWords.length > 0 ? coreWords.join(" ") : null };
+}
+
 export function buildStoreIndex(sources: StoreIndexSources = {}): StoreIndex {
   const stores = sources.stores ?? COMPANY_LOCATIONS;
   const abbreviations = Object.entries(sources.abbreviations ?? {}).map(([short, full]) => ({
@@ -243,6 +265,14 @@ export function buildStoreIndex(sources: StoreIndexSources = {}): StoreIndex {
     if (q) {
       add(`${city} ${q}`, store.id, false, "name");
       if (state) add(`${state} ${city} ${q}`, store.id, false, "name");
+      const { variants, core } = qualifierVariants(q.split(" ").filter(Boolean));
+      for (const variant of variants) {
+        // "omaha west dodge" is specific enough to stand without a cue.
+        add(`${city} ${variant}`, store.id, false, "name");
+        // The road on its own is a place only where the sentence says so ("at Dodge").
+        if (variant.includes(" ") || variant === core) add(variant, store.id, true, "name");
+      }
+      if (core) add(`${city} ${core}`, store.id, false, "name");
     }
     const head = sharedCities.find((candidate) => city.startsWith(`${candidate} `));
     if (head) add(city.slice(head.length), store.id, true, "name");
@@ -425,13 +455,35 @@ export function isStoreName(phrase: string, index: StoreIndex = defaultStoreInde
 const CARRIES_ON = `${PLACE_NOUNS}|and|but|or|on|today|yesterday|tonight|this|last|at|she|he|they|i|we|for|with|where|when|while|because|so|again|during|after|before|around|since|until|was|is|has|had`;
 
 const AT_BEFORE = /\b(?:at|in)\s+(?:the\s+)?$/;
+/** "at Kearney and Bellevue": the second store in a list is a place too, or it is silently dropped. */
+const AT_LIST_BEFORE = /\b(?:at|in)\s+(?:the\s+)?[^|]{1,40}?\s+(?:and|or)\s+(?:the\s+)?$/;
 const PLACE_AFTER = new RegExp(`^\\s*(?:${PLACE_NOUNS})\\b`);
-const CARRIES_ON_AFTER = new RegExp(`^\\s*$|^\\s+(?:${CARRIES_ON})\\b`);
+const CARRIES_ON_AFTER = new RegExp(`^\\s*$|^\\s*\\||^\\s+(?:${CARRIES_ON})\\b`);
+/** "use Kearney", "location is Kearney", "change it to Kearney": the manager is choosing a place. */
+const CHOOSING_BEFORE =
+  /\b(?:use|using|choose|select|pick|go with|make it|file (?:it )?(?:for|under|against)|(?:change|switch|set|move)(?: it| the location| the store)? to|(?:location|store)\s*(?:is|:|=|should be|to))\s+(?:the\s+)?$/;
+/** "Kearney as the location", "Kearney is the store": the same, said the other way round. */
+const CHOSEN_AFTER = new RegExp(`^\\s+(?:as|is|for)\\s+(?:the\\s+|her\\s+|his\\s+|their\\s+)?(?:${PLACE_NOUNS})\\b`);
 
 function cued(index: StoreIndex, before: string, after: string): boolean {
   const stateBefore = index.states.length > 0 ? new RegExp(`\\b(?:${index.states.join("|")})\\s+$`) : null;
   if ((stateBefore && stateBefore.test(before)) || PLACE_AFTER.test(after)) return true;
-  return AT_BEFORE.test(before) && CARRIES_ON_AFTER.test(after);
+  if (CHOOSING_BEFORE.test(before) || CHOSEN_AFTER.test(after)) return true;
+  // The whole turn (or sentence) is the place: the answer to "which store?".
+  if (before.split("|").pop()!.trim() === "" && after.split("|")[0]!.trim() === "") return true;
+  return (AT_BEFORE.test(before) || AT_LIST_BEFORE.test(before)) && CARRIES_ON_AFTER.test(after);
+}
+
+/**
+ * The sentence with its punctuation kept as a BOUNDARY. Folding commas away is
+ * right for a registered name ("Kearney, NE") and wrong for a sentence: "at
+ * Lee's Summit, out of dress code" would lose the comma that says the place has
+ * ended. A comma before a state ("Kearney, NE") is still part of the name.
+ */
+function withBoundaries(text: string, states: readonly string[]): string {
+  const stateComma = states.length > 0 ? new RegExp(`,\\s*(?=(?:${states.join("|")})\\b)`, "gi") : null;
+  const masked = stateComma ? text.replace(stateComma, " ") : text;
+  return masked.replace(/[,;:!?\n]|\.(?=\s|$)/g, " | ");
 }
 
 const NUMBER_MENTION = new RegExp(
@@ -477,7 +529,7 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
     }
   }
 
-  let haystack = foldKey(text, index.abbreviations);
+  let haystack = foldKey(withBoundaries(text, index.states), index.abbreviations);
   for (const alias of index.aliases) {
     const pattern = new RegExp(`(?<= )${escape(alias.phrase)}(?= )`, "g");
     let found = false;

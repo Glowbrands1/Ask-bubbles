@@ -63,7 +63,12 @@ export function authorizeLocation(
 }
 
 export type LocationProposal =
-  | { resolution: "resolved"; locationId: string }
+  | {
+      resolution: "resolved";
+      locationId: string;
+      /** Whose word it rests on: the manager's own, the employee's Woven store, or the account's one assignment. */
+      source?: "manager" | "woven" | "assignment";
+    }
   | {
       resolution: "needs_selection";
       authorizedIds: string[];
@@ -74,6 +79,8 @@ export type LocationProposal =
         typed: string | null;
         numbering?: StoreNumbering;
       };
+      /** Several stores the manager's own words could mean — not their whole assignment. */
+      namedAmbiguous?: true;
     }
   | { resolution: "not_applicable"; reason: string }
   | { resolution: "unavailable"; reason: string };
@@ -83,12 +90,7 @@ export type LocationProposal =
  * then the employee's directory locations, then the account's assignment.
  * Never a guess — several candidates is a question.
  */
-export function proposeLocation(
-  scope: AccessScope | null,
-  managerText = "",
-  employeeLocationIds: readonly string[] = [],
-  index: StoreIndex = ROSTER_STORE_INDEX,
-  options: {
+type LocationOptions = {
     reportUnmatched?: boolean;
     /** The manager's turns, oldest first, so a later correction can replace an earlier store. */
     turns?: readonly string[];
@@ -96,14 +98,34 @@ export function proposeLocation(
     bareReply?: boolean;
     /** A store the manager said yes to; used only if their scope allows it. */
     confirmedStoreId?: string | undefined;
-  } = {},
+  };
+
+export function proposeLocation(
+  scope: AccessScope | null,
+  managerText = "",
+  employeeLocationIds: readonly string[] = [],
+  index: StoreIndex = ROSTER_STORE_INDEX,
+  options: LocationOptions = {},
+): LocationProposal {
+  const detailed = proposeLocationWithSource(scope, managerText, employeeLocationIds, index, options);
+  if (detailed.resolution !== "resolved") return detailed;
+  return { resolution: "resolved", locationId: detailed.locationId };
+}
+
+/** `proposeLocation`, saying whose word a resolved store rests on — for the proposal's read-back. */
+export function proposeLocationWithSource(
+  scope: AccessScope | null,
+  managerText = "",
+  employeeLocationIds: readonly string[] = [],
+  index: StoreIndex = ROSTER_STORE_INDEX,
+  options: LocationOptions = {},
 ): LocationProposal {
   const reportUnmatched = options.reportUnmatched ?? true;
   const textToRead = (index_: StoreIndex) =>
     correctedText(managerText, options.turns, index_, options.bareReply === true);
   const confirmed = (allowedIds: readonly string[]): LocationProposal | null =>
     options.confirmedStoreId && allowedIds.includes(options.confirmedStoreId)
-      ? { resolution: "resolved", locationId: options.confirmedStoreId }
+      ? { resolution: "resolved", locationId: options.confirmedStoreId, source: "manager" }
       : null;
   if (!scope) {
     return {
@@ -129,7 +151,7 @@ export function proposeLocation(
   if (named) return named;
   const employees = fromEmployeeLocations(allowed, employeeLocationIds);
   if (employees) return employees;
-  if (allowed.length === 1) return { resolution: "resolved", locationId: allowed[0]! };
+  if (allowed.length === 1) return { resolution: "resolved", locationId: allowed[0]!, source: "assignment" };
   if (allowed.length > 1) return { resolution: "needs_selection", authorizedIds: allowed };
   return {
     resolution: "unavailable",
@@ -151,7 +173,8 @@ export function namedStoreIds(
   return [
     ...new Set(
       readLocation(text, index)
-        .mentions.filter((mention) => !mention.confirm)
+        // A name that could be several stores (or a number two systems disagree about) names none of them yet.
+        .mentions.filter((mention) => !mention.confirm && !mention.collision && new Set(mention.locationIds).size === 1)
         .flatMap((mention) => mention.locationIds),
     ),
   ];
@@ -209,17 +232,30 @@ function fromNamedLocations(
   const firm = mentions.filter((mention) => !mention.confirm);
   const reading = firm.length > 0 ? firm : mentions;
   const soft = firm.length === 0;
-  const named = [...new Set(reading.flatMap((mention) => mention.locationIds))];
+
+  /*
+   * A MORE SPECIFIC MENTION NARROWS A LESS SPECIFIC ONE. "Sioux Falls" is two
+   * stores; a later "E 18th St" is one of them, and the conversation as a whole
+   * names that one. A mention whose stores strictly contain another mention's
+   * stores is the vaguer of the two and is dropped. Unrelated mentions all
+   * stand, so two different stores are still a question.
+   */
+  const sets = reading.map((mention) => [...new Set(mention.locationIds)]);
+  const narrowed = sets.filter(
+    (ids) => !sets.some((other) => other.length < ids.length && other.every((id) => ids.includes(id))),
+  );
+  const named = [...new Set(narrowed.flat())];
   const inScope = named.filter((id) => allowed.includes(id));
   const typed = reading[0]?.matched ?? null;
   const numbering = reading.find((mention) => mention.numbering)?.numbering;
 
-  if (inScope.length === 1 && !soft) return { resolution: "resolved", locationId: inScope[0]! };
+  if (inScope.length === 1 && !soft) return { resolution: "resolved", locationId: inScope[0]!, source: "manager" };
   if (inScope.length >= 1) {
     const collision = reading.some((mention) => mention.collision);
     return {
       resolution: "needs_selection",
       authorizedIds: inScope,
+      namedAmbiguous: true,
       selection: {
         reason: soft && inScope.length === 1 ? "confirm" : collision ? "number_collision" : "ambiguous",
         typed,
@@ -243,7 +279,7 @@ function fromEmployeeLocations(
   employeeLocationIds: readonly string[],
 ): LocationProposal | null {
   const inScope = [...new Set(employeeLocationIds)].filter((id) => allowed.includes(id));
-  if (inScope.length === 1) return { resolution: "resolved", locationId: inScope[0]! };
+  if (inScope.length === 1) return { resolution: "resolved", locationId: inScope[0]!, source: "woven" };
   if (inScope.length > 1) return { resolution: "needs_selection", authorizedIds: inScope };
   return null;
 }

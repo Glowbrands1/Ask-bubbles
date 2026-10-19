@@ -74,3 +74,33 @@ export async function loadStoreIndex(): Promise<StoreIndex> {
     extraAliases: await loadWovenStoreAliases(),
   });
 }
+
+let titleCache: { at: number; titles: string[] } | null = null;
+
+export function clearKnownTitleCache(): void {
+  titleCache = null;
+}
+
+/**
+ * The job titles Woven holds, for telling a title from a name. Names of
+ * positions only — no employee data — read from the position queue the sync
+ * keeps. Never fails a conversation: an error is an empty list.
+ */
+export async function loadKnownTitles(now: number = Date.now()): Promise<string[]> {
+  if (titleCache && now - titleCache.at < TTL_MS) return titleCache.titles;
+  try {
+    const { data, error } = await getSupabaseAdmin().from("woven_position_map").select("woven_position_name").limit(1000);
+    if (error) return [];
+    const titles = [
+      ...new Set(
+        (data ?? [])
+          .map((row) => (typeof row.woven_position_name === "string" ? row.woven_position_name.trim() : ""))
+          .filter((title) => title.length > 0),
+      ),
+    ];
+    titleCache = { at: now, titles };
+    return titles;
+  } catch {
+    return [];
+  }
+}

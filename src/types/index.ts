@@ -616,6 +616,33 @@ export interface ChatFormProposal {
    */
   namedLocationOutOfScope?: string | null;
   /**
+   * The roster names of the several stores the manager's own words could mean —
+   * "Sioux Falls" when two stores share the city — so the question can name
+   * them instead of asking blind. Set only on `needs_selection` read from what
+   * they typed; never the actor's whole assignment. Optional so conversations
+   * stored before it existed still read.
+   */
+  locationCandidates?: string[];
+  /**
+   * Whose word a resolved `locationId` rests on: `manager` (they named it),
+   * `woven` (the matched employee's mapped Woven store) or `assignment` (the one
+   * location the account covers). Lets the read-back say so. Optional.
+   */
+  locationSource?: "manager" | "woven" | "assignment";
+  /**
+   * When the manager gave SEVERAL incident dates, the dates the form's Date could
+   * be — set while Ask Bubbles is asking which, so the form is dated on purpose
+   * rather than by whichever came first. Absent when there was one or none.
+   */
+  formDateCandidates?: string[];
+  /**
+   * Where `employeeRole` came from: `manager` (they typed a title) or `woven`
+   * (the matched employee's current Woven position). Null/absent when there is
+   * no position at all, which is when Ask Bubbles asks for it. Optional so
+   * conversations stored before it existed still read.
+   */
+  employeeRoleSource?: "manager" | "woven" | null;
+  /**
    * What is still needed. `ready` means nothing is — NOT that anything exists.
    *
    * There is no "needs_template" state, because a proposal without a validated

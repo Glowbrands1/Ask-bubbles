@@ -45,6 +45,13 @@ block and a prompt rule that titles, store assignments and status come only from
 On an open form: "Actually, use the Omaha store" replaces the store (and the employee is re-verified against it); a bare "Omaha" or "yes" answers a store
 question; a store mentioned in passing is not a change (two stores is a question). A transfer is filed at the store being left.
 
+## Titles, pronouns and policy
+
+- A job title Woven holds (read from `woven_position_map`) is never read as a second person: it is lower-cased in the working copy the name reader sees (`known-titles.ts`).
+- General chat ties "What about her title?" to the one person the most recent naming turn establishes, within the asker's scope; zero or several is a question ("Who do you mean?"), never a guess.
+- POLICY: the synchronized Woven directory is the source of truth for title, store assignment and status. A verified Woven title wins over the manager's wording and the difference is said; the manager's own title is used only where Woven could not verify, and is labelled theirs. A named store Woven does not show the employee at stands, with the disagreement said.
+- The prompt always forbids stating an employee's title/store/status without a VERIFIED RECORDS section, and says to report (not adopt) a difference.
+
 ## Scope
 
 District/region accounts are verified across the stores their area contains (resolved through the registered roster, plus any additional stores granted).

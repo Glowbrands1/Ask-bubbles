@@ -197,7 +197,7 @@ export async function answerQuestion(
    * is only a lookup, otherwise attached as verified records. Deterministic and
    * read-only; see `entity-facts.ts`.
    */
-  const entities = await resolveChatEntities({ question: request.question, actor });
+  const entities = await resolveChatEntities({ question: request.question, history: request.history, actor });
   if (entities.direct) return entities.direct;
 
   /* ------------------------------------------------------- retrieve -- */

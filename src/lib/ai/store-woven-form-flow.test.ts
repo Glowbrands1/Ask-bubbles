@@ -25,7 +25,10 @@ const WOVEN_ALIASES: StoreAlias[] = [
 
 const state: { rows: DirectoryRosterRow[]; outage: boolean } = { rows: [], outage: false };
 
+const TITLES = ["Production Associate", "Assistant General Manager", "Team Member Part Time", "General Manager", "Owner"];
+
 vi.mock("@/lib/stores/woven-aliases", () => ({
+  loadKnownTitles: async () => TITLES,
   loadStoreIndex: async () => buildStoreIndex({ stores: COMPANY_LOCATIONS, extraAliases: WOVEN_ALIASES }),
 }));
 
@@ -120,7 +123,7 @@ describe("the expected outcome: a form from a code and a name", () => {
       status: "ready",
       employeeVerification: { status: "verified", title: "Production Associate" },
     });
-    expect(content).not.toMatch(/Woven/);
+    expect(content).not.toMatch(/Woven has/);
   });
 
   it("a first name alone is confirmed against Woven, not guessed", async () => {
@@ -173,8 +176,8 @@ describe("1–6. every way of naming the store reaches the same record", () => {
     expect(p!.locationId).toBeNull();
     expect(p!.locationSelection).toMatchObject({ reason: "ambiguous" });
     expect([...p!.authorizedLocationIds].sort()).toEqual(["loc-225", "loc-338"]);
-    expect(content).toContain("Sioux Falls, SD (W 41st St) (Store 225)");
-    expect(content).toContain("Sioux Falls, SD (E 18th St) (Store 338)");
+    expect(content).toContain("**Sioux Falls, SD (W 41st St)**");
+    expect(content).toContain("**Sioux Falls, SD (E 18th St)**");
   });
 
   it("a city two stores share is a question, offered only from the actor's own stores", async () => {
@@ -477,4 +480,59 @@ describe("5. every HR form type reads the store and verifies the employee the sa
     expect(p!.employeeRole).toBe("Production Associate");
     expect(content).toContain("Woven lists their job title as **Production Associate**");
   });
+});
+
+describe("a Woven job title is never mistaken for another employee", () => {
+  it.each([
+    "Create a coaching form for Sarah Miller, our Assistant General Manager, at Store 236",
+    "Create a coaching form for Sarah Miller at Store 236. She is a Production Associate.",
+    "Create a corrective action form for Sarah Miller (Team Member Part Time) at Store 236",
+    "Create a policy review for Sarah Miller at Store 236, General Manager",
+  ])("%s", async (question) => {
+    const { formProposal: p, content } = await ask(question, ALL_STORES, SARAH);
+    expect(p!.employeeName, question).toBe("Sarah Miller");
+    expect(p!.status).toBe("ready");
+    expect(content).not.toMatch(/Did you mean|which (?:one|employee)/i);
+    // And Woven's own title is still what goes on the form.
+    expect(p!.employeeRole).toBe("Production Associate");
+  });
+
+  it("holds for a demotion that names the title being left, in Title Case", async () => {
+    const { formProposal: p } = await ask(
+      "Create a demotion form for Sarah Miller at Store 236 from Production Associate to Team Member Part Time effective 10/5/26", ALL_STORES, SARAH, { role: "admin" },
+    );
+    expect(p).toMatchObject({ employeeName: "Sarah Miller", locationId: "loc-236", status: "ready" });
+  });
+
+  it("a person is still a person when no title is involved", async () => {
+    const { formProposal: p } = await ask("Create a coaching form for Dana Moss at Store 264", ALL_STORES, [person("e2", "Dana", "Moss", ["loc-264"], "General Manager")]);
+    expect(p).toMatchObject({ employeeName: "Dana Moss", employeeRole: "General Manager" });
+  });
+});
+
+describe("every form type resolves the same store from every way of saying it", () => {
+  const WAYS = ["Store 236", "NE Grand Island", "the Grand Island store", "Grand Island, NE", "store number 123"];
+  const FORMS: [string, (where: string) => string][] = [
+    ["coaching", (where) => `Create a coaching form for Sarah Miller at ${where}`],
+    ["follow-up-coaching", (where) => `Create a follow-up coaching form for Sarah Miller at ${where}`],
+    ["dpoa", (where) => `Create a corrective action form for Sarah Miller at ${where}`],
+    ["policy-review", (where) => `Create a policy review for Sarah Miller at ${where}`],
+    ["sdit-epp", (where) => `Create an SDIT EPP for Sarah Miller at ${where}`],
+    ["tsd-epp", (where) => `Create a TSD EPP for Sarah Miller at ${where}`],
+    ["resignation-exit", (where) => `Create a resignation form for Sarah Miller at ${where}`],
+    ["demotion", (where) => `Create a demotion form for Sarah Miller at ${where} from shift lead to cleaner effective 10/5/26`],
+    ["position-transfer", (where) => `Create a transfer form for Sarah Miller, transferring from ${where} to Bellevue effective 10/5/26`],
+  ];
+  for (const [key, say] of FORMS) {
+    it.each(WAYS)(`${key}: %s`, async (where) => {
+      const { formProposal: p } = await ask(say(where), ALL_STORES, SARAH, { role: "admin" });
+      expect(p, `${key} / ${where}`).toMatchObject({
+        templateKey: key,
+        locationId: "loc-236",
+        locationResolution: "resolved",
+        employeeName: "Sarah Miller",
+        employeeVerification: { status: "verified" },
+      });
+    });
+  }
 });
