@@ -1096,8 +1096,8 @@ function directoryNotes(
      */
     notes.push(
       directory.matched
-        ? `Woven doesn't show a store I can match for **${first}**, so I haven't put one on the form. Tell me ${STORE_QUESTION_TAG}, or leave Location blank on the form.`
-        : `I couldn't verify a store for **${first}** from Woven, so I haven't put one on the form. Tell me ${STORE_QUESTION_TAG}, or leave Location blank on the form.`,
+        ? `Woven doesn't show a store I can match for **${first}**, so I haven't put one on the form. Tell me ${STORE_QUESTION_TAG}, or leave Store blank on the form.`
+        : `I couldn't verify a store for **${first}** from Woven, so I haven't put one on the form. Tell me ${STORE_QUESTION_TAG}, or leave Store blank on the form.`,
     );
   }
   return notes;
@@ -1846,7 +1846,7 @@ const CHANGE_INTAKE: Record<EmploymentChangeKind, { items: string[]; example: st
     items: [
       "The employee's name",
       "Their current title, status (FT/PT) and pay rate",
-      "The new title, status and pay rate — and the new location, if it changes",
+      "The new title, status and pay rate — and the new store, if it changes",
       "The effective date, and whether it's voluntary or involuntary",
       "A short reason",
     ],
@@ -1857,12 +1857,12 @@ const CHANGE_INTAKE: Record<EmploymentChangeKind, { items: string[]; example: st
     items: [
       "The employee's name",
       "Their current title, status (FT/PT) and pay rate",
-      "The new location — and the new title, status and pay if they change",
+      "The new store — and the new title, status and pay if they change",
       "Whether it's voluntary or involuntary",
       "A short reason",
     ],
     example:
-      "Jane Doe is a PT TC at $12/hr, transferring from location 12 to location 18, same title and pay, voluntary — she moved closer to home.",
+      "Jane Doe is a PT TC at $12/hr, transferring from store 12 to store 18, same title and pay, voluntary — she moved closer to home.",
   },
 };
 
@@ -1942,7 +1942,7 @@ function employmentChangeContent(
   lines.push(
     proposal.supportsInlineDraft
       ? proposal.locationResolution === "not_applicable"
-        ? "Your account covers every location, so the form won't name one unless you did. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
+        ? "Your account covers every store, so the form won't name one unless you did. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
         : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do."
       : "**Nothing has been created.** This is a proposal, not a form. To file one today, use Create a Form.",
   );
@@ -2253,8 +2253,8 @@ function proposalContent(
       const who = proposal.subject === "team" ? "This one is for the whole team" : "I have the employee";
       lines.push(
         proposal.locationResolution === "not_applicable"
-          ? `${who}. Your account covers every location, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do.`
-          : `${who}${proposal.subject === "team" ? ", and I have the location" : " and the location"}${resolvedStoreName(proposal) ? ` (**${resolvedStoreName(proposal)}**)` : ""}. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`,
+          ? `${who}. Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do.`
+          : `${who}${proposal.subject === "team" ? ", and I have the store" : " and the store"}${resolvedStoreName(proposal) ? ` (**${resolvedStoreName(proposal)}**)` : ""}. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`,
       );
     } else {
       /*
@@ -2367,10 +2367,10 @@ function correctiveActionReady(
   if (store) {
     stated.push(
       proposal.locationSource === "woven"
-        ? `**Location:** ${store}, from Woven (where ${proposal.employeeName} is assigned) — tell me if that should change`
+        ? `**Store:** ${store}, from Woven (where ${proposal.employeeName} is assigned) — tell me if that should change`
         : proposal.locationSource === "assignment"
-          ? `**Location:** ${store}, your assigned location — tell me if that should change`
-          : `**Location:** ${store}, as you said — tell me if that should change`,
+          ? `**Store:** ${store}, your assigned store — tell me if that should change`
+          : `**Store:** ${store}, as you said — tell me if that should change`,
     );
   }
   if (stated.length > 0) lines.push("", stated.join(" · "));
@@ -2435,7 +2435,7 @@ function correctiveActionReady(
   lines.push(
     proposal.supportsInlineDraft
       ? proposal.locationResolution === "not_applicable"
-        ? "Your account covers every location, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
+        ? "Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
         : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do."
       : "**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.",
   );
@@ -2510,7 +2510,7 @@ function eppReady(
   lines.push(
     proposal.supportsInlineDraft
       ? proposal.locationResolution === "not_applicable"
-        ? "Your account covers every location, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
+        ? "Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
         : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do."
       : "**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.",
   );
@@ -2550,7 +2550,7 @@ function openingQuestions(proposal: ChatFormProposal, context: ManagerContext): 
       : "The employee's full name.",
   ];
   if (proposal.locationResolution === "needs_selection") {
-    asks.push("Which of your locations this is about.");
+    asks.push("Which of your stores this is about.");
   }
   if (!proposal.formDate) {
     asks.push(`The date for the form (if you say "today," I'll use ${todayInWords()}).`);

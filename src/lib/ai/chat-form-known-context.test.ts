@@ -220,7 +220,7 @@ describe("2. a manager with several salons is asked only when it is genuinely op
 
   it("keeps the salon on the corrective-action questions while it is open", async () => {
     const response = await ask("Create a corrective action form", salons(WORNALL, LIBERTY));
-    expect(response.content).toMatch(/^2\. Location$/m);
+    expect(response.content).toMatch(/^2\. Store$/m);
   });
 
   it("does not ask when the manager named one of them", async () => {

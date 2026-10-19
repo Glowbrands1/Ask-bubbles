@@ -310,12 +310,12 @@ describe("the second card agrees with the first, and its tiles add up", () => {
       />,
     );
     expect(screen.getByText("Across Testville Downtown")).toBeTruthy();
-    expect(screen.queryByText("Across every location you cover")).toBeNull();
+    expect(screen.queryByText("Across every store you cover")).toBeNull();
   });
 
   it("says how many records were held back as non-production", () => {
     render(<Overview followUps={followUps({ excluded: 3 })} />);
-    expect(screen.getByText(/3 records are filed against a location that is not on the roster/)).toBeTruthy();
+    expect(screen.getByText(/3 records are filed against a store that is not on the roster/)).toBeTruthy();
     expect(screen.getByText(/still in the forms register/)).toBeTruthy();
   });
 });

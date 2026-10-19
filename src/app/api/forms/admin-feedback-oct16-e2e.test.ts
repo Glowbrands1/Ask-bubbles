@@ -660,14 +660,14 @@ describe("Woven store and position are verified, or asked for — never guessed"
     const { proposal, last } = await conversation(["Create a corrective action for Casey Brandt, out of dress code on 10/11. This is a verbal warning."]);
     expect(proposal.locationId).toBe("loc-66");
     expect(proposal.locationSource).toBe("woven");
-    expect(last.content).toMatch(/Location:\*\* Kearney, NE, from Woven \(where Casey Brandt is assigned\)/);
-    expect(last.content).not.toMatch(/Location:\*\* Kearney, NE, as you said/);
+    expect(last.content).toMatch(/Store:\*\* Kearney, NE, from Woven \(where Casey Brandt is assigned\)/);
+    expect(last.content).not.toMatch(/Store:\*\* Kearney, NE, as you said/);
   });
 
   it("says a store came from the manager's own words", async () => {
     const { proposal, last } = await conversation(["Create a corrective action for Casey Brandt at Kearney, out of dress code on 10/11. This is a verbal warning."]);
     expect(proposal.locationSource).toBe("manager");
-    expect(last.content).toMatch(/Location:\*\* Kearney, NE, as you said/);
+    expect(last.content).toMatch(/Store:\*\* Kearney, NE, as you said/);
   });
 
   it("asks for the store once when none can be verified, and files nothing meanwhile", async () => {

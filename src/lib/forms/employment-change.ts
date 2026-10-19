@@ -589,7 +589,7 @@ export function missingDetails(
   }
   missing.push(...sidePhrase("current", facts.current));
   if (kind === "transfer" && !facts.next.location) {
-    missing.push({ key: "new_location", phrase: "the new location" });
+    missing.push({ key: "new_location", phrase: "the new store" });
   }
   if (!facts.next.title && !facts.unchanged?.title) {
     missing.push({

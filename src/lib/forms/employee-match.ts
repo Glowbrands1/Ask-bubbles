@@ -224,7 +224,7 @@ export function matchEmployeeName(typed: string, roster: readonly RosterEmployee
  */
 export function nameConfirmationQuestion(typed: string, candidates: readonly string[]): string {
   if (candidates.length === 1) {
-    return `Did you mean **${candidates[0]}**? I couldn't find **${typed}** exactly in the employee list for your locations, so I want to be sure before it goes on the form. Reply "yes" to use **${candidates[0]}**, or "no" to keep **${typed}** as you typed it.`;
+    return `Did you mean **${candidates[0]}**? I couldn't find **${typed}** exactly in the employee list for your stores, so I want to be sure before it goes on the form. Reply "yes" to use **${candidates[0]}**, or "no" to keep **${typed}** as you typed it.`;
   }
   const names = candidates.map((name) => `**${name}**`);
   return `Did you mean ${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}? More than one person on your team is a close match for **${typed}**, so tell me which one — or say "keep ${typed}" to use the name exactly as you typed it.`;

@@ -58,7 +58,7 @@ export function authorizeLocation(
   return {
     kind: "refused",
     reason:
-      "That location is not on your assignment. A form can only be filed against a location you are assigned to.",
+      "That store is not on your assignment. A form can only be filed against a store you are assigned to.",
   };
 }
 
@@ -130,7 +130,7 @@ export function proposeLocationWithSource(
   if (!scope) {
     return {
       resolution: "unavailable",
-      reason: "Preview mode cannot verify a location, so none is filled in.",
+      reason: "Preview mode cannot verify a store, so none is filled in.",
     };
   }
 
@@ -142,7 +142,7 @@ export function proposeLocationWithSource(
     if (employees) return employees;
     return {
       resolution: "not_applicable",
-      reason: "Your account covers every location rather than one, so no location is put on this form.",
+      reason: "Your account covers every store rather than one, so no store is put on this form.",
     };
   }
 
@@ -155,7 +155,7 @@ export function proposeLocationWithSource(
   if (allowed.length > 1) return { resolution: "needs_selection", authorizedIds: allowed };
   return {
     resolution: "unavailable",
-    reason: "Your account has no verified location assigned yet, so none can be filled in.",
+    reason: "Your account has no verified store assigned yet, so none can be filled in.",
   };
 }
 

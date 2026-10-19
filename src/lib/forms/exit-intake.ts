@@ -140,7 +140,7 @@ export function exitReady({ proposal, facts, details }: ExitReadyInput): string 
    * exactly the line the form will carry.
    */
   const salon = proposal.locationId ? salonById(proposal.locationId) : undefined;
-  if (salon) filled.push(`- **Location:** ${salon.name}`);
+  if (salon) filled.push(`- **Store:** ${salon.name}`);
   filled.push("- **Date:** the day the draft is created");
   for (const role of ROLE_ORDER) {
     const iso = facts[role];
@@ -178,7 +178,7 @@ export function exitReady({ proposal, facts, details }: ExitReadyInput): string 
    */
   const blank: string[] = [];
   if (!proposal.employeeRole) blank.push("Job Title");
-  if (!salon) blank.push("Location");
+  if (!salon) blank.push("Store");
   blank.push("Permanent Address");
   const unsetDates = ROLE_ORDER.filter((role) => !facts[role]).map((role) => EXIT_ROLE_LABEL[role]);
   blank.push(...unsetDates);
@@ -290,11 +290,11 @@ function detailQuestions(
 function closingLine(proposal: ChatFormProposal): string {
   if (!proposal.supportsInlineDraft) {
     return proposal.status === "needs_location"
-      ? "Choose the location on the card below, then create the draft."
+      ? "Choose the store on the card below, then create the draft."
       : "**Nothing has been created.** This is a proposal, not a form, and the published version of this form can't be drafted in chat — an administrator should check it under Form Templates.";
   }
   return proposal.locationResolution === "not_applicable"
-    ? "Your account covers every location, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
+    ? "Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
     : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.";
 }
 
