@@ -300,6 +300,17 @@ const APP_SWITCHER = "src/components/shell/app-switcher.tsx";
  */
 const GOOGLE_REVIEWS_DENY_LIST = "src/config/company/google-reviews.ts";
 
+/*
+ * THE SHADOW-MODE LEGACY CLASSIFIER NAMES THE LEGACY COMPANY ON PURPOSE. It exists
+ * to recognise Sun Tan City content inside the adopted Framework so Buff can
+ * review it. These two files are exempt from the Sun Tan City NAME check only;
+ * the Ask Sunny and company-ID checks still apply to them.
+ */
+const LEGACY_CLASSIFIER_FILES = [
+  "src/lib/knowledge/legacy-segments.ts",
+  "src/config/company/provenance.ts",
+];
+
 describe("11–12. production builds only the Buff City Soap connector", () => {
   it("11. the factory returns the BCS connector, whatever the configuration — it has no tenant input", () => {
     const configs: WovenKnowledgeConfig[] = [
@@ -326,7 +337,7 @@ describe("11–12. production builds only the Buff City Soap connector", () => {
     const readers = productionSources().filter(({ text }) => /WOVEN_TEAM_COMPANY|WOVEN_TEAM_BASE_URL/.test(text));
     expect(readers.map((r) => r.path)).toEqual(["src/lib/knowledge-sync/woven/config.ts"]);
     const naming = productionSources().filter(({ path, text }) =>
-      (path === APP_SWITCHER ? /1BA00000/i : path === GOOGLE_REVIEWS_DENY_LIST ? /Ask\s*Sunny|1BA00000/i : /Sun\s*Tan\s*City|Ask\s*Sunny|1BA00000/i).test(
+      (path === APP_SWITCHER ? /1BA00000/i : path === GOOGLE_REVIEWS_DENY_LIST || LEGACY_CLASSIFIER_FILES.includes(path) ? /Ask\s*Sunny|1BA00000/i : /Sun\s*Tan\s*City|Ask\s*Sunny|1BA00000/i).test(
         withoutRetainedForReview(text),
       ),
     );
