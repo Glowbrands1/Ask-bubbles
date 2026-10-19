@@ -104,7 +104,7 @@ describe("a demotion asked for in one sentence", () => {
 
   it("asks for nothing when everything was given", async () => {
     const response = await ask(
-      "Demotion form: Jane Doe, Store Director FT at $18/hr → Tanning Consultant PT at $12/hr, effective 10/5, voluntary — she asked to step down.",
+      "Demotion form: Jane Doe, Assistant General Manager FT at $18/hr → Team Member PT at $12/hr, effective 10/5, voluntary — she asked to step down.",
     );
     expect(response!.formProposal!.employeeName).toBe("Jane Doe");
     expect(response!.content).toContain("That covers every detail the form asks for.");

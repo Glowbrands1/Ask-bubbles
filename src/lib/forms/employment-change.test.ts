@@ -275,10 +275,10 @@ describe("the facts of the change", () => {
 
   it("reads the intake's own example, arrow and all", () => {
     const facts = read(
-      "Jane Doe, Store Director FT at $18/hr → Tanning Consultant PT at $12/hr, effective 10/5, voluntary — she asked to step down.",
+      "Jane Doe, Assistant General Manager FT at $18/hr → Team Member PT at $12/hr, effective 10/5, voluntary — she asked to step down.",
     );
     expect(describeKnownFacts(facts)).toBe(
-      "FT Store Director at $18.00/hr → PT Tanning Consultant at $12.00/hr, effective October 5, 2026, voluntary",
+      "FT Assistant General Manager at $18.00/hr → PT Team Member at $12.00/hr, effective October 5, 2026, voluntary",
     );
     expect(missingDetails("demotion", facts)).toEqual([]);
   });
@@ -376,7 +376,7 @@ describe("what is still asked for", () => {
 describe("putting stated facts on the form", () => {
   const document = parseFormDocument(demotionDocument());
   const stated = statedFactValues(
-    read("Jane Doe, Store Director FT at $18/hr → Tanning Consultant PT at $12/hr, effective 10/5, voluntary"),
+    read("Jane Doe, Assistant General Manager FT at $18/hr → Team Member PT at $12/hr, effective 10/5, voluntary"),
   );
 
   it("fills only empty fields, and only the listed ones", () => {
@@ -391,9 +391,9 @@ describe("putting stated facts on the form", () => {
       ],
     });
     expect(selected.values).toEqual({
-      job_title: "Store Director",
+      job_title: "Assistant General Manager",
       current_pay_rate: "$18.00/hr",
-      new_job_title: "Tanning Consultant",
+      new_job_title: "Team Member",
     });
     expect(selected.checked).toEqual({
       current_status: ["full_time"],

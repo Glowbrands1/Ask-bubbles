@@ -98,7 +98,7 @@ export class MockAIProvider implements AIProvider {
      * This branch used to run the whole scripted chat-to-form flow: it
      * collected what was missing, then drafted a Coaching Form with the
      * employee defaulted to "Jane Kowalski", the reason to repeated tardiness,
-     * the job title to "Tanning Consultant" and the follow-up to today plus
+     * the job title to "Team Member" and the follow-up to today plus
      * fourteen days — and offered it as a chip the manager could click.
      *
      * A REAL PROPOSAL NEEDS TWO THINGS THIS PROVIDER CANNOT HAVE: the published
