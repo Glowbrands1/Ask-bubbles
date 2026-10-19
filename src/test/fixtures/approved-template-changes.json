@@ -1,5 +1,5 @@
 {
- "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description, Salon -> Store terminology, and client/customer -> guest terminology approved 2026-10-19 for SD-2, TS-5, TI-4, TI-5, M1-6 and X-1). The prescreen's Sun Tan City uniform/product-use question was REMOVED (D14, Option A, approved 2026-10-19): the removal is declared in src/test/approved-removals.ts, which deletes exactly that block from the Ask Sunny snapshot before comparison, and the description change is listed here. Anything not listed here fails template-parity.test.ts.",
+ "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description, Salon -> Store terminology, and client/customer -> guest terminology approved 2026-10-19 for SD-2, TS-5, TI-4, TI-5, M1-6 and X-1). Phase 2A wording changes approved 2026-10-19 (D3 7G Service, D4 Employee Performance Plan acknowledgement, D12 demotion example placeholder, D18 Makery cleaning scenario) are listed here and allow-listed by exact text in the parity test. The prescreen's Sun Tan City uniform/product-use question was REMOVED (D14, Option A, approved 2026-10-19): the removal is declared in src/test/approved-removals.ts, which deletes exactly that block from the Ask Sunny snapshot before comparison, and the description change is listed here. Anything not listed here fails template-parity.test.ts.",
  "changes": [
   {
    "sourceKey": "coaching",
@@ -67,6 +67,12 @@
   },
   {
    "sourceKey": "sdit-epp",
+   "path": ".document.blocks[5].options[5].label",
+   "from": "Follow through with Client Engagement Strategies with every client.",
+   "to": "Follow through with 7G Service with every guest."
+  },
+  {
+   "sourceKey": "sdit-epp",
    "path": ".document.blocks[10].label",
    "from": "Salon's current productivity",
    "to": "Store's current productivity"
@@ -103,9 +109,27 @@
   },
   {
    "sourceKey": "sdit-epp",
+   "path": ".document.blocks[18].options[5].label",
+   "from": "Follow through with Client Engagement Strategies with every client.",
+   "to": "Follow through with 7G Service with every guest."
+  },
+  {
+   "sourceKey": "sdit-epp",
    "path": ".document.blocks[22].label",
    "from": "Salon Goals: current top three goals",
    "to": "Store Goals: current top three goals"
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".document.blocks[29].text",
+   "from": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+   "to": "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement."
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".document.blocks[36].text",
+   "from": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+   "to": "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement."
   },
   {
    "sourceKey": "sdit-epp",
@@ -247,6 +271,12 @@
   },
   {
    "sourceKey": "tsd-epp",
+   "path": ".document.blocks[32].text",
+   "from": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+   "to": "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement."
+  },
+  {
+   "sourceKey": "tsd-epp",
    "path": ".document.blocks[38].options[3].label",
    "from": "Salon Primary Productivity — Ability to identify improvement areas and filter to team",
    "to": "Store Primary Productivity — Ability to identify improvement areas and filter to team"
@@ -262,6 +292,12 @@
    "path": ".document.blocks[38].options[7].label",
    "from": "Salon Standards of Cleanliness and Safety — Aware of all items on the SVC and able to describe to DM",
    "to": "Store Standards of Cleanliness and Safety — Aware of all items on the SVC and able to describe to DM"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[41].text",
+   "from": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+   "to": "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement."
   },
   {
    "sourceKey": "tsd-epp",
@@ -319,6 +355,12 @@
   },
   {
    "sourceKey": "asd-sdit-epp",
+   "path": ".document.blocks[18].text",
+   "from": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+   "to": "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement."
+  },
+  {
+   "sourceKey": "asd-sdit-epp",
    "path": ".variants[0].role",
    "from": "Training Salon Director",
    "to": "Training Store Director"
@@ -340,6 +382,12 @@
    "path": ".document.blocks[13].label",
    "from": "Salon Goals: current top three goals",
    "to": "Store Goals: current top three goals"
+  },
+  {
+   "sourceKey": "fttc-epp",
+   "path": ".document.blocks[18].text",
+   "from": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+   "to": "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement."
   },
   {
    "sourceKey": "fttc-epp",
@@ -396,6 +444,18 @@
    "to": "Store Goals: What are your store's current top three goals?"
   },
   {
+   "sourceKey": "dmit-epp-tsd",
+   "path": ".document.blocks[29].text",
+   "from": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+   "to": "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement."
+  },
+  {
+   "sourceKey": "dmit-epp-tsd",
+   "path": ".document.blocks[36].text",
+   "from": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+   "to": "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement."
+  },
+  {
    "sourceKey": "dmit-epp-dmit",
    "path": ".document.blocks[0].brand",
    "from": "SUN TAN CITY",
@@ -442,6 +502,18 @@
    "path": ".document.blocks[21].label",
    "from": "Salon Goals: What are your salon's current top three goals?",
    "to": "Store Goals: What are your store's current top three goals?"
+  },
+  {
+   "sourceKey": "dmit-epp-dmit",
+   "path": ".document.blocks[29].text",
+   "from": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+   "to": "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement."
+  },
+  {
+   "sourceKey": "dmit-epp-dmit",
+   "path": ".document.blocks[36].text",
+   "from": "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.",
+   "to": "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement."
   },
   {
    "sourceKey": "follow-up-coaching",
@@ -530,6 +602,12 @@
    "path": ".revisionNote",
    "from": "Published from the GlowBrands Demotion Form source document. The STC Demotion Example is the same document, kept as a reference for the reason's wording; it is not a separate template.",
    "to": "Published from the GlowBrands Demotion Form source document. The source company's Demotion Example is the same document, kept as a reference for the reason's wording; it is not a separate template."
+  },
+  {
+   "sourceKey": "demotion",
+   "path": ".document.blocks[14].text",
+   "from": "(Employee) is moving from a FT (Job Title) at $x.xx /hr at (location, State abbr.) to a PT Tanning Consultant at $x.xx /hr at (location,State abbr.) effective dd/mm/yyyy. (**Effective date must be the start of a pay period).",
+   "to": "(Employee) is moving from a FT (Job Title) at $x.xx /hr at (location, State abbr.) to a PT (New Job Title) at $x.xx /hr at (location,State abbr.) effective dd/mm/yyyy. (**Effective date must be the start of a pay period)."
   },
   {
    "sourceKey": "position-transfer",
@@ -650,6 +728,12 @@
    "path": ".document.blocks[30].text",
    "from": "Tell me about a time you turned an unhappy client into a satisfied one.",
    "to": "Tell me about a time you turned an unhappy guest into a satisfied one."
+  },
+  {
+   "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[35].text",
+   "from": "This role involves hands-on work like cleaning beds and doing laundry. How do you lead by example in these tasks?",
+   "to": "This role involves hands-on work like cleaning the Makery and equipment and keeping the workspace organized. How do you lead by example in these tasks?"
   },
   {
    "sourceKey": "management-interview-round-1",

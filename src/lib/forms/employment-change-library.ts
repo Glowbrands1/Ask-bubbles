@@ -126,7 +126,7 @@ function currentEmployee(section: string | null, partTime: string, fullTime: str
 
 export const DEMOTION_EXAMPLE = [
   "On dd/mm/yyyy (employee first name) requested a voluntary demotion because......",
-  "(Employee) is moving from a FT (Job Title) at $x.xx /hr at (location, State abbr.) to a PT Tanning Consultant at $x.xx /hr at (location,State abbr.) effective dd/mm/yyyy. (**Effective date must be the start of a pay period).",
+  "(Employee) is moving from a FT (Job Title) at $x.xx /hr at (location, State abbr.) to a PT (New Job Title) at $x.xx /hr at (location,State abbr.) effective dd/mm/yyyy. (**Effective date must be the start of a pay period).",
   "Any elected benefits will terminate effective dd/mm/yyyy (last date of the month). As a PT employee, (Name) will not be eligible for benefits or the monthly manager bonus.",
 ];
 
@@ -255,7 +255,7 @@ const DEMOTION_SEED: TemplateSeed = {
   displayOrder: 16,
   document: demotionDocument(),
   variants: [],
-  revision: 1,
+  revision: 2,
   revisionNote:
     "Published from the GlowBrands Demotion Form source document. The source company's Demotion Example is the same document, kept as a reference for the reason's wording; it is not a separate template.",
   bundledPdfName: "Demotion Form.pdf",

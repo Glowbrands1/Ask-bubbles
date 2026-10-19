@@ -61,11 +61,25 @@ const PAIRS: [string, string][] = [
 
 /** Wording the business has NOT approved changing. It must still be there, byte for byte. */
 const UNCHANGED: [string, string][] = [
-  ["sdit-epp", "Follow through with Client Engagement Strategies with every client."],
   ["management-interview-round-1", "A client approaches the counter upset because the tanning bed they reserved is unavailable"],
   ["management-interview-round-2", "Customer visits have dropped 20% over the past month and lotions and memberships sales are at their lowest in six months."],
   ["dmit-epp-tsd", "ensuring the highest level of client service throughout the stores"],
   ["dmit-epp-dmit", "ensuring the highest level of client service throughout the stores"],
+];
+
+/**
+ * Wording that WAS unapproved here and has since been approved explicitly in a
+ * later release. Recorded by name so the protection above is not weakened: the
+ * old wording must be gone, the approved wording present, and nothing else in
+ * that sentence's neighbourhood is exempt.
+ */
+const LATER_APPROVED: { key: string; was: string; now: string; decision: string }[] = [
+  {
+    key: "sdit-epp",
+    was: "Follow through with Client Engagement Strategies with every client.",
+    now: "Follow through with 7G Service with every guest.",
+    decision: "D3, Phase 2A (approved 2026-10-19)",
+  },
 ];
 
 const seed = (key: string) => TEMPLATE_SEEDS.find((entry) => entry.key === key)!;
@@ -81,6 +95,11 @@ describe("the six approved guest corrections", () => {
     for (const key of ISSUED) {
       for (const [old] of PAIRS) expect(text(key), `${key}: ${old}`).not.toContain(old);
     }
+  });
+
+  it.each(LATER_APPROVED)("treats $decision as explicitly approved: $now replaces $was", ({ key, was, now }) => {
+    expect(text(key)).toContain(now);
+    expect(text(key)).not.toContain(was);
   });
 
   it("keeps the unapproved wording exactly as it was", () => {
@@ -111,22 +130,23 @@ describe("the six approved guest corrections", () => {
   it("re-issues exactly the five templates, one revision each, and no other", () => {
     const revisions = Object.fromEntries(TEMPLATE_SEEDS.map((entry) => [entry.key, entry.revision]));
     expect(revisions).toMatchObject({
-      "sdit-epp": 5,
-      "tsd-epp": 4,
+      // Counts include the later approved Phase 2A re-issues (see LATER_APPROVED and phase-2a-wording.test.ts).
+      "sdit-epp": 6,
+      "tsd-epp": 5,
       "tanning-consultant-interview": 3,
-      "management-interview-round-1": 3,
+      "management-interview-round-1": 4,
       "management-interview-round-2": 3,
-      "fttc-epp": 2,
-      "asd-sdit-epp": 2,
-      "dmit-epp-tsd": 2,
-      "dmit-epp-dmit": 2,
+      "fttc-epp": 3,
+      "asd-sdit-epp": 3,
+      "dmit-epp-tsd": 3,
+      "dmit-epp-dmit": 3,
       "prescreen-phone-interview": 3,
       "resignation-exit": 3,
       coaching: 2,
       dpoa: 5,
       "policy-review": 2,
       "follow-up-coaching": 2,
-      demotion: 1,
+      demotion: 2,
       "position-transfer": 1,
     });
   });
@@ -179,7 +199,8 @@ describe("the generated PDFs", () => {
 
   it("still print the unapproved wording", async () => {
     expect(await pdfText("management-interview-round-1")).toContain("A client approaches the counter upset because the tanning bed");
-    expect(await pdfText("sdit-epp")).toContain("Client Engagement Strategies");
+    expect(await pdfText("sdit-epp")).not.toContain("Client Engagement Strategies");
+    expect(await pdfText("sdit-epp")).toContain("Follow through with 7G Service with every guest.");
   });
 });
 
