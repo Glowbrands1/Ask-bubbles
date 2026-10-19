@@ -212,28 +212,34 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
      *                       store key question, and the yes/no answers
      *                       printed as HR's statements.
      */
-    const reissued = new Set(["coaching", "policy-review", "follow-up-coaching"]);
     /*
-     * RE-ISSUED FOR THE SALON -> STORE TERMINOLOGY. A published version is
-     * immutable, so wording that reached a running database has to ship as a
-     * new revision; these templates' documents (or variants) changed and
-     * nothing else did. Field keys are unchanged.
+     * THE REVISION MAP, EXPLICIT. Each number is the count of re-issues the
+     * business has approved for that template (a published version is
+     * immutable, so wording that reached a running database ships as a new
+     * revision): the Salon -> Store release, the guest terminology release and
+     * the Phase 2A wording release. Field keys are unchanged throughout.
      */
-    const storeWording = new Set([
-      "asd-sdit-epp",
-      "fttc-epp",
-      "dmit-epp-tsd",
-      "dmit-epp-dmit",
-      "prescreen-phone-interview",
-    ]);
-    // Re-issued twice: Salon -> Store, then client/customer -> guest.
-    const guestWording = new Set(["tanning-consultant-interview", "management-interview-round-1", "management-interview-round-2"]);
+    const expectedRevisions: Record<string, number> = {
+      coaching: 2,
+      "policy-review": 2,
+      "follow-up-coaching": 2,
+      "asd-sdit-epp": 3,
+      "fttc-epp": 3,
+      "dmit-epp-tsd": 3,
+      "dmit-epp-dmit": 3,
+      "prescreen-phone-interview": 2,
+      "tanning-consultant-interview": 3,
+      "management-interview-round-1": 4,
+      "management-interview-round-2": 3,
+      "tsd-epp": 5,
+      "resignation-exit": 3,
+      demotion: 2,
+      "position-transfer": 1,
+    };
     for (const seed of TEMPLATE_SEEDS) {
-      if (seed.key === "dpoa" || seed.key === "sdit-epp" || seed.key === "tsd-epp" || seed.key === "resignation-exit") continue;
-      expect(seed.revision, seed.key).toBe(guestWording.has(seed.key) ? 3 : reissued.has(seed.key) || storeWording.has(seed.key) ? 2 : 1);
+      if (seed.key === "dpoa" || seed.key === "sdit-epp") continue;
+      expect(seed.revision, seed.key).toBe(expectedRevisions[seed.key] ?? 1);
     }
-    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "tsd-epp")?.revision).toBe(4);
-    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "resignation-exit")?.revision).toBe(3);
     /*
      * THE SDIT EPP IS AT 3. Revision 2 published the form the business issues
      * — the standing expectations, the productivity table, the employee's own
@@ -241,7 +247,7 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
      * SDIT: `roleAbbr` was "ASD", so every `{{roleAbbr}}` on the page named
      * the wrong role.
      */
-    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "sdit-epp")?.revision).toBe(5);
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "sdit-epp")?.revision).toBe(6);
     /*
      * THE CORRECTIVE ACTION FORM IS AT 4. Revision 2 renamed it and gave its
      * observation the Observed/Expectation shape; revision 3 set the two policy
@@ -310,7 +316,7 @@ describe("the First Round Management Interview matches its source", () => {
       "What were your sales targets in your last position? How consistently did you meet or exceed them?",
       "Tell me about a time you turned an unhappy guest into a satisfied one.",
       "What systems or processes have you used to manage staffing, scheduling, and labor costs?",
-      "This role involves hands-on work like cleaning beds and doing laundry. How do you lead by example in these tasks?",
+      "This role involves hands-on work like cleaning the Makery and equipment and keeping the workspace organized. How do you lead by example in these tasks?",
       "How do you ensure your team is consistently trained to meet both performance expectations and company compliance standards?",
       "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the store. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause.",
       "Why should we select you for this position?",
