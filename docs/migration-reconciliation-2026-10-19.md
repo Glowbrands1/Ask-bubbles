@@ -11,8 +11,8 @@ live database was changed to produce it. Prepared 2026-10-19 against the Ask Bub
 - **36 of 39** local files match a history entry exactly (version and name).
 - **3 do not**: `20261014001000` (recorded under a different version and name), `20261015001000` and
   `20261016001000` (no entry). Their schema changes are all present on the live database.
-- **The live database also holds objects that no repo migration creates** (3.3). They match the contents of
-  Ask Sunny's "Woven adoption and credential ownership" migration, applied by hand, with Windows line endings.
+- **The live database also holds objects that no repo migration creates** (3.3). They are defined in
+  Ask Sunny's `20261006001000_woven_adoption_and_credentials.sql`, applied by hand, with Windows line endings.
   One of them (a trigger on `employee_account_links`) **blocks the migration in PR #54** on production, even though
   every local test passes. See 3.3.
 - Why the history matters: standard migration tooling decides what to apply from this table. Today it would
@@ -112,8 +112,12 @@ after comment-stripping: tables `google_review_goals` (including the five `count
 Usage counts at the time of checking: 7 active `app_users`; 3 `employee_account_links`, all `woven_linked`, all `admin_manual`,
 every managed flag **false**; audit rows only of types `invited`, `invitation_accepted` and `role_changed`.
 
-**Origin:** these match Ask Sunny's #87 migration content. Nothing in the repo or the history says who applied them or
-when. That needs a person to answer.
+**Origin:** all three are defined in Ask Sunny's `supabase/migrations/20261006001000_woven_adoption_and_credentials.sql`
+(checked by name against that repo's `main`). That file has the same version number as Ask Bubbles' own
+`20261006001000_woven_knowledge_communications`, which is the one the history records. Nothing in either repo or the
+history says who applied the Sunny objects or when, and no row was ever written with the Sunny-only actions, so that needs a
+person to answer. Ask Sunny's separate `data-changes/20261006_woven_status_managed_sd_asd.sql` does **not** appear to have been run
+here: every Ask Bubbles link has all managed flags off.
 
 **Why it matters for PR #54:** that migration stamps `terminated_at`, `reactivated_at`, `revoked_woven_status`,
 `last_synced_at` and `access_revoked_at` on `employee_account_links` from security-definer functions. The live trigger would
