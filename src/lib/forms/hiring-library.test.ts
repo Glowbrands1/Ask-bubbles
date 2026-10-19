@@ -227,7 +227,7 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
       "fttc-epp": 3,
       "dmit-epp-tsd": 3,
       "dmit-epp-dmit": 3,
-      "prescreen-phone-interview": 2,
+      "prescreen-phone-interview": 3, // Salon -> Store, then the removal of the uniform question (D14, Phase 2B)
       "tanning-consultant-interview": 3,
       "management-interview-round-1": 4,
       "management-interview-round-2": 3,
@@ -515,14 +515,14 @@ describe("the Prescreen / Phone Interview matches its source", () => {
     expect(options(document, "at_least_18")).toEqual(["Yes", "No"]);
   });
 
-  it("keeps the four written questions in the source's words and order", () => {
+  it("keeps the three remaining written questions in the source's words and order, without the removed uniform question (D14)", () => {
     const labels = fieldLabels(document);
     expect(labels.get("why_interested")).toBe(
       "Why are you interested in working for Buff City Soap?",
     );
-    expect(labels.get("uniform_services")).toBe(
-      "Are you willing to use our services as part of your Sun Tan City uniform? (Must agree to UV, Sunless and Spa usage to proceed with employment)",
-    );
+    // Removed on 2026-10-19 (D14, Option A): the Sun Tan City product-use/uniform question.
+    expect(labels.has("uniform_services")).toBe(false);
+    expect([...labels.values()].some((label) => /Sun Tan City|UV, Sunless/.test(label))).toBe(false);
     expect(labels.get("previous_experience")).toBe("Previous Work Experience");
     expect(labels.get("availability")).toBe("Availability");
     expect(labels.get("job_title")).toBe("Position Applied For");

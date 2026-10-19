@@ -7,6 +7,7 @@ import approved from "@/test/fixtures/approved-template-changes.json";
 import rendered from "@/test/fixtures/ask-sunny-rendered-forms.json";
 import jbaChunks from "@/test/fixtures/jba-manual-brand-chunks.json";
 import snapshot from "@/test/fixtures/ask-sunny-published-templates.json";
+import { removedFieldReferenceText, withApprovedRemovals } from "@/test/approved-removals";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatMessage } from "@/types";
 
@@ -238,7 +239,11 @@ interface SnapshotTemplate {
   [field: string]: unknown;
 }
 const SOURCE = new Map((snapshot.templates as unknown as SnapshotTemplate[]).map((entry) => [entry.key, entry]));
-const sourceOf = (key: string) => SOURCE.get(SOURCE_KEY[key] ?? key)!;
+// The snapshot, less any question the business explicitly approved removing (src/test/approved-removals.ts).
+const sourceOf = (key: string) => {
+  const entry = SOURCE.get(SOURCE_KEY[key] ?? key)!;
+  return { ...entry, document: withApprovedRemovals(key, entry.document) };
+};
 const seedOf = (key: string) => MIGRATED_TEMPLATE_SEEDS.find((seed) => seed.key === key)!;
 
 /** The approved substitutions, applied to text from either side. */
@@ -657,7 +662,12 @@ describe.each(FORMS)("$key", (form) => {
       });
       const ours = await pdfText(bytes);
       expect(ours.pages, name).toBe(reference[name]!.pages);
-      expect(neutral(ours.text), name).toBe(neutral(reference[name]!.text));
+      // An approved removal also removes the question, and the sample answer printed under it, from the reference text.
+      const referenceText = removedFieldReferenceText(form.key, neutral).reduce(
+        (text, removed) => text.split(removed).join(""),
+        neutral(reference[name]!.text),
+      ).replace(/\s+/g, " ").trim();
+      expect(neutral(ours.text), name).toBe(referenceText);
     }
   });
 
