@@ -36,6 +36,7 @@
 # PARITY_DUMP_PRODUCTION_LIKE=/path/file writes the production-like database's object
 # fingerprint (see scripts/db/fingerprint.sql) and stops, leaving it running: used to
 # check the fixture against the live database with the same query.
+# PARITY_DUMP_FRESH=/path/file does the same for the FRESH build (file, and file.capture for the state at the capture migration).
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -145,6 +146,12 @@ for f in "$MIGRATIONS"/*.sql; do
 done
 FRESH_FP="$(mktemp)"; fingerprint >"$FRESH_FP"
 echo "   $(wc -l <"$FRESH_FP") objects fingerprinted (full), $(wc -l <"$FRESH_CAP_FP") at the capture"
+if [ "${PARITY_DUMP_FRESH:-}" != "" ]; then
+  # Validation aid: dump the FRESH fingerprint (at the capture, then in full) and leave that cluster running.
+  cp "$FRESH_CAP_FP" "$PARITY_DUMP_FRESH.capture"; cp "$FRESH_FP" "$PARITY_DUMP_FRESH"
+  echo "   fresh fingerprints written to $PARITY_DUMP_FRESH(.capture); cluster left running on port $PORT"
+  exit 0
+fi
 
 ALLOWED="$(mktemp)"
 cat >"$ALLOWED" <<'LIST'

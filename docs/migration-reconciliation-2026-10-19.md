@@ -198,8 +198,11 @@ Only two rows are added. `20261014001000` is deliberately **not** inserted.
 **Step 2, apply what is still pending, with the normal tooling.** Two files are pending: `20261014001000` and `20261017001000`.
 - Because `20261014001000` sorts **before** the newest history entry (`20261014114127`), the Supabase CLI will normally refuse it unless told to
   include earlier-dated files: `supabase db push --include-all`. Run `supabase db push --dry-run --include-all` first; it is read-only and lists
-  exactly what it would apply, which must be those two files and nothing else. (I cannot run the CLI against the project from here, and I have
-  not verified the CLI's exact behaviour; the dry run is the check.)
+  exactly what it would apply, which must be those two files and nothing else. **Verified on a disposable database with the real CLI (v2.121.0,
+  `scripts/db/verify-cli-push.sh`, connecting as the non-superuser owner role `postgres`):** without `--include-all` the CLI refuses
+  (`DbPushMissingRemoteError`); with `--include-all` **before** step 1 it would also re-list `20261015001000` and `20261016001000` (this is why step 1 comes first);
+  **after** step 1 the dry run lists exactly the files that are really pending (`20261014001000`, `20261017001000`, and `20261019001000` once #54 is in the set);
+  the real push applies them, records their statements, a second dry run says "up to date", and the result equals a fresh build object for object. The dry run against production is still the final check.
 - What step 2 changes on production, as measured on the production-like database: it **drops the 4-argument `google_review_apply_reviews`**
   (a `service_role`-only overload) and **replaces the body of `google_reviews_monthly`** with the repository version (reads the identical view;
   same results). Nothing else changes: the harness lists exactly those four fingerprint lines (the overload's function, privilege and comment lines, plus the monthly function), and fails on any other.
@@ -256,8 +259,8 @@ Supabase SQL editor, and the same file on a production-like local database
 On 2026-10-19 both gave: `acl_col 3`, `acl_fn 54`, `acl_rel 56`, `comment_fn 54`, `comment_rel 56`, `constraint 364`, `function 54`, `index 142`, `policy 1`, `rls 42`,
 `table 42`, `trigger 34`, `view 13`, with identical hashes.
 
-**What the harness cannot show.** It models the history table as `version` and `name` only; it does not run the Supabase CLI, so the CLI's ordering rule,
-its `--include-all` behaviour, what it stores in `statements`, and how it splits statements are **not verified** (the dry run in 4.2 is the guard). It runs as
+**What the harness cannot show.** It models the history table as `version` and `name` only and does not run the CLI; the CLI is exercised separately by `scripts/db/verify-cli-push.sh`
+(ordering rule, `--include-all`, stored statements and statement splitting of the nested `$fn$`/`$capture$` bodies all verified there, on Postgres 16). Both run as
 the owner role `postgres` on Postgres 16, so a privilege or ownership problem specific to the live Postgres 17 would not show. The production-like database is a model
 of the live one, validated by the 13 hashes; it is not a copy of it.
 
@@ -265,13 +268,12 @@ of the live one, validated by the 13 hashes; it is not a copy of it.
 
 1. **A version recorded as applied that is not.** Mitigated by recording only `20261015001000` and `20261016001000`, each validated object by object and (for 15) seed row by seed row. `20261014001000` is not recorded.
 2. **Step 2 changes production objects.** It drops one `service_role`-only overload and refreshes one function with an equivalent body. Nothing in the repository calls the 4-argument form (the application sends the 6-argument parameters). Low risk, reversible (4.3).
-3. **`supabase db push --include-all` could try more than expected.** The dry run is the guard: it must list exactly `20261014001000` and `20261017001000`.
+3. **`supabase db push --include-all` could try more than expected.** The dry run is the guard: it must list exactly `20261014001000` and `20261017001000` (plus `20261019001000` only when #54 is in the deployed set). Verified with the real CLI that, before step 1, it would also list `20261015001000` and `20261016001000`, which is why step 1 comes first.
 4. **The marker text in `statements` is not the executed SQL.** Deliberate, so nobody mistakes it for a replayable record.
 5. **The captured guard is only as faithful as the comparison.** Its definition hash-matches the live one, and the production-like database matches the live database on all categories; I have not byte-compared the CRLF text, and the live function's owner and privileges were read, not changed.
-6. **PR #54 depends on this ordering.** Its migration is `20261019001000` and builds on the captured guard (`20261017001000`). Applying #54 first would fail on production.
+6. **PR #54 depends on this ordering.** Its migration is `20261019001000` and rewrites the guard that `20261017001000` captures. The CLI applies pending files in version order, so when both are pending the capture always runs first (shown by `verify-cli-push.sh`: it applied 14001000, 17001000, 19001000 in that order). Production already holds the captured objects, so this is a fresh-build and ordering guarantee, not a production failure I have reproduced. Merge #56 before #54 regardless.
 7. **Process.** The Ask Sunny objects were applied by hand, with no history row. Nothing in either repository says who or when. Recommend migrations only through the repository and the CLI from here.
-8. **Statement splitting by the CLI.** `20261017001000` nests dollar-quoted bodies (`$fn$` inside `$capture$`). The harness applies files with `psql`, which handles this; I have not
-   verified that the Supabase CLI's statement splitter does. If the dry run or the apply rejects it, apply that one file with `psql -1 -f` as the `postgres` role and record its history row by hand.
+8. **Statement splitting by the CLI.** `20261017001000` nests dollar-quoted bodies (`$fn$` inside `$capture$`). Verified with the real CLI (v2.121.0) on a disposable database by `scripts/db/verify-cli-push.sh`: it applied and the result equals a fresh build. If the production dry run or apply rejects it anyway, apply that one file with `psql -1 -f` as the `postgres` role and record its history row by hand.
 9. **Owner and privileges.** The unconditional `revoke` and `grant` in the capture assume the migration role owns `employee_account_links` and the guard function. On production both are owned by
    `postgres` (read-only check), which the pre-flight in 4.2 re-confirms; if the CLI connects as a different role the statements could fail with "permission denied" and the file would roll back.
 10. **`auth_clear_user_credentials` fails only when called.** Its body is not checked at creation, so a difference in the `auth` tables would surface at first use, not at apply.
