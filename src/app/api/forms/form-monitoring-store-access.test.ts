@@ -63,8 +63,14 @@ interface Options {
   subject: string;
   role: string;
   scope: AccessScope;
-  /** Subjects with an unrevoked designation row. */
+  /** Subjects with an unrevoked designation row of mode `all`. */
   designated?: string[];
+  /** Subjects designated for their Woven stores only. */
+  wovenDesignated?: string[];
+  /** Woven affiliations by app user id (active ones); `loc` is the Woven location id. */
+  affiliations?: Record<string, { loc: string; expires_on?: string | null }[]>;
+  /** Woven location id -> company store id, for mapped locations only. */
+  locationMap?: Record<string, string>;
   /** Woven's mapped primary store, by app user id. */
   woven?: Record<string, string | null>;
   /** Make the designation lookup fail. */
@@ -99,29 +105,47 @@ async function load(options: Options) {
     };
   });
 
-  /* The two lookups the visibility rule makes, answered from the options. */
+  /* The lookups the visibility rule makes, answered from the options. */
   vi.doMock("@/lib/supabase/server", () => ({
     getSupabaseAdmin: () => ({
       from: (table: string) => {
-        const state: { eq?: string } = {};
+        const f: { eq: Record<string, unknown>; in?: string[]; select?: string } = { eq: {} };
+        const rows = () => {
+          if (table === "employee_access_preview") {
+            const id = f.eq.app_user_id as string;
+            if (!options.woven || !(id in options.woven)) return [];
+            return [{ employee_id: `emp-${id}`, mapped_primary_location_id: options.woven[id] }];
+          }
+          if (table === "employee_location_affiliations") {
+            const subject = String(f.eq.employee_id).replace("emp-", "");
+            return (options.affiliations?.[subject] ?? []).map((a) => ({
+              woven_location_id: a.loc,
+              expires_on: a.expires_on ?? null,
+            }));
+          }
+          if (table === "woven_location_map") {
+            return (f.in ?? [])
+              .filter((id) => options.locationMap && id in options.locationMap)
+              .map((id) => ({ location_id: options.locationMap![id] }));
+          }
+          return [];
+        };
         const builder = {
-          select: () => builder,
-          eq: (_column: string, value: string) => ((state.eq = value), builder),
+          select: (columns: string) => ((f.select = columns), builder),
+          eq: (column: string, value: unknown) => ((f.eq[column] = value), builder),
           is: () => builder,
-          limit: async () => ({
-            data:
-              table === "employee_access_preview" && options.woven && state.eq! in options.woven
-                ? [{ mapped_primary_location_id: options.woven[state.eq!] }]
-                : [],
-            error: null,
-          }),
-          maybeSingle: async () =>
-            options.designationFails
-              ? { data: null, error: { message: "relation does not exist" } }
-              : {
-                  data: options.designated?.includes(state.eq!) ? { app_user_id: state.eq } : null,
-                  error: null,
-                },
+          in: (_column: string, values: string[]) => ((f.in = values), builder),
+          limit: async () => ({ data: rows(), error: null }),
+          maybeSingle: async () => {
+            if (options.designationFails) return { data: null, error: { message: "column does not exist" } };
+            const id = f.eq.app_user_id as string;
+            if (options.designated?.includes(id)) return { data: { visibility_mode: "all" }, error: null };
+            if (options.wovenDesignated?.includes(id)) {
+              return { data: { visibility_mode: "woven_affiliations" }, error: null };
+            }
+            return { data: null, error: null };
+          },
+          then: (resolve: (value: unknown) => unknown) => resolve({ data: rows(), error: null }),
         };
         return builder;
       },
@@ -206,12 +230,23 @@ const STORE_MANAGER: Options = { subject: "sm", role: "location_manager", scope:
 const COLENE: Options = { subject: "colene", role: "district_manager", scope: GLOBAL, designated: ["colene"] };
 const DJ: Options = { subject: "dj", role: "regional_manager", scope: GLOBAL, designated: ["dj"] };
 const ADMIN: Options = { subject: "admin", role: "admin", scope: GLOBAL };
+/* A District Manager with global scope and NO designation: home store only. */
 const AMBER: Options = {
   subject: "amber",
   role: "district_manager",
   scope: GLOBAL,
   woven: { amber: "loc-b" },
   designated: ["colene", "dj"],
+};
+/* Designated for her Woven stores: home store loc-b plus additional loc-c, Corporate (unmapped) ignored. */
+const AMBER_WOVEN: Options = {
+  subject: "amber",
+  role: "district_manager",
+  scope: GLOBAL,
+  woven: { amber: "loc-b" },
+  wovenDesignated: ["amber"],
+  affiliations: { amber: [{ loc: "w-b" }, { loc: "w-c" }, { loc: "w-corporate" }] },
+  locationMap: { "w-b": "loc-b", "w-c": "loc-c" },
 };
 const NO_STORE: Options = { subject: "nobody", role: "location_manager", scope: GLOBAL, woven: {} };
 
@@ -249,6 +284,47 @@ describe("the list API: who sees which stores' forms", () => {
     const { list } = await load(STORE_MANAGER);
     const payload = (await (await list.GET(get())).json()) as { demo: { deletable: number } };
     expect(payload.demo.deletable).toBe(1);
+  });
+});
+
+describe("a Woven-affiliation designation reads the home store plus the person's other Woven stores", () => {
+  it("lists her home store and her additional stores, and not a store Woven does not list", async () => {
+    expect(await listedIds(AMBER_WOVEN)).toEqual([FORM_B, FORM_C]);
+  });
+  it("opens her additional store's form by URL, and refuses the store she is not on", async () => {
+    const { detail } = await load(AMBER_WOVEN);
+    expect((await detail.GET(get(), params(FORM_B))).status).toBe(200);
+    expect((await detail.GET(get(), params(FORM_C))).status).toBe(200);
+    expect((await detail.GET(get(), params(FORM_A))).status).toBe(404);
+  });
+  it("ignores an expired affiliation", async () => {
+    expect(
+      await listedIds({
+        ...AMBER_WOVEN,
+        affiliations: { amber: [{ loc: "w-b" }, { loc: "w-c", expires_on: "2020-01-01" }] },
+      }),
+    ).toEqual([FORM_B]);
+  });
+  it("ignores an affiliation Woven's map has not resolved to a store", async () => {
+    expect(await listedIds({ ...AMBER_WOVEN, locationMap: { "w-b": "loc-b" } })).toEqual([FORM_B]);
+  });
+  it("falls back to the home store when Woven lists no affiliations", async () => {
+    expect(await listedIds({ ...AMBER_WOVEN, affiliations: {}, locationMap: {} })).toEqual([FORM_B]);
+  });
+  it("reads nothing when Woven offers no store at all", async () => {
+    expect(await listedIds({ ...AMBER_WOVEN, woven: {}, affiliations: {}, locationMap: {} })).toEqual([]);
+  });
+  it("is not all-store access: Colene's mode still is, Amber's is not", async () => {
+    expect(await listedIds(COLENE)).toEqual([FORM_A, FORM_B, FORM_C]);
+    expect(await listedIds(AMBER_WOVEN)).not.toContain(FORM_A);
+  });
+  it("fails closed when the designation cannot be read", async () => {
+    expect(await listedIds({ ...AMBER_WOVEN, designationFails: true })).toEqual([FORM_B]);
+  });
+  it("does not widen anybody else: an undesignated account with affiliations keeps its home store", async () => {
+    expect(
+      await listedIds({ ...AMBER_WOVEN, wovenDesignated: [] }),
+    ).toEqual([FORM_B]);
   });
 });
 
@@ -347,5 +423,12 @@ describe("the designation table is server-only", () => {
     expect(sql).toMatch(/revoke all on public\.forms_all_store_access from anon, authenticated/);
     expect(sql).not.toMatch(/create policy/i);
     expect(sql).toMatch(/from public\.app_users u where u\.id =/);
+  });
+  it("adds the Woven mode without changing any existing designation", () => {
+    const sql = readFileSync("supabase/migrations/20261019002000_forms_store_access_woven_mode.sql", "utf8");
+    expect(sql).toMatch(/default 'all'/);
+    expect(sql).toMatch(/check \(visibility_mode in \('all', 'woven_affiliations'\)\)/);
+    expect(sql).not.toMatch(/\b(delete|drop|truncate)\b/i);
+    expect(sql).not.toMatch(/update public\.forms_all_store_access/i);
   });
 });
