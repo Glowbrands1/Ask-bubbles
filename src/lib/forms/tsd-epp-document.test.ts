@@ -570,18 +570,20 @@ describe("the rest of the library is where it was", () => {
       dpoa: 5,
       "policy-review": 2,
       "follow-up-coaching": 2,
-      "sdit-epp": 5,
-      "tsd-epp": 4,
+      "sdit-epp": 6,
+      "tsd-epp": 5,
       "resignation-exit": 3,
       // Salon -> Store wording re-issues.
-      "asd-sdit-epp": 2,
-      "fttc-epp": 2,
-      "dmit-epp-tsd": 2,
-      "dmit-epp-dmit": 2,
-      "prescreen-phone-interview": 2,
+      "asd-sdit-epp": 3,
+      "fttc-epp": 3,
+      "dmit-epp-tsd": 3,
+      "dmit-epp-dmit": 3,
+      "prescreen-phone-interview": 3,
       "tanning-consultant-interview": 3,
-      "management-interview-round-1": 3,
+      "management-interview-round-1": 4,
       "management-interview-round-2": 3,
+      // Employment changes: the demotion example's destination role.
+      demotion: 2,
     };
     for (const entry of TEMPLATE_SEEDS) {
       expect(entry.revision, entry.key).toBe(expected[entry.key] ?? 1);

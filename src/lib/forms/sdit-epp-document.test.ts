@@ -327,13 +327,13 @@ describe("the rest of the library is where it was", () => {
     const plans = TEMPLATE_SEEDS.filter((entry) => entry.requiredPermission === "create_epp");
     expect(plans.length).toBe(6);
     const expected: Record<string, number> = {
-      "sdit-epp": 5,
-      "tsd-epp": 4,
+      "sdit-epp": 6,
+      "tsd-epp": 5,
       // Salon -> Store wording re-issues.
-      "asd-sdit-epp": 2,
-      "fttc-epp": 2,
-      "dmit-epp-tsd": 2,
-      "dmit-epp-dmit": 2,
+      "asd-sdit-epp": 3,
+      "fttc-epp": 3,
+      "dmit-epp-tsd": 3,
+      "dmit-epp-dmit": 3,
     };
     for (const plan of plans) {
       expect(plan.revision, plan.key).toBe(expected[plan.key] ?? 1);

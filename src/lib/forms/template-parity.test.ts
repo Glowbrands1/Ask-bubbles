@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 import approved from "@/test/fixtures/approved-template-changes.json";
 import snapshot from "@/test/fixtures/ask-sunny-published-templates.json";
 
+import { APPROVED_REMOVAL_DESCRIPTION_CHANGES, APPROVED_REMOVALS, withApprovedRemovals } from "@/test/approved-removals";
+
 import { MIGRATED_TEMPLATE_SEEDS, TEMPLATE_SEEDS } from "./library";
 
 /**
@@ -66,6 +68,22 @@ const md5 = (value: unknown) => createHash("md5").update(jsonbText(value)).diges
 
 const RENAMED: Readonly<Record<string, string>> = { "stc-exit": "resignation-exit" };
 
+
+/**
+ * EXPLICITLY APPROVED CONTENT CHANGES (not branding, not Salon -> Store, not
+ * client -> guest). Each entry is one exact sentence, from the Ask Sunny
+ * published text to the Buff City Soap text, approved by the business on
+ * 2026-10-19 (Phase 2A). The test accepts a difference ONLY if it is exactly one
+ * of these pairs, so this list cannot widen into a general exemption: any other
+ * wording change still fails the approved-list test.
+ */
+const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[] = [
+  { decision: "D3 — 7G Service", from: "Follow through with Client Engagement Strategies with every client.", to: "Follow through with 7G Service with every guest." },
+  { decision: "D4 — Employee Performance Plan acknowledgement", from: "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.", to: "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement." },
+  { decision: "D12 — demotion example destination role", from: "(Employee) is moving from a FT (Job Title) at $x.xx /hr at (location, State abbr.) to a PT Tanning Consultant at $x.xx /hr at (location,State abbr.) effective dd/mm/yyyy. (**Effective date must be the start of a pay period).", to: "(Employee) is moving from a FT (Job Title) at $x.xx /hr at (location, State abbr.) to a PT (New Job Title) at $x.xx /hr at (location,State abbr.) effective dd/mm/yyyy. (**Effective date must be the start of a pay period)." },
+  { decision: "D18 — Makery cleaning scenario", from: "This role involves hands-on work like cleaning beds and doing laundry. How do you lead by example in these tasks?", to: "This role involves hands-on work like cleaning the Makery and equipment and keeping the workspace organized. How do you lead by example in these tasks?" },
+];
+
 function comparable(seed: Record<string, unknown>) {
   return {
     key: seed.key,
@@ -120,7 +138,7 @@ describe("the migrated templates are the reference platform's published template
       expect(seed, template.key).toBeDefined();
       const found: { path: string; from: unknown; to: unknown }[] = [];
       differences(
-        comparable(template),
+        comparable({ ...template, document: withApprovedRemovals(RENAMED[template.key] ?? template.key, template.document) }),
         comparable(seed as unknown as Record<string, unknown>),
         "",
         found,
@@ -128,6 +146,38 @@ describe("the migrated templates are the reference platform's published template
       for (const entry of found) actual.push({ sourceKey: template.key, ...entry });
     }
     expect(actual).toEqual(CHANGES);
+  });
+
+  it("approved removals are narrow: each block exists in the snapshot, is gone from the seed, and nothing else was dropped", () => {
+    expect(APPROVED_REMOVALS).toHaveLength(1);
+    for (const removal of APPROVED_REMOVALS) {
+      const template = TEMPLATES.find((entry) => entry.key === removal.templateKey)!;
+      const seed = MIGRATED_TEMPLATE_SEEDS.find((entry) => entry.key === removal.templateKey)!;
+      type Block = { kind?: string; field?: { key?: string; label?: string } };
+      const before = (template.document as { blocks: Block[] }).blocks;
+      const after = (seed.document as { blocks: Block[] }).blocks;
+      const removed = before.find((block) => block.kind === "field" && block.field?.key === removal.fieldKey);
+      expect(removed?.field?.label, removal.decision).toBe(removal.snapshotLabel);
+      expect(after.some((block) => block.field?.key === removal.fieldKey), removal.decision).toBe(false);
+      // Exactly one block fewer, and every other field key is still there, in the same order.
+      expect(after.length).toBe(before.length - 1);
+      const keys = (blocks: Block[]) => blocks.filter((block) => block.kind === "field").map((block) => block.field?.key);
+      expect(keys(after)).toEqual(keys(before).filter((key) => key !== removal.fieldKey));
+    }
+  });
+
+  it("the explicitly approved content changes are exactly the Phase 2A sentences, each present and nothing wider", () => {
+    const matching = CHANGES.filter((change) =>
+      APPROVED_CONTENT_CHANGES.some((entry) => entry.from === change.from && entry.to === change.to),
+    );
+    // D3 x2 (SDIT, both lists), D4 x10 (six EPPs; SDIT, TSD and both DMIT print it twice), D12 x1, D18 x1.
+    expect(matching).toHaveLength(14);
+    for (const entry of APPROVED_CONTENT_CHANGES) {
+      expect(matching.some((change) => change.from === entry.from), entry.decision).toBe(true);
+    }
+    expect(new Set(matching.map((change) => change.sourceKey))).toEqual(
+      new Set(["sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1"]),
+    );
   });
 
   it("each approved change is a branding change of an authorized kind", () => {
@@ -148,6 +198,10 @@ describe("the migrated templates are the reference platform's published template
       expect(typeof change.to, where).toBe("string");
       const from = change.from as string;
       const to = change.to as string;
+      // The description change that accompanies an approved removal: the exact pair only.
+      if (APPROVED_REMOVAL_DESCRIPTION_CHANGES.some((entry) => entry.templateKey === change.sourceKey && entry.from === from && entry.to === to)) continue;
+      // A Phase 2A change is accepted only as the exact approved pair.
+      if (APPROVED_CONTENT_CHANGES.some((entry) => entry.from === from && entry.to === to)) continue;
       // Salon -> Store is the other authorized substitution: Buff City Soap's locations are stores.
       const SOURCE_TERM = /\b[Ss]alons?\b|\bSALONS?\b|\b[Cc]lients?\b|\b[Cc]ustomers?\b/;
       // The authorized terminology substitutions: Salon -> Store, and client/customer -> guest.

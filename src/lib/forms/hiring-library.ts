@@ -200,7 +200,7 @@ export function firstRoundManagementInterviewDocument(): FormDocument {
       ),
       ...question(
         "hands_on_work",
-        "This role involves hands-on work like cleaning beds and doing laundry. How do you lead by example in these tasks?",
+        "This role involves hands-on work like cleaning the Makery and equipment and keeping the workspace organized. How do you lead by example in these tasks?",
       ),
       ...question(
         "team_training",
@@ -595,15 +595,6 @@ export function prescreenPhoneInterviewDocument(): FormDocument {
       },
       {
         kind: "field",
-        field: field(
-          "uniform_services",
-          "Are you willing to use our services as part of your Sun Tan City uniform? (Must agree to UV, Sunless and Spa usage to proceed with employment)",
-          "manager",
-          "long_text",
-        ),
-      },
-      {
-        kind: "field",
         field: field("previous_experience", "Previous Work Experience", "manager", "long_text"),
       },
       { kind: "field", field: field("availability", "Availability", "manager", "long_text") },
@@ -642,14 +633,14 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     name: "Prescreen / Phone Interview Form",
     shortName: "Prescreen",
     description:
-      "The prescreening call, before anyone is booked for an interview. Age, interest, uniform agreement, experience and availability, signed off by the interviewer.",
+      "The prescreening call, before anyone is booked for an interview. Age, interest, experience and availability, signed off by the interviewer.",
     category: "hiring",
     layoutFamily: "interview",
     requiredPermission: "create_hiring_form",
     displayOrder: 10,
     document: prescreenPhoneInterviewDocument(),
     variants: [],
-    revision: 2,
+    revision: 3,
     revisionNote: "Published from the 04. Prescreen Form - Phone Interview source document.",
     bundledPdfName: "Prescreen Form - Phone Interview.pdf",
   },
@@ -681,7 +672,7 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 12,
     document: firstRoundManagementInterviewDocument(),
     variants: [],
-    revision: 3,
+    revision: 4,
     revisionNote: "Published from the 02. First Round Managment Interview Form source document.",
     bundledPdfName: "First Round Management Interview Form.pdf",
   },

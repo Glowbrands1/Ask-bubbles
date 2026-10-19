@@ -274,7 +274,7 @@ describe("10. an automatic re-sign-in into JB & Associates is detected before re
  * and flagged rather than rewritten. Only these exact strings are exempt.
  */
 const RETAINED_FOR_REVIEW: readonly string[] = [
-  "Are you willing to use our services as part of your Sun Tan City uniform? (Must agree to UV, Sunless and Spa usage to proceed with employment)",
+  // The prescreen's "…as part of your Sun Tan City uniform?" question was removed on 2026-10-19 (D14, Option A).
   "Sun Tan City Core Values",
 ];
 
@@ -359,7 +359,7 @@ describe("11–12. production builds only the Buff City Soap connector", () => {
     expect(woven.map((n) => n.path)).toEqual([]);
   });
 
-  it("12. the source company's name survives only in the two hiring-form lines retained for HR review", () => {
+  it("12. the source company's name survives only in the one hiring-form line still retained for HR review", () => {
     const survivors = productionSources().flatMap(({ path, text }) =>
       RETAINED_FOR_REVIEW.filter((line) => text.includes(line)).map((line) => `${path}: ${line}`),
     );
