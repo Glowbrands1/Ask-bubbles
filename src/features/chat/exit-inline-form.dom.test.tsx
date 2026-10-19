@@ -226,7 +226,7 @@ describe("the Details section HR asked for", () => {
   it("shows every line, filled from the stored answers, and the unanswered ones as not answered", async () => {
     serveWithDetails();
     const { container } = mount();
-    await waitFor(() => expect(container.textContent).toContain("Salon Key Returned"));
+    await waitFor(() => expect(container.textContent).toContain("Store Key Returned"));
 
     const values = [...container.querySelectorAll<HTMLInputElement>("input")].map((input) => input.value);
     for (const value of ["2026-09-20", "Text message", "She's moving to Denver."]) {
@@ -239,7 +239,7 @@ describe("the Details section HR asked for", () => {
     const section = details(container);
     expect(section).toContain("Store Items ReturnedStore items were returned.");
     expect(section).toContain(
-      "Salon Key ReturnedSalon key was not returned. Employee will be payroll deducted $25 for the salon key.",
+      "Store Key ReturnedStore key was not returned. Employee will be payroll deducted $25 for the store key.",
     );
     expect(section).toContain("Payroll DeductionNot answered yet");
     expect(section).toContain("Minimum Wage / Bonus ForfeitureNot answered yet");
@@ -250,7 +250,7 @@ describe("the Details section HR asked for", () => {
   it("follows the tick boxes: answering a question updates its Details line in place", async () => {
     serveWithDetails();
     const { container } = mount();
-    await waitFor(() => expect(container.textContent).toContain("Salon Key Returned"));
+    await waitFor(() => expect(container.textContent).toContain("Store Key Returned"));
 
     const tick = (question: string, answer: "Yes" | "No") =>
       fireEvent.click(
@@ -259,13 +259,13 @@ describe("the Details section HR asked for", () => {
           .querySelector('[role="checkbox"]')!,
       );
     // The key came back after all: untick No, tick Yes.
-    tick("Salon key was returned", "No");
-    tick("Salon key was returned", "Yes");
+    tick("Store key was returned", "No");
+    tick("Store key was returned", "Yes");
     tick("Is Payroll Deduction applicable? *", "No");
     tick("*Are they to be dropped to minimum wage?", "Yes");
     tick("*Do they forfeit their bonus?", "Yes");
 
-    await waitFor(() => expect(details(container)).toContain("Salon Key ReturnedSalon key was returned."));
+    await waitFor(() => expect(details(container)).toContain("Store Key ReturnedStore key was returned."));
     const section = details(container);
     expect(section).not.toContain("$25");
     expect(section).toContain("Payroll DeductionPayroll deduction is not applicable.");

@@ -421,7 +421,7 @@ describe("turn 3 — \"what documents are you referring to in the knowledge base
   it("says which forms this role cannot create rather than listing them as available", async () => {
     const answer = await ask("what forms do we have?", { role: "location_manager" });
 
-    // A Salon Director holds no `create_epp`, so no EPP is offered.
+    // A Store Director holds no `create_epp`, so no EPP is offered.
     expect(answer.content).not.toContain("SDIT EPP");
     expect(answer.content).not.toContain("DMIT EPP");
   });
@@ -472,7 +472,7 @@ describe("turn 6 — \"i need to find those documents\"", () => {
     expect(answer.content).toContain("HR & Performance Forms");
   });
 
-  it("does not send a Salon Director to a page only administrators can open", async () => {
+  it("does not send a Store Director to a page only administrators can open", async () => {
     const answer = await ask("i need to find those documents", { role: "location_manager" });
     // `manage_form_templates` is a District Manager permission.
     expect(answer.content).not.toContain("Form Templates");
@@ -1538,7 +1538,7 @@ describe("the form date, from the request or from a follow-up answer", () => {
  *   Manager: Create a form from this conversation.   → "Which form do you need?"
  *   Manager: Create a Coaching Form …                 → the intake: name, salon,
  *                                                       date, concern, job title
- *   Manager: <first last>, KS <city>, she is the salon director. we can use
+ *   Manager: <first last>, KS <city>, she is the store director. we can use
  *            todays date. the concern is …
  *
  * and the third answer came back as ordinary prose — "I'm creating the
@@ -1567,14 +1567,14 @@ describe("the coaching intake answered on one line", () => {
 
   const ANSWERS: [string, string, string | null][] = [
     [
-      "dana moss, KS shawnee, she is the salon director. we can use todays date. the concern is that she does not verify her salon opener arrives on time, leaving me (rdo) to check in each morning",
+      "dana moss, KS shawnee, she is the store director. we can use todays date. the concern is that she does not verify her salon opener arrives on time, leaving me (rdo) to check in each morning",
       "dana moss",
-      "Salon Director",
+      "Store Director",
     ],
     [
-      "Dana Moss, KS Shawnee, she is the salon director. we can use todays date. the concern is that she does not verify her opener arrives on time",
+      "Dana Moss, KS Shawnee, she is the store director. we can use todays date. the concern is that she does not verify her opener arrives on time",
       "Dana Moss",
-      "Salon Director",
+      "Store Director",
     ],
     ["dana moss, NE Kearney, today, she was late three times", "dana moss", null],
   ];

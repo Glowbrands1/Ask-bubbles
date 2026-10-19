@@ -48,7 +48,7 @@ Google location resource IDs are recorded in `google_review_locations` the first
 - The first **Sync and save** is the backfill: every store's reviews are read from the newest page to the last `nextPageToken` (up to 10,000 per store), keeping Google's original `createTime`/`updateTime`. Each store commits in its own transaction, so an interrupted run loses nothing and the next run simply continues (already-saved reviews are no-ops).
 - Google's own `totalReviewCount` is saved per store on every read; the admin screen shows "Google reports N" under the imported count (highlighted when they differ). A read is only "complete" when imported ≥ Google's total.
 - A read that carries an **older** `updateTime` than what is stored never overwrites it (it only confirms the review still exists); upserts are keyed on the Google review ID per location.
-- Dashboard (`/reviews`) shows imported counts, average, rating spread, monthly trend (by original review date) and a filterable review list. The goal/target tiles stay "Not connected yet": no salon targets or baselines exist yet.
+- Dashboard (`/reviews`) shows imported counts, average, rating spread, monthly trend (by original review date) and a filterable review list. The goal/target tiles stay "Not connected yet": no store targets or baselines exist yet.
 
 ## Near-real-time: Pub/Sub
 

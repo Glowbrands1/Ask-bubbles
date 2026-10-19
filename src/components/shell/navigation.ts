@@ -101,6 +101,27 @@ const ALL_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "insights",
+    label: "Insights",
+    items: [
+      {
+        label: "Reports",
+        href: REPORTS_DEFAULT_PATH,
+        activePrefix: REPORTS_SECTION_PATH,
+        icon: BarChart3,
+        permission: "view_reports",
+        feature: "reports",
+      },
+      {
+        label: "Google Reviews",
+        href: "/reviews",
+        icon: Star,
+        permission: "view_reports",
+        feature: "reviews",
+      },
+    ],
+  },
+  {
     id: "knowledge",
     label: "Knowledge",
     items: [
@@ -131,27 +152,6 @@ const ALL_SECTIONS: NavSection[] = [
         icon: LayoutTemplate,
         permission: "manage_form_templates",
         feature: "forms",
-      },
-    ],
-  },
-  {
-    id: "insights",
-    label: "Insights",
-    items: [
-      {
-        label: "Reports",
-        href: REPORTS_DEFAULT_PATH,
-        activePrefix: REPORTS_SECTION_PATH,
-        icon: BarChart3,
-        permission: "view_reports",
-        feature: "reports",
-      },
-      {
-        label: "Google Reviews",
-        href: "/reviews",
-        icon: Star,
-        permission: "view_reports",
-        feature: "reviews",
       },
     ],
   },

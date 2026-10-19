@@ -80,8 +80,8 @@ describe("the document the business recognises", () => {
   it("prints the sections of the SDIT EPP, in the reference's order", () => {
     expect(sections(renderDocument(document, variant))).toEqual([
       "Employee Information",
-      "To be filled out by Training Salon Director",
-      "Salon's current productivity",
+      "To be filled out by Training Store Director",
+      "Store's current productivity",
       "SDIT's personal productivity",
       "To be filled out by the SDIT",
       "Plan of Action",
@@ -146,7 +146,7 @@ describe("the document the business recognises", () => {
      * other role, fails here.
      */
     expect(variant.roleAbbr).toBe("SDIT");
-    expect(variant.role).toBe("Training Salon Director");
+    expect(variant.role).toBe("Training Store Director");
 
     const printed = JSON.stringify(renderDocument(document, variant));
     expect(printed).toContain("In what areas is the SDIT currently succeeding?");
@@ -163,13 +163,13 @@ describe("the document the business recognises", () => {
       const seed = TEMPLATE_SEEDS.find((entry) => entry.key === key)!;
       return `${seed.variants[0]!.role}/${seed.variants[0]!.roleAbbr}`;
     };
-    expect(pairing("asd-sdit-epp")).toBe("Training Salon Director/ASD");
-    expect(pairing("fttc-epp")).toBe("Salon Director/TC");
+    expect(pairing("asd-sdit-epp")).toBe("Training Store Director/ASD");
+    expect(pairing("fttc-epp")).toBe("Store Director/TC");
     /*
      * THE TSD PLAN'S OWN SUBJECT WAS THE ONE THAT WAS WRONG. It was
      * "District Manager/SD" — inherited from the shared builder — so the
      * Management Performance Plan asked "In what areas is the SD currently
-     * succeeding?" about a Training Salon Director. Its own re-issue fixed
+     * succeeding?" about a Training Store Director. Its own re-issue fixed
      * it, and the two plans above are what would catch that fix having been
      * applied with a find-and-replace.
      */
@@ -208,11 +208,11 @@ describe("the printed PDF", () => {
     for (const printed of [
       "Employee Performance Plan - SDIT",
       "Employee Information",
-      "To be filled out by Training Salon Director",
+      "To be filled out by Training Store Director",
       "Mark areas of success",
       "Mark areas needing improvement",
       "Overall top three strengths",
-      "Salon's current productivity",
+      "Store's current productivity",
       "PPTA",
       "LPSVA",
       "UPTA",
@@ -326,7 +326,15 @@ describe("the rest of the library is where it was", () => {
   it("moves no revision but the SDIT and TSD plans' among the performance plans", () => {
     const plans = TEMPLATE_SEEDS.filter((entry) => entry.requiredPermission === "create_epp");
     expect(plans.length).toBe(6);
-    const expected: Record<string, number> = { "sdit-epp": 3, "tsd-epp": 2 };
+    const expected: Record<string, number> = {
+      "sdit-epp": 4,
+      "tsd-epp": 3,
+      // Salon -> Store wording re-issues.
+      "asd-sdit-epp": 2,
+      "fttc-epp": 2,
+      "dmit-epp-tsd": 2,
+      "dmit-epp-dmit": 2,
+    };
     for (const plan of plans) {
       expect(plan.revision, plan.key).toBe(expected[plan.key] ?? 1);
     }

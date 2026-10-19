@@ -51,7 +51,7 @@ describe("the Google Reviews dashboard with nothing connected", () => {
       within(nav)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Overview", "Google Reviews", "Salon Leaderboard"]);
+    ).toEqual(["Overview", "Google Reviews", "Store Leaderboard"]);
     expect(within(nav).getByRole("link", { name: "Overview" })).toHaveProperty(
       "href",
     );
@@ -77,9 +77,9 @@ describe("the Google Reviews dashboard with nothing connected", () => {
     const { container } = view("overview");
     for (const label of [
       "Qualifying reviews",
-      "Salons at goal",
+      "Stores at goal",
       "Reviews still needed",
-      "Salon goal progress",
+      "Store goal progress",
       "District goal progress",
       "Monthly target",
       "Progress toward target",

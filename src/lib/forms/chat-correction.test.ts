@@ -245,7 +245,7 @@ describe("found in review: the correction and the paragraph are one save", () =>
     state.reason = "Jane was a Manager at Salon 12. She discussed it with her manager and asked to step down.";
     state.values = [{ fieldKey: "job_title", value: "Manager" }];
     const response = await correct("change her current title to SD");
-    expect(state.saved).toEqual([{ values: { job_title: "Salon Director" }, checked: {} }]);
+    expect(state.saved).toEqual([{ values: { job_title: "Store Director" }, checked: {} }]);
     expect(response!.content).toContain('still mentions "Manager", which I didn\'t change automatically');
     expect(response!.formUpdate!.updated).toEqual(["job_title"]);
   });

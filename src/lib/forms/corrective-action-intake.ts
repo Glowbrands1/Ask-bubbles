@@ -334,7 +334,7 @@ const OBSERVATIONAL_CLAUSE: readonly RegExp[] = [
  */
 const JOB_TITLE_GIVEN: readonly RegExp[] = [
   /\b(?:tc|asd|sd|sdit|tsd|dmit|fttc|dm)\b/,
-  /\b(?:tanning consultant|salon director|assistant salon director|district manager|regional manager|key ?holder|shift lead|manager in training)\b/,
+  /\b(?:tanning consultant|(?:salon|store) director|assistant (?:salon|store) director|district manager|regional manager|key ?holder|shift lead|manager in training)\b/,
   /\bjob title\s*[:\-=]/,
 ];
 

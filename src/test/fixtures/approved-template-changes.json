@@ -1,5 +1,5 @@
 {
- "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description). Anything not listed here fails template-parity.test.ts.",
+ "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description, and Salon -> Store terminology). Anything not listed here fails template-parity.test.ts.",
  "changes": [
   {
    "sourceKey": "coaching",
@@ -31,6 +31,12 @@
   },
   {
    "sourceKey": "sdit-epp",
+   "path": ".description",
+   "from": "Employee Performance Plan for a Salon Director in training.",
+   "to": "Employee Performance Plan for a Store Director in training."
+  },
+  {
+   "sourceKey": "sdit-epp",
    "path": ".document.blocks[0].brand",
    "from": "SUN TAN CITY",
    "to": "BUFF CITY SOAP"
@@ -49,6 +55,24 @@
   },
   {
    "sourceKey": "sdit-epp",
+   "path": ".document.blocks[5].options[4].label",
+   "from": "Make fact based decisions when the Salon Director is not present.",
+   "to": "Make fact based decisions when the Store Director is not present."
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".document.blocks[10].label",
+   "from": "Salon's current productivity",
+   "to": "Store's current productivity"
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".document.blocks[12].field.label",
+   "from": "Salon figures, as provided",
+   "to": "Store figures, as provided"
+  },
+  {
+   "sourceKey": "sdit-epp",
    "path": ".document.blocks[18].options[0].label",
    "from": "Uphold the Sun Tan City Experience.",
    "to": "Uphold the Buff City Soap Experience."
@@ -61,9 +85,51 @@
   },
   {
    "sourceKey": "sdit-epp",
+   "path": ".document.blocks[18].options[4].label",
+   "from": "Make fact based decisions when the Salon Director is not present.",
+   "to": "Make fact based decisions when the Store Director is not present."
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".document.blocks[22].label",
+   "from": "Salon Goals: current top three goals",
+   "to": "Store Goals: current top three goals"
+  },
+  {
+   "sourceKey": "sdit-epp",
    "path": ".document.blocks[40].label",
    "from": "Ask Sunny Draft Details",
    "to": "Ask Bubbles Draft Details"
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".document.blocks[40].entries[4].label",
+   "from": "Salon Goals",
+   "to": "Store Goals"
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".document.blocks[40].entries[7].label",
+   "from": "Salon Productivity (as provided)",
+   "to": "Store Productivity (as provided)"
+  },
+  {
+   "sourceKey": "sdit-epp",
+   "path": ".variants[0].role",
+   "from": "Training Salon Director",
+   "to": "Training Store Director"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".description",
+   "from": "Employee Performance Plan for a Training Salon Director.",
+   "to": "Employee Performance Plan for a Training Store Director."
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".revisionNote",
+   "from": "The Management Performance Plan the business issues: the nine management expectations marked twice, five metrics for the manager and five for the salon, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual.",
+   "to": "The Management Performance Plan the business issues: the nine management expectations marked twice, five metrics for the manager and five for the store, the manager's own self-assessment, the eight Plan of Action objectives and their re-evaluation, with the company-policy expectation stated against the JB & Associates Employment Policy Manual."
   },
   {
    "sourceKey": "tsd-epp",
@@ -91,9 +157,27 @@
   },
   {
    "sourceKey": "tsd-epp",
+   "path": ".document.blocks[15].label",
+   "from": "Salon's current productivity",
+   "to": "Store's current productivity"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[17].field.label",
+   "from": "Salon figures, as provided",
+   "to": "Store figures, as provided"
+  },
+  {
+   "sourceKey": "tsd-epp",
    "path": ".document.blocks[20].text",
    "from": "This section is the manager's own assessment, completed in the review conversation. Ask Sunny never answers it.",
    "to": "This section is the manager's own assessment, completed in the review conversation. Ask Bubbles never answers it."
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[21].field.label",
+   "from": "What do you feel is the most important skill for a Salon Director to possess?",
+   "to": "What do you feel is the most important skill for a Store Director to possess?"
   },
   {
    "sourceKey": "tsd-epp",
@@ -109,9 +193,87 @@
   },
   {
    "sourceKey": "tsd-epp",
+   "path": ".document.blocks[25].label",
+   "from": "Salon Goals: what are your salon's current top three goals?",
+   "to": "Store Goals: what are your store's current top three goals?"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[28].rows[3].category",
+   "from": "Salon Primary Productivity",
+   "to": "Store Primary Productivity"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[28].rows[4].category",
+   "from": "Salon Secondary Productivity",
+   "to": "Store Secondary Productivity"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[28].rows[4].objective",
+   "from": "Ability to utilize KPI report to control expenses to salon that effect bottom line revenue",
+   "to": "Ability to utilize KPI report to control expenses to store that effect bottom line revenue"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[28].rows[7].category",
+   "from": "Salon Standards of Cleanliness and Safety",
+   "to": "Store Standards of Cleanliness and Safety"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[38].options[3].label",
+   "from": "Salon Primary Productivity — Ability to identify improvement areas and filter to team",
+   "to": "Store Primary Productivity — Ability to identify improvement areas and filter to team"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[38].options[4].label",
+   "from": "Salon Secondary Productivity — Ability to utilize KPI report to control expenses to salon that effect bottom line revenue",
+   "to": "Store Secondary Productivity — Ability to utilize KPI report to control expenses to store that effect bottom line revenue"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[38].options[7].label",
+   "from": "Salon Standards of Cleanliness and Safety — Aware of all items on the SVC and able to describe to DM",
+   "to": "Store Standards of Cleanliness and Safety — Aware of all items on the SVC and able to describe to DM"
+  },
+  {
+   "sourceKey": "tsd-epp",
    "path": ".document.blocks[45].label",
    "from": "Ask Sunny Draft Details",
    "to": "Ask Bubbles Draft Details"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[45].entries[4].label",
+   "from": "Salon Goals",
+   "to": "Store Goals"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[45].entries[8].label",
+   "from": "Plan of Action — Salon Primary Productivity",
+   "to": "Plan of Action — Store Primary Productivity"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[45].entries[9].label",
+   "from": "Plan of Action — Salon Secondary Productivity",
+   "to": "Plan of Action — Store Secondary Productivity"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[45].entries[12].label",
+   "from": "Plan of Action — Salon Standards of Cleanliness and Safety",
+   "to": "Plan of Action — Store Standards of Cleanliness and Safety"
+  },
+  {
+   "sourceKey": "tsd-epp",
+   "path": ".document.blocks[45].entries[14].label",
+   "from": "Salon Productivity (as provided)",
+   "to": "Store Productivity (as provided)"
   },
   {
    "sourceKey": "asd-sdit-epp",
@@ -120,12 +282,48 @@
    "to": "BUFF CITY SOAP"
   },
   {
+   "sourceKey": "asd-sdit-epp",
+   "path": ".document.blocks[10].field.label",
+   "from": "Salon's current productivity",
+   "to": "Store's current productivity"
+  },
+  {
+   "sourceKey": "asd-sdit-epp",
+   "path": ".document.blocks[13].label",
+   "from": "Salon Goals: current top three goals",
+   "to": "Store Goals: current top three goals"
+  },
+  {
+   "sourceKey": "asd-sdit-epp",
+   "path": ".variants[0].role",
+   "from": "Training Salon Director",
+   "to": "Training Store Director"
+  },
+  {
    "sourceKey": "fttc-epp",
    "path": ".document.blocks[0].brand",
    "from": "SUN TAN CITY",
    "to": "BUFF CITY SOAP"
   },
   {
+   "sourceKey": "fttc-epp",
+   "path": ".document.blocks[10].field.label",
+   "from": "Salon's current productivity",
+   "to": "Store's current productivity"
+  },
+  {
+   "sourceKey": "fttc-epp",
+   "path": ".document.blocks[13].label",
+   "from": "Salon Goals: current top three goals",
+   "to": "Store Goals: current top three goals"
+  },
+  {
+   "sourceKey": "fttc-epp",
+   "path": ".variants[0].role",
+   "from": "Salon Director",
+   "to": "Store Director"
+  },
+  {
    "sourceKey": "dmit-epp-tsd",
    "path": ".document.blocks[0].brand",
    "from": "SUN TAN CITY",
@@ -139,15 +337,39 @@
   },
   {
    "sourceKey": "dmit-epp-tsd",
+   "path": ".document.blocks[4].body[3]",
+   "from": "The District Manager is responsible for overseeing several salons. Responsibilities include managing sales and operations, driving revenue, controlling expenses and payroll budgets, handling personnel issues, accounting, merchandising, and loss prevention. District Managers are also ultimately responsible for ensuring the highest level of client service throughout the salons.",
+   "to": "The District Manager is responsible for overseeing several stores. Responsibilities include managing sales and operations, driving revenue, controlling expenses and payroll budgets, handling personnel issues, accounting, merchandising, and loss prevention. District Managers are also ultimately responsible for ensuring the highest level of client service throughout the stores."
+  },
+  {
+   "sourceKey": "dmit-epp-tsd",
    "path": ".document.blocks[5].body[1]",
    "from": "First we need to understand what the purpose and responsibilities are for a District Manager in Training with Sun Tan City:",
    "to": "First we need to understand what the purpose and responsibilities are for a District Manager in Training with Buff City Soap:"
   },
   {
    "sourceKey": "dmit-epp-tsd",
+   "path": ".document.blocks[5].body[3]",
+   "from": "The District Manager in Training is learning to oversee several salons: sales and operations, revenue, expense and payroll control, personnel, accounting, merchandising and loss prevention, while being assessed against the District Manager standard.",
+   "to": "The District Manager in Training is learning to oversee several stores: sales and operations, revenue, expense and payroll control, personnel, accounting, merchandising and loss prevention, while being assessed against the District Manager standard."
+  },
+  {
+   "sourceKey": "dmit-epp-tsd",
+   "path": ".document.blocks[12].field.label",
+   "from": "Salon's current productivity",
+   "to": "Store's current productivity"
+  },
+  {
+   "sourceKey": "dmit-epp-tsd",
    "path": ".document.blocks[15].text",
    "from": "This section is completed by hand, in the conversation. Ask Sunny does not draft it.",
    "to": "This section is completed by hand, in the conversation. Ask Bubbles does not draft it."
+  },
+  {
+   "sourceKey": "dmit-epp-tsd",
+   "path": ".document.blocks[21].label",
+   "from": "Salon Goals: What are your salon's current top three goals?",
+   "to": "Store Goals: What are your store's current top three goals?"
   },
   {
    "sourceKey": "dmit-epp-dmit",
@@ -163,15 +385,39 @@
   },
   {
    "sourceKey": "dmit-epp-dmit",
+   "path": ".document.blocks[4].body[3]",
+   "from": "The District Manager is responsible for overseeing several salons. Responsibilities include managing sales and operations, driving revenue, controlling expenses and payroll budgets, handling personnel issues, accounting, merchandising, and loss prevention. District Managers are also ultimately responsible for ensuring the highest level of client service throughout the salons.",
+   "to": "The District Manager is responsible for overseeing several stores. Responsibilities include managing sales and operations, driving revenue, controlling expenses and payroll budgets, handling personnel issues, accounting, merchandising, and loss prevention. District Managers are also ultimately responsible for ensuring the highest level of client service throughout the stores."
+  },
+  {
+   "sourceKey": "dmit-epp-dmit",
    "path": ".document.blocks[5].body[1]",
    "from": "First we need to understand what the purpose and responsibilities are for a District Manager in Training with Sun Tan City:",
    "to": "First we need to understand what the purpose and responsibilities are for a District Manager in Training with Buff City Soap:"
   },
   {
    "sourceKey": "dmit-epp-dmit",
+   "path": ".document.blocks[5].body[3]",
+   "from": "The District Manager in Training is learning to oversee several salons: sales and operations, revenue, expense and payroll control, personnel, accounting, merchandising and loss prevention, while being assessed against the District Manager standard.",
+   "to": "The District Manager in Training is learning to oversee several stores: sales and operations, revenue, expense and payroll control, personnel, accounting, merchandising and loss prevention, while being assessed against the District Manager standard."
+  },
+  {
+   "sourceKey": "dmit-epp-dmit",
+   "path": ".document.blocks[12].field.label",
+   "from": "Salon's current productivity",
+   "to": "Store's current productivity"
+  },
+  {
+   "sourceKey": "dmit-epp-dmit",
    "path": ".document.blocks[15].text",
    "from": "This section is completed by hand, in the conversation. Ask Sunny does not draft it.",
    "to": "This section is completed by hand, in the conversation. Ask Bubbles does not draft it."
+  },
+  {
+   "sourceKey": "dmit-epp-dmit",
+   "path": ".document.blocks[21].label",
+   "from": "Salon Goals: What are your salon's current top three goals?",
+   "to": "Store Goals: What are your store's current top three goals?"
   },
   {
    "sourceKey": "follow-up-coaching",
@@ -205,6 +451,12 @@
   },
   {
    "sourceKey": "stc-exit",
+   "path": ".revisionNote",
+   "from": "Details section: resignation date, how and why the employee resigned, salon key returned, and the returned-items, payroll deduction, minimum wage/bonus and rehire answers as statements (HR request, 28 Sep 2026).",
+   "to": "Details section: resignation date, how and why the employee resigned, store key returned, and the returned-items, payroll deduction, minimum wage/bonus and rehire answers as statements (HR request, 28 Sep 2026)."
+  },
+  {
+   "sourceKey": "stc-exit",
    "path": ".document.style.logo",
    "from": {
     "assetKey": "sun-tan-city",
@@ -221,15 +473,45 @@
   },
   {
    "sourceKey": "stc-exit",
+   "path": ".document.blocks[10].label",
+   "from": "Salon key was returned",
+   "to": "Store key was returned"
+  },
+  {
+   "sourceKey": "stc-exit",
    "path": ".document.blocks[19].field.help",
    "from": "The reason the employee gave, in the manager's words. Never supplied by Ask Sunny.",
    "to": "The reason the employee gave, in the manager's words. Never supplied by Ask Bubbles."
+  },
+  {
+   "sourceKey": "stc-exit",
+   "path": ".document.blocks[20].lines[1].label",
+   "from": "Salon Key Returned",
+   "to": "Store Key Returned"
+  },
+  {
+   "sourceKey": "stc-exit",
+   "path": ".document.blocks[20].lines[1].parts[0].statements.yes",
+   "from": "Salon key was returned.",
+   "to": "Store key was returned."
+  },
+  {
+   "sourceKey": "stc-exit",
+   "path": ".document.blocks[20].lines[1].parts[0].statements.no",
+   "from": "Salon key was not returned. Employee will be payroll deducted $25 for the salon key.",
+   "to": "Store key was not returned. Employee will be payroll deducted $25 for the store key."
   },
   {
    "sourceKey": "demotion",
    "path": ".revisionNote",
    "from": "Published from the GlowBrands Demotion Form source document. The STC Demotion Example is the same document, kept as a reference for the reason's wording; it is not a separate template.",
    "to": "Published from the GlowBrands Demotion Form source document. The source company's Demotion Example is the same document, kept as a reference for the reason's wording; it is not a separate template."
+  },
+  {
+   "sourceKey": "position-transfer",
+   "path": ".description",
+   "from": "Records a move to another salon or position — current and new title, location, status and pay, voluntary or involuntary, and the reason.",
+   "to": "Records a move to another store or position — current and new title, location, status and pay, voluntary or involuntary, and the reason."
   },
   {
    "sourceKey": "prescreen-phone-interview",
@@ -244,10 +526,28 @@
    "to": "Why are you interested in working for Buff City Soap?"
   },
   {
+   "sourceKey": "prescreen-phone-interview",
+   "path": ".document.blocks[11].text",
+   "from": "If the response to these questions best fits our business culture, goals, and if the person sounds friendly, you can then schedule an in-person interview with them or encourage them to apply at a neighboring salon if you do not have open positions.",
+   "to": "If the response to these questions best fits our business culture, goals, and if the person sounds friendly, you can then schedule an in-person interview with them or encourage them to apply at a neighboring store if you do not have open positions."
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
+   "path": ".description",
+   "from": "The in-salon interview for a Tanning Consultant. Twelve questions through service, sales, accountability, the core values and the essential job functions.",
+   "to": "The in-store interview for a Tanning Consultant. Twelve questions through service, sales, accountability, the core values and the essential job functions."
+  },
+  {
    "sourceKey": "tanning-consultant-interview",
    "path": ".document.blocks[0].brand",
    "from": "SUN TAN CITY",
    "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
+   "path": ".document.blocks[3].fields[1].label",
+   "from": "Salon Name",
+   "to": "Store Name"
   },
   {
    "sourceKey": "tanning-consultant-interview",
@@ -256,16 +556,82 @@
    "to": "1. Tell me about yourself and why you’re interested in working at Buff City Soap."
   },
   {
+   "sourceKey": "tanning-consultant-interview",
+   "path": ".document.blocks[30].text",
+   "from": "12. This position requires key functions such as standing for extended periods, lifting up to 25 lbs., operating a computer, and overseeing daily salon operations. Are you able to perform these essential functions, with or without reasonable accommodation?",
+   "to": "12. This position requires key functions such as standing for extended periods, lifting up to 25 lbs., operating a computer, and overseeing daily store operations. Are you able to perform these essential functions, with or without reasonable accommodation?"
+  },
+  {
+   "sourceKey": "management-interview-round-1",
+   "path": ".description",
+   "from": "The first management interview, through leadership, sales, operations and a role play, then the salon walkthrough and job shadow.",
+   "to": "The first management interview, through leadership, sales, operations and a role play, then the store walkthrough and job shadow."
+  },
+  {
    "sourceKey": "management-interview-round-1",
    "path": ".document.blocks[0].brand",
    "from": "SUN TAN CITY",
    "to": "BUFF CITY SOAP"
   },
   {
+   "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[3].fields[1].label",
+   "from": "Salon Name",
+   "to": "Store Name"
+  },
+  {
+   "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[40].text",
+   "from": "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the salon. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause.",
+   "to": "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the store. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause."
+  },
+  {
+   "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[52].text",
+   "from": "If interview goes well, proceed to next step and give applicant a walkthrough of the salon. If you wish to pass on this applicant, stop here.",
+   "to": "If interview goes well, proceed to next step and give applicant a walkthrough of the store. If you wish to pass on this applicant, stop here."
+  },
+  {
+   "sourceKey": "management-interview-round-1",
+   "path": ".document.blocks[56].text",
+   "from": "Observe candidate during a guided walkthrough/job shadow in an operating salon. Evaluate: cleanliness, safety, compliance, staff interaction, and sales focus.",
+   "to": "Observe candidate during a guided walkthrough/job shadow in an operating store. Evaluate: cleanliness, safety, compliance, staff interaction, and sales focus."
+  },
+  {
    "sourceKey": "management-interview-round-2",
    "path": ".document.blocks[0].brand",
    "from": "SUN TAN CITY",
    "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "management-interview-round-2",
+   "path": ".document.blocks[3].fields[1].label",
+   "from": "Salon Name",
+   "to": "Store Name"
+  },
+  {
+   "sourceKey": "management-interview-round-2",
+   "path": ".document.blocks[14].text",
+   "from": "How do you identify and develop future leaders within your salon team?",
+   "to": "How do you identify and develop future leaders within your store team?"
+  },
+  {
+   "sourceKey": "management-interview-round-2",
+   "path": ".document.blocks[19].text",
+   "from": "If you were given direction as a Salon Director to reduce expenses, what would be the first three areas you would focus on, and why?",
+   "to": "If you were given direction as a Store Director to reduce expenses, what would be the first three areas you would focus on, and why?"
+  },
+  {
+   "sourceKey": "management-interview-round-2",
+   "path": ".document.blocks[24].text",
+   "from": "Scenario 1: Let’s pretend that during your walkthrough in the salon, a staff member fails to greet a client promptly. Demonstrate how you would address this in real-time.",
+   "to": "Scenario 1: Let’s pretend that during your walkthrough in the store, a staff member fails to greet a client promptly. Demonstrate how you would address this in real-time."
+  },
+  {
+   "sourceKey": "management-interview-round-2",
+   "path": ".document.blocks[29].text",
+   "from": "How would you create a 30–60–90 day training plan for a new Assistant Salon Director or Tanning Consultant?",
+   "to": "How would you create a 30–60–90 day training plan for a new Assistant Store Director or Tanning Consultant?"
   }
  ]
 }

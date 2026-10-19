@@ -200,7 +200,7 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
      *   tsd-epp             re-issued as the Management Performance Plan the
      *                       business issues: nine management expectations
      *                       marked twice, five metrics for the manager and
-     *                       five for the salon, the manager's own self-
+     *                       five for the store, the manager's own self-
      *                       assessment, the eight Plan of Action objectives
      *                       and their re-evaluation. Its company-policy
      *                       expectation names the JB & Associates manual for
@@ -209,14 +209,32 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
      *                       shared builder addressed.
      *   resignation-exit            HR's Details lines (28 Sep 2026): resignation
      *                       date, how and why the employee resigned, the
-     *                       salon key question, and the yes/no answers
+     *                       store key question, and the yes/no answers
      *                       printed as HR's statements.
      */
-    const reissued = new Set(["coaching", "policy-review", "follow-up-coaching", "tsd-epp", "resignation-exit"]);
+    const reissued = new Set(["coaching", "policy-review", "follow-up-coaching"]);
+    /*
+     * RE-ISSUED FOR THE SALON -> STORE TERMINOLOGY. A published version is
+     * immutable, so wording that reached a running database has to ship as a
+     * new revision; these templates' documents (or variants) changed and
+     * nothing else did. Field keys are unchanged.
+     */
+    const storeWording = new Set([
+      "asd-sdit-epp",
+      "fttc-epp",
+      "dmit-epp-tsd",
+      "dmit-epp-dmit",
+      "prescreen-phone-interview",
+      "tanning-consultant-interview",
+      "management-interview-round-1",
+      "management-interview-round-2",
+    ]);
     for (const seed of TEMPLATE_SEEDS) {
-      if (seed.key === "dpoa" || seed.key === "sdit-epp") continue;
-      expect(seed.revision, seed.key).toBe(reissued.has(seed.key) ? 2 : 1);
+      if (seed.key === "dpoa" || seed.key === "sdit-epp" || seed.key === "tsd-epp" || seed.key === "resignation-exit") continue;
+      expect(seed.revision, seed.key).toBe(reissued.has(seed.key) || storeWording.has(seed.key) ? 2 : 1);
     }
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "tsd-epp")?.revision).toBe(3);
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "resignation-exit")?.revision).toBe(3);
     /*
      * THE SDIT EPP IS AT 3. Revision 2 published the form the business issues
      * — the standing expectations, the productivity table, the employee's own
@@ -224,7 +242,7 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
      * SDIT: `roleAbbr` was "ASD", so every `{{roleAbbr}}` on the page named
      * the wrong role.
      */
-    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "sdit-epp")?.revision).toBe(3);
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "sdit-epp")?.revision).toBe(4);
     /*
      * THE CORRECTIVE ACTION FORM IS AT 4. Revision 2 renamed it and gave its
      * observation the Observed/Expectation shape; revision 3 set the two policy
@@ -295,7 +313,7 @@ describe("the First Round Management Interview matches its source", () => {
       "What systems or processes have you used to manage staffing, scheduling, and labor costs?",
       "This role involves hands-on work like cleaning beds and doing laundry. How do you lead by example in these tasks?",
       "How do you ensure your team is consistently trained to meet both performance expectations and company compliance standards?",
-      "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the salon. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause.",
+      "A client approaches the counter upset because the tanning bed they reserved is unavailable due to a mechanical issue. They are raising their voice and demanding a refund, while other clients are in the store. Show how you would handle the client in the moment and explain the steps you would take afterward to address the root cause.",
       "Why should we select you for this position?",
       "1. Job Description and Job Requirements and Duties: Have printed to review.",
       "2. Pay Structure: Explain the pay structure and the earning potential with bonuses. Let the applicant know that bonuses depend on reaching certain levels of sales performance.",
@@ -310,8 +328,8 @@ describe("the First Round Management Interview matches its source", () => {
     expect(notes(document)).toEqual([
       "Please note :- Why did you leave your last position (or why are you considering leaving your current one) and What are you hoping to find in your next role that you haven’t had before?",
       "Explain each section thoroughly and allow the applicant to ask questions.",
-      "If interview goes well, proceed to next step and give applicant a walkthrough of the salon. If you wish to pass on this applicant, stop here.",
-      "Observe candidate during a guided walkthrough/job shadow in an operating salon. Evaluate: cleanliness, safety, compliance, staff interaction, and sales focus.",
+      "If interview goes well, proceed to next step and give applicant a walkthrough of the store. If you wish to pass on this applicant, stop here.",
+      "Observe candidate during a guided walkthrough/job shadow in an operating store. Evaluate: cleanliness, safety, compliance, staff interaction, and sales focus.",
     ]);
   });
 
@@ -367,13 +385,13 @@ describe("the Second Round Management Interview matches its source", () => {
       "Based on what you know now, what skills or qualities do you think will matter most in this role?",
       "Confirm Salary Expectations and Availability:",
       "Describe your approach to setting and communicating performance goals for your team.",
-      "How do you identify and develop future leaders within your salon team?",
+      "How do you identify and develop future leaders within your store team?",
       "How do you ensure all team members follow company policies, procedures, and safety guidelines?",
-      "If you were given direction as a Salon Director to reduce expenses, what would be the first three areas you would focus on, and why?",
+      "If you were given direction as a Store Director to reduce expenses, what would be the first three areas you would focus on, and why?",
       "Tell me about a time you used performance results or key metrics to adjust your approach and improve outcomes.",
-      "Scenario 1: Let’s pretend that during your walkthrough in the salon, a staff member fails to greet a client promptly. Demonstrate how you would address this in real-time.",
+      "Scenario 1: Let’s pretend that during your walkthrough in the store, a staff member fails to greet a client promptly. Demonstrate how you would address this in real-time.",
       "Scenario 2: Customer visits have dropped 20% over the past month and lotions and memberships sales are at their lowest in six months. One long-time team member is resistant to promoting add-ons, saying, “Customers don’t want to be pushed.” What are your next steps?",
-      "How would you create a 30–60–90 day training plan for a new Assistant Salon Director or Tanning Consultant?",
+      "How would you create a 30–60–90 day training plan for a new Assistant Store Director or Tanning Consultant?",
       "How do you follow up to ensure training is being applied consistently?",
     ]);
   });
@@ -438,7 +456,7 @@ describe("the Tanning Consultant Interview matches its source", () => {
       "9. Give me an example of a time when you and a teammate disagreed on how to get something done. How did you handle it, and what was the outcome?",
       "10. Give me an example of when you faced a challenge without your manager immediately available. How did you handle it, and what was the outcome?",
       "11. What skills or experiences make you confident you’ll succeed in this role?",
-      "12. This position requires key functions such as standing for extended periods, lifting up to 25 lbs., operating a computer, and overseeing daily salon operations. Are you able to perform these essential functions, with or without reasonable accommodation?",
+      "12. This position requires key functions such as standing for extended periods, lifting up to 25 lbs., operating a computer, and overseeing daily store operations. Are you able to perform these essential functions, with or without reasonable accommodation?",
     ]);
   });
 
@@ -507,7 +525,7 @@ describe("the Prescreen / Phone Interview matches its source", () => {
 
   it("keeps the three prescreening assessment instructions", () => {
     expect(notes(document)).toEqual([
-      "If the response to these questions best fits our business culture, goals, and if the person sounds friendly, you can then schedule an in-person interview with them or encourage them to apply at a neighboring salon if you do not have open positions.",
+      "If the response to these questions best fits our business culture, goals, and if the person sounds friendly, you can then schedule an in-person interview with them or encourage them to apply at a neighboring store if you do not have open positions.",
       'If you do not receive quality answers to these questions (as per our pre-screening process) or the person does not seem “qualified”, you can tell them "Thank you for your interest, I will keep you in mind for future positions we may have available."',
       "Attach this completed form to the online application email and file in your “Applications” folder.",
     ]);

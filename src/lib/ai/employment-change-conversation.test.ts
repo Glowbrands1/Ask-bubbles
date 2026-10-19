@@ -104,7 +104,7 @@ describe("a demotion asked for in one sentence", () => {
 
   it("asks for nothing when everything was given", async () => {
     const response = await ask(
-      "Demotion form: Jane Doe, Salon Director FT at $18/hr → Tanning Consultant PT at $12/hr, effective 10/5, voluntary — she asked to step down.",
+      "Demotion form: Jane Doe, Store Director FT at $18/hr → Tanning Consultant PT at $12/hr, effective 10/5, voluntary — she asked to step down.",
     );
     expect(response!.formProposal!.employeeName).toBe("Jane Doe");
     expect(response!.content).toContain("That covers every detail the form asks for.");
@@ -189,7 +189,7 @@ describe("permissions", () => {
     expect(response!.content).toContain("Your role cannot create a **Demotion Form**");
   });
 
-  it("offers them to a Salon Director, District Manager and administrator", async () => {
+  it("offers them to a Store Director, District Manager and administrator", async () => {
     for (const role of ["location_manager", "district_manager", "admin"]) {
       const response = await ask("Create a demotion form for jane", { role });
       expect(response!.formProposal?.templateKey, role).toBe("demotion");
@@ -215,7 +215,7 @@ describe("found in hands-on QA: the chat copy", () => {
     expect(response!.formProposal!.employeeName).toBe(displayPersonName("MARLOWE CO"));
     expect(response!.formProposal!.status).toBe("ready");
     expect(response!.content).toContain(
-      "FT Salon Director at $18.00/hr at Store 12 → PT Tanning Consultant at $14.00/hr, effective October 5, 2026, voluntary",
+      "FT Store Director at $18.00/hr at Store 12 → PT Tanning Consultant at $14.00/hr, effective October 5, 2026, voluntary",
     );
   });
 });
@@ -251,9 +251,9 @@ describe("found in hands-on QA: facts from another employee's form never carry o
 
 describe("found in production QA (Codex): the exact live conversations", () => {
   const DEMOTION_1 =
-    "Create a Demotion Form for a synthetic test employee named Demo Alpha Test at salon 12. Their current position is District Manager and the new position is Salon Director, effective October 5, 2026. The reason is a mock role realignment for QA.";
+    "Create a Demotion Form for a synthetic test employee named Demo Alpha Test at salon 12. Their current position is District Manager and the new position is Store Director, effective October 5, 2026. The reason is a mock role realignment for QA.";
   const DEMOTION_2 =
-    "The employee is Demo Alpha Test. Salon 12 is the location. District Manager is the current position, Salon Director is the new position, and QA is just the reason/context.";
+    "The employee is Demo Alpha Test. Salon 12 is the location. District Manager is the current position, Store Director is the new position, and QA is just the reason/context.";
   const TRANSFER_1 =
     "Create a Position Transfer Form for synthetic test employee Transfer Beta Test. She is currently a Salon Manager at salon 18 and will move to salon 23 as a Salon Manager effective October 12, 2026. The reason is a mock staffing coverage change for QA.";
   const sunny = (id: string, content: string): ChatMessage => ({
@@ -268,7 +268,7 @@ describe("found in production QA (Codex): the exact live conversations", () => {
     expect(response!.formProposal!.templateKey).toBe("demotion");
     expect(response!.formProposal!.employeeName).toBe("Demo Alpha Test");
     expect(response!.content).not.toContain("Which of them");
-    expect(response!.content).toContain("District Manager at Salon 12 → Salon Director, effective October 5, 2026");
+    expect(response!.content).toContain("District Manager at Salon 12 → Store Director, effective October 5, 2026");
   });
 
   it("keeps Demo Alpha Test through the clarification reply, and does not ask again", async () => {
@@ -276,7 +276,7 @@ describe("found in production QA (Codex): the exact live conversations", () => {
       manager("m1", DEMOTION_1),
       sunny(
         "a1",
-        "I have the demotion details so far (District Manager → Salon Director, effective October 5, 2026). Which of them is this **Demotion Form** for — **Demo Alpha Test**, **District Manager** or **QA**?",
+        "I have the demotion details so far (District Manager → Store Director, effective October 5, 2026). Which of them is this **Demotion Form** for — **Demo Alpha Test**, **District Manager** or **QA**?",
       ),
     ];
     const reply = await ask(DEMOTION_2, { history, continueTemplateKey: "demotion" });

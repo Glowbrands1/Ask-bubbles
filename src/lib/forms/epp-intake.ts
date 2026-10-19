@@ -115,7 +115,7 @@ export const SDIT_EPP_INTAKE: readonly EppIntakeItem[] = [
   },
   {
     key: "salon_productivity",
-    prompt: "The salon's current productivity numbers — or say you'll add them later",
+    prompt: "The store's current productivity numbers — or say you'll add them later",
     optional: true,
   },
   {
@@ -191,7 +191,7 @@ export const TSD_EPP_INTAKE: readonly EppIntakeItem[] = [
   },
   {
     key: "salon_productivity",
-    prompt: "The salon's current productivity numbers, if you have them (the same five)",
+    prompt: "The store's current productivity numbers, if you have them (the same five)",
     optional: true,
   },
   {
@@ -271,7 +271,7 @@ export const TSD_EPP_PLAN: EppIntakePlan = {
    * Plan — before being asked for anything.
    */
   lead: () =>
-    "To create a Training Salon Director (TSD) Employee Performance Plan (EPP) form for you, I'll need a few details:",
+    "To create a Training Store Director (TSD) Employee Performance Plan (EPP) form for you, I'll need a few details:",
   tail: (formName) =>
     `Please provide these details and I'll prepare the ${formName} draft for you, checking the applicable JB & Associates policy before anything policy-related goes on it.`,
   /*
@@ -410,7 +410,7 @@ const EMPLOYEE_PRODUCTIVITY_GIVEN: readonly RegExp[] = [
 ];
 
 const SALON_PRODUCTIVITY_GIVEN: readonly RegExp[] = [
-  /\bsalon'?s? (?:current )?(?:productivity|ppta|upta|lpsva|numbers?|stats?)\b/,
+  /\b(?:salon|store)'?s? (?:current )?(?:productivity|ppta|upta|lpsva|numbers?|stats?)\b/,
   /\bstore'?s? (?:current )?(?:productivity|numbers?)\b/,
 ];
 
@@ -441,7 +441,7 @@ const EXPECTATIONS_IMPROVEMENT_GIVEN: readonly RegExp[] = [
 /** A job title, in the vocabulary this business uses. */
 const JOB_TITLE_GIVEN: readonly RegExp[] = [
   /\b(?:tc|asd|sd|sdit|tsd|dmit|fttc|dm)\b/,
-  /\b(?:tanning consultant|salon director|assistant salon director|district manager|regional manager|key ?holder|shift lead|manager in training)\b/,
+  /\b(?:tanning consultant|(?:salon|store) director|assistant (?:salon|store) director|district manager|regional manager|key ?holder|shift lead|manager in training)\b/,
   /\bjob title\s*[:\-=]/,
 ];
 

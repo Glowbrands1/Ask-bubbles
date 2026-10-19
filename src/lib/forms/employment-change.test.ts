@@ -263,7 +263,7 @@ describe("the facts of the change", () => {
       "Create a demotion form for marlowe co. She's a full time SD at $18/hr at KS Lawrence and asked to step down to a part time TC at $12.50/hr starting 10-05-2026",
     );
     expect(facts.current).toEqual({
-      title: "Salon Director",
+      title: "Store Director",
       status: "full_time",
       rate: "$18.00/hr",
       location: "KS Lawrence",
@@ -275,10 +275,10 @@ describe("the facts of the change", () => {
 
   it("reads the intake's own example, arrow and all", () => {
     const facts = read(
-      "Jane Doe, Salon Director FT at $18/hr → Tanning Consultant PT at $12/hr, effective 10/5, voluntary — she asked to step down.",
+      "Jane Doe, Store Director FT at $18/hr → Tanning Consultant PT at $12/hr, effective 10/5, voluntary — she asked to step down.",
     );
     expect(describeKnownFacts(facts)).toBe(
-      "FT Salon Director at $18.00/hr → PT Tanning Consultant at $12.00/hr, effective October 5, 2026, voluntary",
+      "FT Store Director at $18.00/hr → PT Tanning Consultant at $12.00/hr, effective October 5, 2026, voluntary",
     );
     expect(missingDetails("demotion", facts)).toEqual([]);
   });
@@ -376,7 +376,7 @@ describe("what is still asked for", () => {
 describe("putting stated facts on the form", () => {
   const document = parseFormDocument(demotionDocument());
   const stated = statedFactValues(
-    read("Jane Doe, Salon Director FT at $18/hr → Tanning Consultant PT at $12/hr, effective 10/5, voluntary"),
+    read("Jane Doe, Store Director FT at $18/hr → Tanning Consultant PT at $12/hr, effective 10/5, voluntary"),
   );
 
   it("fills only empty fields, and only the listed ones", () => {
@@ -391,7 +391,7 @@ describe("putting stated facts on the form", () => {
       ],
     });
     expect(selected.values).toEqual({
-      job_title: "Salon Director",
+      job_title: "Store Director",
       current_pay_rate: "$18.00/hr",
       new_job_title: "Tanning Consultant",
     });
@@ -422,7 +422,7 @@ describe("a correction typed after the form exists", () => {
   it.each([
     ["change her new location to salon 24", { new_location: "Salon 24" }],
     ["new title is shift lead", { new_job_title: "Shift Lead" }],
-    ["change her current title to SD", { job_title: "Salon Director" }],
+    ["change her current title to SD", { job_title: "Store Director" }],
     ["change the name to Marlowe Example", { employee_name: "Marlowe Example" }],
     ["change the date to 9/27", { form_date: "2026-09-27" }],
     ["make the new pay $13.25/hr", { new_pay_rate: "$13.25/hr" }],
@@ -469,16 +469,16 @@ describe("found in hands-on QA", () => {
 
   it("never takes the name or the request in such a list for a title", () => {
     const facts = read("create a demotion form for jane, SD, FT, going to TC");
-    expect(facts.current).toEqual({ title: "Salon Director", status: "full_time" });
+    expect(facts.current).toEqual({ title: "Store Director", status: "full_time" });
   });
 
   it("keeps a spelled-out title as the manager wrote it, and expands an abbreviation", () => {
-    expect(correctionValues("new title should be Assistant Salon Director", TODAY)?.values).toEqual({
-      new_job_title: "Assistant Salon Director",
+    expect(correctionValues("new title should be Assistant Store Director", TODAY)?.values).toEqual({
+      new_job_title: "Assistant Store Director",
     });
     expect(correctionValues("new title should be asd", TODAY)?.values).toEqual({ new_job_title: "ASD" });
-    expect(correctionValues("new title is salon director in training", TODAY)?.values).toEqual({
-      new_job_title: "Salon Director in Training",
+    expect(correctionValues("new title is store director in training", TODAY)?.values).toEqual({
+      new_job_title: "Store Director in Training",
     });
   });
 });
@@ -499,8 +499,8 @@ describe("found in hands-on QA: a bare list", () => {
  */
 const PRODUCTION = {
   demotion: [
-    "Create a Demotion Form for a synthetic test employee named Demo Alpha Test at salon 12. Their current position is District Manager and the new position is Salon Director, effective October 5, 2026. The reason is a mock role realignment for QA.",
-    "The employee is Demo Alpha Test. Salon 12 is the location. District Manager is the current position, Salon Director is the new position, and QA is just the reason/context.",
+    "Create a Demotion Form for a synthetic test employee named Demo Alpha Test at salon 12. Their current position is District Manager and the new position is Store Director, effective October 5, 2026. The reason is a mock role realignment for QA.",
+    "The employee is Demo Alpha Test. Salon 12 is the location. District Manager is the current position, Store Director is the new position, and QA is just the reason/context.",
     "Demo Alpha Test.",
   ],
   transfer: [
@@ -659,7 +659,7 @@ describe("found in review: the reason paragraph is rewritten only where it is sa
   it("never rewrites a single ordinary word, and reports it instead", () => {
     const manager = syncNarrative({
       narrative: "Jane is a Manager at Salon 12. She discussed it with her manager before stepping down.",
-      changes: [{ from: "Manager", to: "Salon Director" }],
+      changes: [{ from: "Manager", to: "Store Director" }],
       unchanged: [],
     });
     expect(manager.text).toBe("Jane is a Manager at Salon 12. She discussed it with her manager before stepping down.");
@@ -773,7 +773,7 @@ describe("found in QA: several lines corrected in one message", () => {
     const sync = syncNarrative({
       narrative,
       changes: [
-        { from: "Salon Manager", to: "Salon Director" },
+        { from: "Salon Manager", to: "Store Director" },
         { from: "Salon Manager", to: "Tanning Consultant" },
       ],
       unchanged: ["Salon 18", "Salon 23"],
@@ -798,11 +798,11 @@ describe("found in QA: several lines corrected in one message", () => {
 
   it("reads both titles from 'current title to SD and new title to TC' — never 'SD and New Title To TC'", () => {
     expect(correctionValues("change her current title to SD and new title to TC", TODAY)?.values).toEqual({
-      job_title: "Salon Director",
+      job_title: "Store Director",
       new_job_title: "Tanning Consultant",
     });
-    expect(correctionValues("current title is Salon Director and new title is Tanning Consultant", TODAY)?.values).toEqual({
-      job_title: "Salon Director",
+    expect(correctionValues("current title is Store Director and new title is Tanning Consultant", TODAY)?.values).toEqual({
+      job_title: "Store Director",
       new_job_title: "Tanning Consultant",
     });
     expect(correctionValues("current location is salon 23. new location is salon 18", TODAY)?.values).toEqual({

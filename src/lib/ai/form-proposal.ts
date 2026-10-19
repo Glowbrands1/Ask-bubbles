@@ -1643,7 +1643,7 @@ const CHANGE_INTAKE: Record<EmploymentChangeKind, { items: string[]; example: st
       "A short reason",
     ],
     example:
-      "Jane Doe, Salon Director FT at $18/hr → Tanning Consultant PT at $12/hr, effective 10/5, voluntary — she asked to step down.",
+      "Jane Doe, Store Director FT at $18/hr → Tanning Consultant PT at $12/hr, effective 10/5, voluntary — she asked to step down.",
   },
   transfer: {
     items: [
@@ -2272,7 +2272,7 @@ function eppReady(
            */
           `the ${plan.subject}'s productivity numbers`
         : item.key === "salon_productivity"
-          ? "the salon's productivity numbers"
+          ? "the store's productivity numbers"
           : "the seven expectation marks",
     );
   const named = [...new Set(outstanding)];
