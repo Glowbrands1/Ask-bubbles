@@ -4,7 +4,7 @@ import { communicationRecord, parseCommunicationRows } from "./adapters/communic
 import { fileLibraryRecord, parseFileLibraryRows } from "./adapters/file-library";
 import { handbookRecord, parseHandbookDownload, parseHandbookManage, parseHandbookRows } from "./adapters/handbooks";
 import { parsePolicyCards, parsePolicyDetail, policyRecord, withPolicyDetail } from "./adapters/policies";
-import { parseProcedureDetail, parseProcedureListing, procedureRecord } from "./adapters/procedures";
+import { countStepAttachments, parseProcedureDetail, parseProcedureListing, procedureRecord } from "./adapters/procedures";
 import { ticksToIso } from "./adapters/shared";
 import { assertCompanyPage, companyIdsOnPage, companyReadingsOnPage } from "./company-guard";
 import { bcsAudienceRestriction, bcsOwnershipHold } from "./policy";
@@ -192,6 +192,77 @@ describe("procedures", () => {
     const html = (fake as unknown as { procedureListing: (c: unknown) => string }).procedureListing(fake.content[BCS_COMPANY_ID]);
     const { categories, cards } = parseProcedureListing({ Success: true, HTML: html });
     expect(cards).toHaveLength(categories.reduce((n, c) => n + c.count, 0));
+  });
+
+  /*
+   * THE LIVE LAYOUT (read-only check of all 5 published Buff City Soap procedures, 2026-10-19; text and
+   * ids are synthetic). Each step appears twice: in the hidden carousel (`summernote-<id>` class) and in the
+   * visible scroll view (`id="procedure-step-<id>"`). `data-procedure-step-id` is on the ATTACHMENT blocks.
+   */
+  const liveStep = (id: string, n: number, text: string, via: "scroll" | "carousel") =>
+    via === "scroll"
+      ? `<div id="procedure-step-${id}" class="procedure-step"><div id="display-order" class="badge badge-default">${n}</div><h3>Heading ${n}</h3><div id="procedure-step-content">${text}</div><div class="procedure-step-attachments"><div data-procedure-step-id="${id}"><p class="procedure-step-attachment-title">Attachments</p><section data-procedure-step-id="${id}"><div class="procedure-step-attachment-list"><a onclick="DownloadProcedureStepAttachment('x.pdf'); return false;">Sheet</a></div></section></div></div></div>`
+      : `<div class="item procedure-step-container summernote-${id}"><div id="display-order" class="badge badge-default">${n}</div><h3>Heading ${n}</h3><div id="procedure-step-content">${text}</div><div class="procedure-step-attachments"><div data-procedure-step-id="${id}"></div></div></div>`;
+  const livePage = (steps: { id: string; text: string }[], opts: { carousel?: boolean; scroll?: boolean } = {}) =>
+    `<html><head><title>Procedures - Opening Checklist</title></head><body><div id="procedure-steps-details-section"><div id="procedure-steps-container">` +
+    (opts.carousel === false ? "" : `<div id="procedure-steps-carousel" class="carousel slide hidden"><div class="carousel-inner">${steps.map((s, i) => liveStep(s.id, i + 1, s.text, "carousel")).join("")}</div></div>`) +
+    (opts.scroll === false ? "" : `<div id="procedure-step-scroll-view">${steps.map((s, i) => liveStep(s.id, i + 1, s.text, "scroll")).join("")}</div>`) +
+    `</div></div></body></html>`;
+
+  it("reads the LIVE procedure page: each step once, in order, from the visible list (regression: every live page used to parse to no steps)", () => {
+    const steps = [{ id: bcsId(21), text: "<p>Unlock the door.</p>" }, { id: bcsId(22), text: "<p>Count the till.</p>" }, { id: bcsId(23), text: "Not Provided" }];
+    expect(parseProcedureDetail(livePage(steps))).toEqual({
+      title: "Opening Checklist",
+      steps: [{ stepId: bcsId(21), text: "Unlock the door." }, { stepId: bcsId(22), text: "Count the till." }, { stepId: bcsId(23), text: "" }],
+    });
+  });
+
+  it("never mistakes the page's own `procedure-step-content` or `procedure-step-scroll-view` for steps, nor an attachment block for text", () => {
+    const html = livePage([{ id: bcsId(21), text: "<p>Only step.</p>" }]);
+    const { steps } = parseProcedureDetail(html);
+    expect(steps).toEqual([{ stepId: bcsId(21), text: "Only step." }]);
+    expect(steps!.map((s) => s.stepId)).not.toContain("content");
+    expect(steps!.map((s) => s.stepId)).not.toContain("scroll-view");
+    /* A page whose only `data-procedure-step-id` elements are attachments has no readable step: BLOCKED, not empty text. */
+    const attachmentsOnly = `<html><head><title>Procedures - X</title></head><body><div class="procedure-step-attachments"><div data-procedure-step-id="${bcsId(21)}"><p>Attachments</p></div></div></body></html>`;
+    expect(parseProcedureDetail(attachmentsOnly).steps).toBeNull();
+  });
+
+  it("falls back to the live carousel copy when the visible list is missing, and still reads each step once", () => {
+    const steps = [{ id: bcsId(31), text: "<p>First.</p>" }, { id: bcsId(32), text: "<p>Second.</p>" }];
+    expect(parseProcedureDetail(livePage(steps, { scroll: false })).steps).toEqual([{ stepId: bcsId(31), text: "First." }, { stepId: bcsId(32), text: "Second." }]);
+    expect(parseProcedureDetail(livePage(steps, { carousel: false })).steps).toHaveLength(2);
+  });
+
+  it("a live page with no steps, or a page that is not the procedure page, still fails closed", () => {
+    expect(parseProcedureDetail(livePage([])).steps).toBeNull();
+    const [card] = parseProcedureListing(listing([["Safety", "1"]], [procedureCard(bcsId(1), "Opening")])).cards;
+    const blocked = procedureRecord(card!, livePage([]));
+    expect(blocked.parts).toHaveLength(1);
+    expect(blocked.parts[0]).toMatchObject({ partKey: "content", retrieval: { kind: "blocked" } });
+    const wrongPage = livePage([{ id: bcsId(21), text: "<p>x</p>" }]).replace("Procedures - Opening Checklist", "Dashboard");
+    expect(() => procedureRecord(card!, wrongPage)).toThrow(/not the verified procedure page/);
+    /* The live record carries its text part, with a content digest, once the steps parse. */
+    const live = procedureRecord(card!, livePage([{ id: bcsId(21), text: "<p>Unlock the door.</p>" }]));
+    expect(live.parts).toHaveLength(1);
+    expect(live.parts[0]).toMatchObject({ partKey: "content", retrieval: { kind: "available" } });
+    expect(live.sourceMetadata).toMatchObject({ steps: 1 });
+  });
+
+  it("a live procedure whose steps say 'Not Provided' but carry an attachment is BLOCKED and named, not dropped as empty", () => {
+    const [card] = parseProcedureListing(listing([["Safety", "1"]], [procedureCard(bcsId(1), "Opening")])).cards;
+    const page = livePage([{ id: bcsId(41), text: "Not Provided" }, { id: bcsId(42), text: "Not Provided" }]);
+    expect(parseProcedureDetail(page).steps).toEqual([{ stepId: bcsId(41), text: "" }, { stepId: bcsId(42), text: "" }]);
+    /* The same file appears in the carousel and the visible list: counted once per step. */
+    expect(countStepAttachments(page)).toBe(1);
+    expect(procedureRecord(card!, page).parts).toEqual([
+      expect.objectContaining({ partKey: "content", retrieval: { kind: "blocked", capability: "procedure_attachment_download_unverified" } }),
+    ]);
+    /* Real step text wins; no attachment and no text is an empty procedure, as before. */
+    expect(procedureRecord(card!, livePage([{ id: bcsId(41), text: "<p>Do it.</p>" }])).parts[0]!.retrieval.kind).toBe("available");
+    const noAttachment = livePage([{ id: bcsId(41), text: "Not Provided" }]).replace(/<a onclick="[^"]*">Sheet<\/a>/g, "");
+    expect(countStepAttachments(noAttachment)).toBe(0);
+    expect(procedureRecord(card!, noAttachment).parts).toEqual([]);
   });
 
   it("reads the detail page's steps once each, without the 'Not Provided' placeholder", () => {
