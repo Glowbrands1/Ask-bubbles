@@ -2,7 +2,7 @@ import "server-only";
 
 import { businessToday } from "@/lib/business-date";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
-import { COMPANY_LOCATIONS, locationNameKey } from "@/lib/locations";
+import { COMPANY_LOCATIONS, locationById, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
@@ -496,6 +496,23 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
     for (const match of text.matchAll(/\b(?:employee|team member|staff member)\s+named\s+(\S+(?:\s+\S+)?)/gi)) {
       const candidate = readTypedName(match[1]!.split(/\s+/), false);
       if (candidate) marked.push(candidate);
+    }
+  }
+  /*
+   * "my employee tiffany lempka has been late": the same marker as the manager
+   * says it, with the name typed in lower case. Admin feedback, 16 Oct 2026 —
+   * a Corrective Action asked for with exactly that sentence was answered "give
+   * me their name", and the manager had to say it again. Only after "my / our"
+   * plus a person noun, and `readTypedName` still refuses topic words,
+   * form words and verbs, so "my employee handbook" and "my employee was late"
+   * name nobody.
+   */
+  if (marked.length === 0) {
+    for (const match of text.matchAll(
+      /\b(?:my|our)\s+(?:employee|team member|staff member|associate|coworker)\s+(\S+(?:\s+\S+)?)/gi,
+    )) {
+      const candidate = readTypedName(match[1]!.split(/\s+/), false);
+      if (candidate && typedNameAllowed(candidate)) marked.push(candidate);
     }
   }
   if (marked.length > 0) {
@@ -1517,6 +1534,13 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
     /* Present only when it applies, so an ordinary proposal carries no extra key. */
     ...(location.resolution === "needs_selection" && location.outOfScopeName
       ? { namedLocationOutOfScope: location.outOfScopeName }
+      : {}),
+    ...(location.resolution === "needs_selection" && location.namedAmbiguous
+      ? {
+          locationCandidates: location.authorizedIds
+            .map((id) => locationById(id)?.name)
+            .filter((name): name is string => Boolean(name)),
+        }
       : {}),
     status,
     sourceMessageIds: input.context.ids,

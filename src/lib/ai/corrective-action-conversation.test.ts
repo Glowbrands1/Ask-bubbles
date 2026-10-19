@@ -1117,10 +1117,13 @@ describe("the fast path — a draft from what the manager already said", () => {
       /Date for the form/i,
       /What happened —/i,
       /Whether this is a verbal or written warning/i,
-      /job title/i,
+      // The position is asked as ONE plain line (admin feedback, 16 Oct 2026),
+      // never as a numbered questionnaire item.
+      /^\d+\. The employee's job title/im,
     ]) {
       expect(answer.content, String(asked)).not.toMatch(asked);
     }
+    expect(answer.content).toMatch(/position \(job title\)\?/i);
     expect(answer.content).not.toMatch(/^1\. /m);
     expect(answer.content).toMatch(/create the draft here/i);
   });
@@ -1154,7 +1157,7 @@ describe("the fast path — a draft from what the manager already said", () => {
   /* -- 4/5/6. an unknown field is named, never asked for ------------------ */
 
   it.each([
-    ["job title", /job title/i],
+    ["the job title as a numbered questionnaire item", /^\d+\. The employee's job title/im],
     ["date of prior action", /date of (?:the )?previous/i],
     ["what happened, once the person is known", /What happened —/i],
   ])("4-6. never asks for %s", async (_label, pattern) => {

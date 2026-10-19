@@ -60,11 +60,18 @@ export function authorizeLocation(
 }
 
 export type LocationProposal =
-  | { resolution: "resolved"; locationId: string }
+  | {
+      resolution: "resolved";
+      locationId: string;
+      /** Whose word it rests on: the manager's own, the employee's Woven store, or the account's one assignment. */
+      source?: "manager" | "woven" | "assignment";
+    }
   | {
       resolution: "needs_selection";
       authorizedIds: string[];
       outOfScopeName?: string;
+      /** Several stores the manager's own words could mean — not their whole assignment. */
+      namedAmbiguous?: true;
     }
   | { resolution: "not_applicable"; reason: string }
   | { resolution: "unavailable"; reason: string };
@@ -75,6 +82,17 @@ export type LocationProposal =
  * Never a guess — several candidates is a question.
  */
 export function proposeLocation(
+  scope: AccessScope | null,
+  managerText = "",
+  employeeLocationIds: readonly string[] = [],
+): LocationProposal {
+  const detailed = proposeLocationWithSource(scope, managerText, employeeLocationIds);
+  if (detailed.resolution !== "resolved") return detailed;
+  return { resolution: "resolved", locationId: detailed.locationId };
+}
+
+/** `proposeLocation`, saying whose word a resolved store rests on — for the proposal's read-back. */
+export function proposeLocationWithSource(
   scope: AccessScope | null,
   managerText = "",
   employeeLocationIds: readonly string[] = [],
@@ -103,7 +121,7 @@ export function proposeLocation(
   if (named) return named;
   const employees = fromEmployeeLocations(allowed, employeeLocationIds);
   if (employees) return employees;
-  if (allowed.length === 1) return { resolution: "resolved", locationId: allowed[0]! };
+  if (allowed.length === 1) return { resolution: "resolved", locationId: allowed[0]!, source: "assignment" };
   if (allowed.length > 1) return { resolution: "needs_selection", authorizedIds: allowed };
   return {
     resolution: "unavailable",
@@ -115,11 +133,22 @@ function fromNamedLocations(allowed: readonly string[], managerText: string): Lo
   const mentions = readLocationMentions(managerText);
   if (mentions.length === 0) return null;
 
-  const named = [...new Set(mentions.flatMap((mention) => mention.locationIds))];
+  /*
+   * A MORE SPECIFIC MENTION NARROWS A LESS SPECIFIC ONE. "Sioux Falls" is two
+   * stores; a later "E 18th St" is one of them, and the conversation as a whole
+   * names that one. A mention whose stores strictly contain another mention's
+   * stores is the vaguer of the two and is dropped. Unrelated mentions all
+   * stand, so two different stores are still a question.
+   */
+  const sets = mentions.map((mention) => [...new Set(mention.locationIds)]);
+  const narrowed = sets.filter(
+    (ids) => !sets.some((other) => other.length < ids.length && other.every((id) => ids.includes(id))),
+  );
+  const named = [...new Set(narrowed.flat())];
   const inScope = named.filter((id) => allowed.includes(id));
 
-  if (inScope.length === 1) return { resolution: "resolved", locationId: inScope[0]! };
-  if (inScope.length > 1) return { resolution: "needs_selection", authorizedIds: inScope };
+  if (inScope.length === 1) return { resolution: "resolved", locationId: inScope[0]!, source: "manager" };
+  if (inScope.length > 1) return { resolution: "needs_selection", authorizedIds: inScope, namedAmbiguous: true };
   if (allowed.length === 0) return null;
 
   const outOfScopeName =
@@ -136,7 +165,7 @@ function fromEmployeeLocations(
   employeeLocationIds: readonly string[],
 ): LocationProposal | null {
   const inScope = [...new Set(employeeLocationIds)].filter((id) => allowed.includes(id));
-  if (inScope.length === 1) return { resolution: "resolved", locationId: inScope[0]! };
+  if (inScope.length === 1) return { resolution: "resolved", locationId: inScope[0]!, source: "woven" };
   if (inScope.length > 1) return { resolution: "needs_selection", authorizedIds: inScope };
   return null;
 }

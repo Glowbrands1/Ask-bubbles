@@ -31,6 +31,7 @@ export const COMPANY_JOB_TITLES: readonly { pattern: RegExp; title: string }[] =
   { pattern: /\b(?:asms?|assistant (?:store |location )?managers?)\b/i, title: "Assistant Manager" },
   { pattern: /\b(?:store|location|makery) managers?\b/i, title: "Store Manager" },
   { pattern: /\b(?:shift (?:leads?|leaders?|supervisors?)|keyholders?)\b/i, title: "Shift Lead" },
+  { pattern: /\bmakery (?:associates?|team members?)\b/i, title: "Makery Associate" },
   { pattern: /\bsoap ?makers?\b/i, title: "Soap Maker" },
   { pattern: /\b(?:sales associates?|team members?)\b/i, title: "Team Member" },
   { pattern: /\b(?:rm|regional managers?)\b/i, title: "Regional Manager" },

@@ -36,6 +36,8 @@ export interface RosterEmployee {
   readonly preferredFirstName?: string | null;
   /** Ask Bubbles location ids (`loc-NNNN`) the employee is actively assigned to. */
   readonly locationIds: readonly string[];
+  /** The employee's current Woven position, as Woven names it. Null when the directory has none. */
+  readonly positionName?: string | null;
 }
 
 export type NameMatch =

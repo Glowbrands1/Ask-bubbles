@@ -549,9 +549,24 @@ function FormProposalCard({
             <Missing>Not yet — tell Bubbles who this form is about</Missing>
           )}
         </ProposalRow>
+        {proposal.employeeRole || POSITION_FORMS.has(proposal.templateKey) ? (
+          <ProposalRow label="Position">
+            {proposal.employeeRole ? (
+              <>
+                {proposal.employeeRole}
+                {proposal.employeeRoleSource === "woven" ? (
+                  <span className="text-muted-foreground"> · from Woven — tell Bubbles if it has changed</span>
+                ) : null}
+              </>
+            ) : (
+              <Missing>Not set — tell Bubbles their position, or fill it in on the form</Missing>
+            )}
+          </ProposalRow>
+        ) : null}
         <ProposalRow label="Location">
           {location ? (
-            <span className="font-mono text-[11px] text-foreground">{location}</span>
+            /* The roster's own name for the store, so the manager reads which one — the id only if the roster does not know it. */
+            <span className="text-foreground">{locationById(location)?.name ?? location}</span>
           ) : proposal.locationResolution === "not_applicable" ? (
             /*
              * NOT A GAP. A global actor is not assigned to a location, and the
@@ -569,9 +584,7 @@ function FormProposalCard({
              * phase exists to stop. `locationName` stays null until a roster
              * exists; see docs/chat-phase-3.md.
              */
-            <span className="font-mono text-[11px] text-foreground">
-              {proposal.locationId}
-            </span>
+            <span className="text-foreground">{locationById(proposal.locationId)?.name ?? proposal.locationId}</span>
           ) : (
             <Missing>
               {proposal.locationResolution === "needs_selection"
@@ -637,6 +650,9 @@ function FormProposalCard({
     </div>
   );
 }
+
+/** The forms whose Job Title is a record fact Bubbles fills from Woven or asks for. */
+const POSITION_FORMS: ReadonlySet<string> = new Set(["coaching", "follow-up-coaching", "dpoa", "policy-review"]);
 
 function ProposalRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
