@@ -230,7 +230,9 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
     const guestWording = new Set(["tanning-consultant-interview", "management-interview-round-1", "management-interview-round-2"]);
     for (const seed of TEMPLATE_SEEDS) {
       if (seed.key === "dpoa" || seed.key === "sdit-epp" || seed.key === "tsd-epp" || seed.key === "resignation-exit") continue;
-      expect(seed.revision, seed.key).toBe(guestWording.has(seed.key) ? 3 : reissued.has(seed.key) || storeWording.has(seed.key) ? 2 : 1);
+      // The prescreen has been re-issued twice: Salon -> Store, then the removal of the uniform question (D14, Phase 2B).
+      const expected = seed.key === "prescreen-phone-interview" ? 3 : guestWording.has(seed.key) ? 3 : reissued.has(seed.key) || storeWording.has(seed.key) ? 2 : 1;
+      expect(seed.revision, seed.key).toBe(expected);
     }
     expect(TEMPLATE_SEEDS.find((seed) => seed.key === "tsd-epp")?.revision).toBe(4);
     expect(TEMPLATE_SEEDS.find((seed) => seed.key === "resignation-exit")?.revision).toBe(3);
@@ -509,14 +511,14 @@ describe("the Prescreen / Phone Interview matches its source", () => {
     expect(options(document, "at_least_18")).toEqual(["Yes", "No"]);
   });
 
-  it("keeps the four written questions in the source's words and order", () => {
+  it("keeps the three remaining written questions in the source's words and order, without the removed uniform question (D14)", () => {
     const labels = fieldLabels(document);
     expect(labels.get("why_interested")).toBe(
       "Why are you interested in working for Buff City Soap?",
     );
-    expect(labels.get("uniform_services")).toBe(
-      "Are you willing to use our services as part of your Sun Tan City uniform? (Must agree to UV, Sunless and Spa usage to proceed with employment)",
-    );
+    // Removed on 2026-10-19 (D14, Option A): the Sun Tan City product-use/uniform question.
+    expect(labels.has("uniform_services")).toBe(false);
+    expect([...labels.values()].some((label) => /Sun Tan City|UV, Sunless/.test(label))).toBe(false);
     expect(labels.get("previous_experience")).toBe("Previous Work Experience");
     expect(labels.get("availability")).toBe("Availability");
     expect(labels.get("job_title")).toBe("Position Applied For");

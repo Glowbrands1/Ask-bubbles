@@ -1,5 +1,5 @@
 {
- "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description, Salon -> Store terminology, and client/customer -> guest terminology approved 2026-10-19 for SD-2, TS-5, TI-4, TI-5, M1-6 and X-1). Anything not listed here fails template-parity.test.ts.",
+ "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description, Salon -> Store terminology, and client/customer -> guest terminology approved 2026-10-19 for SD-2, TS-5, TI-4, TI-5, M1-6 and X-1). The prescreen's Sun Tan City uniform/product-use question was REMOVED (D14, Option A, approved 2026-10-19): the removal is declared in src/test/approved-removals.ts, which deletes exactly that block from the Ask Sunny snapshot before comparison, and the description change is listed here. Anything not listed here fails template-parity.test.ts.",
  "changes": [
   {
    "sourceKey": "coaching",
@@ -539,6 +539,12 @@
   },
   {
    "sourceKey": "prescreen-phone-interview",
+   "path": ".description",
+   "from": "The prescreening call, before anyone is booked for an interview. Age, interest, uniform agreement, experience and availability, signed off by the interviewer.",
+   "to": "The prescreening call, before anyone is booked for an interview. Age, interest, experience and availability, signed off by the interviewer."
+  },
+  {
+   "sourceKey": "prescreen-phone-interview",
    "path": ".document.blocks[0].brand",
    "from": "SUN TAN CITY",
    "to": "BUFF CITY SOAP"
@@ -551,7 +557,7 @@
   },
   {
    "sourceKey": "prescreen-phone-interview",
-   "path": ".document.blocks[11].text",
+   "path": ".document.blocks[10].text",
    "from": "If the response to these questions best fits our business culture, goals, and if the person sounds friendly, you can then schedule an in-person interview with them or encourage them to apply at a neighboring salon if you do not have open positions.",
    "to": "If the response to these questions best fits our business culture, goals, and if the person sounds friendly, you can then schedule an in-person interview with them or encourage them to apply at a neighboring store if you do not have open positions."
   },

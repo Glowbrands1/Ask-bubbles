@@ -578,7 +578,7 @@ describe("the rest of the library is where it was", () => {
       "fttc-epp": 2,
       "dmit-epp-tsd": 2,
       "dmit-epp-dmit": 2,
-      "prescreen-phone-interview": 2,
+      "prescreen-phone-interview": 3,
       "tanning-consultant-interview": 3,
       "management-interview-round-1": 3,
       "management-interview-round-2": 3,

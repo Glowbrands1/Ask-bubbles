@@ -120,7 +120,7 @@ describe("the six approved guest corrections", () => {
       "asd-sdit-epp": 2,
       "dmit-epp-tsd": 2,
       "dmit-epp-dmit": 2,
-      "prescreen-phone-interview": 2,
+      "prescreen-phone-interview": 3,
       "resignation-exit": 3,
       coaching: 2,
       dpoa: 5,

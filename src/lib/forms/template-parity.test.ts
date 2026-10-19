@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 import approved from "@/test/fixtures/approved-template-changes.json";
 import snapshot from "@/test/fixtures/ask-sunny-published-templates.json";
 
+import { APPROVED_REMOVAL_DESCRIPTION_CHANGES, APPROVED_REMOVALS, withApprovedRemovals } from "@/test/approved-removals";
+
 import { MIGRATED_TEMPLATE_SEEDS, TEMPLATE_SEEDS } from "./library";
 
 /**
@@ -120,7 +122,7 @@ describe("the migrated templates are the reference platform's published template
       expect(seed, template.key).toBeDefined();
       const found: { path: string; from: unknown; to: unknown }[] = [];
       differences(
-        comparable(template),
+        comparable({ ...template, document: withApprovedRemovals(RENAMED[template.key] ?? template.key, template.document) }),
         comparable(seed as unknown as Record<string, unknown>),
         "",
         found,
@@ -128,6 +130,24 @@ describe("the migrated templates are the reference platform's published template
       for (const entry of found) actual.push({ sourceKey: template.key, ...entry });
     }
     expect(actual).toEqual(CHANGES);
+  });
+
+  it("approved removals are narrow: each block exists in the snapshot, is gone from the seed, and nothing else was dropped", () => {
+    expect(APPROVED_REMOVALS).toHaveLength(1);
+    for (const removal of APPROVED_REMOVALS) {
+      const template = TEMPLATES.find((entry) => entry.key === removal.templateKey)!;
+      const seed = MIGRATED_TEMPLATE_SEEDS.find((entry) => entry.key === removal.templateKey)!;
+      type Block = { kind?: string; field?: { key?: string; label?: string } };
+      const before = (template.document as { blocks: Block[] }).blocks;
+      const after = (seed.document as { blocks: Block[] }).blocks;
+      const removed = before.find((block) => block.kind === "field" && block.field?.key === removal.fieldKey);
+      expect(removed?.field?.label, removal.decision).toBe(removal.snapshotLabel);
+      expect(after.some((block) => block.field?.key === removal.fieldKey), removal.decision).toBe(false);
+      // Exactly one block fewer, and every other field key is still there, in the same order.
+      expect(after.length).toBe(before.length - 1);
+      const keys = (blocks: Block[]) => blocks.filter((block) => block.kind === "field").map((block) => block.field?.key);
+      expect(keys(after)).toEqual(keys(before).filter((key) => key !== removal.fieldKey));
+    }
   });
 
   it("each approved change is a branding change of an authorized kind", () => {
@@ -148,6 +168,8 @@ describe("the migrated templates are the reference platform's published template
       expect(typeof change.to, where).toBe("string");
       const from = change.from as string;
       const to = change.to as string;
+      // The description change that accompanies an approved removal: the exact pair only.
+      if (APPROVED_REMOVAL_DESCRIPTION_CHANGES.some((entry) => entry.templateKey === change.sourceKey && entry.from === from && entry.to === to)) continue;
       // Salon -> Store is the other authorized substitution: Buff City Soap's locations are stores.
       const SOURCE_TERM = /\b[Ss]alons?\b|\bSALONS?\b|\b[Cc]lients?\b|\b[Cc]ustomers?\b/;
       // The authorized terminology substitutions: Salon -> Store, and client/customer -> guest.
