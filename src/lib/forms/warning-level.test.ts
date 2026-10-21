@@ -460,3 +460,52 @@ describe("correctiveActionIssue — what the form is for, never the person (PR #
     expect(correctiveActionIssue(text, person)).toBe(issue);
   });
 });
+
+/*
+ * ============================================================================
+ * DISTRICT MANAGER FEEDBACK, 21 OCT 2026 — "VERBAL CA" AND A BARE "VERBAL."
+ * ============================================================================
+ *
+ * Two production requests named the level and were still asked "Verbal or
+ * Written?": the level in the form's own shorthand ("create verbal CA for …"),
+ * and the level as a sentence of its own in the middle of the request
+ * ("… on 10-20-26. verbal. no payroll deduct."). Synthetic names.
+ */
+describe("the level in the form's own shorthand, or as a sentence of its own", () => {
+  const DAY = "2026-10-21";
+
+  it.each([
+    [
+      "create verbal CA for remy calder for violating visitors at work policy on 10-10-26. juno spent 40 minutes talking with friend and ignoring guests. previous coaching was jba policy manual 1-1-26",
+      "verbal",
+    ],
+    [
+      "create ca form for tess varga for violating attendance policy on 10-20-26. verbal. no payroll deduct. jba manual 1-1-26 for previous coaching",
+      "verbal",
+    ],
+    ["create a written corrective action for tess varga for a register shortage", "written"],
+    ["written CA for tess varga, register short $3.25 today", "written"],
+    ["give her a verbal C/A for the dress code", "verbal"],
+    ["tess was late on 10/20. written. payroll deduct no", "written"],
+    ["late today. Verbal.", "verbal"],
+  ])("%s → %s", (text, level) => {
+    expect(statedWarningLevel(text, DAY)).toBe(level);
+  });
+
+  it.each([
+    "she had a written CA in august and was late again today",
+    "she has had verbal CAs before",
+    "previous written corrective action 9/1, late again today",
+    "late again. verbal. written.",
+    "verbal or written?",
+    "is it verbal?",
+  ])("%s states no level for this form", (text) => {
+    expect(statedWarningLevel(text, DAY)).toBeNull();
+  });
+
+  it("a bare level in a later turn is still read across the conversation", () => {
+    expect(
+      warningLevelFromTurns(["create ca form for tess varga for violating attendance policy on 10-20-26", "verbal"], DAY),
+    ).toBe("verbal");
+  });
+});

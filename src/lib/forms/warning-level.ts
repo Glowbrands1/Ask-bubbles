@@ -94,8 +94,18 @@ export interface WarningMention {
  */
 const MAX_TEXT = 4000;
 
-/** A named warning, longest first so "final written warning" is one mention. */
-const NAMED = /\b(final\s+written|final|written|verbal)\s+warn(?:ing|ings)?\b|\b(final\s+written)\b(?!\s+(?:statement|notice|test|exam|request|record|note|policy|up)\b)/gi;
+/**
+ * A named warning, longest first so "final written warning" is one mention.
+ *
+ * "VERBAL CA" NAMES THE LEVEL TOO. Production, 21 Oct 2026: "create verbal CA
+ * for <employee> for violating …" was answered "Is this new corrective action
+ * a Verbal Warning or a Written Warning?" — the level was in the request, in
+ * the shorthand managers use for the form itself. A verbal or written CA (or
+ * corrective action) is read exactly as a verbal or written warning: through
+ * the same cues, so "she had a written CA in August" is still history.
+ */
+const NAMED =
+  /\b(final\s+written|final|written|verbal)\s+(?:warn(?:ing|ings)?|cas?|c\/a|corrective\s+actions?)\b|\b(final\s+written)\b(?!\s+(?:statement|notice|test|exam|request|record|note|policy|up)\b)/gi;
 
 /** "no, verbal", "actually verbal", "oops i meant verbal" — a correction's lead-in. */
 const LEAD_IN = String.raw`(?:(?:actually|no|nope|sorry|oops|wait|correction|ok|okay|so|rather|i\s+meant|i\s+mean|make\s+that)[\s,.:!-]*)*`;
@@ -135,6 +145,15 @@ const WHOLE_LINE = new RegExp(
   String.raw`^\s*(?:\d+\s*[.):-]\s*)?${LEAD_IN}(?:(?:type\s+of\s+)?warning(?:\s*(?:level|type))?\s*[:=-]\s*)?(?:(?:it'?s|it\s+is|make\s+it|just|only)\s+)?(?:a\s+)?(final\s+written|verbal|written)(?:\s+warning)?(?:\s+(?:one|please))?(?:[\s,]+not\s+(?:a\s+)?(?:verbal|written)(?:\s+warning)?)?[\s.!]*$`,
   "i",
 );
+
+/**
+ * The level as a SENTENCE OF ITS OWN, mid-message — "…on 10-20-26. verbal. no
+ * payroll deduct." (production, 21 Oct 2026). The same reasoning as a whole
+ * line: a bare adjective standing alone is a decision about the document,
+ * not an account of a conversation. Only the bare adjective: "…q3 review.
+ * written warning." is still read through the cues below and asked about.
+ */
+const BARE_SENTENCE = /^\s*(?:(?:it'?s|it\s+is|make\s+it|just|only)\s+)?(?:a\s+)?(verbal|written)\s*$/i;
 
 /** "warning level: written", "type of warning - verbal". */
 const LABELLED =
@@ -482,13 +501,28 @@ export function warningMentions(text: string, today: string): WarningMention[] {
     }
     offset += line.length + 1;
   }
+  /* A bare level as one sentence of a longer line, read like a whole line. */
+  const sentences: { level: WarningLevel; start: number; end: number }[] = [];
+  for (const segment of source.matchAll(/[^.;!?\n]+/g)) {
+    const bare = BARE_SENTENCE.exec(segment[0]);
+    if (!bare) continue;
+    const start = segment.index + segment[0].toLowerCase().lastIndexOf(bare[1]!.toLowerCase());
+    if (wholeLines.some((entry) => entry.start === start)) continue;
+    // "verbal or written?" is a question, and so is a sentence ending in one.
+    if (source[segment.index + segment[0].length] === "?") continue;
+    sentences.push({ level: levelOf(bare[1]!), start, end: segment.index + segment[0].length });
+  }
+  const answers = wholeLines.length + sentences.length;
   for (const entry of wholeLines) {
     const kind: MentionKind | undefined = entry.underHeading
       ? "historical"
-      : wholeLines.length > 1
+      : answers > 1
         ? "unclear"
         : undefined;
     push(entry.level, entry.start, entry.end, true, kind);
+  }
+  for (const entry of sentences) {
+    push(entry.level, entry.start, entry.end, true, answers > 1 ? "unclear" : undefined);
   }
 
   for (const pattern of [BARE_CHANGED_TO, BARE_AFTER_CUE, BARE_GIVEN]) {
@@ -499,7 +533,7 @@ export function warningMentions(text: string, today: string): WarningMention[] {
   }
   for (const match of source.matchAll(NAMED)) {
     // "verbal warnings" is a pattern of past ones; this form issues one.
-    const plural = /warnings$/i.test(match[0]);
+    const plural = /(?:warnings|cas|actions)$/i.test(match[0]);
     push(levelOf(match[1] ?? match[2]!), match.index, match.index + match[0].length, false, plural ? "historical" : undefined);
   }
 
