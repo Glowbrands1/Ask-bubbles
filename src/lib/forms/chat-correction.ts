@@ -14,6 +14,7 @@ import {
   type FormDocument,
 } from "./document";
 import { CORRECTABLE_KEYS, correctionValues, employmentChangeKind, syncNarrative } from "./employment-change";
+import { changeOnEditableDraft } from "./editable-draft";
 import { EXIT_CORRECTABLE_KEYS, exitCorrectionValues } from "./exit-details";
 import { isExitDocumentKeys } from "./exit-draft";
 import { authorizeInstance } from "./instance-scope";
@@ -58,8 +59,10 @@ import {
  * the turn is answered as it always would have been.
  *
  * IT IS THE MANAGER'S OWN EDIT. Saved through `saveInstanceValues` — the same
- * path as typing into the field — so it is recorded as the manager's, refused
- * on a finalized form, and limited to fields a person may edit.
+ * path as typing into the field — so it is recorded as the manager's and
+ * limited to fields a person may edit. A finalized form is never written: the
+ * reader marks the turn `finalized`, and `correctActiveForm` makes the same
+ * correction on a new draft of it (`editable-draft.ts`).
  */
 async function correctFromFormReaders(
   input: {
@@ -224,10 +227,14 @@ async function correctFromFormReaders(
   if (!correction) return null;
 
   const who = `**${loaded.instance.templateName}** for **${loaded.instance.employeeName}**`;
+  /*
+   * A FINALIZED FORM IS CORRECTED ON A NEW DRAFT OF IT. Nothing is written
+   * here: the turn is marked, and `correctActiveForm` opens the draft and
+   * makes this same correction there. See `editable-draft.ts`.
+   */
   if (loaded.instance.status !== "draft") {
-    return reply(
-      `The ${who} is finalized, so I haven't changed it. Open it from Form Monitoring and create a revision to make a change.`,
-    );
+    applied.finalized = true;
+    return null;
   }
 
   const correctable: ReadonlySet<string> = kind
@@ -473,8 +480,9 @@ function samePerson(named: string, employee: string): boolean {
  * as it always would have been.
  *
  * IT IS THE MANAGER'S OWN EDIT. Saved through `saveInstanceValues` — the same
- * path as typing into the field — so it is recorded as the manager's, refused
- * on a finalized form, and limited to fields a person may edit.
+ * path as typing into the field — so it is recorded as the manager's and
+ * limited to fields a person may edit. On a finalized form it is made on a new
+ * draft of it, as the form readers' corrections are.
  */
 
 const VERB = String.raw`(?:change|update|correct|fix|set|make)`;
@@ -552,6 +560,11 @@ export function readHeaderCorrection(text: string, today: string): HeaderCorrect
 interface AppliedBy {
   /** Whether the readers that saved this correction read `clause`. Set on success. */
   reads?: (clause: string) => boolean;
+  /**
+   * The turn IS a correction to this form, and the form is finalized: nothing
+   * was written. `correctActiveForm` makes it on a new draft of the form.
+   */
+  finalized?: boolean;
 }
 
 /** An instruction, or the name/date a header correction is about. */
@@ -632,10 +645,10 @@ async function correctHeaderLines(
   if (Object.keys(values).length === 0) return null;
 
   const who = `**${instance.templateName}** for **${instance.employeeName}**`;
+  // Finalized: made on a new draft of it by `correctActiveForm`, never here.
   if (instance.status !== "draft") {
-    return reply(
-      `The ${who} is finalized, so I haven't changed it. Open it from the forms register and create a revision to make a change.`,
-    );
+    applied.finalized = true;
+    return null;
   }
 
   /*
@@ -712,7 +725,24 @@ export async function correctActiveForm(input: {
     return { response, applied };
   };
 
+  /*
+   * ==========================================================================
+   * A CORRECTION TO A FINALIZED FORM OPENS A NEW DRAFT OF IT
+   * ==========================================================================
+   *
+   * Ported from the reference platform: this used to answer "it is finalized,
+   * create a revision" and change nothing. Now the readers say the turn is a
+   * correction to a finalized form, the draft is opened (or the open one
+   * found), and the WHOLE correction — leftovers note included — is made on it.
+   * The finalized record is never written.
+   */
+  const onNewDraft = () =>
+    changeOnEditableDraft(input.request, input.instanceId, (draftId) =>
+      correctActiveForm({ ...input, instanceId: draftId }),
+    );
+
   let { response, applied } = await attempt(statements);
+  if (applied.finalized) return onNewDraft();
   /*
    * "Change her new location to salon 24 and rewrite the reason …" reads as
    * nothing whole. Its explicit correction clauses are read alone — never a
@@ -725,9 +755,10 @@ export async function correctActiveForm(input: {
     const explicit = clauses.filter((clause) => CORRECTION_VERB.test(clause));
     if (explicit.length === 0 || explicit.length === clauses.length) return null;
     ({ response, applied } = await attempt(explicit.join(". ")));
+    if (applied.finalized) return onNewDraft();
   }
   if (!response) return null;
-  // Nothing was changed (a finalized form): there is no "rest" to speak of.
+  // Nothing was changed: there is no "rest" to speak of.
   if (!response.formUpdate) return response;
 
   const leftovers = [...unreadInstructions(statements, applied.reads ?? (() => false)), ...questions];

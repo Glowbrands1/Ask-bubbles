@@ -553,3 +553,147 @@ describe("a Corrective Action filed on revision 4, revised", () => {
     expect(count(revised.text, CLOSING)).toBe(1);
   });
 });
+
+describe("a Corrective Action filed on revision 5, edited as a new draft", () => {
+  /*
+   * THE ACTION PLAN BY ITS OWN RULES ON A REVISION (`ca-action-plan.ts`). A
+   * revision is filled against the CURRENT version — the same choice the
+   * reference platform makes — so a CA filed on revision 5 is revised onto
+   * revision 6. A plan Ask Bubbles built is rebuilt there, in revision 6's
+   * words; a plan a person wrote is theirs, with only its closing brought up
+   * to date. The filed record is not touched until the revision is finalized.
+   */
+  async function filedOnRevision5(plan: { value: string; filledBy: string; provenance: Record<string, unknown> }) {
+    const { CA_ACTION_PLAN_CLOSING_REVISION_5 } = await import("@/lib/forms/required-closing");
+    const { result } = await conversation([OPENING]);
+    const id = result.reference.instanceId;
+    const instance = store.form_instances.find((entry) => entry.id === id)!;
+    const current = store.form_template_versions.find((row) => row.id === instance.template_version_id)!;
+    const document = current.document as { blocks: Record<string, unknown>[] };
+    const revision5 = {
+      ...current,
+      id: "dpoa-revision-5",
+      version: 0,
+      status: "archived",
+      seed_revision: 5,
+      document: {
+        ...document,
+        blocks: document.blocks.map((block) => {
+          const field = block.field as Record<string, unknown> | undefined;
+          return field?.key === "action_plan"
+            ? { ...block, field: { ...field, requiredClosing: CA_ACTION_PLAN_CLOSING_REVISION_5 } }
+            : block;
+        }),
+      },
+    };
+    store.form_template_versions.push(revision5);
+    instance.template_version_id = revision5.id;
+    instance.status = "finalized";
+    instance.finalized_at = "2026-09-29T15:00:00Z";
+    const row = store.form_instance_values.find((entry) => entry.instance_id === id && entry.field_key === "action_plan")!;
+    Object.assign(row, { value: plan.value, filled_by: plan.filledBy, provenance: plan.provenance });
+    return { id, closing5: CA_ACTION_PLAN_CLOSING_REVISION_5 };
+  }
+
+  async function revise(id: string) {
+    joinOverview();
+    const response = await instanceRoute.POST(
+      new Request(`https://app.test/api/forms/instances/${id}`, { method: "POST", body: JSON.stringify({ action: "revise" }) }),
+      { params: Promise.resolve({ id }) },
+    );
+    expect(response.status).toBe(200);
+    joinOverview();
+    return ((await response.json()) as { instance: { id: string } }).instance.id;
+  }
+
+  it("rebuilds a plan Ask Bubbles built in the current version's words, and leaves the filed one as signed", async () => {
+    const { ACTION_PLAN_SOURCE } = await import("@/lib/forms/ca-action-plan");
+    const { CA_ACTION_PLAN_CLOSING_REVISION_5: CLOSING_5 } = await import("@/lib/forms/required-closing");
+    const built = { source: ACTION_PLAN_SOURCE, policySource: "none", policies: [], payroll: null };
+    const { id } = await filedOnRevision5({ value: `${REVIEW} ${CLOSING_5}`, filledBy: "ai", provenance: built });
+
+    const revision = await revise(id);
+    const carried = (await review(revision)).values.find((row) => row.fieldKey === "action_plan")!;
+    expect(carried.value).toBe(`${REVIEW} ${CLOSING}`);
+    expect(count(carried.value!, "Future policy violations")).toBe(1);
+    // Still a plan Ask Bubbles built, so a later policy or payroll change in chat rebuilds it again.
+    expect(store.form_instance_values.find((row) => row.instance_id === revision && row.field_key === "action_plan")!.provenance).toMatchObject({
+      source: ACTION_PLAN_SOURCE,
+    });
+
+    // The filed record: its revision-5 words, and still the finalized one on file.
+    expect(await valueOf(id, "action_plan")).toBe(`${REVIEW} ${CLOSING_5}`);
+    expect(store.form_instances.find((row) => row.id === id)!.status).toBe("finalized");
+  });
+
+  it("builds the rebuilt plan from what the carried form says", async () => {
+    const { ACTION_PLAN_SOURCE } = await import("@/lib/forms/ca-action-plan");
+    const { CA_ACTION_PLAN_CLOSING_REVISION_5: CLOSING_5 } = await import("@/lib/forms/required-closing");
+    const built = { source: ACTION_PLAN_SOURCE, policySource: "none", policies: [], payroll: null };
+    const { id } = await filedOnRevision5({ value: `${REVIEW} ${CLOSING_5}`, filledBy: "ai", provenance: built });
+    // The offense line was filled in on the card after the plan was built.
+    store.form_instance_values = store.form_instance_values.filter(
+      (row) => !(row.instance_id === id && row.field_key === "policy_violated"),
+    );
+    store.form_instance_values.push({
+      instance_id: id,
+      field_key: "policy_violated",
+      value: "Attendance Violation",
+      checked: [],
+      filled_by: "manager",
+      provenance: {},
+    });
+
+    const revision = await revise(id);
+    expect(await valueOf(revision, "action_plan")).toBe(
+      `Management will review the Attendance policy with Jessica. ${CLOSING}`,
+    );
+    expect(await valueOf(id, "action_plan")).toBe(`${REVIEW} ${CLOSING_5}`);
+  });
+
+  it("copies the plan exactly when the revision is on the version the form was filed on", async () => {
+    const { ACTION_PLAN_SOURCE } = await import("@/lib/forms/ca-action-plan");
+    const { result } = await conversation([OPENING]);
+    const id = result.reference.instanceId;
+    Object.assign(store.form_instances.find((row) => row.id === id)!, {
+      status: "finalized",
+      finalized_at: "2026-09-29T15:00:00Z",
+    });
+    const plan = store.form_instance_values.find((row) => row.instance_id === id && row.field_key === "action_plan")!;
+    expect(plan.provenance).toMatchObject({ source: ACTION_PLAN_SOURCE });
+    const revision = await revise(id);
+    expect(await valueOf(revision, "action_plan")).toBe(plan.value);
+  });
+
+  it("keeps a plan the manager wrote, with only its closing brought up to date", async () => {
+    const { CA_ACTION_PLAN_CLOSING_REVISION_5: CLOSING_5 } = await import("@/lib/forms/required-closing");
+    const { id } = await filedOnRevision5({ value: `Jessica will arrive early. ${CLOSING_5}`, filledBy: "manager", provenance: {} });
+    const revision = await revise(id);
+    expect(await valueOf(revision, "action_plan")).toBe(`Jessica will arrive early. ${CLOSING}`);
+    expect(await valueOf(id, "action_plan")).toBe(`Jessica will arrive early. ${CLOSING_5}`);
+  });
+
+  it("replaces the filed record only when the revision is finalized", async () => {
+    const { CA_ACTION_PLAN_CLOSING_REVISION_5: CLOSING_5 } = await import("@/lib/forms/required-closing");
+    const { id } = await filedOnRevision5({ value: `Jessica will arrive early. ${CLOSING_5}`, filledBy: "manager", provenance: {} });
+    const revision = await revise(id);
+    // Asking again returns the same draft.
+    expect(await revise(id)).toBe(revision);
+    expect(store.form_instances.find((row) => row.id === id)!.status).toBe("finalized");
+
+    const finalized = await instanceRoute.POST(
+      new Request(`https://app.test/api/forms/instances/${revision}`, {
+        method: "POST",
+        body: JSON.stringify({ action: "finalize", followUpDate: null, acknowledgeUnverifiedPolicy: true }),
+      }),
+      { params: Promise.resolve({ id: revision }) },
+    );
+    expect(finalized.status).toBe(200);
+    expect(store.form_instances.find((row) => row.id === id)!.status).toBe("revised");
+    expect(
+      store.form_instance_events.some(
+        (event) => event.instance_id === id && event.kind === "revised" && (event.detail as Record<string, unknown>).revisionId === revision,
+      ),
+    ).toBe(true);
+  });
+});

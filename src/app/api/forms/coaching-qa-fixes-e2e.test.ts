@@ -2,6 +2,7 @@ import { rosterResultFor } from "@/test/roster-result";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
+import { joinedOnRead } from "@/test/overview-join";
 import type { AccessScope, ChatMessage } from "@/types";
 
 vi.mock("@/config/company/locations", async () =>
@@ -436,15 +437,41 @@ describe("P2 — a follow-up result in the manager's own words fills the finding
     }
   });
 
-  it("a finalized form is refused, with the model never asked", async () => {
+  it("a finalized form is never written: a finding is refused, a change is made on a new draft of it", async () => {
     const { id, history } = await filledFollowUpForm();
-    store.form_instances[0]!.status = "finalized";
-    for (const turnText of ["Kaitlyn improved during today’s observation.", "Make the follow up 10 days instead.", "Change the follow-up date to 10/15"]) {
-      const response = await revise(id, history, turnText);
-      expect(response?.content, turnText).toMatch(/finalized/);
-    }
-    expect(modelCalls("revise_form_fields")).toBe(0);
-    expect(store.form_instances[0]!.follow_up_date ?? null).toBeNull();
+    const original = store.form_instances[0]!;
+    original.status = "finalized";
+    original.finalized_at = "2026-10-01T15:00:00Z";
+    // The view's join on every read: the draft is inserted and read back in one turn.
+    const rows = [...store.form_instances];
+    store.form_instances = joinedOnRead(store, "2026-10-01");
+    store.form_instances.push(...rows);
+    const before = await snapshot(id);
+
+    // A finding is not a reason to open a new version of a signed form.
+    const finding = await revise(id, history, "Kaitlyn improved during today’s observation.");
+    expect(finding?.content).toMatch(/is finalized, so I haven't changed it/);
+    expect(finding?.content).toMatch(/Edit as new draft/);
+    expect(store.form_instances).toHaveLength(1);
+
+    // A revision is made on a new draft — the model asked about that draft only.
+    const timeframe = await revise(id, history, "Make the follow up 10 days instead.");
+    expect(timeframe?.content).toMatch(/was finalized, so I opened a new draft of it/);
+    const draft = timeframe!.formOpened!.instanceId;
+    expect(draft).not.toBe(id);
+    expect(timeframe!.formOpened!.revisesInstanceId).toBe(id);
+    expect(modelCalls("revise_form_fields")).toBe(1);
+
+    // The follow-up date asked next lands on the same draft — no second revision.
+    const date = await revise(id, history, "Change the follow-up date to 10/15");
+    expect(date!.formOpened!.instanceId).toBe(draft);
+    expect(store.form_instances).toHaveLength(2);
+    expect(store.form_instances.find((row) => row.id === draft)!.follow_up_date).toBe("2026-10-15");
+
+    // The finalized record: not one value, and not its follow-up, changed.
+    expect(await snapshot(id)).toEqual(before);
+    expect(original.status).toBe("finalized");
+    expect(original.follow_up_date ?? null).toBeNull();
   });
 });
 

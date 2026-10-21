@@ -29,7 +29,7 @@ import {
   withInstanceRef,
   continuationFor,
 } from "@/lib/forms/proposal-continuation";
-import { announceFormUpdate } from "./form-update-events";
+import { announceFormUpdate, openedFormReference } from "./form-update-events";
 import {
   chatReportContextFromParams,
   type ChatReportContext,
@@ -365,6 +365,12 @@ export function ChatScreen() {
            * ordinary turn back through `send`.
            */
           formSelection: response.formSelection,
+          /*
+           * A form already on file that this turn opened — "edit the exit form
+           * for Jordan Smith", or the new draft of a finalized one — as a card
+           * on this answer. A pointer, like a created form's.
+           */
+          formInstanceRef: openedFormReference(response.formOpened),
         };
 
         // A chat correction saved a form further up the thread: have it re-read.

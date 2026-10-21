@@ -24,6 +24,8 @@ import {
   type DraftValues,
 } from "./responsibility";
 import { selectStatedFacts } from "./employment-change";
+import { refreshedActionPlan } from "./ca-action-plan";
+import { needsFollowUp } from "./follow-up";
 import {
   LEGACY_PREVIOUS_ACTION_DATE_KEY,
   LEGACY_PREVIOUS_ACTION_KEY,
@@ -944,6 +946,8 @@ export async function finalizeInstance(
       ? { unverifiedPolicy: unverified, policyVerificationOverride: true }
       : {}),
   });
+  // A revision, finalized, replaces the form it revises — see `reviseInstance`.
+  await supersedeRevised(loaded, actor);
   return loaded.instance;
 }
 
@@ -960,10 +964,25 @@ export async function markExported(instanceId: string, actor: string): Promise<v
 /**
  * A revision, or the re-evaluation stage of an EPP.
  *
- * The new form copies the old one's values and points back at it, so the
- * DMIT lifecycle — review, plan, follow-up, re-evaluation — reads as one
- * history instead of unrelated documents that happen to share a name. The
- * original is marked `revised` and stays exactly as it was signed.
+ * The new form copies the old one's values and its follow-up, and points back
+ * at it, so the DMIT lifecycle — review, plan, follow-up, re-evaluation —
+ * reads as one history instead of unrelated documents that happen to share a
+ * name. The original stays exactly as it was finalized.
+ *
+ * ============================================================================
+ * THE ORIGINAL IS REPLACED WHEN THE REVISION IS FINALIZED, NOT BEFORE
+ * ============================================================================
+ *
+ * Ported from the reference platform. Opening a revision used to mark the
+ * original `revised` on the spot, so a draft opened by mistake — and then
+ * deleted — left a finalized record marked as replaced by nothing. Now opening
+ * the draft changes nothing about the original; `finalizeInstance` marks it
+ * `revised` when the revision is finalized. Deleting the draft is therefore a
+ * complete undo.
+ *
+ * ONE OPEN REVISION AT A TIME. Asking again while a revision is still a draft
+ * returns that draft rather than forking a second one — the form card's "Edit
+ * as new draft" and a chat correction land on the same record.
  */
 export async function reviseInstance(
   instanceId: string,
@@ -976,6 +995,8 @@ export async function reviseInstance(
   if (loaded.instance.status === "revised") {
     throw new Error("That form has already been revised.");
   }
+  const open = await findOpenRevision(instanceId);
+  if (open) return open;
 
   const version = await getCurrentVersion(loaded.instance.templateId);
   const { data, error } = await supabase
@@ -995,6 +1016,14 @@ export async function reviseInstance(
       source: loaded.instance.source,
       status: "draft",
       revises_instance_id: loaded.instance.id,
+      /*
+       * THE FOLLOW-UP COMES WITH IT. While this is a draft the original still
+       * carries the tracking (see `followUpState`), so nothing is counted
+       * twice; once it is finalized, this one does.
+       */
+      follow_up_date: loaded.instance.followUpDate,
+      followed_up_at: loaded.instance.followedUpAt,
+      followed_up_by: loaded.instance.followedUpBy,
     })
     .select("id")
     .single();
@@ -1061,6 +1090,35 @@ export async function reviseInstance(
         row.value = closed[row.field_key]!;
       }
     }
+
+    /*
+     * THE CORRECTIVE ACTION'S ACTION PLAN, BY ITS OWN RULES (`ca-action-plan.ts`).
+     * Carried onto a NEWER version, a plan Ask Bubbles built is rebuilt there,
+     * from what the carried form says — so a plan built on an older revision of
+     * the form reads exactly as the current one builds it. A plan a person
+     * wrote, or one drafted before plans were built, is theirs and is carried
+     * as it was (its closing brought up to date above). On the SAME version the
+     * revision is a copy, plan included, exactly as it was finalized.
+     */
+    const onNewerVersion = version.id !== loaded.instance.templateVersionId;
+    const plan = onNewerVersion && refreshedActionPlan({
+      templateKey: loaded.instance.templateKey,
+      document: target,
+      variantKey: loaded.instance.variantKey,
+      employeeName: loaded.instance.employeeName,
+      values: rows.map((row) => ({
+        fieldKey: row.field_key,
+        value: row.value,
+        checked: row.checked,
+        filledBy: row.filled_by,
+        provenance: row.provenance,
+      })),
+    });
+    const planRow = plan ? rows.find((row) => row.field_key === plan.key) : undefined;
+    if (plan && planRow) {
+      planRow.value = plan.value;
+      planRow.provenance = plan.provenance;
+    }
   }
 
   if (rows.length > 0) {
@@ -1068,16 +1126,62 @@ export async function reviseInstance(
     if (valueError) throw new Error(`Could not carry the values over: ${valueError.message}`);
   }
 
-  if (loaded.instance.status === "finalized") {
-    await supabase.from("form_instances").update({ status: "revised" }).eq("id", instanceId);
-  }
-
-  await recordEvent(instanceId, kind, actor, { revisionId: data.id });
+  /*
+   * The original is not touched — not its status, and not its history: it is
+   * marked `revised`, with that event, when this is finalized. The revision's
+   * own `created` event says what it was opened from.
+   */
   await recordEvent(String(data.id), "created", actor, { revisionOf: instanceId, kind });
 
   const revision = await loadInstance(String(data.id));
   if (!revision) throw new Error("The revision could not be read back.");
   return revision.instance;
+}
+
+/**
+ * The draft revision of this form still open, if there is one. An archived
+ * draft is not open: somebody put it away, and a new request starts afresh.
+ */
+export async function findOpenRevision(instanceId: string): Promise<InstanceRow | null> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("form_instance_overview")
+    .select("*")
+    .eq("revises_instance_id", instanceId)
+    .eq("status", "draft")
+    .is("archived_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) throw new Error(`Could not read the form's revisions: ${error.message}`);
+  const row = (data ?? [])[0] as Record<string, unknown> | undefined;
+  return row ? mapInstance(row) : null;
+}
+
+/**
+ * A revision has just been finalized: the form it revises is now replaced.
+ *
+ * Only a FINALIZED original is moved, and only to `revised` — a status the
+ * finalized-values guard (`forms_guard_finalized_values`) treats exactly as it
+ * treats `finalized`, so not one value on it can change. The `revised` event
+ * names the revision, which is how a reader of the original finds what
+ * replaced it ("Open newer version" on its card).
+ */
+async function supersedeRevised(revision: LoadedInstance, actor: string): Promise<void> {
+  const originalId = revision.instance.revisesInstanceId;
+  if (!originalId) return;
+  const created = revision.events.find((event) => event.kind === "created");
+  const kind = created?.detail?.kind === "reevaluated" ? "reevaluated" : "revised";
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("form_instances")
+    .update({ status: "revised" })
+    .eq("id", originalId)
+    .eq("status", "finalized")
+    .select("id");
+  if (error) throw new Error(`Could not mark the original form as revised: ${error.message}`);
+  if ((data ?? []).length === 0) return;
+  await recordEvent(originalId, kind, actor, { revisionId: revision.instance.id });
 }
 
 /** Variants a form may be printed as, from its own version. */
@@ -1452,7 +1556,12 @@ export async function listOutstandingFollowUps(
       byId.set(mapped.id, mapped);
     }
   }
+  /*
+   * A revised form, and a revision still in draft, are not outstanding: the
+   * follow-up is tracked on exactly one version of a form. See `followUpState`.
+   */
   return [...byId.values()]
+    .filter((row) => needsFollowUp(row))
     .sort((a, b) => (a.followUpDate ?? "").localeCompare(b.followUpDate ?? ""))
     .slice(0, limit);
 }

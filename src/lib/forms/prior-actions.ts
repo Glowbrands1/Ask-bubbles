@@ -44,15 +44,19 @@ export function signedDate(iso: string): string {
 
 /** The kinds of step the list records, most specific first. */
 const STEPS: readonly [RegExp, string][] = [
-  [/final\s+written\s+(?:warning|corrective\s+action|(?:c\/a|ca)(?![\w/]))/i, "Final written warning"],
-  [/written\s+(?:warning|corrective\s+action|(?:c\/a|ca)(?![\w/]))/i, "Written warning"],
-  [/verbal\s+(?:warning|corrective\s+action|(?:c\/a|ca)(?![\w/]))/i, "Verbal warning"],
+  [/final\s+written\s+(?:corrective actions?|cas?\b|c\/a)/i, "Final written corrective action"],
+  [/written\s+(?:corrective actions?|cas?\b|c\/a)/i, "Written corrective action"],
+  [/verbal\s+(?:corrective actions?|cas?\b|c\/a)/i, "Verbal corrective action"],
+  [/final\s+written\s+warning/i, "Final written warning"],
+  [/written\s+warning/i, "Written warning"],
+  [/verbal\s+warning/i, "Verbal warning"],
   [/write[- ]?ups?|written up/i, "Write-up"],
   [/corrective actions?/i, "Corrective action"],
   [/\b(?:cas?|c\/a)\b/i, "Corrective action"],
   [/coach(?:ed|ing)?/i, "Coaching"],
   [/disciplin\w*/i, "Disciplinary action"],
   [/warn(?:ing|ings|ed)/i, "Warning"],
+  [/(?:\bpolicy\s+)?\backnowledge?ments?\b|\backnowledged\b/i, "Policy acknowledgement"],
 ];
 
 /** The step a manager's words named, as a line on the list begins. */
@@ -65,13 +69,13 @@ function stepLabel(named: string): string {
  * two end at the same place ("verbal warning" and its "warning"), the more
  * specific, listed first, wins.
  */
-function namedStep(named: string): { end: number; label: string } | null {
-  let best: { end: number; label: string } | null = null;
+function namedStep(named: string): { start: number; end: number; label: string } | null {
+  let best: { start: number; end: number; label: string } | null = null;
   for (const [pattern, label] of STEPS) {
     const global = new RegExp(pattern.source, "gi");
     for (const match of named.matchAll(global)) {
       const end = match.index + match[0].length;
-      if (!best || end > best.end) best = { end, label };
+      if (!best || end > best.end) best = { start: match.index, end, label };
     }
   }
   return best;
@@ -94,10 +98,27 @@ function lineStep(line: string): string | null {
   return best?.label ?? null;
 }
 
-/** Steps of one kind: a "Warning" or "Disciplinary action" names no particular step. */
+/** A verbal or written CA is the verbal or written warning the form issues. */
+const SAME_AS: Record<string, string> = {
+  "Verbal corrective action": "Verbal warning",
+  "Written corrective action": "Written warning",
+  "Final written corrective action": "Final written warning",
+};
+
+/**
+ * Steps of one kind: a "Warning" or "Disciplinary action" names no particular
+ * step, and a "Corrective action" may be a verbal or written one.
+ */
 function sameStep(a: string, b: string): boolean {
   const generic = new Set(["Warning", "Disciplinary action", "Coaching or corrective action"]);
-  return a === b || generic.has(a) || generic.has(b);
+  const kind = (label: string) => SAME_AS[label] ?? label;
+  const isCa = (label: string) => /corrective action$/i.test(label);
+  return (
+    kind(a) === kind(b) ||
+    generic.has(a) ||
+    generic.has(b) ||
+    ((a === "Corrective action" || b === "Corrective action") && isCa(a) && isCa(b))
+  );
 }
 
 /**
@@ -137,8 +158,11 @@ const MANUAL_WORDS = new Map(
 );
 
 function stepTopic(topic: string | undefined): string {
-  return (topic ?? "")
-    .trim()
+  let words = (topic ?? "").trim();
+  // "previous coaching: verbal ca 9-1-26": the item names its own step, which the line already opens with.
+  const step = namedStep(words);
+  if (step) words = `${words.slice(0, step.start)} ${words.slice(step.end)}`.trim();
+  return words
     .split(/\s+/)
     .filter(Boolean)
     .map((word) => MANUAL_WORDS.get(word.toLowerCase()) ?? word)

@@ -324,7 +324,7 @@ describe("a CA request answered with one word keeps the whole account", () => {
     const form = await review(reference.instanceId);
     expect(form.instance.formDate).toBe("2026-10-20");
     // The model drafted no history here; both dated steps she gave are put on the line by code.
-    expect(field(form, "prior_actions")!.value).toBe("Coaching — JBA Policy Manual — signed 01/01/2026\nVerbal warning — signed 09/01/2026");
+    expect(field(form, "prior_actions")!.value).toBe("Coaching — JBA Policy Manual — signed 01/01/2026\nVerbal corrective action — signed 09/01/2026");
     expect(field(form, "warning_type")!.checked).toEqual(["written"]);
     expect(field(form, "payroll_deduct")!.checked).toEqual(["no"]);
     expect(field(form, "observation")!.value).toContain("monthly meeting");
