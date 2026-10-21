@@ -6,6 +6,7 @@ import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_MAX_TOKENS, RETRIEVAL } from "@/lib/config/models";
 import { MissingConfigurationError, liveReadiness } from "@/lib/config/server-env";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
+import { asksOnlyAboutFormsOnFile, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
 import { answersFormClarification } from "@/lib/forms/form-clarification";
 import { buildFormInventory, publishedEntries } from "@/lib/forms/inventory";
 import { detectInventoryQuestion, type InventoryQuestion } from "@/lib/forms/inventory-question";
@@ -111,7 +112,17 @@ export async function answerQuestion(
    * proposes one. Both detectors are pure and run before anything is read.
    */
   const detected = detectInventoryQuestion(request.question);
-  const spokenIntent = detectTemplateIntent(request.question);
+  /*
+   * A QUESTION ABOUT FORMS ALREADY ON FILE NAMES A FORM WITHOUT ASKING FOR ONE.
+   * "Does Dana have a previous CA form?" reads as naming the Corrective Action
+   * Form, and "past corrective action form for Marcus" as asking for one for
+   * Marcus; either would get a proposal card nobody asked for. Unless the
+   * sentence also says to make one, it is answered from the Forms Register
+   * below. See `chat-form-records.ts`.
+   */
+  const spokenIntent: ReturnType<typeof detectTemplateIntent> = asksOnlyAboutFormsOnFile(request.question)
+    ? { kind: "none" }
+    : detectTemplateIntent(request.question);
   const elliptical = isEllipticalRegisterReference(request.question);
 
   /*
@@ -232,6 +243,23 @@ export async function answerQuestion(
         history: request.history,
         conversationId: request.conversationId,
         userName: request.context.userName,
+      })
+    : Promise.resolve(null);
+
+  /*
+   * FORMS ALREADY ON FILE. "Does Ellie have previous coachings?" used to be
+   * answered with "I can't look that up — check the Forms Register", when the
+   * register is this app's own table. A question about existing forms now
+   * reads it, as the AUTHORIZED actor and under exactly the visibility that
+   * screen applies — see `chat-form-records.ts`. Never rejects: a failed read
+   * becomes a block that says so.
+   */
+  const formRecordsPromise = isFormRecordsQuestion(request.question)
+    ? loadFormRecords({
+        actor,
+        question: request.question,
+        previousQuestion: previousManagerTurn(request),
+        today: request.context.todayIso,
       })
     : Promise.resolve(null);
 
@@ -402,6 +430,7 @@ export async function answerQuestion(
 
   const settledSummaries = await summariesPromise;
   const personMemory = await memoryPromise;
+  const formRecords = await formRecordsPromise;
   const formInventoryBlock = settledSummaries.ok
     ? buildFormInventoryBlock(buildFormInventory(settledSummaries.rows, actor))
     : null;
@@ -425,6 +454,7 @@ export async function answerQuestion(
     hasVerifiedRecords: entities.block !== null,
     /* Read from whether the block exists, like the forms library above. */
     hasPersonMemory: personMemory !== null,
+    hasFormRecords: formRecords !== null,
     pinnedDocumentTitles: pinnedTitles,
     handbookNote,
     /*
@@ -446,6 +476,7 @@ export async function answerQuestion(
     formsLibrary: formInventoryBlock,
     verifiedRecords: entities.block,
     personMemory,
+    formRecords: formRecords?.block ?? null,
     history: request.history,
     question: request.question,
     maxTokens: CLAUDE_MAX_TOKENS[request.mode],
@@ -467,6 +498,7 @@ export async function answerQuestion(
       retrieved: grounding.length,
       cited: citations.length,
       reportBacked: (briefing?.present.length ?? 0) > 0,
+      recordBacked: formRecords !== null,
       aboutForms: asksAboutForms(request.question),
     }),
   };
@@ -484,7 +516,8 @@ export async function answerQuestion(
  * notice. Nothing on screen said it was not company policy.
  *
  * So a turn is grounded only when the answer actually cites a retrieved row,
- * or stands on report figures (which carry their period, not a marker).
+ * or stands on report figures (which carry their period, not a marker) or
+ * on the forms on file read from the Forms Register (a record, unmarked too).
  * Questions about the forms library are the one exception: forms-library
  * facts are deliberately unmarked (see the prompt's taxonomy), and the
  * library is exhaustive, so an uncited answer about a form is not general
@@ -494,9 +527,15 @@ export function answerCoverage(input: {
   retrieved: number;
   cited: number;
   reportBacked: boolean;
+  /**
+   * The answer stands on the FORMS ON FILE block: a record, read for this
+   * question, which carries no marker either. Optional so the older callers
+   * read as before.
+   */
+  recordBacked?: boolean;
   aboutForms: boolean;
 }): "grounded" | "insufficient" {
-  if (input.reportBacked) return "grounded";
+  if (input.reportBacked || input.recordBacked) return "grounded";
   if (input.retrieved === 0) return "insufficient";
   return input.cited > 0 || input.aboutForms ? "grounded" : "insufficient";
 }
@@ -571,4 +610,15 @@ async function suggestedFormsFor(input: {
   } catch {
     return null;
   }
+}
+
+/** The manager's turn before this one, for a question that names nobody. */
+function previousManagerTurn(request: AskRequest): string | null {
+  for (let index = request.history.length - 1; index >= 0; index -= 1) {
+    const message = request.history[index]!;
+    if (message.role === "user" && message.content.trim() !== request.question.trim()) {
+      return message.content;
+    }
+  }
+  return null;
 }

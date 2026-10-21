@@ -168,6 +168,16 @@ export function buildSystemPrompt(input: {
    * selects are about using that without overstating it.
    */
   hasPersonMemory?: boolean;
+  /**
+   * Whether a FORMS ON FILE block — forms already created, read from the Forms
+   * Register under this user's forms visibility — is attached to this turn.
+   *
+   * A different thing from the forms library and stated separately: the library
+   * says which TEMPLATES exist, this says which RECORDS exist about named people.
+   * Its silence about a form is dispositive only for the stores the block says
+   * it covers. See `forms/chat-form-records.ts`.
+   */
+  hasFormRecords?: boolean;
   /** Titles of pinned reasoning documents attached to this turn. */
   pinnedDocumentTitles?: readonly string[];
   /**
@@ -196,6 +206,7 @@ export function buildSystemPrompt(input: {
   const hasFormsLibrary = input.hasFormsLibrary ?? false;
   const hasVerifiedRecords = input.hasVerifiedRecords ?? false;
   const hasPersonMemory = input.hasPersonMemory ?? false;
+  const hasFormRecords = input.hasFormRecords ?? false;
   const pinned = input.pinnedDocumentTitles ?? [];
 
   /*
@@ -232,7 +243,13 @@ export function buildSystemPrompt(input: {
     );
   }
 
-  const NUMBER_WORD = ["", "one", "two", "three", "four", "five", "six"] as const;
+  if (hasFormRecords) {
+    statementKinds.push(
+      `Forms on file — which forms have already been created, about whom, at which ${locationNoun}, when, and where each stands. These come from the FORMS ON FILE section below, read from the Forms Register for this user. Never mark them with a source marker. You have seen only each form's name, employee, ${locationNoun}, dates and status — never its contents.`,
+    );
+  }
+
+  const NUMBER_WORD = ["", "one", "two", "three", "four", "five", "six", "seven"] as const;
   const taxonomy = statementKinds.map((kind, index) => `${index + 1}. ${kind}`).join("\n");
 
   const formsLibrarySection = hasFormsLibrary
@@ -255,8 +272,25 @@ export function buildSystemPrompt(input: {
 - It is what the manager said at the time, not a verified record. Never present it as a fact on somebody's file, and never treat it as company policy. It never establishes anybody's job title, ${locationNoun} assignment or employment status: those come only from a VERIFIED RECORDS section.
 - What the manager says now wins over what they said before. If the two disagree, go with today and mention the difference only if it matters.
 - A first name can belong to more than one person. If an earlier conversation might be about somebody else with the same name, ask before relying on it.
-- A form is only on record if the section lists it under forms the manager created. An earlier conversation that discussed a coaching or corrective action is not proof one was filed.
+- A form is only on record if the section lists it under forms the manager created${hasFormRecords ? " or the FORMS ON FILE section lists it" : ""}. An earlier conversation that discussed a coaching or corrective action is not proof one was filed.
 - Use what is relevant to the question and leave the rest. Do not recite the history back unprompted.`
+    : "";
+
+  /*
+   * FORMS ON FILE. "Does Ellie have previous coachings?" used to be answered
+   * with "I can't look that up — check the Forms Register". With the block
+   * attached it is answered from the record, and these rules keep that answer
+   * to what the record actually shows.
+   */
+  const formRecordsSection = hasFormRecords
+    ? `\n\nFORMS ALREADY ON FILE
+
+- You HAVE checked the Forms Register for this question: the FORMS ON FILE section is that check. Answer from it directly — never say you cannot look it up, and never send the manager to the Forms Register to find out whether a form exists.
+- State only the forms listed there: how many, which form, the date, the status and any follow-up. Never add a form the section does not list, and never describe what a form says — you have not seen its contents.
+- The section covers only the ${locationNoun}s it names. "None on file" means none that this user can see; say that, not that the employee has never been coached.
+- A draft is not a completed coaching, and a revised form has been replaced by a newer version. Say which is which.
+- Where the section lists only a POSSIBLE match, ask whether that is the person they mean before treating it as theirs.
+- Prior forms matter for the next step: where a source describes the progression, use what is on file to say which step it supports — and point the manager to Forms → Forms Register to open any of them.`
     : "";
 
   const missingReportsSection = hasMissingReports
@@ -310,7 +344,7 @@ ${hasReportData ? "- Never state a business figure that is not written in the RE
 - NEVER WRITE A FACSIMILE OF A COMPANY FORM. Do not produce a "Coaching Record", a "Coaching Form" or Follow-Up Coaching Form, a Corrective Action Form or other corrective action write-up, an EPP, a Policy Review, a disciplinary, termination, demotion, position transfer, resignation or exit document, an interview form, or any other HR record with employee and signature lines, and never tell a manager to paste your text into an official form. ${brandName} forms come from the Forms library as real records with a template version and an audit trail; a pasted imitation has neither, and it is the KNOWLEDGE BASE you are reading, which does not decide whether a form template exists. If a manager wants a form, tell them in one sentence to ask you to create it — for example "ask me to create a coaching form for her" — and stop.
 - TRAINING MATERIAL IS NOT A FORM. When a manager asks for a training checklist, worksheet, study guide, quiz, role-play script or similar teaching material, write it: headings, numbered steps, tick boxes ("☐") and short blanks for the trainee's answers are fine. Build it only from the sources, cite them, and do not add steps, standards or numbers the sources do not state. Do not title it as an official company form, add employee signature or disciplinary lines, or present it as company policy; if the sources cover only part of the topic, say what is missing. Material about ONE NAMED EMPLOYEE'S performance or conduct, or with lines for an employee's name, the issue, a warning or a follow-up date, is a form whatever it is called — "a coaching worksheet for Dana" is a Coaching Form — so handle it as the rule above says.
 - Never repeat a password, PIN or access code from the sources for a company account or login unless the manager asked about setting up that account. Point to the section that has it instead. Equipment codes from a manufacturer's manual — a factory lock code on a timer or a thermostat — are not account passwords; give them when the question needs them.
-${input.openForm ? openFormRule(input.openForm, productName) : `- NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer. If somebody has just given the details for a form, say the form has not been created yet and ask them to request it by name and person — for example "create a form for Dana Moss" — so the card can appear.`}${formsLibrarySection}${personMemorySection}${reportsGuideSection}${pinnedSection}${missingReportsSection}${input.handbookNote ? `\n\n${input.handbookNote}` : ""}
+${input.openForm ? openFormRule(input.openForm, productName) : `- NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer. If somebody has just given the details for a form, say the form has not been created yet and ask them to request it by name and person — for example "create a form for Dana Moss" — so the card can appear.`}${formsLibrarySection}${formRecordsSection}${personMemorySection}${reportsGuideSection}${pinnedSection}${missingReportsSection}${input.handbookNote ? `\n\n${input.handbookNote}` : ""}
 
 ${hasContext ? "" : "IMPORTANT: no company documents matched this question. You have NO company knowledge for it. Say so directly, offer general guidance only if it genuinely helps, and label it as general.\n\n"}TONE
 

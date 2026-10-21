@@ -313,6 +313,14 @@ export interface ChatActor {
   role: Role | null;
   /** `null` when no identity provider vouched for a scope. Never enforced against. */
   scope: AccessScope | null;
+  /**
+   * The account id and whether a provider verified it. Optional because only
+   * the Forms Register lookup needs them — forms visibility is decided per
+   * account (designated all-store access, the stores Woven assigns them, the
+   * creator of a form) — and it reads nothing without both.
+   */
+  subject?: string;
+  verified?: boolean;
 }
 
 export interface ProposalTurn {
@@ -1466,6 +1474,17 @@ export function suggestFormsForTurn(input: ProposalTurn): SuggestedForms | null 
      * same role to the same template.
      */
     rolePlanKey: eppTemplateForRole(context.text),
+    /*
+     * Read turn by turn through the same detector the explicit path uses, so
+     * "not a CA, coaching" and "what is corrective action?" do not count.
+     */
+    correctiveActionRequested: context.messages.some((message) => {
+      const intent = detectTemplateIntent(message.content);
+      return (
+        (intent.kind === "explicit" && intent.templateKey === "dpoa") ||
+        (intent.kind === "corrective_action" && intent.requestedCreation)
+      );
+    }),
   });
 
   /*
@@ -2438,6 +2457,22 @@ function proposalContent(
         proposal.locationResolution === "not_applicable"
           ? `${who}. Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do.`
           : `${who}${proposal.subject === "team" ? ", and I have the store" : " and the store"}${resolvedStoreName(proposal) ? ` (**${resolvedStoreName(proposal)}**)` : ""}. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`,
+      );
+    } else if (
+      proposal.status === "needs_location" &&
+      proposal.locationResolution === "needs_selection" &&
+      supportsInlineDraft(match.key, match.currentVersion?.variants ?? [])
+    ) {
+      /*
+       * ONLY THE STORE IS MISSING, AND THE FORM CAN BE CREATED HERE ONCE IT IS
+       * SET. "I can't create this one in chat yet" used to be printed here too,
+       * beside the store picker that does exactly that — and a manager covering
+       * several stores reads it as Ask Bubbles no longer knowing the form.
+       */
+      lines.push(
+        proposal.authorizedLocationIds.length > 0
+          ? "**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here."
+          : "**Nothing has been created yet.** Tell me which store, and you can create the draft here.",
       );
     } else {
       /*

@@ -91,6 +91,14 @@ export interface CallClaudeInput {
    * the system prompt says how it may be used. See `chat/person-memory.ts`.
    */
   readonly personMemory?: string | null;
+  /**
+   * A SEVENTH block: FORMS ON FILE, read from the Forms Register under the
+   * caller's own forms visibility, or null. Records that exist about named
+   * people — not templates, not evidence, and not the manager's own earlier
+   * account — so it travels apart from the forms library it would otherwise be
+   * confused with. See `forms/chat-form-records.ts`.
+   */
+  readonly formRecords?: string | null;
   readonly history: readonly ClaudeTurn[];
   readonly question: string;
   readonly maxTokens: number;
@@ -134,6 +142,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
                 ...(input.personMemory ? [input.personMemory] : []),
                 ...(input.formsLibrary ? [input.formsLibrary] : []),
                 ...(input.verifiedRecords ? [input.verifiedRecords] : []),
+                ...(input.formRecords ? [input.formRecords] : []),
                 `QUESTION\n\n${input.question}`,
               ].join("\n\n"),
             },

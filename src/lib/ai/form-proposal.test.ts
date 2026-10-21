@@ -674,6 +674,58 @@ describe("P4-RC. a global actor can create a coaching form", () => {
   });
 });
 
+/**
+ * ============================================================================
+ * WAITING ONLY ON THE STORE IS NOT "CAN'T CREATE IN CHAT"
+ * ============================================================================
+ *
+ * A district manager covering three stores asked for a Coaching Form and was
+ * told "I can't create this one in chat yet" beside the store picker that
+ * creates it — and read it as the assistant no longer knowing the form.
+ */
+describe("a proposal waiting only on the store says it can be created here", () => {
+  const THREE_STORES: AccessScope = {
+    level: "location",
+    primaryAreaId: "loc-0410",
+    alsoCoversAreaIds: ["loc-0313", "loc-0314"],
+  };
+  const ask = () =>
+    turn("Build me a coaching form for Sarah Test for that.", {
+      role: "district_manager",
+      scope: THREE_STORES,
+    });
+
+  it("asks which of their stores, and offers exactly those", async () => {
+    const { proposals } = await load([template()]);
+    const response = await proposals.proposeFormForTurn(ask());
+
+    expect(response!.formProposal!.status).toBe("needs_location");
+    expect(response!.formProposal!.locationResolution).toBe("needs_selection");
+    expect(response!.formProposal!.authorizedLocationIds).toEqual(["loc-0410", "loc-0313", "loc-0314"]);
+  });
+
+  it("says the draft can be created here once the store is chosen", async () => {
+    const { proposals } = await load([template()]);
+    const response = await proposals.proposeFormForTurn(ask());
+
+    expect(response!.content).toMatch(/nothing has been created yet/i);
+    expect(response!.content).toMatch(/choose the store below/i);
+    expect(response!.content).not.toMatch(/can't create this one in chat/i);
+  });
+
+  it("keeps the original sentence for a form that really cannot be created in chat", async () => {
+    // Declared variants: the chat flow sends none, so the inline draft refuses it.
+    const { proposals } = await load([
+      template({ currentVersion: { id: "v1", status: "published", variants: [{ key: "a" }, { key: "b" }] } }),
+    ]);
+    const response = await proposals.proposeFormForTurn(ask());
+
+    expect(response!.formProposal!.status).toBe("needs_location");
+    expect(response!.content).toMatch(/can't create this one in chat yet/i);
+    expect(response!.content).not.toMatch(/nothing has been created yet/i);
+  });
+});
+
 describe("P4-RC. the FORMS LIBRARY decides the template exists, never the knowledge base", () => {
   it("resolves the template without consulting retrieval at all", async () => {
     /*
@@ -1485,5 +1537,46 @@ describe("a topic connector is never who the form is for", () => {
     const response = await proposals.proposeFormForTurn(turn("coaching form for Jordan Testperson related to cell phones"));
 
     expect(response!.formProposal!.employeeName).toBe("Jordan Testperson");
+  });
+});
+
+/**
+ * ============================================================================
+ * A MANAGER WHO ASKED FOR A CORRECTIVE ACTION IS OFFERED ONE FIRST
+ * ============================================================================
+ *
+ * Reference platform, October 2026: "write a CA for Paisley" — and the cards
+ * under the next answer led with the Coaching Form. The manager's own turns,
+ * read through the same detector the explicit path uses, now put the
+ * Corrective Action Form first; nobody else's order changes.
+ */
+describe("suggested forms lead with the one the manager asked for", () => {
+  const suggested = async (history: ChatMessage[]) => {
+    const { proposals } = await load([template(), dpoa()]);
+    const found = proposals.suggestFormsForTurn(
+      turn("What does the policy say about training deadlines?", { history }) as never,
+    );
+    return found
+      ? [found.selection.primary.templateName, ...found.selection.additional.map((entry) => entry.templateName)]
+      : [];
+  };
+
+  // A second rung: coached once, and it happened again.
+  const ACCOUNT = "Paisley Peklo didn't finish her training. I verbally coached her last week and she still hasn't.";
+
+  it("puts the Corrective Action Form first after \"write a CA for …\"", async () => {
+    expect(
+      await suggested([managerTurn("m1", "write a CA for Paisley Peklo"), managerTurn("m2", ACCOUNT)]),
+    ).toEqual(["Corrective Action Form", "Coaching Form"]);
+  });
+
+  it("keeps coaching first when nobody asked for a corrective action", async () => {
+    expect(await suggested([managerTurn("m2", ACCOUNT)])).toEqual(["Coaching Form", "Corrective Action Form"]);
+  });
+
+  it("does not count a question about the process as asking for one", async () => {
+    expect(
+      await suggested([managerTurn("m1", "how do I write a CA?"), managerTurn("m2", ACCOUNT)]),
+    ).toEqual(["Coaching Form", "Corrective Action Form"]);
   });
 });
