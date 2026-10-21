@@ -108,6 +108,12 @@ import {
 import { EXIT_DERIVED_KEYS } from "@/lib/forms/exit-facts";
 import { namedManualSection } from "@/lib/forms/named-policy-section";
 import {
+  PAYROLL_DEDUCT_KEY,
+  isPayrollDeductAnswer,
+  payrollDeductAmount,
+  withPayrollDeductInPlan,
+} from "@/lib/forms/payroll-deduct";
+import {
   STANDARDS_OF_CONDUCT,
   caPolicyAmbiguousNotice,
   groundConductPolicy,
@@ -1260,11 +1266,31 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           today: businessToday(),
         })
       : null;
+    /*
+     * "PAYROLL DEDUCT OF $3.25 IS APPLICABLE" IS IN THE ACTION PLAN. District
+     * Manager feedback, 21 Oct 2026: the plan never said what would be
+     * deducted. Where the form's own Yes / No says Yes (the manager's answer,
+     * stored at creation), the drafted plan states the amount the manager
+     * gave, exactly — or that a deduction applies, with no figure, when they
+     * gave none. Nothing else about the plan changes. See `payroll-deduct.ts`.
+     */
+    const planKey = fields.find((field) => field.narrative === PLAN_OF_ACTION)?.key ?? null;
+    const payrollAnswer = planKey
+      ? ((loaded.values ?? []).find((row) => row.fieldKey === PAYROLL_DEDUCT_KEY)?.checked.find(isPayrollDeductAnswer) ??
+        null)
+      : null;
     const draftedValues = (() => {
       const base = { ...(exit?.values ?? attributions.values) };
       if (priorActions) {
         if (priorActions.value.trim() !== "") base[PRIOR_ACTIONS_KEY] = priorActions.value;
         else delete base[PRIOR_ACTIONS_KEY];
+      }
+      if (planKey && typeof base[planKey] === "string") {
+        base[planKey] = withPayrollDeductInPlan(base[planKey]!, {
+          answer: payrollAnswer,
+          amount: payrollDeductAmount(notes),
+          firstName: (loaded.instance.employeeName ?? "").trim().split(/\s+/)[0] || null,
+        });
       }
       return base;
     })();
