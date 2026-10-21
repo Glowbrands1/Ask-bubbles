@@ -439,3 +439,40 @@ describe("a new request in the same chat is a new proposal", () => {
     expect(proposal.sourceMessageIds).toEqual(["m1", "m2"]);
 });
 });
+
+/* ========================================================================= */
+/* A2, A3 — THE PREVIOUS COACHING IS HISTORY, AND IT GOES ON THE FORM          */
+/* ========================================================================= */
+
+describe("previous coaching stated in chat", () => {
+  it("is not offered as the form's date, is read back, and fills the prior-actions line", async () => {
+    const { responses, proposal, create } = await conversation([A1, A2]);
+
+    for (const response of responses) {
+      expect(response.content).not.toMatch(/more than one date/);
+      expect(response.content).not.toMatch(/won't guess/);
+      expect(response.content).toMatch(
+        /\*\*Prior actions:\*\* Coaching — JBA Policy Manual — signed 01\/01\/2026, as you said/,
+      );
+    }
+    expect(proposal.formDate).toBe("2026-10-10");
+    expect(proposal.formDateCandidates).toBeUndefined();
+
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    expect(field(form, "form_date")!.value).toBe("2026-10-10");
+    expect(field(form, "prior_actions")!.value).toBe("Coaching — JBA Policy Manual — signed 01/01/2026");
+  });
+
+  it('"jba manual 1-1-26 for previous coaching" — the date first, the label after', async () => {
+    const { last, proposal, create } = await conversation([B1]);
+
+    expect(last.content).not.toMatch(/more than one date/);
+    expect(proposal.formDate).toBe("2026-10-20");
+
+    const { reference } = await create();
+    expect(field(await review(reference.instanceId), "prior_actions")!.value).toBe(
+      "Coaching — JBA Manual — signed 01/01/2026",
+    );
+  });
+});

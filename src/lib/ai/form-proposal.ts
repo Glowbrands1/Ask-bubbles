@@ -141,6 +141,7 @@ import type {
 } from "@/types";
 
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
+import { statedPriorActions } from "@/lib/forms/prior-actions";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
 import type { AskResponse } from "./types";
@@ -2290,6 +2291,7 @@ function proposalContent(
       return correctiveActionReady(proposal, intake, asksPayrollDeduct(match), readCaPolicy(context.text), {
         offersLevel: offeredWarningLevels(match).length > 0,
         earlierWarning: mentionsEarlierWarning(context.text, today),
+        priorActions: statedPriorActions(context.text, today),
       });
     }
   }
@@ -2434,11 +2436,15 @@ function correctiveActionReady(
   intake: IntakeReading,
   asksPayroll: boolean,
   policy: CaPolicyReading,
-  warning: { offersLevel: boolean; earlierWarning: boolean } = { offersLevel: true, earlierWarning: false },
+  warning: { offersLevel: boolean; earlierWarning: boolean; priorActions?: readonly string[] } = {
+    offersLevel: true,
+    earlierWarning: false,
+  },
 ): string {
   const levelOpen = warning.offersLevel && intake.missingRequired.some((item) => item.key === "warning_level");
+  const priorActions = warning.priorActions ?? [];
   const outstanding = intake.missingRequired
-    .filter((item) => item.key === "previous_action")
+    .filter((item) => item.key === "previous_action" && priorActions.length === 0)
     .map(() => "any prior coaching or corrective action");
 
   const lines = proposal.awaitingIncident
@@ -2468,6 +2474,14 @@ function correctiveActionReady(
     );
   }
   if (stated.length > 0) lines.push("", stated.join(" · "));
+  /*
+   * THE HISTORY THE MANAGER GAVE, READ BACK as it will be listed on the form —
+   * "previous coaching was jba policy manual 1-1-26" is the prior-actions
+   * line, not something to set later (District Manager feedback, 21 Oct 2026).
+   */
+  if (priorActions.length > 0) {
+    lines.push("", `**Prior actions:** ${priorActions.join("; ")}, as you said. I'll list ${priorActions.length === 1 ? "it" : "them"} on the form — tell me if that should change.`);
+  }
 
   /*
    * THE POLICY, SUGGESTED OR ASKED — never left silently to the drafting

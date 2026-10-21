@@ -6,6 +6,7 @@ import {
   legacyPriorActions,
   priorActionLine,
   signedDate,
+  statedPriorActions,
 } from "./prior-actions";
 
 /**
@@ -207,5 +208,40 @@ describe("an earlier step is never dated in the future", () => {
       today: "2027-01-05",
     });
     expect(grounded.value).toBe("Verbal warning — signed 12/20/2026");
+  });
+});
+
+/*
+ * District Manager feedback, 21 Oct 2026: the history as the manager labelled
+ * it — what it was about, then its date — is listed with its topic, the
+ * manual's name spelled as the manual spells it.
+ */
+describe("a labelled earlier step is listed with what it was about", () => {
+  const DAY = "2026-10-21";
+
+  it.each([
+    [
+      "create verbal CA for remy calder for violating visitors at work policy on 10-10-26. previous coaching was jba policy manual 1-1-26",
+      "Coaching — JBA Policy Manual — signed 01/01/2026",
+    ],
+    [
+      "create ca form for tess varga for violating attendance policy on 10-20-26. verbal. no payroll deduct. jba manual 1-1-26 for previous coaching",
+      "Coaching — JBA Manual — signed 01/01/2026",
+    ],
+    ["register shortage on 10-20-26. previous coaching - jba policy manual 1-20-26.", "Coaching — JBA Policy Manual — signed 01/20/2026"],
+    ["late again on 10/20. prior CA 9/1", "Corrective action — signed 09/01/2026"],
+  ])("%s", (notes, line) => {
+    expect(statedPriorActions(notes, DAY)).toEqual([line]);
+    expect(groundPriorActions({ drafted: "", notes, today: DAY }).value).toBe(line);
+  });
+
+  it("keeps the model's own line for that step", () => {
+    const grounded = groundPriorActions({
+      drafted: "Coaching — JBA Manual 1-1-26",
+      notes: "jba manual 1-1-26 for previous coaching",
+      today: DAY,
+    });
+    expect(grounded.value).toBe("Coaching — JBA Manual 1-1-26");
+    expect(grounded.added).toEqual([]);
   });
 });

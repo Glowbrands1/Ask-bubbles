@@ -1,5 +1,6 @@
 import { statesFirstOccurrence } from "./corrective-action-intake";
 import { datesInText, priorSteps } from "./form-date-answer";
+import { OFFICIAL_POLICY_MANUAL } from "./official-policy-manual";
 
 /**
  * ============================================================================
@@ -48,6 +49,7 @@ const STEPS: readonly [RegExp, string][] = [
   [/verbal\s+warning/i, "Verbal warning"],
   [/write[- ]?ups?|written up/i, "Write-up"],
   [/corrective actions?/i, "Corrective action"],
+  [/\b(?:cas?|c\/a)\b/i, "Corrective action"],
   [/coach(?:ed|ing)?/i, "Coaching"],
   [/disciplin\w*/i, "Disciplinary action"],
   [/warn(?:ing|ings|ed)/i, "Warning"],
@@ -115,8 +117,43 @@ function stepDescription(named: string): string {
   return /^(?:for|about|regarding|over)\s+\S/i.test(rest) ? rest : "";
 }
 
-export function priorActionLine(step: string, iso: string, description = ""): string {
-  return `${description ? `${step} ${description}` : step} — signed ${signedDate(iso)}`;
+export function priorActionLine(step: string, iso: string, description = "", topic = ""): string {
+  const what = description ? `${step} ${description}` : step;
+  return `${topic ? `${what} — ${topic}` : what} — signed ${signedDate(iso)}`;
+}
+
+/**
+ * WHAT AN EARLIER STEP WAS ABOUT, as the manager labelled it: "previous
+ * coaching was jba policy manual 1-1-26" → "JBA Policy Manual" (District
+ * Manager feedback, 21 Oct 2026). Their words, in their order; only a word of
+ * the official manual's own name is printed the way the manual spells it, so
+ * "jba manual" reads "JBA Manual" on the record. Nothing is added.
+ */
+const MANUAL_WORDS = new Map(
+  OFFICIAL_POLICY_MANUAL.fallbackTitles
+    .flatMap((title) => title.split(/\s+/))
+    .filter((word) => /^[A-Za-z]+$/.test(word))
+    .map((word) => [word.toLowerCase(), word] as const),
+);
+
+function stepTopic(topic: string | undefined): string {
+  return (topic ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => MANUAL_WORDS.get(word.toLowerCase()) ?? word)
+    .join(" ");
+}
+
+/**
+ * The earlier steps the manager dated in their own words, as lines on the list
+ * — what `groundPriorActions` adds when the draft left one out, and what the
+ * chat reads back before the form is created.
+ */
+export function statedPriorActions(notes: string, today: string): string[] {
+  return priorSteps(notes, today).map((step) =>
+    priorActionLine(stepLabel(step.named), step.iso, stepDescription(step.named), stepTopic(step.topic)),
+  );
 }
 
 /**
@@ -185,7 +222,7 @@ export function groundPriorActions(input: {
   for (const step of managerSteps) {
     if (present.has(step.iso)) continue;
     present.add(step.iso);
-    added.push(priorActionLine(stepLabel(step.named), step.iso, stepDescription(step.named)));
+    added.push(priorActionLine(stepLabel(step.named), step.iso, stepDescription(step.named), stepTopic(step.topic)));
   }
 
   const lines = [...kept, ...added];
