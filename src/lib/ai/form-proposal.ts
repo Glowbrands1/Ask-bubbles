@@ -915,10 +915,11 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
         ? input.history.slice(-1).filter((message) => message.role === "assistant")
         : input.history;
   if (isCorrectiveActionForm(match) && asksPayrollDeduct(match)) {
-    proposal.payrollDeduct = payrollDeductFromConversation([
-      ...formHistory,
-      { role: "user", content: input.question },
-    ]);
+    proposal.payrollDeduct = payrollDeductFromConversation(
+      [...formHistory, { role: "user", content: input.question }],
+      // `formHistory` is already this form's turns: a repeated request keeps the answer.
+      { fromThisForm: true },
+    );
   }
   /* The form's date from this form's turns, too. */
   if (!changeKind && !isExitForm(match)) {
@@ -1001,8 +1002,9 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   if (
     isCorrectiveActionForm(match) &&
     proposal.status !== "needs_employee" &&
-    !describesIncident(context.text) &&
-    !describesMoreThanTheRequest(context.text, {
+    // This form's turns only: another person's account earlier in the chat is not this one's.
+    !describesIncident(scoped.text) &&
+    !describesMoreThanTheRequest(scoped.text, {
       ignore: [
         proposal.employeeName ?? "",
         proposal.employeeRole ?? "",
@@ -2200,19 +2202,27 @@ function choice(summary: TemplateSummary): ChatFormChoice {
 async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedPolicyReading | null> {
   if (readCaPolicy(text).stated !== null) return null;
   const named = namedPolicies(text);
-  if (named.length === 0) return null;
-  const phrase = named[named.length - 1]!.phrase;
+  const phrase = named[named.length - 1]?.phrase ?? null;
   let chunks: readonly ManualChunk[] | null = null;
   try {
     chunks = (await input.policyManual?.()) ?? null;
   } catch {
     chunks = null;
   }
-  if (!chunks || chunks.length === 0) return { phrase, lookup: "unknown" };
+  if (!chunks || chunks.length === 0) return phrase ? { phrase, lookup: "unknown" } : null;
+  // With no policy named, the section the account itself names ("on her cell phone") — see `mentionedManualSection`.
   const found = namedManualSection({ text, chunks });
-  return found
-    ? { phrase: found.phrase, lookup: "found", heading: found.section.heading, page: found.section.page, offenseKey: found.offenseKey }
-    : { phrase, lookup: "missing" };
+  if (found) {
+    return {
+      phrase: found.phrase,
+      lookup: "found",
+      heading: found.section.heading,
+      page: found.section.page,
+      offenseKey: found.offenseKey,
+      ...(found.mentioned ? { mentioned: true } : {}),
+    };
+  }
+  return phrase ? { phrase, lookup: "missing" } : null;
 }
 
 function proposalContent(

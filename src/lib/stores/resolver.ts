@@ -501,8 +501,17 @@ function withBoundaries(text: string, states: readonly string[]): string {
   return masked.replace(/[,;:!?\n]|\.(?=\s|$)/g, " | ");
 }
 
+/*
+ * A NUMBER WITH A UNIT IS NOT A STORE. HR feedback, 21 Oct 2026: "she opened
+ * the store 30 minutes late" read "store 30", answered "I couldn't find a
+ * store matching store 30", and no card could be created — on the account a
+ * late-opening Corrective Action is made of. A time, an amount or a count
+ * after the number says what it measures; a store number has none.
+ */
+const MEASURE_AFTER = String.raw`(?!\s*(?:minutes?|mins?|hours?|hrs?|seconds?|secs?|days?|weeks?|months?|times?|am|pm|a\.m|p\.m|o'?clock|percent|dollars?|bucks|cents|people|guests|customers|employees)\b|\s*%|[:.]\d)`;
+
 const NUMBER_MENTION = new RegExp(
-  `(?:\\b(?:${PLACE_NOUNS})\\s*(?:(?:is|are|was)\\s+)?(?:(?:number|no\\.?|num\\.?)\\s*)?#?\\s*|#\\s*)([A-Za-z0-9][A-Za-z0-9-]{0,15})\\b`,
+  `(?:\\b(?:${PLACE_NOUNS})\\s*(?:(?:is|are|was)\\s+)?(?:(?:number|no\\.?|num\\.?)\\s*)?#?\\s*|#\\s*)([A-Za-z0-9][A-Za-z0-9-]{0,15})\\b${MEASURE_AFTER}`,
   "gi",
 );
 
