@@ -67,6 +67,8 @@ const NEGATIVE: readonly RegExp[] = [
   ),
   // "payroll deduct: no", "payroll deduct applicable - no", "payroll deduct = n/a"
   new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s*[:=-]\s*(?:no|n|none|n/a|not applicable)(?:$|[\s.,!;])`),
+  // "payroll deduct no", "payroll deduction applicable no" — the answer last in its clause, not "no longer"
+  new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s+(?:no|n|nope)\s*(?:$|[.,!;])`),
   // "payroll deduct n/a", "payroll deduction not applicable", "payroll deduct none"
   new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s+(?:is\s+)?(?:n/a|not applicable|none)(?:$|[\s.,!;])`),
   // "we won't deduct", "don't deduct it from her pay", "not deducting"
@@ -87,6 +89,8 @@ const POSITIVE: readonly RegExp[] = [
   ),
   // "payroll deduct: yes", "payroll deduct applicable - yes"
   new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s*[:=-]\s*(?:yes|y)(?:$|[\s.,!;])`),
+  // "payroll deduct yes", "payroll deduction applicable yes"
+  new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s+(?:yes|y)\s*(?:$|[.,!;])`),
   // "deduct it from her paycheck", "deducting the shortage from payroll"
   /\bdeduct(?:ing|ed)?\b[^.\n]{0,40}\bfrom\s+(?:her|his|their|the|its)?\s*(?:pay|paycheck|payroll|check|wages)\b/,
   // "it will be deducted", "we'll deduct", "needs to be deducted"

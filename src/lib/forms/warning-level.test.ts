@@ -509,3 +509,61 @@ describe("the level in the form's own shorthand, or as a sentence of its own", (
     ).toBe("verbal");
   });
 });
+
+/*
+ * ============================================================================
+ * THE LEVEL BESIDE THE PAYROLL ANSWER — "Verbal warning, payroll deduct no."
+ * ============================================================================
+ *
+ * "Verbal warning." was read as the level and "Verbal warning, payroll deduct
+ * no." (a comma after warning) was asked about: the whole-line shape ended at
+ * the level, so the payroll answer after it turned the line into an ordinary
+ * mention, and an ordinary mention after a dated account is asked about.
+ * Synthetic names.
+ */
+describe("the level beside the payroll answer", () => {
+  const DAY = "2026-10-21";
+  const REQUEST = "create ca form for tess varga for violating attendance policy on 10-20-26.";
+
+  it.each([
+    ["Verbal warning, payroll deduct no.", "verbal"],
+    ["Verbal warning.", "verbal"],
+    ["written warning, no payroll deduct", "written"],
+    ["verbal warning; no payroll", "verbal"],
+    ["Verbal warning. payroll deduct no.", "verbal"],
+    ["verbal, payroll deduct no.", "verbal"],
+    ["no payroll deduct, written warning.", "written"],
+    ["Written warning, payroll deduct of $3.25 is applicable.", "written"],
+  ])("%s → %s, as its own turn, its own line, or a sentence after the request", (answer, level) => {
+    expect(statedWarningLevel(answer, DAY)).toBe(level);
+    expect(statedWarningLevel(`${REQUEST}\n${answer}`, DAY)).toBe(level);
+    if (answer !== "Verbal warning.") expect(statedWarningLevel(`${REQUEST} ${answer}`, DAY)).toBe(level);
+  });
+
+  it("the production request: lateness, then the level and the payroll answer", () => {
+    expect(
+      statedWarningLevel(
+        "Pat was scheduled to open the store at 9:30 on 10/16 and did not arrive until 11:23. Verbal warning, payroll deduct no.",
+        DAY,
+      ),
+    ).toBe("verbal");
+  });
+
+  it.each([
+    "she had a written warning, payroll deduct no",
+    "Prior actions:\nwritten warning, no payroll deduct",
+    "verbal warning, no payroll. written warning, payroll yes",
+    "verbal or written warning, no payroll deduct?",
+    "payroll deduct no longer applies, written warning",
+    `${REQUEST} q3 review. written warning.`,
+  ])("%s states no level for this form", (text) => {
+    expect(statedWarningLevel(text, DAY)).toBeNull();
+  });
+
+  it("a later turn that is only the level and the payroll answer corrects a created form", () => {
+    expect(warningLevelCorrection("Verbal warning, payroll deduct no.", DAY)).toBe("verbal");
+    expect(warningLevelCorrection("written warning; no payroll", DAY)).toBe("written");
+    // A new account with the level in it is a request, not a correction.
+    expect(warningLevelCorrection("jordan was late today. verbal warning, no payroll", DAY)).toBeNull();
+  });
+});

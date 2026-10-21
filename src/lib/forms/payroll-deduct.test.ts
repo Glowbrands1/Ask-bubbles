@@ -140,6 +140,11 @@ describe("a stated answer", () => {
     ["deduct the $40 shortage from her paycheck", "yes"],
     ["the shortage will be deducted", "yes"],
     ["payroll-deduct applies", "yes"],
+    ["payroll deduct no", "no"],
+    ["Verbal warning, payroll deduct no.", "no"],
+    ["payroll deduction applicable no", "no"],
+    ["payroll deduct yes", "yes"],
+    ["written warning, payroll deduct yes.", "yes"],
   ])("%s -> %s", (text, expected) => {
     expect(statedPayrollDeduct(text)).toBe(expected);
   });
@@ -152,6 +157,7 @@ describe("a stated answer", () => {
     "she was late again today",
     "first time, verbal warning",
     "no prior corrective action",
+    "payroll deduct no longer applies to her team",
     "Sarah Test",
   ])("%s states nothing", (text) => {
     expect(statedPayrollDeduct(text)).toBeNull();

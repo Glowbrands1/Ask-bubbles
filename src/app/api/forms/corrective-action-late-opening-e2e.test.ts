@@ -391,10 +391,14 @@ describe("Direct policy from official manual, for a late opener", () => {
     };
 
     const { reference } = await create();
-    const policy = field(await review(reference.instanceId), "policy_language")!.value!;
+    const form = await review(reference.instanceId);
+    const policy = field(form, "policy_language")!.value!;
 
     expect(policy).toContain("Source: JBA Policy Manual — Attendance, p. 14");
     expect(policy).not.toMatch(/Late Opening/);
+    // "Verbal warning, payroll deduct no." — the comma after warning still states both.
+    expect(field(form, "warning_type")!.checked).toEqual(["verbal"]);
+    expect(field(form, "payroll_deduct")!.checked).toEqual(["no"]);
   });
 });
 
