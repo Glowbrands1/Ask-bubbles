@@ -93,8 +93,12 @@ const POSITIVE: readonly RegExp[] = [
   new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s+(?:yes|y)\s*(?:$|[.,!;])`),
   // "deduct it from her paycheck", "deducting the shortage from payroll"
   /\bdeduct(?:ing|ed)?\b[^.\n]{0,40}\bfrom\s+(?:her|his|their|the|its)?\s*(?:pay|paycheck|payroll|check|wages)\b/,
-  // "it will be deducted", "we'll deduct", "needs to be deducted"
-  /\b(?:will|we'll|we will|going to|should|needs? to|has to|have to)\s+(?:be\s+)?deduct(?:ed)?\b/,
+  // "it will be deducted", "we'll deduct", "needs to be deducted", "$25 will be payroll deducted"
+  /\b(?:will|we'll|we will|going to|should|needs? to|has to|have to)\s+(?:be\s+)?(?:payroll\s+)?deduct(?:ed)?\b/,
+  // "payroll deduct $25", "deduct $3.25", "deduction of $25" — an amount to take is a yes
+  /\b(?:payroll\s+)?deduct(?:ion|ed|ing)?\s+(?:of\s+|for\s+)?\$\s?\d/,
+  // "$25 payroll deduction", "$25 payroll deduct"
+  /\$\s?\d[\d,]*(?:\.\d{1,2})?\s+payroll\s+deduct/,
 ];
 
 function normalize(text: string): string {
@@ -208,13 +212,18 @@ export interface ConversationTurn {
  * ONLY THIS FORM'S TURNS. The look-back starts after the last manager turn
  * that asked for a DIFFERENT form request than the one being answered, so a
  * payroll answer given on an earlier Corrective Action for somebody else in the
- * same conversation is not carried onto this one.
+ * same conversation is not carried onto this one. A caller that has already
+ * cut the conversation to this form's turns says so (`fromThisForm`), and the
+ * look-back is not cut again: there, a second request is a repeat of this one
+ * ("create ca form for <employee>"), and the answer given with the first still
+ * stands (ported from the reference platform; HR feedback, 21 Oct 2026).
  *
  * ASSISTANT TURNS NEVER ANSWER. They are read only to know which question a
  * bare reply was replying to.
  */
 export function payrollDeductFromConversation(
   turns: readonly ConversationTurn[],
+  options: { readonly fromThisForm?: boolean } = {},
 ): PayrollDeductAnswer | null {
   const usable = turns.filter(
     (turn) => !turn.error && typeof turn.content === "string" && turn.content.trim() !== "",
@@ -224,7 +233,7 @@ export function payrollDeductFromConversation(
     .map((turn, index) => ({ turn, index }))
     .filter(({ turn }) => turn.role === "user" && detectTemplateIntent(turn.content).kind !== "none")
     .map(({ index }) => index);
-  const start = requests.length >= 2 ? requests[requests.length - 2]! + 1 : 0;
+  const start = !options.fromThisForm && requests.length >= 2 ? requests[requests.length - 2]! + 1 : 0;
 
   let lastAssistant = "";
   let answer: PayrollDeductAnswer | null = null;
@@ -312,11 +321,12 @@ const MONEY = String.raw`\$\s?\d[\d,]*(?:\.\d{1,2})?`;
 const AMOUNT_PATTERNS: readonly RegExp[] = [
   new RegExp(String.raw`\b(?:payroll\s+)?deduct(?:ion|ions|ed|ing)?\s+(?:of\s+|for\s+|is\s+|will\s+be\s+|amount\s+(?:of\s+|is\s+)?)?(${MONEY})`, "gi"),
   /*
-   * "$25 will be payroll deducted", "$25 payroll deduction" (District Manager
-   * feedback, 21 Oct 2026: "state $25 will be payroll deducted" went unread).
+   * "$25 will be payroll deducted", "$25 payroll-deducted", "$25 payroll
+   * deduction applies", "$25 payroll deduct" (District Manager / HR feedback,
+   * 21 Oct 2026: "state $25 will be payroll deducted" went unread).
    */
   new RegExp(
-    String.raw`(${MONEY})\s+(?:will\s+be\s+|is\s+(?:being\s+)?|to\s+be\s+|should\s+be\s+|gets?\s+|being\s+)?(?:payroll[- ]?\s*)?(?:deducted\b|deductions?\b)`,
+    String.raw`(${MONEY})\s+(?:will\s+be\s+|is\s+(?:being\s+)?|to\s+be\s+|should\s+be\s+|gets?\s+|being\s+)?(?:payroll[- ]?\s*)?deduct(?:ed|ions?)?\b`,
     "gi",
   ),
 ];

@@ -766,7 +766,7 @@ describe("E: an account of the conduct cites the manual section it describes", (
     expect(last.content).toMatch(/\*\*Type of warning:\*\* Verbal Warning, as you said/);
     expect(last.content).not.toMatch(WARNING_QUESTION);
     expect(last.content).toMatch(
-      /\*\*Policy:\*\* "cell phone" reads as the policy manual's \*\*Cell Phone\/Smart Watch Policy\*\* \(page 19\)\. I'll quote it on the draft under \*\*Violation of Company Policies\*\*/,
+      /\*\*Policy:\*\* Cell Phone\/Smart Watch Policy, from what you described \("cell phone"\) — the policy manual's section on page 19\. I'll quote it on the draft under \*\*Violation of Company Policies\*\*/,
     );
 
     state.draft = {

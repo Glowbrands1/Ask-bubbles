@@ -339,7 +339,7 @@ function namedPolicyLine(named: NamedPolicyReading): string | null {
    */
   if (named.lookup === "described") {
     const box = OFFENSE_BOX_LABEL[named.offenseKey];
-    return `**Policy:** "${named.phrase}" reads as the policy manual's **${named.heading}** (page ${named.page}). I'll quote it on the draft${box ? ` under **${box}**` : ""} — tell me if a different policy applies.`;
+    return `**Policy:** ${named.heading}, from what you described ("${named.phrase}") — the policy manual's section on page ${named.page}. I'll quote it on the draft${box ? ` under **${box}**` : ""}; tell me if a different policy applies.`;
   }
   if (named.lookup === "found") {
     const box = OFFENSE_BOX_LABEL[named.offenseKey];

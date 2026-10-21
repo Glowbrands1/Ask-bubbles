@@ -157,9 +157,6 @@ describe("describedManualSection — a policy the account describes", () => {
     ["she was on her phone for 20 minutes while guests waited", "phone", "Cell Phone/Smart Watch Policy"],
     ["tess was on her cell for an hour", "cell", "Cell Phone/Smart Watch Policy"],
     ["she was looking at her smart watch all afternoon", "smart watch", "Cell Phone/Smart Watch Policy"],
-    ["her friend was visiting for an hour behind the counter", "visiting", "Visitors in the Workplace"],
-    ["she let two visitors into the back room", "visitors", "Visitors in the Workplace"],
-    ["she did not follow the coupon collection process", "coupon collection", "Coupon Collection"],
   ])("%s → %s → %s", (text, phrase, heading) => {
     const found = described(text);
     expect(found).toMatchObject({ phrase, section: { heading }, offenseKey: "company_policies" });
@@ -185,6 +182,14 @@ describe("describedManualSection — a policy the account describes", () => {
     "tess left the back door open all night",
     "she was talking to a guest about her weekend",
     "she gave a guest a coupon",
+    /*
+     * One heading answers, but the manual does not title it a Policy: an
+     * account cites unnamed only a section the manual calls a Policy (Bubbles
+     * PR #63). Named — "violating visitors at work policy" — it is still cited.
+     */
+    "her friend was visiting for an hour behind the counter",
+    "she let two visitors into the back room",
+    "she did not follow the coupon collection process",
   ])("%s → nothing", (text) => {
     expect(described(text)).toBeNull();
   });

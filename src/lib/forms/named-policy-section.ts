@@ -58,6 +58,19 @@ export interface NamedPolicy {
 const NAMED_POLICY =
   /\b(?:violat(?:ing|ed|es|e|ion\s+of)|broke|breaking|breach(?:ed|ing)?(?:\s+of)?|against|(?:did\s*n[o']?t|didn't|not|failed\s+to|refused\s+to)\s+follow(?:ing)?)\s+(?:the\s+|our\s+|a\s+|company'?s?\s+)?((?:[a-z][a-z'&/-]*\s+){1,5}?)polic(?:y|ies)\b/gi;
 
+/**
+ * "ca for pat rivera for cell phone/smart watch policy": no verb, the policy
+ * named after "for". Read only where no verb above names one in the sentence.
+ */
+const FOR_POLICY =
+  /\bfor\s+(?:the\s+|our\s+|a\s+|company'?s?\s+)?((?:[a-z][a-z'&/-]*\s+){1,5}?)polic(?:y|ies)\b/gi;
+
+/**
+ * A sentence that is only the policy's name — "Cell phone/smart watch
+ * policy." — as HR writes it on a line of its own (HR feedback, 21 Oct 2026).
+ */
+const POLICY_LINE = /^\s*(?:the\s+|our\s+)?((?:[a-z][a-z'&/-]*\s+){1,5}?)polic(?:y|ies)\s*[.!]?\s*$/i;
+
 /** Words a heading match ignores on either side. */
 const FILLER = new Set([
   "the", "a", "an", "in", "at", "on", "of", "for", "to", "and", "with", "from", "our", "company", "companys",
@@ -96,28 +109,31 @@ function sameWord(a: string, b: string): boolean {
 }
 
 /**
- * Whether the manager's words name this heading.
- *
- * A HEADING THAT PRINTS ALTERNATIVES — "Cell Phone/Smart Watch Policy" — is
- * named by either of them: "the cell phone policy" leaves "smart watch" off,
- * and every word it does use is still the heading's.
+/**
+ * Whether the manager's words name this heading — or one side of a heading the
+ * manual prints as names joined by a slash. HR / District Manager feedback,
+ * 21 Oct 2026: "violated the cell phone policy" cited nothing, because the
+ * heading is "Cell Phone/Smart Watch Policy" and "smart watch" was not said;
+ * "smoking policy" is the manual's "Smoking/Vaping". Either side names the
+ * section — every word said is that side's, and every word of that side is
+ * said — and the uniqueness rule in `manualSectionNamedBy` still holds.
  */
 export function namesHeading(phrase: string, heading: string): boolean {
+  if (namesWholeHeading(phrase, heading)) return true;
+  const sides = heading.split("/");
+  return sides.length > 1 && sides.some((side) => namesWholeHeading(phrase, side));
+}
+
+function namesWholeHeading(phrase: string, heading: string): boolean {
   const said = words(phrase);
   const printed = words(heading);
   if (said.length === 0 || printed.length === 0) return false;
-  const covered = (part: readonly string[]) =>
-    part.every((word) => OPTIONAL_HEADING_WORDS.has(word) || said.some((other) => sameWord(word, other)));
   return (
     said.every((word) => printed.some((other) => sameWord(word, other))) &&
-    (covered(printed) || headingAlternatives(heading).some((part) => part.length > 0 && covered(part)))
+    printed.every(
+      (word) => OPTIONAL_HEADING_WORDS.has(word) || said.some((other) => sameWord(word, other)),
+    )
   );
-}
-
-/** "Cell Phone/Smart Watch Policy" → [cell, phone], [smart, watch]; a heading with no slash has none. */
-function headingAlternatives(heading: string): string[][] {
-  const parts = heading.split("/");
-  return parts.length < 2 ? [] : parts.map(words);
 }
 
 /** Every policy the manager named, in the order they named them. Questions name none. */
@@ -125,8 +141,13 @@ export function namedPolicies(text: string): NamedPolicy[] {
   const found: NamedPolicy[] = [];
   for (const sentence of (text ?? "").matchAll(/[^.!?\n]+[.!?]*/g)) {
     if (/\?\s*$/.test(sentence[0])) continue;
-    for (const match of sentence[0].matchAll(NAMED_POLICY)) {
-      const phrase = match[1]!.trim();
+    // A line that is only the name — not "violation of company policy", which names none.
+    const line = /\b(?:violat|breach|broke|against|follow)/i.test(sentence[0]) ? null : POLICY_LINE.exec(sentence[0]);
+    if (line && words(line[1]!).length > 0) found.push({ phrase: line[1]!.trim(), index: sentence.index });
+    const verbs = [...sentence[0].matchAll(NAMED_POLICY)];
+    for (const match of verbs.length > 0 ? verbs : sentence[0].matchAll(FOR_POLICY)) {
+      // "ca for pat rivera for cell phone policy": the policy's name is what follows the last "for".
+      const phrase = match[1]!.trim().split(/\bfor\s+/i).pop()!.trim();
       if (words(phrase).length === 0) continue;
       found.push({ phrase, index: sentence.index + match.index });
     }
@@ -147,7 +168,10 @@ export interface NamedManualSection {
  * The manual section the manager named, or null.
  *
  * THE LATEST NAMED POLICY THAT THE MANUAL ANSWERS, and only one that answers
- * unambiguously. A phrase no heading matches cites nothing.
+ * unambiguously. A phrase no heading matches cites nothing. With no policy
+ * named at all, the section the account describes is `describedManualSection`
+ * — a separate reading, so the drafting route can keep a box with its own
+ * specific section standing over it.
  */
 export function namedManualSection(input: {
   readonly text: string;
@@ -199,7 +223,7 @@ export function manualSectionNamedBy(phrase: string, chunks: readonly ManualChun
  *   own candidate ("Cell Phone", "Smart Watch").
  *
  *   THE ACCOUNT MUST USE ALL OF THEM, IN ORDER — "cell phone", "smart watch",
- *   "visitors", "coupon collection" — with only filler between. A word that
+ *   "social media" — with only filler between. A word that
  *   merely appears ("left the door open" is not the Open Door Policy) does
  *   not. One relaxation: the object the employee had — "on her phone" — names
  *   the thing a two-word heading is about ("Cell Phone") when that word is in
@@ -209,8 +233,18 @@ export function manualSectionNamedBy(phrase: string, chunks: readonly ManualChun
  *   phone", a question, or a sentence that states a rule ("belts must not
  *   hold cell phones") names nothing.
  *
- *   EXACTLY ONE HEADING. None, or two ("a belt that holds her cell phone"),
- *   and nothing is cited, as for a named policy.
+ *   EXACTLY ONE HEADING, AND THE MANUAL TITLES IT A POLICY. Every heading
+ *   of the manual is read, so two that answer ("posting on social media":
+ *   Social Media Policy and Using Social Media at Work) cite nothing, as for
+ *   a named policy; and the one that answers is cited only when its heading
+ *   says Policy ("Cell Phone/Smart Watch Policy", not "Visitors in the
+ *   Workplace" or "Coupon Collection"). Checked against all of the real
+ *   manual's headings: an account's ordinary words also say "payroll
+ *   deduct", "time records", "shift replacement", and a section the manager
+ *   means without calling it a policy is cited only where the manual itself
+ *   calls it one (HR feedback, 21 Oct 2026, Bubbles PR #63). A section that is
+ *   not titled a Policy is still cited when the manager names it ("violating
+ *   visitors at work policy").
  *
  * NEVER OVER WHAT ALREADY DECIDES THE POLICY. A policy the manager named —
  * one `ca-policy.ts` knows, or any "violating the … policy", found or not —
@@ -235,6 +269,9 @@ const GENERIC = new Set([
   "corrective", "warning", "verbal", "written", "final", "coaching", "manual", "jba", "proper", "no",
   "non", "related", "recommendation", "guideline", "regulation", "it", "as", "per", "is", "be", "&",
 ]);
+
+/** A heading the manual itself titles a Policy: the only kind an account cites unnamed. */
+const TITLED_A_POLICY = /\bpolic(?:y|ies)\b/i;
 
 /** Words that may stand between a heading's words in an account: "talking on the cell phone". */
 const BETWEEN = new Set([...FILLER, "her", "his", "their", "my", "your", "its", "own", "personal"]);
@@ -362,8 +399,8 @@ function usedIn(said: readonly string[], candidate: Candidate): string | null {
 
 /**
  * The manual section the manager's account describes, or null. See above:
- * only where no policy was named and nothing else decides it, and only where
- * exactly one heading answers.
+ * only where no policy was named and nothing else decides it, only where
+ * exactly one heading answers, and only a heading titled a Policy.
  */
 export function describedManualSection(input: {
   readonly text: string;
@@ -389,6 +426,7 @@ export function describedManualSection(input: {
   }
   if (found.size !== 1) return null;
   const [heading, phrase] = [...found.entries()][0]!;
+  if (!TITLED_A_POLICY.test(heading)) return null;
   const section = findManualSection(input.chunks, [heading]);
   if (!section) return null;
   return { phrase, section, offenseKey: offenseKeyForManualHeading(section.heading) };
