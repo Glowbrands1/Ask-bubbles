@@ -916,10 +916,11 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
         ? input.history.slice(-1).filter((message) => message.role === "assistant")
         : input.history;
   if (isCorrectiveActionForm(match) && asksPayrollDeduct(match)) {
-    proposal.payrollDeduct = payrollDeductFromConversation([
-      ...formHistory,
-      { role: "user", content: input.question },
-    ]);
+    proposal.payrollDeduct = payrollDeductFromConversation(
+      [...formHistory, { role: "user", content: input.question }],
+      // `formHistory` is already this form's turns: a repeated request keeps the answer.
+      { fromThisForm: true },
+    );
   }
   /* The form's date from this form's turns, too. */
   if (!changeKind && !isExitForm(match)) {
@@ -949,6 +950,8 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
         content: (message.id ? excerpts[message.id] : undefined) ?? message.content,
       })),
       input.today ?? businessToday(),
+      // `scoped` is already this form's turns about this person.
+      { fromThisForm: true },
     );
     proposal.warningLevel = stated && offered.includes(stated) ? stated : null;
   }
@@ -1002,8 +1005,9 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   if (
     isCorrectiveActionForm(match) &&
     proposal.status !== "needs_employee" &&
-    !describesIncident(context.text) &&
-    !describesMoreThanTheRequest(context.text, {
+    // This form's turns only: another person's account earlier in the chat is not this one's.
+    !describesIncident(scoped.text) &&
+    !describesMoreThanTheRequest(scoped.text, {
       ignore: [
         proposal.employeeName ?? "",
         proposal.employeeRole ?? "",
@@ -1663,14 +1667,16 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
    * action a Verbal Warning or a Written Warning?" and "verbal" names nobody.
    * A reply that states this form's level continues the open proposal, which
    * re-reads the level itself; a question ("what's the difference?") does not.
+   *
+   * WHETHER OR NOT IT WAS JUST ASKED. "Make it a written warning", typed after
+   * Ask Bubbles had moved on to the store or the policy, used to leave the open
+   * form and go to retrieval, so the change never reached the card (ported
+   * from the reference platform). A level said as history ("she had a verbal
+   * warning on 9/1") is not this form's and does not count; advice still does
+   * not continue it.
    */
-  if (open && isCorrectiveActionForm(open) && !/\?\s*$/.test(input.question)) {
-    const lastAssistant = [...input.history].reverse().find((message) => message.role === "assistant");
-    // Asked, or read back for the manager to change ("Type of Warning: …").
-    const askedLevel =
-      typeof lastAssistant?.content === "string" &&
-      (lastAssistant.content.includes(WARNING_LEVEL_QUESTION) || /type of warning:/i.test(lastAssistant.content));
-    if (askedLevel && warningLevelFromConversation([{ role: "user", content: input.question }], input.today ?? businessToday())) {
+  if (open && isCorrectiveActionForm(open) && !/\?\s*$/.test(input.question) && !ASKS_FOR_ADVICE.test(input.question)) {
+    if (warningLevelFromConversation([{ role: "user", content: input.question }], input.today ?? businessToday())) {
       return { kind: "explicit", templateKey: continued };
     }
   }
@@ -2201,19 +2207,27 @@ function choice(summary: TemplateSummary): ChatFormChoice {
 async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedPolicyReading | null> {
   if (readCaPolicy(text).stated !== null) return null;
   const named = namedPolicies(text);
-  if (named.length === 0) return null;
-  const phrase = named[named.length - 1]!.phrase;
+  const phrase = named[named.length - 1]?.phrase ?? null;
   let chunks: readonly ManualChunk[] | null = null;
   try {
     chunks = (await input.policyManual?.()) ?? null;
   } catch {
     chunks = null;
   }
-  if (!chunks || chunks.length === 0) return { phrase, lookup: "unknown" };
+  if (!chunks || chunks.length === 0) return phrase ? { phrase, lookup: "unknown" } : null;
+  // With no policy named, the section the account itself names ("on her cell phone") — see `mentionedManualSection`.
   const found = namedManualSection({ text, chunks });
-  return found
-    ? { phrase: found.phrase, lookup: "found", heading: found.section.heading, page: found.section.page, offenseKey: found.offenseKey }
-    : { phrase, lookup: "missing" };
+  if (found) {
+    return {
+      phrase: found.phrase,
+      lookup: "found",
+      heading: found.section.heading,
+      page: found.section.page,
+      offenseKey: found.offenseKey,
+      ...(found.mentioned ? { mentioned: true } : {}),
+    };
+  }
+  return phrase ? { phrase, lookup: "missing" } : null;
 }
 
 function proposalContent(

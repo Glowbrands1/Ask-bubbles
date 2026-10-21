@@ -240,15 +240,24 @@ export function priorStepDate(text: string, today: string): string | null {
  * and "got verbal warning on". The same reading as `priorStepDate`, which is
  * the latest of these; a list is what a form that records several needs.
  */
-export function priorSteps(text: string, today: string): { iso: string; named: string; topic?: string }[] {
+export function priorSteps(
+  text: string,
+  today: string,
+): { iso: string; named: string; topic?: string; about?: string }[] {
   const dates = datesInText(text, today);
   const steps = labelledSteps(text, dates);
   return dates.flatMap((found) => {
     const before = text.slice(0, found.index);
+    const about = reasonAfter(text.slice(found.end));
+    const withAbout = about ? { about } : {};
     // "previous coaching was jba policy manual 1-1-26": what it was about, as the manager wrote it.
     const labelled = steps.get(found.index);
     if (labelled) {
-      return [{ iso: earlierYearIfAhead(found, text, today), named: labelled.named, ...(labelled.topic ? { topic: labelled.topic } : {}) }];
+      return [{
+        iso: earlierYearIfAhead(found, text, today),
+        named: labelled.named,
+        ...(labelled.topic ? { topic: labelled.topic } : withAbout),
+      }];
     }
     const match = PRIOR_STEP_BEFORE.exec(before);
     // "she was late, give her a written warning on 10/2": the cue was the incident's, the warning is this form's.
@@ -256,13 +265,31 @@ export function priorSteps(text: string, today: string): { iso: string; named: s
       // A date ahead of today is last year's only after a verb of receiving one ("got … on 12/20" in
       // January); after a bare "was/were" it is a date still to come, and not an earlier step.
       if (found.iso > today && /^(?:was|were)\b/i.test(match[0])) return [];
-      return [{ iso: earlierYearIfAhead(found, text, today), named: match[0] }];
+      return [{ iso: earlierYearIfAhead(found, text, today), named: match[0], ...withAbout }];
     }
     // A step that is hers already counts only on a day before today — never rolled back a year.
     const owned = OWNED_STEP_BEFORE.exec(before);
-    if (owned && !ISSUES_THIS_FORM.test(owned[0]) && found.iso < today) return [{ iso: found.iso, named: owned[0] }];
+    if (owned && !ISSUES_THIS_FORM.test(owned[0]) && found.iso < today) {
+      return [{ iso: found.iso, named: owned[0], ...withAbout }];
+    }
     return [];
   });
+}
+
+/**
+ * WHAT AN EARLIER STEP WAS FOR, SAID AFTER ITS DATE: "previous coaching was
+ * 9/15 for cell phone use" → "for cell phone use" (HR feedback, 21 Oct 2026:
+ * the line read "Coaching — signed 09/15/2026" and lost what it was for). The
+ * manager's own words, opening with for / about / regarding / over, to the
+ * end of the clause — and not past "and she …", which is the account again.
+ * Nothing when the words after the date are anything else.
+ */
+function reasonAfter(after: string): string | null {
+  const match =
+    /^\s*,?\s*((?:for|about|regarding|over)\s+[^.;,!?\n]{2,60}?)(?=\s*(?:$|[.;,!?\n]|\s+(?:and|but|then|so)\s+(?:she|he|they|now|today|again|this|it)\b|\s+(?:and|but)\s+(?:was|is|has)\b))/i.exec(
+      after,
+    );
+  return match ? match[1]!.trim() : null;
 }
 
 /** An issuing verb between the cue and the warning: the warning is the one being issued now. */
