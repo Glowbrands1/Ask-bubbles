@@ -122,7 +122,7 @@ export default async function FormMonitoringPage({
        * manager looking at Followed up still needs to be told what is overdue.
        */
       attention = attentionSummary(
-        visibleInstances(access.actor, await listOutstandingFollowUps(50, access.locationIds)),
+        visibleInstances(access.actor, await listOutstandingFollowUps(50, access.locationIds, access.ownCreatedBy)),
         today,
       );
 

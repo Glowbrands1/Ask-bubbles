@@ -101,8 +101,20 @@ describe("rehire", () => {
     ["She's ineligible for rehire", "no"],
     ["not rehirable", "no"],
     ["rehire: yes", "yes"],
+    ["She isn't going to be eligible for rehire.", "no"],
+    // One fact per line, run together: the "not" belongs to the deduction.
+    ["payroll deduction does not apply eligible for rehire", "yes"],
+    ["payroll deduction does not apply, not eligible for rehire", "no"],
   ])("%s -> %s", (text, expected) => {
     expect(answers(text).eligible_for_rehire).toBe(expected);
+  });
+
+  it("reads the deduction and the rehire answer apart when they run together", () => {
+    expect(answers("Store items returned payroll deduction does not apply eligible for rehire")).toMatchObject({
+      store_items_returned: "yes",
+      payroll_deduction_applicable: "no",
+      eligible_for_rehire: "yes",
+    });
   });
 });
 
@@ -167,6 +179,16 @@ describe("why they resigned", () => {
     ].join("\n");
     expect(read(text).resignationReason).toBe("To pursue other career options.");
     expect(read(text).answers.store_items_returned).toBe("yes");
+  });
+
+  it("ends the reason at the next fact even when the lines run together", () => {
+    expect(
+      read("Resigning to pursue other career options Store items returned payroll deduction does not apply")
+        .resignationReason,
+    ).toBe("To pursue other career options.");
+    expect(read("Resigning to go back to school store key returned").resignationReason).toBe(
+      "To go back to school.",
+    );
   });
 
   it("a reason for something else is not a reason for leaving", () => {

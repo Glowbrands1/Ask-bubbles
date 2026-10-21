@@ -36,7 +36,7 @@ async function overdueCount(): Promise<number> {
     if (access.noStore) return 0;
     const outstanding = visibleInstances(
       access.actor,
-      await listOutstandingFollowUps(50, access.locationIds),
+      await listOutstandingFollowUps(50, access.locationIds, access.ownCreatedBy),
     );
     return attentionSummary(outstanding, today).overdue;
   } catch {

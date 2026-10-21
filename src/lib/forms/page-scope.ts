@@ -16,11 +16,16 @@ import { authorizedLocationIds } from "./location-scope";
  *                 whose scope the browser asserted about itself)
  *   noStore       a verified reader with no resolvable home store: nothing is
  *                 read at all and the page says why
+ *   ownCreatedBy  a restricted reader's account id, so their own forms at
+ *                 other stores are read too (then re-checked per row by
+ *                 `visibleInstances`, which keeps only the stores their stored
+ *                 scope still covers)
  */
 export interface PageFormsAccess {
   actor: FormsActor;
   locationIds: string[] | null;
   noStore: boolean;
+  ownCreatedBy: string | null;
 }
 
 export async function pageFormsAccess(
@@ -36,8 +41,8 @@ export async function pageFormsAccess(
     visibility,
   };
   if (!visibility || visibility.level === "global") {
-    return { actor, locationIds: null, noStore: false };
+    return { actor, locationIds: null, noStore: false, ownCreatedBy: null };
   }
   const locationIds = authorizedLocationIds(visibility);
-  return { actor, locationIds, noStore: locationIds.length === 0 };
+  return { actor, locationIds, noStore: locationIds.length === 0, ownCreatedBy: actor.id };
 }
