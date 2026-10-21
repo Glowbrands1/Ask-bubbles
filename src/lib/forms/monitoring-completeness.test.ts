@@ -266,3 +266,28 @@ describe("R2-F3. the archived view is filtered the same way", () => {
     expect(archived.map((entry) => entry.id)).toEqual(["archived-mine"]);
   });
 });
+
+describe("a person's older forms are found by name, before the limit", () => {
+  beforeEach(() => {
+    // Older than every foreign row, at a store the reader may see and one they may not.
+    store.form_instances.push(
+      row({ id: "ellie-old", employee_name: "Ellie Sendgraff", location_id: "loc-a", created_at: at(2) }),
+      row({ id: "ellie-elsewhere", employee_name: "Ellie Sendgraff", location_id: "loc-other-3", created_at: at(3) }),
+    );
+  });
+
+  it("reads only rows naming the person, so a limit of 5 still reaches them", async () => {
+    const visible = await listInstances("all", 5, { employeeNameWords: ["ellie", "sendgraff"] });
+    expect(visible.map((entry) => entry.id).sort()).toEqual(["ellie-elsewhere", "ellie-old"]);
+  });
+
+  it("still applies the store filter on top of the name", async () => {
+    const visible = await listInstances("all", 5, { locationIds: ["loc-a"], employeeNameWords: ["sendgraff"] });
+    expect(visible.map((entry) => entry.id)).toEqual(["ellie-old"]);
+  });
+
+  it("reads nothing when no word is safe to send", async () => {
+    const visible = await listInstances("all", 5, { employeeNameWords: ["o'brien", "x,y"] });
+    expect(visible).toEqual([]);
+  });
+});

@@ -191,6 +191,52 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain("3. Report figures");
   });
 
+  /*
+   * FORMS ON FILE. Every block attached at once is SEVEN kinds of statement —
+   * the number word the taxonomy had no entry for before the Forms Register
+   * lookup was added.
+   */
+  it("counts the forms on file as a seventh kind, with rules that keep the answer to the record", () => {
+    const prompt = buildSystemPrompt({
+      assistantName: "Bubbles",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
+      locationNoun: "store",
+      context: CONTEXT,
+      mode: "standard",
+      hasContext: true,
+      hasReportData: true,
+      hasFormsLibrary: true,
+      hasVerifiedRecords: true,
+      hasPersonMemory: true,
+      hasFormRecords: true,
+    });
+
+    expect(prompt).toContain("seven kinds of statement");
+    expect(prompt).toContain("7. Forms on file");
+    expect(prompt).toContain("FORMS ALREADY ON FILE");
+    expect(prompt).toContain("never say you cannot look it up");
+    expect(prompt).toContain("The section covers only the stores it names.");
+    expect(prompt).toContain("or the FORMS ON FILE section lists it");
+    expect(prompt).not.toMatch(/salon|Form Monitoring/i);
+  });
+
+  it("adds nothing about forms on file without the block", () => {
+    const prompt = buildSystemPrompt({
+      assistantName: "Bubbles",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
+      locationNoun: "store",
+      context: CONTEXT,
+      mode: "standard",
+      hasContext: true,
+      hasPersonMemory: true,
+    });
+
+    expect(prompt).not.toContain("FORMS ALREADY ON FILE");
+    expect(prompt).not.toContain("FORMS ON FILE");
+  });
+
   it("varies the length instruction by answer mode", () => {
     const build = (mode: "quick" | "standard" | "detailed") =>
       buildSystemPrompt({

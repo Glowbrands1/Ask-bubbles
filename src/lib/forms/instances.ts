@@ -194,6 +194,14 @@ export interface InstanceListFilter {
    * stores their stored scope still covers — see `ownFormStillInScope`.
    */
   ownCreatedBy?: string;
+  /**
+   * Only rows whose employee name contains ANY of these words, case-insensitive.
+   * Used by chat's Forms Register lookup, so a person's older forms are found
+   * by name rather than lost behind the newest `limit` rows. Each word must be
+   * letters only: it is interpolated into a PostgREST filter, and anything else
+   * is dropped rather than escaped. A list with no usable word reads nothing.
+   */
+  employeeNameWords?: string[];
 }
 
 export async function listInstances(
@@ -203,9 +211,15 @@ export async function listInstances(
 ): Promise<InstanceRow[]> {
   const supabase = getSupabaseAdmin();
 
-  /** The view filter, applied identically to every read below. */
+  const nameWords = (filter?.employeeNameWords ?? []).filter((word) => /^[a-z]+$/i.test(word));
+  if (filter?.employeeNameWords && nameWords.length === 0) return [];
+
+  /** The view and name filters, applied identically to every read below. */
   function scoped() {
-    const query = supabase.from("form_instance_overview").select("*");
+    let query = supabase.from("form_instance_overview").select("*");
+    if (nameWords.length > 0) {
+      query = query.or(nameWords.map((word) => `employee_name.ilike.*${word}*`).join(","));
+    }
     // `archived_at` is presentation, not status — see the migration. The active
     // list is the default because it is what somebody opening the screen wants.
     if (view === "active") return query.is("archived_at", null);
