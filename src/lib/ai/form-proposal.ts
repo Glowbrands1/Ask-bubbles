@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import {
   buildProposal,
   correctsTheEmployee,
+  employeeState,
   extractEmployeeNames,
   managerContext,
   resolveEmployee,
@@ -799,14 +800,17 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   const storeIndex = input.storeIndex ?? (await loadStoreIndex());
   const confirmedStore = readStoreConfirmation(input.history, input.question);
   const employeeContext = withoutAnswersToQuestions(context, input.history, input.question);
-  const directory = await checkTypedEmployee(input, match, employeeContext, storeIndex);
+  const carried = NAME_CHECKED_TEMPLATES.has(match.key) ? employeeFromEarlierTurns(input, employeeContext) : null;
+  const directory = await checkTypedEmployee(input, match, employeeContext, storeIndex, carried);
 
   const proposalInput: ProposalInput = {
     ...(directory.resolution
       ? { employee: directory.resolution }
-      : employeeContext !== context
-        ? { employee: resolveEmployee(employeeContext) }
-        : {}),
+      : carried
+        ? { employee: carried }
+        : employeeContext !== context
+          ? { employee: resolveEmployee(employeeContext) }
+          : {}),
     employeeLocationIds: directory.locationIds ?? [],
     storeIndex,
     reportUnmatchedStore: !employmentChangeKind(match.key),
@@ -1012,6 +1016,11 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
 
   const notes: string[] = directory.note ? [directory.note] : [];
   notes.push(...directoryNotes(proposal, directory, match, input, scoped));
+  if (carried && proposal.employeeName && !directory.question) {
+    notes.push(
+      `I took **${proposal.employeeName}** from earlier in this conversation — if this form is for somebody else, tell me who.`,
+    );
+  }
 
   const content =
     changeKind && facts
@@ -1020,6 +1029,43 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
           namedPolicy: isCorrectiveActionForm(match) ? await namedPolicyFor(scoped.text, input) : null,
         });
   return turn(withNotes(content, notes), proposal);
+}
+
+/**
+ * ============================================================================
+ * THE PERSON THIS CONVERSATION HAS BEEN ABOUT
+ * ============================================================================
+ *
+ * Ported from the reference platform (production feedback, 20 Oct 2026): a
+ * conversation that opened with a Corrective Action Form for one employee ran
+ * on about a policy, and "Create a Coaching Form from this conversation" then
+ * asked who the form was for. Their name was in the conversation — just
+ * further back than the window of manager turns the facts are read from.
+ *
+ * So when the window names nobody, the whole conversation's manager turns are
+ * read for the person — the person only, every other fact still comes from the
+ * window. It is used only when the conversation settles on ONE person
+ * (`employeeState`, with its corrections and "not her" rules), and the reply
+ * says where the name came from, so the manager can change it before Create.
+ * The name is still checked against the directory like any typed name.
+ */
+function employeeFromEarlierTurns(input: ProposalTurn, context: ManagerContext): EmployeeResolution | null {
+  if (resolveEmployee(context).kind !== "missing") return null;
+  const turns = [
+    ...input.history
+      .filter((message) => message.role === "user" && !message.error)
+      .filter((message) => typeof message.content === "string" && message.content.trim() !== "")
+      .map((message) => ({ id: message.id, content: message.content.trim() })),
+    { id: input.questionMessageId, content: input.question.trim() },
+  ];
+  if (turns.length <= context.messages.length) return null;
+  const resolution = employeeState({
+    messages: turns,
+    ids: [],
+    text: turns.map((turn) => turn.content).join("\n\n"),
+    truncated: false,
+  }).resolution;
+  return resolution.kind === "resolved" ? resolution : null;
 }
 
 /**
@@ -1215,8 +1261,10 @@ async function checkTypedEmployee(
   match: TemplateSummary,
   context: ManagerContext,
   storeIndex: StoreIndex,
+  /** A name read from earlier in the conversation, when the window had none. */
+  carried: EmployeeResolution | null = null,
 ): Promise<DirectoryCheck> {
-  const typed = resolveEmployee(context);
+  const typed = carried ?? resolveEmployee(context);
   if (typed.kind !== "resolved") return {};
 
   /*

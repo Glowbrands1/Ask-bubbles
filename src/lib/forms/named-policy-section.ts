@@ -140,13 +140,24 @@ export function namedManualSection(input: {
   readonly chunks: readonly ManualChunk[] | null;
 }): NamedManualSection | null {
   if (!input.chunks || input.chunks.length === 0) return null;
-  const headings = manualSheetHeadings(input.chunks);
   for (const named of [...namedPolicies(input.text)].reverse()) {
-    const matches = [...new Set(headings.filter((heading) => namesHeading(named.phrase, heading)))];
-    if (matches.length !== 1) continue;
-    const section = findManualSection(input.chunks, matches);
+    const section = manualSectionNamedBy(named.phrase, input.chunks);
     if (!section) continue;
     return { phrase: named.phrase, section, offenseKey: offenseKeyForManualHeading(section.heading) };
   }
   return null;
+}
+
+/**
+ * The one section of the manual these words name, by the reading above —
+ * every word said in the heading, every heading word said — or null when no
+ * heading, or more than one, answers. Also how a policy named for a form that
+ * is already open is found (`policy-change.ts`), so a name that cites a
+ * section on a new Corrective Action cites the same section on an open one.
+ */
+export function manualSectionNamedBy(phrase: string, chunks: readonly ManualChunk[] | null): ManualSection | null {
+  if (!chunks || chunks.length === 0 || words(phrase).length === 0) return null;
+  const matches = [...new Set(manualSheetHeadings(chunks).filter((heading) => namesHeading(phrase, heading)))];
+  if (matches.length !== 1) return null;
+  return findManualSection(chunks, matches);
 }

@@ -27,7 +27,7 @@ import {
 import { FOLLOW_UP_TIMEFRAME_RULES, guardFollowUpTimeframe } from "./follow-up-timeframe";
 import { authorizeInstance } from "./instance-scope";
 import { datesInText } from "./form-date-answer";
-import { FollowUpError, applyAssistantRevision, setFollowUpDate } from "./instances";
+import { FollowUpError, applyAssistantDraft, applyAssistantRevision, setFollowUpDate } from "./instances";
 import {
   EXPECTATION_LABEL,
   GOING_FORWARD_LABEL,
@@ -40,6 +40,7 @@ import { draftableCheckboxGroups, draftableFields } from "./responsibility";
 import {
   REVISABLE_LAYOUT_FAMILIES,
   asksAboutFollowUpDate,
+  asksForAnotherForm,
   isRevisionRequest,
   planRevision,
   scopeRevision,
@@ -48,6 +49,13 @@ import {
   type RevisionScope,
 } from "./revision";
 import { TEAM_SUBJECT_RULES, isTeamSubject } from "./team-subject";
+import {
+  POLICY_SEPARATION_RULES,
+  stripUnsupportedPolicyAttributions,
+  stripUnsupportedPolicyClaims,
+} from "./policy-claim-guard";
+import { DERIVED_POLICY_FIELD_KEYS, formDerivedProvenance, offenseCategoryValue } from "./policy-fields";
+import { citedCompanyPolicy } from "./policy-change";
 import { applyEmployeeName, employeeNameRules } from "./employee-reference";
 import { detectTemplateIntent } from "./template-intent";
 import { withTruncationRetry } from "@/lib/ai/truncation";
@@ -58,10 +66,11 @@ import { EVIDENCE_BASIS_RULES, guardEvidenceBasis } from "./evidence-basis";
  * "REDRAFT IT WITH THESE CHANGES" — ON THE FORM THAT IS OPEN
  * ============================================================================
  *
- * Tried by the chat route after `correctActiveForm` and before an ordinary
- * answer, only where the browser named a form this conversation created.
- * Returns null for anything that is not a revision of a coaching document, and
- * the turn is answered exactly as it would have been. See `revision.ts` for
+ * Tried by the chat route after `correctActiveForm`, the policy change and
+ * the redraft, and before an ordinary answer, only where the browser named a
+ * form this conversation created. Returns null for anything that is not a
+ * revision of a coaching document, a Corrective Action Form or a Policy
+ * Review, and the turn is answered exactly as it would have been. See `revision.ts` for
  * the rules about what a revision may change.
  *
  * EVERYTHING IS RE-CHECKED. The browser names the instance; this loads it and
@@ -114,7 +123,15 @@ export async function reviseActiveForm(input: {
    * record with a different template and lose the follow-up fields.
    */
   const intent = detectTemplateIntent(input.question);
-  if (intent.kind === "corrective_action") return null;
+  /*
+   * THE CORRECTIVE ACTION FORM, NAMED WHILE IT IS OPEN, IS THIS FORM — "change
+   * the corrective action to a written warning". Only a request for another
+   * one ("create a CA for …") is a new form.
+   */
+  const corrective = instance.layoutFamily === "corrective";
+  if (intent.kind === "corrective_action" && (!corrective || asksForAnotherForm(input.question) || NEW_FORM.test(input.question))) {
+    return null;
+  }
   // "Update the EPP" names a different family of form; it is not this one.
   if (intent.kind === "ambiguous" && intent.family === "epp") return null;
   if (intent.kind === "explicit" && intent.templateKey !== instance.templateKey) {
@@ -150,7 +167,16 @@ export async function reviseActiveForm(input: {
 
   const document = parseFormDocument(loaded.version.document);
   const variantKey = instance.variantKey;
-  const fields = draftableFields(document, variantKey);
+  /*
+   * THE POLICY LINES ARE NEVER A REDRAFT'S TO WRITE. Policy Violated is copied
+   * off the offense box and Direct policy is the manual's own wording, quoted
+   * by `chat-policy-change.ts`; the model is shown them, read-only, and nothing
+   * it returns for them is kept.
+   */
+  const policyLines = draftableFields(document, variantKey).filter(
+    (field) => DERIVED_POLICY_FIELD_KEYS.has(field.key) || field.policyGrounded,
+  );
+  const fields = draftableFields(document, variantKey).filter((field) => !policyLines.includes(field));
   const groups = draftableCheckboxGroups(document, variantKey);
   const followUpKeys = hasManagerFollowUpKeys([...fields.map((f) => f.key), ...groups.map((g) => g.key)]);
 
@@ -239,6 +265,10 @@ export async function reviseActiveForm(input: {
       const ticked = current.get(group.key)?.checked ?? [];
       return `- ${group.key} (checkbox): options ${group.options.map((option) => `${option.key} = ${option.label}`).join("; ")}. Ticked now: ${ticked.length ? ticked.join(", ") : "(none)"}`;
     }),
+    ...policyLines.map((field) => {
+      const value = (current.get(field.key)?.value ?? "").trim();
+      return `- ${field.key} (${interpolate(field.label, null)}) [read-only — never return it]: ${value ? JSON.stringify(value) : "(empty)"}`;
+    }),
   ];
 
   const hasTimeframe = fields.some((field) => field.semantics === "follow_up_timeframe");
@@ -264,7 +294,9 @@ export async function reviseActiveForm(input: {
   if (!asksRevision && !(reportsFollowUp && followUpKeys)) return null;
 
   const system = [
-    `You revise drafts of ${ACTIVE_BRAND.brandName} coaching forms for a manager, who reviews and signs them.`,
+    corrective
+      ? `You revise drafts of the ${ACTIVE_BRAND.brandName} ${instance.templateName} for a manager, who reviews and signs it.`
+      : `You revise drafts of ${ACTIVE_BRAND.brandName} coaching forms for a manager, who reviews and signs them.`,
     "You are given the form as it stands and the manager's requested change. Make THAT change and nothing else.",
     "PRESERVE THE FORM. Return only the fields whose value the request changes. A field you leave out keeps exactly what it says now — so leave out every field the request does not ask you to change, including empty ones.",
     "Never remove or empty a field unless the manager asked for it to be removed. If they did, list its key under `clear`.",
@@ -275,7 +307,7 @@ export async function reviseActiveForm(input: {
       ? FOLLOW_UP_TIMEFRAME_RULES
       : ["Do not mention follow-up dates or scheduling in any field: the follow-up date is recorded separately by the manager."]),
     `A field marked [${OBSERVED_EXPECTATION}] keeps its labelled sections — "${OBSERVED_LABEL}", "${EXPECTATION_LABEL}" and, where present, "${GOING_FORWARD_LABEL}" — each label on its own line.`,
-    ...COACHING_CONTEXT_RULES,
+    ...(corrective ? CORRECTIVE_REVISION_RULES : COACHING_CONTEXT_RULES),
     ...LANGUAGE_CLEANUP_RULES,
     ...(followUpKeys ? MANAGER_FOLLOW_UP_RULES : []),
     ...(team ? TEAM_SUBJECT_RULES : []),
@@ -400,6 +432,19 @@ export async function reviseActiveForm(input: {
     },
     emptied: guardedFollowUp.emptied.filter((key) => !named.has(key)),
   };
+  /*
+   * THE CORRECTIVE FAMILY'S POLICY GUARDS, the same two the first draft runs:
+   * an observation or plan never says a rule was broken, and never attributes
+   * a requirement to policy the form's own Direct policy line does not state.
+   */
+  if (corrective) {
+    const policyText = policyLines.map((field) => current.get(field.key)?.value ?? "").join("\n");
+    const claims = stripUnsupportedPolicyClaims(followUp.values, DERIVED_POLICY_FIELD_KEYS);
+    const attributions = stripUnsupportedPolicyAttributions(claims.values, DERIVED_POLICY_FIELD_KEYS, policyText);
+    followUp.values = Object.fromEntries(
+      Object.entries(attributions.values).filter(([, value]) => typeof value === "string" && value.trim() !== ""),
+    );
+  }
   const framing =
     instance.templateKey === "coaching"
       ? guardCoachingFraming({ values: followUp.values, checked: followUp.checked }, grounding)
@@ -456,6 +501,41 @@ export async function reviseActiveForm(input: {
     ...Object.keys(saved.accepted.checked),
     ...saved.cleared,
   ];
+  /*
+   * POLICY VIOLATED FOLLOWS THE OFFENSE BOX, as it does on the first draft:
+   * re-derived from what is ticked now, so the line can never disagree with
+   * the box above it. Direct policy is left as it is — the manager names a
+   * section for it, and `chat-policy-change.ts` quotes it.
+   */
+  const policyNotes: string[] = [];
+  if (corrective && "offense_type" in saved.accepted.checked && policyLines.some((field) => field.key === "policy_violated")) {
+    const derived = offenseCategoryValue({
+      document,
+      variantKey,
+      checked: { offense_type: saved.accepted.checked.offense_type ?? [] },
+      values: Object.fromEntries(
+        [...current.entries()].map(([key, entry]) => [key, saved.accepted.values[key] ?? entry.value ?? ""]),
+      ),
+      /* "Violation of Company Policies — Visitors in the Workplace": the section Direct policy cites under that box. */
+      companyPolicyName: citedCompanyPolicy(
+        loaded.values.find((row) => row.fieldKey === "policy_language")?.provenance,
+      ),
+    });
+    if (derived) {
+      const rewritten = await applyAssistantDraft(
+        input.instanceId,
+        { values: { policy_violated: derived }, checked: {} },
+        actor.id,
+        formDerivedProvenance(["policy_violated"]),
+      );
+      if ("policy_violated" in rewritten.accepted.values) written.push("policy_violated");
+    }
+    if (policyLines.some((field) => field.policyGrounded)) {
+      policyNotes.push(
+        "Direct policy from official manual is as it was — if a different section of the manual applies now, tell me which (for example \"use the attendance policy instead\") and I'll quote it.",
+      );
+    }
+  }
   if (written.length === 0) {
     if (dateLines.length) return dateReply(dateLines, dateChanged ? input.instanceId : null);
     return reply(`I haven't changed the ${who} — everything on it is as it was.`);
@@ -471,6 +551,7 @@ export async function reviseActiveForm(input: {
   if (sensitive.anyRefused) {
     lines.push("", "I didn't tick a termination, demotion or suspension — that decision stays with leadership.");
   }
+  if (policyNotes.length > 0) lines.push("", ...policyNotes);
   lines.push("", "Give it a read below before you finalize.");
 
   return {
@@ -490,6 +571,21 @@ function formVocabulary(document: ReturnType<typeof parseFormDocument>, variantK
   for (const label of Object.values(GROUP_LABELS)) words.add(label.toLowerCase());
   return words;
 }
+
+/** "Create a CA for …", "I need a new corrective action" — a new form, not this one. */
+const NEW_FORM = /\b(?:create|start|pull up|new|another|need an?|draft an?)\b/i;
+
+/**
+ * Sent with a Corrective Action Form or Policy Review revision, in place of
+ * the coaching register. The policy separation is the first draft's own; the
+ * rest keeps the decisions on the record the manager's.
+ */
+const CORRECTIVE_REVISION_RULES: readonly string[] = [
+  ...POLICY_SEPARATION_RULES,
+  "The policy lines marked read-only are filled from the official manual separately. Never return them, and never write policy wording or a policy name into any other field.",
+  "Tick a Type of Warning or Type of Offense only as the manager states it in this conversation. Never escalate or soften the warning level on your own.",
+  "Prior coaching or corrective action is only what the manager said, each with the date they gave. Never invent one.",
+];
 
 /** Not a field: the instance's own follow-up date, named in `formUpdate.updated`. */
 const FOLLOW_UP_DATE_KEY = "follow_up_date";
@@ -555,6 +651,8 @@ function withoutInventedDates(
 
 /** The coaching documents' unlabelled groups, by the section heading they print under. */
 const GROUP_LABELS: Record<string, string> = {
+  warning_type: "Type of Warning",
+  offense_type: "Type of Offense",
   coaching_type: "Type of Coaching",
   coaching_topics: "Topic of Coaching",
   next_step: "Next Step",

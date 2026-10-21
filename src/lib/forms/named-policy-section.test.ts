@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ManualChunk } from "./official-policy-manual";
-import { namedManualSection, namedPolicies, namesHeading } from "./named-policy-section";
+import { manualSectionNamedBy, namedManualSection, namedPolicies, namesHeading } from "./named-policy-section";
 
 /**
  * A policy the manager names, matched against the pinned manual's own sheet
@@ -91,5 +91,15 @@ describe("namedManualSection", () => {
         chunks: [...CHUNKS, sheet(90, "Visitors at Work", 40)],
       }),
     ).toBeNull();
+  });
+});
+
+describe("manualSectionNamedBy — the same reading, for a policy named for an open form", () => {
+  it("finds the one section the words name, or nothing", () => {
+    expect(manualSectionNamedBy("visitors at work", CHUNKS)).toMatchObject({ heading: "Visitors in the Workplace", page: 30 });
+    expect(manualSectionNamedBy("cell phone", CHUNKS)).toMatchObject({ heading: "Cell Phone Usage", page: 32 });
+    expect(manualSectionNamedBy("workplace", CHUNKS)).toBeNull();
+    expect(manualSectionNamedBy("the", CHUNKS)).toBeNull();
+    expect(manualSectionNamedBy("visitors at work", null)).toBeNull();
   });
 });

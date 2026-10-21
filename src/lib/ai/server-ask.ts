@@ -429,6 +429,8 @@ export async function answerQuestion(
     canViewReports:
       actor.role !== null &&
       hasPermission(DEFAULT_PERMISSION_MATRIX, actor.role, "view_reports"),
+    /* Read from the instance by the route, never from the body. */
+    openForm: request.openForm ?? null,
   });
 
   const answer = await callClaude({

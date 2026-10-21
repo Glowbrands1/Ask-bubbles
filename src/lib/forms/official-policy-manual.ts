@@ -477,7 +477,7 @@ function sheetHeadingsOf(content: string): string[] {
 }
 
 /** Loosened for matching: case, punctuation and spacing drift are absorbed. */
-function headingKey(text: string): string {
+export function headingKey(text: string): string {
   return text
     .toLowerCase()
     .replace(/[\u2010-\u2015]/g, "-")
@@ -860,6 +860,34 @@ export function manualSheetHeadings(chunks: readonly ManualChunk[]): string[] {
     ...(isTableOfContents(chunk.content) ? [] : sheetHeadingsOf(chunk.content)),
   ]);
   return [...new Set(headings.map((heading) => heading.trim()).filter((heading) => heading !== ""))];
+}
+
+/**
+ * Every heading the manual marks as a section, in the manual's own spelling,
+ * each once and in the manual's order.
+ *
+ * THE TWO TIERS `findManualSection` TRUSTS BEFORE THE CONTENTS PAGE — the
+ * sheet headings (`manualSheetHeadings`) and the page-heading rule — so a name
+ * read out of a manager's sentence can only ever resolve to a place the manual
+ * itself prints as a section. Used to read "add the visitors policy to this
+ * form" against the manual as it is, rather than against a list kept here.
+ * See `policy-change.ts`.
+ */
+export function manualSectionHeadings(chunks: readonly ManualChunk[]): string[] {
+  const seen = new Map<string, string>();
+  const ordered = [...chunks].sort((a, b) => a.chunkIndex - b.chunkIndex);
+  for (const heading of [
+    ...manualSheetHeadings(ordered),
+    ...ordered.flatMap((chunk) => {
+      const opening = pageHeadingOf(chunk.content);
+      return opening ? [opening.heading] : [];
+    }),
+  ]) {
+    const key = headingKey(heading);
+    if (key === "" || key === "table of contents" || seen.has(key)) continue;
+    seen.set(key, heading.trim());
+  }
+  return [...seen.values()];
 }
 
 /**

@@ -589,8 +589,19 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
   }
 
   const PREPOSED = new RegExp(`\\b(?:for|about|with|regarding)\\s+(${NAME})\\b`, "g");
+  const RUN = new RegExp(`^${NAME}(?:\\s+${PART})*`);
   for (const match of text.matchAll(PREPOSED)) {
     const candidate = match[1]!.trim();
+    /*
+     * "for Late Opening", "about Dress Code": the first word of a capitalised
+     * policy title, and the run it starts is made only of words that are never
+     * anybody's name. Ported from the reference platform (production, 20 Oct
+     * 2026: "create corrective action for <name> for Late Opening" asked
+     * whether the form was for the employee or for "Late"). One word that
+     * could be a name keeps the run a candidate — "for Grace Early".
+     */
+    const run = RUN.exec(text.slice(match.index! + match[0].length - match[1]!.length))?.[0] ?? candidate;
+    if (run.includes(" ") && run.trim().split(/\s+/).every((word) => NOT_A_TYPED_NAME.has(word.toLowerCase()))) continue;
     // "for Cash Handling": a topic word followed by another is the topic, not "Cash".
     const next = text.slice((match.index ?? 0) + match[0].length).trim().split(/\s+/)[0] ?? "";
     if (NOT_A_NAME_LEAD.has(candidate.toLowerCase()) && (next === "" || isTopicWord(next))) continue;

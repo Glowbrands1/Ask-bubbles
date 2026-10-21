@@ -9,6 +9,7 @@ import {
   PAYROLL_DEDUCT_STATED_KEYS,
   payrollDeductChecked,
   payrollDeductCorrection,
+  payrollDeductReply,
   payrollDeductAmount,
   payrollDeductFromConversation,
   statedPayrollDeduct,
@@ -319,5 +320,19 @@ describe("the amount, and the Action Plan that states it", () => {
     expect(withPayrollDeductInPlan("", { answer: "yes", amount: "$3.25", firstName: "Tess" })).toBe("");
     const stated = `${PLAN} $3.25 will be deducted from Tess's pay.`;
     expect(withPayrollDeductInPlan(stated, { answer: "yes", amount: "$3.25", firstName: "Tess" })).toBe(stated);
+  });
+});
+
+describe("payrollDeductReply — a reply to Ask Bubbles' own question, after the form is created", () => {
+  it("reads a bare answer only when the payroll question was the last thing asked", () => {
+    expect(payrollDeductReply("no", "One more question: **Is payroll deduct applicable?** Yes or No?")).toBe("no");
+    expect(payrollDeductReply("Yes.", "Is payroll deduct applicable?")).toBe("yes");
+    expect(payrollDeductReply("no", "The Late Opening section says the employee must notify the manager.")).toBeNull();
+  });
+
+  it("reads a numbered reply against the payroll item only", () => {
+    const asked = "1. What date did this happen?\n2. Is payroll deduct applicable? (Yes or No)";
+    expect(payrollDeductReply("1. 10/20\n2. no", asked)).toBe("no");
+    expect(payrollDeductReply("no", asked)).toBeNull();
   });
 });

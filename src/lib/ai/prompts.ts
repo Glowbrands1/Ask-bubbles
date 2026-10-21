@@ -10,7 +10,7 @@ import {
   type ReportDefinition,
 } from "@/lib/reporting/registry";
 import type { AnswerMode } from "@/types";
-import type { AskContext } from "./types";
+import type { AskContext, OpenFormSummary } from "./types";
 
 /**
  * THE ASSISTANT'S SYSTEM INSTRUCTION AND GROUNDING FORMAT.
@@ -183,6 +183,12 @@ export function buildSystemPrompt(input: {
    * cannot say the person may open the section has not said they may.
    */
   canViewReports?: boolean;
+  /**
+   * The form created earlier in this conversation, as it reads now — set by
+   * the route from the instance, never from the request body. Null leaves the
+   * prompt exactly as it was. See `lib/forms/open-form-summary.ts`.
+   */
+  openForm?: OpenFormSummary | null;
 }): string {
   const { assistantName, brandName, productName, locationNoun, context, mode, hasContext } = input;
   const hasReportData = input.hasReportData ?? false;
@@ -304,13 +310,45 @@ ${hasReportData ? "- Never state a business figure that is not written in the RE
 - NEVER WRITE A FACSIMILE OF A COMPANY FORM. Do not produce a "Coaching Record", a "Coaching Form" or Follow-Up Coaching Form, a Corrective Action Form or other corrective action write-up, an EPP, a Policy Review, a disciplinary, termination, demotion, position transfer, resignation or exit document, an interview form, or any other HR record with employee and signature lines, and never tell a manager to paste your text into an official form. ${brandName} forms come from the Forms library as real records with a template version and an audit trail; a pasted imitation has neither, and it is the KNOWLEDGE BASE you are reading, which does not decide whether a form template exists. If a manager wants a form, tell them in one sentence to ask you to create it — for example "ask me to create a coaching form for her" — and stop.
 - TRAINING MATERIAL IS NOT A FORM. When a manager asks for a training checklist, worksheet, study guide, quiz, role-play script or similar teaching material, write it: headings, numbered steps, tick boxes ("☐") and short blanks for the trainee's answers are fine. Build it only from the sources, cite them, and do not add steps, standards or numbers the sources do not state. Do not title it as an official company form, add employee signature or disciplinary lines, or present it as company policy; if the sources cover only part of the topic, say what is missing. Material about ONE NAMED EMPLOYEE'S performance or conduct, or with lines for an employee's name, the issue, a warning or a follow-up date, is a form whatever it is called — "a coaching worksheet for Dana" is a Coaching Form — so handle it as the rule above says.
 - Never repeat a password, PIN or access code from the sources for a company account or login unless the manager asked about setting up that account. Point to the section that has it instead. Equipment codes from a manufacturer's manual — a factory lock code on a timer or a thermostat — are not account passwords; give them when the question needs them.
-- NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer. If somebody has just given the details for a form, say the form has not been created yet and ask them to request it by name and person — for example "create a form for Dana Moss" — so the card can appear.${formsLibrarySection}${personMemorySection}${reportsGuideSection}${pinnedSection}${missingReportsSection}${input.handbookNote ? `\n\n${input.handbookNote}` : ""}
+${input.openForm ? openFormRule(input.openForm, productName) : `- NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer. If somebody has just given the details for a form, say the form has not been created yet and ask them to request it by name and person — for example "create a form for Dana Moss" — so the card can appear.`}${formsLibrarySection}${personMemorySection}${reportsGuideSection}${pinnedSection}${missingReportsSection}${input.handbookNote ? `\n\n${input.handbookNote}` : ""}
 
 ${hasContext ? "" : "IMPORTANT: no company documents matched this question. You have NO company knowledge for it. Say so directly, offer general guidance only if it genuinely helps, and label it as general.\n\n"}TONE
 
 ${ASSISTANT_TONE} ${MODE_INSTRUCTION[mode]}
 
 ${ASSISTANT_VOICE_RULES}`;
+}
+
+/**
+ * ============================================================================
+ * A FORM IS OPEN — THE ANSWER IS TOLD SO, AND WHAT IT SAYS
+ * ============================================================================
+ *
+ * Ported from the reference platform (production feedback, 20 Oct 2026): "No
+ * form has been created yet — there's no draft card in this conversation",
+ * said beside the draft on screen, and the manager told to create it again.
+ * The rule above was true of a turn with no form and false of this one, so it
+ * is replaced, not added to: the model is told which form is open, for whom,
+ * what it says, and how a change is made.
+ *
+ * The form's text is the RECORD, not a company source — it is never cited with
+ * a marker, and the policy-source rules above still decide what may be said
+ * about policy. A Direct policy line quoted from the manual says so.
+ */
+export function openFormRule(form: OpenFormSummary, productName: string): string {
+  const lines = form.lines.length
+    ? form.lines.map((line) => `    ${line.label}: ${JSON.stringify(line.value)}`).join("\n")
+    : "    (nothing filled in yet)";
+  const policy =
+    form.unverifiedPolicy.length > 0
+      ? `Not yet checked against the official manual: ${form.unverifiedPolicy.join(", ")}.`
+      : "Its policy lines, where it has any, were quoted from the official manual.";
+  return `- A FORM IS OPEN IN THIS CONVERSATION: the ${form.templateName} for ${form.employeeName}, ${form.status === "draft" ? "a draft the manager can still edit" : "finalized"}. It is on screen as a card above. NEVER say no form has been created, never say there is no draft card, and never ask the manager to create this form again. ${policy} What it says now:
+${lines}
+- The form's text is the record, not a company source: never cite it with a marker.
+- ${form.status === "draft" ? `CHANGES TO THIS FORM ARE MADE IN THIS CONVERSATION OR ON THE CARD — never by starting another form. If the manager asks for a change this answer has not made, do not claim it was made and do not send them elsewhere: tell them to say it in plain words — for example "add the attendance policy", "change it to a written warning", or "add that she was 20 minutes late" — or to edit the card and press Save changes. A policy is added by naming the manual's section; ${productName} quotes it onto the form word for word.` : "It is finalized: a change needs a revision, opened from Forms → Forms Register."}
+- Finalizing and signing are the manager's. When they say it is ready or that they have verified it, tell them to press Finalize on the card — you do not finalize, issue or sign it. Do not argue about a decision that is theirs, and do not ask them a yes-or-no question the form already answers.
+- NEVER SAY YOU HAVE CREATED, FILED OR SAVED A NEW FORM in this answer. If the manager wants a different form, ask them to request it by name and person.`;
 }
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
