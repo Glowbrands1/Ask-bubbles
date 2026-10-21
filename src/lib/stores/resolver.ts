@@ -1,3 +1,4 @@
+import { isJobTitleAbbreviation } from "@/config/company/job-titles";
 import { editDistance } from "@/lib/forms/employee-match";
 import { COMPANY_LOCATIONS, locationNameKey, type CompanyLocation } from "@/lib/locations";
 
@@ -465,9 +466,23 @@ const CHOOSING_BEFORE =
 /** "Kearney as the location", "Kearney is the store": the same, said the other way round. */
 const CHOSEN_AFTER = new RegExp(`^\\s+(?:as|is|for)\\s+(?:the\\s+|her\\s+|his\\s+|their\\s+)?(?:${PLACE_NOUNS})\\b`);
 
-function cued(index: StoreIndex, before: string, after: string): boolean {
+/*
+ * "BRANDI ALGYA ASM GRAND ISLAND": NAME, ROLE, STORE. Managers sign a person
+ * off the way the paperwork does, and the role is what says a place follows
+ * (ported from the reference platform, 20 October 2026). The role is any
+ * abbreviation of the company's job titles (`isJobTitleAbbreviation`). Only
+ * for a store phrase of two or more words: "SD Kearney" can be the store
+ * director called Kearney, but nobody is called "Lee's Summit".
+ */
+function roleBefore(before: string): boolean {
+  const word = /(?:^| )([a-z]{2,6}) $/.exec(before)?.[1];
+  return word !== undefined && isJobTitleAbbreviation(word);
+}
+
+function cued(index: StoreIndex, before: string, after: string, phrase: string): boolean {
   const stateBefore = index.states.length > 0 ? new RegExp(`\\b(?:${index.states.join("|")})\\s+$`) : null;
   if ((stateBefore && stateBefore.test(before)) || PLACE_AFTER.test(after)) return true;
+  if (phrase.includes(" ") && roleBefore(before)) return true;
   if (CHOOSING_BEFORE.test(before) || CHOSEN_AFTER.test(after)) return true;
   // The whole turn (or sentence) is the place: the answer to "which store?".
   if (before.split("|").pop()!.trim() === "" && after.split("|")[0]!.trim() === "") return true;
@@ -536,7 +551,7 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
     haystack = haystack.replace(pattern, (phrase, offset: number) => {
       const before = haystack.slice(0, offset);
       const after = haystack.slice(offset + phrase.length);
-      if (alias.needsCue && !cued(index, before, after)) return phrase;
+      if (alias.needsCue && !cued(index, before, after, phrase)) return phrase;
       found = true;
       return "_".repeat(phrase.length);
     });

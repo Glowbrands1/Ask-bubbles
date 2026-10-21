@@ -36,3 +36,17 @@ export const COMPANY_JOB_TITLES: readonly { pattern: RegExp; title: string }[] =
   { pattern: /\b(?:sales associates?|team members?)\b/i, title: "Team Member" },
   { pattern: /\b(?:rm|regional managers?)\b/i, title: "Regional Manager" },
 ];
+
+/**
+ * Whether a single word is a job-title ABBREVIATION — two to six letters that
+ * one of the titles above reads in full ("ASM", "SD", "DM", "TC"). Case is not
+ * checked here; callers that need the capitals as evidence check them.
+ *
+ * Used where a manager signs a person off as the paperwork does — "Brandi
+ * Algya ASM Grand Island" — so the role ends the name and says a store
+ * follows. Derived from the list, so it follows Buff City Soap's titles.
+ */
+export function isJobTitleAbbreviation(word: string): boolean {
+  if (!/^[A-Za-z]{2,6}$/.test(word)) return false;
+  return COMPANY_JOB_TITLES.some((entry) => word.replace(entry.pattern, "") === "");
+}

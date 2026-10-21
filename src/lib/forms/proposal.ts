@@ -1,7 +1,7 @@
 import "server-only";
 
 import { businessToday } from "@/lib/business-date";
-import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
+import { COMPANY_JOB_TITLES, isJobTitleAbbreviation } from "@/config/company/job-titles";
 import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
@@ -564,8 +564,8 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
     if (words.length > 2 && MONTH_WORD.test(words[words.length - 1]!) && /^\s+\d{1,2}(?:st|nd|rd|th)?\b/.test(after)) {
       words.pop();
     }
-    const run = words.join(" ");
-    if (places.has(run)) continue;
+    const run = nameBeforeRole(words.join(" "));
+    if (run === null || places.has(run)) continue;
     /*
      * "It's Avery Testperson", "Sorry Avery Testperson": the capitalised run
      * starts with the reply, not the name. The reply is dropped; a run that
@@ -1011,6 +1011,47 @@ export function displayPersonName(name: string): string {
  */
 export function correctsTheEmployee(text: string): boolean {
   return CORRECTION_CUE.test(text) || negatedNames(text).length > 0;
+}
+
+/*
+ * ============================================================================
+ * "BRANDI ALGYA ASM GRAND ISLAND": THE NAME, THE ROLE, THE STORE
+ * ============================================================================
+ *
+ * Reported on the reference platform, 20 October 2026, and reproduced here.
+ * Managers sign a person off the way the store's paperwork does — name, role,
+ * store — with no commas:
+ *
+ *     "Can you create a coaching form for a manager on the onboarding
+ *      process? Brandi Algya ASM Grand Island. Properly uploading …"
+ *
+ * The capitalised-run reader took all five words as one run, so the card was
+ * for an employee called "Brandi Algya ASM Grand Island" — or, once the run
+ * was discarded, for nobody, and the manager was asked who the form was for.
+ *
+ * THE ROLE ABBREVIATION IS THE BOUNDARY. Typed in capitals, it ends the name:
+ * the words before it are the person, and what follows is the store or the
+ * rest of the sentence. A role abbreviation is an all-caps word that one of
+ * the company's job titles (`COMPANY_JOB_TITLES`) reads in full — "ASM",
+ * "SD", "DM" — so the list follows Buff City Soap's titles rather than being
+ * written out here. Two name words are required before it, so "Sarah ASM
+ * Grand Island" names nobody from here (it used to name all four words),
+ * exactly as a lone capitalised word never has. A run with no role in it is
+ * returned unchanged.
+ */
+function isRoleAbbreviation(word: string): boolean {
+  const bare = word.replace(/[.,]+$/, "");
+  return /^[A-Z]+$/.test(bare) && isJobTitleAbbreviation(bare);
+}
+
+function nameBeforeRole(run: string): string | null {
+  const words = run.split(/\s+/);
+  const role = words.findIndex(isRoleAbbreviation);
+  if (role >= 2) return words.slice(0, role).join(" ");
+  // "Sarah ASM Grand Island": one word, then the role — not a full name, and
+  // never "Sarah ASM Grand Island" either.
+  if (role === 1) return null;
+  return run;
 }
 
 function settle(strong: string[], weak: string[], text: string): EmployeeMentions {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { COMPANY_JOB_TITLES } from "./job-titles";
+import { COMPANY_JOB_TITLES, isJobTitleAbbreviation } from "./job-titles";
 
 const titleOf = (text: string) => COMPANY_JOB_TITLES.find((entry) => entry.pattern.test(text))?.title ?? null;
 
@@ -31,5 +31,15 @@ describe("job titles as managers type them survive the Salon -> Store wording", 
     expect(titleOf("Team Member Full Time")).toBe("Team Member");
     expect(titleOf("Team Member Part Time")).toBe("Team Member");
     expect(titleOf("District Manager")).toBe("District Manager");
+  });
+});
+
+describe("a job-title abbreviation, as a name-role-store line uses one", () => {
+  it.each(["ASM", "SD", "ASD", "DM", "RM", "asm"])("%s is one", (word) => {
+    expect(isJobTitleAbbreviation(word)).toBe(true);
+  });
+
+  it.each(["NE", "OT", "PTO", "Grand", "manager", "store manager", "A"])("%s is not", (word) => {
+    expect(isJobTitleAbbreviation(word)).toBe(false);
   });
 });
