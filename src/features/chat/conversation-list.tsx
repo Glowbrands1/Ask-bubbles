@@ -233,6 +233,9 @@ export function ConversationList({
         </div>
         <p className="mt-1 text-[9.5px] leading-relaxed text-muted-foreground">
           History is private to your account.
+          {accountHistory
+            ? " Bubbles uses it to remember the people you tell it about. Delete a conversation and Bubbles forgets it."
+            : null}
         </p>
       </div>
 

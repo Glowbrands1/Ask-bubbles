@@ -39,6 +39,9 @@ export interface GroundingChunk {
   content: string;
 }
 
+/** The heading of the block `chat/person-memory.ts` renders. */
+export const MEMORY_SECTION = "WHAT THIS MANAGER TOLD YOU BEFORE";
+
 /** Exported so a test can assert the real text rather than a paraphrase. */
 export const ASSISTANT_VOICE_RULES = ASSISTANT_VOICE;
 
@@ -155,6 +158,16 @@ export function buildSystemPrompt(input: {
   hasFormsLibrary?: boolean;
   /** A VERIFIED RECORDS section is attached: registered stores and Woven employee facts. */
   hasVerifiedRecords?: boolean;
+  /**
+   * Whether a block of what this manager told the assistant BEFORE is attached
+   * — their own words from earlier conversations, and the forms they filed,
+   * about the people this conversation names. See `chat/person-memory.ts`.
+   *
+   * Its own kind of statement: not policy, not a measurement and not a
+   * verified record, but the manager's own account at the time. The rules it
+   * selects are about using that without overstating it.
+   */
+  hasPersonMemory?: boolean;
   /** Titles of pinned reasoning documents attached to this turn. */
   pinnedDocumentTitles?: readonly string[];
   /**
@@ -176,6 +189,7 @@ export function buildSystemPrompt(input: {
   const hasMissingReports = input.hasMissingReports ?? false;
   const hasFormsLibrary = input.hasFormsLibrary ?? false;
   const hasVerifiedRecords = input.hasVerifiedRecords ?? false;
+  const hasPersonMemory = input.hasPersonMemory ?? false;
   const pinned = input.pinnedDocumentTitles ?? [];
 
   /*
@@ -206,7 +220,13 @@ export function buildSystemPrompt(input: {
     );
   }
 
-  const NUMBER_WORD = ["", "one", "two", "three", "four", "five"] as const;
+  if (hasPersonMemory) {
+    statementKinds.push(
+      `Earlier conversations — anything drawn from the ${MEMORY_SECTION} section below. These are the manager's own words from earlier ${productName} conversations, and the forms they created, about people named here. Never mark them with a source marker. Say where they came from in plain words — for example "Last time you mentioned that…" or "On October 3 you told me…".`,
+    );
+  }
+
+  const NUMBER_WORD = ["", "one", "two", "three", "four", "five", "six"] as const;
   const taxonomy = statementKinds.map((kind, index) => `${index + 1}. ${kind}`).join("\n");
 
   const formsLibrarySection = hasFormsLibrary
@@ -220,6 +240,17 @@ export function buildSystemPrompt(input: {
 - Knowledge base documents are NOT forms and forms are NOT knowledge base documents. When both are relevant, say which is which.
 - The knowledge base's categories and the Forms library's categories are different lists. Do not answer a question about where a document is filed by naming a forms category, or the reverse.
 - Where a form is: a manager creates one by asking ${productName}, here in the conversation. Forms already created are in Forms → Forms Register. The templates themselves are in Forms → Form Templates, which only administrators who manage templates can open — do not send anybody else there.`
+    : "";
+
+  const personMemorySection = hasPersonMemory
+    ? `\n\nWHAT THE MANAGER TOLD YOU BEFORE
+
+- The ${MEMORY_SECTION} section is the manager's own earlier account of the people named in this conversation. Use it so they do not have to repeat themselves: connect what they ask now to what they told you before, and notice patterns across conversations — a second late arrival, a follow-up that was due.
+- It is what the manager said at the time, not a verified record. Never present it as a fact on somebody's file, and never treat it as company policy. It never establishes anybody's job title, ${locationNoun} assignment or employment status: those come only from a VERIFIED RECORDS section.
+- What the manager says now wins over what they said before. If the two disagree, go with today and mention the difference only if it matters.
+- A first name can belong to more than one person. If an earlier conversation might be about somebody else with the same name, ask before relying on it.
+- A form is only on record if the section lists it under forms the manager created. An earlier conversation that discussed a coaching or corrective action is not proof one was filed.
+- Use what is relevant to the question and leave the rest. Do not recite the history back unprompted.`
     : "";
 
   const missingReportsSection = hasMissingReports
@@ -273,7 +304,7 @@ ${hasReportData ? "- Never state a business figure that is not written in the RE
 - NEVER WRITE A FACSIMILE OF A COMPANY FORM. Do not produce a "Coaching Record", a "Coaching Form" or Follow-Up Coaching Form, a Corrective Action Form or other corrective action write-up, an EPP, a Policy Review, a disciplinary, termination, demotion, position transfer, resignation or exit document, an interview form, or any other HR record with employee and signature lines, and never tell a manager to paste your text into an official form. ${brandName} forms come from the Forms library as real records with a template version and an audit trail; a pasted imitation has neither, and it is the KNOWLEDGE BASE you are reading, which does not decide whether a form template exists. If a manager wants a form, tell them in one sentence to ask you to create it — for example "ask me to create a coaching form for her" — and stop.
 - TRAINING MATERIAL IS NOT A FORM. When a manager asks for a training checklist, worksheet, study guide, quiz, role-play script or similar teaching material, write it: headings, numbered steps, tick boxes ("☐") and short blanks for the trainee's answers are fine. Build it only from the sources, cite them, and do not add steps, standards or numbers the sources do not state. Do not title it as an official company form, add employee signature or disciplinary lines, or present it as company policy; if the sources cover only part of the topic, say what is missing. Material about ONE NAMED EMPLOYEE'S performance or conduct, or with lines for an employee's name, the issue, a warning or a follow-up date, is a form whatever it is called — "a coaching worksheet for Dana" is a Coaching Form — so handle it as the rule above says.
 - Never repeat a password, PIN or access code from the sources for a company account or login unless the manager asked about setting up that account. Point to the section that has it instead. Equipment codes from a manufacturer's manual — a factory lock code on a timer or a thermostat — are not account passwords; give them when the question needs them.
-- NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer. If somebody has just given the details for a form, say the form has not been created yet and ask them to request it by name and person — for example "create a form for Dana Moss" — so the card can appear.${formsLibrarySection}${reportsGuideSection}${pinnedSection}${missingReportsSection}${input.handbookNote ? `\n\n${input.handbookNote}` : ""}
+- NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer. If somebody has just given the details for a form, say the form has not been created yet and ask them to request it by name and person — for example "create a form for Dana Moss" — so the card can appear.${formsLibrarySection}${personMemorySection}${reportsGuideSection}${pinnedSection}${missingReportsSection}${input.handbookNote ? `\n\n${input.handbookNote}` : ""}
 
 ${hasContext ? "" : "IMPORTANT: no company documents matched this question. You have NO company knowledge for it. Say so directly, offer general guidance only if it genuinely helps, and label it as general.\n\n"}TONE
 

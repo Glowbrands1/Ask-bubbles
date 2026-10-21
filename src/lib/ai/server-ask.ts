@@ -21,6 +21,7 @@ import { rowToCitation, type MatchedChunkRow } from "@/lib/knowledge/mappers";
 import { buildHandbookNote, namesHandbook, selectHandbookCoverage } from "@/lib/knowledge/named-handbook";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { RoleGrounding } from "@/lib/knowledge/role-grounding";
+import { recallPeople } from "@/lib/chat/person-memory-store";
 import { reportById, routeReportQuestion } from "@/lib/reporting/registry";
 import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
@@ -80,10 +81,13 @@ import type { AskRequest, AskResponse } from "./types";
  *   `authorizeRequest` context. A separate parameter from `request`, which is
  *   parsed from the request body: a caller must never be able to assert its own
  *   role or its own location assignment.
+ * @param memory Whose earlier conversations may be recalled — the validated
+ *   session's subject, from the route. Omitted, nothing is recalled.
  */
 export async function answerQuestion(
   request: AskRequest,
   actor: ChatActor,
+  memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
   const readiness = liveReadiness();
 
@@ -213,6 +217,23 @@ export async function answerQuestion(
   if (entities.direct) return entities.direct;
 
   /* ------------------------------------------------------- retrieve -- */
+  /*
+   * WHAT THIS MANAGER TOLD BUBBLES BEFORE about the people this conversation
+   * names — their own earlier conversations and the forms they filed, nobody
+   * else's. Started here, after every forms branch and the direct lookup have
+   * had their chance to return, so neither pays for it; it runs alongside
+   * retrieval and never rejects. See `chat/person-memory-store.ts`.
+   */
+  const memoryPromise = memory.memoryOwnerId
+    ? recallPeople({
+        userId: memory.memoryOwnerId,
+        question: request.question,
+        history: request.history,
+        conversationId: request.conversationId,
+        userName: request.context.userName,
+      })
+    : Promise.resolve(null);
+
   /*
    * THE RETRIEVALS RUN TOGETHER. None depends on another.
    *
@@ -374,6 +395,7 @@ export async function answerQuestion(
   const briefing = await briefingPromise;
 
   const settledSummaries = await summariesPromise;
+  const personMemory = await memoryPromise;
   const formInventoryBlock = settledSummaries.ok
     ? buildFormInventoryBlock(buildFormInventory(settledSummaries.rows, actor))
     : null;
@@ -395,6 +417,8 @@ export async function answerQuestion(
     hasMissingReports: (briefing?.missing.length ?? 0) > 0,
     hasFormsLibrary: formInventoryBlock !== null,
     hasVerifiedRecords: entities.block !== null,
+    /* Read from whether the block exists, like the forms library above. */
+    hasPersonMemory: personMemory !== null,
     pinnedDocumentTitles: pinnedTitles,
     handbookNote,
     /*
@@ -413,6 +437,7 @@ export async function answerQuestion(
     reportData: briefing?.text ?? null,
     formsLibrary: formInventoryBlock,
     verifiedRecords: entities.block,
+    personMemory,
     history: request.history,
     question: request.question,
     maxTokens: CLAUDE_MAX_TOKENS[request.mode],

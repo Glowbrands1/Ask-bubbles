@@ -27,6 +27,7 @@ import { activeKnowledgeCorpus } from "@/lib/knowledge/corpus";
 import { CONTINUATION_KEY_MAX } from "@/lib/forms/proposal-continuation";
 import { parseChatReportContext } from "@/lib/reporting/report-context";
 import { businessToday } from "@/lib/business-date";
+import { isClientConversationId } from "@/lib/chat/client-ids";
 import type { AskRequest } from "@/lib/ai/types";
 import type { AnswerMode, ChatMessage } from "@/types";
 
@@ -199,10 +200,18 @@ export async function POST(request: Request) {
         revision ??
         which ??
         redraft ??
-        (await answerQuestion(parsed, {
-          role: context.identity.role,
-          scope: context.identity.scope,
-        }));
+        (await answerQuestion(
+          parsed,
+          {
+            role: context.identity.role,
+            scope: context.identity.scope,
+          },
+          /*
+           * WHOSE EARLIER CONVERSATIONS BUBBLES MAY RECALL: the validated
+           * session's, and only ever theirs. See `chat/person-memory-store.ts`.
+           */
+          { memoryOwnerId: context.identity.subject },
+        ));
     } catch (error) {
       /*
        * A FAILED ANSWER IS STILL A RECORDED TURN, closed as a failure. The row
@@ -284,6 +293,10 @@ function parseAskRequest(body: Partial<AskRequest>): AskRequest {
           .slice(0, 6)
           .map((id: unknown) => String(id ?? ""))
           .filter((id: string) => UUID.test(id))
+      : undefined,
+    // A `conv_*` id and nothing more; anything else is dropped. See `AskRequest`.
+    conversationId: isClientConversationId(String(body.conversationId ?? ""))
+      ? String(body.conversationId)
       : undefined,
     /*
      * THE MOST IMPORTANT OF THE SIX. Chat retrieves knowledge without the
