@@ -1539,3 +1539,44 @@ describe("a topic connector is never who the form is for", () => {
     expect(response!.formProposal!.employeeName).toBe("Jordan Testperson");
   });
 });
+
+/**
+ * ============================================================================
+ * A MANAGER WHO ASKED FOR A CORRECTIVE ACTION IS OFFERED ONE FIRST
+ * ============================================================================
+ *
+ * Reference platform, October 2026: "write a CA for Paisley" — and the cards
+ * under the next answer led with the Coaching Form. The manager's own turns,
+ * read through the same detector the explicit path uses, now put the
+ * Corrective Action Form first; nobody else's order changes.
+ */
+describe("suggested forms lead with the one the manager asked for", () => {
+  const suggested = async (history: ChatMessage[]) => {
+    const { proposals } = await load([template(), dpoa()]);
+    const found = proposals.suggestFormsForTurn(
+      turn("What does the policy say about training deadlines?", { history }) as never,
+    );
+    return found
+      ? [found.selection.primary.templateName, ...found.selection.additional.map((entry) => entry.templateName)]
+      : [];
+  };
+
+  // A second rung: coached once, and it happened again.
+  const ACCOUNT = "Paisley Peklo didn't finish her training. I verbally coached her last week and she still hasn't.";
+
+  it("puts the Corrective Action Form first after \"write a CA for …\"", async () => {
+    expect(
+      await suggested([managerTurn("m1", "write a CA for Paisley Peklo"), managerTurn("m2", ACCOUNT)]),
+    ).toEqual(["Corrective Action Form", "Coaching Form"]);
+  });
+
+  it("keeps coaching first when nobody asked for a corrective action", async () => {
+    expect(await suggested([managerTurn("m2", ACCOUNT)])).toEqual(["Coaching Form", "Corrective Action Form"]);
+  });
+
+  it("does not count a question about the process as asking for one", async () => {
+    expect(
+      await suggested([managerTurn("m1", "how do I write a CA?"), managerTurn("m2", ACCOUNT)]),
+    ).toEqual(["Coaching Form", "Corrective Action Form"]);
+  });
+});
