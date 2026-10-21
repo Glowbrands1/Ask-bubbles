@@ -1,11 +1,10 @@
 import { readCaPolicy, statedOffenseKeys } from "./ca-policy";
 import { manualSectionNamedBy } from "./named-policy-section";
 import {
-  COMPANY_POLICIES_OFFENSE,
+  boxSectionNames,
   findManualSection,
   headingKey,
   manualSectionHeadings,
-  offenseKeyForManualHeading,
   sectionHeadingsFor,
   type ManualChunk,
   type ManualSection,
@@ -256,21 +255,19 @@ export function nextPolicySections(input: {
 }
 
 /**
- * The section a Direct policy line cites under Violation of Company Policies —
- * a section no other offense box names — read off the line's own provenance.
- * What Policy Violated prints beside that box ("Violation of Company Policies
- * — Visitors in the Workplace"), so the two lines name the same section after
- * either one changes. Null when the line cites none, or was not quoted from
- * the manual.
+ * The sections a Direct policy line cites under a box that is not the box's
+ * own — "Visitors in the Workplace" under Violation of Company Policies,
+ * "Late Opening" under Tardiness — read off the line's own provenance. What
+ * Policy Violated prints beside each box (`boxSectionNames`), so the two lines
+ * name the same section after either one changes. Empty when the line cites
+ * none, or was not quoted from the manual.
  */
-export function citedCompanyPolicy(provenance: Record<string, unknown> | null | undefined): string | null {
-  if (!provenance || provenance.verified !== true || provenance.source !== "official_policy_manual") return null;
+export function citedBoxSections(provenance: Record<string, unknown> | null | undefined): Record<string, string> {
+  if (!provenance || provenance.verified !== true || provenance.source !== "official_policy_manual") return {};
   const listed = Array.isArray(provenance.sections) ? provenance.sections : [];
-  for (const entry of listed) {
-    const heading = (entry as { locator?: unknown } | null)?.locator;
-    if (typeof heading === "string" && heading.trim() !== "" && offenseKeyForManualHeading(heading) === COMPANY_POLICIES_OFFENSE) {
-      return heading.trim();
-    }
-  }
-  return null;
+  return boxSectionNames(
+    listed
+      .map((entry) => (entry as { locator?: unknown } | null)?.locator)
+      .filter((heading): heading is string => typeof heading === "string"),
+  );
 }

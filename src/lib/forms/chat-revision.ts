@@ -55,7 +55,7 @@ import {
   stripUnsupportedPolicyClaims,
 } from "./policy-claim-guard";
 import { DERIVED_POLICY_FIELD_KEYS, formDerivedProvenance, offenseCategoryValue } from "./policy-fields";
-import { citedCompanyPolicy } from "./policy-change";
+import { citedBoxSections } from "./policy-change";
 import { applyEmployeeName, employeeNameRules } from "./employee-reference";
 import { fixedActionPlanKey } from "./ca-action-plan";
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
@@ -552,8 +552,8 @@ export async function reviseActiveForm(input: {
       values: Object.fromEntries(
         [...current.entries()].map(([key, entry]) => [key, saved.accepted.values[key] ?? entry.value ?? ""]),
       ),
-      /* "Violation of Company Policies — Visitors in the Workplace": the section Direct policy cites under that box. */
-      companyPolicyName: citedCompanyPolicy(
+      /* "Violation of Company Policies — Visitors in the Workplace": the section Direct policy cites under a box. */
+      sectionNames: citedBoxSections(
         loaded.values.find((row) => row.fieldKey === "policy_language")?.provenance,
       ),
     });

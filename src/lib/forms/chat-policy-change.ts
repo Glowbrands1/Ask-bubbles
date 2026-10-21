@@ -15,11 +15,11 @@ import { authorizeInstance } from "./instance-scope";
 import { applyAssistantDraft, applyAssistantRevision } from "./instances";
 import {
   COMPANY_POLICIES_OFFENSE,
+  boxSectionNames,
   findManualSection,
   headingKey,
   manualDisplayTitle,
   manualSectionHeadings,
-  offenseKeyForManualHeading,
   officialManualProvenance,
   type ManualChunk,
   type ManualSection,
@@ -304,20 +304,22 @@ function currentSections(
 
 /**
  * ============================================================================
- * POLICY VIOLATED NAMES THE SECTION DIRECT POLICY CITES — UNDER ONE BOX ONLY
+ * POLICY VIOLATED NAMES THE SECTION DIRECT POLICY CITES BESIDE ITS BOX
  * ============================================================================
  *
  * On a first draft, a section the manager named that no other offense box
  * covers is ticked under Violation of Company Policies, and Policy Violated
  * reads "Violation of Company Policies — Visitors in the Workplace"
- * (`named-policy-section.ts`). When the open form is ticked that way and its
- * Direct policy line changes, Policy Violated is re-derived from the box and
- * the section now cited, so the two lines never name different sections.
+ * (`named-policy-section.ts`); a late opening under Tardiness reads
+ * "Tardiness/Leaving Early — Late Opening" (`boxSectionNames`). When the open
+ * form's Direct policy line changes, Policy Violated is re-derived from the
+ * boxes and the sections now cited, so the two lines never name different
+ * sections.
  *
  * NOTHING ELSE MOVES. The offense box is the manager's (or the draft's) and
- * is not ticked or unticked here; a form not ticked under that box, or whose
- * Policy Violated a person wrote by hand, is left exactly as it is. Returns
- * the keys it wrote.
+ * is not ticked or unticked here; a form with no section named beside a box,
+ * before or after, or whose Policy Violated a person wrote by hand, is left
+ * exactly as it is. Returns the keys it wrote.
  */
 async function followOffense(
   instanceId: string,
@@ -329,18 +331,26 @@ async function followOffense(
   const variantKey = loaded.instance.variantKey;
   if (!fieldsForVariant(document, variantKey).some((entry) => entry.key === VIOLATED_KEY)) return [];
   const ticked = loaded.values.find((value) => value.fieldKey === "offense_type")?.checked ?? [];
-  if (!ticked.includes(COMPANY_POLICIES_OFFENSE)) return [];
   const violated = loaded.values.find((value) => value.fieldKey === VIOLATED_KEY);
+  const sectionNames = boxSectionNames(cited.map((section) => section.heading));
+  /*
+   * Only where a section is, or was, named beside a box: Violation of Company
+   * Policies, a box now cited for a section not its own ("Late Opening" under
+   * Tardiness), or a line that named one before.
+   */
+  const names =
+    ticked.includes(COMPANY_POLICIES_OFFENSE) ||
+    ticked.some((key) => key in sectionNames) ||
+    / — /.test(violated?.value ?? "");
+  if (!names) return [];
   if (violated && violated.filledBy === "manager" && (violated.value ?? "").trim() !== "") return [];
 
-  const companyPolicy =
-    cited.find((section) => offenseKeyForManualHeading(section.heading) === COMPANY_POLICIES_OFFENSE)?.heading ?? null;
   const derived = offenseCategoryValue({
     document,
     variantKey,
     checked: { offense_type: ticked },
     values: Object.fromEntries(loaded.values.map((value) => [value.fieldKey, value.value ?? ""])),
-    companyPolicyName: companyPolicy,
+    sectionNames,
   });
   if (!derived || derived === (violated?.value ?? "").trim()) return [];
   const saved = await applyAssistantDraft(

@@ -881,4 +881,29 @@ describe("F: a late opening with a payroll deduction", () => {
       `Management will review the Late Opening and Attendance policies with Tess. $25 will be deducted from Tess's pay. ${CLOSING}`,
     );
   });
+
+  it("Policy Violated names Late Opening beside the Tardiness box, as Direct policy leads with it", async () => {
+    const { create } = await conversation([F_LATE]);
+    state.draft = LATE_OPENER_DRAFT;
+
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    expect(field(form, "offense_type")!.checked).toEqual(["tardiness"]);
+    expect(field(form, "policy_violated")!.value).toBe("Tardiness/Leaving Early — Late Opening");
+  });
+
+  it("a late arrival that is not an opening stays the Tardiness box alone", async () => {
+    const { create } = await conversation([
+      "create verbal ca for tess varga, she was 20 minutes late for her 2pm shift on 10-1-26. no payroll deduct",
+    ]);
+    state.draft = {
+      values: { observation: "Observed:\nOn October 1, 2026, Tess Varga arrived 20 minutes late." },
+      checked: { offense_type: ["tardiness"] },
+    };
+
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    expect(field(form, "policy_violated")!.value).toBe("Tardiness/Leaving Early");
+    expect(field(form, "action_plan")!.value).toBe(`Management will review the Attendance policy with Tess. ${CLOSING}`);
+  });
 });

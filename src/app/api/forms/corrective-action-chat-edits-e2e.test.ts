@@ -322,8 +322,10 @@ describe("a policy named in the conversation goes onto the open form", () => {
     expect(answer?.content).toMatch(/Updated Direct policy from official manual on the \*\*Corrective Action Form\*\* for \*\*Pat Rivera\*\*/);
     expect(answer?.content).toContain("**Late Opening:**");
     expect(answer?.content).not.toMatch(/no form has been created/i);
-    expect(answer?.formUpdate).toEqual({ instanceId: id, updated: ["policy_language", "action_plan"] });
+    expect(answer?.formUpdate).toEqual({ instanceId: id, updated: ["policy_language", "policy_violated", "action_plan"] });
     expect(store.form_instances).toHaveLength(1);
+    /* Policy Violated names the section beside its box, as a first draft does (District Manager feedback, 21 Oct 2026). */
+    expect((await row(id, "policy_violated"))?.value).toBe("Tardiness/Leaving Early — Late Opening");
     /* The Action Plan follows Direct policy: both sections, in the order cited. */
     expect(answer?.content).toContain("The Action Plan now says management will review the Attendance and Late Opening policies with Pat.");
     expect((await row(id, "action_plan"))?.value).toBe(
@@ -357,6 +359,8 @@ describe("a policy named in the conversation goes onto the open form", () => {
     expect(value).not.toContain("Late Opening");
     expect(value).not.toContain("Attendance");
     expect(swapped?.content).toMatch(/no longer cites/i);
+    /* Late Opening is no longer cited, so Policy Violated no longer names it beside the box. */
+    expect((await row(id, "policy_violated"))?.value).toBe("Tardiness/Leaving Early");
   });
 
   it("removes a section the manager takes off, and blanks the line when it was the only one", async () => {
@@ -548,7 +552,7 @@ describe("any other change to the open Corrective Action Form is made in place",
 
     /* Asked for in their words, so a later policy change does not rebuild it. */
     const policy = await changeActiveFormPolicy({ request: chat(), instanceId: id, question: "add the late opening policy", history });
-    expect(policy?.formUpdate?.updated).toEqual(["policy_language"]);
+    expect(policy?.formUpdate?.updated).toEqual(["policy_language", "policy_violated"]);
     expect((await row(id, "action_plan"))?.value).toMatch(/^Pat will retake the attendance training this week\./);
   });
 

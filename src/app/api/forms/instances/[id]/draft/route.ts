@@ -86,6 +86,7 @@ import {
   formDerivedProvenance,
 } from "@/lib/forms/policy-fields";
 import {
+  boxSectionNames,
   manualSectionsFor,
   officialManualProvenance,
 } from "@/lib/forms/official-policy-manual";
@@ -1498,8 +1499,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       checked: validated.checked,
       grounding,
       fieldKeys: new Set(fields.map((field) => field.key)),
-      /* "Violation of Company Policies — Visitors in the Workplace": which policy, where the manager named it. */
-      companyPolicyName: namedManual?.heading ?? null,
+      /*
+       * "Violation of Company Policies — Visitors in the Workplace",
+       * "Tardiness/Leaving Early — Late Opening": the section Direct policy
+       * cites under a box, where it is not the box's own.
+       */
+      sectionNames: boxSectionNames(manualSections.map((section) => section.heading)),
       /*
        * THE MANUAL'S OWN WORDING FOR EACH TICKED SECTION, THEN ITS SOURCE —
        * "Source: JBA Policy Manual — Dress Code for The Company, p. 15" — every
