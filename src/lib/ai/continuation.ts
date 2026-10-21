@@ -197,7 +197,8 @@ const POINTS_BACK: readonly RegExp[] = [
   /^\s*(?:how|what)\s+(?:about|if)\s+(?:it|that|this)\b/i,
 ];
 
-function refersBack(question: string): boolean {
+/** Whether a question points back to the turn before it: a fragment, or a pronoun question above. */
+export function refersBack(question: string): boolean {
   return isEllipticalFollowUp(question) || POINTS_BACK.some((pattern) => pattern.test(question));
 }
 

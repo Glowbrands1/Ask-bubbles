@@ -48,6 +48,11 @@ export interface OpenFormSummary {
   lines: { label: string; value: string }[];
   /** Policy lines no approved source has verified, by label. */
   unverifiedPolicy: string[];
+  /**
+   * The manual sections its policy lines cite, read off their verified
+   * provenance — so a long, clipped line still says what it cites.
+   */
+  cited?: string[];
 }
 
 export interface AskRequest {

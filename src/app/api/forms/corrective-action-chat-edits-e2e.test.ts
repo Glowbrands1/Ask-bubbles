@@ -562,6 +562,8 @@ describe("an ordinary answer knows the form is open", () => {
       ]),
     );
     expect(summary!.unverifiedPolicy).toEqual([]);
+    // What the policy line cites, from its provenance — what a follow-up about "the policy" is searched with.
+    expect(summary!.cited).toEqual(["Attendance"]);
   });
 
   it("tells nobody about a form they may not see", async () => {

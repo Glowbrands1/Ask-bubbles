@@ -64,7 +64,30 @@ export async function describeOpenForm(request: Request, instanceId: string): Pr
     status: instance.status === "draft" ? "draft" : "finalized",
     lines,
     unverifiedPolicy: unverifiedPolicyFields(document, variantKey, loaded.values).map((field) => field.label),
+    cited: citedSectionsOf(fieldsForVariant(document, variantKey), rows),
   };
+}
+
+/**
+ * The manual sections the policy lines cite, from provenance only an
+ * official-manual quotation carries — never from the text, which a person
+ * may have typed and which is clipped above.
+ */
+function citedSectionsOf(
+  fields: readonly { key: string; policyGrounded?: boolean }[],
+  rows: ReadonlyMap<string, { provenance?: Record<string, unknown> }>,
+): string[] {
+  const found = new Set<string>();
+  for (const field of fields) {
+    if (!field.policyGrounded) continue;
+    const provenance = rows.get(field.key)?.provenance;
+    if (!provenance || provenance.verified !== true || provenance.source !== "official_policy_manual") continue;
+    for (const entry of Array.isArray(provenance.sections) ? provenance.sections : []) {
+      const heading = (entry as { locator?: unknown } | null)?.locator;
+      if (typeof heading === "string" && heading.trim() !== "") found.add(heading.trim());
+    }
+  }
+  return [...found];
 }
 
 function clip(value: string): string {

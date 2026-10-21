@@ -27,7 +27,7 @@ import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
 import { callClaude } from "./call-claude";
-import { gateTexts, retrievalPlan, searchWithPlan } from "./continuation";
+import { gateTexts, searchWithPlan } from "./continuation";
 import { AiError } from "./errors";
 import {
   answerInventoryQuestion,
@@ -45,6 +45,7 @@ import {
   stripMarkers,
   type GroundingChunk,
 } from "./prompts";
+import { retrievalPlanFor } from "./retrieval-query";
 import type { AskRequest, AskResponse } from "./types";
 
 /**
@@ -285,11 +286,16 @@ export async function answerQuestion(
 
   /*
    * A FOLLOW-UP THAT FINDS NOTHING ON ITS OWN IS SEARCHED WITH ITS ANCHOR —
-   * "and for part-timers?" then finds the part-time attendance guidance. Only
-   * the query changes: the model is still given the question as typed. See
-   * `retrievalPlan`.
+   * "and for part-timers?" then finds the part-time attendance guidance. A
+   * short turn about "the policy" with a form open is also searched with the
+   * sections that form cites. Only the query changes: the model is still
+   * given the question as typed. See `retrievalPlan` and `retrieval-query.ts`.
    */
-  const plan = retrievalPlan(request.question, request.history);
+  const plan = retrievalPlanFor({
+    question: request.question,
+    history: request.history,
+    openForm: request.openForm ?? null,
+  });
   const limit = pinnedWanted.length > 0 ? RETRIEVAL.roleAugmentedTopK : RETRIEVAL.topK;
 
   let rows: MatchedChunkRow[];
