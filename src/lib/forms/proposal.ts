@@ -6,7 +6,7 @@ import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
-import { NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
+import { NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, lowercaseMonths } from "./name-words";
 import { boundManagerTurns, type BoundedContext } from "./bounded-context";
 import {
   allowsTeamSubject,
@@ -325,7 +325,8 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
   // "pls", "u", "frm" are never names and never end one; read them as words.
   // "general training", "team-wide", "everyone at the salon" describe the team,
   // never a person — they are taken out first. See `maskTeamSubjectPhrases`.
-  const text = maskTeamSubjectPhrases(canonicalShorthand(canonicalWarningWording(typed)));
+  // "for September, 12% under goal" is a date, never a person. See `lowercaseMonths`.
+  const text = lowercaseMonths(maskTeamSubjectPhrases(canonicalShorthand(canonicalWarningWording(typed))));
   /* Names read from a position that says a person is being given on purpose. */
   const strong: string[] = [];
   /* Names read from the narrative: a capitalised pair, "with Jordan". */
