@@ -165,5 +165,5 @@ export function excludedRecordsNote(count: number): string {
     count === 1 ? "record is" : "records are"
   } filed against a location that is not on the roster, or named in this deployment's exclusion list, so ${
     count === 1 ? "it is" : "they are"
-  } not counted here. They are still in Form Monitoring, where they can be reviewed and archived.`;
+  } not counted here. They are still in the Forms Register, where they can be reviewed and archived.`;
 }

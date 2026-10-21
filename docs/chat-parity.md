@@ -149,10 +149,10 @@ The Status column describes Bubbles **after this change**.
 | `forms/exit-facts.ts` (`dateTokens`) | yesterday / last Friday | **Ported** as `forms/relative-date.ts` | adapt |
 | `forms/corrective-action-intake.ts` (`describesIncident`) | "Already said what happened?" | **Ported** as `forms/incident-reading.ts`, without trade words | adapt |
 | `forms/proposal.ts`, `proposal-continuation.ts`, `proposal-currency.ts`, `employee-match.ts`, `employee-roster.ts`, `bounded-context.ts`, `form-date-*.ts`, `inline-draft.ts`, the draft route | Who, where, when; directory check; stale cards; drafting | Present (an earlier port) | copy (done earlier) |
-| `forms/form-opportunity.ts` | Offering forms without being asked | Hook present, returns none | Bubbles-specific until Buff defines the rules |
+| `forms/form-opportunity.ts` | Offering forms without being asked | **Present and live**: a named person, something observed about them and a management frame offer forms through the existing picker (`suggestFormsForTurn` in `ai/form-proposal.ts`, called from `server-ask.ts`); prior coaching plus a recurrence makes the offer "formal" and adds the Corrective Action Form, never as the first card | done |
 | Corrective-action ladder, EPP family, exit / demotion / transfer readers, payroll deduct, coaching framing, prior actions, policy manual sections | The reference company's HR process | Present in code (corrective action, EPP, exit, employment change, payroll deduct); their Sun Tan City wording is tracked in `docs/sun-tan-city-residue-review.md` | see that review |
 | "CA" shorthand | "CA", "ca form", "corrective-action" open the Corrective Action Form | **Present**: `CA_SHORTHAND` in `forms/template-intent.ts` rewrites it to "corrective action" before any matcher runs | done |
-| `forms/salon-mention.ts` short-name and city aliases | Shortened location names | Bubbles has only number / full-name matching | adapt, once Buff's roster exists |
+| `forms/salon-mention.ts` short-name and city aliases | Shortened location names | **Present** in `stores/resolver.ts` on Buff's roster: state, city, street and initials readings, reviewed Woven names and numbers, `COMPANY_LOCATION_NICKNAMES`; a store set off by punctuation or brackets, or followed by what the form is about, is read (21 Oct). The reference platform's Google store codes and its own nicknames are its data and are not copied | adapt (nicknames are Buff data) |
 | `forms/editable-draft.ts`, `chat-reopen.ts`, `reopen-request.ts`, `reopen-cue.ts` (#116) | A finalized form is changed on a new draft of it: "Edit as new draft" on the card, a correction / policy change / redraft in chat, or "change exit for <name>" for a form on file. The original is marked revised only when the draft is finalized | **Ported**. Also wraps Bubbles' header corrections; the "which form?" question still comes first; the form on file is found under the current Forms visibility; a CA's built Action Plan is rebuilt when the revision moves to a newer template version | adapt |
 | `forms/team-subject.ts` | "Coaching for the whole team" | **Present**: coaching form only; the subject is the label "All team members" (`allowsTeamSubject` in `ai/form-proposal.ts`) | done |
 
@@ -269,9 +269,8 @@ Access restrictions are covered by the existing suites (`actor-authority`,
    documents, no employee directory and one example form. Until Buff supplies
    content, live answers will correctly say the knowledge base has nothing.
 5. **Not ported, pending Buff decisions:**
-   - proactive form offers;
-   - "whole team" forms;
-   - shortened location names (they need the roster);
+   - store nicknames (`COMPANY_LOCATION_NICKNAMES` is empty until Buff
+     confirms them; the reader is in place);
    - a handbook identity;
    - pinned rule documents;
    - per-form `clarifyOn` and `chatCorrectableFields` for real Buff forms.

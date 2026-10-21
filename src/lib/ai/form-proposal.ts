@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import {
   buildProposal,
   correctsTheEmployee,
+  displayPersonName,
   employeeState,
   extractEmployeeNames,
   managerContext,
@@ -1352,7 +1353,7 @@ async function checkTypedEmployee(
     const out = unverifiedWithoutRecord("not_found", typed.employeeName);
     return {
       verification: out.verification,
-      note: `I didn't find **${typed.employeeName}** in the employee list for your stores, so the form will use the name exactly as you typed it, with no job title from Woven. Check the spelling before you file it.`,
+      note: `I didn't find **${displayPersonName(typed.employeeName)}** in the employee list for your stores, so the form will use the name exactly as you typed it, with no job title from Woven. Check the spelling before you file it.`,
     };
   }
 

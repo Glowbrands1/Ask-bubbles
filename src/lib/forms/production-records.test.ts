@@ -135,7 +135,7 @@ describe("holding a record back is said out loud", () => {
   it("names the count and where the records still are", () => {
     expect(excludedRecordsNote(1)).toMatch(/1 record is/);
     expect(excludedRecordsNote(3)).toMatch(/3 records are/);
-    expect(excludedRecordsNote(3)).toMatch(/still in Form Monitoring/);
+    expect(excludedRecordsNote(3)).toMatch(/still in the Forms Register/);
     // Nothing is described as deleted, because nothing is.
     expect(excludedRecordsNote(3)).not.toMatch(/delet|remov/i);
   });

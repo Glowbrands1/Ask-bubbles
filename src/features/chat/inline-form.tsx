@@ -15,7 +15,7 @@ import {
   ResponsiveForm,
   type ResponsiveFormValues,
 } from "@/features/forms/document/responsive-form";
-import { ACTIVE_BRAND } from "@/lib/brand";
+import { ACTIVE_BRAND, LOCATION_LABEL } from "@/lib/brand";
 import { useSession } from "@/lib/session/session-context";
 import { checkboxGroupsForVariant, fieldsForVariant } from "@/lib/forms/document";
 import { planSummary } from "@/lib/forms/plan-summary";
@@ -30,6 +30,7 @@ import type {
 } from "@/lib/forms/document";
 import type { ChatFormInstanceRef } from "@/types";
 import { displayLocator } from "@/lib/knowledge/locator";
+import { NO_AUTOFILL } from "@/features/forms/document/autofill";
 
 /**
  * ============================================================================
@@ -259,6 +260,14 @@ export function InlineForm({
    * previous "Finalize anyway" cannot silently authorise a later one.
    */
   const [confirmingPolicy, setConfirmingPolicy] = React.useState(false);
+  /*
+   * FINALIZE IS ASKED ONCE, TOO. It freezes an HR record — afterwards the only
+   * way to change it is a new draft that replaces it — and in live QA on the
+   * reference platform a single click did that with no chance to stop. When
+   * the policy dialog above is going to open anyway it is the confirmation, so
+   * the manager is never asked twice.
+   */
+  const [confirmingFinalize, setConfirmingFinalize] = React.useState(false);
 
   const call = React.useCallback(
     <T,>(url: string, init: RequestInit = {}) => formsFetch<T>(url, role, user.name, init),
@@ -417,7 +426,20 @@ export function InlineForm({
    * Details and then finalized without saving would freeze the version without
    * their change and have no way to correct it but a revision. So the control
    * is disabled while the editor is dirty, and this is the second guard.
+   *
+   * The button calls `requestFinalize`, which asks first. Where `finalize`
+   * would stop anyway — unsaved changes, or the policy acknowledgement that is
+   * itself a confirmation — it goes straight there instead.
    */
+  function requestFinalize() {
+    if (action.kind === "busy") return;
+    if (save.kind === "dirty" || save.kind === "saving" || unresolvedPolicy.length > 0) {
+      void finalize();
+      return;
+    }
+    setConfirmingFinalize(true);
+  }
+
   async function finalize(acknowledgeUnverifiedPolicy = false) {
     if (action.kind === "busy") return;
     if (save.kind === "dirty" || save.kind === "saving") {
@@ -453,6 +475,7 @@ export function InlineForm({
     }
 
     setConfirmingPolicy(false);
+    setConfirmingFinalize(false);
     setAction({ kind: "busy", what: "finalize" });
     try {
       await call(`/api/forms/instances/${instanceId}`, {
@@ -591,7 +614,7 @@ export function InlineForm({
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
         <dt className="text-subtle-foreground">Employee</dt>
         <dd className="min-w-0 text-foreground">{loaded.instance.employeeName}</dd>
-        <dt className="text-subtle-foreground">Location</dt>
+        <dt className="text-subtle-foreground">{LOCATION_LABEL}</dt>
         <dd className="min-w-0 text-foreground">
           {/*
             THE ID, OR NOTHING. `location_name` is only set when a caller
@@ -713,6 +736,7 @@ export function InlineForm({
             <div className="min-w-0 space-y-1">
               <Label htmlFor={`follow-up-${instanceId}`}>Follow-up date</Label>
               <Input
+                {...NO_AUTOFILL}
                 id={`follow-up-${instanceId}`}
                 type="date"
                 className="min-w-0"
@@ -741,7 +765,7 @@ export function InlineForm({
           </div>
           {/*
             ONE THING PER CONTROL. The date here is the calendar day the
-            follow-up is scheduled, and drives Form Monitoring. Where the form
+            follow-up is scheduled, and drives the Forms Register. Where the form
             itself carries an agreed timeframe ("within 2 weeks" — the
             Follow-Up Coaching Form's Next Follow-Up), that is the expectation
             and this is the booking, and the hint says so instead of the two
@@ -841,7 +865,7 @@ export function InlineForm({
               <Button variant="secondary" size="sm" asChild>
                 <Link href="/forms/monitoring">
                   <ExternalLink />
-                  View in Form Monitoring
+                  View in Forms Register
                 </Link>
               </Button>
               {onStartAnother ? (
@@ -856,7 +880,7 @@ export function InlineForm({
               <Button
                 variant="accent"
                 size="sm"
-                onClick={() => void finalize()}
+                onClick={requestFinalize}
                 disabled={action.kind === "busy" || save.kind === "dirty" || save.kind === "saving"}
               >
                 {action.kind === "busy" && action.what === "finalize" ? (
@@ -886,7 +910,7 @@ export function InlineForm({
 
         It names the fields, because "are you sure?" on its own is a dialog
         people learn to dismiss without reading — the same reason the delete
-        confirmation in Form Monitoring states the employee, the form and the
+        confirmation in the Forms Register states the employee, the form and the
         status.
       */}
       <Dialog
@@ -930,6 +954,45 @@ export function InlineForm({
                   <Loader2 className="animate-spin" />
                 ) : null}
                 Finalize anyway
+              </Button>
+            </DialogActions>
+          </DialogContent>
+        ) : null}
+      </Dialog>
+
+      {/*
+        THE ORDINARY CONFIRMATION, worded the way the finalized card is: a
+        finalized form is changed by editing it as a new draft, never reopened.
+      */}
+      <Dialog
+        open={confirmingFinalize}
+        onOpenChange={(open) => {
+          if (!open) setConfirmingFinalize(false);
+        }}
+      >
+        {confirmingFinalize ? (
+          <DialogContent
+            title="Finalize this form?"
+            description={`${loaded.instance.templateName} · ${loaded.instance.employeeName}`}
+          >
+            <p className="text-[13px] leading-relaxed text-muted-foreground">
+              {loaded.instance.revisesInstanceId
+                ? "Its values are frozen and it replaces the finalized original. To change it afterwards, edit it as a new draft. Signatures are signed on paper."
+                : "Its values are frozen. To change it afterwards, edit it as a new draft. Signatures are signed on paper."}
+            </p>
+            <DialogActions>
+              <Button variant="ghost" onClick={() => setConfirmingFinalize(false)}>
+                Keep editing
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => void finalize()}
+                disabled={action.kind === "busy"}
+              >
+                {action.kind === "busy" && action.what === "finalize" ? (
+                  <Loader2 className="animate-spin" />
+                ) : null}
+                Yes, finalize
               </Button>
             </DialogActions>
           </DialogContent>
