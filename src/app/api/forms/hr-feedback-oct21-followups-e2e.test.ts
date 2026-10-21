@@ -434,3 +434,34 @@ describe("what happened is read from this form's turns", () => {
     expect(last.content).toMatch(/haven't told me what happened yet/);
   });
 });
+
+describe("a change of warning level, whenever the manager makes it", () => {
+  it("takes \"make it a written warning\" after the intake has moved on", async () => {
+    const { responses, proposal } = await conversation([
+      "create verbal ca for pat rivera for violating the cell phone policy on 10-20-26. she was texting at the register",
+      "no payroll deduct",
+      "make it a written warning",
+    ]);
+    expect(responses[0]!.formProposal!.warningLevel).toBe("verbal");
+    expect(proposal).toMatchObject({ templateKey: "dpoa", employeeName: "Pat Rivera", warningLevel: "written", payrollDeduct: "no" });
+  });
+
+  it("does not read a past warning as a change", async () => {
+    const { proposal } = await conversation([
+      "create verbal ca for pat rivera for violating the cell phone policy on 10-20-26. she was texting at the register",
+      "no payroll deduct",
+      "she had a written warning on 9/1",
+    ]);
+    expect(proposal.warningLevel).toBe("verbal");
+  });
+});
+
+describe("what an earlier coaching was for stays on the history line", () => {
+  it("previous coaching was 9/15 for cell phone use", async () => {
+    const { form } = await filed(
+      ["create verbal ca for pat rivera for violating the cell phone policy on 10-20-26. previous coaching was 9/15 for cell phone use and she was on her phone again. no payroll deduct"],
+      "Pat Rivera was on her cell phone on 10/20/2026.",
+    );
+    expect(field(form, "prior_actions")!.value).toBe("Coaching for cell phone use — signed 09/15/2026");
+  });
+});
