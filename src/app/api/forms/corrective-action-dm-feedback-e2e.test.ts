@@ -9,7 +9,7 @@ import type { AccessScope, ChatMessage } from "@/types";
  * CORRECTIVE ACTION FEEDBACK FROM A DISTRICT MANAGER, 21 OCT 2026 — END TO END
  * ============================================================================
  *
- * Four production conversations, each rated low, replayed through the real
+ * Production conversations, each rated low, replayed through the real
  * proposal flow, `createInlineForm`, and the real create / draft / review
  * routes, with the shipped Buff City Soap store roster:
  *
@@ -23,6 +23,9 @@ import type { AccessScope, ChatMessage } from "@/types";
  *   C  "payroll deduct of $3.25 is applicable" was not read, and the Action
  *      Plan did not say what would be deducted.
  *   D  "by the 10-15-26 deadline" was drafted as the form's date.
+ *   E  "… on 10-20-26 … was talking on her cell phone for over 30 minutes"
+ *      named no policy and was cited under the Standards of Conduct, not the
+ *      manual's Cell Phone/Smart Watch Policy.
  *
  * Only identity, the model, the knowledge provider, the employee directory
  * read and the database are stand-ins. Every person is synthetic: the
@@ -319,7 +322,33 @@ const VISITORS_CHUNK = {
     "30 | P a g e\nVisitors in the Workplace\nTo provide for the safety and security of Employees and the facilities, only authorized visitors are\nallowed in the workplace. If the Employee is uncomfortable with allowing the visitor into the\nworkplace, the Supervisor or manager on duty must refuse to allow the visitor into the\nworkplace.",
 };
 
-const MANUAL = { chunks: [STANDARDS_OF_CONDUCT_CHUNK, ATTENDANCE_CHUNK, VISITORS_CHUNK] };
+const LATE_OPENING_CHUNK = {
+  chunkIndex: 34,
+  chunkId: "c-34",
+  locator: "Page 15",
+  page: 16,
+  printedPage: 15,
+  sections: [{ heading: "Late Opening", page: 15 }],
+  section: "Late Opening",
+  content:
+    "15 | P a g e\nLate Opening\nWhen an employee assigned to open a location is unable to open the location at the proper\ntime, the employee must notify the manager as soon as possible.",
+};
+
+const CELL_PHONE_CHUNK = {
+  chunkIndex: 41,
+  chunkId: "c-41",
+  locator: "Page 19",
+  page: 20,
+  printedPage: 19,
+  sections: [{ heading: "Cell Phone/Smart Watch Policy", page: 19 }],
+  section: "Cell Phone/Smart Watch Policy",
+  content:
+    "19 | P a g e\nCell Phone/Smart Watch Policy\nPersonal Employee cell phones are permitted in the workplace but must be kept out of sight. It\nis the Employee\u2019s personal responsibility to protect the customer\u2019s experience and doing things\nsuch as texting, making phone calls or using social media jeopardizes the customer\u2019s experience.",
+};
+
+const MANUAL = {
+  chunks: [STANDARDS_OF_CONDUCT_CHUNK, ATTENDANCE_CHUNK, LATE_OPENING_CHUNK, CELL_PHONE_CHUNK, VISITORS_CHUNK],
+};
 
 /* The production turns, names replaced. */
 const A1 =
@@ -714,5 +743,91 @@ describe("the draft never writes Other beside a stated Standards of Conduct", ()
     expect(field(form, "offense_type")!.checked).toEqual(["standards_of_conduct"]);
     expect(field(form, "other_offense")).toBeUndefined();
     expect(JSON.stringify(form.values)).not.toMatch(/September 30/);
+  });
+});
+
+/* ========================================================================= */
+/* E — A CELL PHONE ACCOUNT, WITH NO POLICY NAMED                             */
+/* ========================================================================= */
+
+const E_PHONE =
+  "create a verbal corrective action form for remy calder. on 10-20-26 remy was talking on her cell phone for over 30 minutes";
+
+describe("E: an account of the conduct cites the manual section it describes", () => {
+  it("reads Verbal, and the draft cites the Cell Phone/Smart Watch Policy under Violation of Company Policies", async () => {
+    const { last, proposal, create } = await conversation([E_PHONE]);
+
+    expect(proposal.warningLevel).toBe("verbal");
+    expect(last.content).toMatch(/\*\*Type of warning:\*\* Verbal Warning, as you said/);
+    expect(last.content).not.toMatch(WARNING_QUESTION);
+    expect(last.content).toMatch(
+      /\*\*Policy:\*\* "cell phone" reads as the policy manual's \*\*Cell Phone\/Smart Watch Policy\*\* \(page 19\)\. I'll quote it on the draft under \*\*Violation of Company Policies\*\*/,
+    );
+
+    state.draft = {
+      values: { observation: "Observed:\nOn October 20, 2026, Remy Calder was talking on her cell phone for over 30 minutes." },
+      checked: { offense_type: ["standards_of_conduct"] },
+    };
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    const policy = field(form, "policy_language")!.value!;
+
+    expect(field(form, "warning_type")!.checked).toEqual(["verbal"]);
+    expect(field(form, "offense_type")!.checked).toEqual(["company_policies"]);
+    expect(field(form, "policy_violated")!.value).toBe("Violation of Company Policies — Cell Phone/Smart Watch Policy");
+    expect(policy).toContain("Personal Employee cell phones are permitted in the workplace");
+    expect(policy).toContain("Source: JBA Policy Manual — Cell Phone/Smart Watch Policy, p. 19");
+    expect(policy).not.toMatch(/Standards of Conduct/);
+    expect(field(form, "action_plan")!.value).toBe(
+      `Management will review the Cell Phone/Smart Watch policy with Remy. ${CLOSING}`,
+    );
+  });
+
+  it("a phone in an account a box with its own section governs leaves that box: a late arrival is Attendance", async () => {
+    const { last, create } = await conversation([
+      "create a verbal corrective action form for remy calder. on 10-20-26 remy was 40 minutes late because she was on her phone in the parking lot",
+    ]);
+    expect(last.content).not.toMatch(/Cell Phone/);
+
+    state.draft = {
+      values: { observation: "Observed:\nOn October 20, 2026, Remy Calder arrived 40 minutes late." },
+      checked: { offense_type: ["tardiness"] },
+    };
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    expect(field(form, "offense_type")!.checked).toEqual(["tardiness"]);
+    expect(field(form, "policy_violated")!.value).toBe("Tardiness/Leaving Early");
+    expect(field(form, "policy_language")!.value).toContain("Source: JBA Policy Manual — Attendance, p. 14");
+    expect(field(form, "policy_language")!.value).not.toMatch(/Cell Phone/);
+  });
+
+  it("never replaces a box the draft ticked with its own specific section", async () => {
+    const { create } = await conversation([
+      "create a verbal corrective action form for remy calder. on 10-20-26 remy stayed on her cell phone in the back room after her shift began",
+    ]);
+    state.draft = {
+      values: { observation: "Observed:\nOn October 20, 2026, Remy Calder did not start her shift on time." },
+      checked: { offense_type: ["tardiness"] },
+    };
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    expect(field(form, "offense_type")!.checked).toEqual(["tardiness"]);
+    expect(field(form, "policy_language")!.value).not.toMatch(/Cell Phone/);
+  });
+
+  it("an incidental mention describes nothing: the draft's own box stands", async () => {
+    const { last, create } = await conversation([
+      "create a verbal corrective action form for remy calder. on 10-20-26 remy was rude to a guest. she left her phone number on the schedule",
+    ]);
+    expect(last.content).not.toMatch(/Cell Phone/);
+
+    state.draft = {
+      values: { observation: "Observed:\nOn October 20, 2026, Remy Calder was rude to a guest." },
+      checked: { offense_type: ["standards_of_conduct"] },
+    };
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    expect(field(form, "offense_type")!.checked).toEqual(["standards_of_conduct"]);
+    expect(field(form, "policy_language")!.value).toContain("Source: JBA Policy Manual — Standards of Conduct, p. 12");
   });
 });

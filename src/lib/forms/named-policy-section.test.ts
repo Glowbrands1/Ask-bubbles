@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { ManualChunk } from "./official-policy-manual";
-import { manualSectionNamedBy, namedManualSection, namedPolicies, namesHeading } from "./named-policy-section";
+import {
+  describedManualSection,
+  manualSectionNamedBy,
+  namedManualSection,
+  namedPolicies,
+  namesHeading,
+} from "./named-policy-section";
 
 /**
  * A policy the manager names, matched against the pinned manual's own sheet
@@ -42,6 +48,16 @@ describe("namesHeading", () => {
   });
 
   it.each([
+    ["cell phone", "Cell Phone/Smart Watch Policy"],
+    ["smart watch", "Cell Phone/Smart Watch Policy"],
+    ["cell phone/smart watch", "Cell Phone/Smart Watch Policy"],
+  ])("%s → %s: either side of a heading's slash names it", (phrase, heading) => {
+    expect(namesHeading(phrase, heading)).toBe(true);
+  });
+
+  it.each([
+    ["phone", "Cell Phone/Smart Watch Policy"],
+    ["unicorn phone", "Cell Phone/Smart Watch Policy"],
     ["workplace", "Visitors in the Workplace"],
     ["visitors at work", "Animals in the Workplace"],
     ["phone", "Cell Phone Usage"],
@@ -101,5 +117,100 @@ describe("manualSectionNamedBy — the same reading, for a policy named for an o
     expect(manualSectionNamedBy("workplace", CHUNKS)).toBeNull();
     expect(manualSectionNamedBy("the", CHUNKS)).toBeNull();
     expect(manualSectionNamedBy("visitors at work", null)).toBeNull();
+  });
+});
+
+/*
+ * District Manager feedback, 21 Oct 2026: "on 10-20-26 <employee> was talking
+ * on her cell phone for over 30 minutes" named no policy and was cited under
+ * the Standards of Conduct. Headings below are the 2025 JBA Policy Manual's
+ * own, including the ones that would collide with a looser reading.
+ */
+describe("describedManualSection — a policy the account describes", () => {
+  const MANUAL: ManualChunk[] = [
+    sheet(30, "Standards of Conduct", 12),
+    sheet(32, "Disciplinary Action", 14),
+    sheet(33, "Attendance", 14),
+    sheet(34, "Late Opening", 15),
+    sheet(35, "Dress Code for The Company", 15),
+    sheet(36, "Belts", 15),
+    sheet(37, "Texting as General Work communications", 15),
+    sheet(40, "Open Door Policy", 8),
+    sheet(42, "Coupon Collection", 19),
+    sheet(43, "Cell Phone/Smart Watch Policy", 19),
+    sheet(44, "Background Checks", 21),
+    sheet(45, "Talking to the Media/Press", 22),
+    sheet(46, "Social Media Policy", 22),
+    sheet(47, "Using Social Media at Work", 23),
+    sheet(64, "Visitors in the Workplace", 29),
+    sheet(81, "Schedule Requests/General availability Changes", 37),
+    sheet(82, "Leave Requests", 46),
+  ];
+  const described = (text: string) => describedManualSection({ text, chunks: MANUAL });
+
+  it.each([
+    [
+      "create a verbal corrective action form for remy calder. on 10-20-26 remy was talking on her cell phone for over 30 minutes",
+      "cell phone",
+      "Cell Phone/Smart Watch Policy",
+    ],
+    ["she was on her phone for 20 minutes while guests waited", "phone", "Cell Phone/Smart Watch Policy"],
+    ["tess was on her cell for an hour", "cell", "Cell Phone/Smart Watch Policy"],
+    ["she was looking at her smart watch all afternoon", "smart watch", "Cell Phone/Smart Watch Policy"],
+    ["her friend was visiting for an hour behind the counter", "visiting", "Visitors in the Workplace"],
+    ["she let two visitors into the back room", "visitors", "Visitors in the Workplace"],
+    ["she did not follow the coupon collection process", "coupon collection", "Coupon Collection"],
+  ])("%s → %s → %s", (text, phrase, heading) => {
+    const found = described(text);
+    expect(found).toMatchObject({ phrase, section: { heading }, offenseKey: "company_policies" });
+  });
+
+  it("cites the page the manual prints", () => {
+    expect(described("remy was talking on her cell phone")!.section.page).toBe(19);
+  });
+
+  it.each([
+    /* Incidental mentions. */
+    "she left her phone number on the schedule",
+    "she called in by phone to say she would be out sick",
+    "her friend came to visit",
+    /* A rule, not an account. */
+    "belts must not hold cell phones",
+    /* Two headings answer: nothing. */
+    "she wore a belt that holds her cell phone",
+    "she was posting on social media",
+    /* Words a heading shares with every account. */
+    "create a disciplinary action form for tess. she was rude to a guest",
+    "she did not check the schedule",
+    "tess left the back door open all night",
+    "she was talking to a guest about her weekend",
+    "she gave a guest a coupon",
+  ])("%s → nothing", (text) => {
+    expect(described(text)).toBeNull();
+  });
+
+  it("never over what already decides the policy", () => {
+    /* A policy named — found, or not — is the manager's. */
+    expect(described("violating the unicorn parking policy. she was on her cell phone")).toBeNull();
+    expect(described("for violating the dress code. she was on her cell phone")).toBeNull();
+    /* Attendance, a late opening, dress code: their own boxes. */
+    expect(described("she was 20 minutes late because she was on her cell phone")).toBeNull();
+    expect(described("she opened the store late and was on her cell phone")).toBeNull();
+    expect(described("her uniform was dirty and she was on her cell phone")).toBeNull();
+    /* A conduct incident the Standards of Conduct lists. */
+    expect(described("she refused to follow my direction to put her cell phone away")).toBeNull();
+    /* A question describes nothing. */
+    expect(described("was she on her cell phone?")).toBeNull();
+    /* No manual. */
+    expect(describedManualSection({ text: "on her cell phone", chunks: null })).toBeNull();
+  });
+
+  it("is read from the manual's headings, not a list: a manual without the section cites nothing", () => {
+    expect(
+      describedManualSection({
+        text: "remy was talking on her cell phone",
+        chunks: MANUAL.filter((chunk) => chunk.section !== "Cell Phone/Smart Watch Policy"),
+      }),
+    ).toBeNull();
   });
 });

@@ -106,7 +106,7 @@ import {
   withoutDerivedKeys,
 } from "@/lib/forms/exit-draft";
 import { EXIT_DERIVED_KEYS } from "@/lib/forms/exit-facts";
-import { namedManualSection } from "@/lib/forms/named-policy-section";
+import { SPECIFIC_SECTION_BOXES, describedManualSection, namedManualSection } from "@/lib/forms/named-policy-section";
 import {
   PAYROLL_DEDUCT_KEY,
   isPayrollDeductAnswer,
@@ -560,6 +560,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const namedSection =
       caPolicy && caPolicy.stated === null && manual.ok
         ? namedManualSection({ text: notes, chunks: manual.chunks })
+        : null;
+    /*
+     * NO POLICY NAMED, BUT ONE DESCRIBED — "talking on her cell phone" is the
+     * manual's Cell Phone/Smart Watch Policy (District Manager feedback, 21
+     * Oct 2026). Matched against the same headings, by their distinctive
+     * words; silent wherever a policy was named or the account reads as
+     * attendance, dress code or a conduct incident. Applied below only where
+     * the draft ticked no box with its own specific section.
+     */
+    const describedSection =
+      caPolicy && caPolicy.stated === null && !namedSection && manual.ok
+        ? describedManualSection({ text: notes, chunks: manual.chunks })
         : null;
 
     /*
@@ -1314,8 +1326,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * Otherwise a conduct incident ticks Standards of Conduct where the manual
      * supports it.
      */
+    /*
+     * THE SECTION THE MANAGER NAMED, or the one their account describes —
+     * which leads the model's catch-all Standards of Conduct, as Late Opening
+     * leads Attendance, but never a box whose own section is specific.
+     */
+    const policySection =
+      namedSection ??
+      (describedSection && !(enforced.checked.offense_type ?? []).some((key) => SPECIFIC_SECTION_BOXES.has(key))
+        ? describedSection
+        : null);
     const statedKeys = caPolicy
-      ? (statedOffenseKeys(caPolicy, notes) ?? (namedSection ? [namedSection.offenseKey] : null))
+      ? (statedOffenseKeys(caPolicy, notes) ?? (policySection ? [policySection.offenseKey] : null))
       : null;
     const statedOffense = statedKeys
       ? withStatedOffense({
@@ -1443,8 +1465,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      */
     /* The section the manager named, first, while the box it is cited under is still ticked. */
     const namedManual =
-      namedSection && (validated.checked.offense_type ?? []).includes(namedSection.offenseKey)
-        ? namedSection.section
+      policySection && (validated.checked.offense_type ?? []).includes(policySection.offenseKey)
+        ? policySection.section
         : null;
     const tickedSections = manual.ok
       ? manualSectionsFor({
@@ -1801,10 +1823,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
             caPolicy: statedOffense
               ? {
                   applied: true,
-                  source: "stated",
+                  source: !caPolicy.stated && !namedSection && policySection ? "described" : "stated",
                   stated: caPolicy.stated,
-                  ...(namedSection && !caPolicy.stated
-                    ? { named: namedSection.phrase, section: namedSection.section.heading, page: namedSection.section.page }
+                  ...(policySection && !caPolicy.stated
+                    ? {
+                        [namedSection ? "named" : "described"]: policySection.phrase,
+                        section: policySection.section.heading,
+                        page: policySection.section.page,
+                      }
                     : {}),
                   ticked: statedOffense.ticked,
                   replaced: statedOffense.replaced,
