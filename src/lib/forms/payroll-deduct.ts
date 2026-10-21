@@ -320,9 +320,15 @@ export function payrollDeductCorrection(text: string): PayrollDeductAnswer | nul
 const MONEY = String.raw`\$\s?\d[\d,]*(?:\.\d{1,2})?`;
 const AMOUNT_PATTERNS: readonly RegExp[] = [
   new RegExp(String.raw`\b(?:payroll\s+)?deduct(?:ion|ions|ed|ing)?\s+(?:of\s+|for\s+|is\s+|will\s+be\s+|amount\s+(?:of\s+|is\s+)?)?(${MONEY})`, "gi"),
-  new RegExp(String.raw`(${MONEY})\s+(?:will\s+be\s+|is\s+(?:being\s+)?|to\s+be\s+|should\s+be\s+|gets?\s+|being\s+)?(?:payroll\s+)?deducted\b`, "gi"),
-  // "$25 payroll deduction applies". HR, 21 Oct 2026: "$25 will be payroll deducted" named no amount.
-  new RegExp(String.raw`(${MONEY})\s+payroll\s+deduct(?:ion|ions)?\b`, "gi"),
+  /*
+   * "$25 will be payroll deducted", "$25 payroll-deducted", "$25 payroll
+   * deduction applies", "$25 payroll deduct" (District Manager / HR feedback,
+   * 21 Oct 2026: "state $25 will be payroll deducted" went unread).
+   */
+  new RegExp(
+    String.raw`(${MONEY})\s+(?:will\s+be\s+|is\s+(?:being\s+)?|to\s+be\s+|should\s+be\s+|gets?\s+|being\s+)?(?:payroll[- ]?\s*)?deduct(?:ed|ions?)?\b`,
+    "gi",
+  ),
 ];
 
 /** The amount the manager said would be deducted — "$3.25" — or null. The latest one stated wins. */
@@ -335,6 +341,35 @@ export function payrollDeductAmount(text: string): string | null {
     }
   }
   return found?.amount ?? null;
+}
+
+/**
+ * ============================================================================
+ * THE AMOUNT THE CITED SECTION ITSELF STATES
+ * ============================================================================
+ *
+ * The manual's Late Opening section states what a late opener reimburses —
+ * "$25.00 via payroll deduction". Where the manager answered Yes and gave no
+ * amount, and the section Direct policy QUOTES on this form states one, the
+ * plan may state it, in the manual's own figure. Read only from that quoted
+ * wording (never a section that was not quoted, never the manager's words),
+ * only from a sentence about a payroll deduction, and only where exactly one
+ * amount is stated: two different amounts, or none, and the plan says "A
+ * payroll deduction applies." as before.
+ */
+export function quotedDeductionAmount(policyText: string | null | undefined): string | null {
+  const text = (policyText ?? "").replace(/\s+/g, " ");
+  const amounts = new Map<number, string>();
+  for (const sentence of text.split(/(?<=[.!?])\s+(?=[A-Z])/)) {
+    if (/^Source:/i.test(sentence.trim())) continue;
+    if (!/\bpayroll\s+deduct|\bdeduct\w*\s+from\s+(?:the\s+|their\s+|his\s+|her\s+)?(?:employee'?s?\s+)?(?:pay|paycheck|check|wages)\b/i.test(sentence)) continue;
+    for (const match of sentence.matchAll(new RegExp(MONEY, "g"))) {
+      const written = match[0].replace(/\s+/g, "");
+      const value = Number(written.replace(/[$,]/g, ""));
+      if (Number.isFinite(value) && !amounts.has(value)) amounts.set(value, written);
+    }
+  }
+  return amounts.size === 1 ? [...amounts.values()][0]! : null;
 }
 
 /**

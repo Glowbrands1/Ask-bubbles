@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { findManualSection, manualSectionHeadings, type ManualChunk } from "./official-policy-manual";
 import {
-  citedCompanyPolicy,
+  citedBoxSections,
   headingsNamedIn,
   nextPolicySections,
   policyPhrasesIn,
@@ -145,17 +145,21 @@ describe("what the line cites after the change", () => {
   });
 });
 
-describe("the section Policy Violated names beside Violation of Company Policies", () => {
-  it("is the cited section no other box covers, from verified manual provenance only", () => {
+describe("the section Policy Violated names beside a box", () => {
+  it("is a cited section that is not the box's own, from verified manual provenance only", () => {
     const provenance = {
       verified: true,
       source: "official_policy_manual",
       sections: [{ locator: "Attendance" }, { locator: "Visitors in the Workplace" }],
     };
-    expect(citedCompanyPolicy(provenance)).toBe("Visitors in the Workplace");
-    expect(citedCompanyPolicy({ ...provenance, sections: [{ locator: "Attendance" }] })).toBeNull();
-    expect(citedCompanyPolicy({ ...provenance, verified: false })).toBeNull();
-    expect(citedCompanyPolicy(undefined)).toBeNull();
+    expect(citedBoxSections(provenance)).toEqual({ company_policies: "Visitors in the Workplace" });
+    expect(citedBoxSections({ ...provenance, sections: [{ locator: "Attendance" }] })).toEqual({});
+    /* A late opening is named beside Tardiness; Attendance, its own section, is not. */
+    expect(citedBoxSections({ ...provenance, sections: [{ locator: "Late Opening" }, { locator: "Attendance" }] })).toEqual({
+      tardiness: "Late Opening",
+    });
+    expect(citedBoxSections({ ...provenance, verified: false })).toEqual({});
+    expect(citedBoxSections(undefined)).toEqual({});
   });
 });
 

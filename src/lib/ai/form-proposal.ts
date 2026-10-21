@@ -145,7 +145,7 @@ import type {
 
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
 import { statedPriorActions } from "@/lib/forms/prior-actions";
-import { namedManualSection, namedPolicies } from "@/lib/forms/named-policy-section";
+import { describedManualSection, namedManualSection, namedPolicies } from "@/lib/forms/named-policy-section";
 import type { ManualChunk } from "@/lib/forms/official-policy-manual";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
@@ -2232,27 +2232,38 @@ function choice(summary: TemplateSummary): ChatFormChoice {
 async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedPolicyReading | null> {
   if (readCaPolicy(text).stated !== null) return null;
   const named = namedPolicies(text);
-  const phrase = named[named.length - 1]?.phrase ?? null;
-  let chunks: readonly ManualChunk[] | null = null;
-  try {
-    chunks = (await input.policyManual?.()) ?? null;
-  } catch {
-    chunks = null;
+  const chunksOf = async (): Promise<readonly ManualChunk[] | null> => {
+    try {
+      return (await input.policyManual?.()) ?? null;
+    } catch {
+      return null;
+    }
+  };
+  /*
+   * NO POLICY NAMED: the section the account describes, if exactly one
+   * heading of the manual answers it — "talking on her cell phone" is the
+   * Cell Phone/Smart Watch Policy (District Manager feedback, 21 Oct 2026).
+   * Said only where found; otherwise nothing, as before.
+   */
+  if (named.length === 0) {
+    const described = describedManualSection({ text, chunks: await chunksOf() });
+    return described
+      ? {
+          phrase: described.phrase,
+          lookup: "described",
+          heading: described.section.heading,
+          page: described.section.page,
+          offenseKey: described.offenseKey,
+        }
+      : null;
   }
-  if (!chunks || chunks.length === 0) return phrase ? { phrase, lookup: "unknown" } : null;
-  // With no policy named, the section the account itself names ("on her cell phone") — see `mentionedManualSection`.
+  const phrase = named[named.length - 1]!.phrase;
+  const chunks = await chunksOf();
+  if (!chunks || chunks.length === 0) return { phrase, lookup: "unknown" };
   const found = namedManualSection({ text, chunks });
-  if (found) {
-    return {
-      phrase: found.phrase,
-      lookup: "found",
-      heading: found.section.heading,
-      page: found.section.page,
-      offenseKey: found.offenseKey,
-      ...(found.mentioned ? { mentioned: true } : {}),
-    };
-  }
-  return phrase ? { phrase, lookup: "missing" } : null;
+  return found
+    ? { phrase: found.phrase, lookup: "found", heading: found.section.heading, page: found.section.page, offenseKey: found.offenseKey }
+    : { phrase, lookup: "missing" };
 }
 
 function proposalContent(
