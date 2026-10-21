@@ -853,18 +853,6 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
    * The same holds for the date: "effective october 5" is when the change
    * takes effect, not the date the form is written.
    */
-  /*
-   * THE PAYROLL-DEDUCT ANSWER, FROM THE WHOLE CONVERSATION. Read over both
-   * sides because a bare "no" answers only the question Ask Bubbles asked just
-   * before it — the assistant turns say WHICH question, never the answer.
-   */
-  if (isCorrectiveActionForm(match) && asksPayrollDeduct(match)) {
-    proposal.payrollDeduct = payrollDeductFromConversation([
-      ...input.history,
-      { role: "user", content: input.question },
-    ]);
-  }
-
   const changeKind = employmentChangeKind(match.key);
   /*
    * ONLY THE TURNS ABOUT THIS FORM AND THIS PERSON. Found in hands-on QA: a
@@ -881,8 +869,35 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
    * written from `sourceMessageIds`, so that list is now the turns about this
    * form and this person, and nothing else.
    */
-  const scoped = turnsAboutThisForm(context, match.key, proposal.employeeName);
+  const scoped = turnsAboutThisForm(context, match.key, proposal.employeeName, {
+    correctiveActionForm: isCorrectiveActionForm(match),
+  });
   proposal.sourceMessageIds = scoped.ids;
+  /*
+   * THE PAYROLL-DEDUCT ANSWER, FROM THIS FORM'S CONVERSATION. Read over both
+   * sides because a bare "no" answers only the question Ask Bubbles asked just
+   * before it — the assistant turns say WHICH question, never the answer. It
+   * starts at this form's first turn, so an answer given for an earlier
+   * request in the same chat does not carry onto a new one.
+   */
+  const firstScoped = scoped.messages[0]?.id;
+  const firstAt = firstScoped ? input.history.findIndex((message) => message.id === firstScoped) : -1;
+  const formHistory =
+    firstAt >= 0
+      ? input.history.slice(firstAt)
+      : scoped.messages.length === 1
+        ? input.history.slice(-1).filter((message) => message.role === "assistant")
+        : input.history;
+  if (isCorrectiveActionForm(match) && asksPayrollDeduct(match)) {
+    proposal.payrollDeduct = payrollDeductFromConversation([
+      ...formHistory,
+      { role: "user", content: input.question },
+    ]);
+  }
+  /* The form's date from this form's turns, too. */
+  if (!changeKind && !isExitForm(match)) {
+    proposal.formDate = extractFormDate(scoped.text, input.today ?? businessToday());
+  }
   const excerpts = {
     ...scoped.excerpts,
     ...(input.oneOfSeveral && input.questionMessageId ? { [input.questionMessageId]: input.oneOfSeveral.clause } : {}),
@@ -982,7 +997,7 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   }
 
   const notes: string[] = directory.note ? [directory.note] : [];
-  notes.push(...directoryNotes(proposal, directory, match, input, context));
+  notes.push(...directoryNotes(proposal, directory, match, input, scoped));
 
   const content =
     changeKind && facts
@@ -1756,6 +1771,7 @@ function turnsAboutThisForm(
   context: ManagerContext,
   templateKey: string,
   employeeName: string | null,
+  options: { readonly correctiveActionForm?: boolean } = {},
 ): ManagerContext & { excerpts: Record<string, string> } {
   const same = (name: string) => {
     if (!employeeName) return true;
@@ -1786,16 +1802,51 @@ function turnsAboutThisForm(
    * (`excerpts`), so the draft never puts the wrong name on the record.
    */
   let formStart = 0;
+  /* The latest request for this form, for this employee, inside the turns kept so far. */
+  let requestAt = -1;
   const readings = context.messages.map((message, index) => {
     const intent = detectTemplateIntent(message.content);
+    /*
+     * "CREATE VERBAL CA FOR …" IS A REQUEST FOR THIS FORM. Production, 21 Oct
+     * 2026: a request in the progression's shorthand reads as a corrective
+     * action to be started, which the proposal answers with the Corrective
+     * Action Form — and this test counted it as ANOTHER form, so the next turn
+     * ("no payroll deduct") dropped it. The Issue line went, and the form was
+     * drafted from "no payroll deduct" alone.
+     */
+    const thisForm =
+      (intent.kind === "explicit" && intent.templateKey === templateKey) ||
+      (options.correctiveActionForm === true && intent.kind === "corrective_action" && intent.requestedCreation);
     const otherForm =
       (intent.kind === "explicit" && intent.templateKey !== templateKey) ||
-      intent.kind === "corrective_action";
+      (intent.kind === "corrective_action" && !thisForm);
     const names = extractEmployeeNames(message.content);
     // A turn that also names somebody else is about them too, and stays off this form.
     const otherPerson = names.length > 0 && !names.every(same);
+    const forThisEmployee = thisForm && employeeName !== null && names.length > 0 && !otherPerson;
     if (index < last && (otherForm || otherPerson)) start = index + 1;
     if (index < last && otherForm) formStart = index + 1;
+    if (requestAt < start) requestAt = -1;
+    /*
+     * A NEW REQUEST IS A NEW FORM. Production, 21 Oct 2026: "create ca form for
+     * <employee> for a register shortage …", asked in the chat that had just
+     * proposed one for her attendance, was read back with "Policy: Attendance,
+     * as you said" and "Verbal Warning, as you said" — the earlier request's
+     * answers. A second Corrective Action request for the same employee that
+     * says what happened starts over from itself; one that only repeats the
+     * request ("create ca for <employee>") keeps the account already given.
+     */
+    if (
+      options.correctiveActionForm === true &&
+      forThisEmployee &&
+      requestAt >= 0 &&
+      (describesIncident(message.content) ||
+        describesMoreThanTheRequest(message.content, { ignore: [employeeName ?? ""] }))
+    ) {
+      start = index;
+      formStart = index;
+    }
+    if (forThisEmployee) requestAt = index;
     return { names, otherForm, otherPerson };
   });
   /* The latest turn of this form that corrected the person TO this employee. */
