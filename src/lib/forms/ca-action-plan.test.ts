@@ -193,6 +193,34 @@ describe("rebuilding the plan after a change in chat", () => {
     );
   });
 
+  it("on a Yes with no amount stated, states the one amount the quoted section gives, and follows the section", () => {
+    const yes = { fieldKey: "payroll_deduct", value: null, checked: ["yes"], filledBy: "manager" };
+    const lateOpening = {
+      ...cited("Late Opening", "Attendance"),
+      value: "The employee will reimburse The Company $25.00 via payroll deduction.\n\nSource: JBA Policy Manual — Late Opening, p. 15",
+    };
+    const next = refresh([planRow(built), lateOpening, yes]);
+    expect(next?.value).toBe(
+      `Management will review the Late Opening and Attendance policies with Pat. $25.00 will be deducted from Pat's pay. ${CLOSING}`,
+    );
+    expect(next?.provenance).toMatchObject({ payroll: "$25.00", payrollAmountFrom: "manual" });
+
+    /* Late Opening no longer quoted: the manual's figure goes with it. */
+    const fromManual = planRow(next!.value, "ai", next!.provenance);
+    expect(refresh([fromManual, cited("Attendance"), yes])?.value).toBe(
+      `Management will review the Attendance policy with Pat. A payroll deduction applies. ${CLOSING}`,
+    );
+    /* A Direct policy line not quoted from the manual gives no amount. */
+    expect(
+      refresh([planRow(built), { ...lateOpening, provenance: { verified: false } }, yes])?.value,
+    ).toBe(`Management will review the applicable company policy with Pat. A payroll deduction applies. ${CLOSING}`);
+    /* On No, nothing about pay. */
+    const no = { ...yes, checked: ["no"] };
+    expect(refresh([planRow(built), lateOpening, no])?.value).toBe(
+      `Management will review the Late Opening and Attendance policies with Pat. ${CLOSING}`,
+    );
+  });
+
   it("leaves a plan a person wrote, or one it did not build, alone", () => {
     expect(refresh([planRow("Pat will set two alarms.", "manager"), cited("Late Opening")])).toBeNull();
     expect(refresh([planRow("Pat will set two alarms.", "ai", {}), cited("Late Opening")])).toBeNull();
