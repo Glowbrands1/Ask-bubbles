@@ -864,9 +864,11 @@ export function ChatScreen() {
             rail and does not see this.
 
             Offered once there is a conversation, because that is what it
-            acts on.
+            acts on — and only to an account that may create forms, the same
+            permission the rail's button is wired by. A control the server
+            would refuse is not offered.
           */}
-          {!isEmpty ? (
+          {!isEmpty && can("create_forms") ? (
             <Button
               variant="ghost"
               size="sm"

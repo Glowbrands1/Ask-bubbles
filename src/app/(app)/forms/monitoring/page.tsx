@@ -26,7 +26,7 @@ import {
 import { pageFormsAccess } from "@/lib/forms/page-scope";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 
-export const metadata: Metadata = { title: "Form Monitoring" };
+export const metadata: Metadata = { title: "Forms Register" };
 export const dynamic = "force-dynamic";
 
 /**
@@ -147,7 +147,7 @@ export default async function FormMonitoringPage({
         <PageHeader
           band
           eyebrow="Forms"
-          title="Form Monitoring"
+          title="Forms Register"
           description="Every form created in Ask Bubbles, the template version it was filled from, and what is still outstanding."
         />
 
@@ -157,7 +157,7 @@ export default async function FormMonitoringPage({
           </Notice>
         ) : noStore ? (
           <Notice tone="attention" title="No home store is assigned to your account">
-            Form Monitoring shows the forms for your own store, and your account has no store assigned yet. An administrator can fix this in User Management.
+            The Forms Register shows the forms for your own store, and your account has no store assigned yet. An administrator can fix this in User Management.
           </Notice>
         ) : failure ? (
           <Notice tone="attention" title="Form history could not be read">

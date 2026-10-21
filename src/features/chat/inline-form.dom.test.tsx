@@ -1244,6 +1244,30 @@ describe("P4. finalizing freezes the version the SERVER holds", () => {
   });
 });
 
+/*
+ * ONE LABEL FOR THE STORE ROW. The proposal card said "Store" and the form card
+ * beside it said "Location"; both now use the brand's own word.
+ */
+describe("both form cards name the store row the same way", () => {
+  const labels = (container: HTMLElement) =>
+    [...container.querySelectorAll("dt")].map((term) => term.textContent?.trim());
+
+  it("the proposal card says Store", () => {
+    fakeFetch(() => ({ payload: {} }));
+    const { container } = bubble(assistantTurn({ formProposal: proposal() }));
+    expect(labels(container)).toContain("Store");
+    expect(labels(container)).not.toContain("Location");
+  });
+
+  it("the inline form card says Store", async () => {
+    phase4();
+    const { container } = mounted();
+    await waitFor(() => expect(labels(container)).toContain("Employee"));
+    expect(labels(container)).toContain("Store");
+    expect(labels(container)).not.toContain("Location");
+  });
+});
+
 describe("P4. a finalized form offers the record, not the editor", () => {
   const finalized = () => {
     const row = loadedInstance();
@@ -1252,21 +1276,21 @@ describe("P4. a finalized form offers the record, not the editor", () => {
     return row;
   };
 
-  it("offers Download PDF, View in Form Monitoring and Start another", async () => {
+  it("offers Download PDF, View in Forms Register and Start another", async () => {
     phase4(finalized());
     const { container } = mounted();
 
     await waitFor(() => expect(container.textContent).toContain("Finalized"));
     expect(screen.getByRole("button", { name: /download pdf/i })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /view in form monitoring/i })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /view in forms register/i })).toBeTruthy();
   });
 
-  it("links Monitoring at the existing workspace, not a new one", async () => {
+  it("links the Forms Register at the existing workspace, not a new one", async () => {
     phase4(finalized());
     const { container } = mounted();
 
     await waitFor(() => expect(container.textContent).toContain("Finalized"));
-    const link = screen.getByRole("link", { name: /view in form monitoring/i });
+    const link = screen.getByRole("link", { name: /view in forms register/i });
     expect(link.getAttribute("href")).toBe("/forms/monitoring");
   });
 

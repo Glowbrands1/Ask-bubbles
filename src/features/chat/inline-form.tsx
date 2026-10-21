@@ -15,7 +15,7 @@ import {
   ResponsiveForm,
   type ResponsiveFormValues,
 } from "@/features/forms/document/responsive-form";
-import { ACTIVE_BRAND } from "@/lib/brand";
+import { ACTIVE_BRAND, LOCATION_LABEL } from "@/lib/brand";
 import { useSession } from "@/lib/session/session-context";
 import { checkboxGroupsForVariant, fieldsForVariant } from "@/lib/forms/document";
 import { planSummary } from "@/lib/forms/plan-summary";
@@ -613,7 +613,7 @@ export function InlineForm({
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
         <dt className="text-subtle-foreground">Employee</dt>
         <dd className="min-w-0 text-foreground">{loaded.instance.employeeName}</dd>
-        <dt className="text-subtle-foreground">Location</dt>
+        <dt className="text-subtle-foreground">{LOCATION_LABEL}</dt>
         <dd className="min-w-0 text-foreground">
           {/*
             THE ID, OR NOTHING. `location_name` is only set when a caller
@@ -763,7 +763,7 @@ export function InlineForm({
           </div>
           {/*
             ONE THING PER CONTROL. The date here is the calendar day the
-            follow-up is scheduled, and drives Form Monitoring. Where the form
+            follow-up is scheduled, and drives the Forms Register. Where the form
             itself carries an agreed timeframe ("within 2 weeks" — the
             Follow-Up Coaching Form's Next Follow-Up), that is the expectation
             and this is the booking, and the hint says so instead of the two
@@ -863,7 +863,7 @@ export function InlineForm({
               <Button variant="secondary" size="sm" asChild>
                 <Link href="/forms/monitoring">
                   <ExternalLink />
-                  View in Form Monitoring
+                  View in Forms Register
                 </Link>
               </Button>
               {onStartAnother ? (
@@ -908,7 +908,7 @@ export function InlineForm({
 
         It names the fields, because "are you sure?" on its own is a dialog
         people learn to dismiss without reading — the same reason the delete
-        confirmation in Form Monitoring states the employee, the form and the
+        confirmation in the Forms Register states the employee, the form and the
         status.
       */}
       <Dialog

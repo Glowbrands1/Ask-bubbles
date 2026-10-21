@@ -260,7 +260,7 @@ export function formsLocationFor(role: Role | null): string {
     places.push("**Forms → Form Templates**, which is the blank templates and their version history");
   }
   if (may("view_form_monitoring")) {
-    places.push("**Forms → Form Monitoring**, for forms already created and what is due for follow-up");
+    places.push("**Forms → Forms Register**, for forms already created and what is due for follow-up");
   }
 
   if (places.length === 0) {
