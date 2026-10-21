@@ -1,3 +1,4 @@
+import { featureEnabled } from "@/config/company/features";
 import { COMPANY_REPORTS } from "@/config/company/reports";
 
 import type { ReportCadence } from "./read/freshness-line";
@@ -40,11 +41,35 @@ export interface ReportDefinition {
 
 export const REPORTS_SECTION_PATH = "/reports";
 
+/** What the sidebar calls the section, and what chat calls it when pointing there. */
+export const REPORTS_SECTION_LABEL = "Reports";
+
 export function reportPath(id: string): string {
   return `${REPORTS_SECTION_PATH}/${encodeURIComponent(id)}`;
 }
 
 export const REPORT_REGISTRY: readonly ReportDefinition[] = COMPANY_REPORTS;
+
+/**
+ * THE REPORTS CHAT MAY SEND SOMEBODY TO: the live ones, while the Reports area
+ * is shown at all. A placeholder page carries no figures, so "your KPIs are on
+ * X" would send a manager to an empty screen, and a hidden section is nowhere
+ * to send anybody. The prompt's Reports guide and the links `RichText` will
+ * render both read this one list, so the two cannot disagree.
+ *
+ * Empty for Buff City Soap today (nothing is registered), which leaves the
+ * prompt and the renderer exactly as they were.
+ */
+export const CHAT_LINKABLE_REPORTS: readonly ReportDefinition[] = featureEnabled("reports")
+  ? REPORT_REGISTRY.filter((report) => report.status === "live")
+  : [];
+
+/** The in-app paths a chat answer may link: the section root and each linkable report. */
+export const CHAT_LINKABLE_PATHS: ReadonlySet<string> = new Set(
+  CHAT_LINKABLE_REPORTS.length === 0
+    ? []
+    : [REPORTS_SECTION_PATH, ...CHAT_LINKABLE_REPORTS.map((report) => reportPath(report.id))],
+);
 
 export function reportById(id: string | null | undefined): ReportDefinition | undefined {
   if (!id) return undefined;

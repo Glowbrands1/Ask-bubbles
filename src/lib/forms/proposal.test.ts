@@ -734,7 +734,7 @@ describe("a first name plus a stated role names the employee", () => {
 
   it("takes the role in the words the business uses", () => {
     for (const [sentence, name] of [
-      ["Marco is a Tanning Consultant", "Marco"],
+      ["Marco is a Team Member", "Marco"],
       ["Dana was an FTTC last year", "Dana"],
       ["Priya is our new Salon Director", "Priya"],
     ] as const) {
@@ -948,4 +948,36 @@ describe("the employee named with the form, across the library", () => {
       expect(extractEmployeeNames(text)).toEqual([]);
     },
   );
+});
+
+/* ======================================== a month is never a person == */
+
+describe("a month named beside the employee is a date, not a second person", () => {
+  it("reads only Betty Sue from the reported message shape", () => {
+    // The reference platform's report, in Bubbles' own words: the month used
+    // to be read as a second candidate, and the manager was asked which of
+    // "Betty Sue" and "September" the form was for.
+    const text =
+      "Betty Sue today under performance for September 12% under her add-on goal and Guest Count verbal warning received Greeting Coaching 9/8/2026, Makery Demo Coaching 9/15/2026, New Product Coaching 9/25/2026 not payroll deductible Team Member";
+    expect(extractEmployeeNames(text)).toEqual(["Betty Sue"]);
+    const resolution = resolveEmployee(managerContext([], { id: "msg-current", content: text }));
+    expect(resolution).toEqual({ kind: "resolved", employeeName: "Betty Sue" });
+  });
+
+  it.each([
+    "CA for Betty Sue, under performance for October",
+    "CA for Betty Sue for November numbers",
+    "Coaching for Betty Sue December 3",
+    "Betty Sue missed goal in March and Sept.",
+    "CA for Betty Sue, below goal for June 2026",
+    "CA for Betty Sue, below goal since August",
+    "CA for Betty Sue, under performance for May 40 units under",
+  ])("%s → Betty Sue", (text) => {
+    expect(extractEmployeeNames(text)).toEqual(["Betty Sue"]);
+  });
+
+  it("still reads a first name that is also a month where it is used as a name", () => {
+    expect(extractEmployeeNames("Coaching for June")).toEqual(["June"]);
+    expect(extractEmployeeNames("CA for April Jones")).toEqual(["April Jones"]);
+  });
 });

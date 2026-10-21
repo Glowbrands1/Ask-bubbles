@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { COMPANY_JOB_TITLES } from "./job-titles";
+import { COMPANY_JOB_TITLES, isJobTitleAbbreviation } from "./job-titles";
 
 const titleOf = (text: string) => COMPANY_JOB_TITLES.find((entry) => entry.pattern.test(text))?.title ?? null;
 
@@ -31,5 +31,25 @@ describe("job titles as managers type them survive the Salon -> Store wording", 
     expect(titleOf("Team Member Full Time")).toBe("Team Member");
     expect(titleOf("Team Member Part Time")).toBe("Team Member");
     expect(titleOf("District Manager")).toBe("District Manager");
+  });
+});
+
+describe("a job-title abbreviation, as a name-role-store line uses one", () => {
+  it.each(["ASM", "SD", "ASD", "DM", "RM", "asm"])("%s is one", (word) => {
+    expect(isJobTitleAbbreviation(word)).toBe(true);
+  });
+
+  it.each(["NE", "OT", "PTO", "Grand", "manager", "store manager", "A", "TC", "TCs", "tc"])("%s is not", (word) => {
+    expect(isJobTitleAbbreviation(word)).toBe(false);
+  });
+});
+
+describe("\"TC\" / \"Tanning Consultant\" is not a Buff City Soap title", () => {
+  it.each(["TC", "tc", "TCs", "tanning consultant", "Tanning Consultants"])("%s reads as no title", (typed) => {
+    expect(titleOf(typed)).toBeNull();
+  });
+
+  it("no entry prints it", () => {
+    expect(COMPANY_JOB_TITLES.map((entry) => entry.title)).not.toContain("Tanning Consultant");
   });
 });

@@ -651,6 +651,16 @@ const CREATION_VERBS = [
   "open",
   "write up",
   "write-up",
+  /*
+   * "write a CA for Paisley" was read as a question about the progression and
+   * the manager was told to rephrase (reference platform, October 2026). "How
+   * do I write a CA?" is still a question: it is ruled informational first.
+   */
+  "write a",
+  "write an",
+  "write her up",
+  "write him up",
+  "write them up",
   "fill out",
   "generate",
   "prepare",
@@ -1543,7 +1553,7 @@ const LIBRARY_NAME_WORDS = [
    * put "FT SD" forward as a second employee, because two capitals read as a
    * first name and a surname.
    */
-  "ft", "pt", "sd", "tc", "dm", "stc", "rm",
+  "ft", "pt", "sd", "dm", "stc", "rm",
   // "I need a CA for Dana Moss": the shorthand for the Corrective Action Form.
   "ca",
 ];

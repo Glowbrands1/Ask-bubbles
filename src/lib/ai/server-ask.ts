@@ -5,6 +5,8 @@ import { COMPANY_REPORT_LOADERS } from "@/config/company/reports.server";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_MAX_TOKENS, RETRIEVAL } from "@/lib/config/models";
 import { MissingConfigurationError, liveReadiness } from "@/lib/config/server-env";
+import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
+import { asksOnlyAboutFormsOnFile, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
 import { answersFormClarification } from "@/lib/forms/form-clarification";
 import { buildFormInventory, publishedEntries } from "@/lib/forms/inventory";
 import { detectInventoryQuestion, type InventoryQuestion } from "@/lib/forms/inventory-question";
@@ -20,12 +22,13 @@ import { rowToCitation, type MatchedChunkRow } from "@/lib/knowledge/mappers";
 import { buildHandbookNote, namesHandbook, selectHandbookCoverage } from "@/lib/knowledge/named-handbook";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { RoleGrounding } from "@/lib/knowledge/role-grounding";
+import { recallPeople } from "@/lib/chat/person-memory-store";
 import { reportById, routeReportQuestion } from "@/lib/reporting/registry";
 import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
 import { callClaude } from "./call-claude";
-import { gateTexts, retrievalPlan, searchWithPlan } from "./continuation";
+import { gateTexts, searchWithPlan } from "./continuation";
 import { AiError } from "./errors";
 import {
   answerInventoryQuestion,
@@ -43,6 +46,7 @@ import {
   stripMarkers,
   type GroundingChunk,
 } from "./prompts";
+import { retrievalPlanFor } from "./retrieval-query";
 import type { AskRequest, AskResponse } from "./types";
 
 /**
@@ -79,10 +83,13 @@ import type { AskRequest, AskResponse } from "./types";
  *   `authorizeRequest` context. A separate parameter from `request`, which is
  *   parsed from the request body: a caller must never be able to assert its own
  *   role or its own location assignment.
+ * @param memory Whose earlier conversations may be recalled — the validated
+ *   session's subject, from the route. Omitted, nothing is recalled.
  */
 export async function answerQuestion(
   request: AskRequest,
   actor: ChatActor,
+  memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
   const readiness = liveReadiness();
 
@@ -105,7 +112,17 @@ export async function answerQuestion(
    * proposes one. Both detectors are pure and run before anything is read.
    */
   const detected = detectInventoryQuestion(request.question);
-  const spokenIntent = detectTemplateIntent(request.question);
+  /*
+   * A QUESTION ABOUT FORMS ALREADY ON FILE NAMES A FORM WITHOUT ASKING FOR ONE.
+   * "Does Dana have a previous CA form?" reads as naming the Corrective Action
+   * Form, and "past corrective action form for Marcus" as asking for one for
+   * Marcus; either would get a proposal card nobody asked for. Unless the
+   * sentence also says to make one, it is answered from the Forms Register
+   * below. See `chat-form-records.ts`.
+   */
+  const spokenIntent: ReturnType<typeof detectTemplateIntent> = asksOnlyAboutFormsOnFile(request.question)
+    ? { kind: "none" }
+    : detectTemplateIntent(request.question);
   const elliptical = isEllipticalRegisterReference(request.question);
 
   /*
@@ -188,6 +205,17 @@ export async function answerQuestion(
           PERFORMANCE_MANAGEMENT_FRAMEWORK,
           ACTIVE_BRAND.knowledgeScopeId,
         ),
+      /*
+       * THE PINNED POLICY MANUAL, read only when a Corrective Action request
+       * names a policy by a name the forms do not know ("violating visitors at
+       * work policy"), so the reply can name the manual's own section.
+       */
+      policyManual: async () => {
+        const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(
+          ACTIVE_BRAND.knowledgeScopeId,
+        );
+        return manual.ok ? manual.chunks : null;
+      },
     });
     if (proposal) return proposal;
   }
@@ -201,6 +229,40 @@ export async function answerQuestion(
   if (entities.direct) return entities.direct;
 
   /* ------------------------------------------------------- retrieve -- */
+  /*
+   * WHAT THIS MANAGER TOLD BUBBLES BEFORE about the people this conversation
+   * names — their own earlier conversations and the forms they filed, nobody
+   * else's. Started here, after every forms branch and the direct lookup have
+   * had their chance to return, so neither pays for it; it runs alongside
+   * retrieval and never rejects. See `chat/person-memory-store.ts`.
+   */
+  const memoryPromise = memory.memoryOwnerId
+    ? recallPeople({
+        userId: memory.memoryOwnerId,
+        question: request.question,
+        history: request.history,
+        conversationId: request.conversationId,
+        userName: request.context.userName,
+      })
+    : Promise.resolve(null);
+
+  /*
+   * FORMS ALREADY ON FILE. "Does Ellie have previous coachings?" used to be
+   * answered with "I can't look that up — check the Forms Register", when the
+   * register is this app's own table. A question about existing forms now
+   * reads it, as the AUTHORIZED actor and under exactly the visibility that
+   * screen applies — see `chat-form-records.ts`. Never rejects: a failed read
+   * becomes a block that says so.
+   */
+  const formRecordsPromise = isFormRecordsQuestion(request.question)
+    ? loadFormRecords({
+        actor,
+        question: request.question,
+        previousQuestion: previousManagerTurn(request),
+        today: request.context.todayIso,
+      })
+    : Promise.resolve(null);
+
   /*
    * THE RETRIEVALS RUN TOGETHER. None depends on another.
    *
@@ -252,11 +314,16 @@ export async function answerQuestion(
 
   /*
    * A FOLLOW-UP THAT FINDS NOTHING ON ITS OWN IS SEARCHED WITH ITS ANCHOR —
-   * "and for part-timers?" then finds the part-time attendance guidance. Only
-   * the query changes: the model is still given the question as typed. See
-   * `retrievalPlan`.
+   * "and for part-timers?" then finds the part-time attendance guidance. A
+   * short turn about "the policy" with a form open is also searched with the
+   * sections that form cites. Only the query changes: the model is still
+   * given the question as typed. See `retrievalPlan` and `retrieval-query.ts`.
    */
-  const plan = retrievalPlan(request.question, request.history);
+  const plan = retrievalPlanFor({
+    question: request.question,
+    history: request.history,
+    openForm: request.openForm ?? null,
+  });
   const limit = pinnedWanted.length > 0 ? RETRIEVAL.roleAugmentedTopK : RETRIEVAL.topK;
 
   let rows: MatchedChunkRow[];
@@ -362,6 +429,8 @@ export async function answerQuestion(
   const briefing = await briefingPromise;
 
   const settledSummaries = await summariesPromise;
+  const personMemory = await memoryPromise;
+  const formRecords = await formRecordsPromise;
   const formInventoryBlock = settledSummaries.ok
     ? buildFormInventoryBlock(buildFormInventory(settledSummaries.rows, actor))
     : null;
@@ -383,8 +452,21 @@ export async function answerQuestion(
     hasMissingReports: (briefing?.missing.length ?? 0) > 0,
     hasFormsLibrary: formInventoryBlock !== null,
     hasVerifiedRecords: entities.block !== null,
+    /* Read from whether the block exists, like the forms library above. */
+    hasPersonMemory: personMemory !== null,
+    hasFormRecords: formRecords !== null,
     pinnedDocumentTitles: pinnedTitles,
     handbookNote,
+    /*
+     * From the AUTHORIZED actor, the same matrix the report pages' guard
+     * reads, so the assistant only sends somebody to Reports when the sidebar
+     * would show it to them and the page would let them in.
+     */
+    canViewReports:
+      actor.role !== null &&
+      hasPermission(DEFAULT_PERMISSION_MATRIX, actor.role, "view_reports"),
+    /* Read from the instance by the route, never from the body. */
+    openForm: request.openForm ?? null,
   });
 
   const answer = await callClaude({
@@ -393,6 +475,8 @@ export async function answerQuestion(
     reportData: briefing?.text ?? null,
     formsLibrary: formInventoryBlock,
     verifiedRecords: entities.block,
+    personMemory,
+    formRecords: formRecords?.block ?? null,
     history: request.history,
     question: request.question,
     maxTokens: CLAUDE_MAX_TOKENS[request.mode],
@@ -414,6 +498,7 @@ export async function answerQuestion(
       retrieved: grounding.length,
       cited: citations.length,
       reportBacked: (briefing?.present.length ?? 0) > 0,
+      recordBacked: formRecords !== null,
       aboutForms: asksAboutForms(request.question),
     }),
   };
@@ -431,7 +516,8 @@ export async function answerQuestion(
  * notice. Nothing on screen said it was not company policy.
  *
  * So a turn is grounded only when the answer actually cites a retrieved row,
- * or stands on report figures (which carry their period, not a marker).
+ * or stands on report figures (which carry their period, not a marker) or
+ * on the forms on file read from the Forms Register (a record, unmarked too).
  * Questions about the forms library are the one exception: forms-library
  * facts are deliberately unmarked (see the prompt's taxonomy), and the
  * library is exhaustive, so an uncited answer about a form is not general
@@ -441,9 +527,15 @@ export function answerCoverage(input: {
   retrieved: number;
   cited: number;
   reportBacked: boolean;
+  /**
+   * The answer stands on the FORMS ON FILE block: a record, read for this
+   * question, which carries no marker either. Optional so the older callers
+   * read as before.
+   */
+  recordBacked?: boolean;
   aboutForms: boolean;
 }): "grounded" | "insufficient" {
-  if (input.reportBacked) return "grounded";
+  if (input.reportBacked || input.recordBacked) return "grounded";
   if (input.retrieved === 0) return "insufficient";
   return input.cited > 0 || input.aboutForms ? "grounded" : "insufficient";
 }
@@ -518,4 +610,15 @@ async function suggestedFormsFor(input: {
   } catch {
     return null;
   }
+}
+
+/** The manager's turn before this one, for a question that names nobody. */
+function previousManagerTurn(request: AskRequest): string | null {
+  for (let index = request.history.length - 1; index >= 0; index -= 1) {
+    const message = request.history[index]!;
+    if (message.role === "user" && message.content.trim() !== request.question.trim()) {
+      return message.content;
+    }
+  }
+  return null;
 }

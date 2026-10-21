@@ -12,8 +12,9 @@ import type { AccessScope } from "@/types";
  * REGRESSION. Form Monitoring, the Overview queue and the rail badge read every
  * store's forms, and the stored `global` scope (every account carries it) was
  * treated as "all stores". Visibility is now decided by `resolveFormsVisibility`:
- * administrator role, or an unrevoked `forms_all_store_access` row, reads all
- * stores; anyone else reads their home store; no home store reads nothing.
+ * administrator role, or an unrevoked `forms_all_store_access` row of mode
+ * `all`, reads all stores; anyone else reads their assigned stores plus every
+ * store Woven assigns them; no store at all reads nothing.
  *
  * The fixture holds forms at THREE stores, each reachable by somebody, so a
  * refusal means the rule worked rather than that the row was never there.
@@ -29,7 +30,7 @@ const FORM_B = "22222222-2222-4222-8222-222222222222";
 const FORM_C = "33333333-3333-4333-8333-333333333333";
 const ROWS: Record<string, string> = { [FORM_A]: "loc-a", [FORM_B]: "loc-b", [FORM_C]: "loc-c" };
 
-const row = (id: string) => ({
+const row = (id: string, createdBy = "someone-else") => ({
   id,
   templateId: "tpl",
   templateKey: "coaching",
@@ -43,7 +44,7 @@ const row = (id: string) => ({
   employeeRole: null,
   locationId: ROWS[id]!,
   locationName: null,
-  createdBy: "someone-else",
+  createdBy,
   createdByRole: "location_manager",
   source: "manual",
   status: "draft",
@@ -69,12 +70,20 @@ interface Options {
   wovenDesignated?: string[];
   /** Woven affiliations by app user id (active ones); `loc` is the Woven location id. */
   affiliations?: Record<string, { loc: string; expires_on?: string | null }[]>;
-  /** Woven location id -> company store id, for mapped locations only. */
-  locationMap?: Record<string, string>;
+  /**
+   * Woven's location map: Woven location id -> company store id when `mapped`,
+   * or null when a person marked it `ignored` (an office, Corporate). A Woven
+   * location absent here is still `unmapped`.
+   */
+  locationMap?: Record<string, string | null>;
+  /** Make the Woven affiliation lookup fail. */
+  affiliationsFail?: boolean;
   /** Woven's mapped primary store, by app user id. */
   woven?: Record<string, string | null>;
   /** Make the designation lookup fail. */
   designationFails?: boolean;
+  /** Forms this subject created, by form id. */
+  created?: string[];
 }
 
 async function load(options: Options) {
@@ -126,7 +135,11 @@ async function load(options: Options) {
           if (table === "woven_location_map") {
             return (f.in ?? [])
               .filter((id) => options.locationMap && id in options.locationMap)
-              .map((id) => ({ location_id: options.locationMap![id] }));
+              .map((id) => {
+                const store = options.locationMap![id] ?? null;
+                return { location_id: store, status: store ? "mapped" : "ignored" };
+              })
+              .filter((r) => f.eq.status === undefined || r.status === f.eq.status);
           }
           return [];
         };
@@ -145,7 +158,12 @@ async function load(options: Options) {
             }
             return { data: null, error: null };
           },
-          then: (resolve: (value: unknown) => unknown) => resolve({ data: rows(), error: null }),
+          then: (resolve: (value: unknown) => unknown) =>
+            resolve(
+              table === "employee_location_affiliations" && options.affiliationsFail
+                ? { data: null, error: { message: "relation does not exist" } }
+                : { data: rows(), error: null },
+            ),
         };
         return builder;
       },
@@ -166,25 +184,32 @@ async function load(options: Options) {
     }),
   }));
 
+  /* Each row, carrying this subject as its creator when the options say so. */
+  const rowFor = (id: string) => row(id, options.created?.includes(id) ? options.subject : "someone-else");
+
   vi.doMock("@/lib/forms/instances", () => ({
     loadInstance: async (id: string) =>
       ROWS[id]
-        ? { instance: row(id), version: { id: "v", document: { paper: "letter", blocks: [] }, variants: [] }, values: [], events: [] }
+        ? { instance: rowFor(id), version: { id: "v", document: { paper: "letter", blocks: [] }, variants: [] }, values: [], events: [] }
         : null,
     listInstances: async (
       _view: string,
       _limit: number | undefined,
-      filter?: { locationIds?: string[]; ownNullLocationCreatedBy?: string },
+      filter?: { locationIds?: string[]; ownNullLocationCreatedBy?: string; ownCreatedBy?: string },
     ) => {
-      const rows = Object.keys(ROWS).map(row);
+      const rows = Object.keys(ROWS).map(rowFor);
       if (!filter || filter.locationIds === undefined) return rows;
-      return rows.filter((r) => filter.locationIds!.includes(r.locationId));
+      return rows.filter(
+        (r) =>
+          filter.locationIds!.includes(r.locationId) ||
+          (filter.ownCreatedBy !== undefined && r.createdBy === filter.ownCreatedBy),
+      );
     },
-    findDemoInstances: async () => ({ deletable: Object.keys(ROWS).map(row), protected: [] }),
-    listOutstandingFollowUps: async (_limit: number, ids: string[] | null) =>
+    findDemoInstances: async () => ({ deletable: Object.keys(ROWS).map(rowFor), protected: [] }),
+    listOutstandingFollowUps: async (_limit: number, ids: string[] | null, own?: string | null) =>
       Object.keys(ROWS)
-        .map(row)
-        .filter((r) => ids === null || ids.includes(r.locationId)),
+        .map(rowFor)
+        .filter((r) => ids === null || ids.includes(r.locationId) || (!!own && r.createdBy === own)),
     markExported: async () => undefined,
     InstanceProtectedError: class extends Error {},
     UnverifiedPolicyError: class extends Error {},
@@ -230,7 +255,7 @@ const STORE_MANAGER: Options = { subject: "sm", role: "location_manager", scope:
 const COLENE: Options = { subject: "colene", role: "district_manager", scope: GLOBAL, designated: ["colene"] };
 const DJ: Options = { subject: "dj", role: "regional_manager", scope: GLOBAL, designated: ["dj"] };
 const ADMIN: Options = { subject: "admin", role: "admin", scope: GLOBAL };
-/* A District Manager with global scope and NO designation: home store only. */
+/* A District Manager with global scope, NO designation and one Woven store: that store only. */
 const AMBER: Options = {
   subject: "amber",
   role: "district_manager",
@@ -318,13 +343,79 @@ describe("a Woven-affiliation designation reads the home store plus the person's
     expect(await listedIds(COLENE)).toEqual([FORM_A, FORM_B, FORM_C]);
     expect(await listedIds(AMBER_WOVEN)).not.toContain(FORM_A);
   });
-  it("fails closed when the designation cannot be read", async () => {
-    expect(await listedIds({ ...AMBER_WOVEN, designationFails: true })).toEqual([FORM_B]);
+  it("a designation that cannot be read is never all-store access", async () => {
+    expect(await listedIds({ ...AMBER_WOVEN, designationFails: true })).toEqual([FORM_B, FORM_C]);
   });
-  it("does not widen anybody else: an undesignated account with affiliations keeps its home store", async () => {
+  it("is what everybody now gets: the same account undesignated reads the same stores", async () => {
+    expect(await listedIds({ ...AMBER_WOVEN, wovenDesignated: [] })).toEqual([FORM_B, FORM_C]);
+  });
+});
+
+/*
+ * MULTIPLE STORES (21 Oct 2026). Every person reads the forms at each store
+ * Woven assigns them — the primary, and each active additional or unexpired
+ * temporary location mapped to a store — added to any store-scoped assignment.
+ */
+describe("a person Woven assigns to several stores", () => {
+  const MULTI: Options = {
+    subject: "multi",
+    role: "district_manager",
+    scope: GLOBAL,
+    woven: { multi: "loc-a" },
+    affiliations: { multi: [{ loc: "w-a" }, { loc: "w-b" }] },
+    locationMap: { "w-a": "loc-a", "w-b": "loc-b" },
+  };
+  it("sees the forms at each of their Woven stores, and opens them", async () => {
+    expect(await listedIds(MULTI)).toEqual([FORM_A, FORM_B]);
+    const { detail } = await load(MULTI);
+    expect((await detail.GET(get(), params(FORM_B))).status).toBe(200);
+    expect((await detail.GET(get(), params(FORM_C))).status).toBe(404);
+  });
+  it("adds Woven's stores to a store-scoped manager's assignment", async () => {
     expect(
-      await listedIds({ ...AMBER_WOVEN, wovenDesignated: [] }),
-    ).toEqual([FORM_B]);
+      await listedIds({
+        ...STORE_MANAGER,
+        woven: { sm: "loc-a" },
+        affiliations: { sm: [{ loc: "w-c" }] },
+        locationMap: { "w-c": "loc-c" },
+      }),
+    ).toEqual([FORM_A, FORM_C]);
+  });
+  it("keeps a store-scoped employee's own assignment when Woven offers more", async () => {
+    expect(
+      await listedIds({
+        ...EMPLOYEE,
+        woven: { emp: "loc-b" },
+        affiliations: { emp: [{ loc: "w-b" }] },
+        locationMap: { "w-b": "loc-b" },
+      }),
+    ).toEqual([FORM_A, FORM_B]);
+  });
+  it("reads a temporary store until its access expires", async () => {
+    const temporary = (expires_on: string) => ({
+      ...MULTI,
+      affiliations: { multi: [{ loc: "w-a" }, { loc: "w-b", expires_on }] },
+    });
+    expect(await listedIds(temporary("2099-01-01"))).toEqual([FORM_A, FORM_B]);
+    expect(await listedIds(temporary("2020-01-01"))).toEqual([FORM_A]);
+  });
+  it("skips a Woven location that is unmapped or ignored", async () => {
+    expect(await listedIds({ ...MULTI, locationMap: { "w-a": "loc-a" } })).toEqual([FORM_A]);
+    expect(await listedIds({ ...MULTI, locationMap: { "w-a": "loc-a", "w-b": null } })).toEqual([FORM_A]);
+  });
+  it("grants nothing extra when the Woven lookup fails", async () => {
+    expect(await listedIds({ ...MULTI, affiliationsFail: true })).toEqual([FORM_A]);
+  });
+  it("leaves administrators and all-store accounts unchanged", async () => {
+    expect(await listedIds({ ...MULTI, role: "admin" })).toEqual([FORM_A, FORM_B, FORM_C]);
+    expect(await listedIds({ ...MULTI, designated: ["multi"] })).toEqual([FORM_A, FORM_B, FORM_C]);
+  });
+  it("puts every store on the page reads, the queue and the badge too", async () => {
+    const { pageFormsAccess } = await load(MULTI);
+    expect(await pageFormsAccess(identity(MULTI))).toMatchObject({
+      locationIds: ["loc-a", "loc-b"],
+      noStore: false,
+    });
   });
 });
 
@@ -360,6 +451,36 @@ describe("direct URL / API access to another store's form", () => {
     expect((await detail.GET(get(), params(FORM_A))).status).toBe(404);
     expect((await detail.GET(get(), params(FORM_B))).status).toBe(200);
   });
+  /*
+   * REGRESSION (21 Oct 2026). Reads are scoped to the home store (#57), but
+   * creating is authorized on the STORED scope, so a District Manager whose
+   * scope covers several stores created a form at one that is not their home
+   * store, and the inline card's very next fetch said "This form is not
+   * available". The creator may open their own form while their stored scope
+   * still covers its store.
+   */
+  it("serves a form its creator just created at a store outside their home store", async () => {
+    const { detail } = await load({ ...AMBER, created: [FORM_C] });
+    expect((await detail.GET(get(), params(FORM_C))).status).toBe(200);
+    expect((await detail.GET(get(), params(FORM_A))).status).toBe(404);
+  });
+  it("lets the creator keep editing it", async () => {
+    await load({ ...AMBER, created: [FORM_C] });
+    const { authorizeInstance } = await import("@/lib/forms/instance-scope");
+    await expect(authorizeInstance(get(), FORM_C, "edit")).resolves.toMatchObject({
+      loaded: { instance: { id: FORM_C } },
+    });
+  });
+  it("refuses the creator once their stored scope no longer covers the store", async () => {
+    const { detail } = await load({ ...STORE_MANAGER, created: [FORM_B] });
+    expect((await detail.GET(get(), params(FORM_B))).status).toBe(404);
+  });
+  it("lists the creator's own form at another store in Form Monitoring", async () => {
+    expect(await listedIds({ ...AMBER, created: [FORM_C] })).toEqual([FORM_B, FORM_C]);
+  });
+  it("does not list it once their stored scope no longer covers that store", async () => {
+    expect(await listedIds({ ...STORE_MANAGER, created: [FORM_B] })).toEqual([FORM_A]);
+  });
   it("answers 404 for a user with no home store", async () => {
     const { detail } = await load(NO_STORE);
     for (const id of Object.keys(ROWS)) expect((await detail.GET(get(), params(id))).status).toBe(404);
@@ -385,6 +506,27 @@ describe("the server pages (Form Monitoring, Overview, rail badge) apply the sam
     const counted = visibleInstances(access.actor, await listOutstandingFollowUps(50, access.locationIds));
     expect(counted.map((r) => r.id)).toEqual([FORM_A]);
   });
+  it("puts the reader's own forms at other stores in the queue and the badge", async () => {
+    const who = { ...AMBER, created: [FORM_C] };
+    const { pageFormsAccess, visibleInstances, listOutstandingFollowUps } = await load(who);
+    const access = await pageFormsAccess(identity(who));
+    expect(access).toMatchObject({ locationIds: ["loc-b"], ownCreatedBy: "amber" });
+    const counted = visibleInstances(
+      access.actor,
+      await listOutstandingFollowUps(50, access.locationIds, access.ownCreatedBy),
+    );
+    expect(counted.map((r) => r.id)).toEqual([FORM_B, FORM_C]);
+  });
+  it("drops them from the queue once the stored scope no longer covers the store", async () => {
+    const who = { ...STORE_MANAGER, created: [FORM_B] };
+    const { pageFormsAccess, visibleInstances, listOutstandingFollowUps } = await load(who);
+    const access = await pageFormsAccess(identity(who));
+    const counted = visibleInstances(
+      access.actor,
+      await listOutstandingFollowUps(50, access.locationIds, access.ownCreatedBy),
+    );
+    expect(counted.map((r) => r.id)).toEqual([FORM_A]);
+  });
   it("tells a reader with no home store so, and reads nothing", async () => {
     const { pageFormsAccess } = await load(NO_STORE);
     expect(await pageFormsAccess(identity(NO_STORE))).toMatchObject({ locationIds: [], noStore: true });
@@ -405,6 +547,10 @@ describe("the server pages (Form Monitoring, Overview, rail badge) apply the sam
       expect(source, file).toMatch(/pageFormsAccess\(/);
       expect(source, file).toMatch(/visibleInstances\(/);
       expect(source, file).not.toMatch(/listOutstandingFollowUps\(\)/);
+      if (source.includes("listOutstandingFollowUps(")) {
+        // The queue reads the reader's own forms at other stores too.
+        expect(source, file).toMatch(/listOutstandingFollowUps\(50, [\w.]+, access\.ownCreatedBy\)/);
+      }
       expect(source, file).not.toMatch(/listInstances\(view satisfies InstanceView\)/);
     }
   });

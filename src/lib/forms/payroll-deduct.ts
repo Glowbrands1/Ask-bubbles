@@ -47,7 +47,18 @@ export function isPayrollDeductAnswer(value: unknown): value is PayrollDeductAns
 /** "payroll deduct", "payroll deduction(s)", "payroll", "deduction". */
 const SUBJECT = String.raw`(?:payroll\s+deduct(?:ion|ions|ed)?|payroll|deduct(?:ion|ions)?)`;
 
+/*
+ * "PAYROLL DEDUCT OF $3.25 IS APPLICABLE" — the subject, what it is of or for,
+ * then the answer. District Manager feedback, 21 Oct 2026: the amount between
+ * them hid the answer and the manager was asked "Yes or No?". At most a few
+ * words between, within the clause; the negative is read first.
+ */
+const OF_WHAT = String.raw`\s+(?:of|for|on)\s+(?:[^.!?;\n]|\.(?=\d)){1,30}?\s+`;
 const NEGATIVE: readonly RegExp[] = [
+  // "payroll deduct of $3.25 is not applicable"
+  new RegExp(
+    String.raw`\b${SUBJECT}${OF_WHAT}(?:is\s+|does\s+|would\s+|will\s+)?(?:not|n't|isn't|doesn't|won't|wont|isnt|doesnt)\s+(?:be\s+)?(?:applicable|apply|applies|needed|required|necessary)\b`,
+  ),
   // "no payroll deduct", "no deduction", "no to payroll deduction", "no, payroll"
   new RegExp(String.raw`\bno\b[\s,:-]*(?:to\s+)?(?:the\s+|a\s+)?${SUBJECT}\b`),
   // "payroll deduct is not applicable", "payroll deduction doesn't apply"
@@ -56,6 +67,8 @@ const NEGATIVE: readonly RegExp[] = [
   ),
   // "payroll deduct: no", "payroll deduct applicable - no", "payroll deduct = n/a"
   new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s*[:=-]\s*(?:no|n|none|n/a|not applicable)(?:$|[\s.,!;])`),
+  // "payroll deduct no", "payroll deduction applicable no" — the answer last in its clause, not "no longer"
+  new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s+(?:no|n|nope)\s*(?:$|[.,!;])`),
   // "payroll deduct n/a", "payroll deduction not applicable", "payroll deduct none"
   new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s+(?:is\s+)?(?:n/a|not applicable|none)(?:$|[\s.,!;])`),
   // "we won't deduct", "don't deduct it from her pay", "not deducting"
@@ -64,6 +77,10 @@ const NEGATIVE: readonly RegExp[] = [
 ];
 
 const POSITIVE: readonly RegExp[] = [
+  // "payroll deduct of $3.25 is applicable", "payroll deduction for the shortage applies"
+  new RegExp(
+    String.raw`\b${SUBJECT}${OF_WHAT}(?:is\s+|does\s+|will\s+|would\s+)?(?:be\s+)?(?:applicable|applies|apply|needed|required|necessary)\b`,
+  ),
   // "yes payroll deduct applies", "yes to payroll deduction", "yes, deduction"
   new RegExp(String.raw`\byes\b[\s,:-]*(?:to\s+)?(?:the\s+|a\s+)?${SUBJECT}\b`),
   // "payroll deduct applies", "payroll deduction is applicable", "payroll deduct needed"
@@ -72,6 +89,8 @@ const POSITIVE: readonly RegExp[] = [
   ),
   // "payroll deduct: yes", "payroll deduct applicable - yes"
   new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s*[:=-]\s*(?:yes|y)(?:$|[\s.,!;])`),
+  // "payroll deduct yes", "payroll deduction applicable yes"
+  new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s+(?:yes|y)\s*(?:$|[.,!;])`),
   // "deduct it from her paycheck", "deducting the shortage from payroll"
   /\bdeduct(?:ing|ed)?\b[^.\n]{0,40}\bfrom\s+(?:her|his|their|the|its)?\s*(?:pay|paycheck|payroll|check|wages)\b/,
   // "it will be deducted", "we'll deduct", "needs to be deducted"
@@ -105,7 +124,8 @@ export function statedPayrollDeduct(text: string): PayrollDeductAnswer | null {
   const source = normalize(text).replace(/\?\s*(yes|no|y|n)\b/g, ": $1");
   let answer: PayrollDeductAnswer | null = null;
 
-  for (const clause of source.split(/(?<=[.!?;\n])/)) {
+  // A point inside an amount ("$3.25") does not end a clause.
+  for (const clause of source.split(/(?<=[!?;\n]|\.(?!\d))/)) {
     const trimmed = clause.trim();
     if (trimmed === "" || trimmed.endsWith("?")) continue;
     if (NEGATIVE.some((pattern) => pattern.test(trimmed))) answer = "no";
@@ -234,6 +254,18 @@ export function payrollDeductFromConversation(
 }
 
 /**
+ * A reply to Ask Bubbles' own payroll question, when that question was the
+ * last thing it asked — "no", "Yes.", or "7. no" to a numbered intake. Read
+ * the same way the proposal reads it, so the answer the manager gives after
+ * the form is created lands on the form instead of being asked for again.
+ */
+export function payrollDeductReply(text: string, lastAssistant: string): PayrollDeductAnswer | null {
+  const asked = payrollQuestionIn(lastAssistant);
+  if (!asked) return null;
+  return (asked.number !== null ? numberedAnswer(text, asked.number) : null) ?? (asked.alone ? bareAnswer(text) : null);
+}
+
+/**
  * The value to store for an answer: one ticked option, or nothing at all.
  * Never both boxes, never a default.
  */
@@ -262,4 +294,52 @@ export function payrollDeductCorrection(text: string): PayrollDeductAnswer | nul
     if (to) return to[1] as PayrollDeductAnswer;
   }
   return statedPayrollDeduct(text);
+}
+
+/*
+ * ============================================================================
+ * THE AMOUNT, AND THE ACTION PLAN THAT SAYS IT
+ * ============================================================================
+ *
+ * District Manager feedback, 21 Oct 2026: "payroll deduct of $3.25 is
+ * applicable" — the Action Plan did not say that $3.25 would be deducted. The
+ * amount is the manager's, read here exactly as they wrote it, and only from
+ * words about the deduction: "deduct(ion) of $3.25", "$3.25 will be deducted",
+ * "deduct $3.25". A register short $3.25 is not, on its own, an amount to
+ * deduct. Never an amount the manager did not write.
+ */
+const MONEY = String.raw`\$\s?\d[\d,]*(?:\.\d{1,2})?`;
+const AMOUNT_PATTERNS: readonly RegExp[] = [
+  new RegExp(String.raw`\b(?:payroll\s+)?deduct(?:ion|ions|ed|ing)?\s+(?:of\s+|for\s+|is\s+|will\s+be\s+|amount\s+(?:of\s+|is\s+)?)?(${MONEY})`, "gi"),
+  new RegExp(String.raw`(${MONEY})\s+(?:will\s+be\s+|is\s+(?:being\s+)?|to\s+be\s+|should\s+be\s+|gets?\s+|being\s+)?deducted\b`, "gi"),
+];
+
+/** The amount the manager said would be deducted — "$3.25" — or null. The latest one stated wins. */
+export function payrollDeductAmount(text: string): string | null {
+  let found: { at: number; amount: string } | null = null;
+  for (const pattern of AMOUNT_PATTERNS) {
+    for (const match of (text ?? "").matchAll(pattern)) {
+      const amount = match[1]!.replace(/\s+/g, "");
+      if (!found || match.index >= found.at) found = { at: match.index, amount };
+    }
+  }
+  return found?.amount ?? null;
+}
+
+/**
+ * The Action Plan's payroll sentence, when the manager answered Yes: "$3.25
+ * will be deducted from Tess's pay.", or, with no amount stated, "A payroll
+ * deduction applies." Null on No or no answer — the plan then says nothing
+ * about pay. Placed by `ca-action-plan.ts` between the review sentence and the
+ * form's required closing.
+ */
+export function payrollDeductSentence(input: {
+  answer: PayrollDeductAnswer | null;
+  amount: string | null;
+  firstName: string | null;
+}): string | null {
+  if (input.answer !== "yes") return null;
+  if (!input.amount) return "A payroll deduction applies.";
+  const whose = input.firstName ? `${input.firstName}'s` : "the employee's";
+  return `${input.amount} will be deducted from ${whose} pay.`;
 }

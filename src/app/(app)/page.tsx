@@ -48,7 +48,10 @@ export default async function HomePage() {
       const locationIds = access.locationIds;
       const outstanding = access.noStore
         ? []
-        : visibleInstances(access.actor, await listOutstandingFollowUps(50, locationIds));
+        : visibleInstances(
+            access.actor,
+            await listOutstandingFollowUps(50, locationIds, access.ownCreatedBy),
+          );
 
       const excludedNames = configuredExcludedNames();
       const production = outstanding.filter((instance) =>

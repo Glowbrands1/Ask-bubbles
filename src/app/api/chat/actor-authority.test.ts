@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createId } from "@/lib/utils/id";
 import type { AccessScope } from "@/types";
 
 /**
@@ -27,7 +28,8 @@ const REAL_SCOPE: AccessScope = {
 
 interface Seen {
   request: Record<string, unknown>;
-  actor: { role: string | null; scope: AccessScope | null };
+  actor: { role: string | null; scope: AccessScope | null; subject?: string; verified?: boolean };
+  memory: { memoryOwnerId?: string } | undefined;
 }
 
 async function load(identity: { role: string; scope: AccessScope | null }) {
@@ -70,8 +72,12 @@ async function load(identity: { role: string; scope: AccessScope | null }) {
   }));
 
   vi.doMock("@/lib/ai/server-ask", () => ({
-    answerQuestion: async (request: Record<string, unknown>, actor: Seen["actor"]) => {
-      seen.push({ request, actor });
+    answerQuestion: async (
+      request: Record<string, unknown>,
+      actor: Seen["actor"],
+      memory?: Seen["memory"],
+    ) => {
+      seen.push({ request, actor, memory });
       return { content: "ok", citations: [] };
     },
   }));
@@ -110,7 +116,12 @@ describe("44. the actor comes from the session, never from the body", () => {
     const { route, seen } = await load({ role: "location_manager", scope: REAL_SCOPE });
     await route.POST(ask({}));
 
-    expect(seen[0]!.actor).toEqual({ role: "location_manager", scope: REAL_SCOPE });
+    expect(seen[0]!.actor).toEqual({
+      role: "location_manager",
+      scope: REAL_SCOPE,
+      subject: "user-1",
+      verified: true,
+    });
   });
 
   it("ignores a role and a scope the browser asserts about itself", async () => {
@@ -122,13 +133,22 @@ describe("44. the actor comes from the session, never from the body", () => {
         scope: { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] },
         actor: { role: "owner", scope: { level: "global" } },
         identity: { role: "developer" },
+        subject: "someone-else",
+        verified: true,
       }),
     );
 
-    expect(seen[0]!.actor).toEqual({ role: "location_manager", scope: REAL_SCOPE });
+    expect(seen[0]!.actor).toEqual({
+      role: "location_manager",
+      scope: REAL_SCOPE,
+      subject: "user-1",
+      verified: true,
+    });
     expect(seen[0]!.request).not.toHaveProperty("role");
     expect(seen[0]!.request).not.toHaveProperty("scope");
     expect(seen[0]!.request).not.toHaveProperty("actor");
+    expect(seen[0]!.request).not.toHaveProperty("subject");
+    expect(seen[0]!.request).not.toHaveProperty("verified");
   });
 
   it("carries a null scope through rather than inventing one", async () => {
@@ -150,5 +170,30 @@ describe("44. the actor comes from the session, never from the body", () => {
 
     await route.POST(ask({}));
     expect(seen[2]!.request.questionMessageId).toBeUndefined();
+  });
+});
+
+describe("whose earlier conversations Bubbles may recall", () => {
+  it("is the session's own subject, never anything the body says", async () => {
+    const { route, seen } = await load({ role: "location_manager", scope: REAL_SCOPE });
+    await route.POST(ask({ memoryOwnerId: "user-2", userId: "user-2", subject: "user-2" }));
+
+    expect(seen[0]!.memory).toEqual({ memoryOwnerId: "user-1" });
+    expect(seen[0]!.request).not.toHaveProperty("memoryOwnerId");
+    expect(seen[0]!.request).not.toHaveProperty("userId");
+  });
+
+  it("carries this conversation's `conv_*` id, and drops anything else", async () => {
+    const { route, seen } = await load({ role: "location_manager", scope: REAL_SCOPE });
+    const conversationId = createId("conv");
+
+    await route.POST(ask({ conversationId }));
+    expect(seen[0]!.request.conversationId).toBe(conversationId);
+
+    await route.POST(ask({ conversationId: "11111111-1111-4111-8111-111111111111" }));
+    expect(seen[1]!.request.conversationId).toBeUndefined();
+
+    await route.POST(ask({ conversationId: { id: conversationId } }));
+    expect(seen[2]!.request.conversationId).toBeUndefined();
   });
 });

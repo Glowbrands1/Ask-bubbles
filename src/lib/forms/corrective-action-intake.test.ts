@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   CORRECTIVE_ACTION_INTAKE,
+  answeredWhatHappened,
   correctiveActionBasis,
   correctiveActionIntakeRequest,
+  describesIncident,
+  describesMoreThanTheRequest,
+  NO_INCIDENT_NOTE,
   readCorrectiveActionIntake,
   statesFirstOccurrence,
   statesRepeatedBehaviour,
@@ -171,10 +175,17 @@ describe("3. what counts as an answer", () => {
   });
 
   it.each([
-    ["an acronym", "she is a TC at Kearny"],
+    ["an acronym", "she is a DM at Kearny"],
     ["a spelled-out title", "she is an assistant salon director"],
+    ["a Woven title", "she is a team member at Kearny"],
+    ["a Woven title, in full", "he is our assistant general manager"],
   ])("a job title — %s", (_label, text) => {
     expect(read(text).supplied).toContain("job_title");
+  });
+
+  it("\"TC\" (Tanning Consultant) is not one of Buff City Soap's titles", () => {
+    expect(read("she is a TC at Kearny").supplied).not.toContain("job_title");
+    expect(read("she is a tanning consultant").supplied).not.toContain("job_title");
   });
 
   it("asks for everything when the manager has only named the form", () => {
@@ -408,7 +419,7 @@ describe("5. what Ask Bubbles actually says", () => {
         "6. Whether the employee has previously received coaching and/or corrective action, and if yes, what and the date each was signed",
         // Added at Operations' request, in their wording.
         "7. Is payroll deduct applicable? (Yes or No)",
-        "8. The employee's job title (e.g. TC, ASD, SD) if you have it",
+        "8. The employee's job title (e.g. Team Member, Assistant General Manager) if you have it",
         "",
       ].join("\n"),
     );
@@ -461,5 +472,91 @@ describe("5. what Ask Bubbles actually says", () => {
     });
 
     expect(message).toMatch(/one more thing/i);
+  });
+});
+
+/*
+ * ============================================================================
+ * NOTHING TO DRAFT FROM
+ * ============================================================================
+ *
+ * Ported from the reference platform (production, 20 Oct 2026): a Corrective
+ * Action asked for by name alone was offered a draft with nothing described.
+ * The draft came back empty and the form, its policy line included, was
+ * completed by hand with no section or page cited.
+ */
+describe("6. whether the manager has said what happened", () => {
+  it.each([
+    "create ca for Pat Rivera",
+    "Create a corrective action form for Robin Kessler",
+    "I need a CA for Casey Brandt at Kearney, NE please",
+    "write up a corrective action for Morgan, verbal warning, no payroll deduction, today",
+    "CA for Sam Ortega, she is a makery associate at Dodge",
+    "Corrective action for Jordan, store manager at Grand Island, written warning",
+  ])("reads %s as only the request", (text) => {
+    const ignore = ["Pat Rivera", "Robin Kessler", "Casey Brandt", "Morgan", "Sam Ortega", "Jordan", "Kearney, NE", "Dodge", "Grand Island"];
+    expect(describesIncident(text)).toBe(false);
+    expect(describesMoreThanTheRequest(text, { ignore })).toBe(false);
+  });
+
+  it.each([
+    "Create a corrective action for Robin for missing the Woven deadline.",
+    "corrective action for Pat, scheduled 9:30 but got here 11:23",
+    "CA for Casey, rang up her own soap order with an employee discount code against policy",
+  ])("reads %s as an account", (text) => {
+    expect(describesMoreThanTheRequest(text, { ignore: ["Robin", "Pat", "Casey"] })).toBe(true);
+  });
+
+  it("reads an arrival with its time as an incident", () => {
+    expect(describesIncident("Pat arrived at 11:23 for a 9:30 shift")).toBe(true);
+    expect(describesIncident("came in after ten")).toBe(true);
+  });
+
+  it("takes a reply to its own What happened ask as the account, in any words", () => {
+    const ask = `I can create a **Corrective Action Form** for **Pat Rivera**.\n\n${NO_INCIDENT_NOTE}`;
+
+    expect(
+      answeredWhatHappened([
+        { role: "user", content: "create ca for Pat Rivera" },
+        { role: "assistant", content: ask },
+        { role: "user", content: "Pat got to the store at 11:23 for a 9:30 shift" },
+        { role: "assistant", content: "Is payroll deduct applicable?" },
+        { role: "user", content: "yes" },
+      ]),
+    ).toBe(true);
+  });
+
+  it("does not take a question, a bare ok, or an unprompted turn as the account", () => {
+    const ask = `I can create a **Corrective Action Form** for **Pat Rivera**.\n\n${NO_INCIDENT_NOTE}`;
+
+    expect(answeredWhatHappened([{ role: "assistant", content: ask }, { role: "user", content: "ok" }])).toBe(false);
+    expect(
+      answeredWhatHappened([
+        { role: "assistant", content: ask },
+        { role: "user", content: "what does the attendance policy say?" },
+      ]),
+    ).toBe(false);
+    expect(answeredWhatHappened([{ role: "user", content: "create ca for Pat Rivera" }])).toBe(false);
+  });
+
+  it("says the policy cannot be cited yet, and how to get it cited", () => {
+    expect(NO_INCIDENT_NOTE).toMatch(/haven't told me what happened/);
+    expect(NO_INCIDENT_NOTE).toMatch(/can't cite the policy manual/);
+    expect(NO_INCIDENT_NOTE).toMatch(/redraft the form you created/);
+  });
+
+  it("still recognises the numbered intake's What happened ask", () => {
+    const ask = correctiveActionIntakeRequest({
+      formName: "Corrective Action Form",
+      items: CORRECTIVE_ACTION_INTAKE.filter((item) => item.key === "what_happened"),
+      opening: false,
+    });
+
+    expect(
+      answeredWhatHappened([
+        { role: "assistant", content: ask },
+        { role: "user", content: "she rang up her own soap order with a discount" },
+      ]),
+    ).toBe(true);
   });
 });

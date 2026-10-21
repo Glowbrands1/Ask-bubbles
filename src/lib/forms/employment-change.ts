@@ -111,7 +111,7 @@ function readRate(text: string): string | undefined {
 
 /** Words that make a phrase a job title when the vocabulary does not know it. */
 const TITLE_WORDS =
-  /\b(?:manager|director|consultant|assistant|lead|supervisor|trainer|associate|specialist|key\s?holder|stylist|coordinator|representative|rep|cashier|attendant|technician|esthetician|receptionist|advisor|agent|sdit|tsd|asd|fttc|dmit|sd|dm|tc)\b/i;
+  /\b(?:manager|director|consultant|assistant|lead|supervisor|trainer|associate|specialist|key\s?holder|stylist|coordinator|representative|rep|cashier|attendant|technician|esthetician|receptionist|advisor|agent|sdit|tsd|asd|fttc|dmit|sd|dm)\b/i;
 
 /** A title in the business's own spelling where it has one; otherwise tidied. */
 export function canonicalTitle(raw: string): string | null {
@@ -123,7 +123,7 @@ export function canonicalTitle(raw: string): string | null {
   if (!text) return null;
   /*
    * AN ABBREVIATION IS EXPANDED THE WAY THE BUSINESS PRINTS IT ("sd" →
-   * "Salon Director", "tc" → "Tanning Consultant"); A TITLE THE MANAGER
+   * "Salon Director", "dm" → "District Manager"); A TITLE THE MANAGER
    * SPELLED OUT IS KEPT AS THEY SPELLED IT. "Assistant Salon Director" used to
    * come back as "ASD", which is shorter than what the manager typed and not
    * how they wrote it on the form.
@@ -147,7 +147,7 @@ const NOT_A_TITLE =
 
 /** The words a title may be built from, for the strict reading. */
 const TITLE_VOCABULARY =
-  /^(?:salon|tanning|district|training|store|general|senior|assistant|front|desk|shift|sales|spa|in)$/i;
+  /^(?:salon|district|training|store|general|senior|assistant|front|desk|shift|sales|spa|in)$/i;
 
 /**
  * Whether a leftover phrase is a job title. STRICT is used where nothing but
@@ -236,7 +236,7 @@ export function isQuestion(text: string): boolean {
 
 function readOne(text: string, today: string): EmploymentChangeFacts {
   const facts: EmploymentChangeFacts = { current: {}, next: {} };
-  // Arrows are "to": "SD → TC" is "SD to TC", "from" implied at the clause start.
+  // Arrows are "to": "SD → DM" is "SD to DM", "from" implied at the clause start.
   const source = text.replace(/\s*(?:→|->|=>)\s*/g, " to ");
 
   const sentences = source
@@ -271,9 +271,9 @@ function readSentence(sentence: string, facts: EmploymentChangeFacts, today: str
   }
 
   /*
-   * "Salon Director FT at $18/hr to TC PT at $12/hr" — the arrow in the
+   * "Salon Director FT at $18/hr to Team Member PT at $12/hr" — the arrow in the
    * intake's own example, with no "from". Read only where the left side is
-   * nothing but a title and its details, so "demote marlowe to TC" is left to
+   * nothing but a title and its details, so "demote marlowe to team member" is left to
    * the reading below rather than making "Demote Marlowe" a job title.
    */
   if (!/\bfrom\b/i.test(sentence)) {
@@ -288,7 +288,7 @@ function readSentence(sentence: string, facts: EmploymentChangeFacts, today: str
   }
 
   /*
-   * "salon 12, manager, $18/hr, going to TC at $14/hr" — the answer to "what
+   * "salon 12, manager, $18/hr, going to team member at $14/hr" — the answer to "what
    * are the current and new details?" given as a list. The items BEFORE the
    * change ("going to", "moving to", "demote ... to") describe where the
    * employee is now. Each item is read on its own and strictly, so the
@@ -414,7 +414,7 @@ function readSentence(sentence: string, facts: EmploymentChangeFacts, today: str
     if (location) facts.inferredLocation ??= location;
   }
 
-  /* "<Name> is an SD at Lawrence", "currently a full-time TC", "she is FT". */
+  /* "<Name> is an SD at Lawrence", "currently a full-time team member", "she is FT". */
   const role = new RegExp(
     String.raw`(?:\bis|\bwas|['’]s)\s+(?:currently\s+)?(?:an?|our|the)\s+(?!new\b)(.+?)(?=\s+(?:transferring|transfering|moving|who|that|going|stepping|wants|and|but|is|will|being)\b|${END.slice(3, -1)})`,
     "i",
@@ -646,7 +646,7 @@ function describeSide(side: ChangeSide): string {
 
 /**
  * What Ask Bubbles already has, in one line, so the manager can see it read the
- * sentence correctly: "FT Salon Director → PT Tanning Consultant, effective
+ * sentence correctly: "FT Salon Director → PT Team Member, effective
  * October 5, 2026, voluntary".
  */
 export function describeKnownFacts(facts: EmploymentChangeFacts): string | null {

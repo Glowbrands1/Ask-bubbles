@@ -11,15 +11,22 @@ vi.mock("@/config/company/locations", async () =>
  *
  * The revision itself is proven in `api/forms/coaching-feedback-e2e.test.ts`.
  * This proves the wiring: with a created form named by the browser, the route
- * tries the correction, then the revision, and only then an ordinary answer —
- * and without a named form it never tries the revision at all.
+ * tries the correction, then a policy change, then the redraft, then the
+ * revision, and only then an ordinary answer — which is told which form is
+ * open — and without a named form it never tries any of them.
  */
 
 const ORIGINAL = { ...process.env };
 
-async function load(revision: unknown) {
+async function load(revision: unknown, redraft: unknown = null, policyChange: unknown = null) {
   vi.resetModules();
-  const seen = { answered: 0, revised: [] as unknown[] };
+  const seen = {
+    answered: 0,
+    revised: [] as unknown[],
+    redrafted: [] as unknown[],
+    policy: [] as unknown[],
+    asked: [] as Record<string, unknown>[],
+  };
 
   vi.doMock("@/lib/auth/server", () => ({
     authorizeRequest: async (_request: Request, permission: string) => ({
@@ -36,16 +43,39 @@ async function load(revision: unknown) {
     }),
   }));
   vi.doMock("@/lib/ai/server-ask", () => ({
-    answerQuestion: async () => {
+    answerQuestion: async (request: Record<string, unknown>) => {
       seen.answered += 1;
+      seen.asked.push(request);
       return { content: "An ordinary answer.", citations: [] };
     },
   }));
   vi.doMock("@/lib/forms/chat-correction", () => ({ correctActiveForm: async () => null }));
+  vi.doMock("@/lib/forms/chat-policy-change", () => ({
+    changeActiveFormPolicy: async (input: unknown) => {
+      seen.policy.push(input);
+      return policyChange;
+    },
+  }));
+  vi.doMock("@/lib/forms/open-form-summary", () => ({
+    describeOpenForm: async (_request: Request, id: string) => ({
+      templateName: "Corrective Action Form",
+      employeeName: "Pat Rivera",
+      status: "draft",
+      lines: [],
+      unverifiedPolicy: [],
+      id,
+    }),
+  }));
   vi.doMock("@/lib/forms/chat-revision", () => ({
     reviseActiveForm: async (input: unknown) => {
       seen.revised.push(input);
       return revision;
+    },
+  }));
+  vi.doMock("@/lib/forms/chat-redraft", () => ({
+    redraftActiveForm: async (input: unknown) => {
+      seen.redrafted.push(input);
+      return redraft;
     },
   }));
   vi.doMock("@/lib/supabase/server", () => ({
@@ -81,8 +111,18 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   process.env = { ...ORIGINAL };
-  for (const path of ["@/lib/auth/server", "@/lib/ai/server-ask", "@/lib/forms/chat-correction", "@/lib/forms/chat-revision", "@/lib/supabase/server"]) {
+  for (const path of [
+    "@/lib/auth/server",
+    "@/lib/ai/server-ask",
+    "@/lib/forms/chat-correction",
+    "@/lib/forms/chat-policy-change",
+    "@/lib/forms/open-form-summary",
+    "@/lib/forms/chat-revision",
+    "@/lib/forms/chat-redraft",
+    "@/lib/supabase/server",
+  ]) {
     vi.doUnmock(path);
   }
   vi.resetModules();
@@ -107,6 +147,14 @@ describe("a revision of the open form", () => {
   });
 
   it("is given the business day, so a typed follow-up date can be read", async () => {
+    /*
+     * THE SERVER'S CLOCK, PINNED. The route takes the day from `businessToday()`
+     * and ignores the browser's `todayIso`. Noon Eastern on 2 October, and a
+     * browser date that disagrees, so the assertion names the day and proves
+     * it is the server's.
+     */
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-02T16:00:00Z"));
     const { route, seen } = await load({
       content: "Set the follow-up date to **Thursday, October 15, 2026**.",
       citations: [],
@@ -119,14 +167,11 @@ describe("a revision of the open form", () => {
         activeFormInstanceId: INSTANCE,
         history: [],
         question: "Change the follow-up date to 10/15",
-        context: { userName: "Dana", locationName: "NE Lincoln O Street", todayIso: "2026-10-02" },
+        context: { userName: "Dana", locationName: "NE Lincoln O Street", todayIso: "2026-01-01" },
       }),
     );
     expect(response.status).toBe(200);
-    // The server's business day, not the caller's `todayIso` (the reference
-    // copy pinned the day it was written, and fails on any other day).
-    const { businessToday } = await import("@/lib/business-date");
-    expect(seen.revised[0]).toMatchObject({ question: "Change the follow-up date to 10/15", today: businessToday() });
+    expect(seen.revised[0]).toMatchObject({ question: "Change the follow-up date to 10/15", today: "2026-10-02" });
   });
 
   it("falls through to an ordinary answer when the turn is not a revision", async () => {
@@ -141,5 +186,100 @@ describe("a revision of the open form", () => {
     await route.POST(ask({ history: [] }));
     expect(seen.revised).toHaveLength(0);
     expect(seen.answered).toBe(1);
+  });
+});
+
+/*
+ * "HERE'S WHAT HAPPENED" on a Corrective Action Form created from a name alone
+ * is a redraft of that form (`chat-redraft.ts`), tried after the correction and
+ * the policy change and BEFORE the revision — a Corrective Action Form can be
+ * revised in place now, and on a form Ask Bubbles wrote nothing on the whole
+ * redraft is what the account is for — and only where the browser named a
+ * created form.
+ */
+describe("an account of what happened, on the open form", () => {
+  it("is answered by the redraft, with the form update the editor listens for", async () => {
+    const { route, seen } = await load(null, {
+      content: "Redrafted the **Corrective Action Form** for **Pat Rivera** from what you described.",
+      citations: [],
+      coverage: "not_applicable",
+      formUpdate: { instanceId: INSTANCE, updated: ["observation", "policy_language"] },
+    });
+    const response = await route.POST(
+      ask({
+        activeFormInstanceId: INSTANCE,
+        history: [],
+        question: "Pat was scheduled to open the store at 9:30 and did not arrive until 11:23",
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status, JSON.stringify(payload)).toBe(200);
+    expect(payload.formUpdate).toEqual({ instanceId: INSTANCE, updated: ["observation", "policy_language"] });
+    expect(seen.redrafted).toHaveLength(1);
+    expect(seen.redrafted[0]).toMatchObject({ instanceId: INSTANCE });
+    expect(seen.answered).toBe(0);
+  });
+
+  it("is tried before the revision, which is not tried when the redraft answered the turn", async () => {
+    const { route, seen } = await load(
+      { content: "should not be used" },
+      { content: "Redrafted.", citations: [], coverage: "not_applicable" },
+    );
+    const payload = await (await route.POST(ask({ activeFormInstanceId: INSTANCE, history: [] }))).json();
+    expect(payload.content).toBe("Redrafted.");
+    expect(seen.redrafted).toHaveLength(1);
+    expect(seen.revised).toHaveLength(0);
+  });
+
+  it("is never tried without a form the conversation created", async () => {
+    const { route, seen } = await load(null, { content: "should not be used" });
+    await route.POST(ask({ history: [] }));
+    expect(seen.redrafted).toHaveLength(0);
+    expect(seen.answered).toBe(1);
+  });
+});
+
+describe("a policy named for the open form", () => {
+  it("is answered by the policy change, before any redraft or revision is tried", async () => {
+    const { route, seen } = await load(
+      { content: "should not be used" },
+      { content: "should not be used" },
+      {
+        content: "Updated Direct policy from official manual on the **Corrective Action Form** for **Pat Rivera**.",
+        citations: [],
+        coverage: "not_applicable",
+        formUpdate: { instanceId: INSTANCE, updated: ["policy_language"] },
+      },
+    );
+    const response = await route.POST(
+      ask({ activeFormInstanceId: INSTANCE, history: [], question: "add the attendance policy to this form" }),
+    );
+    const payload = await response.json();
+    expect(payload.formUpdate).toEqual({ instanceId: INSTANCE, updated: ["policy_language"] });
+    expect(seen.policy).toHaveLength(1);
+    expect(seen.redrafted).toHaveLength(0);
+    expect(seen.revised).toHaveLength(0);
+    expect(seen.answered).toBe(0);
+  });
+
+  it("is never tried without a form the conversation created", async () => {
+    const { route, seen } = await load(null);
+    await route.POST(ask({ history: [], question: "add the attendance policy to this form" }));
+    expect(seen.policy).toHaveLength(0);
+  });
+});
+
+describe("an ordinary answer while a form is open", () => {
+  it("is told which form is open, read by the server", async () => {
+    const { route, seen } = await load(null);
+    await route.POST(ask({ activeFormInstanceId: INSTANCE, history: [], openForm: { templateName: "Forged" } }));
+    expect(seen.asked[0]?.openForm).toMatchObject({ templateName: "Corrective Action Form", id: INSTANCE });
+  });
+
+  it("is told nothing when the conversation created no form, whatever the body claims", async () => {
+    const { route, seen } = await load(null);
+    await route.POST(ask({ history: [], openForm: { templateName: "Forged" } }));
+    expect(seen.asked[0]?.openForm ?? null).toBeNull();
   });
 });

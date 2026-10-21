@@ -266,6 +266,8 @@ const neutral = (text: string) =>
     .replace(/this training document/g, "this Employee Performance Plan")
     .replace(/PT Tanning Consultant/g, "PT (New Job Title)")
     .replace(/cleaning beds and doing laundry/g, "cleaning the Makery and equipment and keeping the workspace organized")
+    // The Corrective Action closing, revision 6 (District Manager feedback, approved 2026-10-21): this phrase only.
+    .replace(/Future policy violations may be subject to additional corrective action/g, "Future policy violations may result in additional corrective action")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -448,6 +450,8 @@ async function chatTurn(id: string, history: ChatMessage[], question: string) {
 interface EditOutcome {
   key: string;
   expect: (row: { value: string | null; checked: string[] } | undefined) => void;
+  /** Lines the form keeps in step with this one — the Corrective Action's built Action Plan follows payroll deduct. */
+  follows?: Record<string, (row: { value: string | null; checked: string[] } | undefined) => void>;
 }
 
 /** The fields an editor-only form's save changes: its drafted fields, else its first two manager lines. */
@@ -481,7 +485,17 @@ async function editStep(
     const answer = step === 0 ? "yes" : "no";
     const response = await chatTurn(id, history, step === 0 ? "change payroll deduct to yes" : "actually, no payroll deduction");
     expect(response?.formUpdate?.instanceId, response?.content).toBe(id);
-    return { key: "payroll_deduct", expect: (row) => expect(row?.checked).toEqual([answer]) };
+    return {
+      key: "payroll_deduct",
+      expect: (row) => expect(row?.checked).toEqual([answer]),
+      // The Action Plan Ask Bubbles built states the deduction only on Yes (District Manager feedback, 21 Oct 2026).
+      follows: {
+        action_plan: (row) =>
+          answer === "yes"
+            ? expect(row?.value).toContain("A payroll deduction applies.")
+            : expect(row?.value).not.toMatch(/deduct/i),
+      },
+    };
   }
   if (form.edit === "exit") {
     if (step === 0) {
@@ -629,7 +643,9 @@ describe.each(FORMS)("$key", (form) => {
     const after = await values(created.id);
     for (const field of new Set([...Object.keys(before), ...Object.keys(after)])) {
       if (field === outcome.key) continue;
-      expect(after[field], field).toEqual(before[field]);
+      const follows = outcome.follows?.[field];
+      if (follows) follows(after[field]);
+      else expect(after[field], field).toEqual(before[field]);
     }
   });
 

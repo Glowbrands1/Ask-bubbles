@@ -11,6 +11,9 @@
  *      never mistaken for a person's name.
  *
  * Neutral retail titles until Buff City Soap's Woven positions are confirmed.
+ * "TC" / "Tanning Consultant", a reference-platform position, is not one of
+ * them (removed 21 Oct 2026): "TC" is no longer read as a title, expanded, or
+ * taken as the role that ends a name.
  * Order matters: most specific first, so "assistant store manager" is not
  * read as "store manager".
  */
@@ -24,7 +27,6 @@ export const COMPANY_JOB_TITLES: readonly { pattern: RegExp; title: string }[] =
   { pattern: /\b(?:dmits?|district managers? in training)\b/i, title: "DMIT" },
   { pattern: /\b(?:fttcs?|full[- ]time tanning consultants?)\b/i, title: "FTTC" },
   { pattern: /\b(?:asds?|assistant (?:salon|store) directors?)\b/i, title: "ASD" },
-  { pattern: /\b(?:tcs?|tanning consultants?)\b/i, title: "Tanning Consultant" },
   { pattern: /\b(?:sds?|(?:salon|store) directors?)\b/i, title: "Store Director" },
   { pattern: /\b(?:dm|district managers?)\b/i, title: "District Manager" },
   // Provisional Buff City Soap titles (to be confirmed by Buff).
@@ -36,3 +38,17 @@ export const COMPANY_JOB_TITLES: readonly { pattern: RegExp; title: string }[] =
   { pattern: /\b(?:sales associates?|team members?)\b/i, title: "Team Member" },
   { pattern: /\b(?:rm|regional managers?)\b/i, title: "Regional Manager" },
 ];
+
+/**
+ * Whether a single word is a job-title ABBREVIATION — two to six letters that
+ * one of the titles above reads in full ("ASM", "SD", "DM"). Case is not
+ * checked here; callers that need the capitals as evidence check them.
+ *
+ * Used where a manager signs a person off as the paperwork does — "Brandi
+ * Algya ASM Grand Island" — so the role ends the name and says a store
+ * follows. Derived from the list, so it follows Buff City Soap's titles.
+ */
+export function isJobTitleAbbreviation(word: string): boolean {
+  if (!/^[A-Za-z]{2,6}$/.test(word)) return false;
+  return COMPANY_JOB_TITLES.some((entry) => word.replace(entry.pattern, "") === "");
+}

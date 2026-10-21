@@ -466,6 +466,66 @@ describe("4. the offense box decides which section", () => {
     );
   });
 
+  /*
+   * A LATE OPENING IS LATENESS WITH A SECTION OF ITS OWN. Ported from the
+   * reference platform (production, 20 Oct 2026): a late opener's form was
+   * ticked Tardiness and cited Attendance, and the manager pasted the Late
+   * Opening wording in by hand with no source. The JBA manual is the same for
+   * every brand, so a Buff City Soap store's late opener is cited the same way.
+   */
+  it.each([
+    "Pat was scheduled to open the store at 9:30 and did not arrive until 11:23",
+    "she was the opener today and came in late",
+    "late opening on 10/16",
+    "she didn't open the Makery until 10",
+    "opened the location 40 minutes late",
+  ])("cites Late Opening, then Attendance, for a tardy opener: %s", (notes) => {
+    const sections = manualSectionsFor({
+      chunks: [...MANUAL, LEGACY_LATE_OPENING],
+      offenseKeys: ["tardiness"],
+      notes,
+    });
+
+    expect(officialManualReference(TITLE, sections)).toBe(
+      "JBA Policy Manual — Late Opening — Page 15; Attendance — Page 14",
+    );
+  });
+
+  it.each([
+    "she was 20 minutes late for her 2pm shift",
+    "she left the drawer open and came in late",
+    "we need open communication about her late arrivals",
+    "she skipped her opening duties and was late",
+  ])("cites Attendance alone when the account is not a late opening: %s", (notes) => {
+    const sections = manualSectionsFor({
+      chunks: [...MANUAL, LEGACY_LATE_OPENING],
+      offenseKeys: ["tardiness"],
+      notes,
+    });
+
+    expect(sections.map((section) => section.heading)).toEqual(["Attendance"]);
+  });
+
+  it("cites Late Opening only under the box that governs it", () => {
+    const sections = manualSectionsFor({
+      chunks: [...MANUAL, LEGACY_LATE_OPENING],
+      offenseKeys: ["dress_code"],
+      notes: "she was scheduled to open the store and wore flip flops",
+    });
+
+    expect(sections.map((section) => section.heading)).toEqual(["Dress Code for The Company"]);
+  });
+
+  it("cites Attendance alone when the manual states no Late Opening section", () => {
+    const sections = manualSectionsFor({
+      chunks: MANUAL,
+      offenseKeys: ["tardiness"],
+      notes: "she was scheduled to open the store and came in at 11:23",
+    });
+
+    expect(sections.map((section) => section.heading)).toEqual(["Attendance"]);
+  });
+
   it("skips a ticked box the manual does not state, and cites the rest", () => {
     const sections = manualSectionsFor({
       chunks: MANUAL,

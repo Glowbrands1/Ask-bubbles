@@ -39,6 +39,22 @@ export interface AskContext {
  */
 export type ClientAskContext = Omit<AskContext, "todayIso">;
 
+/** A created form, as an ordinary answer is told about it. */
+export interface OpenFormSummary {
+  templateName: string;
+  employeeName: string;
+  status: "draft" | "finalized";
+  /** Each filled line, in the form's own labels; long text is clipped. */
+  lines: { label: string; value: string }[];
+  /** Policy lines no approved source has verified, by label. */
+  unverifiedPolicy: string[];
+  /**
+   * The manual sections its policy lines cite, read off their verified
+   * provenance — so a long, clipped line still says what it cites.
+   */
+  cited?: string[];
+}
+
 export interface AskRequest {
   question: string;
   mode: AnswerMode;
@@ -83,12 +99,32 @@ export interface AskRequest {
    */
   activeFormInstanceId?: string;
   /**
+   * What the form named by `activeFormInstanceId` says now, for an answer that
+   * no correction, policy change, redraft or revision handled.
+   *
+   * SET BY THE SERVER ONLY. `parseAskRequest` never copies it from the body:
+   * the route reads it from the instance after `authorizeInstance`, so the
+   * prompt can say "the Corrective Action Form for Pat is open" instead of
+   * denying a form that is on screen. See `lib/forms/open-form-summary.ts`.
+   */
+  openForm?: OpenFormSummary | null;
+  /**
    * The forms created from ONE message's several cards, when this turn names
    * none of their people — so a correction is answered with "which one?"
    * rather than guessed or dropped. Ids only, re-authorized server-side; see
    * `askWhichFormToCorrect`.
    */
   activeFormCandidateIds?: string[];
+  /**
+   * The browser's `conv_*` id for the conversation this question belongs to.
+   *
+   * A CORRELATION KEY, NOT AUTHORITY. It is used for one thing: leaving this
+   * conversation out of what Bubbles recalls from the manager's earlier ones,
+   * because it is already in the prompt as history. Memory is read under the
+   * session's own user id, so a forged value can only fail to exclude a
+   * conversation the caller already owns.
+   */
+  conversationId?: string;
   /**
    * What the manager was looking at when they asked, when they came from a
    * report tab's "Ask Bubbles about this report".
@@ -123,13 +159,14 @@ export interface AskRequest {
 }
 
 /**
- * What the BROWSER may send. Everything an `AskRequest` has except the corpus.
+ * What the BROWSER may send. Everything an `AskRequest` has except the corpus
+ * and the open form's summary, which only the server reads.
  *
  * Removed rather than left as an ignored field: a client that keeps sending an
  * authority-looking value is an invitation for a future server edit to start
  * trusting it again.
  */
-export type ClientAskRequest = Omit<AskRequest, "scopeId" | "context"> & {
+export type ClientAskRequest = Omit<AskRequest, "scopeId" | "context" | "openForm"> & {
   context: ClientAskContext;
 };
 

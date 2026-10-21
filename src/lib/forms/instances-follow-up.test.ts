@@ -264,6 +264,32 @@ describe("the outstanding query the Overview reads", () => {
   });
 });
 
+describe("a restricted reader's queue", () => {
+  beforeEach(() => {
+    store.form_instances = [
+      instance({ id: "home-1", location_id: "loc-home", follow_up_date: "2026-09-05" }),
+      instance({ id: "own-away-1", location_id: "loc-away", follow_up_date: "2026-09-01", created_by: "user-dm" }),
+      instance({ id: "other-away-1", location_id: "loc-away", follow_up_date: "2026-09-02" }),
+      instance({ id: "own-home-1", location_id: "loc-home", follow_up_date: "2026-09-03", created_by: "user-dm" }),
+    ];
+  });
+
+  it("reads the home stores, and nothing else, without an owner", async () => {
+    const outstanding = await listOutstandingFollowUps(50, ["loc-home"]);
+    expect(outstanding.map((entry) => entry.id)).toEqual(["own-home-1", "home-1"]);
+  });
+
+  it("adds the reader's own forms at other stores, once each, soonest first — never anybody else's", async () => {
+    const outstanding = await listOutstandingFollowUps(50, ["loc-home"], "user-dm");
+    expect(outstanding.map((entry) => entry.id)).toEqual(["own-away-1", "own-home-1", "home-1"]);
+  });
+
+  it("reads only the reader's own forms when they have no store", async () => {
+    const outstanding = await listOutstandingFollowUps(50, [], "user-dm");
+    expect(outstanding.map((entry) => entry.id)).toEqual(["own-away-1", "own-home-1"]);
+  });
+});
+
 describe("the schema backs what the code assumes", () => {
   const sql = readdirSync("supabase/migrations")
     .map((name) => readFileSync(`supabase/migrations/${name}`, "utf8"))

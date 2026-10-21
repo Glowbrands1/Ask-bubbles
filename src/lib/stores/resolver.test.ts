@@ -232,4 +232,30 @@ describe("in a sentence", () => {
       expect({ text, mentions, unmatched }).toEqual({ text, mentions: [], unmatched: [] });
     }
   });
+
+  /*
+   * Name, role, store — the way the paperwork signs a person off (ported from
+   * the reference platform's QA of 20 October 2026). The role abbreviation is
+   * the cue that a store follows. Read on the roster as it ships, where a
+   * city on its own needs a cue (a mapped Woven name can stand without one).
+   */
+  const readRoster = (text: string) => readStoreMentions(text, rosterOnly);
+
+  it("reads a multi-word store named right after a role abbreviation", () => {
+    for (const [text, ids] of [
+      ["Brandi Algya ASM Lee's Summit. Properly uploading documentation", ["loc-219"]],
+      ["Brandi Algya DM Grand Island", ["loc-236"]],
+      ["Brandi Algya ASM Sioux Falls", ["loc-225", "loc-338"]],
+    ] as const) {
+      expect(readRoster(text).mentions.flatMap((mention) => mention.locationIds), text).toEqual(ids);
+    }
+  });
+
+  it("does not read a store from a role followed by anything else", () => {
+    // One word after a role can be the person ("my ASM Kearney"), and a word
+    // that is not a job title is no cue at all.
+    expect(readRoster("my ASM Kearney was late").mentions).toEqual([]);
+    expect(readRoster("my DM Bellevue called").mentions).toEqual([]);
+    expect(readRoster("Brandi Algya from Grand Island").mentions).toEqual([]);
+  });
 });

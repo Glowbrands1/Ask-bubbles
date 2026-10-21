@@ -8,6 +8,7 @@ import snapshot from "@/test/fixtures/ask-sunny-published-templates.json";
 import { APPROVED_REMOVAL_DESCRIPTION_CHANGES, APPROVED_REMOVALS, withApprovedRemovals } from "@/test/approved-removals";
 
 import { MIGRATED_TEMPLATE_SEEDS, TEMPLATE_SEEDS } from "./library";
+import { CA_ACTION_PLAN_CLOSING, CA_ACTION_PLAN_CLOSING_REVISION_5 } from "./required-closing";
 
 /**
  * ============================================================================
@@ -77,11 +78,25 @@ const RENAMED: Readonly<Record<string, string>> = { "stc-exit": "resignation-exi
  * of these pairs, so this list cannot widen into a general exemption: any other
  * wording change still fails the approved-list test.
  */
+/** The Corrective Action Form's revision note as the reference platform published it. */
+const DPOA_NOTE_REVISION_5 = String(TEMPLATES.find((template) => template.key === "dpoa")!.revisionNote);
+/** The one sentence revision 6 adds to it. */
+const DPOA_REVISION_6 =
+  'Revision 6 (District Manager feedback, 21 Oct 2026) makes the Action Plan two sentences — "Management will review the <policy> policy with <employee>." and "Future policy violations may result in additional corrective action up to and including termination of employment." — with the payroll deduction between them when payroll deduct is Yes.';
+
 const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[] = [
   { decision: "D3 — 7G Service", from: "Follow through with Client Engagement Strategies with every client.", to: "Follow through with 7G Service with every guest." },
   { decision: "D4 — Employee Performance Plan acknowledgement", from: "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.", to: "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement." },
   { decision: "D12 — demotion example destination role", from: "(Employee) is moving from a FT (Job Title) at $x.xx /hr at (location, State abbr.) to a PT Tanning Consultant at $x.xx /hr at (location,State abbr.) effective dd/mm/yyyy. (**Effective date must be the start of a pay period).", to: "(Employee) is moving from a FT (Job Title) at $x.xx /hr at (location, State abbr.) to a PT (New Job Title) at $x.xx /hr at (location,State abbr.) effective dd/mm/yyyy. (**Effective date must be the start of a pay period)." },
   { decision: "D18 — Makery cleaning scenario", from: "This role involves hands-on work like cleaning beds and doing laundry. How do you lead by example in these tasks?", to: "This role involves hands-on work like cleaning the Makery and equipment and keeping the workspace organized. How do you lead by example in these tasks?" },
+  /*
+   * District Manager feedback, 21 Oct 2026, approved for Ask Bubbles: the
+   * Corrective Action Form's Action Plan is two sentences and its closing says
+   * "may result in" (revision 6). The plan is built in `ca-action-plan.ts`.
+   */
+  { decision: "DM-1 — Corrective Action Action Plan help", from: "One paragraph: what is being done, what the employee does going forward, and that the manual's own wording is reviewed with them. No dates and no follow-up meeting. It always ends with the form's closing sentence, which is added automatically.", to: "Two sentences: management will review the policy cited under Direct policy with the employee, and the form's closing sentence — with the payroll deduction between them when payroll deduct is Yes. Written by Ask Bubbles from the form; the closing is added automatically." },
+  { decision: "DM-2 — Corrective Action closing, \"may result in\"", from: CA_ACTION_PLAN_CLOSING_REVISION_5, to: CA_ACTION_PLAN_CLOSING },
+  { decision: "DM-3 — Corrective Action revision 6 note", from: DPOA_NOTE_REVISION_5, to: DPOA_NOTE_REVISION_5.replace(" Forms filed against earlier versions", ` ${DPOA_REVISION_6} Forms filed against earlier versions`) },
 ];
 
 function comparable(seed: Record<string, unknown>) {
@@ -170,13 +185,13 @@ describe("the migrated templates are the reference platform's published template
     const matching = CHANGES.filter((change) =>
       APPROVED_CONTENT_CHANGES.some((entry) => entry.from === change.from && entry.to === change.to),
     );
-    // D3 x2 (SDIT, both lists), D4 x10 (six EPPs; SDIT, TSD and both DMIT print it twice), D12 x1, D18 x1.
-    expect(matching).toHaveLength(14);
+    // D3 x2 (SDIT, both lists), D4 x10 (six EPPs; SDIT, TSD and both DMIT print it twice), D12 x1, D18 x1, DM-1..3 x1 each.
+    expect(matching).toHaveLength(17);
     for (const entry of APPROVED_CONTENT_CHANGES) {
       expect(matching.some((change) => change.from === entry.from), entry.decision).toBe(true);
     }
     expect(new Set(matching.map((change) => change.sourceKey))).toEqual(
-      new Set(["sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1"]),
+      new Set(["sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1", "dpoa"]),
     );
   });
 

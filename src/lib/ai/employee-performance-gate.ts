@@ -329,7 +329,7 @@ export const ESCALATION_ACTION_PATTERNS: readonly RegExp[] = [
 
 /** Person nouns in the singular. Individuating with any determiner. */
 const PERSON_NOUN_SINGULAR =
-  "(?:employee|manager|consultant|associate|teammate|team member|staff member|tanning consultant)";
+  "(?:employee|manager|consultant|associate|teammate|team member|staff member)";
 
 /** Person nouns in the plural. Generic unless a selector picks one out. */
 const PERSON_NOUN_PLURAL =
@@ -475,8 +475,6 @@ export const SUBJECT_TERMS: readonly string[] = [
   "employees",
   "staff",
   "staff member",
-  "tanning consultant",
-  "tc",
   "her",
   "him",
   "she",

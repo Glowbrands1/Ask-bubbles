@@ -200,7 +200,7 @@ describe("1. a manager with one salon is never asked for it", () => {
   });
 
   it("goes straight to the draft once the employee is named", async () => {
-    const response = await ask("Create a corrective action form for Jane Smith", salons(WORNALL));
+    const response = await ask("Create a corrective action form for Jane Smith, she was late today", salons(WORNALL));
 
     expect(response.formProposal!.status).toBe("ready");
     expect(response.formProposal!.supportsInlineDraft).toBe(true);
@@ -356,7 +356,7 @@ describe("the other details are not asked for once they are given", () => {
 
   it("drops the date and the job title from the corrective-action walk-through", async () => {
     const response = await ask(
-      "Corrective action form for Jane Smith, she is a tanning consultant, it happened today — walk me through it.",
+      "Corrective action form for Jane Smith, she is a team member, it happened today — walk me through it.",
       salons(WORNALL),
     );
 

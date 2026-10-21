@@ -264,7 +264,7 @@ describe("a populated draft", () => {
     state.details =
       "Jane Smith gave two weeks notice on 9/14 and worked out her notice. Her last day was Sept 26. She is not eligible for rehire. The form was signed.";
     const { result } = await fromConversation([
-      said("m1", "Jane Smith is one of my TCs. She worked at lincoln o street and gave her two weeks notice on 9/14."),
+      said("m1", "Jane Smith is one of my team members. She worked at lincoln o street and gave her two weeks notice on 9/14."),
       said("m2", "She worked out her notice and her last day was Sept 26. Create an exit form for jane."),
     ]);
     expect(result.draftWarning).toBeNull();
@@ -274,7 +274,7 @@ describe("a populated draft", () => {
     expect(instance).toMatchObject({
       templateKey: "resignation-exit",
       employeeName: "Jane Smith",
-      employeeRole: "Tanning Consultant",
+      employeeRole: "Team Member",
       locationId: "loc-0311",
       locationName: "NE Lincoln O Street",
       status: "draft",
@@ -283,7 +283,7 @@ describe("a populated draft", () => {
 
     const byKey = Object.fromEntries(values.map((row) => [row.fieldKey, row]));
     expect(byKey.employee_name?.value).toBe("Jane Smith");
-    expect(byKey.job_title?.value).toBe("Tanning Consultant");
+    expect(byKey.job_title?.value).toBe("Team Member");
     expect(byKey.location?.value).toBe("NE Lincoln O Street");
     expect(byKey.form_date?.value).toBe("2026-09-28");
     expect(byKey.last_day_worked?.value).toBe("2026-09-26");
@@ -304,7 +304,7 @@ describe("a populated draft", () => {
     expect(text).toContain("Resignation/Exit Form");
     expect(text).toContain("Jane Smith");
     expect(text).toContain("NE Lincoln O Street");
-    expect(text).toContain("Tanning Consultant");
+    expect(text).toContain("Team Member");
     expect(text.replace(/\s+/g, " ")).toContain("Jane's last day was Sept 26.");
     expect(text).not.toMatch(/not eligible for rehire|was signed/);
     expect(text).not.toContain("Invented Road");
@@ -359,7 +359,7 @@ describe("nothing outside the form happens", () => {
 const HR_CONVERSATION = [
   said(
     "m1",
-    "Jane Smith is one of my TCs at lincoln o street. She texted me on 9/20 that she quit because she's moving to Denver, and her last day was 9/19.",
+    "Jane Smith is one of my team members at lincoln o street. She texted me on 9/20 that she quit because she's moving to Denver, and her last day was 9/19.",
   ),
   said(
     "m2",
@@ -431,20 +431,19 @@ describe("the Details section HR asked for", () => {
     expect(text).toContain("Place comment on employee's Sunlync account");
   });
 
-  it("asks only for what is missing, then a correction updates the same form in place", async () => {
+  it("lists what is missing without asking, then a correction updates the same form in place", async () => {
     state.details = "";
     const { response, result } = await fromConversation([
       said("m1", "Create an exit form for Jane Smith at lincoln o street. She quit on the spot by text on 9/20, last day 9/19. She returned her key."),
     ]);
     const content = response!.content;
     expect(content).toMatch(/- \*\*Store Key Returned:\*\* Store key was returned\./);
-    expect(content).toMatch(/- What reason did they give for leaving\?/);
-    expect(content).toMatch(/- Were their store items returned\?/);
-    expect(content).toMatch(/- Is payroll deduction applicable\?/);
-    expect(content).toMatch(/- Will they be dropped to minimum wage and forfeit their bonus\?/);
-    expect(content).toMatch(/- Are they eligible for rehire\?/);
-    // Already said: not asked again.
-    expect(content).not.toMatch(/What date did they resign|How did they let you know|store key returned\?/i);
+    expect(content).toMatch(
+      /\*\*Left blank for you to review:\*\*[^\n]*Reason for Resignation, Store Items Returned, Payroll Deduction, Minimum Wage \/ Bonus Forfeiture, Eligible for Rehire/,
+    );
+    // Already said: not listed. And nothing is asked.
+    expect(content).not.toMatch(/Left blank for you to review:\*\*[^\n]*(?:Resignation Date|How Employee Resigned|Store Key Returned)/);
+    expect(content).not.toMatch(/\?/);
 
     const id = result.reference.instanceId;
     const correct = (question: string) =>

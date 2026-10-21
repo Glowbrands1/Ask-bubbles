@@ -12,7 +12,7 @@ import {
   type InstanceRow,
   type LoadedInstance,
 } from "./instances";
-import { authorizedLocationIds } from "./location-scope";
+import { authorizeLocation, authorizedLocationIds } from "./location-scope";
 import { getTemplateByKey } from "./repository";
 import type { Permission } from "@/types";
 
@@ -114,7 +114,9 @@ export function actorMaySeeInstance(actor: FormsActor, instance: InstanceRow): b
    */
   if (instance.locationId) {
     // Area scopes resolve through the roster; a location not on it fails closed.
-    return authorizedLocationIds(visibility).includes(instance.locationId);
+    if (authorizedLocationIds(visibility).includes(instance.locationId)) return true;
+    // Unless it is the reader's own form at a store they may still file against.
+    return ownFormStillInScope(actor, instance);
   }
 
   /*
@@ -132,6 +134,32 @@ export function actorMaySeeInstance(actor: FormsActor, instance: InstanceRow): b
    * present one.
    */
   return instance.createdBy === actor.id;
+}
+
+/**
+ * ============================================================================
+ * THE FORM YOU JUST CREATED IS ONE YOU CAN OPEN
+ * ============================================================================
+ *
+ * READING is decided by the VISIBILITY scope (`forms-visibility.ts`: the home
+ * store, unless an administrator or designated account), but CREATING is still
+ * authorized against the STORED scope — which, for a district or regional
+ * manager, is usually `global`. So a manager covering several stores could
+ * create a form for one that is not their home store, and the inline card's
+ * very next fetch answered "This form is not available": a draft created and
+ * then stranded.
+ *
+ * So the CREATOR may also see it — in the per-instance guard and in every list,
+ * which all share `actorMaySeeInstance` — but only while their stored scope
+ * would still let them file against that store today. That keeps the transfer
+ * rule above intact (a manager whose assignment no longer covers the store
+ * loses the record), while a form somebody may create is never one they cannot
+ * then open, or find again in Form Monitoring.
+ */
+function ownFormStillInScope(actor: FormsActor, instance: InstanceRow): boolean {
+  if (!actor.verified || !actor.scope || !instance.locationId) return false;
+  if (instance.createdBy !== actor.id) return false;
+  return authorizeLocation(actor.scope, instance.locationId).kind === "authorized";
 }
 
 /**
@@ -165,6 +193,9 @@ export function instanceListFilterFor(actor: FormsActor): InstanceListFilter | u
     locationIds: authorizedLocationIds(visibility),
     // The narrow exception for an ABSENT location, matching `actorMaySeeInstance`.
     ownNullLocationCreatedBy: actor.id,
+    // And their own forms at other stores; `visibleInstances` keeps only those
+    // their stored scope still covers (`ownFormStillInScope`).
+    ...(actor.verified ? { ownCreatedBy: actor.id } : {}),
   };
 }
 

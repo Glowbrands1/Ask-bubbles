@@ -2,6 +2,7 @@ import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
 import { namesIncidentTopicIn } from "./incident-topic";
+import { statedPayrollDeduct } from "./payroll-deduct";
 import { canonicalWarningWording, detectTemplateIntent } from "./template-intent";
 
 /**
@@ -94,18 +95,18 @@ export interface WarningMention {
  */
 const MAX_TEXT = 4000;
 
-/** A named warning, longest first so "final written warning" is one mention. */
-const NAMED = /\b(final\s+written|final|written|verbal)\s+warn(?:ing|ings)?\b|\b(final\s+written)\b(?!\s+(?:statement|notice|test|exam|request|record|note|policy|up)\b)/gi;
-
 /**
- * "Create a written CA for …", "verbal corrective action form", "verbal c/a
- * 9-1-26" — the level named with the form's own name, which is how HR writes
- * it. HR feedback, 21 Oct 2026: "create a written CA for …" was asked "Verbal
- * or Written?", because only "… warning" named a level. Read as "written
- * warning", so the same rules decide whether it is this form's or history.
+ * A named warning, longest first so "final written warning" is one mention.
+ *
+ * "VERBAL CA" NAMES THE LEVEL TOO. Production, 21 Oct 2026: "create verbal CA
+ * for <employee> for violating …" was answered "Is this new corrective action
+ * a Verbal Warning or a Written Warning?" — the level was in the request, in
+ * the shorthand managers use for the form itself. A verbal or written CA (or
+ * corrective action) is read exactly as a verbal or written warning: through
+ * the same cues, so "she had a written CA in August" is still history.
  */
-const LEVELLED_CORRECTIVE_ACTION =
-  /\b(final\s+written|written|verbal)\s+(?:c\.a\.?|c\/a|ca|corrective[\s-]+actions?)(?:\s+forms?)?(?![\w/])/gi;
+const NAMED =
+  /\b(final\s+written|final|written|verbal)\s+(?:warn(?:ing|ings)?|cas?|c\/a|corrective\s+actions?)\b|\b(final\s+written)\b(?!\s+(?:statement|notice|test|exam|request|record|note|policy|up)\b)/gi;
 
 /** "no, verbal", "actually verbal", "oops i meant verbal" — a correction's lead-in. */
 const LEAD_IN = String.raw`(?:(?:actually|no|nope|sorry|oops|wait|correction|ok|okay|so|rather|i\s+meant|i\s+mean|make\s+that)[\s,.:!-]*)*`;
@@ -145,6 +146,85 @@ const WHOLE_LINE = new RegExp(
   String.raw`^\s*(?:\d+\s*[.):-]\s*)?${LEAD_IN}(?:(?:type\s+of\s+)?warning(?:\s*(?:level|type))?\s*[:=-]\s*)?(?:(?:it'?s|it\s+is|make\s+it|just|only)\s+)?(?:a\s+)?(final\s+written|verbal|written)(?:\s+warning)?(?:\s+(?:one|please))?(?:[\s,]+not\s+(?:a\s+)?(?:verbal|written)(?:\s+warning)?)?[\s.!]*$`,
   "i",
 );
+
+/**
+ * The level as a SENTENCE OF ITS OWN, mid-message — "…on 10-20-26. verbal. no
+ * payroll deduct." (production, 21 Oct 2026). The same reasoning as a whole
+ * line: a bare adjective standing alone is a decision about the document,
+ * not an account of a conversation. Only the bare adjective: "…q3 review.
+ * written warning." is still read through the cues below and asked about.
+ */
+const BARE_SENTENCE = /^\s*(?:(?:it'?s|it\s+is|make\s+it|just|only)\s+)?(?:a\s+)?(verbal|written)\s*$/i;
+
+/**
+ * THE LEVEL BESIDE THE PAYROLL ANSWER — "Verbal warning, payroll deduct no.",
+ * "written warning, no payroll deduct", "verbal warning; no payroll" (District
+ * Manager feedback, 21 Oct 2026). "Verbal warning." on its own line was read
+ * as the level and "Verbal warning, payroll deduct no." was asked about: the
+ * whole-line shape ends at the level, so the payroll answer after a comma
+ * made the line an ordinary mention, and mid-message an ordinary mention
+ * after an account with a date in it is asked about. ("payroll deduct no",
+ * the answer straight after the subject, was not read as the payroll answer
+ * either — `payroll-deduct.ts`.)
+ *
+ * A level standing in a clause of its own beside the answer to "Is payroll
+ * deduct applicable?" is a decision about THIS form, as a whole line is: the
+ * payroll question belongs to the form being written, not to a warning on
+ * file. Only the level and the payroll answer — "she had a written warning,
+ * no payroll deduct" is not this shape, and is read through the cues as
+ * before.
+ */
+const LEVEL_PART = new RegExp(
+  String.raw`^\s*${LEAD_IN}(?:(?:it'?s|it\s+is|make\s+it|just|only)\s+)?(?:a\s+)?(final\s+written|verbal|written)(?:\s+(?:warning|ca|c\/a|corrective\s+action))?(?:\s+please)?\s*$`,
+  "i",
+);
+
+/** A clause that only answers the payroll question: "payroll deduct no", "no payroll". */
+function onlyPayrollAnswer(text: string): boolean {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return words > 0 && words <= 10 && statedPayrollDeduct(text) !== null;
+}
+
+/**
+ * The level in `segment` (one sentence of the turn) when it stands beside a
+ * payroll answer — after a comma in the same sentence, before one, or as the
+ * whole sentence with the next or previous sentence the payroll answer.
+ * Returns the level's offset within the segment.
+ */
+function levelBesidePayroll(
+  segment: string,
+  neighbours: readonly (string | undefined)[] = [],
+): { word: string; offset: number } | null {
+  const found = (part: string, partOffset: number) => {
+    const match = LEVEL_PART.exec(part);
+    if (!match) return null;
+    return { word: match[1]!, offset: partOffset + match[0].toLowerCase().lastIndexOf(match[1]!.toLowerCase()) };
+  };
+  const first = segment.indexOf(",");
+  if (first !== -1) {
+    // "verbal warning, payroll deduct no"
+    const head = found(segment.slice(0, first), 0);
+    if (head && onlyPayrollAnswer(segment.slice(first + 1))) return head;
+    // "no payroll deduct, verbal warning"
+    const last = segment.lastIndexOf(",");
+    const tail = found(segment.slice(last + 1), last + 1);
+    if (tail && onlyPayrollAnswer(segment.slice(0, last))) return tail;
+    return null;
+  }
+  // "verbal warning; no payroll", "Verbal warning. payroll deduct no."
+  const whole = found(segment, 0);
+  return whole && neighbours.some((text) => text !== undefined && onlyPayrollAnswer(text)) ? whole : null;
+}
+
+/** One sentence of a turn; a point inside an amount ("$3.25") does not end it. */
+const SENTENCE_WITH_AMOUNTS = /(?:[^.;!?\n]|\.(?=\d))+/g;
+
+/** "verbal warning, payroll deduct no" — the level and the payroll answer, and nothing else. */
+function onlyLevelAndPayroll(text: string): boolean {
+  const parts = [...text.matchAll(SENTENCE_WITH_AMOUNTS)].map((part) => part[0]).filter((part) => part.trim() !== "");
+  const level = (i: number) => levelBesidePayroll(parts[i]!, [parts[i - 1], parts[i + 1]]) !== null;
+  return parts.some((_, i) => level(i)) && parts.every((part, i) => level(i) || onlyPayrollAnswer(part));
+}
 
 /** "warning level: written", "type of warning - verbal". */
 const LABELLED =
@@ -456,10 +536,7 @@ function pointsToThePast(textBefore: string, today: string): boolean {
  */
 export function warningMentions(text: string, today: string): WarningMention[] {
   // "writen warnig", "verbel warning" — spelled out first, as the form request is (PR #8).
-  const source = canonicalWarningWording((text ?? "").slice(0, MAX_TEXT).replace(/[’‘‛]/g, "'")).replace(
-    LEVELLED_CORRECTIVE_ACTION,
-    "$1 warning",
-  );
+  const source = canonicalWarningWording((text ?? "").slice(0, MAX_TEXT).replace(/[’‘‛]/g, "'"));
   const found: WarningMention[] = [];
   const seen = new Set<number>();
 
@@ -481,9 +558,11 @@ export function warningMentions(text: string, today: string): WarningMention[] {
    * warning"). Lines under a "Prior actions:" heading are history.
    */
   const wholeLines: { level: WarningLevel; start: number; end: number; underHeading: boolean }[] = [];
+  const headingLines: { start: number; end: number }[] = [];
   let offset = 0;
   let underHeading = false;
   for (const line of source.split("\n")) {
+    if (underHeading) headingLines.push({ start: offset, end: offset + line.length });
     const whole = WHOLE_LINE.exec(line);
     if (whole) {
       const start = offset + line.toLowerCase().indexOf(whole[1]!.toLowerCase());
@@ -495,13 +574,47 @@ export function warningMentions(text: string, today: string): WarningMention[] {
     }
     offset += line.length + 1;
   }
+  /* A bare level as one sentence of a longer line, read like a whole line. */
+  const sentences: { level: WarningLevel; start: number; end: number }[] = [];
+  for (const segment of source.matchAll(/[^.;!?\n]+/g)) {
+    const bare = BARE_SENTENCE.exec(segment[0]);
+    if (!bare) continue;
+    const start = segment.index + segment[0].toLowerCase().lastIndexOf(bare[1]!.toLowerCase());
+    if (wholeLines.some((entry) => entry.start === start)) continue;
+    // "verbal or written?" is a question, and so is a sentence ending in one.
+    if (source[segment.index + segment[0].length] === "?") continue;
+    sentences.push({ level: levelOf(bare[1]!), start, end: segment.index + segment[0].length });
+  }
+  /* The level beside the payroll answer — "Verbal warning, payroll deduct no." */
+  const beside: { level: WarningLevel; start: number; end: number; underHeading: boolean }[] = [];
+  const segments = [...source.matchAll(SENTENCE_WITH_AMOUNTS)];
+  segments.forEach((segment, i) => {
+    const hit = levelBesidePayroll(segment[0], [segments[i - 1]?.[0], segments[i + 1]?.[0]]);
+    if (!hit) return;
+    const start = segment.index + hit.offset;
+    if (wholeLines.some((entry) => entry.start === start) || sentences.some((entry) => entry.start === start)) return;
+    if (source[segment.index + segment[0].length] === "?") return;
+    beside.push({
+      level: levelOf(hit.word),
+      start,
+      end: segment.index + segment[0].length,
+      underHeading: headingLines.some((line) => start >= line.start && start <= line.end),
+    });
+  });
+  const answers = wholeLines.length + sentences.length + beside.length;
   for (const entry of wholeLines) {
     const kind: MentionKind | undefined = entry.underHeading
       ? "historical"
-      : wholeLines.length > 1
+      : answers > 1
         ? "unclear"
         : undefined;
     push(entry.level, entry.start, entry.end, true, kind);
+  }
+  for (const entry of sentences) {
+    push(entry.level, entry.start, entry.end, true, answers > 1 ? "unclear" : undefined);
+  }
+  for (const entry of beside) {
+    push(entry.level, entry.start, entry.end, true, entry.underHeading ? "historical" : answers > 1 ? "unclear" : undefined);
   }
 
   for (const pattern of [BARE_CHANGED_TO, BARE_AFTER_CUE, BARE_GIVEN]) {
@@ -512,7 +625,7 @@ export function warningMentions(text: string, today: string): WarningMention[] {
   }
   for (const match of source.matchAll(NAMED)) {
     // "verbal warnings" is a pattern of past ones; this form issues one.
-    const plural = /warnings$/i.test(match[0]);
+    const plural = /(?:warnings|cas|actions)$/i.test(match[0]);
     push(levelOf(match[1] ?? match[2]!), match.index, match.index + match[0].length, false, plural ? "historical" : undefined);
   }
 
@@ -647,7 +760,11 @@ const CORRECTION_SHAPED =
 export function warningLevelCorrection(text: string, today: string): WarningLevel | null {
   const trimmed = (text ?? "").trim();
   if (trimmed === "" || trimmed.endsWith("?")) return null;
-  const wholeAnswer = !trimmed.includes("\n") && (WHOLE_LINE.test(trimmed) || LABELLED.test(trimmed));
+  const wholeAnswer =
+    !trimmed.includes("\n") &&
+    (WHOLE_LINE.test(trimmed) ||
+      LABELLED.test(trimmed) ||
+      onlyLevelAndPayroll(trimmed));
   LABELLED.lastIndex = 0;
   if (!wholeAnswer && !CORRECTION_SHAPED.test(trimmed)) return null;
   return statedWarningLevel(trimmed, today);

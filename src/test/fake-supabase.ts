@@ -165,6 +165,22 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
     this.filters.push((row) => String(row[column] ?? "").startsWith(prefix));
     return this;
   }
+  /**
+   * `or` of `column.ilike.*word*` terms only — the shape the Forms Register's
+   * name lookup sends. Anything else fails loudly rather than matching by
+   * accident.
+   */
+  or(expression: string) {
+    const terms = expression.split(",").map((term) => {
+      const match = /^([a-z_]+)\.ilike\.\*([^*,]+)\*$/.exec(term);
+      if (!match) throw new Error(`fake-supabase: or(${term}) unsupported`);
+      return { column: match[1]!, needle: match[2]!.toLowerCase() };
+    });
+    this.filters.push((row) =>
+      terms.some(({ column, needle }) => String(row[column] ?? "").toLowerCase().includes(needle)),
+    );
+    return this;
+  }
   gte(column: string, value: string | number) {
     this.filters.push((row) => row[column] !== undefined && row[column] !== null && String(row[column]) >= String(value));
     return this;

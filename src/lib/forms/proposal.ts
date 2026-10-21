@@ -1,12 +1,12 @@
 import "server-only";
 
 import { businessToday } from "@/lib/business-date";
-import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
+import { COMPANY_JOB_TITLES, isJobTitleAbbreviation } from "@/config/company/job-titles";
 import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
-import { NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
+import { NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, lowercaseMonths } from "./name-words";
 import { boundManagerTurns, type BoundedContext } from "./bounded-context";
 import {
   allowsTeamSubject,
@@ -325,7 +325,8 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
   // "pls", "u", "frm" are never names and never end one; read them as words.
   // "general training", "team-wide", "everyone at the salon" describe the team,
   // never a person — they are taken out first. See `maskTeamSubjectPhrases`.
-  const text = maskTeamSubjectPhrases(canonicalShorthand(canonicalWarningWording(typed)));
+  // "for September, 12% under goal" is a date, never a person. See `lowercaseMonths`.
+  const text = lowercaseMonths(maskTeamSubjectPhrases(canonicalShorthand(canonicalWarningWording(typed))));
   /* Names read from a position that says a person is being given on purpose. */
   const strong: string[] = [];
   /* Names read from the narrative: a capitalised pair, "with Jordan". */
@@ -563,8 +564,8 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
     if (words.length > 2 && MONTH_WORD.test(words[words.length - 1]!) && /^\s+\d{1,2}(?:st|nd|rd|th)?\b/.test(after)) {
       words.pop();
     }
-    const run = words.join(" ");
-    if (places.has(run)) continue;
+    const run = nameBeforeRole(words.join(" "));
+    if (run === null || places.has(run)) continue;
     /*
      * "It's Avery Testperson", "Sorry Avery Testperson": the capitalised run
      * starts with the reply, not the name. The reply is dropped; a run that
@@ -588,8 +589,19 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
   }
 
   const PREPOSED = new RegExp(`\\b(?:for|about|with|regarding)\\s+(${NAME})\\b`, "g");
+  const RUN = new RegExp(`^${NAME}(?:\\s+${PART})*`);
   for (const match of text.matchAll(PREPOSED)) {
     const candidate = match[1]!.trim();
+    /*
+     * "for Late Opening", "about Dress Code": the first word of a capitalised
+     * policy title, and the run it starts is made only of words that are never
+     * anybody's name. Ported from the reference platform (production, 20 Oct
+     * 2026: "create corrective action for <name> for Late Opening" asked
+     * whether the form was for the employee or for "Late"). One word that
+     * could be a name keeps the run a candidate — "for Grace Early".
+     */
+    const run = RUN.exec(text.slice(match.index! + match[0].length - match[1]!.length))?.[0] ?? candidate;
+    if (run.includes(" ") && run.trim().split(/\s+/).every((word) => NOT_A_TYPED_NAME.has(word.toLowerCase()))) continue;
     // "for Cash Handling": a topic word followed by another is the topic, not "Cash".
     const next = text.slice((match.index ?? 0) + match[0].length).trim().split(/\s+/)[0] ?? "";
     if (NOT_A_NAME_LEAD.has(candidate.toLowerCase()) && (next === "" || isTopicWord(next))) continue;
@@ -691,7 +703,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * 1b. THE PERSON A CHANGE IS DONE TO, OR WHO IS MAKING ONE
    * ==========================================================================
    *
-   * "demote marlowe from manager to TC" and "transfer jane to salon 18" put the
+   * "demote marlowe from manager to team member" and "transfer jane to salon 18" put the
    * name straight after the verb; "Jane is transferring from salon 12" and
    * "mike quit, last day was 9/25" put it at the start of the sentence, before
    * the change. Both positions are as strong as "<form> for <name>": the verb
@@ -1012,6 +1024,47 @@ export function correctsTheEmployee(text: string): boolean {
   return CORRECTION_CUE.test(text) || negatedNames(text).length > 0;
 }
 
+/*
+ * ============================================================================
+ * "BRANDI ALGYA ASM GRAND ISLAND": THE NAME, THE ROLE, THE STORE
+ * ============================================================================
+ *
+ * Reported on the reference platform, 20 October 2026, and reproduced here.
+ * Managers sign a person off the way the store's paperwork does — name, role,
+ * store — with no commas:
+ *
+ *     "Can you create a coaching form for a manager on the onboarding
+ *      process? Brandi Algya ASM Grand Island. Properly uploading …"
+ *
+ * The capitalised-run reader took all five words as one run, so the card was
+ * for an employee called "Brandi Algya ASM Grand Island" — or, once the run
+ * was discarded, for nobody, and the manager was asked who the form was for.
+ *
+ * THE ROLE ABBREVIATION IS THE BOUNDARY. Typed in capitals, it ends the name:
+ * the words before it are the person, and what follows is the store or the
+ * rest of the sentence. A role abbreviation is an all-caps word that one of
+ * the company's job titles (`COMPANY_JOB_TITLES`) reads in full — "ASM",
+ * "SD", "DM" — so the list follows Buff City Soap's titles rather than being
+ * written out here. Two name words are required before it, so "Sarah ASM
+ * Grand Island" names nobody from here (it used to name all four words),
+ * exactly as a lone capitalised word never has. A run with no role in it is
+ * returned unchanged.
+ */
+function isRoleAbbreviation(word: string): boolean {
+  const bare = word.replace(/[.,]+$/, "");
+  return /^[A-Z]+$/.test(bare) && isJobTitleAbbreviation(bare);
+}
+
+function nameBeforeRole(run: string): string | null {
+  const words = run.split(/\s+/);
+  const role = words.findIndex(isRoleAbbreviation);
+  if (role >= 2) return words.slice(0, role).join(" ");
+  // "Sarah ASM Grand Island": one word, then the role — not a full name, and
+  // never "Sarah ASM Grand Island" either.
+  if (role === 1) return null;
+  return run;
+}
+
 function settle(strong: string[], weak: string[], text: string): EmployeeMentions {
   const negated = negatedNames(text);
   const correction = negated.length > 0 || CORRECTION_CUE.test(text);
@@ -1130,7 +1183,7 @@ function formSubjectNames(text: string): string[] {
  */
 const TITLE_HEAD = /^(?:managers?|directors?|consultants?|supervisors?|leads?|trainers?|coordinators?|specialists?)$/i;
 const TITLE_MODIFIER =
-  /^(?:salon|location|district|regional|area|store|makery|general|assistant|shift|training|operations|tanning|spa|senior|junior|head|key)$/i;
+  /^(?:salon|location|district|regional|area|store|makery|general|assistant|shift|training|operations|spa|senior|junior|head|key)$/i;
 
 function isJobTitlePhrase(candidate: string): boolean {
   if (JOB_TITLES.some((entry) => entry.pattern.test(candidate) && candidate.replace(entry.pattern, "").trim() === "")) {

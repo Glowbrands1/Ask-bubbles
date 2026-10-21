@@ -106,6 +106,13 @@ import {
   withoutDerivedKeys,
 } from "@/lib/forms/exit-draft";
 import { EXIT_DERIVED_KEYS } from "@/lib/forms/exit-facts";
+import { namedManualSection } from "@/lib/forms/named-policy-section";
+import {
+  PAYROLL_DEDUCT_KEY,
+  isPayrollDeductAnswer,
+  payrollDeductAmount,
+} from "@/lib/forms/payroll-deduct";
+import { actionPlanProvenance, correctiveActionPlan, fixedActionPlanKey, type ActionPlanInput } from "@/lib/forms/ca-action-plan";
 import {
   STANDARDS_OF_CONDUCT,
   caPolicyAmbiguousNotice,
@@ -115,7 +122,7 @@ import {
   withConductOffense,
   withStatedOffense,
 } from "@/lib/forms/ca-policy";
-import { priorStepDate } from "@/lib/forms/form-date-answer";
+import { listFormDates, priorStepDate } from "@/lib/forms/form-date-answer";
 import {
   COACHING_CONTEXT_RULES,
   LANGUAGE_CLEANUP_RULES,
@@ -189,6 +196,13 @@ interface DraftBody {
   /** What the manager described, in their own words. */
   notes?: string;
   topic?: string;
+  /**
+   * A REDRAFT FROM CHAT, of a form the manager may already have filled in by
+   * hand. What they typed stays; their offense tick decides the citation;
+   * only the policy lines are replaced, and only by a cited value. See
+   * `lib/forms/chat-redraft.ts`.
+   */
+  keepManagerValues?: boolean;
 }
 
 function fieldBrief(field: FormField, variantLabel: string | null): string {
@@ -366,7 +380,17 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         ? await applyStatedFacts(id, { values: {}, checked: statedWarning }, actor.id, WARNING_LEVEL_STATED_KEYS)
         : [];
 
-    const promptFields = fields.filter((field) => !EXIT_DERIVED_KEYS.has(field.key));
+    /*
+     * THE CORRECTIVE ACTION FORM'S ACTION PLAN IS NOT DRAFTED. District
+     * Manager feedback, 21 Oct 2026: two sentences, the policy reviewed and
+     * the closing (plus the deduction, where payroll deduct is Yes). Built by
+     * code after the policy is cited — see `ca-action-plan.ts` — so the model
+     * is not shown the field, and anything it returns for it is dropped.
+     */
+    const fixedPlan = fixedActionPlanKey(loaded.instance.templateKey, document, variantKey);
+    const promptFields = fields.filter(
+      (field) => !EXIT_DERIVED_KEYS.has(field.key) && field.key !== fixedPlan?.key,
+    );
     const promptGroups = groups.filter(
       (group) => !EXIT_DERIVED_KEYS.has(group.key) && group.key !== warningGroup?.key,
     );
@@ -525,6 +549,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           group.key === "offense_type" && group.options.some((option) => option.key === STANDARDS_OF_CONDUCT),
       );
     const caPolicy = offersConductPolicy ? readCaPolicy(notes) : null;
+    /*
+     * A POLICY THE MANAGER NAMED BY THE MANUAL'S OWN HEADING — "violating
+     * visitors at work policy" is the manual's Visitors in the Workplace
+     * (District Manager feedback, 21 Oct 2026). Matched against the pinned
+     * manual's sheet headings, and only where exactly one answers; ticked
+     * under the box that section is cited under. Only when no policy
+     * `ca-policy.ts` knows by name was stated. See `named-policy-section.ts`.
+     */
+    const namedSection =
+      caPolicy && caPolicy.stated === null && manual.ok
+        ? namedManualSection({ text: notes, chunks: manual.chunks })
+        : null;
 
     /*
      * THE SECTIONS THE MANAGER'S OWN WORDS POINT AT — never the model's, so the
@@ -597,7 +633,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * would put a second, differently-worded instruction about prose in front
      * of the model on a form that has no plan field to apply it to.
      */
-    const hasPlanOfAction = fields.some((field) => field.narrative === PLAN_OF_ACTION);
+    const hasPlanOfAction = promptFields.some((field) => field.narrative === PLAN_OF_ACTION);
 
     /*
      * THE PRIOR-ACTIONS LIST (Corrective Action Form, revision 5). Its history
@@ -685,7 +721,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
        * THE CHEAPEST OF THE THREE DATE FIXES, and the only one that prevents
        * rather than repairs: a model told the date does not invent one.
        */
-      ...(resolvedFormDate ? [formDateBrief(resolvedFormDate)] : []),
+      ...(resolvedFormDate
+        ? [formDateBrief(resolvedFormDate, listFormDates(notes, businessToday()).map((found) => found.iso))]
+        : []),
       /*
        * THE PLAN OF ACTION — three beats, in order, and nothing else.
        *
@@ -734,7 +772,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
              * `required-closing.ts`); a model paraphrase of it would print
              * next to the real one.
              */
-            ...(fields.some((field) => field.narrative === PLAN_OF_ACTION && field.requiredClosing)
+            ...(promptFields.some((field) => field.narrative === PLAN_OF_ACTION && field.requiredClosing)
               ? [
                   "Do not write any sentence about future violations or their consequences: the form adds its own required closing sentence to this paragraph automatically.",
                 ]
@@ -925,6 +963,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * than the bracket, and why follow-up belongs to instance metadata rather
      * than to a paragraph in Details.
      */
+    // The Corrective Action Form's Action Plan is built below, never taken from the model.
+    if (fixedPlan && drafted.values) delete drafted.values[fixedPlan.key];
     const cleaned = stripPlaceholdersFromDraft(drafted.values ?? {});
 
     /*
@@ -1238,6 +1278,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           today: businessToday(),
         })
       : null;
+    /*
+     * "PAYROLL DEDUCT OF $3.25 IS APPLICABLE" IS IN THE ACTION PLAN. District
+     * Manager feedback, 21 Oct 2026: the plan never said what would be
+     * deducted. The form's own Yes / No (the manager's answer, stored at
+     * creation) decides whether the built plan states the amount the manager
+     * gave — or that a deduction applies, with no figure, when they gave none.
+     * See `ca-action-plan.ts`.
+     */
+    const payrollAnswer = fixedPlan
+      ? ((loaded.values ?? []).find((row) => row.fieldKey === PAYROLL_DEDUCT_KEY)?.checked.find(isPayrollDeductAnswer) ??
+        null)
+      : null;
     const draftedValues = (() => {
       const base = { ...(exit?.values ?? attributions.values) };
       if (priorActions) {
@@ -1262,7 +1314,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * Otherwise a conduct incident ticks Standards of Conduct where the manual
      * supports it.
      */
-    const statedKeys = caPolicy ? statedOffenseKeys(caPolicy, notes) : null;
+    const statedKeys = caPolicy
+      ? (statedOffenseKeys(caPolicy, notes) ?? (namedSection ? [namedSection.offenseKey] : null))
+      : null;
     const statedOffense = statedKeys
       ? withStatedOffense({
           checked: enforced.checked,
@@ -1294,7 +1348,22 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * and the model's own level was discarded. Nothing is ticked here: an AI
      * write of the level would overwrite a box the manager set.
      */
-    const validated = offenseApplied;
+    /*
+     * A REDRAFT KEEPS WHAT THE MANAGER TYPED. Their lines and ticks are left
+     * exactly as they are, and a Type of Offense they ticked is the one the
+     * manual's section is looked up for — the citation follows their
+     * classification, not the model's.
+     */
+    const managerRows = body.keepManagerValues
+      ? loaded.values.filter(
+          (row) => row.filledBy === "manager" && ((row.value ?? "").trim() !== "" || row.checked.length > 0),
+        )
+      : [];
+    const managerKeys = new Set(managerRows.map((row) => row.fieldKey));
+    const managerOffense = managerRows.find((row) => row.fieldKey === "offense_type" && row.checked.length > 0);
+    const validated = managerOffense
+      ? { ...offenseApplied, checked: { ...offenseApplied.checked, offense_type: [...managerOffense.checked] } }
+      : offenseApplied;
 
     /*
      * ========================================================================
@@ -1372,7 +1441,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * ONLY FOR A VERSION THAT HAS THE FIELD. The twelve templates that cite no
      * manual never reach the knowledge base for one.
      */
-    const manualSections = manual.ok
+    /* The section the manager named, first, while the box it is cited under is still ticked. */
+    const namedManual =
+      namedSection && (validated.checked.offense_type ?? []).includes(namedSection.offenseKey)
+        ? namedSection.section
+        : null;
+    const tickedSections = manual.ok
       ? manualSectionsFor({
           chunks: manual.chunks,
           offenseKeys: validated.checked.offense_type ?? [],
@@ -1383,8 +1457,17 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
            * reads as front-line — see `isManagementTitle`.
            */
           jobTitle: loaded.instance.employeeRole,
+          /*
+           * THE MANAGER'S OWN WORDS, never the model's: a late opening under
+           * the Tardiness box also cites the manual's Late Opening section.
+           * See `DESCRIBED_SECTIONS`.
+           */
+          notes: `${body.topic ?? ""} ${notes}`,
         })
       : [];
+    const manualSections = namedManual
+      ? [namedManual, ...tickedSections.filter((section) => section.heading !== namedManual.heading)]
+      : tickedSections;
 
     const derivedPolicy = applyDerivedPolicyFields({
       document,
@@ -1393,6 +1476,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       checked: validated.checked,
       grounding,
       fieldKeys: new Set(fields.map((field) => field.key)),
+      /* "Violation of Company Policies — Visitors in the Workplace": which policy, where the manager named it. */
+      companyPolicyName: namedManual?.heading ?? null,
       /*
        * THE MANUAL'S OWN WORDING FOR EACH TICKED SECTION, THEN ITS SOURCE —
        * "Source: JBA Policy Manual — Dress Code for The Company, p. 15" — every
@@ -1545,11 +1630,67 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           ],
         });
 
+    /*
+     * The manager's own lines are not overwritten — except a policy line this
+     * draft could CITE from the manual, which replaces wording typed without a
+     * section or page.
+     */
+    const keeps = (key: string) =>
+      managerKeys.has(key) && !(DERIVED_POLICY_FIELD_KEYS.has(key) && derivedPolicy.derived.includes(key));
+
+    /*
+     * ========================================================================
+     * THE ACTION PLAN, BUILT FROM WHAT THE FORM NOW SAYS
+     * ========================================================================
+     *
+     * Last, once Direct policy is settled: the plan names the sections that
+     * line cites (`manualSections`, only where they are what is being written
+     * with the manual's provenance), else what Policy Violated names, else
+     * "the applicable company policy". A plan the manager typed is kept on a
+     * redraft, like every line of theirs. See `ca-action-plan.ts`.
+     */
+    const planInput: ActionPlanInput | null = fixedPlan
+      ? {
+          citedPolicies: "policy_language" in pinnedProvenance ? manualSections.map((section) => section.heading) : [],
+          policyViolated: keeps("policy_violated")
+            ? (managerRows.find((row) => row.fieldKey === "policy_violated")?.value ?? null)
+            : (named.values.policy_violated ?? null),
+          employeeName: loaded.instance.employeeName,
+          payroll: { answer: payrollAnswer, amount: payrollDeductAmount(notes) },
+          closing: fixedPlan.closing,
+        }
+      : null;
+    /*
+     * A BLANK FORM STAYS BLANK. One created from a name alone, before the
+     * manager has said what happened, is what the chat redraft looks for
+     * (`chat-redraft.ts`), and a plan naming "the applicable company policy"
+     * on it would say nothing anyone decided. So the plan is built when this
+     * draft wrote something, or the form already holds a draft.
+     */
+    const holdsDraft = (values: Record<string, string>, checked: Record<string, string[]>) =>
+      Object.values(values).some((value) => typeof value === "string" && value.trim() !== "") ||
+      Object.values(checked).some((options) => options.length > 0);
+    const draftedAnything =
+      holdsDraft(named.values, validated.checked) ||
+      (loaded.values ?? []).some(
+        (row) => row.filledBy === "ai" && ((row.value ?? "").trim() !== "" || row.checked.length > 0),
+      );
+    const planned =
+      fixedPlan && planInput && draftedAnything && !keeps(fixedPlan.key)
+        ? {
+            values: { ...named.values, [fixedPlan.key]: correctiveActionPlan(planInput) },
+            provenance: { ...provenance, [fixedPlan.key]: actionPlanProvenance(planInput) },
+          }
+        : { values: named.values, provenance };
+
     const guarded = await applyAssistantDraft(
       id,
-      { values: named.values, checked: validated.checked },
+      {
+        values: Object.fromEntries(Object.entries(planned.values).filter(([key]) => !keeps(key))),
+        checked: Object.fromEntries(Object.entries(validated.checked).filter(([key]) => !keeps(key))),
+      },
       actor.id,
-      provenance,
+      planned.provenance,
     );
 
     return NextResponse.json({
@@ -1662,6 +1803,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
                   applied: true,
                   source: "stated",
                   stated: caPolicy.stated,
+                  ...(namedSection && !caPolicy.stated
+                    ? { named: namedSection.phrase, section: namedSection.section.heading, page: namedSection.section.page }
+                    : {}),
                   ticked: statedOffense.ticked,
                   replaced: statedOffense.replaced,
                 }

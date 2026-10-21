@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, FilePlus2, Loader2, RotateCcw, Settings2 } from "lucide-react";
+import { AlertTriangle, FilePlus2, Loader2, RotateCcw, Settings2, UserRound } from "lucide-react";
 
 import { BubbleMark } from "@/components/brand-mark";
 import { RichText } from "@/components/rich-text";
@@ -17,6 +17,7 @@ import { Notice } from "@/components/ui/feedback";
 import { useSession } from "@/lib/session/session-context";
 import { cn } from "@/lib/utils/cn";
 import { formatChatTime } from "@/lib/chat/history-time";
+import { askerFor, authorFromSession } from "@/lib/chat/message-author";
 import { formsFetch } from "@/features/forms/forms-fetch";
 import { instanceRefFor, isProposalSuperseded, proposalsOf } from "@/lib/forms/proposal-continuation";
 import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types";
@@ -35,8 +36,16 @@ export function MessageBubble({
   onRetry,
   onFormCreated,
   onStartAnother,
+  ownedBySignedIn = true,
 }: {
   message: ChatMessage;
+  /**
+   * Whether the thread is the signed-in person's own — on their account, or
+   * a draft they are typing now. False for a thread that exists only in this
+   * shared browser, whose unstamped questions then get a neutral avatar
+   * instead of somebody else's initials. See `askerFor`.
+   */
+  ownedBySignedIn?: boolean;
   /**
    * The turns this message sits among, for resolving a proposal's
    * `sourceMessageIds` back into the manager's own words.
@@ -59,7 +68,7 @@ export function MessageBubble({
   /** Begins a fresh form request in the same thread. Never reuses an instance. */
   onStartAnother?: () => void;
 }) {
-  const { user, isAdmin } = useSession();
+  const { user, isAdmin, managerDisplayName } = useSession();
   /*
    * BEFORE ANY EARLY RETURN. The lookup is a hook, so it has to run on
    * every render of this component or the hook order changes between
@@ -67,6 +76,7 @@ export function MessageBubble({
    */
 
   if (message.role === "user") {
+    const asker = askerFor(message, authorFromSession(user, managerDisplayName), ownedBySignedIn);
     /*
      * ONE SIDE BUBBLED AND ONE SIDE NOT.
      *
@@ -92,8 +102,11 @@ export function MessageBubble({
         </div>
         {/* The warm neutral, not the grey: the manager's initials on the peach
             ground need a tint that belongs to it. */}
-        <span className="mt-0.5 flex size-[30px] shrink-0 items-center justify-center rounded-full bg-surface text-[11px] font-bold text-foreground">
-          {user.avatarInitials}
+        <span
+          title={asker ? asker.name : "Asked on this device — who asked was not recorded"}
+          className="mt-0.5 flex size-[30px] shrink-0 items-center justify-center rounded-full bg-surface text-[11px] font-bold text-foreground"
+        >
+          {asker ? asker.initials : <UserRound aria-label="Unknown asker" className="size-3.5" />}
         </span>
       </div>
     );

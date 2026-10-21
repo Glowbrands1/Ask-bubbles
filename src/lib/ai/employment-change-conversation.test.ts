@@ -81,7 +81,7 @@ function ask(
 
 describe("a demotion asked for in one sentence", () => {
   it("prefills what was said, asks for the rest in one question, and offers the form", async () => {
-    const response = await ask("demote marlowe from manager to tanning consultant effective october 5");
+    const response = await ask("demote marlowe from manager to team member effective october 5");
     const proposal = response!.formProposal!;
 
     expect(proposal.templateKey).toBe("demotion");
@@ -93,7 +93,7 @@ describe("a demotion asked for in one sentence", () => {
     expect(proposal.status).toBe("ready");
     expect(proposal.supportsInlineDraft).toBe(true);
 
-    expect(response!.content).toContain("Manager → Tanning Consultant, effective October 5, 2026");
+    expect(response!.content).toContain("Manager → Team Member, effective October 5, 2026");
     // One sentence carries every open item.
     expect(response!.content).toContain(
       "To finish it I still need the current status (FT/PT) and pay rate, the new status (FT/PT) and pay rate, and whether it's voluntary or involuntary.",
@@ -150,7 +150,7 @@ describe("a transfer stated rather than requested", () => {
 
 describe("answering the grouped question", () => {
   it("continues the open form when the reply is only details", async () => {
-    const history = [manager("m1", "demote marlowe from manager to tanning consultant effective october 5")];
+    const history = [manager("m1", "demote marlowe from manager to team member effective october 5")];
     const response = await ask("she was FT at $18/hr, new status PT at $12/hr, voluntary", {
       history,
       continueTemplateKey: "demotion",
@@ -158,7 +158,7 @@ describe("answering the grouped question", () => {
     expect(response!.formProposal!.templateKey).toBe("demotion");
     expect(response!.formProposal!.employeeName).toBe(displayPersonName("marlowe"));
     expect(response!.content).toContain(
-      "FT Manager at $18.00/hr → PT Tanning Consultant at $12.00/hr, effective October 5, 2026, voluntary",
+      "FT Manager at $18.00/hr → PT Team Member at $12.00/hr, effective October 5, 2026, voluntary",
     );
     expect(response!.content).toContain("That covers every detail");
   });
@@ -210,12 +210,12 @@ describe("the exit form is the one Resignation/Exit Form", () => {
 describe("found in hands-on QA: the chat copy", () => {
   it("does not read capitalised title and status abbreviations as other people", async () => {
     const response = await ask(
-      "Create a demotion form for MARLOWE CO. She's a FT SD at $18/hr at store 12 and asked to step down to a PT TC at $14/hr effective 10/5/26",
+      "Create a demotion form for MARLOWE CO. She's a FT SD at $18/hr at store 12 and asked to step down to a PT team member at $14/hr effective 10/5/26",
     );
     expect(response!.formProposal!.employeeName).toBe(displayPersonName("MARLOWE CO"));
     expect(response!.formProposal!.status).toBe("ready");
     expect(response!.content).toContain(
-      "FT Store Director at $18.00/hr at Store 12 → PT Tanning Consultant at $14.00/hr, effective October 5, 2026, voluntary",
+      "FT Store Director at $18.00/hr at Store 12 → PT Team Member at $14.00/hr, effective October 5, 2026, voluntary",
     );
   });
 });
@@ -225,11 +225,11 @@ describe("found in hands-on QA: facts from another employee's form never carry o
     const history = [
       manager(
         "m1",
-        "Create a demotion form for MARLOWE CO. She's a FT SD at $18/hr at store 12 and asked to step down to a PT TC at $14/hr effective 10/5/26",
+        "Create a demotion form for MARLOWE CO. She's a FT SD at $18/hr at store 12 and asked to step down to a PT team member at $14/hr effective 10/5/26",
       ),
     ];
     const response = await ask(
-      "pull up a transfer form for jane doe, she is a pt tc at $12/hr, transferring from store 12 to salon 18 effective oct 5, same title, voluntary",
+      "pull up a transfer form for jane doe, she is a pt team member at $12/hr, transferring from store 12 to salon 18 effective oct 5, same title, voluntary",
       { history },
     );
     const proposal = response!.formProposal!;
@@ -238,14 +238,14 @@ describe("found in hands-on QA: facts from another employee's form never carry o
     // Only Jane's own turn is sent to the draft, so the form cannot pick up Marlowe's $14.00/hr.
     expect(proposal.sourceMessageIds).toEqual(["msg-now"]);
     expect(response!.content).not.toContain("$14.00");
-    expect(response!.content).toContain("PT Tanning Consultant at $12.00/hr at Store 12 → Salon 18, effective October 5, 2026, voluntary");
+    expect(response!.content).toContain("PT Team Member at $12.00/hr at Store 12 → Salon 18, effective October 5, 2026, voluntary");
   });
 
   it("keeps earlier turns about the same employee", async () => {
-    const history = [manager("m1", "Jane Doe is a PT TC at $12/hr")];
+    const history = [manager("m1", "Jane Doe is a PT team member at $12/hr")];
     const response = await ask("Jane Doe is transferring from salon 12 to salon 18", { history });
     expect(response!.formProposal!.sourceMessageIds).toEqual(["m1", "msg-now"]);
-    expect(response!.content).toContain("PT Tanning Consultant at $12.00/hr at Salon 12 → Salon 18");
+    expect(response!.content).toContain("PT Team Member at $12.00/hr at Salon 12 → Salon 18");
   });
 });
 

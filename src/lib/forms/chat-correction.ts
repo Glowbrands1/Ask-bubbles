@@ -17,7 +17,13 @@ import { CORRECTABLE_KEYS, correctionValues, employmentChangeKind, syncNarrative
 import { EXIT_CORRECTABLE_KEYS, exitCorrectionValues } from "./exit-details";
 import { isExitDocumentKeys } from "./exit-draft";
 import { authorizeInstance } from "./instance-scope";
-import { PAYROLL_DEDUCT_KEY, payrollDeductChecked, payrollDeductCorrection } from "./payroll-deduct";
+import {
+  PAYROLL_DEDUCT_KEY,
+  payrollDeductChecked,
+  payrollDeductCorrection,
+  payrollDeductReply,
+} from "./payroll-deduct";
+import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { extractEmployeeNames, samePerson as samePersonByName } from "./proposal";
 import { clausesOf, LEAD_IN, separateQuestions } from "./message-parts";
 import { isQuestion } from "./question";
@@ -63,13 +69,21 @@ async function correctFromFormReaders(
     today: string;
     /** The whole message, when `question` is one clause of it. */
     message?: string;
+    /** Ask Bubbles' last answer, read only for the question a bare "no" replies to. */
+    lastAssistant?: string;
   },
   applied: AppliedBy = {},
 ): Promise<AskResponse | null> {
   // A cheap first reading, before anything is loaded: most turns are not corrections.
   const employmentCorrection = correctionValues(input.question, input.today);
   const exitCorrection = exitCorrectionValues(input.question, input.today);
-  const payroll = payrollDeductCorrection(input.question);
+  /*
+   * "NO", straight after Ask Bubbles asked "Is payroll deduct applicable?" with
+   * the form open — the answer to its own question, for the form on screen.
+   * Ported from the reference platform: the manager was asked again instead.
+   */
+  const payroll =
+    payrollDeductCorrection(input.question) ?? payrollDeductReply(input.question, input.lastAssistant ?? "");
   /*
    * "CHANGE WRITTEN WARNING TO VERBAL", "make it verbal" — the Type of
    * Warning on a Corrective Action Form, as the manager now states it. A
@@ -312,6 +326,18 @@ async function correctFromFormReaders(
   const written = updated.filter((key) => !refusedOnSave.has(key));
   if (written.length === 0) return null;
   const rewritten = syncedKey && !refusedOnSave.has(syncedKey) ? syncedKey : null;
+  /*
+   * THE ACTION PLAN STATES THE DEDUCTION ONLY ON YES, so a corrected payroll
+   * answer rebuilds a plan Ask Bubbles built (never one a person wrote). The
+   * amount is read from this message. See `ca-action-plan.ts`.
+   */
+  const planKeys = written.includes(PAYROLL_DEDUCT_KEY)
+    ? await syncCorrectiveActionPlan(input.instanceId, actor.id, {
+        notes: input.message ?? input.question,
+        loaded,
+        checked: accepted.checked,
+      })
+    : [];
 
   const before = Object.fromEntries(loaded.values.map((row) => [row.fieldKey, row.checked]));
   const after = { ...before, ...submitted.checked };
@@ -337,12 +363,20 @@ async function correctFromFormReaders(
     lines.push("", `The ${paragraph} was written before this change — give it a quick read to make sure it still matches.`);
   }
 
+  if (planKeys.length > 0) {
+    written.push(...planKeys);
+    lines.push(
+      "",
+      payroll === "yes" ? "The Action Plan now states the payroll deduction." : "The Action Plan no longer states a payroll deduction.",
+    );
+  }
+
   // What THIS form's readers take from a clause — the test for "was that part done?".
   applied.reads = (clause) =>
     Boolean(
       (kind && correctionValues(clause, input.today)) ||
         (isExit && exitCorrectionValues(clause, input.today)) ||
-        (asksPayroll && payrollDeductCorrection(clause)),
+        (asksPayroll && (payrollDeductCorrection(clause) ?? payrollDeductReply(clause, input.lastAssistant ?? ""))),
     );
   return { ...reply(lines.join("\n")), formUpdate: { instanceId: input.instanceId, updated: written } };
 }
@@ -658,14 +692,22 @@ export async function correctActiveForm(input: {
   instanceId: string;
   question: string;
   today: string;
+  /**
+   * The conversation so far — read only for the last assistant turn, so a
+   * bare "no" that answers Ask Bubbles' own payroll question is read as that
+   * answer rather than asked for again.
+   */
+  history?: readonly { role: string; content: string; error?: unknown }[];
 }): Promise<AskResponse | null> {
   const { statements, questions } = separateQuestions(input.question);
   if (!statements) return null;
+  const lastAssistant =
+    [...(input.history ?? [])].reverse().find((turn) => turn.role === "assistant" && !turn.error)?.content ?? "";
 
   const attempt = async (question: string) => {
     const applied: AppliedBy = {};
     const response =
-      (await correctFromFormReaders({ ...input, question, message: statements }, applied)) ??
+      (await correctFromFormReaders({ ...input, question, message: statements, lastAssistant }, applied)) ??
       (await correctHeaderLines({ ...input, question }, applied));
     return { response, applied };
   };
