@@ -195,11 +195,15 @@ export function namedManualSection(input: {
  * under the Standards of Conduct, and HR had to point at the manual's Cell
  * Phone/Smart Watch Policy on page 19. Where no policy is named, a section is
  * cited only when the account says its whole name, word for word — "cell
- * phone", "late opening", "smart watch" — and only a name of two words or
- * more: a one-word heading ("Shoes", "Smoking") is too common a word to be a
- * citation. Exactly one section may answer, as for a named one; a question
- * names nothing. The proposal says the policy was read from the account, so
- * the manager can change it.
+ * phone", "smart watch", "social media" — only for a section the manual
+ * itself titles a Policy, and only a name of two words or more. Checked
+ * against all of the real manual's headings: without the Policy rule,
+ * "payroll deduct applies" cited Payroll Deductions on every form that
+ * answered the payroll question, and "time records", "shift replacement" read
+ * the same way; a one-word name ("Shoes", "Smoking") is too common a word.
+ * Exactly one section may answer, as for a named one; a question names
+ * nothing. The proposal says the policy was read from the account, so the
+ * manager can change it.
  */
 export function mentionedManualSection(text: string, chunks: readonly ManualChunk[]): NamedManualSection | null {
   const sentences = [...(text ?? "").matchAll(/[^.!?\n]+[.!?]*/g)]
@@ -211,6 +215,7 @@ export function mentionedManualSection(text: string, chunks: readonly ManualChun
       said.some((_, start) => name.every((word, offset) => said[start + offset] !== undefined && sameWord(said[start + offset]!, word))),
     );
   const matches = manualSheetHeadings(chunks).filter((heading) => {
+    if (!/\bpolic(?:y|ies)\b/i.test(heading)) return false;
     const slash = heading.indexOf("/");
     const names = slash < 0 ? [heading] : [heading, heading.slice(0, slash), heading.slice(slash + 1)];
     return names.map((name) => words(name)).some((name) => name.length >= 2 && says(name));

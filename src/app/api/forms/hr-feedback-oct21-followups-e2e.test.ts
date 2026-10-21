@@ -290,6 +290,9 @@ const MANUAL = {
     chunk(40, "Attendance", 14, "It is the responsibility of each employee to know his or her work schedule and to always be on\ntime."),
     chunk(42, "Late Opening", 15, "When an employee assigned to open a location is unable to open the location at the proper\ntime, the employee must notify the manager as soon as possible."),
     chunk(61, "Cell Phone/Smart Watch Policy", 19, "Personal Employee cell phones are permitted in the workplace but must be kept out of sight."),
+    // Real headings an account's ordinary words also say ("payroll deduct", "time records"): never cited unasked.
+    chunk(110, "Payroll Deductions", 39, "Deductions from an employee's pay are made only as required by law or authorised by the employee."),
+    chunk(112, "Time Records", 36, "Employees must record their own time worked accurately."),
     chunk(96, "Visitors in the Workplace", 29, "For personal visitors, Employees must obtain approval from direct Supervisors each time they\ninvite a visitor into the workplace."),
   ],
 };
@@ -330,6 +333,7 @@ describe("a late opening, as HR typed it", () => {
     expect(field(form, "payroll_deduct")!.checked).toEqual(["yes"]);
     expect(field(form, "action_plan")!.value).toContain("$25 will be deducted from Pat's pay.");
     expect(field(form, "policy_language")!.value).toContain("Source: JBA Policy Manual — Late Opening, p. 15");
+    expect(field(form, "policy_language")!.value).not.toContain("Payroll Deductions");
   });
 
   it.each([
@@ -356,6 +360,8 @@ describe("the payroll deduction, however HR words it", () => {
     );
     expect(proposal.payrollDeduct).toBe("yes");
     expect(field(form, "action_plan")!.value).toContain(`${amount} will be deducted from Pat's pay.`);
+    // Saying "payroll deduct" names no policy: the manual's Payroll Deductions section is not cited.
+    expect(field(form, "policy_language")?.value ?? "").not.toContain("Payroll Deductions");
   });
 
   it("keeps the answer when the manager asks for the form again", async () => {
