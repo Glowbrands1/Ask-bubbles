@@ -1894,6 +1894,8 @@ function turnsAboutThisForm(
   let formStart = 0;
   /* The latest request for this form, for this employee, inside the turns kept so far. */
   let requestAt = -1;
+  /* Whether the turns kept so far start just after a turn about somebody else. */
+  let afterAnotherPerson = false;
   const readings = context.messages.map((message, index) => {
     const intent = detectTemplateIntent(message.content);
     /*
@@ -1914,9 +1916,32 @@ function turnsAboutThisForm(
     // A turn that also names somebody else is about them too, and stays off this form.
     const otherPerson = names.length > 0 && !names.every(same);
     const forThisEmployee = thisForm && employeeName !== null && names.length > 0 && !otherPerson;
-    if (index < last && (otherForm || otherPerson)) start = index + 1;
+    if (index < last && (otherForm || otherPerson)) {
+      start = index + 1;
+      afterAnotherPerson = otherPerson;
+    }
     if (index < last && otherForm) formStart = index + 1;
     if (requestAt < start) requestAt = -1;
+    /*
+     * THE ANSWERS GIVEN FOR SOMEBODY ELSE STAY THEIRS. Production, 21 Oct
+     * 2026: a Corrective Action for one employee, then "no payroll deduct",
+     * then "create a verbal corrective action form for <another employee> …"
+     * — the new form was read back with "Is payroll deduct applicable? No",
+     * the first employee's answer, because the short reply names nobody and
+     * so was kept. The first request for this employee after turns about
+     * another person starts this form's turns. A correction of the person
+     * ("actually it's for …") is not a new request, and keeps the account.
+     */
+    if (
+      forThisEmployee &&
+      requestAt < 0 &&
+      afterAnotherPerson &&
+      start < index &&
+      !correctsTheEmployee(message.content)
+    ) {
+      start = index;
+      formStart = index;
+    }
     /*
      * A NEW REQUEST IS A NEW FORM. Production, 21 Oct 2026: "create ca form for
      * <employee> for a register shortage …", asked in the chat that had just
