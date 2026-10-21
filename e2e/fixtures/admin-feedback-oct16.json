@@ -37,7 +37,7 @@
     }
   },
   "ambiguousStore": {
-    "content": "Here is what I would put on a **Corrective Action Form**.\n\nMore than one store matches what you said — **Sioux Falls, SD (W 41st St)** or **Sioux Falls, SD (E 18th St)**? Tell me which one and I won't guess.\n\n**Position:** Makery Associate, from Woven — tell me if that has changed and I'll flag it for review.\n\n**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.",
+    "content": "Here is what I would put on a **Corrective Action Form**.\n\nMore than one store matches what you said — **Sioux Falls, SD (W 41st St)** or **Sioux Falls, SD (E 18th St)**? Tell me which one and I won't guess.\n\n**Position:** Makery Associate, from Woven — tell me if that has changed and I'll flag it for review.\n\n**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here.",
     "proposal": {
       "proposalId": "prop-ambiguousStore",
       "templateKey": "dpoa",
