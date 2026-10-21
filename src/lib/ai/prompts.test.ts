@@ -402,10 +402,17 @@ describe("an answer given while a form is open in the conversation", () => {
     expect(prompt).not.toMatch(/say the form has not been created yet/);
   });
 
-  it("points a finalized form to a revision, not to an edit", () => {
+  it("points a finalized form to a new draft of it, never to an edit of the original", () => {
     const prompt = buildSystemPrompt({ ...base, openForm: { ...openForm, status: "finalized", unverifiedPolicy: [] } });
-    expect(prompt).toContain("It is finalized: a change needs a revision, opened from Forms → Forms Register.");
+    expect(prompt).toContain("It is finalized: a change is made on a new draft of it");
+    expect(prompt).toContain("pressing Edit as new draft on the card");
     expect(prompt).not.toMatch(/CHANGES TO THIS FORM ARE MADE IN THIS CONVERSATION/);
+  });
+
+  it("never lets the model say a created form cannot be changed", () => {
+    const prompt = buildSystemPrompt({ ...base, hasFormsLibrary: true });
+    expect(prompt).toContain("A form already created CAN be changed, here in the conversation");
+    expect(prompt).toContain("Never say a created or finalized form cannot be edited, copied or drafted again.");
   });
 
   it("keeps the old rule when no form is open", () => {

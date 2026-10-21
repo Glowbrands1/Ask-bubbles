@@ -25,6 +25,7 @@ import {
 } from "@/lib/analytics/taxonomy";
 import { activeKnowledgeCorpus } from "@/lib/knowledge/corpus";
 import { CONTINUATION_KEY_MAX } from "@/lib/forms/proposal-continuation";
+import { mayAskToReopen } from "@/lib/forms/reopen-cue";
 import { parseChatReportContext } from "@/lib/reporting/report-context";
 import { businessToday } from "@/lib/business-date";
 import { isClientConversationId } from "@/lib/chat/client-ids";
@@ -218,6 +219,26 @@ export async function POST(request: Request) {
             })
           : null;
       /*
+       * "CHANGE EXIT FOR JORDAN SMITH" — a form already on file, asked for by
+       * name and employee: found among the forms this actor may see and put
+       * in the thread, a finalized one as a new draft of it. Last of the form
+       * paths, so a correction to the open form is always made as one. Loaded
+       * only for a turn with an edit or show verb (`mayAskToReopen`), and null
+       * for any sentence that does not ask to edit or see an existing form.
+       * See `lib/forms/chat-reopen.ts`.
+       */
+      const reopened =
+        !correction && !policyChange && !redraft && !revision && !which && mayAskToReopen(parsed.question)
+          ? await (await import("@/lib/forms/chat-reopen")).reopenRequestedForm({
+              request,
+              question: parsed.question,
+              history: parsed.history,
+              today: parsed.context.todayIso,
+              activeInstanceId: parsed.activeFormInstanceId,
+              continuingTemplateKey: parsed.continueProposalTemplateKey,
+            })
+          : null;
+      /*
        * AN ORDINARY ANSWER STILL KNOWS THE FORM IS THERE. Without this it was
        * told no card ever comes with an answer, and said "no form has been
        * created yet" beside the draft on screen. Read with "view"
@@ -225,7 +246,7 @@ export async function POST(request: Request) {
        * `lib/forms/open-form-summary.ts`.
        */
       const openForm =
-        !correction && !policyChange && !redraft && !revision && parsed.activeFormInstanceId
+        !correction && !policyChange && !redraft && !revision && !reopened && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/open-form-summary")).describeOpenForm(request, parsed.activeFormInstanceId)
           : null;
       answer =
@@ -234,6 +255,7 @@ export async function POST(request: Request) {
         redraft ??
         revision ??
         which ??
+        reopened ??
         (await answerQuestion(
           { ...parsed, openForm },
           {

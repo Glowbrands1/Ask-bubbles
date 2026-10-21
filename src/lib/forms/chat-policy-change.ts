@@ -10,6 +10,7 @@ import type { ChatMessage } from "@/types";
 
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { fieldsForVariant, parseFormDocument } from "./document";
+import { changeOnEditableDraft } from "./editable-draft";
 import { authorizeInstance } from "./instance-scope";
 import { applyAssistantDraft, applyAssistantRevision } from "./instances";
 import {
@@ -117,12 +118,6 @@ export async function changeActiveFormPolicy(input: {
   if (named.length > 0 && !named.some((name) => samePerson(name, instance.employeeName))) return null;
 
   const who = `**${instance.templateName}** for **${instance.employeeName}**`;
-  if (instance.status !== "draft") {
-    return reply(
-      `The ${who} is finalized, so I haven't changed it. Open it from Forms → Forms Register and create a revision to make a change.`,
-    );
-  }
-
   if (!manual.ok) {
     return reply(
       manual.problem === "ambiguous"
@@ -170,6 +165,23 @@ export async function changeActiveFormPolicy(input: {
   const next = nextPolicySections({ mode, current, named: wanted });
   const names = (sections: readonly ManualSection[]) =>
     sections.map((section) => `**${section.heading}** (page ${section.page})`).join(" and ");
+
+  /*
+   * A FINALIZED FORM'S POLICY IS CHANGED ON A NEW DRAFT OF IT, opened here;
+   * the finalized record is never written. On the draft the Action Plan
+   * follows the policy as it does on any draft. Only once the turn is known
+   * to change something — a manual that cannot be read, a section it does not
+   * have, or a policy already cited is answered as on any form, and opens no
+   * draft. See `editable-draft.ts`.
+   */
+  const unchanged =
+    next.length === current.length &&
+    (mode === "remove" || next.every((section, i) => headingKey(section.heading) === headingKey(current[i]!.heading)));
+  if (instance.status !== "draft" && !unchanged) {
+    return changeOnEditableDraft(input.request, input.instanceId, (draftId) =>
+      changeActiveFormPolicy({ ...input, instanceId: draftId }),
+    );
+  }
 
   if (mode === "remove") {
     if (next.length === current.length) {

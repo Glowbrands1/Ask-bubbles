@@ -153,6 +153,7 @@ The Status column describes Bubbles **after this change**.
 | Corrective-action ladder, EPP family, exit / demotion / transfer readers, payroll deduct, coaching framing, prior actions, policy manual sections | The reference company's HR process | Present in code (corrective action, EPP, exit, employment change, payroll deduct); their Sun Tan City wording is tracked in `docs/sun-tan-city-residue-review.md` | see that review |
 | "CA" shorthand | "CA", "ca form", "corrective-action" open the Corrective Action Form | **Present**: `CA_SHORTHAND` in `forms/template-intent.ts` rewrites it to "corrective action" before any matcher runs | done |
 | `forms/salon-mention.ts` short-name and city aliases | Shortened location names | Bubbles has only number / full-name matching | adapt, once Buff's roster exists |
+| `forms/editable-draft.ts`, `chat-reopen.ts`, `reopen-request.ts`, `reopen-cue.ts` (#116) | A finalized form is changed on a new draft of it: "Edit as new draft" on the card, a correction / policy change / redraft in chat, or "change exit for <name>" for a form on file. The original is marked revised only when the draft is finalized | **Ported**. Also wraps Bubbles' header corrections; the "which form?" question still comes first; the form on file is found under the current Forms visibility; a CA's built Action Plan is rebuilt when the revision moves to a newer template version | adapt |
 | `forms/team-subject.ts` | "Coaching for the whole team" | **Present**: coaching form only; the subject is the label "All team members" (`allowsTeamSubject` in `ai/form-proposal.ts`) | done |
 
 ### Authentication and access
@@ -173,7 +174,7 @@ company runs its own Supabase project.
 
 | Area | Change |
 |---|---|
-| Correcting a created draft | `lib/forms/chat-correction.ts`, run before revision in `/api/chat`. Handles "change the date to yesterday", "change the name to …" and "actually her name is …". Re-authorised for edit. Refuses a finalized form, a new request, or a different person. Saved as the manager's own edit. A form opts in with `chatCorrectableFields` (the example form: name and date). |
+| Correcting a created draft | `lib/forms/chat-correction.ts`, run before revision in `/api/chat`. Handles "change the date to yesterday", "change the name to …" and "actually her name is …". Re-authorised for edit. Refuses a new request or a different person. A correction to a finalized form is made on a new draft of it (`lib/forms/editable-draft.ts`, below). Saved as the manager's own edit. A form opts in with `chatCorrectableFields` (the example form: name and date). |
 | Relative dates | `lib/forms/relative-date.ts`: today / yesterday / tomorrow / last or next weekday, relative to the business day. A bare weekday or two different days resolves to nothing, so the manager is asked. |
 | Not asking twice | `describesIncident` drops the "what should the form cover" question once it has been answered, and keeps an intake open on an account with nobody named. `isQuestion` no longer treats "did not show up" as a question. |
 | Guidance or a form? | `clarify` intent plus `form-clarification.ts`, driven by `clarifyOn: { verb, noun }` per form. **Off for every shipped Buff form.** The bare noun next to an advice cue ("tips for coaching Avery") stays advice. |

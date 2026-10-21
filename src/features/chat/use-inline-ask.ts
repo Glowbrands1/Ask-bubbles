@@ -15,7 +15,7 @@ import type { ChatReportContext } from "@/lib/reporting/report-context";
 import type { SavedFeedback } from "@/lib/feedback/types";
 import type { AnswerMode, ChatConversation, ChatMessage } from "@/types";
 import { toChatTurnError } from "./chat-error";
-import { announceFormUpdate } from "./form-update-events";
+import { announceFormUpdate, openedFormReference } from "./form-update-events";
 
 /**
  * =============================================================================
@@ -245,6 +245,8 @@ export function useInlineAsk({ reportContext, onActiveChange, surface }: InlineA
               ? { formProposals: response.formProposals }
               : {}),
             formSelection: response.formSelection,
+            // A form on file this turn opened; see `openedFormReference`.
+            formInstanceRef: openedFormReference(response.formOpened),
           },
         ]);
         if (response.formUpdate) announceFormUpdate(response.formUpdate.instanceId);

@@ -2,6 +2,7 @@ import { rosterResultFor } from "@/test/roster-result";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
+import { joinedOnRead } from "@/test/overview-join";
 import type { AccessScope, ChatMessage } from "@/types";
 
 vi.mock("@/config/company/locations", async () =>
@@ -435,12 +436,24 @@ describe("a redraft keeps the form it was asked to change", () => {
     expect(valueOf(await review(id), "progress_level")?.checked).toEqual(["improved"]);
   });
 
-  it("does not revise a finalized form", async () => {
+  it("revises a finalized form on a new draft of it, never the finalized one", async () => {
     const { id, messages } = await followUpForm();
     store.form_instances[0]!.status = "finalized";
+    store.form_instances[0]!.finalized_at = "2026-10-01T15:00:00Z";
+    // The view's join on every read: the draft is inserted and read back in one turn.
+    const rows = [...store.form_instances];
+    store.form_instances = joinedOnRead(store, "2026-10-01");
+    store.form_instances.push(...rows);
+    const before = (await review(id)).values;
+
     const response = await revise(id, messages, "change the timeframe to one week");
-    expect(response?.content).toMatch(/finalized/);
-    expect(state.calls.filter((entry) => entry.tool === "revise_form_fields")).toHaveLength(0);
+    expect(response?.content).toMatch(/was finalized, so I opened a new draft of it/);
+    const draft = response!.formOpened!.instanceId;
+    expect(draft).not.toBe(id);
+    // The model was asked once, about the draft; the finalized record is as it was.
+    expect(state.calls.filter((entry) => entry.tool === "revise_form_fields")).toHaveLength(1);
+    expect((await review(id)).values).toEqual(before);
+    expect(store.form_instances.find((row) => row.id === id)!.status).toBe("finalized");
   });
 
   it("is not a revision when the turn asks for a new form", async () => {
