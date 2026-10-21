@@ -5,6 +5,7 @@ import { COMPANY_REPORT_LOADERS } from "@/config/company/reports.server";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_MAX_TOKENS, RETRIEVAL } from "@/lib/config/models";
 import { MissingConfigurationError, liveReadiness } from "@/lib/config/server-env";
+import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import { answersFormClarification } from "@/lib/forms/form-clarification";
 import { buildFormInventory, publishedEntries } from "@/lib/forms/inventory";
 import { detectInventoryQuestion, type InventoryQuestion } from "@/lib/forms/inventory-question";
@@ -385,6 +386,14 @@ export async function answerQuestion(
     hasVerifiedRecords: entities.block !== null,
     pinnedDocumentTitles: pinnedTitles,
     handbookNote,
+    /*
+     * From the AUTHORIZED actor, the same matrix the report pages' guard
+     * reads, so the assistant only sends somebody to Reports when the sidebar
+     * would show it to them and the page would let them in.
+     */
+    canViewReports:
+      actor.role !== null &&
+      hasPermission(DEFAULT_PERMISSION_MATRIX, actor.role, "view_reports"),
   });
 
   const answer = await callClaude({

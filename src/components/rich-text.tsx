@@ -1,11 +1,13 @@
 import * as React from "react";
+import Link from "next/link";
 
+import { CHAT_LINKABLE_PATHS } from "@/lib/reporting/registry";
 import { cn } from "@/lib/utils/cn";
 
 /**
  * A deliberately small renderer for the markdown the assistant produces:
- * paragraphs, `**bold**`, `- bullets`, `1. numbered lists`, `### headings` and
- * GitHub-style pipe tables.
+ * paragraphs, `**bold**`, `- bullets`, `1. numbered lists`, `### headings`,
+ * GitHub-style pipe tables and links to this app's own reports.
  *
  * ASSISTANT TEXT IS RENDERED AS REACT ELEMENTS, never with
  * `dangerouslySetInnerHTML`. That is the security property of this module and
@@ -29,17 +31,74 @@ import { cn } from "@/lib/utils/cn";
  * text. So the renderer learned the one construct it was missing.
  */
 
+/**
+ * ============================================================================
+ * LINKS: THE REPORTS, AND NOTHING ELSE
+ * ============================================================================
+ *
+ * Asked "where do I find my KPIs?", the assistant names a report in this app
+ * (see `buildReportsGuideSection`), and an answer that names it without
+ * letting them click it leaves the last step to the sidebar.
+ *
+ * AN ALLOWLIST, NOT A URL PARSER. A `[label](path)` becomes a link only when
+ * `path` is exactly one of `CHAT_LINKABLE_PATHS` — the Reports root and each
+ * live report, strings the registry already holds — so the href is never the
+ * model's spelling of anything. Every other bracket-paren pair, external URLs
+ * included, stays the text it was. With no live report registered the list is
+ * empty and nothing is ever linked. There is still no HTML path: `Link` takes
+ * the href as a prop and React escapes the label.
+ */
+const LINK = /\[([^\]\n]+)\]\(([^)\s]+)\)/g;
+
+/** Plain text with any allowlisted report links in it turned into links. */
+function renderLinks(text: string, keyPrefix: string): React.ReactNode[] {
+  if (CHAT_LINKABLE_PATHS.size === 0) return [text];
+
+  const nodes: React.ReactNode[] = [];
+  let cursor = 0;
+
+  for (const match of text.matchAll(LINK)) {
+    const [whole, label, href] = match;
+    if (!CHAT_LINKABLE_PATHS.has(href)) continue;
+
+    const start = match.index ?? 0;
+    if (start > cursor) nodes.push(text.slice(cursor, start));
+    nodes.push(
+      <Link
+        key={`${keyPrefix}-a${start}`}
+        href={href}
+        className="font-semibold text-foreground underline decoration-brand-accent decoration-2 underline-offset-2 hover:decoration-foreground"
+      >
+        {label}
+      </Link>,
+    );
+    cursor = start + whole.length;
+  }
+
+  if (cursor < text.length) nodes.push(text.slice(cursor));
+  return nodes;
+}
+
+/*
+ * BOLD FIRST, LINKS INSIDE IT. `**[Store Sales](/reports/store-sales)**` is
+ * how a model emphasises a report, and splitting on links first would cut the
+ * bold markers apart and print them.
+ */
 function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
   const parts = text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return (
         <strong key={`${keyPrefix}-b-${index}`} className="font-semibold text-foreground">
-          {part.slice(2, -2)}
+          {renderLinks(part.slice(2, -2), `${keyPrefix}-b-${index}`)}
         </strong>
       );
     }
-    return <React.Fragment key={`${keyPrefix}-t-${index}`}>{part}</React.Fragment>;
+    return (
+      <React.Fragment key={`${keyPrefix}-t-${index}`}>
+        {renderLinks(part, `${keyPrefix}-t-${index}`)}
+      </React.Fragment>
+    );
   });
 }
 

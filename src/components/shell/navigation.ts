@@ -21,6 +21,7 @@ import {
   REPORTS_SECTION_PATH,
 } from "@/features/reports/reports-routes";
 import { ACTIVE_BRAND } from "@/lib/brand";
+import { REPORTS_SECTION_LABEL } from "@/lib/reporting/registry";
 import type { Permission } from "@/types";
 
 export interface NavItem {
@@ -105,7 +106,7 @@ const ALL_SECTIONS: NavSection[] = [
     label: "Insights",
     items: [
       {
-        label: "Reports",
+        label: REPORTS_SECTION_LABEL,
         href: REPORTS_DEFAULT_PATH,
         activePrefix: REPORTS_SECTION_PATH,
         icon: BarChart3,

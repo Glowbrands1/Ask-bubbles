@@ -1,6 +1,14 @@
+import { ROLE_COPY } from "@/config/company/access";
 import { ASSISTANT_PURPOSE, ASSISTANT_TONE, ASSISTANT_VOICE } from "@/config/company/assistant";
 import { BUSINESS_TIMEZONE, shiftDays, weekdayOf } from "@/lib/business-date";
 import { displayLocator } from "@/lib/knowledge/locator";
+import {
+  CHAT_LINKABLE_REPORTS,
+  REPORTS_SECTION_LABEL,
+  REPORTS_SECTION_PATH,
+  reportPath,
+  type ReportDefinition,
+} from "@/lib/reporting/registry";
 import type { AnswerMode } from "@/types";
 import type { AskContext } from "./types";
 
@@ -57,6 +65,68 @@ One of the numbered sources above is "{{TITLE}}". It was attached because this q
 - CURRENT FACTS come only from current data or from what the person has told you in this conversation.
 - WHERE CURRENT {{BRAND}} POLICY AND THIS DOCUMENT CONFLICT, POLICY WINS. Say so plainly, follow the policy, and cite it.`;
 
+/**
+ * ============================================================================
+ * "WHERE DO I FIND MY KPIs?" — START IN THIS APP'S REPORTS
+ * ============================================================================
+ *
+ * Ported from the reference platform, where a manager asking "where do i find
+ * kpi information" was sent only to outside systems named in the knowledge
+ * base, never to the app's own reports one click away in the sidebar: the
+ * model was not told the section exists, so it could not say so.
+ *
+ * BUILT FROM THE REGISTRY, NEVER WRITTEN OUT. The reports listed are
+ * `CHAT_LINKABLE_REPORTS` — live reports, while the Reports area is shown — so
+ * a report registered in `config/company/reports.ts` is one the assistant can
+ * point at, and with none (Buff City Soap today) there is NO section and the
+ * prompt is exactly as it was. Sending somebody to an empty Reports index for
+ * their KPIs would be worse than not mentioning it.
+ *
+ * ONLY FOR A ROLE THAT CAN OPEN IT. `view_reports` gates the sidebar entry and
+ * every report page; a role without it is told nothing about the reports, only
+ * not to send anybody there.
+ *
+ * NOTHING THE PAGES DO NOT HAVE. The reference platform also describes each
+ * tab's filters and an "Ask about this report" bar; Bubbles' report pages do
+ * not carry those yet, so the guide does not mention them.
+ *
+ * THE LINKS ARE THE ONLY ONES `RichText` WILL RENDER (`CHAT_LINKABLE_PATHS`),
+ * so a link here is a path the renderer already holds, not something the model
+ * was trusted to spell.
+ */
+export function buildReportsGuideSection(input: {
+  reports: readonly Pick<ReportDefinition, "id" | "label" | "summary">[];
+  canViewReports: boolean;
+  locationNoun: string;
+}): string | null {
+  const { reports, canViewReports, locationNoun } = input;
+  if (reports.length === 0) return null;
+
+  if (!canViewReports) {
+    return `${REPORTS_SECTION_LABEL.toUpperCase()}
+
+- This person's account cannot open the ${REPORTS_SECTION_LABEL} section of this app. Never send them there and never describe its reports. If they ask where to find figures, answer from the sources and suggest they ask their ${ROLE_COPY.location_manager.label} or ${ROLE_COPY.district_manager.label} for the report.`;
+  }
+
+  const links = reports.map((report) => ({
+    link: `[${report.label}](${reportPath(report.id)})`,
+    summary: report.summary,
+  }));
+  const list = links.map(({ link, summary }) => `- ${link} — ${summary}`).join("\n");
+
+  return `${REPORTS_SECTION_LABEL.toUpperCase()} — WHERE THE NUMBERS LIVE IN THIS APP
+
+This app has a ${REPORTS_SECTION_LABEL} section ([${REPORTS_SECTION_LABEL}](${REPORTS_SECTION_PATH})): in the left sidebar under Insights. It carries these reports:
+
+${list}
+
+- WHEN SOMEBODY ASKS WHERE TO FIND KPIs, STATS, SALES, PERFORMANCE OR A REPORT, START HERE. Tell them to open ${REPORTS_SECTION_LABEL} in the sidebar, name the report that answers their question, and link it exactly as written above — for example ${links[0].link}. Only link the paths listed above; never write any other link.
+- A report shows the figures for the ${locationNoun}s on their own assignment.
+- If they have not said which number they are after, ask, and offer the reports that fit.
+- Systems outside this app come second. Mention one only when the provided sources cover it and the measure is one these reports do not carry, and cite the source as usual.
+- Pointing somebody to a report is not reading it to them. Never state a figure from a report unless it is written in the REPORT DATA section.`;
+}
+
 export function buildSystemPrompt(input: {
   assistantName: string;
   brandName: string;
@@ -93,6 +163,13 @@ export function buildSystemPrompt(input: {
    * exactly as it was.
    */
   handbookNote?: string | null;
+  /**
+   * Whether this person's role holds `view_reports`, from the authorized
+   * actor. Selects which Reports guidance the prompt carries — see
+   * `buildReportsGuideSection`. Absent is treated as no access: a caller that
+   * cannot say the person may open the section has not said they may.
+   */
+  canViewReports?: boolean;
 }): string {
   const { assistantName, brandName, productName, locationNoun, context, mode, hasContext } = input;
   const hasReportData = input.hasReportData ?? false;
@@ -156,6 +233,13 @@ export function buildSystemPrompt(input: {
     )
     .join("");
 
+  const reportsGuide = buildReportsGuideSection({
+    reports: CHAT_LINKABLE_REPORTS,
+    canViewReports: input.canViewReports ?? false,
+    locationNoun,
+  });
+  const reportsGuideSection = reportsGuide ? `\n\n${reportsGuide}` : "";
+
   const purpose = ASSISTANT_PURPOSE.replaceAll("{noun}", locationNoun);
 
   const userName = promptLabel(context.userName) || "a team member";
@@ -189,7 +273,7 @@ ${hasReportData ? "- Never state a business figure that is not written in the RE
 - NEVER WRITE A FACSIMILE OF A COMPANY FORM. Do not produce a "Coaching Record", a "Coaching Form" or Follow-Up Coaching Form, a Corrective Action Form or other corrective action write-up, an EPP, a Policy Review, a disciplinary, termination, demotion, position transfer, resignation or exit document, an interview form, or any other HR record with employee and signature lines, and never tell a manager to paste your text into an official form. ${brandName} forms come from the Forms library as real records with a template version and an audit trail; a pasted imitation has neither, and it is the KNOWLEDGE BASE you are reading, which does not decide whether a form template exists. If a manager wants a form, tell them in one sentence to ask you to create it — for example "ask me to create a coaching form for her" — and stop.
 - TRAINING MATERIAL IS NOT A FORM. When a manager asks for a training checklist, worksheet, study guide, quiz, role-play script or similar teaching material, write it: headings, numbered steps, tick boxes ("☐") and short blanks for the trainee's answers are fine. Build it only from the sources, cite them, and do not add steps, standards or numbers the sources do not state. Do not title it as an official company form, add employee signature or disciplinary lines, or present it as company policy; if the sources cover only part of the topic, say what is missing. Material about ONE NAMED EMPLOYEE'S performance or conduct, or with lines for an employee's name, the issue, a warning or a follow-up date, is a form whatever it is called — "a coaching worksheet for Dana" is a Coaching Form — so handle it as the rule above says.
 - Never repeat a password, PIN or access code from the sources for a company account or login unless the manager asked about setting up that account. Point to the section that has it instead. Equipment codes from a manufacturer's manual — a factory lock code on a timer or a thermostat — are not account passwords; give them when the question needs them.
-- NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer. If somebody has just given the details for a form, say the form has not been created yet and ask them to request it by name and person — for example "create a form for Dana Moss" — so the card can appear.${formsLibrarySection}${pinnedSection}${missingReportsSection}${input.handbookNote ? `\n\n${input.handbookNote}` : ""}
+- NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer. If somebody has just given the details for a form, say the form has not been created yet and ask them to request it by name and person — for example "create a form for Dana Moss" — so the card can appear.${formsLibrarySection}${reportsGuideSection}${pinnedSection}${missingReportsSection}${input.handbookNote ? `\n\n${input.handbookNote}` : ""}
 
 ${hasContext ? "" : "IMPORTANT: no company documents matched this question. You have NO company knowledge for it. Say so directly, offer general guidance only if it genuinely helps, and label it as general.\n\n"}TONE
 
