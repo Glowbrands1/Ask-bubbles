@@ -8,7 +8,7 @@ import { useAppStore } from "@/lib/store/app-store";
 import { activityNowIso } from "@/lib/utils/date";
 import { createId } from "@/lib/utils/id";
 import { authorFromSession } from "@/lib/chat/message-author";
-import { activeFormInstanceFor, continuationFor } from "@/lib/forms/proposal-continuation";
+import { activeFormCandidates, activeFormInstanceFor, continuationFor } from "@/lib/forms/proposal-continuation";
 import { conversationRatingTarget } from "@/lib/feedback/conversation";
 import type { ActivitySurface } from "@/lib/analytics/taxonomy";
 import type { ChatReportContext } from "@/lib/reporting/report-context";
@@ -208,6 +208,16 @@ export function useInlineAsk({ reportContext, onActiveChange, surface }: InlineA
            * yesterday" can correct it. Revalidated server-side.
            */
           activeFormInstanceId: activeFormInstanceFor(history, text),
+          /*
+           * SEVERAL FORMS FROM ONE MESSAGE, and this turn names neither: their
+           * ids, so a correction is answered with "which one?" rather than
+           * applied to a guess or dropped — exactly as the chat screen sends
+           * them. Without this a correction typed here after a two-form
+           * message never got the question. Revalidated server-side.
+           */
+          ...(activeFormInstanceFor(history, text) === undefined && activeFormCandidates(history).length > 1
+            ? { activeFormCandidateIds: activeFormCandidates(history).map((candidate) => candidate.instanceId) }
+            : {}),
           /* Pointers at the view. Never a figure — see the header. */
           reportContext: reportContext ?? null,
           /* Reporting only — see `AskRequest.surface`. */

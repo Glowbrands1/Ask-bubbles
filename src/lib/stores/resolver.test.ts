@@ -259,3 +259,41 @@ describe("in a sentence", () => {
     expect(readRoster("Brandi Algya from Grand Island").mentions).toEqual([]);
   });
 });
+
+/*
+ * PUNCTUATION AND WHAT FOLLOWS A STORE (ported from the reference platform's
+ * QA of 21 October 2026). Read on the roster as it ships.
+ */
+describe("a store set off by punctuation, or followed by what the form is about", () => {
+  const readRoster = (text: string) => readStoreMentions(text, rosterOnly).mentions.flatMap((mention) => mention.locationIds);
+
+  it.each([
+    // What the form is about does not hide the store before it.
+    ["coaching form for jane at kearney about bed cleaning", ["loc-66"]],
+    ["at grand island regarding her breaks", ["loc-236"]],
+    ["she works at kearney who needs a coaching form", ["loc-66"]],
+    // A comma ends the store's name.
+    ["she works at kearney, needs a coaching form", ["loc-66"]],
+    // Brackets set a whole store name off, like commas.
+    ["Avery Testperson (Lee's Summit)", ["loc-219"]],
+    ["Avery Testperson (Grand Island), late twice", ["loc-236"]],
+  ])("reads %s", (text, ids) => {
+    expect(readRoster(text)).toEqual(ids);
+  });
+
+  it.each([
+    // One bracketed word could be a surname.
+    "Avery (Kearney) was late",
+    // A store's road on its own is still a road, bracketed or not.
+    "she parked on west dodge again",
+    "Avery Testperson (West Dodge)",
+  ])("reads no store in %s", (text) => {
+    expect(readRoster(text)).toEqual([]);
+  });
+
+  it("the full registered name, brackets and all, is still one mention", () => {
+    // The bracketed road adds nothing beside the registered name it belongs to.
+    expect(readStoreMentions("coaching at Omaha, NE (West Dodge Rd) today", rosterOnly).mentions).toHaveLength(1);
+    expect(readRoster("coaching at Omaha, NE (West Dodge Rd) today")).toEqual(["loc-264"]);
+  });
+});

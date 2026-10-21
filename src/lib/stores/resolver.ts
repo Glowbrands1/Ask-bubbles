@@ -109,6 +109,11 @@ interface IndexedAlias {
   readonly locationIds: readonly string[];
   readonly needsCue: boolean;
   readonly via: StoreMatchVia;
+  /**
+   * The store's road on its own — "west dodge", "w 41st st" — which is a
+   * place only where the sentence says so, never because it is bracketed.
+   */
+  readonly road?: boolean;
 }
 
 export interface StoreIndex {
@@ -237,17 +242,18 @@ export function buildStoreIndex(sources: StoreIndexSources = {}): StoreIndex {
   const shared = [...counts].filter(([, count]) => count > 1).map(([head]) => head);
   const sharedCities = shared.filter((head) => !shared.some((other) => other !== head && other.startsWith(`${head} `)));
 
-  const merged = new Map<string, { ids: Set<string>; needsCue: boolean; via: StoreMatchVia }>();
-  const add = (phrase: string, storeId: string, needsCue: boolean, via: StoreMatchVia) => {
+  const merged = new Map<string, { ids: Set<string>; needsCue: boolean; via: StoreMatchVia; road: boolean }>();
+  const add = (phrase: string, storeId: string, needsCue: boolean, via: StoreMatchVia, road = false) => {
     const trimmed = phrase.replace(/\s+/g, " ").trim();
     if (!trimmed) return;
     const existing = merged.get(trimmed);
     if (!existing) {
-      merged.set(trimmed, { ids: new Set([storeId]), needsCue, via });
+      merged.set(trimmed, { ids: new Set([storeId]), needsCue, via, road });
       return;
     }
     existing.ids.add(storeId);
     existing.needsCue = existing.needsCue && needsCue;
+    existing.road = existing.road && road;
     if (existing.via === "initials" && via !== "initials") existing.via = via;
   };
 
@@ -271,7 +277,7 @@ export function buildStoreIndex(sources: StoreIndexSources = {}): StoreIndex {
         // "omaha west dodge" is specific enough to stand without a cue.
         add(`${city} ${variant}`, store.id, false, "name");
         // The road on its own is a place only where the sentence says so ("at Dodge").
-        if (variant.includes(" ") || variant === core) add(variant, store.id, true, "name");
+        if (variant.includes(" ") || variant === core) add(variant, store.id, true, "name", true);
       }
       if (core) add(`${city} ${core}`, store.id, false, "name");
     }
@@ -312,6 +318,7 @@ export function buildStoreIndex(sources: StoreIndexSources = {}): StoreIndex {
     locationIds: [...entry.ids],
     needsCue: entry.needsCue,
     via: entry.via,
+    ...(entry.road ? { road: true } : {}),
   }));
   aliases.sort((a, b) => b.phrase.length - a.phrase.length);
 
@@ -453,7 +460,14 @@ export function isStoreName(phrase: string, index: StoreIndex = defaultStoreInde
 
 /* ------------------------------------------------------------ in a sentence */
 
-const CARRIES_ON = `${PLACE_NOUNS}|and|but|or|on|today|yesterday|tonight|this|last|at|she|he|they|i|we|for|with|where|when|while|because|so|again|during|after|before|around|since|until|was|is|has|had`;
+const CARRIES_ON =
+  `${PLACE_NOUNS}|and|but|or|on|today|yesterday|tonight|this|last|at|she|he|they|i|we|for|with|where|when|while|because|so|again|during|after|before|around|since|until|was|is|has|had|` +
+  /*
+   * "…at kearney about bed cleaning" (reference platform, 21 October 2026):
+   * what the form is about, who it concerns, what is needed. None of these
+   * continues a place's name the way "High", "South" or "time" does.
+   */
+  "about|regarding|concerning|re|who|that|then|every|her|his|their|need|needs";
 
 const AT_BEFORE = /\b(?:at|in)\s+(?:the\s+)?$/;
 /** "at Kearney and Bellevue": the second store in a list is a place too, or it is silently dropped. */
@@ -558,6 +572,25 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
     if (found) {
       mentions.push({ locationIds: alias.locationIds, confirm: alias.via === "initials", matched: alias.phrase });
     }
+  }
+
+  /*
+   * A STORE SET OFF IN BRACKETS — "Jane Doe (Lee's Summit)" — is a place, as one
+   * set off by commas already is (see `cued`). Ported from the reference
+   * platform (21 October 2026). Registered names carry brackets of their own
+   * ("Omaha, NE (West Dodge Rd)"), so brackets cannot simply become
+   * boundaries: the bracketed words are read on their own, and count only as a
+   * whole store name of two or more words that is not just a road — nobody is
+   * called "Grand Island", but "(Kearney)" could be a surname and "(West
+   * Dodge)" a road.
+   */
+  for (const match of text.matchAll(/\(([^()]{3,40})\)/g)) {
+    const key = foldKey(match[1]!, index.abbreviations).trim();
+    if (key.split(" ").length < 2) continue;
+    const alias = index.byPhrase.get(key);
+    if (!alias || alias.via === "initials" || alias.road) continue;
+    if (mentions.some((mention) => alias.locationIds.every((id) => mention.locationIds.includes(id)))) continue;
+    mentions.push({ locationIds: alias.locationIds, matched: alias.phrase });
   }
 
   // A city several stores share, said where it stands alone as a place.

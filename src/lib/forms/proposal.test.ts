@@ -981,3 +981,36 @@ describe("a month named beside the employee is a date, not a second person", () 
     expect(extractEmployeeNames("CA for April Jones")).toEqual(["April Jones"]);
   });
 });
+
+/*
+ * REFERENCE PLATFORM QA, 21 OCTOBER 2026 — possessives, "will", and a name
+ * then a role in lower case. End to end in `form-intake-qa-2026-10-21.test.ts`.
+ */
+describe("a possessive ends the name; a contraction is not one", () => {
+  it.each([
+    ["Ellie Sendgraff's coaching form", ["Ellie Sendgraff"]],
+    ["Ellie Sendgraff’s coaching form", ["Ellie Sendgraff"]],
+    ["start ellie sendgraff's CA", ["ellie sendgraff"]],
+    ["Ellie's CA - she was late", ["Ellie"]],
+    ["coaching form for Jordan's attendance", ["Jordan"]],
+  ])("%s", (text, names) => {
+    expect(extractEmployeeNames(text)).toEqual(names);
+  });
+
+  it.each(["It's Avery Testperson", "it's avery testperson"])("%s", (text) => {
+    expect(extractEmployeeNames(text).map((name) => name.toLowerCase())).toEqual(["avery testperson"]);
+  });
+});
+
+describe("'will' followed by a surname, and a lower-case name then a role", () => {
+  it("reads will turner after a form, never a bare will", () => {
+    expect(extractEmployeeNames("coaching form for will turner")).toEqual(["will turner"]);
+    expect(extractEmployeeNames("coaching form for will")).toEqual([]);
+    expect(extractEmployeeNames("the coaching form for will be done tomorrow")).toEqual([]);
+  });
+
+  it("reads two name words then a job-title abbreviation", () => {
+    expect(extractEmployeeNames("brandi algya asm, needs a coaching form")).toEqual(["brandi algya"]);
+    expect(extractEmployeeNames("sarah asm needs a coaching form")).not.toContain("sarah asm");
+  });
+});

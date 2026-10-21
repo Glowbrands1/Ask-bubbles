@@ -8,6 +8,7 @@ import { BubbleMark } from "@/components/brand-mark";
 import { RichText } from "@/components/rich-text";
 import { SourceList } from "@/components/source-list";
 import { Badge } from "@/components/ui/badge";
+import { LOCATION_LABEL } from "@/lib/brand";
 import { locationById } from "@/lib/locations";
 import { describeStore } from "@/lib/stores/resolver";
 import { Button } from "@/components/ui/button";
@@ -628,7 +629,7 @@ function FormProposalCard({
             )}
           </ProposalRow>
         ) : null}
-        <ProposalRow label="Store">
+        <ProposalRow label={LOCATION_LABEL}>
           {location ? (
             <span className="text-foreground">{storeText(location)}</span>
           ) : proposal.locationResolution === "not_applicable" ? (
@@ -662,7 +663,7 @@ function FormProposalCard({
         greyed-out control invites the manager to hunt for what would enable it.
 
         There is no Finalize, no Download PDF, no Start another and no View in
-        Form Monitoring. Those are Phase 4, and a dead Finalize would reproduce
+        the Forms Register. Those are Phase 4, and a dead Finalize would reproduce
         exactly the "Coming later" problem this workstream just removed.
       */}
       {/*
