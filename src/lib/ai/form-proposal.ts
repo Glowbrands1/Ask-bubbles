@@ -862,7 +862,7 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
    * ==========================================================================
    *
    * `extractJobTitle` reads the most specific title anywhere in the
-   * conversation, which on "from salon director to tanning consultant" is the
+   * conversation, which on "from general manager to team member" is the
    * NEW one — so the form's Job Title line would have printed the title the
    * employee is leaving for. On these forms Job Title is the current title,
    * and it is read with the direction the manager gave it; where they gave
@@ -1827,7 +1827,7 @@ function namedInManagerTurns(input: ProposalTurn): TemplateIntent {
 /**
  * The manager's turns that belong to THIS form: everything after the last turn
  * that asked for a different form or named somebody other than this employee.
- * Earlier turns about the same person stay in ("Jane is a PT TC." then "she's
+ * Earlier turns about the same person stay in ("Jane is a PT Team Member." then "she's
  * transferring to salon 18"); a demotion for somebody else earlier in the
  * conversation does not.
  */
@@ -2017,7 +2017,7 @@ const CHANGE_INTAKE: Record<EmploymentChangeKind, { items: string[]; example: st
       "A short reason",
     ],
     example:
-      "Jane Doe is a PT TC at $12/hr, transferring from store 12 to store 18, same title and pay, voluntary — she moved closer to home.",
+      "Jane Doe is a PT Team Member at $12/hr, transferring from store 12 to store 18, same title and pay, voluntary — she moved closer to home.",
   },
 };
 

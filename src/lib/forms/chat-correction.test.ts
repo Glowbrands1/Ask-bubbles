@@ -160,8 +160,8 @@ describe("found in hands-on QA: the correction summary", () => {
 
 describe("found in hands-on QA: a new request is not a correction", () => {
   it.each([
-    "pull up a transfer form for jane doe, she is a pt tc at $12/hr, transferring from store 12 to salon 18 effective oct 5, same title, voluntary",
-    "create a demotion form for maria lopez, going from SD to TC",
+    "pull up a transfer form for jane doe, she is a pt team member at $12/hr, transferring from store 12 to salon 18 effective oct 5, same title, voluntary",
+    "create a demotion form for maria lopez, going from SD to team member",
     "maria lopez is transferring from salon 12 to salon 18",
     "create another position transfer form for jane doe, new location salon 30",
   ])("leaves the open form alone: %s", async (question) => {
@@ -288,7 +288,7 @@ describe("found in QA: corrections to several lines, and a reason the manager wr
 
 describe("found in live QA: a correction never makes the paragraph contradict itself", () => {
   it("leaves the reason alone when the new value is already there for another purpose", async () => {
-    state.reason = "QA draft from the notes: she is a PT TC at $12/hr at salon 18, moving to salon 23 effective 10/12.";
+    state.reason = "QA draft from the notes: she is a PT team member at $12/hr at salon 18, moving to salon 23 effective 10/12.";
     state.values = [
       { fieldKey: "location", value: "KS Lawrence" },
       { fieldKey: "new_location", value: "Salon 23" },

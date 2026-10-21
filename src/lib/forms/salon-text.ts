@@ -30,7 +30,7 @@ import { ROSTER_STORE_INDEX } from "./location-mention";
 const SMALL_WORDS = new Set(["in", "of", "and", "the", "at", "for"]);
 
 const ABBREVIATIONS = new Set([
-  "sd", "asd", "tsd", "dm", "tc",
+  "sd", "asd", "tsd", "dm",
   ...COMPANY_LOCATIONS.map((location) => location.state?.toLowerCase()).filter(
     (state): state is string => Boolean(state),
   ),

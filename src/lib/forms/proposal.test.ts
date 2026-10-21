@@ -734,7 +734,7 @@ describe("a first name plus a stated role names the employee", () => {
 
   it("takes the role in the words the business uses", () => {
     for (const [sentence, name] of [
-      ["Marco is a Tanning Consultant", "Marco"],
+      ["Marco is a Team Member", "Marco"],
       ["Dana was an FTTC last year", "Dana"],
       ["Priya is our new Salon Director", "Priya"],
     ] as const) {

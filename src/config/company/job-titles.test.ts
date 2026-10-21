@@ -39,7 +39,17 @@ describe("a job-title abbreviation, as a name-role-store line uses one", () => {
     expect(isJobTitleAbbreviation(word)).toBe(true);
   });
 
-  it.each(["NE", "OT", "PTO", "Grand", "manager", "store manager", "A"])("%s is not", (word) => {
+  it.each(["NE", "OT", "PTO", "Grand", "manager", "store manager", "A", "TC", "TCs", "tc"])("%s is not", (word) => {
     expect(isJobTitleAbbreviation(word)).toBe(false);
+  });
+});
+
+describe("\"TC\" / \"Tanning Consultant\" is not a Buff City Soap title", () => {
+  it.each(["TC", "tc", "TCs", "tanning consultant", "Tanning Consultants"])("%s reads as no title", (typed) => {
+    expect(titleOf(typed)).toBeNull();
+  });
+
+  it("no entry prints it", () => {
+    expect(COMPANY_JOB_TITLES.map((entry) => entry.title)).not.toContain("Tanning Consultant");
   });
 });

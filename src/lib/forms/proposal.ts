@@ -703,7 +703,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * 1b. THE PERSON A CHANGE IS DONE TO, OR WHO IS MAKING ONE
    * ==========================================================================
    *
-   * "demote marlowe from manager to TC" and "transfer jane to salon 18" put the
+   * "demote marlowe from manager to team member" and "transfer jane to salon 18" put the
    * name straight after the verb; "Jane is transferring from salon 12" and
    * "mike quit, last day was 9/25" put it at the start of the sentence, before
    * the change. Both positions are as strong as "<form> for <name>": the verb
@@ -1183,7 +1183,7 @@ function formSubjectNames(text: string): string[] {
  */
 const TITLE_HEAD = /^(?:managers?|directors?|consultants?|supervisors?|leads?|trainers?|coordinators?|specialists?)$/i;
 const TITLE_MODIFIER =
-  /^(?:salon|location|district|regional|area|store|makery|general|assistant|shift|training|operations|tanning|spa|senior|junior|head|key)$/i;
+  /^(?:salon|location|district|regional|area|store|makery|general|assistant|shift|training|operations|spa|senior|junior|head|key)$/i;
 
 function isJobTitlePhrase(candidate: string): boolean {
   if (JOB_TITLES.some((entry) => entry.pattern.test(candidate) && candidate.replace(entry.pattern, "").trim() === "")) {

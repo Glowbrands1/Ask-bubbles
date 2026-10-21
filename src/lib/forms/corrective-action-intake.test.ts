@@ -175,10 +175,17 @@ describe("3. what counts as an answer", () => {
   });
 
   it.each([
-    ["an acronym", "she is a TC at Kearny"],
+    ["an acronym", "she is a DM at Kearny"],
     ["a spelled-out title", "she is an assistant salon director"],
+    ["a Woven title", "she is a team member at Kearny"],
+    ["a Woven title, in full", "he is our assistant general manager"],
   ])("a job title — %s", (_label, text) => {
     expect(read(text).supplied).toContain("job_title");
+  });
+
+  it("\"TC\" (Tanning Consultant) is not one of Buff City Soap's titles", () => {
+    expect(read("she is a TC at Kearny").supplied).not.toContain("job_title");
+    expect(read("she is a tanning consultant").supplied).not.toContain("job_title");
   });
 
   it("asks for everything when the manager has only named the form", () => {
@@ -412,7 +419,7 @@ describe("5. what Ask Bubbles actually says", () => {
         "6. Whether the employee has previously received coaching and/or corrective action, and if yes, what and the date each was signed",
         // Added at Operations' request, in their wording.
         "7. Is payroll deduct applicable? (Yes or No)",
-        "8. The employee's job title (e.g. TC, ASD, SD) if you have it",
+        "8. The employee's job title (e.g. Team Member, Assistant General Manager) if you have it",
         "",
       ].join("\n"),
     );

@@ -156,9 +156,9 @@ describe("asking for one in chat", () => {
   it.each([
     ["Create a demotion form for marlowe co", "demotion"],
     ["create a demotion form", "demotion"],
-    ["demote marlowe from manager to tanning consultant effective october 5", "demotion"],
+    ["demote marlowe from manager to team member effective october 5", "demotion"],
     ["I need to do a demotion for marlowe", "demotion"],
-    ["she's stepping down to TC effective 10/5", "demotion"],
+    ["she's stepping down to team member effective 10/5", "demotion"],
     ["pull up a transfer form for Jane Doe", "position-transfer"],
     ["make a transfer form", "position-transfer"],
     ["Jane is transferring from salon 12 to salon 18", "position-transfer"],
@@ -175,7 +175,7 @@ describe("asking for one in chat", () => {
     "What happens to PTO when someone goes from FT to PT?",
     "do I need to do anything when someone resigns?",
     "how do I handle a no call no show?",
-    "My best TC quit. Ugh.",
+    "My best team member quit. Ugh.",
   ])("leaves a question or a remark alone: %s", (question) => {
     expect(detectTemplateIntent(question)).toEqual({ kind: "none" });
   });
@@ -206,7 +206,7 @@ describe("the employee's name, in any case", () => {
     ["Position Transfer Form for Jane Doe", "Jane Doe"],
     ["Jane is transferring from salon 12 to salon 18", "Jane"],
     ["jane's transferring to lawrence", "jane"],
-    ["demote marlowe from manager to tanning consultant effective october 5", "marlowe"],
+    ["demote marlowe from manager to team member effective october 5", "marlowe"],
     ["transfer jane from FT to PT, involuntary", "jane"],
     ["create an exit form for mike, last day was 9/25", "mike"],
     ["mike quit, last day was 9/25", "mike"],
@@ -233,7 +233,7 @@ describe("dates, in the formats managers type", () => {
     ["10-05-2026", "2026-10-05"],
     ["10-5-26", "2026-10-05"],
   ])("effective %s", (date, iso) => {
-    expect(read(`demote jane to TC effective ${date}`).effectiveDate).toBe(iso);
+    expect(read(`demote jane to team member effective ${date}`).effectiveDate).toBe(iso);
   });
 
   it("does not read a range as a dashed date", () => {
@@ -241,7 +241,7 @@ describe("dates, in the formats managers type", () => {
   });
 
   it("keeps the effective date, the last day and notice dates off the form's own date", () => {
-    expect(formDateFor("demote jane to TC effective 10/5", TODAY)).toBeNull();
+    expect(formDateFor("demote jane to team member effective 10/5", TODAY)).toBeNull();
     expect(formDateFor("mike quit, last day was 9/25", TODAY)).toBeNull();
     expect(formDateFor("gave notice on 9/11 and worked his notice through 9/25", TODAY)).toBeNull();
     expect(formDateFor("date this 9/27, effective 10/5", TODAY)).toBe("2026-09-27");
@@ -252,15 +252,15 @@ describe("dates, in the formats managers type", () => {
 
 describe("the facts of the change", () => {
   it("reads direction from 'from ... to'", () => {
-    const facts = read("demote marlowe from manager to tanning consultant effective october 5");
+    const facts = read("demote marlowe from manager to team member effective october 5");
     expect(facts.current.title).toBe("Manager");
-    expect(facts.next.title).toBe("Tanning Consultant");
+    expect(facts.next.title).toBe("Team Member");
     expect(facts.effectiveDate).toBe("2026-10-05");
   });
 
   it("reads a whole sentence of details, in any casing", () => {
     const facts = read(
-      "Create a demotion form for marlowe co. She's a full time SD at $18/hr at KS Lawrence and asked to step down to a part time TC at $12.50/hr starting 10-05-2026",
+      "Create a demotion form for marlowe co. She's a full time SD at $18/hr at KS Lawrence and asked to step down to a part time team member at $12.50/hr starting 10-05-2026",
     );
     expect(facts.current).toEqual({
       title: "Store Director",
@@ -268,7 +268,7 @@ describe("the facts of the change", () => {
       rate: "$18.00/hr",
       location: "KS Lawrence",
     });
-    expect(facts.next).toEqual({ title: "Tanning Consultant", status: "part_time", rate: "$12.50/hr" });
+    expect(facts.next).toEqual({ title: "Team Member", status: "part_time", rate: "$12.50/hr" });
     expect(facts.changeType).toBe("voluntary");
     expect(facts.effectiveDate).toBe("2026-10-05");
   });
@@ -323,7 +323,7 @@ describe("the facts of the change", () => {
     expect(read("it's an involuntary demotion").changeType).toBe("involuntary");
     expect(read("voluntary").changeType).toBe("voluntary");
     expect(read("she requested a demotion").changeType).toBe("voluntary");
-    expect(read("we are demoting her to TC").changeType).toBeUndefined();
+    expect(read("we are demoting her to team member").changeType).toBeUndefined();
     expect(read("voluntary, no wait, involuntary").changeType).toBeUndefined();
   });
 
@@ -343,9 +343,9 @@ describe("the facts of the change", () => {
   });
 
   it("copies 'same title and pay' from what the manager gave, never from nothing", () => {
-    const facts = read("Jane Doe is a PT TC at $12/hr, transferring from salon 12 to salon 18, same title and pay, voluntary — she moved closer to home.");
+    const facts = read("Jane Doe is a PT team member at $12/hr, transferring from salon 12 to salon 18, same title and pay, voluntary — she moved closer to home.");
     const { values } = statedFactValues(facts);
-    expect(values.new_job_title).toBe("Tanning Consultant");
+    expect(values.new_job_title).toBe("Team Member");
     expect(values.new_pay_rate).toBe("$12.00/hr");
     expect(missingDetails("transfer", facts).map((item) => item.key)).toEqual(["new_status"]);
   });
@@ -355,7 +355,7 @@ describe("the facts of the change", () => {
 
 describe("what is still asked for", () => {
   it("groups each side's status and pay, and asks for nothing already given", () => {
-    const facts = read("demote marlowe from manager to tanning consultant effective october 5");
+    const facts = read("demote marlowe from manager to team member effective october 5");
     expect(missingDetails("demotion", facts).map((item) => item.phrase)).toEqual([
       "the current status (FT/PT) and pay rate",
       "the new status (FT/PT) and pay rate",
@@ -448,7 +448,7 @@ describe("reading stays fast on long or awkward input", () => {
     "to a ".repeat(800),
     `new status ${"FT ".repeat(1000)}`,
     `${"salon 12, ".repeat(400)}`,
-    `demote ${"x ".repeat(1500)} to TC`,
+    `demote ${"x ".repeat(1500)} to team member`,
     "same title, pay, status, ".repeat(150),
   ])("case %#", (text) => {
     const started = Date.now();
@@ -461,14 +461,14 @@ describe("reading stays fast on long or awkward input", () => {
 
 describe("found in hands-on QA", () => {
   it("reads the items before 'going to' as the current side", () => {
-    const facts = read("salon 12, manager, $18/hr, going to TC at $14/hr effective 10/5");
+    const facts = read("salon 12, manager, $18/hr, going to team member at $14/hr effective 10/5");
     expect(facts.current).toEqual({ location: "Salon 12", title: "Manager", rate: "$18.00/hr" });
-    expect(facts.next).toEqual({ title: "Tanning Consultant", rate: "$14.00/hr" });
+    expect(facts.next).toEqual({ title: "Team Member", rate: "$14.00/hr" });
     expect(facts.effectiveDate).toBe("2026-10-05");
   });
 
   it("never takes the name or the request in such a list for a title", () => {
-    const facts = read("create a demotion form for jane, SD, FT, going to TC");
+    const facts = read("create a demotion form for jane, SD, FT, going to team member");
     expect(facts.current).toEqual({ title: "Store Director", status: "full_time" });
   });
 
@@ -667,21 +667,21 @@ describe("found in review: the reason paragraph is rewritten only where it is sa
     expect(manager.left).toEqual(["Manager"]);
 
     const will = syncNarrative({
-      narrative: "Will asked to step down, and he will start as a TC on 10/5.",
+      narrative: "Will asked to step down, and he will start as a team member on 10/5.",
       changes: [{ from: "Will", to: "William Grant" }],
       unchanged: [],
     });
-    expect(will.text).toBe("Will asked to step down, and he will start as a TC on 10/5.");
+    expect(will.text).toBe("Will asked to step down, and he will start as a team member on 10/5.");
     expect(will.left).toEqual(["Will"]);
   });
 
   it("does not flag the ordinary word when only the verb is there", () => {
     const sync = syncNarrative({
-      narrative: "He asked to step down, and he will start as a TC on 10/5.",
+      narrative: "He asked to step down, and he will start as a team member on 10/5.",
       changes: [{ from: "Will", to: "William Grant" }],
       unchanged: [],
     });
-    expect(sync).toEqual({ text: "He asked to step down, and he will start as a TC on 10/5.", replaced: [], left: [] });
+    expect(sync).toEqual({ text: "He asked to step down, and he will start as a team member on 10/5.", replaced: [], left: [] });
   });
 
   it("rewrites a multi-word value only as written, and flags another casing", () => {
@@ -774,7 +774,7 @@ describe("found in QA: several lines corrected in one message", () => {
       narrative,
       changes: [
         { from: "Salon Manager", to: "Store Director" },
-        { from: "Salon Manager", to: "Tanning Consultant" },
+        { from: "Salon Manager", to: "Team Member" },
       ],
       unchanged: ["Salon 18", "Salon 23"],
     });
@@ -796,14 +796,14 @@ describe("found in QA: several lines corrected in one message", () => {
     ).toBe("from salon 18 to Salon 24 at $13.00/hr");
   });
 
-  it("reads both titles from 'current title to SD and new title to TC' — never 'SD and New Title To TC'", () => {
-    expect(correctionValues("change her current title to SD and new title to TC", TODAY)?.values).toEqual({
+  it("reads both titles from 'current title to SD and new title to DM' — never 'SD and New Title To DM'", () => {
+    expect(correctionValues("change her current title to SD and new title to DM", TODAY)?.values).toEqual({
       job_title: "Store Director",
-      new_job_title: "Tanning Consultant",
+      new_job_title: "District Manager",
     });
-    expect(correctionValues("current title is Store Director and new title is Tanning Consultant", TODAY)?.values).toEqual({
+    expect(correctionValues("current title is Store Director and new title is Team Member", TODAY)?.values).toEqual({
       job_title: "Store Director",
-      new_job_title: "Tanning Consultant",
+      new_job_title: "Team Member",
     });
     expect(correctionValues("current location is salon 23. new location is salon 18", TODAY)?.values).toEqual({
       location: "Salon 23",
@@ -814,7 +814,7 @@ describe("found in QA: several lines corrected in one message", () => {
 
 describe("found in live QA: a new value the paragraph already uses for something else", () => {
   it("does not turn 'at salon 18, moving to salon 23' into 'at salon 18, moving to Salon 18'", () => {
-    const narrative = "she is a PT TC at salon 18, moving to salon 23 effective 10/12";
+    const narrative = "she is a PT team member at salon 18, moving to salon 23 effective 10/12";
     const sync = syncNarrative({
       narrative,
       // The stored current location was the account's salon, not "Salon 18".

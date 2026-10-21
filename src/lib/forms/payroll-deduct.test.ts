@@ -200,9 +200,9 @@ describe("the answer across the conversation", () => {
       "4. Whether this is a verbal or written warning",
       "5. Whether the employee has previously received corrective action for this same issue, and if yes, when",
       "6. Is payroll deduct applicable? (Yes or No)",
-      "7. The employee's job title (e.g. TC, ASD, SD) if you have it",
+      "7. The employee's job title (e.g. Team Member, Assistant General Manager) if you have it",
     ].join("\n");
-    const reply = ["1. Dana Moss", "2. today", "3. late 30 minutes", "4. verbal", "5. no", "6. yes", "7. TC"].join("\n");
+    const reply = ["1. Dana Moss", "2. today", "3. late 30 minutes", "4. verbal", "5. no", "6. yes", "7. team member"].join("\n");
     expect(payrollDeductFromConversation([user("CA"), sunny(intake), user(reply)])).toBe("yes");
 
     // Item 5 is a "no" too — it is the prior-action answer and must not be read.

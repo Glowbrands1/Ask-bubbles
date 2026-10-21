@@ -1543,7 +1543,7 @@ const LIBRARY_NAME_WORDS = [
    * put "FT SD" forward as a second employee, because two capitals read as a
    * first name and a surname.
    */
-  "ft", "pt", "sd", "tc", "dm", "stc", "rm",
+  "ft", "pt", "sd", "dm", "stc", "rm",
   // "I need a CA for Dana Moss": the shorthand for the Corrective Action Form.
   "ca",
 ];

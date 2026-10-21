@@ -277,7 +277,7 @@ describe("what Ask Bubbles says beside the proposal", () => {
     const proposals = await load([exitForm()]);
     const response = await proposals.proposeFormForTurn(
       turn(
-        "Create an exit form for sarah jones, she's a TC. She gave her two weeks notice on 9/1, worked her full two weeks, and her last day was 9/15.",
+        "Create an exit form for sarah jones, she's a team member. She gave her two weeks notice on 9/1, worked her full two weeks, and her last day was 9/15.",
       ),
     );
     const content = response!.content;
@@ -305,19 +305,19 @@ describe("what Ask Bubbles says beside the proposal", () => {
     const proposals = await load([exitForm()]);
     const response = await proposals.proposeFormForTurn(
       turn(
-        "Create an exit form for sarah jones, she's a TC. She gave her two weeks notice on 9/1 by email, worked her full two weeks, and her last day was 9/15. She left for another job. She returned her store items and her key. No payroll deduction. She won't be dropped to minimum wage or forfeit her bonus. She is eligible for rehire.",
+        "Create an exit form for sarah jones, she's a team member. She gave her two weeks notice on 9/1 by email, worked her full two weeks, and her last day was 9/15. She left for another job. She returned her store items and her key. No payroll deduction. She won't be dropped to minimum wage or forfeit her bonus. She is eligible for rehire.",
       ),
     );
     const proposal = response!.formProposal!;
     expect(proposal.employeeName).toBe(displayPersonName("sarah jones"));
-    expect(proposal.employeeRole).toBe("Tanning Consultant");
+    expect(proposal.employeeRole).toBe("Team Member");
     // The form is dated the day it is completed, never the first date in the chat.
     expect(proposal.formDate).toBeNull();
     expect(proposal.supportsInlineDraft).toBe(true);
 
     const content = response!.content;
     expect(content).toMatch(/- \*\*Name:\*\* Sarah Jones/);
-    expect(content).toMatch(/- \*\*Job Title:\*\* Tanning Consultant/);
+    expect(content).toMatch(/- \*\*Job Title:\*\* Team Member/);
     expect(content).toMatch(/- \*\*Last Day Worked:\*\* September 15, 2026/);
     expect(content).toMatch(/- \*\*Date that notice was given:\*\* September 1, 2026/);
     expect(content).toMatch(/- \*\*Resignation Details:\*\* Submitted & Fulfilled Notice/);
@@ -618,7 +618,7 @@ describe("QA 3 — location, title and dates", () => {
     for (const [said, title] of [
       ["she's an ASD", "ASD"],
       ["he is a store director", "Store Director"],
-      ["she's a tanning consultant", "Tanning Consultant"],
+      ["she's a team member", "Team Member"],
     ]) {
       const response = await proposals.proposeFormForTurn(turn(`exit form for Jane Smith, ${said}`));
       expect(response!.formProposal!.employeeRole, said).toBe(title);

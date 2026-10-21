@@ -356,7 +356,7 @@ describe("the other details are not asked for once they are given", () => {
 
   it("drops the date and the job title from the corrective-action walk-through", async () => {
     const response = await ask(
-      "Corrective action form for Jane Smith, she is a tanning consultant, it happened today — walk me through it.",
+      "Corrective action form for Jane Smith, she is a team member, it happened today — walk me through it.",
       salons(WORNALL),
     );
 

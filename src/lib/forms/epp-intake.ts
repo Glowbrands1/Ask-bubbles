@@ -440,8 +440,8 @@ const EXPECTATIONS_IMPROVEMENT_GIVEN: readonly RegExp[] = [
 
 /** A job title, in the vocabulary this business uses. */
 const JOB_TITLE_GIVEN: readonly RegExp[] = [
-  /\b(?:tc|asd|sd|sdit|tsd|dmit|fttc|dm)\b/,
-  /\b(?:tanning consultant|(?:salon|store) director|assistant (?:salon|store) director|district manager|regional manager|key ?holder|shift lead|manager in training)\b/,
+  /\b(?:asd|sd|sdit|tsd|dmit|fttc|dm)\b/,
+  /\b(?:full[- ]time tanning consultant|(?:salon|store) director|assistant (?:salon|store) director|district manager|regional manager|key ?holder|shift lead|manager in training)\b/,
   /\bjob title\s*[:\-=]/,
 ];
 
