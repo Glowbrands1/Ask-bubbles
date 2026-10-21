@@ -24,10 +24,12 @@ import {
   type EppIntakeReading,
 } from "@/lib/forms/epp-intake";
 import {
+  answeredWhatHappened,
   asksToBeGuided,
   describesIncident,
   correctiveActionBasis,
   correctiveActionIntakeRequest,
+  describesMoreThanTheRequest,
   readCorrectiveActionIntake,
   type IntakeReading,
 } from "@/lib/forms/corrective-action-intake";
@@ -943,6 +945,35 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     proposal.employeeRole = directory.verification.title;
   }
 
+  /*
+   * NO CREATE DRAFT UNTIL THE MANAGER HAS SAID WHAT HAPPENED. A Corrective
+   * Action Form is drafted from the account, and the policy citation is
+   * resolved from the offense that account supports — so a card created from
+   * "create ca for Pat Rivera" alone came back empty and was filled by hand
+   * with no citation (reference platform, production, 20 Oct 2026). The
+   * question is asked instead; the next turn that answers it rebuilds the
+   * proposal without this flag. The employee's name, their position and every
+   * name this company's stores answer to are not an account —
+   * read here, after Woven's position has been set.
+   */
+  if (
+    isCorrectiveActionForm(match) &&
+    proposal.status !== "needs_employee" &&
+    !describesIncident(context.text) &&
+    !describesMoreThanTheRequest(context.text, {
+      ignore: [
+        proposal.employeeName ?? "",
+        proposal.employeeRole ?? "",
+        ...storeIndex.stores.map((store) => store.name),
+        ...storeIndex.aliases.map((alias) => alias.phrase),
+      ],
+    }) &&
+    !answeredWhatHappened([...input.history, { role: "user", content: input.question }])
+  ) {
+    proposal.awaitingIncident = true;
+    proposal.supportsInlineDraft = false;
+  }
+
   if (directory.question) return turn(directory.question, proposal);
 
   if (proposal.locationResolution === "resolved" && proposal.subject !== "team") {
@@ -1559,6 +1590,15 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
       typeof lastAssistant?.content === "string" &&
       (lastAssistant.content.includes(CA_POLICY_QUESTION) || lastAssistant.content.includes("**Policy:**"));
     if (raisedPolicy && namesCaPolicy(input.question)) return { kind: "explicit", templateKey: continued };
+
+    /*
+     * AND BY ITS ACCOUNT OF WHAT HAPPENED, in whatever words: "Pat got to the
+     * store at 11:23 for a 9:30 shift" names nobody and no topic, and sending
+     * it to retrieval would end the intake that just asked for it.
+     */
+    if (lastAssistant && answeredWhatHappened([lastAssistant, { role: "user", content: input.question }])) {
+      return { kind: "explicit", templateKey: continued };
+    }
   }
 
   /*
@@ -2188,6 +2228,22 @@ function proposalContent(
      */
     if (proposal.status === "needs_employee") {
       return correctiveActionEmployeeQuestion(proposal.templateName, context);
+    }
+
+    /*
+     * WHO, BUT NOT WHAT. The account is asked for — with the payroll question
+     * if it is still open, so the next answer can complete the card — and
+     * nothing is offered to create until it arrives. See `awaitingIncident`.
+     */
+    if (proposal.awaitingIncident) {
+      const ask = correctiveActionIntakeRequest({
+        formName: proposal.templateName,
+        items: intake.missing.filter((item) => item.key === "what_happened" || item.key === "payroll_deduct"),
+        opening: false,
+        today: todayInWords(),
+        awaitingIncident: true,
+      });
+      return proposal.status === "needs_location" ? `${locationQuestion(proposal)}\n\n${ask}` : ask;
     }
 
     /*

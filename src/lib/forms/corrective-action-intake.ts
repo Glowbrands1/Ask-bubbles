@@ -1,4 +1,5 @@
 import { businessToday } from "@/lib/business-date";
+import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 
 import {
   PAYROLL_DEDUCT_LABEL,
@@ -321,6 +322,8 @@ const INCIDENT_TOPIC: readonly RegExp[] = INCIDENT_TOPIC_PATTERNS;
 const OBSERVATIONAL_CLAUSE: readonly RegExp[] = [
   /\b(?:she|he|they|the employee|[a-z]+)\s+(?:was|were|has been|have been|had been)\s+\w+/,
   /\b(?:she|he|they)\s+(?:arrived|showed up|came in|left|wore|refused|failed|forgot|ignored|walked out|clocked)\b/,
+  /* "Pat arrived at 11:23", "came in after ten": an arrival with its time, whoever the subject is. */
+  /\b(?:arrived|showed up|came in|clocked in|got in)\s+(?:at|around|after|late|\d)/,
   /\b(?:didn't|did not|hasn't|has not|wouldn't|would not)\s+\w+/,
   /\bi (?:saw|observed|watched|found|noticed|had to)\b/,
 ];
@@ -451,6 +454,91 @@ export function readCorrectiveActionIntake(input: {
 export function describesIncident(text: string): boolean {
   const normalized = normalize(text);
   return any(normalized, INCIDENT_TOPIC) || any(normalized, OBSERVATIONAL_CLAUSE);
+}
+
+/**
+ * ============================================================================
+ * AN ACCOUNT GIVEN BECAUSE IT WAS ASKED FOR
+ * ============================================================================
+ *
+ * Ported from the reference platform. `describesIncident` reads vocabulary,
+ * and a manager's account does not have to use any of it: "Pat got to the
+ * store at 11:23 for a 9:30 shift" names no topic and no pronoun. On its own
+ * that would ask for "what happened" a second time, to a manager who has just
+ * answered it.
+ *
+ * So a reply to Ask Bubbles' own "What happened" ask counts as the account,
+ * in any words, as long as it is an answer and not a question or a bare "ok".
+ * Read over the whole conversation rather than the last exchange, so a later
+ * turn answering the payroll question does not un-answer it.
+ */
+const WHAT_HAPPENED_ASK = "What happened —";
+
+/**
+ * ============================================================================
+ * MORE THAN THE REQUEST ITSELF
+ * ============================================================================
+ *
+ * The vocabulary in `describesIncident` cannot list every offense — "for
+ * missing the Woven deadline" names none of it — and treating such a request
+ * as undescribed would ask a manager to repeat what they just said. So the
+ * test that holds a draft back is narrower: did the manager say ANYTHING
+ * beyond asking for the form, naming the person, the store, a date, a title
+ * and answering the form's own yes/no questions? "create ca for Pat Rivera"
+ * did not; "a CA for Robin for missing the Woven deadline" did.
+ *
+ * Words, not meaning: what is left after the request vocabulary, the job
+ * titles this company uses (`COMPANY_JOB_TITLES`) and the employee's and
+ * store's names are removed. Three or more of them is an account.
+ */
+const REQUEST_WORDS = new Set(
+  (
+    "a an the this that these those for to of on in at by with from and or but please pls can could would you u i im i'm me my we our need want " +
+    "lets let's let create make write start open pull up do draft new fill out get give put together prepare generate " +
+    "ca cas corrective correction action actions form forms dpoa document doc paperwork write-up writeup one another " +
+    "employee employees team member staff worker associate her him them his their she he they is was be it its " +
+    "store stores location makery shop today yesterday tomorrow date dated " +
+    "jan january feb february mar march apr april may jun june jul july aug august sep sept september oct october nov november dec december " +
+    "monday tuesday wednesday thursday friday saturday sunday " +
+    "payroll deduct deduction deductions applicable yes no not n/a na verbal written warning first time"
+  ).split(" "),
+);
+
+/** Every job title this company's managers type, matched anywhere in a text. */
+const JOB_TITLE_PHRASES = COMPANY_JOB_TITLES.map(
+  (entry) => new RegExp(entry.pattern.source, entry.pattern.flags.includes("g") ? entry.pattern.flags : `${entry.pattern.flags}g`),
+);
+
+export function describesMoreThanTheRequest(
+  text: string,
+  options: { readonly ignore?: readonly string[] } = {},
+): boolean {
+  const ignored = new Set(
+    (options.ignore ?? []).flatMap((value) => normalize(value).split(/[^a-z0-9'’-]+/)).filter(Boolean),
+  );
+  const untitled = JOB_TITLE_PHRASES.reduce((current, pattern) => current.replace(pattern, " "), normalize(text));
+  const words = untitled
+    .split(/[^a-z0-9'’-]+/)
+    .map((word) => word.replace(/^['’-]+|['’-]+$/g, ""))
+    .filter((word) => word !== "" && !/^\d/.test(word))
+    .filter((word) => !REQUEST_WORDS.has(word) && !ignored.has(word));
+  return words.length >= 3;
+}
+
+export function answeredWhatHappened(
+  conversation: readonly { role: string; content: unknown }[],
+): boolean {
+  for (let index = 0; index < conversation.length - 1; index += 1) {
+    const asked = conversation[index]!;
+    const reply = conversation[index + 1]!;
+    if (asked.role !== "assistant" || typeof asked.content !== "string") continue;
+    if (!asked.content.includes(WHAT_HAPPENED_ASK)) continue;
+    if (reply.role !== "user" || typeof reply.content !== "string") continue;
+    const text = reply.content.trim();
+    if (text.endsWith("?")) continue;
+    if (text.split(/\s+/).filter(Boolean).length >= 4) return true;
+  }
+  return false;
 }
 
 /**
@@ -629,10 +717,29 @@ export function correctiveActionIntakeRequest(input: {
    * caller with no date gets the generic line rather than a wrong one.
    */
   readonly today?: string | null;
+  /** The employee is known but the account of what happened is not: ask for it first. */
+  readonly awaitingIncident?: boolean;
 }): string {
   const numbered = input.items
     .map((item, index) => `${index + 1}. ${promptFor(item, input.today ?? null)}`)
     .join("\n");
+
+  /*
+   * NOTHING TO DRAFT FROM YET. The employee and the store are settled, but a
+   * Corrective Action Form is written from what happened, and the manager has
+   * not said. Ported from the reference platform: a card offered on a name
+   * alone drafted an empty form, and its policy line was filled by hand with
+   * no section or page cited.
+   */
+  if (input.awaitingIncident) {
+    return [
+      `Before I draft the **${input.formName}**, tell me what happened:`,
+      "",
+      numbered,
+      "",
+      "I'll draft it from your answer and cite the policy manual section and page it falls under.",
+    ].join("\n");
+  }
 
   if (input.opening) {
     return [

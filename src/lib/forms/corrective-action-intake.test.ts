@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   CORRECTIVE_ACTION_INTAKE,
+  answeredWhatHappened,
   correctiveActionBasis,
   correctiveActionIntakeRequest,
+  describesIncident,
+  describesMoreThanTheRequest,
   readCorrectiveActionIntake,
   statesFirstOccurrence,
   statesRepeatedBehaviour,
@@ -461,5 +464,93 @@ describe("5. what Ask Bubbles actually says", () => {
     });
 
     expect(message).toMatch(/one more thing/i);
+  });
+});
+
+/*
+ * ============================================================================
+ * NOTHING TO DRAFT FROM
+ * ============================================================================
+ *
+ * Ported from the reference platform (production, 20 Oct 2026): a Corrective
+ * Action asked for by name alone was offered a draft with nothing described.
+ * The draft came back empty and the form, its policy line included, was
+ * completed by hand with no section or page cited.
+ */
+describe("6. whether the manager has said what happened", () => {
+  it.each([
+    "create ca for Pat Rivera",
+    "Create a corrective action form for Robin Kessler",
+    "I need a CA for Casey Brandt at Kearney, NE please",
+    "write up a corrective action for Morgan, verbal warning, no payroll deduction, today",
+    "CA for Sam Ortega, she is a makery associate at Dodge",
+    "Corrective action for Jordan, store manager at Grand Island, written warning",
+  ])("reads %s as only the request", (text) => {
+    const ignore = ["Pat Rivera", "Robin Kessler", "Casey Brandt", "Morgan", "Sam Ortega", "Jordan", "Kearney, NE", "Dodge", "Grand Island"];
+    expect(describesIncident(text)).toBe(false);
+    expect(describesMoreThanTheRequest(text, { ignore })).toBe(false);
+  });
+
+  it.each([
+    "Create a corrective action for Robin for missing the Woven deadline.",
+    "corrective action for Pat, scheduled 9:30 but got here 11:23",
+    "CA for Casey, rang up her own soap order with an employee discount code against policy",
+  ])("reads %s as an account", (text) => {
+    expect(describesMoreThanTheRequest(text, { ignore: ["Robin", "Pat", "Casey"] })).toBe(true);
+  });
+
+  it("reads an arrival with its time as an incident", () => {
+    expect(describesIncident("Pat arrived at 11:23 for a 9:30 shift")).toBe(true);
+    expect(describesIncident("came in after ten")).toBe(true);
+  });
+
+  it("takes a reply to its own What happened ask as the account, in any words", () => {
+    const ask = correctiveActionIntakeRequest({
+      formName: "Corrective Action Form",
+      items: CORRECTIVE_ACTION_INTAKE.filter((item) => item.key === "what_happened"),
+      opening: false,
+      awaitingIncident: true,
+    });
+
+    expect(
+      answeredWhatHappened([
+        { role: "user", content: "create ca for Pat Rivera" },
+        { role: "assistant", content: ask },
+        { role: "user", content: "Pat got to the store at 11:23 for a 9:30 shift" },
+        { role: "assistant", content: "Is payroll deduct applicable?" },
+        { role: "user", content: "yes" },
+      ]),
+    ).toBe(true);
+  });
+
+  it("does not take a question, a bare ok, or an unprompted turn as the account", () => {
+    const ask = correctiveActionIntakeRequest({
+      formName: "Corrective Action Form",
+      items: CORRECTIVE_ACTION_INTAKE.filter((item) => item.key === "what_happened"),
+      opening: false,
+      awaitingIncident: true,
+    });
+
+    expect(answeredWhatHappened([{ role: "assistant", content: ask }, { role: "user", content: "ok" }])).toBe(false);
+    expect(
+      answeredWhatHappened([
+        { role: "assistant", content: ask },
+        { role: "user", content: "what does the attendance policy say?" },
+      ]),
+    ).toBe(false);
+    expect(answeredWhatHappened([{ role: "user", content: "create ca for Pat Rivera" }])).toBe(false);
+  });
+
+  it("asks for the account and says the manual will be cited", () => {
+    const text = correctiveActionIntakeRequest({
+      formName: "Corrective Action Form",
+      items: CORRECTIVE_ACTION_INTAKE.filter((item) => item.key === "what_happened"),
+      opening: false,
+      awaitingIncident: true,
+    });
+
+    expect(text).toMatch(/^Before I draft the \*\*Corrective Action Form\*\*, tell me what happened:/);
+    expect(text).toMatch(/What happened — a clear description/);
+    expect(text).toMatch(/section and page/);
   });
 });

@@ -975,6 +975,20 @@ export function policyVerificationNoticeFor(
   const unresolved = grounded.filter((field) => !verified(field.key));
   if (unresolved.length === 0) return null;
 
+  /*
+   * A DRAFT THAT WROTE NOTHING AT ALL. "No approved policy matched what you
+   * described" is wrong when nothing was described. Ported from the reference
+   * platform (production, 20 Oct 2026): a Corrective Action asked for by name
+   * alone drafted zero fields, and the form was then filled by hand — policy
+   * wording pasted in with no section or page.
+   */
+  const draftedNothing = !loaded.values.some(
+    (row) => row.filledBy === "ai" && ((row.value ?? "").trim() !== "" || row.checked.length > 0),
+  );
+  if (draftedNothing) {
+    return "Ask Bubbles had nothing to draft this form from, so nothing on it came from the policy manual. Tell Bubbles in the chat what happened and create a new draft: it will fill the form and cite the manual's section and page. If you complete this one by hand, confirm the exact policy, section and page in the official manual before you issue it.";
+  }
+
   const blank = unresolved.filter((field) => !filled(field.key));
   const byHand = unresolved.filter((field) => filled(field.key));
   const quote = (fields: typeof grounded) =>

@@ -368,7 +368,7 @@ describe("42. a proposal creates nothing", () => {
    */
   it("offers inline creation for the corrective forms too, not only Coaching", async () => {
     const { proposals } = await load([template(), dpoa()]);
-    const response = await proposals.proposeFormForTurn(turn("write a DPOA for Sarah Jones"));
+    const response = await proposals.proposeFormForTurn(turn("write a DPOA for Sarah Jones, she was late today"));
 
     expect(response!.formProposal!.templateKey).toBe("dpoa");
     expect(response!.formProposal!.supportsInlineDraft).toBe(true);
@@ -412,7 +412,7 @@ describe("42. a proposal creates nothing", () => {
         },
       }),
     ]);
-    const response = await proposals.proposeFormForTurn(turn("write a DPOA for Sarah Jones"));
+    const response = await proposals.proposeFormForTurn(turn("write a DPOA for Sarah Jones, she was late today"));
 
     expect(response!.formProposal!.templateKey).toBe("dpoa");
     expect(response!.formProposal!.supportsInlineDraft).toBe(false);
