@@ -30,10 +30,13 @@ afterEach(() => {
   }
   vi.doUnmock("@/lib/employees/woven/sync");
   vi.doUnmock("@/lib/employees/woven/store");
+  vi.doUnmock("@/lib/employees/woven/auto-sync");
   vi.unstubAllGlobals();
 });
 
-async function loadRoute(env: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>>) {
+type Setting = "on" | "off" | "unreadable" | "missing";
+
+async function loadRoute(env: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>>, setting: Setting = "on") {
   vi.resetModules();
   for (const key of ENV_KEYS) delete process.env[key];
   const next: Record<string, string | undefined> = {
@@ -51,6 +54,18 @@ async function loadRoute(env: Partial<Record<(typeof ENV_KEYS)[number], string |
       return { status: "succeeded", runId: "run-1", summary: { employeesReceived: 3 } };
     },
   }));
+
+  vi.doMock("@/lib/employees/woven/auto-sync", async (importOriginal) => {
+    const original = await importOriginal<typeof import("@/lib/employees/woven/auto-sync")>();
+    return {
+      ...original,
+      readAutoSync: async () => {
+        if (setting === "unreadable") throw new original.AutoSyncError("store_unavailable");
+        if (setting === "missing") throw new original.AutoSyncError("setting_missing");
+        return { enabled: setting === "on", updatedAt: null, updatedBy: null };
+      },
+    };
+  });
 
   const route = await import("./route");
   return { GET: route.GET, runs };
@@ -126,12 +141,28 @@ describe("GET /api/employees/woven/cron", () => {
     }
   });
 
-  it("starts nothing while the schedule switch is off", async () => {
-    const { GET, runs } = await loadRoute({ ...ALL_ON, WOVEN_SYNC_SCHEDULE_ENABLED: undefined });
+  it("starts nothing while Auto Sync is switched off in the database — even with the old env variable on", async () => {
+    const { GET, runs } = await loadRoute({ ...ALL_ON, WOVEN_SYNC_SCHEDULE_ENABLED: "true" }, "off");
     const response = await GET(request(SECRET));
     expect(response.status).toBe(200);
     expect((await response.json()).status).toBe("schedule_disabled");
     expect(runs).toHaveLength(0);
+  });
+
+  it("runs when Auto Sync is on in the database, without the old env variable", async () => {
+    const { GET, runs } = await loadRoute({ ...ALL_ON, WOVEN_SYNC_SCHEDULE_ENABLED: undefined }, "on");
+    expect((await GET(request(SECRET))).status).toBe(200);
+    expect(runs).toHaveLength(1);
+  });
+
+  it("FAILS CLOSED when the setting cannot be read or does not exist: 503, nothing runs", async () => {
+    for (const setting of ["unreadable", "missing"] as const) {
+      const { GET, runs } = await loadRoute(ALL_ON, setting);
+      const response = await GET(request(SECRET));
+      expect(response.status).toBe(503);
+      expect((await response.json()).status).toBe("schedule_unknown");
+      expect(runs).toHaveLength(0);
+    }
   });
 
   it("runs the sync as `cron` when every lock is open", async () => {
@@ -170,6 +201,10 @@ describe("GET /api/employees/woven/cron cannot bypass the write switch", () => {
         seen.storesCreated += 1;
         throw new Error("the store must not be reached");
       },
+    }));
+    vi.doMock("@/lib/employees/woven/auto-sync", async (importOriginal) => ({
+      ...(await importOriginal<typeof import("@/lib/employees/woven/auto-sync")>()),
+      readAutoSync: async () => ({ enabled: true, updatedAt: null, updatedBy: null }),
     }));
     const { GET } = await import("./route");
     const response = await GET(request(SECRET));
