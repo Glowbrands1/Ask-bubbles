@@ -646,3 +646,35 @@ describe("a payroll deduction with an amount", () => {
     expect(field(await review(reference.instanceId), "action_plan")!.value).toBe(`${DRAWER_PLAN} ${CLOSING}`);
   });
 });
+
+/* ========================================================================= */
+/* D — "OTHER" BESIDE STANDARDS OF CONDUCT                                   */
+/* ========================================================================= */
+
+/*
+ * Production: the stored "Other" read "Failure to complete required task —
+ * Woven deadline of September 30, 2026 not met", filled_by "manager", written
+ * by the form card's save 29 seconds after the draft (whose drafted fields did
+ * not include it). No code path in Ask Bubbles writes that field except the
+ * draft (as "ai") and the manager's own save; this holds the draft's half:
+ * whatever the model writes there, a stated Standards of Conduct leaves it
+ * blank.
+ */
+describe("the draft never writes Other beside a stated Standards of Conduct", () => {
+  it("drops the model's write-in and its other box", async () => {
+    const { create } = await conversation([D1]);
+    state.draft = {
+      values: {
+        observation: "Observed:\nTess Varga had not acknowledged the policies in Woven by the October 15, 2026 deadline.",
+        other_offense: "Failure to complete required task — Woven deadline of September 30, 2026 not met",
+      },
+      checked: { offense_type: ["under_performance"] },
+    };
+
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    expect(field(form, "offense_type")!.checked).toEqual(["standards_of_conduct"]);
+    expect(field(form, "other_offense")).toBeUndefined();
+    expect(JSON.stringify(form.values)).not.toMatch(/September 30/);
+  });
+});
