@@ -8,6 +8,7 @@ import {
 } from "@/lib/knowledge/providers/supabase";
 import type { ChatMessage } from "@/types";
 
+import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { fieldsForVariant, parseFormDocument } from "./document";
 import { authorizeInstance } from "./instance-scope";
 import { applyAssistantDraft, applyAssistantRevision } from "./instances";
@@ -23,6 +24,8 @@ import {
   type ManualSection,
 } from "./official-policy-manual";
 import { manualGroundedPolicies, policyFieldValue } from "./policy-citation";
+import { policyPhrase } from "./ca-action-plan";
+import { employeeFirstName } from "./employee-reference";
 import {
   nextPolicySections,
   readPolicyChange,
@@ -175,11 +178,12 @@ export async function changeActiveFormPolicy(input: {
     if (next.length === 0) {
       await applyAssistantRevision(input.instanceId, {}, [POLICY_KEY], actor.id);
       const violated = await followOffense(input.instanceId, actor.id, loaded, document, []);
+      const plan = await syncCorrectiveActionPlan(input.instanceId, actor.id);
       return {
         ...reply(
-          `Removed ${names(wanted)} from ${field.label} on the ${who}. That line is now blank — tell me which policy applies and I'll add it from the manual. Everything else on the form is as it was.`,
+          `Removed ${names(wanted)} from ${field.label} on the ${who}. That line is now blank — tell me which policy applies and I'll add it from the manual.${plan.length > 0 ? " The Action Plan no longer names it." : ""} Everything else on the form is as it was.`,
         ),
-        formUpdate: { instanceId: input.instanceId, updated: [POLICY_KEY, ...violated] },
+        formUpdate: { instanceId: input.instanceId, updated: [POLICY_KEY, ...violated, ...plan] },
       };
     }
   }
@@ -217,6 +221,8 @@ export async function changeActiveFormPolicy(input: {
     return reply(`I couldn't save ${field.label} on the ${who}, so it is as it was. Type the policy into that line on the form instead.`);
   }
   const violated = await followOffense(input.instanceId, actor.id, loaded, document, next);
+  /* The Action Plan names the policy Direct policy cites — so it follows the line. See `ca-action-plan.ts`. */
+  const plan = await syncCorrectiveActionPlan(input.instanceId, actor.id);
 
   const added = mode === "remove" ? [] : wanted;
   const lines: string[] = [];
@@ -251,13 +257,16 @@ export async function changeActiveFormPolicy(input: {
   if (violated.length > 0) {
     lines.push("", "Policy Violated now names the same section, so the two lines agree.");
   }
+  if (plan.length > 0) {
+    lines.push("", `The Action Plan now says management will review ${policyPhrase(next.map((section) => section.heading))} with ${employeeFirstName(instance.employeeName) ?? "the employee"}.`);
+  }
   lines.push(
     "",
     "The policy line is now checked against the manual, so the form won't ask you to verify it at Finalize. Everything else on the form is as it was — give it a read below.",
   );
   return {
     ...reply(lines.join("\n")),
-    formUpdate: { instanceId: input.instanceId, updated: [POLICY_KEY, ...violated] },
+    formUpdate: { instanceId: input.instanceId, updated: [POLICY_KEY, ...violated, ...plan] },
   };
 }
 

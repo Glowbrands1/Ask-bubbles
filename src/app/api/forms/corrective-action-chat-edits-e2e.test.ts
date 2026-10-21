@@ -310,6 +310,7 @@ describe("a policy named in the conversation goes onto the open form", () => {
   it("adds Late Opening to Direct policy, in the manual's own words, as verified", async () => {
     const { id, history } = await createdForm();
     expect((await row(id, "policy_language"))?.value).toContain("Source: JBA Policy Manual — Attendance, p. 14");
+    expect((await row(id, "action_plan"))?.value).toMatch(/^Management will review the Attendance policy with Pat\./);
 
     const answer = await changeActiveFormPolicy({
       request: chat(),
@@ -321,8 +322,13 @@ describe("a policy named in the conversation goes onto the open form", () => {
     expect(answer?.content).toMatch(/Updated Direct policy from official manual on the \*\*Corrective Action Form\*\* for \*\*Pat Rivera\*\*/);
     expect(answer?.content).toContain("**Late Opening:**");
     expect(answer?.content).not.toMatch(/no form has been created/i);
-    expect(answer?.formUpdate).toEqual({ instanceId: id, updated: ["policy_language"] });
+    expect(answer?.formUpdate).toEqual({ instanceId: id, updated: ["policy_language", "action_plan"] });
     expect(store.form_instances).toHaveLength(1);
+    /* The Action Plan follows Direct policy: both sections, in the order cited. */
+    expect(answer?.content).toContain("The Action Plan now says management will review the Attendance and Late Opening policies with Pat.");
+    expect((await row(id, "action_plan"))?.value).toBe(
+      "Management will review the Attendance and Late Opening policies with Pat. Future policy violations may result in additional corrective action up to and including termination of employment.",
+    );
 
     const policy = await row(id, "policy_language");
     expect(policy?.value).toContain("When an employee assigned to open a location is unable to open the location");
@@ -445,6 +451,9 @@ describe("a section cited under Violation of Company Policies", () => {
     );
     expect((await row(id, "offense_type"))?.checked).toEqual(["company_policies"]);
     expect((await row(id, "policy_violated"))?.value).toBe("Violation of Company Policies — Visitors in the Workplace");
+    expect((await row(id, "action_plan"))?.value).toBe(
+      "Management will review the Visitors in the Workplace policy with Pat. Future policy violations may result in additional corrective action up to and including termination of employment.",
+    );
 
     const answer = await changeActiveFormPolicy({
       request: chat(),
@@ -453,7 +462,10 @@ describe("a section cited under Violation of Company Policies", () => {
       history,
     });
 
-    expect(answer?.formUpdate).toEqual({ instanceId: id, updated: ["policy_language", "policy_violated"] });
+    expect(answer?.formUpdate).toEqual({ instanceId: id, updated: ["policy_language", "policy_violated", "action_plan"] });
+    expect((await row(id, "action_plan"))?.value).toBe(
+      "Management will review the Cell Phone Usage policy with Pat. Future policy violations may result in additional corrective action up to and including termination of employment.",
+    );
     expect(answer?.content).toMatch(/Policy Violated now names the same section/);
     expect((await row(id, "policy_language"))?.value).toContain("Source: JBA Policy Manual — Cell Phone Usage, p. 32");
     expect((await row(id, "policy_violated"))?.value).toBe("Violation of Company Policies — Cell Phone Usage");
@@ -469,8 +481,13 @@ describe("any other change to the open Corrective Action Form is made in place",
   it("changes the warning level, re-derives Policy Violated, and never lets the model write a policy line", async () => {
     const { id, history } = await createdForm();
     const before = (await row(id, "policy_language"))?.value;
+    const plan = (await row(id, "action_plan"))?.value;
     state.draft = {
-      values: { policy_language: "Invented policy text.", policy_violated: "Something else" },
+      values: {
+        policy_language: "Invented policy text.",
+        policy_violated: "Something else",
+        action_plan: "Pat must apologise to the whole team before her next shift.",
+      },
       checked: { warning_type: ["written"], offense_type: ["absenteeism"] },
     };
 
@@ -489,6 +506,9 @@ describe("any other change to the open Corrective Action Form is made in place",
     expect((await row(id, "offense_type"))?.checked).toEqual(["absenteeism"]);
     expect((await row(id, "policy_violated"))?.value).toBe("Absenteeism");
     expect((await row(id, "policy_language"))?.value).toBe(before);
+    /* The Action Plan is built, not drafted: a revision that did not name it leaves it as built. */
+    expect((await row(id, "action_plan"))?.value).toBe(plan);
+    expect(plan).toMatch(/^Management will review the Attendance policy with Pat\./);
     const system = state.systems.at(-1) ?? "";
     expect(system).toContain("Corrective Action Form");
     expect(system).not.toContain("COACHING IS NOT ALWAYS ABOUT A PROBLEM");
@@ -510,6 +530,28 @@ describe("any other change to the open Corrective Action Form is made in place",
     expect(answer!.content).not.toMatch(/Type of Warning/);
   });
 
+  it("changes the Action Plan only when the manager names it, and then leaves their wording alone", async () => {
+    const { id, history } = await createdForm();
+    state.draft = { values: { action_plan: "Pat will retake the attendance training this week." }, checked: {} };
+
+    const answer = await reviseActiveForm({
+      request: chat(),
+      instanceId: id,
+      question: "change the action plan to say Pat will retake the attendance training this week",
+      history,
+      today: "2026-10-20",
+    });
+    expect(answer?.formUpdate?.updated).toContain("action_plan");
+    expect((await row(id, "action_plan"))?.value).toBe(
+      "Pat will retake the attendance training this week. Future policy violations may result in additional corrective action up to and including termination of employment.",
+    );
+
+    /* Asked for in their words, so a later policy change does not rebuild it. */
+    const policy = await changeActiveFormPolicy({ request: chat(), instanceId: id, question: "add the late opening policy", history });
+    expect(policy?.formUpdate?.updated).toEqual(["policy_language"]);
+    expect((await row(id, "action_plan"))?.value).toMatch(/^Pat will retake the attendance training this week\./);
+  });
+
   it("is not a revision when the manager asks for another Corrective Action", async () => {
     const { id, history } = await createdForm();
     expect(
@@ -521,6 +563,35 @@ describe("any other change to the open Corrective Action Form is made in place",
         today: "2026-10-20",
       }),
     ).toBeNull();
+  });
+
+  it("puts the deduction in the Action Plan when payroll deduct is changed to Yes, and takes it out on No", async () => {
+    const { id, history } = await createdForm();
+    const closing =
+      "Future policy violations may result in additional corrective action up to and including termination of employment.";
+
+    const yes = await correctActiveForm({
+      request: chat(),
+      instanceId: id,
+      question: "change payroll deduct to yes, $3.25 will be deducted",
+      today: "2026-10-20",
+      history,
+    });
+    expect(yes?.formUpdate?.updated).toEqual(["payroll_deduct", "action_plan"]);
+    expect(yes?.content).toMatch(/The Action Plan now states the payroll deduction/);
+    expect((await row(id, "action_plan"))?.value).toBe(
+      `Management will review the Attendance policy with Pat. $3.25 will be deducted from Pat's pay. ${closing}`,
+    );
+
+    const no = await correctActiveForm({
+      request: chat(),
+      instanceId: id,
+      question: "change payroll deduct to no",
+      today: "2026-10-20",
+      history,
+    });
+    expect(no?.formUpdate?.updated).toEqual(["payroll_deduct", "action_plan"]);
+    expect((await row(id, "action_plan"))?.value).toBe(`Management will review the Attendance policy with Pat. ${closing}`);
   });
 
   it("takes a bare 'no' as the answer to Ask Bubbles' own payroll question", async () => {

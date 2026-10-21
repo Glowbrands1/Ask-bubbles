@@ -57,6 +57,8 @@ import {
 import { DERIVED_POLICY_FIELD_KEYS, formDerivedProvenance, offenseCategoryValue } from "./policy-fields";
 import { citedCompanyPolicy } from "./policy-change";
 import { applyEmployeeName, employeeNameRules } from "./employee-reference";
+import { fixedActionPlanKey } from "./ca-action-plan";
+import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { detectTemplateIntent } from "./template-intent";
 import { withTruncationRetry } from "@/lib/ai/truncation";
 import { EVIDENCE_BASIS_RULES, guardEvidenceBasis } from "./evidence-basis";
@@ -167,6 +169,8 @@ export async function reviseActiveForm(input: {
 
   const document = parseFormDocument(loaded.version.document);
   const variantKey = instance.variantKey;
+  /* The Corrective Action Form's Action Plan, which code builds — see below. */
+  const fixedPlan = fixedActionPlanKey(instance.templateKey, document, variantKey);
   /*
    * THE POLICY LINES ARE NEVER A REDRAFT'S TO WRITE. Policy Violated is copied
    * off the offense box and Direct policy is the manual's own wording, quoted
@@ -308,6 +312,11 @@ export async function reviseActiveForm(input: {
       : ["Do not mention follow-up dates or scheduling in any field: the follow-up date is recorded separately by the manager."]),
     `A field marked [${OBSERVED_EXPECTATION}] keeps its labelled sections — "${OBSERVED_LABEL}", "${EXPECTATION_LABEL}" and, where present, "${GOING_FORWARD_LABEL}" — each label on its own line.`,
     ...(corrective ? CORRECTIVE_REVISION_RULES : COACHING_CONTEXT_RULES),
+    ...(fixedPlan
+      ? [
+          `${fixedPlan.key} (the Action Plan) is written by the form itself from its policy and payroll lines. Return it only when the manager asks to change the Action Plan by name, in the words they ask for.`,
+        ]
+      : []),
     ...LANGUAGE_CLEANUP_RULES,
     ...(followUpKeys ? MANAGER_FOLLOW_UP_RULES : []),
     ...(team ? TEAM_SUBJECT_RULES : []),
@@ -394,8 +403,23 @@ export async function reviseActiveForm(input: {
     clear?: unknown;
   };
 
+  /*
+   * THE CORRECTIVE ACTION FORM'S ACTION PLAN IS BUILT, NOT DRAFTED (District
+   * Manager feedback, 21 Oct 2026; `ca-action-plan.ts`). A redraft or a
+   * rewording never touches it; only a request that names the Action Plan
+   * itself changes it, in the words the manager asked for.
+   */
+  const planLocked = fixedPlan !== null && !(scope.mode === "fields" && scope.keys.has(fixedPlan.key));
+  const allowed = planLocked
+    ? {
+        ...proposed,
+        values: Object.fromEntries(Object.entries(proposed.values ?? {}).filter(([key]) => key !== fixedPlan!.key)),
+        clear: Array.isArray(proposed.clear) ? proposed.clear.filter((key) => key !== fixedPlan!.key) : proposed.clear,
+      }
+    : proposed;
+
   /* 1. WHAT MAY CHANGE AT ALL: the request's scope, the manager's own text, explicit removals. */
-  const plan = planRevision({ question: input.question, fields: labelled, current, proposed, scope });
+  const plan = planRevision({ question: input.question, fields: labelled, current, proposed: allowed, scope });
 
   /* 2. THE DRAFTING GUARDS, on what is left. The form's own text counts as grounded. */
   const grounding = `${notes}\n${currentText}`;
@@ -535,6 +559,14 @@ export async function reviseActiveForm(input: {
         "Direct policy from official manual is as it was — if a different section of the manual applies now, tell me which (for example \"use the attendance policy instead\") and I'll quote it.",
       );
     }
+  }
+  /*
+   * A PLAN ASK BUBBLES BUILT FOLLOWS THE FORM: the offense box behind Policy
+   * Violated may have changed, and with no section cited that is the policy
+   * the plan names.
+   */
+  if (fixedPlan && !written.includes(fixedPlan.key)) {
+    written.push(...(await syncCorrectiveActionPlan(input.instanceId, actor.id)));
   }
   if (written.length === 0) {
     if (dateLines.length) return dateReply(dateLines, dateChanged ? input.instanceId : null);

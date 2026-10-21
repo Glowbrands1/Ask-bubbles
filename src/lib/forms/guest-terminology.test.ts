@@ -143,7 +143,8 @@ describe("the six approved guest corrections", () => {
       "prescreen-phone-interview": 3,
       "resignation-exit": 3,
       coaching: 2,
-      dpoa: 5,
+      // Revision 6: the Action Plan as two sentences (District Manager feedback, 21 Oct 2026).
+      dpoa: 6,
       "policy-review": 2,
       "follow-up-coaching": 2,
       demotion: 2,

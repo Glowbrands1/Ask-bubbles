@@ -451,6 +451,10 @@ describe("a form created from a name alone is redrafted, with the citation, once
     expect(policy).toContain("Source: JBA Policy Manual — Attendance, p. 14");
     expect(policy.indexOf("Late Opening, p. 15")).toBeLessThan(policy.indexOf("Attendance, p. 14"));
     expect(field(form, "policy_language")!.provenance).toMatchObject({ verified: true });
+    /* The Action Plan names both sections Direct policy cites (District Manager feedback, 21 Oct 2026). */
+    expect(field(form, "action_plan")!.value).toBe(
+      "Management will review the Late Opening and Attendance policies with Pat. Future policy violations may result in additional corrective action up to and including termination of employment.",
+    );
   });
 
   it("keeps what the manager typed; their tick decides the section; only the uncited policy line is replaced", async () => {
@@ -461,6 +465,7 @@ describe("a form created from a name alone is redrafted, with the citation, once
         values: {
           observation: "Observed:\nWhat the manager wrote.",
           policy_language: "Openers have to be on time.",
+          action_plan: "Pat and I agreed she will set two alarms.",
         },
         checked: { offense_type: ["tardiness"] },
       },
@@ -486,6 +491,11 @@ describe("a form created from a name alone is redrafted, with the citation, once
     const policy = field(form, "policy_language")!.value!;
     expect(policy).not.toMatch(/Openers have to be on time/);
     expect(policy).toContain("Source: JBA Policy Manual — Late Opening, p. 15");
+    /* The manager's own Action Plan is theirs: only the required closing is added. */
+    expect(field(form, "action_plan")!.value).toBe(
+      "Pat and I agreed she will set two alarms. Future policy violations may result in additional corrective action up to and including termination of employment.",
+    );
+    expect(field(form, "action_plan")!.filledBy).toBe("manager");
   });
 
   it("keeps a policy line the manager typed when the redraft cannot cite one", async () => {
@@ -509,6 +519,10 @@ describe("a form created from a name alone is redrafted, with the citation, once
     const form = await review(instanceId);
     expect(field(form, "policy_language")!.value).toBe("Openers have to be on time.");
     expect(field(form, "observation")!.value).toBe("Observed:\nWhat the manager wrote.");
+    /* No section could be cited: the plan names what Policy Violated names. */
+    expect(field(form, "action_plan")!.value).toBe(
+      "Management will review the Tardiness/Leaving Early policy with Pat. Future policy violations may result in additional corrective action up to and including termination of employment.",
+    );
   });
 
   it("leaves a question, and a form Ask Bubbles already drafted, to the ordinary answer", async () => {
