@@ -286,6 +286,21 @@ export interface ChatMessage {
    * manager changes a report filter.
    */
   feedback?: SavedFeedback;
+  /**
+   * WHO ASKED. User messages only, stamped when the question is sent.
+   *
+   * Chat history lives in this browser's IndexedDB, and a store computer is
+   * shared: everybody who signs in on it sees every thread it holds. Drawing
+   * the signed-in person's initials beside every question put their initials
+   * on questions somebody else asked. The avatar reads this instead.
+   *
+   * Browser-only. It is not in the sync metadata allowlist, so it is never
+   * stored on the account (an account's own conversations need no stamp to
+   * say whose they are), and the chat route's `parseHistory` keeps only id,
+   * role and content of the history it is sent. Absent on turns from before it
+   * existed; see `askerFor`.
+   */
+  author?: ChatMessageAuthor;
   mode?: AnswerMode;
   citations?: SourceCitation[];
   /**
@@ -365,6 +380,13 @@ export interface ChatMessage {
  * so the collapsed card can say which form it points at before the fetch
  * resolves. Nothing decides anything from it.
  */
+/** Who sent a user message, as the avatar beside it shows them. */
+export interface ChatMessageAuthor {
+  userId: string;
+  name: string;
+  initials: string;
+}
+
 export interface ChatFormInstanceRef {
   /** The `form_instances` row. The only durable authority stored in chat. */
   instanceId: string;
