@@ -82,6 +82,15 @@ export interface CallClaudeInput {
    * employment status may come from.
    */
   readonly verifiedRecords?: string | null;
+  /**
+   * A SIXTH block: what this manager told the assistant before about the
+   * people this conversation names, or null.
+   *
+   * Separate because it is a different kind of statement again — the
+   * manager's own earlier account, not a document, a figure or a record — and
+   * the system prompt says how it may be used. See `chat/person-memory.ts`.
+   */
+  readonly personMemory?: string | null;
   readonly history: readonly ClaudeTurn[];
   readonly question: string;
   readonly maxTokens: number;
@@ -122,6 +131,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
               content: [
                 input.grounding,
                 ...(input.reportData ? [input.reportData] : []),
+                ...(input.personMemory ? [input.personMemory] : []),
                 ...(input.formsLibrary ? [input.formsLibrary] : []),
                 ...(input.verifiedRecords ? [input.verifiedRecords] : []),
                 `QUESTION\n\n${input.question}`,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildGroundingBlock,
+  buildReportsGuideSection,
   buildSystemPrompt,
   extractUsedMarkers,
   stripMarkers,
@@ -225,6 +226,71 @@ describe("buildGroundingBlock", () => {
   });
 });
 
+/**
+ * Ported from the reference platform: asked "where do i find kpi information",
+ * its assistant listed outside systems from the knowledge base and never
+ * mentioned the app's own reports, because nothing told it they exist.
+ */
+describe("the Reports guide", () => {
+  const REPORTS = [
+    { id: "store-sales", label: "Store Sales", summary: "Fixture: daily sales by store." },
+    { id: "guest-count", label: "Guest Count", summary: "Fixture: guests through the door." },
+  ];
+
+  it("names the section and links every report for a role that can open it", () => {
+    const section = buildReportsGuideSection({
+      reports: REPORTS,
+      canViewReports: true,
+      locationNoun: "store",
+    });
+
+    expect(section).toContain("REPORTS — WHERE THE NUMBERS LIVE IN THIS APP");
+    expect(section).toMatch(/where to find KPIs/i);
+    expect(section).toContain("[Reports](/reports)");
+    expect(section).toContain("[Store Sales](/reports/store-sales) — Fixture: daily sales by store.");
+    expect(section).toContain("[Guest Count](/reports/guest-count)");
+    expect(section).toContain("for example [Store Sales](/reports/store-sales)");
+    expect(section).toContain("for the stores on their own assignment");
+  });
+
+  it("puts systems outside the app second and never reads a report it was not given", () => {
+    const section = buildReportsGuideSection({ reports: REPORTS, canViewReports: true, locationNoun: "store" });
+
+    expect(section).toMatch(/Systems outside this app come second/);
+    expect(section).toMatch(/Never state a figure from a report unless it is written in the REPORT DATA section/);
+  });
+
+  it("does not send a role without view_reports there", () => {
+    const section = buildReportsGuideSection({ reports: REPORTS, canViewReports: false, locationNoun: "store" });
+
+    expect(section).toMatch(/cannot open the Reports section/);
+    expect(section).toContain("Location Manager or District Manager");
+    expect(section).not.toContain("/reports");
+  });
+
+  it("is absent when no report can be linked", () => {
+    expect(buildReportsGuideSection({ reports: [], canViewReports: true, locationNoun: "store" })).toBeNull();
+    expect(buildReportsGuideSection({ reports: [], canViewReports: false, locationNoun: "store" })).toBeNull();
+  });
+
+  it("leaves Buff City Soap's prompt unchanged while no live report is registered", () => {
+    const base = {
+      assistantName: "Bubbles",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
+      locationNoun: "store",
+      context: CONTEXT,
+      mode: "standard" as const,
+      hasContext: true,
+    };
+
+    const withAccess = buildSystemPrompt({ ...base, canViewReports: true });
+    expect(withAccess).toBe(buildSystemPrompt(base));
+    expect(withAccess).not.toContain("WHERE THE NUMBERS LIVE");
+    expect(withAccess).not.toContain("/reports");
+  });
+});
+
 describe("extractUsedMarkers", () => {
   it("returns the markers used, in first-appearance order, deduplicated", () => {
     expect(extractUsedMarkers("Yes [S2]. Also [S1] and again [S2].", [1, 2, 3])).toEqual([
@@ -258,5 +324,47 @@ describe("stripMarkers", () => {
     expect(stripMarkers("See the guide [section 4] for detail.")).toBe(
       "See the guide [section 4] for detail.",
     );
+  });
+});
+
+describe("an answer given while a form is open in the conversation", () => {
+  const base = {
+    assistantName: "Bubbles",
+    brandName: "Buff City Soap",
+    productName: "Ask Bubbles",
+    locationNoun: "store",
+    context: CONTEXT,
+    mode: "standard" as const,
+    hasContext: true,
+  };
+  const openForm = {
+    templateName: "Corrective Action Form",
+    employeeName: "Pat Rivera",
+    status: "draft" as const,
+    lines: [{ label: "Type of Warning", value: "Verbal Warning" }],
+    unverifiedPolicy: ["Direct policy from official manual"],
+  };
+
+  it("names the form and never tells the manager it does not exist", () => {
+    const prompt = buildSystemPrompt({ ...base, openForm });
+    expect(prompt).toContain("A FORM IS OPEN IN THIS CONVERSATION: the Corrective Action Form for Pat Rivera");
+    expect(prompt).toContain('Type of Warning: "Verbal Warning"');
+    expect(prompt).toContain("Not yet checked against the official manual: Direct policy from official manual.");
+    expect(prompt).toMatch(/NEVER say no form has been created/);
+    expect(prompt).toMatch(/add the attendance policy/);
+    expect(prompt).toMatch(/Ask Bubbles quotes it onto the form word for word/);
+    expect(prompt).not.toMatch(/say the form has not been created yet/);
+  });
+
+  it("points a finalized form to a revision, not to an edit", () => {
+    const prompt = buildSystemPrompt({ ...base, openForm: { ...openForm, status: "finalized", unverifiedPolicy: [] } });
+    expect(prompt).toContain("It is finalized: a change needs a revision, opened from Forms → Forms Register.");
+    expect(prompt).not.toMatch(/CHANGES TO THIS FORM ARE MADE IN THIS CONVERSATION/);
+  });
+
+  it("keeps the old rule when no form is open", () => {
+    const prompt = buildSystemPrompt(base);
+    expect(prompt).toMatch(/say the form has not been created yet/);
+    expect(prompt).not.toContain("A FORM IS OPEN");
   });
 });

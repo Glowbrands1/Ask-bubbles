@@ -477,7 +477,7 @@ function sheetHeadingsOf(content: string): string[] {
 }
 
 /** Loosened for matching: case, punctuation and spacing drift are absorbed. */
-function headingKey(text: string): string {
+export function headingKey(text: string): string {
   return text
     .toLowerCase()
     .replace(/[\u2010-\u2015]/g, "-")
@@ -792,10 +792,12 @@ export function isManagementTitle(jobTitle: string | null | undefined): boolean 
 export function sectionHeadingsFor(input: {
   readonly offenseKeys: readonly string[];
   readonly jobTitle?: string | null;
+  /** The manager's own account, read only for `DESCRIBED_SECTIONS`. */
+  readonly notes?: string | null;
 }): string[][] {
   const management = isManagementTitle(input.jobTitle);
 
-  return input.offenseKeys
+  const ticked = input.offenseKeys
     .map((key) => OFFENSE_MANUAL_SECTIONS[key])
     .filter((entry): entry is OffenseSections => entry !== undefined)
     .map((entry) =>
@@ -803,6 +805,107 @@ export function sectionHeadingsFor(input: {
         ? [...entry.managementHeadings]
         : [...entry.headings],
     );
+
+  const notes = input.notes ?? "";
+  const described = DESCRIBED_SECTIONS.filter(
+    (rule) => input.offenseKeys.includes(rule.offenseKey) && rule.describes.test(notes),
+  ).map((rule) => [...rule.headings]);
+
+  return [...described, ...ticked];
+}
+
+/**
+ * ============================================================================
+ * A SECTION THE MANAGER'S ACCOUNT NAMES, UNDER A BOX THAT GOVERNS IT
+ * ============================================================================
+ *
+ * The Tardiness box cites Attendance, which governs every late arrival. A late
+ * OPENING is also governed by its own section — the one that says the manager
+ * opens in their place and the employee reimburses The Company by payroll
+ * deduction — and a Corrective Action written for one should cite it. Ported
+ * from the reference platform (production, 20 Oct 2026: a late opener's form
+ * cited Attendance alone, and the manager pasted the Late Opening wording in by
+ * hand, with no source). The JBA manual is the same document for every brand,
+ * so the section is the same one here.
+ *
+ * ONLY UNDER THE BOX THAT GOVERNS IT, and only where the manager's own words
+ * say opening: the section is cited in addition to the box's own, first,
+ * because it is the more specific of the two. Words that merely contain
+ * "open" — an open drawer, open communication, opening duties — do not count.
+ * The places are this company's: a store, a location, the Makery, its doors.
+ */
+const DESCRIBED_SECTIONS: readonly {
+  readonly offenseKey: string;
+  readonly describes: RegExp;
+  readonly headings: readonly string[];
+}[] = [
+  {
+    offenseKey: "tardiness",
+    describes:
+      /\b(?:late[- ]open(?:ing|ed)?|open(?:ed|ing)? (?:the |our |her |his |their )?(?:store|location|shop|makery|doors)(?:\s+late)?|(?:scheduled|supposed|assigned|due) to open|opener|opening shift|failed to open|did(?:n't|n’t| not) open)/i,
+    headings: ["Late Opening"],
+  },
+];
+
+/**
+ * Every section heading the manual prints on a sheet, as it prints it — the
+ * same three sources `findManualSection`'s first tier reads, never the
+ * contents page. What a manager-named policy is matched against (see
+ * `named-policy-section.ts`).
+ */
+export function manualSheetHeadings(chunks: readonly ManualChunk[]): string[] {
+  const headings = chunks.flatMap((chunk) => [
+    ...(chunk.sections ?? []).map((entry) => entry.heading),
+    ...(chunk.section ? [chunk.section] : []),
+    ...(isTableOfContents(chunk.content) ? [] : sheetHeadingsOf(chunk.content)),
+  ]);
+  return [...new Set(headings.map((heading) => heading.trim()).filter((heading) => heading !== ""))];
+}
+
+/**
+ * Every heading the manual marks as a section, in the manual's own spelling,
+ * each once and in the manual's order.
+ *
+ * THE TWO TIERS `findManualSection` TRUSTS BEFORE THE CONTENTS PAGE — the
+ * sheet headings (`manualSheetHeadings`) and the page-heading rule — so a name
+ * read out of a manager's sentence can only ever resolve to a place the manual
+ * itself prints as a section. Used to read "add the visitors policy to this
+ * form" against the manual as it is, rather than against a list kept here.
+ * See `policy-change.ts`.
+ */
+export function manualSectionHeadings(chunks: readonly ManualChunk[]): string[] {
+  const seen = new Map<string, string>();
+  const ordered = [...chunks].sort((a, b) => a.chunkIndex - b.chunkIndex);
+  for (const heading of [
+    ...manualSheetHeadings(ordered),
+    ...ordered.flatMap((chunk) => {
+      const opening = pageHeadingOf(chunk.content);
+      return opening ? [opening.heading] : [];
+    }),
+  ]) {
+    const key = headingKey(heading);
+    if (key === "" || key === "table of contents" || seen.has(key)) continue;
+    seen.set(key, heading.trim());
+  }
+  return [...seen.values()];
+}
+
+/**
+ * The offense box a section is cited under: the box that already cites it
+ * (Attendance under Tardiness, Late Opening under Tardiness, …), and
+ * otherwise Violation of Company Policies — a policy of The Company, named by
+ * the manager, which no other box names.
+ */
+export const COMPANY_POLICIES_OFFENSE = "company_policies";
+
+export function offenseKeyForManualHeading(heading: string): string {
+  const key = headingKey(heading);
+  const ticked = Object.entries(OFFENSE_MANUAL_SECTIONS).find(([, entry]) =>
+    [...entry.headings, ...(entry.managementHeadings ?? [])].some((name) => headingKey(name) === key),
+  );
+  if (ticked) return ticked[0];
+  const described = DESCRIBED_SECTIONS.find((rule) => rule.headings.some((name) => headingKey(name) === key));
+  return described?.offenseKey ?? COMPANY_POLICIES_OFFENSE;
 }
 
 /* ------------------------------------------------------------ reference --- */
@@ -847,6 +950,7 @@ export function manualSectionsFor(input: {
   readonly chunks: readonly ManualChunk[];
   readonly offenseKeys: readonly string[];
   readonly jobTitle?: string | null;
+  readonly notes?: string | null;
 }): ManualSection[] {
   const found: ManualSection[] = [];
 
@@ -867,6 +971,7 @@ export function manualSectionFor(input: {
   readonly chunks: readonly ManualChunk[];
   readonly offenseKeys: readonly string[];
   readonly jobTitle?: string | null;
+  readonly notes?: string | null;
 }): ManualSection | null {
   return manualSectionsFor(input)[0] ?? null;
 }

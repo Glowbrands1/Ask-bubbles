@@ -114,7 +114,8 @@ describe("the prescreen without the uniform question", () => {
     expect(seed(KEY).requiredPermission).toBe("create_hiring_form");
     expect(Object.fromEntries(TEMPLATE_SEEDS.filter((entry) => entry.key !== KEY).map((entry) => [entry.key, entry.revision]))).toMatchObject({
       coaching: 2,
-      dpoa: 5,
+      // Revision 6: the Action Plan as two sentences (District Manager feedback, 21 Oct 2026).
+      dpoa: 6,
       "policy-review": 2,
       "follow-up-coaching": 2,
       "tanning-consultant-interview": 3,

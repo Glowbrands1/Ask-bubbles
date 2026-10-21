@@ -25,9 +25,13 @@ export function clausesOf(text: string): string[] {
     .filter(Boolean);
 }
 
-/** Each sentence of `text`, as typed. */
+/**
+ * Each sentence of `text`, as typed. A point inside an amount ("$3.25") does
+ * not end one, so "payroll deduct to yes, $3.25 will be deducted" keeps its
+ * amount whole for the Action Plan (`ca-action-plan.ts`).
+ */
 export function sentencesOf(text: string): string[] {
-  return [...text.matchAll(/[^.!?\n]+[.!?]*/g)].map((match) => match[0].trim()).filter(Boolean);
+  return [...text.matchAll(/(?:[^.!?\n]|\.(?=\d))+[.!?]*/g)].map((match) => match[0].trim()).filter(Boolean);
 }
 
 /*

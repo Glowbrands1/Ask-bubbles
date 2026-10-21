@@ -659,3 +659,38 @@ describe("the Salon -> Store terminology re-issue", () => {
     }
   });
 });
+
+describe("the Corrective Action Form's revision 6 (District Manager feedback, 21 Oct 2026)", () => {
+  const caSeed = TEMPLATE_SEEDS.find((seed) => seed.key === "dpoa")!;
+  const OLD_CLOSING =
+    "Future policy violations may be subject to additional corrective action up to and including termination of employment.";
+  /** Revision 5 as a database seeded before this change holds it: the old closing on the Action Plan. */
+  const asRevision5 = () => {
+    const document = JSON.parse(JSON.stringify(caSeed.document)) as {
+      blocks: { kind: string; field?: { key: string; requiredClosing?: string } }[];
+    };
+    const plan = document.blocks.find((block) => block.kind === "field" && block.field!.key === "action_plan")!;
+    plan.field!.requiredClosing = OLD_CLOSING;
+    return document;
+  };
+
+  it("is published over revision 5 as a new version, and revision 5 is kept for the forms filed on it", async () => {
+    await ensureTemplateLibrary("system");
+    for (const row of versionsOf("dpoa")) {
+      row.seed_revision = 5;
+      row.document = asRevision5();
+    }
+    const originalId = currentVersionOf("dpoa")!.id;
+
+    const result = await ensureTemplateLibrary("system");
+
+    expect(result.revised).toEqual(["dpoa"]);
+    expect(currentVersionOf("dpoa")).toMatchObject({ version: 2, status: "published", seed_revision: 6 });
+    expect(JSON.stringify(currentVersionOf("dpoa")?.document)).toContain("may result in additional corrective action");
+    expect(versionsOf("dpoa").find((row) => row.id === originalId)).toMatchObject({ status: "archived" });
+    expect(JSON.stringify(versionsOf("dpoa").find((row) => row.id === originalId)?.document)).toContain(OLD_CLOSING);
+
+    // Idempotent: a second run publishes nothing.
+    expect((await ensureTemplateLibrary("system")).revised).toEqual([]);
+  });
+});

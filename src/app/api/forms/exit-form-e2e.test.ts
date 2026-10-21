@@ -264,7 +264,7 @@ describe("a populated draft", () => {
     state.details =
       "Jane Smith gave two weeks notice on 9/14 and worked out her notice. Her last day was Sept 26. She is not eligible for rehire. The form was signed.";
     const { result } = await fromConversation([
-      said("m1", "Jane Smith is one of my TCs. She worked at lincoln o street and gave her two weeks notice on 9/14."),
+      said("m1", "Jane Smith is one of my team members. She worked at lincoln o street and gave her two weeks notice on 9/14."),
       said("m2", "She worked out her notice and her last day was Sept 26. Create an exit form for jane."),
     ]);
     expect(result.draftWarning).toBeNull();
@@ -274,7 +274,7 @@ describe("a populated draft", () => {
     expect(instance).toMatchObject({
       templateKey: "resignation-exit",
       employeeName: "Jane Smith",
-      employeeRole: "Tanning Consultant",
+      employeeRole: "Team Member",
       locationId: "loc-0311",
       locationName: "NE Lincoln O Street",
       status: "draft",
@@ -283,7 +283,7 @@ describe("a populated draft", () => {
 
     const byKey = Object.fromEntries(values.map((row) => [row.fieldKey, row]));
     expect(byKey.employee_name?.value).toBe("Jane Smith");
-    expect(byKey.job_title?.value).toBe("Tanning Consultant");
+    expect(byKey.job_title?.value).toBe("Team Member");
     expect(byKey.location?.value).toBe("NE Lincoln O Street");
     expect(byKey.form_date?.value).toBe("2026-09-28");
     expect(byKey.last_day_worked?.value).toBe("2026-09-26");
@@ -304,7 +304,7 @@ describe("a populated draft", () => {
     expect(text).toContain("Resignation/Exit Form");
     expect(text).toContain("Jane Smith");
     expect(text).toContain("NE Lincoln O Street");
-    expect(text).toContain("Tanning Consultant");
+    expect(text).toContain("Team Member");
     expect(text.replace(/\s+/g, " ")).toContain("Jane's last day was Sept 26.");
     expect(text).not.toMatch(/not eligible for rehire|was signed/);
     expect(text).not.toContain("Invented Road");
@@ -359,7 +359,7 @@ describe("nothing outside the form happens", () => {
 const HR_CONVERSATION = [
   said(
     "m1",
-    "Jane Smith is one of my TCs at lincoln o street. She texted me on 9/20 that she quit because she's moving to Denver, and her last day was 9/19.",
+    "Jane Smith is one of my team members at lincoln o street. She texted me on 9/20 that she quit because she's moving to Denver, and her last day was 9/19.",
   ),
   said(
     "m2",

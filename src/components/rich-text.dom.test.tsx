@@ -259,3 +259,19 @@ describe("a complete assistant answer", () => {
     expect(text).not.toMatch(/(^|\n)\s*-\s/);
   });
 });
+
+/**
+ * Report links are an allowlist read from the registry. Buff City Soap has no
+ * live report registered, so the allowlist is empty and NOTHING links — the
+ * renderer behaves exactly as before. (`rich-text-report-links.dom.test.tsx`
+ * registers a report and proves the links work.)
+ */
+describe("links, with no live report registered", () => {
+  it("leaves every bracket-paren pair as the text it was", () => {
+    const content = "Open [Reports](/reports) or [Power BI](https://app.powerbi.com).";
+    render(<RichText content={content} />);
+
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(document.body.textContent).toBe(content);
+  });
+});

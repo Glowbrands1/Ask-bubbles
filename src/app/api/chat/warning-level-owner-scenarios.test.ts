@@ -368,9 +368,10 @@ describe("the owner's acceptance list for PR #10", () => {
   });
 
   it.each([
-    "create a ca for jordan testperson, not sure if verbal or written warning",
-    "create a ca for jordan testperson, should this be a written warning?",
-    "create a ca for jordan testperson, she got a warning before",
+    /* Each says what happened: a Corrective Action asked for by name alone asks for that first. */
+    "create a ca for jordan testperson, late again today, not sure if verbal or written warning",
+    "create a ca for jordan testperson, late again today, should this be a written warning?",
+    "create a ca for jordan testperson, late again today, she got a warning before",
   ])("6. an ambiguous level is asked about, never guessed: %j", async (message) => {
     const thread = new Thread();
     const answer = await thread.say(message);

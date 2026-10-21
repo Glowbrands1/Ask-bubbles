@@ -9,7 +9,10 @@ import {
   PAYROLL_DEDUCT_STATED_KEYS,
   payrollDeductChecked,
   payrollDeductCorrection,
+  payrollDeductReply,
+  payrollDeductAmount,
   payrollDeductFromConversation,
+  payrollDeductSentence,
   statedPayrollDeduct,
 } from "./payroll-deduct";
 import { enforcePersonEdit, enforceResponsibilities } from "./responsibility";
@@ -137,6 +140,11 @@ describe("a stated answer", () => {
     ["deduct the $40 shortage from her paycheck", "yes"],
     ["the shortage will be deducted", "yes"],
     ["payroll-deduct applies", "yes"],
+    ["payroll deduct no", "no"],
+    ["Verbal warning, payroll deduct no.", "no"],
+    ["payroll deduction applicable no", "no"],
+    ["payroll deduct yes", "yes"],
+    ["written warning, payroll deduct yes.", "yes"],
   ])("%s -> %s", (text, expected) => {
     expect(statedPayrollDeduct(text)).toBe(expected);
   });
@@ -149,6 +157,7 @@ describe("a stated answer", () => {
     "she was late again today",
     "first time, verbal warning",
     "no prior corrective action",
+    "payroll deduct no longer applies to her team",
     "Sarah Test",
   ])("%s states nothing", (text) => {
     expect(statedPayrollDeduct(text)).toBeNull();
@@ -191,9 +200,9 @@ describe("the answer across the conversation", () => {
       "4. Whether this is a verbal or written warning",
       "5. Whether the employee has previously received corrective action for this same issue, and if yes, when",
       "6. Is payroll deduct applicable? (Yes or No)",
-      "7. The employee's job title (e.g. TC, ASD, SD) if you have it",
+      "7. The employee's job title (e.g. Team Member, Assistant General Manager) if you have it",
     ].join("\n");
-    const reply = ["1. Dana Moss", "2. today", "3. late 30 minutes", "4. verbal", "5. no", "6. yes", "7. TC"].join("\n");
+    const reply = ["1. Dana Moss", "2. today", "3. late 30 minutes", "4. verbal", "5. no", "6. yes", "7. team member"].join("\n");
     expect(payrollDeductFromConversation([user("CA"), sunny(intake), user(reply)])).toBe("yes");
 
     // Item 5 is a "no" too — it is the prior-action answer and must not be read.
@@ -267,4 +276,64 @@ describe("a correction after the form exists", () => {
       expect(payrollDeductCorrection(text)).toBeNull();
     },
   );
+});
+
+/*
+ * District Manager feedback, 21 Oct 2026: "payroll deduct of $3.25 is
+ * applicable" was asked "Yes or No?", and the Action Plan did not say what
+ * would be deducted.
+ */
+describe("an amount between the question and its answer", () => {
+  it.each([
+    ["create ca form for tess varga. tess had a register shortage of $3.25 on 10-20-26. payroll deduct of $3.25 is applicable", "yes"],
+    ["payroll deduct applies and $3.25 will be deducted from check.", "yes"],
+    ["payroll deduction for the shortage applies", "yes"],
+    ["payroll deduct of $3.25 is not applicable", "no"],
+    ["register short $3.25. no payroll deduct", "no"],
+  ])("%s → %s", (text, answer) => {
+    expect(statedPayrollDeduct(text)).toBe(answer);
+  });
+});
+
+describe("the amount, and the Action Plan sentence that states it", () => {
+  it.each([
+    ["payroll deduct of $3.25 is applicable", "$3.25"],
+    ["payroll deduct applies and $3.25 will be deducted from check.", "$3.25"],
+    ["deduct $12 from her pay", "$12"],
+    ["register shortage of $3.25. payroll deduct applies", null],
+  ])("%s → %s", (text, amount) => {
+    expect(payrollDeductAmount(text)).toBe(amount);
+  });
+
+  it("states the manager's amount, exactly", () => {
+    expect(payrollDeductSentence({ answer: "yes", amount: "$3.25", firstName: "Tess" })).toBe(
+      "$3.25 will be deducted from Tess's pay.",
+    );
+    expect(payrollDeductSentence({ answer: "yes", amount: "$3.25", firstName: null })).toBe(
+      "$3.25 will be deducted from the employee's pay.",
+    );
+  });
+
+  it("says a deduction applies, with no figure, when none was given", () => {
+    expect(payrollDeductSentence({ answer: "yes", amount: null, firstName: "Tess" })).toBe("A payroll deduction applies.");
+  });
+
+  it("says nothing on No or no answer", () => {
+    expect(payrollDeductSentence({ answer: "no", amount: "$3.25", firstName: "Tess" })).toBeNull();
+    expect(payrollDeductSentence({ answer: null, amount: "$3.25", firstName: "Tess" })).toBeNull();
+  });
+});
+
+describe("payrollDeductReply — a reply to Ask Bubbles' own question, after the form is created", () => {
+  it("reads a bare answer only when the payroll question was the last thing asked", () => {
+    expect(payrollDeductReply("no", "One more question: **Is payroll deduct applicable?** Yes or No?")).toBe("no");
+    expect(payrollDeductReply("Yes.", "Is payroll deduct applicable?")).toBe("yes");
+    expect(payrollDeductReply("no", "The Late Opening section says the employee must notify the manager.")).toBeNull();
+  });
+
+  it("reads a numbered reply against the payroll item only", () => {
+    const asked = "1. What date did this happen?\n2. Is payroll deduct applicable? (Yes or No)";
+    expect(payrollDeductReply("1. 10/20\n2. no", asked)).toBe("no");
+    expect(payrollDeductReply("no", asked)).toBeNull();
+  });
 });

@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import {
   buildProposal,
   correctsTheEmployee,
+  employeeState,
   extractEmployeeNames,
   managerContext,
   resolveEmployee,
@@ -24,16 +25,20 @@ import {
   type EppIntakeReading,
 } from "@/lib/forms/epp-intake";
 import {
+  answeredWhatHappened,
   asksToBeGuided,
   describesIncident,
   correctiveActionBasis,
   correctiveActionIntakeRequest,
+  describesMoreThanTheRequest,
+  NO_INCIDENT_NOTE,
   readCorrectiveActionIntake,
   type IntakeReading,
 } from "@/lib/forms/corrective-action-intake";
 import {
   CA_POLICY_QUESTION,
   caPolicyProposalLine,
+  type NamedPolicyReading,
   namesCaPolicy,
   readCaPolicy,
   type CaPolicyReading,
@@ -138,6 +143,9 @@ import type {
 } from "@/types";
 
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
+import { statedPriorActions } from "@/lib/forms/prior-actions";
+import { namedManualSection, namedPolicies } from "@/lib/forms/named-policy-section";
+import type { ManualChunk } from "@/lib/forms/official-policy-manual";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
 import type { AskResponse } from "./types";
@@ -345,6 +353,16 @@ export interface ProposalTurn {
    * that cannot say the framework is healthy has not said it is.
    */
   progressionAvailable?: () => Promise<boolean>;
+  /**
+   * The pinned official policy manual's chunks, or null when it cannot be read.
+   *
+   * A THUNK, read only when a Corrective Action request names a policy that
+   * `ca-policy.ts` does not know by name ("violating visitors at work
+   * policy"), so the reply can say which section of the manual it is — or
+   * that the manual has none by that name. Absent, the reply names the policy
+   * in the manager's own words and the draft looks it up.
+   */
+  policyManual?: () => Promise<readonly ManualChunk[] | null>;
   /**
    * The server's business day (`YYYY-MM-DD`), which supplies the year for a
    * form date typed as month and day. See `lib/forms/form-date-answer.ts`.
@@ -782,14 +800,17 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   const storeIndex = input.storeIndex ?? (await loadStoreIndex());
   const confirmedStore = readStoreConfirmation(input.history, input.question);
   const employeeContext = withoutAnswersToQuestions(context, input.history, input.question);
-  const directory = await checkTypedEmployee(input, match, employeeContext, storeIndex);
+  const carried = NAME_CHECKED_TEMPLATES.has(match.key) ? employeeFromEarlierTurns(input, employeeContext) : null;
+  const directory = await checkTypedEmployee(input, match, employeeContext, storeIndex, carried);
 
   const proposalInput: ProposalInput = {
     ...(directory.resolution
       ? { employee: directory.resolution }
-      : employeeContext !== context
-        ? { employee: resolveEmployee(employeeContext) }
-        : {}),
+      : carried
+        ? { employee: carried }
+        : employeeContext !== context
+          ? { employee: resolveEmployee(employeeContext) }
+          : {}),
     employeeLocationIds: directory.locationIds ?? [],
     storeIndex,
     reportUnmatchedStore: !employmentChangeKind(match.key),
@@ -841,7 +862,7 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
    * ==========================================================================
    *
    * `extractJobTitle` reads the most specific title anywhere in the
-   * conversation, which on "from salon director to tanning consultant" is the
+   * conversation, which on "from general manager to team member" is the
    * NEW one — so the form's Job Title line would have printed the title the
    * employee is leaving for. On these forms Job Title is the current title,
    * and it is read with the direction the manager gave it; where they gave
@@ -850,18 +871,6 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
    * The same holds for the date: "effective october 5" is when the change
    * takes effect, not the date the form is written.
    */
-  /*
-   * THE PAYROLL-DEDUCT ANSWER, FROM THE WHOLE CONVERSATION. Read over both
-   * sides because a bare "no" answers only the question Ask Bubbles asked just
-   * before it — the assistant turns say WHICH question, never the answer.
-   */
-  if (isCorrectiveActionForm(match) && asksPayrollDeduct(match)) {
-    proposal.payrollDeduct = payrollDeductFromConversation([
-      ...input.history,
-      { role: "user", content: input.question },
-    ]);
-  }
-
   const changeKind = employmentChangeKind(match.key);
   /*
    * ONLY THE TURNS ABOUT THIS FORM AND THIS PERSON. Found in hands-on QA: a
@@ -878,8 +887,35 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
    * written from `sourceMessageIds`, so that list is now the turns about this
    * form and this person, and nothing else.
    */
-  const scoped = turnsAboutThisForm(context, match.key, proposal.employeeName);
+  const scoped = turnsAboutThisForm(context, match.key, proposal.employeeName, {
+    correctiveActionForm: isCorrectiveActionForm(match),
+  });
   proposal.sourceMessageIds = scoped.ids;
+  /*
+   * THE PAYROLL-DEDUCT ANSWER, FROM THIS FORM'S CONVERSATION. Read over both
+   * sides because a bare "no" answers only the question Ask Bubbles asked just
+   * before it — the assistant turns say WHICH question, never the answer. It
+   * starts at this form's first turn, so an answer given for an earlier
+   * request in the same chat does not carry onto a new one.
+   */
+  const firstScoped = scoped.messages[0]?.id;
+  const firstAt = firstScoped ? input.history.findIndex((message) => message.id === firstScoped) : -1;
+  const formHistory =
+    firstAt >= 0
+      ? input.history.slice(firstAt)
+      : scoped.messages.length === 1
+        ? input.history.slice(-1).filter((message) => message.role === "assistant")
+        : input.history;
+  if (isCorrectiveActionForm(match) && asksPayrollDeduct(match)) {
+    proposal.payrollDeduct = payrollDeductFromConversation([
+      ...formHistory,
+      { role: "user", content: input.question },
+    ]);
+  }
+  /* The form's date from this form's turns, too. */
+  if (!changeKind && !isExitForm(match)) {
+    proposal.formDate = extractFormDate(scoped.text, input.today ?? businessToday());
+  }
   const excerpts = {
     ...scoped.excerpts,
     ...(input.oneOfSeveral && input.questionMessageId ? { [input.questionMessageId]: input.oneOfSeveral.clause } : {}),
@@ -943,6 +979,34 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     proposal.employeeRole = directory.verification.title;
   }
 
+  /*
+   * NAMED, BUT NOT DESCRIBED. A Corrective Action Form is drafted from the
+   * account, and the policy citation is resolved from the offense that account
+   * supports — so a form created from "create ca for Pat Rivera" alone comes
+   * back without one (reference platform, production, 20 Oct 2026). It can
+   * still be created; the card says so, and says that telling Ask Bubbles what
+   * happened redrafts it with the citation (see `chat-redraft.ts`). The
+   * employee's name, their position and every name this company's stores
+   * answer to are not an account — read here, after Woven's position has been
+   * set.
+   */
+  if (
+    isCorrectiveActionForm(match) &&
+    proposal.status !== "needs_employee" &&
+    !describesIncident(context.text) &&
+    !describesMoreThanTheRequest(context.text, {
+      ignore: [
+        proposal.employeeName ?? "",
+        proposal.employeeRole ?? "",
+        ...storeIndex.stores.map((store) => store.name),
+        ...storeIndex.aliases.map((alias) => alias.phrase),
+      ],
+    }) &&
+    !answeredWhatHappened([...input.history, { role: "user", content: input.question }])
+  ) {
+    proposal.awaitingIncident = true;
+  }
+
   if (directory.question) return turn(directory.question, proposal);
 
   if (proposal.locationResolution === "resolved" && proposal.subject !== "team") {
@@ -951,13 +1015,57 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   }
 
   const notes: string[] = directory.note ? [directory.note] : [];
-  notes.push(...directoryNotes(proposal, directory, match, input, context));
+  notes.push(...directoryNotes(proposal, directory, match, input, scoped));
+  if (carried && proposal.employeeName && !directory.question) {
+    notes.push(
+      `I took **${proposal.employeeName}** from earlier in this conversation — if this form is for somebody else, tell me who.`,
+    );
+  }
 
   const content =
     changeKind && facts
       ? employmentChangeContent(changeKind, facts, proposal, context)
-      : proposalContent(proposal, scoped, match, input.today ?? businessToday());
+      : proposalContent(proposal, scoped, match, input.today ?? businessToday(), {
+          namedPolicy: isCorrectiveActionForm(match) ? await namedPolicyFor(scoped.text, input) : null,
+        });
   return turn(withNotes(content, notes), proposal);
+}
+
+/**
+ * ============================================================================
+ * THE PERSON THIS CONVERSATION HAS BEEN ABOUT
+ * ============================================================================
+ *
+ * Ported from the reference platform (production feedback, 20 Oct 2026): a
+ * conversation that opened with a Corrective Action Form for one employee ran
+ * on about a policy, and "Create a Coaching Form from this conversation" then
+ * asked who the form was for. Their name was in the conversation — just
+ * further back than the window of manager turns the facts are read from.
+ *
+ * So when the window names nobody, the whole conversation's manager turns are
+ * read for the person — the person only, every other fact still comes from the
+ * window. It is used only when the conversation settles on ONE person
+ * (`employeeState`, with its corrections and "not her" rules), and the reply
+ * says where the name came from, so the manager can change it before Create.
+ * The name is still checked against the directory like any typed name.
+ */
+function employeeFromEarlierTurns(input: ProposalTurn, context: ManagerContext): EmployeeResolution | null {
+  if (resolveEmployee(context).kind !== "missing") return null;
+  const turns = [
+    ...input.history
+      .filter((message) => message.role === "user" && !message.error)
+      .filter((message) => typeof message.content === "string" && message.content.trim() !== "")
+      .map((message) => ({ id: message.id, content: message.content.trim() })),
+    { id: input.questionMessageId, content: input.question.trim() },
+  ];
+  if (turns.length <= context.messages.length) return null;
+  const resolution = employeeState({
+    messages: turns,
+    ids: [],
+    text: turns.map((turn) => turn.content).join("\n\n"),
+    truncated: false,
+  }).resolution;
+  return resolution.kind === "resolved" ? resolution : null;
 }
 
 /**
@@ -1153,8 +1261,10 @@ async function checkTypedEmployee(
   match: TemplateSummary,
   context: ManagerContext,
   storeIndex: StoreIndex,
+  /** A name read from earlier in the conversation, when the window had none. */
+  carried: EmployeeResolution | null = null,
 ): Promise<DirectoryCheck> {
-  const typed = resolveEmployee(context);
+  const typed = carried ?? resolveEmployee(context);
   if (typed.kind !== "resolved") return {};
 
   /*
@@ -1559,6 +1669,15 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
       typeof lastAssistant?.content === "string" &&
       (lastAssistant.content.includes(CA_POLICY_QUESTION) || lastAssistant.content.includes("**Policy:**"));
     if (raisedPolicy && namesCaPolicy(input.question)) return { kind: "explicit", templateKey: continued };
+
+    /*
+     * AND BY ITS ACCOUNT OF WHAT HAPPENED, in whatever words: "Pat got to the
+     * store at 11:23 for a 9:30 shift" names nobody and no topic, and sending
+     * it to retrieval would end the intake that just asked for it.
+     */
+    if (lastAssistant && answeredWhatHappened([lastAssistant, { role: "user", content: input.question }])) {
+      return { kind: "explicit", templateKey: continued };
+    }
   }
 
   /*
@@ -1708,7 +1827,7 @@ function namedInManagerTurns(input: ProposalTurn): TemplateIntent {
 /**
  * The manager's turns that belong to THIS form: everything after the last turn
  * that asked for a different form or named somebody other than this employee.
- * Earlier turns about the same person stay in ("Jane is a PT TC." then "she's
+ * Earlier turns about the same person stay in ("Jane is a PT Team Member." then "she's
  * transferring to salon 18"); a demotion for somebody else earlier in the
  * conversation does not.
  */
@@ -1716,6 +1835,7 @@ function turnsAboutThisForm(
   context: ManagerContext,
   templateKey: string,
   employeeName: string | null,
+  options: { readonly correctiveActionForm?: boolean } = {},
 ): ManagerContext & { excerpts: Record<string, string> } {
   const same = (name: string) => {
     if (!employeeName) return true;
@@ -1746,16 +1866,51 @@ function turnsAboutThisForm(
    * (`excerpts`), so the draft never puts the wrong name on the record.
    */
   let formStart = 0;
+  /* The latest request for this form, for this employee, inside the turns kept so far. */
+  let requestAt = -1;
   const readings = context.messages.map((message, index) => {
     const intent = detectTemplateIntent(message.content);
+    /*
+     * "CREATE VERBAL CA FOR …" IS A REQUEST FOR THIS FORM. Production, 21 Oct
+     * 2026: a request in the progression's shorthand reads as a corrective
+     * action to be started, which the proposal answers with the Corrective
+     * Action Form — and this test counted it as ANOTHER form, so the next turn
+     * ("no payroll deduct") dropped it. The Issue line went, and the form was
+     * drafted from "no payroll deduct" alone.
+     */
+    const thisForm =
+      (intent.kind === "explicit" && intent.templateKey === templateKey) ||
+      (options.correctiveActionForm === true && intent.kind === "corrective_action" && intent.requestedCreation);
     const otherForm =
       (intent.kind === "explicit" && intent.templateKey !== templateKey) ||
-      intent.kind === "corrective_action";
+      (intent.kind === "corrective_action" && !thisForm);
     const names = extractEmployeeNames(message.content);
     // A turn that also names somebody else is about them too, and stays off this form.
     const otherPerson = names.length > 0 && !names.every(same);
+    const forThisEmployee = thisForm && employeeName !== null && names.length > 0 && !otherPerson;
     if (index < last && (otherForm || otherPerson)) start = index + 1;
     if (index < last && otherForm) formStart = index + 1;
+    if (requestAt < start) requestAt = -1;
+    /*
+     * A NEW REQUEST IS A NEW FORM. Production, 21 Oct 2026: "create ca form for
+     * <employee> for a register shortage …", asked in the chat that had just
+     * proposed one for her attendance, was read back with "Policy: Attendance,
+     * as you said" and "Verbal Warning, as you said" — the earlier request's
+     * answers. A second Corrective Action request for the same employee that
+     * says what happened starts over from itself; one that only repeats the
+     * request ("create ca for <employee>") keeps the account already given.
+     */
+    if (
+      options.correctiveActionForm === true &&
+      forThisEmployee &&
+      requestAt >= 0 &&
+      (describesIncident(message.content) ||
+        describesMoreThanTheRequest(message.content, { ignore: [employeeName ?? ""] }))
+    ) {
+      start = index;
+      formStart = index;
+    }
+    if (forThisEmployee) requestAt = index;
     return { names, otherForm, otherPerson };
   });
   /* The latest turn of this form that corrected the person TO this employee. */
@@ -1862,7 +2017,7 @@ const CHANGE_INTAKE: Record<EmploymentChangeKind, { items: string[]; example: st
       "A short reason",
     ],
     example:
-      "Jane Doe is a PT TC at $12/hr, transferring from store 12 to store 18, same title and pay, voluntary — she moved closer to home.",
+      "Jane Doe is a PT Team Member at $12/hr, transferring from store 12 to store 18, same title and pay, voluntary — she moved closer to home.",
   },
 };
 
@@ -2017,11 +2172,36 @@ function choice(summary: TemplateSummary): ChatFormChoice {
  * states which form, what is established, what is missing, and that nothing has
  * been created — because at this phase nothing has.
  */
+/**
+ * The policy a Corrective Action request named by a name `ca-policy.ts` does
+ * not know, looked up among the pinned manual's own headings — or null when it
+ * named none. Never throws: a manual that cannot be read leaves the lookup to
+ * the draft, as before.
+ */
+async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedPolicyReading | null> {
+  if (readCaPolicy(text).stated !== null) return null;
+  const named = namedPolicies(text);
+  if (named.length === 0) return null;
+  const phrase = named[named.length - 1]!.phrase;
+  let chunks: readonly ManualChunk[] | null = null;
+  try {
+    chunks = (await input.policyManual?.()) ?? null;
+  } catch {
+    chunks = null;
+  }
+  if (!chunks || chunks.length === 0) return { phrase, lookup: "unknown" };
+  const found = namedManualSection({ text, chunks });
+  return found
+    ? { phrase: found.phrase, lookup: "found", heading: found.section.heading, page: found.section.page, offenseKey: found.offenseKey }
+    : { phrase, lookup: "missing" };
+}
+
 function proposalContent(
   proposal: ChatFormProposal,
   context: ManagerContext,
   match: TemplateSummary,
   today: string,
+  extra: { namedPolicy?: NamedPolicyReading | null } = {},
 ): string {
   /*
    * ==========================================================================
@@ -2199,6 +2379,8 @@ function proposalContent(
       return correctiveActionReady(proposal, intake, asksPayrollDeduct(match), readCaPolicy(context.text), {
         offersLevel: offeredWarningLevels(match).length > 0,
         earlierWarning: mentionsEarlierWarning(context.text, today),
+        priorActions: statedPriorActions(context.text, today),
+        namedPolicy: extra.namedPolicy ?? null,
       });
     }
   }
@@ -2214,6 +2396,7 @@ function proposalContent(
     lines.push(openingQuestions(proposal, context));
   } else if (proposal.status === "needs_location") {
     lines.push(locationQuestion(proposal));
+    if (proposal.awaitingIncident) lines.push("", NO_INCIDENT_NOTE);
   } else {
     lines.push(
       `Everything I need is here, drawn from ${context.messages.length === 1 ? "your message" : "your messages"} above.`,
@@ -2342,16 +2525,27 @@ function correctiveActionReady(
   intake: IntakeReading,
   asksPayroll: boolean,
   policy: CaPolicyReading,
-  warning: { offersLevel: boolean; earlierWarning: boolean } = { offersLevel: true, earlierWarning: false },
+  warning: {
+    offersLevel: boolean;
+    earlierWarning: boolean;
+    priorActions?: readonly string[];
+    namedPolicy?: NamedPolicyReading | null;
+  } = {
+    offersLevel: true,
+    earlierWarning: false,
+  },
 ): string {
   const levelOpen = warning.offersLevel && intake.missingRequired.some((item) => item.key === "warning_level");
+  const priorActions = warning.priorActions ?? [];
   const outstanding = intake.missingRequired
-    .filter((item) => item.key === "previous_action")
+    .filter((item) => item.key === "previous_action" && priorActions.length === 0)
     .map(() => "any prior coaching or corrective action");
 
-  const lines = [
-    `I'll draft a **${proposal.templateName}** for **${proposal.employeeName}** from what you've described, and check the applicable company policy before anything policy-related goes on it.`,
-  ];
+  const lines = proposal.awaitingIncident
+    ? [`I can create a **${proposal.templateName}** for **${proposal.employeeName}**.`, "", NO_INCIDENT_NOTE]
+    : [
+        `I'll draft a **${proposal.templateName}** for **${proposal.employeeName}** from what you've described, and check the applicable company policy before anything policy-related goes on it.`,
+      ];
 
   /*
    * WHAT THE MANAGER SAID, READ BACK before anything is created: the issue and
@@ -2374,6 +2568,14 @@ function correctiveActionReady(
     );
   }
   if (stated.length > 0) lines.push("", stated.join(" · "));
+  /*
+   * THE HISTORY THE MANAGER GAVE, READ BACK as it will be listed on the form —
+   * "previous coaching was jba policy manual 1-1-26" is the prior-actions
+   * line, not something to set later (District Manager feedback, 21 Oct 2026).
+   */
+  if (priorActions.length > 0) {
+    lines.push("", `**Prior actions:** ${priorActions.join("; ")}, as you said. I'll list ${priorActions.length === 1 ? "it" : "them"} on the form — tell me if that should change.`);
+  }
 
   /*
    * THE POLICY, SUGGESTED OR ASKED — never left silently to the drafting
@@ -2383,7 +2585,7 @@ function correctiveActionReady(
    * it only where the current manual's section supports it. An account that
    * also reads as attendance or a target is a question. See `ca-policy.ts`.
    */
-  const policyLine = caPolicyProposalLine(policy);
+  const policyLine = caPolicyProposalLine(policy, warning.namedPolicy ?? null);
   if (policyLine) lines.push("", policyLine);
 
   /*

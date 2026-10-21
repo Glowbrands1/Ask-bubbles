@@ -161,7 +161,7 @@ describe("the four approved wording changes", () => {
       "management-interview-round-1": 4,
     });
     for (const key of ["coaching", "dpoa", "policy-review", "follow-up-coaching", "position-transfer", "prescreen-phone-interview", "resignation-exit", "tanning-consultant-interview", "management-interview-round-2"]) {
-      expect(seed(key).revision, key).toBe(({ coaching: 2, dpoa: 5, "policy-review": 2, "follow-up-coaching": 2, "position-transfer": 1, "prescreen-phone-interview": 3, "resignation-exit": 3, "tanning-consultant-interview": 3, "management-interview-round-2": 3 } as Record<string, number>)[key]);
+      expect(seed(key).revision, key).toBe(({ coaching: 2, dpoa: 6, "policy-review": 2, "follow-up-coaching": 2, "position-transfer": 1, "prescreen-phone-interview": 3, "resignation-exit": 3, "tanning-consultant-interview": 3, "management-interview-round-2": 3 } as Record<string, number>)[key]);
     }
   });
 });

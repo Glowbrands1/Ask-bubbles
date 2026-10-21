@@ -102,7 +102,7 @@ const NOT_A_PERSON = new Set(
     "policy", "policies", "manual", "standards", "standard", "conduct", "dress", "code",
     "attendance", "company", "corrective", "action", "form", "plan", "coaching", "verbal",
     "written", "warning", "epp", "ppta", "upta", "lpsva", "bonus", "viewer", "uv", "sunless",
-    "hr", "ok", "i", "tc", "asd", "sd", "sdit", "tsd", "dmit", "fttc", "dm", "salon", "store", "future",
+    "hr", "ok", "i", "asd", "sd", "sdit", "tsd", "dmit", "fttc", "dm", "salon", "store", "future",
     "none", "first", "occurrence", "signed", "termination", "employment", "source",
   ],
 );

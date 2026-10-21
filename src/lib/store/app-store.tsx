@@ -136,6 +136,14 @@ interface AppStoreValue {
 
   /** True when history is kept on the account rather than only in this browser. */
   accountHistory: boolean;
+  /**
+   * Ids of the conversations the signed-in account holds, or null until the
+   * account has been asked (and always in demo mode).
+   *
+   * What tells a thread the signed-in person started apart from one somebody
+   * else left in this shared browser — see `askerFor`.
+   */
+  accountConversationIds: ReadonlySet<string> | null;
   /** Per-conversation sync state, for a surface that wants to say "not saved yet". */
   conversationSync: Record<string, ConversationSyncStatus>;
   /** True when at least one conversation gave up trying to save. */
@@ -1087,6 +1095,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const importChecked = !DEMO_MODE && historyState !== null;
 
+  const accountConversationIds = useMemo(
+    () => (historyState === null ? null : new Set(historyState.stored.map((entry) => entry.id))),
+    [historyState],
+  );
+
 
   const setPermissionMatrix = useCallback((matrix: PermissionMatrix) => {
     setPermissionMatrixState(matrix);
@@ -1147,6 +1160,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       removeConversation,
       clearConversations,
       accountHistory,
+      accountConversationIds,
       conversationSync,
       conversationSyncFailed,
       retryConversationSync,
@@ -1178,6 +1192,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       removeConversation,
       clearConversations,
       accountHistory,
+      accountConversationIds,
       conversationSync,
       conversationSyncFailed,
       retryConversationSync,

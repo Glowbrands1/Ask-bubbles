@@ -152,7 +152,7 @@ describe("the form a later turn may correct", () => {
     const { activeFormInstanceFor } = await import("./proposal-continuation");
     expect(
       activeFormInstanceFor([
-        { id: "u1", role: "user", content: "demote jane to TC", createdAt: at },
+        { id: "u1", role: "user", content: "demote jane to team member", createdAt: at },
         { id: "a1", role: "assistant", content: "…", createdAt: at, formInstanceRef: ref } as never,
         { id: "u2", role: "user", content: "thanks", createdAt: at },
         { id: "a2", role: "assistant", content: "You're welcome.", createdAt: at },
