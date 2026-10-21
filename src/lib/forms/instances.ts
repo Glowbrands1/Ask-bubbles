@@ -188,6 +188,12 @@ export interface InstanceListFilter {
    * exception for an absent location — see `instance-scope.ts`.
    */
   ownNullLocationCreatedBy?: string;
+  /**
+   * Also read this actor's own rows that DO name a store, wherever it is. The
+   * caller re-checks each with `actorMaySeeInstance`, which keeps only the
+   * stores their stored scope still covers — see `ownFormStillInScope`.
+   */
+  ownCreatedBy?: string;
 }
 
 export async function listInstances(
@@ -249,12 +255,22 @@ export async function listInstances(
     );
   }
 
+  if (filter.ownCreatedBy) {
+    reads.push(
+      scoped()
+        .not("location_id", "is", null)
+        .eq("created_by", filter.ownCreatedBy)
+        .order("created_at", { ascending: false })
+        .limit(limit),
+    );
+  }
+
   if (reads.length === 0) return [];
 
   const results = await Promise.all(reads);
 
-  // Merge, de-duplicate (a row cannot match both predicates, but the union is
-  // written to be correct rather than to rely on that), sort, then bound.
+  // Merge, de-duplicate (the reader's own row at one of their stores matches
+  // two of the reads), sort, then bound.
   const byId = new Map<string, InstanceRow>();
   for (const result of results) {
     if (result.error) throw new Error(`Could not read form history: ${result.error.message}`);
@@ -1381,24 +1397,48 @@ export async function listOutstandingFollowUps(
    * somebody else's unattributed record.
    */
   locationIds: readonly string[] | null = null,
+  /**
+   * A restricted reader's own forms at OTHER stores are read too, in a second
+   * bounded query; the caller keeps only those `actorMaySeeInstance` allows
+   * (their stored scope still covers the store). Ignored when unrestricted.
+   */
+  ownCreatedBy: string | null = null,
 ): Promise<InstanceRow[]> {
   const supabase = getSupabaseAdmin();
-  let query = supabase
-    .from("form_instance_overview")
-    .select("*")
-    .not("follow_up_date", "is", null)
-    .is("followed_up_at", null)
-    .is("archived_at", null)
-    .order("follow_up_date", { ascending: true })
-    .limit(limit);
+  const outstanding = () =>
+    supabase
+      .from("form_instance_overview")
+      .select("*")
+      .not("follow_up_date", "is", null)
+      .is("followed_up_at", null)
+      .is("archived_at", null)
+      .order("follow_up_date", { ascending: true })
+      .limit(limit);
 
-  if (locationIds !== null) {
+  type Read = { data: unknown[] | null; error: { message: string } | null };
+  const reads: PromiseLike<Read>[] = [];
+  if (locationIds === null) {
+    reads.push(outstanding() as PromiseLike<Read>);
+  } else {
     // An empty list means no store qualifies; PostgREST does not accept `in.()`.
-    if (locationIds.length === 0) return [];
-    query = query.in("location_id", locationIds);
+    if (locationIds.length > 0) reads.push(outstanding().in("location_id", locationIds) as PromiseLike<Read>);
+    if (ownCreatedBy) {
+      reads.push(
+        outstanding().not("location_id", "is", null).eq("created_by", ownCreatedBy) as PromiseLike<Read>,
+      );
+    }
   }
+  if (reads.length === 0) return [];
 
-  const { data, error } = await query;
-  if (error) throw new Error(`Could not read outstanding follow-ups: ${error.message}`);
-  return (data ?? []).map(mapInstance);
+  const byId = new Map<string, InstanceRow>();
+  for (const { data, error } of await Promise.all(reads)) {
+    if (error) throw new Error(`Could not read outstanding follow-ups: ${error.message}`);
+    for (const row of data ?? []) {
+      const mapped = mapInstance(row as Record<string, unknown>);
+      byId.set(mapped.id, mapped);
+    }
+  }
+  return [...byId.values()]
+    .sort((a, b) => (a.followUpDate ?? "").localeCompare(b.followUpDate ?? ""))
+    .slice(0, limit);
 }

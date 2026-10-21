@@ -29,7 +29,7 @@ const FORM_B = "22222222-2222-4222-8222-222222222222";
 const FORM_C = "33333333-3333-4333-8333-333333333333";
 const ROWS: Record<string, string> = { [FORM_A]: "loc-a", [FORM_B]: "loc-b", [FORM_C]: "loc-c" };
 
-const row = (id: string) => ({
+const row = (id: string, createdBy = "someone-else") => ({
   id,
   templateId: "tpl",
   templateKey: "coaching",
@@ -43,7 +43,7 @@ const row = (id: string) => ({
   employeeRole: null,
   locationId: ROWS[id]!,
   locationName: null,
-  createdBy: "someone-else",
+  createdBy,
   createdByRole: "location_manager",
   source: "manual",
   status: "draft",
@@ -75,6 +75,8 @@ interface Options {
   woven?: Record<string, string | null>;
   /** Make the designation lookup fail. */
   designationFails?: boolean;
+  /** Forms this subject created, by form id. */
+  created?: string[];
 }
 
 async function load(options: Options) {
@@ -166,25 +168,32 @@ async function load(options: Options) {
     }),
   }));
 
+  /* Each row, carrying this subject as its creator when the options say so. */
+  const rowFor = (id: string) => row(id, options.created?.includes(id) ? options.subject : "someone-else");
+
   vi.doMock("@/lib/forms/instances", () => ({
     loadInstance: async (id: string) =>
       ROWS[id]
-        ? { instance: row(id), version: { id: "v", document: { paper: "letter", blocks: [] }, variants: [] }, values: [], events: [] }
+        ? { instance: rowFor(id), version: { id: "v", document: { paper: "letter", blocks: [] }, variants: [] }, values: [], events: [] }
         : null,
     listInstances: async (
       _view: string,
       _limit: number | undefined,
-      filter?: { locationIds?: string[]; ownNullLocationCreatedBy?: string },
+      filter?: { locationIds?: string[]; ownNullLocationCreatedBy?: string; ownCreatedBy?: string },
     ) => {
-      const rows = Object.keys(ROWS).map(row);
+      const rows = Object.keys(ROWS).map(rowFor);
       if (!filter || filter.locationIds === undefined) return rows;
-      return rows.filter((r) => filter.locationIds!.includes(r.locationId));
+      return rows.filter(
+        (r) =>
+          filter.locationIds!.includes(r.locationId) ||
+          (filter.ownCreatedBy !== undefined && r.createdBy === filter.ownCreatedBy),
+      );
     },
-    findDemoInstances: async () => ({ deletable: Object.keys(ROWS).map(row), protected: [] }),
-    listOutstandingFollowUps: async (_limit: number, ids: string[] | null) =>
+    findDemoInstances: async () => ({ deletable: Object.keys(ROWS).map(rowFor), protected: [] }),
+    listOutstandingFollowUps: async (_limit: number, ids: string[] | null, own?: string | null) =>
       Object.keys(ROWS)
-        .map(row)
-        .filter((r) => ids === null || ids.includes(r.locationId)),
+        .map(rowFor)
+        .filter((r) => ids === null || ids.includes(r.locationId) || (!!own && r.createdBy === own)),
     markExported: async () => undefined,
     InstanceProtectedError: class extends Error {},
     UnverifiedPolicyError: class extends Error {},
@@ -360,6 +369,36 @@ describe("direct URL / API access to another store's form", () => {
     expect((await detail.GET(get(), params(FORM_A))).status).toBe(404);
     expect((await detail.GET(get(), params(FORM_B))).status).toBe(200);
   });
+  /*
+   * REGRESSION (21 Oct 2026). Reads are scoped to the home store (#57), but
+   * creating is authorized on the STORED scope, so a District Manager whose
+   * scope covers several stores created a form at one that is not their home
+   * store, and the inline card's very next fetch said "This form is not
+   * available". The creator may open their own form while their stored scope
+   * still covers its store.
+   */
+  it("serves a form its creator just created at a store outside their home store", async () => {
+    const { detail } = await load({ ...AMBER, created: [FORM_C] });
+    expect((await detail.GET(get(), params(FORM_C))).status).toBe(200);
+    expect((await detail.GET(get(), params(FORM_A))).status).toBe(404);
+  });
+  it("lets the creator keep editing it", async () => {
+    await load({ ...AMBER, created: [FORM_C] });
+    const { authorizeInstance } = await import("@/lib/forms/instance-scope");
+    await expect(authorizeInstance(get(), FORM_C, "edit")).resolves.toMatchObject({
+      loaded: { instance: { id: FORM_C } },
+    });
+  });
+  it("refuses the creator once their stored scope no longer covers the store", async () => {
+    const { detail } = await load({ ...STORE_MANAGER, created: [FORM_B] });
+    expect((await detail.GET(get(), params(FORM_B))).status).toBe(404);
+  });
+  it("lists the creator's own form at another store in Form Monitoring", async () => {
+    expect(await listedIds({ ...AMBER, created: [FORM_C] })).toEqual([FORM_B, FORM_C]);
+  });
+  it("does not list it once their stored scope no longer covers that store", async () => {
+    expect(await listedIds({ ...STORE_MANAGER, created: [FORM_B] })).toEqual([FORM_A]);
+  });
   it("answers 404 for a user with no home store", async () => {
     const { detail } = await load(NO_STORE);
     for (const id of Object.keys(ROWS)) expect((await detail.GET(get(), params(id))).status).toBe(404);
@@ -385,6 +424,27 @@ describe("the server pages (Form Monitoring, Overview, rail badge) apply the sam
     const counted = visibleInstances(access.actor, await listOutstandingFollowUps(50, access.locationIds));
     expect(counted.map((r) => r.id)).toEqual([FORM_A]);
   });
+  it("puts the reader's own forms at other stores in the queue and the badge", async () => {
+    const who = { ...AMBER, created: [FORM_C] };
+    const { pageFormsAccess, visibleInstances, listOutstandingFollowUps } = await load(who);
+    const access = await pageFormsAccess(identity(who));
+    expect(access).toMatchObject({ locationIds: ["loc-b"], ownCreatedBy: "amber" });
+    const counted = visibleInstances(
+      access.actor,
+      await listOutstandingFollowUps(50, access.locationIds, access.ownCreatedBy),
+    );
+    expect(counted.map((r) => r.id)).toEqual([FORM_B, FORM_C]);
+  });
+  it("drops them from the queue once the stored scope no longer covers the store", async () => {
+    const who = { ...STORE_MANAGER, created: [FORM_B] };
+    const { pageFormsAccess, visibleInstances, listOutstandingFollowUps } = await load(who);
+    const access = await pageFormsAccess(identity(who));
+    const counted = visibleInstances(
+      access.actor,
+      await listOutstandingFollowUps(50, access.locationIds, access.ownCreatedBy),
+    );
+    expect(counted.map((r) => r.id)).toEqual([FORM_A]);
+  });
   it("tells a reader with no home store so, and reads nothing", async () => {
     const { pageFormsAccess } = await load(NO_STORE);
     expect(await pageFormsAccess(identity(NO_STORE))).toMatchObject({ locationIds: [], noStore: true });
@@ -405,6 +465,10 @@ describe("the server pages (Form Monitoring, Overview, rail badge) apply the sam
       expect(source, file).toMatch(/pageFormsAccess\(/);
       expect(source, file).toMatch(/visibleInstances\(/);
       expect(source, file).not.toMatch(/listOutstandingFollowUps\(\)/);
+      if (source.includes("listOutstandingFollowUps(")) {
+        // The queue reads the reader's own forms at other stores too.
+        expect(source, file).toMatch(/listOutstandingFollowUps\(50, [\w.]+, access\.ownCreatedBy\)/);
+      }
       expect(source, file).not.toMatch(/listInstances\(view satisfies InstanceView\)/);
     }
   });
