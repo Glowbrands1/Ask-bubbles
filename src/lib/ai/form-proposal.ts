@@ -145,7 +145,7 @@ import type {
 
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
 import { statedPriorActions } from "@/lib/forms/prior-actions";
-import { namedManualSection, namedPolicies } from "@/lib/forms/named-policy-section";
+import { describedPolicies, namedManualSection, namedPolicies } from "@/lib/forms/named-policy-section";
 import type { ManualChunk } from "@/lib/forms/official-policy-manual";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
@@ -1888,6 +1888,8 @@ function turnsAboutThisForm(
   let formStart = 0;
   /* The latest request for this form, for this employee, inside the turns kept so far. */
   let requestAt = -1;
+  /* Whether the turns kept so far start just after a turn about somebody else. */
+  let afterAnotherPerson = false;
   const readings = context.messages.map((message, index) => {
     const intent = detectTemplateIntent(message.content);
     /*
@@ -1908,9 +1910,32 @@ function turnsAboutThisForm(
     // A turn that also names somebody else is about them too, and stays off this form.
     const otherPerson = names.length > 0 && !names.every(same);
     const forThisEmployee = thisForm && employeeName !== null && names.length > 0 && !otherPerson;
-    if (index < last && (otherForm || otherPerson)) start = index + 1;
+    if (index < last && (otherForm || otherPerson)) {
+      start = index + 1;
+      afterAnotherPerson = otherPerson;
+    }
     if (index < last && otherForm) formStart = index + 1;
     if (requestAt < start) requestAt = -1;
+    /*
+     * THE ANSWERS GIVEN FOR SOMEBODY ELSE STAY THEIRS. Production, 21 Oct
+     * 2026: a Corrective Action for one employee, then "no payroll deduct",
+     * then "create a verbal corrective action form for <another employee> …"
+     * — the new form was read back with "Is payroll deduct applicable? No",
+     * the first employee's answer, because the short reply names nobody and
+     * so was kept. The first request for this employee after turns about
+     * another person starts this form's turns. A correction of the person
+     * ("actually it's for …") is not a new request, and keeps the account.
+     */
+    if (
+      forThisEmployee &&
+      requestAt < 0 &&
+      afterAnotherPerson &&
+      start < index &&
+      !correctsTheEmployee(message.content)
+    ) {
+      start = index;
+      formStart = index;
+    }
     /*
      * A NEW REQUEST IS A NEW FORM. Production, 21 Oct 2026: "create ca form for
      * <employee> for a register shortage …", asked in the chat that had just
@@ -2201,19 +2226,28 @@ function choice(summary: TemplateSummary): ChatFormChoice {
 async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedPolicyReading | null> {
   if (readCaPolicy(text).stated !== null) return null;
   const named = namedPolicies(text);
-  if (named.length === 0) return null;
-  const phrase = named[named.length - 1]!.phrase;
+  /* A policy the account only describes is said only when the manual answers it. */
+  if (named.length === 0 && describedPolicies(text).length === 0) return null;
+  const phrase = named.at(-1)?.phrase ?? null;
   let chunks: readonly ManualChunk[] | null = null;
   try {
     chunks = (await input.policyManual?.()) ?? null;
   } catch {
     chunks = null;
   }
-  if (!chunks || chunks.length === 0) return { phrase, lookup: "unknown" };
-  const found = namedManualSection({ text, chunks });
-  return found
-    ? { phrase: found.phrase, lookup: "found", heading: found.section.heading, page: found.section.page, offenseKey: found.offenseKey }
-    : { phrase, lookup: "missing" };
+  const found = chunks && chunks.length > 0 ? namedManualSection({ text, chunks }) : null;
+  if (found) {
+    return {
+      phrase: found.phrase,
+      lookup: "found",
+      heading: found.section.heading,
+      page: found.section.page,
+      offenseKey: found.offenseKey,
+      ...(found.described ? { described: true } : {}),
+    };
+  }
+  if (phrase === null) return null;
+  return { phrase, lookup: chunks && chunks.length > 0 ? "missing" : "unknown" };
 }
 
 function proposalContent(

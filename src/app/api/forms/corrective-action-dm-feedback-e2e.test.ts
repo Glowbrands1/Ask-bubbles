@@ -319,7 +319,20 @@ const VISITORS_CHUNK = {
     "30 | P a g e\nVisitors in the Workplace\nTo provide for the safety and security of Employees and the facilities, only authorized visitors are\nallowed in the workplace. If the Employee is uncomfortable with allowing the visitor into the\nworkplace, the Supervisor or manager on duty must refuse to allow the visitor into the\nworkplace.",
 };
 
-const MANUAL = { chunks: [STANDARDS_OF_CONDUCT_CHUNK, ATTENDANCE_CHUNK, VISITORS_CHUNK] };
+/* The manual's own heading, with its slash: one section, two names. */
+const CELL_PHONE_CHUNK = {
+  chunkIndex: 61,
+  chunkId: "c-61",
+  locator: "Page 19",
+  page: 20,
+  printedPage: 19,
+  sections: [{ heading: "Cell Phone/Smart Watch Policy", page: 19 }],
+  section: "Cell Phone/Smart Watch Policy",
+  content:
+    "Cell Phone/Smart Watch Policy\nPersonal Employee cell phones are permitted in the workplace but must be kept out of sight. It\nis the Employee’s personal responsibility to protect the customer’s experience and doing things\nsuch as texting, making phone calls or using social media jeopardizes the customer’s experience.",
+};
+
+const MANUAL = { chunks: [STANDARDS_OF_CONDUCT_CHUNK, ATTENDANCE_CHUNK, CELL_PHONE_CHUNK, VISITORS_CHUNK] };
 
 /* The production turns, names replaced. */
 const A1 =
@@ -714,5 +727,99 @@ describe("the draft never writes Other beside a stated Standards of Conduct", ()
     expect(field(form, "offense_type")!.checked).toEqual(["standards_of_conduct"]);
     expect(field(form, "other_offense")).toBeUndefined();
     expect(JSON.stringify(form.values)).not.toMatch(/September 30/);
+  });
+});
+
+/* ========================================================================= */
+/* F — THE CELL PHONE/SMART WATCH POLICY, NAMED OR DESCRIBED                  */
+/* ========================================================================= */
+
+/*
+ * Production: "create a verbal corrective action form for <employee>. on
+ * 10-20-26 <employee> was talking on her cell phone for over 30 minutes" was
+ * cited Standards of Conduct; the manager wanted the manual's Cell
+ * Phone/Smart Watch Policy, page 19. The heading's slash meant "cell phone"
+ * never matched it, even when named.
+ */
+const F1 =
+  "create a verbal corrective action form for tess varga. on 10-20-26 tess was talking on her cell phone for over 30 minutes";
+
+describe("an account of personal phone use cites the manual's Cell Phone/Smart Watch Policy", () => {
+  it("described, not named: read back as what it reads as, ticked, and quoted with its page", async () => {
+    const { last, proposal, create } = await conversation([F1]);
+
+    expect(proposal.warningLevel).toBe("verbal");
+    expect(last.content).not.toMatch(WARNING_QUESTION);
+    expect(last.content).toMatch(
+      /\*\*Policy:\*\* this reads as the policy manual's \*\*Cell Phone\/Smart Watch Policy\*\* \(page 19\)/,
+    );
+    expect(last.content).not.toMatch(/as you said — the policy manual's section/);
+
+    state.draft = {
+      values: { observation: "Observed:\nOn October 20, 2026, Tess Varga was talking on her cell phone for over 30 minutes." },
+      checked: { offense_type: ["standards_of_conduct"] },
+    };
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    const policy = field(form, "policy_language")!.value!;
+
+    expect(field(form, "offense_type")!.checked).toEqual(["company_policies"]);
+    expect(field(form, "policy_violated")!.value).toBe("Violation of Company Policies — Cell Phone/Smart Watch Policy");
+    expect(policy).toContain("Personal Employee cell phones are permitted in the workplace but must be kept out of sight.");
+    expect(policy).toContain("Source: JBA Policy Manual — Cell Phone/Smart Watch Policy, p. 19");
+    expect(policy).not.toMatch(/Standards of Conduct/);
+  });
+
+  it('named: "violated the cell phone policy" is the same section', async () => {
+    const { last } = await conversation([
+      "create a verbal CA for tess varga for violating the cell phone policy on 10-20-26. no payroll deduct",
+    ]);
+    expect(last.content).toMatch(
+      /\*\*Policy:\*\* Cell Phone\/Smart Watch Policy, as you said — the policy manual's section on page 19/,
+    );
+  });
+
+  it("a stated policy still wins over the account", async () => {
+    const { last } = await conversation([
+      "create a verbal CA for tess varga for violating standards of conduct on 10-20-26. she was texting on her phone at the register. no payroll deduct",
+    ]);
+    expect(last.content).toMatch(/\*\*Policy:\*\* Standards of Conduct, as you said/);
+    expect(last.content).not.toMatch(/Cell Phone/);
+  });
+
+  it("a phone that is not the employee's own use raises nothing", async () => {
+    const { last } = await conversation([
+      "create a verbal CA for tess varga. on 10-20-26 she hung up on a guest who called the store phone. no payroll deduct",
+    ]);
+    expect(last.content).not.toMatch(/Cell Phone/);
+  });
+});
+
+/* ========================================================================= */
+/* E — A ONE-WORD ANSWER AFTER THE WHOLE REQUEST                               */
+/* ========================================================================= */
+
+/*
+ * Production: the reply to "written" was drafted from "written" alone — the
+ * created form had nothing but the employee, store, title, date and ticks.
+ */
+describe("a one-word answer after the whole request", () => {
+  it('"written" keeps the request as the account, and the draft is written from it', async () => {
+    const { proposal, create } = await conversation([E1.replace("a written CA", "a CA"), "written"]);
+
+    expect(proposal.sourceMessageIds).toEqual(["m1", "m2"]);
+    expect(proposal.warningLevel).toBe("written");
+    expect(proposal.payrollDeduct).toBe("no");
+
+    await create();
+    expect(described()).toContain("not attending the monthly meeting on 10-20-26");
+  });
+
+  it("a request for another employee keeps none of the earlier one's answers", async () => {
+    const { proposal } = await conversation([A1, A2, F1]);
+
+    expect(proposal.employeeName).toBe("Tess Varga");
+    expect(proposal.sourceMessageIds).toEqual(["m3"]);
+    expect(proposal.payrollDeduct).toBeNull();
   });
 });

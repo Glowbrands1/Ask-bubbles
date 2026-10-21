@@ -319,7 +319,7 @@ const ALTERNATIVE_WORDS: Record<CaPolicyReading["alternatives"][number], string>
  * `named-policy-section.ts`.
  */
 export type NamedPolicyReading =
-  | { phrase: string; lookup: "found"; heading: string; page: number; offenseKey: string }
+  | { phrase: string; lookup: "found"; heading: string; page: number; offenseKey: string; described?: boolean }
   | { phrase: string; lookup: "missing" | "unknown" };
 
 /** The offense box a named section is cited under, as the form labels it. */
@@ -334,6 +334,9 @@ const OFFENSE_BOX_LABEL: Record<string, string> = {
 function namedPolicyLine(named: NamedPolicyReading): string | null {
   if (named.lookup === "found") {
     const box = OFFENSE_BOX_LABEL[named.offenseKey];
+    if (named.described) {
+      return `**Policy:** this reads as the policy manual's **${named.heading}** (page ${named.page}). I'll quote it on the draft${box ? ` under **${box}**` : ""}. Tell me if a different policy applies.`;
+    }
     return `**Policy:** ${named.heading}, as you said — the policy manual's section on page ${named.page}. I'll quote it on the draft${box ? ` under **${box}**` : ""}.`;
   }
   if (named.lookup === "missing") {

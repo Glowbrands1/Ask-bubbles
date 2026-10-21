@@ -93,17 +93,27 @@ function sameWord(a: string, b: string): boolean {
   return short.length >= 4 && long.startsWith(short);
 }
 
-/** Whether the manager's words name this heading. */
+/**
+ * Whether the manager's words name this heading.
+ *
+ * A HEADING WITH A SLASH NAMES ONE SECTION TWO WAYS. "Cell Phone/Smart Watch
+ * Policy" is the cell phone policy and the smart watch policy (District
+ * Manager feedback, 21 Oct 2026: "cell phone" never matched it, because "smart"
+ * and "watch" were not said). Every word said must still be in the heading;
+ * the words of ONE side of the slash are what must all be said.
+ */
 export function namesHeading(phrase: string, heading: string): boolean {
   const said = words(phrase);
   const printed = words(heading);
   if (said.length === 0 || printed.length === 0) return false;
-  return (
-    said.every((word) => printed.some((other) => sameWord(word, other))) &&
-    printed.every(
-      (word) => OPTIONAL_HEADING_WORDS.has(word) || said.some((other) => sameWord(word, other)),
-    )
-  );
+  if (!said.every((word) => printed.some((other) => sameWord(word, other)))) return false;
+  return heading
+    .split("/")
+    .map(words)
+    .filter((side) => side.length > 0)
+    .some((side) =>
+      side.every((word) => OPTIONAL_HEADING_WORDS.has(word) || said.some((other) => sameWord(word, other))),
+    );
 }
 
 /** Every policy the manager named, in the order they named them. Questions name none. */
@@ -120,9 +130,50 @@ export function namedPolicies(text: string): NamedPolicy[] {
   return found;
 }
 
+/*
+ * ============================================================================
+ * "TALKING ON HER CELL PHONE" — A POLICY THE ACCOUNT DESCRIBES
+ * ============================================================================
+ *
+ * District Manager feedback, 21 Oct 2026: "on 10-20-26 <employee> was talking
+ * on her cell phone for over 30 minutes" was cited Standards of Conduct; the
+ * manual has a section for exactly that, "Cell Phone/Smart Watch Policy",
+ * page 19. The manager named no policy, so `namedPolicies` read none.
+ *
+ * An account of the employee's OWN phone or smart watch is read as the words
+ * a manager would name that policy by, and those words go through the same
+ * heading match as a named policy: the manual still decides which section, if
+ * any, they are. Only the employee's own device in use — "on her phone",
+ * "cell phone use", "texting" — never a phone the store or a guest used, and
+ * never "I called her phone", which is how a no-show is described.
+ */
+const DESCRIBED_POLICIES: readonly { readonly describes: RegExp; readonly phrase: string }[] = [
+  {
+    phrase: "cell phone",
+    describes:
+      /\b(?:on|using|use|used|uses|playing\s+(?:on|with)|scrolling\s+(?:on|through)|texting\s+on|looking\s+at|checking|had|has|pulled\s+out)\s+(?:(?:her|his|their|a|the|personal|own)\s+){0,2}(?:cell\s*phones?|cellphones?|smart\s*phones?)\b|\b(?:on|using|use|used|uses|playing\s+(?:on|with)|scrolling\s+(?:on|through)|texting\s+on|looking\s+at|checking|had|has|pulled\s+out)\s+(?:her|his|their)\s+(?:own\s+|personal\s+)?phones?\b|\b(?:cell\s*phone|cellphone|personal\s+phone|phone)\s+(?:use|usage)\b|\btexting\b/i,
+  },
+  { phrase: "smart watch", describes: /\bsmart\s*watch(?:es)?\b/i },
+];
+
+/** The policies the manager's account describes without naming, as the words that would name them. */
+export function describedPolicies(text: string): NamedPolicy[] {
+  const found: NamedPolicy[] = [];
+  for (const sentence of (text ?? "").matchAll(/[^.!?\n]+[.!?]*/g)) {
+    if (/\?\s*$/.test(sentence[0])) continue;
+    for (const { describes, phrase } of DESCRIBED_POLICIES) {
+      const match = describes.exec(sentence[0]);
+      if (match) found.push({ phrase, index: sentence.index + match.index });
+    }
+  }
+  return found.sort((a, b) => a.index - b.index);
+}
+
 export interface NamedManualSection {
   /** What the manager called it. */
   readonly phrase: string;
+  /** True when the account described the policy rather than naming it. */
+  readonly described: boolean;
   /** The section, as the manual names and paginates it. */
   readonly section: ManualSection;
   /** The offense box that section is cited under: its own box where it has one, otherwise Violation of Company Policies. */
@@ -133,17 +184,22 @@ export interface NamedManualSection {
  * The manual section the manager named, or null.
  *
  * THE LATEST NAMED POLICY THAT THE MANUAL ANSWERS, and only one that answers
- * unambiguously. A phrase no heading matches cites nothing.
+ * unambiguously. A phrase no heading matches cites nothing. Only when no named
+ * policy answers, the latest policy the account describes.
  */
 export function namedManualSection(input: {
   readonly text: string;
   readonly chunks: readonly ManualChunk[] | null;
 }): NamedManualSection | null {
   if (!input.chunks || input.chunks.length === 0) return null;
-  for (const named of [...namedPolicies(input.text)].reverse()) {
+  const candidates = [
+    ...[...namedPolicies(input.text)].reverse().map((named) => ({ named, described: false })),
+    ...[...describedPolicies(input.text)].reverse().map((named) => ({ named, described: true })),
+  ];
+  for (const { named, described } of candidates) {
     const section = manualSectionNamedBy(named.phrase, input.chunks);
     if (!section) continue;
-    return { phrase: named.phrase, section, offenseKey: offenseKeyForManualHeading(section.heading) };
+    return { phrase: named.phrase, described, section, offenseKey: offenseKeyForManualHeading(section.heading) };
   }
   return null;
 }
