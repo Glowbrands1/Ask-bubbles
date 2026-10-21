@@ -189,6 +189,17 @@ export async function answerQuestion(
           PERFORMANCE_MANAGEMENT_FRAMEWORK,
           ACTIVE_BRAND.knowledgeScopeId,
         ),
+      /*
+       * THE PINNED POLICY MANUAL, read only when a Corrective Action request
+       * names a policy by a name the forms do not know ("violating visitors at
+       * work policy"), so the reply can name the manual's own section.
+       */
+      policyManual: async () => {
+        const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(
+          ACTIVE_BRAND.knowledgeScopeId,
+        );
+        return manual.ok ? manual.chunks : null;
+      },
     });
     if (proposal) return proposal;
   }

@@ -37,6 +37,7 @@ import {
 import {
   CA_POLICY_QUESTION,
   caPolicyProposalLine,
+  type NamedPolicyReading,
   namesCaPolicy,
   readCaPolicy,
   type CaPolicyReading,
@@ -142,6 +143,8 @@ import type {
 
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
 import { statedPriorActions } from "@/lib/forms/prior-actions";
+import { namedManualSection, namedPolicies } from "@/lib/forms/named-policy-section";
+import type { ManualChunk } from "@/lib/forms/official-policy-manual";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
 import type { AskResponse } from "./types";
@@ -349,6 +352,16 @@ export interface ProposalTurn {
    * that cannot say the framework is healthy has not said it is.
    */
   progressionAvailable?: () => Promise<boolean>;
+  /**
+   * The pinned official policy manual's chunks, or null when it cannot be read.
+   *
+   * A THUNK, read only when a Corrective Action request names a policy that
+   * `ca-policy.ts` does not know by name ("violating visitors at work
+   * policy"), so the reply can say which section of the manual it is — or
+   * that the manual has none by that name. Absent, the reply names the policy
+   * in the manager's own words and the draft looks it up.
+   */
+  policyManual?: () => Promise<readonly ManualChunk[] | null>;
   /**
    * The server's business day (`YYYY-MM-DD`), which supplies the year for a
    * form date typed as month and day. See `lib/forms/form-date-answer.ts`.
@@ -1003,7 +1016,9 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   const content =
     changeKind && facts
       ? employmentChangeContent(changeKind, facts, proposal, context)
-      : proposalContent(proposal, scoped, match, input.today ?? businessToday());
+      : proposalContent(proposal, scoped, match, input.today ?? businessToday(), {
+          namedPolicy: isCorrectiveActionForm(match) ? await namedPolicyFor(scoped.text, input) : null,
+        });
   return turn(withNotes(content, notes), proposal);
 }
 
@@ -2109,11 +2124,36 @@ function choice(summary: TemplateSummary): ChatFormChoice {
  * states which form, what is established, what is missing, and that nothing has
  * been created — because at this phase nothing has.
  */
+/**
+ * The policy a Corrective Action request named by a name `ca-policy.ts` does
+ * not know, looked up among the pinned manual's own headings — or null when it
+ * named none. Never throws: a manual that cannot be read leaves the lookup to
+ * the draft, as before.
+ */
+async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedPolicyReading | null> {
+  if (readCaPolicy(text).stated !== null) return null;
+  const named = namedPolicies(text);
+  if (named.length === 0) return null;
+  const phrase = named[named.length - 1]!.phrase;
+  let chunks: readonly ManualChunk[] | null = null;
+  try {
+    chunks = (await input.policyManual?.()) ?? null;
+  } catch {
+    chunks = null;
+  }
+  if (!chunks || chunks.length === 0) return { phrase, lookup: "unknown" };
+  const found = namedManualSection({ text, chunks });
+  return found
+    ? { phrase: found.phrase, lookup: "found", heading: found.section.heading, page: found.section.page, offenseKey: found.offenseKey }
+    : { phrase, lookup: "missing" };
+}
+
 function proposalContent(
   proposal: ChatFormProposal,
   context: ManagerContext,
   match: TemplateSummary,
   today: string,
+  extra: { namedPolicy?: NamedPolicyReading | null } = {},
 ): string {
   /*
    * ==========================================================================
@@ -2292,6 +2332,7 @@ function proposalContent(
         offersLevel: offeredWarningLevels(match).length > 0,
         earlierWarning: mentionsEarlierWarning(context.text, today),
         priorActions: statedPriorActions(context.text, today),
+        namedPolicy: extra.namedPolicy ?? null,
       });
     }
   }
@@ -2436,7 +2477,12 @@ function correctiveActionReady(
   intake: IntakeReading,
   asksPayroll: boolean,
   policy: CaPolicyReading,
-  warning: { offersLevel: boolean; earlierWarning: boolean; priorActions?: readonly string[] } = {
+  warning: {
+    offersLevel: boolean;
+    earlierWarning: boolean;
+    priorActions?: readonly string[];
+    namedPolicy?: NamedPolicyReading | null;
+  } = {
     offersLevel: true,
     earlierWarning: false,
   },
@@ -2491,7 +2537,7 @@ function correctiveActionReady(
    * it only where the current manual's section supports it. An account that
    * also reads as attendance or a target is a question. See `ca-policy.ts`.
    */
-  const policyLine = caPolicyProposalLine(policy);
+  const policyLine = caPolicyProposalLine(policy, warning.namedPolicy ?? null);
   if (policyLine) lines.push("", policyLine);
 
   /*

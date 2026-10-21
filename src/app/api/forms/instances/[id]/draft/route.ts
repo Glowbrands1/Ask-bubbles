@@ -106,6 +106,7 @@ import {
   withoutDerivedKeys,
 } from "@/lib/forms/exit-draft";
 import { EXIT_DERIVED_KEYS } from "@/lib/forms/exit-facts";
+import { namedManualSection } from "@/lib/forms/named-policy-section";
 import {
   STANDARDS_OF_CONDUCT,
   caPolicyAmbiguousNotice,
@@ -532,6 +533,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           group.key === "offense_type" && group.options.some((option) => option.key === STANDARDS_OF_CONDUCT),
       );
     const caPolicy = offersConductPolicy ? readCaPolicy(notes) : null;
+    /*
+     * A POLICY THE MANAGER NAMED BY THE MANUAL'S OWN HEADING — "violating
+     * visitors at work policy" is the manual's Visitors in the Workplace
+     * (District Manager feedback, 21 Oct 2026). Matched against the pinned
+     * manual's sheet headings, and only where exactly one answers; ticked
+     * under the box that section is cited under. Only when no policy
+     * `ca-policy.ts` knows by name was stated. See `named-policy-section.ts`.
+     */
+    const namedSection =
+      caPolicy && caPolicy.stated === null && manual.ok
+        ? namedManualSection({ text: notes, chunks: manual.chunks })
+        : null;
 
     /*
      * THE SECTIONS THE MANAGER'S OWN WORDS POINT AT — never the model's, so the
@@ -1269,7 +1282,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * Otherwise a conduct incident ticks Standards of Conduct where the manual
      * supports it.
      */
-    const statedKeys = caPolicy ? statedOffenseKeys(caPolicy, notes) : null;
+    const statedKeys = caPolicy
+      ? (statedOffenseKeys(caPolicy, notes) ?? (namedSection ? [namedSection.offenseKey] : null))
+      : null;
     const statedOffense = statedKeys
       ? withStatedOffense({
           checked: enforced.checked,
@@ -1394,7 +1409,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * ONLY FOR A VERSION THAT HAS THE FIELD. The twelve templates that cite no
      * manual never reach the knowledge base for one.
      */
-    const manualSections = manual.ok
+    /* The section the manager named, first, while the box it is cited under is still ticked. */
+    const namedManual =
+      namedSection && (validated.checked.offense_type ?? []).includes(namedSection.offenseKey)
+        ? namedSection.section
+        : null;
+    const tickedSections = manual.ok
       ? manualSectionsFor({
           chunks: manual.chunks,
           offenseKeys: validated.checked.offense_type ?? [],
@@ -1413,6 +1433,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           notes: `${body.topic ?? ""} ${notes}`,
         })
       : [];
+    const manualSections = namedManual
+      ? [namedManual, ...tickedSections.filter((section) => section.heading !== namedManual.heading)]
+      : tickedSections;
 
     const derivedPolicy = applyDerivedPolicyFields({
       document,
@@ -1421,6 +1444,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       checked: validated.checked,
       grounding,
       fieldKeys: new Set(fields.map((field) => field.key)),
+      /* "Violation of Company Policies — Visitors in the Workplace": which policy, where the manager named it. */
+      companyPolicyName: namedManual?.heading ?? null,
       /*
        * THE MANUAL'S OWN WORDING FOR EACH TICKED SECTION, THEN ITS SOURCE —
        * "Source: JBA Policy Manual — Dress Code for The Company, p. 15" — every
@@ -1700,6 +1725,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
                   applied: true,
                   source: "stated",
                   stated: caPolicy.stated,
+                  ...(namedSection && !caPolicy.stated
+                    ? { named: namedSection.phrase, section: namedSection.section.heading, page: namedSection.section.page }
+                    : {}),
                   ticked: statedOffense.ticked,
                   replaced: statedOffense.replaced,
                 }

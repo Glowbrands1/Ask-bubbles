@@ -847,6 +847,39 @@ const DESCRIBED_SECTIONS: readonly {
   },
 ];
 
+/**
+ * Every section heading the manual prints on a sheet, as it prints it — the
+ * same three sources `findManualSection`'s first tier reads, never the
+ * contents page. What a manager-named policy is matched against (see
+ * `named-policy-section.ts`).
+ */
+export function manualSheetHeadings(chunks: readonly ManualChunk[]): string[] {
+  const headings = chunks.flatMap((chunk) => [
+    ...(chunk.sections ?? []).map((entry) => entry.heading),
+    ...(chunk.section ? [chunk.section] : []),
+    ...(isTableOfContents(chunk.content) ? [] : sheetHeadingsOf(chunk.content)),
+  ]);
+  return [...new Set(headings.map((heading) => heading.trim()).filter((heading) => heading !== ""))];
+}
+
+/**
+ * The offense box a section is cited under: the box that already cites it
+ * (Attendance under Tardiness, Late Opening under Tardiness, …), and
+ * otherwise Violation of Company Policies — a policy of The Company, named by
+ * the manager, which no other box names.
+ */
+export const COMPANY_POLICIES_OFFENSE = "company_policies";
+
+export function offenseKeyForManualHeading(heading: string): string {
+  const key = headingKey(heading);
+  const ticked = Object.entries(OFFENSE_MANUAL_SECTIONS).find(([, entry]) =>
+    [...entry.headings, ...(entry.managementHeadings ?? [])].some((name) => headingKey(name) === key),
+  );
+  if (ticked) return ticked[0];
+  const described = DESCRIBED_SECTIONS.find((rule) => rule.headings.some((name) => headingKey(name) === key));
+  return described?.offenseKey ?? COMPANY_POLICIES_OFFENSE;
+}
+
 /* ------------------------------------------------------------ reference --- */
 
 /**
