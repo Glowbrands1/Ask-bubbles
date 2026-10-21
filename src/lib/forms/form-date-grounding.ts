@@ -1,3 +1,5 @@
+import { datesInText } from "./form-date-answer";
+
 /**
  * ============================================================================
  * THE FORM ALREADY KNOWS WHAT DAY IT IS. THE MODEL SHOULD NOT BE GUESSING.
@@ -127,8 +129,39 @@ export function resolveFormDate(iso: string): ResolvedFormDate | null {
  * It says what the date IS and forbids any other, which is the cheapest of the
  * three fixes and the one that prevents rather than repairs.
  */
-export function formDateBrief(resolved: ResolvedFormDate): string {
-  return `FORM DATE: ${resolved.long} (${resolved.weekday}). This is the date of the incident and of this form. Where a date belongs in your text, use exactly "${resolved.long}" and no other date.`;
+export function formDateBrief(resolved: ResolvedFormDate, givenDates: readonly string[] = []): string {
+  /*
+   * ==========================================================================
+   * THE FORM'S DATE IS NOT ALWAYS THE INCIDENT'S
+   * ==========================================================================
+   *
+   * District Manager feedback, 21 Oct 2026: "violating attendance policy on
+   * 10-20-26" was drafted "On October 21, 2026, <employee> was reported as
+   * having violated the attendance policy on October 21, 2026." — the form's
+   * date (the day it was created), twice, in place of the one the manager
+   * gave. This line told the model the form's date WAS the incident's, and
+   * to use no other. Where the manager gave a date that is not the form's,
+   * the model is given the manager's dates and told the form's date is not
+   * one to put in the account.
+   */
+  const others = [...new Set(givenDates)].filter((iso) => iso !== resolved.iso).map(resolveFormDate);
+  const given = others.filter((date): date is ResolvedFormDate => date !== null);
+  if (given.length === 0) {
+    return `FORM DATE: ${resolved.long} (${resolved.weekday}). This is the date of the incident and of this form. Where a date belongs in your text, use exactly "${resolved.long}" and no other date.`;
+  }
+  const listed = [...(givenDates.includes(resolved.iso) ? [resolved] : []), ...given]
+    .map((date) => `"${date.long}"`)
+    .join(", ");
+  return `FORM DATE: ${resolved.long} (${resolved.weekday}). This is the date the form is dated, not necessarily the date of the incident. The dates the manager gave are ${listed}: write each one only for what the manager said happened on it (or was due on it), exactly as listed, and state each date once. Never write the form date in place of a date the manager gave, and use no other date.`;
+}
+
+/**
+ * Every spelling of every calendar date in the manager's notes — "10-20-26"
+ * is also "October 20, 2026" and "10/20". So a draft that writes the date
+ * the manager gave in the form's own style is not taken for an invented one.
+ */
+function noteDateSpellings(notes: string, year: string): string[] {
+  return datesInText(notes, `${year}-01-01`).flatMap((found) => resolveFormDate(found.iso)?.spellings ?? []);
 }
 
 /**
@@ -143,7 +176,7 @@ export function groundedSourceWithFormDate(
   resolved: ResolvedFormDate | null,
 ): string {
   if (!resolved) return notes;
-  return `${notes}\n${resolved.spellings.join(" ")}`;
+  return `${notes}\n${[...resolved.spellings, ...noteDateSpellings(notes, resolved.iso.slice(0, 4))].join(" ")}`;
 }
 
 export interface FormDateCorrection {
@@ -169,7 +202,16 @@ export function correctDraftedDates(
   if (!resolved) return { values, corrected: [] };
 
   const supplied = notes.toLowerCase();
-  const isSupplied = (token: string) => supplied.includes(token.toLowerCase());
+  /*
+   * A DATE THE MANAGER GAVE, IN ANY SPELLING. "by the 10-15-26 deadline" drafted
+   * as "by the October 15, 2026 deadline" is their date, and was being
+   * rewritten to the form's (District Manager feedback, 21 Oct 2026).
+   */
+  const year = resolved.iso.slice(0, 4);
+  const given = new Set(datesInText(notes, `${year}-01-01`).map((found) => found.iso));
+  const isSupplied = (token: string) =>
+    supplied.includes(token.toLowerCase()) ||
+    datesInText(token, `${year}-01-01`).some((found) => given.has(found.iso));
   const meansThisDay = (token: string) =>
     resolved.spellings.some((spelling) => spelling.toLowerCase() === token.toLowerCase());
 

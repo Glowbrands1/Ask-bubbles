@@ -116,7 +116,7 @@ import {
   withConductOffense,
   withStatedOffense,
 } from "@/lib/forms/ca-policy";
-import { priorStepDate } from "@/lib/forms/form-date-answer";
+import { listFormDates, priorStepDate } from "@/lib/forms/form-date-answer";
 import {
   COACHING_CONTEXT_RULES,
   LANGUAGE_CLEANUP_RULES,
@@ -705,7 +705,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
        * THE CHEAPEST OF THE THREE DATE FIXES, and the only one that prevents
        * rather than repairs: a model told the date does not invent one.
        */
-      ...(resolvedFormDate ? [formDateBrief(resolvedFormDate)] : []),
+      ...(resolvedFormDate
+        ? [formDateBrief(resolvedFormDate, listFormDates(notes, businessToday()).map((found) => found.iso))]
+        : []),
       /*
        * THE PLAN OF ACTION — three beats, in order, and nothing else.
        *

@@ -89,8 +89,8 @@ vi.mock("@/lib/auth/server", async () => {
 vi.mock("@/lib/ai/anthropic", () => ({
   getAnthropicClient: () => ({
     messages: {
-      create: async (request: { messages?: { content?: unknown }[] }) => {
-        state.modelNotes.push(JSON.stringify(request.messages ?? []));
+      create: async (request: { system?: unknown; messages?: { content?: unknown }[] }) => {
+        state.modelNotes.push(JSON.stringify([request.system ?? null, request.messages ?? []]));
         return {
           stop_reason: "tool_use",
           content: [{ type: "tool_use", name: "write_form_fields", input: state.draft }],
@@ -531,5 +531,52 @@ describe('"violating visitors at work policy" is the manual\'s Visitors in the W
     const { last } = await conversation([A1]);
 
     expect(last.content).toMatch(/\*\*Policy:\*\* "visitors at work", as you said\. I'll look for that section/);
+  });
+});
+
+/* ========================================================================= */
+/* B, D — THE DATES THE MANAGER GAVE STAY THEIRS ON THE DRAFT                 */
+/* ========================================================================= */
+
+const D1 =
+  "create corrective action for tess varga for violating standards of conduct policy on 10-20-26. tess failed to acknowledge policies in woven by the 10-15-26 deadline.";
+
+describe("the observation keeps the manager's dates", () => {
+  it("B: dated by the incident, the observation states it once and as given", async () => {
+    const { create } = await conversation([B1]);
+    state.draft = {
+      values: { observation: "Observed:\nOn October 20, 2026, Tess Varga did not follow the attendance policy." },
+      checked: {},
+    };
+
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    expect(field(form, "form_date")!.value).toBe("2026-10-20");
+    expect(field(form, "observation")!.value).toBe(
+      "Observed:\nOn October 20, 2026, Tess Varga did not follow the attendance policy.",
+    );
+  });
+
+  it("D: on a form dated the day it is created, neither the incident's date nor the deadline becomes the form's", async () => {
+    const { create } = await conversation([D1]);
+    state.draft = {
+      values: {
+        observation:
+          "Observed:\nOn October 20, 2026, Tess Varga had not acknowledged the policies in Woven by the October 15, 2026 deadline.",
+      },
+      checked: {},
+    };
+
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    const observation = field(form, "observation")!.value!;
+
+    expect(field(form, "form_date")!.value).toBe("2026-10-21");
+    expect(observation).toContain("On October 20, 2026");
+    expect(observation).toContain("by the October 15, 2026 deadline");
+    expect(observation).not.toContain("October 21");
+    /* And the model was told which dates are the manager's. */
+    expect(state.modelNotes.at(-1)).toMatch(/not necessarily the date of the incident/);
+    expect(state.modelNotes.at(-1)).toContain('\\"October 20, 2026\\", \\"October 15, 2026\\"');
   });
 });
