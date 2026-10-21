@@ -1748,9 +1748,18 @@ function turnsAboutThisForm(
   let formStart = 0;
   const readings = context.messages.map((message, index) => {
     const intent = detectTemplateIntent(message.content);
+    /*
+     * "CREATE A WRITTEN CA FOR …" IS THIS FORM'S OWN REQUEST. HR feedback,
+     * 21 Oct 2026: that request, answered "written", was cut from the form's
+     * turns as if it had asked for another form — the rule came over from the
+     * reference platform, where "corrective action" named only the progression
+     * — so the draft was written from the one word "written" and filled nothing.
+     * A request to start one is the Corrective Action Form, as the proposal
+     * itself reads it (`proposeOneForm`); talk about the progression still is not.
+     */
     const otherForm =
       (intent.kind === "explicit" && intent.templateKey !== templateKey) ||
-      intent.kind === "corrective_action";
+      (intent.kind === "corrective_action" && !(intent.requestedCreation && templateKey === "dpoa"));
     const names = extractEmployeeNames(message.content);
     // A turn that also names somebody else is about them too, and stays off this form.
     const otherPerson = names.length > 0 && !names.every(same);

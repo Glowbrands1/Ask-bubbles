@@ -97,6 +97,16 @@ const MAX_TEXT = 4000;
 /** A named warning, longest first so "final written warning" is one mention. */
 const NAMED = /\b(final\s+written|final|written|verbal)\s+warn(?:ing|ings)?\b|\b(final\s+written)\b(?!\s+(?:statement|notice|test|exam|request|record|note|policy|up)\b)/gi;
 
+/**
+ * "Create a written CA for …", "verbal corrective action form", "verbal c/a
+ * 9-1-26" — the level named with the form's own name, which is how HR writes
+ * it. HR feedback, 21 Oct 2026: "create a written CA for …" was asked "Verbal
+ * or Written?", because only "… warning" named a level. Read as "written
+ * warning", so the same rules decide whether it is this form's or history.
+ */
+const LEVELLED_CORRECTIVE_ACTION =
+  /\b(final\s+written|written|verbal)\s+(?:c\.a\.?|c\/a|ca|corrective[\s-]+actions?)(?:\s+forms?)?(?![\w/])/gi;
+
 /** "no, verbal", "actually verbal", "oops i meant verbal" — a correction's lead-in. */
 const LEAD_IN = String.raw`(?:(?:actually|no|nope|sorry|oops|wait|correction|ok|okay|so|rather|i\s+meant|i\s+mean|make\s+that)[\s,.:!-]*)*`;
 
@@ -446,7 +456,10 @@ function pointsToThePast(textBefore: string, today: string): boolean {
  */
 export function warningMentions(text: string, today: string): WarningMention[] {
   // "writen warnig", "verbel warning" — spelled out first, as the form request is (PR #8).
-  const source = canonicalWarningWording((text ?? "").slice(0, MAX_TEXT).replace(/[’‘‛]/g, "'"));
+  const source = canonicalWarningWording((text ?? "").slice(0, MAX_TEXT).replace(/[’‘‛]/g, "'")).replace(
+    LEVELLED_CORRECTIVE_ACTION,
+    "$1 warning",
+  );
   const found: WarningMention[] = [];
   const seen = new Set<number>();
 

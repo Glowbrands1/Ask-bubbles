@@ -81,7 +81,7 @@ const FOLLOW_UP_BEFORE =
  * warning on 10/2" — an instruction about this form — is not affected.
  */
 const PRIOR_STEP_BEFORE =
-  /\b(?:got|gotten|received|was given|were given|been given|given|had|issued|gave|was|were|previous(?:ly)?|prior|already|last time)\b[^.;\n]{0,40}\b(?:warn(?:ing|ings|ed)|write[- ]?ups?|written up|coach(?:ed|ing)?|corrective actions?|disciplin\w*)\b[^.;\n]{0,20}$/i;
+  /\b(?:got|gotten|received|was given|were given|been given|given|had|issued|gave|was|were|previous(?:ly)?|prior|already|last time)\b[^.;\n]{0,40}\b(?:warn(?:ing|ings|ed)|write[- ]?ups?|written up|coach(?:ed|ing)?|corrective actions?|c\/as?|cas?|disciplin\w*)\b[^.;\n]{0,20}$/i;
 
 /**
  * A step that is hers already, with no past-tense verb: "despite / after /
@@ -102,6 +102,20 @@ const OWNED_STEP_BEFORE = new RegExp(
 );
 
 /**
+ * "previous coaching: jba policy manual 1-1-26, verbal ca 9-1-26" — the
+ * employee's history written as a labelled list, the way HR writes it. Every
+ * date in the list is an earlier step. HR feedback, 21 Oct 2026: the second
+ * item sat too far from "previous" for `PRIOR_STEP_BEFORE`, so 9/1 was taken
+ * for an incident and the manager was asked which date goes on the form.
+ *
+ * Only a label followed by ":" / "-" / "=", and only while the list reads as
+ * a list: once it says what she did ("…, she was late again on 10/5"), that
+ * date is the account's.
+ */
+const HISTORY_LIST_BEFORE =
+  /\b(?:previous|prior|past|earlier)\s+(?:coachings?|corrective\s+actions?|c\/as?|cas?|warnings?|write[- ]?ups?|discipline|disciplinary\s+actions?|history|steps?|actions?)(?:\s*(?:and|&|\/|or)\s*(?:coachings?|corrective\s+actions?|c\/as?|cas?|warnings?|write[- ]?ups?))?\s*[:=-]\s(?![^.;\n]*\b(?:she|he|they|was|were|is|again|today|still)\b)[^.;\n]*$/i;
+
+/**
  * "I verbally coached her on 10/5", "talked to him on 9/1": an earlier step told
  * as something the manager DID, which carries no "had / got / previous" marker.
  * Requires an object pronoun, so "coaching form on 10/2" is unaffected.
@@ -116,6 +130,7 @@ function isOtherDate(text: string, index: number): boolean {
   return (
     FOLLOW_UP_BEFORE.test(before) ||
     PRIOR_STEP_BEFORE.test(before) ||
+    HISTORY_LIST_BEFORE.test(before) ||
     OWNED_STEP_BEFORE.test(before) ||
     DID_STEP_BEFORE.test(before)
   );
@@ -151,6 +166,14 @@ export function priorSteps(text: string, today: string): { iso: string; named: s
       // January); after a bare "was/were" it is a date still to come, and not an earlier step.
       if (found.iso > today && /^(?:was|were)\b/i.test(match[0])) return [];
       return [{ iso: earlierYearIfAhead(found, text, today), named: match[0] }];
+    }
+    // A labelled history list: the item's own words name the step, or else the label does.
+    const listed = HISTORY_LIST_BEFORE.exec(before);
+    if (listed) {
+      const label = /^.*?(?=\s*[:=-]\s)/.exec(listed[0])![0];
+      const list = listed[0].slice(label.length).replace(/^\s*[:=-]/, "");
+      const item = list.slice(list.lastIndexOf(",") + 1).trim();
+      return [{ iso: earlierYearIfAhead(found, text, today), named: `${label.trim()}: ${item}` }];
     }
     // A step that is hers already counts only on a day before today — never rolled back a year.
     const owned = OWNED_STEP_BEFORE.exec(before);

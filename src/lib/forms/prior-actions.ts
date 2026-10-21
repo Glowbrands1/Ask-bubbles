@@ -43,11 +43,11 @@ export function signedDate(iso: string): string {
 
 /** The kinds of step the list records, most specific first. */
 const STEPS: readonly [RegExp, string][] = [
-  [/final\s+written\s+warning/i, "Final written warning"],
-  [/written\s+warning/i, "Written warning"],
-  [/verbal\s+warning/i, "Verbal warning"],
+  [/final\s+written\s+(?:warning|corrective\s+action|(?:c\/a|ca)(?![\w/]))/i, "Final written warning"],
+  [/written\s+(?:warning|corrective\s+action|(?:c\/a|ca)(?![\w/]))/i, "Written warning"],
+  [/verbal\s+(?:warning|corrective\s+action|(?:c\/a|ca)(?![\w/]))/i, "Verbal warning"],
   [/write[- ]?ups?|written up/i, "Write-up"],
-  [/corrective actions?/i, "Corrective action"],
+  [/corrective actions?|(?<![\w/])(?:c\/as?|cas?)(?![\w/])/i, "Corrective action"],
   [/coach(?:ed|ing)?/i, "Coaching"],
   [/disciplin\w*/i, "Disciplinary action"],
   [/warn(?:ing|ings|ed)/i, "Warning"],
