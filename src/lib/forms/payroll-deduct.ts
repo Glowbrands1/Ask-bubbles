@@ -311,7 +311,14 @@ export function payrollDeductCorrection(text: string): PayrollDeductAnswer | nul
 const MONEY = String.raw`\$\s?\d[\d,]*(?:\.\d{1,2})?`;
 const AMOUNT_PATTERNS: readonly RegExp[] = [
   new RegExp(String.raw`\b(?:payroll\s+)?deduct(?:ion|ions|ed|ing)?\s+(?:of\s+|for\s+|is\s+|will\s+be\s+|amount\s+(?:of\s+|is\s+)?)?(${MONEY})`, "gi"),
-  new RegExp(String.raw`(${MONEY})\s+(?:will\s+be\s+|is\s+(?:being\s+)?|to\s+be\s+|should\s+be\s+|gets?\s+|being\s+)?deducted\b`, "gi"),
+  /*
+   * "$25 will be payroll deducted", "$25 payroll deduction" (District Manager
+   * feedback, 21 Oct 2026: "state $25 will be payroll deducted" went unread).
+   */
+  new RegExp(
+    String.raw`(${MONEY})\s+(?:will\s+be\s+|is\s+(?:being\s+)?|to\s+be\s+|should\s+be\s+|gets?\s+|being\s+)?(?:payroll[- ]?\s*)?(?:deducted\b|deductions?\b)`,
+    "gi",
+  ),
 ];
 
 /** The amount the manager said would be deducted — "$3.25" — or null. The latest one stated wins. */

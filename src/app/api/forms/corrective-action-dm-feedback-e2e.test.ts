@@ -26,6 +26,10 @@ import type { AccessScope, ChatMessage } from "@/types";
  *   E  "… on 10-20-26 … was talking on her cell phone for over 30 minutes"
  *      named no policy and was cited under the Standards of Conduct, not the
  *      manual's Cell Phone/Smart Watch Policy.
+ *   F  "create verbal ca for … for opening store late on 10-1-26 … payroll
+ *      deduct DOES apply and state $25 will be payroll deducted" — the $25
+ *      was not stated in the Action Plan, and Policy Violated named only the
+ *      Tardiness box, not the Late Opening section Direct policy leads with.
  *
  * Only identity, the model, the knowledge provider, the employee directory
  * read and the database are stand-ins. Every person is synthetic: the
@@ -829,5 +833,52 @@ describe("E: an account of the conduct cites the manual section it describes", (
     const form = await review(reference.instanceId);
     expect(field(form, "offense_type")!.checked).toEqual(["standards_of_conduct"]);
     expect(field(form, "policy_language")!.value).toContain("Source: JBA Policy Manual — Standards of Conduct, p. 12");
+  });
+});
+
+/* ========================================================================= */
+/* F — A LATE OPENING, WITH A PAYROLL DEDUCTION AND ITS AMOUNT               */
+/* ========================================================================= */
+
+const F_LATE =
+  "create verbal ca for tess varga for opening store late on 10-1-26. previous coaching is jba policy manual 1-1-26. payroll deduct DOES apply and state $25 will be payroll deducted";
+
+describe("F: a late opening with a payroll deduction", () => {
+  const LATE_OPENER_DRAFT = {
+    values: { observation: "Observed:\nOn October 1, 2026, Tess Varga opened the store late." },
+    checked: { offense_type: ["tardiness"] },
+  };
+
+  it("dates the form 10-1-26, reads Verbal, the history and the $25, and the Action Plan states the $25", async () => {
+    const { last, proposal, create } = await conversation([F_LATE]);
+
+    expect(proposal.warningLevel).toBe("verbal");
+    expect(last.content).toMatch(/\*\*Type of warning:\*\* Verbal Warning, as you said/);
+    expect(last.content).not.toMatch(WARNING_QUESTION);
+    expect(last.content).not.toMatch(/more than one date/);
+    expect(proposal.formDate).toBe("2026-10-01");
+    expect(proposal.formDateCandidates).toBeUndefined();
+    expect(proposal.payrollDeduct).toBe("yes");
+    expect(last.content).toMatch(/Is payroll deduct applicable\? \*\*Yes\*\*/);
+    expect(last.content).toMatch(
+      /\*\*Prior actions:\*\* Coaching — JBA Policy Manual — signed 01\/01\/2026, as you said/,
+    );
+
+    state.draft = LATE_OPENER_DRAFT;
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    const policy = field(form, "policy_language")!.value!;
+
+    expect(field(form, "form_date")!.value).toBe("2026-10-01");
+    expect(field(form, "prior_actions")!.value).toBe("Coaching — JBA Policy Manual — signed 01/01/2026");
+    expect(field(form, "warning_type")!.checked).toEqual(["verbal"]);
+    expect(field(form, "payroll_deduct")!.checked).toEqual(["yes"]);
+    expect(field(form, "offense_type")!.checked).toEqual(["tardiness"]);
+    expect(policy).toContain("Source: JBA Policy Manual — Late Opening, p. 15");
+    expect(policy.indexOf("Late Opening, p. 15")).toBeLessThan(policy.indexOf("Attendance, p. 14"));
+    /* The manager's amount, as they wrote it. */
+    expect(field(form, "action_plan")!.value).toBe(
+      `Management will review the Late Opening and Attendance policies with Tess. $25 will be deducted from Tess's pay. ${CLOSING}`,
+    );
   });
 });

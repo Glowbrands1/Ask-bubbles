@@ -300,7 +300,12 @@ describe("the amount, and the Action Plan sentence that states it", () => {
     ["payroll deduct of $3.25 is applicable", "$3.25"],
     ["payroll deduct applies and $3.25 will be deducted from check.", "$3.25"],
     ["deduct $12 from her pay", "$12"],
+    /* District Manager feedback, 21 Oct 2026. */
+    ["payroll deduct DOES apply and state $25 will be payroll deducted", "$25"],
+    ["$25 will be payroll-deducted", "$25"],
+    ["a $25 payroll deduction applies", "$25"],
     ["register shortage of $3.25. payroll deduct applies", null],
+    ["register short $25. payroll deduct applies", null],
   ])("%s → %s", (text, amount) => {
     expect(payrollDeductAmount(text)).toBe(amount);
   });
