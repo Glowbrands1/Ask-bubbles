@@ -24,36 +24,23 @@ covers that work. Three defects were still live. This branch fixes them.
 
 ## Fixed on this branch
 
-### 1. A policy heading with a slash never matched
+Items 1 and 2 below were also fixed independently in #63, which merged first.
+Its version is the one on main (`named-policy-section.ts`, `ca-policy.ts`):
+a slash heading names its section by either side, and with no policy named,
+a section is cited when the account says its whole name, but only for a
+section the manual titles a Policy. The reply says "Cell Phone/Smart Watch
+Policy, from what you described". The end-to-end test here exercises that
+version against the production wording.
 
-The JBA manual's heading is "Cell Phone/Smart Watch Policy" (page 19). A named
-policy has to match a heading word for word in both directions, so "cell phone
-policy" failed, because "smart" and "watch" were never said. The tests used a
-made-up heading, "Cell Phone Usage", so nothing caught this. A heading with a
-slash now names one section in two ways. Every word the manager says must
-still be in the heading, and either side of the slash must be said in full.
-The rule still fails closed: "phone" alone, or "attendance" against
-"Seminar/Webinar Attendance", matches nothing.
-*(`src/lib/forms/named-policy-section.ts`)*
+### 1. A policy heading with a slash never matched (fixed by #63)
 
-### 2. A policy the account describes but does not name
+"Cell Phone/Smart Watch Policy" (page 19) needed "smart" and "watch" said
+too, so even "violated the cell phone policy" cited nothing.
+
+### 2. A policy the account describes but does not name (fixed by #63)
 
 "on 10-20-26 [Employee B] was talking on her cell phone for over 30 minutes"
-names no policy, so the model ticked Standards of Conduct. An account that
-describes the employee's own phone or smart watch in use ("on her phone",
-"cell phone use", "texting") is now treated as naming that policy. It then
-goes through the same manual-heading match, so the manual still decides the
-section, its page and its wording. The reply says what the account reads as,
-without claiming the manager said it:
-
-> **Policy:** this reads as the policy manual's **Cell Phone/Smart Watch
-> Policy** (page 19). I'll quote it on the draft under **Violation of Company
-> Policies**. Tell me if a different policy applies.
-
-A policy the manager states, or one they name by the manual's heading, still
-wins. "I called her phone", "the store phone" and "on the phone with a guest"
-do not count as phone use.
-*(`named-policy-section.ts`, `ca-policy.ts`, `src/lib/ai/form-proposal.ts`)*
+names no policy, so the model ticked Standards of Conduct.
 
 ### 3. One employee's answers carried onto another employee's form
 
@@ -71,8 +58,8 @@ it's for …") is not a new request, so it still keeps the account.
 |---|---|
 | `npx tsc --noEmit` | clean |
 | `eslint` on changed files | clean |
-| `npx vitest run` (whole suite) | 399 files passed, 6 skipped. 9,666 tests passed, 59 skipped, 0 failed. |
-| New tests | `corrective-action-dm-feedback-e2e.test.ts`: the production turns replayed through the real proposal flow and the create, draft and review routes. `named-policy-section.test.ts`: slash headings, described policies and fail-closed cases. Before the fix, 3 of the new end-to-end cases failed against the original code. |
+| `npx vitest run` (whole suite, after merging main with #63) | 401 files passed, 6 skipped. 9,669 tests passed, 59 skipped, 0 failed. |
+| New tests | `corrective-action-dm-feedback-e2e.test.ts`: the production turns replayed through the real proposal flow and the create, draft and review routes. Before any fix, 3 of the new end-to-end cases failed against the original code. |
 
 ## For the reporter
 

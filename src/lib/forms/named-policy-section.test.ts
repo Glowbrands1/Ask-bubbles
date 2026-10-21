@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ManualChunk } from "./official-policy-manual";
-import {
-  describedPolicies,
-  manualSectionNamedBy,
-  namedManualSection,
-  namedPolicies,
-  namesHeading,
-} from "./named-policy-section";
+import { manualSectionNamedBy, namedManualSection, namedPolicies, namesHeading } from "./named-policy-section";
 
 /**
  * A policy the manager names, matched against the pinned manual's own sheet
@@ -107,83 +101,5 @@ describe("manualSectionNamedBy — the same reading, for a policy named for an o
     expect(manualSectionNamedBy("workplace", CHUNKS)).toBeNull();
     expect(manualSectionNamedBy("the", CHUNKS)).toBeNull();
     expect(manualSectionNamedBy("visitors at work", null)).toBeNull();
-  });
-});
-
-/*
- * District Manager feedback, 21 Oct 2026: the JBA manual's heading is "Cell
- * Phone/Smart Watch Policy", page 19 — one section, two names.
- */
-describe("a heading with a slash", () => {
-  it.each([
-    ["cell phone", "Cell Phone/Smart Watch Policy"],
-    ["smart watch", "Cell Phone/Smart Watch Policy"],
-    ["cell phone and smart watch", "Cell Phone/Smart Watch Policy"],
-    ["smoking", "Smoking/Vaping"],
-    ["vaping", "Smoking/Vaping"],
-    ["jewelry", "Jewelry/Accessories"],
-  ])("%s → %s", (phrase, heading) => {
-    expect(namesHeading(phrase, heading)).toBe(true);
-  });
-
-  it.each([
-    ["phone", "Cell Phone/Smart Watch Policy"],
-    ["watch", "Cell Phone/Smart Watch Policy"],
-    ["cell phone", "Coupon Collection"],
-    ["attendance", "Seminar/Webinar Attendance"],
-    ["smoking", "Drug, Alcohol and Smoking Policy"],
-  ])("%s is not %s", (phrase, heading) => {
-    expect(namesHeading(phrase, heading)).toBe(false);
-  });
-
-  it("is found in the manual by either name, and only that section", () => {
-    const manual = [
-      ...CHUNKS.filter((chunk) => chunk.section !== "Cell Phone Usage"),
-      sheet(61, "Cell Phone/Smart Watch Policy", 19),
-      sheet(62, "Texting as General Work communications", 19),
-    ];
-    expect(manualSectionNamedBy("cell phone", manual)).toMatchObject({ heading: "Cell Phone/Smart Watch Policy", page: 19 });
-    expect(manualSectionNamedBy("smart watch", manual)).toMatchObject({ heading: "Cell Phone/Smart Watch Policy", page: 19 });
-  });
-});
-
-describe("describedPolicies — the employee's own phone or watch, in use", () => {
-  it.each([
-    "on 10-20-26 tess was talking on her cell phone for over 30 minutes",
-    "she was on her phone at the register",
-    "using his cell phone on the floor",
-    "scrolling through her phone instead of greeting guests",
-    "she was texting during her shift",
-    "cell phone use on the sales floor",
-  ])("%s → cell phone", (text) => {
-    expect(describedPolicies(text).map((named) => named.phrase)).toEqual(["cell phone"]);
-  });
-
-  it("reads a smart watch as its own name for the same policy", () => {
-    expect(describedPolicies("she kept answering calls on her smart watch").map((named) => named.phrase)).toEqual([
-      "smart watch",
-    ]);
-  });
-
-  it.each([
-    "I called her phone twice and she never answered",
-    "she hung up on a guest who called the store phone",
-    "she was on the phone with a guest for 20 minutes",
-    "was she on her phone?",
-  ])("%s → nothing", (text) => {
-    expect(describedPolicies(text)).toEqual([]);
-  });
-
-  it("is cited only when no named policy answers, and says it was described", () => {
-    const manual = [...CHUNKS.filter((chunk) => chunk.section !== "Cell Phone Usage"), sheet(61, "Cell Phone/Smart Watch Policy", 19)];
-    expect(namedManualSection({ text: "she was on her phone for 30 minutes", chunks: manual })).toMatchObject({
-      phrase: "cell phone",
-      described: true,
-      section: { heading: "Cell Phone/Smart Watch Policy", page: 19 },
-      offenseKey: "company_policies",
-    });
-    expect(
-      namedManualSection({ text: "violating visitors at work policy. she was on her phone with a friend", chunks: manual }),
-    ).toMatchObject({ described: false, section: { heading: "Visitors in the Workplace" } });
   });
 });

@@ -751,9 +751,9 @@ describe("an account of personal phone use cites the manual's Cell Phone/Smart W
     expect(proposal.warningLevel).toBe("verbal");
     expect(last.content).not.toMatch(WARNING_QUESTION);
     expect(last.content).toMatch(
-      /\*\*Policy:\*\* this reads as the policy manual's \*\*Cell Phone\/Smart Watch Policy\*\* \(page 19\)/,
+      /\*\*Policy:\*\* Cell Phone\/Smart Watch Policy, from what you described — the policy manual's section on page 19/,
     );
-    expect(last.content).not.toMatch(/as you said — the policy manual's section/);
+    expect(last.content).not.toMatch(/Cell Phone\/Smart Watch Policy, as you said/);
 
     state.draft = {
       values: { observation: "Observed:\nOn October 20, 2026, Tess Varga was talking on her cell phone for over 30 minutes." },

@@ -176,7 +176,7 @@ function stepTopic(topic: string | undefined): string {
  */
 export function statedPriorActions(notes: string, today: string): string[] {
   return priorSteps(notes, today).map((step) =>
-    priorActionLine(stepLabel(step.named), step.iso, stepDescription(step.named), stepTopic(step.topic)),
+    priorActionLine(stepLabel(step.named), step.iso, stepDescription(step.named) || (step.about ?? ""), stepTopic(step.topic)),
   );
 }
 
@@ -246,7 +246,7 @@ export function groundPriorActions(input: {
   for (const step of managerSteps) {
     if (present.has(step.iso)) continue;
     present.add(step.iso);
-    added.push(priorActionLine(stepLabel(step.named), step.iso, stepDescription(step.named), stepTopic(step.topic)));
+    added.push(priorActionLine(stepLabel(step.named), step.iso, stepDescription(step.named) || (step.about ?? ""), stepTopic(step.topic)));
   }
 
   const lines = [...kept, ...added];
