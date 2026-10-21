@@ -252,9 +252,14 @@ const HISTORY_CUE =
 const ADJACENT_HISTORY =
   /\b(?:last|previous|prior|earlier|past|recent|most\s+recent|after|following|despite|since|from|even\s+with|(?:after|following|despite|since)\s+(?:receiving|getting|being\s+given|having\s+(?:had|received|gotten))|has|had|have|is\s+on|was\s+on|'s\s+on|been\s+on|still\s+on|already\s+on|been\s+(?:getting|given|receiving|issued)|(?:first|last|previous|that|one)\s+was)\s+(?:(?:a|an|the|her|his|their|that|this|another)\s+)?(?:(?:last|previous|prior|recent|earlier|formal|documented|first|second|third|final)\s+)?$/i;
 
-/** "Prior actions: …", "history - …", "steps so far: …" — a list of what already happened. */
+/**
+ * "Prior actions: …", "history - …", "steps so far: …", "previous coaching:
+ * …", "previous CA: …" — a list of what already happened. HR, 21 Oct 2026:
+ * "previous coaching: jba policy manual 1-1-26, verbal ca 9-1-26" lists a
+ * verbal CA on file; the form being written is the written one requested.
+ */
 const HISTORY_HEADING =
-  /\b(?:(?:prior|previous|past|earlier)\s+(?:actions?|warnings?|discipline|disciplinary(?:\s+actions?)?|corrective\s+actions?|steps|history|write[- ]?ups?)|history|steps\s+so\s+far|so\s+far|on\s+file)\s*(?:[:\-–—]|includes?\b)/i;
+  /\b(?:(?:prior|previous|past|earlier)\s+(?:actions?|warnings?|discipline|disciplinary(?:\s+actions?)?|corrective\s+actions?|coachings?|cas?|c\/a|steps|history|write[- ]?ups?)|history|steps\s+so\s+far|so\s+far|on\s+file)\s*(?:[:\-–—]|includes?\b)/i;
 
 /** It happened — this form, or an earlier one; the time beside it decides. */
 const PAST_CUE =

@@ -326,6 +326,9 @@ const A1 =
   "create verbal CA for remy calder for violating visitors at work policy on 10-10-26. juno spent 40 minutes talking with friend and ignoring guests. previous coaching was jba policy manual 1-1-26";
 const B1 =
   "create ca form for tess varga for violating attendance policy on 10-20-26. verbal. no payroll deduct. jba manual 1-1-26 for previous coaching";
+/* HR, 21 Oct 2026: the history as a list under one label. */
+const E1 =
+  "create a written CA for tess varga for not attending the monthly meeting on 10-20-26. previous coaching: jba policy manual 1-1-26, verbal ca 9-1-26. payroll deduct not applicable";
 
 beforeEach(async () => {
   for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
@@ -476,6 +479,32 @@ describe("previous coaching stated in chat", () => {
     expect(field(await review(reference.instanceId), "prior_actions")!.value).toBe(
       "Coaching — JBA Manual — signed 01/01/2026",
     );
+  });
+
+  /*
+   * HR, 21 Oct 2026: the history as a list under one label. The verbal CA was
+   * dropped from the prior actions, and its date offered as the form's.
+   */
+  it('"previous coaching: jba policy manual 1-1-26, verbal ca 9-1-26" — every item of the list is history', async () => {
+    const { last, proposal, create } = await conversation([E1]);
+
+    expect(last.content).not.toMatch(/more than one date/);
+    expect(proposal.formDate).toBe("2026-10-20");
+    expect(proposal.formDateCandidates).toBeUndefined();
+    expect(proposal.warningLevel).toBe("written");
+    expect(last.content).toMatch(/\*\*Type of warning:\*\* Written Warning, as you said/);
+    expect(last.content).toMatch(
+      /\*\*Prior actions:\*\* Coaching — JBA Policy Manual — signed 01\/01\/2026; Verbal corrective action — signed 09\/01\/2026, as you said/,
+    );
+
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    expect(field(form, "form_date")!.value).toBe("2026-10-20");
+    expect(field(form, "prior_actions")!.value).toBe(
+      "Coaching — JBA Policy Manual — signed 01/01/2026\nVerbal corrective action — signed 09/01/2026",
+    );
+    expect(field(form, "warning_type")!.checked).toEqual(["written"]);
+    expect(described()).toContain(E1);
   });
 });
 

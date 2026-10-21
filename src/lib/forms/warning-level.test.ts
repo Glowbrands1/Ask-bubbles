@@ -511,6 +511,35 @@ describe("the level in the form's own shorthand, or as a sentence of its own", (
 });
 
 /*
+ * HR, 21 Oct 2026: "create a written CA for … previous coaching: jba policy
+ * manual 1-1-26, verbal ca 9-1-26 …". The verbal CA is an item of the history
+ * list; the form being written is the written one requested.
+ */
+describe("a verbal CA in a labelled history list is history", () => {
+  const DAY = "2026-10-21";
+  const PRODUCTION =
+    "create a written CA for tess varga for not attending the monthly meeting on 10-20-26. previous coaching: jba policy manual 1-1-26, verbal ca 9-1-26. payroll deduct not applicable";
+
+  it("the production request is Written, and its verbal CA is history", () => {
+    expect(statedWarningLevel(PRODUCTION, DAY)).toBe("written");
+    expect(warningMentions(PRODUCTION, DAY)).toEqual([
+      expect.objectContaining({ level: "written", kind: "current" }),
+      expect.objectContaining({ level: "verbal", kind: "historical" }),
+    ]);
+  });
+
+  it.each([
+    "missed the monthly meeting on 10-20-26. previous coaching: jba policy manual 1-1-26, verbal ca",
+    "missed the monthly meeting on 10-20-26. previous CA: verbal ca",
+    "missed the monthly meeting on 10-20-26. prior actions - written warning",
+    "missed the monthly meeting on 10-20-26. previous coaching: jba policy manual attendance and punctuality review, verbal ca",
+  ])("undated, under the label: %s", (text) => {
+    expect(statedWarningLevel(text, DAY)).toBeNull();
+    expect(warningMentions(text, DAY).map((mention) => mention.kind)).toEqual(["historical"]);
+  });
+});
+
+/*
  * ============================================================================
  * THE LEVEL BESIDE THE PAYROLL ANSWER — "Verbal warning, payroll deduct no."
  * ============================================================================

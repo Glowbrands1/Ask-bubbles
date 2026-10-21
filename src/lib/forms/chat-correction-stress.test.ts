@@ -24,8 +24,9 @@ vi.mock("@/config/company/locations", async () =>
  *   - "…→ Employee is not eligible for rehire.." printed two full stops.
  *
  * Unchanged on purpose, and pinned here: the Corrective Action Form takes only
- * its payroll answer from chat; a finalized form, another person, a new
- * request, a question or a forbidden edit is never written to.
+ * its payroll answer from chat; another person, a new request, a question or
+ * a forbidden edit is never written to — and a finalized form never is
+ * either: the correction is made on a new draft of it.
  *
  * All people are synthetic.
  */
@@ -35,11 +36,15 @@ const state = vi.hoisted(() => ({
   status: "draft",
   authorized: true,
   saved: [] as { values: Record<string, string>; checked: Record<string, string[]> }[],
+  savedTo: [] as string[],
   employeeName: "Avery Testperson",
 }));
 
+/* The new draft a finalized form's correction is made on. */
+const REVISION_ID = "33333333-3333-3333-3333-333333333333";
+
 vi.mock("./instance-scope", () => ({
-  authorizeInstance: async () => {
+  authorizeInstance: async (_request: Request, id: string) => {
     if (!state.authorized) throw new Error("not permitted");
     const seed = TEMPLATE_SEEDS.find((entry) => entry.key === state.templateKey)!;
     return {
@@ -51,8 +56,9 @@ vi.mock("./instance-scope", () => ({
           templateName: seed.name,
           variantKey: null,
           employeeName: state.employeeName,
-          status: state.status,
+          status: id === REVISION_ID ? "draft" : state.status,
         },
+        events: [],
         version: { document: parseFormDocument(seed.document), variants: [] },
         values: [],
       },
@@ -61,11 +67,14 @@ vi.mock("./instance-scope", () => ({
 }));
 
 vi.mock("./instances", () => ({
+  findOpenRevision: async () => null,
+  reviseInstance: async () => ({ id: REVISION_ID, templateName: "", employeeName: "", status: "draft" }),
   saveInstanceValues: async (
-    _id: string,
+    id: string,
     submitted: { values: Record<string, string>; checked: Record<string, string[]> },
   ) => {
     state.saved.push(submitted);
+    state.savedTo.push(id);
     return { rejected: [] };
   },
 }));
@@ -87,6 +96,7 @@ beforeEach(() => {
   state.status = "draft";
   state.authorized = true;
   state.saved = [];
+  state.savedTo = [];
   state.employeeName = "Avery Testperson";
 });
 
@@ -185,12 +195,13 @@ describe("rehire, typed without apostrophes and contradicted later (FIXED)", () 
 });
 
 describe("what is never written", () => {
-  it("a finalized form", async () => {
+  it("a finalized form — the correction lands on a new draft of it", async () => {
     state.templateKey = "coaching";
     state.status = "finalized";
     const response = await correct("change the date to yesterday");
-    expect(state.saved).toEqual([]);
-    expect(response!.content).toContain("finalized");
+    expect(state.savedTo).toEqual([REVISION_ID]);
+    expect(state.saved).toEqual([{ values: { form_date: "2026-09-29" }, checked: {} }]);
+    expect(response!.content).toContain("was finalized, so I opened a new draft of it");
   });
 
   it("a form the manager may not edit", async () => {
