@@ -7,6 +7,7 @@ import {
   correctiveActionIntakeRequest,
   describesIncident,
   describesMoreThanTheRequest,
+  NO_INCIDENT_NOTE,
   readCorrectiveActionIntake,
   statesFirstOccurrence,
   statesRepeatedBehaviour,
@@ -505,12 +506,7 @@ describe("6. whether the manager has said what happened", () => {
   });
 
   it("takes a reply to its own What happened ask as the account, in any words", () => {
-    const ask = correctiveActionIntakeRequest({
-      formName: "Corrective Action Form",
-      items: CORRECTIVE_ACTION_INTAKE.filter((item) => item.key === "what_happened"),
-      opening: false,
-      awaitingIncident: true,
-    });
+    const ask = `I can create a **Corrective Action Form** for **Pat Rivera**.\n\n${NO_INCIDENT_NOTE}`;
 
     expect(
       answeredWhatHappened([
@@ -524,12 +520,7 @@ describe("6. whether the manager has said what happened", () => {
   });
 
   it("does not take a question, a bare ok, or an unprompted turn as the account", () => {
-    const ask = correctiveActionIntakeRequest({
-      formName: "Corrective Action Form",
-      items: CORRECTIVE_ACTION_INTAKE.filter((item) => item.key === "what_happened"),
-      opening: false,
-      awaitingIncident: true,
-    });
+    const ask = `I can create a **Corrective Action Form** for **Pat Rivera**.\n\n${NO_INCIDENT_NOTE}`;
 
     expect(answeredWhatHappened([{ role: "assistant", content: ask }, { role: "user", content: "ok" }])).toBe(false);
     expect(
@@ -541,16 +532,24 @@ describe("6. whether the manager has said what happened", () => {
     expect(answeredWhatHappened([{ role: "user", content: "create ca for Pat Rivera" }])).toBe(false);
   });
 
-  it("asks for the account and says the manual will be cited", () => {
-    const text = correctiveActionIntakeRequest({
+  it("says the policy cannot be cited yet, and how to get it cited", () => {
+    expect(NO_INCIDENT_NOTE).toMatch(/haven't told me what happened/);
+    expect(NO_INCIDENT_NOTE).toMatch(/can't cite the policy manual/);
+    expect(NO_INCIDENT_NOTE).toMatch(/redraft the form you created/);
+  });
+
+  it("still recognises the numbered intake's What happened ask", () => {
+    const ask = correctiveActionIntakeRequest({
       formName: "Corrective Action Form",
       items: CORRECTIVE_ACTION_INTAKE.filter((item) => item.key === "what_happened"),
       opening: false,
-      awaitingIncident: true,
     });
 
-    expect(text).toMatch(/^Before I draft the \*\*Corrective Action Form\*\*, tell me what happened:/);
-    expect(text).toMatch(/What happened — a clear description/);
-    expect(text).toMatch(/section and page/);
+    expect(
+      answeredWhatHappened([
+        { role: "assistant", content: ask },
+        { role: "user", content: "she rang up her own soap order with a discount" },
+      ]),
+    ).toBe(true);
   });
 });

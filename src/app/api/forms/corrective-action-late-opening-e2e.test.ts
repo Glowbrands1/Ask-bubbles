@@ -12,7 +12,10 @@ import type { AccessScope, ChatMessage } from "@/types";
  * Ported from the reference platform (production, 20 Oct 2026): "create ca for
  * <name>" was offered a Create draft with nothing described. The draft wrote
  * nothing, the form was completed by hand, and the policy wording — the
- * manual's Late Opening section — was pasted in with no section or page.
+ * manual's Late Opening section — was pasted in with no section or page. The
+ * form is still offered on a name alone, the card says why its policy line
+ * cannot be cited yet, and telling Ask Bubbles what happened redrafts the form
+ * on screen with the section and page (`chat-redraft.ts`).
  *
  * Replayed through the real proposal flow, `createInlineForm`, and the real
  * create / draft / review routes, with the shipped Buff City Soap store roster.
@@ -153,6 +156,8 @@ const { createInlineForm } = await import("@/features/chat/create-inline-form");
 const instancesRoute = await import("./instances/route");
 const instanceRoute = await import("./instances/[id]/route");
 const draftRoute = await import("./instances/[id]/draft/route");
+const { redraftActiveForm } = await import("@/lib/forms/chat-redraft");
+const { saveInstanceValues } = await import("@/lib/forms/instances");
 
 function joinOverview() {
   for (const row of store.form_instances ?? []) {
@@ -317,7 +322,7 @@ beforeEach(async () => {
 /* ========================================================================= */
 
 describe("a Corrective Action asked for by name alone", () => {
-  it("asks what happened, and offers no Create draft until it is told", async () => {
+  it("is offered, and says the policy manual cannot be cited until Ask Bubbles is told what happened", async () => {
     const { proposal, last } = await conversation(["create ca for Pat Rivera"]);
 
     expect(proposal).toMatchObject({
@@ -325,13 +330,13 @@ describe("a Corrective Action asked for by name alone", () => {
       employeeName: "Pat Rivera",
       locationId: "loc-264",
       awaitingIncident: true,
-      supportsInlineDraft: false,
+      supportsInlineDraft: true,
     });
-    expect(last.content).toMatch(/Before I draft the \*\*Corrective Action Form\*\*, tell me what happened/);
-    expect(last.content).toMatch(/What happened — a clear description/);
-    expect(last.content).toMatch(/cite the policy manual section and page/);
-    expect(last.content).not.toMatch(/create the draft here/i);
-    expect(store.form_instances).toHaveLength(0);
+    expect(last.content).toMatch(/I can create a \*\*Corrective Action Form\*\* for \*\*Pat Rivera\*\*/);
+    expect(last.content).toMatch(/haven't told me what happened yet/);
+    expect(last.content).toMatch(/can't cite the policy manual/);
+    expect(last.content).not.toMatch(/from what you've described/);
+    expect(last.content).toMatch(/create the draft here/i);
   });
 
   it("takes the reply as the account and continues the intake, in words no topic list names", async () => {
@@ -343,7 +348,7 @@ describe("a Corrective Action asked for by name alone", () => {
     expect(responses[1]!.formProposal!.templateKey).toBe("dpoa");
     expect(proposal.awaitingIncident).toBeUndefined();
     expect(proposal.supportsInlineDraft).toBe(true);
-    expect(responses[1]!.content).toMatch(/create the draft here/i);
+    expect(responses[1]!.content).toMatch(/from what you've described/);
   });
 });
 
@@ -390,5 +395,141 @@ describe("Direct policy from official manual, for a late opener", () => {
 
     expect(policy).toContain("Source: JBA Policy Manual — Attendance, p. 14");
     expect(policy).not.toMatch(/Late Opening/);
+  });
+});
+
+/* ========================================================================= */
+/* CREATED FROM A NAME ALONE, THEN REDRAFTED FROM THE ACCOUNT                 */
+/* ========================================================================= */
+
+describe("a form created from a name alone is redrafted, with the citation, once the manager says what happened", () => {
+  const chatRequest = () =>
+    new Request("https://app.test/api/chat", { method: "POST", headers: { cookie: "session=abc" } });
+
+  async function blankForm() {
+    const played = await conversation(["create ca for Pat Rivera"]);
+    /* Nothing to draft from: the model writes nothing. */
+    state.draft = { values: {}, checked: {} };
+    const { reference } = await played.create();
+    const blank = await review(reference.instanceId);
+    expect(blank.values.filter((row) => row.filledBy === "ai")).toEqual([]);
+    return { ...played, instanceId: reference.instanceId };
+  }
+
+  it("redrafts the form on screen, and Direct policy cites Late Opening, p. 15, then Attendance, p. 14", async () => {
+    const { instanceId, messages } = await blankForm();
+    state.draft = {
+      values: {
+        observation: "Observed:\nPat Rivera was scheduled to open the store at 9:30 on 10/16 and arrived at 11:23.",
+      },
+      checked: { offense_type: ["tardiness"] },
+    };
+
+    const answer = await redraftActiveForm({
+      request: chatRequest(),
+      instanceId,
+      question: "Pat was scheduled to open the store at 9:30 on 10/16 and did not arrive until 11:23",
+      history: messages,
+    });
+
+    expect(answer!.content).toMatch(/Redrafted the \*\*Corrective Action Form\*\* for \*\*Pat Rivera\*\*/);
+    expect(answer!.content).toMatch(/cites its section and page/);
+    expect(answer!.formUpdate!.instanceId).toBe(instanceId);
+    expect(answer!.formUpdate!.updated).toContain("policy_language");
+    expect(store.form_instances).toHaveLength(1);
+
+    const form = await review(instanceId);
+    const policy = field(form, "policy_language")!.value!;
+    expect(field(form, "observation")!.value).toContain("scheduled to open the store");
+    expect(field(form, "offense_type")!.checked).toEqual(["tardiness"]);
+    expect(policy).toContain("When an employee assigned to open a location is unable to open the location");
+    expect(policy).toContain("Source: JBA Policy Manual — Late Opening, p. 15");
+    expect(policy).toContain("Source: JBA Policy Manual — Attendance, p. 14");
+    expect(policy.indexOf("Late Opening, p. 15")).toBeLessThan(policy.indexOf("Attendance, p. 14"));
+    expect(field(form, "policy_language")!.provenance).toMatchObject({ verified: true });
+  });
+
+  it("keeps what the manager typed; their tick decides the section; only the uncited policy line is replaced", async () => {
+    const { instanceId, messages } = await blankForm();
+    await saveInstanceValues(
+      instanceId,
+      {
+        values: {
+          observation: "Observed:\nWhat the manager wrote.",
+          policy_language: "Openers have to be on time.",
+        },
+        checked: { offense_type: ["tardiness"] },
+      },
+      "admin-1",
+    );
+    /* The model would tick another box; the manager's tick decides the section. */
+    state.draft = {
+      values: { observation: "Observed:\nThe model's account." },
+      checked: { offense_type: ["standards_of_conduct"] },
+    };
+
+    const answer = await redraftActiveForm({
+      request: chatRequest(),
+      instanceId,
+      question: "She was supposed to open the Makery at 9:30 and nobody was there until 11:23",
+      history: messages,
+    });
+    expect(answer!.content).toMatch(/kept as you wrote it/);
+
+    const form = await review(instanceId);
+    expect(field(form, "observation")!.value).toBe("Observed:\nWhat the manager wrote.");
+    expect(field(form, "offense_type")!.checked).toEqual(["tardiness"]);
+    const policy = field(form, "policy_language")!.value!;
+    expect(policy).not.toMatch(/Openers have to be on time/);
+    expect(policy).toContain("Source: JBA Policy Manual — Late Opening, p. 15");
+  });
+
+  it("keeps a policy line the manager typed when the redraft cannot cite one", async () => {
+    const { instanceId, messages } = await blankForm();
+    state.manual = null;
+    await saveInstanceValues(
+      instanceId,
+      { values: { observation: "Observed:\nWhat the manager wrote.", policy_language: "Openers have to be on time." } },
+      "admin-1",
+    );
+    state.draft = { values: { observation: "Observed:\nPat opened late." }, checked: { offense_type: ["tardiness"] } };
+
+    const answer = await redraftActiveForm({
+      request: chatRequest(),
+      instanceId,
+      question: "Pat was scheduled to open the store at 9:30 and did not arrive until 11:23",
+      history: messages,
+    });
+
+    expect(answer!.content).toMatch(/couldn't match what you described to a section of the policy manual/);
+    const form = await review(instanceId);
+    expect(field(form, "policy_language")!.value).toBe("Openers have to be on time.");
+    expect(field(form, "observation")!.value).toBe("Observed:\nWhat the manager wrote.");
+  });
+
+  it("leaves a question, and a form Ask Bubbles already drafted, to the ordinary answer", async () => {
+    const { instanceId, messages } = await blankForm();
+    expect(
+      await redraftActiveForm({
+        request: chatRequest(),
+        instanceId,
+        question: "what does the late opening policy say?",
+        history: messages,
+      }),
+    ).toBeNull();
+
+    const drafted = await conversation([
+      "Create a corrective action for Pat Rivera. She was 20 minutes late for her 2pm shift on 10/16.",
+    ]);
+    state.draft = { values: { observation: "Observed:\nPat arrived late." }, checked: { offense_type: ["tardiness"] } };
+    const { reference } = await drafted.create();
+    expect(
+      await redraftActiveForm({
+        request: chatRequest(),
+        instanceId: reference.instanceId,
+        question: "Pat was scheduled to open the store at 9:30 and did not arrive until 11:23",
+        history: drafted.messages,
+      }),
+    ).toBeNull();
   });
 });

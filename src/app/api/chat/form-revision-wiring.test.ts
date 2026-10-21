@@ -17,9 +17,9 @@ vi.mock("@/config/company/locations", async () =>
 
 const ORIGINAL = { ...process.env };
 
-async function load(revision: unknown) {
+async function load(revision: unknown, redraft: unknown = null) {
   vi.resetModules();
-  const seen = { answered: 0, revised: [] as unknown[] };
+  const seen = { answered: 0, revised: [] as unknown[], redrafted: [] as unknown[] };
 
   vi.doMock("@/lib/auth/server", () => ({
     authorizeRequest: async (_request: Request, permission: string) => ({
@@ -46,6 +46,12 @@ async function load(revision: unknown) {
     reviseActiveForm: async (input: unknown) => {
       seen.revised.push(input);
       return revision;
+    },
+  }));
+  vi.doMock("@/lib/forms/chat-redraft", () => ({
+    redraftActiveForm: async (input: unknown) => {
+      seen.redrafted.push(input);
+      return redraft;
     },
   }));
   vi.doMock("@/lib/supabase/server", () => ({
@@ -82,7 +88,7 @@ beforeEach(() => {
 
 afterEach(() => {
   process.env = { ...ORIGINAL };
-  for (const path of ["@/lib/auth/server", "@/lib/ai/server-ask", "@/lib/forms/chat-correction", "@/lib/forms/chat-revision", "@/lib/supabase/server"]) {
+  for (const path of ["@/lib/auth/server", "@/lib/ai/server-ask", "@/lib/forms/chat-correction", "@/lib/forms/chat-revision", "@/lib/forms/chat-redraft", "@/lib/supabase/server"]) {
     vi.doUnmock(path);
   }
   vi.resetModules();
@@ -140,6 +146,52 @@ describe("a revision of the open form", () => {
     const { route, seen } = await load({ content: "should not be used" });
     await route.POST(ask({ history: [] }));
     expect(seen.revised).toHaveLength(0);
+    expect(seen.answered).toBe(1);
+  });
+});
+
+/*
+ * "HERE'S WHAT HAPPENED" on a Corrective Action Form created from a name alone
+ * is a redraft of that form (`chat-redraft.ts`), tried after the correction and
+ * the revision, and only where the browser named a created form.
+ */
+describe("an account of what happened, on the open form", () => {
+  it("is answered by the redraft, with the form update the editor listens for", async () => {
+    const { route, seen } = await load(null, {
+      content: "Redrafted the **Corrective Action Form** for **Pat Rivera** from what you described.",
+      citations: [],
+      coverage: "not_applicable",
+      formUpdate: { instanceId: INSTANCE, updated: ["observation", "policy_language"] },
+    });
+    const response = await route.POST(
+      ask({
+        activeFormInstanceId: INSTANCE,
+        history: [],
+        question: "Pat was scheduled to open the store at 9:30 and did not arrive until 11:23",
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status, JSON.stringify(payload)).toBe(200);
+    expect(payload.formUpdate).toEqual({ instanceId: INSTANCE, updated: ["observation", "policy_language"] });
+    expect(seen.redrafted).toHaveLength(1);
+    expect(seen.redrafted[0]).toMatchObject({ instanceId: INSTANCE });
+    expect(seen.answered).toBe(0);
+  });
+
+  it("is not tried when the revision answered the turn", async () => {
+    const { route, seen } = await load(
+      { content: "Updated.", citations: [], coverage: "not_applicable" },
+      { content: "should not be used" },
+    );
+    await route.POST(ask({ activeFormInstanceId: INSTANCE, history: [] }));
+    expect(seen.redrafted).toHaveLength(0);
+  });
+
+  it("is never tried without a form the conversation created", async () => {
+    const { route, seen } = await load(null, { content: "should not be used" });
+    await route.POST(ask({ history: [] }));
+    expect(seen.redrafted).toHaveLength(0);
     expect(seen.answered).toBe(1);
   });
 });
