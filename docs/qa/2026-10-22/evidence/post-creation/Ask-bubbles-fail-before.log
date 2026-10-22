@@ -1,0 +1,107 @@
+
+ RUN  v4.1.11 /home/user/Ask-bubbles
+
+ ❯ src/lib/forms/qa-f01b-payroll-fail-safe.test.ts (43 tests | 4 failed) 93ms
+     × we cancelled the $25 payroll deduction → No 8ms
+     × cancel the $25 payroll deduction → No 2ms
+     × the $25 payroll deduction was cancelled → No 1ms
+     × the payroll deduction was called off → No 1ms
+stdout | src/app/api/forms/qa-payroll-after-creation-e2e.test.ts > QA 22 Oct 2026: a payroll answer corrected after the form exists is never left as a silent Yes > Yes, then 'we cancelled the $25 payroll deduction' → No on the form, and the Action Plan no longer states a deduction
+{"event":"forms.template_sync.completed","level":"info","created":["coaching","dpoa","policy-review","sdit-epp","tsd-epp","asd-sdit-epp","fttc-epp","dmit-epp-tsd","dmit-epp-dmit","follow-up-coaching","resignation-exit","demotion","position-transfer","prescreen-phone-interview","tanning-consultant-interview","management-interview-round-1","management-interview-round-2"],"revised":[],"renamed":[],"heldBack":[],"failed":[],"repaired":[],"retired":[]}
+
+stdout | src/app/api/forms/qa-payroll-after-creation-e2e.test.ts > QA 22 Oct 2026: a payroll answer corrected after the form exists is never left as a silent Yes > Yes, then 'cancel the $25 payroll deduction' → No on the form, and the Action Plan no longer states a deduction
+{"event":"forms.template_sync.completed","level":"info","created":["coaching","dpoa","policy-review","sdit-epp","tsd-epp","asd-sdit-epp","fttc-epp","dmit-epp-tsd","dmit-epp-dmit","follow-up-coaching","resignation-exit","demotion","position-transfer","prescreen-phone-interview","tanning-consultant-interview","management-interview-round-1","management-interview-round-2"],"revised":[],"renamed":[],"heldBack":[],"failed":[],"repaired":[],"retired":[]}
+
+stdout | src/app/api/forms/qa-payroll-after-creation-e2e.test.ts > QA 22 Oct 2026: a payroll answer corrected after the form exists is never left as a silent Yes > Yes, then 'hold off on the $25 payroll deduction' → the answer is cleared, the plan states no deduction, and the manager is asked
+{"event":"forms.template_sync.completed","level":"info","created":["coaching","dpoa","policy-review","sdit-epp","tsd-epp","asd-sdit-epp","fttc-epp","dmit-epp-tsd","dmit-epp-dmit","follow-up-coaching","resignation-exit","demotion","position-transfer","prescreen-phone-interview","tanning-consultant-interview","management-interview-round-1","management-interview-round-2"],"revised":[],"renamed":[],"heldBack":[],"failed":[],"repaired":[],"retired":[]}
+
+stdout | src/app/api/forms/qa-payroll-after-creation-e2e.test.ts > QA 22 Oct 2026: a payroll answer corrected after the form exists is never left as a silent Yes > Yes, then 'not sure about the payroll deduction anymore' → the answer is cleared, the plan states no deduction, and the manager is asked
+{"event":"forms.template_sync.completed","level":"info","created":["coaching","dpoa","policy-review","sdit-epp","tsd-epp","asd-sdit-epp","fttc-epp","dmit-epp-tsd","dmit-epp-dmit","follow-up-coaching","resignation-exit","demotion","position-transfer","prescreen-phone-interview","tanning-consultant-interview","management-interview-round-1","management-interview-round-2"],"revised":[],"renamed":[],"heldBack":[],"failed":[],"repaired":[],"retired":[]}
+
+stdout | src/app/api/forms/qa-payroll-after-creation-e2e.test.ts > QA 22 Oct 2026: a payroll answer corrected after the form exists is never left as a silent Yes > on a finalized form, the change is made on a new draft and the signed record is untouched > an unclear statement → the draft's answer is cleared and asked, never a Yes
+{"event":"forms.template_sync.completed","level":"info","created":["coaching","dpoa","policy-review","sdit-epp","tsd-epp","asd-sdit-epp","fttc-epp","dmit-epp-tsd","dmit-epp-dmit","follow-up-coaching","resignation-exit","demotion","position-transfer","prescreen-phone-interview","tanning-consultant-interview","management-interview-round-1","management-interview-round-2"],"revised":[],"renamed":[],"heldBack":[],"failed":[],"repaired":[],"retired":[]}
+
+ ❯ src/app/api/forms/qa-payroll-after-creation-e2e.test.ts (8 tests | 5 failed) 840ms
+     × Yes, then 'we cancelled the $25 payroll deduction' → No on the form, and the Action Plan no longer states a deduction 442ms
+     × Yes, then 'cancel the $25 payroll deduction' → No on the form, and the Action Plan no longer states a deduction 93ms
+     × Yes, then 'hold off on the $25 payroll deduction' → the answer is cleared, the plan states no deduction, and the manager is asked 57ms
+     × Yes, then 'not sure about the payroll deduction anymore' → the answer is cleared, the plan states no deduction, and the manager is asked 63ms
+       × an unclear statement → the draft's answer is cleared and asked, never a Yes 40ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/forms/qa-f01b-payroll-fail-safe.test.ts > a cancelled deduction is a No; a denied cancellation is asked (QA, 22 Oct 2026) > we cancelled the $25 payroll deduction → No
+ FAIL  src/lib/forms/qa-f01b-payroll-fail-safe.test.ts > a cancelled deduction is a No; a denied cancellation is asked (QA, 22 Oct 2026) > cancel the $25 payroll deduction → No
+ FAIL  src/lib/forms/qa-f01b-payroll-fail-safe.test.ts > a cancelled deduction is a No; a denied cancellation is asked (QA, 22 Oct 2026) > the $25 payroll deduction was cancelled → No
+ FAIL  src/lib/forms/qa-f01b-payroll-fail-safe.test.ts > a cancelled deduction is a No; a denied cancellation is asked (QA, 22 Oct 2026) > the payroll deduction was called off → No
+AssertionError: expected null to be 'no' // Object.is equality
+
+- Expected:
+"no"
+
++ Received:
+null
+
+ ❯ src/lib/forms/qa-f01b-payroll-fail-safe.test.ts:138:39
+    136|     "the payroll deduction was called off",
+    137|   ])("%s → No", (text) => {
+    138|     expect(statedPayrollDeduct(text)).toBe("no");
+       |                                       ^
+    139|     expect(payrollDeductCorrection(text)).toBe("no");
+    140|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  src/app/api/forms/qa-payroll-after-creation-e2e.test.ts > QA 22 Oct 2026: a payroll answer corrected after the form exists is never left as a silent Yes > Yes, then 'we cancelled the $25 payroll deduction' → No on the form, and the Action Plan no longer states a deduction
+ FAIL  src/app/api/forms/qa-payroll-after-creation-e2e.test.ts > QA 22 Oct 2026: a payroll answer corrected after the form exists is never left as a silent Yes > Yes, then 'cancel the $25 payroll deduction' → No on the form, and the Action Plan no longer states a deduction
+AssertionError: expected 'proposeFormForTurn' to be 'correctActiveForm' // Object.is equality
+
+Expected: "correctActiveForm"
+Received: "proposeFormForTurn"
+
+ ❯ src/app/api/forms/qa-payroll-after-creation-e2e.test.ts:364:30
+    362|       expect(await planDeducts(id)).toBe(true);
+    363|       const step = await turn(id, history, text);
+    364|       expect(step.handledBy).toBe("correctActiveForm");
+       |                              ^
+    365|       expect(await payrollOf(id)).toEqual(["no"]);
+    366|       expect(await planDeducts(id)).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  src/app/api/forms/qa-payroll-after-creation-e2e.test.ts > QA 22 Oct 2026: a payroll answer corrected after the form exists is never left as a silent Yes > Yes, then 'hold off on the $25 payroll deduction' → the answer is cleared, the plan states no deduction, and the manager is asked
+ FAIL  src/app/api/forms/qa-payroll-after-creation-e2e.test.ts > QA 22 Oct 2026: a payroll answer corrected after the form exists is never left as a silent Yes > Yes, then 'not sure about the payroll deduction anymore' → the answer is cleared, the plan states no deduction, and the manager is asked
+AssertionError: expected 'proposeFormForTurn' to be 'correctActiveForm' // Object.is equality
+
+Expected: "correctActiveForm"
+Received: "proposeFormForTurn"
+
+ ❯ src/app/api/forms/qa-payroll-after-creation-e2e.test.ts:376:30
+    374|       const { id, history } = await createWith(`${OPEN} Payroll deduct…
+    375|       const step = await turn(id, history, text);
+    376|       expect(step.handledBy).toBe("correctActiveForm");
+       |                              ^
+    377|       expect(step.content).toMatch(/\*\*Is payroll deduct applicable\?…
+    378|       expect(await payrollOf(id)).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  src/app/api/forms/qa-payroll-after-creation-e2e.test.ts > QA 22 Oct 2026: a payroll answer corrected after the form exists is never left as a silent Yes > on a finalized form, the change is made on a new draft and the signed record is untouched > an unclear statement → the draft's answer is cleared and asked, never a Yes
+TypeError: Cannot read properties of undefined (reading 'id')
+ ❯ finalizedAndDraft src/app/api/forms/qa-payroll-after-creation-e2e.test.ts:353:126
+    351| const finalizedAndDraft = () => {
+    352|   const rows = store.form_instances ?? [];
+    353|   return { finalized: rows.find((r) => r.status === "finalized")!.id a…
+       |                                                                                                                              ^
+    354| };
+    355|
+ ❯ src/app/api/forms/qa-payroll-after-creation-e2e.test.ts:415:36
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  9 failed | 42 passed (51)
+   Start at  17:26:11
+   Duration  4.97s (transform 3.71s, setup 0ms, import 4.40s, tests 933ms, environment 0ms)
+

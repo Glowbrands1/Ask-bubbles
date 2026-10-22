@@ -1,7 +1,7 @@
 From 711f893e7a2d6ba1f5eab4ef77c7df34465979c7 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Thu, 22 Oct 2026 15:27:52 +0000
-Subject: [PATCH 3/4] Fix QA payroll amount: the comma that ends a clause is
+Subject: [PATCH 3/5] Fix QA payroll amount: the comma that ends a clause is
  not part of the amount
 
 Root cause (src/lib/forms/payroll-deduct.ts, MONEY): the amount pattern

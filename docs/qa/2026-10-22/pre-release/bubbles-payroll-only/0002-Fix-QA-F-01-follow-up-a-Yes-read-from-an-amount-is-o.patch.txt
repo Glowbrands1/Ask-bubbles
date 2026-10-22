@@ -1,7 +1,7 @@
 From 28971637a02de68018c3b4e3c358c92f9fe9f96c Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Thu, 22 Oct 2026 14:31:49 +0000
-Subject: [PATCH 2/4] Fix QA F-01 follow-up: a Yes read from an amount is only
+Subject: [PATCH 2/5] Fix QA F-01 follow-up: a Yes read from an amount is only
  a Yes when nothing beside it denies it
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

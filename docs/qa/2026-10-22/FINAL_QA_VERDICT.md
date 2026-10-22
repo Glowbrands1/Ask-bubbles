@@ -1,5 +1,7 @@
 # Final QA verdict — Ask Bubbles (Buff City Soap) — 22 Oct 2026 (after the overnight validation)
 
+> **Superseded by the final safety check:** see `FINAL_RELEASE_RECOMMENDATION.md` (final code heads Sunny `880d19a`, Bubbles `225bf10`, payroll-only `56c45e1`; one more payroll defect fixed — corrections after the form exists).
+
 ## Recommendation: **PASS for release — subject to your approval and the owner acknowledgements below.** Expedite: production `main` has a live payroll defect that this branch fixes.
 
 Every release-blocking defect found by QA is fixed and verified; the full suite, typecheck, lint, build, local-stack integration (25/25), Playwright (9/9), payroll and regression probes pass with no regression against `main`. What remains is Low and pre-existing, plus decisions that are yours or the owner's (not code defects).

@@ -1,7 +1,7 @@
 From 483e6b44cf50be543a96f3e9a307dfffe265a491 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Thu, 22 Oct 2026 15:38:57 +0000
-Subject: [PATCH 4/4] Fix QA payroll: a withdrawn payroll answer stays on the
+Subject: [PATCH 4/5] Fix QA payroll: a withdrawn payroll answer stays on the
  open form and is asked again
 
 Root cause (src/lib/ai/form-proposal.ts, the open Corrective Action
