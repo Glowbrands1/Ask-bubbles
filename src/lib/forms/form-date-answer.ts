@@ -363,6 +363,53 @@ export function priorSteps(
   text: string,
   today: string,
 ): { iso: string; named: string; topic?: string; about?: string }[] {
+  /*
+   * A DATE THE MANAGER CORRECTED IS THE STEP'S DATE: "the verbal ca was on
+   * 9-2-26 not 9-1-26" moves the verbal CA listed on 9/1 to 9/2, once.
+   */
+  const corrected = correctedDates(text, today);
+  const seen = new Set<string>();
+  return stepsAsWritten(text, today)
+    .map((step) => (corrected.has(step.iso) ? { ...step, iso: corrected.get(step.iso)! } : step))
+    .filter((step) => {
+      const key = `${step.iso}|${step.named.toLowerCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+/*
+ * ============================================================================
+ * "ON 10-19, NOT 10-20" — A DATE THE MANAGER CORRECTED
+ * ============================================================================
+ *
+ * QA, 22 Oct 2026: a correction typed before the form was created ("the
+ * verbal ca was on 9-2-26 not 9-1-26") left the wrong date on the history
+ * line and offered both as the form's date. A sentence with two dates, one of
+ * them after "not" / "instead of" / "rather than", retracts that one and puts
+ * the other in its place. Returns retracted → replacement.
+ */
+const RETRACTS_BEFORE = /\b(?:not|instead\s+of|rather\s+than|isn['’]?t|wasn['’]?t|was\s+not|is\s+not)\s*(?:on\s+)?$/i;
+
+export function correctedDates(text: string, today: string): Map<string, string> {
+  const corrected = new Map<string, string>();
+  for (const sentence of (text ?? "").split(/(?<=[.!?;\n])\s*/)) {
+    const dates = datesInText(sentence, today);
+    if (dates.length !== 2) continue;
+    const [first, second] = dates as [DateInText, DateInText];
+    const firstOut = RETRACTS_BEFORE.test(sentence.slice(0, first.index));
+    const secondOut = RETRACTS_BEFORE.test(sentence.slice(0, second.index));
+    if (secondOut && !firstOut && first.iso !== second.iso) corrected.set(second.iso, first.iso);
+    else if (firstOut && !secondOut && first.iso !== second.iso) corrected.set(first.iso, second.iso);
+  }
+  return corrected;
+}
+
+function stepsAsWritten(
+  text: string,
+  today: string,
+): { iso: string; named: string; topic?: string; about?: string }[] {
   const dates = datesInText(text, today);
   const steps = labelledSteps(text, dates);
   return dates.flatMap((found) => {
@@ -525,7 +572,16 @@ export function extractFormDate(text: string, today: string): string | null {
 export function listFormDates(text: string, today: string): { iso: string; index: number }[] {
   const dates = datesInText(text, today);
   const labelled = labelledSteps(text, dates);
-  const kept = dates.filter((found) => !isOtherDate(text, found, labelled));
+  /*
+   * A RETRACTED DATE IS NOBODY'S, and the date that corrects an earlier
+   * step's is that step's: neither is offered as the form's date.
+   */
+  const corrected = correctedDates(text, today);
+  const stepDates = new Set(stepsAsWritten(text, today).map((step) => step.iso));
+  const correctsAStep = new Set([...corrected].filter(([from]) => stepDates.has(from)).map(([, to]) => to));
+  const kept = dates
+    .filter((found) => !isOtherDate(text, found, labelled))
+    .filter((found) => !corrected.has(found.iso) && !correctsAStep.has(found.iso));
   // A date given to the FORM leads — the last one typed first, so a later "date it 10/21" corrects an earlier one.
   const explicit = kept.filter((found) => isExplicitFormDate(text, found)).reverse();
   return [...explicit, ...kept.filter((found) => !explicit.includes(found))].map(({ iso, index }) => ({ iso, index }));

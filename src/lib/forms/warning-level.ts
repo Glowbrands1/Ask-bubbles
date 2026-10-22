@@ -372,6 +372,14 @@ function levelOf(word: string): WarningLevel {
   return w === "verbal" ? "verbal" : "written";
 }
 
+/**
+ * A request put to the assistant as a question, ending right before the level:
+ * "can you make a", "could you please write up a". The level that follows is
+ * the one being asked for, not a question about which level fits.
+ */
+const ASKS_THE_ASSISTANT_FOR =
+  /\b(?:can|could|would|will)\s+(?:you|u)\s+(?:please\s+|pls\s+)?(?:make|do|create|write(?:\s+up)?|draft|start|prepare|put\s+together|get\s+me|give\s+me|fill\s+out|open)\s+(?:me\s+)?(?:a|an)\s+$/i;
+
 /** The sentence a mention sits in: from the last break before it to the next. */
 function clauseAround(
   text: string,
@@ -438,8 +446,9 @@ function dateBefore(before: string, today: string): "earlier" | "today" | "other
 function classify(text: string, start: number, end: number, today: string, cued: boolean): MentionKind | null {
   const { before, after, question, opensTurn } = clauseAround(text, start, end);
   // A question about a level decides nothing: "should this be a written warning?"
-  // "Can we put her on a written for it?" is a request, asked politely (QA, 22 Oct 2026, round 3).
-  if (question && !POLITE_LEVEL_REQUEST.test(before)) return "unclear";
+  // A request worded as a question still asks for that level: "can you make a written CA?",
+  // "Can we put her on a written for it?" (QA, 22 Oct 2026, round 3).
+  if (question && !ASKS_THE_ASSISTANT_FOR.test(before) && !POLITE_LEVEL_REQUEST.test(before)) return "unclear";
   if (NEGATED.test(before)) return null;
   if (REPLACED.test(after)) return null;
   if (ALTERNATIVE_AFTER.test(after) || ALTERNATIVE_BEFORE.test(before)) return "unclear";
@@ -723,7 +732,21 @@ export function warningMentions(text: string, today: string): WarningMention[] {
  * unclear mention ("I gave her a verbal warning", no date) is not one either:
  * the manager is asked rather than guessed for.
  */
+/**
+ * A CHANGE OF MIND AS THE WHOLE TURN: "no, written after all", "go back to
+ * verbal", "let's do verbal instead", "make it written again" (QA, 22 Oct
+ * 2026). Only when the turn is nothing else, so "again" here is a change back,
+ * never "she got a written warning again".
+ */
+const WHOLE_TURN_LEVEL =
+  /^\s*(?:(?:no|nope|actually|sorry|wait|ok(?:ay)?|rather|on\s+second\s+thought)[\s,.!:-]+)*(?:(?:make\s+it|make\s+this|(?:change|switch|set|put)\s+(?:it|this)\s+(?:back\s+)?to|switch\s+(?:back\s+)?to|go\s+(?:back\s+)?(?:to|with)|let['’]?s\s+(?:do|go\s+with)|do|it['’]?s|just)\s+)?(?:a\s+)?(verbal|written)(?:\s+(?:warning|ca|c\/a|corrective\s+action|one))?(?:[\s,]+(?:instead|then|please|now|after\s+all|again))*\s*[.!]?\s*$/i;
+
+const WHOLE_TURN_MAX = 80;
+
 export function statedWarningLevel(text: string, today: string = businessToday()): WarningLevel | null {
+  // A change of mind is a few words; testing only a short turn keeps a long one linear.
+  const whole = (text ?? "").length <= WHOLE_TURN_MAX ? WHOLE_TURN_LEVEL.exec(text ?? "") : null;
+  if (whole) return whole[1]!.toLowerCase() as WarningLevel;
   const current = warningMentions(text, today).filter((mention) => mention.kind === "current");
   return current.length > 0 ? current[current.length - 1]!.level : null;
 }
@@ -810,6 +833,7 @@ export function warningLevelCorrection(text: string, today: string): WarningLeve
   const wholeAnswer =
     !trimmed.includes("\n") &&
     (WHOLE_LINE.test(trimmed) ||
+      (trimmed.length <= WHOLE_TURN_MAX && WHOLE_TURN_LEVEL.test(trimmed)) ||
       LABELLED.test(trimmed) ||
       onlyLevelAndPayroll(trimmed));
   LABELLED.lastIndex = 0;

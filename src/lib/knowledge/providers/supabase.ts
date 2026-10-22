@@ -43,6 +43,14 @@ export type OfficialPolicyManualResult =
       /** The document's category, for a chat source card. Forms ignore it. */
       readonly documentCategory?: string;
       readonly matchedBy: "tag" | "fallback";
+      /**
+       * Whether an owner confirmed this document as the manual (owner decision,
+       * 22 Oct 2026): tagged `official-policy-manual`, or the Woven record the
+       * owner released — Woven JBA records are held until an owner confirms
+       * them (`WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW`). An upload found by its name
+       * is not; a draft citing it says so.
+       */
+      readonly ownerConfirmed: boolean;
       readonly chunks: readonly ManualChunk[];
     }
   | {
@@ -461,6 +469,7 @@ export class SupabaseKnowledgeProvider implements KnowledgeProvider {
       documentTitle: document.title,
       documentCategory: document.category,
       matchedBy: resolution.matchedBy,
+      ownerConfirmed: resolution.matchedBy === "tag" || document.source === "woven",
       chunks: chunks.map((chunk) => ({
         chunkIndex: chunk.chunk_index,
         chunkId: chunk.id,

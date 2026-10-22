@@ -508,9 +508,12 @@ describe("5. the manager changes Written Warning to Verbal Warning through chat"
     const { result } = await conversation([`${REPORT}. this one is a written warning`]);
     const id = result.reference.instanceId;
 
-    // History is not a change of level; since 22 Oct it goes onto Prior Actions instead.
-    const history = await correct(id, "she also had a verbal warning on 8/1");
-    expect(history?.formUpdate?.updated ?? []).not.toContain("warning_type");
+    /*
+     * More history is added to the prior-actions line (QA, 22 Oct 2026: a
+     * prior step stated while the form is open reaches it) — and is still not
+     * a change to this form's level.
+     */
+    expect((await correct(id, "she also had a verbal warning on 8/1"))?.content).toMatch(/added "Verbal warning — signed 08\/01\/2026"/);
     expect(await correct(id, "should this be verbal?")).toBeNull();
     expect(await ticked(id)).toEqual(["written"]);
   });

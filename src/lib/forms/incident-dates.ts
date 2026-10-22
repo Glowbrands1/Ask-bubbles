@@ -82,40 +82,19 @@ export function readDateChoice(reply: string, dates: readonly string[], today: s
 }
 
 /*
- * ============================================================================
- * "WAIT, THE MEETING WAS 10/19" CORRECTS THE DATE, IT DOES NOT ADD ONE
- * ============================================================================
- *
- * QA, 22 Oct 2026, round 3: "need a CA for tess varga for missing the 10/20/26
- * meeting", then "wait, the meeting was 10/19/26", was asked which of the two
- * dates goes on the form. A turn that corrects the date — said as a correction,
- * with one incident date in it — replaces the earlier one. The latest such
- * turn wins; a turn that merely mentions another date is still asked about.
+ * A LATER TURN THAT CORRECTS THE DATE IS THE MANAGER'S CHOICE, asked or not
+ * (QA, 22 Oct 2026): "the meeting was actually on 10-19-26" after an account
+ * dated 10-20 left two dates, so the form was dated today. One incident date
+ * in a turn that says it corrects — and does not add another incident — is
+ * the date.
+ */
+/*
+ * QA, 22 Oct 2026, round 3: "wait, the meeting was 10/19/26" after "… for
+ * missing the 10/20/26 meeting" was asked which date goes on the form.
  */
 const CORRECTS_DATE =
-  /\b(?:wait|actually|sorry|oops|correction|i\s+meant|i\s+mean|not\s+(?:on\s+)?\d|instead|scratch\s+that|my\s+bad|(?:it|that|the\s+(?:meeting|incident|date|shift|deadline|day))\s+(?:was|is)\s+(?:actually\s+|really\s+)?(?:on\s+)?(?=\d|\w+\s+\d)|happened\s+on|change\s+the\s+date)\b/i;
-
-/* "actually she also missed 10/21" adds an incident; it does not move the first one. */
-const ANOTHER_DATE = /\b(?:also|again|too|another|as\s+well|second|both)\b/i;
-
-const NOT_THIS_DATE = /\b(?:not|instead\s+of|rather\s+than|wasn'?t|isn'?t)\s+(?:on\s+|the\s+)?$/i;
-
-export function correctedIncidentDate(turns: readonly string[], today: string): string | null {
-  for (let index = turns.length - 1; index > 0; index -= 1) {
-    const turn = turns[index]!;
-    if (!CORRECTS_DATE.test(turn) || ANOTHER_DATE.test(turn) || /\?\s*$/.test(turn.trim())) continue;
-    // "it was 10/16 not 10/15" — the date it was NOT is not a candidate.
-    const dates = [
-      ...new Set(
-        listFormDates(turn, today)
-          .filter((found) => !NOT_THIS_DATE.test(turn.slice(Math.max(0, found.index - 16), found.index)))
-          .map((found) => found.iso),
-      ),
-    ].filter((iso) => iso <= today);
-    if (dates.length === 1) return dates[0]!;
-  }
-  return null;
-}
+  /\b(?:actually|instead|wrong|correction|i\s+meant|i\s+mean|meant\s+to\s+say|should\s+(?:be|have\s+been|say|read)|sorry|oops|typo|my\s+(?:mistake|bad)|wait|scratch\s+that|change\s+the\s+date|happened\s+on|not\s+(?:on\s+)?\d|(?:it|that|the\s+(?:meeting|incident|date|shift|day))\s+(?:was|is)\s+(?:on\s+)?(?=\d))/i;
+const ADDS_AN_INCIDENT = /\b(?:also|too|again|another|as\s+well|plus|and\s+then)\b/i;
 
 /** The manager's answer to an earlier date question, over the whole conversation. */
 export function dateAnsweredIn(conversation: readonly Turn[], dates: readonly string[], today: string): DateChoice | null {
@@ -123,8 +102,15 @@ export function dateAnsweredIn(conversation: readonly Turn[], dates: readonly st
   for (let index = 1; index < conversation.length; index += 1) {
     const turn = conversation[index]!;
     const before = conversation[index - 1]!;
-    if (turn.role !== "user" || before.role !== "assistant" || !askedForDate(before.content)) continue;
-    choice = readDateChoice(turn.content, dates, today) ?? choice;
+    if (turn.role !== "user") continue;
+    if (before.role === "assistant" && askedForDate(before.content)) {
+      choice = readDateChoice(turn.content, dates, today) ?? choice;
+      continue;
+    }
+    const answered = conversation.slice(0, index).some((earlier) => earlier.role === "assistant");
+    if (!answered || !CORRECTS_DATE.test(turn.content) || ADDS_AN_INCIDENT.test(turn.content)) continue;
+    const own = incidentDates(turn.content, today);
+    if (own.length === 1 && dates.includes(own[0]!)) choice = { kind: "date", iso: own[0]! };
   }
   return choice;
 }
@@ -133,6 +119,23 @@ export function dateAnsweredIn(conversation: readonly Turn[], dates: readonly st
 export function answersDateQuestion(history: readonly Turn[], question: string, dates: readonly string[], today: string): boolean {
   const lastAssistant = [...history].reverse().find((turn) => turn.role === "assistant");
   return !!lastAssistant && askedForDate(lastAssistant.content) && readDateChoice(question, dates.length ? dates : [today], today) !== null;
+}
+
+/**
+ * The incident date a later turn corrected the conversation to — "the meeting
+ * was actually on 10-19-26" — or null. The same reading as the date choice
+ * above, over the manager's own turns: the latest correcting turn after the
+ * first that gives one incident date and adds no other incident.
+ */
+export function correctedIncidentDate(turns: readonly string[], today: string): string | null {
+  let date: string | null = null;
+  for (const turn of turns.slice(1)) {
+    // "wait, was it 10/19/26?" asks; it corrects nothing (QA, 22 Oct 2026, round 3).
+    if (!CORRECTS_DATE.test(turn) || ADDS_AN_INCIDENT.test(turn) || /\?\s*$/.test(turn.trim())) continue;
+    const own = incidentDates(turn, today);
+    if (own.length === 1) date = own[0]!;
+  }
+  return date;
 }
 
 /*
@@ -173,6 +176,13 @@ export function decideFormDate(input: {
   readonly history: readonly Turn[];
   readonly conversation: readonly Turn[];
   readonly today: string;
+  /**
+   * The incident date the manager corrected the conversation to ("the meeting
+   * was actually on 10-19-26"), where they did. Among several dates it is the
+   * answer: the date it replaced is not a second incident, and no question is
+   * asked about it.
+   */
+  readonly correctedTo?: string | null;
 }): FormDateDecision {
   if (!DATED_TEMPLATES.has(input.templateKey)) return {};
   const explicit = explicitFormDate(input.text, input.today);
@@ -186,13 +196,7 @@ export function decideFormDate(input: {
     if (held.length > 1) dates = held;
   }
   if (dates.length <= 1) return {};
-
-  /* "wait, the meeting was 10/19/26" replaces the earlier date — see `correctedIncidentDate`. */
-  const corrected = correctedIncidentDate(
-    input.conversation.filter((turn) => turn.role === "user").map((turn) => turn.content),
-    input.today,
-  );
-  if (corrected && dates.includes(corrected)) return { formDate: corrected };
+  if (input.correctedTo && dates.includes(input.correctedTo)) return { formDate: input.correctedTo };
 
   const choice = dateAnsweredIn(input.conversation, dates, input.today);
   if (choice) return { formDate: choice.kind === "date" ? choice.iso : null };

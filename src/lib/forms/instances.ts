@@ -379,78 +379,6 @@ export interface NewInstance {
   formDate?: string;
   /** The chat card this form was created from; recorded so a repeated press finds it. */
   proposalId?: string;
-  /** The row's id, when the caller derives it — see `fileCardFormOnce`. Absent, the database chooses. */
-  id?: string;
-}
-
-/** The id the caller chose is already a form: the same card, pressed again. */
-export class DuplicateInstanceIdError extends Error {
-  readonly instanceId: string;
-
-  constructor(instanceId: string) {
-    super("That form already exists.");
-    this.name = "DuplicateInstanceIdError";
-    this.instanceId = instanceId;
-  }
-}
-
-/**
- * ============================================================================
- * ONE FORM PER CARD, HELD BY THE TABLE'S OWN PRIMARY KEY
- * ============================================================================
- *
- * QA, 22 Oct 2026, round 3. `findRecentAssistantDraft` returns the draft a
- * card already made, but it is a read before a write: two presses of the same
- * card arriving together — two tabs, a retry racing the original, two server
- * instances — both read "nothing yet" and both insert. The first form a
- * manager files from a card now takes a row id derived from the manager and
- * the card, so the second insert is a primary-key violation and the request
- * returns the form that won. Once that form is finalized (or is somebody
- * else's, or was removed) the card files a new form with an id of its own. No
- * migration: the key is the one the table already has.
- */
-export function cardInstanceId(createdBy: string, proposalId: string): string {
-  const hex = createHash("sha256").update(`ask-bubbles/form-card/${createdBy}/${proposalId}`).digest("hex");
-  const variant = ((parseInt(hex[16]!, 16) & 0x3) | 0x8).toString(16);
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
-}
-
-/** The form at `id`, when it is this manager's open draft of this template for this person — the one to hand back. */
-async function reusableCardForm(id: string, input: NewInstance): Promise<InstanceRow | null> {
-  const instance = (await loadInstance(id).catch(() => null))?.instance ?? null;
-  if (!instance) return null;
-  const { data: template } = await getSupabaseAdmin()
-    .from("form_templates")
-    .select("id")
-    .eq("key", input.templateKey)
-    .maybeSingle();
-  const normal = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase();
-  return template &&
-    String((template as { id: unknown }).id) === instance.templateId &&
-    instance.status === "draft" &&
-    instance.createdBy === input.createdBy &&
-    normal(instance.employeeName) === normal(input.employeeName) &&
-    (instance.locationId ?? null) === (input.locationId ?? null)
-    ? instance
-    : null;
-}
-
-/** Creates the card's form, or returns the one it already made. See `cardInstanceId`. */
-export async function fileCardFormOnce(
-  input: NewInstance & { proposalId: string },
-): Promise<{ instance: InstanceRow; reused: boolean }> {
-  const own = cardInstanceId(input.createdBy, input.proposalId);
-  const existing = await reusableCardForm(own, input);
-  if (existing) return { instance: existing, reused: true };
-  const taken = (await loadInstance(own).catch(() => null)) !== null;
-  try {
-    return { instance: await createInstance(taken ? input : { ...input, id: own }), reused: false };
-  } catch (error) {
-    if (!(error instanceof DuplicateInstanceIdError)) throw error;
-    const winner = await reusableCardForm(own, input);
-    if (winner) return { instance: winner, reused: true };
-    return { instance: await createInstance(input), reused: false };
-  }
 }
 
 /**
@@ -543,7 +471,37 @@ export async function findRecentAssistantDraft(input: {
  * Publishing a new template version tomorrow leaves this form pointing at what
  * it was started from, which is the whole point of versioning.
  */
-export async function createInstance(input: NewInstance): Promise<InstanceRow> {
+/**
+ * ============================================================================
+ * ONE CARD, ONE ROW — EVEN WHEN TWO PRESSES ARRIVE AT ONCE
+ * ============================================================================
+ *
+ * `findRecentAssistantDraft` returns the draft a card already made, but it is
+ * a read before a write: two presses that arrive together (a double click, a
+ * retry racing the first request) both read "none" and both insert. QA, 22 Oct
+ * 2026. So a form created from a chat card is created under an id DERIVED from
+ * the card — the same person, form and card always give the same id — and the
+ * table's own primary key refuses the second insert. That refusal returns the
+ * row the first one made. No other create is affected: without a card id the
+ * database chooses the id, as before.
+ */
+export function cardInstanceId(createdBy: string, templateKey: string, proposalId: string): string {
+  const bytes = Buffer.from(createHash("sha256").update(`form-card\u0000${createdBy}\u0000${templateKey}\u0000${proposalId}`).digest().subarray(0, 16));
+  // An RFC 4122 shape (version 5, variant 10xx), so the column accepts it as a uuid.
+  bytes[6] = (bytes[6]! & 0x0f) | 0x50;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = bytes.toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/** Postgres' unique_violation: here, the card's row already exists. */
+const UNIQUE_VIOLATION = "23505";
+
+/**
+ * Starts a form, or — for a second create of the same chat card — returns the
+ * row the first one made, marked `reused`. See `cardInstanceId`.
+ */
+export async function createInstance(input: NewInstance): Promise<InstanceRow & { reused?: true }> {
   const supabase = getSupabaseAdmin();
 
   const { data: template, error: templateError } = await supabase
@@ -558,9 +516,13 @@ export async function createInstance(input: NewInstance): Promise<InstanceRow> {
   const version = await getCurrentVersion(String(template.id));
   if (!version) throw new Error("That template has no published version yet.");
 
+  const cardId = isProposalId(input.proposalId)
+    ? cardInstanceId(input.createdBy, input.templateKey, input.proposalId)
+    : null;
   const { data, error } = await supabase
     .from("form_instances")
     .insert({
+      ...(cardId ? { id: cardId } : {}),
       template_id: template.id,
       template_version_id: version.id,
       variant_key: input.variantKey,
@@ -580,11 +542,13 @@ export async function createInstance(input: NewInstance): Promise<InstanceRow> {
        * date is now always written, from the same clock everything else uses.
        */
       form_date: input.formDate ?? businessToday(),
-      ...(input.id ? { id: input.id } : {}),
     })
     .select("id")
     .single();
-  if (input.id && (error as { code?: string } | null)?.code === "23505") throw new DuplicateInstanceIdError(input.id);
+  if (cardId && (error as { code?: string } | null)?.code === UNIQUE_VIOLATION) {
+    const existing = await loadInstance(cardId);
+    if (existing) return { ...existing.instance, reused: true };
+  }
   if (error || !data) throw new Error(`Could not start the form: ${error?.message}`);
 
   /*
@@ -776,6 +740,7 @@ export async function saveInstanceValues(
       return before.size !== new Set(checked).size || checked.some((option) => !before.has(option));
     }),
   );
+  // `writeValues` moves `form_instances.form_date` with the Date line.
   await writeValues(instanceId, { values: changedValues, checked: changedChecked }, "manager");
   await recordEvent(instanceId, "edited", actor, {
     fields: Object.keys(result.values).length,
@@ -964,6 +929,7 @@ export class UnverifiedPolicyError extends Error {
     this.fields = fields;
   }
 }
+
 
 export interface FinalizeOptions {
   /**
@@ -1672,4 +1638,19 @@ export async function listOutstandingFollowUps(
     .filter((row) => needsFollowUp(row))
     .sort((a, b) => (a.followUpDate ?? "").localeCompare(b.followUpDate ?? ""))
     .slice(0, limit);
+}
+
+/**
+ * A CHANGE MADE FROM THE CHAT, ON THE RECORD: each field, what it said, what
+ * it says now, who asked and (the event's own timestamp) when. The save itself
+ * records only that the manager edited the form; this records what changed.
+ */
+export async function recordChatCorrection(
+  instanceId: string,
+  actor: string,
+  changes: readonly { field: string; from: string | null; to: string }[],
+): Promise<void> {
+  if (changes.length === 0) return;
+  // An "edited" event — the kinds are a database enum — carrying the changes themselves.
+  await recordEvent(instanceId, "edited", actor, { via: "chat_correction", changes });
 }

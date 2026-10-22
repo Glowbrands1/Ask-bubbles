@@ -1,3 +1,4 @@
+import { priorSteps } from "./form-date-answer";
 import { detectTemplateIntent } from "./template-intent";
 import { warningLevelFromTurns, type WarningLevel } from "./warning-level";
 
@@ -12,6 +13,19 @@ export interface WarningConversationTurn {
   role: string;
   content: string;
   error?: unknown;
+}
+
+/**
+ * A turn that only lists what already happened ("prior coaching: verbal ca
+ * 9-1-26") names a form without asking for one; it is not the start of
+ * another form's turns, and cutting there lost the level stated in the
+ * request before it (QA, 22 Oct 2026).
+ */
+function onlyHistory(text: string, today: string): boolean {
+  return (
+    priorSteps(text, today).length > 0 &&
+    !/\b(?:create|make\s+(?:a|an|it)|start|draft|new|another|need\s+(?:a|an)|open|pull\s+up|write\s+up)\b/i.test(text)
+  );
 }
 
 /**
@@ -37,7 +51,9 @@ export function warningLevelFromConversation(
   );
   const requests = usable
     .map((turn, index) => ({ turn, index }))
-    .filter(({ turn }) => turn.role === "user" && detectTemplateIntent(turn.content).kind !== "none")
+    .filter(
+      ({ turn }) => turn.role === "user" && detectTemplateIntent(turn.content).kind !== "none" && !onlyHistory(turn.content, today),
+    )
     .map(({ index }) => index);
   const start = !options.fromThisForm && requests.length >= 2 ? requests[requests.length - 2]! + 1 : 0;
   return warningLevelFromTurns(
