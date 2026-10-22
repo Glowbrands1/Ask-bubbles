@@ -472,7 +472,7 @@ describe("a CA for somebody with forms already on file", () => {
     });
     joinOverview();
 
-    const { priorFormsForChat } = await import("@/lib/forms/prior-forms");
+    const { priorFormsReadingForChat } = await import("@/lib/forms/prior-forms");
     const actor = { role: state.role as never, scope: state.scope as AccessScope, subject: "manager-1", verified: true };
     const message = said(
       "I need a CA for Dana Moss. She was 30 minutes late today, verbal warning. Payroll deduct no.",
@@ -484,7 +484,7 @@ describe("a CA for somebody with forms already on file", () => {
       actor,
       summaries: await listTemplateSummaries(),
       today: "2026-09-29",
-      priorFormsOnFile: (employeeName) => priorFormsForChat(actor, employeeName),
+      priorFormsOnFile: (employeeName, locationId) => priorFormsReadingForChat(actor, employeeName, locationId),
     });
     expect(response?.content).toContain(
       "**On file in the Forms Register for Dana Moss:** Coaching — signed 09/02/2026; Verbal corrective action — signed 09/21/2026.",
