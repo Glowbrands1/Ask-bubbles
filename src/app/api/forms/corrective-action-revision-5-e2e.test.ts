@@ -681,15 +681,6 @@ describe("a Corrective Action filed on revision 5, edited as a new draft", () =>
     expect(await revise(id)).toBe(revision);
     expect(store.form_instances.find((row) => row.id === id)!.status).toBe("finalized");
 
-    // The manager ticks the level on the draft; a CA is filed only with one they chose (`warning-level-gate.ts`).
-    const levelled = await instanceRoute.PATCH(
-      new Request(`https://app.test/api/forms/instances/${revision}`, {
-        method: "PATCH",
-        body: JSON.stringify({ values: {}, checked: { warning_type: ["verbal"] } }),
-      }),
-      { params: Promise.resolve({ id: revision }) },
-    );
-    expect(levelled.status).toBe(200);
     const finalized = await instanceRoute.POST(
       new Request(`https://app.test/api/forms/instances/${revision}`, {
         method: "POST",

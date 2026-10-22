@@ -146,8 +146,6 @@ describe("Corrective Action Form: draft, edit, save, reopen, finalize", () => {
     expect(policy.provenance).toEqual(SOURCED);
     expect(row(reopened, "prior_actions")!.filledBy).toBe("manager");
 
-    // The manager ticks the level; a CA is filed only with one they chose (`warning-level-gate.ts`).
-    expect((await cardSave(id, {}, { warning_type: ["verbal"] })).status).toBe(200);
     const finalized = await call("POST", id, { action: "finalize" });
     expect(finalized.status, JSON.stringify(await finalized.clone().json())).toBe(200);
     const event = (await reopen(id)).events.find((entry) => entry.kind === "finalized")!;
@@ -171,7 +169,7 @@ describe("Corrective Action Form: draft, edit, save, reopen, finalize", () => {
 
   it("asks again once the manager rewrites the policy, and records the override", async () => {
     const id = await draftedCorrectiveForm();
-    await cardSave(id, { policy_language: `${POLICY_TEXT} (paraphrased by me)` }, { warning_type: ["verbal"] });
+    await cardSave(id, { policy_language: `${POLICY_TEXT} (paraphrased by me)` });
 
     const policy = row(await reopen(id), "policy_language")!;
     expect(policy.filledBy).toBe("manager");
