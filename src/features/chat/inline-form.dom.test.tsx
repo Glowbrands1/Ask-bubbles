@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { MessageBubble } from "./message-bubble";
 import {
   InlineForm,
+  policySourceNoticeFor,
   policyVerificationNoticeFor,
   reviewConversationNoticeFor,
 } from "./inline-form";
@@ -2125,5 +2126,28 @@ describe("two forms in one message render as two independent cards", () => {
     });
     bubble(message, [TWO, message]);
     expect(screen.getAllByRole("button", { name: /create draft/i })).toHaveLength(1);
+  });
+});
+
+/*
+ * Owner decision, 22 Oct 2026 (ported from Ask Sunny): the manual is found by
+ * its name, not by an approval tag. See `policySourceNoticeFor`.
+ */
+describe("a policy quoted from a manual found by its name", () => {
+  const withProvenance = (provenance: Record<string, unknown>) =>
+    ({
+      ...loadedInstance(),
+      values: [{ fieldKey: "policy_language", value: "Quoted.", checked: [], filledBy: "ai", provenance }],
+    }) as never;
+
+  it("says the manual is not yet a confirmed source", () => {
+    expect(policySourceNoticeFor(withProvenance({ verified: true, matchedBy: "fallback" }))).toMatch(
+      /hasn't been confirmed as the company's approved policy source/,
+    );
+  });
+
+  it("says nothing for a tagged manual, or for wording nobody verified", () => {
+    expect(policySourceNoticeFor(withProvenance({ verified: true, matchedBy: "tag" }))).toBeNull();
+    expect(policySourceNoticeFor(withProvenance({}))).toBeNull();
   });
 });

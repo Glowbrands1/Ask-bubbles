@@ -365,6 +365,7 @@ export function InlineForm({
   const notice = prefillNoticeFor(prefill, loaded);
   const reviewNotice = reviewConversationNoticeFor(loaded, prefilling);
   const policyNotice = policyVerificationNoticeFor(loaded, prefilling);
+  const policySourceNotice = prefilling ? null : policySourceNoticeFor(loaded);
   /*
    * THE SAME RULE THE SERVER APPLIES, with no `assistant` gating — a corrective
    * form started by hand in the old Create a Form screen (since removed; its
@@ -693,6 +694,11 @@ export function InlineForm({
       {policyNotice ? (
         <Notice tone="attention" className="mt-3">
           {policyNotice}
+        </Notice>
+      ) : null}
+      {policySourceNotice ? (
+        <Notice tone="attention" className="mt-3">
+          {policySourceNotice}
         </Notice>
       ) : null}
 
@@ -1131,6 +1137,26 @@ export function storedPolicySources(values: LoadedValueRow[]): StoredPolicySourc
   }
 
   return [...seen.values()];
+}
+
+/*
+ * ============================================================================
+ * A MANUAL FOUND BY ITS NAME IS NOT YET AN APPROVED SOURCE
+ * ============================================================================
+ *
+ * Release decision, 22 Oct 2026 (ported from Ask Sunny): the official policy
+ * manual is found by its title — no document carries the
+ * `official-policy-manual` tag and no approval names it — so a citation is
+ * stored `matchedBy: "fallback"`. The quote is still the manual's own words and
+ * the draft keeps it; the card says the manual is not confirmed as the approved
+ * source until an administrator tags it. Display only: Finalize is unchanged.
+ */
+export function policySourceNoticeFor(loaded: LoadedInstance): string | null {
+  const fallback = loaded.values.some(
+    (row) => row.provenance?.verified === true && row.provenance?.matchedBy === "fallback",
+  );
+  if (!fallback) return null;
+  return "The policy on this form is quoted from a manual Ask Bubbles found by its name. It hasn't been confirmed as the company's approved policy source, so check the policy before you issue this form.";
 }
 
 export function policyVerificationNoticeFor(

@@ -67,7 +67,7 @@ const SOURCED = {
   grounded: true,
   verified: true,
   source: "official_policy_manual",
-  // The approved (tagged) manual: a title-matched one asks for acknowledgement at finalize (`policy-approval.test.ts`).
+  // The approved (tagged) manual. A title-matched one only adds a notice on the card (`policySourceNoticeFor`).
   matchedBy: "tag",
   documentId: "doc-manual",
   documentTitle: "Synthetic Policy Manual",

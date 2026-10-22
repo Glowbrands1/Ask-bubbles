@@ -461,7 +461,8 @@ describe("Issue 1: a late opening on 10-1-26 with a $25 payroll deduction", () =
     expect(f.ticks("payroll_deduct")).toEqual(["yes"]);
     expect(f.text("policy_violated")).toMatch(/Late Opening/);
     expect(f.text("policy_language")).toMatch(/Late Opening/);
-    expect(f.text("policy_language")).toMatch(/\$25\.00 via payroll deduction/);
+    // The fixture's wording is synthetic (security cleanup, 22 Oct 2026): its Late Opening sheet carries the $25.00 amount in an invented sentence.
+    expect(f.text("policy_language")).toMatch(/\$25\.00 payroll deduction/);
     expect(f.text("policy_language")).toMatch(/p(?:age|\.)\s*15\b/i);
     expect(f.text("policy_language")).not.toMatch(/Cell Phone|Standards of Conduct|Texting/);
     expect(f.text("prior_actions")).toMatch(/01\/01\/2026|1-1-26/);
