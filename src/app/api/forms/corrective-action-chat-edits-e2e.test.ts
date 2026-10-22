@@ -740,8 +740,9 @@ describe("QA 22 Oct: facts told after the form exists go onto the open form", ()
     await onOpenForm(id, history, "she also had a verbal ca on 9-1-26");
     expect((await values()).prior_actions?.value?.split("\n")).toHaveLength(2);
 
-    const dated = await onOpenForm(id, history, "it happened on 10/19/26");
-    expect(dated?.formUpdate?.updated).toEqual(["form_date"]);
+    // A date change is said as one; the form-date reader moves the drafted paragraphs' day with it.
+    const dated = await onOpenForm(id, history, "change the date to 10/19/26");
+    expect(dated?.formUpdate?.updated).toContain("form_date");
     expect((await values()).form_date?.value).toBe("2026-10-19");
 
     await onOpenForm(id, history, "make it a written");
@@ -754,6 +755,7 @@ describe("QA 22 Oct: facts told after the form exists go onto the open form", ()
     expect(form.prior_actions?.value?.split("\n")).toHaveLength(2);
     expect(form.policy_language?.value).toContain("Attendance");
     expect(form.observation?.value).toContain("Pat Rivera arrived 20 minutes late");
+    expect(form.observation?.value).not.toMatch(/\b10\/20\b/);
     expect(store.form_instances).toHaveLength(1);
   });
 
@@ -805,8 +807,12 @@ describe("QA 22 Oct, round 3: corrections in everyday wording change only what t
     expect((await changedBy("oops, should've been written")).changed).toEqual(["warning_type"]);
     expect((await values()).warning_type?.checked).toEqual(["written"]);
 
-    expect((await changedBy("the date was actually 10/18/26")).changed).toEqual(["form_date"]);
+    // The day in the drafted Observation moves with the Date ("one date everywhere"); nothing else does.
+    expect((await changedBy("the date was actually 10/18/26")).changed).toEqual(["form_date", "observation"]);
     expect((await values()).form_date?.value).toBe("2026-10-18");
+    const redated = (await values()).observation?.value ?? "";
+    expect(redated).not.toMatch(/\b10\/20\b/);
+    expect(redated).toBe(observation!.replace("10/20", "October 18, 2026"));
 
     expect((await changedBy("she was coached on the handbook 6/3/26 too")).changed).toEqual(["prior_actions"]);
     expect((await values()).prior_actions?.value).toMatch(/^Coaching.* — signed 06\/03\/2026$/);
@@ -840,7 +846,7 @@ describe("QA 22 Oct, round 3: corrections in everyday wording change only what t
     expect(form.warning_type?.checked).toEqual(["written"]);
     expect(form.form_date?.value).toBe("2026-10-18");
     expect(form.payroll_deduct?.checked).toEqual(["yes"]);
-    expect(form.observation?.value).toBe(observation);
+    expect(form.observation?.value).toBe(redated);
     expect(store.form_instances).toHaveLength(1);
   });
 });

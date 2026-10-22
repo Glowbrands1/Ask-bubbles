@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ManualChunk } from "./official-policy-manual";
 import {
+  describedManualChoices,
   describedManualSection,
   manualSectionNamedBy,
   namedManualSection,
@@ -217,5 +218,46 @@ describe("describedManualSection — a policy the account describes", () => {
         chunks: MANUAL.filter((chunk) => chunk.section !== "Cell Phone/Smart Watch Policy"),
       }),
     ).toBeNull();
+  });
+});
+
+/*
+ * QA follow-up, 22 Oct 2026: "scrolling social media on her phone" answers both
+ * the Cell Phone/Smart Watch Policy and the Social Media Policy. No section is
+ * chosen — and the manager is asked which, offered both with their pages.
+ */
+describe("describedManualChoices — an account two Policy sections answer", () => {
+  const MANUAL: ManualChunk[] = [
+    sheet(30, "Standards of Conduct", 12),
+    sheet(36, "Belts", 15),
+    sheet(37, "Texting as General Work communications", 15),
+    sheet(43, "Cell Phone/Smart Watch Policy", 19),
+    sheet(46, "Social Media Policy", 22),
+    sheet(47, "Using Social Media at Work", 23),
+  ];
+  const choices = (text: string) =>
+    describedManualChoices({ text, chunks: MANUAL })?.map((found) => [found.section.heading, found.section.page]) ?? null;
+
+  it("offers both Policy sections, in the manual's order, with their pages", () => {
+    expect(choices("on 10-20-26 she was scrolling social media on her phone on the sales floor")).toEqual([
+      ["Cell Phone/Smart Watch Policy", 19],
+      ["Social Media Policy", 22],
+    ]);
+    expect(describedManualSection({ text: "she was scrolling social media on her phone", chunks: MANUAL })).toBeNull();
+  });
+
+  it.each([
+    /* One section answers: it is described, not offered. */
+    "she was on her cell phone for an hour",
+    /* One Policy section and a heading that is not one: the existing rule, nothing. */
+    "she wore a belt that holds her cell phone",
+    /* A policy named settles it. */
+    "violated the cell phone policy, she was scrolling social media on her phone",
+    /* Nothing described. */
+    "she was rude to a guest",
+    /* A question describes nothing. */
+    "was she on social media on her phone?",
+  ])("%s → no choice to offer", (text) => {
+    expect(choices(text)).toBeNull();
   });
 });

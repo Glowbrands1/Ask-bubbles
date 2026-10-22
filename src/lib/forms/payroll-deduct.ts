@@ -1,4 +1,4 @@
-import { normalizePayrollWording as normalize, readPayrollDeduct, statedPayrollDeduct } from "./payroll-deduct-answer";
+import { DENIAL, normalizePayrollWording as normalize, readPayrollDeduct, statedPayrollDeduct } from "./payroll-deduct-answer";
 import { detectTemplateIntent } from "./template-intent";
 
 /**
@@ -219,12 +219,19 @@ export function payrollDeductChecked(
  */
 export function payrollDeductCorrection(text: string): PayrollDeductAnswer | null {
   if (text.trim().endsWith("?")) return null;
+  /*
+   * A point inside an amount ("the $5.00 payroll deduction") does not end the
+   * sentence — QA audit, 22 Oct 2026: "change the $5.00 payroll deduction to
+   * no" read as nothing, and the form kept its Yes.
+   */
   const change =
-    /\b(?:change|update|set|switch|correct|fix|make|mark|tick|check)\b[^.\n]{0,40}\b(?:payroll|deduct)/i.exec(text);
+    /\b(?:change|update|set|switch|correct|fix|make|mark|tick|check)\b(?:[^.\n]|\.(?=\d)){0,40}\b(?:payroll|deduct)/i.exec(text);
   if (change) {
     const after = normalize(text.slice(change.index));
     const to = /\b(?:to|as|=|:)\s*(yes|no)\b/.exec(after);
     if (to) return to[1] as PayrollDeductAnswer;
+    /* "change the payroll deduction to $5.00": a new amount to take is a Yes. */
+    if (new RegExp(String.raw`\bto\s+${ANY_MONEY}`).test(after) && !DENIAL.test(after)) return "yes";
   }
   return statedPayrollDeduct(text);
 }
@@ -247,15 +254,30 @@ export function payrollDeductCorrection(text: string): PayrollDeductAnswer | nul
  * the comma ending the clause was read as part of the amount (QA, 22 Oct 2026).
  */
 const MONEY = String.raw`\$\s?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?(?![\d,]\d)`;
+/*
+ * "25 DOLLARS", "DEDUCTED 3.25" — QA audit, 22 Oct 2026: an amount the manager
+ * wrote without the sign was not read, and the plan said only "A payroll
+ * deduction applies." Money by its word ("dollars", "bucks") or by its cents.
+ * A bare whole number ("deduct 25") is not money — it could be minutes or a
+ * store — and is never read as one.
+ */
+const UNSIGNED_MONEY = String.raw`(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{2})?\s*(?:dollars?|bucks)\b|\d+\.\d{2}\b(?![\d,]\d)`;
+const ANY_MONEY = String.raw`(?:${MONEY}|${UNSIGNED_MONEY})`;
+/** "$ 25" → "$25"; "25 dollars" → "$25"; "3.25" → "$3.25". */
+function asDollars(written: string): string {
+  const compact = written.replace(/\s+/g, "");
+  if (compact.startsWith("$")) return compact;
+  return `$${/^[\d,]+(?:\.\d{2})?/.exec(compact)![0]}`;
+}
 const AMOUNT_PATTERNS: readonly RegExp[] = [
-  new RegExp(String.raw`\b(?:payroll\s+)?deduct(?:ion|ions|ed|ing)?\s+(?:of\s+|for\s+|is\s+|will\s+be\s+|amount\s+(?:of\s+|is\s+)?)?(${MONEY})`, "gi"),
+  new RegExp(String.raw`\b(?:payroll\s+)?deduct(?:ion|ions|ed|ing)?\s+(?:of\s+|for\s+|is\s+|to\s+|will\s+be\s+|amount\s+(?:of\s+|is\s+|to\s+)?)?(${ANY_MONEY})`, "gi"),
   /*
    * "$25 will be payroll deducted", "$25 payroll-deducted", "$25 payroll
    * deduction applies", "$25 payroll deduct" (District Manager / HR feedback,
    * 21 Oct 2026: "state $25 will be payroll deducted" went unread).
    */
   new RegExp(
-    String.raw`(${MONEY})\s+(?:will\s+be\s+|is\s+(?:being\s+)?|to\s+be\s+|should\s+be\s+|gets?\s+|being\s+)?(?:payroll[- ]?\s*)?deduct(?:ed|ions?)?\b`,
+    String.raw`(${ANY_MONEY})\s+(?:will\s+be\s+|is\s+(?:being\s+)?|to\s+be\s+|should\s+be\s+|gets?\s+|being\s+)?(?:payroll[- ]?\s*)?deduct(?:ed|ions?)?\b`,
     "gi",
   ),
 ];
@@ -265,7 +287,7 @@ export function payrollDeductAmount(text: string): string | null {
   let found: { at: number; amount: string } | null = null;
   for (const pattern of AMOUNT_PATTERNS) {
     for (const match of (text ?? "").matchAll(pattern)) {
-      const amount = match[1]!.replace(/\s+/g, "");
+      const amount = asDollars(match[1]!);
       if (!found || match.index >= found.at) found = { at: match.index, amount };
     }
   }

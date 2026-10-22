@@ -383,13 +383,13 @@ describe("a new coaching form", () => {
     await saveInstanceValues(instance.id, { values: { policy_language: "Typed from the manager's own copy." } }, "dana");
     const failure = await finalizeInstance(instance.id, "dana", null).catch((error) => error);
     expect((failure as Error).message).not.toMatch(/You edited the policy wording/);
-    expect((failure as Error).message).toMatch(/^Official policy verification is incomplete/);
+    expect((failure as Error).message).toMatch(/^Woven does not see this policy/);
   });
 
   it("B. a blank policy is still worded as unverified", async () => {
     const instance = await startCorrectiveForm();
     const failure = await finalizeInstance(instance.id, "dana", null).catch((error) => error);
-    expect((failure as Error).message).toMatch(/^Official policy verification is incomplete/);
+    expect((failure as Error).message).toMatch(/^Woven does not see this policy/);
   });
 
   it("C. leaves the form a draft when the manager does not acknowledge", async () => {

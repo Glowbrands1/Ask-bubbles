@@ -1500,7 +1500,8 @@ type Round3Case = {
   employee: string;
   level: "verbal" | "written";
   payroll: "yes" | "no";
-  date: string;
+  /* null: a date given only as a deadline ("due 10/15/26") never dates the form (release decision F-03). */
+  date: string | null;
   offense: string | null;
   prior: RegExp | "" | "none";
 };
@@ -1515,15 +1516,15 @@ const ROUND3_CASES: Round3Case[] = [
   { turns: ["remy calder came in 45 min late on 10/19/26 — write her up, verbal, payroll deduct none"], employee: "Remy Calder", level: "verbal", payroll: "no", date: "2026-10-19", offense: null, prior: "" },
   { turns: ["I have to write someone up", "Tess Varga", "she skipped the monthly meeting on 10/20/26", "written", "she had coaching on the jba manual 1/1/26 and a verbal ca 9/1/26", "no deduction"], employee: "Tess Varga", level: "written", payroll: "no", date: "2026-10-20", offense: "absenteeism", prior: /^Coaching — signed 01\/01\/2026\nVerbal corrective action — signed 09\/01\/2026$/ },
   { turns: ["need a CA for tess varga for missing the 10/20/26 meeting, verbal", "sorry, make that written", "wait, the meeting was 10/19/26", "she was coached 1-1-26 on the jba manual", "payroll deduct n/a"], employee: "Tess Varga", level: "written", payroll: "no", date: "2026-10-19", offense: "absenteeism", prior: /^Coaching — signed 01\/01\/2026$/ },
-  { turns: ["tess varga blew off her woven training due 10/15/26", "can you start a verbal ca for that", "first offense", "no payroll"], employee: "Tess Varga", level: "verbal", payroll: "no", date: "2026-10-15", offense: "standards_of_conduct", prior: "none" },
+  { turns: ["tess varga blew off her woven training due 10/15/26", "can you start a verbal ca for that", "first offense", "no payroll"], employee: "Tess Varga", level: "verbal", payroll: "no", date: null, offense: "standards_of_conduct", prior: "none" },
   // Written afterwards, unseen by the readers.
   { turns: ["Tess Varga missed our team meeting yesterday 10/21/26 without telling anyone. I want to give her a written. No payroll deduction. She was coached on attendance 8/15/26."], employee: "Tess Varga", level: "written", payroll: "no", date: "2026-10-21", offense: "absenteeism", prior: /^Coaching.* — signed 08\/15\/2026$/ },
   { turns: ["Need to write up Remy Calder. He was 30 minutes late to his shift on 10/18/26. Verbal warning. Payroll deduct: no."], employee: "Remy Calder", level: "verbal", payroll: "no", date: "2026-10-18", offense: null, prior: "" },
   { turns: ["remy calder's drawer came up $20 short on 10/17/26. lets do a written ca, deduct the $20 from payroll"], employee: "Remy Calder", level: "written", payroll: "yes", date: "2026-10-17", offense: null, prior: "" },
   { turns: ["could you draft a verbal corrective action for Tess Varga? she skipped the 10/14/26 store meeting. not deducting pay"], employee: "Tess Varga", level: "verbal", payroll: "no", date: "2026-10-14", offense: "absenteeism", prior: "" },
   { turns: ["Tess Varga ditched the 10/20/26 all-hands meeting. Final step isn't needed yet, just a verbal. Payroll: N/A. No prior coaching."], employee: "Tess Varga", level: "verbal", payroll: "no", date: "2026-10-20", offense: "absenteeism", prior: "none" },
-  { turns: ["Please document a written CA for Remy Calder — she didn't finish her Woven modules by the 10/12/26 deadline. She got a verbal for the same thing 9/10/26. No deduction."], employee: "Remy Calder", level: "written", payroll: "no", date: "2026-10-12", offense: "standards_of_conduct", prior: /^Verbal warning.* — signed 09\/10\/2026$/ },
-  { turns: ["I need a corrective action", "it's for remy calder", "she ignored her woven training that was due 10/16/26", "verbal", "nothing prior", "no deduct"], employee: "Remy Calder", level: "verbal", payroll: "no", date: "2026-10-16", offense: "standards_of_conduct", prior: "none" },
+  { turns: ["Please document a written CA for Remy Calder — she didn't finish her Woven modules by the 10/12/26 deadline. She got a verbal for the same thing 9/10/26. No deduction."], employee: "Remy Calder", level: "written", payroll: "no", date: null, offense: "standards_of_conduct", prior: /^Verbal warning.* — signed 09\/10\/2026$/ },
+  { turns: ["I need a corrective action", "it's for remy calder", "she ignored her woven training that was due 10/16/26", "verbal", "nothing prior", "no deduct"], employee: "Remy Calder", level: "verbal", payroll: "no", date: null, offense: "standards_of_conduct", prior: "none" },
   { turns: ["tess varga needs a write up", "she bailed on the 10/19/26 meeting", "make it a written warning", "oh and she had a verbal 9/2/26", "payroll no"], employee: "Tess Varga", level: "written", payroll: "no", date: "2026-10-19", offense: "absenteeism", prior: /^Verbal warning — signed 09\/02\/2026$/ },
   { turns: ["write up for tess varga, missed meeting 10/20/26, written", "actually make it verbal", "no payroll deduction"], employee: "Tess Varga", level: "verbal", payroll: "no", date: "2026-10-20", offense: "absenteeism", prior: "" },
   { turns: ["corrective action for remy calder for being late 10/15/26, verbal, no deduct", "correction: it was 10/16/26 not 10/15"], employee: "Remy Calder", level: "verbal", payroll: "no", date: "2026-10-16", offense: null, prior: "" },
@@ -1553,7 +1554,8 @@ describe("QA 22 Oct, round 3: everyday wording, single messages and multi-turn, 
     expect(field(form, "employee_name")!.value).toBe(c.employee);
     expect(field(form, "warning_type")!.checked).toEqual([c.level]);
     expect(field(form, "payroll_deduct")!.checked).toEqual([c.payroll]);
-    expect(field(form, "form_date")!.value).toBe(c.date);
+    if (c.date) expect(field(form, "form_date")!.value).toBe(c.date);
+    else expect(field(form, "form_date")?.value ?? "").not.toMatch(/^2026-10-1[256]$/);
     expect(field(form, "offense_type")?.checked ?? []).toEqual(c.offense ? [c.offense] : []);
     const prior = field(form, "prior_actions")?.value ?? "";
     if (c.prior === "none") expect(prior).toBe("None — first occurrence");

@@ -52,6 +52,12 @@ export interface CreateInlineFormResult {
   /** Set when the instance was created but Bubbles could not prefill it. */
   draftWarning: string | null;
   /**
+   * What the drafting route says it left off or could not decide — an
+   * observation that lost a policy finding, a refused box, a policy it could
+   * not choose between. Said on the card; null when it left nothing out.
+   */
+  draftNotice?: string | null;
+  /**
    * The server returned a draft this manager had already started (and
    * prefilled) moments ago instead of creating a second one. The editor shows
    * it as stored; nothing was drafted again.
@@ -196,12 +202,13 @@ export async function createInlineForm({
   }
 
   try {
-    await call(`/api/forms/instances/${reference.instanceId}/draft`, {
+    const drafted = await call<{ notice?: unknown }>(`/api/forms/instances/${reference.instanceId}/draft`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ notes: notes.text }),
     });
-    return { reference, draftWarning: null };
+    const notice = typeof drafted?.notice === "string" && drafted.notice.trim() !== "" ? drafted.notice : null;
+    return { reference, draftWarning: null, draftNotice: notice };
   } catch {
     // The form exists. Report it, warn about the prefill, change nothing else.
     return { reference, draftWarning: DRAFT_FAILED_WARNING };

@@ -379,23 +379,24 @@ describe("the Corrective Action Form's payroll-deduct answer", () => {
     expect(state.saved).toEqual([{ values: {}, checked: { payroll_deduct: ["no"] } }]);
   });
 
-  /*
-   * QA, 22 Oct 2026: the date of what happened is one of this form's facts and
-   * is taken from chat too (`correctCorrectiveActionFacts`); the name is not.
-   */
-  it("takes the date of what happened", async () => {
-    const response = await correct("change the date to 9/27");
-    expect(response!.formUpdate!.updated).toEqual(["form_date"]);
-    expect(state.saved).toEqual([{ values: { form_date: "2026-09-27" }, checked: {} }]);
-  });
-
   it.each(["no", "yes", "is payroll deduct applicable?", "change the name to Jane Smith"])(
-    "leaves %s alone — only the payroll answer is taken from chat",
+    "leaves %s alone — the payroll answer, the level and the date are what is taken from chat",
     async (question) => {
       expect(await correct(question)).toBeNull();
       expect(state.saved).toEqual([]);
     },
   );
+
+  /*
+   * QA audit, 22 Oct 2026: the open form's answer tells the manager to say a
+   * change "in plain words", and the date was the one line that could not be.
+   */
+  it("corrects the form's date when the manager names it", async () => {
+    const response = await correct("change the date to 9/27");
+    expect(state.saved).toHaveLength(1);
+    expect(state.saved[0]!.values).toMatchObject({ form_date: expect.stringMatching(/-09-27$/) });
+    expect(response!.formUpdate!.updated).toContain("form_date");
+  });
 
   it("changes a finalized form's answer on a new draft of it", async () => {
     state.status = "finalized";
