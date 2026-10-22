@@ -53,6 +53,11 @@ Sunny gained an end-to-end regression suite for HR's 21 Oct conversations
   name, sidebar order, Bubbles' account provisioning, `entity-facts.ts`
   (efde160), the store resolver and Woven title verification (ffea279), the
   report ask bar's form list (b87431c — Sunny lacks the feature).
+- Bubbles only: `revocation.local-stack.test.ts` proves a session is alive
+  through Ask Bubbles' API instead of a direct knowledge read, because
+  Bubbles' knowledge tables are server-only (`20261003001000`). Sunny's
+  knowledge policy differs and its revocation test already passes (QA, 22 Oct
+  2026).
 - Woven-affiliation designation (Bubbles 6d388ad) is not needed: both apps now
   show a manager the forms at every location Woven assigns them.
 
