@@ -293,7 +293,7 @@ beforeEach(async () => {
   for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
   requests.length = 0;
   state.role = "location_manager";
-  state.scope = { level: "location", primaryAreaId: "loc-0310", alsoCoversAreaIds: [] };
+  state.scope = { level: "location", primaryAreaId: "loc-264", alsoCoversAreaIds: [] };
   state.modelCalls = 0;
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-09-29T15:00:00Z"));
@@ -446,7 +446,7 @@ describe("a CA for somebody with forms already on file", () => {
         templateKey,
         variantKey: null,
         employeeName,
-        locationId: "loc-0310",
+        locationId: "loc-264",
         createdBy: "manager-1",
         source: "assistant",
         formDate,
@@ -465,7 +465,7 @@ describe("a CA for somebody with forms already on file", () => {
       templateKey: "coaching",
       variantKey: null,
       employeeName: "Dana Moss",
-      locationId: "loc-0310",
+      locationId: "loc-264",
       createdBy: "manager-1",
       source: "assistant",
       formDate: "2026-09-15",
