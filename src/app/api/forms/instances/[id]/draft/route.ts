@@ -162,9 +162,9 @@ import {
   WARNING_LEVEL_STATED_KEYS,
   WARNING_TYPE_KEY,
   warningLevelChecked,
-  warningLevelFromConversation,
   withoutModelWarningLevel,
 } from "@/lib/forms/warning-level";
+import { warningLevelFromConversation } from "@/lib/forms/warning-level-conversation";
 import { JOIN } from "@/lib/forms/bounded-context";
 import { businessToday } from "@/lib/business-date";
 import {

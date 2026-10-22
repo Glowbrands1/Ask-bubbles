@@ -58,10 +58,10 @@ import {
   WARNING_LEVEL_QUESTION,
   WARNING_TYPE_KEY,
   mentionsEarlierWarning,
-  warningLevelFromConversation,
   warningLevelLabel,
   type WarningLevel,
 } from "@/lib/forms/warning-level";
+import { warningLevelFromConversation } from "@/lib/forms/warning-level-conversation";
 import { exitFactsSupplied, readExitFacts } from "@/lib/forms/exit-facts";
 import {
   exitEmployeeQuestion,

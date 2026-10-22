@@ -27,6 +27,16 @@ readers) through to the saved form, plus negatives, and all pass — but new
 wording will still find gaps. Treat each one reported from the field as a test
 case first.
 
+## Previews of `claude/*` branches are switched off
+
+This project's preview deployments use the production database. `vercel.json`
+sets `git.deploymentEnabled` to `false` for `claude/*` and `claude/**`, so pushing
+such a branch builds no preview; `main` (production) and every other branch
+deploy as before. The rule is read from the pushed commit: a `claude/` branch
+cut from a `main` that does not yet carry it will still get previews until the
+rule reaches `main`. Previews of other branches still use the production
+database — a separate staging database is the real fix.
+
 ## Policy manual approval
 
 Ask Bubbles cites "the official policy manual" chosen by its title in the knowledge
@@ -44,26 +54,25 @@ To close: an explicit, auditable designation of the approved manual per tenant
 (who approved it, when, which version), checked before a quote is marked
 verified. This is a product and HR decision, not only a code change.
 
-## Bubbles: a benign import cycle
+## Bubbles: import cycle — FIXED on this branch, guarded by a test
 
-`src/lib/forms/template-intent.ts` → `warning-level.ts` → `payroll-deduct.ts` →
-`template-intent.ts`. Introduced on this branch (origin/main has no cycle).
+`template-intent.ts` → `warning-level.ts` → `payroll-deduct.ts` →
+`template-intent.ts`, introduced earlier on this branch. It was harmless only
+while nothing read an imported value at load time; the same shape with one such
+read made a production build answer 500 on the chat and forms routes while every
+unit test passed.
 
-It is safe today because every use of an imported binding in these three files is
-inside a function body; nothing is read while the modules load. A production
-build (`next build` + `next start`) was run and the chat and forms routes
-answered normally in the browser.
+Fixed by moving, without changing behaviour:
+- `canonicalWarningWording` (and its edit distance) to `warning-wording.ts`, which
+  imports nothing; `template-intent.ts` re-exports it;
+- one message's payroll answer (`statedPayrollDeduct`) to
+  `payroll-deduct-answer.ts`, which imports nothing; `payroll-deduct.ts`
+  re-exports it;
+- `warningLevelFromConversation`, the only level function that needs the
+  form-request reader, to `warning-level-conversation.ts`.
 
-Why it still matters: the same shape in Ask Sunny DID break a production build —
-there, a module read an imported constant at load time, and `/api/chat` and the
-forms routes answered 500 ("Cannot access … before initialization") while every
-unit test passed, because the test runner loads modules in a different order.
-One top-level use of an imported value in any of these three files would do the
-same here.
-
-To close: move `statedWarningLevel` (and what it needs) out of the cycle, or have
-`template-intent.ts` stop importing it, as Ask Sunny now does
-(`src/lib/forms/warning-level.ts` there imports nothing).
+`src/lib/import-cycles.test.ts` now fails on any runtime import cycle anywhere in
+`src/` (checked by putting the old import back: the test names the two files).
 
 ## Bubbles: wrong reason when the framework document is missing
 
