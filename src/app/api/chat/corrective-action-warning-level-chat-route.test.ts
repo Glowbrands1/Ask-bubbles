@@ -14,7 +14,7 @@ vi.mock("@/config/company/locations", async () =>
  * THE PRODUCTION REPORT, THROUGH POST /api/chat
  * ============================================================================
  *
- *   "create a ca form for paulyne test, she was late again for 30 mins today.
+ *   "create a ca form for rosalyn test, she was late again for 30 mins today.
  *    given verbal warning on 9/21"
  *
  * came back with Written Warning ticked. `corrective-action-warning-level-e2e`
@@ -113,7 +113,7 @@ vi.mock("@/lib/ai/anthropic", () => ({
               input: {
                 values: {
                   observation:
-                    "Observed:\nPaulyne arrived 30 minutes late for the scheduled shift today.\n\nExpectation:\nEmployees are expected to arrive on time for every scheduled shift.\n\nGoing Forward:\nPaulyne should plan to arrive early.",
+                    "Observed:\nRosalyn arrived 30 minutes late for the scheduled shift today.\n\nExpectation:\nEmployees are expected to arrive on time for every scheduled shift.\n\nGoing Forward:\nRosalyn should plan to arrive early.",
                 },
                 checked: { warning_type: ["written"], offense_type: ["tardiness"] },
               },
@@ -188,7 +188,7 @@ const draftRoute = await import("../forms/instances/[id]/draft/route");
 const pdfRoute = await import("../forms/instances/[id]/pdf/route");
 
 const SENTENCE =
-  "create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 9/21";
+  "create a ca form for rosalyn test, she was late again for 30 mins today. given verbal warning on 9/21";
 const QUESTION = "Is this new corrective action a **Verbal Warning** or a **Written Warning**?";
 
 function joinOverview() {
@@ -320,7 +320,7 @@ describe("the exact production sentence, through POST /api/chat", () => {
     // The owner's rule (9 Oct 2026): "given verbal warning" is the level this form records.
     expect(answer.formProposal?.templateKey).toBe("dpoa");
     // QA 22 Oct 2026 decision: no directory match, so the manager's spelling is kept as typed.
-    expect(answer.formProposal?.employeeName).toBe("paulyne test");
+    expect(answer.formProposal?.employeeName).toBe("rosalyn test");
     expect(answer.formProposal?.warningLevel).toBe("verbal");
     expect(answer.content).toContain("**Type of warning:** Verbal Warning, as you said");
     expect(answer.content).not.toContain(QUESTION);

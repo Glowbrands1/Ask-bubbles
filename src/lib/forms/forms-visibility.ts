@@ -22,7 +22,7 @@ import type { AccessScope, Role } from "@/types";
  *
  *   all stores   an administrator role, or an account with an unrevoked
  *                `forms_all_store_access` row of mode `all` (admin-managed, keyed
- *                to the account id; Colene and DJ). Independent of Woven
+ *                to the account id; one District Manager and one Regional Manager). Independent of Woven
  *                verification.
  *   their stores everyone else, whatever their role: the stores on a `location`
  *                scope, PLUS every store Woven assigns them — the primary, and

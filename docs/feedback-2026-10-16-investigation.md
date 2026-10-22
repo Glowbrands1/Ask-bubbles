@@ -49,7 +49,7 @@ Corrective Action) with no store and no job title.
 
 1. **A lowercase name after "my employee" is not read.** `readEmployeeMentions`
    accepts a lowercase name only after "employee named …". "my employee
-   tiffany lempka …" returned *missing*, so the first reply asked for what had
+   tiffany ostrander …" returned *missing*, so the first reply asked for what had
    been given. *(`src/lib/forms/proposal.ts`)*
 2. **A reply that only gives a store, or objects to being asked again, ends the
    intake.** `continuesIntake` recognised a name, an incident, a date, a topic
@@ -104,7 +104,7 @@ open intake. *(`src/lib/forms/incident-dates.ts`, `form-date-answer.ts`)*
 
 ### Stores
 
-**Evidence.** Conversation B: *"…DJ… at Kearney…"* then *"Use Kearney as the
+**Evidence.** Conversation B: *"…RM… at Kearney…"* then *"Use Kearney as the
 location"* → card `locationResolution: not_applicable`, `locationId: null`
 both times. The saved Corrective Action has `location_id = NULL` and no
 Location line. Conversation C ("our Grand Island location") only got a store

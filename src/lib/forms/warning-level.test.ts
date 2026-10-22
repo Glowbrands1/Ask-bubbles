@@ -16,7 +16,7 @@ import {
 /**
  * The warning being issued NOW, read apart from the warnings already on file.
  *
- * Production, 9 Oct 2026: "create a ca form for paulyne test, she was late
+ * Production, 9 Oct 2026: "create a ca form for rosalyn test, she was late
  * again for 30 mins today. given verbal warning on 9/21" came back with
  * Written Warning ticked. The level is the manager's to state; history and
  * "again" never state it.
@@ -25,7 +25,7 @@ const TODAY = "2026-10-09";
 
 describe("the production report", () => {
   const REPORT =
-    "create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 9/21";
+    "create a ca form for rosalyn test, she was late again for 30 mins today. given verbal warning on 9/21";
 
   /*
    * THE OWNER'S RULE, 9 Oct 2026: "gave / given / give" + a level ticks that
@@ -59,7 +59,7 @@ describe("\"gave / given / give\" + a level ticks that level, whatever its date 
 
   it("never escalates: a later older written warning does not override the verbal that was given", () => {
     const text =
-      "create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 9/21. she has a written warning from august";
+      "create a ca form for rosalyn test, she was late again for 30 mins today. given verbal warning on 9/21. she has a written warning from august";
     expect(statedWarningLevel(text, TODAY)).toBe("verbal");
   });
 
@@ -157,11 +157,11 @@ describe("a level stated for THIS form", () => {
 
   it("separates the current request from the history in the same message", () => {
     const text =
-      "create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 9/21. give her a verbal warning for today";
+      "create a ca form for rosalyn test, she was late again for 30 mins today. given verbal warning on 9/21. give her a verbal warning for today";
     expect(statedWarningLevel(text, TODAY)).toBe("verbal");
 
     const written =
-      "create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 9/21. this one is a written warning";
+      "create a ca form for rosalyn test, she was late again for 30 mins today. given verbal warning on 9/21. this one is a written warning";
     expect(statedWarningLevel(written, TODAY)).toBe("written");
   });
 
@@ -293,11 +293,11 @@ describe("history phrasings found in review never become this form's level", () 
       "back in the summer", "a while back", "earlier this year", "over the summer", "when she started",
       "same deal as spring", "she messed up in the spring", "her old manager did one", "we talked at her review",
       "spring was rough", "q3 review", "annual review", "old manager", "2025", "this summer",
-    ].map((sentence) => `create a ca form for paulyne test, she was late again for 30 mins today. ${sentence}. written warning`),
+    ].map((sentence) => `create a ca form for rosalyn test, she was late again for 30 mins today. ${sentence}. written warning`),
     ...[
       "prev", "former", "orig", "existing", "outstanding", "active", "spring", "summer", "q3", "2025", "monday",
       "wk1", "review", "probation", "onboarding", "90 day",
-    ].map((word) => `create a ca form for paulyne test, she was late again for 30 mins today. ${word} written warning`),
+    ].map((word) => `create a ca form for rosalyn test, she was late again for 30 mins today. ${word} written warning`),
     // A level after a clause with its own structure is asked, not read.
     "she was late last night, verbal warning",
     // Re-check at 7352f3b: an earlier incident before a bare level.
@@ -313,7 +313,7 @@ describe("history phrasings found in review never become this form's level", () 
       "trainee lateness written warning",
       "late at christmas. written warning",
       "late during inventory. written warning",
-    ].map((tail) => `create a ca form for paulyne test, she was late again for 30 mins today. ${tail}`),
+    ].map((tail) => `create a ca form for rosalyn test, she was late again for 30 mins today. ${tail}`),
     // Final re-check (PR #10): history opening a reply, then "now/today" in the next clause.
     "written warning on the 21st, now late again",
     "written warning 2 weeks back, now late again",
@@ -324,7 +324,7 @@ describe("history phrasings found in review never become this form's level", () 
     "verbal warning given 21st, late again today",
     "written warning for the same thing, now late today",
     "verbal warning for that, late again today",
-    "create a ca form for paulyne test, she was late again for 30 mins today.\nPrevious actions:\n- verbal warning\n- written warning",
+    "create a ca form for rosalyn test, she was late again for 30 mins today.\nPrevious actions:\n- verbal warning\n- written warning",
   ])("%s", (text) => {
     expect(statedWarningLevel(text, TODAY)).toBeNull();
   });
@@ -359,14 +359,14 @@ describe("corrections", () => {
     ["uncheck written warning and check verbal", "verbal"],
     ["change written warning to verbal", "verbal"],
     ["change the written warning to verbal", "verbal"],
-    ["change written warning to verbal for paulyne", "verbal"],
+    ["change written warning to verbal for rosalyn", "verbal"],
     ["set the warning type to verbal", "verbal"],
     ["verbal not written", "verbal"],
     ["no, verbal", "verbal"],
     ["actually verbal", "verbal"],
     ["oops i meant verbal", "verbal"],
     ["it should have been verbal", "verbal"],
-    ["change paulyne's warning to verbal", "verbal"],
+    ["change rosalyn's warning to verbal", "verbal"],
     ["verbal", "verbal"],
     ["Written warning.", "written"],
   ] as const)("%s -> %s", (text, level) => {

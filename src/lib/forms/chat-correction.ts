@@ -559,7 +559,7 @@ function aboutSomebodyElse(message: string, employee: string): boolean {
 
 /** "jane", "Jane Doe" and "JANE DOE" name the employee on a form for "Jane Doe". */
 function samePerson(named: string, employee: string): boolean {
-  // "change paulyne's warning to verbal" names Paulyne; the verb is not part of the name.
+  // "change rosalyn's warning to verbal" names Rosalyn; the verb is not part of the name.
   const a = named
     .toLowerCase()
     .replace(/^(?:change|update|set|make|fix|correct|switch)\s+/, "")

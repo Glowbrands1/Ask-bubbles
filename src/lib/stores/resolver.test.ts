@@ -243,9 +243,9 @@ describe("in a sentence", () => {
 
   it("reads a multi-word store named right after a role abbreviation", () => {
     for (const [text, ids] of [
-      ["Brandi Algya ASM Lee's Summit. Properly uploading documentation", ["loc-219"]],
-      ["Brandi Algya DM Grand Island", ["loc-236"]],
-      ["Brandi Algya ASM Sioux Falls", ["loc-225", "loc-338"]],
+      ["Corinne Valdez ASM Lee's Summit. Properly uploading documentation", ["loc-219"]],
+      ["Corinne Valdez DM Grand Island", ["loc-236"]],
+      ["Corinne Valdez ASM Sioux Falls", ["loc-225", "loc-338"]],
     ] as const) {
       expect(readRoster(text).mentions.flatMap((mention) => mention.locationIds), text).toEqual(ids);
     }
@@ -256,7 +256,7 @@ describe("in a sentence", () => {
     // that is not a job title is no cue at all.
     expect(readRoster("my ASM Kearney was late").mentions).toEqual([]);
     expect(readRoster("my DM Bellevue called").mentions).toEqual([]);
-    expect(readRoster("Brandi Algya from Grand Island").mentions).toEqual([]);
+    expect(readRoster("Corinne Valdez from Grand Island").mentions).toEqual([]);
   });
 });
 

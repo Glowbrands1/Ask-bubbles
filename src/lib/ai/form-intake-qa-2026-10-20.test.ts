@@ -14,11 +14,11 @@ import type { AccessScope, ChatMessage } from "@/types";
  * terms. A manager asks:
  *
  *     "Can you create a coaching form for a manager on the onboarding
- *      process? Brandi Algya ASM Grand Island. Properly uploading
+ *      process? Corinne Valdez ASM Grand Island. Properly uploading
  *      documentation for onboarding, reading through the list of acceptable
  *      documentation"
  *
- * "Brandi Algya ASM Grand Island" was read as one capitalised run, so the card
+ * "Corinne Valdez ASM Grand Island" was read as one capitalised run, so the card
  * was for an employee of that whole name — or, phrased differently, for
  * nobody, and the manager was asked who the form was for. See `nameBeforeRole`
  * in `lib/forms/proposal.ts`, and the role cue in `lib/stores/resolver.ts`
@@ -116,38 +116,38 @@ function expectReadyCoaching(last: ChatMessage, employee: string) {
 }
 
 const REPORTED =
-  "Can you create a coaching form for a manager on the onboarding process? Brandi Algya ASM Grand Island. Properly uploading documentation for onboarding, reading through the list of acceptable documentation";
+  "Can you create a coaching form for a manager on the onboarding process? Corinne Valdez ASM Grand Island. Properly uploading documentation for onboarding, reading through the list of acceptable documentation";
 
 describe("QA 20 Oct — a name followed by a role and a store", () => {
-  it("the reported message proposes the Coaching Form for Brandi Algya", async () => {
+  it("the reported message proposes the Coaching Form for Corinne Valdez", async () => {
     const last = await converse(REPORTED);
-    expectReadyCoaching(last, "Brandi Algya");
+    expectReadyCoaching(last, "Corinne Valdez");
     expect(last.formProposal!.employeeRole).toBe("Assistant Manager");
   }, 15_000);
 
   it.each([
-    "can you create a coaching form for Brandi Algya ASM Grand Island. Properly uploading documentation",
-    "can you please create a coaching form for Brandi Algya ASM Grand Island. Properly uploading documentation",
-    "can u pls create a coaching form for Brandi Algya ASM Grand Island. Properly uploading documentation",
-    "Can you pls create a coaching frm for a manager. Brandi Algya ASM Grand Island, onboarding documentation",
+    "can you create a coaching form for Corinne Valdez ASM Grand Island. Properly uploading documentation",
+    "can you please create a coaching form for Corinne Valdez ASM Grand Island. Properly uploading documentation",
+    "can u pls create a coaching form for Corinne Valdez ASM Grand Island. Properly uploading documentation",
+    "Can you pls create a coaching frm for a manager. Corinne Valdez ASM Grand Island, onboarding documentation",
   ])("%s", async (question) => {
-    expectReadyCoaching(await converse(question), "Brandi Algya");
+    expectReadyCoaching(await converse(question), "Corinne Valdez");
   });
 
   it("the replayed conversation: a date, then the name line on its own, keeps the form", async () => {
     const last = await converse(
       "Can you create a coaching form for a manager on the onboarding process?",
       "10/9/2026",
-      "Brandi Algya ASM Grand Island",
+      "Corinne Valdez ASM Grand Island",
     );
-    expectReadyCoaching(last, "Brandi Algya");
+    expectReadyCoaching(last, "Corinne Valdez");
     expect(last.formProposal!.formDate).toBe("2026-10-09");
   });
 
   it.each([
-    ["Brandi Algya SD Kearney", "Brandi Algya"],
-    ["Brandi Algya DM Lee's Summit", "Brandi Algya"],
-    ["Brandi Algya ASM", "Brandi Algya"],
+    ["Corinne Valdez SD Kearney", "Corinne Valdez"],
+    ["Corinne Valdez DM Lee's Summit", "Corinne Valdez"],
+    ["Corinne Valdez ASM", "Corinne Valdez"],
   ])("answers 'who is this for?' with %s", async (answer, employee) => {
     expectReadyCoaching(await converse("I need a coaching form", answer), employee);
   });
@@ -161,9 +161,9 @@ describe("QA 20 Oct — a name followed by a role and a store", () => {
     const severalStores: AccessScope = { level: "location", primaryAreaId: "loc-236", alsoCoversAreaIds: ["loc-66", "loc-219"] };
     const last = await converseAs(
       severalStores,
-      "Can you create a coaching form for a manager on the onboarding process? Brandi Algya ASM Lee's Summit. Properly uploading documentation for onboarding",
+      "Can you create a coaching form for a manager on the onboarding process? Corinne Valdez ASM Lee's Summit. Properly uploading documentation for onboarding",
     );
-    expectReadyCoaching(last, "Brandi Algya");
+    expectReadyCoaching(last, "Corinne Valdez");
     expect(last.formProposal!.locationId).toBe("loc-219");
   });
 });

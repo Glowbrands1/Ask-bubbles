@@ -167,9 +167,9 @@ describe("a policy title in capitals is not a person", () => {
   it("reads the employee, and not the policy's first word, as the person", () => {
     expect(
       extractEmployeeNames(
-        "create corrective action for for Ellie Sendgraff for Late Opening from the policy manual. It is a verbal warning",
+        "create corrective action for for Wren Halvorsen for Late Opening from the policy manual. It is a verbal warning",
       ),
-    ).toEqual(["Ellie Sendgraff"]);
+    ).toEqual(["Wren Halvorsen"]);
     expect(extractEmployeeNames("CA for Dana Moss about Dress Code")).toEqual(["Dana Moss"]);
   });
 

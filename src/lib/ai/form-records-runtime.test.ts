@@ -19,7 +19,7 @@ const state = vi.hoisted(() => ({
   claudeInput: null as Record<string, unknown> | null,
   loadCalls: [] as Record<string, unknown>[],
   proposalCalls: [] as string[],
-  block: "FORMS ON FILE (FORMS REGISTER)\n\n- 2026-09-12 — Coaching Form; employee: Ellie Sendgraff",
+  block: "FORMS ON FILE (FORMS REGISTER)\n\n- 2026-09-12 — Coaching Form; employee: Wren Halvorsen",
 }));
 
 vi.mock("@/lib/config/server-env", async (importOriginal) => ({
@@ -85,7 +85,7 @@ vi.mock("@/lib/forms/chat-form-records", async (importOriginal) => ({
 vi.mock("./call-claude", () => ({
   callClaude: async (input: Record<string, unknown>) => {
     state.claudeInput = input;
-    return "Ellie has one finalized coaching form on file.";
+    return "Wren has one finalized coaching form on file.";
   },
 }));
 
@@ -104,7 +104,7 @@ async function ask(question: string, history: unknown[] = []) {
       mode: "standard",
       history,
       scopeId: "bcs-core",
-      context: { userName: "Paulyne", locationName: "Synthetic Store", todayIso: "2026-10-20" },
+      context: { userName: "Rosalyn", locationName: "Synthetic Store", todayIso: "2026-10-20" },
     } as never,
     ACTOR,
   );
@@ -118,7 +118,7 @@ beforeEach(() => {
 
 describe("a question about forms already on file", () => {
   it("reads the Forms Register as the authorized actor and sends the block with its rules", async () => {
-    const answer = await ask("does employee ellie sendgraff have previous coachings", [
+    const answer = await ask("does employee wren halvorsen have previous coachings", [
       { id: "m1", role: "user", content: "hi" },
       { id: "m2", role: "assistant", content: "Hello!" },
     ]);
@@ -126,7 +126,7 @@ describe("a question about forms already on file", () => {
     expect(state.loadCalls).toHaveLength(1);
     expect(state.loadCalls[0]).toMatchObject({
       actor: ACTOR,
-      question: "does employee ellie sendgraff have previous coachings",
+      question: "does employee wren halvorsen have previous coachings",
       previousQuestion: "hi",
       today: "2026-10-20",
     });
