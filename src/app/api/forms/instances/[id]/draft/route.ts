@@ -173,9 +173,9 @@ import {
   WARNING_LEVEL_STATED_KEYS,
   WARNING_TYPE_KEY,
   warningLevelChecked,
-  warningLevelFromConversation,
   withoutModelWarningLevel,
 } from "@/lib/forms/warning-level";
+import { warningLevelFromConversation } from "@/lib/forms/warning-level-conversation";
 import { JOIN } from "@/lib/forms/bounded-context";
 import { businessToday } from "@/lib/business-date";
 import {
@@ -1401,7 +1401,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         ? describedSection
         : null);
     const statedKeys = caPolicy
-      ? (statedOffenseKeys(caPolicy, notes) ?? (policySection ? [policySection.offenseKey] : null))
+      ? (statedOffenseKeys(caPolicy, notes) ??
+        (policySection ? [policySection.offenseKey] : null))
       : null;
     const statedOffense = statedKeys
       ? withStatedOffense({

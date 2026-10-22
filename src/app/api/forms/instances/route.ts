@@ -34,8 +34,8 @@ import {
   WARNING_TYPE_KEY,
   isWarningLevel,
   warningLevelChecked,
-  warningLevelFromConversation,
 } from "@/lib/forms/warning-level";
+import { warningLevelFromConversation } from "@/lib/forms/warning-level-conversation";
 import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { businessToday } from "@/lib/business-date";
 import type { Permission } from "@/types";

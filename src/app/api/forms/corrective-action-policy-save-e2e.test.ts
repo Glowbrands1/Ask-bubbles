@@ -67,6 +67,8 @@ const SOURCED = {
   grounded: true,
   verified: true,
   source: "official_policy_manual",
+  // The approved (tagged) manual. A title-matched one only adds a notice on the card (`standing-notices.ts`).
+  matchedBy: "tag",
   documentId: "doc-manual",
   documentTitle: "Synthetic Policy Manual",
 };

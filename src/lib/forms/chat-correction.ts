@@ -37,6 +37,7 @@ import { applyAssistantDraft, saveInstanceValues } from "./instances";
 import { correctCaFromChat } from "./ca-chat-corrections";
 import { enforcePersonEdit } from "./responsibility";
 import { namesIncidentTopic } from "./corrective-action-intake";
+import { NO_PRIOR_ACTION, statedPriorActions } from "./prior-actions";
 import {
   WARNING_LEVEL_KEYS,
   WARNING_TYPE_KEY,
@@ -518,6 +519,9 @@ const NOT_A_PERSON = new Set([
   "bus", "car", "hr", "nobody", "everybody", "everything", "nothing", "something", "store", "shift",
   "good", "it's", "that's", "what", "who", "which", "one", "please", "form", "draft", "change",
   "consistency", "fairness", "schedule", "dm", "payroll", "policy", "it", "everyone's", "team", "notes",
+  // "the date was actually 10/18/26" names a field, not a person (QA, 22 Oct 2026, round 3).
+  "date", "meeting", "incident", "deadline", "day", "time", "level", "deduction", "training", "salon",
+  "drawer", "register", "observation", "plan", "amount", "coaching",
 ]);
 
 /**
@@ -874,6 +878,14 @@ export async function correctActiveForm(input: {
     if (caCorrection) return caCorrection;
   }
   /*
+   * The level, prior coaching, payroll and policy said after Create (QA, 22
+   * Oct 2026, round 3) — what the readers above leave, nothing they take.
+   */
+  if (!response) {
+    response = await correctCorrectiveActionFacts({ ...input, question: statements, message: statements }, applied);
+    if (applied.finalized) return onNewDraft();
+  }
+  /*
    * "Change her new location to salon 24 and rewrite the reason …" reads as
    * nothing whole. Its explicit correction clauses are read alone — never a
    * clause without a correction verb, so a request that is all revision
@@ -894,6 +906,123 @@ export async function correctActiveForm(input: {
   const leftovers = [...unreadInstructions(statements, applied.reads ?? (() => false)), ...questions];
   if (leftovers.length === 0) return response;
   return { ...response, content: `${response.content}\n\n${leftoverNote(leftovers)}` };
+}
+
+/*
+ * ============================================================================
+ * THE OPEN CORRECTIVE ACTION FORM, TOLD ONE MORE OF ITS FACTS
+ * ============================================================================
+ *
+ * QA, 22 Oct 2026. With the form already created, "prior coaching JBA Policy
+ * Manual 7-29-26", "she also had a verbal ca on 9-1-26", "first time, no prior
+ * coaching" and "it happened on 10/19/26" changed nothing: none says "change",
+ * so no reader above took it, and the manager had to type it onto the form.
+ * Each is a fact this form records, stated on its own, and it now goes onto
+ * the open draft:
+ *
+ *   an earlier step and its date   added to Prior Actions, as the drafting
+ *                                  route writes it — never a line already
+ *                                  there, and nothing on the list removed
+ *   "first time", "no prior …"     "None — first occurrence", only where
+ *                                  Prior Actions is empty
+ *
+ * The DATE is not taken here: a date correction goes through the form-date
+ * reader above (`correctFromFormReaders`), which also moves the old day in the
+ * paragraphs Ask Bubbles drafted, so the form never states two dates.
+ *
+ * Read only from the manager's statement; a question is answered as before.
+ */
+const NO_HISTORY =
+  /\b(?:first\s+(?:time|offen[cs]e|occurrence|one)|no\s+(?:prior|previous|past|earlier)\b|no\s+(?:coaching|warnings?|write[- ]?ups?|corrective\s+actions?)\b|nothing\s+(?:on\s+file|prior|before))/i;
+
+const PRIOR_ACTIONS_KEY = "prior_actions";
+
+/** The step and the signed date a Prior Actions line names, for telling a repeat. */
+function priorLineKey(line: string): string {
+  const step = line.split(" — ")[0]!.trim().toLowerCase();
+  const date = /signed\s+(\d{2}\/\d{2}\/\d{4})/i.exec(line)?.[1] ?? "";
+  return `${step}|${date}`;
+}
+
+async function correctCorrectiveActionFacts(
+  input: { request: Request; instanceId: string; question: string; today: string; message?: string },
+  applied: AppliedBy = {},
+): Promise<AskResponse | null> {
+  const text = input.question;
+  if (isQuestion(text)) return null;
+  const whole = input.message ?? text;
+  const priorLines = statedPriorActions(text, input.today);
+  const firstTime = priorLines.length === 0 && NO_HISTORY.test(text);
+  if (priorLines.length === 0 && !firstTime) return null;
+
+  let authorized: Awaited<ReturnType<typeof authorizeInstance>>;
+  try {
+    authorized = await authorizeInstance(input.request, input.instanceId, "edit");
+  } catch {
+    return null;
+  }
+  const { actor, loaded } = authorized;
+  const document = parseFormDocument(loaded.version.document);
+  const variantKey = loaded.instance.variantKey;
+  const keys = new Set(fieldsForVariant(document, variantKey).map((field) => field.key));
+  const isCorrectiveAction =
+    keys.has(PRIOR_ACTIONS_KEY) && checkboxGroupsForVariant(document, variantKey).some((group) => group.key === WARNING_TYPE_KEY);
+  if (!isCorrectiveAction) return null;
+
+  // A request for a form, or a turn about somebody else, is left to the ordinary flow.
+  const intent = detectTemplateIntent(whole);
+  if (intent.kind === "ambiguous" || (intent.kind === "corrective_action" && intent.requestedCreation)) return null;
+  if (intent.kind === "explicit" && (intent.templateKey !== loaded.instance.templateKey || /\b(?:create|start|pull up|new|another)\b|\bmake\s+(?:a|an)\b|\bneed\s+(?:a|an)\b/i.test(whole))) {
+    return null;
+  }
+  const named = extractEmployeeNames(whole);
+  if (named.length > 0 && !named.some((name) => samePersonByName(name, loaded.instance.employeeName))) return null;
+  if (aboutSomebodyElse(whole, loaded.instance.employeeName)) return null;
+
+  if (loaded.instance.status !== "draft") {
+    applied.finalized = true;
+    return null;
+  }
+
+  const values: Record<string, string> = {};
+  const notes: string[] = [];
+  const existing = (loaded.values.find((row) => row.fieldKey === PRIOR_ACTIONS_KEY)?.value ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+  const kept = existing.filter((line) => line !== NO_PRIOR_ACTION);
+  const added = priorLines.filter((line) => !kept.some((have) => priorLineKey(have) === priorLineKey(line)));
+  if (added.length > 0) values[PRIOR_ACTIONS_KEY] = [...kept, ...added].join("\n");
+  if (firstTime) {
+    if (kept.length === 0 && existing[0] !== NO_PRIOR_ACTION) values[PRIOR_ACTIONS_KEY] = NO_PRIOR_ACTION;
+    else if (kept.length > 0) notes.push(`Prior Actions already lists ${kept.length === 1 ? "an earlier step" : "earlier steps"}, so I left it as it is — change it on the form if that list is wrong.`);
+  }
+  const submitted = { values, checked: {} as Record<string, string[]> };
+  if (Object.keys(values).length === 0) {
+    return notes.length > 0 ? reply(notes.join("\n\n")) : null;
+  }
+  const accepted = enforcePersonEdit(document, variantKey, submitted);
+  const refused = new Set(accepted.rejected.map((entry) => entry.key));
+  const saved = await saveInstanceValues(input.instanceId, { values: accepted.values, checked: {} }, actor.id);
+  const refusedOnSave = new Set(saved.rejected.map((entry) => entry.key));
+  const written = Object.keys(values).filter((key) => !refused.has(key) && !refusedOnSave.has(key));
+  if (written.length === 0) return null;
+
+  const who = `**${loaded.instance.templateName}** for **${loaded.instance.employeeName}**`;
+  const label = (key: string) => fieldsForVariant(document, variantKey).find((field) => field.key === key)?.label ?? key;
+  const described = written.map((key) =>
+    key === PRIOR_ACTIONS_KEY
+      ? added.length > 0
+        ? `${label(key)} → added ${added.map((line) => `"${line}"`).join(", ")}`
+        : `${label(key)} → ${NO_PRIOR_ACTION}`
+      : `${label(key)} → ${fieldsForVariant(document, variantKey).find((field) => field.key === key)?.input === "date" ? displayDate(values[key]!, document.style) : values[key]}`,
+  );
+  applied.reads = (clause) =>
+    statedPriorActions(clause, input.today).length > 0 || NO_HISTORY.test(clause);
+  return {
+    ...reply([`Updated the ${who}: ${described.join("; ")}.`, ...notes.map((note) => `\n${note}`)].join("\n")),
+    formUpdate: { instanceId: input.instanceId, updated: written },
+  };
 }
 
 /** The question a date correction that names no single day is answered with. Nothing is changed. */

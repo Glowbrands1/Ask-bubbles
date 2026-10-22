@@ -1,4 +1,4 @@
-import { datesInText, explicitFormDate, heldCoachingDates, listIncidentDates } from "./form-date-answer";
+import { explicitFormDate, heldCoachingDates, listFormDates, listIncidentDates } from "./form-date-answer";
 
 /**
  * ============================================================================
@@ -66,7 +66,12 @@ export type DateChoice = { kind: "date"; iso: string } | { kind: "today" };
 export function readDateChoice(reply: string, dates: readonly string[], today: string): DateChoice | null {
   const text = (reply ?? "").toLowerCase();
   if (/\?\s*$/.test(text.trim())) return null;
-  const typed = datesInText(reply, today).filter((found) => found.iso <= today);
+  /*
+   * A DATE OF THE INCIDENT, not any date: "she was coached 1-1-26 on the jba
+   * manual", typed after the question, is history and answered nothing (QA, 22
+   * Oct 2026, round 3 — the form was dated 1/1).
+   */
+  const typed = listFormDates(reply, today).filter((found) => found.iso <= today);
   if (typed.length > 0) return { kind: "date", iso: typed[typed.length - 1]!.iso };
   if (/\b(?:most recent|latest|newest|last (?:one|date)|second)\b/.test(text)) {
     return { kind: "date", iso: dates[dates.length - 1]! };
@@ -83,8 +88,12 @@ export function readDateChoice(reply: string, dates: readonly string[], today: s
  * in a turn that says it corrects — and does not add another incident — is
  * the date.
  */
+/*
+ * QA, 22 Oct 2026, round 3: "wait, the meeting was 10/19/26" after "… for
+ * missing the 10/20/26 meeting" was asked which date goes on the form.
+ */
 const CORRECTS_DATE =
-  /\b(?:actually|instead|wrong|correction|i\s+meant|meant\s+to\s+say|should\s+(?:be|have\s+been|say|read)|sorry|oops|typo|my\s+(?:mistake|bad)|not\s+(?:on\s+)?\d)/i;
+  /\b(?:actually|instead|wrong|correction|i\s+meant|i\s+mean|meant\s+to\s+say|should\s+(?:be|have\s+been|say|read)|sorry|oops|typo|my\s+(?:mistake|bad)|wait|scratch\s+that|change\s+the\s+date|happened\s+on|not\s+(?:on\s+)?\d|(?:it|that|the\s+(?:meeting|incident|date|shift|day))\s+(?:was|is)\s+(?:on\s+)?(?=\d))/i;
 const ADDS_AN_INCIDENT = /\b(?:also|too|again|another|as\s+well|plus|and\s+then)\b/i;
 
 /** The manager's answer to an earlier date question, over the whole conversation. */
@@ -121,7 +130,8 @@ export function answersDateQuestion(history: readonly Turn[], question: string, 
 export function correctedIncidentDate(turns: readonly string[], today: string): string | null {
   let date: string | null = null;
   for (const turn of turns.slice(1)) {
-    if (!CORRECTS_DATE.test(turn) || ADDS_AN_INCIDENT.test(turn)) continue;
+    // "wait, was it 10/19/26?" asks; it corrects nothing (QA, 22 Oct 2026, round 3).
+    if (!CORRECTS_DATE.test(turn) || ADDS_AN_INCIDENT.test(turn) || /\?\s*$/.test(turn.trim())) continue;
     const own = incidentDates(turn, today);
     if (own.length === 1) date = own[0]!;
   }

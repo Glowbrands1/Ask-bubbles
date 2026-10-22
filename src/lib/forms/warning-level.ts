@@ -1,9 +1,11 @@
 import { businessToday } from "@/lib/business-date";
 
-import { datesInText, priorSteps } from "./form-date-answer";
+import { datesInText } from "./form-date-answer";
 import { namesIncidentTopicIn } from "./incident-topic";
-import { statedPayrollDeduct } from "./payroll-deduct";
-import { canonicalWarningWording, detectTemplateIntent } from "./template-intent";
+// From the import-free modules, never `payroll-deduct.ts` / `template-intent.ts`:
+// `template-intent.ts` imports this one, and that closed a cycle (QA, 22 Oct 2026).
+import { statedPayrollDeduct } from "./payroll-deduct-answer";
+import { canonicalWarningWording } from "./warning-wording";
 
 /**
  * ============================================================================
@@ -109,7 +111,7 @@ const NAMED =
   /\b(final\s+written|final|written|verbal)\s+(?:warn(?:ing|ings)?|cas?|c\/a|corrective\s+actions?)\b|\b(final\s+written)\b(?!\s+(?:statement|notice|test|exam|request|record|note|policy|up)\b)/gi;
 
 /** "no, verbal", "actually verbal", "oops i meant verbal" — a correction's lead-in. */
-const LEAD_IN = String.raw`(?:(?:actually|no|nope|sorry|oops|wait|correction|ok|okay|so|rather|i\s+meant|i\s+mean|make\s+that)[\s,.:!-]*)*`;
+const LEAD_IN = String.raw`(?:(?:actually|no|nope|sorry|oops|wait|correction|ok|okay|so|rather|i\s+meant|i\s+mean|make\s+that|on\s+second\s+thought|scratch\s+that)[\s,.:!-]*)*`;
 
 /**
  * The bare adjective, as the level of THIS form — "make it verbal", "should be
@@ -118,7 +120,7 @@ const LEAD_IN = String.raw`(?:(?:actually|no|nope|sorry|oops|wait|correction|ok|
  * heads-up", "a written statement").
  */
 const BARE_AFTER_CUE =
-  /\b(?:make\s+(?:it|this|that)(?:\s+a)?|keep\s+(?:it|this)(?:\s+(?:at|as))?(?:\s+a)?|should\s+(?:have\s+)?be(?:en)?(?:\s+a)?|needs?\s+to\s+be(?:\s+a)?|it'?s(?:\s+a)?|it\s+is(?:\s+a)?|this\s+is(?:\s+a)?|go(?:ing)?\s+with(?:\s+a)?|just(?:\s+a)?|only(?:\s+a)?|mark\s+(?:it\s+)?as(?:\s+a)?|tick|check|select|meant|mean)\s+(verbal|written)\b(?=\s*(?:$|[.,;!?\n)]|one\b|please\b|instead\b|not\b|this\s+time\b|for\s+(?:this|today|now|sure|real)\b|rather\b|then\b|thanks?\b))/gi;
+  /\b(?:make\s+(?:it|this|that)(?:\s+a)?|keep\s+(?:it|this)(?:\s+(?:at|as))?(?:\s+a)?|should(?:\s+have|'ve)?\s+be(?:en)?(?:\s+a)?|(?:bump(?:ed)?|move[ds]?|upgrade[ds]?|downgrade[ds]?|drop(?:ped)?|bring|take)\s+(?:it\s+|this\s+|that\s+|her\s+|him\s+|them\s+)?(?:up\s+|down\s+|back\s+)?to(?:\s+a)?|needs?\s+to\s+be(?:\s+a)?|it'?s(?:\s+a)?|it\s+is(?:\s+a)?|this\s+is(?:\s+a)?|(?:it|this)\s+one\s+is(?:\s+a)?|(?:it|this)(?:\s+one)?\s+will\s+be(?:\s+a)?|(?:it|this)'?ll\s+be(?:\s+a)?|go(?:ing)?\s+with(?:\s+a)?|just(?:\s+a)?|only(?:\s+a)?|mark\s+(?:it\s+)?as(?:\s+a)?|tick|check|select|meant|mean)\s+(verbal|written)\b(?=\s*(?:$|[.,;!?\n)]|one\b|please\b|instead\b|not\b|this\s+time\b|for\s+(?:this|today|now|sure|real)\b|rather\b|then\b|thanks?\b))/gi;
 
 /**
  * "give jordan a verbal for being late", "needs a written", "deserves a final
@@ -126,7 +128,7 @@ const BARE_AFTER_CUE =
  * with the noun left off (owner's QA, PR #8).
  */
 const BARE_GIVEN =
-  /\b(?:give|giving|issue|issuing|needs?|deserves?|requires?)\s+(?:[a-z']+\s+){0,2}?an?\s+(?:final\s+)?(verbal|written)\b(?!\s+(?:warn\w*|statement|notice|test|exam|up|record|note|request|policy)\b)/gi;
+  /\b(?:give|giving|issue|issuing|needs?|deserves?|requires?|put(?:\s+[a-z'’-]+){1,3}\s+on|start|do)\s+(?:[a-z']+\s+){0,2}?an?\s+(?:final\s+)?(verbal|written)\b(?!\s+(?:warn\w*|statement|notice|test|exam|up|record|note|request|policy)\b)/gi;
 
 /**
  * "change written warning to verbal", "set the warning type to verbal",
@@ -209,6 +211,21 @@ function levelBesidePayroll(
     const last = segment.lastIndexOf(",");
     const tail = found(segment.slice(last + 1), last + 1);
     if (tail && onlyPayrollAnswer(segment.slice(0, last))) return tail;
+    /*
+     * "… blew off the training session 10/19/26, written warning, no payroll
+     * deduction" (QA, 22 Oct 2026): the level as a middle item, with the
+     * payroll answer as the item right after it, and nothing after that.
+     */
+    const parts: { text: string; offset: number }[] = [];
+    let at = 0;
+    for (const text of segment.split(",")) {
+      parts.push({ text, offset: at });
+      at += text.length + 1;
+    }
+    for (let i = 1; i < parts.length - 1; i += 1) {
+      const middle = found(parts[i]!.text, parts[i]!.offset);
+      if (middle && i + 1 === parts.length - 1 && onlyPayrollAnswer(parts[i + 1]!.text)) return middle;
+    }
     return null;
   }
   // "verbal warning; no payroll", "Verbal warning. payroll deduct no."
@@ -228,7 +245,7 @@ function onlyLevelAndPayroll(text: string): boolean {
 
 /** "warning level: written", "type of warning - verbal". */
 const LABELLED =
-  /\b(?:type\s+of\s+warning|warning\s*(?:level|type))\s*(?:is|should\s+be|[:=-])\s*(?:a\s+)?(final\s+written|verbal|written)\b/gi;
+  /\b(?:type\s+of\s+warning|warning\s*(?:level|type)|level)\s*(?:is|should\s+be|[:=-])\s*(?:a\s+)?(final\s+written|verbal|written)\b/gi;
 
 /* ------------------------------------------------------------------ cues --- */
 
@@ -271,7 +288,7 @@ const PAST_CUE =
  * verbs that issue, document or decide a warning belong here.
  */
 const ADJACENT_CURRENT =
-  /\b(?:give|giving|issue|issuing|create|creating|write|writing|make|making|do|doing|document|documenting|prepare|draft|file|filing|start|need|needs|needed|deserves?|requires?|want|wants|(?:this|it|that)(?:\s+one)?\s+(?:is|will\s+be|should\s+be|would\s+be|needs\s+to\s+be)|it'?s|should\s+be|will\s+be|to\s+be|go\s+with|going\s+with|keep|use|put\s+(?:her|him|them)\s+on)\s+(?:(?:her|him|them|it|this)\s+)?(?:(?:a|an|the|as|to|at)\s+)?(?:(?:formal|official|documented|new|first|1st|second|third|another|final)\s+)?$/i;
+  /\b(?:give|giving|issue|issuing|create|creating|write|writing|make|making|do|doing|document|documenting|prepare|draft|file|filing|start|need|needs|needed|deserves?|requires?|want|wants|(?:this|it|that)(?:\s+one)?\s+(?:is|will\s+be|should\s+be|would\s+be|needs\s+to\s+be)|it'?s|should\s+be|will\s+be|to\s+be|go\s+with|going\s+with|keep|use|put\s+(?:her|him|them)\s+on|(?:i'?d|i\s+would|we'?d|we\s+would)\s+like|doc|log)\s+(?:(?:her|him|them|it|this)\s+)?(?:(?:a|an|the|as|to|at)\s+)?(?:(?:formal|official|documented|new|first|1st|second|third|another|final)\s+)?$/i;
 
 /**
  * Words that point at THIS form only when nothing dates the warning — "she
@@ -429,13 +446,16 @@ function dateBefore(before: string, today: string): "earlier" | "today" | "other
 function classify(text: string, start: number, end: number, today: string, cued: boolean): MentionKind | null {
   const { before, after, question, opensTurn } = clauseAround(text, start, end);
   // A question about a level decides nothing: "should this be a written warning?"
-  // A request worded as a question still asks for that level: "can you make a written CA?"
-  if (question && !ASKS_THE_ASSISTANT_FOR.test(before)) return "unclear";
+  // A request worded as a question still asks for that level: "can you make a written CA?",
+  // "Can we put her on a written for it?" (QA, 22 Oct 2026, round 3).
+  if (question && !ASKS_THE_ASSISTANT_FOR.test(before) && !POLITE_LEVEL_REQUEST.test(before)) return "unclear";
   if (NEGATED.test(before)) return null;
   if (REPLACED.test(after)) return null;
   if (ALTERNATIVE_AFTER.test(after) || ALTERNATIVE_BEFORE.test(before)) return "unclear";
   // "Prior actions: verbal warning, written warning" — a list of what already happened.
   if (HISTORY_HEADING.test(before)) return "historical";
+  // "… written CA please": a request, whatever was dated before it (QA, 22 Oct 2026).
+  if (/^\s*(?:please|pls|plz)\b/i.test(after) && !PAST_OR_HABITUAL.test(before.slice(-60))) return "current";
   // A bare adjective was only matched after a phrase that sets this form's level.
   if (cued) return "current";
 
@@ -542,6 +562,22 @@ function pointsToThePast(textBefore: string, today: string): boolean {
   return datesInText(textBefore, today).some((found) => found.iso !== today);
 }
 
+/** A polite request that issues the level: "can we put tess on a written …?", "could you give her a verbal …?". */
+const POLITE_LEVEL_REQUEST =
+  /^\s*(?:hey,?\s+|hi,?\s+|ok,?\s+)?(?:can|could|would|will)\s+(?:you|we|i|u)\s+(?:please\s+|pls\s+)?(?:help\s+(?:me|us)\s+(?:to\s+)?)?(?:put|write|start|create|make|do|issue|give|document|doc|file|draft)\b/i;
+
+/** A clause that is only a level: "verbal", "written warning", "a verbal CA please". */
+const CLAUSE_LEVEL =
+  /^\s*(?:(?:it'?s|it\s+is|make\s+it|just|only)\s+)?(?:a\s+|an\s+)?(verbal|written)(?:\s+(?:warning|corrective\s+action|ca|c\/a|write[- ]?up))?(?:\s+(?:please|pls|plz))?\s*$/i;
+
+/** The manager asking for the form, earlier in the same sentence: "write up tess varga, …". */
+const REQUEST_CLAUSE =
+  /\b(?:writ(?:e|ing)\s+up|writ(?:e|ing)\s+[a-z'’-]+(?:\s+[a-z'’-]+)?\s+up|create|make|start|draft|issue|need|needs|want|give|corrective\s+action\s+for|c\.?a\.?|c\/a|corrective\s+actions?(?:\s+form)?|write[- ]?up\s+for)\b/i;
+
+/** Words earlier in the sentence that make a level clause one more item of history. */
+const CLAUSE_HISTORY =
+  /\b(?:had|has|have|got|received|given|issued|previous(?:ly)?|prior|past|earlier|already|before|history|record|ago|last(?!\s+(?:night|shift|evening|weekend|weekend'?s))|back\s+in|spring|summer|fall|autumn|winter|q[1-4]|review|warnings|write[- ]?ups|coached|coaching)\b/i;
+
 /**
  * Every warning level the text names, in order, with how each one reads.
  *
@@ -599,6 +635,38 @@ export function warningMentions(text: string, today: string): WarningMention[] {
     if (source[segment.index + segment[0].length] === "?") continue;
     sentences.push({ level: levelOf(bare[1]!), start, end: segment.index + segment[0].length });
   }
+  /*
+   * ==========================================================================
+   * A LEVEL AS A CLAUSE OF ITS OWN
+   * ==========================================================================
+   *
+   * QA, 22 Oct 2026: "please write tess varga up — verbal — she missed …",
+   * "write up tess varga, written warning. she blew off …". A level standing
+   * as a clause of its own — between dashes, commas or a colon — straight
+   * after the manager asks for the form, in the same sentence, is the level of
+   * the form asked for. Only there: after any other clause ("she was late last
+   * night, verbal warning") it is still asked about, as it always was, and
+   * words of history earlier in the sentence still make it history. Only the
+   * level, its noun and "please" may be in the clause; a second such level
+   * makes both a question.
+   */
+  const clauses: { level: WarningLevel; start: number; end: number }[] = [];
+  const clauseSource = source.replace(/ - /g, " — ");
+  for (const clause of clauseSource.matchAll(/[^.;!?\n,:—–]+/g)) {
+    const own = CLAUSE_LEVEL.exec(clause[0]);
+    if (!own) continue;
+    const start = clause.index + clause[0].toLowerCase().indexOf(own[1]!.toLowerCase());
+    if (wholeLines.some((entry) => entry.start === start) || sentences.some((entry) => entry.start === start)) continue;
+    const end = clause.index + clause[0].length;
+    if (source[end] === "?") continue;
+    const head = source.slice(0, clause.index);
+    const sentenceBefore = head.slice(Math.max(...[".", ";", "!", "?", "\n"].map((mark) => head.lastIndexOf(mark))) + 1);
+    if (!REQUEST_CLAUSE.test(sentenceBefore)) continue;
+    // "write up" asks for this form; it is not a write-up on file.
+    const history = sentenceBefore.replace(new RegExp(REQUEST_CLAUSE.source, "gi"), " ");
+    if (CLAUSE_HISTORY.test(history) || LISTS_EARLIER_STEPS.test(history)) continue;
+    clauses.push({ level: levelOf(own[1]!), start, end });
+  }
   /* The level beside the payroll answer — "Verbal warning, payroll deduct no." */
   const beside: { level: WarningLevel; start: number; end: number; underHeading: boolean }[] = [];
   const segments = [...source.matchAll(SENTENCE_WITH_AMOUNTS)];
@@ -606,7 +674,13 @@ export function warningMentions(text: string, today: string): WarningMention[] {
     const hit = levelBesidePayroll(segment[0], [segments[i - 1]?.[0], segments[i + 1]?.[0]]);
     if (!hit) return;
     const start = segment.index + hit.offset;
-    if (wholeLines.some((entry) => entry.start === start) || sentences.some((entry) => entry.start === start)) return;
+    if (
+      wholeLines.some((entry) => entry.start === start) ||
+      sentences.some((entry) => entry.start === start) ||
+      clauses.some((entry) => entry.start === start)
+    ) {
+      return;
+    }
     if (source[segment.index + segment[0].length] === "?") return;
     beside.push({
       level: levelOf(hit.word),
@@ -615,7 +689,7 @@ export function warningMentions(text: string, today: string): WarningMention[] {
       underHeading: headingLines.some((line) => start >= line.start && start <= line.end),
     });
   });
-  const answers = wholeLines.length + sentences.length + beside.length;
+  const answers = wholeLines.length + sentences.length + clauses.length + beside.length;
   for (const entry of wholeLines) {
     const kind: MentionKind | undefined = entry.underHeading
       ? "historical"
@@ -626,6 +700,10 @@ export function warningMentions(text: string, today: string): WarningMention[] {
   }
   for (const entry of sentences) {
     push(entry.level, entry.start, entry.end, true, answers > 1 ? "unclear" : undefined);
+  }
+  for (const entry of clauses) {
+    const underHeading = headingLines.some((line) => entry.start >= line.start && entry.start <= line.end);
+    push(entry.level, entry.start, entry.end, true, underHeading ? "historical" : answers > 1 ? "unclear" : undefined);
   }
   for (const entry of beside) {
     push(entry.level, entry.start, entry.end, true, entry.underHeading ? "historical" : answers > 1 ? "unclear" : undefined);
@@ -692,62 +770,6 @@ export function warningLevelFromTurns(turns: readonly string[], today: string): 
   return level;
 }
 
-export interface WarningConversationTurn {
-  role: string;
-  content: string;
-  error?: unknown;
-}
-
-/**
- * A turn that only lists what already happened ("prior coaching: verbal ca
- * 9-1-26") names a form without asking for one; it is not the start of
- * another form's turns, and cutting there lost the level stated in the
- * request before it (QA, 22 Oct 2026).
- */
-function onlyHistory(text: string, today: string): boolean {
-  return (
-    priorSteps(text, today).length > 0 &&
-    !/\b(?:create|make\s+(?:a|an|it)|start|draft|new|another|need\s+(?:a|an)|open|pull\s+up|write\s+up)\b/i.test(text)
-  );
-}
-
-/**
- * The level the conversation stated for the form being proposed, or null.
- *
- * ONLY THIS FORM'S TURNS, by the rule `payrollDeductFromConversation` uses:
- * the look-back starts after the last manager turn that asked for a DIFFERENT
- * form request, so "written warning" said about somebody else's Corrective
- * Action earlier in the same chat is not carried onto this one. Assistant
- * turns never answer. A caller that has already cut the conversation to this
- * form's turns says so (`fromThisForm`), and it is not cut again: there, "she
- * had a written warning on 9/1" reads as a request for the form (it names
- * one), and cutting at it lost the level stated in the request before it (HR
- * feedback, 21 Oct 2026 — the same fix as the payroll answer's).
- */
-export function warningLevelFromConversation(
-  turns: readonly WarningConversationTurn[],
-  today: string,
-  options: { readonly fromThisForm?: boolean } = {},
-): WarningLevel | null {
-  const usable = turns.filter(
-    (turn) => !turn.error && typeof turn.content === "string" && turn.content.trim() !== "",
-  );
-  const requests = usable
-    .map((turn, index) => ({ turn, index }))
-    .filter(
-      ({ turn }) => turn.role === "user" && detectTemplateIntent(turn.content).kind !== "none" && !onlyHistory(turn.content, today),
-    )
-    .map(({ index }) => index);
-  const start = !options.fromThisForm && requests.length >= 2 ? requests[requests.length - 2]! + 1 : 0;
-  return warningLevelFromTurns(
-    usable
-      .slice(start)
-      .filter((turn) => turn.role === "user")
-      .map((turn) => turn.content),
-    today,
-  );
-}
-
 /**
  * ============================================================================
  * THE TYPE OF WARNING BOX, AS IT MAY BE STORED
@@ -803,7 +825,7 @@ export function warningLevelChecked(
  * new request, and the ordinary flow proposes a form for it.
  */
 const CORRECTION_SHAPED =
-  /\b(?:change|changed|switch|switched|set|update|correct|fix|make\s+(?:it|this|that)|should\s+(?:have\s+)?be(?:en)?|needs?\s+to\s+be|un-?tick|un-?check|uncheck|tick|check|mark|select|meant|instead)\b|^\s*(?:actually|no|nope|sorry|oops|wait|correction)\b/i;
+  /\b(?:change|changed|switch|switched|set|update|correct|fix|make\s+(?:it|this|that)|should(?:\s+have|'ve)?\s+be(?:en)?|needs?\s+to\s+be|un-?tick|un-?check|uncheck|tick|check|mark|select|meant|instead|bump(?:ed)?|upgrade[ds]?|downgrade[ds]?)\b|^\s*(?:actually|no|nope|sorry|oops|wait|correction|on\s+second\s+thought|scratch\s+that)\b/i;
 
 export function warningLevelCorrection(text: string, today: string): WarningLevel | null {
   const trimmed = (text ?? "").trim();
