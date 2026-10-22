@@ -262,6 +262,7 @@ describe("a missed meeting is Attendance", () => {
     expect(reading.stated).toBe("attendance");
     expect(reading.suggestion).toBeNull();
     expect(statedOffenseKeys(reading, text)).toEqual(["absenteeism"]);
+    expect(caPolicyProposalLine(reading)).toMatch(/^\*\*Policy:\*\* this reads as \*\*Attendance\*\* — a required meeting/);
   });
 
   it.each([
