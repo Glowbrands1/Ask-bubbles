@@ -355,6 +355,71 @@ const OMAHA_AND_KEARNEY: AccessScope = { level: "location", primaryAreaId: "loc-
 const DISTRICT: AccessScope = { level: "district", primaryAreaId: "dist-1", alsoCoversAreaIds: [] };
 const OPEN = "create a coaching form for pat rivera, late 3 times this week";
 
+describe("F-02: a store reply never replaces the employee — on the card or on the saved form", () => {
+  it.each(["kearney", "Kearney", "KEARNEY", "grand island", "it's at kearney", "Kearney, NE"])(
+    "an administrator: the store is set, the employee stays — %s",
+    async (reply) => {
+      const { proposal } = await conversation([OPEN, reply]);
+      expect(proposal.employeeName).toBe("Pat Rivera");
+      expect(proposal.locationId).toBe(/grand island/i.test(reply) ? "loc-236" : "loc-66");
+    },
+  );
+
+  it("'sorry, it's grand island' never becomes the employee", async () => {
+    const responses = await everyTurn([OPEN, "sorry, it's grand island"]);
+    expect(responses[1]?.formProposal?.employeeName ?? "Pat Rivera").toBe("Pat Rivera");
+  });
+
+  it("an administrator: what is saved is the employee and the store the manager gave", async () => {
+    const { proposal, form } = await filed([OPEN, "kearney"], "Pat Rivera was late three times this week.");
+    expect(proposal).toMatchObject({ employeeName: "Pat Rivera", locationId: "loc-66", status: "ready" });
+    expect(form.instance.employeeName).toBe("Pat Rivera");
+    expect(form.instance.locationId).toBe("loc-66");
+  });
+
+  it("a location manager, a store outside their own: the employee stays and the store is not filed against", async () => {
+    state.role = "location_manager";
+    state.scope = OMAHA_ONLY;
+    for (const reply of ["kearney", "sorry, it's grand island"]) {
+      const responses = await everyTurn([OPEN, reply]);
+      expect(responses[0]!.formProposal!.employeeName).toBe("Pat Rivera");
+      expect(responses[1]?.formProposal?.employeeName ?? "Pat Rivera").toBe("Pat Rivera");
+      expect(responses[1]?.formProposal?.locationId ?? null).not.toBe("loc-66");
+      expect(responses[1]?.formProposal?.locationId ?? null).not.toBe("loc-236");
+    }
+  });
+
+  it("a manager of two stores: naming the second keeps the employee, and the saved form carries both", async () => {
+    state.role = "location_manager";
+    state.scope = OMAHA_AND_KEARNEY;
+    const { proposal, form } = await filed([OPEN, "kearney"], "Pat Rivera was late three times this week.");
+    expect(proposal).toMatchObject({ employeeName: "Pat Rivera", locationId: "loc-66" });
+    expect(form.instance.employeeName).toBe("Pat Rivera");
+    expect(form.instance.locationId).toBe("loc-66");
+  });
+
+  it("a district manager: the employee stays, and the store stays fail-closed", async () => {
+    state.role = "district_manager";
+    state.scope = DISTRICT;
+    const responses = await everyTurn([OPEN, "kearney"]);
+    expect(responses[1]?.formProposal?.employeeName ?? "pat rivera").toMatch(/^pat rivera$/i);
+    expect(responses[1]?.formProposal?.locationId ?? null).toBeNull();
+  });
+
+  it("with nobody named yet, a store reply is not the employee", async () => {
+    for (const reply of ["kearney", "grand island"]) {
+      const responses = await everyTurn(["i need a coaching form", reply]);
+      expect(responses[1]?.formProposal?.employeeName ?? null).toBeNull();
+    }
+  });
+
+  it("an explicit change of person still changes it, and is what gets saved", async () => {
+    const { proposal, form } = await filed([OPEN, "kearney", "actually it's for sam jones"], "Sam Jones was late.");
+    expect(proposal.employeeName).toBe("Sam Jones");
+    expect(form.instance.employeeName).toBe("Sam Jones");
+  });
+});
+
 describe("spelling: the manager's own, unless the directory matches exactly", () => {
   it("off the directory: as typed, on the card and on the saved form", async () => {
     const { proposal, form } = await filed(["coaching form for jane doe, late twice"], "Jane was late.");

@@ -286,6 +286,34 @@ function isRosterSalonName(candidate: string): boolean {
   return ROSTER_NAME_KEYS.has(locationNameKey(candidate)) || isStoreName(candidate, ROSTER_STORE_INDEX);
 }
 
+/*
+ * ============================================================================
+ * "KEARNEY", TYPED ON ITS OWN, IS WHERE — NEVER WHO
+ * ============================================================================
+ *
+ * QA, 22 Oct 2026 (F-02). After "create a coaching form for pat rivera …", a
+ * manager answering the store question with "kearney" — or "sorry, it's grand
+ * island" — had the reply read as the ANSWER to "who is this for?", and the
+ * card's employee became "Kearney" (the store was set as well, beside the
+ * wrong person). A one-word store is deliberately not a place in prose
+ * (`ROSTER_NAME_KEYS`: Kearney is also a surname), but a reply that is nothing
+ * except a store's name is not somebody's name.
+ *
+ * THE ROSTER IS THE EVIDENCE: every store's full name and its city ("kearney",
+ * "grand island", "omaha", "lee's summit"), plus every name the store index
+ * already knows (`isRosterSalonName`). Only replies and correction clauses use
+ * this — a name after "<form> for", or marked as the employee, is still read
+ * as given — so "the employee is Pat Kearney" is unchanged. A person whose
+ * name is exactly a store's city is asked for again rather than guessed.
+ */
+const PLACE_REPLY_KEYS: ReadonlySet<string> = new Set(
+  COMPANY_LOCATIONS.flatMap((location) => [locationNameKey(location.name), locationNameKey(location.name.split(",")[0])]),
+);
+
+function isPlaceReply(candidate: string): boolean {
+  return PLACE_REPLY_KEYS.has(locationNameKey(candidate)) || isRosterSalonName(candidate);
+}
+
 function opensWithRosterState(candidate: string): boolean {
   const [head, next] = candidate.split(/\s+/);
   return (
@@ -893,7 +921,8 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
       .split(/\s+/)
       .filter(Boolean);
     const candidate = words.length <= 2 ? readTypedName(words, true) : null;
-    if (candidate && !opensWithRosterState(candidate)) strong.push(candidate);
+    // "kearney", "sorry, it's grand island": a reply that is only a store. See `isPlaceReply`.
+    if (candidate && !opensWithRosterState(candidate) && !isPlaceReply(candidate)) strong.push(candidate);
   }
 
   /*
@@ -924,7 +953,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
   if (listed) {
     const words = listed.trim().split(/\s+/).filter(Boolean);
     const candidate = words.length <= 2 ? readTypedName(words, true) : null;
-    if (candidate && !opensWithRosterState(candidate)) strong.push(candidate);
+    if (candidate && !opensWithRosterState(candidate) && !isPlaceReply(candidate)) strong.push(candidate);
   }
 
   return settle(strong, found, text);
@@ -1094,7 +1123,8 @@ function sentenceAnswers(text: string): string[] {
   for (const sentence of text.split(/(?<=[.!?])\s+|\n+|\s*[,;]\s*|\s+[-–—]\s+|\s+(?:and|but|then)\s+/)) {
     const words = withoutAnswerLead(sentence.trim().replace(/[.?!]+$/, "")).split(/\s+/).filter(Boolean);
     const candidate = words.length > 0 && words.length <= 2 ? readTypedName(words, true) : null;
-    if (candidate && !opensWithRosterState(candidate)) names.push(candidate);
+    // A clause that is only a store is where, not who (QA F-02, `isPlaceReply`).
+    if (candidate && !opensWithRosterState(candidate) && !isPlaceReply(candidate)) names.push(candidate);
   }
   return names;
 }
