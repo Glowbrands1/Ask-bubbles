@@ -23,6 +23,7 @@ import {
   payrollDeductChecked,
   payrollDeductCorrection,
   payrollDeductReply,
+  payrollDeductUnclear,
 } from "./payroll-deduct";
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { extractEmployeeNames, samePerson as samePersonByName } from "./proposal";
@@ -88,6 +89,12 @@ async function correctFromFormReaders(
   const payroll =
     payrollDeductCorrection(input.question) ?? payrollDeductReply(input.question, input.lastAssistant ?? "");
   /*
+   * Something about the deduction that is not a clear Yes or No — "hold off on
+   * the $25 payroll deduction". On a form that asks the question it clears the
+   * answer and asks again (see below), never leaving a Yes in place.
+   */
+  const payrollUnclear = !payroll && payrollDeductUnclear(input.question);
+  /*
    * "CHANGE WRITTEN WARNING TO VERBAL", "make it verbal" — the Type of
    * Warning on a Corrective Action Form, as the manager now states it. A
    * warning described as already given is history and corrects nothing.
@@ -108,7 +115,7 @@ async function correctFromFormReaders(
     namesIncidentTopic(whole) && !/\b(?:change|switch|set|update|correct)\b/i.test(whole)
       ? null
       : warningLevelCorrection(input.question, input.today);
-  if (!employmentCorrection && !exitCorrection && !payroll && !warning) return null;
+  if (!employmentCorrection && !exitCorrection && !payroll && !payrollUnclear && !warning) return null;
 
   let authorized: Awaited<ReturnType<typeof authorizeInstance>>;
   try {
@@ -159,7 +166,7 @@ async function correctFromFormReaders(
     !aboutSomebodyElse(input.message ?? input.question, loaded.instance.employeeName);
   // The Exit Form, read off the pinned version's keys as the drafting route does.
   const isExit = !kind && isExitDocumentKeys(responsibilityMap(document, variantKey).keys());
-  if (!kind && !isExit && !(asksPayroll && payroll) && !correctsWarning) return null;
+  if (!kind && !isExit && !(asksPayroll && (payroll || payrollUnclear)) && !correctsWarning) return null;
   /*
    * ==========================================================================
    * A NEW REQUEST IS NEVER A CORRECTION TO THE LAST FORM
@@ -220,7 +227,7 @@ async function correctFromFormReaders(
       : {
           values: {},
           checked: {
-            ...(asksPayroll ? payrollDeductChecked(payroll) : {}),
+            ...(asksPayroll ? (payrollUnclear ? { [PAYROLL_DEDUCT_KEY]: [] } : payrollDeductChecked(payroll)) : {}),
             ...warningChecked,
           },
         };
@@ -377,13 +384,28 @@ async function correctFromFormReaders(
       payroll === "yes" ? "The Action Plan now states the payroll deduction." : "The Action Plan no longer states a payroll deduction.",
     );
   }
+  /*
+   * AN UNCLEAR PAYROLL STATEMENT ABOUT THIS FORM CLEARS THE ANSWER AND ASKS.
+   * QA, 22 Oct 2026: after a form with "Yes" was created, "hold off on the $25
+   * payroll deduction" or "not sure about the payroll deduction anymore" left
+   * the saved Yes — and the Action Plan's deduction sentence — in place while
+   * the chat moved on. A Yes the manager may have withdrawn is never kept: the
+   * box is cleared, the plan no longer states a deduction, and the manager is
+   * asked. Their next "yes" or "no" answers it (`payrollDeductReply`).
+   */
+  if (payrollUnclear && written.includes(PAYROLL_DEDUCT_KEY)) {
+    lines.push(
+      "",
+      `"${input.question.trim()}" isn't a clear Yes or No, so I cleared the answer rather than keep a Yes on the form. **Is payroll deduct applicable?** Yes or No?`,
+    );
+  }
 
   // What THIS form's readers take from a clause — the test for "was that part done?".
   applied.reads = (clause) =>
     Boolean(
       (kind && correctionValues(clause, input.today)) ||
         (isExit && exitCorrectionValues(clause, input.today)) ||
-        (asksPayroll && (payrollDeductCorrection(clause) ?? payrollDeductReply(clause, input.lastAssistant ?? ""))),
+        (asksPayroll && (payrollDeductCorrection(clause) ?? payrollDeductReply(clause, input.lastAssistant ?? "") ?? (payrollDeductUnclear(clause) || null))),
     );
   return { ...reply(lines.join("\n")), formUpdate: { instanceId: input.instanceId, updated: written } };
 }
