@@ -481,7 +481,7 @@ const CHOOSING_BEFORE =
 const CHOSEN_AFTER = new RegExp(`^\\s+(?:as|is|for)\\s+(?:the\\s+|her\\s+|his\\s+|their\\s+)?(?:${PLACE_NOUNS})\\b`);
 
 /*
- * "BRANDI ALGYA ASM GRAND ISLAND": NAME, ROLE, STORE. Managers sign a person
+ * "CORINNE VALDEZ ASM GRAND ISLAND": NAME, ROLE, STORE. Managers sign a person
  * off the way the paperwork does, and the role is what says a place follows
  * (ported from the reference platform, 20 October 2026). The role is any
  * abbreviation of the company's job titles (`isJobTitleAbbreviation`). Only

@@ -247,7 +247,7 @@ create trigger app_users_no_self_elevation
 -- IN THE DATABASE, NOT IN A ROUTE, and generic rather than keyed to any
 -- person's address. A check in one API handler protects that handler; a trigger
 -- protects every path, including a future bulk update, a repair script, and the
--- privileged client. Curt is the first administrator but nothing here knows or
+-- privileged client. Owen is the first administrator but nothing here knows or
 -- cares who he is.
 --
 -- "Administrative" means the roles that reach the admin console: admin, owner,

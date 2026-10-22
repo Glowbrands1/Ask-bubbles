@@ -14,13 +14,13 @@ import type { AccessScope, ChatMessage } from "@/types";
  * Reported on the reference platform and reproduced here in Buff City Soap's
  * terms, through the real server path:
  *
- *   1. "COACHING FORM PAULYNE CAMACHO LATE 3 TIMES" asked who the form was for.
- *   2. "Paulyne Camacho's CA for no call no show 10/18" gave no card at all, and
- *      "Ellie Sendgraff's coaching form" asked "Did you mean Ellie Sendgraff?".
+ *   1. "COACHING FORM ROSALYN CALLOWAY LATE 3 TIMES" asked who the form was for.
+ *   2. "Rosalyn Calloway's CA for no call no show 10/18" gave no card at all, and
+ *      "Wren Halvorsen's coaching form" asked "Did you mean Wren Halvorsen?".
  *   3. "at kearney about bed cleaning": what the form was about hid the store.
- *   4. "paulyne camacho" was printed in lower case on the cards and in the
+ *   4. "rosalyn calloway" was printed in lower case on the cards and in the
  *      note about a name the employee list lacks.
- *   5. "brandi algya asm grand island" named nobody, where the capitalised
+ *   5. "corinne valdez asm grand island" named nobody, where the capitalised
  *      line worked.
  *   6. "coaching form for will turner" named nobody.
  *
@@ -73,8 +73,8 @@ function person(first: string, last: string, locationIds: string[]): DirectoryRo
 }
 
 state.rows = [
-  person("Paulyne", "Camacho", ["loc-236"]),
-  person("Ellie", "Sendgraff", ["loc-236"]),
+  person("Rosalyn", "Calloway", ["loc-236"]),
+  person("Wren", "Halvorsen", ["loc-236"]),
   person("Shannon", "McAllister", ["loc-66"]),
 ];
 
@@ -148,10 +148,10 @@ function expectCard(last: ChatMessage, templateKey: string, employee: string) {
 }
 
 describe("1. an all-caps message reads the name like any other", () => {
-  it("COACHING FORM PAULYNE CAMACHO LATE 3 TIMES", async () => {
-    const last = await converse("COACHING FORM PAULYNE CAMACHO LATE 3 TIMES");
+  it("COACHING FORM ROSALYN CALLOWAY LATE 3 TIMES", async () => {
+    const last = await converse("COACHING FORM ROSALYN CALLOWAY LATE 3 TIMES");
     // On the directory: the directory's spelling, and her store.
-    expectCard(last, "coaching", "Paulyne Camacho");
+    expectCard(last, "coaching", "Rosalyn Calloway");
     expect(last.formProposal!.locationId).toBe("loc-236");
   }, 15_000);
 
@@ -168,34 +168,34 @@ describe("1. an all-caps message reads the name like any other", () => {
 });
 
 describe("2. a possessive names the person, and the 's is not part of the name", () => {
-  it("Paulyne Camacho's CA for no call no show 10/18 is a Corrective Action Form", async () => {
-    const last = await converse("Paulyne Camacho's CA for no call no show 10/18");
-    expectCard(last, "dpoa", "Paulyne Camacho");
+  it("Rosalyn Calloway's CA for no call no show 10/18 is a Corrective Action Form", async () => {
+    const last = await converse("Rosalyn Calloway's CA for no call no show 10/18");
+    expectCard(last, "dpoa", "Rosalyn Calloway");
     expect(last.formProposal!.formDate).toBe("2026-10-18");
   });
 
   it.each([
-    ["Ellie Sendgraff's coaching form", "coaching"],
-    ["Ellie Sendgraff’s coaching form", "coaching"],
-    ["start ellie sendgraff's coaching form", "coaching"],
-    ["start Ellie Sendgraff's CA, she was late again", "dpoa"],
+    ["Wren Halvorsen's coaching form", "coaching"],
+    ["Wren Halvorsen’s coaching form", "coaching"],
+    ["start wren halvorsen's coaching form", "coaching"],
+    ["start Wren Halvorsen's CA, she was late again", "dpoa"],
   ])("%s", async (question, templateKey) => {
     const last = await converse(question);
-    expectCard(last, templateKey, "Ellie Sendgraff");
+    expectCard(last, templateKey, "Wren Halvorsen");
     expect(last.content).not.toMatch(/did you mean/i);
   });
 
-  it.each(["Ellie's coaching form", "Ellie's CA - she was late 3 times this week"])(
+  it.each(["Wren's coaching form", "Wren's CA - she was late 3 times this week"])(
     "%s confirms the first name against the directory",
     async (question) => {
       const last = await converse(question);
       expect(last.formProposal).toBeDefined();
-      expect(last.content).toMatch(/^Did you mean \*\*Ellie Sendgraff\*\*\?/);
+      expect(last.content).toMatch(/^Did you mean \*\*Wren Halvorsen\*\*\?/);
     },
   );
 
   it("a remark about somebody's CA is still not a request for one", async () => {
-    const last = await converse("Ellie's CA was filed last week");
+    const last = await converse("Wren's CA was filed last week");
     expect(last.formProposal).toBeUndefined();
   });
 
@@ -206,8 +206,8 @@ describe("2. a possessive names the person, and the 's is not part of the name",
 
 describe("3. a store set off by punctuation, or followed by what the form is about", () => {
   it("a store followed by what the form is about still names the store", async () => {
-    const last = await converse("coaching form for paulyne camacho at kearney about bed cleaning");
-    expectCard(last, "coaching", "Paulyne Camacho");
+    const last = await converse("coaching form for rosalyn calloway at kearney about bed cleaning");
+    expectCard(last, "coaching", "Rosalyn Calloway");
     // Named in the message, so it wins over her directory store (Grand Island).
     expect(last.formProposal!.locationId).toBe("loc-66");
   });
@@ -230,8 +230,8 @@ describe("3. a store set off by punctuation, or followed by what the form is abo
 
 describe("4. the employee's name is printed capitalised, on every form", () => {
   it.each([
-    ["create a demotion form for paulyne camacho from ASM to production associate", "demotion", "Paulyne Camacho"],
-    ["create a policy review for paulyne camacho", "policy-review", "Paulyne Camacho"],
+    ["create a demotion form for rosalyn calloway from ASM to production associate", "demotion", "Rosalyn Calloway"],
+    ["create a policy review for rosalyn calloway", "policy-review", "Rosalyn Calloway"],
     // The directory's own spelling, mid-word capital included.
     ["create a demotion form for shannon mcallister from ASM to production associate", "demotion", "Shannon McAllister"],
     ["create a policy review for shannon mcallister", "policy-review", "Shannon McAllister"],
@@ -261,10 +261,10 @@ describe("4. the employee's name is printed capitalised, on every form", () => {
 });
 
 describe("5. name, role and store typed in lower case", () => {
-  it("brandi algya asm grand island coaching form", async () => {
-    const last = await converse("brandi algya asm grand island coaching form");
+  it("corinne valdez asm grand island coaching form", async () => {
+    const last = await converse("corinne valdez asm grand island coaching form");
     // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
-    expectCard(last, "coaching", "brandi algya");
+    expectCard(last, "coaching", "corinne valdez");
     expect(last.formProposal!.employeeRole).toBe("Assistant Manager");
     expect(last.formProposal!.locationId).toBe("loc-236");
   });
@@ -273,10 +273,10 @@ describe("5. name, role and store typed in lower case", () => {
     const last = await converse(
       "can you create a coaching form for a manager on the onboarding process",
       "Oct 9",
-      "brandi algya asm grand island",
+      "corinne valdez asm grand island",
     );
     // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
-    expectCard(last, "coaching", "brandi algya");
+    expectCard(last, "coaching", "corinne valdez");
     expect(last.formProposal!.employeeRole).toBe("Assistant Manager");
     expect(last.formProposal!.locationId).toBe("loc-236");
     expect(last.formProposal!.formDate).toBe("2026-10-09");

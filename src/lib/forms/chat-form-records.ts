@@ -16,7 +16,7 @@ import { authorizedLocationIds } from "./location-scope";
 
 /**
  * ============================================================================
- * "DOES ELLIE HAVE PREVIOUS COACHINGS?" — ANSWERED FROM THE FORMS REGISTER
+ * "DOES WREN HAVE PREVIOUS COACHINGS?" — ANSWERED FROM THE FORMS REGISTER
  * ============================================================================
  *
  * Asked whether an employee had prior coaching, the assistant said it could not
@@ -41,7 +41,7 @@ import { authorizedLocationIds } from "./location-scope";
  * NAMES ARE MATCHED, NEVER GUESSED. The question's words narrow the query
  * (`employeeNameWords`), and a row counts as NAMED only when every word of its
  * employee name appears in the question. A row matching on a first name alone
- * is listed as a POSSIBLE match, so "is Ellie Sendgraff the one you mean?" is
+ * is listed as a POSSIBLE match, so "is Wren Halvorsen the one you mean?" is
  * the model's to ask rather than this file's to decide.
  */
 
@@ -93,7 +93,7 @@ const FORM_RECORDS_PATTERNS: readonly RegExp[] = [
   new RegExp(
     `\\b${FORM_NOUN}\\s+(?:(?:i|we|you|they|she|he)\\s+)?(?:have\\s+|has\\s+|had\\s+)?(?:been\\s+)?(?:filed|created|done|completed|submitted|finalized|started|written)\\b`,
   ),
-  // "coachings for ellie", "write-ups on dana"
+  // "coachings for wren", "write-ups on dana"
   /\b(?:coachings|write[- ]?ups|forms|corrective actions|cas|warnings)\s+(?:for|on|about)\s+\w/,
 ];
 
@@ -393,7 +393,7 @@ export async function loadFormRecords(input: {
 
 /**
  * Whether the text itself carries a name-like phrase: two adjacent candidate
- * words ("ellie sendgraff"), or a candidate word after "for", "on", "about",
+ * words ("wren halvorsen"), or a candidate word after "for", "on", "about",
  * "does" or "has". Conservative — when unsure it says no, and the model gets
  * the recent list instead of a false "nothing on file".
  */
