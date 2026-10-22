@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /home/user/bubbles-main
+
+
+ Test Files  1 passed (1)
+      Tests  36 passed (36)
+   Start at  13:01:05
+   Duration  4.50s (transform 2.80s, setup 0ms, import 3.49s, tests 696ms, environment 0ms)
+

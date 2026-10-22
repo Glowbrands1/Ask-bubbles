@@ -3,6 +3,12 @@ import { displayPersonName } from "@/lib/forms/proposal";
 
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 
+/*
+ * The first test pays for importing the whole answer path (`server-ask`), and
+ * under a full parallel run that alone can pass the default five seconds.
+ */
+vi.setConfig({ testTimeout: 30_000 });
+
 vi.mock("@/config/company/locations", async () =>
   (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
 );
@@ -1858,7 +1864,8 @@ describe("a form's name leading the message, across the library", () => {
     expect(answer.formProposal?.formDate ?? null).toBeNull();
     expect(answer.formSelection).toBeUndefined();
     expect(answer.content).not.toMatch(/who is this/i);
-    expect(answer.content).toMatch(/I'll draft a \*\*Corrective Action Form\*\* for \*\*Marlowe Co\*\*/);
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
+    expect(answer.content).toMatch(/I'll draft a \*\*Corrective Action Form\*\* for \*\*marlowe co\*\*/);
     // What happened and the prior warning were given: no numbered intake.
     expect(answer.content).not.toMatch(/^\d\. /m);
     /*

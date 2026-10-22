@@ -4,7 +4,7 @@ import type { AccessScope } from "@/types";
 import type { StoreIndex, StoreNumbering } from "@/lib/stores/resolver";
 
 import { ROSTER_STORE_INDEX, readLocation, rosterLocationName } from "./location-mention";
-import { CORRECTION, bareStoreReply } from "./store-confirmation";
+import { CORRECTION, bareStoreReply, storeCorrection, storeReplyText } from "./store-confirmation";
 
 /**
  * ============================================================================
@@ -96,6 +96,8 @@ type LocationOptions = {
     turns?: readonly string[];
     /** The previous assistant turn asked which store, so a bare "Omaha" is the answer. */
     bareReply?: boolean;
+    /** Earlier manager turns that answered a store question (`storeAnswerTurns`), so the answer still counts. */
+    answeredTurns?: ReadonlySet<string>;
     /** A store the manager said yes to; used only if their scope allows it. */
     confirmedStoreId?: string | undefined;
   };
@@ -121,8 +123,26 @@ export function proposeLocationWithSource(
   options: LocationOptions = {},
 ): LocationProposal {
   const reportUnmatched = options.reportUnmatched ?? true;
-  const textToRead = (index_: StoreIndex) =>
-    correctedText(managerText, options.turns, index_, options.bareReply === true);
+  const reading = (index_: StoreIndex) =>
+    readCorrected(managerText, options.turns, index_, options.bareReply === true, options.answeredTurns);
+  /*
+   * AN ANSWER THAT COULD BE SEVERAL STORES IS CONFIRMED, NOT PICKED (QA F-12).
+   * "Sioux Falls" in answer to the store question, from a manager who has one
+   * of the two: the sentence reader keeps the one in scope, so it is offered
+   * for confirmation ("I read … as … — is that the store?") instead of filed.
+   */
+  const fromAnswer = (index_: StoreIndex, allowedIds: readonly string[]): LocationProposal | null => {
+    const corrected = reading(index_);
+    const named = fromNamedLocations(allowedIds, corrected.text, index_, reportUnmatched);
+    if (corrected.ambiguous && named?.resolution === "resolved") {
+      return {
+        resolution: "needs_selection",
+        authorizedIds: [named.locationId],
+        selection: { reason: "confirm", typed: corrected.typed },
+      };
+    }
+    return named;
+  };
   const confirmed = (allowedIds: readonly string[]): LocationProposal | null =>
     options.confirmedStoreId && allowedIds.includes(options.confirmedStoreId)
       ? { resolution: "resolved", locationId: options.confirmedStoreId, source: "manager" }
@@ -136,7 +156,7 @@ export function proposeLocationWithSource(
 
   if (scope.level === "global") {
     const all = COMPANY_LOCATIONS.map((location) => location.id);
-    const named = confirmed(all) ?? fromNamedLocations(all, textToRead(index), index, reportUnmatched);
+    const named = confirmed(all) ?? fromAnswer(index, all);
     if (named) return named;
     const employees = fromEmployeeLocations(all, employeeLocationIds);
     if (employees) return employees;
@@ -147,7 +167,7 @@ export function proposeLocationWithSource(
   }
 
   const allowed = authorizedLocationIds(scope);
-  const named = confirmed(allowed) ?? fromNamedLocations(allowed, textToRead(index), index, reportUnmatched);
+  const named = confirmed(allowed) ?? fromAnswer(index, allowed);
   if (named) return named;
   const employees = fromEmployeeLocations(allowed, employeeLocationIds);
   if (employees) return employees;
@@ -169,7 +189,7 @@ export function namedStoreIds(
   index: StoreIndex,
   bareReply = false,
 ): string[] {
-  const text = correctedText(managerText, turns, index, bareReply);
+  const text = readCorrected(managerText, turns, index, bareReply).text;
   return [
     ...new Set(
       readLocation(text, index)
@@ -180,26 +200,42 @@ export function namedStoreIds(
   ];
 }
 
-function correctedText(
+function readCorrected(
   managerText: string,
   turns: readonly string[] | undefined,
   index: StoreIndex,
   bareReply: boolean,
-): string {
-  if (!turns || turns.length < 2) return managerText;
+  answered?: ReadonlySet<string>,
+): { text: string; ambiguous: boolean; typed: string | null } {
+  const plain = { text: managerText, ambiguous: false, typed: null };
+  if (!turns || turns.length < 2) return plain;
   const last = turns.length - 1;
   for (let at = last; at >= 0; at -= 1) {
     const turn = turns[at]!;
+    const isAnswer = (at === last && bareReply) || (answered?.has(turn.trim()) ?? false);
     const reading = readLocation(turn, index);
     if (reading.mentions.length === 0 && reading.unmatched.length === 0) {
-      // "Omaha", said in answer to "Which store is this about?", names no cue — it IS the answer.
-      if (at === last && bareReply && bareStoreReply(turn, index)) return `at ${turn.trim().replace(/[.!]+$/, "")} store`;
+      /*
+       * "Omaha" or "66", said in answer to "Which store is this about?", names
+       * no cue — it IS the answer, on this turn and on later ones. "Sorry, it's
+       * Omaha" is a change of mind that names one (QA F-12).
+       */
+      const answer = isAnswer ? bareStoreReply(turn, index) : null;
+      const correction = answer ? null : at > 0 ? storeCorrection(turn, index) : null;
+      const said = answer ? turn : correction?.text;
+      const resolution = answer ?? correction?.resolution;
+      if (said && resolution) {
+        return { text: storeReplyText(said), ambiguous: resolution.kind === "ambiguous", typed: said.trim().replace(/[.!]+$/, "") };
+      }
       continue;
     }
     // The newest turn that says anything about a store decides, if it is a change or the answer.
-    return at > 0 && (CORRECTION.test(turn) || (at === last && bareReply)) ? turn : managerText;
+    if (!(at > 0 && (CORRECTION.test(turn) || isAnswer))) return plain;
+    // An answer that could be several stores ("Sioux Falls") is confirmed, never picked (QA F-12).
+    const ambiguous = isAnswer && bareStoreReply(turn, index)?.kind === "ambiguous";
+    return { text: turn, ambiguous, typed: ambiguous ? turn.trim().replace(/[.!]+$/, "") : null };
   }
-  return managerText;
+  return plain;
 }
 
 /**

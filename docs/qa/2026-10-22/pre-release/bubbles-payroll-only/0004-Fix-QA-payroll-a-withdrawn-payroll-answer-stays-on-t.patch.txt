@@ -1,0 +1,113 @@
+From 483e6b44cf50be543a96f3e9a307dfffe265a491 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 22 Oct 2026 15:38:57 +0000
+Subject: [PATCH 4/5] Fix QA payroll: a withdrawn payroll answer stays on the
+ open form and is asked again
+
+Root cause (src/lib/ai/form-proposal.ts, the open Corrective Action
+continuation): a turn continued the open card on a payroll statement only when
+the reader returned Yes or No. "actually we're not doing the $25 payroll
+deduction" is deliberately not read either way (it is asked), so the turn left
+the form for a general answer and the card it had already shown kept saying
+"Is payroll deduct applicable? Yes". Present on both apps' main.
+
+A turn about the deduction that cannot safely be read now continues the open
+form (`payrollDeductUnclear`); the proposal re-reads the conversation, the
+earlier Yes is withdrawn, and the card asks Yes or No.
+
+Tests: qa-w1-payroll-proposal.test.ts, 4 cases (withdrawal after a Yes, three
+wordings; then a plain No); 4 fail before. Chat and forms suites pass.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01NFQB4qDFksYNBNAzncXj5X
+---
+ src/lib/ai/form-proposal.ts               |  9 ++++++++
+ src/lib/ai/qa-w1-payroll-proposal.test.ts | 26 +++++++++++++++++++++++
+ src/lib/forms/payroll-deduct.ts           | 10 +++++++++
+ 3 files changed, 45 insertions(+)
+
+diff --git a/src/lib/ai/form-proposal.ts b/src/lib/ai/form-proposal.ts
+index ddc252c..a2db384 100644
+--- a/src/lib/ai/form-proposal.ts
++++ b/src/lib/ai/form-proposal.ts
+@@ -50,6 +50,7 @@ import {
+   PAYROLL_DEDUCT_KEY,
+   PAYROLL_DEDUCT_LABEL,
+   payrollDeductFromConversation,
++  payrollDeductUnclear,
+ } from "@/lib/forms/payroll-deduct";
+ import { checkboxGroupsForVariant } from "@/lib/forms/document";
+ import {
+@@ -1660,6 +1661,14 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
+       { role: "user", content: input.question },
+     ]);
+     if (replied) return { kind: "explicit", templateKey: continued };
++    /*
++     * A STATEMENT ABOUT THE DEDUCTION THAT IS NOT A CLEAR YES OR NO —
++     * "actually we're not doing the $25 payroll deduction" — still belongs to
++     * this form: it withdraws the answer the card shows, and the card must ask
++     * again. Sent to retrieval, it left the card's earlier Yes standing (QA,
++     * 22 Oct 2026).
++     */
++    if (payrollDeductUnclear(input.question)) return { kind: "explicit", templateKey: continued };
+   }
+ 
+   /*
+diff --git a/src/lib/ai/qa-w1-payroll-proposal.test.ts b/src/lib/ai/qa-w1-payroll-proposal.test.ts
+index 12ce8e3..32150de 100644
+--- a/src/lib/ai/qa-w1-payroll-proposal.test.ts
++++ b/src/lib/ai/qa-w1-payroll-proposal.test.ts
+@@ -89,3 +89,29 @@ describe("QA F-01: the Corrective Action card never carries a Yes the manager di
+     expect(proposals.every((proposal) => proposal?.templateKey === "dpoa")).toBe(true);
+   });
+ });
++
++describe("QA F-01 follow-up: a withdrawn Yes is asked again, on the same card", () => {
++  it.each([
++    "actually we're not doing the $25 payroll deduction",
++    "no need for the $25 payroll deduction after all",
++    "hold off on the $25 payroll deduction",
++  ])("Yes, then '%s' -> the open card asks", async (withdrawal) => {
++    const proposals = await conversation([
++      "create verbal ca for pat rivera, she was late today. payroll deduct $25",
++      withdrawal,
++    ]);
++    expect(proposals[0]?.payrollDeduct).toBe("yes");
++    // The second turn stays on the open Corrective Action card, and the Yes is gone.
++    expect(proposals[1]?.templateKey).toBe("dpoa");
++    expect(proposals[1]?.payrollDeduct ?? null).toBeNull();
++  });
++
++  it("asked again, then a plain No -> No", async () => {
++    const proposals = await conversation([
++      "create verbal ca for pat rivera, she was late today. payroll deduct $25",
++      "actually we're not doing the $25 payroll deduction",
++      "no",
++    ]);
++    expect(proposals.map((proposal) => proposal?.payrollDeduct ?? null)).toEqual(["yes", null, "no"]);
++  });
++});
+diff --git a/src/lib/forms/payroll-deduct.ts b/src/lib/forms/payroll-deduct.ts
+index dd77420..b12ffeb 100644
+--- a/src/lib/forms/payroll-deduct.ts
++++ b/src/lib/forms/payroll-deduct.ts
+@@ -242,6 +242,16 @@ function normalize(text: string): string {
+  * "payroll deduction ... apply", and reading that as yes would be the worst
+  * available mistake on a record about someone's pay.
+  */
++/**
++ * Whether a turn says something about the deduction that cannot safely be read
++ * as Yes or No ("actually we're not doing the $25 payroll deduction"). Such a
++ * turn still belongs to the open Corrective Action Form: it withdraws an
++ * earlier answer, and the card asks again (QA, 22 Oct 2026).
++ */
++export function payrollDeductUnclear(text: string): boolean {
++  return readPayrollDeduct(text) === "unclear";
++}
++
+ export function statedPayrollDeduct(text: string): PayrollDeductAnswer | null {
+   const reading = readPayrollDeduct(text);
+   return reading === "unclear" ? null : reading;
+-- 
+2.43.0
+

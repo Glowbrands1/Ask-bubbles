@@ -319,7 +319,8 @@ describe("the exact production sentence, through POST /api/chat", () => {
 
     // The owner's rule (9 Oct 2026): "given verbal warning" is the level this form records.
     expect(answer.formProposal?.templateKey).toBe("dpoa");
-    expect(answer.formProposal?.employeeName).toBe("Paulyne Test");
+    // QA 22 Oct 2026 decision: no directory match, so the manager's spelling is kept as typed.
+    expect(answer.formProposal?.employeeName).toBe("paulyne test");
     expect(answer.formProposal?.warningLevel).toBe("verbal");
     expect(answer.content).toContain("**Type of warning:** Verbal Warning, as you said");
     expect(answer.content).not.toContain(QUESTION);

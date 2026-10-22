@@ -1,4 +1,4 @@
-import { listFormDates } from "./form-date-answer";
+import { datesInText, explicitFormDate, heldCoachingDates, listFormDates, listIncidentDates } from "./form-date-answer";
 
 /**
  * ============================================================================
@@ -30,10 +30,15 @@ export const DATE_QUESTION_TAG = "Which date goes on the form?";
 
 type Turn = { readonly role: string; readonly content: string };
 
-/** The distinct incident dates in the manager's words, oldest first, none in the future. */
+/**
+ * The distinct incident dates in the manager's words, oldest first, none in
+ * the future. A date the manager gave the FORM ("dated 10/20") is not one of
+ * them — it answers the question this module would otherwise ask.
+ */
 export function incidentDates(text: string, today: string): string[] {
-  return [...new Set(listFormDates(text, today).map((found) => found.iso))]
-    .filter((iso) => iso <= today)
+  const explicit = explicitFormDate(text, today);
+  return [...new Set(listIncidentDates(text, today).map((found) => found.iso))]
+    .filter((iso) => iso <= today && iso !== explicit)
     .sort();
 }
 
@@ -128,4 +133,72 @@ export function dateAnsweredIn(conversation: readonly Turn[], dates: readonly st
 export function answersDateQuestion(history: readonly Turn[], question: string, dates: readonly string[], today: string): boolean {
   const lastAssistant = [...history].reverse().find((turn) => turn.role === "assistant");
   return !!lastAssistant && askedForDate(lastAssistant.content) && readDateChoice(question, dates.length ? dates : [today], today) !== null;
+}
+
+/*
+ * ============================================================================
+ * WHICH DATE THE FORM CARRIES, BY WHAT EACH DATE MEANS
+ * ============================================================================
+ *
+ * QA, 22 Oct 2026. In order:
+ *
+ *   1. A date the manager gave the FORM ("dated 10/20") is its Date.
+ *   2. On a Coaching Form, the coaching the manager says they HELD ("I coached
+ *      her on 10/16") is its Date — when nothing she did is dated after it.
+ *      Two such coachings are a question, among them.
+ *   3. Several incident dates are a question ("Which date goes on the form?");
+ *      until it is answered the form carries no date, so it is dated the day
+ *      it is created — never whichever incident was typed first.
+ *   4. Otherwise nothing is decided here: one incident date dates the form,
+ *      as it always has, and none leaves it to the day it is created.
+ *
+ * Earlier steps (coaching or warnings already given) are never the form's
+ * date — `form-date-answer.ts` keeps them out of every list used here.
+ */
+const DATED_TEMPLATES: ReadonlySet<string> = new Set(["coaching", "follow-up-coaching", "dpoa", "policy-review"]);
+const COACHING_TEMPLATES: ReadonlySet<string> = new Set(["coaching", "follow-up-coaching"]);
+
+export interface FormDateDecision {
+  /** Set when this module decides the date; `null` means "the day it is created". Absent: leave it as read. */
+  readonly formDate?: string | null;
+  /** The dates the manager is choosing among, while the question is open. */
+  readonly candidates?: string[];
+  /** The question to ask, once. */
+  readonly question?: string;
+}
+
+export function decideFormDate(input: {
+  readonly text: string;
+  readonly templateKey: string;
+  readonly history: readonly Turn[];
+  readonly conversation: readonly Turn[];
+  readonly today: string;
+}): FormDateDecision {
+  if (!DATED_TEMPLATES.has(input.templateKey)) return {};
+  const explicit = explicitFormDate(input.text, input.today);
+  if (explicit) return { formDate: explicit };
+
+  let dates = incidentDates(input.text, input.today);
+  if (COACHING_TEMPLATES.has(input.templateKey)) {
+    const latestIncident = dates[dates.length - 1] ?? "";
+    const held = heldCoachingDates(input.text, input.today).filter((iso) => iso >= latestIncident);
+    if (held.length === 1) return { formDate: held[0]! };
+    if (held.length > 1) dates = held;
+  }
+  if (dates.length <= 1) return {};
+
+  /* "wait, the meeting was 10/19/26" replaces the earlier date — see `correctedIncidentDate`. */
+  const corrected = correctedIncidentDate(
+    input.conversation.filter((turn) => turn.role === "user").map((turn) => turn.content),
+    input.today,
+  );
+  if (corrected && dates.includes(corrected)) return { formDate: corrected };
+
+  const choice = dateAnsweredIn(input.conversation, dates, input.today);
+  if (choice) return { formDate: choice.kind === "date" ? choice.iso : null };
+  return {
+    formDate: null,
+    candidates: dates,
+    ...(dateAlreadyAsked(input.history) ? {} : { question: dateQuestion(dates) }),
+  };
 }

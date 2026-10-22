@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
 import { Notice } from "@/components/ui/feedback";
 import { Dialog, DialogActions, DialogContent } from "@/components/ui/overlays";
-import { downloadFormPdf, formsFetch } from "@/features/forms/forms-fetch";
+import { downloadFormPdf, formsFetch, FormsFetchError } from "@/features/forms/forms-fetch";
 import { onFormUpdate } from "./form-update-events";
 import {
   ResponsiveForm,
@@ -20,6 +20,7 @@ import { useSession } from "@/lib/session/session-context";
 import { checkboxGroupsForVariant, fieldsForVariant } from "@/lib/forms/document";
 import { planSummary } from "@/lib/forms/plan-summary";
 import {
+  POLICY_ACKNOWLEDGEMENT_REQUIRED,
   policyAcknowledgementWording,
   policyWordingEdited,
   unverifiedPolicyFields,
@@ -497,6 +498,23 @@ export function InlineForm({
       await reload();
       setAction({ kind: "idle" });
     } catch (error) {
+      /*
+       * THE SERVER'S REFUSAL OPENS THE DIALOG TOO. If this card's copy of the
+       * form is behind the server's, the check above can pass and the server
+       * still refuse — and showing that refusal as an error is the dead end the
+       * dialog exists to prevent. Re-read the form so the dialog names the
+       * fields the server named, then ask.
+       */
+      if (
+        error instanceof FormsFetchError &&
+        error.code === POLICY_ACKNOWLEDGEMENT_REQUIRED &&
+        !acknowledgeUnverifiedPolicy
+      ) {
+        await reload().catch(() => null);
+        setAction({ kind: "idle" });
+        setConfirmingPolicy(true);
+        return;
+      }
       setAction({ kind: "error", message: (error as Error).message });
     }
   }
@@ -564,7 +582,7 @@ export function InlineForm({
     if (save.kind === "saving") return;
     setSave({ kind: "saving" });
     try {
-      const result = await call<{ values: LoadedValueRow[] }>(
+      const result = await call<LoadedInstance>(
         `/api/forms/instances/${instanceId}`,
         {
           method: "PATCH",
@@ -576,7 +594,13 @@ export function InlineForm({
        * The response carries the RELOADED instance, so what is displayed after
        * a save is what the server stored — including any value it rejected
        * because the template does not let a person write it.
+       *
+       * AND THE LOADED FORM WITH IT, not just the text boxes. Who wrote each
+       * value — and so whether its policy is verified — is read off `loaded`,
+       * and keeping the pre-save copy is how Finalize came to skip the dialog
+       * on a form the server then refused.
        */
+      setLoad({ kind: "ready", loaded: result });
       setEdits(splitValues(result.values));
       setSave({ kind: "saved" });
       setAction({ kind: "idle" });
@@ -1189,14 +1213,14 @@ export function policyVerificationNoticeFor(
 
   const parts = [
     blank.length > 0
-      ? `${quote(blank)} ${blank.length === 1 ? "is" : "are"} blank because no approved policy matched what you described`
+      ? `${quote(blank)} ${blank.length === 1 ? "is" : "are"} blank because Woven does not see a matching policy in the knowledge base`
       : null,
     byHand.length > 0
       ? `${quote(byHand)} ${byHand.length === 1 ? "was" : "were"} entered by hand and ${byHand.length === 1 ? "has" : "have"} not been checked against the manual`
       : null,
   ].filter((part): part is string => part !== null);
 
-  return `Policy verification is still required: ${parts.join(", and ")}. Confirm the exact policy in the official manual before you issue this form — Ask Bubbles will not write policy wording it cannot source, and it cannot vouch for wording it did not retrieve.`;
+  return `Policy verification is still required: ${parts.join(", and ")}. Woven does not see this policy in the knowledge base, so it cannot be verified — confirm the exact policy in the official manual before you issue this form.`;
 }
 
 /**

@@ -1,4 +1,4 @@
-import { normalizePayrollWording as normalize, statedPayrollDeduct } from "./payroll-deduct-answer";
+import { normalizePayrollWording as normalize, readPayrollDeduct, statedPayrollDeduct } from "./payroll-deduct-answer";
 import { detectTemplateIntent } from "./template-intent";
 
 /**
@@ -51,7 +51,7 @@ export function isPayrollDeductAnswer(value: unknown): value is PayrollDeductAns
  * nothing: the warning-level reader needs it, and reaching it through this
  * module (which reads form requests) closed an import cycle.
  */
-export { statedPayrollDeduct } from "./payroll-deduct-answer";
+export { payrollDeductUnclear, statedPayrollDeduct } from "./payroll-deduct-answer";
 
 /**
  * A bare reply — "yes", "No.", "nope", "yes it is" — read as yes or no.
@@ -159,7 +159,17 @@ export function payrollDeductFromConversation(
     }
     if (turn.role !== "user") continue;
 
-    const stated = statedPayrollDeduct(turn.content);
+    const stated = readPayrollDeduct(turn.content);
+    if (stated === "unclear") {
+      /*
+       * A later turn about the deduction that cannot be read safely ("we're
+       * not doing the $25 payroll deduction") clears an earlier Yes, so the
+       * card asks again instead of keeping a Yes the manager may have
+       * withdrawn (QA, 22 Oct 2026).
+       */
+      answer = null;
+      continue;
+    }
     if (stated) {
       answer = stated;
       continue;
@@ -231,7 +241,12 @@ export function payrollDeductCorrection(text: string): PayrollDeductAnswer | nul
  * "deduct $3.25". A register short $3.25 is not, on its own, an amount to
  * deduct. Never an amount the manager did not write.
  */
-const MONEY = String.raw`\$\s?\d[\d,]*(?:\.\d{1,2})?`;
+/*
+ * "$1,250" — a comma only BETWEEN digit groups. "payroll deduct $25, she was
+ * late" put "$25," on the Action Plan ("$25, will be deducted from …'s pay"):
+ * the comma ending the clause was read as part of the amount (QA, 22 Oct 2026).
+ */
+const MONEY = String.raw`\$\s?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?(?![\d,]\d)`;
 const AMOUNT_PATTERNS: readonly RegExp[] = [
   new RegExp(String.raw`\b(?:payroll\s+)?deduct(?:ion|ions|ed|ing)?\s+(?:of\s+|for\s+|is\s+|will\s+be\s+|amount\s+(?:of\s+|is\s+)?)?(${MONEY})`, "gi"),
   /*

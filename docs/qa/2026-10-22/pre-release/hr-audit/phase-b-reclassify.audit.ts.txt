@@ -1,0 +1,44 @@
+/**
+ * ASK BUBBLES — PAYROLL DEDUCT AUDIT, PHASE B RE-READ (restricted; never committed as a test)
+ *
+ * Re-reads each candidate form's source chat turns with the FIXED payroll
+ * reader and writes ONE line per form: its id and what the fixed reader says.
+ * No chat text is written out. Runs inside a checkout of the fixed commit on
+ * the approved HR workstation:
+ *
+ *   mkdir -p src/__qa__ && cp phase-b-reclassify.audit.ts src/__qa__/reclassify.audit.test.ts
+ *   AUDIT_IN=/secure/hr-audit/source-turns.json AUDIT_OUT=/secure/hr-audit/flags.json \
+ *     npx vitest run src/__qa__/reclassify.audit.test.ts
+ *   rm -rf src/__qa__
+ */
+import { readFileSync, writeFileSync } from "node:fs";
+import { it } from "vitest";
+
+import { payrollDeductFromConversation } from "@/lib/forms/payroll-deduct";
+
+interface Candidate {
+  instanceId: string;
+  sourceFound: boolean;
+  turns: { role: string; content: string }[];
+}
+
+it("re-read every candidate with the fixed reader", () => {
+  const candidates = JSON.parse(readFileSync(process.env.AUDIT_IN!, "utf8")) as Candidate[];
+  const flags = candidates.map((candidate) => {
+    if (!candidate.sourceFound || candidate.turns.length === 0) {
+      return { instanceId: candidate.instanceId, fixedReading: null, priority: "MANUAL — source chat not found (deleted or not chat-created)" };
+    }
+    const fixed = payrollDeductFromConversation(candidate.turns);
+    return {
+      instanceId: candidate.instanceId,
+      fixedReading: fixed,
+      priority:
+        fixed === "no"
+          ? "HIGH — the fixed reader reads No: the stored Yes is probably wrong"
+          : fixed === null
+            ? "MEDIUM — the fixed reader would have asked: confirm with the manager"
+            : "LOW — the fixed reader also reads Yes",
+    };
+  });
+  writeFileSync(process.env.AUDIT_OUT!, JSON.stringify(flags, null, 1));
+});

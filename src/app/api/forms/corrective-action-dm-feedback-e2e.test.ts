@@ -580,7 +580,7 @@ describe('"violating visitors at work policy" is the manual\'s Visitors in the W
       "create verbal CA for remy calder for violating the unicorn parking policy on 10-10-26. no payroll deduct",
     ]);
 
-    expect(last.content).toMatch(/couldn't find a section of the current policy manual for "unicorn parking"/);
+    expect(last.content).toMatch(/Woven does not see a section of the current policy manual for "unicorn parking"/);
 
     state.draft = { values: { observation: "Observed:\nRemy parked in the wrong place." }, checked: {} };
     const { reference } = await create();
@@ -620,7 +620,7 @@ describe("the observation keeps the manager's dates", () => {
     );
   });
 
-  it("D: on a form dated the day it is created, neither the incident's date nor the deadline becomes the form's", async () => {
+  it("D: the deadline is never the form's date; the one incident date (10/20) is (QA F-03)", async () => {
     const { create } = await conversation([D1]);
     state.draft = {
       values: {
@@ -634,7 +634,8 @@ describe("the observation keeps the manager's dates", () => {
     const form = await review(reference.instanceId);
     const observation = field(form, "observation")!.value!;
 
-    expect(field(form, "form_date")!.value).toBe("2026-10-21");
+    // QA F-03 (22 Oct 2026): the deadline is not a second incident, so the one incident date (10/20) dates the form.
+    expect(field(form, "form_date")!.value).toBe("2026-10-20");
     expect(observation).toContain("On October 20, 2026");
     expect(observation).toContain("by the October 15, 2026 deadline");
     expect(observation).not.toContain("October 21");

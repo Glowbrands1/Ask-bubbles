@@ -1,0 +1,1123 @@
+[
+  {
+    "id": "P1",
+    "group": "Payroll stated No",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. we will not payroll deduct $25"
+    ],
+    "expected": "payroll No",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=no",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **No** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "d7f1b7fc-90e2-41dd-999d-71a638618a85",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "P1-u1"
+          ],
+          "payrollDeduct": "no",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "P2",
+    "group": "Payroll stated No",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. don't payroll deduct $25"
+    ],
+    "expected": "payroll No",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=no",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **No** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "f02334a6-b247-4ecc-a2c7-6ef2007748e3",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "P2-u1"
+          ],
+          "payrollDeduct": "no",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "P3",
+    "group": "Payroll stated No",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. the $25 payroll deduction was waived"
+    ],
+    "expected": "payroll No",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=no",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **No** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "ca64162e-11a3-46f8-83c4-b432e6f0b541",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "P3-u1"
+          ],
+          "payrollDeduct": "no",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "P4",
+    "group": "Payroll stated No",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. payroll deduct $25 does not apply"
+    ],
+    "expected": "payroll No",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=no",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **No** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "e9c4e000-822f-4aeb-9495-66b63ceb1b20",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "P4-u1"
+          ],
+          "payrollDeduct": "no",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "P5",
+    "group": "Payroll stated No",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. no payroll deduct"
+    ],
+    "expected": "payroll No",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=no",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **No** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "4c270804-e40f-48c3-bb34-89c500db8d6c",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "P5-u1"
+          ],
+          "payrollDeduct": "no",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "Y1",
+    "group": "Payroll stated Yes",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. payroll deduct $25"
+    ],
+    "expected": "payroll Yes (positive control)",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=yes",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **Yes** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "e8fd632d-3c03-4973-bfa3-9b7dbc86039e",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "Y1-u1"
+          ],
+          "payrollDeduct": "yes",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "Y2",
+    "group": "Payroll stated Yes",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. $25 payroll deduction applies"
+    ],
+    "expected": "payroll Yes",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=yes",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **Yes** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "17469073-06e1-491f-8841-8b943b8c5b1e",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "Y2-u1"
+          ],
+          "payrollDeduct": "yes",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "U1",
+    "group": "Payroll ambiguous",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. we're not doing the $25 payroll deduction"
+    ],
+    "expected": "blank; the card asks",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=null",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "6f231c81-7d7a-45d1-848e-c06182870fc8",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "U1-u1"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "U2",
+    "group": "Payroll ambiguous",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. the DM said skip the $25 payroll deduction"
+    ],
+    "expected": "blank; the card asks",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=null",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\nYou described **Pat Rivera** as a District Manager, but Woven lists their job title as **Team Member Part Time**, so the form uses **Team Member Part Time**.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "388faaac-06e6-4b38-9b15-eb9040e8e974",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "U2-u1"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "U3",
+    "group": "Payroll ambiguous",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. no need for the $25 payroll deduction"
+    ],
+    "expected": "blank; the card asks",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=null",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "a4960d5a-f40b-420d-a420-07a7a3f4c3d8",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "U3-u1"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "U4",
+    "group": "Payroll ambiguous",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. maybe payroll deduct $25"
+    ],
+    "expected": "blank; the card asks",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=null",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "aa0ac91e-6179-4c3c-8ce5-0144d1698f65",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "U4-u1"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "U5",
+    "group": "Payroll ambiguous",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. we did not waive the $25 payroll deduction"
+    ],
+    "expected": "blank; the card asks",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=null",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "82b6b348-425d-441d-b9c3-a32a5dc1c820",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "U5-u1"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "U6",
+    "group": "Payroll ambiguous",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. not sure about the payroll deduction yet"
+    ],
+    "expected": "blank; the card asks",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=null",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "97bce096-aa77-456d-a37a-b905d441b523",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "U6-u1"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "U7",
+    "group": "Payroll ambiguous",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. hold off on the $25 payroll deduction"
+    ],
+    "expected": "blank; the card asks",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=null",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "1c9695a6-b2de-49e2-9563-e2b3b150569d",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "U7-u1"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "M1",
+    "group": "Payroll multi-turn",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. payroll deduct $25",
+      "actually we're not doing the $25 payroll deduction"
+    ],
+    "expected": "earlier Yes withdrawn: blank; asks",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=null",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **Yes** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "e33e4888-e1cb-4062-af3c-03621f48de44",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M1-u1"
+          ],
+          "payrollDeduct": "yes",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "d8c357e8-aa9a-4b21-97b8-2384d9c5c9e6",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M1-u1",
+            "M1-u2"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "M2",
+    "group": "Payroll multi-turn",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. no need for the $25 payroll deduction",
+      "no"
+    ],
+    "expected": "asked, then No",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=no",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "55a1561f-f785-4653-bb4e-da52889fd594",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M2-u1"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **No** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "e2a0cdbf-8f0c-4018-8aa7-2272aeef92c8",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M2-u1",
+            "M2-u2"
+          ],
+          "payrollDeduct": "no",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "M3",
+    "group": "Payroll multi-turn",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. no need for the $25 payroll deduction",
+      "yes"
+    ],
+    "expected": "asked, then Yes",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=yes",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "2120be60-b7d3-4860-951a-0ec6c4fe1e8d",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M3-u1"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **Yes** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "07abac22-ca53-46d3-b78e-89ea7a2b60da",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M3-u1",
+            "M3-u2"
+          ],
+          "payrollDeduct": "yes",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "M4",
+    "group": "Payroll multi-turn",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. payroll deduct $25",
+      "actually no payroll deduct"
+    ],
+    "expected": "Yes then No: No",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=no",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **Yes** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "42e3c09a-c388-4649-b774-490bae4faf8d",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M4-u1"
+          ],
+          "payrollDeduct": "yes",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **No** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "b947c309-4a49-4ead-9ca0-dd040a50b9aa",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M4-u1",
+            "M4-u2"
+          ],
+          "payrollDeduct": "no",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "M5",
+    "group": "Payroll multi-turn",
+    "actor": "location_manager",
+    "turns": [
+      "create a verbal ca for pat rivera, she was late today. we will not payroll deduct $25",
+      "sorry, payroll deduct $25 after all"
+    ],
+    "expected": "No then Yes: Yes",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=yes",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **No** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "f6478344-034f-4370-a8e9-719ee2b78732",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M5-u1"
+          ],
+          "payrollDeduct": "no",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late today · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **Yes** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "d5ecd837-fde2-454b-bf97-18d1e8fb60b5",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M5-u1",
+            "M5-u2"
+          ],
+          "payrollDeduct": "yes",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late today"
+        },
+        "formProposals": [],
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  }
+]

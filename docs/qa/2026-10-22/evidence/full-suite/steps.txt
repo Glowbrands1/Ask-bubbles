@@ -1,0 +1,5 @@
+Ask-bubbles 225bf10 full suite exit 0 (469s)
+ Test Files  420 passed | 6 skipped (426)
+      Tests  10152 passed | 59 skipped (10211)
+Ask-bubbles tsc exit 0
+Ask-bubbles eslint exit 0 :: ✖ 9 problems (0 errors, 9 warnings)

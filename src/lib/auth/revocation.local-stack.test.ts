@@ -141,15 +141,24 @@ describe.skipIf(!ENABLED)("termination on a real Supabase Auth server (local sta
     /* Disposable stack; nothing to clean in a shared system. */
   });
 
-  it("BEFORE: the person can use Ask Bubbles' API, read knowledge with their token, and holds two sessions", async () => {
+  /*
+   * KNOWLEDGE IS SERVER-ONLY (`20261003001000_knowledge_server_only.sql`): no
+   * browser token reads the knowledge tables, active or not, so a direct read
+   * cannot show that a session is alive. Ask Bubbles' own API — the path every
+   * knowledge read takes — is the proof instead (QA, 22 Oct 2026: these checks
+   * had failed against that migration since it was added).
+   */
+  it("BEFORE: the person can use Ask Bubbles' API and holds two sessions; knowledge is server-only even for them", async () => {
     const { authorizeRequest } = await import("@/lib/auth/server");
     const context = await authorizeRequest(new Request("http://127.0.0.1:3000/api/x", { headers: { cookie: cookieA } }), "ask_questions");
     expect(context.identity.subject).toBe(targetId);
 
-    const { data } = await tokenClient(sessionA.access_token).from("knowledge_documents").select("id").eq("knowledge_scope_id", SCOPE);
-    expect(data?.map((d) => d.id)).toEqual([documentId]);
-    const { data: chunks } = await tokenClient(sessionA.access_token).from("knowledge_chunks").select("id").eq("knowledge_scope_id", SCOPE);
-    expect(chunks).toHaveLength(1);
+    const documents = await tokenClient(sessionA.access_token).from("knowledge_documents").select("id").eq("knowledge_scope_id", SCOPE);
+    const chunks = await tokenClient(sessionA.access_token).from("knowledge_chunks").select("id").eq("knowledge_scope_id", SCOPE);
+    expect(documents.error).not.toBeNull();
+    expect(chunks.error).not.toBeNull();
+    expect(documents.data ?? []).toEqual([]);
+    expect(chunks.data ?? []).toEqual([]);
 
     expect(Number(sql(`select count(*) from auth.sessions where user_id = '${targetId}'`))).toBe(2);
   });
@@ -202,10 +211,14 @@ describe.skipIf(!ENABLED)("termination on a real Supabase Auth server (local sta
     expect(matched.data ?? []).toEqual([]);
   });
 
-  it("CONTROL: an active colleague's token still reads knowledge, so the policy is not simply closed", async () => {
+  it("CONTROL: an active colleague can still use Ask Bubbles' API, so termination is not a lockout of everyone", async () => {
     const { data } = await anonClient().auth.signInWithPassword({ email: CONTROL_EMAIL, password: CONTROL_PW });
-    const { data: documents } = await tokenClient(data.session!.access_token).from("knowledge_documents").select("id").eq("knowledge_scope_id", SCOPE);
-    expect(documents?.map((d) => d.id)).toEqual([documentId]);
+    const { authorizeRequest } = await import("@/lib/auth/server");
+    const context = await authorizeRequest(
+      new Request("http://127.0.0.1:3000/api/x", { headers: { cookie: await cookieHeaderFor(data.session!) } }),
+      "ask_questions",
+    );
+    expect(context.identity.subject).toBe(controlId);
   });
 
   it("cannot use Forgot Password: our route sends nothing (and says the same thing), while a colleague's request does send", async () => {
@@ -257,8 +270,12 @@ describe.skipIf(!ENABLED)("termination on a real Supabase Auth server (local sta
     expect(sql(`select coalesce(banned_until < now(), true) from auth.users where id = '${targetId}'`)).toBe("t");
     const { data, error } = await anonClient().auth.signInWithPassword({ email: TARGET_EMAIL, password: TARGET_PW });
     expect(error).toBeNull();
-    const { data: documents } = await tokenClient(data.session!.access_token).from("knowledge_documents").select("id").eq("knowledge_scope_id", SCOPE);
-    expect(documents?.map((d) => d.id)).toEqual([documentId]);
+    const { authorizeRequest } = await import("@/lib/auth/server");
+    const context = await authorizeRequest(
+      new Request("http://127.0.0.1:3000/api/x", { headers: { cookie: await cookieHeaderFor(data.session!) } }),
+      "ask_questions",
+    );
+    expect(context.identity.subject).toBe(targetId);
   });
 
   it("the session function cannot be called by a signed-in user or anonymously", async () => {

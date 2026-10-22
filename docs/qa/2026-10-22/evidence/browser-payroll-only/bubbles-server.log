@@ -1,0 +1,61 @@
+▲ Next.js 16.3.3
+- Local:         http://localhost:3200
+- Network:       http://192.0.2.2:3200
+✓ Ready in 183ms
+✓ Running next.config.ts took 64ms
+{"event":"forms.template_sync.completed","level":"info","created":["coaching","dpoa","policy-review","sdit-epp","tsd-epp","asd-sdit-epp","fttc-epp","dmit-epp-tsd","dmit-epp-dmit","follow-up-coaching","resignation-exit","demotion","position-transfer","prescreen-phone-interview","tanning-consultant-interview","management-interview-round-1","management-interview-round-2"],"revised":[],"renamed":[],"heldBack":[],"failed":[],"repaired":[],"retired":[]}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"6383e324-bdd3-465c-95bc-9dd99acf9087","surface":"main_chat","durationMs":19}
+{"event":"turn.close.succeeded","turnId":"6383e324-bdd3-465c-95bc-9dd99acf9087","durationMs":205}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"951aba77-7ccf-4fce-a1f6-ba978d654ac8","surface":"main_chat","durationMs":17}
+{"event":"turn.close.succeeded","turnId":"951aba77-7ccf-4fce-a1f6-ba978d654ac8","durationMs":99}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"0c82486d-e93c-4be7-a0a7-ba0204c2136f","surface":"main_chat","durationMs":19}
+{"event":"turn.close.succeeded","turnId":"0c82486d-e93c-4be7-a0a7-ba0204c2136f","durationMs":92}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"c2169405-8e41-42ce-93e6-8f875ef71c1a","surface":"main_chat","durationMs":10}
+{"event":"turn.close.succeeded","turnId":"c2169405-8e41-42ce-93e6-8f875ef71c1a","durationMs":78}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"cd7e7593-2954-45ec-b7b7-46f2668ea44a","surface":"main_chat","durationMs":16}
+{"event":"turn.close.succeeded","turnId":"cd7e7593-2954-45ec-b7b7-46f2668ea44a","durationMs":78}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"7005dd10-00fb-4f43-8b93-5e719d5bec78","surface":"main_chat","durationMs":8}
+{"event":"turn.close.succeeded","turnId":"7005dd10-00fb-4f43-8b93-5e719d5bec78","durationMs":93}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"4fb03b53-3c07-4a03-a4aa-c4da62db36ff","surface":"main_chat","durationMs":14}
+{"event":"turn.close.succeeded","turnId":"4fb03b53-3c07-4a03-a4aa-c4da62db36ff","durationMs":72}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"cd61b9ae-999f-471c-9014-780acb0cdff8","surface":"main_chat","durationMs":9}
+{"event":"turn.close.succeeded","turnId":"cd61b9ae-999f-471c-9014-780acb0cdff8","durationMs":98}
+[ask-bubbles] forms/instance/draft: Error: 401 {"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"},"request_id":"req_011CgHjhnsgMJFPeLYzmEFjG"}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"bd1fa54e-6239-47b7-916b-35a97b9d8d51","surface":"main_chat","durationMs":23}
+{"event":"turn.close.succeeded","turnId":"bd1fa54e-6239-47b7-916b-35a97b9d8d51","durationMs":156}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"63f7b7da-6fe3-47ea-a3fa-0c8218fa323d","surface":"main_chat","durationMs":28}
+{"event":"turn.close.succeeded","turnId":"63f7b7da-6fe3-47ea-a3fa-0c8218fa323d","durationMs":96}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"28861276-4b4e-47fc-bfc1-841a96925f37","surface":"main_chat","durationMs":13}
+{"event":"turn.close.succeeded","turnId":"28861276-4b4e-47fc-bfc1-841a96925f37","durationMs":107}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"043a6b97-d6dc-44da-9c2b-29a07e5b45bd","surface":"main_chat","durationMs":10}
+{"event":"turn.close.succeeded","turnId":"043a6b97-d6dc-44da-9c2b-29a07e5b45bd","durationMs":121}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"69855746-88d6-4c6e-b037-0e1bcbadee97","surface":"main_chat","durationMs":26}
+{"event":"turn.close.succeeded","turnId":"69855746-88d6-4c6e-b037-0e1bcbadee97","durationMs":142}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"53954b3b-a108-44fc-bdc1-95ed452c5bdc","surface":"main_chat","durationMs":11}
+{"event":"turn.close.succeeded","turnId":"53954b3b-a108-44fc-bdc1-95ed452c5bdc","durationMs":205}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"dab63fc0-cc43-427f-94c5-46f995a0e3d7","surface":"main_chat","durationMs":20}
+{"event":"turn.close.succeeded","turnId":"dab63fc0-cc43-427f-94c5-46f995a0e3d7","durationMs":117}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"02890c3f-c5c6-45cd-9702-8001ccde37a1","surface":"main_chat","durationMs":14}
+{"event":"turn.close.succeeded","turnId":"02890c3f-c5c6-45cd-9702-8001ccde37a1","durationMs":181}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"736f3887-6623-43ab-9f4e-2b45855c410d","surface":"main_chat","durationMs":9}
+{"event":"turn.close.succeeded","turnId":"736f3887-6623-43ab-9f4e-2b45855c410d","durationMs":111}
+{"event":"turn.open.started","surface":"main_chat","where":"chat"}
+{"event":"turn.open.succeeded","turnId":"604e783c-c71e-4187-8ff1-5ef6f587264f","surface":"main_chat","durationMs":12}
+{"event":"turn.close.succeeded","turnId":"604e783c-c71e-4187-8ff1-5ef6f587264f","durationMs":138}

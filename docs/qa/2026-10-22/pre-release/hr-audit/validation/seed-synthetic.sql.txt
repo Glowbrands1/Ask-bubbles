@@ -1,0 +1,72 @@
+-- SYNTHETIC DATA ONLY, for validating the audit SQL on a disposable local database.
+-- Every person, form and conversation here is invented. Never run against production.
+begin;
+
+insert into auth.users (id, email, aud, role, created_at, updated_at)
+values ('00000000-0000-4000-8000-0000000000a1', 'qa-manager@local.test', 'authenticated', 'authenticated', now(), now());
+
+insert into public.form_templates (id, key, name, short_name, layout_family, required_permission)
+values ('00000000-0000-4000-8000-00000000c0a1', 'dpoa', 'Corrective Action Form', 'Corrective Action', 'corrective', 'create_corrective_action'),
+       ('00000000-0000-4000-8000-00000000c0a2', 'coaching', 'Coaching Form', 'Coaching', 'coaching', 'create_coaching_form');
+
+insert into public.form_template_versions (id, template_id, version, status, document, published_at, published_by)
+values ('00000000-0000-4000-8000-00000000d0a1', '00000000-0000-4000-8000-00000000c0a1', 1, 'published', '{"blocks":[]}', now(), 'system'),
+       ('00000000-0000-4000-8000-00000000d0a2', '00000000-0000-4000-8000-00000000c0a2', 1, 'published', '{"blocks":[]}', now(), 'system');
+
+-- Forms. created_at inside the window (2026-10-21 20:55:22Z .. 2026-10-23) unless noted.
+insert into public.form_instances (id, template_id, template_version_id, employee_name, location_id, created_by, created_by_role, source, status, form_date, finalized_at, exported_at, created_at)
+values
+ ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-00000000c0a1', '00000000-0000-4000-8000-00000000d0a1', 'Synthetic One',   'loc-264', 'user-a1', 'location_manager', 'assistant', 'draft',     '2026-10-21', null, null, '2026-10-21 21:30Z'), -- said "will not" → HIGH (finalized below)
+ ('00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-00000000c0a1', '00000000-0000-4000-8000-00000000d0a1', 'Synthetic Two',   'loc-264', 'user-a1', 'location_manager', 'assistant', 'draft',     '2026-10-22', null, null, '2026-10-22 09:00Z'),                                   -- genuine yes → LOW
+ ('00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-00000000c0a1', '00000000-0000-4000-8000-00000000d0a1', 'Synthetic Three', 'loc-66',  'user-a1', 'location_manager', 'assistant', 'draft',     '2026-10-22', null, null, '2026-10-22 10:00Z'),                                   -- "no need for" → MEDIUM
+ ('00000000-0000-4000-8000-000000000004', '00000000-0000-4000-8000-00000000c0a1', '00000000-0000-4000-8000-00000000d0a1', 'Synthetic Four',  'loc-66',  'user-a1', 'location_manager', 'manual',    'draft',     '2026-10-22', null, null, '2026-10-22 11:00Z'),                                   -- manual, ticked → tier C
+ ('00000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-00000000c0a1', '00000000-0000-4000-8000-00000000d0a1', 'Synthetic Five',  'loc-264', 'user-a1', 'location_manager', 'assistant', 'draft',     '2026-10-22', null, null, '2026-10-22 12:00Z'),                                   -- payroll No → excluded
+ ('00000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-00000000c0a1', '00000000-0000-4000-8000-00000000d0a1', 'Synthetic Six',   'loc-264', 'user-a1', 'location_manager', 'assistant', 'draft',     '2026-10-20', null, null, '2026-10-20 14:00Z'),                 -- Yes before window → excluded (finalized below)
+ ('00000000-0000-4000-8000-000000000007', '00000000-0000-4000-8000-00000000c0a1', '00000000-0000-4000-8000-00000000d0a1', 'Synthetic Seven', 'loc-264', 'user-a1', 'location_manager', 'assistant', 'draft',     '2026-10-22', null, null, '2026-10-22 13:00Z'),                                   -- conversation deleted → MANUAL
+ ('00000000-0000-4000-8000-000000000008', '00000000-0000-4000-8000-00000000c0a2', '00000000-0000-4000-8000-00000000d0a2', 'Synthetic Eight', 'loc-264', 'user-a1', 'location_manager', 'assistant', 'draft',     '2026-10-22', null, null, '2026-10-22 14:00Z'); -- coaching form → excluded
+
+insert into public.form_instance_values (instance_id, field_key, checked, filled_by, provenance, updated_at) values
+ ('00000000-0000-4000-8000-000000000001', 'payroll_deduct', '["yes"]', 'system',  '{"source":"manager_statement"}', '2026-10-21 21:30Z'),
+ ('00000000-0000-4000-8000-000000000002', 'payroll_deduct', '["yes"]', 'system',  '{"source":"manager_statement"}', '2026-10-22 09:00Z'),
+ ('00000000-0000-4000-8000-000000000003', 'payroll_deduct', '["yes"]', 'system',  '{"source":"manager_statement"}', '2026-10-22 10:00Z'),
+ ('00000000-0000-4000-8000-000000000004', 'payroll_deduct', '["yes"]', 'manager', '{}',                             '2026-10-22 11:00Z'),
+ ('00000000-0000-4000-8000-000000000005', 'payroll_deduct', '["no"]',  'system',  '{"source":"manager_statement"}', '2026-10-22 12:00Z'),
+ ('00000000-0000-4000-8000-000000000006', 'payroll_deduct', '["yes"]', 'system',  '{"source":"manager_statement"}', '2026-10-20 14:00Z'),
+ ('00000000-0000-4000-8000-000000000007', 'payroll_deduct', '["yes"]', 'system',  '{"source":"manager_statement"}', '2026-10-22 13:00Z'),
+ ('00000000-0000-4000-8000-000000000008', 'payroll_deduct', '["yes"]', 'system',  '{"source":"manager_statement"}', '2026-10-22 14:00Z');
+insert into public.form_instance_values (instance_id, field_key, value, filled_by, provenance, updated_at) values
+ ('00000000-0000-4000-8000-000000000001', 'action_plan', 'Synthetic plan. $25 will be deducted from Synthetic''s pay.', 'ai', '{"source":"corrective_action_plan"}', '2026-10-21 21:40Z');
+
+insert into public.form_instance_events (instance_id, kind, actor, detail, created_at) values
+ ('00000000-0000-4000-8000-000000000001', 'created', 'user-a1', '{"proposalId":"prop-1"}', '2026-10-21 21:30Z'),
+ ('00000000-0000-4000-8000-000000000002', 'created', 'user-a1', '{"proposalId":"prop-2"}', '2026-10-22 09:00Z'),
+ ('00000000-0000-4000-8000-000000000003', 'created', 'user-a1', '{"proposalId":"prop-3"}', '2026-10-22 10:00Z'),
+ ('00000000-0000-4000-8000-000000000004', 'created', 'user-a1', '{}',                      '2026-10-22 11:00Z'),
+ ('00000000-0000-4000-8000-000000000007', 'created', 'user-a1', '{"proposalId":"prop-7"}', '2026-10-22 13:00Z');
+
+insert into public.chat_conversations (id, user_id, title, client_conversation_id) values
+ ('00000000-0000-4000-8000-0000000c0001', '00000000-0000-4000-8000-0000000000a1', 'Synthetic 1', 'conv-1'),
+ ('00000000-0000-4000-8000-0000000c0002', '00000000-0000-4000-8000-0000000000a1', 'Synthetic 2', 'conv-2'),
+ ('00000000-0000-4000-8000-0000000c0003', '00000000-0000-4000-8000-0000000000a1', 'Synthetic 3', 'conv-3');
+
+insert into public.chat_messages (conversation_id, user_id, role, content, position, client_message_id, metadata) values
+ -- form 1: the card (proposal prop-1) after a "will not" turn; a later unrelated turn must not be read
+ ('00000000-0000-4000-8000-0000000c0001', '00000000-0000-4000-8000-0000000000a1', 'user', 'create a verbal ca for synthetic one, she was late today. we will not payroll deduct $25', 0, 'm1-0', '{}'),
+ ('00000000-0000-4000-8000-0000000c0001', '00000000-0000-4000-8000-0000000000a1', 'assistant', 'Here is what I would put on a Corrective Action Form. Is payroll deduct applicable? Yes — tell me if that should change.', 1, 'm1-1', '{"formProposal":{"proposalId":"prop-1","templateKey":"dpoa","payrollDeduct":"yes"}}'),
+ ('00000000-0000-4000-8000-0000000c0001', '00000000-0000-4000-8000-0000000000a1', 'user', 'thanks, payroll deduct $50 on the next one', 2, 'm1-2', '{}'),
+ -- form 2: a genuine Yes, found through the form reference rather than the proposal
+ ('00000000-0000-4000-8000-0000000c0002', '00000000-0000-4000-8000-0000000000a1', 'user', 'create a verbal ca for synthetic two, register short. payroll deduct $25', 0, 'm2-0', '{}'),
+ ('00000000-0000-4000-8000-0000000c0002', '00000000-0000-4000-8000-0000000000a1', 'assistant', 'Created.', 1, 'm2-1', '{"formInstanceRef":{"instanceId":"00000000-0000-4000-8000-000000000002","proposalId":"prop-2","templateName":"Corrective Action Form"}}'),
+ -- form 3: unclear ("no need for"), card inside formProposals[]
+ ('00000000-0000-4000-8000-0000000c0003', '00000000-0000-4000-8000-0000000000a1', 'user', 'create a verbal ca for synthetic three, late twice. no need for the $25 payroll deduction', 0, 'm3-0', '{}'),
+ ('00000000-0000-4000-8000-0000000c0003', '00000000-0000-4000-8000-0000000000a1', 'assistant', 'Here are the forms.', 1, 'm3-1', '{"formProposals":[{"proposalId":"prop-3","templateKey":"dpoa","payrollDeduct":"yes"}]}');
+-- form 7: its conversation was deleted, so no messages carry prop-7.
+
+-- Finalize forms 1 and 6 the way the app does: values first, then the status
+-- (the forms_guard_finalized_values trigger refuses value writes on a finalized form).
+update public.form_instances set status = 'finalized', finalized_at = '2026-10-21 22:00Z', exported_at = '2026-10-21 22:05Z'
+ where id = '00000000-0000-4000-8000-000000000001';
+update public.form_instances set status = 'finalized', finalized_at = '2026-10-20 15:00Z'
+ where id = '00000000-0000-4000-8000-000000000006';
+
+commit;

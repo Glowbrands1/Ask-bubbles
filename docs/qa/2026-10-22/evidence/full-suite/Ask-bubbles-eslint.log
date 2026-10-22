@@ -1,0 +1,24 @@
+
+/home/user/Ask-bubbles/src/features/admin/woven/dry-run-diagnostics.dom.test.tsx
+  64:26  warning  '_r' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  64:51  warning  '_t' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/user/Ask-bubbles/src/features/chat/context-panel.tsx
+  15:3  warning  'messages' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/Ask-bubbles/src/features/dashboard/answer-sheet.tsx
+   4:8   warning  'Link' is defined but never used            @typescript-eslint/no-unused-vars
+   5:24  warning  'Play' is defined but never used            @typescript-eslint/no-unused-vars
+  12:10  warning  'formatDuration' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/Ask-bubbles/src/features/reports/filter-menu.tsx
+  5:10  warning  'usePathname' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/Ask-bubbles/src/lib/auth/page.ts
+  13:27  warning  'Role' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/Ask-bubbles/src/lib/employees/woven/status-evidence.test.ts
+  153:11  warning  'summary' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 9 problems (0 errors, 9 warnings)
+

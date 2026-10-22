@@ -1,0 +1,2339 @@
+[
+  {
+    "id": "A1",
+    "group": "A lowercase name",
+    "actor": "location_manager",
+    "turns": [
+      "my employee pat rivera was late again today, i need a coaching form"
+    ],
+    "expected": "coaching; employee Pat Rivera",
+    "pass": true,
+    "actual": "proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "273a94c7-8df4-4bfb-9612-656cf1f2c361",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "A1-u1"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "A2",
+    "group": "A lowercase name",
+    "actor": "location_manager",
+    "turns": [
+      "my employee pat rivera was late again today, i need a coaching form"
+    ],
+    "expected": "coaching; employee read as typed (Pat Rivera) even with no directory record; nothing invented",
+    "pass": true,
+    "actual": "proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\nWhat is **Pat Rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "37f07039-d6ae-4bab-b69c-559535c4619f",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "ready",
+          "sourceMessageIds": [
+            "A2-u1"
+          ],
+          "locationSource": "assignment"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "A3",
+    "group": "A lowercase name",
+    "actor": "location_manager",
+    "turns": [
+      "My employee Pat Rivera was late again today, I need a coaching form"
+    ],
+    "expected": "coaching; Pat Rivera (capitalised control)",
+    "pass": true,
+    "actual": "proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "af6f0b6b-1b29-4d99-90c3-157dc4fa1952",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "A3-u1"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "A4",
+    "group": "A lowercase name",
+    "actor": "location_manager",
+    "turns": [
+      "i need a coaching form for my employee pat rivera"
+    ],
+    "expected": "coaching; Pat Rivera",
+    "pass": true,
+    "actual": "proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "eca3481f-ef6c-4864-ac3e-45c20263fa6c",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "A4-u1"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "A5",
+    "group": "Name casing",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for PAT RIVERA, late 3 times this week"
+    ],
+    "expected": "Pat Rivera",
+    "pass": true,
+    "actual": "proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "78093d2a-7a93-47b9-a210-9710434d2553",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "A5-u1"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "A6",
+    "group": "Name casing",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pAt rIvErA, late 3 times this week"
+    ],
+    "expected": "Pat Rivera (directory spelling) or as typed",
+    "pass": true,
+    "actual": "proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "cf781829-8328-4e6f-9442-aa8b8b63ed6b",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "A6-u1"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "A7",
+    "group": "Name casing",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for jo mcdonald, late 3 times this week"
+    ],
+    "expected": "employee read (Jo Mcdonald or jo mcdonald) — not null",
+    "pass": true,
+    "actual": "proposal coaching employee=\"Jo Mcdonald\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\nWhat is **Jo Mcdonald**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "34c2bcf8-83a2-4bd1-997e-20a44a2d128f",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Jo Mcdonald",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "ready",
+          "sourceMessageIds": [
+            "A7-u1"
+          ],
+          "locationSource": "assignment"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "B1",
+    "group": "B continuity",
+    "actor": "location_manager",
+    "turns": [
+      "create coaching form for pat rivera, late 3 times this week",
+      "i already told you"
+    ],
+    "expected": "turn 2 keeps the coaching intake for Pat Rivera (card re-shown, or intake still open for the next turn); nothing lost",
+    "pass": true,
+    "actual": "t1: proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null | t2: proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null | open after t2: coaching",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "6cc3a19f-7307-4d57-8ed7-b526c5f4e414",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "B1-u1"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your messages above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "a1ad1d3f-8364-402b-8b00-22270f48a006",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "B1-u1",
+            "B1-u2"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "B2",
+    "group": "B continuity",
+    "actor": "location_manager",
+    "turns": [
+      "create a coaching form",
+      "i already told you"
+    ],
+    "expected": "nothing was told: still asks who the form is for; no invented employee",
+    "pass": true,
+    "actual": "t1: proposal coaching employee=null status=needs_employee location=loc-264(resolved) formDate=null level=null payroll=null | t2: proposal coaching employee=null status=needs_employee location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nTo draft a form, I'll need a few details first:\n\n1. The employee's full name — or tell me it's for the whole team.\n2. The date for the form (if you say \"today,\" I'll use October 21, 2026).\n3. What the coaching covers — what you observed, or the training, expectation or feedback you're giving.\n4. The employee's job title (optional but helpful).\n\nCould you please provide these?",
+        "formProposal": {
+          "proposalId": "38e07006-d5a3-4d48-b44e-5d343c2b0ddb",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": null,
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "needs_employee",
+          "sourceMessageIds": [
+            "B2-u1"
+          ],
+          "locationSource": "assignment"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nTo draft a form, I'll need a few details first:\n\n1. The employee's full name — or tell me it's for the whole team.\n2. The date for the form (if you say \"today,\" I'll use October 21, 2026).\n3. What the coaching covers — what you observed, or the training, expectation or feedback you're giving.\n4. The employee's job title (optional but helpful).\n\nCould you please provide these?",
+        "formProposal": {
+          "proposalId": "daae4d4e-e333-4675-9520-89484bfcbb7b",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": null,
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "needs_employee",
+          "sourceMessageIds": [
+            "B2-u1",
+            "B2-u2"
+          ],
+          "locationSource": "assignment"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "B3",
+    "group": "B continuity",
+    "actor": "location_manager",
+    "turns": [
+      "create coaching form for pat rivera, late 3 times this week",
+      "i already told you",
+      "today"
+    ],
+    "expected": "turn 3 still on the coaching intake for Pat Rivera",
+    "pass": false,
+    "actual": "proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null | proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null | form picker: {\"primary\":{\"templateKey\":\"coaching\",\"templateName\":\"Coaching Form\",\"description\":\"The everyday documented coaching conversation. Names the gap, the expectation and the follow-up.\"},\"additional\":[]}",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "3d0d0889-3825-43d3-bcf9-5bfb1cda0b1b",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "B3-u1"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your messages above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "90011507-e0c5-4366-823e-b34ec5e920be",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "B3-u1",
+            "B3-u2"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "[MODEL ANSWER — the turn left the forms path]\n\nBased on what you've described, I can prepare:",
+        "formProposal": null,
+        "formSelection": {
+          "primary": {
+            "templateKey": "coaching",
+            "templateName": "Coaching Form",
+            "description": "The everyday documented coaching conversation. Names the gap, the expectation and the follow-up."
+          },
+          "additional": []
+        },
+        "coverage": "insufficient"
+      }
+    ]
+  },
+  {
+    "id": "C1",
+    "group": "C incident vs form date",
+    "actor": "location_manager",
+    "turns": [
+      "create verbal ca for pat rivera. she was late on 10/5 and 10/15. no payroll deduct"
+    ],
+    "expected": "dpoa; formDate NOT silently 10/05 (null = dated on completion, or a clarification); level verbal; payroll no (stated by manager)",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=no",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **No** — tell me if that should change.\n\nYou mentioned more than one date (**10/5**, **10/15**). Which date goes on the form? Say \"most recent\" (10/15), pick one, or say \"today\" for the day you create it. Every date stays in the description of what happened — this only sets the form's Date, and until you choose it is dated today.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "37bd2dc5-8526-4b51-9262-71ed1faac2f2",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "C1-u1"
+          ],
+          "payrollDeduct": "no",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "formDateCandidates": [
+            "2026-10-05",
+            "2026-10-15"
+          ],
+          "employeeRoleSource": "woven",
+          "issue": null
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "C2",
+    "group": "C incident vs form date",
+    "actor": "location_manager",
+    "turns": [
+      "create verbal ca for pat rivera. she was late on 10/15. no payroll deduct"
+    ],
+    "expected": "single incident date: record what formDate does (template semantics)",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=2026-10-15 level=verbal payroll=no",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **No** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "b3b76a29-d57e-451a-a9f3-69a55f2b2dce",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": "2026-10-15",
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "C2-u1"
+          ],
+          "payrollDeduct": "no",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": null
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "C3",
+    "group": "C incident vs form date",
+    "actor": "location_manager",
+    "turns": [
+      "create verbal ca for pat rivera dated 10/20. she was late on 10/5 and 10/15"
+    ],
+    "expected": "explicit form date 2026-10-20 wins over incident dates",
+    "pass": false,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=null",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\nYou mentioned more than one date (**10/5**, **10/15**, **10/20**). Which date goes on the form? Say \"most recent\" (10/20), pick one, or say \"today\" for the day you create it. Every date stays in the description of what happened — this only sets the form's Date, and until you choose it is dated today.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "cb309eea-b8a3-4e61-9cad-615129016445",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "C3-u1"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "formDateCandidates": [
+            "2026-10-05",
+            "2026-10-15",
+            "2026-10-20"
+          ],
+          "employeeRoleSource": "woven",
+          "issue": null
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "C4",
+    "group": "C incident vs form date",
+    "actor": "location_manager",
+    "turns": [
+      "create verbal ca for pat rivera. she was late on 10/5 and 10/15"
+    ],
+    "expected": "payroll NOT asserted when manager did not say (null)",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=null",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\nYou mentioned more than one date (**10/5**, **10/15**). Which date goes on the form? Say \"most recent\" (10/15), pick one, or say \"today\" for the day you create it. Every date stays in the description of what happened — this only sets the form's Date, and until you choose it is dated today.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "ab5b8d91-61d0-44a5-8322-b9a69fe37562",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "C4-u1"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "formDateCandidates": [
+            "2026-10-05",
+            "2026-10-15"
+          ],
+          "employeeRoleSource": "woven",
+          "issue": null
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "C5",
+    "group": "C incident vs form date",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera, she was late on 10/5 and 10/15, I coached her on 10/16"
+    ],
+    "expected": "coaching; formDate 10/16 (the coaching date) or null — not 10/05",
+    "pass": true,
+    "actual": "proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\nYou mentioned more than one date (**10/5**, **10/15**). Which date goes on the form? Say \"most recent\" (10/15), pick one, or say \"today\" for the day you create it. Every date stays in the description of what happened — this only sets the form's Date, and until you choose it is dated today.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "d49f63a5-d6a8-48c0-9daa-9f7b7f292588",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "C5-u1"
+          ],
+          "locationSource": "woven",
+          "formDateCandidates": [
+            "2026-10-05",
+            "2026-10-15"
+          ],
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "L1",
+    "group": "District-scoped location-only reply",
+    "actor": "district_manager",
+    "turns": [
+      "create a coaching form for pat rivera, late 3 times this week",
+      "kearney"
+    ],
+    "expected": "DM (district scope): Bubbles has no district roster — Kearney (loc-66) should only resolve if the DM covers it; record behaviour; employee must stay Pat Rivera",
+    "pass": true,
+    "actual": "t1: proposal coaching employee=\"Pat Rivera\" status=needs_location location=null(unavailable) formDate=null level=null payroll=null | t2: proposal coaching employee=\"Pat Rivera\" status=needs_location location=null(unavailable) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI can't confirm which store this would be filed against, so the proposal has none. A form can only name a store Ask Bubbles can verify you're assigned to.\n\nWhat is **Pat Rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\nI couldn't verify a store for **Pat** from Woven, so I haven't put one on the form. Tell me which store they work at, or leave Store blank on the form.\n\n**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.",
+        "formProposal": {
+          "proposalId": "48c77fbc-e7d9-4e14-b0f3-cdfe16222451",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "unavailable",
+          "authorizedLocationIds": [],
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "L1-u1"
+          ]
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI can't confirm which store this would be filed against, so the proposal has none. A form can only name a store Ask Bubbles can verify you're assigned to.\n\n**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.",
+        "formProposal": {
+          "proposalId": "686e01dd-bd17-4567-905a-d141da36e07c",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Kearney",
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "unavailable",
+          "authorizedLocationIds": [],
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "L1-u1",
+            "L1-u2"
+          ],
+          "employeeRoleSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "L2",
+    "group": "District-scoped location-only reply",
+    "actor": "district_manager",
+    "turns": [
+      "create a coaching form for pat rivera, late 3 times this week",
+      "kearney"
+    ],
+    "expected": "DM of ANOTHER district: Kearney NOT set (out of scope), no leak",
+    "pass": true,
+    "actual": "t1: proposal coaching employee=\"Pat Rivera\" status=needs_location location=null(unavailable) formDate=null level=null payroll=null | t2: proposal coaching employee=\"Pat Rivera\" status=needs_location location=null(unavailable) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI can't confirm which store this would be filed against, so the proposal has none. A form can only name a store Ask Bubbles can verify you're assigned to.\n\nWhat is **Pat Rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\nI couldn't verify a store for **Pat** from Woven, so I haven't put one on the form. Tell me which store they work at, or leave Store blank on the form.\n\n**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.",
+        "formProposal": {
+          "proposalId": "44258b6e-8da6-4e17-8e57-aa35559445ca",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "unavailable",
+          "authorizedLocationIds": [],
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "L2-u1"
+          ]
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI can't confirm which store this would be filed against, so the proposal has none. A form can only name a store Ask Bubbles can verify you're assigned to.\n\n**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.",
+        "formProposal": {
+          "proposalId": "21cdb4a8-520f-4af0-a8c6-04e27baf6bdb",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Kearney",
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "unavailable",
+          "authorizedLocationIds": [],
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "L2-u1",
+            "L2-u2"
+          ],
+          "employeeRoleSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "L3",
+    "group": "District-scoped location-only reply",
+    "actor": "location_manager",
+    "turns": [
+      "create a coaching form for pat rivera, late 3 times this week",
+      "kearney"
+    ],
+    "expected": "location manager at 264: Kearney NOT set; employee stays Pat Rivera",
+    "pass": false,
+    "actual": "t1: proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null | t2: proposal coaching employee=\"Kearney\" status=needs_location location=null(needs_selection) formDate=null level=null payroll=null outOfScope=Kearney, NE",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "ba55f30d-6581-494c-bab6-9df50d6ff6cd",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "L3-u1"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\n**Kearney, NE** isn't a store on your assignment, so I can't file a form against it. Which of your stores is this about?\n\nI didn't find **Kearney** in the employee list for your stores, so the form will use the name exactly as you typed it, with no job title from Woven. Check the spelling before you file it.\n\nWhat is **Kearney**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\n**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here.",
+        "formProposal": {
+          "proposalId": "3588dcf3-4b36-4128-b024-d93f3aa62198",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "Kearney",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "needs_selection",
+          "authorizedLocationIds": [
+            "loc-264"
+          ],
+          "namedLocationOutOfScope": "Kearney, NE",
+          "employeeVerification": {
+            "status": "unverified",
+            "title": null,
+            "reason": "not_found"
+          },
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "L3-u2"
+          ]
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "L4",
+    "group": "District-scoped location-only reply",
+    "actor": "admin",
+    "turns": [
+      "create a coaching form for pat rivera, late 3 times this week",
+      "kearney"
+    ],
+    "expected": "global admin: location-only reply sets loc-66; employee stays Pat Rivera",
+    "pass": false,
+    "actual": "t1: proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null | t2: proposal coaching employee=\"Kearney\" status=ready location=loc-66(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "b6e841e2-bcd4-4259-8b4b-c419daef0c96",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "L4-u1"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\nI didn't find **Kearney** in the employee list for your stores, so the form will use the name exactly as you typed it, with no job title from Woven. Check the spelling before you file it.\n\nWhat is **Kearney**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\nI have the employee and the store (**Kearney, NE**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "1b0e4566-be28-434e-9634-8a6892e5eb94",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Kearney",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-66",
+          "locationName": "Kearney, NE",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "unverified",
+            "title": null,
+            "reason": "not_found"
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "L4-u2"
+          ],
+          "locationSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "R1",
+    "group": "Repeated lateness after coaching",
+    "actor": "location_manager",
+    "turns": [
+      "pat rivera was late again today. I already coached her last week for being late. what should I do?"
+    ],
+    "expected": "offers forms including Corrective Action (formal), not as first card",
+    "pass": false,
+    "actual": "no card; text: \"[MODEL ANSWER — the turn left the forms path]\"",
+    "raw": [
+      {
+        "content": "[MODEL ANSWER — the turn left the forms path]",
+        "formProposal": null,
+        "formSelection": null,
+        "coverage": "insufficient"
+      }
+    ]
+  },
+  {
+    "id": "R4",
+    "group": "Repeated lateness after coaching",
+    "actor": "location_manager",
+    "turns": [
+      "Pat Rivera was late again today. I already coached her last week for being late. what should I do?"
+    ],
+    "expected": "capitalised name: offers Coaching + Corrective Action",
+    "pass": true,
+    "actual": "form picker: {\"primary\":{\"templateKey\":\"coaching\",\"templateName\":\"Coaching Form\",\"description\":\"The everyday documented coaching conversation. Names the gap, the expectation and the follow-up.\"},\"additional\":[{\"templateKey\":\"dpoa\",\"templateName\":\"Corrective Action Form\",\"description\":\"The formal corrective step after coaching. Records the warning, the policy breached in the manual's own words, and the plan.\"}]}",
+    "raw": [
+      {
+        "content": "[MODEL ANSWER — the turn left the forms path]\n\nBased on what you've described, I can prepare:",
+        "formProposal": null,
+        "formSelection": {
+          "primary": {
+            "templateKey": "coaching",
+            "templateName": "Coaching Form",
+            "description": "The everyday documented coaching conversation. Names the gap, the expectation and the follow-up."
+          },
+          "additional": [
+            {
+              "templateKey": "dpoa",
+              "templateName": "Corrective Action Form",
+              "description": "The formal corrective step after coaching. Records the warning, the policy breached in the manual's own words, and the plan."
+            }
+          ]
+        },
+        "coverage": "insufficient"
+      }
+    ]
+  },
+  {
+    "id": "R5",
+    "group": "Repeated lateness after coaching",
+    "actor": "location_manager",
+    "turns": [
+      "I talked to Pat Rivera about being late and she was late again this week"
+    ],
+    "expected": "detector test sentence with a named employee: offers Coaching + Corrective Action",
+    "pass": false,
+    "actual": "form picker: {\"primary\":{\"templateKey\":\"coaching\",\"templateName\":\"Coaching Form\",\"description\":\"The everyday documented coaching conversation. Names the gap, the expectation and the follow-up.\"},\"additional\":[]}",
+    "raw": [
+      {
+        "content": "[MODEL ANSWER — the turn left the forms path]\n\nBased on what you've described, I can prepare:",
+        "formProposal": null,
+        "formSelection": {
+          "primary": {
+            "templateKey": "coaching",
+            "templateName": "Coaching Form",
+            "description": "The everyday documented coaching conversation. Names the gap, the expectation and the follow-up."
+          },
+          "additional": []
+        },
+        "coverage": "insufficient"
+      }
+    ]
+  },
+  {
+    "id": "R6",
+    "group": "Repeated lateness after coaching",
+    "actor": "location_manager",
+    "turns": [
+      "I talked to pat rivera about being late and she was late again this week"
+    ],
+    "expected": "same, lower-case name: offers Coaching + Corrective Action",
+    "pass": false,
+    "actual": "form picker: {\"primary\":{\"templateKey\":\"coaching\",\"templateName\":\"Coaching Form\",\"description\":\"The everyday documented coaching conversation. Names the gap, the expectation and the follow-up.\"},\"additional\":[]}",
+    "raw": [
+      {
+        "content": "[MODEL ANSWER — the turn left the forms path]\n\nBased on what you've described, I can prepare:",
+        "formProposal": null,
+        "formSelection": {
+          "primary": {
+            "templateKey": "coaching",
+            "templateName": "Coaching Form",
+            "description": "The everyday documented coaching conversation. Names the gap, the expectation and the follow-up."
+          },
+          "additional": []
+        },
+        "coverage": "insufficient"
+      }
+    ]
+  },
+  {
+    "id": "R2",
+    "group": "Repeated lateness after coaching",
+    "actor": "location_manager",
+    "turns": [
+      "pat rivera was late today for the first time. what should I do?"
+    ],
+    "expected": "unsuccessful path: no Corrective Action pushed on a first offence",
+    "pass": true,
+    "actual": "no card; text: \"[MODEL ANSWER — the turn left the forms path]\"",
+    "raw": [
+      {
+        "content": "[MODEL ANSWER — the turn left the forms path]",
+        "formProposal": null,
+        "formSelection": null,
+        "coverage": "insufficient"
+      }
+    ]
+  },
+  {
+    "id": "R3",
+    "group": "Repeated lateness after coaching",
+    "actor": "location_manager",
+    "turns": [
+      "create a ca for pat rivera, she was late again after her coaching on 10/1"
+    ],
+    "expected": "dpoa for Pat Rivera; coaching recorded as history, not the form date",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** she was late again after her coaching on 10/1 · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\n**Prior actions:** Coaching — signed 10/01/2026, as you said. I'll list it on the form — tell me if that should change.\n\nIs this new corrective action a **Verbal Warning** or a **Written Warning**? Tell me here, or tick it on the form — I won't choose it for you.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "725879e2-f65b-4f6b-ae71-17e929a026e9",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "R3-u1"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": null,
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "she was late again after her coaching on 10/1"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "N1",
+    "group": "Ambiguous 3-digit numbers",
+    "actor": "admin",
+    "turns": [
+      "coaching form for pat rivera at store 264, late 3 times"
+    ],
+    "expected": "store 264 → loc-264 (Omaha West Dodge)",
+    "pass": true,
+    "actual": "proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "b4d5ef19-218e-4d7a-be14-d39214a4f219",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "N1-u1"
+          ],
+          "locationSource": "manager",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "N2",
+    "group": "Ambiguous 3-digit numbers",
+    "actor": "admin",
+    "turns": [
+      "coaching form for pat rivera at store 999, late 3 times"
+    ],
+    "expected": "unknown store number 999: not set, never guessed",
+    "pass": true,
+    "actual": "proposal coaching employee=\"Pat Rivera\" status=needs_location location=null(needs_selection) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI couldn't find a store matching **store 999** in the registered stores, so I haven't picked one. Which store is this about?\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\n**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here.",
+        "formProposal": {
+          "proposalId": "c53f33c5-2b3e-4d92-b622-f4c211cd5973",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "needs_selection",
+          "authorizedLocationIds": [
+            "loc-66",
+            "loc-67",
+            "loc-219",
+            "loc-225",
+            "loc-236",
+            "loc-264",
+            "loc-338"
+          ],
+          "locationSelection": {
+            "reason": "not_found",
+            "typed": "store 999"
+          },
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "N2-u1"
+          ],
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "N3",
+    "group": "Ambiguous 3-digit numbers",
+    "actor": "admin",
+    "turns": [
+      "coaching form for pat rivera at store 66, late 3 times"
+    ],
+    "expected": "store 66 → loc-66 Kearney",
+    "pass": true,
+    "actual": "proposal coaching employee=\"Pat Rivera\" status=ready location=loc-66(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\nWoven has **Pat Rivera** at **Omaha, NE (West Dodge Rd) (Store 264)**, not **Kearney, NE (Store 66)**. The form uses the store you named — check that it's the right one before you file it.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Kearney, NE**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "de45e82c-cca1-4176-9090-51a87a0241f5",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-66",
+          "locationName": "Kearney, NE",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeMismatch": true,
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "N3-u1"
+          ],
+          "locationSource": "manager",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "N4",
+    "group": "Ambiguous 3-digit numbers",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera at store 66, late 3 times"
+    ],
+    "expected": "location manager at 264 naming store 66: NOT set to 66 (out of scope)",
+    "pass": true,
+    "actual": "proposal coaching employee=\"Pat Rivera\" status=needs_location location=null(needs_selection) formDate=null level=null payroll=null outOfScope=Kearney, NE",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\n**Kearney, NE** isn't a store on your assignment, so I can't file a form against it. Which of your stores is this about?\n\nWoven has **Pat Rivera** at **Omaha, NE (West Dodge Rd) (Store 264)**, not **Kearney, NE (Store 66)**. The form uses the store you named — check that it's the right one before you file it.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\n**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here.",
+        "formProposal": {
+          "proposalId": "cb1047ad-e471-4cf0-89a4-fa18b0099839",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "needs_selection",
+          "authorizedLocationIds": [
+            "loc-264"
+          ],
+          "namedLocationOutOfScope": "Kearney, NE",
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeMismatch": true,
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "N4-u1"
+          ],
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "N5",
+    "group": "Ambiguous 3-digit numbers",
+    "actor": "admin",
+    "turns": [
+      "create a coaching form for pat rivera, late 3 times this week",
+      "264"
+    ],
+    "expected": "bare-number reply 264: store set or asked; employee unchanged",
+    "pass": false,
+    "actual": "t2: form picker: {\"primary\":{\"templateKey\":\"coaching\",\"templateName\":\"Coaching Form\",\"description\":\"The everyday documented coaching conversation. Names the gap, the expectation and the follow-up.\"},\"additional\":[]}",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "b77fcc6d-4952-4a6f-a658-e41ba326f12b",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "N5-u1"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "[MODEL ANSWER — the turn left the forms path]\n\nBased on what you've described, I can prepare:",
+        "formProposal": null,
+        "formSelection": {
+          "primary": {
+            "templateKey": "coaching",
+            "templateName": "Coaching Form",
+            "description": "The everyday documented coaching conversation. Names the gap, the expectation and the follow-up."
+          },
+          "additional": []
+        },
+        "coverage": "insufficient"
+      }
+    ]
+  },
+  {
+    "id": "I1",
+    "group": "Missing/ambiguous identity",
+    "actor": "location_manager",
+    "turns": [
+      "i need a coaching form"
+    ],
+    "expected": "asks who: status needs_employee, employee null",
+    "pass": true,
+    "actual": "proposal coaching employee=null status=needs_employee location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nTo draft a form, I'll need a few details first:\n\n1. The employee's full name — or tell me it's for the whole team.\n2. The date for the form (if you say \"today,\" I'll use October 21, 2026).\n3. What the coaching covers — what you observed, or the training, expectation or feedback you're giving.\n4. The employee's job title (optional but helpful).\n\nCould you please provide these?",
+        "formProposal": {
+          "proposalId": "eedebb13-905b-4b0e-aa6b-04ec66004da7",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": null,
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "needs_employee",
+          "sourceMessageIds": [
+            "I1-u1"
+          ],
+          "locationSource": "assignment"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "I2",
+    "group": "Missing/ambiguous identity",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat, late 3 times"
+    ],
+    "expected": "two Pats in directory: does not silently pick Pat Rivera or Pat Smith",
+    "pass": true,
+    "actual": "proposal coaching employee=null status=needs_employee location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Did you mean **Pat Rivera** or **Pat Smith**? More than one person on your team is a close match for **pat**, so tell me which one — or say \"keep pat\" to use the name exactly as you typed it.",
+        "formProposal": {
+          "proposalId": "3f97239f-c134-4ad0-aff9-04c68164e775",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": null,
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "unverified",
+            "title": null,
+            "reason": "ambiguous"
+          },
+          "status": "needs_employee",
+          "sourceMessageIds": [
+            "I2-u1"
+          ]
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "I3",
+    "group": "Missing/ambiguous identity",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for her, she was late 3 times"
+    ],
+    "expected": "'her' is nobody: needs_employee",
+    "pass": true,
+    "actual": "proposal coaching employee=null status=needs_employee location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nTo draft a form, I'll need a few details first:\n\n1. The employee's full name — or tell me it's for the whole team.\n2. The date for the form (if you say \"today,\" I'll use October 21, 2026).\n3. The employee's job title (optional but helpful).\n\nCould you please provide these?",
+        "formProposal": {
+          "proposalId": "74de4131-3d62-43a9-bede-89476dabf8a2",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": null,
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "needs_employee",
+          "sourceMessageIds": [
+            "I3-u1"
+          ],
+          "locationSource": "assignment"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "I4",
+    "group": "Missing/ambiguous identity",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera and sam jones, both late"
+    ],
+    "expected": "two people: asks which / does not merge into one form silently",
+    "pass": true,
+    "actual": "proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "You asked for two forms, so here are two separate cards — each is created and drafted on its own, only from what you said about that person.\n\n**1. Coaching Form — pat rivera**\n\nHere is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.\n\n**2. Coaching Form — sam jones**\n\nHere is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "14dcf3d1-1d15-4397-ae21-8c914da0e021",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "I4-u1"
+          ],
+          "sourceExcerpts": {
+            "I4-u1": "coaching form for pat rivera"
+          },
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "M1",
+    "group": "Change during active intake",
+    "actor": "location_manager",
+    "turns": [
+      "create coaching form for pat rivera, late 3 times this week",
+      "actually it's for sam jones"
+    ],
+    "expected": "employee becomes Sam Jones",
+    "pass": true,
+    "actual": "t1: proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null | t2: proposal coaching employee=\"Sam Jones\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "1e887e04-efb9-4674-a288-ddd2027a5e70",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M1-u1"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your messages above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "93d606a5-d8ad-4095-a753-9c6fc92000cd",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Sam Jones",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M1-u1",
+            "M1-u2"
+          ],
+          "sourceExcerpts": {
+            "M1-u1": "create coaching form for Sam Jones, late 3 times this week"
+          },
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "M2",
+    "group": "Change during active intake",
+    "actor": "admin",
+    "turns": [
+      "create coaching form for pat rivera at kearney, late 3 times",
+      "sorry, it's grand island"
+    ],
+    "expected": "location becomes loc-236 Grand Island",
+    "pass": false,
+    "actual": "t1: proposal coaching employee=\"Pat Rivera\" status=ready location=loc-66(resolved) formDate=null level=null payroll=null | t2: proposal coaching employee=\"Grand Island\" status=ready location=loc-66(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\nWoven has **Pat Rivera** at **Omaha, NE (West Dodge Rd) (Store 264)**, not **Kearney, NE (Store 66)**. The form uses the store you named — check that it's the right one before you file it.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Kearney, NE**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "82507018-c6ce-41ad-9679-35734eb11ade",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-66",
+          "locationName": "Kearney, NE",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeMismatch": true,
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M2-u1"
+          ],
+          "locationSource": "manager",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your messages above.\n\nI didn't find **Grand Island** in the employee list for your stores, so the form will use the name exactly as you typed it, with no job title from Woven. Check the spelling before you file it.\n\nWhat is **Grand Island**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\nI have the employee and the store (**Kearney, NE**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "acc6d72a-dab3-42d5-8100-707ae240a852",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Grand Island",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-66",
+          "locationName": "Kearney, NE",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "unverified",
+            "title": null,
+            "reason": "not_found"
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M2-u1",
+            "M2-u2"
+          ],
+          "sourceExcerpts": {
+            "M2-u1": "create coaching form for Grand Island at kearney, late 3 times"
+          },
+          "locationSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "M3",
+    "group": "Change during active intake",
+    "actor": "location_manager",
+    "turns": [
+      "create coaching form for pat rivera, late 3 times this week",
+      "not pat rivera"
+    ],
+    "expected": "employee cleared after 'not pat rivera'",
+    "pass": true,
+    "actual": "t2: no card; text: \"[MODEL ANSWER — the turn left the forms path]\"",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "0deac8ef-c658-47ba-a1df-1ebbd8a1edce",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M3-u1"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "[MODEL ANSWER — the turn left the forms path]",
+        "formProposal": null,
+        "formSelection": null,
+        "coverage": "insufficient"
+      }
+    ]
+  },
+  {
+    "id": "M4",
+    "group": "Change during active intake",
+    "actor": "location_manager",
+    "turns": [
+      "create verbal ca for pat rivera, late 3 times",
+      "actually make it a written warning"
+    ],
+    "expected": "warning level becomes written",
+    "pass": true,
+    "actual": "t2: proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=written payroll=null",
+    "raw": [
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** late 3 times · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "341b9ea6-8fe5-448b-8fc6-ceded109bf20",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M4-u1"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "late 3 times"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Issue:** late 3 times · **Type of warning:** Written Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "3506447d-6208-49bc-82db-0a846afc9542",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "M4-u1",
+            "M4-u2"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "written",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": "late 3 times"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "F1",
+    "group": "Follow-ups w/o form request",
+    "actor": "location_manager",
+    "turns": [
+      "create a ca for pat rivera",
+      "she was late 3 times this week",
+      "verbal",
+      "no payroll deduct"
+    ],
+    "expected": "stays dpoa for Pat Rivera; level verbal; payroll no",
+    "pass": true,
+    "actual": "proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null awaitingIncident | proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null | proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=null | proposal dpoa employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=verbal payroll=no",
+    "raw": [
+      {
+        "content": "I can create a **Corrective Action Form** for **Pat Rivera**.\n\n**You haven't told me what happened yet**, so I can't cite the policy manual — the draft will come back without the policy section and page. You can create it now and fill it in yourself, or tell me here what happened and I'll draft it (or redraft the form you created) with the manual's section and page cited.\n\n**Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nIs this new corrective action a **Verbal Warning** or a **Written Warning**? Tell me here, or tick it on the form — I won't choose it for you.\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "6c09d44e-bcbd-464d-95b1-322f575076fc",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "F1-u1"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": null,
+          "awaitingIncident": true,
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": null
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nIs this new corrective action a **Verbal Warning** or a **Written Warning**? Tell me here, or tick it on the form — I won't choose it for you.\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "87c426f7-840d-498f-bba9-de23aabe5639",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "F1-u1",
+            "F1-u2"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": null,
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": null
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "e1d30138-d9da-4ce6-88bd-74e1f2979ce5",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "F1-u1",
+            "F1-u2",
+            "F1-u3"
+          ],
+          "payrollDeduct": null,
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": null
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "I'll draft a **Corrective Action Form** for **Pat Rivera** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Pat Rivera is assigned) — tell me if that should change\n\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.\n\nIs payroll deduct applicable? **No** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "0179ae5c-7319-4dfc-89f8-53d70cfae26f",
+          "templateKey": "dpoa",
+          "templateName": "Corrective Action Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "F1-u1",
+            "F1-u2",
+            "F1-u3",
+            "F1-u4"
+          ],
+          "payrollDeduct": "no",
+          "warningLevel": "verbal",
+          "locationSource": "woven",
+          "employeeRoleSource": "woven",
+          "issue": null
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "F2",
+    "group": "Follow-ups w/o form request",
+    "actor": "location_manager",
+    "turns": [
+      "i need a coaching form",
+      "pat rivera",
+      "late 3 times this week"
+    ],
+    "expected": "employee set from bare-name answer; stays coaching",
+    "pass": true,
+    "actual": "proposal coaching employee=null status=needs_employee location=loc-264(resolved) formDate=null level=null payroll=null | proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null | proposal coaching employee=\"Pat Rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nTo draft a form, I'll need a few details first:\n\n1. The employee's full name — or tell me it's for the whole team.\n2. The date for the form (if you say \"today,\" I'll use October 21, 2026).\n3. What the coaching covers — what you observed, or the training, expectation or feedback you're giving.\n4. The employee's job title (optional but helpful).\n\nCould you please provide these?",
+        "formProposal": {
+          "proposalId": "ab2f40aa-0d79-4c22-a184-7c1f207fcd22",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": null,
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "needs_employee",
+          "sourceMessageIds": [
+            "F2-u1"
+          ],
+          "locationSource": "assignment"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your messages above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "24e2495d-00a1-4a0d-82dd-0164c04411ed",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "F2-u1",
+            "F2-u2"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your messages above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "52296294-508a-4b3b-bc2d-284f4bab9e9d",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "F2-u1",
+            "F2-u2",
+            "F2-u3"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "F3",
+    "group": "Follow-ups w/o form request",
+    "actor": "location_manager",
+    "turns": [
+      "create coaching form for pat rivera, late 3 times this week",
+      "what does the handbook say about lateness?"
+    ],
+    "expected": "a policy question mid-intake is answered (not mistaken for form data); employee unchanged",
+    "pass": true,
+    "actual": "t2: form picker: {\"primary\":{\"templateKey\":\"coaching\",\"templateName\":\"Coaching Form\",\"description\":\"The everyday documented coaching conversation. Names the gap, the expectation and the follow-up.\"},\"additional\":[]}",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "9dd00234-4a9a-4ecd-a839-e2542ae245b0",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "F3-u1"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "[MODEL ANSWER — the turn left the forms path]\n\nBased on what you've described, I can prepare:",
+        "formProposal": null,
+        "formSelection": {
+          "primary": {
+            "templateKey": "coaching",
+            "templateName": "Coaching Form",
+            "description": "The everyday documented coaching conversation. Names the gap, the expectation and the follow-up."
+          },
+          "additional": []
+        },
+        "coverage": "insufficient"
+      }
+    ]
+  },
+  {
+    "id": "F4",
+    "group": "Follow-ups w/o form request",
+    "actor": "location_manager",
+    "turns": [
+      "create coaching form for pat rivera, late 3 times this week",
+      "never mind"
+    ],
+    "expected": "intake ends; no card",
+    "pass": true,
+    "actual": "t2: form picker: {\"primary\":{\"templateKey\":\"coaching\",\"templateName\":\"Coaching Form\",\"description\":\"The everyday documented coaching conversation. Names the gap, the expectation and the follow-up.\"},\"additional\":[]}",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "8798ce59-8d94-4f4c-b29a-58b35012dc78",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "Pat Rivera",
+          "employeeRole": "Team Member Part Time",
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "employeeVerification": {
+            "status": "verified",
+            "title": "Team Member Part Time",
+            "storeIds": [
+              "loc-264"
+            ]
+          },
+          "status": "ready",
+          "sourceMessageIds": [
+            "F4-u1"
+          ],
+          "locationSource": "woven",
+          "employeeRoleSource": "woven"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "[MODEL ANSWER — the turn left the forms path]\n\nBased on what you've described, I can prepare:",
+        "formProposal": null,
+        "formSelection": {
+          "primary": {
+            "templateKey": "coaching",
+            "templateName": "Coaching Form",
+            "description": "The everyday documented coaching conversation. Names the gap, the expectation and the follow-up."
+          },
+          "additional": []
+        },
+        "coverage": "insufficient"
+      }
+    ]
+  }
+]
