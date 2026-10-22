@@ -107,6 +107,7 @@ import {
   withoutDerivedKeys,
 } from "@/lib/forms/exit-draft";
 import { EXIT_DERIVED_KEYS } from "@/lib/forms/exit-facts";
+import { describesIncident, describesMoreThanTheRequest } from "@/lib/forms/corrective-action-intake";
 import { SPECIFIC_SECTION_BOXES, describedManualSection, namedManualSection } from "@/lib/forms/named-policy-section";
 import {
   PAYROLL_DEDUCT_KEY,
@@ -1386,9 +1387,34 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       ? withConductOffense({ checked: enforced.checked, values: enforced.values })
       : null;
     const offenseChange = statedOffense ?? conductOffense;
-    const offenseApplied = offenseChange
+    const offenseChosen = offenseChange
       ? { ...enforced, values: offenseChange.values, checked: offenseChange.checked }
       : enforced;
+    /*
+     * A POLICY NOBODY SETTLED IS LEFT FOR THE MANAGER (QA, 22 Oct 2026). Where
+     * the manager was asked which policy applies and has not said, or has not
+     * said what happened at all, the model's own Type of Offense is a guess on
+     * a disciplinary record. It is not ticked, so Policy Violated, Direct
+     * policy and the Action Plan's policy stay blank until the manager says —
+     * in chat or on the form. A box they ticked themselves still stands below.
+     */
+    const unsettledPolicy =
+      caPolicy !== null &&
+      !offenseChange &&
+      !policySection &&
+      (caPolicy.ambiguous !== null ||
+        (!describesIncident(notes) &&
+          !describesMoreThanTheRequest(notes, {
+            ignore: [loaded.instance.employeeName, loaded.instance.locationName ?? ""],
+          })));
+    const offenseApplied =
+      unsettledPolicy && (offenseChosen.checked.offense_type ?? []).length > 0
+        ? {
+            ...offenseChosen,
+            checked: { ...offenseChosen.checked, offense_type: [] },
+            values: Object.fromEntries(Object.entries(offenseChosen.values).filter(([key]) => key !== "other_offense")),
+          }
+        : offenseChosen;
 
     /*
      * THE WARNING LEVEL THE MANAGER STATED is already on the form — written
@@ -1890,6 +1916,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
                   applied: false,
                   reason: conduct && !conduct.ok ? conduct.reason : "no_suggestion",
                   ambiguous: caPolicy.ambiguous,
+                  ...(unsettledPolicy ? { leftForManager: true } : {}),
                 },
           }
         : {}),
