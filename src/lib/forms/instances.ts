@@ -34,10 +34,10 @@ import {
 } from "./prior-actions";
 import { applyRequiredClosings } from "./required-closing";
 import { isIsoCalendarDate } from "./form-date-answer";
+import { getCurrentVersion, getVersion, type TemplateVersionRow } from "./repository";
 
 /** The form's own Date line — the same day as `form_instances.form_date`. */
 const FORM_DATE_KEY = "form_date";
-import { getCurrentVersion, getVersion, type TemplateVersionRow } from "./repository";
 
 /**
  * THE FORMS THEMSELVES — one employee, one conversation, one record.

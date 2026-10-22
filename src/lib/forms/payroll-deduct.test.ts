@@ -421,3 +421,14 @@ describe("an amount changed after the form exists", () => {
     expect(payrollDeductCorrection("change the $5.00 payroll deduction to no")).toBe("no");
   });
 });
+
+/* Review, 22 Oct 2026: a deduction of nothing is no deduction. */
+describe("a zero amount", () => {
+  it.each([["change the payroll deduction to $0"], ["change the payroll deduction to $0.00"], ["change payroll deduct to 0 dollars"], ["payroll deduct $0"]])(
+    '"%s" is No, and states no amount',
+    (text) => {
+      expect(payrollDeductCorrection(text)).toBe("no");
+      expect(payrollDeductAmount(text)).toBeNull();
+    },
+  );
+});

@@ -255,7 +255,9 @@ export function payrollDeductUnclear(text: string): boolean {
 
 export function statedPayrollDeduct(text: string): PayrollDeductAnswer | null {
   const reading = readPayrollDeduct(text);
-  return reading === "unclear" ? null : reading;
+  if (reading === "unclear") return null;
+  // A deduction of nothing is no deduction (review, 22 Oct 2026: "$0" read as Yes).
+  return reading === "yes" && deductsNothing(text) ? "no" : reading;
 }
 
 /**
@@ -435,8 +437,10 @@ export function payrollDeductCorrection(text: string): PayrollDeductAnswer | nul
     const after = normalize(text.slice(change.index));
     const to = /\b(?:to|as|=|:)\s*(yes|no)\b/.exec(after);
     if (to) return to[1] as PayrollDeductAnswer;
-    /* "change the payroll deduction to $5.00": a new amount to take is a Yes. */
-    if (new RegExp(String.raw`\bto\s+${ANY_MONEY}`).test(after) && !DENIAL.test(after)) return "yes";
+    /* "change the payroll deduction to $5.00": a new amount to take is a Yes — "to $0" is a No. */
+    if (new RegExp(String.raw`\bto\s+${ANY_MONEY}`).test(after) && !DENIAL.test(after)) {
+      return deductsNothing(text) ? "no" : "yes";
+    }
   }
   return statedPayrollDeduct(text);
 }
@@ -489,6 +493,12 @@ const AMOUNT_PATTERNS: readonly RegExp[] = [
 
 /** The amount the manager said would be deducted — "$3.25" — or null. The latest one stated wins. */
 export function payrollDeductAmount(text: string): string | null {
+  const amount = latestAmount(text);
+  return amount === null || isZero(amount) ? null : amount;
+}
+
+/** The latest amount stated for the deduction, zero included. */
+function latestAmount(text: string): string | null {
   let found: { at: number; amount: string } | null = null;
   for (const pattern of AMOUNT_PATTERNS) {
     for (const match of (text ?? "").matchAll(pattern)) {
@@ -497,6 +507,14 @@ export function payrollDeductAmount(text: string): string | null {
     }
   }
   return found?.amount ?? null;
+}
+
+const isZero = (amount: string) => Number(amount.replace(/[$,]/g, "")) === 0;
+
+/** Whether the latest amount stated for the deduction is zero — "$0", "0 dollars". */
+function deductsNothing(text: string): boolean {
+  const amount = latestAmount(text);
+  return amount !== null && isZero(amount);
 }
 
 /**
