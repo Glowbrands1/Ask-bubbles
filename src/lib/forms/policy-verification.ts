@@ -92,5 +92,7 @@ export function unverifiedPolicyFields(
  */
 export const POLICY_ACKNOWLEDGEMENT_REQUIRED = "policy_verification_required";
 
+export const POLICY_ACKNOWLEDGEMENT_TITLE = "Official policy verification is incomplete";
+
 export const POLICY_ACKNOWLEDGEMENT_MESSAGE =
   "Official policy verification is incomplete. Ask Bubbles could not verify one or more policy fields from an approved policy source. Review the applicable company policy before issuing this Corrective Action Form. If you have independently verified the policy, you may continue.";

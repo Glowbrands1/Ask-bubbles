@@ -1226,6 +1226,86 @@ describe("P4. finalizing freezes the version the SERVER holds", () => {
     expect(screen.queryByRole("dialog", { name: "Finalize this form?" })).toBeNull();
   });
 
+  /*
+   * Ported from Ask Sunny (production, 21 Oct 2026): a Verbal CA whose policy
+   * the assistant had verified could not be finalized after a Save. The card
+   * kept its pre-save copy, so it skipped the acknowledgement dialog, and the
+   * server's 409 became a dead-end error.
+   */
+  it("opens the policy dialog when the server refuses the finalize, not an error", async () => {
+    const { server } = phase4();
+    fakeFetch(async (url, init) => {
+      if (url === "/api/forms/instances/inst-42" && init.method === "POST") {
+        return {
+          ok: false,
+          payload: {
+            error: "Policy verification is required before this form can be finalized.",
+            code: "policy_verification_required",
+            fields: [{ key: "policy_violated", label: "Policy Violated", filled: true }],
+          },
+        };
+      }
+      return { payload: server() };
+    });
+    const { container } = mounted();
+
+    await screen.findByDisplayValue("Arrived late on three shifts this week.");
+    fireEvent.click(screen.getByRole("button", { name: /^finalize$/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /yes, finalize/i }));
+
+    expect(await screen.findByRole("dialog", { name: /policy verification is incomplete/i })).toBeTruthy();
+    expect(container.textContent).not.toContain("Policy verification is required before this form");
+    expect(server().instance.status).toBe("draft");
+  });
+
+  it("reads who wrote each value off the save, so Finalize asks about a re-typed policy", async () => {
+    const row = loadedInstance();
+    const document = {
+      ...COACHING_DOCUMENT,
+      blocks: [
+        ...COACHING_DOCUMENT.blocks,
+        {
+          kind: "field" as const,
+          field: {
+            key: "policy_violated",
+            label: "Policy Violated",
+            input: "text" as const,
+            responsibility: "ai" as const,
+            policyGrounded: true,
+          },
+        },
+      ],
+    };
+    const verified = {
+      ...row,
+      version: { ...row.version, document },
+      values: [
+        ...row.values,
+        {
+          fieldKey: "policy_violated",
+          value: "Attendance and Punctuality",
+          checked: [],
+          filledBy: "ai",
+          provenance: { verified: true },
+        },
+      ],
+    } as typeof row;
+    phase4(verified);
+    mounted();
+
+    // The PATCH answers with every value rewritten as the manager's, no provenance.
+    const policy = await screen.findByDisplayValue("Attendance and Punctuality");
+    fireEvent.change(policy, { target: { value: "Attendance" } });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await waitFor(() => expect(screen.getByText("Saved")).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: /^finalize$/i }));
+    expect(await screen.findByRole("dialog", { name: /policy verification is incomplete/i })).toBeTruthy();
+    expect(recorded.some((made) => made.method === "POST" && made.body.action === "finalize")).toBe(
+      false,
+    );
+  });
+
   it("sends the canonical follow-up date with the action", async () => {
     const { server } = phase4();
     mounted();
