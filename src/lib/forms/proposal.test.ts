@@ -1014,3 +1014,73 @@ describe("'will' followed by a surname, and a lower-case name then a role", () =
     expect(extractEmployeeNames("sarah asm needs a coaching form")).not.toContain("sarah asm");
   });
 });
+
+/*
+ * Ported from Ask Sunny (6b5f897). District Manager feedback, 21 Oct 2026:
+ * "create ca for <recipient> … <recipient> failed to have <new hire> …" was
+ * asked which of the two it was for. Synthetic names; the wording is the
+ * report's, in this company's titles.
+ */
+describe("the person a CA is for outranks the people its incident names", () => {
+  const resolve = (content: string, history: ChatMessage[] = []) =>
+    resolveEmployee(managerContext(history, { id: "msg-current", content }));
+
+  it("the production request, with synthetic names", () => {
+    expect(
+      resolve(
+        "create ca for Marisol Quade, Store Director for violating standards of conduct. Marisol failed to have Jaya Penrose complete required policy acknowledgements in woven during Jaya's onboarding on 9-28-26 as reflected on the woven policy acknowledgement report run on 10-16-26.",
+      ),
+    ).toEqual({ kind: "resolved", employeeName: "Marisol Quade" });
+  });
+
+  it.each([
+    ["first", "create ca for Remy Calder for violating standards of conduct. Remy failed to have Tess Varga complete her acknowledgements."],
+    ["middle", "Tess Varga started on 9-28. Please create a corrective action for Remy Calder, Store Director; Remy never had Tess complete them."],
+    ["last", "Tess Varga did not complete her acknowledgements during onboarding. create ca for Remy Calder for violating standards of conduct"],
+    ["after the form's full name", "Corrective Action Form for Remy Calder. Tess Varga reported it to Dana Reyes."],
+  ])("named %s", (_where, content) => {
+    expect(resolve(content)).toEqual({ kind: "resolved", employeeName: "Remy Calder" });
+  });
+
+  it.each([
+    "create ca for Remy Calder and Tess Varga for violating standards of conduct",
+    "create ca for Remy Calder & Tess Varga",
+    "create ca for Remy Calder or Tess Varga, whoever closed",
+    "create ca for Remy Calder/Tess Varga",
+    "coaching form for Remy Calder, Tess Varga said she was late",
+  ])("two people joined as the CA's subject are still a question: %s", (content) => {
+    expect(resolve(content)).toEqual({ kind: "ambiguous", candidates: ["Remy Calder", "Tess Varga"] });
+  });
+
+  it("a second person given a CA of their own is still a question", () => {
+    expect(resolve("create ca for Remy Calder for violating standards of conduct. Tess Varga needs a CA too.").kind).toBe(
+      "ambiguous",
+    );
+  });
+
+  it("with no recipient named, the first name in the message is not chosen", () => {
+    expect(resolve("Remy Calder and Tess Varga skipped their acknowledgements. create a ca for violating standards of conduct")).toEqual({
+      kind: "ambiguous",
+      candidates: ["Remy Calder", "Tess Varga"],
+    });
+  });
+
+  it("a first name two people in the account share is still a question", () => {
+    expect(resolve("create ca for Remy. Remy Calder and Remy Dalton both skipped their acknowledgements.")).toEqual({
+      kind: "ambiguous",
+      candidates: ["Remy Calder", "Remy Dalton"],
+    });
+  });
+
+  it("nobody named is still missing", () => {
+    expect(resolve("create a ca for violating standards of conduct")).toEqual({ kind: "missing" });
+  });
+
+  it("a later turn naming somebody in passing does not replace the CA's recipient", () => {
+    const history = [userTurn("create ca for Remy Calder for violating standards of conduct")];
+    expect(resolve("Tess Varga was the new hire Remy was supposed to onboard.", history)).toEqual({
+      kind: "resolved",
+      employeeName: "Remy Calder",
+    });
+  });
+});
