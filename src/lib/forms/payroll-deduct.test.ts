@@ -371,3 +371,53 @@ describe("quotedDeductionAmount — the one amount the quoted section states for
     ).toBe("$25.00");
   });
 });
+
+/*
+ * QA audit, 22 Oct 2026: amounts a manager writes without a dollar sign.
+ * "25 dollars" and "deducted 3.25" are money; a bare "25" is not (minutes,
+ * a store number), and is never read as an amount.
+ */
+describe("an amount written without a dollar sign", () => {
+  it.each([
+    ["payroll deduct 25 dollars", "yes", "$25"],
+    ["she will be payroll deducted 3.25", "yes", "$3.25"],
+    ["deduct 3.25 from her check", "yes", "$3.25"],
+    ["payroll deduction of 25.00 dollars applies", "yes", "$25.00"],
+    ["25 bucks will be payroll deducted", "yes", "$25"],
+  ])('"%s" is %s, %s', (text, answer, amount) => {
+    expect(statedPayrollDeduct(text)).toBe(answer);
+    expect(payrollDeductAmount(text)).toBe(amount);
+  });
+
+  it.each([
+    ["she was 25 minutes late, payroll deduct applies"],
+    ["store 25 was opened late, payroll deduct applies"],
+    ["deduct 25 from her check"],
+  ])('a bare number is not an amount: "%s"', (text) => {
+    expect(payrollDeductAmount(text)).toBeNull();
+  });
+
+  it.each([["do not payroll deduct 25 dollars"], ["the 3.25 payroll deduction is waived"]])(
+    'denied or waived without a dollar sign is still No: "%s"',
+    (text) => {
+      expect(statedPayrollDeduct(text)).toBe("no");
+    },
+  );
+});
+
+/* QA audit, 22 Oct 2026: a new amount for the deduction on a form already filed. */
+describe("an amount changed after the form exists", () => {
+  it.each([
+    ["change the payroll deduction to $5.00", "$5.00"],
+    ["update the deduction amount to $5", "$5"],
+    ["change payroll deduct to 5 dollars", "$5"],
+    ["set the payroll deduction to $12.50", "$12.50"],
+  ])('"%s" is Yes, %s', (text, amount) => {
+    expect(payrollDeductCorrection(text)).toBe("yes");
+    expect(payrollDeductAmount(text)).toBe(amount);
+  });
+
+  it("a change to No is still No, whatever amount was named", () => {
+    expect(payrollDeductCorrection("change the $5.00 payroll deduction to no")).toBe("no");
+  });
+});
