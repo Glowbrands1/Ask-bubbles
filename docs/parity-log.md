@@ -6,6 +6,20 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 22 Oct 2026: HR's two Corrective Action reports of 21 Oct, checked in both apps
+
+Both fixes were already on `main` and live in both apps; this adds HR's Ask
+Sunny wording as a test here too.
+
+| Report | Fix | Ask Bubbles | Ask Sunny |
+|---|---|---|---|
+| Bubbles: "Bubbles did not fill out the form" (written CA, missed monthly meeting, then "written") | A short answer keeps the request's account | c51d8b9 | its proposal reads every recent turn for a CA, so it never dropped the account; same test in `hr-feedback-oct21-e2e.test.ts` |
+| Sunny: "Sunny would not create the form" (Verbal CA, missed Woven deadline; Save, then "Official policy verification is incomplete") | A Save re-writes only the values that changed | ported in ffab76e; the server half was already there | cf1480b; test 6a85d8e |
+
+New test in both apps (`hr-feedback-oct21-e2e.test.ts`): HR's Sunny wording
+played through the chat, Create, the card's Save and Finalize. It fails
+without the Save fix in each app.
+
 ## 22 Oct 2026: both apps brought level (pending QA review)
 
 Every chat/forms fix merged to either `main` from 12–21 Oct was compared. The
