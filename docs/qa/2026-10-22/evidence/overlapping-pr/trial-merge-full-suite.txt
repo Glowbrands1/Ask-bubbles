@@ -1,0 +1,6 @@
+      Tests  1 failed | 10268 passed | 59 skipped (10328)
+ FAIL  src/lib/google-reviews/sync.db.test.ts > a full, healthy sync > links all seven Buff City Soap stores, saves every review, and never touches the fifteen Sun Tan City profiles
+ Test Files  1 failed | 421 passed | 6 skipped (428)
+Error: Hook timed out in 10000ms.
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+rerun alone: src/lib/google-reviews/sync.db.test.ts 24/24 passed (a 10 s hook timeout under a parallel run; not touched by either PR)

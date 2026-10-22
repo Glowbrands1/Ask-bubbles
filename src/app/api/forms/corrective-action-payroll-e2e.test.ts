@@ -293,7 +293,7 @@ beforeEach(async () => {
   for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
   requests.length = 0;
   state.role = "location_manager";
-  state.scope = { level: "location", primaryAreaId: "loc-0310", alsoCoversAreaIds: [] };
+  state.scope = { level: "location", primaryAreaId: "loc-264", alsoCoversAreaIds: [] };
   state.modelCalls = 0;
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-09-29T15:00:00Z"));
@@ -430,5 +430,75 @@ describe("\"create ca for Marlowe Test she was late today, got verbal warning on
     const { values } = await review(result.reference.instanceId);
     expect(values.find((row) => row.fieldKey === "prior_actions")?.value).toBe("None — first occurrence");
     expect(values.find((row) => row.fieldKey === "previous_action_date")).toBeUndefined();
+  });
+});
+
+/*
+ * Ported from Ask Sunny (District Manager feedback, 21 Oct 2026): the
+ * employee's earlier Coaching Form and Verbal CA were already on file, and the
+ * manager had to type them into the chat again for the history line.
+ */
+describe("a CA for somebody with forms already on file", () => {
+  it("reads the finalized ones back in chat and lists them on the drafted form", async () => {
+    const { createInstance, finalizeInstance, saveInstanceValues } = await import("@/lib/forms/instances");
+    const filed = async (templateKey: string, formDate: string, employeeName = "Dana Moss") => {
+      const instance = await createInstance({
+        templateKey,
+        variantKey: null,
+        employeeName,
+        locationId: "loc-264",
+        createdBy: "manager-1",
+        source: "assistant",
+        formDate,
+      });
+      if (templateKey === "dpoa") {
+        await saveInstanceValues(instance.id, { checked: { warning_type: ["verbal"] } }, "manager-1");
+      }
+      await finalizeInstance(instance.id, "manager-1", null, { acknowledgeUnverifiedPolicy: true });
+      return instance;
+    };
+    await filed("coaching", "2026-09-02");
+    await filed("dpoa", "2026-09-21");
+    // Neither of these is Dana's history: another person, and a form never finalized.
+    await filed("coaching", "2026-09-10", "Dana Smith");
+    await createInstance({
+      templateKey: "coaching",
+      variantKey: null,
+      employeeName: "Dana Moss",
+      locationId: "loc-264",
+      createdBy: "manager-1",
+      source: "assistant",
+      formDate: "2026-09-15",
+    });
+    joinOverview();
+
+    const { priorFormsReadingForChat } = await import("@/lib/forms/prior-forms");
+    const actor = { role: state.role as never, scope: state.scope as AccessScope, subject: "manager-1", verified: true };
+    const message = said(
+      "I need a CA for Dana Moss. She was 30 minutes late today, verbal warning. Payroll deduct no.",
+    );
+    const response = await proposeFormForTurn({
+      history: [],
+      question: message.content,
+      questionMessageId: message.id,
+      actor,
+      summaries: await listTemplateSummaries(),
+      today: "2026-09-29",
+      priorFormsOnFile: (employeeName, locationId) => priorFormsReadingForChat(actor, employeeName, locationId),
+    });
+    expect(response?.content).toContain(
+      "**On file in the Forms Register for Dana Moss:** Coaching — signed 09/02/2026; Verbal corrective action — signed 09/21/2026.",
+    );
+
+    const result = await createInlineForm({
+      proposal: response!.formProposal!,
+      messages: [message],
+      call,
+      onCreated: () => {},
+    });
+    const { values } = await review(result.reference.instanceId);
+    expect(values.find((row) => row.fieldKey === "prior_actions")?.value).toBe(
+      "Coaching — signed 09/02/2026\nVerbal corrective action — signed 09/21/2026",
+    );
   });
 });

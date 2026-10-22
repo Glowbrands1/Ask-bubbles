@@ -1,6 +1,5 @@
 import "server-only";
 
-import { ACTIVE_BRAND } from "@/lib/brand";
 import { activeKnowledgeCorpus } from "@/lib/knowledge/corpus";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { KnowledgeCategory, SearchResult } from "@/types";
@@ -171,7 +170,7 @@ export async function groundPolicy(topic: string): Promise<PolicyGrounding> {
       sources: results.map(toSource),
       unverified: true,
       reason:
-        "No approved policy matched closely enough to quote. The policy fields are left for the manager to complete.",
+        "Woven does not see a matching policy in the knowledge base, so the policy fields are left for you to complete.",
     };
   }
 
@@ -367,6 +366,6 @@ export function groundingNotice(grounding: PolicyGrounding): string | null {
   if (!grounding.unverified) return null;
   return (
     grounding.reason ??
-    `${ACTIVE_BRAND.productName} could not find approved policy for this, so the policy fields are yours to complete.`
+    "Woven does not see this policy in the knowledge base, so the policy fields are yours to complete."
   );
 }

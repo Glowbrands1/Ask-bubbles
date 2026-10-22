@@ -191,7 +191,8 @@ export function statedPriorActions(notes: string, today: string): string[] {
  *   An undated line naming a step the manager never mentioned at all is
  *   removed: that is a prior action nobody reported.
  *   Each step the manager dated in their own words and the draft left out is
- *   added as its own line, with what they said it was for.
+ *   added as its own line, with what they said it was for — and so is each
+ *   finalized form on file for them (`prior-forms.ts`).
  *   The list reads OLDEST FIRST: dated lines in date order, then the lines
  *   with no date (whose place in the history the manager has not given), in
  *   the order they were written.
@@ -204,12 +205,20 @@ export function groundPriorActions(input: {
   drafted: string;
   notes: string;
   today: string;
+  /**
+   * The employee's finalized forms in the Forms Register, as lines — see
+   * `prior-forms.ts`. A record, so its dates stand as the manager's do, and a
+   * step on file that the draft left out is listed.
+   */
+  onFile?: readonly { formDate: string; line: string; templateKey?: string }[];
 }): { value: string; added: string[]; removed: string[] } {
   const managerSteps = priorSteps(input.notes, input.today);
+  const onFile = input.onFile ?? [];
   // The dates the manager gave, with a step's date read as last year's where it would be ahead of today.
   const stated = new Set([
     ...datesInText(input.notes, input.today).map((found) => found.iso),
     ...managerSteps.map((step) => step.iso),
+    ...onFile.map((form) => form.formDate),
   ]);
   const stepOn = new Map(managerSteps.map((step) => [step.iso, stepLabel(step.named)]));
   const mentioned = new Set(STEPS.filter(([pattern]) => pattern.test(input.notes)).map(([, label]) => label));
@@ -250,6 +259,31 @@ export function groundPriorActions(input: {
     present.add(step.iso);
     added.push(priorActionLine(stepLabel(step.named), step.iso, stepDescription(step.named) || (step.about ?? ""), stepTopic(step.topic)));
   }
+  /*
+   * What the manager said of a step comes first; the record fills in the rest.
+   *
+   * A LINE STANDS FOR ONE STEP, NOT FOR A WHOLE DAY (QA F-11, 22 Oct 2026). A
+   * Coaching Form and a Verbal CA signed the same day are two steps; matching
+   * on the date alone listed only the first. A line already on the list covers
+   * a form on file only when it has the form's date AND names the same kind
+   * of step, and each line covers one form.
+   */
+  const covering = [...kept, ...added].map((line) => ({
+    line,
+    dates: new Set(datesInText(line, input.today).map((found) => found.iso)),
+    used: false,
+  }));
+  for (const form of onFile) {
+    const cover = covering.find(
+      (entry) => !entry.used && entry.dates.has(form.formDate) && sameStepKind(entry.line, form),
+    );
+    if (cover) {
+      cover.used = true;
+      continue;
+    }
+    added.push(form.line);
+    covering.push({ line: form.line, dates: new Set([form.formDate]), used: true });
+  }
 
   const lines = [...kept, ...added];
   // A history and "None" cannot both be true; a dated step wins.
@@ -276,6 +310,14 @@ function chronological(lines: readonly string[], today: string): string[] {
       return a.position - b.position;
     })
     .map((entry) => entry.line);
+}
+
+/** Whether a line on the list names the same kind of step as a form on file. */
+function sameStepKind(line: string, form: { line: string; templateKey?: string }): boolean {
+  const coaching = (text: string) => /\bcoach/i.test(text);
+  const corrective = (text: string) => /\b(?:corrective|verbal|written|warning|termination|demotion|ca|c\/a|write[- ]?up)\b/i.test(text);
+  const formIsCoaching = form.templateKey ? form.templateKey === "coaching" : coaching(form.line) && !corrective(form.line);
+  return formIsCoaching ? coaching(line) : corrective(line);
 }
 
 /**

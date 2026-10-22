@@ -1,0 +1,4 @@
+== Ask Bubbles: provenance comments naming the sibling app (allowed; no data): 4
+== Ask Bubbles: foreign company DATA tokens in added lines (code + tests, docs excluded): 1
+    src/lib/forms/qa-w2-employee-reading.test.ts:69: [\bLawrence\b] // No Buff City Soap store is called Lawrence; the roster, not a list of towns, decides.
+== Ask Bubbles: string literals using 'salon' in added production code (review: user-facing?): 0
