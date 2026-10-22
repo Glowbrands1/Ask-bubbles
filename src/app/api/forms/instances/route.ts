@@ -9,6 +9,7 @@ import { isIsoCalendarDate } from "@/lib/forms/form-date-answer";
 import {
   applyStatedFacts,
   createInstance,
+  fileCardFormOnce,
   findRecentAssistantDraft,
   deleteDemoInstances,
   findDemoInstances,
@@ -244,7 +245,7 @@ export async function POST(request: Request) {
       if (existing) return NextResponse.json({ instance: existing, reused: true });
     }
 
-    const instance = await createInstance({
+    const newInstance = {
       templateKey: body.templateKey,
       variantKey: body.variantKey ?? null,
       employeeName: body.employeeName.trim().slice(0, 120),
@@ -257,7 +258,15 @@ export async function POST(request: Request) {
       // A real calendar day or nothing, in which case the form is dated today.
       formDate: isIsoCalendarDate(body.formDate) ? body.formDate : undefined,
       proposalId,
-    });
+    } as const;
+    /*
+     * A card's first form takes the card's own row id, so two presses arriving
+     * together file one form; the second gets the first back. See
+     * `fileCardFormOnce`.
+     */
+    const once = proposalId ? await fileCardFormOnce({ ...newInstance, proposalId }) : null;
+    if (once?.reused) return NextResponse.json({ instance: once.instance, reused: true });
+    const instance = once?.instance ?? (await createInstance(newInstance));
 
     /*
      * "IS PAYROLL DEDUCT APPLICABLE?", AS THE MANAGER ANSWERED IT IN CHAT.

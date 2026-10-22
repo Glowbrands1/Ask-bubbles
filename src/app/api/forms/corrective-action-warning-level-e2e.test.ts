@@ -505,7 +505,9 @@ describe("5. the manager changes Written Warning to Verbal Warning through chat"
     const { result } = await conversation([`${REPORT}. this one is a written warning`]);
     const id = result.reference.instanceId;
 
-    expect(await correct(id, "she also had a verbal warning on 8/1")).toBeNull();
+    // History is not a change of level; since 22 Oct it goes onto Prior Actions instead.
+    const history = await correct(id, "she also had a verbal warning on 8/1");
+    expect(history?.formUpdate?.updated ?? []).not.toContain("warning_type");
     expect(await correct(id, "should this be verbal?")).toBeNull();
     expect(await ticked(id)).toEqual(["written"]);
   });

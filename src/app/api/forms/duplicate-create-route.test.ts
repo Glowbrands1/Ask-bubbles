@@ -44,6 +44,10 @@ async function load(existing: { id: string } | null) {
       created.push(input);
       return { id: "inst-new", ...input };
     },
+    fileCardFormOnce: async (input: Record<string, unknown>) => {
+      created.push(input);
+      return { instance: { id: "inst-new", ...input }, reused: false };
+    },
     findRecentAssistantDraft: async (input: Record<string, unknown>) => {
       lookups.push(input);
       return existing;

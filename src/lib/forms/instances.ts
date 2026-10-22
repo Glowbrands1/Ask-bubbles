@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import { businessToday } from "@/lib/business-date";
 import { isProposalId } from "./proposal-id";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
@@ -14,6 +16,7 @@ import {
 import { refuseUnverifiedPolicyValues } from "./policy-grounding";
 import {
   POLICY_ACKNOWLEDGEMENT_MESSAGE,
+  policyAcknowledgementWording,
   unverifiedPolicyFields,
 } from "./policy-verification";
 import {
@@ -362,6 +365,78 @@ export interface NewInstance {
   formDate?: string;
   /** The chat card this form was created from; recorded so a repeated press finds it. */
   proposalId?: string;
+  /** The row's id, when the caller derives it — see `fileCardFormOnce`. Absent, the database chooses. */
+  id?: string;
+}
+
+/** The id the caller chose is already a form: the same card, pressed again. */
+export class DuplicateInstanceIdError extends Error {
+  readonly instanceId: string;
+
+  constructor(instanceId: string) {
+    super("That form already exists.");
+    this.name = "DuplicateInstanceIdError";
+    this.instanceId = instanceId;
+  }
+}
+
+/**
+ * ============================================================================
+ * ONE FORM PER CARD, HELD BY THE TABLE'S OWN PRIMARY KEY
+ * ============================================================================
+ *
+ * QA, 22 Oct 2026, round 3. `findRecentAssistantDraft` returns the draft a
+ * card already made, but it is a read before a write: two presses of the same
+ * card arriving together — two tabs, a retry racing the original, two server
+ * instances — both read "nothing yet" and both insert. The first form a
+ * manager files from a card now takes a row id derived from the manager and
+ * the card, so the second insert is a primary-key violation and the request
+ * returns the form that won. Once that form is finalized (or is somebody
+ * else's, or was removed) the card files a new form with an id of its own. No
+ * migration: the key is the one the table already has.
+ */
+export function cardInstanceId(createdBy: string, proposalId: string): string {
+  const hex = createHash("sha256").update(`ask-bubbles/form-card/${createdBy}/${proposalId}`).digest("hex");
+  const variant = ((parseInt(hex[16]!, 16) & 0x3) | 0x8).toString(16);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+/** The form at `id`, when it is this manager's open draft of this template for this person — the one to hand back. */
+async function reusableCardForm(id: string, input: NewInstance): Promise<InstanceRow | null> {
+  const instance = (await loadInstance(id).catch(() => null))?.instance ?? null;
+  if (!instance) return null;
+  const { data: template } = await getSupabaseAdmin()
+    .from("form_templates")
+    .select("id")
+    .eq("key", input.templateKey)
+    .maybeSingle();
+  const normal = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase();
+  return template &&
+    String((template as { id: unknown }).id) === instance.templateId &&
+    instance.status === "draft" &&
+    instance.createdBy === input.createdBy &&
+    normal(instance.employeeName) === normal(input.employeeName) &&
+    (instance.locationId ?? null) === (input.locationId ?? null)
+    ? instance
+    : null;
+}
+
+/** Creates the card's form, or returns the one it already made. See `cardInstanceId`. */
+export async function fileCardFormOnce(
+  input: NewInstance & { proposalId: string },
+): Promise<{ instance: InstanceRow; reused: boolean }> {
+  const own = cardInstanceId(input.createdBy, input.proposalId);
+  const existing = await reusableCardForm(own, input);
+  if (existing) return { instance: existing, reused: true };
+  const taken = (await loadInstance(own).catch(() => null)) !== null;
+  try {
+    return { instance: await createInstance(taken ? input : { ...input, id: own }), reused: false };
+  } catch (error) {
+    if (!(error instanceof DuplicateInstanceIdError)) throw error;
+    const winner = await reusableCardForm(own, input);
+    if (winner) return { instance: winner, reused: true };
+    return { instance: await createInstance(input), reused: false };
+  }
 }
 
 /**
@@ -491,9 +566,11 @@ export async function createInstance(input: NewInstance): Promise<InstanceRow> {
        * date is now always written, from the same clock everything else uses.
        */
       form_date: input.formDate ?? businessToday(),
+      ...(input.id ? { id: input.id } : {}),
     })
     .select("id")
     .single();
+  if (input.id && (error as { code?: string } | null)?.code === "23505") throw new DuplicateInstanceIdError(input.id);
   if (error || !data) throw new Error(`Could not start the form: ${error?.message}`);
 
   /*
@@ -854,8 +931,8 @@ export async function applyAssistantRevision(
 export class UnverifiedPolicyError extends Error {
   readonly fields: string[];
 
-  constructor(fields: string[]) {
-    super(POLICY_ACKNOWLEDGEMENT_MESSAGE);
+  constructor(fields: string[], message: string = POLICY_ACKNOWLEDGEMENT_MESSAGE) {
+    super(message);
     this.name = "UnverifiedPolicyError";
     this.fields = fields;
   }
@@ -892,14 +969,16 @@ export async function finalizeInstance(
   const before = await loadInstance(instanceId);
   if (!before) throw new Error("That form no longer exists.");
 
-  const unverified = unverifiedPolicyFields(
+  const unverifiedFields = unverifiedPolicyFields(
     parseFormDocument(before.version.document),
     before.instance.variantKey,
     before.values,
-  ).map((field) => field.key);
+  );
+  const unverified = unverifiedFields.map((field) => field.key);
 
   if (unverified.length > 0 && options.acknowledgeUnverifiedPolicy !== true) {
-    throw new UnverifiedPolicyError(unverified);
+    throw new UnverifiedPolicyError(unverified, policyAcknowledgementWording(unverifiedFields, before.events, Boolean(before.instance.revisesInstanceId))
+        .message);
   }
 
   const supabase = getSupabaseAdmin();

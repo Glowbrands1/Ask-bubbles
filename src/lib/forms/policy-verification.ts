@@ -94,3 +94,62 @@ export const POLICY_ACKNOWLEDGEMENT_REQUIRED = "policy_verification_required";
 
 export const POLICY_ACKNOWLEDGEMENT_MESSAGE =
   "Official policy verification is incomplete. Ask Bubbles could not verify one or more policy fields from an approved policy source. Review the applicable company policy before issuing this Corrective Action Form. If you have independently verified the policy, you may continue.";
+
+export const POLICY_ACKNOWLEDGEMENT_TITLE = "Official policy verification is incomplete";
+
+/**
+ * ============================================================================
+ * "YOU EDITED THE POLICY WORDING" ONLY WHEN THAT IS WHAT HAPPENED
+ * ============================================================================
+ *
+ * HR, 22 Oct 2026: the assistant quoted the Standards of Conduct from the
+ * manual, the manager rewrote the quote, and Finalize said the policy could
+ * not be verified from an approved source — as though none had matched.
+ *
+ * Edited means the field now holds a person's text AND Ask Bubbles had written
+ * it. Ask Bubbles writes a policy value only with verified provenance (see
+ * above), so a policy field named in a `drafted` event was verified when
+ * written; a revision carries its original's verified values over. A field a
+ * person filled in where Ask Bubbles wrote nothing was never verified, so it
+ * is not called an edit, and a blank field is worded as before.
+ */
+export const POLICY_EDITED_TITLE = "You edited the policy wording";
+
+export const POLICY_EDITED_MESSAGE =
+  "You edited the policy wording on this form, so Ask Bubbles can't confirm it still matches the policy manual. Review it against the applicable company policy before issuing this Corrective Action Form. If you have independently verified the policy, you may continue.";
+
+/** The form's events, as both the server and the browser hold them. */
+export interface PolicyEventRow {
+  readonly kind: string;
+  readonly detail?: Record<string, unknown> | null;
+}
+
+/** Whether Ask Bubbles wrote this field at some point — and so had verified it. */
+export function assistantWroteField(events: readonly PolicyEventRow[], key: string): boolean {
+  return events.some(
+    (event) => event.kind === "drafted" && Array.isArray(event.detail?.fields) && event.detail.fields.includes(key),
+  );
+}
+
+/** True when every unverified policy field holds a person's change to wording Ask Bubbles had written. */
+export function policyWordingEdited(
+  fields: readonly Pick<UnverifiedPolicyField, "key" | "filled">[],
+  events: readonly PolicyEventRow[],
+  isRevision = false,
+): boolean {
+  return (
+    fields.length > 0 &&
+    fields.every((field) => field.filled && (isRevision || assistantWroteField(events, field.key)))
+  );
+}
+
+/** The acknowledgement's title and message for these unverified fields. */
+export function policyAcknowledgementWording(
+  fields: readonly Pick<UnverifiedPolicyField, "key" | "filled">[],
+  events: readonly PolicyEventRow[],
+  isRevision = false,
+): { title: string; message: string } {
+  return policyWordingEdited(fields, events, isRevision)
+    ? { title: POLICY_EDITED_TITLE, message: POLICY_EDITED_MESSAGE }
+    : { title: POLICY_ACKNOWLEDGEMENT_TITLE, message: POLICY_ACKNOWLEDGEMENT_MESSAGE };
+}

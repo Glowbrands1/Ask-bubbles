@@ -20,7 +20,8 @@ import { useSession } from "@/lib/session/session-context";
 import { checkboxGroupsForVariant, fieldsForVariant } from "@/lib/forms/document";
 import { planSummary } from "@/lib/forms/plan-summary";
 import {
-  POLICY_ACKNOWLEDGEMENT_MESSAGE,
+  policyAcknowledgementWording,
+  policyWordingEdited,
   unverifiedPolicyFields,
 } from "@/lib/forms/policy-verification";
 import type {
@@ -373,6 +374,11 @@ export function InlineForm({
     loaded.version.document,
     loaded.instance.variantKey,
     loaded.values,
+  );
+  const policyWording = policyAcknowledgementWording(
+    unresolvedPolicy,
+    loaded.events,
+    Boolean(loaded.instance.revisesInstanceId),
   );
   const policySources = storedPolicySources(loaded.values);
   const variant =
@@ -921,8 +927,8 @@ export function InlineForm({
       >
         {confirmingPolicy ? (
           <DialogContent
-            title="Official policy verification is incomplete"
-            description={POLICY_ACKNOWLEDGEMENT_MESSAGE}
+            title={policyWording.title}
+            description={policyWording.message}
           >
             <dl className="space-y-3 text-[13px]">
               <div>
@@ -1165,6 +1171,21 @@ export function policyVerificationNoticeFor(
   const byHand = unresolved.filter((field) => filled(field.key));
   const quote = (fields: typeof grounded) =>
     fields.map((field) => `“${field.label}”`).join(" and ");
+
+  /*
+   * EVERY UNVERIFIED FIELD IS A PERSON'S CHANGE TO WORDING ASK BUBBLES WROTE.
+   * A policy matched; the wording is what changed (HR, 22 Oct 2026). See
+   * `policyWordingEdited`.
+   */
+  if (
+    policyWordingEdited(
+      unresolved.map((field) => ({ key: field.key, filled: filled(field.key) })),
+      loaded.events,
+      Boolean(loaded.instance.revisesInstanceId),
+    )
+  ) {
+    return `You edited the policy wording: ${quote(byHand)} ${byHand.length === 1 ? "was" : "were"} changed by hand, so Ask Bubbles can't confirm ${byHand.length === 1 ? "it matches" : "they match"} the policy manual. Check the wording against the official manual before you issue this form.`;
+  }
 
   const parts = [
     blank.length > 0

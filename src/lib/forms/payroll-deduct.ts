@@ -45,7 +45,8 @@ export function isPayrollDeductAnswer(value: unknown): value is PayrollDeductAns
 /* ------------------------------------------------------------- reading --- */
 
 /** "payroll deduct", "payroll deduction(s)", "payroll", "deduction". */
-const SUBJECT = String.raw`(?:payroll\s+deduct(?:ion|ions|ed)?|payroll|deduct(?:ion|ions)?)`;
+// "payroll ded", "payroll ded." — the abbreviation, after "payroll" only (QA, 22 Oct 2026, round 3).
+const SUBJECT = String.raw`(?:payroll\s+deduct(?:ion|ions|ed)?|payroll\s+ded\.?(?=\s|:|=|-|$)|payroll|deduct(?:ion|ions)?)`;
 
 /*
  * "PAYROLL DEDUCT OF $3.25 IS APPLICABLE" — the subject, what it is of or for,
@@ -68,12 +69,20 @@ const NEGATIVE: readonly RegExp[] = [
   // "payroll deduct: no", "payroll deduct applicable - no", "payroll deduct = n/a"
   new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s*[:=-]\s*(?:no|n|none|n/a|not applicable)(?:$|[\s.,!;])`),
   // "payroll deduct no", "payroll deduction applicable no" — the answer last in its clause, not "no longer"
-  new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s+(?:no|n|nope)\s*(?:$|[.,!;])`),
+  new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s+(?:no|n|nope)\s*(?:$|[.,!;|/]|-\s)`),
   // "payroll deduct n/a", "payroll deduction not applicable", "payroll deduct none"
   new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s+(?:is\s+)?(?:n/a|not applicable|none)(?:$|[\s.,!;])`),
   // "we won't deduct", "don't deduct it from her pay", "not deducting"
   /\b(?:don't|dont|do not|won't|wont|will not|not|no need to|shouldn't|should not)\s+(?:be\s+)?deduct(?:ing|ed)?\b/,
   /\bwithout\s+(?:a\s+|any\s+)?(?:payroll\s+)?deduction\b/,
+  /*
+   * "We aren't docking her pay", "not taking it out of her check", "no pay
+   * deduction" — the same answer without the form's words (QA, 22 Oct 2026,
+   * round 3).
+   */
+  /\b(?:don't|dont|do not|won't|wont|will not|not|aren't|arent|are not|isn't|is not|no need to|shouldn't|should not)\s+(?:be\s+)?(?:going\s+to\s+)?dock(?:ing|ed)?\b/,
+  /\bno\s+(?:pay\s+)?docking\b|\bno\s+pay\s+deduction\b/,
+  /\b(?:don't|dont|do not|won't|wont|will not|not|aren't|are not|no need to)\s+(?:be\s+)?(?:going\s+to\s+)?(?:tak(?:e|ing)|com(?:e|ing))\s+(?:it\s+|anything\s+|that\s+|this\s+)?out\s+of\s+(?:her|his|their)\s+(?:pay|paycheck|check|wages)\b/,
 ];
 
 const POSITIVE: readonly RegExp[] = [
@@ -90,7 +99,7 @@ const POSITIVE: readonly RegExp[] = [
   // "payroll deduct: yes", "payroll deduct applicable - yes"
   new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s*[:=-]\s*(?:yes|y)(?:$|[\s.,!;])`),
   // "payroll deduct yes", "payroll deduction applicable yes"
-  new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s+(?:yes|y)\s*(?:$|[.,!;])`),
+  new RegExp(String.raw`\b${SUBJECT}(?:\s+applicable)?\s+(?:yes|y)\s*(?:$|[.,!;|/]|-\s)`),
   // "deduct it from her paycheck", "deducting the shortage from payroll"
   /\bdeduct(?:ing|ed)?\b[^.\n]{0,40}\bfrom\s+(?:her|his|their|the|its)?\s*(?:pay|paycheck|payroll|check|wages)\b/,
   // "it will be deducted", "we'll deduct", "needs to be deducted", "$25 will be payroll deducted"
@@ -99,6 +108,9 @@ const POSITIVE: readonly RegExp[] = [
   /\b(?:payroll\s+)?deduct(?:ion|ed|ing)?\s+(?:of\s+|for\s+)?\$\s?\d/,
   // "$25 payroll deduction", "$25 payroll deduct"
   /\$\s?\d[\d,]*(?:\.\d{1,2})?\s+payroll\s+deduct/,
+  // "dock her pay", "take it out of her check", "it comes out of his pay"
+  /\bdock(?:ing|ed)?\s+(?:her|his|their)\s+(?:pay|paycheck|check|wages)\b/,
+  /\b(?:take|taking|comes?|coming)\s+(?:it\s+|that\s+|this\s+|the\s+\w+\s+)?out\s+of\s+(?:her|his|their)\s+(?:pay|paycheck|check|wages)\b/,
 ];
 
 function normalize(text: string): string {

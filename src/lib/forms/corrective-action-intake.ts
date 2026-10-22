@@ -221,6 +221,10 @@ const PREVIOUS_NONE: readonly RegExp[] = [
   /\bnever been (?:coached|warned|written up|disciplined)\b/,
   /\bno (?:coaching|warnings?|write[- ]?ups?|corrective action|discipline)\b/,
   /\bfirst offen[cs]e\b/,
+  // "nothing prior", "nothing on file", "clean record", "no history" (QA, 22 Oct 2026, round 3)
+  /\bnothing (?:prior|previous|before|on (?:file|record))\b/,
+  /\bno (?:disciplinary )?(?:history|record)\b/,
+  /\bclean (?:record|file|history)\b/,
 ];
 
 /**

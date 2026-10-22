@@ -1,6 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createGoogleTestDatabase, type GoogleTestDatabase } from "./test-support";
+
+/*
+ * Every test builds a fresh database and replays the migrations. Under a full
+ * parallel run that took 9.5 s once and 5 s+ again (QA, 22 Oct 2026), so the
+ * default 5 s limit failed a correct test; the same limit the other migration
+ * suites use (`pm-framework-readiness.integration.test.ts`).
+ */
+vi.setConfig({ hookTimeout: 120_000, testTimeout: 120_000 });
 
 /** The goal counts on the real schema: baseline boundaries, rating eligibility, windows, historical exclusion. */
 

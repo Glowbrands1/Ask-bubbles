@@ -245,6 +245,13 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
         rows.push(...inserted);
         return { data: this.oneRow ? (inserted[0] ?? null) : inserted, error: null };
       }
+      // A caller-chosen id is a primary key, as in the real table.
+      if (this.payload.id !== undefined && rows.some((row) => row.id === this.payload.id)) {
+        return {
+          data: null,
+          error: { code: "23505", message: `duplicate key value violates unique constraint "${this.table}_pkey"` },
+        } as unknown as { data: unknown; error: null };
+      }
       const inserted = stamped(this.payload);
       rows.push(inserted);
       return { data: this.oneRow ? inserted : null, error: null };

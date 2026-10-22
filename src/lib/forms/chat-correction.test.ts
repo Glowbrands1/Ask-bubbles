@@ -379,7 +379,17 @@ describe("the Corrective Action Form's payroll-deduct answer", () => {
     expect(state.saved).toEqual([{ values: {}, checked: { payroll_deduct: ["no"] } }]);
   });
 
-  it.each(["no", "yes", "is payroll deduct applicable?", "change the name to Jane Smith", "change the date to 9/27"])(
+  /*
+   * QA, 22 Oct 2026: the date of what happened is one of this form's facts and
+   * is taken from chat too (`correctCorrectiveActionFacts`); the name is not.
+   */
+  it("takes the date of what happened", async () => {
+    const response = await correct("change the date to 9/27");
+    expect(response!.formUpdate!.updated).toEqual(["form_date"]);
+    expect(state.saved).toEqual([{ values: { form_date: "2026-09-27" }, checked: {} }]);
+  });
+
+  it.each(["no", "yes", "is payroll deduct applicable?", "change the name to Jane Smith"])(
     "leaves %s alone — only the payroll answer is taken from chat",
     async (question) => {
       expect(await correct(question)).toBeNull();

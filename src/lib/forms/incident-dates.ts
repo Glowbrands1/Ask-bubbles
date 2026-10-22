@@ -1,4 +1,4 @@
-import { datesInText, listFormDates } from "./form-date-answer";
+import { listFormDates } from "./form-date-answer";
 
 /**
  * ============================================================================
@@ -61,13 +61,54 @@ export type DateChoice = { kind: "date"; iso: string } | { kind: "today" };
 export function readDateChoice(reply: string, dates: readonly string[], today: string): DateChoice | null {
   const text = (reply ?? "").toLowerCase();
   if (/\?\s*$/.test(text.trim())) return null;
-  const typed = datesInText(reply, today).filter((found) => found.iso <= today);
+  /*
+   * A DATE OF THE INCIDENT, not any date: "she was coached 1-1-26 on the jba
+   * manual", typed after the question, is history and answered nothing (QA, 22
+   * Oct 2026, round 3 — the form was dated 1/1).
+   */
+  const typed = listFormDates(reply, today).filter((found) => found.iso <= today);
   if (typed.length > 0) return { kind: "date", iso: typed[typed.length - 1]!.iso };
   if (/\b(?:most recent|latest|newest|last (?:one|date)|second)\b/.test(text)) {
     return { kind: "date", iso: dates[dates.length - 1]! };
   }
   if (/\b(?:first|earliest|oldest)\b/.test(text)) return { kind: "date", iso: dates[0]! };
   if (/\b(?:today|the day (?:i|we) (?:create|file|write)|creation)\b/.test(text)) return { kind: "today" };
+  return null;
+}
+
+/*
+ * ============================================================================
+ * "WAIT, THE MEETING WAS 10/19" CORRECTS THE DATE, IT DOES NOT ADD ONE
+ * ============================================================================
+ *
+ * QA, 22 Oct 2026, round 3: "need a CA for tess varga for missing the 10/20/26
+ * meeting", then "wait, the meeting was 10/19/26", was asked which of the two
+ * dates goes on the form. A turn that corrects the date — said as a correction,
+ * with one incident date in it — replaces the earlier one. The latest such
+ * turn wins; a turn that merely mentions another date is still asked about.
+ */
+const CORRECTS_DATE =
+  /\b(?:wait|actually|sorry|oops|correction|i\s+meant|i\s+mean|not\s+(?:on\s+)?\d|instead|scratch\s+that|my\s+bad|(?:it|that|the\s+(?:meeting|incident|date|shift|deadline|day))\s+(?:was|is)\s+(?:actually\s+|really\s+)?(?:on\s+)?(?=\d|\w+\s+\d)|happened\s+on|change\s+the\s+date)\b/i;
+
+/* "actually she also missed 10/21" adds an incident; it does not move the first one. */
+const ANOTHER_DATE = /\b(?:also|again|too|another|as\s+well|second|both)\b/i;
+
+const NOT_THIS_DATE = /\b(?:not|instead\s+of|rather\s+than|wasn'?t|isn'?t)\s+(?:on\s+|the\s+)?$/i;
+
+export function correctedIncidentDate(turns: readonly string[], today: string): string | null {
+  for (let index = turns.length - 1; index > 0; index -= 1) {
+    const turn = turns[index]!;
+    if (!CORRECTS_DATE.test(turn) || ANOTHER_DATE.test(turn) || /\?\s*$/.test(turn.trim())) continue;
+    // "it was 10/16 not 10/15" — the date it was NOT is not a candidate.
+    const dates = [
+      ...new Set(
+        listFormDates(turn, today)
+          .filter((found) => !NOT_THIS_DATE.test(turn.slice(Math.max(0, found.index - 16), found.index)))
+          .map((found) => found.iso),
+      ),
+    ].filter((iso) => iso <= today);
+    if (dates.length === 1) return dates[0]!;
+  }
   return null;
 }
 

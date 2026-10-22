@@ -50,6 +50,7 @@ import {
   PAYROLL_DEDUCT_KEY,
   PAYROLL_DEDUCT_LABEL,
   payrollDeductFromConversation,
+  statedPayrollDeduct,
 } from "@/lib/forms/payroll-deduct";
 import { checkboxGroupsForVariant } from "@/lib/forms/document";
 import {
@@ -90,6 +91,7 @@ import {
   displayName,
   matchEmployeeName,
   nameConfirmationQuestion,
+  rosterNameNamedIn,
   settledNameQuestions,
   type RosterEmployee,
 } from "@/lib/forms/employee-match";
@@ -114,6 +116,7 @@ import {
 import { readLocationMentions } from "@/lib/forms/location-mention";
 import {
   answersDateQuestion,
+  correctedIncidentDate,
   dateAlreadyAsked,
   dateAnsweredIn,
   dateQuestion,
@@ -1162,7 +1165,13 @@ function directoryNotes(
    */
   if (POSITION_TEMPLATES.has(match.key)) {
     const dates = incidentDates(context.text, today);
-    if (dates.length > 1) {
+    const corrected = dates.length > 1 ? correctedIncidentDate(
+      conversation.filter((message) => message.role === "user").map((message) => message.content),
+      today,
+    ) : null;
+    if (corrected && dates.includes(corrected)) {
+      proposal.formDate = corrected;
+    } else if (dates.length > 1) {
       const choice = dateAnsweredIn(conversation, dates, today);
       proposal.formDate = choice?.kind === "date" ? choice.iso : null;
       if (!choice) {
@@ -1277,8 +1286,25 @@ async function checkTypedEmployee(
   /** A name read from earlier in the conversation, when the window had none. */
   carried: EmployeeResolution | null = null,
 ): Promise<DirectoryCheck> {
-  const typed = carried ?? resolveEmployee(context);
-  if (typed.kind !== "resolved") return {};
+  let typed = carried ?? resolveEmployee(context);
+  /*
+   * NOBODY SETTLED BY THE WORDS ALONE — nobody read, or two candidates where
+   * one is not a person ("Tess Varga needs a written CA for missing …"). The
+   * roster may name exactly one person in full; see `rosterNameNamedIn`.
+   */
+  const early = typed.kind === "resolved" ? null : await loadScopedRosterResult(input.actor.scope);
+  if (typed.kind !== "resolved") {
+    const roster = early?.status === "ok" ? early.roster : [];
+    const turns = context.messages.map((message) => message.content);
+    const named =
+      rosterNameNamedIn(turns[turns.length - 1] ?? "", roster) ?? rosterNameNamedIn(turns.join("\n"), roster);
+    const candidates = typed.kind === "ambiguous" ? typed.candidates : null;
+    const fits =
+      named !== null &&
+      (candidates === null || candidates.some((candidate) => candidate.trim().toLowerCase() === named.toLowerCase()));
+    if (!fits) return {};
+    typed = { kind: "resolved", employeeName: named };
+  }
 
   /*
    * THE EXIT AND EMPLOYMENT-CHANGE FORMS keep their own name handling (an
@@ -1288,7 +1314,7 @@ async function checkTypedEmployee(
    */
   const asks = NAME_CHECKED_TEMPLATES.has(match.key);
 
-  const loaded = await loadScopedRosterResult(input.actor.scope);
+  const loaded = early ?? (await loadScopedRosterResult(input.actor.scope));
   if (loaded.status !== "ok") {
     // Preview mode has no Woven scope to speak of; everywhere else, say what was not checked.
     if (!asks || (loaded.status === "not_checked" && loaded.reason === "no_scope")) return {};
@@ -1617,6 +1643,30 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
     return continued === spoken.templateKey ? { kind: "explicit", templateKey: continued } : spoken;
   }
 
+  /*
+   * ==========================================================================
+   * AN OPEN CORRECTIVE ACTION FORM IS ANSWERED BY ANY OF ITS OWN FACTS
+   * ==========================================================================
+   *
+   * QA, 22 Oct 2026: with the card open, "prior coaching JBA Policy Manual
+   * 1-1-26, verbal ca 9-1-26" mentions a corrective action, so it was read as a
+   * question about the progression and answered from the knowledge base — and
+   * the card never got the history; the manager had to ask for the form again.
+   * Whatever the turn otherwise reads as, a statement of one of this form's
+   * own facts — an earlier step and its date, "first time", the payroll
+   * answer, the level, a policy, a date — continues the card, which re-reads
+   * every fact from the manager's turns itself. A question, a request for
+   * advice, a new request ("create a CA for …") and a request for another
+   * form still go where they went.
+   */
+  if (
+    continued &&
+    (spoken.kind === "none" || (spoken.kind === "corrective_action" && !spoken.requestedCreation)) &&
+    statesOpenCorrectiveActionFact(input, continued)
+  ) {
+    return { kind: "explicit", templateKey: continued };
+  }
+
   if (spoken.kind !== "none") return spoken;
 
   /* "The form", in reply to "coaching guidance, or a Coaching Form?". */
@@ -1719,6 +1769,27 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
   if (!continuesIntake(continued, input)) return { kind: "none" };
 
   return { kind: "explicit", templateKey: continued };
+}
+
+/** "first time", "no prior coaching", "nothing on file" — a stated absence of history. */
+const NO_HISTORY =
+  /\b(?:first\s+(?:time|offen[cs]e|occurrence|one)|no\s+(?:prior|previous|past|earlier)\b|no\s+(?:coaching|warnings?|write[- ]?ups?|corrective\s+actions?)\b|nothing\s+(?:on\s+file|prior|before))/i;
+
+/** One of an open Corrective Action Form's own facts, stated (never asked). See `intentForTurn`. */
+function statesOpenCorrectiveActionFact(input: ProposalTurn, continued: string): boolean {
+  const open = input.summaries.find((summary) => summary.key === continued);
+  if (!open || !isCorrectiveActionForm(open)) return false;
+  const question = input.question.trim();
+  if (/\?\s*$/.test(question) || ASKS_FOR_ADVICE.test(question) || endsIntake(question)) return false;
+  const today = input.today ?? businessToday();
+  return (
+    statedPriorActions(question, today).length > 0 ||
+    NO_HISTORY.test(question) ||
+    statedPayrollDeduct(question) !== null ||
+    warningLevelFromConversation([{ role: "user", content: question }], today) !== null ||
+    namesCaPolicy(question) ||
+    extractFormDate(question, today) !== null
+  );
 }
 
 /**
@@ -1909,9 +1980,19 @@ function turnsAboutThisForm(
     const thisForm =
       (intent.kind === "explicit" && intent.templateKey === templateKey) ||
       (options.correctiveActionForm === true && intent.kind === "corrective_action" && intent.requestedCreation);
+    /*
+     * A CORRECTIVE ACTION MENTIONED IN THE HISTORY IS NOT ANOTHER FORM. QA, 22
+     * Oct 2026: "create a CA for <employee> for not attending the monthly
+     * meeting …", "written", then "prior coaching JBA Policy Manual 1-1-26,
+     * verbal ca 9-1-26" — the history answer reads as "corrective action",
+     * which cut every turn before it, and the card that followed was built from
+     * "no payroll deduct" alone: no issue, no date, no level. On a Corrective
+     * Action Form, the progression's name is about this form's subject, never
+     * a different form.
+     */
     const otherForm =
       (intent.kind === "explicit" && intent.templateKey !== templateKey) ||
-      (intent.kind === "corrective_action" && !thisForm);
+      (intent.kind === "corrective_action" && !thisForm && options.correctiveActionForm !== true);
     const names = extractEmployeeNames(message.content);
     // A turn that also names somebody else is about them too, and stays off this form.
     const otherPerson = names.length > 0 && !names.every(same);
@@ -1962,7 +2043,7 @@ function turnsAboutThisForm(
       formStart = index;
     }
     if (forThisEmployee) requestAt = index;
-    return { names, otherForm, otherPerson };
+    return { names, otherForm, otherPerson, thisForm };
   });
   /* The latest turn of this form that corrected the person TO this employee. */
   let correctionAt = -1;
@@ -2001,13 +2082,21 @@ function turnsAboutThisForm(
    * manual say about shirts?" asked before "jordan needs a written warning"
    * says nothing about Jordan, and a draft written from it puts the shirt
    * policy on a disciplinary record. The current turn always stays.
+   *
+   * A QUESTION THAT ASKS FOR THIS FORM STAYS. QA, 22 Oct 2026, round 3: "tess
+   * varga blew off her woven training due 10/15/26", then "can you start a
+   * verbal ca for that" — the request is phrased as a question and names
+   * nobody, so the next turn ("first offense") dropped it and the card lost
+   * the level it stated.
    */
   // The current turn is always the last one, so there is always at least it.
+  const first = Math.min(start, last);
   const messages = source
-    .slice(Math.min(start, last))
+    .slice(first)
     .filter(
       (message, index, kept) =>
         index === kept.length - 1 ||
+        readings[first + index]!.thisForm ||
         !isQuestion(message.content) ||
         extractEmployeeNames(message.content).some(same),
     );

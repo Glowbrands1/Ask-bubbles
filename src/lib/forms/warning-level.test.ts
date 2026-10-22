@@ -115,6 +115,14 @@ describe("a level stated for THIS form", () => {
     ["this is a written warning", "written"],
     ["it should be a verbal warning", "verbal"],
     ["make it verbal", "verbal"],
+    // HR, 22 Oct 2026, with a synthetic name.
+    [
+      "make corrective action for tess varga. this is a verbal. previous coaching JBA Policy Manual 7-29-26. payroll deduct not applicable",
+      "verbal",
+    ],
+    ["this one is a verbal", "verbal"],
+    ["it will be a written", "written"],
+    ["this'll be a verbal", "verbal"],
     ["just verbal", "verbal"],
     ["verbal", "verbal"],
     ["Written.", "written"],
@@ -594,5 +602,31 @@ describe("the level beside the payroll answer", () => {
     expect(warningLevelCorrection("written warning; no payroll", DAY)).toBe("written");
     // A new account with the level in it is a request, not a correction.
     expect(warningLevelCorrection("jordan was late today. verbal warning, no payroll", DAY)).toBeNull();
+  });
+});
+
+/*
+ * QA, 22 Oct 2026: a level as a clause of its own right after the request,
+ * a middle item before the payroll answer, and "… please". The older rule —
+ * a level after an unrelated clause is asked about — is unchanged.
+ */
+describe("a level said beside the request", () => {
+  it.each([
+    ["please write tess varga up — verbal — she missed the meeting on 10/20/26", "verbal"],
+    ["write up tess varga, written warning. she blew off the meeting on 10/20/26", "written"],
+    ["remy calder blew off the training session 10/19/26, written warning, no payroll deduction", "written"],
+    ["Tess Varga skipped the store meeting 10-20-26 — written CA please, payroll deduct n/a", "written"],
+    ["missed the monthly meeting on 10/20/26 — tess varga. verbal ca please", "verbal"],
+  ])("%s → %s", (text, level) => {
+    expect(statedWarningLevel(text, TODAY)).toBe(level);
+  });
+
+  it.each([
+    "she was late last night, verbal warning",
+    "she had a verbal warning, written warning, and now this",
+    "write up tess varga, prior written warning 8/1/26",
+    "previous coaching: jba policy manual 1-1-26, verbal ca 9-1-26",
+  ])("%s states no level for this form", (text) => {
+    expect(statedWarningLevel(text, TODAY)).toBeNull();
   });
 });
