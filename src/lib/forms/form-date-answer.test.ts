@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { extractFormDate, formDateChange, isIsoCalendarDate, listFormDates, priorStepDate, priorSteps } from "./form-date-answer";
+import { extractFormDate, formDateChange, formDateChangeUnclear, isIsoCalendarDate, listFormDates, priorStepDate, priorSteps } from "./form-date-answer";
 
 /**
  * A manager types a date however they type it. Numeric dates are U.S.
@@ -271,4 +271,26 @@ describe("a correction to the form's date", () => {
   ])('"%s" is not a correction to the date', (text) => {
     expect(formDateChange(text, TODAY)).toBeNull();
   });
+});
+
+/* A date correction that does not say which date is asked about, never guessed. */
+describe("a date correction that does not settle the date", () => {
+  const TODAY = "2026-10-21";
+  it.each([
+    ["the date should be 10-2-26 or 10-3-26", ["2026-10-02", "2026-10-03"]],
+    ["change the date to 10/2 or maybe 10/3", ["2026-10-02", "2026-10-03"]],
+    ["change the date", []],
+    ["the date is wrong", []],
+    ["fix the date on the form", []],
+  ])('"%s" changes nothing and is asked about', (text, offered) => {
+    expect(formDateChange(text, TODAY)).toBeNull();
+    expect(formDateChangeUnclear(text, TODAY)).toEqual({ offered });
+  });
+
+  it.each([["change the date to 10-2-26"], ["she was late again on 10-19-26"], ["change the due date"], ["what is the date on the form?"]])(
+    '"%s" is not an unsettled date correction',
+    (text) => {
+      expect(formDateChangeUnclear(text, TODAY)).toBeNull();
+    },
+  );
 });

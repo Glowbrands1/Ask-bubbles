@@ -388,8 +388,18 @@ const DIRECTORY = [
   { id: "e-2", firstName: "Sela", lastName: "Brandt", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" },
 ];
 
+/** Rows read through the overview VIEW carry their template's columns at once, as Postgres does. */
+class JoiningRows extends Array<Record<string, unknown>> {
+  override push(...rows: Record<string, unknown>[]) {
+    const count = super.push(...rows);
+    joinOverview();
+    return count;
+  }
+}
+
 beforeEach(async () => {
   for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
+  store.form_instances = new JoiningRows() as never;
   state.draft = { values: {}, checked: {} };
   state.revision = { values: {} };
   state.draftCalls = 0;
@@ -1253,5 +1263,88 @@ describe("a form's date is one date on every surface", () => {
       body: JSON.stringify({ notes: "marlo opened the store late. payroll deduct $25" }),
     });
     expect((await form(id)).text("observation")).toContain("October 3, 2026");
+  });
+});
+
+/* ========================================================================= */
+/* DATE CORRECTIONS: AMBIGUOUS, COMBINED, AND WHAT THEY MUST NOT TOUCH       */
+/* ========================================================================= */
+
+describe("date corrections that are ambiguous, combined, or near other dates", () => {
+  async function created(model = ISSUE_1_MODEL) {
+    const thread = new Thread();
+    await thread.say(ISSUE_1);
+    state.draft = model;
+    const { id } = await thread.create();
+    return { thread, id, before: await form(id) };
+  }
+  const unchanged = async (id: string, before: Awaited<ReturnType<typeof form>>) => {
+    const f = await form(id);
+    for (const key of ["form_date", "observation", "prior_actions", "action_plan", "policy_language"]) {
+      expect(f.text(key), key).toBe(before.text(key));
+    }
+  };
+
+  it.each([
+    ["the date should be 10-2-26 or 10-3-26", /Which date .* October 2, 2026 or October 3, 2026\? I haven't changed it/],
+    ["change the date", /What date should .* I haven't changed it/],
+    ["the date is wrong", /What date should .* I haven't changed it/],
+  ])('"%s" changes nothing and asks', async (text, asked) => {
+    const { thread, id, before } = await created();
+    const answer = await thread.say(text);
+    expect(answer.content).toMatch(asked);
+    expect(answer.formUpdate ?? null).toBeNull();
+    await unchanged(id, before);
+    /* The answer to the question is then taken. */
+    await thread.say("change the date to 10-3-26");
+    expect((await form(id)).text("form_date")).toBe("2026-10-03");
+  });
+
+  it("asks on a finalized form without opening a draft of it", async () => {
+    const { thread, id } = await created();
+    expect((await act(id, { action: "finalize", followUpDate: null })).status).toBe(200);
+    const answer = await thread.say("change the date");
+    expect(answer.content).toMatch(/What date should/);
+    expect((store.form_instances ?? []).some((row) => row.revises_instance_id === id)).toBe(false);
+  });
+
+  it("a Prior Actions line signed the same day as the incident is never moved", async () => {
+    const { thread, id } = await created({
+      ...ISSUE_1_MODEL,
+      values: { ...ISSUE_1_MODEL.values, prior_actions: "Verbal warning — signed 10/01/2026" },
+    });
+    const prior = (await form(id)).text("prior_actions");
+    await thread.say("change the date to 10-2-26");
+    const f = await form(id);
+    expect(f.text("form_date")).toBe("2026-10-02");
+    expect(f.text("observation")).toContain("October 2, 2026");
+    expect(f.text("prior_actions")).toBe(prior);
+  });
+
+  it("a payroll answer and a date in one message are both made", async () => {
+    const { thread, id } = await created();
+    await thread.say("no payroll deduct and change the date to 10-2-26");
+    const f = await form(id);
+    expect(f.ticks("payroll_deduct")).toEqual(["no"]);
+    expect(f.text("form_date")).toBe("2026-10-02");
+    expect(f.text("action_plan")).not.toMatch(/deduct|\$/i);
+  });
+
+  it("the employee's name is still never changed from chat on this form", async () => {
+    const { thread, id } = await created();
+    await thread.say("change the name to Jane Smith");
+    expect((await form(id)).text("employee_name")).toBe("Marlo Quist");
+  });
+
+  it("an observation the manager partly rewrote is theirs: a date correction leaves every word of it", async () => {
+    const { thread, id } = await created();
+    const drafted = (await form(id)).text("observation")!;
+    const edited = drafted.replace("Going Forward:", "Going Forward (manager):");
+    await save(id, { observation: edited });
+    await thread.say("change the date to 10-2-26");
+    await thread.say("change the date to 10-3-26");
+    const f = await form(id);
+    expect(f.text("form_date")).toBe("2026-10-03");
+    expect(f.text("observation")).toBe(edited);
   });
 });

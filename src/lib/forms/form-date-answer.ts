@@ -463,7 +463,11 @@ export function formDateChange(text: string, today: string): string | null {
   if (dates.length === 0) return null;
 
   const pointer = NAMES_THE_DATE_TO.exec(said) ?? THE_DATE_SHOULD_BE.exec(said);
-  if (pointer) return dates.find((found) => found.index >= pointer.index + pointer[0].length)?.iso ?? null;
+  if (pointer) {
+    // Two different days offered ("10-2 or 10-3") is not a date: it is asked about.
+    const offered = new Set(dates.filter((found) => found.index >= pointer.index + pointer[0].length).map((found) => found.iso));
+    return offered.size === 1 ? [...offered][0]! : null;
+  }
 
   const wrong = THE_DATE_WAS_WRONG.exec(said);
   if (wrong) {
@@ -476,4 +480,24 @@ export function formDateChange(text: string, today: string): string | null {
     if (IT_WAS.test(said.slice(0, day.index)) && NOT_THAT_DAY.test(said.slice(day.end, other.index))) return day.iso;
   }
   return null;
+}
+
+/** "change the date", "the date is wrong" — the date named as what is wrong, with no single day given. */
+const THE_DATE_IS_WRONG_ALONE = new RegExp(
+  String.raw`\b(?:change|update|correct|fix)\s+${THE_DATE}|${THE_DATE}\s+(?:is|was)\s+(?:wrong|incorrect|off)\b`,
+  "i",
+);
+
+/**
+ * A correction to the form's date that does not settle which day — none given
+ * ("change the date"), or several ("10-2 or 10-3"). Nothing is changed; the
+ * manager is asked, offered the days they named. Null for anything else,
+ * including a correction `formDateChange` reads.
+ */
+export function formDateChangeUnclear(text: string, today: string): { offered: string[] } | null {
+  const said = (text ?? "").trim();
+  if (said === "" || said.endsWith("?") || ANOTHER_DATE.test(said)) return null;
+  if (formDateChange(said, today) !== null) return null;
+  if (!THE_DATE_IS_WRONG_ALONE.test(said) && !NAMES_THE_DATE_TO.test(said) && !THE_DATE_SHOULD_BE.test(said)) return null;
+  return { offered: [...new Set(datesInText(said, today).map((found) => found.iso))] };
 }
