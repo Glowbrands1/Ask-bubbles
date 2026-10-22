@@ -252,7 +252,7 @@ export function guardEvidenceBasis(values: Record<string, string>, source: strin
 
 /** Said when a sentence naming unmentioned evidence or a confirmation was removed. */
 export const EVIDENCE_REMOVED_NOTICE =
-  "Wording that named evidence, a confirmation, an admission or a no call/no show your notes did not mention was removed. Add it back only if it is true and documented.";
+  "Wording that named evidence, a confirmation or an admission your notes did not mention, or called an absence a no call/no show, was removed. Add it back only if it is true and documented.";
 
 /** Said when the notes relay only a report and the draft does not say it was reported. */
 export const UNATTRIBUTED_REPORT_NOTICE =
