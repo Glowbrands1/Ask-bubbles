@@ -113,6 +113,34 @@ describe("F-09: a role before the name names the subject", () => {
   });
 });
 
+describe("F-06: two people in one request is a question, never a choice", () => {
+  it.each([
+    "coaching form for pat rivera and sam jones, both late",
+    "coaching form for pat rivera & sam jones",
+    "coaching form for Pat Rivera and Sam Jones, both late",
+    "corrective action for the manager pat rivera and sam jones",
+  ])("%s", (text) => {
+    const resolution = after(text);
+    expect(resolution.kind).toBe("ambiguous");
+    expect(resolution.kind === "ambiguous" ? resolution.candidates.map((name) => name.toLowerCase()) : []).toEqual([
+      "pat rivera",
+      "sam jones",
+    ]);
+  });
+
+  it("naming one of them next proceeds for that person", () => {
+    expect(after("coaching form for pat rivera and sam jones, both late", "pat rivera")).toEqual({
+      kind: "resolved",
+      employeeName: "pat rivera",
+    });
+  });
+
+  it.each(["both", "either"])("'%s' does not pick one, and is nobody", (reply) => {
+    expect(after("coaching form for pat rivera and sam jones, both late", reply).kind).toBe("ambiguous");
+    expect(after("i need a coaching form", reply)).toEqual({ kind: "missing" });
+  });
+});
+
 describe("spelling: the manager's own", () => {
   it.each([
     ["coaching form for jane doe", "jane doe"],

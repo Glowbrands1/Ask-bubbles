@@ -438,6 +438,13 @@ describe("F-09: a role before the name names the subject", () => {
   });
 });
 
+describe("F-06: 'both' or 'either' is not an employee", () => {
+  it.each(["both", "either"])("%s", async (reply) => {
+    const responses = await everyTurn(["coaching form for pat rivera and sam jones, both late", reply]);
+    for (const card of [responses[1]?.formProposal].filter(Boolean)) expect(card!.employeeName).not.toMatch(/^(?:both|either)$/i);
+  });
+});
+
 describe("spelling: the manager's own, unless the directory matches exactly", () => {
   it("off the directory: as typed, on the card and on the saved form", async () => {
     const { proposal, form } = await filed(["coaching form for jane doe, late twice"], "Jane was late.");
