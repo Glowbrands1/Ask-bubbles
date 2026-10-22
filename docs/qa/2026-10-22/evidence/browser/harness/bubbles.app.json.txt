@@ -1,3 +1,0 @@
-{"app":"bubbles","password":"<local-only QA password>","adminEmail":"qa-admin@local.test","managerEmail":"qa-sd@local.test",
- "ownLocations":[{"id":"loc-264","name":"Omaha, NE (West Dodge Rd)"},{"id":"loc-66","name":"Kearney, NE"}],
- "ownReply":"kearney","otherReply":"grand island","forgedLocationId":"loc-236"}

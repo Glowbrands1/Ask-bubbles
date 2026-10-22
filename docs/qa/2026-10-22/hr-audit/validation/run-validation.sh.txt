@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Validates the HR audit SQL on a DISPOSABLE LOCAL database with SYNTHETIC rows only.
+# Refuses to run against anything but 127.0.0.1. Never point this at production.
+set -uo pipefail
+HERE=$(cd "$(dirname "$0")" && pwd)
+AUDIT=$(cd "$HERE/.." && pwd)
+APP=<repo>
+OUT=${1:-$HERE/results}
+mkdir -p "$OUT"
+export LOCAL_STACK_DIR=/tmp/qa-stack-audit POSTGREST_BIN=<postgrest>
+cd "$APP"
+npm run -s stack:up > "$OUT/stack-up.log" 2>&1; echo "stack:up exit $?" | tee "$OUT/steps.txt"
+DB="postgresql://supabase_admin@127.0.0.1:54329/postgres"
+case "$DB" in *127.0.0.1*) ;; *) echo "REFUSING: not a local database"; exit 2;; esac
+P=(psql "$DB" -v ON_ERROR_STOP=1 -X)
+
+echo "== seed synthetic rows" | tee -a "$OUT/steps.txt"
+"${P[@]}" -q -f "$HERE/seed-synthetic.sql" > "$OUT/seed.log" 2>&1; echo "seed exit $?" | tee -a "$OUT/steps.txt"
+
+echo "== audit role (as the plan creates it)" | tee -a "$OUT/steps.txt"
+"${P[@]}" > "$OUT/role.log" 2>&1 <<'SQL'
+create role hr_payroll_audit login password 'local-only-synthetic' valid until 'infinity';
+alter role hr_payroll_audit set default_transaction_read_only = on;
+alter role hr_payroll_audit set statement_timeout = '60s';
+grant usage on schema public to hr_payroll_audit;
+grant select on public.form_templates, public.form_instances, public.form_instance_values, public.form_instance_events to hr_payroll_audit;
+grant select on public.chat_messages to hr_payroll_audit;
+alter role hr_payroll_audit bypassrls;
+SQL
+echo "role exit $?" | tee -a "$OUT/steps.txt"
+A=(psql "postgresql://hr_payroll_audit:local-only-synthetic@127.0.0.1:54329/postgres" -v ON_ERROR_STOP=1 -X)
+
+echo "== Phase A (as hr_payroll_audit)" | tee -a "$OUT/steps.txt"
+"${A[@]}" -v window_start='2026-10-21 20:55:22+00' -v window_end='2026-10-23 00:00:00+00' -f "$AUDIT/phase-a-candidates.sql" > "$OUT/phase-a.txt" 2>&1
+echo "phase A exit $?" | tee -a "$OUT/steps.txt"
+
+echo "== Phase B (as hr_payroll_audit)" | tee -a "$OUT/steps.txt"
+IDS=$("${A[@]}" -t -A -v window_start='2026-10-21 20:55:22+00' -v window_end='2026-10-23 00:00:00+00' -c "
+  select '{' || string_agg(i.id::text, ',' order by i.created_at) || '}'
+  from public.form_instances i join public.form_templates t on t.id=i.template_id and t.key='dpoa'
+  join public.form_instance_values v on v.instance_id=i.id and v.field_key='payroll_deduct' and v.checked ? 'yes'
+  where v.updated_at >= '2026-10-21 20:55:22+00' and v.updated_at < '2026-10-23' and i.source::text='assistant'")
+echo "candidate ids (tiers A/B): $IDS" | tee -a "$OUT/steps.txt"
+"${A[@]}" -t -A -v candidate_ids="$IDS" -f "$AUDIT/phase-b-source-turns.sql" > "$OUT/source-turns.raw" 2>&1
+echo "phase B exit $?" | tee -a "$OUT/steps.txt"
+# psql prints BEGIN/SET/ROLLBACK lines in -t -A mode; keep the JSON line only.
+grep '^\[' "$OUT/source-turns.raw" > "$OUT/source-turns.json"
+
+echo "== read-only enforcement: a write as hr_payroll_audit must fail" | tee -a "$OUT/steps.txt"
+"${A[@]}" -c "update public.form_instance_values set checked='[\"no\"]' where field_key='payroll_deduct'" > "$OUT/write-attempt.log" 2>&1
+echo "write attempt exit $? (non-zero expected)" | tee -a "$OUT/steps.txt"; cat "$OUT/write-attempt.log" | tee -a "$OUT/steps.txt"
+
+echo "== re-read with the FIXED reader" | tee -a "$OUT/steps.txt"
+mkdir -p "$APP/src/__qa__"; cp "$AUDIT/phase-b-reclassify.audit.ts" "$APP/src/__qa__/reclassify.audit.test.ts"
+AUDIT_IN="$OUT/source-turns.json" AUDIT_OUT="$OUT/flags.json" npx vitest run src/__qa__/reclassify.audit.test.ts > "$OUT/reclassify.log" 2>&1
+echo "reclassify exit $?" | tee -a "$OUT/steps.txt"; rm -rf "$APP/src/__qa__"
+cat "$OUT/flags.json" | tee -a "$OUT/steps.txt"
+
+echo "== unchanged data check" | tee -a "$OUT/steps.txt"
+"${P[@]}" -t -A -c "select field_key, checked::text, count(*) from public.form_instance_values where field_key='payroll_deduct' group by 1,2 order by 2" | tee -a "$OUT/steps.txt"
+npm run -s stack:down > "$OUT/stack-down.log" 2>&1; echo "stack:down exit $?" | tee -a "$OUT/steps.txt"

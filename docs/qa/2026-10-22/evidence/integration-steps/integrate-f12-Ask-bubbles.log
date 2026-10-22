@@ -1,9 +1,0 @@
-
- RUN  v4.1.11 /home/user/Ask-bubbles
-
-
- Test Files  184 passed | 1 skipped (185)
-      Tests  5753 passed | 13 skipped (5766)
-   Start at  12:41:02
-   Duration  69.14s (transform 15.22s, setup 0ms, import 46.89s, tests 117.89s, environment 37ms)
-
