@@ -337,20 +337,20 @@ describe("P7 — shared and service accounts are never a name suggestion", () =>
 
   it.each([
     ["Kaitlyn", "Sample"],
-    ["Kim", "Keller"],
+    ["Kim", "Ferrante"],
     ["Hope", "Office"],
-    ["Paige", "Horne"],
-    ["Tia", "Aldred"],
+    ["Paige", "Whitlock"],
+    ["Tia", "Okafor"],
   ])("%s %s is a person", (first, last) => expect(isServiceAccountName(first, last)).toBe(false));
 
   it("leaves them out of the scoped roster without touching anybody else", () => {
     const rows = [
       { id: "1", firstName: "Risk", lastName: "Management", preferredFirstName: "Risk", employmentStatus: "active", locationIds: ["loc-0306"] },
       { id: "2", firstName: "No", lastName: "Manager", preferredFirstName: "No", employmentStatus: "active", locationIds: ["loc-0306"] },
-      { id: "3", firstName: "Hayley", lastName: "Cooper", preferredFirstName: "Hayley", employmentStatus: "active", locationIds: ["loc-0306"] },
+      { id: "3", firstName: "Hayley", lastName: "Strand", preferredFirstName: "Hayley", employmentStatus: "active", locationIds: ["loc-0306"] },
     ];
     const roster = scopeRoster(rows, { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] });
-    expect(roster.map((row) => `${row.firstName} ${row.lastName}`)).toEqual(["Hayley Cooper"]);
+    expect(roster.map((row) => `${row.firstName} ${row.lastName}`)).toEqual(["Hayley Strand"]);
   });
 });
 

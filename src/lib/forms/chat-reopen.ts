@@ -96,7 +96,7 @@ export async function reopenRequestedForm(input: {
       /*
        * NARROWED BY THE NAME BEFORE THE LIMIT, as the Forms Register lookup in
        * `chat-form-records.ts` is, so an older form is not lost behind the
-       * newest 200. A name the reader did not catch ("ashley rogers" in lower
+       * newest 200. A name the reader did not catch ("lacey morrow" in lower
        * case) still reads the newest forms, matched by `mentionsFullName`.
        */
       const words = names.flatMap((name) => name.split(/\s+/)).filter((word) => /^[a-z]+$/i.test(word));

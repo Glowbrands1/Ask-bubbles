@@ -271,19 +271,19 @@ describe("a person's older forms are found by name, before the limit", () => {
   beforeEach(() => {
     // Older than every foreign row, at a store the reader may see and one they may not.
     store.form_instances.push(
-      row({ id: "ellie-old", employee_name: "Ellie Sendgraff", location_id: "loc-a", created_at: at(2) }),
-      row({ id: "ellie-elsewhere", employee_name: "Ellie Sendgraff", location_id: "loc-other-3", created_at: at(3) }),
+      row({ id: "wren-old", employee_name: "Wren Halvorsen", location_id: "loc-a", created_at: at(2) }),
+      row({ id: "wren-elsewhere", employee_name: "Wren Halvorsen", location_id: "loc-other-3", created_at: at(3) }),
     );
   });
 
   it("reads only rows naming the person, so a limit of 5 still reaches them", async () => {
-    const visible = await listInstances("all", 5, { employeeNameWords: ["ellie", "sendgraff"] });
-    expect(visible.map((entry) => entry.id).sort()).toEqual(["ellie-elsewhere", "ellie-old"]);
+    const visible = await listInstances("all", 5, { employeeNameWords: ["wren", "halvorsen"] });
+    expect(visible.map((entry) => entry.id).sort()).toEqual(["wren-elsewhere", "wren-old"]);
   });
 
   it("still applies the store filter on top of the name", async () => {
-    const visible = await listInstances("all", 5, { locationIds: ["loc-a"], employeeNameWords: ["sendgraff"] });
-    expect(visible.map((entry) => entry.id)).toEqual(["ellie-old"]);
+    const visible = await listInstances("all", 5, { locationIds: ["loc-a"], employeeNameWords: ["halvorsen"] });
+    expect(visible.map((entry) => entry.id)).toEqual(["wren-old"]);
   });
 
   it("reads nothing when no word is safe to send", async () => {

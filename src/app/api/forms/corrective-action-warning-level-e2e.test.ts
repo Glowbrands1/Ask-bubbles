@@ -15,7 +15,7 @@ vi.mock("@/config/company/locations", async () =>
  *
  * Production, 9 Oct 2026:
  *
- *   "create a ca form for paulyne test, she was late again for 30 mins today.
+ *   "create a ca form for rosalyn test, she was late again for 30 mins today.
  *    given verbal warning on 9/21"
  *
  * came back with Written Warning ticked, while the 9/21 verbal warning was
@@ -311,7 +311,7 @@ async function correct(id: string, question: string) {
 
 const QUESTION = "Is this new corrective action a **Verbal Warning** or a **Written Warning**?";
 const REPORT =
-  "create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 9/21";
+  "create a ca form for rosalyn test, she was late again for 30 mins today. given verbal warning on 9/21";
 
 /* ------------------------------------------------------------------------ */
 
@@ -325,7 +325,7 @@ describe("1. previous verbal warning, current warning unspecified (the productio
     const { proposal, content, result } = await conversation([REPORT]);
 
     // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
-    expect(proposal.employeeName).toBe("paulyne test");
+    expect(proposal.employeeName).toBe("rosalyn test");
     expect(proposal.warningLevel).toBe("verbal");
     expect(content).toContain("**Type of warning:** Verbal Warning, as you said");
     expect(content).not.toContain(QUESTION);
@@ -341,7 +341,7 @@ describe("1. previous verbal warning, current warning unspecified (the productio
 
   it("with no level given at all, asks and ticks nothing", async () => {
     const { proposal, content, result } = await conversation([
-      "create a ca form for paulyne test, she was late again for 30 mins today. got a verbal warning on 9/21",
+      "create a ca form for rosalyn test, she was late again for 30 mins today. got a verbal warning on 9/21",
     ]);
 
     expect(proposal.warningLevel).toBeNull();
@@ -354,7 +354,7 @@ describe("1. previous verbal warning, current warning unspecified (the productio
 
     expect(proposal.warningLevel).toBe("verbal");
     // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
-    expect(proposal.employeeName).toBe("paulyne test");
+    expect(proposal.employeeName).toBe("rosalyn test");
     expect(content).toContain("**Type of warning:** Verbal Warning, as you said");
     expect(content).not.toContain(QUESTION);
   });
@@ -469,7 +469,7 @@ describe("5. the manager changes Written Warning to Verbal Warning through chat"
     ]);
 
     // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
-    expect(proposal.employeeName).toBe("paulyne test");
+    expect(proposal.employeeName).toBe("rosalyn test");
     expect(proposal.warningLevel).toBe("verbal");
     expect(content).toContain("**Type of warning:** Verbal Warning, as you said");
     const id = result.reference.instanceId;
@@ -576,7 +576,7 @@ describe("7. ambiguous descriptions of disciplinary history", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         templateKey: "dpoa",
-        employeeName: "paulyne test",
+        employeeName: "rosalyn test",
         locationId: "loc-0310",
         source: "assistant",
         warningLevel: "written",
@@ -601,21 +601,21 @@ describe("review: a level said about another form, or as history, never lands on
     "written warning at her review, now late again today",
     "written warning issued, she's late again today",
   ])("a reply opening with past history, then the new incident: %s", async (reply) => {
-    const { proposal, result } = await conversation(["create a ca form for paulyne test, late again today", reply]);
+    const { proposal, result } = await conversation(["create a ca form for rosalyn test, late again today", reply]);
 
     expect(proposal.warningLevel).toBeNull();
     expect(await ticked(result.reference.instanceId)).toEqual([]);
   });
 
-  it("a written warning stated for Jordan earlier in the chat does not tick Paulyne's form", async () => {
+  it("a written warning stated for Jordan earlier in the chat does not tick Rosalyn's form", async () => {
     const { proposal, result } = await conversation([
       "create a ca form for jordan smith, no call no show today. give a written warning",
       REPORT,
     ]);
 
     // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
-    expect(proposal.employeeName).toBe("paulyne test");
-    // Paulyne's own "given verbal warning", never Jordan's written one.
+    expect(proposal.employeeName).toBe("rosalyn test");
+    // Rosalyn's own "given verbal warning", never Jordan's written one.
     expect(proposal.warningLevel).toBe("verbal");
     expect(await ticked(result.reference.instanceId)).toEqual(["verbal"]);
   });
@@ -624,14 +624,14 @@ describe("review: a level said about another form, or as history, never lands on
     `${REPORT}.\nPrevious actions:\n- verbal warning\n- written warning`,
     `${REPORT}. she has a written warning from august`,
     `${REPORT}. she is on a written warning`,
-    "create a ca form for paulyne test, late again today. she did get a written warning in august",
-    "create a ca form for paulyne test, late again today. she did get a written warning on 9/21",
-    "create a ca form for paulyne test, late again today. she gets a written warning 10/1",
-    "create a ca form for paulyne test, late again today. 10/1 she gets a written warning",
-    "create a ca form for paulyne test, late again today. first verbal warning 9/21 second written warning 10/1",
-    "create a ca form for paulyne test, late again today. she's on her second written warning",
-    "create a ca form for paulyne test, late again today. she'd get a written warning back then",
-    "create a ca form for paulyne test, late again today. she always gets a written warning",
+    "create a ca form for rosalyn test, late again today. she did get a written warning in august",
+    "create a ca form for rosalyn test, late again today. she did get a written warning on 9/21",
+    "create a ca form for rosalyn test, late again today. she gets a written warning 10/1",
+    "create a ca form for rosalyn test, late again today. 10/1 she gets a written warning",
+    "create a ca form for rosalyn test, late again today. first verbal warning 9/21 second written warning 10/1",
+    "create a ca form for rosalyn test, late again today. she's on her second written warning",
+    "create a ca form for rosalyn test, late again today. she'd get a written warning back then",
+    "create a ca form for rosalyn test, late again today. she always gets a written warning",
     `${REPORT}. last month written warning`,
     `${REPORT}. 2 weeks ago, written warning`,
     `${REPORT}. last CA: written warning`,
@@ -692,15 +692,15 @@ describe("review: corrections apply only to this form, and never from history", 
   it.each([
     "change written warning to verbal",
     "change the written warning to verbal",
-    "change written warning to verbal for paulyne",
+    "change written warning to verbal for rosalyn",
     "set the warning type to verbal",
     "verbal not written",
     "no, verbal",
     "actually verbal",
     "oops i meant verbal",
     "it should have been verbal",
-    "change paulyne's warning to verbal",
-    "Paulyne Test was late. change it to verbal",
+    "change rosalyn's warning to verbal",
+    "Rosalyn Test was late. change it to verbal",
     "she was late because of traffic, change it to verbal",
     "change it to verbal for tardiness",
     "traffic was bad, change it to verbal",
@@ -731,7 +731,7 @@ describe("review: corrections apply only to this form, and never from history", 
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         templateKey: "dpoa",
-        employeeName: "paulyne test",
+        employeeName: "rosalyn test",
         locationId: "loc-0310",
         source: "assistant",
         warningLevel: "written",
@@ -745,7 +745,7 @@ describe("review: the history line across the year boundary", () => {
   it("a December warning, mentioned in January, is dated last December", async () => {
     vi.setSystemTime(new Date("2027-01-05T15:00:00Z"));
     const { proposal, result } = await conversation([
-      "create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 12/20",
+      "create a ca form for rosalyn test, she was late again for 30 mins today. given verbal warning on 12/20",
     ]);
 
     expect(proposal.warningLevel).toBe("verbal");

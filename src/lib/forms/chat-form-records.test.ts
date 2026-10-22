@@ -5,7 +5,7 @@ import type { AccessScope } from "@/types";
 
 /**
  * ============================================================================
- * "DOES ELLIE SENDGRAFF HAVE PREVIOUS COACHINGS?" — READ FROM THE FORMS REGISTER
+ * "DOES WREN HALVORSEN HAVE PREVIOUS COACHINGS?" — READ FROM THE FORMS REGISTER
  * ============================================================================
  *
  * Ported from the reference platform, where the assistant said it could not
@@ -77,7 +77,7 @@ function row(overrides: Record<string, unknown>) {
     template_version_id: "v1",
     template_version: 1,
     variant_key: null,
-    employee_name: "Ellie Sendgraff",
+    employee_name: "Wren Halvorsen",
     employee_role: "Production Associate",
     location_id: KEARNEY,
     location_name: "NE Kearney",
@@ -117,7 +117,7 @@ beforeEach(() => {
 
 describe("isFormRecordsQuestion", () => {
   it.each([
-    "does employee ellie sendgraff have previous coachings",
+    "does employee wren halvorsen have previous coachings",
     "Has Dana been written up before?",
     "Was she ever coached?",
     "what is Dana Moss's coaching history",
@@ -125,10 +125,10 @@ describe("isFormRecordsQuestion", () => {
     "Is there anything on file for Marcus?",
     "how many coaching forms have I filed this month",
     "show me the write-ups for Jordan",
-    "Any prior corrective action for Ellie?",
-    "past coaching file for ellie sendgraff",
-    "does ellie have a past coaching file",
-    "past ca for ellie sendgraff",
+    "Any prior corrective action for Wren?",
+    "past coaching file for wren halvorsen",
+    "does wren have a past coaching file",
+    "past ca for wren halvorsen",
     "any past CAs for Dana?",
     "does dana have a previous CA form",
     "past corrective action form for Marcus",
@@ -138,7 +138,7 @@ describe("isFormRecordsQuestion", () => {
   });
 
   it.each([
-    "create a coaching form for Ellie Sendgraff",
+    "create a coaching form for Wren Halvorsen",
     "do we have a coaching form?",
     "what is our corrective action process?",
     "what should I focus on today?",
@@ -152,7 +152,7 @@ describe("asksOnlyAboutFormsOnFile — the register, not a new form", () => {
   it.each([
     "does dana have a previous CA form",
     "past corrective action form for Marcus",
-    "past ca for ellie sendgraff",
+    "past ca for wren halvorsen",
     "has Dana Moss been written up before?",
   ])("answers %s from the register", (question) => {
     expect(asksOnlyAboutFormsOnFile(question)).toBe(true);
@@ -161,7 +161,7 @@ describe("asksOnlyAboutFormsOnFile — the register, not a new form", () => {
   it.each([
     "Create a CA for Dana Moss, she's been coached before",
     "write a CA for Dana, she has previous coachings",
-    "I need a coaching form for Ellie — any prior write-ups are in the register",
+    "I need a coaching form for Wren — any prior write-ups are in the register",
     // Two new forms, not a question about existing ones.
     "coaching forms for Avery Testperson and Jordan Testperson",
   ])("keeps the form request in %s", (question) => {
@@ -171,19 +171,19 @@ describe("asksOnlyAboutFormsOnFile — the register, not a new form", () => {
 
 describe("candidateNameWords", () => {
   it("keeps the name and drops the question's vocabulary", () => {
-    expect(candidateNameWords("does employee ellie sendgraff have previous coachings")).toEqual([
-      "ellie",
-      "sendgraff",
+    expect(candidateNameWords("does employee wren halvorsen have previous coachings")).toEqual([
+      "wren",
+      "halvorsen",
     ]);
     expect(candidateNameWords("What is Dana Moss's coaching history?")).toEqual(["dana", "moss"]);
-    expect(candidateNameWords("past ca for ellie sendgraff")).toEqual(["ellie", "sendgraff"]);
-    expect(candidateNameWords("past coaching file for Ellie Sendgraff")).toEqual(["ellie", "sendgraff"]);
+    expect(candidateNameWords("past ca for wren halvorsen")).toEqual(["wren", "halvorsen"]);
+    expect(candidateNameWords("past coaching file for Wren Halvorsen")).toEqual(["wren", "halvorsen"]);
     expect(candidateNameWords("any write-ups for the store manager at my store")).toEqual([]);
   });
 });
 
 describe("loadFormRecords", () => {
-  const question = "does employee ellie sendgraff have previous coachings";
+  const question = "does employee wren halvorsen have previous coachings";
 
   it("reads the register under the forms visibility and lists that person's forms", async () => {
     store.form_instances.push(
@@ -191,7 +191,7 @@ describe("loadFormRecords", () => {
       row({ form_date: "2026-10-02", status: "draft" }),
       // Another store's coaching record for the same name: never visible.
       row({ form_date: "2026-08-01", location_id: WORNALL, location_name: "MO Kansas City Wornall" }),
-      row({ employee_name: "Ellie Park", form_date: "2026-07-01" }),
+      row({ employee_name: "Wren Park", form_date: "2026-07-01" }),
     );
 
     const result = await loadFormRecords({ actor: MANAGER, question, today: "2026-10-20" });
@@ -209,7 +209,7 @@ describe("loadFormRecords", () => {
     expect(block).toContain("store: NE Kearney");
     expect(block).not.toContain("Wornall");
     // A first-name-only match is offered as a question, not as theirs.
-    expect(block).toMatch(/Possible matches[\s\S]*Ellie Park/);
+    expect(block).toMatch(/Possible matches[\s\S]*Wren Park/);
     expect(block).toContain("the stores whose forms this user may see in the Forms Register (NE Kearney)");
     expect(block).toContain("Forms → Forms Register");
     expect(block).not.toMatch(/salon|Form Monitoring/i);
@@ -291,7 +291,7 @@ describe("loadFormRecords", () => {
     const result = await loadFormRecords({
       actor: MANAGER,
       question: "has she been written up before?",
-      previousQuestion: "tell me about ellie sendgraff",
+      previousQuestion: "tell me about wren halvorsen",
       today: "2026-10-20",
     });
 

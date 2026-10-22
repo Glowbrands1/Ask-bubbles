@@ -12,7 +12,7 @@ import { canonicalWarningWording, detectTemplateIntent } from "./template-intent
  *
  * Production, 9 Oct 2026:
  *
- *   "create a ca form for paulyne test, she was late again for 30 mins today.
+ *   "create a ca form for rosalyn test, she was late again for 30 mins today.
  *    given verbal warning on 9/21"
  *
  * came back with WRITTEN WARNING ticked. The verbal warning on 9/21 was listed
@@ -130,7 +130,7 @@ const BARE_GIVEN =
 
 /**
  * "change written warning to verbal", "set the warning type to verbal",
- * "change paulyne's warning to verbal for paulyne" — the new level after a
+ * "change rosalyn's warning to verbal for rosalyn" — the new level after a
  * change verb, whatever follows it. The level being replaced is dropped by
  * `REPLACED`.
  */

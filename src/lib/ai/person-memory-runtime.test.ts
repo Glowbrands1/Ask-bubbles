@@ -102,7 +102,7 @@ async function ask(memory: { memoryOwnerId?: string } = { memoryOwnerId: "user-1
       history: [],
       scopeId: "bcs-core",
       conversationId: "conv_current",
-      context: { userName: "Paulyne", locationName: "Synthetic Store", todayIso: "2026-10-20" },
+      context: { userName: "Rosalyn", locationName: "Synthetic Store", todayIso: "2026-10-20" },
     } as never,
     ACTOR,
     memory,
@@ -123,7 +123,7 @@ describe("what the manager told Bubbles before", () => {
       userId: "user-1",
       question: "What should I do about Sarah Test now?",
       conversationId: "conv_current",
-      userName: "Paulyne",
+      userName: "Rosalyn",
     });
   });
 

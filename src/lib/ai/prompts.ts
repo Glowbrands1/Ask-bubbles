@@ -277,7 +277,7 @@ export function buildSystemPrompt(input: {
     : "";
 
   /*
-   * FORMS ON FILE. "Does Ellie have previous coachings?" used to be answered
+   * FORMS ON FILE. "Does Wren have previous coachings?" used to be answered
    * with "I can't look that up — check the Forms Register". With the block
    * attached it is answered from the record, and these rules keep that answer
    * to what the record actually shows.

@@ -481,7 +481,7 @@ describe("a sensitive final action never reaches the persistence call", () => {
     };
 
     const payload = await post(
-      "create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 9/21",
+      "create a ca form for rosalyn test, she was late again for 30 mins today. given verbal warning on 9/21",
     );
 
     expect(state.stated).toEqual([{ checked: { warning_type: ["verbal"] }, keys: ["warning_type"] }]);
