@@ -96,7 +96,7 @@ import {
 import { loadScopedRosterResult } from "@/lib/forms/employee-roster";
 import { unverifiedWithoutRecord, verifyEmployee } from "@/lib/forms/employee-verification";
 import { namedStoreIds as namedStoreIdsFrom } from "@/lib/forms/location-scope";
-import { continuesStore, readStoreConfirmation, storeQuestionOpen } from "@/lib/forms/store-confirmation";
+import { continuesStore, readStoreConfirmation, storeAnswerTurns, storeQuestionOpen } from "@/lib/forms/store-confirmation";
 import { describeStore, type StoreIndex } from "@/lib/stores/resolver";
 import { loadKnownTitles, loadStoreIndex } from "@/lib/stores/woven-aliases";
 import { neutralizeTitles } from "@/lib/forms/known-titles";
@@ -832,6 +832,8 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     reportUnmatchedStore: !employmentChangeKind(match.key),
     storeReply: {
       bareReply: storeQuestionOpen(input.history),
+      // "66" answered an earlier store question: still the answer on this turn (QA F-12).
+      answeredTurns: storeAnswerTurns(input.history, storeIndex),
       ...(confirmedStore ? { confirmedCode: confirmedStore.code } : {}),
     },
     ...(directory.verification ? { employeeVerification: directory.verification } : {}),

@@ -1693,7 +1693,7 @@ export interface ProposalInput {
    * "yes" to a proposed store (by its registered number — re-authorised against
    * the manager's scope like any other).
    */
-  storeReply?: { bareReply: boolean; confirmedCode?: string };
+  storeReply?: { bareReply: boolean; confirmedCode?: string; answeredTurns?: ReadonlySet<string> };
   /**
    * The words to read the store from, instead of the whole conversation. A
    * transfer reads the store the employee is leaving; the destination is a
@@ -1759,6 +1759,7 @@ export function locationFor(input: ProposalInput, team: boolean): LocationPropos
       reportUnmatched: input.reportUnmatchedStore ?? true,
       ...(input.locationText === undefined ? { turns: input.context.messages.map((message) => message.content) } : {}),
       bareReply: input.storeReply?.bareReply ?? false,
+      ...(input.storeReply?.answeredTurns ? { answeredTurns: input.storeReply.answeredTurns } : {}),
       ...(input.storeReply?.confirmedCode
         ? { confirmedStoreId: locationByCode(input.storeReply.confirmedCode)?.id }
         : {}),
