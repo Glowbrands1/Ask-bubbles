@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /home/user/bubbles-payroll-only
+
+
+ Test Files  1 passed (1)
+      Tests  18 passed (18)
+   Start at  14:43:40
+   Duration  67.48s (transform 199ms, setup 0ms, import 275ms, tests 66.84s, environment 0ms)
+

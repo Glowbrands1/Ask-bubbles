@@ -1,0 +1,73 @@
+
+ RUN  v4.1.11 /home/user/Ask-bubbles
+
+stdout | src/lib/ai/qa-w1-payroll-proposal.test.ts > QA F-01 follow-up: a withdrawn Yes is asked again, on the same card > Yes, then 'actually we're not doing the $25 payroll deduction' -> the open card asks
+{"event":"forms.template_sync.completed","level":"info","created":["coaching","dpoa","policy-review","sdit-epp","tsd-epp","asd-sdit-epp","fttc-epp","dmit-epp-tsd","dmit-epp-dmit","follow-up-coaching","resignation-exit","demotion","position-transfer","prescreen-phone-interview","tanning-consultant-interview","management-interview-round-1","management-interview-round-2"],"revised":[],"renamed":[],"heldBack":[],"failed":[],"repaired":[],"retired":[]}
+
+stdout | src/lib/ai/qa-w1-payroll-proposal.test.ts > QA F-01 follow-up: a withdrawn Yes is asked again, on the same card > Yes, then 'no need for the $25 payroll deduction after all' -> the open card asks
+{"event":"forms.template_sync.completed","level":"info","created":["coaching","dpoa","policy-review","sdit-epp","tsd-epp","asd-sdit-epp","fttc-epp","dmit-epp-tsd","dmit-epp-dmit","follow-up-coaching","resignation-exit","demotion","position-transfer","prescreen-phone-interview","tanning-consultant-interview","management-interview-round-1","management-interview-round-2"],"revised":[],"renamed":[],"heldBack":[],"failed":[],"repaired":[],"retired":[]}
+
+stdout | src/lib/ai/qa-w1-payroll-proposal.test.ts > QA F-01 follow-up: a withdrawn Yes is asked again, on the same card > Yes, then 'hold off on the $25 payroll deduction' -> the open card asks
+{"event":"forms.template_sync.completed","level":"info","created":["coaching","dpoa","policy-review","sdit-epp","tsd-epp","asd-sdit-epp","fttc-epp","dmit-epp-tsd","dmit-epp-dmit","follow-up-coaching","resignation-exit","demotion","position-transfer","prescreen-phone-interview","tanning-consultant-interview","management-interview-round-1","management-interview-round-2"],"revised":[],"renamed":[],"heldBack":[],"failed":[],"repaired":[],"retired":[]}
+
+stdout | src/lib/ai/qa-w1-payroll-proposal.test.ts > QA F-01 follow-up: a withdrawn Yes is asked again, on the same card > asked again, then a plain No -> No
+{"event":"forms.template_sync.completed","level":"info","created":["coaching","dpoa","policy-review","sdit-epp","tsd-epp","asd-sdit-epp","fttc-epp","dmit-epp-tsd","dmit-epp-dmit","follow-up-coaching","resignation-exit","demotion","position-transfer","prescreen-phone-interview","tanning-consultant-interview","management-interview-round-1","management-interview-round-2"],"revised":[],"renamed":[],"heldBack":[],"failed":[],"repaired":[],"retired":[]}
+
+ ❯ src/lib/ai/qa-w1-payroll-proposal.test.ts (9 tests | 4 failed) 374ms
+     × Yes, then 'actually we're not doing the $25 payroll deduction' -> the open card asks 29ms
+     × Yes, then 'no need for the $25 payroll deduction after all' -> the open card asks 20ms
+     × Yes, then 'hold off on the $25 payroll deduction' -> the open card asks 17ms
+     × asked again, then a plain No -> No 25ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/ai/qa-w1-payroll-proposal.test.ts > QA F-01 follow-up: a withdrawn Yes is asked again, on the same card > Yes, then 'actually we're not doing the $25 payroll deduction' -> the open card asks
+ FAIL  src/lib/ai/qa-w1-payroll-proposal.test.ts > QA F-01 follow-up: a withdrawn Yes is asked again, on the same card > Yes, then 'no need for the $25 payroll deduction after all' -> the open card asks
+ FAIL  src/lib/ai/qa-w1-payroll-proposal.test.ts > QA F-01 follow-up: a withdrawn Yes is asked again, on the same card > Yes, then 'hold off on the $25 payroll deduction' -> the open card asks
+AssertionError: expected undefined to be 'dpoa' // Object.is equality
+
+- Expected:
+"dpoa"
+
++ Received:
+undefined
+
+ ❯ src/lib/ai/qa-w1-payroll-proposal.test.ts:105:39
+    103|     expect(proposals[0]?.payrollDeduct).toBe("yes");
+    104|     // The second turn stays on the open Corrective Action card, and t…
+    105|     expect(proposals[1]?.templateKey).toBe("dpoa");
+       |                                       ^
+    106|     expect(proposals[1]?.payrollDeduct ?? null).toBeNull();
+    107|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/lib/ai/qa-w1-payroll-proposal.test.ts > QA F-01 follow-up: a withdrawn Yes is asked again, on the same card > asked again, then a plain No -> No
+AssertionError: expected [ 'yes', null, null ] to deeply equal [ 'yes', null, 'no' ]
+
+- Expected
++ Received
+
+  [
+    "yes",
+    null,
+-   "no",
++   null,
+  ]
+
+ ❯ src/lib/ai/qa-w1-payroll-proposal.test.ts:115:74
+    113|       "no",
+    114|     ]);
+    115|     expect(proposals.map((proposal) => proposal?.payrollDeduct ?? null…
+       |                                                                          ^
+    116|   });
+    117| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 5 passed (9)
+   Start at  15:30:34
+   Duration  3.01s (transform 2.04s, setup 0ms, import 2.34s, tests 374ms, environment 0ms)
+

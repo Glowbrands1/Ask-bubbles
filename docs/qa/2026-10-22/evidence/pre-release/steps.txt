@@ -1,0 +1,16 @@
+bubbles-payroll-only 2897163 full suite exit 1 (558s)  [run 1 — CONTENDED: Sunny probes and payroll tests ran at the same time; goals.db PGlite hook timeout; passes 18/18 alone on main and on this branch]
+ Test Files  1 failed | 403 passed | 6 skipped (410)
+      Tests  2 failed | 9780 passed | 59 skipped (9841)
+== sequential chain started 2026-10-22T14:45:09Z
+bubbles-payroll-only-rerun 2897163 full suite exit 0 (491s) load_before=1.35
+ Test Files  404 passed | 6 skipped (410)
+      Tests  9782 passed | 59 skipped (9841)
+Ask-bubbles-e061750 e061750 full suite exit 0 (485s) load_before=4.60
+ Test Files  419 passed | 6 skipped (425)
+      Tests  10128 passed | 59 skipped (10187)
+ Test Files  1 failed | 516 passed | 12 skipped (529)
+      Tests  1 failed | 12355 passed | 131 skipped (12487)
+ FAIL  src/features/chat/rollout-fixes.dom.test.tsx > rating is scoped to the conversation being rated > does not carry an open rating form into another conversation
+ Test Files  517 passed | 12 skipped (529)
+      Tests  12356 passed | 131 skipped (12487)
+== sequential chain finished 2026-10-22T15:19:33Z

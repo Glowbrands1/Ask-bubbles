@@ -1,10 +1,10 @@
 
  RUN  v4.1.11 /home/user/Ask-bubbles
 
- ❯ src/lib/auth/revocation.local-stack.test.ts (13 tests | 3 failed) 4833ms
-     × BEFORE: the person can use Ask Bubbles' API, read knowledge with their token, and holds two sessions 799ms
-     × CONTROL: an active colleague's token still reads knowledge, so the policy is not simply closed 106ms
-     × an explicit re-enable (the approved-rehire mechanics) lifts the ban and the password works again 180ms
+ ❯ src/lib/auth/revocation.local-stack.test.ts (13 tests | 3 failed) 4469ms
+     × BEFORE: the person can use Ask Bubbles' API, read knowledge with their token, and holds two sessions 723ms
+     × CONTROL: an active colleague's token still reads knowledge, so the policy is not simply closed 95ms
+     × an explicit re-enable (the approved-rehire mechanics) lifts the ban and the password works again 188ms
 psql:supabase/migrations/20261002002000_woven_account_links.sql:95: NOTICE:  relation "employee_account_links" already exists, skipping
 psql:supabase/migrations/20261002002000_woven_account_links.sql:100: NOTICE:  relation "employee_account_links_one_account_per_employee" already exists, skipping
 psql:supabase/migrations/20261002002000_woven_account_links.sql:129: NOTICE:  relation "employee_access_runs" already exists, skipping
@@ -18,19 +18,19 @@ psql:supabase/migrations/20261002002000_woven_account_links.sql:131: NOTICE:  re
 psql:supabase/migrations/20261002002000_woven_account_links.sql:157: NOTICE:  relation "employee_access_actions" already exists, skipping
 psql:supabase/migrations/20261002002000_woven_account_links.sql:159: NOTICE:  relation "employee_access_actions_by_run" already exists, skipping
 ERROR:  duplicate key value violates unique constraint "employee_account_links_one_account_per_employee"
-DETAIL:  Key (source_system, external_employee_id)=(woven, LS-7e6717-LINKED) already exists.
+DETAIL:  Key (source_system, external_employee_id)=(woven, LS-7abe51-LINKED) already exists.
 ERROR:  new row for relation "employee_account_links" violates check constraint "employee_account_links_linked_names_employee"
-DETAIL:  Failing row contains (1709615d-d9d9-41a0-9d4d-04d89c92a757, woven_linked, woven, null, admin_manual, f, f, f, null, null, null, null, null, null, null, null, test, 2026-10-22 13:55:29.373822+00, 2026-10-22 13:55:29.373822+00).
+DETAIL:  Failing row contains (bc9474d2-b9b5-4ff7-a014-ce028dbd406e, woven_linked, woven, null, admin_manual, f, f, f, null, null, null, null, null, null, null, null, test, 2026-10-22 15:43:58.201082+00, 2026-10-22 15:43:58.201082+00).
 ERROR:  new row for relation "employee_account_links" violates check constraint "employee_account_links_unmanaged_manages_nothing"
-DETAIL:  Failing row contains (1709615d-d9d9-41a0-9d4d-04d89c92a757, not_woven_managed, woven, null, admin_manual, t, f, f, null, null, null, null, null, null, null, null, test, 2026-10-22 13:55:29.43214+00, 2026-10-22 13:55:29.43214+00).
+DETAIL:  Failing row contains (bc9474d2-b9b5-4ff7-a014-ce028dbd406e, not_woven_managed, woven, null, admin_manual, t, f, f, null, null, null, null, null, null, null, null, test, 2026-10-22 15:43:58.258118+00, 2026-10-22 15:43:58.258118+00).
 ERROR:  update or delete on table "app_users" violates foreign key constraint "employee_account_links_app_user_id_fkey" on table "employee_account_links"
-DETAIL:  Key (id)=(686dfd9a-a6c6-4841-9ce7-36e77929f9c3) is still referenced from table "employee_account_links".
+DETAIL:  Key (id)=(403411b8-b40e-4440-8d14-802cfbc0c082) is still referenced from table "employee_account_links".
 ERROR:  employee_access_actions is append-only
 CONTEXT:  PL/pgSQL function public.employee_access_actions_guard() line 3 at RAISE
 ERROR:  employee_access_actions is append-only
 CONTEXT:  PL/pgSQL function public.employee_access_actions_guard() line 3 at RAISE
 ERROR:  new row for relation "employee_access_actions" violates check constraint "employee_access_actions_action_check"
-DETAIL:  Failing row contains (6eb129ff-6c10-4159-a99e-3b1d80da4950, 4fc299bf-5f76-4917-9058-c1739ecdec3a, BAD-2, null, DELETE_EVERYONE, t, {}, null, null, null, shadow, 2026-10-22 13:55:32.185618+00).
+DETAIL:  Failing row contains (fdc0a724-cba6-40fe-9ea0-fa667cea1382, e5ace366-b600-4d83-8b2b-3fb85ce27b8a, BAD-2, null, DELETE_EVERYONE, t, {}, null, null, null, shadow, 2026-10-22 15:44:00.628965+00).
 CONTEXT:  SQL statement "insert into public.employee_access_actions (
     access_run_id, external_employee_id, app_user_id, action, is_primary, reason_codes,
     before_values, after_values, woven_source_at, result
@@ -56,7 +56,7 @@ ERROR:  cannot insert into view "employee_access_accounts"
 DETAIL:  Views that do not select from a single table or view are not automatically updatable.
 HINT:  To enable inserting into the view, provide an INSTEAD OF INSERT trigger or an unconditional ON INSERT DO INSTEAD rule.
 ERROR:  new row for relation "employee_access_runs" violates check constraint "employee_access_runs_mode_check"
-DETAIL:  Failing row contains (d51943ae-55f6-49b0-8b52-a203e70a21aa, apply, x, null, p, completed, {}, {}, 2026-10-22 13:55:34.310985+00).
+DETAIL:  Failing row contains (4ad65b8a-05dc-40df-b37b-ff8d529441fb, apply, x, null, p, completed, {}, {}, 2026-10-22 15:44:02.683605+00).
 
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
 
@@ -65,7 +65,7 @@ AssertionError: expected undefined to deeply equal [ Array(1) ]
 
 - Expected:
 [
-  "b41075a2-d526-4c03-9a56-39a74892f6f5",
+  "07f631e0-ced8-40c9-bc0b-882b39afcc1a",
 ]
 
 + Received:
@@ -86,7 +86,7 @@ AssertionError: expected undefined to deeply equal [ Array(1) ]
 
 - Expected:
 [
-  "b41075a2-d526-4c03-9a56-39a74892f6f5",
+  "07f631e0-ced8-40c9-bc0b-882b39afcc1a",
 ]
 
 + Received:
@@ -107,7 +107,7 @@ AssertionError: expected undefined to deeply equal [ Array(1) ]
 
 - Expected:
 [
-  "b41075a2-d526-4c03-9a56-39a74892f6f5",
+  "07f631e0-ced8-40c9-bc0b-882b39afcc1a",
 ]
 
 + Received:
@@ -126,6 +126,6 @@ undefined
 
  Test Files  1 failed | 1 passed (2)
       Tests  3 failed | 22 passed (25)
-   Start at  13:55:21
-   Duration  12.42s (transform 1.56s, setup 0ms, import 517ms, tests 11.44s, environment 0ms)
+   Start at  15:43:51
+   Duration  11.29s (transform 1.40s, setup 0ms, import 418ms, tests 10.36s, environment 0ms)
 

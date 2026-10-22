@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /home/user/Ask-bubbles
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  15:22:01
+   Duration  1.00s (transform 505ms, setup 0ms, import 597ms, tests 20ms, environment 0ms)
+

@@ -1,0 +1,18 @@
+BEGIN
+SET
+SET
+             instance_id              |  status   |  source   | location_id | created_by_role  |       created_at       |      finalized_at      |      exported_at       | revises_instance_id | filled_by | provenance_source |     payroll_set_at     | plan_states_deduction | proposal_id |                    review_tier                    
+--------------------------------------+-----------+-----------+-------------+------------------+------------------------+------------------------+------------------------+---------------------+-----------+-------------------+------------------------+-----------------------+-------------+---------------------------------------------------
+ 00000000-0000-4000-8000-000000000001 | finalized | assistant | loc-264     | location_manager | 2026-10-21 21:30:00+00 | 2026-10-21 22:00:00+00 | 2026-10-21 22:05:00+00 |                     | system    | manager_statement | 2026-10-21 21:30:00+00 | t                     | prop-1      | A: set from chat at creation — review
+ 00000000-0000-4000-8000-000000000002 | draft     | assistant | loc-264     | location_manager | 2026-10-22 09:00:00+00 |                        |                        |                     | system    | manager_statement | 2026-10-22 09:00:00+00 | f                     | prop-2      | A: set from chat at creation — review
+ 00000000-0000-4000-8000-000000000003 | draft     | assistant | loc-66      | location_manager | 2026-10-22 10:00:00+00 |                        |                        |                     | system    | manager_statement | 2026-10-22 10:00:00+00 | f                     | prop-3      | A: set from chat at creation — review
+ 00000000-0000-4000-8000-000000000007 | draft     | assistant | loc-264     | location_manager | 2026-10-22 13:00:00+00 |                        |                        |                     | system    | manager_statement | 2026-10-22 13:00:00+00 | f                     | prop-7      | A: set from chat at creation — review
+ 00000000-0000-4000-8000-000000000004 | draft     | manual    | loc-66      | location_manager | 2026-10-22 11:00:00+00 |                        |                        |                     | manager   |                   | 2026-10-22 11:00:00+00 | f                     |             | C: manual form, Yes ticked by a person — low risk
+(5 rows)
+
+ yes_in_window | set_from_chat | finalized | exported 
+---------------+---------------+-----------+----------
+             5 |             4 |         1 |        1
+(1 row)
+
+ROLLBACK
