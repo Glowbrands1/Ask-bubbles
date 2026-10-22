@@ -1,5 +1,7 @@
 import "server-only";
 
+import { manualDisplayTitle } from "@/lib/forms/official-policy-manual";
+
 import { NAMED_HANDBOOK, PINNED_KNOWLEDGE_ROLES } from "@/config/company/knowledge";
 import { COMPANY_REPORT_LOADERS } from "@/config/company/reports.server";
 import { ACTIVE_BRAND } from "@/lib/brand";
@@ -184,6 +186,9 @@ export async function answerQuestion(
     });
     if (inventoryAnswer) return inventoryAnswer;
 
+    let manualRead: ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]> | null = null;
+    const readManual = () =>
+      (manualRead ??= new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId));
     const proposal = await proposeFormForTurn({
       history: request.history,
       question: request.question,
@@ -211,10 +216,13 @@ export async function answerQuestion(
        * work policy"), so the reply can name the manual's own section.
        */
       policyManual: async () => {
-        const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(
-          ACTIVE_BRAND.knowledgeScopeId,
-        );
+        const manual = await readManual();
         return manual.ok ? manual.chunks : null;
+      },
+      /* Whether an owner confirmed it (see `ownerConfirmed`). One read serves both. */
+      policyManualIdentity: async () => {
+        const manual = await readManual();
+        return manual.ok ? { title: manualDisplayTitle(manual.documentTitle), confirmed: manual.ownerConfirmed } : null;
       },
     });
     if (proposal) return proposal;

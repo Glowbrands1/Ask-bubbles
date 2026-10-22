@@ -229,6 +229,22 @@ async function review(id: string) {
 }
 
 /** The form card's buttons: Finalize, Edit as new draft. */
+/*
+ * THE MANAGER TICKS THE TYPE OF WARNING ON THE FORM, as the inline editor
+ * saves it. A Corrective Action is filed only with a level the manager chose
+ * or confirmed (owner decision, 22 Oct 2026; `warning-level-gate.ts`).
+ */
+async function chooseLevel(id: string, level = "verbal") {
+  const response = await instanceRoute.PATCH(
+    new Request(`https://app.test/api/forms/instances/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ values: {}, checked: { warning_type: [level] } }),
+    }),
+    { params: Promise.resolve({ id }) },
+  );
+  expect(response.status).toBe(200);
+}
+
 async function act(id: string, body: Record<string, unknown>) {
   const response = await instanceRoute.POST(
     new Request(`https://app.test/api/forms/instances/${id}`, { method: "POST", body: JSON.stringify(body) }),
@@ -471,6 +487,7 @@ describe("two forms from one message, both finalized", () => {
     const avery = await create(answer, coaching!);
     const jordan = await create(thread.find((entry) => entry.id === answer.id)!, ca!);
     await act(avery, { action: "finalize", followUpDate: null, acknowledgeUnverifiedPolicy: true });
+    await chooseLevel(jordan);
     await act(jordan, { action: "finalize", followUpDate: null, acknowledgeUnverifiedPolicy: true });
     return { avery, jordan };
   }
@@ -540,6 +557,7 @@ describe("a finalized Corrective Action Form, changed in chat", () => {
     expect(card!.templateKey).toBe("dpoa");
     const id = await create(answer, card!);
     expect((await valueOf(id, "action_plan"))?.value).toMatch(/^Management will review .+ with Jordan\./);
+    await chooseLevel(id);
     await act(id, { action: "finalize", followUpDate: null, acknowledgeUnverifiedPolicy: true });
     return id;
   }

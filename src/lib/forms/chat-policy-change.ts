@@ -231,6 +231,7 @@ export async function changeActiveFormPolicy(input: {
           documentId: manual.documentId,
           documentTitle: manual.documentTitle,
           matchedBy: manual.matchedBy,
+          ownerConfirmed: manual.ownerConfirmed,
           sections: next,
         }),
         citation: policies,

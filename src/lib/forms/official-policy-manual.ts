@@ -170,6 +170,14 @@ export function manualDisplayTitle(documentTitle: string): string {
   return words.join(" ") || documentTitle.trim();
 }
 
+/**
+ * What a draft says when the policy it quotes is from a manual no owner has
+ * confirmed (owner decision, 22 Oct 2026).
+ */
+export function unconfirmedManualNotice(documentTitle: string): string {
+  return `Policy source: "${manualDisplayTitle(documentTitle)}" (${documentTitle.trim()}) requires owner confirmation as Ask Bubbles' approved policy manual — it was found by its name, and no owner has confirmed it. The section and page are cited; check the quoted wording against your current manual before you finalize. An owner confirms it by tagging that document "official-policy-manual" in the Knowledge Base.`;
+}
+
 /** The document columns an identity decision is made from. */
 export interface ManualCandidateDocument {
   readonly id: string;
@@ -1039,6 +1047,8 @@ export function officialManualProvenance(input: {
   readonly documentId: string;
   readonly documentTitle: string;
   readonly matchedBy: "tag" | "fallback";
+  /** Whether an owner confirmed the document as the approved manual (owner decision, 22 Oct 2026). */
+  readonly ownerConfirmed?: boolean;
   readonly sections: readonly ManualSection[];
 }): Record<string, unknown> {
   return {
@@ -1046,6 +1056,7 @@ export function officialManualProvenance(input: {
     verified: true,
     source: "official_policy_manual",
     matchedBy: input.matchedBy,
+    ...(input.ownerConfirmed === undefined ? {} : { ownerConfirmed: input.ownerConfirmed }),
     documentId: input.documentId,
     documentTitle: input.documentTitle,
     /* Every section cited, each with the evidence that placed it. */

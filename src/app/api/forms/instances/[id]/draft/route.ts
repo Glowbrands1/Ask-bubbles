@@ -89,6 +89,7 @@ import {
   boxSectionNames,
   manualSectionsFor,
   officialManualProvenance,
+  unconfirmedManualNotice,
 } from "@/lib/forms/official-policy-manual";
 import { manualGroundedPolicies, policyFieldValue } from "@/lib/forms/policy-citation";
 import {
@@ -1633,6 +1634,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
                 documentId: manual.documentId,
                 documentTitle: manual.documentTitle,
                 matchedBy: manual.matchedBy,
+                ownerConfirmed: manual.ownerConfirmed,
                 sections: manualSections,
               }),
               /* The structured citation the value was rendered from. */
@@ -1655,6 +1657,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
               documentId: manual.documentId,
               documentTitle: manual.documentTitle,
               matchedBy: manual.matchedBy,
+              ownerConfirmed: manual.ownerConfirmed,
               sections: eppPassages.map((passage) => passage.section),
             }),
           }
@@ -1877,6 +1880,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         evidence.unattributed ? UNATTRIBUTED_REPORT_NOTICE : null,
         exit && exit.detailsRemoved.length > 0 ? EXIT_DETAILS_TRIMMED_NOTICE : null,
         caPolicy && !eventSection ? caPolicyAmbiguousNotice(caPolicy) : null,
+        /* The manual's standing, said: quoted from a manual no owner confirmed (owner decision, 22 Oct 2026). */
+        manual.ok && !manual.ownerConfirmed && (manualSections.length > 0 || eppPassages.length > 0)
+          ? unconfirmedManualNotice(manual.documentTitle)
+          : null,
       ]
         .filter((line): line is string => Boolean(line))
         .join(" ") || null,

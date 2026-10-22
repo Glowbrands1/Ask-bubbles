@@ -31,6 +31,7 @@ import { isQuestion } from "./question";
 import { singleSpokenDate } from "./relative-date";
 import { detectTemplateIntent } from "./template-intent";
 import { saveInstanceValues } from "./instances";
+import { correctCaFromChat } from "./ca-chat-corrections";
 import { enforcePersonEdit } from "./responsibility";
 import { namesIncidentTopic } from "./corrective-action-intake";
 import {
@@ -716,6 +717,13 @@ export async function correctActiveForm(input: {
   if (!statements) return null;
   const lastAssistant =
     [...(input.history ?? [])].reverse().find((turn) => turn.role === "assistant" && !turn.error)?.content ?? "";
+  /*
+   * A DATE OR THE WARNING LEVEL ON AN OPEN CORRECTIVE ACTION (owner decisions,
+   * 22 Oct 2026) — read first, so "confirm the written warning" is recorded as
+   * a confirmation rather than as a level that did not change.
+   */
+  const caCorrection = await correctCaFromChat({ ...input, question: statements, lastAssistant });
+  if (caCorrection) return caCorrection;
 
   const attempt = async (question: string) => {
     const applied: AppliedBy = {};

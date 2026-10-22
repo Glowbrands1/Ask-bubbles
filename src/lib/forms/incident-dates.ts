@@ -106,3 +106,19 @@ export function answersDateQuestion(history: readonly Turn[], question: string, 
   const lastAssistant = [...history].reverse().find((turn) => turn.role === "assistant");
   return !!lastAssistant && askedForDate(lastAssistant.content) && readDateChoice(question, dates.length ? dates : [today], today) !== null;
 }
+
+/**
+ * The incident date a later turn corrected the conversation to — "the meeting
+ * was actually on 10-19-26" — or null. The same reading as the date choice
+ * above, over the manager's own turns: the latest correcting turn after the
+ * first that gives one incident date and adds no other incident.
+ */
+export function correctedIncidentDate(turns: readonly string[], today: string): string | null {
+  let date: string | null = null;
+  for (const turn of turns.slice(1)) {
+    if (!CORRECTS_DATE.test(turn) || ADDS_AN_INCIDENT.test(turn)) continue;
+    const own = incidentDates(turn, today);
+    if (own.length === 1) date = own[0]!;
+  }
+  return date;
+}

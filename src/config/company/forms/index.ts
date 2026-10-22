@@ -57,11 +57,13 @@ export const COMPANY_FORMS: readonly CompanyFormDefinition[] = TEMPLATE_SEEDS.ma
    * person may edit (`chat-correction.ts`). A form's own readers (transfer,
    * demotion, exit, payroll) still run first.
    *
-   * EXCEPT THE CORRECTIVE ACTION FORM, whose chat corrections are limited to
-   * the payroll-deduct answer by an explicit decision on the reference
-   * platform (its `corrective-action-ca-alias-and-payroll-deduct.md`: "for the
-   * CA form this is the only thing chat corrects"). A formal disciplinary
-   * record keeps that rule until the business decides otherwise.
+   * EXCEPT THE CORRECTIVE ACTION FORM, which does not use this generic header
+   * reader. The business decided (owner decision, 22 Oct 2026) that a CA
+   * draft's dates may be corrected from chat, but by the CA's own reader
+   * (`ca-chat-corrections.ts`): it tells the incident date, the Date line and
+   * a prior action's date apart, asks when it cannot tell, rewrites only an
+   * account the assistant drafted, records each change, and never writes a
+   * finalized form in place. The name line stays uncorrectable here.
    */
   chatCorrectableFields: seed.key === "dpoa" ? [] : ["employee_name", "form_date"],
   status: "approved",

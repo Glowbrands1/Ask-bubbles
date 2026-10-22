@@ -39,6 +39,7 @@ import {
 import {
   CA_POLICY_QUESTION,
   caPolicyProposalLine,
+  unconfirmedManualLine,
   groundMissedEvent,
   MISSED_EVENT_OFFENSE,
   missedEventPhrase,
@@ -85,7 +86,8 @@ import {
 } from "@/lib/forms/employment-change";
 import { businessToday } from "@/lib/business-date";
 import { locationById } from "@/lib/locations";
-import { correctedDates, extractFormDate } from "@/lib/forms/form-date-answer";
+import { correctedDates, datesInText, extractFormDate, priorSteps } from "@/lib/forms/form-date-answer";
+import { rewriteDate } from "@/lib/forms/ca-chat-dates";
 import { endsIntake } from "@/lib/forms/proposal-continuation";
 import { LEAD_IN, separateQuestions } from "@/lib/forms/message-parts";
 import {
@@ -117,6 +119,7 @@ import {
 import { readLocationMentions } from "@/lib/forms/location-mention";
 import {
   answersDateQuestion,
+  correctedIncidentDate,
   dateAlreadyAsked,
   dateAnsweredIn,
   dateQuestion,
@@ -375,6 +378,12 @@ export interface ProposalTurn {
    * in the manager's own words and the draft looks it up.
    */
   policyManual?: () => Promise<readonly ManualChunk[] | null>;
+  /**
+   * Which manual `policyManual` read, and whether an owner has confirmed it as
+   * the approved one. Null when unknown; a section cited from an unconfirmed
+   * manual is said to require owner confirmation.
+   */
+  policyManualIdentity?: () => Promise<{ readonly title: string; readonly confirmed: boolean } | null>;
   /**
    * The server's business day (`YYYY-MM-DD`), which supplies the year for a
    * form date typed as month and day. See `lib/forms/form-date-answer.ts`.
@@ -1042,7 +1051,7 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     changeKind && facts
       ? employmentChangeContent(changeKind, facts, proposal, context)
       : proposalContent(proposal, scoped, match, input.today ?? businessToday(), {
-          namedPolicy: isCorrectiveActionForm(match) ? await namedPolicyFor(scoped.text, input) : null,
+          namedPolicy: isCorrectiveActionForm(match) ? await withManualIdentity(await namedPolicyFor(scoped.text, input), input) : null,
         });
   return turn(withNotes(content, notes), proposal);
 }
@@ -1628,7 +1637,6 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
    */
   if (
     continued &&
-    spoken.kind !== "none" &&
     !isQuestion(input.question) &&
     extractEmployeeNames(input.question).length === 0 &&
     correctsTheIntake(input.question, input.today ?? businessToday())
@@ -1741,11 +1749,43 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
   return { kind: "explicit", templateKey: continued };
 }
 
+/**
+ * THE ISSUE LINE SAYS WHAT THE FORM WILL SAY. It quotes the account as first
+ * given, so after "the meeting was actually on 10-19-26" the card read "…on
+ * 10-20-26" beside a form dated 10/19 (QA, 22 Oct 2026). A date the manager
+ * retracted ("9-2, not 9-1") or corrected in a later turn is rewritten in the
+ * shape it was typed; an Issue naming several dates is left as it is.
+ */
+function issueWithCorrectedDates(issue: string | null | undefined, turns: readonly string[], today: string): string | null {
+  if (!issue) return issue ?? null;
+  let text = issue;
+  for (const [from, to] of correctedDates(turns.join("\n\n"), today)) text = rewriteDate(text, from, to, today).text;
+  const corrected = correctedIncidentDate(turns, today);
+  const dates = [...new Set(datesInText(text, today).map((found) => found.iso))];
+  if (corrected && dates.length === 1 && dates[0] !== corrected) text = rewriteDate(text, dates[0]!, corrected, today).text;
+  return text;
+}
+
 /** "Sorry, … not 9-1-26", "actually it was 10-19": the turn corrects what the intake already holds. */
 function correctsTheIntake(question: string, today: string): boolean {
   return (
     /^\s*(?:sorry|oops|actually|correction|wait|my\s+(?:mistake|bad)|typo)\b/i.test(question) ||
-    correctedDates(question, today).size > 0
+    correctedDates(question, today).size > 0 ||
+    statesHistoryOnly(question, today)
+  );
+}
+
+/*
+ * "PRIOR COACHING: JBA POLICY MANUAL 1-1-26" — the employee's history, typed
+ * as its own turn while the Corrective Action is open (QA, 22 Oct 2026). It
+ * names coaching, so it read as a request for a Coaching Form and the card
+ * never heard it. A turn that dates an earlier step and asks for nothing is
+ * this form's history.
+ */
+function statesHistoryOnly(question: string, today: string): boolean {
+  return (
+    priorSteps(question, today).length > 0 &&
+    !/\b(?:create|make\s+(?:a|an|it)|start|draft|new|another|need\s+(?:a|an)|open|pull\s+up|write\s+up)\b/i.test(question)
   );
 }
 
@@ -1944,9 +1984,11 @@ function turnsAboutThisForm(
      * dropped the account, the policy and the prior actions given before it).
      */
     const aboutThisForm =
-      options.correctiveActionForm === true && intent.kind === "corrective_action" && !intent.requestedCreation;
+      options.correctiveActionForm === true &&
+      ((intent.kind === "corrective_action" && !intent.requestedCreation) ||
+        statesHistoryOnly(message.content, businessToday()));
     const otherForm =
-      (intent.kind === "explicit" && intent.templateKey !== templateKey) ||
+      (intent.kind === "explicit" && intent.templateKey !== templateKey && !aboutThisForm) ||
       (intent.kind === "corrective_action" && !thisForm && !aboutThisForm);
     const names = extractEmployeeNames(message.content);
     // A turn that also names somebody else is about them too, and stays off this form.
@@ -2265,6 +2307,18 @@ function choice(summary: TemplateSummary): ChatFormChoice {
  * named none. Never throws: a manual that cannot be read leaves the lookup to
  * the draft, as before.
  */
+/** The cited section, marked where its manual is not confirmed as the approved one. */
+async function withManualIdentity(named: NamedPolicyReading | null, input: ProposalTurn): Promise<NamedPolicyReading | null> {
+  if (!named || (named.lookup !== "found" && named.lookup !== "described")) return named;
+  let identity: { readonly title: string; readonly confirmed: boolean } | null = null;
+  try {
+    identity = (await input.policyManualIdentity?.()) ?? null;
+  } catch {
+    identity = null;
+  }
+  return identity && !identity.confirmed ? { ...named, unconfirmedManual: identity.title } : named;
+}
+
 async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedPolicyReading | null> {
   if (readCaPolicy(text).stated !== null) return null;
   const named = namedPolicies(text);
@@ -2452,7 +2506,11 @@ function proposalContent(
   }
 
   if (isCorrectiveActionForm(match)) {
-    proposal.issue = correctiveActionIssue(context.text, proposal.employeeName);
+    proposal.issue = issueWithCorrectedDates(
+      correctiveActionIssue(context.text, proposal.employeeName),
+      context.messages.map((message) => message.content),
+      today,
+    );
     const intake = readCorrectiveActionIntake({
       text: context.text,
       employeeKnown: proposal.employeeName !== null,
@@ -2731,6 +2789,8 @@ function correctiveActionReady(
    */
   const policyLine = caPolicyProposalLine(policy, warning.namedPolicy ?? null);
   if (policyLine) lines.push("", policyLine);
+  const sourceLine = policyLine ? unconfirmedManualLine(warning.namedPolicy ?? null) : null;
+  if (sourceLine) lines.push("", sourceLine);
 
   /*
    * THE LEVEL, ASKED WHEN IT WAS NOT STATED (a stated one is read back above).
