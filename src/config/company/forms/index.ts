@@ -67,11 +67,15 @@ export const COMPANY_FORMS: readonly CompanyFormDefinition[] = TEMPLATE_SEEDS.ma
    * THE CORRECTIVE ACTION FORM TAKES ITS DATE ONLY. Its chat corrections were
    * limited to the payroll-deduct answer by an explicit decision on the
    * reference platform (its `corrective-action-ca-alias-and-payroll-deduct.md`).
-   * The business decided otherwise for the date (22 Oct 2026, after the QA
-   * audit of the District Manager's 21 Oct reports): "change the date to
-   * 10-19-26" corrects it, read by the form's own readers
-   * (`chat-correction.ts`), and the drafted observation's date moves with it.
-   * Its employee name is still corrected on the form, never from chat.
+   * The business decided otherwise for the dates (owner decision, 22 Oct 2026,
+   * after the QA audit of the District Manager's 21 Oct reports). The CA's own
+   * reader (`ca-chat-corrections.ts`) runs first: it tells the incident date,
+   * the Date line and a prior action's date apart, rewrites only an account
+   * the assistant drafted, records each change, and never writes a finalized
+   * form in place. What it does not read — "change the date to yesterday", a
+   * date beside a payroll answer, "10-2 or 10-3" — is read here, by the form's
+   * own readers (`chat-correction.ts`). Its employee name is still corrected
+   * on the form, never from chat.
    */
   chatCorrectableFields: seed.key === "dpoa" ? ["form_date"] : ["employee_name", "form_date"],
   ...(seed.key === "dpoa" ? { formDateIsIncidentDate: true } : {}),

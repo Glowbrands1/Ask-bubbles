@@ -4,6 +4,7 @@ import { JOIN } from "./bounded-context";
 import { correctiveActionIssue } from "./incident-issue";
 
 import {
+  warningLevelFromConversation,
   mentionsEarlierWarning,
   statedWarningLevel,
   warningLevelChecked,
@@ -594,5 +595,48 @@ describe("the level beside the payroll answer", () => {
     expect(warningLevelCorrection("written warning; no payroll", DAY)).toBe("written");
     // A new account with the level in it is a request, not a correction.
     expect(warningLevelCorrection("jordan was late today. verbal warning, no payroll", DAY)).toBeNull();
+  });
+});
+
+describe("requests put as questions, and a prior-coaching follow-up (QA, 22 Oct 2026)", () => {
+  it.each([
+    ["Can you make a written CA?", "written"],
+    ["could you please make a verbal warning for her?", "verbal"],
+  ] as const)("asks for the level: %s", (text, level) => {
+    expect(statedWarningLevel(text, TODAY)).toBe(level);
+  });
+
+  it.each(["should this be a written CA?", "is a verbal warning enough here?"])("a question about the level decides nothing: %s", (text) => {
+    expect(statedWarningLevel(text, TODAY)).toBeNull();
+  });
+
+  it("a history-only follow-up does not cut the look-back off from the request's level", () => {
+    expect(
+      warningLevelFromConversation(
+        [
+          { role: "user", content: "create a written CA for tess varga for not attending the monthly meeting on 10-08-26" },
+          { role: "assistant", content: "I'll draft a Corrective Action Form for Tess Varga." },
+          { role: "user", content: "prior coaching: jba policy manual 1-1-26, verbal ca 9-1-26" },
+        ],
+        TODAY,
+      ),
+    ).toBe("written");
+  });
+});
+
+describe("a change of mind as the whole turn (QA, 22 Oct 2026)", () => {
+  it.each([
+    ["no, written after all", "written"],
+    ["make it written again", "written"],
+    ["go back to verbal", "verbal"],
+    ["let's do verbal instead", "verbal"],
+    ["change it back to written", "written"],
+  ] as const)("%s", (text, level) => {
+    expect(statedWarningLevel(text, TODAY)).toBe(level);
+    expect(warningLevelCorrection(text, TODAY)).toBe(level);
+  });
+
+  it.each(["she got a written warning again", "written again on 9/1"])("is not a change of mind inside an account: %s", (text) => {
+    expect(warningLevelCorrection(text, TODAY)).toBeNull();
   });
 });

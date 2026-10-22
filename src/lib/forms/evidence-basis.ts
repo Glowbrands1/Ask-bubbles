@@ -43,6 +43,7 @@ export const EVIDENCE_BASIS_RULES: readonly string[] = [
   "Something the manager saw or heard themselves is written as what they observed.",
   "Mention a recording, camera footage, a photo, a receipt, a written statement, a witness or any other evidence only if the manager mentioned it. Never add evidence.",
   "Say that something was confirmed, verified, admitted, acknowledged or found by an investigation only if the manager said so.",
+  "Call an absence a no call/no show, or say the employee did not call, notify or tell anyone, only if the manager said so.",
 ];
 
 /**
@@ -108,6 +109,24 @@ const CERTAINTY: readonly { pattern: RegExp; family: RegExp }[] = [
   { pattern: /\b(?:conclusively|undeniabl[ey]|beyond\s+(?:any\s+)?doubt)\b/i, family: /\b(?:conclusive\w*|undeniabl\w*|no doubt)\b/i },
 ];
 
+/**
+ * WHAT AN ABSENCE WAS. "A no call/no show", or that she did not call, notify or
+ * tell anyone, is the fact a manual rule turns on (a seminar missed without
+ * notifying the Supervisor counts as a no call no show) — QA, 22 Oct 2026. A
+ * sentence saying it survives only where the manager's words say it.
+ */
+const UNSTATED_FINDINGS: readonly { pattern: RegExp; family: RegExp }[] = [
+  {
+    pattern: /\bno[- ]?call[,/ -]*(?:and\s+)?no[- ]?show\b|\bncns\b|\bjob\s+abandonment\b/i,
+    family: /\bno[- ]?call\b|\bncns\b|\bno[- ]?show\b|\babandon\w*/i,
+  },
+  {
+    pattern:
+      /\b(?:without|did ?n[o']?t|didn['’]t|never|failed\s+to|neglected\s+to)\s+(?:\w+\s+){0,2}?(?:notify\w*|call(?:ing|ed)?|inform\w*|tell\w*|contact\w*|let\s+(?:\w+\s+)?know|giving\s+notice|notice)\b/i,
+    family: /\b(?:notif\w*|notice|call\w*|inform\w*|told|tell\w*|contact\w*|text\w*|let\s+\w+\s+know|heads[- ]up|no[- ]?show|ncns)\b/i,
+  },
+];
+
 /** Somebody else told the manager. */
 const REPORTED = [
   // Third parties only: the employee's own explanation ("she said her car
@@ -149,7 +168,7 @@ export function unsupportedEvidence(sentence: string, source: string): string[] 
     if (entry.contextual && !EVIDENTIARY.test(sentence)) continue;
     missing.push(match[0]);
   }
-  for (const entry of CERTAINTY) {
+  for (const entry of [...CERTAINTY, ...UNSTATED_FINDINGS]) {
     const match = entry.pattern.exec(sentence);
     if (match && !entry.family.test(source)) missing.push(match[0]);
   }
@@ -233,7 +252,7 @@ export function guardEvidenceBasis(values: Record<string, string>, source: strin
 
 /** Said when a sentence naming unmentioned evidence or a confirmation was removed. */
 export const EVIDENCE_REMOVED_NOTICE =
-  "Wording that named evidence, a confirmation or an admission your notes did not mention was removed. Add it back only if it is true and documented.";
+  "Wording that named evidence, a confirmation or an admission your notes did not mention, or called an absence a no call/no show, was removed. Add it back only if it is true and documented.";
 
 /** Said when the notes relay only a report and the draft does not say it was reported. */
 export const UNATTRIBUTED_REPORT_NOTICE =

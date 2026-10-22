@@ -34,6 +34,7 @@ import { isQuestion } from "./question";
 import { singleSpokenDate } from "./relative-date";
 import { detectTemplateIntent } from "./template-intent";
 import { applyAssistantDraft, saveInstanceValues } from "./instances";
+import { correctCaFromChat } from "./ca-chat-corrections";
 import { enforcePersonEdit } from "./responsibility";
 import { namesIncidentTopic } from "./corrective-action-intake";
 import {
@@ -835,7 +836,6 @@ export async function correctActiveForm(input: {
   if (!statements) return null;
   const lastAssistant =
     [...(input.history ?? [])].reverse().find((turn) => turn.role === "assistant" && !turn.error)?.content ?? "";
-
   const attempt = async (question: string) => {
     const applied: AppliedBy = {};
     const response =
@@ -862,6 +862,17 @@ export async function correctActiveForm(input: {
 
   let { response, applied } = await attempt(statements);
   if (applied.finalized) return onNewDraft();
+  /*
+   * A DATE ON AN OPEN CORRECTIVE ACTION THE READERS ABOVE DID NOT TAKE (owner
+   * decision, 22 Oct 2026): "the meeting was actually on 10-19-26", a prior
+   * action's date. The form's own readers own the Date line ("change the date
+   * to 10-2-26"); the CA's reader (`ca-chat-corrections.ts`) answers what they
+   * leave, and is null for anything else.
+   */
+  if (!response) {
+    const caCorrection = await correctCaFromChat({ ...input, question: statements, lastAssistant });
+    if (caCorrection) return caCorrection;
+  }
   /*
    * "Change her new location to salon 24 and rewrite the reason …" reads as
    * nothing whole. Its explicit correction clauses are read alone — never a
