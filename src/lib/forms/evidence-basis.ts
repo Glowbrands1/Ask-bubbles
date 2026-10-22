@@ -111,8 +111,8 @@ const CERTAINTY: readonly { pattern: RegExp; family: RegExp }[] = [
 
 /**
  * WHAT AN ABSENCE WAS. "A no call/no show", or that she did not call, notify or
- * tell anyone, is the fact a manual rule turns on ("… without notifying your
- * Supervisor, it is considered a no call no show") — QA, 22 Oct 2026. A
+ * tell anyone, is the fact a manual rule turns on (a seminar missed without
+ * notifying the Supervisor counts as a no call no show) — QA, 22 Oct 2026. A
  * sentence saying it survives only where the manager's words say it.
  */
 const UNSTATED_FINDINGS: readonly { pattern: RegExp; family: RegExp }[] = [
