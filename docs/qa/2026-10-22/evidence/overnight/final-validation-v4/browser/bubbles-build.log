@@ -1,0 +1,118 @@
+▲ Next.js 16.3.3 (Turbopack)
+✓ Running next.config.ts took 226ms
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
+
+  To migrate automatically, run:
+  npx @next/codemod@canary middleware-to-proxy .
+
+  Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 7.1s
+  Running TypeScript ...
+  Finished TypeScript in 8.0s ...
+  Collecting page data using 3 workers ...
+  Generating static pages using 3 workers (0/4) ...
+  Generating static pages using 3 workers (1/4) 
+  Generating static pages using 3 workers (2/4) 
+  Generating static pages using 3 workers (3/4) 
+✓ Generating static pages using 3 workers (4/4) in 301ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /admin/ai-usage
+├ ƒ /admin/analytics
+├ ƒ /admin/analytics/[view]
+├ ƒ /admin/integrations
+├ ƒ /admin/integrations/google-reviews
+├ ƒ /admin/integrations/woven
+├ ƒ /admin/integrations/woven-knowledge
+├ ƒ /admin/integrations/woven/[view]
+├ ƒ /admin/integrations/woven/[view]/[id]
+├ ƒ /admin/users
+├ ƒ /api/admin/employees/woven/accounts
+├ ƒ /api/admin/employees/woven/changes
+├ ƒ /api/admin/employees/woven/changes/[id]
+├ ƒ /api/admin/employees/woven/directory
+├ ƒ /api/admin/employees/woven/eligibility
+├ ƒ /api/admin/employees/woven/invite-suggestion
+├ ƒ /api/admin/employees/woven/links
+├ ƒ /api/admin/employees/woven/locations
+├ ƒ /api/admin/employees/woven/positions
+├ ƒ /api/admin/employees/woven/provision
+├ ƒ /api/admin/employees/woven/runs
+├ ƒ /api/admin/employees/woven/sync
+├ ƒ /api/admin/employees/woven/validate
+├ ƒ /api/admin/feedback/[id]
+├ ƒ /api/admin/google-reviews/callback
+├ ƒ /api/admin/google-reviews/connect
+├ ƒ /api/admin/google-reviews/disconnect
+├ ƒ /api/admin/google-reviews/locations
+├ ƒ /api/admin/google-reviews/reviews
+├ ƒ /api/admin/google-reviews/sync
+├ ƒ /api/admin/knowledge-sync/woven
+├ ƒ /api/admin/knowledge-sync/woven/audiences
+├ ƒ /api/admin/knowledge-sync/woven/content
+├ ƒ /api/admin/knowledge-sync/woven/preview-part
+├ ƒ /api/admin/knowledge-sync/woven/run
+├ ƒ /api/admin/knowledge-sync/woven/test
+├ ƒ /api/admin/users
+├ ƒ /api/admin/users/[id]
+├ ƒ /api/admin/users/[id]/recovery
+├ ƒ /api/admin/users/[id]/reset-link
+├ ƒ /api/auth/accept-invitation
+├ ƒ /api/auth/forgot-password
+├ ƒ /api/chat
+├ ƒ /api/chat/conversations
+├ ƒ /api/chat/conversations/[id]
+├ ƒ /api/chat/conversations/import
+├ ƒ /api/chat/feedback
+├ ƒ /api/employees/woven/cron
+├ ƒ /api/forms/instances
+├ ƒ /api/forms/instances/[id]
+├ ƒ /api/forms/instances/[id]/draft
+├ ƒ /api/forms/instances/[id]/follow-up
+├ ƒ /api/forms/instances/[id]/pdf
+├ ƒ /api/forms/templates
+├ ƒ /api/forms/templates/[key]
+├ ƒ /api/forms/templates/[key]/draft
+├ ƒ /api/forms/templates/[key]/extract
+├ ƒ /api/forms/templates/[key]/pdf
+├ ƒ /api/forms/templates/[key]/preview
+├ ƒ /api/forms/templates/[key]/publish
+├ ƒ /api/google-reviews/cron
+├ ƒ /api/google-reviews/notify
+├ ƒ /api/health
+├ ƒ /api/knowledge-sync/woven/cron
+├ ƒ /api/knowledge/documents
+├ ƒ /api/knowledge/documents/[id]
+├ ƒ /api/knowledge/documents/[id]/file
+├ ƒ /api/knowledge/documents/[id]/reindex
+├ ƒ /api/knowledge/search
+├ ƒ /api/knowledge/upload
+├ ƒ /auth/accept
+├ ƒ /auth/callback
+├ ƒ /auth/recovery
+├ ƒ /auth/recovery-continue
+├ ƒ /auth/recovery-start
+├ ƒ /chat
+├ ƒ /forgot-password
+├ ƒ /forms/monitoring
+├ ƒ /forms/templates
+├ ƒ /forms/templates/[key]
+├ ƒ /history
+├ ƒ /knowledge
+├ ƒ /knowledge/document/[id]
+├ ƒ /login
+├ ƒ /reports
+├ ƒ /reports/[reportId]
+├ ƒ /reset-password
+└ ƒ /reviews
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+

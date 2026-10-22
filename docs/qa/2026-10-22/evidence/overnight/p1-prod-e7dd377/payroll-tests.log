@@ -1,0 +1,10 @@
+
+ RUN  v4.1.11 /home/user/bubbles-main
+
+Not implemented: navigation to another Document
+
+ Test Files  46 passed (46)
+      Tests  2588 passed (2588)
+   Start at  19:06:36
+   Duration  37.44s (transform 11.94s, setup 0ms, import 26.73s, tests 70.56s, environment 3.27s)
+

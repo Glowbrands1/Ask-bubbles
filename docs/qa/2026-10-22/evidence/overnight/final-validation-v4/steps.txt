@@ -1,0 +1,5 @@
+Ask-bubbles 7e68a0e full suite exit 0 (435s)
+ Test Files  421 passed | 6 skipped (427)
+      Tests  10161 passed | 59 skipped (10220)
+Ask-bubbles tsc exit 0
+Ask-bubbles eslint exit 0 :: ✖ 9 problems (0 errors, 9 warnings)

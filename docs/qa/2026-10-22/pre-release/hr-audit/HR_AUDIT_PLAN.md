@@ -8,7 +8,7 @@ Find Corrective Action Forms in Ask Bubbles on which "Is payroll deduct applicab
 
 - **In scope:** Ask Bubbles only; template `dpoa` (Corrective Action Form); field `payroll_deduct` ticked `yes`; set inside the defect window.
 - **Out of scope:** Ask Sunny (production not affected), every other template and field, any automatic change, any data outside Ask Bubbles' database.
-- **Window:** from the first **production deployment** containing commit `11d1728` (Ask Bubbles PR #63, merged 2026-10-21 20:55:22 UTC) until the fix is deployed. Until the deployment time is confirmed, use the merge time as a conservative start.
+- **Window (confirmed from Vercel's deployment history, read-only, 22 Oct 2026):** **2026-10-21 20:55:49 UTC** (production deployment `dpl_Dj3AEwdZqewg5tghmhRCeXoPsdFi` of `11d1728`, PR #63, became ready) **to 2026-10-22 19:00:51 UTC** (production deployment `dpl_qapWgWpjkZjZ3SQk7okAmXUvBm2V` of the fix `e7dd377`, PR #67, became ready). Use `-v window_start='2026-10-21 20:55:49+00' -v window_end='2026-10-22 19:00:51+00'`.
 
 ## 2. Principles
 
@@ -56,8 +56,8 @@ Find Corrective Action Forms in Ask Bubbles on which "Is payroll deduct applicab
 
 ## 5. Steps
 
-### Step 0 — confirm the window (G0)
-Read the Ask Bubbles production deployment list and note the first deployment containing `11d1728` (start) and the deployment containing the fix (end). Read-only.
+### Step 0 — confirm the window (G0) — done
+Confirmed from the Vercel deployment list (read-only): start 2026-10-21 20:55:49 UTC, end 2026-10-22 19:00:51 UTC (see Scope). Nothing else is needed for G0.
 
 ### Step 1 — Phase A: candidates, metadata only (G1)
 ```bash
