@@ -1222,7 +1222,7 @@ describe("P4. finalizing freezes the version the SERVER holds", () => {
 
     await screen.findByDisplayValue("Arrived late on three shifts this week.");
     fireEvent.click(screen.getByRole("button", { name: /^finalize$/i }));
-    expect(await screen.findByRole("dialog", { name: /policy verification is incomplete/i })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: /does not see this policy in the knowledge base/i })).toBeTruthy();
     expect(screen.queryByRole("dialog", { name: "Finalize this form?" })).toBeNull();
   });
 
@@ -1253,7 +1253,7 @@ describe("P4. finalizing freezes the version the SERVER holds", () => {
     fireEvent.click(screen.getByRole("button", { name: /^finalize$/i }));
     fireEvent.click(await screen.findByRole("button", { name: /yes, finalize/i }));
 
-    expect(await screen.findByRole("dialog", { name: /policy verification is incomplete/i })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: /does not see this policy in the knowledge base/i })).toBeTruthy();
     expect(container.textContent).not.toContain("Policy verification is required before this form");
     expect(server().instance.status).toBe("draft");
   });
@@ -1300,7 +1300,7 @@ describe("P4. finalizing freezes the version the SERVER holds", () => {
     await waitFor(() => expect(screen.getByText("Saved")).toBeTruthy());
 
     fireEvent.click(screen.getByRole("button", { name: /^finalize$/i }));
-    expect(await screen.findByRole("dialog", { name: /policy verification is incomplete/i })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: /does not see this policy in the knowledge base/i })).toBeTruthy();
     expect(recorded.some((made) => made.method === "POST" && made.body.action === "finalize")).toBe(
       false,
     );
@@ -1785,7 +1785,7 @@ describe("the policy-verification notice", () => {
 
     expect(notice).toMatch(/Policy verification is still required/);
     expect(notice).toMatch(/entered by hand/i);
-    expect(notice).toMatch(/cannot vouch for wording it did not retrieve/i);
+    expect(notice).toMatch(/Woven does not see this policy in the knowledge base/);
     // And it still distinguishes the one that is simply blank.
     expect(notice).toMatch(/“Direct policy from official manual” is blank/);
   });
@@ -1821,7 +1821,7 @@ describe("the policy-verification notice", () => {
 
     expect(notice).toMatch(/You didn't tell Bubbles what happened/);
     expect(notice).toMatch(/redraft this form with the manual's section and page cited/);
-    expect(notice).not.toMatch(/no approved policy matched/);
+    expect(notice).not.toMatch(/Woven does not see/);
   });
 
   it("stays quiet while Bubbles is still writing", () => {
