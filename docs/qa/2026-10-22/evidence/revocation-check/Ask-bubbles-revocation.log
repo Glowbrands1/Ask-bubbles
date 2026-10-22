@@ -1,0 +1,79 @@
+
+ RUN  v4.1.11 /home/user/Ask-bubbles
+
+ ❯ src/lib/auth/revocation.local-stack.test.ts (13 tests | 3 failed) 7570ms
+     × BEFORE: the person can use Ask Bubbles' API, read knowledge with their token, and holds two sessions 2417ms
+     × CONTROL: an active colleague's token still reads knowledge, so the policy is not simply closed 152ms
+     × an explicit re-enable (the approved-rehire mechanics) lifts the ban and the password works again 237ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/auth/revocation.local-stack.test.ts > termination on a real Supabase Auth server (local stack) > BEFORE: the person can use Ask Bubbles' API, read knowledge with their token, and holds two sessions
+AssertionError: expected undefined to deeply equal [ Array(1) ]
+
+- Expected:
+[
+  "6b6ce031-05b9-487f-8afd-99acd684a9d9",
+]
+
++ Received:
+undefined
+
+ ❯ src/lib/auth/revocation.local-stack.test.ts:150:36
+    148|
+    149|     const { data } = await tokenClient(sessionA.access_token).from("kn…
+    150|     expect(data?.map((d) => d.id)).toEqual([documentId]);
+       |                                    ^
+    151|     const { data: chunks } = await tokenClient(sessionA.access_token).…
+    152|     expect(chunks).toHaveLength(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/lib/auth/revocation.local-stack.test.ts > termination on a real Supabase Auth server (local stack) > CONTROL: an active colleague's token still reads knowledge, so the policy is not simply closed
+AssertionError: expected undefined to deeply equal [ Array(1) ]
+
+- Expected:
+[
+  "6b6ce031-05b9-487f-8afd-99acd684a9d9",
+]
+
++ Received:
+undefined
+
+ ❯ src/lib/auth/revocation.local-stack.test.ts:208:41
+    206|     const { data } = await anonClient().auth.signInWithPassword({ emai…
+    207|     const { data: documents } = await tokenClient(data.session!.access…
+    208|     expect(documents?.map((d) => d.id)).toEqual([documentId]);
+       |                                         ^
+    209|   });
+    210|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/lib/auth/revocation.local-stack.test.ts > termination on a real Supabase Auth server (local stack) > an explicit re-enable (the approved-rehire mechanics) lifts the ban and the password works again
+AssertionError: expected undefined to deeply equal [ Array(1) ]
+
+- Expected:
+[
+  "6b6ce031-05b9-487f-8afd-99acd684a9d9",
+]
+
++ Received:
+undefined
+
+ ❯ src/lib/auth/revocation.local-stack.test.ts:261:41
+    259|     expect(error).toBeNull();
+    260|     const { data: documents } = await tokenClient(data.session!.access…
+    261|     expect(documents?.map((d) => d.id)).toEqual([documentId]);
+       |                                         ^
+    262|   });
+    263|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 10 passed (13)
+   Start at  13:51:39
+   Duration  8.30s (transform 2.69s, setup 0ms, import 340ms, tests 7.57s, environment 0ms)
+

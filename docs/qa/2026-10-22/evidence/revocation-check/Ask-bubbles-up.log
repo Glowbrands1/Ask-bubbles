@@ -1,0 +1,8 @@
+== postgres
+== mailpit
+== supabase auth
+== migrations
+   applied 41 migrations
+== postgrest
+== gateway
+== up. Environment: /tmp/qa-stack-rev-Ask-bubbles/env

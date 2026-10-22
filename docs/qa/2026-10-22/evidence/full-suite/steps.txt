@@ -1,0 +1,12 @@
+Ask-bubbles full suite exit 1 (486s)
+ Test Files  1 failed | 417 passed | 6 skipped (424)
+      Tests  1 failed | 10096 passed | 59 skipped (10156)
+Ask-bubbles tsc exit 0
+Ask-bubbles eslint exit 0 :: ✖ 9 problems (0 errors, 9 warnings)  
+Ask-bubbles rerun HEAD=2ea0a937355e67902f3992d4961323e6354caf32
+Ask-bubbles full suite (final) exit 0 (486s)
+ Test Files  418 passed | 6 skipped (424)
+      Tests  10097 passed | 59 skipped (10156)
+Ask-bubbles tsc (final) exit 0
+Ask-bubbles eslint (final 2ea0a93) exit 0 :: ✖ 9 problems (0 errors, 9 warnings)
+eslint origin/main for comparison: sunny-main 1feaa75 ✖ 3 problems (0 errors, 3 warnings); bubbles-main 3395e8d ✖ 9 problems (0 errors, 9 warnings)
