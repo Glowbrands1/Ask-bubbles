@@ -25,8 +25,8 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
  * — with the employee's name replaced. What is under test is whether the code
  * now around the model turns that into the form the manager asked for.
  *
- * The manual is the real JBA Policy Manual's sections, verbatim, with the
- * neighbouring sections a lookup must not land on
+ * The manual is the JBA Policy Manual's layout (headings, pages, sections)
+ * with invented wording, and the neighbouring sections a lookup must not land on
  * (`test/fixtures/jba-manual-ca-sections.ts`). Faked: identity, the database
  * (in-memory), the employee directory read, the general-answer model, and
  * analytics. Every person is synthetic.
