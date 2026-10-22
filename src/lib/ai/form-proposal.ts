@@ -114,9 +114,7 @@ import {
 import { readLocationMentions } from "@/lib/forms/location-mention";
 import {
   answersDateQuestion,
-  dateAlreadyAsked,
-  dateAnsweredIn,
-  dateQuestion,
+  decideFormDate,
   incidentDates,
 } from "@/lib/forms/incident-dates";
 import {
@@ -1168,22 +1166,16 @@ function directoryNotes(
   const today = input.today ?? businessToday();
 
   /*
-   * SEVERAL INCIDENT DATES: the form's Date is chosen on purpose. One date dates
-   * the form (as always); several are asked about once, and until the manager
-   * chooses the form carries the day it is created — never whichever incident
-   * was typed first. See `incident-dates.ts`.
+   * THE FORM'S DATE, BY WHAT EACH DATE MEANS: a date given to the form, the
+   * coaching a Coaching Form documents, or — with several incident dates — the
+   * manager's answer to "which date?", asked once; until then the form carries
+   * the day it is created, never whichever incident was typed first. See
+   * `decideFormDate` in `incident-dates.ts`.
    */
-  if (POSITION_TEMPLATES.has(match.key)) {
-    const dates = incidentDates(context.text, today);
-    if (dates.length > 1) {
-      const choice = dateAnsweredIn(conversation, dates, today);
-      proposal.formDate = choice?.kind === "date" ? choice.iso : null;
-      if (!choice) {
-        proposal.formDateCandidates = dates;
-        if (!dateAlreadyAsked(input.history)) notes.push(dateQuestion(dates));
-      }
-    }
-  }
+  const decided = decideFormDate({ text: context.text, templateKey: match.key, history: input.history, conversation, today });
+  if (decided.formDate !== undefined) proposal.formDate = decided.formDate;
+  if (decided.candidates) proposal.formDateCandidates = decided.candidates;
+  if (decided.question) notes.push(decided.question);
 
   if (POSITION_TEMPLATES.has(match.key)) {
     /*

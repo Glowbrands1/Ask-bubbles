@@ -634,7 +634,8 @@ describe("the observation keeps the manager's dates", () => {
     const form = await review(reference.instanceId);
     const observation = field(form, "observation")!.value!;
 
-    expect(field(form, "form_date")!.value).toBe("2026-10-21");
+    // QA F-03 (22 Oct 2026): the deadline is not a second incident, so the one incident date (10/20) dates the form.
+    expect(field(form, "form_date")!.value).toBe("2026-10-20");
     expect(observation).toContain("On October 20, 2026");
     expect(observation).toContain("by the October 15, 2026 deadline");
     expect(observation).not.toContain("October 21");
