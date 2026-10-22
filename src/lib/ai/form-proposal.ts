@@ -2683,7 +2683,7 @@ function correctiveActionReady(
   }
   /*
    * THE HISTORY ALREADY ON FILE, READ BACK BEFORE IT GOES ON THE FORM. Ported
-   * from Ask Sunny (District Manager feedback, 21 Oct 2026): the employee's
+   * from the reference platform (District Manager feedback, 21 Oct 2026): the employee's
    * earlier Coaching Form and Verbal CA were on file, and the manager had to
    * type them again. They are listed by the draft (`prior-forms.ts`); naming
    * them here is the manager's chance to say one should not count.

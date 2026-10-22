@@ -15,7 +15,7 @@ export type { PriorFormOnFile } from "./prior-forms-lines";
  * THE COACHING AND CORRECTIVE ACTION FORMS ALREADY ON FILE FOR THIS EMPLOYEE
  * ============================================================================
  *
- * Ported from Ask Sunny (District Manager feedback, 21 Oct 2026): a Corrective
+ * Ported from the reference platform (District Manager feedback, 21 Oct 2026): a Corrective
  * Action's history line was filled only from what the manager typed in chat,
  * although the employee's earlier Coaching Form and Verbal CA were sitting in
  * the Forms Register, filed through this same app. So the record is read too,
