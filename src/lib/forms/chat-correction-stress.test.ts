@@ -150,11 +150,23 @@ describe("the employee's name on a draft that exists", () => {
   });
 });
 
-describe("the Corrective Action Form keeps the reference platform's rule: only its payroll answer", () => {
-  it.each(["change the date to yesterday", "change the name to Jordan Testperson"])("leaves '%s' alone", async (question) => {
+/*
+ * The reference platform's rule — only the payroll answer — was relaxed for
+ * the date by the business on 22 Oct 2026 (`config/company/forms`). The name
+ * is still corrected on the form, never from chat.
+ */
+describe("the Corrective Action Form takes its payroll answer, level and date from chat — never the name", () => {
+  it("leaves 'change the name to Jordan Testperson' alone", async () => {
     state.templateKey = "dpoa";
-    expect(await correct(question)).toBeNull();
+    expect(await correct("change the name to Jordan Testperson")).toBeNull();
     expect(state.saved).toEqual([]);
+  });
+
+  it("'change the date to yesterday' sets the date, and only the date", async () => {
+    state.templateKey = "dpoa";
+    await correct("change the date to yesterday");
+    expect(state.saved).toHaveLength(1);
+    expect(state.saved[0]).toEqual({ values: { form_date: "2026-09-29" }, checked: {} });
   });
 
   it("still takes the payroll answer", async () => {

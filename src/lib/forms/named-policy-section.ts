@@ -136,6 +136,15 @@ function namesWholeHeading(phrase: string, heading: string): boolean {
   );
 }
 
+/*
+ * "SHE KNOWS THE POLICY." is a sentence about a policy, not its name — a
+ * person or a verb in the words before "policy" (review, 22 Oct 2026: it was
+ * read as a policy called "She knows the", and the described Cell Phone/Smart
+ * Watch Policy was lost).
+ */
+const NOT_A_NAME =
+  /\b(?:she|he|they|i|we|you|her|his|their|him|them|it|was|were|is|are|has|had|have|knows?|knew|signed|read|reviewed|reminded|told|understands?|acknowledged|got|received|explained|about|of|with|by|to)\b/i;
+
 /** Every policy the manager named, in the order they named them. Questions name none. */
 export function namedPolicies(text: string): NamedPolicy[] {
   const found: NamedPolicy[] = [];
@@ -143,7 +152,9 @@ export function namedPolicies(text: string): NamedPolicy[] {
     if (/\?\s*$/.test(sentence[0])) continue;
     // A line that is only the name — not "violation of company policy", which names none.
     const line = /\b(?:violat|breach|broke|against|follow)/i.test(sentence[0]) ? null : POLICY_LINE.exec(sentence[0]);
-    if (line && words(line[1]!).length > 0) found.push({ phrase: line[1]!.trim(), index: sentence.index });
+    if (line && words(line[1]!).length > 0 && !NOT_A_NAME.test(line[1]!)) {
+      found.push({ phrase: line[1]!.trim(), index: sentence.index });
+    }
     const verbs = [...sentence[0].matchAll(NAMED_POLICY)];
     for (const match of verbs.length > 0 ? verbs : sentence[0].matchAll(FOR_POLICY)) {
       // "ca for pat rivera for cell phone policy": the policy's name is what follows the last "for".
@@ -397,15 +408,11 @@ function usedIn(said: readonly string[], candidate: Candidate): string | null {
   return null;
 }
 
-/**
- * The manual section the manager's account describes, or null. See above:
- * only where no policy was named and nothing else decides it, only where
- * exactly one heading answers, and only a heading titled a Policy.
- */
-export function describedManualSection(input: {
+/** Every heading the account describes, by its distinctive words — or null where something else decides the policy. */
+function describedHeadings(input: {
   readonly text: string;
   readonly chunks: readonly ManualChunk[] | null;
-}): NamedManualSection | null {
+}): Map<string, string> | null {
   if (!input.chunks || input.chunks.length === 0) return null;
   const text = input.text ?? "";
   if (namedPolicies(text).length > 0) return null;
@@ -424,12 +431,56 @@ export function describedManualSection(input: {
       if (phrase) found.set(candidate.heading, phrase);
     }
   }
-  if (found.size !== 1) return null;
-  const [heading, phrase] = [...found.entries()][0]!;
+  return found;
+}
+
+/** A heading the account describes, as the section it cites, when the manual titles it a Policy. */
+function citable(chunks: readonly ManualChunk[], heading: string, phrase: string): NamedManualSection | null {
   if (!TITLED_A_POLICY.test(heading)) return null;
-  const section = findManualSection(input.chunks, [heading]);
-  if (!section) return null;
-  return { phrase, section, offenseKey: offenseKeyForManualHeading(section.heading) };
+  const section = findManualSection(chunks, [heading]);
+  return section ? { phrase, section, offenseKey: offenseKeyForManualHeading(section.heading) } : null;
+}
+
+/**
+ * The manual section the manager's account describes, or null. See above:
+ * only where no policy was named and nothing else decides it, only where
+ * exactly one heading answers, and only a heading titled a Policy.
+ */
+export function describedManualSection(input: {
+  readonly text: string;
+  readonly chunks: readonly ManualChunk[] | null;
+}): NamedManualSection | null {
+  const found = describedHeadings(input);
+  if (!found || found.size !== 1) return null;
+  const [heading, phrase] = [...found.entries()][0]!;
+  return citable(input.chunks!, heading, phrase);
+}
+
+/**
+ * ============================================================================
+ * TWO POLICIES DESCRIBED: OFFERED, NEVER CHOSEN
+ * ============================================================================
+ *
+ * QA follow-up, 22 Oct 2026: "scrolling social media on her phone" answers
+ * both the Cell Phone/Smart Watch Policy and the Social Media Policy, so
+ * `describedManualSection` (rightly) chooses neither — and the draft's own
+ * guess, often the catch-all Standards of Conduct, stood with nothing said.
+ * Where two or more headings the manual titles a Policy answer the account,
+ * these are they, in the manual's order, for the manager to choose between.
+ * One Policy heading beside a heading that is not one ("a belt that holds
+ * her cell phone") offers nothing, as before.
+ */
+export function describedManualChoices(input: {
+  readonly text: string;
+  readonly chunks: readonly ManualChunk[] | null;
+}): NamedManualSection[] | null {
+  const found = describedHeadings(input);
+  if (!found || found.size < 2) return null;
+  const sections = [...found.entries()]
+    .map(([heading, phrase]) => citable(input.chunks!, heading, phrase))
+    .filter((entry): entry is NamedManualSection => entry !== null);
+  if (sections.length < 2) return null;
+  return sections.sort((a, b) => a.section.page - b.section.page);
 }
 
 /**
