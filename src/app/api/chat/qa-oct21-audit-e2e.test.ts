@@ -209,6 +209,8 @@ const chatRoute = await import("./route");
 const instancesRoute = await import("../forms/instances/route");
 const instanceRoute = await import("../forms/instances/[id]/route");
 const draftRoute = await import("../forms/instances/[id]/draft/route");
+const pdfRoute = await import("../forms/instances/[id]/pdf/route");
+const { listInstances } = await import("@/lib/forms/instances");
 
 const TODAY = "2026-10-21";
 
@@ -1160,5 +1162,96 @@ describe("workflow: corrections change only what was asked; finalized forms are 
     const f = await form(id);
     expect(f.text("policy_language")).toMatch(/Cell Phone\/Smart Watch Policy/);
     expect(f.text("policy_violated")).not.toMatch(/Standards of Conduct/);
+  });
+});
+
+/* ========================================================================= */
+/* ONE DATE EVERYWHERE — THE SAVED RECORD, THE REGISTER, THE REOPENED FORM   */
+/* ========================================================================= */
+
+/*
+ * QA follow-up, 22 Oct 2026: `form_instances.form_date` — what the Forms
+ * Register lists, the PDF prints and names, the drafting route treats as the
+ * form's date, and person memory reads — was set once at creation. A Date
+ * changed on the card or in chat changed only the form's Date line, and
+ * "Edit as new draft" dated the new draft the day it was opened.
+ */
+describe("a form's date is one date on every surface", () => {
+  /** Every place a form's date is shown, read for one form. */
+  async function everywhere(id: string) {
+    const f = await form(id);
+    const listed = (await listInstances("all")).find((row) => row.id === id);
+    const pdf = await pdfRoute.GET(new Request(`https://app.test/api/forms/instances/${id}/pdf`), {
+      params: Promise.resolve({ id }),
+    });
+    const filename = /filename="([^"]+)"/.exec(pdf.headers.get("content-disposition") ?? "")?.[1] ?? "";
+    return {
+      value: f.text("form_date"),
+      reopened: String(f.instance.formDate),
+      register: listed?.formDate ?? null,
+      pdfNamesIt: filename,
+    };
+  }
+  const expectAll = async (id: string, iso: string) => {
+    const seen = await everywhere(id);
+    expect(seen.value, "Date line").toBe(iso);
+    expect(seen.reopened, "reopened form").toBe(iso);
+    expect(seen.register, "Forms Register").toBe(iso);
+    expect(seen.pdfNamesIt, "PDF").toContain(iso);
+  };
+
+  async function created() {
+    const thread = new Thread();
+    await thread.say(ISSUE_1);
+    state.draft = ISSUE_1_MODEL;
+    const { id } = await thread.create();
+    return { thread, id };
+  }
+
+  it("a Date changed on the card", async () => {
+    const { id } = await created();
+    await expectAll(id, "2026-10-01");
+    await save(id, { form_date: "2026-10-03" });
+    await expectAll(id, "2026-10-03");
+  });
+
+  it("a Date changed in chat, then again, then back", async () => {
+    const { thread, id } = await created();
+    await thread.say("change the date to 10-2-26");
+    await expectAll(id, "2026-10-02");
+    await thread.say("sorry, the date should be 10/3/26");
+    await expectAll(id, "2026-10-03");
+    await thread.say("it was 10-1-26, not 10-3-26");
+    await expectAll(id, "2026-10-01");
+    expect((await form(id)).text("observation")).toContain("October 1, 2026");
+  });
+
+  it("Edit as new draft keeps the form's date, not the day it is reopened; the finalized original keeps its own", async () => {
+    const { id } = await created();
+    await save(id, { form_date: "2026-10-03" });
+    expect((await act(id, { action: "finalize", followUpDate: null })).status).toBe(200);
+    const reopened = await act(id, { action: "revise" });
+    const draftId = toUuid(reopened.payload.instance!.id);
+    await expectAll(draftId, "2026-10-03");
+    await expectAll(id, "2026-10-03");
+    /* The new draft's date is changed; the finalized record's is not. */
+    await save(draftId, { form_date: "2026-10-04" });
+    await expectAll(draftId, "2026-10-04");
+    await expectAll(id, "2026-10-03");
+  });
+
+  it("a later draft is written against the form's current date, not the one it was created with", async () => {
+    const { id } = await created();
+    await save(id, { form_date: "2026-10-03" });
+    state.draft = {
+      values: { observation: "Observed:\nOn October 21, 2026, Marlo did not open the store at the proper time." },
+      checked: { offense_type: ["tardiness"] },
+    };
+    await call(`/api/forms/instances/${id}/draft`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ notes: "marlo opened the store late. payroll deduct $25" }),
+    });
+    expect((await form(id)).text("observation")).toContain("October 3, 2026");
   });
 });
