@@ -102,6 +102,14 @@ describe("the payroll answer without the form's words", () => {
     expect(statedPayrollDeduct(text)).toBe(answer);
   });
 
+  // A cancelled thing that is not the deduction leaves the Yes (from Ask Sunny's review, 22 Oct 2026).
+  it.each([
+    "Payroll deduction of $25 for the cancelled order is applicable.",
+    "Payroll deduct of $25 is applicable, the refund she cancelled was never rung.",
+  ])("yes: %s", (text) => {
+    expect(statedPayrollDeduct(text)).toBe("yes");
+  });
+
   it.each(["she was docked on the schedule board", "the paycheck stub was wrong"])("nothing: %s", (text) => {
     expect(statedPayrollDeduct(text)).toBeNull();
   });
