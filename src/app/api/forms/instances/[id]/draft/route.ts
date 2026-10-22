@@ -129,7 +129,6 @@ import {
 import {
   STANDARDS_OF_CONDUCT,
   caPolicyAmbiguousNotice,
-  describedOffenseKeys,
   describedPolicyChoiceNotice,
   groundConductPolicy,
   readCaPolicy,
@@ -1382,8 +1381,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         : null);
     const statedKeys = caPolicy
       ? (statedOffenseKeys(caPolicy, notes) ??
-        (policySection ? [policySection.offenseKey] : null) ??
-        describedOffenseKeys(caPolicy, manual.ok ? manual.chunks : null))
+        (policySection ? [policySection.offenseKey] : null))
       : null;
     const statedOffense = statedKeys
       ? withStatedOffense({

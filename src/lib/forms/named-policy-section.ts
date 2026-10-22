@@ -417,7 +417,7 @@ function describedHeadings(input: {
   const text = input.text ?? "";
   if (namedPolicies(text).length > 0) return null;
   const reading = readCaPolicy(text);
-  if (reading.stated !== null || reading.suggestion !== null || reading.ambiguous !== null || reading.described) {
+  if (reading.stated !== null || reading.suggestion !== null || reading.ambiguous !== null) {
     return null;
   }
   if (OWN_BOX.test(text)) return null;
