@@ -79,3 +79,15 @@ Sunny gained an end-to-end regression suite for HR's 21 Oct conversations
   removed); `src/lib/security/no-real-people.test.ts` guards company
   addresses. Bubbles has no copy of the policy-manual fixture, so that part
   of Sunny's change does not apply.
+
+## 22 Oct 2026: Corrective Action QA audit (Ask-bubbles#68 → ask-sunny#128)
+
+Every fix in this audit is ported to Ask Sunny in Glowbrands1/ask-sunny#128,
+one `Port from Ask Bubbles (<sha>)` commit per fix: the invented-date guard
+in drafted text, the draft notice on the chat card, payroll amounts without
+`$` and "$0" as No, a cancelled order beside the deduction not read as a
+waiver (7add5b2), the register `form_date` kept in step with the Date line,
+the two-policy question ("Cell Phone/Smart Watch or Social Media?"),
+autofill off on typed form fields, and the audit's manual fixture with
+invented wording (400bab2). Ask Sunny keeps its own payroll rule (a Yes is
+read only when stated) and sets the warning level on the form.

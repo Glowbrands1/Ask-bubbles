@@ -27,6 +27,11 @@ export { COMPANY_FORM_CATEGORIES } from "./categories";
  *                   yesterday", "her name is actually Jane Doe-Smith"). Saved
  *                   as the manager's own edit. Read only when the form's own
  *                   correction readers found nothing in the turn.
+ *   formDateIsIncidentDate
+ *                   the form's Date is the day of what it records, so a date
+ *                   corrected in chat also moves that day in the narrative
+ *                   paragraphs Ask Bubbles drafted (never a paragraph a person
+ *                   wrote). Only the Corrective Action Form, today.
  *   status          "placeholder" forms are labelled as such everywhere.
  *
  * The original placeholder, "Team Member Check-In (Example)", is no longer
@@ -42,6 +47,8 @@ export type ChatCorrectableField = "employee_name" | "form_date";
 export interface CompanyFormDefinition {
   readonly seed: TemplateSeed;
   readonly chatCorrectableFields: readonly ChatCorrectableField[];
+  /** The form's Date is the incident's: see `formDateIsIncidentDate` above. */
+  readonly formDateIsIncidentDate?: boolean;
   readonly status: CompanyFormStatus;
 }
 
@@ -57,15 +64,21 @@ export const COMPANY_FORMS: readonly CompanyFormDefinition[] = TEMPLATE_SEEDS.ma
    * person may edit (`chat-correction.ts`). A form's own readers (transfer,
    * demotion, exit, payroll) still run first.
    *
-   * EXCEPT THE CORRECTIVE ACTION FORM, which does not use this generic header
-   * reader. The business decided (owner decision, 22 Oct 2026) that a CA
-   * draft's dates may be corrected from chat, but by the CA's own reader
-   * (`ca-chat-corrections.ts`): it tells the incident date, the Date line and
-   * a prior action's date apart, asks when it cannot tell, rewrites only an
-   * account the assistant drafted, records each change, and never writes a
-   * finalized form in place. The name line stays uncorrectable here.
+   * THE CORRECTIVE ACTION FORM TAKES ITS DATE ONLY. Its chat corrections were
+   * limited to the payroll-deduct answer by an explicit decision on the
+   * reference platform (its `corrective-action-ca-alias-and-payroll-deduct.md`).
+   * The business decided otherwise for the dates (owner decision, 22 Oct 2026,
+   * after the QA audit of the District Manager's 21 Oct reports). The CA's own
+   * reader (`ca-chat-corrections.ts`) runs first: it tells the incident date,
+   * the Date line and a prior action's date apart, rewrites only an account
+   * the assistant drafted, records each change, and never writes a finalized
+   * form in place. What it does not read — "change the date to yesterday", a
+   * date beside a payroll answer, "10-2 or 10-3" — is read here, by the form's
+   * own readers (`chat-correction.ts`). Its employee name is still corrected
+   * on the form, never from chat.
    */
-  chatCorrectableFields: seed.key === "dpoa" ? [] : ["employee_name", "form_date"],
+  chatCorrectableFields: seed.key === "dpoa" ? ["form_date"] : ["employee_name", "form_date"],
+  ...(seed.key === "dpoa" ? { formDateIsIncidentDate: true } : {}),
   status: "approved",
 }));
 

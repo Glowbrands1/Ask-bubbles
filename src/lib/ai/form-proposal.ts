@@ -151,7 +151,12 @@ import type {
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
 import { signedDate, statedPriorActions } from "@/lib/forms/prior-actions";
 import type { PriorFormOnFile, PriorFormsReading } from "@/lib/forms/prior-forms-lines";
-import { describedManualSection, namedManualSection, namedPolicies } from "@/lib/forms/named-policy-section";
+import {
+  describedManualChoices,
+  describedManualSection,
+  namedManualSection,
+  namedPolicies,
+} from "@/lib/forms/named-policy-section";
 import type { ManualChunk } from "@/lib/forms/official-policy-manual";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
@@ -1748,7 +1753,9 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
     const raisedPolicy =
       typeof lastAssistant?.content === "string" &&
       (lastAssistant.content.includes(CA_POLICY_QUESTION) || lastAssistant.content.includes("**Policy:**"));
-    if (raisedPolicy && namesCaPolicy(input.question)) return { kind: "explicit", templateKey: continued };
+    if (raisedPolicy && (namesCaPolicy(input.question) || namedPolicies(input.question).length > 0)) {
+      return { kind: "explicit", templateKey: continued };
+    }
 
     /*
      * AND BY ITS ACCOUNT OF WHAT HAPPENED, in whatever words: "Pat got to the
@@ -2396,14 +2403,24 @@ async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedP
           }
         : null;
     }
-    const described = describedManualSection({ text, chunks: await chunksOf() });
-    return described
+    const chunks = await chunksOf();
+    const described = describedManualSection({ text, chunks });
+    if (described) {
+      return {
+        phrase: described.phrase,
+        lookup: "described",
+        heading: described.section.heading,
+        page: described.section.page,
+        offenseKey: described.offenseKey,
+      };
+    }
+    /* Described as more than one Policy section: the manager is asked which. */
+    const choices = describedManualChoices({ text, chunks });
+    return choices
       ? {
-          phrase: described.phrase,
-          lookup: "described",
-          heading: described.section.heading,
-          page: described.section.page,
-          offenseKey: described.offenseKey,
+          phrase: choices[0]!.phrase,
+          lookup: "choose",
+          choices: choices.map((choice) => ({ heading: choice.section.heading, page: choice.section.page })),
         }
       : null;
   }

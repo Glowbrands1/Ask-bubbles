@@ -5,6 +5,8 @@ import type { AskResponse } from "@/lib/ai/types";
 import { caDateQuestion, readCaDateEdit, rewriteDate, type CaDateEdit } from "./ca-chat-dates";
 import { checkboxGroupsForVariant, displayDate, fieldsForVariant, parseFormDocument } from "./document";
 import { changeOnEditableDraft } from "./editable-draft";
+import { payrollDeductCorrection, payrollDeductUnclear } from "./payroll-deduct";
+import { warningLevelCorrection } from "./warning-level";
 import { authorizeInstance } from "./instance-scope";
 import { recordChatCorrection, saveInstanceValues } from "./instances";
 import { extractEmployeeNames, samePerson } from "./proposal";
@@ -23,8 +25,11 @@ import { detectTemplateIntent } from "./template-intent";
  *                action's date may each be corrected; which one is read by
  *                `readCaDateEdit`, and a date with no field is asked about.
  *
- * Tried by `correctActiveForm` before its own readers. Null for anything else,
- * so every other turn is answered as before. Every change is the manager's own
+ * Tried by `correctActiveForm` after the form's own readers, which own the
+ * Date line ("change the date to 10-2-26", a date beside a payroll answer,
+ * "10-2 or 10-3"): this answers what they leave — "the meeting was actually
+ * on 10-19-26", a prior action's date. Null for anything else, so every other
+ * turn is answered as before. Every change is the manager's own
  * edit — so a later redraft keeps it — and is recorded field by field. Only
  * the fields the correction names change. A finalized form is changed on a new
  * draft of it, never in place.
@@ -38,6 +43,15 @@ export async function correctCaFromChat(input: {
 }): Promise<AskResponse | null> {
   const question = (input.question ?? "").trim();
   if (!mayCorrectDates(question)) return null;
+  /*
+   * A DATE BESIDE ANOTHER ANSWER — "no payroll deduct and change the date to
+   * 10-2-26", "make it verbal and the date is 10-2" — is the form's readers'
+   * (`correctFromFormReaders`), which take the whole turn, so neither half is
+   * dropped.
+   */
+  if (payrollDeductCorrection(question) || payrollDeductUnclear(question) || warningLevelCorrection(question, input.today)) {
+    return null;
+  }
 
   // A request for another form is not a correction to this one.
   const intent = detectTemplateIntent(question);
