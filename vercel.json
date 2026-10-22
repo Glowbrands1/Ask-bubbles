@@ -1,6 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
+  "git": {
+    "deploymentEnabled": {
+      "claude/*": false,
+      "claude/**": false
+    }
+  },
   "crons": [
     {
       "path": "/api/knowledge-sync/woven/cron",
