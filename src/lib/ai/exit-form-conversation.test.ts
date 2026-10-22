@@ -305,7 +305,8 @@ describe("what Ask Bubbles says beside the proposal", () => {
     expect(proposal.supportsInlineDraft).toBe(true);
 
     const content = response!.content;
-    expect(content).toMatch(/- \*\*Name:\*\* Sarah Jones/);
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
+    expect(content).toMatch(/- \*\*Name:\*\* sarah jones/);
     expect(content).toMatch(/- \*\*Job Title:\*\* Team Member/);
     expect(content).toMatch(/- \*\*Last Day Worked:\*\* September 15, 2026/);
     expect(content).toMatch(/- \*\*Date that notice was given:\*\* September 1, 2026/);
