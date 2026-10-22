@@ -97,7 +97,7 @@ import {
 import { loadScopedRosterResult } from "@/lib/forms/employee-roster";
 import { unverifiedWithoutRecord, verifyEmployee } from "@/lib/forms/employee-verification";
 import { namedStoreIds as namedStoreIdsFrom } from "@/lib/forms/location-scope";
-import { continuesStore, readStoreConfirmation, storeQuestionOpen } from "@/lib/forms/store-confirmation";
+import { continuesStore, readStoreConfirmation, storeAnswerTurns, storeQuestionOpen } from "@/lib/forms/store-confirmation";
 import { describeStore, type StoreIndex } from "@/lib/stores/resolver";
 import { loadKnownTitles, loadStoreIndex } from "@/lib/stores/woven-aliases";
 import { neutralizeTitles } from "@/lib/forms/known-titles";
@@ -115,9 +115,7 @@ import {
 import { readLocationMentions } from "@/lib/forms/location-mention";
 import {
   answersDateQuestion,
-  dateAlreadyAsked,
-  dateAnsweredIn,
-  dateQuestion,
+  decideFormDate,
   incidentDates,
 } from "@/lib/forms/incident-dates";
 import {
@@ -145,7 +143,8 @@ import type {
 } from "@/types";
 
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
-import { statedPriorActions } from "@/lib/forms/prior-actions";
+import { signedDate, statedPriorActions } from "@/lib/forms/prior-actions";
+import type { PriorFormOnFile, PriorFormsReading } from "@/lib/forms/prior-forms-lines";
 import {
   describedManualChoices,
   describedManualSection,
@@ -378,6 +377,14 @@ export interface ProposalTurn {
    * in the manager's own words and the draft looks it up.
    */
   policyManual?: () => Promise<readonly ManualChunk[] | null>;
+  /**
+   * The employee's signed Coaching and Corrective Action forms in the Forms
+   * Register, under this manager's visibility — read only for a Corrective
+   * Action, so the history already on file is read back before the form is
+   * created. Never rejects: an unreadable record is an empty list. See
+   * `lib/forms/prior-forms.ts`.
+   */
+  priorFormsOnFile?: (employeeName: string, locationId: string | null) => Promise<PriorFormsReading>;
   /**
    * The server's business day (`YYYY-MM-DD`), which supplies the year for a
    * form date typed as month and day. See `lib/forms/form-date-answer.ts`.
@@ -831,6 +838,8 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     reportUnmatchedStore: !employmentChangeKind(match.key),
     storeReply: {
       bareReply: storeQuestionOpen(input.history),
+      // "66" answered an earlier store question: still the answer on this turn (QA F-12).
+      answeredTurns: storeAnswerTurns(input.history, storeIndex),
       ...(confirmedStore ? { confirmedCode: confirmedStore.code } : {}),
     },
     ...(directory.verification ? { employeeVerification: directory.verification } : {}),
@@ -1046,6 +1055,10 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
       ? employmentChangeContent(changeKind, facts, proposal, context)
       : proposalContent(proposal, scoped, match, input.today ?? businessToday(), {
           namedPolicy: isCorrectiveActionForm(match) ? await namedPolicyFor(scoped.text, input) : null,
+          priorOnFile:
+            isCorrectiveActionForm(match) && proposal.employeeName && proposal.status !== "needs_employee"
+              ? ((await input.priorFormsOnFile?.(proposal.employeeName, proposal.locationId)) ?? NO_PRIOR_FORMS)
+              : NO_PRIOR_FORMS,
         });
   return turn(withNotes(content, notes), proposal);
 }
@@ -1161,22 +1174,16 @@ function directoryNotes(
   const today = input.today ?? businessToday();
 
   /*
-   * SEVERAL INCIDENT DATES: the form's Date is chosen on purpose. One date dates
-   * the form (as always); several are asked about once, and until the manager
-   * chooses the form carries the day it is created — never whichever incident
-   * was typed first. See `incident-dates.ts`.
+   * THE FORM'S DATE, BY WHAT EACH DATE MEANS: a date given to the form, the
+   * coaching a Coaching Form documents, or — with several incident dates — the
+   * manager's answer to "which date?", asked once; until then the form carries
+   * the day it is created, never whichever incident was typed first. See
+   * `decideFormDate` in `incident-dates.ts`.
    */
-  if (POSITION_TEMPLATES.has(match.key)) {
-    const dates = incidentDates(context.text, today);
-    if (dates.length > 1) {
-      const choice = dateAnsweredIn(conversation, dates, today);
-      proposal.formDate = choice?.kind === "date" ? choice.iso : null;
-      if (!choice) {
-        proposal.formDateCandidates = dates;
-        if (!dateAlreadyAsked(input.history)) notes.push(dateQuestion(dates));
-      }
-    }
-  }
+  const decided = decideFormDate({ text: context.text, templateKey: match.key, history: input.history, conversation, today });
+  if (decided.formDate !== undefined) proposal.formDate = decided.formDate;
+  if (decided.candidates) proposal.formDateCandidates = decided.candidates;
+  if (decided.question) notes.push(decided.question);
 
   if (POSITION_TEMPLATES.has(match.key)) {
     /*
@@ -1779,6 +1786,17 @@ const ALREADY_SAID = /\b(?:i|we)\s+(?:already|just)\s+(?:told|said|gave|mentione
 
 const ABOUT_THE_EMPLOYEE = /^(?:and\s+|also\s+|then\s+)?(?:she|he|they)(?:['’](?:s|d|ve|re|ll))?\b/i;
 
+/*
+ * A DAY ON ITS OWN. QA, 22 Oct 2026: with a ready Coaching card open, "i
+ * already told you" and then "today" ended the intake — `extractFormDate`
+ * reads calendar dates ("10/20") and not the day words managers type, so the
+ * turn went to retrieval and the card had to be asked for again. Only a reply
+ * that is nothing but the day counts; a sentence that mentions today still
+ * has to read as part of the intake on its own.
+ */
+const ONLY_A_DAY =
+  /^(?:(?:it\s+)?(?:was|happened)\s+)?(?:on\s+)?(?:today|yesterday|this\s+morning|last\s+night|tonight|(?:last\s+)?(?:mon|tues|wednes|thurs|fri|satur|sun)day)[\s.!]*$/i;
+
 function continuesIntake(continued: string, input: ProposalTurn): boolean {
   const question = input.question.trim();
   if (endsIntake(question) || ASKS_FOR_ADVICE.test(question)) return false;
@@ -1802,6 +1820,7 @@ function continuesIntake(continued: string, input: ProposalTurn): boolean {
   return (
     describesIncident(question) ||
     extractFormDate(question, input.today ?? businessToday()) !== null ||
+    ONLY_A_DAY.test(question) ||
     TOPIC_STATEMENT.test(question) ||
     CARRIES_ON.test(question) ||
     ABOUT_THE_EMPLOYEE.test(question)
@@ -2297,7 +2316,7 @@ function proposalContent(
   context: ManagerContext,
   match: TemplateSummary,
   today: string,
-  extra: { namedPolicy?: NamedPolicyReading | null } = {},
+  extra: { namedPolicy?: NamedPolicyReading | null; priorOnFile?: PriorFormsReading } = {},
 ): string {
   /*
    * ==========================================================================
@@ -2477,6 +2496,7 @@ function proposalContent(
         earlierWarning: mentionsEarlierWarning(context.text, today),
         priorActions: statedPriorActions(context.text, today),
         namedPolicy: extra.namedPolicy ?? null,
+        priorOnFile: extra.priorOnFile ?? NO_PRIOR_FORMS,
       });
     }
   }
@@ -2493,6 +2513,11 @@ function proposalContent(
   } else if (proposal.status === "needs_location") {
     lines.push(locationQuestion(proposal));
     if (proposal.awaitingIncident) lines.push("", NO_INCIDENT_NOTE);
+    // No store yet, so nothing on file is verified: say what is there and the rule (QA F-11).
+    const possibleNote = isCorrectiveActionForm(match)
+      ? possibleOnFileNote(proposal, extra.priorOnFile ?? NO_PRIOR_FORMS, statedPriorActions(context.text, today))
+      : null;
+    if (possibleNote) lines.push("", possibleNote);
   } else {
     lines.push(
       `Everything I need is here, drawn from ${context.messages.length === 1 ? "your message" : "your messages"} above.`,
@@ -2615,6 +2640,35 @@ function correctiveActionEmployeeQuestion(
   return `Who is this **${templateName}** for? Give me their name and I'll draft it from what you've told me — you can set the warning level and anything else on the form itself.`;
 }
 
+const NO_PRIOR_FORMS: PriorFormsReading = { attach: [], possible: [], identity: "none" };
+
+/** Why a same-name form on file is only a possible match (`classifyPriorForms`). */
+const POSSIBLE_REASON: Partial<Record<PriorFormsReading["identity"], string>> = {
+  other_locations: "The same name is on file at more than one store, so I can't confirm these are this employee's",
+  no_form_location: "This form has no store yet, and they're added only when they're at the form's own store",
+  single_word_name: "Only a first name was given, so I can't confirm these are this employee's",
+  incomplete: "The record is too long to read in full, so I can't confirm these are this employee's",
+};
+
+/**
+ * Same-name forms on file whose identity is not established (QA F-11): shown,
+ * each with its store from this app's own roster, and never added. The draft
+ * route classifies with the same store, so nothing listed here is written.
+ */
+function possibleOnFileNote(
+  proposal: ChatFormProposal,
+  reading: PriorFormsReading,
+  priorActions: readonly string[],
+): string | null {
+  const possible = reading.possible.filter(
+    (form) => !priorActions.some((line) => line.includes(signedDate(form.formDate))),
+  );
+  if (possible.length === 0) return null;
+  const where = (form: PriorFormOnFile) => form.locationName ?? locationById(form.locationId)?.name ?? "no store";
+  const one = possible.length === 1;
+  return `**Possibly on file — not added:** ${possible.map((form) => `${form.line} (${where(form)})`).join("; ")}. ${POSSIBLE_REASON[reading.identity] ?? "I can't confirm these are this employee's"}, so I won't put ${one ? "it" : "them"} on the form. If ${one ? "it is" : "any are"} ${proposal.employeeName}'s, add ${one ? "it" : "them"} under prior coaching and corrective action yourself.`;
+}
+
 /**
  * The prose beside a Corrective Action Form that is ready to be created.
  *
@@ -2642,6 +2696,7 @@ function correctiveActionReady(
     earlierWarning: boolean;
     priorActions?: readonly string[];
     namedPolicy?: NamedPolicyReading | null;
+    priorOnFile?: PriorFormsReading;
   } = {
     offersLevel: true,
     earlierWarning: false,
@@ -2649,8 +2704,12 @@ function correctiveActionReady(
 ): string {
   const levelOpen = warning.offersLevel && intake.missingRequired.some((item) => item.key === "warning_level");
   const priorActions = warning.priorActions ?? [];
+  // A step the manager already dated is theirs; the record adds only the rest.
+  const onFile = (warning.priorOnFile ?? NO_PRIOR_FORMS).attach.filter(
+    (form) => !priorActions.some((line) => line.includes(signedDate(form.formDate))),
+  );
   const outstanding = intake.missingRequired
-    .filter((item) => item.key === "previous_action" && priorActions.length === 0)
+    .filter((item) => item.key === "previous_action" && priorActions.length === 0 && onFile.length === 0)
     .map(() => "any prior coaching or corrective action");
 
   const lines = proposal.awaitingIncident
@@ -2688,6 +2747,21 @@ function correctiveActionReady(
   if (priorActions.length > 0) {
     lines.push("", `**Prior actions:** ${priorActions.join("; ")}, as you said. I'll list ${priorActions.length === 1 ? "it" : "them"} on the form — tell me if that should change.`);
   }
+  /*
+   * THE HISTORY ALREADY ON FILE, READ BACK BEFORE IT GOES ON THE FORM. Ported
+   * from the reference platform (District Manager feedback, 21 Oct 2026): the employee's
+   * earlier Coaching Form and Verbal CA were on file, and the manager had to
+   * type them again. They are listed by the draft (`prior-forms.ts`); naming
+   * them here is the manager's chance to say one should not count.
+   */
+  if (onFile.length > 0) {
+    lines.push(
+      "",
+      `**On file in the Forms Register for ${proposal.employeeName}:** ${onFile.map((form) => form.line).join("; ")}. I'll list ${onFile.length === 1 ? "it" : "them"} under prior coaching and corrective action on the form — remove any that shouldn't count.`,
+    );
+  }
+  const possibleNote = possibleOnFileNote(proposal, warning.priorOnFile ?? NO_PRIOR_FORMS, priorActions);
+  if (possibleNote) lines.push("", possibleNote);
 
   /*
    * THE POLICY, SUGGESTED OR ASKED — never left silently to the drafting

@@ -1,0 +1,8 @@
+Ask-bubbles conversation exit 0 ::       Tests  51 passed (51)
+Ask-bubbles identifiers exit 0 ::       Tests  17 passed (17)
+Ask-bubbles locprior exit 0 ::       Tests  36 passed (36)
+Ask-bubbles reviewer exit 0 ::       Tests  4 passed (4)
+Ask-bubbles payroll-edge2 exit 0 ::       Tests  1 passed (1)
+Ask-bubbles payroll-conversation exit 0 ::       Tests  19 passed (19)
+Ask-bubbles postcreate exit 0 ::       Tests  12 passed (12)
+== done 2026-10-22T20:55:09Z

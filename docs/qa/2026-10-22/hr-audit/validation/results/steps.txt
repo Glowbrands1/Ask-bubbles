@@ -1,0 +1,40 @@
+stack:up exit 0
+== seed synthetic rows
+seed exit 0
+== audit role (as the plan creates it)
+role exit 0
+== Phase A (as hr_payroll_audit)
+phase A exit 0
+== Phase B (as hr_payroll_audit)
+candidate ids (tiers A/B): {00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002,00000000-0000-4000-8000-000000000003,00000000-0000-4000-8000-000000000007}
+phase B exit 0
+== read-only enforcement: a write as hr_payroll_audit must fail
+write attempt exit 1 (non-zero expected)
+ERROR:  cannot execute UPDATE in a read-only transaction
+== re-read with the FIXED reader
+reclassify exit 0
+[
+ {
+  "instanceId": "00000000-0000-4000-8000-000000000001",
+  "fixedReading": "no",
+  "priority": "HIGH — the fixed reader reads No: the stored Yes is probably wrong"
+ },
+ {
+  "instanceId": "00000000-0000-4000-8000-000000000002",
+  "fixedReading": "yes",
+  "priority": "LOW — the fixed reader also reads Yes"
+ },
+ {
+  "instanceId": "00000000-0000-4000-8000-000000000003",
+  "fixedReading": null,
+  "priority": "MEDIUM — the fixed reader would have asked: confirm with the manager"
+ },
+ {
+  "instanceId": "00000000-0000-4000-8000-000000000007",
+  "fixedReading": null,
+  "priority": "MANUAL — source chat not found (deleted or not chat-created)"
+ }
+]== unchanged data check
+payroll_deduct|["no"]|1
+payroll_deduct|["yes"]|7
+stack:down exit 0

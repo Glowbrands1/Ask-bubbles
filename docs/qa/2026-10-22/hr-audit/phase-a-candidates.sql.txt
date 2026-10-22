@@ -1,0 +1,92 @@
+-- =============================================================================
+-- ASK BUBBLES — PAYROLL DEDUCT AUDIT, PHASE A (metadata only, read-only)
+-- =============================================================================
+--
+-- Purpose: list Corrective Action Forms whose "Is payroll deduct applicable?"
+-- is ticked YES and was set inside the defect window, so HR can decide which
+-- ones need a human review. Returns ids, statuses, dates and booleans only —
+-- NO employee names, NO chat text, NO form free text.
+--
+-- NOT YET RUN AGAINST PRODUCTION. Run only after written HR approval, by the
+-- named operator, inside the read-only transaction below. See README.md.
+--
+-- Parameters (psql):  -v window_start='2026-10-21 20:55:22+00'
+--                     -v window_end='<the time the fix is deployed>'
+-- The window start is the merge of Ask Bubbles PR #63 (commit 11d1728), the
+-- first main commit containing ac36870, which introduced the defect. Narrow it
+-- to the first PRODUCTION deployment containing 11d1728 once confirmed.
+-- =============================================================================
+
+begin transaction isolation level repeatable read read only;
+set local statement_timeout = '60s';
+set local lock_timeout = '5s';
+
+with ca as (
+  select i.id, i.status, i.source, i.location_id, i.created_by_role,
+         i.created_at, i.finalized_at, i.exported_at, i.revises_instance_id
+  from public.form_instances i
+  join public.form_templates t on t.id = i.template_id
+  where t.key = 'dpoa'                               -- the Corrective Action Form
+),
+payroll as (
+  select v.instance_id, v.filled_by::text as filled_by,
+         v.provenance ->> 'source' as provenance_source, v.updated_at
+  from public.form_instance_values v
+  where v.field_key = 'payroll_deduct'
+    and v.checked ? 'yes'
+    and v.updated_at >= :'window_start'::timestamptz
+    and v.updated_at <  :'window_end'::timestamptz
+),
+plan as (
+  -- Whether the built Action Plan states a deduction. A boolean only.
+  select v.instance_id,
+         bool_or(v.value ilike '%will be deducted from%' or v.value ilike '%payroll deduction applies%') as plan_states_deduction
+  from public.form_instance_values v
+  where v.provenance ->> 'source' = 'corrective_action_plan'
+  group by v.instance_id
+),
+created as (
+  select distinct on (e.instance_id) e.instance_id, e.detail ->> 'proposalId' as proposal_id
+  from public.form_instance_events e
+  where e.kind = 'created'
+  order by e.instance_id, e.created_at
+)
+select ca.id                               as instance_id,
+       ca.status::text                     as status,
+       ca.source::text                     as source,          -- 'assistant' = created from chat
+       ca.location_id,
+       ca.created_by_role,
+       ca.created_at,
+       ca.finalized_at,
+       ca.exported_at,
+       ca.revises_instance_id,
+       payroll.filled_by,                                       -- 'system' = read from chat; 'manager' = ticked/edited
+       payroll.provenance_source,                               -- 'manager_statement' = read from chat
+       payroll.updated_at                  as payroll_set_at,
+       coalesce(plan.plan_states_deduction, false) as plan_states_deduction,
+       created.proposal_id,
+       case
+         when payroll.filled_by = 'system' and payroll.provenance_source = 'manager_statement'
+           then 'A: set from chat at creation — review'
+         when ca.source::text = 'assistant'
+           then 'B: chat-created, Yes set or changed by an edit — review'
+         else 'C: manual form, Yes ticked by a person — low risk'
+       end                                 as review_tier
+from ca
+join payroll on payroll.instance_id = ca.id
+left join plan on plan.instance_id = ca.id
+left join created on created.instance_id = ca.id
+order by review_tier, ca.created_at;
+
+-- Totals for the HR summary (same filters).
+select count(*)                                                    as yes_in_window,
+       count(*) filter (where p.filled_by = 'system')             as set_from_chat,
+       count(*) filter (where i.status::text = 'finalized')       as finalized,
+       count(*) filter (where i.exported_at is not null)          as exported
+from public.form_instances i
+join public.form_templates t on t.id = i.template_id and t.key = 'dpoa'
+join public.form_instance_values p on p.instance_id = i.id and p.field_key = 'payroll_deduct' and p.checked ? 'yes'
+where p.updated_at >= :'window_start'::timestamptz
+  and p.updated_at <  :'window_end'::timestamptz;
+
+rollback;  -- read-only; nothing to keep
