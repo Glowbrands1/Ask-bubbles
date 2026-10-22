@@ -410,3 +410,70 @@ export function listFormDates(text: string, today: string): { iso: string; index
     .filter((found) => !isOtherDate(text, found, labelled))
     .map(({ iso, index }) => ({ iso, index }));
 }
+
+/*
+ * ============================================================================
+ * "CHANGE THE DATE TO 10-19-26" — A CORRECTION TO THE FORM'S OWN DATE
+ * ============================================================================
+ *
+ * QA audit, 22 Oct 2026: a Corrective Action Form's date could not be
+ * corrected from the conversation in any wording, while the answer told the
+ * manager to "say it in plain words". Read only where the DATE is named as
+ * what is being corrected — "change the date to …", "the date was wrong … on
+ * …", "the date should be …" — or one day is set against another ("it was
+ * 10-19-26, not 10-20-26"). A new incident's date ("she was late again on
+ * 10-19-26") is never a correction, and neither is a question.
+ */
+/*
+ * THE FORM'S OWN DATE, named as such: "the date", "the form date", "the date
+ * of the incident", "the date on the form". Never a follow-up, due, review or
+ * effective date — those are other lines, read elsewhere.
+ */
+const THE_DATE = String.raw`\b(?:the\s+|this\s+|her\s+|his\s+|their\s+)?(?:form(?:'s)?\s+|incident\s+|offen[cs]e\s+)?date\b(?:\s+(?:of|on|for)\s+(?:the\s+|this\s+)?(?:incident|offen[cs]e|form))?`;
+const NAMES_THE_DATE_TO = new RegExp(
+  String.raw`\b(?:change|update|correct|fix|set|make|move)\s+${THE_DATE}[^.?!\n]{0,30}?(?:\b(?:to|is|as|should\s+be)\b|[=:])\s*`,
+  "i",
+);
+const THE_DATE_SHOULD_BE = new RegExp(
+  String.raw`${THE_DATE}\s+(?:should\s+(?:be|have\s+been|say|read)|needs\s+to\s+be|is\s+actually|was\s+actually)\s+`,
+  "i",
+);
+const THE_DATE_WAS_WRONG = new RegExp(String.raw`${THE_DATE}\s+(?:is|was)\s+(?:wrong|incorrect|off|a\s+mistake)\b`, "i");
+/**
+ * "follow-up date", "due date", "the previous coaching date", "the date of
+ * her verbal warning": another line's date — or an earlier step's — whatever
+ * verb is in front of it.
+ */
+const EARLIER_STEP = String.raw`(?:previous|prior|last|earlier|past|first|verbal|written|final|coaching|warning|ca|c\/a|corrective|follow[\s-]?up)`;
+const ANOTHER_DATE = new RegExp(
+  [
+    String.raw`\b(?:follow[\s-]?up|due|review|effective|start|end|last|check[\s-]?in|next|hire|signed|signature|coaching|warning|ca)\s+date\b`,
+    String.raw`\bdate\s+(?:of|for|on)\s+(?:the\s+|her\s+|his\s+|their\s+|that\s+)?${EARLIER_STEP}\b`,
+  ].join("|"),
+  "i",
+);
+const IT_WAS = /\b(?:it|this|that)\s+(?:was|happened|occurred|actually\s+happened)\s+(?:on\s+)?$/i;
+const NOT_THAT_DAY = /^\s*,?\s*(?:and\s+)?not\s+(?:on\s+)?$/i;
+
+/** The ISO date a manager corrects the form's date to, or null. */
+export function formDateChange(text: string, today: string): string | null {
+  const said = (text ?? "").trim();
+  if (said === "" || said.endsWith("?") || ANOTHER_DATE.test(said)) return null;
+  const dates = datesInText(said, today);
+  if (dates.length === 0) return null;
+
+  const pointer = NAMES_THE_DATE_TO.exec(said) ?? THE_DATE_SHOULD_BE.exec(said);
+  if (pointer) return dates.find((found) => found.index >= pointer.index + pointer[0].length)?.iso ?? null;
+
+  const wrong = THE_DATE_WAS_WRONG.exec(said);
+  if (wrong) {
+    const after = dates.filter((found) => found.index > wrong.index);
+    if (new Set(after.map((found) => found.iso)).size === 1) return after[0]!.iso;
+  }
+
+  for (let at = 0; at + 1 < dates.length; at += 1) {
+    const [day, other] = [dates[at]!, dates[at + 1]!];
+    if (IT_WAS.test(said.slice(0, day.index)) && NOT_THAT_DAY.test(said.slice(day.end, other.index))) return day.iso;
+  }
+  return null;
+}
