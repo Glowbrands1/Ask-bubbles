@@ -350,3 +350,101 @@ describe("a CA request answered with one word keeps the whole account", () => {
     expect(proposal.sourceMessageIds).toEqual(["m2"]);
   });
 });
+
+/* ========================================================================= */
+/* ASK SUNNY HR, 21 OCT 2026 — THE SAVE, THEN FINALIZE (Ask Sunny cf1480b)    */
+/* ========================================================================= */
+
+/*
+ * Reported against Ask Sunny the same day: "Today I asked Sunny to create a
+ * Verbal CA for <employee> for missing the 10-15-26 woven deadline and Sunny
+ * would not create the form." The form was drafted with Standards of Conduct
+ * cited from the manual; the manager pressed Save without touching the policy,
+ * and Finalize said "Official policy verification is incomplete" — the card's
+ * Save sends every value, and the server had re-written them all as the
+ * manager's. Ask Bubbles shares the mechanism, so the same words are played
+ * here through the chat, the Create button, the card's Save and Finalize.
+ */
+describe("a Verbal CA for a missed Woven deadline, saved and then finalized", () => {
+  const ASKED = "create a Verbal CA for pat rivera for missing the 10-15-26 woven deadline";
+
+  /* Standards of Conduct as the knowledge base holds it, with the line a missed required task rests on. */
+  const STANDARDS_OF_CONDUCT = {
+    chunkIndex: 30,
+    chunkId: "c-30",
+    locator: "Page 12",
+    page: 13,
+    printedPage: 12,
+    sections: [{ heading: "Standards of Conduct", page: 12 }],
+    section: "Standards of Conduct",
+    content:
+      "Standards of Conduct\nThe Company expects Employees to follow rules of conduct that will protect the interests and\nsafety of all customers, Employees, and The Company.\nThe following are examples (non-inclusive list) of infractions that may result in disciplinary\naction:\no Failing to follow the policies and procedures of The Company\no Insubordination -the refusal to follow the directions of the manager.",
+  };
+
+  type Row = { fieldKey: string; value: string | null; checked: string[]; filledBy: string; provenance?: Record<string, unknown> };
+  const policyOf = async (id: string) => (await review(id)).values.find((entry) => entry.fieldKey === "policy_language") as Row;
+
+  function send(method: "PATCH" | "POST", id: string, body: unknown) {
+    joinOverview();
+    return instanceRoute[method](
+      new Request(`https://app.test/api/forms/instances/${id}`, {
+        method,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+      { params: Promise.resolve({ id }) },
+    );
+  }
+
+  /** The card's Save: every value and tick it holds, plus the manager's edits. */
+  async function cardSave(id: string, edits: Record<string, string> = {}) {
+    const opened = await review(id);
+    const values = Object.fromEntries(
+      opened.values.filter((entry) => entry.value !== null).map((entry) => [entry.fieldKey, entry.value!]),
+    );
+    const checked = Object.fromEntries(
+      opened.values.filter((entry) => entry.checked.length > 0).map((entry) => [entry.fieldKey, entry.checked]),
+    );
+    const saved = await send("PATCH", id, { values: { ...values, ...edits }, checked });
+    expect(saved.status).toBe(200);
+  }
+
+  async function drafted() {
+    state.manual = { chunks: [STANDARDS_OF_CONDUCT] };
+    const { proposal, create } = await conversation([ASKED, "no payroll deduct"]);
+    expect(proposal).toMatchObject({ templateKey: "dpoa", warningLevel: "verbal", employeeName: "Pat Rivera" });
+    state.draft = {
+      values: { observation: "Observed:\nPat Rivera did not meet the Woven deadline of 10/15/2026." },
+      checked: { offense_type: ["under_performance"], warning_type: ["verbal"] },
+    };
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    expect(field(form, "policy_violated")!.value).toBe("Standards of Conduct");
+    expect((await policyOf(reference.instanceId)).provenance).toMatchObject({ verified: true });
+    return reference.instanceId;
+  }
+
+  it("keeps the cited policy verified through a Save, and finalizes without the warning", async () => {
+    const id = await drafted();
+
+    await cardSave(id, { prior_actions: "Coaching — JBA Policy Manual — signed 07/29/2026" });
+
+    const policy = await policyOf(id);
+    expect(policy.filledBy).toBe("ai");
+    expect(policy.provenance).toMatchObject({ verified: true });
+    expect(field(await review(id), "prior_actions")!.filledBy).toBe("manager");
+
+    const finalized = await send("POST", id, { action: "finalize" });
+    expect(finalized.status, JSON.stringify(await finalized.clone().json())).toBe(200);
+  });
+
+  it("still asks when the manager rewrites the policy herself", async () => {
+    const id = await drafted();
+    const policy = (await policyOf(id)).value!;
+    await cardSave(id, { policy_language: ` ${policy.split("\n\nSource:")[0]}\nViolation of personnel policies` });
+
+    const refused = await send("POST", id, { action: "finalize" });
+    expect(refused.status).toBe(409);
+    expect(await refused.json()).toMatchObject({ code: "policy_verification_required" });
+  });
+});
