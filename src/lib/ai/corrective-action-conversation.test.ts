@@ -3,6 +3,12 @@ import { displayPersonName } from "@/lib/forms/proposal";
 
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 
+/*
+ * The first test pays for importing the whole answer path (`server-ask`), and
+ * under a full parallel run that alone can pass the default five seconds.
+ */
+vi.setConfig({ testTimeout: 30_000 });
+
 vi.mock("@/config/company/locations", async () =>
   (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
 );
