@@ -1144,7 +1144,7 @@ export function storedPolicySources(values: LoadedValueRow[]): StoredPolicySourc
  * A MANUAL FOUND BY ITS NAME IS NOT YET AN APPROVED SOURCE
  * ============================================================================
  *
- * Release decision, 22 Oct 2026 (ported from Ask Sunny): the official policy
+ * Release decision, 22 Oct 2026 (ported from the sibling app): the official policy
  * manual is found by its title — no document carries the
  * `official-policy-manual` tag and no approval names it — so a citation is
  * stored `matchedBy: "fallback"`. The quote is still the manual's own words and

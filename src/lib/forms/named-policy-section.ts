@@ -136,6 +136,15 @@ function namesWholeHeading(phrase: string, heading: string): boolean {
   );
 }
 
+/*
+ * "SHE KNOWS THE POLICY." is a sentence about a policy, not its name — a
+ * person or a verb in the words before "policy" (review, 22 Oct 2026: it was
+ * read as a policy called "She knows the", and the described Cell Phone/Smart
+ * Watch Policy was lost).
+ */
+const NOT_A_NAME =
+  /\b(?:she|he|they|i|we|you|her|his|their|him|them|it|was|were|is|are|has|had|have|knows?|knew|signed|read|reviewed|reminded|told|understands?|acknowledged|got|received|explained|about|of|with|by|to)\b/i;
+
 /** Every policy the manager named, in the order they named them. Questions name none. */
 export function namedPolicies(text: string): NamedPolicy[] {
   const found: NamedPolicy[] = [];
@@ -143,7 +152,9 @@ export function namedPolicies(text: string): NamedPolicy[] {
     if (/\?\s*$/.test(sentence[0])) continue;
     // A line that is only the name — not "violation of company policy", which names none.
     const line = /\b(?:violat|breach|broke|against|follow)/i.test(sentence[0]) ? null : POLICY_LINE.exec(sentence[0]);
-    if (line && words(line[1]!).length > 0) found.push({ phrase: line[1]!.trim(), index: sentence.index });
+    if (line && words(line[1]!).length > 0 && !NOT_A_NAME.test(line[1]!)) {
+      found.push({ phrase: line[1]!.trim(), index: sentence.index });
+    }
     const verbs = [...sentence[0].matchAll(NAMED_POLICY)];
     for (const match of verbs.length > 0 ? verbs : sentence[0].matchAll(FOR_POLICY)) {
       // "ca for pat rivera for cell phone policy": the policy's name is what follows the last "for".

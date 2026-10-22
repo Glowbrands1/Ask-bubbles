@@ -25,8 +25,8 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
  * — with the employee's name replaced. What is under test is whether the code
  * now around the model turns that into the form the manager asked for.
  *
- * The manual is the real JBA Policy Manual's sections, verbatim, with the
- * neighbouring sections a lookup must not land on
+ * The manual is the JBA Policy Manual's layout (headings, pages, sections)
+ * with invented wording, and the neighbouring sections a lookup must not land on
  * (`test/fixtures/jba-manual-ca-sections.ts`). Faked: identity, the database
  * (in-memory), the employee directory read, the general-answer model, and
  * analytics. Every person is synthetic.
@@ -461,8 +461,7 @@ describe("Issue 1: a late opening on 10-1-26 with a $25 payroll deduction", () =
     expect(f.ticks("payroll_deduct")).toEqual(["yes"]);
     expect(f.text("policy_violated")).toMatch(/Late Opening/);
     expect(f.text("policy_language")).toMatch(/Late Opening/);
-    // The fixture's wording is synthetic (security cleanup, 22 Oct 2026): its Late Opening sheet carries the $25.00 amount in an invented sentence.
-    expect(f.text("policy_language")).toMatch(/\$25\.00 payroll deduction/);
+    expect(f.text("policy_language")).toMatch(/\$25\.00 via payroll deduction/);
     expect(f.text("policy_language")).toMatch(/p(?:age|\.)\s*15\b/i);
     expect(f.text("policy_language")).not.toMatch(/Cell Phone|Standards of Conduct|Texting/);
     expect(f.text("prior_actions")).toMatch(/01\/01\/2026|1-1-26/);
@@ -1338,6 +1337,24 @@ describe("date corrections that are ambiguous, combined, or near other dates", (
     /* The answer to the question is then taken. */
     await thread.say("change the date to 10-3-26");
     expect((await form(id)).text("form_date")).toBe("2026-10-03");
+  });
+
+  it.each([["October 3"], ["10/3/26"], ["it's october 3, 2026"]])(
+    'answered "%s" straight after the question, the date is set',
+    async (answer) => {
+      const { thread, id } = await created();
+      await thread.say("the date should be 10-2-26 or 10-3-26");
+      await thread.say(answer);
+      expect((await form(id)).text("form_date")).toBe("2026-10-03");
+    },
+  );
+
+  it("a new request for someone else that mentions a date is a new request, not a date question", async () => {
+    const { thread, id, before } = await created();
+    const answer = await thread.say("Create a new CA for Sela Brandt, she was on her phone. The date is wrong on her timecard");
+    expect(answer.content).not.toMatch(/What date should|Which date should/);
+    expect(answer.formProposal?.employeeName).toBe("Sela Brandt");
+    expect((await form(id)).text("form_date")).toBe(before.text("form_date"));
   });
 
   it("asks on a finalized form without opening a draft of it", async () => {

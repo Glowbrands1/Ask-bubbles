@@ -17,7 +17,7 @@ import { CORRECTABLE_KEYS, correctionValues, employmentChangeKind, syncNarrative
 import { changeOnEditableDraft } from "./editable-draft";
 import { EXIT_CORRECTABLE_KEYS, exitCorrectionValues } from "./exit-details";
 import { isExitDocumentKeys } from "./exit-draft";
-import { formDateChange, formDateChangeUnclear } from "./form-date-answer";
+import { formDateChange, formDateChangeUnclear, formDateReply } from "./form-date-answer";
 import { resolveFormDate, withDateMoved } from "./form-date-grounding";
 import { authorizeInstance } from "./instance-scope";
 import {
@@ -107,7 +107,9 @@ async function correctFromFormReaders(
    * is corrected; see `formDateChange`.
    */
   const newFormDate =
-    formDateChange(input.question, input.today) ?? readHeaderCorrection(input.question, input.today)?.values.form_date ?? null;
+    formDateChange(input.question, input.today) ??
+    readHeaderCorrection(input.question, input.today)?.values.form_date ??
+    formDateReply(input.question, input.lastAssistant ?? "", input.today);
   // "change the date", "10-2 or 10-3": a date correction that does not settle the day — asked, never guessed.
   const dateUnclear = newFormDate === null ? formDateChangeUnclear(input.question, input.today) : null;
   /*
@@ -204,10 +206,8 @@ async function correctFromFormReaders(
     registered?.formDateIsIncidentDate === true &&
     registered.chatCorrectableFields.includes(FORM_DATE_KEY);
   const whichDate = asksWhichDate ? whichDateQuestion(loaded.instance, dateUnclear!.offered) : null;
-  if (!kind && !isExit && !(asksPayroll && (payroll || payrollUnclear)) && !correctsWarning && !correctsDate) {
-    // Nothing else to correct: ask which date, change nothing.
-    return whichDate ? reply(whichDate) : null;
-  }
+  const correctsOtherwise = kind || isExit || (asksPayroll && (payroll || payrollUnclear)) || correctsWarning || correctsDate;
+  if (!correctsOtherwise && !whichDate) return null;
   /*
    * ==========================================================================
    * A NEW REQUEST IS NEVER A CORRECTION TO THE LAST FORM
@@ -244,6 +244,8 @@ async function correctFromFormReaders(
   if (named.length > 0 && !named.some((name) => samePerson(name, loaded.instance.employeeName))) {
     return null;
   }
+  // Only now, past the new-request and other-employee guards: nothing else to correct, so ask which date.
+  if (!correctsOtherwise) return reply(whichDate!);
 
   /*
    * THE EXIT FORM'S CORRECTION is its own readers' reading, plus the one

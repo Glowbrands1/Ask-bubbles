@@ -2130,7 +2130,7 @@ describe("two forms in one message render as two independent cards", () => {
 });
 
 /*
- * Owner decision, 22 Oct 2026 (ported from Ask Sunny): the manual is found by
+ * Owner decision, 22 Oct 2026 (ported from the sibling app): the manual is found by
  * its name, not by an approval tag. See `policySourceNoticeFor`.
  */
 describe("a policy quoted from a manual found by its name", () => {
