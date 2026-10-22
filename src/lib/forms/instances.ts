@@ -6,10 +6,8 @@ import { businessToday } from "@/lib/business-date";
 import { isProposalId } from "./proposal-id";
 import {
   FinalizedFormError,
-  UnconfirmedWarningLevelError,
   WARNING_GROUP_KEY,
   WarningLevelNotOfferedError,
-  warningLevelConfirmed,
 } from "./warning-level-gate";
 
 export { FinalizedFormError, WarningLevelNotOfferedError };
@@ -991,14 +989,6 @@ export async function finalizeInstance(
     before.values,
   ).map((field) => field.key);
 
-  /* A form that asks for a Type of Warning is filed only with a confirmed one. */
-  const asksLevel = checkboxGroupsForVariant(parseFormDocument(before.version.document), before.instance.variantKey).some(
-    (group) => group.key === WARNING_GROUP_KEY,
-  );
-  const level = before.values.find((row) => row.fieldKey === WARNING_GROUP_KEY);
-  if (asksLevel && !warningLevelConfirmed(level)) {
-    throw new UnconfirmedWarningLevelError(level?.filledBy === "ai" ? level.checked : []);
-  }
 
   if (unverified.length > 0 && options.acknowledgeUnverifiedPolicy !== true) {
     throw new UnverifiedPolicyError(unverified);
