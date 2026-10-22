@@ -397,15 +397,11 @@ function usedIn(said: readonly string[], candidate: Candidate): string | null {
   return null;
 }
 
-/**
- * The manual section the manager's account describes, or null. See above:
- * only where no policy was named and nothing else decides it, only where
- * exactly one heading answers, and only a heading titled a Policy.
- */
-export function describedManualSection(input: {
+/** Every heading the account describes, by its distinctive words — or null where something else decides the policy. */
+function describedHeadings(input: {
   readonly text: string;
   readonly chunks: readonly ManualChunk[] | null;
-}): NamedManualSection | null {
+}): Map<string, string> | null {
   if (!input.chunks || input.chunks.length === 0) return null;
   const text = input.text ?? "";
   if (namedPolicies(text).length > 0) return null;
@@ -424,12 +420,56 @@ export function describedManualSection(input: {
       if (phrase) found.set(candidate.heading, phrase);
     }
   }
-  if (found.size !== 1) return null;
-  const [heading, phrase] = [...found.entries()][0]!;
+  return found;
+}
+
+/** A heading the account describes, as the section it cites, when the manual titles it a Policy. */
+function citable(chunks: readonly ManualChunk[], heading: string, phrase: string): NamedManualSection | null {
   if (!TITLED_A_POLICY.test(heading)) return null;
-  const section = findManualSection(input.chunks, [heading]);
-  if (!section) return null;
-  return { phrase, section, offenseKey: offenseKeyForManualHeading(section.heading) };
+  const section = findManualSection(chunks, [heading]);
+  return section ? { phrase, section, offenseKey: offenseKeyForManualHeading(section.heading) } : null;
+}
+
+/**
+ * The manual section the manager's account describes, or null. See above:
+ * only where no policy was named and nothing else decides it, only where
+ * exactly one heading answers, and only a heading titled a Policy.
+ */
+export function describedManualSection(input: {
+  readonly text: string;
+  readonly chunks: readonly ManualChunk[] | null;
+}): NamedManualSection | null {
+  const found = describedHeadings(input);
+  if (!found || found.size !== 1) return null;
+  const [heading, phrase] = [...found.entries()][0]!;
+  return citable(input.chunks!, heading, phrase);
+}
+
+/**
+ * ============================================================================
+ * TWO POLICIES DESCRIBED: OFFERED, NEVER CHOSEN
+ * ============================================================================
+ *
+ * QA follow-up, 22 Oct 2026: "scrolling social media on her phone" answers
+ * both the Cell Phone/Smart Watch Policy and the Social Media Policy, so
+ * `describedManualSection` (rightly) chooses neither — and the draft's own
+ * guess, often the catch-all Standards of Conduct, stood with nothing said.
+ * Where two or more headings the manual titles a Policy answer the account,
+ * these are they, in the manual's order, for the manager to choose between.
+ * One Policy heading beside a heading that is not one ("a belt that holds
+ * her cell phone") offers nothing, as before.
+ */
+export function describedManualChoices(input: {
+  readonly text: string;
+  readonly chunks: readonly ManualChunk[] | null;
+}): NamedManualSection[] | null {
+  const found = describedHeadings(input);
+  if (!found || found.size < 2) return null;
+  const sections = [...found.entries()]
+    .map(([heading, phrase]) => citable(input.chunks!, heading, phrase))
+    .filter((entry): entry is NamedManualSection => entry !== null);
+  if (sections.length < 2) return null;
+  return sections.sort((a, b) => a.section.page - b.section.page);
 }
 
 /**

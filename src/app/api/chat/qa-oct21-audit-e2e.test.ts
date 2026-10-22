@@ -693,24 +693,63 @@ describe("Issue 3: personal phone use cites the Cell Phone/Smart Watch Policy, p
   });
 
   /*
-   * KNOWN LIMIT, by design (`describedManualSection`: two headings answer →
-   * nothing): "social media on her phone" answers both the Cell Phone/Smart
-   * Watch Policy and the Social Media Policy, so no section is read from the
-   * account and the draft's own box stands. It must never be cited as a
-   * section the manager did not describe; naming the policy settles it.
+   * TWO POLICIES DESCRIBED (QA follow-up, 22 Oct 2026): "social media on her
+   * phone" answers both the Cell Phone/Smart Watch Policy (p.19) and the
+   * Social Media Policy (p.22). Neither is chosen for the manager, and the
+   * draft's own guess is not kept: they are asked, and their answer is cited.
    */
-  it("an account two Policy sections answer cites neither by guess; naming one cites it", async () => {
-    const thread = new Thread();
-    await thread.say("create verbal ca for marlo quist, on 10-20-26 she was scrolling social media on her phone on the sales floor. no payroll deduct");
-    state.draft = { values: { observation: ISSUE_3_MODEL.values.observation }, checked: {} };
-    const { id } = await thread.create();
-    expect((await form(id)).text("policy_language") ?? "").not.toMatch(/Texting as General|Using Social Media at Work/);
+  const SOCIAL =
+    "create verbal ca for marlo quist, on 10-20-26 she was scrolling social media on her phone on the sales floor. no payroll deduct";
 
-    const named = new Thread();
-    await named.say("create verbal ca for marlo quist for violating the cell phone policy, on 10-20-26 she was scrolling social media on her phone. no payroll deduct");
+  it("the card asks which policy, offering both with their pages", async () => {
+    const thread = new Thread();
+    const card = await thread.say(SOCIAL);
+    expect(card.content).toMatch(/\*\*Which policy applies\?\*\*/);
+    expect(card.content).toMatch(/Cell Phone\/Smart Watch Policy\*\* \(page 19\)/);
+    expect(card.content).toMatch(/Social Media Policy\*\* \(page 22\)/);
+  });
+
+  it("created without an answer: no guessed policy is cited, and the draft says the policy is left for the manager", async () => {
+    const thread = new Thread();
+    await thread.say(SOCIAL);
     state.draft = ISSUE_3_MODEL;
-    const second = await named.create();
-    expect((await form(second.id)).text("policy_language")).toMatch(/Cell Phone\/Smart Watch Policy/);
+    const { id, draftNotice } = await thread.create();
+    const f = await form(id);
+    expect(f.ticks("offense_type")).not.toContain("standards_of_conduct");
+    expect(f.text("policy_language") ?? "").toBe("");
+    expect(f.text("policy_violated") ?? "").not.toMatch(/Standards of Conduct/);
+    expect(draftNotice).toMatch(/more than one policy in the manual — Cell Phone\/Smart Watch Policy \(page 19\) or Social Media Policy \(page 22\)/);
+    expect(f.text("action_plan")).toMatch(/^Management will review the applicable company policy with Marlo\./);
+
+    /* Then named in chat, it is cited from the manual. */
+    await thread.say("add the Cell Phone/Smart Watch Policy");
+    expect((await form(id)).text("policy_language")).toMatch(/Cell Phone\/Smart Watch Policy/);
+  });
+
+  it.each([
+    ["the cell phone policy", /Cell Phone\/Smart Watch Policy/, /Social Media Policy/],
+    ["social media policy", /Social Media Policy/, /Cell Phone\/Smart Watch/],
+  ])('answered "%s": that section is cited, and only it', async (answer, cited, notCited) => {
+    const thread = new Thread();
+    await thread.say(SOCIAL);
+    const card = await thread.say(answer);
+    expect(card.formProposal?.templateKey).toBe("dpoa");
+    expect(card.content).not.toMatch(/Which policy applies/);
+    state.draft = ISSUE_3_MODEL;
+    const { id } = await thread.create();
+    const f = await form(id);
+    expect(f.text("policy_language")).toMatch(cited);
+    expect(f.text("policy_language")).not.toMatch(notCited);
+    expect(f.text("policy_language")).not.toMatch(/Standards of Conduct/);
+  });
+
+  it("a specific box the account settles is kept: a late arrival on her phone is Attendance, not a question", async () => {
+    const thread = new Thread();
+    const card = await thread.say("create verbal ca for marlo quist, she was 20 minutes late on 10-20-26 because she was on social media on her phone. no payroll deduct");
+    expect(card.content).not.toMatch(/Which policy applies/);
+    state.draft = { values: { observation: "Observed:\nOn October 20, 2026, Marlo arrived 20 minutes late." }, checked: { offense_type: ["tardiness"] } };
+    const { id } = await thread.create();
+    expect((await form(id)).ticks("offense_type")).toContain("tardiness");
   });
 
   it("a phone call that is NOT personal use (calling in late) is not cited as the Cell Phone policy", async () => {
