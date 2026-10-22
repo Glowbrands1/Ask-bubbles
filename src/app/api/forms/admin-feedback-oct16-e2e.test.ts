@@ -368,13 +368,13 @@ describe("Issue 3 — Corrective Action from complete conversational information
 
   it("carries a name given earlier through a store-only reply, without asking again", async () => {
     const { responses, proposal } = await conversation([
-      "My employee tiffany lempka was late on 10/5 and 10/15. Please create a CA form.",
+      "My employee tiffany ostrander was late on 10/5 and 10/15. Please create a CA form.",
       "She is at Dodge",
     ]);
     // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
-    expect(responses[0]!.formProposal!.employeeName).toBe("tiffany lempka");
+    expect(responses[0]!.formProposal!.employeeName).toBe("tiffany ostrander");
     // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
-    expect(proposal.employeeName).toBe("tiffany lempka");
+    expect(proposal.employeeName).toBe("tiffany ostrander");
     expect(proposal.locationId).toBe("loc-264");
     expect(responses[1]!.content).not.toMatch(/who is this/i);
   });

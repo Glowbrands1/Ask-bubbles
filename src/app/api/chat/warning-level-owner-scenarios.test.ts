@@ -110,7 +110,7 @@ vi.mock("@/lib/ai/anthropic", () => ({
               input: {
                 values: {
                   observation:
-                    "Observed:\nPaulyne arrived 30 minutes late for the scheduled shift today.\n\nExpectation:\nEmployees are expected to arrive on time for every scheduled shift.\n\nGoing Forward:\nPaulyne should plan to arrive early.",
+                    "Observed:\nRosalyn arrived 30 minutes late for the scheduled shift today.\n\nExpectation:\nEmployees are expected to arrive on time for every scheduled shift.\n\nGoing Forward:\nRosalyn should plan to arrive early.",
                 },
                 checked: { warning_type: state.modelTicks, offense_type: ["tardiness"] },
               },

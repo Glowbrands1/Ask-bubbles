@@ -69,3 +69,13 @@ Sunny gained an end-to-end regression suite for HR's 21 Oct conversations
 4. Sunny: two forms from one message, and "which one?" for a correction (Bubbles 01fa914, 8b79a46).
 5. Sunny: Bubbles' store resolver / Woven title verification / chat-side people lookup (ffea279, efde160).
 6. A same-origin guard on Sunny's Apify review-sync admin routes.
+
+## 22 Oct 2026: from Ask Sunny — CA recipient, and no real people in the repository
+
+- **Ported** Sunny 6b5f897 (PR #127): "CA for <name>" is the recipient; the
+  incident's other names are not candidates.
+- **Ported** Sunny PR #130: tests, comments, docs and migration notes use
+  synthetic people only (both companies' real names and work addresses
+  removed); `src/lib/security/no-real-people.test.ts` guards company
+  addresses. Bubbles has no copy of the policy-manual fixture, so that part
+  of Sunny's change does not apply.

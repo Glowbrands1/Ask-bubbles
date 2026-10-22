@@ -100,8 +100,8 @@ describe("2b. corrective action is the progression, and never resolves to a temp
 
   /* Reference platform, October 2026: "write a CA for …" was answered as a question. */
   it.each([
-    "write a CA for Paisley Peklo",
-    "write a corrective action for Paisley",
+    "write a CA for Juniper Brandvold",
+    "write a corrective action for Juniper",
     "please write an ca for dana moss",
     "can you write a CA for Dana",
   ])("%s asks for a document", (question) => {

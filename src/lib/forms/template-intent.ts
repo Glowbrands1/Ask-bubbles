@@ -635,11 +635,11 @@ function leadsWithTheForm(q: string, original: string): boolean {
   const named = /^\s*(?:please\s+)?(?:c\.?a\.?|corrective[\s-]+actions?)(?:\s+form)?\s+for\s+(\S+)/i.exec(original);
   if (named !== null && couldBeName(named[1])) return true;
   /*
-   * "PAULYNE CAMACHO'S CA FOR NO CALL NO SHOW 10/18", "Ellie's CA - she was
+   * "ROSALYN CALLOWAY'S CA FOR NO CALL NO SHOW 10/18", "Wren's CA - she was
    * late" (reference platform, 21 October 2026): whose CA it is, then the
    * details. The possessive is the person, exactly as "CA for <name>" is. Only
    * where the details visibly start after it — the end, a separator, or
-   * "for"/"about" — so "Ellie's CA was filed last week" is still a remark
+   * "for"/"about" — so "Wren's CA was filed last week" is still a remark
    * about one.
    */
   const owned =
@@ -654,11 +654,11 @@ function leadsWithTheForm(q: string, original: string): boolean {
  * "WRITE A …" IS A REQUEST ONLY WHEN WHAT IS WRITTEN IS THE FORM
  * ============================================================================
  *
- * "write a CA for Paisley" was read as a question about the progression and
+ * "write a CA for Juniper" was read as a question about the progression and
  * the manager was told to rephrase (October 2026), so "write a" / "write an"
  * were made creation verbs. QA, 22 Oct 2026 (F-04): as bare verbs they also
  * turned "can you write a summary of the corrective action policy", "write a
- * note explaining the corrective action steps" and "write an email to Paisley
+ * note explaining the corrective action steps" and "write an email to Juniper
  * about her CA" into requests to create a Corrective Action Form. Writing is a
  * request for the form only when its object IS the form or the warning;
  * "how do I write a CA?" is still ruled a question before this is consulted.
@@ -685,7 +685,7 @@ const CREATION_VERBS = [
   "open",
   "write up",
   "write-up",
-  /* "write a CA for Paisley" is read by `writesTheForm`, not by a bare "write a". */
+  /* "write a CA for Juniper" is read by `writesTheForm`, not by a bare "write a". */
   "write her up",
   "write him up",
   "write them up",
@@ -994,7 +994,7 @@ export function leadingFormRequest(text: string): LeadingFormRequest | null {
   const next = words[run.length]?.toLowerCase();
   if (run.length > 0 && next !== undefined && NAME_RUN_ENDS.has(next)) return found(run);
   /*
-   * "COACHING FORM PAULYNE CAMACHO LATE 3 TIMES" (reference platform, 21
+   * "COACHING FORM ROSALYN CALLOWAY LATE 3 TIMES" (reference platform, 21
    * October 2026). In capitals or in lower case, no capital says where the
    * name ends, and "late" is not a word that introduces the rest of a sentence
    * — but it is a word that is never part of a name. A FULL name (two words)

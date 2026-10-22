@@ -136,11 +136,11 @@ function simulateApply(rows: PlannedRow[], accounts: PlannerAccount[], employees
 
 describe("provisioning", () => {
   it("1. active Location Manager, approved mapping, email, mapped location, no account → CREATE_USER (invite not sent)", () => {
-    const e = employee({ emailAddress: "Carley.R@Gmail.com" });
+    const e = employee({ emailAddress: "Harper.L@Gmail.com" });
     const row = rowOf(plan([e]), e);
     expect(row.actions).toEqual(["CREATE_USER"]);
     expect(row.after).toEqual({
-      email: "carley.r@gmail.com",
+      email: "harper.l@gmail.com",
       display_name: e.name,
       role: "location_manager",
       status: "invited",
