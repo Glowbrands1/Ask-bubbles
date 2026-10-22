@@ -6,10 +6,12 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
-## 22 Oct 2026: both apps brought level
+## 22 Oct 2026: both apps brought level (pending QA review)
 
 Every chat/forms fix merged to either `main` from 12–21 Oct was compared. The
-gaps below were closed. Everything else already existed in both.
+gaps below are closed on branch `claude/lucid-shannon-v79zju` in each repo,
+**not yet merged to `main`** (QA hold, 22 Oct). Everything else already
+existed in both.
 
 ### Ported into Ask Sunny from Ask Bubbles (sibling)
 
@@ -57,7 +59,7 @@ Sunny gained an end-to-end regression suite for HR's 21 Oct conversations
 ### Open decisions (not ported yet)
 
 1. Sunny: admins who aren't company-wide limited to granting their own areas (Bubbles 2123821).
-2. Sunny: asking "which date goes on the form?" when two incident dates are given (Bubbles).
+2. Sunny: asking "which date goes on the form?" when two incident dates are given (Bubbles 9c02dcb).
 3. Sunny: every form, not only CAs, built only from the turns about that form and person (Bubbles a73ef6c).
 4. Sunny: two forms from one message, and "which one?" for a correction (Bubbles 01fa914, 8b79a46).
 5. Sunny: Bubbles' store resolver / Woven title verification / chat-side people lookup (ffea279, efde160).

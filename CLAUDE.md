@@ -21,9 +21,11 @@ citation, access/auth, knowledge sync or Woven:
    not needed because …**.
 
 Name mapping when porting: Bubbles ↔ Sunny, store ↔ salon, Forms Register ↔
-Form Monitoring, Buff City Soap handbook ↔ JBA Policy Manual. Never copy one
-company's content (policies, job titles, salon/store names, nicknames,
-Sun Tan City / Buff City Soap wording) into the other — port the mechanism.
+Form Monitoring. Both apps cite the **JBA Policy Manual** (this app reads it as
+Buff City Soap, see `config/company/knowledge.ts`) — never rename manual
+titles, retrieval depends on them. Never copy one company's content
+(policies, job titles, salon/store names, nicknames, Sun Tan City / Buff City
+Soap wording) into the other — port the mechanism.
 
 ## 2. Every bug report becomes a test
 
