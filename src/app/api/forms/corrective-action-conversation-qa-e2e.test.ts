@@ -1446,3 +1446,25 @@ describe("Q20 an existing draft through rollout: nothing about it changes except
     expect(store.form_instances).toHaveLength(1);
   });
 });
+
+describe("Q21 a corrected incident date is the answer, not a second incident (release merge, 22 Oct 2026)", () => {
+  it("\"the meeting was actually on 10-19-26\" dates the form 10/19 and never asks which date", async () => {
+    const chat = new Chat();
+    await chat.say(OCT21);
+    const reply = await chat.say("the meeting was actually on 10-19-26");
+    expect(reply).not.toMatch(/Which date goes on the form/);
+    expect(chat.card?.formDate).toBe("2026-10-19");
+    expect(await chat.say("no payroll deduct")).not.toMatch(/Which date goes on the form/);
+    expect(chat.card?.formDate).toBe("2026-10-19");
+    state.draft = MODEL("Tess Varga did not attend the monthly meeting on October 19, 2026.");
+    expect((await saved(await chat.create())).form_date).toBe("2026-10-19");
+  });
+
+  it("two different incidents are still a question", async () => {
+    const chat = new Chat();
+    const reply = await chat.say(
+      "create a written CA for tess varga, she missed the monthly meeting on 10-13-26 and the training on 10-20-26. no payroll deduct",
+    );
+    expect(reply).toMatch(/Which date goes on the form/);
+  });
+});

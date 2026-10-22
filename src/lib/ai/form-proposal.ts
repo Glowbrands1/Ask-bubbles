@@ -1187,7 +1187,17 @@ function directoryNotes(
    * the day it is created, never whichever incident was typed first. See
    * `decideFormDate` in `incident-dates.ts`.
    */
-  const decided = decideFormDate({ text: context.text, templateKey: match.key, history: input.history, conversation, today });
+  const decided = decideFormDate({
+    text: context.text,
+    templateKey: match.key,
+    history: input.history,
+    conversation,
+    today,
+    correctedTo: correctedIncidentDate(
+      context.messages.map((message) => message.content),
+      today,
+    ),
+  });
   if (decided.formDate !== undefined) proposal.formDate = decided.formDate;
   if (decided.candidates) proposal.formDateCandidates = decided.candidates;
   if (decided.question) notes.push(decided.question);
