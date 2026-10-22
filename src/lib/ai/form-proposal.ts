@@ -50,6 +50,7 @@ import {
   PAYROLL_DEDUCT_KEY,
   PAYROLL_DEDUCT_LABEL,
   payrollDeductFromConversation,
+  payrollDeductUnclear,
 } from "@/lib/forms/payroll-deduct";
 import { checkboxGroupsForVariant } from "@/lib/forms/document";
 import {
@@ -1660,6 +1661,14 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
       { role: "user", content: input.question },
     ]);
     if (replied) return { kind: "explicit", templateKey: continued };
+    /*
+     * A STATEMENT ABOUT THE DEDUCTION THAT IS NOT A CLEAR YES OR NO —
+     * "actually we're not doing the $25 payroll deduction" — still belongs to
+     * this form: it withdraws the answer the card shows, and the card must ask
+     * again. Sent to retrieval, it left the card's earlier Yes standing (QA,
+     * 22 Oct 2026).
+     */
+    if (payrollDeductUnclear(input.question)) return { kind: "explicit", templateKey: continued };
   }
 
   /*
