@@ -58,9 +58,9 @@ next-env.d.ts
 # stay out of git. Regenerate them against a local stack when a handoff needs them.
 /screenshots/
 
-# Written by `next dev` on every start; not part of the project.
+# Written by `next dev` when no CLAUDE.md carries its agent-rules block.
+# CLAUDE.md is committed WITH that block, so `next dev` leaves it unchanged.
 /AGENTS.md
-/CLAUDE.md
 
 # browser tests (Playwright) — reports, traces and captures; baselines live in e2e/__screenshots__
 /test-results

@@ -324,7 +324,8 @@ describe("1. previous verbal warning, current warning unspecified (the productio
   it("ticks Verbal from \"given verbal warning\", records the 9/21 history, and never Written", async () => {
     const { proposal, content, result } = await conversation([REPORT]);
 
-    expect(proposal.employeeName).toBe("Paulyne Test");
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
+    expect(proposal.employeeName).toBe("paulyne test");
     expect(proposal.warningLevel).toBe("verbal");
     expect(content).toContain("**Type of warning:** Verbal Warning, as you said");
     expect(content).not.toContain(QUESTION);
@@ -352,7 +353,8 @@ describe("1. previous verbal warning, current warning unspecified (the productio
     const { proposal, content } = await conversation([REPORT, "verbal"]);
 
     expect(proposal.warningLevel).toBe("verbal");
-    expect(proposal.employeeName).toBe("Paulyne Test");
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
+    expect(proposal.employeeName).toBe("paulyne test");
     expect(content).toContain("**Type of warning:** Verbal Warning, as you said");
     expect(content).not.toContain(QUESTION);
   });
@@ -466,7 +468,8 @@ describe("5. the manager changes Written Warning to Verbal Warning through chat"
       "actually change it to verbal",
     ]);
 
-    expect(proposal.employeeName).toBe("Paulyne Test");
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
+    expect(proposal.employeeName).toBe("paulyne test");
     expect(proposal.warningLevel).toBe("verbal");
     expect(content).toContain("**Type of warning:** Verbal Warning, as you said");
     const id = result.reference.instanceId;
@@ -605,7 +608,8 @@ describe("review: a level said about another form, or as history, never lands on
       REPORT,
     ]);
 
-    expect(proposal.employeeName).toBe("Paulyne Test");
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
+    expect(proposal.employeeName).toBe("paulyne test");
     // Paulyne's own "given verbal warning", never Jordan's written one.
     expect(proposal.warningLevel).toBe("verbal");
     expect(await ticked(result.reference.instanceId)).toEqual(["verbal"]);

@@ -1,0 +1,66 @@
+-- =============================================================================
+-- ASK BUBBLES — PAYROLL DEDUCT AUDIT, PHASE B (restricted: reads chat text)
+-- =============================================================================
+--
+-- For ONLY the Phase A candidates HR approved for review, collect the manager's
+-- own chat turns that the form was built from, so the FIXED reader can re-read
+-- them (phase-b-reclassify.audit.ts) and say which forms most likely carry a
+-- Yes the manager did not give. Output is written to a file on the approved,
+-- access-controlled HR workstation and deleted when the review closes.
+--
+-- NOT YET RUN AGAINST PRODUCTION. Requires the Phase B approval in README.md.
+--
+-- Parameter (psql):  -v candidate_ids='{"<uuid>","<uuid>"}'   (from Phase A)
+-- Usage:  psql "$AUDIT_DB_URL" -v candidate_ids=... -f phase-b-source-turns.sql \
+--              -o /secure/hr-audit/source-turns.json -t -A
+-- =============================================================================
+
+begin transaction isolation level repeatable read read only;
+set local statement_timeout = '60s';
+set local lock_timeout = '5s';
+
+with candidates as (
+  select unnest(:'candidate_ids'::uuid[]) as instance_id
+),
+created as (
+  select distinct on (e.instance_id) e.instance_id, e.detail ->> 'proposalId' as proposal_id
+  from public.form_instance_events e
+  join candidates c on c.instance_id = e.instance_id
+  where e.kind = 'created'
+  order by e.instance_id, e.created_at
+),
+-- The assistant turn that carried the card this form was created from: by
+-- the proposal id on the card, or by the form reference written after creation.
+anchor as (
+  select distinct on (c.instance_id)
+         c.instance_id, m.conversation_id, m.position
+  from candidates c
+  left join created cr on cr.instance_id = c.instance_id
+  join public.chat_messages m
+    on m.role::text = 'assistant'
+   and (
+        (cr.proposal_id is not null and (
+             m.metadata -> 'formProposal' ->> 'proposalId' = cr.proposal_id
+          or m.metadata -> 'formProposals' @> jsonb_build_array(jsonb_build_object('proposalId', cr.proposal_id))))
+     or m.metadata -> 'formInstanceRef' ->> 'instanceId' = c.instance_id::text
+     or m.metadata -> 'formInstanceRefs' @> jsonb_build_array(jsonb_build_object('instanceId', c.instance_id::text))
+   )
+  order by c.instance_id, m.position
+),
+turns as (
+  select a.instance_id,
+         jsonb_agg(jsonb_build_object('role', m.role::text, 'content', m.content) order by m.position) as turns
+  from anchor a
+  join public.chat_messages m
+    on m.conversation_id = a.conversation_id
+   and m.position <= a.position
+  group by a.instance_id
+)
+select coalesce(jsonb_agg(jsonb_build_object(
+         'instanceId', c.instance_id,
+         'sourceFound', t.turns is not null,
+         'turns', coalesce(t.turns, '[]'::jsonb))), '[]'::jsonb)
+from candidates c
+left join turns t on t.instance_id = c.instance_id;
+
+rollback;

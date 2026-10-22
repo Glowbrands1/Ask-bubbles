@@ -381,8 +381,9 @@ const brief = (message: ChatMessage) =>
 
 describe("the exact retest prompts", () => {
   it("'jordan testperson needs a written warning for cash handling' → CA · Jordan Testperson · Written · cash handling", async () => {
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed (supersedes the 9 Oct capitalisation rule).
     expect(brief(await say("jordan testperson needs a written warning for cash handling"))).toEqual([
-      { form: "dpoa", employee: "Jordan Testperson", warning: "written", issue: "cash handling" },
+      { form: "dpoa", employee: "jordan testperson", warning: "written", issue: "cash handling" },
     ]);
   });
 
@@ -399,20 +400,22 @@ describe("the exact retest prompts", () => {
     const first = await say("coaching form for Avery Testperson and a CA for Jordan Testperson");
     const second = await say("jordan testperson needs a written warning for cash handling");
     expect(brief(first).map(({ employee }) => employee)).toEqual(["Avery Testperson", "Jordan Testperson"]);
-    expect(brief(second)).toEqual([{ form: "dpoa", employee: "Jordan Testperson", warning: "written", issue: "cash handling" }]);
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed (supersedes the 9 Oct capitalisation rule).
+    expect(brief(second)).toEqual([{ form: "dpoa", employee: "jordan testperson", warning: "written", issue: "cash handling" }]);
   });
 });
 
 describe("capitalisation, misspellings, shorthand and word order", () => {
+  // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed (supersedes the 9 Oct capitalisation rule).
   it.each([
     ["Jordan Testperson needs a written warning for cash handling", "Jordan Testperson", "written", "cash handling"],
-    ["JORDAN TESTPERSON NEEDS A WRITTEN WARNING FOR CASH HANDLING", "Jordan Testperson", "written", "CASH HANDLING"],
-    ["jordan testperson needs a writen warning for cash handeling", "Jordan Testperson", "written", "cash handeling"],
-    ["written warning for jordan testperson - cash handling", "Jordan Testperson", "written", "cash handling"],
-    ["CA for jordan testperson, cash handling", "Jordan Testperson", null, "cash handling"],
-    ["jordan testperson was $40 short on her drawer last night, needs a written warning", "Jordan Testperson", "written", null],
-    ["jordan testperson cash handling written warning", "Jordan Testperson", "written", null],
-    ["need a CA for jordan testperson. she mishandled cash at close yesterday. written warning", "Jordan Testperson", "written", null],
+    ["JORDAN TESTPERSON NEEDS A WRITTEN WARNING FOR CASH HANDLING", "JORDAN TESTPERSON", "written", "CASH HANDLING"],
+    ["jordan testperson needs a writen warning for cash handeling", "jordan testperson", "written", "cash handeling"],
+    ["written warning for jordan testperson - cash handling", "jordan testperson", "written", "cash handling"],
+    ["CA for jordan testperson, cash handling", "jordan testperson", null, "cash handling"],
+    ["jordan testperson was $40 short on her drawer last night, needs a written warning", "jordan testperson", "written", null],
+    ["jordan testperson cash handling written warning", "jordan testperson", "written", null],
+    ["need a CA for jordan testperson. she mishandled cash at close yesterday. written warning", "jordan testperson", "written", null],
   ])("%s", async (prompt, employee, warning, issue) => {
     expect(brief(await say(prompt))).toEqual([{ form: "dpoa", employee, warning, issue }]);
   });
@@ -420,7 +423,8 @@ describe("capitalisation, misspellings, shorthand and word order", () => {
   // The owner's rule, 9 Oct 2026: "given verbal warning" ticks Verbal — the level given, never a higher one.
   it("'given verbal warning on 9/21' → Verbal, never Written", async () => {
     expect(brief(await say("create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 9/21"))).toEqual([
-      { form: "dpoa", employee: "Paulyne Test", warning: "verbal", issue: null },
+      // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed (supersedes the 9 Oct capitalisation rule).
+      { form: "dpoa", employee: "paulyne test", warning: "verbal", issue: null },
     ]);
   });
 
@@ -428,9 +432,10 @@ describe("capitalisation, misspellings, shorthand and word order", () => {
     "Coaching form for avery testperson & CA for jordan testperson",
     "coachng form for avery testperson and a c/a for jordan testperson",
   ])("%s → two cards", async (prompt) => {
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed (supersedes the 9 Oct capitalisation rule).
     expect(brief(await say(prompt)).map(({ form, employee }) => [form, employee])).toEqual([
-      ["coaching", "Avery Testperson"],
-      ["dpoa", "Jordan Testperson"],
+      ["coaching", "avery testperson"],
+      ["dpoa", "jordan testperson"],
     ]);
   });
 
@@ -452,7 +457,8 @@ describe("conversation history", () => {
     await say("What does the JBA policy manual say about shirts?");
     await say("how many days of PTO do I get?");
     const answer = await say("jordan testperson needs a written warning for cash handling");
-    expect(brief(answer)).toEqual([{ form: "dpoa", employee: "Jordan Testperson", warning: "written", issue: "cash handling" }]);
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed (supersedes the 9 Oct capitalisation rule).
+    expect(brief(answer)).toEqual([{ form: "dpoa", employee: "jordan testperson", warning: "written", issue: "cash handling" }]);
     await create(answer, cards(answer)[0]!);
     expect(drafts[0]!.notes).toBe("jordan testperson needs a written warning for cash handling");
   });
@@ -460,16 +466,18 @@ describe("conversation history", () => {
   it("a person correction keeps the account — the warning and the issue — under the corrected name", async () => {
     await say("jordan testperson needs a written warning for cash handling");
     const corrected = await say("actually it's for avery testperson");
-    expect(brief(corrected)).toEqual([{ form: "dpoa", employee: "Avery Testperson", warning: "written", issue: "cash handling" }]);
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed (supersedes the 9 Oct capitalisation rule).
+    expect(brief(corrected)).toEqual([{ form: "dpoa", employee: "avery testperson", warning: "written", issue: "cash handling" }]);
     const changed = await say("make it a verbal warning");
-    expect(brief(changed)).toEqual([{ form: "dpoa", employee: "Avery Testperson", warning: "verbal", issue: "cash handling" }]);
+    expect(brief(changed)).toEqual([{ form: "dpoa", employee: "avery testperson", warning: "verbal", issue: "cash handling" }]);
 
     const { instanceId } = await create(changed, cards(changed)[0]!);
     const form = await review(instanceId);
-    expect(form.instance.employeeName).toBe("Avery Testperson");
+    expect(form.instance.employeeName).toBe("avery testperson");
     expect(value(form, "warning_type")?.checked).toEqual(["verbal"]);
     // The draft is written from the account with the corrected name — never the wrong one.
-    expect(drafts[0]!.notes).toContain("Avery Testperson needs a written warning for cash handling");
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed (supersedes the 9 Oct capitalisation rule).
+    expect(drafts[0]!.notes).toContain("avery testperson needs a written warning for cash handling");
     expect(drafts[0]!.notes.toLowerCase()).not.toContain("jordan");
   });
 

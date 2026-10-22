@@ -1,0 +1,756 @@
+[
+  {
+    "id": "E1",
+    "group": "Explicit identifier",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera at store 66, late 3 times"
+    ],
+    "expected": "loc-66",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=ready location=loc-66(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\nI have the employee and the store (**Kearney, NE**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "b6ffec2a-012d-4662-8f93-9b1eacdd8ebf",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-66",
+          "locationName": "Kearney, NE",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "ready",
+          "sourceMessageIds": [
+            "E1-u1"
+          ],
+          "locationSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "E2",
+    "group": "Explicit identifier",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera at store #66, late 3 times"
+    ],
+    "expected": "loc-66",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=ready location=loc-66(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\nI have the employee and the store (**Kearney, NE**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "82931a52-de37-490e-b88f-f41682c9a265",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-66",
+          "locationName": "Kearney, NE",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "ready",
+          "sourceMessageIds": [
+            "E2-u1"
+          ],
+          "locationSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "E3",
+    "group": "Explicit identifier",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera at location 66, late 3 times"
+    ],
+    "expected": "loc-66",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=ready location=loc-66(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\nI have the employee and the store (**Kearney, NE**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "6ad0c7d2-aa5a-4dd7-809d-21d4d154c9f7",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-66",
+          "locationName": "Kearney, NE",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "ready",
+          "sourceMessageIds": [
+            "E3-u1"
+          ],
+          "locationSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "E4",
+    "group": "Explicit identifier",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera #66, late 3 times"
+    ],
+    "expected": "loc-66",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=ready location=loc-66(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\nI have the employee and the store (**Kearney, NE**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "020e35e8-4f32-46c0-b0fe-c41358efde6d",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-66",
+          "locationName": "Kearney, NE",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "ready",
+          "sourceMessageIds": [
+            "E4-u1"
+          ],
+          "locationSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "E5",
+    "group": "Explicit identifier",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera at kearney, late 3 times"
+    ],
+    "expected": "loc-66 (name)",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=ready location=loc-66(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\nI have the employee and the store (**Kearney, NE**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "9b03f6bb-f4b3-403f-a573-86c1106d0ff2",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-66",
+          "locationName": "Kearney, NE",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "ready",
+          "sourceMessageIds": [
+            "E5-u1"
+          ],
+          "locationSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "E6",
+    "group": "Explicit identifier",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera at store 264, late 3 times"
+    ],
+    "expected": "loc-264",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "1c5b01ef-bac0-4ff1-afc2-d96786863ff7",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "ready",
+          "sourceMessageIds": [
+            "E6-u1"
+          ],
+          "locationSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "E7",
+    "group": "Explicit identifier",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera at the west dodge store, late 3 times"
+    ],
+    "expected": "loc-264 (name)",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=ready location=loc-264(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\nI have the employee and the store (**Omaha, NE (West Dodge Rd)**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "f56957db-4b79-41de-afa9-dd5d71cb12ab",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-264",
+          "locationName": "Omaha, NE (West Dodge Rd)",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "ready",
+          "sourceMessageIds": [
+            "E7-u1"
+          ],
+          "locationSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "E9",
+    "group": "Explicit identifier (reply)",
+    "actor": "location_manager",
+    "turns": [
+      "create a coaching form for pat rivera, late 3 times",
+      "store 66"
+    ],
+    "expected": "reply sets loc-66; employee kept",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=needs_location location=null(needs_selection) formDate=null level=null payroll=null | proposal coaching employee=\"pat rivera\" status=ready location=loc-66(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI won't choose which store this belongs to. Which store is this about?\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\n**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here.",
+        "formProposal": {
+          "proposalId": "64fbb85c-6092-4f18-8b42-5b2f315ea099",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "needs_selection",
+          "authorizedLocationIds": [
+            "loc-264",
+            "loc-66"
+          ],
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "E9-u1"
+          ]
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your messages above.\n\nI have the employee and the store (**Kearney, NE**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "8f5c8304-276d-448b-8444-aa9e8141234b",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-66",
+          "locationName": "Kearney, NE",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "ready",
+          "sourceMessageIds": [
+            "E9-u1",
+            "E9-u2"
+          ],
+          "locationSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "E10",
+    "group": "Explicit identifier (reply)",
+    "actor": "location_manager",
+    "turns": [
+      "create a coaching form for pat rivera, late 3 times",
+      "#66"
+    ],
+    "expected": "reply sets loc-66; employee kept",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=needs_location location=null(needs_selection) formDate=null level=null payroll=null | proposal coaching employee=\"pat rivera\" status=ready location=loc-66(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI won't choose which store this belongs to. Which store is this about?\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\n**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here.",
+        "formProposal": {
+          "proposalId": "c4799ddf-b34f-4712-9939-a53c2346c6ad",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "needs_selection",
+          "authorizedLocationIds": [
+            "loc-264",
+            "loc-66"
+          ],
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "E10-u1"
+          ]
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your messages above.\n\nI have the employee and the store (**Kearney, NE**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "e50c5944-73f6-4eb0-80b7-dac5d91564d2",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-66",
+          "locationName": "Kearney, NE",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "ready",
+          "sourceMessageIds": [
+            "E10-u1",
+            "E10-u2"
+          ],
+          "locationSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "E11",
+    "group": "Explicit identifier (reply)",
+    "actor": "location_manager",
+    "turns": [
+      "create a coaching form for pat rivera, late 3 times",
+      "kearney"
+    ],
+    "expected": "reply sets loc-66; employee kept",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=needs_location location=null(needs_selection) formDate=null level=null payroll=null | proposal coaching employee=\"pat rivera\" status=ready location=loc-66(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI won't choose which store this belongs to. Which store is this about?\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\n**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here.",
+        "formProposal": {
+          "proposalId": "92522cab-11e5-44df-9b21-7d67c2e3573e",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "needs_selection",
+          "authorizedLocationIds": [
+            "loc-264",
+            "loc-66"
+          ],
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "E11-u1"
+          ]
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your messages above.\n\nI have the employee and the store (**Kearney, NE**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "701dd566-7262-4846-b9ae-7df2f28c9cb2",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": "Kearney",
+          "formDate": null,
+          "locationId": "loc-66",
+          "locationName": "Kearney, NE",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "ready",
+          "sourceMessageIds": [
+            "E11-u1",
+            "E11-u2"
+          ],
+          "locationSource": "manager",
+          "employeeRoleSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "U1",
+    "group": "Bare number (not a location)",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera, she got here at 66 today, late 3 times"
+    ],
+    "expected": "not loc-66",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=needs_location location=null(needs_selection) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI won't choose which store this belongs to. Which store is this about?\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\n**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here.",
+        "formProposal": {
+          "proposalId": "37f9fde5-fb74-465e-b527-6c04c6aecbdc",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "needs_selection",
+          "authorizedLocationIds": [
+            "loc-264",
+            "loc-66"
+          ],
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "U1-u1"
+          ]
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "U2",
+    "group": "Bare number (not a location)",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera, she clocked in at 6:06, late 3 times"
+    ],
+    "expected": "time: not loc-66",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=needs_location location=null(needs_selection) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI won't choose which store this belongs to. Which store is this about?\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\n**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here.",
+        "formProposal": {
+          "proposalId": "5cc92456-4b48-4645-9e33-3c49059dfe7d",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "needs_selection",
+          "authorizedLocationIds": [
+            "loc-264",
+            "loc-66"
+          ],
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "U2-u1"
+          ]
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "U4",
+    "group": "Bare number (not a location)",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera, she rang up a sale at 66 dollars and was late 3 times"
+    ],
+    "expected": "price: not loc-66",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=needs_location location=null(needs_selection) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI won't choose which store this belongs to. Which store is this about?\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\n**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here.",
+        "formProposal": {
+          "proposalId": "eeaaf77f-c757-40e1-929f-1128b22ae700",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "needs_selection",
+          "authorizedLocationIds": [
+            "loc-264",
+            "loc-66"
+          ],
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "U4-u1"
+          ]
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "U5",
+    "group": "Bare number (not a location)",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera, she was on break for 66 minutes"
+    ],
+    "expected": "quantity: not loc-66",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=needs_location location=null(needs_selection) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI won't choose which store this belongs to. Which store is this about?\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\n**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here.",
+        "formProposal": {
+          "proposalId": "f98ae257-8781-4c3d-91b9-5749b7d76677",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "needs_selection",
+          "authorizedLocationIds": [
+            "loc-264",
+            "loc-66"
+          ],
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "U5-u1"
+          ]
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "U6",
+    "group": "Bare number (not a location)",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera, she was late on 6/6"
+    ],
+    "expected": "date: not loc-66",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=needs_location location=null(needs_selection) formDate=2026-06-06 level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI won't choose which store this belongs to. Which store is this about?\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\n**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here.",
+        "formProposal": {
+          "proposalId": "157b951c-c1ed-47ba-a2b2-73bddef095cf",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": "2026-06-06",
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "needs_selection",
+          "authorizedLocationIds": [
+            "loc-264",
+            "loc-66"
+          ],
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "U6-u1"
+          ]
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "U7",
+    "group": "Bare number (not a location)",
+    "actor": "location_manager",
+    "turns": [
+      "coaching form for pat rivera, she sold 264 soaps and was late"
+    ],
+    "expected": "quantity: not loc-264",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=needs_location location=null(needs_selection) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI won't choose which store this belongs to. Which store is this about?\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\n**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here.",
+        "formProposal": {
+          "proposalId": "9c094a75-b583-4559-8852-1f096b12ec30",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "needs_selection",
+          "authorizedLocationIds": [
+            "loc-264",
+            "loc-66"
+          ],
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "U7-u1"
+          ]
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  },
+  {
+    "id": "U8",
+    "group": "Bare number reply (ambiguous)",
+    "actor": "location_manager",
+    "turns": [
+      "create a coaching form for pat rivera, late 3 times",
+      "66"
+    ],
+    "expected": "bare reply: asked or set to an AUTHORIZED store only; employee kept",
+    "pass": true,
+    "actual": "proposal coaching employee=\"pat rivera\" status=needs_location location=null(needs_selection) formDate=null level=null payroll=null | proposal coaching employee=\"pat rivera\" status=ready location=loc-66(resolved) formDate=null level=null payroll=null",
+    "raw": [
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nI won't choose which store this belongs to. Which store is this about?\n\nWhat is **pat rivera**'s position (job title)? I don't have one from Woven or from what you've told me. Tell me here, or fill in Job Title on the form — I won't guess it.\n\n**Nothing has been created yet.** Choose the store below, or tell me which one, and you can create the draft here.",
+        "formProposal": {
+          "proposalId": "d1d543ca-fb64-4b16-9865-bca37b35df5a",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": false,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": null,
+          "locationName": null,
+          "locationResolution": "needs_selection",
+          "authorizedLocationIds": [
+            "loc-264",
+            "loc-66"
+          ],
+          "status": "needs_location",
+          "sourceMessageIds": [
+            "U8-u1"
+          ]
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      },
+      {
+        "content": "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your messages above.\n\nI have the employee and the store (**Kearney, NE**). Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        "formProposal": {
+          "proposalId": "79f9ed22-b2f0-47ea-9b41-e7116f868a6d",
+          "templateKey": "coaching",
+          "templateName": "Coaching Form",
+          "supportsInlineDraft": true,
+          "variantKey": null,
+          "employeeName": "pat rivera",
+          "employeeRole": null,
+          "formDate": null,
+          "locationId": "loc-66",
+          "locationName": "Kearney, NE",
+          "locationResolution": "resolved",
+          "authorizedLocationIds": [],
+          "status": "ready",
+          "sourceMessageIds": [
+            "U8-u1",
+            "U8-u2"
+          ],
+          "locationSource": "manager"
+        },
+        "formSelection": null,
+        "coverage": "not_applicable"
+      }
+    ]
+  }
+]

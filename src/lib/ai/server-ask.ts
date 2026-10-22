@@ -7,6 +7,7 @@ import { CLAUDE_MAX_TOKENS, RETRIEVAL } from "@/lib/config/models";
 import { MissingConfigurationError, liveReadiness } from "@/lib/config/server-env";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import { asksOnlyAboutFormsOnFile, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
+import { priorFormsReadingForChat } from "@/lib/forms/prior-forms";
 import { answersFormClarification } from "@/lib/forms/form-clarification";
 import { buildFormInventory, publishedEntries } from "@/lib/forms/inventory";
 import { detectInventoryQuestion, type InventoryQuestion } from "@/lib/forms/inventory-question";
@@ -216,6 +217,12 @@ export async function answerQuestion(
         );
         return manual.ok ? manual.chunks : null;
       },
+      /*
+       * THE EMPLOYEE'S FORMS ALREADY ON FILE, read only for a Corrective
+       * Action so its history is read back before the form is created. See
+       * `prior-forms.ts`.
+       */
+      priorFormsOnFile: (employeeName, locationId) => priorFormsReadingForChat(actor, employeeName, locationId),
     });
     if (proposal) return proposal;
   }
