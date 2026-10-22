@@ -1100,17 +1100,16 @@ function sentenceAnswers(text: string): string[] {
 }
 
 /**
- * A name as it goes on the form: "jordan testperson" and "JORDAN TESTPERSON"
- * become "Jordan Testperson" (owner's acceptance criteria, 9 Oct 2026). A name
- * typed with any capital letters of its own ("McKenzie", "DeShawn") is kept
- * exactly as typed — the manager chose that spelling. Hyphens and apostrophes
- * start a new capital ("Mary-Kate O'Neil"). Always editable on the form.
+ * A name as it goes on the form: AS THE MANAGER TYPED IT. "jordan testperson"
+ * and "JORDAN TESTPERSON" used to be printed "Jordan Testperson" (owner's
+ * acceptance criteria, 9 Oct 2026); QA, 22 Oct 2026 reversed that by decision —
+ * capitalising guesses at "JD SMITH", "John Smith III", "mcdonald", and a
+ * record should say what the manager wrote — unless the employee directory
+ * has an EXACT match, whose spelling `form-proposal.ts` uses instead. Only
+ * spacing is tidied; the field stays editable on the form.
  */
 export function displayPersonName(name: string): string {
-  const letters = name.replace(/[^a-z]/gi, "");
-  const typedAllOneCase = letters === letters.toLowerCase() || letters === letters.toUpperCase();
-  if (!typedAllOneCase) return name;
-  return name.toLowerCase().replace(/(^|[\s'’-])([a-z])/g, (_, lead: string, letter: string) => `${lead}${letter.toUpperCase()}`);
+  return name.trim().replace(/\s+/g, " ");
 }
 
 /**

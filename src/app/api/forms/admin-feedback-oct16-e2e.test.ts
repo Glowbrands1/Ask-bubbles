@@ -371,8 +371,10 @@ describe("Issue 3 — Corrective Action from complete conversational information
       "My employee tiffany lempka was late on 10/5 and 10/15. Please create a CA form.",
       "She is at Dodge",
     ]);
-    expect(responses[0]!.formProposal!.employeeName).toBe("Tiffany Lempka");
-    expect(proposal.employeeName).toBe("Tiffany Lempka");
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
+    expect(responses[0]!.formProposal!.employeeName).toBe("tiffany lempka");
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
+    expect(proposal.employeeName).toBe("tiffany lempka");
     expect(proposal.locationId).toBe("loc-264");
     expect(responses[1]!.content).not.toMatch(/who is this/i);
   });
@@ -792,7 +794,8 @@ describe("a manager who gives everything is never asked for it again", () => {
     expect(proposal).toMatchObject({
       templateKey: "dpoa",
       status: "ready",
-      employeeName: "Sam Ortega",
+      // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
+      employeeName: "sam ortega",
       employeeRole: "Makery Associate",
       employeeRoleSource: "manager",
       locationId: "loc-66",
@@ -815,7 +818,8 @@ describe("a manager who gives everything is never asked for it again", () => {
     expect(draftWarning).toBeNull();
     const form = await review(reference.instanceId);
 
-    expect(form.instance.employeeName).toBe("Sam Ortega");
+    // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
+    expect(form.instance.employeeName).toBe("sam ortega");
     expect(form.instance.locationId).toBe("loc-66");
     expect(field(form, "job_title")!.value).toBe("Makery Associate");
     expect(field(form, "form_date")!.value).toBe("2026-10-12");
