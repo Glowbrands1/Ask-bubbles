@@ -12,7 +12,7 @@
 --
 -- DEPLOY ORDER. Apply this BEFORE the code that reads it. Until it is applied
 -- the code fails closed: nobody but administrators reads other stores' forms,
--- so Colene and DJ would see only their home store.
+-- so both would see only their home store.
 --
 -- The two seed rows below are DATA, applied only if the account exists. To
 -- revoke: update public.forms_all_store_access set revoked_at = now() where
@@ -34,11 +34,11 @@ alter table public.forms_all_store_access force row level security;
 revoke all on public.forms_all_store_access from anon, authenticated;
 
 insert into public.forms_all_store_access (app_user_id, reason, granted_by)
-select u.id, 'Approved all-store Form Monitoring access (Colene Schildt)', 'migration 20261019001000'
+select u.id, 'Approved all-store Form Monitoring access (Delphine Ashworth)', 'migration 20261019001000'
   from public.app_users u where u.id = '4979fa8a-09ae-4b89-ad54-054be3acf6ba'
 on conflict (app_user_id) do nothing;
 
 insert into public.forms_all_store_access (app_user_id, reason, granted_by)
-select u.id, 'Approved all-store Form Monitoring access (DJ Wade)', 'migration 20261019001000'
+select u.id, 'Approved all-store Form Monitoring access (the regional manager)', 'migration 20261019001000'
   from public.app_users u where u.id = '4f085a07-4e36-4ff0-a482-4dfba828b235'
 on conflict (app_user_id) do nothing;

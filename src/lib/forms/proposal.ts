@@ -145,7 +145,7 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
     // An opening wrapper can only precede the name, so only the first word loses one.
     const opened = parts.length === 0 ? raw.replace(WRAPPER_BEFORE, "") : raw;
     const unwrapped = opened.replace(WRAPPER_AFTER, "");
-    // "ellie sendgraff's coaching form": the possessive is the name's last word.
+    // "wren halvorsen's coaching form": the possessive is the name's last word.
     const stem = possessiveStem(unwrapped);
     const ends = WRAPPER_AFTER.test(opened) || stem !== null;
     const word = stem ?? unwrapped;
@@ -156,7 +156,7 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
       (parts.length > 0 || word.length > 1) &&
       // "for cash handling" is a topic; "for jamie cash" is a person.
       (parts.length > 0 || !NOT_A_NAME_LEAD.has(lower)) &&
-      // "brandi algya asm": a role abbreviation ends a name, in any case.
+      // "corinne valdez asm": a role abbreviation ends a name, in any case.
       !isJobTitleAbbreviation(word) &&
       !NOT_A_NAME.has(lower) &&
       !COUNTS_PEOPLE.has(lower) &&
@@ -610,7 +610,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
     }
   }
   /*
-   * "my employee tiffany lempka has been late": the same marker as the manager
+   * "my employee tiffany ostrander has been late": the same marker as the manager
    * says it, with the name typed in lower case. Admin feedback, 16 Oct 2026 —
    * a Corrective Action asked for with exactly that sentence was answered "give
    * me their name", and the manager had to say it again. Only after "my / our"
@@ -672,7 +672,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
     if (words.length > 2 && MONTH_WORD.test(words[words.length - 1]!) && /^\s+\d{1,2}(?:st|nd|rd|th)?\b/.test(after)) {
       words.pop();
     }
-    // "Ellie Sendgraff's coaching form": the name ends at the possessive.
+    // "Wren Halvorsen's coaching form": the name ends at the possessive.
     const run = nameBeforeRole(beforePossessive(words.join(" ")));
     if (run === null || !run.includes(" ") || places.has(run)) continue;
     /*
@@ -885,7 +885,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
   }
 
   /*
-   * "BRANDI ALGYA ASM GRAND ISLAND", TYPED IN LOWER CASE. `nameBeforeRole`
+   * "CORINNE VALDEZ ASM GRAND ISLAND", TYPED IN LOWER CASE. `nameBeforeRole`
    * reads the capitalised line; without capitals the line, or the sentence,
    * must OPEN with exactly two name words and then a role abbreviation (one of
    * the company's job titles, `isJobTitleAbbreviation`) — the same two-word
@@ -901,11 +901,11 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
   }
 
   /*
-   * "<NAME>'S COACHING FORM", "start ellie sendgraff's CA", "Ellie's CA":
+   * "<NAME>'S COACHING FORM", "start wren halvorsen's CA", "Wren's CA":
    * whose form it is, said with the possessive. The words before the 's are
    * read as a whole name — one or two of them, after whatever asks for the
-   * form ("start", "can you do") — so "start ellie's CA" is Ellie, never
-   * "start ellie". See `possessiveStem`.
+   * form ("start", "can you do") — so "start wren's CA" is Wren, never
+   * "start wren". See `possessiveStem`.
    */
   const POSSESSIVE_FORM = new RegExp(
     `(?:^|[.!?\\n]\\s*)${POSSESSIVE_LEAD}(\\S+?)(?:\\s+(\\S+?))?['’]s\\s+(?:(?:new|next|first|second|final|last)\\s+)?(?:${FORM_NAME_PATTERN}|c\\.a\\.?|c\\/a|ca|${FORM_NOUNS})\\b`,
@@ -1169,13 +1169,13 @@ export function correctsTheEmployee(text: string): boolean {
 
 /*
  * ============================================================================
- * "ELLIE SENDGRAFF'S COACHING FORM": THE 'S IS NOT PART OF THE NAME
+ * "WREN HALVORSEN'S COACHING FORM": THE 'S IS NOT PART OF THE NAME
  * ============================================================================
  *
- * Reported on the reference platform, 21 October 2026. "Ellie Sendgraff's
- * coaching form" put "Ellie Sendgraff's" to the directory, which found nobody
- * by that name and asked "Did you mean Ellie Sendgraff?"; in lower case, and as
- * "Ellie's", the name was not read at all. A possessive ENDS a name — what
+ * Reported on the reference platform, 21 October 2026. "Wren Halvorsen's
+ * coaching form" put "Wren Halvorsen's" to the directory, which found nobody
+ * by that name and asked "Did you mean Wren Halvorsen?"; in lower case, and as
+ * "Wren's", the name was not read at all. A possessive ENDS a name — what
  * follows it is the thing that is theirs — so the 's (straight or curly) is
  * dropped and the name stops there.
  *
@@ -1186,7 +1186,7 @@ export function correctsTheEmployee(text: string): boolean {
 const POSSESSIVE = /^(.+?)['’]s$/i;
 const CONTRACTED = new Set(["let", "here", "there", "who", "how", "where", "what", "that", "it", "she", "he", "name"]);
 
-/** The name a possessive word belongs to ("Sendgraff's" → "Sendgraff"), or null. */
+/** The name a possessive word belongs to ("Halvorsen's" → "Halvorsen"), or null. */
 function possessiveStem(word: string): string | null {
   const stem = POSSESSIVE.exec(word)?.[1];
   if (!stem) return null;
@@ -1207,7 +1207,7 @@ function beforePossessive(run: string): string {
 
 /*
  * ============================================================================
- * "BRANDI ALGYA ASM GRAND ISLAND": THE NAME, THE ROLE, THE STORE
+ * "CORINNE VALDEZ ASM GRAND ISLAND": THE NAME, THE ROLE, THE STORE
  * ============================================================================
  *
  * Reported on the reference platform, 20 October 2026, and reproduced here.
@@ -1215,10 +1215,10 @@ function beforePossessive(run: string): string {
  * store — with no commas:
  *
  *     "Can you create a coaching form for a manager on the onboarding
- *      process? Brandi Algya ASM Grand Island. Properly uploading …"
+ *      process? Corinne Valdez ASM Grand Island. Properly uploading …"
  *
  * The capitalised-run reader took all five words as one run, so the card was
- * for an employee called "Brandi Algya ASM Grand Island" — or, once the run
+ * for an employee called "Corinne Valdez ASM Grand Island" — or, once the run
  * was discarded, for nobody, and the manager was asked who the form was for.
  *
  * THE ROLE ABBREVIATION IS THE BOUNDARY. Typed in capitals, it ends the name:

@@ -832,7 +832,7 @@ describe("found in live QA: a new value the paragraph already uses for something
 
 describe("admin feedback 16 Oct 2026: a name typed in lower case after 'my employee'", () => {
   it.each([
-    ["my employee tiffany lempka has was 10 minutes late on her last two shifts", ["tiffany lempka"]],
+    ["my employee tiffany ostrander has was 10 minutes late on her last two shifts", ["tiffany ostrander"]],
     ["our team member jordan ellis was out of dress code", ["jordan ellis"]],
   ])("%j", (text, expected) => {
     expect(extractEmployeeNames(text).map((name) => name.toLowerCase())).toEqual(expected);

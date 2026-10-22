@@ -988,10 +988,10 @@ describe("a month named beside the employee is a date, not a second person", () 
  */
 describe("a possessive ends the name; a contraction is not one", () => {
   it.each([
-    ["Ellie Sendgraff's coaching form", ["Ellie Sendgraff"]],
-    ["Ellie Sendgraff’s coaching form", ["Ellie Sendgraff"]],
-    ["start ellie sendgraff's CA", ["ellie sendgraff"]],
-    ["Ellie's CA - she was late", ["Ellie"]],
+    ["Wren Halvorsen's coaching form", ["Wren Halvorsen"]],
+    ["Wren Halvorsen’s coaching form", ["Wren Halvorsen"]],
+    ["start wren halvorsen's CA", ["wren halvorsen"]],
+    ["Wren's CA - she was late", ["Wren"]],
     ["coaching form for Jordan's attendance", ["Jordan"]],
   ])("%s", (text, names) => {
     expect(extractEmployeeNames(text)).toEqual(names);
@@ -1010,7 +1010,7 @@ describe("'will' followed by a surname, and a lower-case name then a role", () =
   });
 
   it("reads two name words then a job-title abbreviation", () => {
-    expect(extractEmployeeNames("brandi algya asm, needs a coaching form")).toEqual(["brandi algya"]);
+    expect(extractEmployeeNames("corinne valdez asm, needs a coaching form")).toEqual(["corinne valdez"]);
     expect(extractEmployeeNames("sarah asm needs a coaching form")).not.toContain("sarah asm");
   });
 });

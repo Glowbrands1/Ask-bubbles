@@ -422,9 +422,9 @@ describe("capitalisation, misspellings, shorthand and word order", () => {
 
   // The owner's rule, 9 Oct 2026: "given verbal warning" ticks Verbal — the level given, never a higher one.
   it("'given verbal warning on 9/21' → Verbal, never Written", async () => {
-    expect(brief(await say("create a ca form for paulyne test, she was late again for 30 mins today. given verbal warning on 9/21"))).toEqual([
+    expect(brief(await say("create a ca form for rosalyn test, she was late again for 30 mins today. given verbal warning on 9/21"))).toEqual([
       // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed (supersedes the 9 Oct capitalisation rule).
-      { form: "dpoa", employee: "paulyne test", warning: "verbal", issue: null },
+      { form: "dpoa", employee: "rosalyn test", warning: "verbal", issue: null },
     ]);
   });
 

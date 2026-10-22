@@ -66,7 +66,7 @@ const NOT_NAME_WORDS = new Set(
 
 /**
  * A name typed without capitals: the one or two words just before "title",
- * "position" or "role" ("whats paulyne camacho title"), or the two words that
+ * "position" or "role" ("whats rosalyn calloway title"), or the two words that
  * end "what about …" / "who is …". The roster decides whether it is anyone —
  * this only says a name might be here, so the lookup is attempted at all.
  */
@@ -166,7 +166,7 @@ async function resolve({ question: asked, history = [], actor, index: given, now
   const capitalised = extractEmployeeNames(unpossessed)
     .map((name) => name.replace(/^(?:what|which|who|whom|how|where|when|why|is|are|does|do|can|could|tell me|check|confirm|verify|find)\s+/i, "").trim())
     .filter((name) => name.length > 0);
-  // Names typed in lower case ("whats paulyne camacho's title") are names too.
+  // Names typed in lower case ("whats rosalyn calloway's title") are names too.
   const lowerNames = capitalised.length > 0 ? [] : lowerCaseNames(unpossessed);
   const typedNames = capitalised.length > 0 ? capitalised : lowerNames;
   // A lower-case name is only a guess that there is a name here ("attendance policy" is not

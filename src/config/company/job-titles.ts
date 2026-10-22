@@ -44,8 +44,8 @@ export const COMPANY_JOB_TITLES: readonly { pattern: RegExp; title: string }[] =
  * one of the titles above reads in full ("ASM", "SD", "DM"). Case is not
  * checked here; callers that need the capitals as evidence check them.
  *
- * Used where a manager signs a person off as the paperwork does — "Brandi
- * Algya ASM Grand Island" — so the role ends the name and says a store
+ * Used where a manager signs a person off as the paperwork does — "Corinne
+ * Valdez ASM Grand Island" — so the role ends the name and says a store
  * follows. Derived from the list, so it follows Buff City Soap's titles.
  */
 export function isJobTitleAbbreviation(word: string): boolean {

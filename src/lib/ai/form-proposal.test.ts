@@ -1545,7 +1545,7 @@ describe("a topic connector is never who the form is for", () => {
  * A MANAGER WHO ASKED FOR A CORRECTIVE ACTION IS OFFERED ONE FIRST
  * ============================================================================
  *
- * Reference platform, October 2026: "write a CA for Paisley" — and the cards
+ * Reference platform, October 2026: "write a CA for Juniper" — and the cards
  * under the next answer led with the Coaching Form. The manager's own turns,
  * read through the same detector the explicit path uses, now put the
  * Corrective Action Form first; nobody else's order changes.
@@ -1562,11 +1562,11 @@ describe("suggested forms lead with the one the manager asked for", () => {
   };
 
   // A second rung: coached once, and it happened again.
-  const ACCOUNT = "Paisley Peklo didn't finish her training. I verbally coached her last week and she still hasn't.";
+  const ACCOUNT = "Juniper Brandvold didn't finish her training. I verbally coached her last week and she still hasn't.";
 
   it("puts the Corrective Action Form first after \"write a CA for …\"", async () => {
     expect(
-      await suggested([managerTurn("m1", "write a CA for Paisley Peklo"), managerTurn("m2", ACCOUNT)]),
+      await suggested([managerTurn("m1", "write a CA for Juniper Brandvold"), managerTurn("m2", ACCOUNT)]),
     ).toEqual(["Corrective Action Form", "Coaching Form"]);
   });
 

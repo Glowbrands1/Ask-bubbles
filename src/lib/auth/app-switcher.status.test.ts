@@ -41,7 +41,7 @@ vi.mock("./page", () => ({
 
 import { APP_SWITCHER_USER_IDS, pageShowsAppSwitcher } from "./app-switcher";
 
-const [COLENE, DJ] = APP_SWITCHER_USER_IDS;
+const [DELPHINE, RM] = APP_SWITCHER_USER_IDS;
 
 function profile(id: string, role: string, status: string, email = "x@glowbrands.com") {
   return {
@@ -73,16 +73,16 @@ function signIn(id: string, role: string, status: string) {
 
 describe("the named exception needs an ACTIVE profile", () => {
   it.each([
-    ["Colene", COLENE, "district_manager"],
-    ["DJ", DJ, "regional_manager"],
+    ["Delphine", DELPHINE, "district_manager"],
+    ["RM", RM, "regional_manager"],
   ])("%s: active is offered the switcher", async (_n, id, role) => {
     signIn(id, role, "active");
     expect(await pageShowsAppSwitcher()).toBe(true);
   });
 
   it.each([
-    ["Colene", COLENE, "district_manager"],
-    ["DJ", DJ, "regional_manager"],
+    ["Delphine", DELPHINE, "district_manager"],
+    ["RM", RM, "regional_manager"],
   ])("%s: disabled, invited and unknown statuses are not", async (_n, id, role) => {
     for (const status of ["disabled", "invited", "suspended", ""]) {
       signIn(id, role, status);
@@ -91,7 +91,7 @@ describe("the named exception needs an ACTIVE profile", () => {
   });
 
   it("a valid session with no profile row is not", async () => {
-    db.authUserId = COLENE;
+    db.authUserId = DELPHINE;
     db.row = null;
     expect(await pageShowsAppSwitcher()).toBe(false);
   });
@@ -108,7 +108,7 @@ describe("the named exception needs an ACTIVE profile", () => {
   });
 
   it("a named id's role is read from the profile and stays non-admin", async () => {
-    signIn(COLENE, "district_manager", "active");
+    signIn(DELPHINE, "district_manager", "active");
     const identity = (await (page.provider as SupabaseAuthProvider).identify({
       headers: new Headers(),
     }))!;
