@@ -174,6 +174,14 @@ export function intentExtractionEnabled(): boolean {
   return envFlag("INTENT_EXTRACTION_ENABLED");
 }
 
+/**
+ * Similar 5-star exchanges in the system prompt. Off, nothing is read and
+ * the prompt is unchanged.
+ */
+export function fewShotExamplesEnabled(): boolean {
+  return envFlag("FEWSHOT_EXAMPLES_ENABLED");
+}
+
 /** Same switch as `draftEditMergeEnabled`. The sibling app's variable name. */
 export function draftMergeEnabled(): boolean {
   return draftEditMergeEnabled();
@@ -202,4 +210,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "GROUNDED_ENTITIES_ENABLED",
   "FORM_STATE_ENABLED",
   "INTENT_EXTRACTION_ENABLED",
+  "FEWSHOT_EXAMPLES_ENABLED",
 ] as const;

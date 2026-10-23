@@ -36,6 +36,7 @@ import { callClaude } from "./call-claude";
 import { loadChatDataBlock } from "./chat-data-tools";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
+import { loadFewShotBlock } from "./feedback-examples";
 import { applyIntentExtraction } from "./intent-extraction";
 import { pinnedManualBlock } from "./policy-citation-fields";
 import { recallMemory, rememberFact } from "./chat-memory-store";
@@ -651,6 +652,7 @@ async function answerQuestionBody(
     styleRules: chatStyleRulesEnabled(),
     priorCoachingOptional: priorCoachingOptionalEnabled(),
     recalledMemory: await recalledMemoryBlock(request, actor),
+    fewShotExamples: await loadFewShotBlock(request.question),
   });
 
   const longContext = longContextEnabled()
