@@ -165,6 +165,15 @@ export function formStateEnabled(): boolean {
   return envFlag("FORM_STATE_ENABLED");
 }
 
+/**
+ * One tool call reads the form slots, then only the ones the roster, the
+ * store list, or the manual headings confirm are kept. Off, the question
+ * is unchanged and nothing is read or written.
+ */
+export function intentExtractionEnabled(): boolean {
+  return envFlag("INTENT_EXTRACTION_ENABLED");
+}
+
 /** Same switch as `draftEditMergeEnabled`. The sibling app's variable name. */
 export function draftMergeEnabled(): boolean {
   return draftEditMergeEnabled();
@@ -192,4 +201,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "DRAFT_MERGE_ENABLED",
   "GROUNDED_ENTITIES_ENABLED",
   "FORM_STATE_ENABLED",
+  "INTENT_EXTRACTION_ENABLED",
 ] as const;

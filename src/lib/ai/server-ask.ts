@@ -36,6 +36,7 @@ import { callClaude } from "./call-claude";
 import { loadChatDataBlock } from "./chat-data-tools";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
+import { applyIntentExtraction } from "./intent-extraction";
 import { pinnedManualBlock } from "./policy-citation-fields";
 import { recallMemory, rememberFact } from "./chat-memory-store";
 import { finishChatTrace, openChatTrace, redactTraceText } from "./chat-trace";
@@ -53,6 +54,7 @@ import {
   priorCoachingOptionalEnabled,
   queryRewriteEnabled,
   reportBreakdownEnabled,
+  intentExtractionEnabled,
   retrievalRecallEnabled,
   slotRetentionEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -160,6 +162,12 @@ async function answerQuestionBody(
   }
   if (readiness.problems.length > 0) {
     throw new AiError("not_configured", readiness.problems.join(" "), 503);
+  }
+
+  if (intentExtractionEnabled()) {
+    const prepared = await applyIntentExtraction({ request, actor });
+    if (prepared.clarification) return prepared.clarification;
+    request = prepared.request;
   }
 
   /* ---------------------------------------------------------- forms -- */
