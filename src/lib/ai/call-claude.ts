@@ -5,6 +5,8 @@ import { CLAUDE_EFFORT, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
 import { Anthropic, getAnthropicClient } from "./anthropic";
 import { AiError } from "./errors";
+import { selectLongContext } from "./long-context";
+import { noteModelCall } from "./model-failure";
 import { withTruncationRetry } from "./truncation";
 
 /**
@@ -100,6 +102,13 @@ export interface CallClaudeInput {
    */
   readonly formRecords?: string | null;
   readonly history: readonly ClaudeTurn[];
+  /**
+   * "budget" keeps the newest messages that fit in a token budget, up to 40.
+   * Omitted, the last 10 non-empty messages are sent.
+   */
+  readonly historyPolicy?: "budget";
+  /** Summary of turns outside that budget. Used only when historyPolicy is "budget". */
+  readonly priorSummary?: string | null;
   readonly question: string;
   readonly maxTokens: number;
 }
@@ -108,18 +117,28 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
   const client = getAnthropicClient();
 
   // Prior turns, trimmed. The grounding block is rebuilt per question, so it is
-  // appended to the current turn rather than carried in history.
-  const history = input.history
-    .filter((message) => message.content.trim().length > 0)
-    .slice(-10)
-    .map((message) => ({
-      role: message.role === "assistant" ? ("assistant" as const) : ("user" as const),
-      content: message.content,
-    }));
+  // appended to the current turn rather than carried in history. The last 10
+  // is the cost and latency cap. A budget window is used only when the caller
+  // asks for it.
+  const nonempty = input.history.filter((message) => message.content.trim().length > 0);
+  const bounded = input.historyPolicy === "budget" ? selectLongContext(nonempty).kept : nonempty.slice(-10);
+  const history = bounded.map((message) => ({
+    role: message.role === "assistant" ? ("assistant" as const) : ("user" as const),
+    content: message.content,
+  }));
+  if (input.historyPolicy === "budget" && input.priorSummary?.trim()) {
+    const note = `Earlier in this conversation:\n${input.priorSummary.trim()}`;
+    if (history.length === 0 || history[0]!.role === "assistant") {
+      history.unshift({ role: "user", content: note });
+    } else {
+      history[0] = { role: "user", content: `${note}\n\n${history[0]!.content}` };
+    }
+  }
 
   // The API requires the first message to be a user turn.
   while (history.length > 0 && history[0]!.role === "assistant") history.shift();
 
+  const started = Date.now();
   try {
     const response = await withTruncationRetry(
       input.maxTokens,
@@ -151,7 +170,15 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
       `${ACTIVE_BRAND.assistantName} ran out of room before finishing that answer, so it was not shown. Try asking for less at once, or split the question into parts.`,
     );
 
+    const noted = {
+      model: CLAUDE_MODEL,
+      maxTokens: input.maxTokens,
+      stopReason: response.stop_reason ?? null,
+      latencyMs: Date.now() - started,
+      usage: response.usage,
+    };
     if (response.stop_reason === "refusal") {
+      noteModelCall({ ...noted, subtype: "refused" });
       throw new AiError(
         "refused",
         `${ACTIVE_BRAND.assistantName} could not answer that question. Try rephrasing it, or ask a manager directly.`,
@@ -166,9 +193,11 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
       .trim();
 
     if (!text) {
+      noteModelCall({ ...noted, subtype: "empty_answer" });
       throw new AiError("model_failed", `${ACTIVE_BRAND.assistantName} returned an empty answer.`, 502);
     }
 
+    noteModelCall(noted);
     return text;
   } catch (error) {
     if (error instanceof AiError) throw error;
@@ -176,7 +205,16 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
       throw new AiError("not_configured", error.message, 503, error.missing);
     }
     // The SDK error can echo the request, which carries confidential grounding
-    // text. Only the class name is kept — never the body.
+    // text. Only the class name is kept — never the body. The class, status,
+    // and subtype are recorded for the trace before this object is discarded.
+    noteModelCall({
+      model: CLAUDE_MODEL,
+      maxTokens: input.maxTokens,
+      stopReason: null,
+      latencyMs: Date.now() - started,
+      usage: null,
+      error,
+    });
     logAnthropicFailure(error);
     if (error instanceof Anthropic.APIError && rejectsConfiguration(error.status)) {
       throw new AiError(
@@ -212,6 +250,69 @@ function rejectsConfiguration(status: number | undefined): boolean {
  * configured model and effort (JSON-quoted, so stray whitespace in an override
  * shows). Never the SDK message or body, which can echo grounding text.
  */
+/**
+ * One forced tool call. Used by the flagged form reader and the flagged
+ * query rewrite. The answering path stays on `callClaude`. A failure here
+ * uses the same wording and never echoes the request.
+ */
+export async function callClaudeTool(input: {
+  readonly model: string;
+  readonly system: string;
+  readonly messages: readonly { role: "user" | "assistant"; content: string }[];
+  readonly tool: {
+    readonly name: string;
+    readonly description: string;
+    readonly input_schema: {
+      readonly type: "object";
+      readonly properties?: unknown;
+      readonly required?: readonly string[];
+      readonly additionalProperties?: boolean;
+    };
+  };
+  readonly maxTokens: number;
+}): Promise<unknown> {
+  const client = getAnthropicClient();
+  const messages = input.messages.filter((message) => message.content.trim() !== "");
+  try {
+    const response = await client.messages.create({
+      model: input.model,
+      max_tokens: input.maxTokens,
+      system: input.system,
+      tools: [
+        {
+          name: input.tool.name,
+          description: input.tool.description,
+          input_schema: {
+            type: "object",
+            properties: (input.tool.input_schema.properties ?? {}) as Record<string, unknown>,
+            required: input.tool.input_schema.required ? [...input.tool.input_schema.required] : undefined,
+            additionalProperties: input.tool.input_schema.additionalProperties,
+          },
+        },
+      ],
+      tool_choice: { type: "tool", name: input.tool.name },
+      messages: messages.map((message) => ({ role: message.role, content: message.content })),
+    });
+    const block = response.content.find((item) => item.type === "tool_use");
+    if (!block || block.type !== "tool_use") {
+      throw new AiError(
+        "model_failed",
+        `${ACTIVE_BRAND.assistantName} could not reach the language model. No answer was generated.`,
+        502,
+      );
+    }
+    return block.input;
+  } catch (error) {
+    if (error instanceof AiError) throw error;
+    if (error instanceof MissingConfigurationError) throw error;
+    throw new AiError(
+      "model_failed",
+      `${ACTIVE_BRAND.assistantName} could not reach the language model. No answer was generated.`,
+      502,
+    );
+  }
+}
+
 function logAnthropicFailure(error: unknown): void {
   const detail =
     error instanceof Anthropic.APIError

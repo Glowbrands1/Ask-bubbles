@@ -31,7 +31,41 @@ import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
 import { callClaude } from "./call-claude";
+import { loadChatDataBlock } from "./chat-data-tools";
+import { formatRecalledMemory, memoryCue } from "./chat-memory";
+import { recallMemory, rememberFact } from "./chat-memory-store";
+import { finishChatTrace, openChatTrace, redactTraceText } from "./chat-trace";
+import { updateChatTrace } from "./chat-trace-store";
+import {
+  chatDataToolsEnabled,
+  chatMemoryEnabled,
+  chatStyleRulesEnabled,
+  chatTraceEnabled,
+  fieldAccuracyEnabled,
+  formToolsEnabled,
+  hybridSearchEnabled,
+  longContextEnabled,
+  policyCitationEnabled,
+  priorCoachingOptionalEnabled,
+  queryRewriteEnabled,
+  reportBreakdownEnabled,
+  retrievalRecallEnabled,
+  slotRetentionEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
+import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
+import { loadConversationFormState, saveConversationFormState } from "./form-state-store";
+import { formCommandBypassesSearch, routeUnderstoodFormTurn } from "./form-tool-route";
+import { understandFormTurn } from "./form-tool-understand";
+import { augmentIntakeQuestion } from "./intake-augment";
+import { incidentFingerprint } from "@/lib/forms/incident-key";
+import { prepareLongContext } from "./long-context-claude";
+import { applyOptionalPriorCoaching } from "./prior-coaching-optional";
+import { rewriteFollowUpQuery } from "./query-rewrite-claude";
+import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
+import { matchRecallKnowledge } from "@/lib/knowledge/recall-match";
+import { withMappedPolicy } from "./violation-policy";
+import { loadScopedRoster } from "@/lib/forms/employee-roster";
 import { AiError } from "./errors";
 import {
   answerInventoryQuestion,
@@ -90,6 +124,22 @@ import type { AskRequest, AskResponse } from "./types";
  *   session's subject, from the route. Omitted, nothing is recalled.
  */
 export async function answerQuestion(
+  request: AskRequest,
+  actor: ChatActor,
+  memory: { memoryOwnerId?: string } = {},
+): Promise<AskResponse> {
+  if (!chatTraceEnabled()) return answerQuestionBody(request, actor, memory);
+  const draft = openChatTrace({
+    conversationId: request.conversationId,
+    messageId: request.questionMessageId,
+    userId: actor.subject,
+    originalQuery: request.question,
+    formInProgress: Boolean(request.continueProposalTemplateKey || request.openForm || request.activeFormInstanceId),
+  });
+  return finishChatTrace(draft, () => answerQuestionBody(request, actor, memory));
+}
+
+async function answerQuestionBody(
   request: AskRequest,
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
@@ -190,9 +240,10 @@ export async function answerQuestion(
     let manualRead: ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]> | null = null;
     const readManual = () =>
       (manualRead ??= new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId));
+    const proposalQuestion = await questionForProposal(request, actor);
     const proposal = await proposeFormForTurn({
       history: request.history,
-      question: request.question,
+      question: proposalQuestion,
       questionMessageId: request.questionMessageId,
       actor,
       continueTemplateKey: request.continueProposalTemplateKey,
@@ -232,7 +283,83 @@ export async function answerQuestion(
        */
       priorFormsOnFile: (employeeName, locationId) => priorFormsReadingForChat(actor, employeeName, locationId),
     });
+    if (proposal) {
+      const answered = await decorateFormAnswer(request, actor, proposal);
+      // Flags off: decoration returns the same proposal, and the forms-library
+      // answer returns here, before retrieval.
+      if (answered !== proposal) return answered;
+    }
     if (proposal) return proposal;
+  }
+
+  /*
+   * FORM COMMANDS THE PHRASE LIST MISSED. Off unless FORM_TOOLS_ENABLED.
+   * A turn the existing detectors already claimed is left on that path.
+   * A tool failure returns null and this falls through to retrieval.
+   */
+  if (formToolsEnabled() && !formsTurn) {
+    const roster = slotRetentionEnabled() ? await loadRosterQuiet(actor) : [];
+    const stored = await storedFields(request, actor);
+    const understood = await understandFormTurn({
+      question: request.question,
+      history: request.history,
+      today: request.context.todayIso,
+      openTemplateKey: request.continueProposalTemplateKey ?? null,
+    });
+    if (understood && formCommandBypassesSearch(understood)) {
+      const settled = await summariesPromise;
+      if (!settled.ok) {
+        throw new AiError(
+          "retrieval_failed",
+          "The form library could not be read, so nothing was said about which forms exist. Nothing was answered from memory.",
+          502,
+        );
+      }
+      const summaries = settled.rows;
+      let manualRead: ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]> | null = null;
+      const readManual = () =>
+        (manualRead ??= new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId));
+      const routed = await routeUnderstoodFormTurn({
+        reading: understood,
+        question: request.question,
+        history: request.history,
+        today: request.context.todayIso,
+        openTemplateKey: request.continueProposalTemplateKey ?? null,
+        previous: stored ?? undefined,
+        roster,
+        propose: async (adjusted) =>
+          proposeFormForTurn({
+            history: request.history,
+            question: await questionForProposal({ ...request, question: adjusted.question }, actor),
+            questionMessageId: request.questionMessageId,
+            actor,
+            continueTemplateKey: adjusted.continueTemplateKey,
+            summaries,
+            today: request.context.todayIso,
+            progressionAvailable: () =>
+              isFrameworkAvailable(
+                new SupabaseKnowledgeProvider(),
+                PERFORMANCE_MANAGEMENT_FRAMEWORK,
+                ACTIVE_BRAND.knowledgeScopeId,
+              ),
+            policyManual: async () => {
+              const manual = await readManual();
+              return manual.ok ? manual.chunks : null;
+            },
+            policyManualIdentity: async () => {
+              const manual = await readManual();
+              return manual.ok
+                ? { title: manualDisplayTitle(manual.documentTitle), confirmed: manual.ownerConfirmed }
+                : null;
+            },
+            priorFormsOnFile: (employeeName, locationId) => priorFormsReadingForChat(actor, employeeName, locationId),
+          }),
+      });
+      if (routed) {
+        await persistFields(request, actor, routed.fields);
+        return decorateFormAnswer(request, actor, routed.response);
+      }
+    }
   }
 
   /*
@@ -334,8 +461,16 @@ export async function answerQuestion(
    * sections that form cites. Only the query changes: the model is still
    * given the question as typed. See `retrievalPlan` and `retrieval-query.ts`.
    */
+  const retrievalQuestion = queryRewriteEnabled()
+    ? await rewriteFollowUpQuery({
+        question: request.question,
+        history: request.history,
+        fallback: request.question,
+      })
+    : request.question;
+  updateChatTrace({ rewrittenQuery: retrievalQuestion === request.question ? null : retrievalQuestion });
   const plan = retrievalPlanFor({
-    question: request.question,
+    question: retrievalQuestion,
     history: request.history,
     openForm: request.openForm ?? null,
   });
@@ -345,7 +480,12 @@ export async function answerQuestion(
   try {
     rows = await searchWithPlan(
       plan,
-      (query) => knowledge.match({ query, scopeId: request.scopeId, limit }),
+      (query) =>
+        retrievalRecallEnabled()
+          ? matchRecallKnowledge({ query, scopeId: request.scopeId, limit })
+          : hybridSearchEnabled()
+            ? matchHybridKnowledge({ query, scopeId: request.scopeId, limit })
+            : knowledge.match({ query, scopeId: request.scopeId, limit }),
       limit,
     );
   } catch (error) {
@@ -482,17 +622,45 @@ export async function answerQuestion(
       hasPermission(DEFAULT_PERMISSION_MATRIX, actor.role, "view_reports"),
     /* Read from the instance by the route, never from the body. */
     openForm: request.openForm ?? null,
+    styleRules: chatStyleRulesEnabled(),
+    priorCoachingOptional: priorCoachingOptionalEnabled(),
+    recalledMemory: await recalledMemoryBlock(request, actor),
   });
 
+  const longContext = longContextEnabled()
+    ? await prepareLongContext({
+        history: request.history,
+        userId: actor.subject ?? null,
+        conversationId: request.conversationId ?? null,
+      })
+    : null;
+  const dataAddition = await loadChatDataBlock({
+    enabled: chatDataToolsEnabled(),
+    question: request.question,
+    role: actor.role,
+    breakdown: reportBreakdownEnabled(),
+  });
+  const groundingText = buildGroundingBlock(grounding);
+  updateChatTrace({
+    retrievalCount: rows.length,
+    retrieved: rows.slice(0, 20).map((row) => ({
+      id: row.chunk_id,
+      title: row.document_title,
+      section: row.section,
+      score: row.similarity,
+    })),
+    prompt: redactTraceText(system),
+  });
   const answer = await callClaude({
     system,
-    grounding: buildGroundingBlock(grounding),
-    reportData: briefing?.text ?? null,
+    grounding: dataAddition.help ? `${groundingText}\n\n${dataAddition.help}` : groundingText,
+    reportData: [briefing?.text ?? null, dataAddition.data].filter((part) => part && part.length > 0).join("\n\n") || null,
     formsLibrary: formInventoryBlock,
     verifiedRecords: entities.block,
     personMemory,
     formRecords: formRecords?.block ?? null,
     history: request.history,
+    ...(longContext ? { historyPolicy: "budget" as const, priorSummary: longContext.summary } : {}),
     question: request.question,
     maxTokens: CLAUDE_MAX_TOKENS[request.mode],
   });
@@ -505,8 +673,23 @@ export async function answerQuestion(
 
   const suggested = await suggestedFormsFor({ summariesPromise, request, actor });
 
+  const prose = suggested ? `${stripMarkers(answer)}\n\n${suggested.lead}` : stripMarkers(answer);
+  const cited = policyCitationEnabled()
+    ? withMappedPolicy(
+        prose,
+        [...request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), request.question],
+        rows.map((row, index) => ({
+          chunkIndex: index,
+          page: row.page,
+          printedPage: row.page,
+          section: row.section,
+          content: row.content,
+        })),
+        true,
+      )
+    : prose;
   return {
-    content: suggested ? `${stripMarkers(answer)}\n\n${suggested.lead}` : stripMarkers(answer),
+    content: cited,
     formSelection: suggested?.selection,
     citations,
     coverage: answerCoverage({
@@ -622,6 +805,151 @@ async function suggestedFormsFor(input: {
       actor: input.actor,
       summaries: settled.rows,
     });
+  } catch {
+    return null;
+  }
+}
+
+async function decorateFormAnswer(request: AskRequest, actor: ChatActor, response: AskResponse): Promise<AskResponse> {
+  const coachingOn = priorCoachingOptionalEnabled();
+  const policyOn = policyCitationEnabled();
+  const slotsOn = slotRetentionEnabled();
+  if (!coachingOn && !policyOn && !slotsOn) return response;
+  const turns = [...request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), request.question];
+  let content = response.content;
+  if (coachingOn) {
+    content = applyOptionalPriorCoaching(content, { enabled: true, records: [], managerText: turns.join("\n") });
+  }
+  if (slotsOn) {
+    const roster = await loadRosterQuiet(actor);
+    const stored = await storedFields(request, actor);
+    const fields = mergeConfirmed(
+      stored ?? {
+        employeeName: null,
+        employeeId: null,
+        jobTitle: null,
+        store: null,
+        locationId: null,
+        incidentDateIso: null,
+        useToday: false,
+        payrollDeduct: null,
+        payrollAmount: null,
+        warningLevel: null,
+        policySection: null,
+        whatHappened: false,
+        deadline: null,
+        pendingChoice: [],
+      },
+      fieldsFromManagerText(turns.join("\n"), request.context.todayIso, roster),
+      false,
+    );
+    content = retainFieldsInReply(content, fields);
+    await persistFields(request, actor, fields);
+  }
+  if (policyOn) {
+    try {
+      const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
+      if (manual.ok) content = withMappedPolicy(content, turns, manual.chunks, true);
+    } catch {
+      // A manual read that fails leaves the proposal as the forms path wrote it.
+    }
+  }
+  return content === response.content ? response : { ...response, content };
+}
+
+async function questionForProposal(request: AskRequest, actor: ChatActor): Promise<string> {
+  if (!slotRetentionEnabled() && !fieldAccuracyEnabled()) return request.question;
+  const roster = slotRetentionEnabled() ? await loadRosterQuiet(actor) : [];
+  const stored = slotRetentionEnabled() ? await storedFields(request, actor) : null;
+  const question = augmentIntakeQuestion({
+    slots: slotRetentionEnabled(),
+    fields: fieldAccuracyEnabled(),
+    question: request.question,
+    history: request.history,
+    today: request.context.todayIso,
+    roster,
+    stored: stored,
+  });
+  if (slotRetentionEnabled() && actor.subject && request.conversationId) {
+    const fields = mergeConfirmed(
+      stored ?? {
+        employeeName: null,
+        employeeId: null,
+        jobTitle: null,
+        store: null,
+        locationId: null,
+        incidentDateIso: null,
+        useToday: false,
+        payrollDeduct: null,
+        payrollAmount: null,
+        warningLevel: null,
+        policySection: null,
+        whatHappened: false,
+        deadline: null,
+        pendingChoice: [],
+      },
+      fieldsFromManagerText(
+        [...request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), request.question].join("\n"),
+        request.context.todayIso,
+        roster,
+      ),
+      false,
+    );
+    const incidentKey = fields.employeeName
+      ? incidentFingerprint({
+          employeeName: fields.employeeName,
+          formDate: fields.incidentDateIso,
+          text: request.question,
+        })
+      : null;
+    await saveConversationFormState({
+      userId: actor.subject,
+      conversationId: request.conversationId,
+      fields,
+      incidentKey,
+    });
+  }
+  return question;
+}
+
+async function storedFields(request: AskRequest, actor: ChatActor) {
+  if (!slotRetentionEnabled() || !actor.subject || !request.conversationId) return null;
+  const stored = await loadConversationFormState({ userId: actor.subject, conversationId: request.conversationId });
+  return stored?.fields ?? null;
+}
+
+async function persistFields(
+  request: AskRequest,
+  actor: { subject?: string },
+  fields: Parameters<typeof saveConversationFormState>[0]["fields"],
+): Promise<void> {
+  if (!slotRetentionEnabled() || !actor.subject || !request.conversationId) return;
+  await saveConversationFormState({
+    userId: actor.subject,
+    conversationId: request.conversationId,
+    fields,
+    incidentKey: fields.employeeName
+      ? incidentFingerprint({ employeeName: fields.employeeName, formDate: fields.incidentDateIso, text: request.question })
+      : null,
+  });
+}
+
+async function loadRosterQuiet(actor: ChatActor) {
+  try {
+    return await loadScopedRoster(actor.scope);
+  } catch {
+    return [];
+  }
+}
+
+async function recalledMemoryBlock(request: AskRequest, actor: ChatActor): Promise<string | null> {
+  if (!chatMemoryEnabled() || !actor.subject) return null;
+  try {
+    const cue = memoryCue(request.question);
+    if (cue) {
+      await rememberFact({ userId: actor.subject, ...cue, sourceConversationId: request.conversationId ?? null });
+    }
+    return formatRecalledMemory(await recallMemory(actor.subject));
   } catch {
     return null;
   }

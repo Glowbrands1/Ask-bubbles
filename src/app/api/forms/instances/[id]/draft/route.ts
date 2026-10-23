@@ -128,6 +128,16 @@ import {
   planPayrollAmount,
   type ActionPlanInput,
 } from "@/lib/forms/ca-action-plan";
+import { enforceTwoSentenceActionPlan } from "@/lib/forms/action-plan-sentences";
+import { mergeDraftEdits } from "@/lib/forms/draft-edit-merge";
+import { flaggedCitationWrite } from "@/lib/ai/policy-citation-fields";
+import { fieldLines } from "@/lib/ai/intake-augment";
+import {
+  actionPlanSentencesEnabled,
+  draftEditMergeEnabled,
+  fieldAccuracyEnabled,
+  policyCitationEnabled,
+} from "@/lib/config/chat-quality-flags";
 import {
   STANDARDS_OF_CONDUCT,
   caPolicyAmbiguousNotice,
@@ -1779,6 +1789,29 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const keeps = (key: string) =>
       managerKeys.has(key) && !(DERIVED_POLICY_FIELD_KEYS.has(key) && derivedPolicy.derived.includes(key));
 
+    const amountNotes = fieldAccuracyEnabled()
+      ? [notes, ...fieldLines(notes, businessToday())].filter((line) => line.trim() !== "").join("\n")
+      : notes;
+    let draftValues = named.values;
+    let draftProvenance = provenance;
+    if (policyCitationEnabled() && manual.ok) {
+      const cited = flaggedCitationWrite({
+        enabled: true,
+        templateKey: loaded.instance.templateKey,
+        values: draftValues,
+        notes,
+        chunks: manual.chunks,
+        manual: {
+          documentId: manual.documentId,
+          documentTitle: manual.documentTitle,
+          matchedBy: manual.matchedBy,
+          ownerConfirmed: manual.ownerConfirmed,
+        },
+      });
+      draftValues = cited.values;
+      draftProvenance = { ...draftProvenance, ...cited.provenance };
+    }
+
     /*
      * ========================================================================
      * THE ACTION PLAN, BUILT FROM WHAT THE FORM NOW SAYS
@@ -1795,7 +1828,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           citedPolicies: "policy_language" in pinnedProvenance ? manualSections.map((section) => section.heading) : [],
           policyViolated: keeps("policy_violated")
             ? (managerRows.find((row) => row.fieldKey === "policy_violated")?.value ?? null)
-            : (named.values.policy_violated ?? null),
+            : (draftValues.policy_violated ?? null),
           employeeName: loaded.instance.employeeName,
           /*
            * The manager's amount; with none stated, the one the section
@@ -1806,8 +1839,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
             answer: payrollAnswer,
             ...planPayrollAmount({
               answer: payrollAnswer,
-              stated: payrollDeductAmount(notes),
-              quotedPolicy: "policy_language" in pinnedProvenance ? (named.values.policy_language ?? null) : null,
+              stated: payrollDeductAmount(amountNotes),
+              quotedPolicy: "policy_language" in pinnedProvenance ? (draftValues.policy_language ?? null) : null,
             }),
           },
           closing: fixedPlan.closing,
@@ -1828,19 +1861,42 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       (loaded.values ?? []).some(
         (row) => row.filledBy === "ai" && ((row.value ?? "").trim() !== "" || row.checked.length > 0),
       );
+    const builtPlan = planInput ? correctiveActionPlan(planInput) : null;
+    const sentenceGuarded =
+      builtPlan && actionPlanSentencesEnabled()
+        ? enforceTwoSentenceActionPlan(builtPlan, fixedPlan?.closing)
+        : null;
+    const planValue = sentenceGuarded ? (sentenceGuarded.valid ? sentenceGuarded.value : null) : builtPlan;
     const planned =
-      fixedPlan && planInput && draftedAnything && !keeps(fixedPlan.key)
+      fixedPlan && planInput && planValue && draftedAnything && !keeps(fixedPlan.key)
         ? {
-            values: { ...named.values, [fixedPlan.key]: correctiveActionPlan(planInput) },
-            provenance: { ...provenance, [fixedPlan.key]: actionPlanProvenance(planInput) },
+            values: { ...draftValues, [fixedPlan.key]: planValue },
+            provenance: { ...draftProvenance, [fixedPlan.key]: actionPlanProvenance(planInput) },
           }
-        : { values: named.values, provenance };
+        : { values: draftValues, provenance: draftProvenance };
+
+    const existingValues = Object.fromEntries(
+      (loaded.values ?? []).map((row) => [row.fieldKey, row.value ?? ""]),
+    );
+    const existingChecked = Object.fromEntries(
+      (loaded.values ?? [])
+        .filter((row) => row.checked.length > 0)
+        .map((row) => [row.fieldKey, [...row.checked]]),
+    );
+    const merged = draftEditMergeEnabled()
+      ? mergeDraftEdits({
+          existingValues,
+          incomingValues: planned.values,
+          existingChecked,
+          incomingChecked: validated.checked,
+        })
+      : { values: planned.values, checked: validated.checked };
 
     const guarded = await applyAssistantDraft(
       id,
       {
-        values: Object.fromEntries(Object.entries(planned.values).filter(([key]) => !keeps(key))),
-        checked: Object.fromEntries(Object.entries(validated.checked).filter(([key]) => !keeps(key))),
+        values: Object.fromEntries(Object.entries(merged.values).filter(([key]) => !keeps(key))),
+        checked: Object.fromEntries(Object.entries(merged.checked).filter(([key]) => !keeps(key))),
       },
       actor.id,
       planned.provenance,

@@ -38,6 +38,9 @@ import {
 import { warningLevelFromConversation } from "@/lib/forms/warning-level-conversation";
 import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { businessToday } from "@/lib/business-date";
+import { draftDedupeEnabled } from "@/lib/config/chat-quality-flags";
+import { incidentFingerprint } from "@/lib/forms/incident-key";
+import { findResentDraft, rememberDraftIncident } from "@/lib/forms/draft-reopen";
 import type { Permission } from "@/types";
 
 /**
@@ -244,6 +247,29 @@ export async function POST(request: Request) {
       if (existing) return NextResponse.json({ instance: existing, reused: true });
     }
 
+    /*
+     * SAME INCIDENT, NOT THE SAME PERSON. The card-id match above is unchanged.
+     * This runs only when DRAFT_DEDUPE_ENABLED is on, and a different date or
+     * a different account of what happened still creates a new draft.
+     */
+    const incidentKey =
+      draftDedupeEnabled() && body.source === "assistant"
+        ? incidentFingerprint({
+            employeeName: body.employeeName,
+            formDate: isIsoCalendarDate(body.formDate) ? body.formDate : null,
+            text: incidentText(body.conversation, body.employeeName),
+          })
+        : null;
+    if (incidentKey) {
+      const resent = await findResentDraft({
+        templateKey: body.templateKey,
+        employeeName: body.employeeName.trim().slice(0, 120),
+        createdBy: actor.id,
+        incidentKey,
+      });
+      if (resent) return NextResponse.json({ instance: resent, reused: true });
+    }
+
     const instance = await createInstance({
       templateKey: body.templateKey,
       variantKey: body.variantKey ?? null,
@@ -260,6 +286,16 @@ export async function POST(request: Request) {
     });
     /* A concurrent press of the same card: its row, as it already is. See `cardInstanceId`. */
     if (instance.reused) return NextResponse.json({ instance, reused: true });
+
+    if (incidentKey) {
+      await rememberDraftIncident({
+        instanceId: String(instance.id),
+        userId: actor.id,
+        templateKey: body.templateKey,
+        employeeName: body.employeeName.trim().slice(0, 120),
+        incidentKey,
+      });
+    }
 
     /*
      * "IS PAYROLL DEDUCT APPLICABLE?", AS THE MANAGER ANSWERED IT IN CHAT.
@@ -316,6 +352,16 @@ export async function POST(request: Request) {
   } catch (error) {
     return errorResponse(error, "forms/instances/create");
   }
+}
+
+function incidentText(conversation: unknown, employeeName: string): string {
+  if (!Array.isArray(conversation)) return employeeName;
+  const lines = conversation.flatMap((turn) => {
+    if (!turn || typeof turn !== "object") return [];
+    const row = turn as { role?: unknown; content?: unknown };
+    return row.role === "user" && typeof row.content === "string" ? [row.content] : [];
+  });
+  return lines.join("\n") || employeeName;
 }
 
 /**

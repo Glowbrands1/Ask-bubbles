@@ -1,5 +1,8 @@
 import "server-only";
 
+import { actionPlanSentencesEnabled } from "@/lib/config/chat-quality-flags";
+
+import { enforceTwoSentenceActionPlan } from "./action-plan-sentences";
 import { refreshedActionPlan } from "./ca-action-plan";
 import { parseFormDocument } from "./document";
 import { applyAssistantDraft, loadInstance, type LoadedInstance } from "./instances";
@@ -37,9 +40,12 @@ export async function syncCorrectiveActionPlan(
     notes: options.notes,
   });
   if (!next) return [];
+  const guarded = actionPlanSentencesEnabled() ? enforceTwoSentenceActionPlan(next.value) : null;
+  if (guarded && !guarded.valid) return [];
+  const value = guarded?.valid ? guarded.value : next.value;
   const written = await applyAssistantDraft(
     instanceId,
-    { values: { [next.key]: next.value }, checked: {} },
+    { values: { [next.key]: value }, checked: {} },
     actorId,
     { [next.key]: next.provenance },
   );

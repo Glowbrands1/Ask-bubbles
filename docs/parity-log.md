@@ -91,3 +91,22 @@ the two-policy question ("Cell Phone/Smart Watch or Social Media?"),
 autofill off on typed form fields, and the audit's manual fixture with
 invented wording (400bab2). Ask Sunny keeps its own payroll rule (a Yes is
 read only when stated) and sets the warning level on the form.
+
+## 23 Oct 2026: chat-quality flags, ported from Ask Sunny PR #135
+
+Ported from Ask Sunny PR #135 (`ab58ac2`). Bubbles adaptations, so the
+mechanism is shared and the company content is not:
+
+- Store, not salon. Forms Register, not Form Monitoring. The JBA Policy
+  Manual stays the citation source (policy name and page). `JBA Manual` is
+  that source, never an employee.
+- No keyword-to-policy glossary. A section is chosen by heading overlap
+  against the chunks in hand, and the page comes from the chunk.
+- Incident dedupe is keyed on the incident. The card-id match Pau already
+  fixed is unchanged.
+- Conversation form state is its own table. Memory kinds are store, employee,
+  and preference.
+- Two more flags, both default off: the action plan is checked for exactly
+  two sentences, and a "show draft with edits" merge does not blank Offense
+  or the Action Plan. The existing action-plan builder is unchanged when the
+  sentence flag is off.
