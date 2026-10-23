@@ -196,8 +196,12 @@ export async function POST(request: Request) {
        * no open form does not pay to load the forms write path. See
        * `lib/forms/chat-revision.ts`.
        */
-      const revision =
+      const separateDocument =
         !correction && !policyChange && !redraft && parsed.activeFormInstanceId
+          ? await separateFormRequested(parsed.question)
+          : false;
+      const revision =
+        !correction && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/chat-revision")).reviseActiveForm({
               request,
               instanceId: parsed.activeFormInstanceId,
@@ -428,4 +432,12 @@ function parseAskRequest(body: Partial<AskRequest>): AskRequest {
       todayIso: businessToday(),
     },
   };
+}
+
+/** A second document stays off the open form's revision path. Off, this is false. */
+async function separateFormRequested(question: string): Promise<boolean> {
+  const { secondFormEnabled } = await import("@/lib/config/chat-quality-flags");
+  if (!secondFormEnabled()) return false;
+  const { wantsSeparateDocument } = await import("@/lib/ai/second-form");
+  return wantsSeparateDocument(question);
 }

@@ -16,6 +16,7 @@ import { authorizeInstance } from "./instance-scope";
 import { applyAssistantDraft, applyAssistantRevision } from "./instances";
 import {
   COMPANY_POLICIES_OFFENSE,
+  approvedManualConfirmed,
   boxSectionNames,
   findManualSection,
   headingKey,
@@ -231,7 +232,7 @@ export async function changeActiveFormPolicy(input: {
           documentId: manual.documentId,
           documentTitle: manual.documentTitle,
           matchedBy: manual.matchedBy,
-          ownerConfirmed: manual.ownerConfirmed,
+          ownerConfirmed: approvedManualConfirmed(manual),
           sections: next,
         }),
         citation: policies,

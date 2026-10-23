@@ -159,7 +159,9 @@ import {
   namedManualSection,
   namedPolicies,
 } from "@/lib/forms/named-policy-section";
-import type { ManualChunk } from "@/lib/forms/official-policy-manual";
+import { manualDisplayTitle, manualSheetHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
+import { slotRetentionEnabled } from "@/lib/config/chat-quality-flags";
+import { groundEmployeeResolution } from "./employee-candidate-grounding";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
 import type { AskResponse } from "./types";
@@ -1301,6 +1303,20 @@ interface DirectoryCheck {
   verification?: EmployeeVerification;
 }
 
+async function policySourceHeadings(input: ProposalTurn): Promise<string[]> {
+  try {
+    const [chunks, identity] = await Promise.all([
+      input.policyManual?.() ?? Promise.resolve(null),
+      input.policyManualIdentity?.() ?? Promise.resolve(null),
+    ]);
+    const headings = chunks ? manualSheetHeadings(chunks) : [];
+    const titles = identity?.title ? [identity.title, manualDisplayTitle(identity.title)] : [];
+    return [...headings, ...titles];
+  } catch {
+    return [];
+  }
+}
+
 const storeLabel = (id: string) => {
   const store = locationById(id);
   return store ? describeStore(store) : id;
@@ -1315,6 +1331,27 @@ async function checkTypedEmployee(
   carried: EmployeeResolution | null = null,
 ): Promise<DirectoryCheck> {
   let typed = carried ?? resolveEmployee(context);
+  /*
+   * A DOCUMENT TITLE OR A FRAGMENT IS NOT AN EMPLOYEE. On only when slot
+   * retention is on. The roster and the pinned manual's own title and
+   * headings decide. "JBA Manual" is the policy source. The store question
+   * for two people who share one exact name is unchanged below.
+   */
+  if (slotRetentionEnabled()) {
+    const loaded = await loadScopedRosterResult(input.actor.scope);
+    if (loaded.status === "ok" && loaded.roster.length > 0) {
+      const decision = groundEmployeeResolution({
+        candidates:
+          typed.kind === "ambiguous" ? typed.candidates : typed.kind === "resolved" ? [typed.employeeName] : [],
+        text: context.messages.map((message) => message.content).join("\n"),
+        roster: loaded.roster,
+        headings: await policySourceHeadings(input),
+      });
+      if (decision.kind === "resolved") typed = { kind: "resolved", employeeName: decision.name };
+      else if (decision.kind === "ambiguous") typed = { kind: "ambiguous", candidates: [...decision.candidates] };
+      else if (decision.kind === "missing") return { resolution: { kind: "missing" } };
+    }
+  }
   /*
    * NOBODY SETTLED BY THE WORDS ALONE — nobody read, or two candidates where
    * one is not a person ("Tess Varga needs a written CA for missing …"). The
