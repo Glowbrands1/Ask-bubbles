@@ -143,3 +143,15 @@ mechanism is shared and the company content is not:
 - The Google Reviews total is the stored inventory, worded for stores.
 - Card-id dedupe stays first. The fingerprint table stays beside the
   narrative match.
+
+## 23 Oct 2026: intent extraction, ported from Ask Sunny `cursor/intent-extraction-6d4a`
+
+`INTENT_EXTRACTION_ENABLED` defaults off. One Haiku tool call copies the
+employee, store, title, incident, date, payroll amount, warning level, and
+form. A slot is kept only when this app's Woven roster, `COMPANY_LOCATIONS`,
+or the retrieved JBA headings agree. A missing or ambiguous slot is the only
+question, and an ambiguous one is a numbered choice with the store and the
+title. No migration: the slots share the existing `chat_form_state.state`
+jsonb (`incidentType` and `payrollAmount` added to that object). The tool
+payload is parsed by hand. Store wording, `loc-*` ids, and
+`ACTIVE_BRAND.knowledgeScopeId` are this app's.

@@ -67,6 +67,8 @@ export interface ConversationFormState {
   readonly policyPage: number | null;
   readonly templateKey: string | null;
   readonly incident: string | null;
+  readonly incidentType: string | null;
+  readonly payrollAmount: string | null;
 }
 
 export const EMPTY_CONVERSATION_FORM_STATE: ConversationFormState = {
@@ -82,6 +84,8 @@ export const EMPTY_CONVERSATION_FORM_STATE: ConversationFormState = {
   policyPage: null,
   templateKey: null,
   incident: null,
+  incidentType: null,
+  payrollAmount: null,
 };
 
 export function stateSentences(state: ConversationFormState): string[] {
@@ -100,6 +104,8 @@ export function stateSentences(state: ConversationFormState): string[] {
     const page = state.policyPage && state.policyPage > 0 ? ` p.${state.policyPage}` : "";
     lines.push(`Policy reference: ${state.policyHeading}, JBA Policy Manual${page}.`);
   }
+  if (state.incidentType) lines.push(`Incident: ${state.incidentType}.`);
+  if (state.payrollAmount) lines.push(`Payroll amount: ${state.payrollAmount}.`);
   return lines;
 }
 
@@ -142,6 +148,8 @@ export function captureFormState(
     policyPage: input.policyPage ?? prior.policyPage,
     templateKey: proposal?.templateKey ?? prior.templateKey,
     incident: incident || prior.incident,
+    incidentType: prior.incidentType,
+    payrollAmount: prior.payrollAmount,
   };
 }
 
@@ -163,6 +171,8 @@ export function parseFormState(value: unknown): ConversationFormState | null {
     policyPage: typeof row.policyPage === "number" && row.policyPage > 0 ? row.policyPage : null,
     templateKey: textOrNull(row.templateKey),
     incident: textOrNull(row.incident),
+    incidentType: textOrNull(row.incidentType),
+    payrollAmount: textOrNull(row.payrollAmount),
   };
 }
 
