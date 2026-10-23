@@ -1,3 +1,6 @@
+import { classifyQuestionText } from "@/lib/analytics/taxonomy";
+import { OFFICIAL_POLICY_MANUAL } from "@/lib/forms/official-policy-manual";
+
 import type { MatchedChunkRow } from "./mappers";
 import { commonHeadingTokens, headingMatches } from "./section-rank";
 
@@ -21,6 +24,41 @@ export function hybridScore(input: {
   if (input.keywordRank && input.keywordRank > 0) score += 1 / (RRF_K + input.keywordRank);
   if (input.sectionMatch) score += 1;
   return score;
+}
+
+/**
+ * The category the JBA Policy Manual is filed under. Other compliance
+ * documents share it; a framework filed elsewhere does not.
+ */
+const POLICY_MANUAL_CATEGORY = "policies_compliance";
+
+/**
+ * Two first-place reciprocal-rank terms. Enough for a policy-manual keyword
+ * hit to outrank a framework chunk that won the vector list, and smaller than
+ * a section-title match.
+ */
+const POLICY_MANUAL_BOOST = 2 / (RRF_K + 1);
+
+/** A policy question, from the activity taxonomy. No word-to-section map. */
+export function isPolicyTypeQuestion(query: string): boolean {
+  return classifyQuestionText(query) === "policy_question";
+}
+
+/** The manual's own title prefix, or the category that manual is filed under. */
+export function isPolicyManualChunk(row: Pick<MatchedChunkRow, "document_title" | "category">): boolean {
+  const title = row.document_title.trim().toLowerCase();
+  if (OFFICIAL_POLICY_MANUAL.fallbackTitles.some((prefix) => title.startsWith(prefix.toLowerCase()))) {
+    return true;
+  }
+  return row.category === POLICY_MANUAL_CATEGORY;
+}
+
+export function policyManualBoost(
+  query: string,
+  row: Pick<MatchedChunkRow, "document_title" | "category">,
+): number {
+  if (!isPolicyTypeQuestion(query) || !isPolicyManualChunk(row)) return 0;
+  return POLICY_MANUAL_BOOST;
 }
 
 export interface HybridCandidate {
@@ -52,11 +90,12 @@ export function selectHybridMatches(
       return {
         row: candidate.row,
         include: aboveFloor || sectionMatch || strongKeyword,
-        score: hybridScore({
-          vectorRank: candidate.vectorRank,
-          keywordRank: candidate.keywordRank,
-          sectionMatch,
-        }),
+        score:
+          hybridScore({
+            vectorRank: candidate.vectorRank,
+            keywordRank: candidate.keywordRank,
+            sectionMatch,
+          }) + policyManualBoost(query, candidate.row),
       };
     })
     .filter((item) => item.include)

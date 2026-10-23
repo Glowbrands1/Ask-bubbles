@@ -180,3 +180,16 @@ still anchored to the earlier turn, and the retrieval query is then
 rewritten into manual terms from the conversation. SKIP, an empty rewrite,
 or a model failure keeps the typed question. The answering model still
 sees the question as typed. No glossary and no migration.
+
+## 23 Oct 2026: hybrid retrieval timeout
+
+`match_knowledge_chunks_hybrid` fell through to a full scan and an AND
+keyword query, then hit the statement timeout. The app now waits 5s and
+reads `match_knowledge_chunks` when the hybrid or recall RPC errors or
+runs long. A new migration, not applied here, rewrites the function to
+read candidate ids from the HNSW and GIN indexes with an OR tsquery.
+The vector leg over-fetches. A function-level `hnsw.iterative_scan`
+setting is not used. Rollback comments restore this app's previous
+function body. Execute stays on `service_role` only. No glossary. The
+sibling branch `cursor/hybrid-search-timeout-595e` grants `authenticated`
+and sets `hnsw.iterative_scan`; neither is copied.

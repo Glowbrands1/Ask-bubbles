@@ -1,5 +1,5 @@
 import type { MatchedChunkRow } from "./mappers";
-import { hybridScore, type HybridCandidate } from "./hybrid-rank";
+import { hybridScore, policyManualBoost, type HybridCandidate } from "./hybrid-rank";
 import { commonHeadingTokens, headingMatches } from "./section-rank";
 
 /**
@@ -82,7 +82,9 @@ export function selectRecallCandidates(
           vectorRank: candidate.vectorRank,
           keywordRank: candidate.keywordRank,
           sectionMatch: named || sqlFuzzy,
-        }) + (candidate.sectionSimilarity ?? 0),
+        }) +
+        (candidate.sectionSimilarity ?? 0) +
+        policyManualBoost(query, candidate.row),
     };
   });
   scored.sort((a, b) => b.score - a.score || b.row.similarity - a.row.similarity);
