@@ -155,3 +155,13 @@ title. No migration: the slots share the existing `chat_form_state.state`
 jsonb (`incidentType` and `payrollAmount` added to that object). The tool
 payload is parsed by hand. Store wording, `loc-*` ids, and
 `ACTIVE_BRAND.knowledgeScopeId` are this app's.
+
+## 23 Oct 2026: feedback replay cases and few-shot examples
+
+`FEWSHOT_EXAMPLES_ENABLED` defaults off. Ratings of 1–4 become redacted
+replay cases (`scripts/feedback-to-eval.mjs` reads a JSON join on stdin and
+writes cases to stdout; it does not connect to Supabase). A 5-star row can
+add a similar redacted question to the prompt, joined from `chat_traces`
+on `client_message_id` when a trace exists. `assistant_feedback` still
+stores no question and no answer, and no column was added. No migration.
+Store names come from the caller (`COMPANY_LOCATIONS` at request time).
