@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
-import { rosterNameNamedIn, type RosterEmployee } from "./employee-match";
+import { matchEmployeeName, rosterNameNamedIn, type RosterEmployee } from "./employee-match";
+import { withKeptTypedNames } from "./kept-typed-names";
 import { readEmployeeMentions } from "./proposal";
 
 /* Synthetic people only. QA, 22 Oct 2026: see `rosterNameNamedIn`. */
@@ -49,5 +52,22 @@ describe("a reason after \"for\" is not a name", () => {
 
   it("a name that ends in -ing is still a name where nothing a verb takes follows it", () => {
     expect(readEmployeeMentions("CA for sterling hayes, late today").names).toEqual(["sterling hayes"]);
+  });
+});
+
+describe("kept names stay on the server", () => {
+  const kaitlyn = person("9", "Kaitlyn", "Smith");
+
+  it("the matcher the chat screen imports does not pull node:async_hooks", () => {
+    const source = readFileSync("src/lib/forms/employee-match.ts", "utf8");
+    expect(source).not.toContain("node:async_hooks");
+    expect(source).not.toContain("AsyncLocalStorage");
+  });
+
+  it("a name the manager kept is not asked about again, and an unset store still asks", () => {
+    expect(matchEmployeeName("Katlin Smith", [kaitlyn]).kind).toBe("confirm");
+    const kept = withKeptTypedNames(["Katlin Smith"], () => matchEmployeeName("Katlin Smith", [kaitlyn]));
+    expect(kept.kind).toBe("unchecked");
+    expect(matchEmployeeName("Katlin Smith", [kaitlyn]).kind).toBe("confirm");
   });
 });

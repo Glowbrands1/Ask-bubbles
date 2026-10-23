@@ -126,6 +126,13 @@ mechanism is shared and the company content is not:
 - When `ACTION_PLAN_SENTENCES_ENABLED` is on, the plan is the review
   sentence and the required closing. The existing builder is unchanged
   when the flag is off, including its payroll sentence.
+- The chat screen imports the store resolver, which imports the name
+  matcher. That matcher does not import `node:async_hooks` (the browser
+  bundle cannot). Kept names for one server request live in
+  `kept-typed-names.ts`. The sibling's matcher on
+  `cursor/hybrid-search-timeout-595e` still imports `AsyncLocalStorage`
+  from `node:async_hooks`. That repo is not in this session, so the split
+  is not ported there yet.
 
 ### Intentional differences
 
