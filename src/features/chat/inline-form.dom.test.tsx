@@ -2131,7 +2131,11 @@ describe("two forms in one message render as two independent cards", () => {
 describe("a reopened Corrective Action says where its policy came from (owner decision, 22 Oct 2026)", () => {
   const corrective = TEMPLATE_SEEDS.find((seed) => seed.key === "dpoa")!;
 
-  function correctiveDraft(level: { checked: string[]; filledBy: "ai" | "manager" }, ownerConfirmed: boolean) {
+  function correctiveDraft(
+    level: { checked: string[]; filledBy: "ai" | "manager" },
+    ownerConfirmed: boolean,
+    documentTitle = "JBA Policy Manual Edited 5.2025",
+  ) {
     const loaded = loadedInstance({ templateName: "Corrective Action Form" });
     return {
       ...loaded,
@@ -2149,7 +2153,7 @@ describe("a reopened Corrective Action says where its policy came from (owner de
             verified: true,
             matchedBy: "fallback",
             ownerConfirmed,
-            documentTitle: "JBA Policy Manual Edited 5.2025",
+            documentTitle,
           },
         },
       ],
@@ -2166,11 +2170,23 @@ describe("a reopened Corrective Action says where its policy came from (owner de
   }
 
   it("says the manual requires owner confirmation on reopening, and offers no level notice or Confirm button", async () => {
-    fakeFetch(() => ({ payload: correctiveDraft({ checked: ["written"], filledBy: "ai" }, false) }));
+    // Pau, 23 Oct 2026: the JBA Policy Manual is the approved source and is not
+    // announced as unconfirmed. A different manual still is.
+    fakeFetch(() => ({
+      payload: correctiveDraft({ checked: ["written"], filledBy: "ai" }, false, "Regional Operations Handbook"),
+    }));
     open();
     expect(await screen.findByText(/requires owner confirmation as Ask Bubbles's approved policy manual/)).toBeTruthy();
     expect(screen.queryByText(/Type of Warning:/)).toBeNull();
     expect(screen.queryByRole("button", { name: /^Confirm / })).toBeNull();
+  });
+
+  it("does not ask to confirm the JBA Policy Manual", async () => {
+    // Pau, 23 Oct 2026: a stored JBA Policy Manual citation is the approved source.
+    fakeFetch(() => ({ payload: correctiveDraft({ checked: ["written"], filledBy: "ai" }, false) }));
+    open();
+    await screen.findByRole("group", { name: "Is payroll deduct applicable?" });
+    expect(screen.queryByText(/requires owner confirmation/)).toBeNull();
   });
 
   it("says nothing once the manual is confirmed", async () => {

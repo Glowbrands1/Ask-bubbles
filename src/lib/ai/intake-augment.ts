@@ -2,6 +2,7 @@ import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { extractFormDate, listIncidentDates } from "@/lib/forms/form-date-answer";
 import { payrollDeductAmount } from "@/lib/forms/payroll-deduct";
 import { statedPayrollDeduct } from "@/lib/forms/payroll-deduct-answer";
+import { statedWarningLevel, warningLevelFromTurns } from "@/lib/forms/warning-level";
 import { extractJobTitle, readEmployeeMentions } from "@/lib/forms/proposal";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
 import type { RosterEmployee } from "@/lib/forms/employee-match";
@@ -114,7 +115,7 @@ function trigrams(text: string): Set<string> {
   return grams;
 }
 
-function trigramSimilarity(left: string, right: string): number {
+export function trigramSimilarity(left: string, right: string): number {
   const a = trigrams(left);
   const b = trigrams(right);
   if (a.size === 0 || b.size === 0) return 0;
@@ -141,6 +142,45 @@ function fuzzyStore(text: string): string | null {
 }
 
 /**
+ * One store the words uniquely resemble, when `readLocationMentions` did not
+ * take them. Two stores, or a weak resemblance, is no store.
+ */
+export function uniqueRosterStore(text: string): string | null {
+  const tokens = text
+    .toLowerCase()
+    .replace(/[^a-z0-9']+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const hits = new Map<string, number>();
+  for (let start = 0; start < tokens.length; start += 1) {
+    for (let length = 1; length <= 3 && start + length <= tokens.length; length += 1) {
+      const phrase = tokens.slice(start, start + length).join(" ");
+      if (phrase.length < 3) continue;
+      const ranked = rankStores(phrase);
+      if (!ranked) continue;
+      hits.set(ranked.name, Math.max(hits.get(ranked.name) ?? 0, ranked.score));
+    }
+  }
+  if (hits.size !== 1) return null;
+  return [...hits.keys()][0] ?? null;
+}
+
+function rankStores(phrase: string): { name: string; score: number } | null {
+  const ranked = COMPANY_LOCATIONS.map((store) => {
+    const local = store.name.replace(/^[A-Z]{2}\s+/, "");
+    return {
+      name: store.name,
+      score: Math.max(trigramSimilarity(phrase, store.name), trigramSimilarity(phrase, local)),
+    };
+  }).sort((left, right) => right.score - left.score);
+  const top = ranked[0];
+  const next = ranked[1]?.score ?? 0;
+  if (!top || top.score < 0.72 || top.score - next < 0.08) return null;
+  return top;
+}
+
+/**
  * A month-day the date reader skipped, and a dollar amount beside a deduction
  * the amount reader skipped. Rewritten into shapes those readers already accept.
  * A date the reader already returned is left alone.
@@ -160,6 +200,22 @@ export function fieldLines(question: string, today: string, earlier = ""): strin
     const missed = missedDeduction(question) ?? missedDeduction(corpus);
     const amount = known ?? missed;
     if (amount) lines.push(`Payroll deduction of ${amount.startsWith("$") ? amount : `$${amount}`}.`);
+  }
+
+  if (statedPayrollDeduct(question) === null && earlier.trim()) {
+    const known = statedPayrollDeduct(earlier);
+    if (known === "yes") lines.push("Payroll deduct applies.");
+    else if (known === "no") lines.push("No payroll deduction.");
+  }
+  if (statedWarningLevel(question) === null && earlier.trim()) {
+    const level = warningLevelFromTurns(
+      earlier
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean),
+      today,
+    );
+    if (level === "verbal" || level === "written") lines.push(`Warning level: ${level}.`);
   }
   return lines;
 }

@@ -145,7 +145,29 @@ export function actionPlanSentencesEnabled(): boolean {
  * Offense or the Action Plan. Off, a draft write replaces fields as it does today.
  */
 export function draftEditMergeEnabled(): boolean {
-  return envFlag("DRAFT_EDIT_MERGE_ENABLED");
+  return envFlag("DRAFT_EDIT_MERGE_ENABLED") || envFlag("DRAFT_MERGE_ENABLED");
+}
+
+/**
+ * An employee, store, or policy counts only when it resolves against the
+ * Woven roster, the store list, or the JBA manual. Off, a typed name is
+ * accepted exactly as it is today.
+ */
+export function groundedEntitiesEnabled(): boolean {
+  return envFlag("GROUNDED_ENTITIES_ENABLED");
+}
+
+/**
+ * Read and write the per-conversation form state before asking again.
+ * Off, nothing is read or written and the question is unchanged.
+ */
+export function formStateEnabled(): boolean {
+  return envFlag("FORM_STATE_ENABLED");
+}
+
+/** Same switch as `draftEditMergeEnabled`. The sibling app's variable name. */
+export function draftMergeEnabled(): boolean {
+  return draftEditMergeEnabled();
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
@@ -167,4 +189,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CHAT_MEMORY_ENABLED",
   "ACTION_PLAN_SENTENCES_ENABLED",
   "DRAFT_EDIT_MERGE_ENABLED",
+  "DRAFT_MERGE_ENABLED",
+  "GROUNDED_ENTITIES_ENABLED",
+  "FORM_STATE_ENABLED",
 ] as const;

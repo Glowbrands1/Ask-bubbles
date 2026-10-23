@@ -87,7 +87,9 @@ import {
   formDerivedProvenance,
 } from "@/lib/forms/policy-fields";
 import {
+  approvedManualConfirmed,
   boxSectionNames,
+  isApprovedPolicyManualTitle,
   manualSectionsFor,
   officialManualProvenance,
   unconfirmedManualNotice,
@@ -128,8 +130,8 @@ import {
   planPayrollAmount,
   type ActionPlanInput,
 } from "@/lib/forms/ca-action-plan";
-import { enforceTwoSentenceActionPlan } from "@/lib/forms/action-plan-sentences";
-import { mergeDraftEdits } from "@/lib/forms/draft-edit-merge";
+import { twoSentenceActionPlan } from "@/lib/forms/action-plan-sentences";
+import { retainFilledFields } from "@/lib/forms/draft-merge";
 import { flaggedCitationWrite } from "@/lib/ai/policy-citation-fields";
 import { fieldLines } from "@/lib/ai/intake-augment";
 import {
@@ -1704,7 +1706,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
                 documentId: manual.documentId,
                 documentTitle: manual.documentTitle,
                 matchedBy: manual.matchedBy,
-                ownerConfirmed: manual.ownerConfirmed,
+                ownerConfirmed: approvedManualConfirmed(manual),
                 sections: manualSections,
               }),
               /* The structured citation the value was rendered from. */
@@ -1727,7 +1729,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
               documentId: manual.documentId,
               documentTitle: manual.documentTitle,
               matchedBy: manual.matchedBy,
-              ownerConfirmed: manual.ownerConfirmed,
+              ownerConfirmed: approvedManualConfirmed(manual),
               sections: eppPassages.map((passage) => passage.section),
             }),
           }
@@ -1861,12 +1863,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       (loaded.values ?? []).some(
         (row) => row.filledBy === "ai" && ((row.value ?? "").trim() !== "" || row.checked.length > 0),
       );
-    const builtPlan = planInput ? correctiveActionPlan(planInput) : null;
-    const sentenceGuarded =
-      builtPlan && actionPlanSentencesEnabled()
-        ? enforceTwoSentenceActionPlan(builtPlan, fixedPlan?.closing)
-        : null;
-    const planValue = sentenceGuarded ? (sentenceGuarded.valid ? sentenceGuarded.value : null) : builtPlan;
+    const planValue = planInput
+      ? actionPlanSentencesEnabled()
+        ? twoSentenceActionPlan(planInput)
+        : correctiveActionPlan(planInput)
+      : null;
     const planned =
       fixedPlan && planInput && planValue && draftedAnything && !keeps(fixedPlan.key)
         ? {
@@ -1875,20 +1876,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           }
         : { values: draftValues, provenance: draftProvenance };
 
-    const existingValues = Object.fromEntries(
-      (loaded.values ?? []).map((row) => [row.fieldKey, row.value ?? ""]),
-    );
-    const existingChecked = Object.fromEntries(
-      (loaded.values ?? [])
-        .filter((row) => row.checked.length > 0)
-        .map((row) => [row.fieldKey, [...row.checked]]),
-    );
     const merged = draftEditMergeEnabled()
-      ? mergeDraftEdits({
-          existingValues,
-          incomingValues: planned.values,
-          existingChecked,
-          incomingChecked: validated.checked,
+      ? retainFilledFields({
+          question: notes,
+          existing: loaded.values ?? [],
+          values: planned.values,
+          checked: validated.checked,
         })
       : { values: planned.values, checked: validated.checked };
 
@@ -1996,8 +1989,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         evidence.unattributed ? UNATTRIBUTED_REPORT_NOTICE : null,
         exit && exit.detailsRemoved.length > 0 ? EXIT_DETAILS_TRIMMED_NOTICE : null,
         caPolicy && !eventSection ? caPolicyAmbiguousNotice(caPolicy) : null,
-        /* The manual's standing, said: quoted from a manual no owner confirmed (owner decision, 22 Oct 2026). */
-        manual.ok && !manual.ownerConfirmed && (manualSections.length > 0 || eppPassages.length > 0)
+        /*
+         * The manual's standing, said when the quoted manual is not the JBA
+         * Policy Manual (Pau, 23 Oct 2026). That manual is the approved source.
+         */
+        manual.ok &&
+        !isApprovedPolicyManualTitle(manual.documentTitle) &&
+        !manual.ownerConfirmed &&
+        (manualSections.length > 0 || eppPassages.length > 0)
           ? unconfirmedManualNotice(manual.documentTitle)
           : null,
         policyLeftForManager && !managerOffense

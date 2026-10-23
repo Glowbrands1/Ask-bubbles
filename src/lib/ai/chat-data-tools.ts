@@ -23,6 +23,18 @@ export interface ChatDataAddition {
 
 const EMPTY: ChatDataAddition = { help: null, data: null };
 
+/** The page total, said apart from any weekly qualifying count. */
+export function reviewInventoryLine(total: number, scoped: boolean): string {
+  const where = scoped ? " for the stores in this account" : "";
+  return `The Google Reviews page holds ${total} reviews in total${where}. That is the inventory total, not the count of reviews that qualify this week.`;
+}
+
+function storedReviewTotal(
+  stores: readonly { reviewCount: number; apiTotalReviewCount: number | null }[],
+): number {
+  return stores.reduce((sum, store) => sum + (store.apiTotalReviewCount ?? store.reviewCount), 0);
+}
+
 const WANTS_DATA = /\b(?:reviews?|sales totals|comp report|breakdown|by store|by salon)\b/i;
 
 export async function loadChatDataBlock(input: {
@@ -50,7 +62,15 @@ export async function loadChatDataBlock(input: {
         value: `${store.reviewCount} reviews, average ${store.averageRating ?? "unknown"}, ${store.unansweredCount} unanswered`,
       }));
       const planForRows = plan && plan.kind === "reviews" ? plan : planReportBreakdown("reviews by store");
-      return { help, data: formatBreakdown(planForRows.kind === "none" ? { ...planForRows, kind: "reviews", report: "Google Reviews", note: "Stored review summaries." } : planForRows, rows, null) };
+      const breakdown = formatBreakdown(
+        planForRows.kind === "none"
+          ? { ...planForRows, kind: "reviews", report: "Google Reviews", note: "Stored review summaries." }
+          : planForRows,
+        rows,
+        null,
+      );
+      const inventory = reviewInventoryLine(storedReviewTotal(stores), false);
+      return { help, data: breakdown ? `${breakdown}\n\n${inventory}` : inventory };
     } catch {
       return { help, data: "Google Reviews\n\nThe review summaries could not be read. No count was invented." };
     }

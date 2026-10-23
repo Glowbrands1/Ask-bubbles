@@ -100,13 +100,39 @@ mechanism is shared and the company content is not:
 - Store, not salon. Forms Register, not Form Monitoring. The JBA Policy
   Manual stays the citation source (policy name and page). `JBA Manual` is
   that source, never an employee.
-- No keyword-to-policy glossary. A section is chosen by heading overlap
-  against the chunks in hand, and the page comes from the chunk.
+- No company glossary. A section is chosen by the same Corrective Action
+  readers the sibling uses (`accountManualSections`): the manual's own
+  headings and the chunk's page. An employee who is tardy cites Attendance.
+  A store opening late cites Late Opening. Phone use cites Cell
+  Phone/Smart Watch. The flagged citation is `Attendance Policy, JBA Policy
+  Manual p.14`.
+- The JBA Policy Manual is the approved source (Pau, 23 Oct 2026). A
+  fallback match of that title is not asked for owner confirmation. A
+  different manual still is.
 - Incident dedupe is keyed on the incident. The card-id match Pau already
-  fixed is unchanged.
-- Conversation form state is its own table. Memory kinds are store, employee,
-  and preference.
-- Two more flags, both default off: the action plan is checked for exactly
-  two sentences, and a "show draft with edits" merge does not blank Offense
-  or the Action Plan. The existing action-plan builder is unchanged when the
-  sentence flag is off.
+  fixed is unchanged. After a card miss, the fingerprint table runs, then
+  the draft's own narrative, and only when `DRAFT_DEDUPE_ENABLED` is on.
+- Conversation form state shares the chat form-state table (`state` jsonb
+  beside the existing `fields` jsonb). Memory kinds are store, employee,
+  and preference. Store notes stay visible; employee and preference notes
+  stay in the conversation that stored them.
+- `GROUNDED_ENTITIES_ENABLED` and `FORM_STATE_ENABLED` match the sibling's
+  names and default off. `DRAFT_MERGE_ENABLED` is the same switch as
+  `DRAFT_EDIT_MERGE_ENABLED`. Title and primary location come from this
+  app's Woven directory (`loc-*`), not from another company's location tables.
+- The Google Reviews sentence is the sum of the stored store totals
+  (`apiTotalReviewCount` when present, otherwise `reviewCount`) and says
+  "stores". This app has no weekly qualifying snapshot.
+- When `ACTION_PLAN_SENTENCES_ENABLED` is on, the plan is the review
+  sentence and the required closing. The existing builder is unchanged
+  when the flag is off, including its payroll sentence.
+
+### Intentional differences
+
+- Store, Forms Register, Buff City Soap stores, the Woven roster, and this
+  app's Supabase tables. No other company's location names or glossary.
+- Policy selection follows the manual readers. It does not add a model call
+  that picks a heading, and it does not keep a heading-overlap preference.
+- The Google Reviews total is the stored inventory, worded for stores.
+- Card-id dedupe stays first. The fingerprint table stays beside the
+  narrative match.

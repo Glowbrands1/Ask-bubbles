@@ -14,7 +14,6 @@ import {
 import { mergeDraftEdits, showDraftWithEdits } from "@/lib/forms/draft-edit-merge";
 import { sameIncident } from "@/lib/forms/incident-key";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
-import { bestHeading } from "@/lib/knowledge/section-rank";
 import { CHAT_QUALITY_FLAG_NAMES, envFlag } from "@/lib/config/chat-quality-flags";
 
 import {
@@ -23,7 +22,6 @@ import {
   isPolicySourceSpan,
 } from "./employee-candidate-grounding";
 import { augmentIntakeQuestion, fieldLines } from "./intake-augment";
-import { formatJbaCitation } from "./jba-citation";
 import { fieldsFromManagerText, retainFieldsInReply } from "./form-field-state";
 import { applyOptionalPriorCoaching } from "./prior-coaching-optional";
 import { citedSections, withMappedPolicy } from "./violation-policy";
@@ -97,6 +95,9 @@ describe("chat quality flags stay off unless set", () => {
     touched.push("SLOT_RETENTION_ENABLED");
     expect(CHAT_QUALITY_FLAG_NAMES).toContain("ACTION_PLAN_SENTENCES_ENABLED");
     expect(CHAT_QUALITY_FLAG_NAMES).toContain("DRAFT_EDIT_MERGE_ENABLED");
+    expect(CHAT_QUALITY_FLAG_NAMES).toContain("DRAFT_MERGE_ENABLED");
+    expect(CHAT_QUALITY_FLAG_NAMES).toContain("GROUNDED_ENTITIES_ENABLED");
+    expect(CHAT_QUALITY_FLAG_NAMES).toContain("FORM_STATE_ENABLED");
   });
 
   it("leaves a question unchanged when both intake flags are off", () => {
@@ -138,14 +139,14 @@ describe("a Standards of Conduct corrective action keeps the employee and cites 
   });
 
   it("cites Standards of Conduct by name and page from the JBA Policy Manual", () => {
+    // Pau, 23 Oct 2026: the citation is the policy name and the chunk's page.
+    // The form writes "Standards of Conduct Policy, JBA Policy Manual p.12".
     const turns = ["Create a CA for Marissa Lempka for a Standards of Conduct violation."];
     const cited = citedSections(turns, MANUAL);
     expect(cited).toEqual([{ section: "Standards of Conduct", page: 12 }]);
-    const line = formatJbaCitation(cited[0]!.section, cited[0]!.page, "2025 JBA Policy Manual - Edited 5-2025");
-    expect(line).toBe("JBA Policy Manual — Standards of Conduct — Page 12");
     const answer = withMappedPolicy("I can draft that corrective action.", turns, MANUAL, true);
     expect(answer).toContain("**Policy cited from the JBA Policy Manual**");
-    expect(answer).toContain(line);
+    expect(answer).toContain("Standards of Conduct Policy, JBA Policy Manual p.12");
   });
 });
 
@@ -240,16 +241,6 @@ describe("the action plan is exactly two sentences when that check is asked for"
   it("accepts a plan that is already two sentences", () => {
     const enforced = enforceTwoSentenceActionPlan(PLAN);
     expect(enforced).toEqual({ value: PLAN, valid: true });
-  });
-});
-
-describe("heading overlap picks the section the account names", () => {
-  const headings = MANUAL.map((item) => item.section!);
-
-  it("prefers Late Opening over Attendance, and Cell Phone over Standards of Conduct", () => {
-    expect(bestHeading("she opened the store late", headings)?.heading).toBe("Late Opening");
-    expect(bestHeading("she was on her cell phone", headings)?.heading).toBe("Cell Phone/Smart Watch Policy");
-    expect(bestHeading("this is a Standards of Conduct violation", headings)?.heading).toBe("Standards of Conduct");
   });
 });
 

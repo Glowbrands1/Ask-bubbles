@@ -1,6 +1,8 @@
 import "server-only";
 
-import { manualDisplayTitle } from "@/lib/forms/official-policy-manual";
+import { approvedManualConfirmed, manualDisplayTitle } from "@/lib/forms/official-policy-manual";
+import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
+import { mayDescribeSection } from "@/lib/forms/named-policy-section";
 
 import { NAMED_HANDBOOK, PINNED_KNOWLEDGE_ROLES } from "@/config/company/knowledge";
 import { COMPANY_REPORT_LOADERS } from "@/config/company/reports.server";
@@ -32,7 +34,9 @@ import type { SourceCitation } from "@/types";
 
 import { callClaude } from "./call-claude";
 import { loadChatDataBlock } from "./chat-data-tools";
-import { formatRecalledMemory, memoryCue } from "./chat-memory";
+import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
+import { deliverFormProposal } from "./grounded-turn";
+import { pinnedManualBlock } from "./policy-citation-fields";
 import { recallMemory, rememberFact } from "./chat-memory-store";
 import { finishChatTrace, openChatTrace, redactTraceText } from "./chat-trace";
 import { updateChatTrace } from "./chat-trace-store";
@@ -241,9 +245,14 @@ async function answerQuestionBody(
     const readManual = () =>
       (manualRead ??= new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId));
     const proposalQuestion = await questionForProposal(request, actor);
-    const proposal = await proposeFormForTurn({
-      history: request.history,
+    const proposal = await deliverFormProposal({
+      request,
+      actor,
       question: proposalQuestion,
+      decorate: (response) => decorateFormAnswer(request, actor, response),
+      propose: (question) => proposeFormForTurn({
+      history: request.history,
+      question,
       questionMessageId: request.questionMessageId,
       actor,
       continueTemplateKey: request.continueProposalTemplateKey,
@@ -271,10 +280,16 @@ async function answerQuestionBody(
         const manual = await readManual();
         return manual.ok ? manual.chunks : null;
       },
-      /* Whether an owner confirmed it (see `ownerConfirmed`). One read serves both. */
+      /*
+       * The JBA Policy Manual is the approved source whether it was tagged or
+       * found by its name (Pau, 23 Oct 2026). The citation is still the
+       * section and the printed page. One read serves both.
+       */
       policyManualIdentity: async () => {
         const manual = await readManual();
-        return manual.ok ? { title: manualDisplayTitle(manual.documentTitle), confirmed: manual.ownerConfirmed } : null;
+        return manual.ok
+          ? { title: manualDisplayTitle(manual.documentTitle), confirmed: approvedManualConfirmed(manual) }
+          : null;
       },
       /*
        * THE EMPLOYEE'S FORMS ALREADY ON FILE, read only for a Corrective
@@ -282,13 +297,10 @@ async function answerQuestionBody(
        * `prior-forms.ts`.
        */
       priorFormsOnFile: (employeeName, locationId) => priorFormsReadingForChat(actor, employeeName, locationId),
+    }),
     });
-    if (proposal) {
-      const answered = await decorateFormAnswer(request, actor, proposal);
-      // Flags off: decoration returns the same proposal, and the forms-library
-      // answer returns here, before retrieval.
-      if (answered !== proposal) return answered;
-    }
+    // Flags off: decoration returns the same proposal, and the forms-library
+    // answer returns here, before retrieval.
     if (proposal) return proposal;
   }
 
@@ -328,9 +340,14 @@ async function answerQuestionBody(
         previous: stored ?? undefined,
         roster,
         propose: async (adjusted) =>
-          proposeFormForTurn({
-            history: request.history,
+          deliverFormProposal({
+            request,
+            actor,
             question: await questionForProposal({ ...request, question: adjusted.question }, actor),
+            decorate: (response) => decorateFormAnswer(request, actor, response),
+            propose: (question) => proposeFormForTurn({
+            history: request.history,
+            question,
             questionMessageId: request.questionMessageId,
             actor,
             continueTemplateKey: adjusted.continueTemplateKey,
@@ -349,15 +366,16 @@ async function answerQuestionBody(
             policyManualIdentity: async () => {
               const manual = await readManual();
               return manual.ok
-                ? { title: manualDisplayTitle(manual.documentTitle), confirmed: manual.ownerConfirmed }
+                ? { title: manualDisplayTitle(manual.documentTitle), confirmed: approvedManualConfirmed(manual) }
                 : null;
             },
             priorFormsOnFile: (employeeName, locationId) => priorFormsReadingForChat(actor, employeeName, locationId),
           }),
+          }),
       });
       if (routed) {
         await persistFields(request, actor, routed.fields);
-        return decorateFormAnswer(request, actor, routed.response);
+        return routed.response;
       }
     }
   }
@@ -640,7 +658,10 @@ async function answerQuestionBody(
     role: actor.role,
     breakdown: reportBreakdownEnabled(),
   });
-  const groundingText = buildGroundingBlock(grounding);
+  const pinnedPolicy = await citedManualGrounding(request, knowledge);
+  const groundingText = [buildGroundingBlock(grounding), pinnedPolicy]
+    .filter((part) => part && part.length > 0)
+    .join("\n\n");
   updateChatTrace({
     retrievalCount: rows.length,
     retrieved: rows.slice(0, 20).map((row) => ({
@@ -949,7 +970,28 @@ async function recalledMemoryBlock(request: AskRequest, actor: ChatActor): Promi
     if (cue) {
       await rememberFact({ userId: actor.subject, ...cue, sourceConversationId: request.conversationId ?? null });
     }
-    return formatRecalledMemory(await recallMemory(actor.subject));
+    return formatRecalledMemory(
+      factsVisibleInConversation(await recallMemory(actor.subject), request.conversationId ?? null),
+    );
+  } catch {
+    return null;
+  }
+}
+
+async function citedManualGrounding(
+  request: AskRequest,
+  knowledge: { fetchOfficialPolicyManual(scopeId: string): Promise<{ ok: true; chunks: readonly import("@/lib/forms/official-policy-manual").ManualChunk[] } | { ok: false }> },
+): Promise<string | null> {
+  if (!policyCitationEnabled()) return null;
+  const notes = [
+    request.question,
+    ...request.history.filter((turn) => turn.role === "user").slice(-3).map((turn) => turn.content),
+  ].join("\n");
+  if (describedAttendanceKeys(notes) === null && !mayDescribeSection(notes)) return null;
+  try {
+    const manual = await knowledge.fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
+    if (!manual.ok) return null;
+    return pinnedManualBlock(notes, manual.chunks);
   } catch {
     return null;
   }

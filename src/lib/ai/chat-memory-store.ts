@@ -6,18 +6,32 @@ import type { MemoryCue, MemoryFact } from "./chat-memory";
 
 export async function recallMemory(userId: string): Promise<MemoryFact[]> {
   try {
-    const { data, error } = await getSupabaseAdmin()
+    const admin = getSupabaseAdmin();
+    const scoped = await admin
       .from("user_memory")
-      .select("kind, key, value")
+      .select("kind, key, value, source_conversation_id")
       .eq("user_id", userId)
       .order("updated_at", { ascending: false })
       .limit(12);
-    if (error || !Array.isArray(data)) return [];
-    return data
+    const rows = !scoped.error && Array.isArray(scoped.data) ? scoped.data : null;
+    const plain =
+      rows ??
+      (
+        await admin
+          .from("user_memory")
+          .select("kind, key, value")
+          .eq("user_id", userId)
+          .order("updated_at", { ascending: false })
+          .limit(12)
+      ).data;
+    if (!Array.isArray(plain)) return [];
+    return plain
       .map((row) => ({
         kind: row.kind as MemoryFact["kind"],
         key: String(row.key ?? ""),
         value: String(row.value ?? ""),
+        sourceConversationId:
+          "source_conversation_id" in row ? ((row.source_conversation_id as string | null) ?? null) : null,
       }))
       .filter((row) => row.kind === "store" || row.kind === "employee" || row.kind === "preference");
   } catch {

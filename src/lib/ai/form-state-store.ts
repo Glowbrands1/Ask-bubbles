@@ -3,7 +3,7 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import type { ConfirmedFormFields } from "./form-field-state";
-import { formStateFromRow, type StoredFormState } from "./form-state";
+import { formStateFromRow, parseFormState, type ConversationFormState, type StoredFormState } from "./form-state";
 
 /**
  * chat_form_state, service role only. A missing table (the migration has
@@ -48,5 +48,37 @@ export async function saveConversationFormState(input: {
     );
   } catch {
     // The answer does not depend on the write.
+  }
+}
+
+export async function loadFormState(userId: string, conversationId: string): Promise<ConversationFormState | null> {
+  try {
+    const { data, error } = await getSupabaseAdmin()
+      .from("chat_form_state")
+      .select("state")
+      .eq("user_id", userId)
+      .eq("conversation_id", conversationId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return parseFormState(data.state);
+  } catch {
+    return null;
+  }
+}
+
+export async function saveFormState(userId: string, conversationId: string, state: ConversationFormState): Promise<void> {
+  try {
+    const { error } = await getSupabaseAdmin().from("chat_form_state").upsert(
+      {
+        user_id: userId,
+        conversation_id: conversationId,
+        state,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,conversation_id" },
+    );
+    if (error) return;
+  } catch {
+    // The migration has not been applied. The turn keeps the answer it has.
   }
 }

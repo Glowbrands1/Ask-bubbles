@@ -8,6 +8,7 @@ create table if not exists public.chat_form_state (
   user_id text not null,
   conversation_id text not null,
   fields jsonb not null default '{}'::jsonb,
+  state jsonb,
   incident_key text,
   updated_at timestamptz not null default now(),
   primary key (user_id, conversation_id)

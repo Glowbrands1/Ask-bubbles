@@ -1146,11 +1146,14 @@ describe("Q17 the manual's standing: cited by section and page; marked only wher
     expect(form.observation).not.toMatch(/no[- ]call/i);
   });
 
-  it("a manual no owner confirmed: the card and the draft say it requires owner confirmation", async () => {
+  it("the JBA Policy Manual is not marked unconfirmed when the tag is absent", async () => {
+    // Pau, 23 Oct 2026: the JBA Policy Manual is the approved citation source.
+    // A fallback match of that title no longer asks the manager to confirm it.
+    // A manual that is not the JBA Policy Manual still does.
     state.manualConfirmed = false;
     const { reply, notice } = await drafted();
-    expect(reply).toMatch(/\*\*Policy source:\*\* "2025 JBA Policy Manual" — requires owner confirmation as Ask Bubbles' approved policy manual/);
-    expect(notice).toContain("requires owner confirmation as Ask Bubbles' approved policy manual");
+    expect(reply).not.toMatch(/requires owner confirmation/);
+    expect(notice).not.toMatch(/requires owner confirmation/);
   });
 });
 

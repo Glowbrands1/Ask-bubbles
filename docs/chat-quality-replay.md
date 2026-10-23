@@ -16,7 +16,12 @@ manual, or one of its headings, is the policy source.
 The policy source is the **JBA Policy Manual**. A citation names the policy
 and the page the chunk carries:
 
-`JBA Policy Manual — Standards of Conduct — Page 12`
+`Standards of Conduct Policy, JBA Policy Manual p.12`
+
+The section is the one the same Corrective Action readers return from the
+chunks in hand. An employee who is tardy cites Attendance. A store that
+opens late cites Late Opening. Phone use cites Cell Phone/Smart Watch.
+Nothing here prefers one heading because it overlaps the sentence more.
 
 `JBA Manual` is a short name for that source. It is never an employee.
 

@@ -448,6 +448,15 @@ function citable(chunks: readonly ManualChunk[], heading: string, phrase: string
  * only where no policy was named and nothing else decides it, only where
  * exactly one heading answers, and only a heading titled a Policy.
  */
+export function mayDescribeSection(text: string): boolean {
+  if (namedPolicies(text).length > 0) return false;
+  const reading = readCaPolicy(text);
+  if (reading.stated !== null || reading.suggestion !== null || reading.ambiguous !== null) {
+    return false;
+  }
+  return !OWN_BOX.test(text);
+}
+
 export function describedManualSection(input: {
   readonly text: string;
   readonly chunks: readonly ManualChunk[] | null;
