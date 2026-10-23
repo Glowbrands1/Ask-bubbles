@@ -182,6 +182,16 @@ export function fewShotExamplesEnabled(): boolean {
   return envFlag("FEWSHOT_EXAMPLES_ENABLED");
 }
 
+/**
+ * After an answer: the citation is in the retrieved JBA chunks, an action
+ * plan is two sentences, and a named employee is on the Woven roster. One
+ * repair if a check fails. Off, the answer is unchanged and the model is
+ * not called.
+ */
+export function selfCheckEnabled(): boolean {
+  return envFlag("SELF_CHECK_ENABLED");
+}
+
 /** Same switch as `draftEditMergeEnabled`. The sibling app's variable name. */
 export function draftMergeEnabled(): boolean {
   return draftEditMergeEnabled();
@@ -211,4 +221,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_STATE_ENABLED",
   "INTENT_EXTRACTION_ENABLED",
   "FEWSHOT_EXAMPLES_ENABLED",
+  "SELF_CHECK_ENABLED",
 ] as const;

@@ -165,3 +165,18 @@ add a similar redacted question to the prompt, joined from `chat_traces`
 on `client_message_id` when a trace exists. `assistant_feedback` still
 stores no question and no answer, and no column was added. No migration.
 Store names come from the caller (`COMPANY_LOCATIONS` at request time).
+
+## 23 Oct 2026: self-check and manual-term retrieval
+
+`SELF_CHECK_ENABLED` defaults off. After an answer, a JBA citation must be
+a heading and page in the chunks that turn retrieved, an action plan must
+be two sentences when the answer has one, and a person the answer names
+must be on the Woven roster loaded for the turn. One repair call if a
+check fails; a repair that still fails leaves the original answer. The
+flag off does not call the model.
+
+`QUERY_REWRITE_ENABLED` already defaulted off. On, a short follow-up is
+still anchored to the earlier turn, and the retrieval query is then
+rewritten into manual terms from the conversation. SKIP, an empty rewrite,
+or a model failure keeps the typed question. The answering model still
+sees the question as typed. No glossary and no migration.

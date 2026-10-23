@@ -37,6 +37,7 @@ import { loadChatDataBlock } from "./chat-data-tools";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
 import { loadFewShotBlock } from "./feedback-examples";
+import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";
 import { pinnedManualBlock } from "./policy-citation-fields";
 import { recallMemory, rememberFact } from "./chat-memory-store";
@@ -68,7 +69,7 @@ import { augmentIntakeQuestion } from "./intake-augment";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import { prepareLongContext } from "./long-context-claude";
 import { applyOptionalPriorCoaching } from "./prior-coaching-optional";
-import { rewriteFollowUpQuery } from "./query-rewrite-claude";
+import { rewriteRetrievalQuery } from "./query-rewrite-claude";
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
 import { matchRecallKnowledge } from "@/lib/knowledge/recall-match";
 import { withMappedPolicy } from "./violation-policy";
@@ -482,14 +483,13 @@ async function answerQuestionBody(
     : Promise.resolve(null);
 
   /*
-   * A FOLLOW-UP THAT FINDS NOTHING ON ITS OWN IS SEARCHED WITH ITS ANCHOR —
-   * "and for part-timers?" then finds the part-time attendance guidance. A
-   * short turn about "the policy" with a form open is also searched with the
-   * sections that form cites. Only the query changes: the model is still
-   * given the question as typed. See `retrievalPlan` and `retrieval-query.ts`.
+   * Only the query changes: the model is still given the question as typed.
+   * When the flag is on, a short follow-up is anchored to the earlier turn
+   * and the query is then phrased in the manual's terms. SKIP keeps a form
+   * command as typed. See `retrievalPlan` and `retrieval-query.ts`.
    */
   const retrievalQuestion = queryRewriteEnabled()
-    ? await rewriteFollowUpQuery({
+    ? await rewriteRetrievalQuery({
         question: request.question,
         history: request.history,
         fallback: request.question,
@@ -719,8 +719,18 @@ async function answerQuestionBody(
         true,
       )
     : prose;
+  const checked = await applySelfCheck({
+    answer: cited,
+    chunks: rows.map((row) => ({
+      section: row.section,
+      page: row.page,
+      printedPage: row.page,
+      content: row.content,
+    })),
+    loadRoster: () => loadRosterQuiet(actor),
+  });
   return {
-    content: cited,
+    content: checked,
     formSelection: suggested?.selection,
     citations,
     coverage: answerCoverage({
