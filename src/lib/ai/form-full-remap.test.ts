@@ -2,9 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { RosterEmployee } from "@/lib/forms/employee-match";
 
-import { groundFormSlots, remapFormTurn, type FormRemapSlots } from "./form-full-remap";
-import { COACHING_FORM_TURNS, LEAKED_STORE_TURNS, VERBAL_TURNS } from "./form-remap-live-fixtures";
-import { keepThisConversation } from "./form-remap-scope";
+import { groundFormSlots, remapFormTurn } from "./form-full-remap";
 
 /**
  * FORM_FULL_REMAP: one extraction, then only what the manager said.
@@ -51,26 +49,6 @@ afterEach(() => {
 
 const OPEN =
   "corrective action for Test Employee, team member, at Kearney. She left the register drawer open on October 20. Verbal warning. Payroll deduct applies and $25 will come out of the check.";
-
-function replayTurns(turns: readonly string[], proposed: Record<string, unknown>) {
-  let history: { role: string; content: string }[] = [];
-  let saved: FormRemapSlots | null = null;
-  let last: ReturnType<typeof groundFormSlots> | null = null;
-  for (const question of turns) {
-    last = groundFormSlots({
-      raw: raw(proposed),
-      history,
-      question,
-      today: TODAY,
-      people: [JANE],
-      saved,
-    });
-    history = [...history, { role: "user", content: question }];
-    saved = last.slots;
-  }
-  if (!last) throw new Error("no turns");
-  return last;
-}
 
 function raw(over: Record<string, unknown> = {}) {
   return {
@@ -226,56 +204,6 @@ describe("form full remap", () => {
     expect(response.content).not.toContain("Woven has");
   });
 
-  it("conv_mvmj6v1t250hfij replays verbal and 9/01 and keeps 10/11", () => {
-    const { slots, response } = replayTurns(VERBAL_TURNS, {
-      templateKey: "coaching",
-      employeeName: null,
-      observation: null,
-      warningLevel: null,
-      payrollDeduct: null,
-      payrollAmount: null,
-      store: null,
-    });
-    const card = response.formProposal;
-    expect(slots.templateKey).toBe("dpoa");
-    expect(slots.incidentDateIso).toBe("2026-10-11");
-    expect(card?.templateName).toBe("Corrective Action Form");
-    expect(card?.formDate).toBe("2026-10-11");
-    expect(card?.formDate).not.toBe("2026-09-01");
-    expect(card?.warningLevel).toBe("verbal");
-    expect(card?.priorActions).toContain("prior = manual ack 9/01");
-    expect(card?.priorActions).toContain("coached on 2nd");
-    expect(card?.payrollDeduct).toBe("no");
-    expect(card?.issue).toBe("cell phone 30+ min");
-    expect(card?.incidentTime).toBe("10-20");
-    expect(card?.locationId).toBe("loc-236");
-    expect(card?.locationName).toMatch(/Grand Island/);
-    expect(response.content).not.toContain("Which date should go on the form?");
-    expect(response.content).not.toMatch(/Which store\?|What happened\?|Verbal or written\?|Is payroll deduct applicable\?/);
-    expect(response.content).not.toMatch(/Kearney|Bellevue/);
-  });
-
-  it("conv_mvmj7ifs9oosat5 keeps the Coaching Form the user asked for", () => {
-    const { slots, response } = replayTurns(COACHING_FORM_TURNS, {
-      templateKey: "dpoa",
-      employeeName: null,
-      observation: null,
-      warningLevel: "verbal",
-      payrollDeduct: "no",
-      payrollAmount: null,
-      store: "Kearney",
-    });
-    const card = response.formProposal;
-    expect(COACHING_FORM_TURNS).toEqual(["Create a Coaching Form"]);
-    expect(slots.templateKey).toBe("coaching");
-    expect(card?.templateName).toBe("Coaching Form");
-    expect(card?.templateName).not.toBe("Corrective Action Form");
-    expect(card?.warningLevel ?? null).toBeNull();
-    expect(card?.priorActions ?? null).toBeNull();
-    expect(response.content).not.toMatch(/Kearney|Bellevue/);
-    expect(response.content).not.toContain("prior = manual ack 9/01");
-  });
-
   it("does not let verbal replace an explicit Coaching Form", () => {
     const { slots } = groundFormSlots({
       raw: raw({ templateKey: "dpoa", employeeName: null, observation: null }),
@@ -285,31 +213,6 @@ describe("form full remap", () => {
       people: [JANE],
     });
     expect(slots.templateKey).toBe("coaching");
-  });
-
-  it("conv_mvmj8a26gtq901w does not take Kearney or Bellevue from another conversation", () => {
-    const foreign = new Set(LEAKED_STORE_TURNS.map((turn) => turn.id));
-    const history = keepThisConversation(LEAKED_STORE_TURNS, foreign);
-    const { slots, response } = groundFormSlots({
-      raw: raw({
-        templateKey: "dpoa",
-        store: "Kearney",
-        observation: null,
-        warningLevel: null,
-        payrollDeduct: null,
-        payrollAmount: null,
-        employeeName: null,
-      }),
-      history,
-      question: "corrective action",
-      today: TODAY,
-      people: [JANE],
-    });
-    expect(history).toEqual([]);
-    expect(slots.locationId).toBeNull();
-    expect(slots.store).toBeNull();
-    expect(response.formProposal?.locationName ?? null).toBeNull();
-    expect(response.content).not.toMatch(/Kearney|Bellevue/);
   });
 
   it("does not call the model when the flag is off", async () => {

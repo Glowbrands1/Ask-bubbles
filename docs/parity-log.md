@@ -14,7 +14,11 @@ saved for the same conversation id. A later value replaces a field. A blank
 read does not erase one, so a date read on the first turn is not asked
 again. A discipline word (`verbal`, `written`, a warning) selects the Corrective
 Action Form when the manager did not name a form. "Create a Coaching Form"
-stays the Coaching Form. A write-up still selects the Corrective Action Form. The card shows the date, time, type of
+stays the Coaching Form. "CA" is the Corrective Action Form. A bare "10-20"
+is 20 October, not a time. "prior = manual ack 9/01" is the prior action,
+not the form date. "at Grand Island out of dress code" names that store
+when there is no comma before "out". A turn that only names the form
+("Create a Coaching Form") is not the incident. The card shows the date, time, type of
 warning, prior action, payroll answer, and what happened, which are the
 template fields those words map to. A message id stored on another
 conversation is left out, so that chat's store cannot fill this one.

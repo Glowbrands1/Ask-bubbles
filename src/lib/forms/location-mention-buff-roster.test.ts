@@ -39,6 +39,8 @@ describe("store names, as managers type them", () => {
   it.each([
     ["she works at Kearney", ["loc-66"]],
     ["at Kearney, out of dress code", ["loc-66"]],
+    ["at Grand Island out of dress code", ["loc-236"]],
+    ["Test Employee at Grand Island out of dress code 3 shifts", ["loc-236"]],
     ["Kearney NE", ["loc-66"]],
     ["Kearney, NE", ["loc-66"]],
     ["the Bellevue location", ["loc-67"]],

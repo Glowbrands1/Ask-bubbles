@@ -611,8 +611,8 @@ export interface ChatFormProposal {
    */
   priorActions?: string | null;
   /**
-   * A time the manager stated ("10-20") that is not the form's calendar date.
-   * Dashed month-day without a year is a time or a range, not a date.
+   * A time the manager labelled ("time 10:20"). A bare "10-20" is 20 October,
+   * not a time.
    */
   incidentTime?: string | null;
   /**

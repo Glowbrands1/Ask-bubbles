@@ -121,7 +121,7 @@ export function groundFormSlots(input: {
   const payrollDeduct = payrollDeductFromConversation([...input.history, { role: "user", content: input.question }]);
   const payrollAmount = payrollDeduct === "yes" ? managerPayrollAmount(said) : null;
   const policySection = groundedPolicy(said);
-  const observation = statedIncident(said) ?? acceptSummary(raw.observation, said);
+  const observation = statedIncident(said, employeeName) ?? acceptSummary(raw.observation, said);
   const priorActions = statedPrior(said);
   const incidentTime = statedTime(said);
   const actionPlan = acceptSummary(stripMoney(raw.actionPlan ?? ""), said);
@@ -306,7 +306,7 @@ function templateFromUser(text: string): TemplateKey | null {
   };
   add(/\bfollow[- ]up coaching\b/gi, "follow-up-coaching");
   add(/\bpolicy review\b/gi, "policy-review");
-  add(/\bcorrective actions?\b|\bwrite-?ups?\b|\bwritten up\b/gi, "dpoa");
+  add(/\bcorrective actions?\b|\bwrite-?ups?\b|\bwritten up\b|\bca\b|\bc\/a\b|\bdpoa\b/gi, "dpoa");
   add(/\bcoaching form\b/gi, "coaching");
   if (named.length > 0) {
     named.sort((a, b) => a.index - b.index);
@@ -329,10 +329,22 @@ function groundedName(proposed: string | null, turns: readonly string[]): string
   }
   let found: string | null = null;
   for (const turn of turns) {
-    const names = extractEmployeeNames(turn);
-    if (names.length === 1) found = exactSlice(turn, names[0]!) ?? names[0]!;
+    const person = personPhrase(turn);
+    if (person) found = person;
   }
   return found;
+}
+
+/** "for Test Employee" and "Test Employee at Grand Island". Not "Use Kearney as the location". */
+function personPhrase(turn: string): string | null {
+  if (/\bas the location\b/i.test(turn)) return null;
+  const named = /\bfor\s+([A-Z][\w'.-]+(?:\s+[A-Z][\w'.-]+)*)/.exec(turn);
+  if (named) return named[1]!;
+  const leading = /^([A-Z][\w'.-]+(?:\s+[A-Z][\w'.-]+)+)\s+at\b/.exec(turn.trim());
+  if (leading) return leading[1]!;
+  const names = extractEmployeeNames(turn);
+  if (names.length === 1) return exactSlice(turn, names[0]!) ?? names[0]!;
+  return null;
 }
 
 function exactSlice(haystack: string, needle: string): string | null {
@@ -369,6 +381,9 @@ function groundedDate(text: string, today: string): string | null {
   // One incident date, or the later one when they correct it. A prior step's
   // date ("manual ack 9/01") is not this form's date and must not wipe it.
   if (calendar.length >= 1) return calendar.at(-1)!;
+  // "10-20" with no year is 20 October when it is not a duration ("10-20 min").
+  const dashed = dashedMonthDay(text, today);
+  if (dashed) return dashed;
   if (/\b(?:use\s+)?today'?s\s+date\b/i.test(text)) return today;
   // spokenDates also returns every calendar date. Those were already decided
   // above, including a prior-step date that must stay off the form. This
@@ -407,13 +422,40 @@ function explicitWarning(turns: readonly string[], today: string): "verbal" | "w
   let level: "verbal" | "written" | null = null;
   for (const turn of cleaned) {
     for (const sentence of turn.split(/[.\n;]+/)) {
-      if (!/^\s*(?:a\s+)?(verbal|written)\s+warnings?\s*$/i.test(sentence) && !/^\s*(verbal|written)\s*$/i.test(sentence)) {
-        continue;
+      for (const clause of sentence.split(",")) {
+        if (!/^\s*(?:a\s+)?(verbal|written)\s+warnings?\s*$/i.test(clause) && !/^\s*(verbal|written)\s*$/i.test(clause)) {
+          continue;
+        }
+        level = /written/i.test(clause) ? "written" : "verbal";
       }
-      level = /written/i.test(sentence) ? "written" : "verbal";
     }
   }
   return level;
+}
+
+/** "10-20" is 20 October. "10-20 min" and "time 10-20" are not dates. */
+function dashedMonthDay(text: string, today: string): string | null {
+  const year = Number(/^(\d{4})-/.exec(today)?.[1]);
+  if (!Number.isFinite(year)) return null;
+  let found: string | null = null;
+  for (const match of text.matchAll(/(?<![\d-])(\d{1,2})-(\d{1,2})(?!-\d)/g)) {
+    const index = match.index ?? 0;
+    const after = text.slice(index + match[0].length, index + match[0].length + 16);
+    if (/^\s*(?:min|mins|minutes|hrs|hours|hr)\b/i.test(after)) continue;
+    const before = text.slice(Math.max(0, index - 16), index);
+    if (/\btime\s*[:=]?\s*$/i.test(before)) continue;
+    if (dateIsPrior(text, index)) continue;
+    const iso = monthDayIso(year, Number(match[1]), Number(match[2]));
+    if (iso) found = iso;
+  }
+  return found;
+}
+
+function monthDayIso(year: number, month: number, day: number): string | null {
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function managerPayrollAmount(text: string): string | null {
@@ -465,41 +507,95 @@ function closeNote(name: string, people: readonly RosterEmployee[]): string | nu
   return null;
 }
 
-function statedIncident(text: string): string | null {
-  const exact = /cell phone\s+30\+\s*min/i.exec(text);
-  if (exact) return exact[0]!.replace(/\s+/g, " ").trim();
-  const lines = text.split(/\n+/).map((line) => line.trim()).filter(Boolean);
-  const short = lines.filter((line) => line.length <= 80 && !slotLine(line));
-  return short.length === 1 ? short[0]! : null;
+/**
+ * The offense, once the name, store, date, and slot answers are out of the way.
+ * A full sentence ("She left the register drawer open") stays with the model's
+ * summary. A note ("out of dress code 3 shifts", "on cell phone 30+ min") is
+ * the issue itself.
+ */
+function statedIncident(text: string, employeeName: string | null): string | null {
+  const clauses = text.split(/[\n,;]+/).map((clause) => clause.trim()).filter(Boolean);
+  let found: string | null = null;
+  for (const clause of clauses) {
+    if (slotClause(clause)) continue;
+    const offense = phraseOffense(stripSlots(clause, employeeName));
+    if (offense) found = offense;
+  }
+  return found;
+}
+
+function stripSlots(clause: string, employeeName: string | null): string {
+  let text = clause;
+  text = text.replace(/\b(?:verbal|written)\s+(?:ca|c\/a|corrective actions?)\b/gi, " ");
+  text = text.replace(/\b(?:create\s+a\s+)?(?:corrective actions?|coaching form|write-?ups?|ca|c\/a)\s+for\s+/gi, " ");
+  if (employeeName) {
+    text = text.replace(new RegExp(employeeName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig"), " ");
+  }
+  text = text.replace(/^\s*[A-Z][\w'.-]+\s+[A-Z][\w'.-]+\s+(?=at\b|out of\b)/, "");
+  text = text.replace(/\bat\s+[A-Z][\w'.-]*(?:\s+[A-Z][\w'.-]*){0,3}/g, " ");
+  text = text.replace(/\buse\s+[A-Z][\w'.-]*(?:\s+[A-Z][\w'.-]*){0,3}\s+as the location\b/gi, " ");
+  text = text.replace(/\bprior\s*=\s*[^,]+/gi, " ");
+  text = text.replace(/\bcoached on\s+\S+/gi, " ");
+  text = text.replace(/\bno payroll\b/gi, " ");
+  return text;
+}
+
+function phraseOffense(clause: string): string | null {
+  let text = clause.replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, " ");
+  text = text.replace(/(?<![\d-])\d{1,2}-\d{1,2}(?!-\d)(?!\s*(?:min|mins|minutes|hrs|hours|hr)\b)/g, " ");
+  text = text.replace(/\s+/g, " ").trim().replace(/^[,\s]+|[,\s.]+$/g, "");
+  if (!text || text.length > 80) return null;
+  if (/\b(?:she|he|they|i|we)\b/i.test(text)) return null;
+  const title = statedJobTitle(text) ?? extractJobTitle(text);
+  if (title && title.toLowerCase() === text.toLowerCase()) return null;
+  const onDuration = /^on\s+(.+?)\s+(\d+\+?\s*(?:min|mins|minutes|hrs|hours))\b/i.exec(text);
+  if (onDuration) {
+    const thing = onDuration[1]!.replace(/\s+/g, " ").trim();
+    const duration = onDuration[2]!.replace(/\s+/g, "");
+    const spaced = duration.replace(/(\d\+?)(?=[a-z])/i, "$1 ");
+    return /\buse\b/i.test(thing) ? `${thing} ${spaced}` : `${thing} use ${spaced}`;
+  }
+  const outOf = /^out of\s+(.+)$/i.exec(text);
+  if (outOf) {
+    const rest = outOf[1]!.trim();
+    const counted = /^(.+?)\s+(\d+)\s+([a-z]+)$/i.exec(rest);
+    if (counted) return `${counted[1]}, ${counted[2]} ${counted[3]}`;
+    return rest;
+  }
+  return text;
+}
+
+function slotClause(clause: string): boolean {
+  const text = clause.trim();
+  if (/^(?:verbal|written|yes|no|yeah|nope)[.!]?\s*$/i.test(text)) return true;
+  // "Create a Coaching Form" names the form. It is not what happened.
+  if (
+    /^(?:please\s+)?(?:create|make|start|open|do|file|write)\s+(?:a\s+|an\s+|the\s+)?(?:coaching form|corrective action(?: form)?|write-?up|ca|c\/a|dpoa|policy review|follow-?up coaching(?: form)?)\s*[.!]?\s*$/i.test(
+      text,
+    )
+  ) {
+    return true;
+  }
+  if (/^\s*coached on\b/i.test(text)) return true;
+  if (/\bprior\s*=/i.test(text)) return true;
+  if (/\bno payroll\b/i.test(text) && text.split(/\s+/).length <= 6) return true;
+  if (/\buse\s+.+\bas the location\b/i.test(text)) return true;
+  return false;
 }
 
 function statedPrior(text: string): string | null {
-  const hits = new Set<string>();
-  for (const line of text.split(/\n+/)) {
-    const trimmed = line.trim();
-    if (/\bprior\s*=/i.test(trimmed) || /\bcoached on\b/i.test(trimmed)) hits.add(trimmed);
+  const hits: string[] = [];
+  for (const match of text.matchAll(/\bprior\s*=\s*([^,\n.]+)/gi)) {
+    hits.push(match[1]!.trim().replace(/\back\b/gi, "acknowledgement"));
   }
-  for (const match of text.matchAll(/\bprior\s*=\s*[^,\n.]+/gi)) hits.add(match[0]!.trim());
-  for (const match of text.matchAll(/\bcoached on\s+\S+/gi)) hits.add(match[0]!.trim());
-  const lines = [...hits];
-  return lines.length > 0 ? lines.join("\n") : null;
+  for (const match of text.matchAll(/\bcoached on\s+(\S+)/gi)) hits.push(`coached on ${match[1]}`);
+  return hits.length > 0 ? hits.join("\n") : null;
 }
 
-/** "10-20" with no year is a time or a range. "10-20-26" stays a date. */
+/** A labelled time ("time 10:20"). A bare "10-20" is a month and day. */
 function statedTime(text: string): string | null {
   const labelled = /\btime\s*[:=]?\s*(\d{1,2}[:.-]\d{2})\b/i.exec(text);
-  if (labelled) return labelled[1]!;
-  const bare = text.match(/(?<![\d-])(\d{1,2}-\d{2})(?!-\d)/);
-  return bare?.[1] ?? null;
-}
-
-function slotLine(line: string): boolean {
-  if (line.split(/\s+/).length <= 6 && /\b(?:verbal|written|payroll|prior\s*=|coached on)\b/i.test(line)) return true;
-  if (/^\d{1,2}[-:/]\d{1,2}(?:[-/]\d{2,4})?$/.test(line)) return true;
-  if (readLocationMentions(line).some((mention) => mention.locationIds.length === 1) && line.split(/\s+/).length <= 4) {
-    return true;
-  }
-  return false;
+  return labelled?.[1] ?? null;
 }
 
 const SLOT_KEYS = [
@@ -532,7 +628,7 @@ function mergeSlots(next: FormRemapSlots, saved: Partial<FormRemapSlots> | null)
 
 function finishSlots(slots: FormRemapSlots, said: string): FormRemapSlots {
   if (slots.templateKey !== "dpoa") {
-    return { ...slots, warningLevel: null, payrollDeduct: null, payrollAmount: null, priorActions: null };
+    return { ...slots, warningLevel: null, payrollDeduct: null, payrollAmount: null };
   }
   return {
     ...slots,

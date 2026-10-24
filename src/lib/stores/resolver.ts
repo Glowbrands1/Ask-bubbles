@@ -472,7 +472,12 @@ const CARRIES_ON =
    * what the form is about, who it concerns, what is needed. None of these
    * continues a place's name the way "High", "South" or "time" does.
    */
-  "about|regarding|concerning|re|who|that|then|every|her|his|their|need|needs";
+  "about|regarding|concerning|re|who|that|then|every|her|his|their|need|needs|" +
+  /*
+   * "at Grand Island out of dress code" often has no comma. "out" ends the
+   * place the way "on" and "about" do. "outlet" is a different word.
+   */
+  "out";
 
 const AT_BEFORE = /\b(?:at|in)\s+(?:the\s+)?$/;
 /** "at Kearney and Bellevue": the second store in a list is a place too, or it is silently dropped. */
