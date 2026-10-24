@@ -28,7 +28,7 @@ import { CONTINUATION_KEY_MAX } from "@/lib/forms/proposal-continuation";
 import { mayAskToReopen } from "@/lib/forms/reopen-cue";
 import { parseChatReportContext } from "@/lib/reporting/report-context";
 import { businessToday } from "@/lib/business-date";
-import { payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
+import { draftActionsEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
 import { isClientConversationId } from "@/lib/chat/client-ids";
 import type { AskRequest } from "@/lib/ai/types";
 import type { AnswerMode, ChatMessage } from "@/types";
@@ -135,7 +135,39 @@ export async function POST(request: Request) {
      */
     let answer;
     try {
-      const parsed = parseAskRequest(body);
+      const asked = parseAskRequest(body);
+      /*
+       * "DELETE THAT DRAFT", "SAME INCIDENT" (ported from Ask Sunny, QA F8).
+       * Ahead of every open-form path: the revision path read "delete that
+       * draft" as a change and said "I haven't changed…". Deletes a draft only
+       * under the forms API's own DELETE rules; "same incident" opens the form
+       * on file; "different incident" is asked as a new form for that person.
+       * Null for anything else, and off unless DRAFT_ACTIONS_ENABLED. See
+       * `lib/forms/chat-draft-actions.ts`.
+       */
+      const draftAction = draftActionsEnabled()
+        ? await (await import("@/lib/forms/chat-draft-actions")).draftActionForTurn({
+            request,
+            question: asked.question,
+            history: asked.history,
+            today: asked.context.todayIso,
+            activeInstanceId: asked.activeFormInstanceId,
+            continuingTemplateKey: asked.continueProposalTemplateKey,
+          })
+        : null;
+      const draftAnswer = draftAction && "answer" in draftAction ? draftAction.answer : null;
+      /*
+       * Either way the open form is not corrected or revised by this turn: it
+       * was answered above, or a new incident is a new form.
+       */
+      const parsed = draftAction
+        ? {
+            ...asked,
+            ...("question" in draftAction ? { question: draftAction.question } : {}),
+            activeFormInstanceId: undefined,
+            activeFormCandidateIds: undefined,
+          }
+        : asked;
       /*
        * A CORRECTION TO A FORM THIS CONVERSATION ALREADY CREATED — "change the
        * date to yesterday". Tried first, and only where the browser named such
@@ -234,7 +266,7 @@ export async function POST(request: Request) {
        * See `lib/forms/chat-reopen.ts`.
        */
       const reopened =
-        !correction && !policyChange && !redraft && !revision && !which && mayAskToReopen(parsed.question)
+        !draftAnswer && !correction && !policyChange && !redraft && !revision && !which && mayAskToReopen(parsed.question)
           ? await (await import("@/lib/forms/chat-reopen")).reopenRequestedForm({
               request,
               question: parsed.question,
@@ -256,6 +288,7 @@ export async function POST(request: Request) {
           ? await (await import("@/lib/forms/open-form-summary")).describeOpenForm(request, parsed.activeFormInstanceId)
           : null;
       answer =
+        draftAnswer ??
         correction ??
         policyChange ??
         redraft ??
