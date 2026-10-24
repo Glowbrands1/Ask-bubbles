@@ -1,3 +1,4 @@
+import { antiLoopEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS, locationIdsInArea } from "@/lib/locations";
 import type { AccessScope } from "@/types";
 
@@ -200,6 +201,36 @@ export function namedStoreIds(
   ];
 }
 
+function firmStoreIds(reading: ReturnType<typeof readLocation>): string[] {
+  return [
+    ...new Set(
+      reading.mentions
+        .filter((mention) => !mention.confirm && !mention.collision && new Set(mention.locationIds).size === 1)
+        .flatMap((mention) => mention.locationIds),
+    ),
+  ];
+}
+
+/**
+ * The store the manager named as the form's store. "store location is
+ * Bellevue, NE" and "primary store is Sioux Falls W 41st" are that choice.
+ * A town that is not a store, or two stores with no primary, is not.
+ */
+function explicitStoreText(turns: readonly string[], index: StoreIndex): string | null {
+  for (let at = turns.length - 1; at >= 0; at -= 1) {
+    const turn = turns[at]!;
+    const primary = /\bprimary store is\s+([^.]{3,80})/i.exec(turn);
+    if (primary) {
+      const phrase = primary[1]!.replace(/[,]+$/, "").trim();
+      if (firmStoreIds(readLocation(phrase, index)).length === 1) return phrase;
+    }
+    if (/\blocation\s+is\b/i.test(turn) && firmStoreIds(readLocation(turn, index)).length === 1) {
+      return turn;
+    }
+  }
+  return null;
+}
+
 function readCorrected(
   managerText: string,
   turns: readonly string[] | undefined,
@@ -208,6 +239,10 @@ function readCorrected(
   answered?: ReadonlySet<string>,
 ): { text: string; ambiguous: boolean; typed: string | null } {
   const plain = { text: managerText, ambiguous: false, typed: null };
+  if (antiLoopEnabled() && turns && turns.length > 0) {
+    const chosen = explicitStoreText(turns, index);
+    if (chosen) return { text: chosen, ambiguous: false, typed: null };
+  }
   if (!turns || turns.length < 2) return plain;
   const last = turns.length - 1;
   for (let at = last; at >= 0; at -= 1) {

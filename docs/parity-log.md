@@ -362,3 +362,19 @@ turn is still kept.
 
 Ask Sunny reads salons in `salon-mention.ts`, not this store list. The
 same sentence is not ported. No salon name was copied.
+
+## 24 Oct 2026: name, date slot, and store (Round 1)
+
+`TYPED_NAME_ENABLED` and `ANTI_LOOP_ENABLED`. A name written before a job
+title is the employee. A person named only inside the account does not
+replace them. "verbal ca was given on" and a coaching date in a list are
+earlier steps. "use todays date" and a bare "today" with no incident date
+are the form's date. On an exit form the card date is the last day worked,
+then the notice. "store location is …" and "primary store is …" are the
+store, and the reply does not ask which one.
+
+Ask Sunny is not updated in this round. Its salon choice lives in
+`salon-mention.ts`, and its exit form dates a different set of fields.
+The shared name and date readers (`proposal.ts` `settle`, `form-date-answer.ts`)
+still have the old behaviour there. Port those readers in Sunny's next
+replay round. No Buff City store, title, or person was copied.
