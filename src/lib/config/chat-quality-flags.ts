@@ -241,6 +241,41 @@ export function payrollDeductAmountFieldEnabled(): boolean {
   return envFlag("PAYROLL_DEDUCT_AMOUNT_ENABLED");
 }
 
+/**
+ * For a corrective-action or policy question, prefer the current JBA Policy
+ * Manual and the section a synonym names. Off, retrieval order is unchanged.
+ */
+export function caPolicyRetrievalEnabled(): boolean {
+  return envFlag("CA_POLICY_RETRIEVAL_ENABLED");
+}
+
+/**
+ * An open draft for the same employee, template, and incident date is reused
+ * even when another chat or another manager started it. Off, only the
+ * card-id match and DRAFT_DEDUPE_ENABLED run.
+ */
+export function crossChatDraftDedupeEnabled(): boolean {
+  return envFlag("CROSS_CHAT_DRAFT_DEDUPE_ENABLED");
+}
+
+/**
+ * A previous, prior, or past coaching question omits drafts. A question that
+ * asks for drafts still lists them. Off, drafts stay in the list, labelled
+ * as not finalized.
+ */
+export function priorRecordFinalOnlyEnabled(): boolean {
+  return envFlag("PRIOR_RECORD_FINAL_ONLY_ENABLED");
+}
+
+/**
+ * A global-scope account that is not an admin, owner, or developer is asked
+ * once which store the form is for. The card stays ready. Off, the existing
+ * "covers every store" copy is unchanged.
+ */
+export function globalStoreAskEnabled(): boolean {
+  return envFlag("GLOBAL_STORE_ASK_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -269,4 +304,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TYPED_NAME_ENABLED",
   "PRINTED_PAGE_ONLY_ENABLED",
   "PAYROLL_DEDUCT_AMOUNT_ENABLED",
+  "CA_POLICY_RETRIEVAL_ENABLED",
+  "CROSS_CHAT_DRAFT_DEDUPE_ENABLED",
+  "PRIOR_RECORD_FINAL_ONLY_ENABLED",
+  "GLOBAL_STORE_ASK_ENABLED",
 ] as const;

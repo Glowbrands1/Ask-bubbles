@@ -186,3 +186,22 @@ company's titles and stores.
 stripped from employee-name candidates. The words after "job title" are
 the Job Title slot. The earlier round 1 cases in
 `src/lib/ai/name-slot-store.test.ts` still pass.
+
+## Validation port — 24 Oct 2026
+
+Local tests only. No production query, no migration applied, model not
+called. `SELF_CHECK_ENABLED` unset. New flags default off.
+
+| Check | Flag off | Flag on |
+| --- | --- | --- |
+| "CA for insubordination, she did not acknowledge policies at onboarding" | Standards of Conduct outside the top 14 | Standards of Conduct is first of the top 14 |
+| slippers / wrong uniform | Dress Code stays outside the top 14 | Dress Code for The Company leads |
+| "employee was tardy, showed up late for shift again" | Attendance outside the top 14 | Attendance leads |
+| "opening the store late" / "opened late" | Late Opening outside the top 14 | Late Opening leads |
+| previous coachings | draft stays, labelled "draft — not finalized" | draft omitted; a finalized row stays |
+| "any draft coachings for wren halvorsen" | drafts listed | drafts still listed |
+| district_manager, global, no store | "won't name one", card ready | asked once, card stays ready, not needs_location |
+| admin / owner, global | "won't name one" | still not asked |
+| district_manager names Kearney | store loc-66 | no ask |
+| Empire, SD | not a store | still not a store; the ask remains |
+| open draft, same employee, template, incident date, other chat | creates | reuses; card-id match still wins |

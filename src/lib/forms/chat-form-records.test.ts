@@ -326,4 +326,45 @@ describe("loadFormRecords", () => {
     expect(result!.block).toContain("could not be read");
     expect(result!.block).toContain("Forms → Forms Register");
   });
+
+  it("keeps a draft in previous coachings when the flag is off", async () => {
+    delete process.env.PRIOR_RECORD_FINAL_ONLY_ENABLED;
+    store.form_instances.push(row({ form_date: "2026-10-02", status: "draft" }));
+    const block = (await loadFormRecords({ actor: MANAGER, question, today: "2026-10-20" }))!.block;
+    expect(block).toContain("draft — not finalized");
+  });
+
+  it("drops drafts from previous coachings when the flag is on", async () => {
+    process.env.PRIOR_RECORD_FINAL_ONLY_ENABLED = "1";
+    try {
+      store.form_instances.push(
+        row({ form_date: "2026-09-12", status: "finalized" }),
+        row({ form_date: "2026-10-02", status: "draft" }),
+      );
+      const block = (await loadFormRecords({ actor: MANAGER, question, today: "2026-10-20" }))!.block;
+      expect(block).toContain("2026-09-12");
+      expect(block).not.toContain("draft — not finalized");
+      expect(block).not.toContain("2026-10-02");
+    } finally {
+      delete process.env.PRIOR_RECORD_FINAL_ONLY_ENABLED;
+    }
+  });
+
+  it("still lists drafts when the question asks for them", async () => {
+    process.env.PRIOR_RECORD_FINAL_ONLY_ENABLED = "1";
+    try {
+      store.form_instances.push(row({ form_date: "2026-10-02", status: "draft" }));
+      const block = (
+        await loadFormRecords({
+          actor: MANAGER,
+          question: "any draft coachings for wren halvorsen",
+          today: "2026-10-20",
+        })
+      )!.block;
+      expect(block).toContain("draft — not finalized");
+      expect(block).toContain("2026-10-02");
+    } finally {
+      delete process.env.PRIOR_RECORD_FINAL_ONLY_ENABLED;
+    }
+  });
 });

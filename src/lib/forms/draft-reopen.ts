@@ -3,6 +3,7 @@ import "server-only";
 import { trigramSimilarity } from "@/lib/ai/intake-augment";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
+import { pickCrossChatOpenDraft, type CrossChatDraftRow } from "./cross-chat-draft";
 import { sameIncident as sameIncidentKey } from "./incident-key";
 import { DUPLICATE_DRAFT_WINDOW_HOURS, loadInstance, type InstanceRow } from "./instances";
 
@@ -21,6 +22,60 @@ export interface ResentDraftWanted {
   readonly createdBy: string;
   readonly incidentKey: string;
   readonly now?: Date;
+}
+
+/**
+ * An open draft for the same employee, template, and incident date, from
+ * any chat and any manager. A different date does not match. The card-id
+ * match stays in the route and runs first.
+ */
+export async function findCrossChatOpenDraft(input: {
+  readonly templateKey: string;
+  readonly employeeName: string;
+  readonly formDate: string;
+}): Promise<InstanceRow | null> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: template, error: templateError } = await supabase
+      .from("form_templates")
+      .select("id")
+      .eq("key", input.templateKey)
+      .maybeSingle();
+    if (templateError || !template) return null;
+    const { data, error } = await supabase
+      .from("form_instances")
+      .select("id, employee_name, created_at, form_date, status, created_by")
+      .eq("template_id", template.id)
+      .eq("status", "draft")
+      .eq("form_date", input.formDate)
+      .order("created_at", { ascending: false })
+      .limit(25);
+    if (error || !Array.isArray(data)) return null;
+    const rows: CrossChatDraftRow[] = (
+      data as {
+        id?: unknown;
+        employee_name?: unknown;
+        created_at?: unknown;
+        form_date?: unknown;
+        status?: unknown;
+        created_by?: unknown;
+      }[]
+    ).map((row) => ({
+      id: String(row.id),
+      templateKey: input.templateKey,
+      employeeName: String(row.employee_name ?? ""),
+      formDate: typeof row.form_date === "string" ? row.form_date : null,
+      status: String(row.status ?? ""),
+      createdAt: String(row.created_at ?? ""),
+      createdBy: typeof row.created_by === "string" ? row.created_by : undefined,
+    }));
+    const id = pickCrossChatOpenDraft(rows, input);
+    if (!id) return null;
+    const loaded = await loadInstance(id);
+    return loaded?.instance.status === "draft" ? loaded.instance : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function findResentDraft(input: ResentDraftWanted): Promise<InstanceRow | null> {

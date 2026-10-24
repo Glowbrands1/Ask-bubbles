@@ -556,6 +556,12 @@ export interface ChatFormProposal {
    */
   closeMatchNote?: string;
   /**
+   * One non-blocking store question for a global-scope account that is not
+   * an admin, owner, or developer. Set only when GLOBAL_STORE_ASK_ENABLED
+   * is on and the store is still blank. The card status stays ready.
+   */
+  storeAsk?: string;
+  /**
    * The employee's job title, where the MANAGER stated it.
    *
    * "Riley is a Shift Lead at River Market" says it; nothing else does. It is

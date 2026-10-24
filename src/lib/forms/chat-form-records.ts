@@ -3,6 +3,7 @@ import "server-only";
 import { promptLabel } from "@/lib/ai/prompts";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { businessToday } from "@/lib/business-date";
+import { priorRecordFinalOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { locationById } from "@/lib/locations";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import type { AccessScope, Role } from "@/types";
@@ -127,6 +128,27 @@ const ASKS_FOR_A_NEW_FORM =
  * register instead. A sentence that ALSO says "create" or "write a" keeps the
  * proposal.
  */
+const PREVIOUS_RECORD = /\b(?:previous|prior|past)\b/i;
+const ASKS_FOR_DRAFTS = /\b(?:draft|drafted)\b/i;
+
+/**
+ * A previous, prior, or past coaching question drops drafts when the flag
+ * is on. "any draft coachings" still lists them. The flag off returns false.
+ */
+export function priorRecordDropsDrafts(question: string): boolean {
+  if (!priorRecordFinalOnlyEnabled()) return false;
+  if (ASKS_FOR_DRAFTS.test(question)) return false;
+  return PREVIOUS_RECORD.test(question);
+}
+
+export function omitDraftsFromPriorRecord<T extends { status: string }>(
+  question: string,
+  rows: readonly T[],
+): T[] {
+  if (!priorRecordDropsDrafts(question)) return [...rows];
+  return rows.filter((row) => row.status !== "draft");
+}
+
 export function asksOnlyAboutFormsOnFile(question: string): boolean {
   const text = question.toLowerCase().replace(/\s+/g, " ");
   if (!ON_FILE_PATTERNS.some((pattern) => pattern.test(text))) return false;
@@ -360,9 +382,12 @@ export async function loadFormRecords(input: {
     }
 
     if (words.length > 0) {
-      const rows = visibleInstances(
-        formsActor,
-        await listInstances("all", MATCH_LIMIT, { ...filter, employeeNameWords: words }),
+      const rows = omitDraftsFromPriorRecord(
+        input.question,
+        visibleInstances(
+          formsActor,
+          await listInstances("all", MATCH_LIMIT, { ...filter, employeeNameWords: words }),
+        ),
       );
       const matches = matchRowsToQuestion(rows, words);
       if (matches.named.length > 0 || matches.possible.length > 0) {
@@ -370,7 +395,10 @@ export async function loadFormRecords(input: {
       }
     }
 
-    const recent = visibleInstances(formsActor, await listInstances("active", RECENT_LIMIT, filter));
+    const recent = omitDraftsFromPriorRecord(
+      input.question,
+      visibleInstances(formsActor, await listInstances("active", RECENT_LIMIT, filter)),
+    );
     /*
      * A question that names somebody nobody on file matches is reported as
      * "no form names them" — with the recent list left out, so the model
