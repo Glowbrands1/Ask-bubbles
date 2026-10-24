@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { __setAnthropicClient } from "./anthropic";
-import { callClaude, claudeSystemPayload } from "./call-claude";
+import { callClaude, claudeSystemPayload, uncachedSystemPrompt } from "./call-claude";
 import { buildSystemPrompt, splitSystemPrompt } from "./prompts";
 
 /**
@@ -108,7 +108,7 @@ describe("prompt cache replay", () => {
     });
     const parts = splitSystemPrompt(prompt);
     expect(parts).not.toBeNull();
-    const legacy = `${parts!.staticBlock.slice(0, parts!.staticBlock.indexOf("\n"))} ${parts!.dynamicTail}${parts!.staticBlock.slice(parts!.staticBlock.indexOf("\n"))}`;
+    const legacy = uncachedSystemPrompt(parts!.staticBlock, parts!.dynamicTail);
     expect(legacy).not.toContain("---DYNAMIC---");
     expect(claudeSystemPayload(legacy)).toBe(legacy);
     delete process.env.PROMPT_CACHE_ENABLED;
@@ -123,6 +123,8 @@ describe("prompt cache replay", () => {
     expect(payload[0].text).not.toContain("Dana Reyes");
     expect(payload[0].text).not.toContain("2026-08-29");
     expect(payload[0].text).not.toContain("Testville Downtown");
+    expect(payload[0].text).not.toContain("FORMS ALREADY ON FILE");
+    expect(payload[0].text).not.toContain("kinds of statement");
 
     const seen = new Set<string>();
     const log: LoggedCall[] = [];

@@ -37,6 +37,8 @@ vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
 
 const { ensureTemplateLibrary, listTemplateSummaries } = await import("@/lib/forms/repository");
 const { proposeFormForTurn } = await import("@/lib/ai/form-proposal");
+const { createInstance } = await import("@/lib/forms/instances");
+const { authorizeLocation } = await import("./location-scope");
 
 const TODAY = "2026-10-24";
 const GLOBAL: AccessScope = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
@@ -219,6 +221,98 @@ describe("global store ask", () => {
     expect(second?.formProposal?.locationId).toBe("loc-66");
     expect(second?.formProposal?.locationName).toBe("Kearney, NE");
     expect(second?.content ?? "").not.toContain(GLOBAL_STORE_ASK_TAG);
+  });
+
+  it("asks at most once, even when the next turns ignore the question or answer something else", async () => {
+    const turns = [
+      ASK,
+      "ok",
+      "she was talking about customers",
+      "payroll deduct is no",
+    ];
+    const replies: string[] = [];
+    let history: ChatMessage[] = [];
+    for (const [index, question] of turns.entries()) {
+      const response = await propose({ role: "district_manager", question, history });
+      replies.push(response?.content ?? "");
+      if (response?.formProposal) {
+        expect(response.formProposal.status, question).toBe("ready");
+        expect(response.formProposal.supportsInlineDraft, question).toBe(true);
+      }
+      history = [
+        ...history,
+        { id: `u${index}`, role: "user", content: question, createdAt: "2026-10-24T18:00:00Z" },
+        {
+          id: `a${index}`,
+          role: "assistant",
+          content: response?.content ?? "",
+          createdAt: "2026-10-24T18:00:01Z",
+          formProposal: response?.formProposal ?? undefined,
+        },
+      ] as ChatMessage[];
+    }
+    const asked = replies.filter((reply) => reply.includes(GLOBAL_STORE_ASK_TAG));
+    expect(asked).toHaveLength(1);
+    expect(replies[0]).toContain(GLOBAL_STORE_ASK_TAG);
+  });
+
+  it("keeps the card ready so the draft can be created without a store answer", async () => {
+    const response = await propose({ role: "district_manager" });
+    const proposal = response?.formProposal;
+    expect(proposal?.status).toBe("ready");
+    expect(proposal?.supportsInlineDraft).toBe(true);
+    expect(proposal?.locationId ?? null).toBeNull();
+    expect(response?.content).toContain(GLOBAL_STORE_ASK_TAG);
+    expect(authorizeLocation(GLOBAL, proposal?.locationId ?? null).kind).not.toBe("refused");
+
+    const created = await createInstance({
+      templateKey: proposal!.templateKey,
+      variantKey: proposal!.variantKey ?? null,
+      employeeName: proposal!.employeeName ?? "Sarah Test",
+      employeeRole: proposal!.employeeRole,
+      locationId: proposal!.locationId,
+      createdBy: "manager-1",
+      createdByRole: "district_manager",
+      source: "assistant",
+      formDate: TODAY,
+      proposalId: proposal!.proposalId,
+    });
+    expect(created.status).toBe("draft");
+    expect(created.locationId).toBeNull();
+    expect(created.id).toBeTruthy();
+  });
+
+  it("does not ask again after the store is given", async () => {
+    const opening = await propose({ role: "district_manager" });
+    expect(opening?.content).toContain(GLOBAL_STORE_ASK_TAG);
+    const named = await propose({
+      role: "district_manager",
+      question: "Kearney",
+      history: historyFrom(ASK, opening),
+    });
+    expect(named?.formProposal?.locationId).toBe("loc-66");
+    expect(named?.formProposal?.locationName).toBe("Kearney, NE");
+    expect(named?.formProposal?.status).toBe("ready");
+    expect(named?.formProposal?.supportsInlineDraft).toBe(true);
+    expect(named?.content ?? "").not.toContain(GLOBAL_STORE_ASK_TAG);
+
+    const later = await propose({
+      role: "district_manager",
+      question: "she was late again today",
+      history: [
+        ...historyFrom(ASK, opening),
+        { id: "u2", role: "user", content: "Kearney", createdAt: "2026-10-24T18:01:00Z" },
+        {
+          id: "a2",
+          role: "assistant",
+          content: named?.content ?? "",
+          createdAt: "2026-10-24T18:01:01Z",
+          formProposal: named?.formProposal ?? undefined,
+        },
+      ] as ChatMessage[],
+    });
+    expect(later?.formProposal?.locationId).toBe("loc-66");
+    expect(later?.content ?? "").not.toContain(GLOBAL_STORE_ASK_TAG);
   });
 
   it("still asks before using a typo when the flag is off", async () => {

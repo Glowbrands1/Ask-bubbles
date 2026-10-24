@@ -523,6 +523,18 @@ There is no `---DYNAMIC---` cut on Sunny's `main` or on
 `cursor/edition-supersession-6d4a`. Port the cut with Sunny's next
 prompt round. No salon wording was copied.
 
+## 24 Oct 2026: cache split, trace columns, flags-off suite
+
+Per-user, employee, store, and retrieval sections now sit below
+`---DYNAMIC---`. The static block is the same from one request to the next.
+`chat_traces` gains nullable `cache_creation_input_tokens`,
+`cache_read_input_tokens`, and `first_token_ms` in an additive migration
+that is not applied here. A live indexed document that shares a superseded
+document's content hash stays in search. `ANTI_LOOP_ENABLED` is in
+`CHAT_QUALITY_FLAG_NAMES`, and a flags-off child suite covers chat and
+forms. Ask Sunny has no `---DYNAMIC---` cut, so this round stays
+Bubbles-only. No salon wording was copied.
+
 ## 24 Oct 2026: chat data tools, measured, not ported
 
 `CHAT_DATA_TOOLS_ENABLED` already defaults off in both apps. Ask Sunny's

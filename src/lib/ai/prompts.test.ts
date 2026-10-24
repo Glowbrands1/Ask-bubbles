@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { uncachedSystemPrompt } from "./call-claude";
 import {
   ACTION_PLAN_SENTENCE_RULE,
   COACHING_CONSEQUENCE_RULES,
@@ -525,13 +526,80 @@ describe("the cacheable instruction omits the listener", () => {
     expect(staticBlock).not.toContain("Today is");
     expect(staticBlock).not.toContain("who works at");
     expect(staticBlock).toContain("today's date above");
-    expect(dynamicTail).toBe(
+    expect(dynamicTail.startsWith(
       "You are talking to Dana Reyes, who works at Testville Downtown. Today is Saturday, 2026-08-29 (business time zone America/Chicago; yesterday was 2026-08-28).",
-    );
-    const breakAt = staticBlock.indexOf("\n");
-    const legacy = `${staticBlock.slice(0, breakAt)} ${dynamicTail}${staticBlock.slice(breakAt)}`;
+    )).toBe(true);
+    expect(dynamicTail).toContain("kinds of statement");
+    const legacy = uncachedSystemPrompt(staticBlock, dynamicTail);
     expect(legacy.startsWith("You are Bubbles, the internal assistant for Buff City Soap teams. You are talking to Dana Reyes, who works at Testville Downtown. ")).toBe(true);
     expect(legacy).not.toContain("---DYNAMIC---");
+    expect(legacy.slice(0, legacy.indexOf("HOW YOU ANSWER"))).not.toContain("kinds of statement");
     expect(prompt).toContain("Never invent a document title, a page number");
+  });
+});
+
+describe("the static block holds no per-request data", () => {
+  const base = {
+    assistantName: "Bubbles",
+    brandName: "Buff City Soap",
+    productName: "Ask Bubbles",
+    locationNoun: "store",
+    mode: "standard" as const,
+  };
+
+  it("stays the same when the user, the employee, the store, or the retrieval changes", () => {
+    const plain = buildSystemPrompt({
+      ...base,
+      context: CONTEXT,
+      hasContext: true,
+    });
+    const varied = buildSystemPrompt({
+      ...base,
+      context: { userName: "UniqueUserZz", locationName: "UniqueStoreZz", todayIso: "2099-01-02" },
+      hasContext: false,
+      hasReportData: true,
+      hasMissingReports: true,
+      hasFormsLibrary: true,
+      hasVerifiedRecords: true,
+      hasPersonMemory: true,
+      hasFormRecords: true,
+      pinnedDocumentTitles: ["PinnedTitleZz"],
+      handbookNote: "HandbookNoteZz",
+      canViewReports: true,
+      priorCoachingOptional: true,
+      recalledMemory: "RecalledMemoryZz",
+      fewShotExamples: "FewshotZz",
+      openForm: {
+        templateName: "Coaching",
+        employeeName: "UniqueEmployeeZz",
+        status: "draft",
+        lines: [{ label: "Notes", value: "UniqueEmployeeZz arrived late." }],
+        unverifiedPolicy: [],
+      },
+    });
+    const left = splitSystemPrompt(plain);
+    const right = splitSystemPrompt(varied);
+    expect(left).not.toBeNull();
+    expect(right).not.toBeNull();
+    expect(right!.staticBlock).toBe(left!.staticBlock);
+    const forbidden = [
+      "UniqueUserZz",
+      "UniqueStoreZz",
+      "UniqueEmployeeZz",
+      "2099-01-02",
+      "HandbookNoteZz",
+      "RecalledMemoryZz",
+      "FewshotZz",
+      "PinnedTitleZz",
+      "FORMS ALREADY ON FILE",
+      "WHAT THE MANAGER TOLD YOU BEFORE",
+      "no company documents matched",
+      "kinds of statement",
+    ];
+    for (const needle of forbidden) expect(right!.staticBlock).not.toContain(needle);
+    for (const needle of forbidden) expect(right!.dynamicTail).toContain(needle);
+    const coachingOff = splitSystemPrompt(buildSystemPrompt({ ...base, context: CONTEXT, hasContext: true, priorCoachingOptional: false }));
+    const coachingOn = splitSystemPrompt(buildSystemPrompt({ ...base, context: CONTEXT, hasContext: true, priorCoachingOptional: true }));
+    expect(coachingOn!.staticBlock).toBe(coachingOff!.staticBlock);
   });
 });
