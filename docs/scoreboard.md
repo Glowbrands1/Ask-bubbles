@@ -305,3 +305,69 @@ or a different attached section still changes the prefix.
 
 Card replay pass/fail is unchanged. The form card does not read this
 prompt, and the round 1 table above keeps the same expectations.
+
+## One run — pass or fail — 24 Oct 2026
+
+Commit `e1a6fdb`. Local harness. The model is not called. Each case once.
+No production query.
+
+Card cases use `proposeFormForTurn`. OLD is every flag off. NEW is
+`TYPED_NAME_ENABLED`, `ACTION_PLAN_SENTENCES_ENABLED`,
+`PRINTED_PAGE_ONLY_ENABLED`, `POLICY_CITATION_ENABLED`,
+`PAYROLL_DEDUCT_AMOUNT_ENABLED`, and `ANTI_LOOP_ENABLED`.
+`SELF_CHECK_ENABLED` is unset.
+
+| Case | OLD | NEW |
+| --- | --- | --- |
+| b9 Test Employee, written CA | FAIL | PASS |
+| b10 Testy Testerson, Dodge, measuring | FAIL | PASS |
+| b11 Testy Testerson, late, Attendance | FAIL | PASS |
+| b12 Sadie Hoffart, Empire SD | FAIL | PASS |
+
+Same six flags on. OLD is the last-known-good prompt text (`655a61d`).
+NEW is the current prompt, with the listener line after `---DYNAMIC---`.
+The card does not read the system prompt, so the cache split does not
+change these results.
+
+| Case | OLD prompt | NEW prompt |
+| --- | --- | --- |
+| b9 Test Employee, written CA | PASS | PASS |
+| b10 Testy Testerson, Dodge, measuring | PASS | PASS |
+| b11 Testy Testerson, late, Attendance | PASS | PASS |
+| b12 Sadie Hoffart, Empire SD | PASS | PASS |
+
+Round 1 scope, one measurement of the table above. PASS means that run
+matched the expected cell. Each row matched.
+
+| Case | OLD | NEW |
+| --- | --- | --- |
+| Name: Christiana Headley, job title tanning consultant | PASS | PASS |
+| Jane Store | PASS | PASS |
+| Job title, as a candidate | PASS | PASS |
+| SoC, insubordination | PASS | PASS |
+| Dress Code, slippers | PASS | PASS |
+| Attendance, tardy | PASS | PASS |
+| Late Opening, store opened late | PASS | PASS |
+| Policy matcher, opening the store late | PASS | PASS |
+| Policy matcher, employee tardy | PASS | PASS |
+| chat_form_state | PASS | PASS |
+| chat_traces | PASS | PASS |
+| Cross-chat draft, same employee, template, date | PASS | PASS |
+| Cross-chat, different date | PASS | PASS |
+| Previous coaching, finalized plus a draft | PASS | PASS |
+| Store ask, global district manager | PASS | PASS |
+| Store ask, already asked | PASS | PASS |
+| Store ask, admin | PASS | PASS |
+| Sync guard, 2024 manual beside May 2025 | PASS | PASS |
+| Identical section text | PASS | PASS |
+| Preview | PASS | PASS |
+
+Prompt cache, one run of the local stand-in. Tokens are one per four
+characters of the block that was sent. First-token time is how long that
+stand-in waits.
+
+| Call | cache_creation_input_tokens | cache_read_input_tokens | First token |
+| --- | --- | --- | --- |
+| OLD | 0 | 0 | 55 ms |
+| NEW, 1st call | 1815 | 0 | 55 ms |
+| NEW, later call | 0 | 1815 | 13 ms |
