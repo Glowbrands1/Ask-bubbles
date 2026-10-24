@@ -4,7 +4,8 @@ import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manual";
 import { namesHeading } from "@/lib/forms/named-policy-section";
 import { payrollDeductAmount, payrollDeductFromConversation, type PayrollDeductAnswer } from "@/lib/forms/payroll-deduct";
-import { intentPayrollManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { formChoiceStatedEnabled, intentPayrollManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { detectTemplateIntent } from "@/lib/forms/template-intent";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -136,7 +137,10 @@ export function normalizeIncidentDate(raw: string, today: string): string | null
 }
 
 export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
-  const saved = input.saved ?? EMPTY_CONVERSATION_FORM_STATE;
+  const choiceStated = formChoiceStatedEnabled();
+  const saved = choiceStated
+    ? withoutDisciplineProcedure(input.saved ?? EMPTY_CONVERSATION_FORM_STATE)
+    : (input.saved ?? EMPTY_CONVERSATION_FORM_STATE);
   const reading = parseReading(input.raw);
   const blob = conversationBlob(input);
   const choice = readPriorChoice(input.history, input.question, input.people, input.stores);
@@ -145,7 +149,8 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
     : groundEmployee(reading?.employee ?? null, blob, input.people);
   const store = groundStore(choice?.store ?? reading?.store ?? null, blob, input.stores, employee.person);
   const title = groundTitle(reading?.title ?? null, blob, input.people, employee.person);
-  const incidentType = groundIncident(reading?.incidentType ?? null, blob, input.headings);
+  const groundedIncident = groundIncident(reading?.incidentType ?? null, blob, input.headings);
+  const incidentType = choiceStated && isDisciplineProcedure(groundedIncident) ? null : groundedIncident;
   const date = groundDate(choice?.date ?? reading?.incidentDate ?? null, blob, input.today);
   const managerOnly = intentPayrollManagerOnlyEnabled();
   const payrollAnswer = managerOnly
@@ -158,7 +163,9 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
       : (payrollClauseAmount(input) ??
         (payrollAnswer === "yes" ? groundPayroll(reading?.payrollAmount ?? null, managerBlob(input)) : null));
   const warningLevel = groundWarning(choice?.warning ?? reading?.warningLevel ?? null, blob);
-  const formType = groundForm(choice?.form ?? reading?.formType ?? null, blob, input.templates);
+  const formType = choiceStated
+    ? groundStatedForm(choice?.form ?? null, managerTurns(input), input.templates)
+    : groundForm(choice?.form ?? reading?.formType ?? null, blob, input.templates);
   const formTurn = Boolean(input.formInProgress || reading?.formTurn || formType.key || saved.templateKey);
 
   const state = mergeSlots(saved, {
@@ -193,6 +200,75 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
   if (clarification) return { question: input.question, state, clarification };
   if (!formTurn) return { question: input.question, state, clarification: null };
   return { question: prependFormState(input.question, state), state, clarification: null };
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED. "Disciplinary Action" is the manual's discipline
+ * procedure itself, never the policy an offense broke. A stored one wrote
+ * "Policy reference: Disciplinary Action" ahead of the turn, and its alias
+ * picked the Corrective Action Form over the form the manager asked for
+ * (ported from Ask Sunny, QA 24 Oct 2026).
+ */
+function isDisciplineProcedure(heading: string | null | undefined): boolean {
+  return Boolean(heading) && /^disciplinary actions?(?: policy)?$/.test(headingKey(heading!));
+}
+
+function withoutDisciplineProcedure(state: ConversationFormState): ConversationFormState {
+  const policy = isDisciplineProcedure(state.policyHeading);
+  const incident = isDisciplineProcedure(state.incidentType);
+  if (!policy && !incident) return state;
+  return {
+    ...state,
+    policyHeading: policy ? null : state.policyHeading,
+    policyPage: policy ? null : state.policyPage,
+    incidentType: incident ? null : state.incidentType,
+  };
+}
+
+/** The manager's own turns, oldest first, this one last. */
+function managerTurns(input: IntentTurnInput): string[] {
+  return [...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content), input.question].filter(
+    (part) => part.trim() !== "",
+  );
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED. The form the manager named, newest turn first.
+ *
+ * Read from their own words only. The assistant's "**Corrective Action
+ * Form**", the stored state's sentences and the model's formType (which
+ * copies either) never choose it. A turn that names no form ("Create a form
+ * from this conversation") looks further back; a turn that names one
+ * replaces the stored form. Nothing named leaves the stored form.
+ */
+function groundStatedForm(
+  chosen: string | null,
+  turns: readonly string[],
+  templates: readonly TemplateRow[],
+): { key: string | null; ambiguous: readonly TemplateRow[] } {
+  const picked = chosen ? matchTemplates(chosen, templates) : [];
+  if (picked.length === 1) return { key: picked[0]!.key, ambiguous: [] };
+  for (let at = turns.length - 1; at >= 0; at -= 1) {
+    const key = formNamedIn(turns[at]!, templates);
+    if (key) return { key, ambiguous: [] };
+  }
+  return { key: null, ambiguous: [] };
+}
+
+function formNamedIn(text: string, templates: readonly TemplateRow[]): string | null {
+  const published = (key: string) => (templates.some((template) => template.key === key) ? key : null);
+  const intent = detectTemplateIntent(text);
+  if (intent.kind === "explicit" || intent.kind === "clarify") {
+    const named = published(intent.templateKey);
+    if (named) return named;
+  }
+  // "create a CA", "create a Verbal CA for …": a corrective action asked for
+  // in this turn is the Corrective Action Form, as the proposal reads it.
+  if (intent.kind === "corrective_action" && intent.requestedCreation) return published("dpoa");
+  if (intent.kind !== "none") return null;
+  const lower = text.toLowerCase();
+  const byName = templates.filter((template) => lower.includes(template.name.toLowerCase()));
+  return byName.length === 1 ? byName[0]!.key : null;
 }
 
 function parseReading(raw: unknown): IntentSlotReading | null {

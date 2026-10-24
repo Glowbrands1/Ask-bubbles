@@ -336,6 +336,19 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
   return envFlag("INTENT_PAYROLL_MANAGER_ONLY_ENABLED");
 }
 
+/**
+ * The form is the one the manager named in their own words, newest turn
+ * first. The model's formType, the assistant's "**Corrective Action Form**"
+ * and the state lines never pick it, and a "Policy reference:" line is not a
+ * form request. "Disciplinary Action" (the discipline procedure) is never the
+ * violated policy. Ported from Ask Sunny (QA, 24 Oct 2026: coaching and
+ * Policy Review requests became a Corrective Action). Off, the form is read
+ * as before.
+ */
+export function formChoiceStatedEnabled(): boolean {
+  return envFlag("FORM_CHOICE_STATED_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -374,4 +387,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
+  "FORM_CHOICE_STATED_ENABLED",
 ] as const;
