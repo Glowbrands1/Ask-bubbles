@@ -159,7 +159,7 @@ import {
   withConductOffense,
   withStatedOffense,
 } from "@/lib/forms/ca-policy";
-import { listFormDates, priorStepDate } from "@/lib/forms/form-date-answer";
+import { priorStepDate } from "@/lib/forms/form-date-answer";
 import {
   COACHING_CONTEXT_RULES,
   LANGUAGE_CLEANUP_RULES,
@@ -202,6 +202,7 @@ import {
   groundedSourceWithFormDate,
   resolveFormDate,
 } from "@/lib/forms/form-date-grounding";
+import { draftDateApplies, fidelityGivenDates } from "@/lib/forms/form-input-fidelity";
 
 /**
  * POST /api/forms/instances/[id]/draft
@@ -713,10 +714,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * calculates a date and nothing asks the model to. See
      * `form-date-grounding.ts`.
      */
-    const resolvedFormDate =
-      loaded.instance.layoutFamily === "corrective"
-        ? resolveFormDate(loaded.instance.formDate)
-        : null;
+    const resolvedFormDate = draftDateApplies(loaded.instance.layoutFamily)
+      ? resolveFormDate(loaded.instance.formDate)
+      : null;
 
     /*
      * The narrative fields, named once: the date correction runs on exactly
@@ -830,7 +830,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
        * rather than repairs: a model told the date does not invent one.
        */
       ...(resolvedFormDate
-        ? [formDateBrief(resolvedFormDate, listFormDates(notes, businessToday()).map((found) => found.iso))]
+        ? [formDateBrief(resolvedFormDate, fidelityGivenDates(notes, businessToday()))]
         : []),
       /*
        * THE PLAN OF ACTION — three beats, in order, and nothing else.

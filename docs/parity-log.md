@@ -6,6 +6,17 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: typed dates and one-word follow-ups
+
+`FORM_INPUT_FIDELITY_ENABLED` is Bubbles-only in this change. A matching
+Ask Sunny fix is being built separately, so this one is not ported here.
+No store or salon wording was copied. The JBA Policy Manual titles stay.
+
+Off, a manager who types "yesterday" still gets a draft dated today, and a
+one-word "verbal" or "written" can still be saved as Job Title. On, the
+typed or resolved day is the form date, and today is used only when no date
+was given. A bare follow-up goes to the question just asked.
+
 ## 24 Oct 2026: the newest Woven edition is the one that answers
 
 Ported from Ask Sunny branch `cursor/edition-supersession-6d4a`, commit

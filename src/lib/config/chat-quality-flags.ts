@@ -299,6 +299,15 @@ export function promptCacheEnabled(): boolean {
   return envFlag("PROMPT_CACHE_ENABLED");
 }
 
+/**
+ * Keep a date the manager typed, and send a one-word follow-up to the
+ * question just asked. Off, a relative day such as "yesterday" still leaves
+ * the form dated today, and a bare "verbal" can be saved as the job title.
+ */
+export function formInputFidelityEnabled(): boolean {
+  return envFlag("FORM_INPUT_FIDELITY_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -334,4 +343,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "GLOBAL_STORE_ASK_ENABLED",
   "EDITION_SUPERSESSION_ENABLED",
   "PROMPT_CACHE_ENABLED",
+  "FORM_INPUT_FIDELITY_ENABLED",
 ] as const;

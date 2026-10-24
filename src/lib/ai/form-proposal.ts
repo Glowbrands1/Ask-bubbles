@@ -112,13 +112,13 @@ import { describeStore, type StoreIndex } from "@/lib/stores/resolver";
 import { loadKnownTitles, loadStoreIndex } from "@/lib/stores/woven-aliases";
 import { neutralizeTitles } from "@/lib/forms/known-titles";
 import { allowsTeamSubject } from "@/lib/forms/team-subject";
+import { fidelityAwareTitle, fidelityFormDate } from "@/lib/forms/form-input-fidelity";
 import { locationFor, statedJobTitle, type EmployeeResolution, type ProposalInput } from "@/lib/forms/proposal";
 import type { EmployeeVerification } from "@/types";
 import { STORE_QUESTION_TAG, answersToOpenQuestions } from "@/lib/forms/question-answers";
 import {
   answersPositionQuestion,
   positionAlreadyAsked,
-  positionAnsweredIn,
   positionQuestion,
   samePosition,
 } from "@/lib/forms/employee-position";
@@ -964,7 +964,16 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   }
   /* The form's date from this form's turns, too. */
   if (!changeKind && !isExitForm(match)) {
-    proposal.formDate = extractFormDate(scoped.text, input.today ?? businessToday());
+    const today = input.today ?? businessToday();
+    proposal.formDate = extractFormDate(scoped.text, today);
+    /*
+     * Before any early return. A name confirmation leaves this function
+     * with the card it already built, and "yesterday" is not a calendar
+     * date, so the card would otherwise stay undated and the draft would
+     * use today. A bare "Oct 20" on the next turn is in the question even
+     * when the scoped text dropped that reply.
+     */
+    proposal.formDate = fidelityFormDate(`${scoped.text}\n${input.question}`, today, proposal.formDate);
   }
   /*
    * The exit form's own Date stays the day it is completed while the flag is
@@ -1038,7 +1047,7 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   // WOVEN'S TITLE WINS where Woven verified the employee — over the manager's wording
   // and over a title read out of the conversation. A title the manager typed
   // wins instead when TYPED_NAME_ENABLED is on.
-  const statedTitle = statedJobTitle(scoped.text) ?? positionAnsweredIn([...input.history, { role: "user", content: input.question }]);
+  const statedTitle = fidelityAwareTitle(scoped.text, [...input.history, { role: "user", content: input.question }]);
   if (directory.verification?.status === "verified" && directory.verification.title && !(typedNameEnabled() && statedTitle)) {
     proposal.employeeRole = directory.verification.title;
   }
@@ -1115,6 +1124,11 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
 
   const notes: string[] = directory.note ? [directory.note] : [];
   notes.push(...directoryNotes(proposal, directory, match, input, scoped));
+  proposal.formDate = fidelityFormDate(
+    `${scoped.text}\n${input.question}`,
+    input.today ?? businessToday(),
+    proposal.formDate,
+  );
   if (antiLoopEnabled()) proposal.formDate = isoCardDate(proposal.formDate);
   if (carried && proposal.employeeName && !directory.question) {
     notes.push(
@@ -1289,7 +1303,7 @@ function directoryNotes(
      */
     const wovenTitle =
       directory.verification?.status === "verified" ? (directory.verification.title?.trim() || null) : null;
-    const stated = statedJobTitle(context.text) ?? positionAnsweredIn(conversation);
+    const stated = fidelityAwareTitle(context.text, conversation);
     if (wovenTitle && !(typedNameEnabled() && stated)) {
       proposal.employeeRole = wovenTitle;
       proposal.employeeRoleSource = "woven";
