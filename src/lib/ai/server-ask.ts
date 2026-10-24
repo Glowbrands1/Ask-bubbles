@@ -52,6 +52,7 @@ import {
   formToolsEnabled,
   hybridSearchEnabled,
   longContextEnabled,
+  actionPlanSentencesEnabled,
   policyCitationEnabled,
   priorCoachingOptionalEnabled,
   queryRewriteEnabled,
@@ -658,6 +659,8 @@ async function answerQuestionBody(
     fewShotExamples: await loadFewShotBlock(request.question),
     typedName: typedNameEnabled(),
     policyCitation: policyCitationEnabled(),
+    printedPageOnly: printedPageOnlyEnabled(),
+    actionPlanSentences: actionPlanSentencesEnabled(),
   });
 
   const longContext = longContextEnabled()
