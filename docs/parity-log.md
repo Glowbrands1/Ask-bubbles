@@ -180,3 +180,25 @@ still anchored to the earlier turn, and the retrieval query is then
 rewritten into manual terms from the conversation. SKIP, an empty rewrite,
 or a model failure keeps the typed question. The answering model still
 sees the question as typed. No glossary and no migration.
+
+## 24 Oct 2026: older Woven editions are superseded, not deleted
+
+`WOVEN_EDITION_SUPERSESSION_ENABLED` defaults off. When it is on, a full
+Woven sync marks an older edition of the same document `status =
+superseded`, `indexed = false`, `superseded_by` the newer document id.
+The row, its chunks and its file stay. Retrieval (`match_knowledge_chunks`,
+hybrid search, section search) already requires `status = indexed`, so
+only the current edition is cited.
+
+The family is data Woven already sent: the citation title with its edition
+tokens removed (`manualDisplayTitle` — "2025 JBA Policy Manual - Edited
+5-2025" and "2026 JBA Policy Manual" are one family) or the same Woven
+policy id, plus a strictly newest edit date. A missing or tied date
+changes nothing. A policy's text and its PDF are different parts, and two
+differently titled files on one policy are not editions of each other.
+
+No migration. `chat_form_state` from
+`20261023160000_chat_form_state.sql` is already applied on the Bubbles
+project. Sunny `main` (b9ae362) has no woven-edition step; this is the
+mechanism Pau asked Bubbles to match, not a port of a Sunny commit.
+Company titles are not copied.

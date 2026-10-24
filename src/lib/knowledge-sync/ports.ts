@@ -101,6 +101,11 @@ export interface KnowledgeSink {
    * without touching them. See `supersession.ts`.
    */
   supersedeDuplicates?(currentDocumentIds: string[]): Promise<DuplicateOutcome>;
+  /**
+   * Marks older Woven editions superseded. The rows stay. Called only when
+   * `WOVEN_EDITION_SUPERSESSION_ENABLED` is on and the plan is non-empty.
+   */
+  supersedeEditions?(plan: readonly { documentId: string; supersededBy: string }[]): Promise<{ superseded: number }>;
 }
 
 /** Why a sink call failed — a code the audit log can carry and a user-safe sentence. */

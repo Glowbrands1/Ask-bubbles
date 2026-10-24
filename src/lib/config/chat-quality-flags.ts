@@ -197,6 +197,14 @@ export function draftMergeEnabled(): boolean {
   return draftEditMergeEnabled();
 }
 
+/**
+ * When Woven publishes a newer edition of a document already in the library,
+ * the older edition is marked superseded. Off, sync leaves every edition indexed.
+ */
+export function wovenEditionSupersessionEnabled(): boolean {
+  return envFlag("WOVEN_EDITION_SUPERSESSION_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -222,4 +230,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INTENT_EXTRACTION_ENABLED",
   "FEWSHOT_EXAMPLES_ENABLED",
   "SELF_CHECK_ENABLED",
+  "WOVEN_EDITION_SUPERSESSION_ENABLED",
 ] as const;

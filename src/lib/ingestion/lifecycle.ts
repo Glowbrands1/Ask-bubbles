@@ -423,6 +423,53 @@ export async function supersedeDocument(input: { documentId: string; scopeId: st
 }
 
 /**
+ * A newer Woven edition replaces an older one of the same document.
+ *
+ * The row, its chunks and its file stay. Retrieval already ignores a
+ * document whose status is not `indexed`. Only an indexed Woven document is
+ * changed, and only when the successor is itself an indexed Woven document.
+ * An upload is never touched here — that path is `supersedeDocument`.
+ */
+export async function supersedeSyncedEdition(input: {
+  documentId: string;
+  scopeId: string;
+  supersededBy: string;
+}): Promise<boolean> {
+  if (input.documentId === input.supersededBy) return false;
+  const admin = getSupabaseAdmin();
+  const { data: successor, error: readError } = await admin
+    .from("knowledge_documents")
+    .select("id")
+    .eq("id", input.supersededBy)
+    .eq("knowledge_scope_id", input.scopeId)
+    .eq("source", "woven")
+    .eq("status", "indexed")
+    .eq("indexed", true)
+    .maybeSingle();
+  if (readError) {
+    throw new IngestionError("persistence_failed", `The current edition could not be read: ${readError.message}`, 502);
+  }
+  if (!successor) return false;
+  const { data, error } = await admin
+    .from("knowledge_documents")
+    .update({
+      status: "superseded",
+      indexed: false,
+      superseded_by: input.supersededBy,
+      superseded_at: new Date().toISOString(),
+    })
+    .eq("id", input.documentId)
+    .eq("knowledge_scope_id", input.scopeId)
+    .eq("source", "woven")
+    .eq("status", "indexed")
+    .select("id");
+  if (error) {
+    throw new IngestionError("persistence_failed", `The older edition could not be marked superseded: ${error.message}`, 502);
+  }
+  return ((data ?? []) as unknown[]).length > 0;
+}
+
+/**
  * Changes a document's title, description, category and tags only — no
  * extraction, no embedding. For a source item whose bytes are unchanged but
  * whose name or details changed.

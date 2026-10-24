@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 
+import { wovenEditionSupersessionEnabled } from "@/lib/config/chat-quality-flags";
+
 import { buildDryRunPlan } from "./dry-run";
+import { editionSupersessionsToApply, type EditionDocument } from "./edition-supersession";
 import { manifestKey, reconcile, type ReconcileInput } from "./reconcile";
 import { SinkError, type DescribeItem, type KnowledgeSink, type KnowledgeSyncStore } from "./ports";
 import {
@@ -397,6 +400,52 @@ export async function runKnowledgeSync(deps: EngineDeps, options: RunOptions): P
         }
       } catch {
         report.attention.push({ code: "duplicates_not_checked", message: "Uploaded copies of Woven documents could not be checked this time. Nothing was changed." });
+      }
+    }
+
+    /*
+     * ---- editions ----
+     * A newer Woven copy of the same document (title family or policy id,
+     * newest edit date) supersedes the older one. Off unless
+     * WOVEN_EDITION_SUPERSESSION_ENABLED. Rows are kept; retrieval already
+     * skips anything that is not status indexed.
+     */
+    if (
+      options.mode === "sync" &&
+      listingFailures === 0 &&
+      !sessionLost &&
+      report.totals.deferred === 0 &&
+      deps.sink.supersedeEditions &&
+      wovenEditionSupersessionEnabled()
+    ) {
+      const editions: EditionDocument[] = [...merged.values()]
+        .filter((item) => item.inKnowledgeBase && item.knowledgeDocumentId && item.state !== "ERROR")
+        .map((item) => ({
+          documentId: item.knowledgeDocumentId!,
+          title: item.title,
+          contentType: item.contentType,
+          entityId: item.entityId,
+          policyId: item.locator?.policyId ?? null,
+          partKey: item.partKey,
+          editedAt: item.sourceUpdatedAt,
+        }));
+      const plan = editionSupersessionsToApply(editions, true);
+      if (plan.length > 0) {
+        try {
+          const outcome = await deps.sink.supersedeEditions(plan);
+          if (outcome.superseded > 0) {
+            report.attention.push({
+              code: "editions_superseded",
+              message: `${outcome.superseded} older Woven edition${outcome.superseded === 1 ? " was" : "s were"} replaced by a newer edition and no longer answer questions. The older copies are kept.`,
+              count: outcome.superseded,
+            });
+          }
+        } catch {
+          report.attention.push({
+            code: "editions_not_checked",
+            message: "Older Woven editions could not be checked this time. Nothing was changed.",
+          });
+        }
       }
     }
 
