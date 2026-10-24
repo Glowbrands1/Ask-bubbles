@@ -8,7 +8,9 @@ import { BuffCitySoapLogo } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { SOURCE_PROMISE } from "@/data/answer-modes";
 import { aiProviderStatus, getAIProvider } from "@/lib/ai";
+import type { ClientAskRequest } from "@/lib/ai/types";
 import { quickQuestionsFor } from "@/lib/ai/quick-questions";
+import { chatA11yEnabled, chatStreamingEnabled, resumeDraftEnabled } from "@/lib/config/chat-ui-flags";
 import { useSession } from "@/lib/session/session-context";
 import { useAppStore } from "@/lib/store/app-store";
 import { cn } from "@/lib/utils/cn";
@@ -41,7 +43,9 @@ import { writeChatAddress } from "./chat-address";
 import { ContextPanel } from "./context-panel";
 import { ConversationList } from "./conversation-list";
 import { HistoryImportButton, ImportLocalHistoryPrompt } from "./import-local-history";
+import { askChatStream } from "./chat-stream";
 import { MessageBubble, ThinkingBubble } from "./message-bubble";
+import { ResumeDraftBanner } from "./resume-draft-banner";
 import { ConversationRating } from "./conversation-rating";
 
 export function ChatScreen() {
@@ -270,8 +274,9 @@ export function ChatScreen() {
         setDraftMessages([]);
       }
 
+      let streamedId: string | null = null;
       try {
-        const response = await provider.ask({
+        const askRequest: ClientAskRequest = {
           question: text,
           mode,
           history,
@@ -330,10 +335,30 @@ export function ChatScreen() {
             userName: managerDisplayName,
             locationName: primaryLocationName,
           },
-        });
+        };
+        const stream = chatStreamingEnabled() && provider.connected;
+        if (stream) {
+          streamedId = createId("msg");
+          appendConversationMessages(conversationId, [
+            {
+              id: streamedId,
+              role: "assistant",
+              content: "",
+              createdAt: activityNowIso(),
+              mode,
+              citations: [],
+              coverage: "not_applicable",
+            },
+          ]);
+        }
+        const response = stream
+          ? await askChatStream(askRequest, (snapshot) => {
+              patchConversationMessage(conversationId, streamedId!, { content: snapshot });
+            })
+          : await provider.ask(askRequest);
 
         const assistantMessage: ChatMessage = {
-          id: createId("msg"),
+          id: streamedId ?? createId("msg"),
           role: "assistant",
           content: response.content,
           createdAt: activityNowIso(),
@@ -387,7 +412,11 @@ export function ChatScreen() {
           autoDraftMessageId.current = assistantMessage.id;
         }
 
-        appendConversationMessages(conversationId, [assistantMessage]);
+        if (streamedId) {
+          patchConversationMessage(conversationId, streamedId, assistantMessage);
+        } else {
+          appendConversationMessages(conversationId, [assistantMessage]);
+        }
       } catch (caught) {
         /*
          * A failed turn becomes a visible, actionable message in the thread
@@ -407,7 +436,14 @@ export function ChatScreen() {
           error: toChatTurnError(caught, text),
         };
 
-        appendConversationMessages(conversationId, [errorMessage]);
+        if (streamedId) {
+          patchConversationMessage(conversationId, streamedId, {
+            content: "",
+            error: errorMessage.error,
+          });
+        } else {
+          appendConversationMessages(conversationId, [errorMessage]);
+        }
       } finally {
         setBusy(false);
       }
@@ -426,6 +462,7 @@ export function ChatScreen() {
       signedIn,
       addConversation,
       appendConversationMessages,
+      patchConversationMessage,
       reportContext,
     ],
   );
@@ -989,6 +1026,7 @@ export function ChatScreen() {
               /* The artifact's 22px rhythm between turns. */
               isEmpty ? "gap-4" : "gap-5.5",
             )}
+            {...(chatA11yEnabled() && !isEmpty ? { "aria-live": "polite" as const, "aria-relevant": "additions" as const } : {})}
           >
             {isEmpty ? (
               <>
@@ -1039,6 +1077,9 @@ export function ChatScreen() {
               </>
             ) : (
               <>
+                {resumeDraftEnabled() && activeId ? (
+                  <ResumeDraftBanner conversationId={activeId} onContinue={(text) => void send(text)} />
+                ) : null}
                 {messages.map((message) => (
                   <MessageBubble
                     key={message.id}

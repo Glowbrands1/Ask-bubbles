@@ -2,6 +2,7 @@ import "server-only";
 
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { modelRetryEnabled, promptCacheEnabled } from "@/lib/config/chat-quality-flags";
+import { chatStreamingEnabled } from "@/lib/config/chat-ui-flags";
 import { CLAUDE_EFFORT, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
 import { Anthropic, getAnthropicClient } from "./anthropic";
@@ -117,6 +118,12 @@ export interface CallClaudeInput {
    * `PROMPT_CACHE_ENABLED` is on. Off, callers leave it inside `grounding`.
    */
   readonly policyManual?: string | null;
+  /**
+   * Called with the answer text so far, when chat streaming is on.
+   * Ignored unless `NEXT_PUBLIC_CHAT_STREAMING_ENABLED` is on, so the
+   * `messages.create` path stays the one a normal request uses.
+   */
+  readonly onDelta?: (snapshot: string) => void;
 }
 
 export interface CachedTextBlock {
@@ -174,17 +181,17 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
   try {
     const response = await withTruncationRetry(
       input.maxTokens,
-      (maxTokens) =>
-        client.messages.create({
+      async (maxTokens) => {
+        const params = {
           model: CLAUDE_MODEL,
           max_tokens: maxTokens,
-          thinking: { type: "adaptive" },
+          thinking: { type: "adaptive" as const },
           output_config: { effort: CLAUDE_EFFORT },
           system: claudeSystemPayload(input.system, input.policyManual),
           messages: [
             ...history,
             {
-              role: "user",
+              role: "user" as const,
               // Every context block and then the question, in that order: the
               // question last is what keeps a long briefing from burying it.
               content: [
@@ -198,7 +205,14 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
               ].join("\n\n"),
             },
           ],
-        }),
+        };
+        if (input.onDelta && chatStreamingEnabled()) {
+          const stream = client.messages.stream(params);
+          stream.on("text", (_delta, snapshot) => input.onDelta!(snapshot));
+          return await stream.finalMessage();
+        }
+        return await client.messages.create(params);
+      },
       `${ACTIVE_BRAND.assistantName} ran out of room before finishing that answer, so it was not shown. Try asking for less at once, or split the question into parts.`,
     );
 

@@ -29,6 +29,8 @@ import { mayAskToReopen } from "@/lib/forms/reopen-cue";
 import { parseChatReportContext } from "@/lib/reporting/report-context";
 import { businessToday } from "@/lib/business-date";
 import { isClientConversationId } from "@/lib/chat/client-ids";
+import { chatStreamingEnabled } from "@/lib/config/chat-ui-flags";
+import { encodeSse } from "@/features/chat/chat-stream";
 import type { AskRequest } from "@/lib/ai/types";
 import type { AnswerMode, ChatMessage } from "@/types";
 
@@ -54,7 +56,44 @@ const MODES: AnswerMode[] = ["quick", "standard", "detailed"];
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function POST(request: Request) {
+export async function POST(request: Request): Promise<Response> {
+  if (!chatStreamingEnabled() || request.headers.get("x-chat-stream") !== "1") {
+    return chatPost(request);
+  }
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (event: string, data: unknown) => {
+        controller.enqueue(encoder.encode(encodeSse(event, data)));
+      };
+      try {
+        const response = await chatPost(request, (snapshot) => send("delta", { text: snapshot }));
+        const payload = (await response.json().catch(() => ({}))) as { error?: string; code?: string; missing?: string[] };
+        if (!response.ok) {
+          send("error", {
+            error: payload.error ?? "Ask Bubbles could not answer that right now.",
+            code: payload.code ?? "model_failed",
+            missing: payload.missing ?? [],
+          });
+        } else {
+          send("done", payload);
+        }
+      } catch {
+        send("error", { error: "Ask Bubbles could not answer that right now.", code: "model_failed" });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+  return new Response(stream, {
+    headers: {
+      "content-type": "text/event-stream; charset=utf-8",
+      "cache-control": "no-cache, no-transform",
+    },
+  });
+}
+
+async function chatPost(request: Request, onDelta?: (snapshot: string) => void): Promise<Response> {
   try {
     assertLiveMode();
     assertNoConfigurationProblems();
@@ -273,6 +312,7 @@ export async function POST(request: Request) {
            * session's, and only ever theirs. See `chat/person-memory-store.ts`.
            */
           { memoryOwnerId: context.identity.subject },
+          onDelta ? { onDelta } : undefined,
         ));
     } catch (error) {
       /*

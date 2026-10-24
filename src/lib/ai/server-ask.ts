@@ -141,9 +141,10 @@ export async function answerQuestion(
   request: AskRequest,
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
+  hooks?: { onDelta?: (snapshot: string) => void },
 ): Promise<AskResponse> {
   await primeStoresFromTable();
-  if (!chatTraceEnabled()) return answerQuestionBody(request, actor, memory);
+  if (!chatTraceEnabled()) return answerQuestionBody(request, actor, memory, hooks);
   const draft = openChatTrace({
     conversationId: request.conversationId,
     messageId: request.questionMessageId,
@@ -151,13 +152,14 @@ export async function answerQuestion(
     originalQuery: request.question,
     formInProgress: Boolean(request.continueProposalTemplateKey || request.openForm || request.activeFormInstanceId),
   });
-  return finishChatTrace(draft, () => answerQuestionBody(request, actor, memory));
+  return finishChatTrace(draft, () => answerQuestionBody(request, actor, memory, hooks));
 }
 
 async function answerQuestionBody(
   request: AskRequest,
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
+  hooks?: { onDelta?: (snapshot: string) => void },
 ): Promise<AskResponse> {
   const readiness = liveReadiness();
 
@@ -703,6 +705,7 @@ async function answerQuestionBody(
     question: request.question,
     maxTokens: CLAUDE_MAX_TOKENS[request.mode],
     policyManual: cacheManual,
+    onDelta: hooks?.onDelta,
   });
 
   const markers = extractUsedMarkers(answer, grounding.map((chunk) => chunk.marker));

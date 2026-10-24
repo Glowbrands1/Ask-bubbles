@@ -221,3 +221,20 @@ on purpose — `src/app/api/forms/duplicate-create-route.test.ts` already
 guards a second create, and that guard was not edited. `chat_form_state`
 (`20261023160000`) is already applied on project `dyurgwieyltnhphihwwj`.
 The visible UI items are a separate branch.
+
+## 24 Oct 2026: visible chat improvements (B1–B7)
+
+**Sibling app: not ported.** Ask Sunny `main` at `b9ae362` does not render
+these. Each one is a `NEXT_PUBLIC_` flag and defaults off. With every flag
+unset, the chat markup is the markup it had: the JSON answer, the source
+list, the proposal card, and no resume banner.
+
+| Flag | What appears when it is on |
+|---|---|
+| `NEXT_PUBLIC_CHAT_STREAMING_ENABLED` | The reply is sent as server-sent events. The route still returns one JSON body when the flag is off or the request has no `x-chat-stream` header |
+| `NEXT_PUBLIC_FIELD_CHECKLIST_ENABLED` | Filled and missing corrective-action lines. A typed name is filled |
+| `NEXT_PUBLIC_INLINE_CARD_EDIT_ENABLED` | Employee, date, warning, and payroll can be edited on the card before create |
+| `NEXT_PUBLIC_CITATION_CHIPS_ENABLED` | Section and page chips that open the cited document, in place of the source list |
+| `NEXT_PUBLIC_QUICK_REPLIES_ENABLED` | "Verbal warning", "Written warning", "Payroll deduct: yes", "Payroll deduct: no" |
+| `NEXT_PUBLIC_RESUME_DRAFT_ENABLED` | A banner from `chat_form_state` for this conversation |
+| `NEXT_PUBLIC_CHAT_A11Y_ENABLED` | `aria-live` on the thread, and focus moves to a new form card |

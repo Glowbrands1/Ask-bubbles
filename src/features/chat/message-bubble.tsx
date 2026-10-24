@@ -12,7 +12,13 @@ import { LOCATION_LABEL } from "@/lib/brand";
 import { locationById } from "@/lib/locations";
 import { describeStore } from "@/lib/stores/resolver";
 import { Button } from "@/components/ui/button";
-import { Label, Select } from "@/components/ui/field";
+import { Input, Label, Select } from "@/components/ui/field";
+import {
+  chatA11yEnabled,
+  citationChipsEnabled,
+  fieldChecklistEnabled,
+  inlineCardEditEnabled,
+} from "@/lib/config/chat-ui-flags";
 import { ANSWER_MODE_LABEL } from "@/data/answer-modes";
 import { Notice } from "@/components/ui/feedback";
 import { useSession } from "@/lib/session/session-context";
@@ -26,7 +32,10 @@ import { chatErrorTitle } from "./chat-error";
 import { FormPicker } from "./form-picker";
 import { logTurnEvent } from "@/lib/analytics/telemetry";
 import { DRAFT_FAILED_WARNING, createInlineForm } from "./create-inline-form";
+import { CitationChips } from "./citation-chips";
+import { FieldChecklist, notesForChecklist } from "./field-checklist";
 import { InlineForm, type PrefillState } from "./inline-form";
+import { QuickReplies } from "./quick-replies";
 
 export function MessageBubble({
   message,
@@ -191,6 +200,15 @@ export function MessageBubble({
               onStartAnother={onStartAnother}
             />
           ))}
+          {fieldChecklistEnabled()
+            ? proposalsOf(message).map((proposal) => (
+                <FieldChecklist
+                  key={`fields-${proposal.proposalId}`}
+                  proposal={proposal}
+                  notes={notesForChecklist(conversation)}
+                />
+              ))
+            : null}
           {proposalsOf(message).length === 0 && message.formInstanceRef ? (
             /*
               A FORM ALREADY ON FILE, OPENED BY THIS TURN — "edit the exit
@@ -253,7 +271,11 @@ export function MessageBubble({
           Overview's answer sheet, only that one was clickable, and this one
           having lost its links was a reported regression.
         */}
-        <SourceList citations={message.citations ?? []} className="mt-4" />
+        {citationChipsEnabled() ? (
+          <CitationChips citations={message.citations ?? []} />
+        ) : (
+          <SourceList citations={message.citations ?? []} className="mt-4" />
+        )}
 
         {message.followUpSuggestions && message.followUpSuggestions.length > 0 ? (
           <div className="mt-4 flex flex-wrap gap-2">
@@ -288,6 +310,8 @@ export function MessageBubble({
             })}
           </div>
         ) : null}
+
+        <QuickReplies proposal={message.formProposal} onSuggestion={onSuggestion} />
 
         {/*
           NO FEEDBACK PANEL UNDER THE ANSWER, AND THAT IS THE CHANGE.
@@ -380,6 +404,15 @@ function FormProposalCard({
    * `POST /api/forms/instances`, so an edited list buys nothing.
    */
   const [location, setLocation] = React.useState("");
+  const [employeeDraft, setEmployeeDraft] = React.useState(proposal.employeeName ?? "");
+  const [dateDraft, setDateDraft] = React.useState(proposal.formDate ?? "");
+  const [warningDraft, setWarningDraft] = React.useState(proposal.warningLevel ?? "");
+  const [payrollDraft, setPayrollDraft] = React.useState(proposal.payrollDeduct ?? "");
+  const cardRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!chatA11yEnabled()) return;
+    cardRef.current?.focus();
+  }, []);
 
   /*
    * ==========================================================================
@@ -468,8 +501,21 @@ function FormProposalCard({
     let rowExists = false;
 
     try {
+      const editsOn = inlineCardEditEnabled();
+      const filed: ChatFormProposal = editsOn
+        ? {
+            ...proposal,
+            employeeName: employeeDraft.trim() || null,
+            formDate: dateDraft || proposal.formDate,
+            warningLevel:
+              warningDraft === "verbal" || warningDraft === "written" || warningDraft === "final_warning"
+                ? warningDraft
+                : proposal.warningLevel,
+            payrollDeduct: payrollDraft === "yes" || payrollDraft === "no" ? payrollDraft : proposal.payrollDeduct,
+          }
+        : proposal;
       const result = await createInlineForm({
-        proposal: location ? { ...proposal, locationId: location } : proposal,
+        proposal: location ? { ...filed, locationId: location } : filed,
         messages: conversation,
         call: (url, init) => formsFetch(url, role, user.name, init),
         /*
@@ -570,7 +616,11 @@ function FormProposalCard({
   }
 
   return (
-    <div className="mt-4 min-w-0 rounded-[var(--radius-md)] border-[1.5px] border-primary bg-surface px-4 py-3">
+    <div
+      ref={cardRef}
+      {...(chatA11yEnabled() ? { tabIndex: -1 } : {})}
+      className="mt-4 min-w-0 rounded-[var(--radius-md)] border-[1.5px] border-primary bg-surface px-4 py-3"
+    >
       <div className="flex flex-wrap items-center gap-2">
         <span className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-surface text-muted-foreground">
           <FilePlus2 className="size-3.5" aria-hidden />
@@ -589,8 +639,18 @@ function FormProposalCard({
 
       <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs">
         <ProposalRow label="Employee">
-          {proposal.employeeName ?? (
-            <Missing>Not yet — tell Bubbles who this form is about</Missing>
+          {inlineCardEditEnabled() ? (
+            <Input
+              aria-label="Employee"
+              value={employeeDraft}
+              onChange={(event) => setEmployeeDraft(event.target.value)}
+              className="h-8 text-xs"
+              data-chat-ui="card-edit"
+            />
+          ) : (
+            proposal.employeeName ?? (
+              <Missing>Not yet — tell Bubbles who this form is about</Missing>
+            )
           )}
         </ProposalRow>
         {proposal.employeeRole || POSITION_FORMS.has(proposal.templateKey) ? (
@@ -652,6 +712,40 @@ function FormProposalCard({
           )}
         </ProposalRow>
       </dl>
+
+      {inlineCardEditEnabled() ? (
+        <div className="mt-3 grid gap-2 text-xs" data-chat-ui="card-edits">
+          <Label htmlFor={`date-${proposal.proposalId}`}>Date for the form</Label>
+          <Input
+            id={`date-${proposal.proposalId}`}
+            type="date"
+            value={dateDraft}
+            onChange={(event) => setDateDraft(event.target.value)}
+            className="h-8 text-xs"
+          />
+          <Label htmlFor={`warning-${proposal.proposalId}`}>Warning</Label>
+          <Select
+            id={`warning-${proposal.proposalId}`}
+            value={warningDraft}
+            onChange={(event) => setWarningDraft(event.target.value as typeof warningDraft)}
+          >
+            <option value="">Not set</option>
+            <option value="verbal">Verbal warning</option>
+            <option value="written">Written warning</option>
+            <option value="final_warning">Final warning</option>
+          </Select>
+          <Label htmlFor={`payroll-${proposal.proposalId}`}>Is payroll deduct applicable?</Label>
+          <Select
+            id={`payroll-${proposal.proposalId}`}
+            value={payrollDraft}
+            onChange={(event) => setPayrollDraft(event.target.value as typeof payrollDraft)}
+          >
+            <option value="">Not set</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </Select>
+        </div>
+      ) : null}
 
       {/*
         THE ONLY CONTROL ON THIS CARD, AND ONLY WHEN IT WORKS.
