@@ -6,6 +6,26 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: a manual citation only marks a page the sentence restates
+
+`FULL_MANUAL_CONTEXT_ENABLED` stays off. On, `citePolicyAnswer` reads the
+answer one sentence or bullet line at a time. Every `[p.N]` is taken off
+and written again only for the page whose text that sentence restates. A
+page the model chose stays when that page's text still matches. Nothing
+else in the answer changes: no word, line break or bullet. On f8759f6 the
+model's +1 pages stayed, and pages 10, 18, 20 and 29 were added to one
+sentence because they shared a few words. Each of those pages also became a
+Sources row. The manual block's page mapping is unchanged. With the
+production rows it already marks Hair 15, Facial Hair to Buff City Soap
+16, chunk 50 and Sun Tan City 17, Cell Phone and Company Email 19, and POS
+Passwords 20 (checked against the manual's contents page and footers).
+Tests read the production rows (chunks 44-64) and the four saved replies.
+
+**Sibling app: not ported in this change.** Ask Sunny's full-manual citation
+is being reworked in Glowbrands1/ask-sunny#172 (open). That PR is checked
+against Sunny's own saved replies separately. No Buff City Soap wording was
+copied.
+
 ## 24 Oct 2026: a later form turn keeps what was already said
 
 `FORM_FULL_REMAP_ENABLED` stays off. On, each turn reads every user message
