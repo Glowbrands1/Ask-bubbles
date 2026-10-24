@@ -40,8 +40,17 @@ removed. A page the loaded manual does not contain is removed. An answer
 that still cites no printed page uses ordinary retrieval, the same path
 as the flag off.
 
+The dress-code chat cites printed pages 15 and 16. Page 17 stays valid for
+Sun Tan City's dress code and for other brands' pants. Crunch shirts and
+pants are printed page 16, so a Crunch Shirts or Pants source on page 17
+is dropped in favor of the longer phrase on page 16. A page outside 15–17
+is not a citation for that answer. An inline label such as
+"Tattoos, JBA Policy Manual p.16" does not replace the sentence in front
+of it.
+
 **Sibling app: not ported.** Ask Sunny's `main` does not have
-`FULL_MANUAL_CONTEXT_ENABLED` (checked 24 Oct 2026). No Buff City Soap
+`FULL_MANUAL_CONTEXT_ENABLED` (checked 24 Oct 2026). Sunny's open citation
+work is on another branch and was not copied here. No Buff City Soap
 policy text is copied there.
 
 ## 24 Oct 2026: one extraction fills the form

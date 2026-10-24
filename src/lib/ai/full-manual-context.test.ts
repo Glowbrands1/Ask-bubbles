@@ -24,10 +24,9 @@ const STC_SHIRTS = "Any STC Employee can wear any Branded top or black collared 
 /**
  * Printed pages the manual records for a fixture chunk.
  *
- * `chunk.p` is the printed page of the headings ingestion stored on that
- * chunk. Crunch shirts and pants are the next printed page: they share a
- * chunk with Jewelry, whose footer is 16, and the sheet index of that chunk
- * is 17. Company dress code and Hair stay on 15.
+ * `chunk.p` is the printed page. Crunch Fitness Specific Dress Code, its
+ * Shirts and Pants, and Buff City Soap Shirts all start on printed page 16.
+ * Company dress code and Hair stay on 15. The next sheet's footer is 17.
  */
 function sectionsFor(chunk: { p: string; h: string[]; c: string }): { heading: string; page: number }[] {
   const printed = Number(chunk.p);
@@ -38,9 +37,12 @@ function sectionsFor(chunk: { p: string; h: string[]; c: string }): { heading: s
   if (chunk.c.includes("approved for Instructors ONLY")) {
     sections.push(
       { heading: "Crunch Fitness Specific Dress Code", page: printed },
-      { heading: "Shirts", page: printed + 1 },
-      { heading: "Pants", page: printed + 1 },
+      { heading: "Shirts", page: printed },
+      { heading: "Pants", page: printed },
     );
+  }
+  if (chunk.c.includes("Any BCS Employee can wear any plain black")) {
+    sections.push({ heading: "Buff City Soap", page: printed }, { heading: "Shirts", page: printed });
   }
   return sections;
 }
@@ -444,16 +446,17 @@ describe("production chats cite printed pages", () => {
       return text.slice(from, to);
     };
     const company = slice("[p.15]", "[p.16]");
-    const jewelry = slice("[p.16]", "[p.17]");
-    const crunchClothes = slice("[p.17]", "[p.19]");
+    const page16 = slice("[p.16]", "[p.17]");
     expect(company).toContain("All Locations Dress Code:");
     expect(company).toContain("Hair");
     expect(company).not.toContain("Jewelry/Accessories");
-    expect(jewelry).toContain("Jewelry/Accessories");
-    expect(jewelry).toContain("Crunch Fitness Specific Dress Code:");
-    expect(jewelry).not.toContain("approved for Instructors ONLY");
-    expect(crunchClothes).toContain("approved for Instructors ONLY");
-    expect(crunchClothes).toContain("Two uniform shirts");
+    expect(page16).toContain("Jewelry/Accessories");
+    expect(page16).toContain("Crunch Fitness Specific Dress Code:");
+    expect(page16).toContain("Two uniform shirts");
+    expect(page16).toContain("approved for Instructors ONLY");
+    expect(page16).toContain("Buff City Soap:");
+    expect(page16).toContain(BCS_SHIRTS);
+    expect(page16).not.toContain("never to be worn");
     expect(text).toContain("[p.19]");
     expect(text).not.toContain("[p.20]");
     expect(text).not.toContain("[p.3]");
@@ -501,30 +504,70 @@ describe("production chats cite printed pages", () => {
     expect(text.indexOf("[p.15]")).toBeLessThan(text.indexOf("Hair"));
   });
 
-  it("conv_mvmkij8h2vdogs9 cites printed p.15 and p.16, and p.17 only for Crunch shirts and pants", () => {
+  it("conv_mvmkij8h2vdogs9 cites p.15 and p.16, and p.17 only for other brands", () => {
     const plan = planFullManualContext({ question: DRESS_CODE_QUESTION, documents });
-    const cited = citePolicyAnswer(DRESS_CODE_ANSWER, plan);
+    /*
+     * Sun Tan City's dress code and the other brands' pants are printed on
+     * page 17. Citing that page is allowed. Crunch shirts and pants are not.
+     */
+    const withOtherBrands = [
+      DRESS_CODE_ANSWER,
+      "Any STC Employee can wear any Branded top or black collared or black t-shirt.",
+      "Yoga pants, joggers or sweats are never to be worn while at work.",
+    ].join(" ");
+    const cited = citePolicyAnswer(withOtherBrands, plan);
     expect(cited.ok).toBe(true);
     expect(cited.text).toMatch(/buff city soap/i);
     expect(cited.text).toMatch(/crunch/i);
     expect(cited.text).toMatch(/tattoo/i);
     expect(cited.text).toMatch(/jewelry/i);
     expect(cited.text).toMatch(/hair/i);
+    expect(cited.text).toContain("approved for instructors only");
+    expect(cited.text).toContain("plain black, white, or gray t-shirt");
     const pages = new Set(cited.sources.map((source) => source.printedPage));
+    const marked = new Set(citedPages(cited.text));
     expect(pages.has(15)).toBe(true);
     expect(pages.has(16)).toBe(true);
-    expect([...pages].every((page) => page === 15 || page === 16 || page === 17)).toBe(true);
-    expect(new Set(citedPages(cited.text))).toEqual(pages);
+    expect(marked.has(15)).toBe(true);
+    expect(marked.has(16)).toBe(true);
+    for (const page of [...pages, ...marked]) {
+      expect(page === 15 || page === 16 || page === 17).toBe(true);
+    }
     expect(cited.sources.some((source) => source.printedPage === 15 && /Hair|Dress Code|All Locations/i.test(`${source.locator} ${source.excerpt}`))).toBe(true);
     expect(cited.sources.some((source) => /Page 16 — Jewelry/.test(source.locator))).toBe(true);
-    expect(cited.sources.some((source) => source.printedPage === 16 && /Crunch Fitness Specific Dress Code|Tattoos/i.test(source.locator))).toBe(true);
+    expect(cited.sources.some((source) => source.printedPage === 16 && /plain black, white, or gray t-shirt/i.test(source.excerpt))).toBe(true);
+    expect(cited.sources.some((source) => source.printedPage === 17)).toBe(true);
     for (const source of cited.sources) {
-      if (source.printedPage !== 17) continue;
-      expect(`${source.locator}\n${source.excerpt}`).toMatch(/Instructors ONLY|uniform shirts|Crunch Fitness/);
-      expect(source.excerpt).not.toMatch(/never to be worn|Sun Tan City/);
+      const body = `${source.locator}\n${source.excerpt}`;
+      const crunchShirtsOrPants =
+        /Instructors ONLY|Two uniform shirts/i.test(body) ||
+        (/Shirts|Pants/.test(source.locator) && /Crunch Fitness/i.test(body));
+      if (!crunchShirtsOrPants) continue;
+      expect(source.printedPage).toBe(16);
     }
+    const crunchSentence = cited.text.split(/(?<=[.!?])\s+/).find((sentence) => /instructors only/i.test(sentence));
+    expect(crunchSentence).toMatch(/\[p\.16\]/);
+    expect(crunchSentence).not.toMatch(/\[p\.17\]/);
     expect(cited.sources.map((source) => source.locator).join("\n")).not.toMatch(/Full manual|Page 1\b|p\.1/);
     expect(cited.text).not.toContain("[S");
+  });
+
+  it("keeps the sentence when a sub-heading is the citation label", () => {
+    const sentence = "Tattoos — large, inappropriate, or offensive tattoos must be covered";
+    const label = "Tattoos, JBA Policy Manual p.16";
+    const answer = `${sentence} (${label}).`;
+    const plan = planFullManualContext({ question: DRESS_CODE_QUESTION, documents });
+    const cited = citePolicyAnswer(answer, plan);
+    const marked = validateManualCitations(cited.text, { shownMarkers: [], index: plan.index });
+    for (const text of [cited.text, marked]) {
+      expect(text).toContain(sentence);
+      expect(text).toContain(label);
+      expect(text).not.toContain("Tattoos — large,Tattoos, JBA Policy Manual p.16)");
+    }
+    const tattoos = cited.sources.find((source) => /Tattoos/.test(source.locator));
+    expect(tattoos?.locator).toBe("Page 16 — Tattoos");
+    expect(tattoos?.excerpt).toContain("inappropriate, or offensive tattoos must be covered");
+    expect(tattoos?.printedPage).toBe(16);
   });
 
   it("conv_mvmkj5v72w5x3l5 cites p.19, and [S9] is not left without a source", () => {
