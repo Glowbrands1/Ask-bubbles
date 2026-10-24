@@ -6,6 +6,18 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: a policy quote is not the manager's payroll answer
+
+`INTENT_PAYROLL_MANAGER_ONLY_ENABLED` is new and stays off. With it on,
+the intent read takes the payroll amount and the Yes/No from the manager's
+turns only. In conv_mvmf4x1i2qxha7u the manager said "verbal, no payroll",
+but the saved state had payroll amount 25 and Yes. The $25 came from the
+assistant quoting the Late Opening policy. "no payroll" now saves No with
+no amount, and a figure the manager typed is still kept.
+
+**Sibling app: ported in the same session.** Ask Sunny's `intent-slots.ts`
+has the same `mergeSlots` rule; the mechanism is ported there under the same
+flag name. No store names or policy wording were copied.
 ## 24 Oct 2026: a manual citation only marks a page the sentence restates
 
 `FULL_MANUAL_CONTEXT_ENABLED` stays off. On, `citePolicyAnswer` reads the
