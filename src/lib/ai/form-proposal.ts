@@ -9,6 +9,7 @@ import {
   employeeState,
   extractEmployeeNames,
   managerContext,
+  readEmployeeMentions,
   resolveEmployee,
   type ManagerContext,
 } from "@/lib/forms/proposal";
@@ -963,6 +964,16 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   /* The form's date from this form's turns, too. */
   if (!changeKind && !isExitForm(match)) {
     proposal.formDate = extractFormDate(scoped.text, input.today ?? businessToday());
+  }
+  /*
+   * The exit form's own Date stays the day it is completed while the flag is
+   * off. On, the card's date slot is the last day the manager stated, then
+   * the notice, so a date they already gave is not left blank.
+   */
+  if (antiLoopEnabled() && isExitForm(match)) {
+    const exitFacts = readExitFacts(scoped.text, input.today ?? businessToday());
+    proposal.formDate =
+      exitFacts.lastDayWorked ?? exitFacts.noticeFulfilled ?? exitFacts.noticeGiven ?? exitFacts.resignationDate ?? null;
   }
   const excerpts = {
     ...scoped.excerpts,
@@ -2210,9 +2221,15 @@ function turnsAboutThisForm(
     const otherForm =
       (intent.kind === "explicit" && intent.templateKey !== templateKey && !aboutThisForm) ||
       (intent.kind === "corrective_action" && !thisForm && !aboutThisForm);
-    const names = extractEmployeeNames(message.content);
-    // A turn that also names somebody else is about them too, and stays off this form.
-    const otherPerson = names.length > 0 && !names.every(same);
+    const reading = readEmployeeMentions(message.content);
+    const names = reading.names;
+    /*
+     * A person named only inside the account ("new hire Sam Lee") is not a
+     * second employee. Cutting that turn dropped the offense and its date.
+     * A name given on purpose still starts a different form's turns.
+     */
+    const otherPerson =
+      names.length > 0 && !names.every(same) && !(antiLoopEnabled() && !reading.explicit);
     const forThisEmployee = thisForm && employeeName !== null && names.length > 0 && !otherPerson;
     if (index < last && (otherForm || otherPerson)) {
       start = index + 1;

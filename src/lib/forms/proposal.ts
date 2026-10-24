@@ -6,7 +6,7 @@ import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
-import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { companyNameStops } from "./name-stops";
 import { isTypedStopSpan, isTypedStopWord, NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, lowercaseMonths } from "./name-words";
 import { keepTypedPerson } from "./typed-name";
@@ -1018,7 +1018,28 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
     if (candidate && !opensWithRosterState(candidate) && !isPlaceReply(candidate)) strong.push(candidate);
   }
 
+  /*
+   * "dana moss, team member at bellevue". The name is the words before the
+   * comma and the job title is what makes them a person. A comma alone is not
+   * enough — "sorry, the store is Bellevue" has no title after it.
+   */
+  if (typedNameEnabled()) strong.push(...nameBeforeTitle(text));
+
   return settle(strong, found, text, subjects);
+}
+
+/** "<name>, <job title> …" — the person, when this company's titles say so. */
+function nameBeforeTitle(text: string): string[] {
+  const names: string[] = [];
+  for (const sentence of text.split(/(?<=[.!?])\s+|\n+/)) {
+    const match = /^\s*(\S+(?:\s+\S+)?)\s*,\s+(\S.*)$/.exec(sentence.trim());
+    if (!match) continue;
+    const candidate = readTypedName(match[1]!.split(/\s+/), true);
+    if (!candidate || !typedNameAllowed(candidate) || opensWithRosterState(candidate) || isPlaceReply(candidate)) continue;
+    if (extractJobTitle(match[2]!) === null) continue;
+    names.push(candidate);
+  }
+  return names;
 }
 
 /**
@@ -1350,8 +1371,14 @@ function settle(strong: string[], weak: string[], text: string, subjects: readon
   const names = distinctNames([...given, ...narrative]).filter(
     (name) => !negated.some((not) => samePerson(not, name)),
   );
-  const explicit =
-    names.length > 0 && (correction || names.some((name) => given.some((named) => samePerson(named, name))));
+  /*
+   * A narrative name stays narrative. "not acknowledged" is not a correction
+   * to the employee, and the person in the account ("new hire Sam Lee") must
+   * not replace the person the form is for. A name given on purpose — a
+   * label, the form's subject, or the answer in a real correction — still does.
+   */
+  const namedOnPurpose = names.some((name) => given.some((named) => samePerson(named, name)));
+  const explicit = names.length > 0 && (antiLoopEnabled() ? namedOnPurpose : correction || namedOnPurpose);
   return { names, explicit, negated };
 }
 

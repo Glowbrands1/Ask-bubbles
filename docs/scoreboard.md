@@ -115,3 +115,57 @@ and the case under 8000ms.
 The one case that asked which store after the name was dropped, s11, keeps
 casey quinn. A city from this company's store list, followed by a job title,
 is not the employee.
+
+## Round 1 — name, date slot, and store — 24 Oct 2026
+
+Compared with the guide v3 NEW column above. Same 18 cases, same wording,
+3 runs, local harness only (in-memory database, model not called). The
+preview deployment was not used: it shares the production database.
+
+Flag set for this replay, assigned explicitly:
+
+| Variable | Value |
+| --- | --- |
+| `TYPED_NAME_ENABLED` | `1` |
+| `ACTION_PLAN_SENTENCES_ENABLED` | `1` |
+| `PRINTED_PAGE_ONLY_ENABLED` | `1` |
+| `POLICY_CITATION_ENABLED` | `1` |
+| `PAYROLL_DEDUCT_AMOUNT_ENABLED` | `1` |
+| `ANTI_LOOP_ENABLED` | `1` |
+| `SELF_CHECK_ENABLED` | `false` |
+
+`false` is off. Self-check does not run. No other chat-quality flag was set.
+
+Targeted cases: s5, s8, s9, s11, s12, s16, s17, s21, s27.
+
+| Case | Before | Round 1 | |
+| --- | --- | --- | --- |
+| b9 | FAIL. Page missing. | FAIL. Same page miss. Name, date, blank store kept. | same |
+| b10 | FAIL. Page missing. | FAIL. Same page miss. | same |
+| b11 | FAIL. Page missing. | FAIL. Same page miss. | same |
+| b12 | FAIL. Page missing. | FAIL. Same page miss. Blank store kept. | same |
+| s4 | FAIL. Payroll line and page. | FAIL. Same two misses. | same |
+| s9 | FAIL. Date 2026-09-01. Page missing. | FAIL. Date is 2026-09-28. Page still missing. | fixed date |
+| s11 | FAIL. Store blank. Page missing. | FAIL. Store is Bellevue loc-67. Page still missing. | fixed store |
+| s5 | FAIL. Name dana. No date. | PASS. dana moss, 2026-10-24, Bellevue. | fixed |
+| s27 | FAIL. Employee Sam Lee. No date. Page missing. | FAIL. Pat Rivera, 2026-10-16. Page still missing. | fixed name and date |
+| s28 | FAIL. Page missing. | FAIL. Same page miss. Pat Rivera and 2026-09-28 kept. | same |
+| s29 | PASS. | PASS. | same |
+| s17 | FAIL. No date. | PASS. 2026-10-24. | fixed |
+| s20 | PASS. | PASS. | same |
+| s21 | FAIL. Store blank. | PASS. Primary store Sioux Falls W 41st loc-225. | fixed |
+| s25 | PASS. | PASS. | same |
+| s8 | FAIL. No name. Asks who. No date. | PASS. morgan blake, 2026-09-20, Lee's Summit. | fixed |
+| s12 | FAIL. No date. | PASS. 2026-09-28. | fixed |
+| s16 | FAIL. No date. | PASS. 2026-10-09. | fixed |
+
+6 cases that were failing now pass (s5, s8, s12, s16, s17, s21). s9, s11,
+and s27 each lost a failing rule and gained none. s20, s25, and s29 still
+pass. No case gained a miss. No reply leaked repair text. The slowest case
+is 149ms against a previous max of 150ms. Every case stays within 25% of
+its previous max (the largest move is b11, 10ms to 12ms). Policy pages and
+the s4 payroll amount line are unchanged and were not this round.
+
+Replayed again on `3d3f3fd` with the flag values in the table above,
+`SELF_CHECK_ENABLED=false`. Same pass and fail on every case. No new miss.
+Slowest case 150ms. Largest move against the round above is b10, 78ms to 80ms.

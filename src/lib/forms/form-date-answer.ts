@@ -1,4 +1,4 @@
-import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 
 import { JOIN } from "./bounded-context";
 
@@ -331,6 +331,19 @@ function labelledSteps(text: string, dates: readonly DateInText[]): Map<number, 
   return found;
 }
 
+/**
+ * A step named with the noun first. "verbal ca was given on 9-1-26" and
+ * "Focus Item Coaching 9/15/2026" are history. The verb-first reader never
+ * sees them, because the date sits after the noun.
+ */
+function statedEarlierStep(before: string): boolean {
+  if (!antiLoopEnabled()) return false;
+  return (
+    /\bcoaching\s+$/i.test(before) ||
+    /\b(?:verbal|written|final)\s+(?:ca|c\/a|corrective actions?|warnings?)\s+was\s+(?:given|issued)\s+on\s*$/i.test(before)
+  );
+}
+
 function isOtherDate(text: string, found: DateInText, labelled: ReadonlyMap<number, LabelledStep>): boolean {
   const before = text.slice(0, found.index);
   return (
@@ -339,6 +352,7 @@ function isOtherDate(text: string, found: DateInText, labelled: ReadonlyMap<numb
     OWNED_STEP_BEFORE.test(before) ||
     DID_STEP_BEFORE.test(before) ||
     talkedStep(before) ||
+    statedEarlierStep(before) ||
     labelled.has(found.index)
   );
 }
@@ -465,6 +479,9 @@ function stepsAsWritten(
         named: labelled.named,
         ...(labelled.topic ? { topic: labelled.topic } : withAbout),
       }];
+    }
+    if (statedEarlierStep(before) && found.iso <= today) {
+      return [{ iso: found.iso, named: before.slice(Math.max(0, before.length - 80)), ...withAbout }];
     }
     const match = PRIOR_STEP_BEFORE.exec(before);
     // "she was late, give her a written warning on 10/2": the cue was the incident's, the warning is this form's.

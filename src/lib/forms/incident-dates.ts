@@ -1,3 +1,5 @@
+import { antiLoopEnabled } from "@/lib/config/chat-quality-flags";
+
 import { explicitFormDate, heldCoachingDates, listFormDates, listIncidentDates } from "./form-date-answer";
 
 /**
@@ -195,11 +197,19 @@ export function decideFormDate(input: {
     if (held.length === 1) return { formDate: held[0]! };
     if (held.length > 1) dates = held;
   }
+  if (antiLoopEnabled() && dates.length === 0 && /\btoday(?:'?s|s)?(?:\s+date)?\b/i.test(input.text)) {
+    return { formDate: input.today };
+  }
   if (dates.length <= 1) return {};
   if (input.correctedTo && dates.includes(input.correctedTo)) return { formDate: input.correctedTo };
 
   const choice = dateAnsweredIn(input.conversation, dates, input.today);
   if (choice) return { formDate: choice.kind === "date" ? choice.iso : null };
+  /*
+   * Several dates are not a question. The card keeps the latest one the
+   * manager stated. The others stay in the account.
+   */
+  if (antiLoopEnabled()) return { formDate: dates[dates.length - 1]! };
   return {
     formDate: null,
     candidates: dates,
