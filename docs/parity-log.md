@@ -555,3 +555,12 @@ reader. The effect recorded in `docs/scoreboard.md` is this app's block:
 password-reset help, and Google Reviews only for a role with
 `view_reports`. No Ask Sunny change. No Buff City store list was copied
 there, and no salon list was copied here.
+
+## 24 Oct 2026: stream only when a flag is on
+
+The main answer call streams only when `CHAT_TRACE_ENABLED` or
+`PROMPT_CACHE_ENABLED` is on. With both off it uses `messages.create`,
+including when the live client has `messages.stream`. Ask Sunny is not
+updated in this session. Its answer path is still a separate `call-claude`,
+and this change stays on Ask Bubbles PR 90. No salon wording was copied.
+

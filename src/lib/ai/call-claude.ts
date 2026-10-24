@@ -3,7 +3,7 @@ import "server-only";
 import type { TextBlockParam } from "@anthropic-ai/sdk/resources/messages";
 
 import { ACTIVE_BRAND } from "@/lib/brand";
-import { promptCacheEnabled } from "@/lib/config/chat-quality-flags";
+import { chatTraceEnabled, promptCacheEnabled } from "@/lib/config/chat-quality-flags";
 import { CLAUDE_EFFORT, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
 
@@ -207,9 +207,13 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
             },
           ],
         };
-        // A test double that only implements create keeps that path. The live
-        // client streams, so the trace can store the wait until the first text.
-        if (typeof client.messages.stream !== "function") {
+        // The live client always has messages.stream. Streaming with the
+        // flags off would change production on merge, so stream only when a
+        // flag that reads the stream is on. A double with no stream stays
+        // on create either way, and firstTokenMs stays null on create.
+        const useStream =
+          (chatTraceEnabled() || promptCacheEnabled()) && typeof client.messages.stream === "function";
+        if (!useStream) {
           const created = await client.messages.create(params);
           return Object.assign(created, { firstTokenMs: null as number | null });
         }

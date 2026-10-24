@@ -400,9 +400,10 @@ When it runs, it warms the cache once, then measures three calls. The first
 measured call is included. It streams each opening turn of b9, b10, b11, and
 b12 (`claude-sonnet-5`, adaptive thinking, the same effort as `callClaude`).
 
-`callClaude` streams when the client provides `messages.stream`, and the
-trace stores that wait on `first_token_ms`. A test double that only
-implements `messages.create` keeps the create path, and `first_token_ms`
+`callClaude` streams only when `CHAT_TRACE_ENABLED` or
+`PROMPT_CACHE_ENABLED` is on and the client provides `messages.stream`.
+The trace stores that wait on `first_token_ms`. With both flags off the
+call uses `messages.create` even if `stream` exists, and `first_token_ms`
 stays null. `chat_traces.latency_ms` is still the full reply. The cache
 token columns are the response usage fields, not a character estimate.
 
