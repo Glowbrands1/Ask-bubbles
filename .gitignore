@@ -65,3 +65,6 @@ next-env.d.ts
 # browser tests (Playwright) — reports, traces and captures; baselines live in e2e/__screenshots__
 /test-results
 /playwright-report
+
+# A local roster export for no-real-people.test.ts. Real names; never commit it.
+/.real-people-roster.txt

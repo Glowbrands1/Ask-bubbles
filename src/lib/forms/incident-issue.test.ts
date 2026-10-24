@@ -19,7 +19,7 @@ const B10 =
 const B9 =
   "create a written corrective action for Team Member, Test Employee. Test was assigned to complete policy acknowledgements in woven by 10-15-26 and failed to meet the deadline. Previous coaching was a Verbal CA 10-1-26. Payroll deduct is not applicable.";
 const B12 =
-  "do verbal for team member sadie hoffart at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 sadie was not scheduled to work and came into the store to show her team her new puppy. Sadie was in the store 45 min";
+  "do verbal for team member odette brannock at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 odette was not scheduled to work and came into the store to show her team her new puppy. Odette was in the store 45 min";
 
 describe("correctiveActionIssue keeps the for-clause when a typed name is not in force", () => {
   it("reads cash handling, and a person with no offense as nothing", () => {
@@ -54,7 +54,7 @@ describe("correctiveActionIssue reads the offense when a typed name is kept", ()
 
   it("keeps the puppy account and the 45 minutes, not the payroll line", () => {
     process.env.TYPED_NAME_ENABLED = "1";
-    const issue = correctiveActionIssue(B12, "Sadie Hoffart");
+    const issue = correctiveActionIssue(B12, "Odette Brannock");
     expect(issue).toMatch(/puppy/i);
     expect(issue).toMatch(/45/);
     expect(issue).not.toMatch(/payroll/i);

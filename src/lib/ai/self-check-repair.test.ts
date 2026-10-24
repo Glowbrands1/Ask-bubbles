@@ -24,10 +24,10 @@ import type { RosterEmployee } from "@/lib/forms/employee-match";
 
 import { applySelfCheck } from "./self-check-repair";
 
-const MARISSA: RosterEmployee = {
-  id: "emp-marissa",
-  firstName: "Marissa",
-  lastName: "Lempka",
+const LARISSA: RosterEmployee = {
+  id: "emp-larissa",
+  firstName: "Larissa",
+  lastName: "Venko",
   locationIds: ["loc-66"],
 };
 
@@ -56,7 +56,7 @@ describe("applySelfCheck keeps a typed name", () => {
     const result = await applySelfCheck({
       answer,
       chunks: [],
-      loadRoster: async () => [MARISSA],
+      loadRoster: async () => [LARISSA],
     });
     expect(result).toBe(answer);
     expect(state.calls).toBe(0);
@@ -74,7 +74,7 @@ describe("applySelfCheck keeps a typed name", () => {
       const result = await applySelfCheck({
         answer: NAMED,
         chunks: [ATTENDANCE],
-        loadRoster: async () => [MARISSA],
+        loadRoster: async () => [LARISSA],
       });
       expect(result).toBe(NAMED);
       expect(result).not.toMatch(/couldn't find|not verified/i);
@@ -88,7 +88,7 @@ describe("applySelfCheck keeps a typed name", () => {
     const result = await applySelfCheck({
       answer: NAMED,
       chunks: [ATTENDANCE],
-      loadRoster: async () => [MARISSA],
+      loadRoster: async () => [LARISSA],
     });
     expect(result).toBe(state.repair);
     expect(result).toContain("Casey Quinn");
@@ -99,7 +99,7 @@ describe("applySelfCheck keeps a typed name", () => {
     const result = await applySelfCheck({
       answer: NAMED,
       chunks: [ATTENDANCE],
-      loadRoster: async () => [MARISSA],
+      loadRoster: async () => [LARISSA],
     });
     expect(result).toBe(NAMED);
     expect(state.calls).toBe(0);

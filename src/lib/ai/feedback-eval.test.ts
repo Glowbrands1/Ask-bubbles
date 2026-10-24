@@ -21,7 +21,7 @@ describe("1–4 star ratings become redacted replay cases", () => {
         {
           rating: 2,
           question:
-            "Marissa Lempka at Kearney, NE showed up late. Reach me at marissa.lempka@example.com or 402-555-0100. Ref 11111111-1111-4111-8111-111111111111.",
+            "Larissa Venko at Kearney, NE showed up late. Reach me at larissa.venko@example.com or 402-555-0100. Ref 11111111-1111-4111-8111-111111111111.",
           comment: "The attendance answer missed the page.",
         },
         { rating: 5, question: "What does attendance say about being on time?", comment: "Clear." },
@@ -31,8 +31,8 @@ describe("1–4 star ratings become redacted replay cases", () => {
     );
     expect(cases).toHaveLength(2);
     expect(cases[0]?.rating).toBe(2);
-    expect(cases[0]?.question).not.toContain("Marissa");
-    expect(cases[0]?.question).not.toContain("Lempka");
+    expect(cases[0]?.question).not.toContain("Larissa");
+    expect(cases[0]?.question).not.toContain("Venko");
     expect(cases[0]?.question).not.toContain("Kearney");
     expect(cases[0]?.question).not.toContain("example.com");
     expect(cases[0]?.question).not.toContain("402");
@@ -52,7 +52,7 @@ describe("1–4 star ratings become redacted replay cases", () => {
       rows: [
         {
           rating: 3,
-          question: "Corrective action for Marissa Lempka at Kearney, NE",
+          question: "Corrective action for Larissa Venko at Kearney, NE",
           comment: "Asked me for the name again.",
         },
       ],
@@ -64,7 +64,7 @@ describe("1–4 star ratings become redacted replay cases", () => {
     expect(result.status).toBe(0);
     const cases = JSON.parse(result.stdout);
     expect(cases).toEqual(replayCasesFromFeedback(input.rows, input.places));
-    expect(result.stdout).not.toContain("Marissa");
+    expect(result.stdout).not.toContain("Larissa");
     expect(result.stdout).not.toContain("Kearney");
   });
 });
@@ -108,10 +108,10 @@ describe("FEWSHOT_EXAMPLES_ENABLED", () => {
   it("redacts a name inside a highly rated question", () => {
     const block = formatFewShot(
       "attendance for a late arrival",
-      [{ rating: 5, question: "Attendance for Marissa Lempka at Kearney, NE who was late", comment: null }],
+      [{ rating: 5, question: "Attendance for Larissa Venko at Kearney, NE who was late", comment: null }],
       PLACES,
     );
-    expect(block).not.toContain("Marissa");
+    expect(block).not.toContain("Larissa");
     expect(block).not.toContain("Kearney");
     expect(block).toContain("the employee");
     expect(block).toContain("the store");

@@ -178,7 +178,7 @@ describe("a labelled earlier step is history, wherever its date sits", () => {
 
   it("a later turn that restates the manual date replaces the earlier one", () => {
     const first =
-      "previous coaching jba manual 11-1-26. on 10-22-26 sadie was not scheduled to work and came into the store to show her team her new puppy";
+      "previous coaching jba manual 11-1-26. on 10-22-26 odette was not scheduled to work and came into the store to show her team her new puppy";
     const notes = `${first}\n\njba manual 11-1-25`;
     delete process.env.TYPED_NAME_ENABLED;
     expect(priorSteps(notes, "2026-10-24").map((step) => step.iso)).toContain("2026-11-01");

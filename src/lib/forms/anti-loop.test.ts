@@ -29,7 +29,7 @@ function card(over: Partial<ChatFormProposal> = {}): ChatFormProposal {
     templateName: "Corrective Action Form",
     supportsInlineDraft: false,
     variantKey: null,
-    employeeName: "Sadie Hoffart",
+    employeeName: "Odette Brannock",
     employeeRole: "Team Member",
     locationId: null,
     locationName: null,
@@ -57,7 +57,7 @@ function person(id: string, first: string, last: string): GroundedPerson {
 describe("anti-loop name, store, date, and harness", () => {
   it("keeps a real name and strips stores, labels, and promos", () => {
     expect(stripNonNameTokens("Test Employee")).toBe("Test Employee");
-    expect(stripNonNameTokens("Sadie Hoffart")).toBe("Sadie Hoffart");
+    expect(stripNonNameTokens("Odette Brannock")).toBe("Odette Brannock");
     expect(stripNonNameTokens("Testy Testerson Dodge promo")).toBe("Testy Testerson");
     expect(stripNonNameTokens("location payroll policy")).toBeNull();
     expect(stripNonNameTokens("Job Title")).toBeNull();
@@ -72,8 +72,8 @@ describe("anti-loop name, store, date, and harness", () => {
     expect(stripNonNameTokens("Store Director")).toBe("Store Director");
     expect(stripNonNameTokens("Jane Store")).toBe("Jane Store");
     expect(stripNonNameTokens("Jane Salon")).toBe("Jane Salon");
-    expect(stripNonNameTokens("Christiana Headley Title")).toBe("Christiana Headley");
-    expect(stripNonNameTokens("Christiana Headley Job")).toBe("Christiana Headley");
+    expect(stripNonNameTokens("Evangeline Pembury Title")).toBe("Evangeline Pembury");
+    expect(stripNonNameTokens("Evangeline Pembury Job")).toBe("Evangeline Pembury");
   });
 
   it("ignores a model employee only when the flag is on", () => {
@@ -158,12 +158,12 @@ describe("anti-loop name, store, date, and harness", () => {
   });
 
   it("keeps a stored incident until the manager describes a new one", () => {
-    const opening = "on 10-22-26 sadie was not scheduled and came in to show her puppy";
+    const opening = "on 10-22-26 odette was not scheduled and came in to show her puppy";
     process.env.ANTI_LOOP_ENABLED = "1";
     const prior = captureFormState(null, {
       proposal: card(),
       employeeId: null,
-      keptTypedName: "Sadie Hoffart",
+      keptTypedName: "Odette Brannock",
       userText: opening,
       policyHeading: null,
       policyPage: null,
@@ -171,7 +171,7 @@ describe("anti-loop name, store, date, and harness", () => {
     const held = captureFormState(prior, {
       proposal: card(),
       employeeId: null,
-      keptTypedName: "Sadie Hoffart",
+      keptTypedName: "Odette Brannock",
       userText: "jba manual 11-1-25",
       policyHeading: null,
       policyPage: null,
@@ -181,7 +181,7 @@ describe("anti-loop name, store, date, and harness", () => {
     const changed = captureFormState(held, {
       proposal: card(),
       employeeId: null,
-      keptTypedName: "Sadie Hoffart",
+      keptTypedName: "Odette Brannock",
       userText: "she was late for her shift",
       policyHeading: null,
       policyPage: null,
@@ -192,7 +192,7 @@ describe("anti-loop name, store, date, and harness", () => {
     const replaced = captureFormState(prior, {
       proposal: card(),
       employeeId: null,
-      keptTypedName: "Sadie Hoffart",
+      keptTypedName: "Odette Brannock",
       userText: "jba manual 11-1-25",
       policyHeading: null,
       policyPage: null,

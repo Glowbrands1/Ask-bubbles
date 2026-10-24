@@ -341,9 +341,9 @@ describe("priority replay b9–b12, flags on, word for word", () => {
     finish("b11", snaps, misses);
   });
 
-  it("b12 verbal CA for Sadie Hoffart, animals, Empire SD", async () => {
+  it("b12 verbal CA for Odette Brannock, animals, Empire SD", async () => {
     const snaps = await replay([
-      "do verbal for team member sadie hoffart at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 sadie was not scheduled to work and came into the store to show her team her new puppy. Sadie was in the store 45 min",
+      "do verbal for team member odette brannock at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 odette was not scheduled to work and came into the store to show her team her new puppy. Odette was in the store 45 min",
       "jba manual 11-1-25",
       "cite pets in workplace",
       "cite animals in the workplace policy",
@@ -359,7 +359,7 @@ describe("priority replay b9–b12, flags on, word for word", () => {
     }
     const first = card(snaps, 1);
     if (first?.templateKey !== "dpoa") misses.push({ check: "verbal CA card", detail: first?.templateKey ?? "none" });
-    if (!/sadie hoffart/i.test(first?.employeeName ?? "")) misses.push({ check: "name", detail: first?.employeeName ?? "none" });
+    if (!/odette brannock/i.test(first?.employeeName ?? "")) misses.push({ check: "name", detail: first?.employeeName ?? "none" });
     if (first?.warningLevel !== "verbal") misses.push({ check: "verbal", detail: first?.warningLevel ?? "none" });
     if (first?.payrollDeduct !== "no") misses.push({ check: "payroll N/A", detail: String(first?.payrollDeduct) });
     if (first?.formDate !== "2026-10-22") misses.push({ check: "date 10-22-26", detail: first?.formDate ?? "none" });

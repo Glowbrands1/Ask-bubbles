@@ -333,7 +333,7 @@ export function stripTrailingJobOrTitle(name: string): string | null {
 
 /**
  * The person written after "Name:". The label stays a label. "Name:
- * Christiana Headley, job title tanning consultant" is Christiana Headley.
+ * Evangeline Pembury, job title tanning consultant" is Evangeline Pembury.
  */
 export function nameAfterNameLabel(text: string): string | null {
   const match = /(?:^|\n)\s*name\s*:\s*([^\n]+)/i.exec(text.trim());
