@@ -6,6 +6,18 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: a chunk can open on the previous sheet
+
+`FULL_MANUAL_CONTEXT_ENABLED` stays off. On, chunk 50 is stored as printed
+page 17 and opens with Buff City Soap's shirt and pants lines. Those lines
+stay on page 16. The text after "Sun Tan City:" is page 17. Chunk 62 is
+stored as page 19 and holds Company Email and the POS/alarm password text,
+which is page 20. A cell-phone answer takes no marker from that chunk.
+
+**Sibling app: not ported.** Ask Sunny's assembler does not share this
+chunk walk. Its `main` was not changed here. No Buff City Soap policy text
+was copied.
+
 ## 24 Oct 2026: a stored printed page is not shifted when the chunk has no footer
 
 `FULL_MANUAL_CONTEXT_ENABLED` stays off. On, a chunk with no footer is cited

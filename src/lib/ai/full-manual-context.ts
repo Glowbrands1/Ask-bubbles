@@ -206,6 +206,11 @@ function recordedSectionPages(chunk: FullManualChunk): number[] {
  * Hair is 15, Jewelry and Crunch shirts are 16, and the cell-phone policy
  * is 19. A heading recorded on the PDF sheet does not move that text.
  *
+ * A section page later than the stored number, and not equal to the PDF
+ * sheet, is the sheet this chunk's text is printed on. Chunk 62 is stored
+ * as 19 and its password heading is recorded on 20, so the email and
+ * password text is page 20.
+ *
  * The footer ("15 | P a g e") wins when the chunk still has one, unless
  * that footer repeats the PDF sheet and the headings all record a different
  * page. A locator that repeats `chunk.page` is the PDF sheet and is not used.
@@ -214,8 +219,19 @@ export function resolvePrintedPage(chunk: FullManualChunk): number | null {
   const footer = footerPrintedPage(chunk.content);
   const stored = positivePage(chunk.printedPage);
   const pdf = positivePage(chunk.page);
-  if (!footer && stored) return stored;
   const recorded = recordedSectionPages(chunk);
+  if (!footer && stored) {
+    /*
+     * Chunk 62 records Company Email on the stored page and the password
+     * heading on the next printed page. That later page is the sheet the
+     * chunk's text is printed on. A heading recorded only on stored+1, with
+     * no heading left on the stored page, is the PDF sheet (Hair's section
+     * page 16 while the chunk is stored as 15) and is not used.
+     */
+    const later = recorded.filter((page) => page > stored && page !== pdf);
+    if (recorded.includes(stored) && later.length > 0) return Math.max(...later);
+    return stored;
+  }
   const footerIsPdf = footer !== null && pdf !== null && footer === pdf;
   if (footer && recorded.length === 1 && recorded[0] !== footer && footerIsPdf) {
     return recorded[0]!;
@@ -242,6 +258,19 @@ function recordedHeadingPage(chunk: FullManualChunk, heading: string): number | 
 function skipContentsPage(chunk: FullManualChunk, page: number | null): boolean {
   if (isTableOfContents(chunk.content)) return true;
   return page !== null && JBA_CONTENTS_PRINTED_PAGES.has(page);
+}
+
+const CONTINUATION_SUBHEADING = /^(?:shirts|pants|tanning)$/i;
+
+/** A bullet or a wrapped line, not a heading that opens the chunk's own page. */
+function opensAsContinuation(body: string, known: readonly string[]): boolean {
+  const first = body
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.length > 0);
+  if (!first) return false;
+  if (/^o\s/i.test(first)) return true;
+  return headingOf(first, known) === null;
 }
 
 function trimOverlap(previous: string, next: string): string {
@@ -400,7 +429,23 @@ export function rebuildManualText(
     if (skipContentsPage(chunk, page)) continue;
     const body = trimOverlap(previous, readings[position] ?? "");
     if (!body) continue;
-    if (page) moveTo(page);
+    const stored = positivePage(chunk.printedPage);
+    /*
+     * Chunk 50 is stored as page 17 and opens with Buff City Soap's shirt
+     * and pants lines, which are still page 16. Those lines stay on the
+     * previous page until a heading other than Shirts, Pants, or Tanning.
+     * The next brand heading is that point, and it is page 17.
+     */
+    const deferStoredPage =
+      page !== null &&
+      stored !== null &&
+      page === stored &&
+      currentPage !== null &&
+      stored > currentPage &&
+      footerPrintedPage(chunk.content) === null &&
+      opensAsContinuation(body, chunk.headings ?? []);
+    if (page && !deferStoredPage) moveTo(page);
+    let deferred = deferStoredPage;
     if (!page && !currentPage) {
       blocks.push(body);
       previous = body;
@@ -422,6 +467,10 @@ export function rebuildManualText(
       for (const line of pieces) {
         const heading = headingOf(line, chunk.headings ?? []);
         if (!heading) continue;
+        if (deferred && stored !== null && !CONTINUATION_SUBHEADING.test(heading)) {
+          moveTo(stored);
+          deferred = false;
+        }
         const recorded = recordedHeadingPage(chunk, heading);
         if (recorded && !storedPageStays) moveTo(recorded);
       }
