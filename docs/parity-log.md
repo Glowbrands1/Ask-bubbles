@@ -25,6 +25,27 @@ action plan does not repeat the figure. Yes with no amount is asked once.
 shape (`record_form_turn`). It does not have `FORM_FULL_REMAP` yet, and
 that repo was not in this session. No salon wording was copied.
 
+## 24 Oct 2026: the whole current manual in a cached prompt
+
+`FULL_MANUAL_CONTEXT_ENABLED` defaults off. On, a policy question puts the
+current JBA Policy Manual in a cached system block: indexed chunks in
+`chunk_index` order, printed pages as `[p.N]`, headings from the chunk text.
+Retired and superseded documents are left out. The block stays under 120k
+tokens (about four characters a token). Over that, the turn uses ordinary
+retrieval. Cache read and cache creation tokens are logged on the model call.
+
+An unbranded question, including "what's the dress code?", includes every
+brand in that manual. Buff City Soap and Crunch are both in the block. A
+question that names one brand gets that brand's manual plus the company-wide
+sections. After the answer, a page or heading that is not on that page is
+corrected when the heading has one page, or removed. An `[S#]` that is not
+one of the sources shown is removed, so `[S11]` cannot sit beside eight
+sources and `[S10]` or `[S8]` cannot sit beside seven.
+
+Ask Sunny's `main` does not have this flag yet (checked 24 Oct 2026). The
+mechanism is the one both apps should share. This change is not ported in
+this session, and no Buff City Soap policy text is copied into Ask Sunny.
+
 ## 24 Oct 2026: the newest Woven edition is the one that answers
 
 Ported from Ask Sunny branch `cursor/edition-supersession-6d4a`, commit
