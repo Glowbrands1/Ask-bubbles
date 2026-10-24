@@ -1,4 +1,4 @@
-import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { readCaPolicy } from "@/lib/forms/ca-policy";
 import {
@@ -162,7 +162,15 @@ export function applyGroundedProposal(
   let content = response.content;
   const singleClose = typedNameEnabled() ? /^Did you mean \*\*([^*]+)\*\*\?/.exec(content.trim()) : null;
   const typedClose = singleClose ? (/couldn't find \*\*([^*]+)\*\*/.exec(content)?.[1]?.trim() ?? null) : null;
-  if (singleClose) {
+  if (antiLoopEnabled() && /^\s*Did you mean /.test(content)) {
+    const one = /^Did you mean \*\*([^*]+)\*\*\?/.exec(content.trim());
+    content = content
+      .split("\n\n")
+      .filter((block) => !/^\s*Did you mean /.test(block.trim()))
+      .join("\n\n")
+      .trim();
+    if (!content && one && !response.formProposal) content = wovenCloseNote(one[1]!.trim());
+  } else if (singleClose) {
     if (response.formProposal) {
       // The note is rendered under the card. The question does not stay in the reply.
       content = content
@@ -176,7 +184,7 @@ export function applyGroundedProposal(
   } else if (input.prep.ambiguous.length > 1 || content.startsWith("Did you mean **")) {
     content = labelDuplicateQuestion(content, input.people, input.prep.ambiguousTyped);
   }
-  if (!input.rosterEmpty && input.prep.unmatched.length > 0) {
+  if (!antiLoopEnabled() && !input.rosterEmpty && input.prep.unmatched.length > 0) {
     const names = input.prep.unmatched.map((name) => `**${name}**`).join(" or ");
     const sentence = `I couldn't find ${names} in the Woven roster, so that name is not on the form.`;
     if (!content.includes("couldn't find")) content = `${sentence}\n\n${content}`;
@@ -203,6 +211,7 @@ export function applyGroundedProposal(
     if (match.kind === "none" && isStorePhrase(currentName)) {
       proposal = applyStore(clearEmployee(proposal), storeIdForPhrase(currentName));
     } else if (
+      !antiLoopEnabled() &&
       match.kind === "none" &&
       input.prep.unmatched.some((name) => name.toLowerCase() === currentName.toLowerCase())
     ) {
@@ -210,10 +219,12 @@ export function applyGroundedProposal(
     }
   }
 
-  if (typedNameEnabled() && proposal.employeeName && !input.rosterEmpty) {
+  if ((typedNameEnabled() || antiLoopEnabled()) && proposal.employeeName && !input.rosterEmpty) {
     const close = matchEmployeeName(proposal.employeeName, input.people);
     if (close.kind === "unchecked" && close.closeName) {
       proposal = { ...proposal, closeMatchNote: wovenCloseNote(close.closeName) };
+    } else if (antiLoopEnabled() && close.kind === "confirm" && close.candidates.length === 1) {
+      proposal = { ...proposal, closeMatchNote: wovenCloseNote(close.candidates[0]!.name) };
     } else if (proposal.closeMatchNote) {
       const rest = { ...proposal };
       delete rest.closeMatchNote;
@@ -229,7 +240,7 @@ export function applyGroundedProposal(
     const ids = factLocationIds(fact);
     if (ids.length === 1 && (proposal.locationResolution !== "resolved" || !proposal.locationId)) {
       proposal = withLocation(proposal, ids[0]!);
-    } else if (ids.length > 1 && !proposal.locationId && proposal.employeeName) {
+    } else if (!antiLoopEnabled() && ids.length > 1 && !proposal.locationId && proposal.employeeName) {
       proposal = {
         ...proposal,
         locationResolution: "needs_selection",
@@ -276,13 +287,14 @@ function gateMentions(
       continue;
     }
     if (match.kind === "confirm" && match.candidates.length === 1) {
-      if (typedNameEnabled()) continue;
+      if (typedNameEnabled() || antiLoopEnabled()) continue;
       const only = match.candidates[0]!;
       next = replacePhrase(next, name, only.name);
       rosterIds = [only.employee.id];
       continue;
     }
     if (match.kind === "confirm") {
+      if (antiLoopEnabled()) continue;
       ambiguous = match.candidates.map(
         (candidate) => people.find((person) => person.id === candidate.employee.id) ?? asPerson(candidate.employee),
       );
@@ -294,8 +306,9 @@ function gateMentions(
       next = replacePhrase(next, name, embedded);
       const again = matchEmployeeName(embedded, roster);
       if (again.kind === "exact") rosterIds = [again.employee.id];
-      else if (again.kind === "confirm" && again.candidates.length === 1) rosterIds = [again.candidates[0]!.employee.id];
-      else if (again.kind === "confirm") {
+      else if (!antiLoopEnabled() && again.kind === "confirm" && again.candidates.length === 1) {
+        rosterIds = [again.candidates[0]!.employee.id];
+      } else if (!antiLoopEnabled() && again.kind === "confirm") {
         ambiguous = again.candidates.map(
           (candidate) => people.find((person) => person.id === candidate.employee.id) ?? asPerson(candidate.employee),
         );
@@ -304,6 +317,7 @@ function gateMentions(
       continue;
     }
     if (isStorePhrase(name)) continue;
+    if (antiLoopEnabled()) continue;
     next = replacePhrase(next, name, "");
     unmatched.push(name);
   }

@@ -1,0 +1,133 @@
+{
+  "id": "b9-b12-2026-10-24",
+  "note": "Pass criteria written before the anti-loop replay. Judged on the card fields. Visitors is not required. A blank store is not a question.",
+  "temperature": 0,
+  "runsRequired": 3,
+  "latencyBudgetMs": 8000,
+  "runner": "proposeFormForTurn",
+  "configuredModel": "claude-sonnet-5",
+  "modelCalled": false,
+  "blockingPatterns": ["^Did you mean", "which store", "who is this", "which employee"],
+  "leakPatterns": [
+    "Not verified",
+    "validator",
+    "SELF_CHECK",
+    "so that name is not on the form",
+    "I couldn't reach the Woven",
+    "haven't verified"
+  ],
+  "cases": [
+    {
+      "id": "b9",
+      "title": "Test Employee, written CA",
+      "criteria": [
+        "By turn 2 the card employee matches Test Employee, the template is the corrective action, the warning is written, payroll is no, and the form date is 2026-10-15.",
+        "The store is blank on every turn. The reply does not ask which store.",
+        "Turn 3 keeps Test Employee, cites Standards of Conduct and printed page 12, and does not ask who the form is for.",
+        "No blocking question and no leaked internal text on any turn.",
+        "The case finishes in under 8000ms."
+      ],
+      "turns": [
+        "create a written corrective action for Team Member, Test Employee. Test was assigned to complete policy acknowledgements in woven by 10-15-26 and failed to meet the deadline. Previous coaching was a Verbal CA 10-1-26. Payroll deduct is not applicable.",
+        "name is Test Employee",
+        "this is a violation under Standards of Conduct"
+      ],
+      "employee": { "pattern": "test employee", "byTurn": 2, "heldOnTurn": 3 },
+      "templateKey": "dpoa",
+      "warningLevel": "written",
+      "payrollDeduct": "no",
+      "formDate": "2026-10-15",
+      "store": { "kind": "blank" },
+      "policy": { "fromTurn": 3, "heading": "Standards of Conduct", "page": 12 }
+    },
+    {
+      "id": "b10",
+      "title": "Testy Testerson, Dodge, measuring",
+      "criteria": [
+        "Turn 1 employee is Testy Testerson and is never NE. Warning is verbal, payroll is no, the form date is 2026-10-16, and the store is Dodge (loc-264).",
+        "The offense of measuring and weighing is on the card.",
+        "From the cite turn, the card cites Standards of Conduct and printed page 12.",
+        "Turns 4 and 6 show a card. Turn 6 has a two-sentence action plan that starts with Management will review, and that plan is in the reply.",
+        "The reply does not say the incident was missing.",
+        "No blocking question and no leaked internal text.",
+        "The case finishes in under 8000ms."
+      ],
+      "turns": [
+        "create a verbal CA for team member Testy Testerson at Dodge, NE. location. On 10-16-26 Testy was not properly measuring and weighing product. payroll deduct is not applicable",
+        "employee name is Testy Testerson",
+        "cite standards of conduct as policy violated",
+        "show draft",
+        "violation is that on 10-16-26 Testy was not measuring and weighing product",
+        "show draft with edits"
+      ],
+      "employee": { "pattern": "testy testerson", "byTurn": 1, "heldOnTurn": 6 },
+      "neverEmployee": ["^ne$", "jba"],
+      "templateKey": "dpoa",
+      "warningLevel": "verbal",
+      "payrollDeduct": "no",
+      "formDate": "2026-10-16",
+      "store": { "kind": "match", "pattern": "dodge|loc-264" },
+      "offense": "measur[a-z]*[\\s\\S]{0,80}weigh|weigh[a-z]*[\\s\\S]{0,80}measur",
+      "policy": { "fromTurn": 3, "heading": "Standards of Conduct", "page": 12 },
+      "showCardOnTurns": [4, 6],
+      "planOnTurn": { "turn": 6, "sentences": 2, "starts": "Management will review" },
+      "forbid": ["haven't told me what happened"]
+    },
+    {
+      "id": "b11",
+      "title": "Testy Testerson, late, Attendance",
+      "criteria": [
+        "The employee is Testy Testerson, never NE and never JBA Manual. Warning is verbal, payroll is no, the form date is 2026-10-20, and the store is Dodge (loc-264).",
+        "The card cites Attendance and printed page 14.",
+        "The prior coaching date matches 2025-01-01, 01/01/2025, or 1-1-25.",
+        "No blocking question and no leaked internal text.",
+        "The case finishes in under 8000ms."
+      ],
+      "turns": [
+        "write a verbal CA for Team Member, Testy Testerson at Dodge, NE. On 10-20-26 Testy was late for shift and did not call supervisor as outlined in attendance policy. payroll deduct is not applicable. previous coaching is JBA Manual 1-1-25"
+      ],
+      "employee": { "pattern": "testy testerson", "byTurn": 1 },
+      "neverEmployee": ["^ne$", "jba"],
+      "templateKey": "dpoa",
+      "warningLevel": "verbal",
+      "payrollDeduct": "no",
+      "formDate": "2026-10-20",
+      "store": { "kind": "match", "pattern": "dodge|loc-264" },
+      "policy": { "fromTurn": 1, "heading": "Attendance", "page": 14 },
+      "priorOnTurn": { "turn": 1, "pattern": "\\b(?:0?1[-/]0?1[-/](?:25|2025)|2025-01-01|january 1)\\b" },
+      "forbid": ["haven't told me what happened"]
+    },
+    {
+      "id": "b12",
+      "title": "Sadie Hoffart, Empire SD",
+      "criteria": [
+        "The employee is sadie hoffart. Warning is verbal, payroll is no, and the form date is 2026-10-22.",
+        "The role is not Store Director. The store is not workplace policy. 45 minutes stays on the card.",
+        "The store is blank: no location id, Empire is not invented, and the reply does not ask which store.",
+        "Turn 2 prior coaching matches 2025-11-01, 11/01/2025, or 11-1-25.",
+        "From the turn that names Animals in the Workplace, the card cites that heading and printed page 30. Visitors is not required.",
+        "No blocking question and no leaked internal text.",
+        "The case finishes in under 8000ms."
+      ],
+      "turns": [
+        "do verbal for team member sadie hoffart at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 sadie was not scheduled to work and came into the store to show her team her new puppy. Sadie was in the store 45 min",
+        "jba manual 11-1-25",
+        "cite pets in workplace",
+        "cite animals in the workplace policy",
+        "store location is empire, sd. create corrective action"
+      ],
+      "employee": { "pattern": "sadie hoffart", "byTurn": 1, "heldOnTurn": 5 },
+      "templateKey": "dpoa",
+      "warningLevel": "verbal",
+      "payrollDeduct": "no",
+      "formDate": "2026-10-22",
+      "store": { "kind": "blank" },
+      "policy": { "fromTurn": 4, "heading": "Animals in the Workplace", "page": 30 },
+      "priorOnTurn": { "turn": 2, "pattern": "\\b(?:11[-/]0?1[-/](?:25|2025)|2025-11-01|november 1)\\b" },
+      "roleNot": "store director",
+      "locationNot": "workplace policy|empire",
+      "keep": "45",
+      "forbid": ["you (?:said|called|described).{0,40}store director"]
+    }
+  ]
+}

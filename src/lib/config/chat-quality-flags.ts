@@ -210,6 +210,18 @@ export function typedNameEnabled(): boolean {
 }
 
 /**
+ * Replay anti-loop. Off, chat is unchanged. On, a repeated failure is handled
+ * in code: the model does not write the employee, an unmatched name is kept,
+ * slots already stored are not cleared, the store is not a question, there is
+ * no "Did you mean", a close name is the under-card note, roster refusals and
+ * validator text are not shown, dates on the card are ISO, and a policy's
+ * page comes from the manual's printed-page map.
+ */
+export function antiLoopEnabled(): boolean {
+  return envFlag("ANTI_LOOP_ENABLED");
+}
+
+/**
  * A citation is checked against the page the manual prints. Off, the PDF
  * sheet number is still accepted. On, only `printedPage` counts.
  */

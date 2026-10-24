@@ -61,6 +61,7 @@ import {
   slotRetentionEnabled,
   printedPageOnlyEnabled,
   typedNameEnabled,
+  antiLoopEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -724,11 +725,13 @@ async function answerQuestionBody(
         true,
       )
     : prose;
-  const checked = await applySelfCheck({
-    answer: cited,
-    chunks: manualChunks,
-    loadRoster: () => loadRosterQuiet(actor),
-  });
+  const checked = antiLoopEnabled()
+    ? cited
+    : await applySelfCheck({
+        answer: cited,
+        chunks: manualChunks,
+        loadRoster: () => loadRosterQuiet(actor),
+      });
   return {
     content: checked,
     formSelection: suggested?.selection,

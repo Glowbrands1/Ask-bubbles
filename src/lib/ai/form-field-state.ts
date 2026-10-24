@@ -1,4 +1,5 @@
-import { payrollDeductAmountFieldEnabled, priorCoachingOptionalEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, payrollDeductAmountFieldEnabled, priorCoachingOptionalEnabled } from "@/lib/config/chat-quality-flags";
+import { cardEmployeeName, isoCardDate } from "@/lib/forms/anti-loop";
 import { readCorrectiveActionIntake, describesIncident, type IntakeItem } from "@/lib/forms/corrective-action-intake";
 import { extractFormDate } from "@/lib/forms/form-date-answer";
 import { payrollDeductAmount } from "@/lib/forms/payroll-deduct";
@@ -101,8 +102,9 @@ export function fieldsFromManagerText(
   const useToday = date === null && intake.supplied.includes("form_date");
   const store = storeFromText(text);
   const title = extractJobTitle(text) ?? person?.title ?? null;
+  const readName = person?.name ?? null;
   return {
-    employeeName: person?.name ?? null,
+    employeeName: antiLoopEnabled() ? cardEmployeeName(readName, null) : readName,
     employeeId: person?.employeeId ?? null,
     jobTitle: title,
     store: store?.name ?? person?.locationName ?? null,
@@ -115,7 +117,7 @@ export function fieldsFromManagerText(
     policySection: null,
     whatHappened: describesIncident(text) || intake.supplied.includes("what_happened"),
     deadline: null,
-    pendingChoice: grounded?.needsChoice ? grounded.candidates : [],
+    pendingChoice: antiLoopEnabled() ? [] : grounded?.needsChoice ? grounded.candidates : [],
   };
 }
 
@@ -128,7 +130,11 @@ export function corroborateModelFields(
 ): ConfirmedFormFields {
   let employeeName = base.employeeName;
   let employeeId = base.employeeId;
-  if (!employeeName && model.employeeName && appears(text, model.employeeName)) {
+  if (antiLoopEnabled()) {
+    const stripped = cardEmployeeName(base.employeeName, null);
+    if (stripped !== base.employeeName) employeeId = null;
+    employeeName = stripped;
+  } else if (!employeeName && model.employeeName && appears(text, model.employeeName)) {
     const grounded = groundEmployee(model.employeeName, roster);
     if (grounded && !grounded.needsChoice && grounded.name) {
       employeeName = grounded.name;
@@ -179,6 +185,8 @@ export function corroborateModelFields(
     const wanted = model.payrollAmount.replace(/\s+/g, "");
     if (stated.includes(wanted)) payrollAmount = wanted;
   }
+
+  if (antiLoopEnabled()) incidentDateIso = isoCardDate(incidentDateIso);
 
   const deadline = model.deadline && appears(text, model.deadline) ? asWritten(text, model.deadline) : null;
 
@@ -252,7 +260,7 @@ export function missingIntakeItems(text: string, fields: ConfirmedFormFields): I
   });
   return intake.missing.filter((item) => {
     if (item.key === "employee_name" && fields.employeeName) return false;
-    if (item.key === "salon" && fields.store) return false;
+    if (item.key === "salon" && (fields.store || antiLoopEnabled())) return false;
     if (item.key === "form_date" && (fields.incidentDateIso || fields.useToday)) return false;
     if (item.key === "job_title" && fields.jobTitle) return false;
     if (item.key === "what_happened" && fields.whatHappened) return false;
