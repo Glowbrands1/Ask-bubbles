@@ -760,6 +760,64 @@ export function mentionsEarlierWarning(text: string, today: string): boolean {
   return warningMentions(text, today).some((mention) => mention.kind !== "current");
 }
 
+/** A whole reply that only says yes. */
+const BARE_YES = /^\s*(?:yes|yeah|yep|yup|correct|that'?s\s+(?:right|correct))\s*[.!]*\s*$/i;
+
+/** A yes/no question opens with the verb: "Should this be …?", "Is it …?". */
+const YES_NO_OPENING =
+  /^\s*(?:so\s+|and\s+|just\s+to\s+confirm,?\s+)?(?:is|isn'?t|are|was|should|shall|do|does|did|will|would|can|could)\b/i;
+
+const LEVEL_IN_QUESTION = /\b(verbal|written)\s+(?:warning|ca|c\/a|corrective(?:\s+action)?)\b/gi;
+
+/**
+ * The one level an assistant turn asks a single yes/no question about —
+ * "Should I tick **Written Warning** on the form?" — or null. Null when the
+ * turn asks more than one question (a bare "Yes" could answer either), when
+ * the question offers a choice ("verbal or written?", "Yes or No?"), or when
+ * it names no level or both. Ported from Ask Sunny.
+ */
+export function levelAskedYesNo(assistant: string): StatedWarningLevel | null {
+  const plain = (assistant ?? "").replace(/[*_`]/g, "");
+  const questions = plain.match(/[^.!?\n]*\?/g) ?? [];
+  if (questions.length !== 1) return null;
+  const question = questions[0]!;
+  if (!YES_NO_OPENING.test(question) || /\bor\b/i.test(question)) return null;
+  const named = new Set([...question.matchAll(LEVEL_IN_QUESTION)].map((match) => match[1]!.toLowerCase() as StatedWarningLevel));
+  return named.size === 1 ? [...named][0]! : null;
+}
+
+export interface WarningLevelTurn {
+  readonly role: string;
+  readonly content: string;
+}
+
+/**
+ * The verbal or written level the MANAGER stated, read from their turns only —
+ * the latest that states one winning; a final warning there states neither.
+ * The assistant's turns never state a level; they only make a bare "Yes"
+ * count, and only when the assistant turn right before it asked one yes/no
+ * question about that exact level (see `levelAskedYesNo`). Ported from Ask
+ * Sunny (live replays, 24 Oct 2026: the assistant's own "verbal/written
+ * warning level" was read back as "Written Warning, as you said").
+ */
+export function managerStatedWarningLevel(
+  turns: readonly WarningLevelTurn[],
+  today: string = businessToday(),
+): StatedWarningLevel | null {
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    const turn = turns[index]!;
+    if (turn.role !== "user" || typeof turn.content !== "string") continue;
+    const level = statedWarningLevel(turn.content, today);
+    if (level) return level === "verbal" || level === "written" ? level : null;
+    const before = turns[index - 1];
+    if (BARE_YES.test(turn.content) && before?.role === "assistant") {
+      const asked = levelAskedYesNo(before.content);
+      if (asked) return asked;
+    }
+  }
+  return null;
+}
+
 /**
  * The level stated across a conversation's manager turns, latest turn last.
  *
