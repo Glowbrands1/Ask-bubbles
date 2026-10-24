@@ -122,7 +122,12 @@ import {
   PAYROLL_DEDUCT_KEY,
   isPayrollDeductAnswer,
   payrollDeductAmount,
+  statedPayrollDeduct,
 } from "@/lib/forms/payroll-deduct";
+import {
+  PAYROLL_DEDUCT_AMOUNT_KEY,
+  PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
+} from "@/lib/forms/payroll-deduct-amount";
 import {
   actionPlanProvenance,
   correctiveActionPlan,
@@ -136,6 +141,7 @@ import { flaggedCitationWrite } from "@/lib/ai/policy-citation-fields";
 import { fieldLines } from "@/lib/ai/intake-augment";
 import {
   actionPlanSentencesEnabled,
+  payrollDeductAmountFieldEnabled,
   draftEditMergeEnabled,
   fieldAccuracyEnabled,
   policyCitationEnabled,
@@ -325,6 +331,25 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           actor.id,
         )
       : [];
+
+    /*
+     * THE PAYROLL AMOUNT THE MANAGER STATED, into the blank line after Yes/No.
+     * Only when that answer is Yes, and only from their words — never the
+     * figure a cited section states. An amount already stored is left alone.
+     */
+    const statedAmount = payrollDeductAmount(notes);
+    const payrollYes =
+      (loaded.values ?? []).some(
+        (row) => row.fieldKey === PAYROLL_DEDUCT_KEY && row.checked.includes("yes"),
+      ) || statedPayrollDeduct(notes) === "yes";
+    if (payrollDeductAmountFieldEnabled() && payrollYes && statedAmount) {
+      await applyStatedFacts(
+        id,
+        { values: { [PAYROLL_DEDUCT_AMOUNT_KEY]: statedAmount }, checked: {} },
+        actor.id,
+        PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
+      );
+    }
 
     const document = loaded.version.document;
     const variantKey = loaded.instance.variantKey;

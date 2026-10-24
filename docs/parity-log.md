@@ -204,8 +204,8 @@ Leggings are Dress Code. "Opening tasks" and slippers are unchanged.
 
 `ACTION_PLAN_SENTENCES_ENABLED` already defaulted off. On, payroll deduct
 Yes does not add a third sentence, and a "$25.00" the Late Opening
-section quotes is not filled in unless the manager stated an amount. The
-deduction stays on its own field. No new payroll amount field was added.
+section quotes is not filled into the action plan unless the manager
+stated an amount. The amount line itself is the next section.
 
 `POLICY_CITATION_ENABLED` already defaulted off. On, a form that has a
 policy line gets the manual section name and printed page from the chunk.
@@ -225,3 +225,19 @@ form, including where Woven verified a different one. "based", a state
 code from `COMPANY_LOCATIONS`, and a span that uses a word of the JBA
 manual title ("workplace policy", "JBA Manual") are not a person and not
 a store. Off, "Did you mean" and the Woven title still win.
+
+## 24 Oct 2026: payroll deduction amount
+
+**Sibling app: not ported.** Ask Sunny `main` at `b9ae362` has the Yes/No
+question "Is payroll deduct applicable?" and reads a manager-stated amount
+into the action-plan sentence. It has no separate amount field and no
+"Payroll deduction amount" label. This line follows that Yes/No placement
+(the next block, before Acknowledgement) and the same manager-amount
+reader. Do not copy salon names or Sun Tan City wording.
+
+`PAYROLL_DEDUCT_AMOUNT_ENABLED` defaults off. On, the Corrective Action
+form, card, and PDF show **Payroll deduction amount** immediately after
+the payroll Yes/No question. The line stays blank unless the manager
+stated an amount. A "$25.00" quoted from Late Opening is not written into
+it. When payroll is Yes and no amount was stated, chat asks once. Off,
+the document, the card, the question, and the PDF are unchanged.

@@ -215,6 +215,16 @@ export function printedPageOnlyEnabled(): boolean {
   return envFlag("PRINTED_PAGE_ONLY_ENABLED");
 }
 
+/**
+ * A Corrective Action line for the payroll amount, immediately after the
+ * Yes/No question. Off, the document, the card, the question, and the PDF
+ * stay as they are. On, the line is blank unless the manager stated an
+ * amount — a figure in the cited policy is never written into it.
+ */
+export function payrollDeductAmountFieldEnabled(): boolean {
+  return envFlag("PAYROLL_DEDUCT_AMOUNT_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -242,4 +252,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SELF_CHECK_ENABLED",
   "TYPED_NAME_ENABLED",
   "PRINTED_PAGE_ONLY_ENABLED",
+  "PAYROLL_DEDUCT_AMOUNT_ENABLED",
 ] as const;

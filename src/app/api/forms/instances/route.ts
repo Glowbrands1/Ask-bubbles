@@ -27,8 +27,13 @@ import { getTemplateByKey } from "@/lib/forms/repository";
 import {
   isPayrollDeductAnswer,
   PAYROLL_DEDUCT_STATED_KEYS,
+  payrollDeductAmount,
   payrollDeductChecked,
 } from "@/lib/forms/payroll-deduct";
+import {
+  PAYROLL_DEDUCT_AMOUNT_KEY,
+  PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
+} from "@/lib/forms/payroll-deduct-amount";
 import {
   WARNING_LEVEL_STATED_KEYS,
   WARNING_TYPE_KEY,
@@ -38,7 +43,10 @@ import {
 import { warningLevelFromConversation } from "@/lib/forms/warning-level-conversation";
 import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { businessToday } from "@/lib/business-date";
-import { draftDedupeEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  draftDedupeEnabled,
+  payrollDeductAmountFieldEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import { findAccountResentDraft, findResentDraft, rememberDraftIncident } from "@/lib/forms/draft-reopen";
 import { historyWantsSeparateDocument } from "@/lib/ai/second-form";
@@ -336,6 +344,34 @@ export async function POST(request: Request) {
         actor.id,
         PAYROLL_DEDUCT_STATED_KEYS,
       );
+    }
+
+    /*
+     * THE AMOUNT, ONLY WHERE THE MANAGER STATED ONE. A "$25.00" in the cited
+     * policy is not an amount. Written on the same path as the Yes/No, and
+     * only when that answer is Yes. The flag off writes nothing.
+     */
+    if (
+      payrollDeductAmountFieldEnabled() &&
+      body.payrollDeduct === "yes" &&
+      Array.isArray(body.conversation)
+    ) {
+      const said = body.conversation
+        .flatMap((turn) => {
+          if (!turn || typeof turn !== "object") return [];
+          const row = turn as { role?: unknown; content?: unknown };
+          return row.role === "user" && typeof row.content === "string" ? [row.content] : [];
+        })
+        .join("\n");
+      const amount = payrollDeductAmount(said);
+      if (amount) {
+        await applyStatedFacts(
+          String(instance.id),
+          { values: { [PAYROLL_DEDUCT_AMOUNT_KEY]: amount }, checked: {} },
+          actor.id,
+          PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
+        );
+      }
     }
 
     /*

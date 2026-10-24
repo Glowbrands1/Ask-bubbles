@@ -57,6 +57,7 @@ import {
   payrollDeductUnclear,
   statedPayrollDeduct,
 } from "@/lib/forms/payroll-deduct";
+import { payrollAmountPrompt } from "@/lib/forms/payroll-deduct-amount";
 import { checkboxGroupsForVariant } from "@/lib/forms/document";
 import {
   WARNING_LEVEL_KEYS,
@@ -1078,6 +1079,18 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
             isCorrectiveActionForm(match) && proposal.employeeName && proposal.status !== "needs_employee"
               ? ((await input.priorFormsOnFile?.(proposal.employeeName, proposal.locationId)) ?? NO_PRIOR_FORMS)
               : NO_PRIOR_FORMS,
+          payrollAmountLine: isCorrectiveActionForm(match)
+            ? payrollAmountPrompt({
+                payroll: proposal.payrollDeduct ?? null,
+                managerText: [...formHistory, { role: "user", content: input.question }]
+                  .filter((message) => message.role === "user")
+                  .map((message) => message.content)
+                  .join("\n"),
+                assistantMessages: formHistory
+                  .filter((message) => message.role === "assistant")
+                  .map((message) => message.content),
+              })
+            : null,
         });
   return turn(withNotes(content, notes), proposal);
 }
@@ -2563,7 +2576,11 @@ function proposalContent(
   context: ManagerContext,
   match: TemplateSummary,
   today: string,
-  extra: { namedPolicy?: NamedPolicyReading | null; priorOnFile?: PriorFormsReading } = {},
+  extra: {
+    namedPolicy?: NamedPolicyReading | null;
+    priorOnFile?: PriorFormsReading;
+    payrollAmountLine?: string | null;
+  } = {},
 ): string {
   /*
    * ==========================================================================
@@ -2748,6 +2765,7 @@ function proposalContent(
         priorActions: statedPriorActions(context.text, today),
         namedPolicy: extra.namedPolicy ?? null,
         priorOnFile: extra.priorOnFile ?? NO_PRIOR_FORMS,
+        payrollAmountLine: extra.payrollAmountLine ?? null,
       });
     }
   }
@@ -2948,6 +2966,8 @@ function correctiveActionReady(
     priorActions?: readonly string[];
     namedPolicy?: NamedPolicyReading | null;
     priorOnFile?: PriorFormsReading;
+    /** The amount line, already decided. Null leaves the reply unchanged. */
+    payrollAmountLine?: string | null;
   } = {
     offersLevel: true,
     earlierWarning: false,
@@ -3071,6 +3091,7 @@ function correctiveActionReady(
       `One more question: **${PAYROLL_DEDUCT_LABEL}** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.`,
     );
   }
+  if (warning.payrollAmountLine) lines.push("", warning.payrollAmountLine);
 
   lines.push("");
   lines.push(

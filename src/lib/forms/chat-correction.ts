@@ -27,6 +27,11 @@ import {
   payrollDeductReply,
   payrollDeductUnclear,
 } from "./payroll-deduct";
+import {
+  PAYROLL_DEDUCT_AMOUNT_KEY,
+  statedPayrollDeductAmount,
+} from "./payroll-deduct-amount";
+import { payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { extractEmployeeNames, samePerson as samePersonByName } from "./proposal";
 import { clausesOf, LEAD_IN, separateQuestions } from "./message-parts";
@@ -96,6 +101,13 @@ async function correctFromFormReaders(
   const payroll =
     payrollDeductCorrection(input.question) ?? payrollDeductReply(input.question, input.lastAssistant ?? "");
   /*
+   * The amount the manager stated for the deduction. A bare "$3.25" counts
+   * only as the answer to the amount question. The cited policy is not read.
+   */
+  const statedAmount = payrollDeductAmountFieldEnabled()
+    ? statedPayrollDeductAmount(input.question, input.lastAssistant ?? "")
+    : null;
+  /*
    * Something about the deduction that is not a clear Yes or No — "hold off on
    * the $25 payroll deduction". On a form that asks the question it clears the
    * answer and asks again (see below), never leaving a Yes in place.
@@ -134,7 +146,16 @@ async function correctFromFormReaders(
     namesIncidentTopic(whole) && !/\b(?:change|switch|set|update|correct)\b/i.test(whole)
       ? null
       : warningLevelCorrection(input.question, input.today);
-  if (!employmentCorrection && !exitCorrection && !payroll && !payrollUnclear && !warning && !newFormDate && !dateUnclear) {
+  if (
+    !employmentCorrection &&
+    !exitCorrection &&
+    !payroll &&
+    !payrollUnclear &&
+    !warning &&
+    !newFormDate &&
+    !dateUnclear &&
+    !statedAmount
+  ) {
     return null;
   }
 
@@ -264,12 +285,24 @@ async function correctFromFormReaders(
           checked: exitCorrection?.checked ?? {},
         }
       : null;
+  const storedPayrollYes = (loaded.values.find((row) => row.fieldKey === PAYROLL_DEDUCT_KEY)?.checked ?? []).includes(
+    "yes",
+  );
+  const payrollIsYes = payroll === "yes" || (payroll == null && storedPayrollYes);
+  const amountToStore =
+    payrollDeductAmountFieldEnabled() && statedAmount && payrollIsYes && asksPayroll ? statedAmount : null;
   const correction = kind
     ? employmentCorrection
     : isExit
       ? exitValues
       : {
-          values: correctsDate ? { [FORM_DATE_KEY]: newFormDate! } : {},
+          values: {
+            ...(correctsDate ? { [FORM_DATE_KEY]: newFormDate! } : {}),
+            ...(amountToStore ? { [PAYROLL_DEDUCT_AMOUNT_KEY]: amountToStore } : {}),
+            ...(payrollDeductAmountFieldEnabled() && asksPayroll && payroll === "no"
+              ? { [PAYROLL_DEDUCT_AMOUNT_KEY]: "" }
+              : {}),
+          },
           checked: {
             ...(asksPayroll ? (payrollUnclear ? { [PAYROLL_DEDUCT_KEY]: [] } : payrollDeductChecked(payroll)) : {}),
             ...warningChecked,
@@ -292,7 +325,12 @@ async function correctFromFormReaders(
     ? CORRECTABLE_KEYS
     : isExit
       ? EXIT_CORRECTABLE_KEYS
-      : new Set([PAYROLL_DEDUCT_KEY, WARNING_TYPE_KEY, FORM_DATE_KEY]);
+      : new Set([
+          PAYROLL_DEDUCT_KEY,
+          WARNING_TYPE_KEY,
+          FORM_DATE_KEY,
+          ...(payrollDeductAmountFieldEnabled() ? [PAYROLL_DEDUCT_AMOUNT_KEY] : []),
+        ]);
   const restrict = <T,>(entries: Record<string, T>) =>
     Object.fromEntries(Object.entries(entries).filter(([key]) => correctable.has(key)));
   const values = restrict(correction.values);
