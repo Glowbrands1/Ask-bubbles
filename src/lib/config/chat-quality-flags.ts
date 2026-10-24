@@ -326,6 +326,17 @@ export function fullManualContextEnabled(): boolean {
 }
 
 /**
+ * Store the answer call's raw model text on the chat_traces row, before any
+ * citation check or post-processing, capped at 20,000 characters. Needs
+ * CHAT_TRACE_ENABLED too. Off, the insert does not name raw_answer, so it
+ * works before supabase/migrations/20261024200000_chat_traces_raw_answer.sql
+ * is applied.
+ */
+export function chatTraceRawAnswerEnabled(): boolean {
+  return envFlag("CHAT_TRACE_RAW_ANSWER_ENABLED");
+}
+
+/**
  * The intent read takes a payroll amount and the Yes/No only from the
  * manager's own turns. A figure the assistant quoted from policy ("reimburse
  * the company $25 via payroll deduction") is not an amount, and "verbal, no
@@ -373,5 +384,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PROMPT_CACHE_ENABLED",
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
+  "CHAT_TRACE_RAW_ANSWER_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
 ] as const;

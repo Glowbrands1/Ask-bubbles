@@ -6,6 +6,24 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: the model's raw answer on chat_traces — ported from Ask Sunny
+
+`CHAT_TRACE_RAW_ANSWER_ENABLED` stays off. On, with `CHAT_TRACE_ENABLED`
+also on, the chat_traces row stores `raw_answer`: the answer call's text as
+the model returned it, before `citePolicyAnswer`, marker stripping and the
+self-check, first 20,000 characters. When the full-manual answer falls back
+to ordinary retrieval, the fallback call's text is stored, since that is the
+answer shown. chat_messages still keeps only the processed text. Off, the
+insert does not name `raw_answer`, so the app works before
+`supabase/migrations/20261024200000_chat_traces_raw_answer.sql` is applied.
+Apply that file before turning the flag on. It recreates `chat_traces_live`
+(`select *`, 7 days, `security_invoker`) so the view shows the column.
+
+**Sibling app: ported.** Same mechanism as Ask Sunny branch
+`feat/raw-answer-sunny`, same flag and column name, same cap. Sunny's
+`chat_traces_live` lists named columns and leaves the long text columns out,
+so Sunny's migration does not change its view.
+
 ## 24 Oct 2026: a policy quote is not the manager's payroll answer
 
 `INTENT_PAYROLL_MANAGER_ONLY_ENABLED` is new and stays off. With it on,

@@ -44,7 +44,7 @@ import { applyIntentExtraction } from "./intent-extraction";
 import { pinnedManualBlock, printedPageFromRetrieval } from "./policy-citation-fields";
 import { recallMemory, rememberFact } from "./chat-memory-store";
 import { finishChatTrace, openChatTrace, redactTraceText } from "./chat-trace";
-import { updateChatTrace } from "./chat-trace-store";
+import { noteRawAnswer, updateChatTrace } from "./chat-trace-store";
 import {
   chatDataToolsEnabled,
   chatMemoryEnabled,
@@ -811,6 +811,8 @@ async function answerQuestionBody(
     grounding: dataAddition.help ? `${groundingText}\n\n${dataAddition.help}` : groundingText,
     ...(useManual && manualPlan?.cachedBlock ? { cachedContext: manualPlan.cachedBlock } : {}),
   });
+  // Before citePolicyAnswer, marker stripping and the self-check change a word.
+  noteRawAnswer(answer);
 
   let settled: CitedManualAnswer | null = null;
   let fellBack = false;
@@ -828,6 +830,8 @@ async function answerQuestionBody(
         .filter((part) => part && part.length > 0)
         .join("\n\n");
       answer = await callClaude({ ...claudeBase, grounding: fallbackGrounding });
+      // The fallback answer is the one shown, so it replaces the first.
+      noteRawAnswer(answer);
     }
   }
 

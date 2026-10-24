@@ -93,6 +93,9 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
       extraction_input_tokens: draft.formExtraction?.inputTokens ?? null,
       extraction_output_tokens: draft.formExtraction?.outputTokens ?? null,
       slots: draft.formExtraction?.slots ?? null,
+      // Named only when CHAT_TRACE_RAW_ANSWER_ENABLED set it, so a database
+      // without the raw_answer column still takes the row.
+      ...(typeof draft.rawAnswer === "string" ? { raw_answer: draft.rawAnswer } : {}),
     });
     if (error) {
       chatTraceInsertErrorCount += 1;
