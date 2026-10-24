@@ -1,0 +1,178 @@
+{
+  "note": "Production-shaped rows for the JBA Policy Manual, chunks 44-49 and 61. printedPage is the number stored on the chunk. It is not the PDF sheet and it is not printed+1. page is the PDF sheet (cover unnumbered, so it is printedPage + 1). sections[].page is that PDF sheet. On the live replay those section pages moved every heading one page past the stored printedPage, because the chunk text has no footer. Chunk 44 content is the verbatim Production knowledge_chunks row from 30 Sep 2026 (policy-citation.test.ts LIVE_CHUNK). Chunks 45-49 are the 8 Oct 2026 brand export (jba-manual-brand-chunks.json i 35-39) with footer lines removed. Chunk 45 continues the dress-code paragraph that chunk 44 starts. Nothing in that export was reworded. Chunk 61 is the Cell Phone/Smart Watch paragraph from corrective-action-dm-feedback-e2e.test.ts with the footer line removed. printedPage is 19. Chunks 50-60 and 62 are not in the repo. They are omitted rather than rewritten. The cell-phone regression adds the page-20 POS Passwords row the replay cited.",
+  "chunks": [
+    {
+      "i": 44,
+      "page": 16,
+      "printedPage": 15,
+      "h": [
+        "Dress Code for The Company",
+        "All Locations Dress Code"
+      ],
+      "sections": [
+        {
+          "heading": "Dress Code for The Company",
+          "page": 16
+        },
+        {
+          "heading": "All Locations Dress Code",
+          "page": 16
+        }
+      ],
+      "c": "Dress Code for The Company\nThe Company Employees are to keep a neat, clean, professional appearance at all times. Anyone\nviolating their Brand’s Dress code policy will be sent home to change into proper work attire and\nmay be subject to disciplinary action, up to and potentially including termination.\n\nAll Locations Dress Code:\nName tags\no Name tags are to be worn and visible at all times while working."
+    },
+    {
+      "i": 45,
+      "page": 16,
+      "printedPage": 15,
+      "h": [
+        "Shoes",
+        "Belts",
+        "Hair",
+        "All Locations Dress Code"
+      ],
+      "sections": [
+        {
+          "heading": "Shoes",
+          "page": 16
+        },
+        {
+          "heading": "Belts",
+          "page": 16
+        },
+        {
+          "heading": "Hair",
+          "page": 16
+        },
+        {
+          "heading": "All Locations Dress Code",
+          "page": 16
+        }
+      ],
+      "c": "Anyone\nviolating their Brand’s Dress code policy will be sent home to change into proper work attire and\nmay be subject to disciplinary action, up to and potentially including termination.\n\nAll Locations Dress Code:\nName tags\no Name tags are to be worn and visible at all times while working. o Each Employee will receive one name tag. o Additional or replacement tags can be ordered through a manager at the Employee’s\nexpense. Shoes\no Tennis shoes or other full coverage closed toe shoes are to be worn. o No sandals, crocks, flip-flops, or other open toe shoes are allowed. o Shoes must be tied at all times and must be clean with no holes. Belts\no Belts are to be dark brown or black. o Belts are not to hang down or have objects (cell phones, pagers, chains, keys, etc.) hanging\nfrom them. Hair\no Hair of all lengths and colors are acceptable as long as it is clean, groomed, and kept out of\nemployee’s face and eyes."
+    },
+    {
+      "i": 46,
+      "page": 17,
+      "printedPage": 16,
+      "h": [
+        "Facial Hair",
+        "Make-up",
+        "Jewelry/Accessories",
+        "Tattoos",
+        "Crunch Fitness Specific Dress Code",
+        "Shirts",
+        "Pants"
+      ],
+      "sections": [
+        {
+          "heading": "Facial Hair",
+          "page": 17
+        },
+        {
+          "heading": "Make-up",
+          "page": 17
+        },
+        {
+          "heading": "Jewelry/Accessories",
+          "page": 17
+        },
+        {
+          "heading": "Tattoos",
+          "page": 17
+        },
+        {
+          "heading": "Crunch Fitness Specific Dress Code",
+          "page": 17
+        },
+        {
+          "heading": "Shirts",
+          "page": 17
+        },
+        {
+          "heading": "Pants",
+          "page": 17
+        }
+      ],
+      "c": "Facial Hair\no Facial hair is acceptable as long as it is clean, well-groomed, and trimmed. Make-up\no Due to the nature of working in the Beauty Industry, reasonable and natural make-up is\nacceptable and encouraged. Jewelry/Accessories\no Jewelry that does not interfere with work is acceptable. o No dangling earrings or chains, and no pins or buttons allowed on the shirt unless approved\nby Management. Tattoos\no Large, inappropriate, or offensive tattoos must be covered. All other tattoos are acceptable\nas long as they are not discriminatory or offensive in nature. Crunch Fitness Specific Dress Code:\nShirts\no Two uniform shirts will be provided to all Employees upon hire. o Full-time Employees will receive an additional 1-2 shirts. o Employee may also wear a plain black, white, or gray long sleeve shirt underneath their\nbranded shirt when cold. o Group Fitness Instructors (Crunch Fitness) teaching classes that are not proprietary to\nCrunch Fitness, i.e., Zumba, Pound, etc. may wear fitness style apparel or branding related\nto class style. o Shirts should not be shorter than the beltline, exposing the stomach area or low cut to\nexpose the chest area. o Shirts must be clean and free of wrinkles. o No patches, rips, or holes are to be noticeable on the shirt. Pants\no Yoga pants, joggers, or sweats are approved for Instructors ONLY (preferably solid black). o Front Desk and Management’s pants must be solid khaki or black in color. o Pants must be full length and free of holes or frayed edges."
+    },
+    {
+      "i": 47,
+      "page": 17,
+      "printedPage": 16,
+      "h": [
+        "Buff City Soap",
+        "Shirts"
+      ],
+      "sections": [
+        {
+          "heading": "Buff City Soap",
+          "page": 17
+        },
+        {
+          "heading": "Shirts",
+          "page": 17
+        }
+      ],
+      "c": "o Front Desk and Management’s pants must be solid khaki or black in color. o Pants must be full length and free of holes or frayed edges.\n\nBuff City Soap:\nShirts\no Any BCS Employee can wear any plain black, white, or gray t-shirt or long-sleeved shirt to\nwear under their branded apron. o Employees can also wear any Branded top. o Shirts should not be shorter than the beltline, exposing the stomach area or low cut to\nexpose the chest area. o Shirts must be clean and free from wrinkles."
+    },
+    {
+      "i": 48,
+      "page": 18,
+      "printedPage": 17,
+      "h": [
+        "Tanning",
+        "Sun Tan City",
+        "Shirts",
+        "Pants",
+        "JB & Associates Office"
+      ],
+      "sections": [
+        {
+          "heading": "Tanning",
+          "page": 18
+        },
+        {
+          "heading": "Sun Tan City",
+          "page": 18
+        },
+        {
+          "heading": "Shirts",
+          "page": 18
+        },
+        {
+          "heading": "Pants",
+          "page": 18
+        },
+        {
+          "heading": "JB & Associates Office",
+          "page": 18
+        }
+      ],
+      "c": "o No patches, rips, or holes are to be noticeable on the shirt. Pants\no Full length black or blue jean-colored pants are acceptable. o Yoga pants, joggers or sweats are never to be worn while at work. Sun Tan City:\nShirts\no Any STC Employee can wear any Branded top or black collared or black t-shirt. o ASD and above can wear any colored collared shirt. o Any STC Employee can wear any gray, black or white plain jacket. o Shirts should not be shorter than the beltline, exposing the stomach area or low cut to\nexpose the chest area. o Shirts must be clean and free from wrinkles. o No patches, rips, or holes are to be noticeable on the shirt\nPants\no Full length khaki/black pants or jeans (no holes, rips or patches) are acceptable. o Yoga pants, joggers or sweats are never to be worn while at work. o Shorts that sit at or below the knee are acceptable: i.e., Bermuda shorts or Capris. Tanning\no Employees are expected to maintain a consistent tanning schedule in accordance with\ncompany appearance standards. JB & Associates Office:\nShirts\no Any JBA franchise Branded top\no Fitted blouse or collared shirts\no Sundresses\no Shirts should not be shorter than the beltline, exposing the stomach area or low cut to\nexpose the chest area. o Shirts must be clean and free from wrinkles. o No patches, rips, or holes are to be noticeable on the shirt. Pants\no Full length khaki or black pants are acceptable. o Full length black or blue jean-colored pants are acceptable as long as they are free of tears\nor excessive distressing."
+    },
+    {
+      "i": 49,
+      "page": 18,
+      "printedPage": 17,
+      "h": [],
+      "sections": [],
+      "c": "Pants\no Full length khaki or black pants are acceptable. o Full length black or blue jean-colored pants are acceptable as long as they are free of tears\nor excessive distressing.\n\no Shorts that sit at or below the knee are acceptable: i.e., Bermuda shorts or Capris. o Skirts that sit at or below the knee. All aspects of the dress code are at The Company’s discretion, if an employee has a question, please\ncheck with management prior to wearing."
+    },
+    {
+      "i": 61,
+      "page": 20,
+      "printedPage": 19,
+      "h": [
+        "Cell Phone/Smart Watch Policy"
+      ],
+      "sections": [
+        {
+          "heading": "Cell Phone/Smart Watch Policy",
+          "page": 20
+        }
+      ],
+      "c": "Cell Phone/Smart Watch Policy\nPersonal Employee cell phones are permitted in the workplace but must be kept out of sight. It\nis the Employee’s personal responsibility to protect the customer’s experience and doing things\nsuch as texting, making phone calls or using social media jeopardizes the customer’s experience."
+    }
+  ]
+}

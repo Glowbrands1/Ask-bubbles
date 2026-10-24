@@ -6,6 +6,26 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: a stored printed page is not shifted when the chunk has no footer
+
+`FULL_MANUAL_CONTEXT_ENABLED` stays off. On, a chunk with no footer is cited
+on `metadata.printedPage` as stored. A heading's section page does not move
+that text onto the PDF sheet. A footer still wins, including when the footer
+repeats the PDF sheet and the headings record a different printed page.
+
+An inline `[p.N]` is written on the sentence that restates that page. A
+marker with no Sources row is removed. A page number in the answer does not
+add a source by itself. The dress-code replay cites Hair on printed page 15
+and Jewelry and Crunch shirts and pants on 16. Cell-phone bullets cite 19.
+The POS passwords page and pages 9, 10, 12, 14, 18, 20, 26, 29, 31, and 48
+are not sources for that answer.
+
+**Sibling app: not ported.** Ask Sunny's `main` already maps a sheet with no
+footer to the stored printed page (`citedPageFor`) and does not move a
+heading onto `sections[].page`. Its marker alignment keeps a page that
+exists in the manual. That path was not changed here. No Buff City Soap
+policy text was copied.
+
 ## 24 Oct 2026: a later form turn keeps what was already said
 
 `FORM_FULL_REMAP_ENABLED` stays off. On, each turn reads every user message
