@@ -30,6 +30,7 @@ export function openChatTrace(input: {
     prompt: null,
     formInProgress: input.formInProgress,
     modelCall: null,
+    formExtraction: null,
     errorSubtype: null,
     errorClass: null,
     errorStatus: null,
@@ -71,11 +72,11 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
       retrieved: draft.retrieved,
       retrieval_count: draft.retrievalCount,
       prompt: draft.prompt,
-      model: model?.model ?? null,
+      model: model?.model ?? draft.formExtraction?.model ?? null,
       max_tokens: model?.maxTokens ?? null,
       stop_reason: model?.stopReason ?? null,
-      input_tokens: model?.inputTokens ?? null,
-      output_tokens: model?.outputTokens ?? null,
+      input_tokens: model?.inputTokens ?? draft.formExtraction?.inputTokens ?? null,
+      output_tokens: model?.outputTokens ?? draft.formExtraction?.outputTokens ?? null,
       thinking_tokens: model?.thinkingTokens ?? null,
       cache_creation_input_tokens: model?.cacheCreationInputTokens ?? null,
       cache_read_input_tokens: model?.cacheReadInputTokens ?? null,
@@ -88,6 +89,10 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
       retryable: model?.retryable ?? false,
       retried: false,
       succeeded: draft.succeeded === true,
+      extraction_model: draft.formExtraction?.model ?? null,
+      extraction_input_tokens: draft.formExtraction?.inputTokens ?? null,
+      extraction_output_tokens: draft.formExtraction?.outputTokens ?? null,
+      slots: draft.formExtraction?.slots ?? null,
     });
     if (error) {
       chatTraceInsertErrorCount += 1;

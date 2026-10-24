@@ -63,12 +63,14 @@ import {
   printedPageOnlyEnabled,
   typedNameEnabled,
   antiLoopEnabled,
+  formFullRemapEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
 import { loadConversationFormState, saveConversationFormState } from "./form-state-store";
 import { formCommandBypassesSearch, routeUnderstoodFormTurn } from "./form-tool-route";
 import { understandFormTurn } from "./form-tool-understand";
+import { remapFormTurn } from "./form-full-remap";
 import { augmentIntakeQuestion } from "./intake-augment";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import { prepareLongContext } from "./long-context-claude";
@@ -254,6 +256,18 @@ async function answerQuestionBody(
       namedTemplateKey: spokenIntent.kind === "explicit" ? spokenIntent.templateKey : null,
     });
     if (inventoryAnswer) return inventoryAnswer;
+
+    if (formFullRemapEnabled()) {
+      const roster = await loadRosterQuiet(actor);
+      const remapped = await remapFormTurn({
+        question: request.question,
+        history: request.history,
+        today: request.context.todayIso,
+        continueTemplateKey: request.continueProposalTemplateKey ?? null,
+        people: roster,
+      });
+      if (remapped) return remapped;
+    }
 
     let manualRead: ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]> | null = null;
     const readManual = () =>

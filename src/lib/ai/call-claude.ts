@@ -330,6 +330,27 @@ export async function callClaudeTool(input: {
   };
   readonly maxTokens: number;
 }): Promise<unknown> {
+  const detailed = await callClaudeToolDetailed(input);
+  return detailed.input;
+}
+
+/** The tool payload plus the usage the form extraction records on chat_traces. */
+export async function callClaudeToolDetailed(input: {
+  readonly model: string;
+  readonly system: string;
+  readonly messages: readonly { role: "user" | "assistant"; content: string }[];
+  readonly tool: {
+    readonly name: string;
+    readonly description: string;
+    readonly input_schema: {
+      readonly type: "object";
+      readonly properties?: unknown;
+      readonly required?: readonly string[];
+      readonly additionalProperties?: boolean;
+    };
+  };
+  readonly maxTokens: number;
+}): Promise<{ input: unknown; inputTokens: number | null; outputTokens: number | null }> {
   const client = getAnthropicClient();
   const messages = input.messages.filter((message) => message.content.trim() !== "");
   try {
@@ -360,7 +381,12 @@ export async function callClaudeTool(input: {
         502,
       );
     }
-    return block.input;
+    const usage = response.usage as { input_tokens?: unknown; output_tokens?: unknown } | undefined;
+    return {
+      input: block.input,
+      inputTokens: typeof usage?.input_tokens === "number" ? usage.input_tokens : null,
+      outputTokens: typeof usage?.output_tokens === "number" ? usage.output_tokens : null,
+    };
   } catch (error) {
     if (error instanceof AiError) throw error;
     if (error instanceof MissingConfigurationError) throw error;
