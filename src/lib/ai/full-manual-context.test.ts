@@ -9,6 +9,7 @@ import {
   alignSourceMarkers,
   brandChoice,
   brandsCovered,
+  citePolicyAnswer,
   isPolicyQuestion,
   planFullManualContext,
   validateManualCitations,
@@ -106,6 +107,8 @@ describe("FULL_MANUAL_CONTEXT_ENABLED", () => {
     expect(isPolicyQuestion("what's the dress code?")).toBe(true);
     expect(isPolicyQuestion("how much PTO do I get?")).toBe(true);
     expect(isPolicyQuestion("Paid time off accrues after 90 days")).toBe(true);
+    expect(isPolicyQuestion("what's the cell phone policy?")).toBe(true);
+    expect(isPolicyQuestion("can staff use cell phones on the floor?")).toBe(true);
     expect(isPolicyQuestion("create a coaching form for Dana Moss")).toBe(false);
   });
 
@@ -131,6 +134,8 @@ describe("FULL_MANUAL_CONTEXT_ENABLED", () => {
     expect(text).not.toContain("SUPERSEDED EDITION ONLY");
     expect(text).not.toContain("FRAMEWORK ONLY");
     expect(plan.cachedBlock).toContain("Cover Buff City Soap and Crunch");
+    expect(plan.sources).toEqual([]);
+    expect(text).not.toContain("[S1]");
   });
 
   it("uses the Crunch manual when the question names Crunch, and still keeps company-wide rules", () => {
@@ -322,5 +327,156 @@ describe("cached system block", () => {
     expect(line).toContain("cache_creation_input_tokens");
     expect(line).toContain("cache_read_input_tokens");
     expect(line).toContain("34");
+  });
+});
+
+/**
+ * Production chats from 24 Oct 2026.
+ *
+ * conv_mvmkij8h2vdogs9 opened at 15:42:55Z (dress code, both brands).
+ * conv_mvmkj5v72w5x3l5 opened at 15:43:24Z (cell phone). Both turns loaded
+ * the full manual. The message rows are not readable with the key this
+ * session can use, so the questions are the ones those chats asked.
+ */
+const DRESS_CODE_QUESTION = "what's the dress code for Buff City Soap and Crunch?";
+const CELL_PHONE_QUESTION = "what's the cell phone policy?";
+
+const DRESS_CODE_ANSWER = [
+  "Buff City Soap employees can wear any plain black, white, or gray t-shirt.",
+  "Jewelry that does not interfere with work is acceptable.",
+  "Large, inappropriate, or offensive tattoos must be covered.",
+  "At Crunch, yoga pants, joggers, or sweats are approved for instructors only.",
+  "Buff City Soap pants are full length, and yoga pants, joggers or sweats are never to be worn while at work.",
+].join(" ");
+
+const CELL_PHONE_ANSWER =
+  "Personal Employee cell phones are permitted in the workplace but must be kept out of sight. Texting or phone calls during the shift is not allowed under the Cell Phone/Smart Watch Policy.";
+
+function contentsChunk(printed: number) {
+  const body =
+    printed === 3
+      ? "Table of Contents\nDress Code ................ 16\nCell Phone ................ 19\nJewelry ................ 16"
+      : "Attendance .......... 14\nLate Opening .......... 15";
+  return {
+    chunkIndex: printed,
+    content: `${printed} | P a g e\n${body}\nCONTENTS ROW ONLY page ${printed}`,
+    page: printed + 1,
+    printedPage: printed + 1,
+    locator: `Page ${printed + 1} — Table of Contents`,
+    headings: ["Table of Contents"],
+    section: "Table of Contents",
+  };
+}
+
+function productionManual(): FullManualDocument {
+  const base = manual();
+  return manual({
+    chunks: [
+      {
+        chunkIndex: 0,
+        content: "1 | P a g e\n2025 JB & Associates Employment Policy Manual. This page is the cover.",
+        page: 2,
+        printedPage: 2,
+        locator: "Page 2",
+        headings: [],
+      },
+      contentsChunk(3),
+      contentsChunk(4),
+      contentsChunk(5),
+      contentsChunk(6),
+      ...base.chunks,
+      {
+        chunkIndex: 61,
+        content:
+          "19 | P a g e\nCell Phone/Smart Watch Policy\nPersonal Employee cell phones are permitted in the workplace but must be kept out of sight. It is the Employee's personal responsibility to protect the customer's experience and doing things such as texting, making phone calls or using social media jeopardizes the customer's experience.",
+        page: 20,
+        printedPage: 20,
+        locator: "Page 20 — Cell Phone/Smart Watch Policy",
+        headings: ["Cell Phone/Smart Watch Policy"],
+        section: "Cell Phone/Smart Watch Policy",
+      },
+    ],
+  });
+}
+
+function citedPages(text: string): number[] {
+  return [...text.matchAll(/\[p\.(\d{1,3})\]/gi)].map((match) => Number(match[1]));
+}
+
+describe("production chats cite printed pages", () => {
+  const documents = [productionManual()];
+
+  it("marks the footer page, not the PDF page, and skips contents pages 3-6", () => {
+    const plan = planFullManualContext({ question: DRESS_CODE_QUESTION, documents });
+    expect(plan.ready).toBe(true);
+    expect(brandChoice(DRESS_CODE_QUESTION)).toBe("all");
+    const text = plan.cachedBlock ?? "";
+    expect(text).toContain("[p.16]");
+    expect(text).toContain("[p.17]");
+    expect(text).toContain("[p.19]");
+    expect(text).not.toContain("[p.20]");
+    expect(text).not.toContain("[p.3]");
+    expect(text).not.toContain("[p.4]");
+    expect(text).not.toContain("[p.5]");
+    expect(text).not.toContain("[p.6]");
+    expect(text).not.toContain("CONTENTS ROW ONLY");
+    expect(text).not.toContain("Table of Contents");
+    expect(plan.index?.pages.has(16)).toBe(true);
+    expect(plan.index?.pages.has(19)).toBe(true);
+    expect(plan.index?.pages.has(3)).toBe(false);
+    expect(plan.index?.pages.has(6)).toBe(false);
+    expect(plan.index?.pages.has(20)).toBe(false);
+  });
+
+  it("conv_mvmkij8h2vdogs9 cites p.16 and p.17 for both brands, tattoos, and jewelry", () => {
+    const plan = planFullManualContext({ question: DRESS_CODE_QUESTION, documents });
+    const cited = citePolicyAnswer(DRESS_CODE_ANSWER, plan);
+    expect(cited.ok).toBe(true);
+    expect(cited.text).toMatch(/buff city soap/i);
+    expect(cited.text).toMatch(/crunch/i);
+    expect(cited.text).toMatch(/tattoo/i);
+    expect(cited.text).toMatch(/jewelry/i);
+    expect(citedPages(cited.text)).toEqual(expect.arrayContaining([16, 17]));
+    const locators = cited.sources.map((source) => source.locator);
+    expect(locators.some((locator) => /Page 16 — Tattoos/.test(locator))).toBe(true);
+    expect(locators.some((locator) => /Page 16 — Jewelry/.test(locator))).toBe(true);
+    expect(locators.some((locator) => /Page 16 — Shirts/.test(locator))).toBe(true);
+    expect(locators.some((locator) => /Page 16 — Pants/.test(locator))).toBe(true);
+    expect(locators.some((locator) => /Page 17 — Pants/.test(locator))).toBe(true);
+    expect(locators.join("\n")).not.toMatch(/Full manual|Page 1\b|p\.1/);
+    expect(cited.sources.length).toBeGreaterThan(1);
+    expect(new Set(citedPages(cited.text))).toEqual(new Set([16, 17]));
+    for (const page of citedPages(cited.text)) {
+      expect(cited.sources.some((source) => source.printedPage === page)).toBe(true);
+    }
+    expect(cited.sources.every((source) => source.printedPage === 16 || source.printedPage === 17)).toBe(true);
+    expect(cited.text).not.toContain("[S");
+  });
+
+  it("conv_mvmkj5v72w5x3l5 cites p.19, and [S9] is not left without a source", () => {
+    const plan = planFullManualContext({ question: CELL_PHONE_QUESTION, documents });
+    const cited = citePolicyAnswer(`${CELL_PHONE_ANSWER} [S9]`, plan, [1]);
+    expect(cited.ok).toBe(true);
+    expect(cited.text).not.toContain("[S9]");
+    expect(cited.text).not.toContain("[S");
+    expect(new Set(citedPages(cited.text))).toEqual(new Set([19]));
+    expect(cited.sources.map((source) => source.locator).join("\n")).toMatch(/Page 19 — Cell Phone\/Smart Watch Policy/);
+    expect(cited.sources.every((source) => source.locator.startsWith("Page 19 — Cell Phone"))).toBe(true);
+    expect(cited.sources.map((source) => source.locator).join("\n")).not.toMatch(/Full manual|Page 1\b|p\.1/);
+    expect(cited.sources.every((source) => source.printedPage === 19)).toBe(true);
+  });
+
+  it("drops a page the manual does not contain, and falls back when nothing was cited", () => {
+    const plan = planFullManualContext({ question: CELL_PHONE_QUESTION, documents });
+    const repaired = citePolicyAnswer(`See page 99 and [p.4]. ${CELL_PHONE_ANSWER}`, plan);
+    expect(repaired.ok).toBe(true);
+    expect(repaired.text).not.toContain("99");
+    expect(repaired.text).not.toContain("[p.4]");
+    expect(new Set(citedPages(repaired.text))).toEqual(new Set([19]));
+    expect(repaired.sources.some((source) => source.printedPage === 4 || source.printedPage === 99)).toBe(false);
+
+    const missed = citePolicyAnswer("The weather is nice today.", plan);
+    expect(missed.ok).toBe(false);
+    expect(missed.sources).toEqual([]);
   });
 });

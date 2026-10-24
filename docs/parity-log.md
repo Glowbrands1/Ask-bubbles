@@ -6,6 +6,24 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: printed pages on the full-manual answer
+
+`FULL_MANUAL_CONTEXT_ENABLED` stays off by default. On, each page in the
+cached manual is marked with the number printed on the sheet (the footer
+`16 | P a g e`), not the PDF sheet index. Printed pages 3–6 are the JBA
+table of contents and are left out, and any chunk that is a contents page
+is left out, so a re-upload cannot put those sheets back into the prompt.
+
+After the answer, each section the answer uses becomes a Sources row with
+that printed page. An `[S#]` that is not one of the sources shown is
+removed. A page the loaded manual does not contain is removed. An answer
+that still cites no printed page uses ordinary retrieval, the same path
+as the flag off.
+
+**Sibling app: not ported.** Ask Sunny's `main` does not have
+`FULL_MANUAL_CONTEXT_ENABLED` (checked 24 Oct 2026). No Buff City Soap
+policy text is copied there.
+
 ## 24 Oct 2026: one extraction fills the form
 
 `FORM_FULL_REMAP_ENABLED` defaults off. On, each form turn is one tool
