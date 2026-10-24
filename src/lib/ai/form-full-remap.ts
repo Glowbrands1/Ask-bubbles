@@ -106,7 +106,8 @@ export function groundFormSlots(input: {
   /** Slots already kept for this conversation. A null read must not erase them. */
   readonly saved?: Partial<FormRemapSlots> | null;
 }): { slots: FormRemapSlots; response: AskResponse } {
-  const users = userTurns(input.history, input.question);
+  const conversation = turnsWithQuestion(input.history, input.question);
+  const users = conversation.filter((turn) => turn.role === "user").map((turn) => turn.content);
   const said = users.join("\n");
   const raw = parseRaw(input.raw);
   const templateKey =
@@ -118,7 +119,7 @@ export function groundFormSlots(input: {
   const store = groundedStore(said);
   const incidentDateIso = groundedDate(said, input.today);
   const warningLevel = explicitWarning(users, input.today);
-  const payrollDeduct = payrollDeductFromConversation([...input.history, { role: "user", content: input.question }]);
+  const payrollDeduct = payrollDeductFromConversation(conversation);
   const payrollAmount = payrollDeduct === "yes" ? managerPayrollAmount(said) : null;
   const policySection = groundedPolicy(said);
   const observation = statedIncident(said, employeeName) ?? acceptSummary(raw.observation, said);
@@ -265,10 +266,20 @@ function conversationText(history: readonly Turn[], question: string, today: str
   return `Today is ${today}.\n\n${turns.join("\n\n")}`;
 }
 
-function userTurns(history: readonly Turn[], question: string): string[] {
-  return [...history, { role: "user", content: question }]
-    .filter((turn) => turn.role === "user" && turn.content.trim() !== "")
-    .map((turn) => turn.content);
+/**
+ * The current question is already the last user turn when the client or the
+ * history table appended it before this read. Counting it twice stacked the
+ * prior-action line on that turn. The next turn read the line once, and the
+ * duplicate collapsed.
+ */
+function turnsWithQuestion(history: readonly Turn[], question: string): Turn[] {
+  const turns = [...history, { role: "user", content: question }].filter((turn) => turn.content.trim() !== "");
+  const last = turns.at(-1);
+  const before = turns.at(-2);
+  if (last && before && last.role === "user" && before.role === "user" && last.content === before.content) {
+    turns.pop();
+  }
+  return turns;
 }
 
 interface RawSlots {
@@ -544,6 +555,8 @@ function phraseOffense(clause: string): string | null {
   let text = clause.replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, " ");
   text = text.replace(/(?<![\d-])\d{1,2}-\d{1,2}(?!-\d)(?!\s*(?:min|mins|minutes|hrs|hours|hr)\b)/g, " ");
   text = text.replace(/\s+/g, " ").trim().replace(/^[,\s]+|[,\s.]+$/g, "");
+  // "register short $40 on 10-20" leaves "on" behind once the date is lifted.
+  text = text.replace(/\s+(?:on|at)$/i, "");
   if (!text || text.length > 80) return null;
   if (/\b(?:she|he|they|i|we)\b/i.test(text)) return null;
   const title = statedJobTitle(text) ?? extractJobTitle(text);
@@ -565,6 +578,16 @@ function phraseOffense(clause: string): string | null {
   return text;
 }
 
+const PAYROLL_ANSWER_ONLY =
+  /^(?:(?:yes|no|yeah|nope|y|n)\b[\s,.!-]*)?payroll(?:\s+|-)deduct(?:ion|ed|s)?(?:\s+(?:of\s+)?\$?\d{1,6}(?:\.\d{1,2})?)?(?:\s+(?:applies|applicable|apply|is\s+applicable|does\s+not\s+apply|doesn'?t\s+apply|not\s+applicable|n\/?a|yes|no))?[\s.!]*$/i;
+
+const STATE_NAMES =
+  "alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming";
+const STATE_ONLY = new RegExp(
+  `^(?:A[LKZR]|C[AOT]|DE|FL|GA|HI|I[ADLN]|K[SY]|LA|M[ADEINOST]|N[CDEHJMVY]|O[HKR]|PA|RI|S[CD]|T[NX]|UT|V[AT]|W[AIVY]|${STATE_NAMES})\\.?$`,
+  "i",
+);
+
 function slotClause(clause: string): boolean {
   const text = clause.trim();
   if (/^(?:verbal|written|yes|no|yeah|nope)[.!]?\s*$/i.test(text)) return true;
@@ -579,6 +602,13 @@ function slotClause(clause: string): boolean {
   if (/^\s*coached on\b/i.test(text)) return true;
   if (/\bprior\s*=/i.test(text)) return true;
   if (/\bno payroll\b/i.test(text) && text.split(/\s+/).length <= 6) return true;
+  // "payroll deduct $40 applies" and "yes payroll deduct" answer the payroll
+  // question. Read as the incident, they replaced "register short $40". Only
+  // a clause that is nothing but that answer: "falsified payroll deduct
+  // paperwork" and "payroll deduct for missing cash $40" are offenses (QA).
+  if (PAYROLL_ANSWER_ONLY.test(text)) return true;
+  // "at Dodge, NE": a clause that is only the store's state is not what happened.
+  if (STATE_ONLY.test(text)) return true;
   if (/\buse\s+.+\bas the location\b/i.test(text)) return true;
   return false;
 }
@@ -666,7 +696,8 @@ function renderReply(slots: FormRemapSlots, questions: readonly string[]): strin
   if (slots.incidentDateIso) lines.push(`**Date:** ${slots.incidentDateIso}`);
   if (slots.incidentTime) lines.push(`**Time:** ${slots.incidentTime}`);
   if (slots.observation) lines.push(`**What happened:** ${slots.observation}`);
-  if (slots.priorActions) lines.push(`**Prior action:** ${slots.priorActions}`);
+  // The card is the one prior-action line. Repeating it in the reply painted
+  // the acknowledgement twice on the turn that first stated it.
   if (slots.policySection) lines.push(`**Policy:** ${slots.policySection}, as you said`);
   if (slots.warningLevel) {
     const label = slots.warningLevel === "verbal" ? "Verbal Warning" : "Written Warning";
