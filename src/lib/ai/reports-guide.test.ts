@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { NAV_SECTIONS } from "@/components/shell/navigation";
 
-import { buildSystemPrompt } from "./prompts";
+import { buildSystemPrompt, splitSystemPrompt } from "./prompts";
 
 /*
  * Buff City Soap's catalog is empty, so a report is registered here to drive
@@ -60,6 +60,20 @@ describe("the Reports guide, once a live report is registered", () => {
 
   it("treats an absent flag as no access", () => {
     expect(buildSystemPrompt(BASE)).toMatch(/cannot open the Reports section/);
+  });
+
+  it("keeps the per-user reports guide below the cached prefix", () => {
+    const allowed = splitSystemPrompt(buildSystemPrompt({ ...BASE, canViewReports: true }));
+    const denied = splitSystemPrompt(buildSystemPrompt({ ...BASE, canViewReports: false }));
+
+    expect(allowed.staticText).toBe(denied.staticText);
+    expect(allowed.staticText).not.toContain("Dana Reyes");
+    expect(allowed.staticText).not.toContain("Testville Downtown");
+    expect(allowed.staticText).not.toContain("2026-10-20");
+    expect(allowed.staticText).not.toContain("Store Sales");
+    expect(allowed.staticText).not.toContain("/reports");
+    expect(allowed.dynamicText).toContain("[Store Sales](/reports/store-sales)");
+    expect(denied.dynamicText).toMatch(/cannot open the Reports section/);
   });
 
   it("names the section as the sidebar does, under Insights", () => {

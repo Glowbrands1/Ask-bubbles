@@ -1,11 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   buildGroundingBlock,
   buildReportsGuideSection,
   buildSystemPrompt,
+  DYNAMIC_PROMPT_MARKER,
   extractUsedMarkers,
+  LIVE_PROMPT_CACHE_CHECK,
+  promptCacheEnabled,
+  splitSystemPrompt,
   stripMarkers,
+  systemPromptForApi,
   type GroundingChunk,
 } from "./prompts";
 
@@ -419,5 +426,191 @@ describe("an answer given while a form is open in the conversation", () => {
     const prompt = buildSystemPrompt(base);
     expect(prompt).toMatch(/say the form has not been created yet/);
     expect(prompt).not.toContain("A FORM IS OPEN");
+  });
+});
+
+describe("the cached prefix is byte-identical across requests", () => {
+  const shared = {
+    assistantName: "Bubbles",
+    brandName: "Buff City Soap",
+    productName: "Ask Bubbles",
+    locationNoun: "store" as const,
+  };
+
+  const quinn = buildSystemPrompt({
+    ...shared,
+    context: { userName: "Quinn Abel", locationName: "Store 41 West", todayIso: "2026-01-15" },
+    mode: "quick",
+    hasContext: true,
+    hasReportData: false,
+    message: "What is the late policy for Quinn Abel at Store 41 West?",
+    policyChunks: [
+      {
+        marker: 1,
+        documentTitle: "UNIQUEPOLICYTITLE",
+        locator: "Page 4",
+        content: "UNIQUECHUNKBODY doors open at 9.",
+      },
+    ],
+    openForm: {
+      templateName: "Attendance Note",
+      employeeName: "Riley Cho",
+      status: "draft",
+      lines: [{ label: "Issue", value: "UNIQUEFORMVALUE twenty minutes" }],
+      unverifiedPolicy: [],
+    },
+    formState: "FORM STATE employee Riley Cho UNIQUEFORMSTATE",
+    recalledMemory: "UNIQUENOTE Riley prefers mornings",
+    nameMatches: "UNIQUEMATCH Riley Cho at Store 41 West",
+    handbookNote: "UNIQUEHANDBOOK was attached for this question.",
+    pinnedDocumentTitles: ["UNIQUEPINNED Manual"],
+  });
+
+  const sam = buildSystemPrompt({
+    ...shared,
+    context: { userName: "Sam Patel", locationName: "Store 88 East", todayIso: "2026-11-02" },
+    mode: "detailed",
+    hasContext: false,
+    hasReportData: true,
+    hasFormsLibrary: true,
+    hasVerifiedRecords: true,
+    hasPersonMemory: true,
+    hasFormRecords: true,
+    hasMissingReports: true,
+    canViewReports: true,
+    message: "Sam Patel asked about vacation at Store 88 East.",
+    policyChunks: [
+      {
+        marker: 2,
+        documentTitle: "OTHERPOLICYTITLE",
+        locator: "Page 9",
+        content: "OTHERCHUNKBODY two weeks notice.",
+      },
+    ],
+    openForm: {
+      templateName: "Exit Note",
+      employeeName: "Casey Ng",
+      status: "finalized",
+      lines: [{ label: "Reason", value: "OTHERFORMVALUE relocation" }],
+      unverifiedPolicy: ["Direct policy from official manual"],
+    },
+    formState: "FORM STATE employee Casey Ng OTHERFORMSTATE",
+    recalledMemory: "OTHERNOTE Casey works weekends",
+    fewShotExamples: "HIGHLY RATED EXCHANGES\n\nOTHERFEWSHOT",
+    nameMatches: "OTHERMATCH Casey Ng at Store 88 East",
+    handbookNote: "OTHERHANDBOOK was attached for this question.",
+    pinnedDocumentTitles: ["OTHERPINNED Guide"],
+  });
+
+  const perRequest = [
+    "Quinn Abel",
+    "Sam Patel",
+    "Store 41 West",
+    "Store 88 East",
+    "2026-01-15",
+    "2026-01-14",
+    "2026-11-02",
+    "2026-11-01",
+    "What is the late policy for Quinn Abel at Store 41 West?",
+    "Sam Patel asked about vacation at Store 88 East.",
+    "UNIQUECHUNKBODY",
+    "OTHERCHUNKBODY",
+    "UNIQUEPOLICYTITLE",
+    "OTHERPOLICYTITLE",
+    "Riley Cho",
+    "Casey Ng",
+    "UNIQUEFORMVALUE",
+    "OTHERFORMVALUE",
+    "UNIQUEFORMSTATE",
+    "OTHERFORMSTATE",
+    "UNIQUENOTE",
+    "OTHERNOTE",
+    "UNIQUEMATCH",
+    "OTHERMATCH",
+    "UNIQUEHANDBOOK",
+    "OTHERHANDBOOK",
+    "UNIQUEPINNED",
+    "OTHERPINNED",
+    "OTHERFEWSHOT",
+    "two or three sentences",
+    "Give the full picture",
+  ];
+
+  it("keeps one static section for two users, stores and messages", () => {
+    const first = splitSystemPrompt(quinn);
+    const second = splitSystemPrompt(sam);
+
+    expect(quinn.split(DYNAMIC_PROMPT_MARKER)).toHaveLength(2);
+    expect(sam.split(DYNAMIC_PROMPT_MARKER)).toHaveLength(2);
+    expect(first.staticText).toBe(second.staticText);
+    expect(first.staticText).not.toContain(DYNAMIC_PROMPT_MARKER);
+    expect(first.staticText.length).toBeGreaterThan(0);
+
+    for (const value of perRequest) {
+      expect(first.staticText, value).not.toContain(value);
+    }
+
+    expect(first.dynamicText).toContain("Quinn Abel");
+    expect(first.dynamicText).toContain("Store 41 West");
+    expect(first.dynamicText).toContain("2026-01-15");
+    expect(first.dynamicText).toContain("UNIQUECHUNKBODY");
+    expect(first.dynamicText).toContain("UNIQUEFORMVALUE");
+    expect(first.dynamicText).toContain("UNIQUEFORMSTATE");
+    expect(first.dynamicText).toContain("UNIQUENOTE");
+    expect(first.dynamicText).toContain("UNIQUEMATCH");
+    expect(first.dynamicText).toContain("What is the late policy for Quinn Abel at Store 41 West?");
+    expect(second.dynamicText).toContain("Sam Patel");
+    expect(second.dynamicText).toContain("Store 88 East");
+    expect(second.dynamicText).toContain("OTHERCHUNKBODY");
+    expect(second.dynamicText).toContain("OTHERFORMSTATE");
+    expect(second.dynamicText).toContain("OTHERMATCH");
+    expect(second.dynamicText).toContain("Sam Patel asked about vacation at Store 88 East.");
+  });
+
+  it("puts cache_control ephemeral on the static block only when the flag is on", () => {
+    expect(promptCacheEnabled()).toBe(false);
+    expect(systemPromptForApi(quinn)).toBe(quinn);
+
+    const blocks = systemPromptForApi(quinn, true);
+    expect(Array.isArray(blocks)).toBe(true);
+    if (!Array.isArray(blocks)) return;
+    expect(blocks[0]).toEqual({
+      type: "text",
+      text: `${splitSystemPrompt(quinn).staticText}\n\n${DYNAMIC_PROMPT_MARKER}`,
+      cache_control: { type: "ephemeral" },
+    });
+    expect(blocks[1]).toEqual({ type: "text", text: splitSystemPrompt(quinn).dynamicText });
+    expect(blocks[1]).not.toHaveProperty("cache_control");
+    expect(readFileSync("src/lib/ai/call-claude.ts", "utf8")).toContain("systemPromptForApi(input.system)");
+  });
+
+  it("treats the live cache measurement as a manual production check", () => {
+    expect(LIVE_PROMPT_CACHE_CHECK).toEqual({
+      where: "production",
+      warmFirst: true,
+      samples: 3,
+      exemptFirstCall: false,
+    });
+  });
+});
+
+describe("PROMPT_CACHE_ENABLED", () => {
+  const previous = process.env.PROMPT_CACHE_ENABLED;
+  afterEach(() => {
+    if (previous === undefined) delete process.env.PROMPT_CACHE_ENABLED;
+    else process.env.PROMPT_CACHE_ENABLED = previous;
+  });
+
+  it("stays off unless set to an on-value", () => {
+    delete process.env.PROMPT_CACHE_ENABLED;
+    expect(promptCacheEnabled()).toBe(false);
+    for (const value of ["", "0", "false", "off", "no"]) {
+      process.env.PROMPT_CACHE_ENABLED = value;
+      expect(promptCacheEnabled()).toBe(false);
+    }
+    for (const value of ["1", "true", "on", "yes"]) {
+      process.env.PROMPT_CACHE_ENABLED = value;
+      expect(promptCacheEnabled()).toBe(true);
+    }
   });
 });

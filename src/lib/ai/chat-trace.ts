@@ -51,34 +51,45 @@ export async function finishChatTrace<T>(draft: ChatTraceDraft, run: () => Promi
   }
 }
 
+/**
+ * The chat_traces row for one turn. Cache counts are copied from
+ * `usage.cache_creation_input_tokens` and `usage.cache_read_input_tokens`.
+ * A trace is opened only when CHAT_TRACE_ENABLED is on.
+ */
+export function chatTraceInsert(draft: ChatTraceDraft): Record<string, unknown> {
+  const model = draft.modelCall;
+  return {
+    conversation_id: draft.conversationId,
+    message_id: draft.messageId,
+    user_id: draft.userId,
+    original_query: redactTraceText(draft.originalQuery),
+    rewritten_query: draft.rewrittenQuery ? redactTraceText(draft.rewrittenQuery) : null,
+    intent: draft.intent,
+    retrieved: draft.retrieved,
+    retrieval_count: draft.retrievalCount,
+    prompt: draft.prompt,
+    model: model?.model ?? null,
+    max_tokens: model?.maxTokens ?? null,
+    stop_reason: model?.stopReason ?? null,
+    input_tokens: model?.inputTokens ?? null,
+    output_tokens: model?.outputTokens ?? null,
+    thinking_tokens: model?.thinkingTokens ?? null,
+    cache_creation_input_tokens: model?.cacheCreationInputTokens ?? null,
+    cache_read_input_tokens: model?.cacheReadInputTokens ?? null,
+    latency_ms: model?.latencyMs ?? Date.now() - draft.startedAt,
+    error_subtype: draft.errorSubtype,
+    error_class: draft.errorClass,
+    error_status: draft.errorStatus,
+    form_in_progress: draft.formInProgress,
+    retryable: model?.retryable ?? false,
+    retried: false,
+    succeeded: draft.succeeded === true,
+  };
+}
+
 async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
   try {
-    const model = draft.modelCall;
-    await getSupabaseAdmin().from("chat_traces").insert({
-      conversation_id: draft.conversationId,
-      message_id: draft.messageId,
-      user_id: draft.userId,
-      original_query: redactTraceText(draft.originalQuery),
-      rewritten_query: draft.rewrittenQuery ? redactTraceText(draft.rewrittenQuery) : null,
-      intent: draft.intent,
-      retrieved: draft.retrieved,
-      retrieval_count: draft.retrievalCount,
-      prompt: draft.prompt,
-      model: model?.model ?? null,
-      max_tokens: model?.maxTokens ?? null,
-      stop_reason: model?.stopReason ?? null,
-      input_tokens: model?.inputTokens ?? null,
-      output_tokens: model?.outputTokens ?? null,
-      thinking_tokens: model?.thinkingTokens ?? null,
-      latency_ms: model?.latencyMs ?? Date.now() - draft.startedAt,
-      error_subtype: draft.errorSubtype,
-      error_class: draft.errorClass,
-      error_status: draft.errorStatus,
-      form_in_progress: draft.formInProgress,
-      retryable: model?.retryable ?? false,
-      retried: false,
-      succeeded: draft.succeeded === true,
-    });
+    await getSupabaseAdmin().from("chat_traces").insert(chatTraceInsert(draft));
   } catch {
     // Tracing never changes what the manager sees.
   }

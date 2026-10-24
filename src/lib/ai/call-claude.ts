@@ -7,6 +7,7 @@ import { Anthropic, getAnthropicClient } from "./anthropic";
 import { AiError } from "./errors";
 import { selectLongContext } from "./long-context";
 import { noteModelCall } from "./model-failure";
+import { systemPromptForApi } from "./prompts";
 import { withTruncationRetry } from "./truncation";
 
 /**
@@ -148,7 +149,9 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
           max_tokens: maxTokens,
           thinking: { type: "adaptive" },
           output_config: { effort: CLAUDE_EFFORT },
-          system: input.system,
+          // Ephemeral cache_control stays on the static block, and only when
+          // PROMPT_CACHE_ENABLED is on. Off, this is still the original string.
+          system: systemPromptForApi(input.system),
           messages: [
             ...history,
             {

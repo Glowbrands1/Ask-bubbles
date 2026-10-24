@@ -1,6 +1,7 @@
 import { ROLE_COPY } from "@/config/company/access";
 import { ASSISTANT_PURPOSE, ASSISTANT_TONE, ASSISTANT_VOICE } from "@/config/company/assistant";
 import { BUSINESS_TIMEZONE, shiftDays, weekdayOf } from "@/lib/business-date";
+import { envFlag } from "@/lib/config/chat-quality-flags";
 import { displayLocator } from "@/lib/knowledge/locator";
 import {
   CHAT_LINKABLE_REPORTS,
@@ -46,6 +47,66 @@ export const MEMORY_SECTION = "WHAT THIS MANAGER TOLD YOU BEFORE";
 
 /** Exported so a test can assert the real text rather than a paraphrase. */
 export const ASSISTANT_VOICE_RULES = ASSISTANT_VOICE;
+
+/**
+ * Everything above this line is the cached prefix: byte-identical from one
+ * request to the next. User, store, date, retrieved chunks, form state,
+ * notes and name matches go below it.
+ */
+export const DYNAMIC_PROMPT_MARKER = "---DYNAMIC---";
+
+/**
+ * A live cache read is a production check. Preview deployments have no
+ * Anthropic key, so this suite does not call the model. Warm the cache
+ * once, then read `usage.cache_read_input_tokens` on at least three further
+ * calls. Keep every sample, including the first of those three.
+ */
+export const LIVE_PROMPT_CACHE_CHECK = {
+  where: "production",
+  warmFirst: true,
+  samples: 3,
+  exemptFirstCall: false,
+} as const;
+
+/** Default off. Unset, empty, "0", "false" and "off" leave the request a single string. */
+export function promptCacheEnabled(): boolean {
+  return envFlag("PROMPT_CACHE_ENABLED");
+}
+
+export interface CachedSystemBlock {
+  readonly type: "text";
+  readonly text: string;
+  readonly cache_control?: { readonly type: "ephemeral" };
+}
+
+export function splitSystemPrompt(prompt: string): { readonly staticText: string; readonly dynamicText: string } {
+  const token = `\n\n${DYNAMIC_PROMPT_MARKER}\n\n`;
+  const index = prompt.indexOf(token);
+  if (index === -1) return { staticText: prompt, dynamicText: "" };
+  return {
+    staticText: prompt.slice(0, index),
+    dynamicText: prompt.slice(index + token.length),
+  };
+}
+
+/**
+ * Flag off: the string `buildSystemPrompt` returned, unchanged.
+ * Flag on: `cache_control: ephemeral` on the static block only.
+ */
+export function systemPromptForApi(prompt: string, caching = promptCacheEnabled()): string | CachedSystemBlock[] {
+  if (!caching) return prompt;
+  const { staticText, dynamicText } = splitSystemPrompt(prompt);
+  if (staticText === prompt) return prompt;
+  const blocks: CachedSystemBlock[] = [
+    {
+      type: "text",
+      text: `${staticText}\n\n${DYNAMIC_PROMPT_MARKER}`,
+      cache_control: { type: "ephemeral" },
+    },
+  ];
+  if (dynamicText.length > 0) blocks.push({ type: "text", text: dynamicText });
+  return blocks;
+}
 
 const MODE_INSTRUCTION: Record<AnswerMode, string> = {
   quick:
@@ -232,6 +293,20 @@ export function buildSystemPrompt(input: {
    * POLICY_CITATION_ENABLED is on.
    */
   policyCitation?: boolean;
+  /**
+   * Retrieved policy excerpts for this question. Below ---DYNAMIC---.
+   * Omit when the caller sends them as a separate grounding message.
+   */
+  policyChunks?: readonly GroundingChunk[] | null;
+  /** Roster or store name matches for this turn. Below ---DYNAMIC---. */
+  nameMatches?: string | null;
+  /** The manager's message, when the prompt is assembled as one string. */
+  message?: string | null;
+  /**
+   * Persisted conversation form state. The open card is `openForm`;
+   * this is the slot state. Below ---DYNAMIC---.
+   */
+  formState?: string | null;
 }): string {
   const { assistantName, brandName, productName, locationNoun, context, mode, hasContext } = input;
   const hasReportData = input.hasReportData ?? false;
@@ -358,16 +433,19 @@ export function buildSystemPrompt(input: {
 
   const userName = promptLabel(context.userName) || "a team member";
   const locationName = promptLabel(context.locationName);
+  const reportFigureRule = hasReportData
+    ? "- Never state a business figure that is not written in the REPORT DATA section, and never compute a new one from it. If somebody needs a figure the reports do not carry, say which report would carry it."
+    : "- You have NO report figures for this question. Do not state a sales figure, a count, a rate or a comparison from memory. If somebody asks for one, say the reports available to you do not cover it.";
+  const formCreationRule = input.openForm
+    ? openFormRule(input.openForm, productName)
+    : `- NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer. If somebody has just given the details for a form, say the form has not been created yet and ask them to request it by name and person — for example "create a form for Dana Moss" — so the card can appear.`;
+  const noContextNotice = hasContext
+    ? ""
+    : "IMPORTANT: no company documents matched this question. You have NO company knowledge for it. Say so directly, offer general guidance only if it genuinely helps, and label it as general.";
 
-  return `You are ${assistantName}, the internal assistant for ${brandName} teams. You are talking to ${userName}${locationName ? `, who works at ${locationName}` : ""}. ${todayLine(context.todayIso)}
+  const staticPrompt = `You are ${assistantName}, the internal assistant for ${brandName} teams.
 
 ${purpose}
-
-HOW YOU ANSWER
-
-You answer from the sections below, and you distinguish clearly between ${NUMBER_WORD[statementKinds.length]} kinds of statement:
-
-${taxonomy}
 
 RULES YOU DO NOT BREAK
 
@@ -376,24 +454,57 @@ RULES YOU DO NOT BREAK
 - Never invent a document title, a page number, a section name or a policy name. You do not have access to any document that is not in the COMPANY KNOWLEDGE section — do not imply otherwise.
 - Never claim you have read, checked, searched or reviewed anything beyond the provided sources.
 ${nameRule}${citationRule}
-${hasReportData ? "- Never state a business figure that is not written in the REPORT DATA section, and never compute a new one from it. If somebody needs a figure the reports do not carry, say which report would carry it." : "- You have NO report figures for this question. Do not state a sales figure, a count, a rate or a comparison from memory. If somebody asks for one, say the reports available to you do not cover it."}
 - Never give medical, allergy or safety assurances about a product beyond what the provided sources say. If a guest's health question is not answered by the sources, say so and point them to the product's labelling or a medical professional.
 - A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.
 - Keep what the person told you at the standing they gave it. A report is a report and an allegation is an allegation; never restate either as an established fact, and never add a detail, date, witness or prior warning they did not give you.
 - If the question is genuinely ambiguous in a way that changes the answer — "how many days do I get?" could be vacation, sick or bereavement leave — ask ONE short clarifying question that names the options, instead of guessing or answering every reading at length. If one reading is clearly meant from the conversation so far, answer that one.
-- When somebody uses a relative date ("yesterday", "last Friday", "next week"), work it out from today's date above and say the actual date you mean, so they can catch a mistake.
+- When somebody uses a relative date ("yesterday", "last Friday", "next week"), work it out from today's date stated below, with who you are talking to, and say the actual date you mean, so they can catch a mistake.
 - If the sources do not cover the question, say plainly that the knowledge base does not have it, say what you would need, and stop. Do not fill the gap with plausible-sounding policy. An honest "I do not have that" is the correct answer, not a failure.
 - Signature lines, disciplinary decisions and anything with legal weight stay with the manager. Point them at the policy language; do not decide for them.
 - NEVER WRITE A FACSIMILE OF A COMPANY FORM. Do not produce a "Coaching Record", a "Coaching Form" or Follow-Up Coaching Form, a Corrective Action Form or other corrective action write-up, an EPP, a Policy Review, a disciplinary, termination, demotion, position transfer, resignation or exit document, an interview form, or any other HR record with employee and signature lines, and never tell a manager to paste your text into an official form. ${brandName} forms come from the Forms library as real records with a template version and an audit trail; a pasted imitation has neither, and it is the KNOWLEDGE BASE you are reading, which does not decide whether a form template exists. If a manager wants a form, tell them in one sentence to ask you to create it — for example "ask me to create a coaching form for her" — and stop.
 - TRAINING MATERIAL IS NOT A FORM. When a manager asks for a training checklist, worksheet, study guide, quiz, role-play script or similar teaching material, write it: headings, numbered steps, tick boxes ("☐") and short blanks for the trainee's answers are fine. Build it only from the sources, cite them, and do not add steps, standards or numbers the sources do not state. Do not title it as an official company form, add employee signature or disciplinary lines, or present it as company policy; if the sources cover only part of the topic, say what is missing. Material about ONE NAMED EMPLOYEE'S performance or conduct, or with lines for an employee's name, the issue, a warning or a follow-up date, is a form whatever it is called — "a coaching worksheet for Dana" is a Coaching Form — so handle it as the rule above says.
-- Never repeat a password, PIN or access code from the sources for a company account or login unless the manager asked about setting up that account. Point to the section that has it instead. Equipment codes from a manufacturer's manual — a factory lock code on a timer or a thermostat — are not account passwords; give them when the question needs them.
-${input.openForm ? openFormRule(input.openForm, productName) : `- NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer. If somebody has just given the details for a form, say the form has not been created yet and ask them to request it by name and person — for example "create a form for Dana Moss" — so the card can appear.`}${formsLibrarySection}${formRecordsSection}${personMemorySection}${reportsGuideSection}${pinnedSection}${missingReportsSection}${input.handbookNote ? `\n\n${input.handbookNote}` : ""}${styleSection}${priorCoachingSection}${memorySection}${fewShotSection}
+- Never repeat a password, PIN or access code from the sources for a company account or login unless the manager asked about setting up that account. Point to the section that has it instead. Equipment codes from a manufacturer's manual — a factory lock code on a timer or a thermostat — are not account passwords; give them when the question needs them.${styleSection}${priorCoachingSection}
 
-${hasContext ? "" : "IMPORTANT: no company documents matched this question. You have NO company knowledge for it. Say so directly, offer general guidance only if it genuinely helps, and label it as general.\n\n"}TONE
+TONE
 
-${ASSISTANT_TONE} ${MODE_INSTRUCTION[mode]}
+${ASSISTANT_TONE}
 
 ${ASSISTANT_VOICE_RULES}`;
+
+  const dynamicPrompt = joinPromptSections([
+    `You are talking to ${userName}${locationName ? `, who works at ${locationName}` : ""}. ${todayLine(context.todayIso)}`,
+    `HOW YOU ANSWER
+
+You answer from the sections below, and you distinguish clearly between ${NUMBER_WORD[statementKinds.length]} kinds of statement:
+
+${taxonomy}`,
+    reportFigureRule,
+    formCreationRule,
+    formsLibrarySection,
+    formRecordsSection,
+    personMemorySection,
+    reportsGuideSection,
+    pinnedSection,
+    missingReportsSection,
+    input.handbookNote ?? "",
+    memorySection,
+    fewShotSection,
+    noContextNotice,
+    MODE_INSTRUCTION[mode],
+    input.policyChunks ? buildGroundingBlock([...input.policyChunks]) : "",
+    input.nameMatches?.trim() ? `NAME MATCHES\n\n${input.nameMatches.trim()}` : "",
+    input.formState?.trim() ? `FORM STATE\n\n${input.formState.trim()}` : "",
+    input.message?.trim() ? `MESSAGE\n\n${input.message.trim()}` : "",
+  ]);
+
+  return `${staticPrompt}\n\n${DYNAMIC_PROMPT_MARKER}\n\n${dynamicPrompt}`;
+}
+
+function joinPromptSections(parts: readonly string[]): string {
+  return parts
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+    .join("\n\n");
 }
 
 /**
