@@ -55,6 +55,30 @@ function readHeadings(metadata: Record<string, unknown> | null, section: string 
   return fromSections;
 }
 
+/** The knowledge_chunks columns this loader selects. */
+export interface ManualChunkRow {
+  chunk_index: number;
+  locator: string | null;
+  page: number | null;
+  section: string | null;
+  content: string;
+  metadata: Record<string, unknown> | null;
+}
+
+/** One stored chunk row as the full-manual prompt reads it. Tests replay production rows through this. */
+export function manualChunkFromRow(chunk: ManualChunkRow): FullManualDocument["chunks"][number] {
+  return {
+    chunkIndex: chunk.chunk_index,
+    content: chunk.content,
+    locator: chunk.locator,
+    page: chunk.page,
+    printedPage: readPrintedPage(chunk.metadata),
+    section: chunk.section,
+    headings: readHeadings(chunk.metadata, chunk.section),
+    sections: readSections(chunk.metadata),
+  };
+}
+
 async function fetchIndexedManuals(scopeId: string): Promise<FullManualDocument[]> {
   const client = getSupabaseAdmin();
   const { data, error } = await client
@@ -88,23 +112,7 @@ async function fetchIndexedManuals(scopeId: string): Promise<FullManualDocument[
       category: row.category,
       status: row.status,
       indexed: row.indexed,
-      chunks: ((chunks ?? []) as {
-        chunk_index: number;
-        locator: string | null;
-        page: number | null;
-        section: string | null;
-        content: string;
-        metadata: Record<string, unknown> | null;
-      }[]).map((chunk) => ({
-        chunkIndex: chunk.chunk_index,
-        content: chunk.content,
-        locator: chunk.locator,
-        page: chunk.page,
-        printedPage: readPrintedPage(chunk.metadata),
-        section: chunk.section,
-        headings: readHeadings(chunk.metadata, chunk.section),
-        sections: readSections(chunk.metadata),
-      })),
+      chunks: ((chunks ?? []) as ManualChunkRow[]).map(manualChunkFromRow),
     });
   }
   return documents;

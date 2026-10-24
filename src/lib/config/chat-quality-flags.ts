@@ -339,6 +339,17 @@ export function warningLevelManagerOnlyEnabled(): boolean {
   return envFlag("WARNING_LEVEL_MANAGER_ONLY_ENABLED");
 }
 
+/**
+ * The intent read takes a payroll amount and the Yes/No only from the
+ * manager's own turns. A figure the assistant quoted from policy ("reimburse
+ * the company $25 via payroll deduction") is not an amount, and "verbal, no
+ * payroll" is No (conv_mvmf4x1i2qxha7u, 24 Oct 2026). Off, every turn is
+ * read for an amount, as before.
+ */
+export function intentPayrollManagerOnlyEnabled(): boolean {
+  return envFlag("INTENT_PAYROLL_MANAGER_ONLY_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -377,4 +388,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
   "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
+  "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
 ] as const;
