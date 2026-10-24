@@ -187,6 +187,14 @@ stripped from employee-name candidates. The words after "job title" are
 the Job Title slot. The earlier round 1 cases in
 `src/lib/ai/name-slot-store.test.ts` still pass.
 
+`name-words.ts` now treats job, title, position, role, location, salon,
+and store as label words. A trailing "Job" or "Title" is removed only
+after a full name, so "Store Director" stays. The value after "Name:"
+is the employee. s8 (Morgan Blake), s17 (Riley Quinn), and
+"Name: Christiana Headley, job title tanning consultant" keep that name.
+"Tanning consultant" is the typed title on that line. It is not a Buff
+City job title.
+
 ## Validation port — 24 Oct 2026
 
 Local tests only. No production query, no migration applied, model not

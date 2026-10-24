@@ -8,7 +8,7 @@ import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
 import { antiLoopEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { companyNameStops } from "./name-stops";
-import { isTypedStopSpan, isTypedStopWord, NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, lowercaseMonths } from "./name-words";
+import { isTypedStopSpan, isTypedStopWord, NAME_LABEL_WORDS, NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, isNameLabelPhrase, lowercaseMonths, nameAfterNameLabel, stripTrailingJobOrTitle } from "./name-words";
 import { keepTypedPerson } from "./typed-name";
 import { boundManagerTurns, type BoundedContext } from "./bounded-context";
 import {
@@ -174,6 +174,7 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
     // "NE" and "SD" are this company's state codes. The capitalised reader
     // already drops them; this reader is the one "Dodge, NE" was still reaching.
     const stateOrTitle = typedNameEnabled() && isTypedStopWord(word, companyNameStops());
+    const labelWord = antiLoopEnabled() && NAME_LABEL_WORDS.has(lower);
     const usable =
       TYPED_NAME_WORD.test(word) &&
       // The first part is a real word; a trailing initial ("C") may follow it.
@@ -182,6 +183,7 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
       (parts.length > 0 || !NOT_A_NAME_LEAD.has(lower)) &&
       // "corinne valdez asm": a role abbreviation ends a name, in any case.
       !isJobTitleAbbreviation(word) &&
+      !labelWord &&
       !NOT_A_NAME.has(lower) &&
       !COUNTS_PEOPLE.has(lower) &&
       (!NOT_A_TYPED_NAME.has(lower) || willAsFirstName(lower, parts.length, words, whole)) &&
@@ -462,6 +464,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
   const notAName = (word: string) =>
     NOT_A_NAME.has(word.toLowerCase()) ||
     isFormVocabulary(word) ||
+    (antiLoopEnabled() && NAME_LABEL_WORDS.has(word.toLowerCase().replace(/[^a-z]/g, ""))) ||
     (typedNameEnabled() && isTypedStopWord(word, companyNameStops()));
 
   const NAME = "[A-Z][a-zA-Z'’-]+";
@@ -721,7 +724,8 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
      * starts with the reply, not the name. The reply is dropped; a run that
      * was only the reply names nobody.
      */
-    const candidate = withoutConversationalLead(run);
+    let candidate = withoutConversationalLead(run);
+    if (candidate && antiLoopEnabled()) candidate = stripTrailingJobOrTitle(candidate);
     if (candidate === null) continue;
     if (opensWithRosterState(candidate) && !AS_A_PERSON(candidate)) continue;
     if (isRosterSalonName(candidate)) continue;
@@ -1355,19 +1359,28 @@ function formRecipient(subjects: readonly string[], strong: readonly string[], w
   return joined ? null : recipient;
 }
 
-const FIELD_LABEL_WORDS = new Set(["title", "position", "location", "store", "date", "job"]);
+const FIELD_LABEL_WORDS = new Set(["title", "position", "location", "store", "date", "job", "role", "salon"]);
 
 /** "Job Title", "Store", "Date" — the form's own labels, never the employee. */
 function isFieldLabelCandidate(name: string): boolean {
   const folded = name.toLowerCase().replace(/[^a-z\s]/g, " ").replace(/\s+/g, " ").trim();
   if (!folded) return true;
   if (/^(?:job title|employee name|full name)\b/.test(folded)) return true;
+  if (isNameLabelPhrase(folded)) return true;
   const words = folded.split(" ").filter(Boolean);
-  return words.length > 0 && words.every((word) => FIELD_LABEL_WORDS.has(word));
+  return words.length > 0 && words.every((word) => word === "date" || FIELD_LABEL_WORDS.has(word));
 }
 
 function settle(strong: string[], weak: string[], text: string, subjects: readonly string[] = []): EmployeeMentions {
   if (antiLoopEnabled()) {
+    const fromLabel = nameAfterNameLabel(text);
+    if (fromLabel) strong = [fromLabel, ...strong];
+    const tidy = (name: string) => {
+      const next = stripTrailingJobOrTitle(name);
+      return next ?? "";
+    };
+    strong = strong.map(tidy).filter(Boolean);
+    weak = weak.map(tidy).filter(Boolean);
     const labeled = titleFollowingJobTitleLabel(text)?.toLowerCase() ?? null;
     const drop = (name: string) =>
       isFieldLabelCandidate(name) || (labeled !== null && name.toLowerCase() === labeled);
