@@ -880,7 +880,25 @@ export function citePolicyAnswer(
     addHit(chosen, 0, chosen.heading);
   }
 
-  const meaningful = matched.filter((hit) => !(hit.passage.printedPage === 1 && !hit.heading));
+  /*
+   * "yoga pants, joggers or sweats are" is also the never-worn rule on the
+   * next sheet. The sentence that continues "approved for instructors only"
+   * restates the longer phrase, so the shorter copy is not a second page.
+   */
+  const phraseOf = (hit: { passage: ManualPassage; sentence: number }) =>
+    sharedPhraseLength(sentences[hit.sentence] ?? cleaned, hit.passage.text);
+  const bestPhrase = new Map<number, number>();
+  for (const hit of matched) {
+    const phrase = phraseOf(hit);
+    if (phrase > (bestPhrase.get(hit.sentence) ?? 0)) bestPhrase.set(hit.sentence, phrase);
+  }
+  const focused = matched.filter((hit) => {
+    const best = bestPhrase.get(hit.sentence) ?? 0;
+    const phrase = phraseOf(hit);
+    if (phrase === 0 || best < 4) return true;
+    return phrase === best;
+  });
+  const meaningful = focused.filter((hit) => !(hit.passage.printedPage === 1 && !hit.heading));
   if (meaningful.length === 0) return { text: cleaned, sources: [], ok: false };
 
   const bySentence = new Map<number, number[]>();
