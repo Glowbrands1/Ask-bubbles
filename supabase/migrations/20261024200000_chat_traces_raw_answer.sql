@@ -1,5 +1,5 @@
 -- The model's raw answer on chat_traces. Not applied from this branch.
--- chat_messages keeps the text after citation checks and marker stripping.
+-- The saved chat message keeps the text after citation checks and marker stripping.
 -- raw_answer is the answer call's text before any of that, so a citation bug
 -- can be replayed from what the model wrote. Capped at 20,000 characters by
 -- the writer. Nullable, appended after the existing columns.
