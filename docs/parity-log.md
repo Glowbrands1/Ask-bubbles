@@ -31,7 +31,7 @@ Sources row. The manual block's page mapping is unchanged. With the
 production rows it already marks Hair 15, Facial Hair to Buff City Soap
 16, chunk 50 and Sun Tan City 17, Cell Phone and Company Email 19, and POS
 Passwords 20 (checked against the manual's contents page and footers).
-Tests read the production rows (chunks 44-64) and the four saved replies.
+Tests read the whole production manual (151 rows) and the four saved replies.
 
 **Sibling app: not ported in this change.** Ask Sunny's full-manual citation
 is being reworked in Glowbrands1/ask-sunny#172 (open). That PR is checked

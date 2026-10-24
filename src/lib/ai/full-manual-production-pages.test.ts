@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import rows from "@/test/fixtures/jba-manual-production-chunks-44-64.json";
+import manual151 from "@/test/fixtures/jba-manual-production-151.json";
 import live from "@/test/fixtures/bubbles-live-policy-answers-oct24.json";
 import { manualChunkFromRow, type ManualChunkRow } from "@/lib/knowledge/full-manual-load";
 
 import { citePolicyAnswer, planFullManualContext, type FullManualDocument } from "./full-manual-context";
 
 /**
- * Production rows 44-64 of the JBA Policy Manual, read the way
+ * The whole production JBA Policy Manual (151 rows), read the way
  * full-manual-load.ts reads them, and the replies production saved for the
  * dress-code and cell-phone questions on 24 Oct 2026.
  *
@@ -23,9 +23,12 @@ import { citePolicyAnswer, planFullManualContext, type FullManualDocument } from
 const DRESS_CODE = "What is the dress code policy for Buff City Soap and Crunch?";
 const CELL_PHONE = "What is the cell phone policy?";
 
+const rows = manual151;
+const BUBBLES_DOCUMENT_ID = manual151.document_ids["ask-bubbles"];
+
 function productionManual(): FullManualDocument {
   return {
-    id: rows.document_id,
+    id: BUBBLES_DOCUMENT_ID,
     title: "2025 JBA Policy Manual - Edited 5-2025",
     category: "policies_compliance",
     status: "indexed",
@@ -73,12 +76,13 @@ function expectSameWordsAndLines(input: string, output: string) {
   expect(output.split("\n").length).toBe(input.split("\n").length);
 }
 
-describe("production manual rows 44-64", () => {
+describe("production manual rows", () => {
   it("are the stored rows, with no footer in the text", () => {
-    expect(rows.chunks.map((row) => row.chunk_index)).toEqual(Array.from({ length: 21 }, (_, at) => 44 + at));
+    // Chunks 2-16 were the contents pages, deleted on 24 Oct 2026 (backup in knowledge_chunks_toc_backup_20261024).
+    expect(rows.chunks.map((row) => row.chunk_index)).toEqual([0, 1, ...Array.from({ length: 149 }, (_, at) => 17 + at)]);
     for (const row of rows.chunks) {
       expect(row.content).not.toMatch(/\d+\s*\|\s*P\s*a\s*g\s*e/i);
-      expect(row.page).toBe(row.metadata.printedPage + 1);
+      if (row.metadata.printedPage) expect(row.page).toBe(row.metadata.printedPage + 1);
     }
     const chunk = (index: number) => rows.chunks.find((row) => row.chunk_index === index)!;
     expect(chunk(46).locator).toBe("Pages 15–16 — Hair");
@@ -158,15 +162,21 @@ describe("live replies from 24 Oct 2026", () => {
     }
   });
 
-  it("conv_mvmkj5v72w5x3l5 cites the cell-phone policy on p.19 only, and nothing from chunk 62", () => {
+  it("conv_mvmkj5v72w5x3l5 cites the cell-phone policy on p.19, the driving rule on p.32, and nothing from chunk 62", () => {
     const raw = reply("conv_mvmkj5v72w5x3l5");
     const cited = citePolicyAnswer(raw, plan(CELL_PHONE));
     expect(cited.ok).toBe(true);
     expectSameWordsAndLines(raw, cited.text);
-    expect(pagesIn(cited.text)).toEqual(new Set([19]));
+    expect(pagesIn(cited.text)).toEqual(new Set([19, 32]));
     expect(pagesIn(lineWith(cited.text, "must be kept out of sight"))).toEqual(new Set([19]));
+    // The reply's closing note restates Driver Safety Rules, printed on 32 (checked in the PDF).
+    expect(pagesIn(lineWith(cited.text, "separate rule for driving"))).toEqual(new Set([32]));
     expect(cited.sources.length).toBeGreaterThan(0);
-    expect(cited.sources.every((source) => source.locator === "Page 19 — Cell Phone/Smart Watch Policy")).toBe(true);
+    for (const source of cited.sources) {
+      expect(source.locator === "Page 19 — Cell Phone/Smart Watch Policy" || source.printedPage === 32).toBe(true);
+    }
+    const body = cited.sources.map((source) => `${source.locator}\n${source.excerpt}`).join("\n");
+    expect(body).not.toMatch(/Company Email|Point of Sale|alarm codes/i);
   });
 
   it("conv_mvmnpmj55lrm0ny drops pages 9, 12, 14, 20, 26, 31 and 48 from the cell-phone answer", () => {
@@ -191,5 +201,32 @@ describe("live replies from 24 Oct 2026", () => {
       expect(twice.text).toBe(once.text);
       expect(twice.sources.map((source) => source.locator)).toEqual(once.sources.map((source) => source.locator));
     }
+  });
+});
+
+/**
+ * QA, 24 Oct 2026: the stray pages in the live replies (9, 10, 12, 14, 18,
+ * 20, 26, 29, 31, 48) come from sections outside the dress code and cell
+ * phone policy, so only the whole manual shows they are gone. The driving
+ * rule the 15:43 cell-phone reply mentions is Driver Safety Rules, printed
+ * on 32.
+ */
+describe("live replies against the whole manual", () => {
+  const cases = [
+    ["conv_mvmkij8h2vdogs9", [15, 16, 17]],
+    ["conv_mvmnp3lv2ify4m8", [15, 16, 17]],
+    ["conv_mvmkj5v72w5x3l5", [19, 32]],
+    ["conv_mvmnpmj55lrm0ny", [19]],
+  ] as const;
+
+  it.each(cases)("%s cites only pages %j, in the text and in Sources", (conversationId, allowed) => {
+    const found = live.answers.find((answer) => answer.conversationId === conversationId)!;
+    const plan = planFullManualContext({ question: found.question, documents: [productionManual()] });
+    const cited = citePolicyAnswer(found.content, plan);
+    expect(cited.ok).toBe(true);
+    expectSameWordsAndLines(found.content, cited.text);
+    for (const page of pagesIn(cited.text)) expect(allowed).toContain(page);
+    for (const source of cited.sources) expect(allowed).toContain(source.printedPage);
+    expect(pagesIn(cited.text).has(allowed[0])).toBe(true);
   });
 });
