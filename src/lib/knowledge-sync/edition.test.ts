@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dedupeIdenticalSections, documentFamily, planEditionSupersession, type EditionCandidate } from "./edition";
+import { dedupeIdenticalSections, documentFamily, planEditionSupersession, supersededCopyStaysOff, type EditionCandidate } from "./edition";
 
 const doc = (over: Partial<EditionCandidate> & Pick<EditionCandidate, "documentId" | "title" | "publicationId">): EditionCandidate => ({
   fileName: null,
@@ -81,5 +81,25 @@ describe("identical sections", () => {
       { document_id: "ce6b00f1", document_title: CURRENT, section: "Dress Code", content: "Skirts and dresses must reach the knee.", similarity: 0.5 },
     ]);
     expect(different).toHaveLength(2);
+  });
+});
+
+describe("a superseded copy stays off", () => {
+  const superseded = { id: "doc-2024", contentHash: "hash-old", superseded: true };
+  const current = { id: "doc-2025", contentHash: "hash-new", superseded: false };
+
+  it("matches a re-sent Woven record even when the bytes changed", () => {
+    expect(supersededCopyStaysOff({ documentId: "doc-2024", contentHash: "hash-resent" }, [superseded, current])).toBe("record");
+  });
+
+  it("matches a re-filed copy by content hash under a different record", () => {
+    expect(supersededCopyStaysOff({ documentId: "doc-refiled", contentHash: "hash-old" }, [superseded, current])).toBe("content");
+  });
+
+  it("stays off only when the flag is on and a superseded row matches", () => {
+    expect(supersededCopyStaysOff({ documentId: "doc-2024", contentHash: "hash-old" }, [superseded, current], false)).toBeNull();
+    expect(supersededCopyStaysOff({ documentId: "doc-other", contentHash: "hash-new" }, [superseded, current])).toBeNull();
+    /* The live document's id plus the old hash is still a content match here. The sink lets that live update through. */
+    expect(supersededCopyStaysOff({ documentId: "doc-2025", contentHash: "hash-old" }, [superseded, current])).toBe("content");
   });
 });

@@ -830,3 +830,71 @@ describe("newest Woven edition", () => {
     expect(h.sink.documents.get(olderId)!.superseded).toBe(true);
   });
 });
+
+describe("a superseded document is not re-indexed", () => {
+  afterEach(() => {
+    delete process.env[EDITION_FLAG];
+  });
+
+  it("a re-sent Woven record stays superseded when its bytes change", async () => {
+    const h = new Harness();
+    await h.initial();
+    const id = h.item(HANDBOOK).knowledgeDocumentId!;
+    const before = h.sink.documents.get(id)!;
+    expect(new TextDecoder().decode(before.bytes)).toBe("%PDF handbook v1");
+    before.superseded = true;
+    before.supersededBy = "current-edition";
+    const calls = h.sink.ingestCalls;
+    process.env[EDITION_FLAG] = "on";
+    Object.assign(h.fake.state.handbooks[0]!, { currentVersionId: uuid(2102), updatedOn: "2026-10-20T08:00:00", bytes: "%PDF handbook v2" });
+    await h.run("sync");
+    const after = h.sink.documents.get(id)!;
+    expect(after.version).toBe(1);
+    expect(after.superseded).toBe(true);
+    expect(after.supersededBy).toBe("current-edition");
+    expect(new TextDecoder().decode(after.bytes)).toBe("%PDF handbook v1");
+    expect(h.sink.searchable().map((doc) => doc.id)).not.toContain(id);
+    expect(h.sink.ingestCalls).toBe(calls);
+    expect(h.item(HANDBOOK)).toMatchObject({
+      knowledgeDocumentId: id,
+      inKnowledgeBase: false,
+      pendingAction: "none",
+      reason: "older_edition",
+    });
+  });
+
+  it("a re-filed copy of a superseded document's bytes stays out of search", async () => {
+    const h = new Harness();
+    await h.initial();
+    const id = h.item(HANDBOOK).knowledgeDocumentId!;
+    const before = h.sink.documents.get(id)!;
+    before.superseded = true;
+    before.supersededBy = "current-edition";
+    const refiled = uuid(499);
+    h.fake.state.fileLibrary.push({
+      EntityID: refiled,
+      Column1: "PDF",
+      Column2: "Locker list",
+      Column3: LIVE_STATUS("Published"),
+      Column4: "Public",
+      Column5: "<span>1 MB</span>",
+      Column6: "10/1/2026",
+      Column7: "",
+      Column8: "Example Soap Co",
+    });
+    h.fake.state.fileLibraryFiles[refiled] = { bytes: new TextDecoder().decode(before.bytes), fileName: "Locker list.pdf" };
+    const calls = h.sink.ingestCalls;
+    process.env[EDITION_FLAG] = "on";
+    await h.run("sync");
+    expect(h.sink.documents.get(id)).toMatchObject({ version: 1, superseded: true, supersededBy: "current-edition" });
+    expect([...h.sink.documents.values()].some((doc) => doc.fileName === "Locker list.pdf")).toBe(false);
+    expect(h.sink.searchable().map((doc) => doc.id)).not.toContain(id);
+    expect(h.sink.ingestCalls).toBe(calls);
+    expect(h.item(`file_library\u0000${refiled}\u0000file`)).toMatchObject({
+      knowledgeDocumentId: null,
+      inKnowledgeBase: false,
+      pendingAction: "none",
+      reason: "older_edition",
+    });
+  });
+});

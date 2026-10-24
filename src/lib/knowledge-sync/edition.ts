@@ -8,7 +8,9 @@
  * so they become different Ask Bubbles documents. Pau's rule is that the newest
  * edition wins. The older one stays in the library for audit — nothing is
  * deleted — and it is not searchable (`status = superseded`, `indexed = false`,
- * `superseded_by` the current document).
+ * `superseded_by` the current document). A later sync does not put that row
+ * back: the same Woven record stays superseded, and another record whose
+ * content hash matches that superseded copy is not indexed either.
  *
  * WHICH DOCUMENTS ARE THE SAME ONE is read from the title and the file name.
  * The edition date and the words that only introduce an edition (edited,
@@ -148,6 +150,42 @@ export function planEditionSupersession(candidates: readonly EditionCandidate[])
     }
   }
   return plan;
+}
+
+export type SupersededCopyMatch = "record" | "content";
+
+export interface SupersededDocumentRef {
+  id: string;
+  /** File hash or extracted content hash already stored for this document. */
+  contentHash: string | null;
+  superseded: boolean;
+}
+
+/**
+ * Whether a Woven sync must leave a superseded document out of search.
+ *
+ * `record` — this document id is already superseded. A re-sent copy stays
+ * off even when its bytes changed.
+ * `content` — a different superseded document has this content hash. A
+ * re-filed old copy stays off.
+ * Null when the flag is off, or when nothing superseded matches.
+ */
+export function supersededCopyStaysOff(
+  input: { documentId: string; contentHash: string },
+  documents: readonly SupersededDocumentRef[],
+  enabled = true,
+): SupersededCopyMatch | null {
+  if (!enabled) return null;
+  if (documents.some((doc) => doc.superseded && doc.id === input.documentId)) return "record";
+  if (
+    input.contentHash !== "" &&
+    documents.some(
+      (doc) => doc.superseded && doc.id !== input.documentId && doc.contentHash !== null && doc.contentHash === input.contentHash,
+    )
+  ) {
+    return "content";
+  }
+  return null;
 }
 
 /**

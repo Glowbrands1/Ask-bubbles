@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
 
+import { editionSupersessionEnabled } from "@/lib/config/chat-quality-flags";
 import { EMBEDDING_DIMENSIONS } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
 import { getEmbeddingProvider } from "@/lib/embeddings";
@@ -9,6 +10,7 @@ import { KNOWLEDGE_BUCKET, getSupabaseAdmin } from "@/lib/supabase/server";
 import { escapeLike } from "@/lib/supabase/like";
 import type { KnowledgeCategory, KnowledgeDocument } from "@/types";
 import { rowToDocument, type KnowledgeDocumentRow } from "@/lib/knowledge/mappers";
+import { supersededCopyStaysOff } from "@/lib/knowledge-sync/edition";
 import { chunkSegments, type DocumentChunk } from "./chunking";
 import { IngestionError } from "./errors";
 import { extractDocument } from "./extract";
@@ -76,6 +78,11 @@ export interface IngestResult {
   chunkCount: number;
   /** True when an unchanged version meant embeddings were reused. */
   reusedExistingEmbeddings: boolean;
+  /**
+   * Set when a Woven sync asked to index a superseded document or a re-filed
+   * copy of one. The row was not re-activated. Uploads never set this.
+   */
+  stayedSuperseded?: "record" | "content";
 }
 
 export async function ingestDocument(input: IngestInput): Promise<IngestResult> {
@@ -103,6 +110,19 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
   const existing = input.documentId
     ? await findById(input.scopeId, input.documentId)
     : await findByTitle(input.scopeId, title, input.source ?? "upload");
+  /*
+   * A superseded Woven document stays superseded. Re-ingesting it used to
+   * clear superseded_by and mark the row current. That path is off unless
+   * edition supersession is on; uploads are unchanged.
+   */
+  if (input.source === "woven" && editionSupersessionEnabled() && existing?.status === "superseded") {
+    return {
+      document: rowToDocument(existing),
+      chunkCount: 0,
+      reusedExistingEmbeddings: false,
+      stayedSuperseded: "record",
+    };
+  }
   const version = existing ? existing.version + 1 : 1;
   const previousVersions = existing
     ? [
@@ -202,6 +222,64 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
     }
 
     const contentHash = hashChunks(chunks);
+
+    /*
+     * A new Woven record whose extracted text matches a superseded document
+     * is a re-filed old copy. Remove the uploading placeholder and leave
+     * search as it was. The live document (an update of a current row) is
+     * not this branch: `existing` is set.
+     */
+    if (input.source === "woven" && editionSupersessionEnabled() && !existing) {
+      const { data: held, error: heldError } = await supabase
+        .from("knowledge_documents")
+        .select("id, content_hash")
+        .eq("knowledge_scope_id", input.scopeId)
+        .eq("status", "superseded")
+        .eq("content_hash", contentHash)
+        .limit(1);
+      if (heldError) {
+        throw new IngestionError("persistence_failed", `A superseded copy could not be checked: ${heldError.message}`, 502);
+      }
+      const match = supersededCopyStaysOff(
+        { documentId, contentHash },
+        ((held ?? []) as { id: string; content_hash: string | null }[]).map((row) => ({
+          id: row.id,
+          contentHash: row.content_hash,
+          superseded: true,
+        })),
+      );
+      if (match === "content") {
+        await supabase.storage.from(KNOWLEDGE_BUCKET).remove([storagePath]);
+        const { error: deleteError } = await supabase.from("knowledge_documents").delete().eq("id", documentId).eq("knowledge_scope_id", input.scopeId);
+        if (deleteError) {
+          throw new IngestionError("persistence_failed", `The re-filed copy could not be left out of search: ${deleteError.message}`, 502);
+        }
+        return {
+          document: {
+            id: documentId,
+            title,
+            description: input.description?.trim() ?? "",
+            category: input.category,
+            fileName: sanitizeFileName(input.fileName),
+            fileType: validated.fileType,
+            sizeBytes: input.file.size,
+            characterCount: 0,
+            status: "superseded",
+            source: "woven",
+            version: 1,
+            previousVersions: [],
+            uploadedBy: input.uploadedByName,
+            uploadedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            indexed: false,
+            tags: input.tags ?? [],
+          },
+          chunkCount: 0,
+          reusedExistingEmbeddings: false,
+          stayedSuperseded: "content",
+        };
+      }
+    }
 
     /* 7. Embed. Skipped entirely when the content is identical to the version
           already indexed, so re-uploading the same file costs nothing. */

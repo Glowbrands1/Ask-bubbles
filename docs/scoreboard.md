@@ -240,6 +240,8 @@ embedder. Preview writes no manifest and no document.
 | --- | --- | --- |
 | 2024 JBA manual plus two May 2025 copies | all three indexed | May 2025 copies indexed; 2024 held as `older_edition` and not searchable |
 | 2024 file already indexed, then its bytes and updated time change | would ingest the change | version stays 1, row stays superseded, bytes unchanged |
+| superseded record re-sent alone, bytes changed | re-indexed and current again | version stays 1, `superseded_by` stays, not searchable |
+| same bytes filed under a new Woven record | new document indexed | no new document; the old row stays superseded |
 | same section text in the 2024 and May 2025 manuals | both rows returned | May 2025 row kept |
 | two May 2025 copies, same section, same score | both kept by the sync | retrieval keeps the lower document id |
 | preview | writes nothing | writes nothing |

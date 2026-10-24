@@ -278,9 +278,11 @@ export function globalStoreAskEnabled(): boolean {
 
 /**
  * When Woven publishes a revised document, keep the newest edition and
- * leave older editions out of search. Identical sections from two current
- * copies collapse to one citation. Off, a sync still indexes every current
- * Woven copy, including an older edition of the same document.
+ * leave older editions out of search. A superseded knowledge document is
+ * not re-indexed or re-activated: the same Woven record stays off, and a
+ * re-filed copy of its content hash stays off. Identical sections from two
+ * current copies collapse to one citation. Off, a sync still indexes every
+ * current Woven copy, including an older edition of the same document.
  */
 export function editionSupersessionEnabled(): boolean {
   return envFlag("EDITION_SUPERSESSION_ENABLED");

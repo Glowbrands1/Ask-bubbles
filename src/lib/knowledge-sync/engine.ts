@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { editionSupersessionEnabled } from "@/lib/config/chat-quality-flags";
 
-import { holdOlderEditions, type EditionSupersession } from "./edition";
+import { holdOlderEditions, type EditionSupersession, type SupersededCopyMatch } from "./edition";
 import { buildDryRunPlan } from "./dry-run";
 import { manifestKey, reconcile, type ReconcileInput } from "./reconcile";
 import { SinkError, type DescribeItem, type KnowledgeSink, type KnowledgeSyncStore } from "./ports";
@@ -541,6 +541,16 @@ async function applyItem(deps: EngineDeps, item: ManifestItem, nowIso: () => str
   const hash = sha256Hex(fetched.bytes);
   const metadata = deps.describe(current);
 
+  /*
+   * A superseded document stays superseded. The same Woven record is not
+   * re-indexed, and a different record with that content hash is not indexed.
+   * Off, this is skipped and the ingest below is the one this app already ran.
+   */
+  if (deps.sink.keptOff) {
+    const stayed = await deps.sink.keptOff({ documentId: current.knowledgeDocumentId!, contentHash: hash });
+    if (stayed) return stayedOff(current, stayed, hash, nowIso);
+  }
+
   let action: SyncEvent["action"];
   let metadataOnly = false;
   if (current.inKnowledgeBase && current.contentHash === hash) {
@@ -548,13 +558,14 @@ async function applyItem(deps: EngineDeps, item: ManifestItem, nowIso: () => str
     action = "metadata_only";
     metadataOnly = true;
   } else {
-    await deps.sink.ingest({
+    const ingested = await deps.sink.ingest({
       documentId: current.knowledgeDocumentId!,
       bytes: fetched.bytes,
       fileName: fetched.fileName,
       mimeType: fetched.mimeType,
       ...metadata,
     });
+    if (ingested.stayedSuperseded) return stayedOff(current, ingested.stayedSuperseded, hash, nowIso);
     action = current.syncedFingerprint === null ? "ingest" : "update";
   }
 
@@ -579,6 +590,29 @@ async function applyItem(deps: EngineDeps, item: ManifestItem, nowIso: () => str
     },
     action,
     metadataOnly,
+  };
+}
+
+function stayedOff(current: ManifestItem, match: SupersededCopyMatch, hash: string, nowIso: () => string): Applied {
+  return {
+    item: {
+      ...current,
+      /* A re-filed copy has no row. Keeping the id would point the manifest at a document that was not created. */
+      knowledgeDocumentId: match === "record" ? current.knowledgeDocumentId : null,
+      state: "EXCLUDED",
+      reason: "older_edition",
+      pendingAction: "none",
+      inKnowledgeBase: false,
+      contentHash: hash,
+      syncedFingerprint: current.observedFingerprint,
+      lastError: null,
+      errorCategory: null,
+      retryCount: 0,
+      nextRetryAt: null,
+      lastSyncedAt: nowIso(),
+    },
+    action: "skip",
+    metadataOnly: false,
   };
 }
 

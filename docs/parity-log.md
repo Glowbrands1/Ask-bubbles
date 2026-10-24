@@ -40,6 +40,17 @@ its chunks are not candidates.
 Sibling app: this is the port. Ask Sunny already has the guard on
 `cursor/edition-supersession-6d4a`.
 
+The re-activation guard is Bubbles-only in this change. When
+`EDITION_SUPERSESSION_ENABLED` is on, a sync does not re-index a
+`knowledge_documents` row that is already `status = superseded`. The match
+is the Woven record's document id, or the content hash of a superseded row
+(the document's `content_hash`, and the file hash already stored on the
+sync item). A re-sent record stays off even if its bytes change. A re-filed
+copy under a new record stays off. The row keeps `indexed = false`,
+`superseded_by`, and `superseded_at`. No new column and no screen change.
+Off, a re-ingest still clears those columns and indexes the row, which is
+the path Sunny's pipeline still takes. Ask Sunny is not updated here.
+
 ## 22 Oct 2026: both apps brought level (pending QA review)
 
 Every chat/forms fix merged to either `main` from 12–21 Oct was compared. The

@@ -183,4 +183,61 @@ describe("memory sink", () => {
     expect(sink.documents.get("doc-2024")!.superseded).toBe(false);
     expect(sink.searchable().map((doc) => doc.id)).toContain("doc-2024");
   });
+
+  it("re-activates a superseded row only while the flag is off", async () => {
+    const sink = new MemoryKnowledgeSink();
+    const oldBytes = new TextEncoder().encode("%PDF-1.4 old manual");
+    const input = {
+      title: OLDER,
+      description: "older",
+      category: "other",
+      tags: ["woven"],
+      fileName: "2024-JBA.pdf",
+      mimeType: "application/pdf",
+    };
+    await sink.ingest({ documentId: "doc-2024", ...input, bytes: oldBytes });
+    await sink.ingest({
+      documentId: "doc-edited",
+      ...input,
+      title: CURRENT,
+      fileName: "JBA-Policy-Manual-Edited-5.2025.pdf",
+      bytes: new TextEncoder().encode("%PDF-1.4 current manual"),
+    });
+    await sink.supersedeEditions([{ documentId: "doc-2024", supersededBy: "doc-edited" }]);
+    const storedHash = sink.documents.get("doc-2024")!.contentHash;
+
+    delete process.env[FLAG];
+    await sink.ingest({ documentId: "doc-2024", ...input, bytes: new TextEncoder().encode("%PDF-1.4 resent") });
+    expect(sink.documents.get("doc-2024")).toMatchObject({ version: 2, superseded: false, supersededBy: null });
+    expect(sink.searchable().map((doc) => doc.id)).toContain("doc-2024");
+
+    const resent = sink.documents.get("doc-2024")!;
+    resent.superseded = true;
+    resent.supersededBy = "doc-edited";
+    const frozen = { version: resent.version, bytes: resent.bytes, contentHash: resent.contentHash };
+    process.env[FLAG] = "on";
+
+    const byRecord = await sink.ingest({ documentId: "doc-2024", ...input, bytes: new TextEncoder().encode("%PDF-1.4 resent again") });
+    expect(byRecord.stayedSuperseded).toBe("record");
+    expect(sink.documents.get("doc-2024")).toMatchObject({ version: frozen.version, superseded: true, supersededBy: "doc-edited" });
+    expect(sink.documents.get("doc-2024")!.bytes).toEqual(frozen.bytes);
+    expect(await sink.keptOff({ documentId: "doc-2024", contentHash: "different" })).toBe("record");
+
+    const byHash = await sink.ingest({ documentId: "doc-refiled", ...input, fileName: "Locker-list.pdf", bytes: frozen.bytes });
+    expect(byHash.stayedSuperseded).toBe("content");
+    expect(sink.documents.has("doc-refiled")).toBe(false);
+    expect(await sink.keptOff({ documentId: "doc-refiled", contentHash: frozen.contentHash })).toBe("content");
+    expect(sink.searchable().map((doc) => doc.id)).not.toContain("doc-2024");
+    expect(storedHash).not.toBe(frozen.contentHash);
+
+    const live = await sink.ingest({
+      documentId: "doc-edited",
+      ...input,
+      title: CURRENT,
+      fileName: "JBA-Policy-Manual-Edited-5.2025.pdf",
+      bytes: frozen.bytes,
+    });
+    expect(live.stayedSuperseded).toBeUndefined();
+    expect(sink.documents.get("doc-edited")).toMatchObject({ superseded: false, version: 2 });
+  });
 });
