@@ -4,7 +4,8 @@ import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manual";
 import { namesHeading } from "@/lib/forms/named-policy-section";
 import { payrollDeductAmount, payrollDeductFromConversation, type PayrollDeductAnswer } from "@/lib/forms/payroll-deduct";
-import { intentPayrollManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { intentPayrollManagerOnlyEnabled, managerWordsOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { extractJobTitle } from "@/lib/forms/proposal";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -13,6 +14,7 @@ import {
   type ConversationFormState,
 } from "./form-state";
 import type { GroundedPerson } from "./grounded-entities";
+import { titleTextFromTurns } from "./title-words";
 
 /**
  * Slots read off one turn, then kept only when the roster, the store list,
@@ -144,7 +146,12 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
     ? { person: choice.person, name: displayName(choice.person), ambiguous: [] as readonly GroundedPerson[], typed: null }
     : groundEmployee(reading?.employee ?? null, blob, input.people);
   const store = groundStore(choice?.store ?? reading?.store ?? null, blob, input.stores, employee.person);
-  const title = groundTitle(reading?.title ?? null, blob, input.people, employee.person);
+  // The manager's turns only: not the assistant's, not the saved state, not a
+  // pasted policy, and "ass't" spelled out.
+  const titleText = managerWordsOnlyEnabled()
+    ? titleTextFromTurns([...input.history.filter((turn) => turn.role !== "assistant").map((turn) => turn.content), input.question])
+    : null;
+  const title = groundTitle(reading?.title ?? null, blob, input.people, employee.person, titleText);
   const incidentType = groundIncident(reading?.incidentType ?? null, blob, input.headings);
   const date = groundDate(choice?.date ?? reading?.incidentDate ?? null, blob, input.today);
   const managerOnly = intentPayrollManagerOnlyEnabled();
@@ -326,6 +333,7 @@ function groundTitle(
   blob: string,
   people: readonly GroundedPerson[],
   person: GroundedPerson | null,
+  titleText: string | null = null,
 ): string | null {
   if (person?.title) return person.title;
   const titles = [...new Set(people.map((row) => row.title).filter((title): title is string => Boolean(title?.trim())))];
@@ -336,7 +344,13 @@ function groundTitle(
     const close = titles.filter((title) => editDistance(title.toLowerCase(), probe.toLowerCase()) <= 1);
     if (close.length === 1) return close[0]!;
   }
-  const inText = titles.filter((title) => blob.toLowerCase().includes(title.toLowerCase()));
+  if (titleText !== null) {
+    // Most specific first: "assistant store manager" is not "Store Manager".
+    const stated = extractJobTitle(titleText);
+    if (stated) return stated;
+  }
+  const said = (titleText ?? blob).toLowerCase();
+  const inText = titles.filter((title) => said.includes(title.toLowerCase()));
   return inText.length === 1 ? inText[0]! : null;
 }
 

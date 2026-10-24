@@ -336,6 +336,18 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
   return envFlag("INTENT_PAYROLL_MANAGER_ONLY_ENABLED");
 }
 
+/**
+ * The job title and what happened are read only from the manager's own
+ * words. The lines the app writes onto the question ("Job title: CA. It
+ * happened at Kearney, NE.") are not read as what the manager said, a pasted
+ * policy is not their title, and a turn that only names the employee or says
+ * where they work is not what happened (ported from Ask Sunny). Off, every
+ * reader is unchanged.
+ */
+export function managerWordsOnlyEnabled(): boolean {
+  return envFlag("MANAGER_WORDS_ONLY_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -374,4 +386,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
+  "MANAGER_WORDS_ONLY_ENABLED",
 ] as const;
