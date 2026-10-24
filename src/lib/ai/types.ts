@@ -259,6 +259,12 @@ export interface AskResponse {
     /** The finalized form this turn revised to open the draft, if it did. */
     revisesInstanceId: string | null;
   };
+  /**
+   * Template fields still empty, when `REQUIRED_FIELDS_ENABLED` is on.
+   * Absent when that flag is off. A name the manager typed is never listed,
+   * including a name Woven does not have.
+   */
+  missingFields?: readonly { key: string; label: string }[];
 }
 
 /**

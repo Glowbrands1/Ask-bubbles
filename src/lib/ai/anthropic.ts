@@ -2,6 +2,7 @@ import "server-only";
 
 import Anthropic from "@anthropic-ai/sdk";
 
+import { modelRetryEnabled } from "@/lib/config/chat-quality-flags";
 import { requireEnv } from "@/lib/config/server-env";
 
 /**
@@ -11,15 +12,26 @@ import { requireEnv } from "@/lib/config/server-env";
  * browser: a client component importing this file fails the build.
  */
 let client: Anthropic | null = null;
+let retryClient: Anthropic | null = null;
+
+/** SDK defaults. The retry client is a separate instance so the off path never sees a timeout. */
+export const MODEL_TIMEOUT_MS = 45_000;
+export const MODEL_MAX_RETRIES = 2;
 
 export function getAnthropicClient(): Anthropic {
-  client ??= new Anthropic({ apiKey: requireEnv("ANTHROPIC_API_KEY") });
+  const apiKey = requireEnv("ANTHROPIC_API_KEY");
+  if (modelRetryEnabled()) {
+    retryClient ??= new Anthropic({ apiKey, timeout: MODEL_TIMEOUT_MS, maxRetries: MODEL_MAX_RETRIES });
+    return retryClient;
+  }
+  client ??= new Anthropic({ apiKey });
   return client;
 }
 
 /** Test seam. */
 export function __setAnthropicClient(next: Anthropic | null): void {
   client = next;
+  retryClient = next;
 }
 
 export { Anthropic };

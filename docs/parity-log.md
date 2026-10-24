@@ -180,3 +180,44 @@ still anchored to the earlier turn, and the retrieval query is then
 rewritten into manual terms from the conversation. SKIP, an empty rewrite,
 or a model failure keeps the typed question. The answering model still
 sees the question as typed. No glossary and no migration.
+
+## 24 Oct 2026: approved backend improvements (A2, A4, A6, A8, A9, A11)
+
+**Sibling app: not ported.** Ask Sunny `main` at `b9ae362` has none of
+these. They were added here from the 24 Oct improvement list Pau approved
+for Bubbles. Sunny's salon names, people, and wording were not copied.
+Port the mechanism when Sunny takes the same list.
+
+Each flag defaults off. Unset, the request, the answer text, the citation
+list, and the in-memory store roster stay as they are.
+
+| Flag | What it turns on |
+|---|---|
+| `PROMPT_CACHE_ENABLED` | `cache_control: ephemeral` on the system prompt and, when present, the policy-manual block |
+| `MODEL_RETRY_ENABLED` | Anthropic client `timeout` 45s and `maxRetries` 2, and a short "busy" sentence on HTTP 529 / `overloaded_error` |
+| `REQUIRED_FIELDS_ENABLED` | After a corrective-action card, one sentence listing intake fields still empty. A typed employee name is never in that list |
+| `CITATION_VERIFY_ENABLED` | Drop a citation whose heading or page is not in the chunks retrieved for this turn |
+| `CHAT_TRACE_ENABLED` | Already wired. `supabase/queries/chat_traces_weekly.sql` counts rewritten queries, empty retrieval, and turns with no form |
+| `STORES_TABLE_ENABLED` | `resolver.ts` reads `public.stores` plus mapped `woven_location_map` rows |
+
+`supabase/migrations/20261024001000_stores.sql` is prepared and **not
+applied**. Proposed rows, from `COMPANY_LOCATION_ENTRIES` only:
+
+| id | code | name | state |
+|---|---|---|---|
+| loc-66 | 66 | Kearney, NE | NE |
+| loc-67 | 67 | Bellevue, NE | NE |
+| loc-219 | 219 | Lee's Summit, MO | MO |
+| loc-225 | 225 | Sioux Falls, SD (W 41st St) | SD |
+| loc-236 | 236 | Grand Island, NE | NE |
+| loc-264 | 264 | Omaha, NE (West Dodge Rd) | NE |
+| loc-338 | 338 | Sioux Falls, SD (E 18th St) | SD |
+
+No Woven location ids are in that file. Mapped aliases are joined at read
+time. Pau reviews the rows before anyone runs the migration.
+
+Not in this change: file items A1, A3, A5, A7, A10. A5 stays Bubbles-only
+on purpose — `src/app/api/forms/duplicate-create-route.test.ts` already
+guards a second create, and that guard was not edited. `chat_form_state`
+(`20261023160000`) is already applied on project `dyurgwieyltnhphihwwj`.
+The visible UI items are a separate branch.

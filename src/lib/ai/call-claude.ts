@@ -1,6 +1,7 @@
 import "server-only";
 
 import { ACTIVE_BRAND } from "@/lib/brand";
+import { modelRetryEnabled, promptCacheEnabled } from "@/lib/config/chat-quality-flags";
 import { CLAUDE_EFFORT, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
 import { Anthropic, getAnthropicClient } from "./anthropic";
@@ -111,6 +112,37 @@ export interface CallClaudeInput {
   readonly priorSummary?: string | null;
   readonly question: string;
   readonly maxTokens: number;
+  /**
+   * The policy-manual block, cached with the system prompt when
+   * `PROMPT_CACHE_ENABLED` is on. Off, callers leave it inside `grounding`.
+   */
+  readonly policyManual?: string | null;
+}
+
+export interface CachedTextBlock {
+  readonly type: "text";
+  readonly text: string;
+  readonly cache_control: { readonly type: "ephemeral" };
+}
+
+/** The system value `messages.create` receives. A string unless prompt caching is on. */
+export function claudeSystemPayload(system: string, policyManual?: string | null): string | CachedTextBlock[] {
+  if (!promptCacheEnabled()) return system;
+  const blocks: CachedTextBlock[] = [
+    { type: "text", text: system, cache_control: { type: "ephemeral" } },
+  ];
+  const manual = policyManual?.trim();
+  if (manual) blocks.push({ type: "text", text: manual, cache_control: { type: "ephemeral" } });
+  return blocks;
+}
+
+export function modelIsOverloaded(error: unknown): boolean {
+  if (!(error instanceof Anthropic.APIError)) return false;
+  if (error.status === 529) return true;
+  const body = error.error;
+  if (!body || typeof body !== "object") return false;
+  const type = "type" in body ? body.type : null;
+  return type === "overloaded_error";
 }
 
 export async function callClaude(input: CallClaudeInput): Promise<string> {
@@ -148,7 +180,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
           max_tokens: maxTokens,
           thinking: { type: "adaptive" },
           output_config: { effort: CLAUDE_EFFORT },
-          system: input.system,
+          system: claudeSystemPayload(input.system, input.policyManual),
           messages: [
             ...history,
             {
@@ -216,6 +248,13 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
       error,
     });
     logAnthropicFailure(error);
+    if (modelRetryEnabled() && modelIsOverloaded(error)) {
+      throw new AiError(
+        "model_failed",
+        `${ACTIVE_BRAND.assistantName} is busy right now. Wait a moment and ask again. No answer was generated.`,
+        503,
+      );
+    }
     if (error instanceof Anthropic.APIError && rejectsConfiguration(error.status)) {
       throw new AiError(
         "not_configured",
@@ -277,7 +316,7 @@ export async function callClaudeTool(input: {
     const response = await client.messages.create({
       model: input.model,
       max_tokens: input.maxTokens,
-      system: input.system,
+      system: claudeSystemPayload(input.system),
       tools: [
         {
           name: input.tool.name,
@@ -305,6 +344,13 @@ export async function callClaudeTool(input: {
   } catch (error) {
     if (error instanceof AiError) throw error;
     if (error instanceof MissingConfigurationError) throw error;
+    if (modelRetryEnabled() && modelIsOverloaded(error)) {
+      throw new AiError(
+        "model_failed",
+        `${ACTIVE_BRAND.assistantName} is busy right now. Wait a moment and ask again. No answer was generated.`,
+        503,
+      );
+    }
     throw new AiError(
       "model_failed",
       `${ACTIVE_BRAND.assistantName} could not reach the language model. No answer was generated.`,

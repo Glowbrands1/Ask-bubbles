@@ -197,6 +197,37 @@ export function draftMergeEnabled(): boolean {
   return draftEditMergeEnabled();
 }
 
+/** Cache the static system prompt and the policy-manual block. Off, the request is unchanged. */
+export function promptCacheEnabled(): boolean {
+  return envFlag("PROMPT_CACHE_ENABLED");
+}
+
+/** Anthropic timeout and retries, and a plain sentence when the model is overloaded. */
+export function modelRetryEnabled(): boolean {
+  return envFlag("MODEL_RETRY_ENABLED");
+}
+
+/**
+ * After a form card, list the template fields still empty. A name the
+ * manager typed is never listed, including a name Woven does not have.
+ */
+export function requiredFieldsEnabled(): boolean {
+  return envFlag("REQUIRED_FIELDS_ENABLED");
+}
+
+/** Drop a citation whose heading or page is not in the current manual chunks. */
+export function citationVerifyEnabled(): boolean {
+  return envFlag("CITATION_VERIFY_ENABLED");
+}
+
+/**
+ * The store resolver reads `public.stores` and mapped `woven_location_map`
+ * rows. Off, it keeps reading the company roster in memory.
+ */
+export function storesTableEnabled(): boolean {
+  return envFlag("STORES_TABLE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -222,4 +253,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INTENT_EXTRACTION_ENABLED",
   "FEWSHOT_EXAMPLES_ENABLED",
   "SELF_CHECK_ENABLED",
+  "PROMPT_CACHE_ENABLED",
+  "MODEL_RETRY_ENABLED",
+  "REQUIRED_FIELDS_ENABLED",
+  "CITATION_VERIFY_ENABLED",
+  "STORES_TABLE_ENABLED",
 ] as const;

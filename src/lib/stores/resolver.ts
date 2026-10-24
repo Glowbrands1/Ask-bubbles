@@ -1,4 +1,5 @@
 import { isJobTitleAbbreviation } from "@/config/company/job-titles";
+import { storesTableEnabled } from "@/lib/config/chat-quality-flags";
 import { editDistance } from "@/lib/forms/employee-match";
 import { COMPANY_LOCATIONS, locationNameKey, type CompanyLocation } from "@/lib/locations";
 
@@ -335,9 +336,22 @@ export function buildStoreIndex(sources: StoreIndexSources = {}): StoreIndex {
 
 /** The roster as it ships — no Woven mappings. What synchronous callers use. */
 let defaultIndex: StoreIndex | null = null;
+/** Set from `public.stores` when STORES_TABLE_ENABLED is on. Null leaves the roster. */
+let tableIndex: StoreIndex | null = null;
+
 export function defaultStoreIndex(sources?: { nicknames?: StoreIndexSources["nicknames"]; abbreviations?: StoreIndexSources["abbreviations"] }): StoreIndex {
   if (sources) return buildStoreIndex({ ...sources });
   return (defaultIndex ??= buildStoreIndex());
+}
+
+export function primeStoreIndex(index: StoreIndex | null): void {
+  tableIndex = index;
+}
+
+/** The table index only while the flag is on and a prime succeeded. */
+export function activeStoreIndex(): StoreIndex {
+  if (storesTableEnabled() && tableIndex) return tableIndex;
+  return defaultStoreIndex();
 }
 
 function storesById(index: StoreIndex, ids: readonly string[]): CompanyLocation[] {
@@ -401,7 +415,7 @@ function partial(query: string, index: StoreIndex): string[] {
  * The store a typed phrase names — the whole phrase, as in an autofill field or
  * a menu answer. For a sentence use `readStoreMentions`.
  */
-export function resolveStoreText(query: string, index: StoreIndex = defaultStoreIndex()): StoreResolution {
+export function resolveStoreText(query: string, index: StoreIndex = activeStoreIndex()): StoreResolution {
   const typed = query.replace(/^[\s,:;-]+|[\s,.;:!?]+$/g, "").trim();
   if (!typed) return { kind: "not_found", query };
 
@@ -451,7 +465,7 @@ export function resolveStoreText(query: string, index: StoreIndex = defaultStore
  * words. A capitalised pair like "Grand Island" is a place, not an employee. A
  * single word ("Kearney") is never decided here: it is also a surname.
  */
-export function isStoreName(phrase: string, index: StoreIndex = defaultStoreIndex()): boolean {
+export function isStoreName(phrase: string, index: StoreIndex = activeStoreIndex()): boolean {
   const key = foldKey(phrase, index.abbreviations).trim();
   if (key.split(" ").length < 2) return false;
   const alias = index.byPhrase.get(key);
@@ -548,7 +562,7 @@ const SPAN_AT_END = new RegExp(
  * "store"/"location" ("the Kearney store"), or after "at"/"in" when the
  * sentence then ends or carries on ("at Kearney today"). "From" is not a cue.
  */
-export function readStoreMentions(text: string, index: StoreIndex = defaultStoreIndex()): StoreReading {
+export function readStoreMentions(text: string, index: StoreIndex = activeStoreIndex()): StoreReading {
   const mentions: StoreMention[] = [];
   const unmatched: string[] = [];
 

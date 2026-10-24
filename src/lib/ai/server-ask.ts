@@ -28,11 +28,14 @@ import { buildHandbookNote, namesHandbook, selectHandbookCoverage } from "@/lib/
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { RoleGrounding } from "@/lib/knowledge/role-grounding";
 import { recallPeople } from "@/lib/chat/person-memory-store";
+import { primeStoresFromTable } from "@/lib/stores/store-table";
 import { reportById, routeReportQuestion } from "@/lib/reporting/registry";
 import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
 import { callClaude } from "./call-claude";
+import { keepVerifiedCitations } from "./citation-verify";
+import { missingRequiredFields, requiredFieldSentence } from "./required-fields";
 import { loadChatDataBlock } from "./chat-data-tools";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
@@ -48,7 +51,10 @@ import {
   chatMemoryEnabled,
   chatStyleRulesEnabled,
   chatTraceEnabled,
+  citationVerifyEnabled,
   fieldAccuracyEnabled,
+  promptCacheEnabled,
+  requiredFieldsEnabled,
   formToolsEnabled,
   hybridSearchEnabled,
   longContextEnabled,
@@ -136,6 +142,7 @@ export async function answerQuestion(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
+  await primeStoresFromTable();
   if (!chatTraceEnabled()) return answerQuestionBody(request, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
@@ -669,7 +676,8 @@ async function answerQuestionBody(
     breakdown: reportBreakdownEnabled(),
   });
   const pinnedPolicy = await citedManualGrounding(request, knowledge);
-  const groundingText = [buildGroundingBlock(grounding), pinnedPolicy]
+  const cacheManual = promptCacheEnabled() ? pinnedPolicy : null;
+  const groundingText = [buildGroundingBlock(grounding), cacheManual ? null : pinnedPolicy]
     .filter((part) => part && part.length > 0)
     .join("\n\n");
   updateChatTrace({
@@ -694,13 +702,25 @@ async function answerQuestionBody(
     ...(longContext ? { historyPolicy: "budget" as const, priorSummary: longContext.summary } : {}),
     question: request.question,
     maxTokens: CLAUDE_MAX_TOKENS[request.mode],
+    policyManual: cacheManual,
   });
 
   const markers = extractUsedMarkers(answer, grounding.map((chunk) => chunk.marker));
-  const citations: SourceCitation[] = markers
+  const builtCitations: SourceCitation[] = markers
     .map((marker) => used[marker - 1])
     .filter((row): row is MatchedChunkRow => Boolean(row))
     .map(rowToCitation);
+  const citations = citationVerifyEnabled()
+    ? keepVerifiedCitations(
+        builtCitations,
+        rows.map((row) => ({
+          documentId: row.document_id,
+          section: row.section,
+          page: row.page,
+          content: row.content,
+        })),
+      )
+    : builtCitations;
 
   const suggested = await suggestedFormsFor({ summariesPromise, request, actor });
 
@@ -855,7 +875,8 @@ async function decorateFormAnswer(request: AskRequest, actor: ChatActor, respons
   const coachingOn = priorCoachingOptionalEnabled();
   const policyOn = policyCitationEnabled();
   const slotsOn = slotRetentionEnabled();
-  if (!coachingOn && !policyOn && !slotsOn) return response;
+  const requiredOn = requiredFieldsEnabled();
+  if (!coachingOn && !policyOn && !slotsOn && !requiredOn) return response;
   const turns = [...request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), request.question];
   let content = response.content;
   if (coachingOn) {
@@ -895,7 +916,13 @@ async function decorateFormAnswer(request: AskRequest, actor: ChatActor, respons
       // A manual read that fails leaves the proposal as the forms path wrote it.
     }
   }
-  return content === response.content ? response : { ...response, content };
+  const missing = requiredOn && response.formProposal ? missingRequiredFields(response.formProposal, turns.join("\n")) : [];
+  if (missing.length > 0) {
+    const sentence = requiredFieldSentence(missing);
+    if (sentence && !content.includes("Still needed on the form:")) content = content ? `${content}\n\n${sentence}` : sentence;
+  }
+  if (content === response.content && missing.length === 0) return response;
+  return { ...response, content, ...(requiredOn ? { missingFields: missing } : {}) };
 }
 
 async function questionForProposal(request: AskRequest, actor: ChatActor): Promise<string> {
