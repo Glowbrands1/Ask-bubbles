@@ -595,7 +595,7 @@ describe.each(FORMS)("$key", (form) => {
     const found: { path: string; from: unknown; to: unknown }[] = [];
     differences(
       comparable(source),
-      comparable({ ...(seed as never), document: referenceDocument(form.key, seed.document) }),
+      comparable({ ...seed, document: referenceDocument(form.key, seed.document) } as Record<string, unknown>),
       "",
       found,
     );

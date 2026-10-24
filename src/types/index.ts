@@ -545,6 +545,17 @@ export interface ChatFormProposal {
   /** Null until the manager names one. Never inferred from an assistant turn. */
   employeeName: string | null;
   /**
+   * A different Woven employee whose name is close to the one on the card.
+   *
+   * Shown under the card, never as a question, and only when
+   * `TYPED_NAME_ENABLED` found exactly one close roster name — "Woven has
+   * Jane Doe" while the card still says the name the manager typed. Absent
+   * when nothing is close, so a card with no close match shows no note.
+   * Optional so a proposal stored before this field still reads. The create
+   * route does not file it.
+   */
+  closeMatchNote?: string;
+  /**
    * The employee's job title, where the MANAGER stated it.
    *
    * "Riley is a Shift Lead at River Market" says it; nothing else does. It is

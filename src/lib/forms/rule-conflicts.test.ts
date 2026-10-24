@@ -119,9 +119,10 @@ describe("a name already given is not asked again", () => {
     const close = matchEmployeeName("Katlin Brook", roster);
     expect(close.kind).toBe("unchecked");
     if (close.kind === "unchecked") expect(close.closeName).toBe("Kaitlyn Brook");
-    expect(wovenCloseNote("Kaitlyn Brook")).toBe(
-      "Woven has **Kaitlyn Brook** — say so if that's who you mean. Carry on; do not wait.",
-    );
+    // Pau, 24 Oct 2026: the note is the short line, not a question.
+    expect(wovenCloseNote("Kaitlyn Brook")).toBe("Woven has Kaitlyn Brook");
+    expect(wovenCloseNote("Jane Doe")).toBe("Woven has Jane Doe");
+    expect(wovenCloseNote("Kaitlyn Brook")).not.toMatch(/\?/);
     expect(wovenCloseNote("Kaitlyn Brook").startsWith("Did you mean")).toBe(false);
     expect(matchEmployeeName("Test Employee", roster).kind).toBe("none");
   });
@@ -410,11 +411,81 @@ describe("Did you mean is a note, and the typed title wins", () => {
       },
       { people: [person], prep, rosterEmpty: false },
     );
-    expect(applied.content).toBe(wovenCloseNote("Kaitlyn Brook"));
+    // The question is gone from the reply. The short note sits on the card.
     expect(applied.content.startsWith("Did you mean")).toBe(false);
+    expect(applied.content).not.toContain("Woven has");
+    expect(applied.content).not.toMatch(/\?/);
+    expect(applied.formProposal?.closeMatchNote).toBe("Woven has Kaitlyn Brook");
+    expect(applied.formProposal?.closeMatchNote).toBe(wovenCloseNote("Kaitlyn Brook"));
     expect(applied.formProposal?.employeeName).toBe("Katlin Brook");
     expect(applied.formProposal?.employeeRole).toBe("Store Director");
     expect(applied.formProposal?.status).toBe("ready");
+  });
+
+  it("with the flag off, Did you mean stays a question and there is no note", () => {
+    delete process.env.TYPED_NAME_ENABLED;
+    const proposal = {
+      proposalId: "p",
+      templateKey: "coaching",
+      templateName: "Coaching Form",
+      supportsInlineDraft: true,
+      variantKey: null,
+      employeeName: "Kaitlyn Brook",
+      employeeRole: "Team Member",
+      formDate: null,
+      locationId: "loc-264",
+      locationName: "Omaha",
+      locationResolution: "resolved",
+      authorizedLocationIds: [],
+      status: "ready",
+      sourceMessageIds: [],
+    } as ChatFormProposal;
+    const applied = applyGroundedProposal(
+      {
+        content:
+          'Did you mean **Kaitlyn Brook**? I couldn\'t find **Katlin Brook** exactly in the employee list for your stores, so I want to be sure before it goes on the form.',
+        citations: [],
+        coverage: "not_applicable",
+        formProposal: proposal,
+      },
+      { people: [person], prep, rosterEmpty: false },
+    );
+    expect(applied.content.startsWith("Did you mean")).toBe(true);
+    expect(applied.formProposal?.closeMatchNote).toBeUndefined();
+  });
+
+  it("no close match adds no Woven note and does not block the typed name", () => {
+    vi.stubEnv("TYPED_NAME_ENABLED", "1");
+    const proposal = {
+      proposalId: "p",
+      templateKey: "coaching",
+      templateName: "Coaching Form",
+      supportsInlineDraft: true,
+      variantKey: null,
+      employeeName: "Test Employee",
+      employeeRole: null,
+      formDate: null,
+      locationId: "loc-264",
+      locationName: "Omaha",
+      locationResolution: "resolved",
+      authorizedLocationIds: [],
+      status: "ready",
+      sourceMessageIds: [],
+    } as ChatFormProposal;
+    const applied = applyGroundedProposal(
+      {
+        content: "Here is the Coaching Form for Test Employee.",
+        citations: [],
+        coverage: "not_applicable",
+        formProposal: proposal,
+      },
+      { people: [person], prep, rosterEmpty: false },
+    );
+    expect(applied.formProposal?.employeeName).toBe("Test Employee");
+    expect(applied.formProposal?.closeMatchNote).toBeUndefined();
+    expect(applied.formProposal?.status).toBe("ready");
+    expect(applied.content).not.toContain("Woven has");
+    expect(applied.content.startsWith("Did you mean")).toBe(false);
   });
 
   it("a typed job title is not replaced with Woven's title", () => {

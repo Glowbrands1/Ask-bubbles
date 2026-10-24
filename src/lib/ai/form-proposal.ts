@@ -836,7 +836,8 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   /*
    * THE TYPED NAME, CHECKED AGAINST THE PEOPLE THIS MANAGER MAY FILE ABOUT.
    * See `checkTypedEmployee`: an exact match takes the directory's spelling and
-   * salon, a close one is asked about, and nothing is ever autocorrected.
+   * salon. One close spelling keeps the typed name and, when the typed-name
+   * flag is on, a note under the card. Nothing is ever autocorrected.
    */
   const storeIndex = input.storeIndex ?? (await loadStoreIndex());
   const confirmedStore = readStoreConfirmation(input.history, input.question);
@@ -898,6 +899,8 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     formDateFromConversation: !isExitForm(match),
   };
   const proposal = buildProposal(proposalInput);
+  // Under the card. Not in the reply, so it is not a question and not above the card.
+  if (directory.closeNote) proposal.closeMatchNote = directory.closeNote;
 
   /*
    * ==========================================================================
@@ -1314,8 +1317,13 @@ interface DirectoryCheck {
   matched?: boolean;
   /** Asked INSTEAD of the proposal text: the form is not offered yet. */
   question?: string;
-  /** Said AFTER the proposal text. */
+  /** Said AFTER the proposal text, in the reply above the card. */
   note?: string;
+  /**
+   * One close Woven name. Put on the proposal and shown under the card.
+   * Not part of the reply, so it is not asked and does not sit above the card.
+   */
+  closeNote?: string;
   /** What Woven confirmed — or why it could not. Absent only where nothing was checked. */
   verification?: EmployeeVerification;
 }
@@ -1338,11 +1346,6 @@ const storeLabel = (id: string) => {
   const store = locationById(id);
   return store ? describeStore(store) : id;
 };
-
-function wovenNoteAlreadySaid(history: readonly { role: string; content: string }[], rosterName: string): boolean {
-  const note = wovenCloseNote(rosterName);
-  return history.some((turn) => turn.role === "assistant" && turn.content.includes(note));
-}
 
 async function checkTypedEmployee(
   input: ProposalTurn,
@@ -1456,8 +1459,9 @@ async function checkTypedEmployee(
   }
 
   if (result.kind === "unchecked") {
-    if (typedNameEnabled() && result.closeName && asks && !wovenNoteAlreadySaid(input.history, result.closeName)) {
-      return { note: wovenCloseNote(result.closeName) };
+    // The card is built either way. The note is under it, and only for one close name.
+    if (typedNameEnabled() && result.closeName && asks) {
+      return { closeNote: wovenCloseNote(result.closeName) };
     }
     return {};
   }

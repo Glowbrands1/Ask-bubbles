@@ -14,9 +14,10 @@ import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
  *
  * WHAT IT NEVER DOES:
  *
- *   AUTOCORRECT. A close spelling is a question — "Did you mean Kaitlyn
- *   Smith?" — and the form is not offered until the manager answers it. An
- *   HR record naming the wrong person is worse than one with a typo.
+ *   AUTOCORRECT. A close spelling is never written onto the form. Off the
+ *   typed-name flag it is still "Did you mean Kaitlyn Smith?". On that flag
+ *   the card keeps the typed name and a short note names the close person.
+ *   An HR record naming the wrong person is worse than one with a typo.
  *
  *   CHOOSE BETWEEN PEOPLE. Two plausible matches are both put to the manager.
  *
@@ -284,9 +285,9 @@ export function matchEmployeeName(typed: string, roster: readonly RosterEmployee
   if (kept?.has(normalize(typed))) return { kind: "unchecked" };
   /*
    * One close roster name is not a question when a typed name is kept.
-   * The caller may say "Woven has X" once. The form still uses the
-   * spelling the manager typed. Two different people are still a question.
-   * Off, every close match asks "Did you mean".
+   * The card uses the spelling the manager typed, and the caller may show
+   * "Woven has Jane Doe" under that card. Two different people are still
+   * a question. Off, every close match asks "Did you mean".
    */
   if (typedNameEnabled() && ranked.length === 1) {
     return { kind: "unchecked", closeName: displayName(ranked[0]!.employee) };
@@ -294,9 +295,12 @@ export function matchEmployeeName(typed: string, roster: readonly RosterEmployee
   return result;
 }
 
-/** A close roster name, said once, without waiting for an answer. */
+/**
+ * A close roster name, shown under the card. Not a question and not a block.
+ * Pau, 24 Oct 2026: "Woven has Jane Doe". The card keeps the typed spelling.
+ */
 export function wovenCloseNote(rosterName: string): string {
-  return `Woven has **${rosterName}** — say so if that's who you mean. Carry on; do not wait.`;
+  return `Woven has ${rosterName}`;
 }
 
 /* ------------------------------------------------- asking, and answering --- */

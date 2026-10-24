@@ -276,3 +276,34 @@ describe("a card from before a correction offers nothing", () => {
     expect([...container.querySelectorAll("button")].some((button) => /Create draft/.test(button.textContent ?? ""))).toBe(true);
   });
 });
+
+describe("a close Woven name is a note under the card", () => {
+  it("shows Woven has Jane Doe under the card, and the typed name on it", () => {
+    const { container } = bubble({
+      content: "Here is the Coaching Form for Jayne Doe.",
+      formProposal: proposal({
+        employeeName: "Jayne Doe",
+        employeeRole: "Store Director",
+        templateName: "Coaching Form",
+        closeMatchNote: "Woven has Jane Doe",
+      }),
+    });
+    const card = container.querySelector("dl")!.parentElement!;
+    const note = container.querySelector("[data-woven-close-note]");
+    expect(card.textContent).toContain("Jayne Doe");
+    expect(card.textContent).not.toContain("Woven has Jane Doe");
+    expect(note?.textContent).toBe("Woven has Jane Doe");
+    expect(note?.textContent).not.toMatch(/\?/);
+    expect(card.compareDocumentPosition(note!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.textContent).not.toMatch(/Did you mean/);
+  });
+
+  it("shows no note when there is no close match", () => {
+    const { container } = bubble({
+      content: "Here is the Coaching Form for Test Employee.",
+      formProposal: proposal({ employeeName: "Test Employee" }),
+    });
+    expect(container.querySelector("[data-woven-close-note]")).toBeNull();
+    expect(container.textContent).not.toMatch(/Woven has /);
+  });
+});
