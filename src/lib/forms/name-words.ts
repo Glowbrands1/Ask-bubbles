@@ -235,6 +235,52 @@ const MONTH_AS_DATE = new RegExp(
   "gi",
 );
 
+/**
+ * A word or a span that is not a person and not a store, when a typed name
+ * is kept. The caller supplies the company's state codes and the manual's
+ * own titles, so this file still imports nothing.
+ *
+ * "based" is the glue in "coaching form based on uniform". A two-letter
+ * state code is a store's state, not a surname. A span that uses a word of
+ * the manual's title ("policy", "manual", "JBA") is the document.
+ */
+export interface NameStopSources {
+  readonly stateCodes: ReadonlySet<string>;
+  readonly titleWords: ReadonlySet<string>;
+  readonly phrases: readonly string[];
+}
+
+const NAME_STOP_GLUE = new Set(["based"]);
+
+function stopWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+export function isTypedStopWord(word: string, sources: NameStopSources): boolean {
+  const lower = stopWords(word)[0];
+  if (!lower) return false;
+  if (NAME_STOP_GLUE.has(lower)) return true;
+  if (sources.titleWords.has(lower)) return true;
+  return lower.length === 2 && sources.stateCodes.has(lower.toUpperCase());
+}
+
+/** True for "based", "NE", "JBA Manual", and "workplace policy". */
+export function isTypedStopSpan(span: string, sources: NameStopSources): boolean {
+  const words = stopWords(span);
+  if (words.length === 0) return false;
+  if (words.length === 1) return isTypedStopWord(words[0]!, sources);
+  if (words.some((word) => sources.titleWords.has(word) || NAME_STOP_GLUE.has(word))) return true;
+  return sources.phrases.some((phrase) => {
+    const title = new Set(stopWords(phrase));
+    return title.size >= 2 && words.every((word) => title.has(word));
+  });
+}
+
 export function lowercaseMonths(text: string): string {
   return text
     .replace(MONTH_ALWAYS, (month) => month.toLowerCase())

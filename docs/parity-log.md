@@ -203,9 +203,25 @@ Attendance. A missed policy acknowledgement is Standards of Conduct.
 Leggings are Dress Code. "Opening tasks" and slippers are unchanged.
 
 `ACTION_PLAN_SENTENCES_ENABLED` already defaulted off. On, payroll deduct
-Yes does not add a third sentence. The deduction stays on its own field.
+Yes does not add a third sentence, and a "$25.00" the Late Opening
+section quotes is not filled in unless the manager stated an amount. The
+deduction stays on its own field. No new payroll amount field was added.
 
 `POLICY_CITATION_ENABLED` already defaulted off. On, a form that has a
 policy line gets the manual section name and printed page from the chunk.
 A chunk with no page is not given one. The prompt says the same, and only
 when the flag is on.
+
+`PRINTED_PAGE_ONLY_ENABLED` defaults off. On, self-check and the retrieval
+row passed into that check use the printed page only. The PDF sheet
+number is not treated as the printed page. Off, either number still passes.
+
+On `TYPED_NAME_ENABLED`, one close roster match is the note "Woven has
+**X** — say so if that's who you mean. Carry on; do not wait." The card
+in that same turn uses the typed name. The note is not asked again. A
+name Woven does not list is not mentioned. Two different close matches
+are still a question. A job title the manager typed is the title on the
+form, including where Woven verified a different one. "based", a state
+code from `COMPANY_LOCATIONS`, and a span that uses a word of the JBA
+manual title ("workplace policy", "JBA Manual") are not a person and not
+a store. Off, "Did you mean" and the Woven title still win.

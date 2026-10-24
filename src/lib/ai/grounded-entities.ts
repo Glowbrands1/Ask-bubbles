@@ -1,15 +1,17 @@
+import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { readCaPolicy } from "@/lib/forms/ca-policy";
 import {
   displayName,
   matchEmployeeName,
   rosterNameNamedIn,
+  wovenCloseNote,
   type RosterEmployee,
 } from "@/lib/forms/employee-match";
 import { withKeptTypedNames } from "@/lib/forms/kept-typed-names";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
-import { readEmployeeMentions } from "@/lib/forms/proposal";
+import { extractJobTitle, readEmployeeMentions } from "@/lib/forms/proposal";
 import type { ChatFormProposal } from "@/types";
 
 import { uniqueRosterStore } from "./intake-augment";
@@ -158,7 +160,12 @@ export function applyGroundedProposal(
   },
 ): AskResponse {
   let content = response.content;
-  if (input.prep.ambiguous.length > 1 || content.startsWith("Did you mean **")) {
+  const singleClose = typedNameEnabled() ? /^Did you mean \*\*([^*]+)\*\*\?/.exec(content.trim()) : null;
+  const typedClose = singleClose ? (/couldn't find \*\*([^*]+)\*\*/.exec(content)?.[1]?.trim() ?? null) : null;
+  if (singleClose) {
+    const suggested = singleClose[1]!.trim();
+    if (!content.includes(`Woven has **${suggested}**`)) content = wovenCloseNote(suggested);
+  } else if (input.prep.ambiguous.length > 1 || content.startsWith("Did you mean **")) {
     content = labelDuplicateQuestion(content, input.people, input.prep.ambiguousTyped);
   }
   if (!input.rosterEmpty && input.prep.unmatched.length > 0) {
@@ -169,6 +176,13 @@ export function applyGroundedProposal(
   if (!response.formProposal) return content === response.content ? response : { ...response, content };
 
   let proposal = response.formProposal;
+  if (typedClose) {
+    proposal = {
+      ...proposal,
+      employeeName: typedClose,
+      status: proposal.locationId || proposal.locationResolution === "resolved" ? "ready" : "needs_location",
+    };
+  }
   if (proposal.employeeName && isDocumentOrPolicyName(proposal.employeeName)) {
     const refused = proposal.employeeName;
     proposal = clearEmployee(proposal);
@@ -188,9 +202,11 @@ export function applyGroundedProposal(
     }
   }
 
+  const stated = typedNameEnabled() ? extractJobTitle(input.prep.question) : null;
+  if (stated) proposal = { ...proposal, employeeRole: stated, employeeRoleSource: "manager" };
   const fact = factForProposal(proposal, input.people, input.prep.employeeId);
   if (fact) {
-    if (!proposal.employeeRole && fact.title) proposal = { ...proposal, employeeRole: fact.title };
+    if (!stated && !proposal.employeeRole && fact.title) proposal = { ...proposal, employeeRole: fact.title };
     const ids = factLocationIds(fact);
     if (ids.length === 1 && (proposal.locationResolution !== "resolved" || !proposal.locationId)) {
       proposal = withLocation(proposal, ids[0]!);
@@ -241,6 +257,7 @@ function gateMentions(
       continue;
     }
     if (match.kind === "confirm" && match.candidates.length === 1) {
+      if (typedNameEnabled()) continue;
       const only = match.candidates[0]!;
       next = replacePhrase(next, name, only.name);
       rosterIds = [only.employee.id];

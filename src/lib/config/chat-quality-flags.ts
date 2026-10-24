@@ -200,10 +200,19 @@ export function draftMergeEnabled(): boolean {
 /**
  * A name the manager typed is the name on the form. Off, a close roster
  * match still asks "Did you mean", and a state or a document title can
- * still be offered as a person.
+ * still be offered as a person. On, one close roster name is a note, not
+ * a question, and the card uses the typed spelling.
  */
 export function typedNameEnabled(): boolean {
   return envFlag("TYPED_NAME_ENABLED");
+}
+
+/**
+ * A citation is checked against the page the manual prints. Off, the PDF
+ * sheet number is still accepted. On, only `printedPage` counts.
+ */
+export function printedPageOnlyEnabled(): boolean {
+  return envFlag("PRINTED_PAGE_ONLY_ENABLED");
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
@@ -232,4 +241,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FEWSHOT_EXAMPLES_ENABLED",
   "SELF_CHECK_ENABLED",
   "TYPED_NAME_ENABLED",
+  "PRINTED_PAGE_ONLY_ENABLED",
 ] as const;

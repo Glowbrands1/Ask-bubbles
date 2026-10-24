@@ -54,7 +54,7 @@ export type NameMatch =
   /** Nobody on the roster is close. The typed name stands, as typed. */
   | { kind: "none" }
   /** No roster to check against — the directory is empty or unavailable. */
-  | { kind: "unchecked" };
+  | { kind: "unchecked"; readonly closeName?: string };
 
 /*
  * ============================================================================
@@ -283,11 +283,20 @@ export function matchEmployeeName(typed: string, roster: readonly RosterEmployee
   const kept = readKeptTypedNames();
   if (kept?.has(normalize(typed))) return { kind: "unchecked" };
   /*
-   * A typed name is not a question. Off, a close roster match still asks
-   * "Did you mean". On, the form keeps the spelling the manager used.
+   * One close roster name is not a question when a typed name is kept.
+   * The caller may say "Woven has X" once. The form still uses the
+   * spelling the manager typed. Two different people are still a question.
+   * Off, every close match asks "Did you mean".
    */
-  if (typedNameEnabled()) return { kind: "unchecked" };
+  if (typedNameEnabled() && ranked.length === 1) {
+    return { kind: "unchecked", closeName: displayName(ranked[0]!.employee) };
+  }
   return result;
+}
+
+/** A close roster name, said once, without waiting for an answer. */
+export function wovenCloseNote(rosterName: string): string {
+  return `Woven has **${rosterName}** — say so if that's who you mean. Carry on; do not wait.`;
 }
 
 /* ------------------------------------------------- asking, and answering --- */

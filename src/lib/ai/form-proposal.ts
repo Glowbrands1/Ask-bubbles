@@ -99,6 +99,7 @@ import {
   nameConfirmationQuestion,
   rosterNameNamedIn,
   settledNameQuestions,
+  wovenCloseNote,
   type RosterEmployee,
 } from "@/lib/forms/employee-match";
 import { loadScopedRosterResult } from "@/lib/forms/employee-roster";
@@ -1017,8 +1018,10 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     else delete proposal.namedLocationOutOfScope;
   }
   // WOVEN'S TITLE WINS where Woven verified the employee — over the manager's wording
-  // and over a title read out of the conversation.
-  if (directory.verification?.status === "verified" && directory.verification.title) {
+  // and over a title read out of the conversation. A title the manager typed
+  // wins instead when TYPED_NAME_ENABLED is on.
+  const statedTitle = extractJobTitle(scoped.text) ?? positionAnsweredIn([...input.history, { role: "user", content: input.question }]);
+  if (directory.verification?.status === "verified" && directory.verification.title && !(typedNameEnabled() && statedTitle)) {
     proposal.employeeRole = directory.verification.title;
   }
 
@@ -1322,6 +1325,11 @@ const storeLabel = (id: string) => {
   return store ? describeStore(store) : id;
 };
 
+function wovenNoteAlreadySaid(history: readonly { role: string; content: string }[], rosterName: string): boolean {
+  const note = wovenCloseNote(rosterName);
+  return history.some((turn) => turn.role === "assistant" && turn.content.includes(note));
+}
+
 async function checkTypedEmployee(
   input: ProposalTurn,
   match: TemplateSummary,
@@ -1433,7 +1441,12 @@ async function checkTypedEmployee(
     }
   }
 
-  if (result.kind === "unchecked") return {};
+  if (result.kind === "unchecked") {
+    if (typedNameEnabled() && result.closeName && asks && !wovenNoteAlreadySaid(input.history, result.closeName)) {
+      return { note: wovenCloseNote(result.closeName) };
+    }
+    return {};
+  }
   if (result.kind === "exact") return verified(result.employee);
 
   if (!asks) return {};

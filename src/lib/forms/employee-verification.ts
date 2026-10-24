@@ -1,3 +1,4 @@
+import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import type { EmployeeVerification } from "@/types";
 
 import { displayName, type RosterEmployee } from "./employee-match";
@@ -88,7 +89,7 @@ export function verifyEmployee(input: {
   const mismatch = named.length > 0 && storeIds.length > 0 && !named.some((id) => storeIds.includes(id));
 
   const notes: string[] = [];
-  if (input.managerTitle && squash(input.managerTitle) !== squash(title)) {
+  if (input.managerTitle && squash(input.managerTitle) !== squash(title) && !typedNameEnabled()) {
     notes.push(
       `You described **${name}** as a ${input.managerTitle}, but Woven lists their job title as **${title}**, so the form uses **${title}**.`,
     );

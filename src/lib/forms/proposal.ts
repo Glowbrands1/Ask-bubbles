@@ -7,7 +7,8 @@ import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
 import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
-import { NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, lowercaseMonths } from "./name-words";
+import { companyNameStops } from "./name-stops";
+import { isTypedStopSpan, isTypedStopWord, NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, lowercaseMonths } from "./name-words";
 import { keepTypedPerson } from "./typed-name";
 import { boundManagerTurns, type BoundedContext } from "./bounded-context";
 import {
@@ -438,7 +439,9 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * capitalising the form's name is the most natural way to ask for one.
    */
   const notAName = (word: string) =>
-    NOT_A_NAME.has(word.toLowerCase()) || isFormVocabulary(word);
+    NOT_A_NAME.has(word.toLowerCase()) ||
+    isFormVocabulary(word) ||
+    (typedNameEnabled() && isTypedStopWord(word, companyNameStops()));
 
   const NAME = "[A-Z][a-zA-Z'’-]+";
 
@@ -708,6 +711,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
      * stop word — "Price Smith" and "Jamie Cash" are people.
      */
     if (candidate.split(/\s+/).every((word) => isTopicWord(word))) continue;
+    if (typedNameEnabled() && isTypedStopSpan(candidate, companyNameStops())) continue;
     if (!candidate.split(/\s+/).some(notAName)) {
       // Led by a reply ("It's …"), the run IS the answer.
       (candidate === run ? found : strong).push(candidate);
@@ -728,6 +732,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
      */
     const run = RUN.exec(text.slice(match.index! + match[0].length - match[1]!.length))?.[0] ?? candidate;
     if (run.includes(" ") && run.trim().split(/\s+/).every((word) => NOT_A_TYPED_NAME.has(word.toLowerCase()))) continue;
+    if (typedNameEnabled() && isTypedStopSpan(run, companyNameStops())) continue;
     // "for Cash Handling": a topic word followed by another is the topic, not "Cash".
     const next = text.slice((match.index ?? 0) + match[0].length).trim().split(/\s+/)[0] ?? "";
     if (NOT_A_NAME_LEAD.has(candidate.toLowerCase()) && (next === "" || isTopicWord(next))) continue;
@@ -1113,6 +1118,7 @@ function labelledNames(text: string): string[] {
 /** A typed name that is not a job title, a salon, or a document's name. */
 function typedNameAllowed(candidate: string): boolean {
   const words = candidate.toLowerCase().split(/\s+/);
+  if (typedNameEnabled() && isTypedStopSpan(candidate, companyNameStops())) return false;
   return !isJobTitlePhrase(candidate) && !isRosterSalonName(candidate) && !words.some((word) => DOCUMENT_WORDS.has(word));
 }
 

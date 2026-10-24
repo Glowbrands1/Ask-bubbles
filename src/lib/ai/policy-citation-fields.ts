@@ -23,6 +23,28 @@ const NARRATIVE_KEY: Readonly<Record<string, string>> = {
   "follow-up-coaching": "follow_up_observation",
 };
 
+/**
+ * The page a retrieval row prints, for a check that must not use the PDF
+ * sheet number. A footer the extractor knows, or a locator whose page is
+ * not the PDF page, is that printed page. The PDF `page` column is not.
+ */
+export function printedPageFromRetrieval(row: {
+  readonly page: number | null;
+  readonly locator?: string | null;
+  readonly content?: string | null;
+}): number | null {
+  for (const line of (row.content ?? "").split("\n")) {
+    const printed = printedPageOf(line);
+    if (printed) return printed;
+  }
+  const match = /\bPage\s+(\d+)\b/i.exec(row.locator ?? "");
+  if (!match) return null;
+  const printed = Number(match[1]);
+  if (!Number.isInteger(printed) || printed <= 0) return null;
+  if (row.page !== null && printed === row.page) return null;
+  return printed;
+}
+
 export function citationPage(chunk: ManualChunk, heading: string): number | null {
   const listed = chunk.sections?.find((section) => section.heading.toLowerCase() === heading.toLowerCase());
   if (listed && listed.page > 0) return listed.page;

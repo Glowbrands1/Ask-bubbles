@@ -1,5 +1,8 @@
 import { isJobTitleAbbreviation } from "@/config/company/job-titles";
+import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { editDistance } from "@/lib/forms/employee-match";
+import { companyNameStops } from "@/lib/forms/name-stops";
+import { isTypedStopSpan } from "@/lib/forms/name-words";
 import { COMPANY_LOCATIONS, locationNameKey, type CompanyLocation } from "@/lib/locations";
 
 /**
@@ -433,6 +436,8 @@ export function resolveStoreText(query: string, index: StoreIndex = defaultStore
   ).trim();
   if (!key) return { kind: "not_found", query };
 
+  if (typedNameEnabled() && isTypedStopSpan(key, companyNameStops())) return { kind: "not_found", query };
+
   const exact = index.byPhrase.get(key);
   if (exact) return settle(exact.locationIds, exact.via === "initials" ? "initials" : exact.via, exact.via === "initials", typed);
 
@@ -575,6 +580,7 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
       const before = haystack.slice(0, offset);
       const after = haystack.slice(offset + phrase.length);
       if (alias.needsCue && !cued(index, before, after, phrase)) return phrase;
+      if (typedNameEnabled() && isTypedStopSpan(phrase, companyNameStops())) return phrase;
       found = true;
       return "_".repeat(phrase.length);
     });
@@ -618,6 +624,7 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
   for (const [pattern, nounFollows] of [[SPAN_BEFORE_NOUN, true], [SPAN_AT_END, false]] as const) {
     for (const match of spaced.matchAll(pattern)) {
       const span = match[1]!.trim();
+      if (typedNameEnabled() && isTypedStopSpan(span, companyNameStops())) continue;
       const normalized = foldKey(span, index.abbreviations).trim();
       if (!normalized || seen.has(normalized) || /['’]s$/i.test(span)) continue;
       const words = normalized.split(" ");

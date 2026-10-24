@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { applyGroundedProposal, type GroundedPerson, type GroundedPrep } from "@/lib/ai/grounded-entities";
 import { buildSystemPrompt } from "@/lib/ai/prompts";
-import { flaggedCitationWrite, type FlaggedManualIdentity } from "@/lib/ai/policy-citation-fields";
+import { flaggedCitationWrite, printedPageFromRetrieval, type FlaggedManualIdentity } from "@/lib/ai/policy-citation-fields";
+import { selfCheck } from "@/lib/ai/self-check";
 import { actionPlanSentenceCount } from "@/lib/forms/action-plan-sentences";
-import { correctiveActionPlan } from "@/lib/forms/ca-action-plan";
+import { correctiveActionPlan, planPayrollAmount } from "@/lib/forms/ca-action-plan";
 import {
   LATE_OPENING_OFFENSE,
   describedAttendanceKeys,
@@ -12,10 +14,15 @@ import {
   statedOffenseKeys,
 } from "@/lib/forms/ca-policy";
 import { JOIN } from "@/lib/forms/bounded-context";
-import { matchEmployeeName, type RosterEmployee } from "@/lib/forms/employee-match";
+import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
+import { verifyEmployee } from "@/lib/forms/employee-verification";
+import { readStoreMentions } from "@/lib/stores/resolver";
 import { sectionHeadingsFor, type ManualChunk } from "@/lib/forms/official-policy-manual";
 import { extractEmployeeNames, managerContext, resolveEmployee } from "@/lib/forms/proposal";
+import { isTypedStopSpan } from "@/lib/forms/name-words";
+import { companyNameStops } from "@/lib/forms/name-stops";
 import { isNotAPersonCandidate, keepTypedPerson } from "@/lib/forms/typed-name";
+import type { ChatFormProposal } from "@/types";
 
 /**
  * Rule conflicts from the 24 Oct 2026 prompt evidence.
@@ -28,11 +35,13 @@ import { isNotAPersonCandidate, keepTypedPerson } from "@/lib/forms/typed-name";
 const saved = {
   typed: process.env.TYPED_NAME_ENABLED,
   plan: process.env.ACTION_PLAN_SENTENCES_ENABLED,
+  printed: process.env.PRINTED_PAGE_ONLY_ENABLED,
 };
 
 afterEach(() => {
   restore("TYPED_NAME_ENABLED", saved.typed);
   restore("ACTION_PLAN_SENTENCES_ENABLED", saved.plan);
+  restore("PRINTED_PAGE_ONLY_ENABLED", saved.printed);
 });
 
 function restore(name: string, value: string | undefined) {
@@ -107,8 +116,23 @@ describe("a name already given is not asked again", () => {
     delete process.env.TYPED_NAME_ENABLED;
     expect(matchEmployeeName("Katlin Brook", roster).kind).toBe("confirm");
     vi.stubEnv("TYPED_NAME_ENABLED", "1");
-    expect(matchEmployeeName("Katlin Brook", roster).kind).toBe("unchecked");
+    const close = matchEmployeeName("Katlin Brook", roster);
+    expect(close.kind).toBe("unchecked");
+    if (close.kind === "unchecked") expect(close.closeName).toBe("Kaitlyn Brook");
+    expect(wovenCloseNote("Kaitlyn Brook")).toBe(
+      "Woven has **Kaitlyn Brook** — say so if that's who you mean. Carry on; do not wait.",
+    );
+    expect(wovenCloseNote("Kaitlyn Brook").startsWith("Did you mean")).toBe(false);
     expect(matchEmployeeName("Test Employee", roster).kind).toBe("none");
+  });
+
+  it("two close people are still a question", () => {
+    const roster = [
+      { id: "1", firstName: "Kaitlyn", lastName: "Brook", locationIds: [] },
+      { id: "2", firstName: "Kaitlyn", lastName: "Brooks", locationIds: [] },
+    ] as unknown as RosterEmployee[];
+    vi.stubEnv("TYPED_NAME_ENABLED", "1");
+    expect(matchEmployeeName("Katlin Brook", roster).kind).toBe("confirm");
   });
 });
 
@@ -172,6 +196,21 @@ describe("the action plan stays two sentences when payroll deduct is yes", () =>
     expect(actionPlanSentenceCount(plan)).toBe(2);
     expect(plan).not.toMatch(/deducted/);
     expect(plan.startsWith("Management will review the Late Opening policy with Test.")).toBe(true);
+  });
+
+  it("the flag on does not fill $25 from the Late Opening section", () => {
+    const quoted = "The employee will reimburse The Company $25.00 via payroll deduction.";
+    delete process.env.ACTION_PLAN_SENTENCES_ENABLED;
+    expect(planPayrollAmount({ answer: "yes", stated: null, quotedPolicy: quoted })).toEqual({
+      amount: "$25.00",
+      amountFrom: "manual",
+    });
+    vi.stubEnv("ACTION_PLAN_SENTENCES_ENABLED", "1");
+    expect(planPayrollAmount({ answer: "yes", stated: null, quotedPolicy: quoted })).toEqual({ amount: null });
+    expect(planPayrollAmount({ answer: "yes", stated: "$4.10", quotedPolicy: quoted })).toEqual({
+      amount: "$4.10",
+      amountFrom: "manager",
+    });
   });
 });
 
@@ -249,5 +288,183 @@ describe("every form that has a policy line cites the name and the page", () => 
   it("the prompt requires the citation only when that flag is set", () => {
     expect(buildSystemPrompt(PROMPT)).not.toContain("Every form cites the policy");
     expect(buildSystemPrompt({ ...PROMPT, policyCitation: true })).toContain("Never invent a page");
+  });
+});
+
+describe("a citation uses the printed page, not the PDF page", () => {
+  const late = {
+    section: "Late Opening",
+    page: 16,
+    printedPage: 15,
+    content: "15 | P a g e\nLate Opening\nA location that opens late.",
+  };
+
+  it("off, either page number is accepted", () => {
+    delete process.env.PRINTED_PAGE_ONLY_ENABLED;
+    expect(
+      selfCheck({
+        answer: "See Late Opening Policy, JBA Policy Manual p.16.",
+        chunks: [late],
+        roster: [],
+      }),
+    ).toEqual([]);
+    expect(
+      selfCheck({
+        answer: "See Late Opening Policy, JBA Policy Manual p.15.",
+        chunks: [{ section: "Late Opening", page: 15, content: "Late Opening" }],
+        roster: [],
+      }),
+    ).toEqual([]);
+  });
+
+  it("on, only the printed page is accepted", () => {
+    vi.stubEnv("PRINTED_PAGE_ONLY_ENABLED", "1");
+    expect(
+      selfCheck({
+        answer: "See Late Opening Policy, JBA Policy Manual p.16.",
+        chunks: [late],
+        roster: [],
+      }).map((failure) => failure.kind),
+    ).toEqual(["citation"]);
+    expect(
+      selfCheck({
+        answer: "See Late Opening Policy, JBA Policy Manual p.15.",
+        chunks: [late],
+        roster: [],
+      }),
+    ).toEqual([]);
+    expect(
+      selfCheck({
+        answer: "See Late Opening Policy, JBA Policy Manual p.15.",
+        chunks: [{ section: "Late Opening", page: 16, content: "Late Opening" }],
+        roster: [],
+      }).map((failure) => failure.kind),
+    ).toEqual(["citation"]);
+  });
+
+  it("a retrieval row does not copy the PDF page into the printed page", () => {
+    expect(
+      printedPageFromRetrieval({
+        page: 16,
+        locator: "Page 15 — Late Opening",
+        content: "Late Opening",
+      }),
+    ).toBe(15);
+    expect(
+      printedPageFromRetrieval({
+        page: 16,
+        locator: "Page 16 — Late Opening",
+        content: "15 | P a g e\nLate Opening",
+      }),
+    ).toBe(15);
+    expect(printedPageFromRetrieval({ page: 16, locator: "Page 16", content: "Late Opening" })).toBeNull();
+  });
+});
+
+describe("Did you mean is a note, and the typed title wins", () => {
+  const person: GroundedPerson = {
+    id: "1",
+    firstName: "Kaitlyn",
+    lastName: "Brook",
+    locationIds: ["loc-264"],
+    title: "Team Member",
+    primaryLocationName: null,
+    positionName: "Team Member",
+  };
+  const prep: GroundedPrep = {
+    question: "coaching form for Katlin Brook, Store Director",
+    rosterIds: null,
+    keptTypedNames: [],
+    unmatched: [],
+    ambiguous: [],
+    ambiguousTyped: null,
+    keptTypedName: null,
+    employeeId: null,
+  };
+
+  it("the card keeps the typed name and says Woven has the close match", () => {
+    vi.stubEnv("TYPED_NAME_ENABLED", "1");
+    const proposal = {
+      proposalId: "p",
+      templateKey: "coaching",
+      templateName: "Coaching Form",
+      supportsInlineDraft: true,
+      variantKey: null,
+      employeeName: "Kaitlyn Brook",
+      employeeRole: "Team Member",
+      formDate: null,
+      locationId: "loc-264",
+      locationName: "Omaha",
+      locationResolution: "resolved",
+      authorizedLocationIds: [],
+      status: "ready",
+      sourceMessageIds: [],
+    } as ChatFormProposal;
+    const applied = applyGroundedProposal(
+      {
+        content:
+          'Did you mean **Kaitlyn Brook**? I couldn\'t find **Katlin Brook** exactly in the employee list for your stores, so I want to be sure before it goes on the form.',
+        citations: [],
+        coverage: "not_applicable",
+        formProposal: proposal,
+      },
+      { people: [person], prep, rosterEmpty: false },
+    );
+    expect(applied.content).toBe(wovenCloseNote("Kaitlyn Brook"));
+    expect(applied.content.startsWith("Did you mean")).toBe(false);
+    expect(applied.formProposal?.employeeName).toBe("Katlin Brook");
+    expect(applied.formProposal?.employeeRole).toBe("Store Director");
+    expect(applied.formProposal?.status).toBe("ready");
+  });
+
+  it("a typed job title is not replaced with Woven's title", () => {
+    const employee = {
+      id: "1",
+      firstName: "Test",
+      lastName: "Employee",
+      locationIds: ["loc-264"],
+      positionName: "Team Member",
+      employmentStatus: "active",
+      lastSyncedAt: new Date().toISOString(),
+    } as RosterEmployee;
+    delete process.env.TYPED_NAME_ENABLED;
+    expect(verifyEmployee({ employee, managerTitle: "Store Director" }).note ?? "").toMatch(/form uses \*\*Team Member\*\*/);
+    vi.stubEnv("TYPED_NAME_ENABLED", "1");
+    expect(verifyEmployee({ employee, managerTitle: "Store Director" }).note ?? "").not.toMatch(/form uses/);
+  });
+});
+
+describe("based, state codes, and policy phrases are not a person or a store", () => {
+  it("the stop list is the company's states and the manual's titles", () => {
+    const stops = companyNameStops();
+    expect(stops.stateCodes.has("NE")).toBe(true);
+    expect(stops.stateCodes.has("TT")).toBe(false);
+    expect(stops.titleWords.has("policy")).toBe(true);
+    expect(stops.titleWords.has("manual")).toBe(true);
+    expect(isTypedStopSpan("based", stops)).toBe(true);
+    expect(isTypedStopSpan("NE", stops)).toBe(true);
+    expect(isTypedStopSpan("JBA Manual", stops)).toBe(true);
+    expect(isTypedStopSpan("workplace policy", stops)).toBe(true);
+    expect(isTypedStopSpan("TT", stops)).toBe(false);
+  });
+
+  it("flag on, those words are not the employee", () => {
+    vi.stubEnv("TYPED_NAME_ENABLED", "1");
+    expect(extractEmployeeNames("coaching form based on uniform").join(" ")).not.toMatch(/\bbased\b/i);
+    const asked = extractEmployeeNames("write a verbal CA for Team Member TT at Dodge, NE. JBA Manual 1-1-25");
+    expect(asked.join(" ")).not.toMatch(/\bNE\b/);
+    expect(asked.join(" ").toLowerCase()).not.toContain("jba");
+    expect(asked.join(" ")).toMatch(/\bTT\b/);
+  });
+
+  it("flag on, workplace policy is not a store", () => {
+    const text = "she let a visitor in the workplace policy store";
+    delete process.env.TYPED_NAME_ENABLED;
+    const before = readStoreMentions(text);
+    expect(before.unmatched.join(" ") + before.mentions.map((mention) => mention.matched).join(" ")).toMatch(/workplace/i);
+    vi.stubEnv("TYPED_NAME_ENABLED", "1");
+    const after = readStoreMentions(text);
+    expect(after.unmatched.join(" ")).not.toMatch(/workplace/i);
+    expect(after.mentions.map((mention) => mention.matched).join(" ")).not.toMatch(/workplace/i);
   });
 });

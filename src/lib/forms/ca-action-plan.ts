@@ -35,9 +35,10 @@ import { CA_ACTION_PLAN_CLOSING, withRequiredClosing } from "./required-closing"
  * applicable?" says Yes (the manager's answer; `payroll-deduct.ts`) and
  * ACTION_PLAN_SENTENCES_ENABLED is off. With that flag on, the plan stays
  * the review sentence and the required closing — two sentences — and the
- * deduction stays on the payroll field. Its amount is the manager's; with
- * none stated, the one amount the section Direct policy quotes states for a
- * payroll deduction ("$25.00" under Late Opening), and otherwise none. The
+ * deduction stays on the payroll field. Its amount is the manager's. With
+ * the flag off and none stated, the one amount the quoted section states
+ * ("$25.00" under Late Opening) is used. With the flag on, that amount is
+ * not filled in from the manual. The
  * last sentence is the version's required closing (`required-closing.ts`).
  *
  * THE POLICY IS THE ONE DIRECT POLICY CITES, never the model's: the manual
@@ -159,7 +160,9 @@ export function actionPlanProvenance(input: ActionPlanInput): Record<string, unk
 
 /**
  * The amount the plan states, and where it came from: the manager's, else —
- * on a Yes — the one the quoted section states (`quotedDeductionAmount`).
+ * on a Yes, and only while ACTION_PLAN_SENTENCES_ENABLED is off — the one
+ * the quoted section states (`quotedDeductionAmount`). The flag stops that
+ * "$25.00" from being filled in when the manager did not state an amount.
  */
 export function planPayrollAmount(input: {
   readonly answer: PayrollDeductAnswer | null;
@@ -168,6 +171,7 @@ export function planPayrollAmount(input: {
   readonly quotedPolicy: string | null;
 }): { amount: string | null; amountFrom?: "manager" | "manual" } {
   if (input.stated) return { amount: input.stated, amountFrom: "manager" };
+  if (actionPlanSentencesEnabled()) return { amount: null };
   const quoted = input.answer === "yes" ? quotedDeductionAmount(input.quotedPolicy) : null;
   return quoted ? { amount: quoted, amountFrom: "manual" } : { amount: null };
 }

@@ -1,3 +1,4 @@
+import { printedPageOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { actionPlanSentenceCount } from "@/lib/forms/action-plan-sentences";
 import { matchEmployeeName, type RosterEmployee } from "@/lib/forms/employee-match";
 import { headingKey } from "@/lib/forms/official-policy-manual";
@@ -119,8 +120,11 @@ function citationIsInChunks(
   const key = headingKey(stripPolicySuffix(citation.heading));
   if (!key) return false;
   return chunks.some((chunk) => {
-    const pages = [chunk.page, chunk.printedPage].filter((page): page is number => typeof page === "number" && page > 0);
-    if (citation.page !== null && pages.length > 0 && !pages.includes(citation.page)) return false;
+    const printedOnly = printedPageOnlyEnabled();
+    const pages = (printedOnly ? [chunk.printedPage] : [chunk.page, chunk.printedPage]).filter(
+      (page): page is number => typeof page === "number" && page > 0,
+    );
+    if (citation.page !== null && (printedOnly || pages.length > 0) && !pages.includes(citation.page)) return false;
     const section = chunk.section ? headingKey(stripPolicySuffix(chunk.section)) : "";
     if (section === key) return true;
     const content = (chunk.content ?? "").toLowerCase();
