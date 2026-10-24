@@ -1,0 +1,232 @@
+import { describe, expect, it } from "vitest";
+
+import manual151 from "@/test/fixtures/jba-manual-production-151.json";
+import live from "@/test/fixtures/bubbles-live-policy-answers-oct24.json";
+import { manualChunkFromRow, type ManualChunkRow } from "@/lib/knowledge/full-manual-load";
+
+import { citePolicyAnswer, planFullManualContext, type FullManualDocument } from "./full-manual-context";
+
+/**
+ * The whole production JBA Policy Manual (151 rows), read the way
+ * full-manual-load.ts reads them, and the replies production saved for the
+ * dress-code and cell-phone questions on 24 Oct 2026.
+ *
+ * Printed pages are checked against two sources, not against the code:
+ * the manual's own table of contents (knowledge_chunks_toc_backup_20261024)
+ * lists Dress Code 15, Crunch Fitness 16, Buff City Soap 16, Sun Tan City 17,
+ * Cell Phone 19, Company Email Account 19 and Point of Sale and Alarm
+ * Passwords 20; and the footer export in jba-manual-brand-chunks.json puts
+ * "17 | P a g e" before chunk 50's opening lines ("No patches…", the Buff
+ * City Soap pants lines), so those lines are printed on page 17, as stored.
+ */
+
+const DRESS_CODE = "What is the dress code policy for Buff City Soap and Crunch?";
+const CELL_PHONE = "What is the cell phone policy?";
+
+const rows = manual151;
+const BUBBLES_DOCUMENT_ID = manual151.document_ids["ask-bubbles"];
+
+function productionManual(): FullManualDocument {
+  return {
+    id: BUBBLES_DOCUMENT_ID,
+    title: "2025 JBA Policy Manual - Edited 5-2025",
+    category: "policies_compliance",
+    status: "indexed",
+    indexed: true,
+    chunks: (rows.chunks as ManualChunkRow[]).map(manualChunkFromRow),
+  };
+}
+
+function reply(conversationId: string): string {
+  const found = live.answers.find((answer) => answer.conversationId === conversationId);
+  if (!found) throw new Error(`missing live reply ${conversationId}`);
+  return found.content;
+}
+
+function markerBefore(text: string, snippet: string): number | null {
+  const at = text.indexOf(snippet);
+  expect(at, snippet).toBeGreaterThan(-1);
+  const markers = [...text.slice(0, at).matchAll(/\[p\.(\d{1,3})\]/g)];
+  const last = markers[markers.length - 1];
+  return last ? Number(last[1]) : null;
+}
+
+/** The answer's words, in order, without [p.N] markers. */
+function wordsInOrder(text: string): string[] {
+  return text
+    .replace(/\[p\.\d{1,3}\]/g, " ")
+    .split(/\s+/)
+    .map((word) => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
+    .filter(Boolean);
+}
+
+function pagesIn(text: string): Set<number> {
+  return new Set([...text.matchAll(/\[p\.(\d{1,3})\]/g)].map((match) => Number(match[1])));
+}
+
+/** The output line that holds `snippet`, with its markers. */
+function lineWith(text: string, snippet: string): string {
+  const line = text.split("\n").find((part) => part.includes(snippet));
+  expect(line, snippet).toBeTruthy();
+  return line!;
+}
+
+function expectSameWordsAndLines(input: string, output: string) {
+  expect(wordsInOrder(output)).toEqual(wordsInOrder(input));
+  expect(output.split("\n").length).toBe(input.split("\n").length);
+}
+
+describe("production manual rows", () => {
+  it("are the stored rows, with no footer in the text", () => {
+    // Chunks 2-16 were the contents pages, deleted on 24 Oct 2026 (backup in knowledge_chunks_toc_backup_20261024).
+    expect(rows.chunks.map((row) => row.chunk_index)).toEqual([0, 1, ...Array.from({ length: 149 }, (_, at) => 17 + at)]);
+    for (const row of rows.chunks) {
+      expect(row.content).not.toMatch(/\d+\s*\|\s*P\s*a\s*g\s*e/i);
+      if (row.metadata.printedPage) expect(row.page).toBe(row.metadata.printedPage + 1);
+    }
+    const chunk = (index: number) => rows.chunks.find((row) => row.chunk_index === index)!;
+    expect(chunk(46).locator).toBe("Pages 15–16 — Hair");
+    expect(chunk(46).metadata.sections).toEqual([
+      { page: 15, heading: "Hair" },
+      { page: 16, heading: "Facial Hair" },
+      { page: 16, heading: "Make-up" },
+    ]);
+    expect(chunk(50).metadata.printedPage).toBe(17);
+    expect(chunk(50).content.startsWith("o No patches, rips, or holes are to be noticeable on the shirt.")).toBe(true);
+    expect(chunk(62).metadata.sections).toEqual([
+      { page: 19, heading: "Company Email Account" },
+      { page: 20, heading: "Point of Sale and Alarm Passwords" },
+    ]);
+  });
+
+  it.each([DRESS_CODE, CELL_PHONE])("marks every section on the page the manual prints it (%s)", (question) => {
+    const text = planFullManualContext({ question, documents: [productionManual()] }).cachedBlock ?? "";
+    expect(markerBefore(text, "Dress Code for The Company")).toBe(15);
+    expect(markerBefore(text, "Hair\no Hair of all lengths")).toBe(15);
+    expect(markerBefore(text, "Facial Hair\n")).toBe(16);
+    expect(markerBefore(text, "Make-up\n")).toBe(16);
+    expect(markerBefore(text, "Jewelry/Accessories")).toBe(16);
+    expect(markerBefore(text, "Crunch Fitness Specific Dress Code:")).toBe(16);
+    expect(markerBefore(text, "Buff City Soap:")).toBe(16);
+    expect(markerBefore(text, "Any BCS Employee can wear any plain black")).toBe(16);
+    expect(markerBefore(text, "o Full length black or blue jean-colored pants are acceptable.\n")).toBe(17);
+    expect(markerBefore(text, "Sun Tan City:")).toBe(17);
+    expect(markerBefore(text, "All aspects of the dress code")).toBe(17);
+    expect(markerBefore(text, "Cell Phone/Smart Watch Policy")).toBe(19);
+    expect(markerBefore(text, "Company Email Account")).toBe(19);
+    expect(markerBefore(text, "Point of Sale and Alarm Passwords")).toBe(20);
+  });
+});
+
+describe("live replies from 24 Oct 2026", () => {
+  const plan = (question: string) => planFullManualContext({ question, documents: [productionManual()] });
+
+  it("conv_mvmkij8h2vdogs9 keeps every word and line, and keeps only markers its text is printed on", () => {
+    const raw = reply("conv_mvmkij8h2vdogs9");
+    const cited = citePolicyAnswer(raw, plan(DRESS_CODE));
+    expect(cited.ok).toBe(true);
+    expectSameWordsAndLines(raw, cited.text);
+    expect(pagesIn(lineWith(cited.text, "Name tags worn and visible"))).toEqual(new Set([15]));
+    expect(pagesIn(lineWith(cited.text, "Belts dark brown or black"))).toEqual(new Set([15]));
+    expect(pagesIn(lineWith(cited.text, "Facial hair is fine"))).toEqual(new Set([16]));
+    expect(pagesIn(lineWith(cited.text, "Jewelry is fine"))).toEqual(new Set([16]));
+    expect(pagesIn(lineWith(cited.text, "tattoos must be covered"))).toEqual(new Set([16]));
+    expect(pagesIn(lineWith(cited.text, "worn under the branded apron"))).toEqual(new Set([16]));
+    expect(pagesIn(lineWith(cited.text, "approved for Instructors only"))).toEqual(new Set([16]));
+    expect(pagesIn(lineWith(cited.text, "blue jean-colored pants are acceptable"))).toEqual(new Set([17]));
+    expect(pagesIn(lineWith(cited.text, "at The Company's discretion"))).toEqual(new Set([17]));
+    for (const page of pagesIn(cited.text)) expect([15, 16, 17]).toContain(page);
+    for (const page of pagesIn(cited.text)) {
+      expect(cited.sources.some((source) => source.printedPage === page)).toBe(true);
+    }
+  });
+
+  it("conv_mvmnp3lv2ify4m8 moves the +1 markers back and drops pages 10, 18, 20 and 29", () => {
+    const raw = reply("conv_mvmnp3lv2ify4m8");
+    const cited = citePolicyAnswer(raw, plan(DRESS_CODE));
+    expect(cited.ok).toBe(true);
+    expectSameWordsAndLines(raw, cited.text);
+    expect(pagesIn(lineWith(cited.text, "Name tags worn and visible"))).toEqual(new Set([15]));
+    expect(pagesIn(lineWith(cited.text, "Tennis shoes or other full-coverage"))).toEqual(new Set([15]));
+    expect(pagesIn(lineWith(cited.text, "Belts must be dark brown or black"))).toEqual(new Set([15]));
+    expect(pagesIn(lineWith(cited.text, "Hair of all lengths and colors"))).toEqual(new Set([15]));
+    expect(pagesIn(lineWith(cited.text, "Jewelry is fine"))).toEqual(new Set([16]));
+    expect(pagesIn(lineWith(cited.text, "worn under the branded apron"))).toEqual(new Set([16]));
+    expect(pagesIn(lineWith(cited.text, "two uniform shirts provided at hire"))).toEqual(new Set([16]));
+    expect(pagesIn(lineWith(cited.text, "approved for Instructors ONLY"))).toEqual(new Set([16]));
+    expect(pagesIn(lineWith(cited.text, "blue jean-colored pants are acceptable"))).toEqual(new Set([17]));
+    expect(pagesIn(lineWith(cited.text, "all aspects of dress code"))).toEqual(new Set([17]));
+    for (const page of [10, 18, 20, 29]) {
+      expect(pagesIn(cited.text).has(page)).toBe(false);
+      expect(cited.sources.some((source) => source.printedPage === page)).toBe(false);
+    }
+  });
+
+  it("conv_mvmkj5v72w5x3l5 cites the cell-phone policy on p.19, the driving rule on p.32, and nothing from chunk 62", () => {
+    const raw = reply("conv_mvmkj5v72w5x3l5");
+    const cited = citePolicyAnswer(raw, plan(CELL_PHONE));
+    expect(cited.ok).toBe(true);
+    expectSameWordsAndLines(raw, cited.text);
+    expect(pagesIn(cited.text)).toEqual(new Set([19, 32]));
+    expect(pagesIn(lineWith(cited.text, "must be kept out of sight"))).toEqual(new Set([19]));
+    // The reply's closing note restates Driver Safety Rules, printed on 32 (checked in the PDF).
+    expect(pagesIn(lineWith(cited.text, "separate rule for driving"))).toEqual(new Set([32]));
+    expect(cited.sources.length).toBeGreaterThan(0);
+    for (const source of cited.sources) {
+      expect(source.locator === "Page 19 — Cell Phone/Smart Watch Policy" || source.printedPage === 32).toBe(true);
+    }
+    const body = cited.sources.map((source) => `${source.locator}\n${source.excerpt}`).join("\n");
+    expect(body).not.toMatch(/Company Email|Point of Sale|alarm codes/i);
+  });
+
+  it("conv_mvmnpmj55lrm0ny drops pages 9, 12, 14, 20, 26, 31 and 48 from the cell-phone answer", () => {
+    const raw = reply("conv_mvmnpmj55lrm0ny");
+    const cited = citePolicyAnswer(raw, plan(CELL_PHONE));
+    expect(cited.ok).toBe(true);
+    expectSameWordsAndLines(raw, cited.text);
+    expect(pagesIn(cited.text)).toEqual(new Set([19]));
+    expect(pagesIn(lineWith(cited.text, "must be kept out of sight"))).toEqual(new Set([19]));
+    const body = cited.sources.map((source) => `${source.locator}\n${source.excerpt}`).join("\n");
+    expect(body).not.toMatch(/Company Email|Point of Sale|alarm codes/i);
+    expect(cited.sources.every((source) => source.printedPage === 19)).toBe(true);
+  });
+
+  it("is unchanged when its own output is cited again, as server-ask does after the self-check", () => {
+    for (const [conversationId, question] of [
+      ["conv_mvmkij8h2vdogs9", DRESS_CODE],
+      ["conv_mvmnpmj55lrm0ny", CELL_PHONE],
+    ] as const) {
+      const once = citePolicyAnswer(reply(conversationId), plan(question));
+      const twice = citePolicyAnswer(once.text, plan(question));
+      expect(twice.text).toBe(once.text);
+      expect(twice.sources.map((source) => source.locator)).toEqual(once.sources.map((source) => source.locator));
+    }
+  });
+});
+
+/**
+ * QA, 24 Oct 2026: the stray pages in the live replies (9, 10, 12, 14, 18,
+ * 20, 26, 29, 31, 48) come from sections outside the dress code and cell
+ * phone policy, so only the whole manual shows they are gone. The driving
+ * rule the 15:43 cell-phone reply mentions is Driver Safety Rules, printed
+ * on 32.
+ */
+describe("live replies against the whole manual", () => {
+  const cases = [
+    ["conv_mvmkij8h2vdogs9", [15, 16, 17]],
+    ["conv_mvmnp3lv2ify4m8", [15, 16, 17]],
+    ["conv_mvmkj5v72w5x3l5", [19, 32]],
+    ["conv_mvmnpmj55lrm0ny", [19]],
+  ] as const;
+
+  it.each(cases)("%s cites only pages %j, in the text and in Sources", (conversationId, allowed) => {
+    const found = live.answers.find((answer) => answer.conversationId === conversationId)!;
+    const plan = planFullManualContext({ question: found.question, documents: [productionManual()] });
+    const cited = citePolicyAnswer(found.content, plan);
+    expect(cited.ok).toBe(true);
+    expectSameWordsAndLines(found.content, cited.text);
+    for (const page of pagesIn(cited.text)) expect(allowed).toContain(page);
+    for (const source of cited.sources) expect(allowed).toContain(source.printedPage);
+    expect(pagesIn(cited.text).has(allowed[0])).toBe(true);
+  });
+});
