@@ -301,6 +301,18 @@ async function answerQuestionBody(
         continueTemplateKey: request.continueProposalTemplateKey ?? null,
         people: roster,
         saved,
+        // Read only with REMAP_INCIDENT_FIX_ENABLED on, so the card cites the section and page.
+        policyManual: async () => {
+          const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
+          return manual.ok
+            ? {
+                documentId: manual.documentId,
+                documentTitle: manual.documentTitle,
+                documentCategory: manual.documentCategory ?? null,
+                chunks: manual.chunks,
+              }
+            : null;
+        },
       });
       if (remapped) return remapped;
     }
