@@ -145,6 +145,35 @@ describe("form full remap", () => {
     expect(quoted.response.content).toContain("**Payroll deduction amount?**");
   });
 
+  /**
+   * conv_mvmo0x2t25sybdx on dpl_EchzRGzeEvDyRk9QqgDd2DLvFJfr, in the manager's
+   * words. What happened read "payroll deduct $40 applies", then "yes payroll
+   * deduct": a payroll answer replaced the incident.
+   */
+  it("keeps the register shortage as what happened through the payroll answers", () => {
+    const first = "CA for Test Employee at Dodge, NE, register short $40 on 10-20, payroll deduct $40 applies";
+    const turns = [first, "verbal", "yes payroll deduct"];
+    let history: { role: string; content: string }[] = [];
+    let saved: ReturnType<typeof groundFormSlots>["slots"] | null = null;
+    for (const question of turns) {
+      const { slots, response } = groundFormSlots({
+        raw: raw({ observation: "Register was short $40.", warningLevel: null, payrollDeduct: null }),
+        history,
+        question,
+        today: TODAY,
+        people: [],
+        saved,
+      });
+      expect(slots.observation, question).toBe("register short $40");
+      expect(response.content, question).toContain("**What happened:** register short $40");
+      expect(response.content, question).not.toMatch(/What happened:\*\* (?:yes )?payroll/i);
+      expect(slots.payrollDeduct, question).toBe("yes");
+      expect(slots.payrollAmount, question).toBe("$40");
+      history = [...history, { role: "user", content: question }, { role: "assistant", content: response.content }];
+      saved = slots;
+    }
+  });
+
   it("overwrites the store and does not restart", () => {
     const first = "corrective action for Test Employee at Kearney. She left the register drawer open on October 20.";
     const { slots, response } = groundFormSlots({
