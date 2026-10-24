@@ -38,3 +38,34 @@ and b12 still asks once with the two Sioux Falls stores and still misses
 Visitors in the Workplace. That miss stays. This round does not require
 Visitors. Animals in the Workplace p.30 is required because the manager
 names that heading.
+
+## Round — prompt A/B — 24 Oct 2026
+
+The last-known-good system prompt is `buildSystemPrompt` at `655a61d`,
+the parent of `295d573`. That commit is the only edit to `prompts.ts`
+after main. It added the typed-name rule and the printed-page citation
+rule. Both arms use the current code and the six flags above. The card
+runner does not read the system prompt. The old prompt did not score
+better on any case, so those sections stay.
+
+| | |
+| --- | --- |
+| replay_set.json | `b880bb5d80810302ac9ece8c5042f9cae1104eef10ee538516871be4ac3970fe` |
+| commit | `9ce0c202dd75f2f45b55a097502389e5f0638b27` |
+| last-known-good prompt | `655a61dbebccd34405b53e40e0566a294120b0b8` |
+| prompt hash, current | `13a74bd2194bab22c8aed6628f9383a5aee4ad4d60e67e1f46d374e37adf8e9e` |
+| prompt hash, last-known-good | `b70bdf29016c52e5857240b7eb2323dcd0f40600c005e9b36172638c72b87878` |
+| flag set, both arms | `TYPED_NAME_ENABLED`, `ACTION_PLAN_SENTENCES_ENABLED`, `PRINTED_PAGE_ONLY_ENABLED`, `POLICY_CITATION_ENABLED`, `PAYROLL_DEDUCT_AMOUNT_ENABLED`, `ANTI_LOOP_ENABLED` |
+| model | `claude-sonnet-5` (configured, not called) |
+| runner | `proposeFormForTurn` |
+| temperature | 0 |
+| runs | 3 per arm |
+
+| Case | Last-known-good prompt | Current prompt |
+| --- | --- | --- |
+| b9 Test Employee, written CA | PASS 3/3. Slowest run 25ms. | PASS 3/3. Slowest run 153ms. |
+| b10 Testy Testerson, Dodge, measuring | PASS 3/3. Slowest run 58ms. | PASS 3/3. Slowest run 78ms. |
+| b11 Testy Testerson, late, Attendance | PASS 3/3. Slowest run 7ms. | PASS 3/3. Slowest run 10ms. |
+| b12 Sadie Hoffart, Empire SD | PASS 3/3. Slowest run 48ms. | PASS 3/3. Slowest run 55ms. |
+
+No prompt section was reverted. The fixes stay in code.
