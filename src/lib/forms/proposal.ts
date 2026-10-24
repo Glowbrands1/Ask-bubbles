@@ -6,7 +6,9 @@ import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
+import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, lowercaseMonths } from "./name-words";
+import { keepTypedPerson } from "./typed-name";
 import { boundManagerTurns, type BoundedContext } from "./bounded-context";
 import {
   allowsTeamSubject,
@@ -1534,7 +1536,8 @@ function distinctNames(found: readonly string[]): string[] {
  * always been free text.
  */
 export function resolveEmployee(context: ManagerContext): EmployeeResolution {
-  return employeeState(context).resolution;
+  const resolution = employeeState(context).resolution;
+  return typedNameEnabled() ? keepTypedPerson(resolution) : resolution;
 }
 
 export interface EmployeeState {
@@ -1877,6 +1880,11 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
    */
   const status: ChatFormProposal["status"] =
     employeeName === null ? "needs_employee" : salonSettled ? "ready" : "needs_location";
+  const statedTitle = extractJobTitle(input.context.text);
+  const verifiedTitle =
+    input.employeeVerification?.status === "verified" && input.employeeVerification.title
+      ? input.employeeVerification.title
+      : null;
 
   return {
     proposalId: input.proposalId,
@@ -1899,11 +1907,7 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
      * words — flagged unverified on the card. Never a model's, never the
      * template's.
      */
-    employeeRole: team
-      ? null
-      : input.employeeVerification?.status === "verified" && input.employeeVerification.title
-        ? input.employeeVerification.title
-        : extractJobTitle(input.context.text),
+    employeeRole: team ? null : typedNameEnabled() && statedTitle ? statedTitle : (verifiedTitle ?? statedTitle),
     /* Same rule: the manager's own words, read as U.S. month/day. */
     formDate:
       input.formDateFromConversation === false

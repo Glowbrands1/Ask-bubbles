@@ -197,6 +197,15 @@ export function draftMergeEnabled(): boolean {
   return draftEditMergeEnabled();
 }
 
+/**
+ * A name the manager typed is the name on the form. Off, a close roster
+ * match still asks "Did you mean", and a state or a document title can
+ * still be offered as a person.
+ */
+export function typedNameEnabled(): boolean {
+  return envFlag("TYPED_NAME_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -222,4 +231,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INTENT_EXTRACTION_ENABLED",
   "FEWSHOT_EXAMPLES_ENABLED",
   "SELF_CHECK_ENABLED",
+  "TYPED_NAME_ENABLED",
 ] as const;

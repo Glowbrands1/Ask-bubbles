@@ -221,6 +221,17 @@ export function buildSystemPrompt(input: {
    * prompt unchanged. Set only when FEWSHOT_EXAMPLES_ENABLED is on.
    */
   fewShotExamples?: string | null;
+  /**
+   * A typed name is used as typed. Omitted or false leaves the name rule
+   * unchanged. Set only when TYPED_NAME_ENABLED is on.
+   */
+  typedName?: boolean;
+  /**
+   * Every form cites a policy name and printed page from the sources.
+   * Omitted or false leaves the prompt unchanged. Set only when
+   * POLICY_CITATION_ENABLED is on.
+   */
+  policyCitation?: boolean;
 }): string {
   const { assistantName, brandName, productName, locationNoun, context, mode, hasContext } = input;
   const hasReportData = input.hasReportData ?? false;
@@ -338,6 +349,12 @@ export function buildSystemPrompt(input: {
   const priorCoachingSection = input.priorCoachingOptional ? `\n\n${PRIOR_COACHING_OPTIONAL_RULES}` : "";
   const memorySection = input.recalledMemory ? `\n\n${input.recalledMemory}` : "";
   const fewShotSection = input.fewShotExamples ? `\n\n${input.fewShotExamples}` : "";
+  const nameRule = input.typedName
+    ? "- A name the manager already typed is the employee's name. Use it exactly as typed, including when no VERIFIED RECORDS section lists them. Do not ask for their full name again, do not ask who this form is for, and do not ask \"did you mean\" another person. A state abbreviation and a document or policy title are not people. Do not replace a job title the manager typed with a different title. Never invent a store name or number."
+    : "- Never state a particular employee's job title, store assignment or employment status unless a VERIFIED RECORDS section below gives it. Without one, you have not looked that person up: say so and ask for their full name, rather than answering from the wording of the question, a name that sounds familiar or general knowledge. Never invent a store name or number.";
+  const citationRule = input.policyCitation
+    ? "\n- Every form cites the policy by its name and printed page from the sources. Name the JBA Policy Manual section and the page those sources give. If a section or a page is not in the sources, leave that citation off the form. Never invent a page."
+    : "";
 
   const userName = promptLabel(context.userName) || "a team member";
   const locationName = promptLabel(context.locationName);
@@ -358,7 +375,7 @@ RULES YOU DO NOT BREAK
 - Never use a marker for a source that is not listed below. Only the markers listed are valid.
 - Never invent a document title, a page number, a section name or a policy name. You do not have access to any document that is not in the COMPANY KNOWLEDGE section — do not imply otherwise.
 - Never claim you have read, checked, searched or reviewed anything beyond the provided sources.
-- Never state a particular employee's job title, store assignment or employment status unless a VERIFIED RECORDS section below gives it. Without one, you have not looked that person up: say so and ask for their full name, rather than answering from the wording of the question, a name that sounds familiar or general knowledge. Never invent a store name or number.
+${nameRule}${citationRule}
 ${hasReportData ? "- Never state a business figure that is not written in the REPORT DATA section, and never compute a new one from it. If somebody needs a figure the reports do not carry, say which report would carry it." : "- You have NO report figures for this question. Do not state a sales figure, a count, a rate or a comparison from memory. If somebody asks for one, say the reports available to you do not cover it."}
 - Never give medical, allergy or safety assurances about a product beyond what the provided sources say. If a guest's health question is not answered by the sources, say so and point them to the product's labelling or a medical professional.
 - A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.

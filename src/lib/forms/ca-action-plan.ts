@@ -9,6 +9,7 @@ import {
   quotedDeductionAmount,
   type PayrollDeductAnswer,
 } from "./payroll-deduct";
+import { actionPlanSentencesEnabled } from "@/lib/config/chat-quality-flags";
 import { CA_ACTION_PLAN_CLOSING, withRequiredClosing } from "./required-closing";
 
 /**
@@ -31,11 +32,13 @@ import { CA_ACTION_PLAN_CLOSING, withRequiredClosing } from "./required-closing"
  *   and including termination of employment.
  *
  * The payroll sentence is there only when the form's own "Is payroll deduct
- * applicable?" says Yes (the manager's answer; `payroll-deduct.ts`). Its
- * amount is the manager's; with none stated, the one amount the section
- * Direct policy quotes states for a payroll deduction ("$25.00" under Late
- * Opening), and otherwise none. The last sentence is the version's required
- * closing (`required-closing.ts`).
+ * applicable?" says Yes (the manager's answer; `payroll-deduct.ts`) and
+ * ACTION_PLAN_SENTENCES_ENABLED is off. With that flag on, the plan stays
+ * the review sentence and the required closing — two sentences — and the
+ * deduction stays on the payroll field. Its amount is the manager's; with
+ * none stated, the one amount the section Direct policy quotes states for a
+ * payroll deduction ("$25.00" under Late Opening), and otherwise none. The
+ * last sentence is the version's required closing (`required-closing.ts`).
  *
  * THE POLICY IS THE ONE DIRECT POLICY CITES, never the model's: the manual
  * sections on the line's verified provenance, by the headings the manual
@@ -129,9 +132,12 @@ export interface ActionPlanInput {
 export function correctiveActionPlan(input: ActionPlanInput): string {
   const firstName = employeeFirstName(input.employeeName);
   const names = input.citedPolicies.length > 0 ? input.citedPolicies : policyNamesFromViolated(input.policyViolated);
+  const deduction = actionPlanSentencesEnabled()
+    ? null
+    : payrollDeductSentence({ answer: input.payroll.answer, amount: input.payroll.amount, firstName });
   const sentences = [
     `Management will review ${policyPhrase(names)} with ${firstName ?? "the employee"}.`,
-    payrollDeductSentence({ answer: input.payroll.answer, amount: input.payroll.amount, firstName }),
+    deduction,
   ].filter((sentence): sentence is string => sentence !== null);
   return withRequiredClosing(sentences.join(" "), input.closing?.trim() || CA_ACTION_PLAN_CLOSING);
 }

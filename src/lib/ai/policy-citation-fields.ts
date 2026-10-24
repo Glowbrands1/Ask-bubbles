@@ -80,15 +80,24 @@ export function flaggedCitationWrite(input: {
   }
 
   const paged = found.filter((item) => item.page !== null && item.page > 0);
-  if (
-    (input.templateKey === "dpoa" || input.templateKey === "policy-review") &&
-    !(input.values.policy_language ?? "").trim() &&
-    paged.length > 0 &&
-    input.manual
-  ) {
+  const writesPolicyLine =
+    input.templateKey === "dpoa" ||
+    input.templateKey === "policy-review" ||
+    Object.prototype.hasOwnProperty.call(input.values, "policy_language");
+  if (writesPolicyLine && paged.length > 0 && input.manual) {
     const policy = paged
       .map((item) => formatManualCitation(item.section, item.page))
       .join("; ");
+    const current = (input.values.policy_language ?? "").trim();
+    const alreadyCited =
+      current !== "" &&
+      paged.every(
+        (item) =>
+          current.toLowerCase().includes(item.section.toLowerCase()) &&
+          (current.includes(`p.${item.page}`) || current.toLowerCase().includes(`page ${item.page}`)),
+      );
+    if (alreadyCited) return { values: input.values, provenance: {} };
+    const next = current ? `${current}\n\n${policy}` : policy;
     const sections: ManualSection[] = paged.map((item) => ({
       heading: item.section,
       page: item.page ?? 0,
@@ -96,7 +105,7 @@ export function flaggedCitationWrite(input: {
       foundBy: "page_heading",
     }));
     return {
-      values: { ...input.values, policy_language: policy },
+      values: { ...input.values, policy_language: next },
       provenance: {
         policy_language: officialManualProvenance({
           documentId: input.manual.documentId,

@@ -160,7 +160,7 @@ import {
   namedPolicies,
 } from "@/lib/forms/named-policy-section";
 import { manualDisplayTitle, manualSheetHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
-import { slotRetentionEnabled } from "@/lib/config/chat-quality-flags";
+import { slotRetentionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { groundEmployeeResolution } from "./employee-candidate-grounding";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
@@ -1222,7 +1222,7 @@ function directoryNotes(
     const wovenTitle =
       directory.verification?.status === "verified" ? (directory.verification.title?.trim() || null) : null;
     const stated = extractJobTitle(context.text) ?? positionAnsweredIn(conversation);
-    if (wovenTitle) {
+    if (wovenTitle && !(typedNameEnabled() && stated)) {
       proposal.employeeRole = wovenTitle;
       proposal.employeeRoleSource = "woven";
       if (!(stated && !samePosition(stated, wovenTitle))) {
@@ -1443,6 +1443,7 @@ async function checkTypedEmployee(
   if (settled.kept.some((name) => same(name, typed.employeeName))) return {};
 
   if (result.kind === "none") {
+    if (typedNameEnabled()) return {};
     const out = unverifiedWithoutRecord("not_found", typed.employeeName);
     return {
       verification: out.verification,

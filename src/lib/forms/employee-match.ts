@@ -1,3 +1,5 @@
+import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
+
 /**
  * ============================================================================
  * IS THE NAME THE MANAGER TYPED SOMEBODY ON THEIR TEAM?
@@ -280,6 +282,11 @@ export function matchEmployeeName(typed: string, roster: readonly RosterEmployee
   };
   const kept = readKeptTypedNames();
   if (kept?.has(normalize(typed))) return { kind: "unchecked" };
+  /*
+   * A typed name is not a question. Off, a close roster match still asks
+   * "Did you mean". On, the form keeps the spelling the manager used.
+   */
+  if (typedNameEnabled()) return { kind: "unchecked" };
   return result;
 }
 

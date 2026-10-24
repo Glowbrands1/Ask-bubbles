@@ -59,6 +59,7 @@ import {
   intentExtractionEnabled,
   retrievalRecallEnabled,
   slotRetentionEnabled,
+  typedNameEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -653,6 +654,8 @@ async function answerQuestionBody(
     priorCoachingOptional: priorCoachingOptionalEnabled(),
     recalledMemory: await recalledMemoryBlock(request, actor),
     fewShotExamples: await loadFewShotBlock(request.question),
+    typedName: typedNameEnabled(),
+    policyCitation: policyCitationEnabled(),
   });
 
   const longContext = longContextEnabled()

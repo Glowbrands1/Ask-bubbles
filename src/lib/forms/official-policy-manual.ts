@@ -881,6 +881,16 @@ const DESCRIBED_SECTIONS: readonly {
     headings: ["Late Opening"],
   },
   /*
+   * THE OFFENSE KEY `ca-policy.ts` RETURNS FOR A LATE OPENING. It cites Late
+   * Opening only. The Tardiness box above still cites Attendance, and this
+   * entry is not that box.
+   */
+  {
+    offenseKey: "late_opening",
+    describes: /^/,
+    headings: ["Late Opening"],
+  },
+  /*
    * A SEMINAR OR WEBINAR NOT ATTENDED is an absence from a scheduled shift,
    * and the manual's Seminar/Webinar Attendance section is the one that says
    * so (District Manager feedback, 21 Oct 2026). Cited ahead of Attendance

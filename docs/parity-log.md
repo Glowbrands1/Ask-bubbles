@@ -180,3 +180,32 @@ still anchored to the earlier turn, and the retrieval query is then
 rewritten into manual terms from the conversation. SKIP, an empty rewrite,
 or a model failure keeps the typed question. The answering model still
 sees the question as typed. No glossary and no migration.
+
+## 24 Oct 2026: typed names, late opening, two-sentence plans, citations
+
+**Sibling app: not ported.** Ask Sunny `main` at `b9ae362` still asks
+"Did you mean" and "Who is this for?" for a name Woven does not list, and
+its corrective-action plan still inserts a payroll sentence between the
+review and the closing. Port the mechanism. Do not copy store names,
+people, or Buff City Soap wording.
+
+`TYPED_NAME_ENABLED` defaults off. On, a name the manager typed is kept,
+including one Woven does not list. A state code from `COMPANY_LOCATIONS`
+and a span of the JBA manual title are not people, so a turn that names
+someone at Dodge, NE and cites the JBA Manual is not asked which of those
+is the employee. The system prompt does not tell the model to ask for the
+full name again, and a job title the manager typed is not replaced by
+Woven's title. Off, the previous ask stays.
+
+A store that opened late is the Late Opening offense (`late_opening`), not
+Tardiness. An employee who arrived late stays Tardiness, which cites
+Attendance. A missed policy acknowledgement is Standards of Conduct.
+Leggings are Dress Code. "Opening tasks" and slippers are unchanged.
+
+`ACTION_PLAN_SENTENCES_ENABLED` already defaulted off. On, payroll deduct
+Yes does not add a third sentence. The deduction stays on its own field.
+
+`POLICY_CITATION_ENABLED` already defaulted off. On, a form that has a
+policy line gets the manual section name and printed page from the chunk.
+A chunk with no page is not given one. The prompt says the same, and only
+when the flag is on.
