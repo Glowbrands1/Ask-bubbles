@@ -169,3 +169,20 @@ the s4 payroll amount line are unchanged and were not this round.
 Replayed again on `3d3f3fd` with the flag values in the table above,
 `SELF_CHECK_ENABLED=false`. Same pass and fail on every case. No new miss.
 Slowest case 150ms. Largest move against the round above is b10, 78ms to 80ms.
+
+## Job title is a title — 24 Oct 2026
+
+`ANTI_LOOP_ENABLED` and `TYPED_NAME_ENABLED` on, `SELF_CHECK_ENABLED` unset.
+Local harness, empty roster, model not called. Sunny s8 and s17, with this
+company's titles and stores.
+
+| Case | Employee | Job Title | Not the employee |
+| --- | --- | --- | --- |
+| s8 Morgan Blake, exit, Lee's Summit | morgan blake | Team Member | job title |
+| s17 Riley Quinn, performance CA | Riley Quinn | Team Member | job title, september, based |
+| Riley Quinn, `Job Title: Floor Lead` | Riley Quinn | Floor Lead | job title, and the words after the label |
+
+"Job Title", "title", "position", "location", "store", and "date" are
+stripped from employee-name candidates. The words after "job title" are
+the Job Title slot. The earlier round 1 cases in
+`src/lib/ai/name-slot-store.test.ts` still pass.

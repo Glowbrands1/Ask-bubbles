@@ -112,7 +112,7 @@ import { describeStore, type StoreIndex } from "@/lib/stores/resolver";
 import { loadKnownTitles, loadStoreIndex } from "@/lib/stores/woven-aliases";
 import { neutralizeTitles } from "@/lib/forms/known-titles";
 import { allowsTeamSubject } from "@/lib/forms/team-subject";
-import { extractJobTitle, locationFor, type EmployeeResolution, type ProposalInput } from "@/lib/forms/proposal";
+import { locationFor, statedJobTitle, type EmployeeResolution, type ProposalInput } from "@/lib/forms/proposal";
 import type { EmployeeVerification } from "@/types";
 import { STORE_QUESTION_TAG, answersToOpenQuestions } from "@/lib/forms/question-answers";
 import {
@@ -1037,7 +1037,7 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   // WOVEN'S TITLE WINS where Woven verified the employee — over the manager's wording
   // and over a title read out of the conversation. A title the manager typed
   // wins instead when TYPED_NAME_ENABLED is on.
-  const statedTitle = extractJobTitle(scoped.text) ?? positionAnsweredIn([...input.history, { role: "user", content: input.question }]);
+  const statedTitle = statedJobTitle(scoped.text) ?? positionAnsweredIn([...input.history, { role: "user", content: input.question }]);
   if (directory.verification?.status === "verified" && directory.verification.title && !(typedNameEnabled() && statedTitle)) {
     proposal.employeeRole = directory.verification.title;
   }
@@ -1275,7 +1275,7 @@ function directoryNotes(
      */
     const wovenTitle =
       directory.verification?.status === "verified" ? (directory.verification.title?.trim() || null) : null;
-    const stated = extractJobTitle(context.text) ?? positionAnsweredIn(conversation);
+    const stated = statedJobTitle(context.text) ?? positionAnsweredIn(conversation);
     if (wovenTitle && !(typedNameEnabled() && stated)) {
       proposal.employeeRole = wovenTitle;
       proposal.employeeRoleSource = "woven";
@@ -1467,7 +1467,7 @@ async function checkTypedEmployee(
         turnsAboutThisForm(context, match.key, typed.employeeName).messages.map((message) => message.content),
         input.today ?? businessToday(),
       ).current.title ?? null)
-    : extractJobTitle(context.text);
+    : statedJobTitle(context.text);
 
   const verified = (employee: RosterEmployee): DirectoryCheck => {
     const outcome = verifyEmployee({ employee, namedStoreIds, storeLabel, managerTitle });

@@ -33,6 +33,7 @@ vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
 
 const { ensureTemplateLibrary, listTemplateSummaries } = await import("@/lib/forms/repository");
 const { proposeFormForTurn } = await import("./form-proposal");
+const { readEmployeeMentions, statedJobTitle } = await import("@/lib/forms/proposal");
 
 const TODAY = "2026-10-24";
 const SCOPE: AccessScope = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
@@ -140,6 +141,8 @@ describe("name, date slot, and store from the manager's words", () => {
       "create exit form",
     ]);
     expect(card?.employeeName).toBe("morgan blake");
+    expect(card?.employeeName?.toLowerCase()).not.toBe("job title");
+    expect(card?.employeeRole).toBe("Team Member");
     expect(card?.formDate).toBe("2026-09-20");
     expect(card?.locationId).toBe("loc-219");
     expect(card?.status).not.toBe("needs_employee");
@@ -172,6 +175,31 @@ describe("name, date slot, and store from the manager's words", () => {
       "Riley Quinn",
     ]);
     expect(card?.employeeName).toBe("Riley Quinn");
+    expect(card?.employeeName?.toLowerCase()).not.toBe("job title");
+    expect(card?.employeeName?.toLowerCase()).not.toBe("september");
+    expect(card?.employeeName?.toLowerCase()).not.toBe("based");
+    expect(card?.employeeRole).toBe("Team Member");
+    expect(card?.formDate).toBe("2026-10-24");
+  });
+
+  it("puts the words after job title on the title, and never on the employee", async () => {
+    const reading = readEmployeeMentions(
+      "Riley Quinn today under performance for September. Job Title: Team Member",
+    );
+    expect(reading.names.map((name) => name.toLowerCase())).not.toContain("job title");
+    expect(reading.names.join(" ").toLowerCase()).toContain("riley quinn");
+    expect(statedJobTitle("Job Title: Team Member")).toBe("Team Member");
+    expect(statedJobTitle("Job title: Floor Lead")).toBe("Floor Lead");
+
+    const card = await lastCard([
+      "Can you create me a performance CA?",
+      "Riley Quinn today under performance for September, sales below goal. Job Title: Floor Lead. verbal warning received Open Ended Questions Coaching 9/8/2026, Focus Item Coaching 9/15/2026, New Product Coaching 9/25/2026 not payroll deductible",
+      "Riley Quinn",
+    ]);
+    expect(card?.employeeName).toBe("Riley Quinn");
+    expect(card?.employeeName?.toLowerCase()).not.toContain("job");
+    expect(card?.employeeName?.toLowerCase()).not.toContain("title");
+    expect(card?.employeeRole).toBe("Floor Lead");
     expect(card?.formDate).toBe("2026-10-24");
   });
 

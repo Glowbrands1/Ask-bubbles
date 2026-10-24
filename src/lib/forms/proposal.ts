@@ -1355,7 +1355,25 @@ function formRecipient(subjects: readonly string[], strong: readonly string[], w
   return joined ? null : recipient;
 }
 
+const FIELD_LABEL_WORDS = new Set(["title", "position", "location", "store", "date", "job"]);
+
+/** "Job Title", "Store", "Date" — the form's own labels, never the employee. */
+function isFieldLabelCandidate(name: string): boolean {
+  const folded = name.toLowerCase().replace(/[^a-z\s]/g, " ").replace(/\s+/g, " ").trim();
+  if (!folded) return true;
+  if (/^(?:job title|employee name|full name)\b/.test(folded)) return true;
+  const words = folded.split(" ").filter(Boolean);
+  return words.length > 0 && words.every((word) => FIELD_LABEL_WORDS.has(word));
+}
+
 function settle(strong: string[], weak: string[], text: string, subjects: readonly string[] = []): EmployeeMentions {
+  if (antiLoopEnabled()) {
+    const labeled = titleFollowingJobTitleLabel(text)?.toLowerCase() ?? null;
+    const drop = (name: string) =>
+      isFieldLabelCandidate(name) || (labeled !== null && name.toLowerCase() === labeled);
+    strong = strong.filter((name) => !drop(name));
+    weak = weak.filter((name) => !drop(name));
+  }
   if (typedNameEnabled()) {
     const people = [...strong, ...weak].filter((name) => !isCompanyPlaceWord(name));
     if (people.length > 0) {
@@ -1892,6 +1910,45 @@ export const JOB_TITLES: readonly { pattern: RegExp; title: string }[] = COMPANY
  * us what the subject is, and the field is editable — but the ORDER means the
  * most specific one wins rather than whichever came first in the sentence.
  */
+/**
+ * The words the manager wrote after the label "job title". A known title is
+ * returned in the company's wording. Any other short phrase is the title as
+ * typed. It is never an employee name.
+ */
+export function titleFollowingJobTitleLabel(text: string): string | null {
+  const labeled =
+    /\bjob title\s*(?::|-|–|—|=|\bis\b|\bwas\b)\s*([A-Za-z][^.\n]{0,60})/i.exec(text) ??
+    /\bjob title\s+([A-Za-z][^.\n]{0,60})/i.exec(text);
+  if (!labeled) return null;
+  const cut = labeled[1]!
+    .split(/\s+(?:at|location|store|date|today|and|who|for)\b/i)[0]!
+    .trim()
+    .replace(/[.,;:]+$/g, "");
+  const first = cut.split(/\s+/)[0]?.toLowerCase() ?? "";
+  if (!cut || ["if", "optional", "when", "where", "please", "the"].includes(first)) return null;
+  if (isFieldLabelCandidate(cut)) return null;
+  const known = extractJobTitle(cut);
+  if (known) return known;
+  const words = cut.split(/\s+/);
+  if (words.length > 5 || words.some((word) => !/^[A-Za-z][A-Za-z'’./&-]*$/.test(word))) return null;
+  return words
+    .map((word) => (word === word.toUpperCase() && word.length <= 5 ? word : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()))
+    .join(" ");
+}
+
+/**
+ * The job title for the card. With the anti-loop flag on, a "job title" label
+ * wins, and those words are not the employee. Off, only a title this company
+ * already names is read, as before.
+ */
+export function statedJobTitle(text: string): string | null {
+  if (antiLoopEnabled()) {
+    const labeled = titleFollowingJobTitleLabel(text);
+    if (labeled) return labeled;
+  }
+  return extractJobTitle(text);
+}
+
 export function extractJobTitle(text: string): string | null {
   // "at Empire, SD" is a place. "SD" is also the Store Director abbreviation,
   // and only the abbreviation that follows a comma is the state.
@@ -1977,7 +2034,7 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
    */
   const status: ChatFormProposal["status"] =
     employeeName === null ? "needs_employee" : salonSettled ? "ready" : "needs_location";
-  const statedTitle = extractJobTitle(input.context.text);
+  const statedTitle = statedJobTitle(input.context.text);
   const verifiedTitle =
     input.employeeVerification?.status === "verified" && input.employeeVerification.title
       ? input.employeeVerification.title
