@@ -308,6 +308,20 @@ export function formFullRemapEnabled(): boolean {
   return envFlag("FORM_FULL_REMAP_ENABLED");
 }
 
+/**
+ * Put the current brand manual in a cached system block for a policy
+ * question. Off, retrieval and citation display stay as they are.
+ *
+ * On, the manual is rebuilt from indexed chunks in order, with printed
+ * page markers. An unbranded question includes every brand in that manual.
+ * A manual over the token budget is not sent, and retrieval stands.
+ * After the answer, a page or heading that is not in the manual is corrected
+ * or removed, and an [S#] that is not one of the sources shown is removed.
+ */
+export function fullManualContextEnabled(): boolean {
+  return envFlag("FULL_MANUAL_CONTEXT_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -344,4 +358,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EDITION_SUPERSESSION_ENABLED",
   "PROMPT_CACHE_ENABLED",
   "FORM_FULL_REMAP_ENABLED",
+  "FULL_MANUAL_CONTEXT_ENABLED",
 ] as const;

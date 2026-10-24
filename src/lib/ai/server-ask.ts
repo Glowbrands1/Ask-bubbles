@@ -4,7 +4,7 @@ import { approvedManualConfirmed, manualDisplayTitle } from "@/lib/forms/officia
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { mayDescribeSection } from "@/lib/forms/named-policy-section";
 
-import { NAMED_HANDBOOK, PINNED_KNOWLEDGE_ROLES } from "@/config/company/knowledge";
+import { MULTI_BRAND_MANUAL_TITLES, NAMED_HANDBOOK, PINNED_KNOWLEDGE_ROLES } from "@/config/company/knowledge";
 import { COMPANY_REPORT_LOADERS } from "@/config/company/reports.server";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_MAX_TOKENS, RETRIEVAL } from "@/lib/config/models";
@@ -25,6 +25,8 @@ import { PERFORMANCE_MANAGEMENT_FRAMEWORK } from "@/lib/knowledge/document-roles
 import { isFrameworkAvailable } from "@/lib/knowledge/framework-availability";
 import { rowToCitation, type MatchedChunkRow } from "@/lib/knowledge/mappers";
 import { buildHandbookNote, namesHandbook, selectHandbookCoverage } from "@/lib/knowledge/named-handbook";
+import { isMultiBrandManual } from "@/lib/knowledge/brand-sections";
+import { loadFullManualPlan } from "@/lib/knowledge/full-manual-load";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { RoleGrounding } from "@/lib/knowledge/role-grounding";
 import { recallPeople } from "@/lib/chat/person-memory-store";
@@ -64,6 +66,7 @@ import {
   typedNameEnabled,
   antiLoopEnabled,
   formFullRemapEnabled,
+  fullManualContextEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -90,6 +93,7 @@ import { resolveChatEntities } from "./entity-facts";
 import { proposeFormForTurn, suggestFormsForTurn, type ChatActor } from "./form-proposal";
 import { rowsForQuestion } from "@/lib/knowledge/credential-redaction";
 import { assembleGrounding } from "./grounding-assembly";
+import { fullManualGroundingNote, validateManualCitations } from "./full-manual-context";
 import {
   buildGroundingBlock,
   buildSystemPrompt,
@@ -611,20 +615,48 @@ async function answerQuestionBody(
    */
   const used = rowsForQuestion(request.question, assembled.rows);
 
+  /*
+   * The whole current manual, when the flag is on and the question is about
+   * policy. Over budget, or not a policy question, leaves `used` as the
+   * grounding. An unbranded question keeps every brand; the brand filter on
+   * retrieval is not what the model reads in that case.
+   */
+  const policyText = [
+    request.question,
+    ...request.history.filter((turn) => turn.role === "user").slice(-2).map((turn) => turn.content),
+  ].join("\n");
+  const manualPlan = fullManualContextEnabled()
+    ? await loadFullManualPlan(request.scopeId, request.question, policyText).catch(() => null)
+    : null;
+  const useManual = manualPlan?.ready === true && (manualPlan.sources.length ?? 0) > 0;
+  const manualSources = useManual && manualPlan ? manualPlan.sources : [];
+  const supplemental = useManual
+    ? used.filter((row) => !isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES))
+    : used;
+  const grounding: GroundingChunk[] = [
+    ...manualSources.map((source) => ({
+      marker: source.marker,
+      documentTitle: source.documentTitle,
+      locator: source.locator,
+      content: source.excerpt,
+    })),
+    ...supplemental.map((row, index) => ({
+      marker: manualSources.length + index + 1,
+      documentTitle: row.document_title,
+      locator: row.locator,
+      content: row.content,
+    })),
+  ];
+  const citationRows: (MatchedChunkRow | null)[] = [...manualSources.map(() => null), ...supplemental];
+
   /* Where the pinned handbook rows landed, so the note names real markers only. */
   const handbookChunkIds = new Set((handbookCoverage?.rows ?? []).map((row) => row.chunk_id));
   const handbookNote = handbookCoverage
     ? buildHandbookNote(
         handbookCoverage,
-        used.flatMap((row, index) => (handbookChunkIds.has(row.chunk_id) ? [index + 1] : [])),
+        citationRows.flatMap((row, index) => (row && handbookChunkIds.has(row.chunk_id) ? [index + 1] : [])),
       )
     : null;
-  const grounding: GroundingChunk[] = used.map((row, index) => ({
-    marker: index + 1,
-    documentTitle: row.document_title,
-    locator: row.locator,
-    content: row.content,
-  }));
 
   const briefing = await briefingPromise;
 
@@ -691,7 +723,18 @@ async function answerQuestionBody(
     breakdown: reportBreakdownEnabled(),
   });
   const pinnedPolicy = await citedManualGrounding(request, knowledge);
-  const groundingText = [buildGroundingBlock(grounding), pinnedPolicy]
+  const supplementalChunks = grounding.filter((chunk) => chunk.marker > manualSources.length);
+  const supplementalText =
+    useManual && supplementalChunks.length > 0
+      ? `OTHER COMPANY SOURCES\n\n${supplementalChunks
+          .map((chunk) => `[S${chunk.marker}] ${chunk.documentTitle}${chunk.locator ? ` — ${chunk.locator}` : ""}\n${chunk.content}`)
+          .join("\n\n---\n\n")}`
+      : null;
+  const groundingText = [
+    useManual && manualPlan ? fullManualGroundingNote(manualPlan) : buildGroundingBlock(grounding),
+    supplementalText,
+    useManual ? null : pinnedPolicy,
+  ]
     .filter((part) => part && part.length > 0)
     .join("\n\n");
   updateChatTrace({
@@ -716,17 +759,35 @@ async function answerQuestionBody(
     ...(longContext ? { historyPolicy: "budget" as const, priorSummary: longContext.summary } : {}),
     question: request.question,
     maxTokens: CLAUDE_MAX_TOKENS[request.mode],
+    ...(useManual && manualPlan?.cachedBlock ? { cachedContext: manualPlan.cachedBlock } : {}),
   });
 
   const markers = extractUsedMarkers(answer, grounding.map((chunk) => chunk.marker));
-  const citations: SourceCitation[] = markers
-    .map((marker) => used[marker - 1])
-    .filter((row): row is MatchedChunkRow => Boolean(row))
-    .map(rowToCitation);
+  const guarded = fullManualContextEnabled()
+    ? validateManualCitations(answer, { shownMarkers: markers, index: manualPlan?.index ?? null })
+    : answer;
+  const citations: SourceCitation[] = markers.flatMap((marker) => {
+    const manual = manualSources[marker - 1];
+    if (manual) {
+      return [
+        {
+          documentId: manual.documentId,
+          documentTitle: manual.documentTitle,
+          locator: manual.locator,
+          category: manual.category,
+          excerpt: manual.excerpt,
+          relevance: 1,
+        },
+      ];
+    }
+    const row = citationRows[marker - 1];
+    return row ? [rowToCitation(row)] : [];
+  });
 
   const suggested = await suggestedFormsFor({ summariesPromise, request, actor });
 
-  const prose = suggested ? `${stripMarkers(answer)}\n\n${suggested.lead}` : stripMarkers(answer);
+  const proseBody = stripMarkers(guarded);
+  const prose = suggested ? `${proseBody}\n\n${suggested.lead}` : proseBody;
   const manualChunks = rows.map((row, index) => ({
     chunkIndex: index,
     page: row.page,

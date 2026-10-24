@@ -3,7 +3,7 @@ import "server-only";
 import type { TextBlockParam } from "@anthropic-ai/sdk/resources/messages";
 
 import { ACTIVE_BRAND } from "@/lib/brand";
-import { chatTraceEnabled, promptCacheEnabled } from "@/lib/config/chat-quality-flags";
+import { chatTraceEnabled, fullManualContextEnabled, promptCacheEnabled } from "@/lib/config/chat-quality-flags";
 import { CLAUDE_EFFORT, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
 
@@ -116,6 +116,12 @@ export interface CallClaudeInput {
   readonly priorSummary?: string | null;
   readonly question: string;
   readonly maxTokens: number;
+  /**
+   * A stable block placed after the instructions and before the per-turn
+   * tail, with its own cache breakpoint. The full policy manual uses this
+   * so a later policy question can read it back instead of sending it again.
+   */
+  readonly cachedContext?: string | null;
 }
 
 /**
@@ -139,14 +145,37 @@ export function uncachedSystemPrompt(staticBlock: string, dynamicTail: string): 
   return `${staticBlock.slice(0, breakAt)} ${listener}${staticBlock.slice(breakAt)}${remainder}`;
 }
 
-export function claudeSystemPayload(system: string): string | TextBlockParam[] {
+export function claudeSystemPayload(system: string, cachedContext?: string | null): string | TextBlockParam[] {
+  const manual = cachedContext?.trim() ?? "";
   const parts = splitSystemPrompt(system);
-  if (!parts) return system;
+  if (!manual) {
+    if (!parts) return system;
+    if (!promptCacheEnabled()) {
+      return uncachedSystemPrompt(parts.staticBlock, parts.dynamicTail);
+    }
+    const blocks: TextBlockParam[] = [
+      { type: "text", text: parts.staticBlock, cache_control: { type: "ephemeral" } },
+    ];
+    if (parts.dynamicTail.length > 0) blocks.push({ type: "text", text: parts.dynamicTail });
+    return blocks;
+  }
+
+  const cachedManual: TextBlockParam = { type: "text", text: manual, cache_control: { type: "ephemeral" } };
+  if (!parts) {
+    return [
+      { type: "text", text: system },
+      cachedManual,
+    ];
+  }
   if (!promptCacheEnabled()) {
-    return uncachedSystemPrompt(parts.staticBlock, parts.dynamicTail);
+    return [
+      { type: "text", text: uncachedSystemPrompt(parts.staticBlock, parts.dynamicTail) },
+      cachedManual,
+    ];
   }
   const blocks: TextBlockParam[] = [
     { type: "text", text: parts.staticBlock, cache_control: { type: "ephemeral" } },
+    cachedManual,
   ];
   if (parts.dynamicTail.length > 0) blocks.push({ type: "text", text: parts.dynamicTail });
   return blocks;
@@ -188,7 +217,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
           max_tokens: maxTokens,
           thinking: { type: "adaptive" as const },
           output_config: { effort: CLAUDE_EFFORT },
-          system: claudeSystemPayload(input.system),
+          system: claudeSystemPayload(input.system, input.cachedContext),
           messages: [
             ...history,
             {
@@ -212,7 +241,8 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
         // flag that reads the stream is on. A double with no stream stays
         // on create either way, and firstTokenMs stays null on create.
         const useStream =
-          (chatTraceEnabled() || promptCacheEnabled()) && typeof client.messages.stream === "function";
+          (chatTraceEnabled() || promptCacheEnabled() || fullManualContextEnabled()) &&
+          typeof client.messages.stream === "function";
         if (!useStream) {
           const created = await client.messages.create(params);
           return Object.assign(created, { firstTokenMs: null as number | null });

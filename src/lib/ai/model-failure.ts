@@ -1,3 +1,5 @@
+import { fullManualContextEnabled } from "@/lib/config/chat-quality-flags";
+
 import { updateChatTrace } from "./chat-trace-store";
 
 /**
@@ -96,6 +98,15 @@ export function noteModelCall(input: {
       errorClass: snapshot.errorClass,
       errorStatus: snapshot.errorStatus,
     });
+    if (fullManualContextEnabled()) {
+      console.info(
+        JSON.stringify({
+          event: "full_manual_context_cache",
+          cache_creation_input_tokens: snapshot.cacheCreationInputTokens,
+          cache_read_input_tokens: snapshot.cacheReadInputTokens,
+        }),
+      );
+    }
   } catch {
     // A trace must not change the answer.
   }
