@@ -4,7 +4,8 @@ import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manual";
 import { namesHeading } from "@/lib/forms/named-policy-section";
 import { payrollDeductAmount, payrollDeductFromConversation, type PayrollDeductAnswer } from "@/lib/forms/payroll-deduct";
-import { intentPayrollManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { intentPayrollManagerOnlyEnabled, notANameGuardEnabled } from "@/lib/config/chat-quality-flags";
+import { isNotAName, maskNotANameText } from "@/lib/forms/not-a-name";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -142,7 +143,7 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
   const choice = readPriorChoice(input.history, input.question, input.people, input.stores);
   const employee = choice?.person
     ? { person: choice.person, name: displayName(choice.person), ambiguous: [] as readonly GroundedPerson[], typed: null }
-    : groundEmployee(reading?.employee ?? null, blob, input.people);
+    : groundEmployee(guardedTyped(reading?.employee ?? null, input), blob, input.people);
   const store = groundStore(choice?.store ?? reading?.store ?? null, blob, input.stores, employee.person);
   const title = groundTitle(reading?.title ?? null, blob, input.people, employee.person);
   const incidentType = groundIncident(reading?.incidentType ?? null, blob, input.headings);
@@ -240,6 +241,29 @@ function conversationBlob(input: IntentTurnInput): string {
   const prior = input.history.map((turn) => turn.content);
   const saved = input.saved ? stateSentences(input.saved).join(" ") : "";
   return [...prior, input.question, saved].filter((part) => part.trim() !== "").join("\n");
+}
+
+/**
+ * NOT_A_NAME_GUARD_ENABLED: the model's employee is kept only when it is in
+ * the manager's own words and is a name. The intent model reads the
+ * assistant's turns too, and in Ask Sunny copied "require practice" out of a
+ * reply (QA round 4, 24 Oct 2026); "blank" is the manager saying there is
+ * nobody yet. Off, the model's slot is read as before.
+ */
+function guardedTyped(typed: string | null, input: IntentTurnInput): string | null {
+  if (!typed?.trim() || !notANameGuardEnabled()) return typed;
+  if (isNotAName(typed)) return null;
+  const said = [
+    ...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
+    input.question,
+    input.saved ? stateSentences(input.saved).join(" ") : "",
+  ]
+    // Outside a bulleted or priced offer list: an offer is not a person.
+    .map((turn) => maskNotANameText(turn))
+    .join("\n")
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+  return said.includes(typed.trim().toLowerCase().replace(/\s+/g, " ")) ? typed : null;
 }
 
 function groundEmployee(

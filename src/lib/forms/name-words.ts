@@ -7,8 +7,11 @@
  * reader (`template-intent.ts`), which both have to decide whether the words
  * after a form's name are a person. One list, so the two can never disagree
  * about whether "coaching tips" or "exit process" names somebody. Pure and
- * browser-safe; it imports nothing.
+ * browser-safe; its one import (`not-a-name.ts`, NOT_A_NAME_GUARD_ENABLED)
+ * reads only the store roster, the brand and the report catalogue.
  */
+
+import { maskNotANameText } from "./not-a-name";
 
 export const NOT_A_NAME = new Set([
   /*
@@ -342,7 +345,9 @@ export function nameAfterNameLabel(text: string): string | null {
 }
 
 export function lowercaseMonths(text: string): string {
-  return text
+  // The last pass before a name is read. NOT_A_NAME_GUARD_ENABLED also takes
+  // the app's own lines, bulleted lists, priced runs and stand-in words out here.
+  return maskNotANameText(text)
     .replace(MONTH_ALWAYS, (month) => month.toLowerCase())
     .replace(MONTH_AS_DATE, (match, lead: string | undefined, led: string | undefined, dated: string | undefined) =>
       lead && led ? `${lead}${led.toLowerCase()}` : (dated ?? match).toLowerCase(),
