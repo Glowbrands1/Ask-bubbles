@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CHAT_QUALITY_FLAG_NAMES, placeSpanGuardEnabled } from "@/lib/config/chat-quality-flags";
 import type { AccessScope } from "@/types";
 
-import { readLocation } from "./location-mention";
+import { readLocation, readLocationMentions } from "./location-mention";
 import { proposeLocation } from "./location-scope";
 
 /**
@@ -86,6 +86,24 @@ describe("conv_mvmcetjw2i4vtwz: a policy phrase is not a typed store (flag on)",
     process.env.PLACE_SPAN_GUARD_ENABLED = "1";
     const turns = ["cite animals in the workplace policy", "she works at Kearney store"];
     expect(readLocation(turns.join("\n\n")).mentions.map((mention) => mention.locationIds)).toEqual([["loc-66"]]);
+  });
+
+  /*
+   * The conversation's own second turn with a registered store in it: "<location>
+   * is <place>". The card files the store named, the remap reads the same one,
+   * and nothing is left over as a typed store.
+   */
+  it("'store location is Kearney, NE' after the policy turn is Kearney, with no typed store", () => {
+    process.env.PLACE_SPAN_GUARD_ENABLED = "1";
+    const turns = ["cite animals in the workplace policy", "store location is Kearney, NE. create corrective action"];
+    const text = turns.join("\n\n");
+    expect(readLocation(text).unmatched).toEqual([]);
+    const proposal = proposeLocation(SCOPE, text, [], undefined, { turns });
+    expect(proposal.resolution).toBe("resolved");
+    expect(proposal.resolution === "resolved" ? proposal.locationId : null).toBe("loc-66");
+    // form-full-remap reads one-store mentions from the manager's turn.
+    const remap = readLocationMentions(turns[1]!).filter((mention) => !mention.confirm && mention.locationIds.length === 1);
+    expect(remap.map((mention) => mention.locationIds)).toEqual([["loc-66"]]);
   });
 });
 
