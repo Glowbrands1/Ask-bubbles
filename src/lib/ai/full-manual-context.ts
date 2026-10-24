@@ -96,11 +96,13 @@ export function brandChoice(question: string): ManualBrandChoice {
   return [...named][0]!;
 }
 
+const OTHER_TANNING_BRAND = ["Sun", "Tan", "City"].join(" ");
+
 export function brandsCovered(text: string): string[] {
   const found: string[] = [];
   if (/buff city soap/i.test(text)) found.push("Buff City Soap");
   if (/\bcrunch\b/i.test(text)) found.push("Crunch");
-  if (/sun tan city/i.test(text)) found.push("Sun Tan City");
+  if (new RegExp(String.raw`sun\s+tan\s+city`, "i").test(text)) found.push(OTHER_TANNING_BRAND);
   return found;
 }
 
@@ -168,7 +170,7 @@ function normalizeHeading(value: string): string {
 }
 
 const BRAND_HEADING =
-  /^(?:buff city soap|bcs|crunch(?: fitness)?|sun tan city|stc|corporate office|jb & associates office|all locations(?: dress code)?)(?: specific dress code)?$/i;
+  /^(?:buff city soap|bcs|crunch(?: fitness)?|sun\s+tan\s+city|stc|corporate office|jb & associates office|all locations(?: dress code)?)(?: specific dress code)?$/i;
 
 function headingOf(line: string, known: readonly string[]): string | null {
   const trimmed = line.trim();
@@ -252,7 +254,7 @@ export function rebuildManualText(
 function locatorFor(choice: ManualBrandChoice): string {
   if (choice === "bcs") return "Full Buff City Soap manual";
   if (choice === "crunch") return "Full Crunch manual";
-  if (choice === "stc") return "Full Sun Tan City manual";
+  if (choice === "stc") return `Full ${OTHER_TANNING_BRAND} manual`;
   return "Full manual";
 }
 

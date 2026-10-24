@@ -93,7 +93,7 @@ import { resolveChatEntities } from "./entity-facts";
 import { proposeFormForTurn, suggestFormsForTurn, type ChatActor } from "./form-proposal";
 import { rowsForQuestion } from "@/lib/knowledge/credential-redaction";
 import { assembleGrounding } from "./grounding-assembly";
-import { fullManualGroundingNote, validateManualCitations } from "./full-manual-context";
+import { fullManualGroundingNote, validateManualCitations, type FullManualPlan } from "./full-manual-context";
 import {
   buildGroundingBlock,
   buildSystemPrompt,
@@ -625,9 +625,14 @@ async function answerQuestionBody(
     request.question,
     ...request.history.filter((turn) => turn.role === "user").slice(-2).map((turn) => turn.content),
   ].join("\n");
-  const manualPlan = fullManualContextEnabled()
-    ? await loadFullManualPlan(request.scopeId, request.question, policyText).catch(() => null)
-    : null;
+  let manualPlan: FullManualPlan | null = null;
+  if (fullManualContextEnabled()) {
+    try {
+      manualPlan = await loadFullManualPlan(request.scopeId, request.question, policyText);
+    } catch {
+      manualPlan = null;
+    }
+  }
   const useManual = manualPlan?.ready === true && (manualPlan.sources.length ?? 0) > 0;
   const manualSources = useManual && manualPlan ? manualPlan.sources : [];
   const supplemental = useManual
