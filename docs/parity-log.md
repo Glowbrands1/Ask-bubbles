@@ -651,3 +651,16 @@ including when the live client has `messages.stream`. Ask Sunny is not
 updated in this session. Its answer path is still a separate `call-claude`,
 and this change stays on Ask Bubbles PR 90. No salon wording was copied.
 
+
+## 24 Oct 2026: a policy phrase is not a typed store
+
+`PLACE_SPAN_GUARD_ENABLED` (default off). In conv_mvmcetjw2i4vtwz, "cite
+animals in the workplace policy" followed by "store location is empire, sd"
+was joined into "in the workplace policy store", and the card asked about a
+typed store called "workplace policy". On, the span reader skips a phrase
+that names a policy, manual, section or similar document, and a
+span-before-"store" match must sit inside one manager turn. Stays
+Bubbles-only: Ask Sunny's salon reader (`src/lib/forms/salon-mention.ts`)
+matches only roster salon names and numbers, has no unmatched-span reading
+and no `typed` salon selection, so the same turns name no salon there and
+ask nothing. No Ask Sunny change. No salon wording was copied.

@@ -325,6 +325,18 @@ export function fullManualContextEnabled(): boolean {
   return envFlag("FULL_MANUAL_CONTEXT_ENABLED");
 }
 
+/**
+ * A policy or document phrase is not a place. Off, the store reader is
+ * unchanged. On, a span that names a policy, manual, section or similar
+ * document ("in the workplace policy") is never read as a typed store, and
+ * a span-before-"store" match must sit inside one manager turn, so "cite
+ * animals in the workplace policy" followed by "store location is …" does
+ * not become "the workplace policy store".
+ */
+export function placeSpanGuardEnabled(): boolean {
+  return envFlag("PLACE_SPAN_GUARD_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -362,4 +374,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PROMPT_CACHE_ENABLED",
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
+  "PLACE_SPAN_GUARD_ENABLED",
 ] as const;
