@@ -282,9 +282,9 @@ export function isTypedStopSpan(span: string, sources: NameStopSources): boolean
 }
 
 /**
- * Field labels. A line that is only these words names a field, not a person.
- * "salon" is the same kind of label as "store": either word can introduce
- * where someone works. Neither word is a place name.
+ * Field labels. They reject a name candidate only when the candidate is
+ * the label itself ("Job title", "Store", "Salon"). A real surname that
+ * is one of these words still belongs to the person: "Jane Store".
  */
 export const NAME_LABEL_WORDS = new Set([
   "job",
@@ -304,7 +304,7 @@ function labelParts(name: string): { raw: string; token: string }[] {
     .map((raw) => ({ raw, token: raw.toLowerCase().replace(/[^a-z]/g, "") }));
 }
 
-/** "Job Title", "Store", "Salon", "Role" — the label by itself. */
+/** True only when every word is a label. "Job title" is. "Jane Store" is not. */
 export function isNameLabelPhrase(name: string): boolean {
   const parts = labelParts(name);
   return parts.length > 0 && parts.every((part) => NAME_LABEL_WORDS.has(part.token));

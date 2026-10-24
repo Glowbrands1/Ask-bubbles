@@ -70,6 +70,8 @@ describe("anti-loop name, store, date, and harness", () => {
     expect(stripNonNameTokens("Position")).toBeNull();
     expect(stripNonNameTokens("Location")).toBeNull();
     expect(stripNonNameTokens("Store Director")).toBe("Store Director");
+    expect(stripNonNameTokens("Jane Store")).toBe("Jane Store");
+    expect(stripNonNameTokens("Jane Salon")).toBe("Jane Salon");
     expect(stripNonNameTokens("Christiana Headley Title")).toBe("Christiana Headley");
     expect(stripNonNameTokens("Christiana Headley Job")).toBe("Christiana Headley");
   });

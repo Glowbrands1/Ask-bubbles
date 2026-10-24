@@ -11,13 +11,18 @@ describe("name label words", () => {
       expect(isNameLabelPhrase(word)).toBe(true);
     }
     expect(isNameLabelPhrase("Job Title")).toBe(true);
+    expect(isNameLabelPhrase("Job title")).toBe(true);
     expect(isNameLabelPhrase("Store Director")).toBe(false);
+    expect(isNameLabelPhrase("Jane Store")).toBe(false);
+    expect(isNameLabelPhrase("Jane Salon")).toBe(false);
   });
 
   it("strips a trailing Job or Title only after a full name", () => {
     expect(stripTrailingJobOrTitle("Christiana Headley Title")).toBe("Christiana Headley");
     expect(stripTrailingJobOrTitle("Christiana Headley Job")).toBe("Christiana Headley");
     expect(stripTrailingJobOrTitle("Christiana Headley Job Title")).toBe("Christiana Headley");
+    expect(stripTrailingJobOrTitle("Jane Store")).toBe("Jane Store");
+    expect(stripTrailingJobOrTitle("Jane Salon")).toBe("Jane Salon");
     expect(stripTrailingJobOrTitle("Store Director")).toBe("Store Director");
     expect(stripTrailingJobOrTitle("Pat Job")).toBe("Pat Job");
     expect(stripTrailingJobOrTitle("Job Title")).toBeNull();

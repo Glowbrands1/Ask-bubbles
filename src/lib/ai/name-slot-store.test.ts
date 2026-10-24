@@ -213,6 +213,17 @@ describe("name, date slot, and store from the manager's words", () => {
     expect(card?.formDate).toBe("2026-10-05");
     expect(card?.locationId).toBe("loc-225");
   });
+
+  it("keeps Jane Store when Store is the surname", async () => {
+    const card = await lastCard([
+      "create coaching form for Jane Store, team member at kearney. use todays date",
+    ]);
+    expect(card?.employeeName).toBe("Jane Store");
+    expect(card?.employeeName?.toLowerCase()).not.toBe("store");
+    expect(card?.employeeName?.toLowerCase()).not.toBe("job title");
+    expect(card?.locationId).toBe("loc-66");
+    expect(card?.formDate).toBe("2026-10-24");
+  });
 });
 
 describe("s8, s17, and a Name: line", () => {
@@ -245,6 +256,13 @@ describe("s8, s17, and a Name: line", () => {
     expect(names).not.toContain("september");
     expect(names).not.toContain("based");
     expect(statedJobTitle(s17)).toBe("Team Member");
+  });
+
+  it("keeps Jane Store and Jane Salon, and still rejects a candidate that is the label", () => {
+    expect(readEmployeeMentions("create a coaching form for Jane Store").names).toContain("Jane Store");
+    expect(readEmployeeMentions("create a coaching form for Jane Salon").names).toContain("Jane Salon");
+    expect(readEmployeeMentions("Job title").names.map((name) => name.toLowerCase())).not.toContain("job title");
+    expect(readEmployeeMentions("Store").names.map((name) => name.toLowerCase())).not.toContain("store");
   });
 
   it("keeps the value after Name: and leaves the job title off the employee", () => {
