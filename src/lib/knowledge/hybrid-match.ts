@@ -1,10 +1,12 @@
 import "server-only";
 
+import { caPolicyRetrievalEnabled } from "@/lib/config/chat-quality-flags";
 import { EMBEDDING_DIMENSIONS, RETRIEVAL } from "@/lib/config/models";
 import { getEmbeddingProvider } from "@/lib/embeddings";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import type { MatchedChunkRow } from "./mappers";
+import { caPolicyMatchCount, rerankCaPolicyChunks } from "./ca-policy-retrieval";
 import { selectHybridMatches, type HybridCandidate } from "./hybrid-rank";
 
 /**
@@ -69,8 +71,10 @@ export async function matchHybridKnowledge(input: {
   if (error) throw new Error(`Knowledge retrieval failed: ${error.message}`);
 
   const rows = (data ?? []) as HybridRpcRow[];
-  return selectHybridMatches(rows.map((row) => toCandidate(row)), trimmed, {
+  const boost = caPolicyRetrievalEnabled();
+  const pool = selectHybridMatches(rows.map((row) => toCandidate(row)), trimmed, {
     vectorFloor: RETRIEVAL.minSimilarity,
-    limit,
+    limit: caPolicyMatchCount(limit, boost),
   });
+  return boost ? rerankCaPolicyChunks(pool, trimmed, limit) : pool;
 }

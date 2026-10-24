@@ -1,5 +1,6 @@
 import "server-only";
 
+import { caPolicyRetrievalEnabled } from "@/lib/config/chat-quality-flags";
 import { EMBEDDING_DIMENSIONS, RETRIEVAL } from "@/lib/config/models";
 import { getEmbeddingProvider } from "@/lib/embeddings";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
@@ -32,6 +33,7 @@ import {
 } from "@/lib/forms/official-policy-manual";
 import { MULTI_BRAND_MANUAL_TITLES, POLICY_MANUAL_BRAND_SCOPE } from "@/config/company/knowledge";
 import { isMultiBrandManual, readManualForBrand } from "../brand-sections";
+import { caPolicyMatchCount, rerankCaPolicyChunks } from "../ca-policy-retrieval";
 import type { KnowledgeProvider, KnowledgeQuery } from "../types";
 
 /** The manual's rows, or why none could be cited. */
@@ -216,10 +218,12 @@ export class SupabaseKnowledgeProvider implements KnowledgeProvider {
 
     const queryEmbedding = await embeddings.embedQuery(trimmed);
 
+    const limit = query.limit ?? RETRIEVAL.topK;
+    const boost = caPolicyRetrievalEnabled();
     const { data, error } = await getSupabaseAdmin().rpc("match_knowledge_chunks", {
       query_embedding: queryEmbedding,
       scope_id: query.scopeId,
-      match_count: query.limit ?? RETRIEVAL.topK,
+      match_count: caPolicyMatchCount(limit, boost),
       min_similarity: RETRIEVAL.minSimilarity,
       filter_categories: query.categories?.length ? query.categories : null,
     });
@@ -230,7 +234,8 @@ export class SupabaseKnowledgeProvider implements KnowledgeProvider {
       throw new Error(`Knowledge retrieval failed: ${error.message}`);
     }
 
-    this.lastRows = await this.readRowsForBrand((data ?? []) as MatchedChunkRow[]);
+    const rows = await this.readRowsForBrand((data ?? []) as MatchedChunkRow[]);
+    this.lastRows = boost ? rerankCaPolicyChunks(rows, trimmed, limit) : rows;
     return this.lastRows;
   }
 

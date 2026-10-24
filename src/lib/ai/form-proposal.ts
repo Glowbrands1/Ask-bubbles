@@ -135,6 +135,7 @@ import {
   answersFormClarification,
 } from "@/lib/forms/form-clarification";
 import { isoCardDate, storeWithoutGate, stripNonNameTokens } from "@/lib/forms/anti-loop";
+import { globalStoreAskLine } from "@/lib/forms/global-store-ask";
 import { inlineDraftVariantKey, supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { buildFormInventory } from "@/lib/forms/inventory";
 import {
@@ -1089,6 +1090,19 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
       delete proposal.namedLocationOutOfScope;
       Object.assign(proposal, gated);
     }
+  }
+
+  if (proposal.status === "ready" && proposal.employeeName && proposal.subject !== "team") {
+    const line = globalStoreAskLine({
+      role: input.actor.role,
+      scope: input.actor.scope,
+      storeResolved: proposal.locationResolution === "resolved" && Boolean(proposal.locationId),
+      employeeName: proposal.employeeName,
+      assistantMessages: input.history
+        .filter((message) => message.role === "assistant")
+        .map((message) => message.content),
+    });
+    if (line) proposal.storeAsk = line;
   }
 
   // A confirm question is the loop. The card is built from the typed name instead.
@@ -2470,9 +2484,12 @@ function employmentChangeContent(
   lines.push("");
   lines.push(
     proposal.supportsInlineDraft
-      ? proposal.locationResolution === "not_applicable"
-        ? "Your account covers every store, so the form won't name one unless you did. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
-        : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do."
+      ? closeForDraft(
+          proposal,
+          proposal.locationResolution === "not_applicable"
+            ? "Your account covers every store, so the form won't name one unless you did. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
+            : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        )
       : "**Nothing has been created.** This is a proposal, not a form. To file one today, use Create a Form.",
   );
   return lines.join("\n");
@@ -2902,11 +2919,14 @@ function proposalContent(
       const who = proposal.subject === "team" ? "This one is for the whole team" : "I have the employee";
       const storeBlank = antiLoopEnabled() && !proposal.locationId && proposal.locationResolution !== "not_applicable";
       lines.push(
-        proposal.locationResolution === "not_applicable"
-          ? `${who}. Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do.`
-          : storeBlank
-            ? `${who}. The store is blank and can be filled on the form. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`
-            : `${who}${proposal.subject === "team" ? ", and I have the store" : " and the store"}${resolvedStoreName(proposal) ? ` (**${resolvedStoreName(proposal)}**)` : ""}. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`,
+        closeForDraft(
+          proposal,
+          proposal.locationResolution === "not_applicable"
+            ? `${who}. Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do.`
+            : storeBlank
+              ? `${who}. The store is blank and can be filled on the form. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`
+              : `${who}${proposal.subject === "team" ? ", and I have the store" : " and the store"}${resolvedStoreName(proposal) ? ` (**${resolvedStoreName(proposal)}**)` : ""}. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`,
+        ),
       );
     } else if (
       proposal.status === "needs_location" &&
@@ -3190,9 +3210,12 @@ function correctiveActionReady(
   lines.push("");
   lines.push(
     proposal.supportsInlineDraft
-      ? proposal.locationResolution === "not_applicable"
-        ? "Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
-        : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do."
+      ? closeForDraft(
+          proposal,
+          proposal.locationResolution === "not_applicable"
+            ? "Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
+            : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        )
       : "**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.",
   );
 
@@ -3204,6 +3227,10 @@ function correctiveActionReady(
  * some. Same rule as the corrective-action question above: a manager who wrote
  * two names has told us everything except which of them.
  */
+function closeForDraft(proposal: ChatFormProposal, ordinary: string): string {
+  return proposal.storeAsk ?? ordinary;
+}
+
 function eppEmployeeQuestion(templateName: string, context: ManagerContext): string {
   const employee = resolveEmployee(context);
 
@@ -3265,9 +3292,12 @@ function eppReady(
   lines.push("");
   lines.push(
     proposal.supportsInlineDraft
-      ? proposal.locationResolution === "not_applicable"
-        ? "Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
-        : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do."
+      ? closeForDraft(
+          proposal,
+          proposal.locationResolution === "not_applicable"
+            ? "Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
+            : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        )
       : "**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.",
   );
 

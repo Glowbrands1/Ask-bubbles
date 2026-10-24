@@ -3,6 +3,7 @@ import "server-only";
 import { promptLabel } from "@/lib/ai/prompts";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { businessToday } from "@/lib/business-date";
+import { priorRecordFinalOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { locationById } from "@/lib/locations";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import type { AccessScope, Role } from "@/types";
@@ -127,6 +128,30 @@ const ASKS_FOR_A_NEW_FORM =
  * register instead. A sentence that ALSO says "create" or "write a" keeps the
  * proposal.
  */
+const PREVIOUS_RECORD = /\b(?:previous|prior|past)\b/i;
+const ASKS_FOR_DRAFTS = /\b(?:draft|drafted)\b/i;
+
+/**
+ * A previous, prior, or past coaching question, or a question that asks
+ * about drafts, lists drafts apart from the record when the flag is on.
+ * The flag off returns false and the labelled list is unchanged.
+ */
+export function separateDraftsAsNotOnFile(question: string): boolean {
+  if (!priorRecordFinalOnlyEnabled()) return false;
+  return PREVIOUS_RECORD.test(question) || ASKS_FOR_DRAFTS.test(question);
+}
+
+export function splitRecordDrafts<T extends { status: string }>(
+  question: string,
+  rows: readonly T[],
+): { onFile: T[]; notOnFile: T[] } {
+  if (!separateDraftsAsNotOnFile(question)) return { onFile: [...rows], notOnFile: [] };
+  return {
+    onFile: rows.filter((row) => row.status !== "draft"),
+    notOnFile: rows.filter((row) => row.status === "draft"),
+  };
+}
+
 export function asksOnlyAboutFormsOnFile(question: string): boolean {
   const text = question.toLowerCase().replace(/\s+/g, " ");
   if (!ON_FILE_PATTERNS.some((pattern) => pattern.test(text))) return false;
@@ -256,6 +281,8 @@ export function renderFormRecordsBlock(input: {
   words: readonly string[];
   matches: NameMatches | null;
   recent: readonly InstanceRow[];
+  /** Drafts kept out of the previous-coaching list. Empty when the flag is off. */
+  notOnFile?: readonly InstanceRow[];
   today: string;
 }): string {
   const { words, matches, recent, today } = input;
@@ -282,6 +309,12 @@ export function renderFormRecordsBlock(input: {
     );
   } else {
     sections.push(`No forms are on file at the ${NOUNS} this user can see.`);
+  }
+
+  if (input.notOnFile && input.notOnFile.length > 0) {
+    sections.push(
+      `Not on file. These drafts are not previous coaching:\n${input.notOnFile.map((row) => describeRow(row, today)).join("\n")}`,
+    );
   }
 
   return sections.join("\n\n");
@@ -360,17 +393,26 @@ export async function loadFormRecords(input: {
     }
 
     if (words.length > 0) {
-      const rows = visibleInstances(
-        formsActor,
-        await listInstances("all", MATCH_LIMIT, { ...filter, employeeNameWords: words }),
+      const split = splitRecordDrafts(
+        input.question,
+        visibleInstances(
+          formsActor,
+          await listInstances("all", MATCH_LIMIT, { ...filter, employeeNameWords: words }),
+        ),
       );
-      const matches = matchRowsToQuestion(rows, words);
-      if (matches.named.length > 0 || matches.possible.length > 0) {
-        return { block: renderFormRecordsBlock({ visibility, words, matches, recent: [], today }) };
+      const matches = matchRowsToQuestion(split.onFile, words);
+      const drafts = matchRowsToQuestion(split.notOnFile, words);
+      const notOnFile = [...drafts.named, ...drafts.possible];
+      if (matches.named.length > 0 || matches.possible.length > 0 || notOnFile.length > 0) {
+        return { block: renderFormRecordsBlock({ visibility, words, matches, recent: [], notOnFile, today }) };
       }
     }
 
-    const recent = visibleInstances(formsActor, await listInstances("active", RECENT_LIMIT, filter));
+    const recentSplit = splitRecordDrafts(
+      input.question,
+      visibleInstances(formsActor, await listInstances("active", RECENT_LIMIT, filter)),
+    );
+    const recent = recentSplit.onFile;
     /*
      * A question that names somebody nobody on file matches is reported as
      * "no form names them" — with the recent list left out, so the model
@@ -383,6 +425,9 @@ export async function loadFormRecords(input: {
         words,
         matches: named ? { named: [], possible: [] } : null,
         recent,
+        // A named miss already returned that person's drafts above. The recent
+        // list's drafts belong here only when the question named nobody.
+        notOnFile: named ? undefined : recentSplit.notOnFile,
         today,
       }),
     };

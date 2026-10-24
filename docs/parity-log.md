@@ -391,3 +391,51 @@ on the Job Title slot. "Job Title", "title", "position", "location",
 Ask Sunny is not updated. Its s8 and s17 use a tanning title and salon
 names, which stay there. The label strip is in this app's name step
 (`settle` and `stripNonNameTokens`). No salon title was copied here.
+
+## 24 Oct 2026: validation port (retrieval, drafts, store ask)
+
+Four flags, all default off. Ask Sunny is not updated in this round. The
+validation measured both apps; these are the Bubbles mechanisms. No salon
+name, tanning title, or Sunny location number was copied.
+
+`CA_POLICY_RETRIEVAL_ENABLED`. A corrective-action question boosts the
+current JBA Policy Manual over the Performance Framework. The synonym map
+sends insubordination, acknowledgment, acknowledgements, "policy
+acknowledgements", and refusal to Standards of Conduct; uniform, slippers,
+and shoes to Dress Code for The Company; tardy to Attendance; "store opened
+late" and opened late to Late Opening. The exact prompt "CA for
+insubordination, she did not acknowledge policies at onboarding" keeps
+Standards of Conduct outside the top 14 until the flag is on. Dress Code
+moves from rank 17 to 1 on the slippers prompt; Standards of Conduct moves
+from rank 15 to 1 on the insubordination prompt. The retriever fetches a
+wider window only when the flag is on. Hybrid search stays off in the app.
+The hybrid reorder is tested in the local harness only
+(`src/lib/knowledge/ca-policy-hybrid.local.test.ts`), on an in-memory
+candidate list, with no database call and no embedder.
+`research/reports/full-validation-2026-10-24.md` was not in this checkout.
+The 17 plain-language cases in `ca-policy-retrieval.test.ts` are the
+stakeholder cues, the Sunny rewrite questions adapted from salon to store,
+and those two phrases. Bubbles has one JBA copy, so Sunny's duplicate-manual
+retirement is not ported.
+
+`CROSS_CHAT_DRAFT_DEDUPE_ENABLED`. An open draft for the same employee,
+template, and incident date is reused across chats, including a draft
+another manager started. The card-id match stays first. `DRAFT_DEDUPE_ENABLED`
+is unchanged. A different date, or a request for a separate document, still
+creates.
+
+`PRIOR_RECORD_FINAL_ONLY_ENABLED`. "previous / prior / past" coaching, and
+a question that asks for drafts, keeps finalized rows in the on-file list
+and lists drafts in a separate section that says "Not on file. These drafts
+are not previous coaching:". A draft is never described as previous coaching.
+The flag off keeps the labelled draft list and does not add that section.
+
+`GLOBAL_STORE_ASK_ENABLED`. A global-scope district manager is asked once
+which store. The card stays ready. Admin, owner, and developer keep the
+existing copy. A named store is not asked again. Empire, SD is not a store.
+
+Colene's six ignored Woven locations (Corporate twice, Grand Forks, Raymore,
+Fargo, Maintenance) and Empire, SD are named in
+`supabase/migrations/20261024180000_colene_unmapped_woven_locations_review.sql`
+for Pau's review. The file writes nothing. Woven location ids are not in
+this repo and were not guessed. Raymore is not loc-219.

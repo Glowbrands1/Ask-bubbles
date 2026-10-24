@@ -245,6 +245,7 @@ function closingLine(proposal: ChatFormProposal): string {
       ? "Choose the store on the card below, then create the draft."
       : "**Nothing has been created.** This is a proposal, not a form, and the published version of this form can't be drafted in chat — an administrator should check it under Form Templates.";
   }
+  if (proposal.storeAsk) return proposal.storeAsk;
   return proposal.locationResolution === "not_applicable"
     ? "Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
     : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.";

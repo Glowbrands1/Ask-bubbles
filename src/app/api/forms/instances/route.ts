@@ -44,11 +44,17 @@ import { warningLevelFromConversation } from "@/lib/forms/warning-level-conversa
 import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { businessToday } from "@/lib/business-date";
 import {
+  crossChatDraftDedupeEnabled,
   draftDedupeEnabled,
   payrollDeductAmountFieldEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
-import { findAccountResentDraft, findResentDraft, rememberDraftIncident } from "@/lib/forms/draft-reopen";
+import {
+  findAccountResentDraft,
+  findCrossChatOpenDraft,
+  findResentDraft,
+  rememberDraftIncident,
+} from "@/lib/forms/draft-reopen";
 import { historyWantsSeparateDocument } from "@/lib/ai/second-form";
 import type { Permission } from "@/types";
 
@@ -298,6 +304,27 @@ export async function POST(request: Request) {
         formDate: isIsoCalendarDate(body.formDate) ? body.formDate : null,
       });
       if (narrative) return NextResponse.json({ instance: narrative, reused: true });
+    }
+
+    /*
+     * SAME EMPLOYEE, TEMPLATE, AND INCIDENT DATE, ACROSS CHATS. The card-id
+     * match above stays first. This does not widen DRAFT_DEDUPE_ENABLED: a
+     * different date, or a request for a separate document, still creates.
+     * Off, this block does not run.
+     */
+    const crossChatDate = isIsoCalendarDate(body.formDate) ? body.formDate : null;
+    if (
+      crossChatDraftDedupeEnabled() &&
+      body.source === "assistant" &&
+      crossChatDate &&
+      !historyWantsSeparateDocument(body.conversation)
+    ) {
+      const open = await findCrossChatOpenDraft({
+        templateKey: body.templateKey,
+        employeeName: body.employeeName.trim().slice(0, 120),
+        formDate: crossChatDate,
+      });
+      if (open) return NextResponse.json({ instance: open, reused: true });
     }
 
     const instance = await createInstance({
