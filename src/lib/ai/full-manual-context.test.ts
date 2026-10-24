@@ -587,7 +587,13 @@ describe("production chats cite printed pages", () => {
     const plan = planFullManualContext({ question: CELL_PHONE_QUESTION, documents });
     const repaired = citePolicyAnswer(`See page 99 and [p.4]. ${CELL_PHONE_ANSWER}`, plan);
     expect(repaired.ok).toBe(true);
-    expect(repaired.text).not.toContain("99");
+    /*
+     * Changed on purpose (24 Oct 2026): the citation check no longer deletes
+     * the model's words. "page 99" stays as written; it is never a marker or
+     * a Sources row. Only [p.N] markers are added or removed.
+     */
+    expect(repaired.text.startsWith("See page 99 and.")).toBe(true);
+    expect(repaired.text).not.toContain("[p.99]");
     expect(repaired.text).not.toContain("[p.4]");
     expect(new Set(citedPages(repaired.text))).toEqual(new Set([19]));
     expect(repaired.sources.some((source) => source.printedPage === 4 || source.printedPage === 99)).toBe(false);

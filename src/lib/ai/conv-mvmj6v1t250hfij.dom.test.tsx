@@ -27,7 +27,7 @@ const TURNS = [
 
 const TODAY = "2026-10-24";
 
-function replay() {
+function replay(options?: { repeatCurrent?: boolean }) {
   let history: { role: string; content: string }[] = [];
   let saved: FormRemapSlots | null = null;
   const steps: ReturnType<typeof groundFormSlots>[] = [];
@@ -41,7 +41,7 @@ function replay() {
         warningLevel: null,
         payrollDeduct: null,
       },
-      history,
+      history: options?.repeatCurrent ? [...history, { role: "user", content: question }] : history,
       question,
       today: TODAY,
       people: [],
@@ -67,6 +67,10 @@ function cardText(proposal: NonNullable<ReturnType<typeof groundFormSlots>["resp
   };
   render(<MessageBubble message={message} onSuggestion={() => {}} />);
   return document.querySelector("dl")?.textContent ?? "";
+}
+
+function count(text: string, phrase: string): number {
+  return text.split(phrase).length - 1;
 }
 
 describe("conv_mvmj6v1t250hfij", () => {
@@ -102,5 +106,36 @@ describe("conv_mvmj6v1t250hfij", () => {
     expect(shown).toContain("manual acknowledgement 9/01");
     expect(shown).toContain("No");
     expect(shown).toContain("dress code");
+  });
+  /**
+   * conv_mvmo24rs2rjnl7q on dpl_EchzRGzeEvDyRk9QqgDd2DLvFJfr: after
+   * "verbal, prior = manual ack 9/01, no payroll" the card's prior action read
+   * "manual acknowledgement 9/01" twice, because that turn was already the
+   * last user turn in the history when it was read again as the question.
+   */
+  it("renders the prior action once after every turn, including when this turn is already in the history", () => {
+    for (const repeatCurrent of [false, true]) {
+      for (const [index, step] of replay({ repeatCurrent }).entries()) {
+        cleanup();
+        const message: ChatMessage = {
+          id: `m-${index}`,
+          role: "assistant",
+          content: step.response.content,
+          createdAt: "2026-10-24T15:06:00Z",
+          mode: "standard",
+          coverage: "not_applicable",
+          citations: [],
+          formProposal: step.response.formProposal,
+        };
+        const view = render(<MessageBubble message={message} onSuggestion={() => {}} />);
+        const shown = view.container.textContent ?? "";
+        const where = `repeatCurrent=${repeatCurrent} turn ${index + 1}`;
+        const expected = index === 0 ? 0 : 1;
+        expect(count(shown, "manual acknowledgement 9/01"), where).toBe(expected);
+        expect(count(document.querySelector("dl")?.textContent ?? "", "manual acknowledgement 9/01"), where).toBe(expected);
+        expect(count(shown, "Prior action"), where).toBe(expected);
+        if (index > 0) expect(step.slots.priorActions).toBe("manual acknowledgement 9/01");
+      }
+    }
   });
 });
