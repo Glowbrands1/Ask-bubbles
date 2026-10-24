@@ -41,6 +41,7 @@ function draft(): ChatTraceDraft {
     prompt: null,
     formInProgress: false,
     modelCall: null,
+    formExtraction: null,
     errorSubtype: null,
     errorClass: null,
     errorStatus: null,

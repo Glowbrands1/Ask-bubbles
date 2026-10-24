@@ -299,6 +299,15 @@ export function promptCacheEnabled(): boolean {
   return envFlag("PROMPT_CACHE_ENABLED");
 }
 
+/**
+ * One extraction over the whole conversation fills the form. A field is
+ * written only from the manager's words, a later edit replaces it, and a
+ * blank required field is asked once. Off, the existing form path is used.
+ */
+export function formFullRemapEnabled(): boolean {
+  return envFlag("FORM_FULL_REMAP_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -334,4 +343,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "GLOBAL_STORE_ASK_ENABLED",
   "EDITION_SUPERSESSION_ENABLED",
   "PROMPT_CACHE_ENABLED",
+  "FORM_FULL_REMAP_ENABLED",
 ] as const;

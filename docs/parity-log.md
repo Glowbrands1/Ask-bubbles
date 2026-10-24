@@ -6,6 +6,25 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: one extraction fills the form
+
+`FORM_FULL_REMAP_ENABLED` defaults off. On, each form turn is one tool
+call over the whole conversation. A field is kept only when the manager
+said it. A later edit replaces that field and the form continues. A blank
+required field is one short question, and that question is not asked
+again. Incident text is a short summary. "as you said" is only on a fact
+the manager stated. A typed name stays as typed, with "Woven has …" when
+one roster name is close. The call's model, token counts, and slots are
+written on `chat_traces`.
+
+The payroll amount from PR 80 stays: a stated deduction amount is the
+amount, "$25.00 via payroll deduction" from the manual is not, and the
+action plan does not repeat the figure. Yes with no amount is asked once.
+
+**Sibling app: not ported.** Ask Sunny's form tool is the same one-call
+shape (`record_form_turn`). It does not have `FORM_FULL_REMAP` yet, and
+that repo was not in this session. No salon wording was copied.
+
 ## 24 Oct 2026: the newest Woven edition is the one that answers
 
 Ported from Ask Sunny branch `cursor/edition-supersession-6d4a`, commit

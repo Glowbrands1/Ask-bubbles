@@ -22,6 +22,13 @@ export interface ChatTraceDraft {
   prompt: string | null;
   formInProgress: boolean;
   modelCall: ModelCallSnapshot | null;
+  /** The form extraction, when FORM_FULL_REMAP ran. Null on every other turn. */
+  formExtraction: {
+    model: string;
+    inputTokens: number | null;
+    outputTokens: number | null;
+    slots: Record<string, unknown>;
+  } | null;
   errorSubtype: ErrorSubtype | null;
   errorClass: string | null;
   errorStatus: number | null;
