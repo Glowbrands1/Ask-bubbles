@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ACTION_PLAN_SENTENCE_RULE,
+  COACHING_CONSEQUENCE_RULES,
+  EMPLOYEE_FIGURE_RULES,
+  FORM_LIBRARY_DETAIL_RULES,
+  PRINTED_PAGE_RULE,
   buildGroundingBlock,
   buildReportsGuideSection,
   buildSystemPrompt,
@@ -419,5 +424,82 @@ describe("an answer given while a form is open in the conversation", () => {
     const prompt = buildSystemPrompt(base);
     expect(prompt).toMatch(/say the form has not been created yet/);
     expect(prompt).not.toContain("A FORM IS OPEN");
+  });
+});
+
+describe("Sunny chat and forms rules stay behind the existing flags", () => {
+  const base = {
+    assistantName: "Bubbles",
+    brandName: "Buff City Soap",
+    productName: "Ask Bubbles",
+    locationNoun: "store",
+    context: CONTEXT,
+    mode: "standard" as const,
+    hasContext: true,
+    hasFormsLibrary: true,
+    hasPersonMemory: true,
+    hasFormRecords: true,
+  };
+
+  it("leaves the prompt unchanged when the flags are omitted", () => {
+    const prompt = buildSystemPrompt(base);
+    expect(prompt).toBe(
+      buildSystemPrompt({
+        ...base,
+        styleRules: false,
+        actionPlanSentences: false,
+        printedPageOnly: false,
+        typedName: false,
+        policyCitation: false,
+      }),
+    );
+    expect(prompt).toContain("ask for their full name");
+    expect(prompt).toContain("A metric is a coaching signal, not a finding.");
+    expect(prompt).toContain("TRAINING MATERIAL IS NOT A FORM");
+    expect(prompt).toContain("Keep what the person told you at the standing they gave it.");
+    expect(prompt).toContain("edit the exit form for Jordan Smith");
+    expect(prompt).toContain("ask whether that is the person they mean before treating it as theirs.");
+    expect(prompt).toContain("ask before relying on it.");
+    expect(prompt).not.toContain(COACHING_CONSEQUENCE_RULES);
+    expect(prompt).not.toContain(EMPLOYEE_FIGURE_RULES);
+    expect(prompt).not.toContain(FORM_LIBRARY_DETAIL_RULES);
+    expect(prompt).not.toContain(ACTION_PLAN_SENTENCE_RULE);
+    expect(prompt).not.toContain(PRINTED_PAGE_RULE);
+    expect(prompt).not.toContain("salon");
+    expect(prompt).not.toContain("tanning");
+    expect(prompt).not.toContain("PPTA");
+  });
+
+  it("adds the consequence rules, the missing forms sentences, and the two-sentence plan only when those flags are on", () => {
+    const prompt = buildSystemPrompt({
+      ...base,
+      styleRules: true,
+      actionPlanSentences: true,
+      printedPageOnly: true,
+      typedName: true,
+    });
+    expect(prompt).toContain(COACHING_CONSEQUENCE_RULES);
+    expect(prompt).toContain("Weigh opportunity volume before performance.");
+    expect(prompt).toContain("Recommend the lightest appropriate next step.");
+    expect(prompt).toContain("Recognition is half the job.");
+    expect(prompt).toContain(EMPLOYEE_FIGURE_RULES);
+    expect(prompt).toContain("Do not invent an employee, a name, a score, a ranking or a headcount.");
+    expect(prompt).toContain(FORM_LIBRARY_DETAIL_RULES);
+    expect(prompt).toContain(
+      "An approved progression may name a step — observation, role play, a follow-up review, escalation to leadership — that has no template of its own.",
+    );
+    expect(prompt).toContain(
+      "Guidance about how to coach, when to escalate and what the progression is lives in the knowledge base and is cited by marker.",
+    );
+    expect(prompt).toContain(ACTION_PLAN_SENTENCE_RULE);
+    expect(prompt).toContain("An action plan on a form is exactly two sentences.");
+    expect(prompt).toContain(PRINTED_PAGE_RULE);
+    expect(prompt).toContain("A PDF sheet number is not the printed page.");
+    expect(prompt).toContain("Use the name the manager typed. Do not ask which person, and do not block because a roster does not list them.");
+    expect(prompt).toContain("keep the name the manager typed. Do not ask whether that is the person, and do not block the form.");
+    expect(prompt).not.toContain("ask whether that is the person they mean");
+    expect(prompt).not.toContain("ask before relying on it.");
+    expect(prompt).not.toContain("I couldn't find");
+    expect(prompt).not.toContain("salon");
   });
 });

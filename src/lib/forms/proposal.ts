@@ -321,6 +321,18 @@ function isRosterSalonName(candidate: string): boolean {
   return ROSTER_NAME_KEYS.has(locationNameKey(candidate)) || isStoreName(candidate, ROSTER_STORE_INDEX);
 }
 
+/** A city or road from this company's stores, long enough not to be a surname on its own. */
+function isCompanyPlaceWord(word: string): boolean {
+  const token = word.toLowerCase().replace(/[^a-z]/g, "");
+  if (token.length <= 3) return false;
+  return COMPANY_LOCATIONS.some((location) =>
+    location.name
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .some((part) => part.length > 3 && part === token),
+  );
+}
+
 /*
  * ============================================================================
  * "KEARNEY", TYPED ON ITS OWN, IS WHERE — NEVER WHO
@@ -1323,6 +1335,13 @@ function formRecipient(subjects: readonly string[], strong: readonly string[], w
 }
 
 function settle(strong: string[], weak: string[], text: string, subjects: readonly string[] = []): EmployeeMentions {
+  if (typedNameEnabled()) {
+    const people = [...strong, ...weak].filter((name) => !isCompanyPlaceWord(name));
+    if (people.length > 0) {
+      strong = strong.filter((name) => !isCompanyPlaceWord(name));
+      weak = weak.filter((name) => !isCompanyPlaceWord(name));
+    }
+  }
   const negated = negatedNames(text);
   const correction = negated.length > 0 || CORRECTION_CUE.test(text);
   const given = correction ? [...strong, ...sentenceAnswers(text)] : strong;
@@ -1456,7 +1475,15 @@ function formSubjectNames(text: string): string[] {
      */
     if (/^on$/i.test(match[1]!) && candidate.split(/\s+/).length < 2) continue;
     const following = after.slice(candidate.split(/\s+/).length);
-    if (/^(?:employee|team|staff|named)$/i.test(following[0] ?? "")) continue;
+    if (/^(?:employee|team|staff|named)$/i.test(following[0] ?? "")) {
+      // "for bellevue team member, casey quinn": the first word is a store,
+      // the title follows, and the person is named after it.
+      if (typedNameEnabled() && isCompanyPlaceWord(candidate)) {
+        const person = readTypedName(withoutSubjectLead(following).slice(0, 4), false);
+        if (person && typedNameAllowed(person) && !opensWithRosterState(person)) subjects.push(person);
+      }
+      continue;
+    }
     subjects.push(candidate);
     /*
      * "COACHING FORM FOR AVERY TESTPERSON AND JORDAN TESTPERSON", typed in

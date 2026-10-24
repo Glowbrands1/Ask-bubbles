@@ -292,3 +292,73 @@ The system prompt before `295d573` (`655a61d`) was scored against the
 current prompt on the same code and the same flags. The card runner does
 not read the system prompt. Neither arm scored better. The prompt
 sections stay. Ask Sunny was not changed.
+
+## 24 Oct 2026: Sunny prompt sections that chat and forms were missing
+
+**Sibling app: ported here from Ask Sunny `main` `b9ae362`
+(`src/lib/ai/prompts.ts`, 774 lines).** The mechanism only. No Sun Tan
+City wording, salon names, or Sunny people. Ask Sunny was not changed.
+
+On Bubbles `main` that file is 528 lines. The branch before this port
+was 545, which is `main` plus the typed-name and printed-page sentences
+from `295d573`. Those sentences are still in the file.
+
+Ported, and only when an existing flag is on. With every new switch
+omitted or false, `buildSystemPrompt` is the same string as before.
+
+- `CHAT_STYLE_RULES_ENABLED`: Sunny's "BEFORE YOU SUGGEST ANY CONSEQUENCE"
+  (EPP, opportunity volume, name the behaviour, lightest next step,
+  recognition) and the no-employee-report figure rules. A name is not
+  refused because it is missing from a report.
+- Same flag, and only when a forms library block is attached: a process
+  step (observation, role play, a follow-up review, escalation to
+  leadership) is not a form, and coaching guidance is cited from the
+  knowledge base while the blank template lives in Forms.
+- `ACTION_PLAN_SENTENCES_ENABLED`: an action plan on a form is exactly
+  two sentences. No payroll sentence and no third sentence. Sunny says
+  this in its repair prompt; the system prompt now says it too.
+- `PRINTED_PAGE_ONLY_ENABLED`: cite the printed page. A PDF sheet number
+  is not that page.
+- `TYPED_NAME_ENABLED`, when person memory or forms on file are attached:
+  a possible match and a shared first name do not become a question, and
+  a roster miss does not block. Off, those sections still ask.
+
+Skipped, and why:
+
+- `SUNNY_VOICE`. Brand personality. This app uses `ASSISTANT_VOICE`.
+- Employee-facts block (`EMPLOYEE_FACTS_ATTACHED_RULES`,
+  `EMPLOYEE_DATA_SECTION`). Nothing in this app renders that section.
+  The "no dataset" half is the figure rule above.
+- Daily stats source, reasoning, and the five-part manager answer
+  (`DAILY_STATS_*`, `MANAGER_ANSWER_SHAPE`). Those name Sun Tan City
+  report families (bed usage, spa, PPTA, tanning). This app has no
+  daily-stats framework. The non-salon pieces (do not treat a number as
+  a finding, name a behaviour, recognition) are in the consequence rules.
+- Reports guide systems (OPS Dashboard, Power BI, Portal Report Center,
+  Salon Director, tab filters, an "Ask about this report" bar). This
+  app's guide is already built from its own report list and is omitted
+  when that list is empty. The pages do not have those controls.
+- The spa example in the missing-reports sentence. The generic sentence
+  is already here.
+- `policyManualNote`. `handbookNote` is that slot.
+- Sunny's finalized-form line that sends the manager to Form Monitoring
+  to open a revision. A finalized form here opens a new draft in the
+  conversation.
+- Sunny's repair line that an employee must be a roster name. That
+  blocks on Woven. It is not in this prompt.
+- The numbered "order of authority" and "examples are not facts".
+  `PINNED_SOURCE_RULES` already says that for whatever document was
+  pinned.
+- Sunny's shorter facsimile-form rule. This prompt's list is the longer
+  one and stays.
+
+## 24 Oct 2026: a store word before a title is not the employee
+
+`TYPED_NAME_ENABLED`. "create a coaching form for bellevue team member,
+casey quinn, who was talking on her cell phone…" keeps casey quinn. The
+city word is taken from this company's store names, and it is dropped only
+when the turn also names a person. A city that is the only name in the
+turn is still kept.
+
+Ask Sunny reads salons in `salon-mention.ts`, not this store list. The
+same sentence is not ported. No salon name was copied.
