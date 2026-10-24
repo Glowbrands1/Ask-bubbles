@@ -331,7 +331,9 @@ export function fullManualContextEnabled(): boolean {
  * document ("in the workplace policy") is never read as a typed store, and
  * a span-before-"store" match must sit inside one manager turn, so "cite
  * animals in the workplace policy" followed by "store location is …" does
- * not become "the workplace policy store".
+ * not become "the workplace policy store". Also on, a field label is a place
+ * cue and the newest turn's store replaces the saved one: "location kearney"
+ * after "store is grand island" is Kearney (ported from Ask Sunny, QA Round 4).
  */
 export function placeSpanGuardEnabled(): boolean {
   return envFlag("PLACE_SPAN_GUARD_ENABLED");

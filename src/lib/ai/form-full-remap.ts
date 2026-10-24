@@ -1,7 +1,7 @@
 import "server-only";
 
 import { CLAUDE_HAIKU_MODEL } from "@/lib/config/models";
-import { formFullRemapEnabled } from "@/lib/config/chat-quality-flags";
+import { formFullRemapEnabled, placeSpanGuardEnabled } from "@/lib/config/chat-quality-flags";
 import { CA_POLICY_LABEL, readCaPolicy } from "@/lib/forms/ca-policy";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
 import { listIncidentDates } from "@/lib/forms/form-date-answer";
@@ -12,6 +12,7 @@ import { payrollDeductAmount, payrollDeductFromConversation } from "@/lib/forms/
 import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
 import { extractEmployeeNames, extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
 import { spokenDates } from "@/lib/forms/relative-date";
+import { labelledStoreIds } from "@/lib/forms/store-cue";
 import { warningLevelFromTurns } from "@/lib/forms/warning-level";
 import type { ChatFormProposal } from "@/types";
 
@@ -116,7 +117,7 @@ export function groundFormSlots(input: {
     (isTemplate(raw.templateKey) ? raw.templateKey : null);
   const employeeName = groundedName(raw.employeeName, users);
   const jobTitle = groundedTitle(users);
-  const store = groundedStore(said);
+  const store = (placeSpanGuardEnabled() ? newestNamedStore(users) : null) ?? groundedStore(said);
   const incidentDateIso = groundedDate(said, input.today);
   const warningLevel = explicitWarning(users, input.today);
   const payrollDeduct = payrollDeductFromConversation(conversation);
@@ -373,6 +374,27 @@ function groundedTitle(turns: readonly string[]): string | null {
     title = found;
   }
   return title;
+}
+
+/*
+ * PLACE_SPAN_GUARD_ENABLED. The store the newest manager turn names wins over
+ * one an earlier turn named: "location kearney" after "store is grand island"
+ * is Kearney (ported from Ask Sunny, QA Round 4). Each turn is read newest
+ * first, as before and then with a field label as the place cue
+ * (`store-cue.ts`). A turn naming more than one store is left to the reading
+ * below.
+ */
+function newestNamedStore(turns: readonly string[]): { id: string; name: string } | null {
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    const turn = turns[index]!;
+    const own = groundedStore(turn);
+    if (own) return own;
+    const ids = labelledStoreIds(turn);
+    if (ids.length > 1) return null;
+    const name = ids.length === 1 ? rosterLocationName(ids[0]!) : null;
+    if (name) return { id: ids[0]!, name };
+  }
+  return null;
 }
 
 function groundedStore(text: string): { id: string; name: string } | null {

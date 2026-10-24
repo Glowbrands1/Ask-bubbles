@@ -4,7 +4,8 @@ import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manual";
 import { namesHeading } from "@/lib/forms/named-policy-section";
 import { payrollDeductAmount, payrollDeductFromConversation, type PayrollDeductAnswer } from "@/lib/forms/payroll-deduct";
-import { intentPayrollManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { intentPayrollManagerOnlyEnabled, placeSpanGuardEnabled } from "@/lib/config/chat-quality-flags";
+import { labelledStoreIds } from "@/lib/forms/store-cue";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -143,7 +144,9 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
   const employee = choice?.person
     ? { person: choice.person, name: displayName(choice.person), ambiguous: [] as readonly GroundedPerson[], typed: null }
     : groundEmployee(reading?.employee ?? null, blob, input.people);
-  const store = groundStore(choice?.store ?? reading?.store ?? null, blob, input.stores, employee.person);
+  const store =
+    newestTurnStore(input.question, input.stores) ??
+    groundStore(choice?.store ?? reading?.store ?? null, blob, input.stores, employee.person);
   const title = groundTitle(reading?.title ?? null, blob, input.people, employee.person);
   const incidentType = groundIncident(reading?.incidentType ?? null, blob, input.headings);
   const date = groundDate(choice?.date ?? reading?.incidentDate ?? null, blob, input.today);
@@ -285,6 +288,24 @@ function peopleNamedIn(blob: string, people: readonly GroundedPerson[]): Grounde
 
 function asGrounded(employee: RosterEmployee, people: readonly GroundedPerson[]): GroundedPerson {
   return people.find((person) => person.id === employee.id) ?? { ...employee, title: null, primaryLocationName: null };
+}
+
+/*
+ * PLACE_SPAN_GUARD_ENABLED. The store this turn names wins over the one the
+ * conversation saved: "location kearney" after "store is grand island" is
+ * Kearney (ported from Ask Sunny, QA Round 4). A field label counts as the
+ * place cue (`store-cue.ts`). Off, or when this turn names no single store,
+ * the store is grounded as before.
+ */
+function newestTurnStore(
+  question: string,
+  stores: readonly StoreRow[],
+): { id: string; name: string; ambiguous: readonly StoreRow[] } | null {
+  if (!placeSpanGuardEnabled()) return null;
+  const ids = labelledStoreIds(question);
+  if (ids.length !== 1) return null;
+  const row = stores.find((store) => store.id === ids[0]);
+  return row ? { id: row.id, name: row.name, ambiguous: [] } : null;
 }
 
 function groundStore(

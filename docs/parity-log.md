@@ -698,3 +698,15 @@ Ask Sunny (9b206c6, same flag): its roster salon reader
 workplace policy" then "at Kearney, NE" read as one unknown place) and its
 employment-change labelled location kept "per the new salon policy" as the
 salon. Both are guarded there. No salon wording was copied.
+
+## 24 Oct 2026: "location kearney" names the store (from Ask Sunny, QA Round 4)
+
+Same flag, `PLACE_SPAN_GUARD_ENABLED`. Ask Sunny conv_mvmw4hwq292a6vq:
+"name is test testyone, location st joe, …" after "salon is wornall" left
+the card on Wornall (Ask Sunny 503d454). The same turns with stores here:
+"location kearney" and "store kearney" were not read, and the form remap
+and the intent slots kept Grand Island. On, `store-cue.ts` reads "location /
+store <name>" as "at <name>" (the store reader's own rules still apply), and
+the store the newest manager turn names wins on the remap and the intent
+slots. No salon wording was copied. Test:
+`src/lib/forms/store-label-cue.test.ts`.
