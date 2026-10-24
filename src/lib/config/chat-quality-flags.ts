@@ -1320,6 +1320,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
+  "FORM_INPUT_FIDELITY_ENABLED",
 ] as const;
 
 /**
@@ -4262,4 +4263,13 @@ export function failureToOpenIsLateOpeningEnabled(): boolean {
  */
 export function payrollBareSentenceEnabled(): boolean {
   return envFlag("PAYROLL_BARE_SENTENCE_ENABLED");
+}
+
+/**
+ * Keep a date the manager typed, and send a one-word follow-up to the
+ * question just asked. Off, a relative day such as "yesterday" still leaves
+ * the form dated today, and a bare "verbal" can be saved as the job title.
+ */
+export function formInputFidelityEnabled(): boolean {
+  return envFlag("FORM_INPUT_FIDELITY_ENABLED");
 }
