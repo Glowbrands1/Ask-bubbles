@@ -14,6 +14,7 @@ import {
   PAYROLL_DEDUCT_LABEL,
   PAYROLL_DEDUCT_OPTIONS,
 } from "./payroll-deduct";
+import { payrollDeductAmountBlock } from "./payroll-deduct-amount";
 import { PRIOR_ACTIONS_KEY, PRIOR_ACTIONS_LABEL } from "./prior-actions";
 import { CA_ACTION_PLAN_CLOSING } from "./required-closing";
 
@@ -616,6 +617,12 @@ export function correctiveActionDocument(): FormDocument {
         columns: 2,
         single: true,
       },
+      /*
+       * The amount, on the line after Yes/No. Blank until the manager states
+       * one. This seed is not published by this change: the live template is
+       * still version 2 until that publish is approved.
+       */
+      payrollDeductAmountBlock(),
 
       { kind: "section", label: "Acknowledgement of Receipt of Warning" },
       {

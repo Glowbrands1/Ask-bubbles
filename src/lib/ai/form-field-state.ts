@@ -1,4 +1,4 @@
-import { priorCoachingOptionalEnabled } from "@/lib/config/chat-quality-flags";
+import { payrollDeductAmountFieldEnabled, priorCoachingOptionalEnabled } from "@/lib/config/chat-quality-flags";
 import { readCorrectiveActionIntake, describesIncident, type IntakeItem } from "@/lib/forms/corrective-action-intake";
 import { extractFormDate } from "@/lib/forms/form-date-answer";
 import { payrollDeductAmount } from "@/lib/forms/payroll-deduct";
@@ -167,7 +167,14 @@ export function corroborateModelFields(
 
   const payrollDeduct = base.payrollDeduct ?? null;
   let payrollAmount = base.payrollAmount;
-  if (!payrollAmount && payrollDeduct === "yes" && model.payrollAmount) {
+  if (payrollDeductAmountFieldEnabled()) {
+    /*
+     * The model does not choose the amount. A dollar figure that only appears
+     * because the cited policy states it ("$25.00 via payroll deduction") is
+     * not this field.
+     */
+    payrollAmount = payrollDeduct === "no" ? null : payrollDeductAmount(text);
+  } else if (!payrollAmount && payrollDeduct === "yes" && model.payrollAmount) {
     const stated = dollarsIn(text);
     const wanted = model.payrollAmount.replace(/\s+/g, "");
     if (stated.includes(wanted)) payrollAmount = wanted;
@@ -202,6 +209,7 @@ export function mergeConfirmed(
     if (correct) return incoming ?? prior;
     return prior ?? incoming;
   };
+  const payrollDeduct = pick(previous.payrollDeduct, next.payrollDeduct);
   return {
     employeeName: pick(previous.employeeName, next.employeeName),
     employeeId: pick(previous.employeeId, next.employeeId),
@@ -210,8 +218,11 @@ export function mergeConfirmed(
     locationId: pick(previous.locationId, next.locationId),
     incidentDateIso: pick(previous.incidentDateIso, next.incidentDateIso),
     useToday: correct ? next.useToday || previous.useToday : previous.useToday || next.useToday,
-    payrollDeduct: pick(previous.payrollDeduct, next.payrollDeduct),
-    payrollAmount: pick(previous.payrollAmount, next.payrollAmount),
+    payrollDeduct,
+    payrollAmount:
+      payrollDeductAmountFieldEnabled() && payrollDeduct === "no"
+        ? null
+        : pick(previous.payrollAmount, next.payrollAmount),
     warningLevel: pick(previous.warningLevel, next.warningLevel),
     policySection: pick(previous.policySection, next.policySection),
     whatHappened: previous.whatHappened || next.whatHappened,

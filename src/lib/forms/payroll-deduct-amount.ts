@@ -2,7 +2,7 @@ import { payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags
 
 import { field } from "./catalog";
 import type { FormBlock, FormDocument } from "./document";
-import { PAYROLL_DEDUCT_KEY, payrollDeductAmount } from "./payroll-deduct";
+import { PAYROLL_DEDUCT_KEY, payrollDeductAmount, quotedDeductionAmount } from "./payroll-deduct";
 
 /**
  * The Corrective Action amount line, placed immediately after
@@ -71,6 +71,30 @@ export function payrollAmountPrompt(input: {
   }
   if (input.assistantMessages.some((message) => message.includes(ASKED))) return null;
   return PAYROLL_DEDUCT_AMOUNT_QUESTION;
+}
+
+/**
+ * The amount a draft may write into an empty Payroll deduction amount line.
+ * The manager's words win. A figure already on the form is left there. A
+ * saved chat amount is used only when this turn did not state one, and only
+ * when it is a deduction amount — a policy sentence that merely quotes
+ * "$25.00 via payroll deduction" is not.
+ */
+export function payrollAmountForDraft(input: {
+  notes: string;
+  saved: string | null;
+  existing: string | null;
+}): string | null {
+  if (!payrollDeductAmountFieldEnabled()) return null;
+  if ((input.existing ?? "").trim()) return null;
+  return payrollDeductAmount(input.notes) ?? carriedPayrollAmount(input.saved);
+}
+
+function carriedPayrollAmount(saved: string | null): string | null {
+  const text = (saved ?? "").trim();
+  if (!text || quotedDeductionAmount(text)) return null;
+  const figure = text.startsWith("$") ? text : `$${text.replace(/^\$/, "")}`;
+  return payrollDeductAmount(`payroll deduction of ${figure}`);
 }
 
 /** The block inserted after the payroll Yes/No group. A manager field, optional. */

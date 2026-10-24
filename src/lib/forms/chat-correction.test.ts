@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseFormDocument } from "./document";
 import { TEMPLATE_SEEDS } from "./library";
@@ -20,7 +20,7 @@ const state = vi.hoisted(() => ({
   saved: [] as { values: Record<string, string>; checked: Record<string, string[]> }[],
   reason: "",
   employeeName: "Jane Doe",
-  values: [] as { fieldKey: string; value: string }[],
+  values: [] as { fieldKey: string; value: string; checked?: string[] }[],
   failSave: false,
   reasonFilledBy: "ai",
   /** Every instance id a save was written to, in order. */
@@ -54,7 +54,13 @@ vi.mock("./instance-scope", () => ({
           ...(state.reason
             ? [{ fieldKey: "reason", value: state.reason, checked: [], filledBy: state.reasonFilledBy, provenance: {} }]
             : []),
-          ...state.values.map((row) => ({ ...row, checked: [], filledBy: "system", provenance: {} })),
+          ...state.values.map((row) => ({
+            fieldKey: row.fieldKey,
+            value: row.value,
+            checked: row.checked ?? [],
+            filledBy: "system",
+            provenance: {},
+          })),
         ],
       },
     };
@@ -413,5 +419,60 @@ describe("the Corrective Action Form's payroll-deduct answer", () => {
     state.templateKey = "coaching";
     expect(await correct("no payroll deduction")).toBeNull();
     expect(state.saved).toEqual([]);
+  });
+});
+
+describe("the payroll amount, asked once", () => {
+  const FLAG = "PAYROLL_DEDUCT_AMOUNT_ENABLED";
+  const prior = process.env[FLAG];
+  const asked = "One more question: **Payroll deduction amount?** Tell me the amount here, or fill it on the form — I won't choose it for you.";
+
+  beforeEach(() => {
+    state.templateKey = "dpoa";
+    process.env[FLAG] = "1";
+  });
+
+  afterEach(() => {
+    if (prior === undefined) delete process.env[FLAG];
+    else process.env[FLAG] = prior;
+  });
+
+  it("asks once when payroll is changed to Yes and no amount was stated", async () => {
+    const first = await correct("change payroll deduct to yes");
+    expect(first!.content).toContain(asked);
+    expect(first!.content).not.toContain("$25");
+    const second = await correctActiveForm({
+      request: new Request("http://localhost/api/chat"),
+      instanceId: "11111111-1111-1111-1111-111111111111",
+      question: "change payroll deduct to yes",
+      today: "2026-09-28",
+      history: [{ role: "assistant", content: first!.content }],
+    });
+    expect(second!.content).not.toContain("Payroll deduction amount?");
+  });
+
+  it("stores a bare amount only as the answer to that question, and not the Late Opening $25", async () => {
+    state.values = [{ fieldKey: "payroll_deduct", value: "", checked: ["yes"] }];
+    expect(
+      await correctActiveForm({
+        request: new Request("http://localhost/api/chat"),
+        instanceId: "11111111-1111-1111-1111-111111111111",
+        question: "The employee will reimburse The Company $25.00 via payroll deduction.",
+        today: "2026-09-28",
+        history: [{ role: "assistant", content: asked }],
+      }),
+    ).toBeNull();
+    expect(state.saved).toEqual([]);
+
+    const stored = await correctActiveForm({
+      request: new Request("http://localhost/api/chat"),
+      instanceId: "11111111-1111-1111-1111-111111111111",
+      question: "$3.25",
+      today: "2026-09-28",
+      history: [{ role: "assistant", content: asked }],
+    });
+    expect(state.saved).toEqual([{ values: { payroll_deduct_amount: "$3.25" }, checked: {} }]);
+    expect(stored!.content).toContain("Payroll deduction amount → $3.25");
+    expect(stored!.content).not.toContain("Payroll deduction amount?");
   });
 });

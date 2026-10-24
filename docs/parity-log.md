@@ -235,12 +235,15 @@ into the action-plan sentence. It has no separate amount field and no
 (the next block, before Acknowledgement) and the same manager-amount
 reader. Do not copy salon names or Sun Tan City wording.
 
-`PAYROLL_DEDUCT_AMOUNT_ENABLED` defaults off. On, the Corrective Action
-form, card, and PDF show **Payroll deduction amount** immediately after
-the payroll Yes/No question. The line stays blank unless the manager
-stated an amount. A "$25.00" quoted from Late Opening is not written into
-it. When payroll is Yes and no amount was stated, chat asks once. Off,
-the document, the card, the question, and the PDF are unchanged.
+`PAYROLL_DEDUCT_AMOUNT_ENABLED` defaults off. The Corrective Action seed
+in `library.ts` includes **Payroll deduction amount** immediately after
+the payroll Yes/No question. That seed is not published: the live Bubbles
+template is still version 2 until Pau approves a publish. On, chat fills
+the line only from an amount the manager stated, asks once when payroll
+is Yes and the amount is missing, keeps that amount on `chat_form_state`
+across a redraft, and does not put it in the action plan. A "$25.00"
+quoted from Late Opening is not written into the line. Off, chat does
+not ask and does not fill.
 
 ## 24 Oct 2026: name, store, and issue gate (replay b9–b12)
 

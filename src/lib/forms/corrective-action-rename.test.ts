@@ -182,6 +182,8 @@ describe("2. what the data addresses, unchanged", () => {
         "action_plan",
         // Revision 4: "Is payroll deduct applicable?" — a new key, not a rename.
         "payroll_deduct",
+        // The amount line. Not published; the live template stays version 2 until Pau approves.
+        "payroll_deduct_amount",
       ].sort(),
     );
   });

@@ -1,4 +1,6 @@
+import { payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
 import { rosterLocationName } from "@/lib/forms/location-mention";
+import { statedPayrollDeductAmount } from "@/lib/forms/payroll-deduct-amount";
 import type { ChatFormProposal } from "@/types";
 
 import type { GroundedCandidate } from "./roster-grounding";
@@ -105,7 +107,11 @@ export function stateSentences(state: ConversationFormState): string[] {
     lines.push(`Policy reference: ${state.policyHeading}, JBA Policy Manual${page}.`);
   }
   if (state.incidentType) lines.push(`Incident: ${state.incidentType}.`);
-  if (state.payrollAmount) lines.push(`Payroll amount: ${state.payrollAmount}.`);
+  if (state.payrollAmount && payrollDeductAmountFieldEnabled()) {
+    lines.push(`Payroll deduction of ${state.payrollAmount}.`);
+  } else if (state.payrollAmount) {
+    lines.push(`Payroll amount: ${state.payrollAmount}.`);
+  }
   return lines;
 }
 
@@ -123,6 +129,7 @@ export function captureFormState(
     readonly employeeId: string | null;
     readonly keptTypedName: string | null;
     readonly userText: string;
+    readonly lastAssistant?: string;
     readonly policyHeading: string | null;
     readonly policyPage: number | null;
   },
@@ -149,8 +156,29 @@ export function captureFormState(
     templateKey: proposal?.templateKey ?? prior.templateKey,
     incident: incident || prior.incident,
     incidentType: prior.incidentType,
-    payrollAmount: prior.payrollAmount,
+    payrollAmount: rememberPayrollAmount({
+      prior: prior.payrollAmount,
+      userText: input.userText,
+      lastAssistant: input.lastAssistant,
+      payroll: payroll ?? prior.payrollDeduct,
+    }),
   };
+}
+
+/**
+ * The amount chat_form_state keeps across a later turn, including a redraft
+ * that does not repeat the figure. A No clears it. A policy quote does not
+ * set it. Off, the stored amount is left as it was.
+ */
+export function rememberPayrollAmount(input: {
+  prior: string | null;
+  userText: string;
+  lastAssistant?: string;
+  payroll: "yes" | "no" | null;
+}): string | null {
+  if (!payrollDeductAmountFieldEnabled()) return input.prior;
+  if (input.payroll === "no") return null;
+  return statedPayrollDeductAmount(input.userText, input.lastAssistant ?? "") ?? input.prior;
 }
 
 export function parseFormState(value: unknown): ConversationFormState | null {

@@ -29,6 +29,8 @@ import {
 } from "./payroll-deduct";
 import {
   PAYROLL_DEDUCT_AMOUNT_KEY,
+  PAYROLL_DEDUCT_AMOUNT_QUESTION,
+  payrollAmountPrompt,
   statedPayrollDeductAmount,
 } from "./payroll-deduct-amount";
 import { payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
@@ -214,6 +216,13 @@ async function correctFromFormReaders(
    * Every other form's date is the header reader's, below, unchanged.
    */
   const registered = companyFormFor(loaded.instance.templateKey);
+  const storedPayrollYes = (loaded.values.find((row) => row.fieldKey === PAYROLL_DEDUCT_KEY)?.checked ?? []).includes(
+    "yes",
+  );
+  const payrollIsYes = payroll === "yes" || (payroll == null && storedPayrollYes);
+  const amountToStore =
+    payrollDeductAmountFieldEnabled() && statedAmount && payrollIsYes && asksPayroll ? statedAmount : null;
+  const clearsAmount = payrollDeductAmountFieldEnabled() && asksPayroll && payroll === "no";
   const correctsDate =
     !kind &&
     !isExit &&
@@ -228,7 +237,14 @@ async function correctFromFormReaders(
     registered?.formDateIsIncidentDate === true &&
     registered.chatCorrectableFields.includes(FORM_DATE_KEY);
   const whichDate = asksWhichDate ? whichDateQuestion(loaded.instance, dateUnclear!.offered) : null;
-  const correctsOtherwise = kind || isExit || (asksPayroll && (payroll || payrollUnclear)) || correctsWarning || correctsDate;
+  const correctsOtherwise =
+    kind ||
+    isExit ||
+    (asksPayroll && (payroll || payrollUnclear)) ||
+    correctsWarning ||
+    correctsDate ||
+    Boolean(amountToStore) ||
+    clearsAmount;
   if (!correctsOtherwise && !whichDate) return null;
   /*
    * ==========================================================================
@@ -285,12 +301,6 @@ async function correctFromFormReaders(
           checked: exitCorrection?.checked ?? {},
         }
       : null;
-  const storedPayrollYes = (loaded.values.find((row) => row.fieldKey === PAYROLL_DEDUCT_KEY)?.checked ?? []).includes(
-    "yes",
-  );
-  const payrollIsYes = payroll === "yes" || (payroll == null && storedPayrollYes);
-  const amountToStore =
-    payrollDeductAmountFieldEnabled() && statedAmount && payrollIsYes && asksPayroll ? statedAmount : null;
   const correction = kind
     ? employmentCorrection
     : isExit
@@ -467,6 +477,7 @@ async function correctFromFormReaders(
   const before = Object.fromEntries(loaded.values.map((row) => [row.fieldKey, row.checked]));
   const after = { ...before, ...submitted.checked };
   const described = written
+    .filter((key) => key !== PAYROLL_DEDUCT_AMOUNT_KEY || (submitted.values[key] ?? "").trim() !== "")
     .map((key) => describe(document, variantKey, key, submitted, { before, after }))
     .filter((line): line is string => line !== null);
   const lines = [
@@ -535,6 +546,23 @@ async function correctFromFormReaders(
       `"${input.question.trim()}" isn't a clear Yes or No, so I cleared the answer rather than keep a Yes on the form. **Is payroll deduct applicable?** Yes or No?`,
     );
   }
+  /*
+   * Payroll is Yes and the manager has not stated an amount. Asked once.
+   * A later turn whose last answer already asked it does not ask again.
+   */
+  const storedAmount = (loaded.values.find((row) => row.fieldKey === PAYROLL_DEDUCT_AMOUNT_KEY)?.value ?? "").trim();
+  if (
+    payroll === "yes" &&
+    !statedAmount &&
+    !storedAmount &&
+    payrollAmountPrompt({
+      payroll: "yes",
+      managerText: input.question,
+      assistantMessages: [input.lastAssistant ?? ""],
+    }) === PAYROLL_DEDUCT_AMOUNT_QUESTION
+  ) {
+    lines.push("", PAYROLL_DEDUCT_AMOUNT_QUESTION);
+  }
 
   // What THIS form's readers take from a clause — the test for "was that part done?".
   applied.reads = (clause) =>
@@ -542,6 +570,8 @@ async function correctFromFormReaders(
       (kind && correctionValues(clause, input.today)) ||
         (isExit && exitCorrectionValues(clause, input.today)) ||
         (asksPayroll && (payrollDeductCorrection(clause) ?? payrollDeductReply(clause, input.lastAssistant ?? "") ?? (payrollDeductUnclear(clause) || null))) ||
+        (payrollDeductAmountFieldEnabled() &&
+          Boolean(statedPayrollDeductAmount(clause, input.lastAssistant ?? ""))) ||
         (correctsDate && formDateChange(clause, input.today) !== null),
     );
   return { ...reply(lines.join("\n")), formUpdate: { instanceId: input.instanceId, updated: written } };

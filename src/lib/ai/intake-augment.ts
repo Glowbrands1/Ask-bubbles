@@ -1,3 +1,4 @@
+import { payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { extractFormDate, listIncidentDates } from "@/lib/forms/form-date-answer";
 import { payrollDeductAmount } from "@/lib/forms/payroll-deduct";
@@ -63,6 +64,14 @@ function slotLines(input: {
     : null;
   const merged = mergeConfirmed(input.stored ?? emptyForMerge(), read, false);
   const lines: string[] = [];
+  if (
+    payrollDeductAmountFieldEnabled() &&
+    merged.payrollAmount &&
+    merged.payrollDeduct !== "no" &&
+    !payrollDeductAmount(input.question)
+  ) {
+    lines.push(`Payroll deduction of ${merged.payrollAmount}.`);
+  }
 
   const name = remembered?.name || merged.employeeName;
   if (name && readEmployeeMentions(input.question).names.length === 0 && !groundEmployee(input.question, roster)?.name) {
@@ -197,7 +206,14 @@ export function fieldLines(question: string, today: string, earlier = ""): strin
 
   if (!payrollDeductAmount(question)) {
     const known = payrollDeductAmount(corpus);
-    const missed = missedDeduction(question) ?? missedDeduction(corpus);
+    /*
+     * A dollar sign next to the word "payroll" is not, by itself, the
+     * manager's amount. The Late Opening sentence states "$25.00 via payroll
+     * deduction", and that figure stays off this field.
+     */
+    const missed = payrollDeductAmountFieldEnabled()
+      ? null
+      : (missedDeduction(question) ?? missedDeduction(corpus));
     const amount = known ?? missed;
     if (amount) lines.push(`Payroll deduction of ${amount.startsWith("$") ? amount : `$${amount}`}.`);
   }

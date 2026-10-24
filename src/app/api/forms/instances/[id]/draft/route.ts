@@ -127,6 +127,7 @@ import {
 import {
   PAYROLL_DEDUCT_AMOUNT_KEY,
   PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
+  payrollAmountForDraft,
 } from "@/lib/forms/payroll-deduct-amount";
 import {
   actionPlanProvenance,
@@ -141,7 +142,6 @@ import { flaggedCitationWrite } from "@/lib/ai/policy-citation-fields";
 import { fieldLines } from "@/lib/ai/intake-augment";
 import {
   actionPlanSentencesEnabled,
-  payrollDeductAmountFieldEnabled,
   draftEditMergeEnabled,
   fieldAccuracyEnabled,
   policyCitationEnabled,
@@ -240,6 +240,12 @@ interface DraftBody {
    * `lib/forms/chat-redraft.ts`.
    */
   keepManagerValues?: boolean;
+  /**
+   * The amount already stored on chat_form_state. Used only when these notes
+   * do not state one, and only into an empty line. A redraft that does not
+   * repeat the figure keeps it.
+   */
+  savedPayrollAmount?: string;
 }
 
 function fieldBrief(field: FormField, variantLabel: string | null): string {
@@ -337,12 +343,20 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * Only when that answer is Yes, and only from their words — never the
      * figure a cited section states. An amount already stored is left alone.
      */
-    const statedAmount = payrollDeductAmount(notes);
     const payrollYes =
       (loaded.values ?? []).some(
         (row) => row.fieldKey === PAYROLL_DEDUCT_KEY && row.checked.includes("yes"),
       ) || statedPayrollDeduct(notes) === "yes";
-    if (payrollDeductAmountFieldEnabled() && payrollYes && statedAmount) {
+    const existingAmount =
+      (loaded.values ?? []).find((row) => row.fieldKey === PAYROLL_DEDUCT_AMOUNT_KEY)?.value ?? null;
+    const statedAmount = payrollYes
+      ? payrollAmountForDraft({
+          notes,
+          saved: typeof body.savedPayrollAmount === "string" ? body.savedPayrollAmount : null,
+          existing: existingAmount,
+        })
+      : null;
+    if (statedAmount) {
       await applyStatedFacts(
         id,
         { values: { [PAYROLL_DEDUCT_AMOUNT_KEY]: statedAmount }, checked: {} },

@@ -297,6 +297,21 @@ function differences(a: unknown, b: unknown, path: string, out: { path: string; 
   out.push({ path, from: a ?? null, to: b ?? null });
 }
 
+/**
+ * The payroll amount line is on the Corrective Action seed and is not in the
+ * published reference. Comparisons against that reference set the line aside.
+ * The seed itself still has it; the tests below check that separately.
+ */
+function referenceDocument(key: string, raw: unknown): unknown {
+  if (key !== "dpoa" || !raw || typeof raw !== "object") return raw;
+  const document = raw as { blocks?: { kind?: string; field?: { key?: string } }[] };
+  if (!Array.isArray(document.blocks)) return raw;
+  return {
+    ...document,
+    blocks: document.blocks.filter((block) => !(block.kind === "field" && block.field?.key === "payroll_deduct_amount")),
+  };
+}
+
 /** A document's shape: every block's kind and keys, nothing a branding change touches. */
 function skeleton(raw: unknown, variantKey: string | null) {
   const document = parseFormDocument(raw);
@@ -578,7 +593,12 @@ describe.each(FORMS)("$key", (form) => {
       variants: entry.variants,
     });
     const found: { path: string; from: unknown; to: unknown }[] = [];
-    differences(comparable(source), comparable(seed as never), "", found);
+    differences(
+      comparable(source),
+      comparable({ ...(seed as never), document: referenceDocument(form.key, seed.document) }),
+      "",
+      found,
+    );
     const allowed = (approved.changes as { sourceKey: string; path: string }[])
       .filter((change) => change.sourceKey === source.key)
       .map((change) => change.path);
@@ -587,7 +607,13 @@ describe.each(FORMS)("$key", (form) => {
 
   it(`${form.key} · 03 all sections and fields are preserved`, () => {
     for (const variantKey of variantKeys) {
-      expect(skeleton(seed.document, variantKey), String(variantKey)).toEqual(skeleton(source.document, variantKey));
+      expect(skeleton(referenceDocument(form.key, seed.document), variantKey), String(variantKey)).toEqual(
+        skeleton(source.document, variantKey),
+      );
+      if (form.key === "dpoa") {
+        const fields = skeleton(seed.document, variantKey).fields;
+        expect(fields).toContainEqual(["payroll_deduct_amount", "text", "manager"]);
+      }
     }
     expect(seed.variants.map((variant) => variant.key)).toEqual(source.variants.map((variant) => variant.key));
   });
@@ -665,7 +691,7 @@ describe.each(FORMS)("$key", (form) => {
   it(`${form.key} · 10 generated PDFs preserve the reference layout and content`, async () => {
     const reference = rendered.forms as Record<string, { pages: number; text: string }>;
     for (const variant of seed.variants.length > 0 ? seed.variants : [null]) {
-      const document = parseFormDocument(seed.document);
+      const document = parseFormDocument(referenceDocument(form.key, seed.document));
       const name = `${form.key}${variant ? `__${variant.key}` : ""}`;
       const bytes = renderFormPdf(document, variant as never, syntheticValues(document, variant?.key ?? null), {
         templateName: seed.name,
@@ -684,6 +710,25 @@ describe.each(FORMS)("$key", (form) => {
         neutral(reference[name]!.text),
       ).replace(/\s+/g, " ").trim();
       expect(neutral(ours.text), name).toBe(referenceText);
+      if (form.key === "dpoa") {
+        const full = parseFormDocument(seed.document);
+        const printed = await pdfText(
+          renderFormPdf(full, variant as never, syntheticValues(full, variant?.key ?? null), {
+            templateName: seed.name,
+            templateVersion: 1,
+            employeeName: "Avery Testperson",
+            formDate: "2026-10-01",
+            locationName: "Test Location 1",
+            reference: "qa-0001",
+            status: "finalized",
+          }),
+        );
+        const text = printed.text.replace(/\s+/g, " ");
+        const payroll = text.indexOf("Is payroll deduct applicable?");
+        const amount = text.indexOf("Payroll deduction amount");
+        expect(amount).toBeGreaterThan(payroll);
+        expect(text).toContain("Sample payroll deduct amount");
+      }
     }
   });
 

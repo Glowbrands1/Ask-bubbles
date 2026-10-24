@@ -67,6 +67,22 @@ function jsonbText(value: unknown): string {
 
 const md5 = (value: unknown) => createHash("md5").update(jsonbText(value)).digest("hex");
 
+/**
+ * The payroll amount line is in the Corrective Action seed and is not part of
+ * the published snapshot. It is not published to the database from this
+ * change (the live template stays version 2 until that is approved), so the
+ * parity comparison sets it aside and a separate test checks its place.
+ */
+function withoutUnpublishedPayrollAmount(key: string, document: unknown): unknown {
+  if (key !== "dpoa" || !document || typeof document !== "object") return document;
+  const doc = document as { blocks?: { kind?: string; field?: { key?: string } }[] };
+  if (!Array.isArray(doc.blocks)) return document;
+  return {
+    ...doc,
+    blocks: doc.blocks.filter((block) => !(block.kind === "field" && block.field?.key === "payroll_deduct_amount")),
+  };
+}
+
 const RENAMED: Readonly<Record<string, string>> = { "stc-exit": "resignation-exit" };
 
 
@@ -154,7 +170,10 @@ describe("the migrated templates are the reference platform's published template
       const found: { path: string; from: unknown; to: unknown }[] = [];
       differences(
         comparable({ ...template, document: withApprovedRemovals(RENAMED[template.key] ?? template.key, template.document) }),
-        comparable(seed as unknown as Record<string, unknown>),
+        comparable({
+          ...(seed as unknown as Record<string, unknown>),
+          document: withoutUnpublishedPayrollAmount(seed!.key, seed!.document),
+        }),
         "",
         found,
       );
@@ -239,5 +258,18 @@ describe("the migrated templates are the reference platform's published template
       // Both sides are read through the authorized substitutions, so only those substitutions can differ.
       expect(unsalon(restored), where).toBe(unsalon(from));
     }
+  });
+
+  it("puts Payroll deduction amount on the Corrective Action seed, after Yes/No, and not on the published snapshot", () => {
+    type Block = { kind?: string; key?: string; field?: { key?: string; label?: string; responsibility?: string } };
+    const seed = (MIGRATED_TEMPLATE_SEEDS.find((entry) => entry.key === "dpoa")!.document as { blocks: Block[] }).blocks;
+    const published = (TEMPLATES.find((entry) => entry.key === "dpoa")!.document as { blocks: Block[] }).blocks;
+    const at = seed.findIndex((block) => block.kind === "field" && block.field?.key === "payroll_deduct_amount");
+    expect(seed[at - 1]).toMatchObject({ kind: "checkbox_group", key: "payroll_deduct" });
+    expect(seed[at]?.field).toMatchObject({
+      label: "Payroll deduction amount",
+      responsibility: "manager",
+    });
+    expect(published.some((block) => block.field?.key === "payroll_deduct_amount")).toBe(false);
   });
 });
