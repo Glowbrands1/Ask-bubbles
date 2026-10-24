@@ -6,6 +6,29 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: form replay guards, and a denied prior-coaching note
+
+`FORM_REPLAY_GUARDS_ENABLED` stays off by default. On, one incident date
+the manager gave is the form date (a relative day such as "yesterday" is
+that day, not today). A dollar amount in the same clause as a payroll
+deduction, including "$25", is the payroll amount. "change store to
+Bellevue" chooses Bellevue and does not ask the store question again.
+The manual's "$25.00 via payroll deduction" is still not an amount.
+
+A later message saved as Job Title is the slot-retention and form-state
+failure (B1, then "verbal"). Those two flags already default off. While
+either is on, "verbal", "yes", a date, or a store change is not the job
+title. Ask Sunny does not have this store phrase or this job-title save
+in the same place, so that part stays here.
+
+The prior-coaching negation is ported from Ask Sunny PR 165
+(`e70d67e`, branch `cursor/prior-coaching-negation-9296`).
+`typedPriorCoachingNote` skips a match when a negation governs the
+phrase. " but " and "?" are clause breaks, along with the sentence
+punctuation Sunny already used. The Forms Register wording stays. No
+salon name was copied. `PRIOR_COACHING_OPTIONAL_ENABLED` still defaults
+off, and the card text is unchanged while that flag is off.
+
 ## 24 Oct 2026: intent extraction must not replace the card
 
 `INTENT_EXTRACTION_ENABLED` stays off by default. On, a missing slot is

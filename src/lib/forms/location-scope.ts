@@ -1,4 +1,4 @@
-import { antiLoopEnabled, globalStoreAskEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, formReplayGuardsEnabled, globalStoreAskEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS, locationIdsInArea } from "@/lib/locations";
 import type { AccessScope } from "@/types";
 
@@ -231,6 +231,17 @@ function explicitStoreText(turns: readonly string[], index: StoreIndex): string 
   return null;
 }
 
+const CHANGE_STORE_TO = /\bchange store to\s+([A-Za-z][A-Za-z'’-]*(?:\s+[A-Za-z][A-Za-z'’-]*){0,3})/i;
+
+/** "change store to Bellevue" names that store, even when an earlier store was restated in the same turn. */
+function changeStorePhrase(text: string): string | null {
+  if (!formReplayGuardsEnabled()) return null;
+  const match = CHANGE_STORE_TO.exec(text);
+  if (!match) return null;
+  const phrase = match[1]!.trim().replace(/[.,;:]+$/g, "").trim();
+  return phrase || null;
+}
+
 function readCorrected(
   managerText: string,
   turns: readonly string[] | undefined,
@@ -239,6 +250,8 @@ function readCorrected(
   answered?: ReadonlySet<string>,
 ): { text: string; ambiguous: boolean; typed: string | null } {
   const plain = { text: managerText, ambiguous: false, typed: null };
+  const chosen = changeStorePhrase(turns && turns.length > 0 ? turns[turns.length - 1]! : managerText);
+  if (chosen) return { text: `at ${chosen} store`, ambiguous: false, typed: null };
   if (antiLoopEnabled() && turns && turns.length > 0) {
     const chosen = explicitStoreText(turns, index);
     if (chosen) return { text: chosen, ambiguous: false, typed: null };

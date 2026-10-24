@@ -299,6 +299,15 @@ export function promptCacheEnabled(): boolean {
   return envFlag("PROMPT_CACHE_ENABLED");
 }
 
+/**
+ * Keep a stated incident date, a stated payroll amount, and a
+ * "change store to …" correction. Off, the form date, the amount line,
+ * and store resolution stay as they are.
+ */
+export function formReplayGuardsEnabled(): boolean {
+  return envFlag("FORM_REPLAY_GUARDS_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -334,4 +343,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "GLOBAL_STORE_ASK_ENABLED",
   "EDITION_SUPERSESSION_ENABLED",
   "PROMPT_CACHE_ENABLED",
+  "FORM_REPLAY_GUARDS_ENABLED",
 ] as const;

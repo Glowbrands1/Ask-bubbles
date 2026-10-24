@@ -118,10 +118,10 @@ import { STORE_QUESTION_TAG, answersToOpenQuestions } from "@/lib/forms/question
 import {
   answersPositionQuestion,
   positionAlreadyAsked,
-  positionAnsweredIn,
   positionQuestion,
   samePosition,
 } from "@/lib/forms/employee-position";
+import { replayFormDate, replayJobTitle } from "@/lib/forms/replay-guards";
 import { readLocationMentions } from "@/lib/forms/location-mention";
 import {
   answersDateQuestion,
@@ -1038,7 +1038,7 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   // WOVEN'S TITLE WINS where Woven verified the employee — over the manager's wording
   // and over a title read out of the conversation. A title the manager typed
   // wins instead when TYPED_NAME_ENABLED is on.
-  const statedTitle = statedJobTitle(scoped.text) ?? positionAnsweredIn([...input.history, { role: "user", content: input.question }]);
+  const statedTitle = replayJobTitle(scoped.text, [...input.history, { role: "user", content: input.question }]);
   if (directory.verification?.status === "verified" && directory.verification.title && !(typedNameEnabled() && statedTitle)) {
     proposal.employeeRole = directory.verification.title;
   }
@@ -1276,6 +1276,7 @@ function directoryNotes(
     ),
   });
   if (decided.formDate !== undefined) proposal.formDate = decided.formDate;
+  proposal.formDate = replayFormDate(context.text, today, proposal.formDate);
   if (decided.candidates) proposal.formDateCandidates = decided.candidates;
   if (decided.question) notes.push(decided.question);
 
@@ -1289,7 +1290,7 @@ function directoryNotes(
      */
     const wovenTitle =
       directory.verification?.status === "verified" ? (directory.verification.title?.trim() || null) : null;
-    const stated = statedJobTitle(context.text) ?? positionAnsweredIn(conversation);
+    const stated = replayJobTitle(context.text, conversation);
     if (wovenTitle && !(typedNameEnabled() && stated)) {
       proposal.employeeRole = wovenTitle;
       proposal.employeeRoleSource = "woven";

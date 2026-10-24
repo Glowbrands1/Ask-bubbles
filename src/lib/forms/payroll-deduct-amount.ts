@@ -3,6 +3,7 @@ import { payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags
 import { field } from "./catalog";
 import type { FormBlock, FormDocument } from "./document";
 import { PAYROLL_DEDUCT_KEY, payrollDeductAmount, quotedDeductionAmount } from "./payroll-deduct";
+import { replayPayrollAmount } from "./replay-guards";
 
 /**
  * The Corrective Action amount line, placed immediately after
@@ -47,7 +48,7 @@ function dollars(written: string): string | null {
  * A reply that is only an amount counts only after the amount question.
  */
 export function statedPayrollDeductAmount(text: string, lastAssistant = ""): string | null {
-  const stated = payrollDeductAmount(text);
+  const stated = replayPayrollAmount(text);
   if (stated) return stated;
   if (!lastAssistant.includes(ASKED)) return null;
   const bare = BARE_AMOUNT.exec(text.trim());
@@ -65,7 +66,7 @@ export function payrollAmountPrompt(input: {
 }): string | null {
   if (!payrollDeductAmountFieldEnabled()) return null;
   if (input.payroll !== "yes") return null;
-  const stated = payrollDeductAmount(input.managerText);
+  const stated = replayPayrollAmount(input.managerText);
   if (stated) {
     return `**${PAYROLL_DEDUCT_AMOUNT_LABEL}:** ${stated} — tell me if that should change.`;
   }
@@ -87,7 +88,7 @@ export function payrollAmountForDraft(input: {
 }): string | null {
   if (!payrollDeductAmountFieldEnabled()) return null;
   if ((input.existing ?? "").trim()) return null;
-  return payrollDeductAmount(input.notes) ?? carriedPayrollAmount(input.saved);
+  return replayPayrollAmount(input.notes) ?? carriedPayrollAmount(input.saved);
 }
 
 function carriedPayrollAmount(saved: string | null): string | null {

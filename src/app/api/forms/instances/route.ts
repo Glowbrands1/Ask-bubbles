@@ -27,9 +27,9 @@ import { getTemplateByKey } from "@/lib/forms/repository";
 import {
   isPayrollDeductAnswer,
   PAYROLL_DEDUCT_STATED_KEYS,
-  payrollDeductAmount,
   payrollDeductChecked,
 } from "@/lib/forms/payroll-deduct";
+import { replayPayrollAmount } from "@/lib/forms/replay-guards";
 import {
   PAYROLL_DEDUCT_AMOUNT_KEY,
   PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
@@ -390,7 +390,7 @@ export async function POST(request: Request) {
           return row.role === "user" && typeof row.content === "string" ? [row.content] : [];
         })
         .join("\n");
-      const amount = payrollDeductAmount(said);
+      const amount = replayPayrollAmount(said);
       if (amount) {
         await applyStatedFacts(
           String(instance.id),
