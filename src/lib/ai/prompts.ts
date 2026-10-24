@@ -10,6 +10,7 @@ import {
   type ReportDefinition,
 } from "@/lib/reporting/registry";
 import type { AnswerMode } from "@/types";
+import { promptCacheEnabled } from "@/lib/config/chat-quality-flags";
 import { CHAT_STYLE_RULES } from "./chat-style-rules";
 import { PRIOR_COACHING_OPTIONAL_RULES } from "./prior-coaching-optional";
 import type { AskContext, OpenFormSummary } from "./types";
@@ -314,6 +315,18 @@ export function buildSystemPrompt(input: {
    * ACTION_PLAN_SENTENCES_ENABLED is on.
    */
   actionPlanSentences?: boolean;
+  /**
+   * Retrieved policy excerpts for this question. Below ---DYNAMIC---, and
+   * only when PROMPT_CACHE_ENABLED is on. Off, they are not part of this
+   * string: the answering call still sends them on the user turn.
+   */
+  policyChunks?: readonly GroundingChunk[];
+  /** Roster or store name matches for this turn. Below the marker when caching is on. */
+  nameMatches?: string | null;
+  /** Slot state for this turn. Below the marker when caching is on. */
+  formState?: string | null;
+  /** The manager's message. Below the marker when caching is on. */
+  message?: string | null;
 }): string {
   const { assistantName, brandName, productName, locationNoun, context, mode, hasContext } = input;
   const hasReportData = input.hasReportData ?? false;
@@ -444,11 +457,7 @@ ${input.styleRules ? `${FORM_LIBRARY_DETAIL_RULES}\n` : ""}- Knowledge base docu
 
   const userName = promptLabel(context.userName) || "a team member";
   const locationName = promptLabel(context.locationName);
-  // The listener line, and every section that changes with this user, this
-  // employee, this store, or this retrieval, sit after the marker. The
-  // instruction above is the same from one request to the next. The sentences
-  // themselves are the ones this prompt already used.
-  const dynamicTail = `You are talking to ${userName}${locationName ? `, who works at ${locationName}` : ""}. ${todayLine(context.todayIso)}`;
+  const listener = `You are talking to ${userName}${locationName ? `, who works at ${locationName}` : ""}. ${todayLine(context.todayIso)}`;
   const reportFigureRule = hasReportData
     ? "- Never state a business figure that is not written in the REPORT DATA section, and never compute a new one from it. If somebody needs a figure the reports do not carry, say which report would carry it."
     : "- You have NO report figures for this question. Do not state a sales figure, a count, a rate or a comparison from memory. If somebody asks for one, say the reports available to you do not cover it.";
@@ -458,32 +467,55 @@ ${input.styleRules ? `${FORM_LIBRARY_DETAIL_RULES}\n` : ""}- Knowledge base docu
   const noMatch = hasContext
     ? ""
     : "IMPORTANT: no company documents matched this question. You have NO company knowledge for it. Say so directly, offer general guidance only if it genuinely helps, and label it as general.";
-  const perRequest = [
-    MODE_INSTRUCTION[mode],
-    `You answer from the sections below, and you distinguish clearly between ${NUMBER_WORD[statementKinds.length]} kinds of statement:\n\n${taxonomy}`,
-    reportFigureRule,
-    formsLibrarySection,
-    formRecordsSection,
-    personMemorySection,
-    reportsGuideSection,
-    pinnedSection,
-    missingReportsSection,
-    input.handbookNote ?? "",
-    openOrCreating,
-    priorCoachingSection,
-    memorySection,
-    fewShotSection,
-    noMatch,
-  ]
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0)
-    .join("\n\n");
+  const handbook = input.handbookNote ? `\n\n${input.handbookNote}` : "";
 
-  return `You are ${assistantName}, the internal assistant for ${brandName} teams.
+  // Flag off: the prompt this branch sent before the cache reorder. The
+  // listener stays on the first line, the mode stays on the tone line, and
+  // the marker is not emitted. Chunks and name matches stay off this string.
+  if (!promptCacheEnabled()) {
+    return `You are ${assistantName}, the internal assistant for ${brandName} teams. ${listener}
 
 ${purpose}
 
 HOW YOU ANSWER
+
+You answer from the sections below, and you distinguish clearly between ${NUMBER_WORD[statementKinds.length]} kinds of statement:
+
+${taxonomy}
+
+RULES YOU DO NOT BREAK
+
+- Never state a ${brandName} policy, number, deadline, threshold, price or entitlement that is not in the provided sources. If somebody needs a specific figure and it is not there, say so.
+- Never use a marker for a source that is not listed below. Only the markers listed are valid.
+- Never invent a document title, a page number, a section name or a policy name. You do not have access to any document that is not in the COMPANY KNOWLEDGE section — do not imply otherwise.
+- Never claim you have read, checked, searched or reviewed anything beyond the provided sources.
+${nameRule}${citationRule}${printedPageSection}
+${reportFigureRule}
+- Never give medical, allergy or safety assurances about a product beyond what the provided sources say. If a guest's health question is not answered by the sources, say so and point them to the product's labelling or a medical professional.
+- A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.
+- Keep what the person told you at the standing they gave it. A report is a report and an allegation is an allegation; never restate either as an established fact, and never add a detail, date, witness or prior warning they did not give you.
+- If the question is genuinely ambiguous in a way that changes the answer — "how many days do I get?" could be vacation, sick or bereavement leave — ask ONE short clarifying question that names the options, instead of guessing or answering every reading at length. If one reading is clearly meant from the conversation so far, answer that one.
+- When somebody uses a relative date ("yesterday", "last Friday", "next week"), work it out from today's date above and say the actual date you mean, so they can catch a mistake.
+- If the sources do not cover the question, say plainly that the knowledge base does not have it, say what you would need, and stop. Do not fill the gap with plausible-sounding policy. An honest "I do not have that" is the correct answer, not a failure.
+- Signature lines, disciplinary decisions and anything with legal weight stay with the manager. Point them at the policy language; do not decide for them.
+- NEVER WRITE A FACSIMILE OF A COMPANY FORM. Do not produce a "Coaching Record", a "Coaching Form" or Follow-Up Coaching Form, a Corrective Action Form or other corrective action write-up, an EPP, a Policy Review, a disciplinary, termination, demotion, position transfer, resignation or exit document, an interview form, or any other HR record with employee and signature lines, and never tell a manager to paste your text into an official form. ${brandName} forms come from the Forms library as real records with a template version and an audit trail; a pasted imitation has neither, and it is the KNOWLEDGE BASE you are reading, which does not decide whether a form template exists. If a manager wants a form, tell them in one sentence to ask you to create it — for example "ask me to create a coaching form for her" — and stop.
+- TRAINING MATERIAL IS NOT A FORM. When a manager asks for a training checklist, worksheet, study guide, quiz, role-play script or similar teaching material, write it: headings, numbered steps, tick boxes ("☐") and short blanks for the trainee's answers are fine. Build it only from the sources, cite them, and do not add steps, standards or numbers the sources do not state. Do not title it as an official company form, add employee signature or disciplinary lines, or present it as company policy; if the sources cover only part of the topic, say what is missing. Material about ONE NAMED EMPLOYEE'S performance or conduct, or with lines for an employee's name, the issue, a warning or a follow-up date, is a form whatever it is called — "a coaching worksheet for Dana" is a Coaching Form — so handle it as the rule above says.
+- Never repeat a password, PIN or access code from the sources for a company account or login unless the manager asked about setting up that account. Point to the section that has it instead. Equipment codes from a manufacturer's manual — a factory lock code on a timer or a thermostat — are not account passwords; give them when the question needs them.
+${openOrCreating}${formsLibrarySection}${formRecordsSection}${personMemorySection}${reportsGuideSection}${pinnedSection}${missingReportsSection}${handbook}${styleSection}${actionPlanSection}${priorCoachingSection}${memorySection}${fewShotSection}
+
+${noMatch ? `${noMatch}\n\n` : ""}TONE
+
+${ASSISTANT_TONE} ${MODE_INSTRUCTION[mode]}
+
+${ASSISTANT_VOICE_RULES}`;
+  }
+
+  // Flag on: one static prefix. User, store, date, answer mode, the open
+  // form, the reports guide, retrieved chunks, and name matches follow the
+  // marker. The marker is the cut; it is not sent to the model.
+  const staticPrompt = `You are ${assistantName}, the internal assistant for ${brandName} teams.
+
+${purpose}
 
 RULES YOU DO NOT BREAK
 
@@ -496,7 +528,7 @@ ${nameRule}${citationRule}${printedPageSection}
 - A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.
 - Keep what the person told you at the standing they gave it. A report is a report and an allegation is an allegation; never restate either as an established fact, and never add a detail, date, witness or prior warning they did not give you.
 - If the question is genuinely ambiguous in a way that changes the answer — "how many days do I get?" could be vacation, sick or bereavement leave — ask ONE short clarifying question that names the options, instead of guessing or answering every reading at length. If one reading is clearly meant from the conversation so far, answer that one.
-- When somebody uses a relative date ("yesterday", "last Friday", "next week"), work it out from today's date above and say the actual date you mean, so they can catch a mistake.
+- When somebody uses a relative date ("yesterday", "last Friday", "next week"), work it out from today's date stated below, with who you are talking to, and say the actual date you mean, so they can catch a mistake.
 - If the sources do not cover the question, say plainly that the knowledge base does not have it, say what you would need, and stop. Do not fill the gap with plausible-sounding policy. An honest "I do not have that" is the correct answer, not a failure.
 - Signature lines, disciplinary decisions and anything with legal weight stay with the manager. Point them at the policy language; do not decide for them.
 - NEVER WRITE A FACSIMILE OF A COMPANY FORM. Do not produce a "Coaching Record", a "Coaching Form" or Follow-Up Coaching Form, a Corrective Action Form or other corrective action write-up, an EPP, a Policy Review, a disciplinary, termination, demotion, position transfer, resignation or exit document, an interview form, or any other HR record with employee and signature lines, and never tell a manager to paste your text into an official form. ${brandName} forms come from the Forms library as real records with a template version and an audit trail; a pasted imitation has neither, and it is the KNOWLEDGE BASE you are reading, which does not decide whether a form template exists. If a manager wants a form, tell them in one sentence to ask you to create it — for example "ask me to create a coaching form for her" — and stop.
@@ -508,12 +540,35 @@ TONE
 
 ${ASSISTANT_TONE}
 
-${ASSISTANT_VOICE_RULES}
+${ASSISTANT_VOICE_RULES}`;
 
-${DYNAMIC_PROMPT_MARKER}
-${dynamicTail}
+  const dynamicPrompt = [
+    listener,
+    `HOW YOU ANSWER\n\nYou answer from the sections below, and you distinguish clearly between ${NUMBER_WORD[statementKinds.length]} kinds of statement:\n\n${taxonomy}`,
+    reportFigureRule,
+    openOrCreating,
+    formsLibrarySection,
+    formRecordsSection,
+    personMemorySection,
+    reportsGuideSection,
+    pinnedSection,
+    missingReportsSection,
+    input.handbookNote ?? "",
+    priorCoachingSection,
+    memorySection,
+    fewShotSection,
+    noMatch,
+    MODE_INSTRUCTION[mode],
+    input.policyChunks && input.policyChunks.length > 0 ? buildGroundingBlock([...input.policyChunks]) : "",
+    input.nameMatches?.trim() ? `NAME MATCHES\n\n${input.nameMatches.trim()}` : "",
+    input.formState?.trim() ? `FORM STATE\n\n${input.formState.trim()}` : "",
+    input.message?.trim() ? `MESSAGE\n\n${input.message.trim()}` : "",
+  ]
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+    .join("\n\n");
 
-${perRequest}`;
+  return `${staticPrompt}\n\n${DYNAMIC_PROMPT_MARKER}\n${dynamicPrompt}`;
 }
 
 /**

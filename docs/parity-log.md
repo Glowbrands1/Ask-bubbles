@@ -539,7 +539,10 @@ Bubbles-only. No salon wording was copied. The answer-mode sentence
 sits in the tail as well, so a different mode does not change the cached
 prefix. The live Anthropic check is `npm run prompt-cache:live` and does
 not run in CI or on a preview. `chat_traces` stores the response's
-`cache_creation_input_tokens` and `cache_read_input_tokens`.
+`cache_creation_input_tokens` and `cache_read_input_tokens`. The reorder
+and the marker are emitted only when `PROMPT_CACHE_ENABLED` is on, so the
+flag-off prompt stays the base string. Ask Sunny is not updated for that
+gate. PR 91 is not merged here.
 
 ## 24 Oct 2026: chat data tools, measured, not ported
 

@@ -290,13 +290,17 @@ characters. It waits that long before resolving, which is the first-token
 time: the whole prompt when nothing is cached, and only the tail on a
 cache read. One run.
 
-The static block is the instruction body, through the voice rules. It has
-no listener name, no today's date, no location name, and no answer-mode
-sentence. Per-request sections — the answer mode, taxonomy, report figures,
-forms on file, person memory, pinned sources, prior coaching, recalled
-memory, and the no-match line — follow `---DYNAMIC---` with the listener.
-The marker is not sent. `cache_control` is `{ type: "ephemeral" }` on the
-static block only. The tail has none.
+The reorder and the `---DYNAMIC---` marker are emitted only when
+`PROMPT_CACHE_ENABLED` is on. Off, the prompt is the base string: the
+listener stays on the first line, and the marker is absent. On, the static
+block is the instruction body, through the voice rules. It has no listener
+name, no today's date, no location name, and no answer-mode sentence.
+Per-request sections — the user, store, date, answer mode, open form,
+reports guide, retrieved chunks, name matches, taxonomy, report figures,
+forms on file, and person memory — follow the marker. The marker is not
+sent. `cache_control` is `{ type: "ephemeral" }` on the static block only.
+`callClaudeTool` sends a plain system string and is not cached. The tail
+has no breakpoint.
 
 A repeated prompt is what produces a cache read. A different user, store,
 message, answer mode, or retrieval does not change that prefix.
@@ -304,8 +308,8 @@ message, answer mode, or retrieval does not change that prefix.
 | Call | cache_creation_input_tokens | cache_read_input_tokens | First token |
 | --- | --- | --- | --- |
 | OLD, one string, no cache | 0 | 0 | 55 ms |
-| NEW, 1st call | 1477 | 0 | 55 ms |
-| NEW, later calls | 0 | 1477 | 14 ms |
+| NEW, 1st call | 1482 | 0 | 55 ms |
+| NEW, later calls | 0 | 1482 | 14 ms |
 
 Card replay pass/fail is unchanged. The form card does not read this
 prompt, and the round 1 table above keeps the same expectations.
@@ -373,16 +377,18 @@ stand-in waits.
 | Call | cache_creation_input_tokens | cache_read_input_tokens | First token |
 | --- | --- | --- | --- |
 | OLD | 0 | 0 | 55 ms |
-| NEW, 1st call | 1477 | 0 | 55 ms |
-| NEW, later call | 0 | 1477 | 14 ms |
+| NEW, 1st call | 1482 | 0 | 55 ms |
+| NEW, later call | 0 | 1482 | 14 ms |
 
 The rows above, and the matching rows in the item 9 section, are a local
 stand-in: one token per four characters of the block that was sent. They
 are not Anthropic usage, and they are not what `chat_traces` stores.
 `chat_traces` stores `usage.cache_creation_input_tokens` and
 `usage.cache_read_input_tokens` from the response. The static prefix in
-this stand-in is 1477 tokens. A cache read of that prefix waits 14 ms in
-the stand-in, against 55 ms with nothing cached.
+this stand-in is 1482 tokens. A cache read of that prefix waits 14 ms in
+the stand-in, against 55 ms with nothing cached. These stand-in counts
+are mocked (`Math.ceil(characters / 4)`). They are not a measured
+Anthropic bill.
 
 ## Live Claude cache — not measured
 

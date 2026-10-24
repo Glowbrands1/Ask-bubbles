@@ -78,18 +78,28 @@ export function measuredCacheReads(input: {
 }
 
 function promptPair(): { legacy: string; current: string } {
-  const current = buildSystemPrompt({
+  const input = {
     assistantName: "Bubbles",
     brandName: "Buff City Soap",
     productName: "Ask Bubbles",
-    locationNoun: "store",
+    locationNoun: "store" as const,
     context: CONTEXT,
-    mode: "standard",
+    mode: "standard" as const,
     hasContext: true,
-  });
+  };
+  const previous = process.env.PROMPT_CACHE_ENABLED;
+  delete process.env.PROMPT_CACHE_ENABLED;
+  const legacy = buildSystemPrompt(input);
+  process.env.PROMPT_CACHE_ENABLED = "1";
+  const current = buildSystemPrompt(input);
+  if (previous === undefined) delete process.env.PROMPT_CACHE_ENABLED;
+  else process.env.PROMPT_CACHE_ENABLED = previous;
   const parts = splitSystemPrompt(current);
   if (!parts) throw new Error("the system prompt has no dynamic tail");
-  return { legacy: uncachedSystemPrompt(parts.staticBlock, parts.dynamicTail), current };
+  if (uncachedSystemPrompt(parts.staticBlock, parts.dynamicTail).includes("---DYNAMIC---")) {
+    throw new Error("the marker must not be sent");
+  }
+  return { legacy, current };
 }
 
 async function measure(

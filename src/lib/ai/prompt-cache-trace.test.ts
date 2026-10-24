@@ -9,7 +9,10 @@ import { chatTraceEnabled } from "@/lib/config/chat-quality-flags";
  * server-ask uses.
  */
 
-const inserts = vi.hoisted(() => ({ rows: [] as Record<string, unknown>[] }));
+const inserts = vi.hoisted(() => ({
+  rows: [] as Record<string, unknown>[],
+  error: null as { message: string; code: string } | null,
+}));
 
 vi.mock("@/lib/supabase/server", () => ({
   getSupabaseAdmin: () => ({
@@ -17,14 +20,14 @@ vi.mock("@/lib/supabase/server", () => ({
       return {
         insert: async (row: Record<string, unknown>) => {
           inserts.rows.push({ table, ...row });
-          return { error: null };
+          return { error: inserts.error };
         },
       };
     },
   }),
 }));
 
-const { finishChatTrace, openChatTrace } = await import("./chat-trace");
+const { chatTraceInsertErrors, finishChatTrace, openChatTrace } = await import("./chat-trace");
 const { callClaude } = await import("./call-claude");
 const { __setAnthropicClient } = await import("./anthropic");
 
@@ -37,6 +40,7 @@ afterEach(() => {
   delete process.env.CHAT_TRACE_ENABLED;
   delete process.env.PROMPT_CACHE_ENABLED;
   inserts.rows.length = 0;
+  inserts.error = null;
 });
 
 function installClient(): void {
@@ -90,6 +94,19 @@ describe("chat traces store Anthropic cache usage", () => {
     const estimate = Math.ceil(SYSTEM.length / 4);
     expect(row?.cache_creation_input_tokens).not.toBe(estimate);
     expect(row?.cache_read_input_tokens).not.toBe(estimate);
+  });
+
+  it("counts a supabase insert error instead of dropping it", async () => {
+    installClient();
+    process.env.CHAT_TRACE_ENABLED = "1";
+    inserts.error = { message: "column cache_creation_input_tokens does not exist", code: "42703" };
+    const before = chatTraceInsertErrors();
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await answer()).toBe("Team members wear a clean apron.");
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(chatTraceInsertErrors()).toBe(before + 1);
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining("42703"));
+    spy.mockRestore();
   });
 
   it("writes nothing when the flag is off", async () => {

@@ -51,10 +51,17 @@ export async function finishChatTrace<T>(draft: ChatTraceDraft, run: () => Promi
   }
 }
 
+let chatTraceInsertErrorCount = 0;
+
+/** How many chat_traces inserts came back with a Supabase error. */
+export function chatTraceInsertErrors(): number {
+  return chatTraceInsertErrorCount;
+}
+
 async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
   try {
     const model = draft.modelCall;
-    await getSupabaseAdmin().from("chat_traces").insert({
+    const { error } = await getSupabaseAdmin().from("chat_traces").insert({
       conversation_id: draft.conversationId,
       message_id: draft.messageId,
       user_id: draft.userId,
@@ -82,7 +89,14 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
       retried: false,
       succeeded: draft.succeeded === true,
     });
+    if (error) {
+      chatTraceInsertErrorCount += 1;
+      const code = "code" in error && error.code ? ` (${error.code})` : "";
+      console.error(`chat_traces insert failed${code}: ${error.message}`);
+    }
   } catch {
+    chatTraceInsertErrorCount += 1;
+    console.error("chat_traces insert failed");
     // Tracing never changes what the manager sees.
   }
 }

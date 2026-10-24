@@ -97,24 +97,25 @@ describe("prompt cache replay", () => {
   });
 
   it("creates a cache on the first call, reads it later, and is faster than the uncached prompt", async () => {
-    const prompt = buildSystemPrompt({
+    const shared = {
       assistantName: "Bubbles",
       brandName: "Buff City Soap",
       productName: "Ask Bubbles",
-      locationNoun: "store",
+      locationNoun: "store" as const,
       context: CONTEXT,
-      mode: "standard",
+      mode: "standard" as const,
       hasContext: true,
-    });
-    const parts = splitSystemPrompt(prompt);
-    expect(parts).not.toBeNull();
-    const legacy = uncachedSystemPrompt(parts!.staticBlock, parts!.dynamicTail);
+    };
+    delete process.env.PROMPT_CACHE_ENABLED;
+    const legacy = buildSystemPrompt(shared);
     expect(legacy).not.toContain("---DYNAMIC---");
     expect(claudeSystemPayload(legacy)).toBe(legacy);
-    delete process.env.PROMPT_CACHE_ENABLED;
-    expect(claudeSystemPayload(prompt)).toBe(legacy);
 
     process.env.PROMPT_CACHE_ENABLED = "1";
+    const prompt = buildSystemPrompt(shared);
+    const parts = splitSystemPrompt(prompt);
+    expect(parts).not.toBeNull();
+    expect(uncachedSystemPrompt(parts!.staticBlock, parts!.dynamicTail)).not.toContain("---DYNAMIC---");
     const payload = claudeSystemPayload(prompt);
     expect(Array.isArray(payload)).toBe(true);
     if (!Array.isArray(payload)) return;
