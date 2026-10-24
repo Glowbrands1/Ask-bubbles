@@ -169,11 +169,16 @@ Store names come from the caller (`COMPANY_LOCATIONS` at request time).
 ## 23 Oct 2026: self-check and manual-term retrieval
 
 `SELF_CHECK_ENABLED` defaults off. After an answer, a JBA citation must be
-a heading and page in the chunks that turn retrieved, an action plan must
-be two sentences when the answer has one, and a person the answer names
-must be on the Woven roster loaded for the turn. One repair call if a
-check fails; a repair that still fails leaves the original answer. The
-flag off does not call the model.
+a heading and page in the chunks that turn retrieved, and an action plan
+must be two sentences when the answer has one. A name the answer already
+uses is kept when Woven does not list it. A repair that drops that name,
+or that says the person is missing from Woven, is not shown. One repair
+call if a citation or a plan check fails; a repair that still fails leaves
+the original answer. The flag off does not call the model.
+
+Ask Sunny `main` (`b9ae362`) still adds "I couldn't find **name** in the
+Woven roster" when the roster check fails, and its repair may set the
+card to `needs_employee`. That sentence is not ported. The typed name stays.
 
 `QUERY_REWRITE_ENABLED` already defaulted off. On, a short follow-up is
 still anchored to the earlier turn, and the retrieval query is then
