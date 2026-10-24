@@ -852,19 +852,40 @@ function excerptForHit(heading: string | null, passage: ManualPassage): string {
   return excerptOf(heading, slice) || heading;
 }
 
-function sentencesOf(answer: string): string[] {
-  const parts = answer
-    .split(/\n+|(?<=[.!?])\s+/)
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
-  return parts.length > 0 ? parts : [answer.trim()];
+/**
+ * Sentences and the whitespace after each one.
+ *
+ * A line break, or a space after . ! ?, ends a sentence. The whitespace is
+ * kept and written back, so a bullet list, a bold heading line, or a blank
+ * line between paragraphs is still there after the markers are placed.
+ */
+function sentencesOf(answer: string): { sentences: string[]; separators: string[] } {
+  const sentences: string[] = [];
+  const separators: string[] = [];
+  let start = 0;
+  for (const match of answer.matchAll(/[^\S\n]*\n\s*|(?<=[.!?])[^\S\n]+/g)) {
+    const part = answer.slice(start, match.index);
+    if (part.length > 0) {
+      sentences.push(part);
+      separators.push(match[0]);
+    } else if (separators.length > 0) {
+      separators[separators.length - 1] += match[0];
+    }
+    start = match.index + match[0].length;
+  }
+  const tail = answer.slice(start);
+  if (tail.length > 0) {
+    sentences.push(tail);
+    separators.push("");
+  }
+  return sentences.length > 0 ? { sentences, separators } : { sentences: [answer.trim()], separators: [""] };
 }
 
 /** Model [p.N] markers are replaced by the pages whose text the sentence restates. */
 function stripPrintedMarkers(answer: string): string {
   return answer
-    .replace(/\[p\.\d{1,3}\]/gi, "")
-    .replace(/[^\S\n]{2,}/g, " ")
+    .replace(/[^\S\n]*\[p\.\d{1,3}\]/gi, "")
+    .replace(/(\S)[^\S\n]{2,}/g, "$1 ")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -896,7 +917,7 @@ export function citePolicyAnswer(
   if (!index) return { text: cleaned, sources: [], ok: false };
 
   const prose = stripPrintedMarkers(cleaned);
-  const sentences = sentencesOf(prose);
+  const { sentences, separators } = sentencesOf(prose);
   const matched: { passage: ManualPassage; sentence: number; heading: string | null; score: number }[] = [];
   const addHit = (passage: ManualPassage, sentence: number, heading: string | null) => {
     const sentenceText = sentences[sentence] ?? prose;
@@ -966,7 +987,8 @@ export function citePolicyAnswer(
       if (/[.!?]$/.test(sentence)) return sentence.replace(/([.!?])$/, ` ${markers}$1`);
       return `${sentence} ${markers}`;
     })
-    .join(" ");
+    .map((sentence, sentenceIndex) => `${sentence}${separators[sentenceIndex] ?? ""}`)
+    .join("");
 
   const sourceHits: typeof meaningful = [];
   for (const hit of meaningful) {

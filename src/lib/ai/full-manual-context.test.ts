@@ -937,3 +937,26 @@ describe("production chunks 50 and 62", () => {
     expect(passwords.sources.map((source) => source.locator).join("\n")).toMatch(/Point of Sale and Alarm Passwords/);
   });
 });
+
+describe("live answer layout", () => {
+  // chat_messages.content for conv_mvmnpmj55lrm0ny (24 Oct 2026, flag on at
+  // f8759f6). The stored text already carries markers; they are replaced.
+  const LIVE_CELL_PHONE_ANSWER =
+    "Here's the cell phone/smart watch policy that applies across the company — Buff City Soap, Crunch and the other brands:\n\n- Personal cell phones are permitted in the workplace but must be kept out of sight — not in back pockets, not charging in the break room, and not sitting on top of a drawer till [p.19]. [p.20]\n- Phones should be on silent, and they should only be accessed while clocked in for emergency situations. [p.20]\n- It's each employee's responsibility to protect the customer experience — texting, calls or social media use on the clock jeopardizes that [p.9] [p.14] [p.26] [p.31] [p.48]. [p.20]\n- Smart watches are allowed as long as they're not used for social media, texting or calls. Management can ask an employee to remove one if it starts interfering with the customer experience [p.12]. [p.20]\n\nThat's the full policy — no separate per-brand version is called out on that page. Let me know if you're dealing with a specific situation where someone isn't following it.";
+
+  const withoutMarkers = (text: string) => text.replace(/[^\S\n]*\[p\.\d{1,3}\]/g, "");
+  const words = (text: string) => withoutMarkers(text).split(/\s+/).filter(Boolean);
+
+  it("keeps the bullets, the blank lines and every word of conv_mvmnpmj55lrm0ny", () => {
+    const plan = planFullManualContext({
+      question: "What is the cell phone policy?",
+      documents: [manualFrom([storedChunk(61), productionChunk(62)])],
+    });
+    const cited = citePolicyAnswer(LIVE_CELL_PHONE_ANSWER, plan);
+    expect(cited.ok).toBe(true);
+    expect(words(cited.text)).toEqual(words(LIVE_CELL_PHONE_ANSWER));
+    expect(withoutMarkers(cited.text).split("\n")).toEqual(withoutMarkers(LIVE_CELL_PHONE_ANSWER).split("\n"));
+    expect(cited.text).not.toMatch(/ {2}|\s[.,]/);
+    expect(new Set(citedPages(cited.text))).toEqual(new Set([19]));
+  });
+});
