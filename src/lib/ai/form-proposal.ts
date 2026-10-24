@@ -152,6 +152,7 @@ import type {
   Role,
 } from "@/types";
 
+import { correctiveActionPlan } from "@/lib/forms/ca-action-plan";
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
 import { signedDate, statedPriorActions } from "@/lib/forms/prior-actions";
 import type { PriorFormOnFile, PriorFormsReading } from "@/lib/forms/prior-forms-lines";
@@ -162,7 +163,7 @@ import {
   namedPolicies,
 } from "@/lib/forms/named-policy-section";
 import { manualDisplayTitle, manualSheetHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
-import { slotRetentionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { actionPlanSentencesEnabled, slotRetentionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { groundEmployeeResolution } from "./employee-candidate-grounding";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
@@ -1785,9 +1786,11 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
   if (!continued) return { kind: "none" };
 
   // "show draft" / "show draft with edits" is the open card, not a new question.
+  // "cite <heading>" is the same card: the manager is naming the policy on it.
   if (
     typedNameEnabled() &&
-    /^\s*show(?:\s+me)?(?:\s+the)?\s+draft(?:\s+with\s+edits)?\s*[.!]?\s*$/i.test(input.question.trim())
+    (/^\s*show(?:\s+me)?(?:\s+the)?\s+draft(?:\s+with\s+edits)?\s*[.!]?\s*$/i.test(input.question.trim()) ||
+      (/^\s*cite\s+\S/i.test(input.question.trim()) && !/\?\s*$/.test(input.question.trim())))
   ) {
     return { kind: "explicit", templateKey: continued };
   }
@@ -2789,6 +2792,16 @@ function proposalContent(
     lines.push(openingQuestions(proposal, context));
   } else if (proposal.status === "needs_location") {
     lines.push(locationQuestion(proposal));
+    // The store is still a question. The history the manager already dated is not.
+    if (typedNameEnabled() && isCorrectiveActionForm(match)) {
+      const priorActions = statedPriorActions(context.text, today);
+      if (priorActions.length > 0) {
+        lines.push(
+          "",
+          `**Prior actions:** ${priorActions.join("; ")}, as you said. I'll list ${priorActions.length === 1 ? "it" : "them"} on the form — tell me if that should change.`,
+        );
+      }
+    }
     if (proposal.awaitingIncident) lines.push("", NO_INCIDENT_NOTE);
     // No store yet, so nothing on file is verified: say what is there and the rule (QA F-11).
     const possibleNote = isCorrectiveActionForm(match)
@@ -3100,6 +3113,21 @@ function correctiveActionReady(
     );
   }
   if (warning.payrollAmountLine) lines.push("", warning.payrollAmountLine);
+  // The two-sentence plan is written here, on the card the manager is shown.
+  // The draft route writes the same sentences onto the form. The chat prompt does not.
+  if (actionPlanSentencesEnabled()) {
+    const named = warning.namedPolicy;
+    const cited = named && (named.lookup === "found" || named.lookup === "described") ? [named.heading] : [];
+    const payroll = proposal.payrollDeduct === "yes" || proposal.payrollDeduct === "no" ? proposal.payrollDeduct : null;
+    lines.push(
+      "",
+      `**Action plan:** ${correctiveActionPlan({
+        citedPolicies: cited,
+        employeeName: proposal.employeeName,
+        payroll: { answer: payroll, amount: null },
+      })}`,
+    );
+  }
 
   lines.push("");
   lines.push(

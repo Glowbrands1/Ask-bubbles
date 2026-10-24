@@ -255,6 +255,10 @@ as Store Director. "do verbal for" opens a corrective action and sets the
 level. "show draft" continues the open card. An "at <place>, <state>"
 that is not a registered store asks with the stores in that state and
 does not invent the town. A for-clause that is only the title, the
-person, and the place is not the issue; the offense sentence is. Off,
-the for-clause, the article in "do a verbal", and the old store miss
+person, and the place is not the issue; the offense sentence is. "cite
+…" continues the open card. The two-sentence action plan is read back
+on that card when `ACTION_PLAN_SENTENCES_ENABLED` is on. A later turn
+that is only the same manual topic and a new date ("jba manual 11-1-25")
+replaces that prior step's date and is not offered as the form's date.
+Off, the for-clause, the article in "do a verbal", and the old store miss
 stay as they were.

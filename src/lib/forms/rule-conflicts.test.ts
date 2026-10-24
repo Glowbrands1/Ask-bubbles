@@ -18,7 +18,7 @@ import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/fo
 import { verifyEmployee } from "@/lib/forms/employee-verification";
 import { readStoreMentions } from "@/lib/stores/resolver";
 import { sectionHeadingsFor, type ManualChunk } from "@/lib/forms/official-policy-manual";
-import { extractEmployeeNames, managerContext, resolveEmployee } from "@/lib/forms/proposal";
+import { extractEmployeeNames, extractJobTitle, managerContext, resolveEmployee } from "@/lib/forms/proposal";
 import { isTypedStopSpan } from "@/lib/forms/name-words";
 import { companyNameStops } from "@/lib/forms/name-stops";
 import { isNotAPersonCandidate, keepTypedPerson } from "@/lib/forms/typed-name";
@@ -455,6 +455,13 @@ describe("based, state codes, and policy phrases are not a person or a store", (
     expect(asked.join(" ")).not.toMatch(/\bNE\b/);
     expect(asked.join(" ").toLowerCase()).not.toContain("jba");
     expect(asked.join(" ")).toMatch(/\bTT\b/);
+    // "do verbal for" has no form noun before "for". The person is still the subject.
+    expect(
+      extractEmployeeNames(
+        "do verbal for team member sadie hoffart at empire, sd. payroll deduct does not apply",
+      ).join(" "),
+    ).toMatch(/sadie hoffart/i);
+    expect(extractJobTitle("do verbal for team member sadie hoffart at empire, sd")).toBe("Team Member");
   });
 
   it("flag on, workplace policy is not a store", () => {

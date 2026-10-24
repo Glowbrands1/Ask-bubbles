@@ -1470,6 +1470,18 @@ function formSubjectNames(text: string): string[] {
       if (second && typedNameAllowed(second) && !opensWithRosterState(second)) subjects.push(second);
     }
   }
+  /*
+   * "do verbal for <person>" names the form by its level, not by "CA", so the
+   * form-noun pattern above never sees the "for". The person is in the same
+   * place. "do a verbal" already matches that pattern; this is the article left off.
+   */
+  if (typedNameEnabled()) {
+    for (const match of text.matchAll(/\bdo\s+(?:verbal|written)\s+for\s+(?=\S)/gi)) {
+      const after = withoutSubjectLead(text.slice((match.index ?? 0) + match[0].length).trim().split(/\s+/));
+      const candidate = readTypedName(after.slice(0, 4), false);
+      if (candidate && typedNameAllowed(candidate) && !opensWithRosterState(candidate)) subjects.push(candidate);
+    }
+  }
   return subjects;
 }
 
