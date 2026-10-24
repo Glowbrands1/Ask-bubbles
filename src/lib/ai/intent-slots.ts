@@ -3,6 +3,8 @@ import { displayName, editDistance, matchEmployeeName, type RosterEmployee } fro
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manual";
 import { namesHeading } from "@/lib/forms/named-policy-section";
+import { payrollDeductAmount, payrollDeductFromConversation, type PayrollDeductAnswer } from "@/lib/forms/payroll-deduct";
+import { intentPayrollManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -145,7 +147,16 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
   const title = groundTitle(reading?.title ?? null, blob, input.people, employee.person);
   const incidentType = groundIncident(reading?.incidentType ?? null, blob, input.headings);
   const date = groundDate(choice?.date ?? reading?.incidentDate ?? null, blob, input.today);
-  const payrollAmount = groundPayroll(reading?.payrollAmount ?? null, blob);
+  const managerOnly = intentPayrollManagerOnlyEnabled();
+  const payrollAnswer = managerOnly
+    ? payrollDeductFromConversation([...input.history, { role: "user", content: input.question }])
+    : null;
+  const payrollAmount = !managerOnly
+    ? groundPayroll(reading?.payrollAmount ?? null, blob)
+    : payrollAnswer === "no"
+      ? null
+      : (payrollClauseAmount(input) ??
+        (payrollAnswer === "yes" ? groundPayroll(reading?.payrollAmount ?? null, managerBlob(input)) : null));
   const warningLevel = groundWarning(choice?.warning ?? reading?.warningLevel ?? null, blob);
   const formType = groundForm(choice?.form ?? reading?.formType ?? null, blob, input.templates);
   const formTurn = Boolean(input.formInProgress || reading?.formTurn || formType.key || saved.templateKey);
@@ -157,6 +168,8 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
     incidentType,
     date: date.iso,
     payrollAmount,
+    payrollAnswer,
+    managerOnly,
     warningLevel: warningLevel.value,
     formType: formType.key,
   });
@@ -197,6 +210,30 @@ function parseReading(raw: unknown): IntentSlotReading | null {
     formType: blank(row.formType),
     formTurn: row.formTurn === true,
   };
+}
+
+/**
+ * The manager's own words this conversation. The assistant's turns quote
+ * policy figures that the manager never stated, and the saved state may
+ * already hold one of those figures.
+ */
+function managerBlob(input: IntentTurnInput): string {
+  const said = input.history.filter((turn) => turn.role === "user").map((turn) => turn.content);
+  return [...said, input.question].filter((part) => part.trim() !== "").join("\n");
+}
+
+/**
+ * The latest amount the manager stated for the deduction itself ("payroll
+ * deduct $25", "deduct $40", "$25 will be payroll deducted"). A shortage
+ * ("register short $40") is not a deduction.
+ */
+function payrollClauseAmount(input: IntentTurnInput): string | null {
+  const said = [...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content), input.question];
+  for (let at = said.length - 1; at >= 0; at -= 1) {
+    const stated = payrollDeductAmount(said[at] ?? "");
+    if (stated) return canonicalAmount(stated);
+  }
+  return null;
 }
 
 function conversationBlob(input: IntentTurnInput): string {
@@ -424,6 +461,10 @@ function mergeSlots(
     incidentType: string | null;
     date: string | null;
     payrollAmount: string | null;
+    /** The manager's Yes/No, when INTENT_PAYROLL_MANAGER_ONLY_ENABLED is on. */
+    payrollAnswer?: PayrollDeductAnswer | null;
+    /** INTENT_PAYROLL_MANAGER_ONLY_ENABLED: Yes/No only from the manager's answer, never from an amount alone. */
+    managerOnly?: boolean;
     warningLevel: "verbal" | "written" | null;
     formType: string | null;
   },
@@ -437,10 +478,14 @@ function mergeSlots(
     title: slots.title ?? prior.title,
     formDate: slots.date ?? prior.formDate,
     warningLevel: slots.warningLevel ?? prior.warningLevel,
-    payrollDeduct: slots.payrollAmount ? "yes" : prior.payrollDeduct,
+    payrollDeduct: slots.managerOnly
+      ? (slots.payrollAnswer ?? prior.payrollDeduct)
+      : slots.payrollAmount
+        ? "yes"
+        : prior.payrollDeduct,
     templateKey: slots.formType ?? prior.templateKey,
     incidentType: slots.incidentType ?? prior.incidentType,
-    payrollAmount: slots.payrollAmount ?? prior.payrollAmount,
+    payrollAmount: slots.payrollAnswer === "no" ? null : slots.payrollAmount ?? prior.payrollAmount,
   };
 }
 

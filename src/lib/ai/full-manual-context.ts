@@ -734,23 +734,6 @@ function mentionsHeading(answer: string, heading: string): boolean {
   return words.some((word) => word.length >= 6 && !HEADING_STOP.has(word) && hay.includes(` ${word} `));
 }
 
-function sharedPhraseLength(answer: string, passage: string): number {
-  const hay = wordsOf(answer);
-  const words = wordsOf(passage).split(" ").filter(Boolean);
-  const max = Math.min(14, words.length);
-  for (let size = max; size >= 4; size -= 1) {
-    for (let index = 0; index <= words.length - size; index += 1) {
-      const phrase = words.slice(index, index + size).join(" ");
-      if (phrase.length >= 16 && hay.includes(phrase)) return size;
-    }
-  }
-  return 0;
-}
-
-function sharesPhrase(answer: string, passage: string): boolean {
-  return sharedPhraseLength(answer, passage) >= 4;
-}
-
 function overlapScore(answer: string, passage: string): number {
   const hay = new Set(wordsOf(answer).split(" ").filter((word) => word.length >= 5 && !OVERLAP_STOP.has(word)));
   const seen = new Set<string>();
@@ -774,20 +757,6 @@ function namedHeadings(passage: ManualPassage, answer: string): string[] {
   return unique;
 }
 
-function passageMatches(answer: string, passage: ManualPassage): boolean {
-  /*
-   * The heading string alone is not the section. Brand names and a repeated
-   * title sit on many pages; the sentence has to restate that page's text.
-   */
-  if (sharesPhrase(answer, passage.text)) return true;
-  return overlapScore(answer, passage.text) >= 6;
-}
-
-function hasPrintedPage(answer: string, page: number): boolean {
-  if (new RegExp(`\\[p\\.${page}\\]`, "i").test(answer)) return true;
-  return new RegExp(`(?:^|[^\\w[])(?:page|p)\\.?\\s*${page}\\b`, "i").test(answer);
-}
-
 function sectionLocator(page: number, heading: string | null): string {
   return heading ? `Page ${page} — ${heading}` : `Page ${page}`;
 }
@@ -799,22 +768,189 @@ function excerptForHit(heading: string | null, passage: ManualPassage): string {
   return excerptOf(heading, slice) || heading;
 }
 
-function sentencesOf(answer: string): string[] {
-  const parts = answer
-    .trim()
-    .split(/(?<=[.!?])\s+/)
-    .filter((part) => part.trim().length > 0);
-  return parts.length > 0 ? parts : [answer.trim()];
+/**
+ * The longest phrase a stretch shares with a passage that carries two
+ * distinctive words, or one in five words or more ("are at the company's
+ * discretion"). "employees are responsible for" is on the Lost and
+ * Found page and "must be clean and" is every brand's shirt rule; neither
+ * says which page a cell-phone or facial-hair sentence restates.
+ */
+const passageWords = new Map<string, string[]>();
+
+/** A passage's words, read once per passage text. */
+function wordsList(text: string): string[] {
+  const cached = passageWords.get(text);
+  if (cached) return cached;
+  const words = wordsOf(text).split(" ").filter(Boolean);
+  if (passageWords.size > 5000) passageWords.clear();
+  passageWords.set(text, words);
+  return words;
+}
+
+/** Whether a shared run of words is a phrase that says which page it came from. */
+function restates(slice: readonly string[]): boolean {
+  if (slice.join(" ").length < 16) return false;
+  const distinctive = slice.filter((word) => word.length >= 5 && !OVERLAP_STOP.has(word));
+  return distinctive.length >= 2 || (slice.length >= 5 && distinctive.length >= 1);
+}
+
+function restatedPhraseLength(answer: string, passage: string): number {
+  const said = wordsList(answer);
+  const words = wordsList(passage);
+  if (said.length < 4 || words.length < 4) return 0;
+  const starts = new Map<string, number[]>();
+  for (let at = 0; at + 4 <= said.length; at += 1) {
+    const key = said.slice(at, at + 4).join(" ");
+    const list = starts.get(key);
+    if (list) list.push(at);
+    else starts.set(key, [at]);
+  }
+  let best = 0;
+  for (let index = 0; index + 4 <= words.length; index += 1) {
+    const hits = starts.get(words.slice(index, index + 4).join(" "));
+    if (!hits) continue;
+    for (const from of hits) {
+      let run = 4;
+      while (index + run < words.length && from + run < said.length && words[index + run] === said[from + run]) run += 1;
+      /*
+       * Every window inside a shared run is shared too. Take the longest
+       * window (at most 14 words) that names its page.
+       */
+      for (let size = Math.min(14, run); size > best && size >= 4; size -= 1) {
+        let found = false;
+        for (let offset = 0; offset + size <= run; offset += 1) {
+          if (restates(words.slice(index + offset, index + offset + size))) {
+            found = true;
+            break;
+          }
+        }
+        if (found) {
+          best = size;
+          break;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+/** The best manual passages a stretch of the answer restates, by longest shared phrase. */
+function restatedPassages(text: string, passages: readonly ManualPassage[]): ManualPassage[] {
+  let best = 0;
+  let chosen: ManualPassage[] = [];
+  for (const passage of passages) {
+    const phrase = restatedPhraseLength(text, passage.text);
+    /*
+     * "yoga pants, joggers or sweats are" is also the never-worn rule on the
+     * next sheet. The stretch that continues "approved for instructors only"
+     * restates the longer phrase, so the shorter copy is not a second page.
+     */
+    if (phrase < 4 || phrase < best) continue;
+    if (phrase > best) {
+      best = phrase;
+      chosen = [];
+    }
+    chosen.push(passage);
+  }
+  return chosen;
 }
 
 /**
- * A policy answer must cite printed pages that are in the loaded manual,
- * and each of those pages must be a Sources row for the section it names.
+ * A page the model wrote is kept, when no passage shares a phrase with the
+ * stretch, only if a passage on that page shares at least four distinctive
+ * words with it. A shared noun ("employee", "management") is not enough.
+ */
+function confirmedModelPages(
+  text: string,
+  pages: readonly number[],
+  passages: readonly ManualPassage[],
+): ManualPassage[] {
+  const kept: ManualPassage[] = [];
+  for (const page of pages) {
+    let best: ManualPassage | null = null;
+    let bestScore = 0;
+    for (const passage of passages) {
+      if (passage.printedPage !== page) continue;
+      const score = overlapScore(text, passage.text);
+      if (score > bestScore) {
+        best = passage;
+        bestScore = score;
+      }
+    }
+    if (best && bestScore >= 4) kept.push(best);
+  }
+  return kept;
+}
+
+/**
+ * With no shared phrase and no confirmed model page, one passage that shares
+ * five or more distinctive words, on a page no other passage ties, is the
+ * section ("no dangling earrings/chains" is Jewelry/Accessories). A tie
+ * between pages is not a citation.
+ */
+function closestPassage(text: string, passages: readonly ManualPassage[]): ManualPassage[] {
+  let best: ManualPassage[] = [];
+  let bestScore = 0;
+  for (const passage of passages) {
+    const score = overlapScore(text, passage.text);
+    if (score < 5 || score < bestScore) continue;
+    if (score > bestScore) {
+      bestScore = score;
+      best = [];
+    }
+    best.push(passage);
+  }
+  return new Set(best.map((passage) => passage.printedPage)).size === 1 ? best.slice(0, 1) : [];
+}
+
+const PRINTED_MARKER = /[^\S\n]*\[p\.(\d{1,3})\]/gi;
+
+/** "expense[p.15]and" keeps a space between the two words. */
+function withoutPrintedMarkers(text: string): string {
+  const bare = text.replace(/[^\S\n]*\[p\.\d{1,3}\]/gi, (full, offset: number, whole: string) =>
+    /^[\p{L}\p{N}]/u.test(whole.slice(offset + full.length)) && offset > 0 ? " " : "",
+  );
+  return /^[^\S\n]*\[p\.\d{1,3}\]/i.test(text) ? bare.trimStart() : bare;
+}
+
+/**
+ * One line of the answer cut into stretches at sentence ends. The text
+ * between stretches is kept as it was, so joining them gives the line back.
+ */
+function stretchesOf(line: string): { text: string; gap: string }[] {
+  const parts = line.split(/((?<=[.!?])[^\S\n]+)/);
+  const stretches: { text: string; gap: string }[] = [];
+  for (let at = 0; at < parts.length; at += 2) {
+    stretches.push({ text: parts[at] ?? "", gap: parts[at + 1] ?? "" });
+  }
+  return stretches;
+}
+
+/** Markers go before the stretch's closing punctuation, or at its end. */
+function markStretch(text: string, pages: readonly number[]): string {
+  if (pages.length === 0) return text;
+  const markers = [...pages].sort((left, right) => left - right).map((page) => `[p.${page}]`).join(" ");
+  const closing = text.match(/[.!?:;]+["'”’)*_]*$/);
+  if (closing && closing.index !== undefined && closing.index > 0) {
+    return `${text.slice(0, closing.index).trimEnd()} ${markers}${text.slice(closing.index)}`;
+  }
+  return `${text.trimEnd()} ${markers}`;
+}
+
+/**
+ * A policy answer cites a printed page only where it restates that page.
+ *
+ * The answer is read one sentence (or bullet line) at a time. Every [p.N]
+ * is taken off and written again only for a page whose passage that
+ * sentence restates; a page the model chose stays when that page's text
+ * still matches the sentence. No word, line break or bullet is changed:
+ * only [p.N] markers are removed or added. 24 Oct 2026, f8759f6: the
+ * model's +1 pages were kept, pages 10, 18, 20 and 29 were added to one
+ * sentence from shared words alone, and each of those pages became a
+ * Sources row.
  *
  * An [S#] that is not one of `shownMarkers` is removed, so [S9] cannot sit
- * beside a shorter source list. A page or heading that the manual does not
- * contain is removed. When the answer names no valid page, the sections it
- * actually restates are marked. When nothing in the manual was used, `ok`
+ * beside a shorter source list. When no sentence restates the manual, `ok`
  * is false and the caller falls back to ordinary retrieval.
  */
 export function citePolicyAnswer(
@@ -823,102 +959,58 @@ export function citePolicyAnswer(
   shownMarkers: readonly number[] = [],
 ): CitedManualAnswer {
   const index = plan.index;
-  const cleaned = alignSourceMarkers(
-    index ? fixPageCitations(normalizeMarkers(answer), index) : normalizeMarkers(answer),
-    shownMarkers,
-  );
+  const cleaned = alignSourceMarkers(normalizeMarkers(answer), shownMarkers);
   if (!index) return { text: cleaned, sources: [], ok: false };
 
-  const sentences = sentencesOf(cleaned);
-  const matched: { passage: ManualPassage; sentence: number; heading: string | null; score: number }[] = [];
-  const addHit = (passage: ManualPassage, sentence: number, heading: string | null) => {
-    const sentenceText = sentences[sentence] ?? cleaned;
-    const score = sharedPhraseLength(sentenceText, passage.text) * 10 + overlapScore(sentenceText, passage.text);
-    const key = `${passage.documentId}:${passage.printedPage}:${normalizeHeading(heading ?? "")}`;
-    const existing = matched.findIndex(
-      (hit) => `${hit.passage.documentId}:${hit.passage.printedPage}:${normalizeHeading(hit.heading ?? "")}` === key,
-    );
-    /*
-     * The same heading is printed for more than one brand. Keep the passage
-     * the sentence actually restates, not the first copy in the manual.
-     */
-    if (existing >= 0) {
-      if (score > matched[existing]!.score) matched[existing] = { passage, sentence, heading, score };
-      return;
-    }
-    matched.push({ passage, sentence, heading, score });
-  };
-  plan.passages.forEach((passage) => {
-    let best = -1;
-    let bestScore = 0;
-    sentences.forEach((sentence, sentenceIndex) => {
-      if (!passageMatches(sentence, passage)) return;
-      const score =
-        sharedPhraseLength(sentence, passage.text) * 10 +
-        namedHeadings(passage, sentence).length * 8 +
-        overlapScore(sentence, passage.text);
-      if (score > bestScore) {
-        best = sentenceIndex;
-        bestScore = score;
+  const hits: { passage: ManualPassage; heading: string | null; score: number }[] = [];
+  const addHit = (passage: ManualPassage, text: string) => {
+    const score = restatedPhraseLength(text, passage.text) * 10 + overlapScore(text, passage.text);
+    const names = namedHeadings(passage, text);
+    for (const heading of names.length > 0 ? names : [passage.heading]) {
+      const key = `${passage.documentId}:${passage.printedPage}:${normalizeHeading(heading ?? "")}`;
+      const existing = hits.findIndex(
+        (hit) => `${hit.passage.documentId}:${hit.passage.printedPage}:${normalizeHeading(hit.heading ?? "")}` === key,
+      );
+      /*
+       * The same heading is printed for more than one brand. Keep the passage
+       * the answer actually restates, not the first copy in the manual.
+       */
+      if (existing >= 0) {
+        if (score > hits[existing]!.score) hits[existing] = { passage, heading, score };
+        continue;
       }
-    });
-    if (best < 0) return;
-    const names = namedHeadings(passage, cleaned);
-    if (names.length === 0) {
-      addHit(passage, best, passage.heading);
-      return;
+      hits.push({ passage, heading, score });
     }
-    for (const heading of names) addHit(passage, best, heading);
-  });
+  };
 
-  for (const page of index.pages) {
-    if (!hasPrintedPage(cleaned, page)) continue;
-    if (matched.some((hit) => hit.passage.printedPage === page)) continue;
-    const onPage = plan.passages.filter((passage) => passage.printedPage === page);
-    const chosen = onPage.find((passage) => passage.heading) ?? onPage[0];
-    if (!chosen) continue;
-    addHit(chosen, 0, chosen.heading);
-  }
+  const marked = cleaned
+    .split("\n")
+    .map((line) =>
+      stretchesOf(line)
+        .map(({ text, gap }) => {
+          const written = [...text.matchAll(PRINTED_MARKER)].map((match) => Number(match[1]));
+          const bare = withoutPrintedMarkers(text);
+          // A stretch that was only markers ("till [p.19]. [p.20]") leaves nothing, not a gap.
+          if (!bare.trim()) return text.trim() ? "" : `${text}${gap}`;
+          let restated = restatedPassages(bare, plan.passages);
+          if (restated.length === 0) {
+            const modelPages = [...new Set(written)].filter((page) => index.pages.has(page));
+            restated = confirmedModelPages(bare, modelPages, plan.passages);
+          }
+          if (restated.length === 0) restated = closestPassage(bare, plan.passages);
+          const meaningful = restated.filter((passage) => !(passage.printedPage === 1 && !passage.heading));
+          for (const passage of meaningful) addHit(passage, bare);
+          const pages = [...new Set(meaningful.map((passage) => passage.printedPage))];
+          return `${markStretch(bare, pages)}${gap}`;
+        })
+        .join("")
+        .replace(/[^\S\n]+$/, ""),
+    )
+    .join("\n");
 
-  /*
-   * "yoga pants, joggers or sweats are" is also the never-worn rule on the
-   * next sheet. The sentence that continues "approved for instructors only"
-   * restates the longer phrase, so the shorter copy is not a second page.
-   */
-  const phraseOf = (hit: { passage: ManualPassage; sentence: number }) =>
-    sharedPhraseLength(sentences[hit.sentence] ?? cleaned, hit.passage.text);
-  const bestPhrase = new Map<number, number>();
-  for (const hit of matched) {
-    const phrase = phraseOf(hit);
-    if (phrase > (bestPhrase.get(hit.sentence) ?? 0)) bestPhrase.set(hit.sentence, phrase);
-  }
-  const focused = matched.filter((hit) => {
-    const best = bestPhrase.get(hit.sentence) ?? 0;
-    const phrase = phraseOf(hit);
-    if (phrase === 0 || best < 4) return true;
-    return phrase === best;
-  });
-  const meaningful = focused.filter((hit) => !(hit.passage.printedPage === 1 && !hit.heading));
-  if (meaningful.length === 0) return { text: cleaned, sources: [], ok: false };
+  if (hits.length === 0) return { text: cleaned, sources: [], ok: false };
 
-  const bySentence = new Map<number, number[]>();
-  for (const hit of meaningful) {
-    if (hasPrintedPage(cleaned, hit.passage.printedPage)) continue;
-    const list = bySentence.get(hit.sentence) ?? [];
-    if (!list.includes(hit.passage.printedPage)) list.push(hit.passage.printedPage);
-    bySentence.set(hit.sentence, list);
-  }
-  const marked = sentences
-    .map((sentence, sentenceIndex) => {
-      const pages = bySentence.get(sentenceIndex);
-      if (!pages || pages.length === 0) return sentence;
-      const markers = [...pages].sort((left, right) => left - right).map((page) => `[p.${page}]`).join(" ");
-      if (/[.!?]$/.test(sentence)) return sentence.replace(/([.!?])$/, ` ${markers}$1`);
-      return `${sentence} ${markers}`;
-    })
-    .join(" ");
-
-  const sources: FullManualSource[] = meaningful.map((hit, marker) => ({
+  const sources: FullManualSource[] = hits.map((hit, marker) => ({
     marker: marker + 1,
     documentId: hit.passage.documentId,
     documentTitle: hit.passage.documentTitle,
