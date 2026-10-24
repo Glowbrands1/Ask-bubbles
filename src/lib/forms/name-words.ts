@@ -281,6 +281,66 @@ export function isTypedStopSpan(span: string, sources: NameStopSources): boolean
   });
 }
 
+/**
+ * Field labels. They reject a name candidate only when the candidate is
+ * the label itself ("Job title", "Store", "Salon"). A real surname that
+ * is one of these words still belongs to the person: "Jane Store".
+ */
+export const NAME_LABEL_WORDS = new Set([
+  "job",
+  "title",
+  "position",
+  "role",
+  "location",
+  "salon",
+  "store",
+]);
+
+function labelParts(name: string): { raw: string; token: string }[] {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((raw) => ({ raw, token: raw.toLowerCase().replace(/[^a-z]/g, "") }));
+}
+
+/** True only when every word is a label. "Job title" is. "Jane Store" is not. */
+export function isNameLabelPhrase(name: string): boolean {
+  const parts = labelParts(name);
+  return parts.length > 0 && parts.every((part) => NAME_LABEL_WORDS.has(part.token));
+}
+
+/**
+ * A full name is two words that are not labels. A "Job" or "Title" that
+ * follows that name is the field label, so it is not part of the name.
+ * "Store Director" has neither of those trailing words, so it stays.
+ * A phrase that is only labels is not a name.
+ */
+export function stripTrailingJobOrTitle(name: string): string | null {
+  const parts = labelParts(name);
+  if (parts.length === 0) return null;
+  if (parts.every((part) => NAME_LABEL_WORDS.has(part.token))) return null;
+  const kept: { raw: string; token: string }[] = [];
+  let nameWords = 0;
+  for (const part of parts) {
+    if ((part.token === "job" || part.token === "title") && nameWords >= 2) break;
+    kept.push(part);
+    if (part.token && !NAME_LABEL_WORDS.has(part.token)) nameWords += 1;
+  }
+  if (kept.length === 0 || kept.every((part) => NAME_LABEL_WORDS.has(part.token))) return null;
+  return kept.map((part) => part.raw).join(" ");
+}
+
+/**
+ * The person written after "Name:". The label stays a label. "Name:
+ * Christiana Headley, job title tanning consultant" is Christiana Headley.
+ */
+export function nameAfterNameLabel(text: string): string | null {
+  const match = /(?:^|\n)\s*name\s*:\s*([^\n]+)/i.exec(text.trim());
+  if (!match) return null;
+  return stripTrailingJobOrTitle(match[1]!.replace(/[,:;]+/g, " "));
+}
+
 export function lowercaseMonths(text: string): string {
   return text
     .replace(MONTH_ALWAYS, (month) => month.toLowerCase())

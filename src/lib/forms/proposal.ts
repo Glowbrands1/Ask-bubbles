@@ -8,7 +8,7 @@ import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
 import { antiLoopEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { companyNameStops } from "./name-stops";
-import { isTypedStopSpan, isTypedStopWord, NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, lowercaseMonths } from "./name-words";
+import { isTypedStopSpan, isTypedStopWord, NAME_LABEL_WORDS, NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, isNameLabelPhrase, lowercaseMonths, nameAfterNameLabel, stripTrailingJobOrTitle } from "./name-words";
 import { keepTypedPerson } from "./typed-name";
 import { boundManagerTurns, type BoundedContext } from "./bounded-context";
 import {
@@ -171,6 +171,9 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
     // "Employee" is the form's own word, and also a surname ("Test Employee").
     // Only a later word, and only while a typed name is kept.
     const employeeSurname = typedNameEnabled() && parts.length > 0 && lower === "employee";
+    // "Store" and "Salon" are form words, and they are also surnames. A label
+    // rejects the candidate only when the whole candidate is the label.
+    const labelSurname = antiLoopEnabled() && parts.length > 0 && NAME_LABEL_WORDS.has(lower);
     // "NE" and "SD" are this company's state codes. The capitalised reader
     // already drops them; this reader is the one "Dodge, NE" was still reaching.
     const stateOrTitle = typedNameEnabled() && isTypedStopWord(word, companyNameStops());
@@ -185,7 +188,7 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
       !NOT_A_NAME.has(lower) &&
       !COUNTS_PEOPLE.has(lower) &&
       (!NOT_A_TYPED_NAME.has(lower) || willAsFirstName(lower, parts.length, words, whole)) &&
-      (!isFormVocabulary(lower) || employeeSurname) &&
+      (!isFormVocabulary(lower) || employeeSurname || labelSurname) &&
       !stateOrTitle;
     if (!usable) {
       if (whole) return null;
@@ -211,7 +214,7 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
      */
     if (MONTH_WORD.test(parts[2]!) && next !== undefined && /^\d{1,2}(?:st|nd|rd|th)?\b/.test(next)) {
       parts.pop();
-      return parts.join(" ");
+      return finishedName(parts.join(" "));
     }
     const boundary =
       next === undefined ||
@@ -223,7 +226,12 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
   }
   if (parts.length === 0) return null;
   if (whole && parts.length !== words.length) return null;
-  const candidate = parts.join(" ");
+  return finishedName(parts.join(" "));
+}
+
+/** A label rejects the candidate only when the candidate is the label itself. */
+function finishedName(candidate: string): string | null {
+  if (antiLoopEnabled() && isNameLabelPhrase(candidate)) return null;
   if (typedNameEnabled() && isTypedStopSpan(candidate, companyNameStops())) return null;
   return candidate;
 }
@@ -463,6 +471,18 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
     NOT_A_NAME.has(word.toLowerCase()) ||
     isFormVocabulary(word) ||
     (typedNameEnabled() && isTypedStopWord(word, companyNameStops()));
+  /*
+   * A label word inside a full name can be a surname ("Jane Store"). It
+   * rejects the candidate only when the candidate is the label itself.
+   */
+  const labelWordBlocks = (word: string, candidate: string) => {
+    const token = word.toLowerCase().replace(/[^a-z]/g, "");
+    const fullName = candidate.trim().split(/\s+/).length >= 2;
+    if (antiLoopEnabled() && fullName && NAME_LABEL_WORDS.has(token) && !isNameLabelPhrase(candidate)) {
+      return NOT_A_NAME.has(token) || (typedNameEnabled() && isTypedStopWord(word, companyNameStops()));
+    }
+    return notAName(word);
+  };
 
   const NAME = "[A-Z][a-zA-Z'’-]+";
 
@@ -721,7 +741,8 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
      * starts with the reply, not the name. The reply is dropped; a run that
      * was only the reply names nobody.
      */
-    const candidate = withoutConversationalLead(run);
+    let candidate = withoutConversationalLead(run);
+    if (candidate && antiLoopEnabled()) candidate = stripTrailingJobOrTitle(candidate);
     if (candidate === null) continue;
     if (opensWithRosterState(candidate) && !AS_A_PERSON(candidate)) continue;
     if (isRosterSalonName(candidate)) continue;
@@ -733,7 +754,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
      */
     if (candidate.split(/\s+/).every((word) => isTopicWord(word))) continue;
     if (typedNameEnabled() && isTypedStopSpan(candidate, companyNameStops())) continue;
-    if (!candidate.split(/\s+/).some(notAName)) {
+    if (!candidate.split(/\s+/).some((word) => labelWordBlocks(word, candidate))) {
       // Led by a reply ("It's …"), the run IS the answer.
       (candidate === run ? found : strong).push(candidate);
     }
@@ -1355,19 +1376,28 @@ function formRecipient(subjects: readonly string[], strong: readonly string[], w
   return joined ? null : recipient;
 }
 
-const FIELD_LABEL_WORDS = new Set(["title", "position", "location", "store", "date", "job"]);
+const FIELD_LABEL_WORDS = new Set(["title", "position", "location", "store", "date", "job", "role", "salon"]);
 
 /** "Job Title", "Store", "Date" — the form's own labels, never the employee. */
 function isFieldLabelCandidate(name: string): boolean {
   const folded = name.toLowerCase().replace(/[^a-z\s]/g, " ").replace(/\s+/g, " ").trim();
   if (!folded) return true;
   if (/^(?:job title|employee name|full name)\b/.test(folded)) return true;
+  if (isNameLabelPhrase(folded)) return true;
   const words = folded.split(" ").filter(Boolean);
-  return words.length > 0 && words.every((word) => FIELD_LABEL_WORDS.has(word));
+  return words.length > 0 && words.every((word) => word === "date" || FIELD_LABEL_WORDS.has(word));
 }
 
 function settle(strong: string[], weak: string[], text: string, subjects: readonly string[] = []): EmployeeMentions {
   if (antiLoopEnabled()) {
+    const fromLabel = nameAfterNameLabel(text);
+    if (fromLabel) strong = [fromLabel, ...strong];
+    const tidy = (name: string) => {
+      const next = stripTrailingJobOrTitle(name);
+      return next ?? "";
+    };
+    strong = strong.map(tidy).filter(Boolean);
+    weak = weak.map(tidy).filter(Boolean);
     const labeled = titleFollowingJobTitleLabel(text)?.toLowerCase() ?? null;
     const drop = (name: string) =>
       isFieldLabelCandidate(name) || (labeled !== null && name.toLowerCase() === labeled);

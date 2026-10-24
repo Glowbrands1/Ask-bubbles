@@ -1,4 +1,5 @@
 import { antiLoopEnabled } from "@/lib/config/chat-quality-flags";
+import { isNameLabelPhrase, stripTrailingJobOrTitle } from "@/lib/forms/name-words";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { rosterLocationName } from "@/lib/forms/location-mention";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
@@ -31,7 +32,7 @@ const LABEL_WORDS = new Set([
  * after it belong on the Job Title slot, so they are not kept as a name either.
  */
 const FIELD_LABEL =
-  /^(?:job title|employee name|full name|title|position|location|store|date|job)$/i;
+  /^(?:job title|employee name|full name|title|position|role|location|salon|store|date|job)$/i;
 
 function placeWords(): Set<string> {
   const words = new Set<string>();
@@ -51,9 +52,11 @@ export function stripNonNameTokens(name: string): string | null {
   const folded = name.trim().replace(/\s+/g, " ");
   if (FIELD_LABEL.test(folded)) return null;
   if (/^(?:job title|employee name|full name)\b/i.test(folded)) return null;
+  if (isNameLabelPhrase(folded)) return null;
+  const trailed = stripTrailingJobOrTitle(folded);
+  if (!trailed) return null;
   const places = placeWords();
-  const kept = name
-    .trim()
+  const kept = trailed
     .split(/\s+/)
     .filter((word) => {
       const token = word.toLowerCase().replace(/[^a-z]/g, "");

@@ -392,6 +392,15 @@ Ask Sunny is not updated. Its s8 and s17 use a tanning title and salon
 names, which stay there. The label strip is in this app's name step
 (`settle` and `stripNonNameTokens`). No salon title was copied here.
 
+The shared label list is `NAME_LABEL_WORDS` in `name-words.ts`: job,
+title, position, role, location, salon, and store. A candidate is
+rejected only when it is the label itself ("Job title"). A surname
+such as Store or Salon stays: "Jane Store". A trailing "Job" or
+"Title" comes off only after a full name. The words after "Name:" stay
+the employee. Sunny's reader does not have that list yet. Port
+`stripTrailingJobOrTitle` and `nameAfterNameLabel` in Sunny's next name
+round. "Tanning consultant" was not added to this company's titles.
+
 ## 24 Oct 2026: validation port (retrieval, drafts, store ask)
 
 Four flags, all default off. Ask Sunny is not updated in this round. The

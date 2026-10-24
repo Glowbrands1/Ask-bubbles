@@ -213,6 +213,64 @@ describe("name, date slot, and store from the manager's words", () => {
     expect(card?.formDate).toBe("2026-10-05");
     expect(card?.locationId).toBe("loc-225");
   });
+
+  it("keeps Jane Store when Store is the surname", async () => {
+    const card = await lastCard([
+      "create coaching form for Jane Store, team member at kearney. use todays date",
+    ]);
+    expect(card?.employeeName).toBe("Jane Store");
+    expect(card?.employeeName?.toLowerCase()).not.toBe("store");
+    expect(card?.employeeName?.toLowerCase()).not.toBe("job title");
+    expect(card?.locationId).toBe("loc-66");
+    expect(card?.formDate).toBe("2026-10-24");
+  });
+});
+
+describe("s8, s17, and a Name: line", () => {
+  beforeEach(() => {
+    for (const name of FLAGS) process.env[name] = "1";
+  });
+
+  afterEach(() => {
+    for (const name of FLAGS) delete process.env[name];
+  });
+
+  const s8 = "morgan blake, team member at lee's summit";
+  const s17 =
+    "Riley Quinn today under performance for September, sales below goal, verbal warning received Open Ended Questions Coaching 9/8/2026, Focus Item Coaching 9/15/2026, New Product Coaching 9/25/2026 not payroll deductible Team Member";
+
+  it("s8 keeps Morgan Blake and does not take job, title, salon, or store as the employee", () => {
+    const names = readEmployeeMentions(s8).names.map((name) => name.toLowerCase());
+    expect(names).toContain("morgan blake");
+    expect(names).not.toContain("job title");
+    expect(names).not.toContain("job");
+    expect(names).not.toContain("title");
+    expect(names).not.toContain("salon");
+    expect(names).not.toContain("store");
+  });
+
+  it("s17 keeps Riley Quinn and does not take job title, september, or based", () => {
+    const names = readEmployeeMentions(s17).names.map((name) => name.toLowerCase());
+    expect(names).toContain("riley quinn");
+    expect(names).not.toContain("job title");
+    expect(names).not.toContain("september");
+    expect(names).not.toContain("based");
+    expect(statedJobTitle(s17)).toBe("Team Member");
+  });
+
+  it("keeps Jane Store and Jane Salon, and still rejects a candidate that is the label", () => {
+    expect(readEmployeeMentions("create a coaching form for Jane Store").names).toContain("Jane Store");
+    expect(readEmployeeMentions("create a coaching form for Jane Salon").names).toContain("Jane Salon");
+    expect(readEmployeeMentions("Job title").names.map((name) => name.toLowerCase())).not.toContain("job title");
+    expect(readEmployeeMentions("Store").names.map((name) => name.toLowerCase())).not.toContain("store");
+  });
+
+  it("keeps the value after Name: and leaves the job title off the employee", () => {
+    const text = "Name: Christiana Headley, job title tanning consultant";
+    const names = readEmployeeMentions(text).names.map((name) => name.toLowerCase());
+    expect(names).toEqual(["christiana headley"]);
+    expect(statedJobTitle(text)).toBe("Tanning Consultant");
+  });
 });
 
 describe("flags off, the same words do not move the card", () => {
