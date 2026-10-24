@@ -71,9 +71,9 @@ on. None do when it is off.
 
 ## Round — self-check typed name — 24 Oct 2026
 
-Same harness and the same 18 cases, after the self-check change on this
-branch. Empty roster, owner with global scope, today 2026-10-24. The model
-is not called. The repair stub is the same one as the baseline: a check
+Same harness and the same 18 cases. The code under test is
+`aaaef4b6bd7a06851bd9bbcd2afd36b953cc83f2`. Empty roster, owner with
+global scope, today 2026-10-24. The model is not called. The repair stub is the same one as the baseline: a check
 line that says a name is not on the roster still returns "I couldn't find
 that person in the Woven roster." No prompt was reverted.
 
