@@ -661,6 +661,26 @@ function FormProposalCard({
             </Missing>
           )}
         </ProposalRow>
+        {proposal.formDate ? <ProposalRow label="Date">{proposal.formDate}</ProposalRow> : null}
+        {proposal.incidentTime ? <ProposalRow label="Time">{proposal.incidentTime}</ProposalRow> : null}
+        {proposal.warningLevel ? (
+          <ProposalRow label="Type of warning">
+            {proposal.warningLevel === "verbal"
+              ? "Verbal Warning"
+              : proposal.warningLevel === "written"
+                ? "Written Warning"
+                : "Final Warning"}
+          </ProposalRow>
+        ) : null}
+        {proposal.priorActions ? (
+          <ProposalRow label="Prior action">
+            <span className="whitespace-pre-line">{proposal.priorActions}</span>
+          </ProposalRow>
+        ) : null}
+        {proposal.payrollDeduct ? (
+          <ProposalRow label="Payroll deduct">{proposal.payrollDeduct === "yes" ? "Yes" : "No"}</ProposalRow>
+        ) : null}
+        {proposal.issue ? <ProposalRow label="What happened">{proposal.issue}</ProposalRow> : null}
       </dl>
 
       {/*

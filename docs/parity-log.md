@@ -6,6 +6,26 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: a later form turn keeps what was already said
+
+`FORM_FULL_REMAP_ENABLED` stays off. On, each turn reads every user message
+in this conversation only, then merges that read with the slots already
+saved for the same conversation id. A later value replaces a field. A blank
+read does not erase one, so a date read on the first turn is not asked
+again. A discipline word (`verbal`, `written`, a warning) selects the Corrective
+Action Form when the manager did not name a form. "Create a Coaching Form"
+stays the Coaching Form. "CA" is the Corrective Action Form. A bare "10-20"
+is 20 October, not a time. "prior = manual ack 9/01" is the prior action,
+not the form date. "at Grand Island out of dress code" names that store
+when there is no comma before "out". A turn that only names the form
+("Create a Coaching Form") is not the incident. The card shows the date, time, type of
+warning, prior action, payroll answer, and what happened, which are the
+template fields those words map to. A message id stored on another
+conversation is left out, so that chat's store cannot fill this one.
+
+**Sibling app: not ported.** Ask Sunny was not in this session. The
+mechanism is the same one-call extraction; no store names were copied.
+
 ## 24 Oct 2026: one extraction fills the form
 
 `FORM_FULL_REMAP_ENABLED` defaults off. On, each form turn is one tool

@@ -204,6 +204,17 @@ describe("form full remap", () => {
     expect(response.content).not.toContain("Woven has");
   });
 
+  it("does not let verbal replace an explicit Coaching Form", () => {
+    const { slots } = groundFormSlots({
+      raw: raw({ templateKey: "dpoa", employeeName: null, observation: null }),
+      history: [],
+      question: "Create a Coaching Form\nverbal",
+      today: TODAY,
+      people: [JANE],
+    });
+    expect(slots.templateKey).toBe("coaching");
+  });
+
   it("does not call the model when the flag is off", async () => {
     const call = vi.fn();
     const response = await remapFormTurn(

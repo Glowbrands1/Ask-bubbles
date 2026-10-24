@@ -70,11 +70,13 @@ export interface FormRemapSlots {
   readonly store: string | null;
   readonly locationId: string | null;
   readonly incidentDateIso: string | null;
+  readonly incidentTime: string | null;
   readonly warningLevel: "verbal" | "written" | null;
   readonly payrollDeduct: "yes" | "no" | null;
   readonly payrollAmount: string | null;
   readonly policySection: string | null;
   readonly observation: string | null;
+  readonly priorActions: string | null;
   readonly actionPlan: string | null;
   readonly closeMatchNote: string | null;
 }
@@ -101,6 +103,8 @@ export function groundFormSlots(input: {
   readonly today: string;
   readonly people: readonly RosterEmployee[];
   readonly continueTemplateKey?: string | null;
+  /** Slots already kept for this conversation. A null read must not erase them. */
+  readonly saved?: Partial<FormRemapSlots> | null;
 }): { slots: FormRemapSlots; response: AskResponse } {
   const users = userTurns(input.history, input.question);
   const said = users.join("\n");
@@ -113,29 +117,34 @@ export function groundFormSlots(input: {
   const jobTitle = groundedTitle(users);
   const store = groundedStore(said);
   const incidentDateIso = groundedDate(said, input.today);
-  const warningLevel = templateKey === "dpoa" ? explicitWarning(users, input.today) : null;
-  const payrollDeduct = templateKey === "dpoa" ? payrollDeductFromConversation([...input.history, { role: "user", content: input.question }]) : null;
+  const warningLevel = explicitWarning(users, input.today);
+  const payrollDeduct = payrollDeductFromConversation([...input.history, { role: "user", content: input.question }]);
   const payrollAmount = payrollDeduct === "yes" ? managerPayrollAmount(said) : null;
   const policySection = groundedPolicy(said);
-  const observation = acceptSummary(raw.observation, said);
+  const observation = statedIncident(said, employeeName) ?? acceptSummary(raw.observation, said);
+  const priorActions = statedPrior(said);
+  const incidentTime = statedTime(said);
   const actionPlan = acceptSummary(stripMoney(raw.actionPlan ?? ""), said);
   const closeMatchNote = employeeName ? closeNote(employeeName, input.people) : null;
 
-  const slots: FormRemapSlots = {
+  const read: FormRemapSlots = {
     templateKey,
     employeeName,
     jobTitle,
     store: store?.name ?? null,
     locationId: store?.id ?? null,
     incidentDateIso,
+    incidentTime,
     warningLevel: warningLevel === "verbal" || warningLevel === "written" ? warningLevel : null,
     payrollDeduct,
     payrollAmount,
     policySection,
     observation,
+    priorActions,
     actionPlan,
     closeMatchNote,
   };
+  const slots = finishSlots(mergeSlots(read, input.saved ?? null), said);
 
   const assistants = [...input.history, { role: "user", content: input.question }]
     .filter((turn) => turn.role === "assistant")
@@ -150,6 +159,23 @@ export function groundFormSlots(input: {
   return { slots, response };
 }
 
+/**
+ * A form turn is one the library already calls a form, or field notes
+ * ("verbal", "no payroll", "prior ="). A question about the policy is not.
+ */
+export function remapShouldRun(input: {
+  readonly question: string;
+  readonly history: readonly { role: string; content: string }[];
+  readonly formsTurn: boolean;
+}): boolean {
+  if (input.formsTurn) return true;
+  if (/\?\s*$/.test(input.question.trim()) && /\b(?:what|how|when|where|who|why|can|does|do|is)\b/i.test(input.question)) {
+    return false;
+  }
+  const text = [input.question, ...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content)].join("\n");
+  return /\b(?:verbal|written|warning|corrective|write-?ups?|payroll|prior\s*=)\b/i.test(text);
+}
+
 export async function remapFormTurn(
   input: {
     readonly history: readonly Turn[];
@@ -157,6 +183,7 @@ export async function remapFormTurn(
     readonly today: string;
     readonly people: readonly RosterEmployee[];
     readonly continueTemplateKey?: string | null;
+    readonly saved?: Partial<FormRemapSlots> | null;
   },
   call: FormRemapCaller = defaultCall,
 ): Promise<AskResponse | null> {
@@ -172,7 +199,7 @@ export async function remapFormTurn(
   } catch {
     return null;
   }
-  const grounded = groundFormSlots({ ...input, raw: result.raw });
+  const grounded = groundFormSlots({ ...input, raw: result.raw, saved: input.saved ?? null });
   noteExtraction({
     model: result.model,
     inputTokens: result.inputTokens,
@@ -270,21 +297,25 @@ function isTemplate(value: string | null | undefined): value is TemplateKey {
 }
 
 function templateFromUser(text: string): TemplateKey | null {
-  const hits: { index: number; key: TemplateKey }[] = [];
+  // A named form wins, last one typed. "Create a Coaching Form" stays that
+  // form even if the note also says "verbal". "coached on the 2nd" is a prior
+  // step, not a request for the Coaching Form.
+  const named: { index: number; key: TemplateKey }[] = [];
   const add = (re: RegExp, key: TemplateKey) => {
-    for (const match of text.matchAll(re)) hits.push({ index: match.index ?? 0, key });
+    for (const match of text.matchAll(re)) named.push({ index: match.index ?? 0, key });
   };
   add(/\bfollow[- ]up coaching\b/gi, "follow-up-coaching");
   add(/\bpolicy review\b/gi, "policy-review");
-  add(/\bcorrective action\b|\bwrite-?up\b/gi, "dpoa");
-  add(/\bcoaching form\b|\bcoaching\b/gi, "coaching");
-  const followUps = hits.filter((hit) => hit.key === "follow-up-coaching");
-  const kept = hits.filter((hit) => {
-    if (hit.key !== "coaching") return true;
-    return !followUps.some((follow) => hit.index >= follow.index && hit.index < follow.index + 24);
-  });
-  kept.sort((a, b) => a.index - b.index);
-  return kept.at(-1)?.key ?? null;
+  add(/\bcorrective actions?\b|\bwrite-?ups?\b|\bwritten up\b|\bca\b|\bc\/a\b|\bdpoa\b/gi, "dpoa");
+  add(/\bcoaching form\b/gi, "coaching");
+  if (named.length > 0) {
+    named.sort((a, b) => a.index - b.index);
+    return named.at(-1)!.key;
+  }
+  // No form was named. A discipline word is the Corrective Action Form.
+  if (/\b(?:verbal|written|warnings?|final\s+warnings?|terminations?|demotions?)\b/i.test(text)) return "dpoa";
+  if (/\bcoaching\b/i.test(text)) return "coaching";
+  return null;
 }
 
 function groundedName(proposed: string | null, turns: readonly string[]): string | null {
@@ -298,10 +329,22 @@ function groundedName(proposed: string | null, turns: readonly string[]): string
   }
   let found: string | null = null;
   for (const turn of turns) {
-    const names = extractEmployeeNames(turn);
-    if (names.length === 1) found = exactSlice(turn, names[0]!) ?? names[0]!;
+    const person = personPhrase(turn);
+    if (person) found = person;
   }
   return found;
+}
+
+/** "for Test Employee" and "Test Employee at Grand Island". Not "Use Kearney as the location". */
+function personPhrase(turn: string): string | null {
+  if (/\bas the location\b/i.test(turn)) return null;
+  const named = /\bfor\s+([A-Z][\w'.-]+(?:\s+[A-Z][\w'.-]+)*)/.exec(turn);
+  if (named) return named[1]!;
+  const leading = /^([A-Z][\w'.-]+(?:\s+[A-Z][\w'.-]+)+)\s+at\b/.exec(turn.trim());
+  if (leading) return leading[1]!;
+  const names = extractEmployeeNames(turn);
+  if (names.length === 1) return exactSlice(turn, names[0]!) ?? names[0]!;
+  return null;
 }
 
 function exactSlice(haystack: string, needle: string): string | null {
@@ -333,18 +376,43 @@ function groundedStore(text: string): { id: string; name: string } | null {
 }
 
 function groundedDate(text: string, today: string): string | null {
-  const calendar = [...new Set(listIncidentDates(text, today).map((item) => item.iso))];
-  if (calendar.length === 1) return calendar[0]!;
-  if (calendar.length > 1) return null;
+  const found = listIncidentDates(text, today).filter((item) => !dateIsPrior(text, item.index));
+  const calendar = [...new Set(found.map((item) => item.iso))];
+  // One incident date, or the later one when they correct it. A prior step's
+  // date ("manual ack 9/01") is not this form's date and must not wipe it.
+  if (calendar.length >= 1) return calendar.at(-1)!;
+  // "10-20" with no year is 20 October when it is not a duration ("10-20 min").
+  const dashed = dashedMonthDay(text, today);
+  if (dashed) return dashed;
   if (/\b(?:use\s+)?today'?s\s+date\b/i.test(text)) return today;
+  // spokenDates also returns every calendar date. Those were already decided
+  // above, including a prior-step date that must stay off the form. This
+  // fallback is only a relative day ("yesterday", "last Friday").
   const spoken = [
     ...new Set(
       spokenDates(text, today)
-        .map((item) => item.iso)
-        .filter((iso): iso is string => typeof iso === "string" && iso !== "" && iso !== today),
+        .filter((item) => {
+          if (!item.iso || item.iso === today || dateIsPrior(text, item.index)) return false;
+          return !calendarPhrase(item.phrase);
+        })
+        .map((item) => item.iso as string),
     ),
   ];
   return spoken.length === 1 ? spoken[0]! : null;
+}
+
+/** "9/01" and "October 20". Not "yesterday" or "2 days ago". */
+function calendarPhrase(phrase: string): boolean {
+  return /\d{4}-\d{2}-\d{2}|\d{1,2}[/. -]\d{1,2}|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b/i.test(
+    phrase,
+  );
+}
+
+/** A date that belongs to an earlier step, not the form being written. */
+function dateIsPrior(text: string, index: number): boolean {
+  const before = text.slice(Math.max(0, index - 80), index);
+  const clause = before.slice(Math.max(before.search(/[^.;\n]*$/), 0));
+  return /\b(?:prior|previous|coached\s+on|manual\s+ack|already|got|received)\b/i.test(clause);
 }
 
 function explicitWarning(turns: readonly string[], today: string): "verbal" | "written" | null {
@@ -354,13 +422,40 @@ function explicitWarning(turns: readonly string[], today: string): "verbal" | "w
   let level: "verbal" | "written" | null = null;
   for (const turn of cleaned) {
     for (const sentence of turn.split(/[.\n;]+/)) {
-      if (!/^\s*(?:a\s+)?(verbal|written)\s+warnings?\s*$/i.test(sentence) && !/^\s*(verbal|written)\s*$/i.test(sentence)) {
-        continue;
+      for (const clause of sentence.split(",")) {
+        if (!/^\s*(?:a\s+)?(verbal|written)\s+warnings?\s*$/i.test(clause) && !/^\s*(verbal|written)\s*$/i.test(clause)) {
+          continue;
+        }
+        level = /written/i.test(clause) ? "written" : "verbal";
       }
-      level = /written/i.test(sentence) ? "written" : "verbal";
     }
   }
   return level;
+}
+
+/** "10-20" is 20 October. "10-20 min" and "time 10-20" are not dates. */
+function dashedMonthDay(text: string, today: string): string | null {
+  const year = Number(/^(\d{4})-/.exec(today)?.[1]);
+  if (!Number.isFinite(year)) return null;
+  let found: string | null = null;
+  for (const match of text.matchAll(/(?<![\d-])(\d{1,2})-(\d{1,2})(?!-\d)/g)) {
+    const index = match.index ?? 0;
+    const after = text.slice(index + match[0].length, index + match[0].length + 16);
+    if (/^\s*(?:min|mins|minutes|hrs|hours|hr)\b/i.test(after)) continue;
+    const before = text.slice(Math.max(0, index - 16), index);
+    if (/\btime\s*[:=]?\s*$/i.test(before)) continue;
+    if (dateIsPrior(text, index)) continue;
+    const iso = monthDayIso(year, Number(match[1]), Number(match[2]));
+    if (iso) found = iso;
+  }
+  return found;
+}
+
+function monthDayIso(year: number, month: number, day: number): string | null {
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function managerPayrollAmount(text: string): string | null {
@@ -412,6 +507,135 @@ function closeNote(name: string, people: readonly RosterEmployee[]): string | nu
   return null;
 }
 
+/**
+ * The offense, once the name, store, date, and slot answers are out of the way.
+ * A full sentence ("She left the register drawer open") stays with the model's
+ * summary. A note ("out of dress code 3 shifts", "on cell phone 30+ min") is
+ * the issue itself.
+ */
+function statedIncident(text: string, employeeName: string | null): string | null {
+  const clauses = text.split(/[\n,;]+/).map((clause) => clause.trim()).filter(Boolean);
+  let found: string | null = null;
+  for (const clause of clauses) {
+    if (slotClause(clause)) continue;
+    const offense = phraseOffense(stripSlots(clause, employeeName));
+    if (offense) found = offense;
+  }
+  return found;
+}
+
+function stripSlots(clause: string, employeeName: string | null): string {
+  let text = clause;
+  text = text.replace(/\b(?:verbal|written)\s+(?:ca|c\/a|corrective actions?)\b/gi, " ");
+  text = text.replace(/\b(?:create\s+a\s+)?(?:corrective actions?|coaching form|write-?ups?|ca|c\/a)\s+for\s+/gi, " ");
+  if (employeeName) {
+    text = text.replace(new RegExp(employeeName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig"), " ");
+  }
+  text = text.replace(/^\s*[A-Z][\w'.-]+\s+[A-Z][\w'.-]+\s+(?=at\b|out of\b)/, "");
+  text = text.replace(/\bat\s+[A-Z][\w'.-]*(?:\s+[A-Z][\w'.-]*){0,3}/g, " ");
+  text = text.replace(/\buse\s+[A-Z][\w'.-]*(?:\s+[A-Z][\w'.-]*){0,3}\s+as the location\b/gi, " ");
+  text = text.replace(/\bprior\s*=\s*[^,]+/gi, " ");
+  text = text.replace(/\bcoached on\s+\S+/gi, " ");
+  text = text.replace(/\bno payroll\b/gi, " ");
+  return text;
+}
+
+function phraseOffense(clause: string): string | null {
+  let text = clause.replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, " ");
+  text = text.replace(/(?<![\d-])\d{1,2}-\d{1,2}(?!-\d)(?!\s*(?:min|mins|minutes|hrs|hours|hr)\b)/g, " ");
+  text = text.replace(/\s+/g, " ").trim().replace(/^[,\s]+|[,\s.]+$/g, "");
+  if (!text || text.length > 80) return null;
+  if (/\b(?:she|he|they|i|we)\b/i.test(text)) return null;
+  const title = statedJobTitle(text) ?? extractJobTitle(text);
+  if (title && title.toLowerCase() === text.toLowerCase()) return null;
+  const onDuration = /^on\s+(.+?)\s+(\d+\+?\s*(?:min|mins|minutes|hrs|hours))\b/i.exec(text);
+  if (onDuration) {
+    const thing = onDuration[1]!.replace(/\s+/g, " ").trim();
+    const duration = onDuration[2]!.replace(/\s+/g, "");
+    const spaced = duration.replace(/(\d\+?)(?=[a-z])/i, "$1 ");
+    return /\buse\b/i.test(thing) ? `${thing} ${spaced}` : `${thing} use ${spaced}`;
+  }
+  const outOf = /^out of\s+(.+)$/i.exec(text);
+  if (outOf) {
+    const rest = outOf[1]!.trim();
+    const counted = /^(.+?)\s+(\d+)\s+([a-z]+)$/i.exec(rest);
+    if (counted) return `${counted[1]}, ${counted[2]} ${counted[3]}`;
+    return rest;
+  }
+  return text;
+}
+
+function slotClause(clause: string): boolean {
+  const text = clause.trim();
+  if (/^(?:verbal|written|yes|no|yeah|nope)[.!]?\s*$/i.test(text)) return true;
+  // "Create a Coaching Form" names the form. It is not what happened.
+  if (
+    /^(?:please\s+)?(?:create|make|start|open|do|file|write)\s+(?:a\s+|an\s+|the\s+)?(?:coaching form|corrective action(?: form)?|write-?up|ca|c\/a|dpoa|policy review|follow-?up coaching(?: form)?)\s*[.!]?\s*$/i.test(
+      text,
+    )
+  ) {
+    return true;
+  }
+  if (/^\s*coached on\b/i.test(text)) return true;
+  if (/\bprior\s*=/i.test(text)) return true;
+  if (/\bno payroll\b/i.test(text) && text.split(/\s+/).length <= 6) return true;
+  if (/\buse\s+.+\bas the location\b/i.test(text)) return true;
+  return false;
+}
+
+function statedPrior(text: string): string | null {
+  const hits: string[] = [];
+  for (const match of text.matchAll(/\bprior\s*=\s*([^,\n.]+)/gi)) {
+    hits.push(match[1]!.trim().replace(/\back\b/gi, "acknowledgement"));
+  }
+  for (const match of text.matchAll(/\bcoached on\s+(\S+)/gi)) hits.push(`coached on ${match[1]}`);
+  return hits.length > 0 ? hits.join("\n") : null;
+}
+
+/** A labelled time ("time 10:20"). A bare "10-20" is a month and day. */
+function statedTime(text: string): string | null {
+  const labelled = /\btime\s*[:=]?\s*(\d{1,2}[:.-]\d{2})\b/i.exec(text);
+  return labelled?.[1] ?? null;
+}
+
+const SLOT_KEYS = [
+  "templateKey",
+  "employeeName",
+  "jobTitle",
+  "store",
+  "locationId",
+  "incidentDateIso",
+  "incidentTime",
+  "warningLevel",
+  "payrollDeduct",
+  "payrollAmount",
+  "policySection",
+  "observation",
+  "priorActions",
+  "actionPlan",
+  "closeMatchNote",
+] as const satisfies readonly (keyof FormRemapSlots)[];
+
+/** A later value replaces the same field. A blank read leaves the saved one. */
+function mergeSlots(next: FormRemapSlots, saved: Partial<FormRemapSlots> | null): FormRemapSlots {
+  if (!saved) return next;
+  const merged: Record<string, FormRemapSlots[keyof FormRemapSlots]> = { ...next };
+  for (const key of SLOT_KEYS) {
+    if (merged[key] == null && saved[key] != null) merged[key] = saved[key];
+  }
+  return merged as unknown as FormRemapSlots;
+}
+
+function finishSlots(slots: FormRemapSlots, said: string): FormRemapSlots {
+  if (slots.templateKey !== "dpoa") {
+    return { ...slots, warningLevel: null, payrollDeduct: null, payrollAmount: null };
+  }
+  return {
+    ...slots,
+    payrollAmount: slots.payrollDeduct === "yes" ? (slots.payrollAmount ?? managerPayrollAmount(said)) : null,
+  };
+}
+
 function questionsFor(slots: FormRemapSlots, assistants: readonly string[]): string[] {
   const needed: string[] = [];
   if (!slots.templateKey) needed.push("templateKey");
@@ -440,7 +664,9 @@ function renderReply(slots: FormRemapSlots, questions: readonly string[]): strin
   if (slots.jobTitle) lines.push(`**Job title:** ${slots.jobTitle}, as you said`);
   if (slots.store) lines.push(`**Store:** ${slots.store}, as you said`);
   if (slots.incidentDateIso) lines.push(`**Date:** ${slots.incidentDateIso}`);
+  if (slots.incidentTime) lines.push(`**Time:** ${slots.incidentTime}`);
   if (slots.observation) lines.push(`**What happened:** ${slots.observation}`);
+  if (slots.priorActions) lines.push(`**Prior action:** ${slots.priorActions}`);
   if (slots.policySection) lines.push(`**Policy:** ${slots.policySection}, as you said`);
   if (slots.warningLevel) {
     const label = slots.warningLevel === "verbal" ? "Verbal Warning" : "Written Warning";
@@ -470,9 +696,11 @@ function proposalFor(slots: FormRemapSlots): ChatFormProposal {
     employeeRoleSource: slots.jobTitle ? "manager" : null,
     ...(slots.closeMatchNote ? { closeMatchNote: slots.closeMatchNote } : {}),
     formDate: slots.incidentDateIso,
+    incidentTime: slots.incidentTime,
     payrollDeduct: slots.payrollDeduct,
     warningLevel: slots.warningLevel,
     issue: slots.observation,
+    priorActions: slots.priorActions,
     locationId: slots.locationId,
     locationName: slots.store,
     locationResolution: located ? "resolved" : "needs_selection",
