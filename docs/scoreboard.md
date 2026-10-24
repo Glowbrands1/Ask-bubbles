@@ -119,10 +119,22 @@ is not the employee.
 ## Round 1 — name, date slot, and store — 24 Oct 2026
 
 Compared with the guide v3 NEW column above. Same 18 cases, same wording,
-3 runs. `SELF_CHECK_ENABLED` is off. The flag set is unchanged:
-`TYPED_NAME_ENABLED`, `ACTION_PLAN_SENTENCES_ENABLED`,
-`PRINTED_PAGE_ONLY_ENABLED`, `POLICY_CITATION_ENABLED`,
-`PAYROLL_DEDUCT_AMOUNT_ENABLED`, `ANTI_LOOP_ENABLED`.
+3 runs, local harness only (in-memory database, model not called). The
+preview deployment was not used: it shares the production database.
+
+Flag set for this replay, assigned explicitly:
+
+| Variable | Value |
+| --- | --- |
+| `TYPED_NAME_ENABLED` | `1` |
+| `ACTION_PLAN_SENTENCES_ENABLED` | `1` |
+| `PRINTED_PAGE_ONLY_ENABLED` | `1` |
+| `POLICY_CITATION_ENABLED` | `1` |
+| `PAYROLL_DEDUCT_AMOUNT_ENABLED` | `1` |
+| `ANTI_LOOP_ENABLED` | `1` |
+| `SELF_CHECK_ENABLED` | `false` |
+
+`false` is off. Self-check does not run. No other chat-quality flag was set.
 
 Targeted cases: s5, s8, s9, s11, s12, s16, s17, s21, s27.
 
@@ -153,3 +165,7 @@ pass. No case gained a miss. No reply leaked repair text. The slowest case
 is 149ms against a previous max of 150ms. Every case stays within 25% of
 its previous max (the largest move is b11, 10ms to 12ms). Policy pages and
 the s4 payroll amount line are unchanged and were not this round.
+
+Replayed again on `3d3f3fd` with the flag values in the table above,
+`SELF_CHECK_ENABLED=false`. Same pass and fail on every case. No new miss.
+Slowest case 150ms. Largest move against the round above is b10, 78ms to 80ms.
