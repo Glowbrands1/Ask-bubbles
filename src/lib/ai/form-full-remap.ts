@@ -297,27 +297,25 @@ function isTemplate(value: string | null | undefined): value is TemplateKey {
 }
 
 function templateFromUser(text: string): TemplateKey | null {
-  // A discipline word is the Corrective Action Form. "coaching" later in the
-  // same note must not switch it to the Coaching Form. "coached on the 2nd"
-  // is a prior step, not a request for that form.
-  if (/\b(?:verbal|written|warnings?|corrective\s+actions?|write-?ups?|written\s+up|final\s+warnings?|terminations?|demotions?)\b/i.test(text)) {
-    return "dpoa";
-  }
-  const hits: { index: number; key: TemplateKey }[] = [];
+  // A named form wins, last one typed. "Create a Coaching Form" stays that
+  // form even if the note also says "verbal". "coached on the 2nd" is a prior
+  // step, not a request for the Coaching Form.
+  const named: { index: number; key: TemplateKey }[] = [];
   const add = (re: RegExp, key: TemplateKey) => {
-    for (const match of text.matchAll(re)) hits.push({ index: match.index ?? 0, key });
+    for (const match of text.matchAll(re)) named.push({ index: match.index ?? 0, key });
   };
   add(/\bfollow[- ]up coaching\b/gi, "follow-up-coaching");
   add(/\bpolicy review\b/gi, "policy-review");
-  add(/\bcorrective action\b|\bwrite-?up\b/gi, "dpoa");
-  add(/\bcoaching form\b|\bcoaching\b/gi, "coaching");
-  const followUps = hits.filter((hit) => hit.key === "follow-up-coaching");
-  const kept = hits.filter((hit) => {
-    if (hit.key !== "coaching") return true;
-    return !followUps.some((follow) => hit.index >= follow.index && hit.index < follow.index + 24);
-  });
-  kept.sort((a, b) => a.index - b.index);
-  return kept.at(-1)?.key ?? null;
+  add(/\bcorrective actions?\b|\bwrite-?ups?\b|\bwritten up\b/gi, "dpoa");
+  add(/\bcoaching form\b/gi, "coaching");
+  if (named.length > 0) {
+    named.sort((a, b) => a.index - b.index);
+    return named.at(-1)!.key;
+  }
+  // No form was named. A discipline word is the Corrective Action Form.
+  if (/\b(?:verbal|written|warnings?|final\s+warnings?|terminations?|demotions?)\b/i.test(text)) return "dpoa";
+  if (/\bcoaching\b/i.test(text)) return "coaching";
+  return null;
 }
 
 function groundedName(proposed: string | null, turns: readonly string[]): string | null {
