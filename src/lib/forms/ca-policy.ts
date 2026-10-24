@@ -1,4 +1,5 @@
 import { JOIN } from "./bounded-context";
+import { LATE_TO_OPEN, lateOpenOn } from "./late-open";
 import {
   findManualSection,
   isApprovedPolicyManualTitle,
@@ -394,11 +395,22 @@ const LATENESS = /\b(?:late|lateness|tardy|tardiness|left early|leaving early|cl
 const LATE_OPENING =
   /\b(?:late[- ]open(?:ing|ed)?|open(?:ed|ing)? (?:the |our |her |his |their )?(?:store|location|shop|makery|doors)(?:\s+late)?|(?:scheduled|supposed|assigned|due) to open|opener|opening shift|failed to open|did(?:n't|n’t| not) open)/i;
 
+/**
+ * "late to open" and "opened late" with no place named are a late opening
+ * too (QA, 24 Oct 2026; LATE_OPEN_DATE_ENABLED). "Late for her shift" is not.
+ */
+const OPENED_LATE = /\bopen(?:ed|ing)\s+late\b/i;
+
+function opensLate(text: string): boolean {
+  if (LATE_OPENING.test(text)) return true;
+  return lateOpenOn() && (LATE_TO_OPEN.test(text) || OPENED_LATE.test(text));
+}
+
 /** Offense key for a store that opened late. Not the Tardiness box. */
 export const LATE_OPENING_OFFENSE = "late_opening";
 
 export function describesLateOpening(rawText: string): boolean {
-  return LATE_OPENING.test(normalize(rawText));
+  return opensLate(normalize(rawText));
 }
 
 /**
@@ -407,7 +419,7 @@ export function describesLateOpening(rawText: string): boolean {
  * account also describes an absence.
  */
 function attendanceOffenseKeys(text: string, missed: boolean): string[] | null {
-  const opening = LATE_OPENING.test(text);
+  const opening = opensLate(text);
   const absent = ABSENCE.test(text) || missed;
   const late = !opening && LATENESS.test(text);
   if (!opening && !absent && !late) return null;

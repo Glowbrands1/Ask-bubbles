@@ -1,6 +1,7 @@
 import { payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { extractFormDate, listIncidentDates } from "@/lib/forms/form-date-answer";
+import { lateOpenOn, yearlessCuedDates } from "@/lib/forms/late-open";
 import { payrollDeductAmount } from "@/lib/forms/payroll-deduct";
 import { statedPayrollDeduct } from "@/lib/forms/payroll-deduct-answer";
 import { statedWarningLevel, warningLevelFromTurns } from "@/lib/forms/warning-level";
@@ -242,6 +243,11 @@ function slashDate(iso: string): string {
 }
 
 function lastUnyearDated(text: string, today: string): string | null {
+  // "late to open 10-19", "change the date to 10-22": any date cue, and never a future day (LATE_OPEN_DATE_ENABLED).
+  if (lateOpenOn()) {
+    const iso = yearlessCuedDates(text, today).at(-1)?.iso;
+    return iso ? slashDate(iso) : null;
+  }
   let last: string | null = null;
   for (const match of text.matchAll(/\b(?:on|dated?)\s+(\d{1,2})-(\d{1,2})(?!\d)/gi)) {
     const formatted = calendarDay(Number(match[1]), Number(match[2]), today);

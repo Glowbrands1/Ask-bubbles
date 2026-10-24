@@ -63,6 +63,8 @@
 
 import { headingOf, isPageFooter } from "@/lib/ingestion/extract/pdf-sections";
 
+import { describesAttendanceToo, LATE_TO_OPEN, lateOpenOn } from "./late-open";
+
 /* ------------------------------------------------------------- identity --- */
 
 /**
@@ -843,7 +845,7 @@ export function sectionHeadingsFor(input: {
 
   const notes = input.notes ?? "";
   const described = DESCRIBED_SECTIONS.filter(
-    (rule) => input.offenseKeys.includes(rule.offenseKey) && rule.describes.test(notes),
+    (rule) => input.offenseKeys.includes(rule.offenseKey) && describesRule(rule, notes),
   ).map((rule) => [...rule.headings]);
 
   return [...described, ...ticked];
@@ -902,6 +904,49 @@ const DESCRIBED_SECTIONS: readonly {
     headings: ["Seminar/Webinar Attendance"],
   },
 ];
+
+const LATE_OPENING = "Late Opening";
+
+/**
+ * "late to open" and "opened late" describe the Late Opening section under
+ * the Tardiness box too, with LATE_OPEN_DATE_ENABLED (QA, 24 Oct 2026;
+ * ported from Ask Sunny). See `late-open.ts`.
+ */
+function describesRule(rule: (typeof DESCRIBED_SECTIONS)[number], notes: string): boolean {
+  if (rule.describes.test(notes)) return true;
+  return (
+    lateOpenOn() &&
+    rule.offenseKey === "tardiness" &&
+    rule.headings.includes(LATE_OPENING) &&
+    (LATE_TO_OPEN.test(notes) || /\bopen(?:ed|ing)\s+late\b/i.test(notes))
+  );
+}
+
+function describesLateOpening(notes: string): boolean {
+  const rule = DESCRIBED_SECTIONS.find((entry) => entry.offenseKey === "tardiness" && entry.headings.includes(LATE_OPENING));
+  return rule ? describesRule(rule, notes) : false;
+}
+
+/**
+ * A LATE OPENING CITES LATE OPENING ONLY (LATE_OPEN_DATE_ENABLED).
+ *
+ * Under the Tardiness box a late opening cited Late Opening and Attendance.
+ * HR, 21 Oct 2026 (conv_mvifqra017j15ld8): "noted tardiness/leaving early vs
+ * late open policy pg.15". When the account is a late opening and nothing
+ * else the Attendance section governs (a late shift, an absence), Attendance
+ * is dropped — only once Late Opening itself was found, so a manual without
+ * that section still cites one. Ported from Ask Sunny.
+ */
+export function withoutAttendanceForLateOpening<T extends { readonly heading: string }>(
+  sections: readonly T[],
+  notes: string | null | undefined,
+): T[] {
+  const text = notes ?? "";
+  if (!lateOpenOn() || !text.trim()) return [...sections];
+  if (!sections.some((section) => headingKey(section.heading) === headingKey(LATE_OPENING))) return [...sections];
+  if (!describesLateOpening(text) || describesAttendanceToo(text)) return [...sections];
+  return sections.filter((section) => headingKey(section.heading) !== "attendance");
+}
 
 /**
  * Every section heading the manual prints on a sheet, as it prints it — the
@@ -1053,7 +1098,7 @@ export function manualSectionsFor(input: {
     found.push(section);
   }
 
-  return found;
+  return withoutAttendanceForLateOpening(found, input.notes);
 }
 
 /** The first section the ticked boxes point at, or none. */
