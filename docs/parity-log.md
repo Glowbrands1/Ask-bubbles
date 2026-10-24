@@ -217,14 +217,16 @@ row passed into that check use the printed page only. The PDF sheet
 number is not treated as the printed page. Off, either number still passes.
 
 On `TYPED_NAME_ENABLED`, one close roster match is the note "Woven has
-**X** — say so if that's who you mean. Carry on; do not wait." The card
-in that same turn uses the typed name. The note is not asked again. A
-name Woven does not list is not mentioned. Two different close matches
-are still a question. A job title the manager typed is the title on the
-form, including where Woven verified a different one. "based", a state
-code from `COMPANY_LOCATIONS`, and a span that uses a word of the JBA
-manual title ("workplace policy", "JBA Manual") are not a person and not
-a store. Off, "Did you mean" and the Woven title still win.
+Jane Doe" under the card. The card in that same turn uses the typed
+name. The note is not a question and does not block the card. A name
+Woven does not list has no note. Two different close matches are still
+a question. A job title the manager typed is the title on the form,
+including where Woven verified a different one. "based", a state code
+from `COMPANY_LOCATIONS`, and a span that uses a word of the JBA manual
+title ("workplace policy", "JBA Manual") are not a person and not a
+store. Off, "Did you mean" and the Woven title still win. Ask Sunny
+`main` at `b9ae362` still asks "Did you mean" for one close name; this
+short under-card note is not ported.
 
 ## 24 Oct 2026: payroll deduction amount
 

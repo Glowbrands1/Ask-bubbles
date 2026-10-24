@@ -200,8 +200,10 @@ export function draftMergeEnabled(): boolean {
 /**
  * A name the manager typed is the name on the form. Off, a close roster
  * match still asks "Did you mean", and a state or a document title can
- * still be offered as a person. On, one close roster name is a note, not
- * a question, and the card uses the typed spelling.
+ * still be offered as a person. On, one close roster name is a short note
+ * under the card ("Woven has Jane Doe"), not a question and not a block.
+ * The card in that same turn uses the typed spelling. No note when nothing
+ * on the roster is close. Two different close matches are still a question.
  */
 export function typedNameEnabled(): boolean {
   return envFlag("TYPED_NAME_ENABLED");

@@ -180,16 +180,26 @@ export function MessageBubble({
             records only its own reference (`instanceRefFor`).
           */}
           {proposalsOf(message).map((proposal, index) => (
-            <FormProposalCard
-              key={proposal.proposalId}
-              proposal={proposal}
-              instanceRef={instanceRefFor(message, proposal.proposalId)}
-              conversation={conversation ?? []}
-              // A picker choice names one form; it can only ever be the first card.
-              consumePickerChoice={index === 0 ? consumePickerChoice : undefined}
-              onCreated={(reference) => onFormCreated?.(message.id, reference)}
-              onStartAnother={onStartAnother}
-            />
+            <React.Fragment key={proposal.proposalId}>
+              <FormProposalCard
+                proposal={proposal}
+                instanceRef={instanceRefFor(message, proposal.proposalId)}
+                conversation={conversation ?? []}
+                // A picker choice names one form; it can only ever be the first card.
+                consumePickerChoice={index === 0 ? consumePickerChoice : undefined}
+                onCreated={(reference) => onFormCreated?.(message.id, reference)}
+                onStartAnother={onStartAnother}
+              />
+              {/*
+                One close Woven name, under the card. The reply above does not
+                ask it. Absent when nothing on the roster is close.
+              */}
+              {proposal.closeMatchNote ? (
+                <p className="mt-2 text-xs text-muted-foreground" data-woven-close-note="">
+                  {proposal.closeMatchNote}
+                </p>
+              ) : null}
+            </React.Fragment>
           ))}
           {proposalsOf(message).length === 0 && message.formInstanceRef ? (
             /*

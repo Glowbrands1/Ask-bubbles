@@ -163,8 +163,16 @@ export function applyGroundedProposal(
   const singleClose = typedNameEnabled() ? /^Did you mean \*\*([^*]+)\*\*\?/.exec(content.trim()) : null;
   const typedClose = singleClose ? (/couldn't find \*\*([^*]+)\*\*/.exec(content)?.[1]?.trim() ?? null) : null;
   if (singleClose) {
-    const suggested = singleClose[1]!.trim();
-    if (!content.includes(`Woven has **${suggested}**`)) content = wovenCloseNote(suggested);
+    if (response.formProposal) {
+      // The note is rendered under the card. The question does not stay in the reply.
+      content = content
+        .split("\n\n")
+        .filter((block) => !/^Did you mean \*\*[^*]+\*\*\?/.test(block.trim()))
+        .join("\n\n")
+        .trim();
+    } else if (!content.startsWith("Woven has ")) {
+      content = wovenCloseNote(singleClose[1]!.trim());
+    }
   } else if (input.prep.ambiguous.length > 1 || content.startsWith("Did you mean **")) {
     content = labelDuplicateQuestion(content, input.people, input.prep.ambiguousTyped);
   }
@@ -199,6 +207,17 @@ export function applyGroundedProposal(
       input.prep.unmatched.some((name) => name.toLowerCase() === currentName.toLowerCase())
     ) {
       proposal = clearEmployee(proposal);
+    }
+  }
+
+  if (typedNameEnabled() && proposal.employeeName && !input.rosterEmpty) {
+    const close = matchEmployeeName(proposal.employeeName, input.people);
+    if (close.kind === "unchecked" && close.closeName) {
+      proposal = { ...proposal, closeMatchNote: wovenCloseNote(close.closeName) };
+    } else if (proposal.closeMatchNote) {
+      const rest = { ...proposal };
+      delete rest.closeMatchNote;
+      proposal = rest;
     }
   }
 
