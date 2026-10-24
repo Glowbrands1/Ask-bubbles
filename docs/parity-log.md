@@ -481,3 +481,18 @@ existing copy. A named store is not asked again. Empire, SD is not a store.
 Pau dropped the Colene location mapping prep. Grand Forks, Fargo, Raymore,
 and Empire, SD are probably test data. The review migration is not in this
 tree. No location row is written. No production data is written.
+
+## 24 Oct 2026: prompt caching
+
+The answering prompt is split. The instruction body is the cacheable
+prefix. The listener's name, today's date, and their location follow
+`---DYNAMIC---`. `callClaude` sends the prefix as a text block with
+`cache_control: { type: "ephemeral" }` and the tail as a second block
+with no breakpoint. The marker is not sent. No rule sentence was
+rewritten.
+
+Ask Sunny is not updated. Its `buildSystemPrompt` still opens with the
+listener line, and its `call-claude` still sends `system` as one string.
+There is no `---DYNAMIC---` cut on Sunny's `main` or on
+`cursor/edition-supersession-6d4a`. Port the cut with Sunny's next
+prompt round. No salon wording was copied.

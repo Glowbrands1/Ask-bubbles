@@ -279,3 +279,30 @@ each run, matched.
 | Sync guard, 2024 manual beside May 2025 | flag off, pending ingest | pending none, older_edition |
 | Identical section text | both copies | newest edition only (ce6b00f1) |
 | Preview | returns before the edition hold | returns before the edition hold |
+
+## Round 1 item 9 — prompt caching — 24 Oct 2026
+
+Local harness only. The model is not called. No production query. The
+stand-in client in `src/lib/ai/prompt-cache-replay.test.ts` returns usage
+from the blocks `callClaude` actually sent, at one token per four
+characters. It waits that long before resolving, which is the first-token
+time: the whole prompt when nothing is cached, and only the tail on a
+cache read. Three runs matched.
+
+The static block is the instruction body, through the voice rules. It has
+no listener name, no today's date, and no location name. Those sentences
+are unchanged and follow `---DYNAMIC---`. The marker is not sent.
+`cache_control` is `{ type: "ephemeral" }` on the static block only. The
+tail has none.
+
+A repeated prompt is what produces a cache read. A different answer mode
+or a different attached section still changes the prefix.
+
+| Call | cache_creation_input_tokens | cache_read_input_tokens | First token |
+| --- | --- | --- | --- |
+| OLD, one string, no cache | 0 | 0 | 55 ms |
+| NEW, 1st call | 1815 | 0 | 55 ms |
+| NEW, later calls | 0 | 1815 | 13 ms |
+
+Card replay pass/fail is unchanged. The form card does not read this
+prompt, and the round 1 table above keeps the same expectations.

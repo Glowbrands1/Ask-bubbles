@@ -9,6 +9,7 @@ import {
   buildGroundingBlock,
   buildReportsGuideSection,
   buildSystemPrompt,
+  splitSystemPrompt,
   extractUsedMarkers,
   stripMarkers,
   type GroundingChunk,
@@ -501,5 +502,36 @@ describe("Sunny chat and forms rules stay behind the existing flags", () => {
     expect(prompt).not.toContain("ask before relying on it.");
     expect(prompt).not.toContain("I couldn't find");
     expect(prompt).not.toContain("salon");
+  });
+});
+
+describe("the cacheable instruction omits the listener", () => {
+  it("keeps every sentence and moves the name, the date, and the location after the marker", () => {
+    const prompt = buildSystemPrompt({
+      assistantName: "Bubbles",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
+      locationNoun: "store",
+      context: CONTEXT,
+      mode: "standard",
+      hasContext: true,
+    });
+    const parts = splitSystemPrompt(prompt);
+    expect(parts).not.toBeNull();
+    const { staticBlock, dynamicTail } = parts!;
+    expect(staticBlock).not.toContain("Dana Reyes");
+    expect(staticBlock).not.toContain("Testville Downtown");
+    expect(staticBlock).not.toContain("2026-08-29");
+    expect(staticBlock).not.toContain("Today is");
+    expect(staticBlock).not.toContain("who works at");
+    expect(staticBlock).toContain("today's date above");
+    expect(dynamicTail).toBe(
+      "You are talking to Dana Reyes, who works at Testville Downtown. Today is Saturday, 2026-08-29 (business time zone America/Chicago; yesterday was 2026-08-28).",
+    );
+    const breakAt = staticBlock.indexOf("\n");
+    const legacy = `${staticBlock.slice(0, breakAt)} ${dynamicTail}${staticBlock.slice(breakAt)}`;
+    expect(legacy.startsWith("You are Bubbles, the internal assistant for Buff City Soap teams. You are talking to Dana Reyes, who works at Testville Downtown. ")).toBe(true);
+    expect(legacy).not.toContain("---DYNAMIC---");
+    expect(prompt).toContain("Never invent a document title, a page number");
   });
 });

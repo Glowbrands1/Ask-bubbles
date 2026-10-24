@@ -47,6 +47,23 @@ export const MEMORY_SECTION = "WHAT THIS MANAGER TOLD YOU BEFORE";
 /** Exported so a test can assert the real text rather than a paraphrase. */
 export const ASSISTANT_VOICE_RULES = ASSISTANT_VOICE;
 
+/**
+ * Splits the system prompt into the cacheable instruction and the per-turn
+ * tail. The marker is not sent to the model. It is only the cut.
+ */
+export const DYNAMIC_PROMPT_MARKER = "---DYNAMIC---";
+
+/** The instruction body, then the listener line. Null when this prompt has no cut. */
+export function splitSystemPrompt(prompt: string): { staticBlock: string; dynamicTail: string } | null {
+  const marker = `\n\n${DYNAMIC_PROMPT_MARKER}\n`;
+  const index = prompt.indexOf(marker);
+  if (index < 0) return null;
+  return {
+    staticBlock: prompt.slice(0, index),
+    dynamicTail: prompt.slice(index + marker.length),
+  };
+}
+
 const MODE_INSTRUCTION: Record<AnswerMode, string> = {
   quick:
     "Answer in two or three sentences. Lead with the answer itself. No preamble, no headings.",
@@ -427,8 +444,12 @@ ${input.styleRules ? `${FORM_LIBRARY_DETAIL_RULES}\n` : ""}- Knowledge base docu
 
   const userName = promptLabel(context.userName) || "a team member";
   const locationName = promptLabel(context.locationName);
+  // The listener, today's date, and their location change every turn. They sit
+  // after the marker so the instruction above can be cached. The sentences
+  // themselves are the ones this prompt already used.
+  const dynamicTail = `You are talking to ${userName}${locationName ? `, who works at ${locationName}` : ""}. ${todayLine(context.todayIso)}`;
 
-  return `You are ${assistantName}, the internal assistant for ${brandName} teams. You are talking to ${userName}${locationName ? `, who works at ${locationName}` : ""}. ${todayLine(context.todayIso)}
+  return `You are ${assistantName}, the internal assistant for ${brandName} teams.
 
 ${purpose}
 
@@ -462,7 +483,10 @@ ${hasContext ? "" : "IMPORTANT: no company documents matched this question. You 
 
 ${ASSISTANT_TONE} ${MODE_INSTRUCTION[mode]}
 
-${ASSISTANT_VOICE_RULES}`;
+${ASSISTANT_VOICE_RULES}
+
+${DYNAMIC_PROMPT_MARKER}
+${dynamicTail}`;
 }
 
 /**
