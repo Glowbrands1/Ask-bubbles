@@ -309,6 +309,16 @@ export function formFullRemapEnabled(): boolean {
 }
 
 /**
+ * When the form extraction cannot read this conversation's own turns (no
+ * signed-in account, no conversation id, or the store read fails), it reads
+ * only the current question. Off, it reads the history the browser sent,
+ * which can hold a turn from a different chat.
+ */
+export function formRemapStrictScopeEnabled(): boolean {
+  return envFlag("FORM_REMAP_STRICT_SCOPE_ENABLED");
+}
+
+/**
  * Put the current brand manual in a cached system block for a policy
  * question. Off, retrieval and citation display stay as they are.
  *
@@ -362,4 +372,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PROMPT_CACHE_ENABLED",
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
+  "FORM_REMAP_STRICT_SCOPE_ENABLED",
 ] as const;

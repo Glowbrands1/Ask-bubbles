@@ -66,6 +66,7 @@ import {
   typedNameEnabled,
   antiLoopEnabled,
   formFullRemapEnabled,
+  formRemapStrictScopeEnabled,
   fullManualContextEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
@@ -278,7 +279,13 @@ async function answerQuestionBody(
       })
     ) {
       const roster = await loadRosterQuiet(actor);
-      let history: { role: string; content: string }[] = request.history;
+      /*
+       * The browser's history can carry a turn from a different chat. Only
+       * `historyForRemap` can tell, so when it cannot run (or fails) the
+       * strict-scope flag reads the current question alone.
+       */
+      const unscoped = formRemapStrictScopeEnabled() ? [] : request.history;
+      let history: { role: string; content: string }[] = unscoped;
       let saved: Partial<FormRemapSlots> | null = null;
       if (actor.subject && request.conversationId) {
         try {
@@ -290,8 +297,9 @@ async function answerQuestionBody(
           history = scoped.history;
           saved = scoped.saved;
         } catch {
-          // A store miss keeps this request's own history. It does not read another chat.
-          history = request.history;
+          // A failed read does not use another chat's saved slots. With the
+          // strict-scope flag off it keeps the browser history as sent.
+          history = unscoped;
         }
       }
       const remapped = await remapFormTurn({

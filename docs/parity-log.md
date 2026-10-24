@@ -6,6 +6,28 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: the form remap fallback does not read another chat — ported from Ask Sunny
+
+New flag `FORM_REMAP_STRICT_SCOPE_ENABLED`, default off. With
+`FORM_FULL_REMAP_ENABLED` on, `historyForRemap` drops a browser turn whose id
+is stored on a different conversation. When it cannot run (no signed-in
+subject, no conversation id) or its read fails, `server-ask.ts` used the
+browser history as sent. A $40 payroll chat at Bellevue, NE then filled the
+next chat's card with Bellevue (`loc-67`) and October 1, although that chat
+said 10-20 (`src/lib/ai/form-remap-request.test.ts`). On, that fallback reads
+only the current question and no saved slots. Off, nothing changes.
+
+The same file runs one request through `answerQuestion` with the remap on and
+checks that `historyForRemap` read this conversation id and that the remap,
+not the proposal path, answered. `conv-remap-carryover.dom.test.tsx` is the
+Sunny carryover test with this app's stores (Bellevue, Kearney `loc-66`,
+Grand Island `loc-236`), including no saved slots on a new conversation's
+first turn.
+
+**Sibling app: ported from Ask Sunny** `837dbd4` (local branch
+`test/carryover-sunny`, not yet on Sunny's `main`). No Sun Tan City salon
+names were copied.
+
 ## 24 Oct 2026: a later form turn keeps what was already said
 
 `FORM_FULL_REMAP_ENABLED` stays off. On, each turn reads every user message
