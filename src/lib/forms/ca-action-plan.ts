@@ -9,7 +9,7 @@ import {
   quotedDeductionAmount,
   type PayrollDeductAnswer,
 } from "./payroll-deduct";
-import { actionPlanSentencesEnabled } from "@/lib/config/chat-quality-flags";
+import { actionPlanSentencesEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
 import { CA_ACTION_PLAN_CLOSING, withRequiredClosing } from "./required-closing";
 
 /**
@@ -133,9 +133,14 @@ export interface ActionPlanInput {
 export function correctiveActionPlan(input: ActionPlanInput): string {
   const firstName = employeeFirstName(input.employeeName);
   const names = input.citedPolicies.length > 0 ? input.citedPolicies : policyNamesFromViolated(input.policyViolated);
+  /*
+   * The amount field holds the figure. The plan does not repeat it, and it
+   * does not take the figure a cited section states.
+   */
+  const amount = payrollDeductAmountFieldEnabled() ? null : input.payroll.amount;
   const deduction = actionPlanSentencesEnabled()
     ? null
-    : payrollDeductSentence({ answer: input.payroll.answer, amount: input.payroll.amount, firstName });
+    : payrollDeductSentence({ answer: input.payroll.answer, amount, firstName });
   const sentences = [
     `Management will review ${policyPhrase(names)} with ${firstName ?? "the employee"}.`,
     deduction,
@@ -161,8 +166,10 @@ export function actionPlanProvenance(input: ActionPlanInput): Record<string, unk
 /**
  * The amount the plan states, and where it came from: the manager's, else —
  * on a Yes, and only while ACTION_PLAN_SENTENCES_ENABLED is off — the one
- * the quoted section states (`quotedDeductionAmount`). The flag stops that
- * "$25.00" from being filled in when the manager did not state an amount.
+ * the quoted section states (`quotedDeductionAmount`). The sentences flag
+ * stops that "$25.00" from being filled in when the manager did not state an
+ * amount. The amount-field flag keeps every figure off the plan: the stated
+ * amount stays on Payroll deduction amount, and the quoted $25.00 is not used.
  */
 export function planPayrollAmount(input: {
   readonly answer: PayrollDeductAnswer | null;
@@ -170,6 +177,7 @@ export function planPayrollAmount(input: {
   /** Direct policy's value, only where it was quoted from the manual. */
   readonly quotedPolicy: string | null;
 }): { amount: string | null; amountFrom?: "manager" | "manual" } {
+  if (payrollDeductAmountFieldEnabled()) return { amount: null };
   if (input.stated) return { amount: input.stated, amountFrom: "manager" };
   if (actionPlanSentencesEnabled()) return { amount: null };
   const quoted = input.answer === "yes" ? quotedDeductionAmount(input.quotedPolicy) : null;

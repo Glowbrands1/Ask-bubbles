@@ -1,12 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { extractText, getDocumentProxy } from "unpdf";
 
+import { augmentIntakeQuestion, fieldLines } from "@/lib/ai/intake-augment";
+import { captureFormState, prependFormState, rememberPayrollAmount } from "@/lib/ai/form-state";
+import { corroborateModelFields, EMPTY_CONFIRMED_FIELDS, fieldsFromManagerText } from "@/lib/ai/form-field-state";
+import type { FormToolTurn } from "@/lib/ai/form-tool-schema";
 import type { AccessScope, ChatMessage } from "@/types";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import { rosterResultFor } from "@/test/roster-result";
 
 import { parseFormDocument } from "./document";
 import { selectStatedFacts } from "./employment-change";
+import { correctiveActionPlan, planPayrollAmount } from "./ca-action-plan";
 import { correctiveActionDocument } from "./library";
 import { payrollDeductAmount, quotedDeductionAmount } from "./payroll-deduct";
 import {
@@ -14,6 +19,7 @@ import {
   PAYROLL_DEDUCT_AMOUNT_LABEL,
   PAYROLL_DEDUCT_AMOUNT_QUESTION,
   PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
+  payrollAmountForDraft,
   payrollAmountPrompt,
   statedPayrollDeductAmount,
   withPayrollDeductAmountField,
@@ -78,23 +84,17 @@ function blockKeys(document: ReturnType<typeof parseFormDocument>): string[] {
   });
 }
 
-describe("the amount line stays off the seeded document", () => {
-  it("is absent from the Corrective Action seed even when the flag is on", () => {
-    setFlag(true);
-    expect(JSON.stringify(correctiveActionDocument())).not.toContain(PAYROLL_DEDUCT_AMOUNT_KEY);
-    expect(JSON.stringify(correctiveActionDocument())).not.toContain(PAYROLL_DEDUCT_AMOUNT_LABEL);
-  });
-
-  it("leaves the document unchanged when the flag is off", () => {
-    setFlag(false);
+describe("the amount line is on the Corrective Action seed", () => {
+  it("does not insert a second copy when the flag is on or off", () => {
     const document = parseFormDocument(correctiveActionDocument());
+    setFlag(false);
     expect(withPayrollDeductAmountField(document)).toBe(document);
-    expect(blockKeys(document).some((key) => key.includes(PAYROLL_DEDUCT_AMOUNT_KEY))).toBe(false);
+    setFlag(true);
+    expect(withPayrollDeductAmountField(document)).toBe(document);
   });
 
-  it("places Payroll deduction amount immediately after the Yes/No question", () => {
-    setFlag(true);
-    const document = withPayrollDeductAmountField(parseFormDocument(correctiveActionDocument()));
+  it("places Payroll deduction amount immediately after the Yes/No question, as a manager field", () => {
+    const document = parseFormDocument(correctiveActionDocument());
     const keys = blockKeys(document);
     const payroll = keys.indexOf("group:payroll_deduct");
     expect(keys[payroll + 1]).toBe(`field:${PAYROLL_DEDUCT_AMOUNT_KEY}`);
@@ -145,16 +145,51 @@ describe("the amount is the manager's, never the policy's", () => {
     expect(kept.values[PAYROLL_DEDUCT_AMOUNT_KEY]).toBeUndefined();
   });
 
-  it("refuses the key on the seeded document when the flag is off", () => {
+  it("does not write an amount when the flag is off, and does not take the Late Opening $25", () => {
     setFlag(false);
-    const selected = selectStatedFacts({
-      document: parseFormDocument(correctiveActionDocument()),
-      variantKey: null,
-      stated: { values: { [PAYROLL_DEDUCT_AMOUNT_KEY]: "$3.25" }, checked: {} },
-      existing: [],
-      keys: PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
-    });
-    expect(selected.values).toEqual({});
+    expect(
+      payrollAmountForDraft({
+        notes: `${LATE_OPENING}\n${MANAGER_AMOUNT}`,
+        saved: "$3.25",
+        existing: null,
+      }),
+    ).toBeNull();
+    setFlag(true);
+    expect(
+      payrollAmountForDraft({
+        notes: `${LATE_OPENING}\npayroll deduct yes`,
+        saved: null,
+        existing: null,
+      }),
+    ).toBeNull();
+    expect(
+      payrollAmountForDraft({
+        notes: LATE_OPENING,
+        saved: LATE_OPENING,
+        existing: null,
+      }),
+    ).toBeNull();
+    expect(
+      payrollAmountForDraft({
+        notes: "she was late again. payroll deduct yes",
+        saved: "$3.25",
+        existing: null,
+      }),
+    ).toBe("$3.25");
+    expect(
+      payrollAmountForDraft({
+        notes: MANAGER_AMOUNT,
+        saved: "$9.00",
+        existing: null,
+      }),
+    ).toBe("$3.25");
+    expect(
+      payrollAmountForDraft({
+        notes: "she was late again",
+        saved: "$9.00",
+        existing: "$3.25",
+      }),
+    ).toBeNull();
   });
 });
 
@@ -229,18 +264,20 @@ async function pdfText(bytes: Uint8Array) {
 }
 
 describe("the PDF", () => {
-  it("omits the line when the flag is off", async () => {
-    setFlag(false);
+  it("prints the blank line from the template and does not invent $25", async () => {
     const text = await pdfText(
       renderFormPdf(parseFormDocument(correctiveActionDocument()), null, { values: {}, checked: {} }, META),
     );
-    expect(text).toContain("Is payroll deduct applicable?");
-    expect(text).not.toContain(PAYROLL_DEDUCT_AMOUNT_LABEL);
+    const payroll = text.indexOf("Is payroll deduct applicable?");
+    const amount = text.indexOf(PAYROLL_DEDUCT_AMOUNT_LABEL);
+    expect(payroll).toBeGreaterThan(-1);
+    expect(amount).toBeGreaterThan(payroll);
+    expect(text).not.toContain("$25.00");
+    expect(text).not.toContain("$3.25");
   });
 
-  it("prints the label and the manager's amount when the flag is on", async () => {
-    setFlag(true);
-    const document = withPayrollDeductAmountField(parseFormDocument(correctiveActionDocument()));
+  it("prints the label and the manager's amount", async () => {
+    const document = parseFormDocument(correctiveActionDocument());
     const text = await pdfText(
       renderFormPdf(
         document,
@@ -258,6 +295,83 @@ describe("the PDF", () => {
     expect(amount).toBeGreaterThan(payroll);
     expect(text).toContain("$3.25");
     expect(text).not.toContain("$25.00");
+  });
+});
+
+describe("the amount is never in the action plan and is never the policy's $25", () => {
+  it("leaves a stated $3.25 and a quoted $25.00 off the plan while the flag is on", () => {
+    setFlag(true);
+    const plan = correctiveActionPlan({
+      citedPolicies: ["Late Opening"],
+      employeeName: "Pat Rivera",
+      payroll: { answer: "yes", amount: "$3.25", amountFrom: "manager" },
+    });
+    expect(plan).not.toContain("$3.25");
+    expect(plan).not.toContain("$25");
+    expect(
+      planPayrollAmount({ answer: "yes", stated: "$3.25", quotedPolicy: LATE_OPENING }),
+    ).toEqual({ amount: null });
+    expect(
+      planPayrollAmount({ answer: "yes", stated: null, quotedPolicy: LATE_OPENING }),
+    ).toEqual({ amount: null });
+
+    setFlag(false);
+    expect(
+      planPayrollAmount({ answer: "yes", stated: null, quotedPolicy: LATE_OPENING }).amount,
+    ).toBe("$25.00");
+  });
+
+  it("keeps a stated amount on chat_form_state when a later turn does not repeat it", () => {
+    setFlag(true);
+    expect(rememberPayrollAmount({ prior: null, userText: LATE_OPENING, payroll: "yes" })).toBeNull();
+    const first = captureFormState(null, {
+      proposal: { payrollDeduct: "yes", templateKey: "dpoa" } as never,
+      employeeId: null,
+      keptTypedName: null,
+      userText: `${LATE_OPENING}\n${MANAGER_AMOUNT}`,
+      policyHeading: null,
+      policyPage: null,
+    });
+    expect(first.payrollAmount).toBe("$3.25");
+    const redraft = captureFormState(first, {
+      proposal: null,
+      employeeId: null,
+      keptTypedName: null,
+      userText: "she opened late again and guests waited",
+      policyHeading: null,
+      policyPage: null,
+    });
+    expect(redraft.payrollAmount).toBe("$3.25");
+    expect(payrollDeductAmount(prependFormState("please redraft", redraft))).toBe("$3.25");
+    const cleared = captureFormState(redraft, {
+      proposal: { payrollDeduct: "no" } as never,
+      employeeId: null,
+      keptTypedName: null,
+      userText: "no payroll deduction",
+      policyHeading: null,
+      policyPage: null,
+    });
+    expect(cleared.payrollAmount).toBeNull();
+  });
+
+  it("does not copy a policy $25 into the next question, and does copy a stated amount", () => {
+    setFlag(true);
+    expect(fieldLines("payroll deduct yes", "2026-10-24", LATE_OPENING).join(" ")).not.toContain("25");
+    expect(fieldLines("payroll deduct yes", "2026-10-24", MANAGER_AMOUNT).join(" ")).toContain(
+      "Payroll deduction of $3.25",
+    );
+    const base = fieldsFromManagerText(`${LATE_OPENING}\npayroll deduct yes`, "2026-10-24");
+    const model = { payrollAmount: "$25.00" } as FormToolTurn["fields"];
+    expect(corroborateModelFields(base, model, `${LATE_OPENING}\npayroll deduct yes`, "2026-10-24").payrollAmount).toBeNull();
+    const carried = augmentIntakeQuestion({
+      slots: true,
+      fields: false,
+      question: "she was late again",
+      history: [],
+      today: "2026-10-24",
+      stored: { ...EMPTY_CONFIRMED_FIELDS, payrollDeduct: "yes", payrollAmount: "$3.25" },
+    });
+    expect(carried).toContain("Payroll deduction of $3.25.");
   });
 });
 

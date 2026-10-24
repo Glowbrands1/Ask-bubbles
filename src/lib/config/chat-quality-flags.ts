@@ -217,9 +217,11 @@ export function printedPageOnlyEnabled(): boolean {
 
 /**
  * A Corrective Action line for the payroll amount, immediately after the
- * Yes/No question. Off, the document, the card, the question, and the PDF
- * stay as they are. On, the line is blank unless the manager stated an
- * amount — a figure in the cited policy is never written into it.
+ * Yes/No question. The seed document includes the line. It is not published
+ * to the database from this change. Off, chat does not ask for an amount and
+ * does not fill one. On, the line is filled only from an amount the manager
+ * stated — a figure in the cited policy is never written into it, and the
+ * action plan does not repeat it.
  */
 export function payrollDeductAmountFieldEnabled(): boolean {
   return envFlag("PAYROLL_DEDUCT_AMOUNT_ENABLED");
