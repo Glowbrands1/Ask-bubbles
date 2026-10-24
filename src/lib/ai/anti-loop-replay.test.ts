@@ -109,9 +109,18 @@ interface Snap {
   verification: string | null;
 }
 
+/**
+ * The system prompt before commit 295d573 (parent 655a61d). That commit is
+ * the only edit to `prompts.ts` after main. With these two switches off,
+ * `buildSystemPrompt` is that text. The card runner does not read it.
+ */
+const LAST_KNOWN_GOOD_PROMPT = "655a61dbebccd34405b53e40e0566a294120b0b8";
+
 interface CaseResult {
   id: string;
   flags: "off" | "on";
+  prompt: "current" | "lkg";
+  promptSha256: string;
   run: number;
   pass: boolean;
   misses: string[];
@@ -330,8 +339,8 @@ function applyFlags(on: boolean) {
   }
 }
 
-function promptHash(on: boolean): string {
-  const prompt = buildSystemPrompt({
+function systemPrompt(arm: "current" | "lkg"): string {
+  return buildSystemPrompt({
     assistantName: ACTIVE_BRAND.assistantName,
     brandName: ACTIVE_BRAND.brandName,
     productName: ACTIVE_BRAND.productName,
@@ -339,10 +348,14 @@ function promptHash(on: boolean): string {
     context: { userName: "Test Manager", locationName: "", todayIso: TODAY },
     mode: "standard",
     hasContext: true,
-    typedName: on,
-    policyCitation: on,
+    // The last-known-good arm is the pre-295d573 text. Flags stay on either way.
+    typedName: arm === "current",
+    policyCitation: arm === "current",
   });
-  return createHash("sha256").update(prompt).digest("hex");
+}
+
+function promptHash(arm: "current" | "lkg"): string {
+  return createHash("sha256").update(systemPrompt(arm)).digest("hex");
 }
 
 beforeEach(async () => {
@@ -372,8 +385,9 @@ afterAll(() => {
     JSON.stringify(
       {
         replaySetSha256: createHash("sha256").update(readFileSync(file)).digest("hex"),
-        promptSha256FlagsOn: promptHash(true),
-        promptSha256FlagsOff: promptHash(false),
+        lastKnownGoodPromptCommit: LAST_KNOWN_GOOD_PROMPT,
+        promptSha256Current: promptHash("current"),
+        promptSha256LastKnownGood: promptHash("lkg"),
         configuredModel: CLAUDE_MODEL,
         runner: replaySet.runner,
         temperature: replaySet.temperature,
@@ -385,28 +399,60 @@ afterAll(() => {
   );
 });
 
-async function score(flags: "on" | "off", runs: number) {
+async function score(flags: "on" | "off", runs: number, prompt: "current" | "lkg") {
   applyFlags(flags === "on");
+  const promptSha256 = promptHash(prompt);
   for (let run = 1; run <= runs; run += 1) {
     for (const spec of cases) {
       const started = performance.now();
       const { snaps, events } = await replay(spec.turns);
       const latencyMs = performance.now() - started;
       const misses = judge(spec, snaps, latencyMs);
-      results.push({ id: spec.id, flags, run, pass: misses.length === 0, misses, events, latencyMs });
+      results.push({
+        id: spec.id,
+        flags,
+        prompt,
+        promptSha256,
+        run,
+        pass: misses.length === 0,
+        misses,
+        events,
+        latencyMs,
+      });
     }
   }
 }
 
-describe("anti-loop replay b9–b12", () => {
-  it("passes every flags-on run and records flags-off without requiring it to pass", async () => {
-    await score("on", replaySet.runsRequired);
-    const on = results.filter((row) => row.flags === "on");
-    const failed = on.filter((row) => !row.pass);
-    expect(failed.map((row) => `${row.id}#${row.run}: ${row.misses.join("; ")}`)).toEqual([]);
-    expect(on).toHaveLength(cases.length * replaySet.runsRequired);
+function missCount(rows: CaseResult[]): number {
+  return Math.max(...rows.map((row) => row.misses.length));
+}
 
-    await score("off", 1);
+describe("anti-loop replay b9–b12", () => {
+  it("scores the current prompt and the last-known-good prompt on the same code and flags", async () => {
+    const currentText = systemPrompt("current");
+    const lkgText = systemPrompt("lkg");
+    expect(lkgText).toContain("ask for their full name");
+    expect(lkgText).not.toContain("Use it exactly as typed");
+    expect(currentText).toContain("Use it exactly as typed");
+    expect(currentText).toContain("Every form cites the policy by its name and printed page");
+    expect(currentText).not.toBe(lkgText);
+
+    await score("on", replaySet.runsRequired, "current");
+    await score("on", replaySet.runsRequired, "lkg");
+
+    const current = results.filter((row) => row.flags === "on" && row.prompt === "current");
+    const lkg = results.filter((row) => row.flags === "on" && row.prompt === "lkg");
+    const failed = current.filter((row) => !row.pass);
+    expect(failed.map((row) => `${row.id}#${row.run}: ${row.misses.join("; ")}`)).toEqual([]);
+    expect(current).toHaveLength(cases.length * replaySet.runsRequired);
+    expect(lkg).toHaveLength(cases.length * replaySet.runsRequired);
+
+    const oldBetter = cases
+      .filter((spec) => missCount(lkg.filter((row) => row.id === spec.id)) < missCount(current.filter((row) => row.id === spec.id)))
+      .map((spec) => spec.id);
+    expect(oldBetter, "last-known-good prompt scored better; revert those prompt sections and keep the code fixes").toEqual([]);
+
+    await score("off", 1, "lkg");
     const off = results.filter((row) => row.flags === "off");
     expect(off).toHaveLength(cases.length);
   });

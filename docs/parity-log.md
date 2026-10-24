@@ -287,3 +287,8 @@ shown. A date on the card is ISO. A policy page comes from the heading's
 printed page on the chunks in hand. Off, two close matches are still a
 question, and an unmatched town in a state still asks with the stores in
 that state.
+
+The system prompt before `295d573` (`655a61d`) was scored against the
+current prompt on the same code and the same flags. The card runner does
+not read the system prompt. Neither arm scored better. The prompt
+sections stay. Ask Sunny was not changed.
