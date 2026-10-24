@@ -533,6 +533,17 @@ describe("based, state codes, and policy phrases are not a person or a store", (
       ).join(" "),
     ).toMatch(/sadie hoffart/i);
     expect(extractJobTitle("do verbal for team member sadie hoffart at empire, sd")).toBe("Team Member");
+    // The store word is not the employee. The name after the title is.
+    expect(
+      extractEmployeeNames(
+        "create a coaching form for bellevue team member, casey quinn, who was talking on her cell phone for 25 minutes on 9-29-26 when customers were waiting to check in",
+      ).join(" "),
+    ).toMatch(/casey quinn/i);
+    expect(
+      extractEmployeeNames(
+        "create a coaching form for bellevue team member, casey quinn, who was talking on her cell phone for 25 minutes on 9-29-26 when customers were waiting to check in",
+      ).join(" "),
+    ).not.toMatch(/bellevue/i);
   });
 
   it("flag on, workplace policy is not a store", () => {

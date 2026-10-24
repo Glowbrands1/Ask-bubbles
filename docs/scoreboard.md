@@ -69,3 +69,49 @@ better on any case, so those sections stay.
 | b12 Sadie Hoffart, Empire SD | PASS 3/3. Slowest run 48ms. | PASS 3/3. Slowest run 55ms. |
 
 No prompt section was reverted. The fixes stay in code.
+
+## Round — guide v3, old behaviour against the rulebook flags — 24 Oct 2026
+
+The 18 turns are the Buff City cases b9–b12 and the 14 adapted chats, word
+for word, three runs each. Local harness only. Empty roster. Owner with
+global scope. Today 2026-10-24. The model is not called. A rule counts only
+when all three runs agree, and they did.
+
+Scored against the guide: employee on the card, the typed name kept, store
+not a gate, the date the manager gave, policy name and printed page, a
+two-sentence action plan with no payroll sentence, a payroll amount only
+when the manager stated one, no blocking question, no leaked repair text,
+and the case under 8000ms.
+
+| | |
+| --- | --- |
+| OLD | `main` `655a61dbebccd34405b53e40e0566a294120b0b8`, every flag off |
+| NEW | this branch, `TYPED_NAME_ENABLED`, `ACTION_PLAN_SENTENCES_ENABLED`, `PRINTED_PAGE_ONLY_ENABLED`, `POLICY_CITATION_ENABLED`, `PAYROLL_DEDUCT_AMOUNT_ENABLED`, `ANTI_LOOP_ENABLED` |
+| runs | 3 per case, per column |
+| latency | slowest case 57ms. Budget 8000ms. Both columns pass it. |
+
+| Case | OLD | NEW | |
+| --- | --- | --- | --- |
+| b9 Test Employee | FAIL. No name. Asks who. No plan. Standards of Conduct page missing. | FAIL. Name, date, blank store, and the two-sentence plan are kept. The printed page is not in the reply. | better |
+| b10 Testy Testerson, Dodge | FAIL. Name and Dodge are kept. No plan. Page missing. | FAIL. Plan is two sentences. Page missing. | better |
+| b11 Testy Testerson, Attendance | FAIL. No name. No plan. Page missing. | FAIL. Name, Dodge, 2026-10-20, and the plan are kept. Page missing. | better |
+| b12 Sadie Hoffart | FAIL. No name. Role read as Store Director. Date 2025-11-01. Asks who. | FAIL. Typed name, 2026-10-22, blank store, and the plan are kept. Page missing. | better |
+| s4 Test Testy, Kearney, $25 | FAIL. No plan. No payroll amount. Page missing. | FAIL. Plan is two sentences and does not contain the amount. $25 is in the reply and not on the payroll amount line. Page missing. | better |
+| s9 Ima Employee | FAIL. Name shortened to ima. Date is the prior coaching. No plan. | FAIL. Full name kept. Date is still 2026-09-01. Page missing. | better |
+| s11 Casey Quinn, Bellevue | FAIL. Employee read as bellevue. No store. | FAIL. casey quinn stays. The store is still blank. Cell Phone page missing. | better |
+| s5 Dana Moss | FAIL. Name is dana. Asks which store. No date. | FAIL. Store is Bellevue and nothing asks which store. Name is still dana. No date. | better |
+| s27 Pat Rivera | FAIL. Employee is Sam Lee. Asks which store and who. No plan. | FAIL. No store question. Employee is still Sam Lee. No date. Page missing. | better |
+| s28 Pat Rivera | FAIL. Asks which store. No plan. Page missing. | FAIL. Name and 2026-09-28 kept. Page missing. | better |
+| s29 Pat Rivera | FAIL. Asks which store. No plan. | PASS. | better |
+| s17 Riley Quinn | FAIL. Asks which store. No date. No plan. | FAIL. Name and plan kept. Date missing. | better |
+| s20 worksheet, then exit | PASS. No false employee. | PASS. | same |
+| s21 Alex Morgan | FAIL. No plan. No store chosen. | FAIL. Plan kept. Store stays blank, and the reply does not ask which store. | better |
+| s25 Jamye Cole | FAIL. Asks who. Asks which store. No plan. | PASS. | better |
+| s8 Morgan Blake, exit | FAIL. No name. Asks who. Date missing. | FAIL. Same misses. Lee's Summit is on the card. | same |
+| s12 Casey Quinn, exit | FAIL. Date missing. | FAIL. Name and Kearney kept. Date missing. | same |
+| s16 Quinn Adler, exit | FAIL. Date missing. | FAIL. Name and Kearney kept. Date missing. | same |
+
+14 better, 4 same, 0 worse. Nothing on NEW fails a rule that OLD passed.
+The one case that asked which store after the name was dropped, s11, keeps
+casey quinn. A city from this company's store list, followed by a job title,
+is not the employee.

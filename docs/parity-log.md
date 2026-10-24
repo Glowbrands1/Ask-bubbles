@@ -351,3 +351,14 @@ Skipped, and why:
   pinned.
 - Sunny's shorter facsimile-form rule. This prompt's list is the longer
   one and stays.
+
+## 24 Oct 2026: a store word before a title is not the employee
+
+`TYPED_NAME_ENABLED`. "create a coaching form for bellevue team member,
+casey quinn, who was talking on her cell phone…" keeps casey quinn. The
+city word is taken from this company's store names, and it is dropped only
+when the turn also names a person. A city that is the only name in the
+turn is still kept.
+
+Ask Sunny reads salons in `salon-mention.ts`, not this store list. The
+same sentence is not ported. No salon name was copied.
