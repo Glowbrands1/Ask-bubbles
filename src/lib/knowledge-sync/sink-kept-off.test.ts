@@ -65,7 +65,11 @@ describe("a live document may share a superseded hash", () => {
     const sink = createSupabaseKnowledgeSink("woven");
     const keptOff = sink.keptOff;
     expect(keptOff).toBeTypeOf("function");
+    // Line 115: a live indexed row that shares 25eb4afd's hash stays searchable.
     expect(await keptOff!({ documentId: LIVE_ID, contentHash: HASH })).toBeNull();
+    // The superseded document itself stays off before that live-copy exception.
+    expect(await keptOff!({ documentId: SUPERSEDED_ID, contentHash: HASH })).toBe("record");
+    // A re-file of the same hash whose own row is missing stays off.
     expect(await keptOff!({ documentId: "refiled-not-indexed", contentHash: HASH })).toBe("content");
   });
 });

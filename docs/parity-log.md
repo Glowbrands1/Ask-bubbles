@@ -500,8 +500,10 @@ this flag is on; off, that typo is still "is that the store?" and the
 location stays empty. The nickname "the island" is a test index, not a
 Buff City nickname in `COMPANY_LOCATION_NICKNAMES`. Empire, SD is not a
 store. A typo at the end of an earlier paragraph is still read after turns
-are joined. Ask Sunny is not updated for that reader or for the non-blocking
-ask.
+are joined. A name that is not on the Woven roster stays the typed
+string, and the store question still does not block the draft. Ask Sunny
+is not updated for that reader, for the non-blocking ask, or for that
+typed-name check.
 
 Pau dropped the Colene location mapping prep. Grand Forks, Fargo, Raymore,
 and Empire, SD are probably test data. The review migration is not in this

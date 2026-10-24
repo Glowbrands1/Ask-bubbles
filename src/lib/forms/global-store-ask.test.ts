@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { DirectoryRosterRow } from "@/lib/forms/employee-roster";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { buildStoreIndex, type StoreIndex } from "@/lib/stores/resolver";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
@@ -52,11 +53,14 @@ async function propose(input: {
   history?: ChatMessage[];
   antiLoop?: boolean;
   ask?: boolean;
+  typedName?: boolean;
   storeIndex?: StoreIndex;
 }) {
   process.env.GLOBAL_STORE_ASK_ENABLED = input.ask === false ? "false" : "1";
   if (input.antiLoop) process.env.ANTI_LOOP_ENABLED = "1";
   else delete process.env.ANTI_LOOP_ENABLED;
+  if (input.typedName) process.env.TYPED_NAME_ENABLED = "1";
+  else delete process.env.TYPED_NAME_ENABLED;
   delete process.env.SELF_CHECK_ENABLED;
   return proposeFormForTurn({
     history: input.history ?? [],
@@ -100,6 +104,7 @@ afterEach(() => {
   vi.useRealTimers();
   delete process.env.GLOBAL_STORE_ASK_ENABLED;
   delete process.env.ANTI_LOOP_ENABLED;
+  delete process.env.TYPED_NAME_ENABLED;
   delete process.env.SELF_CHECK_ENABLED;
 });
 
@@ -238,6 +243,7 @@ describe("global store ask", () => {
       if (response?.formProposal) {
         expect(response.formProposal.status, question).toBe("ready");
         expect(response.formProposal.supportsInlineDraft, question).toBe(true);
+        expect(response.formProposal.employeeName, question).toBe("Sarah Test");
       }
       history = [
         ...history,
@@ -259,6 +265,7 @@ describe("global store ask", () => {
   it("keeps the card ready so the draft can be created without a store answer", async () => {
     const response = await propose({ role: "district_manager" });
     const proposal = response?.formProposal;
+    expect(proposal?.employeeName).toBe("Sarah Test");
     expect(proposal?.status).toBe("ready");
     expect(proposal?.supportsInlineDraft).toBe(true);
     expect(proposal?.locationId ?? null).toBeNull();
@@ -268,7 +275,7 @@ describe("global store ask", () => {
     const created = await createInstance({
       templateKey: proposal!.templateKey,
       variantKey: proposal!.variantKey ?? null,
-      employeeName: proposal!.employeeName ?? "Sarah Test",
+      employeeName: proposal!.employeeName!,
       employeeRole: proposal!.employeeRole,
       locationId: proposal!.locationId,
       createdBy: "manager-1",
@@ -278,8 +285,61 @@ describe("global store ask", () => {
       proposalId: proposal!.proposalId,
     });
     expect(created.status).toBe("draft");
+    expect(created.employeeName).toBe("Sarah Test");
     expect(created.locationId).toBeNull();
     expect(created.id).toBeTruthy();
+  });
+
+  it("uses a typed name that is not in Woven, and the store question still does not block the form", async () => {
+    const woven: DirectoryRosterRow = {
+      id: "e-jane",
+      firstName: "Jane",
+      lastName: "Doe",
+      preferredFirstName: null,
+      employmentStatus: "active",
+      locationIds: ["loc-264"],
+      positionName: "Team Member",
+      lastSyncedAt: "2026-10-24T17:00:00Z",
+    };
+    state.directory = [woven];
+    const response = await propose({ role: "district_manager", typedName: true });
+    const proposal = response?.formProposal;
+    expect(proposal?.employeeName).toBe("Sarah Test");
+    expect(proposal?.employeeName).not.toBe("Jane Doe");
+    expect(proposal?.status).toBe("ready");
+    expect(proposal?.status).not.toBe("needs_employee");
+    expect(proposal?.supportsInlineDraft).toBe(true);
+    expect(response?.content).toContain(GLOBAL_STORE_ASK_TAG);
+    expect(response?.content ?? "").not.toMatch(/Did you mean/i);
+    expect(response?.content ?? "").not.toMatch(/not on the form/i);
+    expect(authorizeLocation(GLOBAL, proposal?.locationId ?? null).kind).not.toBe("refused");
+
+    const created = await createInstance({
+      templateKey: proposal!.templateKey,
+      variantKey: proposal!.variantKey ?? null,
+      employeeName: proposal!.employeeName!,
+      employeeRole: proposal!.employeeRole,
+      locationId: proposal!.locationId,
+      createdBy: "manager-1",
+      createdByRole: "district_manager",
+      source: "assistant",
+      formDate: TODAY,
+      proposalId: proposal!.proposalId,
+    });
+    expect(created.status).toBe("draft");
+    expect(created.employeeName).toBe("Sarah Test");
+    expect(created.locationId).toBeNull();
+
+    const later = await propose({
+      role: "district_manager",
+      typedName: true,
+      question: "she was talking about customers",
+      history: historyFrom(ASK, response),
+    });
+    expect(later?.formProposal?.employeeName).toBe("Sarah Test");
+    expect(later?.formProposal?.status).toBe("ready");
+    expect(later?.formProposal?.supportsInlineDraft).toBe(true);
+    expect(later?.content ?? "").not.toContain(GLOBAL_STORE_ASK_TAG);
   });
 
   it("does not ask again after the store is given", async () => {
