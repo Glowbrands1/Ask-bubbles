@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RosterEmployee } from "@/lib/forms/employee-match";
 
 import { groundFormSlots, remapFormTurn } from "./form-full-remap";
+import { keepThisConversation } from "./form-remap-scope";
 
 /**
  * FORM_FULL_REMAP: one extraction, then only what the manager said.
@@ -202,6 +203,120 @@ describe("form full remap", () => {
     expect(response.formProposal?.employeeName).toBe("Kaitln Brook");
     expect(response.formProposal?.closeMatchNote).toBe("Woven has Kaitlyn Brook");
     expect(response.content).not.toContain("Woven has");
+  });
+
+  it("conv_mvmj6v1t250hfij keeps 10/11 on the next turn", () => {
+    // The production service key is not readable from this agent, so this is
+    // the date the live turn read and then asked for again.
+    const first = groundFormSlots({
+      raw: raw({ observation: null, warningLevel: null, payrollDeduct: null, payrollAmount: null }),
+      history: [],
+      question: "10/11",
+      today: TODAY,
+      people: [JANE],
+      continueTemplateKey: "dpoa",
+    });
+    expect(first.slots.incidentDateIso).toBe("2026-10-11");
+
+    const second = groundFormSlots({
+      raw: raw({
+        observation: null,
+        incidentDateIso: null,
+        warningLevel: null,
+        payrollDeduct: null,
+        payrollAmount: null,
+        store: null,
+      }),
+      history: [{ role: "user", content: "10/11" }],
+      question: "prior = manual ack 9/01",
+      today: TODAY,
+      people: [JANE],
+      continueTemplateKey: "dpoa",
+      saved: first.slots,
+    });
+    expect(second.slots.incidentDateIso).toBe("2026-10-11");
+    expect(second.slots.priorActions).toContain("prior = manual ack 9/01");
+    expect(second.response.content).not.toContain("Which date should go on the form?");
+    expect(second.response.formProposal?.formDate).toBe("2026-10-11");
+  });
+
+  it("conv_mvmj7ifs9oosat5 maps the stated fields onto the corrective action card", () => {
+    const question = [
+      "verbal",
+      "prior = manual ack 9/01",
+      "coached on 2nd",
+      "no payroll",
+      "cell phone 30+ min",
+      "10-20",
+      "Grand Island",
+    ].join("\n");
+    const { slots, response } = groundFormSlots({
+      raw: raw({
+        templateKey: "coaching",
+        warningLevel: null,
+        payrollDeduct: null,
+        payrollAmount: null,
+        observation: null,
+        store: "Omaha",
+        employeeName: null,
+      }),
+      history: [],
+      question,
+      today: TODAY,
+      people: [JANE],
+    });
+    const card = response.formProposal;
+    expect(slots.templateKey).toBe("dpoa");
+    expect(card?.templateName).toBe("Corrective Action Form");
+    expect(card?.templateName).not.toMatch(/Coaching Form/);
+    expect(card?.warningLevel).toBe("verbal");
+    expect(card?.priorActions).toContain("prior = manual ack 9/01");
+    expect(card?.priorActions).toContain("coached on 2nd");
+    expect(card?.payrollDeduct).toBe("no");
+    expect(card?.issue).toBe("cell phone 30+ min");
+    expect(card?.incidentTime).toBe("10-20");
+    expect(card?.locationId).toBe("loc-236");
+    expect(card?.locationName).toMatch(/Grand Island/);
+    // "9/01" dates the prior acknowledgement, not this form.
+    expect(slots.incidentDateIso).toBeNull();
+    expect(card?.formDate ?? null).toBeNull();
+    expect(response.content).not.toMatch(/Which store\?|What happened\?|Verbal or written\?|Is payroll deduct applicable\?/);
+    expect(response.content).not.toMatch(/Kearney|Bellevue/);
+  });
+
+  it("conv_mvmj8a26gtq901w does not take Kearney or Bellevue from another conversation", () => {
+    const foreign = new Set(["msg-kearney", "msg-bellevue"]);
+    const history = keepThisConversation(
+      [
+        { id: "msg-kearney", role: "user", content: "corrective action at Kearney" },
+        { id: "msg-bellevue", role: "user", content: "change store to Bellevue" },
+        { id: "msg-own", role: "user", content: "10/11" },
+      ],
+      foreign,
+    );
+    const { slots, response } = groundFormSlots({
+      raw: raw({
+        store: "Kearney",
+        observation: null,
+        warningLevel: null,
+        payrollDeduct: null,
+        payrollAmount: null,
+        employeeName: null,
+      }),
+      history,
+      question: "Grand Island",
+      today: TODAY,
+      people: [JANE],
+      continueTemplateKey: "dpoa",
+      saved: { incidentDateIso: "2026-10-11", templateKey: "dpoa", store: "Kearney, NE", locationId: "loc-66" },
+    });
+    expect(history.map((turn) => turn.content).join("\n")).not.toMatch(/Kearney|Bellevue/);
+    expect(slots.locationId).toBe("loc-236");
+    expect(slots.store).toMatch(/Grand Island/);
+    expect(slots.incidentDateIso).toBe("2026-10-11");
+    expect(response.content).not.toMatch(/Kearney|Bellevue/);
+    expect(response.content).not.toContain("Which date should go on the form?");
+    expect(response.content).not.toContain("Which store?");
   });
 
   it("does not call the model when the flag is off", async () => {

@@ -73,7 +73,8 @@ import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./fo
 import { loadConversationFormState, saveConversationFormState } from "./form-state-store";
 import { formCommandBypassesSearch, routeUnderstoodFormTurn } from "./form-tool-route";
 import { understandFormTurn } from "./form-tool-understand";
-import { remapFormTurn } from "./form-full-remap";
+import { remapFormTurn, remapShouldRun, type FormRemapSlots } from "./form-full-remap";
+import { historyForRemap } from "./form-remap-scope";
 import { augmentIntakeQuestion } from "./intake-augment";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import { prepareLongContext } from "./long-context-claude";
@@ -261,14 +262,38 @@ async function answerQuestionBody(
     });
     if (inventoryAnswer) return inventoryAnswer;
 
-    if (formFullRemapEnabled()) {
-      const roster = await loadRosterQuiet(actor);
-      const remapped = await remapFormTurn({
+    if (
+      formFullRemapEnabled() &&
+      remapShouldRun({
         question: request.question,
         history: request.history,
+        formsTurn,
+      })
+    ) {
+      const roster = await loadRosterQuiet(actor);
+      let history: { role: string; content: string }[] = request.history;
+      let saved: Partial<FormRemapSlots> | null = null;
+      if (actor.subject && request.conversationId) {
+        try {
+          const scoped = await historyForRemap({
+            userId: actor.subject,
+            conversationId: request.conversationId,
+            history: request.history,
+          });
+          history = scoped.history;
+          saved = scoped.saved;
+        } catch {
+          // A store miss keeps this request's own history. It does not read another chat.
+          history = request.history;
+        }
+      }
+      const remapped = await remapFormTurn({
+        question: request.question,
+        history,
         today: request.context.todayIso,
         continueTemplateKey: request.continueProposalTemplateKey ?? null,
         people: roster,
+        saved,
       });
       if (remapped) return remapped;
     }

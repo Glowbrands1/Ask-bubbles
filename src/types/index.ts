@@ -605,6 +605,17 @@ export interface ChatFormProposal {
    */
   issue?: string | null;
   /**
+   * The Corrective Action Form's prior-actions line, in the manager's words
+   * ("prior = manual ack 9/01"). Optional so older proposals still read.
+   * The create path files it on `prior_actions` when that field exists.
+   */
+  priorActions?: string | null;
+  /**
+   * A time the manager stated ("10-20") that is not the form's calendar date.
+   * Dashed month-day without a year is a time or a range, not a date.
+   */
+  incidentTime?: string | null;
+  /**
    * THE PART OF A MESSAGE THIS PROPOSAL WAS READ FROM, by message id, when one
    * message asked for more than one form. "coaching form for Avery and a CA for
    * Jordan" is one message and two proposals; each drafts from its own clause
