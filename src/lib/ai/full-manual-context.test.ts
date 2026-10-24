@@ -21,6 +21,30 @@ const BCS_SHIRTS = "Any BCS Employee can wear any plain black, white, or gray t-
 const CRUNCH_PANTS = "Yoga pants, joggers, or sweats are approved for Instructors ONLY";
 const STC_SHIRTS = "Any STC Employee can wear any Branded top or black collared or black t-shirt";
 
+/**
+ * Printed pages the manual records for a fixture chunk.
+ *
+ * `chunk.p` is the printed page of the headings ingestion stored on that
+ * chunk. Crunch shirts and pants are the next printed page: they share a
+ * chunk with Jewelry, whose footer is 16, and the sheet index of that chunk
+ * is 17. Company dress code and Hair stay on 15.
+ */
+function sectionsFor(chunk: { p: string; h: string[]; c: string }): { heading: string; page: number }[] {
+  const printed = Number(chunk.p);
+  const sections = chunk.h.map((heading) => ({ heading, page: printed }));
+  if (chunk.c.includes("All Locations Dress Code:")) {
+    sections.push({ heading: "All Locations Dress Code", page: printed });
+  }
+  if (chunk.c.includes("approved for Instructors ONLY")) {
+    sections.push(
+      { heading: "Crunch Fitness Specific Dress Code", page: printed },
+      { heading: "Shirts", page: printed + 1 },
+      { heading: "Pants", page: printed + 1 },
+    );
+  }
+  return sections;
+}
+
 function manual(overrides: Partial<FullManualDocument> = {}): FullManualDocument {
   return {
     id: "81622d77-ee6c-55f6-904d-dee057907a13",
@@ -36,6 +60,7 @@ function manual(overrides: Partial<FullManualDocument> = {}): FullManualDocument
       printedPage: Number(chunk.p),
       section: chunk.h[0] ?? null,
       headings: chunk.h,
+      sections: sectionsFor(chunk),
     })),
     ...overrides,
   };
@@ -342,11 +367,13 @@ const DRESS_CODE_QUESTION = "what's the dress code for Buff City Soap and Crunch
 const CELL_PHONE_QUESTION = "what's the cell phone policy?";
 
 const DRESS_CODE_ANSWER = [
-  "Buff City Soap employees can wear any plain black, white, or gray t-shirt.",
+  "Anyone violating their brand's dress code policy will be sent home to change into proper work attire.",
+  "Hair of all lengths and colors is acceptable when it is clean, groomed, and kept out of the employee's face and eyes.",
   "Jewelry that does not interfere with work is acceptable.",
   "Large, inappropriate, or offensive tattoos must be covered.",
-  "At Crunch, yoga pants, joggers, or sweats are approved for instructors only.",
-  "Buff City Soap pants are full length, and yoga pants, joggers or sweats are never to be worn while at work.",
+  "Buff City Soap employees can wear any plain black, white, or gray t-shirt.",
+  "The Crunch Fitness specific dress code applies at Crunch.",
+  "Crunch provides two uniform shirts, and yoga pants, joggers, or sweats are approved for instructors only.",
 ].join(" ");
 
 const CELL_PHONE_ANSWER =
@@ -411,8 +438,22 @@ describe("production chats cite printed pages", () => {
     expect(plan.ready).toBe(true);
     expect(brandChoice(DRESS_CODE_QUESTION)).toBe("all");
     const text = plan.cachedBlock ?? "";
-    expect(text).toContain("[p.16]");
-    expect(text).toContain("[p.17]");
+    const slice = (start: string, end: string) => {
+      const from = text.indexOf(start);
+      const to = text.indexOf(end, from + start.length);
+      return text.slice(from, to);
+    };
+    const company = slice("[p.15]", "[p.16]");
+    const jewelry = slice("[p.16]", "[p.17]");
+    const crunchClothes = slice("[p.17]", "[p.19]");
+    expect(company).toContain("All Locations Dress Code:");
+    expect(company).toContain("Hair");
+    expect(company).not.toContain("Jewelry/Accessories");
+    expect(jewelry).toContain("Jewelry/Accessories");
+    expect(jewelry).toContain("Crunch Fitness Specific Dress Code:");
+    expect(jewelry).not.toContain("approved for Instructors ONLY");
+    expect(crunchClothes).toContain("approved for Instructors ONLY");
+    expect(crunchClothes).toContain("Two uniform shirts");
     expect(text).toContain("[p.19]");
     expect(text).not.toContain("[p.20]");
     expect(text).not.toContain("[p.3]");
@@ -421,14 +462,46 @@ describe("production chats cite printed pages", () => {
     expect(text).not.toContain("[p.6]");
     expect(text).not.toContain("CONTENTS ROW ONLY");
     expect(text).not.toContain("Table of Contents");
+    expect(plan.index?.pages.has(15)).toBe(true);
     expect(plan.index?.pages.has(16)).toBe(true);
+    expect(plan.index?.pages.has(17)).toBe(true);
     expect(plan.index?.pages.has(19)).toBe(true);
     expect(plan.index?.pages.has(3)).toBe(false);
     expect(plan.index?.pages.has(6)).toBe(false);
     expect(plan.index?.pages.has(20)).toBe(false);
   });
 
-  it("conv_mvmkij8h2vdogs9 cites p.16 and p.17 for both brands, tattoos, and jewelry", () => {
+  it("does not cite the PDF sheet when the footer repeats it and the headings record page 15", () => {
+    const plan = planFullManualContext({
+      question: DRESS_CODE_QUESTION,
+      documents: [
+        manual({
+          chunks: [
+            {
+              chunkIndex: 44,
+              page: 16,
+              printedPage: 16,
+              locator: "Page 16 — Dress Code for The Company",
+              content:
+                "16 | P a g e\nDress Code for The Company\nThe Company Employees are to keep a neat, clean, professional appearance. Anyone violating their Brand’s Dress code policy will be sent home.\nHair\no Hair of all lengths and colors are acceptable as long as it is clean, groomed, and kept out of the employee’s face and eyes.",
+              headings: ["Dress Code for The Company", "Hair"],
+              sections: [
+                { heading: "Dress Code for The Company", page: 15 },
+                { heading: "Hair", page: 15 },
+              ],
+            },
+          ],
+        }),
+      ],
+    });
+    const text = plan.cachedBlock ?? "";
+    expect(text).toContain("[p.15]");
+    expect(text).not.toContain("[p.16]");
+    expect(text).not.toContain("[p.17]");
+    expect(text.indexOf("[p.15]")).toBeLessThan(text.indexOf("Hair"));
+  });
+
+  it("conv_mvmkij8h2vdogs9 cites printed p.15 and p.16, and p.17 only for Crunch shirts and pants", () => {
     const plan = planFullManualContext({ question: DRESS_CODE_QUESTION, documents });
     const cited = citePolicyAnswer(DRESS_CODE_ANSWER, plan);
     expect(cited.ok).toBe(true);
@@ -436,20 +509,21 @@ describe("production chats cite printed pages", () => {
     expect(cited.text).toMatch(/crunch/i);
     expect(cited.text).toMatch(/tattoo/i);
     expect(cited.text).toMatch(/jewelry/i);
-    expect(citedPages(cited.text)).toEqual(expect.arrayContaining([16, 17]));
-    const locators = cited.sources.map((source) => source.locator);
-    expect(locators.some((locator) => /Page 16 — Tattoos/.test(locator))).toBe(true);
-    expect(locators.some((locator) => /Page 16 — Jewelry/.test(locator))).toBe(true);
-    expect(locators.some((locator) => /Page 16 — Shirts/.test(locator))).toBe(true);
-    expect(locators.some((locator) => /Page 16 — Pants/.test(locator))).toBe(true);
-    expect(locators.some((locator) => /Page 17 — Pants/.test(locator))).toBe(true);
-    expect(locators.join("\n")).not.toMatch(/Full manual|Page 1\b|p\.1/);
-    expect(cited.sources.length).toBeGreaterThan(1);
-    expect(new Set(citedPages(cited.text))).toEqual(new Set([16, 17]));
-    for (const page of citedPages(cited.text)) {
-      expect(cited.sources.some((source) => source.printedPage === page)).toBe(true);
+    expect(cited.text).toMatch(/hair/i);
+    const pages = new Set(cited.sources.map((source) => source.printedPage));
+    expect(pages.has(15)).toBe(true);
+    expect(pages.has(16)).toBe(true);
+    expect([...pages].every((page) => page === 15 || page === 16 || page === 17)).toBe(true);
+    expect(new Set(citedPages(cited.text))).toEqual(pages);
+    expect(cited.sources.some((source) => source.printedPage === 15 && /Hair|Dress Code|All Locations/i.test(`${source.locator} ${source.excerpt}`))).toBe(true);
+    expect(cited.sources.some((source) => /Page 16 — Jewelry/.test(source.locator))).toBe(true);
+    expect(cited.sources.some((source) => source.printedPage === 16 && /Crunch Fitness Specific Dress Code|Tattoos/i.test(source.locator))).toBe(true);
+    for (const source of cited.sources) {
+      if (source.printedPage !== 17) continue;
+      expect(`${source.locator}\n${source.excerpt}`).toMatch(/Instructors ONLY|uniform shirts|Crunch Fitness/);
+      expect(source.excerpt).not.toMatch(/never to be worn|Sun Tan City/);
     }
-    expect(cited.sources.every((source) => source.printedPage === 16 || source.printedPage === 17)).toBe(true);
+    expect(cited.sources.map((source) => source.locator).join("\n")).not.toMatch(/Full manual|Page 1\b|p\.1/);
     expect(cited.text).not.toContain("[S");
   });
 

@@ -33,10 +33,17 @@ export interface FullManualChunk {
   readonly chunkIndex: number;
   readonly content: string;
   readonly locator?: string | null;
+  /** PDF sheet index. Not the number the manual prints. */
   readonly page?: number | null;
   readonly printedPage?: number | null;
   readonly section?: string | null;
   readonly headings?: readonly string[];
+  /**
+   * Heading and the page the manual prints it on. A chunk can open on one
+   * printed page and continue onto the next; the footer at the top is only
+   * the first of those.
+   */
+  readonly sections?: readonly { readonly heading: string; readonly page: number }[];
 }
 
 export interface FullManualDocument {
@@ -178,24 +185,56 @@ function footerPrintedPage(content: string): number | null {
   return null;
 }
 
+function positivePage(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
+}
+
+/** Distinct printed pages recorded for headings in this chunk, in first-seen order. */
+function recordedSectionPages(chunk: FullManualChunk): number[] {
+  const pages: number[] = [];
+  for (const entry of chunk.sections ?? []) {
+    const page = positivePage(entry.page);
+    if (page && !pages.includes(page)) pages.push(page);
+  }
+  return pages;
+}
+
 /**
  * The page number printed on the sheet.
  *
- * The footer ("16 | P a g e") wins. The stored printed page is next. The
- * PDF sheet number — `chunk.page`, or a locator that repeats it — is not
- * a citation.
+ * The footer ("15 | P a g e") wins, unless that footer repeats the PDF sheet
+ * index and the headings on the chunk all record a different page. Company
+ * dress code and Hair are printed 15; the sheet index 16 is not a citation.
+ * A locator that repeats `chunk.page` is the PDF sheet and is not used.
  */
 export function resolvePrintedPage(chunk: FullManualChunk): number | null {
   const footer = footerPrintedPage(chunk.content);
-  if (footer) return footer;
-  if (typeof chunk.printedPage === "number" && Number.isInteger(chunk.printedPage) && chunk.printedPage > 0) {
-    return chunk.printedPage;
+  const stored = positivePage(chunk.printedPage);
+  const pdf = positivePage(chunk.page);
+  const recorded = recordedSectionPages(chunk);
+  const footerIsPdf = footer !== null && pdf !== null && footer === pdf;
+  const storedIsPdf = footer === null && stored !== null && pdf !== null && stored === pdf;
+  if (recorded.length === 1 && recorded[0] !== (footer ?? stored) && (footerIsPdf || storedIsPdf)) {
+    return recorded[0]!;
   }
+  if (footer) return footer;
+  if (stored) return stored;
   const locator = chunk.locator?.match(/\bpage\s+(\d{1,3})\b/i);
   if (!locator) return null;
   const parsed = Number(locator[1]);
-  if (typeof chunk.page === "number" && parsed === chunk.page) return null;
+  if (pdf !== null && parsed === pdf) return null;
   return parsed;
+}
+
+/** The printed page ingestion recorded for this heading, if it recorded one. */
+function recordedHeadingPage(chunk: FullManualChunk, heading: string): number | null {
+  const key = normalizeHeading(heading);
+  for (const entry of chunk.sections ?? []) {
+    if (normalizeHeading(entry.heading) !== key) continue;
+    const page = positivePage(entry.page);
+    if (page) return page;
+  }
+  return null;
 }
 
 function skipContentsPage(chunk: FullManualChunk, page: number | null): boolean {
@@ -274,20 +313,6 @@ interface MutableIndex {
   headings: Map<number, Set<string>>;
 }
 
-function recordHeadings(index: MutableIndex, page: number | null, text: string, known: readonly string[]): void {
-  if (!page) return;
-  index.pages.add(page);
-  let set = index.headings.get(page);
-  if (!set) {
-    set = new Set();
-    index.headings.set(page, set);
-  }
-  for (const line of text.split("\n")) {
-    const heading = headingOf(line, known);
-    if (heading) set.add(normalizeHeading(heading));
-  }
-}
-
 function readingsFor(chunks: readonly FullManualChunk[], choice: ManualBrandChoice): string[] {
   const ordered = [...chunks].sort((left, right) => left.chunkIndex - right.chunkIndex);
   if (choice === "all") return ordered.map((chunk) => chunk.content);
@@ -347,46 +372,70 @@ export function rebuildManualText(
     passages.push({ printedPage: currentPage, heading: passageHeading, text, knownHeadings });
   };
 
+  let shown: string[] = [];
+  const flushShown = () => {
+    const text = shown.join("\n").trim();
+    shown = [];
+    if (text) blocks.push(text);
+  };
+  const moveTo = (page: number) => {
+    if (page === currentPage) return;
+    flush();
+    flushShown();
+    /*
+     * A heading belongs to the page it was printed on. Carrying the previous
+     * heading onto the next sheet labeled a later rule with the earlier section.
+     */
+    passageHeading = null;
+    blocks.push(`[p.${page}]`);
+    currentPage = page;
+    index.pages.add(page);
+  };
+
   for (let position = 0; position < ordered.length; position += 1) {
     const chunk = ordered[position]!;
     const page = resolvePrintedPage(chunk);
     if (skipContentsPage(chunk, page)) continue;
     const body = trimOverlap(previous, readings[position] ?? "");
     if (!body) continue;
-    if (page && page !== currentPage) {
-      flush();
-      /*
-       * A heading belongs to the page it was printed on. The next sheet often
-       * starts mid-paragraph, and keeping the old heading labeled that sheet
-       * with the previous section (a resignation rule became "Cell Phone").
-       */
-      passageHeading = null;
-      blocks.push(`[p.${page}]`);
-      currentPage = page;
-      index.pages.add(page);
-    }
+    if (page) moveTo(page);
     if (!page && !currentPage) {
       blocks.push(body);
       previous = body;
       continue;
     }
     for (const rawLine of body.split("\n")) {
-      if (isPageFooter(rawLine)) continue;
+      if (isPageFooter(rawLine)) {
+        shown.push(rawLine);
+        continue;
+      }
       const peeled = trailingHeading(rawLine, chunk.headings ?? []);
       const pieces = peeled ? [peeled.before, peeled.heading] : [rawLine];
+      for (const line of pieces) {
+        const heading = headingOf(line, chunk.headings ?? []);
+        if (!heading) continue;
+        const recorded = recordedHeadingPage(chunk, heading);
+        if (recorded) moveTo(recorded);
+      }
+      shown.push(rawLine);
       for (const line of pieces) {
         if (!line.trim()) continue;
         const heading = headingOf(line, chunk.headings ?? []);
         if (heading && normalizeHeading(heading) !== normalizeHeading(passageHeading ?? "")) {
           flush();
           passageHeading = heading;
+          if (currentPage) {
+            index.pages.add(currentPage);
+            const set = index.headings.get(currentPage) ?? new Set<string>();
+            set.add(normalizeHeading(heading));
+            index.headings.set(currentPage, set);
+          }
         }
         noteKnown(line, chunk.headings ?? []);
         passageLines.push(line);
       }
     }
-    recordHeadings(index, currentPage, body, chunk.headings ?? []);
-    blocks.push(body);
+    flushShown();
     previous = body;
   }
   flush();

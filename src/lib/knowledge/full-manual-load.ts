@@ -25,6 +25,21 @@ function readPrintedPage(metadata: Record<string, unknown> | null): number | nul
   return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
 }
 
+function readSections(metadata: Record<string, unknown> | null): { heading: string; page: number }[] {
+  const value = metadata?.sections;
+  if (!Array.isArray(value)) return [];
+  const sections: { heading: string; page: number }[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const heading = (entry as { heading?: unknown }).heading;
+    const page = (entry as { page?: unknown }).page;
+    if (typeof heading !== "string" || !heading.trim()) continue;
+    if (typeof page !== "number" || !Number.isInteger(page) || page <= 0) continue;
+    sections.push({ heading: heading.trim(), page });
+  }
+  return sections;
+}
+
 function readHeadings(metadata: Record<string, unknown> | null, section: string | null): string[] {
   const value = metadata?.sections;
   const fromSections = Array.isArray(value)
@@ -88,6 +103,7 @@ async function fetchIndexedManuals(scopeId: string): Promise<FullManualDocument[
         printedPage: readPrintedPage(chunk.metadata),
         section: chunk.section,
         headings: readHeadings(chunk.metadata, chunk.section),
+        sections: readSections(chunk.metadata),
       })),
     });
   }
