@@ -1,6 +1,8 @@
 import { MULTI_BRAND_MANUAL_TITLES, POLICY_MANUAL_BRAND_SCOPE } from "@/config/company/knowledge";
+import { isTableOfContents } from "@/lib/forms/official-policy-manual";
 import { readManualForBrand, isMultiBrandManual, type ManualBrandScope } from "@/lib/knowledge/brand-sections";
 import { estimateTokens } from "@/lib/ingestion/chunking";
+import { isPageFooter, printedPageOf } from "@/lib/ingestion/extract/pdf-sections";
 import type { KnowledgeCategory } from "@/types";
 
 import { normalizeMarkers } from "./prompts";
@@ -31,10 +33,17 @@ export interface FullManualChunk {
   readonly chunkIndex: number;
   readonly content: string;
   readonly locator?: string | null;
+  /** PDF sheet index. Not the number the manual prints. */
   readonly page?: number | null;
   readonly printedPage?: number | null;
   readonly section?: string | null;
   readonly headings?: readonly string[];
+  /**
+   * Heading and the page the manual prints it on. A chunk can open on one
+   * printed page and continue onto the next; the footer at the top is only
+   * the first of those.
+   */
+  readonly sections?: readonly { readonly heading: string; readonly page: number }[];
 }
 
 export interface FullManualDocument {
@@ -61,7 +70,29 @@ export interface FullManualSource {
   readonly locator: string;
   readonly excerpt: string;
   readonly category: KnowledgeCategory;
+  /** Printed page this source was built from. Absent on older callers. */
+  readonly printedPage?: number;
 }
+
+/** One section of the loaded manual, on the page the manual prints. */
+export interface ManualPassage {
+  readonly documentId: string;
+  readonly documentTitle: string;
+  readonly category: KnowledgeCategory;
+  readonly printedPage: number;
+  readonly heading: string | null;
+  /** Headings the chunk text names, including one packed onto a body line. */
+  readonly knownHeadings: readonly string[];
+  readonly excerpt: string;
+  readonly text: string;
+}
+
+/**
+ * Printed pages 3–6 of the JBA Policy Manual are the table of contents.
+ * Those chunks were removed from the database; a re-upload must still leave
+ * them out of the prompt, or the model cites the contents sheet.
+ */
+export const JBA_CONTENTS_PRINTED_PAGES: ReadonlySet<number> = new Set([3, 4, 5, 6]);
 
 export interface FullManualPlan {
   readonly ready: boolean;
@@ -70,13 +101,14 @@ export interface FullManualPlan {
   readonly choice: ManualBrandChoice;
   readonly cachedBlock: string | null;
   readonly sources: readonly FullManualSource[];
+  readonly passages: readonly ManualPassage[];
   readonly index: ManualCitationIndex | null;
   /** Brand names whose rules are in the block. */
   readonly brands: readonly string[];
 }
 
 const POLICY_QUESTION =
-  /\b(?:dress(?:\s*|-)?codes?|uniforms?|pto|paid\s+time\s+off|vacation(?:\s+time)?|sick(?:\s+(?:day|days|leave|time))?|polic(?:y|ies)|handbooks?|manuals?|attendance|time\s*off|holidays?|bereavement|benefits?)\b/i;
+  /\b(?:dress(?:\s*|-)?codes?|uniforms?|pto|paid\s+time\s+off|vacation(?:\s+time)?|sick(?:\s+(?:day|days|leave|time))?|polic(?:y|ies)|handbooks?|manuals?|attendance|time\s*off|holidays?|bereavement|benefits?|cell\s*phones?|smart\s*watch(?:es)?)\b/i;
 
 /** A policy question, including the dress-code and PTO wordings managers used. */
 export function isPolicyQuestion(text: string): boolean {
@@ -145,13 +177,69 @@ function scopeFor(choice: Exclude<ManualBrandChoice, "all">): ManualBrandScope {
   };
 }
 
-function printedPage(chunk: FullManualChunk): number | null {
-  if (typeof chunk.printedPage === "number" && Number.isInteger(chunk.printedPage) && chunk.printedPage > 0) {
-    return chunk.printedPage;
+function footerPrintedPage(content: string): number | null {
+  for (const line of content.split("\n")) {
+    const printed = printedPageOf(line);
+    if (printed) return printed;
   }
-  const locator = chunk.locator?.match(/\bpage\s+(\d{1,3})\b/i);
-  if (locator) return Number(locator[1]);
   return null;
+}
+
+function positivePage(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
+}
+
+/** Distinct printed pages recorded for headings in this chunk, in first-seen order. */
+function recordedSectionPages(chunk: FullManualChunk): number[] {
+  const pages: number[] = [];
+  for (const entry of chunk.sections ?? []) {
+    const page = positivePage(entry.page);
+    if (page && !pages.includes(page)) pages.push(page);
+  }
+  return pages;
+}
+
+/**
+ * The page number printed on the sheet.
+ *
+ * The footer ("15 | P a g e") wins, unless that footer repeats the PDF sheet
+ * index and the headings on the chunk all record a different page. Company
+ * dress code and Hair are printed 15; the sheet index 16 is not a citation.
+ * A locator that repeats `chunk.page` is the PDF sheet and is not used.
+ */
+export function resolvePrintedPage(chunk: FullManualChunk): number | null {
+  const footer = footerPrintedPage(chunk.content);
+  const stored = positivePage(chunk.printedPage);
+  const pdf = positivePage(chunk.page);
+  const recorded = recordedSectionPages(chunk);
+  const footerIsPdf = footer !== null && pdf !== null && footer === pdf;
+  const storedIsPdf = footer === null && stored !== null && pdf !== null && stored === pdf;
+  if (recorded.length === 1 && recorded[0] !== (footer ?? stored) && (footerIsPdf || storedIsPdf)) {
+    return recorded[0]!;
+  }
+  if (footer) return footer;
+  if (stored) return stored;
+  const locator = chunk.locator?.match(/\bpage\s+(\d{1,3})\b/i);
+  if (!locator) return null;
+  const parsed = Number(locator[1]);
+  if (pdf !== null && parsed === pdf) return null;
+  return parsed;
+}
+
+/** The printed page ingestion recorded for this heading, if it recorded one. */
+function recordedHeadingPage(chunk: FullManualChunk, heading: string): number | null {
+  const key = normalizeHeading(heading);
+  for (const entry of chunk.sections ?? []) {
+    if (normalizeHeading(entry.heading) !== key) continue;
+    const page = positivePage(entry.page);
+    if (page) return page;
+  }
+  return null;
+}
+
+function skipContentsPage(chunk: FullManualChunk, page: number | null): boolean {
+  if (isTableOfContents(chunk.content)) return true;
+  return page !== null && JBA_CONTENTS_PRINTED_PAGES.has(page);
 }
 
 function trimOverlap(previous: string, next: string): string {
@@ -171,6 +259,39 @@ function normalizeHeading(value: string): string {
 
 const BRAND_HEADING =
   /^(?:buff city soap|bcs|crunch(?: fitness)?|sun\s+tan\s+city|stc|corporate office|jb & associates office|all locations(?: dress code)?)(?: specific dress code)?$/i;
+
+/**
+ * "…on the shirt. Pants" is a heading glued to the end of the previous
+ * sentence. The heading is only recognized when it stands as its own line,
+ * so peel that trailing title off before the line is read.
+ */
+function trailingHeading(line: string, known: readonly string[]): { before: string; heading: string } | null {
+  const match = line.match(/^(.*[.!?])\s+(\S.*)$/u);
+  if (!match?.[1] || !match[2]) return null;
+  const words = match[2].replace(/:+$/, "").trim().split(/\s+/);
+  if (words.length === 0 || words.length > 8) return null;
+  for (let start = 0; start < words.length; start += 1) {
+    const candidate = words.slice(start).join(" ").replace(/:+$/, "").trim();
+    if (!candidate || candidate.length > 80) continue;
+    const heading = headingOf(candidate, known);
+    if (!heading || !isSectionTitle(heading, known)) continue;
+    const prefix = words.slice(0, start);
+    const before = prefix.length > 0 ? `${match[1]} ${prefix.join(" ")}` : match[1];
+    return { before, heading };
+  }
+  return null;
+}
+
+/** A trailing title, not an ordinary capitalized word such as "The". */
+function isSectionTitle(heading: string, known: readonly string[]): boolean {
+  if (known.some((item) => normalizeHeading(item) === normalizeHeading(heading))) return true;
+  if (BRAND_HEADING.test(heading)) return true;
+  const words = heading.split(/\s+/);
+  if (words.length !== 1 || words[0]!.length < 4) return false;
+  return !/^(?:the|and|for|with|this|that|from|when|they|their|also|only|each|such|into|over|under|after|before|will|must|have|been|any|all|not|our|you|your)$/i.test(
+    heading,
+  );
+}
 
 function headingOf(line: string, known: readonly string[]): string | null {
   const trimmed = line.trim();
@@ -192,20 +313,6 @@ interface MutableIndex {
   headings: Map<number, Set<string>>;
 }
 
-function recordHeadings(index: MutableIndex, page: number | null, text: string, known: readonly string[]): void {
-  if (!page) return;
-  index.pages.add(page);
-  let set = index.headings.get(page);
-  if (!set) {
-    set = new Set();
-    index.headings.set(page, set);
-  }
-  for (const line of text.split("\n")) {
-    const heading = headingOf(line, known);
-    if (heading) set.add(normalizeHeading(heading));
-  }
-}
-
 function readingsFor(chunks: readonly FullManualChunk[], choice: ManualBrandChoice): string[] {
   const ordered = [...chunks].sort((left, right) => left.chunkIndex - right.chunkIndex);
   if (choice === "all") return ordered.map((chunk) => chunk.content);
@@ -224,51 +331,133 @@ function readingsFor(chunks: readonly FullManualChunk[], choice: ManualBrandChoi
  * changes. Headings are the ones printed in the chunk, not a stored locator
  * that named a heading the brand filter has already removed.
  */
+interface RawPassage {
+  readonly printedPage: number;
+  readonly heading: string | null;
+  readonly text: string;
+  readonly knownHeadings: readonly string[];
+}
+
 export function rebuildManualText(
   chunks: readonly FullManualChunk[],
   choice: ManualBrandChoice,
-): { text: string; index: ManualCitationIndex } {
+): { text: string; index: ManualCitationIndex; passages: RawPassage[] } {
   const ordered = [...chunks].sort((left, right) => left.chunkIndex - right.chunkIndex);
   const readings = readingsFor(ordered, choice);
   const index: MutableIndex = { pages: new Set(), headings: new Map() };
   const blocks: string[] = [];
+  const passages: RawPassage[] = [];
   let previous = "";
   let currentPage: number | null = null;
+  let passageHeading: string | null = null;
+  let passageLines: string[] = [];
+  let passageKnown: string[] = [];
+
+  const noteKnown = (line: string, known: readonly string[]) => {
+    for (const heading of known) {
+      const bare = heading.trim();
+      if (bare.length < 4) continue;
+      if (!line.toLowerCase().includes(bare.toLowerCase())) continue;
+      if (passageKnown.some((item) => normalizeHeading(item) === normalizeHeading(bare))) continue;
+      passageKnown.push(bare);
+    }
+  };
+
+  const flush = () => {
+    const text = passageLines.join("\n").trim();
+    const knownHeadings = passageKnown;
+    passageLines = [];
+    passageKnown = [];
+    if (!currentPage || !text) return;
+    passages.push({ printedPage: currentPage, heading: passageHeading, text, knownHeadings });
+  };
+
+  let shown: string[] = [];
+  const flushShown = () => {
+    const text = shown.join("\n").trim();
+    shown = [];
+    if (text) blocks.push(text);
+  };
+  const moveTo = (page: number) => {
+    if (page === currentPage) return;
+    flush();
+    flushShown();
+    /*
+     * A heading belongs to the page it was printed on. Carrying the previous
+     * heading onto the next sheet labeled a later rule with the earlier section.
+     */
+    passageHeading = null;
+    blocks.push(`[p.${page}]`);
+    currentPage = page;
+    index.pages.add(page);
+  };
+
   for (let position = 0; position < ordered.length; position += 1) {
     const chunk = ordered[position]!;
+    const page = resolvePrintedPage(chunk);
+    if (skipContentsPage(chunk, page)) continue;
     const body = trimOverlap(previous, readings[position] ?? "");
     if (!body) continue;
-    const page = printedPage(chunk);
-    if (page && page !== currentPage) {
-      blocks.push(`[p.${page}]`);
-      currentPage = page;
-      index.pages.add(page);
+    if (page) moveTo(page);
+    if (!page && !currentPage) {
+      blocks.push(body);
+      previous = body;
+      continue;
     }
-    recordHeadings(index, currentPage, body, chunk.headings ?? []);
-    blocks.push(body);
+    for (const rawLine of body.split("\n")) {
+      if (isPageFooter(rawLine)) {
+        shown.push(rawLine);
+        continue;
+      }
+      const peeled = trailingHeading(rawLine, chunk.headings ?? []);
+      const pieces = peeled ? [peeled.before, peeled.heading] : [rawLine];
+      for (const line of pieces) {
+        const heading = headingOf(line, chunk.headings ?? []);
+        if (!heading) continue;
+        const recorded = recordedHeadingPage(chunk, heading);
+        if (recorded) moveTo(recorded);
+      }
+      shown.push(rawLine);
+      for (const line of pieces) {
+        if (!line.trim()) continue;
+        const heading = headingOf(line, chunk.headings ?? []);
+        if (heading && normalizeHeading(heading) !== normalizeHeading(passageHeading ?? "")) {
+          flush();
+          passageHeading = heading;
+          if (currentPage) {
+            index.pages.add(currentPage);
+            const set = index.headings.get(currentPage) ?? new Set<string>();
+            set.add(normalizeHeading(heading));
+            index.headings.set(currentPage, set);
+          }
+        }
+        noteKnown(line, chunk.headings ?? []);
+        passageLines.push(line);
+      }
+    }
+    flushShown();
     previous = body;
   }
-  return { text: blocks.join("\n\n"), index };
+  flush();
+  return { text: blocks.join("\n\n"), index, passages };
 }
 
-function locatorFor(choice: ManualBrandChoice): string {
-  if (choice === "bcs") return "Full Buff City Soap manual";
-  if (choice === "crunch") return "Full Crunch manual";
-  if (choice === "stc") return `Full ${OTHER_TANNING_BRAND} manual`;
-  return "Full manual";
-}
-
-function headerFor(choice: ManualBrandChoice, sources: readonly FullManualSource[]): string {
-  const markers = sources.map((source) => `[S${source.marker}] ${source.documentTitle}`).join("\n");
+function headerFor(choice: ManualBrandChoice): string {
   const coverage =
     choice === "all"
       ? "The question did not name one brand, so this text includes every brand in the manual. Cover Buff City Soap and Crunch, not only one brand."
       : "This text is that brand's manual plus the company-wide sections.";
   return `FULL POLICY MANUAL
 
-${markers}
+This is the current manual. Retired and superseded editions are not included. Each page is marked [p.N] with the page number printed in the manual, not the PDF sheet. Cite a statement with the [p.N] marker above that passage. Do not cite a page that has no marker. Do not write an [S#] marker. Name a heading only when it is printed on that page. ${coverage}`;
+}
 
-This is the current manual. Retired and superseded editions are not included. Pages are marked [p.N]. Cite a page only when that marker is present, and a heading only when it is printed on that page. ${coverage}`;
+function excerptOf(heading: string | null, text: string): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  if (!heading) return flat.slice(0, 220).trim();
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const bare = flat.replace(new RegExp(`^${escaped}\\s*`, "i"), "").trim();
+  return (bare || flat).slice(0, 220).trim();
 }
 
 export function planFullManualContext(input: {
@@ -285,6 +474,7 @@ export function planFullManualContext(input: {
     choice,
     cachedBlock: null,
     sources: [],
+    passages: [],
     index: null,
     brands: [],
   };
@@ -296,14 +486,7 @@ export function planFullManualContext(input: {
   const pages: Set<number> = new Set();
   const headings: Map<number, Set<string>> = new Map();
   const parts: string[] = [];
-  const sources: FullManualSource[] = documents.map((document, index) => ({
-    marker: index + 1,
-    documentId: document.id,
-    documentTitle: document.title,
-    locator: locatorFor(choice),
-    excerpt: "",
-    category: categoryOf(document.category),
-  }));
+  const passages: ManualPassage[] = [];
 
   for (const document of documents) {
     const rebuilt = rebuildManualText(document.chunks, choice);
@@ -313,14 +496,25 @@ export function planFullManualContext(input: {
       for (const heading of set) existing.add(heading);
       headings.set(page, existing);
     }
+    const category = categoryOf(document.category);
+    for (const passage of rebuilt.passages) {
+      passages.push({
+        documentId: document.id,
+        documentTitle: document.title,
+        category,
+        printedPage: passage.printedPage,
+        heading: passage.heading,
+        knownHeadings: passage.knownHeadings,
+        excerpt: excerptOf(passage.heading, passage.text),
+        text: passage.text,
+      });
+    }
     parts.push(rebuilt.text);
   }
 
   const body = parts.filter((part) => part.trim().length > 0).join("\n\n");
-  const cachedBlock = `${headerFor(choice, sources)}\n\n${body}`.trim();
+  const cachedBlock = `${headerFor(choice)}\n\n${body}`.trim();
   const tokens = estimateTokens(cachedBlock);
-  const excerpt = body.replace(/\s+/g, " ").trim().slice(0, 320);
-  const withExcerpt = sources.map((source) => ({ ...source, excerpt: excerpt || source.documentTitle }));
   const index = { pages, headings };
   const brands = brandsCovered(body);
   const budget = input.budget ?? FULL_MANUAL_TOKEN_BUDGET;
@@ -332,6 +526,7 @@ export function planFullManualContext(input: {
       choice,
       cachedBlock: null,
       sources: [],
+      passages,
       index,
       brands,
     };
@@ -342,26 +537,21 @@ export function planFullManualContext(input: {
     tokens,
     choice,
     cachedBlock,
-    sources: withExcerpt,
+    sources: [],
+    passages,
     index,
     brands,
   };
 }
 
-export function fullManualGroundingNote(plan: Pick<FullManualPlan, "sources" | "choice">): string {
-  const markers = plan.sources.map((source) => `[S${source.marker}]`).join(", ");
+export function fullManualGroundingNote(plan: Pick<FullManualPlan, "choice">): string {
   const coverage =
     plan.choice === "all"
       ? "The question does not name one brand. Cover every brand this manual states, including Buff City Soap and Crunch."
       : "The question names one brand. Answer from that brand's manual and the company-wide sections.";
-  const listed = plan.sources
-    .map((source) => `[S${source.marker}] ${source.documentTitle} — ${source.locator}`)
-    .join("\n");
   return `COMPANY KNOWLEDGE
 
-The full current policy manual is in the system prefix. Valid markers are ${markers}. Cite a page only when that page is marked [p.N] in the manual, and a heading only when that heading is printed on that page. ${coverage}
-
-${listed}`;
+The full current policy manual is in the system prefix. Each page is marked [p.N] with the page number printed in the manual. Cite each policy statement with that marker. Do not cite a page that is not marked. Do not write an [S#] marker for the manual. A heading may be named only when it is printed on that page. ${coverage}`;
 }
 
 function pagesWithHeading(index: ManualCitationIndex, heading: string): number[] {
@@ -431,4 +621,312 @@ export function validateManualCitations(
   const normalized = normalizeMarkers(answer);
   const paged = input.index ? fixPageCitations(normalized, input.index) : normalized;
   return alignSourceMarkers(paged, input.shownMarkers);
+}
+
+export interface CitedManualAnswer {
+  readonly text: string;
+  readonly sources: readonly FullManualSource[];
+  /**
+   * False when the answer still names no printed page that this manual
+   * contains. The caller then uses ordinary retrieval.
+   */
+  readonly ok: boolean;
+}
+
+const HEADING_STOP = new Set([
+  "dress",
+  "code",
+  "specific",
+  "policy",
+  "policies",
+  "section",
+  "manual",
+  "company",
+  "locations",
+  "location",
+  "employees",
+  "employee",
+  "about",
+  "other",
+  "workplace",
+  "safety",
+  "security",
+  "customer",
+  "customers",
+  "management",
+  "holiday",
+  "holidays",
+  "benefits",
+  "records",
+  "office",
+  "corporate",
+  "acceptable",
+  "required",
+  "permitted",
+  "personal",
+  "phone",
+  "phones",
+]);
+
+const OVERLAP_STOP = new Set([
+  ...HEADING_STOP,
+  "about",
+  "after",
+  "again",
+  "also",
+  "and",
+  "are",
+  "been",
+  "being",
+  "does",
+  "each",
+  "from",
+  "have",
+  "into",
+  "more",
+  "must",
+  "only",
+  "should",
+  "some",
+  "such",
+  "than",
+  "that",
+  "their",
+  "them",
+  "then",
+  "there",
+  "these",
+  "they",
+  "this",
+  "those",
+  "under",
+  "very",
+  "what",
+  "when",
+  "where",
+  "which",
+  "while",
+  "will",
+  "with",
+  "your",
+]);
+
+function wordsOf(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function mentionsHeading(answer: string, heading: string): boolean {
+  const hay = ` ${wordsOf(answer)} `;
+  const phrase = wordsOf(heading);
+  if (!phrase) return false;
+  if (phrase.length >= 8 && hay.includes(` ${phrase} `)) return true;
+  const words = phrase.split(" ");
+  /*
+   * "Tattoos" and "Jewelry/Accessories" are named by one distinctive word.
+   * A longer heading is not named by one shared noun: "workplace" is not
+   * the Safety in the Workplace section.
+   */
+  if (words.length > 3) return false;
+  return words.some((word) => word.length >= 6 && !HEADING_STOP.has(word) && hay.includes(` ${word} `));
+}
+
+function sharedPhraseLength(answer: string, passage: string): number {
+  const hay = wordsOf(answer);
+  const words = wordsOf(passage).split(" ").filter(Boolean);
+  const max = Math.min(14, words.length);
+  for (let size = max; size >= 4; size -= 1) {
+    for (let index = 0; index <= words.length - size; index += 1) {
+      const phrase = words.slice(index, index + size).join(" ");
+      if (phrase.length >= 16 && hay.includes(phrase)) return size;
+    }
+  }
+  return 0;
+}
+
+function sharesPhrase(answer: string, passage: string): boolean {
+  return sharedPhraseLength(answer, passage) >= 4;
+}
+
+function overlapScore(answer: string, passage: string): number {
+  const hay = new Set(wordsOf(answer).split(" ").filter((word) => word.length >= 5 && !OVERLAP_STOP.has(word)));
+  const seen = new Set<string>();
+  let score = 0;
+  for (const word of wordsOf(passage).split(" ")) {
+    if (word.length < 5 || OVERLAP_STOP.has(word) || !hay.has(word) || seen.has(word)) continue;
+    seen.add(word);
+    score += 1;
+  }
+  return score;
+}
+
+function namedHeadings(passage: ManualPassage, answer: string): string[] {
+  const names = [passage.heading, ...passage.knownHeadings].filter((heading): heading is string => Boolean(heading));
+  const unique: string[] = [];
+  for (const heading of names) {
+    if (!mentionsHeading(answer, heading)) continue;
+    if (unique.some((item) => normalizeHeading(item) === normalizeHeading(heading))) continue;
+    unique.push(heading);
+  }
+  return unique;
+}
+
+function passageMatches(answer: string, passage: ManualPassage): boolean {
+  /*
+   * The heading string alone is not the section. Brand names and a repeated
+   * title sit on many pages; the sentence has to restate that page's text.
+   */
+  if (sharesPhrase(answer, passage.text)) return true;
+  return overlapScore(answer, passage.text) >= 6;
+}
+
+function hasPrintedPage(answer: string, page: number): boolean {
+  if (new RegExp(`\\[p\\.${page}\\]`, "i").test(answer)) return true;
+  return new RegExp(`(?:^|[^\\w[])(?:page|p)\\.?\\s*${page}\\b`, "i").test(answer);
+}
+
+function sectionLocator(page: number, heading: string | null): string {
+  return heading ? `Page ${page} — ${heading}` : `Page ${page}`;
+}
+
+function excerptForHit(heading: string | null, passage: ManualPassage): string {
+  if (!heading) return passage.excerpt || passage.documentTitle;
+  const at = passage.text.toLowerCase().indexOf(heading.toLowerCase());
+  const slice = at >= 0 ? passage.text.slice(at) : passage.text;
+  return excerptOf(heading, slice) || heading;
+}
+
+function sentencesOf(answer: string): string[] {
+  const parts = answer
+    .trim()
+    .split(/(?<=[.!?])\s+/)
+    .filter((part) => part.trim().length > 0);
+  return parts.length > 0 ? parts : [answer.trim()];
+}
+
+/**
+ * A policy answer must cite printed pages that are in the loaded manual,
+ * and each of those pages must be a Sources row for the section it names.
+ *
+ * An [S#] that is not one of `shownMarkers` is removed, so [S9] cannot sit
+ * beside a shorter source list. A page or heading that the manual does not
+ * contain is removed. When the answer names no valid page, the sections it
+ * actually restates are marked. When nothing in the manual was used, `ok`
+ * is false and the caller falls back to ordinary retrieval.
+ */
+export function citePolicyAnswer(
+  answer: string,
+  plan: Pick<FullManualPlan, "index" | "passages">,
+  shownMarkers: readonly number[] = [],
+): CitedManualAnswer {
+  const index = plan.index;
+  const cleaned = alignSourceMarkers(
+    index ? fixPageCitations(normalizeMarkers(answer), index) : normalizeMarkers(answer),
+    shownMarkers,
+  );
+  if (!index) return { text: cleaned, sources: [], ok: false };
+
+  const sentences = sentencesOf(cleaned);
+  const matched: { passage: ManualPassage; sentence: number; heading: string | null; score: number }[] = [];
+  const addHit = (passage: ManualPassage, sentence: number, heading: string | null) => {
+    const sentenceText = sentences[sentence] ?? cleaned;
+    const score = sharedPhraseLength(sentenceText, passage.text) * 10 + overlapScore(sentenceText, passage.text);
+    const key = `${passage.documentId}:${passage.printedPage}:${normalizeHeading(heading ?? "")}`;
+    const existing = matched.findIndex(
+      (hit) => `${hit.passage.documentId}:${hit.passage.printedPage}:${normalizeHeading(hit.heading ?? "")}` === key,
+    );
+    /*
+     * The same heading is printed for more than one brand. Keep the passage
+     * the sentence actually restates, not the first copy in the manual.
+     */
+    if (existing >= 0) {
+      if (score > matched[existing]!.score) matched[existing] = { passage, sentence, heading, score };
+      return;
+    }
+    matched.push({ passage, sentence, heading, score });
+  };
+  plan.passages.forEach((passage) => {
+    let best = -1;
+    let bestScore = 0;
+    sentences.forEach((sentence, sentenceIndex) => {
+      if (!passageMatches(sentence, passage)) return;
+      const score =
+        sharedPhraseLength(sentence, passage.text) * 10 +
+        namedHeadings(passage, sentence).length * 8 +
+        overlapScore(sentence, passage.text);
+      if (score > bestScore) {
+        best = sentenceIndex;
+        bestScore = score;
+      }
+    });
+    if (best < 0) return;
+    const names = namedHeadings(passage, cleaned);
+    if (names.length === 0) {
+      addHit(passage, best, passage.heading);
+      return;
+    }
+    for (const heading of names) addHit(passage, best, heading);
+  });
+
+  for (const page of index.pages) {
+    if (!hasPrintedPage(cleaned, page)) continue;
+    if (matched.some((hit) => hit.passage.printedPage === page)) continue;
+    const onPage = plan.passages.filter((passage) => passage.printedPage === page);
+    const chosen = onPage.find((passage) => passage.heading) ?? onPage[0];
+    if (!chosen) continue;
+    addHit(chosen, 0, chosen.heading);
+  }
+
+  /*
+   * "yoga pants, joggers or sweats are" is also the never-worn rule on the
+   * next sheet. The sentence that continues "approved for instructors only"
+   * restates the longer phrase, so the shorter copy is not a second page.
+   */
+  const phraseOf = (hit: { passage: ManualPassage; sentence: number }) =>
+    sharedPhraseLength(sentences[hit.sentence] ?? cleaned, hit.passage.text);
+  const bestPhrase = new Map<number, number>();
+  for (const hit of matched) {
+    const phrase = phraseOf(hit);
+    if (phrase > (bestPhrase.get(hit.sentence) ?? 0)) bestPhrase.set(hit.sentence, phrase);
+  }
+  const focused = matched.filter((hit) => {
+    const best = bestPhrase.get(hit.sentence) ?? 0;
+    const phrase = phraseOf(hit);
+    if (phrase === 0 || best < 4) return true;
+    return phrase === best;
+  });
+  const meaningful = focused.filter((hit) => !(hit.passage.printedPage === 1 && !hit.heading));
+  if (meaningful.length === 0) return { text: cleaned, sources: [], ok: false };
+
+  const bySentence = new Map<number, number[]>();
+  for (const hit of meaningful) {
+    if (hasPrintedPage(cleaned, hit.passage.printedPage)) continue;
+    const list = bySentence.get(hit.sentence) ?? [];
+    if (!list.includes(hit.passage.printedPage)) list.push(hit.passage.printedPage);
+    bySentence.set(hit.sentence, list);
+  }
+  const marked = sentences
+    .map((sentence, sentenceIndex) => {
+      const pages = bySentence.get(sentenceIndex);
+      if (!pages || pages.length === 0) return sentence;
+      const markers = [...pages].sort((left, right) => left - right).map((page) => `[p.${page}]`).join(" ");
+      if (/[.!?]$/.test(sentence)) return sentence.replace(/([.!?])$/, ` ${markers}$1`);
+      return `${sentence} ${markers}`;
+    })
+    .join(" ");
+
+  const sources: FullManualSource[] = meaningful.map((hit, marker) => ({
+    marker: marker + 1,
+    documentId: hit.passage.documentId,
+    documentTitle: hit.passage.documentTitle,
+    locator: sectionLocator(hit.passage.printedPage, hit.heading),
+    excerpt: excerptForHit(hit.heading, hit.passage),
+    category: hit.passage.category,
+    printedPage: hit.passage.printedPage,
+  }));
+
+  return { text: marked, sources, ok: true };
 }

@@ -9,6 +9,7 @@ import {
   alignSourceMarkers,
   brandChoice,
   brandsCovered,
+  citePolicyAnswer,
   isPolicyQuestion,
   planFullManualContext,
   validateManualCitations,
@@ -19,6 +20,32 @@ import { noteModelCall } from "./model-failure";
 const BCS_SHIRTS = "Any BCS Employee can wear any plain black, white, or gray t-shirt";
 const CRUNCH_PANTS = "Yoga pants, joggers, or sweats are approved for Instructors ONLY";
 const STC_SHIRTS = "Any STC Employee can wear any Branded top or black collared or black t-shirt";
+
+/**
+ * Printed pages the manual records for a fixture chunk.
+ *
+ * `chunk.p` is the printed page. Crunch Fitness Specific Dress Code, its
+ * Shirts and Pants, and Buff City Soap Shirts all start on printed page 16.
+ * Company dress code and Hair stay on 15. The next sheet's footer is 17.
+ */
+function sectionsFor(chunk: { p: string; h: string[]; c: string }): { heading: string; page: number }[] {
+  const printed = Number(chunk.p);
+  const sections = chunk.h.map((heading) => ({ heading, page: printed }));
+  if (chunk.c.includes("All Locations Dress Code:")) {
+    sections.push({ heading: "All Locations Dress Code", page: printed });
+  }
+  if (chunk.c.includes("approved for Instructors ONLY")) {
+    sections.push(
+      { heading: "Crunch Fitness Specific Dress Code", page: printed },
+      { heading: "Shirts", page: printed },
+      { heading: "Pants", page: printed },
+    );
+  }
+  if (chunk.c.includes("Any BCS Employee can wear any plain black")) {
+    sections.push({ heading: "Buff City Soap", page: printed }, { heading: "Shirts", page: printed });
+  }
+  return sections;
+}
 
 function manual(overrides: Partial<FullManualDocument> = {}): FullManualDocument {
   return {
@@ -35,6 +62,7 @@ function manual(overrides: Partial<FullManualDocument> = {}): FullManualDocument
       printedPage: Number(chunk.p),
       section: chunk.h[0] ?? null,
       headings: chunk.h,
+      sections: sectionsFor(chunk),
     })),
     ...overrides,
   };
@@ -106,6 +134,8 @@ describe("FULL_MANUAL_CONTEXT_ENABLED", () => {
     expect(isPolicyQuestion("what's the dress code?")).toBe(true);
     expect(isPolicyQuestion("how much PTO do I get?")).toBe(true);
     expect(isPolicyQuestion("Paid time off accrues after 90 days")).toBe(true);
+    expect(isPolicyQuestion("what's the cell phone policy?")).toBe(true);
+    expect(isPolicyQuestion("can staff use cell phones on the floor?")).toBe(true);
     expect(isPolicyQuestion("create a coaching form for Dana Moss")).toBe(false);
   });
 
@@ -131,6 +161,8 @@ describe("FULL_MANUAL_CONTEXT_ENABLED", () => {
     expect(text).not.toContain("SUPERSEDED EDITION ONLY");
     expect(text).not.toContain("FRAMEWORK ONLY");
     expect(plan.cachedBlock).toContain("Cover Buff City Soap and Crunch");
+    expect(plan.sources).toEqual([]);
+    expect(text).not.toContain("[S1]");
   });
 
   it("uses the Crunch manual when the question names Crunch, and still keeps company-wide rules", () => {
@@ -322,5 +354,246 @@ describe("cached system block", () => {
     expect(line).toContain("cache_creation_input_tokens");
     expect(line).toContain("cache_read_input_tokens");
     expect(line).toContain("34");
+  });
+});
+
+/**
+ * Production chats from 24 Oct 2026.
+ *
+ * conv_mvmkij8h2vdogs9 opened at 15:42:55Z (dress code, both brands).
+ * conv_mvmkj5v72w5x3l5 opened at 15:43:24Z (cell phone). Both turns loaded
+ * the full manual. The message rows are not readable with the key this
+ * session can use, so the questions are the ones those chats asked.
+ */
+const DRESS_CODE_QUESTION = "what's the dress code for Buff City Soap and Crunch?";
+const CELL_PHONE_QUESTION = "what's the cell phone policy?";
+
+const DRESS_CODE_ANSWER = [
+  "Anyone violating their brand's dress code policy will be sent home to change into proper work attire.",
+  "Hair of all lengths and colors is acceptable when it is clean, groomed, and kept out of the employee's face and eyes.",
+  "Jewelry that does not interfere with work is acceptable.",
+  "Large, inappropriate, or offensive tattoos must be covered.",
+  "Buff City Soap employees can wear any plain black, white, or gray t-shirt.",
+  "The Crunch Fitness specific dress code applies at Crunch.",
+  "Crunch provides two uniform shirts, and yoga pants, joggers, or sweats are approved for instructors only.",
+].join(" ");
+
+const CELL_PHONE_ANSWER =
+  "Personal Employee cell phones are permitted in the workplace but must be kept out of sight. Texting or phone calls during the shift is not allowed under the Cell Phone/Smart Watch Policy.";
+
+function contentsChunk(printed: number) {
+  const body =
+    printed === 3
+      ? "Table of Contents\nDress Code ................ 16\nCell Phone ................ 19\nJewelry ................ 16"
+      : "Attendance .......... 14\nLate Opening .......... 15";
+  return {
+    chunkIndex: printed,
+    content: `${printed} | P a g e\n${body}\nCONTENTS ROW ONLY page ${printed}`,
+    page: printed + 1,
+    printedPage: printed + 1,
+    locator: `Page ${printed + 1} — Table of Contents`,
+    headings: ["Table of Contents"],
+    section: "Table of Contents",
+  };
+}
+
+function productionManual(): FullManualDocument {
+  const base = manual();
+  return manual({
+    chunks: [
+      {
+        chunkIndex: 0,
+        content: "1 | P a g e\n2025 JB & Associates Employment Policy Manual. This page is the cover.",
+        page: 2,
+        printedPage: 2,
+        locator: "Page 2",
+        headings: [],
+      },
+      contentsChunk(3),
+      contentsChunk(4),
+      contentsChunk(5),
+      contentsChunk(6),
+      ...base.chunks,
+      {
+        chunkIndex: 61,
+        content:
+          "19 | P a g e\nCell Phone/Smart Watch Policy\nPersonal Employee cell phones are permitted in the workplace but must be kept out of sight. It is the Employee's personal responsibility to protect the customer's experience and doing things such as texting, making phone calls or using social media jeopardizes the customer's experience.",
+        page: 20,
+        printedPage: 20,
+        locator: "Page 20 — Cell Phone/Smart Watch Policy",
+        headings: ["Cell Phone/Smart Watch Policy"],
+        section: "Cell Phone/Smart Watch Policy",
+      },
+    ],
+  });
+}
+
+function citedPages(text: string): number[] {
+  return [...text.matchAll(/\[p\.(\d{1,3})\]/gi)].map((match) => Number(match[1]));
+}
+
+describe("production chats cite printed pages", () => {
+  const documents = [productionManual()];
+
+  it("marks the footer page, not the PDF page, and skips contents pages 3-6", () => {
+    const plan = planFullManualContext({ question: DRESS_CODE_QUESTION, documents });
+    expect(plan.ready).toBe(true);
+    expect(brandChoice(DRESS_CODE_QUESTION)).toBe("all");
+    const text = plan.cachedBlock ?? "";
+    const slice = (start: string, end: string) => {
+      const from = text.indexOf(start);
+      const to = text.indexOf(end, from + start.length);
+      return text.slice(from, to);
+    };
+    const company = slice("[p.15]", "[p.16]");
+    const page16 = slice("[p.16]", "[p.17]");
+    expect(company).toContain("All Locations Dress Code:");
+    expect(company).toContain("Hair");
+    expect(company).not.toContain("Jewelry/Accessories");
+    expect(page16).toContain("Jewelry/Accessories");
+    expect(page16).toContain("Crunch Fitness Specific Dress Code:");
+    expect(page16).toContain("Two uniform shirts");
+    expect(page16).toContain("approved for Instructors ONLY");
+    expect(page16).toContain("Buff City Soap:");
+    expect(page16).toContain(BCS_SHIRTS);
+    expect(page16).not.toContain("never to be worn");
+    expect(text).toContain("[p.19]");
+    expect(text).not.toContain("[p.20]");
+    expect(text).not.toContain("[p.3]");
+    expect(text).not.toContain("[p.4]");
+    expect(text).not.toContain("[p.5]");
+    expect(text).not.toContain("[p.6]");
+    expect(text).not.toContain("CONTENTS ROW ONLY");
+    expect(text).not.toContain("Table of Contents");
+    expect(plan.index?.pages.has(15)).toBe(true);
+    expect(plan.index?.pages.has(16)).toBe(true);
+    expect(plan.index?.pages.has(17)).toBe(true);
+    expect(plan.index?.pages.has(19)).toBe(true);
+    expect(plan.index?.pages.has(3)).toBe(false);
+    expect(plan.index?.pages.has(6)).toBe(false);
+    expect(plan.index?.pages.has(20)).toBe(false);
+  });
+
+  it("does not cite the PDF sheet when the footer repeats it and the headings record page 15", () => {
+    const plan = planFullManualContext({
+      question: DRESS_CODE_QUESTION,
+      documents: [
+        manual({
+          chunks: [
+            {
+              chunkIndex: 44,
+              page: 16,
+              printedPage: 16,
+              locator: "Page 16 — Dress Code for The Company",
+              content:
+                "16 | P a g e\nDress Code for The Company\nThe Company Employees are to keep a neat, clean, professional appearance. Anyone violating their Brand’s Dress code policy will be sent home.\nHair\no Hair of all lengths and colors are acceptable as long as it is clean, groomed, and kept out of the employee’s face and eyes.",
+              headings: ["Dress Code for The Company", "Hair"],
+              sections: [
+                { heading: "Dress Code for The Company", page: 15 },
+                { heading: "Hair", page: 15 },
+              ],
+            },
+          ],
+        }),
+      ],
+    });
+    const text = plan.cachedBlock ?? "";
+    expect(text).toContain("[p.15]");
+    expect(text).not.toContain("[p.16]");
+    expect(text).not.toContain("[p.17]");
+    expect(text.indexOf("[p.15]")).toBeLessThan(text.indexOf("Hair"));
+  });
+
+  it("conv_mvmkij8h2vdogs9 cites p.15 and p.16, and p.17 only for other brands", () => {
+    const plan = planFullManualContext({ question: DRESS_CODE_QUESTION, documents });
+    /*
+     * Sun Tan City's dress code and the other brands' pants are printed on
+     * page 17. Citing that page is allowed. Crunch shirts and pants are not.
+     */
+    const withOtherBrands = [
+      DRESS_CODE_ANSWER,
+      "Any STC Employee can wear any Branded top or black collared or black t-shirt.",
+      "Yoga pants, joggers or sweats are never to be worn while at work.",
+    ].join(" ");
+    const cited = citePolicyAnswer(withOtherBrands, plan);
+    expect(cited.ok).toBe(true);
+    expect(cited.text).toMatch(/buff city soap/i);
+    expect(cited.text).toMatch(/crunch/i);
+    expect(cited.text).toMatch(/tattoo/i);
+    expect(cited.text).toMatch(/jewelry/i);
+    expect(cited.text).toMatch(/hair/i);
+    expect(cited.text).toContain("approved for instructors only");
+    expect(cited.text).toContain("plain black, white, or gray t-shirt");
+    const pages = new Set(cited.sources.map((source) => source.printedPage));
+    const marked = new Set(citedPages(cited.text));
+    expect(pages.has(15)).toBe(true);
+    expect(pages.has(16)).toBe(true);
+    expect(marked.has(15)).toBe(true);
+    expect(marked.has(16)).toBe(true);
+    for (const page of [...pages, ...marked]) {
+      expect(page === 15 || page === 16 || page === 17).toBe(true);
+    }
+    expect(cited.sources.some((source) => source.printedPage === 15 && /Hair|Dress Code|All Locations/i.test(`${source.locator} ${source.excerpt}`))).toBe(true);
+    expect(cited.sources.some((source) => /Page 16 — Jewelry/.test(source.locator))).toBe(true);
+    expect(cited.sources.some((source) => source.printedPage === 16 && /plain black, white, or gray t-shirt/i.test(source.excerpt))).toBe(true);
+    expect(cited.sources.some((source) => source.printedPage === 17)).toBe(true);
+    for (const source of cited.sources) {
+      const body = `${source.locator}\n${source.excerpt}`;
+      const crunchShirtsOrPants =
+        /Instructors ONLY|Two uniform shirts/i.test(body) ||
+        (/Shirts|Pants/.test(source.locator) && /Crunch Fitness/i.test(body));
+      if (!crunchShirtsOrPants) continue;
+      expect(source.printedPage).toBe(16);
+    }
+    const crunchSentence = cited.text.split(/(?<=[.!?])\s+/).find((sentence) => /instructors only/i.test(sentence));
+    expect(crunchSentence).toMatch(/\[p\.16\]/);
+    expect(crunchSentence).not.toMatch(/\[p\.17\]/);
+    expect(cited.sources.map((source) => source.locator).join("\n")).not.toMatch(/Full manual|Page 1\b|p\.1/);
+    expect(cited.text).not.toContain("[S");
+  });
+
+  it("keeps the sentence when a sub-heading is the citation label", () => {
+    const sentence = "Tattoos — large, inappropriate, or offensive tattoos must be covered";
+    const label = "Tattoos, JBA Policy Manual p.16";
+    const answer = `${sentence} (${label}).`;
+    const plan = planFullManualContext({ question: DRESS_CODE_QUESTION, documents });
+    const cited = citePolicyAnswer(answer, plan);
+    const marked = validateManualCitations(cited.text, { shownMarkers: [], index: plan.index });
+    for (const text of [cited.text, marked]) {
+      expect(text).toContain(sentence);
+      expect(text).toContain(label);
+      expect(text).not.toContain("Tattoos — large,Tattoos, JBA Policy Manual p.16)");
+    }
+    const tattoos = cited.sources.find((source) => /Tattoos/.test(source.locator));
+    expect(tattoos?.locator).toBe("Page 16 — Tattoos");
+    expect(tattoos?.excerpt).toContain("inappropriate, or offensive tattoos must be covered");
+    expect(tattoos?.printedPage).toBe(16);
+  });
+
+  it("conv_mvmkj5v72w5x3l5 cites p.19, and [S9] is not left without a source", () => {
+    const plan = planFullManualContext({ question: CELL_PHONE_QUESTION, documents });
+    const cited = citePolicyAnswer(`${CELL_PHONE_ANSWER} [S9]`, plan, [1]);
+    expect(cited.ok).toBe(true);
+    expect(cited.text).not.toContain("[S9]");
+    expect(cited.text).not.toContain("[S");
+    expect(new Set(citedPages(cited.text))).toEqual(new Set([19]));
+    expect(cited.sources.map((source) => source.locator).join("\n")).toMatch(/Page 19 — Cell Phone\/Smart Watch Policy/);
+    expect(cited.sources.every((source) => source.locator.startsWith("Page 19 — Cell Phone"))).toBe(true);
+    expect(cited.sources.map((source) => source.locator).join("\n")).not.toMatch(/Full manual|Page 1\b|p\.1/);
+    expect(cited.sources.every((source) => source.printedPage === 19)).toBe(true);
+  });
+
+  it("drops a page the manual does not contain, and falls back when nothing was cited", () => {
+    const plan = planFullManualContext({ question: CELL_PHONE_QUESTION, documents });
+    const repaired = citePolicyAnswer(`See page 99 and [p.4]. ${CELL_PHONE_ANSWER}`, plan);
+    expect(repaired.ok).toBe(true);
+    expect(repaired.text).not.toContain("99");
+    expect(repaired.text).not.toContain("[p.4]");
+    expect(new Set(citedPages(repaired.text))).toEqual(new Set([19]));
+    expect(repaired.sources.some((source) => source.printedPage === 4 || source.printedPage === 99)).toBe(false);
+
+    const missed = citePolicyAnswer("The weather is nice today.", plan);
+    expect(missed.ok).toBe(false);
+    expect(missed.sources).toEqual([]);
   });
 });
