@@ -3,6 +3,7 @@ import "server-only";
 import type { TextBlockParam } from "@anthropic-ai/sdk/resources/messages";
 
 import { ACTIVE_BRAND } from "@/lib/brand";
+import { promptCacheEnabled } from "@/lib/config/chat-quality-flags";
 import { CLAUDE_EFFORT, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
 
@@ -125,6 +126,11 @@ export interface CallClaudeInput {
 export function claudeSystemPayload(system: string): string | TextBlockParam[] {
   const parts = splitSystemPrompt(system);
   if (!parts) return system;
+  if (!promptCacheEnabled()) {
+    const breakAt = parts.staticBlock.indexOf("\n");
+    if (breakAt < 0) return `${parts.staticBlock} ${parts.dynamicTail}`;
+    return `${parts.staticBlock.slice(0, breakAt)} ${parts.dynamicTail}${parts.staticBlock.slice(breakAt)}`;
+  }
   const blocks: TextBlockParam[] = [
     { type: "text", text: parts.staticBlock, cache_control: { type: "ephemeral" } },
   ];

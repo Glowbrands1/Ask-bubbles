@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { selfCheckEnabled } from "@/lib/config/chat-quality-flags";
 import type { RosterEmployee } from "@/lib/forms/employee-match";
 
-import { chooseCheckedAnswer, selfCheck } from "./self-check";
+import { chooseCheckedAnswer, repairMayReplace, selfCheck } from "./self-check";
 
 const MARISSA: RosterEmployee = {
   id: "emp-marissa",
@@ -101,7 +101,9 @@ describe("SELF_CHECK_ENABLED", () => {
     expect(none).toEqual([]);
   });
 
-  it("an employee the answer names must be on the roster, and an empty roster does not fail the answer", () => {
+  it("a typed name that Woven does not list is not a failed check", () => {
+    // 8f7cf6d failed "Casey Quinn" and the repair then removed the name.
+    // The name stays. An empty roster is the same: not proof the person is absent.
     const known = selfCheck({
       answer: "I will file this for Marissa Lempka.",
       chunks: [],
@@ -114,9 +116,7 @@ describe("SELF_CHECK_ENABLED", () => {
       chunks: [],
       roster: [MARISSA],
     });
-    expect(unknown.map((failure) => failure.kind)).toEqual(["employee"]);
-    expect(unknown[0]?.detail).toContain("Casey Quinn");
-    expect(unknown[0]?.detail).toContain("Woven");
+    expect(unknown).toEqual([]);
 
     const directoryDown = selfCheck({
       answer: "I will file this for Casey Quinn.",
@@ -124,6 +124,15 @@ describe("SELF_CHECK_ENABLED", () => {
       roster: [],
     });
     expect(directoryDown).toEqual([]);
+  });
+
+  it("does not show a repair that drops the typed name or says they are missing from Woven", () => {
+    const original = "I will file this for Casey Quinn.";
+    const dropped = "I couldn't find that person in the Woven roster.";
+    expect(repairMayReplace(original, dropped)).toBe(false);
+    expect(chooseCheckedAnswer(original, dropped, [])).toBe(original);
+    expect(chooseCheckedAnswer(original, "I couldn't find Casey Quinn in the Woven roster. The form is ready.", [])).toBe(original);
+    expect(repairMayReplace(original, "I will file this for Casey Quinn. See Attendance Policy, JBA Policy Manual p.14.")).toBe(true);
   });
 
   it("keeps the original answer when the repair still fails", () => {

@@ -203,11 +203,16 @@ Store names come from the caller (`COMPANY_LOCATIONS` at request time).
 ## 23 Oct 2026: self-check and manual-term retrieval
 
 `SELF_CHECK_ENABLED` defaults off. After an answer, a JBA citation must be
-a heading and page in the chunks that turn retrieved, an action plan must
-be two sentences when the answer has one, and a person the answer names
-must be on the Woven roster loaded for the turn. One repair call if a
-check fails; a repair that still fails leaves the original answer. The
-flag off does not call the model.
+a heading and page in the chunks that turn retrieved, and an action plan
+must be two sentences when the answer has one. A name the answer already
+uses is kept when Woven does not list it. A repair that drops that name,
+or that says the person is missing from Woven, is not shown. One repair
+call if a citation or a plan check fails; a repair that still fails leaves
+the original answer. The flag off does not call the model.
+
+Ask Sunny `main` (`b9ae362`) still adds "I couldn't find **name** in the
+Woven roster" when the roster check fails, and its repair may set the
+card to `needs_employee`. That sentence is not ported. The typed name stays.
 
 `QUERY_REWRITE_ENABLED` already defaulted off. On, a short follow-up is
 still anchored to the earlier turn, and the retrieval query is then
@@ -486,13 +491,26 @@ tree. No location row is written. No production data is written.
 
 The answering prompt is split. The instruction body is the cacheable
 prefix. The listener's name, today's date, and their location follow
-`---DYNAMIC---`. `callClaude` sends the prefix as a text block with
-`cache_control: { type: "ephemeral" }` and the tail as a second block
-with no breakpoint. The marker is not sent. No rule sentence was
-rewritten.
+`---DYNAMIC---`. `PROMPT_CACHE_ENABLED` defaults off. On, `callClaude`
+sends the prefix as a text block with `cache_control: { type: "ephemeral" }`
+and the tail as a second block with no breakpoint. Off, that call sends
+the previous single system string. The marker is not sent. No rule
+sentence was rewritten.
 
 Ask Sunny is not updated. Its `buildSystemPrompt` still opens with the
 listener line, and its `call-claude` still sends `system` as one string.
 There is no `---DYNAMIC---` cut on Sunny's `main` or on
 `cursor/edition-supersession-6d4a`. Port the cut with Sunny's next
 prompt round. No salon wording was copied.
+
+## 24 Oct 2026: chat data tools, measured, not ported
+
+`CHAT_DATA_TOOLS_ENABLED` already defaults off in both apps. Ask Sunny's
+reader is the salon snapshot (`chat-data-tools.test.ts` on `b9ae362`): a
+model chooses reviews, sales, or the Comp Report, and the inventory line
+says "salons". This app's reader is the stored store summaries, and the
+line says "stores". The one-at-a-time card replay does not call that
+reader. The effect recorded in `docs/scoreboard.md` is this app's block:
+password-reset help, and Google Reviews only for a role with
+`view_reports`. No Ask Sunny change. No Buff City store list was copied
+there, and no salon list was copied here.

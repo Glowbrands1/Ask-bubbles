@@ -286,6 +286,14 @@ export function editionSupersessionEnabled(): boolean {
   return envFlag("EDITION_SUPERSESSION_ENABLED");
 }
 
+/**
+ * Cache the static system prompt. Off, the answering call sends one system
+ * string and does not set a cache breakpoint.
+ */
+export function promptCacheEnabled(): boolean {
+  return envFlag("PROMPT_CACHE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -319,4 +327,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PRIOR_RECORD_FINAL_ONLY_ENABLED",
   "GLOBAL_STORE_ASK_ENABLED",
   "EDITION_SUPERSESSION_ENABLED",
+  "PROMPT_CACHE_ENABLED",
 ] as const;

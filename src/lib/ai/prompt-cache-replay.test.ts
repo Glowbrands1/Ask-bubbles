@@ -93,6 +93,7 @@ describe("prompt cache replay", () => {
   afterEach(() => {
     __setAnthropicClient(null);
     vi.useRealTimers();
+    delete process.env.PROMPT_CACHE_ENABLED;
   });
 
   it("creates a cache on the first call, reads it later, and is faster than the uncached prompt", async () => {
@@ -110,7 +111,10 @@ describe("prompt cache replay", () => {
     const legacy = `${parts!.staticBlock.slice(0, parts!.staticBlock.indexOf("\n"))} ${parts!.dynamicTail}${parts!.staticBlock.slice(parts!.staticBlock.indexOf("\n"))}`;
     expect(legacy).not.toContain("---DYNAMIC---");
     expect(claudeSystemPayload(legacy)).toBe(legacy);
+    delete process.env.PROMPT_CACHE_ENABLED;
+    expect(claudeSystemPayload(prompt)).toBe(legacy);
 
+    process.env.PROMPT_CACHE_ENABLED = "1";
     const payload = claudeSystemPayload(prompt);
     expect(Array.isArray(payload)).toBe(true);
     if (!Array.isArray(payload)) return;

@@ -16,8 +16,8 @@ import { chooseCheckedAnswer, selfCheck, type CheckChunk, type SelfCheckFailure 
 const SYSTEM = `Rewrite the answer so the failed checks pass.
 A citation must name a heading and page from the retrieved sections, and no other.
 An action plan must be exactly two sentences.
-A person presented as the employee must be on the roster. If the check says they are not, do not present them as the employee.
-Change only what a failed check names. Do not add a policy, a page, or a person the retrieved sections and the roster do not contain.
+A name already in the answer stays as written, including when it is not on the roster. Do not remove it, and do not say it is missing from Woven.
+Change only what a failed check names. Do not add a policy, a page, or a person the retrieved sections do not contain.
 Return only the tool call.`;
 
 export async function applySelfCheck(input: {

@@ -1,6 +1,6 @@
 import { printedPageOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { actionPlanSentenceCount } from "@/lib/forms/action-plan-sentences";
-import { matchEmployeeName, type RosterEmployee } from "@/lib/forms/employee-match";
+import type { RosterEmployee } from "@/lib/forms/employee-match";
 import { headingKey } from "@/lib/forms/official-policy-manual";
 import { readEmployeeMentions } from "@/lib/forms/proposal";
 
@@ -9,9 +9,9 @@ import { readEmployeeMentions } from "@/lib/forms/proposal";
  * loaded.
  *
  * A citation has to be a heading and page those chunks carry. An action
- * plan, when the answer has one, is two sentences. A person the answer
- * names has to be on the roster. Nothing here is a list of policies or
- * of people: the chunks and the roster are the whole authority.
+ * plan, when the answer has one, is two sentences. A name the answer
+ * uses is kept when Woven does not list it. Nothing here is a list of
+ * policies or of people: the chunks are the citation authority.
  */
 
 export interface CheckChunk {
@@ -31,20 +31,37 @@ export function selfCheck(input: {
   readonly chunks: readonly CheckChunk[];
   readonly roster: readonly RosterEmployee[];
 }): SelfCheckFailure[] {
-  return [
-    ...citationFailures(input.answer, input.chunks),
-    ...actionPlanFailures(input.answer),
-    ...employeeFailures(input.answer, input.roster),
-  ];
+  // `input.roster` is not a reason to fail the answer. A typed name that
+  // Woven does not list stays. 8f7cf6d failed that name, and the repair
+  // then removed it.
+  void input.roster;
+  return [...citationFailures(input.answer, input.chunks), ...actionPlanFailures(input.answer)];
 }
 
-/** One repair is kept only when the repaired answer passes. Otherwise the original stands. */
+const REPAIR_TEXT = /couldn'?t find|could not find|not in the woven roster|not verified/i;
+
+/**
+ * A repair may replace the answer only when it still carries every name the
+ * original named, and it does not say the person is missing from Woven.
+ * 8f7cf6d told the repair to drop a name that was not on the roster, and
+ * that sentence was shown.
+ */
+export function repairMayReplace(original: string, repaired: string): boolean {
+  if (REPAIR_TEXT.test(repaired)) return false;
+  for (const name of readEmployeeMentions(original).names) {
+    if (!repaired.toLowerCase().includes(name.toLowerCase())) return false;
+  }
+  return true;
+}
+
+/** One repair is kept only when the repaired answer passes and keeps the typed name. Otherwise the original stands. */
 export function chooseCheckedAnswer(
   original: string,
   repaired: string | null,
   repairedFailures: readonly SelfCheckFailure[],
 ): string {
   if (!repaired || repaired.trim() === "") return original;
+  if (!repairMayReplace(original, repaired)) return original;
   return repairedFailures.length === 0 ? repaired : original;
 }
 
@@ -150,19 +167,6 @@ function actionPlanText(answer: string): string | null {
   const end = rest.search(/\n\s*\n/);
   const block = (end === -1 ? rest : rest.slice(0, end)).trim();
   return block || null;
-}
-
-function employeeFailures(answer: string, roster: readonly RosterEmployee[]): SelfCheckFailure[] {
-  if (roster.length === 0) return [];
-  const names = [...new Set(readEmployeeMentions(answer).names.map((name) => name.trim()).filter(Boolean))];
-  const failures: SelfCheckFailure[] = [];
-  for (const name of names) {
-    const match = matchEmployeeName(name, roster);
-    if (match.kind === "none") {
-      failures.push({ kind: "employee", detail: `${name} is not in the Woven roster` });
-    }
-  }
-  return failures;
 }
 
 function stripPolicySuffix(heading: string): string {
