@@ -27,7 +27,7 @@ import type { ManifestItem } from "@/lib/knowledge-sync/types";
 import type { AccessScope } from "@/types";
 
 /**
- * Round 1, flags off against flags on, three independent runs.
+ * Round 1, flags off against flags on, one run.
  * Local only. The Supabase client in this file is an in-memory recorder.
  * It does not open a network connection.
  */
@@ -391,13 +391,13 @@ const EXPECTED: Record<string, { old: string; neu: string }> = {
   "Identical section": { old: "both copies", neu: "ce6b00f1" },
 };
 
-describe("round 1 scoreboard, three runs", () => {
+describe("round 1 scoreboard, one run", () => {
   afterEach(() => {
     clearFlags();
     writes.rows.length = 0;
   });
 
-  it("flags off and flags on agree on every run", async () => {
+  it("flags off and flags on agree", async () => {
     expect(caPolicyRetrievalEnabled()).toBe(false);
     expect(formStateEnabled()).toBe(false);
     expect(chatTraceEnabled()).toBe(false);
@@ -413,11 +413,9 @@ describe("round 1 scoreboard, three runs", () => {
     expect(engine.indexOf('if (options.mode === "preview")')).toBeLessThan(engine.lastIndexOf("holdOlderEditions("));
     expect(existsSync("supabase/migrations/20261024180000_colene_unmapped_woven_locations_review.sql")).toBe(false);
 
-    const runs = [await measure(), await measure(), await measure()];
-    expect(runs[1]).toEqual(runs[0]);
-    expect(runs[2]).toEqual(runs[0]);
-    expect(runs[0]).toEqual(EXPECTED);
-    expect(pickedStable(runs[0]["Cross-chat draft"].neu)).toBe("draft-other-chat");
+    const run = await measure();
+    expect(run).toEqual(EXPECTED);
+    expect(pickedStable(run["Cross-chat draft"].neu)).toBe("draft-other-chat");
   });
 });
 

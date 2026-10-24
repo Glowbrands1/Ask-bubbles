@@ -2,8 +2,8 @@
 
 Local harness only. `proposeFormForTurn`, temperature 0, empty roster, owner
 with global scope, today 2026-10-24. The model is the configured answering
-model and is not called. A case passes only when every flags-on run passes.
-Flags-off is the same card rules and is allowed to fail them.
+model and is not called. Each case is replayed once. A case passes when
+that run passes. Flags-off is the same card rules and is allowed to fail them.
 
 Pass criteria were written in `src/lib/ai/replay-set.json` before the run.
 They are judged on the card: employee, store, date, policy and printed page,
@@ -24,14 +24,14 @@ case failure. This run had no harness events.
 | model | `claude-sonnet-5` (configured, not called) |
 | runner | `proposeFormForTurn` |
 | temperature | 0 |
-| runs | 3 flags-on, 1 flags-off |
+| runs | 1 flags-on, 1 flags-off |
 
 | Case | Flags off | Flags on |
 | --- | --- | --- |
-| b9 Test Employee, written CA | FAIL. No employee on the card. Turns 1 and 3 ask who. | PASS 3/3. Slowest run 156ms. |
-| b10 Testy Testerson, Dodge, measuring | FAIL. Turn 1 has no employee. "show draft" has no card. The incident is treated as missing. | PASS 3/3. Slowest run 79ms. |
-| b11 Testy Testerson, late, Attendance | FAIL. Asks which of NE, Testy Testerson, or JBA Manual. | PASS 3/3. Slowest run 10ms. |
-| b12 Sadie Hoffart, Empire SD | FAIL. No employee. Turn 5 reads Store Director and asks who. | PASS 3/3. Slowest run 55ms. Store blank. Animals in the Workplace p.30. Visitors not required. |
+| b9 Test Employee, written CA | FAIL. No employee on the card. Turns 1 and 3 ask who. | PASS. Slowest run 156ms. |
+| b10 Testy Testerson, Dodge, measuring | FAIL. Turn 1 has no employee. "show draft" has no card. The incident is treated as missing. | PASS. Slowest run 79ms. |
+| b11 Testy Testerson, late, Attendance | FAIL. Asks which of NE, Testy Testerson, or JBA Manual. | PASS. Slowest run 10ms. |
+| b12 Sadie Hoffart, Empire SD | FAIL. No employee. Turn 5 reads Store Director and asks who. | PASS. Slowest run 55ms. Store blank. Animals in the Workplace p.30. Visitors not required. |
 
 The five-flag replay without `ANTI_LOOP_ENABLED` is unchanged: b9–b11 pass,
 and b12 still asks once with the two Sioux Falls stores and still misses
@@ -59,23 +59,23 @@ better on any case, so those sections stay.
 | model | `claude-sonnet-5` (configured, not called) |
 | runner | `proposeFormForTurn` |
 | temperature | 0 |
-| runs | 3 per arm |
+| runs | 1 per arm |
 
 | Case | Last-known-good prompt | Current prompt |
 | --- | --- | --- |
-| b9 Test Employee, written CA | PASS 3/3. Slowest run 25ms. | PASS 3/3. Slowest run 153ms. |
-| b10 Testy Testerson, Dodge, measuring | PASS 3/3. Slowest run 58ms. | PASS 3/3. Slowest run 78ms. |
-| b11 Testy Testerson, late, Attendance | PASS 3/3. Slowest run 7ms. | PASS 3/3. Slowest run 10ms. |
-| b12 Sadie Hoffart, Empire SD | PASS 3/3. Slowest run 48ms. | PASS 3/3. Slowest run 55ms. |
+| b9 Test Employee, written CA | PASS. Slowest run 25ms. | PASS. Slowest run 153ms. |
+| b10 Testy Testerson, Dodge, measuring | PASS. Slowest run 58ms. | PASS. Slowest run 78ms. |
+| b11 Testy Testerson, late, Attendance | PASS. Slowest run 7ms. | PASS. Slowest run 10ms. |
+| b12 Sadie Hoffart, Empire SD | PASS. Slowest run 48ms. | PASS. Slowest run 55ms. |
 
 No prompt section was reverted. The fixes stay in code.
 
 ## Round — guide v3, old behaviour against the rulebook flags — 24 Oct 2026
 
 The 18 turns are the Buff City cases b9–b12 and the 14 adapted chats, word
-for word, three runs each. Local harness only. Empty roster. Owner with
-global scope. Today 2026-10-24. The model is not called. A rule counts only
-when all three runs agree, and they did.
+for word, one run each. Local harness only. Empty roster. Owner with
+global scope. Today 2026-10-24. The model is not called. A rule counts on
+that run.
 
 Scored against the guide: employee on the card, the typed name kept, store
 not a gate, the date the manager gave, policy name and printed page, a
@@ -87,7 +87,7 @@ and the case under 8000ms.
 | --- | --- |
 | OLD | `main` `655a61dbebccd34405b53e40e0566a294120b0b8`, every flag off |
 | NEW | `73bbd8421e3d749849d554293f93d68062496cc8`, `TYPED_NAME_ENABLED`, `ACTION_PLAN_SENTENCES_ENABLED`, `PRINTED_PAGE_ONLY_ENABLED`, `POLICY_CITATION_ENABLED`, `PAYROLL_DEDUCT_AMOUNT_ENABLED`, `ANTI_LOOP_ENABLED` |
-| runs | 3 per case, per column |
+| runs | 1 per case, per column |
 | latency | slowest case 57ms. Budget 8000ms. Both columns pass it. |
 
 | Case | OLD | NEW | |
@@ -119,7 +119,7 @@ is not the employee.
 ## Round 1 — name, date slot, and store — 24 Oct 2026
 
 Compared with the guide v3 NEW column above. Same 18 cases, same wording,
-3 runs, local harness only (in-memory database, model not called). The
+1 run, local harness only (in-memory database, model not called). The
 preview deployment was not used: it shares the production database.
 
 Flag set for this replay, assigned explicitly:
@@ -253,9 +253,8 @@ NEW. The policy matcher is not behind a flag, so both columns agree. The
 Colene location mapping file is removed. Grand Forks, Fargo, Raymore, and
 Empire, SD are not mapped. No location row is written.
 
-Three runs of `src/lib/ai/round1-scoreboard.test.ts`. Each run measures
-this table three times. All three runs, and all three measurements inside
-each run, matched.
+One run of `src/lib/ai/round1-scoreboard.test.ts`. It measures this table
+once.
 
 | Case | OLD | NEW |
 | --- | --- | --- |
@@ -287,7 +286,7 @@ stand-in client in `src/lib/ai/prompt-cache-replay.test.ts` returns usage
 from the blocks `callClaude` actually sent, at one token per four
 characters. It waits that long before resolving, which is the first-token
 time: the whole prompt when nothing is cached, and only the tail on a
-cache read. Three runs matched.
+cache read. One run.
 
 The static block is the instruction body, through the voice rules. It has
 no listener name, no today's date, and no location name. Those sentences

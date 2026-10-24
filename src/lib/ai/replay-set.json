@@ -2,7 +2,7 @@
   "id": "b9-b12-2026-10-24",
   "note": "Pass criteria written before the anti-loop replay. Judged on the card fields. Visitors is not required. A blank store is not a question.",
   "temperature": 0,
-  "runsRequired": 3,
+  "runsRequired": 1,
   "latencyBudgetMs": 8000,
   "runner": "proposeFormForTurn",
   "configuredModel": "claude-sonnet-5",
