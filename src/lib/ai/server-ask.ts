@@ -94,7 +94,14 @@ import { resolveChatEntities } from "./entity-facts";
 import { proposeFormForTurn, suggestFormsForTurn, type ChatActor } from "./form-proposal";
 import { rowsForQuestion } from "@/lib/knowledge/credential-redaction";
 import { assembleGrounding } from "./grounding-assembly";
-import { fullManualGroundingNote, validateManualCitations, type FullManualPlan } from "./full-manual-context";
+import {
+  citePolicyAnswer,
+  fullManualGroundingNote,
+  validateManualCitations,
+  type CitedManualAnswer,
+  type FullManualPlan,
+  type FullManualSource,
+} from "./full-manual-context";
 import {
   buildGroundingBlock,
   buildSystemPrompt,
@@ -658,26 +665,22 @@ async function answerQuestionBody(
       manualPlan = null;
     }
   }
-  const useManual = manualPlan?.ready === true && (manualPlan.sources.length ?? 0) > 0;
-  const manualSources = useManual && manualPlan ? manualPlan.sources : [];
+  const useManual = manualPlan?.ready === true && manualPlan.cachedBlock != null;
+  /*
+   * The manual itself is not a source card here. Section cards are built
+   * after the answer, from the printed pages it cites. One card for the
+   * whole manual is what showed up as JBA Policy Manual p.1.
+   */
   const supplemental = useManual
     ? used.filter((row) => !isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES))
     : used;
-  const grounding: GroundingChunk[] = [
-    ...manualSources.map((source) => ({
-      marker: source.marker,
-      documentTitle: source.documentTitle,
-      locator: source.locator,
-      content: source.excerpt,
-    })),
-    ...supplemental.map((row, index) => ({
-      marker: manualSources.length + index + 1,
-      documentTitle: row.document_title,
-      locator: row.locator,
-      content: row.content,
-    })),
-  ];
-  const citationRows: (MatchedChunkRow | null)[] = [...manualSources.map(() => null), ...supplemental];
+  const grounding: GroundingChunk[] = supplemental.map((row, index) => ({
+    marker: index + 1,
+    documentTitle: row.document_title,
+    locator: row.locator,
+    content: row.content,
+  }));
+  const citationRows: (MatchedChunkRow | null)[] = supplemental;
 
   /* Where the pinned handbook rows landed, so the note names real markers only. */
   const handbookChunkIds = new Set((handbookCoverage?.rows ?? []).map((row) => row.chunk_id));
@@ -709,7 +712,12 @@ async function answerQuestionBody(
     locationNoun: ACTIVE_BRAND.vocabulary.locationNoun,
     context: request.context,
     mode: request.mode,
-    hasContext: grounding.length > 0,
+    /*
+     * The manual lives in the cached prefix, not in `grounding`. Those rows
+     * are the other documents. An empty grounding list must not tell the
+     * model that no company document matched.
+     */
+    hasContext: grounding.length > 0 || useManual,
     hasReportData: (briefing?.present.length ?? 0) > 0,
     hasMissingReports: (briefing?.missing.length ?? 0) > 0,
     hasFormsLibrary: formInventoryBlock !== null,
@@ -753,7 +761,7 @@ async function answerQuestionBody(
     breakdown: reportBreakdownEnabled(),
   });
   const pinnedPolicy = await citedManualGrounding(request, knowledge);
-  const supplementalChunks = grounding.filter((chunk) => chunk.marker > manualSources.length);
+  const supplementalChunks = grounding;
   const supplementalText =
     useManual && supplementalChunks.length > 0
       ? `OTHER COMPANY SOURCES\n\n${supplementalChunks
@@ -777,10 +785,11 @@ async function answerQuestionBody(
     })),
     prompt: redactTraceText(system),
   });
-  const answer = await callClaude({
+  const reportData =
+    [briefing?.text ?? null, dataAddition.data].filter((part) => part && part.length > 0).join("\n\n") || null;
+  const claudeBase = {
     system,
-    grounding: dataAddition.help ? `${groundingText}\n\n${dataAddition.help}` : groundingText,
-    reportData: [briefing?.text ?? null, dataAddition.data].filter((part) => part && part.length > 0).join("\n\n") || null,
+    reportData,
     formsLibrary: formInventoryBlock,
     verifiedRecords: entities.block,
     personMemory,
@@ -789,30 +798,63 @@ async function answerQuestionBody(
     ...(longContext ? { historyPolicy: "budget" as const, priorSummary: longContext.summary } : {}),
     question: request.question,
     maxTokens: CLAUDE_MAX_TOKENS[request.mode],
+  };
+  const retrievalChunks: GroundingChunk[] = used.map((row, index) => ({
+    marker: index + 1,
+    documentTitle: row.document_title,
+    locator: row.locator,
+    content: row.content,
+  }));
+  const supplementalMarkers = grounding.map((chunk) => chunk.marker);
+  let answer = await callClaude({
+    ...claudeBase,
+    grounding: dataAddition.help ? `${groundingText}\n\n${dataAddition.help}` : groundingText,
     ...(useManual && manualPlan?.cachedBlock ? { cachedContext: manualPlan.cachedBlock } : {}),
   });
 
-  const markers = extractUsedMarkers(answer, grounding.map((chunk) => chunk.marker));
-  const guarded = fullManualContextEnabled()
-    ? validateManualCitations(answer, { shownMarkers: markers, index: manualPlan?.index ?? null })
-    : answer;
-  const citations: SourceCitation[] = markers.flatMap((marker) => {
-    const manual = manualSources[marker - 1];
-    if (manual) {
-      return [
-        {
-          documentId: manual.documentId,
-          documentTitle: manual.documentTitle,
-          locator: manual.locator,
-          category: manual.category,
-          excerpt: manual.excerpt,
-          relevance: 1,
-        },
-      ];
+  let settled: CitedManualAnswer | null = null;
+  let fellBack = false;
+  if (useManual && manualPlan) {
+    const checkedManual = citePolicyAnswer(answer, manualPlan, supplementalMarkers);
+    if (checkedManual.ok) {
+      settled = checkedManual;
+    } else {
+      /*
+       * The answer named no printed page from the manual that was loaded.
+       * Ordinary retrieval is the same path the flag-off turn already uses.
+       */
+      fellBack = true;
+      const fallbackGrounding = [buildGroundingBlock(retrievalChunks), pinnedPolicy, dataAddition.help]
+        .filter((part) => part && part.length > 0)
+        .join("\n\n");
+      answer = await callClaude({ ...claudeBase, grounding: fallbackGrounding });
     }
-    const row = citationRows[marker - 1];
-    return row ? [rowToCitation(row)] : [];
+  }
+
+  const activeMarkers = (fellBack ? retrievalChunks : grounding).map((chunk) => chunk.marker);
+  const activeRows: (MatchedChunkRow | null)[] = fellBack ? [...used] : citationRows;
+  const markers = extractUsedMarkers(settled?.text ?? answer, activeMarkers);
+  const guarded = settled
+    ? settled.text
+    : fullManualContextEnabled() && !fellBack
+      ? validateManualCitations(answer, { shownMarkers: markers, index: manualPlan?.index ?? null })
+      : answer;
+  const toCitation = (source: FullManualSource): SourceCitation => ({
+    documentId: source.documentId,
+    documentTitle: source.documentTitle,
+    locator: source.locator,
+    category: source.category,
+    excerpt: source.excerpt,
+    relevance: 1,
   });
+  const citedRows = (usedMarkers: readonly number[], rows: readonly (MatchedChunkRow | null)[]): SourceCitation[] =>
+    usedMarkers.flatMap((marker) => {
+      const row = rows[marker - 1];
+      return row ? [rowToCitation(row)] : [];
+    });
+  let citations: SourceCitation[] = settled
+    ? [...settled.sources.map(toCitation), ...citedRows(markers, citationRows)]
+    : citedRows(markers, activeRows);
 
   const suggested = await suggestedFormsFor({ summariesPromise, request, actor });
 
@@ -825,14 +867,15 @@ async function answerQuestionBody(
     section: row.section,
     content: row.content,
   }));
-  const cited = policyCitationEnabled()
-    ? withMappedPolicy(
-        prose,
-        [...request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), request.question],
-        manualChunks,
-        true,
-      )
-    : prose;
+  const cited =
+    policyCitationEnabled() && !settled
+      ? withMappedPolicy(
+          prose,
+          [...request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), request.question],
+          manualChunks,
+          true,
+        )
+      : prose;
   const checked = antiLoopEnabled()
     ? cited
     : await applySelfCheck({
@@ -840,12 +883,24 @@ async function answerQuestionBody(
         chunks: manualChunks,
         loadRoster: () => loadRosterQuiet(actor),
       });
+  let content = checked;
+  if (settled && manualPlan) {
+    const final = citePolicyAnswer(checked, manualPlan, supplementalMarkers);
+    if (final.ok) {
+      content = final.text;
+      const finalMarkers = extractUsedMarkers(final.text, supplementalMarkers);
+      citations = [...final.sources.map(toCitation), ...citedRows(finalMarkers, citationRows)];
+    } else {
+      content = suggested ? `${stripMarkers(settled.text)}\n\n${suggested.lead}` : stripMarkers(settled.text);
+      citations = settled.sources.map(toCitation);
+    }
+  }
   return {
-    content: checked,
+    content,
     formSelection: suggested?.selection,
     citations,
     coverage: answerCoverage({
-      retrieved: grounding.length,
+      retrieved: fellBack ? used.length : grounding.length + (useManual ? 1 : 0),
       cited: citations.length,
       reportBacked: (briefing?.present.length ?? 0) > 0,
       recordBacked: formRecords !== null,
