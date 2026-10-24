@@ -648,6 +648,17 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
         if (!mentions.some((mention) => mention.matched && foldKey(mention.matched, index.abbreviations).includes(` ${normalized} `))) {
           unmatched.push(span);
         }
+      } else if (!nounFollows && typedNameEnabled()) {
+        // "at Empire, SD": the place is not a registered store. The state is.
+        // The stores in that state are the options — never a store invented from the town.
+        const after = spaced.slice((match.index ?? 0) + match[0].length);
+        const state = /^\s*,\s*([A-Za-z]{2})\b/.exec(after);
+        const code = state?.[1]?.toUpperCase() ?? "";
+        if (code && companyNameStops().stateCodes.has(code)) {
+          const ids = index.stores.filter((store) => store.state?.toUpperCase() === code).map((store) => store.id);
+          if (ids.length > 1) mentions.push({ locationIds: ids, matched: `${span}, ${code}` });
+          else unmatched.push(`${span}, ${code}`);
+        }
       }
     }
   }

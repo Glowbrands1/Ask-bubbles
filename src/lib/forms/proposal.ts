@@ -168,6 +168,12 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
     const ends = WRAPPER_AFTER.test(opened) || stem !== null;
     const word = stem ?? unwrapped;
     const lower = word.toLowerCase();
+    // "Employee" is the form's own word, and also a surname ("Test Employee").
+    // Only a later word, and only while a typed name is kept.
+    const employeeSurname = typedNameEnabled() && parts.length > 0 && lower === "employee";
+    // "NE" and "SD" are this company's state codes. The capitalised reader
+    // already drops them; this reader is the one "Dodge, NE" was still reaching.
+    const stateOrTitle = typedNameEnabled() && isTypedStopWord(word, companyNameStops());
     const usable =
       TYPED_NAME_WORD.test(word) &&
       // The first part is a real word; a trailing initial ("C") may follow it.
@@ -179,7 +185,8 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
       !NOT_A_NAME.has(lower) &&
       !COUNTS_PEOPLE.has(lower) &&
       (!NOT_A_TYPED_NAME.has(lower) || willAsFirstName(lower, parts.length, words, whole)) &&
-      !isFormVocabulary(lower);
+      (!isFormVocabulary(lower) || employeeSurname) &&
+      !stateOrTitle;
     if (!usable) {
       if (whole) return null;
       break;
@@ -216,7 +223,9 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
   }
   if (parts.length === 0) return null;
   if (whole && parts.length !== words.length) return null;
-  return parts.join(" ");
+  const candidate = parts.join(" ");
+  if (typedNameEnabled() && isTypedStopSpan(candidate, companyNameStops())) return null;
+  return candidate;
 }
 
 /*
@@ -1410,6 +1419,15 @@ function withoutSubjectLead(words: readonly string[]): string[] {
     if (words[at] !== undefined && isJobTitleAbbreviation(words[at]!.replace(/[,.]$/, ""))) skip = at + 1;
   }
   const rest = words.slice(skip);
+  if (rest.length > 0 && rest.length < words.length) return rest;
+  // "for Team Member, Test Employee": the comma sits on the title, so the
+  // role pattern above never sees "Team Member". Drop the title and keep the name.
+  if (typedNameEnabled() && skip === 0) {
+    const joined = words.join(" ").replace(/,/g, " ");
+    const titled = SUBJECT_LEAD_AT_START.exec(`${joined} `)?.[0];
+    const leadWords = titled ? titled.trim().split(/\s+/).length : 0;
+    if (leadWords > 0 && leadWords < words.length) return words.slice(leadWords);
+  }
   return rest.length > 0 ? rest : [...words];
 }
 
@@ -1809,8 +1827,15 @@ export const JOB_TITLES: readonly { pattern: RegExp; title: string }[] = COMPANY
  * most specific one wins rather than whichever came first in the sentence.
  */
 export function extractJobTitle(text: string): string | null {
+  // "at Empire, SD" is a place. "SD" is also the Store Director abbreviation,
+  // and only the abbreviation that follows a comma is the state.
+  const source = typedNameEnabled()
+    ? text.replace(/,\s*([A-Za-z]{2})\b/g, (match, code: string) =>
+        companyNameStops().stateCodes.has(code.toUpperCase()) ? "" : match,
+      )
+    : text;
   for (const entry of JOB_TITLES) {
-    if (entry.pattern.test(text)) return entry.title;
+    if (entry.pattern.test(source)) return entry.title;
   }
   return null;
 }

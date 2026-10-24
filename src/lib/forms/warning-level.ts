@@ -1,3 +1,4 @@
+import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
@@ -709,7 +710,10 @@ export function warningMentions(text: string, today: string): WarningMention[] {
     push(entry.level, entry.start, entry.end, true, entry.underHeading ? "historical" : answers > 1 ? "unclear" : undefined);
   }
 
-  for (const pattern of [BARE_CHANGED_TO, BARE_AFTER_CUE, BARE_GIVEN]) {
+  const patterns = [BARE_CHANGED_TO, BARE_AFTER_CUE, BARE_GIVEN];
+  // "do verbal for …" names the level. The article in BARE_GIVEN is optional only here.
+  if (typedNameEnabled()) patterns.push(/\bdo\s+(verbal|written)\s+for\b/gi);
+  for (const pattern of patterns) {
     for (const match of source.matchAll(pattern)) {
       const start = match.index + match[0].length - match[1]!.length;
       push(levelOf(match[1]!), start, match.index + match[0].length, true);

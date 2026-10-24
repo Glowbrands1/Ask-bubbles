@@ -241,3 +241,20 @@ the payroll Yes/No question. The line stays blank unless the manager
 stated an amount. A "$25.00" quoted from Late Opening is not written into
 it. When payroll is Yes and no amount was stated, chat asks once. Off,
 the document, the card, the question, and the PDF are unchanged.
+
+## 24 Oct 2026: name, store, and issue gate (replay b9–b12)
+
+**Sibling app: not ported.** These turns are Buff City Soap's. Ask Sunny
+`main` is not this working tree, and its people, salon names, and wording
+stay there. The mechanism is the one `TYPED_NAME_ENABLED` already gates.
+Nothing here is a prompt change.
+
+On that flag, a state code is not a person, a surname "Employee" is kept,
+and a comma after a job title does not hide the name. ", SD" is not read
+as Store Director. "do verbal for" opens a corrective action and sets the
+level. "show draft" continues the open card. An "at <place>, <state>"
+that is not a registered store asks with the stores in that state and
+does not invent the town. A for-clause that is only the title, the
+person, and the place is not the issue; the offense sentence is. Off,
+the for-clause, the article in "do a verbal", and the old store miss
+stay as they were.

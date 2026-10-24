@@ -1,4 +1,8 @@
+import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
+
 import { JOIN } from "./bounded-context";
+import { describesIncident } from "./corrective-action-intake";
 
 /**
  * ============================================================================
@@ -23,15 +27,26 @@ const REQUEST =
   /\b(?:warning|write[- ]?up|corrective\s+action(?:\s+form)?|ca|c\/a|dpoa)\s+(?:for|about|over|regarding|re:?)\s+([^.;!?\n]+)/gi;
 const CUT = /\s*(?:,|\s-\s|\s—\s|\band\b(?=\s+(?:a|an|the|also|then|she|he|they|i|we|please|pls)\b)|\bplease\b|\bpls\b|\bthanks?\b|\bthank you\b)/i;
 const NOT_AN_ISSUE = /^(?:her|him|them|this|that|it|the\s+employee|my\s+employee|an?\s+employee|today|tomorrow|yesterday)$/i;
+/** "violation is that …" names the offense. The request's for-clause often names only the person. */
+const VIOLATION = /\bviolation\s+is\s+(?:that\s+)?([^.;!?\n]+)/i;
+/** Payroll and prior coaching answer those fields. They are not the offense. */
+const NOT_THE_ACCOUNT =
+  /\b(?:payroll\s+deduct|previous\s+coaching|prior\s+(?:coaching|actions?)|jba\s+(?:policy\s+)?manual)\b/i;
+const PLACE = /\bat\s+[A-Za-z0-9][\w'.-]*(?:\s+[A-Za-z0-9][\w'.-]*){0,3}/gi;
+const LEFTOVER_FILLER = /^(?:location|store|the|a|an|for|and)$/i;
 
-export function correctiveActionIssue(text: string, employeeName: string | null): string | null {
-  const turns = (text ?? "")
+function turnsOf(text: string): string[] {
+  return (text ?? "")
     .split(JOIN)
     .map((turn) => turn.trim())
     .filter(Boolean);
+}
+
+/** The for-clause the request names, flags off and on. Capped at 80, as before. */
+function issueFromRequest(text: string, employeeName: string | null): string | null {
   const person = (employeeName ?? "").trim().toLowerCase();
   const personWords = new Set(person.split(/\s+/).filter(Boolean));
-  for (const turn of [...turns].reverse()) {
+  for (const turn of [...turnsOf(text)].reverse()) {
     let found: string | null = null;
     for (const match of turn.matchAll(REQUEST)) {
       let raw = match[1]!;
@@ -52,4 +67,82 @@ export function correctiveActionIssue(text: string, employeeName: string | null)
     if (found) return found;
   }
   return null;
+}
+
+/**
+ * A for-clause that is only a job title, the employee, and "at <place>".
+ * "CA for team member Testy Testerson at Dodge" names who and where, not what happened.
+ */
+function titleAndPlaceOnly(issue: string, employeeName: string | null): boolean {
+  let rest = ` ${issue} `;
+  let strippedTitle = false;
+  let strippedPlace = false;
+  for (const entry of COMPANY_JOB_TITLES) {
+    const pattern = new RegExp(entry.pattern.source, "gi");
+    if (!pattern.test(rest)) continue;
+    strippedTitle = true;
+    rest = rest.replace(new RegExp(entry.pattern.source, "gi"), " ");
+  }
+  if (PLACE.test(rest)) {
+    strippedPlace = true;
+    rest = rest.replace(new RegExp(PLACE.source, "gi"), " ");
+  }
+  PLACE.lastIndex = 0;
+  if (!strippedTitle && !strippedPlace) return false;
+  const person = new Set(
+    (employeeName ?? "")
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean),
+  );
+  const leftover = rest
+    .replace(/[^A-Za-z0-9']+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word && !LEFTOVER_FILLER.test(word));
+  if (leftover.length === 0) return true;
+  if (person.size > 0) return leftover.every((word) => person.has(word.toLowerCase()));
+  return strippedTitle && leftover.length <= 3 && leftover.every((word) => /^[A-Za-z][A-Za-z'.-]*$/.test(word));
+}
+
+function clipAccount(raw: string): string | null {
+  const issue = raw.trim().replace(/[\s"'”’)]+$/, "").replace(/\.+$/, "");
+  if (issue.length < 3 || issue.length > 180 || NOT_AN_ISSUE.test(issue)) return null;
+  return issue;
+}
+
+/** The latest account of what happened, when the for-clause was only the person and the store. */
+function accountIssue(text: string): string | null {
+  for (const turn of [...turnsOf(text)].reverse()) {
+    const violation = VIOLATION.exec(turn);
+    if (violation && !NOT_THE_ACCOUNT.test(violation[1]!)) {
+      const issue = clipAccount(violation[1]!);
+      if (issue) return issue;
+    }
+    const sentences = [...turn.matchAll(/[^.!?\n]+[.!?]*/g)]
+      .map((match) => match[0].trim())
+      .filter((sentence) => sentence.length >= 3 && sentence.length <= 180);
+    const hits = sentences
+      .map((sentence, index) => ({ sentence, index }))
+      .filter(({ sentence }) => !NOT_THE_ACCOUNT.test(sentence) && describesIncident(sentence));
+    if (hits.length === 0) continue;
+    let start = hits.length - 1;
+    while (start > 0 && hits[start]!.index === hits[start - 1]!.index + 1) start -= 1;
+    let joined = "";
+    for (const hit of hits.slice(start)) {
+      const next = joined ? `${joined} ${hit.sentence}` : hit.sentence;
+      if (next.length > 180) break;
+      joined = next;
+    }
+    const issue = clipAccount(joined);
+    if (issue) return issue;
+  }
+  return null;
+}
+
+export function correctiveActionIssue(text: string, employeeName: string | null): string | null {
+  const fromRequest = issueFromRequest(text, employeeName);
+  if (!typedNameEnabled()) return fromRequest;
+  if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return fromRequest;
+  return accountIssue(text);
 }

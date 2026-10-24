@@ -23,6 +23,7 @@
  * Here, that sentence is AMBIGUOUS and the answer is a question.
  */
 
+import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { asksForTeamCoaching } from "./team-subject";
 import { EXIT_TEMPLATE_KEY } from "./exit-library";
@@ -1506,6 +1507,10 @@ export function detectTemplateIntent(question: string): TemplateIntent {
 
   /* "issue a verbal", "put tess varga on a written" — see `LEVEL_AS_DOCUMENT`. */
   if (!informational && LEVEL_AS_DOCUMENT.test(q)) return { kind: "explicit", templateKey: "dpoa" };
+  // "do verbal for <person>": the same request as "do a verbal", without the article.
+  if (typedNameEnabled() && !informational && /\bdo\s+(?:verbal|written)\s+for\b/i.test(q)) {
+    return { kind: "explicit", templateKey: "dpoa" };
+  }
 
   /*
    * THE NAME OF THE PROGRESSION, with no document named alongside it — and not

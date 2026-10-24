@@ -1784,6 +1784,14 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
 
   if (!continued) return { kind: "none" };
 
+  // "show draft" / "show draft with edits" is the open card, not a new question.
+  if (
+    typedNameEnabled() &&
+    /^\s*show(?:\s+me)?(?:\s+the)?\s+draft(?:\s+with\s+edits)?\s*[.!]?\s*$/i.test(input.question.trim())
+  ) {
+    return { kind: "explicit", templateKey: continued };
+  }
+
   /*
    * AN OPEN EXIT FORM IS ALSO ANSWERED BY ITS FACTS. Bubbles asks "what was
    * their last day worked?" and "how did they leave?" — and "her last day was
