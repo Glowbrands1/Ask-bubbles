@@ -2,8 +2,8 @@
 
 Local harness only. `proposeFormForTurn`, temperature 0, empty roster, owner
 with global scope, today 2026-10-24. The model is the configured answering
-model and is not called. A case passes only when every flags-on run passes.
-Flags-off is the same card rules and is allowed to fail them.
+model and is not called. Each case is replayed once. A case passes when
+that run passes. Flags-off is the same card rules and is allowed to fail them.
 
 Pass criteria were written in `src/lib/ai/replay-set.json` before the run.
 They are judged on the card: employee, store, date, policy and printed page,
@@ -24,14 +24,14 @@ case failure. This run had no harness events.
 | model | `claude-sonnet-5` (configured, not called) |
 | runner | `proposeFormForTurn` |
 | temperature | 0 |
-| runs | 3 flags-on, 1 flags-off |
+| runs | 1 flags-on, 1 flags-off |
 
 | Case | Flags off | Flags on |
 | --- | --- | --- |
-| b9 Test Employee, written CA | FAIL. No employee on the card. Turns 1 and 3 ask who. | PASS 3/3. Slowest run 156ms. |
-| b10 Testy Testerson, Dodge, measuring | FAIL. Turn 1 has no employee. "show draft" has no card. The incident is treated as missing. | PASS 3/3. Slowest run 79ms. |
-| b11 Testy Testerson, late, Attendance | FAIL. Asks which of NE, Testy Testerson, or JBA Manual. | PASS 3/3. Slowest run 10ms. |
-| b12 Sadie Hoffart, Empire SD | FAIL. No employee. Turn 5 reads Store Director and asks who. | PASS 3/3. Slowest run 55ms. Store blank. Animals in the Workplace p.30. Visitors not required. |
+| b9 Test Employee, written CA | FAIL. No employee on the card. Turns 1 and 3 ask who. | PASS. Slowest run 156ms. |
+| b10 Testy Testerson, Dodge, measuring | FAIL. Turn 1 has no employee. "show draft" has no card. The incident is treated as missing. | PASS. Slowest run 79ms. |
+| b11 Testy Testerson, late, Attendance | FAIL. Asks which of NE, Testy Testerson, or JBA Manual. | PASS. Slowest run 10ms. |
+| b12 Sadie Hoffart, Empire SD | FAIL. No employee. Turn 5 reads Store Director and asks who. | PASS. Slowest run 55ms. Store blank. Animals in the Workplace p.30. Visitors not required. |
 
 The five-flag replay without `ANTI_LOOP_ENABLED` is unchanged: b9–b11 pass,
 and b12 still asks once with the two Sioux Falls stores and still misses
@@ -59,23 +59,23 @@ better on any case, so those sections stay.
 | model | `claude-sonnet-5` (configured, not called) |
 | runner | `proposeFormForTurn` |
 | temperature | 0 |
-| runs | 3 per arm |
+| runs | 1 per arm |
 
 | Case | Last-known-good prompt | Current prompt |
 | --- | --- | --- |
-| b9 Test Employee, written CA | PASS 3/3. Slowest run 25ms. | PASS 3/3. Slowest run 153ms. |
-| b10 Testy Testerson, Dodge, measuring | PASS 3/3. Slowest run 58ms. | PASS 3/3. Slowest run 78ms. |
-| b11 Testy Testerson, late, Attendance | PASS 3/3. Slowest run 7ms. | PASS 3/3. Slowest run 10ms. |
-| b12 Sadie Hoffart, Empire SD | PASS 3/3. Slowest run 48ms. | PASS 3/3. Slowest run 55ms. |
+| b9 Test Employee, written CA | PASS. Slowest run 25ms. | PASS. Slowest run 153ms. |
+| b10 Testy Testerson, Dodge, measuring | PASS. Slowest run 58ms. | PASS. Slowest run 78ms. |
+| b11 Testy Testerson, late, Attendance | PASS. Slowest run 7ms. | PASS. Slowest run 10ms. |
+| b12 Sadie Hoffart, Empire SD | PASS. Slowest run 48ms. | PASS. Slowest run 55ms. |
 
 No prompt section was reverted. The fixes stay in code.
 
 ## Round — guide v3, old behaviour against the rulebook flags — 24 Oct 2026
 
 The 18 turns are the Buff City cases b9–b12 and the 14 adapted chats, word
-for word, three runs each. Local harness only. Empty roster. Owner with
-global scope. Today 2026-10-24. The model is not called. A rule counts only
-when all three runs agree, and they did.
+for word, one run each. Local harness only. Empty roster. Owner with
+global scope. Today 2026-10-24. The model is not called. A rule counts on
+that run.
 
 Scored against the guide: employee on the card, the typed name kept, store
 not a gate, the date the manager gave, policy name and printed page, a
@@ -87,7 +87,7 @@ and the case under 8000ms.
 | --- | --- |
 | OLD | `main` `655a61dbebccd34405b53e40e0566a294120b0b8`, every flag off |
 | NEW | `73bbd8421e3d749849d554293f93d68062496cc8`, `TYPED_NAME_ENABLED`, `ACTION_PLAN_SENTENCES_ENABLED`, `PRINTED_PAGE_ONLY_ENABLED`, `POLICY_CITATION_ENABLED`, `PAYROLL_DEDUCT_AMOUNT_ENABLED`, `ANTI_LOOP_ENABLED` |
-| runs | 3 per case, per column |
+| runs | 1 per case, per column |
 | latency | slowest case 57ms. Budget 8000ms. Both columns pass it. |
 
 | Case | OLD | NEW | |
@@ -119,7 +119,7 @@ is not the employee.
 ## Round 1 — name, date slot, and store — 24 Oct 2026
 
 Compared with the guide v3 NEW column above. Same 18 cases, same wording,
-3 runs, local harness only (in-memory database, model not called). The
+1 run, local harness only (in-memory database, model not called). The
 preview deployment was not used: it shares the production database.
 
 Flag set for this replay, assigned explicitly:
@@ -228,3 +228,146 @@ Seventeen plain-language prompts are in `src/lib/knowledge/ca-policy-retrieval.t
 | district_manager names Kearney | store loc-66 | no ask |
 | Empire, SD | not a store | still not a store; the ask remains |
 | open draft, same employee, template, incident date, other chat | creates | reuses; card-id match still wins |
+
+## Newest Woven edition — 24 Oct 2026
+
+`EDITION_SUPERSESSION_ENABLED` defaults off. Local harness only: the fake
+Woven in `src/lib/knowledge-sync/woven/reference/sync.test.ts`, the memory
+sink, and pure planners. No production query, no migration applied, no
+embedder. Preview writes no manifest and no document.
+
+| Check | Flag off | Flag on |
+| --- | --- | --- |
+| 2024 JBA manual plus two May 2025 copies | all three indexed | May 2025 copies indexed; 2024 held as `older_edition` and not searchable |
+| 2024 file already indexed, then its bytes and updated time change | would ingest the change | version stays 1, row stays superseded, bytes unchanged |
+| same section text in the 2024 and May 2025 manuals | both rows returned | May 2025 row kept |
+| two May 2025 copies, same section, same score | both kept by the sync | retrieval keeps the lower document id |
+| preview | writes nothing | writes nothing |
+
+## Round 1 scope — old against new — 24 Oct 2026
+
+Local harness only. In-memory recorder for `chat_form_state` and
+`chat_traces`. No production query, no migration applied, model not called.
+`SELF_CHECK_ENABLED` unset. Each other flag below is off in OLD and on in
+NEW. The policy matcher is not behind a flag, so both columns agree. The
+Colene location mapping file is removed. Grand Forks, Fargo, Raymore, and
+Empire, SD are not mapped. No location row is written.
+
+One run of `src/lib/ai/round1-scoreboard.test.ts`. It measures this table
+once.
+
+| Case | OLD | NEW |
+| --- | --- | --- |
+| Name: Christiana Headley, job title tanning consultant | christiana headley. Job title slot empty. | christiana headley. Job title Tanning Consultant. |
+| Jane Store | Jane | Jane Store |
+| Job title, as a candidate | Job title | not a name |
+| SoC, insubordination | outside the top 14 (rank 15) | Standards of Conduct first |
+| Dress Code, slippers | outside the top 14 (rank 17) | Dress Code for The Company first |
+| Attendance, tardy | outside the top 14 (rank 16) | Attendance first |
+| Late Opening, store opened late | outside the top 14 (rank 18) | Late Opening first |
+| Policy matcher, opening the store late | Late Opening | Late Opening |
+| Policy matcher, employee tardy | Attendance | Attendance |
+| chat_form_state | 0 writes | 1 upsert |
+| chat_traces | 0 writes | 1 insert |
+| Cross-chat draft, same employee, template, date | creates | reuses draft-other-chat |
+| Cross-chat, different date | creates | creates |
+| Previous coaching, finalized plus a draft | draft stays in the on-file list | Not on file. These drafts are not previous coaching: |
+| Store ask, global district manager | not asked | asked once |
+| Store ask, already asked | not asked | not asked again |
+| Store ask, admin | not asked | not asked |
+| Sync guard, 2024 manual beside May 2025 | flag off, pending ingest | pending none, older_edition |
+| Identical section text | both copies | newest edition only (ce6b00f1) |
+| Preview | returns before the edition hold | returns before the edition hold |
+
+## Round 1 item 9 — prompt caching — 24 Oct 2026
+
+Local harness only. The model is not called. No production query. The
+stand-in client in `src/lib/ai/prompt-cache-replay.test.ts` returns usage
+from the blocks `callClaude` actually sent, at one token per four
+characters. It waits that long before resolving, which is the first-token
+time: the whole prompt when nothing is cached, and only the tail on a
+cache read. One run.
+
+The static block is the instruction body, through the voice rules. It has
+no listener name, no today's date, and no location name. Those sentences
+are unchanged and follow `---DYNAMIC---`. The marker is not sent.
+`cache_control` is `{ type: "ephemeral" }` on the static block only. The
+tail has none.
+
+A repeated prompt is what produces a cache read. A different answer mode
+or a different attached section still changes the prefix.
+
+| Call | cache_creation_input_tokens | cache_read_input_tokens | First token |
+| --- | --- | --- | --- |
+| OLD, one string, no cache | 0 | 0 | 55 ms |
+| NEW, 1st call | 1815 | 0 | 55 ms |
+| NEW, later calls | 0 | 1815 | 13 ms |
+
+Card replay pass/fail is unchanged. The form card does not read this
+prompt, and the round 1 table above keeps the same expectations.
+
+## One run — pass or fail — 24 Oct 2026
+
+Commit `e1a6fdb`. Local harness. The model is not called. Each case once.
+No production query.
+
+Card cases use `proposeFormForTurn`. OLD is every flag off. NEW is
+`TYPED_NAME_ENABLED`, `ACTION_PLAN_SENTENCES_ENABLED`,
+`PRINTED_PAGE_ONLY_ENABLED`, `POLICY_CITATION_ENABLED`,
+`PAYROLL_DEDUCT_AMOUNT_ENABLED`, and `ANTI_LOOP_ENABLED`.
+`SELF_CHECK_ENABLED` is unset.
+
+| Case | OLD | NEW |
+| --- | --- | --- |
+| b9 Test Employee, written CA | FAIL | PASS |
+| b10 Testy Testerson, Dodge, measuring | FAIL | PASS |
+| b11 Testy Testerson, late, Attendance | FAIL | PASS |
+| b12 Sadie Hoffart, Empire SD | FAIL | PASS |
+
+Same six flags on. OLD is the last-known-good prompt text (`655a61d`).
+NEW is the current prompt, with the listener line after `---DYNAMIC---`.
+The card does not read the system prompt, so the cache split does not
+change these results.
+
+| Case | OLD prompt | NEW prompt |
+| --- | --- | --- |
+| b9 Test Employee, written CA | PASS | PASS |
+| b10 Testy Testerson, Dodge, measuring | PASS | PASS |
+| b11 Testy Testerson, late, Attendance | PASS | PASS |
+| b12 Sadie Hoffart, Empire SD | PASS | PASS |
+
+Round 1 scope, one measurement of the table above. PASS means that run
+matched the expected cell. Each row matched.
+
+| Case | OLD | NEW |
+| --- | --- | --- |
+| Name: Christiana Headley, job title tanning consultant | PASS | PASS |
+| Jane Store | PASS | PASS |
+| Job title, as a candidate | PASS | PASS |
+| SoC, insubordination | PASS | PASS |
+| Dress Code, slippers | PASS | PASS |
+| Attendance, tardy | PASS | PASS |
+| Late Opening, store opened late | PASS | PASS |
+| Policy matcher, opening the store late | PASS | PASS |
+| Policy matcher, employee tardy | PASS | PASS |
+| chat_form_state | PASS | PASS |
+| chat_traces | PASS | PASS |
+| Cross-chat draft, same employee, template, date | PASS | PASS |
+| Cross-chat, different date | PASS | PASS |
+| Previous coaching, finalized plus a draft | PASS | PASS |
+| Store ask, global district manager | PASS | PASS |
+| Store ask, already asked | PASS | PASS |
+| Store ask, admin | PASS | PASS |
+| Sync guard, 2024 manual beside May 2025 | PASS | PASS |
+| Identical section text | PASS | PASS |
+| Preview | PASS | PASS |
+
+Prompt cache, one run of the local stand-in. Tokens are one per four
+characters of the block that was sent. First-token time is how long that
+stand-in waits.
+
+| Call | cache_creation_input_tokens | cache_read_input_tokens | First token |
+| --- | --- | --- | --- |
+| OLD | 0 | 0 | 55 ms |
+| NEW, 1st call | 1815 | 0 | 55 ms |
+| NEW, later call | 0 | 1815 | 13 ms |

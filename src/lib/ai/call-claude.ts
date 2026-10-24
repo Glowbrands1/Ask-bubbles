@@ -1,12 +1,16 @@
 import "server-only";
 
+import type { TextBlockParam } from "@anthropic-ai/sdk/resources/messages";
+
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_EFFORT, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
+
 import { Anthropic, getAnthropicClient } from "./anthropic";
 import { AiError } from "./errors";
 import { selectLongContext } from "./long-context";
 import { noteModelCall } from "./model-failure";
+import { splitSystemPrompt } from "./prompts";
 import { withTruncationRetry } from "./truncation";
 
 /**
@@ -113,6 +117,21 @@ export interface CallClaudeInput {
   readonly maxTokens: number;
 }
 
+/**
+ * The answering path's system value. A prompt with a dynamic tail sends the
+ * instruction block first, with an ephemeral cache breakpoint, and the tail
+ * after it with no breakpoint. Any other system string is sent as-is.
+ */
+export function claudeSystemPayload(system: string): string | TextBlockParam[] {
+  const parts = splitSystemPrompt(system);
+  if (!parts) return system;
+  const blocks: TextBlockParam[] = [
+    { type: "text", text: parts.staticBlock, cache_control: { type: "ephemeral" } },
+  ];
+  if (parts.dynamicTail.length > 0) blocks.push({ type: "text", text: parts.dynamicTail });
+  return blocks;
+}
+
 export async function callClaude(input: CallClaudeInput): Promise<string> {
   const client = getAnthropicClient();
 
@@ -148,7 +167,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
           max_tokens: maxTokens,
           thinking: { type: "adaptive" },
           output_config: { effort: CLAUDE_EFFORT },
-          system: input.system,
+          system: claudeSystemPayload(input.system),
           messages: [
             ...history,
             {
