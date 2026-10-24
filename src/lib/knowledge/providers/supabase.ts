@@ -1,6 +1,7 @@
 import "server-only";
 
-import { caPolicyRetrievalEnabled } from "@/lib/config/chat-quality-flags";
+import { caPolicyRetrievalEnabled, editionSupersessionEnabled } from "@/lib/config/chat-quality-flags";
+import { dedupeIdenticalSections } from "@/lib/knowledge-sync/edition";
 import { EMBEDDING_DIMENSIONS, RETRIEVAL } from "@/lib/config/models";
 import { getEmbeddingProvider } from "@/lib/embeddings";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
@@ -235,7 +236,8 @@ export class SupabaseKnowledgeProvider implements KnowledgeProvider {
     }
 
     const rows = await this.readRowsForBrand((data ?? []) as MatchedChunkRow[]);
-    this.lastRows = boost ? rerankCaPolicyChunks(rows, trimmed, limit) : rows;
+    const ranked = boost ? rerankCaPolicyChunks(rows, trimmed, limit) : rows;
+    this.lastRows = editionSupersessionEnabled() ? dedupeIdenticalSections(ranked) : ranked;
     return this.lastRows;
   }
 

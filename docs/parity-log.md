@@ -6,6 +6,40 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: the newest Woven edition is the one that answers
+
+Ported from Ask Sunny branch `cursor/edition-supersession-6d4a`, commit
+`84d4f7f` (branch tip `89093ce` also pins an unrelated analytics test; that
+pin is not in this change). Mechanism only. No salon name was copied. The
+JBA Policy Manual titles stay, because both apps cite that manual.
+
+When `EDITION_SUPERSESSION_ENABLED` is on and Woven publishes a revised
+document, the sync marks the older edition `status = superseded`,
+`indexed = false`, and `superseded_by` the newest document. The row, its
+chunks, and its file stay. A later sync does not ingest that older edition
+again while a newer one in the same family is current, even if the older
+file's updated time or bytes change. The family is the title and file name
+with the edition date and words such as edited, master, and acknowledgement
+removed. The date is the month and year in that name, or Woven's updated
+time when the name has none. Two editions from the same month and year both
+stay indexed. A year with no month is not older than a month in that year.
+
+Retrieval then keeps one copy of a section whose normalized text is the
+same, so the citation does not flip between them. That is the content
+identity. Hand uploads still use the existing content-hash and file-name
+match in `supersession.ts`. Off, sync and retrieval are unchanged. Preview
+still writes nothing. No new migration. No rows are deleted. Hybrid search
+applies the same section dedupe after its own ranking, and only when this
+flag is on. Hybrid itself stays off.
+
+Search already requires `indexed = true` and `status = 'indexed'`
+(`match_knowledge_chunks`, `match_knowledge_chunks_hybrid`,
+`match_knowledge_sections_fuzzy`). A superseded row cannot be indexed, so
+its chunks are not candidates.
+
+Sibling app: this is the port. Ask Sunny already has the guard on
+`cursor/edition-supersession-6d4a`.
+
 ## 22 Oct 2026: both apps brought level (pending QA review)
 
 Every chat/forms fix merged to either `main` from 12–21 Oct was compared. The
@@ -424,8 +458,9 @@ candidate list, with no database call and no embedder.
 `research/reports/full-validation-2026-10-24.md` was not in this checkout.
 The 17 plain-language cases in `ca-policy-retrieval.test.ts` are the
 stakeholder cues, the Sunny rewrite questions adapted from salon to store,
-and those two phrases. Bubbles has one JBA copy, so Sunny's duplicate-manual
-retirement is not ported.
+and those two phrases. The edition guard that keeps the newest Woven
+copy is ported separately, behind `EDITION_SUPERSESSION_ENABLED` (see the
+24 Oct section at the top of this log).
 
 `CROSS_CHAT_DRAFT_DEDUPE_ENABLED`. An open draft for the same employee,
 template, and incident date is reused across chats, including a draft

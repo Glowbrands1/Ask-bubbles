@@ -1,6 +1,7 @@
 import "server-only";
 
-import { caPolicyRetrievalEnabled } from "@/lib/config/chat-quality-flags";
+import { caPolicyRetrievalEnabled, editionSupersessionEnabled } from "@/lib/config/chat-quality-flags";
+import { dedupeIdenticalSections } from "@/lib/knowledge-sync/edition";
 import { EMBEDDING_DIMENSIONS, RETRIEVAL } from "@/lib/config/models";
 import { getEmbeddingProvider } from "@/lib/embeddings";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
@@ -76,5 +77,6 @@ export async function matchHybridKnowledge(input: {
     vectorFloor: RETRIEVAL.minSimilarity,
     limit: caPolicyMatchCount(limit, boost),
   });
-  return boost ? rerankCaPolicyChunks(pool, trimmed, limit) : pool;
+  const ranked = boost ? rerankCaPolicyChunks(pool, trimmed, limit) : pool;
+  return editionSupersessionEnabled() ? dedupeIdenticalSections(ranked) : ranked;
 }

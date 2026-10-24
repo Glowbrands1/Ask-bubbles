@@ -276,6 +276,16 @@ export function globalStoreAskEnabled(): boolean {
   return envFlag("GLOBAL_STORE_ASK_ENABLED");
 }
 
+/**
+ * When Woven publishes a revised document, keep the newest edition and
+ * leave older editions out of search. Identical sections from two current
+ * copies collapse to one citation. Off, a sync still indexes every current
+ * Woven copy, including an older edition of the same document.
+ */
+export function editionSupersessionEnabled(): boolean {
+  return envFlag("EDITION_SUPERSESSION_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -308,4 +318,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CROSS_CHAT_DRAFT_DEDUPE_ENABLED",
   "PRIOR_RECORD_FINAL_ONLY_ENABLED",
   "GLOBAL_STORE_ASK_ENABLED",
+  "EDITION_SUPERSESSION_ENABLED",
 ] as const;

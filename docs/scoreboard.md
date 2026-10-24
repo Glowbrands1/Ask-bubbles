@@ -228,3 +228,18 @@ Seventeen plain-language prompts are in `src/lib/knowledge/ca-policy-retrieval.t
 | district_manager names Kearney | store loc-66 | no ask |
 | Empire, SD | not a store | still not a store; the ask remains |
 | open draft, same employee, template, incident date, other chat | creates | reuses; card-id match still wins |
+
+## Newest Woven edition — 24 Oct 2026
+
+`EDITION_SUPERSESSION_ENABLED` defaults off. Local harness only: the fake
+Woven in `src/lib/knowledge-sync/woven/reference/sync.test.ts`, the memory
+sink, and pure planners. No production query, no migration applied, no
+embedder. Preview writes no manifest and no document.
+
+| Check | Flag off | Flag on |
+| --- | --- | --- |
+| 2024 JBA manual plus two May 2025 copies | all three indexed | May 2025 copies indexed; 2024 held as `older_edition` and not searchable |
+| 2024 file already indexed, then its bytes and updated time change | would ingest the change | version stays 1, row stays superseded, bytes unchanged |
+| same section text in the 2024 and May 2025 manuals | both rows returned | May 2025 row kept |
+| two May 2025 copies, same section, same score | both kept by the sync | retrieval keeps the lower document id |
+| preview | writes nothing | writes nothing |
