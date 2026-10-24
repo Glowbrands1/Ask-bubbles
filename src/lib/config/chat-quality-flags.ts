@@ -325,6 +325,17 @@ export function fullManualContextEnabled(): boolean {
   return envFlag("FULL_MANUAL_CONTEXT_ENABLED");
 }
 
+/**
+ * Store the answer call's raw model text on the chat_traces row, before any
+ * citation check or post-processing, capped at 20,000 characters. Needs
+ * CHAT_TRACE_ENABLED too. Off, the insert does not name raw_answer, so it
+ * works before supabase/migrations/20261024200000_chat_traces_raw_answer.sql
+ * is applied.
+ */
+export function chatTraceRawAnswerEnabled(): boolean {
+  return envFlag("CHAT_TRACE_RAW_ANSWER_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -362,4 +373,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PROMPT_CACHE_ENABLED",
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
+  "CHAT_TRACE_RAW_ANSWER_ENABLED",
 ] as const;
