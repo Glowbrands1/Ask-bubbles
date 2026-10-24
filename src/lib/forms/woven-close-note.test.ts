@@ -36,10 +36,13 @@ vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
 });
 
 const saved = process.env.TYPED_NAME_ENABLED;
+const savedAntiLoop = process.env.ANTI_LOOP_ENABLED;
 
 afterEach(() => {
   if (saved === undefined) delete process.env.TYPED_NAME_ENABLED;
   else process.env.TYPED_NAME_ENABLED = saved;
+  if (savedAntiLoop === undefined) delete process.env.ANTI_LOOP_ENABLED;
+  else process.env.ANTI_LOOP_ENABLED = savedAntiLoop;
 });
 
 const fresh = () => new Date().toISOString();
@@ -142,8 +145,29 @@ describe("one close Woven name", () => {
 
   it("asks Did you mean when the flag is off, and does not attach the note", async () => {
     delete process.env.TYPED_NAME_ENABLED;
+    delete process.env.ANTI_LOOP_ENABLED;
     const response = await ask("Create a coaching form for Jayne Doe at Omaha West Dodge", [JANE]);
     expect(response!.content).toMatch(/^Did you mean \*\*Jane Doe\*\*\?/);
     expect(response?.formProposal?.closeMatchNote).toBeUndefined();
+  });
+
+  it("with anti-loop on, two close people are not a question and the typed name stays", async () => {
+    vi.stubEnv("TYPED_NAME_ENABLED", "1");
+    vi.stubEnv("ANTI_LOOP_ENABLED", "1");
+    const response = await ask("Create a coaching form for Jyne Doe at Omaha West Dodge", [JANE, JAYNE]);
+    expect(response!.content).not.toMatch(/Did you mean/);
+    expect(response?.formProposal?.employeeName).toBe("Jyne Doe");
+    expect(response?.formProposal?.closeMatchNote).toBeUndefined();
+    expect(response?.formProposal?.status).toBe("ready");
+  });
+
+  it("with only anti-loop on, one close name is the under-card note", async () => {
+    delete process.env.TYPED_NAME_ENABLED;
+    vi.stubEnv("ANTI_LOOP_ENABLED", "1");
+    const response = await ask("Create a coaching form for Jayne Doe at Omaha West Dodge", [JANE]);
+    expect(response!.formProposal!.employeeName).toBe("Jayne Doe");
+    expect(response!.formProposal!.closeMatchNote).toBe("Woven has Jane Doe");
+    expect(response!.content).not.toMatch(/Did you mean/);
+    expect(response!.content).not.toContain("Woven has");
   });
 });

@@ -267,3 +267,28 @@ that is only the same manual topic and a new date ("jba manual 11-1-25")
 replaces that prior step's date and is not offered as the form's date.
 Off, the for-clause, the article in "do a verbal", and the old store miss
 stay as they were.
+
+## 24 Oct 2026: anti-loop replay (name, store, confirm, page)
+
+**Sibling app: not ported.** Ask Sunny `main` at `b9ae362` still asks
+"Did you mean" and still asks which salon. These turns are Buff City
+Soap's. Sunny's people, salon names, and wording stay there. `chat_traces`
+is already applied in production; this change does not add a migration.
+
+`ANTI_LOOP_ENABLED` defaults off. On, the model does not write the
+employee: a name is read in code, store and promo words are stripped, and
+a name Woven does not list is kept as typed. Slots already stored in
+`chat_form_state` stay until the manager changes them. The store is not a
+question: the account's single store, then the roster's single store,
+otherwise blank and editable. There is no "Did you mean" and no confirm
+loop. One close roster name is still the under-card note "Woven has Jane
+Doe". A roster refusal is not shown, and a self-check repair is not
+shown. A date on the card is ISO. A policy page comes from the heading's
+printed page on the chunks in hand. Off, two close matches are still a
+question, and an unmatched town in a state still asks with the stores in
+that state.
+
+The system prompt before `295d573` (`655a61d`) was scored against the
+current prompt on the same code and the same flags. The card runner does
+not read the system prompt. Neither arm scored better. The prompt
+sections stay. Ask Sunny was not changed.

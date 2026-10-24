@@ -133,6 +133,7 @@ import {
   FORM_OR_GUIDANCE_QUESTION,
   answersFormClarification,
 } from "@/lib/forms/form-clarification";
+import { isoCardDate, storeWithoutGate, stripNonNameTokens } from "@/lib/forms/anti-loop";
 import { inlineDraftVariantKey, supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { buildFormInventory } from "@/lib/forms/inventory";
 import {
@@ -163,7 +164,7 @@ import {
   namedPolicies,
 } from "@/lib/forms/named-policy-section";
 import { manualDisplayTitle, manualSheetHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
-import { actionPlanSentencesEnabled, slotRetentionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { actionPlanSentencesEnabled, antiLoopEnabled, slotRetentionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { groundEmployeeResolution } from "./employee-candidate-grounding";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
@@ -1059,7 +1060,28 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     proposal.awaitingIncident = true;
   }
 
-  if (directory.question) return turn(directory.question, proposal);
+  if (antiLoopEnabled()) {
+    if (proposal.employeeName) {
+      const stripped = stripNonNameTokens(proposal.employeeName);
+      if (!stripped) {
+        proposal.employeeName = null;
+        proposal.status = "needs_employee";
+        proposal.supportsInlineDraft = false;
+      } else {
+        proposal.employeeName = stripped;
+      }
+    }
+    const gated = storeWithoutGate(proposal, input.actor.scope, directory.locationIds ?? []);
+    if (gated !== proposal) {
+      delete proposal.locationSelection;
+      delete proposal.locationCandidates;
+      delete proposal.namedLocationOutOfScope;
+      Object.assign(proposal, gated);
+    }
+  }
+
+  // A confirm question is the loop. The card is built from the typed name instead.
+  if (directory.question && !antiLoopEnabled()) return turn(directory.question, proposal);
 
   if (proposal.locationResolution === "resolved" && proposal.subject !== "team") {
     const detailed = locationFor(changeKind && facts?.current.location ? { ...proposalInput, locationText: facts.current.location } : proposalInput, false);
@@ -1068,6 +1090,7 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
 
   const notes: string[] = directory.note ? [directory.note] : [];
   notes.push(...directoryNotes(proposal, directory, match, input, scoped));
+  if (antiLoopEnabled()) proposal.formDate = isoCardDate(proposal.formDate);
   if (carried && proposal.employeeName && !directory.question) {
     notes.push(
       `I took **${proposal.employeeName}** from earlier in this conversation — if this form is for somebody else, tell me who.`,
@@ -1262,6 +1285,7 @@ function directoryNotes(
   if (named && directory.matched && directory.locationIds && directory.locationIds.length > 0) {
     // nothing further: settled above
   } else if (
+    !antiLoopEnabled() &&
     POSITION_TEMPLATES.has(match.key) &&
     (directory.locationIds?.length ?? 0) === 0 &&
     proposal.locationResolution !== "resolved" &&
@@ -1407,13 +1431,14 @@ async function checkTypedEmployee(
   const loaded = early ?? (await loadScopedRosterResult(input.actor.scope));
   if (loaded.status !== "ok") {
     // Preview mode has no Woven scope to speak of; everywhere else, say what was not checked.
-    if (!asks || (loaded.status === "not_checked" && loaded.reason === "no_scope")) return {};
+    // Anti-loop shows neither the unavailable note nor an unverified row.
+    if (antiLoopEnabled() || !asks || (loaded.status === "not_checked" && loaded.reason === "no_scope")) return {};
     const out = unverifiedWithoutRecord(loaded.status === "unavailable" ? "unavailable" : "not_checked", typed.employeeName);
     return { verification: out.verification, note: out.note ?? undefined };
   }
   const roster = loaded.roster;
   if (roster.length === 0) {
-    if (!asks) return {};
+    if (antiLoopEnabled() || !asks) return {};
     const out = unverifiedWithoutRecord("unavailable", typed.employeeName);
     return { verification: out.verification, note: out.note ?? undefined };
   }
@@ -1474,7 +1499,7 @@ async function checkTypedEmployee(
   if (settled.kept.some((name) => same(name, typed.employeeName))) return {};
 
   if (result.kind === "none") {
-    if (typedNameEnabled()) return {};
+    if (antiLoopEnabled() || typedNameEnabled()) return {};
     const out = unverifiedWithoutRecord("not_found", typed.employeeName);
     return {
       verification: out.verification,
@@ -1496,6 +1521,13 @@ async function checkTypedEmployee(
 
   const names = result.candidates.map((candidate) => candidate.name);
   const out = unverifiedWithoutRecord("ambiguous", typed.employeeName);
+
+  // No "Did you mean", and no store question to tell two people apart.
+  // One close roster name is the under-card note. Two names stay off the card.
+  if (antiLoopEnabled()) {
+    if (result.candidates.length === 1) return { closeNote: wovenCloseNote(result.candidates[0]!.name) };
+    return {};
+  }
 
   // TWO PEOPLE, ONE NAME: asking "Sarah Smith or Sarah Smith?" is no question. Ask for the store.
   const duplicated = names.find((name, index) => names.findIndex((other) => same(other, name)) !== index);
@@ -2690,7 +2722,8 @@ function proposalContent(
       employeeKnown: proposal.employeeName !== null,
       salonSettled:
         proposal.locationResolution === "resolved" ||
-        proposal.locationResolution === "not_applicable",
+        proposal.locationResolution === "not_applicable" ||
+        antiLoopEnabled(),
       plan,
     });
 
@@ -2728,7 +2761,8 @@ function proposalContent(
       employeeKnown: proposal.employeeName !== null,
       salonSettled:
         proposal.locationResolution === "resolved" ||
-        proposal.locationResolution === "not_applicable",
+        proposal.locationResolution === "not_applicable" ||
+        antiLoopEnabled(),
       payrollDeduct: proposal.payrollDeduct ?? null,
       asksPayrollDeduct: asksPayrollDeduct(match),
       warningLevel: proposal.warningLevel ?? null,
@@ -2849,10 +2883,13 @@ function proposalContent(
        * on it would be the card misdescribing itself.
        */
       const who = proposal.subject === "team" ? "This one is for the whole team" : "I have the employee";
+      const storeBlank = antiLoopEnabled() && !proposal.locationId && proposal.locationResolution !== "not_applicable";
       lines.push(
         proposal.locationResolution === "not_applicable"
           ? `${who}. Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do.`
-          : `${who}${proposal.subject === "team" ? ", and I have the store" : " and the store"}${resolvedStoreName(proposal) ? ` (**${resolvedStoreName(proposal)}**)` : ""}. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`,
+          : storeBlank
+            ? `${who}. The store is blank and can be filled on the form. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`
+            : `${who}${proposal.subject === "team" ? ", and I have the store" : " and the store"}${resolvedStoreName(proposal) ? ` (**${resolvedStoreName(proposal)}**)` : ""}. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`,
       );
     } else if (
       proposal.status === "needs_location" &&

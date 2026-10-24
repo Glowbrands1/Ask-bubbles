@@ -1,3 +1,5 @@
+import { antiLoopEnabled } from "@/lib/config/chat-quality-flags";
+import { printedPageForHeading } from "@/lib/forms/policy-page-map";
 import { printedPageOf } from "@/lib/ingestion/extract/pdf-sections";
 import { manualGroundedPolicies, policyFieldValue } from "@/lib/forms/policy-citation";
 import {
@@ -84,10 +86,13 @@ export function flaggedCitationWrite(input: {
   readonly manual?: FlaggedManualIdentity | null;
 }): { values: Record<string, string>; provenance: Record<string, Record<string, unknown>> } {
   if (!input.enabled) return { values: input.values, provenance: {} };
-  const found = accountManualSections(input.notes, input.chunks).map((section) => ({
-    section: section.heading,
-    page: section.page > 0 ? section.page : null,
-  }));
+  const found = accountManualSections(input.notes, input.chunks).map((section) => {
+    const mapped = antiLoopEnabled() ? printedPageForHeading(section.heading, input.chunks) : null;
+    return {
+      section: section.heading,
+      page: mapped ?? (section.page > 0 ? section.page : null),
+    };
+  });
   if (found.length === 0) return { values: input.values, provenance: {} };
   const line = found
     .map((item) => formatManualCitation(item.section, item.page))

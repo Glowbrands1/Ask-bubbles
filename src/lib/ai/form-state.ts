@@ -1,4 +1,5 @@
-import { payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
+import { describesIncident } from "@/lib/forms/incident-reading";
 import { rosterLocationName } from "@/lib/forms/location-mention";
 import { statedPayrollDeductAmount } from "@/lib/forms/payroll-deduct-amount";
 import type { ChatFormProposal } from "@/types";
@@ -154,7 +155,11 @@ export function captureFormState(
     policyHeading: input.policyHeading ?? prior.policyHeading,
     policyPage: input.policyPage ?? prior.policyPage,
     templateKey: proposal?.templateKey ?? prior.templateKey,
-    incident: incident || prior.incident,
+    incident: antiLoopEnabled()
+      ? describesIncident(input.userText)
+        ? incident
+        : prior.incident
+      : incident || prior.incident,
     incidentType: prior.incidentType,
     payrollAmount: rememberPayrollAmount({
       prior: prior.payrollAmount,
