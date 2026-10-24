@@ -336,6 +336,19 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
   return envFlag("INTENT_PAYROLL_MANAGER_ONLY_ENABLED");
 }
 
+/**
+ * A request to start a corrective action ("create a Verbal CA for …", "I need
+ * a CA for someone opening the store late") is the Corrective Action Form
+ * when the intent read has no model reading. The template reader calls that
+ * request the progression, and the intent slots used to keep no form for it,
+ * so the next answer ("verbal", "no payroll") was not a form turn (QA F4,
+ * 24 Oct 2026). A metric with no behaviour stays the progression, as in the
+ * form proposal. Off, the form slot is left as before.
+ */
+export function caTemplateMapEnabled(): boolean {
+  return envFlag("CA_TEMPLATE_MAP_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -374,4 +387,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
+  "CA_TEMPLATE_MAP_ENABLED",
 ] as const;
