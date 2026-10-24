@@ -4,8 +4,10 @@
 -- below with the same predicate and security_invoker. create or replace
 -- expands * after the columns exist, and it only adds columns at the end.
 --
--- Rollback drops the columns, then recreates the view so * no longer
--- includes them:
+-- Rollback: drop the view first. Dropping the columns while
+-- chat_traces_live still selects them fails with
+-- "cannot drop column ... other objects depend on it".
+--   drop view if exists public.chat_traces_live;
 --   alter table public.chat_traces
 --     drop column if exists cache_creation_input_tokens,
 --     drop column if exists cache_read_input_tokens,
@@ -14,6 +16,7 @@
 --   with (security_invoker = true) as
 --   select * from public.chat_traces
 --   where created_at > now() - interval '7 days';
+--   revoke all on public.chat_traces_live from anon, authenticated;
 
 alter table public.chat_traces
   add column if not exists cache_creation_input_tokens integer,

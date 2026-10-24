@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { __setAnthropicClient } from "./anthropic";
+import { Anthropic, __setAnthropicClient } from "./anthropic";
 import { callClaude } from "./call-claude";
 import { runChatTrace, type ChatTraceDraft } from "./chat-trace-store";
 import { AiError } from "./errors";
@@ -48,7 +48,12 @@ function draft(): ChatTraceDraft {
   };
 }
 
-function install(input: { replies?: readonly Reply[]; error?: Error }) {
+function install(input: {
+  replies?: readonly Reply[];
+  error?: Error;
+  /** Fire a text event, then reject. The partial text must not leave callClaude. */
+  textBeforeError?: { text: string; beforeTextMs: number };
+}) {
   const createBudgets: number[] = [];
   const streamBudgets: number[] = [];
   let index = 0;
@@ -86,7 +91,13 @@ function install(input: { replies?: readonly Reply[]; error?: Error }) {
             handlers.set(event, list);
           },
           async finalMessage() {
-            if (input.error && !input.replies) throw input.error;
+            if (input.error && !input.replies) {
+              if (input.textBeforeError) {
+                now += input.textBeforeError.beforeTextMs;
+                for (const cb of handlers.get("text") ?? []) cb();
+              }
+              throw input.error;
+            }
             const response = nextReply();
             now += response.beforeTextMs;
             for (const cb of handlers.get("text") ?? []) cb();
@@ -179,6 +190,49 @@ describe("a stream, only when a flag is on", () => {
     expect(error.message).not.toContain(SECRET);
     const logged = log.mock.calls.map((call) => call.join(" ")).join("\n");
     expect(logged).toContain("class=Error");
+    expect(logged).not.toContain(SECRET);
+  });
+
+  it("an error after partial text does not return that text", async () => {
+    process.env.CHAT_TRACE_ENABLED = "1";
+    const partial = "PARTIAL-ANSWER-THAT-MUST-NOT-BE-SHOWN";
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    install({
+      error: new Error(`echo of ${SECRET}`),
+      textBeforeError: { text: partial, beforeTextMs: 9 },
+    });
+    const trace = draft();
+    const error = await runChatTrace(trace, () => callClaude(INPUT)).catch((caught) => caught);
+    expect(error).toBeInstanceOf(AiError);
+    expect(error.code).toBe("model_failed");
+    expect(error.message).toMatch(/could not reach the language model/);
+    expect(error.message).not.toContain(partial);
+    expect(error.message).not.toContain(SECRET);
+    expect(trace.modelCall?.firstTokenMs).toBeNull();
+    const logged = log.mock.calls.map((call) => call.join(" ")).join("\n");
+    expect(logged).not.toContain(partial);
+    expect(logged).not.toContain(SECRET);
+  });
+
+  it("an Anthropic error with a status is configuration when the status says so, and the status is logged", async () => {
+    process.env.CHAT_TRACE_ENABLED = "1";
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const failure = Anthropic.APIError.generate(
+      401,
+      { type: "error", error: { type: "authentication_error", message: `echo of ${SECRET}` } },
+      `echo of ${SECRET}`,
+      new Headers({ "request-id": "req_stream_401" }),
+    );
+    install({ error: failure });
+    const error = await callClaude(INPUT).catch((caught) => caught);
+    expect(error).toBeInstanceOf(AiError);
+    expect(error.code).toBe("not_configured");
+    expect(error.message).toContain("HTTP 401");
+    expect(error.message).not.toContain(SECRET);
+    const logged = log.mock.calls.map((call) => call.join(" ")).join("\n");
+    expect(logged).toContain("status=401");
+    expect(logged).toContain("type=authentication_error");
+    expect(logged).toContain("request_id=req_stream_401");
     expect(logged).not.toContain(SECRET);
   });
 
