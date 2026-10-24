@@ -6,6 +6,22 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: citation locator from the text the brand filter kept — Bubbles-only
+
+`CITATION_LOCATOR_FROM_KEPT_TEXT` stays off. On, after Buff City Soap's brand
+filter, a JBA chunk is cited by the first heading still in the kept text, the
+brand label that heading sits under, and that heading's printed page. Chunk
+49 (stored "Page 16 — Pants", Crunch pants removed) becomes "Page 16 — Buff
+City Soap: Shirts". Shoes on printed page 15 and Important Notes on printed
+page 40 already name the heading that opens the kept text, and they stay.
+Nothing is re-ingested. `MANUAL_SECTION_DEDUPE` is not ported: Sunny's copy
+keeps one chunk per section string, and here that would drop the Buff City
+Soap dress-code rule that shares a heading with another brand.
+
+Sibling app: not ported. Ask Sunny has no brand filter, so this relabel has
+nothing to run after. The same stored chunks are mislabelled there for Sun
+Tan City; port the flag when Sunny reads one brand out of a mixed chunk.
+
 ## 24 Oct 2026: the newest Woven edition is the one that answers
 
 Ported from Ask Sunny branch `cursor/edition-supersession-6d4a`, commit

@@ -1,6 +1,10 @@
 import "server-only";
 
-import { caPolicyRetrievalEnabled, editionSupersessionEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  caPolicyRetrievalEnabled,
+  citationLocatorFromKeptTextEnabled,
+  editionSupersessionEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { dedupeIdenticalSections } from "@/lib/knowledge-sync/edition";
 import { EMBEDDING_DIMENSIONS, RETRIEVAL } from "@/lib/config/models";
 import { getEmbeddingProvider } from "@/lib/embeddings";
@@ -34,6 +38,7 @@ import {
 } from "@/lib/forms/official-policy-manual";
 import { MULTI_BRAND_MANUAL_TITLES, POLICY_MANUAL_BRAND_SCOPE } from "@/config/company/knowledge";
 import { isMultiBrandManual, readManualForBrand } from "../brand-sections";
+import { locatorsAfterBrandFilter } from "../citation-locator";
 import { caPolicyMatchCount, rerankCaPolicyChunks } from "../ca-policy-retrieval";
 import type { KnowledgeProvider, KnowledgeQuery } from "../types";
 
@@ -175,11 +180,29 @@ function readChunksForBrand(title: string, chunks: RoleChunkRow[]): RoleChunkRow
     })),
     POLICY_MANUAL_BRAND_SCOPE,
   );
-  return chunks.flatMap((chunk, index) => (read[index] ? [{ ...chunk, content: read[index]! }] : []));
+  const locators = locatorsAfterBrandFilter(
+    citationLocatorFromKeptTextEnabled(),
+    chunks.map((chunk, index) => ({
+      locator: chunk.locator,
+      section: chunk.section,
+      kept: read[index] ?? "",
+      sections: readSections(chunk.metadata),
+    })),
+    POLICY_MANUAL_BRAND_SCOPE,
+  );
+  return chunks.flatMap((chunk, index) =>
+    read[index] ? [{ ...chunk, content: read[index]!, locator: locators[index] ?? chunk.locator }] : [],
+  );
 }
 
-/** Per manual document: chunk id -> this company's reading of it. */
-const BRAND_READINGS = new Map<string, ReadonlyMap<string, string>>();
+/** This company's reading of one chunk, and the locator for the text that remains. */
+interface BrandReading {
+  readonly content: string;
+  readonly locator: string;
+}
+
+/** Per manual document: chunk id -> this company's reading of it, and the locator for that reading. */
+const BRAND_READINGS = new Map<string, ReadonlyMap<string, BrandReading>>();
 const BRAND_READINGS_LIMIT = 8;
 
 /**
@@ -258,7 +281,7 @@ export class SupabaseKnowledgeProvider implements KnowledgeProvider {
     ];
     if (manuals.length === 0) return rows;
 
-    const readings = new Map<string, ReadonlyMap<string, string> | null>();
+    const readings = new Map<string, ReadonlyMap<string, BrandReading> | null>();
     for (const documentId of manuals) {
       const cached = BRAND_READINGS.get(documentId);
       const wanted = rows.filter((row) => row.document_id === documentId).map((row) => row.chunk_id);
@@ -273,11 +296,11 @@ export class SupabaseKnowledgeProvider implements KnowledgeProvider {
       if (!readings.has(row.document_id)) return [row];
       const reading = readings.get(row.document_id);
       const text = reading?.get(row.chunk_id);
-      return text ? [{ ...row, content: text }] : [];
+      return text ? [{ ...row, content: text.content, locator: text.locator }] : [];
     });
   }
 
-  private async loadBrandReading(documentId: string): Promise<ReadonlyMap<string, string> | null> {
+  private async loadBrandReading(documentId: string): Promise<ReadonlyMap<string, BrandReading> | null> {
     try {
       const client = getSupabaseAdmin();
       const { data: document, error: documentError } = await client
@@ -294,7 +317,7 @@ export class SupabaseKnowledgeProvider implements KnowledgeProvider {
         .order("chunk_index", { ascending: true });
       if (error) return null;
       const chunks = readChunksForBrand(String(document.title), (data ?? []) as RoleChunkRow[]);
-      const reading = new Map(chunks.map((chunk) => [chunk.id, chunk.content]));
+      const reading = new Map(chunks.map((chunk) => [chunk.id, { content: chunk.content, locator: chunk.locator }]));
       if (BRAND_READINGS.size >= BRAND_READINGS_LIMIT) BRAND_READINGS.clear();
       BRAND_READINGS.set(documentId, reading);
       return reading;

@@ -299,6 +299,19 @@ export function promptCacheEnabled(): boolean {
   return envFlag("PROMPT_CACHE_ENABLED");
 }
 
+/**
+ * After the brand filter, cite the heading that is still in the kept text.
+ *
+ * On, a multi-brand manual chunk whose stored label named a heading the
+ * filter removed is labelled from the first heading that remains, with the
+ * brand label it sits under and that heading's printed page. A company-wide
+ * heading is left on its own page. Off, the stored locator is shown as
+ * ingested.
+ */
+export function citationLocatorFromKeptTextEnabled(): boolean {
+  return envFlag("CITATION_LOCATOR_FROM_KEPT_TEXT");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -334,4 +347,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "GLOBAL_STORE_ASK_ENABLED",
   "EDITION_SUPERSESSION_ENABLED",
   "PROMPT_CACHE_ENABLED",
+  "CITATION_LOCATOR_FROM_KEPT_TEXT",
 ] as const;
