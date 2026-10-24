@@ -1,4 +1,5 @@
-import { antiLoopEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, formStateEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
+import { replyIsNotAJobTitle, sameTitleWords } from "@/lib/forms/replay-guards";
 import { describesIncident } from "@/lib/forms/incident-reading";
 import { rosterLocationName } from "@/lib/forms/location-mention";
 import { statedPayrollDeductAmount } from "@/lib/forms/payroll-deduct-amount";
@@ -123,6 +124,14 @@ export function prependFormState(question: string, state: ConversationFormState 
   return `${lines.join(" ")}\n${question}`;
 }
 
+function keptTitle(role: string | null | undefined, userText: string, prior: string | null): string | null {
+  const incoming = role?.trim() || null;
+  if (formStateEnabled() && incoming && replyIsNotAJobTitle(userText) && sameTitleWords(incoming, userText)) {
+    return prior;
+  }
+  return incoming || prior;
+}
+
 export function captureFormState(
   previous: ConversationFormState | null,
   input: {
@@ -148,7 +157,7 @@ export function captureFormState(
     employeeName: named ?? prior.employeeName,
     keptTypedName: input.keptTypedName ?? prior.keptTypedName,
     locationId: proposal?.locationId ?? prior.locationId,
-    title: proposal?.employeeRole?.trim() || prior.title,
+    title: keptTitle(proposal?.employeeRole, input.userText, prior.title),
     formDate: proposal?.formDate ?? prior.formDate,
     warningLevel: warning ?? prior.warningLevel,
     payrollDeduct: payroll ?? prior.payrollDeduct,

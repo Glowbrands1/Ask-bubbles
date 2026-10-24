@@ -1,7 +1,13 @@
-import { antiLoopEnabled, payrollDeductAmountFieldEnabled, priorCoachingOptionalEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  antiLoopEnabled,
+  formReplayGuardsEnabled,
+  payrollDeductAmountFieldEnabled,
+  priorCoachingOptionalEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { cardEmployeeName, isoCardDate } from "@/lib/forms/anti-loop";
 import { readCorrectiveActionIntake, describesIncident, type IntakeItem } from "@/lib/forms/corrective-action-intake";
 import { extractFormDate } from "@/lib/forms/form-date-answer";
+import { replayIncidentDate } from "@/lib/forms/replay-guards";
 import { payrollDeductAmount } from "@/lib/forms/payroll-deduct";
 import { statedPayrollDeduct } from "@/lib/forms/payroll-deduct-answer";
 import { extractJobTitle } from "@/lib/forms/proposal";
@@ -99,7 +105,8 @@ export function fieldsFromManagerText(
   const grounded = groundEmployee(text, roster);
   const person = grounded && !grounded.needsChoice && grounded.name ? grounded : null;
   const date = extractFormDate(text, today);
-  const useToday = date === null && intake.supplied.includes("form_date");
+  const replay = formReplayGuardsEnabled() ? replayIncidentDate(text, today) : null;
+  const useToday = date === null && replay === null && intake.supplied.includes("form_date");
   const store = storeFromText(text);
   const title = extractJobTitle(text) ?? person?.title ?? null;
   const readName = person?.name ?? null;
@@ -109,7 +116,7 @@ export function fieldsFromManagerText(
     jobTitle: title,
     store: store?.name ?? person?.locationName ?? null,
     locationId: store?.locationId ?? person?.locationId ?? null,
-    incidentDateIso: date ?? (useToday ? today : null),
+    incidentDateIso: date ?? replay ?? (useToday ? today : null),
     useToday,
     payrollDeduct: statedPayrollDeduct(text),
     payrollAmount: payrollDeductAmount(text),

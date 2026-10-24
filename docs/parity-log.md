@@ -6,6 +6,63 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: a grounded name Woven does not list stays typed
+
+`GROUNDED_ENTITIES_ENABLED` still defaults off. On, with anti-loop off, a
+name that is not on the Woven roster used to become "I couldn't find **name**
+in the Woven roster, so that name is not on the form" and the form lost
+that name. The typed spelling now stays on the question and on the form.
+The reply does not gain a sentence, and the "Woven has …" note stays behind
+`TYPED_NAME_ENABLED` or `ANTI_LOOP_ENABLED`.
+
+**Sibling app: not ported.** Ask Sunny is not in this session. Its
+grounded-entity path still refuses that name when anti-loop is off. No
+salon wording was copied.
+
+## 24 Oct 2026: form replay guards, and a denied prior-coaching note
+
+`FORM_REPLAY_GUARDS_ENABLED` stays off by default. On, one incident date
+the manager gave is the form date (a relative day such as "yesterday" is
+that day, not today). A dollar amount in the same clause as a payroll
+deduction, including "$25", is the payroll amount. "change store to
+Bellevue" chooses Bellevue and does not ask the store question again.
+The manual's "$25.00 via payroll deduction" is still not an amount.
+
+A later message saved as Job Title is the slot-retention and form-state
+failure (B1, then "verbal"). Those two flags already default off. While
+either is on, "verbal", "yes", a date, or a store change is not the job
+title. Ask Sunny does not have this store phrase or this job-title save
+in the same place, so that part stays here.
+
+The prior-coaching negation is ported from Ask Sunny PR 165
+(`e70d67e`, branch `cursor/prior-coaching-negation-9296`).
+`typedPriorCoachingNote` skips a match when a negation governs the
+phrase. " but " and "?" are clause breaks, along with the sentence
+punctuation Sunny already used. The Forms Register wording stays. No
+salon name was copied. `PRIOR_COACHING_OPTIONAL_ENABLED` still defaults
+off, and the card text is unchanged while that flag is off.
+
+## 24 Oct 2026: intent extraction must not replace the card
+
+`INTENT_EXTRACTION_ENABLED` stays off by default. On, a missing slot is
+filled on the proposal card. The "I still need …" list, including "not in
+the Woven roster", was the whole reply, so the card never appeared and the
+same employee, store, and date were asked again on the next turn.
+
+Ask Sunny already returns no clarification after a real choice question
+(`clarificationFor` in `intent-slots.ts`, commit `56aac229`) and keeps a
+name Woven does not list. That mechanism is what this change follows.
+Bubbles still requires `TYPED_NAME_ENABLED` before an unmatched name is
+kept; with typed names off, the roster sentence stays. Sunny keeps the
+typed name with no second flag. No store or salon wording was copied.
+
+Two replay fixes stay on this app until Sunny shows the same loop. The
+warning level and the payroll yes/no are read from the manager's turns
+only, so an assistant question that says "verbal" or "no payroll" is not
+an answer. The store question and the date question are asked at most
+once. Sunny's `groundWarning` still reads the whole conversation, assistant
+turns included.
+
 ## 24 Oct 2026: the newest Woven edition is the one that answers
 
 Ported from Ask Sunny branch `cursor/edition-supersession-6d4a`, commit

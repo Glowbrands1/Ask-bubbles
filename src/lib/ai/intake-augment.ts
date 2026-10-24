@@ -8,6 +8,8 @@ import { extractJobTitle, readEmployeeMentions } from "@/lib/forms/proposal";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
 import type { RosterEmployee } from "@/lib/forms/employee-match";
 
+import { replyIsNotAJobTitle, sameTitleWords } from "@/lib/forms/replay-guards";
+
 import { fieldsFromManagerText, mergeConfirmed, type ConfirmedFormFields } from "./form-field-state";
 import { chooseRememberedCandidate, groundEmployee } from "./roster-grounding";
 
@@ -78,7 +80,8 @@ function slotLines(input: {
     lines.push(`The employee is ${name}.`);
   }
   const title = remembered?.title || merged.jobTitle || extractJobTitle(corpus);
-  if (title && !extractJobTitle(input.question)) lines.push(`Job title: ${title}.`);
+  const laterMessageIsTheTitle = Boolean(title) && replyIsNotAJobTitle(input.question) && sameTitleWords(title!, input.question);
+  if (title && !extractJobTitle(input.question) && !laterMessageIsTheTitle) lines.push(`Job title: ${title}.`);
 
   const store =
     (remembered && remembered.locationNames[0]) ||

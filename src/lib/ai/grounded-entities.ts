@@ -1,4 +1,4 @@
-import { antiLoopEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, groundedEntitiesEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { readCaPolicy } from "@/lib/forms/ca-policy";
 import {
@@ -23,8 +23,11 @@ import type { AskResponse } from "./types";
  *
  * One strong roster match is rewritten to the directory spelling and limited
  * to that row. Two matches are told apart with the store's name and the job
- * title. No match is said plainly and is not put on the form. An empty roster
- * leaves the typed name alone.
+ * title. A name Woven does not list stays exactly as typed. It is not taken
+ * off the question or the form, and this module does not add a sentence
+ * about it. The "Woven has …" note stays behind the typed-name and anti-loop
+ * gates. A direct call with this flag off still refuses that name when
+ * anti-loop is off. An empty roster leaves the typed name alone.
  */
 
 const NAMES_COMPANY = /\b(?:jba|jb\s*(?:&|and)\s*associates)\b/i;
@@ -184,7 +187,12 @@ export function applyGroundedProposal(
   } else if (input.prep.ambiguous.length > 1 || content.startsWith("Did you mean **")) {
     content = labelDuplicateQuestion(content, input.people, input.prep.ambiguousTyped);
   }
-  if (!antiLoopEnabled() && !input.rosterEmpty && input.prep.unmatched.length > 0) {
+  if (
+    !groundedEntitiesEnabled() &&
+    !antiLoopEnabled() &&
+    !input.rosterEmpty &&
+    input.prep.unmatched.length > 0
+  ) {
     const names = input.prep.unmatched.map((name) => `**${name}**`).join(" or ");
     const sentence = `I couldn't find ${names} in the Woven roster, so that name is not on the form.`;
     if (!content.includes("couldn't find")) content = `${sentence}\n\n${content}`;
@@ -211,6 +219,7 @@ export function applyGroundedProposal(
     if (match.kind === "none" && isStorePhrase(currentName)) {
       proposal = applyStore(clearEmployee(proposal), storeIdForPhrase(currentName));
     } else if (
+      !groundedEntitiesEnabled() &&
       !antiLoopEnabled() &&
       match.kind === "none" &&
       input.prep.unmatched.some((name) => name.toLowerCase() === currentName.toLowerCase())
@@ -317,7 +326,7 @@ function gateMentions(
       continue;
     }
     if (isStorePhrase(name)) continue;
-    if (antiLoopEnabled()) continue;
+    if (antiLoopEnabled() || groundedEntitiesEnabled()) continue;
     next = replacePhrase(next, name, "");
     unmatched.push(name);
   }

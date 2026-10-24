@@ -149,9 +149,11 @@ export function draftEditMergeEnabled(): boolean {
 }
 
 /**
- * An employee, store, or policy counts only when it resolves against the
- * Woven roster, the store list, or the JBA manual. Off, a typed name is
- * accepted exactly as it is today.
+ * An employee, store, or policy is grounded when it resolves against the
+ * Woven roster, the store list, or the JBA manual. A person Woven does not
+ * list stays exactly as typed: the name is not removed from the form and
+ * the reply does not say they are missing. Off, this path is not used and
+ * a typed name is accepted as it is today.
  */
 export function groundedEntitiesEnabled(): boolean {
   return envFlag("GROUNDED_ENTITIES_ENABLED");
@@ -299,6 +301,15 @@ export function promptCacheEnabled(): boolean {
   return envFlag("PROMPT_CACHE_ENABLED");
 }
 
+/**
+ * Keep a stated incident date, a stated payroll amount, and a
+ * "change store to …" correction. Off, the form date, the amount line,
+ * and store resolution stay as they are.
+ */
+export function formReplayGuardsEnabled(): boolean {
+  return envFlag("FORM_REPLAY_GUARDS_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -334,4 +345,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "GLOBAL_STORE_ASK_ENABLED",
   "EDITION_SUPERSESSION_ENABLED",
   "PROMPT_CACHE_ENABLED",
+  "FORM_REPLAY_GUARDS_ENABLED",
 ] as const;
