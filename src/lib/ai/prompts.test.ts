@@ -547,14 +547,18 @@ describe("the static block holds no per-request data", () => {
     mode: "standard" as const,
   };
 
-  it("stays the same when the user, the employee, the store, or the retrieval changes", () => {
+  it("is byte-identical for two users, two stores, and two messages", () => {
+    const messageA = "What is the dress code for Dana Reyes at Testville Downtown?";
+    const messageB = "Who opened UniqueStoreZz late on 2099-01-02?";
     const plain = buildSystemPrompt({
       ...base,
       context: CONTEXT,
       hasContext: true,
+      mode: "quick",
     });
     const varied = buildSystemPrompt({
       ...base,
+      mode: "detailed",
       context: { userName: "UniqueUserZz", locationName: "UniqueStoreZz", todayIso: "2099-01-02" },
       hasContext: false,
       hasReportData: true,
@@ -582,7 +586,11 @@ describe("the static block holds no per-request data", () => {
     expect(left).not.toBeNull();
     expect(right).not.toBeNull();
     expect(right!.staticBlock).toBe(left!.staticBlock);
-    const forbidden = [
+    const absentAbove = [
+      messageA,
+      messageB,
+      "Dana Reyes",
+      "Testville Downtown",
       "UniqueUserZz",
       "UniqueStoreZz",
       "UniqueEmployeeZz",
@@ -591,13 +599,29 @@ describe("the static block holds no per-request data", () => {
       "RecalledMemoryZz",
       "FewshotZz",
       "PinnedTitleZz",
+      "two or three sentences",
+      "full picture",
       "FORMS ALREADY ON FILE",
       "WHAT THE MANAGER TOLD YOU BEFORE",
       "no company documents matched",
       "kinds of statement",
     ];
-    for (const needle of forbidden) expect(right!.staticBlock).not.toContain(needle);
-    for (const needle of forbidden) expect(right!.dynamicTail).toContain(needle);
+    for (const needle of absentAbove) {
+      expect(left!.staticBlock).not.toContain(needle);
+      expect(right!.staticBlock).not.toContain(needle);
+    }
+    expect(plain).not.toContain(messageA);
+    expect(varied).not.toContain(messageB);
+    expect(left!.dynamicTail).toContain("Dana Reyes");
+    expect(left!.dynamicTail).toContain("two or three sentences");
+    expect(right!.dynamicTail).toContain("UniqueUserZz");
+    expect(right!.dynamicTail).toContain("UniqueStoreZz");
+    expect(right!.dynamicTail).toContain("UniqueEmployeeZz");
+    expect(right!.dynamicTail).toContain("2099-01-02");
+    expect(right!.dynamicTail).toContain("full picture");
+    expect(right!.dynamicTail).toContain("FORMS ALREADY ON FILE");
+    expect(right!.dynamicTail).toContain("WHAT THE MANAGER TOLD YOU BEFORE");
+    expect(right!.dynamicTail).toContain("no company documents matched");
     const coachingOff = splitSystemPrompt(buildSystemPrompt({ ...base, context: CONTEXT, hasContext: true, priorCoachingOptional: false }));
     const coachingOn = splitSystemPrompt(buildSystemPrompt({ ...base, context: CONTEXT, hasContext: true, priorCoachingOptional: true }));
     expect(coachingOn!.staticBlock).toBe(coachingOff!.staticBlock);

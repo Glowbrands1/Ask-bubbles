@@ -291,22 +291,21 @@ time: the whole prompt when nothing is cached, and only the tail on a
 cache read. One run.
 
 The static block is the instruction body, through the voice rules. It has
-no listener name, no today's date, and no location name. Per-request
-sections — taxonomy, report figures, forms on file, person memory, pinned
-sources, prior coaching, recalled memory, and the no-match line — follow
-`---DYNAMIC---` with the listener. The marker is not sent.
-`cache_control` is `{ type: "ephemeral" }` on the static block only. The
-tail has none.
+no listener name, no today's date, no location name, and no answer-mode
+sentence. Per-request sections — the answer mode, taxonomy, report figures,
+forms on file, person memory, pinned sources, prior coaching, recalled
+memory, and the no-match line — follow `---DYNAMIC---` with the listener.
+The marker is not sent. `cache_control` is `{ type: "ephemeral" }` on the
+static block only. The tail has none.
 
-A repeated prompt is what produces a cache read. A different answer mode
-still changes the prefix. A different user, employee, store, or retrieval
-does not.
+A repeated prompt is what produces a cache read. A different user, store,
+message, answer mode, or retrieval does not change that prefix.
 
 | Call | cache_creation_input_tokens | cache_read_input_tokens | First token |
 | --- | --- | --- | --- |
 | OLD, one string, no cache | 0 | 0 | 55 ms |
-| NEW, 1st call | 1508 | 0 | 55 ms |
-| NEW, later calls | 0 | 1508 | 14 ms |
+| NEW, 1st call | 1477 | 0 | 55 ms |
+| NEW, later calls | 0 | 1477 | 14 ms |
 
 Card replay pass/fail is unchanged. The form card does not read this
 prompt, and the round 1 table above keeps the same expectations.
@@ -374,40 +373,32 @@ stand-in waits.
 | Call | cache_creation_input_tokens | cache_read_input_tokens | First token |
 | --- | --- | --- | --- |
 | OLD | 0 | 0 | 55 ms |
-| NEW, 1st call | 1508 | 0 | 55 ms |
-| NEW, later call | 0 | 1508 | 14 ms |
+| NEW, 1st call | 1477 | 0 | 55 ms |
+| NEW, later call | 0 | 1477 | 14 ms |
 
-The rows above, and the matching rows in the item 9 section, are the local
-stand-in after the per-request sections moved below the marker. They are
-not an Anthropic bill. The static prefix shrank from 1815 stand-in tokens
-to 1508. A cache read of that prefix is 14 ms in the stand-in, against
-55 ms with nothing cached.
+The rows above, and the matching rows in the item 9 section, are a local
+stand-in: one token per four characters of the block that was sent. They
+are not Anthropic usage, and they are not what `chat_traces` stores.
+`chat_traces` stores `usage.cache_creation_input_tokens` and
+`usage.cache_read_input_tokens` from the response. The static prefix in
+this stand-in is 1477 tokens. A cache read of that prefix waits 14 ms in
+the stand-in, against 55 ms with nothing cached.
 
 ## Live Claude cache — not measured
 
 This checkout has no `ANTHROPIC_API_KEY`. No Claude call was made, so there
 is no real `cache_creation_input_tokens`, `cache_read_input_tokens`, or
-first-token time to record. `src/lib/ai/prompt-cache-live.test.ts` skips
-unless that key is set. When it runs, it streams each opening turn of b9,
-b10, b11, and b12 against the real system prompt (`claude-sonnet-5`,
-adaptive thinking, the same effort as `callClaude`). OLD sends one system
-string. NEW sends the static block with `cache_control: { type: "ephemeral" }`
-and the dynamic tail uncached. First-token time is the wait until the first
-text delta. A later call whose `cache_read_input_tokens` is greater than
-zero must be within 125% of that case's OLD first-token time. A cache read
-of zero fails the test: the static prefix was under the model's cache
-minimum, or the breakpoint was not on that block.
+first-token time to record. The live check is manual: `npm run prompt-cache:live`
+on a machine that has the key. CI and previews do not set `PROMPT_CACHE_LIVE`.
+When it runs, it warms the cache once, then measures three calls. The first
+measured call is included. It streams each opening turn of b9, b10, b11, and
+b12 (`claude-sonnet-5`, adaptive thinking, the same effort as `callClaude`).
 
 `callClaude` streams when the client provides `messages.stream`, and the
 trace stores that wait on `first_token_ms`. A test double that only
 implements `messages.create` keeps the create path, and `first_token_ms`
-stays null. `chat_traces.latency_ms` is still the full reply.
-
-The live test takes the median of at least three cache-read samples and
-compares it with the median of at least three OLD samples. A call that
-writes the cache can be slower and is not part of that gate. A warm cache,
-whose first NEW call already has `cache_read_input_tokens` greater than
-zero, passes. This checkout did not run that live test.
+stays null. `chat_traces.latency_ms` is still the full reply. The cache
+token columns are the response usage fields, not a character estimate.
 
 ## Store ask replay — 24 Oct 2026
 

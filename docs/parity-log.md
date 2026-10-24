@@ -533,7 +533,11 @@ that is not applied here. A live indexed document that shares a superseded
 document's content hash stays in search. `ANTI_LOOP_ENABLED` is in
 `CHAT_QUALITY_FLAG_NAMES`, and a flags-off child suite covers chat and
 forms. Ask Sunny has no `---DYNAMIC---` cut, so this round stays
-Bubbles-only. No salon wording was copied.
+Bubbles-only. No salon wording was copied. The answer-mode sentence
+sits in the tail as well, so a different mode does not change the cached
+prefix. The live Anthropic check is `npm run prompt-cache:live` and does
+not run in CI or on a preview. `chat_traces` stores the response's
+`cache_creation_input_tokens` and `cache_read_input_tokens`.
 
 ## 24 Oct 2026: chat data tools, measured, not ported
 

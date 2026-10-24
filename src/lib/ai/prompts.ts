@@ -459,6 +459,7 @@ ${input.styleRules ? `${FORM_LIBRARY_DETAIL_RULES}\n` : ""}- Knowledge base docu
     ? ""
     : "IMPORTANT: no company documents matched this question. You have NO company knowledge for it. Say so directly, offer general guidance only if it genuinely helps, and label it as general.";
   const perRequest = [
+    MODE_INSTRUCTION[mode],
     `You answer from the sections below, and you distinguish clearly between ${NUMBER_WORD[statementKinds.length]} kinds of statement:\n\n${taxonomy}`,
     reportFigureRule,
     formsLibrarySection,
@@ -505,7 +506,7 @@ ${styleSection}${actionPlanSection}
 
 TONE
 
-${ASSISTANT_TONE} ${MODE_INSTRUCTION[mode]}
+${ASSISTANT_TONE}
 
 ${ASSISTANT_VOICE_RULES}
 

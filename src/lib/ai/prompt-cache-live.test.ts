@@ -9,17 +9,15 @@ import { claudeSystemPayload, uncachedSystemPrompt } from "./call-claude";
 import { buildSystemPrompt, splitSystemPrompt } from "./prompts";
 
 /**
- * Real Claude calls. Skipped unless ANTHROPIC_API_KEY is set, which CI and
- * this checkout are not. The local stand-in in prompt-cache-replay.test.ts
- * is not a bill and is not what the live case measures.
+ * The Anthropic check is manual. CI and Vercel previews do not set
+ * PROMPT_CACHE_LIVE, and previews have no API key. Run it with
+ * `npm run prompt-cache:live` on a machine that has ANTHROPIC_API_KEY.
  *
- * First-token time is the wait until the first text delta on messages.stream.
- * callClaude streams when the client provides messages.stream, and falls
- * back to messages.create when it does not. chat_traces.latency_ms stays
- * the full reply. The +25% gate uses the median of the cache-read samples
- * only. A call that writes the cache (cache_creation > 0 and cache_read
- * === 0) can be slower and is not gated. A warm cache, whose first NEW
- * call already has cache_read > 0, is a success.
+ * That check warms the cache with one call, then measures three more.
+ * The first measured call is included. A creation call is not dropped
+ * from the sample. The local stand-in in prompt-cache-replay.test.ts
+ * divides characters by four. It is not this check, and it is not what
+ * chat_traces stores.
  */
 
 const KEY = process.env.ANTHROPIC_API_KEY;
@@ -46,30 +44,37 @@ export function median(values: readonly number[]): number {
 }
 
 /**
- * Gate the cache-read samples only. Creation samples are dropped. Fewer
- * than three reads fails. A warm cache (every sample is a read) passes
- * when that median is within 125% of the OLD median.
+ * Samples taken after an explicit warmup. The first sample counts.
+ * cache_read of 0 on that call fails the check.
  */
-export function cacheReadWithinGate(input: {
+export function measuredCacheReads(input: {
   oldFirstTokenMs: readonly number[];
   samples: readonly UsageTiming[];
 }): { ok: boolean; reason: string } {
   if (input.oldFirstTokenMs.length < READ_SAMPLES) {
     return { ok: false, reason: `need ${READ_SAMPLES} OLD samples` };
   }
-  const reads = input.samples.filter((sample) => sample.cacheRead > 0);
-  if (reads.length < READ_SAMPLES) {
-    return { ok: false, reason: `need ${READ_SAMPLES} cache-read samples; cache_read stayed 0 or the prefix was not warm` };
+  if (input.samples.length < READ_SAMPLES) {
+    return { ok: false, reason: `need ${READ_SAMPLES} measured samples after the warmup` };
+  }
+  if ((input.samples[0]?.cacheRead ?? 0) <= 0) {
+    return {
+      ok: false,
+      reason: "the first measured call was not a cache read; warm the cache first and keep that call in the sample",
+    };
+  }
+  if (input.samples.some((sample) => sample.cacheRead <= 0)) {
+    return { ok: false, reason: "a measured call had cache_read 0" };
   }
   const oldMedian = median(input.oldFirstTokenMs);
-  const readMedian = median(reads.map((sample) => sample.firstTokenMs));
+  const readMedian = median(input.samples.map((sample) => sample.firstTokenMs));
   if (readMedian > oldMedian * 1.25) {
     return {
       ok: false,
       reason: `cache-read median ${readMedian} ms is more than 125% of OLD median ${oldMedian} ms`,
     };
   }
-  return { ok: true, reason: "cache-read median is within 125% of OLD" };
+  return { ok: true, reason: "median of the measured calls, including the first, is within 125% of OLD" };
 }
 
 function promptPair(): { legacy: string; current: string } {
@@ -115,49 +120,41 @@ async function measure(
 }
 
 describe("prompt cache gate", () => {
-  it("takes the median and does not gate a cache-creation call", () => {
+  it("includes the first measured call and rejects a sample that was not warmed", () => {
     expect(median([30, 10, 20])).toBe(20);
     expect(median([10, 40, 20, 30])).toBe(25);
-    const warm = cacheReadWithinGate({
+    const warmed = measuredCacheReads({
       oldFirstTokenMs: [100, 100, 100],
       samples: [
-        { cacheCreation: 0, cacheRead: 800, firstTokenMs: 110 },
-        { cacheCreation: 0, cacheRead: 800, firstTokenMs: 120 },
-        { cacheCreation: 0, cacheRead: 800, firstTokenMs: 115 },
+        { cacheCreation: 0, cacheRead: 800, firstTokenMs: 140 },
+        { cacheCreation: 0, cacheRead: 800, firstTokenMs: 100 },
+        { cacheCreation: 0, cacheRead: 800, firstTokenMs: 100 },
       ],
     });
-    expect(warm.ok).toBe(true);
+    expect(warmed.ok).toBe(true);
+    expect(median([140, 100, 100])).toBe(100);
 
-    const created = cacheReadWithinGate({
-      oldFirstTokenMs: [100, 110, 90],
+    const notWarmed = measuredCacheReads({
+      oldFirstTokenMs: [100, 100, 100],
       samples: [
         { cacheCreation: 1800, cacheRead: 0, firstTokenMs: 900 },
         { cacheCreation: 0, cacheRead: 1800, firstTokenMs: 100 },
-        { cacheCreation: 0, cacheRead: 1800, firstTokenMs: 110 },
-        { cacheCreation: 0, cacheRead: 1800, firstTokenMs: 105 },
+        { cacheCreation: 0, cacheRead: 1800, firstTokenMs: 100 },
       ],
     });
-    expect(created.ok).toBe(true);
-
-    const slow = cacheReadWithinGate({
-      oldFirstTokenMs: [100, 100, 100],
-      samples: [
-        { cacheCreation: 0, cacheRead: 800, firstTokenMs: 200 },
-        { cacheCreation: 0, cacheRead: 800, firstTokenMs: 210 },
-        { cacheCreation: 0, cacheRead: 800, firstTokenMs: 190 },
-      ],
-    });
-    expect(slow.ok).toBe(false);
-    expect(cacheReadWithinGate({ oldFirstTokenMs: [100, 100, 100], samples: [] }).ok).toBe(false);
+    expect(notWarmed.ok).toBe(false);
+    expect(notWarmed.reason).toContain("first measured call");
+    expect(measuredCacheReads({ oldFirstTokenMs: [100, 100, 100], samples: [] }).ok).toBe(false);
   });
 });
 
-describe.skipIf(!KEY)("prompt cache, live Claude", () => {
+describe.skipIf(process.env.PROMPT_CACHE_LIVE !== "1")("prompt cache live check (manual)", () => {
   afterEach(() => {
     delete process.env.PROMPT_CACHE_ENABLED;
   });
 
-  it("accepts a warm cache and gates the median of three cache-read samples", async () => {
+  it("warms the cache, then measures three calls and keeps the first", async () => {
+    expect(KEY, "PROMPT_CACHE_LIVE=1 requires ANTHROPIC_API_KEY").toBeTruthy();
     const replay = JSON.parse(readFileSync("src/lib/ai/replay-set.json", "utf8")) as {
       cases: { id: string; turns: string[] }[];
     };
@@ -165,7 +162,6 @@ describe.skipIf(!KEY)("prompt cache, live Claude", () => {
     const { legacy, current } = promptPair();
     const openings = replay.cases.filter((item) => ["b9", "b10", "b11", "b12"].includes(item.id));
     expect(openings).toHaveLength(4);
-    const allNew: UsageTiming[] = [];
 
     for (const item of openings) {
       const question = item.turns[0]!;
@@ -173,19 +169,15 @@ describe.skipIf(!KEY)("prompt cache, live Claude", () => {
       const olds: UsageTiming[] = [];
       for (let i = 0; i < READ_SAMPLES; i += 1) olds.push(await measure(client, claudeSystemPayload(legacy), question));
       process.env.PROMPT_CACHE_ENABLED = "1";
-      const news: UsageTiming[] = [];
-      for (let i = 0; i < READ_SAMPLES + 1; i += 1) news.push(await measure(client, claudeSystemPayload(current), question));
-      allNew.push(...news);
-      const gate = cacheReadWithinGate({
+      const warmup = await measure(client, claudeSystemPayload(current), question);
+      const samples: UsageTiming[] = [];
+      for (let i = 0; i < READ_SAMPLES; i += 1) samples.push(await measure(client, claudeSystemPayload(current), question));
+      const gate = measuredCacheReads({
         oldFirstTokenMs: olds.map((sample) => sample.firstTokenMs),
-        samples: news,
+        samples,
       });
       expect(gate.ok, `${item.id}: ${gate.reason}`).toBe(true);
-      console.log(JSON.stringify({ caseId: item.id, olds, news, reason: gate.reason }));
+      console.log(JSON.stringify({ caseId: item.id, warmup, olds, samples, reason: gate.reason }));
     }
-
-    const wrote = allNew.some((sample) => sample.cacheCreation > 0 && sample.cacheRead === 0);
-    const warm = allNew.every((sample) => sample.cacheRead > 0);
-    expect(wrote || warm, "static prefix was not cached: under the model minimum, or cache_control is not on that block").toBe(true);
   }, 600_000);
 });
