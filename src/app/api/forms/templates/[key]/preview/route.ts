@@ -2,6 +2,7 @@ import { errorResponse } from "@/lib/api/respond";
 import { businessToday } from "@/lib/business-date";
 import { authorizeForms } from "@/lib/forms/access";
 import { fieldsForVariant } from "@/lib/forms/document";
+import { withPayrollDeductAmountField } from "@/lib/forms/payroll-deduct-amount";
 import { renderFormPdf } from "@/lib/forms/pdf-render";
 import { getCurrentVersion, getTemplateByKey, listVersions } from "@/lib/forms/repository";
 
@@ -46,8 +47,9 @@ export async function GET(request: Request, context: { params: Promise<{ key: st
     const variant =
       version.variants.find((entry) => entry.key === variantKey) ?? version.variants[0] ?? null;
 
+    const document = withPayrollDeductAmountField(version.document);
     const values: Record<string, string> = {};
-    for (const field of fieldsForVariant(version.document, variant?.key ?? null)) {
+    for (const field of fieldsForVariant(document, variant?.key ?? null)) {
       values[field.key] =
         field.responsibility === "ai"
           ? "[Ask Bubbles drafts this]"
@@ -58,7 +60,7 @@ export async function GET(request: Request, context: { params: Promise<{ key: st
               : "[Manager completes]";
     }
 
-    const bytes = renderFormPdf(version.document, variant, { values, checked: {} }, {
+    const bytes = renderFormPdf(document, variant, { values, checked: {} }, {
       templateName: `${template.name} — preview`,
       templateVersion: version.version,
       employeeName: "[Employee]",

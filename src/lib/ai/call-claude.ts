@@ -1,12 +1,17 @@
 import "server-only";
 
+import type { TextBlockParam } from "@anthropic-ai/sdk/resources/messages";
+
 import { ACTIVE_BRAND } from "@/lib/brand";
+import { chatTraceEnabled, promptCacheEnabled } from "@/lib/config/chat-quality-flags";
 import { CLAUDE_EFFORT, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
+
 import { Anthropic, getAnthropicClient } from "./anthropic";
 import { AiError } from "./errors";
 import { selectLongContext } from "./long-context";
 import { noteModelCall } from "./model-failure";
+import { splitSystemPrompt } from "./prompts";
 import { withTruncationRetry } from "./truncation";
 
 /**
@@ -113,6 +118,40 @@ export interface CallClaudeInput {
   readonly maxTokens: number;
 }
 
+/**
+ * The answering path's system value. A prompt with a dynamic tail sends the
+ * instruction block first, with an ephemeral cache breakpoint, and the tail
+ * after it with no breakpoint. Any other system string is sent as-is.
+ */
+/**
+ * Cache off: the listener sentence returns to the opening line. Anything
+ * after that sentence in the tail — forms on file, memory, a pinned source,
+ * a retrieval — stays after the instruction, which is also where the cached
+ * call sends it. Splicing the whole tail into the opening would put a
+ * different employee's records in front of the rules.
+ */
+export function uncachedSystemPrompt(staticBlock: string, dynamicTail: string): string {
+  const splitAt = dynamicTail.indexOf("\n");
+  const listener = splitAt < 0 ? dynamicTail : dynamicTail.slice(0, splitAt);
+  const remainder = splitAt < 0 ? "" : dynamicTail.slice(splitAt);
+  const breakAt = staticBlock.indexOf("\n");
+  if (breakAt < 0) return `${staticBlock} ${listener}${remainder}`;
+  return `${staticBlock.slice(0, breakAt)} ${listener}${staticBlock.slice(breakAt)}${remainder}`;
+}
+
+export function claudeSystemPayload(system: string): string | TextBlockParam[] {
+  const parts = splitSystemPrompt(system);
+  if (!parts) return system;
+  if (!promptCacheEnabled()) {
+    return uncachedSystemPrompt(parts.staticBlock, parts.dynamicTail);
+  }
+  const blocks: TextBlockParam[] = [
+    { type: "text", text: parts.staticBlock, cache_control: { type: "ephemeral" } },
+  ];
+  if (parts.dynamicTail.length > 0) blocks.push({ type: "text", text: parts.dynamicTail });
+  return blocks;
+}
+
 export async function callClaude(input: CallClaudeInput): Promise<string> {
   const client = getAnthropicClient();
 
@@ -142,17 +181,18 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
   try {
     const response = await withTruncationRetry(
       input.maxTokens,
-      (maxTokens) =>
-        client.messages.create({
+      async (maxTokens) => {
+        const attemptStarted = Date.now();
+        const params = {
           model: CLAUDE_MODEL,
           max_tokens: maxTokens,
-          thinking: { type: "adaptive" },
+          thinking: { type: "adaptive" as const },
           output_config: { effort: CLAUDE_EFFORT },
-          system: input.system,
+          system: claudeSystemPayload(input.system),
           messages: [
             ...history,
             {
-              role: "user",
+              role: "user" as const,
               // Every context block and then the question, in that order: the
               // question last is what keeps a long briefing from burying it.
               content: [
@@ -166,7 +206,25 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
               ].join("\n\n"),
             },
           ],
-        }),
+        };
+        // The live client always has messages.stream. Streaming with the
+        // flags off would change production on merge, so stream only when a
+        // flag that reads the stream is on. A double with no stream stays
+        // on create either way, and firstTokenMs stays null on create.
+        const useStream =
+          (chatTraceEnabled() || promptCacheEnabled()) && typeof client.messages.stream === "function";
+        if (!useStream) {
+          const created = await client.messages.create(params);
+          return Object.assign(created, { firstTokenMs: null as number | null });
+        }
+        let firstTokenMs: number | null = null;
+        const running = client.messages.stream(params);
+        running.on("text", () => {
+          if (firstTokenMs === null) firstTokenMs = Date.now() - attemptStarted;
+        });
+        const streamed = await running.finalMessage();
+        return Object.assign(streamed, { firstTokenMs });
+      },
       `${ACTIVE_BRAND.assistantName} ran out of room before finishing that answer, so it was not shown. Try asking for less at once, or split the question into parts.`,
     );
 
@@ -175,6 +233,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
       maxTokens: input.maxTokens,
       stopReason: response.stop_reason ?? null,
       latencyMs: Date.now() - started,
+      firstTokenMs: response.firstTokenMs,
       usage: response.usage,
     };
     if (response.stop_reason === "refusal") {

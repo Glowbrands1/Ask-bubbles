@@ -74,7 +74,7 @@ export const CA_POLICY_LABEL: Record<CaPolicyName, string> = {
 };
 
 /** What an incident was, in the terms the suggestion is explained in. */
-export type ConductTopic = "task" | "deadline" | "direction" | "cash";
+export type ConductTopic = "task" | "deadline" | "direction" | "cash" | "acknowledgement";
 
 export interface CaPolicyReading {
   /** The policy the manager named, latest turn first. */
@@ -151,6 +151,18 @@ const CONDUCT_TOPICS: { topic: ConductTopic; pattern: RegExp }[] = [
     topic: "cash",
     pattern:
       /\bcash[- ]?hand[a-z]*\b|\b(?:register|drawer|till|bank|deposit|cash)\s+(?:was\s+|were\s+|came\s+up\s+|is\s+)?(?:short|shortages?|over|overages?|discrepanc\w*|count\s+(?:was\s+)?(?:off|wrong))\b|\b(?:short|shortages?)\s+(?:in|on|from)\s+(?:the\s+|her\s+|his\s+|their\s+)?(?:register|drawer|till|bank|deposit)\b|\bmishandl\w*\s+(?:the\s+)?(?:cash|money|deposits?|register)\b/,
+  },
+  {
+    /*
+     * A POLICY ACKNOWLEDGEMENT LEFT UNDONE. "failed to acknowledge the
+     * policies in Woven" is Standards of Conduct — the manual's line about
+     * failing to follow the policies — and not a blank offense. A prior
+     * coaching labelled "policy acknowledgement" with no failure word is
+     * not this.
+     */
+    topic: "acknowledgement",
+    pattern:
+      /\b(?:fail(?:ed|ing)? to|did ?n[o']?t|didn't|never|has ?n[o']?t|hasn't|had ?n[o']?t|hadn't|not yet|without)\s+(?:\S+\s+){0,4}?acknowledge[ds]?\b|\b(?:missed|outstanding|incomplete|unsigned)\s+(?:\S+\s+){0,3}?(?:policy\s+)?acknowledgements?\b/,
   },
   {
     topic: "direction",
@@ -295,6 +307,13 @@ export function readCaPolicy(rawText: string): CaPolicyReading {
    * and ticks Absenteeism; `groundMissedEvent` still finds where the manual
    * says so. A policy the manager does name still wins.
    */
+  /*
+   * LEGGINGS ARE DRESS CODE. The words "dress code" already count when the
+   * manager names that policy. "She wore leggings" does not say those words,
+   * and it was read as no policy. Slippers and other clothes stay unread
+   * here — only leggings, which is the item managers write up this way.
+   */
+  if (stated === null && /\bleggings\b/.test(text)) stated = "dress_code";
   if (stated === null && missedEvent !== null) stated = "attendance";
 
   const topics = CONDUCT_TOPICS.filter(({ pattern }) => sentences.some((s) => pattern.test(s))).map(
@@ -364,16 +383,48 @@ export function namesCaPolicy(reply: string): boolean {
 const ABSENCE = /\b(?:absent|absence|absences|absenteeism|no[- ]call|no[- ]show|called (?:out|off)|call[- ]?off|missed (?:her|his|their|a|the) shift)\b/;
 const LATENESS = /\b(?:late|lateness|tardy|tardiness|left early|leaving early|clocked out early)\b/;
 
+/**
+ * A STORE THAT OPENED LATE, not an employee who arrived late.
+ *
+ * `LATENESS` matches the word "late" in "opened the store late", and that
+ * used to tick Tardiness. A late opening is the manual's Late Opening
+ * section. An employee who arrived late, with no opening, stays Tardiness,
+ * which cites Attendance. "Opening tasks" and "opening duties" do not match.
+ */
+const LATE_OPENING =
+  /\b(?:late[- ]open(?:ing|ed)?|open(?:ed|ing)? (?:the |our |her |his |their )?(?:store|location|shop|makery|doors)(?:\s+late)?|(?:scheduled|supposed|assigned|due) to open|opener|opening shift|failed to open|did(?:n't|n’t| not) open)/i;
+
+/** Offense key for a store that opened late. Not the Tardiness box. */
+export const LATE_OPENING_OFFENSE = "late_opening";
+
+export function describesLateOpening(rawText: string): boolean {
+  return LATE_OPENING.test(normalize(rawText));
+}
+
+/**
+ * Late Opening when the store opened late. Tardiness when an employee
+ * arrived late and the store did not. Absenteeism beside either when the
+ * account also describes an absence.
+ */
+function attendanceOffenseKeys(text: string, missed: boolean): string[] | null {
+  const opening = LATE_OPENING.test(text);
+  const absent = ABSENCE.test(text) || missed;
+  const late = !opening && LATENESS.test(text);
+  if (!opening && !absent && !late) return null;
+  const keys: string[] = [];
+  if (opening) keys.push(LATE_OPENING_OFFENSE);
+  else if (late) keys.push("tardiness");
+  if (absent) keys.push("absenteeism");
+  return keys;
+}
+
 export function statedOffenseKeys(reading: CaPolicyReading, rawText: string): string[] | null {
   switch (reading.stated) {
     case null:
       return null;
     case "attendance": {
       const text = normalize(rawText);
-      const absent = ABSENCE.test(text) || missedEventIn(statements(text)) !== null;
-      const late = LATENESS.test(text);
-      if (absent && late) return ["tardiness", "absenteeism"];
-      return absent ? ["absenteeism"] : ["tardiness"];
+      return attendanceOffenseKeys(text, missedEventIn(statements(text)) !== null) ?? ["tardiness"];
     }
     default:
       return [reading.stated];
@@ -408,6 +459,7 @@ const TOPIC_WORDS: Record<ConductTopic, string> = {
   deadline: "a required deadline that was missed",
   direction: "a manager's direction that wasn't followed",
   cash: "cash handling",
+  acknowledgement: "a policy acknowledgement that wasn't completed",
 };
 
 const ALTERNATIVE_WORDS: Record<CaPolicyReading["alternatives"][number], string> = {
@@ -515,12 +567,7 @@ export const CA_POLICY_QUESTION = "Which policy applies?";
  * lateness nor absence — it does not default every note to tardiness.
  */
 export function describedAttendanceKeys(rawText: string): string[] | null {
-  const text = normalize(rawText);
-  const absent = ABSENCE.test(text);
-  const late = LATENESS.test(text);
-  if (!absent && !late) return null;
-  if (absent && late) return ["tardiness", "absenteeism"];
-  return absent ? ["absenteeism"] : ["tardiness"];
+  return attendanceOffenseKeys(normalize(rawText), false);
 }
 
 /**
@@ -586,6 +633,7 @@ const ANCHORS: Record<ConductTopic, RegExp[]> = {
    * on the manual saying something about cash, or on nothing.
    */
   cash: [/register\s*\/\s*bank\s+shortages?/i],
+  acknowledgement: [/failing to follow the policies and procedures/i],
 };
 
 /** How many chunks a section may run across before another heading must have begun. */

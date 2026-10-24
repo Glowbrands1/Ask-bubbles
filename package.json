@@ -2,6 +2,9 @@
   "name": "ask-bubbles",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -15,6 +18,7 @@
     "bootstrap:admin": "node scripts/bootstrap-admin.mjs",
     "verify:bundle": "node scripts/verify-no-demo-in-bundle.mjs",
     "probe:woven": "vitest run src/lib/employees/woven/live-probe.dry-run.test.ts --disableConsoleIntercept",
+    "prompt-cache:live": "PROMPT_CACHE_LIVE=1 vitest run src/lib/ai/prompt-cache-live.test.ts -t \"warms the cache\"",
     "dry-run:woven-knowledge": "vitest run src/lib/knowledge-sync/woven/bcs/live-dry-run.dry-run.test.ts --disableConsoleIntercept",
     "stack:up": "bash scripts/local-stack/up.sh",
     "stack:down": "bash scripts/local-stack/down.sh",

@@ -28,6 +28,7 @@ import { CONTINUATION_KEY_MAX } from "@/lib/forms/proposal-continuation";
 import { mayAskToReopen } from "@/lib/forms/reopen-cue";
 import { parseChatReportContext } from "@/lib/reporting/report-context";
 import { businessToday } from "@/lib/business-date";
+import { payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
 import { isClientConversationId } from "@/lib/chat/client-ids";
 import type { AskRequest } from "@/lib/ai/types";
 import type { AnswerMode, ChatMessage } from "@/types";
@@ -185,6 +186,7 @@ export async function POST(request: Request) {
               instanceId: parsed.activeFormInstanceId,
               question: parsed.question,
               history: parsed.history,
+              savedPayrollAmount: await savedPayrollAmountFor(context.identity.subject, body.conversationId),
             })
           : null;
       /*
@@ -432,6 +434,19 @@ function parseAskRequest(body: Partial<AskRequest>): AskRequest {
       todayIso: businessToday(),
     },
   };
+}
+
+/**
+ * The amount chat_form_state already holds for this conversation. Null when
+ * the amount field is off, or when nothing was stored. A redraft passes it
+ * through so the figure is not lost when the new notes do not repeat it.
+ */
+async function savedPayrollAmountFor(userId: string | undefined, conversationId: unknown): Promise<string | null> {
+  if (!payrollDeductAmountFieldEnabled() || !userId || typeof conversationId !== "string" || conversationId === "") {
+    return null;
+  }
+  const { loadFormState } = await import("@/lib/ai/form-state-store");
+  return (await loadFormState(userId, conversationId))?.payrollAmount ?? null;
 }
 
 /** A second document stays off the open form's revision path. Off, this is false. */

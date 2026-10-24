@@ -27,6 +27,7 @@ import {
   type DraftValues,
 } from "./responsibility";
 import { selectStatedFacts } from "./employment-change";
+import { withPayrollDeductAmountField } from "./payroll-deduct-amount";
 import { refreshedActionPlan } from "./ca-action-plan";
 import { needsFollowUp } from "./follow-up";
 import {
@@ -353,7 +354,7 @@ export async function loadInstance(id: string): Promise<LoadedInstance | null> {
 
   return {
     instance,
-    version,
+    version: { ...version, document: withPayrollDeductAmountField(version.document) },
     values: mapped,
     events: (events.data ?? []).map((event) => ({
       kind: String(event.kind),

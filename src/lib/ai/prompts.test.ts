@@ -1,9 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 
+import { afterEach, describe, expect, it } from "vitest";
+
+import { ASSISTANT_TONE } from "@/config/company/assistant";
+
+import { uncachedSystemPrompt } from "./call-claude";
 import {
+  ACTION_PLAN_SENTENCE_RULE,
+  COACHING_CONSEQUENCE_RULES,
+  EMPLOYEE_FIGURE_RULES,
+  FORM_LIBRARY_DETAIL_RULES,
+  PRINTED_PAGE_RULE,
   buildGroundingBlock,
   buildReportsGuideSection,
   buildSystemPrompt,
+  splitSystemPrompt,
   extractUsedMarkers,
   stripMarkers,
   type GroundingChunk,
@@ -419,5 +430,275 @@ describe("an answer given while a form is open in the conversation", () => {
     const prompt = buildSystemPrompt(base);
     expect(prompt).toMatch(/say the form has not been created yet/);
     expect(prompt).not.toContain("A FORM IS OPEN");
+  });
+});
+
+describe("Sunny chat and forms rules stay behind the existing flags", () => {
+  const base = {
+    assistantName: "Bubbles",
+    brandName: "Buff City Soap",
+    productName: "Ask Bubbles",
+    locationNoun: "store",
+    context: CONTEXT,
+    mode: "standard" as const,
+    hasContext: true,
+    hasFormsLibrary: true,
+    hasPersonMemory: true,
+    hasFormRecords: true,
+  };
+
+  it("leaves the prompt unchanged when the flags are omitted", () => {
+    const prompt = buildSystemPrompt(base);
+    expect(prompt).toBe(
+      buildSystemPrompt({
+        ...base,
+        styleRules: false,
+        actionPlanSentences: false,
+        printedPageOnly: false,
+        typedName: false,
+        policyCitation: false,
+      }),
+    );
+    expect(prompt).toContain("ask for their full name");
+    expect(prompt).toContain("A metric is a coaching signal, not a finding.");
+    expect(prompt).toContain("TRAINING MATERIAL IS NOT A FORM");
+    expect(prompt).toContain("Keep what the person told you at the standing they gave it.");
+    expect(prompt).toContain("edit the exit form for Jordan Smith");
+    expect(prompt).toContain("ask whether that is the person they mean before treating it as theirs.");
+    expect(prompt).toContain("ask before relying on it.");
+    expect(prompt).not.toContain(COACHING_CONSEQUENCE_RULES);
+    expect(prompt).not.toContain(EMPLOYEE_FIGURE_RULES);
+    expect(prompt).not.toContain(FORM_LIBRARY_DETAIL_RULES);
+    expect(prompt).not.toContain(ACTION_PLAN_SENTENCE_RULE);
+    expect(prompt).not.toContain(PRINTED_PAGE_RULE);
+    expect(prompt).not.toContain("salon");
+    expect(prompt).not.toContain("tanning");
+    expect(prompt).not.toContain("PPTA");
+  });
+
+  it("adds the consequence rules, the missing forms sentences, and the two-sentence plan only when those flags are on", () => {
+    const prompt = buildSystemPrompt({
+      ...base,
+      styleRules: true,
+      actionPlanSentences: true,
+      printedPageOnly: true,
+      typedName: true,
+    });
+    expect(prompt).toContain(COACHING_CONSEQUENCE_RULES);
+    expect(prompt).toContain("Weigh opportunity volume before performance.");
+    expect(prompt).toContain("Recommend the lightest appropriate next step.");
+    expect(prompt).toContain("Recognition is half the job.");
+    expect(prompt).toContain(EMPLOYEE_FIGURE_RULES);
+    expect(prompt).toContain("Do not invent an employee, a name, a score, a ranking or a headcount.");
+    expect(prompt).toContain(FORM_LIBRARY_DETAIL_RULES);
+    expect(prompt).toContain(
+      "An approved progression may name a step — observation, role play, a follow-up review, escalation to leadership — that has no template of its own.",
+    );
+    expect(prompt).toContain(
+      "Guidance about how to coach, when to escalate and what the progression is lives in the knowledge base and is cited by marker.",
+    );
+    expect(prompt).toContain(ACTION_PLAN_SENTENCE_RULE);
+    expect(prompt).toContain("An action plan on a form is exactly two sentences.");
+    expect(prompt).toContain(PRINTED_PAGE_RULE);
+    expect(prompt).toContain("A PDF sheet number is not the printed page.");
+    expect(prompt).toContain("Use the name the manager typed. Do not ask which person, and do not block because a roster does not list them.");
+    expect(prompt).toContain("keep the name the manager typed. Do not ask whether that is the person, and do not block the form.");
+    expect(prompt).not.toContain("ask whether that is the person they mean");
+    expect(prompt).not.toContain("ask before relying on it.");
+    expect(prompt).not.toContain("I couldn't find");
+    expect(prompt).not.toContain("salon");
+  });
+});
+
+describe("the cacheable instruction omits the listener", () => {
+  afterEach(() => {
+    delete process.env.PROMPT_CACHE_ENABLED;
+  });
+
+  it("keeps every sentence and moves the name, the date, and the location after the marker", () => {
+    process.env.PROMPT_CACHE_ENABLED = "1";
+    const prompt = buildSystemPrompt({
+      assistantName: "Bubbles",
+      brandName: "Buff City Soap",
+      productName: "Ask Bubbles",
+      locationNoun: "store",
+      context: CONTEXT,
+      mode: "standard",
+      hasContext: true,
+    });
+    const parts = splitSystemPrompt(prompt);
+    expect(parts).not.toBeNull();
+    const { staticBlock, dynamicTail } = parts!;
+    expect(staticBlock).not.toContain("Dana Reyes");
+    expect(staticBlock).not.toContain("Testville Downtown");
+    expect(staticBlock).not.toContain("2026-08-29");
+    expect(staticBlock).not.toContain("Today is");
+    expect(staticBlock).not.toContain("who works at");
+    expect(staticBlock).toContain("today's date stated below");
+    expect(dynamicTail.startsWith(
+      "You are talking to Dana Reyes, who works at Testville Downtown. Today is Saturday, 2026-08-29 (business time zone America/Chicago; yesterday was 2026-08-28).",
+    )).toBe(true);
+    expect(dynamicTail).toContain("kinds of statement");
+    const legacy = uncachedSystemPrompt(staticBlock, dynamicTail);
+    expect(legacy.startsWith("You are Bubbles, the internal assistant for Buff City Soap teams. You are talking to Dana Reyes, who works at Testville Downtown. ")).toBe(true);
+    expect(legacy).not.toContain("---DYNAMIC---");
+    expect(legacy.slice(0, legacy.indexOf("HOW YOU ANSWER"))).not.toContain("kinds of statement");
+    expect(prompt).toContain("Never invent a document title, a page number");
+  });
+});
+
+describe("the static block holds no per-request data", () => {
+  afterEach(() => {
+    delete process.env.PROMPT_CACHE_ENABLED;
+  });
+
+  const base = {
+    assistantName: "Bubbles",
+    brandName: "Buff City Soap",
+    productName: "Ask Bubbles",
+    locationNoun: "store",
+    mode: "standard" as const,
+  };
+
+  it("is byte-identical for two users, two stores, and two messages", () => {
+    process.env.PROMPT_CACHE_ENABLED = "1";
+    const messageA = "What is the dress code for Dana Reyes at Testville Downtown?";
+    const messageB = "Who opened UniqueStoreZz late on 2099-01-02?";
+    const plain = buildSystemPrompt({
+      ...base,
+      context: CONTEXT,
+      hasContext: true,
+      mode: "quick",
+      message: messageA,
+      policyChunks: [chunk(1, "Dress Code")],
+      nameMatches: "Dana Reyes at Testville Downtown",
+      formState: "FORM STATE Dana Reyes",
+    });
+    const varied = buildSystemPrompt({
+      ...base,
+      mode: "detailed",
+      context: { userName: "UniqueUserZz", locationName: "UniqueStoreZz", todayIso: "2099-01-02" },
+      hasContext: false,
+      hasReportData: true,
+      hasMissingReports: true,
+      hasFormsLibrary: true,
+      hasVerifiedRecords: true,
+      hasPersonMemory: true,
+      hasFormRecords: true,
+      pinnedDocumentTitles: ["PinnedTitleZz"],
+      handbookNote: "HandbookNoteZz",
+      canViewReports: true,
+      priorCoachingOptional: true,
+      recalledMemory: "RecalledMemoryZz",
+      fewShotExamples: "FewshotZz",
+      message: messageB,
+      policyChunks: [chunk(2, "UniqueChunkTitleZz")],
+      nameMatches: "UniqueMatchZz at UniqueStoreZz",
+      formState: "FORM STATE UniqueEmployeeZz",
+      openForm: {
+        templateName: "Coaching",
+        employeeName: "UniqueEmployeeZz",
+        status: "draft",
+        lines: [{ label: "Notes", value: "UniqueEmployeeZz arrived late." }],
+        unverifiedPolicy: [],
+      },
+    });
+    const left = splitSystemPrompt(plain);
+    const right = splitSystemPrompt(varied);
+    expect(left).not.toBeNull();
+    expect(right).not.toBeNull();
+    expect(right!.staticBlock).toBe(left!.staticBlock);
+    const absentAbove = [
+      messageA,
+      messageB,
+      "Dana Reyes",
+      "Testville Downtown",
+      "UniqueUserZz",
+      "UniqueStoreZz",
+      "UniqueEmployeeZz",
+      "2099-01-02",
+      "HandbookNoteZz",
+      "RecalledMemoryZz",
+      "FewshotZz",
+      "PinnedTitleZz",
+      "two or three sentences",
+      "full picture",
+      "FORMS ALREADY ON FILE",
+      "WHAT THE MANAGER TOLD YOU BEFORE",
+      "no company documents matched",
+      "kinds of statement",
+      "UniqueChunkTitleZz",
+      "UniqueMatchZz",
+      "FORM STATE",
+    ];
+    for (const needle of absentAbove) {
+      expect(left!.staticBlock).not.toContain(needle);
+      expect(right!.staticBlock).not.toContain(needle);
+    }
+    expect(left!.dynamicTail).toContain("Dana Reyes");
+    expect(left!.dynamicTail).toContain("two or three sentences");
+    expect(right!.dynamicTail).toContain("UniqueUserZz");
+    expect(right!.dynamicTail).toContain("UniqueStoreZz");
+    expect(right!.dynamicTail).toContain("UniqueEmployeeZz");
+    expect(right!.dynamicTail).toContain("2099-01-02");
+    expect(right!.dynamicTail).toContain("full picture");
+    expect(right!.dynamicTail).toContain("FORMS ALREADY ON FILE");
+    expect(right!.dynamicTail).toContain("WHAT THE MANAGER TOLD YOU BEFORE");
+    expect(right!.dynamicTail).toContain("no company documents matched");
+    expect(right!.dynamicTail).toContain("NAME MATCHES");
+    expect(right!.dynamicTail).toContain("UniqueMatchZz");
+    expect(right!.dynamicTail).toContain("FORM STATE UniqueEmployeeZz");
+    expect(right!.dynamicTail).toContain("UniqueChunkTitleZz");
+    expect(right!.dynamicTail).toContain(messageB);
+    expect(left!.dynamicTail).toContain("Dana Reyes at Testville Downtown");
+    expect(left!.dynamicTail).toContain(messageA);
+    const coachingOff = splitSystemPrompt(buildSystemPrompt({ ...base, context: CONTEXT, hasContext: true, priorCoachingOptional: false }));
+    const coachingOn = splitSystemPrompt(buildSystemPrompt({ ...base, context: CONTEXT, hasContext: true, priorCoachingOptional: true }));
+    expect(coachingOn!.staticBlock).toBe(coachingOff!.staticBlock);
+  });
+});
+
+describe("PROMPT_CACHE_ENABLED off", () => {
+  afterEach(() => {
+    delete process.env.PROMPT_CACHE_ENABLED;
+  });
+
+  const input = {
+    assistantName: "Bubbles",
+    brandName: "Buff City Soap",
+    productName: "Ask Bubbles",
+    locationNoun: "store" as const,
+    context: CONTEXT,
+    mode: "standard" as const,
+    hasContext: true,
+    policyChunks: [chunk(1, "Dress Code")],
+    nameMatches: "Should Not Appear",
+    formState: "Should Not Appear State",
+    message: "Should Not Appear Message",
+  };
+
+  it("is byte-identical to the base prompt and does not emit the marker", () => {
+    delete process.env.PROMPT_CACHE_ENABLED;
+    const prompt = buildSystemPrompt(input);
+    const again = buildSystemPrompt(input);
+    expect(again).toBe(prompt);
+    expect(prompt).toBe(readFileSync(new URL("./prompts.base.fixture.txt", import.meta.url), "utf8"));
+    expect(prompt).not.toContain("---DYNAMIC---");
+    expect(prompt).not.toContain("Should Not Appear");
+    expect(prompt.startsWith("You are Bubbles, the internal assistant for Buff City Soap teams. You are talking to Dana Reyes, who works at Testville Downtown. ")).toBe(true);
+    expect(prompt.indexOf("HOW YOU ANSWER")).toBeLessThan(prompt.indexOf("RULES YOU DO NOT BREAK"));
+    expect(prompt.indexOf("RULES YOU DO NOT BREAK")).toBeLessThan(prompt.indexOf("\nTONE\n"));
+    expect(prompt).toContain("today's date above");
+    expect(prompt).toContain(`${ASSISTANT_TONE} Answer in a short paragraph or a few bullets`);
+
+    process.env.PROMPT_CACHE_ENABLED = "1";
+    const cached = buildSystemPrompt(input);
+    expect(cached).not.toBe(prompt);
+    expect(cached).toContain("\n\n---DYNAMIC---\n");
+    expect(cached).toContain("Should Not Appear Message");
+    const parts = splitSystemPrompt(cached);
+    expect(parts).not.toBeNull();
+    expect(parts!.staticBlock).not.toContain("Dana Reyes");
+    expect(parts!.dynamicTail).toContain("Should Not Appear");
   });
 });

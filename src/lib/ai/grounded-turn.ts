@@ -127,11 +127,14 @@ async function writeSaved(
 ): Promise<void> {
   if (!enabled || !input.actor.subject || !input.request.conversationId) return;
   const proposal = response.formProposal ?? null;
+  const lastAssistant =
+    [...input.request.history].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
   const next = captureFormState(previous, {
     proposal,
     employeeId: prep.employeeId,
     keptTypedName: prep.keptTypedName,
     userText: input.request.question,
+    lastAssistant,
     policyHeading: null,
     policyPage: null,
   });

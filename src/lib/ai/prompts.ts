@@ -10,6 +10,7 @@ import {
   type ReportDefinition,
 } from "@/lib/reporting/registry";
 import type { AnswerMode } from "@/types";
+import { promptCacheEnabled } from "@/lib/config/chat-quality-flags";
 import { CHAT_STYLE_RULES } from "./chat-style-rules";
 import { PRIOR_COACHING_OPTIONAL_RULES } from "./prior-coaching-optional";
 import type { AskContext, OpenFormSummary } from "./types";
@@ -47,6 +48,23 @@ export const MEMORY_SECTION = "WHAT THIS MANAGER TOLD YOU BEFORE";
 /** Exported so a test can assert the real text rather than a paraphrase. */
 export const ASSISTANT_VOICE_RULES = ASSISTANT_VOICE;
 
+/**
+ * Splits the system prompt into the cacheable instruction and the per-turn
+ * tail. The marker is not sent to the model. It is only the cut.
+ */
+export const DYNAMIC_PROMPT_MARKER = "---DYNAMIC---";
+
+/** The instruction body, then the listener line. Null when this prompt has no cut. */
+export function splitSystemPrompt(prompt: string): { staticBlock: string; dynamicTail: string } | null {
+  const marker = `\n\n${DYNAMIC_PROMPT_MARKER}\n`;
+  const index = prompt.indexOf(marker);
+  if (index < 0) return null;
+  return {
+    staticBlock: prompt.slice(0, index),
+    dynamicTail: prompt.slice(index + marker.length),
+  };
+}
+
 const MODE_INSTRUCTION: Record<AnswerMode, string> = {
   quick:
     "Answer in two or three sentences. Lead with the answer itself. No preamble, no headings.",
@@ -69,6 +87,59 @@ One of the numbered sources above is "{{TITLE}}". It was attached because this q
 - IT IS REASONING, NOT EVIDENCE ABOUT ANY PERSON, STORE OR DAY. Any name, store, date, ranking or figure inside it is an example or a placeholder. Never present one as a current fact, and never fill a placeholder in with a guess.
 - CURRENT FACTS come only from current data or from what the person has told you in this conversation.
 - WHERE CURRENT {{BRAND}} POLICY AND THIS DOCUMENT CONFLICT, POLICY WINS. Say so plainly, follow the policy, and cite it.`;
+
+/**
+ * Sunny's "BEFORE YOU SUGGEST ANY CONSEQUENCE", without a salon measure.
+ * Attached only when CHAT_STYLE_RULES_ENABLED is on, so a turn with that
+ * flag off keeps the shorter metric rule already in the prompt. Exported
+ * so a test can assert this text rather than a paraphrase.
+ */
+export const COACHING_CONSEQUENCE_RULES = `BEFORE YOU SUGGEST ANY CONSEQUENCE
+
+- A metric is a coaching signal, not a finding. Never recommend discipline, an EPP, a corrective action form, a suspension or a termination on the strength of numbers alone, however bad they look, and never imply a manager would be justified in doing so.
+- Documentation becomes appropriate only alongside observed behaviour, prior coaching, manager follow-up or a confirmed pattern. Where that is missing, the correct recommendation is to observe first — say which behaviour to watch for.
+- Weigh opportunity volume before performance. A low rate on a handful of chances is not the same as a low rate on hundreds.
+- Connect the metric to a behaviour, and name the behaviour. A number without a behaviour is not coachable.
+- Never infer attitude, effort, character or laziness from a metric. You cannot see any of those in a number.
+- Recommend the lightest appropriate next step.
+- Recognition is half the job. Identify who is worth praising, who can model the behaviour, and who has improved since coaching.`;
+
+/**
+ * What to do when no employee-level report is attached. Sunny states this
+ * beside its employee-performance framework. There is no employee-figures
+ * block in this app, so the "a dataset is attached" branch is not copied.
+ * Attached only when CHAT_STYLE_RULES_ENABLED is on.
+ */
+export const EMPLOYEE_FIGURE_RULES = `WHERE FIGURES ABOUT A PERSON COME FROM
+
+No employee-level report is attached to this turn.
+
+- You MAY use figures the manager has stated in this conversation, exactly as stated, and you should say that is where they came from.
+- You may not add to them. Do not infer a metric that was not stated, and do not compute a rate the manager did not give you.
+- If the manager has NOT stated any employee figures and asks you to rank, name, score or choose between actual people, say plainly that you have no current employee-level report, and say what would be needed. Do not invent an employee, a name, a score, a ranking or a headcount.
+- With or without figures, you can still help with which metrics matter, what to observe, how to prioritise once a report is available, and how to run the conversation.`;
+
+/**
+ * The two forms-library sentences Sunny states and this prompt shortened.
+ * Attached only when the forms library is on the turn and
+ * CHAT_STYLE_RULES_ENABLED is on. Off, the shorter sentences stay.
+ */
+export const FORM_LIBRARY_DETAIL_RULES = `- An approved progression may name a step — observation, role play, a follow-up review, escalation to leadership — that has no template of its own. Naming the step is correct; implying a form exists for it is not.
+- Guidance about how to coach, when to escalate and what the progression is lives in the knowledge base and is cited by marker. The blank templates live in Forms.`;
+
+/**
+ * Pau: an action plan is exactly two sentences. Sunny says this in its
+ * repair prompt. Attached only when ACTION_PLAN_SENTENCES_ENABLED is on.
+ */
+export const ACTION_PLAN_SENTENCE_RULE = `ACTION PLAN
+
+- An action plan on a form is exactly two sentences. Do not add a payroll sentence, a deduction amount, or a third sentence.`;
+
+/**
+ * Pau: the page on a form is the printed page. Attached only when
+ * PRINTED_PAGE_ONLY_ENABLED is on.
+ */
+export const PRINTED_PAGE_RULE = "Cite the printed page from the sources. A PDF sheet number is not the printed page. Never invent a page.";
 
 /**
  * ============================================================================
@@ -221,6 +292,41 @@ export function buildSystemPrompt(input: {
    * prompt unchanged. Set only when FEWSHOT_EXAMPLES_ENABLED is on.
    */
   fewShotExamples?: string | null;
+  /**
+   * A typed name is used as typed. Omitted or false leaves the name rule
+   * unchanged. Set only when TYPED_NAME_ENABLED is on.
+   */
+  typedName?: boolean;
+  /**
+   * Every form cites a policy name and printed page from the sources.
+   * Omitted or false leaves the prompt unchanged. Set only when
+   * POLICY_CITATION_ENABLED is on.
+   */
+  policyCitation?: boolean;
+  /**
+   * The page on a form is the printed page, not the PDF sheet number.
+   * Omitted or false leaves the prompt unchanged. Set only when
+   * PRINTED_PAGE_ONLY_ENABLED is on.
+   */
+  printedPageOnly?: boolean;
+  /**
+   * An action plan on a form is exactly two sentences. Omitted or false
+   * leaves the prompt unchanged. Set only when
+   * ACTION_PLAN_SENTENCES_ENABLED is on.
+   */
+  actionPlanSentences?: boolean;
+  /**
+   * Retrieved policy excerpts for this question. Below ---DYNAMIC---, and
+   * only when PROMPT_CACHE_ENABLED is on. Off, they are not part of this
+   * string: the answering call still sends them on the user turn.
+   */
+  policyChunks?: readonly GroundingChunk[];
+  /** Roster or store name matches for this turn. Below the marker when caching is on. */
+  nameMatches?: string | null;
+  /** Slot state for this turn. Below the marker when caching is on. */
+  formState?: string | null;
+  /** The manager's message. Below the marker when caching is on. */
+  message?: string | null;
 }): string {
   const { assistantName, brandName, productName, locationNoun, context, mode, hasContext } = input;
   const hasReportData = input.hasReportData ?? false;
@@ -282,7 +388,7 @@ export function buildSystemPrompt(input: {
 - Never claim you can create a form unless that entry says this user may create it. Never say you can create it in this conversation unless the entry says it can be created inside the conversation; where it cannot, say ${productName} cannot create it yet. Forms are only ever created in this conversation: there is no separate Create a Form screen, so never send anybody to one.
 - Never describe a form's fields, checkboxes, signature lines or acknowledgement wording. You are not shown them, and a plausible description of a document that goes in an employment file is worse than no description. Say what the form is for and let them open it.
 - A STEP IN A PROCESS IS NOT A FORM. A process may name a step that has no template of its own. Naming the step is correct; implying a form exists for it is not. If somebody asks whether there is a form for a step, answer from the FORMS LIBRARY section only.
-- Knowledge base documents are NOT forms and forms are NOT knowledge base documents. When both are relevant, say which is which.
+${input.styleRules ? `${FORM_LIBRARY_DETAIL_RULES}\n` : ""}- Knowledge base documents are NOT forms and forms are NOT knowledge base documents. When both are relevant, say which is which.
 - The knowledge base's categories and the Forms library's categories are different lists. Do not answer a question about where a document is filed by naming a forms category, or the reverse.
 - Where a form is: a manager creates one by asking ${productName}, here in the conversation. Forms already created are in Forms → Forms Register. A form already created CAN be changed, here in the conversation: the manager asks for it by form and employee — for example "edit the exit form for Jordan Smith" — and the form comes back into the conversation to edit; a finalized one opens as a new draft with everything carried over, and the finalized original stays on file until that draft is finalized and replaces it. A finalized form's card also has an Edit as new draft button. Never say a created or finalized form cannot be edited, copied or drafted again. The templates themselves are in Forms → Form Templates, which only administrators who manage templates can open — do not send anybody else there.`
     : "";
@@ -293,7 +399,7 @@ export function buildSystemPrompt(input: {
 - The ${MEMORY_SECTION} section is the manager's own earlier account of the people named in this conversation. Use it so they do not have to repeat themselves: connect what they ask now to what they told you before, and notice patterns across conversations — a second late arrival, a follow-up that was due.
 - It is what the manager said at the time, not a verified record. Never present it as a fact on somebody's file, and never treat it as company policy. It never establishes anybody's job title, ${locationNoun} assignment or employment status: those come only from a VERIFIED RECORDS section.
 - What the manager says now wins over what they said before. If the two disagree, go with today and mention the difference only if it matters.
-- A first name can belong to more than one person. If an earlier conversation might be about somebody else with the same name, ask before relying on it.
+- A first name can belong to more than one person. ${input.typedName ? "Use the name the manager typed. Do not ask which person, and do not block because a roster does not list them." : "If an earlier conversation might be about somebody else with the same name, ask before relying on it."}
 - A form is only on record if the section lists it under forms the manager created${hasFormRecords ? " or the FORMS ON FILE section lists it" : ""}. An earlier conversation that discussed a coaching or corrective action is not proof one was filed.
 - Use what is relevant to the question and leave the rest. Do not recite the history back unprompted.`
     : "";
@@ -311,7 +417,7 @@ export function buildSystemPrompt(input: {
 - State only the forms listed there: how many, which form, the date, the status and any follow-up. Never add a form the section does not list, and never describe what a form says — you have not seen its contents.
 - The section covers only the ${locationNoun}s it names. "None on file" means none that this user can see; say that, not that the employee has never been coached.
 - A draft is not a completed coaching, and a revised form has been replaced by a newer version. Say which is which.
-- Where the section lists only a POSSIBLE match, ask whether that is the person they mean before treating it as theirs.
+- Where the section lists only a POSSIBLE match, ${input.typedName ? "keep the name the manager typed. Do not ask whether that is the person, and do not block the form." : "ask whether that is the person they mean before treating it as theirs."}
 - Prior forms matter for the next step: where a source describes the progression, use what is on file to say which step it supports — and point the manager to Forms → Forms Register to open any of them.`
     : "";
 
@@ -334,15 +440,40 @@ export function buildSystemPrompt(input: {
   const reportsGuideSection = reportsGuide ? `\n\n${reportsGuide}` : "";
 
   const purpose = ASSISTANT_PURPOSE.replaceAll("{noun}", locationNoun);
-  const styleSection = input.styleRules ? `\n\n${CHAT_STYLE_RULES}` : "";
+  const styleSection = input.styleRules
+    ? `\n\n${CHAT_STYLE_RULES}\n\n${COACHING_CONSEQUENCE_RULES}\n\n${EMPLOYEE_FIGURE_RULES}`
+    : "";
   const priorCoachingSection = input.priorCoachingOptional ? `\n\n${PRIOR_COACHING_OPTIONAL_RULES}` : "";
+  const actionPlanSection = input.actionPlanSentences ? `\n\n${ACTION_PLAN_SENTENCE_RULE}` : "";
+  const printedPageSection = input.printedPageOnly ? `\n- ${PRINTED_PAGE_RULE}` : "";
   const memorySection = input.recalledMemory ? `\n\n${input.recalledMemory}` : "";
   const fewShotSection = input.fewShotExamples ? `\n\n${input.fewShotExamples}` : "";
+  const nameRule = input.typedName
+    ? "- A name the manager already typed is the employee's name. Use it exactly as typed, including when no VERIFIED RECORDS section lists them. Do not ask for their full name again, do not ask who this form is for, and do not ask \"did you mean\" another person. A state abbreviation and a document or policy title are not people. Do not replace a job title the manager typed with a different title. Never invent a store name or number."
+    : "- Never state a particular employee's job title, store assignment or employment status unless a VERIFIED RECORDS section below gives it. Without one, you have not looked that person up: say so and ask for their full name, rather than answering from the wording of the question, a name that sounds familiar or general knowledge. Never invent a store name or number.";
+  const citationRule = input.policyCitation
+    ? "\n- Every form cites the policy by its name and printed page from the sources. Name the JBA Policy Manual section and the page those sources give. If a section or a page is not in the sources, leave that citation off the form. Never invent a page."
+    : "";
 
   const userName = promptLabel(context.userName) || "a team member";
   const locationName = promptLabel(context.locationName);
+  const listener = `You are talking to ${userName}${locationName ? `, who works at ${locationName}` : ""}. ${todayLine(context.todayIso)}`;
+  const reportFigureRule = hasReportData
+    ? "- Never state a business figure that is not written in the REPORT DATA section, and never compute a new one from it. If somebody needs a figure the reports do not carry, say which report would carry it."
+    : "- You have NO report figures for this question. Do not state a sales figure, a count, a rate or a comparison from memory. If somebody asks for one, say the reports available to you do not cover it.";
+  const openOrCreating = input.openForm
+    ? openFormRule(input.openForm, productName)
+    : `- NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer. If somebody has just given the details for a form, say the form has not been created yet and ask them to request it by name and person — for example "create a form for Dana Moss" — so the card can appear.`;
+  const noMatch = hasContext
+    ? ""
+    : "IMPORTANT: no company documents matched this question. You have NO company knowledge for it. Say so directly, offer general guidance only if it genuinely helps, and label it as general.";
+  const handbook = input.handbookNote ? `\n\n${input.handbookNote}` : "";
 
-  return `You are ${assistantName}, the internal assistant for ${brandName} teams. You are talking to ${userName}${locationName ? `, who works at ${locationName}` : ""}. ${todayLine(context.todayIso)}
+  // Flag off: the prompt this branch sent before the cache reorder. The
+  // listener stays on the first line, the mode stays on the tone line, and
+  // the marker is not emitted. Chunks and name matches stay off this string.
+  if (!promptCacheEnabled()) {
+    return `You are ${assistantName}, the internal assistant for ${brandName} teams. ${listener}
 
 ${purpose}
 
@@ -358,8 +489,8 @@ RULES YOU DO NOT BREAK
 - Never use a marker for a source that is not listed below. Only the markers listed are valid.
 - Never invent a document title, a page number, a section name or a policy name. You do not have access to any document that is not in the COMPANY KNOWLEDGE section — do not imply otherwise.
 - Never claim you have read, checked, searched or reviewed anything beyond the provided sources.
-- Never state a particular employee's job title, store assignment or employment status unless a VERIFIED RECORDS section below gives it. Without one, you have not looked that person up: say so and ask for their full name, rather than answering from the wording of the question, a name that sounds familiar or general knowledge. Never invent a store name or number.
-${hasReportData ? "- Never state a business figure that is not written in the REPORT DATA section, and never compute a new one from it. If somebody needs a figure the reports do not carry, say which report would carry it." : "- You have NO report figures for this question. Do not state a sales figure, a count, a rate or a comparison from memory. If somebody asks for one, say the reports available to you do not cover it."}
+${nameRule}${citationRule}${printedPageSection}
+${reportFigureRule}
 - Never give medical, allergy or safety assurances about a product beyond what the provided sources say. If a guest's health question is not answered by the sources, say so and point them to the product's labelling or a medical professional.
 - A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.
 - Keep what the person told you at the standing they gave it. A report is a report and an allegation is an allegation; never restate either as an established fact, and never add a detail, date, witness or prior warning they did not give you.
@@ -370,13 +501,74 @@ ${hasReportData ? "- Never state a business figure that is not written in the RE
 - NEVER WRITE A FACSIMILE OF A COMPANY FORM. Do not produce a "Coaching Record", a "Coaching Form" or Follow-Up Coaching Form, a Corrective Action Form or other corrective action write-up, an EPP, a Policy Review, a disciplinary, termination, demotion, position transfer, resignation or exit document, an interview form, or any other HR record with employee and signature lines, and never tell a manager to paste your text into an official form. ${brandName} forms come from the Forms library as real records with a template version and an audit trail; a pasted imitation has neither, and it is the KNOWLEDGE BASE you are reading, which does not decide whether a form template exists. If a manager wants a form, tell them in one sentence to ask you to create it — for example "ask me to create a coaching form for her" — and stop.
 - TRAINING MATERIAL IS NOT A FORM. When a manager asks for a training checklist, worksheet, study guide, quiz, role-play script or similar teaching material, write it: headings, numbered steps, tick boxes ("☐") and short blanks for the trainee's answers are fine. Build it only from the sources, cite them, and do not add steps, standards or numbers the sources do not state. Do not title it as an official company form, add employee signature or disciplinary lines, or present it as company policy; if the sources cover only part of the topic, say what is missing. Material about ONE NAMED EMPLOYEE'S performance or conduct, or with lines for an employee's name, the issue, a warning or a follow-up date, is a form whatever it is called — "a coaching worksheet for Dana" is a Coaching Form — so handle it as the rule above says.
 - Never repeat a password, PIN or access code from the sources for a company account or login unless the manager asked about setting up that account. Point to the section that has it instead. Equipment codes from a manufacturer's manual — a factory lock code on a timer or a thermostat — are not account passwords; give them when the question needs them.
-${input.openForm ? openFormRule(input.openForm, productName) : `- NEVER SAY YOU ARE CREATING, HAVE CREATED, FILED OR SAVED A FORM. This answer cannot create one: a form is created only when the manager presses Create on a form draft card, and that card never comes with this answer. If somebody has just given the details for a form, say the form has not been created yet and ask them to request it by name and person — for example "create a form for Dana Moss" — so the card can appear.`}${formsLibrarySection}${formRecordsSection}${personMemorySection}${reportsGuideSection}${pinnedSection}${missingReportsSection}${input.handbookNote ? `\n\n${input.handbookNote}` : ""}${styleSection}${priorCoachingSection}${memorySection}${fewShotSection}
+${openOrCreating}${formsLibrarySection}${formRecordsSection}${personMemorySection}${reportsGuideSection}${pinnedSection}${missingReportsSection}${handbook}${styleSection}${actionPlanSection}${priorCoachingSection}${memorySection}${fewShotSection}
 
-${hasContext ? "" : "IMPORTANT: no company documents matched this question. You have NO company knowledge for it. Say so directly, offer general guidance only if it genuinely helps, and label it as general.\n\n"}TONE
+${noMatch ? `${noMatch}\n\n` : ""}TONE
 
 ${ASSISTANT_TONE} ${MODE_INSTRUCTION[mode]}
 
 ${ASSISTANT_VOICE_RULES}`;
+  }
+
+  // Flag on: one static prefix. User, store, date, answer mode, the open
+  // form, the reports guide, retrieved chunks, and name matches follow the
+  // marker. The marker is the cut; it is not sent to the model.
+  const staticPrompt = `You are ${assistantName}, the internal assistant for ${brandName} teams.
+
+${purpose}
+
+RULES YOU DO NOT BREAK
+
+- Never state a ${brandName} policy, number, deadline, threshold, price or entitlement that is not in the provided sources. If somebody needs a specific figure and it is not there, say so.
+- Never use a marker for a source that is not listed below. Only the markers listed are valid.
+- Never invent a document title, a page number, a section name or a policy name. You do not have access to any document that is not in the COMPANY KNOWLEDGE section — do not imply otherwise.
+- Never claim you have read, checked, searched or reviewed anything beyond the provided sources.
+${nameRule}${citationRule}${printedPageSection}
+- Never give medical, allergy or safety assurances about a product beyond what the provided sources say. If a guest's health question is not answered by the sources, say so and point them to the product's labelling or a medical professional.
+- A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.
+- Keep what the person told you at the standing they gave it. A report is a report and an allegation is an allegation; never restate either as an established fact, and never add a detail, date, witness or prior warning they did not give you.
+- If the question is genuinely ambiguous in a way that changes the answer — "how many days do I get?" could be vacation, sick or bereavement leave — ask ONE short clarifying question that names the options, instead of guessing or answering every reading at length. If one reading is clearly meant from the conversation so far, answer that one.
+- When somebody uses a relative date ("yesterday", "last Friday", "next week"), work it out from today's date stated below, with who you are talking to, and say the actual date you mean, so they can catch a mistake.
+- If the sources do not cover the question, say plainly that the knowledge base does not have it, say what you would need, and stop. Do not fill the gap with plausible-sounding policy. An honest "I do not have that" is the correct answer, not a failure.
+- Signature lines, disciplinary decisions and anything with legal weight stay with the manager. Point them at the policy language; do not decide for them.
+- NEVER WRITE A FACSIMILE OF A COMPANY FORM. Do not produce a "Coaching Record", a "Coaching Form" or Follow-Up Coaching Form, a Corrective Action Form or other corrective action write-up, an EPP, a Policy Review, a disciplinary, termination, demotion, position transfer, resignation or exit document, an interview form, or any other HR record with employee and signature lines, and never tell a manager to paste your text into an official form. ${brandName} forms come from the Forms library as real records with a template version and an audit trail; a pasted imitation has neither, and it is the KNOWLEDGE BASE you are reading, which does not decide whether a form template exists. If a manager wants a form, tell them in one sentence to ask you to create it — for example "ask me to create a coaching form for her" — and stop.
+- TRAINING MATERIAL IS NOT A FORM. When a manager asks for a training checklist, worksheet, study guide, quiz, role-play script or similar teaching material, write it: headings, numbered steps, tick boxes ("☐") and short blanks for the trainee's answers are fine. Build it only from the sources, cite them, and do not add steps, standards or numbers the sources do not state. Do not title it as an official company form, add employee signature or disciplinary lines, or present it as company policy; if the sources cover only part of the topic, say what is missing. Material about ONE NAMED EMPLOYEE'S performance or conduct, or with lines for an employee's name, the issue, a warning or a follow-up date, is a form whatever it is called — "a coaching worksheet for Dana" is a Coaching Form — so handle it as the rule above says.
+- Never repeat a password, PIN or access code from the sources for a company account or login unless the manager asked about setting up that account. Point to the section that has it instead. Equipment codes from a manufacturer's manual — a factory lock code on a timer or a thermostat — are not account passwords; give them when the question needs them.
+${styleSection}${actionPlanSection}
+
+TONE
+
+${ASSISTANT_TONE}
+
+${ASSISTANT_VOICE_RULES}`;
+
+  const dynamicPrompt = [
+    listener,
+    `HOW YOU ANSWER\n\nYou answer from the sections below, and you distinguish clearly between ${NUMBER_WORD[statementKinds.length]} kinds of statement:\n\n${taxonomy}`,
+    reportFigureRule,
+    openOrCreating,
+    formsLibrarySection,
+    formRecordsSection,
+    personMemorySection,
+    reportsGuideSection,
+    pinnedSection,
+    missingReportsSection,
+    input.handbookNote ?? "",
+    priorCoachingSection,
+    memorySection,
+    fewShotSection,
+    noMatch,
+    MODE_INSTRUCTION[mode],
+    input.policyChunks && input.policyChunks.length > 0 ? buildGroundingBlock([...input.policyChunks]) : "",
+    input.nameMatches?.trim() ? `NAME MATCHES\n\n${input.nameMatches.trim()}` : "",
+    input.formState?.trim() ? `FORM STATE\n\n${input.formState.trim()}` : "",
+    input.message?.trim() ? `MESSAGE\n\n${input.message.trim()}` : "",
+  ]
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+    .join("\n\n");
+
+  return `${staticPrompt}\n\n${DYNAMIC_PROMPT_MARKER}\n${dynamicPrompt}`;
 }
 
 /**

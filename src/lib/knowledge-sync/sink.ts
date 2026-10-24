@@ -1,11 +1,13 @@
 import "server-only";
 
+import { editionSupersessionEnabled } from "@/lib/config/chat-quality-flags";
 import { activeKnowledgeCorpus } from "@/lib/knowledge/corpus";
 import { IngestionError } from "@/lib/ingestion/errors";
-import { retireDocument, supersedeDocument, updateDocumentMetadata } from "@/lib/ingestion/lifecycle";
+import { retireDocument, supersedeDocument, supersedeEdition, updateDocumentMetadata } from "@/lib/ingestion/lifecycle";
 import { ingestDocument } from "@/lib/ingestion/pipeline";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { KnowledgeCategory } from "@/types";
+import { supersededCopyStaysOff, type SupersededDocumentRef } from "./edition";
 import { SinkError, type KnowledgeSink } from "./ports";
 import { planSupersession, type LibraryDocument } from "./supersession";
 import type { SourceSystem } from "./types";
@@ -23,6 +25,40 @@ import type { SourceSystem } from "./types";
  */
 
 const UPLOADER_LABEL: Record<SourceSystem, string> = { woven: "Woven sync" };
+
+/**
+ * Superseded rows, each with the hashes a re-sent or re-filed copy can match:
+ * the extracted `content_hash` on the document, and the file hash the sync
+ * stored for that document. No new column.
+ */
+async function supersededRefs(
+  admin: ReturnType<typeof getSupabaseAdmin>,
+  scopeId: string,
+): Promise<SupersededDocumentRef[]> {
+  const { data, error } = await admin
+    .from("knowledge_documents")
+    .select("id, content_hash")
+    .eq("knowledge_scope_id", scopeId)
+    .eq("status", "superseded");
+  if (error) throw new SinkError("library_unavailable", "The knowledge library could not be read.");
+  const docs = (data ?? []) as { id: string; content_hash: string | null }[];
+  const refs: SupersededDocumentRef[] = docs.map((doc) => ({ id: doc.id, contentHash: doc.content_hash, superseded: true }));
+  if (docs.length === 0) return refs;
+  const { data: items, error: itemError } = await admin
+    .from("knowledge_sync_items")
+    .select("knowledge_document_id, content_hash")
+    .in(
+      "knowledge_document_id",
+      docs.map((doc) => doc.id),
+    );
+  if (itemError) throw new SinkError("library_unavailable", "The knowledge library could not be read.");
+  for (const item of (items ?? []) as { knowledge_document_id: string | null; content_hash: string | null }[]) {
+    if (!item.knowledge_document_id || !item.content_hash) continue;
+    if (refs.some((ref) => ref.id === item.knowledge_document_id && ref.contentHash === item.content_hash)) continue;
+    refs.push({ id: item.knowledge_document_id, contentHash: item.content_hash, superseded: true });
+  }
+  return refs;
+}
 
 function asSinkError(error: unknown, fallback: string): SinkError {
   if (error instanceof IngestionError) {
@@ -55,10 +91,29 @@ export function createSupabaseKnowledgeSink(source: SourceSystem): KnowledgeSink
           source,
           supersededNote: "Updated in Woven",
         });
-        return { reusedExistingEmbeddings: result.reusedExistingEmbeddings };
+        return { reusedExistingEmbeddings: result.reusedExistingEmbeddings, stayedSuperseded: result.stayedSuperseded };
       } catch (error) {
         throw asSinkError(error, "ingest_failed");
       }
+    },
+
+    async keptOff({ documentId, contentHash }) {
+      if (!editionSupersessionEnabled()) return null;
+      const admin = getSupabaseAdmin();
+      const refs = await supersededRefs(admin, scopeId);
+      const match = supersededCopyStaysOff({ documentId, contentHash }, refs);
+      if (match !== "content") return match;
+      const { data, error } = await admin
+        .from("knowledge_documents")
+        .select("status, indexed")
+        .eq("knowledge_scope_id", scopeId)
+        .eq("id", documentId)
+        .maybeSingle();
+      if (error) throw new SinkError("library_unavailable", "The knowledge library could not be read.");
+      const row = data as { status?: string; indexed?: boolean } | null;
+      /* The live copy may change. A missing, failed, or already superseded row may not come back. */
+      if (row && row.status === "indexed" && row.indexed === true) return null;
+      return match;
     },
 
     async updateMetadata(documentId, metadata) {
@@ -112,6 +167,18 @@ export function createSupabaseKnowledgeSink(source: SourceSystem): KnowledgeSink
         superseded,
         held: plan.held.map((h) => ({ uploadTitle: h.uploadTitle, candidateTitles: h.candidates.map((c) => c.title), reason: h.reason })),
       };
+    },
+
+    async supersedeEditions(plan) {
+      let superseded = 0;
+      for (const row of plan) {
+        try {
+          if (await supersedeEdition({ documentId: row.documentId, scopeId, supersededBy: row.supersededBy })) superseded += 1;
+        } catch (error) {
+          throw asSinkError(error, "supersede_failed");
+        }
+      }
+      return { superseded };
     },
 
     async countManualTitleMatches(titles) {

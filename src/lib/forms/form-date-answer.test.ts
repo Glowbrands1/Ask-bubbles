@@ -176,6 +176,22 @@ describe("a labelled earlier step is history, wherever its date sits", () => {
     expect(listFormDates(text, DAY).map((found) => found.iso)).not.toContain(iso);
   });
 
+  it("a later turn that restates the manual date replaces the earlier one", () => {
+    const first =
+      "previous coaching jba manual 11-1-26. on 10-22-26 sadie was not scheduled to work and came into the store to show her team her new puppy";
+    const notes = `${first}\n\njba manual 11-1-25`;
+    delete process.env.TYPED_NAME_ENABLED;
+    expect(priorSteps(notes, "2026-10-24").map((step) => step.iso)).toContain("2026-11-01");
+    process.env.TYPED_NAME_ENABLED = "1";
+    try {
+      expect(priorSteps(notes, "2026-10-24").map((step) => step.iso)).toEqual(["2025-11-01"]);
+      expect(extractFormDate(notes, "2026-10-24")).toBe("2026-10-22");
+      expect(listFormDates(notes, "2026-10-24").map((found) => found.iso)).not.toContain("2025-11-01");
+    } finally {
+      delete process.env.TYPED_NAME_ENABLED;
+    }
+  });
+
   it("leaves the incident's own date alone", () => {
     const text =
       "create verbal CA for remy calder for violating visitors at work policy on 10-10-26. juno spent 40 minutes talking with friend and ignoring guests. previous coaching was jba policy manual 1-1-26";

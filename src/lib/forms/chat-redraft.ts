@@ -41,6 +41,8 @@ export async function redraftActiveForm(input: {
   instanceId: string;
   question: string;
   history: Pick<ChatMessage, "id" | "role" | "content" | "error">[];
+  /** An amount chat_form_state already holds, so a redraft that does not repeat it keeps it. */
+  savedPayrollAmount?: string | null;
 }): Promise<AskResponse | null> {
   const question = input.question.trim();
   if (question === "" || isQuestion(question)) return null;
@@ -104,7 +106,11 @@ export async function redraftActiveForm(input: {
     new Request(new URL(`/api/forms/instances/${input.instanceId}/draft`, input.request.url), {
       method: "POST",
       headers,
-      body: JSON.stringify({ notes, keepManagerValues: true }),
+      body: JSON.stringify({
+        notes,
+        keepManagerValues: true,
+        ...(input.savedPayrollAmount ? { savedPayrollAmount: input.savedPayrollAmount } : {}),
+      }),
     }),
     { params: Promise.resolve({ id: input.instanceId }) },
   );

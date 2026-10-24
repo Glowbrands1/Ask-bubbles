@@ -9,6 +9,7 @@ import {
   employeeState,
   extractEmployeeNames,
   managerContext,
+  readEmployeeMentions,
   resolveEmployee,
   type ManagerContext,
 } from "@/lib/forms/proposal";
@@ -57,6 +58,7 @@ import {
   payrollDeductUnclear,
   statedPayrollDeduct,
 } from "@/lib/forms/payroll-deduct";
+import { payrollAmountPrompt } from "@/lib/forms/payroll-deduct-amount";
 import { checkboxGroupsForVariant } from "@/lib/forms/document";
 import {
   WARNING_LEVEL_KEYS,
@@ -99,6 +101,7 @@ import {
   nameConfirmationQuestion,
   rosterNameNamedIn,
   settledNameQuestions,
+  wovenCloseNote,
   type RosterEmployee,
 } from "@/lib/forms/employee-match";
 import { loadScopedRosterResult } from "@/lib/forms/employee-roster";
@@ -109,7 +112,7 @@ import { describeStore, type StoreIndex } from "@/lib/stores/resolver";
 import { loadKnownTitles, loadStoreIndex } from "@/lib/stores/woven-aliases";
 import { neutralizeTitles } from "@/lib/forms/known-titles";
 import { allowsTeamSubject } from "@/lib/forms/team-subject";
-import { extractJobTitle, locationFor, type EmployeeResolution, type ProposalInput } from "@/lib/forms/proposal";
+import { locationFor, statedJobTitle, type EmployeeResolution, type ProposalInput } from "@/lib/forms/proposal";
 import type { EmployeeVerification } from "@/types";
 import { STORE_QUESTION_TAG, answersToOpenQuestions } from "@/lib/forms/question-answers";
 import {
@@ -131,6 +134,8 @@ import {
   FORM_OR_GUIDANCE_QUESTION,
   answersFormClarification,
 } from "@/lib/forms/form-clarification";
+import { isoCardDate, storeWithoutGate, stripNonNameTokens } from "@/lib/forms/anti-loop";
+import { globalStoreAskLine } from "@/lib/forms/global-store-ask";
 import { inlineDraftVariantKey, supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { buildFormInventory } from "@/lib/forms/inventory";
 import {
@@ -150,6 +155,7 @@ import type {
   Role,
 } from "@/types";
 
+import { correctiveActionPlan } from "@/lib/forms/ca-action-plan";
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
 import { signedDate, statedPriorActions } from "@/lib/forms/prior-actions";
 import type { PriorFormOnFile, PriorFormsReading } from "@/lib/forms/prior-forms-lines";
@@ -160,7 +166,7 @@ import {
   namedPolicies,
 } from "@/lib/forms/named-policy-section";
 import { manualDisplayTitle, manualSheetHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
-import { slotRetentionEnabled } from "@/lib/config/chat-quality-flags";
+import { actionPlanSentencesEnabled, antiLoopEnabled, slotRetentionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { groundEmployeeResolution } from "./employee-candidate-grounding";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
@@ -833,7 +839,8 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   /*
    * THE TYPED NAME, CHECKED AGAINST THE PEOPLE THIS MANAGER MAY FILE ABOUT.
    * See `checkTypedEmployee`: an exact match takes the directory's spelling and
-   * salon, a close one is asked about, and nothing is ever autocorrected.
+   * salon. One close spelling keeps the typed name and, when the typed-name
+   * flag is on, a note under the card. Nothing is ever autocorrected.
    */
   const storeIndex = input.storeIndex ?? (await loadStoreIndex());
   const confirmedStore = readStoreConfirmation(input.history, input.question);
@@ -895,6 +902,8 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     formDateFromConversation: !isExitForm(match),
   };
   const proposal = buildProposal(proposalInput);
+  // Under the card. Not in the reply, so it is not a question and not above the card.
+  if (directory.closeNote) proposal.closeMatchNote = directory.closeNote;
 
   /*
    * ==========================================================================
@@ -957,6 +966,16 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
   if (!changeKind && !isExitForm(match)) {
     proposal.formDate = extractFormDate(scoped.text, input.today ?? businessToday());
   }
+  /*
+   * The exit form's own Date stays the day it is completed while the flag is
+   * off. On, the card's date slot is the last day the manager stated, then
+   * the notice, so a date they already gave is not left blank.
+   */
+  if (antiLoopEnabled() && isExitForm(match)) {
+    const exitFacts = readExitFacts(scoped.text, input.today ?? businessToday());
+    proposal.formDate =
+      exitFacts.lastDayWorked ?? exitFacts.noticeFulfilled ?? exitFacts.noticeGiven ?? exitFacts.resignationDate ?? null;
+  }
   const excerpts = {
     ...scoped.excerpts,
     ...(input.oneOfSeveral && input.questionMessageId ? { [input.questionMessageId]: input.oneOfSeveral.clause } : {}),
@@ -1017,8 +1036,10 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     else delete proposal.namedLocationOutOfScope;
   }
   // WOVEN'S TITLE WINS where Woven verified the employee — over the manager's wording
-  // and over a title read out of the conversation.
-  if (directory.verification?.status === "verified" && directory.verification.title) {
+  // and over a title read out of the conversation. A title the manager typed
+  // wins instead when TYPED_NAME_ENABLED is on.
+  const statedTitle = statedJobTitle(scoped.text) ?? positionAnsweredIn([...input.history, { role: "user", content: input.question }]);
+  if (directory.verification?.status === "verified" && directory.verification.title && !(typedNameEnabled() && statedTitle)) {
     proposal.employeeRole = directory.verification.title;
   }
 
@@ -1051,7 +1072,41 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     proposal.awaitingIncident = true;
   }
 
-  if (directory.question) return turn(directory.question, proposal);
+  if (antiLoopEnabled()) {
+    if (proposal.employeeName) {
+      const stripped = stripNonNameTokens(proposal.employeeName);
+      if (!stripped) {
+        proposal.employeeName = null;
+        proposal.status = "needs_employee";
+        proposal.supportsInlineDraft = false;
+      } else {
+        proposal.employeeName = stripped;
+      }
+    }
+    const gated = storeWithoutGate(proposal, input.actor.scope, directory.locationIds ?? []);
+    if (gated !== proposal) {
+      delete proposal.locationSelection;
+      delete proposal.locationCandidates;
+      delete proposal.namedLocationOutOfScope;
+      Object.assign(proposal, gated);
+    }
+  }
+
+  if (proposal.status === "ready" && proposal.employeeName && proposal.subject !== "team") {
+    const line = globalStoreAskLine({
+      role: input.actor.role,
+      scope: input.actor.scope,
+      storeResolved: proposal.locationResolution === "resolved" && Boolean(proposal.locationId),
+      employeeName: proposal.employeeName,
+      assistantMessages: input.history
+        .filter((message) => message.role === "assistant")
+        .map((message) => message.content),
+    });
+    if (line) proposal.storeAsk = line;
+  }
+
+  // A confirm question is the loop. The card is built from the typed name instead.
+  if (directory.question && !antiLoopEnabled()) return turn(directory.question, proposal);
 
   if (proposal.locationResolution === "resolved" && proposal.subject !== "team") {
     const detailed = locationFor(changeKind && facts?.current.location ? { ...proposalInput, locationText: facts.current.location } : proposalInput, false);
@@ -1060,6 +1115,7 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
 
   const notes: string[] = directory.note ? [directory.note] : [];
   notes.push(...directoryNotes(proposal, directory, match, input, scoped));
+  if (antiLoopEnabled()) proposal.formDate = isoCardDate(proposal.formDate);
   if (carried && proposal.employeeName && !directory.question) {
     notes.push(
       `I took **${proposal.employeeName}** from earlier in this conversation — if this form is for somebody else, tell me who.`,
@@ -1075,6 +1131,18 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
             isCorrectiveActionForm(match) && proposal.employeeName && proposal.status !== "needs_employee"
               ? ((await input.priorFormsOnFile?.(proposal.employeeName, proposal.locationId)) ?? NO_PRIOR_FORMS)
               : NO_PRIOR_FORMS,
+          payrollAmountLine: isCorrectiveActionForm(match)
+            ? payrollAmountPrompt({
+                payroll: proposal.payrollDeduct ?? null,
+                managerText: [...formHistory, { role: "user", content: input.question }]
+                  .filter((message) => message.role === "user")
+                  .map((message) => message.content)
+                  .join("\n"),
+                assistantMessages: formHistory
+                  .filter((message) => message.role === "assistant")
+                  .map((message) => message.content),
+              })
+            : null,
         });
   return turn(withNotes(content, notes), proposal);
 }
@@ -1221,8 +1289,8 @@ function directoryNotes(
      */
     const wovenTitle =
       directory.verification?.status === "verified" ? (directory.verification.title?.trim() || null) : null;
-    const stated = extractJobTitle(context.text) ?? positionAnsweredIn(conversation);
-    if (wovenTitle) {
+    const stated = statedJobTitle(context.text) ?? positionAnsweredIn(conversation);
+    if (wovenTitle && !(typedNameEnabled() && stated)) {
       proposal.employeeRole = wovenTitle;
       proposal.employeeRoleSource = "woven";
       if (!(stated && !samePosition(stated, wovenTitle))) {
@@ -1242,6 +1310,7 @@ function directoryNotes(
   if (named && directory.matched && directory.locationIds && directory.locationIds.length > 0) {
     // nothing further: settled above
   } else if (
+    !antiLoopEnabled() &&
     POSITION_TEMPLATES.has(match.key) &&
     (directory.locationIds?.length ?? 0) === 0 &&
     proposal.locationResolution !== "resolved" &&
@@ -1297,8 +1366,13 @@ interface DirectoryCheck {
   matched?: boolean;
   /** Asked INSTEAD of the proposal text: the form is not offered yet. */
   question?: string;
-  /** Said AFTER the proposal text. */
+  /** Said AFTER the proposal text, in the reply above the card. */
   note?: string;
+  /**
+   * One close Woven name. Put on the proposal and shown under the card.
+   * Not part of the reply, so it is not asked and does not sit above the card.
+   */
+  closeNote?: string;
   /** What Woven confirmed — or why it could not. Absent only where nothing was checked. */
   verification?: EmployeeVerification;
 }
@@ -1382,13 +1456,14 @@ async function checkTypedEmployee(
   const loaded = early ?? (await loadScopedRosterResult(input.actor.scope));
   if (loaded.status !== "ok") {
     // Preview mode has no Woven scope to speak of; everywhere else, say what was not checked.
-    if (!asks || (loaded.status === "not_checked" && loaded.reason === "no_scope")) return {};
+    // Anti-loop shows neither the unavailable note nor an unverified row.
+    if (antiLoopEnabled() || !asks || (loaded.status === "not_checked" && loaded.reason === "no_scope")) return {};
     const out = unverifiedWithoutRecord(loaded.status === "unavailable" ? "unavailable" : "not_checked", typed.employeeName);
     return { verification: out.verification, note: out.note ?? undefined };
   }
   const roster = loaded.roster;
   if (roster.length === 0) {
-    if (!asks) return {};
+    if (antiLoopEnabled() || !asks) return {};
     const out = unverifiedWithoutRecord("unavailable", typed.employeeName);
     return { verification: out.verification, note: out.note ?? undefined };
   }
@@ -1406,7 +1481,7 @@ async function checkTypedEmployee(
         turnsAboutThisForm(context, match.key, typed.employeeName).messages.map((message) => message.content),
         input.today ?? businessToday(),
       ).current.title ?? null)
-    : extractJobTitle(context.text);
+    : statedJobTitle(context.text);
 
   const verified = (employee: RosterEmployee): DirectoryCheck => {
     const outcome = verifyEmployee({ employee, namedStoreIds, storeLabel, managerTitle });
@@ -1433,7 +1508,13 @@ async function checkTypedEmployee(
     }
   }
 
-  if (result.kind === "unchecked") return {};
+  if (result.kind === "unchecked") {
+    // The card is built either way. The note is under it, and only for one close name.
+    if (typedNameEnabled() && result.closeName && asks) {
+      return { closeNote: wovenCloseNote(result.closeName) };
+    }
+    return {};
+  }
   if (result.kind === "exact") return verified(result.employee);
 
   if (!asks) return {};
@@ -1443,6 +1524,7 @@ async function checkTypedEmployee(
   if (settled.kept.some((name) => same(name, typed.employeeName))) return {};
 
   if (result.kind === "none") {
+    if (antiLoopEnabled() || typedNameEnabled()) return {};
     const out = unverifiedWithoutRecord("not_found", typed.employeeName);
     return {
       verification: out.verification,
@@ -1464,6 +1546,13 @@ async function checkTypedEmployee(
 
   const names = result.candidates.map((candidate) => candidate.name);
   const out = unverifiedWithoutRecord("ambiguous", typed.employeeName);
+
+  // No "Did you mean", and no store question to tell two people apart.
+  // One close roster name is the under-card note. Two names stay off the card.
+  if (antiLoopEnabled()) {
+    if (result.candidates.length === 1) return { closeNote: wovenCloseNote(result.candidates[0]!.name) };
+    return {};
+  }
 
   // TWO PEOPLE, ONE NAME: asking "Sarah Smith or Sarah Smith?" is no question. Ask for the store.
   const duplicated = names.find((name, index) => names.findIndex((other) => same(other, name)) !== index);
@@ -1756,6 +1845,16 @@ function intentForTurn(input: ProposalTurn): TemplateIntent {
   }
 
   if (!continued) return { kind: "none" };
+
+  // "show draft" / "show draft with edits" is the open card, not a new question.
+  // "cite <heading>" is the same card: the manager is naming the policy on it.
+  if (
+    typedNameEnabled() &&
+    (/^\s*show(?:\s+me)?(?:\s+the)?\s+draft(?:\s+with\s+edits)?\s*[.!]?\s*$/i.test(input.question.trim()) ||
+      (/^\s*cite\s+\S/i.test(input.question.trim()) && !/\?\s*$/.test(input.question.trim())))
+  ) {
+    return { kind: "explicit", templateKey: continued };
+  }
 
   /*
    * AN OPEN EXIT FORM IS ALSO ANSWERED BY ITS FACTS. Bubbles asks "what was
@@ -2136,9 +2235,15 @@ function turnsAboutThisForm(
     const otherForm =
       (intent.kind === "explicit" && intent.templateKey !== templateKey && !aboutThisForm) ||
       (intent.kind === "corrective_action" && !thisForm && !aboutThisForm);
-    const names = extractEmployeeNames(message.content);
-    // A turn that also names somebody else is about them too, and stays off this form.
-    const otherPerson = names.length > 0 && !names.every(same);
+    const reading = readEmployeeMentions(message.content);
+    const names = reading.names;
+    /*
+     * A person named only inside the account ("new hire Sam Lee") is not a
+     * second employee. Cutting that turn dropped the offense and its date.
+     * A name given on purpose still starts a different form's turns.
+     */
+    const otherPerson =
+      names.length > 0 && !names.every(same) && !(antiLoopEnabled() && !reading.explicit);
     const forThisEmployee = thisForm && employeeName !== null && names.length > 0 && !otherPerson;
     if (index < last && (otherForm || otherPerson)) {
       start = index + 1;
@@ -2379,9 +2484,12 @@ function employmentChangeContent(
   lines.push("");
   lines.push(
     proposal.supportsInlineDraft
-      ? proposal.locationResolution === "not_applicable"
-        ? "Your account covers every store, so the form won't name one unless you did. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
-        : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do."
+      ? closeForDraft(
+          proposal,
+          proposal.locationResolution === "not_applicable"
+            ? "Your account covers every store, so the form won't name one unless you did. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
+            : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        )
       : "**Nothing has been created.** This is a proposal, not a form. To file one today, use Create a Form.",
   );
   return lines.join("\n");
@@ -2549,7 +2657,11 @@ function proposalContent(
   context: ManagerContext,
   match: TemplateSummary,
   today: string,
-  extra: { namedPolicy?: NamedPolicyReading | null; priorOnFile?: PriorFormsReading } = {},
+  extra: {
+    namedPolicy?: NamedPolicyReading | null;
+    priorOnFile?: PriorFormsReading;
+    payrollAmountLine?: string | null;
+  } = {},
 ): string {
   /*
    * ==========================================================================
@@ -2644,7 +2756,8 @@ function proposalContent(
       employeeKnown: proposal.employeeName !== null,
       salonSettled:
         proposal.locationResolution === "resolved" ||
-        proposal.locationResolution === "not_applicable",
+        proposal.locationResolution === "not_applicable" ||
+        antiLoopEnabled(),
       plan,
     });
 
@@ -2682,7 +2795,8 @@ function proposalContent(
       employeeKnown: proposal.employeeName !== null,
       salonSettled:
         proposal.locationResolution === "resolved" ||
-        proposal.locationResolution === "not_applicable",
+        proposal.locationResolution === "not_applicable" ||
+        antiLoopEnabled(),
       payrollDeduct: proposal.payrollDeduct ?? null,
       asksPayrollDeduct: asksPayrollDeduct(match),
       warningLevel: proposal.warningLevel ?? null,
@@ -2734,6 +2848,7 @@ function proposalContent(
         priorActions: statedPriorActions(context.text, today),
         namedPolicy: extra.namedPolicy ?? null,
         priorOnFile: extra.priorOnFile ?? NO_PRIOR_FORMS,
+        payrollAmountLine: extra.payrollAmountLine ?? null,
       });
     }
   }
@@ -2749,6 +2864,16 @@ function proposalContent(
     lines.push(openingQuestions(proposal, context));
   } else if (proposal.status === "needs_location") {
     lines.push(locationQuestion(proposal));
+    // The store is still a question. The history the manager already dated is not.
+    if (typedNameEnabled() && isCorrectiveActionForm(match)) {
+      const priorActions = statedPriorActions(context.text, today);
+      if (priorActions.length > 0) {
+        lines.push(
+          "",
+          `**Prior actions:** ${priorActions.join("; ")}, as you said. I'll list ${priorActions.length === 1 ? "it" : "them"} on the form — tell me if that should change.`,
+        );
+      }
+    }
     if (proposal.awaitingIncident) lines.push("", NO_INCIDENT_NOTE);
     // No store yet, so nothing on file is verified: say what is there and the rule (QA F-11).
     const possibleNote = isCorrectiveActionForm(match)
@@ -2792,10 +2917,16 @@ function proposalContent(
        * on it would be the card misdescribing itself.
        */
       const who = proposal.subject === "team" ? "This one is for the whole team" : "I have the employee";
+      const storeBlank = antiLoopEnabled() && !proposal.locationId && proposal.locationResolution !== "not_applicable";
       lines.push(
-        proposal.locationResolution === "not_applicable"
-          ? `${who}. Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do.`
-          : `${who}${proposal.subject === "team" ? ", and I have the store" : " and the store"}${resolvedStoreName(proposal) ? ` (**${resolvedStoreName(proposal)}**)` : ""}. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`,
+        closeForDraft(
+          proposal,
+          proposal.locationResolution === "not_applicable"
+            ? `${who}. Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do.`
+            : storeBlank
+              ? `${who}. The store is blank and can be filled on the form. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`
+              : `${who}${proposal.subject === "team" ? ", and I have the store" : " and the store"}${resolvedStoreName(proposal) ? ` (**${resolvedStoreName(proposal)}**)` : ""}. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`,
+        ),
       );
     } else if (
       proposal.status === "needs_location" &&
@@ -2934,6 +3065,8 @@ function correctiveActionReady(
     priorActions?: readonly string[];
     namedPolicy?: NamedPolicyReading | null;
     priorOnFile?: PriorFormsReading;
+    /** The amount line, already decided. Null leaves the reply unchanged. */
+    payrollAmountLine?: string | null;
   } = {
     offersLevel: true,
     earlierWarning: false,
@@ -3057,13 +3190,32 @@ function correctiveActionReady(
       `One more question: **${PAYROLL_DEDUCT_LABEL}** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.`,
     );
   }
+  if (warning.payrollAmountLine) lines.push("", warning.payrollAmountLine);
+  // The two-sentence plan is written here, on the card the manager is shown.
+  // The draft route writes the same sentences onto the form. The chat prompt does not.
+  if (actionPlanSentencesEnabled()) {
+    const named = warning.namedPolicy;
+    const cited = named && (named.lookup === "found" || named.lookup === "described") ? [named.heading] : [];
+    const payroll = proposal.payrollDeduct === "yes" || proposal.payrollDeduct === "no" ? proposal.payrollDeduct : null;
+    lines.push(
+      "",
+      `**Action plan:** ${correctiveActionPlan({
+        citedPolicies: cited,
+        employeeName: proposal.employeeName,
+        payroll: { answer: payroll, amount: null },
+      })}`,
+    );
+  }
 
   lines.push("");
   lines.push(
     proposal.supportsInlineDraft
-      ? proposal.locationResolution === "not_applicable"
-        ? "Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
-        : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do."
+      ? closeForDraft(
+          proposal,
+          proposal.locationResolution === "not_applicable"
+            ? "Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
+            : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        )
       : "**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.",
   );
 
@@ -3075,6 +3227,12 @@ function correctiveActionReady(
  * some. Same rule as the corrective-action question above: a manager who wrote
  * two names has told us everything except which of them.
  */
+function closeForDraft(proposal: ChatFormProposal, ordinary: string): string {
+  if (!proposal.storeAsk) return ordinary;
+  /* The question does not replace the draft. The card stays creatable. */
+  return `${proposal.storeAsk}\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`;
+}
+
 function eppEmployeeQuestion(templateName: string, context: ManagerContext): string {
   const employee = resolveEmployee(context);
 
@@ -3136,9 +3294,12 @@ function eppReady(
   lines.push("");
   lines.push(
     proposal.supportsInlineDraft
-      ? proposal.locationResolution === "not_applicable"
-        ? "Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
-        : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do."
+      ? closeForDraft(
+          proposal,
+          proposal.locationResolution === "not_applicable"
+            ? "Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do."
+            : "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+        )
       : "**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.",
   );
 

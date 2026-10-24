@@ -1,5 +1,8 @@
 import { isJobTitleAbbreviation } from "@/config/company/job-titles";
+import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { editDistance } from "@/lib/forms/employee-match";
+import { companyNameStops } from "@/lib/forms/name-stops";
+import { isTypedStopSpan } from "@/lib/forms/name-words";
 import { COMPANY_LOCATIONS, locationNameKey, type CompanyLocation } from "@/lib/locations";
 
 /**
@@ -433,6 +436,8 @@ export function resolveStoreText(query: string, index: StoreIndex = defaultStore
   ).trim();
   if (!key) return { kind: "not_found", query };
 
+  if (typedNameEnabled() && isTypedStopSpan(key, companyNameStops())) return { kind: "not_found", query };
+
   const exact = index.byPhrase.get(key);
   if (exact) return settle(exact.locationIds, exact.via === "initials" ? "initials" : exact.via, exact.via === "initials", typed);
 
@@ -575,6 +580,7 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
       const before = haystack.slice(0, offset);
       const after = haystack.slice(offset + phrase.length);
       if (alias.needsCue && !cued(index, before, after, phrase)) return phrase;
+      if (typedNameEnabled() && isTypedStopSpan(phrase, companyNameStops())) return phrase;
       found = true;
       return "_".repeat(phrase.length);
     });
@@ -613,11 +619,22 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
   }
 
   // What is left: a partial name or a typo, where the sentence says it is a store.
+  // A typo at the end of an earlier turn ("at Kearny" then a later message) is
+  // still that store. Joining turns with a newline must not hide it, because
+  // the span reader treats the end of a paragraph the way it treats the end
+  // of the whole message.
   const covered = new Set(mentions.flatMap((mention) => mention.locationIds));
   const seen = new Set<string>();
+  const paragraphs = text
+    .split(/\n+/)
+    .map((part) => part.replace(/\s+/g, " ").trim())
+    .filter((part) => part.length > 0);
+  const scans = paragraphs.length > 1 ? [spaced, ...paragraphs] : [spaced];
+  for (const scan of scans) {
   for (const [pattern, nounFollows] of [[SPAN_BEFORE_NOUN, true], [SPAN_AT_END, false]] as const) {
-    for (const match of spaced.matchAll(pattern)) {
+    for (const match of scan.matchAll(pattern)) {
       const span = match[1]!.trim();
+      if (typedNameEnabled() && isTypedStopSpan(span, companyNameStops())) continue;
       const normalized = foldKey(span, index.abbreviations).trim();
       if (!normalized || seen.has(normalized) || /['’]s$/i.test(span)) continue;
       const words = normalized.split(" ");
@@ -641,8 +658,20 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
         if (!mentions.some((mention) => mention.matched && foldKey(mention.matched, index.abbreviations).includes(` ${normalized} `))) {
           unmatched.push(span);
         }
+      } else if (!nounFollows && typedNameEnabled()) {
+        // "at Empire, SD": the place is not a registered store. The state is.
+        // The stores in that state are the options — never a store invented from the town.
+        const after = scan.slice((match.index ?? 0) + match[0].length);
+        const state = /^\s*,\s*([A-Za-z]{2})\b/.exec(after);
+        const code = state?.[1]?.toUpperCase() ?? "";
+        if (code && companyNameStops().stateCodes.has(code)) {
+          const ids = index.stores.filter((store) => store.state?.toUpperCase() === code).map((store) => store.id);
+          if (ids.length > 1) mentions.push({ locationIds: ids, matched: `${span}, ${code}` });
+          else unmatched.push(`${span}, ${code}`);
+        }
       }
     }
+  }
   }
 
   return { mentions, unmatched };

@@ -6,7 +6,10 @@ import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
-import { NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, lowercaseMonths } from "./name-words";
+import { antiLoopEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { companyNameStops } from "./name-stops";
+import { isTypedStopSpan, isTypedStopWord, NAME_LABEL_WORDS, NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, isNameLabelPhrase, lowercaseMonths, nameAfterNameLabel, stripTrailingJobOrTitle } from "./name-words";
+import { keepTypedPerson } from "./typed-name";
 import { boundManagerTurns, type BoundedContext } from "./bounded-context";
 import {
   allowsTeamSubject,
@@ -165,6 +168,15 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
     const ends = WRAPPER_AFTER.test(opened) || stem !== null;
     const word = stem ?? unwrapped;
     const lower = word.toLowerCase();
+    // "Employee" is the form's own word, and also a surname ("Test Employee").
+    // Only a later word, and only while a typed name is kept.
+    const employeeSurname = typedNameEnabled() && parts.length > 0 && lower === "employee";
+    // "Store" and "Salon" are form words, and they are also surnames. A label
+    // rejects the candidate only when the whole candidate is the label.
+    const labelSurname = antiLoopEnabled() && parts.length > 0 && NAME_LABEL_WORDS.has(lower);
+    // "NE" and "SD" are this company's state codes. The capitalised reader
+    // already drops them; this reader is the one "Dodge, NE" was still reaching.
+    const stateOrTitle = typedNameEnabled() && isTypedStopWord(word, companyNameStops());
     const usable =
       TYPED_NAME_WORD.test(word) &&
       // The first part is a real word; a trailing initial ("C") may follow it.
@@ -176,7 +188,8 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
       !NOT_A_NAME.has(lower) &&
       !COUNTS_PEOPLE.has(lower) &&
       (!NOT_A_TYPED_NAME.has(lower) || willAsFirstName(lower, parts.length, words, whole)) &&
-      !isFormVocabulary(lower);
+      (!isFormVocabulary(lower) || employeeSurname || labelSurname) &&
+      !stateOrTitle;
     if (!usable) {
       if (whole) return null;
       break;
@@ -201,7 +214,7 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
      */
     if (MONTH_WORD.test(parts[2]!) && next !== undefined && /^\d{1,2}(?:st|nd|rd|th)?\b/.test(next)) {
       parts.pop();
-      return parts.join(" ");
+      return finishedName(parts.join(" "));
     }
     const boundary =
       next === undefined ||
@@ -213,7 +226,14 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
   }
   if (parts.length === 0) return null;
   if (whole && parts.length !== words.length) return null;
-  return parts.join(" ");
+  return finishedName(parts.join(" "));
+}
+
+/** A label rejects the candidate only when the candidate is the label itself. */
+function finishedName(candidate: string): string | null {
+  if (antiLoopEnabled() && isNameLabelPhrase(candidate)) return null;
+  if (typedNameEnabled() && isTypedStopSpan(candidate, companyNameStops())) return null;
+  return candidate;
 }
 
 /*
@@ -307,6 +327,18 @@ const ROSTER_NAME_KEYS: ReadonlySet<string> = new Set(
 
 function isRosterSalonName(candidate: string): boolean {
   return ROSTER_NAME_KEYS.has(locationNameKey(candidate)) || isStoreName(candidate, ROSTER_STORE_INDEX);
+}
+
+/** A city or road from this company's stores, long enough not to be a surname on its own. */
+function isCompanyPlaceWord(word: string): boolean {
+  const token = word.toLowerCase().replace(/[^a-z]/g, "");
+  if (token.length <= 3) return false;
+  return COMPANY_LOCATIONS.some((location) =>
+    location.name
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .some((part) => part.length > 3 && part === token),
+  );
 }
 
 /*
@@ -436,7 +468,21 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    * capitalising the form's name is the most natural way to ask for one.
    */
   const notAName = (word: string) =>
-    NOT_A_NAME.has(word.toLowerCase()) || isFormVocabulary(word);
+    NOT_A_NAME.has(word.toLowerCase()) ||
+    isFormVocabulary(word) ||
+    (typedNameEnabled() && isTypedStopWord(word, companyNameStops()));
+  /*
+   * A label word inside a full name can be a surname ("Jane Store"). It
+   * rejects the candidate only when the candidate is the label itself.
+   */
+  const labelWordBlocks = (word: string, candidate: string) => {
+    const token = word.toLowerCase().replace(/[^a-z]/g, "");
+    const fullName = candidate.trim().split(/\s+/).length >= 2;
+    if (antiLoopEnabled() && fullName && NAME_LABEL_WORDS.has(token) && !isNameLabelPhrase(candidate)) {
+      return NOT_A_NAME.has(token) || (typedNameEnabled() && isTypedStopWord(word, companyNameStops()));
+    }
+    return notAName(word);
+  };
 
   const NAME = "[A-Z][a-zA-Z'’-]+";
 
@@ -695,7 +741,8 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
      * starts with the reply, not the name. The reply is dropped; a run that
      * was only the reply names nobody.
      */
-    const candidate = withoutConversationalLead(run);
+    let candidate = withoutConversationalLead(run);
+    if (candidate && antiLoopEnabled()) candidate = stripTrailingJobOrTitle(candidate);
     if (candidate === null) continue;
     if (opensWithRosterState(candidate) && !AS_A_PERSON(candidate)) continue;
     if (isRosterSalonName(candidate)) continue;
@@ -706,7 +753,8 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
      * stop word — "Price Smith" and "Jamie Cash" are people.
      */
     if (candidate.split(/\s+/).every((word) => isTopicWord(word))) continue;
-    if (!candidate.split(/\s+/).some(notAName)) {
+    if (typedNameEnabled() && isTypedStopSpan(candidate, companyNameStops())) continue;
+    if (!candidate.split(/\s+/).some((word) => labelWordBlocks(word, candidate))) {
       // Led by a reply ("It's …"), the run IS the answer.
       (candidate === run ? found : strong).push(candidate);
     }
@@ -726,6 +774,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
      */
     const run = RUN.exec(text.slice(match.index! + match[0].length - match[1]!.length))?.[0] ?? candidate;
     if (run.includes(" ") && run.trim().split(/\s+/).every((word) => NOT_A_TYPED_NAME.has(word.toLowerCase()))) continue;
+    if (typedNameEnabled() && isTypedStopSpan(run, companyNameStops())) continue;
     // "for Cash Handling": a topic word followed by another is the topic, not "Cash".
     const next = text.slice((match.index ?? 0) + match[0].length).trim().split(/\s+/)[0] ?? "";
     if (NOT_A_NAME_LEAD.has(candidate.toLowerCase()) && (next === "" || isTopicWord(next))) continue;
@@ -990,7 +1039,28 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
     if (candidate && !opensWithRosterState(candidate) && !isPlaceReply(candidate)) strong.push(candidate);
   }
 
+  /*
+   * "dana moss, team member at bellevue". The name is the words before the
+   * comma and the job title is what makes them a person. A comma alone is not
+   * enough — "sorry, the store is Bellevue" has no title after it.
+   */
+  if (typedNameEnabled()) strong.push(...nameBeforeTitle(text));
+
   return settle(strong, found, text, subjects);
+}
+
+/** "<name>, <job title> …" — the person, when this company's titles say so. */
+function nameBeforeTitle(text: string): string[] {
+  const names: string[] = [];
+  for (const sentence of text.split(/(?<=[.!?])\s+|\n+/)) {
+    const match = /^\s*(\S+(?:\s+\S+)?)\s*,\s+(\S.*)$/.exec(sentence.trim());
+    if (!match) continue;
+    const candidate = readTypedName(match[1]!.split(/\s+/), true);
+    if (!candidate || !typedNameAllowed(candidate) || opensWithRosterState(candidate) || isPlaceReply(candidate)) continue;
+    if (extractJobTitle(match[2]!) === null) continue;
+    names.push(candidate);
+  }
+  return names;
 }
 
 /**
@@ -1111,6 +1181,7 @@ function labelledNames(text: string): string[] {
 /** A typed name that is not a job title, a salon, or a document's name. */
 function typedNameAllowed(candidate: string): boolean {
   const words = candidate.toLowerCase().split(/\s+/);
+  if (typedNameEnabled() && isTypedStopSpan(candidate, companyNameStops())) return false;
   return !isJobTitlePhrase(candidate) && !isRosterSalonName(candidate) && !words.some((word) => DOCUMENT_WORDS.has(word));
 }
 
@@ -1305,7 +1376,41 @@ function formRecipient(subjects: readonly string[], strong: readonly string[], w
   return joined ? null : recipient;
 }
 
+const FIELD_LABEL_WORDS = new Set(["title", "position", "location", "store", "date", "job", "role", "salon"]);
+
+/** "Job Title", "Store", "Date" — the form's own labels, never the employee. */
+function isFieldLabelCandidate(name: string): boolean {
+  const folded = name.toLowerCase().replace(/[^a-z\s]/g, " ").replace(/\s+/g, " ").trim();
+  if (!folded) return true;
+  if (/^(?:job title|employee name|full name)\b/.test(folded)) return true;
+  if (isNameLabelPhrase(folded)) return true;
+  const words = folded.split(" ").filter(Boolean);
+  return words.length > 0 && words.every((word) => word === "date" || FIELD_LABEL_WORDS.has(word));
+}
+
 function settle(strong: string[], weak: string[], text: string, subjects: readonly string[] = []): EmployeeMentions {
+  if (antiLoopEnabled()) {
+    const fromLabel = nameAfterNameLabel(text);
+    if (fromLabel) strong = [fromLabel, ...strong];
+    const tidy = (name: string) => {
+      const next = stripTrailingJobOrTitle(name);
+      return next ?? "";
+    };
+    strong = strong.map(tidy).filter(Boolean);
+    weak = weak.map(tidy).filter(Boolean);
+    const labeled = titleFollowingJobTitleLabel(text)?.toLowerCase() ?? null;
+    const drop = (name: string) =>
+      isFieldLabelCandidate(name) || (labeled !== null && name.toLowerCase() === labeled);
+    strong = strong.filter((name) => !drop(name));
+    weak = weak.filter((name) => !drop(name));
+  }
+  if (typedNameEnabled()) {
+    const people = [...strong, ...weak].filter((name) => !isCompanyPlaceWord(name));
+    if (people.length > 0) {
+      strong = strong.filter((name) => !isCompanyPlaceWord(name));
+      weak = weak.filter((name) => !isCompanyPlaceWord(name));
+    }
+  }
   const negated = negatedNames(text);
   const correction = negated.length > 0 || CORRECTION_CUE.test(text);
   const given = correction ? [...strong, ...sentenceAnswers(text)] : strong;
@@ -1314,8 +1419,14 @@ function settle(strong: string[], weak: string[], text: string, subjects: readon
   const names = distinctNames([...given, ...narrative]).filter(
     (name) => !negated.some((not) => samePerson(not, name)),
   );
-  const explicit =
-    names.length > 0 && (correction || names.some((name) => given.some((named) => samePerson(named, name))));
+  /*
+   * A narrative name stays narrative. "not acknowledged" is not a correction
+   * to the employee, and the person in the account ("new hire Sam Lee") must
+   * not replace the person the form is for. A name given on purpose — a
+   * label, the form's subject, or the answer in a real correction — still does.
+   */
+  const namedOnPurpose = names.some((name) => given.some((named) => samePerson(named, name)));
+  const explicit = names.length > 0 && (antiLoopEnabled() ? namedOnPurpose : correction || namedOnPurpose);
   return { names, explicit, negated };
 }
 
@@ -1402,6 +1513,15 @@ function withoutSubjectLead(words: readonly string[]): string[] {
     if (words[at] !== undefined && isJobTitleAbbreviation(words[at]!.replace(/[,.]$/, ""))) skip = at + 1;
   }
   const rest = words.slice(skip);
+  if (rest.length > 0 && rest.length < words.length) return rest;
+  // "for Team Member, Test Employee": the comma sits on the title, so the
+  // role pattern above never sees "Team Member". Drop the title and keep the name.
+  if (typedNameEnabled() && skip === 0) {
+    const joined = words.join(" ").replace(/,/g, " ");
+    const titled = SUBJECT_LEAD_AT_START.exec(`${joined} `)?.[0];
+    const leadWords = titled ? titled.trim().split(/\s+/).length : 0;
+    if (leadWords > 0 && leadWords < words.length) return words.slice(leadWords);
+  }
   return rest.length > 0 ? rest : [...words];
 }
 
@@ -1430,7 +1550,15 @@ function formSubjectNames(text: string): string[] {
      */
     if (/^on$/i.test(match[1]!) && candidate.split(/\s+/).length < 2) continue;
     const following = after.slice(candidate.split(/\s+/).length);
-    if (/^(?:employee|team|staff|named)$/i.test(following[0] ?? "")) continue;
+    if (/^(?:employee|team|staff|named)$/i.test(following[0] ?? "")) {
+      // "for bellevue team member, casey quinn": the first word is a store,
+      // the title follows, and the person is named after it.
+      if (typedNameEnabled() && isCompanyPlaceWord(candidate)) {
+        const person = readTypedName(withoutSubjectLead(following).slice(0, 4), false);
+        if (person && typedNameAllowed(person) && !opensWithRosterState(person)) subjects.push(person);
+      }
+      continue;
+    }
     subjects.push(candidate);
     /*
      * "COACHING FORM FOR AVERY TESTPERSON AND JORDAN TESTPERSON", typed in
@@ -1442,6 +1570,18 @@ function formSubjectNames(text: string): string[] {
     if (/^(?:and|&)$/i.test(following[0] ?? "")) {
       const second = readTypedName(withoutSubjectLead(following.slice(1)).slice(0, 4), false);
       if (second && typedNameAllowed(second) && !opensWithRosterState(second)) subjects.push(second);
+    }
+  }
+  /*
+   * "do verbal for <person>" names the form by its level, not by "CA", so the
+   * form-noun pattern above never sees the "for". The person is in the same
+   * place. "do a verbal" already matches that pattern; this is the article left off.
+   */
+  if (typedNameEnabled()) {
+    for (const match of text.matchAll(/\bdo\s+(?:verbal|written)\s+for\s+(?=\S)/gi)) {
+      const after = withoutSubjectLead(text.slice((match.index ?? 0) + match[0].length).trim().split(/\s+/));
+      const candidate = readTypedName(after.slice(0, 4), false);
+      if (candidate && typedNameAllowed(candidate) && !opensWithRosterState(candidate)) subjects.push(candidate);
     }
   }
   return subjects;
@@ -1534,7 +1674,8 @@ function distinctNames(found: readonly string[]): string[] {
  * always been free text.
  */
 export function resolveEmployee(context: ManagerContext): EmployeeResolution {
-  return employeeState(context).resolution;
+  const resolution = employeeState(context).resolution;
+  return typedNameEnabled() ? keepTypedPerson(resolution) : resolution;
 }
 
 export interface EmployeeState {
@@ -1799,9 +1940,55 @@ export const JOB_TITLES: readonly { pattern: RegExp; title: string }[] = COMPANY
  * us what the subject is, and the field is editable — but the ORDER means the
  * most specific one wins rather than whichever came first in the sentence.
  */
+/**
+ * The words the manager wrote after the label "job title". A known title is
+ * returned in the company's wording. Any other short phrase is the title as
+ * typed. It is never an employee name.
+ */
+export function titleFollowingJobTitleLabel(text: string): string | null {
+  const labeled =
+    /\bjob title\s*(?::|-|–|—|=|\bis\b|\bwas\b)\s*([A-Za-z][^.\n]{0,60})/i.exec(text) ??
+    /\bjob title\s+([A-Za-z][^.\n]{0,60})/i.exec(text);
+  if (!labeled) return null;
+  const cut = labeled[1]!
+    .split(/\s+(?:at|location|store|date|today|and|who|for)\b/i)[0]!
+    .trim()
+    .replace(/[.,;:]+$/g, "");
+  const first = cut.split(/\s+/)[0]?.toLowerCase() ?? "";
+  if (!cut || ["if", "optional", "when", "where", "please", "the"].includes(first)) return null;
+  if (isFieldLabelCandidate(cut)) return null;
+  const known = extractJobTitle(cut);
+  if (known) return known;
+  const words = cut.split(/\s+/);
+  if (words.length > 5 || words.some((word) => !/^[A-Za-z][A-Za-z'’./&-]*$/.test(word))) return null;
+  return words
+    .map((word) => (word === word.toUpperCase() && word.length <= 5 ? word : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()))
+    .join(" ");
+}
+
+/**
+ * The job title for the card. With the anti-loop flag on, a "job title" label
+ * wins, and those words are not the employee. Off, only a title this company
+ * already names is read, as before.
+ */
+export function statedJobTitle(text: string): string | null {
+  if (antiLoopEnabled()) {
+    const labeled = titleFollowingJobTitleLabel(text);
+    if (labeled) return labeled;
+  }
+  return extractJobTitle(text);
+}
+
 export function extractJobTitle(text: string): string | null {
+  // "at Empire, SD" is a place. "SD" is also the Store Director abbreviation,
+  // and only the abbreviation that follows a comma is the state.
+  const source = typedNameEnabled()
+    ? text.replace(/,\s*([A-Za-z]{2})\b/g, (match, code: string) =>
+        companyNameStops().stateCodes.has(code.toUpperCase()) ? "" : match,
+      )
+    : text;
   for (const entry of JOB_TITLES) {
-    if (entry.pattern.test(text)) return entry.title;
+    if (entry.pattern.test(source)) return entry.title;
   }
   return null;
 }
@@ -1877,6 +2064,11 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
    */
   const status: ChatFormProposal["status"] =
     employeeName === null ? "needs_employee" : salonSettled ? "ready" : "needs_location";
+  const statedTitle = statedJobTitle(input.context.text);
+  const verifiedTitle =
+    input.employeeVerification?.status === "verified" && input.employeeVerification.title
+      ? input.employeeVerification.title
+      : null;
 
   return {
     proposalId: input.proposalId,
@@ -1899,11 +2091,7 @@ export function buildProposal(input: ProposalInput): ChatFormProposal {
      * words — flagged unverified on the card. Never a model's, never the
      * template's.
      */
-    employeeRole: team
-      ? null
-      : input.employeeVerification?.status === "verified" && input.employeeVerification.title
-        ? input.employeeVerification.title
-        : extractJobTitle(input.context.text),
+    employeeRole: team ? null : typedNameEnabled() && statedTitle ? statedTitle : (verifiedTitle ?? statedTitle),
     /* Same rule: the manager's own words, read as U.S. month/day. */
     formDate:
       input.formDateFromConversation === false

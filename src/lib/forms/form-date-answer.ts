@@ -1,3 +1,7 @@
+import { antiLoopEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+
+import { JOIN } from "./bounded-context";
+
 /**
  * ============================================================================
  * THE DATE A MANAGER TYPED, AS THE FORM'S DATE
@@ -327,6 +331,19 @@ function labelledSteps(text: string, dates: readonly DateInText[]): Map<number, 
   return found;
 }
 
+/**
+ * A step named with the noun first. "verbal ca was given on 9-1-26" and
+ * "Focus Item Coaching 9/15/2026" are history. The verb-first reader never
+ * sees them, because the date sits after the noun.
+ */
+function statedEarlierStep(before: string): boolean {
+  if (!antiLoopEnabled()) return false;
+  return (
+    /\bcoaching\s+$/i.test(before) ||
+    /\b(?:verbal|written|final)\s+(?:ca|c\/a|corrective actions?|warnings?)\s+was\s+(?:given|issued)\s+on\s*$/i.test(before)
+  );
+}
+
 function isOtherDate(text: string, found: DateInText, labelled: ReadonlyMap<number, LabelledStep>): boolean {
   const before = text.slice(0, found.index);
   return (
@@ -335,6 +352,7 @@ function isOtherDate(text: string, found: DateInText, labelled: ReadonlyMap<numb
     OWNED_STEP_BEFORE.test(before) ||
     DID_STEP_BEFORE.test(before) ||
     talkedStep(before) ||
+    statedEarlierStep(before) ||
     labelled.has(found.index)
   );
 }
@@ -369,7 +387,7 @@ export function priorSteps(
    */
   const corrected = correctedDates(text, today);
   const seen = new Set<string>();
-  return stepsAsWritten(text, today)
+  const steps = stepsAsWritten(text, today)
     .map((step) => (corrected.has(step.iso) ? { ...step, iso: corrected.get(step.iso)! } : step))
     .filter((step) => {
       const key = `${step.iso}|${step.named.toLowerCase()}`;
@@ -377,6 +395,43 @@ export function priorSteps(
       seen.add(key);
       return true;
     });
+  return typedNameEnabled() ? restatedTopicDate(text, today, steps) : steps;
+}
+
+/**
+ * A later turn that is only the same topic and a new date replaces that step.
+ * "previous coaching jba manual 11-1-26" then "jba manual 11-1-25": the second
+ * date is the correction. "not 11-1-26" is already `correctedDates`.
+ */
+function restatedTopicDate(
+  text: string,
+  today: string,
+  steps: { iso: string; named: string; topic?: string; about?: string }[],
+): { iso: string; named: string; topic?: string; about?: string }[] {
+  let current = steps;
+  for (const turn of text.split(JOIN).slice(1)) {
+    const trimmed = turn.trim();
+    const dates = datesInText(trimmed, today);
+    if (dates.length !== 1) continue;
+    const date = dates[0]!;
+    const words = trimmed
+      .slice(0, date.index)
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean);
+    if (words.length === 0 || words.length > 5) continue;
+    if (trimmed.slice(date.end).trim().replace(/[.]+$/, "") !== "") continue;
+    const index = current.findIndex((step) => {
+      const topic = (step.topic ?? "")
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter(Boolean);
+      return topic.length > 0 && words.every((word) => topic.includes(word));
+    });
+    if (index < 0) continue;
+    current = current.map((step, at) => (at === index ? { ...step, iso: date.iso } : step));
+  }
+  return current;
 }
 
 /*
@@ -424,6 +479,9 @@ function stepsAsWritten(
         named: labelled.named,
         ...(labelled.topic ? { topic: labelled.topic } : withAbout),
       }];
+    }
+    if (statedEarlierStep(before) && found.iso <= today) {
+      return [{ iso: found.iso, named: before.slice(Math.max(0, before.length - 80)), ...withAbout }];
     }
     const match = PRIOR_STEP_BEFORE.exec(before);
     // "she was late, give her a written warning on 10/2": the cue was the incident's, the warning is this form's.
@@ -579,9 +637,11 @@ export function listFormDates(text: string, today: string): { iso: string; index
   const corrected = correctedDates(text, today);
   const stepDates = new Set(stepsAsWritten(text, today).map((step) => step.iso));
   const correctsAStep = new Set([...corrected].filter(([from]) => stepDates.has(from)).map(([, to]) => to));
+  // A later "jba manual 11-1-25" is that prior step's date (`priorSteps`), not a second date for the form.
+  const restated = typedNameEnabled() ? new Set(priorSteps(text, today).map((step) => step.iso)) : new Set<string>();
   const kept = dates
     .filter((found) => !isOtherDate(text, found, labelled))
-    .filter((found) => !corrected.has(found.iso) && !correctsAStep.has(found.iso));
+    .filter((found) => !corrected.has(found.iso) && !correctsAStep.has(found.iso) && !restated.has(found.iso));
   // A date given to the FORM leads — the last one typed first, so a later "date it 10/21" corrects an earlier one.
   const explicit = kept.filter((found) => isExplicitFormDate(text, found)).reverse();
   return [...explicit, ...kept.filter((found) => !explicit.includes(found))].map(({ iso, index }) => ({ iso, index }));

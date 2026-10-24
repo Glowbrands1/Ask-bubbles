@@ -1,3 +1,8 @@
+import { createHash } from "node:crypto";
+
+import { editionSupersessionEnabled } from "@/lib/config/chat-quality-flags";
+
+import { supersededCopyStaysOff, type SupersededCopyMatch } from "./edition";
 import { manifestKey } from "./reconcile";
 import type { ClaimResult, KnowledgeSink, KnowledgeSyncStore, RunRecord, SinkDocument, SinkMetadata } from "./ports";
 import { AUTOMATIC_SYNC_INTERVAL_DAYS } from "./types";
@@ -170,7 +175,16 @@ export interface MemoryDocument extends SinkMetadata {
   bytes: Uint8Array;
   version: number;
   retired: boolean;
+  /** Set when a newer edition replaced this one. The bytes stay. */
+  superseded: boolean;
+  supersededBy: string | null;
+  /** sha256 of the stored bytes. The sync compares a re-filed copy to this. */
+  contentHash: string;
   source: "woven" | "upload";
+}
+
+function byteHash(bytes: Uint8Array): string {
+  return createHash("sha256").update(bytes).digest("hex");
 }
 
 export class MemoryKnowledgeSink implements KnowledgeSink {
@@ -181,13 +195,16 @@ export class MemoryKnowledgeSink implements KnowledgeSink {
   /** Set to make the next `ingest` calls throw. */
   failNextIngest: Error | null = null;
 
-  async ingest(document: SinkDocument): Promise<{ reusedExistingEmbeddings: boolean }> {
+  async ingest(document: SinkDocument): Promise<{ reusedExistingEmbeddings: boolean; stayedSuperseded?: SupersededCopyMatch }> {
     this.ingestCalls += 1;
     if (this.failNextIngest) {
       const error = this.failNextIngest;
       this.failNextIngest = null;
       throw error;
     }
+    const contentHash = byteHash(document.bytes);
+    const stayed = this.matchSuperseded(document.documentId, contentHash);
+    if (stayed) return { reusedExistingEmbeddings: false, stayedSuperseded: stayed };
     const existing = this.documents.get(document.documentId);
     this.documents.set(document.documentId, {
       id: document.documentId,
@@ -200,9 +217,33 @@ export class MemoryKnowledgeSink implements KnowledgeSink {
       bytes: document.bytes,
       version: existing ? existing.version + 1 : 1,
       retired: false,
+      superseded: false,
+      supersededBy: null,
+      contentHash,
       source: "woven",
     });
     return { reusedExistingEmbeddings: false };
+  }
+
+  async keptOff(input: { documentId: string; contentHash: string }): Promise<SupersededCopyMatch | null> {
+    return this.matchSuperseded(input.documentId, input.contentHash);
+  }
+
+  /**
+   * Record match wins: the Woven record's own row is already superseded.
+   * Content match refuses a new row only. A live indexed copy may still
+   * be updated.
+   */
+  private matchSuperseded(documentId: string, contentHash: string): SupersededCopyMatch | null {
+    if (!editionSupersessionEnabled()) return null;
+    const match = supersededCopyStaysOff(
+      { documentId, contentHash },
+      [...this.documents.values()].map((doc) => ({ id: doc.id, contentHash: doc.contentHash, superseded: doc.superseded })),
+    );
+    if (match !== "content") return match;
+    const existing = this.documents.get(documentId);
+    if (existing && !existing.superseded && !existing.retired) return null;
+    return match;
   }
 
   async updateMetadata(documentId: string, metadata: SinkMetadata): Promise<void> {
@@ -218,6 +259,22 @@ export class MemoryKnowledgeSink implements KnowledgeSink {
     if (doc) doc.retired = true;
   }
 
+  async supersedeEditions(plan: { documentId: string; supersededBy: string }[]): Promise<{ superseded: number }> {
+    let superseded = 0;
+    for (const row of plan) {
+      if (row.documentId === row.supersededBy) continue;
+      const successor = this.documents.get(row.supersededBy);
+      if (!successor || successor.retired || successor.superseded) continue;
+      const doc = this.documents.get(row.documentId);
+      if (!doc || doc.retired) continue;
+      if (doc.superseded && doc.supersededBy === row.supersededBy) continue;
+      doc.superseded = true;
+      doc.supersededBy = row.supersededBy;
+      superseded += 1;
+    }
+    return { superseded };
+  }
+
   async countManualTitleMatches(titles: string[]): Promise<number> {
     const manual = new Set(
       [...this.documents.values()].filter((d) => d.source === "upload").map((d) => d.title.trim().toLowerCase()),
@@ -227,6 +284,6 @@ export class MemoryKnowledgeSink implements KnowledgeSink {
 
   /** Documents a signed-in user could currently find. */
   searchable(): MemoryDocument[] {
-    return [...this.documents.values()].filter((d) => !d.retired);
+    return [...this.documents.values()].filter((d) => !d.retired && !d.superseded);
   }
 }

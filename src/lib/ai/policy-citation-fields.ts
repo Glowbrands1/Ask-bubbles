@@ -1,3 +1,5 @@
+import { antiLoopEnabled } from "@/lib/config/chat-quality-flags";
+import { printedPageForHeading } from "@/lib/forms/policy-page-map";
 import { printedPageOf } from "@/lib/ingestion/extract/pdf-sections";
 import { manualGroundedPolicies, policyFieldValue } from "@/lib/forms/policy-citation";
 import {
@@ -22,6 +24,28 @@ const NARRATIVE_KEY: Readonly<Record<string, string>> = {
   coaching: "coaching_details",
   "follow-up-coaching": "follow_up_observation",
 };
+
+/**
+ * The page a retrieval row prints, for a check that must not use the PDF
+ * sheet number. A footer the extractor knows, or a locator whose page is
+ * not the PDF page, is that printed page. The PDF `page` column is not.
+ */
+export function printedPageFromRetrieval(row: {
+  readonly page: number | null;
+  readonly locator?: string | null;
+  readonly content?: string | null;
+}): number | null {
+  for (const line of (row.content ?? "").split("\n")) {
+    const printed = printedPageOf(line);
+    if (printed) return printed;
+  }
+  const match = /\bPage\s+(\d+)\b/i.exec(row.locator ?? "");
+  if (!match) return null;
+  const printed = Number(match[1]);
+  if (!Number.isInteger(printed) || printed <= 0) return null;
+  if (row.page !== null && printed === row.page) return null;
+  return printed;
+}
 
 export function citationPage(chunk: ManualChunk, heading: string): number | null {
   const listed = chunk.sections?.find((section) => section.heading.toLowerCase() === heading.toLowerCase());
@@ -62,10 +86,13 @@ export function flaggedCitationWrite(input: {
   readonly manual?: FlaggedManualIdentity | null;
 }): { values: Record<string, string>; provenance: Record<string, Record<string, unknown>> } {
   if (!input.enabled) return { values: input.values, provenance: {} };
-  const found = accountManualSections(input.notes, input.chunks).map((section) => ({
-    section: section.heading,
-    page: section.page > 0 ? section.page : null,
-  }));
+  const found = accountManualSections(input.notes, input.chunks).map((section) => {
+    const mapped = antiLoopEnabled() ? printedPageForHeading(section.heading, input.chunks) : null;
+    return {
+      section: section.heading,
+      page: mapped ?? (section.page > 0 ? section.page : null),
+    };
+  });
   if (found.length === 0) return { values: input.values, provenance: {} };
   const line = found
     .map((item) => formatManualCitation(item.section, item.page))
@@ -80,15 +107,24 @@ export function flaggedCitationWrite(input: {
   }
 
   const paged = found.filter((item) => item.page !== null && item.page > 0);
-  if (
-    (input.templateKey === "dpoa" || input.templateKey === "policy-review") &&
-    !(input.values.policy_language ?? "").trim() &&
-    paged.length > 0 &&
-    input.manual
-  ) {
+  const writesPolicyLine =
+    input.templateKey === "dpoa" ||
+    input.templateKey === "policy-review" ||
+    Object.prototype.hasOwnProperty.call(input.values, "policy_language");
+  if (writesPolicyLine && paged.length > 0 && input.manual) {
     const policy = paged
       .map((item) => formatManualCitation(item.section, item.page))
       .join("; ");
+    const current = (input.values.policy_language ?? "").trim();
+    const alreadyCited =
+      current !== "" &&
+      paged.every(
+        (item) =>
+          current.toLowerCase().includes(item.section.toLowerCase()) &&
+          (current.includes(`p.${item.page}`) || current.toLowerCase().includes(`page ${item.page}`)),
+      );
+    if (alreadyCited) return { values: input.values, provenance: {} };
+    const next = current ? `${current}\n\n${policy}` : policy;
     const sections: ManualSection[] = paged.map((item) => ({
       heading: item.section,
       page: item.page ?? 0,
@@ -96,7 +132,7 @@ export function flaggedCitationWrite(input: {
       foundBy: "page_heading",
     }));
     return {
-      values: { ...input.values, policy_language: policy },
+      values: { ...input.values, policy_language: next },
       provenance: {
         policy_language: officialManualProvenance({
           documentId: input.manual.documentId,

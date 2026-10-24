@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
 
+import { editionSupersessionEnabled } from "@/lib/config/chat-quality-flags";
+
+import { holdOlderEditions, type EditionSupersession, type SupersededCopyMatch } from "./edition";
 import { buildDryRunPlan } from "./dry-run";
 import { manifestKey, reconcile, type ReconcileInput } from "./reconcile";
 import { SinkError, type DescribeItem, type KnowledgeSink, type KnowledgeSyncStore } from "./ports";
@@ -244,6 +247,7 @@ export async function runKnowledgeSync(deps: EngineDeps, options: RunOptions): P
     const manifest = await store.loadManifest(source);
     const decisions = new Map((await store.loadDecisions(source)).map((d) => [d.audienceKey, d]));
     const merged = new Map(manifest.map((item) => [manifestKey(item), item]));
+    let editionPlan: EditionSupersession[] = [];
 
     /* ---- scan ---- */
     let listingFailures = 0;
@@ -322,8 +326,21 @@ export async function runKnowledgeSync(deps: EngineDeps, options: RunOptions): P
         return finish(status, null, null);
       }
 
+      if (editionSupersessionEnabled()) {
+        const held = holdOlderEditions([...merged.values()], knowledgeDocumentIdFor);
+        editionPlan = held.plan;
+        for (const item of held.items) merged.set(manifestKey(item), item);
+      }
+
       /* The scan is saved before any work starts, so a crash mid-apply resumes from it. */
-      await store.saveItems(scan.items);
+      await store.saveItems(editionSupersessionEnabled() ? [...merged.values()] : scan.items);
+    }
+
+    if (options.mode === "continue" && editionSupersessionEnabled()) {
+      const held = holdOlderEditions([...merged.values()], knowledgeDocumentIdFor);
+      editionPlan = held.plan;
+      for (const item of held.items) merged.set(manifestKey(item), item);
+      await store.saveItems([...merged.values()]);
     }
 
     /* ---- apply ---- */
@@ -397,6 +414,37 @@ export async function runKnowledgeSync(deps: EngineDeps, options: RunOptions): P
         }
       } catch {
         report.attention.push({ code: "duplicates_not_checked", message: "Uploaded copies of Woven documents could not be checked this time. Nothing was changed." });
+      }
+    }
+
+    /*
+     * Older editions of one Woven document. Only after the newest copy has
+     * been indexed, and only when the flag is on (the plan is empty otherwise).
+     * Rows and chunks are kept. A preview returns before this and writes nothing.
+     */
+    if (
+      options.mode === "sync" &&
+      editionPlan.length > 0 &&
+      listingFailures === 0 &&
+      !sessionLost &&
+      report.totals.deferred === 0 &&
+      deps.sink.supersedeEditions
+    ) {
+      try {
+        const outcome = await deps.sink.supersedeEditions(editionPlan);
+        if (outcome.superseded > 0) {
+          const n = outcome.superseded;
+          report.attention.push({
+            code: "editions_superseded",
+            message: `${n} older edition${n === 1 ? " was" : "s were"} replaced by the newest Woven copy and no longer answer questions. Nothing was deleted.`,
+            count: n,
+          });
+        }
+      } catch {
+        report.attention.push({
+          code: "editions_not_checked",
+          message: "Older editions of Woven documents could not be updated this time. Nothing was changed.",
+        });
       }
     }
 
@@ -493,6 +541,16 @@ async function applyItem(deps: EngineDeps, item: ManifestItem, nowIso: () => str
   const hash = sha256Hex(fetched.bytes);
   const metadata = deps.describe(current);
 
+  /*
+   * A superseded document stays superseded. The same Woven record is not
+   * re-indexed, and a different record with that content hash is not indexed.
+   * Off, this is skipped and the ingest below is the one this app already ran.
+   */
+  if (deps.sink.keptOff) {
+    const stayed = await deps.sink.keptOff({ documentId: current.knowledgeDocumentId!, contentHash: hash });
+    if (stayed) return stayedOff(current, stayed, hash, nowIso);
+  }
+
   let action: SyncEvent["action"];
   let metadataOnly = false;
   if (current.inKnowledgeBase && current.contentHash === hash) {
@@ -500,13 +558,14 @@ async function applyItem(deps: EngineDeps, item: ManifestItem, nowIso: () => str
     action = "metadata_only";
     metadataOnly = true;
   } else {
-    await deps.sink.ingest({
+    const ingested = await deps.sink.ingest({
       documentId: current.knowledgeDocumentId!,
       bytes: fetched.bytes,
       fileName: fetched.fileName,
       mimeType: fetched.mimeType,
       ...metadata,
     });
+    if (ingested.stayedSuperseded) return stayedOff(current, ingested.stayedSuperseded, hash, nowIso);
     action = current.syncedFingerprint === null ? "ingest" : "update";
   }
 
@@ -531,6 +590,29 @@ async function applyItem(deps: EngineDeps, item: ManifestItem, nowIso: () => str
     },
     action,
     metadataOnly,
+  };
+}
+
+function stayedOff(current: ManifestItem, match: SupersededCopyMatch, hash: string, nowIso: () => string): Applied {
+  return {
+    item: {
+      ...current,
+      /* A re-filed copy has no row. Keeping the id would point the manifest at a document that was not created. */
+      knowledgeDocumentId: match === "record" ? current.knowledgeDocumentId : null,
+      state: "EXCLUDED",
+      reason: "older_edition",
+      pendingAction: "none",
+      inKnowledgeBase: false,
+      contentHash: hash,
+      syncedFingerprint: current.observedFingerprint,
+      lastError: null,
+      errorCategory: null,
+      retryCount: 0,
+      nextRetryAt: null,
+      lastSyncedAt: nowIso(),
+    },
+    action: "skip",
+    metadataOnly: false,
   };
 }
 

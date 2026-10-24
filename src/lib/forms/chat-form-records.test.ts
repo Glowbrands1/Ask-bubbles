@@ -113,6 +113,7 @@ beforeEach(() => {
   state.visibility = KEARNEY_ONLY;
   state.visibilityCalls = [];
   state.fail = false;
+  delete process.env.PRIOR_RECORD_FINAL_ONLY_ENABLED;
 });
 
 describe("isFormRecordsQuestion", () => {
@@ -325,5 +326,74 @@ describe("loadFormRecords", () => {
 
     expect(result!.block).toContain("could not be read");
     expect(result!.block).toContain("Forms → Forms Register");
+  });
+
+  it("keeps a draft in previous coachings when the flag is off", async () => {
+    store.form_instances.push(row({ form_date: "2026-10-02", status: "draft" }));
+    const block = (await loadFormRecords({ actor: MANAGER, question, today: "2026-10-20" }))!.block;
+    expect(block).toContain("draft — not finalized");
+    expect(block).not.toContain("Not on file");
+  });
+
+  it("lists drafts separately as not on file, never as previous coaching", async () => {
+    process.env.PRIOR_RECORD_FINAL_ONLY_ENABLED = "1";
+    try {
+      store.form_instances.push(
+        row({ form_date: "2026-09-12", status: "finalized" }),
+        row({ form_date: "2026-10-02", status: "draft" }),
+      );
+      const block = (await loadFormRecords({ actor: MANAGER, question, today: "2026-10-20" }))!.block;
+      const [onFile, drafts] = block.split("Not on file");
+      expect(drafts).toBeDefined();
+      expect(onFile).toContain("2026-09-12");
+      expect(onFile).not.toContain("2026-10-02");
+      expect(drafts).toMatch(/not previous coaching/i);
+      expect(drafts).toContain("2026-10-02");
+      expect(drafts).toContain("draft — not finalized");
+    } finally {
+      delete process.env.PRIOR_RECORD_FINAL_ONLY_ENABLED;
+    }
+  });
+
+  it("still lists drafts when the question asks for them, under not on file", async () => {
+    process.env.PRIOR_RECORD_FINAL_ONLY_ENABLED = "1";
+    try {
+      store.form_instances.push(row({ form_date: "2026-10-02", status: "draft" }));
+      const block = (
+        await loadFormRecords({
+          actor: MANAGER,
+          question: "any draft coachings for wren halvorsen",
+          today: "2026-10-20",
+        })
+      )!.block;
+      const [onFile, drafts] = block.split("Not on file");
+      expect(onFile).not.toContain("2026-10-02");
+      expect(onFile).not.toMatch(/previous coaching/i);
+      expect(drafts).toMatch(/not previous coaching/i);
+      expect(drafts).toContain("draft — not finalized");
+      expect(drafts).toContain("2026-10-02");
+    } finally {
+      delete process.env.PRIOR_RECORD_FINAL_ONLY_ENABLED;
+    }
+  });
+
+  it("splits an unnamed previous-coaching list the same way", async () => {
+    process.env.PRIOR_RECORD_FINAL_ONLY_ENABLED = "1";
+    try {
+      store.form_instances.push(
+        row({ form_date: "2026-09-12", status: "finalized" }),
+        row({ form_date: "2026-10-02", status: "draft" }),
+      );
+      const block = (
+        await loadFormRecords({ actor: MANAGER, question: "any previous coachings", today: "2026-10-20" })
+      )!.block;
+      const [onFile, drafts] = block.split("Not on file");
+      expect(onFile).toContain("2026-09-12");
+      expect(onFile).not.toContain("2026-10-02");
+      expect(drafts).toMatch(/not previous coaching/i);
+      expect(drafts).toContain("2026-10-02");
+    } finally {
+      delete process.env.PRIOR_RECORD_FINAL_ONLY_ENABLED;
+    }
   });
 });

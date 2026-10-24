@@ -197,6 +197,108 @@ export function draftMergeEnabled(): boolean {
   return draftEditMergeEnabled();
 }
 
+/**
+ * A name the manager typed is the name on the form. Off, a close roster
+ * match still asks "Did you mean", and a state or a document title can
+ * still be offered as a person. On, one close roster name is a short note
+ * under the card ("Woven has Jane Doe"), not a question and not a block.
+ * The card in that same turn uses the typed spelling. No note when nothing
+ * on the roster is close. Two different close matches are still a question.
+ */
+export function typedNameEnabled(): boolean {
+  return envFlag("TYPED_NAME_ENABLED");
+}
+
+/**
+ * Replay anti-loop. Off, chat is unchanged. On, a repeated failure is handled
+ * in code: the model does not write the employee, an unmatched name is kept,
+ * slots already stored are not cleared, the store is not a question, there is
+ * no "Did you mean", a close name is the under-card note, roster refusals and
+ * validator text are not shown, dates on the card are ISO, and a policy's
+ * page comes from the manual's printed-page map.
+ */
+export function antiLoopEnabled(): boolean {
+  return envFlag("ANTI_LOOP_ENABLED");
+}
+
+/**
+ * A citation is checked against the page the manual prints. Off, the PDF
+ * sheet number is still accepted. On, only `printedPage` counts.
+ */
+export function printedPageOnlyEnabled(): boolean {
+  return envFlag("PRINTED_PAGE_ONLY_ENABLED");
+}
+
+/**
+ * A Corrective Action line for the payroll amount, immediately after the
+ * Yes/No question. The seed document includes the line. It is not published
+ * to the database from this change. Off, chat does not ask for an amount and
+ * does not fill one. On, the line is filled only from an amount the manager
+ * stated — a figure in the cited policy is never written into it, and the
+ * action plan does not repeat it.
+ */
+export function payrollDeductAmountFieldEnabled(): boolean {
+  return envFlag("PAYROLL_DEDUCT_AMOUNT_ENABLED");
+}
+
+/**
+ * For a corrective-action or policy question, prefer the current JBA Policy
+ * Manual and the section a synonym names. Off, retrieval order is unchanged.
+ */
+export function caPolicyRetrievalEnabled(): boolean {
+  return envFlag("CA_POLICY_RETRIEVAL_ENABLED");
+}
+
+/**
+ * An open draft for the same employee, template, and incident date is reused
+ * even when another chat or another manager started it. Off, only the
+ * card-id match and DRAFT_DEDUPE_ENABLED run.
+ */
+export function crossChatDraftDedupeEnabled(): boolean {
+  return envFlag("CROSS_CHAT_DRAFT_DEDUPE_ENABLED");
+}
+
+/**
+ * A previous, prior, or past coaching question omits drafts. A question that
+ * asks for drafts still lists them. Off, drafts stay in the list, labelled
+ * as not finalized.
+ */
+export function priorRecordFinalOnlyEnabled(): boolean {
+  return envFlag("PRIOR_RECORD_FINAL_ONLY_ENABLED");
+}
+
+/**
+ * A global-scope account that is not an admin, owner, or developer is asked
+ * once which store the form is for. The question is added after the create
+ * sentence, and the card stays ready. A store named in the same message, on
+ * an earlier turn, by a reviewed nickname, or as one in-scope typo is used
+ * and is not asked again. Off, the existing "covers every store" copy is
+ * unchanged, and a typo is still confirmed before it is used.
+ */
+export function globalStoreAskEnabled(): boolean {
+  return envFlag("GLOBAL_STORE_ASK_ENABLED");
+}
+
+/**
+ * When Woven publishes a revised document, keep the newest edition and
+ * leave older editions out of search. A superseded knowledge document is
+ * not re-indexed or re-activated: the same Woven record stays off, and a
+ * re-filed copy of its content hash stays off. Identical sections from two
+ * current copies collapse to one citation. Off, a sync still indexes every
+ * current Woven copy, including an older edition of the same document.
+ */
+export function editionSupersessionEnabled(): boolean {
+  return envFlag("EDITION_SUPERSESSION_ENABLED");
+}
+
+/**
+ * Cache the static system prompt. Off, the answering call sends one system
+ * string and does not set a cache breakpoint.
+ */
+export function promptCacheEnabled(): boolean {
+  return envFlag("PROMPT_CACHE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -215,6 +317,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "LONG_CONTEXT_ENABLED",
   "CHAT_MEMORY_ENABLED",
   "ACTION_PLAN_SENTENCES_ENABLED",
+  "ANTI_LOOP_ENABLED",
   "DRAFT_EDIT_MERGE_ENABLED",
   "DRAFT_MERGE_ENABLED",
   "GROUNDED_ENTITIES_ENABLED",
@@ -222,4 +325,13 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INTENT_EXTRACTION_ENABLED",
   "FEWSHOT_EXAMPLES_ENABLED",
   "SELF_CHECK_ENABLED",
+  "TYPED_NAME_ENABLED",
+  "PRINTED_PAGE_ONLY_ENABLED",
+  "PAYROLL_DEDUCT_AMOUNT_ENABLED",
+  "CA_POLICY_RETRIEVAL_ENABLED",
+  "CROSS_CHAT_DRAFT_DEDUPE_ENABLED",
+  "PRIOR_RECORD_FINAL_ONLY_ENABLED",
+  "GLOBAL_STORE_ASK_ENABLED",
+  "EDITION_SUPERSESSION_ENABLED",
+  "PROMPT_CACHE_ENABLED",
 ] as const;

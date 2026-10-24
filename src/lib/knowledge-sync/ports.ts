@@ -87,8 +87,21 @@ export interface SinkMetadata {
 
 /** Ask Bubbles' knowledge base, as the engine sees it. */
 export interface KnowledgeSink {
-  /** Creates the document, or replaces its content in place. Idempotent on `documentId`. */
-  ingest(document: SinkDocument): Promise<{ reusedExistingEmbeddings: boolean }>;
+  /**
+   * Creates the document, or replaces its content in place. Idempotent on
+   * `documentId`. `stayedSuperseded` is set when edition supersession is on
+   * and this write was refused because the row, or its content hash, is
+   * already superseded. The caller must not mark that copy searchable.
+   */
+  ingest(document: SinkDocument): Promise<{ reusedExistingEmbeddings: boolean; stayedSuperseded?: "record" | "content" }>;
+  /**
+   * `record` when `documentId` is already superseded. `content` when a
+   * different superseded document has `contentHash`. Null when the sync
+   * should ingest. Absent on a sink that does not know superseded rows.
+   * A current indexed document is never reported as `content`: updating
+   * the live copy is a normal sync.
+   */
+  keptOff?(input: { documentId: string; contentHash: string }): Promise<"record" | "content" | null>;
   /** Changes title/description/tags only; nothing is re-extracted or re-embedded. */
   updateMetadata(documentId: string, metadata: SinkMetadata): Promise<void>;
   /** Removes the document from search without destroying it. */
@@ -101,6 +114,11 @@ export interface KnowledgeSink {
    * without touching them. See `supersession.ts`.
    */
   supersedeDuplicates?(currentDocumentIds: string[]): Promise<DuplicateOutcome>;
+  /**
+   * Marks older editions of one Woven document superseded. The row, its
+   * chunks and its file stay. A successor that is not indexed is skipped.
+   */
+  supersedeEditions?(plan: { documentId: string; supersededBy: string }[]): Promise<{ superseded: number }>;
 }
 
 /** Why a sink call failed — a code the audit log can carry and a user-safe sentence. */

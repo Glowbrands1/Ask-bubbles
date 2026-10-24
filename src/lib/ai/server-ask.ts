@@ -39,7 +39,7 @@ import { deliverFormProposal } from "./grounded-turn";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";
-import { pinnedManualBlock } from "./policy-citation-fields";
+import { pinnedManualBlock, printedPageFromRetrieval } from "./policy-citation-fields";
 import { recallMemory, rememberFact } from "./chat-memory-store";
 import { finishChatTrace, openChatTrace, redactTraceText } from "./chat-trace";
 import { updateChatTrace } from "./chat-trace-store";
@@ -52,6 +52,7 @@ import {
   formToolsEnabled,
   hybridSearchEnabled,
   longContextEnabled,
+  actionPlanSentencesEnabled,
   policyCitationEnabled,
   priorCoachingOptionalEnabled,
   queryRewriteEnabled,
@@ -59,6 +60,9 @@ import {
   intentExtractionEnabled,
   retrievalRecallEnabled,
   slotRetentionEnabled,
+  printedPageOnlyEnabled,
+  typedNameEnabled,
+  antiLoopEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -653,6 +657,10 @@ async function answerQuestionBody(
     priorCoachingOptional: priorCoachingOptionalEnabled(),
     recalledMemory: await recalledMemoryBlock(request, actor),
     fewShotExamples: await loadFewShotBlock(request.question),
+    typedName: typedNameEnabled(),
+    policyCitation: policyCitationEnabled(),
+    printedPageOnly: printedPageOnlyEnabled(),
+    actionPlanSentences: actionPlanSentencesEnabled(),
   });
 
   const longContext = longContextEnabled()
@@ -705,30 +713,28 @@ async function answerQuestionBody(
   const suggested = await suggestedFormsFor({ summariesPromise, request, actor });
 
   const prose = suggested ? `${stripMarkers(answer)}\n\n${suggested.lead}` : stripMarkers(answer);
+  const manualChunks = rows.map((row, index) => ({
+    chunkIndex: index,
+    page: row.page,
+    printedPage: printedPageOnlyEnabled() ? printedPageFromRetrieval(row) : row.page,
+    section: row.section,
+    content: row.content,
+  }));
   const cited = policyCitationEnabled()
     ? withMappedPolicy(
         prose,
         [...request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), request.question],
-        rows.map((row, index) => ({
-          chunkIndex: index,
-          page: row.page,
-          printedPage: row.page,
-          section: row.section,
-          content: row.content,
-        })),
+        manualChunks,
         true,
       )
     : prose;
-  const checked = await applySelfCheck({
-    answer: cited,
-    chunks: rows.map((row) => ({
-      section: row.section,
-      page: row.page,
-      printedPage: row.page,
-      content: row.content,
-    })),
-    loadRoster: () => loadRosterQuiet(actor),
-  });
+  const checked = antiLoopEnabled()
+    ? cited
+    : await applySelfCheck({
+        answer: cited,
+        chunks: manualChunks,
+        loadRoster: () => loadRosterQuiet(actor),
+      });
   return {
     content: checked,
     formSelection: suggested?.selection,
