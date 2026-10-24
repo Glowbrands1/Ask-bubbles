@@ -373,3 +373,41 @@ stand-in waits.
 | OLD | 0 | 0 | 55 ms |
 | NEW, 1st call | 1815 | 0 | 55 ms |
 | NEW, later call | 0 | 1815 | 13 ms |
+
+The rows above, and the matching rows in the item 9 section, are the local
+stand-in. They are not an Anthropic bill.
+
+## Live Claude cache — not measured
+
+This checkout has no `ANTHROPIC_API_KEY`. No Claude call was made, so there
+is no real `cache_creation_input_tokens`, `cache_read_input_tokens`, or
+first-token time to record. `src/lib/ai/prompt-cache-live.test.ts` skips
+unless that key is set. When it runs, it streams each opening turn of b9,
+b10, b11, and b12 against the real system prompt (`claude-sonnet-5`,
+adaptive thinking, the same effort as `callClaude`). OLD sends one system
+string. NEW sends the static block with `cache_control: { type: "ephemeral" }`
+and the dynamic tail uncached. First-token time is the wait until the first
+text delta. A later call whose `cache_read_input_tokens` is greater than
+zero must be within 125% of that case's OLD first-token time. A cache read
+of zero fails the test: the static prefix was under the model's cache
+minimum, or the breakpoint was not on that block.
+
+`callClaude` still uses `messages.create`, so the latency stored on
+`chat_traces.latency_ms` is the full reply, not this first-token time.
+Cache creation on the first NEW call can be slower than OLD. The gate is
+the later cache-read call.
+
+## Store ask replay — 24 Oct 2026
+
+`GLOBAL_STORE_ASK_ENABLED` on for the NEW column, off for OLD. Local
+harness. The model is not called. A resolved store is carried onto the
+next turn. The nickname is a test index (`the island` → store 236), not a
+production nickname.
+
+| Case | OLD | NEW |
+| --- | --- | --- |
+| Same message, Kearney | loc-66, no store question, card ready | loc-66, no store question, card ready |
+| Earlier turn, Kearney | loc-66 kept, no store question | loc-66 kept, no store question |
+| Nickname, the island | loc-236 Grand Island, no store question | loc-236 Grand Island, no store question |
+| Typo, Kearny | "is that the store?", location empty | loc-66 Kearney, no store question, card ready |
+| No store named | covers every store, card ready | asked once, create sentence kept, card ready |

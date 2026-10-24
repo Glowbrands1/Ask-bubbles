@@ -1,4 +1,4 @@
-import { antiLoopEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, globalStoreAskEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS, locationIdsInArea } from "@/lib/locations";
 import type { AccessScope } from "@/types";
 
@@ -277,7 +277,9 @@ function readCorrected(
  * WHAT THE MANAGER'S WORDS SAY ABOUT THE STORE, in this order of trust:
  *
  *   a firm reading     a registered code, name, partial name or reviewed alias
- *   a soft reading     a typo or initialism — asked about, never used silently
+ *   a soft reading     a typo or initialism — confirmed before use, unless the
+ *                      global store ask is on and exactly one in-scope store
+ *                      matches, in which case that store is used
  *   nothing registered "Store 102" with no store 102 — said so, not skipped
  *
  * Several candidates is a question, and the candidates offered are only the
@@ -321,6 +323,14 @@ function fromNamedLocations(
   const numbering = reading.find((mention) => mention.numbering)?.numbering;
 
   if (inScope.length === 1 && !soft) return { resolution: "resolved", locationId: inScope[0]!, source: "manager" };
+  /*
+   * A single typo or initialism is the store. The global store question is
+   * not asked, and the draft stays ready. Off, that reading is still a
+   * confirmation, as before.
+   */
+  if (globalStoreAskEnabled() && soft && inScope.length === 1) {
+    return { resolution: "resolved", locationId: inScope[0]!, source: "manager" };
+  }
   if (inScope.length >= 1) {
     const collision = reading.some((mention) => mention.collision);
     return {

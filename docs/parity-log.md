@@ -491,8 +491,17 @@ are not previous coaching:". A draft is never described as previous coaching.
 The flag off keeps the labelled draft list and does not add that section.
 
 `GLOBAL_STORE_ASK_ENABLED`. A global-scope district manager is asked once
-which store. The card stays ready. Admin, owner, and developer keep the
-existing copy. A named store is not asked again. Empire, SD is not a store.
+which store. The question is appended after the create sentence, so the
+card stays ready and the draft is not blocked. Admin, owner, and developer
+keep the existing copy. A store named in the same message, on an earlier
+turn, or by a nickname passed into the store index is resolved and is not
+asked again. One in-scope typo (Kearny → Kearney) is resolved only while
+this flag is on; off, that typo is still "is that the store?" and the
+location stays empty. The nickname "the island" is a test index, not a
+Buff City nickname in `COMPANY_LOCATION_NICKNAMES`. Empire, SD is not a
+store. A typo at the end of an earlier paragraph is still read after turns
+are joined. Ask Sunny is not updated for that reader or for the non-blocking
+ask.
 
 Pau dropped the Colene location mapping prep. Grand Forks, Fargo, Raymore,
 and Empire, SD are probably test data. The review migration is not in this

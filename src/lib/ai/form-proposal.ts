@@ -3228,7 +3228,9 @@ function correctiveActionReady(
  * two names has told us everything except which of them.
  */
 function closeForDraft(proposal: ChatFormProposal, ordinary: string): string {
-  return proposal.storeAsk ?? ordinary;
+  if (!proposal.storeAsk) return ordinary;
+  /* The question does not replace the draft. The card stays creatable. */
+  return `${proposal.storeAsk}\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.`;
 }
 
 function eppEmployeeQuestion(templateName: string, context: ManagerContext): string {

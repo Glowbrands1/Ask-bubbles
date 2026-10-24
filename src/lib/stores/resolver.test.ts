@@ -215,6 +215,11 @@ describe("in a sentence", () => {
     }
   });
 
+  it("still reads a typo that ended an earlier paragraph", () => {
+    const { mentions } = read("Sarah at Kearny\n\nshe was talking about customers");
+    expect(mentions.some((mention) => mention.locationIds.includes("loc-66") && mention.confirm)).toBe(true);
+  });
+
   it("says when a store number names no registered store", () => {
     expect(read("Create a coaching form for Sarah at Store 102")).toEqual({ mentions: [], unmatched: ["Store 102"] });
     expect(read("coaching for Sarah at the Springfield store").unmatched).toEqual(["Springfield"]);

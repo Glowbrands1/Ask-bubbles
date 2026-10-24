@@ -619,10 +619,20 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
   }
 
   // What is left: a partial name or a typo, where the sentence says it is a store.
+  // A typo at the end of an earlier turn ("at Kearny" then a later message) is
+  // still that store. Joining turns with a newline must not hide it, because
+  // the span reader treats the end of a paragraph the way it treats the end
+  // of the whole message.
   const covered = new Set(mentions.flatMap((mention) => mention.locationIds));
   const seen = new Set<string>();
+  const paragraphs = text
+    .split(/\n+/)
+    .map((part) => part.replace(/\s+/g, " ").trim())
+    .filter((part) => part.length > 0);
+  const scans = paragraphs.length > 1 ? [spaced, ...paragraphs] : [spaced];
+  for (const scan of scans) {
   for (const [pattern, nounFollows] of [[SPAN_BEFORE_NOUN, true], [SPAN_AT_END, false]] as const) {
-    for (const match of spaced.matchAll(pattern)) {
+    for (const match of scan.matchAll(pattern)) {
       const span = match[1]!.trim();
       if (typedNameEnabled() && isTypedStopSpan(span, companyNameStops())) continue;
       const normalized = foldKey(span, index.abbreviations).trim();
@@ -651,7 +661,7 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
       } else if (!nounFollows && typedNameEnabled()) {
         // "at Empire, SD": the place is not a registered store. The state is.
         // The stores in that state are the options — never a store invented from the town.
-        const after = spaced.slice((match.index ?? 0) + match[0].length);
+        const after = scan.slice((match.index ?? 0) + match[0].length);
         const state = /^\s*,\s*([A-Za-z]{2})\b/.exec(after);
         const code = state?.[1]?.toUpperCase() ?? "";
         if (code && companyNameStops().stateCodes.has(code)) {
@@ -661,6 +671,7 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
         }
       }
     }
+  }
   }
 
   return { mentions, unmatched };

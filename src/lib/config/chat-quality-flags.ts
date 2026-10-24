@@ -269,8 +269,11 @@ export function priorRecordFinalOnlyEnabled(): boolean {
 
 /**
  * A global-scope account that is not an admin, owner, or developer is asked
- * once which store the form is for. The card stays ready. Off, the existing
- * "covers every store" copy is unchanged.
+ * once which store the form is for. The question is added after the create
+ * sentence, and the card stays ready. A store named in the same message, on
+ * an earlier turn, by a reviewed nickname, or as one in-scope typo is used
+ * and is not asked again. Off, the existing "covers every store" copy is
+ * unchanged, and a typo is still confirmed before it is used.
  */
 export function globalStoreAskEnabled(): boolean {
   return envFlag("GLOBAL_STORE_ASK_ENABLED");
