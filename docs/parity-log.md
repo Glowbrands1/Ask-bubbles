@@ -185,3 +185,15 @@ still anchored to the earlier turn, and the retrieval query is then
 rewritten into manual terms from the conversation. SKIP, an empty rewrite,
 or a model failure keeps the typed question. The answering model still
 sees the question as typed. No glossary and no migration.
+
+## 24 Oct 2026: chat data tools, measured, not ported
+
+`CHAT_DATA_TOOLS_ENABLED` already defaults off in both apps. Ask Sunny's
+reader is the salon snapshot (`chat-data-tools.test.ts` on `b9ae362`): a
+model chooses reviews, sales, or the Comp Report, and the inventory line
+says "salons". This app's reader is the stored store summaries, and the
+line says "stores". The one-at-a-time card replay does not call that
+reader. The effect recorded in `docs/scoreboard.md` is this app's block:
+password-reset help, and Google Reviews only for a role with
+`view_reports`. No Ask Sunny change. No Buff City store list was copied
+there, and no salon list was copied here.

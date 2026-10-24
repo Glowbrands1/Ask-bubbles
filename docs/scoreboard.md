@@ -113,3 +113,26 @@ A citation check can still ask for one repair. When that repair is
 or "Not verified — no matching employee in Woven", the original answer is
 what is shown, and Casey Quinn is still in it. A repair that keeps Casey
 Quinn and cites Attendance p.14 from the retrieved section is kept.
+
+## Chat data tools — one flag — 24 Oct 2026
+
+`CHAT_DATA_TOOLS_ENABLED` was already a column in the one-at-a-time card
+replay, on main `655a61d` and on this branch `aaaef4b`. Cards stay 7/18.
+Misses and employee names match flags off on every case. The card path
+does not call `loadChatDataBlock`, so that column cannot show what the
+flag does.
+
+This measurement is that block, the text `server-ask` attaches before the
+model. `SELF_CHECK_ENABLED` is the string `false`. `REPORT_BREAKDOWN_ENABLED`
+is unset. Every other chat-quality flag is unset. The model is not called.
+Review summaries are an in-memory list: Kearney `loc-66` holds 12, Bellevue
+`loc-67` holds 4. Nothing reads a database. The 16 below is that sum.
+
+| Question | Flag off, and the string `false` | `CHAT_DATA_TOOLS_ENABLED=1` alone |
+| --- | --- | --- |
+| how do I reset my Ask Bubbles password | Help empty. Data empty. Summaries not read. | `APP HELP — PASSWORD RESET`, including `/api/auth/forgot-password` and `/reset-password`. Data empty. Summaries not read. An employee gets the same help. |
+| I forgot my password | Help empty. Data empty. Summaries not read. | The same password-reset help. Data empty. Summaries not read. |
+| how are our google reviews, owner | Help empty. Data empty. Summaries not read. | Google Reviews rows for Kearney and Bellevue, then "The Google Reviews page holds 16 reviews in total. That is the inventory total, not the count of reviews that qualify this week." |
+| how are our google reviews, employee | Help empty. Data empty. | Help empty. Data empty. An employee does not hold `view_reports`, so the summaries are not read. |
+| what are our sales totals, owner | Help empty. Data empty. | "No Sales Totals or Comp Report breakdown is loaded for chat. No figure was invented." Summaries not read. |
+| how are our google reviews, owner, and the summary read throws | Help empty. Data empty. | "The review summaries could not be read. No count was invented." |
