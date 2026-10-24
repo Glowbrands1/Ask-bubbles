@@ -336,6 +336,16 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
   return envFlag("INTENT_PAYROLL_MANAGER_ONLY_ENABLED");
 }
 
+/**
+ * One draft per form in a conversation. A new card for the same form and
+ * employee in the same chat opens the draft this chat already made, unless a
+ * manager turn since that draft asked for another document. Off, every new
+ * card creates as it does today.
+ */
+export function conversationDraftReuseEnabled(): boolean {
+  return envFlag("CONVERSATION_DRAFT_REUSE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -374,4 +384,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
+  "CONVERSATION_DRAFT_REUSE_ENABLED",
 ] as const;

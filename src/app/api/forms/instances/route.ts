@@ -44,6 +44,7 @@ import { warningLevelFromConversation } from "@/lib/forms/warning-level-conversa
 import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { businessToday } from "@/lib/business-date";
 import {
+  conversationDraftReuseEnabled,
   crossChatDraftDedupeEnabled,
   draftDedupeEnabled,
   payrollDeductAmountFieldEnabled,
@@ -56,6 +57,12 @@ import {
   rememberDraftIncident,
 } from "@/lib/forms/draft-reopen";
 import { historyWantsSeparateDocument } from "@/lib/ai/second-form";
+import {
+  conversationKeyOf,
+  findConversationDraft,
+  lastManagerTurnId,
+  noteConversationDraft,
+} from "@/lib/forms/conversation-draft";
 import type { Permission } from "@/types";
 
 /**
@@ -152,6 +159,8 @@ export async function POST(request: Request) {
       warningLevel?: unknown;
       /** The chat the proposal came from, for `checkProposalIsCurrent`. Ask Bubbles only. */
       conversation?: unknown;
+      /** Optional stable id for this chat. The first message id is used when this is absent. */
+      conversationId?: unknown;
       /** The card's id: a repeated press of the same card returns its draft. */
       proposalId?: unknown;
     } | null;
@@ -263,6 +272,30 @@ export async function POST(request: Request) {
     }
 
     /*
+     * ONE DRAFT PER FORM IN THIS CHAT (CONVERSATION_DRAFT_REUSE_ENABLED). A new
+     * card for the same form and employee opens the draft this chat already
+     * made, unless the manager asked for another document since. Before the
+     * incident checks below, which one earlier "another" switches off for the
+     * rest of the chat. See `conversation-draft.ts`.
+     */
+    const draftChat =
+      body.source === "assistant" && conversationDraftReuseEnabled()
+        ? conversationKeyOf({ conversationId: body.conversationId, conversation: body.conversation })
+        : null;
+    const chatTurns = draftChat ? parseHistory(body.conversation) : [];
+    if (draftChat) {
+      // A guard that cannot read is no guard: the create goes ahead as before.
+      const same = await findConversationDraft({
+        createdBy: actor.id,
+        templateKey: body.templateKey,
+        employeeName: body.employeeName.trim().slice(0, 120),
+        conversationKey: draftChat,
+        turns: chatTurns,
+      }).catch(() => null);
+      if (same) return NextResponse.json({ instance: same, reused: true });
+    }
+
+    /*
      * SAME INCIDENT, NOT THE SAME PERSON. The card-id match above is unchanged.
      * This runs only when DRAFT_DEDUPE_ENABLED is on, and a different date or
      * a different account of what happened still creates a new draft.
@@ -343,6 +376,9 @@ export async function POST(request: Request) {
     });
     /* A concurrent press of the same card: its row, as it already is. See `cardInstanceId`. */
     if (instance.reused) return NextResponse.json({ instance, reused: true });
+    if (draftChat) {
+      await noteConversationDraft(String(instance.id), draftChat, lastManagerTurnId(chatTurns)).catch(() => undefined);
+    }
 
     if (incidentKey) {
       await rememberDraftIncident({
