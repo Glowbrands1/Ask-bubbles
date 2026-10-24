@@ -63,18 +63,66 @@ describe("CA policy retrieval", () => {
     expect(caPolicyMatchCount(TOP, true)).toBe(TOP * 3);
   });
 
-  it("maps the other plain-language cues onto their JBA sections", () => {
+  /**
+   * Plain-language regression set. research/reports/full-validation-2026-10-24.md
+   * was not in this checkout, so these 17 are the stakeholder validation cues,
+   * the Sunny rewrite questions with salon wording adapted to a store, and
+   * the two phrases Git named ("store opened late", "policy acknowledgements").
+   */
+  it.each([
+    ["I need a CA for someone opening the store late", "Late Opening"],
+    ["CA for late opening is a verbal warning", "Late Opening"],
+    ["write a CA for slippers and the wrong uniform", "Dress Code for The Company"],
+    ["employee was tardy, showed up late for shift again", "Attendance"],
+    ["CA for insubordination, she did not acknowledge policies at onboarding", "Standards of Conduct"],
+    ["store opened late", "Late Opening"],
+    ["policy acknowledgements", "Standards of Conduct"],
+    ["the store opened late today", "Late Opening"],
+    ["tardy twice this week", "Attendance"],
+    ["She wore slippers on shift today.", "Dress Code for The Company"],
+    ["wrong shoes on the sales floor", "Dress Code for The Company"],
+    ["she came in wearing the wrong uniform", "Dress Code for The Company"],
+    ["she has been tardy three times this month", "Attendance"],
+    ["she missed her policy acknowledgements at onboarding", "Standards of Conduct"],
+    ["she refused to follow a manager's direction", "Standards of Conduct"],
+    ["insubordination during the shift", "Standards of Conduct"],
+    ["create verbal ca for pat rivera for opening store late on 10-1-26", "Late Opening"],
+  ])("ranks %j to %s", (question, section) => {
     const rows = fixture();
-    expect(rerankCaPolicyChunks(rows, "write a CA for slippers and the wrong uniform", TOP)[0]?.section).toBe(
-      "Dress Code for The Company",
-    );
-    expect(rerankCaPolicyChunks(rows, "employee was tardy, showed up late for shift again", TOP)[0]?.section).toBe(
-      "Attendance",
-    );
-    expect(rerankCaPolicyChunks(rows, "I need a CA for someone opening the store late", TOP)[0]?.section).toBe(
-      "Late Opening",
-    );
-    expect(rerankCaPolicyChunks(rows, "the store opened late", TOP)[0]?.section).toBe("Late Opening");
+    expect(caPolicyTargetSection(question)).toBe(section);
+    const ranked = rerankCaPolicyChunks(rows, question, TOP);
+    expect(ranked[0]?.section).toBe(section);
+    expect(titles(ranked)).toContain(section);
+  });
+
+  it("shows Dress Code and Standards of Conduct ranks before and after the boost", () => {
+    const before = fixture();
+    const rank = (rows: readonly CaPolicyChunk[], section: string) =>
+      rows.findIndex((row) => row.section === section) + 1;
+
+    expect(rank(before, "Standards of Conduct")).toBe(15);
+    expect(rank(before, "Dress Code for The Company")).toBe(17);
+    expect(rank(before.slice(0, TOP), "Standards of Conduct")).toBe(0);
+    expect(rank(before.slice(0, TOP), "Dress Code for The Company")).toBe(0);
+
+    const dress = "write a CA for slippers and the wrong uniform";
+    const afterDress = rerankCaPolicyChunks(before, dress, before.length);
+    expect(rank(afterDress, "Dress Code for The Company")).toBe(1);
+    expect(rank(afterDress, "Standards of Conduct")).toBe(2);
+    expect(rerankCaPolicyChunks(before, dress, TOP)[0]?.section).toBe("Dress Code for The Company");
+
+    const conduct = "CA for insubordination, she did not acknowledge policies at onboarding";
+    const afterConduct = rerankCaPolicyChunks(before, conduct, before.length);
+    expect(rank(afterConduct, "Standards of Conduct")).toBe(1);
+    expect(rank(afterConduct, "Dress Code for The Company")).toBe(3);
+    expect(titles(rerankCaPolicyChunks(before, conduct, TOP))).toContain("Standards of Conduct");
+
+    const acknowledgements = rerankCaPolicyChunks(before, "policy acknowledgements", before.length);
+    expect(rank(acknowledgements, "Standards of Conduct")).toBe(1);
+
+    const late = rerankCaPolicyChunks(before, "store opened late", before.length);
+    expect(rank(late, "Late Opening")).toBe(1);
+    expect(rank(before, "Late Opening")).toBe(18);
   });
 
   it("does not let a cell-phone CA promote Standards of Conduct over that section", () => {

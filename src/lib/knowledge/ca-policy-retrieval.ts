@@ -21,7 +21,19 @@ const CA_QUESTION = /\b(?:ca|caf|corrective actions?|write[- ]?ups?)\b/i;
  */
 export const CA_POLICY_SYNONYMS: readonly { readonly cues: readonly string[]; readonly section: string }[] = [
   {
-    cues: ["insubordination", "acknowledgment", "acknowledgement", "acknowledge", "acknowledged", "refusal", "refused"],
+    cues: [
+      "policy acknowledgements",
+      "policy acknowledgments",
+      "insubordination",
+      "acknowledgment",
+      "acknowledgement",
+      "acknowledgements",
+      "acknowledgments",
+      "acknowledge",
+      "acknowledged",
+      "refusal",
+      "refused",
+    ],
     section: "Standards of Conduct",
   },
   {
@@ -29,7 +41,14 @@ export const CA_POLICY_SYNONYMS: readonly { readonly cues: readonly string[]; re
     section: "Dress Code for The Company",
   },
   {
-    cues: ["opened late", "opening the store late", "late opening", "opening late"],
+    cues: [
+      "store opened late",
+      "opened late",
+      "opening the store late",
+      "late opening",
+      "opening late",
+      "opening store late",
+    ],
     section: "Late Opening",
   },
   {

@@ -197,9 +197,21 @@ called. `SELF_CHECK_ENABLED` unset. New flags default off.
 | "CA for insubordination, she did not acknowledge policies at onboarding" | Standards of Conduct outside the top 14 | Standards of Conduct is first of the top 14 |
 | slippers / wrong uniform | Dress Code stays outside the top 14 | Dress Code for The Company leads |
 | "employee was tardy, showed up late for shift again" | Attendance outside the top 14 | Attendance leads |
-| "opening the store late" / "opened late" | Late Opening outside the top 14 | Late Opening leads |
-| previous coachings | draft stays, labelled "draft — not finalized" | draft omitted; a finalized row stays |
-| "any draft coachings for wren halvorsen" | drafts listed | drafts still listed |
+| "opening the store late" / "store opened late" | Late Opening outside the top 14 (rank 18) | Late Opening leads (rank 1) |
+| "policy acknowledgements" | Standards of Conduct outside the top 14 (rank 15) | Standards of Conduct leads (rank 1) |
+| previous coachings | draft stays in the list, labelled "draft — not finalized" | finalized row stays on file; draft is a separate "Not on file" section and is not previous coaching |
+| "any draft coachings for wren halvorsen" | drafts listed in the on-file list | drafts listed under "Not on file", never as previous coaching |
+
+Fixture order before the boost: ranks 1–14 Performance Framework, 15 Standards of Conduct, 16 Attendance, 17 Dress Code for The Company, 18 Late Opening. After the full-list reorder:
+
+| Prompt | Standards of Conduct | Dress Code for The Company |
+| --- | --- | --- |
+| before any prompt | 15 (outside the top 14) | 17 (outside the top 14) |
+| "write a CA for slippers and the wrong uniform" | 2 | 1 |
+| "CA for insubordination, she did not acknowledge policies at onboarding" | 1 | 3 |
+| "policy acknowledgements" | 1 | 3 |
+
+Seventeen plain-language prompts are in `src/lib/knowledge/ca-policy-retrieval.test.ts`. `research/reports/full-validation-2026-10-24.md` was not in this checkout, so the set is the stakeholder cues, the Sunny rewrite questions with salon wording adapted to a store, and the phrases "store opened late" and "policy acknowledgements". The synonym map covers both phrases. Hybrid search is scored only in `src/lib/knowledge/ca-policy-hybrid.local.test.ts` on an in-memory candidate list. That test does not call the database or an embedder. The same before/after ranks hold there once the flag widens the pool.
 | district_manager, global, no store | "won't name one", card ready | asked once, card stays ready, not needs_location |
 | admin / owner, global | "won't name one" | still not asked |
 | district_manager names Kearney | store loc-66 | no ask |
