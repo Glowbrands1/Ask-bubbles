@@ -22,7 +22,16 @@ const LABEL_WORDS = new Set([
   "promo",
   "promotion",
   "bogo",
+  "title",
+  "date",
 ]);
+
+/**
+ * A form field's own label, not a person. "Job Title" is the label. The words
+ * after it belong on the Job Title slot, so they are not kept as a name either.
+ */
+const FIELD_LABEL =
+  /^(?:job title|employee name|full name|title|position|location|store|date|job)$/i;
 
 function placeWords(): Set<string> {
   const words = new Set<string>();
@@ -39,6 +48,9 @@ function placeWords(): Set<string> {
  * A surname such as "Employee" stays. An empty result means there was no name.
  */
 export function stripNonNameTokens(name: string): string | null {
+  const folded = name.trim().replace(/\s+/g, " ");
+  if (FIELD_LABEL.test(folded)) return null;
+  if (/^(?:job title|employee name|full name)\b/i.test(folded)) return null;
   const places = placeWords();
   const kept = name
     .trim()

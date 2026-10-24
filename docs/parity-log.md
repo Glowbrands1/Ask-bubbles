@@ -378,3 +378,16 @@ Ask Sunny is not updated in this round. Its salon choice lives in
 The shared name and date readers (`proposal.ts` `settle`, `form-date-answer.ts`)
 still have the old behaviour there. Port those readers in Sunny's next
 replay round. No Buff City store, title, or person was copied.
+
+## 24 Oct 2026: a job title label is not the employee
+
+`ANTI_LOOP_ENABLED`. Sunny's priority replay s8 and s17 forbid an employee
+named "job title" and put the stated title on the role. Those turns are
+here as Morgan Blake (exit, Team Member, Lee's Summit) and Riley Quinn
+(performance CA, Team Member). The words after the label "job title" go
+on the Job Title slot. "Job Title", "title", "position", "location",
+"store", and "date" are not employee-name candidates.
+
+Ask Sunny is not updated. Its s8 and s17 use a tanning title and salon
+names, which stay there. The label strip is in this app's name step
+(`settle` and `stripNonNameTokens`). No salon title was copied here.

@@ -60,6 +60,13 @@ describe("anti-loop name, store, date, and harness", () => {
     expect(stripNonNameTokens("Sadie Hoffart")).toBe("Sadie Hoffart");
     expect(stripNonNameTokens("Testy Testerson Dodge promo")).toBe("Testy Testerson");
     expect(stripNonNameTokens("location payroll policy")).toBeNull();
+    expect(stripNonNameTokens("Job Title")).toBeNull();
+    expect(stripNonNameTokens("Job Title Team Member")).toBeNull();
+    expect(stripNonNameTokens("Title")).toBeNull();
+    expect(stripNonNameTokens("Date")).toBeNull();
+    expect(stripNonNameTokens("Store")).toBeNull();
+    expect(stripNonNameTokens("Position")).toBeNull();
+    expect(stripNonNameTokens("Location")).toBeNull();
   });
 
   it("ignores a model employee only when the flag is on", () => {
