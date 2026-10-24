@@ -243,3 +243,39 @@ embedder. Preview writes no manifest and no document.
 | same section text in the 2024 and May 2025 manuals | both rows returned | May 2025 row kept |
 | two May 2025 copies, same section, same score | both kept by the sync | retrieval keeps the lower document id |
 | preview | writes nothing | writes nothing |
+
+## Round 1 scope — old against new — 24 Oct 2026
+
+Local harness only. In-memory recorder for `chat_form_state` and
+`chat_traces`. No production query, no migration applied, model not called.
+`SELF_CHECK_ENABLED` unset. Each other flag below is off in OLD and on in
+NEW. The policy matcher is not behind a flag, so both columns agree. The
+Colene location mapping file is removed. Grand Forks, Fargo, Raymore, and
+Empire, SD are not mapped. No location row is written.
+
+Three runs of `src/lib/ai/round1-scoreboard.test.ts`. Each run measures
+this table three times. All three runs, and all three measurements inside
+each run, matched.
+
+| Case | OLD | NEW |
+| --- | --- | --- |
+| Name: Christiana Headley, job title tanning consultant | christiana headley. Job title slot empty. | christiana headley. Job title Tanning Consultant. |
+| Jane Store | Jane | Jane Store |
+| Job title, as a candidate | Job title | not a name |
+| SoC, insubordination | outside the top 14 (rank 15) | Standards of Conduct first |
+| Dress Code, slippers | outside the top 14 (rank 17) | Dress Code for The Company first |
+| Attendance, tardy | outside the top 14 (rank 16) | Attendance first |
+| Late Opening, store opened late | outside the top 14 (rank 18) | Late Opening first |
+| Policy matcher, opening the store late | Late Opening | Late Opening |
+| Policy matcher, employee tardy | Attendance | Attendance |
+| chat_form_state | 0 writes | 1 upsert |
+| chat_traces | 0 writes | 1 insert |
+| Cross-chat draft, same employee, template, date | creates | reuses draft-other-chat |
+| Cross-chat, different date | creates | creates |
+| Previous coaching, finalized plus a draft | draft stays in the on-file list | Not on file. These drafts are not previous coaching: |
+| Store ask, global district manager | not asked | asked once |
+| Store ask, already asked | not asked | not asked again |
+| Store ask, admin | not asked | not asked |
+| Sync guard, 2024 manual beside May 2025 | flag off, pending ingest | pending none, older_edition |
+| Identical section text | both copies | newest edition only (ce6b00f1) |
+| Preview | returns before the edition hold | returns before the edition hold |

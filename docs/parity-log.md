@@ -478,8 +478,6 @@ The flag off keeps the labelled draft list and does not add that section.
 which store. The card stays ready. Admin, owner, and developer keep the
 existing copy. A named store is not asked again. Empire, SD is not a store.
 
-Colene's six ignored Woven locations (Corporate twice, Grand Forks, Raymore,
-Fargo, Maintenance) and Empire, SD are named in
-`supabase/migrations/20261024180000_colene_unmapped_woven_locations_review.sql`
-for Pau's review. The file writes nothing. Woven location ids are not in
-this repo and were not guessed. Raymore is not loc-219.
+Pau dropped the Colene location mapping prep. Grand Forks, Fargo, Raymore,
+and Empire, SD are probably test data. The review migration is not in this
+tree. No location row is written. No production data is written.
