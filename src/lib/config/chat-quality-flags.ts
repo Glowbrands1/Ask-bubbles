@@ -326,6 +326,18 @@ export function fullManualContextEnabled(): boolean {
 }
 
 /**
+ * A policy or document phrase is not a place. Off, the store reader is
+ * unchanged. On, a span that names a policy, manual, section or similar
+ * document ("in the workplace policy") is never read as a typed store, and
+ * a span-before-"store" match must sit inside one manager turn, so "cite
+ * animals in the workplace policy" followed by "store location is …" does
+ * not become "the workplace policy store".
+ */
+export function placeSpanGuardEnabled(): boolean {
+  return envFlag("PLACE_SPAN_GUARD_ENABLED");
+}
+
+/**
  * The intent read takes a payroll amount and the Yes/No only from the
  * manager's own turns. A figure the assistant quoted from policy ("reimburse
  * the company $25 via payroll deduction") is not an amount, and "verbal, no
@@ -373,5 +385,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PROMPT_CACHE_ENABLED",
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
+  "PLACE_SPAN_GUARD_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
 ] as const;
