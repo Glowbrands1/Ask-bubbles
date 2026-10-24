@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import fixture from "@/test/fixtures/jba-manual-brand-chunks.json";
+import storedChunks from "@/test/fixtures/jba-manual-chunks-44-62.json";
+import productionRows from "@/test/fixtures/jba-manual-chunks-50-53-62.json";
 import { CHAT_QUALITY_FLAG_NAMES, fullManualContextEnabled } from "@/lib/config/chat-quality-flags";
 
 import { claudeSystemPayload } from "./call-claude";
@@ -595,5 +597,343 @@ describe("production chats cite printed pages", () => {
     const missed = citePolicyAnswer("The weather is nice today.", plan);
     expect(missed.ok).toBe(false);
     expect(missed.sources).toEqual([]);
+  });
+});
+
+/**
+ * Live replay of the merged full-manual path (f8759f6).
+ *
+ * The chunks below store printedPage and do not contain a footer. Their
+ * section pages are the PDF sheet, one higher than the printed page. Hair is
+ * stored as 15, Jewelry and Crunch shirts and pants as 16, Cell Phone as 19.
+ */
+function storedManual(extra: FullManualDocument["chunks"][number][] = []): FullManualDocument {
+  return {
+    id: "81622d77-ee6c-55f6-904d-dee057907a13",
+    title: "2025 JBA Policy Manual - Edited 5-2025",
+    category: "policies_compliance",
+    status: "indexed",
+    indexed: true,
+    chunks: [
+      ...storedChunks.chunks.map((chunk) => ({
+        chunkIndex: chunk.i,
+        content: chunk.c,
+        locator: `Page ${chunk.page} — ${chunk.h[0] ?? "Pants"}`,
+        page: chunk.page,
+        printedPage: chunk.printedPage,
+        section: chunk.h[0] ?? null,
+        headings: chunk.h,
+        sections: chunk.sections,
+      })),
+      ...extra,
+    ],
+  };
+}
+
+function decoy(index: number, printed: number, heading: string, body: string) {
+  return {
+    chunkIndex: index,
+    content: `${heading}\n${body}`,
+    locator: `Page ${printed + 1} — ${heading}`,
+    page: printed + 1,
+    printedPage: printed,
+    section: heading,
+    headings: [heading],
+    sections: [{ heading, page: printed + 1 }],
+  };
+}
+
+describe("stored printed pages, no footer", () => {
+  it("keeps printedPage as stored on chunks 44-49 and 61", () => {
+    const pages = new Map(storedChunks.chunks.map((chunk) => [chunk.i, chunk.printedPage]));
+    expect(pages.get(44)).toBe(15);
+    expect(pages.get(45)).toBe(15);
+    expect(pages.get(46)).toBe(16);
+    expect(pages.get(47)).toBe(16);
+    expect(pages.get(61)).toBe(19);
+    for (const chunk of storedChunks.chunks) {
+      expect(chunk.printedPage).toBe(chunk.page - 1);
+      expect(chunk.c).not.toMatch(/\d+\s*\|\s*p\s*a\s*g\s*e/i);
+      expect(chunk.sections.every((section) => section.page === chunk.page)).toBe(true);
+    }
+  });
+
+  it("cites Hair on p.15 and Jewelry and Crunch shirts on p.16 when section pages are the PDF sheet", () => {
+    const plan = planFullManualContext({ question: DRESS_CODE_QUESTION, documents: [storedManual()] });
+    const text = plan.cachedBlock ?? "";
+    const slice = (start: string, end: string) => {
+      const from = text.indexOf(start);
+      const to = text.indexOf(end, from + start.length);
+      return text.slice(from, to < 0 ? text.length : to);
+    };
+    const company = slice("[p.15]", "[p.16]");
+    const page16 = slice("[p.16]", "[p.17]");
+    expect(company).toContain("Hair");
+    expect(company).toContain("All Locations Dress Code:");
+    expect(company).not.toContain("Jewelry/Accessories");
+    expect(page16).toContain("Jewelry/Accessories");
+    expect(page16).toContain("Crunch Fitness Specific Dress Code:");
+    expect(page16).toContain("Two uniform shirts");
+    expect(page16).toContain("approved for Instructors ONLY");
+    expect(page16).toContain(BCS_SHIRTS);
+    expect(text).not.toContain("[p.18]");
+
+    const replay = [
+      "Hair of all lengths and colors is acceptable when it is clean, groomed, and kept out of the employee's face and eyes. [p.16]",
+      "Jewelry that does not interfere with work is acceptable. [p.17]",
+      "Crunch provides two uniform shirts, and yoga pants, joggers, or sweats are approved for instructors only. [p.17]",
+    ].join(" ");
+    const cited = citePolicyAnswer(replay, plan);
+    expect(cited.ok).toBe(true);
+    const hair = cited.text.split(/(?<=[.!?])\s+/).find((sentence) => /^Hair of all lengths/i.test(sentence));
+    const jewelry = cited.text.split(/(?<=[.!?])\s+/).find((sentence) => /^Jewelry that does not/i.test(sentence));
+    const crunch = cited.text.split(/(?<=[.!?])\s+/).find((sentence) => /instructors only/i.test(sentence));
+    expect(hair).toMatch(/\[p\.15\]/);
+    expect(hair).not.toMatch(/\[p\.16\]/);
+    expect(jewelry).toMatch(/\[p\.16\]/);
+    expect(jewelry).not.toMatch(/\[p\.17\]/);
+    expect(crunch).toMatch(/\[p\.16\]/);
+    expect(crunch).not.toMatch(/\[p\.17\]/);
+    expect(cited.sources.some((source) => source.printedPage === 15 && /Hair/.test(source.locator))).toBe(true);
+    expect(cited.sources.some((source) => source.printedPage === 16 && /Jewelry/.test(source.locator))).toBe(true);
+    for (const source of cited.sources) {
+      const body = `${source.locator}\n${source.excerpt}`;
+      if (/Instructors ONLY|Two uniform shirts/i.test(body)) expect(source.printedPage).toBe(16);
+    }
+    const marked = new Set(citedPages(cited.text));
+    for (const page of marked) {
+      expect(cited.sources.some((source) => source.printedPage === page)).toBe(true);
+    }
+  });
+
+  it("uses the stored printed page when that page equals the PDF sheet and the section page is one higher", () => {
+    const plan = planFullManualContext({
+      question: DRESS_CODE_QUESTION,
+      documents: [
+        manual({
+          chunks: [
+            {
+              chunkIndex: 44,
+              page: 15,
+              printedPage: 15,
+              locator: "Page 15 — Hair",
+              content:
+                "Hair\no Hair of all lengths and colors are acceptable as long as it is clean, groomed, and kept out of the employee’s face and eyes.",
+              headings: ["Hair"],
+              sections: [{ heading: "Hair", page: 16 }],
+            },
+          ],
+        }),
+      ],
+    });
+    const text = plan.cachedBlock ?? "";
+    expect(text).toContain("[p.15]");
+    expect(text).not.toContain("[p.16]");
+    expect(text.indexOf("[p.15]")).toBeLessThan(text.indexOf("Hair"));
+  });
+
+  it("conv_mvmkj5v72w5x3l5 marks the cell-phone sentence, and drops POS passwords and pages that do not match", () => {
+    const stray = [9, 10, 12, 14, 18, 20, 26, 29, 31, 48];
+    const documents = [
+      storedManual([
+        decoy(62, 20, "POS Passwords", "A register password is issued to one person and is never written on a note."),
+        decoy(901, 9, "Parking", "Team members park away from the front row so customers can use those spaces."),
+        decoy(902, 10, "Opening Cash", "The opening manager counts the drawer before unlocking the front door."),
+        decoy(903, 12, "Rest Breaks", "A rest break is scheduled away from the sales floor."),
+        decoy(904, 14, "Attendance", "Missing a scheduled shift without calling the manager is an attendance occurrence."),
+        decoy(905, 18, "Visitors", "A guest waits in the lobby until a supervisor approves the visit."),
+        decoy(906, 26, "Building Keys", "Building keys are signed out at the start of a shift and returned at the end."),
+        decoy(907, 29, "Personal Visitors", "Personal visitors need supervisor approval before they enter the back room."),
+        decoy(908, 31, "Security Cameras", "Security cameras stay on after closing and the recording is reviewed by the district."),
+        decoy(909, 48, "Maternity Leave", "Leave for a birth is requested on the leave form and sent to the district manager."),
+      ]),
+    ];
+    const plan = planFullManualContext({ question: CELL_PHONE_QUESTION, documents });
+    const prompt = plan.cachedBlock ?? "";
+    const cellAt = prompt.indexOf("Cell Phone/Smart Watch Policy");
+    const posAt = prompt.indexOf("POS Passwords");
+    expect(cellAt).toBeGreaterThan(prompt.lastIndexOf("[p.19]", cellAt));
+    expect(prompt.slice(prompt.lastIndexOf("[p.19]", cellAt), cellAt)).not.toContain("[p.20]");
+    expect(posAt).toBeGreaterThan(prompt.lastIndexOf("[p.20]", posAt));
+
+    const bullets = [
+      "Personal Employee cell phones are permitted in the workplace but must be kept out of sight.",
+      "It is the Employee's personal responsibility to protect the customer's experience.",
+      "Doing things such as texting, making phone calls or using social media jeopardizes the customer's experience.",
+    ];
+    const answer = [
+      ...bullets.map((bullet) => `${bullet} [p.20]`),
+      `Keep the phone in a locker during the shift. [p.20] ${stray.map((page) => `[p.${page}]`).join(" ")}`,
+    ].join("\n");
+    const cited = citePolicyAnswer(answer, plan);
+    expect(cited.ok).toBe(true);
+    for (const bullet of bullets) {
+      const sentence = cited.text.split(/(?<=[.!?])\s+/).find((part) => part.includes(bullet.slice(0, 40)));
+      expect(sentence).toMatch(/\[p\.19\]/);
+      expect(sentence).not.toMatch(/\[p\.20\]/);
+    }
+    const locker = cited.text.split(/(?<=[.!?])\s+/).find((part) => /locker/i.test(part));
+    expect(locker).toBeTruthy();
+    expect(locker).not.toMatch(/\[p\./);
+    expect(new Set(citedPages(cited.text))).toEqual(new Set([19]));
+    expect(cited.sources.every((source) => source.printedPage === 19)).toBe(true);
+    expect(cited.sources.every((source) => source.locator.startsWith("Page 19 — Cell Phone"))).toBe(true);
+    expect(cited.sources.map((source) => `${source.locator} ${source.excerpt}`).join("\n")).not.toMatch(/POS Passwords/);
+    for (const page of stray) {
+      expect(cited.sources.some((source) => source.printedPage === page)).toBe(false);
+    }
+    for (const page of citedPages(cited.text)) {
+      expect(cited.sources.some((source) => source.printedPage === page)).toBe(true);
+    }
+  });
+});
+
+/**
+ * Production rows for chunks 50-53 and 62. `printedPage` and `sections` are
+ * the metadata as stored. Chunk 50's section pages are all 17, and chunk 62
+ * is stored as 19 with the password heading recorded on 20.
+ */
+function productionChunk(index: number) {
+  const row = productionRows.chunks.find((chunk) => chunk.chunk_index === index);
+  if (!row) throw new Error(`missing production chunk ${index}`);
+  const sections = row.metadata.sections;
+  return {
+    chunkIndex: row.chunk_index,
+    content: row.content,
+    printedPage: row.metadata.printedPage,
+    section: sections[0]?.heading ?? null,
+    headings: sections.map((section) => section.heading),
+    sections,
+  };
+}
+
+function storedChunk(index: number) {
+  const chunk = storedChunks.chunks.find((item) => item.i === index);
+  if (!chunk) throw new Error(`missing stored chunk ${index}`);
+  return {
+    chunkIndex: chunk.i,
+    content: chunk.c,
+    locator: `Page ${chunk.page} — ${chunk.h[0] ?? "Pants"}`,
+    page: chunk.page,
+    printedPage: chunk.printedPage,
+    section: chunk.h[0] ?? null,
+    headings: chunk.h,
+    sections: chunk.sections,
+  };
+}
+
+function manualFrom(chunks: FullManualDocument["chunks"]): FullManualDocument {
+  return {
+    id: productionRows.document_id,
+    title: "2025 JBA Policy Manual - Edited 5-2025",
+    category: "policies_compliance",
+    status: "indexed",
+    indexed: true,
+    chunks,
+  };
+}
+
+function markerBefore(text: string, snippet: string): string {
+  const at = text.indexOf(snippet);
+  expect(at).toBeGreaterThan(-1);
+  const markers = [...text.slice(0, at).matchAll(/\[p\.(\d{1,3})\]/g)];
+  return markers[markers.length - 1]?.[1] ?? "";
+}
+
+describe("production chunks 50 and 62", () => {
+  it("keeps the stored metadata for chunks 50-53 and 62", () => {
+    expect(productionRows.chunks.map((chunk) => chunk.chunk_index)).toEqual([50, 51, 52, 53, 62]);
+    expect(productionRows.chunks.find((chunk) => chunk.chunk_index === 50)?.metadata.printedPage).toBe(17);
+    expect(productionRows.chunks.find((chunk) => chunk.chunk_index === 62)?.metadata.printedPage).toBe(19);
+    expect(productionRows.chunks.find((chunk) => chunk.chunk_index === 62)?.metadata.sections).toEqual([
+      { page: 19, heading: "Company Email Account" },
+      { page: 20, heading: "Point of Sale and Alarm Passwords" },
+    ]);
+  });
+
+  it("chunk 50's Buff City Soap shirt and pants stay on p.16, and Sun Tan City starts p.17", () => {
+    const plan = planFullManualContext({
+      question: DRESS_CODE_QUESTION,
+      documents: [manualFrom([storedChunk(47), productionChunk(50)])],
+    });
+    const text = plan.cachedBlock ?? "";
+    const page16 = text.slice(text.indexOf("[p.16]"), text.indexOf("[p.17]"));
+    const page17 = text.slice(text.indexOf("[p.17]"));
+    expect(page16).toContain("No patches, rips, or holes are to be noticeable on the shirt.");
+    expect(page16).toContain("Full length black or blue jean-colored pants are acceptable.");
+    expect(page16).toContain("Yoga pants, joggers or sweats are never to be worn while at work.");
+    expect(page16).not.toContain("Sun Tan City:");
+    expect(page17).toContain("Sun Tan City:");
+    expect(page17).toContain("Any STC Employee can wear any Branded top or black collared or black t-shirt.");
+    expect(page17).not.toContain("blue jean-colored pants are acceptable.");
+    expect(markerBefore(text, "Full length black or blue jean-colored pants are acceptable.")).toBe("16");
+    expect(markerBefore(text, "Sun Tan City:")).toBe("17");
+
+    const bcs = citePolicyAnswer(
+      [
+        "Full length black or blue jean-colored pants are acceptable.",
+        "Yoga pants, joggers or sweats are never to be worn while at work.",
+      ].join(" "),
+      plan,
+    );
+    for (const sentence of bcs.text.split(/(?<=[.!?])\s+/)) {
+      if (!/blue jean-colored|never to be worn/i.test(sentence)) continue;
+      expect(sentence).toMatch(/\[p\.16\]/);
+      expect(sentence).not.toMatch(/\[p\.17\]/);
+    }
+    expect(bcs.sources.every((source) => source.printedPage === 16)).toBe(true);
+
+    const stc = citePolicyAnswer(
+      "Any STC Employee can wear any Branded top or black collared or black t-shirt.",
+      plan,
+    );
+    expect(stc.text).toMatch(/\[p\.17\]/);
+    expect(stc.text).not.toMatch(/\[p\.16\]/);
+    expect(stc.sources.every((source) => source.printedPage === 17)).toBe(true);
+  });
+
+  it("chunk 62 is p.20 email and password text, and a cell phone answer takes no marker from it", () => {
+    const plan = planFullManualContext({
+      question: CELL_PHONE_QUESTION,
+      documents: [manualFrom([storedChunk(61), productionChunk(62)])],
+    });
+    const text = plan.cachedBlock ?? "";
+    const page19 = text.slice(text.indexOf("[p.19]"), text.indexOf("[p.20]"));
+    const page20 = text.slice(text.indexOf("[p.20]"));
+    expect(page19).toContain("Cell Phone/Smart Watch Policy");
+    expect(page19).toContain("Personal Employee cell phones are permitted");
+    expect(page19).not.toContain("Company Email Account");
+    expect(page19).not.toContain("Point of Sale and Alarm Passwords");
+    expect(page20).toContain("Company Email Account");
+    expect(page20).toContain("Point of Sale and Alarm Passwords");
+    expect(page20).toContain("Do NOT share");
+    expect(markerBefore(text, "Company Email Account")).toBe("20");
+    expect(markerBefore(text, "Point of Sale and Alarm Passwords")).toBe("20");
+
+    const bullets = [
+      "Personal Employee cell phones are permitted in the workplace but must be kept out of sight.",
+      "It is the Employee's personal responsibility to protect the customer's experience.",
+      "Doing things such as texting, making phone calls or using social media jeopardizes the customer's experience.",
+    ];
+    const cited = citePolicyAnswer(bullets.map((bullet) => `${bullet} [p.19]`).join("\n"), plan);
+    expect(cited.ok).toBe(true);
+    expect(new Set(citedPages(cited.text))).toEqual(new Set([19]));
+    for (const bullet of bullets) {
+      const sentence = cited.text.split(/(?<=[.!?])\s+/).find((part) => part.includes(bullet.slice(0, 40)));
+      expect(sentence).toMatch(/\[p\.19\]/);
+      expect(sentence).not.toMatch(/\[p\.20\]/);
+    }
+    const body = cited.sources.map((source) => `${source.locator}\n${source.excerpt}`).join("\n");
+    expect(body).not.toMatch(/Company Email|Alarm Password|alarm codes|Point of Sale/i);
+    expect(cited.sources.every((source) => source.printedPage === 19)).toBe(true);
+    expect(cited.sources.every((source) => source.locator.startsWith("Page 19 — Cell Phone"))).toBe(true);
+
+    const passwords = citePolicyAnswer(
+      "Employees must always use their own personal passwords and alarm codes. Do NOT share alarm codes or passwords.",
+      plan,
+    );
+    expect(new Set(citedPages(passwords.text))).toEqual(new Set([20]));
+    expect(passwords.sources.every((source) => source.printedPage === 20)).toBe(true);
+    expect(passwords.sources.map((source) => source.locator).join("\n")).toMatch(/Point of Sale and Alarm Passwords/);
   });
 });

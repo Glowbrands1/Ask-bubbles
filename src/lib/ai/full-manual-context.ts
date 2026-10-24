@@ -202,23 +202,41 @@ function recordedSectionPages(chunk: FullManualChunk): number[] {
 /**
  * The page number printed on the sheet.
  *
- * The footer ("15 | P a g e") wins, unless that footer repeats the PDF sheet
- * index and the headings on the chunk all record a different page. Company
- * dress code and Hair are printed 15; the sheet index 16 is not a citation.
- * A locator that repeats `chunk.page` is the PDF sheet and is not used.
+ * A chunk whose text has no footer is cited on `printedPage` as stored.
+ * Hair is 15, Jewelry and Crunch shirts are 16, and the cell-phone policy
+ * is 19. A heading recorded on the PDF sheet does not move that text.
+ *
+ * A section page later than the stored number, and not equal to the PDF
+ * sheet, is the sheet this chunk's text is printed on. Chunk 62 is stored
+ * as 19 and its password heading is recorded on 20, so the email and
+ * password text is page 20.
+ *
+ * The footer ("15 | P a g e") wins when the chunk still has one, unless
+ * that footer repeats the PDF sheet and the headings all record a different
+ * page. A locator that repeats `chunk.page` is the PDF sheet and is not used.
  */
 export function resolvePrintedPage(chunk: FullManualChunk): number | null {
   const footer = footerPrintedPage(chunk.content);
   const stored = positivePage(chunk.printedPage);
   const pdf = positivePage(chunk.page);
   const recorded = recordedSectionPages(chunk);
+  if (!footer && stored) {
+    /*
+     * Chunk 62 records Company Email on the stored page and the password
+     * heading on the next printed page. That later page is the sheet the
+     * chunk's text is printed on. A heading recorded only on stored+1, with
+     * no heading left on the stored page, is the PDF sheet (Hair's section
+     * page 16 while the chunk is stored as 15) and is not used.
+     */
+    const later = recorded.filter((page) => page > stored && page !== pdf);
+    if (recorded.includes(stored) && later.length > 0) return Math.max(...later);
+    return stored;
+  }
   const footerIsPdf = footer !== null && pdf !== null && footer === pdf;
-  const storedIsPdf = footer === null && stored !== null && pdf !== null && stored === pdf;
-  if (recorded.length === 1 && recorded[0] !== (footer ?? stored) && (footerIsPdf || storedIsPdf)) {
+  if (footer && recorded.length === 1 && recorded[0] !== footer && footerIsPdf) {
     return recorded[0]!;
   }
   if (footer) return footer;
-  if (stored) return stored;
   const locator = chunk.locator?.match(/\bpage\s+(\d{1,3})\b/i);
   if (!locator) return null;
   const parsed = Number(locator[1]);
@@ -240,6 +258,19 @@ function recordedHeadingPage(chunk: FullManualChunk, heading: string): number | 
 function skipContentsPage(chunk: FullManualChunk, page: number | null): boolean {
   if (isTableOfContents(chunk.content)) return true;
   return page !== null && JBA_CONTENTS_PRINTED_PAGES.has(page);
+}
+
+const CONTINUATION_SUBHEADING = /^(?:shirts|pants|tanning)$/i;
+
+/** A bullet or a wrapped line, not a heading that opens the chunk's own page. */
+function opensAsContinuation(body: string, known: readonly string[]): boolean {
+  const first = body
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.length > 0);
+  if (!first) return false;
+  if (/^o\s/i.test(first)) return true;
+  return headingOf(first, known) === null;
 }
 
 function trimOverlap(previous: string, next: string): string {
@@ -398,12 +429,34 @@ export function rebuildManualText(
     if (skipContentsPage(chunk, page)) continue;
     const body = trimOverlap(previous, readings[position] ?? "");
     if (!body) continue;
-    if (page) moveTo(page);
+    const stored = positivePage(chunk.printedPage);
+    /*
+     * Chunk 50 is stored as page 17 and opens with Buff City Soap's shirt
+     * and pants lines, which are still page 16. Those lines stay on the
+     * previous page until a heading other than Shirts, Pants, or Tanning.
+     * The next brand heading is that point, and it is page 17.
+     */
+    const deferStoredPage =
+      page !== null &&
+      stored !== null &&
+      page === stored &&
+      currentPage !== null &&
+      stored > currentPage &&
+      footerPrintedPage(chunk.content) === null &&
+      opensAsContinuation(body, chunk.headings ?? []);
+    if (page && !deferStoredPage) moveTo(page);
+    let deferred = deferStoredPage;
     if (!page && !currentPage) {
       blocks.push(body);
       previous = body;
       continue;
     }
+    /*
+     * No footer and a stored printed page: the heading's section page is the
+     * PDF sheet on these chunks, one higher than the page the manual prints.
+     * Moving to it cited Hair on 16 and the cell-phone policy on 20.
+     */
+    const storedPageStays = footerPrintedPage(chunk.content) === null && positivePage(chunk.printedPage) !== null;
     for (const rawLine of body.split("\n")) {
       if (isPageFooter(rawLine)) {
         shown.push(rawLine);
@@ -414,8 +467,12 @@ export function rebuildManualText(
       for (const line of pieces) {
         const heading = headingOf(line, chunk.headings ?? []);
         if (!heading) continue;
+        if (deferred && stored !== null && !CONTINUATION_SUBHEADING.test(heading)) {
+          moveTo(stored);
+          deferred = false;
+        }
         const recorded = recordedHeadingPage(chunk, heading);
-        if (recorded) moveTo(recorded);
+        if (recorded && !storedPageStays) moveTo(recorded);
       }
       shown.push(rawLine);
       for (const line of pieces) {
@@ -778,14 +835,10 @@ function passageMatches(answer: string, passage: ManualPassage): boolean {
   /*
    * The heading string alone is not the section. Brand names and a repeated
    * title sit on many pages; the sentence has to restate that page's text.
+   * Shared words are not enough: a cell-phone bullet must not land on the
+   * POS passwords page because both mention an employee.
    */
-  if (sharesPhrase(answer, passage.text)) return true;
-  return overlapScore(answer, passage.text) >= 6;
-}
-
-function hasPrintedPage(answer: string, page: number): boolean {
-  if (new RegExp(`\\[p\\.${page}\\]`, "i").test(answer)) return true;
-  return new RegExp(`(?:^|[^\\w[])(?:page|p)\\.?\\s*${page}\\b`, "i").test(answer);
+  return sharesPhrase(answer, passage.text);
 }
 
 function sectionLocator(page: number, heading: string | null): string {
@@ -801,15 +854,28 @@ function excerptForHit(heading: string | null, passage: ManualPassage): string {
 
 function sentencesOf(answer: string): string[] {
   const parts = answer
-    .trim()
-    .split(/(?<=[.!?])\s+/)
-    .filter((part) => part.trim().length > 0);
+    .split(/\n+|(?<=[.!?])\s+/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
   return parts.length > 0 ? parts : [answer.trim()];
+}
+
+/** Model [p.N] markers are replaced by the pages whose text the sentence restates. */
+function stripPrintedMarkers(answer: string): string {
+  return answer
+    .replace(/\[p\.\d{1,3}\]/gi, "")
+    .replace(/[^\S\n]{2,}/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /**
  * A policy answer must cite printed pages that are in the loaded manual,
  * and each of those pages must be a Sources row for the section it names.
+ * A marker is written on the sentence that restates that page. A [p.N]
+ * the model wrote is dropped when no sentence matches that page, so a
+ * marker cannot sit without a Sources row.
  *
  * An [S#] that is not one of `shownMarkers` is removed, so [S9] cannot sit
  * beside a shorter source list. A page or heading that the manual does not
@@ -829,18 +895,22 @@ export function citePolicyAnswer(
   );
   if (!index) return { text: cleaned, sources: [], ok: false };
 
-  const sentences = sentencesOf(cleaned);
+  const prose = stripPrintedMarkers(cleaned);
+  const sentences = sentencesOf(prose);
   const matched: { passage: ManualPassage; sentence: number; heading: string | null; score: number }[] = [];
   const addHit = (passage: ManualPassage, sentence: number, heading: string | null) => {
-    const sentenceText = sentences[sentence] ?? cleaned;
+    const sentenceText = sentences[sentence] ?? prose;
     const score = sharedPhraseLength(sentenceText, passage.text) * 10 + overlapScore(sentenceText, passage.text);
-    const key = `${passage.documentId}:${passage.printedPage}:${normalizeHeading(heading ?? "")}`;
+    const key = `${sentence}:${passage.documentId}:${passage.printedPage}:${normalizeHeading(heading ?? "")}`;
     const existing = matched.findIndex(
-      (hit) => `${hit.passage.documentId}:${hit.passage.printedPage}:${normalizeHeading(hit.heading ?? "")}` === key,
+      (hit) =>
+        `${hit.sentence}:${hit.passage.documentId}:${hit.passage.printedPage}:${normalizeHeading(hit.heading ?? "")}` ===
+        key,
     );
     /*
      * The same heading is printed for more than one brand. Keep the passage
      * the sentence actually restates, not the first copy in the manual.
+     * A later sentence that restates the same section still gets its own marker.
      */
     if (existing >= 0) {
       if (score > matched[existing]!.score) matched[existing] = { passage, sentence, heading, score };
@@ -849,44 +919,26 @@ export function citePolicyAnswer(
     matched.push({ passage, sentence, heading, score });
   };
   plan.passages.forEach((passage) => {
-    let best = -1;
-    let bestScore = 0;
     sentences.forEach((sentence, sentenceIndex) => {
       if (!passageMatches(sentence, passage)) return;
-      const score =
-        sharedPhraseLength(sentence, passage.text) * 10 +
-        namedHeadings(passage, sentence).length * 8 +
-        overlapScore(sentence, passage.text);
-      if (score > bestScore) {
-        best = sentenceIndex;
-        bestScore = score;
+      const names = namedHeadings(passage, sentence);
+      if (names.length === 0) {
+        addHit(passage, sentenceIndex, passage.heading);
+        return;
       }
+      for (const heading of names) addHit(passage, sentenceIndex, heading);
     });
-    if (best < 0) return;
-    const names = namedHeadings(passage, cleaned);
-    if (names.length === 0) {
-      addHit(passage, best, passage.heading);
-      return;
-    }
-    for (const heading of names) addHit(passage, best, heading);
   });
-
-  for (const page of index.pages) {
-    if (!hasPrintedPage(cleaned, page)) continue;
-    if (matched.some((hit) => hit.passage.printedPage === page)) continue;
-    const onPage = plan.passages.filter((passage) => passage.printedPage === page);
-    const chosen = onPage.find((passage) => passage.heading) ?? onPage[0];
-    if (!chosen) continue;
-    addHit(chosen, 0, chosen.heading);
-  }
 
   /*
    * "yoga pants, joggers or sweats are" is also the never-worn rule on the
    * next sheet. The sentence that continues "approved for instructors only"
    * restates the longer phrase, so the shorter copy is not a second page.
+   * A hit with no shared phrase is not a page, even when the answer already
+   * printed that page number.
    */
   const phraseOf = (hit: { passage: ManualPassage; sentence: number }) =>
-    sharedPhraseLength(sentences[hit.sentence] ?? cleaned, hit.passage.text);
+    sharedPhraseLength(sentences[hit.sentence] ?? prose, hit.passage.text);
   const bestPhrase = new Map<number, number>();
   for (const hit of matched) {
     const phrase = phraseOf(hit);
@@ -894,16 +946,14 @@ export function citePolicyAnswer(
   }
   const focused = matched.filter((hit) => {
     const best = bestPhrase.get(hit.sentence) ?? 0;
-    const phrase = phraseOf(hit);
-    if (phrase === 0 || best < 4) return true;
-    return phrase === best;
+    if (best < 4) return false;
+    return phraseOf(hit) === best;
   });
   const meaningful = focused.filter((hit) => !(hit.passage.printedPage === 1 && !hit.heading));
-  if (meaningful.length === 0) return { text: cleaned, sources: [], ok: false };
+  if (meaningful.length === 0) return { text: prose, sources: [], ok: false };
 
   const bySentence = new Map<number, number[]>();
   for (const hit of meaningful) {
-    if (hasPrintedPage(cleaned, hit.passage.printedPage)) continue;
     const list = bySentence.get(hit.sentence) ?? [];
     if (!list.includes(hit.passage.printedPage)) list.push(hit.passage.printedPage);
     bySentence.set(hit.sentence, list);
@@ -918,7 +968,20 @@ export function citePolicyAnswer(
     })
     .join(" ");
 
-  const sources: FullManualSource[] = meaningful.map((hit, marker) => ({
+  const sourceHits: typeof meaningful = [];
+  for (const hit of meaningful) {
+    const key = `${hit.passage.documentId}:${hit.passage.printedPage}:${normalizeHeading(hit.heading ?? "")}`;
+    const existing = sourceHits.findIndex(
+      (item) =>
+        `${item.passage.documentId}:${item.passage.printedPage}:${normalizeHeading(item.heading ?? "")}` === key,
+    );
+    if (existing >= 0) {
+      if (hit.score > sourceHits[existing]!.score) sourceHits[existing] = hit;
+      continue;
+    }
+    sourceHits.push(hit);
+  }
+  const sources: FullManualSource[] = sourceHits.map((hit, marker) => ({
     marker: marker + 1,
     documentId: hit.passage.documentId,
     documentTitle: hit.passage.documentTitle,
