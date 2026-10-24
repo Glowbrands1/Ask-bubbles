@@ -1,8 +1,10 @@
+import { intentExtractionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { datesInText } from "@/lib/forms/form-date-answer";
 import { displayName, editDistance, matchEmployeeName, type RosterEmployee } from "@/lib/forms/employee-match";
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manual";
 import { namesHeading } from "@/lib/forms/named-policy-section";
+import { statedPayrollDeduct } from "@/lib/forms/payroll-deduct-answer";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -18,7 +20,9 @@ import type { GroundedPerson } from "./grounded-entities";
  *
  * The model copies what the manager said. This file decides what is real.
  * A heading that is not in the headings it was given is not an incident
- * type, and a person who is not on the roster is not the employee.
+ * type. A person who is not on the roster is not the employee, unless
+ * intent extraction and typed names are both on: then the spelling they
+ * typed is the employee, and a missing slot does not replace the card.
  */
 
 export const INTENT_TOOL_NAME = "record_intent_slots";
@@ -137,18 +141,32 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
   const saved = input.saved ?? EMPTY_CONVERSATION_FORM_STATE;
   const reading = parseReading(input.raw);
   const blob = conversationBlob(input);
+  // The assistant's own questions name "verbal", "written", stores, and
+  // dates. Counting those as the manager's answer is how a level, a payroll
+  // answer, and a second store or date question got invented.
+  const extracting = intentExtractionEnabled();
+  const spoken = extracting ? managerWords(input) : blob;
   const choice = readPriorChoice(input.history, input.question, input.people, input.stores);
-  const employee = choice?.person
+  const groundedEmployee = choice?.person
     ? { person: choice.person, name: displayName(choice.person), ambiguous: [] as readonly GroundedPerson[], typed: null }
-    : groundEmployee(reading?.employee ?? null, blob, input.people);
-  const store = groundStore(choice?.store ?? reading?.store ?? null, blob, input.stores, employee.person);
+    : groundEmployee(reading?.employee ?? null, extracting ? spoken : blob, input.people);
+  const typedNameKept =
+    extracting &&
+    typedNameEnabled() &&
+    Boolean(groundedEmployee.typed) &&
+    !groundedEmployee.person &&
+    !groundedEmployee.name &&
+    groundedEmployee.ambiguous.length === 0;
+  const employee = typedNameKept ? { ...groundedEmployee, name: groundedEmployee.typed } : groundedEmployee;
+  const store = groundStore(choice?.store ?? reading?.store ?? null, spoken, input.stores, employee.person);
   const title = groundTitle(reading?.title ?? null, blob, input.people, employee.person);
   const incidentType = groundIncident(reading?.incidentType ?? null, blob, input.headings);
-  const date = groundDate(choice?.date ?? reading?.incidentDate ?? null, blob, input.today);
-  const payrollAmount = groundPayroll(reading?.payrollAmount ?? null, blob);
-  const warningLevel = groundWarning(choice?.warning ?? reading?.warningLevel ?? null, blob);
+  const date = groundDate(choice?.date ?? reading?.incidentDate ?? null, spoken, input.today);
+  const payrollAmount = groundPayroll(reading?.payrollAmount ?? null, spoken);
+  const warningLevel = groundWarning(choice?.warning ?? reading?.warningLevel ?? null, spoken);
   const formType = groundForm(choice?.form ?? reading?.formType ?? null, blob, input.templates);
   const formTurn = Boolean(input.formInProgress || reading?.formTurn || formType.key || saved.templateKey);
+  const payrollDeduct = extracting ? statedPayrollDeduct(spoken) : payrollAmount ? "yes" : null;
 
   const state = mergeSlots(saved, {
     employee,
@@ -157,8 +175,10 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
     incidentType,
     date: date.iso,
     payrollAmount,
+    payrollDeduct,
     warningLevel: warningLevel.value,
     formType: formType.key,
+    typedNameKept,
   });
 
   const clarification = clarificationFor({
@@ -175,6 +195,8 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
     people: input.people,
     stores: input.stores,
     templates: input.templates,
+    storeAsked: assistantAsked(input.history, /\bwhich store\b/i),
+    dateAsked: assistantAsked(input.history, /\bwhich date\b|\bthe date it happened\b/i),
   });
 
   if (clarification) return { question: input.question, state, clarification };
@@ -203,6 +225,16 @@ function conversationBlob(input: IntentTurnInput): string {
   const prior = input.history.map((turn) => turn.content);
   const saved = input.saved ? stateSentences(input.saved).join(" ") : "";
   return [...prior, input.question, saved].filter((part) => part.trim() !== "").join("\n");
+}
+
+/** Manager turns only. An assistant question is not an answer. */
+function managerWords(input: IntentTurnInput): string {
+  const prior = input.history.filter((turn) => turn.role === "user").map((turn) => turn.content);
+  return [...prior, input.question].filter((part) => part.trim() !== "").join("\n");
+}
+
+function assistantAsked(history: readonly { role: string; content: string }[], pattern: RegExp): boolean {
+  return history.some((turn) => turn.role === "assistant" && pattern.test(turn.content));
 }
 
 function groundEmployee(
@@ -424,20 +456,23 @@ function mergeSlots(
     incidentType: string | null;
     date: string | null;
     payrollAmount: string | null;
+    payrollDeduct: "yes" | "no" | null;
     warningLevel: "verbal" | "written" | null;
     formType: string | null;
+    /** This turn kept a spelling Woven does not list. Do not keep another person's id on it. */
+    typedNameKept: boolean;
   },
 ): ConversationFormState {
   const named = slots.employee.name;
   return {
     ...prior,
-    employeeId: slots.employee.person?.id ?? prior.employeeId,
+    employeeId: slots.employee.person?.id ?? (slots.typedNameKept ? null : prior.employeeId),
     employeeName: slots.employee.person ? displayName(slots.employee.person) : named ?? prior.employeeName,
     locationId: slots.store.id ?? prior.locationId,
     title: slots.title ?? prior.title,
     formDate: slots.date ?? prior.formDate,
     warningLevel: slots.warningLevel ?? prior.warningLevel,
-    payrollDeduct: slots.payrollAmount ? "yes" : prior.payrollDeduct,
+    payrollDeduct: slots.payrollDeduct ?? prior.payrollDeduct,
     templateKey: slots.formType ?? prior.templateKey,
     incidentType: slots.incidentType ?? prior.incidentType,
     payrollAmount: slots.payrollAmount ?? prior.payrollAmount,
@@ -458,17 +493,44 @@ function clarificationFor(input: {
   people: readonly GroundedPerson[];
   stores: readonly StoreRow[];
   templates: readonly TemplateRow[];
+  storeAsked: boolean;
+  dateAsked: boolean;
 }): string | null {
-  if (input.employee.ambiguous.length > 1 || (input.employee.ambiguous.length === 1 && !input.employee.person)) {
+  const extracting = intentExtractionEnabled();
+  // A slot already on the form state is not a question again. The store and
+  // the date are asked at most once; after that the card carries them.
+  const employeeFilled = extracting && Boolean(input.state.employeeName);
+  const storeFilled = extracting && Boolean(input.state.locationId);
+  const dateFilled = extracting && Boolean(input.state.formDate);
+  const formFilled = extracting && Boolean(input.state.templateKey);
+  const warningFilled = extracting && Boolean(input.state.warningLevel);
+  if (
+    !employeeFilled &&
+    (input.employee.ambiguous.length > 1 || (input.employee.ambiguous.length === 1 && !input.employee.person))
+  ) {
     return personQuestion(input.employee.ambiguous, input.employee.typed, input.stores);
   }
-  if (input.store.ambiguous.length > 1) return storeQuestion(input.store.ambiguous);
-  if (input.date.ambiguous.length > 1) return dateQuestion(input.date.ambiguous);
-  if (input.formType.ambiguous.length > 1) return formQuestion(input.formType.ambiguous);
-  if (input.warningLevel.ambiguous) {
+  if (!storeFilled && input.store.ambiguous.length > 1 && !(extracting && input.storeAsked)) {
+    return storeQuestion(input.store.ambiguous);
+  }
+  if (!dateFilled && input.date.ambiguous.length > 1 && !(extracting && input.dateAsked)) {
+    return dateQuestion(input.date.ambiguous);
+  }
+  if (!formFilled && input.formType.ambiguous.length > 1) return formQuestion(input.formType.ambiguous);
+  if (!warningFilled && input.warningLevel.ambiguous) {
     return "Which warning level did you mean? Reply with the number.\n1. **verbal**\n2. **written**";
   }
   if (!input.formTurn) return null;
+
+  if (extracting) {
+    // A missing title, warning, date, or store is filled on the card. Listing
+    // them here replaced the card on the live replay. An unmatched name still
+    // blocks until typed names are on, which is the rule above.
+    if (!typedNameEnabled() && !input.state.employeeName && input.employee.typed) {
+      return `I still need which employee — **${input.employee.typed}** is not in the Woven roster.`;
+    }
+    return null;
+  }
 
   const missing: string[] = [];
   if (!input.state.employeeName) {

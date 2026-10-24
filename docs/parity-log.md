@@ -6,6 +6,27 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: intent extraction must not replace the card
+
+`INTENT_EXTRACTION_ENABLED` stays off by default. On, a missing slot is
+filled on the proposal card. The "I still need …" list, including "not in
+the Woven roster", was the whole reply, so the card never appeared and the
+same employee, store, and date were asked again on the next turn.
+
+Ask Sunny already returns no clarification after a real choice question
+(`clarificationFor` in `intent-slots.ts`, commit `56aac229`) and keeps a
+name Woven does not list. That mechanism is what this change follows.
+Bubbles still requires `TYPED_NAME_ENABLED` before an unmatched name is
+kept; with typed names off, the roster sentence stays. Sunny keeps the
+typed name with no second flag. No store or salon wording was copied.
+
+Two replay fixes stay on this app until Sunny shows the same loop. The
+warning level and the payroll yes/no are read from the manager's turns
+only, so an assistant question that says "verbal" or "no payroll" is not
+an answer. The store question and the date question are asked at most
+once. Sunny's `groundWarning` still reads the whole conversation, assistant
+turns included.
+
 ## 24 Oct 2026: the newest Woven edition is the one that answers
 
 Ported from Ask Sunny branch `cursor/edition-supersession-6d4a`, commit
