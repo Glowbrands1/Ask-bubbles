@@ -6,6 +6,19 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: a grounded name Woven does not list stays typed
+
+`GROUNDED_ENTITIES_ENABLED` still defaults off. On, with anti-loop off, a
+name that is not on the Woven roster used to become "I couldn't find **name**
+in the Woven roster, so that name is not on the form" and the form lost
+that name. The typed spelling now stays on the question and on the form.
+The reply does not gain a sentence, and the "Woven has …" note stays behind
+`TYPED_NAME_ENABLED` or `ANTI_LOOP_ENABLED`.
+
+**Sibling app: not ported.** Ask Sunny is not in this session. Its
+grounded-entity path still refuses that name when anti-loop is off. No
+salon wording was copied.
+
 ## 24 Oct 2026: form replay guards, and a denied prior-coaching note
 
 `FORM_REPLAY_GUARDS_ENABLED` stays off by default. On, one incident date
