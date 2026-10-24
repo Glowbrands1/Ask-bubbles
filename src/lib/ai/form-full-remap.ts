@@ -106,7 +106,8 @@ export function groundFormSlots(input: {
   /** Slots already kept for this conversation. A null read must not erase them. */
   readonly saved?: Partial<FormRemapSlots> | null;
 }): { slots: FormRemapSlots; response: AskResponse } {
-  const users = userTurns(input.history, input.question);
+  const conversation = turnsWithQuestion(input.history, input.question);
+  const users = conversation.filter((turn) => turn.role === "user").map((turn) => turn.content);
   const said = users.join("\n");
   const raw = parseRaw(input.raw);
   const templateKey =
@@ -118,7 +119,7 @@ export function groundFormSlots(input: {
   const store = groundedStore(said);
   const incidentDateIso = groundedDate(said, input.today);
   const warningLevel = explicitWarning(users, input.today);
-  const payrollDeduct = payrollDeductFromConversation([...input.history, { role: "user", content: input.question }]);
+  const payrollDeduct = payrollDeductFromConversation(conversation);
   const payrollAmount = payrollDeduct === "yes" ? managerPayrollAmount(said) : null;
   const policySection = groundedPolicy(said);
   const observation = statedIncident(said, employeeName) ?? acceptSummary(raw.observation, said);
@@ -265,10 +266,20 @@ function conversationText(history: readonly Turn[], question: string, today: str
   return `Today is ${today}.\n\n${turns.join("\n\n")}`;
 }
 
-function userTurns(history: readonly Turn[], question: string): string[] {
-  return [...history, { role: "user", content: question }]
-    .filter((turn) => turn.role === "user" && turn.content.trim() !== "")
-    .map((turn) => turn.content);
+/**
+ * The current question is already the last user turn when the client or the
+ * history table appended it before this read. Counting it twice stacked the
+ * prior-action line on that turn. The next turn read the line once, and the
+ * duplicate collapsed.
+ */
+function turnsWithQuestion(history: readonly Turn[], question: string): Turn[] {
+  const turns = [...history, { role: "user", content: question }].filter((turn) => turn.content.trim() !== "");
+  const last = turns.at(-1);
+  const before = turns.at(-2);
+  if (last && before && last.role === "user" && before.role === "user" && last.content === before.content) {
+    turns.pop();
+  }
+  return turns;
 }
 
 interface RawSlots {
@@ -666,7 +677,8 @@ function renderReply(slots: FormRemapSlots, questions: readonly string[]): strin
   if (slots.incidentDateIso) lines.push(`**Date:** ${slots.incidentDateIso}`);
   if (slots.incidentTime) lines.push(`**Time:** ${slots.incidentTime}`);
   if (slots.observation) lines.push(`**What happened:** ${slots.observation}`);
-  if (slots.priorActions) lines.push(`**Prior action:** ${slots.priorActions}`);
+  // The card is the one prior-action line. Repeating it in the reply painted
+  // the acknowledgement twice on the turn that first stated it.
   if (slots.policySection) lines.push(`**Policy:** ${slots.policySection}, as you said`);
   if (slots.warningLevel) {
     const label = slots.warningLevel === "verbal" ? "Verbal Warning" : "Written Warning";
