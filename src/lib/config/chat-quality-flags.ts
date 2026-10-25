@@ -412,6 +412,16 @@ export function conversationDraftReuseEnabled(): boolean {
 }
 
 /**
+ * DIFFERENT_EMPLOYEE_NEW_FORM_ENABLED: a turn that asks for a form for somebody
+ * other than the open form's employee ("now one for Test Employee Two …") is
+ * not a redraft or an edit of the open form; it gets its own card (QA, B21-4,
+ * 25 Oct 2026). Off, the open form answers as it does today.
+ */
+export function differentEmployeeNewFormEnabled(): boolean {
+  return envFlag("DIFFERENT_EMPLOYEE_NEW_FORM_ENABLED");
+}
+
+/**
  * "Delete that draft" deletes the draft on screen where the manager may
  * delete forms (the forms API's own rule), and says truthfully who can where
  * they may not; "same incident", answering "is this the same incident as the
@@ -594,4 +604,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "KEEP_FORM_EMPLOYEE_ENABLED",
   "TITLE_WHOLE_WORD_ENABLED",
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
+  "DIFFERENT_EMPLOYEE_NEW_FORM_ENABLED",
 ] as const;
