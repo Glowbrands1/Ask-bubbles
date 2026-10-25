@@ -711,3 +711,23 @@ including when the live client has `messages.stream`. Ask Sunny is not
 updated in this session. Its answer path is still a separate `call-claude`,
 and this change stays on Ask Bubbles PR 90. No salon wording was copied.
 
+
+## 24 Oct 2026: remap incident (prod, FORM_FULL_REMAP on)
+
+What happened came from what was left of the request, "previous coaching: …"
+was not a prior action, "10-1" was read out of "10-15-26", and a remap card
+cited no policy. Fixed in `form-full-remap.ts` and the new `remap-incident.ts`
+behind `REMAP_INCIDENT_FIX_ENABLED`; the date regex is an unflagged bug fix.
+Ported to Ask Sunny's remap path in the same session. Sunny's live intent
+path got its own fixes for the same cases (Sunny-only files; see Ask Sunny's
+parity log). Tests: `src/lib/ai/remap-incident-oct24.test.ts` in both apps.
+
+Follow-up (QA step 3 and C-list, 25 Oct 2026): What happened is read one
+turn at a time, so an edit or command ("change the date to 10-22", "name is
+…", "show draft", "cite …", "this is a violation under …") never replaces it;
+a later create request with its own incident resets What happened and the
+policy; a bare "Yes" after several questions answers none; the action plan
+is the manager's own or blank; "as you said" on the store and title only
+when a manager turn holds the words; "at Grand Island used her cell phone"
+keeps the store. Same flag. Ported to Ask Sunny's remap path, and its intent
+path got the same behaviour in its own readers.

@@ -309,6 +309,19 @@ export function formFullRemapEnabled(): boolean {
 }
 
 /**
+ * The remap path's What happened, prior actions and policy, read from the
+ * manager's words and the manual. The request ("create a corrective action
+ * form for …") is not the incident and not the action plan. "previous
+ * coaching: …" is the prior-action list. A policy is "as you said" only
+ * when the manager named it; otherwise the manual section and printed page
+ * the account resolves are cited on the card. Off, the remap reads these
+ * fields as before.
+ */
+export function remapIncidentFixEnabled(): boolean {
+  return envFlag("REMAP_INCIDENT_FIX_ENABLED");
+}
+
+/**
  * Put the current brand manual in a cached system block for a policy
  * question. Off, retrieval and citation display stay as they are.
  *
@@ -493,5 +506,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "LATE_OPEN_DATE_ENABLED",
   "CA_TEMPLATE_MAP_ENABLED",
   "FORM_CHOICE_STATED_ENABLED",
+  "REMAP_INCIDENT_FIX_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
 ] as const;
