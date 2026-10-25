@@ -1,7 +1,12 @@
 import "server-only";
 
 import { CLAUDE_HAIKU_MODEL } from "@/lib/config/models";
-import { formFullRemapEnabled, notANameGuardEnabled, warningLevelManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  formFullRemapEnabled,
+  managerWordsOnlyEnabled,
+  notANameGuardEnabled,
+  warningLevelManagerOnlyEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { CA_POLICY_LABEL, readCaPolicy } from "@/lib/forms/ca-policy";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
 import { listIncidentDates } from "@/lib/forms/form-date-answer";
@@ -16,8 +21,10 @@ import { spokenDates } from "@/lib/forms/relative-date";
 import { managerStatedWarningLevel, warningLevelFromTurns } from "@/lib/forms/warning-level";
 import type { ChatFormProposal } from "@/types";
 
+import { withoutAppLines } from "./app-sentences";
 import { callClaudeToolDetailed } from "./call-claude";
 import { chatTraceDraft } from "./chat-trace-store";
+import { readsAsPolicyPaste, readsAsStatedTitle, spelledAssistant } from "./title-words";
 import type { AskResponse } from "./types";
 
 /**
@@ -107,7 +114,9 @@ export function groundFormSlots(input: {
   /** Slots already kept for this conversation. A null read must not erase them. */
   readonly saved?: Partial<FormRemapSlots> | null;
 }): { slots: FormRemapSlots; response: AskResponse } {
-  const conversation = turnsWithQuestion(input.history, input.question);
+  const managerOnly = managerWordsOnlyEnabled();
+  const allTurns = turnsWithQuestion(input.history, input.question);
+  const conversation = managerOnly ? managerTurns(allTurns) : allTurns;
   const users = conversation.filter((turn) => turn.role === "user").map((turn) => turn.content);
   const saved = withoutUntypedName(
     input.saved ?? null,
@@ -121,7 +130,7 @@ export function groundFormSlots(input: {
     (isTemplate(input.continueTemplateKey) ? input.continueTemplateKey : null) ??
     (isTemplate(raw.templateKey) ? raw.templateKey : null);
   const employeeName = groundedName(raw.employeeName, users);
-  const jobTitle = groundedTitle(users);
+  const jobTitle = managerOnly ? managerTitle(users, raw.employeeName) : groundedTitle(users);
   const store = groundedStore(said);
   const incidentDateIso = groundedDate(said, input.today);
   /*
@@ -139,7 +148,7 @@ export function groundFormSlots(input: {
   const payrollDeduct = payrollDeductFromConversation(conversation);
   const payrollAmount = payrollDeduct === "yes" ? managerPayrollAmount(said) : null;
   const policySection = groundedPolicy(said);
-  const observation = statedIncident(said, employeeName) ?? acceptSummary(raw.observation, said);
+  const observation = statedIncident(said, employeeName, managerOnly) ?? acceptSummary(raw.observation, said);
   const priorActions = statedPrior(said);
   const incidentTime = statedTime(said);
   const actionPlan = acceptSummary(stripMoney(raw.actionPlan ?? ""), said);
@@ -168,8 +177,9 @@ export function groundFormSlots(input: {
    * and a saved one is kept only when the history may have been cut — so a
    * level the manager never stated cannot ride on from an earlier extraction.
    */
+  // Every turn counts toward the cap, also one that held only the app's lines (MANAGER_WORDS_ONLY_ENABLED).
   const savedSlots =
-    warningLevelManagerOnlyEnabled() && saved && conversation.length < HISTORY_CAP
+    warningLevelManagerOnlyEnabled() && saved && allTurns.length < HISTORY_CAP
       ? { ...saved, warningLevel: null }
       : saved;
   const slots = finishSlots(mergeSlots(read, savedSlots), said);
@@ -222,7 +232,9 @@ export async function remapFormTurn(
     result = await call({
       model: CLAUDE_HAIKU_MODEL,
       system: SYSTEM,
-      user: conversationText(input.history, input.question, input.today),
+      user: managerWordsOnlyEnabled()
+        ? conversationText(managerTurns(input.history), withoutAppLines(input.question), input.today)
+        : conversationText(input.history, input.question, input.today),
     });
   } catch {
     return null;
@@ -421,6 +433,30 @@ function exactSlice(haystack: string, needle: string): string | null {
   return haystack.slice(at, at + needle.length);
 }
 
+/**
+ * The manager's turns without the lines the app wrote onto the question
+ * ("Job title: CA. It happened at Kearney, NE."). A turn that was only those
+ * lines is gone.
+ */
+function managerTurns(turns: readonly Turn[]): Turn[] {
+  return turns
+    .map((turn) => (turn.role === "user" ? { role: turn.role, content: withoutAppLines(turn.content) } : turn))
+    .filter((turn) => turn.content.trim() !== "");
+}
+
+/**
+ * The title from the manager's turns: not a pasted policy ("District Managers
+ * will be responsible …"), "ass't" spelled out, and a labelled phrase only
+ * when it reads as a title ("test was late opening store" is a clause).
+ */
+function managerTitle(turns: readonly string[], employeeName: string | null): string | null {
+  const read = turns.filter((turn) => !readsAsPolicyPaste(turn)).map(spelledAssistant);
+  const title = groundedTitle(read);
+  if (!title || extractJobTitle(title)) return title;
+  const said = read.join("\n");
+  return readsAsStatedTitle({ probe: title, text: said, employeeName, knownTitle: extractJobTitle }) ? title : null;
+}
+
 function groundedTitle(turns: readonly string[]): string | null {
   let title: string | null = null;
   for (const turn of turns) {
@@ -589,11 +625,12 @@ function closeNote(name: string, people: readonly RosterEmployee[]): string | nu
  * summary. A note ("out of dress code 3 shifts", "on cell phone 30+ min") is
  * the issue itself.
  */
-function statedIncident(text: string, employeeName: string | null): string | null {
+function statedIncident(text: string, employeeName: string | null, managerOnly = false): string | null {
   const clauses = text.split(/[\n,;]+/).map((clause) => clause.trim()).filter(Boolean);
   let found: string | null = null;
   for (const clause of clauses) {
     if (slotClause(clause)) continue;
+    if (managerOnly && namesOrPlacesThem(clause)) continue;
     const offense = phraseOffense(stripSlots(clause, employeeName));
     if (offense) found = offense;
   }
@@ -641,6 +678,18 @@ function phraseOffense(clause: string): string | null {
     return rest;
   }
   return text;
+}
+
+/**
+ * "Her name is Test Employee" and "Test Employee works at Grand Island" say
+ * who and where. They are not what happened.
+ */
+function namesOrPlacesThem(clause: string): boolean {
+  const text = clause.trim();
+  if (/^(?:(?:her|his|their|the employee'?s|employee'?s?)\s+)?(?:full\s+)?name\s+is\b/i.test(text)) return true;
+  return /^(?:[A-Za-z'’-]+(?:\s+[A-Za-z'’-]+)?\s+)?(?:works|worked|is based|is assigned|is working)\s+(?:at|in|out of|from)\s+(?:the\s+)?[^.!?]{1,40}[.!]?$/i.test(
+    text,
+  );
 }
 
 const PAYROLL_ANSWER_ONLY =

@@ -6,6 +6,24 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 24 Oct 2026: the app's own lines are not the manager's words — ported from Ask Sunny
+
+`MANAGER_WORDS_ONLY_ENABLED` is new and stays off. With it on, form-full-remap
+reads the manager's turns without the lines the app writes onto the question
+("The employee is …. Job title: …. It happened at Kearney, NE."), for the
+fields and for the extraction call. The job title skips a pasted policy
+("Managers or District Managers will be responsible …"), reads "ass't store
+manager" as Assistant Manager, and drops a labelled phrase that is a clause
+("test was late opening store"). What happened skips "Her name is …" and
+"… works at Grand Island". The intent read takes the title from the manager's
+turns only (most specific catalog title first), and grounded entities do not
+read a pasted policy for it.
+
+Same expected card as Ask Sunny; this app's path differs (remap is live here).
+Tests use this app's production turn (conv_mvmz8pys26bs2ax) and the Ask Sunny
+managers' turns with this app's stores and titles. No Sun Tan City content.
+
+
 ## 24 Oct 2026: a policy quote is not the manager's payroll answer
 
 `INTENT_PAYROLL_MANAGER_ONLY_ENABLED` is new and stays off. With it on,
