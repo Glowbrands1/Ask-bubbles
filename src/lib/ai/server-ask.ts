@@ -76,6 +76,7 @@ import {
   fullManualContextEnabled,
   crossChatReplyGuardEnabled,
   manualNegatedListNoteEnabled,
+  policyPageOnCardEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -84,6 +85,7 @@ import { formCommandBypassesSearch, routeUnderstoodFormTurn } from "./form-tool-
 import { understandFormTurn } from "./form-tool-understand";
 import { remapFormTurn, remapShouldRun, type FormRemapSlots } from "./form-full-remap";
 import { historyForRemap } from "./form-remap-scope";
+import type { RemapManual } from "./remap-incident";
 import { augmentIntakeQuestion } from "./intake-augment";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import { prepareLongContext } from "./long-context-claude";
@@ -92,6 +94,7 @@ import { rewriteRetrievalQuery } from "./query-rewrite-claude";
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
 import { matchRecallKnowledge } from "@/lib/knowledge/recall-match";
 import { withMappedPolicy } from "./violation-policy";
+import { withPolicyPagesOnCard } from "@/lib/forms/policy-page-on-card";
 import { loadScopedRoster } from "@/lib/forms/employee-roster";
 import { AiError } from "./errors";
 import {
@@ -323,6 +326,21 @@ async function answerQuestionCore(
           history = request.history;
         }
       }
+      // One manual read for the remap and the card's printed page (POLICY_PAGE_ON_CARD_ENABLED).
+      let remapManual: Promise<RemapManualRead> | null = null;
+      const readRemapManual = () =>
+        (remapManual ??= new SupabaseKnowledgeProvider()
+          .fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId)
+          .then((manual) =>
+            manual.ok
+              ? {
+                  documentId: manual.documentId,
+                  documentTitle: manual.documentTitle,
+                  documentCategory: manual.documentCategory ?? null,
+                  chunks: manual.chunks,
+                }
+              : null,
+          ));
       const remapped = await remapFormTurn({
         question: request.question,
         history,
@@ -332,19 +350,9 @@ async function answerQuestionCore(
         saved,
         unpublished,
         // Read only with REMAP_INCIDENT_FIX_ENABLED on, so the card cites the section and page.
-        policyManual: async () => {
-          const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
-          return manual.ok
-            ? {
-                documentId: manual.documentId,
-                documentTitle: manual.documentTitle,
-                documentCategory: manual.documentCategory ?? null,
-                chunks: manual.chunks,
-              }
-            : null;
-        },
+        policyManual: readRemapManual,
       });
-      if (remapped) return remapped;
+      if (remapped) return policyPageOnCardEnabled() ? await withCardPolicyPages(remapped, readRemapManual) : remapped;
     }
 
     let manualRead: ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]> | null = null;
@@ -1141,11 +1149,32 @@ async function suggestedFormsFor(input: {
   }
 }
 
+type RemapManualRead = RemapManual | null;
+
+/**
+ * POLICY_PAGE_ON_CARD_ENABLED: the card's own policy line with the printed
+ * page from the manual's chunk metadata. A failed manual read leaves the card
+ * as the form path wrote it.
+ */
+async function withCardPolicyPages(response: AskResponse, read: () => Promise<RemapManualRead>): Promise<AskResponse> {
+  if (!response.formProposal) return response;
+  let manual: RemapManualRead = null;
+  try {
+    manual = await read();
+  } catch {
+    manual = null;
+  }
+  if (!manual) return response;
+  const content = withPolicyPagesOnCard(response.content, manual.chunks);
+  return content === response.content ? response : { ...response, content };
+}
+
 async function decorateFormAnswer(request: AskRequest, actor: ChatActor, response: AskResponse): Promise<AskResponse> {
   const coachingOn = priorCoachingOptionalEnabled();
   const policyOn = policyCitationEnabled();
   const slotsOn = slotRetentionEnabled();
-  if (!coachingOn && !policyOn && !slotsOn) return response;
+  const pageOn = policyPageOnCardEnabled();
+  if (!coachingOn && !policyOn && !slotsOn && !pageOn) return response;
   const turns = [...request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), request.question];
   let content = response.content;
   if (coachingOn) {
@@ -1177,10 +1206,11 @@ async function decorateFormAnswer(request: AskRequest, actor: ChatActor, respons
     content = retainFieldsInReply(content, fields);
     await persistFields(request, actor, fields);
   }
-  if (policyOn) {
+  if (policyOn || (pageOn && response.formProposal)) {
     try {
       const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
-      if (manual.ok) content = withMappedPolicy(content, turns, manual.chunks, true);
+      if (manual.ok && pageOn && response.formProposal) content = withPolicyPagesOnCard(content, manual.chunks);
+      if (manual.ok && policyOn) content = withMappedPolicy(content, turns, manual.chunks, true);
     } catch {
       // A manual read that fails leaves the proposal as the forms path wrote it.
     }

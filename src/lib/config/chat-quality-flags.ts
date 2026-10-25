@@ -594,4 +594,16 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "KEEP_FORM_EMPLOYEE_ENABLED",
   "TITLE_WHOLE_WORD_ENABLED",
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
+  "POLICY_PAGE_ON_CARD_ENABLED",
 ] as const;
+
+/**
+ * The form card's policy line carries the printed page from the JBA Policy
+ * Manual's chunk metadata: "**Policy:** Standards of Conduct (JBA Policy
+ * Manual p.12), as you said" (QA, 25 Oct 2026). Only a line the app wrote
+ * with one of its own policy names changes; a heading without exactly one
+ * printed page gets none. Off, the card is exactly as before.
+ */
+export function policyPageOnCardEnabled(): boolean {
+  return envFlag("POLICY_PAGE_ON_CARD_ENABLED");
+}
