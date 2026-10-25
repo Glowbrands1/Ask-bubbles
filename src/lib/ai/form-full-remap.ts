@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isHiddenTemplate } from "@/config/company/forms/hidden";
 import { CLAUDE_HAIKU_MODEL } from "@/lib/config/models";
 import {
   formFullRemapEnabled,
@@ -325,11 +326,13 @@ export function remapShouldRun(input: {
   readonly formsTurn: boolean;
   /** The template of the card already open in this chat, if any. */
   readonly continueTemplateKey?: string | null;
+  /** Library keys this deployment lists but does not publish (inactive, or no published version). */
+  readonly unpublished?: readonly string[];
 }): boolean {
   if (asksAboutCorrectiveAction(input.question)) return false;
   const named = managerNamedTemplate(input.question, input.history);
-  if (named !== null && !isTemplate(named)) return false;
-  if (named === null && input.continueTemplateKey && !isTemplate(input.continueTemplateKey)) return false;
+  if (named !== null && !remapFills(named, input.unpublished)) return false;
+  if (named === null && input.continueTemplateKey && !remapFills(input.continueTemplateKey, input.unpublished)) return false;
   if (input.formsTurn) return true;
   if (asksAQuestion(input.question)) return false;
   const text = [input.question, ...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content)].join("\n");
@@ -371,8 +374,71 @@ function managerNamedTemplate(question: string, history: readonly { role: string
     const intent = detectTemplateIntent(text);
     if (intent.kind === "explicit" || intent.kind === "clarify") return intent.templateKey;
     if (intent.kind === "corrective_action" && intent.requestedCreation) return "dpoa";
+    if (namesFormOutsideRemap(text)) return OUTSIDE_REMAP;
   }
   return null;
+}
+
+/**
+ * A FORM THIS READ DOES NOT FILL IS NOT ONE OF THE FOUR (conv_mvnqbm6m28hg07j,
+ * conv_mvnqblza266tbwt, 25 Oct 2026). "create a tanning consultant interview
+ * form for Test Employee" came back as "Here is the Coaching Form." with
+ * "What happened: create a tanning consultant interview form for", and "create
+ * a first round management interview form for Test Employee" as the
+ * Corrective Action Form, after both templates were hidden
+ * (`config/company/forms/hidden.ts`). The extraction can only choose among
+ * `TEMPLATES`, so the remap runs only for a form it fills that this deployment
+ * also publishes: not a hidden template, and not one the library lists as
+ * inactive or without a published version. Everything else is the proposal
+ * flow's, which says the form is not published and opens no card.
+ */
+function remapFills(templateKey: string, unpublished: readonly string[] | undefined): boolean {
+  if (!isTemplate(templateKey) || isHiddenTemplate(templateKey)) return false;
+  return !(unpublished ?? []).includes(templateKey);
+}
+
+/** The manager named a form, but not one the library reads as a single template this read fills. */
+const OUTSIDE_REMAP = "outside-remap";
+
+/**
+ * The head word of every library title the remap does not fill — "Interview"
+ * (the Prescreen / Phone, Tanning Consultant and both Management Interview
+ * Forms), "Exit" and "Resignation", "Demotion", "Transfer", "EPP" — read from
+ * the titles themselves, minus the heads of the four it does fill ("Coaching",
+ * "Action", "Review"). A title added to the library is covered here without a
+ * second edit, and a hidden one stays covered because its seed is still listed.
+ */
+const OUTSIDE_HEADS: readonly string[] = (() => {
+  const heads = (name: string): string[] =>
+    name
+      .toLowerCase()
+      .split(/\s*[\/—–]\s*/)
+      .map((segment) => segment.split(/[^a-z]+/).filter((word) => word && word !== "form").at(-1))
+      .filter((word): word is string => Boolean(word));
+  const filled = new Set(TEMPLATE_SEEDS.filter((seed) => isTemplate(seed.key)).flatMap((seed) => heads(seed.name)));
+  const outside = new Set(TEMPLATE_SEEDS.filter((seed) => !isTemplate(seed.key)).flatMap((seed) => heads(seed.name)));
+  return [...outside].filter((word) => !filled.has(word));
+})();
+
+const OUTSIDE_HEAD = `(?:${OUTSIDE_HEADS.join("|")})s?`;
+/** "interview form", "store manager interview paperwork", "exit form". */
+const OUTSIDE_AS_FORM = new RegExp(String.raw`\b${OUTSIDE_HEAD}\s+(?:forms?|paperwork|packets?|sheets?|documents?|templates?)\b`, "i");
+/** "create a store manager interview for …", "start the exit for …": the form's head is what is being made. */
+const OUTSIDE_AS_OBJECT = new RegExp(
+  String.raw`\b(?:create|make|start|draft|build|fill\s+(?:out|in)|pull\s+up|open|begin|prepare|need)\s+(?:me\s+|us\s+)?(?:a|an|the|another)\s+(?:[a-z/'-]+\s+){0,4}?${OUTSIDE_HEAD}\b`,
+  "i",
+);
+
+/**
+ * A manager turn that names, as the thing to make, a form whose title is
+ * outside the remap — "an interview form" (which the library reads as a
+ * choice among interviews), "a store manager interview form" (no such title).
+ * A mention that is not the request ("she skipped her interview", "she wants
+ * a transfer") is not a naming.
+ */
+function namesFormOutsideRemap(text: string): boolean {
+  if (OUTSIDE_HEADS.length === 0) return false;
+  return OUTSIDE_AS_FORM.test(text) || OUTSIDE_AS_OBJECT.test(text);
 }
 
 export async function remapFormTurn(
@@ -385,6 +451,8 @@ export async function remapFormTurn(
     readonly saved?: Partial<FormRemapSlots> | null;
     /** Read only with REMAP_INCIDENT_FIX_ENABLED on. A failed read cites nothing. */
     readonly policyManual?: () => Promise<RemapManual | null>;
+    /** Library keys listed but not published; a card for one of them is left to the proposal flow. */
+    readonly unpublished?: readonly string[];
   },
   call: FormRemapCaller = defaultCall,
 ): Promise<AskResponse | null> {
@@ -421,6 +489,9 @@ export async function remapFormTurn(
     latencyMs: Date.now() - started,
     slots: grounded.slots,
   });
+  // The model's own choice of a form this deployment hides or does not publish opens no card here.
+  const chosen = grounded.response.formProposal?.templateKey;
+  if (chosen && !remapFills(chosen, input.unpublished)) return null;
   return grounded.response;
 }
 
