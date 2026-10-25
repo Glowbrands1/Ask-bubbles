@@ -1,5 +1,5 @@
 import { rosterResultFor } from "@/test/roster-result";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatMessage } from "@/types";
@@ -379,6 +379,37 @@ describe("Direct policy from official manual, for a late opener", () => {
     expect(policy.indexOf("Late Opening, p. 15")).toBeLessThan(policy.indexOf("Attendance, p. 14"));
     expect(policy).not.toMatch(/Invented/);
     expect(field(form, "policy_language")!.provenance).toMatchObject({ verified: true });
+  });
+
+  /*
+   * QA, 24 Oct 2026, and HR, 21 Oct 2026 (conv_mvifqra017j15ld8: "noted
+   * tardiness/leaving early vs late open policy pg.15"): with
+   * LATE_OPEN_DATE_ENABLED a late opening cites Late Opening, p. 15 only.
+   */
+  describe("LATE_OPEN_DATE_ENABLED", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it.each([
+      [LATE_OPENER],
+      ["Pat was late to open the store 10-15, verbal, no payroll"],
+    ])("a late opening cites Late Opening, p. 15 only: %s", async (account) => {
+      vi.stubEnv("LATE_OPEN_DATE_ENABLED", "1");
+      const { create } = await conversation(["create ca for Pat Rivera", account]);
+      state.draft = {
+        values: { observation: "Observed:\nPat Rivera opened the store late." },
+        checked: { offense_type: ["tardiness"] },
+      };
+
+      const { reference } = await create();
+      const form = await review(reference.instanceId);
+      const policy = field(form, "policy_language")!.value!;
+
+      expect(policy).toContain("Source: JBA Policy Manual — Late Opening, p. 15");
+      expect(policy).not.toMatch(/Attendance/);
+      expect(field(form, "action_plan")!.value).not.toMatch(/Attendance/);
+    });
   });
 
   it("cites Attendance alone for lateness that is not an opening", async () => {

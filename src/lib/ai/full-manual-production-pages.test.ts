@@ -4,6 +4,7 @@ import manual151 from "@/test/fixtures/jba-manual-production-151.json";
 import live from "@/test/fixtures/bubbles-live-policy-answers-oct24.json";
 import liveB2 from "@/test/fixtures/bubbles-live-policy-answers-oct24-b2.json";
 import liveStep3 from "@/test/fixtures/bubbles-live-policy-answers-oct24-step3.json";
+import liveOct25 from "@/test/fixtures/bubbles-live-policy-answers-oct25.json";
 import { manualChunkFromRow, type ManualChunkRow } from "@/lib/knowledge/full-manual-load";
 
 import { citePolicyAnswer, keepRestatedFallbackMarkers, planFullManualContext, type FullManualDocument } from "./full-manual-context";
@@ -432,5 +433,67 @@ describe("live B4: the page that says clearly more", () => {
       planFor(CELL_PHONE),
     );
     expect(pagesIn(cited.text)).toEqual(new Set([19]));
+  }, 20_000);
+});
+
+/**
+ * Live, 25 Oct 2026, whole replies (md5-checked against chat_messages):
+ * B6 conv_mvnmxkma2ztlgfv on 6812da6 (PR 120), and B4 conv_mvnljjp92oyd332.
+ * "Payout on termination follows all applicable state and federal law [p.12]"
+ * ties on "state and federal law" with two unrelated pages, and the page that
+ * says more by its words was Smoking/Vaping ("as follows", "applicable"). A
+ * page chosen by words, not by a printed phrase, gives way to a page the same
+ * answer restates by phrase when that page shares enough of the sentence: the
+ * PTO page (42), "all state and federal guidelines will be followed regarding
+ * paying out accrued PTO upon termination".
+ */
+describe("live B6: a word match prefers the answer's own page", () => {
+  const recorded = (conversationId: string) => {
+    const found = liveOct25.answers.find((answer) => answer.conversationId === conversationId);
+    if (!found) throw new Error(`missing live reply ${conversationId}`);
+    return found;
+  };
+  const cite = (conversationId: string) => {
+    const found = recorded(conversationId);
+    return citePolicyAnswer(found.content, planFullManualContext({ question: found.question, documents: [productionManual()] }));
+  };
+  const lineWith = (text: string, snippet: string) => text.split("\n").find((line) => line.includes(snippet)) ?? "";
+
+  it("the PTO payout line cites PTO (42), not Smoking/Vaping (12); every other line stays on 41/42", () => {
+    const cited = cite("conv_mvnmxkma2ztlgfv");
+    expect(pagesIn(lineWith(cited.text, "Payout on termination"))).toEqual(new Set([42]));
+    for (const page of pagesIn(cited.text)) expect([41, 42]).toContain(page);
+    expect(cited.sources.map((source) => source.locator).join(" ")).not.toContain("Smoking");
+  }, 20_000);
+
+  it("in its whole reply, the dress-code discipline line still cites the Dress Code page (15)", () => {
+    const cited = cite("conv_mvnljjp92oyd332");
+    expect(pagesIn(lineWith(cited.text, "Dress code violations"))).toEqual(new Set([15]));
+  }, 20_000);
+});
+
+/**
+ * Live B8, 25 Oct 2026 (conv_mvnncdlu2xvoyqu on dfe2890): a sentence quoting
+ * two policies cited only the first. A quote cites the page it is printed on.
+ */
+describe("live B8: a quote cites the page it is printed on", () => {
+  it('"please do not bring pets into the workplace" cites Animals in the Workplace (30) beside Visitors (29)', () => {
+    const found = liveOct25.answers.find((answer) => answer.conversationId === "conv_mvnncdlu2xvoyqu");
+    if (!found) throw new Error("missing live reply conv_mvnncdlu2xvoyqu");
+    const cited = citePolicyAnswer(found.content, planFullManualContext({ question: found.question, documents: [productionManual()] }));
+    const line = cited.text.split("\n").find((text) => text.includes("please do not bring pets")) ?? "";
+    expect(pagesIn(line)).toEqual(new Set([29, 30]));
+  }, 20_000);
+
+  it('both payout wordings cite PTO (42): "…all applicable state and federal law" and "…state and federal guidelines"', () => {
+    const plan = planFullManualContext({ question: "What is the PTO policy?", documents: [productionManual()] });
+    const intro = "- Request it in the Personnel System at least two weeks ahead; if something unforeseen comes up, call your supervisor directly and log the request as soon as possible [p.42].";
+    for (const payout of [
+      "- Payout on termination follows all applicable state and federal law [p.12].",
+      "- Payout on termination follows state and federal guidelines [p.42].",
+    ]) {
+      const cited = citePolicyAnswer(`${intro}\n${payout}`, plan);
+      expect(pagesIn(cited.text.split("\n")[1] ?? "")).toEqual(new Set([42]));
+    }
   }, 20_000);
 });

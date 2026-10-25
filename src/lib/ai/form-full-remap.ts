@@ -1,29 +1,66 @@
 import "server-only";
 
+import { isHiddenTemplate } from "@/config/company/forms/hidden";
 import { CLAUDE_HAIKU_MODEL } from "@/lib/config/models";
 import {
   actionPlanManagerOnlyEnabled,
   formFullRemapEnabled,
+  managerWordsOnlyEnabled,
   notANameGuardEnabled,
   warningLevelManagerOnlyEnabled,
+  formChoiceStatedEnabled,
+  remapIncidentFixEnabled,
+  placeSpanGuardEnabled,
+  priorActionsParseEnabled,
+  keepFormEmployeeEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
-import { CA_POLICY_LABEL, readCaPolicy } from "@/lib/forms/ca-policy";
+import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
+import { asksOnlyAboutFormsOnFile } from "@/lib/forms/chat-form-records";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
-import { listIncidentDates } from "@/lib/forms/form-date-answer";
+import { listIncidentDates, datesInText, datesInTextWithYearless } from "@/lib/forms/form-date-answer";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
+import { lateOpenOn, mostRecent } from "@/lib/forms/late-open";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
+import { statedPriorActions } from "@/lib/forms/prior-actions";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
 import { payrollDeductAmount, payrollDeductFromConversation } from "@/lib/forms/payroll-deduct";
 import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
 import { extractEmployeeNames, extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
 import { spokenDates } from "@/lib/forms/relative-date";
-import { managerStatedWarningLevel, warningLevelFromTurns } from "@/lib/forms/warning-level";
+import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
+import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
+import { labelledStoreIds } from "@/lib/forms/store-cue";
+import { warningLevelFromTurns, managerStatedWarningLevel } from "@/lib/forms/warning-level";
 import type { ChatFormProposal } from "@/types";
 
+import { withoutAppLines } from "./app-sentences";
 import { callClaudeToolDetailed } from "./call-claude";
 import { chatTraceDraft } from "./chat-trace-store";
+import { readsAsPolicyPaste, readsAsStatedTitle, spelledAssistant } from "./title-words";
+import {
+  currentRequestStart,
+  hasCutDate,
+  isAmbiguousAnswer,
+  isEditTurn,
+  isRequestLeftover,
+  mergePriorActions,
+  namedPolicy,
+  priorListActions,
+  remapCitations,
+  remapManualHeadings,
+  remapManualSections,
+  remapPolicyLine,
+  placeSpans,
+  requestIncident,
+  saidInWords,
+  statedActionPlan,
+  withoutAmbiguousAnswers,
+  withoutPriorList,
+  withoutStateCodes,
+  type RemapManual,
+} from "./remap-incident";
 import type { AskResponse } from "./types";
 
 /**
@@ -112,8 +149,13 @@ export function groundFormSlots(input: {
   readonly continueTemplateKey?: string | null;
   /** Slots already kept for this conversation. A null read must not erase them. */
   readonly saved?: Partial<FormRemapSlots> | null;
+  /** The JBA Policy Manual, read only with REMAP_INCIDENT_FIX_ENABLED on. */
+  readonly manual?: RemapManual | null;
 }): { slots: FormRemapSlots; response: AskResponse } {
-  const conversation = turnsWithQuestion(input.history, input.question);
+  const fixed = remapIncidentFixEnabled();
+  const managerOnly = managerWordsOnlyEnabled();
+  const allTurns = turnsWithQuestion(input.history, input.question);
+  const conversation = managerOnly ? managerTurns(allTurns) : allTurns;
   const users = conversation.filter((turn) => turn.role === "user").map((turn) => turn.content);
   const saved = withoutUntypedName(
     input.saved ?? null,
@@ -122,13 +164,29 @@ export function groundFormSlots(input: {
   );
   const said = users.join("\n");
   const raw = parseRaw(input.raw);
-  const templateKey =
-    templateFromUser(said) ??
-    (isTemplate(input.continueTemplateKey) ? input.continueTemplateKey : null) ??
-    (isTemplate(raw.templateKey) ? raw.templateKey : null);
-  const employeeName = groundedName(raw.employeeName, users);
-  const jobTitle = groundedTitle(users);
-  const store = groundedStore(said);
+  const choiceStated = formChoiceStatedEnabled();
+  const continued = isTemplate(input.continueTemplateKey) ? input.continueTemplateKey : null;
+  const stated = choiceStated ? statedTemplate(users, continued ?? input.saved?.templateKey ?? null) : null;
+  if (stated?.together) {
+    return { slots: { ...EMPTY_SLOTS }, response: { content: startWithQuestion(stated.together), citations: [] } };
+  }
+  // FORM_CHOICE_STATED_ENABLED: in a coaching conversation the model's "dpoa"
+  // does not pick the Corrective Action Form; the manager's own words do
+  // (templateFromUser reads "CA", "write up", "verbal", "warning").
+  const coaching =
+    users.some((turn) => /\bcoach(?:ing)?\b/i.test(turn)) && !users.some((turn) => mentionsEarlierCoaching(turn));
+  const modelKey =
+    isTemplate(raw.templateKey) && !(choiceStated && raw.templateKey === "dpoa" && coaching) ? raw.templateKey : null;
+  const templateKey = stated?.key ?? templateFromUser(said) ?? continued ?? modelKey;
+  // KEEP_FORM_EMPLOYEE_ENABLED keeps the saved employee; NOT_A_NAME_GUARD_ENABLED
+  // has already dropped a saved name that was never typed.
+  const employeeName = groundedName(raw.employeeName, users, saved?.employeeName ?? null);
+  // REMAP_INCIDENT_FIX_ENABLED drops "Kearney, NE"-style state codes before the
+  // title is read; MANAGER_WORDS_ONLY_ENABLED then reads it from the manager's turns.
+  const titleTurns = fixed ? users.map(withoutStateCodes) : users;
+  const jobTitle = managerOnly ? managerTitle(titleTurns, raw.employeeName) : groundedTitle(titleTurns);
+  const store =
+    (placeSpanGuardEnabled() ? newestNamedStore(users) : null) ?? groundedStore(said) ?? (fixed ? placeStore(said) : null);
   const incidentDateIso = groundedDate(said, input.today);
   /*
    * WARNING_LEVEL_MANAGER_ONLY_ENABLED (ported from the sibling app, 24 Oct 2026):
@@ -142,15 +200,48 @@ export function groundFormSlots(input: {
       )
     : null;
   const warningLevel = managerWarning ?? explicitWarning(users, input.today);
-  const payrollDeduct = payrollDeductFromConversation(conversation);
+  // A bare "Yes" after a list of questions answers none of them (REMAP_INCIDENT_FIX_ENABLED).
+  const payrollDeduct = payrollDeductFromConversation(fixed ? withoutAmbiguousAnswers(conversation) : conversation);
   const payrollAmount = payrollDeduct === "yes" ? managerPayrollAmount(said) : null;
-  const policySection = groundedPolicy(said);
-  const observation = statedIncident(said, employeeName) ?? acceptSummary(raw.observation, said);
-  const priorActions = statedPrior(said);
+  // A later create request with its own incident starts a new form: What
+  // happened, the policy, the prior actions and the plan are read from there.
+  const start = fixed ? currentRequestStart({ turns: users, employeeName, slotClause }) : 0;
+  const scoped = users.slice(start).join("\n");
+  const named = fixed ? namedPolicy(withoutPriorList(scoped)) : null;
+  // LATE_OPEN_DATE_ENABLED with REMAP_INCIDENT_FIX_ENABLED: a described late
+  // opening is still the Late Opening policy when no policy is named and the
+  // manual gives no section for it.
+  const lateOpening = fixed && !named ? describedLateOpening(withoutPriorList(scoped)) : null;
+  const policySection = fixed ? (named ?? lateOpening) : groundedPolicy(said);
+  // MANAGER_WORDS_ONLY_ENABLED: a clause that only names the employee or says
+  // where they work is not what happened, on either reader.
+  const incidentSlot = managerOnly ? (clause: string) => slotClause(clause) || namesOrPlacesThem(clause) : slotClause;
+  const observation = fixed
+    ? (requestIncident({ text: scoped, employeeName, slotClause: incidentSlot }) ??
+      (isRequestLeftover(raw.observation, employeeName) || hasCutDate(raw.observation, said)
+        ? null
+        : acceptSummary(raw.observation, scoped)))
+    : (statedIncident(said, employeeName, managerOnly) ?? acceptSummary(raw.observation, said));
+  // Both readers contribute, each behind its own flag: the "previous coaching: …"
+  // list (REMAP_INCIDENT_FIX_ENABLED) and the intent path's step reader
+  // (PRIOR_ACTIONS_PARSE_ENABLED). With both on, a list item whose date a
+  // parsed step already holds is the same step and is not listed twice.
+  const priorList = fixed ? priorListActions(said) : [];
+  const priorActions = priorActionsParseEnabled()
+    ? remapPriorActions(statedPrior(said), said, input.today, priorList)
+    : fixed
+      ? mergePriorActions(statedPrior(said), priorList)
+      : statedPrior(said);
   const incidentTime = statedTime(said);
+  // The action plan is the manager's, or blank. The model's summary and
+  // "previous coaching …" are not a plan.
+  const plan = fixed ? statedActionPlan(scoped) : acceptSummary(stripMoney(raw.actionPlan ?? ""), said);
+  // PRIOR_ACTIONS_PARSE_ENABLED: a plan that is only the history label is not a plan.
+  const remapPlan = priorActionsParseEnabled() && plan && HISTORY_LABEL_ONLY.test(plan) ? null : plan;
   // Manager-only: the plan they typed, word for word, or none. Never the model's summary.
+  // With REMAP_INCIDENT_FIX_ENABLED it is read from the current request's turns only.
   const planManagerOnly = actionPlanManagerOnlyEnabled();
-  const actionPlan = planManagerOnly ? managerTypedActionPlan(users) : acceptSummary(stripMoney(raw.actionPlan ?? ""), said);
+  const actionPlan = planManagerOnly ? managerTypedActionPlan(fixed ? users.slice(start) : users) : remapPlan;
   const closeMatchNote = employeeName ? closeNote(employeeName, input.people) : null;
 
   const read: FormRemapSlots = {
@@ -170,28 +261,54 @@ export function groundFormSlots(input: {
     actionPlan,
     closeMatchNote,
   };
+  // NOT_A_NAME_GUARD_ENABLED filtered `saved` above; REMAP_INCIDENT_FIX_ENABLED drops leftovers from it.
+  const kept = fixed ? withoutLeftovers(saved, employeeName, start > 0, said) : saved;
   /*
    * RE-READ EVERY TURN (WARNING_LEVEL_MANAGER_ONLY_ENABLED; ported from Ask
    * Sunny, QA 24 Oct 2026): the level is what the manager's turns state now,
    * and a saved one is kept only when the history may have been cut — so a
    * level the manager never stated cannot ride on from an earlier extraction.
    */
+  // Every turn counts toward the cap, also one that held only the app's lines (MANAGER_WORDS_ONLY_ENABLED).
   const savedSlots =
-    warningLevelManagerOnlyEnabled() && saved && conversation.length < HISTORY_CAP
-      ? { ...saved, warningLevel: null }
-      : saved;
-  const merged = finishSlots(mergeSlots(read, savedSlots), said);
+    warningLevelManagerOnlyEnabled() && kept && allTurns.length < HISTORY_CAP
+      ? { ...kept, warningLevel: null }
+      : kept;
+  let slots = finishSlots(firstCoachingUnlessEarlier(mergeSlots(read, savedSlots), users), said);
+  const sections =
+    fixed && input.manual
+      ? remapManualSections({
+          said: scoped,
+          chunks: input.manual.chunks,
+          incident: slots.observation,
+          modelHeading: raw.policySection,
+        })
+      : [];
+  if (fixed) slots = { ...slots, policySection: named ?? sections[0]?.heading ?? lateOpening ?? null };
   // A saved summary from an earlier turn does not come back either.
-  const slots = planManagerOnly ? { ...merged, actionPlan } : merged;
+  if (planManagerOnly) slots = { ...slots, actionPlan };
 
   const assistants = [...input.history, { role: "user", content: input.question }]
     .filter((turn) => turn.role === "assistant")
     .map((turn) => turn.content);
+  // An ambiguous "Yes" answered nothing, so the questions before it are asked again.
+  if (fixed && isAmbiguousAnswer(conversation, conversation.length - 1)) assistants.pop();
   const questions = questionsFor(slots, assistants);
-  const content = renderReply(slots, questions);
+  const content = renderReply(
+    slots,
+    questions,
+    fixed
+      ? {
+          policyLine:
+            remapPolicyLine(named, sections) ?? (slots.policySection === lateOpening && lateOpening ? `**Policy:** ${lateOpening}` : null),
+          storeSaid: slots.store ? saidInWords(slots.store, said) : false,
+          titleSaid: slots.jobTitle ? saidInWords(slots.jobTitle, said) : false,
+        }
+      : null,
+  );
   const response: AskResponse = {
     content,
-    citations: [],
+    citations: fixed && input.manual ? remapCitations(input.manual, sections) : [],
     ...(slots.templateKey ? { formProposal: proposalFor(slots) } : {}),
   };
   return { slots, response };
@@ -200,18 +317,137 @@ export function groundFormSlots(input: {
 /**
  * A form turn is one the library already calls a form, or field notes
  * ("verbal", "no payroll", "prior ="). A question about the policy is not.
+ *
+ * ONLY THE FOUR FORMS THIS READ FILLS (conv_mvnmfb21286uhtq, 25 Oct 2026).
+ * "Create an exit form for Test Employee at Kearney, she resigned …" came back
+ * as "Here is the Corrective Action Form." with "Verbal or written?" and
+ * "Is payroll deduct applicable?", and the next "Yes" set payroll deduct: the
+ * extraction can only choose among `TEMPLATES`, so a form outside them fell
+ * onto the Corrective Action Form. When the manager's own latest naming is a
+ * library form outside `TEMPLATES` (the Resignation/Exit Form, a demotion, an
+ * EPP, …), or none is named and the open card is one, this read does not run
+ * and the proposal flow serves the turn. Bubbles' replies never count, and a
+ * Corrective Action that mentions "she resigned" is still a Corrective Action.
  */
 export function remapShouldRun(input: {
   readonly question: string;
   readonly history: readonly { role: string; content: string }[];
   readonly formsTurn: boolean;
+  /** The template of the card already open in this chat, if any. */
+  readonly continueTemplateKey?: string | null;
+  /** Library keys this deployment lists but does not publish (inactive, or no published version). */
+  readonly unpublished?: readonly string[];
 }): boolean {
+  if (asksAboutCorrectiveAction(input.question)) return false;
+  const named = managerNamedTemplate(input.question, input.history);
+  if (named !== null && !remapFills(named, input.unpublished)) return false;
+  if (named === null && input.continueTemplateKey && !remapFills(input.continueTemplateKey, input.unpublished)) return false;
   if (input.formsTurn) return true;
-  if (/\?\s*$/.test(input.question.trim()) && /\b(?:what|how|when|where|who|why|can|does|do|is)\b/i.test(input.question)) {
-    return false;
-  }
+  if (asksAQuestion(input.question)) return false;
   const text = [input.question, ...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content)].join("\n");
   return /\b(?:verbal|written|warning|corrective|write-?ups?|payroll|prior\s*=)\b/i.test(text);
+}
+
+function asksAQuestion(question: string): boolean {
+  return /\?\s*$/.test(question.trim()) && /\b(?:what|how|when|where|who|why|can|does|do|is)\b/i.test(question);
+}
+
+/**
+ * "what does a verbal CA mean?" names the form and asks about it. The spoken
+ * intent made it a forms turn, and the remap answered with a Corrective
+ * Action Form whose "What happened" was the question (QA F4, 24 Oct 2026).
+ * The template reader already says nothing is to be started, so the turn
+ * goes to the form proposal, which hands it to the knowledge base.
+ */
+function asksAboutCorrectiveAction(question: string): boolean {
+  if (!asksAQuestion(question)) return false;
+  const intent = detectTemplateIntent(question);
+  return intent.kind === "corrective_action" && !intent.requestedCreation;
+}
+
+/**
+ * The library form the manager last asked for, newest manager turn first, or
+ * null when no manager turn names one. A question about forms already on file
+ * names a form without asking for one, as on the proposal path.
+ */
+function managerNamedTemplate(question: string, history: readonly { role: string; content: string }[]): string | null {
+  const managerTurns = [
+    question,
+    ...history
+      .filter((turn) => turn.role === "user")
+      .map((turn) => turn.content)
+      .reverse(),
+  ];
+  for (const text of managerTurns) {
+    if (!text.trim() || asksOnlyAboutFormsOnFile(text)) continue;
+    const intent = detectTemplateIntent(text);
+    if (intent.kind === "explicit" || intent.kind === "clarify") return intent.templateKey;
+    if (intent.kind === "corrective_action" && intent.requestedCreation) return "dpoa";
+    if (namesFormOutsideRemap(text)) return OUTSIDE_REMAP;
+  }
+  return null;
+}
+
+/**
+ * A FORM THIS READ DOES NOT FILL IS NOT ONE OF THE FOUR (conv_mvnqbm6m28hg07j,
+ * conv_mvnqblza266tbwt, 25 Oct 2026). "create a tanning consultant interview
+ * form for Test Employee" came back as "Here is the Coaching Form." with
+ * "What happened: create a tanning consultant interview form for", and "create
+ * a first round management interview form for Test Employee" as the
+ * Corrective Action Form, after both templates were hidden
+ * (`config/company/forms/hidden.ts`). The extraction can only choose among
+ * `TEMPLATES`, so the remap runs only for a form it fills that this deployment
+ * also publishes: not a hidden template, and not one the library lists as
+ * inactive or without a published version. Everything else is the proposal
+ * flow's, which says the form is not published and opens no card.
+ */
+function remapFills(templateKey: string, unpublished: readonly string[] | undefined): boolean {
+  if (!isTemplate(templateKey) || isHiddenTemplate(templateKey)) return false;
+  return !(unpublished ?? []).includes(templateKey);
+}
+
+/** The manager named a form, but not one the library reads as a single template this read fills. */
+const OUTSIDE_REMAP = "outside-remap";
+
+/**
+ * The head word of every library title the remap does not fill — "Interview"
+ * (the Prescreen / Phone, Tanning Consultant and both Management Interview
+ * Forms), "Exit" and "Resignation", "Demotion", "Transfer", "EPP" — read from
+ * the titles themselves, minus the heads of the four it does fill ("Coaching",
+ * "Action", "Review"). A title added to the library is covered here without a
+ * second edit, and a hidden one stays covered because its seed is still listed.
+ */
+const OUTSIDE_HEADS: readonly string[] = (() => {
+  const heads = (name: string): string[] =>
+    name
+      .toLowerCase()
+      .split(/\s*[\/—–]\s*/)
+      .map((segment) => segment.split(/[^a-z]+/).filter((word) => word && word !== "form").at(-1))
+      .filter((word): word is string => Boolean(word));
+  const filled = new Set(TEMPLATE_SEEDS.filter((seed) => isTemplate(seed.key)).flatMap((seed) => heads(seed.name)));
+  const outside = new Set(TEMPLATE_SEEDS.filter((seed) => !isTemplate(seed.key)).flatMap((seed) => heads(seed.name)));
+  return [...outside].filter((word) => !filled.has(word));
+})();
+
+const OUTSIDE_HEAD = `(?:${OUTSIDE_HEADS.join("|")})s?`;
+/** "interview form", "store manager interview paperwork", "exit form". */
+const OUTSIDE_AS_FORM = new RegExp(String.raw`\b${OUTSIDE_HEAD}\s+(?:forms?|paperwork|packets?|sheets?|documents?|templates?)\b`, "i");
+/** "create a store manager interview for …", "start the exit for …": the form's head is what is being made. */
+const OUTSIDE_AS_OBJECT = new RegExp(
+  String.raw`\b(?:create|make|start|draft|build|fill\s+(?:out|in)|pull\s+up|open|begin|prepare|need)\s+(?:me\s+|us\s+)?(?:a|an|the|another)\s+(?:[a-z/'-]+\s+){0,4}?${OUTSIDE_HEAD}\b`,
+  "i",
+);
+
+/**
+ * A manager turn that names, as the thing to make, a form whose title is
+ * outside the remap — "an interview form" (which the library reads as a
+ * choice among interviews), "a store manager interview form" (no such title).
+ * A mention that is not the request ("she skipped her interview", "she wants
+ * a transfer") is not a naming.
+ */
+function namesFormOutsideRemap(text: string): boolean {
+  if (OUTSIDE_HEADS.length === 0) return false;
+  return OUTSIDE_AS_FORM.test(text) || OUTSIDE_AS_OBJECT.test(text);
 }
 
 export async function remapFormTurn(
@@ -222,22 +458,39 @@ export async function remapFormTurn(
     readonly people: readonly RosterEmployee[];
     readonly continueTemplateKey?: string | null;
     readonly saved?: Partial<FormRemapSlots> | null;
+    /** Read only with REMAP_INCIDENT_FIX_ENABLED on. A failed read cites nothing. */
+    readonly policyManual?: () => Promise<RemapManual | null>;
+    /** Library keys listed but not published; a card for one of them is left to the proposal flow. */
+    readonly unpublished?: readonly string[];
   },
   call: FormRemapCaller = defaultCall,
 ): Promise<AskResponse | null> {
   if (!formFullRemapEnabled()) return null;
   const started = Date.now();
+  let manual: RemapManual | null = null;
+  if (remapIncidentFixEnabled() && input.policyManual) {
+    try {
+      manual = await input.policyManual();
+    } catch {
+      manual = null;
+    }
+  }
+  const headings = manual ? remapManualHeadings(manual.chunks) : [];
   let result: FormRemapCallerResult;
   try {
     result = await call({
       model: CLAUDE_HAIKU_MODEL,
-      system: SYSTEM,
-      user: conversationText(input.history, input.question, input.today),
+      system: headings.length > 0 ? `${SYSTEM}\n${SYSTEM_POLICY_HEADING}` : SYSTEM,
+      user:
+        headingsBlock(headings) +
+        (managerWordsOnlyEnabled()
+          ? conversationText(managerTurns(input.history), withoutAppLines(input.question), input.today)
+          : conversationText(input.history, input.question, input.today)),
     });
   } catch {
     return null;
   }
-  const grounded = groundFormSlots({ ...input, raw: result.raw, saved: input.saved ?? null });
+  const grounded = groundFormSlots({ ...input, raw: result.raw, saved: input.saved ?? null, manual });
   noteExtraction({
     model: result.model,
     inputTokens: result.inputTokens,
@@ -245,6 +498,9 @@ export async function remapFormTurn(
     latencyMs: Date.now() - started,
     slots: grounded.slots,
   });
+  // The model's own choice of a form this deployment hides or does not publish opens no card here.
+  const chosen = grounded.response.formProposal?.templateKey;
+  if (chosen && !remapFills(chosen, input.unpublished)) return null;
   return grounded.response;
 }
 
@@ -296,6 +552,13 @@ async function defaultCall(input: { model: string; system: string; user: string 
   return { raw: detailed.input, model: input.model, inputTokens: detailed.inputTokens, outputTokens: detailed.outputTokens };
 }
 
+const SYSTEM_POLICY_HEADING =
+  "policySection is the one heading from the manual list in the message that the incident is about, or null when none fits. Copy the heading exactly. Do not invent one.";
+
+function headingsBlock(headings: readonly string[]): string {
+  return headings.length > 0 ? `Manual headings:\n${headings.map((heading) => `- ${heading}`).join("\n")}\n\n` : "";
+}
+
 function conversationText(history: readonly Turn[], question: string, today: string): string {
   const turns = [...history, { role: "user", content: question }]
     .filter((turn) => turn.content.trim() !== "")
@@ -324,6 +587,7 @@ interface RawSlots {
   readonly employeeName: string | null;
   readonly observation: string | null;
   readonly actionPlan: string | null;
+  readonly policySection: string | null;
 }
 
 function parseRaw(input: unknown): RawSlots {
@@ -333,11 +597,96 @@ function parseRaw(input: unknown): RawSlots {
     employeeName: str(record.employeeName),
     observation: str(record.observation),
     actionPlan: str(record.actionPlan),
+    policySection: str(record.policySection),
   };
 }
 
 function str(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED. The Follow-Up Coaching Form only when the
+ * manager mentions coaching that already happened or a follow-up. The model's
+ * "follow-up-coaching", an open follow-up card or a stored one is otherwise
+ * the Coaching Form (QA, 25 Oct 2026: "I need to coach an employee").
+ */
+function firstCoachingUnlessEarlier(slots: FormRemapSlots, users: readonly string[]): FormRemapSlots {
+  if (!formChoiceStatedEnabled() || slots.templateKey !== "follow-up-coaching") return slots;
+  if (users.some((turn) => mentionsEarlierCoaching(turn))) return slots;
+  return { ...slots, templateKey: "coaching" };
+}
+
+const EMPTY_SLOTS: FormRemapSlots = {
+  templateKey: null,
+  employeeName: null,
+  jobTitle: null,
+  store: null,
+  locationId: null,
+  incidentDateIso: null,
+  incidentTime: null,
+  warningLevel: null,
+  payrollDeduct: null,
+  payrollAmount: null,
+  policySection: null,
+  observation: null,
+  priorActions: null,
+  actionPlan: null,
+  closeMatchNote: null,
+};
+
+/**
+ * FORM_CHOICE_STATED_ENABLED (ported from the sibling app, QA round 12, 25
+ * Oct 2026). One turn carries one card. A turn that names two forms ("a
+ * coaching form and a policy review? I'd like to see both") asks which to
+ * start with. The manager answers with the form's name, which is a form
+ * request like any other; once a card is open, that earlier turn no longer
+ * asks. Null leaves the form to the reading below.
+ */
+function statedTemplate(
+  users: readonly string[],
+  openKey: string | null,
+): { key: TemplateKey | null; together?: TemplateKey[] } | null {
+  for (let at = users.length - 1; at >= 0; at -= 1) {
+    const several = formsNamedTogether(users[at]!);
+    if (several.length > 1) {
+      if (at < users.length - 1 && isTemplate(openKey)) return { key: openKey };
+      return { key: null, together: several };
+    }
+    if (namedForms(users[at]!).length > 0) return null;
+  }
+  return null;
+}
+
+function namedForms(text: string): TemplateKey[] {
+  const keys: TemplateKey[] = [];
+  const add = (re: RegExp, key: TemplateKey) => {
+    if (re.test(text) && !keys.includes(key)) keys.push(key);
+  };
+  add(/\bfollow[- ]up coaching\b/i, "follow-up-coaching");
+  add(/\bpolicy review\b/i, "policy-review");
+  add(/\bcorrective actions?\b|\bwrite-?ups?\b|\bwritten up\b|\bca\b|\bc\/a\b|\bdpoa\b/i, "dpoa");
+  add(/(?<!follow[- ]up )\bcoaching form\b/i, "coaching");
+  return keys;
+}
+
+/** The forms one turn asks for together; each part between "and", "plus" or a comma is read on its own. */
+function formsNamedTogether(text: string): TemplateKey[] {
+  const parts = text.split(/,|&|\band\b|\bplus\b|\bas well as\b/i).filter((part) => part.trim() !== "");
+  if (parts.length < 2) return [];
+  const keys: TemplateKey[] = [];
+  for (const part of parts) {
+    const named = namedForms(part);
+    const key = named.length === 1 ? named[0]! : null;
+    if (key && !keys.includes(key)) keys.push(key);
+  }
+  return keys.length > 1 ? keys : [];
+}
+
+function startWithQuestion(keys: readonly TemplateKey[]): string {
+  const names = keys.map((key) => `the **${TEMPLATE_SEEDS.find((seed) => seed.key === key)?.name ?? key}**`);
+  const choices = names.length === 2 ? names.join(" or ") : `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`;
+  return `Which form should I start with — ${choices}? I'll draft one at a time; ask for the other once this one is done.`;
 }
 
 function isTemplate(value: string | null | undefined): value is TemplateKey {
@@ -355,7 +704,9 @@ function templateFromUser(text: string): TemplateKey | null {
   add(/\bfollow[- ]up coaching\b/gi, "follow-up-coaching");
   add(/\bpolicy review\b/gi, "policy-review");
   add(/\bcorrective actions?\b|\bwrite-?ups?\b|\bwritten up\b|\bca\b|\bc\/a\b|\bdpoa\b/gi, "dpoa");
-  add(/\bcoaching form\b/gi, "coaching");
+  // "follow-up coaching form" names the Follow-Up Coaching Form, not a second
+  // naming of the Coaching Form after it (25 Oct 2026).
+  add(/(?<!follow[- ]up )\bcoaching form\b/gi, "coaching");
   if (named.length > 0) {
     named.sort((a, b) => a.index - b.index);
     return named.at(-1)!.key;
@@ -390,7 +741,7 @@ function withoutUntypedName(
   return { ...saved, employeeName: null, closeMatchNote: null };
 }
 
-function groundedName(proposed: string | null, turns: readonly string[]): string | null {
+function groundedName(proposed: string | null, turns: readonly string[], saved: string | null = null): string | null {
   // NOT_A_NAME_GUARD_ENABLED: the model's name is looked for outside a
   // bulleted or priced offer list, so an offer it copied is not found.
   const spoken = notANameGuardEnabled() ? turns.map((turn) => maskNotANameText(turn)) : turns;
@@ -399,11 +750,27 @@ function groundedName(proposed: string | null, turns: readonly string[]): string
   // NOT_A_NAME_GUARD_ENABLED: "blank", a product, a store's city or a verb
   // phrase is not the employee, even when the manager typed those words.
   if (proposed && isNotAName(proposed)) proposed = null;
+  const keep = keepFormEmployeeEnabled();
+  /*
+   * KEEP_FORM_EMPLOYEE_ENABLED (ported from the sibling app, QA 25 Oct 2026):
+   * "for Test Employee" names Test Employee. The model's "Test" is a slice of
+   * the manager's words, so it was kept and the card said "Test". The name
+   * as typed stands in for a shorter spelling of it, or for no name.
+   */
+  const typed = keep ? typedEmployeeName(turns.at(-1) ?? "") : null;
+  if (typed && (!proposed || typed.toLowerCase().startsWith(`${proposed.trim().toLowerCase()} `))) {
+    return fullerOfSame(saved, typed);
+  }
   if (proposed) {
     const inLatest = exactSlice(latest, proposed);
-    if (inLatest) return inLatest;
+    if (inLatest) return keep ? fullerOfSame(saved, inLatest) : inLatest;
     const inSaid = exactSlice(said, proposed);
-    if (inSaid) return inSaid;
+    if (inSaid) return keep ? fullerOfSame(saved, inSaid) : inSaid;
+  }
+  // NOT_A_NAME_GUARD_ENABLED: the kept reader looks at the masked turns too, and a kept non-name is dropped.
+  if (keep) {
+    const kept = keptEmployee(spoken, saved);
+    return kept && isNotAName(kept) ? null : kept;
   }
   let found: string | null = null;
   for (const turn of turns) {
@@ -411,6 +778,54 @@ function groundedName(proposed: string | null, turns: readonly string[]): string
     if (person && !isNotAName(person)) found = person;
   }
   return found;
+}
+
+/*
+ * KEEP_FORM_EMPLOYEE_ENABLED (ported from the sibling app, QA round 10). The
+ * model's name was not in the manager's words, so the employee is read here.
+ * A name stated on purpose ("for Test Employee", "Test Employee at
+ * Kearney", a turn that is only the name) replaces the one before it. A name
+ * met in passing ("onboarding with new hire Test Newhire") is the employee
+ * only when there is none yet: it does not replace the saved one. A shorter
+ * spelling of the same person ("test") keeps the fuller name.
+ */
+function keptEmployee(turns: readonly string[], saved: string | null): string | null {
+  let found = saved?.trim() || null;
+  for (const turn of turns) {
+    const stated = statedPerson(turn);
+    // NOT_A_NAME_GUARD_ENABLED: "for blank" or a store's city is not a person.
+    if (stated && isNotAName(stated)) continue;
+    if (stated) {
+      found = fullerOfSame(found, stated);
+      continue;
+    }
+    const names = extractEmployeeNames(turn);
+    if (names.length !== 1) continue;
+    const name = exactSlice(turn, names[0]!) ?? names[0]!;
+    if (!found && !isNotAName(name)) found = name;
+  }
+  return found;
+}
+
+function statedPerson(turn: string): string | null {
+  if (/\bas the location\b/i.test(turn)) return null;
+  const named = /\bfor\s+([A-Z][\w'.-]+(?:\s+[A-Z][\w'.-]+)*)/.exec(turn);
+  if (named) return named[1]!;
+  const leading = /^([A-Z][\w'.-]+(?:\s+[A-Z][\w'.-]+)+)\s+at\b/.exec(turn.trim());
+  if (leading) return leading[1]!;
+  const names = extractEmployeeNames(turn);
+  if (names.length !== 1) return null;
+  const whole = turn.trim().replace(/[.!]+$/, "");
+  return whole.toLowerCase() === names[0]!.toLowerCase() ? (exactSlice(turn, names[0]!) ?? names[0]!) : null;
+}
+
+/** The saved name when `name` is a shorter spelling of the same person ("test" for "test employee"). */
+function fullerOfSame(saved: string | null, name: string): string {
+  if (!saved) return name;
+  const kept = saved.toLowerCase().split(/\s+/).filter(Boolean);
+  const typed = name.toLowerCase().split(/\s+/).filter(Boolean);
+  if (typed.length < kept.length && typed.every((word, index) => kept[index] === word)) return saved;
+  return name;
 }
 
 /** "for Test Employee" and "Test Employee at Grand Island". Not "Use Kearney as the location". */
@@ -431,6 +846,30 @@ function exactSlice(haystack: string, needle: string): string | null {
   return haystack.slice(at, at + needle.length);
 }
 
+/**
+ * The manager's turns without the lines the app wrote onto the question
+ * ("Job title: CA. It happened at Kearney, NE."). A turn that was only those
+ * lines is gone.
+ */
+function managerTurns(turns: readonly Turn[]): Turn[] {
+  return turns
+    .map((turn) => (turn.role === "user" ? { role: turn.role, content: withoutAppLines(turn.content) } : turn))
+    .filter((turn) => turn.content.trim() !== "");
+}
+
+/**
+ * The title from the manager's turns: not a pasted policy ("District Managers
+ * will be responsible …"), "ass't" spelled out, and a labelled phrase only
+ * when it reads as a title ("test was late opening store" is a clause).
+ */
+function managerTitle(turns: readonly string[], employeeName: string | null): string | null {
+  const read = turns.filter((turn) => !readsAsPolicyPaste(turn)).map(spelledAssistant);
+  const title = groundedTitle(read);
+  if (!title || extractJobTitle(title)) return title;
+  const said = read.join("\n");
+  return readsAsStatedTitle({ probe: title, text: said, employeeName, knownTitle: extractJobTitle }) ? title : null;
+}
+
 function groundedTitle(turns: readonly string[]): string | null {
   let title: string | null = null;
   for (const turn of turns) {
@@ -440,6 +879,27 @@ function groundedTitle(turns: readonly string[]): string | null {
     title = found;
   }
   return title;
+}
+
+/*
+ * PLACE_SPAN_GUARD_ENABLED. The store the newest manager turn names wins over
+ * one an earlier turn named: "location kearney" after "store is grand island"
+ * is Kearney (ported from the sibling app, QA Round 4). Each turn is read newest
+ * first, as before and then with a field label as the place cue
+ * (`store-cue.ts`). A turn naming more than one store is left to the reading
+ * below.
+ */
+function newestNamedStore(turns: readonly string[]): { id: string; name: string } | null {
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    const turn = turns[index]!;
+    const own = groundedStore(turn);
+    if (own) return own;
+    const ids = labelledStoreIds(turn);
+    if (ids.length > 1) return null;
+    const name = ids.length === 1 ? rosterLocationName(ids[0]!) : null;
+    if (name) return { id: ids[0]!, name };
+  }
+  return null;
 }
 
 function groundedStore(text: string): { id: string; name: string } | null {
@@ -454,6 +914,9 @@ function groundedStore(text: string): { id: string; name: string } | null {
 }
 
 function groundedDate(text: string, today: string): string | null {
+  // LATE_OPEN_DATE_ENABLED: the newest date the manager typed, dashed or not.
+  const newest = lateOpenOn() ? newestDate(text, today) : null;
+  if (newest) return newest;
   const found = listIncidentDates(text, today).filter((item) => !dateIsPrior(text, item.index));
   const calendar = [...new Set(found.map((item) => item.iso))];
   // One incident date, or the later one when they correct it. A prior step's
@@ -490,7 +953,9 @@ function calendarPhrase(phrase: string): boolean {
 function dateIsPrior(text: string, index: number): boolean {
   const before = text.slice(Math.max(0, index - 80), index);
   const clause = before.slice(Math.max(before.search(/[^.;\n]*$/), 0));
-  return /\b(?:prior|previous|coached\s+on|manual\s+ack|already|got|received)\b/i.test(clause);
+  if (/\b(?:prior|previous|coached\s+on|manual\s+ack|already|got|received)\b/i.test(clause)) return true;
+  // REMAP_INCIDENT_FIX_ENABLED: "jba manual 11-1-25" dates the manual acknowledgement, not this form.
+  return remapIncidentFixEnabled() && /\b(?:jba\s+(?:policy\s+)?manual|policy\s+manual)\b/i.test(clause);
 }
 
 /** "write up" and "written up" are the form, not a level. */
@@ -519,12 +984,52 @@ function explicitWarning(turns: readonly string[], today: string): "verbal" | "w
   return level;
 }
 
+/**
+ * THE NEWEST DATE WINS (QA, 24 Oct 2026; LATE_OPEN_DATE_ENABLED). "change the
+ * date to 10-22" after "was late to open the store 10-19-26" kept 19 October:
+ * a dated calendar date always beat a yearless one, wherever it was typed.
+ * Now the later of the two in the manager's words dates the form, and a
+ * yearless "10-22" is the most recent 22 October, never a future one.
+ */
+function newestDate(text: string, today: string): string | null {
+  const calendar = listIncidentDates(text, today)
+    .filter((item) => !dateIsPrior(text, item.index))
+    .map((item) => ({ iso: item.iso, index: item.index }));
+  const dashed = dashedMonthDays(text, today).map((item) => ({
+    iso: mostRecent(item.month, item.day, today) ?? item.iso,
+    index: item.index,
+  }));
+  const all = [...calendar, ...dashed].sort((a, b) => a.index - b.index);
+  return all.at(-1)?.iso ?? null;
+}
+
+/** Every "10-20" that is a month and day, with where it sits. Same rules as `dashedMonthDay`. */
+function dashedMonthDays(text: string, today: string): { iso: string; index: number; month: number; day: number }[] {
+  const year = Number(/^(\d{4})-/.exec(today)?.[1]);
+  if (!Number.isFinite(year)) return [];
+  const found: { iso: string; index: number; month: number; day: number }[] = [];
+  // Not "10-1" out of "10-19-26": the day takes every digit, and a year after it is a calendar date.
+  for (const match of text.matchAll(/(?<![\d-])(\d{1,2})-(\d{1,2})(?!\d|-\d)/g)) {
+    const index = match.index ?? 0;
+    const after = text.slice(index + match[0].length, index + match[0].length + 16);
+    if (/^\s*(?:min|mins|minutes|hrs|hours|hr)\b/i.test(after)) continue;
+    const before = text.slice(Math.max(0, index - 16), index);
+    if (/\btime\s*[:=]?\s*$/i.test(before)) continue;
+    if (dateIsPrior(text, index)) continue;
+    const month = Number(match[1]);
+    const day = Number(match[2]);
+    const iso = monthDayIso(year, month, day);
+    if (iso) found.push({ iso, index, month, day });
+  }
+  return found;
+}
+
 /** "10-20" is 20 October. "10-20 min" and "time 10-20" are not dates. */
 function dashedMonthDay(text: string, today: string): string | null {
   const year = Number(/^(\d{4})-/.exec(today)?.[1]);
   if (!Number.isFinite(year)) return null;
   let found: string | null = null;
-  for (const match of text.matchAll(/(?<![\d-])(\d{1,2})-(\d{1,2})(?!-\d)/g)) {
+  for (const match of text.matchAll(/(?<![\d-])(\d{1,2})-(\d{1,2})(?![\d-])/g)) {
     const index = match.index ?? 0;
     const after = text.slice(index + match[0].length, index + match[0].length + 16);
     if (/^\s*(?:min|mins|minutes|hrs|hours|hr)\b/i.test(after)) continue;
@@ -565,7 +1070,16 @@ function clausePayrollAmount(text: string): string | null {
 
 function groundedPolicy(text: string): string | null {
   const reading = readCaPolicy(text);
-  return reading.stated ? CA_POLICY_LABEL[reading.stated] : null;
+  if (reading.stated) return CA_POLICY_LABEL[reading.stated];
+  return describedLateOpening(text);
+}
+
+/**
+ * "late to open", "late opening", "opened late": the manual's Late Opening
+ * section, which this card did not name (QA, 24 Oct 2026; LATE_OPEN_DATE_ENABLED).
+ */
+function describedLateOpening(text: string): string | null {
+  return lateOpenOn() && describedAttendanceKeys(text)?.includes(LATE_OPENING_OFFENSE) ? "Late Opening" : null;
 }
 
 function acceptSummary(summary: string | null, said: string): string | null {
@@ -599,11 +1113,12 @@ function closeNote(name: string, people: readonly RosterEmployee[]): string | nu
  * summary. A note ("out of dress code 3 shifts", "on cell phone 30+ min") is
  * the issue itself.
  */
-function statedIncident(text: string, employeeName: string | null): string | null {
+function statedIncident(text: string, employeeName: string | null, managerOnly = false): string | null {
   const clauses = text.split(/[\n,;]+/).map((clause) => clause.trim()).filter(Boolean);
   let found: string | null = null;
   for (const clause of clauses) {
     if (slotClause(clause)) continue;
+    if (managerOnly && namesOrPlacesThem(clause)) continue;
     const offense = phraseOffense(stripSlots(clause, employeeName));
     if (offense) found = offense;
   }
@@ -627,8 +1142,10 @@ function stripSlots(clause: string, employeeName: string | null): string {
 }
 
 function phraseOffense(clause: string): string | null {
-  let text = clause.replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, " ");
-  text = text.replace(/(?<![\d-])\d{1,2}-\d{1,2}(?!-\d)(?!\s*(?:min|mins|minutes|hrs|hours|hr)\b)/g, " ");
+  // A whole date first: "10-1" inside "10-15-26" is not a date of its own.
+  let text = clause.replace(/(?<![\d/-])\d{1,2}[/-]\d{1,2}[/-]\d{2,4}(?![\d/-])/g, " ");
+  text = text.replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, " ");
+  text = text.replace(/(?<![\d-])\d{1,2}-\d{1,2}(?![\d-])(?!\s*(?:min|mins|minutes|hrs|hours|hr)\b)/g, " ");
   text = text.replace(/\s+/g, " ").trim().replace(/^[,\s]+|[,\s.]+$/g, "");
   // "register short $40 on 10-20" leaves "on" behind once the date is lifted.
   text = text.replace(/\s+(?:on|at)$/i, "");
@@ -651,6 +1168,18 @@ function phraseOffense(clause: string): string | null {
     return rest;
   }
   return text;
+}
+
+/**
+ * "Her name is Test Employee" and "Test Employee works at Grand Island" say
+ * who and where. They are not what happened.
+ */
+function namesOrPlacesThem(clause: string): boolean {
+  const text = clause.trim();
+  if (/^(?:(?:her|his|their|the employee'?s|employee'?s?)\s+)?(?:full\s+)?name\s+is\b/i.test(text)) return true;
+  return /^(?:[A-Za-z'’-]+(?:\s+[A-Za-z'’-]+)?\s+)?(?:works|worked|is based|is assigned|is working)\s+(?:at|in|out of|from)\s+(?:the\s+)?[^.!?]{1,40}[.!]?$/i.test(
+    text,
+  );
 }
 
 const PAYROLL_ANSWER_ONLY =
@@ -688,6 +1217,61 @@ function slotClause(clause: string): boolean {
   return false;
 }
 
+/*
+ * PRIOR_ACTIONS_PARSE_ENABLED. "previous coaching - jba policy manual
+ * 1-20-26" put "Action plan: Previous coaching" on the card and no prior
+ * action (conv_mvmzmhst2si3jfr). The history is read with the intent path's
+ * reader (`statedPriorActions`), one line per step, after any "prior =" or
+ * "coached on" line already read here; and an action plan that is only the
+ * history label is not an action plan.
+ */
+const HISTORY_LABEL_ONLY =
+  /^\s*(?:(?:the|her|his|their)\s+)?(?:previous|prior|past|earlier|last)\s+(?:coaching|coached|warnings?|verbal|written|final|corrective\s+actions?|cas?|c\/a|write[- ]?ups?|disciplin\w*|actions?)\b/i;
+
+function remapPriorActions(
+  first: string | null,
+  said: string,
+  today: string,
+  listed: readonly string[] = [],
+): string | null {
+  const stated = statedPriorActions(said, today);
+  const lines = (first ? first.split("\n") : []).map((line) => sameCoachingLine(line, stated, today) ?? line);
+  const dated = new Set(lines.flatMap((line) => datesInTextWithYearless(line, today).map((found) => found.iso)));
+  for (const line of stated) {
+    const own = datesInText(line, today).map((found) => found.iso);
+    // A step a "prior =" line already dated is not listed twice; two steps on one day both are.
+    if (own.some((iso) => dated.has(iso)) || lines.includes(line)) continue;
+    lines.push(line);
+  }
+  /*
+   * REMAP_INCIDENT_FIX_ENABLED's list items, after the parsed steps. An item
+   * whose date a step above already holds is that step; the same month and day
+   * counts too, since the reader above takes a corrected year ("jba manual
+   * 11-1-26", then "jba manual 11-1-25") and the list keeps the first one.
+   */
+  const held = lines.flatMap((line) => datesInText(line, today).map((found) => found.iso));
+  for (const item of listed) {
+    const own = datesInText(item, today).map((found) => found.iso);
+    const same = own.some((iso) => held.some((kept) => kept === iso || kept.slice(5) === iso.slice(5)));
+    if (same || lines.some((line) => line.toLowerCase() === item.toLowerCase())) continue;
+    lines.push(item);
+    held.push(...own);
+  }
+  return lines.length > 0 ? lines.join("\n") : null;
+}
+
+/**
+ * "coached on 9-15" read here and "Coaching for being late — signed
+ * 09/15/2026" read by the intent path's reader are one step: the card keeps
+ * the dated line, with what it was for (QA, 25 Oct 2026, conv_mvnoiw8n2kfbcvc).
+ */
+function sameCoachingLine(line: string, stated: readonly string[], today: string): string | null {
+  if (!/^coached on\b/i.test(line)) return null;
+  const day = datesInTextWithYearless(line, today)[0]?.iso.slice(5);
+  if (!day) return null;
+  return stated.find((entry) => /^Coaching\b/.test(entry) && datesInText(entry, today).some((found) => found.iso.slice(5) === day)) ?? null;
+}
+
 function statedPrior(text: string): string | null {
   const hits: string[] = [];
   for (const match of text.matchAll(/\bprior\s*=\s*([^,\n.]+)/gi)) {
@@ -720,6 +1304,44 @@ const SLOT_KEYS = [
   "actionPlan",
   "closeMatchNote",
 ] as const satisfies readonly (keyof FormRemapSlots)[];
+
+/**
+ * A saved What happened that was only the request or an edit ("change the
+ * date to", "name is", "show draft"), what was left of the request ("create
+ * a for for …") or a date cut short ("5-26" of "10-15-26") is not kept, and
+ * neither is a saved
+ * action plan: the plan is read from the manager's words each turn. A new
+ * request drops the old form's incident and policy.
+ */
+function withoutLeftovers(
+  saved: Partial<FormRemapSlots> | null,
+  employeeName: string | null,
+  newRequest: boolean,
+  said: string,
+): Partial<FormRemapSlots> | null {
+  if (!saved) return saved;
+  const name = employeeName ?? saved.employeeName ?? null;
+  const observation = saved.observation ?? null;
+  const leftover =
+    !observation ||
+    isRequestLeftover(observation, name) ||
+    hasCutDate(observation, said) ||
+    isEditTurn(observation) ||
+    /^it\s+happened\b/i.test(observation);
+  return {
+    ...saved,
+    observation: newRequest || leftover ? null : observation,
+    actionPlan: null,
+    ...(newRequest ? { policySection: null } : {}),
+  };
+}
+
+/** The capitalized place after "at", read alone: "at Grand Island used her cell phone". */
+function placeStore(text: string): { id: string; name: string } | null {
+  let found: { id: string; name: string } | null = null;
+  for (const span of placeSpans(text)) found = groundedStore(span) ?? found;
+  return found;
+}
 
 /** A later value replaces the same field. A blank read leaves the saved one. */
 function mergeSlots(next: FormRemapSlots, saved: Partial<FormRemapSlots> | null): FormRemapSlots {
@@ -759,21 +1381,32 @@ function questionsFor(slots: FormRemapSlots, assistants: readonly string[]): str
     .filter((question) => !assistants.some((message) => message.includes(question)));
 }
 
-function renderReply(slots: FormRemapSlots, questions: readonly string[]): string {
+function renderReply(
+  slots: FormRemapSlots,
+  questions: readonly string[],
+  fixed: { readonly policyLine: string | null; readonly storeSaid: boolean; readonly titleSaid: boolean } | null = null,
+): string {
   const lines: string[] = [];
   if (slots.templateKey) {
     const name = TEMPLATE_SEEDS.find((seed) => seed.key === slots.templateKey)?.name ?? "form";
     lines.push(`Here is the ${name}.`);
   }
   if (slots.employeeName) lines.push(`**Employee:** ${slots.employeeName}`);
-  if (slots.jobTitle) lines.push(`**Job title:** ${slots.jobTitle}, as you said`);
-  if (slots.store) lines.push(`**Store:** ${slots.store}, as you said`);
+  const saidTitle = !fixed || fixed.titleSaid ? ", as you said" : "";
+  const saidStore = !fixed || fixed.storeSaid ? ", as you said" : "";
+  if (slots.jobTitle) lines.push(`**Job title:** ${slots.jobTitle}${saidTitle}`);
+  if (slots.store) lines.push(`**Store:** ${slots.store}${saidStore}`);
   if (slots.incidentDateIso) lines.push(`**Date:** ${slots.incidentDateIso}`);
   if (slots.incidentTime) lines.push(`**Time:** ${slots.incidentTime}`);
   if (slots.observation) lines.push(`**What happened:** ${slots.observation}`);
   // The card is the one prior-action line. Repeating it in the reply painted
-  // the acknowledgement twice on the turn that first stated it.
-  if (slots.policySection) lines.push(`**Policy:** ${slots.policySection}, as you said`);
+  // the acknowledgement twice on the turn that first stated it. With the fix
+  // flag the reply lists it once on every turn, as the intent path does
+  // (conv_mvmz9j6n2jyzl4o lost it from the reply after turn 2).
+  if (fixed && slots.priorActions) lines.push(`**Prior actions:** ${slots.priorActions.split("\n").join("; ")}`);
+  if (fixed) {
+    if (fixed.policyLine) lines.push(fixed.policyLine);
+  } else if (slots.policySection) lines.push(`**Policy:** ${slots.policySection}, as you said`);
   if (slots.warningLevel) {
     const label = slots.warningLevel === "verbal" ? "Verbal Warning" : "Written Warning";
     lines.push(`**Type of warning:** ${label}, as you said`);

@@ -6,6 +6,33 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 25 Oct 2026: the job title is a title the manager stated — ported from Ask Sunny (PR 188)
+
+Ask Sunny PR 188 (`59fe1ca`, the same patch as `517992a`) is the title rule
+under `MANAGER_WORDS_ONLY_ENABLED`; its mechanism (`title-words.ts`) reached
+this app in the entry below (PR 116). `src/lib/ai/title-rule-oct24.test.ts`
+runs QA's four turns, with this app's stores and titles, through every reader
+that fills the Job title here: form-full-remap, the intent read and grounded
+entities, flag on and off. On main, 8 of its 13 cases fail; on top of PR 116
+all pass. No Sun Tan City content.
+
+## 24 Oct 2026: the app's own lines are not the manager's words — ported from Ask Sunny
+
+`MANAGER_WORDS_ONLY_ENABLED` is new and stays off. With it on, form-full-remap
+reads the manager's turns without the lines the app writes onto the question
+("The employee is …. Job title: …. It happened at Kearney, NE."), for the
+fields and for the extraction call. The job title skips a pasted policy
+("Managers or District Managers will be responsible …"), reads "ass't store
+manager" as Assistant Manager, and drops a labelled phrase that is a clause
+("test was late opening store"). What happened skips "Her name is …" and
+"… works at Grand Island". The intent read takes the title from the manager's
+turns only (most specific catalog title first), and grounded entities do not
+read a pasted policy for it.
+
+Same expected card as Ask Sunny; this app's path differs (remap is live here).
+Tests use this app's production turn (conv_mvmz8pys26bs2ax) and the Ask Sunny
+managers' turns with this app's stores and titles. No Sun Tan City content.
+
 ## 25 Oct 2026: exit text without tanning; three interview forms hidden
 
 QA found Sun Tan City wording in what a Buff City Soap manager reads: the
@@ -701,3 +728,50 @@ including when the live client has `messages.stream`. Ask Sunny is not
 updated in this session. Its answer path is still a separate `call-claude`,
 and this change stays on Ask Bubbles PR 90. No salon wording was copied.
 
+
+## 24 Oct 2026: remap incident (prod, FORM_FULL_REMAP on)
+
+What happened came from what was left of the request, "previous coaching: …"
+was not a prior action, "10-1" was read out of "10-15-26", and a remap card
+cited no policy. Fixed in `form-full-remap.ts` and the new `remap-incident.ts`
+behind `REMAP_INCIDENT_FIX_ENABLED`; the date regex is an unflagged bug fix.
+Ported to Ask Sunny's remap path in the same session. Sunny's live intent
+path got its own fixes for the same cases (Sunny-only files; see Ask Sunny's
+parity log). Tests: `src/lib/ai/remap-incident-oct24.test.ts` in both apps.
+
+Follow-up (QA step 3 and C-list, 25 Oct 2026): What happened is read one
+turn at a time, so an edit or command ("change the date to 10-22", "name is
+…", "show draft", "cite …", "this is a violation under …") never replaces it;
+a later create request with its own incident resets What happened and the
+policy; a bare "Yes" after several questions answers none; the action plan
+is the manager's own or blank; "as you said" on the store and title only
+when a manager turn holds the words; "at Grand Island used her cell phone"
+keeps the store. Same flag. Ported to Ask Sunny's remap path, and its intent
+path got the same behaviour in its own readers.
+
+## 24 Oct 2026: a policy phrase is not a typed store
+
+`PLACE_SPAN_GUARD_ENABLED` (default off). In conv_mvmcetjw2i4vtwz, "cite
+animals in the workplace policy" followed by "store location is empire, sd"
+was joined into "in the workplace policy store", and the card asked about a
+typed store called "workplace policy". On, the span reader skips a phrase
+that names a policy, manual, section or similar document, and a
+span-before-"store" match must sit inside one manager turn. Ported to
+Ask Sunny (9b206c6, same flag): its roster salon reader
+(`src/lib/forms/salon-mention.ts`) has no unmatched-span reading, but its
+"<place>, <state>" reader (`place-state.ts`) joined the turns ("… in the
+workplace policy" then "at Kearney, NE" read as one unknown place) and its
+employment-change labelled location kept "per the new salon policy" as the
+salon. Both are guarded there. No salon wording was copied.
+
+## 24 Oct 2026: "location kearney" names the store (from Ask Sunny, QA Round 4)
+
+Same flag, `PLACE_SPAN_GUARD_ENABLED`. Ask Sunny conv_mvmw4hwq292a6vq:
+"name is test testyone, location st joe, …" after "salon is wornall" left
+the card on Wornall (Ask Sunny 503d454). The same turns with stores here:
+"location kearney" and "store kearney" were not read, and the form remap
+and the intent slots kept Grand Island. On, `store-cue.ts` reads "location /
+store <name>" as "at <name>" (the store reader's own rules still apply), and
+the store the newest manager turn names wins on the remap and the intent
+slots. No salon wording was copied. Test:
+`src/lib/forms/store-label-cue.test.ts`.
