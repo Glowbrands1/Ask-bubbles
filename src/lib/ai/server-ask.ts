@@ -124,6 +124,7 @@ import { retrievalPlanFor } from "./retrieval-query";
 import { slotOnlyRetrievalTopic } from "./slot-only-turn";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
 import type { AskRequest, AskResponse } from "./types";
+import { keepManagerActionPlan } from "./manager-action-plan-reply";
 
 /**
  * ============================================================================
@@ -178,7 +179,16 @@ export async function answerQuestion(
   return finishChatTrace(draft, () => answerQuestionBody(request, actor, memory));
 }
 
+/** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
 async function answerQuestionBody(
+  request: AskRequest,
+  actor: ChatActor,
+  memory: { memoryOwnerId?: string } = {},
+): Promise<AskResponse> {
+  return keepManagerActionPlan(await answerQuestionCore(request, actor, memory), request);
+}
+
+async function answerQuestionCore(
   request: AskRequest,
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
