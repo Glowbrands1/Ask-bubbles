@@ -1,7 +1,7 @@
 import "server-only";
 
 import { CLAUDE_HAIKU_MODEL } from "@/lib/config/models";
-import { formFullRemapEnabled } from "@/lib/config/chat-quality-flags";
+import { formFullRemapEnabled, warningLevelManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { CA_POLICY_LABEL, readCaPolicy } from "@/lib/forms/ca-policy";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
 import { listIncidentDates } from "@/lib/forms/form-date-answer";
@@ -12,7 +12,7 @@ import { payrollDeductAmount, payrollDeductFromConversation } from "@/lib/forms/
 import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
 import { extractEmployeeNames, extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
 import { spokenDates } from "@/lib/forms/relative-date";
-import { warningLevelFromTurns } from "@/lib/forms/warning-level";
+import { managerStatedWarningLevel, warningLevelFromTurns } from "@/lib/forms/warning-level";
 import type { ChatFormProposal } from "@/types";
 
 import { callClaudeToolDetailed } from "./call-claude";
@@ -118,7 +118,18 @@ export function groundFormSlots(input: {
   const jobTitle = groundedTitle(users);
   const store = groundedStore(said);
   const incidentDateIso = groundedDate(said, input.today);
-  const warningLevel = explicitWarning(users, input.today);
+  /*
+   * WARNING_LEVEL_MANAGER_ONLY_ENABLED (ported from Ask Sunny, 24 Oct 2026):
+   * the latest level the manager states, with a bare "Yes" counted only after
+   * one yes/no question about that exact level; see `managerStatedWarningLevel`.
+   */
+  const managerWarning = warningLevelManagerOnlyEnabled()
+    ? managerStatedWarningLevel(
+        conversation.map((turn) => ({ role: turn.role, content: withoutWriteUps(turn.content) })),
+        input.today,
+      )
+    : null;
+  const warningLevel = managerWarning ?? explicitWarning(users, input.today);
   const payrollDeduct = payrollDeductFromConversation(conversation);
   const payrollAmount = payrollDeduct === "yes" ? managerPayrollAmount(said) : null;
   const policySection = groundedPolicy(said);
@@ -145,7 +156,17 @@ export function groundFormSlots(input: {
     actionPlan,
     closeMatchNote,
   };
-  const slots = finishSlots(mergeSlots(read, input.saved ?? null), said);
+  /*
+   * RE-READ EVERY TURN (WARNING_LEVEL_MANAGER_ONLY_ENABLED; ported from Ask
+   * Sunny, QA 24 Oct 2026): the level is what the manager's turns state now,
+   * and a saved one is kept only when the history may have been cut — so a
+   * level the manager never stated cannot ride on from an earlier extraction.
+   */
+  const savedSlots =
+    warningLevelManagerOnlyEnabled() && input.saved && conversation.length < HISTORY_CAP
+      ? { ...input.saved, warningLevel: null }
+      : input.saved ?? null;
+  const slots = finishSlots(mergeSlots(read, savedSlots), said);
 
   const assistants = [...input.history, { role: "user", content: input.question }]
     .filter((turn) => turn.role === "assistant")
@@ -426,8 +447,16 @@ function dateIsPrior(text: string, index: number): boolean {
   return /\b(?:prior|previous|coached\s+on|manual\s+ack|already|got|received)\b/i.test(clause);
 }
 
+/** "write up" and "written up" are the form, not a level. */
+function withoutWriteUps(text: string): string {
+  return text.replace(/\bwrit(?:e|ing|ten)\s+ups?\b/gi, " ");
+}
+
+/** `LIMITS.historyTurns` in `lib/api/validation.ts`: a longer history may have been cut. */
+const HISTORY_CAP = 20;
+
 function explicitWarning(turns: readonly string[], today: string): "verbal" | "written" | null {
-  const cleaned = turns.map((turn) => turn.replace(/\bwrit(?:e|ing|ten)\s+ups?\b/gi, " "));
+  const cleaned = turns.map(withoutWriteUps);
   const fromReader = warningLevelFromTurns(cleaned, today);
   if (fromReader === "verbal" || fromReader === "written") return fromReader;
   let level: "verbal" | "written" | null = null;

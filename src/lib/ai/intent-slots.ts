@@ -1,5 +1,5 @@
 import { datesInText } from "@/lib/forms/form-date-answer";
-import { managerStatedWarningLevel } from "@/lib/forms/warning-level";
+import { managerStatedWarningLevel, templateHasWarningLevel } from "@/lib/forms/warning-level";
 import { displayName, editDistance, matchEmployeeName, type RosterEmployee } from "@/lib/forms/employee-match";
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manual";
@@ -193,6 +193,18 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
   if (warningManagerOnly) {
     const answered = payrollAnsweredNow(input.history, input.question);
     if (answered) state = { ...state, payrollDeduct: answered };
+    /*
+     * RE-READ EVERY TURN, AND ONLY FOR A FORM WITH A TYPE OF WARNING (ported
+     * from Ask Sunny; QA, 24 Oct 2026). A level stored once came back on every
+     * later turn, beat "this is a verbal", and rode onto other forms. The
+     * level is what the manager's turns state now; the stored one is kept only
+     * when the history may have been cut (the route keeps the last HISTORY_CAP
+     * turns), so a level stated before that is not lost.
+     */
+    const template = input.templates.find((row) => row.key === state.templateKey) ?? null;
+    const kept = warningLevel.value ?? (input.history.length >= HISTORY_CAP ? saved.warningLevel : null);
+    const level = templateHasWarningLevel(template ?? { key: state.templateKey }) ? kept : null;
+    if (level !== state.warningLevel) state = { ...state, warningLevel: level };
   }
 
   const clarification = clarificationFor({
@@ -216,6 +228,9 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
   return { question: prependFormState(input.question, state), state, clarification: null };
 }
 
+/** `LIMITS.historyTurns` in `lib/api/validation.ts` (server-only, so not imported here). */
+const HISTORY_CAP = 20;
+
 /** Another yes/no question beside the payroll one: "Did you mean **Rowan Testo**?". */
 const OTHER_YES_NO =
   /^\s*(?:did\s+you\s+mean|is|isn'?t|are|was|should|shall|do|does|did|will|would|can|could)\b/i;
@@ -238,7 +253,8 @@ function payrollAnsweredNow(
   const questions = (before.content.replace(/[*_`]/g, "").match(/[^.!?\n]*\?/g) ?? [])
     .map((line) => line.trim())
     .filter((line) => !/payroll/i.test(line) && !/^yes\s+or\s+no\?$/i.test(line));
-  if (questions.some((line) => OTHER_YES_NO.test(line))) return null;
+  // An either/or ("a Verbal Warning or a Written Warning?") is not answered by "Yes", as payroll-deduct.ts reads it too.
+  if (questions.some((line) => OTHER_YES_NO.test(line) && !/\bor\b/i.test(line))) return null;
   return payrollDeductFromConversation(
     [
       { role: "assistant", content: before.content },

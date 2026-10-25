@@ -80,7 +80,8 @@ function secondTurn(first: string, reply: string, second: string, raw: unknown =
     intent({
       question: second,
       history: [said(first), replied(reply)],
-      saved: one.state,
+      // The card on screen is a Corrective Action Form; a level is only kept on a form with a Type of Warning.
+      saved: { ...one.state, templateKey: one.state.templateKey ?? "dpoa" },
       raw,
       formInProgress: true,
     }),
@@ -151,9 +152,11 @@ describe('a bare "Yes"/"No" answers the payroll question just asked (ported from
     expect(stateSentences(decision.state).join(" ")).toMatch(sentence);
   });
 
-  it("a Yes beside another yes/no question, or confirming a name, is not a payroll answer", () => {
+  it("a Yes beside an either/or answers the payroll question; one confirming a name does not", () => {
     process.env[FLAG] = "true";
-    expect(secondTurn(REQUEST, REQUEST_REPLY, "Yes").state.payrollDeduct).toBeNull();
+    // Changed on purpose (QA, 24 Oct 2026): "a Verbal Warning or a Written Warning?" is not a yes/no
+    // question, so the bare Yes answers payroll — as this app's live remap path (payroll-deduct.ts) reads it.
+    expect(secondTurn(REQUEST, REQUEST_REPLY, "Yes").state.payrollDeduct).toBe("yes");
     expect(
       secondTurn(
         "CA for Testy Testersen at Bellevue, NE",

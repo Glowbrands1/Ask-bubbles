@@ -786,6 +786,20 @@ export function levelAskedYesNo(assistant: string): StatedWarningLevel | null {
   return named.size === 1 ? [...named][0]! : null;
 }
 
+/**
+ * Whether a template has a Type of Warning to tick — the Corrective Action
+ * Form, published as "dpoa". A level is never carried onto any other form
+ * (Ask Sunny live, 24 Oct 2026: "Written" rode onto a Resignation/Exit Form
+ * and a Policy Review). Read by the WARNING_LEVEL_MANAGER_ONLY_ENABLED paths.
+ * Ported from Ask Sunny.
+ */
+export function templateHasWarningLevel(
+  template: { readonly key?: string | null; readonly name?: string | null } | null | undefined,
+): boolean {
+  if (!template) return false;
+  return template.key === "dpoa" || /\bcorrective\s+action\b/i.test(template.name ?? "");
+}
+
 export interface WarningLevelTurn {
   readonly role: string;
   readonly content: string;
