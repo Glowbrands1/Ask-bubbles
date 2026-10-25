@@ -192,6 +192,8 @@ const PROD_FLAGS = [
   "CONVERSATION_DRAFT_REUSE_ENABLED",
 ] as const;
 const FLAG = "FORM_EDIT_DATE_RULES_ENABLED";
+/** Merged-bundle flags, default off, that cover parts of QA's B-list outside this flag. */
+const BUNDLE_FLAGS = ["REMAP_INCIDENT_FIX_ENABLED", "PRIOR_ACTIONS_PARSE_ENABLED", "PAYROLL_DEDUCT_AMOUNT_ENABLED"] as const;
 const TODAY = "2026-10-25";
 const saved = new Map<string, string | undefined>();
 
@@ -228,7 +230,7 @@ class JoiningRows extends Array<Record<string, unknown>> {
 beforeEach(async () => {
   for (const key of Object.keys(store)) (store as Record<string, unknown[]>)[key] = [];
   store.form_instances = new JoiningRows() as never;
-  for (const name of [...PROD_FLAGS, FLAG, "INTENT_EXTRACTION_ENABLED", "REMAP_INCIDENT_FIX_ENABLED"]) saved.set(name, process.env[name]);
+  for (const name of [...PROD_FLAGS, FLAG, "INTENT_EXTRACTION_ENABLED", ...BUNDLE_FLAGS]) saved.set(name, process.env[name]);
   for (const name of PROD_FLAGS) process.env[name] = "true";
   delete process.env.INTENT_EXTRACTION_ENABLED;
   process.env[FLAG] = "true";
@@ -290,7 +292,8 @@ class Thread {
   instanceId: string | null = null;
   private sequence = 0;
 
-  async say(question: string, remap: Record<string, unknown> = {}): Promise<Answer> {
+  /** `recorded`: production's reply for this turn, kept in history in place of this harness's. */
+  async say(question: string, remap: Record<string, unknown> = {}, recorded?: string): Promise<Answer> {
     state.remap = remap;
     const history = this.messages.map(({ id, role, content, formProposal }) => ({ id, role, content, ...(formProposal ? { formProposal } : {}) }));
     const continuation = this.instanceId ? null : continuationFor(this.messages);
@@ -326,7 +329,7 @@ class Thread {
       {
         id: `a${this.sequence}`,
         role: "assistant",
-        content: payload.content,
+        content: recorded ?? payload.content,
         createdAt: `${TODAY}T15:00:01Z`,
         ...(payload.formProposal ? { formProposal: payload.formProposal } : {}),
       } as ChatMessage,
@@ -508,5 +511,155 @@ describe("flag off: production today", () => {
     const thread = new Thread();
     const answer = await thread.say("create a CA for Test Employee at Kearney, she opened the store late today", EMPLOYEE);
     expect(answer.formProposal?.formDate ?? null).toBeNull();
+  });
+});
+
+
+/*
+ * ============================================================================
+ * QA'S B-LIST, THE EXACT TURNS (names replaced with "Test Employee")
+ * ============================================================================
+ *
+ *   B1  conv_mvifqra017j15ld8  late opening on 10-1-26; the manual
+ *                              acknowledgement 1-1-26 was offered as the date.
+ *   B2  conv_mvi7bwpw5f1mw4j   standards of conduct on 10-20-26, the 10-15-26
+ *                              deadline in the account.
+ *   B4  conv_mvi98yvkfuehzye   attendance on 10-20-26, "verbal", then a NEW
+ *                              register-shortage form with $3.25.
+ *   B8  conv_mvl9l6fkymv3c7p   late for shift on 10-20-26, prior coaching 1-1-25.
+ *   G11 conv_mvlb6ils11qqyexg  (5 stars, must keep working) late open 10-21-26,
+ *                              prior steps 1-1-95 and 10-5-26, $25.
+ *
+ * Production's form path: the full remap was on in every chat_traces row to
+ * 15:55 UTC, 25 Oct 2026 (remap slots); QA reports it now off, and intent
+ * extraction has never been on here (no state-prefixed query since 20 Oct). So
+ * each case runs on the remap, on the proposal flow with both off, and on the
+ * intent path. The date assertions are this flag's; the rest (policy page,
+ * prior-action lines, the amount line) are pinned with the merged-bundle flags
+ * that carry them.
+ */
+
+const B1 = "create verbal ca for Test Employee for opening store late on 10-1-26. previous coaching is jba policy manual 1-1-26. payroll deduct DOES apply and state $25 will be payroll deducted";
+const B2 = "create corrective action for Test Employee for violating standards of conduct policy on 10-20-26. Test Employee failed to acknowledge policies in woven by the 10-15-26 deadline.";
+const B4 = [
+  "create ca form for Test Employee for violating attendance policy on 10-20-26. verbal. no payroll deduct. jba manual 1-1-26 for previous coaching",
+  "verbal",
+  "create ca form for Test Employee for a register shortage on 10-20-26. payroll deduct applies and $3.25 will be deducted from check. previous coaching - jba policy manual 1-20-26.",
+] as const;
+/* Production's replies to B4 t0 and t2 (22 Oct 2026), the name replaced. */
+const B4_REPLIES = [
+  "I'll draft a **Corrective Action Form** for **Test Employee** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Store:** Omaha, NE (West Dodge Rd), from Woven (where Test Employee is assigned) — tell me if that should change\n\n**Policy:** Attendance, as you said. I'll quote that section from the current policy manual on the draft.\n\nIs this new corrective action a **Verbal Warning** or a **Written Warning**? Tell me here, or tick it on the form — I won't choose it for you.\n\nIs payroll deduct applicable? **No** — tell me if that should change.\n\nYou mentioned more than one date (**1/1**, **10/20**). Which date goes on the form? Say \"most recent\" (10/20), pick one, or say \"today\" for the day you create it. Every date stays in the description of what happened — this only sets the form's Date, and until you choose it is dated today.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+  "I'll draft a **Corrective Action Form** for **Test Employee** from what you've described, and check the applicable company policy before anything policy-related goes on it.\n\n**Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Test Employee is assigned) — tell me if that should change\n\n**Policy:** Attendance, as you said. I'll quote that section from the current policy manual on the draft.\n\nIs payroll deduct applicable? **No** — tell me if that should change.\n\n**Position:** Team Member Part Time, from Woven — tell me if that has changed and I'll flag it for review.\n\nCreate the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.",
+] as const;
+const B8 = "write a verbal CA for Team Member, Test Employee at Dodge, NE. On 10-20-26 Test Employee was late for shift and did not call supervisor as outlined in attendance policy. payroll deduct is not applicable. previous coaching is JBA Manual 1-1-25";
+const G11 = "create a written corrective action for team member Test Employee at bellevue, ne. location. previous coaching jba manual 1-1-95, verbal ca 10-5-26. payroll deduct is applicable and $25 will be payroll deducted for late open on 10-21-26";
+
+/** No prior step's date is the card's Date or offered as one. */
+function noPriorDate(answer: Answer, prior: readonly string[]) {
+  expect(answer.content).not.toMatch(/more than one date|Which date should go on the form/i);
+  for (const iso of prior) {
+    expect(answer.formProposal?.formDate ?? null).not.toBe(iso);
+    const [year, month, day] = iso.split("-");
+    expect(line(answer.content, "Date") ?? "").not.toContain(`${year}-${month}-${day}`);
+  }
+}
+
+const PATHS = [
+  ["the full remap (production to 15:55 UTC, 25 Oct)", () => {}],
+  ["the proposal flow (remap off, as QA reports now)", () => {
+    delete process.env.FORM_FULL_REMAP_ENABLED;
+  }],
+  ["the intent path (remap off, intent extraction on)", () => {
+    delete process.env.FORM_FULL_REMAP_ENABLED;
+    process.env.INTENT_EXTRACTION_ENABLED = "true";
+  }],
+] as const;
+
+describe.each(PATHS)("QA B-list on %s: a prior step's date is never the form's", (_path, setPath) => {
+  it("B1: dated 2026-10-01, never the 1-1-26 acknowledgement", async () => {
+    setPath();
+    const answer = await new Thread().say(B1, EMPLOYEE);
+    expect(answer.formProposal?.formDate).toBe("2026-10-01");
+    noPriorDate(answer, ["2026-01-01"]);
+  });
+
+  it("B2: dated 2026-10-20, with no invented date", async () => {
+    setPath();
+    const answer = await new Thread().say(B2, EMPLOYEE);
+    expect(answer.formProposal?.formDate).toBe("2026-10-20");
+    expect(answer.content).not.toMatch(/9[/-]30|09-30/);
+    /* Nothing the manager did not type is an Action Plan on the card. */
+    expect(line(answer.content, "Action plan")).toBeNull();
+  });
+
+  it("B4: the offense date is the only date; the register shortage is a new form with $3.25", async () => {
+    setPath();
+    const thread = new Thread();
+    const first = await thread.say(B4[0], EMPLOYEE, B4_REPLIES[0]);
+    expect(first.formProposal?.formDate).toBe("2026-10-20");
+    noPriorDate(first, ["2026-01-01"]);
+    const second = await thread.say(B4[1], EMPLOYEE, B4_REPLIES[1]);
+    noPriorDate(second, ["2026-01-01"]);
+    const third = await thread.say(B4[2], EMPLOYEE);
+    noPriorDate(third, ["2026-01-20", "2026-01-01"]);
+    if (third.formProposal) expect(third.formProposal.formDate).toBe("2026-10-20");
+    /* The amount line on the proposal flow is PAYROLL_DEDUCT_AMOUNT_ENABLED's; the remap prints it. */
+    if (process.env.FORM_FULL_REMAP_ENABLED) expect(line(third.content, "Payroll deduction amount")).toBe("$3.25");
+  });
+
+  it("B8: dated 2026-10-20, never the 1-1-25 coaching", async () => {
+    setPath();
+    const answer = await new Thread().say(B8, EMPLOYEE);
+    expect(answer.formProposal?.formDate).toBe("2026-10-20");
+    noPriorDate(answer, ["2025-01-01"]);
+  });
+
+  it("G11: dated 2026-10-21, never a prior step's date", async () => {
+    setPath();
+    const answer = await new Thread().say(G11, EMPLOYEE);
+    /*
+     * The intent path answers "Which warning level did you mean?" here (the
+     * prior "verbal ca 10-5-26" beside "written"): warning-level reading, not
+     * this flag's; the other paths carry a card.
+     */
+    if (!process.env.INTENT_EXTRACTION_ENABLED) expect(answer.formProposal?.formDate).toBe("2026-10-21");
+    noPriorDate(answer, ["2095-01-01", "2026-10-05"]);
+  });
+});
+
+describe("QA B-list on the full remap with the merged-bundle flags that carry the rest", () => {
+  beforeEach(() => {
+    for (const name of BUNDLE_FLAGS) process.env[name] = "true";
+  });
+
+  it("B1: Late Opening p.15 and the $25 line", async () => {
+    const answer = await new Thread().say(B1, EMPLOYEE);
+    expect(line(answer.content, "Date")).toBe("2026-10-01");
+    expect(line(answer.content, "Policy")).toMatch(/^Late Opening Policy, JBA Policy Manual p\.15/);
+    expect(line(answer.content, "Payroll deduction amount")).toBe("$25");
+  });
+
+  it("B4 t4: a new register-shortage form, $3.25, not Attendance", async () => {
+    const thread = new Thread();
+    await thread.say(B4[0], EMPLOYEE, B4_REPLIES[0]);
+    await thread.say(B4[1], EMPLOYEE, B4_REPLIES[1]);
+    const third = await thread.say(B4[2], EMPLOYEE);
+    expect(happened(third)).toMatch(/register shortage/);
+    expect(line(third.content, "Payroll deduction amount")).toBe("$3.25");
+    expect(line(third.content, "Policy")).not.toMatch(/Attendance/);
+  });
+
+  it("B8: a filled verbal CA, Attendance, and the prior coaching line", async () => {
+    const answer = await new Thread().say(B8, EMPLOYEE);
+    expect(line(answer.content, "Type of warning")).toMatch(/^Verbal Warning/);
+    expect(line(answer.content, "Policy")).toMatch(/^Attendance Policy/);
+    expect(line(answer.content, "Prior actions")).toMatch(/01\/01\/2025/);
+  });
+
+  it("G11: every prior step and the $25 are kept", async () => {
+    const answer = await new Thread().say(G11, EMPLOYEE);
+    expect(line(answer.content, "Prior actions")).toMatch(/01\/01\/2095.*10\/05\/2026/);
+    expect(line(answer.content, "Payroll deduction amount")).toBe("$25");
+    expect(line(answer.content, "Date")).toBe("2026-10-21");
   });
 });
