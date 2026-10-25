@@ -471,3 +471,29 @@ describe("live B6: a word match prefers the answer's own page", () => {
     expect(pagesIn(lineWith(cited.text, "Dress code violations"))).toEqual(new Set([15]));
   }, 20_000);
 });
+
+/**
+ * Live B8, 25 Oct 2026 (conv_mvnncdlu2xvoyqu on dfe2890): a sentence quoting
+ * two policies cited only the first. A quote cites the page it is printed on.
+ */
+describe("live B8: a quote cites the page it is printed on", () => {
+  it('"please do not bring pets into the workplace" cites Animals in the Workplace (30) beside Visitors (29)', () => {
+    const found = liveOct25.answers.find((answer) => answer.conversationId === "conv_mvnncdlu2xvoyqu");
+    if (!found) throw new Error("missing live reply conv_mvnncdlu2xvoyqu");
+    const cited = citePolicyAnswer(found.content, planFullManualContext({ question: found.question, documents: [productionManual()] }));
+    const line = cited.text.split("\n").find((text) => text.includes("please do not bring pets")) ?? "";
+    expect(pagesIn(line)).toEqual(new Set([29, 30]));
+  }, 20_000);
+
+  it('both payout wordings cite PTO (42): "…all applicable state and federal law" and "…state and federal guidelines"', () => {
+    const plan = planFullManualContext({ question: "What is the PTO policy?", documents: [productionManual()] });
+    const intro = "- Request it in the Personnel System at least two weeks ahead; if something unforeseen comes up, call your supervisor directly and log the request as soon as possible [p.42].";
+    for (const payout of [
+      "- Payout on termination follows all applicable state and federal law [p.12].",
+      "- Payout on termination follows state and federal guidelines [p.42].",
+    ]) {
+      const cited = citePolicyAnswer(`${intro}\n${payout}`, plan);
+      expect(pagesIn(cited.text.split("\n")[1] ?? "")).toEqual(new Set([42]));
+    }
+  }, 20_000);
+});

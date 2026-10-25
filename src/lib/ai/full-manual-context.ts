@@ -1291,6 +1291,33 @@ function answersOwnPage(
   return looseRare > OWN_PAGE_YIELD * rareOverlap(text, best.text, rarity) ? [...loose] : [best];
 }
 
+/*
+ * A QUOTE CITES THE PAGE IT IS PRINTED ON (live B8, 25 Oct 2026). "…the
+ * manual does address being in the store while off-schedule and pets —
+ * "Employees who are not scheduled to be working should not be in the
+ * workplace unless they are shopping or receiving services from the
+ * workplace", and the animals policy says "please do not bring pets into the
+ * workplace" [p.29]" quotes Visitors in the Workplace (29) and Animals in the
+ * Workplace (30); only 29 was cited. Each quoted span of four words or more
+ * that the manual prints word for word cites the page it is printed on.
+ */
+const QUOTED = /["“]([^"“”\n]{12,}?)["”]/g;
+
+function quotedPassages(text: string, passages: readonly ManualPassage[]): ManualPassage[] {
+  const found: ManualPassage[] = [];
+  for (const match of text.matchAll(QUOTED)) {
+    const quote = wordsOf(match[1] ?? "");
+    if (quote.split(" ").length < 4) continue;
+    const printing = passages.filter((passage) => ` ${wordsOf(passage.text)} `.includes(` ${quote} `));
+    // A quote printed on three pages or more is boilerplate, and names none of them.
+    if (new Set(printing.map((passage) => passage.printedPage)).size > 2) continue;
+    for (const passage of printing) {
+      if (!found.some((kept) => kept.printedPage === passage.printedPage)) found.push(passage);
+    }
+  }
+  return found;
+}
+
 /**
  * A policy answer cites a printed page only where it restates that page.
  *
@@ -1353,6 +1380,13 @@ export function citePolicyAnswer(
         restated = confirmedModelPages(bare, modelPages, plan.passages);
       }
       if (restated.length === 0) restated = closestPassage(bare, plan.passages);
+      const quoted = quotedPassages(bare, plan.passages);
+      if (quoted.length > 0) {
+        // A verbatim quote names its page outright; the other pages stand only where they restate more than it.
+        const quotedPages = new Set(quoted.map((passage) => passage.printedPage));
+        const kept = loose ? [] : restated.filter((passage) => !quotedPages.has(passage.printedPage));
+        return { text, gap, bare, restated: [...quoted, ...kept], loose: false };
+      }
       return { text, gap, bare, restated, loose };
     }),
   );
