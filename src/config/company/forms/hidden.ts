@@ -17,8 +17,8 @@
 
 /**
  * "Tanning Consultant Interview Form" — the reference platform's interview
- * for its own front-desk role, with the sibling company's core values printed
- * on it. Not a Buff City Soap form (QA, 25 Oct 2026). It was already withheld
+ * for its own front-desk role. (Its core-values heading no longer names the
+ * sibling company: QA, 25 Oct 2026, `lib/forms/seed-sibling-brand.test.ts`.) Not a Buff City Soap form (QA, 25 Oct 2026). It was already withheld
  * from the chooser (`lib/forms/chooser.ts`); it still reached the template
  * list and the chat's forms library block from the database row.
  *

@@ -252,6 +252,10 @@ const seedOf = (key: string) => MIGRATED_TEMPLATE_SEEDS.find((seed) => seed.key 
 /** The approved substitutions, applied to text from either side. */
 const neutral = (text: string) =>
   text
+    // QA, 25 Oct 2026 (QA-4): the core-values heading names no company. This heading only (the PDF prints it in
+    // capitals), read before the company-name substitution below so it does not become "Buff City Soap Core Values".
+    .replace(/Sun Tan City Core Values/g, "Core Values")
+    .replace(/SUN TAN CITY CORE VALUES/g, "CORE VALUES")
     .replace(/SUN TAN CITY/g, "BUFF CITY SOAP")
     .replace(/Sun Tan City/g, "Buff City Soap")
     .replace(/Ask Sunny/g, "Ask Bubbles")
@@ -276,10 +280,12 @@ const neutral = (text: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-/** The two hiring-form lines retained verbatim for the business's review. */
+/**
+ * The hiring-form line retained verbatim for the business's review. "Sun Tan City Core Values" was the
+ * other; its heading now reads "Core Values" (QA, 25 Oct 2026, QA-4), so it is no longer exempt.
+ */
 const RETAINED_FOR_REVIEW = [
   "Are you willing to use our services as part of your Sun Tan City uniform? (Must agree to UV, Sunless and Spa usage to proceed with employment)",
-  "Sun Tan City Core Values",
 ];
 
 function strings(value: unknown, out: string[] = []): string[] {
