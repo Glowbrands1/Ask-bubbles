@@ -63,6 +63,11 @@ export interface CreateInlineFormResult {
    * it as stored; nothing was drafted again.
    */
   reused?: boolean;
+  /**
+   * DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED: the reopened draft's date, which the
+   * card states ("Updated your open draft from <date>"). Absent otherwise.
+   */
+  reusedFrom?: string;
 }
 
 export const DRAFT_FAILED_WARNING =
@@ -110,7 +115,7 @@ export async function createInlineForm({
    * docs/chat-phase-3.md. A validated id with no name is honest; a validated id
    * with a demo name beside it is not.
    */
-  const created = await call<{ instance: { id: string }; reused?: boolean }>("/api/forms/instances", {
+  const created = await call<{ instance: { id: string }; reused?: boolean; reusedFrom?: string }>("/api/forms/instances", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -189,7 +194,14 @@ export async function createInlineForm({
    * the manager may already have edited it; prefilling again would spend a
    * model call to overwrite their work.
    */
-  if (created.reused) return { reference, draftWarning: null, reused: true };
+  if (created.reused) {
+    return {
+      reference,
+      draftWarning: null,
+      reused: true,
+      ...(typeof created.reusedFrom === "string" && created.reusedFrom ? { reusedFrom: created.reusedFrom } : {}),
+    };
+  }
 
   /*
    * THE DRAFT. Manager turns only, resolved from the ids the server retained —
