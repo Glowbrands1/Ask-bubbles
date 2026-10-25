@@ -110,9 +110,19 @@ describe("cross-chat open draft on create", () => {
     expect(body.instance.id).toBe("inst-other-chat");
     expect(body.reused).toBe(true);
     expect(created).toEqual([]);
-    expect(crossChatCalls).toEqual([
-      { templateKey: "dpoa", employeeName: "Paisley Example", formDate: "2026-10-20" },
-    ]);
+    /*
+     * Changed on purpose (ported from Ask Sunny, conv_mvh1m29j25aig2n): the
+     * lookup now also carries the caller, so only their own draft at a store
+     * they may open is reused. See `draft-reopen-scope-e2e.test.ts`.
+     */
+    expect(crossChatCalls).toHaveLength(1);
+    expect(crossChatCalls[0]).toMatchObject({
+      templateKey: "dpoa",
+      employeeName: "Paisley Example",
+      formDate: "2026-10-20",
+      createdBy: "manager-1",
+      actor: { id: "manager-1" },
+    });
   });
 
   it("does not look across chats when the flag is off", async () => {
