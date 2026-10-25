@@ -46,6 +46,7 @@ import { businessToday } from "@/lib/business-date";
 import {
   conversationDraftReuseEnabled,
   crossChatDraftDedupeEnabled,
+  draftActionsEnabled,
   draftDedupeEnabled,
   payrollDeductAmountFieldEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -64,6 +65,7 @@ import {
   lastManagerTurnId,
   noteConversationDraft,
 } from "@/lib/forms/conversation-draft";
+import { historySaysDifferentIncident } from "@/lib/forms/draft-actions";
 import type { Permission } from "@/types";
 
 /**
@@ -366,8 +368,16 @@ export async function POST(request: Request) {
      * incident checks below, which one earlier "another" switches off for the
      * rest of the chat. See `conversation-draft.ts`.
      */
+    /*
+     * "DIFFERENT INCIDENT", answering whether this is the same incident as the
+     * form on file (ported from the sibling app, QA F8): a new form, so no open
+     * draft is reopened in its place. DRAFT_ACTIONS_ENABLED only. Read before
+     * the chat's own draft too, so "different incident" is not folded into the
+     * draft this chat already made when both flags are on.
+     */
+    const newIncident = draftActionsEnabled() && historySaysDifferentIncident(body.conversation);
     const draftChat =
-      body.source === "assistant" && conversationDraftReuseEnabled()
+      body.source === "assistant" && conversationDraftReuseEnabled() && !newIncident
         ? conversationKeyOf({ conversationId: body.conversationId, conversation: body.conversation })
         : null;
     const chatTurns = draftChat ? parseHistory(body.conversation) : [];
@@ -404,7 +414,7 @@ export async function POST(request: Request) {
      * a different account of what happened still creates a new draft.
      */
     const incidentKey =
-      draftDedupeEnabled() && body.source === "assistant"
+      draftDedupeEnabled() && body.source === "assistant" && !newIncident
         ? incidentFingerprint({
             employeeName: body.employeeName,
             formDate: isIsoCalendarDate(body.formDate) ? body.formDate : null,
@@ -427,7 +437,7 @@ export async function POST(request: Request) {
      * request for a separate document, still creates.
      */
     const account =
-      draftDedupeEnabled() && body.source === "assistant" && !historyWantsSeparateDocument(body.conversation)
+      draftDedupeEnabled() && body.source === "assistant" && !newIncident && !historyWantsSeparateDocument(body.conversation)
         ? userIncidentAccount(body.conversation)
         : null;
     if (account) {
@@ -453,6 +463,7 @@ export async function POST(request: Request) {
       crossChatDraftDedupeEnabled() &&
       body.source === "assistant" &&
       crossChatDate &&
+      !newIncident &&
       !historyWantsSeparateDocument(body.conversation)
     ) {
       const open = await findCrossChatOpenDraft({
