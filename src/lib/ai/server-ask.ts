@@ -83,6 +83,7 @@ import { loadConversationFormState, saveConversationFormState } from "./form-sta
 import { formCommandBypassesSearch, routeUnderstoodFormTurn } from "./form-tool-route";
 import { understandFormTurn } from "./form-tool-understand";
 import { remapFormTurn, remapShouldRun, type FormRemapSlots } from "./form-full-remap";
+import { withFutureDateQuestion } from "./future-incident-date";
 import { historyForRemap } from "./form-remap-scope";
 import { augmentIntakeQuestion } from "./intake-augment";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
@@ -344,7 +345,8 @@ async function answerQuestionCore(
             : null;
         },
       });
-      if (remapped) return remapped;
+      // FUTURE_INCIDENT_DATE_CONFIRM_ENABLED: a future incident date on the card is asked about once.
+      if (remapped) return withFutureDateQuestion(remapped, { today: request.context.todayIso, history: [...request.history, ...history] });
     }
 
     let manualRead: ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]> | null = null;

@@ -16,6 +16,7 @@ import {
   placeSpanGuardEnabled,
   priorActionsParseEnabled,
   titleWholeWordEnabled,
+  statedTitleWinsEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
@@ -32,7 +33,7 @@ import {
   type ConversationFormState,
 } from "./form-state";
 import type { GroundedPerson } from "./grounded-entities";
-import { titleTextFromTurns } from "./title-words";
+import { copularJobTitle, titleTextFromTurns } from "./title-words";
 import { titleInWords } from "./title-in-words";
 
 /**
@@ -184,7 +185,12 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
   const titleText = managerWordsOnlyEnabled()
     ? titleTextFromTurns([...input.history.filter((turn) => turn.role !== "assistant").map((turn) => turn.content), input.question])
     : null;
-  const title = groundTitle(reading?.title ?? null, blob, input.people, employee.person, titleText);
+  // STATED_TITLE_WINS_ENABLED: the title the manager's own turns state comes before Woven's.
+  const statedText = statedTitleWinsEnabled()
+    ? (titleText ??
+      titleTextFromTurns([...input.history.filter((turn) => turn.role !== "assistant").map((turn) => turn.content), input.question]))
+    : null;
+  const title = groundTitle(reading?.title ?? null, blob, input.people, employee.person, titleText, statedText);
   const groundedIncident = groundIncident(reading?.incidentType ?? null, blob, input.headings);
   const incidentType = choiceStated && isDisciplineProcedure(groundedIncident) ? null : groundedIncident;
   /*
@@ -686,7 +692,17 @@ function groundTitle(
   people: readonly GroundedPerson[],
   person: GroundedPerson | null,
   titleText: string | null = null,
+  statedText: string | null = null,
 ): string | null {
+  /*
+   * STATED_TITLE_WINS_ENABLED (QA history, conv_mvjyhx8z2ayo9ku, 22 Oct 2026):
+   * "<name>, team member at dodge" put Woven's "Human Resources Generalist"
+   * on the form. The title the manager's turns state is the form's.
+   */
+  if (statedText !== null) {
+    const stated = extractJobTitle(statedText) ?? copularJobTitle(statedText);
+    if (stated) return stated;
+  }
   if (person?.title) return person.title;
   const titles = [...new Set(people.map((row) => row.title).filter((title): title is string => Boolean(title?.trim())))];
   // TITLE_WHOLE_WORD_ENABLED: a directory title is stated only as a whole
