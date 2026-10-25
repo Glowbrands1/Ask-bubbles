@@ -13,13 +13,16 @@ import {
   placeSpanGuardEnabled,
   priorActionsParseEnabled,
   keepFormEmployeeEnabled,
+  caTemplateMapEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
 import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
 import { asksOnlyAboutFormsOnFile } from "@/lib/forms/chat-form-records";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
 import { listIncidentDates, datesInText, datesInTextWithYearless } from "@/lib/forms/form-date-answer";
-import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
+import { isNotAName, maskNotANameText, saidInReply, withoutRoleLead } from "@/lib/forms/not-a-name";
+import { isPriorStep, preparingConversation, withoutPriorSteps } from "@/lib/forms/form-request-parts";
+import { correctiveActionBasis } from "@/lib/forms/corrective-action-intake";
 import { lateOpenOn, mostRecent } from "@/lib/forms/late-open";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
@@ -177,7 +180,11 @@ export function groundFormSlots(input: {
     users.some((turn) => /\bcoach(?:ing)?\b/i.test(turn)) && !users.some((turn) => mentionsEarlierCoaching(turn));
   const modelKey =
     isTemplate(raw.templateKey) && !(choiceStated && raw.templateKey === "dpoa" && coaching) ? raw.templateKey : null;
-  const templateKey = stated?.key ?? templateFromUser(said) ?? continued ?? modelKey;
+  // FORM_CHOICE_STATED_ENABLED: a step already taken ("Prior coaching: … product coaching form 9/30/26") names
+  // no form, and a conversation the manager is preparing for opens none from the model (ported from the sibling app).
+  const fromUser = templateFromUser(choiceStated ? withoutPriorSteps(said) : said);
+  const templateKey =
+    stated?.key ?? fromUser ?? continued ?? (choiceStated && preparingConversation(users) ? null : modelKey);
   // KEEP_FORM_EMPLOYEE_ENABLED keeps the saved employee; NOT_A_NAME_GUARD_ENABLED
   // has already dropped a saved name that was never typed.
   const employeeName = groundedName(raw.employeeName, users, saved?.employeeName ?? null);
@@ -340,12 +347,31 @@ export function remapShouldRun(input: {
 }): boolean {
   if (asksAboutCorrectiveAction(input.question)) return false;
   const named = managerNamedTemplate(input.question, input.history);
+  /*
+   * CA_TEMPLATE_MAP_ENABLED (B14, conv_mvntxr592mc1e2l): "Test Employee at
+   * Kearney has low sales per hour this month, create a corrective action"
+   * was a Corrective Action card whose What happened was the metric. A metric
+   * with no behaviour is not what the ladder escalates on: the turn goes to
+   * the form proposal, which answers that and asks what was observed — the
+   * rule the sibling app's intent path already keeps.
+   */
+  if (caTemplateMapEnabled() && metricOnlyCorrectiveAction(input, named)) return false;
   if (named !== null && !remapFills(named, input.unpublished)) return false;
   if (named === null && input.continueTemplateKey && !remapFills(input.continueTemplateKey, input.unpublished)) return false;
   if (input.formsTurn) return true;
   if (asksAQuestion(input.question)) return false;
   const text = [input.question, ...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content)].join("\n");
   return /\b(?:verbal|written|warning|corrective|write-?ups?|payroll|prior\s*=)\b/i.test(text);
+}
+
+/** CA_TEMPLATE_MAP_ENABLED. The manager asks for a Corrective Action on a metric alone. */
+function metricOnlyCorrectiveAction(
+  input: { readonly question: string; readonly history: readonly { role: string; content: string }[] },
+  named: string | null,
+): boolean {
+  if (named !== "dpoa" && !/\b(?:corrective\s+actions?|ca|c\/a|write-?ups?)\b/i.test(input.question)) return false;
+  const said = [...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content), input.question];
+  return correctiveActionBasis(said.join("\n")) === "metric_only";
 }
 
 function asksAQuestion(question: string): boolean {
@@ -675,7 +701,7 @@ function formsNamedTogether(text: string): TemplateKey[] {
   const parts = text.split(/,|&|\band\b|\bplus\b|\bas well as\b/i).filter((part) => part.trim() !== "");
   if (parts.length < 2) return [];
   const keys: TemplateKey[] = [];
-  for (const part of parts) {
+  for (const part of parts.filter((part) => !isPriorStep(part))) {
     const named = namedForms(part);
     const key = named.length === 1 ? named[0]! : null;
     if (key && !keys.includes(key)) keys.push(key);
@@ -749,6 +775,8 @@ function groundedName(proposed: string | null, turns: readonly string[], saved: 
   const latest = spoken.at(-1) ?? "";
   // NOT_A_NAME_GUARD_ENABLED: "blank", a product, a store's city or a verb
   // phrase is not the employee, even when the manager typed those words.
+  // NOT_A_NAME_GUARD_ENABLED: "empolyee <name>", "Store Manger <name>" — the role the model copied comes off.
+  if (proposed && notANameGuardEnabled()) proposed = withoutRoleLead(proposed);
   if (proposed && isNotAName(proposed)) proposed = null;
   const keep = keepFormEmployeeEnabled();
   /*

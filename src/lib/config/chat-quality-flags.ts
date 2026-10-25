@@ -540,6 +540,17 @@ export function titleWholeWordEnabled(): boolean {
   return envFlag("TITLE_WHOLE_WORD_ENABLED");
 }
 
+/**
+ * "payroll is deductable" / "payroll deductible" is the manager's Yes, and
+ * "not payroll deductible" their No (ported from the sibling app, QA
+ * conv_mvh9a9q62mjffk2 there: the card asked the payroll question again on
+ * every turn after "payroll is deductable"). Off, those words are read as
+ * nothing.
+ */
+export function payrollDeductibleWordEnabled(): boolean {
+  return envFlag("PAYROLL_DEDUCTIBLE_WORD_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -594,4 +605,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "KEEP_FORM_EMPLOYEE_ENABLED",
   "TITLE_WHOLE_WORD_ENABLED",
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
+  "PAYROLL_DEDUCTIBLE_WORD_ENABLED",
 ] as const;
