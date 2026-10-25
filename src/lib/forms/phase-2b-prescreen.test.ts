@@ -121,7 +121,8 @@ describe("the prescreen without the uniform question", () => {
       "tanning-consultant-interview": 3,
       "management-interview-round-1": 4, // Phase 2A re-issue
       "management-interview-round-2": 3,
-      "resignation-exit": 3,
+      // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
+      "resignation-exit": 4,
     });
     // Held items still say what they said.
     expect(JSON.stringify(seed("tanning-consultant-interview").document)).toContain("Sun Tan City Core Values");

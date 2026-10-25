@@ -141,7 +141,8 @@ describe("the six approved guest corrections", () => {
       "dmit-epp-tsd": 3,
       "dmit-epp-dmit": 3,
       "prescreen-phone-interview": 3,
-      "resignation-exit": 3,
+      // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
+      "resignation-exit": 4,
       coaching: 2,
       // Revision 6: the Action Plan as two sentences (District Manager feedback, 21 Oct 2026).
       dpoa: 6,

@@ -1806,7 +1806,13 @@ export const HR_TEMPLATE_SEEDS: TemplateSeed[] = [
     key: "fttc-epp",
     name: "FTTC Performance EPP",
     shortName: "FTTC",
-    description: "Performance plan for a full-time Tanning Consultant.",
+    /*
+     * Not "for a full-time Tanning Consultant": tanning is the reference
+     * platform's product, and the description is shown on the chooser's cards
+     * (QA, 25 Oct 2026). The plan's own name stays; Buff City Soap's matching
+     * role is not known yet, so none is invented here.
+     */
+    description: "The FTTC Employee Performance Plan.",
     category: "hr_performance",
     layoutFamily: "epp",
     requiredPermission: "create_epp",

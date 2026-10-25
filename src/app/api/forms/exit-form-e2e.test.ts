@@ -380,10 +380,10 @@ describe("the Details section HR asked for", () => {
     expect(content).toMatch(/- \*\*Store Key Returned:\*\* Store key was not returned\. Employee will be payroll deducted \$25 for the store key\./);
     expect(content).not.toMatch(/Before you create it/);
 
-    // A new Exit Form is pinned to revision 2 of the template.
+    // A new Exit Form is pinned to the template's current revision: 4 since QA, 25 Oct 2026 (neutral system names in the steps).
     const created = store.form_instances!.find((row) => row.id === result.reference.instanceId)!;
     const pinned = store.form_template_versions.find((row) => row.id === created.template_version_id)!;
-    expect(pinned.seed_revision).toBe(3);
+    expect(pinned.seed_revision).toBe(4);
     expect(JSON.stringify(pinned.document)).toContain("answer_statements");
 
     const { values } = await review(result.reference.instanceId);
@@ -428,7 +428,9 @@ describe("the Details section HR asked for", () => {
       "By signing this form, I confirm that I understand the information in this resignation/exit form.",
     );
     expect(text).toContain("Steps to Finish Termination");
-    expect(text).toContain("Place comment on employee's Sunlync account");
+    // The step's neutral wording since revision 4 (QA, 25 Oct 2026: no sibling-company system names).
+    expect(text).toContain("Add a note to the employee's account");
+    expect(text).not.toMatch(/MyGlow|Sunlync|tanning/i);
   });
 
   it("lists what is missing without asking, then a correction updates the same form in place", async () => {

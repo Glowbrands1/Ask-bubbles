@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isHiddenTemplate } from "@/config/company/forms/hidden";
 import { RETIRED_TEMPLATE_KEYS } from "@/config/company/forms/retired";
 
 import { describeError } from "@/lib/api/redact";
@@ -807,7 +808,13 @@ export interface TemplateSummary extends TemplateRow {
   assetCount: number;
 }
 
-/** The template library screen, in one read per table rather than per card. */
+/**
+ * The template library screen, in one read per table rather than per card.
+ *
+ * A template this deployment hides (`config/company/forms/hidden.ts`) is left
+ * out here, the one list every screen and chat path starts from. Its row is
+ * not touched.
+ */
 export async function listTemplateSummaries(): Promise<TemplateSummary[]> {
   const supabase = getSupabaseAdmin();
 
@@ -828,7 +835,7 @@ export async function listTemplateSummaries(): Promise<TemplateSummary[]> {
   const versionRows = (versions.data ?? []).map(mapVersion);
   const assetRows = (assets.data ?? []).map(mapAsset);
 
-  return (templates.data ?? []).map((row) => {
+  return (templates.data ?? []).filter((row) => !isHiddenTemplate(String(row.key))).map((row) => {
     const template = mapTemplate(row);
     const mine = versionRows.filter((version) => version.templateId === template.id);
     const currentId = currentByTemplate.get(template.id);

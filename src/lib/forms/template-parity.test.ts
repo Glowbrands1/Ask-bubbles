@@ -113,6 +113,17 @@ const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[]
   { decision: "DM-1 — Corrective Action Action Plan help", from: "One paragraph: what is being done, what the employee does going forward, and that the manual's own wording is reviewed with them. No dates and no follow-up meeting. It always ends with the form's closing sentence, which is added automatically.", to: "Two sentences: management will review the policy cited under Direct policy with the employee, and the form's closing sentence — with the payroll deduction between them when payroll deduct is Yes. Written by Ask Bubbles from the form; the closing is added automatically." },
   { decision: "DM-2 — Corrective Action closing, \"may result in\"", from: CA_ACTION_PLAN_CLOSING_REVISION_5, to: CA_ACTION_PLAN_CLOSING },
   { decision: "DM-3 — Corrective Action revision 6 note", from: DPOA_NOTE_REVISION_5, to: DPOA_NOTE_REVISION_5.replace(" Forms filed against earlier versions", ` ${DPOA_REVISION_6} Forms filed against earlier versions`) },
+  /*
+   * QA, 25 Oct 2026: nothing a Buff City Soap manager reads names the sibling
+   * company's systems or product. Buff City Soap's own system names are not
+   * known yet, so the exit steps name the system neutrally (exit form
+   * revision 4), and the FTTC EPP's description — printed on the chooser's
+   * cards — repeats the plan's own name instead of the tanning role. See
+   * `exit-sibling-wording.test.ts`.
+   */
+  { decision: "QA-1 — exit step, scheduling/HR system", from: "Upload Exit Form to employee’s personal file and remove employee from MyGlow.", to: "Upload Exit Form to employee’s personal file and remove the employee from the scheduling/HR system." },
+  { decision: "QA-2 — exit step, note on the employee's account", from: "Place comment on employee’s Sunlync account stating they are no longer employed, verify tanning has been removed.", to: "Add a note to the employee’s account stating they are no longer employed." },
+  { decision: "QA-3 — FTTC EPP description", from: "Performance plan for a full-time Tanning Consultant.", to: "The FTTC Employee Performance Plan." },
 ];
 
 function comparable(seed: Record<string, unknown>) {
@@ -204,13 +215,14 @@ describe("the migrated templates are the reference platform's published template
     const matching = CHANGES.filter((change) =>
       APPROVED_CONTENT_CHANGES.some((entry) => entry.from === change.from && entry.to === change.to),
     );
-    // D3 x2 (SDIT, both lists), D4 x10 (six EPPs; SDIT, TSD and both DMIT print it twice), D12 x1, D18 x1, DM-1..3 x1 each.
-    expect(matching).toHaveLength(17);
+    // D3 x2 (SDIT, both lists), D4 x10 (six EPPs; SDIT, TSD and both DMIT print it twice), D12 x1, D18 x1, DM-1..3 x1 each,
+    // QA-1..3 x1 each (QA, 25 Oct 2026: no sibling-company system names).
+    expect(matching).toHaveLength(20);
     for (const entry of APPROVED_CONTENT_CHANGES) {
       expect(matching.some((change) => change.from === entry.from), entry.decision).toBe(true);
     }
     expect(new Set(matching.map((change) => change.sourceKey))).toEqual(
-      new Set(["sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1", "dpoa"]),
+      new Set(["sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1", "dpoa", "stc-exit"]),
     );
   });
 

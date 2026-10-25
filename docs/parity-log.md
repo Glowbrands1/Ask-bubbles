@@ -6,6 +6,27 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 25 Oct 2026: no Sun Tan City system names in exit text; Tanning Consultant Interview hidden
+
+QA found the sibling company's systems and product in what a Buff City
+Soap manager reads: the exit form's Steps to Finish Termination ("remove
+employee from MyGlow", "Place comment on employee's Sunlync account …
+verify tanning has been removed"), the chat line that the draft does not
+"remove anyone from MyGlow … or update Sunlync", the drafting rule, and
+the FTTC EPP's chooser description ("full-time Tanning Consultant"). The
+steps now say "the scheduling/HR system" and "the employee's account"
+(exit form revision 4) until Buff City Soap names its systems. The Details
+guard keeps the old names and also drops a neutral claim that the employee
+was taken off a system or had a note put on their account. The Tanning
+Consultant Interview Form, already withheld from the chooser, is now left
+out of `listTemplateSummaries()` and refused by the create route
+(`config/company/forms/hidden.ts`); its database row is not touched.
+
+**Sibling app: not needed.** MyGlow, Sunlync and the Tanning Consultant
+Interview are Ask Sunny's own systems and form, correct there. The neutral
+guard words are this app's wording; Ask Sunny's guard already names its own
+systems. No Ask Sunny change.
+
 ## 24 Oct 2026: a policy quote is not the manager's payroll answer
 
 `INTENT_PAYROLL_MANAGER_ONLY_ENABLED` is new and stays off. With it on,

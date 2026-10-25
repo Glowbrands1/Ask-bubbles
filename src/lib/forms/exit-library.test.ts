@@ -73,6 +73,19 @@ const HR_ADDED = new Set<string>([
   "Additional Details",
 ]);
 
+/**
+ * QA, 25 Oct 2026: two Steps to Finish Termination named the sibling company's
+ * own systems and product. Each step is kept, in its place, with the system
+ * named neutrally until Buff City Soap's are supplied (revision 4). The source
+ * sentence each one replaces is still checked to be the Word document's.
+ */
+const QA_NEUTRAL_STEPS: Readonly<Record<string, string>> = {
+  "Upload Exit Form to employee’s personal file and remove the employee from the scheduling/HR system.":
+    "Upload Exit Form to employee’s personal file and remove employee from MyGlow.",
+  "Add a note to the employee’s account stating they are no longer employed.":
+    "Place comment on employee’s Sunlync account stating they are no longer employed, verify tanning has been removed.",
+};
+
 /** The Word document's words, run together per paragraph, header included. */
 function sourceText(): string {
   const xml = [readZipText(SOURCE, "word/header1.xml"), readZipText(SOURCE, "word/document.xml")].join("");
@@ -94,7 +107,8 @@ describe("the Resignation/Exit Form is the STC Exit document", () => {
       layoutFamily: "exit",
       requiredPermission: "create_exit_form",
       variants: [],
-      revision: 3,
+      // 4: the Steps to Finish Termination name no sibling-company system (QA, 25 Oct 2026).
+      revision: 4,
     });
     expect(FORM_CATEGORIES.map((category) => category.key)).toContain("separation");
     const orders = TEMPLATE_SEEDS.map((entry) => entry.displayOrder);
@@ -108,6 +122,11 @@ describe("the Resignation/Exit Form is the STC Exit document", () => {
     const flat = strip(source);
     for (const text of printed(document.blocks).filter(Boolean)) {
       if (HR_ADDED.has(text)) continue;
+      const replaced = QA_NEUTRAL_STEPS[text];
+      if (replaced) {
+        expect(flat, text).toContain(strip(replaced));
+        continue;
+      }
       // Approved branding change: the letterhead names this company, in plain text.
       if (text === "Buff City Soap") {
         expect(flat).toContain("Sun Tan City");
@@ -176,9 +195,10 @@ describe("the Resignation/Exit Form is the STC Exit document", () => {
       "Supervisor Signature",
       "District Manager/Witness Signature (when required)",
       "Steps to Finish Termination",
-      "Upload Exit Form to employee's personal file and remove employee from MyGlow.",
+      // The two system steps in their neutral wording (QA, 25 Oct 2026); see QA_NEUTRAL_STEPS.
+      "Upload Exit Form to employee's personal file and remove the employee from the scheduling/HR system.",
       "Notify home office of employee's final date of employment for HR, Payroll, and Security System purposes.",
-      "Place comment on employee's Sunlync account stating they are no longer employed, verify tanning has been removed.",
+      "Add a note to the employee's account stating they are no longer employed.",
     ];
     for (const text of wanted) expect(ours, text).toContain(text);
   });
