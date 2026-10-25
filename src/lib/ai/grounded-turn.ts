@@ -51,7 +51,8 @@ export async function deliverFormProposal(input: {
   const stateOn = formStateEnabled();
   const dedupe = draftDedupeEnabled();
   // KEEP_FORM_EMPLOYEE_ENABLED: "for Test Employee" stays Test Employee on the card. See `withTypedEmployeeOnCard`.
-  const typedName = (response: AskResponse) => withTypedEmployeeOnCard(response, input.request.question);
+  const earlier = input.request.history.filter((turn) => turn.role === "user").map((turn) => turn.content);
+  const typedName = (response: AskResponse) => withTypedEmployeeOnCard(response, input.request.question, earlier);
   if (!entities && !stateOn && !dedupe) {
     const proposed = await input.propose(input.question);
     return proposed ? typedName(await input.decorate(proposed)) : null;
