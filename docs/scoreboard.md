@@ -308,8 +308,12 @@ message, answer mode, or retrieval does not change that prefix.
 | Call | cache_creation_input_tokens | cache_read_input_tokens | First token |
 | --- | --- | --- | --- |
 | OLD, one string, no cache | 0 | 0 | 55 ms |
-| NEW, 1st call | 1482 | 0 | 55 ms |
-| NEW, later calls | 0 | 1482 | 14 ms |
+| NEW, 1st call | 1603 | 0 | 55 ms |
+| NEW, later calls | 0 | 1603 | 14 ms |
+
+The static prefix was 1482 stand-in tokens until the retrieved-sources
+rule (conv_mvnljjl32xlit48: retrieved sources are never something the
+manager shared) joined the static rules; it is 1603 since.
 
 Card replay pass/fail is unchanged. The form card does not read this
 prompt, and the round 1 table above keeps the same expectations.
@@ -377,15 +381,15 @@ stand-in waits.
 | Call | cache_creation_input_tokens | cache_read_input_tokens | First token |
 | --- | --- | --- | --- |
 | OLD | 0 | 0 | 55 ms |
-| NEW, 1st call | 1482 | 0 | 55 ms |
-| NEW, later call | 0 | 1482 | 14 ms |
+| NEW, 1st call | 1603 | 0 | 55 ms |
+| NEW, later call | 0 | 1603 | 14 ms |
 
 The rows above, and the matching rows in the item 9 section, are a local
 stand-in: one token per four characters of the block that was sent. They
 are not Anthropic usage, and they are not what `chat_traces` stores.
 `chat_traces` stores `usage.cache_creation_input_tokens` and
 `usage.cache_read_input_tokens` from the response. The static prefix in
-this stand-in is 1482 tokens. A cache read of that prefix waits 14 ms in
+this stand-in is 1603 tokens. A cache read of that prefix waits 14 ms in
 the stand-in, against 55 ms with nothing cached. These stand-in counts
 are mocked (`Math.ceil(characters / 4)`). They are not a measured
 Anthropic bill.

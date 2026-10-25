@@ -682,6 +682,8 @@ describe("PROMPT_CACHE_ENABLED off", () => {
     const prompt = buildSystemPrompt(input);
     const again = buildSystemPrompt(input);
     expect(again).toBe(prompt);
+    // The fixture gained the retrieved-sources rule on purpose (conv_mvnljjl32xlit48:
+    // "the sources you just shared"); see `sources-not-shared.ts`.
     expect(prompt).toBe(readFileSync(new URL("./prompts.base.fixture.txt", import.meta.url), "utf8"));
     expect(prompt).not.toContain("---DYNAMIC---");
     expect(prompt).not.toContain("Should Not Appear");
