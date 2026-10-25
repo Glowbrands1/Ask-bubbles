@@ -1,7 +1,7 @@
 import "server-only";
 
 import { CLAUDE_HAIKU_MODEL } from "@/lib/config/models";
-import { formFullRemapEnabled } from "@/lib/config/chat-quality-flags";
+import { formChoiceStatedEnabled, formFullRemapEnabled } from "@/lib/config/chat-quality-flags";
 import { CA_POLICY_LABEL, readCaPolicy } from "@/lib/forms/ca-policy";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
 import { listIncidentDates } from "@/lib/forms/form-date-answer";
@@ -12,6 +12,7 @@ import { payrollDeductAmount, payrollDeductFromConversation } from "@/lib/forms/
 import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
 import { extractEmployeeNames, extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
 import { spokenDates } from "@/lib/forms/relative-date";
+import { mentionsEarlierCoaching } from "@/lib/forms/template-intent";
 import { warningLevelFromTurns } from "@/lib/forms/warning-level";
 import type { ChatFormProposal } from "@/types";
 
@@ -145,7 +146,7 @@ export function groundFormSlots(input: {
     actionPlan,
     closeMatchNote,
   };
-  const slots = finishSlots(mergeSlots(read, input.saved ?? null), said);
+  const slots = finishSlots(firstCoachingUnlessEarlier(mergeSlots(read, input.saved ?? null), users), said);
 
   const assistants = [...input.history, { role: "user", content: input.question }]
     .filter((turn) => turn.role === "assistant")
@@ -301,6 +302,18 @@ function parseRaw(input: unknown): RawSlots {
 
 function str(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED. The Follow-Up Coaching Form only when the
+ * manager mentions coaching that already happened or a follow-up. The model's
+ * "follow-up-coaching", an open follow-up card or a stored one is otherwise
+ * the Coaching Form (QA, 25 Oct 2026: "I need to coach an employee").
+ */
+function firstCoachingUnlessEarlier(slots: FormRemapSlots, users: readonly string[]): FormRemapSlots {
+  if (!formChoiceStatedEnabled() || slots.templateKey !== "follow-up-coaching") return slots;
+  if (users.some((turn) => mentionsEarlierCoaching(turn))) return slots;
+  return { ...slots, templateKey: "coaching" };
 }
 
 function isTemplate(value: string | null | undefined): value is TemplateKey {

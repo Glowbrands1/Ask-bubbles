@@ -5,7 +5,7 @@ import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manu
 import { namesHeading } from "@/lib/forms/named-policy-section";
 import { payrollDeductAmount, payrollDeductFromConversation, type PayrollDeductAnswer } from "@/lib/forms/payroll-deduct";
 import { formChoiceStatedEnabled, intentPayrollManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
-import { detectTemplateIntent } from "@/lib/forms/template-intent";
+import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -164,11 +164,16 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
         (payrollAnswer === "yes" ? groundPayroll(reading?.payrollAmount ?? null, managerBlob(input)) : null));
   const warningLevel = groundWarning(choice?.warning ?? reading?.warningLevel ?? null, blob);
   const formType = choiceStated
-    ? groundStatedForm(choice?.form ?? null, managerTurns(input), input.templates)
+    ? groundStatedForm(
+        choice?.form ?? null,
+        managerTurns(input),
+        input.templates,
+        saved.templateKey ? null : (reading?.formType ?? null),
+      )
     : groundForm(choice?.form ?? reading?.formType ?? null, blob, input.templates);
   const formTurn = Boolean(input.formInProgress || reading?.formTurn || formType.key || saved.templateKey);
 
-  const state = mergeSlots(saved, {
+  const merged = mergeSlots(saved, {
     employee,
     store,
     title,
@@ -180,6 +185,7 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
     warningLevel: warningLevel.value,
     formType: formType.key,
   });
+  const state = choiceStated ? firstCoachingUnlessEarlier(merged, managerTurns(input), input.templates) : merged;
 
   const clarification = clarificationFor({
     formTurn,
@@ -239,12 +245,15 @@ function managerTurns(input: IntentTurnInput): string[] {
  * Form**", the stored state's sentences and the model's formType (which
  * copies either) never choose it. A turn that names no form ("Create a form
  * from this conversation") looks further back; a turn that names one
- * replaces the stored form. Nothing named leaves the stored form.
+ * replaces the stored form. When no manager turn names a form, the stored
+ * form stays, and only then does the model's formType count — read as a
+ * template name, never from the blob.
  */
 function groundStatedForm(
   chosen: string | null,
   turns: readonly string[],
   templates: readonly TemplateRow[],
+  modelForm: string | null,
 ): { key: string | null; ambiguous: readonly TemplateRow[] } {
   const picked = chosen ? matchTemplates(chosen, templates) : [];
   if (picked.length === 1) return { key: picked[0]!.key, ambiguous: [] };
@@ -252,7 +261,24 @@ function groundStatedForm(
     const key = formNamedIn(turns[at]!, templates);
     if (key) return { key, ambiguous: [] };
   }
-  return { key: null, ambiguous: [] };
+  const typed = modelForm?.trim() ? matchTemplates(modelForm.trim(), templates) : [];
+  return { key: typed.length === 1 ? typed[0]!.key : null, ambiguous: [] };
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED. The Follow-Up Coaching Form only when a manager
+ * turn mentions coaching that already happened or a follow-up; otherwise the
+ * Coaching Form. A stored follow-up key from an earlier turn is corrected the
+ * same way.
+ */
+function firstCoachingUnlessEarlier(
+  state: ConversationFormState,
+  turns: readonly string[],
+  templates: readonly TemplateRow[],
+): ConversationFormState {
+  if (state.templateKey !== "follow-up-coaching") return state;
+  if (turns.some((turn) => mentionsEarlierCoaching(turn))) return state;
+  return templates.some((template) => template.key === "coaching") ? { ...state, templateKey: "coaching" } : state;
 }
 
 function formNamedIn(text: string, templates: readonly TemplateRow[]): string | null {

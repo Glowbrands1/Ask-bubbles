@@ -240,6 +240,51 @@ const CREATE_CA: LiveTurn = {
   remap: { templateKey: "dpoa" },
 };
 
+/*
+ * Ask Sunny conv_mvnbbhdq2a8t7nk (QA, 25 Oct 2026), in this app's words: the
+ * follow-up card came up with no earlier coaching mentioned. The model reads
+ * "follow-up-coaching", as the bad run's did.
+ */
+const FOLLOW_UP_CARD = "Here is the Follow-Up Coaching Form.\n**Employee:** Test Employee";
+const COACH_TURNS: LiveTurn[] = [
+  {
+    question: "I need to coach an employee",
+    intent: { formType: null, formTurn: true },
+    remap: { templateKey: null },
+  },
+  {
+    question: "Her name is Test Employee",
+    intent: { employee: "Test Employee", formType: "follow-up-coaching", formTurn: true },
+    remap: { templateKey: "follow-up-coaching", employeeName: "Test Employee" },
+  },
+  {
+    question: "She works at Kearney",
+    intent: { employee: "Test Employee", store: "Kearney", formType: "follow-up-coaching", formTurn: true },
+    remap: { templateKey: "follow-up-coaching", employeeName: "Test Employee", store: "Kearney" },
+  },
+  {
+    question: "It happened on 10-21",
+    intent: { employee: "Test Employee", incidentDate: "10-21", formType: "follow-up-coaching", formTurn: true },
+    remap: { templateKey: "follow-up-coaching", employeeName: "Test Employee" },
+  },
+  {
+    question: "She was on her cell phone for 30+ minutes at the register",
+    intent: { employee: "Test Employee", incidentType: "on her cell phone for 30+ minutes at the register", formType: "follow-up-coaching", formTurn: true },
+    remap: { templateKey: "follow-up-coaching", employeeName: "Test Employee", observation: "On her cell phone for 30+ minutes at the register." },
+  },
+];
+const COACH_REPLIES = [
+  "Happy to help with that. Tell me who, what you saw or heard, and any history. The progression runs observation → coaching → role play → follow-up coaching before anything formal. When you're ready for the paperwork, ask me to create a coaching form for them.",
+  FOLLOW_UP_CARD,
+  FOLLOW_UP_CARD,
+  FOLLOW_UP_CARD,
+];
+const EARLIER: LiveTurn = {
+  question: "Her name is Test Employee, I coached her on 10-1 about her phone",
+  intent: { employee: "Test Employee", formType: "follow-up-coaching", formTurn: true },
+  remap: { templateKey: "follow-up-coaching", employeeName: "Test Employee" },
+};
+
 beforeEach(async () => {
   for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
   state.directory = [];
@@ -291,6 +336,14 @@ describe("FORM_CHOICE_STATED_ENABLED: the form the manager named wins (ported fr
       expect(remapPath([CREATE_CA], []).keys).toEqual(["dpoa"]);
       expect(remapPath([PERFORMANCE_TURNS[0]!, CREATE_CA], []).keys).toEqual(["coaching", "dpoa"]);
       expect(remapPath([WOVEN], []).keys).toEqual(["dpoa"]);
+    });
+
+    it("no earlier coaching mentioned is the Coaching Form, not the follow-up", () => {
+      expect(remapPath(COACH_TURNS, COACH_REPLIES).keys.slice(1)).toEqual(["coaching", "coaching", "coaching", "coaching"]);
+    });
+
+    it("a follow-up the manager mentions is still the Follow-Up Coaching Form", () => {
+      expect(remapPath([COACH_TURNS[0]!, EARLIER], COACH_REPLIES).keys[1]).toBe("follow-up-coaching");
     });
 
     it("conv_mvmyqvkq2zwzrln: the reply names no Disciplinary Action policy and cites no source", () => {
@@ -351,6 +404,17 @@ describe("FORM_CHOICE_STATED_ENABLED: the form the manager named wins (ported fr
       expect(saved?.policyHeading).toBeNull();
     });
 
+    it("no earlier coaching mentioned is the Coaching Form, not the follow-up", async () => {
+      const { keys, saved } = await intentPath(COACH_TURNS, COACH_REPLIES);
+      expect(keys.slice(1)).toEqual(["coaching", "coaching", "coaching", "coaching"]);
+      expect(saved?.templateKey).toBe("coaching");
+    });
+
+    it("a follow-up the manager mentions is still the Follow-Up Coaching Form", async () => {
+      const { saved } = await intentPath([COACH_TURNS[0]!, EARLIER], COACH_REPLIES);
+      expect(saved?.templateKey).toBe("follow-up-coaching");
+    });
+
     it("a Policy reference line names no form", () => {
       expect(
         detectTemplateIntent(`Policy reference: Disciplinary Action, JBA Policy Manual p.14.\n${PERFORMANCE_CONCERN}`),
@@ -363,6 +427,16 @@ describe("FORM_CHOICE_STATED_ENABLED: the form the manager named wins (ported fr
     it("the intent read took the form from the assistant's Corrective Action Form", async () => {
       const { keys } = await intentPath(PERFORMANCE_TURNS, PERFORMANCE_REPLIES);
       expect(keys.slice(1)).toContain("dpoa");
+    });
+
+    it("the remap and the intent read gave the follow-up card with no earlier coaching mentioned", async () => {
+      expect(remapPath(COACH_TURNS, COACH_REPLIES).keys.slice(1)).toEqual([
+        "follow-up-coaching",
+        "follow-up-coaching",
+        "follow-up-coaching",
+        "follow-up-coaching",
+      ]);
+      expect((await intentPath(COACH_TURNS, COACH_REPLIES)).saved?.templateKey).toBe("follow-up-coaching");
     });
 
     it("a stored Disciplinary Action line made a coaching request a Corrective Action", () => {
