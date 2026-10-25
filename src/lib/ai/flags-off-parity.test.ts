@@ -46,7 +46,13 @@ const PROTECTED = [
 const APPROVED_PROTECTED_EDITS = [":(exclude)src/lib/forms/form-date-answer.ts"];
 
 const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.tsx", "**/*.css"];
-const ALLOWED_UI = "src/features/chat/message-bubble.tsx";
+/*
+ * The UI files this branch may change. The composer was added with QA's
+ * approval on 25 Oct 2026: behind CHAT_LONG_MESSAGE_ENABLED, a
+ * character-count line under the field and send disabled over the limit.
+ * Off, it renders as before.
+ */
+const ALLOWED_UI = ["src/features/chat/message-bubble.tsx", "src/features/chat/composer.tsx"];
 
 function diff(ref: string, args: string[]): string {
   return execFileSync("git", ["diff", ref, "--", ...args], { encoding: "utf8" });
@@ -85,14 +91,14 @@ describe("new flags default off", () => {
     }
   });
 
-  it("does not edit the protected modules, and the only UI diff is the close-match note", () => {
+  it("does not edit the protected modules, and the only UI diffs are the close-match note and the composer's length line", () => {
     expect(diff("HEAD", [...PROTECTED, ...APPROVED_PROTECTED_EDITS])).toBe("");
     const uiBase = uiDiffBase();
     if (uiBase) {
       const raw = diff(uiBase, [...UI_PATHS, ":(exclude)**/*.test.tsx", ":(exclude)**/*.dom.test.tsx"]);
       const unexpected = raw
         .split(/(?=^diff --git )/m)
-        .filter((block) => block.trim().length > 0 && !block.includes(ALLOWED_UI))
+        .filter((block) => block.trim().length > 0 && !ALLOWED_UI.some((file) => block.includes(file)))
         .join("");
       expect(unexpected).toBe("");
     }
