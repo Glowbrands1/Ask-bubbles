@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { answerQuestion } from "@/lib/ai/server-ask";
+import { isQuestionNotForm } from "@/lib/ai/question-not-form";
 import {
   assertLiveMode,
   assertNoConfigurationProblems,
@@ -28,7 +29,7 @@ import { CONTINUATION_KEY_MAX } from "@/lib/forms/proposal-continuation";
 import { mayAskToReopen } from "@/lib/forms/reopen-cue";
 import { parseChatReportContext } from "@/lib/reporting/report-context";
 import { businessToday } from "@/lib/business-date";
-import { draftActionsEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
+import { draftActionsEnabled, payrollDeductAmountFieldEnabled, questionNotFormEnabled } from "@/lib/config/chat-quality-flags";
 import { isClientConversationId } from "@/lib/chat/client-ids";
 import type { AskRequest } from "@/lib/ai/types";
 import type { AnswerMode, ChatMessage } from "@/types";
@@ -177,7 +178,15 @@ export async function POST(request: Request) {
        * also a revision verb, and a header line is not a drafted field. See
        * `lib/forms/chat-correction.ts`.
        */
-      const correction = parsed.activeFormInstanceId
+      /*
+       * A QUESTION IS ANSWERED, NEVER WRITTEN INTO THE OPEN FORM ("what policy
+       * does that fall under?"). It skips the correction, policy, redraft,
+       * revision and which-form paths below; the answer still knows the form
+       * is open. See `lib/ai/question-not-form.ts`. Behind
+       * QUESTION_NOT_FORM_ENABLED.
+       */
+      const askedQuestion = questionNotFormEnabled() && isQuestionNotForm(parsed.question, parsed.history);
+      const correction = parsed.activeFormInstanceId && !askedQuestion
         ? await (await import("@/lib/forms/chat-correction")).correctActiveForm({
             request,
             instanceId: parsed.activeFormInstanceId,
@@ -193,7 +202,7 @@ export async function POST(request: Request) {
        * writes them. Null for anything else. See `lib/forms/chat-policy-change.ts`.
        */
       const policyChange =
-        !correction && parsed.activeFormInstanceId
+        !correction && !askedQuestion && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/chat-policy-change")).changeActiveFormPolicy({
               request,
               instanceId: parsed.activeFormInstanceId,
@@ -212,7 +221,7 @@ export async function POST(request: Request) {
        * manager needs, not one field revised.
        */
       const redraft =
-        !correction && !policyChange && parsed.activeFormInstanceId
+        !correction && !askedQuestion && !policyChange && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/chat-redraft")).redraftActiveForm({
               request,
               instanceId: parsed.activeFormInstanceId,
@@ -231,11 +240,11 @@ export async function POST(request: Request) {
        * `lib/forms/chat-revision.ts`.
        */
       const separateDocument =
-        !correction && !policyChange && !redraft && parsed.activeFormInstanceId
+        !correction && !askedQuestion && !policyChange && !redraft && parsed.activeFormInstanceId
           ? await separateFormRequested(parsed.question)
           : false;
       const revision =
-        !correction && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
+        !correction && !askedQuestion && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/chat-revision")).reviseActiveForm({
               request,
               instanceId: parsed.activeFormInstanceId,
@@ -249,7 +258,7 @@ export async function POST(request: Request) {
        * which, change nothing. See `askWhichFormToCorrect`.
        */
       const which =
-        !correction && !revision && !parsed.activeFormInstanceId && (parsed.activeFormCandidateIds?.length ?? 0) > 1
+        !correction && !askedQuestion && !revision && !parsed.activeFormInstanceId && (parsed.activeFormCandidateIds?.length ?? 0) > 1
           ? await (await import("@/lib/forms/chat-correction")).askWhichFormToCorrect({
               request,
               instanceIds: parsed.activeFormCandidateIds!,
