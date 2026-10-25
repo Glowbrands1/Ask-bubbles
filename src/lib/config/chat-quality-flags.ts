@@ -376,6 +376,18 @@ export function crossChatReplyGuardEnabled(): boolean {
   return envFlag("CROSS_CHAT_REPLY_GUARD_ENABLED");
 }
 
+/**
+ * A reading note beside the JBA Policy Manual p.19 cell-phone sentence when
+ * the grounding holds it: "not in back pockets, charging in the break room,
+ * or sitting on top of a drawer till" lists three places the phone may NOT
+ * be (conv_mvnoscyz200gtat, QA 25 Oct 2026). The note goes in the per-turn
+ * grounding block, never in the manual text or the cached manual prefix.
+ * Off, the grounding is exactly as before.
+ */
+export function manualNegatedListNoteEnabled(): boolean {
+  return envFlag("MANUAL_NEGATED_LIST_NOTE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -417,4 +429,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
   "NOT_A_NAME_GUARD_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
+  "MANUAL_NEGATED_LIST_NOTE_ENABLED",
 ] as const;
