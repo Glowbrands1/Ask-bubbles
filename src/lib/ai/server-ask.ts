@@ -30,7 +30,13 @@ import { loadFullManualPlan } from "@/lib/knowledge/full-manual-load";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { RoleGrounding } from "@/lib/knowledge/role-grounding";
 import { recallPeople } from "@/lib/chat/person-memory-store";
-import { asksAboutRecords, refersBack, withoutCrossChatClaims } from "@/lib/chat/cross-chat-guard";
+import {
+  asksAboutRecords,
+  CROSS_CHAT_NEUTRAL_REPLY,
+  refersBack,
+  withoutCrossChatClaims,
+  type CrossChatCheck,
+} from "@/lib/chat/cross-chat-guard";
 import { reportById, routeReportQuestion } from "@/lib/reporting/registry";
 import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
@@ -45,7 +51,7 @@ import { applyIntentExtraction } from "./intent-extraction";
 import { pinnedManualBlock, printedPageFromRetrieval } from "./policy-citation-fields";
 import { recallMemory, rememberFact } from "./chat-memory-store";
 import { finishChatTrace, openChatTrace, redactTraceText } from "./chat-trace";
-import { updateChatTrace } from "./chat-trace-store";
+import { chatTraceDraft, updateChatTrace } from "./chat-trace-store";
 import {
   chatDataToolsEnabled,
   chatMemoryEnabled,
@@ -928,11 +934,13 @@ async function answerQuestionBody(
    * every other word the model wrote is kept.
    */
   if (crossChatGuard && !refersBack(request.question, request.history)) {
-    content = withoutCrossChatClaims(content, {
+    const crossChatCheck = withoutCrossChatClaims(content, {
       question: request.question,
       history: request.history,
       todayIso: request.context.todayIso,
-    }).content;
+    });
+    noteCrossChatRemoval(crossChatCheck);
+    content = crossChatCheck.content;
   }
   return {
     content,
@@ -1231,4 +1239,20 @@ function previousManagerTurn(request: AskRequest): string | null {
     }
   }
   return null;
+}
+
+/**
+ * A reply the cross-chat backstop changed is logged and tagged on the trace's
+ * intent column ("cross_chat_removed", or "cross_chat_neutral" when nothing
+ * but the neutral line was left), so a read of chat_traces finds every one.
+ * The count only: the removed sentences carry the manager's own words.
+ */
+function noteCrossChatRemoval(check: CrossChatCheck): void {
+  if (check.removed.length === 0) return;
+  const neutral = check.content === CROSS_CHAT_NEUTRAL_REPLY;
+  console.info(
+    JSON.stringify({ event: "reply.cross_chat.removed", sentences: check.removed.length, neutral }),
+  );
+  const tag = neutral ? "cross_chat_neutral" : "cross_chat_removed";
+  updateChatTrace({ intent: [chatTraceDraft()?.intent, tag].filter(Boolean).join("|") });
 }
