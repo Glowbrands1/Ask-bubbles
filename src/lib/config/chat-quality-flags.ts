@@ -412,6 +412,18 @@ export function conversationDraftReuseEnabled(): boolean {
 }
 
 /**
+ * DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED: an open draft is reused only when this
+ * chat made it, for the same employee, form and incident or date. A card
+ * dated differently from the chat's own draft makes a new draft, and a reuse
+ * says so on the card ("Updated your open draft from <date>"). A draft from
+ * another chat is never reopened, so it is never overwritten (QA, B18–B20,
+ * 25 Oct 2026). Off, every lookup is as it was.
+ */
+export function draftReuseSameChatOnlyEnabled(): boolean {
+  return envFlag("DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED");
+}
+
+/**
  * "Delete that draft" deletes the draft on screen where the manager may
  * delete forms (the forms API's own rule), and says truthfully who can where
  * they may not; "same incident", answering "is this the same incident as the
@@ -594,4 +606,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "KEEP_FORM_EMPLOYEE_ENABLED",
   "TITLE_WHOLE_WORD_ENABLED",
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
+  "DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED",
 ] as const;
