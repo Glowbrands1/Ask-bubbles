@@ -1,5 +1,8 @@
 import "server-only";
 
+import { refersBack } from "@/lib/chat/cross-chat-guard";
+import { matchEmployeeName, type RosterEmployee } from "@/lib/forms/employee-match";
+import { businessToday } from "@/lib/business-date";
 import { samePerson } from "@/lib/forms/proposal";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import {
@@ -94,14 +97,58 @@ export interface RecallInput {
   /** The browser's `conv_*` id for this conversation, if it sent one. */
   readonly conversationId?: string;
   readonly userName: string;
+  /**
+   * CROSS_CHAT_REPLY_GUARD_ENABLED, read by the caller. On: nothing is
+   * recalled unless the manager refers back to an earlier conversation here; a
+   * name read only from a bare turn must be on `roster`; another conversation
+   * from this same business day is never quoted; and the block is labelled as
+   * records from other conversations.
+   */
+  readonly crossChatGuard?: boolean;
+  /** The caller's scoped roster, read only when a bare-turn name needs it. */
+  readonly roster?: () => Promise<readonly RosterEmployee[]>;
+  /**
+   * The business date of this turn. With the guard on, another conversation
+   * from this same day is not recalled: parallel chats were quoted as "you
+   * told me earlier today" (conv_mvmzl40e2dxpgej).
+   */
+  readonly todayIso?: string;
+}
+
+/**
+ * The candidates the guard lets through: a name typed as a whole turn on its
+ * own ("asdasd") is recalled only when the roster has somebody by that name.
+ * No roster to check against keeps it out.
+ */
+async function guardedCandidates(
+  input: RecallInput,
+  candidates: readonly PersonCandidate[],
+): Promise<PersonCandidate[]> {
+  if (!candidates.some((person) => person.bareTurnOnly)) return [...candidates];
+  const roster = input.roster ? await input.roster() : [];
+  return candidates.filter((person) => {
+    if (!person.bareTurnOnly) return true;
+    const match = matchEmployeeName(person.name, roster);
+    return match.kind === "exact" || match.kind === "confirm";
+  });
 }
 
 /**
  * The memory block for this turn, or null — never a rejection.
  */
 export async function recallPeople(input: RecallInput): Promise<string | null> {
-  const candidates = namesToRecall(input);
-  if (candidates.length === 0) return null;
+  /*
+   * CROSS_CHAT_REPLY_GUARD_ENABLED: nothing from another conversation — its
+   * words or the forms listed with it — unless the manager refers back to one
+   * here ("like last time", "the one I did yesterday", "her earlier CA").
+   * QA (conv_mvmzl3vs2kxujv0, conv_mvmzlbhv2ww7y5v, conv_mvmzlvq124nmks8):
+   * "I see a couple of earlier items on Test Employee from your past
+   * conversations…", "you already have a Corrective Action on file…", "you've
+   * mentioned Test Employee before…". No query is made.
+   */
+  if (input.crossChatGuard && !refersBack(input.question, input.history)) return null;
+  const named = namesToRecall(input);
+  if (named.length === 0) return null;
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   const budget = new Promise<null>((resolve) => {
@@ -109,7 +156,11 @@ export async function recallPeople(input: RecallInput): Promise<string | null> {
   });
 
   try {
-    return await Promise.race([readMemory(input, candidates), budget]);
+    const read = async () => {
+      const candidates = input.crossChatGuard ? await guardedCandidates(input, named) : named;
+      return candidates.length === 0 ? null : readMemory(input, candidates);
+    };
+    return await Promise.race([read(), budget]);
   } catch (error) {
     // The reason only: the rows carry the manager's own words.
     console.warn(
@@ -275,9 +326,12 @@ async function readMemory(
       const excerpt = excerptFor(person, turns);
       if (excerpt.length === 0) continue;
       const lastMention = [...turns].reverse().find((turn) => mentionsPerson(turn.content, person.name));
+      const date = rememberedDate(lastMention?.createdAt ?? conversation.created_at) ?? "an earlier day";
+      // CROSS_CHAT_REPLY_GUARD_ENABLED: a different chat from today is not "earlier".
+      if (input.crossChatGuard && date === (input.todayIso?.trim() || businessToday())) continue;
       recalled.push({
         title: conversation.title ?? "Untitled conversation",
-        date: rememberedDate(lastMention?.createdAt ?? conversation.created_at) ?? "an earlier day",
+        date,
         excerpt,
       });
     }
@@ -285,5 +339,7 @@ async function readMemory(
     return { name: person.name, conversations: recalled, forms: personForms };
   });
 
-  return renderMemoryBlock(recollections, input.userName);
+  return input.crossChatGuard
+    ? renderMemoryBlock(recollections, input.userName, { crossChatGuard: true })
+    : renderMemoryBlock(recollections, input.userName);
 }
