@@ -540,6 +540,19 @@ export function titleWholeWordEnabled(): boolean {
   return envFlag("TITLE_WHOLE_WORD_ENABLED");
 }
 
+/**
+ * The exit form's intake reads what the manager typed (live QA, 25 Oct 2026).
+ * A Details answer ("items returned") or the Permanent Address the manager
+ * typed is never offered as the employee; "change the reason for resignation
+ * to: …" replaces the reason; a yearless "last day 10-24" is the most recent
+ * 24 October; the Permanent Address is read; and "did not call in for her
+ * last two shifts" is No Call No Show. Same name in the sibling app. Off, the
+ * exit readers read as before.
+ */
+export function exitIntakeFixEnabled(): boolean {
+  return envFlag("EXIT_INTAKE_FIX_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -593,5 +606,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ACTION_PLAN_MANAGER_ONLY_ENABLED",
   "KEEP_FORM_EMPLOYEE_ENABLED",
   "TITLE_WHOLE_WORD_ENABLED",
+  "EXIT_INTAKE_FIX_ENABLED",
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
 ] as const;
