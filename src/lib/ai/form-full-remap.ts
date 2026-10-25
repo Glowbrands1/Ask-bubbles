@@ -119,7 +119,7 @@ export function groundFormSlots(input: {
   const store = groundedStore(said);
   const incidentDateIso = groundedDate(said, input.today);
   /*
-   * WARNING_LEVEL_MANAGER_ONLY_ENABLED (ported from Ask Sunny, 24 Oct 2026):
+   * WARNING_LEVEL_MANAGER_ONLY_ENABLED (ported from the sibling app, 24 Oct 2026):
    * the latest level the manager states, with a bare "Yes" counted only after
    * one yes/no question about that exact level; see `managerStatedWarningLevel`.
    */

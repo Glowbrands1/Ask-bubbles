@@ -774,7 +774,7 @@ const LEVEL_IN_QUESTION = /\b(verbal|written)\s+(?:warning|ca|c\/a|corrective(?:
  * "Should I tick **Written Warning** on the form?" — or null. Null when the
  * turn asks more than one question (a bare "Yes" could answer either), when
  * the question offers a choice ("verbal or written?", "Yes or No?"), or when
- * it names no level or both. Ported from Ask Sunny.
+ * it names no level or both. Ported from the sibling app.
  */
 export function levelAskedYesNo(assistant: string): StatedWarningLevel | null {
   const plain = (assistant ?? "").replace(/[*_`]/g, "");
@@ -789,9 +789,9 @@ export function levelAskedYesNo(assistant: string): StatedWarningLevel | null {
 /**
  * Whether a template has a Type of Warning to tick — the Corrective Action
  * Form, published as "dpoa". A level is never carried onto any other form
- * (Ask Sunny live, 24 Oct 2026: "Written" rode onto a Resignation/Exit Form
+ * (sibling-app live, 24 Oct 2026: "Written" rode onto a Resignation/Exit Form
  * and a Policy Review). Read by the WARNING_LEVEL_MANAGER_ONLY_ENABLED paths.
- * Ported from Ask Sunny.
+ * Ported from the sibling app.
  */
 export function templateHasWarningLevel(
   template: { readonly key?: string | null; readonly name?: string | null } | null | undefined,

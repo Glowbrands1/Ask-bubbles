@@ -333,7 +333,7 @@ export function fullManualContextEnabled(): boolean {
  * one yes/no question about that exact level. A bare Yes/No right after "Is
  * payroll deduct applicable?" is kept as the payroll answer before the stored
  * slots are put ahead of it. Off, the intent reading grounds both as it does
- * today. Ported from Ask Sunny.
+ * today. Ported from the sibling app.
  */
 export function warningLevelManagerOnlyEnabled(): boolean {
   return envFlag("WARNING_LEVEL_MANAGER_ONLY_ENABLED");

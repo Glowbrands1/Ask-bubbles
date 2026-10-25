@@ -160,7 +160,7 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
         (payrollAnswer === "yes" ? groundPayroll(reading?.payrollAmount ?? null, managerBlob(input)) : null));
   /*
    * THE MANAGER'S LEVEL ONLY (WARNING_LEVEL_MANAGER_ONLY_ENABLED; ported from
-   * Ask Sunny, live replays 24 Oct 2026). The blob holds the assistant's own
+   * the sibling app, live replays 24 Oct 2026). The blob holds the assistant's own
    * turns ("the warning level, verbal or written") and the saved state, and a
    * word anywhere in it — or the slot model's guess — was taken as the level.
    * With the flag, the level is a numbered choice the manager just made, or
@@ -195,7 +195,7 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
     if (answered) state = { ...state, payrollDeduct: answered };
     /*
      * RE-READ EVERY TURN, AND ONLY FOR A FORM WITH A TYPE OF WARNING (ported
-     * from Ask Sunny; QA, 24 Oct 2026). A level stored once came back on every
+     * from the sibling app; QA, 24 Oct 2026). A level stored once came back on every
      * later turn, beat "this is a verbal", and rode onto other forms. The
      * level is what the manager's turns state now; the stored one is kept only
      * when the history may have been cut (the route keeps the last HISTORY_CAP
@@ -239,7 +239,7 @@ const OTHER_YES_NO =
  * "Yes" / "No" ANSWERING "Is payroll deduct applicable? Yes or No?" — read
  * here, while the reply is still bare. Once the stored slots are put ahead of
  * it the reply is no longer a bare answer, and the card asked the payroll
- * question again (Ask Sunny live replay, 24 Oct 2026). Only the assistant turn
+ * question again (sibling-app live replay, 24 Oct 2026). Only the assistant turn
  * right before it counts, and only when that turn asks no other yes/no
  * question, so the "Yes" that confirms a name is never a payroll answer.
  * Behind WARNING_LEVEL_MANAGER_ONLY_ENABLED.
