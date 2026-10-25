@@ -62,7 +62,9 @@ export function withoutPriorList(text: string): string {
 
 /**
  * "previous coaching: jba policy manual 1-1-26, verbal ca 9-1-26" is two prior
- * actions. The manual shorthand is the JBA Policy Manual acknowledgement.
+ * actions. The manual shorthand reads as the manual's title, "JBA Policy
+ * Manual"; "acknowledgement" is added to it only when the manager typed an
+ * acknowledgement word (QA, 25 Oct 2026: no word the manager did not say).
  */
 export function priorListActions(text: string): string[] {
   const items: string[] = [];
@@ -80,8 +82,8 @@ function priorItem(raw: string): string | null {
   if (!item || /^(?:none|no|n\/?a)$/i.test(item)) return null;
   if (/\bmanual\b/i.test(item)) {
     item = item.replace(
-      /\b(?:the\s+)?(?:jba\s+)?(?:policy\s+)?manual(?:\s+(?:ack(?:nowledge?ments?)?|acknowledged|signed|signature|sign[- ]off))?\b/i,
-      "JBA Policy Manual acknowledgement",
+      /\b(?:the\s+)?(?:jba\s+)?(?:policy\s+)?manual(?:\s+(ack(?:nowledge?ments?)?|acknowledged|signed|signature|sign[- ]off))?\b/i,
+      (_whole, said: string | undefined) => (said ? `JBA Policy Manual ${said}` : "JBA Policy Manual"),
     );
   }
   return item.replace(/\bc\/a\b/gi, "C/A").replace(/\bca\b/gi, "CA");

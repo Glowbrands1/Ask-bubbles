@@ -107,6 +107,21 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
+/*
+ * PRIOR ACTIONS, QA decision of 25 Oct 2026. A prior-action line holds no word
+ * the manager did not say. This file runs with PRIOR_ACTIONS_PARSE_ENABLED off,
+ * where the "previous coaching: …" list reader writes the line: "jba policy
+ * manual 1-1-26" is "JBA Policy Manual 1-1-26" (it was "JBA Policy Manual
+ * acknowledgement 1-1-26"; nobody typed "acknowledgement"). With
+ * PRIOR_ACTIONS_PARSE_ENABLED also on, the parser's structured line wins:
+ * "Coaching — JBA Policy Manual — 01/01/2026", with no "signed" unless the
+ * manager wrote it. `priorLine` picks the expectation for the flags in force,
+ * so the same cases pass on their own and in the both-flags-on probe.
+ */
+function priorLine(list: string, parsed: string): string {
+  return process.env.PRIOR_ACTIONS_PARSE_ENABLED ? parsed : list;
+}
+
 let answerQuestion: typeof import("./server-ask").answerQuestion;
 let groundFormSlots: typeof import("./form-full-remap").groundFormSlots;
 
@@ -186,10 +201,15 @@ describe("remap path: What happened is the incident, not the request (prod, 24 O
       },
     ]);
     expect(response.formProposal?.issue).toBe("not attending the monthly meeting");
-    expect(response.formProposal?.priorActions).toBe("JBA Policy Manual acknowledgement 1-1-26\nverbal CA 9-1-26");
+    // QA 25 Oct 2026: no invented "acknowledgement"; the parser's line when PRIOR_ACTIONS_PARSE_ENABLED is on (see priorLine).
+    const prior = priorLine(
+      "JBA Policy Manual 1-1-26\nverbal CA 9-1-26",
+      "Coaching — JBA Policy Manual — 01/01/2026\nVerbal corrective action — 09/01/2026",
+    );
+    expect(response.formProposal?.priorActions).toBe(prior);
     expect(response.formProposal?.formDate).toBe("2026-10-20");
     expect(response.content).not.toMatch(/Attendance, as you said/);
-    expect(response.content).toContain("**Prior actions:** JBA Policy Manual acknowledgement 1-1-26; verbal CA 9-1-26");
+    expect(response.content).toContain(`**Prior actions:** ${prior.split("\n").join("; ")}`);
   });
 
   it("conv_mvmzaecp2d44t0e / conv_mvmzj1ok29ilgvt: the woven deadline keeps its whole date and cites Standards of Conduct p.12", async () => {
@@ -221,7 +241,8 @@ describe("remap path: What happened is the incident, not the request (prod, 24 O
     ]);
     expect(response.formProposal?.issue).toBe("late for shift and did not call supervisor as outlined in attendance policy");
     expect(response.formProposal?.issue).not.toMatch(/write a|Team Member/i);
-    expect(response.formProposal?.priorActions).toBe("JBA Policy Manual acknowledgement 1-1-25");
+    // QA 25 Oct 2026: "JBA Manual" reads as the manual's title, with no invented "acknowledgement" (see priorLine).
+    expect(response.formProposal?.priorActions).toBe(priorLine("JBA Policy Manual 1-1-25", "Coaching — JBA Policy Manual — 01/01/2025"));
     citesPage(response, "Attendance", 14);
   });
 
@@ -247,7 +268,8 @@ describe("remap path: What happened is the incident, not the request (prod, 24 O
     ]);
     expect(response.formProposal?.issue).toBe("opening store late");
     expect(response.content).not.toMatch(/\nWhat happened\?/);
-    expect(response.formProposal?.priorActions).toBe("JBA Policy Manual acknowledgement 1-1-26");
+    // QA 25 Oct 2026: no invented "acknowledgement"; the parser's line when PRIOR_ACTIONS_PARSE_ENABLED is on (see priorLine).
+    expect(response.formProposal?.priorActions).toBe(priorLine("JBA Policy Manual 1-1-26", "Coaching — JBA Policy Manual — 01/01/2026"));
     citesPage(response, "Late Opening", 15);
   });
 
@@ -286,7 +308,8 @@ describe("remap path: What happened is the incident, not the request (prod, 24 O
         raw: { employeeName: "Test Employee" },
       },
     ]);
-    expect(response.formProposal?.priorActions).toBe("JBA Policy Manual acknowledgement 1-1-26");
+    // QA 25 Oct 2026: no invented "acknowledgement"; the parser's line when PRIOR_ACTIONS_PARSE_ENABLED is on (see priorLine).
+    expect(response.formProposal?.priorActions).toBe(priorLine("JBA Policy Manual 1-1-26", "Coaching — JBA Policy Manual — 01/01/2026"));
   });
 });
 
@@ -412,7 +435,8 @@ describe("step 3 and C-list: edits never become What happened (prod, 24 Oct 2026
       );
       expect(response.content, `turn ${count}`).not.toMatch(/Action plan:/);
       expect(response.formProposal?.issue ?? "", `turn ${count}`).not.toMatch(/create a for Team Member|^name is|this is a violation/i);
-      expect(response.formProposal?.priorActions, `turn ${count}`).toBe("Verbal CA 10-1-26");
+      // QA 25 Oct 2026: the parser's line wins when PRIOR_ACTIONS_PARSE_ENABLED is on, with no invented "signed" (see priorLine).
+      expect(response.formProposal?.priorActions, `turn ${count}`).toBe(priorLine("Verbal CA 10-1-26", "Verbal corrective action — 10/01/2026"));
     }
     citesPage(await chat(turns), "Standards of Conduct", 12);
   });
@@ -502,7 +526,8 @@ describe("step 3 and C-list: edits never become What happened (prod, 24 Oct 2026
     expect(response.formProposal?.issue).toBe("register shortage");
     expect(response.content).not.toMatch(/Attendance[^\n]*as you said/);
     expect(response.content).not.toMatch(/Action plan:/);
-    expect(response.formProposal?.priorActions ?? "").toMatch(/JBA Policy Manual acknowledgement 1-20-26/);
+    // QA 25 Oct 2026: no invented "acknowledgement"; the parser's line when PRIOR_ACTIONS_PARSE_ENABLED is on (see priorLine).
+    expect(response.formProposal?.priorActions ?? "").toContain(priorLine("JBA Policy Manual 1-20-26", "Coaching — JBA Policy Manual — 01/20/2026"));
   });
 
   it("C-list (c) conv_mvifedfn12ysyjzz / conv_mvmzmy4g2wp7dhf: every 'as you said' value is in the manager's words", async () => {
