@@ -7,7 +7,8 @@ import { authorizeForms } from "./access";
 import { correctActiveForm } from "./chat-correction";
 import { changeActiveFormPolicy } from "./chat-policy-change";
 import { reviseActiveForm } from "./chat-revision";
-import { formOpenedFor, openEditableDraft, openingLine } from "./editable-draft";
+import { formOpenedFor, openEditableDraft, openingLine, reasonRequiredReply } from "./editable-draft";
+import { RevisionReasonRequiredError } from "./revision-chain";
 import { authorizeInstance, instanceListFilterFor, visibleInstances } from "./instance-scope";
 import { listInstances, type InstanceRow } from "./instances";
 import { extractEmployeeNames, samePerson } from "./proposal";
@@ -132,6 +133,7 @@ export async function reopenRequestedForm(input: {
   try {
     draft = await openEditableDraft(input.request, target.id, { revise: reading.mode === "edit" });
   } catch (error) {
+    if (error instanceof RevisionReasonRequiredError) return reasonRequiredReply(input.request, target.id);
     return reply(
       `I found the **${target.templateName}** for **${target.employeeName}**, but couldn't open it to edit: ${(error as Error).message}`,
     );
