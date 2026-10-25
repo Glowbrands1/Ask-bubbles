@@ -397,3 +397,29 @@ describe("loadFormRecords", () => {
     }
   });
 });
+
+/*
+ * CROSS_CHAT_REPLY_GUARD_ENABLED (`markCreator`): the register lists every form
+ * this user may SEE, and a reply called another manager's draft "the written
+ * one you created today for the missed Woven acknowledgement deadline"
+ * (conv_mvmznap42vcw0dl — those drafts were created by other accounts). Each
+ * row now says who created it, and the rules say only "this user" rows are
+ * the manager's.
+ */
+describe("loadFormRecords marks who created each row", () => {
+  it("says 'created by: this user' or 'another user' only when asked to", async () => {
+    store.form_instances.push(
+      row({ created_by: "user-1", status: "draft", form_date: "2026-10-24", template_name: "Corrective Action Form" }),
+      row({ created_by: "someone-else", form_date: "2026-09-12" }),
+    );
+    const question = "does wren halvorsen have previous coachings?";
+
+    const marked = (await loadFormRecords({ actor: MANAGER, question, today: "2026-10-24", markCreator: true }))!.block;
+    expect(marked).toContain("created by: this user");
+    expect(marked).toContain("created by: another user");
+    expect(marked).toContain('Say the manager created a form only when its row says "created by: this user"');
+
+    const plain = (await loadFormRecords({ actor: MANAGER, question, today: "2026-10-24" }))!.block;
+    expect(plain).not.toContain("created by:");
+  });
+});
