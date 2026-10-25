@@ -488,6 +488,29 @@ export function crossChatReplyGuardEnabled(): boolean {
 }
 
 /**
+ * A reading note beside the JBA Policy Manual p.19 cell-phone sentence when
+ * the grounding holds it: "not in back pockets, charging in the break room,
+ * or sitting on top of a drawer till" lists three places the phone may NOT
+ * be (conv_mvnoscyz200gtat, QA 25 Oct 2026). The note goes in the per-turn
+ * grounding block, never in the manual text or the cached manual prefix.
+ * Off, the grounding is exactly as before.
+ */
+export function manualNegatedListNoteEnabled(): boolean {
+  return envFlag("MANUAL_NEGATED_LIST_NOTE_ENABLED");
+}
+
+/**
+ * The Corrective Action Form's Action Plan is the manager's, or blank (Pau,
+ * 25 Oct 2026). A plan they typed ("action plan: …") goes on the card and the
+ * form word for word. With none typed, nothing is written: no "Management
+ * will review …" sentence, no closing, no model summary. Off, the plan is
+ * built as it is today.
+ */
+export function actionPlanManagerOnlyEnabled(): boolean {
+  return envFlag("ACTION_PLAN_MANAGER_ONLY_ENABLED");
+}
+
+/**
  * The form's employee stays the employee. A person the manager's account
  * mentions ("onboarding with new hire Test Newhire") does not replace them on
  * a later turn, and a bare first name ("test") keeps the fuller name already
@@ -593,8 +616,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REMAP_INCIDENT_FIX_ENABLED",
   "PRIOR_ACTIONS_PARSE_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
+  "ACTION_PLAN_MANAGER_ONLY_ENABLED",
   "KEEP_FORM_EMPLOYEE_ENABLED",
   "TITLE_WHOLE_WORD_ENABLED",
+  "MANUAL_NEGATED_LIST_NOTE_ENABLED",
   "FORM_REQUEST_OVER_ON_FILE_ENABLED",
   "NEWEST_PLACE_TURN_ENABLED",
 ] as const;
