@@ -592,3 +592,81 @@ describe("step 3 and C-list: edits never become What happened (prod, 24 Oct 2026
     citesPage(response, "Animals in the Workplace", 30);
   });
 });
+
+/**
+ * QA B5, prod 25 Oct 2026 (conv_mvnmf1ik2lqkfld, FORM_FULL_REMAP on,
+ * REMAP_INCIDENT_FIX_ENABLED off): the card said "What happened: create a for
+ * for missing the 5-26 woven deadline" and "Action plan: Meet the woven
+ * deadline". The manager typed no plan. The turn is word for word; the model
+ * stand-in returns the plan the extraction returned in prod, and the stored
+ * slots are the trace row of that turn.
+ */
+describe("QA B5 conv_mvnmf1ik2lqkfld: the woven deadline request (prod, 25 Oct 2026)", () => {
+  const SAID = "create a written CA for Test Employee at Kearney for missing the 10-15-26 woven deadline";
+  /** chat_traces.slots for the prod turn, as the next turn reads them back. */
+  const STORED = {
+    templateKey: "dpoa",
+    employeeName: "Test Employee",
+    store: "Kearney, NE",
+    locationId: "loc-66",
+    incidentDateIso: "2026-10-15",
+    warningLevel: "written",
+    observation: "create a for for missing the 5-26 woven deadline",
+    actionPlan: "Meet the woven deadline",
+  };
+
+  it("What happened is the incident with its whole date, and no plan is added", async () => {
+    for (const observation of [null, "missing the 10-15-26 woven deadline", STORED.observation]) {
+      const response = await chat([
+        { say: SAID, raw: { employeeName: "Test Employee", observation, actionPlan: "Meet the woven deadline" } },
+      ]);
+      expect(response.formProposal?.issue).toBe("missing the 10-15-26 woven deadline");
+      expect(response.content).toContain("**What happened:** missing the 10-15-26 woven deadline");
+      expect(response.content).not.toMatch(/create a for|(?<![\d-])5-26|Meet the woven deadline|Action plan/i);
+      expect(response.formProposal?.formDate).toBe("2026-10-15");
+      expect(response.content).toContain("**Type of warning:** Written Warning, as you said");
+    }
+  });
+
+  it("the stored fragment and the stored plan do not ride on to the next turn", () => {
+    // The next answer, with the turn that held the account not in hand (a
+    // store miss keeps only this request's history).
+    const { slots, response } = groundFormSlots({
+      raw: raw({ employeeName: "Test Employee", actionPlan: "Meet the woven deadline" }),
+      history: [],
+      question: "Team Member",
+      today: "2026-10-25",
+      people: [],
+      saved: STORED as never,
+    });
+    expect(slots.observation).toBeNull();
+    expect(slots.actionPlan).toBeNull();
+    expect(response.content).not.toMatch(/create a for|Meet the woven deadline/i);
+    expect(response.content).toContain("What happened?");
+
+    // With the account in hand, the next turn reads it again in full.
+    const next = groundFormSlots({
+      raw: raw({ employeeName: "Test Employee", actionPlan: "Meet the woven deadline" }),
+      history: [{ role: "user", content: SAID }],
+      question: "Team Member",
+      today: "2026-10-25",
+      people: [],
+      saved: STORED as never,
+    });
+    expect(next.slots.observation).toBe("missing the 10-15-26 woven deadline");
+    expect(next.slots.actionPlan).toBeNull();
+  });
+
+  it("a model summary with the date cut short is not What happened", () => {
+    // "date is …" reads as a date edit, so the summary is the fallback here.
+    const { slots } = groundFormSlots({
+      raw: raw({ employeeName: "Test Employee", observation: "missed the 5-26 woven deadline" }),
+      history: [{ role: "user", content: "create a written CA for Test Employee" }],
+      question: "date is 10-15-26, missed the woven deadline",
+      today: "2026-10-25",
+      people: [],
+    });
+    expect(slots.observation ?? "").not.toMatch(/(?<![\d-])5-26/);
+    expect(slots.incidentDateIso).toBe("2026-10-15");
+  });
+});
