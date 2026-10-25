@@ -246,7 +246,7 @@ function conversationBlob(input: IntentTurnInput): string {
 /**
  * NOT_A_NAME_GUARD_ENABLED: the model's employee is kept only when it is in
  * the manager's own words and is a name. The intent model reads the
- * assistant's turns too, and in Ask Sunny copied "require practice" out of a
+ * assistant's turns too, and in the sibling app copied "require practice" out of a
  * reply (QA round 4, 24 Oct 2026); "blank" is the manager saying there is
  * nobody yet. Off, the model's slot is read as before.
  */

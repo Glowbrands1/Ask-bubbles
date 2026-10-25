@@ -8,7 +8,7 @@ import { COMPANY_LOCATIONS, locationNameKey } from "@/lib/locations";
  * WORDS THAT ARE NOT A PERSON (NOT_A_NAME_GUARD_ENABLED)
  * ============================================================================
  *
- * Ported from Ask Sunny (QA round 4, 24 Oct 2026): "1. employee name is
+ * Ported from the sibling app (QA round 4, 24 Oct 2026): "1. employee name is
  * blank" put "Blank" on the card; a pasted promo list was offered back as
  * "which of them"; "coaching form for <city> location …, test testy" asked
  * "test testy or <city>?"; two products after "coaching form for" were asked
