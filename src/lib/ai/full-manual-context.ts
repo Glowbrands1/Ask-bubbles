@@ -951,6 +951,8 @@ function restatedPassages(text: string, passages: readonly ManualPassage[]): Man
  * The passages a stretch restates, and whether a shared phrase chose them
  * (false when a page that says clearly more by its words took their place).
  */
+const MIN_PHRASE = 4;
+
 function restatedByPhrase(text: string, passages: readonly ManualPassage[]): { passages: ManualPassage[]; byPhrase: boolean } {
   const index = phrasePagesOf(passages);
   let best = 0;
@@ -962,7 +964,7 @@ function restatedByPhrase(text: string, passages: readonly ManualPassage[]): { p
      * next sheet. The stretch that continues "approved for instructors only"
      * restates the longer phrase, so the shorter copy is not a second page.
      */
-    if (phrase < 4 || phrase < best) continue;
+    if (phrase < MIN_PHRASE || phrase < best) continue;
     if (phrase > best) {
       best = phrase;
       chosen = [];
@@ -972,7 +974,8 @@ function restatedByPhrase(text: string, passages: readonly ManualPassage[]): { p
   const said = outsaid(text, chosen, passages);
   return {
     passages: dominantPages(text, said, (passage) => passage.printedPage),
-    byPhrase: said.every((passage) => chosen.includes(passage)),
+    // Four words is the shortest phrase read at all ("state and federal law"): it decides nothing alone.
+    byPhrase: best > MIN_PHRASE && said.every((passage) => chosen.includes(passage)),
   };
 }
 
@@ -1252,8 +1255,8 @@ export function keepRestatedFallbackMarkers(
  * the page that says more by its words was Smoking/Vaping (12): "as follows",
  * "applicable". The PTO page (42) says it: "all state and federal guidelines
  * will be followed regarding paying out accrued PTO upon termination". A
- * stretch whose page was chosen by words, not by a phrase the page prints,
- * cites instead a page another stretch of the same answer restates by phrase,
+ * stretch whose page was chosen by words, or by no more than the shortest
+ * phrase read at all (four words, "state and federal law"), cites instead a page another stretch of the same answer restates by phrase,
  * when that page shares enough of the stretch's words for a word match and
  * the word-chosen page's words do not count for more than OWN_PAGE_YIELD
  * times as much. "Dress code violations … up to and including termination"
