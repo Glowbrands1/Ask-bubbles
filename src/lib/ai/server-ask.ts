@@ -119,6 +119,8 @@ import {
   type GroundingChunk,
 } from "./prompts";
 import { retrievalPlanFor } from "./retrieval-query";
+import { slotOnlyRetrievalTopic } from "./slot-only-turn";
+import { withoutSharedSourceClaims } from "./sources-not-shared";
 import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
 
@@ -584,13 +586,22 @@ async function answerQuestionCore(
    * and the query is then phrased in the manual's terms. SKIP keeps a form
    * command as typed. See `retrievalPlan` and `retrieval-query.ts`.
    */
-  const retrievalQuestion = queryRewriteEnabled()
-    ? await rewriteRetrievalQuery({
-        question: request.question,
-        history: request.history,
-        fallback: request.question,
-      })
-    : request.question;
+  /*
+   * A TURN THAT ONLY FILLS IN A DETAIL — "She works at Grand Island", "It
+   * happened on 10-21" — is searched with the conversation's topic, not its
+   * own words, which found recipe and event pages (conv_mvnljjl32xlit48).
+   * See `slot-only-turn.ts`.
+   */
+  const slotTopic = slotOnlyRetrievalTopic(request.question, request.history);
+  const retrievalQuestion = slotTopic
+    ? slotTopic
+    : queryRewriteEnabled()
+      ? await rewriteRetrievalQuery({
+          question: request.question,
+          history: request.history,
+          fallback: request.question,
+        })
+      : request.question;
   updateChatTrace({ rewrittenQuery: retrievalQuestion === request.question ? null : retrievalQuestion });
   const plan = retrievalPlanFor({
     question: retrievalQuestion,
@@ -965,6 +976,16 @@ async function answerQuestionCore(
     noteCrossChatRemoval(crossChatCheck);
     content = crossChatCheck.content;
   }
+  /*
+   * THE BACKSTOP to the retrieved-sources rule: a reply that still calls the
+   * retrieved excerpts "the sources you shared" has that clause rewritten,
+   * unless the manager pasted something. See `sources-not-shared.ts`.
+   */
+  content = withoutSharedSourceClaims(content, {
+    question: request.question,
+    history: request.history,
+    attachedDocumentIds: request.attachedDocumentIds,
+  }).content;
   return {
     content,
     formSelection: suggested?.selection,
