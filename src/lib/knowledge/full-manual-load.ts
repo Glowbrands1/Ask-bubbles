@@ -5,8 +5,10 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { MULTI_BRAND_MANUAL_TITLES } from "@/config/company/knowledge";
 import { isMultiBrandManual } from "@/lib/knowledge/brand-sections";
 import {
+  asksAboutManual,
   isPolicyQuestion,
   planFullManualContext,
+  planManualCitations,
   type FullManualDocument,
   type FullManualPlan,
 } from "@/lib/ai/full-manual-context";
@@ -118,16 +120,51 @@ async function fetchIndexedManuals(scopeId: string): Promise<FullManualDocument[
   return documents;
 }
 
-/** Null is not used. A failed read is an empty plan so retrieval can stand. */
-export async function loadFullManualPlan(scopeId: string, question: string, policyText?: string): Promise<FullManualPlan> {
+/**
+ * Null is not used. A failed read is an empty plan so retrieval can stand.
+ *
+ * `wideGate` (FULL_MANUAL_WIDE_GATE_ENABLED): a question the policy words do
+ * not catch still gets the manual when retrieval's best excerpt is from the
+ * manual, or when it names a word of a section heading the manual prints
+ * (see `asksAboutManual`). The manual is read to decide; a question it does
+ * not cover keeps retrieval, and its plan carries the passages so a reply's
+ * manual sources can still be cited on their printed pages.
+ */
+export async function loadFullManualPlan(
+  scopeId: string,
+  question: string,
+  policyText?: string,
+  options: { readonly wideGate?: boolean; readonly topRowIsManual?: boolean } = {},
+): Promise<FullManualPlan> {
   const asked = policyText ?? question;
-  if (!isPolicyQuestion(asked)) {
+  const policy = isPolicyQuestion(asked);
+  if (!policy && !options.wideGate) {
     return planFullManualContext({ question, policyText: asked, documents: [] });
   }
   try {
     const documents = await fetchIndexedManuals(scopeId);
-    return planFullManualContext({ question, policyText: asked, documents });
+    if (policy) return planFullManualContext({ question, policyText: asked, documents });
+    const cites = planManualCitations(documents);
+    if (options.topRowIsManual || asksAboutManual(question, cites)) {
+      return planFullManualContext({ question, policyText: asked, documents, asked: true });
+    }
+    return { ...planFullManualContext({ question, policyText: asked, documents: [] }), ...cites };
   } catch {
     return planFullManualContext({ question, policyText: asked, documents: [] });
+  }
+}
+
+/**
+ * The current manuals' passages for citing a reply answered from retrieval.
+ * Null when they cannot be read; the reply's sources then stay as they were.
+ */
+export async function loadManualCitationPlan(
+  scopeId: string,
+): Promise<Pick<FullManualPlan, "index" | "passages"> | null> {
+  try {
+    const cites = planManualCitations(await fetchIndexedManuals(scopeId));
+    return cites.passages.length > 0 ? cites : null;
+  } catch {
+    return null;
   }
 }

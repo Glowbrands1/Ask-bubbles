@@ -6,6 +6,39 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 25 Oct 2026: policy sweep citations (citation-d)
+
+QA's 71-question sweep (prod 7174fdc, FULL_MANUAL_CONTEXT on): 54 replies
+showed a JBA source and no [p.N]. Those questions name no policy word, so
+the manual was not in the prompt; the reply came from retrieval and its
+[S#] markers were taken out before it was shown. A manual excerpt's [S#] is
+now cited as the printed page its sentence restates, in the sentence, with
+the section as the source (`citeRetrievedAnswer`, unflagged: it is the
+FULL_MANUAL_CONTEXT citation rule, now on the retrieval path too). The
+first PTO tier cites p.41 (a tied page counts every passage on it the
+sentence restates), the jury-duty summons cites Jury Duty on p.47 (a
+sentence that names its section is cited there), a marker the sentence
+reads through ("at [p.47]") is re-pointed in place or goes with its word,
+and a passage before a page's first heading is labelled with the section
+it continues. Ported to Ask Sunny in the same session.
+
+On a full-manual turn, only a pinned role document or named handbook is sent
+beside the manual; other retrieved documents are not (as in Ask Sunny, which
+sends none). An answer that names no printed page is no longer asked again
+without the manual; it stands as written, as in Ask Sunny (history
+conv_muxei72m2prj6n5, "policy specific to uggs?", came back "I only have
+wiring diagrams" from that second ask). Unflagged: repairs on the
+FULL_MANUAL_CONTEXT path, which is on.
+
+`FULL_MANUAL_WIDE_GATE_ENABLED` (default off, same name in both apps) loads
+the manual for a question whose best retrieved excerpt is from the manual
+or that names a printed heading word ("What is COBRA?"). Ask Sunny has the
+flag too; there it only catches what its gate misses, since that gate
+already reads the intent extraction ("policy"), its HR-policy words and the
+activity taxonomy. Sunny's "when does it start?" form-command misread (E1)
+cannot happen here: this gate has no form-command check, and a test sends
+that question through this app's answer path.
+
 ## 25 Oct 2026: the job title is a title the manager stated — ported from Ask Sunny (PR 188)
 
 Ask Sunny PR 188 (`59fe1ca`, the same patch as `517992a`) is the title rule

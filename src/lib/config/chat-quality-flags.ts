@@ -339,6 +339,18 @@ export function fullManualContextEnabled(): boolean {
 }
 
 /**
+ * With FULL_MANUAL_CONTEXT_ENABLED on, a question the policy words do not
+ * catch ("Where should employees park?", "What is COBRA?") is still asked
+ * with the whole manual when retrieval's best excerpt is from the manual or
+ * the question names a word of a heading the manual prints. Off, only the
+ * policy words choose the manual and every other question keeps retrieval.
+ * Default off: it moves most manual questions onto the full-manual prompt.
+ */
+export function fullManualWideGateEnabled(): boolean {
+  return envFlag("FULL_MANUAL_WIDE_GATE_ENABLED");
+}
+
+/**
  * A policy or document phrase is not a place. Off, the store reader is
  * unchanged. On, a span that names a policy, manual, section or similar
  * document ("in the workplace policy") is never read as a typed store, and
@@ -577,6 +589,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PROMPT_CACHE_ENABLED",
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
+  "FULL_MANUAL_WIDE_GATE_ENABLED",
   "PLACE_SPAN_GUARD_ENABLED",
   "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
