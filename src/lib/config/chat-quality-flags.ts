@@ -686,6 +686,16 @@ export function chatLongMessageEnabled(): boolean {
   );
 }
 
+/**
+ * A full-remap card names the manager's turns it was read from (QA H1, 25 Oct
+ * 2026), so Create draft prefills the form from them instead of filing it
+ * blank. Off, the remap card names no turns, as before. See
+ * `lib/ai/remap-draft-sources.ts`.
+ */
+export function remapDraftSourcesEnabled(): boolean {
+  return envFlag("REMAP_DRAFT_SOURCES_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -751,4 +761,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FRAMEWORK_UNPIN_ENABLED",
   "CHAT_LONG_MESSAGE_ENABLED",
   "NEXT_PUBLIC_CHAT_LONG_MESSAGE_ENABLED",
+  "REMAP_DRAFT_SOURCES_ENABLED",
 ] as const;

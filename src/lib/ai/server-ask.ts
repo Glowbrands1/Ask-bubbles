@@ -89,6 +89,7 @@ import { formCommandBypassesSearch, routeUnderstoodFormTurn } from "./form-tool-
 import { understandFormTurn } from "./form-tool-understand";
 import { remapFormTurn, remapShouldRun, type FormRemapSlots } from "./form-full-remap";
 import { historyForRemap } from "./form-remap-scope";
+import { withRemapDraftSources } from "./remap-draft-sources";
 import { augmentIntakeQuestion } from "./intake-augment";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import { prepareLongContext } from "./long-context-claude";
@@ -365,7 +366,8 @@ async function answerQuestionCore(
             : null;
         },
       });
-      if (remapped) return remapped;
+      // REMAP_DRAFT_SOURCES_ENABLED: the card names the turns its draft is written from.
+      if (remapped) return withRemapDraftSources(remapped, request);
     }
 
     let manualRead: ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]> | null = null;
