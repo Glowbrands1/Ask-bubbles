@@ -379,7 +379,7 @@ function groundedTitle(turns: readonly string[]): string | null {
 /*
  * PLACE_SPAN_GUARD_ENABLED. The store the newest manager turn names wins over
  * one an earlier turn named: "location kearney" after "store is grand island"
- * is Kearney (ported from Ask Sunny, QA Round 4). Each turn is read newest
+ * is Kearney (ported from the sibling app, QA Round 4). Each turn is read newest
  * first, as before and then with a field label as the place cue
  * (`store-cue.ts`). A turn naming more than one store is left to the reading
  * below.

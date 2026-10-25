@@ -293,7 +293,7 @@ function asGrounded(employee: RosterEmployee, people: readonly GroundedPerson[])
 /*
  * PLACE_SPAN_GUARD_ENABLED. The store this turn names wins over the one the
  * conversation saved: "location kearney" after "store is grand island" is
- * Kearney (ported from Ask Sunny, QA Round 4). A field label counts as the
+ * Kearney (ported from the sibling app, QA Round 4). A field label counts as the
  * place cue (`store-cue.ts`). Off, or when this turn names no single store,
  * the store is grounded as before.
  */

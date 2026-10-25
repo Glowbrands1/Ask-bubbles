@@ -5,7 +5,7 @@ import { readLocationMentions } from "./location-mention";
  * "LOCATION KEARNEY" NAMES THE STORE
  * ============================================================================
  *
- * Ported from Ask Sunny (QA Round 4, 24 Oct 2026). A field label in front of
+ * Ported from the sibling app (QA Round 4, 24 Oct 2026). A field label in front of
  * a store's name ("location kearney", "store kearney") was not read as a
  * place, so the store an earlier turn named stayed on the card. "kearney
  * location" and "location is kearney" already were.

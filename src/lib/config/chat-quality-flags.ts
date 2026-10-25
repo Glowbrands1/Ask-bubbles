@@ -333,7 +333,7 @@ export function fullManualContextEnabled(): boolean {
  * animals in the workplace policy" followed by "store location is …" does
  * not become "the workplace policy store". Also on, a field label is a place
  * cue and the newest turn's store replaces the saved one: "location kearney"
- * after "store is grand island" is Kearney (ported from Ask Sunny, QA Round 4).
+ * after "store is grand island" is Kearney (ported from the sibling app, QA Round 4).
  */
 export function placeSpanGuardEnabled(): boolean {
   return envFlag("PLACE_SPAN_GUARD_ENABLED");
