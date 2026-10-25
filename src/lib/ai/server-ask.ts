@@ -97,6 +97,7 @@ import { assembleGrounding } from "./grounding-assembly";
 import {
   citePolicyAnswer,
   fullManualGroundingNote,
+  keepRestatedFallbackMarkers,
   validateManualCitations,
   type CitedManualAnswer,
   type FullManualPlan,
@@ -833,12 +834,24 @@ async function answerQuestionBody(
 
   const activeMarkers = (fellBack ? retrievalChunks : grounding).map((chunk) => chunk.marker);
   const activeRows: (MatchedChunkRow | null)[] = fellBack ? [...used] : citationRows;
-  const markers = extractUsedMarkers(settled?.text ?? answer, activeMarkers);
+  /*
+   * The retrieval fallback's manual pages are kept only where the sentence
+   * restates them (see `keepRestatedFallbackMarkers`).
+   */
+  const manualDocuments = new Set((manualPlan?.passages ?? []).map((passage) => passage.documentId));
+  const fallbackText =
+    fellBack && manualPlan
+      ? keepRestatedFallbackMarkers(answer, manualPlan, (marker) => {
+          const row = activeRows[marker - 1];
+          return row && manualDocuments.has(row.document_id) ? printedPageFromRetrieval(row) : null;
+        })
+      : answer;
+  const markers = extractUsedMarkers(settled?.text ?? fallbackText, activeMarkers);
   const guarded = settled
     ? settled.text
     : fullManualContextEnabled() && !fellBack
       ? validateManualCitations(answer, { shownMarkers: markers, index: manualPlan?.index ?? null })
-      : answer;
+      : fallbackText;
   const toCitation = (source: FullManualSource): SourceCitation => ({
     documentId: source.documentId,
     documentTitle: source.documentTitle,

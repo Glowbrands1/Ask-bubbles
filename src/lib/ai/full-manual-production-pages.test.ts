@@ -6,7 +6,7 @@ import liveB2 from "@/test/fixtures/bubbles-live-policy-answers-oct24-b2.json";
 import liveStep3 from "@/test/fixtures/bubbles-live-policy-answers-oct24-step3.json";
 import { manualChunkFromRow, type ManualChunkRow } from "@/lib/knowledge/full-manual-load";
 
-import { citePolicyAnswer, planFullManualContext, type FullManualDocument } from "./full-manual-context";
+import { citePolicyAnswer, keepRestatedFallbackMarkers, planFullManualContext, type FullManualDocument } from "./full-manual-context";
 
 /**
  * The whole production JBA Policy Manual (151 rows), read the way
@@ -345,5 +345,65 @@ describe("QA B-list: ranges, heading fragments, loose model pages, month names",
     const found = liveB2.answers.find((answer) => answer.conversationId === "conv_mvmzj2142hdb365")!;
     const cited = citePolicyAnswer(found.content, planFor(found.question));
     expect(pagesIn(lineWith(cited.text, "peak season"))).toEqual(new Set([42]));
+  }, 20_000);
+});
+
+/**
+ * QA B3, 25 Oct 2026 (live on 108): two reworded sentences still carried
+ * three pages. Verbatim from the live replies.
+ */
+describe("QA B3: a page that says clearly more wins", () => {
+  const planFor = (question: string) => planFullManualContext({ question, documents: [productionManual()] });
+
+  it("the reworded cell-phone sentence cites p.19 only (not Using Social Media p.23 or Employee Injury p.26)", () => {
+    const cited = citePolicyAnswer(
+      "Employees are personally responsible for protecting the customer experience — texting, making calls, or using social media while on duty jeopardizes that experience.",
+      planFor("What is the cell phone policy?"),
+    );
+    expect(pagesIn(cited.text)).toEqual(new Set([19]));
+  }, 20_000);
+
+  it("the dress-code discipline sentence cites p.15 only (not Retaliation p.23 or Bonus Policy p.38)", () => {
+    const cited = citePolicyAnswer(
+      "Anyone violating their brand's dress code policy may be sent home to change and may be subject to disciplinary action, up to and including termination.",
+      planFor("Test Employee at Grand Island was out of dress code on 10-18, no name tag and wrong shirt for the whole shift"),
+    );
+    expect(pagesIn(cited.text)).toEqual(new Set([15]));
+  }, 20_000);
+});
+
+/**
+ * QA, 25 Oct 2026: conv_mvmznap42vcw0dl T1. No sentence restated the manual,
+ * so the answer was asked for again with ordinary retrieval, and that
+ * answer's "[p.36]" became a "Page 36 — Time Records" source. A page stays on
+ * every path only where the sentence restates it.
+ */
+describe("QA: the retrieval fallback keeps only pages the sentence restates", () => {
+  const recorded = liveStep3.answers.find((answer) => answer.conversationId === "conv_mvmznap42vcw0dl");
+  if (!recorded) throw new Error("missing live reply conv_mvmznap42vcw0dl");
+  const plan = planFullManualContext({ question: recorded.question, documents: [productionManual()] });
+  const noSources = () => null;
+
+  it('drops "[p.36]" from "…the prior coaching reference [p.36]." and changes no word', () => {
+    expect(recorded.content).toContain("the prior coaching reference [p.36].");
+    const kept = keepRestatedFallbackMarkers(recorded.content, plan, noSources);
+    expect(kept).not.toMatch(/\[p\.\d/);
+    expect(kept).toBe(recorded.content.replace(" [p.36]", ""));
+  }, 20_000);
+
+  it("drops an [S#] whose row is manual page 36, and keeps a source from another document", () => {
+    const answer = "Bring the 10-22-26 details and the prior coaching reference [S2]. See the store checklist [S3].";
+    const kept = keepRestatedFallbackMarkers(answer, plan, (marker) => (marker === 2 ? 36 : null));
+    expect(kept).toBe("Bring the 10-22-26 details and the prior coaching reference. See the store checklist [S3].");
+  }, 20_000);
+
+  it("keeps a page the sentence restates (cell phone, p.19), as [p.N] and as [S#]", () => {
+    const cellPlan = planFullManualContext({ question: CELL_PHONE, documents: [productionManual()] });
+    const sentence =
+      "Employees are personally responsible for protecting the customer experience — texting, making calls, or using social media while on duty jeopardizes that experience.";
+    const written = `${sentence.slice(0, -1)} [p.19].`;
+    expect(keepRestatedFallbackMarkers(written, cellPlan, noSources)).toBe(written);
+    const source = `${sentence.slice(0, -1)} [S1].`;
+    expect(keepRestatedFallbackMarkers(source, cellPlan, () => 19)).toBe(source);
   }, 20_000);
 });

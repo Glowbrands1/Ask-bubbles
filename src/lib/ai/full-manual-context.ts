@@ -961,7 +961,40 @@ function restatedPassages(text: string, passages: readonly ManualPassage[]): Man
     }
     chosen.push(passage);
   }
-  return chosen;
+  return dominantPages(text, chosen, (passage) => passage.printedPage);
+}
+
+/*
+ * ONE PAGE THAT SAYS MORE WINS (QA B3, 25 Oct 2026). Pages tied on the
+ * longest shared phrase are kept only where they share nearly as many of the
+ * sentence's distinctive words as the best page does, and a sentence carries
+ * at most two pages. Live: "…texting, making calls, or using social media
+ * while on duty jeopardizes that experience" shares eight such words with
+ * the Cell Phone policy (19), three with Using Social Media at Work (23) and
+ * two with Employee Injury (26); "…may be subject to disciplinary action, up
+ * to and including termination" shares nine with the dress code (15) and six
+ * and five with the Bonus Policy (38) and Retaliation (23), which print the
+ * same discipline clause.
+ */
+const DOMINANCE = 0.75;
+const MAX_PAGES_PER_SENTENCE = 2;
+
+function dominantPages<T extends { readonly text: string }>(text: string, tied: readonly T[], pageOf: (item: T) => number): T[] {
+  if (tied.length <= 1) return [...tied];
+  const scored = tied.map((item) => ({ item, score: overlapScore(text, item.text) }));
+  const best = Math.max(...scored.map((entry) => entry.score));
+  const kept = scored.filter((entry) => entry.score >= DOMINANCE * best).sort((a, b) => b.score - a.score);
+  const pages: number[] = [];
+  const out: T[] = [];
+  for (const entry of kept) {
+    const page = pageOf(entry.item);
+    if (!pages.includes(page)) {
+      if (pages.length >= MAX_PAGES_PER_SENTENCE) continue;
+      pages.push(page);
+    }
+    out.push(entry.item);
+  }
+  return out;
 }
 
 /**
@@ -1066,6 +1099,65 @@ function markStretch(text: string, pages: readonly number[]): string {
     return `${text.slice(0, closing.index).trimEnd()} ${markers}${text.slice(closing.index)}`;
   }
   return `${text.trimEnd()} ${markers}`;
+}
+
+/** The pages a stretch restates: a shared phrase, a confirmed model page, or the one closest passage. */
+function restatedPagesOf(
+  bare: string,
+  plan: Pick<FullManualPlan, "index" | "passages">,
+  modelPages: readonly number[],
+): number[] {
+  let restated = restatedPassages(bare, plan.passages);
+  if (restated.length === 0) {
+    const pages = [...new Set(modelPages)].filter((page) => plan.index?.pages.has(page));
+    restated = confirmedModelPages(bare, pages, plan.passages);
+  }
+  if (restated.length === 0) restated = closestPassage(bare, plan.passages);
+  return [...new Set(restated.map((passage) => passage.printedPage))];
+}
+
+/**
+ * THE RETRIEVAL FALLBACK CITES A MANUAL PAGE ONLY WHERE THE SENTENCE RESTATES
+ * IT (QA, 25 Oct 2026). When no sentence restates the manual, the answer is
+ * asked for again with ordinary retrieval, and that answer's markers were
+ * kept as written: live, "…and the prior coaching reference [p.36]" became a
+ * "Page 36 — Time Records" source. Each stretch keeps a [p.N], and an [S#]
+ * whose row is a manual page, only when that stretch restates the page.
+ * Nothing is added, no word changes, and a source from any other document is
+ * left as it is (`manualPageOfMarker` returns null for it).
+ */
+export function keepRestatedFallbackMarkers(
+  answer: string,
+  plan: Pick<FullManualPlan, "index" | "passages">,
+  manualPageOfMarker: (marker: number) => number | null,
+): string {
+  if (!plan.index) return answer;
+  return answer
+    .split("\n")
+    .map((line) =>
+      stretchesOf(line)
+        .map(({ text, gap }) => {
+          const written = [...text.matchAll(PRINTED_MARKER)].flatMap(markerPages);
+          const sourcePages = [...text.matchAll(/\[S(\d{1,2})\]/g)]
+            .map((match) => manualPageOfMarker(Number(match[1])))
+            .filter((page): page is number => page !== null);
+          if (written.length === 0 && sourcePages.length === 0) return `${text}${gap}`;
+          const bare = withoutPrintedMarkers(text).replace(/[^\S\n]*\[S\d{1,2}\]/g, "");
+          const pages = new Set(bare.trim() ? restatedPagesOf(bare, plan, [...written, ...sourcePages]) : []);
+          const kept = text
+            .replace(PRINTED_MARKER, (full: string, from: string, to?: string) => {
+              const named = markerPages([full, from, to] as unknown as RegExpMatchArray);
+              return named.some((page) => pages.has(page)) ? full : "";
+            })
+            .replace(/[^\S\n]*\[S(\d{1,2})\]/g, (full: string, digits: string) => {
+              const page = manualPageOfMarker(Number(digits));
+              return page === null || pages.has(page) ? full : "";
+            });
+          return `${kept}${gap}`;
+        })
+        .join(""),
+    )
+    .join("\n");
 }
 
 /**
