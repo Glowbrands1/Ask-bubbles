@@ -299,14 +299,22 @@ const STORE_FILLER = new Set(["the", "store", "location", "shop", "our"]);
 
 /** Every word is the store's own name ("kearney", "the Grand Island store"). */
 function isStoreOnly(text: string): boolean {
+  return storeWordsOf(text) !== null;
+}
+
+/** The words of the stores a store-only phrase names, or null when it is not only a store. */
+function storeWordsOf(text: string): Set<string> | null {
   const ids = [...new Set(readLocationMentions(`at ${text}`).flatMap((mention) => mention.locationIds))];
-  if (ids.length === 0) return false;
+  if (ids.length === 0) return null;
   const storeWords = new Set(
     ids.flatMap((id) => (rosterLocationName(id) ?? "").toLowerCase().split(/[^a-z0-9]+/)).filter(Boolean),
   );
   const words = text.toLowerCase().split(/[^a-z0-9']+/).filter(Boolean);
-  return words.length > 0 && words.every((word) => storeWords.has(word) || STORE_FILLER.has(word));
+  return words.length > 0 && words.every((word) => storeWords.has(word) || STORE_FILLER.has(word)) ? storeWords : null;
 }
+
+/** Small words a store name holds that never extend a place on their own. */
+const STORE_STOP = new Set(["and", "the", "of", "on", "at", "for", "in", "to", "a", "an"]);
 
 /** MANAGER_WORDS_ONLY_ENABLED: a summary that still says "at Grand Island" gives their place. */
 export function namesTheirStore(text: string | null | undefined): boolean {
@@ -321,9 +329,21 @@ function withoutStore(clause: string): string {
     for (let length = Math.min(6, words.length - index - 1); length >= 1; length -= 1) {
       const phrase = words.slice(index + 1, index + 1 + length).join(" ");
       const bare = phrase.replace(/[.!?]+$/, "");
-      if (!isStoreOnly(bare)) continue;
-      const tail = phrase.slice(bare.length);
-      const rest = [...words.slice(0, index), ...words.slice(index + 1 + length)].join(" ");
+      const named = storeWordsOf(bare);
+      if (!named) continue;
+      // Round 18 (a), ported from the sibling app: a city several stores share,
+      // then a word of one store's name, goes whole; no word of it is left behind.
+      let end = index + 1 + length;
+      let tail = phrase.slice(bare.length);
+      while (!tail && end < words.length) {
+        const next = words[end]!;
+        const word = next.replace(/[.!?,;:]+$/, "");
+        const key = word.toLowerCase();
+        if (!named.has(key) || STORE_STOP.has(key)) break;
+        tail = next.slice(word.length);
+        end += 1;
+      }
+      const rest = [...words.slice(0, index), ...words.slice(end)].join(" ");
       return withoutStore(`${rest}${tail}`.trim());
     }
   }
@@ -538,6 +558,8 @@ function clauseOffense(clause: string, employeeName: string | null): string | nu
     }
   }
   text = text.replace(/\bat\s+[A-Z][\w'.-]*(?:\s+[A-Z][\w'.-]*){0,3}/g, " ");
+  // "at kansas city wornall": a store typed in lower case goes too (Round 18 (a)).
+  text = withoutStore(text);
   text = text.replace(/\buse\s+[A-Z][\w'.-]*(?:\s+[A-Z][\w'.-]*){0,3}\s+as the (?:location|store)\b/gi, " ");
   text = text.replace(/\bcoached on\s+\S+/gi, " ");
   text = text.replace(/\bno payroll\b/gi, " ");

@@ -454,3 +454,24 @@ describe.each([[[] as string[]], [["MANAGER_WORDS_ONLY_ENABLED"]]])("QA B-list, 
     expect(priors(reply!)).toBe("Coaching — JBA Policy Manual — 01/01/1995; Verbal corrective action — 10/05/2026");
   });
 });
+
+/*
+ * Round 18 (a), ported from the sibling app (its conv_mvo1ri4r2q9bnfv: "at
+ * Omaha Center" was trimmed only partly). Here a two-word store typed in lower
+ * case was not trimmed at all on the remap: "at kansas city wornall for being
+ * late" (the reference roster's stores). Production flags, the remap fix and
+ * pair 2, with and without MANAGER_WORDS_ONLY.
+ */
+describe.each([[[] as string[]], [["MANAGER_WORDS_ONLY_ENABLED"]]])("Round 18 (a): a two-word store is taken out whole (also on: %j)", (also) => {
+  beforeEach(() => {
+    for (const flag of [...also, "PLACE_SPAN_GUARD_ENABLED", "TITLE_WHOLE_WORD_ENABLED"]) vi.stubEnv(flag, "true");
+  });
+
+  it.each(["Kansas City Wornall", "kansas city wornall", "Grand Island", "grand island", "NE Kearney"])(
+    "create a verbal CA for Test Employee at %s for being late on 10-20-26",
+    async (store) => {
+      const [reply] = await replay([`create a verbal CA for Test Employee at ${store} for being late on 10-20-26`]);
+      expect(whatHappened(reply!)).toBe("being late");
+    },
+  );
+});
