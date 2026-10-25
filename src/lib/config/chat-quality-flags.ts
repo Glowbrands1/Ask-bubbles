@@ -500,6 +500,18 @@ export function crossChatReplyGuardEnabled(): boolean {
 }
 
 /**
+ * A reading note beside the JBA Policy Manual p.19 cell-phone sentence when
+ * the grounding holds it: "not in back pockets, charging in the break room,
+ * or sitting on top of a drawer till" lists three places the phone may NOT
+ * be (conv_mvnoscyz200gtat, QA 25 Oct 2026). The note goes in the per-turn
+ * grounding block, never in the manual text or the cached manual prefix.
+ * Off, the grounding is exactly as before.
+ */
+export function manualNegatedListNoteEnabled(): boolean {
+  return envFlag("MANUAL_NEGATED_LIST_NOTE_ENABLED");
+}
+
+/**
  * The Corrective Action Form's Action Plan is the manager's, or blank (Pau,
  * 25 Oct 2026). A plan they typed ("action plan: …") goes on the card and the
  * form word for word. With none typed, nothing is written: no "Management
@@ -594,4 +606,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ACTION_PLAN_MANAGER_ONLY_ENABLED",
   "KEEP_FORM_EMPLOYEE_ENABLED",
   "TITLE_WHOLE_WORD_ENABLED",
+  "MANUAL_NEGATED_LIST_NOTE_ENABLED",
 ] as const;
