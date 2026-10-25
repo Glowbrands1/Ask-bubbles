@@ -300,3 +300,82 @@ describe("recallPeople", () => {
     warn.mockRestore();
   });
 });
+
+/*
+ * ============================================================================
+ * CROSS_CHAT_REPLY_GUARD_ENABLED — OTHER CHATS IN THE REPLY TEXT
+ * ============================================================================
+ *
+ * This app's production case, conv_mvmo31du2s97yka: the same manager's other
+ * chats about Test Employee (Dodge, NE; Kearney) were recalled into a fresh
+ * chat about Grand Island, and the reply said "last time you told me…". And
+ * the Ask Sunny turns (a repeated situation; a lone "asdasd") replayed here
+ * with invented people. The flag is read by `server-ask.ts`; here it arrives
+ * as `crossChatGuard`.
+ */
+describe("recallPeople with the cross-chat guard", () => {
+  const GRAND_ISLAND = "Test Employee at Grand Island out of dress code 3 shifts, coached on 2nd";
+  const SITUATION =
+    "an employee (Wren)  is talking negatively about co workers and customers. another employee, marlo, complained to the store manager about Wren";
+  const ROSTER = [{ id: "e1", firstName: "Wren", lastName: "Calder", locationIds: ["loc-0101"] }];
+  const guarded = { crossChatGuard: true, roster: async () => ROSTER };
+
+  it("does not quote the Dodge and Kearney chats into a fresh Grand Island chat (flag off, it did)", async () => {
+    conversation({
+      createdAt: "2026-10-23T17:21:43Z",
+      turns: ["CA for Test Employee at Dodge, NE, register short $40 on 10-20, payroll deduct $40 applies"],
+    });
+    conversation({ createdAt: "2026-10-23T15:05:51Z", turns: ["CA for Test Employee at Kearney, out of dress code 10/11"] });
+
+    // Production today: both chats are quoted.
+    const today = await recall(GRAND_ISLAND);
+    expect(today).toContain("Dodge, NE");
+    expect(today).toContain("Kearney");
+
+    expect(await recall(GRAND_ISLAND, guarded)).toBeNull();
+  });
+
+  it('"asdasd" recalls nothing: a lone keystroke is not a person (flag off, it recalled the earlier chat)', async () => {
+    conversation({ createdAt: "2026-08-26T09:09:12Z", turns: ["asdasd"] });
+
+    expect(await recall("asdasd")).toContain("2026-08-26");
+
+    expect(await recall("asdasd", guarded)).toBeNull();
+    expect(await recall("asdasd", { crossChatGuard: true })).toBeNull();
+  });
+
+  it("a name typed as a whole turn is still recalled when the roster has that person", async () => {
+    conversation({ turns: ["Wren Calder was late again last week"] });
+    const history = [
+      { role: "user", content: "she was late again" },
+      { role: "assistant", content: "Who is this about?" },
+    ];
+    expect(await recall("Wren Calder", { ...guarded, history })).toContain("> Wren Calder was late again last week");
+  });
+
+  it("still lists a form on file, as a record, and labels the block", async () => {
+    conversation({ createdAt: "2026-10-23T20:46:08Z", turns: [SITUATION, "create coaching form for wren calder"] });
+    db.tables.form_instances!.push({
+      employee_name: "Wren Calder",
+      status: "draft",
+      form_date: "2026-10-23",
+      created_by: ME,
+      archived_at: null,
+      created_at: "2026-10-23T20:50:00Z",
+      form_templates: { name: "Coaching Form" },
+    });
+
+    const block = await recall(SITUATION, guarded);
+
+    expect(block).toContain("- Coaching Form for Wren Calder — dated 2026-10-23, draft, not finalized");
+    expect(block).toContain("records from OTHER conversations");
+    expect(block).not.toContain("Earlier conversation,");
+  });
+
+  it("quotes the earlier chat when the manager refers back to it", async () => {
+    conversation({ createdAt: "2026-10-23T15:05:51Z", turns: ["CA for Test Employee at Kearney, out of dress code 10/11"] });
+    const block = await recall("Test Employee is out of dress code again, same as last time", guarded);
+    expect(block).toContain("Kearney");
+    expect(block).toContain("records from OTHER conversations");
+  });
+});

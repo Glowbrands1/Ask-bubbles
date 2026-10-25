@@ -11,6 +11,7 @@ import {
 } from "@/lib/reporting/registry";
 import type { AnswerMode } from "@/types";
 import { promptCacheEnabled } from "@/lib/config/chat-quality-flags";
+import { CROSS_CHAT_REPLY_RULE } from "@/lib/chat/cross-chat-guard";
 import { CHAT_STYLE_RULES } from "./chat-style-rules";
 import { PRIOR_COACHING_OPTIONAL_RULES } from "./prior-coaching-optional";
 import type { AskContext, OpenFormSummary } from "./types";
@@ -242,6 +243,12 @@ export function buildSystemPrompt(input: {
    */
   hasPersonMemory?: boolean;
   /**
+   * CROSS_CHAT_REPLY_GUARD_ENABLED. Adds the rule that nothing from another
+   * conversation is the manager's to have said in this one, and words the
+   * person-memory rules as records rather than "last time you mentioned".
+   */
+  crossChatGuard?: boolean;
+  /**
    * Whether a FORMS ON FILE block — forms already created, read from the Forms
    * Register under this user's forms visibility — is attached to this turn.
    *
@@ -334,6 +341,7 @@ export function buildSystemPrompt(input: {
   const hasFormsLibrary = input.hasFormsLibrary ?? false;
   const hasVerifiedRecords = input.hasVerifiedRecords ?? false;
   const hasPersonMemory = input.hasPersonMemory ?? false;
+  const crossChatGuard = input.crossChatGuard ?? false;
   const hasFormRecords = input.hasFormRecords ?? false;
   const pinned = input.pinnedDocumentTitles ?? [];
 
@@ -367,7 +375,9 @@ export function buildSystemPrompt(input: {
 
   if (hasPersonMemory) {
     statementKinds.push(
-      `Earlier conversations — anything drawn from the ${MEMORY_SECTION} section below. These are the manager's own words from earlier ${productName} conversations, and the forms they created, about people named here. Never mark them with a source marker. Say where they came from in plain words — for example "Last time you mentioned that…" or "On October 3 you told me…".`,
+      crossChatGuard
+        ? `Earlier conversations — anything drawn from the ${MEMORY_SECTION} section below. These are records from other ${productName} conversations, and the forms the manager created, about people named here. Never mark them with a source marker. A form is a record on file — say "On file: …". Mention an earlier conversation only because the manager referred back to it in this one, and never say the manager raised or sent this before otherwise.`
+        : `Earlier conversations — anything drawn from the ${MEMORY_SECTION} section below. These are the manager's own words from earlier ${productName} conversations, and the forms they created, about people named here. Never mark them with a source marker. Say where they came from in plain words — for example "Last time you mentioned that…" or "On October 3 you told me…".`,
     );
   }
 
@@ -393,7 +403,7 @@ ${input.styleRules ? `${FORM_LIBRARY_DETAIL_RULES}\n` : ""}- Knowledge base docu
 - Where a form is: a manager creates one by asking ${productName}, here in the conversation. Forms already created are in Forms → Forms Register. A form already created CAN be changed, here in the conversation: the manager asks for it by form and employee — for example "edit the exit form for Jordan Smith" — and the form comes back into the conversation to edit; a finalized one opens as a new draft with everything carried over, and the finalized original stays on file until that draft is finalized and replaces it. A finalized form's card also has an Edit as new draft button. Never say a created or finalized form cannot be edited, copied or drafted again. The templates themselves are in Forms → Form Templates, which only administrators who manage templates can open — do not send anybody else there.`
     : "";
 
-  const personMemorySection = hasPersonMemory
+  const plainPersonMemorySection = hasPersonMemory
     ? `\n\nWHAT THE MANAGER TOLD YOU BEFORE
 
 - The ${MEMORY_SECTION} section is the manager's own earlier account of the people named in this conversation. Use it so they do not have to repeat themselves: connect what they ask now to what they told you before, and notice patterns across conversations — a second late arrival, a follow-up that was due.
@@ -403,6 +413,20 @@ ${input.styleRules ? `${FORM_LIBRARY_DETAIL_RULES}\n` : ""}- Knowledge base docu
 - A form is only on record if the section lists it under forms the manager created${hasFormRecords ? " or the FORMS ON FILE section lists it" : ""}. An earlier conversation that discussed a coaching or corrective action is not proof one was filed.
 - Use what is relevant to the question and leave the rest. Do not recite the history back unprompted.`
     : "";
+  /*
+   * CROSS_CHAT_REPLY_GUARD_ENABLED (ported from Ask Sunny, where a reply said
+   * "You raised this same situation with me on October 23" about a chat the
+   * manager never mentioned). The rule travels with every answer while the
+   * flag is on, memory or not.
+   */
+  const crossChatSection = crossChatGuard ? `\n\nOTHER CONVERSATIONS\n\n${CROSS_CHAT_REPLY_RULE}` : "";
+  const personMemorySection =
+    (crossChatGuard
+      ? plainPersonMemorySection.replace(
+          /^- The [^\n]*notice patterns across conversations[^\n]*$/m,
+          `- The ${MEMORY_SECTION} section holds records from other conversations and the forms the manager created, about people named here. An earlier conversation is in it only because the manager referred back to one in this conversation; a form is there as a record on file.`,
+        )
+      : plainPersonMemorySection) + crossChatSection;
 
   /*
    * FORMS ON FILE. "Does Wren have previous coachings?" used to be answered
