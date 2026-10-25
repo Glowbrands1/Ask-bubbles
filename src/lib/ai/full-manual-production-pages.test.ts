@@ -407,3 +407,30 @@ describe("QA: the retrieval fallback keeps only pages the sentence restates", ()
     expect(keepRestatedFallbackMarkers(source, cellPlan, () => 19)).toBe(source);
   }, 20_000);
 });
+
+/**
+ * Live, 25 Oct 2026 (Bubbles B4, flag-on deploy without this branch): the
+ * sentences as the replies wrote them, markers included.
+ * conv_mvnljjp92oyd332 (md5 41c7371f…) and conv_mvnlkafd25dlbux (md5 902135f4…).
+ */
+describe("live B4: the page that says clearly more", () => {
+  const planFor = (question: string) => planFullManualContext({ question, documents: [productionManual()] });
+
+  it("dress-code discipline cites the Dress Code page (15), not Retaliation (23) or the Bonus Policy (38)", () => {
+    const cited = citePolicyAnswer(
+      "- Dress code violations can lead to being sent home to change and are subject to disciplinary action, up to and including termination [p.23] [p.38].",
+      planFor(
+        "I have an employee Test Employee at our Grand Island location who has been out of dress code three shifts. I verbally coached her on the second offense and she still is out of dress code",
+      ),
+    );
+    expect(pagesIn(cited.text)).toEqual(new Set([15]));
+  }, 20_000);
+
+  it("the guest-experience line cites Cell Phone (19), not Employee Injury (26)", () => {
+    const cited = citePolicyAnswer(
+      "- Employees are personally responsible for protecting the guest experience — texting, making calls, or using social media on the clock jeopardizes that [p.19] [p.26].",
+      planFor(CELL_PHONE),
+    );
+    expect(pagesIn(cited.text)).toEqual(new Set([19]));
+  }, 20_000);
+});
