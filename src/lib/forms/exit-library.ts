@@ -1,3 +1,4 @@
+import { EXIT_ACCOUNT_SYSTEM, EXIT_EMPLOYEE_SYSTEM } from "@/config/company/forms/exit-systems";
 import { FORM_LETTERHEAD_BRAND_NAME } from "@/config/company/forms/letterhead";
 
 import { field, type TemplateSeed } from "./catalog";
@@ -87,6 +88,13 @@ import type { AnswerStatementLine, FormBlock, FormDocument } from "./document";
  * finalizing this form does none of them — there is no MyGlow, payroll or
  * Sunlync integration in this codebase for it to call, and the steps carry no
  * field that could record them as done.
+ *
+ * THE SYSTEM NAMES (Pau, via QA, 25 Oct 2026). Buff City Soap uses MyGlow and
+ * Sunlync too, so both steps keep the source wording; only the source's
+ * "verify tanning has been removed" is gone (tanning is the reference
+ * platform's product). Both names come from
+ * `config/company/forms/exit-systems.ts`; never put a name there that the
+ * business has not given.
  */
 
 /** A Yes / No question as the form prints it. Always the manager's. */
@@ -400,7 +408,7 @@ export function exitFormDocument(): FormDocument {
       { kind: "section", label: "Steps to Finish Termination" },
       {
         kind: "paragraph",
-        text: "Upload Exit Form to employee’s personal file and remove employee from MyGlow.",
+        text: `Upload Exit Form to employee’s personal file and remove employee from ${EXIT_EMPLOYEE_SYSTEM}.`,
       },
       {
         kind: "paragraph",
@@ -408,7 +416,7 @@ export function exitFormDocument(): FormDocument {
       },
       {
         kind: "paragraph",
-        text: "Place comment on employee’s Sunlync account stating they are no longer employed, verify tanning has been removed.",
+        text: `Place comment on employee’s ${EXIT_ACCOUNT_SYSTEM} account stating they are no longer employed.`,
       },
     ],
   };
@@ -448,8 +456,14 @@ export const EXIT_TEMPLATE_SEEDS: TemplateSeed[] = [
      * keeps the version it was pinned to; new ones get this one.
      *
      * 3: terminology only — Salon becomes Store in the key line. No field key changes.
+     *
+     * 4: the Steps to Finish Termination (QA, 25 Oct 2026): the Sunlync step
+     * loses "verify tanning has been removed"; MyGlow and Sunlync stay (Pau
+     * confirmed both). Text only; no field, key or layout changes. Published
+     * as a new version by the next library install; forms already filed keep
+     * the version they were pinned to.
      */
-    revision: 3,
+    revision: 4,
     revisionNote:
       "Details section: resignation date, how and why the employee resigned, store key returned, and the returned-items, payroll deduction, minimum wage/bonus and rehire answers as statements (HR request, 28 Sep 2026).",
     bundledPdfName: "Resignation Exit Form.pdf",

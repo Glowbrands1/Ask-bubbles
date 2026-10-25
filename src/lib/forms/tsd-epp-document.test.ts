@@ -573,7 +573,8 @@ describe("the rest of the library is where it was", () => {
       "follow-up-coaching": 2,
       "sdit-epp": 6,
       "tsd-epp": 5,
-      "resignation-exit": 3,
+      // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
+      "resignation-exit": 4,
       // Salon -> Store wording re-issues.
       "asd-sdit-epp": 3,
       "fttc-epp": 3,

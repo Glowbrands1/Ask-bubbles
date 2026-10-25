@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isHiddenTemplate } from "@/config/company/forms/hidden";
 import { locationById as salonById } from "@/lib/locations";
 
 import { errorResponse } from "@/lib/api/respond";
@@ -178,7 +179,8 @@ export async function POST(request: Request) {
      * after the conversation started.
      */
     const template = await getTemplateByKey(body.templateKey);
-    if (!template || !template.active) {
+    // A hidden template (`config/company/forms/hidden.ts`) is answered exactly as a retired one.
+    if (!template || !template.active || isHiddenTemplate(template.key)) {
       return NextResponse.json({ error: "No such form template." }, { status: 404 });
     }
 
