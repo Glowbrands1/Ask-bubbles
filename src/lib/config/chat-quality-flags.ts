@@ -722,6 +722,17 @@ export function reopenVerbGuardEnabled(): boolean {
   return envFlag("REOPEN_VERB_GUARD_ENABLED");
 }
 
+/**
+ * A terse "ca <name> <store> <what happened> <date> verbal" line is written
+ * out as the long form before it is read, so the name, store, date, warning
+ * level and payroll amount are read as from a full sentence, and the card
+ * appears (conv_mvofim8a2lqx6jn, 25 Oct 2026; ported from the sibling app).
+ * See `ai/terse-slots.ts`. Off, the turn is read as typed.
+ */
+export function terseSlotReadEnabled(): boolean {
+  return envFlag("TERSE_SLOT_READ_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -790,4 +801,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REMAP_DRAFT_SOURCES_ENABLED",
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
+  "TERSE_SLOT_READ_ENABLED",
 ] as const;

@@ -494,6 +494,29 @@ describe("individual and team-wide coaching", () => {
     expect(draft.prompt).not.toContain("EMPLOYEE:");
   });
 
+  // conv_mvofim8a2lqx6jn, 25 Oct 2026: the manager's terse turn exactly, name invented.
+  const TERSE = "ca avery stone kearney dress code 10/11 verbal";
+
+  it("TERSE_SLOT_READ_ENABLED: the terse turn is written out with the store apart from the name", async () => {
+    const { expandTerseRequest } = await import("@/lib/ai/terse-slots");
+    expect(expandTerseRequest(TERSE, "2026-10-25")).toBe(
+      "Create a corrective action form for avery stone at kearney. On 10/11/26 avery stone dress code. This is a verbal warning.",
+    );
+  });
+
+  it("TERSE_SLOT_READ_ENABLED off: the raw terse turn does not read the employee apart from the store, as on main", async () => {
+    const response = await propose([said(TERSE)]);
+    expect(response?.formProposal?.employeeName?.toLowerCase() ?? null).not.toBe("avery stone");
+  });
+
+  it("TERSE_SLOT_READ_ENABLED on: the written-out turn opens the Corrective Action card for the employee", async () => {
+    const { expandTerseRequest } = await import("@/lib/ai/terse-slots");
+    const response = await propose([said(expandTerseRequest(TERSE, "2026-10-01"))]);
+    expect(response!.formProposal?.templateKey).toBe("dpoa");
+    expect(response!.formProposal?.employeeName?.toLowerCase()).toBe("avery stone");
+    expect(response!.formProposal?.warningLevel).toBe("verbal");
+  });
+
   it("refuses a team subject on a form that is about one person", async () => {
     const response = await instancesRoute.POST(
       new Request("https://app.test/api/forms/instances", {
