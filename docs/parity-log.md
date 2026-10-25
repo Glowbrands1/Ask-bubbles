@@ -775,3 +775,13 @@ store <name>" as "at <name>" (the store reader's own rules still apply), and
 the store the newest manager turn names wins on the remap and the intent
 slots. No salon wording was copied. Test:
 `src/lib/forms/store-label-cue.test.ts`.
+
+## 25 Oct 2026: a turn never saves or shows an empty reply (from Ask Sunny 9fabb22)
+
+`EMPTY_REPLY_GUARD_ENABLED` (default off), plus two unflagged client fixes: a
+200 without an answer is a failed turn, and the stored error keeps the
+server's code and status (an auth refusal reads as signed out). Ported here
+as 1b0e7e4. Bubbles-only on top: this app's answers can carry
+several form cards (`formProposals`), which also count as an answer; Ask
+Sunny's answers have no such field, so nothing to port back. Test:
+`src/app/api/chat/empty-reply.test.ts`.

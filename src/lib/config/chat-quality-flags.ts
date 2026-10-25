@@ -540,6 +540,17 @@ export function titleWholeWordEnabled(): boolean {
   return envFlag("TITLE_WHOLE_WORD_ENABLED");
 }
 
+/**
+ * A turn never saves or shows a blank answer. A successful answer whose prose
+ * is empty after every post-processor, and which carries no form card, choice
+ * or update, is returned as an honest failure instead ("Bubbles could not
+ * produce an answer…"), so the thread shows an error card and the turn is
+ * closed as failed. Ported from the sibling app. Off, the answer is returned as it is.
+ */
+export function emptyReplyGuardEnabled(): boolean {
+  return envFlag("EMPTY_REPLY_GUARD_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -594,4 +605,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "KEEP_FORM_EMPLOYEE_ENABLED",
   "TITLE_WHOLE_WORD_ENABLED",
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
+  "EMPTY_REPLY_GUARD_ENABLED",
 ] as const;

@@ -28,7 +28,8 @@ import { CONTINUATION_KEY_MAX } from "@/lib/forms/proposal-continuation";
 import { mayAskToReopen } from "@/lib/forms/reopen-cue";
 import { parseChatReportContext } from "@/lib/reporting/report-context";
 import { businessToday } from "@/lib/business-date";
-import { draftActionsEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
+import { emptyReplyError, isEmptyReply } from "@/lib/ai/empty-reply";
+import { draftActionsEnabled, emptyReplyGuardEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
 import { isClientConversationId } from "@/lib/chat/client-ids";
 import type { AskRequest } from "@/lib/ai/types";
 import type { AnswerMode, ChatMessage } from "@/types";
@@ -309,6 +310,12 @@ export async function POST(request: Request) {
            */
           { memoryOwnerId: context.identity.subject },
         ));
+      /*
+       * NEVER A BLANK ANSWER (EMPTY_REPLY_GUARD_ENABLED). An answer with no
+       * prose and no card is a failure, said as one: the turn closes as failed
+       * below and the thread shows an error card, not an empty bubble.
+       */
+      if (emptyReplyGuardEnabled() && isEmptyReply(answer)) throw emptyReplyError();
     } catch (error) {
       /*
        * A FAILED ANSWER IS STILL A RECORDED TURN, closed as a failure. The row
