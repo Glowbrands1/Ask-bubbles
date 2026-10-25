@@ -693,3 +693,13 @@ behind `REMAP_INCIDENT_FIX_ENABLED`; the date regex is an unflagged bug fix.
 Ported to Ask Sunny's remap path in the same session. Sunny's live intent
 path got its own fixes for the same cases (Sunny-only files; see Ask Sunny's
 parity log). Tests: `src/lib/ai/remap-incident-oct24.test.ts` in both apps.
+
+Follow-up (QA step 3 and C-list, 25 Oct 2026): What happened is read one
+turn at a time, so an edit or command ("change the date to 10-22", "name is
+…", "show draft", "cite …", "this is a violation under …") never replaces it;
+a later create request with its own incident resets What happened and the
+policy; a bare "Yes" after several questions answers none; the action plan
+is the manager's own or blank; "as you said" on the store and title only
+when a manager turn holds the words; "at Grand Island used her cell phone"
+keeps the store. Same flag. Ported to Ask Sunny's remap path, and its intent
+path got the same behaviour in its own readers.

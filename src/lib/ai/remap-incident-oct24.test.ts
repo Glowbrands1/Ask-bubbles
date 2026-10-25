@@ -74,6 +74,9 @@ vi.mock("@/lib/knowledge/providers/supabase", async () => {
       async fetchRoleGrounding() {
         return { ok: false, failure: { code: "missing", detail: "not used", missingGroups: [] } };
       }
+      async fetchNamedHandbook() {
+        return { ok: false, reason: "not used" };
+      }
       async fetchOfficialPolicyManual() {
         return {
           ok: true as const,
@@ -110,7 +113,8 @@ let groundFormSlots: typeof import("./form-full-remap").groundFormSlots;
 beforeAll(async () => {
   ({ answerQuestion } = await import("./server-ask"));
   ({ groundFormSlots } = await import("./form-full-remap"));
-});
+  // The first import loads the whole answer path; a busy machine takes longer than the 10 s default.
+}, 120_000);
 
 beforeEach(() => {
   for (const flag of FLAGS) process.env[flag] = "true";
@@ -333,4 +337,258 @@ describe("date bug fix in the remap path that is already on (REMAP_INCIDENT_FIX_
 // The fixture is the production manual; this guards that the test still reads it.
 it("reads the production manual rows", () => {
   expect((manual151.chunks as unknown[]).length).toBeGreaterThan(100);
+});
+
+/**
+ * QA's live step-3 run and C-list, 24–25 Oct 2026. Edits and commands change
+ * their own field and never What happened; a new request with a new incident
+ * starts a new form; a bare "Yes" after a list of questions answers none; the
+ * action plan is the manager's or blank; "as you said" only for words a
+ * manager turn holds. Real employee names in the LR chats are replaced with
+ * "Test Employee".
+ */
+const EDIT_WORDS = /change the date|name is|cite |show draft|this is a violation|^it happened\b|^location$/i;
+
+function asYouSaidLines(content: string): { label: string; value: string }[] {
+  return [...content.matchAll(/\*\*([^*]+):\*\*\s*([^\n]+?), as you said/g)].map((match) => ({
+    label: match[1]!,
+    value: match[2]!,
+  }));
+}
+
+describe("step 3 and C-list: edits never become What happened (prod, 24 Oct 2026)", () => {
+  it("A3 conv_mvmzl3ot2tufozt: 'change the date to 10-22' changes the date only", async () => {
+    const response = await chat([
+      { say: "CA for Test Employee at Grand Island, late to open 10-19, verbal, no payroll", raw: { employeeName: "Test Employee" } },
+      { say: "change the date to 10-22", raw: { employeeName: "Test Employee" } },
+    ]);
+    expect(response.formProposal?.formDate).toBe("2026-10-22");
+    expect(response.formProposal?.issue).toBe("late to open");
+  });
+
+  it("conv_mvmzn7k62uoi4r9: name, cite and show-draft turns keep the incident; a restated violation replaces it", async () => {
+    const turns = [
+      {
+        say: "create a verbal CA for team member Testy Testerson at Dodge, NE. location. On 10-16-26 Testy was not properly measuring and weighing product. payroll deduct is not applicable",
+        raw: { employeeName: "Testy Testerson" },
+      },
+      { say: "employee name is Testy Testerson", raw: { employeeName: "Testy Testerson" } },
+      { say: "cite standards of conduct as policy violated", raw: { employeeName: "Testy Testerson" } },
+      { say: "show draft", raw: { employeeName: "Testy Testerson" } },
+      { say: "violation is that on 10-16-26 Testy was not measuring and weighing product", raw: { employeeName: "Testy Testerson" } },
+      { say: "show draft with edits", raw: { employeeName: "Testy Testerson" } },
+    ];
+    for (const count of [1, 2, 3, 4]) {
+      const response = await chat(turns.slice(0, count));
+      expect(response.formProposal?.issue, `turn ${count}`).toBe("not properly measuring and weighing product");
+    }
+    const cited = await chat(turns.slice(0, 3));
+    citesPage(cited, "Standards of Conduct", 12);
+    for (const count of [5, 6]) {
+      const response = await chat(turns.slice(0, count));
+      // The whole date "10-16-26" is lifted, never "6-26".
+      expect(response.formProposal?.issue, `turn ${count}`).toBe("not measuring and weighing product");
+      expect(response.formProposal?.issue ?? "").not.toMatch(EDIT_WORDS);
+    }
+  });
+
+  it("conv_mvmzn0sn2pfk6uk / conv_mvl991xkbul93bi: 'name is' and the policy line keep the incident, and no plan is invented", async () => {
+    const turns = [
+      {
+        say: "create a written corrective action for Team Member, Test Employee. Test was assigned to complete policy acknowledgements in woven by 10-15-26 and failed to meet the deadline. Previous coaching was a Verbal CA 10-1-26. Payroll deduct is not applicable.",
+        raw: { employeeName: "Test Employee" },
+      },
+      // Prod showed "Action plan: Complete policy acknowledgements in woven" from here on.
+      { say: "name is Test Employee", raw: { employeeName: "Test Employee", actionPlan: "Complete policy acknowledgements in woven" } },
+      {
+        say: "this is a violation under Standards of Conduct",
+        raw: { employeeName: "Test Employee", actionPlan: "Complete policy acknowledgements in woven" },
+      },
+    ];
+    for (const count of [1, 2, 3]) {
+      const response = await chat(turns.slice(0, count));
+      expect(response.formProposal?.issue, `turn ${count}`).toBe(
+        "assigned to complete policy acknowledgements in woven by 10-15-26 and failed to meet the deadline",
+      );
+      expect(response.content, `turn ${count}`).not.toMatch(/Action plan:/);
+      expect(response.formProposal?.issue ?? "", `turn ${count}`).not.toMatch(/create a for Team Member|^name is|this is a violation/i);
+      expect(response.formProposal?.priorActions, `turn ${count}`).toBe("Verbal CA 10-1-26");
+    }
+    citesPage(await chat(turns), "Standards of Conduct", 12);
+  });
+
+  it("conv_mvmzmjxc2mkyriw: a new request with a new incident resets What happened and the policy", async () => {
+    const turns = [
+      {
+        say: "create verbal CA for Test Testy for violating visitors at work policy on 10-10-26. Test Employee spent 40 minutes talking with friend and ignoring guests. previous coaching was jba policy manual 1-1-26",
+        raw: { employeeName: "Test Testy", observation: "Spent 40 minutes talking with friend and ignoring guests" },
+      },
+      { say: "no payroll deduct", raw: { employeeName: "Test Testy" } },
+      {
+        say: "create a verbal corrective action form for Test Employee. on 10-20-26 Test was talking on her cell phone for over 30 minutes",
+        // The model kept the old incident in prod.
+        raw: { employeeName: "Test Employee", observation: "Spent 40 minutes talking with friend and ignoring guests" },
+      },
+      { say: "verbal", raw: { employeeName: "Test Employee", observation: "Spent 40 minutes talking with friend and ignoring guests" } },
+    ];
+    const first = await chat(turns.slice(0, 2));
+    expect(first.formProposal?.issue).toMatch(/talking with friend/);
+    for (const count of [3, 4]) {
+      const response = await chat(turns.slice(0, count));
+      expect(response.formProposal?.issue, `turn ${count}`).toBe("talking on her cell phone for over 30 minutes");
+      expect(response.formProposal?.formDate).toBe("2026-10-20");
+      expect(response.content).not.toMatch(/Visitors/i);
+    }
+  });
+
+  it("A2 conv_mvmzl3vs2kxujv0: 'It happened on 10-21' is the date; the cell phone account is What happened", async () => {
+    const response = await chat([
+      { say: "I need to coach an employee", raw: { templateKey: null } },
+      { say: "Her name is Test Employee", raw: { templateKey: null } },
+      { say: "She works at Grand Island", raw: { templateKey: null } },
+      { say: "It happened on 10-21", raw: { templateKey: null } },
+      { say: "She was on her cell phone for 30+ minutes at the front desk", raw: { templateKey: null } },
+      { say: "Create a Coaching Form", raw: { templateKey: "coaching", employeeName: "Test Employee" } },
+    ]);
+    expect(response.formProposal?.templateKey).toBe("coaching");
+    expect(response.formProposal?.issue).toBe("on her cell phone for 30+ minutes at the front desk");
+    expect(response.formProposal?.formDate).toBe("2026-10-21");
+    expect(response.formProposal?.locationId).toBe("loc-236");
+  });
+
+  it("conv_mvmzje0z25pbngu vs conv_mvmzmzvt2atuccg: the same words give the same What happened whatever the model returns", async () => {
+    const say =
+      "create verbal ca for Test Employee for opening store late on 10-1-26. previous coaching is jba policy manual 1-1-26. payroll deduct DOES apply and state $25 will be payroll deducted";
+    const withoutModel = await chat([{ say, raw: { employeeName: "Test Employee", observation: null } }]);
+    const withModel = await chat([{ say, raw: { employeeName: "Test Employee", observation: "Opening store late on 10-1-26" } }]);
+    expect(withoutModel.formProposal?.issue).toBe("opening store late");
+    expect(withModel.formProposal?.issue).toBe("opening store late");
+  });
+
+  it("C-list (a) conv_mvmz9j622931cj5: a bare 'Yes' after several questions is not a payroll answer", async () => {
+    const response = await chat([
+      { say: "create a corrective action form for Test Employee", raw: { employeeName: "Test Employee" } },
+      { say: "Yes", raw: { employeeName: "Test Employee", actionPlan: "create a corrective action form for" } },
+    ]);
+    expect(response.formProposal?.payrollDeduct ?? null).toBeNull();
+    expect(response.content).not.toMatch(/Payroll deduct:\*\*\s*Yes/);
+    expect(response.content).toContain("Is payroll deduct applicable?");
+    expect(response.content).not.toMatch(/Action plan:/);
+  });
+
+  it("C-list (a): a bare 'Yes' to the one open payroll question is still Yes", async () => {
+    const response = await chat([
+      {
+        say: "CA for Test Employee, team member, at Grand Island, late to open 10-19, verbal",
+        raw: { employeeName: "Test Employee" },
+      },
+      { say: "Yes", raw: { employeeName: "Test Employee" } },
+    ]);
+    expect(response.formProposal?.payrollDeduct).toBe("yes");
+  });
+
+  it("C-list (b) conv_mvi98yvkfuehzye / conv_mvmzmhst2si3jfr: a new request drops the old policy, and previous coaching is never the plan", async () => {
+    const response = await chat([
+      {
+        say: "create ca form for Test Employee for violating attendance policy on 10-20-26. verbal. no payroll deduct. jba manual 1-1-26 for previous coaching",
+        raw: { employeeName: "Test Employee" },
+      },
+      { say: "verbal", raw: { employeeName: "Test Employee" } },
+      {
+        say: "create ca form for Test Employee for a register shortage on 10-20-26. payroll deduct applies and $3.25 will be deducted from check. previous coaching - jba policy manual 1-20-26.",
+        raw: { employeeName: "Test Employee", actionPlan: "Previous coaching" },
+      },
+    ]);
+    expect(response.formProposal?.issue).toBe("register shortage");
+    expect(response.content).not.toMatch(/Attendance[^\n]*as you said/);
+    expect(response.content).not.toMatch(/Action plan:/);
+    expect(response.formProposal?.priorActions ?? "").toMatch(/JBA Policy Manual acknowledgement 1-20-26/);
+  });
+
+  it("C-list (c) conv_mvifedfn12ysyjzz / conv_mvmzmy4g2wp7dhf: every 'as you said' value is in the manager's words", async () => {
+    const turns = [
+      "create a written CA for Test Employee for not attending the monthly meeting on 10-20-26. previous coaching: jba policy manual 1-1-26, verbal ca 9-1-26. payroll deduct not applicable",
+      "written",
+    ];
+    const response = await chat(turns.map((say) => ({ say, raw: { employeeName: "Test Employee" } })));
+    const said = turns.join("\n");
+    const lines = asYouSaidLines(response.content);
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      const evidence = /payroll/i.test(line.label) ? ["payroll"] : line.value.split(/[^A-Za-z]+/).filter((word) => word.length >= 3);
+      expect(evidence.some((word) => new RegExp(`\\b${word}\\b`, "i").test(said)), `${line.label}: ${line.value}`).toBe(true);
+    }
+    expect(response.content).not.toMatch(/Attendance[^\n]*as you said/);
+  });
+
+  it("C-list (e) conv_mvmzlbhv2ww7y5v: 'at Grand Island' before the account is the store on the Policy Review", async () => {
+    const response = await chat([
+      { say: "Test Employee at Grand Island used her cell phone on the sales floor on 10-17", raw: { templateKey: null } },
+      { say: "Create a Policy Review", raw: { templateKey: "policy-review", employeeName: "Test Employee" } },
+    ]);
+    expect(response.formProposal?.templateKey).toBe("policy-review");
+    expect(response.formProposal?.locationId).toBe("loc-236");
+    expect(response.formProposal?.issue).toBe("used her cell phone on the sales floor");
+  });
+
+  it("conv_mvmzlvq124nmks8: 'Create a Coaching Form from this conversation.' is never What happened", async () => {
+    const turns = [
+      {
+        say: "I have an employee Test Employee at our Grand Island location who has been out of dress code three shifts. I verbally coached her on the second offense and she still is out of dress code",
+        raw: { templateKey: null },
+      },
+      { say: "Create a Coaching Form from this conversation.", raw: { templateKey: "coaching", employeeName: "Test Employee" } },
+      { say: "Yes", raw: { templateKey: "coaching", employeeName: "Test Employee" } },
+    ];
+    for (const count of [2, 3]) {
+      const response = await chat(turns.slice(0, count));
+      expect(response.formProposal?.issue ?? "", `turn ${count}`).not.toMatch(/Create a Coaching Form|this conversation/i);
+      expect(response.formProposal?.issue ?? "", `turn ${count}`).toMatch(/out of dress code three shifts/);
+    }
+  });
+
+  it("conv_mvmzlpox2z7u4c3: the account keeps both dates and the verbal coaching; the complaint is never What happened", async () => {
+    const turns = [
+      {
+        say: "My employee Test Employee has was 10 minutes late on her last two shifts. On the first shift I verbally coached her on our policy and expectations. Then she was late again. Please create a CA form so I can document. She was late on 10/5 and 10/15",
+        raw: { employeeName: "Test Employee" },
+      },
+      { say: "I already told you the employee name. She is at Dodge", raw: { employeeName: "Test Employee" } },
+      {
+        say: "I gave bubbles all of the information it should need, but it still would not generate the coaching form.",
+        raw: { templateKey: "coaching", employeeName: "Test Employee" },
+      },
+      {
+        say: "Create the coaching form with the information given. Her name is Test Employee and she is at Dodge. She is a makery associate",
+        raw: { templateKey: "coaching", employeeName: "Test Employee" },
+      },
+      { say: "she is at Omaha dodge", raw: { templateKey: "coaching", employeeName: "Test Employee" } },
+    ];
+    for (const count of [1, 2, 3, 4, 5]) {
+      const response = await chat(turns.slice(0, count));
+      const issue = response.formProposal?.issue ?? "";
+      expect(issue, `turn ${count}`).toMatch(/10 minutes late/);
+      expect(issue, `turn ${count}`).toMatch(/10\/5/);
+      expect(issue, `turn ${count}`).toMatch(/10\/15/);
+      expect(issue, `turn ${count}`).toMatch(/verbally coached/);
+      expect(issue, `turn ${count}`).not.toMatch(/generate|bubbles|information/i);
+    }
+  });
+
+  it("conv_mvmznap42vcw0dl: the form date is the incident's 10-22-26, never the 'jba manual 11-1-25' date", async () => {
+    const response = await chat([
+      {
+        say: "do verbal for team member Test Employee at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 Test was not scheduled to work and came into the store to show her team her new puppy. Test was in the store 45 min",
+        raw: { templateKey: null },
+      },
+      { say: "jba manual 11-1-25", raw: { templateKey: null } },
+      { say: "cite pets in workplace", raw: { templateKey: null } },
+      { say: "cite animals in the workplace policy", raw: { templateKey: null } },
+      { say: "store location is empire, sd. create corrective action", raw: { employeeName: "Test Employee" } },
+    ]);
+    expect(response.formProposal?.formDate).toBe("2026-10-22");
+    expect(response.formProposal?.issue ?? "").toMatch(/new puppy/);
+    expect(response.formProposal?.issue ?? "").not.toMatch(/create corrective action|sd\./i);
+    citesPage(response, "Animals in the Workplace", 30);
+  });
 });
