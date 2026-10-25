@@ -6,6 +6,7 @@ import {
   type ManualChunk,
   type ManualSection,
 } from "@/lib/forms/official-policy-manual";
+import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
 import { extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
 import type { KnowledgeCategory, SourceCitation } from "@/types";
 
@@ -118,6 +119,8 @@ export function requestIncident(input: {
   readonly text: string;
   readonly employeeName: string | null;
   readonly slotClause: (clause: string) => boolean;
+  /** MANAGER_WORDS_ONLY_ENABLED: see `managerSentence`. */
+  readonly managerOnly?: boolean;
 }): string | null {
   let found: string | null = null;
   // One turn at a time. An edit or a command ("change the date to 10-22",
@@ -125,8 +128,29 @@ export function requestIncident(input: {
   // field and never What happened; the newest turn that describes an
   // incident is the incident.
   for (const turn of input.text.split("\n")) {
-    const offense = turnIncident(turn, input.employeeName, input.slotClause);
+    const offense = turnIncident(turn, input.employeeName, input.slotClause, input.managerOnly ?? false);
     if (offense) found = offense;
+  }
+  return found;
+}
+
+/**
+ * MANAGER_WORDS_ONLY_ENABLED (QA, 25 Oct 2026): when neither this reader nor
+ * the model's summary gives What happened, the newest sentence about her in
+ * the manager's own words, without the request, the name or the store: "She
+ * opened the store late at Grand Island" is "She opened the store late". The
+ * offense reader leaves a sentence about her to the model's summary, and a
+ * summary that copies the sentence is refused as the question itself.
+ */
+export function sentenceAboutThem(input: {
+  readonly text: string;
+  readonly employeeName: string | null;
+  readonly slotClause: (clause: string) => boolean;
+}): string | null {
+  let found: string | null = null;
+  for (const turn of input.text.split("\n")) {
+    const told = turnIncident(turn, input.employeeName, input.slotClause, true, true);
+    if (told) found = told;
   }
   return found;
 }
@@ -135,9 +159,12 @@ function turnIncident(
   turn: string,
   employeeName: string | null,
   slotClause: (clause: string) => boolean,
+  managerOnly = false,
+  aboutThemOnly = false,
 ): string | null {
   if (isEditTurn(turn)) return null;
   let found: string | null = null;
+  let aboutThem: string | null = null;
   const story: string[] = [];
   for (const raw of withoutPriorList(turn).split(/[.!?;]+(?=\s|$)/)) {
     const sentence = raw.trim();
@@ -147,17 +174,122 @@ function turnIncident(
     for (const clause of sentence.split(",")) {
       const text = clause.trim();
       if (!text || slotClause(text) || STORE_CLAUSE.test(text) || PAYROLL_STATEMENT.test(text) || POLICY_ASK.test(text)) continue;
+      // MANAGER_WORDS_ONLY_ENABLED: "create a CA form for test employee at kearney" is who and where.
+      if (managerOnly && onlyWhoOrWhere(text.replace(REQUEST_LEAD, " ").replace(LEVEL_REQUEST, " ").trim(), employeeName)) continue;
       kept = true;
       const offense = clauseOffense(text, employeeName);
       if (offense) found = offense;
     }
     if (kept && !requested && sentence.split(/\s+/).length >= 3) story.push(sentence);
+    if (managerOnly && kept) {
+      const told = managerSentence(sentence, employeeName, slotClause);
+      if (/^(?:she|he|they)\s+\S+\s+\S/i.test(told)) aboutThem = told;
+    }
   }
   // An account of two or more sentences is kept in the manager's words, so
   // both dates and the coaching they already gave stay on the form
   // (conv_mvmzlpox2z7u4c3). One sentence is read down to the offense.
+  if (managerOnly) {
+    // MANAGER_WORDS_ONLY_ENABLED (QA, 25 Oct 2026): those words without the
+    // clauses that only request the form, name the employee or give their
+    // place: "She opened the store late at Grand Island. She did not call
+    // anyone" is "She opened the store late. She did not call anyone".
+    const told = story.map((sentence) => managerSentence(sentence, employeeName, slotClause)).filter(Boolean);
+    if (aboutThemOnly) return told.length >= 2 ? null : aboutThem;
+    if (told.length >= 2) return told.join(". ");
+    return found;
+  }
   if (story.length >= 2) return story.join(". ");
   return found;
+}
+
+/**
+ * MANAGER_WORDS_ONLY_ENABLED (QA, 25 Oct 2026; the same rule as the sibling
+ * app): a sentence of the account without the clauses that only request the
+ * form, name the employee or give their place (the store, or a job title at a
+ * store). Everything else stays word for word. Empty when nothing is left.
+ */
+function managerSentence(sentence: string, employeeName: string | null, slotClause: (clause: string) => boolean): string {
+  const kept: string[] = [];
+  let requested = false;
+  for (const clause of sentence.split(",")) {
+    let text = clause.trim();
+    if (!text || slotClause(text) || STORE_CLAUSE.test(text) || PAYROLL_STATEMENT.test(text) || POLICY_ASK.test(text)) continue;
+    if (REQUEST_LEAD.test(text) || LEVEL_REQUEST.test(text)) {
+      requested = true;
+      text = text.replace(REQUEST_LEAD, " ").replace(LEVEL_REQUEST, " ").replace(/\s+/g, " ").trim();
+      if (!text || /^(?:so|to|with|from|because|now)\b/i.test(text)) continue;
+      if (onlyNamesThem(text, employeeName) || /^[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*){0,2}$/.test(text)) continue;
+    }
+    if (onlyWhoOrWhere(text, employeeName)) continue;
+    text = withoutStore(text);
+    // The "for" the dropped request left: "… for opening store late".
+    if (requested) text = text.replace(/^(?:for|about|regarding)\s+/i, "");
+    if (text) kept.push(text);
+  }
+  return kept.join(", ");
+}
+
+/** "soap maker at kearney", "Test Employee at Kearney", "the Grand Island store": who and where. */
+function onlyWhoOrWhere(clause: string, employeeName: string | null): boolean {
+  const text = clause.trim().replace(/[.!?]+$/, "");
+  if (!text) return false;
+  if (onlyNamesThem(text, employeeName) || isStoreOnly(text)) return true;
+  const unplaced = withoutStore(text);
+  if (unplaced === text) return false;
+  // A store was named: what is left is only the person or their job title.
+  const rest = employeeName ? unplaced.replace(new RegExp(escape(employeeName), "ig"), " ").trim() : unplaced;
+  if (!rest) return true;
+  const words = rest.replace(/^(?:a|an|the|our)\s+/i, "").split(/\s+/);
+  if (words.length > 4 || /\b(?:was|is|did|had|has|not)\b/i.test(rest)) return false;
+  return Boolean(statedJobTitle(rest) ?? extractJobTitle(rest)) || TITLE_HEAD.test(rest);
+}
+
+/** "soap maker", "assistant manager": the last word is a job. */
+const TITLE_HEAD = /\b(?:managers?|directors?|makers?|consultants?|supervisors?|leads?|trainers?|coordinators?|specialists?|associates?)$/i;
+
+function onlyNamesThem(text: string, employeeName: string | null): boolean {
+  if (!employeeName) return false;
+  const rest = text
+    .replace(new RegExp(escape(employeeName), "ig"), " ")
+    .replace(/\b(?:for|employee|team\s+member)\b/gi, " ")
+    .trim();
+  return rest === "" && text.trim() !== "";
+}
+
+const STORE_FILLER = new Set(["the", "store", "location", "shop", "our"]);
+
+/** Every word is the store's own name ("kearney", "the Grand Island store"). */
+function isStoreOnly(text: string): boolean {
+  const ids = [...new Set(readLocationMentions(`at ${text}`).flatMap((mention) => mention.locationIds))];
+  if (ids.length === 0) return false;
+  const storeWords = new Set(
+    ids.flatMap((id) => (rosterLocationName(id) ?? "").toLowerCase().split(/[^a-z0-9]+/)).filter(Boolean),
+  );
+  const words = text.toLowerCase().split(/[^a-z0-9']+/).filter(Boolean);
+  return words.length > 0 && words.every((word) => storeWords.has(word) || STORE_FILLER.has(word));
+}
+
+/** MANAGER_WORDS_ONLY_ENABLED: a summary that still says "at Grand Island" gives their place. */
+export function namesTheirStore(text: string | null | undefined): boolean {
+  return Boolean(text) && withoutStore(text!) !== text!.trim();
+}
+
+/** "at Grand Island", "at kearney": the store, taken out of the clause. */
+function withoutStore(clause: string): string {
+  const words = clause.trim().split(/\s+/);
+  for (let index = 0; index < words.length - 1; index += 1) {
+    if (!/^(?:at|in)$/i.test(words[index]!)) continue;
+    for (let length = Math.min(6, words.length - index - 1); length >= 1; length -= 1) {
+      const phrase = words.slice(index + 1, index + 1 + length).join(" ");
+      const bare = phrase.replace(/[.!?]+$/, "");
+      if (!isStoreOnly(bare)) continue;
+      const tail = phrase.slice(bare.length);
+      const rest = [...words.slice(0, index), ...words.slice(index + 1 + length)].join(" ");
+      return withoutStore(`${rest}${tail}`.trim());
+    }
+  }
+  return clause.trim();
 }
 
 /** "do verbal for team member …": a level and "for" is a request too. */

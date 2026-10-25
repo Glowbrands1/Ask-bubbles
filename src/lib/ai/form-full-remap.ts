@@ -54,6 +54,8 @@ import {
   remapPolicyLine,
   placeSpans,
   requestIncident,
+  namesTheirStore,
+  sentenceAboutThem,
   saidInWords,
   statedActionPlan,
   withoutAmbiguousAnswers,
@@ -217,10 +219,16 @@ export function groundFormSlots(input: {
   // where they work is not what happened, on either reader.
   const incidentSlot = managerOnly ? (clause: string) => slotClause(clause) || namesOrPlacesThem(clause) : slotClause;
   const observation = fixed
-    ? (requestIncident({ text: scoped, employeeName, slotClause: incidentSlot }) ??
-      (isRequestLeftover(raw.observation, employeeName) || hasCutDate(raw.observation, said)
+    ? (requestIncident({ text: scoped, employeeName, slotClause: incidentSlot, managerOnly }) ??
+      (isRequestLeftover(raw.observation, employeeName) ||
+      hasCutDate(raw.observation, said) ||
+      // MANAGER_WORDS_ONLY_ENABLED: the model's "She works at Grand Island" says
+      // where, not what happened, and a summary that keeps the store is not the
+      // manager's account without their place (QA, 25 Oct 2026).
+      (managerOnly && (namesOrPlacesThem(raw.observation ?? "") || namesTheirStore(raw.observation)))
         ? null
-        : acceptSummary(raw.observation, scoped)))
+        : acceptSummary(raw.observation, scoped)) ??
+      (managerOnly ? sentenceAboutThem({ text: scoped, employeeName, slotClause: incidentSlot }) : null))
     : (statedIncident(said, employeeName, managerOnly) ?? acceptSummary(raw.observation, said));
   // Both readers contribute, each behind its own flag: the "previous coaching: …"
   // list (REMAP_INCIDENT_FIX_ENABLED) and the intent path's step reader
