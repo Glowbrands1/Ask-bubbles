@@ -13,6 +13,7 @@ import {
   optionalString,
   parseHistory,
   parseJsonBody,
+  requireChatQuestion,
   requireString,
 } from "@/lib/api/validation";
 import { authorizeRequest } from "@/lib/auth/server";
@@ -28,7 +29,12 @@ import { CONTINUATION_KEY_MAX } from "@/lib/forms/proposal-continuation";
 import { mayAskToReopen } from "@/lib/forms/reopen-cue";
 import { parseChatReportContext } from "@/lib/reporting/report-context";
 import { businessToday } from "@/lib/business-date";
-import { draftActionsEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  chatLongMessageEnabled,
+  draftActionsEnabled,
+  payrollDeductAmountFieldEnabled,
+} from "@/lib/config/chat-quality-flags";
+import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
 import { isClientConversationId } from "@/lib/chat/client-ids";
 import type { AskRequest } from "@/lib/ai/types";
 import type { AnswerMode, ChatMessage } from "@/types";
@@ -366,9 +372,17 @@ function parseAskRequest(body: Partial<AskRequest>): AskRequest {
   const context = body.context;
 
   return {
-    question: requireString(body.question, "A question", LIMITS.question),
+    /*
+     * CHAT_LONG_MESSAGE_ENABLED raises the limit to 12,000 characters, says
+     * how long a refused message is, and refuses an overlong history turn
+     * instead of slicing it. Text is refused, never cut. Off, the 4,000
+     * check, its wording and the history slice are unchanged.
+     */
+    question: chatLongMessageEnabled()
+      ? requireChatQuestion(body.question, LONG_MESSAGE_LIMIT)
+      : requireString(body.question, "A question", LIMITS.question),
     mode: optionalEnum<AnswerMode>(body.mode, MODES, "standard"),
-    history: parseHistory(body.history) as ChatMessage[],
+    history: parseHistory(body.history, { refuseOverlong: chatLongMessageEnabled() }) as ChatMessage[],
     questionMessageId: optionalString(body.questionMessageId, LIMITS.messageId) || undefined,
     /*
      * A TEMPLATE KEY, BOUNDED, AND NOTHING ELSE. It says which kind of form the
