@@ -343,7 +343,7 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
  * that name ("asdasd") is recalled only when it is on the roster; the prompt
  * labels the block as records from other conversations; and a reply sentence
  * that still says the manager raised or sent something in another chat or on
- * another date is taken out. Ported from Ask Sunny (QA, 24 Oct 2026). Off,
+ * another date is taken out. Ported from the sibling app (QA, 24 Oct 2026). Off,
  * recall and the reply are exactly as before.
  */
 export function crossChatReplyGuardEnabled(): boolean {

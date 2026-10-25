@@ -247,7 +247,7 @@ async function readMemory(
 
   /*
    * CROSS_CHAT_REPLY_GUARD_ENABLED: another chat is quoted only when the
-   * manager refers back to one here. In Ask Sunny the reply told a manager
+   * manager refers back to one here. In the sibling app the reply told a manager
    * "you raised this same situation with me on October 23" about a chat they
    * never mentioned. The forms they filed are still listed, as records.
    */

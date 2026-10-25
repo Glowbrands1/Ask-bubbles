@@ -3,7 +3,7 @@
  * OTHER CONVERSATIONS STAY OUT OF THE REPLY TEXT
  * ============================================================================
  *
- * Ported from Ask Sunny, where QA found replies that told a manager what
+ * Ported from the sibling app, where QA found replies that told a manager what
  * they had said somewhere else (this app has the same person-memory recall):
  *
  *   "You raised this same situation with me on October 23, …"

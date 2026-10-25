@@ -414,7 +414,7 @@ ${input.styleRules ? `${FORM_LIBRARY_DETAIL_RULES}\n` : ""}- Knowledge base docu
 - Use what is relevant to the question and leave the rest. Do not recite the history back unprompted.`
     : "";
   /*
-   * CROSS_CHAT_REPLY_GUARD_ENABLED (ported from Ask Sunny, where a reply said
+   * CROSS_CHAT_REPLY_GUARD_ENABLED (ported from the sibling app, where a reply said
    * "You raised this same situation with me on October 23" about a chat the
    * manager never mentioned). The rule travels with every answer while the
    * flag is on, memory or not.
