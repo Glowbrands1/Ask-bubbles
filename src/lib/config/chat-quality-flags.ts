@@ -461,6 +461,19 @@ export function formChoiceStatedEnabled(): boolean {
 }
 
 /**
+ * Prior actions read the way managers write them. A list after "received …
+ * coaching 9/8" keeps its later comma items that name a step; "prior verbal
+ * 9-1-26" and "Her prior coaching is her policy manual acknowledgement on
+ * 9/01" are earlier steps; a date governed by "previous / prior / coached /
+ * jba manual / policy manual acknowledgement" never dates the form; and an
+ * action plan that is only the history label is dropped. Off, the readers
+ * are unchanged.
+ */
+export function priorActionsParseEnabled(): boolean {
+  return envFlag("PRIOR_ACTIONS_PARSE_ENABLED");
+}
+
+/**
  * Keep other conversations out of the reply text. The person-memory recall
  * quotes another chat only when the manager refers back to it ("again", "last
  * time", "like before", "same as …"); a name read from a turn that is only
@@ -522,5 +535,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CA_TEMPLATE_MAP_ENABLED",
   "FORM_CHOICE_STATED_ENABLED",
   "REMAP_INCIDENT_FIX_ENABLED",
+  "PRIOR_ACTIONS_PARSE_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
 ] as const;

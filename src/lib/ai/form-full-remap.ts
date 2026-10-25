@@ -9,14 +9,16 @@ import {
   formChoiceStatedEnabled,
   remapIncidentFixEnabled,
   placeSpanGuardEnabled,
+  priorActionsParseEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
-import { listIncidentDates } from "@/lib/forms/form-date-answer";
+import { listIncidentDates, datesInText } from "@/lib/forms/form-date-answer";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { lateOpenOn, mostRecent } from "@/lib/forms/late-open";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
+import { statedPriorActions } from "@/lib/forms/prior-actions";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
 import { payrollDeductAmount, payrollDeductFromConversation } from "@/lib/forms/payroll-deduct";
 import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
@@ -212,11 +214,22 @@ export function groundFormSlots(input: {
         ? null
         : acceptSummary(raw.observation, scoped)))
     : (statedIncident(said, employeeName, managerOnly) ?? acceptSummary(raw.observation, said));
-  const priorActions = fixed ? mergePriorActions(statedPrior(said), priorListActions(said)) : statedPrior(said);
+  // Both readers contribute, each behind its own flag: the "previous coaching: …"
+  // list (REMAP_INCIDENT_FIX_ENABLED) and the intent path's step reader
+  // (PRIOR_ACTIONS_PARSE_ENABLED). With both on, a list item whose date a
+  // parsed step already holds is the same step and is not listed twice.
+  const priorList = fixed ? priorListActions(said) : [];
+  const priorActions = priorActionsParseEnabled()
+    ? remapPriorActions(statedPrior(said), said, input.today, priorList)
+    : fixed
+      ? mergePriorActions(statedPrior(said), priorList)
+      : statedPrior(said);
   const incidentTime = statedTime(said);
   // The action plan is the manager's, or blank. The model's summary and
   // "previous coaching …" are not a plan.
-  const actionPlan = fixed ? statedActionPlan(scoped) : acceptSummary(stripMoney(raw.actionPlan ?? ""), said);
+  const plan = fixed ? statedActionPlan(scoped) : acceptSummary(stripMoney(raw.actionPlan ?? ""), said);
+  // PRIOR_ACTIONS_PARSE_ENABLED: a plan that is only the history label is not a plan.
+  const actionPlan = priorActionsParseEnabled() && plan && HISTORY_LABEL_ONLY.test(plan) ? null : plan;
   const closeMatchNote = employeeName ? closeNote(employeeName, input.people) : null;
 
   const read: FormRemapSlots = {
@@ -1014,6 +1027,48 @@ function slotClause(clause: string): boolean {
   if (STATE_ONLY.test(text)) return true;
   if (/\buse\s+.+\bas the location\b/i.test(text)) return true;
   return false;
+}
+
+/*
+ * PRIOR_ACTIONS_PARSE_ENABLED. "previous coaching - jba policy manual
+ * 1-20-26" put "Action plan: Previous coaching" on the card and no prior
+ * action (conv_mvmzmhst2si3jfr). The history is read with the intent path's
+ * reader (`statedPriorActions`), one line per step, after any "prior =" or
+ * "coached on" line already read here; and an action plan that is only the
+ * history label is not an action plan.
+ */
+const HISTORY_LABEL_ONLY =
+  /^\s*(?:(?:the|her|his|their)\s+)?(?:previous|prior|past|earlier|last)\s+(?:coaching|coached|warnings?|verbal|written|final|corrective\s+actions?|cas?|c\/a|write[- ]?ups?|disciplin\w*|actions?)\b/i;
+
+function remapPriorActions(
+  first: string | null,
+  said: string,
+  today: string,
+  listed: readonly string[] = [],
+): string | null {
+  const lines = first ? first.split("\n") : [];
+  const dated = new Set(lines.flatMap((line) => datesInText(line, today).map((found) => found.iso)));
+  for (const line of statedPriorActions(said, today)) {
+    const own = datesInText(line, today).map((found) => found.iso);
+    // A step a "prior =" line already dated is not listed twice; two steps on one day both are.
+    if (own.some((iso) => dated.has(iso)) || lines.includes(line)) continue;
+    lines.push(line);
+  }
+  /*
+   * REMAP_INCIDENT_FIX_ENABLED's list items, after the parsed steps. An item
+   * whose date a step above already holds is that step; the same month and day
+   * counts too, since the reader above takes a corrected year ("jba manual
+   * 11-1-26", then "jba manual 11-1-25") and the list keeps the first one.
+   */
+  const held = lines.flatMap((line) => datesInText(line, today).map((found) => found.iso));
+  for (const item of listed) {
+    const own = datesInText(item, today).map((found) => found.iso);
+    const same = own.some((iso) => held.some((kept) => kept === iso || kept.slice(5) === iso.slice(5)));
+    if (same || lines.some((line) => line.toLowerCase() === item.toLowerCase())) continue;
+    lines.push(item);
+    held.push(...own);
+  }
+  return lines.length > 0 ? lines.join("\n") : null;
 }
 
 function statedPrior(text: string): string | null {
