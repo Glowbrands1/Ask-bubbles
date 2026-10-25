@@ -259,3 +259,32 @@ describe("a bare \"verbal\" turn is never a prior action, and the line holds onl
     expect(statedPriorActions("prior verbal ca 9-1-26", TODAY)).toEqual(["Verbal corrective action — signed 09/01/2026"]);
   });
 });
+
+describe("8. \"she was coached on 9-15 for being late\" (the sibling app's conv_mvnoiw8n2kfbcvc, in this app's words)", () => {
+  const SAID =
+    "create a verbal CA for Test Employee at Kearney for being late to open on 10-20, she was coached on 9-15 for being late, no payroll";
+
+  it("is one dated coaching line, and 10-20 stays the form's date", () => {
+    const { slots } = groundFormSlots({
+      raw: { templateKey: "dpoa", employeeName: "Test Employee", observation: null, actionPlan: null },
+      history: [],
+      question: SAID,
+      today: "2026-10-25",
+      people: [],
+    });
+    expect(lines(slots.priorActions)).toEqual(["Coaching for being late — signed 09/15/2026"]);
+    expect(slots.incidentDateIso).toBe("2026-10-20");
+  });
+
+  it("flag off, the card keeps the raw \"coached on 9-15\"", () => {
+    vi.stubEnv(FLAG, "");
+    const { slots } = groundFormSlots({
+      raw: { templateKey: "dpoa", employeeName: "Test Employee", observation: null, actionPlan: null },
+      history: [],
+      question: SAID,
+      today: "2026-10-25",
+      people: [],
+    });
+    expect(slots.priorActions).toBe("coached on 9-15");
+  });
+});

@@ -15,7 +15,7 @@ import {
 import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
 import { asksOnlyAboutFormsOnFile } from "@/lib/forms/chat-form-records";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
-import { listIncidentDates, datesInText } from "@/lib/forms/form-date-answer";
+import { listIncidentDates, datesInText, datesInTextWithYearless } from "@/lib/forms/form-date-answer";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { lateOpenOn, mostRecent } from "@/lib/forms/late-open";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
@@ -1141,9 +1141,10 @@ function remapPriorActions(
   today: string,
   listed: readonly string[] = [],
 ): string | null {
-  const lines = first ? first.split("\n") : [];
-  const dated = new Set(lines.flatMap((line) => datesInText(line, today).map((found) => found.iso)));
-  for (const line of statedPriorActions(said, today)) {
+  const stated = statedPriorActions(said, today);
+  const lines = (first ? first.split("\n") : []).map((line) => sameCoachingLine(line, stated, today) ?? line);
+  const dated = new Set(lines.flatMap((line) => datesInTextWithYearless(line, today).map((found) => found.iso)));
+  for (const line of stated) {
     const own = datesInText(line, today).map((found) => found.iso);
     // A step a "prior =" line already dated is not listed twice; two steps on one day both are.
     if (own.some((iso) => dated.has(iso)) || lines.includes(line)) continue;
@@ -1164,6 +1165,18 @@ function remapPriorActions(
     held.push(...own);
   }
   return lines.length > 0 ? lines.join("\n") : null;
+}
+
+/**
+ * "coached on 9-15" read here and "Coaching for being late — signed
+ * 09/15/2026" read by the intent path's reader are one step: the card keeps
+ * the dated line, with what it was for (QA, 25 Oct 2026, conv_mvnoiw8n2kfbcvc).
+ */
+function sameCoachingLine(line: string, stated: readonly string[], today: string): string | null {
+  if (!/^coached on\b/i.test(line)) return null;
+  const day = datesInTextWithYearless(line, today)[0]?.iso.slice(5);
+  if (!day) return null;
+  return stated.find((entry) => /^Coaching\b/.test(entry) && datesInText(entry, today).some((found) => found.iso.slice(5) === day)) ?? null;
 }
 
 function statedPrior(text: string): string | null {
