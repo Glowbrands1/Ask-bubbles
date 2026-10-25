@@ -3,7 +3,9 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { ChatFormProposal } from "@/types";
 
+import { HIDDEN_TEMPLATE_KEYS } from "@/config/company/forms/hidden";
 import { buildFormInventoryBlock } from "@/lib/ai/form-answers";
+import { proposeFormForTurn } from "@/lib/ai/form-proposal";
 
 import { WITHHELD_FROM_CHOOSER, offeredInChooser } from "./chooser";
 import { EXIT_DETAILS_TRIMMED_NOTICE, EXIT_DRAFT_RULES, guardExitDetails } from "./exit-draft";
@@ -26,20 +28,21 @@ import { TEMPLATE_SEEDS } from "./library";
  *
  * QA, 25 Oct 2026, on Ask Bubbles main: the exit form's Steps to Finish
  * Termination told a Buff City Soap manager to "remove employee from MyGlow"
- * and to "Place comment on employee's Sunlync account … verify tanning has
- * been removed"; the chat said the draft would not "remove anyone from MyGlow
- * … or update Sunlync"; and the Tanning Consultant Interview Form was still in
- * the template library the chat reads. MyGlow and Sunlync are the sibling
- * company's systems and tanning is its product.
+ * and to "verify tanning has been removed"; the chat said the draft would not
+ * "remove anyone from MyGlow"; and the Tanning Consultant Interview and both
+ * management interviews were still in the template library the chat reads.
  *
- * Buff City Soap's own system names are not known yet, so the steps say
- * "the scheduling/HR system" and "the employee's account" until they are.
+ * Pau's answers (via QA, same day): Buff City Soap uses Sunlync too, so the
+ * Sunlync step and mentions stay, without the tanning clause. MyGlow is not
+ * confirmed, so it reads "the scheduling/HR system" until it is
+ * (`config/company/forms/exit-systems.ts`). The three interviews are hidden.
  *
  * Every string below is the exported text or a builder's real output — not a
  * grep of the source — so a word that reaches a manager through a template
  * literal, a seed or a builder is caught here.
  */
-const SIBLING_WORDING = /myglow|my\s+glow|sunlync|sunlink|tanning|sun\s*tan\s*city/i;
+/* Sunlync is NOT here: Buff City Soap uses it (Pau, via QA, 25 Oct 2026). */
+const SIBLING_WORDING = /myglow|my\s+glow|tanning|sun\s*tan\s*city/i;
 
 function expectClean(text: string, where: string) {
   const hit = SIBLING_WORDING.exec(text);
@@ -88,11 +91,11 @@ describe("the exit form's Steps to Finish Termination", () => {
     return blocks.slice(at + 1).map((block) => (block as { text?: string }).text ?? "");
   })();
 
-  it("names no sibling-company system, and uses neutral wording until Buff City Soap's systems are named", () => {
+  it("keeps Sunlync, drops the tanning clause, and names the unconfirmed system neutrally", () => {
     expect(steps).toEqual([
-      "Upload Exit Form to employee’s personal file and remove the employee from the scheduling/HR system.",
+      "Upload Exit Form to employee’s personal file and remove employee from the scheduling/HR system.",
       "Notify home office of employee’s final date of employment for HR, Payroll, and Security System purposes.",
-      "Add a note to the employee’s account stating they are no longer employed.",
+      "Place comment on employee’s Sunlync account stating they are no longer employed.",
     ]);
     for (const step of steps) expectClean(step, "exit step");
   });
@@ -111,7 +114,7 @@ describe("the exit form's Steps to Finish Termination", () => {
 describe("the exit intake's chat text", () => {
   it("the 'creating the draft does not act' line names no system", () => {
     expectClean(EXIT_DOES_NOT_ACT, "EXIT_DOES_NOT_ACT");
-    expect(EXIT_DOES_NOT_ACT).toMatch(/doesn't sign anything, remove anyone from any system, change payroll/);
+    expect(EXIT_DOES_NOT_ACT).toMatch(/doesn't sign anything, remove anyone from the scheduling\/HR system, change payroll or update Sunlync —/);
   });
 
   it("the opening and the who-is-it-for questions are clean", () => {
@@ -138,14 +141,16 @@ describe("the exit drafting rules and the Details guard", () => {
   it("every drafting rule and the trimmed notice are clean", () => {
     for (const rule of EXIT_DRAFT_RULES) expectClean(rule, "EXIT_DRAFT_RULES");
     expectClean(EXIT_DETAILS_TRIMMED_NOTICE, "EXIT_DETAILS_TRIMMED_NOTICE");
-    expect(EXIT_DRAFT_RULES.join(" ")).toMatch(/removing the employee from the scheduling\/HR system or any other system/);
+    expect(EXIT_DRAFT_RULES.join(" ")).toMatch(
+      /removing the employee from the scheduling\/HR system, notifying the home office, HR, payroll or security, or commenting on Sunlync\./,
+    );
   });
 
   /*
    * THE GUARD STAYS, AND WIDENS. It still drops a sentence claiming the old
    * system names (a model can echo them from anywhere), and now also drops a
-   * sentence claiming the employee was taken off any system or had a note put
-   * on their account: Ask Bubbles never does either, under any name.
+   * sentence claiming the employee was taken off any system or that anybody
+   * commented on their Sunlync (or any) account: Ask Bubbles never does either.
    */
   const notes = "Jordan gave two weeks notice on 9/1 and her last day was 9/15.";
   it.each([
@@ -157,10 +162,20 @@ describe("the exit drafting rules and the Details guard", () => {
     "Jordan's access was removed from the system.",
     "A note was added to Jordan's account stating Jordan is no longer employed.",
     "Jordan's account has been updated to show Jordan is no longer employed.",
+    "Bubbles commented on Jordan's Sunlync account.",
+    "The manager commented on their Sunlync account that Jordan is no longer employed.",
+    "Jordan's Sunlync account was commented on.",
   ])("drops a claim the manager did not make: %s", (claim) => {
     const result = guardExitDetails(`Jordan gave two weeks notice on 9/1. ${claim}`, notes, TODAY);
     expect(result.removed).toEqual([claim]);
     expect(result.value).toBe("Jordan gave two weeks notice on 9/1.");
+  });
+
+  it("still drops a Sunlync or system claim when the manager only mentioned the home office", () => {
+    const said = "Jordan gave two weeks notice on 9/1. I'll call the home office tomorrow.";
+    for (const claim of ["A comment was placed on Jordan's Sunlync account.", "Jordan was removed from the scheduling system."]) {
+      expect(guardExitDetails(claim, said, TODAY).removed).toEqual([claim]);
+    }
   });
 
   it("keeps the manager's own words when the manager raised it", () => {
@@ -184,9 +199,14 @@ describe("the chooser and the template library the chat reads", () => {
     }
   });
 
-  it("the Tanning Consultant Interview Form is never offered", () => {
-    expect(WITHHELD_FROM_CHOOSER).toContain("tanning-consultant-interview");
-    expect(offeredInChooser("tanning-consultant-interview")).toBe(false);
+  const HIDDEN = ["tanning-consultant-interview", "management-interview-round-1", "management-interview-round-2"];
+
+  it("the Tanning Consultant Interview and both management interviews are hidden and never offered", () => {
+    expect([...HIDDEN_TEMPLATE_KEYS].sort()).toEqual([...HIDDEN].sort());
+    for (const key of HIDDEN) {
+      expect(WITHHELD_FROM_CHOOSER).toContain(key);
+      expect(offeredInChooser(key)).toBe(false);
+    }
   });
 
   describe("read from the database", () => {
@@ -194,14 +214,14 @@ describe("the chooser and the template library the chat reads", () => {
       await ensureTemplateLibrary("system", PRODUCTION);
     });
 
-    it("the row is still in the database (nothing is deleted)…", () => {
-      expect(store.form_templates!.some((row) => row.key === "tanning-consultant-interview")).toBe(true);
+    it("the rows are still in the database (nothing is deleted)…", () => {
+      for (const key of HIDDEN) expect(store.form_templates!.some((row) => row.key === key && row.active === true), key).toBe(true);
     });
 
-    it("…but the template list leaves it out, and nothing listed carries sibling wording", async () => {
+    it("…but the template list leaves them out, and nothing listed carries sibling wording", async () => {
       const summaries = await listTemplateSummaries();
-      expect(summaries.map((summary) => summary.key)).not.toContain("tanning-consultant-interview");
-      expect(summaries.length).toBe(TEMPLATE_SEEDS.length - 1);
+      for (const key of HIDDEN) expect(summaries.map((summary) => summary.key)).not.toContain(key);
+      expect(summaries.length).toBe(TEMPLATE_SEEDS.length - HIDDEN.length);
       for (const summary of summaries) {
         expectClean(summary.name, `${summary.key} name`);
         expectClean(summary.shortName, `${summary.key} short name`);
@@ -209,9 +229,33 @@ describe("the chooser and the template library the chat reads", () => {
       }
     });
 
-    it("the forms library block the model reads is clean", async () => {
+    it("the forms library block the model reads is clean and names none of them", async () => {
       const inventory = buildFormInventory(await listTemplateSummaries(), { role: "location_manager", scope: null });
-      expectClean(buildFormInventoryBlock(inventory), "buildFormInventoryBlock");
+      const block = buildFormInventoryBlock(inventory);
+      expectClean(block, "buildFormInventoryBlock");
+      // The Prescreen / Phone Interview Form is not hidden and still listed; these three are not.
+      expect(block).not.toMatch(/Tanning Consultant Interview|Round Management Interview/);
+    });
+
+    /* Asked for by name in chat: the honest "not published" answer, no proposal card. */
+    it.each([
+      "Create a tanning consultant interview form for Jordan Testperson.",
+      "TC interview for Sam Rivera",
+      "Create a first round management interview form for Jordan Testperson.",
+      "Create a second round management interview form for Jordan Testperson.",
+    ])("is not reachable by name: %s", async (question) => {
+      const reply = await proposeFormForTurn({
+        history: [],
+        question,
+        questionMessageId: "m-1",
+        actor: { role: "location_manager", scope: { level: "location", primaryAreaId: "loc-0310", alsoCoversAreaIds: [] } as never },
+        summaries: await listTemplateSummaries(),
+        today: TODAY,
+      });
+      expect(reply?.formProposal, reply?.content).toBeUndefined();
+      expect(reply?.content).toMatch(/not published in Ask Bubbles/);
+      expectClean(reply?.content ?? "", "reply");
+      expect(reply?.content).not.toMatch(/Tanning Consultant Interview|Round Management Interview/);
     });
   });
 });

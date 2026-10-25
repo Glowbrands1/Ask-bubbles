@@ -1,3 +1,4 @@
+import { EXIT_ACCOUNT_SYSTEM, EXIT_EMPLOYEE_SYSTEM } from "@/config/company/forms/exit-systems";
 import { FORM_LETTERHEAD_BRAND_NAME } from "@/config/company/forms/letterhead";
 
 import { field, type TemplateSeed } from "./catalog";
@@ -81,18 +82,19 @@ import type { AnswerStatementLine, FormBlock, FormDocument } from "./document";
  *      word; the renderer's fonts have no bullet, and a "?" in its place would
  *      be worse than none.
  *
- * THE STEPS ARE INSTRUCTIONS ON PAPER, NOT ACTIONS. "Remove the employee
- * from the scheduling/HR system", "Notify home office", "Add a note to the
- * employee's account" are what a manager does after the form is complete.
- * Creating, drafting or finalizing this form does none of them — there is no
- * scheduling, HR, payroll or account integration in this codebase for it to
- * call, and the steps carry no field that could record them as done.
+ * THE STEPS ARE INSTRUCTIONS ON PAPER, NOT ACTIONS. "Remove employee from
+ * the scheduling/HR system", "Notify home office", "Place comment on
+ * employee's Sunlync account" are what a manager does after the form is
+ * complete. Creating, drafting or finalizing this form does none of them —
+ * there is no scheduling, HR, payroll or Sunlync integration in this codebase
+ * for it to call, and the steps carry no field that could record them as done.
  *
- * NEUTRAL SYSTEM NAMES (QA, 25 Oct 2026). The reference platform's steps named
- * the sibling company's own employee and point-of-sale systems and its
- * product. Buff City Soap's system names are not known yet, so the steps say
- * "the scheduling/HR system" and "the employee's account" until the business
- * supplies them. Never put a name here that the business has not given.
+ * THE SYSTEM NAMES (QA, 25 Oct 2026). Sunlync is confirmed for Buff City Soap
+ * and stays; the source's "verify tanning has been removed" does not (tanning
+ * is the reference platform's product). MyGlow is not confirmed, so the first
+ * step names "the scheduling/HR system" until it is. Both names come from
+ * `config/company/forms/exit-systems.ts`; never put a name there that the
+ * business has not given.
  */
 
 /** A Yes / No question as the form prints it. Always the manager's. */
@@ -406,7 +408,7 @@ export function exitFormDocument(): FormDocument {
       { kind: "section", label: "Steps to Finish Termination" },
       {
         kind: "paragraph",
-        text: "Upload Exit Form to employee’s personal file and remove the employee from the scheduling/HR system.",
+        text: `Upload Exit Form to employee’s personal file and remove employee from ${EXIT_EMPLOYEE_SYSTEM}.`,
       },
       {
         kind: "paragraph",
@@ -414,7 +416,7 @@ export function exitFormDocument(): FormDocument {
       },
       {
         kind: "paragraph",
-        text: "Add a note to the employee’s account stating they are no longer employed.",
+        text: `Place comment on employee’s ${EXIT_ACCOUNT_SYSTEM} account stating they are no longer employed.`,
       },
     ],
   };
@@ -455,10 +457,10 @@ export const EXIT_TEMPLATE_SEEDS: TemplateSeed[] = [
      *
      * 3: terminology only — Salon becomes Store in the key line. No field key changes.
      *
-     * 4: the Steps to Finish Termination name no sibling-company system (QA,
-     * 25 Oct 2026): "the scheduling/HR system" and "the employee's account"
-     * until Buff City Soap's own system names are supplied. Text only; no
-     * field, key or layout changes. Published as a new version by the next
+     * 4: the Steps to Finish Termination (QA, 25 Oct 2026): MyGlow, not
+     * confirmed for Buff City Soap, becomes "the scheduling/HR system"; the
+     * Sunlync step keeps its wording without "verify tanning has been
+     * removed". Text only; no field, key or layout changes. Published as a new version by the next
      * library install; forms already filed keep the version they were pinned to.
      */
     revision: 4,

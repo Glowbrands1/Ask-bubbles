@@ -21,8 +21,18 @@
  * on it. Not a Buff City Soap form (QA, 25 Oct 2026). It was already withheld
  * from the chooser (`lib/forms/chooser.ts`); it still reached the template
  * list and the chat's forms library block from the database row.
+ *
+ * "First Round Management Interview Form" and "Second Round Management
+ * Interview Form" — the reference platform's management interviews, whose
+ * scenarios are about tanning beds, lotions and memberships and a Tanning
+ * Consultant. Hidden the same way (Pau, via QA, 25 Oct 2026); also already
+ * withheld from the chooser.
  */
-export const HIDDEN_TEMPLATE_KEYS: readonly string[] = ["tanning-consultant-interview"];
+export const HIDDEN_TEMPLATE_KEYS: readonly string[] = [
+  "tanning-consultant-interview",
+  "management-interview-round-1",
+  "management-interview-round-2",
+];
 
 export function isHiddenTemplate(templateKey: string): boolean {
   return HIDDEN_TEMPLATE_KEYS.includes(templateKey);

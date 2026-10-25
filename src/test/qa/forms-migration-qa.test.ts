@@ -215,8 +215,8 @@ const FORMS: readonly QaForm[] = [
   { key: "position-transfer", phrase: "Create a position transfer form for Jordan Testperson, transferring from store 12 to store 18.", creator: "location_manager", edits: ["reason", "reason"], edit: "revision" },
   { key: "prescreen-phone-interview", phrase: "Create a prescreen phone interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
   { key: "tanning-consultant-interview", phrase: "Create a tanning consultant interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
-  { key: "management-interview-round-1", phrase: "Create a first round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
-  { key: "management-interview-round-2", phrase: "Create a second round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
+  { key: "management-interview-round-1", phrase: "Create a first round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
+  { key: "management-interview-round-2", phrase: "Create a second round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
 ];
 
 /*
@@ -271,12 +271,9 @@ const neutral = (text: string) =>
     .replace(/cleaning beds and doing laundry/g, "cleaning the Makery and equipment and keeping the workspace organized")
     // The Corrective Action closing, revision 6 (District Manager feedback, approved 2026-10-21): this phrase only.
     .replace(/Future policy violations may be subject to additional corrective action/g, "Future policy violations may result in additional corrective action")
-    // QA, 25 Oct 2026 (QA-1, QA-2): the exit steps name no sibling-company system. These two sentences only.
-    .replace(/remove\s+employee\s+from\s+MyGlow\./g, "remove the employee from the scheduling/HR system.")
-    .replace(
-      /Place\s+comment\s+on\s+employee([’'])s\s+Sunlync\s+account\s+stating\s+they\s+are\s+no\s+longer\s+employed,\s+verify\s+tanning\s+has\s+been\s+removed\./g,
-      "Add a note to the employee$1s account stating they are no longer employed.",
-    )
+    // QA, 25 Oct 2026 (QA-1, QA-2): MyGlow is not confirmed, and the Sunlync step loses its tanning clause. These two only.
+    .replace(/remove\s+employee\s+from\s+MyGlow\./g, "remove employee from the scheduling/HR system.")
+    .replace(/no\s+longer\s+employed,\s+verify\s+tanning\s+has\s+been\s+removed\./g, "no longer employed.")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -577,10 +574,11 @@ beforeEach(async () => {
 
 /*
  * HIDDEN IN THIS DEPLOYMENT (QA, 25 Oct 2026). The Tanning Consultant Interview
- * Form is the sibling company's own interview. Its row, versions and content
- * stay, and the content steps of this matrix (02, 03, 10, 11, 14 …) still check
- * them; but nothing lists it and nothing creates a form from it, so the listing
- * and creation steps check that refusal instead of a created form. The
+ * Form and both management interviews are the sibling company's own. Their
+ * rows, versions and content stay, and the content steps of this matrix (02,
+ * 03, 10, 11, 14 …) still check them; but nothing lists them and nothing
+ * creates a form from them, so the listing and creation steps check that
+ * refusal instead of a created form. The
  * expectation changes on purpose; see `config/company/forms/hidden.ts`.
  */
 async function expectHidden(form: QaForm) {

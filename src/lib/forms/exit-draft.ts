@@ -1,3 +1,4 @@
+import { EXIT_ACCOUNT_SYSTEM, EXIT_EMPLOYEE_SYSTEM } from "@/config/company/forms/exit-systems";
 import { shiftDays } from "@/lib/business-date";
 
 import { EXIT_DERIVED_KEYS, exitFactValues, readExitFacts, type ExitFacts } from "./exit-facts";
@@ -29,11 +30,11 @@ import { datesInText } from "./form-date-answer";
  *   fact, restated; otherwise it is an HR answer nobody gave. The same holds
  *   for a termination the manager did not describe, a signature, a date the
  *   manager did not give, and any claim that a Step to Finish Termination
- *   (the personal file, the scheduling/HR system or any other system, home
- *   office, payroll, security, a note on the employee's account) has been
- *   done. The reference platform's own system names stay in the guard too: a
- *   model can echo them from anywhere, and Ask Bubbles never removes anybody
- *   from a system under any name.
+ *   (the personal file, the scheduling/HR system, home office, payroll,
+ *   security, a comment on the Sunlync account) has been done. MyGlow stays in
+ *   the guard although the steps no longer name it: a model can echo it from
+ *   anywhere, and Ask Bubbles never removes anybody from a system or comments
+ *   on an account, under any name.
  */
 
 export const EXIT_DRAFT_RULES: readonly string[] = [
@@ -45,7 +46,7 @@ export const EXIT_DRAFT_RULES: readonly string[] = [
   "Never state or imply an answer to any of these questions unless the manager stated it, and then only in the manager's own terms: whether store items were returned, whether a payroll deduction applies, whether a bonus is forfeited, whether pay drops to minimum wage, whether written notice is attached, or whether the employee is eligible for rehire.",
   "Never call the departure a termination, firing, dismissal or involuntary separation unless the manager did. Never give a reason for leaving the manager did not give.",
   "Never say that the form, a notice or anything else was signed.",
-  "Never say that any step to finish the termination has been done — uploading to the personal file, removing the employee from the scheduling/HR system or any other system, notifying the home office, HR, payroll or security, or adding a note to the employee's account.",
+  `Never say that any step to finish the termination has been done — uploading to the personal file, removing the employee from ${EXIT_EMPLOYEE_SYSTEM}, notifying the home office, HR, payroll or security, or commenting on ${EXIT_ACCOUNT_SYSTEM}.`,
 ];
 
 /**
@@ -62,13 +63,15 @@ const DECISION_TOPICS: RegExp[] = [
   /\bsign(?:s|ed|ing|ature|atures)?\b/i,
   /\bmyglow\b|\bsunlync\b|\bhome office\b|\bpersonal file\b|\bsecurity system\b/i,
   /*
-   * THE SAME CLAIM IN NEUTRAL WORDS (QA, 25 Oct 2026). The steps now say "the
-   * scheduling/HR system" and "the employee's account", so a sentence saying
-   * the employee was taken off a system, or that their account got a note or
-   * an update, is the same unmade claim under a new name. Its own entry, so a
-   * manager who mentioned the home office does not let it through.
+   * THE SAME CLAIM IN ANY WORDS (QA, 25 Oct 2026). The first step now says
+   * "the scheduling/HR system", so a sentence saying the employee was taken
+   * off a system is the same unmade claim under a new name; and a sentence
+   * saying anybody commented on, noted or updated an account (Sunlync or any
+   * other) is a step Ask Bubbles never takes. Its own entry, so a manager who
+   * mentioned the home office does not let a Sunlync or system claim through
+   * the line above.
    */
-  /\b(?:remov(?:e|ed|es|ing)|taken|took|delet(?:e|ed|ing)|deactivat\w*|offboard\w*)\b[^.!?]{0,40}\b(?:from|off|out of)\b[^.!?]{0,40}\bsystems?\b|\b(?:scheduling|hr|payroll|employee|pos)(?:\s*\/\s*hr)?\s+systems?\b|\b(?:note|comment)s?\b[^.!?]{0,40}\baccount\b|\baccount\b[^.!?]{0,40}\b(?:updated|noted|commented|deactivated|closed|removed)\b/i,
+  /\bmyglow\b|\bsunlync\b|\b(?:remov(?:e|ed|es|ing)|taken|took|delet(?:e|ed|ing)|deactivat\w*|offboard\w*)\b[^.!?]{0,40}\b(?:from|off|out of)\b[^.!?]{0,40}\bsystems?\b|\b(?:scheduling|hr|payroll|employee|pos)(?:\s*\/\s*hr)?\s+systems?\b|\b(?:not(?:e|es|ed)|comment(?:s|ed|ing)?)\b[^.!?]{0,40}\baccount\b|\baccount\b[^.!?]{0,40}\b(?:updated|noted|commented|deactivated|closed|removed)\b/i,
   /\bfired\b|\bterminat(?:e|ed|ion)\b|\blet (?:her|him|them) go\b|\blet go\b|\binvoluntar(?:y|ily)\b|\bdismiss(?:ed|al)?\b|\bdischarged\b/i,
 ];
 

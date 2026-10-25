@@ -74,15 +74,16 @@ const HR_ADDED = new Set<string>([
 ]);
 
 /**
- * QA, 25 Oct 2026: two Steps to Finish Termination named the sibling company's
- * own systems and product. Each step is kept, in its place, with the system
- * named neutrally until Buff City Soap's are supplied (revision 4). The source
- * sentence each one replaces is still checked to be the Word document's.
+ * QA, 25 Oct 2026 (revision 4): MyGlow, not confirmed for Buff City Soap, is
+ * named "the scheduling/HR system" (`config/company/forms/exit-systems.ts`),
+ * and the Sunlync step loses "verify tanning has been removed" (Sunlync itself
+ * is confirmed). The source sentence each one replaces is still checked to be
+ * the Word document's.
  */
 const QA_NEUTRAL_STEPS: Readonly<Record<string, string>> = {
-  "Upload Exit Form to employee’s personal file and remove the employee from the scheduling/HR system.":
+  "Upload Exit Form to employee’s personal file and remove employee from the scheduling/HR system.":
     "Upload Exit Form to employee’s personal file and remove employee from MyGlow.",
-  "Add a note to the employee’s account stating they are no longer employed.":
+  "Place comment on employee’s Sunlync account stating they are no longer employed.":
     "Place comment on employee’s Sunlync account stating they are no longer employed, verify tanning has been removed.",
 };
 
@@ -195,10 +196,10 @@ describe("the Resignation/Exit Form is the STC Exit document", () => {
       "Supervisor Signature",
       "District Manager/Witness Signature (when required)",
       "Steps to Finish Termination",
-      // The two system steps in their neutral wording (QA, 25 Oct 2026); see QA_NEUTRAL_STEPS.
-      "Upload Exit Form to employee's personal file and remove the employee from the scheduling/HR system.",
+      // The two system steps as revision 4 prints them (QA, 25 Oct 2026); see QA_NEUTRAL_STEPS.
+      "Upload Exit Form to employee's personal file and remove employee from the scheduling/HR system.",
       "Notify home office of employee's final date of employment for HR, Payroll, and Security System purposes.",
-      "Add a note to the employee's account stating they are no longer employed.",
+      "Place comment on employee's Sunlync account stating they are no longer employed.",
     ];
     for (const text of wanted) expect(ours, text).toContain(text);
   });

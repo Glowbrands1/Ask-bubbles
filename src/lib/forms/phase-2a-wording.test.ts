@@ -69,11 +69,9 @@ const UNCHANGED: [string, string][] = [
   ["sdit-epp", "PPTA"],
   ["fttc-epp", "In what areas is the {{roleAbbr}} currently succeeding?"], // role mapping held
   ["fttc-epp", "TC"],
-  // D10 was held here as "Place comment on employee’s Sunlync account". QA, 25 Oct 2026, ruled that a
-  // Buff City Soap form must not name the sibling company's systems, so revision 4 says "Add a note to the
-  // employee’s account" until the business names its own system (exit-sibling-wording.test.ts). The
-  // sentence's purpose is kept; only the system name is neutral.
-  ["resignation-exit", "Add a note to the employee’s account stating they are no longer employed."],
+  // D10 held: Pau confirmed (via QA, 25 Oct 2026) that Buff City Soap uses Sunlync too. Only the tanning
+  // clause ("verify tanning has been removed") was removed, in revision 4.
+  ["resignation-exit", "Place comment on employee’s Sunlync account stating they are no longer employed."], // D10 held
   ["resignation-exit", "Notify home office of employee’s final date of employment for HR, Payroll, and Security System purposes."], // D11 held
   ["demotion", "or the monthly manager bonus"], // DE-3 held
   ["demotion", "Any elected benefits will terminate"],
@@ -164,7 +162,7 @@ describe("the four approved wording changes", () => {
       demotion: 2,
       "management-interview-round-1": 4,
     });
-    // resignation-exit is 4 since its Steps to Finish Termination dropped the sibling-company system names (QA, 25 Oct 2026).
+    // resignation-exit is 4 since its Steps to Finish Termination dropped MyGlow and the tanning clause (QA, 25 Oct 2026).
     for (const key of ["coaching", "dpoa", "policy-review", "follow-up-coaching", "position-transfer", "prescreen-phone-interview", "resignation-exit", "tanning-consultant-interview", "management-interview-round-2"]) {
       expect(seed(key).revision, key).toBe(({ coaching: 2, dpoa: 6, "policy-review": 2, "follow-up-coaching": 2, "position-transfer": 1, "prescreen-phone-interview": 3, "resignation-exit": 4, "tanning-consultant-interview": 3, "management-interview-round-2": 3 } as Record<string, number>)[key]);
     }

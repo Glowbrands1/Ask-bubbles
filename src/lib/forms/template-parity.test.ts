@@ -114,15 +114,15 @@ const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[]
   { decision: "DM-2 — Corrective Action closing, \"may result in\"", from: CA_ACTION_PLAN_CLOSING_REVISION_5, to: CA_ACTION_PLAN_CLOSING },
   { decision: "DM-3 — Corrective Action revision 6 note", from: DPOA_NOTE_REVISION_5, to: DPOA_NOTE_REVISION_5.replace(" Forms filed against earlier versions", ` ${DPOA_REVISION_6} Forms filed against earlier versions`) },
   /*
-   * QA, 25 Oct 2026: nothing a Buff City Soap manager reads names the sibling
-   * company's systems or product. Buff City Soap's own system names are not
-   * known yet, so the exit steps name the system neutrally (exit form
-   * revision 4), and the FTTC EPP's description — printed on the chooser's
-   * cards — repeats the plan's own name instead of the tanning role. See
-   * `exit-sibling-wording.test.ts`.
+   * QA, 25 Oct 2026 (Pau's answers): MyGlow is not confirmed for Buff City
+   * Soap, so the exit step names "the scheduling/HR system"
+   * (`config/company/forms/exit-systems.ts`); Sunlync is confirmed and stays,
+   * without the tanning clause (exit form revision 4). The FTTC EPP's
+   * description — printed on the chooser's cards — repeats the plan's own
+   * name instead of the tanning role. See `exit-sibling-wording.test.ts`.
    */
-  { decision: "QA-1 — exit step, scheduling/HR system", from: "Upload Exit Form to employee’s personal file and remove employee from MyGlow.", to: "Upload Exit Form to employee’s personal file and remove the employee from the scheduling/HR system." },
-  { decision: "QA-2 — exit step, note on the employee's account", from: "Place comment on employee’s Sunlync account stating they are no longer employed, verify tanning has been removed.", to: "Add a note to the employee’s account stating they are no longer employed." },
+  { decision: "QA-1 — exit step, MyGlow not confirmed", from: "Upload Exit Form to employee’s personal file and remove employee from MyGlow.", to: "Upload Exit Form to employee’s personal file and remove employee from the scheduling/HR system." },
+  { decision: "QA-2 — exit step, tanning clause removed (Sunlync kept)", from: "Place comment on employee’s Sunlync account stating they are no longer employed, verify tanning has been removed.", to: "Place comment on employee’s Sunlync account stating they are no longer employed." },
   { decision: "QA-3 — FTTC EPP description", from: "Performance plan for a full-time Tanning Consultant.", to: "The FTTC Employee Performance Plan." },
 ];
 

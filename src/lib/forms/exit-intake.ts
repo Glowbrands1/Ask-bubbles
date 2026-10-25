@@ -1,3 +1,4 @@
+import { EXIT_ACCOUNT_SYSTEM, EXIT_EMPLOYEE_SYSTEM } from "@/config/company/forms/exit-systems";
 import { locationById as salonById } from "@/lib/locations";
 import type { ChatFormProposal } from "@/types";
 
@@ -39,9 +40,9 @@ import {
  *   decided by Bubbles.
  *
  * WHAT IS NEVER SAID. That the form is signed, filed or complete; that anybody
- * has been removed from the scheduling/HR system or any other system, taken off
- * payroll or had a note put on their account. Creating a draft does none of
- * that, and the closing line says so.
+ * has been removed from the scheduling/HR system, taken off payroll or had
+ * their Sunlync account changed. Creating a draft does none of that, and the
+ * closing line says so.
  *
  * The Details paragraph is drafted by the model after the form is created, so
  * it is described here as what it will be — never quoted.
@@ -82,8 +83,7 @@ function list(items: string[]): string {
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
-export const EXIT_DOES_NOT_ACT =
-  "Creating the draft doesn't sign anything, remove anyone from any system, change payroll or add a note to anyone's account — the Steps to Finish Termination stay on the form for you to do once it's complete.";
+export const EXIT_DOES_NOT_ACT = `Creating the draft doesn't sign anything, remove anyone from ${EXIT_EMPLOYEE_SYSTEM}, change payroll or update ${EXIT_ACCOUNT_SYSTEM} — the Steps to Finish Termination stay on the form for you to do once it's complete.`;
 
 /** The opening intake, for a manager who has only named the form. */
 export function exitIntakeRequest(formName: string): string {

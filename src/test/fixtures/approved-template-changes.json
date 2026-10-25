@@ -1,5 +1,5 @@
 {
- "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description, Salon -> Store terminology, and client/customer -> guest terminology approved 2026-10-19 for SD-2, TS-5, TI-4, TI-5, M1-6 and X-1). Phase 2A wording changes approved 2026-10-19 (D3 7G Service, D4 Employee Performance Plan acknowledgement, D12 demotion example placeholder, D18 Makery cleaning scenario) are listed here and allow-listed by exact text in the parity test. The prescreen's Sun Tan City uniform/product-use question was REMOVED (D14, Option A, approved 2026-10-19): the removal is declared in src/test/approved-removals.ts, which deletes exactly that block from the Ask Sunny snapshot before comparison, and the description change is listed here. The Corrective Action Form's revision 6 (District Manager feedback approved 2026-10-21: the Action Plan's help text, its closing \"may result in\", and the revision note) is listed here and allow-listed by exact text in the parity test. QA, 25 Oct 2026 (no sibling-company system names or product in what a Buff City Soap manager reads): the exit form's two system steps (QA-1, QA-2) and the FTTC EPP's chooser description (QA-3) are listed here and allow-listed by exact text in the parity test. Anything not listed here fails template-parity.test.ts.",
+ "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description, Salon -> Store terminology, and client/customer -> guest terminology approved 2026-10-19 for SD-2, TS-5, TI-4, TI-5, M1-6 and X-1). Phase 2A wording changes approved 2026-10-19 (D3 7G Service, D4 Employee Performance Plan acknowledgement, D12 demotion example placeholder, D18 Makery cleaning scenario) are listed here and allow-listed by exact text in the parity test. The prescreen's Sun Tan City uniform/product-use question was REMOVED (D14, Option A, approved 2026-10-19): the removal is declared in src/test/approved-removals.ts, which deletes exactly that block from the Ask Sunny snapshot before comparison, and the description change is listed here. The Corrective Action Form's revision 6 (District Manager feedback approved 2026-10-21: the Action Plan's help text, its closing \"may result in\", and the revision note) is listed here and allow-listed by exact text in the parity test. QA, 25 Oct 2026 (no sibling-company product or unconfirmed system names in what a Buff City Soap manager reads): the exit form's MyGlow step, now \"the scheduling/HR system\" (QA-1), the Sunlync step without its tanning clause (QA-2; Sunlync is confirmed) and the FTTC EPP's chooser description (QA-3) are listed here and allow-listed by exact text in the parity test. Anything not listed here fails template-parity.test.ts.",
  "changes": [
   {
    "sourceKey": "coaching",
@@ -625,13 +625,13 @@
    "sourceKey": "stc-exit",
    "path": ".document.blocks[28].text",
    "from": "Upload Exit Form to employee’s personal file and remove employee from MyGlow.",
-   "to": "Upload Exit Form to employee’s personal file and remove the employee from the scheduling/HR system."
+   "to": "Upload Exit Form to employee’s personal file and remove employee from the scheduling/HR system."
   },
   {
    "sourceKey": "stc-exit",
    "path": ".document.blocks[30].text",
    "from": "Place comment on employee’s Sunlync account stating they are no longer employed, verify tanning has been removed.",
-   "to": "Add a note to the employee’s account stating they are no longer employed."
+   "to": "Place comment on employee’s Sunlync account stating they are no longer employed."
   },
   {
    "sourceKey": "demotion",

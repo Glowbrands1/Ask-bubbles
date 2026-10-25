@@ -322,8 +322,8 @@ describe("what Ask Bubbles says beside the proposal", () => {
     expect(content).toMatch(/\*\*Left blank for you to review:\*\* Store, Permanent Address, Date that notice was fulfilled, written notice attached and all three signature lines\./);
     expect(content).not.toMatch(/\?\n/); // no question asked
     expect(content).not.toMatch(/Before you create it/);
-    // No sibling-company system names (QA, 25 Oct 2026): "any system", not "MyGlow".
-    expect(content).toMatch(/doesn't sign anything, remove anyone from any system, change payroll/);
+    // MyGlow is not confirmed for Buff City Soap, so the line names "the scheduling/HR system"; Sunlync is (QA, 25 Oct 2026).
+    expect(content).toMatch(/doesn't sign anything, remove anyone from the scheduling\/HR system, change payroll or update Sunlync/);
   });
 
   it("reads the facts across the manager's turns, and never from Bubbles'", async () => {

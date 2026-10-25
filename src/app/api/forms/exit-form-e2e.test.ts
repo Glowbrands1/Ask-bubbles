@@ -428,9 +428,9 @@ describe("the Details section HR asked for", () => {
       "By signing this form, I confirm that I understand the information in this resignation/exit form.",
     );
     expect(text).toContain("Steps to Finish Termination");
-    // The step's neutral wording since revision 4 (QA, 25 Oct 2026: no sibling-company system names).
-    expect(text).toContain("Add a note to the employee's account");
-    expect(text).not.toMatch(/MyGlow|Sunlync|tanning/i);
+    expect(text).toContain("Place comment on employee's Sunlync account stating they are no longer employed.");
+    // Revision 4 (QA, 25 Oct 2026): no tanning clause, and MyGlow (not confirmed for Buff City Soap) is not printed.
+    expect(text).not.toMatch(/MyGlow|tanning/i);
   });
 
   it("lists what is missing without asking, then a correction updates the same form in place", async () => {
