@@ -425,3 +425,32 @@ describe("B9: a coaching the manager held on the first shift is a prior action",
     expect(priors(replies[1]!)).toBeNull();
   });
 });
+
+/*
+ * QA's B-list, measured on main before round 2 (edits-dates agent): the same
+ * B4 and G11 turns from earlier runs, conv_mvi98yvkfuehzye and
+ * conv_mvlb6ils11qqyexg (the manager's words; the employee is "Test
+ * Employee"), with REMAP_INCIDENT_FIX + PRIOR_ACTIONS_PARSE on, and with
+ * MANAGER_WORDS_ONLY on too.
+ */
+describe.each([[[] as string[]], [["MANAGER_WORDS_ONLY_ENABLED"]]])("QA B-list, also on: %j", (also) => {
+  beforeEach(() => {
+    for (const flag of also) vi.stubEnv(flag, "true");
+  });
+
+  it("B4 conv_mvi98yvkfuehzye: the prior is never What happened, and the register-shortage CA has only its own prior", async () => {
+    const [first, second, third] = await replay(B4);
+    for (const reply of [first!, second!]) {
+      expect(whatHappened(reply)).toBe("violating attendance policy");
+      expect(priors(reply)).toBe("Coaching — JBA Policy Manual — 01/01/2026");
+    }
+    expect(whatHappened(third!)).toBe("register shortage");
+    expect(priors(third!)).toBe("Coaching — JBA Policy Manual — 01/20/2026");
+  });
+
+  it("G11 conv_mvlb6ils11qqyexg: What happened is the late open, never \"team member at bellevue\"", async () => {
+    const [reply] = await replay([G11]);
+    expect(whatHappened(reply!)).toBe("late open");
+    expect(priors(reply!)).toBe("Coaching — JBA Policy Manual — 01/01/1995; Verbal corrective action — 10/05/2026");
+  });
+});
