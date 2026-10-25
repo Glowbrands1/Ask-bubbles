@@ -375,6 +375,16 @@ export function managerWordsOnlyEnabled(): boolean {
 }
 
 /**
+ * One draft per form in a conversation. A new card for the same form and
+ * employee in the same chat opens the draft this chat already made, unless a
+ * manager turn since that draft asked for another document. Off, every new
+ * card creates as it does today.
+ */
+export function conversationDraftReuseEnabled(): boolean {
+  return envFlag("CONVERSATION_DRAFT_REUSE_ENABLED");
+}
+
+/**
  * Keep other conversations out of the reply text. The person-memory recall
  * quotes another chat only when the manager refers back to it ("again", "last
  * time", "like before", "same as …"); a name read from a turn that is only
@@ -429,5 +439,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
   "NOT_A_NAME_GUARD_ENABLED",
   "MANAGER_WORDS_ONLY_ENABLED",
+  "CONVERSATION_DRAFT_REUSE_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
 ] as const;
