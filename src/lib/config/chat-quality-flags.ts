@@ -517,6 +517,32 @@ export function titleWholeWordEnabled(): boolean {
   return envFlag("TITLE_WHOLE_WORD_ENABLED");
 }
 
+/**
+ * A form request that mentions earlier coaching is still a form request.
+ * "do verbal corrective action for Test Employee, … previous coaching jba
+ * manual 9-9-26 …" (conv_mvnu3j932gpohx4, 25 Oct 2026) read as a question
+ * about forms on file ("previous coaching"), so it never reached the form
+ * path and the answer model replied that it could not write a facsimile of a
+ * Corrective Action. On, a sentence that opens with a level request ("do
+ * verbal …", "write a written warning …") asks for a new form. Off, the
+ * forms-on-file reading is unchanged.
+ */
+export function formRequestOverOnFileEnabled(): boolean {
+  return envFlag("FORM_REQUEST_OVER_ON_FILE_ENABLED");
+}
+
+/**
+ * The store the newest manager turn names is the card's store, whichever turn
+ * that is, on the intent reading (the full remap already reads turns newest
+ * first with PLACE_SPAN_GUARD_ENABLED). "change store location to bellevue,
+ * ne" then 'create a Corrective Action Form for Test Employee"' kept the
+ * first store (conv_mvnu3j932gpohx4, 25 Oct 2026). Off, only this turn's
+ * labelled store wins and the store is grounded as before.
+ */
+export function newestPlaceTurnEnabled(): boolean {
+  return envFlag("NEWEST_PLACE_TURN_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -569,4 +595,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
   "KEEP_FORM_EMPLOYEE_ENABLED",
   "TITLE_WHOLE_WORD_ENABLED",
+  "FORM_REQUEST_OVER_ON_FILE_ENABLED",
+  "NEWEST_PLACE_TURN_ENABLED",
 ] as const;
