@@ -545,7 +545,7 @@ export function titleWholeWordEnabled(): boolean {
  * is empty after every post-processor, and which carries no form card, choice
  * or update, is returned as an honest failure instead ("Bubbles could not
  * produce an answer…"), so the thread shows an error card and the turn is
- * closed as failed. Ported from Ask Sunny. Off, the answer is returned as it is.
+ * closed as failed. Ported from the sibling app. Off, the answer is returned as it is.
  */
 export function emptyReplyGuardEnabled(): boolean {
   return envFlag("EMPTY_REPLY_GUARD_ENABLED");
