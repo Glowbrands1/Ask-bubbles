@@ -13,6 +13,7 @@ import { payrollDeductAmount, payrollDeductFromConversation } from "@/lib/forms/
 import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
 import { extractEmployeeNames, extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
 import { spokenDates } from "@/lib/forms/relative-date";
+import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 import { managerStatedWarningLevel, warningLevelFromTurns } from "@/lib/forms/warning-level";
 import type { ChatFormProposal } from "@/types";
 
@@ -390,6 +391,16 @@ function groundedName(proposed: string | null, turns: readonly string[], saved: 
   // NOT_A_NAME_GUARD_ENABLED: "blank", a product, a store's city or a verb
   // phrase is not the employee, even when the manager typed those words.
   if (proposed && isNotAName(proposed)) proposed = null;
+  /*
+   * KEEP_FORM_EMPLOYEE_ENABLED (ported from the sibling app, QA 25 Oct 2026):
+   * "for Test Employee" names Test Employee. The model's "Test" is a slice of
+   * the manager's words, so it was kept and the card said "Test". The name
+   * as typed stands in for a shorter spelling of it, or for no name.
+   */
+  const typed = keep ? typedEmployeeName(turns.at(-1) ?? "") : null;
+  if (typed && (!proposed || typed.toLowerCase().startsWith(`${proposed.trim().toLowerCase()} `))) {
+    return fullerOfSame(saved, typed);
+  }
   if (proposed) {
     const inLatest = exactSlice(latest, proposed);
     if (inLatest) return keep ? fullerOfSame(saved, inLatest) : inLatest;
