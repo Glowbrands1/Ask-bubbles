@@ -337,7 +337,7 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
 }
 
 /**
- * A late opening, read as one (QA, 24 Oct 2026; ported from Ask Sunny).
+ * A late opening, read as one (QA, 24 Oct 2026; ported from the sibling app).
  * "late to open 10-19" is the manual's Late Opening section and is dated 19
  * October: a yearless dashed month-day after a date cue is a date (the most
  * recent one, never a future day), the newest date the manager states dates

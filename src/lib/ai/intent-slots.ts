@@ -148,7 +148,7 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
   const title = groundTitle(reading?.title ?? null, blob, input.people, employee.person);
   const incidentType = groundIncident(reading?.incidentType ?? null, blob, input.headings);
   /*
-   * LATE_OPEN_DATE_ENABLED (QA, 24 Oct 2026; ported from Ask Sunny): "late
+   * LATE_OPEN_DATE_ENABLED (QA, 24 Oct 2026; ported from the sibling app): "late
    * to open 10-19" and "change the date to 10-22" are dates, and the one this
    * turn states dates the form ahead of the saved one. See `late-open.ts`.
    */

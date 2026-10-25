@@ -23,7 +23,7 @@ import { listIncidentDates } from "./form-date-answer";
  * Used by the callers only (`intent-slots.ts`, `intake-augment.ts`,
  * `form-full-remap.ts`, `official-policy-manual.ts`, `ca-policy.ts`), behind
  * LATE_OPEN_DATE_ENABLED. The protected date and payroll readers are not
- * changed. Pure and browser-safe. Ported from Ask Sunny.
+ * changed. Pure and browser-safe. Ported from the sibling app.
  */
 
 /** "late to open", "was late to open the store". */

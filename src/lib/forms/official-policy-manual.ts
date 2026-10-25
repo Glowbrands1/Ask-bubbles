@@ -910,7 +910,7 @@ const LATE_OPENING = "Late Opening";
 /**
  * "late to open" and "opened late" describe the Late Opening section under
  * the Tardiness box too, with LATE_OPEN_DATE_ENABLED (QA, 24 Oct 2026;
- * ported from Ask Sunny). See `late-open.ts`.
+ * ported from the sibling app). See `late-open.ts`.
  */
 function describesRule(rule: (typeof DESCRIBED_SECTIONS)[number], notes: string): boolean {
   if (rule.describes.test(notes)) return true;
@@ -935,7 +935,7 @@ function describesLateOpening(notes: string): boolean {
  * late open policy pg.15". When the account is a late opening and nothing
  * else the Attendance section governs (a late shift, an absence), Attendance
  * is dropped — only once Late Opening itself was found, so a manual without
- * that section still cites one. Ported from Ask Sunny.
+ * that section still cites one. Ported from the sibling app.
  */
 export function withoutAttendanceForLateOpening<T extends { readonly heading: string }>(
   sections: readonly T[],
