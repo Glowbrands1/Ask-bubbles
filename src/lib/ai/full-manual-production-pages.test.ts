@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import manual151 from "@/test/fixtures/jba-manual-production-151.json";
 import live from "@/test/fixtures/bubbles-live-policy-answers-oct24.json";
+import liveB2 from "@/test/fixtures/bubbles-live-policy-answers-oct24-b2.json";
 import { manualChunkFromRow, type ManualChunkRow } from "@/lib/knowledge/full-manual-load";
 
 import { citePolicyAnswer, planFullManualContext, type FullManualDocument } from "./full-manual-context";
@@ -229,4 +230,64 @@ describe("live replies against the whole manual", () => {
     for (const source of cited.sources) expect(allowed).toContain(source.printedPage);
     expect(pagesIn(cited.text).has(allowed[0])).toBe(true);
   });
+});
+
+/**
+ * QA P0, 24 Oct 2026 (live round B2, conv_mvmzil682z73liv): "It's the
+ * employee's responsibility to protect the guest experience — texting, phone
+ * calls, or social media use while working jeopardizes that" was cited on
+ * pages 9, 14, 26, 31 and 48, each a Sources row. "the employee's
+ * responsibility to" is printed on all of them; the page this restates is
+ * the Cell Phone/Smart Watch Policy on 19 ("It is the Employee's personal
+ * responsibility to protect the client's experience … texting … social media
+ * … jeopardizes"). A phrase printed on three or more pages says nothing about
+ * which page a sentence restates.
+ */
+describe("boilerplate phrases cite no page (QA P0, live round B2)", () => {
+  const b2 = (conversationId: string) => {
+    const found = liveB2.answers.find((answer) => answer.conversationId === conversationId);
+    if (!found) throw new Error(`missing live reply ${conversationId}`);
+    return found;
+  };
+  const SENTENCE =
+    "It's the employee's responsibility to protect the guest experience — texting, phone calls, or social media use while working jeopardizes that.";
+
+  it("the cell-phone sentence cites page 19 only", () => {
+    const plan = planFullManualContext({ question: CELL_PHONE, documents: [productionManual()] });
+    const cited = citePolicyAnswer(SENTENCE, plan);
+    expect(pagesIn(cited.text)).toEqual(new Set([19]));
+    expect(cited.sources.every((source) => source.printedPage === 19)).toBe(true);
+  }, 20_000);
+
+  it("the whole B2 cell-phone reply cites page 19 only, with the same words and lines", () => {
+    const found = b2("conv_mvmzil682z73liv");
+    const cited = citePolicyAnswer(found.content, planFullManualContext({ question: found.question, documents: [productionManual()] }));
+    expectSameWordsAndLines(found.content, cited.text);
+    expect(pagesIn(cited.text)).toEqual(new Set([19]));
+    expect(pagesIn(lineWith(cited.text, "protect the guest experience"))).toEqual(new Set([19]));
+    expect(cited.sources.every((source) => source.printedPage === 19)).toBe(true);
+  }, 20_000);
+
+  it("no sentence of the B2 dress-code and PTO replies carries more than two pages", () => {
+    for (const conversationId of ["conv_mvmzj1sr2u4yqex", "conv_mvmzj2142hdb365"]) {
+      const found = b2(conversationId);
+      const cited = citePolicyAnswer(found.content, planFullManualContext({ question: found.question, documents: [productionManual()] }));
+      expectSameWordsAndLines(found.content, cited.text);
+      for (const line of cited.text.split("\n")) {
+        for (const sentence of line.split(/(?<=[.!?])\s+/)) expect(pagesIn(sentence).size, sentence).toBeLessThanOrEqual(2);
+      }
+    }
+  }, 20_000);
+
+  it("the B2 dress-code reply cites the dress code on 15, 16 and 17 only", () => {
+    const found = b2("conv_mvmzj1sr2u4yqex");
+    const cited = citePolicyAnswer(found.content, planFullManualContext({ question: found.question, documents: [productionManual()] }));
+    for (const page of pagesIn(cited.text)) expect([15, 16, 17]).toContain(page);
+  }, 20_000);
+
+  it("the B2 PTO reply cites PTO on 41 and 42 only", () => {
+    const found = b2("conv_mvmzj2142hdb365");
+    const cited = citePolicyAnswer(found.content, planFullManualContext({ question: found.question, documents: [productionManual()] }));
+    for (const page of pagesIn(cited.text)) expect([41, 42]).toContain(page);
+  }, 20_000);
 });
