@@ -326,6 +326,20 @@ export function fullManualContextEnabled(): boolean {
 }
 
 /**
+ * The warning level kept for a Corrective Action is only one the manager
+ * stated: read from their own turns, never from Ask Bubbles' ("the warning
+ * level, verbal or written" is not a level), never from the slot model's
+ * guess, and a bare "Yes" only where the assistant turn just before it asked
+ * one yes/no question about that exact level. A bare Yes/No right after "Is
+ * payroll deduct applicable?" is kept as the payroll answer before the stored
+ * slots are put ahead of it. Off, the intent reading grounds both as it does
+ * today. Ported from the sibling app.
+ */
+export function warningLevelManagerOnlyEnabled(): boolean {
+  return envFlag("WARNING_LEVEL_MANAGER_ONLY_ENABLED");
+}
+
+/**
  * The intent read takes a payroll amount and the Yes/No only from the
  * manager's own turns. A figure the assistant quoted from policy ("reimburse
  * the company $25 via payroll deduction") is not an amount, and "verbal, no
@@ -387,6 +401,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PROMPT_CACHE_ENABLED",
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
+  "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
 ] as const;
