@@ -724,9 +724,30 @@ const CONTRACTIONS: readonly [RegExp, string][] = [
   [/\b(is|are|was|were|do|does|did|has|have|had|should|would|could|must)n't\b/g, "$1 not"],
 ];
 
+/*
+ * "Nov 1" is the manual's "November 1" (QA B-list, 25 Oct 2026: the
+ * peak-season bullet cited nothing because the answer shortened the months).
+ * Only before a day number, so "may" and "dec" elsewhere are left alone.
+ */
+const MONTHS: Record<string, string> = {
+  jan: "january",
+  feb: "february",
+  mar: "march",
+  apr: "april",
+  jun: "june",
+  jul: "july",
+  aug: "august",
+  sep: "september",
+  oct: "october",
+  nov: "november",
+  dec: "december",
+};
+const SHORT_MONTH = /\b(jan|feb|mar|apr|jun|jul|aug|sept?|oct|nov|dec)\.?\s+(?=\d)/g;
+
 function wordsOf(text: string): string {
   let folded = text.toLowerCase().replace(/[’‘`´]/g, "'");
   for (const [pattern, replacement] of CONTRACTIONS) folded = folded.replace(pattern, replacement);
+  folded = folded.replace(SHORT_MONTH, (_whole, month: string) => `${MONTHS[month.slice(0, 3)]} `);
   return folded
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ")
@@ -748,6 +769,11 @@ function mentionsHeading(answer: string, heading: string): boolean {
   return words.some((word) => word.length >= 6 && !HEADING_STOP.has(word) && hay.includes(` ${word} `));
 }
 
+/** The distinct words of five letters or more that say something. */
+function distinctiveCount(text: string): number {
+  return new Set(wordsOf(text).split(" ").filter((word) => word.length >= 5 && !OVERLAP_STOP.has(word))).size;
+}
+
 function overlapScore(answer: string, passage: string): number {
   const hay = new Set(wordsOf(answer).split(" ").filter((word) => word.length >= 5 && !OVERLAP_STOP.has(word)));
   const seen = new Set<string>();
@@ -760,8 +786,17 @@ function overlapScore(answer: string, passage: string): number {
   return score;
 }
 
+/*
+ * A sentence's first word is not a heading (QA B-list, 25 Oct 2026: "Anyone
+ * violating their Brand's Dress code policy…" gave the source "Page 15 —
+ * Anyone").
+ */
+const FRAGMENT_HEADING = /^(?:anyone|everyone|someone|no one|employees?|all|each|any|every|none|this|these|those|they|you|we|it)$/i;
+
 function namedHeadings(passage: ManualPassage, answer: string): string[] {
-  const names = [passage.heading, ...passage.knownHeadings].filter((heading): heading is string => Boolean(heading));
+  const names = [passage.heading, ...passage.knownHeadings].filter(
+    (heading): heading is string => Boolean(heading) && !FRAGMENT_HEADING.test(heading!.trim()),
+  );
   const unique: string[] = [];
   for (const heading of names) {
     if (!mentionsHeading(answer, heading)) continue;
@@ -951,7 +986,14 @@ function confirmedModelPages(
         bestScore = score;
       }
     }
-    if (best && bestScore >= 4) kept.push(best);
+    /*
+     * Four shared words must also be a real share of what the sentence says
+     * (QA B-list, 25 Oct 2026: "…no payroll deduct, and the prior coaching
+     * reference [p.36]" kept Time Records on "scheduled", "minutes",
+     * "employee" and "payroll" out of eighteen words; a manager's note is not
+     * a page).
+     */
+    if (best && bestScore >= 4 && bestScore >= 0.4 * distinctiveCount(text)) kept.push(best);
   }
   return kept;
 }
@@ -967,7 +1009,8 @@ function closestPassage(text: string, passages: readonly ManualPassage[]): Manua
   let bestScore = 0;
   for (const passage of passages) {
     const score = overlapScore(text, passage.text);
-    if (score < 5 || score < bestScore) continue;
+    // The same share rule as a model page: five words out of a long sentence about something else is not the section.
+    if (score < 5 || score < 0.4 * distinctiveCount(text) || score < bestScore) continue;
     if (score > bestScore) {
       bestScore = score;
       best = [];
@@ -977,14 +1020,28 @@ function closestPassage(text: string, passages: readonly ManualPassage[]): Manua
   return new Set(best.map((passage) => passage.printedPage)).size === 1 ? best.slice(0, 1) : [];
 }
 
-const PRINTED_MARKER = /[^\S\n]*\[p\.(\d{1,3})\]/gi;
+/*
+ * "[p.16-17]" and "[pp.16–17]" are markers too (QA B-list, 25 Oct 2026: a
+ * range was kept beside the page the sentence restates, "[p.16-17] [p.16]").
+ * They are taken off like any other marker; the pages they name count as the
+ * model's pages.
+ */
+const PRINTED_MARKER = /[^\S\n]*\[pp?\.\s*(\d{1,3})(?:\s*[-–]\s*(\d{1,3}))?\]/gi;
+
+/** The pages a marker names: one page, or each page of a short range. */
+function markerPages(match: RegExpMatchArray): number[] {
+  const from = Number(match[1]);
+  const to = match[2] ? Number(match[2]) : from;
+  if (to < from || to - from > 5) return [from];
+  return Array.from({ length: to - from + 1 }, (_unused, offset) => from + offset);
+}
 
 /** "expense[p.15]and" keeps a space between the two words. */
 function withoutPrintedMarkers(text: string): string {
-  const bare = text.replace(/[^\S\n]*\[p\.\d{1,3}\]/gi, (full, offset: number, whole: string) =>
+  const bare = text.replace(/[^\S\n]*\[pp?\.\s*\d{1,3}(?:\s*[-–]\s*\d{1,3})?\]/gi, (full, offset: number, whole: string) =>
     /^[\p{L}\p{N}]/u.test(whole.slice(offset + full.length)) && offset > 0 ? " " : "",
   );
-  return /^[^\S\n]*\[p\.\d{1,3}\]/i.test(text) ? bare.trimStart() : bare;
+  return /^[^\S\n]*\[pp?\.\s*\d{1,3}(?:\s*[-–]\s*\d{1,3})?\]/i.test(text) ? bare.trimStart() : bare;
 }
 
 /**
@@ -1040,7 +1097,8 @@ export function citePolicyAnswer(
   const addHit = (passage: ManualPassage, text: string) => {
     const score = restatedPhraseLength(text, passage.text, phrasePagesOf(plan.passages)) * 10 + overlapScore(text, passage.text);
     const names = namedHeadings(passage, text);
-    for (const heading of names.length > 0 ? names : [passage.heading]) {
+    const own = passage.heading && !FRAGMENT_HEADING.test(passage.heading.trim()) ? passage.heading : null;
+    for (const heading of names.length > 0 ? names : [own]) {
       const key = `${passage.documentId}:${passage.printedPage}:${normalizeHeading(heading ?? "")}`;
       const existing = hits.findIndex(
         (hit) => `${hit.passage.documentId}:${hit.passage.printedPage}:${normalizeHeading(hit.heading ?? "")}` === key,
@@ -1062,7 +1120,7 @@ export function citePolicyAnswer(
     .map((line) =>
       stretchesOf(line)
         .map(({ text, gap }) => {
-          const written = [...text.matchAll(PRINTED_MARKER)].map((match) => Number(match[1]));
+          const written = [...text.matchAll(PRINTED_MARKER)].flatMap(markerPages);
           const bare = withoutPrintedMarkers(text);
           // A stretch that was only markers ("till [p.19]. [p.20]") leaves nothing, not a gap.
           if (!bare.trim()) return text.trim() ? "" : `${text}${gap}`;

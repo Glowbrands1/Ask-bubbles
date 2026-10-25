@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import manual151 from "@/test/fixtures/jba-manual-production-151.json";
 import live from "@/test/fixtures/bubbles-live-policy-answers-oct24.json";
 import liveB2 from "@/test/fixtures/bubbles-live-policy-answers-oct24-b2.json";
+import liveStep3 from "@/test/fixtures/bubbles-live-policy-answers-oct24-step3.json";
 import { manualChunkFromRow, type ManualChunkRow } from "@/lib/knowledge/full-manual-load";
 
 import { citePolicyAnswer, planFullManualContext, type FullManualDocument } from "./full-manual-context";
@@ -289,5 +290,60 @@ describe("boilerplate phrases cite no page (QA P0, live round B2)", () => {
     const found = b2("conv_mvmzj2142hdb365");
     const cited = citePolicyAnswer(found.content, planFullManualContext({ question: found.question, documents: [productionManual()] }));
     for (const page of pagesIn(cited.text)) expect([41, 42]).toContain(page);
+  }, 20_000);
+});
+
+/**
+ * QA B-list, 25 Oct 2026 (live step 3 and round B2, FULL_MANUAL_CONTEXT on):
+ *   - "[p.16-17] [p.16]": the model's range marker was kept beside the page
+ *     the sentence restates.
+ *   - "Page 15 — Anyone": a sentence's first word was used as the heading.
+ *   - "the prior coaching reference [p.36]" kept Time Records because the
+ *     sentence shared four ordinary words with that page; a manager's note
+ *     is not a page.
+ *   - The peak-season bullet ("Buff City Soap Nov 1 and Dec 31") cited
+ *     nothing: the manual spells the months out.
+ */
+describe("QA B-list: ranges, heading fragments, loose model pages, month names", () => {
+  const step3 = (conversationId: string) => {
+    const found = liveStep3.answers.find((answer) => answer.conversationId === conversationId);
+    if (!found) throw new Error(`missing live reply ${conversationId}`);
+    return found;
+  };
+  const planFor = (question: string) => planFullManualContext({ question, documents: [productionManual()] });
+
+  it("a range marker is a marker: the shirt bullet cites each page once, and the dress-code note is not labelled 'Anyone'", () => {
+    const found = step3("conv_mvmzl40e2dxpgej");
+    const cited = citePolicyAnswer(found.content, planFor(DRESS_CODE));
+    expectSameWordsAndLines(found.content.replace(/\[p\.\d+-\d+\]/g, ""), cited.text);
+    expect(cited.text).not.toMatch(/\[p\.\d+-\d+\]/);
+    const shirts = lineWith(cited.text, "Buff City Soap shirts");
+    expect(shirts.match(/\[p\.16\]/g)?.length ?? 0).toBeLessThanOrEqual(1);
+    for (const page of pagesIn(shirts)) expect([16, 17]).toContain(page);
+    expect(pagesIn(lineWith(cited.text, "Anyone violating"))).toEqual(new Set([15]));
+    expect(cited.sources.map((source) => source.locator)).not.toContain("Page 15 — Anyone");
+  }, 20_000);
+
+  /*
+   * Live, this reply came from the retrieval fallback (no sentence restated
+   * the manual, so server-ask asked again with ordinary retrieval and the
+   * model cited the Time Records chunk). The manual pass itself must not
+   * find a page for it: five shared words out of seventeen ("scheduled",
+   * "minutes", "employee", "payroll", …) are not the section.
+   */
+  it("a manager's prior-coaching note restates no page of the manual", () => {
+    const found = step3("conv_mvmznap42vcw0dl");
+    const plan = planFor(found.question);
+    const cited = citePolicyAnswer(found.content.replace(/ \[p\.36\]/, ""), plan);
+    expect(pagesIn(lineWith(cited.text, "the prior coaching reference")).size).toBe(0);
+    expect(cited.sources.map((source) => source.locator)).not.toContain("Page 36 — Time Records");
+    // With the model's own [p.36], the page is still not confirmed.
+    expect(citePolicyAnswer(found.content, plan).sources.map((source) => source.printedPage)).not.toContain(36);
+  }, 20_000);
+
+  it('"Nov 1 and Dec 31" is the manual\'s "November 1 and December 31": the peak-season bullet cites p.42', () => {
+    const found = liveB2.answers.find((answer) => answer.conversationId === "conv_mvmzj2142hdb365")!;
+    const cited = citePolicyAnswer(found.content, planFor(found.question));
+    expect(pagesIn(lineWith(cited.text, "peak season"))).toEqual(new Set([42]));
   }, 20_000);
 });
