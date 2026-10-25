@@ -14,6 +14,7 @@ import { promptCacheEnabled } from "@/lib/config/chat-quality-flags";
 import { CROSS_CHAT_REPLY_RULE } from "@/lib/chat/cross-chat-guard";
 import { CHAT_STYLE_RULES } from "./chat-style-rules";
 import { PRIOR_COACHING_OPTIONAL_RULES } from "./prior-coaching-optional";
+import { RETRIEVED_NOT_SHARED_NOTE, RETRIEVED_NOT_SHARED_RULE } from "./sources-not-shared";
 import type { AskContext, OpenFormSummary } from "./types";
 
 /**
@@ -513,6 +514,7 @@ RULES YOU DO NOT BREAK
 - Never use a marker for a source that is not listed below. Only the markers listed are valid.
 - Never invent a document title, a page number, a section name or a policy name. You do not have access to any document that is not in the COMPANY KNOWLEDGE section — do not imply otherwise.
 - Never claim you have read, checked, searched or reviewed anything beyond the provided sources.
+${RETRIEVED_NOT_SHARED_RULE}
 ${nameRule}${citationRule}${printedPageSection}
 ${reportFigureRule}
 - Never give medical, allergy or safety assurances about a product beyond what the provided sources say. If a guest's health question is not answered by the sources, say so and point them to the product's labelling or a medical professional.
@@ -547,6 +549,7 @@ RULES YOU DO NOT BREAK
 - Never use a marker for a source that is not listed below. Only the markers listed are valid.
 - Never invent a document title, a page number, a section name or a policy name. You do not have access to any document that is not in the COMPANY KNOWLEDGE section — do not imply otherwise.
 - Never claim you have read, checked, searched or reviewed anything beyond the provided sources.
+${RETRIEVED_NOT_SHARED_RULE}
 ${nameRule}${citationRule}${printedPageSection}
 - Never give medical, allergy or safety assurances about a product beyond what the provided sources say. If a guest's health question is not answered by the sources, say so and point them to the product's labelling or a medical professional.
 - A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.
@@ -682,6 +685,8 @@ export function buildGroundingBlock(chunks: GroundingChunk[]): string {
     .join("\n\n---\n\n");
 
   return `COMPANY KNOWLEDGE
+
+${RETRIEVED_NOT_SHARED_NOTE}
 
 The following excerpts are the only company documents available for this question. Valid markers are ${chunks
     .map((chunk) => `[S${chunk.marker}]`)
