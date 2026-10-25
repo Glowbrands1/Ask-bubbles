@@ -45,6 +45,7 @@ import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/documen
 import { businessToday } from "@/lib/business-date";
 import {
   crossChatDraftDedupeEnabled,
+  draftActionsEnabled,
   draftDedupeEnabled,
   payrollDeductAmountFieldEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -56,6 +57,7 @@ import {
   rememberDraftIncident,
 } from "@/lib/forms/draft-reopen";
 import { historyWantsSeparateDocument } from "@/lib/ai/second-form";
+import { historySaysDifferentIncident } from "@/lib/forms/draft-actions";
 import type { Permission } from "@/types";
 
 /**
@@ -267,8 +269,14 @@ export async function POST(request: Request) {
      * This runs only when DRAFT_DEDUPE_ENABLED is on, and a different date or
      * a different account of what happened still creates a new draft.
      */
+    /*
+     * "DIFFERENT INCIDENT", answering whether this is the same incident as the
+     * form on file (ported from the sibling app, QA F8): a new form, so no open
+     * draft is reopened in its place. DRAFT_ACTIONS_ENABLED only.
+     */
+    const newIncident = draftActionsEnabled() && historySaysDifferentIncident(body.conversation);
     const incidentKey =
-      draftDedupeEnabled() && body.source === "assistant"
+      draftDedupeEnabled() && body.source === "assistant" && !newIncident
         ? incidentFingerprint({
             employeeName: body.employeeName,
             formDate: isIsoCalendarDate(body.formDate) ? body.formDate : null,
@@ -291,7 +299,7 @@ export async function POST(request: Request) {
      * request for a separate document, still creates.
      */
     const account =
-      draftDedupeEnabled() && body.source === "assistant" && !historyWantsSeparateDocument(body.conversation)
+      draftDedupeEnabled() && body.source === "assistant" && !newIncident && !historyWantsSeparateDocument(body.conversation)
         ? userIncidentAccount(body.conversation)
         : null;
     if (account) {
@@ -317,6 +325,7 @@ export async function POST(request: Request) {
       crossChatDraftDedupeEnabled() &&
       body.source === "assistant" &&
       crossChatDate &&
+      !newIncident &&
       !historyWantsSeparateDocument(body.conversation)
     ) {
       const open = await findCrossChatOpenDraft({

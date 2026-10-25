@@ -351,6 +351,17 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
 }
 
 /**
+ * "Delete that draft" deletes the draft on screen where the manager may
+ * delete forms (the forms API's own rule), and says truthfully who can where
+ * they may not; "same incident", answering "is this the same incident as the
+ * <form> for <name>?", opens that form instead of asking for a phrase to type
+ * (ported from the sibling app, QA F8). Off, both turns are answered as before.
+ */
+export function draftActionsEnabled(): boolean {
+  return envFlag("DRAFT_ACTIONS_ENABLED");
+}
+
+/**
  * Keep other conversations out of the reply text. The person-memory recall
  * quotes another chat only when the manager refers back to it ("again", "last
  * time", "like before", "same as …"); a name read from a turn that is only
@@ -403,5 +414,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FULL_MANUAL_CONTEXT_ENABLED",
   "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
+  "DRAFT_ACTIONS_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
 ] as const;
