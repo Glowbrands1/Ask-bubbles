@@ -30,11 +30,9 @@ import { datesInText } from "./form-date-answer";
  *   fact, restated; otherwise it is an HR answer nobody gave. The same holds
  *   for a termination the manager did not describe, a signature, a date the
  *   manager did not give, and any claim that a Step to Finish Termination
- *   (the personal file, the scheduling/HR system, home office, payroll,
- *   security, a comment on the Sunlync account) has been done. MyGlow stays in
- *   the guard although the steps no longer name it: a model can echo it from
- *   anywhere, and Ask Bubbles never removes anybody from a system or comments
- *   on an account, under any name.
+ *   (the personal file, MyGlow, home office, payroll, security, Sunlync) has
+ *   been done — and, in any words, that anybody was removed from a system or
+ *   that an account was commented on: Ask Bubbles never does either.
  */
 
 export const EXIT_DRAFT_RULES: readonly string[] = [
@@ -63,12 +61,11 @@ const DECISION_TOPICS: RegExp[] = [
   /\bsign(?:s|ed|ing|ature|atures)?\b/i,
   /\bmyglow\b|\bsunlync\b|\bhome office\b|\bpersonal file\b|\bsecurity system\b/i,
   /*
-   * THE SAME CLAIM IN ANY WORDS (QA, 25 Oct 2026). The first step now says
-   * "the scheduling/HR system", so a sentence saying the employee was taken
-   * off a system is the same unmade claim under a new name; and a sentence
-   * saying anybody commented on, noted or updated an account (Sunlync or any
-   * other) is a step Ask Bubbles never takes. Its own entry, so a manager who
-   * mentioned the home office does not let a Sunlync or system claim through
+   * THE SAME CLAIM IN ANY WORDS (QA, 25 Oct 2026). A sentence saying the
+   * employee was taken off MyGlow or any other system, or that anybody
+   * commented on, noted or updated their Sunlync or any other account, is a
+   * step Ask Bubbles never takes. Its own entry, so a manager who mentioned
+   * the home office does not let a MyGlow, Sunlync or system claim through
    * the line above.
    */
   /\bmyglow\b|\bsunlync\b|\b(?:remov(?:e|ed|es|ing)|taken|took|delet(?:e|ed|ing)|deactivat\w*|offboard\w*)\b[^.!?]{0,40}\b(?:from|off|out of)\b[^.!?]{0,40}\bsystems?\b|\b(?:scheduling|hr|payroll|employee|pos)(?:\s*\/\s*hr)?\s+systems?\b|\b(?:not(?:e|es|ed)|comment(?:s|ed|ing)?)\b[^.!?]{0,40}\baccount\b|\baccount\b[^.!?]{0,40}\b(?:updated|noted|commented|deactivated|closed|removed)\b/i,

@@ -6,25 +6,23 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
-## 25 Oct 2026: exit text without MyGlow or tanning; three interview forms hidden
+## 25 Oct 2026: exit text without tanning; three interview forms hidden
 
 QA found Sun Tan City wording in what a Buff City Soap manager reads: the
-exit form's Steps to Finish Termination ("remove employee from MyGlow",
-"verify tanning has been removed"), the chat line and drafting rule naming
-MyGlow, and the FTTC EPP's chooser description ("full-time Tanning
-Consultant"). Pau's answers: Buff City Soap uses Sunlync too, so the Sunlync
-step and mentions stay, without the tanning clause; MyGlow is not
-confirmed, so it reads "the scheduling/HR system" until it is. That name
-lives in one constant, `src/config/company/forms/exit-systems.ts`
-(`EXIT_EMPLOYEE_SYSTEM`); exit form revision 4. The Details guard keeps
-MyGlow and Sunlync and adds an entry for a claim that the employee was taken
-off a system or that anybody commented on an account. The Tanning
+exit form's Steps to Finish Termination ("verify tanning has been
+removed") and the FTTC EPP's chooser description ("full-time Tanning
+Consultant"). Pau confirmed Buff City Soap uses MyGlow and Sunlync, so those
+steps and mentions keep the source wording; only the tanning clause goes
+(exit form revision 4). The system names are read from one place,
+`src/config/company/forms/exit-systems.ts`. The Details guard keeps MyGlow
+and Sunlync and adds an entry for a claim, in any words, that the employee
+was taken off a system or that anybody commented on an account. The Tanning
 Consultant Interview and both management interviews, already withheld from
 the chooser, are left out of `listTemplateSummaries()` and refused by the
 create route (`config/company/forms/hidden.ts`); their rows are not touched.
 
-**Sibling app: not needed.** MyGlow, the tanning clause and the three
-interviews are Ask Sunny's own and correct there. No Ask Sunny change.
+**Sibling app: not needed.** The tanning clause and the three interviews are
+Ask Sunny's own and correct there. No Ask Sunny change.
 
 ## 24 Oct 2026: a policy quote is not the manager's payroll answer
 

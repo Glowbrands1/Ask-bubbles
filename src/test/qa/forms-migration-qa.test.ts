@@ -271,8 +271,7 @@ const neutral = (text: string) =>
     .replace(/cleaning beds and doing laundry/g, "cleaning the Makery and equipment and keeping the workspace organized")
     // The Corrective Action closing, revision 6 (District Manager feedback, approved 2026-10-21): this phrase only.
     .replace(/Future policy violations may be subject to additional corrective action/g, "Future policy violations may result in additional corrective action")
-    // QA, 25 Oct 2026 (QA-1, QA-2): MyGlow is not confirmed, and the Sunlync step loses its tanning clause. These two only.
-    .replace(/remove\s+employee\s+from\s+MyGlow\./g, "remove employee from the scheduling/HR system.")
+    // QA, 25 Oct 2026 (QA-2): the Sunlync step loses its tanning clause. This clause only (MyGlow is confirmed and unchanged).
     .replace(/no\s+longer\s+employed,\s+verify\s+tanning\s+has\s+been\s+removed\./g, "no longer employed.")
     .replace(/\s+/g, " ")
     .trim();

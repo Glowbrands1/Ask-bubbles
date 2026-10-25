@@ -40,8 +40,8 @@ import {
  *   decided by Bubbles.
  *
  * WHAT IS NEVER SAID. That the form is signed, filed or complete; that anybody
- * has been removed from the scheduling/HR system, taken off payroll or had
- * their Sunlync account changed. Creating a draft does none of that, and the
+ * has been removed from MyGlow, taken off payroll or had their Sunlync account
+ * changed. Creating a draft does none of that, and the
  * closing line says so.
  *
  * The Details paragraph is drafted by the model after the form is created, so

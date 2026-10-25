@@ -380,7 +380,7 @@ describe("the Details section HR asked for", () => {
     expect(content).toMatch(/- \*\*Store Key Returned:\*\* Store key was not returned\. Employee will be payroll deducted \$25 for the store key\./);
     expect(content).not.toMatch(/Before you create it/);
 
-    // A new Exit Form is pinned to the template's current revision: 4 since QA, 25 Oct 2026 (neutral system names in the steps).
+    // A new Exit Form is pinned to the template's current revision: 4 since QA, 25 Oct 2026 (the tanning clause removed from the steps).
     const created = store.form_instances!.find((row) => row.id === result.reference.instanceId)!;
     const pinned = store.form_template_versions.find((row) => row.id === created.template_version_id)!;
     expect(pinned.seed_revision).toBe(4);
@@ -429,8 +429,9 @@ describe("the Details section HR asked for", () => {
     );
     expect(text).toContain("Steps to Finish Termination");
     expect(text).toContain("Place comment on employee's Sunlync account stating they are no longer employed.");
-    // Revision 4 (QA, 25 Oct 2026): no tanning clause, and MyGlow (not confirmed for Buff City Soap) is not printed.
-    expect(text).not.toMatch(/MyGlow|tanning/i);
+    // Revision 4 (QA, 25 Oct 2026): no tanning clause. MyGlow stays (Pau confirmed MyGlow, 25 Oct 2026).
+    expect(text).toContain("remove employee from MyGlow.");
+    expect(text).not.toMatch(/tanning/i);
   });
 
   it("lists what is missing without asking, then a correction updates the same form in place", async () => {

@@ -33,16 +33,16 @@ import { TEMPLATE_SEEDS } from "./library";
  * management interviews were still in the template library the chat reads.
  *
  * Pau's answers (via QA, same day): Buff City Soap uses Sunlync too, so the
- * Sunlync step and mentions stay, without the tanning clause. MyGlow is not
- * confirmed, so it reads "the scheduling/HR system" until it is
+ * Sunlync step and mentions stay, without the tanning clause; Buff City Soap
+ * uses MyGlow too, so that step reads as the source printed it
  * (`config/company/forms/exit-systems.ts`). The three interviews are hidden.
  *
  * Every string below is the exported text or a builder's real output — not a
  * grep of the source — so a word that reaches a manager through a template
  * literal, a seed or a builder is caught here.
  */
-/* Sunlync is NOT here: Buff City Soap uses it (Pau, via QA, 25 Oct 2026). */
-const SIBLING_WORDING = /myglow|my\s+glow|tanning|sun\s*tan\s*city/i;
+/* Sunlync and MyGlow are NOT here: Buff City Soap uses both (Pau, via QA, 25 Oct 2026). */
+const SIBLING_WORDING = /tanning|sun\s*tan\s*city/i;
 
 function expectClean(text: string, where: string) {
   const hit = SIBLING_WORDING.exec(text);
@@ -91,9 +91,10 @@ describe("the exit form's Steps to Finish Termination", () => {
     return blocks.slice(at + 1).map((block) => (block as { text?: string }).text ?? "");
   })();
 
-  it("keeps Sunlync, drops the tanning clause, and names the unconfirmed system neutrally", () => {
+  // Pau confirmed MyGlow, 25 Oct 2026: the first step is the source sentence again.
+  it("keeps MyGlow and Sunlync and drops the tanning clause", () => {
     expect(steps).toEqual([
-      "Upload Exit Form to employee’s personal file and remove employee from the scheduling/HR system.",
+      "Upload Exit Form to employee’s personal file and remove employee from MyGlow.",
       "Notify home office of employee’s final date of employment for HR, Payroll, and Security System purposes.",
       "Place comment on employee’s Sunlync account stating they are no longer employed.",
     ]);
@@ -112,9 +113,10 @@ describe("the exit form's Steps to Finish Termination", () => {
 });
 
 describe("the exit intake's chat text", () => {
-  it("the 'creating the draft does not act' line names no system", () => {
+  // Pau confirmed MyGlow, 25 Oct 2026: the line reads as on main.
+  it("the 'creating the draft does not act' line names MyGlow and Sunlync, and nothing of the sibling company's", () => {
     expectClean(EXIT_DOES_NOT_ACT, "EXIT_DOES_NOT_ACT");
-    expect(EXIT_DOES_NOT_ACT).toMatch(/doesn't sign anything, remove anyone from the scheduling\/HR system, change payroll or update Sunlync —/);
+    expect(EXIT_DOES_NOT_ACT).toMatch(/doesn't sign anything, remove anyone from MyGlow, change payroll or update Sunlync —/);
   });
 
   it("the opening and the who-is-it-for questions are clean", () => {
@@ -142,7 +144,8 @@ describe("the exit drafting rules and the Details guard", () => {
     for (const rule of EXIT_DRAFT_RULES) expectClean(rule, "EXIT_DRAFT_RULES");
     expectClean(EXIT_DETAILS_TRIMMED_NOTICE, "EXIT_DETAILS_TRIMMED_NOTICE");
     expect(EXIT_DRAFT_RULES.join(" ")).toMatch(
-      /removing the employee from the scheduling\/HR system, notifying the home office, HR, payroll or security, or commenting on Sunlync\./,
+      // Pau confirmed MyGlow, 25 Oct 2026: the rule reads as on main.
+      /removing the employee from MyGlow, notifying the home office, HR, payroll or security, or commenting on Sunlync\./,
     );
   });
 

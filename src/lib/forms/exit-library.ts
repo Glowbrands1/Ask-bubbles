@@ -83,16 +83,16 @@ import type { AnswerStatementLine, FormBlock, FormDocument } from "./document";
  *      be worse than none.
  *
  * THE STEPS ARE INSTRUCTIONS ON PAPER, NOT ACTIONS. "Remove employee from
- * the scheduling/HR system", "Notify home office", "Place comment on
- * employee's Sunlync account" are what a manager does after the form is
- * complete. Creating, drafting or finalizing this form does none of them —
- * there is no scheduling, HR, payroll or Sunlync integration in this codebase
- * for it to call, and the steps carry no field that could record them as done.
+ * MyGlow", "Notify home office", "Place comment on employee's Sunlync account"
+ * are what a manager does after the form is complete. Creating, drafting or
+ * finalizing this form does none of them — there is no MyGlow, payroll or
+ * Sunlync integration in this codebase for it to call, and the steps carry no
+ * field that could record them as done.
  *
- * THE SYSTEM NAMES (QA, 25 Oct 2026). Sunlync is confirmed for Buff City Soap
- * and stays; the source's "verify tanning has been removed" does not (tanning
- * is the reference platform's product). MyGlow is not confirmed, so the first
- * step names "the scheduling/HR system" until it is. Both names come from
+ * THE SYSTEM NAMES (Pau, via QA, 25 Oct 2026). Buff City Soap uses MyGlow and
+ * Sunlync too, so both steps keep the source wording; only the source's
+ * "verify tanning has been removed" is gone (tanning is the reference
+ * platform's product). Both names come from
  * `config/company/forms/exit-systems.ts`; never put a name there that the
  * business has not given.
  */
@@ -457,11 +457,11 @@ export const EXIT_TEMPLATE_SEEDS: TemplateSeed[] = [
      *
      * 3: terminology only — Salon becomes Store in the key line. No field key changes.
      *
-     * 4: the Steps to Finish Termination (QA, 25 Oct 2026): MyGlow, not
-     * confirmed for Buff City Soap, becomes "the scheduling/HR system"; the
-     * Sunlync step keeps its wording without "verify tanning has been
-     * removed". Text only; no field, key or layout changes. Published as a new version by the next
-     * library install; forms already filed keep the version they were pinned to.
+     * 4: the Steps to Finish Termination (QA, 25 Oct 2026): the Sunlync step
+     * loses "verify tanning has been removed"; MyGlow and Sunlync stay (Pau
+     * confirmed both). Text only; no field, key or layout changes. Published
+     * as a new version by the next library install; forms already filed keep
+     * the version they were pinned to.
      */
     revision: 4,
     revisionNote:

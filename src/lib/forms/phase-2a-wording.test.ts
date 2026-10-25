@@ -162,7 +162,7 @@ describe("the four approved wording changes", () => {
       demotion: 2,
       "management-interview-round-1": 4,
     });
-    // resignation-exit is 4 since its Steps to Finish Termination dropped MyGlow and the tanning clause (QA, 25 Oct 2026).
+    // resignation-exit is 4 since its Steps to Finish Termination dropped the tanning clause (QA, 25 Oct 2026).
     for (const key of ["coaching", "dpoa", "policy-review", "follow-up-coaching", "position-transfer", "prescreen-phone-interview", "resignation-exit", "tanning-consultant-interview", "management-interview-round-2"]) {
       expect(seed(key).revision, key).toBe(({ coaching: 2, dpoa: 6, "policy-review": 2, "follow-up-coaching": 2, "position-transfer": 1, "prescreen-phone-interview": 3, "resignation-exit": 4, "tanning-consultant-interview": 3, "management-interview-round-2": 3 } as Record<string, number>)[key]);
     }

@@ -74,15 +74,13 @@ const HR_ADDED = new Set<string>([
 ]);
 
 /**
- * QA, 25 Oct 2026 (revision 4): MyGlow, not confirmed for Buff City Soap, is
- * named "the scheduling/HR system" (`config/company/forms/exit-systems.ts`),
- * and the Sunlync step loses "verify tanning has been removed" (Sunlync itself
- * is confirmed). The source sentence each one replaces is still checked to be
- * the Word document's.
+ * QA, 25 Oct 2026 (revision 4): the Sunlync step loses "verify tanning has
+ * been removed". MyGlow and Sunlync themselves stay (Pau confirmed MyGlow,
+ * 25 Oct 2026, so the MyGlow step prints the source sentence again). The
+ * source sentence the shortened step comes from is still checked to be the
+ * Word document's.
  */
-const QA_NEUTRAL_STEPS: Readonly<Record<string, string>> = {
-  "Upload Exit Form to employee’s personal file and remove employee from the scheduling/HR system.":
-    "Upload Exit Form to employee’s personal file and remove employee from MyGlow.",
+const QA_SHORTENED_STEPS: Readonly<Record<string, string>> = {
   "Place comment on employee’s Sunlync account stating they are no longer employed.":
     "Place comment on employee’s Sunlync account stating they are no longer employed, verify tanning has been removed.",
 };
@@ -123,7 +121,7 @@ describe("the Resignation/Exit Form is the STC Exit document", () => {
     const flat = strip(source);
     for (const text of printed(document.blocks).filter(Boolean)) {
       if (HR_ADDED.has(text)) continue;
-      const replaced = QA_NEUTRAL_STEPS[text];
+      const replaced = QA_SHORTENED_STEPS[text];
       if (replaced) {
         expect(flat, text).toContain(strip(replaced));
         continue;
@@ -196,8 +194,8 @@ describe("the Resignation/Exit Form is the STC Exit document", () => {
       "Supervisor Signature",
       "District Manager/Witness Signature (when required)",
       "Steps to Finish Termination",
-      // The two system steps as revision 4 prints them (QA, 25 Oct 2026); see QA_NEUTRAL_STEPS.
-      "Upload Exit Form to employee's personal file and remove employee from the scheduling/HR system.",
+      // Pau confirmed MyGlow, 25 Oct 2026: the source sentence again. The Sunlync step is shortened; see QA_SHORTENED_STEPS.
+      "Upload Exit Form to employee's personal file and remove employee from MyGlow.",
       "Notify home office of employee's final date of employment for HR, Payroll, and Security System purposes.",
       "Place comment on employee's Sunlync account stating they are no longer employed.",
     ];

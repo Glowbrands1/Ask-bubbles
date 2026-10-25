@@ -114,14 +114,13 @@ const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[]
   { decision: "DM-2 — Corrective Action closing, \"may result in\"", from: CA_ACTION_PLAN_CLOSING_REVISION_5, to: CA_ACTION_PLAN_CLOSING },
   { decision: "DM-3 — Corrective Action revision 6 note", from: DPOA_NOTE_REVISION_5, to: DPOA_NOTE_REVISION_5.replace(" Forms filed against earlier versions", ` ${DPOA_REVISION_6} Forms filed against earlier versions`) },
   /*
-   * QA, 25 Oct 2026 (Pau's answers): MyGlow is not confirmed for Buff City
-   * Soap, so the exit step names "the scheduling/HR system"
-   * (`config/company/forms/exit-systems.ts`); Sunlync is confirmed and stays,
-   * without the tanning clause (exit form revision 4). The FTTC EPP's
+   * QA, 25 Oct 2026 (Pau's answers): Buff City Soap uses MyGlow and Sunlync,
+   * so both exit steps keep the source wording and only the tanning clause
+   * goes (exit form revision 4; there is no QA-1 any more — Pau confirmed
+   * MyGlow, 25 Oct 2026). The FTTC EPP's
    * description — printed on the chooser's cards — repeats the plan's own
    * name instead of the tanning role. See `exit-sibling-wording.test.ts`.
    */
-  { decision: "QA-1 — exit step, MyGlow not confirmed", from: "Upload Exit Form to employee’s personal file and remove employee from MyGlow.", to: "Upload Exit Form to employee’s personal file and remove employee from the scheduling/HR system." },
   { decision: "QA-2 — exit step, tanning clause removed (Sunlync kept)", from: "Place comment on employee’s Sunlync account stating they are no longer employed, verify tanning has been removed.", to: "Place comment on employee’s Sunlync account stating they are no longer employed." },
   { decision: "QA-3 — FTTC EPP description", from: "Performance plan for a full-time Tanning Consultant.", to: "The FTTC Employee Performance Plan." },
 ];
@@ -216,8 +215,8 @@ describe("the migrated templates are the reference platform's published template
       APPROVED_CONTENT_CHANGES.some((entry) => entry.from === change.from && entry.to === change.to),
     );
     // D3 x2 (SDIT, both lists), D4 x10 (six EPPs; SDIT, TSD and both DMIT print it twice), D12 x1, D18 x1, DM-1..3 x1 each,
-    // QA-1..3 x1 each (QA, 25 Oct 2026: no sibling-company system names).
-    expect(matching).toHaveLength(20);
+    // QA-2..3 x1 each (QA, 25 Oct 2026: no sibling-company wording; QA-1 dropped, MyGlow confirmed by Pau).
+    expect(matching).toHaveLength(19);
     for (const entry of APPROVED_CONTENT_CHANGES) {
       expect(matching.some((change) => change.from === entry.from), entry.decision).toBe(true);
     }
