@@ -4,6 +4,7 @@ import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import { rosterResultFor } from "@/test/roster-result";
 import type { AccessScope, ChatMessage } from "@/types";
 import { isNotAName } from "@/lib/forms/not-a-name";
+import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 
 import { withTypedEmployeeOnCard } from "./typed-employee-card";
 
@@ -141,5 +142,54 @@ describe("off: as production", { timeout: 120_000 }, () => {
     expect((await propose(TURNS.B4)).map((turn) => turn.employeeName)).toEqual(["Test", "Test"]);
     expect((await propose(TURNS.B8))[0]!.content).toMatch(/\*\*NE\*\* or \*\*JBA Manual\*\*/);
     expect((await propose(TURNS.G11))[0]!.content).toMatch(/^Who is this/);
+  });
+});
+
+/*
+ * Ask Sunny QA G4 (conv_mvo1t7qv253555k there), in this app's words: the name
+ * opening a sentence after another was read only by the intent model's slot,
+ * so one run of three dropped it. The reader now finds it with the guard on.
+ */
+describe("G4 (ported): a name that opens a sentence", () => {
+  const TURN =
+    "Okay let's restart. Test Employee, Team Member, Kearney. Not completing closing duties and signing off that they were complete when they weren't.";
+
+  it("guard on: read", () => {
+    vi.stubEnv("NOT_A_NAME_GUARD_ENABLED", "true");
+    expect(typedEmployeeName(TURN)).toBe("Test Employee");
+  });
+
+  it("guard off: unchanged", () => {
+    expect(typedEmployeeName(TURN)).toBeNull();
+  });
+});
+
+describe("G4 (ported): the intake list no longer asks for the name it read", () => {
+  const reply = (content: string) =>
+    ({
+      content,
+      formProposal: { templateName: "Coaching Form", templateKey: "coaching", employeeName: null },
+    }) as unknown as Parameters<typeof withTypedEmployeeOnCard>[0];
+  const ASKED = [
+    "Who is this coaching form for?",
+    "",
+    "To draft it I need:",
+    "1. The employee's full name and title",
+    "2. The store",
+    "3. What happened",
+  ].join("\n");
+  const TURN = "Okay let's restart. Test Employee, Team Member, Kearney. Not completing closing duties.";
+
+  it("guard on: the name item comes out and the list counts from 1", () => {
+    vi.stubEnv("NOT_A_NAME_GUARD_ENABLED", "true");
+    const out = withTypedEmployeeOnCard(reply(ASKED), TURN);
+    expect(out.formProposal?.employeeName).toBe("Test Employee");
+    expect(out.content).not.toMatch(/who is this|full name/i);
+    expect(out.content).toContain("1. The store\n2. What happened");
+  });
+
+  it("guard off: unchanged", () => {
+    const out = withTypedEmployeeOnCard(reply(ASKED), TURN);
+    expect(out.content).toBe(ASKED);
   });
 });
