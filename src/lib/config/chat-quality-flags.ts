@@ -351,6 +351,18 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
 }
 
 /**
+ * The job title and what happened are read only from the manager's own
+ * words. The lines the app writes onto the question ("Job title: CA. It
+ * happened at Kearney, NE.") are not read as what the manager said, a pasted
+ * policy is not their title, and a turn that only names the employee or says
+ * where they work is not what happened (ported from the sibling app). Off, every
+ * reader is unchanged.
+ */
+export function managerWordsOnlyEnabled(): boolean {
+  return envFlag("MANAGER_WORDS_ONLY_ENABLED");
+}
+
+/**
  * Keep other conversations out of the reply text. The person-memory recall
  * quotes another chat only when the manager refers back to it ("again", "last
  * time", "like before", "same as …"); a name read from a turn that is only
@@ -403,5 +415,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FULL_MANUAL_CONTEXT_ENABLED",
   "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
+  "MANAGER_WORDS_ONLY_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
 ] as const;
