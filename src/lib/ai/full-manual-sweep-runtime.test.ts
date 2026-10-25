@@ -261,3 +261,45 @@ describe("E1 parity: Who is eligible for PTO and when does it start?", () => {
     expect(response.citations.map((citation) => citation.locator)).toEqual(["Page 41 — Eligibility"]);
   }, 30_000);
 });
+
+/*
+ * QA parity with the sibling app (25 Oct 2026). On a full-manual turn the
+ * sibling sends no retrieved excerpt from another document and never asks
+ * again without the manual. Sunny history conv_muxei72m2prj6n5, "policy
+ * specific to uggs?": an answer that named no page was asked again from
+ * retrieval alone and came back "I only have wiring diagrams".
+ */
+describe("a full-manual turn: no other retrieved document, no second ask without the manual", () => {
+  const wiring = {
+    chunk_id: "wiring-1",
+    document_id: "doc-wiring",
+    document_title: "Synthetic Equipment Wiring Diagram",
+    category: "equipment_procedures",
+    locator: "Page 3",
+    page: 3,
+    section: null,
+    content: "Ballast wiring diagram, 220V.",
+    similarity: 0.8,
+  };
+
+  it('"policy specific to uggs?" → the manual is in the prompt and the wiring diagram is not', async () => {
+    state.rows = [wiring];
+    state.replies = ["The manual does not name the brand; full coverage closed toe shoes are required [p.15]."];
+    const response = await ask("policy specific to uggs?", "conv_uggs_manual");
+    expect(state.calls).toHaveLength(1);
+    expect(state.calls[0]?.cachedContext).toContain("Tennis shoes or other full coverage closed toe shoes");
+    expect(state.calls[0]?.grounding).not.toContain("Wiring Diagram");
+    expect(state.calls[0]?.grounding).not.toContain("OTHER COMPANY SOURCES");
+    expect(response.citations.every((citation) => citation.documentTitle === MANUAL_TITLE)).toBe(true);
+  }, 30_000);
+
+  it("an answer that names no page stands as written: no second call, no retrieval-only answer", async () => {
+    state.rows = [wiring];
+    state.replies = ["The manual does not name that brand.", "I only have wiring diagrams."];
+    const response = await ask("policy specific to uggs?", "conv_uggs_manual");
+    expect(state.calls).toHaveLength(1);
+    expect(response.content).toBe("The manual does not name that brand.");
+    expect(response.content).not.toMatch(/wiring/i);
+    expect(response.citations).toEqual([]);
+  }, 30_000);
+});

@@ -22,6 +22,14 @@ reads through ("at [p.47]") is re-pointed in place or goes with its word,
 and a passage before a page's first heading is labelled with the section
 it continues. Ported to Ask Sunny in the same session.
 
+On a full-manual turn, only a pinned role document or named handbook is sent
+beside the manual; other retrieved documents are not (as in Ask Sunny, which
+sends none). An answer that names no printed page is no longer asked again
+without the manual; it stands as written, as in Ask Sunny (history
+conv_muxei72m2prj6n5, "policy specific to uggs?", came back "I only have
+wiring diagrams" from that second ask). Unflagged: repairs on the
+FULL_MANUAL_CONTEXT path, which is on.
+
 `FULL_MANUAL_WIDE_GATE_ENABLED` (default off, same name in both apps) loads
 the manual for a question whose best retrieved excerpt is from the manual
 or that names a printed heading word ("What is COBRA?"). Ask Sunny has the

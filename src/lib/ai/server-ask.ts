@@ -110,7 +110,6 @@ import {
   citeRetrievedAnswer,
   retrievedLocatorPages,
   fullManualGroundingNote,
-  keepRestatedFallbackMarkers,
   validateManualCitations,
   type CitedManualAnswer,
   type FullManualPlan,
@@ -751,8 +750,21 @@ async function answerQuestionCore(
    * after the answer, from the printed pages it cites. One card for the
    * whole manual is what showed up as JBA Policy Manual p.1.
    */
+  /*
+   * ON A FULL-MANUAL TURN ONLY A PINNED DOCUMENT RIDES ALONG (QA parity with
+   * the sibling app, 25 Oct 2026). The manual is the policy source; a
+   * retrieved excerpt from any other document (a wiring diagram for "policy
+   * specific to uggs?") was sent as OTHER COMPANY SOURCES and could be read
+   * as the only thing on file. A pinned role document or named handbook,
+   * which the turn asked for by design, stays.
+   */
+  const mandatoryChunkIds = new Set(
+    [...pinned.flatMap((entry) => entry.rows), ...(handbookCoverage?.rows ?? [])].map((row) => row.chunk_id),
+  );
   const supplemental = useManual
-    ? used.filter((row) => !isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES))
+    ? used.filter(
+        (row) => !isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES) && mandatoryChunkIds.has(row.chunk_id),
+      )
     : used;
   const grounding: GroundingChunk[] = supplemental.map((row, index) => ({
     marker: index + 1,
@@ -889,48 +901,30 @@ async function answerQuestionCore(
     question: request.question,
     maxTokens: CLAUDE_MAX_TOKENS[request.mode],
   };
-  const retrievalChunks: GroundingChunk[] = used.map((row, index) => ({
-    marker: index + 1,
-    documentTitle: row.document_title,
-    locator: row.locator,
-    content: row.content,
-  }));
   const supplementalMarkers = grounding.map((chunk) => chunk.marker);
-  let answer = await callClaude({
+  const answer = await callClaude({
     ...claudeBase,
     grounding: dataAddition.help ? `${groundingText}\n\n${dataAddition.help}` : groundingText,
     ...(useManual && manualPlan?.cachedBlock ? { cachedContext: manualPlan.cachedBlock } : {}),
   });
 
+  /*
+   * AN ANSWER WITH THE MANUAL IN CONTEXT IS THE ANSWER, PAGE OR NO PAGE (QA
+   * parity with the sibling app, 25 Oct 2026). One that named no printed page
+   * ("The manual does not name that brand.") used to be asked again WITHOUT
+   * the manual, from retrieval alone, and that second answer could deny the
+   * manual existed: Sunny history conv_muxei72m2prj6n5, "policy specific to
+   * uggs?", came back "I only have wiring diagrams". It now stands as
+   * written, with no page marked; its markers are checked like any other.
+   */
   let settled: CitedManualAnswer | null = null;
-  let fellBack = false;
   if (useManual && manualPlan) {
     const checkedManual = citePolicyAnswer(answer, manualPlan, supplementalMarkers);
-    if (checkedManual.ok) {
-      settled = checkedManual;
-    } else {
-      /*
-       * The answer named no printed page from the manual that was loaded.
-       * Ordinary retrieval is the same path the flag-off turn already uses.
-       */
-      fellBack = true;
-      const fallbackParts = [buildGroundingBlock(retrievalChunks), pinnedPolicy]
-        .filter((part) => part && part.length > 0)
-        .join("\n\n");
-      const fallbackGrounding = [readingNotes ? withManualReadingNotes(fallbackParts) : fallbackParts, dataAddition.help]
-        .filter((part) => part && part.length > 0)
-        .join("\n\n");
-      answer = await callClaude({ ...claudeBase, grounding: fallbackGrounding });
-    }
+    settled = checkedManual.ok ? checkedManual : { text: checkedManual.text, sources: [], ok: false };
   }
 
-  const activeMarkers = (fellBack ? retrievalChunks : grounding).map((chunk) => chunk.marker);
-  const activeRows: (MatchedChunkRow | null)[] = fellBack ? [...used] : citationRows;
-  /*
-   * The retrieval fallback's manual pages are kept only where the sentence
-   * restates them (see `keepRestatedFallbackMarkers`).
-   */
-  const manualDocuments = new Set((manualPlan?.passages ?? []).map((passage) => passage.documentId));
+  const activeMarkers = grounding.map((chunk) => chunk.marker);
+  const activeRows: (MatchedChunkRow | null)[] = citationRows;
   /*
    * A reply answered from retrieved excerpts (the manual was not loaded, or
    * this is the fallback) cites each manual excerpt as the printed page its
@@ -953,18 +947,11 @@ async function answerQuestionCore(
       retrievalCited = cited?.ok ? cited : null;
     }
   }
-  const fallbackText = retrievalCited
-    ? retrievalCited.text
-    : fellBack && manualPlan
-      ? keepRestatedFallbackMarkers(answer, manualPlan, (marker) => {
-          const row = activeRows[marker - 1];
-          return row && manualDocuments.has(row.document_id) ? printedPageFromRetrieval(row) : null;
-        })
-      : answer;
+  const fallbackText = retrievalCited ? retrievalCited.text : answer;
   const markers = extractUsedMarkers(settled?.text ?? fallbackText, activeMarkers);
   const guarded = settled
     ? settled.text
-    : fullManualContextEnabled() && !fellBack
+    : fullManualContextEnabled()
       ? validateManualCitations(fallbackText, { shownMarkers: markers, index: manualPlan?.index ?? null })
       : fallbackText;
   const toCitation = (source: FullManualSource): SourceCitation => ({
@@ -1022,7 +1009,7 @@ async function answerQuestionCore(
       citations = [...final.sources.map(toCitation), ...citedRows(finalMarkers, citationRows)];
     } else {
       content = suggested ? `${stripMarkers(settled.text)}\n\n${suggested.lead}` : stripMarkers(settled.text);
-      citations = settled.sources.map(toCitation);
+      citations = [...settled.sources.map(toCitation), ...citedRows(markers, citationRows)];
     }
   }
   /*
@@ -1055,7 +1042,7 @@ async function answerQuestionCore(
     formSelection: suggested?.selection,
     citations,
     coverage: answerCoverage({
-      retrieved: fellBack ? used.length : grounding.length + (useManual ? 1 : 0),
+      retrieved: grounding.length + (useManual ? 1 : 0),
       cited: citations.length,
       reportBacked: (briefing?.present.length ?? 0) > 0,
       recordBacked: formRecords !== null,
