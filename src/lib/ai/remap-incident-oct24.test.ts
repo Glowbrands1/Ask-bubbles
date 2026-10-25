@@ -116,7 +116,10 @@ vi.mock("@/lib/supabase/server", () => ({
  * acknowledgement 1-1-26"; nobody typed "acknowledgement"). With
  * PRIOR_ACTIONS_PARSE_ENABLED also on, the parser's structured line wins:
  * "Coaching — JBA Policy Manual — 01/01/2026", with no "signed" unless the
- * manager wrote it. `priorLine` picks the expectation for the flags in force,
+ * manager wrote it. QA confirmed rule (a) on 25 Oct 2026: dropping the untyped
+ * "acknowledgement" when only REMAP_INCIDENT_FIX_ENABLED is on is intended,
+ * because a prior-action line uses only words the manager typed. `priorLine`
+ * picks the expectation for the flags in force,
  * so the same cases pass on their own and in the both-flags-on probe.
  */
 function priorLine(list: string, parsed: string): string {
@@ -203,7 +206,9 @@ describe("remap path: What happened is the incident, not the request (prod, 24 O
       },
     ]);
     expect(response.formProposal?.issue).toBe("not attending the monthly meeting");
-    // QA 25 Oct 2026: no invented "acknowledgement"; the parser's line when PRIOR_ACTIONS_PARSE_ENABLED is on (see priorLine).
+    // Changed on purpose (was "JBA Policy Manual acknowledgement …"): with REMAP_INCIDENT_FIX_ENABLED alone the list
+    // reader no longer adds "acknowledgement", because a prior-action line uses only words the manager typed (rule (a),
+    // QA, 25 Oct 2026). The parser's line when PRIOR_ACTIONS_PARSE_ENABLED is on (see priorLine).
     const prior = priorLine(
       "JBA Policy Manual 1-1-26\nverbal CA 9-1-26",
       "Coaching — JBA Policy Manual — 01/01/2026\nVerbal corrective action — 09/01/2026",
@@ -243,7 +248,9 @@ describe("remap path: What happened is the incident, not the request (prod, 24 O
     ]);
     expect(response.formProposal?.issue).toBe("late for shift and did not call supervisor as outlined in attendance policy");
     expect(response.formProposal?.issue).not.toMatch(/write a|Team Member/i);
-    // QA 25 Oct 2026: "JBA Manual" reads as the manual's title, with no invented "acknowledgement" (see priorLine).
+    // Changed on purpose (was "JBA Policy Manual acknowledgement 1-1-25"): "JBA Manual" reads as the manual's title, and
+    // "acknowledgement" is dropped because a prior-action line uses only words the manager typed (rule (a), QA,
+    // 25 Oct 2026). See priorLine.
     expect(response.formProposal?.priorActions).toBe(priorLine("JBA Policy Manual 1-1-25", "Coaching — JBA Policy Manual — 01/01/2025"));
     citesPage(response, "Attendance", 14);
   });
@@ -270,7 +277,9 @@ describe("remap path: What happened is the incident, not the request (prod, 24 O
     ]);
     expect(response.formProposal?.issue).toBe("opening store late");
     expect(response.content).not.toMatch(/\nWhat happened\?/);
-    // QA 25 Oct 2026: no invented "acknowledgement"; the parser's line when PRIOR_ACTIONS_PARSE_ENABLED is on (see priorLine).
+    // Changed on purpose (was "JBA Policy Manual acknowledgement …"): with REMAP_INCIDENT_FIX_ENABLED alone the list
+    // reader no longer adds "acknowledgement", because a prior-action line uses only words the manager typed (rule (a),
+    // QA, 25 Oct 2026). The parser's line when PRIOR_ACTIONS_PARSE_ENABLED is on (see priorLine).
     expect(response.formProposal?.priorActions).toBe(priorLine("JBA Policy Manual 1-1-26", "Coaching — JBA Policy Manual — 01/01/2026"));
     citesPage(response, "Late Opening", 15);
   });
@@ -310,7 +319,9 @@ describe("remap path: What happened is the incident, not the request (prod, 24 O
         raw: { employeeName: "Test Employee" },
       },
     ]);
-    // QA 25 Oct 2026: no invented "acknowledgement"; the parser's line when PRIOR_ACTIONS_PARSE_ENABLED is on (see priorLine).
+    // Changed on purpose (was "JBA Policy Manual acknowledgement …"): with REMAP_INCIDENT_FIX_ENABLED alone the list
+    // reader no longer adds "acknowledgement", because a prior-action line uses only words the manager typed (rule (a),
+    // QA, 25 Oct 2026). The parser's line when PRIOR_ACTIONS_PARSE_ENABLED is on (see priorLine).
     expect(response.formProposal?.priorActions).toBe(priorLine("JBA Policy Manual 1-1-26", "Coaching — JBA Policy Manual — 01/01/2026"));
   });
 });
@@ -528,7 +539,9 @@ describe("step 3 and C-list: edits never become What happened (prod, 24 Oct 2026
     expect(response.formProposal?.issue).toBe("register shortage");
     expect(response.content).not.toMatch(/Attendance[^\n]*as you said/);
     expect(response.content).not.toMatch(/Action plan:/);
-    // QA 25 Oct 2026: no invented "acknowledgement"; the parser's line when PRIOR_ACTIONS_PARSE_ENABLED is on (see priorLine).
+    // Changed on purpose (was "JBA Policy Manual acknowledgement …"): with REMAP_INCIDENT_FIX_ENABLED alone the list
+    // reader no longer adds "acknowledgement", because a prior-action line uses only words the manager typed (rule (a),
+    // QA, 25 Oct 2026). The parser's line when PRIOR_ACTIONS_PARSE_ENABLED is on (see priorLine).
     expect(response.formProposal?.priorActions ?? "").toContain(priorLine("JBA Policy Manual 1-20-26", "Coaching — JBA Policy Manual — 01/20/2026"));
   });
 
