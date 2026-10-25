@@ -11,12 +11,13 @@ import {
   notANameGuardEnabled,
   warningLevelManagerOnlyEnabled,
   caTemplateMapEnabled,
+  formChoiceStatedEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { extractJobTitle } from "@/lib/forms/proposal";
 import { lateOpenOn, newestStatedDate, withYearlessDatesWritten } from "@/lib/forms/late-open";
 import { correctiveActionBasis } from "@/lib/forms/corrective-action-intake";
-import { detectTemplateIntent } from "@/lib/forms/template-intent";
+import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -150,7 +151,10 @@ export function normalizeIncidentDate(raw: string, today: string): string | null
 
 export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision {
   const input = withoutUntypedSavedName(rawInput);
-  const saved = input.saved ?? EMPTY_CONVERSATION_FORM_STATE;
+  const choiceStated = formChoiceStatedEnabled();
+  const saved = choiceStated
+    ? withoutDisciplineProcedure(input.saved ?? EMPTY_CONVERSATION_FORM_STATE)
+    : (input.saved ?? EMPTY_CONVERSATION_FORM_STATE);
   const reading = parseReading(input.raw);
   const blob = conversationBlob(input);
   const choice = readPriorChoice(input.history, input.question, input.people, input.stores);
@@ -164,7 +168,8 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
     ? titleTextFromTurns([...input.history.filter((turn) => turn.role !== "assistant").map((turn) => turn.content), input.question])
     : null;
   const title = groundTitle(reading?.title ?? null, blob, input.people, employee.person, titleText);
-  const incidentType = groundIncident(reading?.incidentType ?? null, blob, input.headings);
+  const groundedIncident = groundIncident(reading?.incidentType ?? null, blob, input.headings);
+  const incidentType = choiceStated && isDisciplineProcedure(groundedIncident) ? null : groundedIncident;
   /*
    * LATE_OPEN_DATE_ENABLED (QA, 24 Oct 2026; ported from the sibling app): "late
    * to open 10-19" and "change the date to 10-22" are dates, and the one this
@@ -211,13 +216,24 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
         ambiguous: false,
       }
     : groundWarning(choice?.warning ?? reading?.warningLevel ?? null, blob);
-  const formType = groundForm(choice?.form ?? reading?.formType ?? null, blob, input.templates, {
-    question: input.question,
-    managerText: managerBlob(input),
-  });
+  const formType: { key: string | null; ambiguous: readonly TemplateRow[]; together?: boolean } = choiceStated
+    ? groundStatedForm(
+        choice?.form ?? null,
+        managerTurns(input),
+        input.templates,
+        saved.templateKey ? null : (reading?.formType ?? null),
+        saved.templateKey,
+        // CA_TEMPLATE_MAP_ENABLED: a metric with no behaviour stays the
+        // progression here too, as in `correctiveActionRequestKey`.
+        caTemplateMapEnabled() && correctiveActionBasis(managerBlob(input)) === "metric_only",
+      )
+    : groundForm(choice?.form ?? reading?.formType ?? null, blob, input.templates, {
+        question: input.question,
+        managerText: managerBlob(input),
+      });
   const formTurn = Boolean(input.formInProgress || reading?.formTurn || formType.key || saved.templateKey);
 
-  let state = mergeSlots(saved, {
+  const merged = mergeSlots(saved, {
     employee,
     store,
     title,
@@ -230,6 +246,7 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
     warningLevel: warningLevel.value,
     formType: formType.key,
   });
+  let state = choiceStated ? firstCoachingUnlessEarlier(merged, managerTurns(input), input.templates) : merged;
   if (warningManagerOnly) {
     const answered = payrollAnsweredNow(input.history, input.question);
     if (answered) state = { ...state, payrollDeduct: answered };
@@ -266,6 +283,141 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
   if (clarification) return { question: input.question, state, clarification };
   if (!formTurn) return { question: input.question, state, clarification: null };
   return { question: prependFormState(input.question, state), state, clarification: null };
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED. "Disciplinary Action" is the manual's discipline
+ * procedure itself, never the policy an offense broke. A stored one wrote
+ * "Policy reference: Disciplinary Action" ahead of the turn, and its alias
+ * picked the Corrective Action Form over the form the manager asked for
+ * (ported from the sibling app, QA 24 Oct 2026).
+ */
+function isDisciplineProcedure(heading: string | null | undefined): boolean {
+  return Boolean(heading) && /^disciplinary actions?(?: policy)?$/.test(headingKey(heading!));
+}
+
+function withoutDisciplineProcedure(state: ConversationFormState): ConversationFormState {
+  const policy = isDisciplineProcedure(state.policyHeading);
+  const incident = isDisciplineProcedure(state.incidentType);
+  if (!policy && !incident) return state;
+  return {
+    ...state,
+    policyHeading: policy ? null : state.policyHeading,
+    policyPage: policy ? null : state.policyPage,
+    incidentType: incident ? null : state.incidentType,
+  };
+}
+
+/** The manager's own turns, oldest first, this one last. */
+function managerTurns(input: IntentTurnInput): string[] {
+  return [...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content), input.question].filter(
+    (part) => part.trim() !== "",
+  );
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED. The form the manager named, newest turn first.
+ *
+ * Read from their own words only. The assistant's "**Corrective Action
+ * Form**", the stored state's sentences and the model's formType (which
+ * copies either) never choose it. A turn that names no form ("Create a form
+ * from this conversation") looks further back; a turn that names one
+ * replaces the stored form. When no manager turn names a form, the stored
+ * form stays, and only then does the model's formType count — read as a
+ * template name, never from the blob.
+ *
+ * In a coaching conversation the model's formType never picks the Corrective
+ * Action Form; the manager asks for one in their own words ("create a CA", "a
+ * verbal warning", "write them up" — formNamedIn reads those). Ported from
+ * the sibling app (QA round 12, 25 Oct 2026): "Help me prepare for a coaching
+ * conversation." then "…not verifying documents are signed" was a Corrective
+ * Action card on every turn, though the manager only asked for coaching and
+ * a Policy Review.
+ *
+ * One turn carries one card. A turn that names two forms ("a coaching form
+ * and a policy review? I'd like to see both") asks which to start with; the
+ * manager answers with the form's name, and once a form is stored that
+ * earlier turn no longer asks.
+ */
+function groundStatedForm(
+  chosen: string | null,
+  turns: readonly string[],
+  templates: readonly TemplateRow[],
+  modelForm: string | null,
+  storedKey: string | null,
+  metricOnly = false,
+): { key: string | null; ambiguous: readonly TemplateRow[]; together?: boolean } {
+  const picked = chosen ? matchTemplates(chosen, templates) : [];
+  if (picked.length === 1) return { key: picked[0]!.key, ambiguous: [] };
+  for (let at = turns.length - 1; at >= 0; at -= 1) {
+    const several = formsNamedTogether(turns[at]!, templates);
+    if (several.length > 1) {
+      if (at < turns.length - 1 && storedKey) return { key: null, ambiguous: [] };
+      return { key: null, ambiguous: several, together: true };
+    }
+    const key = formNamedIn(turns[at]!, templates);
+    if (key && !(metricOnly && key === CORRECTIVE_ACTION_KEY)) return { key, ambiguous: [] };
+  }
+  const typed = modelForm?.trim() ? matchTemplates(modelForm.trim(), templates) : [];
+  const key = typed.length === 1 && !(typed[0]!.key === "dpoa" && coachingConversation(turns)) ? typed[0]!.key : null;
+  return { key, ambiguous: [] };
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED. The manager is talking about coaching ("a
+ * coaching conversation", "coach an employee") and mentions no coaching that
+ * already happened. The model's Corrective Action Form does not count here.
+ */
+function coachingConversation(turns: readonly string[]): boolean {
+  return turns.some((turn) => /\bcoach(?:ing)?\b/i.test(turn)) && !turns.some((turn) => mentionsEarlierCoaching(turn));
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED. The forms one turn asks for together: "a
+ * coaching form and a policy review", "a coaching form, plus a policy
+ * review". Each part is read on its own; fewer than two forms is none.
+ */
+function formsNamedTogether(text: string, templates: readonly TemplateRow[]): TemplateRow[] {
+  const parts = text.split(/,|&|\band\b|\bplus\b|\bas well as\b/i).filter((part) => part.trim() !== "");
+  if (parts.length < 2) return [];
+  const keys = new Set<string>();
+  for (const part of parts) {
+    const key = formNamedIn(part, templates);
+    if (key) keys.add(key);
+  }
+  return keys.size > 1 ? templates.filter((template) => keys.has(template.key)) : [];
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED. The Follow-Up Coaching Form only when a manager
+ * turn mentions coaching that already happened or a follow-up; otherwise the
+ * Coaching Form. A stored follow-up key from an earlier turn is corrected the
+ * same way.
+ */
+function firstCoachingUnlessEarlier(
+  state: ConversationFormState,
+  turns: readonly string[],
+  templates: readonly TemplateRow[],
+): ConversationFormState {
+  if (state.templateKey !== "follow-up-coaching") return state;
+  if (turns.some((turn) => mentionsEarlierCoaching(turn))) return state;
+  return templates.some((template) => template.key === "coaching") ? { ...state, templateKey: "coaching" } : state;
+}
+
+function formNamedIn(text: string, templates: readonly TemplateRow[]): string | null {
+  const published = (key: string) => (templates.some((template) => template.key === key) ? key : null);
+  const intent = detectTemplateIntent(text);
+  if (intent.kind === "explicit" || intent.kind === "clarify") {
+    const named = published(intent.templateKey);
+    if (named) return named;
+  }
+  // "create a CA", "create a Verbal CA for …": a corrective action asked for
+  // in this turn is the Corrective Action Form, as the proposal reads it.
+  if (intent.kind === "corrective_action" && intent.requestedCreation) return published("dpoa");
+  if (intent.kind !== "none") return null;
+  const lower = text.toLowerCase();
+  const byName = templates.filter((template) => lower.includes(template.name.toLowerCase()));
+  return byName.length === 1 ? byName[0]!.key : null;
 }
 
 /** `LIMITS.historyTurns` in `lib/api/validation.ts` (server-only, so not imported here). */
@@ -694,7 +846,7 @@ function clarificationFor(input: {
   date: { iso: string | null; ambiguous: readonly string[] };
   payrollAmount: string | null;
   warningLevel: { value: "verbal" | "written" | null; ambiguous: boolean };
-  formType: { key: string | null; ambiguous: readonly TemplateRow[] };
+  formType: { key: string | null; ambiguous: readonly TemplateRow[]; together?: boolean };
   state: ConversationFormState;
   people: readonly GroundedPerson[];
   stores: readonly StoreRow[];
@@ -705,6 +857,7 @@ function clarificationFor(input: {
   }
   if (input.store.ambiguous.length > 1) return storeQuestion(input.store.ambiguous);
   if (input.date.ambiguous.length > 1) return dateQuestion(input.date.ambiguous);
+  if (input.formType.ambiguous.length > 1 && input.formType.together) return startWithQuestion(input.formType.ambiguous);
   if (input.formType.ambiguous.length > 1) return formQuestion(input.formType.ambiguous);
   if (input.warningLevel.ambiguous) {
     return "Which warning level did you mean? Reply with the number.\n1. **verbal**\n2. **written**";
@@ -761,6 +914,16 @@ function dateQuestion(dates: readonly string[]): string {
 function formQuestion(templates: readonly TemplateRow[]): string {
   const options = templates.map((template, index) => `${index + 1}. **${template.name}**`);
   return `Which form did you mean? Reply with the number or the form.\n${options.join("\n")}`;
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED: two forms asked for in one turn; one card at a
+ * time. The same question the full remap asks, answered with the form's name.
+ */
+function startWithQuestion(templates: readonly TemplateRow[]): string {
+  const names = templates.map((template) => `the **${template.name}**`);
+  const choices = names.length === 2 ? names.join(" or ") : `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`;
+  return `Which form should I start with — ${choices}? I'll draft one at a time; ask for the other once this one is done.`;
 }
 
 export function personDetail(person: GroundedPerson, stores: readonly StoreRow[]): string | null {

@@ -6,6 +6,7 @@ import {
   managerWordsOnlyEnabled,
   notANameGuardEnabled,
   warningLevelManagerOnlyEnabled,
+  formChoiceStatedEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
@@ -19,7 +20,7 @@ import { payrollDeductAmount, payrollDeductFromConversation } from "@/lib/forms/
 import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
 import { extractEmployeeNames, extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
 import { spokenDates } from "@/lib/forms/relative-date";
-import { detectTemplateIntent } from "@/lib/forms/template-intent";
+import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
 import { warningLevelFromTurns, managerStatedWarningLevel } from "@/lib/forms/warning-level";
 import type { ChatFormProposal } from "@/types";
 
@@ -127,10 +128,20 @@ export function groundFormSlots(input: {
   );
   const said = users.join("\n");
   const raw = parseRaw(input.raw);
-  const templateKey =
-    templateFromUser(said) ??
-    (isTemplate(input.continueTemplateKey) ? input.continueTemplateKey : null) ??
-    (isTemplate(raw.templateKey) ? raw.templateKey : null);
+  const choiceStated = formChoiceStatedEnabled();
+  const continued = isTemplate(input.continueTemplateKey) ? input.continueTemplateKey : null;
+  const stated = choiceStated ? statedTemplate(users, continued ?? input.saved?.templateKey ?? null) : null;
+  if (stated?.together) {
+    return { slots: { ...EMPTY_SLOTS }, response: { content: startWithQuestion(stated.together), citations: [] } };
+  }
+  // FORM_CHOICE_STATED_ENABLED: in a coaching conversation the model's "dpoa"
+  // does not pick the Corrective Action Form; the manager's own words do
+  // (templateFromUser reads "CA", "write up", "verbal", "warning").
+  const coaching =
+    users.some((turn) => /\bcoach(?:ing)?\b/i.test(turn)) && !users.some((turn) => mentionsEarlierCoaching(turn));
+  const modelKey =
+    isTemplate(raw.templateKey) && !(choiceStated && raw.templateKey === "dpoa" && coaching) ? raw.templateKey : null;
+  const templateKey = stated?.key ?? templateFromUser(said) ?? continued ?? modelKey;
   const employeeName = groundedName(raw.employeeName, users);
   const jobTitle = managerOnly ? managerTitle(users, raw.employeeName) : groundedTitle(users);
   const store = groundedStore(said);
@@ -184,7 +195,7 @@ export function groundFormSlots(input: {
     warningLevelManagerOnlyEnabled() && saved && allTurns.length < HISTORY_CAP
       ? { ...saved, warningLevel: null }
       : saved;
-  const slots = finishSlots(mergeSlots(read, savedSlots), said);
+  const slots = finishSlots(firstCoachingUnlessEarlier(mergeSlots(read, savedSlots), users), said);
 
   const assistants = [...input.history, { role: "user", content: input.question }]
     .filter((turn) => turn.role === "assistant")
@@ -358,6 +369,90 @@ function parseRaw(input: unknown): RawSlots {
 
 function str(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED. The Follow-Up Coaching Form only when the
+ * manager mentions coaching that already happened or a follow-up. The model's
+ * "follow-up-coaching", an open follow-up card or a stored one is otherwise
+ * the Coaching Form (QA, 25 Oct 2026: "I need to coach an employee").
+ */
+function firstCoachingUnlessEarlier(slots: FormRemapSlots, users: readonly string[]): FormRemapSlots {
+  if (!formChoiceStatedEnabled() || slots.templateKey !== "follow-up-coaching") return slots;
+  if (users.some((turn) => mentionsEarlierCoaching(turn))) return slots;
+  return { ...slots, templateKey: "coaching" };
+}
+
+const EMPTY_SLOTS: FormRemapSlots = {
+  templateKey: null,
+  employeeName: null,
+  jobTitle: null,
+  store: null,
+  locationId: null,
+  incidentDateIso: null,
+  incidentTime: null,
+  warningLevel: null,
+  payrollDeduct: null,
+  payrollAmount: null,
+  policySection: null,
+  observation: null,
+  priorActions: null,
+  actionPlan: null,
+  closeMatchNote: null,
+};
+
+/**
+ * FORM_CHOICE_STATED_ENABLED (ported from the sibling app, QA round 12, 25
+ * Oct 2026). One turn carries one card. A turn that names two forms ("a
+ * coaching form and a policy review? I'd like to see both") asks which to
+ * start with. The manager answers with the form's name, which is a form
+ * request like any other; once a card is open, that earlier turn no longer
+ * asks. Null leaves the form to the reading below.
+ */
+function statedTemplate(
+  users: readonly string[],
+  openKey: string | null,
+): { key: TemplateKey | null; together?: TemplateKey[] } | null {
+  for (let at = users.length - 1; at >= 0; at -= 1) {
+    const several = formsNamedTogether(users[at]!);
+    if (several.length > 1) {
+      if (at < users.length - 1 && isTemplate(openKey)) return { key: openKey };
+      return { key: null, together: several };
+    }
+    if (namedForms(users[at]!).length > 0) return null;
+  }
+  return null;
+}
+
+function namedForms(text: string): TemplateKey[] {
+  const keys: TemplateKey[] = [];
+  const add = (re: RegExp, key: TemplateKey) => {
+    if (re.test(text) && !keys.includes(key)) keys.push(key);
+  };
+  add(/\bfollow[- ]up coaching\b/i, "follow-up-coaching");
+  add(/\bpolicy review\b/i, "policy-review");
+  add(/\bcorrective actions?\b|\bwrite-?ups?\b|\bwritten up\b|\bca\b|\bc\/a\b|\bdpoa\b/i, "dpoa");
+  add(/(?<!follow[- ]up )\bcoaching form\b/i, "coaching");
+  return keys;
+}
+
+/** The forms one turn asks for together; each part between "and", "plus" or a comma is read on its own. */
+function formsNamedTogether(text: string): TemplateKey[] {
+  const parts = text.split(/,|&|\band\b|\bplus\b|\bas well as\b/i).filter((part) => part.trim() !== "");
+  if (parts.length < 2) return [];
+  const keys: TemplateKey[] = [];
+  for (const part of parts) {
+    const named = namedForms(part);
+    const key = named.length === 1 ? named[0]! : null;
+    if (key && !keys.includes(key)) keys.push(key);
+  }
+  return keys.length > 1 ? keys : [];
+}
+
+function startWithQuestion(keys: readonly TemplateKey[]): string {
+  const names = keys.map((key) => `the **${TEMPLATE_SEEDS.find((seed) => seed.key === key)?.name ?? key}**`);
+  const choices = names.length === 2 ? names.join(" or ") : `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`;
+  return `Which form should I start with — ${choices}? I'll draft one at a time; ask for the other once this one is done.`;
 }
 
 function isTemplate(value: string | null | undefined): value is TemplateKey {
