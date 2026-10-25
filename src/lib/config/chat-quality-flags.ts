@@ -341,7 +341,7 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
  * words. The lines the app writes onto the question ("Job title: CA. It
  * happened at Kearney, NE.") are not read as what the manager said, a pasted
  * policy is not their title, and a turn that only names the employee or says
- * where they work is not what happened (ported from Ask Sunny). Off, every
+ * where they work is not what happened (ported from the sibling app). Off, every
  * reader is unchanged.
  */
 export function managerWordsOnlyEnabled(): boolean {
