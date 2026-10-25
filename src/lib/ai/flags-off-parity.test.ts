@@ -48,6 +48,22 @@ const APPROVED_PROTECTED_EDITS = [":(exclude)src/lib/forms/form-date-answer.ts"]
 const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.tsx", "**/*.css"];
 const ALLOWED_UI = "src/features/chat/message-bubble.tsx";
 
+/*
+ * The user (Pau) approved, via QA on 25 Oct 2026, the forms list's Edit and
+ * History mount for form revisions in both apps: exactly these two added
+ * lines in monitoring-table.tsx, rendering nothing with
+ * NEXT_PUBLIC_FORM_REVISIONS_ENABLED off. Any other change to the file fails.
+ */
+const MONITORING_TABLE = "src/features/forms/monitoring-table.tsx";
+const MONITORING_MOUNT = [
+  '+import { RegisterRowActions } from "@/form-revisions/register-row-actions";',
+  "+                            <RegisterRowActions form={form} />",
+];
+
+function changedLines(patch: string): string[] {
+  return patch.split("\n").filter((line) => /^[+-](?![+-]{2} )/.test(line));
+}
+
 function diff(ref: string, args: string[]): string {
   return execFileSync("git", ["diff", ref, "--", ...args], { encoding: "utf8" });
 }
@@ -92,9 +108,10 @@ describe("new flags default off", () => {
       const raw = diff(uiBase, [...UI_PATHS, ":(exclude)**/*.test.tsx", ":(exclude)**/*.dom.test.tsx"]);
       const unexpected = raw
         .split(/(?=^diff --git )/m)
-        .filter((block) => block.trim().length > 0 && !block.includes(ALLOWED_UI))
+        .filter((block) => block.trim().length > 0 && !block.includes(ALLOWED_UI) && !block.includes(MONITORING_TABLE))
         .join("");
       expect(unexpected).toBe("");
+      expect(changedLines(diff(uiBase, [MONITORING_TABLE])).filter((line) => !MONITORING_MOUNT.includes(line))).toEqual([]);
     }
     const ask = readFileSync("src/lib/ai/server-ask.ts", "utf8");
     const code = ask.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
