@@ -627,6 +627,17 @@ export function questionNotFormEnabled(): boolean {
   return envFlag("QUESTION_NOT_FORM_ENABLED");
 }
 
+/**
+ * The exit form's How Employee Resigned line also reads a resignation the
+ * manager says was given verbally ("she told me verbally", "verbal notice"),
+ * as "Verbal" (Pau's decision, 25 Oct 2026, ported from the sibling app). A
+ * bare "she resigned" still leaves the line blank, and "verbal warning" is
+ * never a method. Off, the methods read are exactly as before.
+ */
+export function resignMethodFollowupEnabled(): boolean {
+  return envFlag("RESIGN_METHOD_FOLLOWUP_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -688,4 +699,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_DATE_RULES_ENABLED",
   "QUESTION_NOT_FORM_ENABLED",
   "DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED",
+  "RESIGN_METHOD_FOLLOWUP_ENABLED",
 ] as const;
