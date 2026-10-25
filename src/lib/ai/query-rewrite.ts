@@ -33,17 +33,17 @@ export function queryAfterRewrite(fallback: string, rewritten: string | null | u
  * A FOLLOW-UP THAT NAMES ITS OWN DOCUMENTS IS SEARCHED ON THEM
  * ============================================================================
  *
- * QA Round 17, Sunny conv_mvo0ayai2x20aiy (25 Oct 2026). After "I have an
- * employee that is not verifying documents are signed", the manager named the
- * documents: "The NCR and Fitzpatrick Skin Type Chart, EFT Agreements". The
- * retrieval rewrite, reading the earlier turn, searched "Employment
- * Verification" instead; the skin typing chart (Consent Forms, p.49) was not
- * retrieved and the reply said the knowledge base had nothing on it.
+ * Found in the sibling app (QA Round 17, 25 Oct 2026). After a turn about
+ * documents not being signed, the manager named the documents, and the
+ * retrieval rewrite, reading the earlier turn, searched the earlier turn's
+ * subject ("Employment Verification") instead; the section that covered the
+ * named documents was not retrieved and the reply said there was nothing on
+ * them.
  *
  * Behind FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED: a turn that names at least two
- * words of its own (words of four letters or more, or acronyms such as "NCR"
- * and "EFT", that no earlier manager turn used) keeps a rewritten query only
- * when the rewrite still carries one of those words. A rewrite that kept
+ * words of its own (words of four letters or more, or acronyms of two or
+ * more capitals, that no earlier manager turn used) keeps a rewritten query
+ * only when the rewrite still carries one of those words. A rewrite that kept
  * none of them, only the earlier subject, gives way to the turn's own words.
  */
 

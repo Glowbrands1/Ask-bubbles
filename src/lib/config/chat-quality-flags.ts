@@ -27,8 +27,8 @@ export function hybridSearchEnabled(): boolean {
 
 /** Haiku reading of a short follow-up before retrieval. */
 /**
- * A follow-up that names its own documents or nouns ("The NCR and
- * Fitzpatrick Skin Type Chart, EFT Agreements") is searched on them when the
+ * A follow-up that names its own documents or nouns ("The I-9 and W-4
+ * forms, direct deposit agreements") is searched on them when the
  * retrieval rewrite kept none of them and searched only the earlier turn's
  * subject ("Employment Verification"). Off, the rewritten query is searched
  * as it is. Same name in both apps. Default off.

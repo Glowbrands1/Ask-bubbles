@@ -14,7 +14,10 @@ new documents was searched on the earlier turn's subject. This app's
 `rewriteRetrievalQuery` also reads the earlier turn and can do the same. On,
 after the rewrite, a turn that names two or more words no earlier manager
 turn used keeps the rewritten query only when it still has one of them;
-otherwise the turn is searched as typed.
+otherwise the turn is searched as typed. The test is a neutral store/HR
+case ("The I-9 and W-4 forms, direct deposit agreements"; the rewrite stubbed
+with this manual's Employment Verification heading): none of the sibling's
+documents or wording were copied.
 
 ## 25 Oct 2026: the job title is a title the manager stated — ported from Ask Sunny (PR 188)
 

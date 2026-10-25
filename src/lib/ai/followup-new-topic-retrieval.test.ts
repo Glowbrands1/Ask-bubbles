@@ -4,28 +4,30 @@ import { followUpOwnQuery, newTopicWords } from "./query-rewrite";
 
 /**
  * ============================================================================
- * QA ROUND 17 (sibling app), conv_mvo0ayai2x20aiy — a follow-up that names its documents
+ * A FOLLOW-UP THAT NAMES ITS OWN DOCUMENTS (FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED)
  * ============================================================================
  *
- * The manager's turns, word for word:
- *   T1 "Help me prepare for a coaching conversation."
- *   T2 "I have an employee that is not verifying documents are signed"
- *   T3 "The NCR and Fitzpatrick Skin Type Chart, EFT Agreements"
+ * Found in the sibling app (QA Round 17): after a turn about documents not
+ * being signed, the manager named the documents, and the retrieval rewrite,
+ * reading the earlier turn, searched the earlier turn's subject instead, so
+ * the section that covers them was never retrieved.
  *
- * The turns are the sibling app's production conversation (sibling chat_traces
- * for T3: rewritten_query "Employment Verification", the T2 subject). This
- * app's rewrite (`rewriteRetrievalQuery`) reads the same earlier turn and can
- * drop the same words. The assistant turns are short stand-ins: the rewrite
- * reads only the manager's turns. The manager's words name no company.
+ * No production turn here shows it yet: of this app's chat_traces, only six
+ * carry a rewritten query, all of them slot-only turns ("Her name is Test
+ * Employee") searched with the conversation's topic by design. So the turns
+ * below are a neutral store/HR case built for this test, and the rewrite is
+ * stubbed with a heading this app's manual prints (Employment Verification,
+ * p.20). `rewriteRetrievalQuery` reads the earlier manager turn the same way
+ * and can drop a follow-up's own nouns. The assistant turns are short
+ * stand-ins: the rewrite reads only the manager's turns.
  *
- * FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED (default off): T3 names words no
- * earlier manager turn used, and the rewrite kept none of them, so T3 is
- * searched on its own words.
+ * Flag on: T3 names words no earlier manager turn used, and the rewrite kept
+ * none of them, so T3 is searched as typed.
  */
 
 const T1 = "Help me prepare for a coaching conversation.";
-const T2 = "I have an employee that is not verifying documents are signed";
-const T3 = "The NCR and Fitzpatrick Skin Type Chart, EFT Agreements";
+const T2 = "I have an employee who is not getting new hire paperwork signed";
+const T3 = "The I-9 and W-4 forms, direct deposit agreements";
 const LIVE_REWRITE = "Employment Verification";
 
 const HISTORY = [
@@ -37,7 +39,7 @@ const HISTORY = [
 
 describe("followUpOwnQuery (pure)", () => {
   it("T3 names words of its own", () => {
-    expect(newTopicWords(T3, HISTORY)).toEqual(expect.arrayContaining(["ncr", "fitzpatrick", "skin", "chart", "eft", "agreement"]));
+    expect(newTopicWords(T3, HISTORY)).toEqual(expect.arrayContaining(["form", "direct", "deposit", "agreement"]));
   });
 
   it("a rewrite that kept only the earlier subject gives way to the turn's own words", () => {
@@ -45,7 +47,8 @@ describe("followUpOwnQuery (pure)", () => {
   });
 
   it("a rewrite that kept the turn's words stays", () => {
-    const kept = "Consent Forms skin typing chart";
+    // A manual heading the rewrite may add, with the turn's own words kept.
+    const kept = "Timekeeping & Payroll direct deposit agreements";
     expect(followUpOwnQuery({ question: T3, history: HISTORY, rewritten: kept, ownWords: T3 })).toBe(kept);
   });
 
@@ -113,7 +116,7 @@ async function ask(question: string) {
       mode: "standard",
       history: HISTORY,
       scopeId: "bcs-core",
-      conversationId: "conv_mvo0ayai2x20aiy",
+      conversationId: "conv_followup_new_topic",
       context: { userName: "Test Manager", locationName: "All areas", todayIso: "2026-10-25" },
     } as never,
     ACTOR as never,
@@ -134,19 +137,19 @@ afterEach(() => {
   delete process.env.FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED;
 });
 
-describe("conv_mvo0ayai2x20aiy T3 through answerQuestion (query rewrite on)", () => {
+describe("T3 through answerQuestion (query rewrite on)", () => {
   it("flag off: searched on the earlier subject, as live", async () => {
     await ask(T3);
     // The plan searches the rewrite, then the rewrite anchored to the earlier turn.
     expect(state.queries[0]).toBe(LIVE_REWRITE);
-    expect(state.queries.some((query) => /fitzpatrick/i.test(query))).toBe(false);
+    expect(state.queries.some((query) => /direct deposit/i.test(query))).toBe(false);
   }, 30_000);
 
   it("FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED on: searched on the documents T3 names", async () => {
     process.env.FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED = "1";
     await ask(T3);
     expect(state.queries.length).toBeGreaterThan(0);
-    expect(state.queries.every((query) => query.includes("Fitzpatrick Skin Type Chart"))).toBe(true);
+    expect(state.queries.every((query) => query.includes("direct deposit agreements"))).toBe(true);
     expect(state.queries.some((query) => query.startsWith(LIVE_REWRITE))).toBe(false);
   }, 30_000);
 
