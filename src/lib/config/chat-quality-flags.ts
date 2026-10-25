@@ -336,6 +336,19 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
   return envFlag("INTENT_PAYROLL_MANAGER_ONLY_ENABLED");
 }
 
+/**
+ * Prior actions read the way managers write them. A list after "received …
+ * coaching 9/8" keeps its later comma items that name a step; "prior verbal
+ * 9-1-26" and "Her prior coaching is her policy manual acknowledgement on
+ * 9/01" are earlier steps; a date governed by "previous / prior / coached /
+ * jba manual / policy manual acknowledgement" never dates the form; and an
+ * action plan that is only the history label is dropped. Off, the readers
+ * are unchanged.
+ */
+export function priorActionsParseEnabled(): boolean {
+  return envFlag("PRIOR_ACTIONS_PARSE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -374,4 +387,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
+  "PRIOR_ACTIONS_PARSE_ENABLED",
 ] as const;
