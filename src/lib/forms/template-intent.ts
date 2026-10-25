@@ -23,7 +23,7 @@
  * Here, that sentence is AMBIGUOUS and the answer is a question.
  */
 
-import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { formChoiceStatedEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { asksForTeamCoaching } from "./team-subject";
 import { EXIT_TEMPLATE_KEY } from "./exit-library";
@@ -1278,6 +1278,34 @@ function requestedNaming(q: string, original: string): { key: string; phrase: st
 const DECLINES_FORM =
   /\b(?:(?:don'?t|dont|do\s+not|doesn'?t|does\s+not|didn'?t)\s+(?:want|need|make|create|start|draft|file|open)|not\s+(?:ready\s+for|looking\s+for|doing|filing|making)|no\s+need\s+for|(?:skip|hold\s+off\s+on))\s+(?:(?:a|an|the|any)\s+)?(?:actual\s+|real\s+|official\s+)?(?:[a-z-]+\s+){0,2}?(?:form|forms|document|paperwork|write[- ]?up)\b|\bno\s+(?:actual\s+)?(?:form|forms|paperwork)\b|\bnot\s+(?:a|an)\s+(?:actual\s+)?form\b|\b(?:never\s*mind|forget)\s+(?:the|this|that)\s+form\b|\b(?:form|forms|paperwork)\s+not\s+yet\b/;
 
+/**
+ * FORM_CHOICE_STATED_ENABLED. "Policy reference: Disciplinary Action, JBA
+ * Policy Manual p.14." is the stored policy written ahead of the turn, not a
+ * form the manager asked for. Its "disciplinary action" is a Corrective Action
+ * alias, and it beat "Create a coaching form" on the list's order (ported
+ * from the sibling app, QA 24 Oct 2026). Here it names no form.
+ */
+const POLICY_REFERENCE_LINE = /\bPolicy reference:[^\n]*?JBA Policy Manual(?:\s+p\.\s*\d+)?\.?/gi;
+
+function withoutPolicyReference(text: string): string {
+  return text.replace(POLICY_REFERENCE_LINE, " ");
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED. Whether the manager's own words mention coaching
+ * that already happened, or a follow-up: "follow up on her coaching", "I
+ * coached her last week", "prior coaching 9-1", "she was coached before".
+ * The Follow-Up Coaching Form is only for that. "I need to coach an employee"
+ * is a first coaching (ported from the sibling app, QA 25 Oct 2026: the
+ * follow-up card came up with no earlier coaching mentioned).
+ */
+const EARLIER_COACHING =
+  /\bfollow[- ]?ups?\b|\b(?:coached|re-?coach(?:ed|ing)?)\b|\b(?:prior|previous|previously|earlier|last|first|already|again|second|past)\s+(?:(?:documented|verbal)\s+)?coach(?:ing|ed)?\b|\bcoach(?:ing|ed)?\s+(?:\w+\s+){0,3}?(?:before|again|already|last\s+(?:week|month|time)|previously)\b/i;
+
+export function mentionsEarlierCoaching(text: string): boolean {
+  return EARLIER_COACHING.test(text ?? "");
+}
+
 function declinesForm(q: string): boolean {
   return DECLINES_FORM.test(q);
 }
@@ -1436,7 +1464,8 @@ export function asksAboutForms(question: string): boolean {
 
 const EXISTENCE_QUESTION = /^(?:so\s+|and\s+)?(?:(?:do|does|did)\s+(?:we|you|i|they|ask bubbles)\s+(?:have|offer|keep|use)|(?:is|are)\s+there|have\s+(?:we|you)\s+got|(?:can|could)\s+(?:i|we)\s+(?:find|get))\b/;
 
-export function detectTemplateIntent(question: string): TemplateIntent {
+export function detectTemplateIntent(rawQuestion: string): TemplateIntent {
+  const question = formChoiceStatedEnabled() ? withoutPolicyReference(rawQuestion) : rawQuestion;
   const q = canonicalFormWording(normalize(question));
   /* A question about forms — compared, explained, or when to use one — is answered, never opened. */
   /*

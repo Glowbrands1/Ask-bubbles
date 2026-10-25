@@ -351,6 +351,19 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
 }
 
 /**
+ * The form is the one the manager named in their own words, newest turn
+ * first. The model's formType, the assistant's "**Corrective Action Form**"
+ * and the state lines never pick it, and a "Policy reference:" line is not a
+ * form request. "Disciplinary Action" (the discipline procedure) is never the
+ * violated policy. Ported from the sibling app (QA, 24 Oct 2026: coaching and
+ * Policy Review requests became a Corrective Action). Off, the form is read
+ * as before.
+ */
+export function formChoiceStatedEnabled(): boolean {
+  return envFlag("FORM_CHOICE_STATED_ENABLED");
+}
+
+/**
  * Keep other conversations out of the reply text. The person-memory recall
  * quotes another chat only when the manager refers back to it ("again", "last
  * time", "like before", "same as …"); a name read from a turn that is only
@@ -403,5 +416,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FULL_MANUAL_CONTEXT_ENABLED",
   "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
+  "FORM_CHOICE_STATED_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
 ] as const;
