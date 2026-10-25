@@ -3,7 +3,7 @@ import "server-only";
 import { promptLabel } from "@/lib/ai/prompts";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { businessToday } from "@/lib/business-date";
-import { priorRecordFinalOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { formRequestOverOnFileEnabled, priorRecordFinalOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { locationById } from "@/lib/locations";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import type { AccessScope, Role } from "@/types";
@@ -155,8 +155,19 @@ export function splitRecordDrafts<T extends { status: string }>(
 export function asksOnlyAboutFormsOnFile(question: string): boolean {
   const text = question.toLowerCase().replace(/\s+/g, " ");
   if (!ON_FILE_PATTERNS.some((pattern) => pattern.test(text))) return false;
+  if (formRequestOverOnFileEnabled() && LEVEL_REQUEST.test(text)) return false;
   return !ASKS_FOR_A_NEW_FORM.test(text);
 }
+
+/*
+ * FORM_REQUEST_OVER_ON_FILE_ENABLED. A sentence that opens by asking for a
+ * warning level is a request for a new form, whatever history it lists
+ * after: "do verbal corrective action for Test Employee, … previous coaching
+ * jba manual 9-9-26" (conv_mvnu3j932gpohx4). "Was she given a verbal?" does
+ * not open with a request and is unchanged.
+ */
+const LEVEL_REQUEST =
+  /(?:^|[.!?;]\s+)(?:please\s+)?(?:do|write|issue|give|file)\s+(?:her\s+|him\s+|them\s+)?(?:a\s+|an\s+)?(?:verbal|written|final)\b/;
 
 /* ----------------------------------------------------------------- names --- */
 

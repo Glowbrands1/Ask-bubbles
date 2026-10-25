@@ -16,6 +16,7 @@ import {
   placeSpanGuardEnabled,
   priorActionsParseEnabled,
   titleWholeWordEnabled,
+  newestPlaceTurnEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
@@ -24,6 +25,7 @@ import { lateOpenOn, newestStatedDate, withYearlessDatesWritten } from "@/lib/fo
 import { correctiveActionBasis } from "@/lib/forms/corrective-action-intake";
 import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
 import { labelledStoreIds } from "@/lib/forms/store-cue";
+import { newestManagerTurnStore } from "@/lib/forms/newest-place-turn";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -177,6 +179,12 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
   const typedEmployee = keepFormEmployeeEnabled() && !choice?.person ? typedEmployeeName(input.question) : null;
   const employee = typedEmployee ? withTypedEmployee(grounded, typedEmployee) : grounded;
   const store =
+    (newestPlaceTurnEnabled()
+      ? newestManagerTurnStore(
+          [input.question, ...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content).reverse()],
+          input.stores,
+        )
+      : null) ??
     newestTurnStore(input.question, input.stores) ??
     groundStore(choice?.store ?? reading?.store ?? null, blob, input.stores, employee.person);
   // The manager's turns only: not the assistant's, not the saved state, not a

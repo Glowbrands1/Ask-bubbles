@@ -41,6 +41,7 @@ import { chatTraceDraft } from "./chat-trace-store";
 import { readsAsPolicyPaste, readsAsStatedTitle, spelledAssistant } from "./title-words";
 import {
   currentRequestStart,
+  HAS_WORD,
   hasCutDate,
   isAmbiguousAnswer,
   isEditTurn,
@@ -216,12 +217,14 @@ export function groundFormSlots(input: {
   // MANAGER_WORDS_ONLY_ENABLED: a clause that only names the employee or says
   // where they work is not what happened, on either reader.
   const incidentSlot = managerOnly ? (clause: string) => slotClause(clause) || namesOrPlacesThem(clause) : slotClause;
-  const observation = fixed
+  const incidentRead = fixed
     ? (requestIncident({ text: scoped, employeeName, slotClause: incidentSlot }) ??
       (isRequestLeftover(raw.observation, employeeName) || hasCutDate(raw.observation, said)
         ? null
         : acceptSummary(raw.observation, scoped)))
     : (statedIncident(said, employeeName, managerOnly) ?? acceptSummary(raw.observation, said));
+  // A stray quote or other punctuation alone is never What happened (conv_mvnu3j932gpohx4).
+  const observation = incidentRead && HAS_WORD.test(incidentRead) ? incidentRead : null;
   // Both readers contribute, each behind its own flag: the "previous coaching: …"
   // list (REMAP_INCIDENT_FIX_ENABLED) and the intent path's step reader
   // (PRIOR_ACTIONS_PARSE_ENABLED). With both on, a list item whose date a
