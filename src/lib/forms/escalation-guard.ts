@@ -171,3 +171,14 @@ export const PERFORMANCE_MANAGEMENT_DRAFT_RULES: readonly string[] = [
   "NEVER SELECT A TERMINATION, DEMOTION OR SUSPENSION, and never write that one is warranted. Those are final employment decisions reserved to the company leadership process — District Manager, HR or Loss Prevention as applicable. If the manager asks whether to take one, draft the rest of the form and say the decision goes to leadership review.",
   "IF THE MANAGER'S ACCOUNT DOES NOT SUPPORT A CHOICE, LEAVE THE STEP UNSET and say what you would need to choose one. A guessed rung on somebody's record is worse than a blank line the manager fills in deliberately.",
 ];
+
+/**
+ * The same rules for a governed form drafted WITHOUT the framework's sections
+ * (FRAMEWORK_UNPIN_ENABLED). Only the first rule changes: it pointed at a
+ * framework section that is no longer in the prompt. Every guard after it is
+ * the app's own and stays.
+ */
+export const UNPINNED_PERFORMANCE_MANAGEMENT_DRAFT_RULES: readonly string[] = [
+  "THIS FORM RECORDS A STEP IN THE APPROVED CORRECTIVE-ACTION PROGRESSION. Do not describe or restate a progression in a field.",
+  ...PERFORMANCE_MANAGEMENT_DRAFT_RULES.slice(1),
+];
