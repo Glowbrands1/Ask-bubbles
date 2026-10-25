@@ -549,6 +549,8 @@ describe("based, state codes, and policy phrases are not a person or a store", (
   it("flag on, workplace policy is not a store", () => {
     const text = "she let a visitor in the workplace policy store";
     delete process.env.TYPED_NAME_ENABLED;
+    // The old reading, before either guard: PLACE_SPAN_GUARD_ENABLED also drops this span.
+    vi.stubEnv("PLACE_SPAN_GUARD_ENABLED", "");
     const before = readStoreMentions(text);
     expect(before.unmatched.join(" ") + before.mentions.map((mention) => mention.matched).join(" ")).toMatch(/workplace/i);
     vi.stubEnv("TYPED_NAME_ENABLED", "1");

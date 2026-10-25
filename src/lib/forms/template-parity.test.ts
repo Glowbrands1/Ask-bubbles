@@ -123,6 +123,13 @@ const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[]
    */
   { decision: "QA-2 — exit step, tanning clause removed (Sunlync kept)", from: "Place comment on employee’s Sunlync account stating they are no longer employed, verify tanning has been removed.", to: "Place comment on employee’s Sunlync account stating they are no longer employed." },
   { decision: "QA-3 — FTTC EPP description", from: "Performance plan for a full-time Tanning Consultant.", to: "The FTTC Employee Performance Plan." },
+  /*
+   * QA, 25 Oct 2026: the hidden Tanning Consultant Interview printed the
+   * sibling company's name above its core values. The heading is the JBA
+   * Policy Manual's own ("Core Values", p.7); the five values are unchanged.
+   * See `seed-sibling-brand.test.ts`.
+   */
+  { decision: "QA-4 — Tanning Consultant Interview core-values heading", from: "Sun Tan City Core Values", to: "Core Values" },
 ];
 
 function comparable(seed: Record<string, unknown>) {
@@ -215,13 +222,13 @@ describe("the migrated templates are the reference platform's published template
       APPROVED_CONTENT_CHANGES.some((entry) => entry.from === change.from && entry.to === change.to),
     );
     // D3 x2 (SDIT, both lists), D4 x10 (six EPPs; SDIT, TSD and both DMIT print it twice), D12 x1, D18 x1, DM-1..3 x1 each,
-    // QA-2..3 x1 each (QA, 25 Oct 2026: no sibling-company wording; QA-1 dropped, MyGlow confirmed by Pau).
-    expect(matching).toHaveLength(19);
+    // QA-2..4 x1 each (QA, 25 Oct 2026: no sibling-company wording; QA-1 dropped, MyGlow confirmed by Pau).
+    expect(matching).toHaveLength(20);
     for (const entry of APPROVED_CONTENT_CHANGES) {
       expect(matching.some((change) => change.from === entry.from), entry.decision).toBe(true);
     }
     expect(new Set(matching.map((change) => change.sourceKey))).toEqual(
-      new Set(["sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1", "dpoa", "stc-exit"]),
+      new Set(["sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1", "dpoa", "stc-exit", "tanning-consultant-interview"]),
     );
   });
 

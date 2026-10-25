@@ -228,7 +228,8 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
       "dmit-epp-tsd": 3,
       "dmit-epp-dmit": 3,
       "prescreen-phone-interview": 3, // Salon -> Store, then the removal of the uniform question (D14, Phase 2B)
-      "tanning-consultant-interview": 3,
+      // 4: the core-values heading names no company (QA, 25 Oct 2026; seed-sibling-brand.test.ts).
+      "tanning-consultant-interview": 4,
       "management-interview-round-1": 4,
       "management-interview-round-2": 3,
       "tsd-epp": 5,
@@ -468,12 +469,14 @@ describe("the Tanning Consultant Interview matches its source", () => {
     ]);
   });
 
-  it("prints the five core values in the source's words", () => {
+  it("prints the five core values in the source's words, under a heading that names no company", () => {
     const reference = parseFormDocument(document).blocks.find(
       (block) => block.kind === "reference",
     );
     expect(reference).toMatchObject({
-      label: "Sun Tan City Core Values",
+      // The source printed the sibling company's name before "Core Values" (QA, 25 Oct 2026):
+      // the heading is now the JBA Policy Manual's own, and the five values are unchanged.
+      label: "Core Values",
       body: [
         "Nothing’s Impossible – We approach challenges with creativity and determination instead of excuses.",
         "Work Hard, Have Fun – We bring energy, positivity, and joy to doing our best work.",

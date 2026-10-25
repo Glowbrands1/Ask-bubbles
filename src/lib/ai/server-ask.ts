@@ -75,6 +75,7 @@ import {
   formFullRemapEnabled,
   fullManualContextEnabled,
   crossChatReplyGuardEnabled,
+  manualNegatedListNoteEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -102,6 +103,7 @@ import { resolveChatEntities } from "./entity-facts";
 import { proposeFormForTurn, suggestFormsForTurn, type ChatActor } from "./form-proposal";
 import { rowsForQuestion } from "@/lib/knowledge/credential-redaction";
 import { assembleGrounding } from "./grounding-assembly";
+import { withManualReadingNotes } from "./manual-reading-notes";
 import {
   citePolicyAnswer,
   fullManualGroundingNote,
@@ -122,6 +124,7 @@ import { retrievalPlanFor } from "./retrieval-query";
 import { slotOnlyRetrievalTopic } from "./slot-only-turn";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
 import type { AskRequest, AskResponse } from "./types";
+import { keepManagerActionPlan } from "./manager-action-plan-reply";
 
 /**
  * ============================================================================
@@ -176,7 +179,16 @@ export async function answerQuestion(
   return finishChatTrace(draft, () => answerQuestionBody(request, actor, memory));
 }
 
+/** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
 async function answerQuestionBody(
+  request: AskRequest,
+  actor: ChatActor,
+  memory: { memoryOwnerId?: string } = {},
+): Promise<AskResponse> {
+  return keepManagerActionPlan(await answerQuestionCore(request, actor, memory), request);
+}
+
+async function answerQuestionCore(
   request: AskRequest,
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
@@ -280,12 +292,18 @@ async function answerQuestionBody(
     });
     if (inventoryAnswer) return inventoryAnswer;
 
+    // Hidden templates are already left out of `summaries`; one listed but not published is not filled by the remap either.
+    const unpublished = buildFormInventory(summaries, actor)
+      .entries.filter((entry) => !entry.published)
+      .map((entry) => entry.templateKey);
     if (
       formFullRemapEnabled() &&
       remapShouldRun({
         question: request.question,
         history: request.history,
         formsTurn,
+        continueTemplateKey: request.continueProposalTemplateKey ?? null,
+        unpublished,
       })
     ) {
       const roster = await loadRosterQuiet(actor);
@@ -312,6 +330,19 @@ async function answerQuestionBody(
         continueTemplateKey: request.continueProposalTemplateKey ?? null,
         people: roster,
         saved,
+        unpublished,
+        // Read only with REMAP_INCIDENT_FIX_ENABLED on, so the card cites the section and page.
+        policyManual: async () => {
+          const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
+          return manual.ok
+            ? {
+                documentId: manual.documentId,
+                documentTitle: manual.documentTitle,
+                documentCategory: manual.documentCategory ?? null,
+                chunks: manual.chunks,
+              }
+            : null;
+        },
       });
       if (remapped) return remapped;
     }
@@ -812,13 +843,22 @@ async function answerQuestionBody(
           .map((chunk) => `[S${chunk.marker}] ${chunk.documentTitle}${chunk.locator ? ` — ${chunk.locator}` : ""}\n${chunk.content}`)
           .join("\n\n---\n\n")}`
       : null;
-  const groundingText = [
+  /*
+   * A reading note beside a manual sentence a reply read backwards (p.19's
+   * list of places a phone may not be). It goes in this per-turn block, not
+   * in the cached manual, so the prefix and its cache key stay the same.
+   */
+  const readingNotes = manualNegatedListNoteEnabled();
+  const groundingParts = [
     useManual && manualPlan ? fullManualGroundingNote(manualPlan) : buildGroundingBlock(grounding),
     supplementalText,
     useManual ? null : pinnedPolicy,
   ]
     .filter((part) => part && part.length > 0)
     .join("\n\n");
+  const groundingText = readingNotes
+    ? withManualReadingNotes(groundingParts, useManual ? manualPlan?.cachedBlock : null)
+    : groundingParts;
   updateChatTrace({
     retrievalCount: rows.length,
     retrieved: rows.slice(0, 20).map((row) => ({
@@ -868,7 +908,10 @@ async function answerQuestionBody(
        * Ordinary retrieval is the same path the flag-off turn already uses.
        */
       fellBack = true;
-      const fallbackGrounding = [buildGroundingBlock(retrievalChunks), pinnedPolicy, dataAddition.help]
+      const fallbackParts = [buildGroundingBlock(retrievalChunks), pinnedPolicy]
+        .filter((part) => part && part.length > 0)
+        .join("\n\n");
+      const fallbackGrounding = [readingNotes ? withManualReadingNotes(fallbackParts) : fallbackParts, dataAddition.help]
         .filter((part) => part && part.length > 0)
         .join("\n\n");
       answer = await callClaude({ ...claudeBase, grounding: fallbackGrounding });

@@ -944,6 +944,16 @@ function restatedPhraseLength(answer: string, passage: string, index?: PhrasePag
 
 /** The best manual passages a stretch of the answer restates, by longest shared phrase. */
 function restatedPassages(text: string, passages: readonly ManualPassage[]): ManualPassage[] {
+  return restatedByPhrase(text, passages).passages;
+}
+
+/**
+ * The passages a stretch restates, and whether a shared phrase chose them
+ * (false when a page that says clearly more by its words took their place).
+ */
+const MIN_PHRASE = 4;
+
+function restatedByPhrase(text: string, passages: readonly ManualPassage[]): { passages: ManualPassage[]; byPhrase: boolean } {
   const index = phrasePagesOf(passages);
   let best = 0;
   let chosen: ManualPassage[] = [];
@@ -954,14 +964,19 @@ function restatedPassages(text: string, passages: readonly ManualPassage[]): Man
      * next sheet. The stretch that continues "approved for instructors only"
      * restates the longer phrase, so the shorter copy is not a second page.
      */
-    if (phrase < 4 || phrase < best) continue;
+    if (phrase < MIN_PHRASE || phrase < best) continue;
     if (phrase > best) {
       best = phrase;
       chosen = [];
     }
     chosen.push(passage);
   }
-  return dominantPages(text, outsaid(text, chosen, passages), (passage) => passage.printedPage);
+  const said = outsaid(text, chosen, passages);
+  return {
+    passages: dominantPages(text, said, (passage) => passage.printedPage),
+    // Four words is the shortest phrase read at all ("state and federal law"): it decides nothing alone.
+    byPhrase: best > MIN_PHRASE && said.every((passage) => chosen.includes(passage)),
+  };
 }
 
 /*
@@ -1232,6 +1247,77 @@ export function keepRestatedFallbackMarkers(
     .join("\n");
 }
 
+/*
+ * A WORD MATCH PREFERS THE ANSWER'S OWN PAGE (live B6, 25 Oct 2026).
+ * "Payout on termination follows all applicable state and federal law
+ * [p.12]", the last bullet of a PTO answer whose other bullets restate pages
+ * 41 and 42, ties on "state and federal law" with two unrelated pages, and
+ * the page that says more by its words was Smoking/Vaping (12): "as follows",
+ * "applicable". The PTO page (42) says it: "all state and federal guidelines
+ * will be followed regarding paying out accrued PTO upon termination". A
+ * stretch whose page was chosen by words, or by no more than the shortest
+ * phrase read at all (four words, "state and federal law"), cites instead a page another stretch of the same answer restates by phrase,
+ * when that page shares enough of the stretch's words for a word match and
+ * the word-chosen page's words do not count for more than OWN_PAGE_YIELD
+ * times as much. "Dress code violations … up to and including termination"
+ * keeps the Dress Code page (15): its "dress", "home", "sent" count for more
+ * than four times the progression page's (14). Nothing is added to a stretch
+ * that cited no page.
+ */
+const OWN_PAGE_YIELD = 2.5;
+
+function answersOwnPage(
+  text: string,
+  loose: readonly ManualPassage[],
+  anchored: ReadonlySet<number>,
+  passages: readonly ManualPassage[],
+): ManualPassage[] {
+  if (loose.length === 0 || loose.some((passage) => anchored.has(passage.printedPage))) return [...loose];
+  const distinctive = distinctiveCount(text);
+  const needed = Math.max(3, Math.min(4, Math.ceil(0.4 * distinctive)));
+  let best: ManualPassage | null = null;
+  let bestScore = 0;
+  for (const passage of passages) {
+    if (!anchored.has(passage.printedPage)) continue;
+    const score = overlapScore(text, passage.text);
+    if (score >= needed && score > bestScore) {
+      best = passage;
+      bestScore = score;
+    }
+  }
+  if (!best) return [...loose];
+  const rarity = wordRarityOf(passages);
+  const looseRare = Math.max(...loose.map((passage) => rareOverlap(text, passage.text, rarity)));
+  return looseRare > OWN_PAGE_YIELD * rareOverlap(text, best.text, rarity) ? [...loose] : [best];
+}
+
+/*
+ * A QUOTE CITES THE PAGE IT IS PRINTED ON (live B8, 25 Oct 2026). "…the
+ * manual does address being in the store while off-schedule and pets —
+ * "Employees who are not scheduled to be working should not be in the
+ * workplace unless they are shopping or receiving services from the
+ * workplace", and the animals policy says "please do not bring pets into the
+ * workplace" [p.29]" quotes Visitors in the Workplace (29) and Animals in the
+ * Workplace (30); only 29 was cited. Each quoted span of four words or more
+ * that the manual prints word for word cites the page it is printed on.
+ */
+const QUOTED = /["“]([^"“”\n]{12,}?)["”]/g;
+
+function quotedPassages(text: string, passages: readonly ManualPassage[]): ManualPassage[] {
+  const found: ManualPassage[] = [];
+  for (const match of text.matchAll(QUOTED)) {
+    const quote = wordsOf(match[1] ?? "");
+    if (quote.split(" ").length < 4) continue;
+    const printing = passages.filter((passage) => ` ${wordsOf(passage.text)} `.includes(` ${quote} `));
+    // A quote printed on three pages or more is boilerplate, and names none of them.
+    if (new Set(printing.map((passage) => passage.printedPage)).size > 2) continue;
+    for (const passage of printing) {
+      if (!found.some((kept) => kept.printedPage === passage.printedPage)) found.push(passage);
+    }
+  }
+  return found;
+}
+
 /**
  * A policy answer cites a printed page only where it restates that page.
  *
@@ -1279,22 +1365,43 @@ export function citePolicyAnswer(
     }
   };
 
-  const marked = cleaned
-    .split("\n")
-    .map((line) =>
-      stretchesOf(line)
-        .map(({ text, gap }) => {
-          const written = [...text.matchAll(PRINTED_MARKER)].flatMap(markerPages);
-          const bare = withoutPrintedMarkers(text);
+  type Stretch = { text: string; gap: string; bare: string; restated: ManualPassage[]; loose: boolean };
+  const lines: Stretch[][] = cleaned.split("\n").map((line) =>
+    stretchesOf(line).map(({ text, gap }) => {
+      const written = [...text.matchAll(PRINTED_MARKER)].flatMap(markerPages);
+      const bare = withoutPrintedMarkers(text);
+      if (!bare.trim()) return { text, gap, bare, restated: [], loose: false };
+      const phrase = restatedByPhrase(bare, plan.passages);
+      let restated = phrase.passages;
+      // Matched by words, not by a phrase the page prints: a shared-word match, or a page that says more.
+      const loose = restated.length === 0 || !phrase.byPhrase;
+      if (restated.length === 0) {
+        const modelPages = [...new Set(written)].filter((page) => index.pages.has(page));
+        restated = confirmedModelPages(bare, modelPages, plan.passages);
+      }
+      if (restated.length === 0) restated = closestPassage(bare, plan.passages);
+      const quoted = quotedPassages(bare, plan.passages);
+      if (quoted.length > 0) {
+        // A verbatim quote names its page outright; the other pages stand only where they restate more than it.
+        const quotedPages = new Set(quoted.map((passage) => passage.printedPage));
+        const kept = loose ? [] : restated.filter((passage) => !quotedPages.has(passage.printedPage));
+        return { text, gap, bare, restated: [...quoted, ...kept], loose: false };
+      }
+      return { text, gap, bare, restated, loose };
+    }),
+  );
+  const anchored = new Set(
+    lines.flat().flatMap((stretch) => (stretch.loose ? [] : stretch.restated.map((passage) => passage.printedPage))),
+  );
+
+  const marked = lines
+    .map((stretches) =>
+      stretches
+        .map(({ text, gap, bare, restated, loose }) => {
           // A stretch that was only markers ("till [p.19]. [p.20]") leaves nothing, not a gap.
           if (!bare.trim()) return text.trim() ? "" : `${text}${gap}`;
-          let restated = restatedPassages(bare, plan.passages);
-          if (restated.length === 0) {
-            const modelPages = [...new Set(written)].filter((page) => index.pages.has(page));
-            restated = confirmedModelPages(bare, modelPages, plan.passages);
-          }
-          if (restated.length === 0) restated = closestPassage(bare, plan.passages);
-          const meaningful = restated.filter((passage) => !(passage.printedPage === 1 && !passage.heading));
+          const chosen = loose ? answersOwnPage(bare, restated, anchored, plan.passages) : restated;
+          const meaningful = chosen.filter((passage) => !(passage.printedPage === 1 && !passage.heading));
           for (const passage of meaningful) addHit(passage, bare);
           const pages = [...new Set(meaningful.map((passage) => passage.printedPage))];
           return `${markStretch(bare, pages)}${gap}`;
