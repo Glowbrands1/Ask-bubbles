@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import manual151 from "@/test/fixtures/jba-manual-production-151.json";
+import { priorActionsParseEnabled } from "@/lib/config/chat-quality-flags";
 import { correctiveActionDocument } from "@/lib/forms/library";
 import type { AccessScope, ChatMessage } from "@/types";
 
@@ -119,7 +120,8 @@ vi.mock("@/lib/supabase/server", () => ({
  * so the same cases pass on their own and in the both-flags-on probe.
  */
 function priorLine(list: string, parsed: string): string {
-  return process.env.PRIOR_ACTIONS_PARSE_ENABLED ? parsed : list;
+  // The flag's own reader: "off", "0" and "" are off (the flags-off parity run sets them so).
+  return priorActionsParseEnabled() ? parsed : list;
 }
 
 let answerQuestion: typeof import("./server-ask").answerQuestion;
