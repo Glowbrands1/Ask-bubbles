@@ -5,7 +5,7 @@ import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manu
 import { namesHeading } from "@/lib/forms/named-policy-section";
 import { payrollDeductAmount, payrollDeductFromConversation, type PayrollDeductAnswer } from "@/lib/forms/payroll-deduct";
 import { intentPayrollManagerOnlyEnabled, notANameGuardEnabled } from "@/lib/config/chat-quality-flags";
-import { isNotAName, maskNotANameText } from "@/lib/forms/not-a-name";
+import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -269,17 +269,25 @@ function typedBy(turns: readonly string[], name: string): boolean {
 }
 
 /**
- * NOT_A_NAME_GUARD_ENABLED: a saved employee the manager never typed is not
+ * NOT_A_NAME_GUARD_ENABLED: a saved employee that came from a reply is not
  * kept. In Ask Sunny (QA L23), a name read from a manual heading in an
  * assistant reply was saved, and "The employee is …" then outvoted the name
- * the manager typed on every later turn. A roster pick (it carries the
- * directory id) is the manager's choice and stays.
+ * the manager typed on every later turn.
+ *
+ * Only on evidence: the name is not a name at all ("blank"), or an
+ * assistant turn in the window says it (other than as a card's subject,
+ * `saidInReply`) and none of the manager's turns do. History is
+ * capped at 20 turns, so a name typed long ago may be outside the window;
+ * with no evidence either way the saved name stays. A roster pick (it
+ * carries the directory id) is the manager's choice and stays.
  */
 function withoutUntypedSavedName(input: IntentTurnInput): IntentTurnInput {
   const name = input.saved?.employeeName ?? null;
   if (!notANameGuardEnabled() || !input.saved || !name || input.saved.employeeId) return input;
   const said = [...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content), input.question];
-  if (!isNotAName(name) && typedBy(said, name)) return input;
+  const replies = input.history.filter((turn) => turn.role === "assistant").map((turn) => turn.content);
+  const fromReply = !typedBy(said, name) && saidInReply(replies, name);
+  if (!isNotAName(name) && !fromReply) return input;
   return { ...input, saved: { ...input.saved, employeeName: null, keptTypedName: null } };
 }
 

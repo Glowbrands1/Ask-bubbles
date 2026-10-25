@@ -5,7 +5,7 @@ import { formFullRemapEnabled, notANameGuardEnabled } from "@/lib/config/chat-qu
 import { CA_POLICY_LABEL, readCaPolicy } from "@/lib/forms/ca-policy";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
 import { listIncidentDates } from "@/lib/forms/form-date-answer";
-import { isNotAName, maskNotANameText } from "@/lib/forms/not-a-name";
+import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
@@ -109,7 +109,11 @@ export function groundFormSlots(input: {
 }): { slots: FormRemapSlots; response: AskResponse } {
   const conversation = turnsWithQuestion(input.history, input.question);
   const users = conversation.filter((turn) => turn.role === "user").map((turn) => turn.content);
-  const saved = withoutUntypedName(input.saved ?? null, users);
+  const saved = withoutUntypedName(
+    input.saved ?? null,
+    users,
+    conversation.filter((turn) => turn.role === "assistant").map((turn) => turn.content),
+  );
   const said = users.join("\n");
   const raw = parseRaw(input.raw);
   const templateKey =
@@ -332,16 +336,26 @@ function templateFromUser(text: string): TemplateKey | null {
 }
 
 /**
- * NOT_A_NAME_GUARD_ENABLED: a kept employee the manager never typed is not
+ * NOT_A_NAME_GUARD_ENABLED: a kept employee that came from a reply is not
  * kept again (Ask Sunny QA L23: a name read from a manual heading in a reply
- * outlived the name the manager typed). Off, the kept slots are unchanged.
+ * outlived the name the manager typed). Only on evidence: not a name at all,
+ * or an assistant turn in the window says it (other than as a card's subject)
+ * and none of the manager's turns do. With
+ * no evidence (a name typed before the 20-turn window) it stays. Off, the
+ * kept slots are unchanged.
  */
-function withoutUntypedName(saved: Partial<FormRemapSlots> | null, turns: readonly string[]): Partial<FormRemapSlots> | null {
+function withoutUntypedName(
+  saved: Partial<FormRemapSlots> | null,
+  turns: readonly string[],
+  replies: readonly string[],
+): Partial<FormRemapSlots> | null {
   const name = saved?.employeeName ?? null;
   if (!saved || !name || !notANameGuardEnabled()) return saved;
   const needle = name.trim().toLowerCase().replace(/\s+/g, " ");
-  const typed = turns.some((turn) => maskNotANameText(turn).toLowerCase().replace(/\s+/g, " ").includes(needle));
-  if (typed && !isNotAName(name)) return saved;
+  const said = (text: string) => text.toLowerCase().replace(/\s+/g, " ").includes(needle);
+  const typed = turns.some((turn) => said(maskNotANameText(turn)));
+  const fromReply = !typed && saidInReply(replies, name);
+  if (!isNotAName(name) && !fromReply) return saved;
   return { ...saved, employeeName: null, closeMatchNote: null };
 }
 

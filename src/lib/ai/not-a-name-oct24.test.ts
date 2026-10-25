@@ -187,7 +187,8 @@ function history(item: Case, upTo: number, replies: readonly string[]): ChatMess
       createdAt: `${TODAY}T18:00:01Z`,
     } as ChatMessage);
   }
-  return out;
+  // The route keeps the last 20 turns (`LIMITS.historyTurns`).
+  return out.slice(-20);
 }
 
 /** The full remap, turn by turn, keeping the slots it kept. */
@@ -540,7 +541,11 @@ describe.each([
     expect(slots.employeeName?.toLowerCase()).toBe("test employee");
     const kept = groundFormSlots({
       raw: { templateKey: null, employeeName: null, observation: null, actionPlan: null },
-      history: [{ role: "user", content: "assist with creating an exit form" }],
+      history: [
+        { role: "user", content: "who fills in the exit paperwork?" },
+        { role: "assistant", content: "The store manager does. I can start the Resignation/Exit Form for Pat Example when you're ready." },
+        { role: "user", content: "assist with creating an exit form" },
+      ],
       question: "create exit form",
       today: TODAY,
       people: [],
@@ -567,5 +572,51 @@ describe.each([
     });
     expect(decision.state.employeeName?.toLowerCase()).toBe("test employee");
     expect(decision.question).not.toContain("Pat Example");
+  });
+});
+
+/**
+ * History is capped at 20 turns. A name the manager typed in the first turn
+ * of a long form chat falls out of the window; the remap's own replies keep
+ * printing it as the card's subject, which is not evidence it came from a
+ * reply, so it stays.
+ */
+const LONG_CHAT: Case = {
+  id: "a name typed before the history window",
+  turns: [
+    "create a coaching form for Avery Testperson",
+    "she was late on 10/20",
+    "it was the third time this month",
+    "she was 25 minutes late",
+    "the coaching covers attendance",
+    "I explained the attendance policy",
+    "she said traffic was bad",
+    "we agreed she will leave earlier",
+    "follow up in two weeks",
+    "job title is soap maker",
+    "it happened at bellevue",
+    "add that she was apologetic",
+    "Create a form from this conversation.",
+  ],
+  model: ["Avery Testperson"],
+  banned: [],
+  person: { from: 0, name: /^avery testperson$/i },
+};
+
+describe.each([
+  ["TYPED_NAME_ENABLED off", ""],
+  ["TYPED_NAME_ENABLED on", "true"],
+])("a saved name typed before the window, guard on, %s", (_label, typed) => {
+  beforeEach(() => {
+    vi.stubEnv("NOT_A_NAME_GUARD_ENABLED", "true");
+    vi.stubEnv("TYPED_NAME_ENABLED", typed);
+  });
+
+  it("the remap keeps it", () => {
+    checkPerson(LONG_CHAT, throughRemap(LONG_CHAT));
+  });
+
+  it("the intent read keeps it", () => {
+    checkPerson(LONG_CHAT, throughIntent(LONG_CHAT));
   });
 });

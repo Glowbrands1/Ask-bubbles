@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { readEmployeeMentions } from "./proposal";
-import { isNotAName, maskNotANameText } from "./not-a-name";
+import { isNotAName, maskNotANameText, saidInReply } from "./not-a-name";
 import { keepTypedPerson } from "./typed-name";
 
 /**
@@ -117,5 +117,13 @@ describe("NOT_A_NAME_GUARD_ENABLED on", () => {
       kind: "resolved",
       employeeName: "Test Testy",
     });
+  });
+});
+
+describe("saidInReply", () => {
+  it("finds a name a reply cites, not one a card names as its subject", () => {
+    expect(saidInReply(['Treat every guest with respect ("Core Values", JBA Policy Manual p.4).'], "Core Values")).toBe(true);
+    expect(saidInReply(["**Employee:** Avery Testperson\n\nWho is this for? It is for **Avery Testperson**."], "Avery Testperson")).toBe(false);
+    expect(saidInReply(["Nothing about anyone here."], "Avery Testperson")).toBe(false);
   });
 });
