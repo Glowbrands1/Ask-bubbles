@@ -276,3 +276,152 @@ describe("B13 P0 rows, both flags on (production flags too)", () => {
     }
   });
 });
+
+/*
+ * B16, live on prod 25 Oct 2026, with pairs 1-4 on: REMAP_INCIDENT_FIX,
+ * PRIOR_ACTIONS_PARSE, CA_TEMPLATE_MAP, FORM_CHOICE_STATED, KEEP_FORM_EMPLOYEE,
+ * LATE_OPEN_DATE, PLACE_SPAN_GUARD and TITLE_WHOLE_WORD.
+ *
+ *   conv_mvnub78w2aellap  turn 2 gave only the warning level, the prior and
+ *                         the payroll answer; What happened became "Her".
+ *   conv_mvnuc0z025sotrk  a numbered intake; What happened became "test
+ *                         employee 2.today 3. i have observed test employee
+ *                         running late to her shifts 4".
+ */
+const B16 = [
+  "CA_TEMPLATE_MAP_ENABLED",
+  "FORM_CHOICE_STATED_ENABLED",
+  "KEEP_FORM_EMPLOYEE_ENABLED",
+  "LATE_OPEN_DATE_ENABLED",
+  "PLACE_SPAN_GUARD_ENABLED",
+  "TITLE_WHOLE_WORD_ENABLED",
+] as const;
+
+describe("B16 rows, pairs 1-4 on (production flags too)", () => {
+  beforeEach(() => {
+    for (const flag of B16) vi.stubEnv(flag, "true");
+  });
+
+  it("conv_mvnub78w2aellap: a turn of only the warning level, the prior and the payroll answer keeps the incident", async () => {
+    const replies = await replay([
+      "I need a CA form for Test Employee at Kearney for being out of dress code on October 11",
+      "This is a verbal warning. Her prior coaching is her policy manual ackwnelegement on 9/01. payroll deduction is not applicable.",
+      "Use Kearney as the location",
+    ]);
+    expect(whatHappened(replies[0]!)).toBe("being out of dress code on October 11");
+    for (const reply of replies.slice(1)) {
+      expect(whatHappened(reply)).toBe("being out of dress code on October 11");
+      // Rule (a): the manager's own word stays on the prior line.
+      expect(priors(reply)).toBe("Coaching — JBA Policy Manual ackwnelegement — 09/01/2026");
+    }
+  });
+
+  it("conv_mvnuc0z025sotrk: a numbered intake is read item by item", async () => {
+    const [, reply] = await replay([
+      "create a coaching form",
+      "1. test employee 2.today 3. i have observed test employee running late to her shifts 4. kearney",
+    ]);
+    expect(whatHappened(reply!)).toBe("running late to her shifts");
+    expect(reply!.formProposal?.employeeName ?? "").toMatch(/test employee/i);
+    expect(reply!.content).toMatch(/\*\*Store:\*\* (?:NE )?Kearney/);
+    expect(reply!.formProposal?.formDate ?? null).toBe(TODAY);
+  });
+});
+
+/*
+ * B17 (pairs 1-5 on, DRAFT_ACTIONS + CONVERSATION_DRAFT_REUSE among them),
+ * conv_mvnuh50i2hanl53 turn 3: a new incident carried incident 1's "Verbal
+ * Warning, as you said" and "No, as you said", and What happened read
+ * "different incident: no call no show". QA: a new incident starts with no
+ * warning level, payroll or priors unless typed for it.
+ */
+describe("B17: a different incident starts its own form", () => {
+  beforeEach(() => {
+    for (const flag of [...B16, "DRAFT_ACTIONS_ENABLED", "CONVERSATION_DRAFT_REUSE_ENABLED"]) vi.stubEnv(flag, "true");
+  });
+
+  it("conv_mvnuh50i2hanl53: no warning level or payroll from incident 1, and no \"different incident:\"", async () => {
+    const replies = await replay([
+      "create a CA for Test Employee at Kearney for being late to open on 10-20-26, verbal, no payroll",
+      "add that she was also on her phone",
+      "create a corrective action for Test Employee for a different incident: no call no show on 10-22-26",
+    ]);
+    expect(replies[0]!.content).toMatch(/Type of warning:\*\* Verbal Warning, as you said/);
+    const third = replies[2]!;
+    expect(whatHappened(third)).toBe("no call no show");
+    expect(third.formProposal?.formDate).toBe("2026-10-22");
+    expect(third.content).not.toMatch(/Type of warning:\*\*|Payroll deduct:\*\*/);
+    expect(third.formProposal?.warningLevel ?? null).toBeNull();
+    expect(third.formProposal?.payrollDeduct ?? null).toBeNull();
+  });
+});
+
+/* QA S20, S3, S22, S23, G10, S14, B18 and two leftovers: the request, a slot answer or the plan is never What happened. */
+describe("What happened is the incident only (QA, 25 Oct 2026)", () => {
+  beforeEach(() => {
+    for (const flag of B16) vi.stubEnv(flag, "true");
+  });
+
+  it.each([
+    // S20 conv_mvnuhq2r2qzjtdg: was "create a second coaching form for for being late".
+    ["create a second coaching form for Test Employee at Kearney for being late on 10-22-26, she already has a coaching form from 10-15-26", "being late"],
+    // S22 conv_mvnt83f02depar5: was "citing the Standards of Conduct for missing the woven deadline".
+    ["create a CA for Test Employee at Kearney citing the Standards of Conduct for missing the woven deadline on 10-15-26", "missing the woven deadline"],
+    // G10 conv_mvnt901z2sicurz: was the whole request, name sentence included (synthetic name).
+    ["create a coaching citing dress code violation on 10-15-26. Team Members name is Testy Testerson", "dress code violation"],
+    // B18 conv_mvnuqsc52eknfah: was the action plan, and the form was dated 10-30.
+    ["create a written CA for Test Employee at Kearney for missing the 10-15-26 woven deadline. action plan: complete the Woven policy module by 10-30-26 and review it with her manager", "missing the 10-15-26 woven deadline"],
+    // S14 conv_mvnt7yh522460kh: was empty.
+    ["create a coaching form for Test Employee at Kearney: on 10-20-26 she did not restock the bath bombs before close and left the shelf empty for the morning shift", "she did not restock the bath bombs before close and left the shelf empty for the morning shift"],
+    // BH5 conv_mvikc78w58v710y (synthetic name; the closing curly quote is the manager's): was ". payroll deduct not applicable"".
+    ["create a written CA for Test Employee for not attending the monthly meeting on 12-20-26. previous coaching: jba policy manual 5-8-26, verbal ca 10-2-26. payroll deduct not applicable”", "not attending the monthly meeting"],
+  ])("%s", async (said, expected) => {
+    const [reply] = await replay([said]);
+    expect(whatHappened(reply!)).toBe(expected);
+  });
+
+  it("B18: the form is dated the incident, not the plan's due date, and the plan stays verbatim", async () => {
+    vi.stubEnv("ACTION_PLAN_MANAGER_ONLY_ENABLED", "true");
+    const [reply] = await replay([
+      "create a written CA for Test Employee at Kearney for missing the 10-15-26 woven deadline. action plan: complete the Woven policy module by 10-30-26 and review it with her manager",
+    ]);
+    expect(reply!.formProposal?.formDate).toBe("2026-10-15");
+    expect(reply!.content).toContain("complete the Woven policy module by 10-30-26 and review it with her manager");
+  });
+
+  it("S3 conv_mvnt7jx72gan2i2: \"use today's date\" is the date, not What happened", async () => {
+    const [reply] = await replay(["create a coaching form for Test Employee, team member at Kearney, use today's date"]);
+    expect(whatHappened(reply!)).toBeNull();
+    expect(reply!.formProposal?.formDate).toBe(TODAY);
+  });
+
+  it("S23 conv_mvnt86tb2r30asu: \"it is for …\" and \"the policy violated is …\" are answers, not What happened", async () => {
+    const replies = await replay(["create a CA", "it is for Test Employee at Kearney", "the policy violated is standards of conduct"]);
+    for (const reply of replies) expect(whatHappened(reply)).toBeNull();
+  });
+
+  it("\"employee name is …\" on the turn after a missed name is never What happened", async () => {
+    const replies = await replay(["create a CA for being late to open on 10-20-26", "employee name is Test Employee"]);
+    expect(whatHappened(replies[1]!)).toBe("being late to open");
+  });
+});
+
+/*
+ * QA B9, conv_mvnt8fgs2gh96uh (both flags on): "On the first shift I verbally
+ * coached her" was no prior action. It is a verbal coaching on the first of
+ * the two dates, in the manager's words (rule (a)); the form is dated 10/15.
+ */
+describe("B9: a coaching the manager held on the first shift is a prior action", () => {
+  it("conv_mvnt8fgs2gh96uh turn 1", async () => {
+    const [reply] = await replay([
+      "My employee Test Employee has was 10 minutes late on her last two shifts. On the first shift I verbally coached her on our policy and expectations. Then she was late again. Please create a CA form so I can document. She was late on 10/5 and 10/15",
+    ]);
+    expect(priors(reply!)).toBe("Verbal coaching — 10/05/2026");
+    expect(reply!.formProposal?.formDate).toBe("2026-10-15");
+  });
+
+  it("a bare \"verbal\" turn is still no prior action (rule (b))", async () => {
+    const replies = await replay(["create a CA for Test Employee at Kearney for being late on 10/15", "verbal"]);
+    expect(priors(replies[1]!)).toBeNull();
+  });
+});

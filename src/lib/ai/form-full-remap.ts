@@ -23,7 +23,7 @@ import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-nam
 import { lateOpenOn, mostRecent } from "@/lib/forms/late-open";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
-import { statedPriorActions } from "@/lib/forms/prior-actions";
+import { signedDate, statedPriorActions } from "@/lib/forms/prior-actions";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
 import { payrollDeductAmount, payrollDeductFromConversation } from "@/lib/forms/payroll-deduct";
 import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
@@ -56,6 +56,8 @@ import {
   requestIncident,
   namesTheirStore,
   sentenceAboutThem,
+  withoutActionPlan,
+  splitNumberedItems,
   saidInWords,
   statedActionPlan,
   withoutAmbiguousAnswers,
@@ -189,7 +191,13 @@ export function groundFormSlots(input: {
   const jobTitle = managerOnly ? managerTitle(titleTurns, raw.employeeName) : groundedTitle(titleTurns);
   const store =
     (placeSpanGuardEnabled() ? newestNamedStore(users) : null) ?? groundedStore(said) ?? (fixed ? placeStore(said) : null);
-  const incidentDateIso = groundedDate(said, input.today);
+  // REMAP_INCIDENT_FIX_ENABLED: an action plan's due date is not the form's date (QA B18).
+  const incidentDateIso = groundedDate(fixed ? withoutActionPlan(said) : said, input.today);
+  // A later create request with its own incident starts a new form: What
+  // happened, the policy, the prior actions and the plan are read from there,
+  // and (QA B17, 25 Oct 2026) the warning level and the payroll answer too.
+  const start = fixed ? currentRequestStart({ turns: users, employeeName, slotClause }) : 0;
+  const levelTurns = start > 0 ? fromUserTurn(conversation, start) : conversation;
   /*
    * WARNING_LEVEL_MANAGER_ONLY_ENABLED (ported from the sibling app, 24 Oct 2026):
    * the latest level the manager states, with a bare "Yes" counted only after
@@ -197,17 +205,14 @@ export function groundFormSlots(input: {
    */
   const managerWarning = warningLevelManagerOnlyEnabled()
     ? managerStatedWarningLevel(
-        conversation.map((turn) => ({ role: turn.role, content: withoutWriteUps(turn.content) })),
+        levelTurns.map((turn) => ({ role: turn.role, content: withoutWriteUps(turn.content) })),
         input.today,
       )
     : null;
-  const warningLevel = managerWarning ?? explicitWarning(users, input.today);
+  const warningLevel = managerWarning ?? explicitWarning(users.slice(start), input.today);
   // A bare "Yes" after a list of questions answers none of them (REMAP_INCIDENT_FIX_ENABLED).
-  const payrollDeduct = payrollDeductFromConversation(fixed ? withoutAmbiguousAnswers(conversation) : conversation);
-  const payrollAmount = payrollDeduct === "yes" ? managerPayrollAmount(said) : null;
-  // A later create request with its own incident starts a new form: What
-  // happened, the policy, the prior actions and the plan are read from there.
-  const start = fixed ? currentRequestStart({ turns: users, employeeName, slotClause }) : 0;
+  const payrollDeduct = payrollDeductFromConversation(fixed ? withoutAmbiguousAnswers(levelTurns) : conversation);
+  const payrollAmount = payrollDeduct === "yes" ? managerPayrollAmount(users.slice(start).join("\n")) : null;
   const scoped = users.slice(start).join("\n");
   const named = fixed ? namedPolicy(withoutPriorList(scoped)) : null;
   // LATE_OPEN_DATE_ENABLED with REMAP_INCIDENT_FIX_ENABLED: a described late
@@ -228,7 +233,7 @@ export function groundFormSlots(input: {
       (managerOnly && (namesOrPlacesThem(raw.observation ?? "") || namesTheirStore(raw.observation)))
         ? null
         : acceptSummary(raw.observation, scoped)) ??
-      (managerOnly ? sentenceAboutThem({ text: scoped, employeeName, slotClause: incidentSlot }) : null))
+      sentenceAboutThem({ text: scoped, employeeName, slotClause: incidentSlot }))
     : (statedIncident(said, employeeName, managerOnly) ?? acceptSummary(raw.observation, said));
   // Both readers contribute, each behind its own flag: the "previous coaching: …"
   // list (REMAP_INCIDENT_FIX_ENABLED) and the intent path's step reader
@@ -239,8 +244,16 @@ export function groundFormSlots(input: {
   // manager restates them (QA, 25 Oct 2026, conv_mvnt9by62zckttk).
   const priorSaid = fixed ? scoped : said;
   const priorList = fixed ? priorListActions(priorSaid) : [];
-  const priorActions = priorActionsParseEnabled()
+  const parsedPriors = priorActionsParseEnabled()
     ? remapPriorActions(statedPrior(priorSaid), priorSaid, input.today, priorList)
+    : null;
+  // QA B9 (conv_mvnt8fgs2gh96uh): "On the first shift I verbally coached her …
+  // She was late on 10/5 and 10/15" is a verbal coaching on 10/5, both flags on.
+  const heldFirst = fixed && priorActionsParseEnabled() ? firstTimeCoaching(priorSaid, input.today) : null;
+  const priorActions = priorActionsParseEnabled()
+    ? heldFirst
+      ? mergePriorActions(parsedPriors, [heldFirst])
+      : parsedPriors
     : fixed
       ? mergePriorActions(statedPrior(priorSaid), priorList)
       : statedPrior(said);
@@ -938,6 +951,8 @@ function groundedDate(text: string, today: string): string | null {
   const dashed = dashedMonthDay(text, today);
   if (dashed) return dashed;
   if (/\b(?:use\s+)?today'?s\s+date\b/i.test(text)) return today;
+  // REMAP_INCIDENT_FIX_ENABLED: "2.today" in a numbered intake is the date item (conv_mvnuc0z025sotrk).
+  if (remapIncidentFixEnabled() && splitNumberedItems(text).split("\n").some((item) => /^today[.!]?$/i.test(item.trim()))) return today;
   // spokenDates also returns every calendar date. Those were already decided
   // above, including a prior-step date that must stay off the form. This
   // fallback is only a relative day ("yesterday", "last Friday").
@@ -1344,7 +1359,9 @@ function withoutLeftovers(
     ...saved,
     observation: newRequest || leftover ? null : observation,
     actionPlan: null,
-    ...(newRequest ? { policySection: null, priorActions: null } : {}),
+    ...(newRequest
+      ? { policySection: null, priorActions: null, warningLevel: null, payrollDeduct: null, payrollAmount: null }
+      : {}),
   };
 }
 
@@ -1353,6 +1370,39 @@ function placeStore(text: string): { id: string; name: string } | null {
   let found: { id: string; name: string } | null = null;
   for (const span of placeSpans(text)) found = groundedStore(span) ?? found;
   return found;
+}
+
+/**
+ * A coaching the manager held on the first of the occurrences they list: "On
+ * the first shift I verbally coached her on our policy … She was late on 10/5
+ * and 10/15" is "Verbal coaching — 10/05/2026", in the manager's words (rule
+ * (a)); the form keeps the later date. A bare "verbal" turn is never a prior
+ * (rule (b)): this needs "I … coached/warned her" and a "first" occurrence, and
+ * at least two dates to take the first of.
+ */
+function firstTimeCoaching(text: string, today: string): string | null {
+  for (const sentence of text.split(/(?<=[.!?])\s+|\n/)) {
+    if (!/\b(?:the\s+)?first\s+(?:shift|time|day|occurrence)\b/i.test(sentence)) continue;
+    const held = /\bI\s+(verbally\s+)?(coached|warned)\s+(?:her|him|them)\b/i.exec(sentence);
+    if (!held) continue;
+    const dates = [...new Set(datesInText(text, today).map((found) => found.iso))].sort();
+    if (dates.length < 2) return null;
+    const kind = held[2]!.toLowerCase() === "warned" ? "warning" : "coaching";
+    const label = held[1] ? `Verbal ${kind}` : `${kind[0]!.toUpperCase()}${kind.slice(1)}`;
+    return `${label} — ${signedDate(dates[0]!)}`;
+  }
+  return null;
+}
+
+/** The conversation from the user's `index`-th turn on (0-based), with the replies after it. */
+function fromUserTurn<T extends { readonly role: string }>(turns: readonly T[], index: number): T[] {
+  let seen = -1;
+  for (const [at, turn] of turns.entries()) {
+    if (turn.role !== "user") continue;
+    seen += 1;
+    if (seen === index) return turns.slice(at);
+  }
+  return [...turns];
 }
 
 /** A later value replaces the same field. A blank read leaves the saved one. */
