@@ -331,10 +331,26 @@ export function fullManualContextEnabled(): boolean {
  * document ("in the workplace policy") is never read as a typed store, and
  * a span-before-"store" match must sit inside one manager turn, so "cite
  * animals in the workplace policy" followed by "store location is …" does
- * not become "the workplace policy store".
+ * not become "the workplace policy store". Also on, a field label is a place
+ * cue and the newest turn's store replaces the saved one: "location kearney"
+ * after "store is grand island" is Kearney (ported from the sibling app, QA Round 4).
  */
 export function placeSpanGuardEnabled(): boolean {
   return envFlag("PLACE_SPAN_GUARD_ENABLED");
+}
+
+/**
+ * The warning level kept for a Corrective Action is only one the manager
+ * stated: read from their own turns, never from Ask Bubbles' ("the warning
+ * level, verbal or written" is not a level), never from the slot model's
+ * guess, and a bare "Yes" only where the assistant turn just before it asked
+ * one yes/no question about that exact level. A bare Yes/No right after "Is
+ * payroll deduct applicable?" is kept as the payroll answer before the stored
+ * slots are put ahead of it. Off, the intent reading grounds both as it does
+ * today. Ported from the sibling app.
+ */
+export function warningLevelManagerOnlyEnabled(): boolean {
+  return envFlag("WARNING_LEVEL_MANAGER_ONLY_ENABLED");
 }
 
 /**
@@ -346,6 +362,20 @@ export function placeSpanGuardEnabled(): boolean {
  */
 export function intentPayrollManagerOnlyEnabled(): boolean {
   return envFlag("INTENT_PAYROLL_MANAGER_ONLY_ENABLED");
+}
+
+/**
+ * Keep other conversations out of the reply text. The person-memory recall
+ * quotes another chat only when the manager refers back to it ("again", "last
+ * time", "like before", "same as …"); a name read from a turn that is only
+ * that name ("asdasd") is recalled only when it is on the roster; the prompt
+ * labels the block as records from other conversations; and a reply sentence
+ * that still says the manager raised or sent something in another chat or on
+ * another date is taken out. Ported from the sibling app (QA, 24 Oct 2026). Off,
+ * recall and the reply are exactly as before.
+ */
+export function crossChatReplyGuardEnabled(): boolean {
+  return envFlag("CROSS_CHAT_REPLY_GUARD_ENABLED");
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
@@ -386,5 +416,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
   "PLACE_SPAN_GUARD_ENABLED",
+  "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
+  "CROSS_CHAT_REPLY_GUARD_ENABLED",
 ] as const;

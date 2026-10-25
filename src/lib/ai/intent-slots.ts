@@ -1,10 +1,12 @@
 import { datesInText } from "@/lib/forms/form-date-answer";
+import { managerStatedWarningLevel, templateHasWarningLevel } from "@/lib/forms/warning-level";
 import { displayName, editDistance, matchEmployeeName, type RosterEmployee } from "@/lib/forms/employee-match";
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manual";
 import { namesHeading } from "@/lib/forms/named-policy-section";
 import { payrollDeductAmount, payrollDeductFromConversation, type PayrollDeductAnswer } from "@/lib/forms/payroll-deduct";
-import { intentPayrollManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { intentPayrollManagerOnlyEnabled, placeSpanGuardEnabled, warningLevelManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { labelledStoreIds } from "@/lib/forms/store-cue";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -143,7 +145,9 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
   const employee = choice?.person
     ? { person: choice.person, name: displayName(choice.person), ambiguous: [] as readonly GroundedPerson[], typed: null }
     : groundEmployee(reading?.employee ?? null, blob, input.people);
-  const store = groundStore(choice?.store ?? reading?.store ?? null, blob, input.stores, employee.person);
+  const store =
+    newestTurnStore(input.question, input.stores) ??
+    groundStore(choice?.store ?? reading?.store ?? null, blob, input.stores, employee.person);
   const title = groundTitle(reading?.title ?? null, blob, input.people, employee.person);
   const incidentType = groundIncident(reading?.incidentType ?? null, blob, input.headings);
   const date = groundDate(choice?.date ?? reading?.incidentDate ?? null, blob, input.today);
@@ -157,11 +161,27 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
       ? null
       : (payrollClauseAmount(input) ??
         (payrollAnswer === "yes" ? groundPayroll(reading?.payrollAmount ?? null, managerBlob(input)) : null));
-  const warningLevel = groundWarning(choice?.warning ?? reading?.warningLevel ?? null, blob);
+  /*
+   * THE MANAGER'S LEVEL ONLY (WARNING_LEVEL_MANAGER_ONLY_ENABLED; ported from
+   * the sibling app, live replays 24 Oct 2026). The blob holds the assistant's own
+   * turns ("the warning level, verbal or written") and the saved state, and a
+   * word anywhere in it — or the slot model's guess — was taken as the level.
+   * With the flag, the level is a numbered choice the manager just made, or
+   * what their own turns state — nothing else.
+   */
+  const warningManagerOnly = warningLevelManagerOnlyEnabled();
+  const warningLevel = warningManagerOnly
+    ? {
+        value:
+          choice?.warning ??
+          managerStatedWarningLevel([...input.history, { role: "user", content: input.question }], input.today),
+        ambiguous: false,
+      }
+    : groundWarning(choice?.warning ?? reading?.warningLevel ?? null, blob);
   const formType = groundForm(choice?.form ?? reading?.formType ?? null, blob, input.templates);
   const formTurn = Boolean(input.formInProgress || reading?.formTurn || formType.key || saved.templateKey);
 
-  const state = mergeSlots(saved, {
+  let state = mergeSlots(saved, {
     employee,
     store,
     title,
@@ -173,6 +193,22 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
     warningLevel: warningLevel.value,
     formType: formType.key,
   });
+  if (warningManagerOnly) {
+    const answered = payrollAnsweredNow(input.history, input.question);
+    if (answered) state = { ...state, payrollDeduct: answered };
+    /*
+     * RE-READ EVERY TURN, AND ONLY FOR A FORM WITH A TYPE OF WARNING (ported
+     * from the sibling app; QA, 24 Oct 2026). A level stored once came back on every
+     * later turn, beat "this is a verbal", and rode onto other forms. The
+     * level is what the manager's turns state now; the stored one is kept only
+     * when the history may have been cut (the route keeps the last HISTORY_CAP
+     * turns), so a level stated before that is not lost.
+     */
+    const template = input.templates.find((row) => row.key === state.templateKey) ?? null;
+    const kept = warningLevel.value ?? (input.history.length >= HISTORY_CAP ? saved.warningLevel : null);
+    const level = templateHasWarningLevel(template ?? { key: state.templateKey }) ? kept : null;
+    if (level !== state.warningLevel) state = { ...state, warningLevel: level };
+  }
 
   const clarification = clarificationFor({
     formTurn,
@@ -193,6 +229,42 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
   if (clarification) return { question: input.question, state, clarification };
   if (!formTurn) return { question: input.question, state, clarification: null };
   return { question: prependFormState(input.question, state), state, clarification: null };
+}
+
+/** `LIMITS.historyTurns` in `lib/api/validation.ts` (server-only, so not imported here). */
+const HISTORY_CAP = 20;
+
+/** Another yes/no question beside the payroll one: "Did you mean **Rowan Testo**?". */
+const OTHER_YES_NO =
+  /^\s*(?:did\s+you\s+mean|is|isn'?t|are|was|should|shall|do|does|did|will|would|can|could)\b/i;
+
+/**
+ * "Yes" / "No" ANSWERING "Is payroll deduct applicable? Yes or No?" — read
+ * here, while the reply is still bare. Once the stored slots are put ahead of
+ * it the reply is no longer a bare answer, and the card asked the payroll
+ * question again (sibling-app live replay, 24 Oct 2026). Only the assistant turn
+ * right before it counts, and only when that turn asks no other yes/no
+ * question, so the "Yes" that confirms a name is never a payroll answer.
+ * Behind WARNING_LEVEL_MANAGER_ONLY_ENABLED.
+ */
+function payrollAnsweredNow(
+  history: readonly { role: string; content: string }[],
+  question: string,
+): "yes" | "no" | null {
+  const before = history[history.length - 1];
+  if (!before || before.role !== "assistant") return null;
+  const questions = (before.content.replace(/[*_`]/g, "").match(/[^.!?\n]*\?/g) ?? [])
+    .map((line) => line.trim())
+    .filter((line) => !/payroll/i.test(line) && !/^yes\s+or\s+no\?$/i.test(line));
+  // An either/or ("a Verbal Warning or a Written Warning?") is not answered by "Yes", as payroll-deduct.ts reads it too.
+  if (questions.some((line) => OTHER_YES_NO.test(line) && !/\bor\b/i.test(line))) return null;
+  return payrollDeductFromConversation(
+    [
+      { role: "assistant", content: before.content },
+      { role: "user", content: question },
+    ],
+    { fromThisForm: true },
+  );
 }
 
 function parseReading(raw: unknown): IntentSlotReading | null {
@@ -285,6 +357,24 @@ function peopleNamedIn(blob: string, people: readonly GroundedPerson[]): Grounde
 
 function asGrounded(employee: RosterEmployee, people: readonly GroundedPerson[]): GroundedPerson {
   return people.find((person) => person.id === employee.id) ?? { ...employee, title: null, primaryLocationName: null };
+}
+
+/*
+ * PLACE_SPAN_GUARD_ENABLED. The store this turn names wins over the one the
+ * conversation saved: "location kearney" after "store is grand island" is
+ * Kearney (ported from the sibling app, QA Round 4). A field label counts as the
+ * place cue (`store-cue.ts`). Off, or when this turn names no single store,
+ * the store is grounded as before.
+ */
+function newestTurnStore(
+  question: string,
+  stores: readonly StoreRow[],
+): { id: string; name: string; ambiguous: readonly StoreRow[] } | null {
+  if (!placeSpanGuardEnabled()) return null;
+  const ids = labelledStoreIds(question);
+  if (ids.length !== 1) return null;
+  const row = stores.find((store) => store.id === ids[0]);
+  return row ? { id: row.id, name: row.name, ambiguous: [] } : null;
 }
 
 function groundStore(

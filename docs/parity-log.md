@@ -691,8 +691,22 @@ animals in the workplace policy" followed by "store location is empire, sd"
 was joined into "in the workplace policy store", and the card asked about a
 typed store called "workplace policy". On, the span reader skips a phrase
 that names a policy, manual, section or similar document, and a
-span-before-"store" match must sit inside one manager turn. Stays
-Bubbles-only: Ask Sunny's salon reader (`src/lib/forms/salon-mention.ts`)
-matches only roster salon names and numbers, has no unmatched-span reading
-and no `typed` salon selection, so the same turns name no salon there and
-ask nothing. No Ask Sunny change. No salon wording was copied.
+span-before-"store" match must sit inside one manager turn. Ported to
+Ask Sunny (9b206c6, same flag): its roster salon reader
+(`src/lib/forms/salon-mention.ts`) has no unmatched-span reading, but its
+"<place>, <state>" reader (`place-state.ts`) joined the turns ("… in the
+workplace policy" then "at Kearney, NE" read as one unknown place) and its
+employment-change labelled location kept "per the new salon policy" as the
+salon. Both are guarded there. No salon wording was copied.
+
+## 24 Oct 2026: "location kearney" names the store (from Ask Sunny, QA Round 4)
+
+Same flag, `PLACE_SPAN_GUARD_ENABLED`. Ask Sunny conv_mvmw4hwq292a6vq:
+"name is test testyone, location st joe, …" after "salon is wornall" left
+the card on Wornall (Ask Sunny 503d454). The same turns with stores here:
+"location kearney" and "store kearney" were not read, and the form remap
+and the intent slots kept Grand Island. On, `store-cue.ts` reads "location /
+store <name>" as "at <name>" (the store reader's own rules still apply), and
+the store the newest manager turn names wins on the remap and the intent
+slots. No salon wording was copied. Test:
+`src/lib/forms/store-label-cue.test.ts`.
