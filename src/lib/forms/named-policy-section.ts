@@ -1,4 +1,4 @@
-import { readCaPolicy } from "./ca-policy";
+import { cleaningIncidentPhrase, readCaPolicy } from "./ca-policy";
 import {
   OFFENSE_MANUAL_SECTIONS,
   findManualSection,
@@ -461,10 +461,29 @@ export function describedManualSection(input: {
   readonly text: string;
   readonly chunks: readonly ManualChunk[] | null;
 }): NamedManualSection | null {
+  const cleaning = input.chunks && input.chunks.length > 0 ? cleaningSection(input.text ?? "", input.chunks) : null;
+  if (cleaning) return cleaning;
   const found = describedHeadings(input);
   if (!found || found.size !== 1) return null;
   const [heading, phrase] = [...found.entries()][0]!;
   return citable(input.chunks!, heading, phrase);
+}
+
+/**
+ * POLICY_CLEANING_INCIDENT_ENABLED: cleaning left undone ("the cleaning
+ * duties weren't done", "left the beds dirty") is the manual's Care and
+ * Cleaning of Equipment and Facilities section, found by its own heading on
+ * the pinned manual, and only where exactly one heading answers. Nothing
+ * else must decide the policy first: a policy the manager named wins.
+ * Off (`cleaningIncidentPhrase` reads nothing), this returns null.
+ */
+function cleaningSection(text: string, chunks: readonly ManualChunk[]): NamedManualSection | null {
+  const phrase = cleaningIncidentPhrase(text);
+  if (!phrase || !mayDescribeSection(text)) return null;
+  const headings = [...new Set(manualSheetHeadings(chunks).filter((heading) => /^care and cleaning\b/i.test(heading.trim())))];
+  if (headings.length !== 1) return null;
+  const section = findManualSection(chunks, headings);
+  return section ? { phrase, section, offenseKey: offenseKeyForManualHeading(section.heading) } : null;
 }
 
 /**
