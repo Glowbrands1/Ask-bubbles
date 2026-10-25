@@ -775,3 +775,15 @@ store <name>" as "at <name>" (the store reader's own rules still apply), and
 the store the newest manager turn names wins on the remap and the intent
 slots. No salon wording was copied. Test:
 `src/lib/forms/store-label-cue.test.ts`.
+
+## 25 Oct 2026: the remap drops the incident's own trailing date; Ask Sunny keeps it (logged, not changed)
+
+With `REMAP_INCIDENT_FIX_ENABLED`, this app's remap reads What happened down to
+the offense and drops the incident's own date at the start or end ("create a
+CA form for … for opening store late on 9-28-26" is "opening store late"; the
+date is the form's Date). Ask Sunny's live path (intent extraction,
+`accountSentences`) keeps the manager's words with the date ("opening salon
+late on 9-28-26"). QA, 25 Oct 2026: leave both as they are for now and log
+the difference. A date inside the phrase stays here too ("missing the
+10-15-26 woven deadline"). Tests that pin each app's form:
+`src/app/api/chat/b13-remap-p0-oct25.test.ts` in both apps.
