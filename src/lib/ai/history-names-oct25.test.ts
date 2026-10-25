@@ -436,6 +436,22 @@ describe("FORM_CHOICE_STATED_ENABLED + CA_TEMPLATE_MAP_ENABLED (live in producti
     },
   );
 
+  // Ask Sunny conv_muxahcdkiiur2tu, ported: "she completed … coaching 9/29/26" is a prior step on the remap card.
+  it("conv_muxahcdkiiur2tu (ported): completed coachings are prior actions, not a second form", () => {
+    vi.stubEnv("PRIOR_ACTIONS_PARSE_ENABLED", "true");
+    const { slots, response } = groundFormSlots({
+      raw: { templateKey: "dpoa", employeeName: "Avery Lund", observation: null, actionPlan: null },
+      history: [],
+      question:
+        "create a corrective action form for Avery Lund, she is a Team Member at Kearney, this will be a written warning, she completed September Promo coaching 9/29/26, Holiday soap product coaching form 9/30/26, there is no payroll deduction applicable",
+      today: TODAY,
+      people: [],
+    });
+    expect(response.content).not.toMatch(/which form should I start with/i);
+    expect(slots.templateKey).toBe("dpoa");
+    expect(slots.priorActions ?? "", response.content).toMatch(/09\/29\/2026/);
+  });
+
   // B14 conv_mvntxr592mc1e2l: a Corrective Action card whose What happened was the metric.
   it("conv_mvntxr592mc1e2l: a metric alone does not open the remap's Corrective Action card", () => {
     const question = "Test Employee at Kearney has low sales per hour this month, create a corrective action";
