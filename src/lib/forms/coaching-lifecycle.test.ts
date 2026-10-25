@@ -362,6 +362,40 @@ describe("a new coaching form", () => {
   });
 
   /*
+   * Ported from Ask Sunny (QA T14): a blank Direct policy held Corrective
+   * Action finalize. With POLICY_GATE_NONBLOCKING_ENABLED on, a blank policy
+   * field stays blank and is not an unresolved item.
+   */
+  it('feedback 10/7 and 10/20: "not letting me complete it due to policy verification"', async () => {
+    process.env.POLICY_GATE_NONBLOCKING_ENABLED = "1";
+    try {
+      const instance = await startCorrectiveForm();
+      const finalized = await finalizeInstance(instance.id, "dana", null);
+      expect(finalized.status).toBe("finalized");
+      const loaded = await loadInstance(instance.id);
+      const policy = loaded!.values.find((row) => row.fieldKey === "policy_language");
+      expect((policy?.value ?? "").trim()).toBe("");
+    } finally {
+      delete process.env.POLICY_GATE_NONBLOCKING_ENABLED;
+    }
+  });
+
+  it("B. a hand-typed Direct policy still asks when the gate is non-blocking", async () => {
+    process.env.POLICY_GATE_NONBLOCKING_ENABLED = "1";
+    try {
+      const instance = await startCorrectiveForm();
+      await saveInstanceValues(
+        instance.id,
+        { values: { policy_language: "Typed from the manager's own copy." } },
+        "dana",
+      );
+      await expect(finalizeInstance(instance.id, "dana", null)).rejects.toBeInstanceOf(UnverifiedPolicyError);
+    } finally {
+      delete process.env.POLICY_GATE_NONBLOCKING_ENABLED;
+    }
+  });
+
+  /*
    * HR, 22 Oct 2026: the manager rewrote the verified quote, and
    * the refusal read as though no policy had matched. It says what happened.
    */

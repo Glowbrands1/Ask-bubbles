@@ -733,6 +733,25 @@ export function terseSlotReadEnabled(): boolean {
   return envFlag("TERSE_SLOT_READ_ENABLED");
 }
 
+/**
+ * A blank Direct policy does not hold the card or the finalize (QA T14). The
+ * field stays empty. A value somebody typed that was never verified still
+ * asks for an acknowledgement. Off, a blank policy field still blocks
+ * finalize.
+ *
+ * The form card is a client component, so the browser reads
+ * `NEXT_PUBLIC_POLICY_GATE_NONBLOCKING_ENABLED`, written out statically for
+ * Next to inline. The server reads either spelling, so the card and
+ * `finalizeInstance` agree when a deployment sets only the public name.
+ */
+export function policyGateNonblockingEnabled(): boolean {
+  const inlined = process.env.NEXT_PUBLIC_POLICY_GATE_NONBLOCKING_ENABLED;
+  return (
+    envFlag("POLICY_GATE_NONBLOCKING_ENABLED") ||
+    (typeof inlined === "string" && ON.has(inlined.trim().toLowerCase()))
+  );
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -802,4 +821,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "POLICY_GATE_NONBLOCKING_ENABLED",
+  "NEXT_PUBLIC_POLICY_GATE_NONBLOCKING_ENABLED",
 ] as const;
