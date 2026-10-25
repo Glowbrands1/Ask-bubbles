@@ -341,7 +341,7 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
  * delete forms (the forms API's own rule), and says truthfully who can where
  * they may not; "same incident", answering "is this the same incident as the
  * <form> for <name>?", opens that form instead of asking for a phrase to type
- * (ported from Ask Sunny, QA F8). Off, both turns are answered as before.
+ * (ported from the sibling app, QA F8). Off, both turns are answered as before.
  */
 export function draftActionsEnabled(): boolean {
   return envFlag("DRAFT_ACTIONS_ENABLED");

@@ -271,7 +271,7 @@ export async function POST(request: Request) {
      */
     /*
      * "DIFFERENT INCIDENT", answering whether this is the same incident as the
-     * form on file (ported from Ask Sunny, QA F8): a new form, so no open
+     * form on file (ported from the sibling app, QA F8): a new form, so no open
      * draft is reopened in its place. DRAFT_ACTIONS_ENABLED only.
      */
     const newIncident = draftActionsEnabled() && historySaysDifferentIncident(body.conversation);

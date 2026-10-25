@@ -137,7 +137,7 @@ export async function POST(request: Request) {
     try {
       const asked = parseAskRequest(body);
       /*
-       * "DELETE THAT DRAFT", "SAME INCIDENT" (ported from Ask Sunny, QA F8).
+       * "DELETE THAT DRAFT", "SAME INCIDENT" (ported from the sibling app, QA F8).
        * Ahead of every open-form path: the revision path read "delete that
        * draft" as a change and said "I haven't changed…". Deletes a draft only
        * under the forms API's own DELETE rules; "same incident" opens the form
