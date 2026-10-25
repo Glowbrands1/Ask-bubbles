@@ -500,6 +500,20 @@ export function manualNegatedListNoteEnabled(): boolean {
 }
 
 /**
+ * An edit typed in chat is applied to its field or answered, and dates follow
+ * the incident (QA history replay, 25 Oct 2026; the same flag as the sibling
+ * app). "change observation of offense to: …" replaces What happened with the
+ * manager's text; "add that …" appends their clause; "clean up my grammar" and
+ * "change the date to …" never become What happened. "X instead of Y" names
+ * X. A prior action's date is never the form's Date, and "today" dates the
+ * form today. "can you edit the form I already finalized" opens it as a
+ * revision. Off, every reader is as before.
+ */
+export function formEditDateRulesEnabled(): boolean {
+  return envFlag("FORM_EDIT_DATE_RULES_ENABLED");
+}
+
+/**
  * The Corrective Action Form's Action Plan is the manager's, or blank (Pau,
  * 25 Oct 2026). A plan they typed ("action plan: …") goes on the card and the
  * form word for word. With none typed, nothing is written: no "Management
@@ -635,4 +649,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
   "REFORMAT_KEEPS_SOURCES_ENABLED",
   "FRAMEWORK_GENERAL_SECTIONS_ENABLED",
+  "FORM_EDIT_DATE_RULES_ENABLED",
 ] as const;
