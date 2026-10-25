@@ -337,7 +337,7 @@ function templateFromUser(text: string): TemplateKey | null {
 
 /**
  * NOT_A_NAME_GUARD_ENABLED: a kept employee that came from a reply is not
- * kept again (Ask Sunny QA L23: a name read from a manual heading in a reply
+ * kept again (the sibling app's QA L23: a name read from a manual heading in a reply
  * outlived the name the manager typed). Only on evidence: not a name at all,
  * or an assistant turn in the window says it (other than as a card's subject)
  * and none of the manager's turns do. With

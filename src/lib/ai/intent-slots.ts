@@ -270,7 +270,7 @@ function typedBy(turns: readonly string[], name: string): boolean {
 
 /**
  * NOT_A_NAME_GUARD_ENABLED: a saved employee that came from a reply is not
- * kept. In Ask Sunny (QA L23), a name read from a manual heading in an
+ * kept. In the sibling app (QA L23), a name read from a manual heading in an
  * assistant reply was saved, and "The employee is …" then outvoted the name
  * the manager typed on every later turn.
  *
