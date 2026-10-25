@@ -195,16 +195,25 @@ async function replay(turns: readonly (Turn | string)[], id = conversationId()) 
  * The production flags these turns ran under, as far as they decide this path:
  * the full remap (which the exit form leaves), the not-a-name guard, the
  * typed-name reading (the live card asked "Test Employee or items returned",
- * which only that reading gives), and slot retention / field accuracy / form
- * state (the live edit turn was answered with the exit card again).
+ * which only that reading gives) and field accuracy (the live edit turn was
+ * answered with the exit card again; QA reads both as on in production).
+ *
+ * SLOT_RETENTION_ENABLED and FORM_STATE_ENABLED were rolled back, QA says, but
+ * that is read from flag comments, so every case runs with each of them on
+ * and off.
  */
 const PRODUCTION = [
   "FORM_FULL_REMAP_ENABLED",
   "NOT_A_NAME_GUARD_ENABLED",
   "TYPED_NAME_ENABLED",
-  "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
-  "FORM_STATE_ENABLED",
+] as const;
+const ROLLED_BACK = ["SLOT_RETENTION_ENABLED", "FORM_STATE_ENABLED"] as const;
+const PROFILES = [
+  ["slot retention off, form state off", false, false],
+  ["slot retention on, form state off", true, false],
+  ["slot retention off, form state on", false, true],
+  ["slot retention on, form state on", true, true],
 ] as const;
 const FLAG = "EXIT_INTAKE_FIX_ENABLED";
 
@@ -212,7 +221,7 @@ beforeEach(async () => {
   for (const key of Object.keys(store)) (store as Record<string, unknown[]>)[key] = [];
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-25T16:00:00Z"));
-  for (const name of [...PRODUCTION, FLAG]) saved.set(name, process.env[name]);
+  for (const name of [...PRODUCTION, ...ROLLED_BACK, FLAG]) saved.set(name, process.env[name]);
   for (const name of PRODUCTION) process.env[name] = "true";
   process.env[FLAG] = "true";
   await ensureTemplateLibrary("system");
@@ -241,85 +250,92 @@ function blankLine(content: string): string {
   return /\*\*Left blank for you to review:\*\*([^\n]*)/.exec(content)?.[1] ?? "";
 }
 
-describe("acceptance: the exit intake on Ask Bubbles' live path (EXIT_INTAKE_FIX_ENABLED on)", () => {
-  it("conv_mvnt2u0o2ql6a0h: Test Employee's card, never 'items returned' offered as the employee", async () => {
-    const [reply] = await replay([NOT_A_NAME_TURN]);
-    expect(reply!.formProposal?.templateKey).toBe("resignation-exit");
-    expect(reply!.formProposal?.employeeName).toBe("Test Employee");
-    expect(reply!.formProposal?.status).toBe("ready");
-    expect(reply!.content).not.toMatch(/Which of them/i);
-    expect(reply!.content).not.toMatch(/\*\*items returned\*\*/i);
-    expect(reply!.content).toContain("- **Name:** Test Employee");
-    // What the manager typed is on the card.
-    expect(reply!.content).toContain("- **Date that notice was given:** September 25, 2026");
-    expect(reply!.content).toContain("- **Date that notice was fulfilled:** October 9, 2026");
-    expect(reply!.content).toContain("- **Reason for Resignation:** To pursue other career options.");
-    expect(reply!.content).toContain("- **Store Items Returned:** Store items were returned.");
-    expect(reply!.content).toContain("- **Payroll Deduction:** Payroll deduction is not applicable.");
+describe.each(PROFILES)("%s", (_profile, slotRetention, formState) => {
+  beforeEach(() => {
+    process.env.SLOT_RETENTION_ENABLED = slotRetention ? "true" : "false";
+    process.env.FORM_STATE_ENABLED = formState ? "true" : "false";
   });
 
-  it("conv_mvnt2ed52s35vpw T2: an explicit edit of the reason changes the reason on the open card", async () => {
-    const replies = await replay([REASON_REQUEST, REASON_EDIT]);
-    expect(replies[0]!.content).toContain("- **Reason for Resignation:** Moving out of state.");
-    const last = replies.at(-1)!;
-    expect(last.formProposal?.templateKey).toBe("resignation-exit");
-    expect(last.formProposal?.employeeName).toBe("Test Employee");
-    expect(last.content).toContain("- **Reason for Resignation:** Going back to school.");
-    expect(last.content).not.toContain("Moving out of state");
-    // The rest of the card is kept.
-    expect(last.content).toContain("- **Last Day Worked:** October 24, 2026");
-  });
-
-  it("conv_mvnt2ecc2qnsv1x: a yearless 'last day 10-24' is the most recent October 24", async () => {
-    const [reply] = await replay([YEARLESS]);
-    expect(reply!.formProposal?.employeeName).toBe("Test Employee");
-    expect(reply!.content).toContain("- **Last Day Worked:** October 24, 2026");
-    expect(blankLine(reply!.content)).not.toContain("Last Day Worked");
-    // "She resigned" says that she resigned, not how: How Employee Resigned stays for the manager.
-    expect(blankLine(reply!.content)).toContain("How Employee Resigned");
-  });
-
-  it("conv_mvnt2mhy2wi2b3x: the typed Permanent Address is filled and No Call No Show is ticked", async () => {
-    const [reply] = await replay([ADDRESS_NCNS]);
-    expect(reply!.formProposal?.employeeName).toBe("Test Employee");
-    expect(reply!.content).toContain("- **Permanent Address:** 123 Main St, Kearney, NE 68847");
-    expect(blankLine(reply!.content)).not.toContain("Permanent Address");
-    expect(reply!.content).toContain("- **Resignation Details:** No Call No Show");
-    expect(reply!.content).toContain("- **Last Day Worked:** October 20, 2026");
-    expect(reply!.content).not.toMatch(/\*\*Main St\*\*/);
-  });
-});
-
-describe("unchanged", () => {
-  it("conv_mvnt2e7a2kkdg9x, an exit form that already worked, is the same card with the flag on and off", async () => {
-    const [on] = await replay([ALREADY_WORKS]);
-    process.env[FLAG] = "false";
-    const [off] = await replay([ALREADY_WORKS]);
-    expect(on!.content).toBe(off!.content);
-    expect({ ...on!.formProposal, proposalId: null, sourceMessageIds: null }).toEqual({
-      ...off!.formProposal,
-      proposalId: null,
-      sourceMessageIds: null,
+  describe("acceptance: the exit intake on Ask Bubbles' live path (EXIT_INTAKE_FIX_ENABLED on)", () => {
+    it("conv_mvnt2u0o2ql6a0h: Test Employee's card, never 'items returned' offered as the employee", async () => {
+      const [reply] = await replay([NOT_A_NAME_TURN]);
+      expect(reply!.formProposal?.templateKey).toBe("resignation-exit");
+      expect(reply!.formProposal?.employeeName).toBe("Test Employee");
+      expect(reply!.formProposal?.status).toBe("ready");
+      expect(reply!.content).not.toMatch(/Which of them/i);
+      expect(reply!.content).not.toMatch(/\*\*items returned\*\*/i);
+      expect(reply!.content).toContain("- **Name:** Test Employee");
+      // What the manager typed is on the card.
+      expect(reply!.content).toContain("- **Date that notice was given:** September 25, 2026");
+      expect(reply!.content).toContain("- **Date that notice was fulfilled:** October 9, 2026");
+      expect(reply!.content).toContain("- **Reason for Resignation:** To pursue other career options.");
+      expect(reply!.content).toContain("- **Store Items Returned:** Store items were returned.");
+      expect(reply!.content).toContain("- **Payroll Deduction:** Payroll deduction is not applicable.");
     });
-    expect(on!.content).toContain("- **Last Day Worked:** October 17, 2026");
+
+    it("conv_mvnt2ed52s35vpw T2: an explicit edit of the reason changes the reason on the open card", async () => {
+      const replies = await replay([REASON_REQUEST, REASON_EDIT]);
+      expect(replies[0]!.content).toContain("- **Reason for Resignation:** Moving out of state.");
+      const last = replies.at(-1)!;
+      expect(last.formProposal?.templateKey).toBe("resignation-exit");
+      expect(last.formProposal?.employeeName).toBe("Test Employee");
+      expect(last.content).toContain("- **Reason for Resignation:** Going back to school.");
+      expect(last.content).not.toContain("Moving out of state");
+      // The rest of the card is kept.
+      expect(last.content).toContain("- **Last Day Worked:** October 24, 2026");
+    });
+
+    it("conv_mvnt2ecc2qnsv1x: a yearless 'last day 10-24' is the most recent October 24", async () => {
+      const [reply] = await replay([YEARLESS]);
+      expect(reply!.formProposal?.employeeName).toBe("Test Employee");
+      expect(reply!.content).toContain("- **Last Day Worked:** October 24, 2026");
+      expect(blankLine(reply!.content)).not.toContain("Last Day Worked");
+      // "She resigned" says that she resigned, not how: How Employee Resigned stays for the manager.
+      expect(blankLine(reply!.content)).toContain("How Employee Resigned");
+    });
+
+    it("conv_mvnt2mhy2wi2b3x: the typed Permanent Address is filled and No Call No Show is ticked", async () => {
+      const [reply] = await replay([ADDRESS_NCNS]);
+      expect(reply!.formProposal?.employeeName).toBe("Test Employee");
+      expect(reply!.content).toContain("- **Permanent Address:** 123 Main St, Kearney, NE 68847");
+      expect(blankLine(reply!.content)).not.toContain("Permanent Address");
+      expect(reply!.content).toContain("- **Resignation Details:** No Call No Show");
+      expect(reply!.content).toContain("- **Last Day Worked:** October 20, 2026");
+      expect(reply!.content).not.toMatch(/\*\*Main St\*\*/);
+    });
   });
 
-  it("flag off: the exit readers read as before (the live replies)", async () => {
-    process.env[FLAG] = "false";
-    const [asked] = await replay([NOT_A_NAME_TURN]);
-    expect(asked!.content).toMatch(/Which of them is this \*\*Resignation\/Exit Form\*\* for — \*\*Test Employee\*\* or \*\*items returned\*\*\?/);
-    const [yearless] = await replay([YEARLESS]);
-    expect(blankLine(yearless!.content)).toContain("Last Day Worked");
-    const [address] = await replay([ADDRESS_NCNS]);
-    expect(blankLine(address!.content)).toContain("Permanent Address");
-    expect(address!.content).not.toContain("No Call No Show");
-  });
+  describe("unchanged", () => {
+    it("conv_mvnt2e7a2kkdg9x, an exit form that already worked, is the same card with the flag on and off", async () => {
+      const [on] = await replay([ALREADY_WORKS]);
+      process.env[FLAG] = "false";
+      const [off] = await replay([ALREADY_WORKS]);
+      expect(on!.content).toBe(off!.content);
+      expect({ ...on!.formProposal, proposalId: null, sourceMessageIds: null }).toEqual({
+        ...off!.formProposal,
+        proposalId: null,
+        sourceMessageIds: null,
+      });
+      expect(on!.content).toContain("- **Last Day Worked:** October 17, 2026");
+    });
 
-  it("a Corrective Action whose account says 'items returned … does not apply' keeps its employee", async () => {
-    const [reply] = await replay([
-      "create a CA for Test Employee at Kearney, she was out of dress code 10/11, items returned, payroll deduction does not apply",
-    ]);
-    expect(reply!.formProposal?.templateKey).toBe("dpoa");
-    expect(reply!.formProposal?.employeeName ?? "").not.toMatch(/items returned/i);
+    it("flag off: the exit readers read as before (the live replies)", async () => {
+      process.env[FLAG] = "false";
+      const [asked] = await replay([NOT_A_NAME_TURN]);
+      expect(asked!.content).toMatch(/Which of them is this \*\*Resignation\/Exit Form\*\* for — \*\*Test Employee\*\* or \*\*items returned\*\*\?/);
+      const [yearless] = await replay([YEARLESS]);
+      expect(blankLine(yearless!.content)).toContain("Last Day Worked");
+      const [address] = await replay([ADDRESS_NCNS]);
+      expect(blankLine(address!.content)).toContain("Permanent Address");
+      expect(address!.content).not.toContain("No Call No Show");
+    });
+
+    it("a Corrective Action whose account says 'items returned … does not apply' keeps its employee", async () => {
+      const [reply] = await replay([
+        "create a CA for Test Employee at Kearney, she was out of dress code 10/11, items returned, payroll deduction does not apply",
+      ]);
+      expect(reply!.formProposal?.templateKey).toBe("dpoa");
+      expect(reply!.formProposal?.employeeName ?? "").not.toMatch(/items returned/i);
+    });
   });
 });
