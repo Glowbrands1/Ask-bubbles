@@ -228,8 +228,27 @@ describe("the intent path reads the same history and the same date", () => {
 /*
  * QA decisions, 25 Oct 2026, with REMAP_INCIDENT_FIX_ENABLED (the "previous
  * coaching: …" list reader) and PRIOR_ACTIONS_PARSE_ENABLED (this reader).
+ * The manager's two turns are copied exactly: "jba manual 1-1-26 for previous
+ * coaching", then a turn of just "verbal" (the warning level).
  */
-describe("the line holds only the manager's words", () => {
+describe("a bare \"verbal\" turn is never a prior action, and the line holds only the manager's words", () => {
+  const TURNS = ["jba manual 1-1-26 for previous coaching", "verbal"];
+  const LINE = "Coaching — JBA Policy Manual — 01/01/2026";
+
+  it.each([
+    ["both flags on", { fix: "1", parse: "1" }, [LINE]],
+    ["PRIOR_ACTIONS_PARSE_ENABLED alone", { fix: "", parse: "1" }, [LINE]],
+    // The list reader reads a label followed by its items; here the label comes last, so there is no list.
+    ["REMAP_INCIDENT_FIX_ENABLED alone", { fix: "1", parse: "" }, []],
+  ])("%s", (_name, flags, expected) => {
+    vi.stubEnv("REMAP_INCIDENT_FIX_ENABLED", flags.fix);
+    vi.stubEnv(FLAG, flags.parse);
+    const { slots, response } = remap(TURNS, {});
+    expect(lines(slots.priorActions)).toEqual(expected);
+    expect(lines(slots.priorActions).some((line) => /^verbal$/i.test(line.trim()))).toBe(false);
+    expect(response.content).not.toMatch(/Prior actions:\*\*[^\n]*\bverbal\b/i);
+  });
+
   it("\"signed\" is on the line only when the manager wrote it", () => {
     expect(statedPriorActions("prior verbal ca signed 9-1-26", TODAY)).toEqual(["Verbal corrective action — signed 09/01/2026"]);
     expect(statedPriorActions("prior verbal ca 9-1-26", TODAY)).toEqual(["Verbal corrective action — 09/01/2026"]);
