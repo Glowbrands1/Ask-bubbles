@@ -19,6 +19,20 @@ case ("The I-9 and W-4 forms, direct deposit agreements"; the rewrite stubbed
 with this manual's Employment Verification heading): none of the sibling's
 documents or wording were copied.
 
+## 25 Oct 2026: the framework's sections are not pinned into governed drafts — Bubbles-only
+
+`FRAMEWORK_UNPIN_ENABLED` defaults off. The uploaded Performance Management
+Framework (`ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT`) was
+prepared from the sibling app's framework with only the app name changed,
+so it still carries the sibling company's name, examples and metrics, and
+the draft route pinned up to sixteen of its sections into every governed
+form's prompt (Follow-Up Coaching, Corrective Action, Policy Review, EPPs).
+On, a governed draft does not read the framework, its absence no longer
+withholds the draft, and the app's own escalation rules stay in the system
+prompt. Off, nothing changes. Test: `src/app/api/forms/pm-draft-route.test.ts`
+("FRAMEWORK_UNPIN_ENABLED"). **Sibling app: not needed** — Ask Sunny's
+framework is its own company's text; a matching note is in its parity log.
+
 ## 25 Oct 2026: the job title is a title the manager stated — ported from Ask Sunny (PR 188)
 
 Ask Sunny PR 188 (`59fe1ca`, the same patch as `517992a`) is the title rule

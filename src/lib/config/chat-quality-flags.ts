@@ -638,6 +638,20 @@ export function resignMethodFollowupEnabled(): boolean {
   return envFlag("RESIGN_METHOD_FOLLOWUP_ENABLED");
 }
 
+/**
+ * The Performance Management Framework document is not pinned into a
+ * governed form's drafting prompt (QA, 25 Oct 2026). The uploaded framework
+ * text still carries the sibling company's examples, metrics and name, and
+ * the governed-form draft pinned up to sixteen of its sections. On, a
+ * governed form drafts without the framework's sections: the document is not
+ * read, its absence does not withhold the draft, and the app's own
+ * escalation rules (lowest rung, no termination, demotion or suspension,
+ * leave the step unset) still apply. Off, the sections are pinned as before.
+ */
+export function frameworkUnpinEnabled(): boolean {
+  return envFlag("FRAMEWORK_UNPIN_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -700,4 +714,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "QUESTION_NOT_FORM_ENABLED",
   "DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED",
   "RESIGN_METHOD_FOLLOWUP_ENABLED",
+  "FRAMEWORK_UNPIN_ENABLED",
 ] as const;
