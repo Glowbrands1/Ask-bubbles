@@ -6,6 +6,29 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 25 Oct 2026: policy sweep citations (citation-d)
+
+QA's 71-question sweep (prod 7174fdc, FULL_MANUAL_CONTEXT on): 54 replies
+showed a JBA source and no [p.N]. Those questions name no policy word, so
+the manual was not in the prompt; the reply came from retrieval and its
+[S#] markers were taken out before it was shown. A manual excerpt's [S#] is
+now cited as the printed page its sentence restates, in the sentence, with
+the section as the source (`citeRetrievedAnswer`, unflagged: it is the
+FULL_MANUAL_CONTEXT citation rule, now on the retrieval path too). The
+first PTO tier cites p.41 (a tied page counts every passage on it the
+sentence restates), the jury-duty summons cites Jury Duty on p.47 (a
+sentence that names its section is cited there), a marker the sentence
+reads through ("at [p.47]") is re-pointed in place or goes with its word,
+and a passage before a page's first heading is labelled with the section
+it continues. Ported to Ask Sunny in the same session.
+
+`FULL_MANUAL_WIDE_GATE_ENABLED` (default off) stays Bubbles-only: it loads
+the manual for a question whose best retrieved excerpt is from the manual
+or that names a printed heading word ("What is COBRA?"). Ask Sunny already
+loads the manual for these questions: its gate reads the intent extraction
+("policy"), its HR-policy words and the activity taxonomy, and every one of
+the sweep's 71 questions was answered from the full manual there.
+
 ## 25 Oct 2026: exit text without tanning; three interview forms hidden
 
 QA found Sun Tan City wording in what a Buff City Soap manager reads: the

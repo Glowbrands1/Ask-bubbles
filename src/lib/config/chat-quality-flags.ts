@@ -326,6 +326,18 @@ export function fullManualContextEnabled(): boolean {
 }
 
 /**
+ * With FULL_MANUAL_CONTEXT_ENABLED on, a question the policy words do not
+ * catch ("Where should employees park?", "What is COBRA?") is still asked
+ * with the whole manual when retrieval's best excerpt is from the manual or
+ * the question names a word of a heading the manual prints. Off, only the
+ * policy words choose the manual and every other question keeps retrieval.
+ * Default off: it moves most manual questions onto the full-manual prompt.
+ */
+export function fullManualWideGateEnabled(): boolean {
+  return envFlag("FULL_MANUAL_WIDE_GATE_ENABLED");
+}
+
+/**
  * The warning level kept for a Corrective Action is only one the manager
  * stated: read from their own turns, never from Ask Bubbles' ("the warning
  * level, verbal or written" is not a level), never from the slot model's
@@ -413,6 +425,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PROMPT_CACHE_ENABLED",
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
+  "FULL_MANUAL_WIDE_GATE_ENABLED",
   "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
   "NOT_A_NAME_GUARD_ENABLED",

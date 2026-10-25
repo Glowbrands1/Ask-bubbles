@@ -81,6 +81,12 @@ export interface ManualPassage {
   readonly category: KnowledgeCategory;
   readonly printedPage: number;
   readonly heading: string | null;
+  /**
+   * A passage at the top of a page, before that page's first heading,
+   * continues the section printed above it: this is that section's heading.
+   * Only the source label reads it.
+   */
+  readonly continues?: string | null;
   /** Headings the chunk text names, including one packed onto a body line. */
   readonly knownHeadings: readonly string[];
   readonly excerpt: string;
@@ -334,6 +340,7 @@ function readingsFor(chunks: readonly FullManualChunk[], choice: ManualBrandChoi
 interface RawPassage {
   readonly printedPage: number;
   readonly heading: string | null;
+  readonly continues: string | null;
   readonly text: string;
   readonly knownHeadings: readonly string[];
 }
@@ -350,6 +357,8 @@ export function rebuildManualText(
   let previous = "";
   let currentPage: number | null = null;
   let passageHeading: string | null = null;
+  /* The last heading printed so far, on this page or an earlier one. */
+  let lastHeading: string | null = null;
   let passageLines: string[] = [];
   let passageKnown: string[] = [];
 
@@ -369,7 +378,13 @@ export function rebuildManualText(
     passageLines = [];
     passageKnown = [];
     if (!currentPage || !text) return;
-    passages.push({ printedPage: currentPage, heading: passageHeading, text, knownHeadings });
+    passages.push({
+      printedPage: currentPage,
+      heading: passageHeading,
+      continues: passageHeading ? null : lastHeading,
+      text,
+      knownHeadings,
+    });
   };
 
   let shown: string[] = [];
@@ -424,6 +439,7 @@ export function rebuildManualText(
         if (heading && normalizeHeading(heading) !== normalizeHeading(passageHeading ?? "")) {
           flush();
           passageHeading = heading;
+          lastHeading = heading;
           if (currentPage) {
             index.pages.add(currentPage);
             const set = index.headings.get(currentPage) ?? new Set<string>();
@@ -465,6 +481,8 @@ export function planFullManualContext(input: {
   readonly policyText?: string;
   readonly documents: readonly FullManualDocument[];
   readonly budget?: number;
+  /** The caller already decided this is a manual question (see `asksAboutManual`). */
+  readonly asked?: boolean;
 }): FullManualPlan {
   const choice = brandChoice(input.question);
   const empty: FullManualPlan = {
@@ -478,7 +496,7 @@ export function planFullManualContext(input: {
     index: null,
     brands: [],
   };
-  if (!isPolicyQuestion(input.policyText ?? input.question)) return empty;
+  if (!(input.asked ?? false) && !isPolicyQuestion(input.policyText ?? input.question)) return empty;
 
   const documents = input.documents.filter(isCurrentManual);
   if (documents.length === 0) return { ...empty, reason: "no_manual" };
@@ -504,6 +522,7 @@ export function planFullManualContext(input: {
         category,
         printedPage: passage.printedPage,
         heading: passage.heading,
+        continues: passage.continues,
         knownHeadings: passage.knownHeadings,
         excerpt: excerptOf(passage.heading, passage.text),
         text: passage.text,
@@ -945,23 +964,63 @@ function restatedPhraseLength(answer: string, passage: string, index?: PhrasePag
 /** The best manual passages a stretch of the answer restates, by longest shared phrase. */
 function restatedPassages(text: string, passages: readonly ManualPassage[]): ManualPassage[] {
   const index = phrasePagesOf(passages);
+  const restating: { passage: ManualPassage; phrase: number }[] = [];
   let best = 0;
-  let chosen: ManualPassage[] = [];
   for (const passage of passages) {
     const phrase = restatedPhraseLength(text, passage.text, index);
-    /*
-     * "yoga pants, joggers or sweats are" is also the never-worn rule on the
-     * next sheet. The stretch that continues "approved for instructors only"
-     * restates the longer phrase, so the shorter copy is not a second page.
-     */
-    if (phrase < 4 || phrase < best) continue;
-    if (phrase > best) {
-      best = phrase;
-      chosen = [];
-    }
-    chosen.push(passage);
+    if (phrase < 4) continue;
+    restating.push({ passage, phrase });
+    best = Math.max(best, phrase);
   }
-  return dominantPages(text, outsaid(text, chosen, passages), (passage) => passage.printedPage);
+  /*
+   * "yoga pants, joggers or sweats are" is also the never-worn rule on the
+   * next sheet. The stretch that continues "approved for instructors only"
+   * restates the longer phrase, so the shorter copy is not a second page.
+   */
+  const longest = restating.filter((entry) => entry.phrase === best).map((entry) => entry.passage);
+  const chosen = namedSection(text, restating, best) ?? longest;
+  return dominantPages(
+    text,
+    outsaid(
+      text,
+      chosen,
+      passages,
+      restating.map((entry) => entry.passage),
+    ),
+    (passage) => passage.printedPage,
+  );
+}
+
+/*
+ * A SENTENCE THAT NAMES ITS SECTION IS CITED THERE (live sweep, 25 Oct 2026,
+ * E12). "If an employee is summoned for jury duty, they need to show the
+ * summons to their supervisor as soon as possible so the supervisor can
+ * adjust the schedule" was cited on p.48: Witness Duty prints "summons to
+ * their Supervisor as soon as possible so the Supervisor", two words longer
+ * than Jury Duty's "summons to their supervisor as soon as possible so that
+ * the supervisor" on p.47. The sentence says "jury duty". A passage whose own
+ * heading the sentence names, sharing nearly as long a phrase (three words in
+ * four), wins over a longer copy under a heading the sentence does not name.
+ */
+const NAMED_SHARE = 0.75;
+
+function namesOwnHeading(passage: ManualPassage, text: string): boolean {
+  const heading = passage.heading?.trim();
+  return Boolean(heading) && !FRAGMENT_HEADING.test(heading!) && mentionsHeading(text, heading!);
+}
+
+function namedSection(
+  text: string,
+  restating: readonly { passage: ManualPassage; phrase: number }[],
+  best: number,
+): ManualPassage[] | null {
+  if (restating.some((entry) => entry.phrase === best && namesOwnHeading(entry.passage, text))) return null;
+  const named = restating.filter(
+    (entry) => entry.phrase >= Math.max(5, NAMED_SHARE * best) && namesOwnHeading(entry.passage, text),
+  );
+  if (named.length === 0) return null;
+  const top = Math.max(...named.map((entry) => entry.phrase));
+  return named.filter((entry) => entry.phrase === top).map((entry) => entry.passage);
 }
 
 /*
@@ -982,11 +1041,34 @@ function restatedPassages(text: string, passages: readonly ManualPassage[]): Man
  */
 const OUTSAID = 2 / 3;
 
-function outsaid(text: string, tied: readonly ManualPassage[], passages: readonly ManualPassage[]): ManualPassage[] {
+/*
+ * A TIED PAGE IS READ AS EVERYTHING ON IT THE SENTENCE RESTATES (live sweep,
+ * 25 Oct 2026, E2). "A full-time manager begins accruing PTO after 90 days of
+ * employment in that position, and in the first tier — 90 days through 4
+ * years of service — they earn 2 weeks (80 hours) of PTO, with a maximum
+ * accrual cap of 120 hours" restates two sections of p.41, Eligibility and
+ * Provisions. Each of them alone says less of the sentence than the rest of
+ * the accrual list on p.42, so p.42 outsaid p.41 and the first tier was cited
+ * on the page that prints the later tiers. The tied page counts the words of
+ * every passage on it that shares a phrase with the sentence.
+ */
+function pageText(page: number, tied: readonly ManualPassage[], restating: readonly ManualPassage[]): string {
+  return [...new Set([...tied, ...restating].filter((passage) => passage.printedPage === page))]
+    .map((passage) => passage.text)
+    .join("\n");
+}
+
+function outsaid(
+  text: string,
+  tied: readonly ManualPassage[],
+  passages: readonly ManualPassage[],
+  restating: readonly ManualPassage[] = [],
+): ManualPassage[] {
   if (tied.length === 0) return [...tied];
   const rarity = wordRarityOf(passages);
   const tiedPages = new Set(tied.map((passage) => passage.printedPage));
-  const tiedBest = Math.max(...tied.map((passage) => rareOverlap(text, passage.text, rarity)));
+  const tiedTexts = [...tiedPages].map((page) => pageText(page, tied, restating));
+  const tiedBest = Math.max(...tiedTexts.map((joined) => rareOverlap(text, joined, rarity)));
   let best: ManualPassage | null = null;
   let bestScore = 0;
   for (const passage of passages) {
@@ -997,7 +1079,7 @@ function outsaid(text: string, tied: readonly ManualPassage[], passages: readonl
     }
   }
   // It also shares at least as many distinctive words as the closest tied page: two rare words are not a page.
-  const tiedWords = Math.max(...tied.map((passage) => overlapScore(text, passage.text)));
+  const tiedWords = Math.max(...tiedTexts.map((joined) => overlapScore(text, joined)));
   if (!best || tiedPages.has(best.printedPage) || overlapScore(text, best.text) < Math.max(4, tiedWords)) return [...tied];
   return tiedBest < OUTSAID * bestScore ? [best] : [...tied];
 }
@@ -1179,13 +1261,82 @@ function restatedPagesOf(
   plan: Pick<FullManualPlan, "index" | "passages">,
   modelPages: readonly number[],
 ): number[] {
+  return [...new Set(restatedFor(bare, plan, modelPages).map((passage) => passage.printedPage))];
+}
+
+/** The passages a stretch restates: a shared phrase, a confirmed model page, or the one closest passage. */
+function restatedFor(
+  bare: string,
+  plan: Pick<FullManualPlan, "index" | "passages">,
+  modelPages: readonly number[],
+): ManualPassage[] {
   let restated = restatedPassages(bare, plan.passages);
   if (restated.length === 0) {
     const pages = [...new Set(modelPages)].filter((page) => plan.index?.pages.has(page));
     restated = confirmedModelPages(bare, pages, plan.passages);
   }
   if (restated.length === 0) restated = closestPassage(bare, plan.passages);
-  return [...new Set(restated.map((passage) => passage.printedPage))];
+  return restated;
+}
+
+/*
+ * A MARKER THE SENTENCE READS THROUGH IS NOT TAKEN OFF ALONE (live sweep, 25
+ * Oct 2026, E12). "(The manual gives a specific day limit — 15 days — at
+ * [p.47], so I'll note…)" restates no page, its marker was removed, and the
+ * reply said "— 15 days — at, so I'll note…". A marker after "at", "see",
+ * "on", "in", "per", "from" or "under" is part of the sentence. When the
+ * sentence restates a page, that page's marker is written in its place. When
+ * it restates none, the word goes with the marker, and so does a dash that
+ * only led into it ("— 15 days, so I'll note…"). No other word changes.
+ */
+const EMBEDDED_MARKER =
+  /([^\S\n]*(?:[—–][^\S\n]*)?)\b(at|see|on|in|per|from|under)([^\S\n]+)(\[pp?\.\s*\d{1,3}(?:\s*[-–]\s*\d{1,3})?\])/gi;
+
+function markersFor(pages: readonly number[]): string {
+  return [...pages].sort((left, right) => left - right).map((page) => `[p.${page}]`).join(" ");
+}
+
+/** The removal of an embedded marker that no page backs: the word, and a dash that only led into it. */
+function droppedEmbedded(lead: string, after: string): string {
+  const closes = /^[^\S\n]*(?:[,.;:!?)\]]|$)/.test(after);
+  if (/[—–]/.test(lead) && !closes) return lead.replace(/[^\S\n]+$/, "");
+  return "";
+}
+
+/** Brackets a removed marker left empty, and a space before punctuation it left behind. */
+function tidyRemoved(text: string): string {
+  return text
+    .replace(/[^\S\n]*\([^\S\n]*\)/g, "")
+    .replace(/[^\S\n]+([,.;:!?])/g, "$1")
+    .replace(/[^\S\n]{2,}/g, " ");
+}
+
+/**
+ * The stretch with its embedded markers handled and every other marker taken
+ * off, or null when it has no embedded marker. With `pages`, the first
+ * embedded marker becomes those pages; without, each embedded marker goes
+ * with its word.
+ */
+function withEmbeddedMarkers(text: string, pages: readonly number[]): string | null {
+  if (!new RegExp(EMBEDDED_MARKER.source, "i").test(text)) return null;
+  const kept: string[] = [];
+  let placed = false;
+  const held = text.replace(
+    new RegExp(EMBEDDED_MARKER.source, "gi"),
+    (full: string, lead: string, word: string, space: string, _marker: string, offset: number, whole: string) => {
+      let replacement: string;
+      if (pages.length > 0 && !placed) {
+        placed = true;
+        replacement = `${lead}${word}${space}${markersFor(pages)}`;
+      } else {
+        replacement = droppedEmbedded(lead, whole.slice(offset + full.length));
+      }
+      kept.push(replacement);
+      return `\u0000${kept.length - 1}\u0000`;
+    },
+  );
+  const restored = withoutPrintedMarkers(held).replace(/\u0000(\d+)\u0000/g, (_whole, at: string) => kept[Number(at)] ?? "");
+  return placed ? restored : tidyRemoved(restored);
 }
 
 /**
@@ -1216,52 +1367,57 @@ export function keepRestatedFallbackMarkers(
           if (written.length === 0 && sourcePages.length === 0) return `${text}${gap}`;
           const bare = withoutPrintedMarkers(text).replace(/[^\S\n]*\[S\d{1,2}\]/g, "");
           const pages = new Set(bare.trim() ? restatedPagesOf(bare, plan, [...written, ...sourcePages]) : []);
-          const kept = text
-            .replace(PRINTED_MARKER, (full: string, from: string, to?: string) => {
-              const named = markerPages([full, from, to] as unknown as RegExpMatchArray);
-              return named.some((page) => pages.has(page)) ? full : "";
-            })
+          const restates = (full: string, from: string, to?: string) =>
+            markerPages([full, from, to] as unknown as RegExpMatchArray).some((page) => pages.has(page));
+          // "at [p.36]," loses "at" with the marker, not the marker alone.
+          const embedded = text.replace(
+            new RegExp(EMBEDDED_MARKER.source, "gi"),
+            (full: string, lead: string, _word: string, _space: string, marker: string, offset: number, whole: string) => {
+              const match = marker.match(/(\d{1,3})(?:\s*[-–]\s*(\d{1,3}))?/);
+              return match && restates(marker, match[1]!, match[2]) ? full : droppedEmbedded(lead, whole.slice(offset + full.length));
+            },
+          );
+          const kept = embedded
+            .replace(PRINTED_MARKER, (full: string, from: string, to?: string) => (restates(full, from, to) ? full : ""))
             .replace(/[^\S\n]*\[S(\d{1,2})\]/g, (full: string, digits: string) => {
               const page = manualPageOfMarker(Number(digits));
               return page === null || pages.has(page) ? full : "";
             });
-          return `${kept}${gap}`;
+          return `${kept === text ? kept : tidyRemoved(kept)}${gap}`;
         })
         .join(""),
     )
     .join("\n");
 }
 
-/**
- * A policy answer cites a printed page only where it restates that page.
- *
- * The answer is read one sentence (or bullet line) at a time. Every [p.N]
- * is taken off and written again only for a page whose passage that
- * sentence restates; a page the model chose stays when that page's text
- * still matches the sentence. No word, line break or bullet is changed:
- * only [p.N] markers are removed or added. 24 Oct 2026, f8759f6: the
- * model's +1 pages were kept, pages 10, 18, 20 and 29 were added to one
- * sentence from shared words alone, and each of those pages became a
- * Sources row.
- *
- * An [S#] that is not one of `shownMarkers` is removed, so [S9] cannot sit
- * beside a shorter source list. When no sentence restates the manual, `ok`
- * is false and the caller falls back to ordinary retrieval.
- */
-export function citePolicyAnswer(
-  answer: string,
-  plan: Pick<FullManualPlan, "index" | "passages">,
-  shownMarkers: readonly number[] = [],
-): CitedManualAnswer {
-  const index = plan.index;
-  const cleaned = alignSourceMarkers(normalizeMarkers(answer), shownMarkers);
-  if (!index) return { text: cleaned, sources: [], ok: false };
+interface ManualHit {
+  passage: ManualPassage;
+  heading: string | null;
+  score: number;
+}
 
-  const hits: { passage: ManualPassage; heading: string | null; score: number }[] = [];
+/**
+ * Each stretch of `cleaned` with its [p.N] markers written again for the
+ * pages it restates, and the sections it restates as hits. With
+ * `onlyMarked`, a stretch that carries no [p.N] is left exactly as it was.
+ */
+function citeStretches(
+  cleaned: string,
+  plan: Pick<FullManualPlan, "index" | "passages">,
+  onlyMarked: boolean,
+): { text: string; hits: ManualHit[] } {
+  const index = plan.index!;
+  const hits: ManualHit[] = [];
   const addHit = (passage: ManualPassage, text: string) => {
     const score = restatedPhraseLength(text, passage.text, phrasePagesOf(plan.passages)) * 10 + overlapScore(text, passage.text);
     const names = namedHeadings(passage, text);
-    const own = passage.heading && !FRAGMENT_HEADING.test(passage.heading.trim()) ? passage.heading : null;
+    /*
+     * A passage at the top of a page continues the section printed above it
+     * (QA cosmetic, 25 Oct 2026): it is labelled with that section, not with
+     * the first heading printed further down the page.
+     */
+    const ownHeading = passage.heading ?? passage.continues ?? null;
+    const own = ownHeading && !FRAGMENT_HEADING.test(ownHeading.trim()) ? ownHeading : null;
     for (const heading of names.length > 0 ? names : [own]) {
       const key = `${passage.documentId}:${passage.printedPage}:${normalizeHeading(heading ?? "")}`;
       const existing = hits.findIndex(
@@ -1279,34 +1435,35 @@ export function citePolicyAnswer(
     }
   };
 
-  const marked = cleaned
+  const text = cleaned
     .split("\n")
     .map((line) =>
       stretchesOf(line)
         .map(({ text, gap }) => {
           const written = [...text.matchAll(PRINTED_MARKER)].flatMap(markerPages);
+          if (onlyMarked && written.length === 0) return `${text}${gap}`;
           const bare = withoutPrintedMarkers(text);
           // A stretch that was only markers ("till [p.19]. [p.20]") leaves nothing, not a gap.
           if (!bare.trim()) return text.trim() ? "" : `${text}${gap}`;
-          let restated = restatedPassages(bare, plan.passages);
-          if (restated.length === 0) {
-            const modelPages = [...new Set(written)].filter((page) => index.pages.has(page));
-            restated = confirmedModelPages(bare, modelPages, plan.passages);
-          }
-          if (restated.length === 0) restated = closestPassage(bare, plan.passages);
+          // Another document's [S#] stays where the model put it and is not read as words.
+          const said = bare.replace(/[^\S\n]*\[S\d{1,2}\]/g, "");
+          const modelPages = [...new Set(written)].filter((page) => index.pages.has(page));
+          const restated = restatedFor(said, plan, modelPages);
           const meaningful = restated.filter((passage) => !(passage.printedPage === 1 && !passage.heading));
-          for (const passage of meaningful) addHit(passage, bare);
+          for (const passage of meaningful) addHit(passage, said);
           const pages = [...new Set(meaningful.map((passage) => passage.printedPage))];
-          return `${markStretch(bare, pages)}${gap}`;
+          const embedded = withEmbeddedMarkers(text, pages);
+          return `${embedded ?? markStretch(bare, pages)}${gap}`;
         })
         .join("")
         .replace(/[^\S\n]+$/, ""),
     )
     .join("\n");
+  return { text, hits };
+}
 
-  if (hits.length === 0) return { text: cleaned, sources: [], ok: false };
-
-  const sources: FullManualSource[] = hits.map((hit, marker) => ({
+function sourcesOf(hits: readonly ManualHit[]): FullManualSource[] {
+  return hits.map((hit, marker) => ({
     marker: marker + 1,
     documentId: hit.passage.documentId,
     documentTitle: hit.passage.documentTitle,
@@ -1315,6 +1472,132 @@ export function citePolicyAnswer(
     category: hit.passage.category,
     printedPage: hit.passage.printedPage,
   }));
+}
 
-  return { text: marked, sources, ok: true };
+/**
+ * A policy answer cites a printed page only where it restates that page.
+ *
+ * The answer is read one sentence (or bullet line) at a time. Every [p.N]
+ * is taken off and written again only for a page whose passage that
+ * sentence restates; a page the model chose stays when that page's text
+ * still matches the sentence. No word, line break or bullet is changed:
+ * only [p.N] markers are removed or added, and a marker the sentence reads
+ * through ("at [p.47]") is re-pointed in place or goes with its word. 24
+ * Oct 2026, f8759f6: the model's +1 pages were kept, pages 10, 18, 20 and
+ * 29 were added to one sentence from shared words alone, and each of those
+ * pages became a Sources row.
+ *
+ * An [S#] that is not one of `shownMarkers` is removed, so [S9] cannot sit
+ * beside a shorter source list. When no sentence restates the manual, `ok`
+ * is false and the caller falls back to ordinary retrieval.
+ */
+export function citePolicyAnswer(
+  answer: string,
+  plan: Pick<FullManualPlan, "index" | "passages">,
+  shownMarkers: readonly number[] = [],
+): CitedManualAnswer {
+  const cleaned = alignSourceMarkers(normalizeMarkers(answer), shownMarkers);
+  if (!plan.index) return { text: cleaned, sources: [], ok: false };
+  const { text, hits } = citeStretches(cleaned, plan, false);
+  if (hits.length === 0) return { text: cleaned, sources: [], ok: false };
+  return { text, sources: sourcesOf(hits), ok: true };
+}
+
+/*
+ * A RETRIEVED MANUAL SOURCE IS A PAGE MARKED IN THE SENTENCE (live sweep, 25
+ * Oct 2026: 54 of 71 replies showed a JBA source and no [p.N]). A question
+ * the manual is not loaded for is answered from retrieved excerpts, cited
+ * [S#]; every [S#] is taken out of the reply before it is shown, so "Where
+ * should employees park?" read "Employees shouldn't park in the spots
+ * closest to the front of the location — those are reserved for customers."
+ * beside a "Page 18 — Employee Parking" source and no marker. Here each [S#]
+ * whose row is a manual excerpt is read as that excerpt's pages, and the
+ * sentence is cited exactly as a full-manual answer is: a [p.N] for each
+ * page it restates, written where the marker stood, and a section source
+ * for each. A sentence that restates nothing keeps no marker. Stretches the
+ * model did not cite, and an [S#] from any other document, are left as they
+ * are.
+ */
+export function citeRetrievedAnswer(
+  answer: string,
+  plan: Pick<FullManualPlan, "index" | "passages">,
+  manualPagesOfMarker: (marker: number) => readonly number[] | null,
+): CitedManualAnswer {
+  const normalized = normalizeMarkers(answer);
+  if (!plan.index || plan.passages.length === 0) return { text: normalized, sources: [], ok: false };
+  const asPages = normalized.replace(/\[S(\d{1,2})\]/g, (full: string, digits: string) => {
+    const pages = manualPagesOfMarker(Number(digits));
+    if (pages === null) return full;
+    const known = [...new Set(pages)].filter((page) => Number.isInteger(page) && page > 0).sort((a, b) => a - b);
+    if (known.length === 0) return "[p.0]";
+    const from = known[0]!;
+    const to = known[known.length - 1]!;
+    return to > from && to - from <= 5 ? `[p.${from}-${to}]` : `[p.${from}]`;
+  });
+  const { text, hits } = citeStretches(asPages, plan, true);
+  if (hits.length === 0) return { text: normalized, sources: [], ok: false };
+  return { text, sources: sourcesOf(hits), ok: true };
+}
+
+/** Pages a retrieved manual excerpt is printed on, from its stored locator ("Page 18 — …", "Pages 15–16 — …"). */
+export function retrievedLocatorPages(row: { readonly locator?: string | null; readonly page?: number | null }): number[] {
+  const match = (row.locator ?? "").match(/\bPages?\s+(\d{1,3})(?:\s*[-–]\s*(\d{1,3}))?/i);
+  if (!match) return [];
+  const from = Number(match[1]);
+  const to = match[2] ? Number(match[2]) : from;
+  if (!match[2] && row.page != null && from === row.page) return [];
+  if (to < from || to - from > 5) return [from];
+  return Array.from({ length: to - from + 1 }, (_unused, offset) => from + offset);
+}
+
+/**
+ * The current manuals' passages and printed pages, for citing a reply that
+ * was answered from retrieval. Every brand is read: only a sentence's own
+ * words choose a page.
+ */
+export function planManualCitations(
+  documents: readonly FullManualDocument[],
+): Pick<FullManualPlan, "index" | "passages"> {
+  const plan = planFullManualContext({ question: "", documents, asked: true, budget: Number.POSITIVE_INFINITY });
+  return { index: plan.index, passages: plan.passages };
+}
+
+/*
+ * A QUESTION ABOUT A SECTION THE MANUAL PRINTS IS A MANUAL QUESTION (live
+ * sweep, 25 Oct 2026, E9: "What is COBRA?" named no policy word, so the
+ * manual was not loaded; retrieval found no manual excerpt either, and the
+ * reply said there was nothing on COBRA, which p.45 prints under "Group
+ * Health Plan Continuation Coverage Under COBRA"). Behind
+ * FULL_MANUAL_WIDE_GATE_ENABLED, a question that names a word of a printed
+ * heading is asked with the whole manual. A heading word printed on more
+ * than one page in ten ("employee", "work", "time") says nothing about
+ * which section is meant and does not count.
+ */
+const HEADING_WORD_SHARE = 0.1;
+
+export function asksAboutManual(question: string, plan: Pick<FullManualPlan, "passages">): boolean {
+  if (plan.passages.length === 0) return false;
+  const asked = new Set(wordsOf(question).split(" ").filter((word) => word.length >= 4 && !OVERLAP_STOP.has(word)));
+  if (asked.size === 0) return false;
+  const pagesOfWord = new Map<string, Set<number>>();
+  const allPages = new Set<number>();
+  for (const passage of plan.passages) {
+    allPages.add(passage.printedPage);
+    for (const word of new Set(wordsList(passage.text))) {
+      if (!asked.has(word)) continue;
+      const pages = pagesOfWord.get(word) ?? new Set<number>();
+      pages.add(passage.printedPage);
+      pagesOfWord.set(word, pages);
+    }
+  }
+  const limit = Math.max(1, Math.floor(HEADING_WORD_SHARE * allPages.size));
+  for (const passage of plan.passages) {
+    const heading = passage.heading?.trim();
+    if (!heading || FRAGMENT_HEADING.test(heading)) continue;
+    for (const word of wordsOf(heading).split(" ")) {
+      if (!asked.has(word)) continue;
+      if ((pagesOfWord.get(word)?.size ?? 0) <= limit) return true;
+    }
+  }
+  return false;
 }

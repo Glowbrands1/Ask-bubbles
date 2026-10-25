@@ -26,7 +26,7 @@ import { isFrameworkAvailable } from "@/lib/knowledge/framework-availability";
 import { rowToCitation, type MatchedChunkRow } from "@/lib/knowledge/mappers";
 import { buildHandbookNote, namesHandbook, selectHandbookCoverage } from "@/lib/knowledge/named-handbook";
 import { isMultiBrandManual } from "@/lib/knowledge/brand-sections";
-import { loadFullManualPlan } from "@/lib/knowledge/full-manual-load";
+import { loadFullManualPlan, loadManualCitationPlan } from "@/lib/knowledge/full-manual-load";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { RoleGrounding } from "@/lib/knowledge/role-grounding";
 import { recallPeople } from "@/lib/chat/person-memory-store";
@@ -74,6 +74,7 @@ import {
   antiLoopEnabled,
   formFullRemapEnabled,
   fullManualContextEnabled,
+  fullManualWideGateEnabled,
   crossChatReplyGuardEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
@@ -104,6 +105,8 @@ import { rowsForQuestion } from "@/lib/knowledge/credential-redaction";
 import { assembleGrounding } from "./grounding-assembly";
 import {
   citePolicyAnswer,
+  citeRetrievedAnswer,
+  retrievedLocatorPages,
   fullManualGroundingNote,
   keepRestatedFallbackMarkers,
   validateManualCitations,
@@ -703,7 +706,10 @@ async function answerQuestionBody(
   let manualPlan: FullManualPlan | null = null;
   if (fullManualContextEnabled()) {
     try {
-      manualPlan = await loadFullManualPlan(request.scopeId, request.question, policyText);
+      manualPlan = await loadFullManualPlan(request.scopeId, request.question, policyText, {
+        wideGate: fullManualWideGateEnabled(),
+        topRowIsManual: rows[0] ? isMultiBrandManual(rows[0].document_title, MULTI_BRAND_MANUAL_TITLES) : false,
+      });
     } catch {
       manualPlan = null;
     }
@@ -882,8 +888,31 @@ async function answerQuestionBody(
    * restates them (see `keepRestatedFallbackMarkers`).
    */
   const manualDocuments = new Set((manualPlan?.passages ?? []).map((passage) => passage.documentId));
-  const fallbackText =
-    fellBack && manualPlan
+  /*
+   * A reply answered from retrieved excerpts (the manual was not loaded, or
+   * this is the fallback) cites each manual excerpt as the printed page its
+   * sentence restates, in the sentence (see `citeRetrievedAnswer`). Only when
+   * the reply cites a manual excerpt is the manual read for this.
+   */
+  const manualRowPages = (marker: number): number[] | null => {
+    const row = activeRows[marker - 1];
+    if (!row || !isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES)) return null;
+    const printed = printedPageFromRetrieval(row);
+    const pages = retrievedLocatorPages(row);
+    return printed && !pages.includes(printed) ? [printed, ...pages] : pages;
+  };
+  let retrievalCited: CitedManualAnswer | null = null;
+  if (!settled && fullManualContextEnabled()) {
+    const citesManual = extractUsedMarkers(answer, activeMarkers).some((marker) => manualRowPages(marker) !== null);
+    if (citesManual || /\[pp?\.\s*\d/i.test(answer)) {
+      const citePlan = manualPlan?.passages.length ? manualPlan : await loadManualCitationPlan(request.scopeId);
+      const cited = citePlan ? citeRetrievedAnswer(answer, citePlan, manualRowPages) : null;
+      retrievalCited = cited?.ok ? cited : null;
+    }
+  }
+  const fallbackText = retrievalCited
+    ? retrievalCited.text
+    : fellBack && manualPlan
       ? keepRestatedFallbackMarkers(answer, manualPlan, (marker) => {
           const row = activeRows[marker - 1];
           return row && manualDocuments.has(row.document_id) ? printedPageFromRetrieval(row) : null;
@@ -893,7 +922,7 @@ async function answerQuestionBody(
   const guarded = settled
     ? settled.text
     : fullManualContextEnabled() && !fellBack
-      ? validateManualCitations(answer, { shownMarkers: markers, index: manualPlan?.index ?? null })
+      ? validateManualCitations(fallbackText, { shownMarkers: markers, index: manualPlan?.index ?? null })
       : fallbackText;
   const toCitation = (source: FullManualSource): SourceCitation => ({
     documentId: source.documentId,
@@ -910,7 +939,9 @@ async function answerQuestionBody(
     });
   let citations: SourceCitation[] = settled
     ? [...settled.sources.map(toCitation), ...citedRows(markers, citationRows)]
-    : citedRows(markers, activeRows);
+    : retrievalCited
+      ? [...retrievalCited.sources.map(toCitation), ...citedRows(markers, activeRows)]
+      : citedRows(markers, activeRows);
 
   const suggested = await suggestedFormsFor({ summariesPromise, request, actor });
 

@@ -1,0 +1,139 @@
+{
+  "source": "Ask Bubbles production chat_messages joined to chat_conversations (client_conversation_id), policy sweep of 25 Oct 2026 11:05-11:09 UTC, prod 7174fdc, FULL_MANUAL_CONTEXT on. Each content is byte-identical to the stored reply (md5 checked); sources are the stored citation locators. trace is chat_traces for the same conversation: cacheReadInputTokens > 0 means the full manual was in the prompt; 0 means the turn was answered from retrieval. retrievedManual lists the top JBA manual sections retrieved (none for COBRA: the 6 rows were other documents).",
+  "answers": [
+    {
+      "conversationId": "conv_mvnq1y262zwz4jn",
+      "question": "Can employees vape at work?",
+      "md5": "01d5535f3b143e31efe15975937b786d",
+      "content": "No — vaping (vapor products) is prohibited at all locations, including parking lots and company vehicles. Employees who vape have to step off the premises entirely to do so.",
+      "sources": [
+        "Page 12 — Prescribed Medications"
+      ],
+      "trace": {
+        "cacheReadInputTokens": 0,
+        "retrievalCount": 14,
+        "retrievedManual": [
+          "Smoking/Vaping chunk (stored section Prescribed Medications)"
+        ]
+      }
+    },
+    {
+      "conversationId": "conv_mvnq2i4c2o7tyfj",
+      "question": "Are beards allowed?",
+      "md5": "0997f6647a40f35c621e4088bd5840db",
+      "content": "Yes — facial hair is acceptable as long as it's clean, well-groomed, and trimmed.",
+      "sources": [
+        "Pages 15–16 — Hair"
+      ],
+      "trace": {
+        "cacheReadInputTokens": 0,
+        "retrievalCount": 13,
+        "retrievedManual": [
+          "Hair",
+          "Jewelry/Accessories",
+          "Prescribed Medications"
+        ]
+      }
+    },
+    {
+      "conversationId": "conv_mvnq2qk32hw0pah",
+      "question": "Where should employees park?",
+      "md5": "f7a166a2dca4b49f712f2fd39a25ce50",
+      "content": "Employees shouldn't park in the spots closest to the front of the location — those are reserved for customers.",
+      "sources": [
+        "Page 18 — Employee Parking"
+      ],
+      "trace": {
+        "cacheReadInputTokens": 0,
+        "retrievalCount": 14,
+        "retrievedManual": [
+          "Employee Parking",
+          "Visitors in the Workplace",
+          "Employee Records"
+        ]
+      }
+    },
+    {
+      "conversationId": "conv_mvnq4dvo2i2xnfg",
+      "question": "How many hours is full-time?",
+      "md5": "199fb40954209c3788801c2e19496158",
+      "content": "Full-time status is 30+ hours per week, but the exact required range depends on the position:\n\n- AMM/ASD/AGM – 30–35 hours per week\n- Hourly Office Personnel – 40 hours per week\n- MM/SD/GM/TSD/DM – 40–45 hours per week\n\nLet me know if you need the range for a specific role.",
+      "sources": [
+        "Page 33 — Accident Procedures"
+      ],
+      "trace": {
+        "cacheReadInputTokens": 0,
+        "retrievalCount": 14,
+        "retrievedManual": [
+          "Employee Classifications chunk (stored section Accident Procedures)"
+        ]
+      }
+    },
+    {
+      "conversationId": "conv_mvnq55v42a0dhaj",
+      "question": "How much PTO does a full-time manager get in their first years?",
+      "md5": "f61292d735e8d42076a953bc3d2b9bdf",
+      "content": "A full-time manager begins accruing PTO after 90 days of employment in that position, and in the first tier — 90 days through 4 years of service — they earn 2 weeks (80 hours) of PTO, with a maximum accrual cap of 120 hours [p.42].\n\nWorth noting: PTO is for eligible salaried managers, full-time corporate staff, and full-time ASD/AMM roles, and it can't be used during the brand's peak blackout dates — for example, November 1 and December 31 for Buff City Soap, or January 1 and February 28 for Crunch [p.42]. Let me know if you want the accrual details for longer tenure too.",
+      "sources": [
+        "Page 42",
+        "Page 42 — Usage"
+      ],
+      "trace": {
+        "cacheReadInputTokens": 41942,
+        "retrievalCount": 14,
+        "retrievedManual": [
+          "Eligibility",
+          "Provisions",
+          "Employee Benefits"
+        ]
+      }
+    },
+    {
+      "conversationId": "conv_mvnq5p7s278vzdm",
+      "question": "What is COBRA?",
+      "md5": "59f197791d5a7a4f1e462a01bee4629f",
+      "content": "I don't have anything on COBRA in the knowledge base I can pull from for this question. That's a benefits/legal topic — you'd need to check with HR or your benefits administrator for accurate details on COBRA coverage and eligibility.",
+      "sources": [],
+      "trace": {
+        "cacheReadInputTokens": 0,
+        "retrievalCount": 6,
+        "retrievedManual": []
+      }
+    },
+    {
+      "conversationId": "conv_mvnq5u9u2kj9v06",
+      "question": "Do employees get time off for jury duty?",
+      "md5": "ebc90c73298a040f29825db2947a673d",
+      "content": "Yes — here's what the manual says, across all brands (this is a company-wide policy, not brand-specific):\n\n- If an employee is summoned for jury duty, they need to show the summons to their supervisor as soon as possible so the supervisor can adjust the schedule around it [p.48].\n- The Company pays normal salary or hourly compensation for up to the stated number of days of jury service [p.47]. (The manual gives a specific day limit — 15 days — at, so I'll note that number is in the sources.)\n- After that paid period, the employee can use PTO or take unpaid leave, their choice.\n- Employees are expected to come back to work whenever the court schedule allows, or once they're dismissed from jury duty [p.47] [p.48].\n- One condition: the employee has to sign over to the Company any pay they receive from the court for those first paid days, to offset what the Company paid them.\n\nSupervisors who get a jury duty request and summons should also loop in Human Resources for guidance on handling it [p.47].",
+      "sources": [
+        "Page 48",
+        "Page 47 — Jury Duty"
+      ],
+      "trace": {
+        "cacheReadInputTokens": 41942,
+        "retrievalCount": 14,
+        "retrievedManual": [
+          "Jury Duty",
+          "Witness Duty",
+          "Time Off to Vote or Serve as an Election Officer"
+        ]
+      }
+    },
+    {
+      "conversationId": "conv_mvnq5wzc2zbf6f9",
+      "question": "Is there paid maternity leave?",
+      "md5": "0c4fcf38d8fe541b8672c9c314c294d2",
+      "content": "No, there's no paid maternity leave. The company encourages employees to use any accrued PTO during that time, and eligible employees (1,250+ hours worked in the past 12 months) can take 12 weeks of unpaid, job-protected leave under FMLA.\n\nA few related details worth knowing:\n- PTO isn't required to accrue while someone is on FMLA leave, though it doesn't stop either — nothing requires it either way.\n- Health insurance continues, but the employee is responsible for keeping up their premium payments.\n- To take any leave, a Leave Request Form has to be filled out and turned in to the District Manager — that's how the time off gets documented.\n\nIf someone's asking because they're starting this process, point them to their District Manager for the Leave Request Form.",
+      "sources": [
+        "Page 48 — Witness Duty"
+      ],
+      "trace": {
+        "cacheReadInputTokens": 0,
+        "retrievalCount": 14,
+        "retrievedManual": [
+          "Maternity Leave chunk (stored section Witness Duty)"
+        ]
+      }
+    }
+  ]
+}
