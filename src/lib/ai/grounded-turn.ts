@@ -17,6 +17,7 @@ import { loadFormState, saveFormState } from "./form-state-store";
 import { applyGroundedProposal, prepareGroundedQuestion, type GroundedPerson, type GroundedPrep } from "./grounded-entities";
 import type { ChatActor } from "./form-proposal";
 import type { AskRequest } from "./types";
+import { withTypedEmployeeOnCard } from "./typed-employee-card";
 
 /**
  * Form proposal with the grounded-entity and form-state flags.
@@ -47,9 +48,11 @@ export async function deliverFormProposal(input: {
   const entities = groundedEntitiesEnabled();
   const stateOn = formStateEnabled();
   const dedupe = draftDedupeEnabled();
+  // KEEP_FORM_EMPLOYEE_ENABLED: "for Test Employee" stays Test Employee on the card. See `withTypedEmployeeOnCard`.
+  const typedName = (response: AskResponse) => withTypedEmployeeOnCard(response, input.request.question);
   if (!entities && !stateOn && !dedupe) {
     const proposed = await input.propose(input.question);
-    return proposed ? input.decorate(proposed) : null;
+    return proposed ? typedName(await input.decorate(proposed)) : null;
   }
 
   const saved = await readSaved(stateOn, input.actor.subject, input.request.conversationId);
@@ -71,7 +74,7 @@ export async function deliverFormProposal(input: {
     withKeptTypedNames(prep.keptTypedNames, () => input.propose(prep.question)),
   );
   if (!proposed) return null;
-  const decorated = await input.decorate(proposed);
+  const decorated = typedName(await input.decorate(proposed));
   const applied = entities
     ? applyGroundedProposal(decorated, { people, prep, rosterEmpty: people.length === 0 })
     : decorated;

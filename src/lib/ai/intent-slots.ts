@@ -7,6 +7,7 @@ import { namesHeading } from "@/lib/forms/named-policy-section";
 import { payrollDeductAmount, payrollDeductFromConversation, type PayrollDeductAnswer } from "@/lib/forms/payroll-deduct";
 import {
   intentPayrollManagerOnlyEnabled,
+  keepFormEmployeeEnabled,
   managerWordsOnlyEnabled,
   notANameGuardEnabled,
   warningLevelManagerOnlyEnabled,
@@ -16,6 +17,7 @@ import {
   priorActionsParseEnabled,
   titleWholeWordEnabled,
 } from "@/lib/config/chat-quality-flags";
+import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { extractJobTitle } from "@/lib/forms/proposal";
 import { lateOpenOn, newestStatedDate, withYearlessDatesWritten } from "@/lib/forms/late-open";
@@ -163,9 +165,17 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
   const reading = parseReading(input.raw);
   const blob = conversationBlob(input);
   const choice = readPriorChoice(input.history, input.question, input.people, input.stores);
-  const employee = choice?.person
+  const grounded = choice?.person
     ? { person: choice.person, name: displayName(choice.person), ambiguous: [] as readonly GroundedPerson[], typed: null }
     : groundEmployee(guardedTyped(reading?.employee ?? null, input), blob, input.people);
+  /*
+   * KEEP_FORM_EMPLOYEE_ENABLED (ported from the sibling app, QA 25 Oct 2026):
+   * "for Test Employee" names Test Employee. The readers end a name at
+   * "Employee", a form word, so the slot model's "Test", or nobody, is
+   * replaced by the name as typed.
+   */
+  const typedEmployee = keepFormEmployeeEnabled() && !choice?.person ? typedEmployeeName(input.question) : null;
+  const employee = typedEmployee ? withTypedEmployee(grounded, typedEmployee) : grounded;
   const store =
     newestTurnStore(input.question, input.stores) ??
     groundStore(choice?.store ?? reading?.store ?? null, blob, input.stores, employee.person);
@@ -425,6 +435,22 @@ function formNamedIn(text: string, templates: readonly TemplateRow[]): string | 
   const lower = text.toLowerCase();
   const byName = templates.filter((template) => lower.includes(template.name.toLowerCase()));
   return byName.length === 1 ? byName[0]!.key : null;
+}
+
+/**
+ * KEEP_FORM_EMPLOYEE_ENABLED. The name the manager typed ("Test Employee")
+ * stands in for a reading that is a shorter spelling of it ("Test") or
+ * nobody. A different person the reading found is kept.
+ */
+function withTypedEmployee(
+  grounded: ReturnType<typeof groundEmployee>,
+  typed: string,
+): ReturnType<typeof groundEmployee> {
+  const name = (grounded.name ?? "").trim().toLowerCase();
+  const full = typed.toLowerCase();
+  if (name === full) return grounded;
+  if (name !== "" && !full.startsWith(`${name} `)) return grounded;
+  return { person: null, name: typed, ambiguous: [], typed };
 }
 
 /** `LIMITS.historyTurns` in `lib/api/validation.ts` (server-only, so not imported here). */

@@ -494,7 +494,12 @@ export function crossChatReplyGuardEnabled(): boolean {
  * on the form (ported from the sibling app, QA round 10). Here: the full
  * remap's own name reading, used when the model's name is not in the
  * manager's words, sets the employee from a passing mention only when there
- * is none yet. Off, the latest name read wins as before.
+ * is none yet. And the name the manager typed is the employee: "for Test
+ * Employee" is Test Employee, not "Test" ("Employee" is a form word to the
+ * name readers), on the full remap, the proposal flow and the intent reading
+ * (ported from the sibling app, QA 25 Oct 2026). A lower-case "an employee"
+ * or "my employee" is still nobody's name. Off, the latest name read wins
+ * and the name is read as before.
  */
 export function keepFormEmployeeEnabled(): boolean {
   return envFlag("KEEP_FORM_EMPLOYEE_ENABLED");

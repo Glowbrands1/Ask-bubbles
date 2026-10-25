@@ -27,6 +27,7 @@ import { payrollDeductAmount, payrollDeductFromConversation } from "@/lib/forms/
 import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
 import { extractEmployeeNames, extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
 import { spokenDates } from "@/lib/forms/relative-date";
+import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
 import { labelledStoreIds } from "@/lib/forms/store-cue";
 import { warningLevelFromTurns, managerStatedWarningLevel } from "@/lib/forms/warning-level";
@@ -742,14 +743,27 @@ function groundedName(proposed: string | null, turns: readonly string[], saved: 
   // phrase is not the employee, even when the manager typed those words.
   if (proposed && isNotAName(proposed)) proposed = null;
   const keep = keepFormEmployeeEnabled();
+  /*
+   * KEEP_FORM_EMPLOYEE_ENABLED (ported from the sibling app, QA 25 Oct 2026):
+   * "for Test Employee" names Test Employee. The model's "Test" is a slice of
+   * the manager's words, so it was kept and the card said "Test". The name
+   * as typed stands in for a shorter spelling of it, or for no name.
+   */
+  const typed = keep ? typedEmployeeName(turns.at(-1) ?? "") : null;
+  if (typed && (!proposed || typed.toLowerCase().startsWith(`${proposed.trim().toLowerCase()} `))) {
+    return fullerOfSame(saved, typed);
+  }
   if (proposed) {
     const inLatest = exactSlice(latest, proposed);
     if (inLatest) return keep ? fullerOfSame(saved, inLatest) : inLatest;
     const inSaid = exactSlice(said, proposed);
     if (inSaid) return keep ? fullerOfSame(saved, inSaid) : inSaid;
   }
-  // NOT_A_NAME_GUARD_ENABLED: the kept reader looks at the masked turns too.
-  if (keep) return keptEmployee(spoken, saved);
+  // NOT_A_NAME_GUARD_ENABLED: the kept reader looks at the masked turns too, and a kept non-name is dropped.
+  if (keep) {
+    const kept = keptEmployee(spoken, saved);
+    return kept && isNotAName(kept) ? null : kept;
+  }
   let found: string | null = null;
   for (const turn of turns) {
     const person = personPhrase(notANameGuardEnabled() ? maskNotANameText(turn) : turn);
