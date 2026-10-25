@@ -733,6 +733,19 @@ export function terseSlotReadEnabled(): boolean {
   return envFlag("TERSE_SLOT_READ_ENABLED");
 }
 
+/**
+ * A policy the manager sets aside leaves the card (Code 3, policy reading;
+ * QA F1/M3, 25 Oct 2026; same flag as the sibling app): "the policy violated
+ * is late opening, not attendance", "not attendance, late opening", "no no
+ * late opening policy only", "reference the late opening policy INSTEAD of
+ * the attendance policy". The negated or set-aside policy is not cited, no
+ * third policy is added, and a pasted manual paragraph does not add a generic
+ * heading such as Guidelines p.22. Off, the policy is read exactly as before.
+ */
+export function policySetAsideEnabled(): boolean {
+  return envFlag("POLICY_SET_ASIDE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -802,4 +815,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "POLICY_SET_ASIDE_ENABLED",
 ] as const;

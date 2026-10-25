@@ -1,4 +1,6 @@
-import { readCaPolicy, statedOffenseKeys } from "./ca-policy";
+import { policySetAsideEnabled } from "@/lib/config/chat-quality-flags";
+
+import { policiesSetAside, readCaPolicy, statedOffenseKeys, withoutSetAsideSections } from "./ca-policy";
 import { manualSectionNamedBy } from "./named-policy-section";
 import {
   boxSectionNames,
@@ -80,11 +82,16 @@ const ANSWER_CUE = /\b(?:actually|should|use|make|change|switch|go with|instead|
 export function readPolicyChange(question: string, options: { readonly policyAsked?: boolean } = {}): PolicyChangeMode | null {
   const text = (question ?? "").trim();
   if (text === "" || ASKS_ABOUT.test(text)) return null;
+  // POLICY_SET_ASIDE_ENABLED: "not attendance, late opening" names one policy and sets another aside.
+  const aside = policiesSetAside(text);
+  if (aside.setAside.length > 0 && aside.named.length > 0 && !REMOVE.test(text)) return "replace";
   if (!NAMES_A_POLICY.test(text)) {
     return POLICY_ANSWER.test(text) && (options.policyAsked || ANSWER_CUE.test(text)) ? "replace" : null;
   }
   if (REMOVE.test(text)) return "remove";
   if (REPLACE_STRONG.test(text)) return "replace";
+  // POLICY_SET_ASIDE_ENABLED: "late opening policy only" keeps that policy alone.
+  if (policiesSetAside(text).only !== null) return "replace";
   if (ADD.test(text)) return "add";
   if (REPLACE_WEAK.test(text)) return "replace";
   // "The policy is standards of conduct", "it's attendance": a policy named as the answer.
@@ -116,11 +123,26 @@ const SHORTEST_HEADING = 4;
  * The manual's headings this text names, longest first, with a heading that
  * is only part of a longer one dropped ("Opening" inside "Late Opening").
  */
+/*
+ * POLICY_SET_ASIDE_ENABLED: a one-word heading that is also an everyday word
+ * is never named by a turn. A pasted Late Opening paragraph says "guidelines",
+ * and the card gained Guidelines p.22, a social-media postings section the
+ * manager never named (QA F1/M3, 25 Oct 2026). A one-word heading said only
+ * as part of a job title ("tanning consultant") is not named either.
+ */
+const EVERYDAY_HEADINGS = new Set(["guidelines", "procedures", "overview", "requirements", "expectations"]);
+const JOB_WORD = /^(?:consultants?|associates?|specialists?|managers?|directors?|leads?|supervisors?|team members?)\b/;
+
 export function headingsNamedIn(text: string, headings: readonly string[]): string[] {
   const said = ` ${headingKey(text)} `;
   const matched = headings.filter((heading) => {
     const key = headingKey(heading);
     if (key.length < SHORTEST_HEADING || NOT_A_SECTION.has(key)) return false;
+    if (policySetAsideEnabled() && EVERYDAY_HEADINGS.has(key)) return false;
+    if (policySetAsideEnabled() && !key.includes(" ")) {
+      const alone = said.split(` ${key} `).slice(1).some((after) => !JOB_WORD.test(after));
+      if (!alone) return false;
+    }
     return said.includes(` ${key} `);
   });
   const keys = matched.map(headingKey);
@@ -207,6 +229,16 @@ export function sectionsNamedIn(input: {
   readonly chunks: readonly ManualChunk[];
   readonly jobTitle?: string | null;
   /** The manual's own title, whose words never name a section in it. */
+  readonly manualTitle?: string | null;
+}): ManualSection[] {
+  // POLICY_SET_ASIDE_ENABLED: "late opening, not attendance" names Late Opening alone.
+  return withoutSetAsideSections(sectionsNamedInTurn(input), input.text);
+}
+
+function sectionsNamedInTurn(input: {
+  readonly text: string;
+  readonly chunks: readonly ManualChunk[];
+  readonly jobTitle?: string | null;
   readonly manualTitle?: string | null;
 }): ManualSection[] {
   const found: ManualSection[] = [];

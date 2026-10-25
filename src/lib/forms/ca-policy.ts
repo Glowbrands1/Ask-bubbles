@@ -1,4 +1,4 @@
-import { formEditDateRulesEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditDateRulesEnabled, policySetAsideEnabled } from "@/lib/config/chat-quality-flags";
 
 import { JOIN } from "./bounded-context";
 import { LATE_TO_OPEN, lateOpenOn } from "./late-open";
@@ -273,6 +273,26 @@ const NEGATED_BEFORE = /\b(?:not|never|isn't|is not|wasn't|was not|no)\s+(?:\S+\
  */
 const SET_ASIDE_BEFORE = /\b(?:instead\s+of|rather\s+than|in\s+place\s+of|replac(?:e|ing)|remov(?:e|ing)|swap\s+out)\s+(?:the\s+|our\s+|that\s+)?$/;
 
+/*
+ * POLICY_SET_ASIDE_ENABLED. A negation reaches back only to the last comma or
+ * dash: in "not attendance, late opening" the "not" is attendance's, and late
+ * opening is the answer. A leading "no no" or "nope" is the manager
+ * correcting the reply, not negating the policy ("no no late opening policy
+ * only"). Both were read as no policy at all (QA F1/M3, 25 Oct 2026).
+ */
+const INTERJECTION_ONLY = /^\s*(?:(?:no|nope|nah|wait|sorry|actually|oops)[,.!\s]+)+$/;
+
+function negatedBefore(before: string): boolean {
+  if (!policySetAsideEnabled()) return NEGATED_BEFORE.test(before);
+  const clause = before.split(/[,;:–—]|\s-\s/).pop() ?? "";
+  if (INTERJECTION_ONLY.test(clause)) return false;
+  return NEGATED_BEFORE.test(clause);
+}
+
+function setAsideBefore(before: string): boolean {
+  return (formEditDateRulesEnabled() || policySetAsideEnabled()) && SET_ASIDE_BEFORE.test(before);
+}
+
 function statedIn(turn: string): CaPolicyName | null {
   let found: { name: CaPolicyName; at: number } | null = null;
   const short = turn.split(/\s+/).filter(Boolean).length <= 8;
@@ -280,8 +300,8 @@ function statedIn(turn: string): CaPolicyName | null {
     for (const { name, pattern, alwaysAPolicy } of NAMED) {
       const match = pattern.exec(sentence);
       if (!match) continue;
-      if (NEGATED_BEFORE.test(sentence.slice(0, match.index))) continue;
-      if (formEditDateRulesEnabled() && SET_ASIDE_BEFORE.test(sentence.slice(0, match.index))) continue;
+      if (negatedBefore(sentence.slice(0, match.index))) continue;
+      if (setAsideBefore(sentence.slice(0, match.index))) continue;
       if (!alwaysAPolicy && !short && !POLICY_FRAME.test(sentence) && !AGAINST_BEFORE.test(sentence.slice(0, match.index))) {
         continue;
       }
@@ -291,6 +311,89 @@ function statedIn(turn: string): CaPolicyName | null {
     }
   }
   return found?.name ?? null;
+}
+
+/**
+ * ============================================================================
+ * POLICIES THE MANAGER SET ASIDE (POLICY_SET_ASIDE_ENABLED)
+ * ============================================================================
+ *
+ * Ported from Ask Sunny (QA F1/M3, 25 Oct 2026): after "not attendance, late
+ * opening" and "no no late opening policy only" the card still cited
+ * Attendance p.14 beside Late Opening p.15. A policy named after "not",
+ * "instead of", "rather than" or "in place of" is set aside; one named with
+ * "only" sets aside every other. The later turn wins: a policy set aside and
+ * then named again is back. Late Opening is read here by its name too, as
+ * the manual's heading. Off, nothing is set aside.
+ */
+type SetAsideName = CaPolicyName | "late_opening";
+
+const SET_ASIDE_NAMES: { name: SetAsideName; pattern: RegExp }[] = [
+  ...NAMED.map(({ name, pattern }) => ({ name: name as SetAsideName, pattern })),
+  { name: "late_opening", pattern: /\blate[- ]open(?:ing|ed|er)?\b|\bopen(?:ed|ing)\s+late\b/ },
+];
+
+export interface PolicySetAside {
+  readonly setAside: readonly SetAsideName[];
+  /** Policies named and not set aside, in the order named. */
+  readonly named: readonly SetAsideName[];
+  /** "late opening policy only": the one policy kept. */
+  readonly only: SetAsideName | null;
+}
+
+const ONLY_AROUND = (index: number, end: number, sentence: string) =>
+  /\bonly\s+(?:the\s+|our\s+)?$/.test(sentence.slice(0, index)) ||
+  /^(?:\s+polic(?:y|ies))?\s+only\b/.test(sentence.slice(end));
+
+export function policiesSetAside(rawText: string): PolicySetAside {
+  if (!policySetAsideEnabled()) return { setAside: [], named: [], only: null };
+  const turns = normalize(rawText).split(JOIN).map((turn) => turn.trim()).filter(Boolean);
+  const aside = new Set<SetAsideName>();
+  const named = new Set<SetAsideName>();
+  let only: SetAsideName | null = null;
+  for (const turn of turns) {
+    for (const sentence of statements(turn)) {
+      for (const { name, pattern } of SET_ASIDE_NAMES) {
+        const match = pattern.exec(sentence);
+        if (!match) continue;
+        const before = sentence.slice(0, match.index);
+        if (negatedBefore(before) || setAsideBefore(before)) {
+          aside.add(name);
+          named.delete(name);
+          if (only === name) only = null;
+          continue;
+        }
+        aside.delete(name);
+        named.add(name);
+        if (ONLY_AROUND(match.index, match.index + match[0].length, sentence)) only = name;
+      }
+    }
+  }
+  if (only) aside.delete(only);
+  return { setAside: [...aside], named: [...named], only };
+}
+
+/** The manual headings each policy name is cited under. */
+const POLICY_HEADING: Partial<Record<SetAsideName, RegExp>> = {
+  standards_of_conduct: /^standards? of conduct\b/i,
+  attendance: /^attendance\b/i,
+  late_opening: /^late open/i,
+  dress_code: /^dress code\b/i,
+};
+
+/**
+ * The sections with every policy the manager set aside taken out, and with
+ * "X only" kept to X where X is among them. Never adds a section. Off, the
+ * sections as given.
+ */
+export function withoutSetAsideSections<T extends { readonly heading: string }>(sections: readonly T[], rawText: string): T[] {
+  const { setAside, only } = policiesSetAside(rawText);
+  let kept = sections.filter((section) => !setAside.some((name) => POLICY_HEADING[name]?.test(section.heading.trim())));
+  const onlyHeading = only ? POLICY_HEADING[only] : undefined;
+  if (onlyHeading && kept.some((section) => onlyHeading.test(section.heading.trim()))) {
+    kept = kept.filter((section) => onlyHeading.test(section.heading.trim()));
+  }
+  return kept.length === sections.length ? [...sections] : kept;
 }
 
 /* ------------------------------------------------------------- reading -- */
