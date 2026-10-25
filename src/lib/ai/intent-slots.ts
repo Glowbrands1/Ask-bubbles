@@ -5,7 +5,8 @@ import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manual";
 import { namesHeading } from "@/lib/forms/named-policy-section";
 import { payrollDeductAmount, payrollDeductFromConversation, type PayrollDeductAnswer } from "@/lib/forms/payroll-deduct";
-import { intentPayrollManagerOnlyEnabled, warningLevelManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { intentPayrollManagerOnlyEnabled, notANameGuardEnabled, warningLevelManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -136,14 +137,15 @@ export function normalizeIncidentDate(raw: string, today: string): string | null
   return calendarIso(year, month, Number(named[1]));
 }
 
-export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
+export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision {
+  const input = withoutUntypedSavedName(rawInput);
   const saved = input.saved ?? EMPTY_CONVERSATION_FORM_STATE;
   const reading = parseReading(input.raw);
   const blob = conversationBlob(input);
   const choice = readPriorChoice(input.history, input.question, input.people, input.stores);
   const employee = choice?.person
     ? { person: choice.person, name: displayName(choice.person), ambiguous: [] as readonly GroundedPerson[], typed: null }
-    : groundEmployee(reading?.employee ?? null, blob, input.people);
+    : groundEmployee(guardedTyped(reading?.employee ?? null, input), blob, input.people);
   const store = groundStore(choice?.store ?? reading?.store ?? null, blob, input.stores, employee.person);
   const title = groundTitle(reading?.title ?? null, blob, input.people, employee.person);
   const incidentType = groundIncident(reading?.incidentType ?? null, blob, input.headings);
@@ -309,6 +311,53 @@ function conversationBlob(input: IntentTurnInput): string {
   const prior = input.history.map((turn) => turn.content);
   const saved = input.saved ? stateSentences(input.saved).join(" ") : "";
   return [...prior, input.question, saved].filter((part) => part.trim() !== "").join("\n");
+}
+
+/**
+ * NOT_A_NAME_GUARD_ENABLED: the model's employee is kept only when it is in
+ * the manager's own words and is a name. The intent model reads the
+ * assistant's turns too, and in the sibling app copied "require practice" out of a
+ * reply (QA round 4, 24 Oct 2026); "blank" is the manager saying there is
+ * nobody yet. Off, the model's slot is read as before.
+ */
+function guardedTyped(typed: string | null, input: IntentTurnInput): string | null {
+  if (!typed?.trim() || !notANameGuardEnabled()) return typed;
+  if (isNotAName(typed)) return null;
+  const turns = [
+    ...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
+    input.question,
+    input.saved ? stateSentences(input.saved).join(" ") : "",
+  ];
+  return typedBy(turns, typed) ? typed : null;
+}
+
+/** The name is in these turns, outside a bulleted or priced offer list. */
+function typedBy(turns: readonly string[], name: string): boolean {
+  const needle = name.trim().toLowerCase().replace(/\s+/g, " ");
+  return turns.some((turn) => maskNotANameText(turn).toLowerCase().replace(/\s+/g, " ").includes(needle));
+}
+
+/**
+ * NOT_A_NAME_GUARD_ENABLED: a saved employee that came from a reply is not
+ * kept. In the sibling app (QA L23), a name read from a manual heading in an
+ * assistant reply was saved, and "The employee is …" then outvoted the name
+ * the manager typed on every later turn.
+ *
+ * Only on evidence: the name is not a name at all ("blank"), or an
+ * assistant turn in the window says it (other than as a card's subject,
+ * `saidInReply`) and none of the manager's turns do. History is
+ * capped at 20 turns, so a name typed long ago may be outside the window;
+ * with no evidence either way the saved name stays. A roster pick (it
+ * carries the directory id) is the manager's choice and stays.
+ */
+function withoutUntypedSavedName(input: IntentTurnInput): IntentTurnInput {
+  const name = input.saved?.employeeName ?? null;
+  if (!notANameGuardEnabled() || !input.saved || !name || input.saved.employeeId) return input;
+  const said = [...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content), input.question];
+  const replies = input.history.filter((turn) => turn.role === "assistant").map((turn) => turn.content);
+  const fromReply = !typedBy(said, name) && saidInReply(replies, name);
+  if (!isNotAName(name) && !fromReply) return input;
+  return { ...input, saved: { ...input.saved, employeeName: null, keptTypedName: null } };
 }
 
 function groundEmployee(

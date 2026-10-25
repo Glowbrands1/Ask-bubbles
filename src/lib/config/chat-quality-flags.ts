@@ -351,6 +351,18 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
 }
 
 /**
+ * Words that are not a person never become the employee: a placeholder
+ * ("blank", "n/a", "unknown"), a phrase that starts with a verb ("require
+ * practice"), a word of the brand or a report, a place on the store roster,
+ * and the app's own lines and lists (the stored "Policy reference: …" line,
+ * an assistant reply, a bulleted or priced offer list). Ported from Ask
+ * Sunny. Off, the readers take names as they do today.
+ */
+export function notANameGuardEnabled(): boolean {
+  return envFlag("NOT_A_NAME_GUARD_ENABLED");
+}
+
+/**
  * Keep other conversations out of the reply text. The person-memory recall
  * quotes another chat only when the manager refers back to it ("again", "last
  * time", "like before", "same as …"); a name read from a turn that is only
@@ -403,5 +415,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FULL_MANUAL_CONTEXT_ENABLED",
   "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
+  "NOT_A_NAME_GUARD_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
 ] as const;
