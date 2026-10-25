@@ -241,7 +241,21 @@ const STATUS_LABEL: Record<InstanceRow["status"], string> = {
  * title — so it is reduced to a plain label before it enters the prompt, the
  * same as the user and store names the system prompt carries.
  */
-function describeRow(row: InstanceRow, today: string): string {
+/*
+ * CROSS_CHAT_REPLY_GUARD_ENABLED: each row says whether the person asking
+ * created it. The register lists every form this user may SEE, and a reply
+ * called another manager's draft "the written one you created today"
+ * (conv_mvmznap42vcw0dl). Without a viewer the line is unchanged.
+ */
+const CREATED_BY_RULE =
+  'Each row says who created it. Say the manager created a form only when its row says "created by: this user"; a form created by another user was not created by them.';
+
+function createdByPart(row: InstanceRow, viewerId: string | null | undefined): string[] {
+  if (!viewerId) return [];
+  return [row.createdBy === viewerId ? "created by: this user" : "created by: another user"];
+}
+
+function describeRow(row: InstanceRow, today: string, viewerId?: string | null): string {
   const state = followUpState(row, today);
   const role = promptLabel(row.employeeRole);
   const parts = [
@@ -255,6 +269,7 @@ function describeRow(row: InstanceRow, today: string): string {
     parts.push(`follow-up: ${FOLLOW_UP_LABEL[state]}`);
   }
   if (row.archivedAt) parts.push("archived");
+  parts.push(...createdByPart(row, viewerId));
   return `- ${parts.join("; ")}`;
 }
 
@@ -284,14 +299,17 @@ export function renderFormRecordsBlock(input: {
   /** Drafts kept out of the previous-coaching list. Empty when the flag is off. */
   notOnFile?: readonly InstanceRow[];
   today: string;
+  /** CROSS_CHAT_REPLY_GUARD_ENABLED: the asking user's id, to mark who created each row. */
+  viewerId?: string | null;
 }): string {
+  const viewerId = input.viewerId ?? null;
   const { words, matches, recent, today } = input;
-  const sections: string[] = [FORM_RECORDS_HEADING, `${RECORDS_RULES} ${scopeSentence(input.visibility)}`];
+  const sections: string[] = [FORM_RECORDS_HEADING, `${RECORDS_RULES} ${scopeSentence(input.visibility)}${viewerId ? ` ${CREATED_BY_RULE}` : ""}`];
 
   if (matches) {
     if (matches.named.length > 0) {
       sections.push(
-        `Forms naming the person in the question (${matches.named.length}), newest first:\n${matches.named.map((row) => describeRow(row, today)).join("\n")}`,
+        `Forms naming the person in the question (${matches.named.length}), newest first:\n${matches.named.map((row) => describeRow(row, today, viewerId)).join("\n")}`,
       );
     } else {
       sections.push(
@@ -300,12 +318,12 @@ export function renderFormRecordsBlock(input: {
     }
     if (matches.possible.length > 0) {
       sections.push(
-        `Possible matches — part of the name matches, so they may be somebody else. Ask before treating them as the same person:\n${matches.possible.map((row) => describeRow(row, today)).join("\n")}`,
+        `Possible matches — part of the name matches, so they may be somebody else. Ask before treating them as the same person:\n${matches.possible.map((row) => describeRow(row, today, viewerId)).join("\n")}`,
       );
     }
   } else if (recent.length > 0) {
     sections.push(
-      `The question names nobody. The ${recent.length} most recent forms this user can see, newest first:\n${recent.map((row) => describeRow(row, today)).join("\n")}`,
+      `The question names nobody. The ${recent.length} most recent forms this user can see, newest first:\n${recent.map((row) => describeRow(row, today, viewerId)).join("\n")}`,
     );
   } else {
     sections.push(`No forms are on file at the ${NOUNS} this user can see.`);
@@ -313,7 +331,7 @@ export function renderFormRecordsBlock(input: {
 
   if (input.notOnFile && input.notOnFile.length > 0) {
     sections.push(
-      `Not on file. These drafts are not previous coaching:\n${input.notOnFile.map((row) => describeRow(row, today)).join("\n")}`,
+      `Not on file. These drafts are not previous coaching:\n${input.notOnFile.map((row) => describeRow(row, today, viewerId)).join("\n")}`,
     );
   }
 
@@ -372,6 +390,8 @@ export async function loadFormRecords(input: {
   question: string;
   previousQuestion?: string | null;
   today?: string;
+  /** CROSS_CHAT_REPLY_GUARD_ENABLED: mark which rows the asking user created. */
+  markCreator?: boolean;
 }): Promise<{ block: string } | null> {
   const { actor } = input;
   // Fails closed: no verified identity, no read. Chat is live-only, so this is
@@ -380,6 +400,7 @@ export async function loadFormRecords(input: {
   if (!hasPermission(DEFAULT_PERMISSION_MATRIX, actor.role, "view_form_monitoring")) return null;
 
   const today = input.today ?? businessToday();
+  const viewerId = input.markCreator ? actor.subject : null;
   try {
     const formsActor = (await chatFormsActor(actor))!;
     const visibility = formsActor.visibility!;
@@ -404,7 +425,7 @@ export async function loadFormRecords(input: {
       const drafts = matchRowsToQuestion(split.notOnFile, words);
       const notOnFile = [...drafts.named, ...drafts.possible];
       if (matches.named.length > 0 || matches.possible.length > 0 || notOnFile.length > 0) {
-        return { block: renderFormRecordsBlock({ visibility, words, matches, recent: [], notOnFile, today }) };
+        return { block: renderFormRecordsBlock({ visibility, words, matches, recent: [], notOnFile, today, viewerId }) };
       }
     }
 
@@ -421,6 +442,7 @@ export async function loadFormRecords(input: {
     const named = words.length > 0 && looksLikeItNamesSomebody(nameSource);
     return {
       block: renderFormRecordsBlock({
+        viewerId,
         visibility,
         words,
         matches: named ? { named: [], possible: [] } : null,
