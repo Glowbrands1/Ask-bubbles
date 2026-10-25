@@ -1,6 +1,6 @@
 import { datesInText, listFormDates } from "@/lib/forms/form-date-answer";
 import { managerStatedWarningLevel, templateHasWarningLevel } from "@/lib/forms/warning-level";
-import { displayName, editDistance, matchEmployeeName, type RosterEmployee } from "@/lib/forms/employee-match";
+import { acceptedNameSuggestions, displayName, editDistance, matchEmployeeName, type RosterEmployee } from "@/lib/forms/employee-match";
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manual";
 import { namesHeading } from "@/lib/forms/named-policy-section";
@@ -18,12 +18,14 @@ import {
   titleWholeWordEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
-import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
+import { isPriorStep, preparingConversation } from "@/lib/forms/form-request-parts";
+import { isNotAName, maskNotANameText, saidInReply, withoutRoleLead } from "@/lib/forms/not-a-name";
 import { extractJobTitle } from "@/lib/forms/proposal";
 import { lateOpenOn, newestStatedDate, withYearlessDatesWritten } from "@/lib/forms/late-open";
 import { correctiveActionBasis } from "@/lib/forms/corrective-action-intake";
 import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
 import { labelledStoreIds } from "@/lib/forms/store-cue";
+import { readLocationMentions } from "@/lib/forms/location-mention";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -167,7 +169,11 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
   const choice = readPriorChoice(input.history, input.question, input.people, input.stores);
   const grounded = choice?.person
     ? { person: choice.person, name: displayName(choice.person), ambiguous: [] as readonly GroundedPerson[], typed: null }
-    : groundEmployee(guardedTyped(reading?.employee ?? null, input), blob, input.people);
+    : groundEmployee(
+        guardedTyped(reading?.employee ?? null, input),
+        notANameGuardEnabled() ? managerWords(input).join("\n") : blob,
+        input.people,
+      );
   /*
    * KEEP_FORM_EMPLOYEE_ENABLED (ported from the sibling app, QA 25 Oct 2026):
    * "for Test Employee" names Test Employee. The readers end a name at
@@ -375,6 +381,8 @@ function groundStatedForm(
     const key = formNamedIn(turns[at]!, templates);
     if (key && !(metricOnly && key === CORRECTIVE_ACTION_KEY)) return { key, ambiguous: [] };
   }
+  // Preparing for a conversation, with no form named: the model's form opens no card.
+  if (preparingConversation(turns)) return { key: null, ambiguous: [] };
   const typed = modelForm?.trim() ? matchTemplates(modelForm.trim(), templates) : [];
   const key = typed.length === 1 && !(typed[0]!.key === "dpoa" && coachingConversation(turns)) ? typed[0]!.key : null;
   return { key, ambiguous: [] };
@@ -398,7 +406,8 @@ function formsNamedTogether(text: string, templates: readonly TemplateRow[]): Te
   const parts = text.split(/,|&|\band\b|\bplus\b|\bas well as\b/i).filter((part) => part.trim() !== "");
   if (parts.length < 2) return [];
   const keys = new Set<string>();
-  for (const part of parts) {
+  // A dated or already-taken step ("Prior coaching: … 9/29/26, product coaching form 9/30/26") is not a request.
+  for (const part of parts.filter((part) => !isPriorStep(part))) {
     const key = formNamedIn(part, templates);
     if (key) keys.add(key);
   }
@@ -530,6 +539,20 @@ function payrollClauseAmount(input: IntentTurnInput): string | null {
   return null;
 }
 
+/**
+ * NOT_A_NAME_GUARD_ENABLED (ported from the sibling app, QA 25 Oct 2026): what
+ * a roster person is read from — the manager's turns and the saved state,
+ * plus a name the manager said "yes" to when the assistant asked "Did you
+ * mean **<name>**?". A suggestion answered "keep <typed>" is not among them:
+ * the assistant's question named that person, the manager did not.
+ */
+function managerWords(input: IntentTurnInput): string[] {
+  const said = input.history.filter((turn) => turn.role === "user").map((turn) => turn.content);
+  const saved = input.saved ? stateSentences(input.saved).join(" ") : "";
+  const accepted = acceptedNameSuggestions([...input.history, { role: "user", content: input.question }]);
+  return [...said, input.question, saved, ...accepted].filter((part) => part.trim() !== "");
+}
+
 function conversationBlob(input: IntentTurnInput): string {
   const prior = input.history.map((turn) => turn.content);
   const saved = input.saved ? stateSentences(input.saved).join(" ") : "";
@@ -543,8 +566,10 @@ function conversationBlob(input: IntentTurnInput): string {
  * reply (QA round 4, 24 Oct 2026); "blank" is the manager saying there is
  * nobody yet. Off, the model's slot is read as before.
  */
-function guardedTyped(typed: string | null, input: IntentTurnInput): string | null {
-  if (!typed?.trim() || !notANameGuardEnabled()) return typed;
+function guardedTyped(raw: string | null, input: IntentTurnInput): string | null {
+  if (!raw?.trim() || !notANameGuardEnabled()) return raw;
+  // A role the model copied with the name ("empolyee <name>", "Store Manger <name>") is the label it is.
+  const typed = withoutRoleLead(raw);
   if (isNotAName(typed)) return null;
   const turns = [
     ...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
@@ -680,6 +705,20 @@ function matchStoresInText(blob: string, stores: readonly StoreRow[]): StoreRow[
   });
 }
 
+/**
+ * TITLE_WHOLE_WORD_ENABLED (ported from the sibling app, QA H10: "4. bed tech
+ * st joe" became the title). The longest run of trailing words that names
+ * exactly one roster store comes off a typed title, as long as a word is left.
+ */
+function withoutTrailingStore(title: string): string {
+  const words = title.split(/\s+/);
+  for (let start = 1; start < words.length; start += 1) {
+    const mentions = readLocationMentions(words.slice(start).join(" "));
+    if (mentions.length === 1 && mentions[0]!.locationIds.length === 1 && !mentions[0]!.confirm) return words.slice(0, start).join(" ");
+  }
+  return title;
+}
+
 function groundTitle(
   typed: string | null,
   blob: string,
@@ -694,7 +733,9 @@ function groundTitle(
   // words carry it (see `titleInWords`).
   const wholeWord = titleWholeWordEnabled();
   const inWords = (title: string) => !wholeWord || titleInWords(title, titleText ?? blob);
-  const probe = typed?.trim() && inWords(typed.trim()) ? typed.trim() : null;
+  // TITLE_WHOLE_WORD_ENABLED: a typed title with the store on the end is the title without it (sibling QA H10).
+  const typedTitle = wholeWord && typed?.trim() ? withoutTrailingStore(typed.trim()) : typed?.trim();
+  const probe = typedTitle && inWords(typedTitle) ? typedTitle : null;
   if (probe) {
     const hit = titles.find((title) => title.toLowerCase() === probe.toLowerCase() && inWords(title));
     if (hit) return hit;
