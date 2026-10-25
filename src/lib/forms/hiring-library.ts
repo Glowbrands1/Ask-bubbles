@@ -493,9 +493,16 @@ export function tanningConsultantInterviewDocument(): FormDocument {
         kind: "paragraph",
         text: "8. Our company has five core values. Id like to hear about a time in your past experiences--work, school, or personal where youve shown one of these in action.",
       },
+      /*
+       * THE HEADING NAMES NO COMPANY (QA, 25 Oct 2026). The source printed the
+       * sibling company's name before "Core Values"; under the Buff City Soap
+       * letterhead that named the wrong company. "Core Values" is the JBA
+       * Policy Manual's own heading for these same five values (p.7), the
+       * manual Ask Bubbles cites, so the values themselves are unchanged.
+       */
       {
         kind: "reference",
-        label: "Sun Tan City Core Values",
+        label: "Core Values",
         body: [
           "Nothing’s Impossible – We approach challenges with creativity and determination instead of excuses.",
           "Work Hard, Have Fun – We bring energy, positivity, and joy to doing our best work.",
@@ -656,7 +663,11 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     displayOrder: 11,
     document: tanningConsultantInterviewDocument(),
     variants: [],
-    revision: 3,
+    /*
+     * 4: the core-values heading names no company (QA, 25 Oct 2026). Hidden
+     * templates are still seeded, so the row gets the new wording too.
+     */
+    revision: 4,
     revisionNote: "Published from the 03. Tanning Consultant Interview Form source document.",
     bundledPdfName: "Tanning Consultant Interview Form.pdf",
   },

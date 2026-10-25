@@ -69,12 +69,16 @@ const UNCHANGED: [string, string][] = [
   ["sdit-epp", "PPTA"],
   ["fttc-epp", "In what areas is the {{roleAbbr}} currently succeeding?"], // role mapping held
   ["fttc-epp", "TC"],
-  ["resignation-exit", "Place comment on employee’s Sunlync account"], // D10 held
+  // D10 held: Pau confirmed (via QA, 25 Oct 2026) that Buff City Soap uses Sunlync too. Only the tanning
+  // clause ("verify tanning has been removed") was removed, in revision 4.
+  ["resignation-exit", "Place comment on employee’s Sunlync account stating they are no longer employed."], // D10 held
   ["resignation-exit", "Notify home office of employee’s final date of employment for HR, Payroll, and Security System purposes."], // D11 held
   ["demotion", "or the monthly manager bonus"], // DE-3 held
   ["demotion", "Any elected benefits will terminate"],
   // The prescreen uniform question (D14) was removed by Phase 2B (phase-2b-prescreen.test.ts), so it is no longer pinned here.
-  ["tanning-consultant-interview", "Sun Tan City Core Values"], // D15 held
+  // D15 resolved (QA, 25 Oct 2026): the heading reads "Core Values", the JBA Policy Manual's own heading for
+  // these five values; the values are unchanged. Pinned in seed-sibling-brand.test.ts and template-parity QA-4.
+  ["tanning-consultant-interview", "Core Values"],
   ["tanning-consultant-interview", "Our company has five core values."], // D16 held
   ["tanning-consultant-interview", "overseeing daily store operations"], // D17 held
   ["management-interview-round-1", "the tanning bed they reserved is unavailable"], // M1-1 held
@@ -160,8 +164,10 @@ describe("the four approved wording changes", () => {
       demotion: 2,
       "management-interview-round-1": 4,
     });
+    // resignation-exit is 4 since its Steps to Finish Termination dropped the tanning clause (QA, 25 Oct 2026).
+    // tanning-consultant-interview is 4 since its core-values heading names no company (QA, 25 Oct 2026).
     for (const key of ["coaching", "dpoa", "policy-review", "follow-up-coaching", "position-transfer", "prescreen-phone-interview", "resignation-exit", "tanning-consultant-interview", "management-interview-round-2"]) {
-      expect(seed(key).revision, key).toBe(({ coaching: 2, dpoa: 6, "policy-review": 2, "follow-up-coaching": 2, "position-transfer": 1, "prescreen-phone-interview": 3, "resignation-exit": 3, "tanning-consultant-interview": 3, "management-interview-round-2": 3 } as Record<string, number>)[key]);
+      expect(seed(key).revision, key).toBe(({ coaching: 2, dpoa: 6, "policy-review": 2, "follow-up-coaching": 2, "position-transfer": 1, "prescreen-phone-interview": 3, "resignation-exit": 4, "tanning-consultant-interview": 4, "management-interview-round-2": 3 } as Record<string, number>)[key]);
     }
   });
 });

@@ -309,6 +309,19 @@ export function formFullRemapEnabled(): boolean {
 }
 
 /**
+ * The remap path's What happened, prior actions and policy, read from the
+ * manager's words and the manual. The request ("create a corrective action
+ * form for …") is not the incident and not the action plan. "previous
+ * coaching: …" is the prior-action list. A policy is "as you said" only
+ * when the manager named it; otherwise the manual section and printed page
+ * the account resolves are cited on the card. Off, the remap reads these
+ * fields as before.
+ */
+export function remapIncidentFixEnabled(): boolean {
+  return envFlag("REMAP_INCIDENT_FIX_ENABLED");
+}
+
+/**
  * Put the current brand manual in a cached system block for a policy
  * question. Off, retrieval and citation display stay as they are.
  *
@@ -323,6 +336,20 @@ export function formFullRemapEnabled(): boolean {
  */
 export function fullManualContextEnabled(): boolean {
   return envFlag("FULL_MANUAL_CONTEXT_ENABLED");
+}
+
+/**
+ * A policy or document phrase is not a place. Off, the store reader is
+ * unchanged. On, a span that names a policy, manual, section or similar
+ * document ("in the workplace policy") is never read as a typed store, and
+ * a span-before-"store" match must sit inside one manager turn, so "cite
+ * animals in the workplace policy" followed by "store location is …" does
+ * not become "the workplace policy store". Also on, a field label is a place
+ * cue and the newest turn's store replaces the saved one: "location kearney"
+ * after "store is grand island" is Kearney (ported from the sibling app, QA Round 4).
+ */
+export function placeSpanGuardEnabled(): boolean {
+  return envFlag("PLACE_SPAN_GUARD_ENABLED");
 }
 
 /**
@@ -363,6 +390,90 @@ export function notANameGuardEnabled(): boolean {
 }
 
 /**
+ * The job title and what happened are read only from the manager's own
+ * words. The lines the app writes onto the question ("Job title: CA. It
+ * happened at Kearney, NE.") are not read as what the manager said, a pasted
+ * policy is not their title, and a turn that only names the employee or says
+ * where they work is not what happened (ported from the sibling app). Off, every
+ * reader is unchanged.
+ */
+export function managerWordsOnlyEnabled(): boolean {
+  return envFlag("MANAGER_WORDS_ONLY_ENABLED");
+}
+
+/**
+ * One draft per form in a conversation. A new card for the same form and
+ * employee in the same chat opens the draft this chat already made, unless a
+ * manager turn since that draft asked for another document. Off, every new
+ * card creates as it does today.
+ */
+export function conversationDraftReuseEnabled(): boolean {
+  return envFlag("CONVERSATION_DRAFT_REUSE_ENABLED");
+}
+
+/**
+ * "Delete that draft" deletes the draft on screen where the manager may
+ * delete forms (the forms API's own rule), and says truthfully who can where
+ * they may not; "same incident", answering "is this the same incident as the
+ * <form> for <name>?", opens that form instead of asking for a phrase to type
+ * (ported from the sibling app, QA F8). Off, both turns are answered as before.
+ */
+export function draftActionsEnabled(): boolean {
+  return envFlag("DRAFT_ACTIONS_ENABLED");
+}
+
+/**
+ * A late opening, read as one (QA, 24 Oct 2026; ported from the sibling app).
+ * "late to open 10-19" is the manual's Late Opening section and is dated 19
+ * October: a yearless dashed month-day after a date cue is a date (the most
+ * recent one, never a future day), the newest date the manager states dates
+ * the form, "opened late" and "late to open" are Late Opening, and "payroll
+ * deduct is not applicable" is No in the saved state. Off, as before.
+ */
+export function lateOpenDateEnabled(): boolean {
+  return envFlag("LATE_OPEN_DATE_ENABLED");
+}
+
+/**
+ * A request to start a corrective action ("create a Verbal CA for …", "I need
+ * a CA for someone opening the store late") is the Corrective Action Form
+ * when the intent read has no model reading. The template reader calls that
+ * request the progression, and the intent slots used to keep no form for it,
+ * so the next answer ("verbal", "no payroll") was not a form turn (QA F4,
+ * 24 Oct 2026). A metric with no behaviour stays the progression, as in the
+ * form proposal. Off, the form slot is left as before.
+ */
+export function caTemplateMapEnabled(): boolean {
+  return envFlag("CA_TEMPLATE_MAP_ENABLED");
+}
+
+/**
+ * The form is the one the manager named in their own words, newest turn
+ * first. The model's formType, the assistant's "**Corrective Action Form**"
+ * and the state lines never pick it, and a "Policy reference:" line is not a
+ * form request. "Disciplinary Action" (the discipline procedure) is never the
+ * violated policy. Ported from the sibling app (QA, 24 Oct 2026: coaching and
+ * Policy Review requests became a Corrective Action). Off, the form is read
+ * as before.
+ */
+export function formChoiceStatedEnabled(): boolean {
+  return envFlag("FORM_CHOICE_STATED_ENABLED");
+}
+
+/**
+ * Prior actions read the way managers write them. A list after "received …
+ * coaching 9/8" keeps its later comma items that name a step; "prior verbal
+ * 9-1-26" and "Her prior coaching is her policy manual acknowledgement on
+ * 9/01" are earlier steps; a date governed by "previous / prior / coached /
+ * jba manual / policy manual acknowledgement" never dates the form; and an
+ * action plan that is only the history label is dropped. Off, the readers
+ * are unchanged.
+ */
+export function priorActionsParseEnabled(): boolean {
+  return envFlag("PRIOR_ACTIONS_PARSE_ENABLED");
+}
+
+/**
  * Keep other conversations out of the reply text. The person-memory recall
  * quotes another chat only when the manager refers back to it ("again", "last
  * time", "like before", "same as …"); a name read from a turn that is only
@@ -386,6 +497,36 @@ export function crossChatReplyGuardEnabled(): boolean {
  */
 export function manualNegatedListNoteEnabled(): boolean {
   return envFlag("MANUAL_NEGATED_LIST_NOTE_ENABLED");
+}
+
+/**
+ * The form's employee stays the employee. A person the manager's account
+ * mentions ("onboarding with new hire Test Newhire") does not replace them on
+ * a later turn, and a bare first name ("test") keeps the fuller name already
+ * on the form (ported from the sibling app, QA round 10). Here: the full
+ * remap's own name reading, used when the model's name is not in the
+ * manager's words, sets the employee from a passing mention only when there
+ * is none yet. And the name the manager typed is the employee: "for Test
+ * Employee" is Test Employee, not "Test" ("Employee" is a form word to the
+ * name readers), on the full remap, the proposal flow and the intent reading
+ * (ported from the sibling app, QA 25 Oct 2026). A lower-case "an employee"
+ * or "my employee" is still nobody's name. Off, the latest name read wins
+ * and the name is read as before.
+ */
+export function keepFormEmployeeEnabled(): boolean {
+  return envFlag("KEEP_FORM_EMPLOYEE_ENABLED");
+}
+
+/**
+ * A directory title counts as stated only as a whole word, and a short
+ * all-capitals title only as the manager typed it ("1 hr late" is an hour).
+ * A title the slot model typed is kept only when the manager's words carry
+ * it. Ported from the sibling app (QA round 10, where "throught the rest"
+ * contained a two-letter directory title). Off, the intent reading grounds
+ * the title as before.
+ */
+export function titleWholeWordEnabled(): boolean {
+  return envFlag("TITLE_WHOLE_WORD_ENABLED");
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
@@ -425,9 +566,20 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PROMPT_CACHE_ENABLED",
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
+  "PLACE_SPAN_GUARD_ENABLED",
   "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
   "NOT_A_NAME_GUARD_ENABLED",
+  "MANAGER_WORDS_ONLY_ENABLED",
+  "CONVERSATION_DRAFT_REUSE_ENABLED",
+  "DRAFT_ACTIONS_ENABLED",
+  "LATE_OPEN_DATE_ENABLED",
+  "CA_TEMPLATE_MAP_ENABLED",
+  "FORM_CHOICE_STATED_ENABLED",
+  "REMAP_INCIDENT_FIX_ENABLED",
+  "PRIOR_ACTIONS_PARSE_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
+  "KEEP_FORM_EMPLOYEE_ENABLED",
+  "TITLE_WHOLE_WORD_ENABLED",
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
 ] as const;

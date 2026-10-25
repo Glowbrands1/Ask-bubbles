@@ -133,7 +133,8 @@ describe("the six approved guest corrections", () => {
       // Counts include the later approved Phase 2A re-issues (see LATER_APPROVED and phase-2a-wording.test.ts).
       "sdit-epp": 6,
       "tsd-epp": 5,
-      "tanning-consultant-interview": 3,
+      // 4: the core-values heading names no company (QA, 25 Oct 2026; seed-sibling-brand.test.ts).
+      "tanning-consultant-interview": 4,
       "management-interview-round-1": 4,
       "management-interview-round-2": 3,
       "fttc-epp": 3,
@@ -141,7 +142,8 @@ describe("the six approved guest corrections", () => {
       "dmit-epp-tsd": 3,
       "dmit-epp-dmit": 3,
       "prescreen-phone-interview": 3,
-      "resignation-exit": 3,
+      // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
+      "resignation-exit": 4,
       coaching: 2,
       // Revision 6: the Action Plan as two sentences (District Manager feedback, 21 Oct 2026).
       dpoa: 6,

@@ -118,13 +118,17 @@ describe("the prescreen without the uniform question", () => {
       dpoa: 6,
       "policy-review": 2,
       "follow-up-coaching": 2,
-      "tanning-consultant-interview": 3,
+      // 4: the core-values heading names no company (QA, 25 Oct 2026; seed-sibling-brand.test.ts).
+      "tanning-consultant-interview": 4,
       "management-interview-round-1": 4, // Phase 2A re-issue
       "management-interview-round-2": 3,
-      "resignation-exit": 3,
+      // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
+      "resignation-exit": 4,
     });
-    // Held items still say what they said.
-    expect(JSON.stringify(seed("tanning-consultant-interview").document)).toContain("Sun Tan City Core Values");
+    // Held items still say what they said. The core-values heading no longer names a company
+    // (QA, 25 Oct 2026; seed-sibling-brand.test.ts); the values under it are unchanged.
+    expect(JSON.stringify(seed("tanning-consultant-interview").document)).toContain("Nothing’s Impossible");
+    expect(JSON.stringify(seed("tanning-consultant-interview").document)).not.toContain("Sun Tan City");
   });
 });
 

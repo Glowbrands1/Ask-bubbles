@@ -573,14 +573,16 @@ describe("the rest of the library is where it was", () => {
       "follow-up-coaching": 2,
       "sdit-epp": 6,
       "tsd-epp": 5,
-      "resignation-exit": 3,
+      // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
+      "resignation-exit": 4,
       // Salon -> Store wording re-issues.
       "asd-sdit-epp": 3,
       "fttc-epp": 3,
       "dmit-epp-tsd": 3,
       "dmit-epp-dmit": 3,
       "prescreen-phone-interview": 3,
-      "tanning-consultant-interview": 3,
+      // 4: the core-values heading names no company (QA, 25 Oct 2026; seed-sibling-brand.test.ts).
+      "tanning-consultant-interview": 4,
       "management-interview-round-1": 4,
       "management-interview-round-2": 3,
       // Employment changes: the demotion example's destination role.

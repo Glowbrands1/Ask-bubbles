@@ -282,12 +282,18 @@ async function answerQuestionBody(
     });
     if (inventoryAnswer) return inventoryAnswer;
 
+    // Hidden templates are already left out of `summaries`; one listed but not published is not filled by the remap either.
+    const unpublished = buildFormInventory(summaries, actor)
+      .entries.filter((entry) => !entry.published)
+      .map((entry) => entry.templateKey);
     if (
       formFullRemapEnabled() &&
       remapShouldRun({
         question: request.question,
         history: request.history,
         formsTurn,
+        continueTemplateKey: request.continueProposalTemplateKey ?? null,
+        unpublished,
       })
     ) {
       const roster = await loadRosterQuiet(actor);
@@ -314,6 +320,19 @@ async function answerQuestionBody(
         continueTemplateKey: request.continueProposalTemplateKey ?? null,
         people: roster,
         saved,
+        unpublished,
+        // Read only with REMAP_INCIDENT_FIX_ENABLED on, so the card cites the section and page.
+        policyManual: async () => {
+          const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
+          return manual.ok
+            ? {
+                documentId: manual.documentId,
+                documentTitle: manual.documentTitle,
+                documentCategory: manual.documentCategory ?? null,
+                chunks: manual.chunks,
+              }
+            : null;
+        },
       });
       if (remapped) return remapped;
     }
