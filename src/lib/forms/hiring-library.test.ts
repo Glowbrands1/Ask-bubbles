@@ -232,7 +232,8 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
       "management-interview-round-1": 4,
       "management-interview-round-2": 3,
       "tsd-epp": 5,
-      "resignation-exit": 3,
+      // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
+      "resignation-exit": 4,
       demotion: 2,
       "position-transfer": 1,
     };

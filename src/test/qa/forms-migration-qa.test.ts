@@ -157,6 +157,7 @@ const { correctActiveForm } = await import("@/lib/forms/chat-correction");
 const { DEFAULT_PERMISSION_MATRIX, hasPermission } = await import("@/lib/permissions");
 const { COMPANY_FORM_CATEGORIES, FORM_LAYOUT_FAMILIES } = await import("@/config/company/forms/categories");
 const { RETIRED_TEMPLATE_KEYS } = await import("@/config/company/forms/retired");
+const { isHiddenTemplate } = await import("@/config/company/forms/hidden");
 const { POLICY_MANUAL_BRAND_SCOPE } = await import("@/config/company/knowledge");
 const { readManualForBrand } = await import("@/lib/knowledge/brand-sections");
 const instancesRoute = await import("@/app/api/forms/instances/route");
@@ -194,6 +195,8 @@ interface QaForm {
   /** Drafted fields the model writes on creation (the AI chips exercised). Empty: none on this form. */
   edits: readonly string[];
   edit: EditKind;
+  /** Hidden in this deployment (`config/company/forms/hidden.ts`): listed and created nowhere. */
+  hidden?: true;
 }
 
 const FORMS: readonly QaForm[] = [
@@ -211,9 +214,9 @@ const FORMS: readonly QaForm[] = [
   { key: "demotion", phrase: "Create a demotion form for Jordan Testperson, from manager to sales associate effective 10/12.", creator: "location_manager", edits: ["reason", "reason"], edit: "revision" },
   { key: "position-transfer", phrase: "Create a position transfer form for Jordan Testperson, transferring from store 12 to store 18.", creator: "location_manager", edits: ["reason", "reason"], edit: "revision" },
   { key: "prescreen-phone-interview", phrase: "Create a prescreen phone interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
-  { key: "tanning-consultant-interview", phrase: "Create a tanning consultant interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
-  { key: "management-interview-round-1", phrase: "Create a first round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
-  { key: "management-interview-round-2", phrase: "Create a second round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
+  { key: "tanning-consultant-interview", phrase: "Create a tanning consultant interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
+  { key: "management-interview-round-1", phrase: "Create a first round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
+  { key: "management-interview-round-2", phrase: "Create a second round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
 ];
 
 /*
@@ -268,6 +271,8 @@ const neutral = (text: string) =>
     .replace(/cleaning beds and doing laundry/g, "cleaning the Makery and equipment and keeping the workspace organized")
     // The Corrective Action closing, revision 6 (District Manager feedback, approved 2026-10-21): this phrase only.
     .replace(/Future policy violations may be subject to additional corrective action/g, "Future policy violations may result in additional corrective action")
+    // QA, 25 Oct 2026 (QA-2): the Sunlync step loses its tanning clause. This clause only (MyGlow is confirmed and unchanged).
+    .replace(/no\s+longer\s+employed,\s+verify\s+tanning\s+has\s+been\s+removed\./g, "no longer employed.")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -566,12 +571,54 @@ beforeEach(async () => {
 
 /* ------------------------------------------------------------ the matrix --- */
 
+/*
+ * HIDDEN IN THIS DEPLOYMENT (QA, 25 Oct 2026). The Tanning Consultant Interview
+ * Form and both management interviews are the sibling company's own. Their
+ * rows, versions and content stay, and the content steps of this matrix (02,
+ * 03, 10, 11, 14 …) still check them; but nothing lists them and nothing
+ * creates a form from them, so the listing and creation steps check that
+ * refusal instead of a created form. The
+ * expectation changes on purpose; see `config/company/forms/hidden.ts`.
+ */
+async function expectHidden(form: QaForm) {
+  expect(isHiddenTemplate(form.key)).toBe(true);
+  const template = await getTemplateByKey(form.key);
+  expect(template?.active, "the row is untouched").toBe(true);
+  const summaries = await listTemplateSummaries();
+  expect(summaries.map((summary) => summary.key)).not.toContain(form.key);
+  actAs(form.creator);
+  const messages = [said(form.phrase)];
+  const reply = await proposeFormForTurn({
+    history: [],
+    question: form.phrase,
+    questionMessageId: messages[0]!.id,
+    actor: { role: form.creator as never, scope: LOCATION_SCOPE as AccessScope },
+    summaries,
+    today: "2026-10-01",
+  });
+  expect(reply?.formProposal, reply?.content).toBeUndefined();
+  expect(reply?.content).toMatch(/not published in Ask Bubbles/);
+  expect(reply?.content).not.toMatch(/tanning/i);
+  const response = await instancesRoute.POST(
+    new Request("https://app.test/api/forms/instances", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ templateKey: form.key, employeeName: "Jordan Testperson", variantKey: null }),
+    }),
+  );
+  expect(response.status).toBe(404);
+  expect(store.form_instances).toHaveLength(0);
+}
+
 describe.each(FORMS)("$key", (form) => {
   const seed = seedOf(form.key);
   const source = sourceOf(form.key);
   const variantKeys = seed.variants.length > 0 ? seed.variants.map((variant) => variant.key) : [null];
+  /** A listing or creation step: for a hidden template, the refusal is checked instead. */
+  const shown = (name: string, body: () => Promise<void>) =>
+    form.hidden ? it(`${name} — hidden in this deployment, so refused`, () => expectHidden(form)) : it(name, body);
 
-  it(`${form.key} · 01 the correct template loads`, async () => {
+  shown(`${form.key} · 01 the correct template loads`, async () => {
     const template = await getTemplateByKey(form.key);
     expect(template?.active).toBe(true);
     const current = await getCurrentVersion(template!.id);
@@ -635,7 +682,7 @@ describe.each(FORMS)("$key", (form) => {
     expect(read[form.edits[0]!]?.by).toBe("ai");
   });
 
-  it(`${form.key} · 05 chat correctly creates the form`, async () => {
+  shown(`${form.key} · 05 chat correctly creates the form`, async () => {
     const { id, proposal } = await createViaChat(form);
     expect(proposal.employeeName).toBe("Jordan Testperson");
     const row = store.form_instances.find((entry) => entry.id === id)!;
@@ -645,14 +692,14 @@ describe.each(FORMS)("$key", (form) => {
     expect(store.form_instances).toHaveLength(1);
   });
 
-  it(`${form.key} · 06 an existing draft can be edited (${form.edit === "editor" ? "form editor, as on the reference platform" : "through chat"})`, async () => {
+  shown(`${form.key} · 06 an existing draft can be edited (${form.edit === "editor" ? "form editor, as on the reference platform" : "through chat"})`, async () => {
     const created = await createViaChat(form);
     const outcome = await editStep(form, created, 0);
     outcome.expect((await values(created.id))[outcome.key]);
     expect(store.form_instances).toHaveLength(1);
   });
 
-  it(`${form.key} · 07 follow-up corrections persist`, async () => {
+  shown(`${form.key} · 07 follow-up corrections persist`, async () => {
     const created = await createViaChat(form);
     const first = await editStep(form, created, 0);
     const second = await editStep(form, created, 1);
@@ -662,7 +709,7 @@ describe.each(FORMS)("$key", (form) => {
     expect(store.form_instances).toHaveLength(1);
   });
 
-  it(`${form.key} · 08 unrelated fields remain unchanged`, async () => {
+  shown(`${form.key} · 08 unrelated fields remain unchanged`, async () => {
     const created = await createViaChat(form);
     const before = await values(created.id);
     const outcome = await editStep(form, created, 0);
@@ -675,7 +722,7 @@ describe.each(FORMS)("$key", (form) => {
     }
   });
 
-  it(`${form.key} · 09 the PDF preview renders`, async () => {
+  shown(`${form.key} · 09 the PDF preview renders`, async () => {
     const { id } = await createViaChat(form);
     joinOverview();
     const response = await pdfRoute.GET(new Request(`https://app.test/api/forms/instances/${id}/pdf`), {
@@ -779,7 +826,7 @@ describe.each(FORMS)("$key", (form) => {
     expect(history.find((version) => version.id === published!.id)?.status).toBe("archived");
   });
 
-  it(`${form.key} · 13 published versions remain immutable`, async () => {
+  shown(`${form.key} · 13 published versions remain immutable`, async () => {
     const { id } = await createViaChat(form);
     const pinned = store.form_instances.find((entry) => entry.id === id)!.template_version_id;
     const template = await getTemplateByKey(form.key);
@@ -828,7 +875,7 @@ describe.each(FORMS)("$key", (form) => {
     );
   });
 
-  it(`${form.key} · 16 role-based permissions apply`, async () => {
+  shown(`${form.key} · 16 role-based permissions apply`, async () => {
     expect(seed.requiredPermission).toBe(source.requiredPermission);
     const create = (role: string) => {
       actAs(role);
