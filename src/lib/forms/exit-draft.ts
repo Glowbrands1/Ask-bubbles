@@ -1,3 +1,4 @@
+import { EXIT_ACCOUNT_SYSTEM, EXIT_EMPLOYEE_SYSTEM } from "@/config/company/forms/exit-systems";
 import { shiftDays } from "@/lib/business-date";
 
 import { EXIT_DERIVED_KEYS, exitFactValues, readExitFacts, type ExitFacts } from "./exit-facts";
@@ -30,7 +31,8 @@ import { datesInText } from "./form-date-answer";
  *   for a termination the manager did not describe, a signature, a date the
  *   manager did not give, and any claim that a Step to Finish Termination
  *   (the personal file, MyGlow, home office, payroll, security, Sunlync) has
- *   been done.
+ *   been done — and, in any words, that anybody was removed from a system or
+ *   that an account was commented on: Ask Bubbles never does either.
  */
 
 export const EXIT_DRAFT_RULES: readonly string[] = [
@@ -42,7 +44,7 @@ export const EXIT_DRAFT_RULES: readonly string[] = [
   "Never state or imply an answer to any of these questions unless the manager stated it, and then only in the manager's own terms: whether store items were returned, whether a payroll deduction applies, whether a bonus is forfeited, whether pay drops to minimum wage, whether written notice is attached, or whether the employee is eligible for rehire.",
   "Never call the departure a termination, firing, dismissal or involuntary separation unless the manager did. Never give a reason for leaving the manager did not give.",
   "Never say that the form, a notice or anything else was signed.",
-  "Never say that any step to finish the termination has been done — uploading to the personal file, removing the employee from MyGlow, notifying the home office, HR, payroll or security, or commenting on Sunlync.",
+  `Never say that any step to finish the termination has been done — uploading to the personal file, removing the employee from ${EXIT_EMPLOYEE_SYSTEM}, notifying the home office, HR, payroll or security, or commenting on ${EXIT_ACCOUNT_SYSTEM}.`,
 ];
 
 /**
@@ -58,6 +60,15 @@ const DECISION_TOPICS: RegExp[] = [
   /\breturn(?:ed|s|ing)?\b|\bstore items?\b/i,
   /\bsign(?:s|ed|ing|ature|atures)?\b/i,
   /\bmyglow\b|\bsunlync\b|\bhome office\b|\bpersonal file\b|\bsecurity system\b/i,
+  /*
+   * THE SAME CLAIM IN ANY WORDS (QA, 25 Oct 2026). A sentence saying the
+   * employee was taken off MyGlow or any other system, or that anybody
+   * commented on, noted or updated their Sunlync or any other account, is a
+   * step Ask Bubbles never takes. Its own entry, so a manager who mentioned
+   * the home office does not let a MyGlow, Sunlync or system claim through
+   * the line above.
+   */
+  /\bmyglow\b|\bsunlync\b|\b(?:remov(?:e|ed|es|ing)|taken|took|delet(?:e|ed|ing)|deactivat\w*|offboard\w*)\b[^.!?]{0,40}\b(?:from|off|out of)\b[^.!?]{0,40}\bsystems?\b|\b(?:scheduling|hr|payroll|employee|pos)(?:\s*\/\s*hr)?\s+systems?\b|\b(?:not(?:e|es|ed)|comment(?:s|ed|ing)?)\b[^.!?]{0,40}\baccount\b|\baccount\b[^.!?]{0,40}\b(?:updated|noted|commented|deactivated|closed|removed)\b/i,
   /\bfired\b|\bterminat(?:e|ed|ion)\b|\blet (?:her|him|them) go\b|\blet go\b|\binvoluntar(?:y|ily)\b|\bdismiss(?:ed|al)?\b|\bdischarged\b/i,
 ];
 

@@ -322,7 +322,7 @@ describe("what Ask Bubbles says beside the proposal", () => {
     expect(content).toMatch(/\*\*Left blank for you to review:\*\* Store, Permanent Address, Date that notice was fulfilled, written notice attached and all three signature lines\./);
     expect(content).not.toMatch(/\?\n/); // no question asked
     expect(content).not.toMatch(/Before you create it/);
-    expect(content).toMatch(/doesn't sign anything, remove anyone from MyGlow, change payroll/);
+    expect(content).toMatch(/doesn't sign anything, remove anyone from MyGlow, change payroll or update Sunlync/);
   });
 
   it("reads the facts across the manager's turns, and never from Bubbles'", async () => {
