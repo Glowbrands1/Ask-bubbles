@@ -6,6 +6,16 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 25 Oct 2026: the job title is a title the manager stated — ported from Ask Sunny (PR 188)
+
+Ask Sunny PR 188 (`59fe1ca`, the same patch as `517992a`) is the title rule
+under `MANAGER_WORDS_ONLY_ENABLED`; its mechanism (`title-words.ts`) reached
+this app in the entry below (PR 116). `src/lib/ai/title-rule-oct24.test.ts`
+runs QA's four turns, with this app's stores and titles, through every reader
+that fills the Job title here: form-full-remap, the intent read and grounded
+entities, flag on and off. On main, 8 of its 13 cases fail; on top of PR 116
+all pass. No Sun Tan City content.
+
 ## 24 Oct 2026: the app's own lines are not the manager's words — ported from Ask Sunny
 
 `MANAGER_WORDS_ONLY_ENABLED` is new and stays off. With it on, form-full-remap
