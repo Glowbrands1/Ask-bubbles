@@ -957,6 +957,19 @@ export function nameBeforeTitleEnabled(): boolean {
   return envFlag("NAME_BEFORE_TITLE_ENABLED");
 }
 
+/**
+ * A form turn always answers the manager: when the card reply would be empty
+ * or word for word the previous one, a line in front of it answers the turn
+ * (press Create draft to edit; Finalize is a button on the form), and the
+ * chatty team request ("reuse for any team member … leave the employee name
+ * blank … generic for the whole team") reads as a team coaching form. Ported
+ * from the sibling app (conv_mvoenhk42lu3cxo, conv_mvofsdg92obw8px). See
+ * `ai/card-never-silent.ts` and `forms/team-subject.ts`. Off, as before.
+ */
+export function cardNeverSilentEnabled(): boolean {
+  return envFlag("CARD_NEVER_SILENT_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "INCIDENT_FROM_EARLIER_TURN_ENABLED",
   "LEVEL_REQUEST_DATE_ENABLED",
@@ -1319,6 +1332,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  "CARD_NEVER_SILENT_ENABLED",
 ] as const;
 
 /**
