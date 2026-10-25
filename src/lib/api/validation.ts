@@ -1,6 +1,7 @@
 import "server-only";
 
 import { AiError } from "@/lib/ai/errors";
+import { LEGACY_MESSAGE_LIMIT, messageTooLongNotice } from "@/lib/chat/message-limit";
 
 /**
  * CENTRALIZED REQUEST VALIDATION.
@@ -23,7 +24,7 @@ const UUID =
 const PROTOTYPE_ID = /^[a-z]{2,6}_[a-z0-9]{4,32}$/i;
 
 export const LIMITS = {
-  question: 4000,
+  question: LEGACY_MESSAGE_LIMIT,
   searchQuery: 2000,
   title: 300,
   description: 2000,
@@ -67,6 +68,23 @@ export function requireString(
   const trimmed = value.trim();
   if (trimmed.length > maxLength) {
     reject(`${field} is too long. The limit is ${maxLength} characters.`);
+  }
+  return trimmed;
+}
+
+/**
+ * The chat question with CHAT_LONG_MESSAGE_ENABLED on. Same required check
+ * as `requireString`; over `limit` the 400 says how long the message is and
+ * that nothing was cut, in the words the composer shows before sending. The
+ * text is never shortened here or anywhere after.
+ */
+export function requireChatQuestion(value: unknown, limit: number): string {
+  if (typeof value !== "string" || !value.trim()) {
+    reject("A question is required.");
+  }
+  const trimmed = value.trim();
+  if (trimmed.length > limit) {
+    reject(messageTooLongNotice(trimmed.length, limit));
   }
   return trimmed;
 }
@@ -132,9 +150,18 @@ export function parseTags(value: unknown): string[] {
   return [...seen];
 }
 
-/** Chat history, filtered to well-formed turns and capped to the recent tail. */
+/**
+ * Chat history, filtered to well-formed turns and capped to the recent tail.
+ *
+ * `refuseOverlong` (CHAT_LONG_MESSAGE_ENABLED): a turn longer than
+ * `LIMITS.historyMessage` is refused with a 400 instead of being shortened
+ * without a word. A real browser cannot send one (a manager turn is at most
+ * 12,000 characters, an answer far under 40,000); the slice stays as it is
+ * with the flag off.
+ */
 export function parseHistory(
   value: unknown,
+  options: { refuseOverlong?: boolean } = {},
 ): { id?: string; role: "user" | "assistant"; content: string }[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -162,6 +189,11 @@ export function parseHistory(
        */
       const id = (entry as { id?: unknown }).id;
       const usable = typeof id === "string" && id.length > 0 && id.length <= LIMITS.messageId;
+      if (options.refuseOverlong && entry.content.length > LIMITS.historyMessage) {
+        reject(
+          `An earlier message in this conversation is longer than ${LIMITS.historyMessage.toLocaleString("en-US")} characters, so it cannot be sent again in full. Nothing was cut. Start a new conversation.`,
+        );
+      }
       const content = entry.content.slice(0, LIMITS.historyMessage);
       return usable
         ? { id: id as string, role: entry.role, content }
