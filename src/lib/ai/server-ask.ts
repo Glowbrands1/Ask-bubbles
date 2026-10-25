@@ -97,6 +97,7 @@ import { understandFormTurn } from "./form-tool-understand";
 import { remapFormTurn, remapShouldRun, type FormRemapSlots } from "./form-full-remap";
 import { historyForRemap } from "./form-remap-scope";
 import { withRemapDraftSources } from "./remap-draft-sources";
+import { withCrossPersonGuard } from "./cross-person-guard";
 import { augmentIntakeQuestion } from "./intake-augment";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import { prepareLongContext } from "./long-context-claude";
@@ -378,7 +379,8 @@ async function answerQuestionCore(
         },
       });
       // REMAP_DRAFT_SOURCES_ENABLED: the card names the turns its draft is written from.
-      if (remapped) return withRemapDraftSources(remapped, request);
+      // CROSS_PERSON_INCIDENT_GUARD_ENABLED: a new employee does not inherit the earlier account.
+      if (remapped) return withCrossPersonGuard(withRemapDraftSources(remapped, request), request);
     }
 
     let manualRead: ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]> | null = null;
