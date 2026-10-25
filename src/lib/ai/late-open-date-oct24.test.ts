@@ -160,6 +160,36 @@ describe("F5: late to open 10-19, verbal, no payroll", () => {
   });
 });
 
+/*
+ * S1, from the sibling app's live conversation (24 Oct 2026), in this app's
+ * words: the date in the second turn, the late opening in the third, and
+ * "change the date to 10-21" in the fourth. Live there, the card stayed 10/20.
+ */
+describe("S1: the date changed after the account", () => {
+  const S1 = [
+    "I need a CA for Test Employee",
+    "she works at Kearney and it happened on 10-20",
+    "she opened the store 20 minutes late and did not call anyone",
+    "change the date to 10-21",
+  ];
+
+  it("ends dated 10/21 on the card and in the saved state, as Late Opening", () => {
+    on();
+    const played = play(S1);
+    expect(played.slots.incidentDateIso).toBe("2026-10-21");
+    expect(played.intent.formDate).toBe("2026-10-21");
+    expect(played.slots.policySection).toBe("Late Opening");
+    expect(played.intent.incidentType).toBe("Late Opening");
+  });
+
+  it("after the second turn it is 10/20", () => {
+    on();
+    const played = play(S1.slice(0, 2));
+    expect(played.slots.incidentDateIso).toBe("2026-10-20");
+    expect(played.intent.formDate).toBe("2026-10-20");
+  });
+});
+
 describe("the variants", () => {
   it.each([
     ["CA for Test Employee at Kearney, late opening 10-19, verbal, no payroll"],
