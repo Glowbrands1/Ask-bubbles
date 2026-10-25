@@ -36,6 +36,15 @@ const PROTECTED = [
   "src/lib/forms/instances.ts",
 ];
 
+/*
+ * The user (Pau) approved, via QA on 25 Oct 2026, editing
+ * src/lib/forms/form-date-answer.ts to fix prior-action parsing behind
+ * PRIOR_ACTIONS_PARSE_ENABLED, with the flag-off reading unchanged. It stays
+ * on the PROTECTED list; only the diff check leaves it out. No other
+ * protected file is excepted.
+ */
+const APPROVED_PROTECTED_EDITS = [":(exclude)src/lib/forms/form-date-answer.ts"];
+
 const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.tsx", "**/*.css"];
 const ALLOWED_UI = "src/features/chat/message-bubble.tsx";
 
@@ -77,7 +86,7 @@ describe("new flags default off", () => {
   });
 
   it("does not edit the protected modules, and the only UI diff is the close-match note", () => {
-    expect(diff("HEAD", PROTECTED)).toBe("");
+    expect(diff("HEAD", [...PROTECTED, ...APPROVED_PROTECTED_EDITS])).toBe("");
     const uiBase = uiDiffBase();
     if (uiBase) {
       const raw = diff(uiBase, [...UI_PATHS, ":(exclude)**/*.test.tsx", ":(exclude)**/*.dom.test.tsx"]);

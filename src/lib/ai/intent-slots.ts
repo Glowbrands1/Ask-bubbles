@@ -1,11 +1,11 @@
-import { datesInText } from "@/lib/forms/form-date-answer";
+import { datesInText, listFormDates } from "@/lib/forms/form-date-answer";
 import { managerStatedWarningLevel, templateHasWarningLevel } from "@/lib/forms/warning-level";
 import { displayName, editDistance, matchEmployeeName, type RosterEmployee } from "@/lib/forms/employee-match";
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manual";
 import { namesHeading } from "@/lib/forms/named-policy-section";
 import { payrollDeductAmount, payrollDeductFromConversation, type PayrollDeductAnswer } from "@/lib/forms/payroll-deduct";
-import { intentPayrollManagerOnlyEnabled, warningLevelManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { intentPayrollManagerOnlyEnabled, priorActionsParseEnabled, warningLevelManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -446,6 +446,16 @@ function groundDate(
 
 function datesInConversation(blob: string, today: string): string[] {
   const found = new Set(datesInText(blob, today).map((item) => item.iso));
+  /*
+   * PRIOR_ACTIONS_PARSE_ENABLED: an earlier step's date ("previous coaching
+   * jba manual 11-1-26", "jba manual 11-1-25") or a follow-up's is not a
+   * date for the form, even when the model read it as the incident's
+   * (conv_mvmznap42vcw0dl dated a form 2025-11-01).
+   */
+  if (priorActionsParseEnabled()) {
+    const kept = new Set(listFormDates(blob, today).map((item) => item.iso));
+    for (const iso of [...found]) if (!kept.has(iso)) found.delete(iso);
+  }
   DAY_MONTH.lastIndex = 0;
   for (const match of blob.matchAll(DAY_MONTH)) {
     const iso = dayMonthIso(match, today);
