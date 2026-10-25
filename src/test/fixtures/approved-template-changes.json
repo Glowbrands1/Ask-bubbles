@@ -1,5 +1,5 @@
 {
- "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description, Salon -> Store terminology, and client/customer -> guest terminology approved 2026-10-19 for SD-2, TS-5, TI-4, TI-5, M1-6 and X-1). Phase 2A wording changes approved 2026-10-19 (D3 7G Service, D4 Employee Performance Plan acknowledgement, D12 demotion example placeholder, D18 Makery cleaning scenario) are listed here and allow-listed by exact text in the parity test. The prescreen's Sun Tan City uniform/product-use question was REMOVED (D14, Option A, approved 2026-10-19): the removal is declared in src/test/approved-removals.ts, which deletes exactly that block from the Ask Sunny snapshot before comparison, and the description change is listed here. The Corrective Action Form's revision 6 (District Manager feedback approved 2026-10-21: the Action Plan's help text, its closing \"may result in\", and the revision note) is listed here and allow-listed by exact text in the parity test. QA, 25 Oct 2026 (no sibling-company product in what a Buff City Soap manager reads): the Sunlync step without its tanning clause (QA-2; Sunlync and MyGlow are confirmed) and the FTTC EPP's chooser description (QA-3) are listed here and allow-listed by exact text in the parity test. Anything not listed here fails template-parity.test.ts.",
+ "note": "Every difference between the migrated templates and the Ask Sunny published versions. Each is an approved change (company branding, the source app name, the exit form key and description, Salon -> Store terminology, and client/customer -> guest terminology approved 2026-10-19 for SD-2, TS-5, TI-4, TI-5, M1-6 and X-1). Phase 2A wording changes approved 2026-10-19 (D3 7G Service, D4 Employee Performance Plan acknowledgement, D12 demotion example placeholder, D18 Makery cleaning scenario) are listed here and allow-listed by exact text in the parity test. The prescreen's Sun Tan City uniform/product-use question was REMOVED (D14, Option A, approved 2026-10-19): the removal is declared in src/test/approved-removals.ts, which deletes exactly that block from the Ask Sunny snapshot before comparison, and the description change is listed here. The Corrective Action Form's revision 6 (District Manager feedback approved 2026-10-21: the Action Plan's help text, its closing \"may result in\", and the revision note) is listed here and allow-listed by exact text in the parity test. QA, 25 Oct 2026 (no sibling-company product in what a Buff City Soap manager reads): the Sunlync step without its tanning clause (QA-2; Sunlync and MyGlow are confirmed) and the FTTC EPP's chooser description (QA-3) are listed here and allow-listed by exact text in the parity test. QA, 25 Oct 2026 (QA-4): the hidden Tanning Consultant Interview's core-values heading reads \"Core Values\" (the JBA Policy Manual's own heading), without the sibling company's name; listed here and allow-listed by exact text in the parity test. Anything not listed here fails template-parity.test.ts.",
  "changes": [
   {
    "sourceKey": "coaching",
@@ -710,6 +710,12 @@
    "path": ".document.blocks[17].text",
    "from": "6. This role includes recommending products and services to clients. How comfortable are you with sales, and what’s your approach?",
    "to": "6. This role includes recommending products and services to guests. How comfortable are you with sales, and what’s your approach?"
+  },
+  {
+   "sourceKey": "tanning-consultant-interview",
+   "path": ".document.blocks[22].label",
+   "from": "Sun Tan City Core Values",
+   "to": "Core Values"
   },
   {
    "sourceKey": "tanning-consultant-interview",

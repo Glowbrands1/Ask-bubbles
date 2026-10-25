@@ -581,7 +581,8 @@ describe("the rest of the library is where it was", () => {
       "dmit-epp-tsd": 3,
       "dmit-epp-dmit": 3,
       "prescreen-phone-interview": 3,
-      "tanning-consultant-interview": 3,
+      // 4: the core-values heading names no company (QA, 25 Oct 2026; seed-sibling-brand.test.ts).
+      "tanning-consultant-interview": 4,
       "management-interview-round-1": 4,
       "management-interview-round-2": 3,
       // Employment changes: the demotion example's destination role.

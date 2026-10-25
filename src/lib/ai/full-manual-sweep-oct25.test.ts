@@ -150,8 +150,16 @@ describe("(1) a reply answered from retrieval carries its [p.N] inline", () => {
     const cited = citeRetrievedAnswer(withSourceMarker(answer.content), citePlan(), (marker) => (marker === 1 ? [48] : null));
     expect(pagesIn(lineWith(cited.text, "12 weeks of unpaid"))).toEqual(new Set([48]));
     expect(pagesIn(lineWith(cited.text, "Leave Request Form has to be filled out"))).toEqual(new Set([48]));
-    expect(cited.sources.map((source) => source.locator)).toContain("Page 48 — Maternity Leave");
-    expect(cited.sources.map((source) => source.locator)).not.toContain("Page 48 — Witness Duty");
+    /*
+     * The premium bullet shares "health insurance … premium payments" with
+     * the Premium Payments list on p.44; the rest of the answer restates
+     * p.48 by phrase, and p.48 prints the rule ("Health insurance will be
+     * maintained, but the Employee is responsible for … premiums"), so the
+     * answer's own page wins (citation-c, "a word match prefers the answer's
+     * own page"; without it this bullet cited p.44).
+     */
+    expect(pagesIn(lineWith(cited.text, "Health insurance continues"))).toEqual(new Set([48]));
+    expect(cited.sources.map((source) => source.locator)).toEqual(["Page 48 — Maternity Leave"]);
   }, 20_000);
 
   it("a source from another document keeps its [S#], and an uncited sentence is not marked", () => {

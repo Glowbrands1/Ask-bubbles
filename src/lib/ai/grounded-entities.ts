@@ -1,4 +1,4 @@
-import { antiLoopEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, managerWordsOnlyEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { readCaPolicy } from "@/lib/forms/ca-policy";
 import {
@@ -15,6 +15,7 @@ import { extractJobTitle, readEmployeeMentions } from "@/lib/forms/proposal";
 import type { ChatFormProposal } from "@/types";
 
 import { uniqueRosterStore } from "./intake-augment";
+import { titleTextFromQuestion } from "./title-words";
 import { prependFormState, type ConversationFormState } from "./form-state";
 import type { AskResponse } from "./types";
 
@@ -232,7 +233,9 @@ export function applyGroundedProposal(
     }
   }
 
-  const stated = typedNameEnabled() ? extractJobTitle(input.prep.question) : null;
+  // Flag on: the saved title line stays, a pasted policy is not the title.
+  const titleQuestion = managerWordsOnlyEnabled() ? titleTextFromQuestion(input.prep.question) : input.prep.question;
+  const stated = typedNameEnabled() ? extractJobTitle(titleQuestion) : null;
   if (stated) proposal = { ...proposal, employeeRole: stated, employeeRoleSource: "manager" };
   const fact = factForProposal(proposal, input.people, input.prep.employeeId);
   if (fact) {

@@ -242,3 +242,22 @@ describe("(2) What is COBRA? (FULL_MANUAL_WIDE_GATE_ENABLED)", () => {
     expect(response.citations.map((citation) => citation.locator)).toEqual(["Page 18 — Employee Parking"]);
   }, 30_000);
 });
+
+/*
+ * Sunny sweep E1 (25 Oct 2026): the sibling app read "when does it start?"
+ * as a form command and kept the manual out. Here the gate has no
+ * form-command check: the same question reads the manual and its reply is
+ * cited on p.41.
+ */
+describe("E1 parity: Who is eligible for PTO and when does it start?", () => {
+  it("reads the whole manual, and its reply is cited on printed pages", async () => {
+    state.rows = [manualRow(137, 0.889)];
+    state.replies = [
+      "All salaried managers, full-time corporate office personnel, and full-time Assistant Salon Directors/Assistant Makery Managers begin accruing PTO after 90 days of employment in that position [p.41].",
+    ];
+    const response = await ask("Who is eligible for PTO and when does it start?", "conv_e1_parity");
+    expect(state.calls[0]?.cachedContext).toMatch(/\[p\.41\]/);
+    expect(response.content).toContain("[p.41]");
+    expect(response.citations.map((citation) => citation.locator)).toEqual(["Page 41 — Eligibility"]);
+  }, 30_000);
+});
