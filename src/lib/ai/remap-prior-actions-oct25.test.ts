@@ -272,7 +272,8 @@ describe("8. \"she was coached on 9-15 for being late\" (the sibling app's conv_
       today: "2026-10-25",
       people: [],
     });
-    expect(lines(slots.priorActions)).toEqual(["Coaching for being late — signed 09/15/2026"]);
+    // QA 25 Oct 2026: no "signed" — the manager never wrote it (see the note above case 1).
+    expect(lines(slots.priorActions)).toEqual(["Coaching for being late — 09/15/2026"]);
     expect(slots.incidentDateIso).toBe("2026-10-20");
   });
 

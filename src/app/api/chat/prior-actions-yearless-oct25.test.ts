@@ -24,7 +24,9 @@ vi.mock("@/config/company/locations", async () =>
  * On this path the date was already 10/20, and the card's prior action was
  * the raw "coached on 9-15", with no full date and not what it was for. With
  * PRIOR_ACTIONS_PARSE_ENABLED the earlier-step reader reads a yearless "9-15",
- * and the card lists "Coaching for being late — signed 09/15/2026". The intake
+ * and the card lists "Coaching for being late — 09/15/2026" (QA decision, 25 Oct
+ * 2026: the line holds no word the manager did not say; "signed" appears only
+ * when they write it, and this manager did not). The intake
  * line the intent path adds ("It happened on …") no longer takes the coaching's
  * date either. A coaching the manager says they held is read as before.
  */
@@ -252,7 +254,8 @@ describe("the late opening with an earlier coaching, on the live path", () => {
     const card = first!.formProposal!;
     expect(card, first!.content).toBeTruthy();
     expect(card.formDate).toBe("2026-10-20");
-    expect(card.priorActions).toBe("Coaching for being late — signed 09/15/2026");
+    // QA 25 Oct 2026: no "signed" — the manager never wrote it (see the header).
+    expect(card.priorActions).toBe("Coaching for being late — 09/15/2026");
     expect(card.warningLevel).toBe("verbal");
     expect(card.payrollDeduct).toBe("no");
   });
@@ -269,7 +272,8 @@ describe("the readers", () => {
   it("read the yearless coaching as an earlier step, and the late opening as the incident", async () => {
     const { fieldLines } = await import("@/lib/ai/intake-augment");
     vi.stubEnv(FLAG_UNDER_TEST, "true");
-    expect(statedPriorActions(SAID, TODAY)).toEqual(["Coaching for being late — signed 09/15/2026"]);
+    // QA 25 Oct 2026: no "signed" — the manager never wrote it (see the header).
+    expect(statedPriorActions(SAID, TODAY)).toEqual(["Coaching for being late — 09/15/2026"]);
     expect(fieldLines(SAID, TODAY)).toEqual(["It happened on 10/20/2026."]);
     expect(blankYearlessStepDates(SAID, TODAY)).toBe(SAID.replace("9-15", "    "));
     vi.stubEnv(FLAG_UNDER_TEST, "");
