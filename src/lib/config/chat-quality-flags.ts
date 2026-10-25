@@ -396,6 +396,18 @@ export function draftActionsEnabled(): boolean {
 }
 
 /**
+ * A late opening, read as one (QA, 24 Oct 2026; ported from the sibling app).
+ * "late to open 10-19" is the manual's Late Opening section and is dated 19
+ * October: a yearless dashed month-day after a date cue is a date (the most
+ * recent one, never a future day), the newest date the manager states dates
+ * the form, "opened late" and "late to open" are Late Opening, and "payroll
+ * deduct is not applicable" is No in the saved state. Off, as before.
+ */
+export function lateOpenDateEnabled(): boolean {
+  return envFlag("LATE_OPEN_DATE_ENABLED");
+}
+
+/**
  * Keep other conversations out of the reply text. The person-memory recall
  * quotes another chat only when the manager refers back to it ("again", "last
  * time", "like before", "same as …"); a name read from a turn that is only
@@ -452,5 +464,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MANAGER_WORDS_ONLY_ENABLED",
   "CONVERSATION_DRAFT_REUSE_ENABLED",
   "DRAFT_ACTIONS_ENABLED",
+  "LATE_OPEN_DATE_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
 ] as const;

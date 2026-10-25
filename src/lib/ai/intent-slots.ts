@@ -13,6 +13,7 @@ import {
 } from "@/lib/config/chat-quality-flags";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { extractJobTitle } from "@/lib/forms/proposal";
+import { lateOpenOn, newestStatedDate, withYearlessDatesWritten } from "@/lib/forms/late-open";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -161,13 +162,31 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
     : null;
   const title = groundTitle(reading?.title ?? null, blob, input.people, employee.person, titleText);
   const incidentType = groundIncident(reading?.incidentType ?? null, blob, input.headings);
-  const date = groundDate(choice?.date ?? reading?.incidentDate ?? null, blob, input.today);
+  /*
+   * LATE_OPEN_DATE_ENABLED (QA, 24 Oct 2026; ported from the sibling app): "late
+   * to open 10-19" and "change the date to 10-22" are dates, and the one this
+   * turn states dates the form ahead of the saved one. See `late-open.ts`.
+   */
+  const lateOpen = lateOpenOn();
+  const statedNow = lateOpen && !choice?.date ? newestStatedDate(input.question, input.today) : null;
+  const date = statedNow
+    ? { iso: statedNow, ambiguous: [] as readonly string[] }
+    : groundDate(
+        choice?.date ?? reading?.incidentDate ?? null,
+        lateOpen ? withYearlessDatesWritten(blob, input.today) : blob,
+        input.today,
+      );
   const managerOnly = intentPayrollManagerOnlyEnabled();
-  const payrollAnswer = managerOnly
-    ? payrollDeductFromConversation([...input.history, { role: "user", content: input.question }])
-    : null;
+  // The manager's Yes/No, never an assistant turn's: "payroll deduct is not
+  // applicable" is No in the saved state too (LATE_OPEN_DATE_ENABLED).
+  const payrollAnswer =
+    managerOnly || lateOpen
+      ? payrollDeductFromConversation([...input.history, { role: "user", content: input.question }])
+      : null;
   const payrollAmount = !managerOnly
-    ? groundPayroll(reading?.payrollAmount ?? null, blob)
+    ? lateOpen && payrollAnswer === "no"
+      ? null
+      : groundPayroll(reading?.payrollAmount ?? null, blob)
     : payrollAnswer === "no"
       ? null
       : (payrollClauseAmount(input) ??
@@ -201,6 +220,7 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
     payrollAmount,
     payrollAnswer,
     managerOnly,
+    managerAnswer: lateOpen,
     warningLevel: warningLevel.value,
     formType: formType.key,
   });
@@ -602,6 +622,8 @@ function mergeSlots(
     payrollAnswer?: PayrollDeductAnswer | null;
     /** INTENT_PAYROLL_MANAGER_ONLY_ENABLED: Yes/No only from the manager's answer, never from an amount alone. */
     managerOnly?: boolean;
+    /** LATE_OPEN_DATE_ENABLED: the manager's stated Yes/No is kept, ahead of an amount's Yes. */
+    managerAnswer?: boolean;
     warningLevel: "verbal" | "written" | null;
     formType: string | null;
   },
@@ -617,9 +639,11 @@ function mergeSlots(
     warningLevel: slots.warningLevel ?? prior.warningLevel,
     payrollDeduct: slots.managerOnly
       ? (slots.payrollAnswer ?? prior.payrollDeduct)
-      : slots.payrollAmount
-        ? "yes"
-        : prior.payrollDeduct,
+      : slots.managerAnswer && slots.payrollAnswer
+        ? slots.payrollAnswer
+        : slots.payrollAmount
+          ? "yes"
+          : prior.payrollDeduct,
     templateKey: slots.formType ?? prior.templateKey,
     incidentType: slots.incidentType ?? prior.incidentType,
     payrollAmount: slots.payrollAnswer === "no" ? null : slots.payrollAmount ?? prior.payrollAmount,

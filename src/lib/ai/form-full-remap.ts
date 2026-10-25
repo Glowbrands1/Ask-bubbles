@@ -7,10 +7,11 @@ import {
   notANameGuardEnabled,
   warningLevelManagerOnlyEnabled,
 } from "@/lib/config/chat-quality-flags";
-import { CA_POLICY_LABEL, readCaPolicy } from "@/lib/forms/ca-policy";
+import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
 import { listIncidentDates } from "@/lib/forms/form-date-answer";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
+import { lateOpenOn, mostRecent } from "@/lib/forms/late-open";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
@@ -480,6 +481,9 @@ function groundedStore(text: string): { id: string; name: string } | null {
 }
 
 function groundedDate(text: string, today: string): string | null {
+  // LATE_OPEN_DATE_ENABLED: the newest date the manager typed, dashed or not.
+  const newest = lateOpenOn() ? newestDate(text, today) : null;
+  if (newest) return newest;
   const found = listIncidentDates(text, today).filter((item) => !dateIsPrior(text, item.index));
   const calendar = [...new Set(found.map((item) => item.iso))];
   // One incident date, or the later one when they correct it. A prior step's
@@ -545,6 +549,46 @@ function explicitWarning(turns: readonly string[], today: string): "verbal" | "w
   return level;
 }
 
+/**
+ * THE NEWEST DATE WINS (QA, 24 Oct 2026; LATE_OPEN_DATE_ENABLED). "change the
+ * date to 10-22" after "was late to open the store 10-19-26" kept 19 October:
+ * a dated calendar date always beat a yearless one, wherever it was typed.
+ * Now the later of the two in the manager's words dates the form, and a
+ * yearless "10-22" is the most recent 22 October, never a future one.
+ */
+function newestDate(text: string, today: string): string | null {
+  const calendar = listIncidentDates(text, today)
+    .filter((item) => !dateIsPrior(text, item.index))
+    .map((item) => ({ iso: item.iso, index: item.index }));
+  const dashed = dashedMonthDays(text, today).map((item) => ({
+    iso: mostRecent(item.month, item.day, today) ?? item.iso,
+    index: item.index,
+  }));
+  const all = [...calendar, ...dashed].sort((a, b) => a.index - b.index);
+  return all.at(-1)?.iso ?? null;
+}
+
+/** Every "10-20" that is a month and day, with where it sits. Same rules as `dashedMonthDay`. */
+function dashedMonthDays(text: string, today: string): { iso: string; index: number; month: number; day: number }[] {
+  const year = Number(/^(\d{4})-/.exec(today)?.[1]);
+  if (!Number.isFinite(year)) return [];
+  const found: { iso: string; index: number; month: number; day: number }[] = [];
+  // Not "10-1" out of "10-19-26": the day takes every digit, and a year after it is a calendar date.
+  for (const match of text.matchAll(/(?<![\d-])(\d{1,2})-(\d{1,2})(?!\d|-\d)/g)) {
+    const index = match.index ?? 0;
+    const after = text.slice(index + match[0].length, index + match[0].length + 16);
+    if (/^\s*(?:min|mins|minutes|hrs|hours|hr)\b/i.test(after)) continue;
+    const before = text.slice(Math.max(0, index - 16), index);
+    if (/\btime\s*[:=]?\s*$/i.test(before)) continue;
+    if (dateIsPrior(text, index)) continue;
+    const month = Number(match[1]);
+    const day = Number(match[2]);
+    const iso = monthDayIso(year, month, day);
+    if (iso) found.push({ iso, index, month, day });
+  }
+  return found;
+}
+
 /** "10-20" is 20 October. "10-20 min" and "time 10-20" are not dates. */
 function dashedMonthDay(text: string, today: string): string | null {
   const year = Number(/^(\d{4})-/.exec(today)?.[1]);
@@ -591,7 +635,11 @@ function clausePayrollAmount(text: string): string | null {
 
 function groundedPolicy(text: string): string | null {
   const reading = readCaPolicy(text);
-  return reading.stated ? CA_POLICY_LABEL[reading.stated] : null;
+  if (reading.stated) return CA_POLICY_LABEL[reading.stated];
+  // "late to open", "late opening", "opened late": the manual's Late Opening
+  // section, which this card did not name (QA, 24 Oct 2026; LATE_OPEN_DATE_ENABLED).
+  if (lateOpenOn() && describedAttendanceKeys(text)?.includes(LATE_OPENING_OFFENSE)) return "Late Opening";
+  return null;
 }
 
 function acceptSummary(summary: string | null, said: string): string | null {
