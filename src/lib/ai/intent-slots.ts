@@ -12,12 +12,14 @@ import {
   warningLevelManagerOnlyEnabled,
   caTemplateMapEnabled,
   formChoiceStatedEnabled,
+  placeSpanGuardEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { extractJobTitle } from "@/lib/forms/proposal";
 import { lateOpenOn, newestStatedDate, withYearlessDatesWritten } from "@/lib/forms/late-open";
 import { correctiveActionBasis } from "@/lib/forms/corrective-action-intake";
 import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
+import { labelledStoreIds } from "@/lib/forms/store-cue";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -161,7 +163,9 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
   const employee = choice?.person
     ? { person: choice.person, name: displayName(choice.person), ambiguous: [] as readonly GroundedPerson[], typed: null }
     : groundEmployee(guardedTyped(reading?.employee ?? null, input), blob, input.people);
-  const store = groundStore(choice?.store ?? reading?.store ?? null, blob, input.stores, employee.person);
+  const store =
+    newestTurnStore(input.question, input.stores) ??
+    groundStore(choice?.store ?? reading?.store ?? null, blob, input.stores, employee.person);
   // The manager's turns only: not the assistant's, not the saved state, not a
   // pasted policy, and "ass't" spelled out.
   const titleText = managerWordsOnlyEnabled()
@@ -593,6 +597,24 @@ function peopleNamedIn(blob: string, people: readonly GroundedPerson[]): Grounde
 
 function asGrounded(employee: RosterEmployee, people: readonly GroundedPerson[]): GroundedPerson {
   return people.find((person) => person.id === employee.id) ?? { ...employee, title: null, primaryLocationName: null };
+}
+
+/*
+ * PLACE_SPAN_GUARD_ENABLED. The store this turn names wins over the one the
+ * conversation saved: "location kearney" after "store is grand island" is
+ * Kearney (ported from the sibling app, QA Round 4). A field label counts as the
+ * place cue (`store-cue.ts`). Off, or when this turn names no single store,
+ * the store is grounded as before.
+ */
+function newestTurnStore(
+  question: string,
+  stores: readonly StoreRow[],
+): { id: string; name: string; ambiguous: readonly StoreRow[] } | null {
+  if (!placeSpanGuardEnabled()) return null;
+  const ids = labelledStoreIds(question);
+  if (ids.length !== 1) return null;
+  const row = stores.find((store) => store.id === ids[0]);
+  return row ? { id: row.id, name: row.name, ambiguous: [] } : null;
 }
 
 function groundStore(

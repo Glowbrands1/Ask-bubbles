@@ -1,5 +1,5 @@
 import { isJobTitleAbbreviation } from "@/config/company/job-titles";
-import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { placeSpanGuardEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { editDistance } from "@/lib/forms/employee-match";
 import { companyNameStops } from "@/lib/forms/name-stops";
 import { isTypedStopSpan } from "@/lib/forms/name-words";
@@ -548,6 +548,17 @@ const SPAN_AT_END = new RegExp(
   "gi",
 );
 
+/*
+ * A POLICY IS NOT A PLACE. "in the workplace policy", "in the dress code
+ * section", "in the handbook": the manager is pointing at a document. No
+ * store name carries one of these words.
+ */
+const DOCUMENT_WORDS = /\b(?:polic(?:y|ies)|manuals?|handbooks?|sections?|procedures?|guidelines?|sops?|rules?|forms?)\b/i;
+
+function isDocumentPhrase(span: string): boolean {
+  return DOCUMENT_WORDS.test(span);
+}
+
 /**
  * Every store a piece of text names, and every store-shaped reference it makes
  * that no registered store answers to.
@@ -635,11 +646,21 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
     .map((part) => part.replace(/\s+/g, " ").trim())
     .filter((part) => part.length > 0);
   const scans = paragraphs.length > 1 ? [spaced, ...paragraphs] : [spaced];
-  for (const scan of scans) {
+  const guard = placeSpanGuardEnabled();
+  for (const [at, scan] of scans.entries()) {
   for (const [pattern, nounFollows] of [[SPAN_BEFORE_NOUN, true], [SPAN_AT_END, false]] as const) {
+    /*
+     * PLACE_SPAN_GUARD_ENABLED. "cite animals in the workplace policy", then
+     * "store location is empire, sd" (conv_mvmcetjw2i4vtwz, 24 Oct 2026): on
+     * the joined turns the two read as "in the workplace policy store", and
+     * "workplace policy" was asked about as a typed store. A span and the
+     * "store" after it must be in one turn; each turn is scanned on its own.
+     */
+    if (guard && nounFollows && at === 0 && paragraphs.length > 1) continue;
     for (const match of scan.matchAll(pattern)) {
       const span = match[1]!.trim();
       if (typedNameEnabled() && isTypedStopSpan(span, companyNameStops())) continue;
+      if (guard && isDocumentPhrase(span)) continue;
       const normalized = foldKey(span, index.abbreviations).trim();
       if (!normalized || seen.has(normalized) || /['’]s$/i.test(span)) continue;
       const words = normalized.split(" ");

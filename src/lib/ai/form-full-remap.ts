@@ -8,6 +8,7 @@ import {
   warningLevelManagerOnlyEnabled,
   formChoiceStatedEnabled,
   remapIncidentFixEnabled,
+  placeSpanGuardEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
@@ -22,6 +23,7 @@ import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amoun
 import { extractEmployeeNames, extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
 import { spokenDates } from "@/lib/forms/relative-date";
 import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
+import { labelledStoreIds } from "@/lib/forms/store-cue";
 import { warningLevelFromTurns, managerStatedWarningLevel } from "@/lib/forms/warning-level";
 import type { ChatFormProposal } from "@/types";
 
@@ -173,7 +175,8 @@ export function groundFormSlots(input: {
   // title is read; MANAGER_WORDS_ONLY_ENABLED then reads it from the manager's turns.
   const titleTurns = fixed ? users.map(withoutStateCodes) : users;
   const jobTitle = managerOnly ? managerTitle(titleTurns, raw.employeeName) : groundedTitle(titleTurns);
-  const store = groundedStore(said) ?? (fixed ? placeStore(said) : null);
+  const store =
+    (placeSpanGuardEnabled() ? newestNamedStore(users) : null) ?? groundedStore(said) ?? (fixed ? placeStore(said) : null);
   const incidentDateIso = groundedDate(said, input.today);
   /*
    * WARNING_LEVEL_MANAGER_ONLY_ENABLED (ported from the sibling app, 24 Oct 2026):
@@ -675,6 +678,27 @@ function groundedTitle(turns: readonly string[]): string | null {
     title = found;
   }
   return title;
+}
+
+/*
+ * PLACE_SPAN_GUARD_ENABLED. The store the newest manager turn names wins over
+ * one an earlier turn named: "location kearney" after "store is grand island"
+ * is Kearney (ported from the sibling app, QA Round 4). Each turn is read newest
+ * first, as before and then with a field label as the place cue
+ * (`store-cue.ts`). A turn naming more than one store is left to the reading
+ * below.
+ */
+function newestNamedStore(turns: readonly string[]): { id: string; name: string } | null {
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    const turn = turns[index]!;
+    const own = groundedStore(turn);
+    if (own) return own;
+    const ids = labelledStoreIds(turn);
+    if (ids.length > 1) return null;
+    const name = ids.length === 1 ? rosterLocationName(ids[0]!) : null;
+    if (name) return { id: ids[0]!, name };
+  }
+  return null;
 }
 
 function groundedStore(text: string): { id: string; name: string } | null {

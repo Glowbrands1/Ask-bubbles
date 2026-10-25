@@ -339,6 +339,20 @@ export function fullManualContextEnabled(): boolean {
 }
 
 /**
+ * A policy or document phrase is not a place. Off, the store reader is
+ * unchanged. On, a span that names a policy, manual, section or similar
+ * document ("in the workplace policy") is never read as a typed store, and
+ * a span-before-"store" match must sit inside one manager turn, so "cite
+ * animals in the workplace policy" followed by "store location is …" does
+ * not become "the workplace policy store". Also on, a field label is a place
+ * cue and the newest turn's store replaces the saved one: "location kearney"
+ * after "store is grand island" is Kearney (ported from the sibling app, QA Round 4).
+ */
+export function placeSpanGuardEnabled(): boolean {
+  return envFlag("PLACE_SPAN_GUARD_ENABLED");
+}
+
+/**
  * The warning level kept for a Corrective Action is only one the manager
  * stated: read from their own turns, never from Ask Bubbles' ("the warning
  * level, verbal or written" is not a level), never from the slot model's
@@ -497,6 +511,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PROMPT_CACHE_ENABLED",
   "FORM_FULL_REMAP_ENABLED",
   "FULL_MANUAL_CONTEXT_ENABLED",
+  "PLACE_SPAN_GUARD_ENABLED",
   "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
   "NOT_A_NAME_GUARD_ENABLED",
