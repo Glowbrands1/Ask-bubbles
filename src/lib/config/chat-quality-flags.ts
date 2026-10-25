@@ -351,6 +351,19 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
 }
 
 /**
+ * A request to start a corrective action ("create a Verbal CA for …", "I need
+ * a CA for someone opening the store late") is the Corrective Action Form
+ * when the intent read has no model reading. The template reader calls that
+ * request the progression, and the intent slots used to keep no form for it,
+ * so the next answer ("verbal", "no payroll") was not a form turn (QA F4,
+ * 24 Oct 2026). A metric with no behaviour stays the progression, as in the
+ * form proposal. Off, the form slot is left as before.
+ */
+export function caTemplateMapEnabled(): boolean {
+  return envFlag("CA_TEMPLATE_MAP_ENABLED");
+}
+
+/**
  * Keep other conversations out of the reply text. The person-memory recall
  * quotes another chat only when the manager refers back to it ("again", "last
  * time", "like before", "same as …"); a name read from a turn that is only
@@ -403,5 +416,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FULL_MANUAL_CONTEXT_ENABLED",
   "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
+  "CA_TEMPLATE_MAP_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
 ] as const;
