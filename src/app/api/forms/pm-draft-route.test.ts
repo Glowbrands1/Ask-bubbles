@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseFormDocument } from "@/lib/forms/document";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
@@ -1892,5 +1892,116 @@ describe("Owner's QA 8 Oct — the Policy Review keeps its retrieved reference",
     state.toolInput = { values: {}, checked: {} };
     await post("Policy review with Harper about the attendance policy and her schedule.");
     expect(state.persisted[0]!.values.policy_language ?? "").toContain("work schedule");
+  });
+});
+
+/* ==================================================================== */
+/*  FRAMEWORK_UNPIN_ENABLED                                             */
+/* ==================================================================== */
+
+/*
+ * QA, 25 Oct 2026: the uploaded Performance Management Framework (document
+ * 6e192b76, "ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT") still
+ * carries the sibling company's name, examples and metrics, and a governed
+ * draft pinned its sections into the prompt. With the flag on they are not
+ * pinned. With it off (unset, "0", "false") the draft is exactly as before.
+ */
+describe("FRAMEWORK_UNPIN_ENABLED — the framework's sections and a governed draft", () => {
+  const GOVERNED = ["follow-up-coaching", "dpoa", "policy-review", "sdit-epp"] as const;
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  describe.each([
+    ["unset", undefined],
+    ["0", "0"],
+    ["false", "false"],
+  ])("flag off (%s): pinned as before", (_label, value) => {
+    beforeEach(() => {
+      if (value === undefined) vi.stubEnv("FRAMEWORK_UNPIN_ENABLED", undefined as unknown as string);
+      else vi.stubEnv("FRAMEWORK_UNPIN_ENABLED", value);
+    });
+
+    it.each(GOVERNED)("%s reads the framework and sends its sections", async (key) => {
+      state.templateKey = key;
+      await post(NOTES);
+
+      expect(state.roleCalls).toContain(PROGRESSION_ID);
+      expect(state.modelCalls).toBe(1);
+      expect(prompt()).toContain("PERFORMANCE MANAGEMENT FRAMEWORK (the approved progression");
+      expect(prompt()).toContain("[ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT — SECTION 2 – PERFORMANCE MANAGEMENT LADDER]");
+      expect(prompt()).toContain("Solve the issue at the lowest appropriate level.");
+      expect(systemPrompt()).toContain("The PERFORMANCE MANAGEMENT FRAMEWORK section below is that progression.");
+    });
+
+    it("still withholds a governed draft when the framework is unavailable", async () => {
+      state.templateKey = "dpoa";
+      state.roleResults = { [PROGRESSION_ID]: DOWN };
+
+      const payload = await post(NOTES);
+
+      expect(state.modelCalls).toBe(0);
+      expect(String(payload.notice)).toContain("Performance Management Framework");
+    });
+  });
+
+  describe("flag on: not pinned", () => {
+    beforeEach(() => {
+      vi.stubEnv("FRAMEWORK_UNPIN_ENABLED", "true");
+    });
+
+    it.each(GOVERNED)("%s does not read the framework or send its sections", async (key) => {
+      state.templateKey = key;
+      await post(NOTES);
+
+      expect(state.roleCalls).not.toContain(PROGRESSION_ID);
+      expect(state.modelCalls).toBe(1);
+      expect(prompt()).not.toContain("PERFORMANCE MANAGEMENT FRAMEWORK");
+      expect(prompt()).not.toContain("Solve the issue at the lowest appropriate level.");
+      expect(prompt()).not.toContain("SECTION 2 – PERFORMANCE MANAGEMENT LADDER");
+      expect(prompt()).not.toContain("10.7 Final operating rule");
+    });
+
+    it("keeps the app's own escalation rules, without pointing at a missing section", async () => {
+      state.templateKey = "follow-up-coaching";
+      await post(NOTES);
+
+      expect(systemPrompt()).toContain("THIS FORM RECORDS A STEP IN THE APPROVED CORRECTIVE-ACTION PROGRESSION.");
+      expect(systemPrompt()).not.toContain("PERFORMANCE MANAGEMENT FRAMEWORK section below");
+      expect(systemPrompt()).toMatch(/classify it as a skill, knowledge, confidence, effort, policy or leadership issue/i);
+      expect(systemPrompt()).toMatch(/LOWEST rung that fits/);
+      expect(systemPrompt()).toMatch(/NEVER SELECT A TERMINATION, DEMOTION OR SUSPENSION/);
+      expect(systemPrompt()).toMatch(/LEAVE THE STEP UNSET/);
+    });
+
+    it("drafts a governed form when the framework is unavailable", async () => {
+      state.templateKey = "dpoa";
+      state.roleResults = { [PROGRESSION_ID]: DOWN };
+
+      const payload = await post(NOTES);
+
+      expect(state.modelCalls).toBe(1);
+      expect(String(payload.notice ?? "")).not.toContain("Performance Management Framework");
+    });
+
+    it("still refuses a model-selected termination", async () => {
+      state.templateKey = "dpoa";
+      state.toolInput = { values: {}, checked: { warning_type: ["termination"] } };
+
+      const payload = await post(NOTES);
+
+      expect(state.persisted[0]?.checked.warning_type).toBeUndefined();
+      expect(payload.sensitiveRefused).toEqual({ warning_type: ["termination"] });
+    });
+
+    it("leaves the plain Coaching Form as it was", async () => {
+      state.templateKey = "coaching";
+      await post(NOTES);
+
+      expect(state.roleCalls).not.toContain(PROGRESSION_ID);
+      expect(state.modelCalls).toBe(1);
+      expect(systemPrompt()).not.toMatch(/LOWEST rung that fits/);
+    });
   });
 });

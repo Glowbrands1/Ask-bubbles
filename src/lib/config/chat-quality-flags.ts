@@ -26,6 +26,17 @@ export function hybridSearchEnabled(): boolean {
 }
 
 /** Haiku reading of a short follow-up before retrieval. */
+/**
+ * A follow-up that names its own documents or nouns ("The I-9 and W-4
+ * forms, direct deposit agreements") is searched on them when the
+ * retrieval rewrite kept none of them and searched only the earlier turn's
+ * subject ("Employment Verification"). Off, the rewritten query is searched
+ * as it is. Same name in both apps. Default off.
+ */
+export function followupNewTopicRetrievalEnabled(): boolean {
+  return envFlag("FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED");
+}
+
 export function queryRewriteEnabled(): boolean {
   return envFlag("QUERY_REWRITE_ENABLED");
 }
@@ -412,6 +423,18 @@ export function conversationDraftReuseEnabled(): boolean {
 }
 
 /**
+ * DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED: an open draft is reused only when this
+ * chat made it, for the same employee, form and incident or date. A card
+ * dated differently from the chat's own draft makes a new draft, and a reuse
+ * says so on the card ("Updated your open draft from <date>"). A draft from
+ * another chat is never reopened, so it is never overwritten (QA, B18–B20,
+ * 25 Oct 2026). Off, every lookup is as it was.
+ */
+export function draftReuseSameChatOnlyEnabled(): boolean {
+  return envFlag("DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED");
+}
+
+/**
  * "Delete that draft" deletes the draft on screen where the manager may
  * delete forms (the forms API's own rule), and says truthfully who can where
  * they may not; "same incident", answering "is this the same incident as the
@@ -500,6 +523,20 @@ export function manualNegatedListNoteEnabled(): boolean {
 }
 
 /**
+ * An edit typed in chat is applied to its field or answered, and dates follow
+ * the incident (QA history replay, 25 Oct 2026; the same flag as the sibling
+ * app). "change observation of offense to: …" replaces What happened with the
+ * manager's text; "add that …" appends their clause; "clean up my grammar" and
+ * "change the date to …" never become What happened. "X instead of Y" names
+ * X. A prior action's date is never the form's Date, and "today" dates the
+ * form today. "can you edit the form I already finalized" opens it as a
+ * revision. Off, every reader is as before.
+ */
+export function formEditDateRulesEnabled(): boolean {
+  return envFlag("FORM_EDIT_DATE_RULES_ENABLED");
+}
+
+/**
  * The Corrective Action Form's Action Plan is the manager's, or blank (Pau,
  * 25 Oct 2026). A plan they typed ("action plan: …") goes on the card and the
  * form word for word. With none typed, nothing is written: no "Management
@@ -574,6 +611,115 @@ export function payrollFromThisFormEnabled(): boolean {
   return envFlag("PAYROLL_FROM_THIS_FORM_ENABLED");
 }
 
+/**
+ * The exit form's intake reads what the manager typed (live QA, 25 Oct 2026).
+ * A Details answer ("items returned") or the Permanent Address the manager
+ * typed is never offered as the employee; "change the reason for resignation
+ * to: …" replaces the reason; a yearless "last day 10-24" is the most recent
+ * 24 October; the Permanent Address is read; and "did not call in for her
+ * last two shifts" is No Call No Show. Same name in the sibling app. Off, the
+ * exit readers read as before.
+ */
+export function exitIntakeFixEnabled(): boolean {
+  return envFlag("EXIT_INTAKE_FIX_ENABLED");
+}
+
+/**
+ * A reformat turn keeps the sources of the answer it reformats. "Make this a
+ * downloadable document", "put that in a table", "summarize that" is searched
+ * again with the question the previous answer was written for, and those rows
+ * go first, so the reply does not "correct" claims whose sources it can no
+ * longer see. Removing [S#] markers also never leaves their grammar behind
+ * ("two markers, and, that"). Ported from the sibling app. Off, retrieval and
+ * marker stripping are as before.
+ */
+export function reformatKeepsSourcesEnabled(): boolean {
+  return envFlag("REFORMAT_KEEPS_SOURCES_ENABLED");
+}
+
+/**
+ * The coaching framework covers an issue it does not name. With the framework
+ * among the sources, the prompt tells the model to answer from its general
+ * sections (root cause, performance vs behavior, conversation structure), cite
+ * them, and say only that no section names this exact issue, instead of "the
+ * knowledge base does not have it" (QA, conv_mvb28ztb85z53mc). Off, the
+ * prompt is byte-for-byte as before.
+ */
+export function frameworkGeneralSectionsEnabled(): boolean {
+  return envFlag("FRAMEWORK_GENERAL_SECTIONS_ENABLED");
+}
+
+/**
+ * A question is answered, never routed into a form (P0, live replay 25 Oct
+ * 2026: "what policy does that fall under?" was written into the open card's
+ * What happened). On, a turn `question-not-form.ts` reads as a question skips
+ * the slot reader, the remap, the proposal and the open-form correction and
+ * revision paths, and is answered. Off, every turn is routed as before. The
+ * same flag as in the sibling app.
+ */
+export function questionNotFormEnabled(): boolean {
+  return envFlag("QUESTION_NOT_FORM_ENABLED");
+}
+
+/**
+ * The exit form's How Employee Resigned line also reads a resignation the
+ * manager says was given verbally ("she told me verbally", "verbal notice"),
+ * as "Verbal" (Pau's decision, 25 Oct 2026, ported from the sibling app). A
+ * bare "she resigned" still leaves the line blank, and "verbal warning" is
+ * never a method. Off, the methods read are exactly as before.
+ */
+export function resignMethodFollowupEnabled(): boolean {
+  return envFlag("RESIGN_METHOD_FOLLOWUP_ENABLED");
+}
+
+/**
+ * The Performance Management Framework document is not pinned into a
+ * governed form's drafting prompt (QA, 25 Oct 2026). The uploaded framework
+ * text still carries the sibling company's examples, metrics and name, and
+ * the governed-form draft pinned up to sixteen of its sections. On, a
+ * governed form drafts without the framework's sections: the document is not
+ * read, its absence does not withhold the draft, and the app's own
+ * escalation rules (lowest rung, no termination, demotion or suspension,
+ * leave the step unset) still apply. Off, the sections are pinned as before.
+ */
+export function frameworkUnpinEnabled(): boolean {
+  return envFlag("FRAMEWORK_UNPIN_ENABLED");
+}
+
+/**
+ * The composer's reading of CHAT_LONG_MESSAGE_ENABLED. Only a statically
+ * written `process.env.NEXT_PUBLIC_*` name reaches a client bundle, so the
+ * browser reads the public twin and nothing else. Off, the composer renders
+ * and sends exactly as it did.
+ */
+export function chatLongMessageClientEnabled(): boolean {
+  const inlined = process.env.NEXT_PUBLIC_CHAT_LONG_MESSAGE_ENABLED;
+  return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
+}
+
+/**
+ * A chat message may be up to 12,000 characters instead of 4,000
+ * (`LONG_MESSAGE_LIMIT` in `lib/chat/message-limit.ts`). Over the limit the
+ * route returns a 400 that says how long the message is; nothing is cut. An
+ * earlier turn in the history over `LIMITS.historyMessage` is refused with a
+ * 400 instead of being shortened. Off (the default), the route keeps the
+ * 4,000-character check, its wording and the history slice exactly as they
+ * are.
+ *
+ * The composer is a client component, so the browser reads
+ * `NEXT_PUBLIC_CHAT_LONG_MESSAGE_ENABLED`, written out statically for Next
+ * to inline. The server reads either spelling, so a deployment that sets
+ * only the public name never shows a 12,000 limit the route refuses.
+ */
+export function chatLongMessageEnabled(): boolean {
+  const inlined = process.env.NEXT_PUBLIC_CHAT_LONG_MESSAGE_ENABLED;
+  return (
+    envFlag("CHAT_LONG_MESSAGE_ENABLED") ||
+    envFlag("NEXT_PUBLIC_CHAT_LONG_MESSAGE_ENABLED") ||
+    (typeof inlined === "string" && ON.has(inlined.trim().toLowerCase()))
+  );
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -624,11 +770,22 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REMAP_INCIDENT_FIX_ENABLED",
   "PRIOR_ACTIONS_PARSE_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
+  "FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED",
   "ACTION_PLAN_MANAGER_ONLY_ENABLED",
   "KEEP_FORM_EMPLOYEE_ENABLED",
   "TITLE_WHOLE_WORD_ENABLED",
+  "EXIT_INTAKE_FIX_ENABLED",
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
   "FACSIMILE_ASK_ONLY_ENABLED",
   "TYPED_PRIOR_NOT_ON_FILE_ENABLED",
   "PAYROLL_FROM_THIS_FORM_ENABLED",
+  "REFORMAT_KEEPS_SOURCES_ENABLED",
+  "FRAMEWORK_GENERAL_SECTIONS_ENABLED",
+  "FORM_EDIT_DATE_RULES_ENABLED",
+  "QUESTION_NOT_FORM_ENABLED",
+  "DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED",
+  "RESIGN_METHOD_FOLLOWUP_ENABLED",
+  "FRAMEWORK_UNPIN_ENABLED",
+  "CHAT_LONG_MESSAGE_ENABLED",
+  "NEXT_PUBLIC_CHAT_LONG_MESSAGE_ENABLED",
 ] as const;

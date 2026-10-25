@@ -137,6 +137,8 @@ export function exitReady({ proposal, facts, details }: ExitReadyInput): string 
   const salon = proposal.locationId ? salonById(proposal.locationId) : undefined;
   if (salon) filled.push(`- **Store:** ${salon.name}`);
   filled.push("- **Date:** the day the draft is created");
+  // EXIT_INTAKE_FIX_ENABLED: the address the manager typed (`readPermanentAddress`).
+  if (details.permanentAddress) filled.push(`- **Permanent Address:** ${details.permanentAddress}`);
   for (const role of ROLE_ORDER) {
     const iso = facts[role];
     if (iso) filled.push(`- **${EXIT_ROLE_LABEL[role]}:** ${exitDateInWords(iso)}`);
@@ -174,7 +176,7 @@ export function exitReady({ proposal, facts, details }: ExitReadyInput): string 
   const blank: string[] = [];
   if (!proposal.employeeRole) blank.push("Job Title");
   if (!salon) blank.push("Store");
-  blank.push("Permanent Address");
+  if (!details.permanentAddress) blank.push("Permanent Address");
   const unsetDates = ROLE_ORDER.filter((role) => !facts[role]).map((role) => EXIT_ROLE_LABEL[role]);
   blank.push(...unsetDates);
   if (ticks.length === 0) blank.push("the Resignation Details boxes");

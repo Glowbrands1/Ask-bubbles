@@ -2,6 +2,7 @@ import { isPolicySourceSpan } from "@/lib/ai/employee-candidate-grounding";
 import { manualDisplayTitle, OFFICIAL_POLICY_MANUAL } from "@/lib/forms/official-policy-manual";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 
+import { isExitAnswerPhrase } from "./exit-answer-phrase";
 import { isNotAName } from "./not-a-name";
 
 /**
@@ -32,6 +33,8 @@ export function isNotAPersonCandidate(candidate: string): boolean {
   if (/^[A-Za-z]{2}$/.test(trimmed) && STATE_CODES.has(trimmed.toUpperCase())) return true;
   // NOT_A_NAME_GUARD_ENABLED: "blank", "require practice", a store's city.
   if (isNotAName(trimmed)) return true;
+  // EXIT_INTAKE_FIX_ENABLED: "items returned" is one of the exit form's answers.
+  if (isExitAnswerPhrase(trimmed)) return true;
   return isPolicySourceSpan(trimmed, policyTitles());
 }
 
