@@ -268,14 +268,14 @@ describe("10. an automatic re-sign-in into JB & Associates is detected before re
 
 /**
  * WORDING RETAINED FOR HR REVIEW, EXACTLY. Two lines of the migrated hiring
- * forms name the source company in a way that cannot be rebranded without
- * changing what they require (a tanning-services uniform condition; that
- * company's own core values). The business asked for them to be kept, unedited,
- * and flagged rather than rewritten. Only these exact strings are exempt.
+ * forms once named the source company (a tanning-services uniform condition;
+ * a core-values heading) and were kept, flagged, for the business to decide.
+ * Both are resolved, so nothing is exempt any more; a line added here must be
+ * one exact string the business asked to keep.
  */
 const RETAINED_FOR_REVIEW: readonly string[] = [
   // The prescreen's "…as part of your Sun Tan City uniform?" question was removed on 2026-10-19 (D14, Option A).
-  "Sun Tan City Core Values",
+  // "Sun Tan City Core Values" now reads "Core Values" (QA, 25 Oct 2026, QA-4; seed-sibling-brand.test.ts).
 ];
 
 function withoutRetainedForReview(text: string): string {
@@ -348,7 +348,8 @@ describe("11–12. production builds only the Buff City Soap connector", () => {
     expect(woven.map((n) => n.path)).toEqual([]);
   });
 
-  it("12. the source company's name survives only in the one hiring-form line still retained for HR review", () => {
+  // Expectation changed on purpose (QA, 25 Oct 2026): the last retained line is resolved, so no hiring-form line survives.
+  it("12. the source company's name survives in no hiring-form line (none is retained for HR review any more)", () => {
     const survivors = productionSources().flatMap(({ path, text }) =>
       RETAINED_FOR_REVIEW.filter((line) => text.includes(line)).map((line) => `${path}: ${line}`),
     );
