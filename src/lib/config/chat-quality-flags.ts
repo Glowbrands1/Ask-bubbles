@@ -1320,6 +1320,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
+  "EMPTY_REPLY_GUARD_ENABLED",
 ] as const;
 
 /**
@@ -4262,4 +4263,15 @@ export function failureToOpenIsLateOpeningEnabled(): boolean {
  */
 export function payrollBareSentenceEnabled(): boolean {
   return envFlag("PAYROLL_BARE_SENTENCE_ENABLED");
+}
+
+/**
+ * A turn never saves or shows a blank answer. A successful answer whose prose
+ * is empty after every post-processor, and which carries no form card, choice
+ * or update, is returned as an honest failure instead ("Bubbles could not
+ * produce an answer…"), so the thread shows an error card and the turn is
+ * closed as failed. Ported from Ask Sunny. Off, the answer is returned as it is.
+ */
+export function emptyReplyGuardEnabled(): boolean {
+  return envFlag("EMPTY_REPLY_GUARD_ENABLED");
 }
