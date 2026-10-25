@@ -180,12 +180,13 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
         ambiguous: false,
       }
     : groundWarning(choice?.warning ?? reading?.warningLevel ?? null, blob);
-  const formType = choiceStated
+  const formType: { key: string | null; ambiguous: readonly TemplateRow[]; together?: boolean } = choiceStated
     ? groundStatedForm(
         choice?.form ?? null,
         managerTurns(input),
         input.templates,
         saved.templateKey ? null : (reading?.formType ?? null),
+        saved.templateKey,
       )
     : groundForm(choice?.form ?? reading?.formType ?? null, blob, input.templates);
   const formTurn = Boolean(input.formInProgress || reading?.formTurn || formType.key || saved.templateKey);
@@ -281,21 +282,66 @@ function managerTurns(input: IntentTurnInput): string[] {
  * replaces the stored form. When no manager turn names a form, the stored
  * form stays, and only then does the model's formType count — read as a
  * template name, never from the blob.
+ *
+ * In a coaching conversation the model's formType never picks the Corrective
+ * Action Form; the manager asks for one in their own words ("create a CA", "a
+ * verbal warning", "write them up" — formNamedIn reads those). Ported from
+ * the sibling app (QA round 12, 25 Oct 2026): "Help me prepare for a coaching
+ * conversation." then "…not verifying documents are signed" was a Corrective
+ * Action card on every turn, though the manager only asked for coaching and
+ * a Policy Review.
+ *
+ * One turn carries one card. A turn that names two forms ("a coaching form
+ * and a policy review? I'd like to see both") asks which to start with; the
+ * manager answers with the form's name, and once a form is stored that
+ * earlier turn no longer asks.
  */
 function groundStatedForm(
   chosen: string | null,
   turns: readonly string[],
   templates: readonly TemplateRow[],
   modelForm: string | null,
-): { key: string | null; ambiguous: readonly TemplateRow[] } {
+  storedKey: string | null,
+): { key: string | null; ambiguous: readonly TemplateRow[]; together?: boolean } {
   const picked = chosen ? matchTemplates(chosen, templates) : [];
   if (picked.length === 1) return { key: picked[0]!.key, ambiguous: [] };
   for (let at = turns.length - 1; at >= 0; at -= 1) {
+    const several = formsNamedTogether(turns[at]!, templates);
+    if (several.length > 1) {
+      if (at < turns.length - 1 && storedKey) return { key: null, ambiguous: [] };
+      return { key: null, ambiguous: several, together: true };
+    }
     const key = formNamedIn(turns[at]!, templates);
     if (key) return { key, ambiguous: [] };
   }
   const typed = modelForm?.trim() ? matchTemplates(modelForm.trim(), templates) : [];
-  return { key: typed.length === 1 ? typed[0]!.key : null, ambiguous: [] };
+  const key = typed.length === 1 && !(typed[0]!.key === "dpoa" && coachingConversation(turns)) ? typed[0]!.key : null;
+  return { key, ambiguous: [] };
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED. The manager is talking about coaching ("a
+ * coaching conversation", "coach an employee") and mentions no coaching that
+ * already happened. The model's Corrective Action Form does not count here.
+ */
+function coachingConversation(turns: readonly string[]): boolean {
+  return turns.some((turn) => /\bcoach(?:ing)?\b/i.test(turn)) && !turns.some((turn) => mentionsEarlierCoaching(turn));
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED. The forms one turn asks for together: "a
+ * coaching form and a policy review", "a coaching form, plus a policy
+ * review". Each part is read on its own; fewer than two forms is none.
+ */
+function formsNamedTogether(text: string, templates: readonly TemplateRow[]): TemplateRow[] {
+  const parts = text.split(/,|&|\band\b|\bplus\b|\bas well as\b/i).filter((part) => part.trim() !== "");
+  if (parts.length < 2) return [];
+  const keys = new Set<string>();
+  for (const part of parts) {
+    const key = formNamedIn(part, templates);
+    if (key) keys.add(key);
+  }
+  return keys.size > 1 ? templates.filter((template) => keys.has(template.key)) : [];
 }
 
 /**
@@ -669,7 +715,7 @@ function clarificationFor(input: {
   date: { iso: string | null; ambiguous: readonly string[] };
   payrollAmount: string | null;
   warningLevel: { value: "verbal" | "written" | null; ambiguous: boolean };
-  formType: { key: string | null; ambiguous: readonly TemplateRow[] };
+  formType: { key: string | null; ambiguous: readonly TemplateRow[]; together?: boolean };
   state: ConversationFormState;
   people: readonly GroundedPerson[];
   stores: readonly StoreRow[];
@@ -680,6 +726,7 @@ function clarificationFor(input: {
   }
   if (input.store.ambiguous.length > 1) return storeQuestion(input.store.ambiguous);
   if (input.date.ambiguous.length > 1) return dateQuestion(input.date.ambiguous);
+  if (input.formType.ambiguous.length > 1 && input.formType.together) return startWithQuestion(input.formType.ambiguous);
   if (input.formType.ambiguous.length > 1) return formQuestion(input.formType.ambiguous);
   if (input.warningLevel.ambiguous) {
     return "Which warning level did you mean? Reply with the number.\n1. **verbal**\n2. **written**";
@@ -736,6 +783,16 @@ function dateQuestion(dates: readonly string[]): string {
 function formQuestion(templates: readonly TemplateRow[]): string {
   const options = templates.map((template, index) => `${index + 1}. **${template.name}**`);
   return `Which form did you mean? Reply with the number or the form.\n${options.join("\n")}`;
+}
+
+/**
+ * FORM_CHOICE_STATED_ENABLED: two forms asked for in one turn; one card at a
+ * time. The same question the full remap asks, answered with the form's name.
+ */
+function startWithQuestion(templates: readonly TemplateRow[]): string {
+  const names = templates.map((template) => `the **${template.name}**`);
+  const choices = names.length === 2 ? names.join(" or ") : `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`;
+  return `Which form should I start with — ${choices}? I'll draft one at a time; ask for the other once this one is done.`;
 }
 
 export function personDetail(person: GroundedPerson, stores: readonly StoreRow[]): string | null {

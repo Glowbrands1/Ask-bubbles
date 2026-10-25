@@ -293,6 +293,34 @@ beforeEach(async () => {
   await ensureTemplateLibrary("system");
 });
 
+
+/* ------------------------------------- QA round 12 (sibling app), 25 Oct -- */
+
+/**
+ * The sibling app's conv_mvnmetao241awxn, with this app's wording (Team
+ * Member, this app's own documents); nobody was named. The sibling app gave
+ * a Corrective Action card on T2–T5. The models' readings were not recorded;
+ * here they copy "Corrective Action Form" from T2 on, as the sibling app's
+ * trace read.
+ */
+const PREPARE = "Help me prepare for a coaching conversation.";
+const NOT_VERIFYING = "I have a Team Member that is not verifying documents are signed";
+const BOTH_FORMS = "Can you create a coaching form and a policy review? I'd like to see both";
+const START_WITH = /^Which form should I start with — the \*\*Coaching Form\*\* or the \*\*Policy Review\*\*\?/;
+const CA_COPIED = { formType: "Corrective Action Form", formTurn: true };
+const ROUND_12: LiveTurn[] = [
+  { question: PREPARE, intent: { formType: null, formTurn: false }, remap: { templateKey: null } },
+  { question: NOT_VERIFYING, intent: CA_COPIED, remap: { templateKey: "dpoa" } },
+  { question: "The register count sheet and the refund receipts", intent: CA_COPIED, remap: { templateKey: "dpoa" } },
+  { question: BOTH_FORMS, intent: CA_COPIED, remap: { templateKey: "dpoa" } },
+  {
+    question: "Can you make it generic so if the problem occurs elsewhere it can be used for any Team Member?",
+    intent: CA_COPIED,
+    remap: { templateKey: "dpoa" },
+  },
+];
+const PICK_COACHING: LiveTurn = { question: "The coaching form", intent: CA_COPIED, remap: { templateKey: "dpoa" } };
+
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllEnvs();
@@ -423,6 +451,40 @@ describe("FORM_CHOICE_STATED_ENABLED: the form the manager named wins (ported fr
     });
   });
 
+  describe("QA round 12: a coaching conversation is never a Corrective Action", () => {
+    beforeEach(() => vi.stubEnv("FORM_CHOICE_STATED_ENABLED", "true"));
+
+    it("full remap: no turn is the Corrective Action Form, and both forms asks which to start with", () => {
+      const { keys, contents } = remapPath(ROUND_12, []);
+      expect(keys).not.toContain("dpoa");
+      expect(keys[3]).toBeNull();
+      expect(contents[3]).toMatch(START_WITH);
+    });
+
+    it("full remap: after a coaching conversation, the model's dpoa alone is not the Corrective Action Form", () => {
+      const prepare = [{ role: "user", content: "I need to coach a Team Member" }];
+      const { slots, response } = groundFormSlots({ raw: { templateKey: "dpoa" }, history: prepare, question: NOT_VERIFYING, today: TODAY, people: [] });
+      expect(slots.templateKey).toBeNull();
+      expect(response.formProposal).toBeUndefined();
+      // Coaching that already happened is an escalation: the model's form still counts.
+      const coached = [{ role: "user", content: "I coached her last week about this" }];
+      expect(groundFormSlots({ raw: { templateKey: "dpoa" }, history: coached, question: NOT_VERIFYING, today: TODAY, people: [] }).slots.templateKey).toBe("dpoa");
+    });
+
+    it("full remap: the form named after the question is the card, and it stays", () => {
+      const { keys } = remapPath([...ROUND_12.slice(0, 4), PICK_COACHING, ROUND_12[4]!], []);
+      expect(keys.slice(4)).toEqual(["coaching", "coaching"]);
+    });
+
+    it("intent read: no turn is the Corrective Action Form, and both forms asks which to start with", async () => {
+      const { keys, clarifications } = await intentPath(ROUND_12, []);
+      expect(keys).not.toContain("dpoa");
+      expect(clarifications[3]).toMatch(START_WITH);
+      const picked = await intentPath([...ROUND_12.slice(0, 4), PICK_COACHING, ROUND_12[4]!], []);
+      expect(picked.keys.slice(4)).toEqual(["coaching", "coaching"]);
+    });
+  });
+
   describe("off, as before", () => {
     it("the intent read took the form from the assistant's Corrective Action Form", async () => {
       const { keys } = await intentPath(PERFORMANCE_TURNS, PERFORMANCE_REPLIES);
@@ -437,6 +499,14 @@ describe("FORM_CHOICE_STATED_ENABLED: the form the manager named wins (ported fr
         "follow-up-coaching",
       ]);
       expect((await intentPath(COACH_TURNS, COACH_REPLIES)).saved?.templateKey).toBe("follow-up-coaching");
+    });
+
+    it("QA round 12: the model's Corrective Action Form was the card, and both forms showed one", async () => {
+      expect(remapPath(ROUND_12, []).keys[1]).toBe("coaching");
+      const prepare = [{ role: "user", content: "I need to coach a Team Member" }];
+      expect(groundFormSlots({ raw: { templateKey: "dpoa" }, history: prepare, question: NOT_VERIFYING, today: TODAY, people: [] }).slots.templateKey).toBe("dpoa");
+      expect(remapPath(ROUND_12, []).keys[3]).toBe("policy-review");
+      expect((await intentPath(ROUND_12, [])).keys[1]).toBe("dpoa");
     });
 
     it("a stored Disciplinary Action line made a coaching request a Corrective Action", () => {
