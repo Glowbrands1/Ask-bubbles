@@ -50,6 +50,7 @@ import { withBareAnswerBinding } from "./bare-answer-guard";
 import { withManagerFormChoice } from "./manager-form-choice";
 import { withStoreAliases } from "./store-alias";
 import { withNameRespell } from "./name-respell";
+import { withCardNeverSilent } from "./card-never-silent";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";
