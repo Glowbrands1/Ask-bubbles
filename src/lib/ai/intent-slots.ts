@@ -10,10 +10,13 @@ import {
   managerWordsOnlyEnabled,
   notANameGuardEnabled,
   warningLevelManagerOnlyEnabled,
+  caTemplateMapEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { extractJobTitle } from "@/lib/forms/proposal";
 import { lateOpenOn, newestStatedDate, withYearlessDatesWritten } from "@/lib/forms/late-open";
+import { correctiveActionBasis } from "@/lib/forms/corrective-action-intake";
+import { detectTemplateIntent } from "@/lib/forms/template-intent";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -208,7 +211,10 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
         ambiguous: false,
       }
     : groundWarning(choice?.warning ?? reading?.warningLevel ?? null, blob);
-  const formType = groundForm(choice?.form ?? reading?.formType ?? null, blob, input.templates);
+  const formType = groundForm(choice?.form ?? reading?.formType ?? null, blob, input.templates, {
+    question: input.question,
+    managerText: managerBlob(input),
+  });
   const formTurn = Boolean(input.formInProgress || reading?.formTurn || formType.key || saved.templateKey);
 
   let state = mergeSlots(saved, {
@@ -590,15 +596,44 @@ function groundForm(
   typed: string | null,
   blob: string,
   templates: readonly TemplateRow[],
+  turn?: { readonly question: string; readonly managerText: string },
 ): { key: string | null; ambiguous: readonly TemplateRow[] } {
   const probed = typed?.trim() || null;
   const fromTyped = probed ? matchTemplates(probed, templates) : [];
   if (fromTyped.length === 1) return { key: fromTyped[0]!.key, ambiguous: [] };
   if (fromTyped.length > 1) return { key: null, ambiguous: fromTyped };
+  const requested = turn && caTemplateMapEnabled() ? correctiveActionRequestKey(turn, templates) : null;
+  if (requested) return { key: requested, ambiguous: [] };
   const fromText = templates.filter((template) => blob.toLowerCase().includes(template.name.toLowerCase()));
   if (fromText.length === 1) return { key: fromText[0]!.key, ambiguous: [] };
   if (fromText.length > 1) return { key: null, ambiguous: fromText };
   return { key: null, ambiguous: [] };
+}
+
+/** The Corrective Action Form's library key; the template reader names it the same way. */
+const CORRECTIVE_ACTION_KEY = "dpoa";
+
+/**
+ * CA_TEMPLATE_MAP_ENABLED (QA F4, 24 Oct 2026). "create a Verbal CA for …",
+ * "I need a CA for someone opening the store late": this turn asks for a
+ * corrective action to be started. With no model reading, only a template
+ * name typed in full was kept, so the slot stayed empty. The form that
+ * records it is the published Corrective Action Form, whether the template
+ * reader calls the request the progression ("verbal CA") or the form itself
+ * ("CA for …"). A question about corrective action starts nothing, and a
+ * metric with no behaviour is the progression, as the form proposal reads it.
+ */
+function correctiveActionRequestKey(
+  turn: { readonly question: string; readonly managerText: string },
+  templates: readonly TemplateRow[],
+): string | null {
+  const intent = detectTemplateIntent(turn.question);
+  const asked =
+    (intent.kind === "corrective_action" && intent.requestedCreation) ||
+    (intent.kind === "explicit" && intent.templateKey === CORRECTIVE_ACTION_KEY);
+  if (!asked) return null;
+  if (correctiveActionBasis(turn.managerText) === "metric_only") return null;
+  return templates.some((template) => template.key === CORRECTIVE_ACTION_KEY) ? CORRECTIVE_ACTION_KEY : null;
 }
 
 function matchTemplates(typed: string, templates: readonly TemplateRow[]): TemplateRow[] {
