@@ -592,6 +592,18 @@ export function frameworkGeneralSectionsEnabled(): boolean {
   return envFlag("FRAMEWORK_GENERAL_SECTIONS_ENABLED");
 }
 
+/**
+ * A question is answered, never routed into a form (P0, live replay 25 Oct
+ * 2026: "what policy does that fall under?" was written into the open card's
+ * What happened). On, a turn `question-not-form.ts` reads as a question skips
+ * the slot reader, the remap, the proposal and the open-form correction and
+ * revision paths, and is answered. Off, every turn is routed as before. The
+ * same flag as in the sibling app.
+ */
+export function questionNotFormEnabled(): boolean {
+  return envFlag("QUESTION_NOT_FORM_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -650,4 +662,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REFORMAT_KEEPS_SOURCES_ENABLED",
   "FRAMEWORK_GENERAL_SECTIONS_ENABLED",
   "FORM_EDIT_DATE_RULES_ENABLED",
+  "QUESTION_NOT_FORM_ENABLED",
 ] as const;

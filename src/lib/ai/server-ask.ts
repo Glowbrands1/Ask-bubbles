@@ -48,6 +48,7 @@ import { deliverFormProposal } from "./grounded-turn";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";
+import { isQuestionNotForm } from "./question-not-form";
 import { pinnedManualBlock, printedPageFromRetrieval } from "./policy-citation-fields";
 import { recallMemory, rememberFact } from "./chat-memory-store";
 import { finishChatTrace, openChatTrace, redactTraceText } from "./chat-trace";
@@ -78,6 +79,7 @@ import {
   reformatKeepsSourcesEnabled,
   crossChatReplyGuardEnabled,
   manualNegatedListNoteEnabled,
+  questionNotFormEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -211,7 +213,19 @@ async function answerQuestionCore(
     throw new AiError("not_configured", readiness.problems.join(" "), 503);
   }
 
-  if (intentExtractionEnabled()) {
+  /*
+   * A QUESTION IS NEVER A FORM TURN (P0, live replay 25 Oct 2026). "what
+   * policy does that fall under?" with a card open was written into What
+   * happened, and "employee has been late twice. should i do a coaching or
+   * corrective action" became a card filled from the turn before it. A
+   * question skips the slot reader, the remap and the proposal and is
+   * answered; an inventory question is still answered from the library, and an
+   * open card is left as it was. A create or edit request, however it is
+   * phrased, is not a question. See `question-not-form.ts`. Behind
+   * QUESTION_NOT_FORM_ENABLED; off, every turn is routed as before.
+   */
+  const askedQuestion = questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
+  if (intentExtractionEnabled() && !askedQuestion) {
     const prepared = await applyIntentExtraction({ request, actor });
     if (prepared.clarification) return prepared.clarification;
     request = prepared.request;
@@ -301,6 +315,7 @@ async function answerQuestionCore(
       .entries.filter((entry) => !entry.published)
       .map((entry) => entry.templateKey);
     if (
+      !askedQuestion &&
       formFullRemapEnabled() &&
       remapShouldRun({
         question: request.question,
@@ -355,7 +370,7 @@ async function answerQuestionCore(
     const readManual = () =>
       (manualRead ??= new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId));
     const proposalQuestion = await questionForProposal(request, actor);
-    const proposal = await deliverFormProposal({
+    const proposal = askedQuestion ? null : await deliverFormProposal({
       request,
       actor,
       question: proposalQuestion,
@@ -422,7 +437,8 @@ async function answerQuestionCore(
   if (formToolsEnabled() && !formsTurn) {
     const roster = slotRetentionEnabled() ? await loadRosterQuiet(actor) : [];
     const stored = await storedFields(request, actor);
-    const understood = await understandFormTurn({
+    // A question is answered, never read as a form command (`question-not-form.ts`).
+    const understood = askedQuestion ? null : await understandFormTurn({
       question: request.question,
       history: request.history,
       today: request.context.todayIso,
