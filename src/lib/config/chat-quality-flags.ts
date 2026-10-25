@@ -26,6 +26,17 @@ export function hybridSearchEnabled(): boolean {
 }
 
 /** Haiku reading of a short follow-up before retrieval. */
+/**
+ * A follow-up that names its own documents or nouns ("The I-9 and W-4
+ * forms, direct deposit agreements") is searched on them when the
+ * retrieval rewrite kept none of them and searched only the earlier turn's
+ * subject ("Employment Verification"). Off, the rewritten query is searched
+ * as it is. Same name in both apps. Default off.
+ */
+export function followupNewTopicRetrievalEnabled(): boolean {
+  return envFlag("FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED");
+}
+
 export function queryRewriteEnabled(): boolean {
   return envFlag("QUERY_REWRITE_ENABLED");
 }
@@ -590,6 +601,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REMAP_INCIDENT_FIX_ENABLED",
   "PRIOR_ACTIONS_PARSE_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
+  "FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED",
   "ACTION_PLAN_MANAGER_ONLY_ENABLED",
   "KEEP_FORM_EMPLOYEE_ENABLED",
   "TITLE_WHOLE_WORD_ENABLED",

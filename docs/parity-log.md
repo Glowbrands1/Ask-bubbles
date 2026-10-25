@@ -6,6 +6,19 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 25 Oct 2026: a follow-up that names its own documents is searched on them — ported from Ask Sunny (a47bf19)
+
+`FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED` defaults off, same name in both apps.
+Found in Ask Sunny (QA Round 17, conv_mvo0ayai2x20aiy): a follow-up naming
+new documents was searched on the earlier turn's subject. This app's
+`rewriteRetrievalQuery` also reads the earlier turn and can do the same. On,
+after the rewrite, a turn that names two or more words no earlier manager
+turn used keeps the rewritten query only when it still has one of them;
+otherwise the turn is searched as typed. The test is a neutral store/HR
+case ("The I-9 and W-4 forms, direct deposit agreements"; the rewrite stubbed
+with this manual's Employment Verification heading): none of the sibling's
+documents or wording were copied.
+
 ## 25 Oct 2026: the job title is a title the manager stated — ported from Ask Sunny (PR 188)
 
 Ask Sunny PR 188 (`59fe1ca`, the same patch as `517992a`) is the title rule
