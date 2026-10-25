@@ -66,6 +66,7 @@ import {
   policyCitationEnabled,
   priorCoachingOptionalEnabled,
   queryRewriteEnabled,
+  followupNewTopicRetrievalEnabled,
   reportBreakdownEnabled,
   intentExtractionEnabled,
   retrievalRecallEnabled,
@@ -93,6 +94,7 @@ import { incidentFingerprint } from "@/lib/forms/incident-key";
 import { prepareLongContext } from "./long-context-claude";
 import { applyOptionalPriorCoaching } from "./prior-coaching-optional";
 import { rewriteRetrievalQuery } from "./query-rewrite-claude";
+import { followUpOwnQuery } from "./query-rewrite";
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
 import { matchRecallKnowledge } from "@/lib/knowledge/recall-match";
 import { withMappedPolicy } from "./violation-policy";
@@ -634,7 +636,7 @@ async function answerQuestionCore(
    * See `slot-only-turn.ts`.
    */
   const slotTopic = slotOnlyRetrievalTopic(request.question, request.history);
-  const retrievalQuestion = slotTopic
+  const rewrittenQuestion = slotTopic
     ? slotTopic
     : queryRewriteEnabled()
       ? await rewriteRetrievalQuery({
@@ -643,6 +645,20 @@ async function answerQuestionCore(
           fallback: request.question,
         })
       : request.question;
+  /*
+   * FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED: a follow-up that names documents of
+   * its own is searched on them when the rewrite kept only the earlier
+   * subject (ported from the sibling app, QA Round 17). See `followUpOwnQuery`.
+   */
+  const retrievalQuestion =
+    followupNewTopicRetrievalEnabled() && !slotTopic
+      ? followUpOwnQuery({
+          question: request.question,
+          history: request.history,
+          rewritten: rewrittenQuestion,
+          ownWords: request.question,
+        })
+      : rewrittenQuestion;
   updateChatTrace({ rewrittenQuery: retrievalQuestion === request.question ? null : retrievalQuestion });
   const plan = retrievalPlanFor({
     question: retrievalQuestion,
