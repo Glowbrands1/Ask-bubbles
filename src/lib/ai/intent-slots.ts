@@ -207,7 +207,7 @@ export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
  * procedure itself, never the policy an offense broke. A stored one wrote
  * "Policy reference: Disciplinary Action" ahead of the turn, and its alias
  * picked the Corrective Action Form over the form the manager asked for
- * (ported from Ask Sunny, QA 24 Oct 2026).
+ * (ported from the sibling app, QA 24 Oct 2026).
  */
 function isDisciplineProcedure(heading: string | null | undefined): boolean {
   return Boolean(heading) && /^disciplinary actions?(?: policy)?$/.test(headingKey(heading!));

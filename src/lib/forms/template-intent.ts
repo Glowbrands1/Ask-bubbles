@@ -1283,7 +1283,7 @@ const DECLINES_FORM =
  * Policy Manual p.14." is the stored policy written ahead of the turn, not a
  * form the manager asked for. Its "disciplinary action" is a Corrective Action
  * alias, and it beat "Create a coaching form" on the list's order (ported
- * from Ask Sunny, QA 24 Oct 2026). Here it names no form.
+ * from the sibling app, QA 24 Oct 2026). Here it names no form.
  */
 const POLICY_REFERENCE_LINE = /\bPolicy reference:[^\n]*?JBA Policy Manual(?:\s+p\.\s*\d+)?\.?/gi;
 

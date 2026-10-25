@@ -341,7 +341,7 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
  * first. The model's formType, the assistant's "**Corrective Action Form**"
  * and the state lines never pick it, and a "Policy reference:" line is not a
  * form request. "Disciplinary Action" (the discipline procedure) is never the
- * violated policy. Ported from Ask Sunny (QA, 24 Oct 2026: coaching and
+ * violated policy. Ported from the sibling app (QA, 24 Oct 2026: coaching and
  * Policy Review requests became a Corrective Action). Off, the form is read
  * as before.
  */
