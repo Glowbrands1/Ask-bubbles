@@ -284,6 +284,7 @@ async function answerQuestionBody(
         question: request.question,
         history: request.history,
         formsTurn,
+        continueTemplateKey: request.continueProposalTemplateKey ?? null,
       })
     ) {
       const roster = await loadRosterQuiet(actor);
