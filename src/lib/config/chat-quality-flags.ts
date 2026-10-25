@@ -376,6 +376,36 @@ export function crossChatReplyGuardEnabled(): boolean {
   return envFlag("CROSS_CHAT_REPLY_GUARD_ENABLED");
 }
 
+/**
+ * The form's employee stays the employee. A person the manager's account
+ * mentions ("onboarding with new hire Test Newhire") does not replace them on
+ * a later turn, and a bare first name ("test") keeps the fuller name already
+ * on the form (ported from the sibling app, QA round 10). Here: the full
+ * remap's own name reading, used when the model's name is not in the
+ * manager's words, sets the employee from a passing mention only when there
+ * is none yet. And the name the manager typed is the employee: "for Test
+ * Employee" is Test Employee, not "Test" ("Employee" is a form word to the
+ * name readers), on the full remap, the proposal flow and the intent reading
+ * (ported from the sibling app, QA 25 Oct 2026). A lower-case "an employee"
+ * or "my employee" is still nobody's name. Off, the latest name read wins
+ * and the name is read as before.
+ */
+export function keepFormEmployeeEnabled(): boolean {
+  return envFlag("KEEP_FORM_EMPLOYEE_ENABLED");
+}
+
+/**
+ * A directory title counts as stated only as a whole word, and a short
+ * all-capitals title only as the manager typed it ("1 hr late" is an hour).
+ * A title the slot model typed is kept only when the manager's words carry
+ * it. Ported from the sibling app (QA round 10, where "throught the rest"
+ * contained a two-letter directory title). Off, the intent reading grounds
+ * the title as before.
+ */
+export function titleWholeWordEnabled(): boolean {
+  return envFlag("TITLE_WHOLE_WORD_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -417,4 +447,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
   "NOT_A_NAME_GUARD_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
+  "KEEP_FORM_EMPLOYEE_ENABLED",
+  "TITLE_WHOLE_WORD_ENABLED",
 ] as const;
