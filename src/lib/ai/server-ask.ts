@@ -75,6 +75,7 @@ import {
   formFullRemapEnabled,
   fullManualContextEnabled,
   crossChatReplyGuardEnabled,
+  manualNegatedListNoteEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -102,6 +103,7 @@ import { resolveChatEntities } from "./entity-facts";
 import { proposeFormForTurn, suggestFormsForTurn, type ChatActor } from "./form-proposal";
 import { rowsForQuestion } from "@/lib/knowledge/credential-redaction";
 import { assembleGrounding } from "./grounding-assembly";
+import { withManualReadingNotes } from "./manual-reading-notes";
 import {
   citePolicyAnswer,
   fullManualGroundingNote,
@@ -841,13 +843,22 @@ async function answerQuestionCore(
           .map((chunk) => `[S${chunk.marker}] ${chunk.documentTitle}${chunk.locator ? ` — ${chunk.locator}` : ""}\n${chunk.content}`)
           .join("\n\n---\n\n")}`
       : null;
-  const groundingText = [
+  /*
+   * A reading note beside a manual sentence a reply read backwards (p.19's
+   * list of places a phone may not be). It goes in this per-turn block, not
+   * in the cached manual, so the prefix and its cache key stay the same.
+   */
+  const readingNotes = manualNegatedListNoteEnabled();
+  const groundingParts = [
     useManual && manualPlan ? fullManualGroundingNote(manualPlan) : buildGroundingBlock(grounding),
     supplementalText,
     useManual ? null : pinnedPolicy,
   ]
     .filter((part) => part && part.length > 0)
     .join("\n\n");
+  const groundingText = readingNotes
+    ? withManualReadingNotes(groundingParts, useManual ? manualPlan?.cachedBlock : null)
+    : groundingParts;
   updateChatTrace({
     retrievalCount: rows.length,
     retrieved: rows.slice(0, 20).map((row) => ({
@@ -897,7 +908,10 @@ async function answerQuestionCore(
        * Ordinary retrieval is the same path the flag-off turn already uses.
        */
       fellBack = true;
-      const fallbackGrounding = [buildGroundingBlock(retrievalChunks), pinnedPolicy, dataAddition.help]
+      const fallbackParts = [buildGroundingBlock(retrievalChunks), pinnedPolicy]
+        .filter((part) => part && part.length > 0)
+        .join("\n\n");
+      const fallbackGrounding = [readingNotes ? withManualReadingNotes(fallbackParts) : fallbackParts, dataAddition.help]
         .filter((part) => part && part.length > 0)
         .join("\n\n");
       answer = await callClaude({ ...claudeBase, grounding: fallbackGrounding });
