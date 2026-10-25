@@ -756,7 +756,9 @@ describe(`BH5 (${DATE_FLAG}): an incident date in the future is asked about once
     expect(withFutureDateQuestion(asResponse, { today: TODAY, history: [] })).toBe(asResponse);
     process.env[DATE_FLAG] = "true";
     const on = await new Thread().say(BH5);
-    expect(on.formProposal).toEqual(off.formProposal);
+    // Changed on purpose: since main's #143 every remap card gets its own proposal id, so two
+    // separate runs never share one; every other field of the card must be the same.
+    expect({ ...on.formProposal, proposalId: null }).toEqual({ ...off.formProposal, proposalId: null });
     expect(on.content).toBe(FUTURE);
   });
 
