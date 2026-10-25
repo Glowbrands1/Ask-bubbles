@@ -709,6 +709,16 @@ export function remapDraftSourcesClientEnabled(): boolean {
   return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
 }
 
+/**
+ * The form's date is the incident date the manager stated, or the day the
+ * form is created — never a deadline, due date, assignment date, prior-action
+ * date or a "by <date>" (Pau's coordinator, 25 Oct 2026, D3). Off, the date
+ * readers keep main's reading.
+ */
+export function formDateIncidentOnlyEnabled(): boolean {
+  return envFlag("FORM_DATE_INCIDENT_ONLY_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -776,4 +786,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_CHAT_LONG_MESSAGE_ENABLED",
   "REMAP_DRAFT_SOURCES_ENABLED",
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
+  "FORM_DATE_INCIDENT_ONLY_ENABLED",
 ] as const;
