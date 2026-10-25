@@ -30,7 +30,7 @@ import { loadFullManualPlan } from "@/lib/knowledge/full-manual-load";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { RoleGrounding } from "@/lib/knowledge/role-grounding";
 import { recallPeople } from "@/lib/chat/person-memory-store";
-import { refersBack, withoutCrossChatClaims } from "@/lib/chat/cross-chat-guard";
+import { asksAboutRecords, refersBack, withoutCrossChatClaims } from "@/lib/chat/cross-chat-guard";
 import { reportById, routeReportQuestion } from "@/lib/reporting/registry";
 import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
@@ -476,7 +476,11 @@ async function answerQuestionBody(
         conversationId: request.conversationId,
         userName: request.context.userName,
         ...(crossChatGuard
-          ? { crossChatGuard: true, roster: () => loadScopedRoster(actor.scope) }
+          ? {
+              crossChatGuard: true,
+              roster: () => loadScopedRoster(actor.scope),
+              todayIso: request.context.todayIso,
+            }
           : {}),
       })
     : Promise.resolve(null);
@@ -489,12 +493,22 @@ async function answerQuestionBody(
    * screen applies — see `chat-form-records.ts`. Never rejects: a failed read
    * becomes a block that says so.
    */
-  const formRecordsPromise = isFormRecordsQuestion(request.question)
+  /*
+   * CROSS_CHAT_REPLY_GUARD_ENABLED: the register is read for a QUESTION about
+   * records ("does she have previous coachings?") or a refer-back, not for a
+   * form request that mentions history ("do verbal for team member … previous
+   * coaching jba manual 11-1-26"), and each row says who created it.
+   */
+  const readsFormRecords =
+    isFormRecordsQuestion(request.question) &&
+    (!crossChatGuard || asksAboutRecords(request.question) || refersBack(request.question, request.history));
+  const formRecordsPromise = readsFormRecords
     ? loadFormRecords({
         actor,
         question: request.question,
         previousQuestion: previousManagerTurn(request),
         today: request.context.todayIso,
+        ...(crossChatGuard ? { markCreator: true } : {}),
       })
     : Promise.resolve(null);
 

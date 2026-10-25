@@ -353,7 +353,7 @@ describe("recallPeople with the cross-chat guard", () => {
     expect(await recall("Wren Calder", { ...guarded, history })).toContain("> Wren Calder was late again last week");
   });
 
-  it("still lists a form on file, as a record, and labels the block", async () => {
+  it("lists a form on file only when the manager refers back, labelled as a record", async () => {
     conversation({ createdAt: "2026-10-23T20:46:08Z", turns: [SITUATION, "create coaching form for wren calder"] });
     db.tables.form_instances!.push({
       employee_name: "Wren Calder",
@@ -365,11 +365,48 @@ describe("recallPeople with the cross-chat guard", () => {
       form_templates: { name: "Coaching Form" },
     });
 
-    const block = await recall(SITUATION, guarded);
+    // Changed on purpose (QA follow-up, 25 Oct): forms from other
+    // conversations stay out too unless the manager refers back. The first
+    // version of this guard still listed them.
+    expect(await recall(SITUATION, guarded)).toBeNull();
 
+    const block = await recall("what about her earlier CA? Wren Calder", guarded);
     expect(block).toContain("- Coaching Form for Wren Calder — dated 2026-10-23, draft, not finalized");
     expect(block).toContain("records from OTHER conversations");
-    expect(block).not.toContain("Earlier conversation,");
+    expect(block).toContain("a form discussed, requested or proposed in an earlier conversation was not created");
+  });
+
+  it("A2: 'Her name is Test Employee' after 'I need to coach an employee' recalls nothing, and asks nothing of the database", async () => {
+    conversation({ createdAt: "2026-10-22T15:00:00Z", turns: ["verbal CA for Test Employee, late to open 10-22, no payroll"] });
+    conversation({ createdAt: "2026-10-23T15:05:51Z", turns: ["CA for Test Employee at Kearney, out of dress code 10/11"] });
+    const history = [
+      { role: "user", content: "I need to coach an employee" },
+      { role: "assistant", content: "Happy to help you build this out. What did you observe?" },
+    ];
+
+    // Production today: both chats are quoted.
+    expect(await recall("Her name is Test Employee", { history })).toContain("Kearney");
+
+    db.queries = 0;
+    expect(await recall("Her name is Test Employee", { ...guarded, history })).toBeNull();
+    expect(db.queries).toBe(0);
+  });
+
+  it("A1: another chat from this same day is not quoted, even when the manager refers back (ported same-day skip)", async () => {
+    conversation({
+      createdAt: "2026-10-24T13:00:00Z",
+      turns: ["CA for Test Employee at Grand Island, late to open 10-19, verbal, no payroll"],
+    });
+    conversation({ createdAt: "2026-10-12T15:05:51Z", turns: ["CA for Test Employee at Kearney, out of dress code 10/11"] });
+    const asked = "Test Employee at Grand Island was out of dress code again on 10-18, no name tag and wrong shirt";
+
+    // Production today: the same-day chat is quoted ("You told me earlier today…").
+    expect(await recall(asked, { todayIso: "2026-10-24" })).toContain("late to open 10-19");
+
+    const block = await recall(asked, { ...guarded, todayIso: "2026-10-24" });
+    expect(block).toContain("CA for Test Employee at Kearney, out of dress code 10/11");
+    expect(block).not.toContain("late to open 10-19");
+    expect(block).not.toContain("2026-10-24");
   });
 
   it("quotes the earlier chat when the manager refers back to it", async () => {
