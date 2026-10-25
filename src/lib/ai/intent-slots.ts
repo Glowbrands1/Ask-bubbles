@@ -5,7 +5,7 @@ import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manual";
 import { namesHeading } from "@/lib/forms/named-policy-section";
 import { payrollDeductAmount, payrollDeductFromConversation, type PayrollDeductAnswer } from "@/lib/forms/payroll-deduct";
-import { intentPayrollManagerOnlyEnabled, warningLevelManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { intentPayrollManagerOnlyEnabled, titleWholeWordEnabled, warningLevelManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
 
 import {
   EMPTY_CONVERSATION_FORM_STATE,
@@ -14,6 +14,7 @@ import {
   type ConversationFormState,
 } from "./form-state";
 import type { GroundedPerson } from "./grounded-entities";
+import { titleInWords } from "./title-in-words";
 
 /**
  * Slots read off one turn, then kept only when the roster, the store list,
@@ -398,14 +399,21 @@ function groundTitle(
 ): string | null {
   if (person?.title) return person.title;
   const titles = [...new Set(people.map((row) => row.title).filter((title): title is string => Boolean(title?.trim())))];
-  const probe = typed?.trim() || null;
+  // TITLE_WHOLE_WORD_ENABLED: a directory title is stated only as a whole
+  // word in the conversation, and a title the model typed only when the
+  // words carry it (see `titleInWords`).
+  const wholeWord = titleWholeWordEnabled();
+  const inWords = (title: string) => !wholeWord || titleInWords(title, blob);
+  const probe = typed?.trim() && inWords(typed.trim()) ? typed.trim() : null;
   if (probe) {
-    const hit = titles.find((title) => title.toLowerCase() === probe.toLowerCase());
+    const hit = titles.find((title) => title.toLowerCase() === probe.toLowerCase() && inWords(title));
     if (hit) return hit;
     const close = titles.filter((title) => editDistance(title.toLowerCase(), probe.toLowerCase()) <= 1);
     if (close.length === 1) return close[0]!;
   }
-  const inText = titles.filter((title) => blob.toLowerCase().includes(title.toLowerCase()));
+  const inText = titles.filter((title) =>
+    wholeWord ? titleInWords(title, blob) : blob.toLowerCase().includes(title.toLowerCase()),
+  );
   return inText.length === 1 ? inText[0]! : null;
 }
 

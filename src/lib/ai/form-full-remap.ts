@@ -1,7 +1,7 @@
 import "server-only";
 
 import { CLAUDE_HAIKU_MODEL } from "@/lib/config/models";
-import { formFullRemapEnabled, warningLevelManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { formFullRemapEnabled, keepFormEmployeeEnabled, warningLevelManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { CA_POLICY_LABEL, readCaPolicy } from "@/lib/forms/ca-policy";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
 import { listIncidentDates } from "@/lib/forms/form-date-answer";
@@ -114,7 +114,7 @@ export function groundFormSlots(input: {
     templateFromUser(said) ??
     (isTemplate(input.continueTemplateKey) ? input.continueTemplateKey : null) ??
     (isTemplate(raw.templateKey) ? raw.templateKey : null);
-  const employeeName = groundedName(raw.employeeName, users);
+  const employeeName = groundedName(raw.employeeName, users, input.saved?.employeeName ?? null);
   const jobTitle = groundedTitle(users);
   const store = groundedStore(said);
   const incidentDateIso = groundedDate(said, input.today);
@@ -350,21 +350,69 @@ function templateFromUser(text: string): TemplateKey | null {
   return null;
 }
 
-function groundedName(proposed: string | null, turns: readonly string[]): string | null {
+function groundedName(proposed: string | null, turns: readonly string[], saved: string | null = null): string | null {
   const said = turns.join("\n");
   const latest = turns.at(-1) ?? "";
+  const keep = keepFormEmployeeEnabled();
   if (proposed) {
     const inLatest = exactSlice(latest, proposed);
-    if (inLatest) return inLatest;
+    if (inLatest) return keep ? fullerOfSame(saved, inLatest) : inLatest;
     const inSaid = exactSlice(said, proposed);
-    if (inSaid) return inSaid;
+    if (inSaid) return keep ? fullerOfSame(saved, inSaid) : inSaid;
   }
+  if (keep) return keptEmployee(turns, saved);
   let found: string | null = null;
   for (const turn of turns) {
     const person = personPhrase(turn);
     if (person) found = person;
   }
   return found;
+}
+
+/*
+ * KEEP_FORM_EMPLOYEE_ENABLED (ported from the sibling app, QA round 10). The
+ * model's name was not in the manager's words, so the employee is read here.
+ * A name stated on purpose ("for Test Employee", "Test Employee at
+ * Kearney", a turn that is only the name) replaces the one before it. A name
+ * met in passing ("onboarding with new hire Test Newhire") is the employee
+ * only when there is none yet: it does not replace the saved one. A shorter
+ * spelling of the same person ("test") keeps the fuller name.
+ */
+function keptEmployee(turns: readonly string[], saved: string | null): string | null {
+  let found = saved?.trim() || null;
+  for (const turn of turns) {
+    const stated = statedPerson(turn);
+    if (stated) {
+      found = fullerOfSame(found, stated);
+      continue;
+    }
+    const names = extractEmployeeNames(turn);
+    if (names.length !== 1) continue;
+    const name = exactSlice(turn, names[0]!) ?? names[0]!;
+    if (!found) found = name;
+  }
+  return found;
+}
+
+function statedPerson(turn: string): string | null {
+  if (/\bas the location\b/i.test(turn)) return null;
+  const named = /\bfor\s+([A-Z][\w'.-]+(?:\s+[A-Z][\w'.-]+)*)/.exec(turn);
+  if (named) return named[1]!;
+  const leading = /^([A-Z][\w'.-]+(?:\s+[A-Z][\w'.-]+)+)\s+at\b/.exec(turn.trim());
+  if (leading) return leading[1]!;
+  const names = extractEmployeeNames(turn);
+  if (names.length !== 1) return null;
+  const whole = turn.trim().replace(/[.!]+$/, "");
+  return whole.toLowerCase() === names[0]!.toLowerCase() ? (exactSlice(turn, names[0]!) ?? names[0]!) : null;
+}
+
+/** The saved name when `name` is a shorter spelling of the same person ("test" for "test employee"). */
+function fullerOfSame(saved: string | null, name: string): string {
+  if (!saved) return name;
+  const kept = saved.toLowerCase().split(/\s+/).filter(Boolean);
+  const typed = name.toLowerCase().split(/\s+/).filter(Boolean);
+  if (typed.length < kept.length && typed.every((word, index) => kept[index] === word)) return saved;
+  return name;
 }
 
 /** "for Test Employee" and "Test Employee at Grand Island". Not "Use Kearney as the location". */
