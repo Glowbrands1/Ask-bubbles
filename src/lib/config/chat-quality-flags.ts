@@ -540,6 +540,17 @@ export function titleWholeWordEnabled(): boolean {
   return envFlag("TITLE_WHOLE_WORD_ENABLED");
 }
 
+/**
+ * The exit form's How Employee Resigned line also reads a resignation the
+ * manager says was given verbally ("she told me verbally", "verbal notice"),
+ * as "Verbal" (Pau's decision, 25 Oct 2026, ported from the sibling app). A
+ * bare "she resigned" still leaves the line blank, and "verbal warning" is
+ * never a method. Off, the methods read are exactly as before.
+ */
+export function resignMethodFollowupEnabled(): boolean {
+  return envFlag("RESIGN_METHOD_FOLLOWUP_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -594,4 +605,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "KEEP_FORM_EMPLOYEE_ENABLED",
   "TITLE_WHOLE_WORD_ENABLED",
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
+  "RESIGN_METHOD_FOLLOWUP_ENABLED",
 ] as const;
