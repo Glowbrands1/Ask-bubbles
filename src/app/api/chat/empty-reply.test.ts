@@ -142,6 +142,9 @@ describe("a blank answer is returned as an honest failure (EMPTY_REPLY_GUARD_ENA
     expect(isEmptyReply({ ...BLANK, content: "The waiver is required." })).toBe(false);
     expect(isEmptyReply({ ...BLANK, formSelection: { options: [] } as never })).toBe(false);
     expect(isEmptyReply(null)).toBe(true);
+    // Several form cards on one turn are an answer too.
+    expect(isEmptyReply({ ...BLANK, formProposals: [{ templateKey: "coaching" }] as never })).toBe(false);
+    expect(isEmptyReply({ ...BLANK, formProposals: [] })).toBe(true);
   });
 });
 

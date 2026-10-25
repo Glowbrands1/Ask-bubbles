@@ -25,7 +25,8 @@ export function isEmptyReply(answer: Partial<AskResponse> | null | undefined): b
   if (!answer) return true;
   const prose = typeof answer.content === "string" ? answer.content.trim() : "";
   if (prose.length > 0) return false;
-  return !answer.formProposal && !answer.formSelection && !answer.formOpened && !answer.formUpdate;
+  const proposals = Array.isArray(answer.formProposals) && answer.formProposals.length > 0;
+  return !answer.formProposal && !proposals && !answer.formSelection && !answer.formOpened && !answer.formUpdate;
 }
 
 export function emptyReplyError(): AiError {
