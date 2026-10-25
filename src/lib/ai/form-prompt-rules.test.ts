@@ -128,9 +128,12 @@ describe("the flags are registered and default off", () => {
     const flags = await import("@/lib/config/chat-quality-flags");
     expect(flags.CHAT_QUALITY_FLAG_NAMES).toContain("FACSIMILE_ASK_ONLY_ENABLED");
     expect(flags.CHAT_QUALITY_FLAG_NAMES).toContain("TYPED_PRIOR_NOT_ON_FILE_ENABLED");
+    expect(flags.CHAT_QUALITY_FLAG_NAMES).toContain("PAYROLL_FROM_THIS_FORM_ENABLED");
     vi.stubEnv("FACSIMILE_ASK_ONLY_ENABLED", "");
     vi.stubEnv("TYPED_PRIOR_NOT_ON_FILE_ENABLED", "");
+    vi.stubEnv("PAYROLL_FROM_THIS_FORM_ENABLED", "");
     expect(flags.facsimileAskOnlyEnabled()).toBe(false);
     expect(flags.typedPriorNotOnFileEnabled()).toBe(false);
+    expect(flags.payrollFromThisFormEnabled()).toBe(false);
   });
 });

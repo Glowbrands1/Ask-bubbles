@@ -5,7 +5,7 @@ import type { ChatFormProposal, ChatMessage } from "@/types";
 
 /**
  * ============================================================================
- * PRODUCTION 25 OCT 2026 — TWO PROMPT RULES QA APPROVED (G12, B6)
+ * PRODUCTION 25 OCT 2026 — THREE RULES QA APPROVED (G12, B6, B15)
  * ============================================================================
  *
  * Every turn through POST /api/chat with this app's production form path (the
@@ -21,6 +21,10 @@ import type { ChatFormProposal, ChatMessage } from "@/types";
  *   B6, conv_mvnsqglc2v7zuyk: "… previous coaching jba manual 11-1-26 …", then
  *     "jba manual 11-1-25", answered "**Prior coaching:** Coaching Form on
  *     file, dated 2025-11-01, for Test Employee." TYPED_PRIOR_NOT_ON_FILE_ENABLED.
+ *
+ *   B15, conv_mvnu3j932gpohx4 T1–T3: "payroll deduct applies" in T1; T3
+ *     'create a Corrective Action Form for Test Employee"' — the card asked
+ *     "Is payroll deduct applicable?". PAYROLL_FROM_THIS_FORM_ENABLED.
  *
  * The prompt rules are checked on the system prompt the answering call is
  * sent: what the model reads is the part this app controls.
@@ -184,6 +188,7 @@ const ENV = [
   "PROMPT_CACHE_ENABLED",
   "FACSIMILE_ASK_ONLY_ENABLED",
   "TYPED_PRIOR_NOT_ON_FILE_ENABLED",
+  "PAYROLL_FROM_THIS_FORM_ENABLED",
 ] as const;
 const saved = new Map<string, string | undefined>();
 
@@ -265,9 +270,16 @@ function on(...names: string[]) {
   for (const name of names) process.env[name] = "true";
 }
 
-/* conv_mvnu3j932gpohx4, the manager's words. */
+/* conv_mvnu3j932gpohx4, the manager's words. The stray closing quote in T3 is theirs. */
 const B15_T1 =
   "do verbal corrective action for Test Employee, team member at Dodge, NE. location. previous coaching jba manual 9-9-26. payroll deduct applies. on 10-22-26 the register was short 8.65 which will be payroll deducted from Test Employee check";
+const B15_T2 = "change store location to bellevue, ne";
+const B15_T3 = 'create a Corrective Action Form for Test Employee"';
+/* Production's replies to T1 and T2, word for word up to the point that matters. */
+const B15_T1_REPLY =
+  "I can't write this up as a corrective action document here — that's a formal HR record, and I can't produce a facsimile of one or its contents. What I can do is help you get the real form started.\n\nA few things first, though:\n\n- **Store**: You said \"Dodge, NE\" — the verified store for this question is Omaha, NE (West Dodge Rd), Store 264. If that's not the one you mean, tell me which store.\n\nIf you want to proceed, just say: **\"create a Corrective Action form for Test Employee\"** and the draft card will come up for you to fill in with the store, date, amount, and prior coaching details.";
+const B15_T2_REPLY =
+  "Got it — the store for this is Bellevue, NE, Store 67 (per the verified store list), not Dodge/Omaha.\n\nWhen you're ready, say **\"create a Corrective Action form for Test Employee\"** and the draft card will open for you to enter these details.";
 
 /* conv_mvnsqglc2v7zuyk, the manager's words. */
 const B6_T1 =
@@ -314,5 +326,46 @@ describe.each([
     await replay([{ user: B6_T1, recordedReply: B6_T1_REPLY }, B6_T2]);
     expect(sent).toHaveLength(2);
     expect(sent[1]).not.toContain(TYPED_PRIOR);
+  });
+});
+
+describe("B15 conv_mvnu3j932gpohx4: \"payroll deduct applies\" in T1 is on the T3 card", () => {
+  /* Production at 12:59 UTC: the full remap with the incident fix and the prior-actions reader. */
+  const PRODUCTION = ["REMAP_INCIDENT_FIX_ENABLED", "PRIOR_ACTIONS_PARSE_ENABLED"];
+
+  async function card(flags: readonly string[]) {
+    on(...flags);
+    const replies = await replay([
+      { user: B15_T1, recordedReply: B15_T1_REPLY },
+      { user: B15_T2, recordedReply: B15_T2_REPLY },
+      B15_T3,
+    ]);
+    return replies.at(-1)!;
+  }
+
+  it.each([
+    ["the production flags", PRODUCTION],
+    ["with the place guard", [...PRODUCTION, "PLACE_SPAN_GUARD_ENABLED"]],
+    ["without the incident fix", ["PRIOR_ACTIONS_PARSE_ENABLED"]],
+  ])("PAYROLL_FROM_THIS_FORM_ENABLED (%s): Payroll deduct Yes, never asked again", async (_name, flags) => {
+    const reply = await card([...flags, "PAYROLL_FROM_THIS_FORM_ENABLED"]);
+    expect(reply.formProposal?.templateKey).toBe("dpoa");
+    expect(reply.formProposal?.payrollDeduct).toBe("yes");
+    expect(reply.content).not.toContain("Is payroll deduct applicable?");
+  });
+
+  it("flag on, a later request with its own incident is a new form: T1's answer is not carried onto it", async () => {
+    on(...PRODUCTION, "PAYROLL_FROM_THIS_FORM_ENABLED");
+    const replies = await replay([
+      { user: B15_T1, recordedReply: B15_T1_REPLY },
+      "create a written CA for Test Employee for being on her phone at the register on 10-24-26",
+    ]);
+    expect(replies.at(-1)!.formProposal?.payrollDeduct ?? null).toBeNull();
+  });
+
+  it("flag off: the card asks \"Is payroll deduct applicable?\" (the production card)", async () => {
+    const reply = await card(PRODUCTION);
+    expect(reply.formProposal?.payrollDeduct ?? null).toBeNull();
+    expect(reply.content).toContain("Is payroll deduct applicable?");
   });
 });

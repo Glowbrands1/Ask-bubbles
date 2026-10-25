@@ -563,6 +563,17 @@ export function typedPriorNotOnFileEnabled(): boolean {
   return envFlag("TYPED_PRIOR_NOT_ON_FILE_ENABLED");
 }
 
+/**
+ * The full remap reads the payroll answer from every turn when no later
+ * request starts a new form (currentRequestStart is 0). "payroll deduct
+ * applies" in T1 was dropped when T3 asked 'create a Corrective Action Form
+ * for Test Employee"' (conv_mvnu3j932gpohx4, B15, 25 Oct 2026). Off, the
+ * look-back starts after the next-to-last request, as before.
+ */
+export function payrollFromThisFormEnabled(): boolean {
+  return envFlag("PAYROLL_FROM_THIS_FORM_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -619,4 +630,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
   "FACSIMILE_ASK_ONLY_ENABLED",
   "TYPED_PRIOR_NOT_ON_FILE_ENABLED",
+  "PAYROLL_FROM_THIS_FORM_ENABLED",
 ] as const;
