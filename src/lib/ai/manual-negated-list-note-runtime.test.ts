@@ -287,16 +287,23 @@ describe("conv_mvnoscyz200gtat — the full manual is loaded (the live path)", (
     expect(on.content).toContain("not charging in the break room");
   });
 
-  it("the retrieval retry after an uncited reply carries the note too", async () => {
+  /*
+   * Expectation changed on purpose (citation-d, QA parity with Ask Sunny,
+   * 25 Oct 2026): an answer that names no page is no longer asked again
+   * without the manual, so there is no retrieval retry to carry the note.
+   * The one call has the manual and, with the flag on, the note; the
+   * uncited answer stands as written.
+   */
+  it("an uncited reply is not asked again without the manual; its one call carried the note", async () => {
     state.reply = "An answer with no page.";
-    await run(B9_QUESTION, undefined);
-    const offRetry = state.calls[1];
-    await run(B9_QUESTION, "1");
-    const onRetry = state.calls[1];
-    expect(offRetry?.cachedContext).toBeUndefined();
-    expect(offRetry?.grounding).toContain("charging in the break room");
-    expect(offRetry?.grounding).not.toContain("Reading note");
-    expect(onRetry?.grounding).toBe(`${offRetry?.grounding}\n\n${NOTE_BLOCK}`);
+    const off = await run(B9_QUESTION, undefined);
+    expect(state.calls).toHaveLength(1);
+    const on = await run(B9_QUESTION, "1");
+    expect(state.calls).toHaveLength(1);
+    expect(on.cachedContext).toContain("charging in the break room");
+    expect(off.grounding).not.toContain("Reading note");
+    expect(on.grounding).toContain("Reading note");
+    expect(on.content).toBe("An answer with no page.");
   });
 
   it("a correct answer is left as written", async () => {
