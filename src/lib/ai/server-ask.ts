@@ -74,6 +74,8 @@ import {
   antiLoopEnabled,
   formFullRemapEnabled,
   fullManualContextEnabled,
+  frameworkGeneralSectionsEnabled,
+  reformatKeepsSourcesEnabled,
   crossChatReplyGuardEnabled,
   manualNegatedListNoteEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -118,9 +120,11 @@ import {
   buildSystemPrompt,
   extractUsedMarkers,
   stripMarkers,
+  isCoachingFrameworkTitle,
   type GroundingChunk,
 } from "./prompts";
 import { retrievalPlanFor } from "./retrieval-query";
+import { earlierAnsweredTurn, isReformatTurn, keepEarlierSources } from "./reformat-turn";
 import { slotOnlyRetrievalTopic } from "./slot-only-turn";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
 import type { AskRequest, AskResponse } from "./types";
@@ -633,16 +637,32 @@ async function answerQuestionCore(
 
   let rows: MatchedChunkRow[];
   try {
-    rows = await searchWithPlan(
-      plan,
-      (query) =>
-        retrievalRecallEnabled()
-          ? matchRecallKnowledge({ query, scopeId: request.scopeId, limit })
-          : hybridSearchEnabled()
-            ? matchHybridKnowledge({ query, scopeId: request.scopeId, limit })
-            : knowledge.match({ query, scopeId: request.scopeId, limit }),
-      limit,
-    );
+    const search = (query: string) =>
+      retrievalRecallEnabled()
+        ? matchRecallKnowledge({ query, scopeId: request.scopeId, limit })
+        : hybridSearchEnabled()
+          ? matchHybridKnowledge({ query, scopeId: request.scopeId, limit })
+          : knowledge.match({ query, scopeId: request.scopeId, limit });
+    rows = await searchWithPlan(plan, search, limit);
+    /*
+     * A REFORMAT TURN KEEPS THE SOURCES OF THE ANSWER IT REFORMATS
+     * (REFORMAT_KEEPS_SOURCES_ENABLED). "Make this a downloadable document" is
+     * searched again with the question that answer was written for, and those
+     * rows go first, so the model is not left "correcting" claims whose sources
+     * it can no longer see. Ported from the sibling app. See `reformat-turn.ts`.
+     */
+    const earlier =
+      reformatKeepsSourcesEnabled() && isReformatTurn(request.question, request.history)
+        ? earlierAnsweredTurn(request.history)
+        : null;
+    if (earlier) {
+      const earlierPlan = retrievalPlanFor({
+        question: earlier.question,
+        history: earlier.history,
+        openForm: request.openForm ?? null,
+      });
+      rows = keepEarlierSources(await searchWithPlan(earlierPlan, search, limit), rows, limit);
+    }
   } catch (error) {
     if (error instanceof MissingConfigurationError) {
       throw new AiError("not_configured", error.message, 503, error.missing);
@@ -820,6 +840,15 @@ async function answerQuestionCore(
     policyCitation: policyCitationEnabled(),
     printedPageOnly: printedPageOnlyEnabled(),
     actionPlanSentences: actionPlanSentencesEnabled(),
+    /*
+     * FRAMEWORK_GENERAL_SECTIONS_ENABLED, and only where the framework is a
+     * marked source: an issue it does not name is still covered by its general
+     * sections. See `FRAMEWORK_GENERAL_SECTIONS_RULE`.
+     */
+    ...(frameworkGeneralSectionsEnabled() &&
+    grounding.some((chunk) => isCoachingFrameworkTitle(chunk.documentTitle))
+      ? { frameworkGeneralSections: true }
+      : {}),
   });
 
   const longContext = longContextEnabled()
@@ -957,7 +986,7 @@ async function answerQuestionCore(
 
   const suggested = await suggestedFormsFor({ summariesPromise, request, actor });
 
-  const proseBody = stripMarkers(guarded);
+  const proseBody = stripMarkers(guarded, { tidy: reformatKeepsSourcesEnabled() });
   const prose = suggested ? `${proseBody}\n\n${suggested.lead}` : proseBody;
   const manualChunks = rows.map((row, index) => ({
     chunkIndex: index,
@@ -990,7 +1019,8 @@ async function answerQuestionCore(
       const finalMarkers = extractUsedMarkers(final.text, supplementalMarkers);
       citations = [...final.sources.map(toCitation), ...citedRows(finalMarkers, citationRows)];
     } else {
-      content = suggested ? `${stripMarkers(settled.text)}\n\n${suggested.lead}` : stripMarkers(settled.text);
+      const tidy = { tidy: reformatKeepsSourcesEnabled() };
+      content = suggested ? `${stripMarkers(settled.text, tidy)}\n\n${suggested.lead}` : stripMarkers(settled.text, tidy);
       citations = settled.sources.map(toCitation);
     }
   }

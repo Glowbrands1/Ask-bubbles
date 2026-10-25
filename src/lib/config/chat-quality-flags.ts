@@ -553,6 +553,31 @@ export function exitIntakeFixEnabled(): boolean {
   return envFlag("EXIT_INTAKE_FIX_ENABLED");
 }
 
+/**
+ * A reformat turn keeps the sources of the answer it reformats. "Make this a
+ * downloadable document", "put that in a table", "summarize that" is searched
+ * again with the question the previous answer was written for, and those rows
+ * go first, so the reply does not "correct" claims whose sources it can no
+ * longer see. Removing [S#] markers also never leaves their grammar behind
+ * ("two markers, and, that"). Ported from the sibling app. Off, retrieval and
+ * marker stripping are as before.
+ */
+export function reformatKeepsSourcesEnabled(): boolean {
+  return envFlag("REFORMAT_KEEPS_SOURCES_ENABLED");
+}
+
+/**
+ * The coaching framework covers an issue it does not name. With the framework
+ * among the sources, the prompt tells the model to answer from its general
+ * sections (root cause, performance vs behavior, conversation structure), cite
+ * them, and say only that no section names this exact issue, instead of "the
+ * knowledge base does not have it" (QA, conv_mvb28ztb85z53mc). Off, the
+ * prompt is byte-for-byte as before.
+ */
+export function frameworkGeneralSectionsEnabled(): boolean {
+  return envFlag("FRAMEWORK_GENERAL_SECTIONS_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -608,4 +633,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TITLE_WHOLE_WORD_ENABLED",
   "EXIT_INTAKE_FIX_ENABLED",
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
+  "REFORMAT_KEEPS_SOURCES_ENABLED",
+  "FRAMEWORK_GENERAL_SECTIONS_ENABLED",
 ] as const;
