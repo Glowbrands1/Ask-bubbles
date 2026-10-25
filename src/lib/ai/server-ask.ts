@@ -164,8 +164,7 @@ export async function answerQuestion(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
-  // Last on every path: the Corrective Action card's Action Plan is the manager's or none.
-  if (!chatTraceEnabled()) return keepManagerActionPlan(await answerQuestionBody(request, actor, memory), request);
+  if (!chatTraceEnabled()) return answerQuestionBody(request, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
     messageId: request.questionMessageId,
@@ -173,10 +172,19 @@ export async function answerQuestion(
     originalQuery: request.question,
     formInProgress: Boolean(request.continueProposalTemplateKey || request.openForm || request.activeFormInstanceId),
   });
-  return keepManagerActionPlan(await finishChatTrace(draft, () => answerQuestionBody(request, actor, memory)), request);
+  return finishChatTrace(draft, () => answerQuestionBody(request, actor, memory));
 }
 
+/** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
 async function answerQuestionBody(
+  request: AskRequest,
+  actor: ChatActor,
+  memory: { memoryOwnerId?: string } = {},
+): Promise<AskResponse> {
+  return keepManagerActionPlan(await answerQuestionCore(request, actor, memory), request);
+}
+
+async function answerQuestionCore(
   request: AskRequest,
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
