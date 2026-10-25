@@ -32,7 +32,8 @@ export interface RemapManual {
   readonly chunks: readonly ManualChunk[];
 }
 
-const FORM_WORDS = String.raw`(?:corrective\s+actions?|ca|c\/a|write-?ups?|dpoa|coaching\s+form|policy\s+review|follow-?up\s+coaching)(?:\s+forms?)?`;
+// "create a coaching document for …" asks for the form too (QA, 25 Oct 2026, conv_mvnt95q52gmu047).
+const FORM_WORDS = String.raw`(?:corrective\s+actions?|ca|c\/a|write-?ups?|dpoa|coaching\s+(?:form|document|doc|paperwork)|policy\s+review|follow-?up\s+coaching)(?:\s+forms?)?`;
 const LEVEL_WORDS = String.raw`(?:(?:a|an|the)\s+)?(?:new\s+)?(?:(?:verbal|written|final)\s+(?:warning\s+)?)?`;
 
 /** "create a verbal CA for", "write a CA for", "CA for" — only at the start of a clause. */
@@ -173,9 +174,22 @@ function turnIncident(
     let kept = false;
     for (const clause of sentence.split(",")) {
       const text = clause.trim();
-      if (!text || slotClause(text) || STORE_CLAUSE.test(text) || PAYROLL_STATEMENT.test(text) || POLICY_ASK.test(text)) continue;
-      // MANAGER_WORDS_ONLY_ENABLED: "create a CA form for test employee at kearney" is who and where.
-      if (managerOnly && onlyWhoOrWhere(text.replace(REQUEST_LEAD, " ").replace(LEVEL_REQUEST, " ").trim(), employeeName)) continue;
+      if (!text || slotClause(text) || STORE_CLAUSE.test(text) || POLICY_ASK.test(text)) continue;
+      if (PAYROLL_STATEMENT.test(text)) {
+        // "$25 will be payroll deducted for late open on 10-21-26": the payroll
+        // answer, and after "for" what it is for (conv_mvnt9m172krh73y).
+        const reason = /\bfor\s+(?!the\s+(?:amount|total)\b)(.{4,})$/i.exec(text)?.[1];
+        const offense = reason ? clauseOffense(reason, employeeName) : null;
+        if (offense) found = offense;
+        continue;
+      }
+      // A prior step ("jba manual 1-1-26 for previous coaching", "she was coached
+      // on 9-15 for being late") is a prior action, never the incident (QA, 25 Oct
+      // 2026, conv_mvnt9by62zckttk, conv_mvnt9uu12rle7pt).
+      if (isPriorStep(text)) continue;
+      // "create a CA form for test employee at kearney", "team member Test
+      // Employee at bellevue": who and where, never the incident (QA, 25 Oct 2026).
+      if (onlyWhoOrWhere(text.replace(REQUEST_LEAD, " ").replace(LEVEL_REQUEST, " ").trim(), employeeName)) continue;
       kept = true;
       const offense = clauseOffense(text, employeeName);
       if (offense) found = offense;
@@ -228,6 +242,20 @@ function managerSentence(sentence: string, employeeName: string | null, slotClau
     if (text) kept.push(text);
   }
   return kept.join(", ");
+}
+
+/**
+ * A step before this incident: a labelled prior ("previous coaching", "prior
+ * verbal"), a coaching she was given ("she was coached on 9-15"), or a policy
+ * manual with a date ("jba manual 1-1-26"). A coaching the manager says they
+ * held ("I verbally coached her …") is part of their account.
+ */
+function isPriorStep(clause: string): boolean {
+  return (
+    /\b(?:previous|prior|past|earlier)\s+(?:coaching|corrective|cas?\b|c\/as?\b|actions?|steps?|warnings?|discipline|verbal|written)/i.test(clause) ||
+    /\b(?:was|were|got|been|had\s+been)\s+(?:verbally\s+)?coached\b/i.test(clause) ||
+    /\bmanual\b.*(?<![\d/-])\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?(?![\d/-])/i.test(clause)
+  );
 }
 
 /** "soap maker at kearney", "Test Employee at Kearney", "the Grand Island store": who and where. */
@@ -421,6 +449,8 @@ function clauseOffense(clause: string, employeeName: string | null): string | nu
   text = text.replace(new RegExp(String.raw`^(?:on\s+)?${DATE}\s*,?\s*`, "i"), "");
   text = text.replace(new RegExp(String.raw`\s*,?\s*(?:on|at|dated)?\s*${DATE}$`, "i"), "");
   text = text.replace(/^(?:for|about|regarding|re:?)\s+/i, "");
+  // "regarding On 10-16-26 Test Employee did not …": the date the lead-in left.
+  text = text.replace(new RegExp(String.raw`^(?:on\s+)?${DATE}\s*,?\s*`, "i"), "");
   // Another spelling of the person as the subject: "Test Employee spent 40 minutes …".
   text = text.replace(/^[A-Z][a-z'-]+\s+[A-Z][a-z'-]+\s+(?=[a-z])/, "");
   text = text.replace(/^(?:was|is|has been)\s+/i, "");
@@ -428,6 +458,9 @@ function clauseOffense(clause: string, employeeName: string | null): string | nu
   text = text.replace(/^[,\s]+|[,\s.]+$/g, "").replace(/\s+(?:on|at)$/i, "");
   if (!text || text.length > 120) return null;
   if (/^(?:for|a|an|the|form|location|store|draft)$/i.test(text)) return null;
+  // "create a coaching document for Test Employee": a repeat request names the
+  // person, it is no new incident (QA, 25 Oct 2026, conv_mvnt95q52gmu047).
+  if ((REQUEST_LEAD.test(clause) || LEVEL_REQUEST.test(clause)) && /^[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*){0,2}$/.test(text)) return null;
   // "jba manual 11-1-25" answers the prior-coaching question.
   if (/^(?:the\s+)?(?:jba\s+)?(?:policy\s+)?manual(?:\s+ack\w*)?$/i.test(text)) return null;
   if (/\b(?:she|he|they|i|we)\b/i.test(text)) return null;

@@ -234,11 +234,15 @@ export function groundFormSlots(input: {
   // list (REMAP_INCIDENT_FIX_ENABLED) and the intent path's step reader
   // (PRIOR_ACTIONS_PARSE_ENABLED). With both on, a list item whose date a
   // parsed step already holds is the same step and is not listed twice.
-  const priorList = fixed ? priorListActions(said) : [];
+  // REMAP_INCIDENT_FIX_ENABLED: priors belong to the request that typed them. A
+  // later create request with its own incident starts with none unless the
+  // manager restates them (QA, 25 Oct 2026, conv_mvnt9by62zckttk).
+  const priorSaid = fixed ? scoped : said;
+  const priorList = fixed ? priorListActions(priorSaid) : [];
   const priorActions = priorActionsParseEnabled()
-    ? remapPriorActions(statedPrior(said), said, input.today, priorList)
+    ? remapPriorActions(statedPrior(priorSaid), priorSaid, input.today, priorList)
     : fixed
-      ? mergePriorActions(statedPrior(said), priorList)
+      ? mergePriorActions(statedPrior(priorSaid), priorList)
       : statedPrior(said);
   const incidentTime = statedTime(said);
   // The action plan is the manager's, or blank. The model's summary and
@@ -1340,7 +1344,7 @@ function withoutLeftovers(
     ...saved,
     observation: newRequest || leftover ? null : observation,
     actionPlan: null,
-    ...(newRequest ? { policySection: null } : {}),
+    ...(newRequest ? { policySection: null, priorActions: null } : {}),
   };
 }
 
