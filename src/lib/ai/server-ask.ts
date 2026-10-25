@@ -46,6 +46,7 @@ import { loadChatDataBlock } from "./chat-data-tools";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
 import { withTerseSlots } from "./terse-slots";
+import { withCardNeverSilent } from "./card-never-silent";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";
@@ -197,7 +198,8 @@ async function answerQuestionBody(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
-  return keepManagerActionPlan(await answerQuestionCore(request, actor, memory), request);
+  // CARD_NEVER_SILENT_ENABLED: a card turn always answers what the manager asked.
+  return withCardNeverSilent(keepManagerActionPlan(await answerQuestionCore(request, actor, memory), request), request);
 }
 
 async function answerQuestionCore(

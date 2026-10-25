@@ -733,6 +733,19 @@ export function terseSlotReadEnabled(): boolean {
   return envFlag("TERSE_SLOT_READ_ENABLED");
 }
 
+/**
+ * A form turn always answers the manager: when the card reply would be empty
+ * or word for word the previous one, a line in front of it answers the turn
+ * (press Create draft to edit; Finalize is a button on the form), and the
+ * chatty team request ("reuse for any team member … leave the employee name
+ * blank … generic for the whole team") reads as a team coaching form. Ported
+ * from the sibling app (conv_mvoenhk42lu3cxo, conv_mvofsdg92obw8px). See
+ * `ai/card-never-silent.ts` and `forms/team-subject.ts`. Off, as before.
+ */
+export function cardNeverSilentEnabled(): boolean {
+  return envFlag("CARD_NEVER_SILENT_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -802,4 +815,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "CARD_NEVER_SILENT_ENABLED",
 ] as const;
