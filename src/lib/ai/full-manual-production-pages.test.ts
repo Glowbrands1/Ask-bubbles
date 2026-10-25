@@ -3,9 +3,10 @@ import { describe, expect, it } from "vitest";
 import manual151 from "@/test/fixtures/jba-manual-production-151.json";
 import live from "@/test/fixtures/bubbles-live-policy-answers-oct24.json";
 import liveB2 from "@/test/fixtures/bubbles-live-policy-answers-oct24-b2.json";
+import liveStep3 from "@/test/fixtures/bubbles-live-policy-answers-oct24-step3.json";
 import { manualChunkFromRow, type ManualChunkRow } from "@/lib/knowledge/full-manual-load";
 
-import { citePolicyAnswer, planFullManualContext, type FullManualDocument } from "./full-manual-context";
+import { citePolicyAnswer, keepRestatedFallbackMarkers, planFullManualContext, type FullManualDocument } from "./full-manual-context";
 
 /**
  * The whole production JBA Policy Manual (151 rows), read the way
@@ -289,5 +290,147 @@ describe("boilerplate phrases cite no page (QA P0, live round B2)", () => {
     const found = b2("conv_mvmzj2142hdb365");
     const cited = citePolicyAnswer(found.content, planFullManualContext({ question: found.question, documents: [productionManual()] }));
     for (const page of pagesIn(cited.text)) expect([41, 42]).toContain(page);
+  }, 20_000);
+});
+
+/**
+ * QA B-list, 25 Oct 2026 (live step 3 and round B2, FULL_MANUAL_CONTEXT on):
+ *   - "[p.16-17] [p.16]": the model's range marker was kept beside the page
+ *     the sentence restates.
+ *   - "Page 15 — Anyone": a sentence's first word was used as the heading.
+ *   - "the prior coaching reference [p.36]" kept Time Records because the
+ *     sentence shared four ordinary words with that page; a manager's note
+ *     is not a page.
+ *   - The peak-season bullet ("Buff City Soap Nov 1 and Dec 31") cited
+ *     nothing: the manual spells the months out.
+ */
+describe("QA B-list: ranges, heading fragments, loose model pages, month names", () => {
+  const step3 = (conversationId: string) => {
+    const found = liveStep3.answers.find((answer) => answer.conversationId === conversationId);
+    if (!found) throw new Error(`missing live reply ${conversationId}`);
+    return found;
+  };
+  const planFor = (question: string) => planFullManualContext({ question, documents: [productionManual()] });
+
+  it("a range marker is a marker: the shirt bullet cites each page once, and the dress-code note is not labelled 'Anyone'", () => {
+    const found = step3("conv_mvmzl40e2dxpgej");
+    const cited = citePolicyAnswer(found.content, planFor(DRESS_CODE));
+    expectSameWordsAndLines(found.content.replace(/\[p\.\d+-\d+\]/g, ""), cited.text);
+    expect(cited.text).not.toMatch(/\[p\.\d+-\d+\]/);
+    const shirts = lineWith(cited.text, "Buff City Soap shirts");
+    expect(shirts.match(/\[p\.16\]/g)?.length ?? 0).toBeLessThanOrEqual(1);
+    for (const page of pagesIn(shirts)) expect([16, 17]).toContain(page);
+    expect(pagesIn(lineWith(cited.text, "Anyone violating"))).toEqual(new Set([15]));
+    expect(cited.sources.map((source) => source.locator)).not.toContain("Page 15 — Anyone");
+  }, 20_000);
+
+  /*
+   * Live, this reply came from the retrieval fallback (no sentence restated
+   * the manual, so server-ask asked again with ordinary retrieval and the
+   * model cited the Time Records chunk). The manual pass itself must not
+   * find a page for it: five shared words out of seventeen ("scheduled",
+   * "minutes", "employee", "payroll", …) are not the section.
+   */
+  it("a manager's prior-coaching note restates no page of the manual", () => {
+    const found = step3("conv_mvmznap42vcw0dl");
+    const plan = planFor(found.question);
+    const cited = citePolicyAnswer(found.content.replace(/ \[p\.36\]/, ""), plan);
+    expect(pagesIn(lineWith(cited.text, "the prior coaching reference")).size).toBe(0);
+    expect(cited.sources.map((source) => source.locator)).not.toContain("Page 36 — Time Records");
+    // With the model's own [p.36], the page is still not confirmed.
+    expect(citePolicyAnswer(found.content, plan).sources.map((source) => source.printedPage)).not.toContain(36);
+  }, 20_000);
+
+  it('"Nov 1 and Dec 31" is the manual\'s "November 1 and December 31": the peak-season bullet cites p.42', () => {
+    const found = liveB2.answers.find((answer) => answer.conversationId === "conv_mvmzj2142hdb365")!;
+    const cited = citePolicyAnswer(found.content, planFor(found.question));
+    expect(pagesIn(lineWith(cited.text, "peak season"))).toEqual(new Set([42]));
+  }, 20_000);
+});
+
+/**
+ * QA B3, 25 Oct 2026 (live on 108): two reworded sentences still carried
+ * three pages. Verbatim from the live replies.
+ */
+describe("QA B3: a page that says clearly more wins", () => {
+  const planFor = (question: string) => planFullManualContext({ question, documents: [productionManual()] });
+
+  it("the reworded cell-phone sentence cites p.19 only (not Using Social Media p.23 or Employee Injury p.26)", () => {
+    const cited = citePolicyAnswer(
+      "Employees are personally responsible for protecting the customer experience — texting, making calls, or using social media while on duty jeopardizes that experience.",
+      planFor("What is the cell phone policy?"),
+    );
+    expect(pagesIn(cited.text)).toEqual(new Set([19]));
+  }, 20_000);
+
+  it("the dress-code discipline sentence cites p.15 only (not Retaliation p.23 or Bonus Policy p.38)", () => {
+    const cited = citePolicyAnswer(
+      "Anyone violating their brand's dress code policy may be sent home to change and may be subject to disciplinary action, up to and including termination.",
+      planFor("Test Employee at Grand Island was out of dress code on 10-18, no name tag and wrong shirt for the whole shift"),
+    );
+    expect(pagesIn(cited.text)).toEqual(new Set([15]));
+  }, 20_000);
+});
+
+/**
+ * QA, 25 Oct 2026: conv_mvmznap42vcw0dl T1. No sentence restated the manual,
+ * so the answer was asked for again with ordinary retrieval, and that
+ * answer's "[p.36]" became a "Page 36 — Time Records" source. A page stays on
+ * every path only where the sentence restates it.
+ */
+describe("QA: the retrieval fallback keeps only pages the sentence restates", () => {
+  const recorded = liveStep3.answers.find((answer) => answer.conversationId === "conv_mvmznap42vcw0dl");
+  if (!recorded) throw new Error("missing live reply conv_mvmznap42vcw0dl");
+  const plan = planFullManualContext({ question: recorded.question, documents: [productionManual()] });
+  const noSources = () => null;
+
+  it('drops "[p.36]" from "…the prior coaching reference [p.36]." and changes no word', () => {
+    expect(recorded.content).toContain("the prior coaching reference [p.36].");
+    const kept = keepRestatedFallbackMarkers(recorded.content, plan, noSources);
+    expect(kept).not.toMatch(/\[p\.\d/);
+    expect(kept).toBe(recorded.content.replace(" [p.36]", ""));
+  }, 20_000);
+
+  it("drops an [S#] whose row is manual page 36, and keeps a source from another document", () => {
+    const answer = "Bring the 10-22-26 details and the prior coaching reference [S2]. See the store checklist [S3].";
+    const kept = keepRestatedFallbackMarkers(answer, plan, (marker) => (marker === 2 ? 36 : null));
+    expect(kept).toBe("Bring the 10-22-26 details and the prior coaching reference. See the store checklist [S3].");
+  }, 20_000);
+
+  it("keeps a page the sentence restates (cell phone, p.19), as [p.N] and as [S#]", () => {
+    const cellPlan = planFullManualContext({ question: CELL_PHONE, documents: [productionManual()] });
+    const sentence =
+      "Employees are personally responsible for protecting the customer experience — texting, making calls, or using social media while on duty jeopardizes that experience.";
+    const written = `${sentence.slice(0, -1)} [p.19].`;
+    expect(keepRestatedFallbackMarkers(written, cellPlan, noSources)).toBe(written);
+    const source = `${sentence.slice(0, -1)} [S1].`;
+    expect(keepRestatedFallbackMarkers(source, cellPlan, () => 19)).toBe(source);
+  }, 20_000);
+});
+
+/**
+ * Live, 25 Oct 2026 (Bubbles B4, flag-on deploy without this branch): the
+ * sentences as the replies wrote them, markers included.
+ * conv_mvnljjp92oyd332 (md5 41c7371f…) and conv_mvnlkafd25dlbux (md5 902135f4…).
+ */
+describe("live B4: the page that says clearly more", () => {
+  const planFor = (question: string) => planFullManualContext({ question, documents: [productionManual()] });
+
+  it("dress-code discipline cites the Dress Code page (15), not Retaliation (23) or the Bonus Policy (38)", () => {
+    const cited = citePolicyAnswer(
+      "- Dress code violations can lead to being sent home to change and are subject to disciplinary action, up to and including termination [p.23] [p.38].",
+      planFor(
+        "I have an employee Test Employee at our Grand Island location who has been out of dress code three shifts. I verbally coached her on the second offense and she still is out of dress code",
+      ),
+    );
+    expect(pagesIn(cited.text)).toEqual(new Set([15]));
+  }, 20_000);
+
+  it("the guest-experience line cites Cell Phone (19), not Employee Injury (26)", () => {
+    const cited = citePolicyAnswer(
+      "- Employees are personally responsible for protecting the guest experience — texting, making calls, or using social media on the clock jeopardizes that [p.19] [p.26].",
+      planFor(CELL_PHONE),
+    );
+    expect(pagesIn(cited.text)).toEqual(new Set([19]));
   }, 20_000);
 });
