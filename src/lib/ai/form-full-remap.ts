@@ -109,6 +109,7 @@ export function groundFormSlots(input: {
 }): { slots: FormRemapSlots; response: AskResponse } {
   const conversation = turnsWithQuestion(input.history, input.question);
   const users = conversation.filter((turn) => turn.role === "user").map((turn) => turn.content);
+  const saved = withoutUntypedName(input.saved ?? null, users);
   const said = users.join("\n");
   const raw = parseRaw(input.raw);
   const templateKey =
@@ -146,7 +147,7 @@ export function groundFormSlots(input: {
     actionPlan,
     closeMatchNote,
   };
-  const slots = finishSlots(mergeSlots(read, input.saved ?? null), said);
+  const slots = finishSlots(mergeSlots(read, saved), said);
 
   const assistants = [...input.history, { role: "user", content: input.question }]
     .filter((turn) => turn.role === "assistant")
@@ -328,6 +329,20 @@ function templateFromUser(text: string): TemplateKey | null {
   if (/\b(?:verbal|written|warnings?|final\s+warnings?|terminations?|demotions?)\b/i.test(text)) return "dpoa";
   if (/\bcoaching\b/i.test(text)) return "coaching";
   return null;
+}
+
+/**
+ * NOT_A_NAME_GUARD_ENABLED: a kept employee the manager never typed is not
+ * kept again (Ask Sunny QA L23: a name read from a manual heading in a reply
+ * outlived the name the manager typed). Off, the kept slots are unchanged.
+ */
+function withoutUntypedName(saved: Partial<FormRemapSlots> | null, turns: readonly string[]): Partial<FormRemapSlots> | null {
+  const name = saved?.employeeName ?? null;
+  if (!saved || !name || !notANameGuardEnabled()) return saved;
+  const needle = name.trim().toLowerCase().replace(/\s+/g, " ");
+  const typed = turns.some((turn) => maskNotANameText(turn).toLowerCase().replace(/\s+/g, " ").includes(needle));
+  if (typed && !isNotAName(name)) return saved;
+  return { ...saved, employeeName: null, closeMatchNote: null };
 }
 
 function groundedName(proposed: string | null, turns: readonly string[]): string | null {

@@ -6,7 +6,8 @@ import type { AccessScope, ChatMessage } from "@/types";
 import { notANameGuardEnabled } from "@/lib/config/chat-quality-flags";
 
 import { groundFormSlots, type FormRemapSlots } from "./form-full-remap";
-import type { ConversationFormState } from "./form-state";
+import { EMPTY_CONVERSATION_FORM_STATE, type ConversationFormState } from "./form-state";
+import type { GroundedPerson } from "./grounded-entities";
 import { decideIntentTurn } from "./intent-slots";
 
 /**
@@ -70,6 +71,7 @@ const TEMPLATES = [
   { key: "coaching", name: "Coaching Form" },
   { key: "follow-up-coaching", name: "Follow-Up Coaching Form" },
   { key: "policy-review", name: "Policy Review" },
+  { key: "resignation-exit", name: "Resignation/Exit Form" },
 ] as const;
 
 interface Case {
@@ -82,6 +84,10 @@ interface Case {
   readonly banned: readonly string[];
   /** The typed name that must still be found, and from which turn on. */
   readonly person?: { readonly from: number; readonly name: RegExp };
+  /** The directory, when the case needs one. */
+  readonly people?: readonly GroundedPerson[];
+  /** The typed name is not on that directory. */
+  readonly offDirectory?: boolean;
 }
 
 const OFFERS = `Timeline: October 1 – October 31
@@ -195,7 +201,7 @@ function throughRemap(item: Case): Seen[] {
       history: history(item, index, replies),
       question,
       today: TODAY,
-      people: [],
+      people: item.people ?? [],
       saved,
     });
     saved = slots;
@@ -226,7 +232,7 @@ function throughIntent(item: Case): Seen[] {
         formType: null,
         formTurn: index > 0,
       },
-      people: [],
+      people: item.people ?? [],
       stores: STORES,
       headings: [],
       templates: TEMPLATES,
@@ -320,5 +326,246 @@ describe.each([
 
   it.each(CASES.map((item) => [item.id, item] as const))("%s: the proposal never offers a non-name", async (_id, item) => {
     check(item, await throughProposal(item));
+  });
+});
+
+/**
+ * ============================================================================
+ * EVERY NAME GUARD ON AT ONCE — THE EARLIER NAME FIXES STILL HOLD (25 OCT 2026)
+ * ============================================================================
+ *
+ * FORM_FULL_REMAP and INTENT_EXTRACTION (this app's live path) plus
+ * NOT_A_NAME_GUARD, MANAGER_WORDS_ONLY, WARNING_LEVEL_MANAGER_ONLY and
+ * CROSS_CHAT_REPLY_GUARD, with TYPED_NAME_ENABLED off and on.
+ * MANAGER_WORDS_ONLY, WARNING_LEVEL_MANAGER_ONLY and CROSS_CHAT_REPLY_GUARD
+ * are not in this app yet; the variables are set so this test covers them
+ * the day they land, and are inert until then. The cross-chat rule may gate
+ * memory recall only: a name the manager typed is never dropped from the form.
+ *
+ * Synthetic names only. Jordan Hale is on the directory; "jordan ha" is a
+ * partial surname and stays as typed; Avery Testperson is off the directory.
+ */
+const HALE: GroundedPerson = {
+  id: "e-jordan-hale",
+  firstName: "Jordan",
+  lastName: "Hale",
+  locationIds: ["loc-67"],
+  positionName: "Soap Maker",
+  title: "Soap Maker",
+  primaryLocationName: "Bellevue, NE",
+};
+
+const ALL_ON = [
+  "NOT_A_NAME_GUARD_ENABLED",
+  "MANAGER_WORDS_ONLY_ENABLED",
+  "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
+  "CROSS_CHAT_REPLY_GUARD_ENABLED",
+] as const;
+
+const TYPED_NAMES: readonly Case[] = [
+  {
+    id: "a lowercase full name",
+    turns: ["create a coaching form for jordan hale, she was late on 10/20"],
+    model: ["jordan hale"],
+    banned: [],
+    person: { from: 0, name: /^jordan hale$/i },
+    people: [HALE],
+  },
+  {
+    id: "a lowercase first name and partial surname",
+    turns: ["create a coaching form for jordan ha, she was late on 10/20"],
+    model: ["jordan ha"],
+    banned: [],
+    person: { from: 0, name: /^jordan ha$/i },
+    people: [HALE],
+    offDirectory: true,
+  },
+  {
+    id: "a partial surname as the bare reply",
+    turns: ["create a coaching form", "jordan ha"],
+    model: [null, "jordan ha"],
+    banned: [],
+    person: { from: 1, name: /^jordan ha$/i },
+    people: [HALE],
+    offDirectory: true,
+  },
+  {
+    id: "a full name as the bare reply",
+    turns: ["create a coaching form", "jordan hale"],
+    model: [null, "jordan hale"],
+    banned: [],
+    person: { from: 1, name: /^jordan hale$/i },
+    people: [HALE],
+  },
+  {
+    id: "ALL CAPS on the directory",
+    turns: ["COACHING FORM JORDAN HALE LATE 3 TIMES"],
+    model: ["JORDAN HALE"],
+    banned: [],
+    person: { from: 0, name: /^jordan hale$/i },
+    people: [HALE],
+  },
+  {
+    id: "ALL CAPS off the directory",
+    turns: ["COACHING FORM AVERY TESTPERSON LATE 3 TIMES"],
+    model: ["AVERY TESTPERSON"],
+    banned: [],
+    person: { from: 0, name: /^avery testperson$/i },
+    people: [HALE],
+    offDirectory: true,
+  },
+  {
+    id: "a possessive",
+    turns: ["Jordan Hale's coaching form, she was late on 10/20"],
+    model: ["Jordan Hale"],
+    banned: [],
+    person: { from: 0, name: /^jordan hale$/i },
+    people: [HALE],
+  },
+];
+
+function expectNoNameQuestion(seen: readonly Seen[]) {
+  for (const row of seen) expect(row.asked, `${row.path} turn ${row.turn + 1}`).not.toMatch(/did you mean|which of them|which person/i);
+}
+
+describe.each([
+  ["TYPED_NAME_ENABLED off", ""],
+  ["TYPED_NAME_ENABLED on", "true"],
+])("every name guard on, %s: typed names still reach the form", (_label, typed) => {
+  beforeEach(() => {
+    for (const flag of ALL_ON) vi.stubEnv(flag, "true");
+    vi.stubEnv("TYPED_NAME_ENABLED", typed);
+  });
+
+  it.each(TYPED_NAMES.map((item) => [item.id, item] as const))("%s: the remap", (_id, item) => {
+    const seen = throughRemap(item);
+    checkPerson(item, seen);
+    expectNoNameQuestion(seen);
+  });
+
+  it.each(TYPED_NAMES.map((item) => [item.id, item] as const))("%s: the intent read", (_id, item) => {
+    const seen = throughIntent(item);
+    // With a directory, this app's intent read keeps only a directory person
+    // and leaves an off-directory name to the remap's card — guards on or
+    // off. The guards must not drop the directory person.
+    if (!item.offDirectory) checkPerson(item, seen);
+    expectNoNameQuestion(seen);
+  });
+
+  it.each(TYPED_NAMES.map((item) => [item.id, item] as const))("%s: the proposal", async (_id, item) => {
+    const seen = await throughProposal(item);
+    checkPerson(item, seen);
+    expectNoNameQuestion(seen);
+  });
+});
+
+/**
+ * ============================================================================
+ * MIRROR OF ASK SUNNY QA L23 (25 OCT 2026) — A MANUAL HEADING ON AN EXIT FORM
+ * ============================================================================
+ *
+ * In Ask Sunny a policy answer cited a manual heading that reads like a
+ * name, and the exit form that followed was drafted for that heading on
+ * every turn, even after the manager typed the employee. Here the answer
+ * cites "Core Values" (a JBA Policy Manual heading this app cites), the
+ * stand-in models copy it the way the model copied the heading there, and
+ * the manager's turns are the same in this app's words.
+ */
+const MIRROR_TURNS = [
+  "what does policy say about pets in the store",
+  "assist with creating an exit form",
+  "test employee, soap maker at bellevue",
+  "last day worked was 9-20-26. management called her with no response on 9-27-26",
+  "its a no call no show",
+  "create exit form",
+  "Create a form from this conversation.",
+  "create exit: Test Employee, Soap Maker, Bellevue, NE\nLast day worked 9/20/26\nNo call/no show; management attempted phone contact 9/27/26, no response",
+  "Create a form from this conversation.",
+  "Create a form from this conversation.",
+];
+
+const MIRROR_PETS_REPLY = `Pets are out; service animals are in.
+
+- Employees are asked not to bring pets into the workplace ("Animals in the Workplace", JBA Policy Manual p.30).
+- Treat every guest and team member with respect while you handle it ("Core Values", JBA Policy Manual p.4).
+
+If a team member is unsure how to handle a service animal at the counter, route it to HR rather than improvising.`;
+
+const MIRROR: Case = {
+  id: "a manual heading in the reply before an exit request",
+  turns: MIRROR_TURNS,
+  recorded: { 0: MIRROR_PETS_REPLY },
+  model: [null, "Core Values", "test employee", "Core Values", "Core Values", "Core Values", "Core Values", "Test Employee", "Core Values", "Core Values"],
+  banned: ["Core Values"],
+  person: { from: 2, name: /^test employee$/i },
+};
+
+describe.each([
+  ["TYPED_NAME_ENABLED off", ""],
+  ["TYPED_NAME_ENABLED on", "true"],
+])("Ask Sunny L23 mirror, guard on, %s", (_label, typed) => {
+  beforeEach(() => {
+    vi.stubEnv("NOT_A_NAME_GUARD_ENABLED", "true");
+    vi.stubEnv("TYPED_NAME_ENABLED", typed);
+  });
+
+  it("the remap never takes the heading, and the typed employee holds from the turn it is typed", () => {
+    const seen = throughRemap(MIRROR);
+    check(MIRROR, seen);
+    checkPerson(MIRROR, seen);
+  });
+
+  it("the intent read never takes the heading, and the typed employee holds from the turn it is typed", () => {
+    const seen = throughIntent(MIRROR);
+    check(MIRROR, seen);
+    checkPerson(MIRROR, seen);
+  });
+
+  it("the proposal never names the heading", async () => {
+    check(MIRROR, await throughProposal(MIRROR));
+  });
+
+  it("a remap slot the manager never typed is dropped, and the typed one replaces it", () => {
+    const { slots } = groundFormSlots({
+      raw: { templateKey: null, employeeName: "test employee", observation: null, actionPlan: null },
+      history: [
+        { role: "user", content: "assist with creating an exit form" },
+        { role: "assistant", content: "Here is what I'll fill in on the Resignation/Exit Form for Pat Example." },
+      ],
+      question: "test employee, soap maker at bellevue",
+      today: TODAY,
+      people: [],
+      saved: { employeeName: "Pat Example" },
+    });
+    expect(slots.employeeName?.toLowerCase()).toBe("test employee");
+    const kept = groundFormSlots({
+      raw: { templateKey: null, employeeName: null, observation: null, actionPlan: null },
+      history: [{ role: "user", content: "assist with creating an exit form" }],
+      question: "create exit form",
+      today: TODAY,
+      people: [],
+      saved: { employeeName: "Pat Example" },
+    });
+    expect(kept.slots.employeeName).toBeNull();
+  });
+
+  it("a saved intent employee the manager never typed is dropped, and the typed one replaces it", () => {
+    const decision = decideIntentTurn({
+      question: "test employee, soap maker at bellevue",
+      history: [
+        { role: "user", content: "assist with creating an exit form" },
+        { role: "assistant", content: "Here is what I'll fill in on the Resignation/Exit Form for Pat Example." },
+      ],
+      today: TODAY,
+      saved: { ...EMPTY_CONVERSATION_FORM_STATE, employeeName: "Pat Example", templateKey: "resignation-exit" },
+      raw: { employee: "test employee", store: null, title: null, incidentType: null, incidentDate: null, payrollAmount: null, warningLevel: null, formType: null, formTurn: true },
+      people: [],
+      stores: STORES,
+      headings: [],
+      templates: TEMPLATES,
+      formInProgress: true,
+    });
+    expect(decision.state.employeeName?.toLowerCase()).toBe("test employee");
+    expect(decision.question).not.toContain("Pat Example");
   });
 });

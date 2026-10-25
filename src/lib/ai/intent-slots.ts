@@ -136,7 +136,8 @@ export function normalizeIncidentDate(raw: string, today: string): string | null
   return calendarIso(year, month, Number(named[1]));
 }
 
-export function decideIntentTurn(input: IntentTurnInput): IntentTurnDecision {
+export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision {
+  const input = withoutUntypedSavedName(rawInput);
   const saved = input.saved ?? EMPTY_CONVERSATION_FORM_STATE;
   const reading = parseReading(input.raw);
   const blob = conversationBlob(input);
@@ -253,17 +254,33 @@ function conversationBlob(input: IntentTurnInput): string {
 function guardedTyped(typed: string | null, input: IntentTurnInput): string | null {
   if (!typed?.trim() || !notANameGuardEnabled()) return typed;
   if (isNotAName(typed)) return null;
-  const said = [
+  const turns = [
     ...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
     input.question,
     input.saved ? stateSentences(input.saved).join(" ") : "",
-  ]
-    // Outside a bulleted or priced offer list: an offer is not a person.
-    .map((turn) => maskNotANameText(turn))
-    .join("\n")
-    .toLowerCase()
-    .replace(/\s+/g, " ");
-  return said.includes(typed.trim().toLowerCase().replace(/\s+/g, " ")) ? typed : null;
+  ];
+  return typedBy(turns, typed) ? typed : null;
+}
+
+/** The name is in these turns, outside a bulleted or priced offer list. */
+function typedBy(turns: readonly string[], name: string): boolean {
+  const needle = name.trim().toLowerCase().replace(/\s+/g, " ");
+  return turns.some((turn) => maskNotANameText(turn).toLowerCase().replace(/\s+/g, " ").includes(needle));
+}
+
+/**
+ * NOT_A_NAME_GUARD_ENABLED: a saved employee the manager never typed is not
+ * kept. In Ask Sunny (QA L23), a name read from a manual heading in an
+ * assistant reply was saved, and "The employee is …" then outvoted the name
+ * the manager typed on every later turn. A roster pick (it carries the
+ * directory id) is the manager's choice and stays.
+ */
+function withoutUntypedSavedName(input: IntentTurnInput): IntentTurnInput {
+  const name = input.saved?.employeeName ?? null;
+  if (!notANameGuardEnabled() || !input.saved || !name || input.saved.employeeId) return input;
+  const said = [...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content), input.question];
+  if (!isNotAName(name) && typedBy(said, name)) return input;
+  return { ...input, saved: { ...input.saved, employeeName: null, keptTypedName: null } };
 }
 
 function groundEmployee(
