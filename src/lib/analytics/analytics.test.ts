@@ -1,3 +1,4 @@
+import { businessToday } from "@/lib/business-date";
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -496,12 +497,35 @@ describe("filters survive the round trip through a URL", () => {
 });
 
 describe("the window and the one before it", () => {
+  /*
+   * Changed on purpose (QA, 25 Oct 2026): the window's edges are midnight in
+   * the business timezone (America/Chicago: UTC-5 in September, UTC-6 in
+   * January), not UTC midnight, so an evening's activity is inside today's
+   * window. The ISO strings below moved by that offset; the days covered did not.
+   */
+  it("covers this evening: a rating at 11:25pm Central is inside today's window", () => {
+    const now = new Date("2026-10-25T04:25:00.000Z");
+    const window = resolveWindow(EMPTY_FILTERS, businessToday(now));
+    expect(businessToday(now)).toBe("2026-10-24");
+    expect(Date.parse(window.from)).toBeLessThanOrEqual(now.getTime());
+    expect(Date.parse(window.to)).toBeGreaterThan(now.getTime());
+    expect(window.to).toBe("2026-10-25T05:00:00.000Z");
+  });
+
+  it("keeps whole local days across a DST change", () => {
+    // 1 Nov 2026 is the end of daylight time in Chicago.
+    const window = resolveWindow({ ...EMPTY_FILTERS, range: "7d" }, "2026-11-03");
+    expect(window.from).toBe("2026-10-28T05:00:00.000Z");
+    expect(window.to).toBe("2026-11-04T06:00:00.000Z");
+    expect(window.days).toBe(7);
+  });
+
   it("covers the anchor day and ends exclusively after it", () => {
     const window = resolveWindow({ ...EMPTY_FILTERS, range: "7d" }, "2026-09-11");
     expect(window.days).toBe(7);
-    expect(window.from).toBe("2026-09-05T00:00:00.000Z");
+    expect(window.from).toBe("2026-09-05T05:00:00.000Z");
     /* Exclusive: the 12th is the boundary, so the 11th is fully included. */
-    expect(window.to).toBe("2026-09-12T00:00:00.000Z");
+    expect(window.to).toBe("2026-09-12T05:00:00.000Z");
   });
 
   it("compares against an equally long window immediately before", () => {
@@ -518,16 +542,16 @@ describe("the window and the one before it", () => {
       "2026-09-11",
     );
     expect(window.days).toBe(7);
-    expect(window.to).toBe("2026-09-08T00:00:00.000Z");
+    expect(window.to).toBe("2026-09-08T05:00:00.000Z");
   });
 
   it("starts this month and this year on their first day", () => {
     expect(
       resolveWindow({ ...EMPTY_FILTERS, range: "mtd" }, "2026-09-11").from,
-    ).toBe("2026-09-01T00:00:00.000Z");
+    ).toBe("2026-09-01T05:00:00.000Z");
     expect(
       resolveWindow({ ...EMPTY_FILTERS, range: "ytd" }, "2026-09-11").from,
-    ).toBe("2026-01-01T00:00:00.000Z");
+    ).toBe("2026-01-01T06:00:00.000Z");
   });
 
   it("coarsens the bucket as the window grows", () => {
