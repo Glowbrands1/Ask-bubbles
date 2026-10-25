@@ -23,7 +23,7 @@ import { loadInstance, type InstanceRow } from "./instances";
  * a separate document.
  *
  * The caller's own drafts only, still a draft, made in the last 24 hours.
- * Ported from Ask Sunny: in Bubbles one District Manager filed 10 Corrective
+ * Ported from the sibling app: in Bubbles one District Manager filed 10 Corrective
  * Action Forms for one employee on 21 Oct 2026.
  */
 
