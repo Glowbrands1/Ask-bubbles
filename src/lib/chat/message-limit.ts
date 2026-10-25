@@ -10,7 +10,7 @@
  * raise it, warn before sending, never cut text silently. 12,000 comes from
  * the production data and the prompt budget:
  *
- *   - Ask Sunny, 3,131 manager messages (26 Aug to 25 Oct 2026): median 43
+ *   - The sibling app, 3,131 manager messages (26 Aug to 25 Oct 2026): median 43
  *     characters, p99 401, p99.9 about 2,000, longest 5,089. Exactly one went
  *     over 4,000 (a 5,089-character paste); the route refused it after it was
  *     sent and the manager left the conversation. None is exactly 4,000, so
