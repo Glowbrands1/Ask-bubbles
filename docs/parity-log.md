@@ -775,3 +775,14 @@ store <name>" as "at <name>" (the store reader's own rules still apply), and
 the store the newest manager turn names wins on the remap and the intent
 slots. No salon wording was copied. Test:
 `src/lib/forms/store-label-cue.test.ts`.
+
+## 25 Oct 2026: FORM_REQUEST_OVER_ON_FILE_ENABLED, this app only (8c8e7dc)
+
+"do verbal corrective action for Test Employee, … previous coaching jba
+manual 9-9-26 …" (conv_mvnu3j932gpohx4) was read as a question about forms on
+file and answered with a facsimile refusal. The gate that did it,
+`asksOnlyAboutFormsOnFile` in `chat-form-records.ts`, has no counterpart in
+the sibling app's routing. There the same request (salon wording) already
+opens the Corrective Action Form; `src/lib/ai/salon-replay-oct25.test.ts`
+there asserts it. Nothing to port. The stray-quote guard and
+NEWEST_PLACE_TURN_ENABLED were ported in the same session.
