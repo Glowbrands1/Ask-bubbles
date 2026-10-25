@@ -3,8 +3,10 @@ import "server-only";
 import { trigramSimilarity } from "@/lib/ai/intake-augment";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
+import type { FormsActor } from "./access";
 import { pickCrossChatOpenDraft, type CrossChatDraftRow } from "./cross-chat-draft";
 import { sameIncident as sameIncidentKey } from "./incident-key";
+import { actorMaySeeInstance } from "./instance-scope";
 import { DUPLICATE_DRAFT_WINDOW_HOURS, loadInstance, type InstanceRow } from "./instances";
 
 /**
@@ -21,18 +23,36 @@ export interface ResentDraftWanted {
   readonly employeeName: string;
   readonly createdBy: string;
   readonly incidentKey: string;
+  /** The caller. A draft is reused only if they may open it — see `reusableDraft`. */
+  readonly actor: FormsActor;
   readonly now?: Date;
 }
 
 /**
+ * A draft the create route may hand back instead of filing a new one: still
+ * a draft, the caller's own, and one the caller may open now under the rule
+ * the instance GET applies (`actorMaySeeInstance`, which keeps the caller's
+ * own form only while their scope still covers its store). Otherwise the
+ * card points at a form whose next read is a 404, and a new chat finds the
+ * same draft again (ported from the sibling app, conv_mvh1m29j25aig2n).
+ */
+function reusableDraft(instance: InstanceRow | undefined, actor: FormsActor, createdBy: string): InstanceRow | null {
+  if (!instance || instance.status !== "draft" || instance.createdBy !== createdBy) return null;
+  return actorMaySeeInstance(actor, instance) ? instance : null;
+}
+
+/**
  * An open draft for the same employee, template, and incident date, from
- * any chat and any manager. A different date does not match. The card-id
- * match stays in the route and runs first.
+ * any chat. A different date does not match. The card-id match stays in the
+ * route and runs first. Only the caller's own draft, at a store they may
+ * still open — see `reusableDraft`.
  */
 export async function findCrossChatOpenDraft(input: {
   readonly templateKey: string;
   readonly employeeName: string;
   readonly formDate: string;
+  readonly createdBy: string;
+  readonly actor: FormsActor;
 }): Promise<InstanceRow | null> {
   try {
     const supabase = getSupabaseAdmin();
@@ -46,6 +66,7 @@ export async function findCrossChatOpenDraft(input: {
       .from("form_instances")
       .select("id, employee_name, created_at, form_date, status, created_by")
       .eq("template_id", template.id)
+      .eq("created_by", input.createdBy)
       .eq("status", "draft")
       .eq("form_date", input.formDate)
       .order("created_at", { ascending: false })
@@ -69,10 +90,14 @@ export async function findCrossChatOpenDraft(input: {
       createdAt: String(row.created_at ?? ""),
       createdBy: typeof row.created_by === "string" ? row.created_by : undefined,
     }));
-    const id = pickCrossChatOpenDraft(rows, input);
-    if (!id) return null;
-    const loaded = await loadInstance(id);
-    return loaded?.instance.status === "draft" ? loaded.instance : null;
+    let remaining = rows;
+    for (let id = pickCrossChatOpenDraft(remaining, input); id; id = pickCrossChatOpenDraft(remaining, input)) {
+      const reusable = reusableDraft((await loadInstance(id))?.instance, input.actor, input.createdBy);
+      if (reusable) return reusable;
+      const skipped = id;
+      remaining = remaining.filter((row) => row.id !== skipped);
+    }
+    return null;
   } catch {
     return null;
   }
@@ -91,12 +116,15 @@ export async function findResentDraft(input: ResentDraftWanted): Promise<Instanc
       .order("created_at", { ascending: false })
       .limit(25);
     if (error || !Array.isArray(data)) return null;
-    const match = (data as { instance_id?: unknown; incident_key?: unknown }[]).find(
+    const matches = (data as { instance_id?: unknown; incident_key?: unknown }[]).filter(
       (row) => typeof row.incident_key === "string" && sameIncidentKey(row.incident_key, input.incidentKey),
     );
-    if (!match || typeof match.instance_id !== "string") return null;
-    const loaded = await loadInstance(match.instance_id);
-    return loaded?.instance.status === "draft" ? loaded.instance : null;
+    for (const match of matches) {
+      if (typeof match.instance_id !== "string") continue;
+      const reusable = reusableDraft((await loadInstance(match.instance_id))?.instance, input.actor, input.createdBy);
+      if (reusable) return reusable;
+    }
+    return null;
   } catch {
     return null;
   }

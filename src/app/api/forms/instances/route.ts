@@ -428,6 +428,7 @@ export async function POST(request: Request) {
         templateKey: body.templateKey,
         employeeName: body.employeeName.trim().slice(0, 120),
         createdBy: actor.id,
+        actor,
         incidentKey,
       });
       if (resent) return NextResponse.json({ instance: resent, reused: true });
@@ -458,7 +459,8 @@ export async function POST(request: Request) {
      * SAME EMPLOYEE, TEMPLATE, AND INCIDENT DATE, ACROSS CHATS. The card-id
      * match above stays first. This does not widen DRAFT_DEDUPE_ENABLED: a
      * different date, or a request for a separate document, still creates.
-     * Off, this block does not run.
+     * Off, this block does not run. Only the caller's own draft, at a store
+     * they may still open (ported from the sibling app, conv_mvh1m29j25aig2n).
      */
     const crossChatDate = isIsoCalendarDate(body.formDate) ? body.formDate : null;
     if (
@@ -472,6 +474,8 @@ export async function POST(request: Request) {
         templateKey: body.templateKey,
         employeeName: body.employeeName.trim().slice(0, 120),
         formDate: crossChatDate,
+        createdBy: actor.id,
+        actor,
       });
       if (open) return NextResponse.json({ instance: open, reused: true });
     }
