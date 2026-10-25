@@ -1,10 +1,11 @@
 import "server-only";
 
 import { CLAUDE_HAIKU_MODEL } from "@/lib/config/models";
-import { formFullRemapEnabled, keepFormEmployeeEnabled, warningLevelManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { formFullRemapEnabled, keepFormEmployeeEnabled, notANameGuardEnabled, warningLevelManagerOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { CA_POLICY_LABEL, readCaPolicy } from "@/lib/forms/ca-policy";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
 import { listIncidentDates } from "@/lib/forms/form-date-answer";
+import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
@@ -108,13 +109,18 @@ export function groundFormSlots(input: {
 }): { slots: FormRemapSlots; response: AskResponse } {
   const conversation = turnsWithQuestion(input.history, input.question);
   const users = conversation.filter((turn) => turn.role === "user").map((turn) => turn.content);
+  const saved = withoutUntypedName(
+    input.saved ?? null,
+    users,
+    conversation.filter((turn) => turn.role === "assistant").map((turn) => turn.content),
+  );
   const said = users.join("\n");
   const raw = parseRaw(input.raw);
   const templateKey =
     templateFromUser(said) ??
     (isTemplate(input.continueTemplateKey) ? input.continueTemplateKey : null) ??
     (isTemplate(raw.templateKey) ? raw.templateKey : null);
-  const employeeName = groundedName(raw.employeeName, users, input.saved?.employeeName ?? null);
+  const employeeName = groundedName(raw.employeeName, users, saved?.employeeName ?? null);
   const jobTitle = groundedTitle(users);
   const store = groundedStore(said);
   const incidentDateIso = groundedDate(said, input.today);
@@ -163,9 +169,9 @@ export function groundFormSlots(input: {
    * level the manager never stated cannot ride on from an earlier extraction.
    */
   const savedSlots =
-    warningLevelManagerOnlyEnabled() && input.saved && conversation.length < HISTORY_CAP
-      ? { ...input.saved, warningLevel: null }
-      : input.saved ?? null;
+    warningLevelManagerOnlyEnabled() && saved && conversation.length < HISTORY_CAP
+      ? { ...saved, warningLevel: null }
+      : saved;
   const slots = finishSlots(mergeSlots(read, savedSlots), said);
 
   const assistants = [...input.history, { role: "user", content: input.question }]
@@ -350,21 +356,54 @@ function templateFromUser(text: string): TemplateKey | null {
   return null;
 }
 
+/**
+ * NOT_A_NAME_GUARD_ENABLED: a kept employee that came from a reply is not
+ * kept again (the sibling app's QA L23: a name read from a manual heading in a reply
+ * outlived the name the manager typed). Only on evidence: not a name at all,
+ * or an assistant turn in the window says it (other than as a card's subject)
+ * and none of the manager's turns do. With
+ * no evidence (a name typed before the 20-turn window) it stays. Off, the
+ * kept slots are unchanged.
+ */
+function withoutUntypedName(
+  saved: Partial<FormRemapSlots> | null,
+  turns: readonly string[],
+  replies: readonly string[],
+): Partial<FormRemapSlots> | null {
+  const name = saved?.employeeName ?? null;
+  if (!saved || !name || !notANameGuardEnabled()) return saved;
+  const needle = name.trim().toLowerCase().replace(/\s+/g, " ");
+  const said = (text: string) => text.toLowerCase().replace(/\s+/g, " ").includes(needle);
+  const typed = turns.some((turn) => said(maskNotANameText(turn)));
+  const fromReply = !typed && saidInReply(replies, name);
+  if (!isNotAName(name) && !fromReply) return saved;
+  return { ...saved, employeeName: null, closeMatchNote: null };
+}
+
 function groundedName(proposed: string | null, turns: readonly string[], saved: string | null = null): string | null {
-  const said = turns.join("\n");
-  const latest = turns.at(-1) ?? "";
+  // NOT_A_NAME_GUARD_ENABLED: the model's name is looked for outside a
+  // bulleted or priced offer list, so an offer it copied is not found.
+  const spoken = notANameGuardEnabled() ? turns.map((turn) => maskNotANameText(turn)) : turns;
+  const said = spoken.join("\n");
+  const latest = spoken.at(-1) ?? "";
   const keep = keepFormEmployeeEnabled();
+  // NOT_A_NAME_GUARD_ENABLED: "blank", a product, a store's city or a verb
+  // phrase is not the employee, even when the manager typed those words.
+  if (proposed && isNotAName(proposed)) proposed = null;
   if (proposed) {
     const inLatest = exactSlice(latest, proposed);
     if (inLatest) return keep ? fullerOfSame(saved, inLatest) : inLatest;
     const inSaid = exactSlice(said, proposed);
     if (inSaid) return keep ? fullerOfSame(saved, inSaid) : inSaid;
   }
-  if (keep) return keptEmployee(turns, saved);
+  if (keep) {
+    const kept = keptEmployee(spoken, saved);
+    return kept && isNotAName(kept) ? null : kept;
+  }
   let found: string | null = null;
   for (const turn of turns) {
-    const person = personPhrase(turn);
-    if (person) found = person;
+    const person = personPhrase(notANameGuardEnabled() ? maskNotANameText(turn) : turn);
+    if (person && !isNotAName(person)) found = person;
   }
   return found;
 }

@@ -30,7 +30,13 @@ import { loadFullManualPlan } from "@/lib/knowledge/full-manual-load";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { RoleGrounding } from "@/lib/knowledge/role-grounding";
 import { recallPeople } from "@/lib/chat/person-memory-store";
-import { asksAboutRecords, refersBack, withoutCrossChatClaims } from "@/lib/chat/cross-chat-guard";
+import {
+  asksAboutRecords,
+  CROSS_CHAT_NEUTRAL_REPLY,
+  refersBack,
+  withoutCrossChatClaims,
+  type CrossChatCheck,
+} from "@/lib/chat/cross-chat-guard";
 import { reportById, routeReportQuestion } from "@/lib/reporting/registry";
 import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
@@ -45,7 +51,7 @@ import { applyIntentExtraction } from "./intent-extraction";
 import { pinnedManualBlock, printedPageFromRetrieval } from "./policy-citation-fields";
 import { recallMemory, rememberFact } from "./chat-memory-store";
 import { finishChatTrace, openChatTrace, redactTraceText } from "./chat-trace";
-import { updateChatTrace } from "./chat-trace-store";
+import { chatTraceDraft, updateChatTrace } from "./chat-trace-store";
 import {
   chatDataToolsEnabled,
   chatMemoryEnabled,
@@ -99,6 +105,7 @@ import { assembleGrounding } from "./grounding-assembly";
 import {
   citePolicyAnswer,
   fullManualGroundingNote,
+  keepRestatedFallbackMarkers,
   validateManualCitations,
   type CitedManualAnswer,
   type FullManualPlan,
@@ -112,6 +119,8 @@ import {
   type GroundingChunk,
 } from "./prompts";
 import { retrievalPlanFor } from "./retrieval-query";
+import { slotOnlyRetrievalTopic } from "./slot-only-turn";
+import { withoutSharedSourceClaims } from "./sources-not-shared";
 import type { AskRequest, AskResponse } from "./types";
 
 /**
@@ -567,13 +576,22 @@ async function answerQuestionBody(
    * and the query is then phrased in the manual's terms. SKIP keeps a form
    * command as typed. See `retrievalPlan` and `retrieval-query.ts`.
    */
-  const retrievalQuestion = queryRewriteEnabled()
-    ? await rewriteRetrievalQuery({
-        question: request.question,
-        history: request.history,
-        fallback: request.question,
-      })
-    : request.question;
+  /*
+   * A TURN THAT ONLY FILLS IN A DETAIL — "She works at Grand Island", "It
+   * happened on 10-21" — is searched with the conversation's topic, not its
+   * own words, which found recipe and event pages (conv_mvnljjl32xlit48).
+   * See `slot-only-turn.ts`.
+   */
+  const slotTopic = slotOnlyRetrievalTopic(request.question, request.history);
+  const retrievalQuestion = slotTopic
+    ? slotTopic
+    : queryRewriteEnabled()
+      ? await rewriteRetrievalQuery({
+          question: request.question,
+          history: request.history,
+          fallback: request.question,
+        })
+      : request.question;
   updateChatTrace({ rewrittenQuery: retrievalQuestion === request.question ? null : retrievalQuestion });
   const plan = retrievalPlanFor({
     question: retrievalQuestion,
@@ -859,12 +877,24 @@ async function answerQuestionBody(
 
   const activeMarkers = (fellBack ? retrievalChunks : grounding).map((chunk) => chunk.marker);
   const activeRows: (MatchedChunkRow | null)[] = fellBack ? [...used] : citationRows;
-  const markers = extractUsedMarkers(settled?.text ?? answer, activeMarkers);
+  /*
+   * The retrieval fallback's manual pages are kept only where the sentence
+   * restates them (see `keepRestatedFallbackMarkers`).
+   */
+  const manualDocuments = new Set((manualPlan?.passages ?? []).map((passage) => passage.documentId));
+  const fallbackText =
+    fellBack && manualPlan
+      ? keepRestatedFallbackMarkers(answer, manualPlan, (marker) => {
+          const row = activeRows[marker - 1];
+          return row && manualDocuments.has(row.document_id) ? printedPageFromRetrieval(row) : null;
+        })
+      : answer;
+  const markers = extractUsedMarkers(settled?.text ?? fallbackText, activeMarkers);
   const guarded = settled
     ? settled.text
     : fullManualContextEnabled() && !fellBack
       ? validateManualCitations(answer, { shownMarkers: markers, index: manualPlan?.index ?? null })
-      : answer;
+      : fallbackText;
   const toCitation = (source: FullManualSource): SourceCitation => ({
     documentId: source.documentId,
     documentTitle: source.documentTitle,
@@ -928,12 +958,24 @@ async function answerQuestionBody(
    * every other word the model wrote is kept.
    */
   if (crossChatGuard && !refersBack(request.question, request.history)) {
-    content = withoutCrossChatClaims(content, {
+    const crossChatCheck = withoutCrossChatClaims(content, {
       question: request.question,
       history: request.history,
       todayIso: request.context.todayIso,
-    }).content;
+    });
+    noteCrossChatRemoval(crossChatCheck);
+    content = crossChatCheck.content;
   }
+  /*
+   * THE BACKSTOP to the retrieved-sources rule: a reply that still calls the
+   * retrieved excerpts "the sources you shared" has that clause rewritten,
+   * unless the manager pasted something. See `sources-not-shared.ts`.
+   */
+  content = withoutSharedSourceClaims(content, {
+    question: request.question,
+    history: request.history,
+    attachedDocumentIds: request.attachedDocumentIds,
+  }).content;
   return {
     content,
     formSelection: suggested?.selection,
@@ -1231,4 +1273,20 @@ function previousManagerTurn(request: AskRequest): string | null {
     }
   }
   return null;
+}
+
+/**
+ * A reply the cross-chat backstop changed is logged and tagged on the trace's
+ * intent column ("cross_chat_removed", or "cross_chat_neutral" when nothing
+ * but the neutral line was left), so a read of chat_traces finds every one.
+ * The count only: the removed sentences carry the manager's own words.
+ */
+function noteCrossChatRemoval(check: CrossChatCheck): void {
+  if (check.removed.length === 0) return;
+  const neutral = check.content === CROSS_CHAT_NEUTRAL_REPLY;
+  console.info(
+    JSON.stringify({ event: "reply.cross_chat.removed", sentences: check.removed.length, neutral }),
+  );
+  const tag = neutral ? "cross_chat_neutral" : "cross_chat_removed";
+  updateChatTrace({ intent: [chatTraceDraft()?.intent, tag].filter(Boolean).join("|") });
 }
