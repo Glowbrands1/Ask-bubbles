@@ -733,6 +733,18 @@ export function terseSlotReadEnabled(): boolean {
   return envFlag("TERSE_SLOT_READ_ENABLED");
 }
 
+/**
+ * A new employee on the card starts a new account: the Issue, prior actions,
+ * Date, warning level, payroll answer and the draft's source turns are read
+ * only from the turns since the manager named that person. Ported from Ask
+ * Sunny (conv_mvoetxo92fraflz, 25 Oct 2026); here request 1's payroll answer
+ * and warning level reached request 2's card (conv_mvoftzhs29se8nb). See
+ * `ai/cross-person-guard.ts`. Off, the card carries them as before.
+ */
+export function crossPersonIncidentGuardEnabled(): boolean {
+  return envFlag("CROSS_PERSON_INCIDENT_GUARD_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -802,4 +814,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "CROSS_PERSON_INCIDENT_GUARD_ENABLED",
 ] as const;
