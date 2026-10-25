@@ -1,0 +1,384 @@
+import { rosterResultFor } from "@/test/roster-result";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
+import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
+
+/**
+ * ============================================================================
+ * THE FORM'S ACTION PLAN IS THE MANAGER'S, OR BLANK — END TO END
+ * ============================================================================
+ *
+ * Pau, 25 Oct 2026: when the manager typed no action plan, the Corrective
+ * Action Form's Action Plan stays blank — no "Management will review …"
+ * sentence and no closing written onto it. A plan the manager typed ("action
+ * plan: …") is the Action Plan word for word. ACTION_PLAN_MANAGER_ONLY_ENABLED.
+ *
+ * The C-list turn from QA B5 (conv_mvnmf1ik2lqkfld), word for word, through
+ * the real proposal flow, `createInlineForm` and the real create / draft /
+ * review routes, with the shipped store roster. Only identity, the model, the
+ * knowledge provider, the directory read and the database are stand-ins.
+ * Every person is synthetic. The card on the live chat path is covered by
+ * `src/app/api/chat/action-plan-manager-only-live-path.test.ts`.
+ */
+
+/* "Kearney, NE" on the shipped roster. */
+const KEARNEY = "loc-66";
+
+const store: FakeStore = {
+  form_instances: [],
+  form_instance_values: [],
+  form_instance_events: [],
+  form_template_versions: [],
+  form_templates: [],
+  form_template_current: [],
+  form_template_assets: [],
+};
+
+const state = vi.hoisted(() => ({
+  role: "admin",
+  scope: null as unknown,
+  draft: {} as { values?: Record<string, unknown>; checked?: Record<string, unknown> },
+  /** What the drafting model was given, per call. */
+  modelNotes: [] as string[],
+  directory: [] as unknown[],
+  manual: null as null | { chunks: unknown[] },
+}));
+
+vi.mock("@/lib/supabase/server", () => ({ getSupabaseAdmin: () => fakeSupabase(store) }));
+
+vi.mock("@/lib/api/respond", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/respond")>();
+  return {
+    ...actual,
+    assertLiveMode: () => {},
+    assertNoConfigurationProblems: () => {},
+    assertWithinRateLimit: () => {},
+  };
+});
+
+vi.mock("@/lib/auth/server", async () => {
+  const { AuthError } = await import("@/lib/auth/types");
+  const { DEFAULT_PERMISSION_MATRIX, hasPermission } = await import("@/lib/permissions");
+  return {
+    authorizeRequest: async (_request: Request, permission: string) => {
+      if (!hasPermission(DEFAULT_PERMISSION_MATRIX, state.role as never, permission as never)) {
+        throw new AuthError("forbidden", "Your role does not have permission to do that.");
+      }
+      return {
+        identity: {
+          subject: "admin-1",
+          email: "admin@example.com",
+          displayName: "Admin",
+          role: state.role,
+          scope: state.scope,
+          verified: true,
+        },
+        permission,
+        provider: "supabase",
+      };
+    },
+  };
+});
+
+vi.mock("@/lib/ai/anthropic", () => ({
+  getAnthropicClient: () => ({
+    messages: {
+      create: async (request: { system?: unknown; messages?: { content?: unknown }[] }) => {
+        state.modelNotes.push(JSON.stringify([request.system ?? null, request.messages ?? []]));
+        return {
+          stop_reason: "tool_use",
+          content: [{ type: "tool_use", name: "write_form_fields", input: state.draft }],
+        };
+      },
+    },
+  }),
+}));
+
+vi.mock("@/lib/knowledge/providers/supabase", () => ({
+  SupabaseKnowledgeProvider: class {
+    async search() {
+      return [];
+    }
+    async fetchRoleGrounding(role: { id: string }) {
+      return {
+        ok: true,
+        grounding: {
+          role: { id: role.id },
+          documentId: "doc-progression",
+          documentTitle: "ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT",
+          matchedBy: "tag",
+          rows: [
+            {
+              chunk_id: "pmf-0",
+              document_id: "doc-progression",
+              document_title: "ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT",
+              category: "leadership_coaching",
+              locator: "SECTION 2",
+              page: null,
+              section: null,
+              content: "Solve the issue at the lowest appropriate level.",
+              similarity: 0,
+            },
+          ],
+        },
+      };
+    }
+    async fetchOfficialPolicyManual() {
+      if (!state.manual) return { ok: false, reason: "The official policy manual is not in the knowledge base." };
+      return {
+        ok: true,
+        documentId: "doc-manual",
+        documentTitle: "2025 JBA Policy Manual - Edited 5-2025",
+        documentCategory: "policies_compliance",
+        matchedBy: "tag",
+        chunks: state.manual.chunks,
+      };
+    }
+  },
+}));
+
+process.env.NEXT_PUBLIC_DEMO_MODE = "false";
+
+vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/forms/employee-roster")>();
+  return {
+    ...actual,
+    loadScopedRoster: async (scope: AccessScope | null) => actual.scopeRoster(state.directory as never, scope),
+    loadScopedRosterResult: async (scope: AccessScope | null) =>
+      rosterResultFor(actual.scopeRoster, state.directory as never, scope),
+  };
+});
+
+const { ensureTemplateLibrary, listTemplateSummaries } = await import("@/lib/forms/repository");
+const { proposeFormForTurn } = await import("@/lib/ai/form-proposal");
+const { createInlineForm } = await import("@/features/chat/create-inline-form");
+const instancesRoute = await import("./instances/route");
+const instanceRoute = await import("./instances/[id]/route");
+const draftRoute = await import("./instances/[id]/draft/route");
+
+function joinOverview() {
+  for (const row of store.form_instances ?? []) {
+    const template = store.form_templates!.find((entry) => entry.id === row.template_id);
+    const version = store.form_template_versions.find((entry) => entry.id === row.template_version_id);
+    Object.assign(row, {
+      form_date: row.form_date ?? "2026-10-21",
+      template_key: template?.key,
+      template_name: template?.name,
+      layout_family: template?.layout_family,
+      template_version: version?.version,
+    });
+  }
+}
+
+async function call<T>(url: string, init?: RequestInit): Promise<T> {
+  const request = new Request(`https://app.test${url}`, init);
+  const draft = /^\/api\/forms\/instances\/([^/]+)\/draft$/.exec(url);
+  const response = draft
+    ? await draftRoute.POST(request, { params: Promise.resolve({ id: draft[1]! }) })
+    : url === "/api/forms/instances"
+      ? await instancesRoute.POST(request)
+      : null;
+  if (!response) throw new Error(`no route for ${url}`);
+  joinOverview();
+  const body = (await response.json()) as T & { error?: string };
+  if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
+  return body;
+}
+
+async function review(id: string) {
+  joinOverview();
+  const response = await instanceRoute.GET(new Request(`https://app.test/api/forms/instances/${id}`), {
+    params: Promise.resolve({ id }),
+  });
+  expect(response.status).toBe(200);
+  return (await response.json()) as {
+    instance: Record<string, unknown>;
+    values: {
+      fieldKey: string;
+      value: string | null;
+      checked: string[];
+      filledBy: string;
+      provenance?: Record<string, unknown>;
+    }[];
+  };
+}
+
+const field = (form: Awaited<ReturnType<typeof review>>, key: string) =>
+  form.values.find((entry) => entry.fieldKey === key);
+
+let sequence = 0;
+const said = (content: string): ChatMessage => ({
+  id: `m${(sequence += 1)}`,
+  role: "user",
+  content,
+  createdAt: "2026-10-21T15:00:00Z",
+});
+
+/**
+ * Plays the manager's turns through the real proposal flow — Ask Bubbles' own
+ * answers fed forward as history, and the open card's template sent as the
+ * browser does — and returns every turn's response plus a `create` that files
+ * the last card exactly as the chat's Create draft button does.
+ */
+async function conversation(turns: string[]) {
+  const messages: ChatMessage[] = [];
+  const responses: NonNullable<Awaited<ReturnType<typeof proposeFormForTurn>>>[] = [];
+  let open: string | undefined;
+  for (const text of turns) {
+    const message = said(text);
+    const response = await proposeFormForTurn({
+      history: messages,
+      question: message.content,
+      questionMessageId: message.id,
+      actor: { role: state.role as never, scope: state.scope as AccessScope },
+      summaries: await listTemplateSummaries(),
+      today: "2026-10-21",
+      /* The pinned manual, as server-ask supplies it. */
+      policyManual: async () => (state.manual?.chunks as never) ?? null,
+      ...(open ? { continueTemplateKey: open } : {}),
+    });
+    expect(response, `turn left the form intake: ${JSON.stringify(text)}`).not.toBeNull();
+    responses.push(response!);
+    if (response!.formProposal) open = response!.formProposal.templateKey;
+    messages.push(message, {
+      id: `a${sequence}`,
+      role: "assistant",
+      content: response!.content,
+      createdAt: "2026-10-21T15:00:01Z",
+      ...(response!.formProposal ? { formProposal: response!.formProposal } : {}),
+    } as ChatMessage);
+  }
+  const last = responses[responses.length - 1]!;
+  return {
+    responses,
+    last,
+    messages,
+    proposal: last.formProposal!,
+    /*
+     * The card as the manager files it. On the live path the remap names the
+     * employee and the store (see the live-path test); the proposal flow on
+     * its own reads neither from this turn, so they are filled in as the
+     * manager fills them on the card.
+     */
+    create: async () => {
+      const proposal: ChatFormProposal = {
+        ...last.formProposal!,
+        employeeName: "Test Employee",
+        locationId: KEARNEY,
+        status: "ready",
+        supportsInlineDraft: true,
+      };
+      return createInlineForm({ proposal, messages, call, onCreated: () => {} });
+    },
+  };
+}
+
+
+/* Synthetic people only. */
+const DIRECTORY = [
+  { id: "e-1", firstName: "Test", lastName: "Employee", preferredFirstName: null, employmentStatus: "active", locationIds: [KEARNEY], positionName: "Operator" },
+];
+
+const STANDARDS_OF_CONDUCT_CHUNK = {
+  chunkIndex: 30,
+  chunkId: "c-30",
+  locator: "Page 12",
+  page: 13,
+  printedPage: 12,
+  sections: [{ heading: "Standards of Conduct", page: 12 }],
+  section: "Standards of Conduct",
+  content:
+    "Standards of Conduct\nThe Company expects Employees to follow rules of conduct that will protect the interests and\nsafety of all customers, Employees, and The Company.\nThe following are examples (non-inclusive list) of infractions that may result in disciplinary\naction:\no Failing to follow the policies and procedures of The Company\no Register / Bank shortages",
+};
+
+const MANUAL = { chunks: [STANDARDS_OF_CONDUCT_CHUNK] };
+
+/* QA B5, conv_mvnmf1ik2lqkfld — the C-list turn, word for word. */
+const C_LIST = "create a written CA for Test Employee at Kearney for missing the 10-15-26 woven deadline";
+const MANAGER_PLAN = "complete the Woven policy module by 10-30-26 and review it with her manager";
+const CONTROL = `${C_LIST}. action plan: ${MANAGER_PLAN}`;
+
+const CLOSING =
+  "Future policy violations may result in additional corrective action up to and including termination of employment.";
+/* What the drafting model returns. Its plan never reaches the form. */
+const MODEL_DRAFT = {
+  values: {
+    observation: "Observed:\nOn October 15, 2026, Test Employee missed the Woven deadline.",
+    action_plan: "Test is expected to meet every Woven deadline. Management will monitor compliance.",
+  },
+  checked: {},
+};
+
+const FLAG = "ACTION_PLAN_MANAGER_ONLY_ENABLED";
+const SENTENCES = "ACTION_PLAN_SENTENCES_ENABLED";
+const savedFlags = new Map<string, string | undefined>();
+
+beforeEach(async () => {
+  for (const name of [FLAG, SENTENCES]) savedFlags.set(name, process.env[name]);
+  delete process.env[FLAG];
+  delete process.env[SENTENCES];
+  for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
+  state.role = "admin";
+  state.scope = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
+  state.draft = MODEL_DRAFT;
+  state.modelNotes = [];
+  state.directory = DIRECTORY;
+  state.manual = MANUAL;
+  sequence = 0;
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-25T15:00:00Z"));
+  await ensureTemplateLibrary("system");
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  for (const [name, value] of savedFlags) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
+});
+
+async function draftedPlan(turns: string[]) {
+  const { create } = await conversation(turns);
+  const { reference } = await create();
+  const form = await review(reference.instanceId);
+  return { form, plan: field(form, "action_plan") };
+}
+
+describe.each([
+  ["two-sentence plan off", false],
+  ["two-sentence plan on (production)", true],
+] as const)("the form's Action Plan (%s)", (_name, sentences) => {
+  beforeEach(() => {
+    if (sentences) process.env[SENTENCES] = "true";
+  });
+
+  it("flag off: the C-list turn's form gets the standard plan (unchanged)", async () => {
+    const { plan } = await draftedPlan([C_LIST]);
+    expect(plan?.value ?? "").toMatch(/^Management will review the .+ with Test\./);
+    expect(plan?.value ?? "").toContain(CLOSING);
+  });
+
+  it("flag on: the C-list turn's form leaves the Action Plan blank", async () => {
+    process.env[FLAG] = "true";
+    const { form, plan } = await draftedPlan([C_LIST]);
+    expect((plan?.value ?? "").trim()).toBe("");
+    expect(JSON.stringify(form.values)).not.toMatch(/Management will review/);
+    /* The rest of the draft is still written. */
+    expect(field(form, "observation")?.value ?? "").toMatch(/Woven deadline/);
+  });
+
+  it("flag on, control: the Action Plan is exactly what the manager typed", async () => {
+    process.env[FLAG] = "true";
+    const { plan } = await draftedPlan([CONTROL]);
+    expect(plan?.value).toBe(MANAGER_PLAN);
+    expect(plan?.provenance).toMatchObject({ source: "manager_statement" });
+  });
+
+  it("flag on, control as a second turn: the Action Plan is exactly what the manager typed", async () => {
+    process.env[FLAG] = "true";
+    const { plan } = await draftedPlan([C_LIST, `action plan: ${MANAGER_PLAN}`]);
+    expect(plan?.value).toBe(MANAGER_PLAN);
+  });
+});

@@ -120,6 +120,7 @@ import {
 } from "./prompts";
 import { retrievalPlanFor } from "./retrieval-query";
 import type { AskRequest, AskResponse } from "./types";
+import { keepManagerActionPlan } from "./manager-action-plan-reply";
 
 /**
  * ============================================================================
@@ -163,7 +164,8 @@ export async function answerQuestion(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
-  if (!chatTraceEnabled()) return answerQuestionBody(request, actor, memory);
+  // Last on every path: the Corrective Action card's Action Plan is the manager's or none.
+  if (!chatTraceEnabled()) return keepManagerActionPlan(await answerQuestionBody(request, actor, memory), request);
   const draft = openChatTrace({
     conversationId: request.conversationId,
     messageId: request.questionMessageId,
@@ -171,7 +173,7 @@ export async function answerQuestion(
     originalQuery: request.question,
     formInProgress: Boolean(request.continueProposalTemplateKey || request.openForm || request.activeFormInstanceId),
   });
-  return finishChatTrace(draft, () => answerQuestionBody(request, actor, memory));
+  return keepManagerActionPlan(await finishChatTrace(draft, () => answerQuestionBody(request, actor, memory)), request);
 }
 
 async function answerQuestionBody(

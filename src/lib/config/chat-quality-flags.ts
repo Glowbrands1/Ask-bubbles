@@ -376,6 +376,17 @@ export function crossChatReplyGuardEnabled(): boolean {
   return envFlag("CROSS_CHAT_REPLY_GUARD_ENABLED");
 }
 
+/**
+ * The Corrective Action Form's Action Plan is the manager's, or blank (Pau,
+ * 25 Oct 2026). A plan they typed ("action plan: …") goes on the card and the
+ * form word for word. With none typed, nothing is written: no "Management
+ * will review …" sentence, no closing, no model summary. Off, the plan is
+ * built as it is today.
+ */
+export function actionPlanManagerOnlyEnabled(): boolean {
+  return envFlag("ACTION_PLAN_MANAGER_ONLY_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -417,4 +428,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
   "NOT_A_NAME_GUARD_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
+  "ACTION_PLAN_MANAGER_ONLY_ENABLED",
 ] as const;
