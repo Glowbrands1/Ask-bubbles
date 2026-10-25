@@ -90,10 +90,9 @@ const PRIOR_STEP_BEFORE =
   /\b(?:got|gotten|received|was given|were given|been given|given|had|issued|gave|was|were|previous(?:ly)?|prior|already|last time)\b[^.;\n]{0,40}\b(?:warn(?:ing|ings|ed)|write[- ]?ups?|written up|coach(?:ed|ing)?|corrective actions?|cas?|c\/a|disciplin\w*|(?:a|an)\s+(?:final\s+)?(?:verbal|written)(?!\s+up))\b(?:[^.;,\n]{0,20}|\s+(?:on|about|for|over|regarding)\s+(?:the\s+|her\s+|his\s+|their\s+)?(?:[a-z]+\s+){0,3}?(?:back\s+)?(?:on|in)\s+)$/i;
 
 /*
- * PRIOR_ACTIONS_PARSE_ENABLED. "she completed September Promo coaching
- * 9/29/26, Hemp nation product coaching form 9/30/26" (QA, Ask Sunny
- * conv_muxahcdkiiur2tu) is a step she already took: "completed" is one of the
- * verbs that say so. Off, the reading is exactly `PRIOR_STEP_BEFORE`.
+ * PRIOR_ACTIONS_PARSE_ENABLED. "she completed … coaching 9/29/26, product
+ * coaching form 9/30/26" (QA, the sibling app's chat history) is a step she
+ * already took: "completed" is one of the verbs that say so. Off, the reading is exactly `PRIOR_STEP_BEFORE`.
  */
 const PRIOR_STEP_BEFORE_PARSED = new RegExp(PRIOR_STEP_BEFORE.source.replace("(?:got|", "(?:completed|got|"), "i");
 
