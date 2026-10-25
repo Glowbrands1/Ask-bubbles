@@ -27,9 +27,9 @@ export const NOT_A_NAME = new Set([
   "friday", "saturday", "sunday",
   /*
    * THE MONTHS THAT ARE NEVER ANYBODY'S FIRST NAME. Reported on the reference
-   * platform: "Betty Sue … under performance for September …" read "for
+   * platform: "Dora Lee … under performance for September …" read "for
    * September" as a second person, and the assistant asked whether the form
-   * was for Betty Sue or September. April, May, June, July and August are real
+   * was for Dora Lee or September. April, May, June, July and August are real
    * first names, so they are not here — `lowercaseMonths` below takes them out
    * of a name position only where the sentence uses them as a date.
    */
@@ -216,7 +216,7 @@ export const NOT_A_NAME_LEAD = new Set([
  * The employee readers take a capital letter as the evidence of a name, so a
  * month written as managers write it — capitalised — reached the same
  * positions a person does: "for September", or the tail of a capitalised run
- * ("Betty Sue September"). Writing the month in lower case takes it out of
+ * ("Dora Lee September"). Writing the month in lower case takes it out of
  * every capital-based reading while the date readers, which match months in
  * any case, still see it.
  *
