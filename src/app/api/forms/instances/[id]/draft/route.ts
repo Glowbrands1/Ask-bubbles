@@ -536,7 +536,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * `.catch(() => null)` above collapses a retrieval OUTAGE into the same
      * unavailable state rather than a 500, so this branch covers both.
      */
-    if (governance.governed && !unpinFramework && (progression === null || !progression.ok)) {
+    if (!unpinFramework && governance.governed && (progression === null || !progression.ok)) {
       return NextResponse.json({
         values: {},
         checked: {},
@@ -930,11 +930,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
             "Each plan you do write is one or two sentences, tied to what the manager described and to the objective printed beside the category. No dates, no disciplinary step, no quoted policy wording.",
           ]
         : []),
-      ...(governance.governed
-        ? unpinFramework
-          ? UNPINNED_PERFORMANCE_MANAGEMENT_DRAFT_RULES
-          : PERFORMANCE_MANAGEMENT_DRAFT_RULES
-        : []),
+      // FRAMEWORK_UNPIN_ENABLED: `unpinFramework` is only ever true on a governed form.
+      ...(unpinFramework
+        ? UNPINNED_PERFORMANCE_MANAGEMENT_DRAFT_RULES
+        : governance.governed ? PERFORMANCE_MANAGEMENT_DRAFT_RULES : []),
       /*
        * THE EPP'S OWN RULES, on the versions that have the appendix field.
        * They say what a performance plan IS — coaching, not a warning — and
