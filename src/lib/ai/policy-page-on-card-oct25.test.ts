@@ -133,12 +133,12 @@ afterEach(() => {
 });
 
 /** One chat with exactly these flags on; every other flag of this file off. */
-async function chat(flags: readonly string[], say: string): Promise<{ content: string }> {
+async function chat(flags: readonly string[], say: string, templateKey = "dpoa"): Promise<{ content: string }> {
   for (const name of ALL) {
     if (flags.includes(name)) process.env[name] = "true";
     else delete process.env[name];
   }
-  model.raw = { templateKey: "dpoa", employeeName: "Test Employee", observation: null, actionPlan: null };
+  model.raw = { templateKey, employeeName: /Testy Testerson/.test(say) ? "Testy Testerson" : "Test Employee", observation: null, actionPlan: null };
   const history: ChatMessage[] = [];
   return answerQuestion(
     {
@@ -154,11 +154,11 @@ async function chat(flags: readonly string[], say: string): Promise<{ content: s
 }
 
 /** The card with the flag unset, with the flag set "off", and with it on. */
-async function threeWays(profile: readonly string[], say: string) {
-  const unset = await chat(profile, say);
+async function threeWays(profile: readonly string[], say: string, templateKey = "dpoa") {
+  const unset = await chat(profile, say, templateKey);
   process.env[FLAG] = "off";
-  const off = await chat([...profile], say);
-  const on = await chat([...profile, FLAG], say);
+  const off = await chat([...profile], say, templateKey);
+  const on = await chat([...profile, FLAG], say, templateKey);
   return { unset: unset.content, off: off.content, on: on.content };
 }
 
@@ -170,6 +170,8 @@ const STANDARDS =
   "create corrective action for Test Employee for violating standards of conduct policy on 10-20-26. Test failed to acknowledge policies in woven by the 10-15-26 deadline.";
 const LATE_OPENING =
   "create verbal ca for Test Employee for opening store late on 10-1-26. previous coaching is jba policy manual 1-1-26. payroll deduct DOES apply and state $25 will be payroll deducted";
+const DRESS_CODE = "create a verbal corrective action for Test Employee, team member at dodge for violating dress code on 10-20-26";
+const DRESS_CODE_COACHING = "create a coaching citing dress code violation on 10-15-26. Team Members name is Testy Testerson";
 const CELL_PHONE = "create a verbal corrective action form for Test Employee. on 10-20-26 Test was talking on her cell phone for over 30 minutes";
 
 describe("QA 25 Oct 2026: the policy on the card carries its printed page (POLICY_PAGE_ON_CARD_ENABLED)", () => {
@@ -187,6 +189,23 @@ describe("QA 25 Oct 2026: the policy on the card carries its printed page (POLIC
     expect(card.off).toContain("**Policy:** Late Opening, as you said");
     expect(card.on).toContain("**Policy:** Late Opening (JBA Policy Manual p.15), as you said");
     expect(card.on).not.toMatch(/p\.16\b/);
+    expect(card.on.replace(" (JBA Policy Manual p.15)", "")).toBe(card.off);
+    expect(card.off).toBe(card.unset);
+  });
+
+  it("a Dress Code CA: p.15, the page of the manual section the app cites for the box (QA follow-up)", async () => {
+    const card = await threeWays(REMAP, DRESS_CODE);
+    expect(card.off).toContain("**Policy:** Dress Code, as you said");
+    expect(card.on).toContain("**Policy:** Dress Code (JBA Policy Manual p.15), as you said");
+    expect(card.on).not.toMatch(/p\.16\b/);
+    expect(card.on.replace(" (JBA Policy Manual p.15)", "")).toBe(card.off);
+    expect(card.off).toBe(card.unset);
+  });
+
+  it("a Dress Code Coaching Form: the same p.15", async () => {
+    const card = await threeWays(REMAP, DRESS_CODE_COACHING, "coaching");
+    expect(card.off).toContain("**Policy:** Dress Code, as you said");
+    expect(card.on).toContain("**Policy:** Dress Code (JBA Policy Manual p.15), as you said");
     expect(card.on.replace(" (JBA Policy Manual p.15)", "")).toBe(card.off);
     expect(card.off).toBe(card.unset);
   });
