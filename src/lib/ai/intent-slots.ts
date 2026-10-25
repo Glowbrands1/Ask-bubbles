@@ -14,6 +14,7 @@ import {
   formChoiceStatedEnabled,
   placeSpanGuardEnabled,
   priorActionsParseEnabled,
+  titleWholeWordEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { extractJobTitle } from "@/lib/forms/proposal";
@@ -30,6 +31,7 @@ import {
 } from "./form-state";
 import type { GroundedPerson } from "./grounded-entities";
 import { titleTextFromTurns } from "./title-words";
+import { titleInWords } from "./title-in-words";
 
 /**
  * Slots read off one turn, then kept only when the roster, the store list,
@@ -661,9 +663,14 @@ function groundTitle(
 ): string | null {
   if (person?.title) return person.title;
   const titles = [...new Set(people.map((row) => row.title).filter((title): title is string => Boolean(title?.trim())))];
-  const probe = typed?.trim() || null;
+  // TITLE_WHOLE_WORD_ENABLED: a directory title is stated only as a whole
+  // word in the conversation, and a title the model typed only when the
+  // words carry it (see `titleInWords`).
+  const wholeWord = titleWholeWordEnabled();
+  const inWords = (title: string) => !wholeWord || titleInWords(title, titleText ?? blob);
+  const probe = typed?.trim() && inWords(typed.trim()) ? typed.trim() : null;
   if (probe) {
-    const hit = titles.find((title) => title.toLowerCase() === probe.toLowerCase());
+    const hit = titles.find((title) => title.toLowerCase() === probe.toLowerCase() && inWords(title));
     if (hit) return hit;
     const close = titles.filter((title) => editDistance(title.toLowerCase(), probe.toLowerCase()) <= 1);
     if (close.length === 1) return close[0]!;
@@ -673,8 +680,12 @@ function groundTitle(
     const stated = extractJobTitle(titleText);
     if (stated) return stated;
   }
-  const said = (titleText ?? blob).toLowerCase();
-  const inText = titles.filter((title) => said.includes(title.toLowerCase()));
+  // MANAGER_WORDS_ONLY_ENABLED narrows the text to the manager's turns;
+  // TITLE_WHOLE_WORD_ENABLED reads a directory title in it as a whole word.
+  const said = titleText ?? blob;
+  const inText = titles.filter((title) =>
+    wholeWord ? titleInWords(title, said) : said.toLowerCase().includes(title.toLowerCase()),
+  );
   return inText.length === 1 ? inText[0]! : null;
 }
 

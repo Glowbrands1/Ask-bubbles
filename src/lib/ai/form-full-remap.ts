@@ -10,6 +10,7 @@ import {
   remapIncidentFixEnabled,
   placeSpanGuardEnabled,
   priorActionsParseEnabled,
+  keepFormEmployeeEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
@@ -172,7 +173,9 @@ export function groundFormSlots(input: {
   const modelKey =
     isTemplate(raw.templateKey) && !(choiceStated && raw.templateKey === "dpoa" && coaching) ? raw.templateKey : null;
   const templateKey = stated?.key ?? templateFromUser(said) ?? continued ?? modelKey;
-  const employeeName = groundedName(raw.employeeName, users);
+  // KEEP_FORM_EMPLOYEE_ENABLED keeps the saved employee; NOT_A_NAME_GUARD_ENABLED
+  // has already dropped a saved name that was never typed.
+  const employeeName = groundedName(raw.employeeName, users, saved?.employeeName ?? null);
   // REMAP_INCIDENT_FIX_ENABLED drops "Kearney, NE"-style state codes before the
   // title is read; MANAGER_WORDS_ONLY_ENABLED then reads it from the manager's turns.
   const titleTurns = fixed ? users.map(withoutStateCodes) : users;
@@ -617,7 +620,7 @@ function withoutUntypedName(
   return { ...saved, employeeName: null, closeMatchNote: null };
 }
 
-function groundedName(proposed: string | null, turns: readonly string[]): string | null {
+function groundedName(proposed: string | null, turns: readonly string[], saved: string | null = null): string | null {
   // NOT_A_NAME_GUARD_ENABLED: the model's name is looked for outside a
   // bulleted or priced offer list, so an offer it copied is not found.
   const spoken = notANameGuardEnabled() ? turns.map((turn) => maskNotANameText(turn)) : turns;
@@ -626,18 +629,69 @@ function groundedName(proposed: string | null, turns: readonly string[]): string
   // NOT_A_NAME_GUARD_ENABLED: "blank", a product, a store's city or a verb
   // phrase is not the employee, even when the manager typed those words.
   if (proposed && isNotAName(proposed)) proposed = null;
+  const keep = keepFormEmployeeEnabled();
   if (proposed) {
     const inLatest = exactSlice(latest, proposed);
-    if (inLatest) return inLatest;
+    if (inLatest) return keep ? fullerOfSame(saved, inLatest) : inLatest;
     const inSaid = exactSlice(said, proposed);
-    if (inSaid) return inSaid;
+    if (inSaid) return keep ? fullerOfSame(saved, inSaid) : inSaid;
   }
+  // NOT_A_NAME_GUARD_ENABLED: the kept reader looks at the masked turns too.
+  if (keep) return keptEmployee(spoken, saved);
   let found: string | null = null;
   for (const turn of turns) {
     const person = personPhrase(notANameGuardEnabled() ? maskNotANameText(turn) : turn);
     if (person && !isNotAName(person)) found = person;
   }
   return found;
+}
+
+/*
+ * KEEP_FORM_EMPLOYEE_ENABLED (ported from the sibling app, QA round 10). The
+ * model's name was not in the manager's words, so the employee is read here.
+ * A name stated on purpose ("for Test Employee", "Test Employee at
+ * Kearney", a turn that is only the name) replaces the one before it. A name
+ * met in passing ("onboarding with new hire Test Newhire") is the employee
+ * only when there is none yet: it does not replace the saved one. A shorter
+ * spelling of the same person ("test") keeps the fuller name.
+ */
+function keptEmployee(turns: readonly string[], saved: string | null): string | null {
+  let found = saved?.trim() || null;
+  for (const turn of turns) {
+    const stated = statedPerson(turn);
+    // NOT_A_NAME_GUARD_ENABLED: "for blank" or a store's city is not a person.
+    if (stated && isNotAName(stated)) continue;
+    if (stated) {
+      found = fullerOfSame(found, stated);
+      continue;
+    }
+    const names = extractEmployeeNames(turn);
+    if (names.length !== 1) continue;
+    const name = exactSlice(turn, names[0]!) ?? names[0]!;
+    if (!found && !isNotAName(name)) found = name;
+  }
+  return found;
+}
+
+function statedPerson(turn: string): string | null {
+  if (/\bas the location\b/i.test(turn)) return null;
+  const named = /\bfor\s+([A-Z][\w'.-]+(?:\s+[A-Z][\w'.-]+)*)/.exec(turn);
+  if (named) return named[1]!;
+  const leading = /^([A-Z][\w'.-]+(?:\s+[A-Z][\w'.-]+)+)\s+at\b/.exec(turn.trim());
+  if (leading) return leading[1]!;
+  const names = extractEmployeeNames(turn);
+  if (names.length !== 1) return null;
+  const whole = turn.trim().replace(/[.!]+$/, "");
+  return whole.toLowerCase() === names[0]!.toLowerCase() ? (exactSlice(turn, names[0]!) ?? names[0]!) : null;
+}
+
+/** The saved name when `name` is a shorter spelling of the same person ("test" for "test employee"). */
+function fullerOfSame(saved: string | null, name: string): string {
+  if (!saved) return name;
+  const kept = saved.toLowerCase().split(/\s+/).filter(Boolean);
+  const typed = name.toLowerCase().split(/\s+/).filter(Boolean);
+  if (typed.length < kept.length && typed.every((word, index) => kept[index] === word)) return saved;
+  return name;
 }
 
 /** "for Test Employee" and "Test Employee at Grand Island". Not "Use Kearney as the location". */
