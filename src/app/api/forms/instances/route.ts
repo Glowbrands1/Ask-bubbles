@@ -47,6 +47,7 @@ import { businessToday } from "@/lib/business-date";
 import {
   conversationDraftReuseEnabled,
   draftReuseSameChatOnlyEnabled,
+  draftReuseOwnDraftsOnlyEnabled,
   crossChatDraftDedupeEnabled,
   draftActionsEnabled,
   draftDedupeEnabled,
@@ -483,7 +484,8 @@ export async function POST(request: Request) {
      * SAME EMPLOYEE, TEMPLATE, AND INCIDENT DATE, ACROSS CHATS. The card-id
      * match above stays first. This does not widen DRAFT_DEDUPE_ENABLED: a
      * different date, or a request for a separate document, still creates.
-     * Off, this block does not run.
+     * Off, this block does not run. With DRAFT_REUSE_OWN_DRAFTS_ONLY_ENABLED
+     * on, only a draft this manager made is reopened; off, any manager's counts.
      */
     const crossChatDate = isIsoCalendarDate(body.formDate) ? body.formDate : null;
     if (
@@ -498,6 +500,7 @@ export async function POST(request: Request) {
         employeeName: body.employeeName.trim().slice(0, 120),
         formDate: crossChatDate,
         ...(sameChat ? { sameChat } : {}),
+        ...(draftReuseOwnDraftsOnlyEnabled() ? { ownDraftsOnly: true, createdBy: actor.id } : {}),
       });
       if (open) return reused(open);
     }

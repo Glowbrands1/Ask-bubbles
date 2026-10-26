@@ -29,8 +29,15 @@ export interface ResentDraftWanted {
 
 /**
  * An open draft for the same employee, template, and incident date, from
- * any chat and any manager. A different date does not match. The card-id
- * match stays in the route and runs first.
+ * any chat. A different date does not match. The card-id match stays in the
+ * route and runs first.
+ *
+ * WHOSE DRAFT. With DRAFT_REUSE_OWN_DRAFTS_ONLY_ENABLED off (the default),
+ * any manager's draft counts. With it on, the route passes `ownDraftsOnly`
+ * and `createdBy`: the query reads only that manager's drafts and the picker
+ * checks each row's creator again, so one manager's create is never handed
+ * another manager's draft (QA, 25 Oct 2026). Without `createdBy` it finds
+ * nothing.
  */
 export async function findCrossChatOpenDraft(input: {
   readonly templateKey: string;
@@ -38,8 +45,12 @@ export async function findCrossChatOpenDraft(input: {
   readonly formDate: string;
   /** DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED: only a draft this chat made. */
   readonly sameChat?: SameChat;
+  /** DRAFT_REUSE_OWN_DRAFTS_ONLY_ENABLED: only a draft `createdBy` made. */
+  readonly ownDraftsOnly?: boolean;
+  readonly createdBy?: string;
 }): Promise<InstanceRow | null> {
   try {
+    if (input.ownDraftsOnly && !input.createdBy) return null;
     const supabase = getSupabaseAdmin();
     const { data: template, error: templateError } = await supabase
       .from("form_templates")
@@ -47,7 +58,7 @@ export async function findCrossChatOpenDraft(input: {
       .eq("key", input.templateKey)
       .maybeSingle();
     if (templateError || !template) return null;
-    const { data, error } = await supabase
+    let query = supabase
       .from("form_instances")
       .select("id, employee_name, created_at, form_date, status, created_by")
       .eq("template_id", template.id)
@@ -55,6 +66,8 @@ export async function findCrossChatOpenDraft(input: {
       .eq("form_date", input.formDate)
       .order("created_at", { ascending: false })
       .limit(25);
+    if (input.ownDraftsOnly && input.createdBy) query = query.eq("created_by", input.createdBy);
+    const { data, error } = await query;
     if (error || !Array.isArray(data)) return null;
     const read: CrossChatDraftRow[] = (
       data as {
