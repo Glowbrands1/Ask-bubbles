@@ -43,6 +43,7 @@ import type { SourceCitation } from "@/types";
 
 import { callClaude } from "./call-claude";
 import { loadChatDataBlock } from "./chat-data-tools";
+import { loadGoogleReviewsChatBlock } from "./google-reviews-chat-read";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
 import { withTerseSlots } from "./terse-slots";
@@ -82,6 +83,7 @@ import {
   crossChatReplyGuardEnabled,
   manualNegatedListNoteEnabled,
   questionNotFormEnabled,
+  googleReviewsInChatEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -136,6 +138,7 @@ import { appPasswordHelpFor } from "./app-password-help";
 import { redactSensitiveDefaults, withoutSensitiveDefaults } from "./sensitive-defaults";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
 import { withoutOtherBrands } from "./brand-reply-guard";
+import { withNameBeforeTitle } from "./name-before-title";
 import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
 
@@ -209,7 +212,8 @@ async function answerQuestionTraced(
   memory: { memoryOwnerId?: string },
 ): Promise<AskResponse> {
   // TERSE_SLOT_READ_ENABLED: a terse "ca …" line is read as the long form.
-  const read = withTerseSlots(request);
+  // NAME_BEFORE_TITLE_ENABLED: a two-word name right before a job title is the name.
+  const read = withTerseSlots(withNameBeforeTitle(request));
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
@@ -853,6 +857,14 @@ async function answerQuestionCore(
     : null;
 
   const briefing = await briefingPromise;
+  /*
+   * GOOGLE_REVIEWS_IN_CHAT_ENABLED: the Google Reviews page's month to date,
+   * goal and pace for the caller's stores, read only on a Google review
+   * question and only with View reports. Null otherwise.
+   */
+  const reviewBlock = googleReviewsInChatEnabled()
+    ? await loadGoogleReviewsChatBlock({ question: request.question, role: actor.role, scope: actor.scope })
+    : null;
 
   const settledSummaries = await summariesPromise;
   const personMemory = await memoryPromise;
@@ -879,7 +891,7 @@ async function answerQuestionCore(
      * model that no company document matched.
      */
     hasContext: grounding.length > 0 || useManual,
-    hasReportData: (briefing?.present.length ?? 0) > 0,
+    hasReportData: (briefing?.present.length ?? 0) > 0 || reviewBlock?.figures === true,
     hasMissingReports: (briefing?.missing.length ?? 0) > 0,
     hasFormsLibrary: formInventoryBlock !== null,
     hasVerifiedRecords: entities.block !== null,
@@ -930,6 +942,7 @@ async function answerQuestionCore(
     question: request.question,
     role: actor.role,
     breakdown: reportBreakdownEnabled(),
+    reviewsHandled: reviewBlock !== null,
   });
   const pinnedPolicy = await citedManualGrounding(request, knowledge);
   const supplementalChunks = grounding;
@@ -966,7 +979,7 @@ async function answerQuestionCore(
     prompt: redactTraceText(system),
   });
   const reportData =
-    [briefing?.text ?? null, dataAddition.data].filter((part) => part && part.length > 0).join("\n\n") || null;
+    [briefing?.text ?? null, reviewBlock?.text ?? null, dataAddition.data].filter((part) => part && part.length > 0).join("\n\n") || null;
   const claudeBase = {
     system,
     reportData,
@@ -1125,7 +1138,7 @@ async function answerQuestionCore(
     coverage: answerCoverage({
       retrieved: fellBack ? used.length : grounding.length + (useManual ? 1 : 0),
       cited: citations.length,
-      reportBacked: (briefing?.present.length ?? 0) > 0,
+      reportBacked: (briefing?.present.length ?? 0) > 0 || reviewBlock?.figures === true,
       recordBacked: formRecords !== null,
       aboutForms: asksAboutForms(request.question),
     }),
