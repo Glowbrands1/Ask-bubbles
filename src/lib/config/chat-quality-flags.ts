@@ -786,6 +786,15 @@ export function appPasswordHelpEnabled(): boolean {
   return envFlag("APP_PASSWORD_HELP_ENABLED");
 }
 
+/**
+ * A terse "ca …" line's incident sentence is the account alone, "On 10/11/26,
+ * dress code.", without the employee's name inside What happened (QA, 26 Oct
+ * 2026). Off, the expansion reads "On 10/11/26 <name> dress code." as before.
+ */
+export function terseIncidentNoNameEnabled(): boolean {
+  return envFlag("TERSE_INCIDENT_NO_NAME_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -859,4 +868,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TERSE_SLOT_READ_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
+  "TERSE_INCIDENT_NO_NAME_ENABLED",
 ] as const;
