@@ -239,13 +239,22 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
   const managerOnly = intentPayrollManagerOnlyEnabled();
   // The manager's Yes/No, never an assistant turn's: "payroll deduct is not
   // applicable" is No in the saved state too (LATE_OPEN_DATE_ENABLED).
-  const payrollAnswer =
-    lateOpen && !managerOnly && latePayrollFromFormEnabled()
-      ? latePayrollFromForm(input, formType.key ?? saved.templateKey)
-      : managerOnly || lateOpen
-        ? payrollDeductFromConversation([...input.history, { role: "user", content: input.question }])
-        : null;
-  const payrollAmount = !managerOnly
+  /*
+   * LATE_OPEN_PAYROLL_FROM_FORM_ENABLED (live, 26 Oct 2026; ported from the
+   * sibling app): payroll deduct is this form's only — the manager's own
+   * statement, or a bare reply to the payroll question asked just before it —
+   * and only a form that asks it (the Corrective Action Form) takes a bare
+   * reply or an amount. With or without INTENT_PAYROLL_MANAGER_ONLY. See
+   * `latePayrollFromForm`.
+   */
+  const payrollFromForm = lateOpen && latePayrollFromFormEnabled();
+  const asksPayroll = payrollFromForm && formAsksPayroll(input.templates, formType.key ?? saved.templateKey);
+  const payrollAnswer = payrollFromForm
+    ? latePayrollFromForm(input, asksPayroll)
+    : managerOnly || lateOpen
+      ? payrollDeductFromConversation([...input.history, { role: "user", content: input.question }])
+      : null;
+  const payrollAmountRead = !managerOnly
     ? lateOpen && payrollAnswer === "no"
       ? null
       : groundPayroll(reading?.payrollAmount ?? null, blob)
@@ -253,6 +262,8 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
       ? null
       : (payrollClauseAmount(input) ??
         (payrollAnswer === "yes" ? groundPayroll(reading?.payrollAmount ?? null, managerBlob(input)) : null));
+  // LATE_OPEN_PAYROLL_FROM_FORM_ENABLED: "$25" on an exit form is no payroll deduction.
+  const payrollAmount = payrollFromForm && !asksPayroll ? null : payrollAmountRead;
   const formTurn = Boolean(input.formInProgress || reading?.formTurn || formType.key || saved.templateKey);
 
   const merged = mergeSlots(saved, {
@@ -270,7 +281,12 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
   });
   let state = choiceStated ? firstCoachingUnlessEarlier(merged, managerTurns(input), input.templates) : merged;
   if (warningManagerOnly) {
-    const answered = payrollAnsweredNow(input.history, input.question);
+    // LATE_OPEN_PAYROLL_FROM_FORM_ENABLED: only on a form that asks it, and only to the question itself.
+    const answered = !payrollFromForm
+      ? payrollAnsweredNow(input.history, input.question)
+      : asksPayroll
+        ? payrollAnsweredNow(input.history, input.question, { askedOpen: true })
+        : null;
     if (answered) state = { ...state, payrollDeduct: answered };
     /*
      * RE-READ EVERY TURN, AND ONLY FOR A FORM WITH A TYPE OF WARNING (ported
@@ -462,24 +478,39 @@ function withTypedEmployee(
 const HISTORY_CAP = 20;
 
 /**
- * LATE_OPEN_PAYROLL_FROM_FORM_ENABLED (QA, 26 Oct 2026; ported from the
- * sibling app). With LATE_OPEN_DATE_ENABLED on, the intent read took the
- * payroll answer over the whole thread, so a bare "Yes" or "No" after an exit
- * form — or after a Corrective Action reply asking the payroll question — was
- * saved as payroll deduct on the exit form. Now, as WARNING_LEVEL_MANAGER_ONLY
- * reads it: what the manager's own turns state ("no payroll", "payroll deduct
- * is not applicable"), and a bare Yes/No only as the reply to the payroll
- * question just asked (`payrollAnsweredNow`), and only on a form that asks it
- * — the Corrective Action Form.
+ * LATE_OPEN_PAYROLL_FROM_FORM_ENABLED (QA and live, 26 Oct 2026; ported from
+ * the sibling app). With LATE_OPEN_DATE_ENABLED on, the intent read took the
+ * payroll answer over the whole thread, and with WARNING_LEVEL_MANAGER_ONLY on
+ * a bare reply was saved on any form: a "yes", "no" or "$25" after an exit
+ * form's card (which lists its "Payroll Deduction" box), and a bare "yes"
+ * after "no payroll deduct" flipped a Corrective Action to Yes. Now: what the
+ * manager's own turns state ("no payroll", "payroll deduct is not
+ * applicable"), and a bare Yes/No only as the reply to the payroll QUESTION
+ * asked just before it and still open (`PAYROLL_ASKED`), and only on a form
+ * that asks it — the Corrective Action Form.
  */
-function latePayrollFromForm(input: IntentTurnInput, templateKey: string | null): PayrollDeductAnswer | null {
+function latePayrollFromForm(input: IntentTurnInput, asksPayroll: boolean): PayrollDeductAnswer | null {
   const said = payrollDeductFromConversation(
     [...input.history, { role: "user", content: input.question }].filter((turn) => turn.role === "user"),
   );
-  const template = input.templates.find((row) => row.key === templateKey) ?? (templateKey ? { key: templateKey } : null);
-  const replied = templateHasWarningLevel(template) ? payrollAnsweredNow(input.history, input.question) : null;
+  const replied = asksPayroll ? payrollAnsweredNow(input.history, input.question, { askedOpen: true }) : null;
   return replied ?? said;
 }
+
+/** Whether the form is one that asks "Is payroll deduct applicable?" — the Corrective Action Form. */
+function formAsksPayroll(templates: readonly TemplateRow[], templateKey: string | null): boolean {
+  if (!templateKey) return false;
+  return templateHasWarningLevel(templates.find((row) => row.key === templateKey) ?? { key: templateKey });
+}
+
+/**
+ * The payroll question itself, still open: "Is payroll deduct applicable? Yes
+ * or No?", "7. Is payroll deduct applicable? (Yes or No)", or the question
+ * ending its line. Not a form's "Payroll Deduction" box, and not the question
+ * read back with its answer ("Is payroll deduct applicable? **No** — tell me
+ * if that should change.").
+ */
+const PAYROLL_ASKED = /is\s+payroll\s+deduct(?:ion)?\s+applicable\?(?![ \t]*(?:yes|no)\b(?![ \t]+or\b))/im;
 
 /** Another yes/no question beside the payroll one: "Did you mean **Rowan Testo**?". */
 const OTHER_YES_NO =
@@ -497,9 +528,12 @@ const OTHER_YES_NO =
 function payrollAnsweredNow(
   history: readonly { role: string; content: string }[],
   question: string,
+  options: { readonly askedOpen?: boolean } = {},
 ): "yes" | "no" | null {
   const before = history[history.length - 1];
   if (!before || before.role !== "assistant") return null;
+  // LATE_OPEN_PAYROLL_FROM_FORM_ENABLED: the payroll question itself was asked, and is still open.
+  if (options.askedOpen && !PAYROLL_ASKED.test(before.content.replace(/[*_`]/g, ""))) return null;
   const questions = (before.content.replace(/[*_`]/g, "").match(/[^.!?\n]*\?/g) ?? [])
     .map((line) => line.trim())
     .filter((line) => !/payroll/i.test(line) && !/^yes\s+or\s+no\?$/i.test(line));
