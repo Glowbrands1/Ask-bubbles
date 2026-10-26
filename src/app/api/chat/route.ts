@@ -33,12 +33,14 @@ import { businessToday } from "@/lib/business-date";
 import {
   chatLongMessageEnabled,
   draftActionsEnabled,
+  noCardNoDraftClaimEnabled,
   payrollDeductAmountFieldEnabled,
   questionNotFormEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
 import { isClientConversationId } from "@/lib/chat/client-ids";
-import type { AskRequest } from "@/lib/ai/types";
+import { hasCard, noCardNoDraftClaim, type NoCardClaimContext } from "@/lib/ai/no-card-draft-claim";
+import type { AskRequest, AskResponse, OpenFormSummary } from "@/lib/ai/types";
 import type { AnswerMode, ChatMessage } from "@/types";
 
 /**
@@ -311,19 +313,33 @@ export async function POST(request: Request) {
         revision ??
         which ??
         reopened ??
-        (await answerQuestion(
-          { ...parsed, openForm },
-          {
-            role: context.identity.role,
-            scope: context.identity.scope,
-            subject: context.identity.subject,
-            verified: context.identity.verified,
-          },
+        (await noCardClaimChecked(
+          await answerQuestion(
+            { ...parsed, openForm },
+            {
+              role: context.identity.role,
+              scope: context.identity.scope,
+              subject: context.identity.subject,
+              verified: context.identity.verified,
+            },
+            /*
+             * WHOSE EARLIER CONVERSATIONS BUBBLES MAY RECALL: the validated
+             * session's, and only ever theirs. See `chat/person-memory-store.ts`.
+             */
+            { memoryOwnerId: context.identity.subject },
+          ),
+          { question: parsed.question, openForm, proposalPending: Boolean(parsed.continueProposalTemplateKey) },
           /*
-           * WHOSE EARLIER CONVERSATIONS BUBBLES MAY RECALL: the validated
-           * session's, and only ever theirs. See `chat/person-memory-store.ts`.
+           * Two cards from one message and a turn that names neither: no
+           * single `openForm`, but both forms are on screen. Read only when
+           * the guard is on and the answer came with no card.
            */
-          { memoryOwnerId: context.identity.subject },
+          async () => {
+            if (openForm || !parsed.activeFormCandidateIds?.length) return [];
+            const { describeOpenForm } = await import("@/lib/forms/open-form-summary");
+            const forms = await Promise.all(parsed.activeFormCandidateIds.map((id) => describeOpenForm(request, id)));
+            return forms.filter((form): form is OpenFormSummary => form !== null);
+          },
         ));
     } catch (error) {
       /*
@@ -375,6 +391,26 @@ export async function POST(request: Request) {
   } catch (error) {
     return errorResponse(error, "POST /api/chat");
   }
+}
+
+/**
+ * NO CARD, NO CLAIM THAT A DRAFT IS OPEN (NO_CARD_NO_DRAFT_CLAIM_ENABLED, QA
+ * B22-2). The model's answer, when it carries no card, has any sentence that
+ * says a draft is open or created that is not on screen — or that tells the
+ * manager to press Finalize or Create on it — replaced with one honest line.
+ * Off, the answer is returned as it came. See `lib/ai/no-card-draft-claim.ts`.
+ *
+ * `openFormsOnScreen` gives every form open when several cards came from one
+ * message and the turn named none (`activeFormCandidateIds`, `openForm` null),
+ * so a true line about either card is not rewritten (QA-7).
+ */
+async function noCardClaimChecked(
+  answer: AskResponse,
+  context: NoCardClaimContext,
+  openFormsOnScreen: () => Promise<OpenFormSummary[]>,
+): Promise<AskResponse> {
+  if (!noCardNoDraftClaimEnabled() || hasCard(answer)) return answer;
+  return noCardNoDraftClaim(answer, { ...context, openForms: await openFormsOnScreen() });
 }
 
 /** Validates and bounds everything that arrived from the browser. */
