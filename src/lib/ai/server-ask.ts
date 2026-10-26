@@ -133,9 +133,19 @@ import {
 import { retrievalPlanFor } from "./retrieval-query";
 import { earlierAnsweredTurn, isReformatTurn, keepEarlierSources } from "./reformat-turn";
 import { slotOnlyRetrievalTopic } from "./slot-only-turn";
+import { appPasswordHelpFor } from "./app-password-help";
+import { redactSensitiveDefaults, withoutSensitiveDefaults } from "./sensitive-defaults";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
 import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
+
+/** SENSITIVE_DEFAULTS_REDACT_ENABLED: a default password format or SSN digits are never shown to the model. */
+function withoutSensitiveChunks<T extends { content: string }>(chunks: T[]): T[] {
+  return chunks.map((chunk) => {
+    const content = redactSensitiveDefaults(chunk.content);
+    return content === chunk.content ? chunk : { ...chunk, content };
+  });
+}
 
 /**
  * ============================================================================
@@ -178,6 +188,25 @@ export async function answerQuestion(
   request: AskRequest,
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
+): Promise<AskResponse> {
+  /*
+   * APP_PASSWORD_HELP_ENABLED: "I forgot my password" is answered about this
+   * app's own sign-in, the "Forgot your password?" link (QA and Pau, 25 Oct
+   * 2026). SENSITIVE_DEFAULTS_REDACT_ENABLED: no reply or cited excerpt ever
+   * repeats a default password format or SSN digits (QA P0). Off, both are
+   * the turn as before.
+   */
+  const passwordHelp = appPasswordHelpFor(request.question, request.history);
+  if (passwordHelp) {
+    return { content: passwordHelp, citations: [], coverage: "grounded" };
+  }
+  return withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory));
+}
+
+async function answerQuestionTraced(
+  request: AskRequest,
+  actor: ChatActor,
+  memory: { memoryOwnerId?: string },
 ): Promise<AskResponse> {
   // TERSE_SLOT_READ_ENABLED: a terse "ca …" line is read as the long form.
   // STATE_CA_GUARD_ENABLED: "Sacramento, CA" is a place, not a Corrective Action.
@@ -918,7 +947,7 @@ async function answerQuestionCore(
    */
   const readingNotes = manualNegatedListNoteEnabled();
   const groundingParts = [
-    useManual && manualPlan ? fullManualGroundingNote(manualPlan) : buildGroundingBlock(grounding),
+    useManual && manualPlan ? fullManualGroundingNote(manualPlan) : buildGroundingBlock(withoutSensitiveChunks(grounding)),
     supplementalText,
     useManual ? null : pinnedPolicy,
   ]
@@ -976,7 +1005,7 @@ async function answerQuestionCore(
        * Ordinary retrieval is the same path the flag-off turn already uses.
        */
       fellBack = true;
-      const fallbackParts = [buildGroundingBlock(retrievalChunks), pinnedPolicy]
+      const fallbackParts = [buildGroundingBlock(withoutSensitiveChunks(retrievalChunks)), pinnedPolicy]
         .filter((part) => part && part.length > 0)
         .join("\n\n");
       const fallbackGrounding = [readingNotes ? withManualReadingNotes(fallbackParts) : fallbackParts, dataAddition.help]
