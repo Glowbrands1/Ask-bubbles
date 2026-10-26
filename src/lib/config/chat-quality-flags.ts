@@ -786,6 +786,15 @@ export function appPasswordHelpEnabled(): boolean {
   return envFlag("APP_PASSWORD_HELP_ENABLED");
 }
 
+/**
+ * Two forms asked for in one turn are never silently one: the reply says
+ * which was started and how to start the other (QA, 26 Oct 2026; same flag
+ * in both apps). See `ai/two-forms.ts`. Off, the reply is as it is.
+ */
+export function twoFormsAskEnabled(): boolean {
+  return envFlag("TWO_FORMS_ASK_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -859,4 +868,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TERSE_SLOT_READ_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
+  "TWO_FORMS_ASK_ENABLED",
 ] as const;
