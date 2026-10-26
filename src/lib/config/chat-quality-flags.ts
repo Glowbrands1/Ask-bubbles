@@ -957,6 +957,16 @@ export function nameBeforeTitleEnabled(): boolean {
   return envFlag("NAME_BEFORE_TITLE_ENABLED");
 }
 
+/**
+ * The form the manager named is the form: "needs CA" and "write ca" ask for
+ * the Corrective Action Form, and a request for "a form" that names none uses
+ * the form last named in the chat (conv_mvofmpei2c50lhp, 25 Oct 2026). See
+ * `ai/manager-form-choice.ts`. Off, every turn is read as typed.
+ */
+export function managerFormChoiceEnabled(): boolean {
+  return envFlag("MANAGER_FORM_CHOICE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "INCIDENT_FROM_EARLIER_TURN_ENABLED",
   "LEVEL_REQUEST_DATE_ENABLED",
@@ -1319,6 +1329,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  // coding 6: MANAGER_FORM_CHOICE (B#181 rebuilt; default off; wiring awaits Coding-2).
+  "MANAGER_FORM_CHOICE_ENABLED",
 ] as const;
 
 /**
