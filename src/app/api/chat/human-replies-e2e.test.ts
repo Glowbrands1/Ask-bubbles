@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
+import { humanPhrases } from "@/lib/ai/human-replies";
 import type { ChatFormProposal, ChatMessage } from "@/types";
 
 vi.mock("@/config/company/locations", async () =>
@@ -281,7 +282,11 @@ function typed(steps: readonly Step[]): [string, readonly Step[]][] {
   ];
 }
 
-const OPENERS = ["Here is the Corrective Action Form.", "I'll draft a **Corrective Action Form** for"];
+/** Main's openers, and what the manager reads instead. */
+const OPENERS: [string, string][] = [
+  ["Here is the Corrective Action Form.", "Here's the Corrective Action Form."],
+  ["I'll draft a **Corrective Action Form** for", "Here's the **Corrective Action Form** for"],
+];
 const LONG_NOTICE = "nothing is saved to anyone's file until you do.";
 const SHORT_NOTICE = "Nothing's saved until you tap **Create draft**.";
 
@@ -302,16 +307,20 @@ describe.each(PROFILES)("(1) the opener is said once (%s)", (_label, flags) => {
       useProfile(flags, true);
       const after = await replay(steps);
 
-      const opener = OPENERS.find((text) => before[0]!.content.startsWith(text));
-      expect(opener, before[0]!.content).toBeDefined();
+      const pair = OPENERS.find(([main]) => before[0]!.content.startsWith(main));
+      expect(pair, before[0]!.content).toBeDefined();
+      const [opener, human] = pair!;
       // Before: the opener on every turn.
-      for (const reply of before) expect(reply.content.startsWith(opener!), reply.content).toBe(true);
+      for (const reply of before) expect(reply.content.startsWith(opener), reply.content).toBe(true);
 
-      // After: turn 1 is unchanged, and the opener is said once in the chat.
-      expect(after[0]!.content).toBe(before[0]!.content);
+      // After: turn 1 is main's in the phrase table's words, and its opener is said once in the chat.
+      expect(after[0]!.content).toBe(humanPhrases(before[0]!.content));
       const chat = after.map((reply) => reply.content).join("\n\n");
-      expect(count(chat, opener!)).toBe(1);
-      expect(count(chat, LONG_NOTICE)).toBe(count(before[0]!.content, LONG_NOTICE));
+      expect(count(chat, opener)).toBe(0);
+      expect(count(chat, human)).toBe(1);
+      expect(count(chat, LONG_NOTICE)).toBe(0);
+      // Never "JB & Associates" in this app.
+      expect(chat).not.toContain("JB & Associates");
       expect(after[1]!.content.split("\n")[0]).toBe("Got it — no payroll deduct.");
       expect(after[2]!.content.split("\n")[0]).toBe("Got it — the date's 10/14.");
       expect(after[3]!.content.split("\n")[0]).toBe("Got it — it's a written warning.");
@@ -319,7 +328,7 @@ describe.each(PROFILES)("(1) the opener is said once (%s)", (_label, flags) => {
         // (2) Answered, so not asked again.
         expect(reply.content).not.toContain("I won't answer it for you");
         expect(reply.content).not.toMatch(/^Is payroll deduct applicable\?$/m);
-        if (before[0]!.content.includes(LONG_NOTICE)) expect(reply.content).toContain(SHORT_NOTICE);
+        if (after[0]!.content.includes(SHORT_NOTICE)) expect(reply.content).toContain(SHORT_NOTICE);
       }
 
       // The card itself does not change.
