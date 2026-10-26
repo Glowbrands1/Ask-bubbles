@@ -94,3 +94,76 @@ describe("INCIDENT_SPLIT_FIX_ENABLED on", () => {
     expect(correctiveActionIssue("create a ca for avery stone", "avery stone")).toBeNull();
   });
 });
+
+/**
+ * QA-2, 26 Oct 2026, with INCIDENT_SPLIT_FIX_ENABLED on: suites whose Issue
+ * picked up another field's answer, or lost part of the account. The suites'
+ * own turns, names invented. With the flag on, an Issue that main left empty
+ * or read as the for-clause is now the account (intended); these pin what it
+ * must never contain.
+ */
+describe("INCIDENT_SPLIT_FIX_ENABLED on: the Issue never carries another field's answer", () => {
+  const on = () => {
+    process.env.INCIDENT_SPLIT_FIX_ENABLED = "on";
+    process.env.TYPED_NAME_ENABLED = "1";
+  };
+
+  it.each([
+    [
+      "the duration stays (b12)",
+      "do verbal for team member sadie hoffart at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 sadie was not scheduled to work and came into the store to show her team her new puppy. Sadie was in the store 45 min",
+      "Sadie Hoffart",
+      /puppy.*45 min/i,
+      /payroll|coaching|manual/i,
+    ],
+    [
+      "a prior verbal CA is not the account (Q13)",
+      "create a CA for tess varga for not attending the monthly meeting on 10-20-26. previous coaching: jba policy manual 1-1-26, verbal ca 9-1-26",
+      "Tess Varga",
+      /^not attending the monthly meeting on 10-20-26$/,
+      /verbal|9-1-26/i,
+    ],
+    [
+      "a payroll answer is not the account",
+      "create a ca for dana moss, she was 30 minutes late today, first time. No payroll deduction",
+      "Dana Moss",
+      /30 minutes late today/,
+      /payroll/i,
+    ],
+    [
+      "an earlier verbal warning and its date are not the account (Verbal, never Written)",
+      "create a ca form for rosalyn test, she was late again for 30 mins today. given verbal warning on 9/21",
+      "Rosalyn Test",
+      /^she was late again for 30 mins today$/,
+      /verbal|9\/21|written/i,
+    ],
+    [
+      "the level and the name are not the account",
+      "jordan testperson cash handling written warning",
+      "Jordan Testperson",
+      /^cash handling$/,
+      /jordan|written/i,
+    ],
+    [
+      "'please' is not the account",
+      "CA for jordan about her register being short $20, please",
+      "Jordan Testperson",
+      /^her register being short \$20$/,
+      /please/i,
+    ],
+    [
+      "'This is a verbal warning', 'She is at Dodge' and 'I verbally coached her' are not the account",
+      "My employee pat rivera was 10 minutes late on 10/5 and 10/15. I verbally coached her on the first one. She is at Dodge. This is a verbal warning. Create a CA",
+      "Pat Rivera",
+      /10 minutes late on 10\/5 and 10\/15$/,
+      /coached|dodge|this is|verbal/i,
+    ],
+  ])("%s", (_name, text, employee, has, never) => {
+    on();
+    for (const variant of [text, text.toLowerCase()]) {
+      const issue = correctiveActionIssue(variant, employee) ?? "";
+      expect(issue).toMatch(new RegExp(has.source, "i"));
+      expect(issue).not.toMatch(never);
+    }
+  });
+});

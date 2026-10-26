@@ -196,9 +196,38 @@ const POLICY_TEXT =
 const LEVEL_ONLY = /^(?:(?:this\s+is\s+)?(?:a\s+)?(?:verbal|written|final)(?:\s+(?:warning|ca|corrective\s+action))?|today'?s?\s+date|no\s+prior.*)$/i;
 const HAPPENED = /\b(?:late|tardy|did\s*n[o']?t|didnt|failed|missed|never|no\s+call|left|opened|open|talking|phone|ignor\w*|spent|was\s+not|wasn'?t|forgot|refused|rude|yell\w*|short(?:age)?|took|stole|clock\w*|sleep\w*)\b/i;
 
+/** Clauses that answer another field: payroll, a prior action or the level, a lone date, a bare place. */
+const PAYROLL_PART = /\b(?:payroll|deduct\w*)\b/i;
+const PRIOR_PART =
+  /^(?:(?:given|gave|got|had|has|received)\s+(?:(?:her|him|them)\s+)?(?:a\s+)?)?(?:verbal|written|final)\s+(?:warning|ca|c\/a|corrective\s+action)\b/i;
+const LEVEL_TAIL = /(?:^|\s+)(?:(?:this|it)\s+(?:is|was)\s+|it['’]?s\s+)?(?:a\s+)?(?:verbal|written|final)\s+(?:warning|ca|c\/a|corrective\s+action)\s*$/i;
+const COACHED_BEFORE = /^(?:i\s+)?(?:verbally\s+)?coached\s+(?:her|him|them)\b/i;
+const ONLY_WHERE = /^(?:she|he|they)\s+(?:is|works)\s+(?:at|in)\s+(?:our\s+|the\s+)?\S+(?:\s+\S+){0,2}$/i;
+const ONLY_DATE = /^(?:on\s+)?\d{1,2}[-/]\d{1,2}(?:[-/]\d{2,4})?$/;
+const BARE_PLACE = /^(?:in|at)\s+(?:our\s+|the\s+)?[A-Za-z][\w'.-]*(?:\s+[A-Za-z][\w'.-]*){0,3}$/i;
+const COURTESY_TAIL = /[,\s]+(?:please|pls|thanks?|thank\s+you)\s*$/i;
+const DURATION = /\b\d+\s*(?:min|mins|minutes|hours?|hrs?)\b/i;
+
+function answersAnotherField(part: string): boolean {
+  if (/^(?:please|pls|thanks?|thank\s+you)$/i.test(part)) return true;
+  return PAYROLL_PART.test(part) || PRIOR_PART.test(part) || COACHED_BEFORE.test(part) || ONLY_WHERE.test(part) || ONLY_DATE.test(part) || (BARE_PLACE.test(part) && !HAPPENED.test(part));
+}
+
+/** "jordan testperson cash handling": the person's name before the account is not the account. */
+function withoutLeadingName(part: string, personWords: ReadonlySet<string>): string {
+  const words = part.split(/\s+/);
+  let index = 0;
+  while (index < words.length - 1 && personWords.has(words[index]!.toLowerCase().replace(/[^a-z'-]/g, ""))) index += 1;
+  // A name followed by what they did ("juno spent 40 minutes …") keeps its subject.
+  if (index === 0 || HAPPENED.test(words.slice(index).join(" "))) return part;
+  return words.slice(index).join(" ");
+}
+
 function whoOrWhere(clause: string, personWords: ReadonlySet<string>): boolean {
   const lower = clause.toLowerCase().trim();
   if (HAPPENED.test(lower)) return false;
+  // "Sadie was in the store 45 min" is what happened, not where she works.
+  if (DURATION.test(lower)) return false;
   if (/\b(?:primary|home)\s+store\b/.test(lower)) return true;
   const words = lower.split(/\s+/);
   const subject = words[0] === "she" || words[0] === "he" || words[0] === "they" || personWords.has(words[0] ?? "");
@@ -211,8 +240,10 @@ function whoOrWhere(clause: string, personWords: ReadonlySet<string>): boolean {
 function accountClauses(sentence: string, personWords: ReadonlySet<string>): string | null {
   const parts = sentence
     .split(/\s*,\s*|\s+and\s+(?=(?:she|he|they|was|is|did|has|had|then)\b)/i)
-    .map((part) => part.trim().replace(/^and\s+/i, ""))
+    .map((part) => part.trim().replace(/^and\s+/i, "").replace(COURTESY_TAIL, "").replace(LEVEL_TAIL, "").trim())
     .filter(Boolean)
+    .map((part) => withoutLeadingName(part, personWords))
+    .filter((part) => !answersAnotherField(part))
     .filter((part) => !NOT_THE_ACCOUNT.test(part) && !POLICY_TEXT.test(part) && !LEVEL_ONLY.test(part))
     .filter((part) => !whoOrWhere(part, personWords))
     .filter((part) => !part.split(/\s+/).every((word) => personWords.has(word.toLowerCase().replace(/[^a-z'-]/g, ""))));
