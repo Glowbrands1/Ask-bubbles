@@ -790,7 +790,7 @@ export function appPasswordHelpEnabled(): boolean {
  * A new employee on the card starts a new account: the Issue, prior actions,
  * Date, warning level, payroll answer and the draft's source turns are read
  * only from the turns since the manager named that person. Ported from Ask
- * Sunny (conv_mvoetxo92fraflz, 25 Oct 2026); here request 1's payroll answer
+ * the sibling app (conv_mvoetxo92fraflz, 25 Oct 2026); here request 1's payroll answer
  * and warning level reached request 2's card (conv_mvoftzhs29se8nb). See
  * `ai/cross-person-guard.ts`. Off, the card carries them as before.
  */

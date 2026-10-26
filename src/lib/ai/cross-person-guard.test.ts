@@ -12,7 +12,7 @@ import type { AskRequest, AskResponse } from "./types";
  *
  * Request 1 said "no payroll deduct" for Lena. Request 2, for Petra, never
  * mentioned payroll, and Petra's card read "Is payroll deduct applicable?
- * **No**". The same carry-over in Ask Sunny (conv_mvoetxo92fraflz) kept the
+ * **No**". The same carry-over in the sibling app (conv_mvoetxo92fraflz) kept the
  * first employee's incident in Observation of Offense.
  */
 const FLAG = "CROSS_PERSON_INCIDENT_GUARD_ENABLED";
