@@ -786,6 +786,15 @@ export function appPasswordHelpEnabled(): boolean {
   return envFlag("APP_PASSWORD_HELP_ENABLED");
 }
 
+/**
+ * The draft route keeps up to 24,000 characters of the manager's notes
+ * instead of 4,000, so a long account (CHAT_LONG_MESSAGE) is drafted whole
+ * (QA, 26 Oct 2026). Off, the 4,000-character cut stays.
+ */
+export function longDraftNotesEnabled(): boolean {
+  return envFlag("LONG_DRAFT_NOTES_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -859,4 +868,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TERSE_SLOT_READ_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
+  "LONG_DRAFT_NOTES_ENABLED",
 ] as const;
