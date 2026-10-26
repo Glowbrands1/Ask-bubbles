@@ -24,7 +24,7 @@ const RESET_PAGE = [
   "Resetting an Employee's Password",
   "Open the employee's profile and choose Reset Password.",
   "The default password is the Example format with the store code.",
-  "It uses the last five digits of the employee's social security number.",
+  "The default is built from the employee's social security number.",
   "The employee is asked to choose a new password at next sign-in.",
 ].join("\n");
 
@@ -132,7 +132,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
-const SENSITIVE = /default password is|social security number|last five digits/i;
+const SENSITIVE = /default password is|default is built|social security number/i;
 
 /** The live wording, then lowercase and sentence case (Pau's register rule). */
 const APP_QUESTIONS = [
@@ -199,7 +199,7 @@ describe("SENSITIVE_DEFAULTS_REDACT_ENABLED", () => {
   it.each(QUESTIONS)("flag on: %s -> neither the model nor the reply sees the format or SSN digits", async (question) => {
     vi.stubEnv("SENSITIVE_DEFAULTS_REDACT_ENABLED", "true");
     // The model repeats what it was given, as production did.
-    state.reply = "To reset it, open the employee's profile. The default password is the Example format with the store code. It uses the last five digits of the employee's social security number [S1].";
+    state.reply = "To reset it, open the employee's profile. The default password is the Example format with the store code. The default is built from the employee's social security number [S1].";
     const answer = await ask(question, []);
     expect(state.grounding).not.toMatch(SENSITIVE);
     expect(state.grounding).toContain("Open the employee's profile and choose Reset Password.");

@@ -10,9 +10,8 @@ import { appPasswordHelpEnabled } from "@/lib/config/chat-quality-flags";
  * QA, 25 Oct 2026 (tester 4af0): "how do i chnge my passwrd", "forgot
  * password" then "just reset it" were answered "Depends which password you
  * mean" with a list of other portals, asked which login twice, and never said
- * how to reset this app's own. Pau: "if they
- * forgot sunny or bubble password they can click the link in the log in
- * screen forgot password".
+ * how to reset this app's own. The owner's rule: a person who forgot this
+ * app's password clicks the forgot-password link on the log-in screen.
  *
  * A question about one's own password or sign-in, that names no other system,
  * is answered here, in plain words, with the sign-in page's own link label
