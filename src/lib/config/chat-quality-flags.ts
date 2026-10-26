@@ -765,6 +765,18 @@ export function terseSlotReadEnabled(): boolean {
 }
 
 /**
+ * The exit form's chat prose and Additional Details say only what is true
+ * (QA, 25 Oct 2026): the Date line shows the card's date when it has one, not
+ * "the day the draft is created"; Additional Details is never promised as "a
+ * short account drafted from what you've described" when nothing was
+ * described; and a drafted Details sentence about working the notice or
+ * calling in survives only when the manager raised it. Off, as before.
+ */
+export function exitProseFactsEnabled(): boolean {
+  return envFlag("EXIT_PROSE_FACTS_ENABLED");
+}
+
+/**
  * Chat answers never repeat a default-password format or Social Security
  * digits from the knowledge base (QA P0, 25 Oct 2026; same flag in both
  * apps). The sentence is taken out of the excerpts the model is given and of
@@ -784,6 +796,21 @@ export function sensitiveDefaultsRedactEnabled(): boolean {
  */
 export function appPasswordHelpEnabled(): boolean {
   return envFlag("APP_PASSWORD_HELP_ENABLED");
+}
+
+/**
+ * A source excerpt shown under an answer never quotes the sibling company's
+ * lines (QA, 25 Oct 2026, B22-4). The JBA Policy Manual covers every brand;
+ * a question that names no brand reads the whole manual, and the excerpt cut
+ * from that reading quoted another company's peak-season PTO bullet. On, a
+ * line, bullet or sentence of a multi-brand manual's excerpt that names a
+ * brand in `EXCERPT_HIDDEN_BRANDS` (`config/company/knowledge.ts`) is left
+ * out before the excerpt is cut; what is kept is verbatim. Retrieval,
+ * ranking, the prompt, page numbers and titles are unchanged. Off, excerpts
+ * are built exactly as before.
+ */
+export function excerptBrandFilterEnabled(): boolean {
+  return envFlag("EXCERPT_BRAND_FILTER_ENABLED");
 }
 
 /**
@@ -867,7 +894,34 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "EXIT_PROSE_FACTS_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
+  "INCIDENT_CLAUSE_SPLIT_ENABLED",
+  "EXCERPT_BRAND_FILTER_ENABLED",
+  "STATE_CODE_NOT_A_PERSON_ENABLED",
   "STORE_ALIAS_ENABLED",
 ] as const;
+
+/**
+ * What happened (the card's Issue) is read from the clauses that say what
+ * happened: a clause that only gives the employee's title, store or tenure,
+ * a policy instruction or pasted policy text is never the incident, and
+ * "dodge, ne", "$3.25", "9/25/26" and "st. joe" stay inside one clause
+ * (`lib/ai/incident-clauses.ts`; QA, 26 Oct 2026). Off (the default), the
+ * incident readers see the turn as typed.
+ */
+export function incidentClauseSplitEnabled(): boolean {
+  return envFlag("INCIDENT_CLAUSE_SPLIT_ENABLED");
+}
+
+/**
+ * A US state code after a place ("Dodge, NE", "lawrence, ks") is never a
+ * second person when a chat card is created (26 Oct 2026: "…at Dodge, NE.
+ * She did not clock in…" was refused as naming "Odalys Merriweather, NE";
+ * ported from the sibling app, same flag in both apps). See
+ * `forms/state-code-place.ts`. Off, the conversation is read as typed.
+ */
+export function stateCodeNotAPersonEnabled(): boolean {
+  return envFlag("STATE_CODE_NOT_A_PERSON_ENABLED");
+}
