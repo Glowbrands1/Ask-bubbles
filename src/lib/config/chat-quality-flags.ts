@@ -955,6 +955,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NOT_DEDUCTIBLE_READ_ENABLED",
   "PRIOR_STEP_SENTENCE_ENABLED",
   "EXIT_FULFILLED_IS_LAST_DAY_ENABLED",
+  "DATE_LINE_NO_ECHO_ENABLED",
 ] as const;
 
 /**
@@ -1102,6 +1103,13 @@ export function priorStepSentenceEnabled(): boolean {
  */
 export function exitFulfilledIsLastDayEnabled(): boolean {
   return envFlag("EXIT_FULFILLED_IS_LAST_DAY_ENABLED");
+ * The reply is not sent on with an "It happened on …" line the conversation
+ * already dates (QA LS-B5, 26 Oct 2026; same flag in both apps): after "… for
+ * previous coaching" that line read as a second earlier step and the form was
+ * dated today. See `fieldLines` in `ai/intake-augment.ts`. Off, as before.
+ */
+export function dateLineNoEchoEnabled(): boolean {
+  return envFlag("DATE_LINE_NO_ECHO_ENABLED");
 }
 
 /**
