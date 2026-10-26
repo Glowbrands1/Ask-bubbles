@@ -142,6 +142,7 @@ import {
 import { twoSentenceActionPlan } from "@/lib/forms/action-plan-sentences";
 import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
 import { retainFilledFields } from "@/lib/forms/draft-merge";
+import { withStatedIncidentDates } from "@/lib/forms/draft-incident-dates";
 import {
   holdsNarrative,
   managerWordsObservation,
@@ -1383,6 +1384,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           eppPassages.map((passage) => passage.text).join(" "),
         )
       : { values: requirements.values, adjusted: [] as string[], emptied: [] as string[] };
+    /*
+     * FORM_DATE_INCIDENT_ONLY_ENABLED (coordinator, 26 Oct 2026): the
+     * Observation keeps every incident date the manager stated, after every
+     * guard above has run. See `draft-incident-dates.ts`.
+     */
+    attributions.values = withStatedIncidentDates(attributions.values, notes, businessToday());
 
     return { cleaned, dated, narrated, evidence, timeframe, followUp, framing, claims, requirements, attributions };
     };

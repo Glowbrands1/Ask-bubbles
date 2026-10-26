@@ -22,6 +22,7 @@ import {
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { extractJobTitle } from "@/lib/forms/proposal";
+import { incidentOnlyOn, onlyNotTheIncident } from "@/lib/forms/form-date-incident-only";
 import { lateOpenOn, newestStatedDate, withYearlessDatesWritten } from "@/lib/forms/late-open";
 import { correctiveActionBasis } from "@/lib/forms/corrective-action-intake";
 import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
@@ -767,8 +768,17 @@ function groundDate(
   blob: string,
   today: string,
 ): { iso: string | null; ambiguous: readonly string[] } {
-  const inText = datesInConversation(blob, today);
-  const normalized = typed ? normalizeIncidentDate(typed, today) : null;
+  /*
+   * FORM_DATE_INCIDENT_ONLY_ENABLED (live card test, 26 Oct 2026): "missing
+   * the woven deadline of 11-1-26" — the model copied the deadline as the
+   * incident's date and, typed by the manager, it dated the card. On, a date
+   * every mention of which is a deadline, assignment or earlier step is not
+   * the incident's.
+   */
+  const only = incidentOnlyOn();
+  const inText = datesInConversation(blob, today).filter((iso) => !(only && onlyNotTheIncident(blob, today, iso)));
+  const read = typed ? normalizeIncidentDate(typed, today) : null;
+  const normalized = read && only && onlyNotTheIncident(blob, today, read) ? null : read;
   if (normalized && inText.includes(normalized)) return { iso: normalized, ambiguous: [] };
   if (inText.length === 1) return { iso: inText[0]!, ambiguous: [] };
   if (inText.length > 1) return { iso: null, ambiguous: inText };
