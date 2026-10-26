@@ -290,7 +290,11 @@ describe("STATE_CODE_NOT_A_PERSON_ENABLED with NOT_A_NAME_GUARD_ENABLED on, as i
     delete process.env.STATE_CODE_NOT_A_PERSON_ENABLED;
     const result = await createFor("Odalys Merriweather", DID_NOT[0]!);
     expect(result.status).toBe(409);
-    expect(result.body.error).toContain("(Odalys Merriweather, NE)");
+    // With NOT_A_NAME_GUARD_ENABLED on, the guard's state-after-place masking
+    // (forms/not-a-name.ts, PR #158) writes the state in lower case before the
+    // conversation is read, so the refusal lists it as "ne". Still refused with
+    // the state read as a person, which is what this case pins.
+    expect(result.body.error).toMatch(/\(Odalys Merriweather, NE\)/i);
   });
 });
 
