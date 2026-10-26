@@ -7,7 +7,7 @@ import {
   type ManualSection,
 } from "@/lib/forms/official-policy-manual";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
-import { remapIncidentFixEnabled } from "@/lib/config/chat-quality-flags";
+import { dateReaderWideEnabled, remapIncidentFixEnabled } from "@/lib/config/chat-quality-flags";
 import { extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
 import { excerptTextForDisplay } from "@/lib/knowledge/excerpt-brand-filter";
 import { US_STATE_CODE } from "@/lib/forms/state-code-place";
@@ -16,6 +16,7 @@ import type { KnowledgeCategory, SourceCitation } from "@/types";
 import { accountManualSections } from "./account-manual-sections";
 import { incidentTurn } from "./incident-clauses";
 import { formatManualCitation } from "./policy-citation-fields";
+import { protectDateDots, restoreDateDots } from "@/lib/forms/date-words";
 
 /**
  * REMAP_INCIDENT_FIX_ENABLED: the remap path's What happened, prior actions
@@ -190,7 +191,11 @@ function turnIncident(
   // 26 Oct 2026: REMAP_DRAFT_SOURCES reads this with the fix off).
   const fix = remapIncidentFixEnabled();
   // INCIDENT_CLAUSE_SPLIT_ENABLED: without the employee facts and policy text, "dodge, ne" kept whole.
-  for (const raw of withoutPriorList(incidentTurn(turn, employeeName, { subjectless: true })).split(/[.!?;]+(?=\s|$)/)) {
+  // DATE_READER_WIDE_ENABLED: "late on oct. 5" and "late on 10.5.26" are not cut at the date's dot.
+  const wide = dateReaderWideEnabled();
+  const told = withoutPriorList(incidentTurn(turn, employeeName, { subjectless: true }));
+  for (const piece of (wide ? protectDateDots(told) : told).split(/[.!?;]+(?=\s|$)/)) {
+    const raw = wide ? restoreDateDots(piece) : piece;
     const sentence = raw.trim();
     if (!sentence || isEditTurn(sentence) || TALKS_TO_THE_APP.test(sentence) || ASKS_FOR_HELP.test(sentence)) continue;
     const requested = requestLead().test(sentence) || LEVEL_REQUEST.test(sentence);

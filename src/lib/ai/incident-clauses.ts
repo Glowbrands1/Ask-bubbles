@@ -1,4 +1,5 @@
-import { incidentClauseSplitEnabled } from "@/lib/config/chat-quality-flags";
+import { dateReaderWideEnabled, incidentClauseSplitEnabled } from "@/lib/config/chat-quality-flags";
+import { protectDateDots } from "@/lib/forms/date-words";
 
 /**
  * INCIDENT_CLAUSE_SPLIT_ENABLED: What happened is the incident, never a
@@ -65,7 +66,10 @@ export function joinPlaceState(text: string): string {
 
 /** The turn's sentences, a point inside an abbreviation, an amount or a date kept in its sentence. */
 export function incidentSentences(text: string): string[] {
-  const kept = text.replace(ABBREVIATIONS, (match) => match.replace(/\./g, LEADER));
+  // DATE_READER_WIDE_ENABLED: "oct. 5" and "10.5.26" keep their dots inside the sentence.
+  // protectDateDots marks with the same "․" this splitter restores to "." below.
+  const pointed = dateReaderWideEnabled() ? protectDateDots(text) : text;
+  const kept = pointed.replace(ABBREVIATIONS, (match) => match.replace(/\./g, LEADER));
   return kept
     .split(/[.!?;]+(?=\s|$)/)
     .map((sentence) => sentence.replace(new RegExp(LEADER, "g"), ".").trim())
