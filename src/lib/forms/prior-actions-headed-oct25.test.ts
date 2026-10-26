@@ -35,6 +35,32 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+/*
+ * The same words the way managers type them (Pau, 26 Oct 2026): all lowercase,
+ * and sentence case with the names and levels typed lowercase or capitalized.
+ * Neither reader may depend on capitals.
+ */
+const REGISTERS = [
+  ["as reported", SAID],
+  ["all lowercase", SAID.toLowerCase()],
+  [
+    "sentence case, names lowercase",
+    "Create a verbal corrective action for test employee, soap maker at test store for missing the 10-15-26 woven deadline. Previous coaching. Verbal (06/25/2026) and written (07/28/2026). No payroll deducation",
+  ],
+  [
+    "sentence case, names and levels capitalized",
+    "Create a Verbal corrective action for Test Employee, Soap Maker at Test Store for missing the 10-15-26 Woven deadline. Previous Coaching. Verbal (06/25/2026) and Written (07/28/2026). No payroll deducation",
+  ],
+] as const;
+
+describe("flag on, in every register", () => {
+  it.each(REGISTERS)("lists both priors and offers only the incident's date (%s)", (_register, said) => {
+    vi.stubEnv("PRIOR_ACTIONS_PARSE_ENABLED", "1");
+    expect(statedPriorActions(said, TODAY)).toEqual(["Verbal warning — 06/25/2026", "Written warning — 07/28/2026"]);
+    expect(incidentDates(said, TODAY)).toEqual(["2026-10-15"]);
+  });
+});
+
 describe("flag on", () => {
   it("lists both priors and offers only the incident's date", () => {
     vi.stubEnv("PRIOR_ACTIONS_PARSE_ENABLED", "1");
