@@ -45,6 +45,7 @@ import { callClaude } from "./call-claude";
 import { loadChatDataBlock } from "./chat-data-tools";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
+import { withTerseSlots } from "./terse-slots";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";
@@ -89,6 +90,7 @@ import { formCommandBypassesSearch, routeUnderstoodFormTurn } from "./form-tool-
 import { understandFormTurn } from "./form-tool-understand";
 import { remapFormTurn, remapShouldRun, type FormRemapSlots } from "./form-full-remap";
 import { historyForRemap } from "./form-remap-scope";
+import { withRemapDraftSources } from "./remap-draft-sources";
 import { augmentIntakeQuestion } from "./intake-augment";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import { prepareLongContext } from "./long-context-claude";
@@ -176,7 +178,9 @@ export async function answerQuestion(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
-  if (!chatTraceEnabled()) return answerQuestionBody(request, actor, memory);
+  // TERSE_SLOT_READ_ENABLED: a terse "ca …" line is read as the long form.
+  const read = withTerseSlots(request);
+  if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
     messageId: request.questionMessageId,
@@ -184,7 +188,7 @@ export async function answerQuestion(
     originalQuery: request.question,
     formInProgress: Boolean(request.continueProposalTemplateKey || request.openForm || request.activeFormInstanceId),
   });
-  return finishChatTrace(draft, () => answerQuestionBody(request, actor, memory));
+  return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory));
 }
 
 /** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
@@ -365,7 +369,8 @@ async function answerQuestionCore(
             : null;
         },
       });
-      if (remapped) return remapped;
+      // REMAP_DRAFT_SOURCES_ENABLED: the card names the turns its draft is written from.
+      if (remapped) return withRemapDraftSources(remapped, request);
     }
 
     let manualRead: ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]> | null = null;
