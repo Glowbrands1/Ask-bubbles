@@ -930,6 +930,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
   "NAME_BEFORE_TITLE_ENABLED",
+  "PRIOR_ACTIONS_NO_COMMA_ENABLED",
 ] as const;
 
 /**
@@ -953,4 +954,27 @@ export function incidentClauseSplitEnabled(): boolean {
  */
 export function stateCodeNotAPersonEnabled(): boolean {
   return envFlag("STATE_CODE_NOT_A_PERSON_ENABLED");
+}
+
+/**
+ * Prior actions typed with no comma between them (QA, 26 Oct 2026): "prior
+ * coaching verbal 6/25 written 7/28 no deduct" read the second line as
+ * "Written warning — verbal 6/25 — 07/28/2026". On, after a labelled earlier
+ * step, an item that names a step and is set off only by spaces continues the
+ * list, as a comma or "and" does, and keeps only its own words
+ * (`lib/forms/form-date-answer.ts`). Server-only. Off (the default), prior
+ * actions read exactly as before.
+ *
+ * QA, 26 Oct 2026 (the sibling app's round 3): "… verbal prior coachings 9/8
+ * 9/15 9/25" — a label and a bare list of dates is one step per date, each
+ * with only its own date, and the "verbal" before the label is this form's
+ * level (`lib/forms/warning-level.ts`). Read as on only with
+ * PRIOR_ACTIONS_PARSE_ENABLED, which it extends.
+ *
+ * QA, 26 Oct 2026 (both apps): "… no call no show today. I coached her on
+ * 10-16 and gave a verbal on 10-21" lists both as prior actions, and neither
+ * is "it happened on" (`lib/forms/form-date-answer.ts`).
+ */
+export function priorActionsNoCommaEnabled(): boolean {
+  return envFlag("PRIOR_ACTIONS_NO_COMMA_ENABLED") && envFlag("PRIOR_ACTIONS_PARSE_ENABLED");
 }
