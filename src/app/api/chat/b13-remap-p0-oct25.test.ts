@@ -276,3 +276,96 @@ describe("B13 P0 rows, both flags on (production flags too)", () => {
     }
   });
 });
+
+/* ========================================================================= */
+/* Registers: the same manager words typed all lowercase or in sentence case */
+/* ========================================================================= */
+
+/**
+ * Every B13 row above, typed (1) all lowercase and (2) in sentence case with
+ * the names typed lowercase or Capitalized. Names and keywords read the same
+ * either way, so every outcome is the one the production wording gets.
+ */
+type Register = readonly [label: string, type: (text: string) => string];
+
+const NAMES = ["test employee", "bellevue", "kearney"];
+
+function sentenceCase(text: string, capitalizeNames: boolean): string {
+  let out = text.toLowerCase();
+  if (capitalizeNames) {
+    for (const name of NAMES) {
+      out = out.replace(new RegExp(`\\b${name}\\b`, "g"), name.replace(/\b[a-z]/g, (letter) => letter.toUpperCase()));
+    }
+  }
+  return out.replace(/(^|[.!?]\s+)([a-z])/g, (_match, lead: string, letter: string) => `${lead}${letter.toUpperCase()}`);
+}
+
+const REGISTERS: readonly Register[] = [
+  ["all lowercase", (text) => text.toLowerCase()],
+  ["sentence case, names lowercase", (text) => sentenceCase(text, false)],
+  ["sentence case, names Capitalized", (text) => sentenceCase(text, true)],
+];
+
+describe("B13 P0 rows in every register, both flags on (production flags too)", () => {
+  it.each(REGISTERS)("%s: G11, 1-1-95 is 1995 and What happened is the late open", async (_label, type) => {
+    const [reply] = await replay([type(G11)]);
+    expect(priors(reply!)).toBe("Coaching — JBA Policy Manual — 01/01/1995; Verbal corrective action — 10/05/2026");
+    expect(whatHappened(reply!)).toBe("late open");
+  });
+
+  it.each(REGISTERS)("%s: B4 turn 1, the prior is never What happened", async (_label, type) => {
+    const [first] = await replay(B4.slice(0, 1).map(type));
+    expect(whatHappened(first!)).toBe("violating attendance policy");
+    expect(priors(first!)).toBe("Coaching — JBA Policy Manual — 01/01/2026");
+    expect(first!.formProposal?.employeeName?.toLowerCase()).toBe("test employee");
+  });
+
+  it.each(REGISTERS.filter(([label]) => label.endsWith("names Capitalized")))(
+    "%s: B4 turn 2 (\"verbal\"), the prior is never What happened",
+    async (_label, type) => {
+      const [, second] = await replay(B4.slice(0, 2).map(type));
+      expect(whatHappened(second!)).toBe("violating attendance policy");
+      expect(priors(second!)).toBe("Coaching — JBA Policy Manual — 01/01/2026");
+    },
+  );
+
+  /*
+   * PINNED, NOT THE WANTED OUTCOME (registers, 26 Oct 2026). With the name
+   * typed lowercase, the bare "verbal" turn re-reads the employee from the
+   * whole chat, and the remap's name reader (`personPhrase` /
+   * `statedPerson` in form-full-remap.ts, "for" + a Capitalized name) does
+   * not see "for test employee": it falls back to "test", so only "test" is
+   * taken out of What happened. That reader is outside this PR's flags and
+   * KEEP_FORM_EMPLOYEE_ENABLED does not change it, so it is pinned here as it
+   * is; the wanted outcome is the Capitalized row above. The prior stays out
+   * of What happened either way, which is what B4 is about.
+   */
+  it.each(REGISTERS.filter(([label]) => !label.endsWith("names Capitalized")))(
+    "%s: B4 turn 2 (\"verbal\") — PINNED: a lowercase name is cut to its first word",
+    async (_label, type) => {
+      const [, second] = await replay(B4.slice(0, 2).map(type));
+      expect(whatHappened(second!)).toBe("employee for violating attendance policy");
+      expect(second!.formProposal?.employeeName).toBe("test");
+      expect(priors(second!)).toBe("Coaching — JBA Policy Manual — 01/01/2026");
+    },
+  );
+
+  it.each(REGISTERS)("%s: B4 turn 3, a new CA starts with its own prior only", async (_label, type) => {
+    const third = (await replay(B4.map(type))).at(-1)!;
+    expect(whatHappened(third!)).toBe("register shortage");
+    expect(priors(third!)).toBe("Coaching — JBA Policy Manual — 01/20/2026");
+  });
+
+  it.each(REGISTERS)("%s: Q7, What happened is late to open", async (_label, type) => {
+    const [reply] = await replay([type(Q7)]);
+    expect(whatHappened(reply!)).toBe("late to open");
+    expect(priors(reply!)).toBe("Coaching for being late — 09/15/2026");
+  });
+
+  it.each(REGISTERS)("%s: H7, the request words go and a bare repeat keeps the incident", async (_label, type) => {
+    const replies = await replay(H7.map(type));
+    for (const reply of replies) {
+      expect(whatHappened(reply)).toBe("did not complete her closing checklist");
+    }
+  });
+});
