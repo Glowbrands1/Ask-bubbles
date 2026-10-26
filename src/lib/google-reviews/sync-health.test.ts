@@ -110,6 +110,13 @@ describe("no notice while reviews are current", () => {
 });
 
 describe("GOOGLE_REVIEWS_STALE_BANNER_ENABLED", () => {
+  it("is read like the chat flags, the same as the sibling app", async () => {
+    const { staleBannerEnabled } = await import("./config");
+    for (const value of ["1", "true", "on", "yes", " TRUE "]) expect(staleBannerEnabled({ GOOGLE_REVIEWS_STALE_BANNER_ENABLED: value })).toBe(true);
+    for (const value of ["", "0", "false", "off", "no"]) expect(staleBannerEnabled({ GOOGLE_REVIEWS_STALE_BANNER_ENABLED: value })).toBe(false);
+    expect(staleBannerEnabled({})).toBe(false);
+  });
+
   it("off (the default), nothing is read and there is no notice", async () => {
     const { loadSyncNotice } = await import("./sync-health-read");
     expect(await loadSyncNotice(true, OUTAGE.now)).toBeNull();

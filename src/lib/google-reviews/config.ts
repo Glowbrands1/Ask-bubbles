@@ -93,9 +93,14 @@ export function readGoogleReviewsConfig(env: EnvSource = process.env): GoogleRev
   };
 }
 
-/** Whether /reviews says so when reviews have stopped syncing. Off unless exactly "true". */
+/**
+ * Whether /reviews says so when reviews have stopped syncing. Read like the
+ * chat flags (`envFlag`): "1", "true", "on" or "yes", any case, trimmed. The
+ * sibling app reads the same flag the same way, so one setting means the
+ * same in both (QA-2, 26 Oct 2026).
+ */
 export function staleBannerEnabled(env: EnvSource = process.env): boolean {
-  return flag(env, GOOGLE_REVIEWS_STALE_BANNER_ENABLED_ENV);
+  return ["1", "true", "on", "yes"].includes(env[GOOGLE_REVIEWS_STALE_BANNER_ENABLED_ENV]?.trim().toLowerCase() ?? "");
 }
 
 export interface OAuthSettings {
