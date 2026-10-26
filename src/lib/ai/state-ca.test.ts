@@ -5,7 +5,7 @@ import { detectTemplateIntent } from "@/lib/forms/template-intent";
 import { statesSpelledOut, withStateNames } from "./state-ca";
 import type { AskRequest } from "./types";
 
-/** Ported from Ask Sunny conv_mvokdp2c24wi9re (26 Oct 2026): the manager's turn "Sacramento, CA" exactly. */
+/** Ported from the sibling app's conv_mvokdp2c24wi9re (26 Oct 2026): the manager's turn "Sacramento, CA" exactly. */
 const FLAG = "STATE_CA_GUARD_ENABLED";
 const saved = process.env[FLAG];
 afterEach(() => {
