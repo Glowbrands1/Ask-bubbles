@@ -447,6 +447,16 @@ describe(`${FLAG} on: the warning level is never the job title`, () => {
   });
 });
 
+/* QA BP1 live (conv_mvpphhx52bd9dx1): "i dont know the amount" was saved as the Job Title. */
+describe(`${FLAG}: "i dont know the amount" is no position`, () => {
+  it.each([["", "I Dont Know The Amount"], ["1", null]] as const)("flag '%s'", async (flag, expected) => {
+    vi.stubEnv(FLAG, flag);
+    const { readPositionAnswer } = await import("@/lib/forms/employee-position");
+    expect(readPositionAnswer("i dont know the amount")).toBe(expected);
+    expect(readPositionAnswer("I don't know the amount")).toBe(flag ? null : readPositionAnswer("I don't know the amount"));
+  });
+});
+
 describe(`${FLAG} off: as main, the answer is saved as the job title`, () => {
   it.each(Object.keys(CHATS) as (keyof typeof CHATS)[])("%s", async (casing) => {
     vi.stubEnv(FLAG, "");

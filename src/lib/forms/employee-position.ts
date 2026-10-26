@@ -52,10 +52,11 @@ const NOT_A_POSITION = new Set([
  * POSITION_ANSWER_GUARD_ENABLED (QA, 26 Oct 2026, three tester drafts): with
  * the position question open, a reply to the warning-level or payroll question
  * — "This is a verbal", "Written", "Verbal", "verbal warning", "no payroll
- * deduct", "$25" — was saved as the Job Title. Such a reply is not a position.
+ * deduct", "$25", "i dont know the amount" — was saved as the Job Title. Such
+ * a reply is not a position.
  */
 const ANSWERS_ANOTHER_QUESTION =
-  /^(?:(?:it|this|that)(?:['’]s|\s+is|\s+will\s+be|\s+should\s+be)\s+)?(?:an?\s+)?(?:(?:verbal|written|final)(?:\s+(?:written\s+)?(?:warning|ca|corrective\s+action))?|(?:yes|no)?[\s,]*(?:payroll|pay\s*roll|payrol)\b.*|\$\s?\d+(?:\.\d{2})?)[.!\s]*$/i;
+  /^(?:(?:it|this|that)(?:['’]s|\s+is|\s+will\s+be|\s+should\s+be)\s+)?(?:an?\s+)?(?:(?:verbal|written|final)(?:\s+(?:written\s+)?(?:warning|ca|corrective\s+action))?|(?:yes|no)?[\s,]*(?:payroll|pay\s*roll|payrol)\b.*|\$\s?\d+(?:\.\d{2})?|(?:i\s+)?(?:do\s*n['’]?t|dont|do\s+not)\s+know\b.*)[.!\s]*$/i;
 
 function titleCase(phrase: string): string {
   return phrase
