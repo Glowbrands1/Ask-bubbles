@@ -1319,6 +1319,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
+  "PRIOR_ACTIONS_NO_COMMA_ENABLED",
 ] as const;
 
 /**
@@ -4208,4 +4210,17 @@ export function sameRequestOtherPersonEnabled(): boolean {
  */
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
+}
+
+/**
+ * Prior actions typed with no comma between them (QA, 26 Oct 2026): "prior
+ * coaching verbal 6/25 written 7/28 no deduct" read the second line as
+ * "Written warning — verbal 6/25 — 07/28/2026". On, after a labelled earlier
+ * step, an item that names a step and is set off only by spaces continues the
+ * list, as a comma or "and" does, and keeps only its own words
+ * (`lib/forms/form-date-answer.ts`). Server-only. Off (the default), prior
+ * actions read exactly as before.
+ */
+export function priorActionsNoCommaEnabled(): boolean {
+  return envFlag("PRIOR_ACTIONS_NO_COMMA_ENABLED");
 }
