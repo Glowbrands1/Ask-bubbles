@@ -754,6 +754,18 @@ export function reopenVerbGuardEnabled(): boolean {
 }
 
 /**
+ * A notice the manager says was worked fills "Date that notice was
+ * fulfilled" with the last day worked and ticks Submitted & Fulfilled Notice;
+ * "9/25 gave notice worked it til 10/9" is notice 9/25, last day 10/9 (QA,
+ * 25 Oct 2026). Never a date the manager did not give. On, it ALSO turns on
+ * the year-less exit-date reading ("last day 9-28", "resigned 9-15") that
+ * EXIT_INTAKE_FIX_ENABLED already enables. Off, the exit form reads as before.
+ */
+export function exitNoticeFulfilledEnabled(): boolean {
+  return envFlag("EXIT_NOTICE_FULFILLED_ENABLED");
+}
+
+/**
  * A terse "ca <name> <store> <what happened> <date> verbal" line is written
  * out as the long form before it is read, so the name, store, date, warning
  * level and payroll amount are read as from a full sentence, and the card
@@ -909,6 +921,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REMAP_DRAFT_SOURCES_ENABLED",
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
+  "EXIT_NOTICE_FULFILLED_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
   "EXIT_PROSE_FACTS_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
