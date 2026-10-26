@@ -813,6 +813,18 @@ export function excerptBrandFilterEnabled(): boolean {
   return envFlag("EXCERPT_BRAND_FILTER_ENABLED");
 }
 
+/**
+ * DRAFT_REUSE_OWN_DRAFTS_ONLY_ENABLED: a create from chat reopens an open
+ * draft only when the calling manager made it (`created_by`). Another
+ * manager's matching draft is never handed to this caller; a new draft is
+ * filed instead (QA, 25 Oct 2026). Same family as
+ * DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED. Server only. Off (the default), every
+ * lookup is as it was.
+ */
+export function draftReuseOwnDraftsOnlyEnabled(): boolean {
+  return envFlag("DRAFT_REUSE_OWN_DRAFTS_ONLY_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -889,6 +901,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "APP_PASSWORD_HELP_ENABLED",
   "INCIDENT_CLAUSE_SPLIT_ENABLED",
   "EXCERPT_BRAND_FILTER_ENABLED",
+  "DRAFT_REUSE_OWN_DRAFTS_ONLY_ENABLED",
 ] as const;
 
 /**
