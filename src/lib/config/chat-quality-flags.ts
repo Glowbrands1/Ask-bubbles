@@ -850,6 +850,20 @@ export function nameBeforeTitleEnabled(): boolean {
   return envFlag("NAME_BEFORE_TITLE_ENABLED");
 }
 
+/**
+ * Plain conduct wording reads as the Standards of Conduct (Code 3, policy
+ * reading; QA T4/T2/J1, 25 Oct 2026; same flag as the sibling app): a policy
+ * acknowledgment left undone in either spelling, a refusal to do what the
+ * manager asked, talking back or disrespect to a manager, and gossip or
+ * talking negatively about co-workers. Gossip is never the harassment section
+ * unless the manager used a harassment word, and a Standards of Conduct
+ * reading is cited by the code, not left to the model. Off, the policy is
+ * read exactly as before.
+ */
+export function policyConductWordingEnabled(): boolean {
+  return envFlag("POLICY_CONDUCT_WORDING_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -930,6 +944,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
   "NAME_BEFORE_TITLE_ENABLED",
+  "POLICY_CONDUCT_WORDING_ENABLED",
 ] as const;
 
 /**
