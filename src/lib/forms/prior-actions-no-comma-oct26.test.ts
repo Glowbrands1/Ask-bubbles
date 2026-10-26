@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { decideIntentTurn, type IntentTurnInput } from "@/lib/ai/intent-slots";
+import { listIncidentDates } from "@/lib/forms/form-date-answer";
 import { incidentDates } from "@/lib/forms/incident-dates";
 import { statedPriorActions } from "@/lib/forms/prior-actions";
+import { managerStatedWarningLevel, statedWarningLevel, warningLevelFromTurns } from "@/lib/forms/warning-level";
 
 /**
  * ============================================================================
@@ -34,7 +37,7 @@ function variants(text: string): string[] {
   const lower = text.toLowerCase();
   const sentence = lower.replace(/(^|[.!?]\s+)([a-z])/g, (_, lead: string, letter: string) => lead + letter.toUpperCase());
   const capitalized = sentence.replace(
-    /\b(verbal|written|final|coaching|test employee|test store)\b/g,
+    /\b(verbal|written|final|coaching|coachings|test employee|test store|rowan pell)\b/g,
     (word) => word.replace(/\b[a-z]/g, (letter) => letter.toUpperCase()),
   );
   return [...new Set([lower, sentence, capitalized])];
@@ -73,6 +76,54 @@ const FLAG_ON: { text: string; priors: string[]; incidents: string[] }[] = [
   },
 ];
 
+/*
+ * ============================================================================
+ * QA, 26 OCT 2026 (THE SIBLING APP'S ROUND 3, PORTED) — A MANAGER'S REGISTER
+ * ============================================================================
+ *
+ * The sibling app's two turns, carried over in this app's store wording, the
+ * employee invented ("Rowan Pell"):
+ *
+ *   (1) "ca rowan pell written 10/22 back room station 4 prior coaching verbal
+ *       6/25 written 7/28 no deduct" — the list after an incident date, in a
+ *       longer turn, reads as two clean priors with the flag on.
+ *
+ *   (2) "perf ca rowan pell 270 units below goal upt atv verbal prior
+ *       coachings 9/8 9/15 9/25 no deduct" — the priors accumulated
+ *       ("Coaching — 9/8 — 09/15/2026; Coaching — 9/8 9/15 — 09/25/2026"),
+ *       and Type of Warning was blank though the manager said "verbal". The
+ *       form's date was never a prior's here: `groundDate` takes the slot
+ *       model's date only from the form-date reader's own list (pinned below).
+ */
+const QA_ONE = "ca rowan pell written 10/22 back room station 4 prior coaching verbal 6/25 written 7/28 no deduct";
+const QA_TWO = "perf ca rowan pell 270 units below goal upt atv verbal prior coachings 9/8 9/15 9/25 no deduct";
+const COACHINGS = ["Coaching — 09/08/2026", "Coaching — 09/15/2026", "Coaching — 09/25/2026"];
+
+FLAG_ON.push(
+  { text: QA_ONE, priors: PRIORS, incidents: ["2026-10-22"] },
+  { text: QA_TWO, priors: COACHINGS, incidents: [] },
+  { text: "prior coachings 9/8 9/15 9/25", priors: COACHINGS, incidents: [] },
+  { text: "prior coachings 9/8, 9/15 and 9/25", priors: COACHINGS, incidents: [] },
+  { text: "prior coachings: 9/8 9/15 9/25", priors: COACHINGS, incidents: [] },
+  {
+    text: "prior coaching 9/8 9/15",
+    priors: ["Coaching — 09/08/2026", "Coaching — 09/15/2026"],
+    incidents: [],
+  },
+  // The incident date the turn gives is kept; the bare list stays history.
+  {
+    text: "perf ca rowan pell below goal on 10/20 verbal prior coachings 9/8 9/15 9/25 no deduct",
+    priors: COACHINGS,
+    incidents: ["2026-10-20"],
+  },
+  // An account after the list ends it: "late again 10/20" is an incident.
+  {
+    text: "prior coachings 9/8 9/15 late again 10/20",
+    priors: ["Coaching — 09/08/2026", "Coaching — 09/15/2026"],
+    incidents: ["2026-10-20"],
+  },
+);
+
 describe("PRIOR_ACTIONS_NO_COMMA_ENABLED on (with PRIOR_ACTIONS_PARSE_ENABLED, as in production)", () => {
   for (const { text, priors, incidents } of FLAG_ON) {
     for (const variant of variants(text)) {
@@ -83,6 +134,90 @@ describe("PRIOR_ACTIONS_NO_COMMA_ENABLED on (with PRIOR_ACTIONS_PARSE_ENABLED, a
       });
     }
   }
+});
+
+/*
+ * THE FORM'S DATE AND TYPE OF WARNING, through the intent reading
+ * (`decideIntentTurn`, the production path), with the slot model's reading as
+ * it came back: the first date, the last one, or none.
+ */
+function turn(question: string, incidentDate: string | null) {
+  const input: IntentTurnInput = {
+    question,
+    history: [],
+    today: TODAY,
+    saved: null,
+    raw: { employee: "Rowan Pell", incidentDate, warningLevel: null, formType: "corrective action", formTurn: true },
+    people: [],
+    stores: [{ id: "store-test", name: "Test Store" }],
+    headings: ["Attendance", "Standards of Conduct"],
+    templates: [{ key: "dpoa", name: "Corrective Action Form" }],
+    formInProgress: false,
+  };
+  return decideIntentTurn(input).state;
+}
+
+describe("(2) the form's date and level, flag on", () => {
+  for (const variant of variants(QA_TWO)) {
+    for (const model of ["9/8", "9/25", null]) {
+      for (const managerOnly of [true, false]) {
+        it(`"${variant}" (model ${model ?? "none"}, WARNING_LEVEL_MANAGER_ONLY_ENABLED ${managerOnly ? "on" : "off"})`, () => {
+          flags(true, true);
+          vi.stubEnv("WARNING_LEVEL_MANAGER_ONLY_ENABLED", managerOnly ? "1" : "");
+          const state = turn(variant, model);
+          // No incident date in the turn: dated the day it is created, never a prior coaching's date.
+          expect(state.formDate).toBeNull();
+          expect(state.warningLevel).toBe("verbal");
+          expect(listIncidentDates(variant, TODAY)).toEqual([]);
+        });
+      }
+    }
+  }
+
+  it("a turn that gives its incident date keeps it, whatever the model copied", () => {
+    flags(true, true);
+    const said = "perf ca rowan pell below goal on 10/20 verbal prior coachings 9/8 9/15 9/25 no deduct";
+    for (const model of ["10/20", "9/25", null]) expect(turn(said, model).formDate).toBe("2026-10-20");
+  });
+
+  it("(1): dated 10/22, whatever the model copied", () => {
+    flags(true, true);
+    for (const model of ["10/22", "7/28", null]) expect(turn(QA_ONE, model).formDate).toBe("2026-10-22");
+  });
+});
+
+describe("(2c) the level before the history label (warning-level.ts)", () => {
+  it("is this form's level in every register, flag on", () => {
+    flags(true, true);
+    for (const variant of variants(QA_TWO)) {
+      expect(statedWarningLevel(variant, TODAY)).toBe("verbal");
+      expect(warningLevelFromTurns([variant], TODAY)).toBe("verbal");
+      expect(managerStatedWarningLevel([{ role: "user", content: variant }], TODAY)).toBe("verbal");
+    }
+    expect(statedWarningLevel("ca rowan pell late to open 10/20 written prior warnings 9/1 9/15", TODAY)).toBe("written");
+  });
+
+  it("is never read after words of history, or without a request for the form", () => {
+    flags(true, true);
+    expect(statedWarningLevel("she had a verbal prior coaching 9/8", TODAY)).toBeNull();
+    expect(statedWarningLevel("ca rowan pell, she got a verbal prior coaching 9/8", TODAY)).toBeNull();
+    expect(statedWarningLevel("verbal prior coachings 9/8 9/15", TODAY)).toBeNull();
+    // A level stated for the form elsewhere is untouched.
+    expect(statedWarningLevel("create a written ca for rowan pell. verbal prior coachings 9/8 9/15", TODAY)).toBe("written");
+    expect(statedWarningLevel(QA_ONE, TODAY)).toBeNull();
+  });
+
+  it("flag off, or without PRIOR_ACTIONS_PARSE_ENABLED, it reads as before (pinned)", () => {
+    for (const [parse, noComma] of [
+      [true, false],
+      [false, true],
+      [false, false],
+    ] as const) {
+      flags(parse, noComma);
+      expect(statedWarningLevel(QA_TWO, TODAY)).toBeNull();
+      expect(warningLevelFromTurns([QA_TWO], TODAY)).toBeNull();
+    }
+  });
 });
 
 describe("PRIOR_ACTIONS_NO_COMMA_ENABLED off: today's output, pinned", () => {
@@ -104,6 +239,28 @@ describe("PRIOR_ACTIONS_NO_COMMA_ENABLED off: today's output, pinned", () => {
       expect(statedPriorActions(text, TODAY)).toEqual(priors);
     });
   }
+
+  it("(2): the priors accumulate and the level is blank (QA's defect)", () => {
+    flags(true, false);
+    expect(statedPriorActions(QA_TWO, TODAY)).toEqual([
+      "Coaching — 09/08/2026",
+      "Coaching — 9/8 — 09/15/2026",
+      "Coaching — 9/8 9/15 — 09/25/2026",
+    ]);
+    expect(statedPriorActions("prior coachings 9/8, 9/15 and 9/25", TODAY)).toEqual(["Coaching — 09/08/2026"]);
+    expect(incidentDates("prior coachings 9/8, 9/15 and 9/25", TODAY)).toEqual(["2026-09-15", "2026-09-25"]);
+    // Here the model's copy of a prior's date never dated the form (`groundDate`).
+    expect(turn(QA_TWO, "9/25").formDate).toBeNull();
+    vi.stubEnv("WARNING_LEVEL_MANAGER_ONLY_ENABLED", "1");
+    expect(turn(QA_TWO, null).warningLevel).toBeNull();
+  });
+
+  it("(2) with the new flag on but PRIOR_ACTIONS_PARSE_ENABLED off, the same as off", () => {
+    flags(false, false);
+    const before = { priors: statedPriorActions(QA_TWO, TODAY), date: turn(QA_TWO, "9/25").formDate };
+    flags(false, true);
+    expect({ priors: statedPriorActions(QA_TWO, TODAY), date: turn(QA_TWO, "9/25").formDate }).toEqual(before);
+  });
 
   it("Capitalized levels keep the manager's casing in the garbled line", () => {
     flags(true, false);
