@@ -1,4 +1,4 @@
-import { formEditDateRulesEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditDateRulesEnabled, policyTwoIncidentsEnabled } from "@/lib/config/chat-quality-flags";
 
 import { JOIN } from "./bounded-context";
 import { LATE_TO_OPEN, lateOpenOn } from "./late-open";
@@ -416,6 +416,41 @@ function opensLate(text: string): boolean {
   return lateOpenOn() && (LATE_TO_OPEN.test(text) || OPENED_LATE.test(text));
 }
 
+/** Where the account says the opening, longest first: "opened the store late", "late to open". */
+function openingSpans(text: string): { start: number; end: number }[] {
+  const spans: { start: number; end: number }[] = [];
+  for (const pattern of [LATE_OPENING, OPENED_LATE, LATE_TO_OPEN]) {
+    for (const match of text.matchAll(new RegExp(pattern.source, "gi"))) spans.push({ start: match.index, end: match.index + match[0].length });
+  }
+  return spans;
+}
+
+/** The account with its opening words taken out, so "opened the store late" is not also a late shift. */
+function withoutOpeningWords(text: string): string {
+  let rest = text;
+  for (const span of [...openingSpans(text)].sort((a, b) => b.start - a.start)) {
+    rest = `${rest.slice(0, span.start)} ${rest.slice(span.end)}`;
+  }
+  return rest;
+}
+
+/**
+ * Where the account first says the late opening and the other attendance
+ * incident, for listing their sections in the order the manager said them
+ * (POLICY_TWO_INCIDENTS_ENABLED). -1 when the account does not say it.
+ */
+export function attendanceIncidentPositions(rawText: string): { lateOpening: number; attendance: number } {
+  const text = normalize(rawText);
+  const spans = opensLate(text) ? openingSpans(text) : [];
+  const inside = (index: number) => spans.some((span) => index >= span.start && index < span.end);
+  let attendance = -1;
+  for (const pattern of [ABSENCE, LATENESS]) {
+    const first = [...text.matchAll(new RegExp(pattern.source, "gi"))].find((match) => !inside(match.index));
+    if (first && (attendance === -1 || first.index < attendance)) attendance = first.index;
+  }
+  return { lateOpening: spans.length > 0 ? Math.min(...spans.map((span) => span.start)) : -1, attendance };
+}
+
 /** Offense key for a store that opened late. Not the Tardiness box. */
 export const LATE_OPENING_OFFENSE = "late_opening";
 
@@ -431,11 +466,12 @@ export function describesLateOpening(rawText: string): boolean {
 function attendanceOffenseKeys(text: string, missed: boolean): string[] | null {
   const opening = opensLate(text);
   const absent = ABSENCE.test(text) || missed;
-  const late = !opening && LATENESS.test(text);
+  // POLICY_TWO_INCIDENTS_ENABLED: a late shift beside a late opening is a second incident.
+  const late = opening ? policyTwoIncidentsEnabled() && LATENESS.test(withoutOpeningWords(text)) : LATENESS.test(text);
   if (!opening && !absent && !late) return null;
   const keys: string[] = [];
   if (opening) keys.push(LATE_OPENING_OFFENSE);
-  else if (late) keys.push("tardiness");
+  if (late) keys.push("tardiness");
   if (absent) keys.push("absenteeism");
   return keys;
 }

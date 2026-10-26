@@ -786,6 +786,16 @@ export function appPasswordHelpEnabled(): boolean {
   return envFlag("APP_PASSWORD_HELP_ENABLED");
 }
 
+/**
+ * Two incidents in one account cite both policies, in the order the manager
+ * said them (Code 3; QA, 26 Oct 2026; same flag in both apps). On, a late
+ * shift beside a late opening keeps its Tardiness box and Attendance, and
+ * Late Opening and Attendance are listed in the order said. Off, as before.
+ */
+export function policyTwoIncidentsEnabled(): boolean {
+  return envFlag("POLICY_TWO_INCIDENTS_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -859,4 +869,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TERSE_SLOT_READ_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
+  "POLICY_TWO_INCIDENTS_ENABLED",
 ] as const;
