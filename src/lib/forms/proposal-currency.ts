@@ -8,6 +8,7 @@ import { employeeState, managerContext, samePerson } from "./proposal";
 import { namingTheForm } from "./other-employee";
 import { answersToOpenQuestions } from "./question-answers";
 import { readFormRequests } from "./form-requests";
+import { stateCodePlaceContext } from "./state-code-place";
 import { detectTemplateIntent } from "./template-intent";
 import type { ChatMessage } from "@/types";
 
@@ -89,7 +90,11 @@ export function checkProposalIsCurrent(input: {
   }
 
   const context = managerContext(prior, { id: last.id, content: last.content });
-  const { resolution, excluded } = employeeState(context);
+  let state = employeeState(context);
+  // STATE_CODE_NOT_A_PERSON_ENABLED: "at Dodge, NE" is a place; the turns are read again without it.
+  const placed = stateCodePlaceContext(context, state.resolution);
+  if (placed) state = employeeState(placed);
+  const { resolution, excluded } = state;
 
   if (resolution.kind === "ambiguous") {
     return {
