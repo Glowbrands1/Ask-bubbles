@@ -8,6 +8,7 @@ import { payrollDeductAmount, payrollDeductFromConversation, type PayrollDeductA
 import {
   intentPayrollManagerOnlyEnabled,
   keepFormEmployeeEnabled,
+  latePayrollFromFormEnabled,
   managerWordsOnlyEnabled,
   notANameGuardEnabled,
   warningLevelManagerOnlyEnabled,
@@ -203,21 +204,6 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
         lateOpen ? withYearlessDatesWritten(blob, input.today) : blob,
         input.today,
       );
-  const managerOnly = intentPayrollManagerOnlyEnabled();
-  // The manager's Yes/No, never an assistant turn's: "payroll deduct is not
-  // applicable" is No in the saved state too (LATE_OPEN_DATE_ENABLED).
-  const payrollAnswer =
-    managerOnly || lateOpen
-      ? payrollDeductFromConversation([...input.history, { role: "user", content: input.question }])
-      : null;
-  const payrollAmount = !managerOnly
-    ? lateOpen && payrollAnswer === "no"
-      ? null
-      : groundPayroll(reading?.payrollAmount ?? null, blob)
-    : payrollAnswer === "no"
-      ? null
-      : (payrollClauseAmount(input) ??
-        (payrollAnswer === "yes" ? groundPayroll(reading?.payrollAmount ?? null, managerBlob(input)) : null));
   /*
    * THE MANAGER'S LEVEL ONLY (WARNING_LEVEL_MANAGER_ONLY_ENABLED; ported from
    * the sibling app, live replays 24 Oct 2026). The blob holds the assistant's own
@@ -250,6 +236,23 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
         question: input.question,
         managerText: managerBlob(input),
       });
+  const managerOnly = intentPayrollManagerOnlyEnabled();
+  // The manager's Yes/No, never an assistant turn's: "payroll deduct is not
+  // applicable" is No in the saved state too (LATE_OPEN_DATE_ENABLED).
+  const payrollAnswer =
+    lateOpen && !managerOnly && latePayrollFromFormEnabled()
+      ? latePayrollFromForm(input, formType.key ?? saved.templateKey)
+      : managerOnly || lateOpen
+        ? payrollDeductFromConversation([...input.history, { role: "user", content: input.question }])
+        : null;
+  const payrollAmount = !managerOnly
+    ? lateOpen && payrollAnswer === "no"
+      ? null
+      : groundPayroll(reading?.payrollAmount ?? null, blob)
+    : payrollAnswer === "no"
+      ? null
+      : (payrollClauseAmount(input) ??
+        (payrollAnswer === "yes" ? groundPayroll(reading?.payrollAmount ?? null, managerBlob(input)) : null));
   const formTurn = Boolean(input.formInProgress || reading?.formTurn || formType.key || saved.templateKey);
 
   const merged = mergeSlots(saved, {
@@ -457,6 +460,26 @@ function withTypedEmployee(
 
 /** `LIMITS.historyTurns` in `lib/api/validation.ts` (server-only, so not imported here). */
 const HISTORY_CAP = 20;
+
+/**
+ * LATE_OPEN_PAYROLL_FROM_FORM_ENABLED (QA, 26 Oct 2026; ported from the
+ * sibling app). With LATE_OPEN_DATE_ENABLED on, the intent read took the
+ * payroll answer over the whole thread, so a bare "Yes" or "No" after an exit
+ * form — or after a Corrective Action reply asking the payroll question — was
+ * saved as payroll deduct on the exit form. Now, as WARNING_LEVEL_MANAGER_ONLY
+ * reads it: what the manager's own turns state ("no payroll", "payroll deduct
+ * is not applicable"), and a bare Yes/No only as the reply to the payroll
+ * question just asked (`payrollAnsweredNow`), and only on a form that asks it
+ * — the Corrective Action Form.
+ */
+function latePayrollFromForm(input: IntentTurnInput, templateKey: string | null): PayrollDeductAnswer | null {
+  const said = payrollDeductFromConversation(
+    [...input.history, { role: "user", content: input.question }].filter((turn) => turn.role === "user"),
+  );
+  const template = input.templates.find((row) => row.key === templateKey) ?? (templateKey ? { key: templateKey } : null);
+  const replied = templateHasWarningLevel(template) ? payrollAnsweredNow(input.history, input.question) : null;
+  return replied ?? said;
+}
 
 /** Another yes/no question beside the payroll one: "Did you mean **Rowan Testo**?". */
 const OTHER_YES_NO =

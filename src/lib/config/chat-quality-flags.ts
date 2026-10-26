@@ -941,6 +941,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
   "NAME_BEFORE_TITLE_ENABLED",
+  "LATE_OPEN_PAYROLL_FROM_FORM_ENABLED",
 ] as const;
 
 /**
@@ -964,4 +965,18 @@ export function incidentClauseSplitEnabled(): boolean {
  */
 export function stateCodeNotAPersonEnabled(): boolean {
   return envFlag("STATE_CODE_NOT_A_PERSON_ENABLED");
+}
+
+/**
+ * With LATE_OPEN_DATE_ENABLED on, payroll deduct is read from this form only
+ * (QA, 26 Oct 2026; ported from the sibling app, same flag in both apps): what
+ * the manager's own turns state, and a bare Yes/No only as the reply to the
+ * payroll question just asked on a Corrective Action Form. A bare "Yes" after
+ * an exit form, a resignation or a Coaching Form is never saved as payroll
+ * deduct on the intent read; the full remap's card (this app's live form
+ * path) already never stored it. See `latePayrollFromForm` in
+ * `ai/intent-slots.ts`. Off, exactly as before.
+ */
+export function latePayrollFromFormEnabled(): boolean {
+  return envFlag("LATE_OPEN_PAYROLL_FROM_FORM_ENABLED");
 }
