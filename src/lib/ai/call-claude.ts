@@ -7,6 +7,7 @@ import { chatTraceEnabled, fullManualContextEnabled, promptCacheEnabled } from "
 import { CLAUDE_EFFORT, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
 
+import { answerLengthGuard, answerLengthRetry } from "./answer-length-guard";
 import { Anthropic, getAnthropicClient } from "./anthropic";
 import { AiError } from "./errors";
 import { selectLongContext } from "./long-context";
@@ -122,6 +123,13 @@ export interface CallClaudeInput {
    * so a later policy question can read it back instead of sending it again.
    */
   readonly cachedContext?: string | null;
+  /**
+   * Set by the chat answer only. With ANSWER_LENGTH_GUARD_ENABLED on, a reply
+   * cut at max_tokens is asked for once more or ends on a whole sentence, in
+   * place of `withTruncationRetry` (see `answer-length-guard.ts`). Other
+   * callers, and the flag off, are unchanged.
+   */
+  readonly answerLengthGuard?: boolean;
 }
 
 /**
@@ -206,10 +214,12 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
   // The API requires the first message to be a user turn.
   while (history.length > 0 && history[0]!.role === "assistant") history.shift();
 
+  // ANSWER_LENGTH_GUARD_ENABLED, chat answer only: null otherwise, and then nothing below differs from main.
+  const guard = answerLengthGuard(input);
   const started = Date.now();
   try {
-    const response = await withTruncationRetry(
-      input.maxTokens,
+    const response = await (guard ? answerLengthRetry(guard) : withTruncationRetry)(
+      guard?.maxTokens ?? input.maxTokens,
       async (maxTokens) => {
         const attemptStarted = Date.now();
         const params = {
@@ -260,7 +270,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
 
     const noted = {
       model: CLAUDE_MODEL,
-      maxTokens: input.maxTokens,
+      maxTokens: guard?.maxTokens ?? input.maxTokens,
       stopReason: response.stop_reason ?? null,
       latencyMs: Date.now() - started,
       firstTokenMs: response.firstTokenMs,
@@ -298,7 +308,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
     // and subtype are recorded for the trace before this object is discarded.
     noteModelCall({
       model: CLAUDE_MODEL,
-      maxTokens: input.maxTokens,
+      maxTokens: guard?.maxTokens ?? input.maxTokens,
       stopReason: null,
       latencyMs: Date.now() - started,
       usage: null,
