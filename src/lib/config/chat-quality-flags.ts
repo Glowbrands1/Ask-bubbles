@@ -859,4 +859,19 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TERSE_SLOT_READ_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
+  "ANSWER_LENGTH_GUARD_ENABLED",
 ] as const;
+
+/**
+ * A long chat answer is not cut mid-sentence (a coaching-plan answer in the
+ * sibling app, 26 Oct 2026, stopped at max_tokens on "…can copy it [S5";
+ * same flag in both apps). The answer call gets 3584 tokens instead of 2048;
+ * a reply still cut is asked once more while the turn is under 35 s, and
+ * otherwise ends at its last complete sentence or list item, never past
+ * 60 s. With it on, this replaces the answer call's withTruncationRetry, so a
+ * cut reply is never retried twice. See `ai/answer-length-guard.ts`. Off, the
+ * request and the reply are exactly what main ships.
+ */
+export function answerLengthGuardEnabled(): boolean {
+  return envFlag("ANSWER_LENGTH_GUARD_ENABLED");
+}

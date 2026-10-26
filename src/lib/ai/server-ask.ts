@@ -977,6 +977,8 @@ async function answerQuestionCore(
     ...(longContext ? { historyPolicy: "budget" as const, priorSummary: longContext.summary } : {}),
     question: request.question,
     maxTokens: CLAUDE_MAX_TOKENS[request.mode],
+    // ANSWER_LENGTH_GUARD_ENABLED reads this; off, the request is main's.
+    answerLengthGuard: true,
   };
   const retrievalChunks: GroundingChunk[] = used.map((row, index) => ({
     marker: index + 1,
