@@ -45,7 +45,7 @@ import { callClaude } from "./call-claude";
 import { loadChatDataBlock } from "./chat-data-tools";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
-import { withNameCase } from "./name-case";
+import { withNameCase, withNameTitleCase } from "./name-case";
 import { withTerseSlots } from "./terse-slots";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
@@ -211,7 +211,7 @@ async function answerQuestionTraced(
   // TERSE_SLOT_READ_ENABLED: a terse "ca …" line is read as the long form.
   // NAME_CASE_INSENSITIVE_ENABLED: a name is read the same however it is typed.
   const read = withNameCase(withTerseSlots(request));
-  if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
+  if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory).then(withNameTitleCase);
   const draft = openChatTrace({
     conversationId: request.conversationId,
     messageId: request.questionMessageId,
@@ -219,7 +219,7 @@ async function answerQuestionTraced(
     originalQuery: request.question,
     formInProgress: Boolean(request.continueProposalTemplateKey || request.openForm || request.activeFormInstanceId),
   });
-  return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory));
+  return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory).then(withNameTitleCase));
 }
 
 /** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
