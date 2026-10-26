@@ -112,6 +112,62 @@ describe("INCIDENT_CLAUSE_SPLIT_ENABLED on: the intent read's own sentences", ()
   });
 });
 
+for (const both of [false, true]) describe(`INCIDENT_COMMAND_WORDS_ENABLED on${both ? ", with INCIDENT_CLAUSE_SPLIT_ENABLED" : " alone"}: commands are never the Issue`, () => {
+  beforeEach(() => {
+    vi.stubEnv("INCIDENT_COMMAND_WORDS_ENABLED", "true");
+    vi.stubEnv("INCIDENT_CLAUSE_SPLIT_ENABLED", both ? "true" : "");
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  // QA / Code 8, 26 Oct 2026, full remap: the Issue became "no deduct" / "date is" / "change it to written".
+  it("a later command turn keeps the incident already given", () => {
+    for (const later of ["no deduct", "No deduct", "date is 10/14", "Date is", "change it to written", "Change it to written", "verbal"]) {
+      expect(remap(["create a ca for kira dunmore, she was late today", later].join("\n"), "kira dunmore"), later).toBe("late today");
+    }
+  });
+
+  it("\"no deduct\" and \"date 10/14\" in the same turn stay out of it", () => {
+    for (const text of cased("coaching form for kira dunmore. opened the store late today. no deduct", ["kira dunmore"])) {
+      expect(remap(text, "kira dunmore")).toBe("opened the store late today");
+    }
+    for (const text of cased("coaching form for kira dunmore. skipped the 10 minute disinfect today. date 10/14", ["kira dunmore"])) {
+      expect(remap(text, "kira dunmore")).toBe("skipped the 10 minute disinfect today");
+    }
+  });
+
+  it("a negated or hedged command is still a command, never the Issue (QA-7)", () => {
+    for (const later of [
+      "don't change it to written",
+      "Do not change it to written",
+      "actually no deduct",
+      "Actually no deduct",
+      "not verbal",
+      "never written",
+      "she was not verbal",
+      "She was not verbal",
+      "verbal not written",
+      "written, not verbal",
+      "VERBAL NOT WRITTEN",
+    ]) {
+      expect(remap(["create a ca for kira dunmore, she was late today", later].join("\n"), "kira dunmore"), later).toBe("late today");
+    }
+  });
+
+  if (both) {
+    it("a place sentence between two acts goes; both acts stay (QA-7)", () => {
+      for (const text of cased("create a ca for kira dunmore, she skipped a tour today, it happened at kearney ne and she did not clock out", ["kira dunmore"])) {
+        expect(remap(text, "kira dunmore")).toBe("skipped a tour today and did not clock out");
+      }
+    });
+  }
+
+  it("words after a duration keep the manager's wording", () => {
+    for (const text of ["Devon harlan, dodge ne, was on her phone 25 min customers waiting 9-29-26", "devon harlan, dodge ne, was on her phone 25 min customers waiting 9-29-26"]) {
+      expect(remap(text, "devon harlan")).toBe("on her phone 25 min customers waiting");
+    }
+  });
+});
+
 describe("the clause splitter", () => {
   it("keeps a place and its state, a date, an amount and an abbreviation in one clause", () => {
     expect(incidentClauses("she works at our dodge, ne store, and was late")).toEqual([
@@ -149,5 +205,9 @@ describe("INCIDENT_CLAUSE_SPLIT_ENABLED off", () => {
     expect(remap(DEVON, "devon harlan")).toBe("ne store as a team member and was late today");
     expect(remap(TENURE, "jory pell")).toBe("employee for 7 months");
     expect(remap(PASTED.join("\n"), "jory pell")).toBe(PASTED[1]);
+  });
+
+  it("a later command turn is read as the Issue with INCIDENT_COMMAND_WORDS_ENABLED off (the reported command bug)", () => {
+    expect(remap(["create a ca for kira dunmore, she was late today", "no deduct"].join("\n"), "kira dunmore")).toBe("no deduct");
   });
 });
