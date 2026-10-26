@@ -140,6 +140,7 @@ import {
 import { twoSentenceActionPlan } from "@/lib/forms/action-plan-sentences";
 import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
 import { retainFilledFields } from "@/lib/forms/draft-merge";
+import { withoutNegatedLatenessTopic } from "@/lib/forms/negated-lateness";
 import {
   holdsNarrative,
   managerWordsObservation,
@@ -157,6 +158,7 @@ import {
 import { flaggedCitationWrite } from "@/lib/ai/policy-citation-fields";
 import { fieldLines } from "@/lib/ai/intake-augment";
 import {
+  negatedLatenessTopicEnabled,
   actionPlanManagerOnlyEnabled,
   actionPlanSentencesEnabled,
   draftEditMergeEnabled,
@@ -1245,6 +1247,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const framing = isCoachingFamily
       ? guardCoachingFraming({ values: followUp.values, checked: followUp.checked }, notes)
       : { values: followUp.values, checked: followUp.checked, adjusted: [] as string[], underperformanceRefused: false };
+    /*
+     * NEGATED_LATENESS_TOPIC_ENABLED (QA, 26 Oct 2026): notes that mention
+     * lateness only to deny it ("she was not late today") do not come back
+     * ticked "Other: Punctuality". See `negated-lateness.ts`.
+     */
+    if (isCoachingFamily && negatedLatenessTopicEnabled()) {
+      Object.assign(framing, withoutNegatedLatenessTopic({ values: framing.values, checked: framing.checked }, notes));
+    }
 
     /*
      * ========================================================================
