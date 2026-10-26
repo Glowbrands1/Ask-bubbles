@@ -1,4 +1,4 @@
-import { incidentClauseSplitEnabled } from "@/lib/config/chat-quality-flags";
+import { incidentClauseSplitEnabled, incidentCommandWordsEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
  * INCIDENT_CLAUSE_SPLIT_ENABLED: What happened is the incident, never a
@@ -33,7 +33,8 @@ import { incidentClauseSplitEnabled } from "@/lib/config/chat-quality-flags";
  *   the app's    the intent read's own sentences in front of the turn ("The
  *   sentences    employee is …", "Policy reference: …") are never the
  *                incident;
- *   commands     "no deduct", "date 10/14", "change it to written",
+ *   commands     (INCIDENT_COMMAND_WORDS_ENABLED, its own flag) "no deduct",
+ *                "date 10/14", "change it to written",
  *                "verbal", "store is …" fill their own field, never What
  *                happened.
  *
@@ -199,40 +200,55 @@ function withoutSubject(clause: string): string {
 export function incidentOnlyText(
   turn: string,
   employeeName: string | null,
-  options: { readonly subjectless?: boolean } = {},
+  options: { readonly subjectless?: boolean; readonly split?: boolean; readonly commands?: boolean } = {},
 ): string {
+  const read = { subjectless: options.subjectless ?? false, split: options.split ?? true, commands: options.commands ?? true };
   return turn
     .split("\n")
-    .map((line) => incidentOnlyLine(line, employeeName, options.subjectless ?? false))
+    .map((line) => incidentOnlyLine(line, employeeName, read))
     .join("\n");
 }
 
-function incidentOnlyLine(line: string, employeeName: string | null, subjectless: boolean): string {
+function incidentOnlyLine(
+  line: string,
+  employeeName: string | null,
+  read: { readonly subjectless: boolean; readonly split: boolean; readonly commands: boolean },
+): string {
   if (!line.trim()) return line;
   const sentences: string[] = [];
   // "st. joe": the readers split at a point too, so the abbreviation's own point goes.
-  const unpointed = line.replace(ABBREVIATIONS, (match) => match.replace(/\.$/, ""));
+  const unpointed = read.split ? line.replace(ABBREVIATIONS, (match) => match.replace(/\.$/, "")) : line;
   for (const sentence of incidentSentences(unpointed)) {
     // "Issue: The employee who failed to open will then be required …": the policy's words.
     const unlabelled = sentence.replace(/^\s*(?:issue|policy|note)\s*:\s*/i, "");
-    if (isStateSentence(sentence) || isSlotCommand(sentence) || isPolicyInstruction(unlabelled) || isPolicyText(unlabelled)) continue;
-    const clauses = incidentClauses(sentence.replace(GLUED_STATE, ""))
-      .filter((clause) => !isPolicyInstruction(clause) && !isPolicyText(clause) && !isSlotCommand(clause))
-      .map((clause) => actHalves(clause, employeeName))
-      .filter((clause) => !isEmployeeFact(clause, employeeName))
-      .map((clause) => (subjectless && statesAnAct(clause) ? withoutSubject(clause) : clause));
+    if (read.split && (isStateSentence(sentence) || isPolicyInstruction(unlabelled) || isPolicyText(unlabelled))) continue;
+    // INCIDENT_COMMAND_WORDS_ENABLED: "no deduct", "date 10/14", "change it to written" fill a field.
+    if (read.commands && isSlotCommand(sentence)) continue;
+    const body = read.commands ? sentence.replace(GLUED_STATE, "") : sentence;
+    let clauses = read.split ? incidentClauses(body) : body.split(",").map((clause) => clause.trim()).filter(Boolean);
+    if (read.split) {
+      clauses = clauses
+        .filter((clause) => !isPolicyInstruction(clause) && !isPolicyText(clause))
+        .map((clause) => actHalves(clause, employeeName))
+        .filter((clause) => !isEmployeeFact(clause, employeeName))
+        .map((clause) => (read.subjectless && statesAnAct(clause) ? withoutSubject(clause) : clause));
+    }
+    if (read.commands) clauses = clauses.filter((clause) => !isSlotCommand(clause));
     if (clauses.length > 0) sentences.push(clauses.join(", "));
   }
   return sentences.join(". ");
 }
 
-/** The readers' input with INCIDENT_CLAUSE_SPLIT_ENABLED on; the turn as typed with it off. */
+/** The readers' input with INCIDENT_CLAUSE_SPLIT_ENABLED or INCIDENT_COMMAND_WORDS_ENABLED on; the turn as typed with both off. */
 export function incidentTurn(
   turn: string,
   employeeName: string | null,
   options: { readonly subjectless?: boolean } = {},
 ): string {
-  return incidentClauseSplitEnabled() ? incidentOnlyText(turn, employeeName, options) : turn;
+  const split = incidentClauseSplitEnabled();
+  const commands = incidentCommandWordsEnabled();
+  if (!split && !commands) return turn;
+  return incidentOnlyText(turn, employeeName, { ...options, split, commands });
 }
 
 function escape(value: string): string {

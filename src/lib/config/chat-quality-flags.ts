@@ -890,6 +890,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INCIDENT_CLAUSE_SPLIT_ENABLED",
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
+  "INCIDENT_COMMAND_WORDS_ENABLED",
 ] as const;
 
 /**
@@ -913,4 +914,17 @@ export function incidentClauseSplitEnabled(): boolean {
  */
 export function stateCodeNotAPersonEnabled(): boolean {
   return envFlag("STATE_CODE_NOT_A_PERSON_ENABLED");
+}
+
+/**
+ * A command to the app ("no deduct", "date 10/14", "date is", "change it to
+ * written", "verbal", "store is …") and the intent read's "It happened at …"
+ * glued onto the account are never the Issue, and words after a duration
+ * ("… 25 min customers waiting") keep the manager's wording
+ * (`ai/incident-clauses.ts`; QA / Code 8, 26 Oct 2026). Its own flag, apart
+ * from INCIDENT_CLAUSE_SPLIT_ENABLED. Off (the default), the turn is read as
+ * typed.
+ */
+export function incidentCommandWordsEnabled(): boolean {
+  return envFlag("INCIDENT_COMMAND_WORDS_ENABLED");
 }

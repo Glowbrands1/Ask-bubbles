@@ -112,8 +112,11 @@ describe("INCIDENT_CLAUSE_SPLIT_ENABLED on: the intent read's own sentences", ()
   });
 });
 
-describe("INCIDENT_CLAUSE_SPLIT_ENABLED on: commands are never the Issue", () => {
-  beforeEach(() => vi.stubEnv("INCIDENT_CLAUSE_SPLIT_ENABLED", "true"));
+for (const both of [false, true]) describe(`INCIDENT_COMMAND_WORDS_ENABLED on${both ? ", with INCIDENT_CLAUSE_SPLIT_ENABLED" : " alone"}: commands are never the Issue`, () => {
+  beforeEach(() => {
+    vi.stubEnv("INCIDENT_COMMAND_WORDS_ENABLED", "true");
+    vi.stubEnv("INCIDENT_CLAUSE_SPLIT_ENABLED", both ? "true" : "");
+  });
   afterEach(() => vi.unstubAllEnvs());
 
   // QA / Code 8, 26 Oct 2026, full remap: the Issue became "no deduct" / "date is" / "change it to written".
@@ -178,7 +181,7 @@ describe("INCIDENT_CLAUSE_SPLIT_ENABLED off", () => {
     expect(remap(PASTED.join("\n"), "jory pell")).toBe(PASTED[1]);
   });
 
-  it("a later command turn is read as the Issue (the reported command bug)", () => {
+  it("a later command turn is read as the Issue with INCIDENT_COMMAND_WORDS_ENABLED off (the reported command bug)", () => {
     expect(remap(["create a ca for kira dunmore, she was late today", "no deduct"].join("\n"), "kira dunmore")).toBe("no deduct");
   });
 });
