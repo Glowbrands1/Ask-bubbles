@@ -105,6 +105,8 @@ beforeEach(() => {
     "Pets are not allowed in the workplace; only a trained service animal is permitted [S1]. For Sun Tan City and Crunch tanning rooms specifically, service animals are allowed in the tanning room [S1].";
 });
 afterEach(() => vi.unstubAllEnvs());
+// Flag-off pins hold whatever the environment has on; flag-on tests set it.
+beforeEach(() => vi.stubEnv("BRAND_REPLY_GUARD_ENABLED", ""));
 
 const QUESTIONS = [
   "can i bring my dog to work",
