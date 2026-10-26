@@ -20,6 +20,7 @@ import { applyGroundedProposal, prepareGroundedQuestion, type GroundedPerson, ty
 import type { ChatActor } from "./form-proposal";
 import type { AskRequest } from "./types";
 import { withTypedEmployeeOnCard } from "./typed-employee-card";
+import { withCrossPersonGuard } from "./cross-person-guard";
 
 /**
  * Form proposal with the grounded-entity and form-state flags.
@@ -54,7 +55,8 @@ export async function deliverFormProposal(input: {
   const typedName = (response: AskResponse) => withTypedEmployeeOnCard(response, input.request.question);
   if (!entities && !stateOn && !dedupe) {
     const proposed = await input.propose(input.question);
-    return proposed ? typedName(await input.decorate(proposed)) : null;
+    // CROSS_PERSON_INCIDENT_GUARD_ENABLED: a new employee does not inherit the earlier account.
+    return proposed ? withCrossPersonGuard(typedName(await input.decorate(proposed)), input.request) : null;
   }
 
   const saved = await readSaved(stateOn, input.actor.subject, input.request.conversationId);
@@ -77,9 +79,11 @@ export async function deliverFormProposal(input: {
   );
   if (!proposed) return null;
   const decorated = typedName(await input.decorate(proposed));
-  const applied = entities
+  const grounded = entities
     ? applyGroundedProposal(decorated, { people, prep, rosterEmpty: people.length === 0 })
     : decorated;
+  // CROSS_PERSON_INCIDENT_GUARD_ENABLED: a new employee does not inherit the earlier account.
+  const applied = withCrossPersonGuard(grounded, input.request);
 
   const reopened = await reopenSameIncident(dedupe, input, applied);
   if (reopened) {
