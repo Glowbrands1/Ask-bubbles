@@ -47,6 +47,7 @@ import { loadGoogleReviewsChatBlock } from "./google-reviews-chat-read";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
 import { withTerseSlots } from "./terse-slots";
+import { withBareAnswerBinding } from "./bare-answer-guard";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";
@@ -228,7 +229,8 @@ async function answerQuestionBody(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
-  return keepManagerActionPlan(await answerQuestionCore(request, actor, memory), request);
+  // BARE_ANSWER_BINDING_ENABLED: a short answer fills only the slot it answers.
+  return withBareAnswerBinding(keepManagerActionPlan(await answerQuestionCore(request, actor, memory), request), request);
 }
 
 async function answerQuestionCore(

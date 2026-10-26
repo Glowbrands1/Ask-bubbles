@@ -839,6 +839,18 @@ export function draftNeverBlankEnabled(): boolean {
   return envFlag("DRAFT_NEVER_BLANK_ENABLED");
 }
 
+/**
+ * A short answer fills the slot it answers and nothing else: Employee is
+ * never a title, place, warning level or yes/no ("tm", "dodge", "verbal",
+ * "no prior"); Job title is never a place, level or yes/no; Payroll changes
+ * only when the turn says payroll or is a bare yes/no to the payroll question
+ * asked last. Ported from the sibling app (25 Oct 2026; here conv_mvofpdj12iwndws,
+ * conv_mvofk1r32edmbmk). See `ai/bare-answer-guard.ts`. Off, as before.
+ */
+export function bareAnswerBindingEnabled(): boolean {
+  return envFlag("BARE_ANSWER_BINDING_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -918,6 +930,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
+  "BARE_ANSWER_BINDING_ENABLED",
 ] as const;
 
 /**
