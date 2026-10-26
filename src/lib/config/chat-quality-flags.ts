@@ -814,6 +814,15 @@ export function excerptBrandFilterEnabled(): boolean {
 }
 
 /**
+ * A Google review question gets the Google Reviews page's month-to-date
+ * figures, goal and pace for the caller's stores, and only with View reports.
+ * Off, review questions keep the existing path. Ported from the sibling app (QA T11).
+ */
+export function googleReviewsInChatEnabled(): boolean {
+  return envFlag("GOOGLE_REVIEWS_IN_CHAT_ENABLED");
+}
+
+/**
  * The manager's newest spelling of the card's employee wins, when the card's
  * spelling is one they typed (ported from the sibling app, 25 Oct 2026). See
  * `ai/name-respell.ts`. Off, the first spelling stays.
@@ -899,6 +908,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INCIDENT_CLAUSE_SPLIT_ENABLED",
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
+  "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "NAME_RESPELL_ENABLED",
 ] as const;
 
