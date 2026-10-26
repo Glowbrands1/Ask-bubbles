@@ -29,6 +29,7 @@ import { reusedDraftNotice } from "@/lib/forms/reused-draft-notice";
 
 import { DRAFT_FAILED_WARNING, createInlineForm } from "./create-inline-form";
 import { InlineForm, type PrefillState } from "./inline-form";
+import { FormRevisionsMount } from "@/form-revisions/form-revisions-mount";
 
 export function MessageBubble({
   message,
@@ -210,12 +211,17 @@ export function MessageBubble({
               proposal: the form existed before this answer. The card is the
               same live editor a created form gets.
             */
-            <InlineForm
+            <FormRevisionsMount
               reference={message.formInstanceRef}
-              prefill={OPENED_PREFILL}
               onReplaced={(reference) => onFormCreated?.(message.id, reference)}
-              onStartAnother={onStartAnother}
-            />
+            >
+              <InlineForm
+                reference={message.formInstanceRef}
+                prefill={OPENED_PREFILL}
+                onReplaced={(reference) => onFormCreated?.(message.id, reference)}
+                onStartAnother={onStartAnother}
+              />
+            </FormRevisionsMount>
           ) : null}
 
           {/*
@@ -574,10 +580,15 @@ function FormProposalCard({
   ) : null;
 
   const reference = instanceRef ?? created;
+  const replaced = (next: ChatFormInstanceRef) => {
+    setCreated(next);
+    onCreated(next);
+  };
   if (reference) {
     return (
       <>
         {reusedNote}
+        <FormRevisionsMount reference={reference} onReplaced={replaced}>
         <InlineForm
           reference={reference}
           prefill={prefill}
@@ -588,11 +599,9 @@ function FormProposalCard({
             was (`withInstanceRef`, by this card's proposal id), so a refresh
             reopens the draft rather than the frozen original.
           */
-          onReplaced={(next) => {
-            setCreated(next);
-            onCreated(next);
-          }}
+          onReplaced={replaced}
         />
+        </FormRevisionsMount>
       </>
     );
   }
