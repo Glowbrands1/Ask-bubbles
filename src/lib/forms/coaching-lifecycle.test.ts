@@ -380,13 +380,20 @@ describe("a new coaching form", () => {
     }
   });
 
-  it("B. a hand-typed Direct policy still asks when the gate is non-blocking", async () => {
+  /*
+   * The typed policy as managers type it (Pau, 26 Oct 2026): sentence case
+   * and all lowercase. A typed value asks either way; only a blank is let by.
+   */
+  it.each([
+    ["sentence case", "Typed from the manager's own copy."],
+    ["all lowercase", "typed from the managers own copy"],
+  ])("B. a hand-typed Direct policy still asks when the gate is non-blocking (%s)", async (_register, typed) => {
     process.env.POLICY_GATE_NONBLOCKING_ENABLED = "1";
     try {
       const instance = await startCorrectiveForm();
       await saveInstanceValues(
         instance.id,
-        { values: { policy_language: "Typed from the manager's own copy." } },
+        { values: { policy_language: typed } },
         "dana",
       );
       await expect(finalizeInstance(instance.id, "dana", null)).rejects.toBeInstanceOf(UnverifiedPolicyError);
