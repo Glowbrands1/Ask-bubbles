@@ -133,6 +133,7 @@ import { retrievalPlanFor } from "./retrieval-query";
 import { earlierAnsweredTurn, isReformatTurn, keepEarlierSources } from "./reformat-turn";
 import { slotOnlyRetrievalTopic } from "./slot-only-turn";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
+import { withoutOtherBrands } from "./brand-reply-guard";
 import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
 
@@ -1086,6 +1087,8 @@ async function answerQuestionCore(
     history: request.history,
     attachedDocumentIds: request.attachedDocumentIds,
   }).content;
+  // BRAND_REPLY_GUARD_ENABLED: the reply speaks for this company only (QA G21/U1/U6).
+  content = withoutOtherBrands(content);
   return {
     content,
     formSelection: suggested?.selection,
