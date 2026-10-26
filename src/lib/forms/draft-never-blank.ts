@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import { describesIncident } from "./corrective-action-intake";
-import { managerIncidentClause } from "./incident-issue";
+import { requestIssueClause } from "./incident-issue";
 import { EXPECTATION_LABEL, GOING_FORWARD_LABEL, OBSERVED_LABEL } from "./narrative-draft";
 
 /**
@@ -164,38 +164,50 @@ export function readDraftedCall(
 }
 
 /*
- * AN ACCOUNT TOLD AS WHAT DID NOT HAPPEN. "She never opened the salon on
- * time", "he did not come in", "she didn't clock in", "no call on 10/22" —
- * QA-2, 26 Oct 2026: the incident readers above take none of these for an
- * account, so a draft whose only account is one of them got no retry and no
- * fallback. The latest such sentences, outside the request itself, read as
- * the manager wrote them.
+ * THE MANAGER'S ACCOUNT, SENTENCE BY SENTENCE (the fallback's words).
+ *
+ * Every sentence of the latest turn that tells what happened, in the order
+ * and words the manager typed — so "She never opened the salon on time. She
+ * also left early on 10/20." keeps both incidents (QA-2, 26 Oct 2026). A
+ * sentence counts when it describes an incident, or tells one as what did not
+ * happen ("never opened", "did not clock in", "didn't show", "no call").
+ *
+ * NOT AN ACCOUNT: the sentence asking for the form; payroll and prior-coaching
+ * lines; a negation that clears the employee ("she was never late", "never
+ * had a problem", "didn't do anything wrong"); and conversation ("never
+ * mind", "I never said she was late"). With no such sentence, the request's
+ * own for-clause ("a CA for <name> for cash handling") is the account.
  */
 const NEGATED_ACCOUNT = /\b(?:never|did\s+not|didn['’]?t|no[- ]call)\s+[a-z]/i;
 const ASKS_FOR_THE_FORM =
   /\b(?:warning|write[- ]?up|corrective\s+action(?:\s+form)?|ca|c\/a|dpoa)\s+(?:for|about|over|regarding|re:?)\s/i;
 const NOT_THE_INCIDENT =
   /\b(?:payroll\s+deduct|previous\s+coaching|prior\s+(?:coaching|actions?)|jba\s+(?:policy\s+)?manual)\b/i;
+/* A negation that denies a fault: what follows it within a few words is the fault denied. */
+const EXONERATING =
+  /\b(?:never|did\s+not|didn['’]?t|was\s+not|wasn['’]?t|has\s+not|hasn['’]?t|no)\b(?:\s+[\w']+){0,4}?\s+(?:late|tardy|problems?|issues?|wrong|trouble|complaints?|mistakes?|absent|concerns?)\b/i;
+/* Talk about the conversation, not about the employee. */
+const CONVERSATIONAL =
+  /\bnever\s*mind\b|\b(?:i|we)\s+(?:never|did\s+not|didn['’]?t)\s+(?:said|say|told|tell|meant|mean|asked|ask|thought|think|knew|know)\b/i;
+const ACCOUNT_LIMIT = 400;
 
-export function negatedAccountClause(text: string): string | null {
+function isAccountSentence(sentence: string): boolean {
+  if (ASKS_FOR_THE_FORM.test(sentence) || NOT_THE_INCIDENT.test(sentence)) return false;
+  if (EXONERATING.test(sentence) || CONVERSATIONAL.test(sentence)) return false;
+  return NEGATED_ACCOUNT.test(sentence) || describesIncident(sentence);
+}
+
+export function managerAccountClause(text: string): string | null {
   const turns = (text ?? "").split(/\n\s*\n/).map((turn) => turn.trim()).filter(Boolean);
   for (const turn of [...turns].reverse()) {
-    const sentences = [...turn.matchAll(/[^.!?\n]+[.!?]*/g)]
+    const hits = [...turn.matchAll(/[^.!?\n]+[.!?]*/g)]
       .map((match) => match[0].trim())
-      .filter((sentence) => sentence.length >= 3 && sentence.length <= 180);
-    const hits = sentences
-      .map((sentence, index) => ({ sentence, index }))
-      .filter(
-        ({ sentence }) =>
-          NEGATED_ACCOUNT.test(sentence) && !ASKS_FOR_THE_FORM.test(sentence) && !NOT_THE_INCIDENT.test(sentence),
-      );
+      .filter((sentence) => sentence.length >= 3 && sentence.length <= 180 && isAccountSentence(sentence));
     if (hits.length === 0) continue;
-    let start = hits.length - 1;
-    while (start > 0 && hits[start]!.index === hits[start - 1]!.index + 1) start -= 1;
     let joined = "";
-    for (const hit of hits.slice(start)) {
-      const next = joined ? `${joined} ${hit.sentence}` : hit.sentence;
-      if (next.length > 180) break;
+    for (const sentence of hits) {
+      const next = joined ? `${joined} ${sentence}` : sentence;
+      if (next.length > ACCOUNT_LIMIT) break;
       joined = next;
     }
     const clause = joined.trim().replace(/[\s"'”’)]+$/, "").replace(/\.+$/, "");
@@ -204,9 +216,9 @@ export function negatedAccountClause(text: string): string | null {
   return null;
 }
 
-/** The incident clause, or — when the readers find none — an account told as what did not happen. */
+/** The manager's account, sentence by sentence, or — with none — the request's own for-clause. */
 function incidentClause(notes: string, employeeName: string | null): string | null {
-  return managerIncidentClause(notes, employeeName) ?? negatedAccountClause(notes);
+  return managerAccountClause(notes) ?? requestIssueClause(notes, employeeName);
 }
 
 /** True when any of `keys` holds text. */
@@ -216,7 +228,7 @@ export function holdsNarrative(values: Record<string, string>, keys: readonly st
 
 /** True when the notes give an account of what happened, so a blank narrative is a failure. */
 export function notesHoldAccount(notes: string, employeeName: string | null): boolean {
-  return incidentClause(notes, employeeName) !== null || describesIncident(notes);
+  return incidentClause(notes, employeeName) !== null;
 }
 
 /**

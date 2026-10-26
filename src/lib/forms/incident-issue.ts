@@ -160,3 +160,14 @@ export function managerIncidentClause(text: string, employeeName: string | null)
   if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return fromRequest;
   return accountIssue(text);
 }
+
+/**
+ * The request's own for-clause ("a written warning for cash handling" →
+ * "cash handling"), unless it only names the person and the store. Null
+ * otherwise. Used by DRAFT_NEVER_BLANK_ENABLED when the manager's account
+ * gives no sentence of its own.
+ */
+export function requestIssueClause(text: string, employeeName: string | null): string | null {
+  const fromRequest = issueFromRequest(text, employeeName);
+  return fromRequest && !titleAndPlaceOnly(fromRequest, employeeName) ? fromRequest : null;
+}
