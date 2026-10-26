@@ -1,8 +1,11 @@
-import { APIError } from "@anthropic-ai/sdk";
+import { APIConnectionTimeoutError, APIError } from "@anthropic-ai/sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { chatErrorTitle, toChatTurnError } from "@/features/chat/chat-error";
+import { ClaudeProvider } from "@/lib/ai/claude-provider";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
+import { JBA_MANUAL_CA_CHUNKS } from "@/test/fixtures/jba-manual-ca-sections";
 
 /**
  * ============================================================================
@@ -52,11 +55,14 @@ const store = {
 type Outcome =
   | { kind: "answer" }
   | { kind: "http"; status: number; type: string }
-  | { kind: "midstream"; type: string };
+  | { kind: "midstream"; type: string }
+  | { kind: "timeout" };
 
 const state = vi.hoisted(() => ({
   script: [] as unknown[],
   modelCalls: [] as { params: unknown; options: unknown; via: "create" | "stream" }[],
+  /** Every forced tool call the turn made, by tool name, in order. */
+  toolCalls: [] as string[],
   waits: [] as number[],
 }));
 
@@ -109,7 +115,7 @@ vi.mock("@/lib/ai/retry-wait", () => ({
 
 const ANSWER = "Clock in at the start of your scheduled shift.";
 
-function sdkError(outcome: Exclude<Outcome, { kind: "answer" }>): Error {
+function sdkError(outcome: Extract<Outcome, { kind: "http" | "midstream" }>): Error {
   const body = { type: "error", error: { type: outcome.type, message: "upstream" } };
   if (outcome.kind === "http") return APIError.generate(outcome.status, body, undefined, new Headers());
   // What the SDK's stream throws on an `event: error` after the 200 arrived.
@@ -127,9 +133,14 @@ vi.mock("@/lib/ai/anthropic", async (importOriginal) => ({
   getAnthropicClient: () => ({
     messages: {
       create: async (params: { tool_choice?: unknown }, options?: unknown) => {
-        if (params.tool_choice) return { stop_reason: "tool_use", content: [] };
+        if (params.tool_choice) {
+          // No tool_use block: each tool caller sees a failed call, and must fall back.
+          state.toolCalls.push(String((params.tool_choice as { name?: unknown }).name));
+          return { stop_reason: "tool_use", content: [] };
+        }
         state.modelCalls.push({ params, options, via: "create" });
         const next = (state.script.shift() ?? { kind: "answer" }) as Outcome;
+        if (next.kind === "timeout") throw new APIConnectionTimeoutError();
         if (next.kind !== "answer") throw sdkError(next);
         return MESSAGE;
       },
@@ -142,7 +153,8 @@ vi.mock("@/lib/ai/anthropic", async (importOriginal) => ({
             if (event === "text") handlers.push(handler);
           },
           async finalMessage() {
-            // An HTTP error rejects before any text; a streamed one after some.
+            // An HTTP error or a timeout rejects before any text; a streamed one after some.
+            if (next.kind === "timeout") throw new APIConnectionTimeoutError();
             if (next.kind === "http") throw sdkError(next);
             for (const handler of handlers) handler();
             if (next.kind === "midstream") throw sdkError(next);
@@ -162,14 +174,47 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
     async match() {
       return [];
     }
-    async fetchRoleGrounding() {
-      return { ok: false, reason: "no role grounding in this test" };
+    async fetchRoleGrounding(role: { id: string }) {
+      return {
+        ok: true,
+        grounding: {
+          role: { id: role.id },
+          documentId: "doc-progression",
+          documentTitle: "PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT",
+          matchedBy: "tag",
+          rows: [
+            {
+              chunk_id: "pmf-0",
+              document_id: "doc-progression",
+              document_title: "PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT",
+              category: "leadership_coaching",
+              locator: "SECTION 2",
+              page: null,
+              section: null,
+              content: "Solve the issue at the lowest appropriate level.",
+              similarity: 0,
+            },
+          ],
+          presentGroups: ["escalation_ladder"],
+        },
+      };
     }
     async fetchOfficialPolicyManual() {
-      return { ok: false, reason: "no manual in this test" };
+      return {
+        ok: true,
+        documentId: "doc-manual",
+        documentTitle: "2025 JBA Policy Manual - Edited 5-2025",
+        documentCategory: "policies_compliance",
+        matchedBy: "tag",
+        chunks: JBA_MANUAL_CA_CHUNKS,
+      };
     }
   },
 }));
+
+// Hybrid and recall retrieval embed the question against the live database.
+vi.mock("@/lib/knowledge/hybrid-match", () => ({ matchHybridKnowledge: async () => [] }));
+vi.mock("@/lib/knowledge/recall-match", () => ({ matchRecallKnowledge: async () => [] }));
 
 vi.mock("@/lib/knowledge", () => ({
   getKnowledgeProvider: () => {
@@ -217,6 +262,7 @@ let warnings: string[] = [];
 beforeEach(() => {
   state.script = [];
   state.modelCalls = [];
+  state.toolCalls = [];
   state.waits = [];
   store.chat_traces.length = 0;
   warnings = [];
@@ -240,13 +286,21 @@ afterEach(() => {
   }
 });
 
-async function ask(): Promise<{ status: number; text: string; body: Record<string, unknown> }> {
-  const response = await chatRoute.POST(
+async function ask(question = QUESTION): Promise<{ status: number; text: string; body: Record<string, unknown> }> {
+  const response = await post(question);
+  const text = await response.text();
+  // The trace is written after the turn without being awaited.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  return { status: response.status, text, body: JSON.parse(text) as Record<string, unknown> };
+}
+
+function post(question: string): Promise<Response> {
+  return chatRoute.POST(
     new Request("https://app.test/api/chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        question: QUESTION,
+        question,
         mode: "standard",
         history: [],
         questionMessageId: "m1",
@@ -254,17 +308,35 @@ async function ask(): Promise<{ status: number; text: string; body: Record<strin
       }),
     }),
   );
-  const text = await response.text();
-  // The trace is written after the turn without being awaited.
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  return { status: response.status, text, body: JSON.parse(text) as Record<string, unknown> };
 }
+
+/**
+ * What the manager reads: the browser's provider posts the turn, and the chat
+ * screen turns whatever it throws into the error card (title and body).
+ */
+async function managerSees(respond: () => Promise<Response>): Promise<{ title: string; message: string; retryable: boolean }> {
+  vi.spyOn(globalThis, "fetch").mockImplementation(async () => respond());
+  try {
+    await new ClaudeProvider().ask({ question: QUESTION } as never);
+  } catch (caught) {
+    const error = toChatTurnError(caught, QUESTION);
+    return { title: chatErrorTitle(error.kind), message: error.message, retryable: error.retryable };
+  }
+  throw new Error("the turn answered");
+}
+
+/** The error card for model_failed, as main already shows it. */
+const PLAIN_CARD = {
+  title: "No answer was produced",
+  message: `${ACTIVE_BRAND.assistantName} could not produce an answer. Nothing was answered from memory — try again in a moment.`,
+  retryable: true,
+};
 
 function flagOn() {
   process.env[FLAG] = "on";
 }
 
-const FAILURES: readonly [string, Exclude<Outcome, { kind: "answer" }>][] = [
+const FAILURES: readonly [string, Extract<Outcome, { kind: "http" | "midstream" }>][] = [
   ["429 rate_limit_error", { kind: "http", status: 429, type: "rate_limit_error" }],
   ["529 overloaded_error", { kind: "http", status: 529, type: "overloaded_error" }],
   ["overloaded_error mid-stream", { kind: "midstream", type: "overloaded_error" }],
@@ -421,4 +493,111 @@ describe("with tracing off the answer is read through messages.create", () => {
     expect(JSON.stringify(state.modelCalls[0]!.params)).toBe(offRequest);
     expect(state.modelCalls[0]!.via).toBe("create");
   });
+});
+
+describe("a 502 or a timeout from the model, then an answer (QA follow-up, 26 Oct 2026)", () => {
+  const BAD_GATEWAY: Outcome = { kind: "http", status: 502, type: "api_error" };
+
+  it("answers after one 502", async () => {
+    flagOn();
+    state.script = [BAD_GATEWAY, { kind: "answer" }];
+    const result = await ask();
+    expect(result.status, result.text).toBe(200);
+    expect(result.body.content).toBe(ANSWER);
+    expect(state.modelCalls).toHaveLength(2);
+    expect(state.waits).toEqual([1_000]);
+  });
+
+  it("answers after two 502s (two retries)", async () => {
+    flagOn();
+    state.script = [BAD_GATEWAY, BAD_GATEWAY, { kind: "answer" }];
+    const result = await ask();
+    expect(result.status, result.text).toBe(200);
+    expect(result.body.content).toBe(ANSWER);
+    expect(state.modelCalls).toHaveLength(3);
+    expect(state.waits).toEqual([1_000, 3_000]);
+  });
+
+  it("after three 502s the manager reads a plain try-again card, never the raw error", async () => {
+    flagOn();
+    state.script = [BAD_GATEWAY, BAD_GATEWAY, BAD_GATEWAY, { kind: "answer" }];
+    const seen = await managerSees(() => post(QUESTION));
+    expect(state.modelCalls).toHaveLength(3);
+    expect(seen).toEqual(PLAIN_CARD);
+    expect(`${seen.title} ${seen.message}`).not.toMatch(/502|upstream|language model|api_error|status/i);
+    expect(warnings.join("\n")).toMatch(/model call failed after 3 attempts: upstream 502/);
+  });
+
+  it("the same card with the flag off (main), after one 502", async () => {
+    state.script = [BAD_GATEWAY, { kind: "answer" }];
+    expect(await managerSees(() => post(QUESTION))).toEqual(PLAIN_CARD);
+    expect(state.modelCalls).toHaveLength(1);
+  });
+
+  it('the same card when something in front of the app answers 502 "upstream request failed"', async () => {
+    const seen = await managerSees(async () => new Response("upstream request failed", { status: 502 }));
+    expect(seen).toEqual(PLAIN_CARD);
+  });
+
+  it("answers after a connection timeout, on the stream and the create paths", async () => {
+    flagOn();
+    state.script = [{ kind: "timeout" }, { kind: "answer" }];
+    const streamed = await ask();
+    expect(streamed.status, streamed.text).toBe(200);
+    expect(streamed.body.content).toBe(ANSWER);
+    expect(state.modelCalls.map((call) => call.via)).toEqual(["stream", "stream"]);
+    expect(warnings.join("\n")).toMatch(/attempt 1 failed: upstream connection/);
+
+    delete process.env.CHAT_TRACE_ENABLED;
+    state.modelCalls = [];
+    state.script = [{ kind: "timeout" }, { kind: "answer" }];
+    const created = await ask();
+    expect(created.status, created.text).toBe(200);
+    expect(state.modelCalls.map((call) => call.via)).toEqual(["create", "create"]);
+  });
+});
+
+/*
+ * The sibling app's live QA case (one standalone chat): this exact turn came
+ * back to QA's client as 502 "upstream request failed" after about 30 s while
+ * the app itself answered at 30-34 s — the 502 came from in front of the app.
+ * Here, with this app's production flags, the turn makes two model calls: the
+ * slot reader (record_intent_slots, which falls back when it fails) and the
+ * answer, the call the retry covers.
+ */
+describe("QA's turn, exact wording, with the production flags", () => {
+  const PRODUCTION = [
+    "ACTION_PLAN_MANAGER_ONLY", "ACTION_PLAN_SENTENCES", "APP_PASSWORD_HELP", "CA_TEMPLATE_MAP", "CHAT_TRACE",
+    "CONVERSATION_DRAFT_REUSE", "CROSS_CHAT_REPLY_GUARD", "DRAFT_ACTIONS", "DRAFT_REUSE_SAME_CHAT_ONLY",
+    "FIELD_ACCURACY", "FORM_CHOICE_STATED", "FORM_FULL_REMAP", "FORM_STATE", "FULL_MANUAL_CONTEXT",
+    "GLOBAL_STORE_ASK", "GROUNDED_ENTITIES", "INTENT_EXTRACTION", "KEEP_FORM_EMPLOYEE", "LATE_OPEN_DATE",
+    "MANUAL_NEGATED_LIST_NOTE", "NOT_A_NAME_GUARD", "PAYROLL_DEDUCT_AMOUNT", "PLACE_SPAN_GUARD",
+    "PRINTED_PAGE_ONLY", "PRIOR_ACTIONS_PARSE", "PROMPT_CACHE", "REMAP_DRAFT_SOURCES", "REMAP_INCIDENT_FIX",
+    "REOPEN_VERB_GUARD", "SLOT_RETENTION", "TITLE_WHOLE_WORD", "TYPED_NAME", "WARNING_LEVEL_MANAGER_ONLY",
+  ].map((name) => `${name}_ENABLED`);
+
+  for (const wording of [
+    "can you make a weekly coaching for how to get efts",
+    "Can you make a weekly coaching for how to get efts",
+  ]) {
+    it(`"${wording}": the failing slot reader still answers, and a 502 on the answer is retried`, async () => {
+      for (const name of PRODUCTION) process.env[name] = "1";
+      flagOn();
+      state.script = [{ kind: "http", status: 502, type: "api_error" }, { kind: "answer" }];
+      const result = await ask(wording);
+      expect(result.status, result.text).toBe(200);
+      expect(result.body.content).toBe(ANSWER);
+      expect(state.toolCalls).toEqual(["record_intent_slots"]);
+      expect(state.modelCalls).toHaveLength(2);
+    });
+
+    it(`"${wording}": flag off, the 502 on the answer is main's error and card`, async () => {
+      for (const name of PRODUCTION) process.env[name] = "1";
+      state.script = [{ kind: "http", status: 502, type: "api_error" }, { kind: "answer" }];
+      const result = await ask(wording);
+      expect(result.status).toBe(502);
+      expect(result.body).toEqual(OLD_ERROR);
+      expect(state.modelCalls).toHaveLength(1);
+    });
+  }
 });
