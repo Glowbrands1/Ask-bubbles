@@ -1,6 +1,7 @@
 import { formEditDateRulesEnabled } from "@/lib/config/chat-quality-flags";
 
 import { JOIN } from "./bounded-context";
+import { saysUndenied } from "./denied-incident";
 import { LATE_TO_OPEN, lateOpenOn } from "./late-open";
 import {
   findManualSection,
@@ -430,8 +431,9 @@ export function describesLateOpening(rawText: string): boolean {
  */
 function attendanceOffenseKeys(text: string, missed: boolean): string[] | null {
   const opening = opensLate(text);
-  const absent = ABSENCE.test(text) || missed;
-  const late = !opening && LATENESS.test(text);
+  // NEGATED_LATE_SHIFT_ENABLED: "was not late" is not a lateness.
+  const absent = saysUndenied(text, ABSENCE) || missed;
+  const late = !opening && saysUndenied(text, LATENESS);
   if (!opening && !absent && !late) return null;
   const keys: string[] = [];
   if (opening) keys.push(LATE_OPENING_OFFENSE);

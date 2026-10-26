@@ -890,6 +890,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INCIDENT_CLAUSE_SPLIT_ENABLED",
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
+  "NEGATED_LATE_SHIFT_ENABLED",
 ] as const;
 
 /**
@@ -913,4 +914,15 @@ export function incidentClauseSplitEnabled(): boolean {
  */
 export function stateCodeNotAPersonEnabled(): boolean {
   return envFlag("STATE_CODE_NOT_A_PERSON_ENABLED");
+}
+
+/**
+ * A lateness or absence the manager denies is not one (26 Oct 2026; ported
+ * from the sibling app, same flag in both apps): "was not late to her shift"
+ * and "was never late" cited the Attendance section. On, the lateness and
+ * absence readers skip a match with a negation just before it in the same
+ * clause (`lib/forms/denied-incident.ts`). Off, as before.
+ */
+export function negatedLateShiftEnabled(): boolean {
+  return envFlag("NEGATED_LATE_SHIFT_ENABLED");
 }
