@@ -47,6 +47,7 @@ import { loadGoogleReviewsChatBlock } from "./google-reviews-chat-read";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
 import { withTerseSlots } from "./terse-slots";
+import { withManagerFormChoice } from "./manager-form-choice";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";
@@ -210,7 +211,8 @@ async function answerQuestionTraced(
   memory: { memoryOwnerId?: string },
 ): Promise<AskResponse> {
   // TERSE_SLOT_READ_ENABLED: a terse "ca …" line is read as the long form.
-  const read = withTerseSlots(request);
+  // MANAGER_FORM_CHOICE_ENABLED: the form the manager named is the form.
+  const read = withManagerFormChoice(withTerseSlots(request));
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
