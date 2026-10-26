@@ -839,6 +839,18 @@ export function draftNeverBlankEnabled(): boolean {
   return envFlag("DRAFT_NEVER_BLANK_ENABLED");
 }
 
+/**
+ * CLEANUP_REQUEST_KEEPS_CARD_ENABLED (QA live run, 26 Oct 2026): on an open
+ * card, "can you clean up my grammar and capitalizing on proper nouns?"
+ * re-issued the card with the request read into the account, and the draft lost
+ * the incident dates. A clean-up request or a thank-you is answered with the
+ * same card, unchanged. See `ai/cleanup-keeps-card.ts`. Off, the reply is as it
+ * is.
+ */
+export function cleanupRequestKeepsCardEnabled(): boolean {
+  return envFlag("CLEANUP_REQUEST_KEEPS_CARD_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -918,6 +930,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
+  "CLEANUP_REQUEST_KEEPS_CARD_ENABLED",
 ] as const;
 
 /**

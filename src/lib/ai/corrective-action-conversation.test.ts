@@ -1974,3 +1974,56 @@ describe("HR feedback 30 Sep — the Corrective Action names or asks the policy"
     expect(answer.formProposal).toBeUndefined();
   });
 });
+
+/**
+ * QA live run, 26 Oct 2026 (tester 1, conv_mvoxiuy728u1zyy; the tester's
+ * wording, name invented), with the production flags: after the
+ * card, "can you clean up my grammar and capitalizing on proper nouns?"
+ * re-issued the card, and the draft made from it lost the incident dates.
+ * CLEANUP_REQUEST_KEEPS_CARD_ENABLED keeps the card as it was.
+ */
+describe("'can you clean up my grammar…' on an open card", () => {
+  const PROD = "ACTION_PLAN_MANAGER_ONLY_ENABLED=1 ACTION_PLAN_SENTENCES_ENABLED=1 ATTENDANCE_POLICY_CITATION_ENABLED=1 CA_TEMPLATE_MAP_ENABLED=1 CROSS_CHAT_REPLY_GUARD_ENABLED=1 CURRENT_MANUAL_SCOPE_ENABLED=1 DRAFT_DEDUPE_ENABLED=1 DRAFT_MERGE_ENABLED=1 FIELD_ACCURACY_ENABLED=1 FORM_CHOICE_STATED_ENABLED=1 GLOBAL_SALON_ASK_ENABLED=1 GROUNDED_ENTITIES_ENABLED=1 INTENT_EXTRACTION_ENABLED=1 KEEP_FORM_EMPLOYEE_ENABLED=1 LATE_OPEN_DATE_ENABLED=1 MANAGER_PAYROLL_AMOUNT_ONLY_ENABLED=1 MANAGER_WORDS_ONLY_ENABLED=1 NOT_A_NAME_GUARD_ENABLED=1 PAYROLL_AMOUNT_FIELD_ENABLED=1 PLACE_SPAN_GUARD_ENABLED=1 POLICY_CITATION_ENABLED=1 PRIOR_ACTIONS_PARSE_ENABLED=1 SECOND_FORM_ENABLED=1 SLOT_RETENTION_ENABLED=1 TITLE_WHOLE_WORD_ENABLED=1 TYPED_NAME_PROCEEDS_ENABLED=1 WARNING_LEVEL_MANAGER_ONLY_ENABLED=1 EXIT_INTAKE_FIX_ENABLED=1 REOPEN_VERB_GUARD_ENABLED=1";
+  const T1 = "create a ca for rory vance at omaha ne, she was late on 10-5 and 10-15. i coached her on 10-16 about being late";
+  const T2 = "can you clean up my grammar and capitalizing on proper nouns?";
+  const withFlags = (extra: string[]) => {
+    const names = [...PROD.split(" ").map((pair) => pair.split("=")[0]!), ...extra];
+    for (const name of names) process.env[name] = "1";
+    return () => {
+      for (const name of names) delete process.env[name];
+    };
+  };
+  const twoTurns = async (second: string) => {
+    const first = await ask(T1);
+    const history = [
+      { id: "m0", role: "user", content: T1 },
+      { id: "m1", role: "assistant", content: first.content, formProposal: first.formProposal },
+    ];
+    return { first, second: await ask(second, { history: history as never, continueTemplateKey: first.formProposal?.templateKey }) };
+  };
+
+  // In this app the card is re-issued as a new proposal built again from the turns (live, the
+  // draft from it lost the late dates); the harness pins that it is a new proposal.
+  it("flag off, as on main: the card is re-issued as a new proposal", async () => {
+    const off = withFlags([]);
+    try {
+      const { first, second } = await twoTurns(T2);
+      expect(second.formProposal?.proposalId).not.toBe(first.formProposal?.proposalId);
+    } finally {
+      off();
+    }
+  });
+
+  it.each([T2, "Can you clean up my grammar and capitalizing on proper nouns?"])("flag on: '%s' keeps the card as it was", async (turn) => {
+    const off = withFlags(["CLEANUP_REQUEST_KEEPS_CARD_ENABLED"]);
+    try {
+      const { first, second } = await twoTurns(turn);
+      expect(second.formProposal).toEqual(first.formProposal);
+      expect(second.content).toContain("The card below is unchanged");
+      expect(second.content).toContain(first.content.trim());
+      expect(second.content).not.toMatch(/clean up my grammar/i);
+    } finally {
+      off();
+    }
+  });
+});
