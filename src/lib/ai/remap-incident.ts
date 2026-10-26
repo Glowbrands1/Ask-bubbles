@@ -9,6 +9,7 @@ import {
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
 import { remapIncidentFixEnabled } from "@/lib/config/chat-quality-flags";
 import { extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
+import { excerptTextForDisplay } from "@/lib/knowledge/excerpt-brand-filter";
 import type { KnowledgeCategory, SourceCitation } from "@/types";
 
 import { accountManualSections } from "./account-manual-sections";
@@ -646,7 +647,7 @@ export function remapCitations(manual: RemapManual, sections: readonly ManualSec
       documentTitle: manual.documentTitle,
       locator: `Page ${section.page}`,
       category,
-      excerpt: `${section.heading}. ${chunk?.content ?? ""}`.slice(0, 500),
+      excerpt: `${section.heading}. ${excerptTextForDisplay(chunk?.content ?? "", manual.documentTitle)}`.slice(0, 500),
       relevance: 1,
     });
   }
