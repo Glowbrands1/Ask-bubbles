@@ -5,6 +5,7 @@ import {
   answerLengthGuard,
   answerLengthRetry,
   cutAtLastComplete,
+  NO_WHOLE_SENTENCE_REPLY,
   type AnswerLengthGuard,
 } from "./answer-length-guard";
 
@@ -238,5 +239,93 @@ describe("the guard exists only for the chat answer with the flag on", () => {
     expect(answerLengthGuard({ maxTokens: 2048, answerLengthGuard: true })?.maxTokens).toBe(3584);
     expect(answerLengthGuard({ maxTokens: 1024, answerLengthGuard: true })?.maxTokens).toBe(1024);
     expect(answerLengthGuard({ maxTokens: 4096, answerLengthGuard: true })?.maxTokens).toBe(4096);
+  });
+});
+
+/*
+ * QA-5 (26 Oct 2026, found in the sibling app's same cut code): the cut's own
+ * defects. Each runs in sentence case and in lowercase (Pau's rule); [S#]
+ * markers stay as the model writes them.
+ */
+function bothCases(text: string): string[] {
+  return [text, text.toLowerCase().replace(/\[s(\d+)\]/g, "[S$1]")];
+}
+
+const NEVER = async (): Promise<Message> => {
+  throw new Error("not asked again");
+};
+
+describe("QA-5: a numbered list written on one line leaves no dangling number", () => {
+  it.each(bothCases("Clock in on time. 1. Open the door. 2. Count the dra"))("%j", (text) => {
+    const cut = cutAtLastComplete(text);
+    expect(cut).toBe(bothCases("Clock in on time. 1. Open the door.")[text === text.toLowerCase() ? 1 : 0]);
+    expect(cut).not.toMatch(/\d\.$/);
+  });
+
+  it.each(bothCases("Members get 10. Then the team"))("a number that ends a sentence still ends it: %j", (text) => {
+    // Lowercase, "then" could be the same sentence going on, so nothing is trusted and nothing half-written shows.
+    expect(cutAtLastComplete(text)).toBe(text.startsWith("M") ? "Members get 10." : "");
+  });
+});
+
+describe("QA-5: a sentence ending \"[S2].\" before a lowercase one is kept, and a half sentence never shows", () => {
+  it.each(bothCases("Count the drawer before you open [S2]. then lock the safe and"))("%j", (text) => {
+    expect(cutAtLastComplete(text)).toBe(text.slice(0, text.indexOf("[S2].") + 5));
+  });
+
+  it.each(bothCases("Count the drawer before you open [S2]. then lock the safe and"))(
+    "settled, the reply is that sentence, not the raw text: %j",
+    async (text) => {
+      const settled = await settleAnswer(guardAt(40_000), reply(text, "max_tokens"), NEVER);
+      expect(settled.text).toBe(text.slice(0, text.indexOf("[S2].") + 5));
+      expect(settled.text).not.toContain("then lock");
+    },
+  );
+});
+
+describe("QA-5: a cut reply with no whole sentence shows a fixed line, never the half sentence", () => {
+  it.each(bothCases("To set up EFTs you open the portal and go to the [S"))("%j", async (text) => {
+    expect(cutAtLastComplete(text)).toBe("");
+    const settled = await settleAnswer(guardAt(40_000), reply(text, "max_tokens"), NEVER);
+    expect(settled.text).toBe(NO_WHOLE_SENTENCE_REPLY);
+    expect(settled.stopReason).toBe("max_tokens");
+  });
+
+  it.each(bothCases("Open the door. Count the dra"))("a full stop before a lowercase word is not trusted: %j", async (text) => {
+    // Sentence case keeps "Open the door."; lowercase has no stop it can trust, so the fixed line shows.
+    const settled = await settleAnswer(guardAt(40_000), reply(text, "max_tokens"), NEVER);
+    expect(settled.text).toBe(text.startsWith("O") ? "Open the door." : NO_WHOLE_SENTENCE_REPLY);
+  });
+
+  it("both attempts with no whole sentence: the fixed line", async () => {
+    const settled = await settleAnswer(
+      guardAt(10_000),
+      reply("Here is a weekly coaching plan so the team can copy it [S5", "max_tokens"),
+      async () => reply("Here is a weekly coaching plan so the", "max_tokens"),
+    );
+    expect(settled.text).toBe(NO_WHOLE_SENTENCE_REPLY);
+  });
+});
+
+describe("QA-5: an unclosed code fence is dropped whole (documented)", () => {
+  it.each(bothCases("Use this plan.\n```\nWeek 1: Review the offer\nWeek 2: Ask every cu"))(
+    "the text before the fence is kept: %j",
+    (text) => {
+      expect(cutAtLastComplete(text)).toBe(text.split("\n")[0]);
+    },
+  );
+
+  it.each(bothCases("Here is the template:\n```\nWeek 1: Review the offer\nWeek 2: Ask every cu"))(
+    "a fence after only a lead-in leaves nothing, so the fixed line shows: %j",
+    async (text) => {
+      expect(cutAtLastComplete(text)).toBe("");
+      const settled = await settleAnswer(guardAt(40_000), reply(text, "max_tokens"), NEVER);
+      expect(settled.text).toBe(NO_WHOLE_SENTENCE_REPLY);
+    },
+  );
+
+  it("a closed fence is kept whole", () => {
+    const text = ["Use this plan.", "```", "Week 1: Review the offer", "```", "Then share what wor"].join("\n");
+    expect(cutAtLastComplete(text)).toBe(["Use this plan.", "```", "Week 1: Review the offer", "```"].join("\n"));
   });
 });
