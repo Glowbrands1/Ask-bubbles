@@ -722,6 +722,16 @@ export function reopenVerbGuardEnabled(): boolean {
   return envFlag("REOPEN_VERB_GUARD_ENABLED");
 }
 
+/**
+ * Exit form Details, as managers type them (QA, 25 Oct 2026): "not
+ * rehireble", "not eligable for rehire" and a run-on "… rehire yes" fill
+ * Eligible for Rehire; "other career options" and "put her notice in because
+ * …" fill Reason for Resignation. Off, the Details read as before.
+ */
+export function exitRehireReasonEnabled(): boolean {
+  return envFlag("EXIT_REHIRE_REASON_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -790,4 +800,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REMAP_DRAFT_SOURCES_ENABLED",
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
+  "EXIT_REHIRE_REASON_ENABLED",
 ] as const;
