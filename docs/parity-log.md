@@ -6,6 +6,19 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 26 Oct 2026: the six EPP templates are hidden in Ask Bubbles — Bubbles-only; Ask Sunny keeps them
+
+The SDIT, TSD, ASD-SDIT and FTTC EPPs and both DMIT EPP readings
+(`sdit-epp`, `tsd-epp`, `asd-sdit-epp`, `fttc-epp`, `dmit-epp-tsd`,
+`dmit-epp-dmit`) came over from Ask Sunny with the library and carry its
+content; Buff City Soap has no EPP of its own yet. QA decision: they are added
+to `HIDDEN_TEMPLATE_KEYS` (`src/config/company/forms/hidden.ts`). Config
+only: rows, versions and any filed form stay, and nothing lists, proposes or
+creates them. Not ported: they are Ask Sunny's own plans, and Sunny-only
+content stays Sunny-only (Sunny locks them in
+`src/lib/forms/epp-templates-lock-oct26.test.ts`). Tests:
+`src/lib/forms/hidden-epp-oct26.test.ts`, `src/app/api/chat/hidden-epp-no-card-oct26.test.ts`.
+
 ## 25 Oct 2026: a follow-up that names its own documents is searched on them — ported from Ask Sunny (a47bf19)
 
 `FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED` defaults off, same name in both apps.
