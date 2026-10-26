@@ -71,3 +71,44 @@ describe("STORE_ALIAS_ENABLED on", () => {
     }
   });
 });
+
+/**
+ * QA, 26 Oct 2026, with STORE_ALIAS_ENABLED on alone (the sibling app's
+ * finding, same mechanism here): a typed Permanent Address must stay as typed,
+ * and a later place word must never change the store once one is named.
+ */
+describe("STORE_ALIAS_ENABLED on: addresses and later place words", () => {
+  const EXIT = "create an exit form for Test Employee at Kearney, permanent address 123 Main St, kearney ne 68847. She did not call in for her last two shifts. Last day worked 10-20-26";
+
+  it.each([EXIT, EXIT.toLowerCase(), EXIT.toUpperCase()])("keeps the typed address as typed: %s", (turn) => {
+    process.env[FLAG] = "on";
+    const address = /123 main st, kearney ne 68847/i.exec(turn)![0];
+    expect(withStoreAliases({ question: turn, history: [] } as unknown as AskRequest).question).toContain(address);
+    expect(rosterNames(`permanent address ${address}`)).toBe(`permanent address ${address}`);
+  });
+
+  it.each(["change store location to dodge ne", "Change store location to Dodge NE", "CHANGE STORE LOCATION TO DODGE NE"])(
+    "leaves a later place word as typed once a store is named: %s",
+    (later) => {
+      process.env[FLAG] = "on";
+      const history = [
+        { role: "user", content: "do verbal corrective action for Test Employee, team member at Kearney, NE. location." },
+        { role: "assistant", content: "Got it." },
+        { role: "user", content: later },
+        { role: "assistant", content: "Got it." },
+      ];
+      const out = withStoreAliases({ question: "create a Corrective Action Form for Test Employee", history } as unknown as AskRequest);
+      expect(out.history.map((turn) => turn.content)).toEqual(history.map((turn) => turn.content));
+    },
+  );
+
+  it("still names the first store from an alias after other turns", () => {
+    process.env[FLAG] = "on";
+    const history = [
+      { role: "user", content: "ca for test testy, late 9-20-26" },
+      { role: "assistant", content: "Which store is this for?" },
+    ];
+    const out = withStoreAliases({ question: "dodge ne", history } as unknown as AskRequest);
+    expect(ids(out.question)).toContain(DODGE);
+  });
+});

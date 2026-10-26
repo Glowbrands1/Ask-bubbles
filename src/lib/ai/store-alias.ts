@@ -1,5 +1,6 @@
 import { storeAliasEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATION_ENTRIES } from "@/config/company/locations";
+import { readLocationMentions } from "@/lib/forms/location-mention";
 
 import type { AskRequest } from "./types";
 
@@ -38,6 +39,8 @@ interface PlaceParts {
 
 /** This app's stores, as name, state, city and the street in brackets ("Omaha, NE (West Dodge Rd)"). */
 const READERS = {
+  /** The turn names one store the readers read. */
+  named: (text: string): boolean => readLocationMentions(text).some((mention) => mention.locationIds.length === 1),
   places: (): PlaceParts[] =>
     COMPANY_LOCATION_ENTRIES.filter((entry) => entry.state).map((entry) => {
       const street = /\(([^)]+)\)/.exec(entry.name)?.[1] ?? null;
@@ -119,19 +122,38 @@ export function withStoreAliases(request: AskRequest): AskRequest {
     const before = [...request.history.slice(0, index)].reverse().find((turn) => turn.role === "assistant");
     return PLACE_QUESTION.test(before?.content ?? "");
   };
-  const question = rosterNames(request.question, asked(request.history.length));
-  let changed = question !== request.question;
+  // An alias fills the first STORE the chat names; a turn that already names one the
+  // readers read, and every turn after it, stays as typed, so a later place word never
+  // changes the salon (that is NEWEST_PLACE_TURN_ENABLED's, as on main).
+  let named = false;
+  const write = (text: string, placeAsked: boolean): string => {
+    if (named) return text;
+    // A turn the readers already read is theirs as typed, unless it answers
+    // the app's own "which salon or store?".
+    if (!placeAsked && READERS.named(text)) {
+      named = true;
+      return text;
+    }
+    const out = rosterNames(text, placeAsked);
+    named = READERS.named(out);
+    return out;
+  };
+  let changed = false;
   const history = request.history.map((turn, index) => {
     if (turn.role !== "user" || typeof turn.content !== "string") return turn;
-    const content = rosterNames(turn.content, asked(index));
+    const content = write(turn.content, asked(index));
     if (content === turn.content) return turn;
     changed = true;
     return { ...turn, content };
   });
+  const question = write(request.question, asked(request.history.length));
+  changed ||= question !== request.question;
   return changed ? { ...request, question, history } : request;
 }
 
 /** The app asked which store: a one-word reply may be a place. */
+const ADDRESS = /\baddress\b[:\s]+[^.;\n]+|\b\d{1,6}\s+[A-Za-z][^,.;\n]*(?:,\s*[^,.;\n]+){0,3},?\s+[A-Za-z]{2}\.?\s+\d{5}(?:-\d{4})?\b/gi;
+
 const PLACE_QUESTION = /\b(?:salon|store|location)\b[^\n?]*\?/i;
 
 /**
@@ -148,6 +170,9 @@ export function rosterNames(text: string, placeAsked = false): string {
   for (const place of READERS.places()) {
     out = out.replace(new RegExp(escape(place.name), "gi"), (found) => `\u0000${kept.push(found) - 1}\u0000`);
   }
+  // An address ("permanent address 123 Main St, Kearney, NE 68847") is the
+  // address reader's, never a salon or store.
+  out = out.replace(ADDRESS, (found) => `\u0000${kept.push(found) - 1}\u0000`);
   const whole = out.trim().replace(/[.!?]+$/, "").trim().toLowerCase();
   for (const alias of ALIASES) {
     if (whole === alias.phrase && (placeAsked || alias.phrase.includes(" "))) {
