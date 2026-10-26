@@ -16,6 +16,7 @@ import {
   priorActionsParseEnabled,
   keepFormEmployeeEnabled,
   formEditDateRulesEnabled,
+  priorActionsRetainedEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
 import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
@@ -39,6 +40,7 @@ import { warningLevelFromTurns, managerStatedWarningLevel } from "@/lib/forms/wa
 import type { ChatFormProposal } from "@/types";
 
 import { withoutAppLines } from "./app-sentences";
+import { priorRemoval, withoutClearedKinds } from "./prior-actions-cleared";
 import { callClaudeToolDetailed } from "./call-claude";
 import { chatTraceDraft } from "./chat-trace-store";
 import { remapEditLine, formDateByRules, managerWords, remapObservation, withoutSetAsidePolicies } from "./edit-date-rules";
@@ -243,11 +245,21 @@ export function groundFormSlots(input: {
   // manager restates them (QA, 25 Oct 2026, conv_mvnt9by62zckttk).
   const priorSaid = fixed ? scoped : said;
   const priorList = fixed ? priorListActions(priorSaid) : [];
-  const priorActions = priorActionsParseEnabled()
-    ? remapPriorActions(statedPrior(priorSaid), priorSaid, input.today, priorList)
-    : fixed
-      ? mergePriorActions(statedPrior(priorSaid), priorList)
-      : statedPrior(said);
+  // PRIOR_ACTIONS_RETAINED_ENABLED: "no prior coaching" / "remove the prior" clears what was said before it.
+  const removal = priorActionsRetainedEnabled() ? priorRemoval(users.slice(start), employeeName) : null;
+  const readPriors = (text: string) =>
+    priorActionsParseEnabled()
+      ? remapPriorActions(statedPrior(text), text, input.today, fixed ? priorListActions(text) : [])
+      : fixed
+        ? mergePriorActions(statedPrior(text), priorListActions(text))
+        : statedPrior(text);
+  const priorActions = removal
+    ? withoutClearedKinds(readPriors(removal.after), removal, readPriors)
+    : priorActionsParseEnabled()
+      ? remapPriorActions(statedPrior(priorSaid), priorSaid, input.today, priorList)
+      : fixed
+        ? mergePriorActions(statedPrior(priorSaid), priorList)
+        : statedPrior(said);
   const incidentTime = statedTime(said);
   // The action plan is the manager's, or blank. The model's summary and
   // "previous coaching …" are not a plan.
@@ -278,7 +290,9 @@ export function groundFormSlots(input: {
     closeMatchNote,
   };
   // NOT_A_NAME_GUARD_ENABLED filtered `saved` above; REMAP_INCIDENT_FIX_ENABLED drops leftovers from it.
-  const kept = fixed ? withoutLeftovers(saved, employeeName, start > 0, said) : saved;
+  const leftovers = fixed ? withoutLeftovers(saved, employeeName, start > 0, said) : saved;
+  // A removal is read from the turns themselves: the saved list does not come back in.
+  const kept = removal && leftovers ? { ...leftovers, priorActions: null } : leftovers;
   /*
    * RE-READ EVERY TURN (WARNING_LEVEL_MANAGER_ONLY_ENABLED; ported from Ask
    * Sunny, QA 24 Oct 2026): the level is what the manager's turns state now,

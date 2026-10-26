@@ -816,3 +816,28 @@ happened; "X instead of Y" names X; a prior action's date ("jba manual
 revision. Not ported: the Follow-up line rule (this card has none) and the
 card salon edit (the store edit is its own fix here). No salon wording was
 copied. Test: `src/app/api/chat/edits-dates-replay-e2e.test.ts`.
+
+## 26 Oct 2026: a prior dropped by a slot answer (not needed here); "no prior coaching" clears a listed prior (ported) — PRIOR_ACTIONS_RETAINED_ENABLED
+
+The sibling app's tester found a Corrective Action card that listed "prior
+coaching JBA Policy Manual 7-29-26" in turn 2 and dropped it when turn 3 only
+answered the payroll question ("no payroll deduct"). There the intent path's
+stored-slot lines read as a new request, so the priors were read from the
+latest turn alone; it is fixed behind `PRIOR_ACTIONS_RETAINED_ENABLED`
+(default off, same name in both apps). That half is not needed here: this
+app's live form path is the full remap, whose prior-actions line reads every
+turn of the form, and replayed through POST /api/chat with store wording the
+prior stays through "no payroll deduct", "no payroll deduction", "verbal",
+"written warning please", "yes 25 dollars", a position, a date and the same
+turns in capitals.
+
+The same replay showed the opposite gap here, and the sibling's clearing rule
+is ported behind the same flag: on the remap "no prior coaching", "no priors"
+or "remove the prior" never cleared a prior already listed (the line is read
+again from every turn, and a blank read kept the saved one). On,
+`ai/prior-actions-cleared.ts` reads the priors from what was said after the
+last removal; "no prior written" clears only a written warning; a removal
+asked as a question ("never had a prior? no, she had a verbal 7-29-26") or
+about somebody else ("no prior coaching for <another name>") does not count;
+"add the prior back" undoes the latest removal. No salon wording was copied.
+Test: `src/app/api/chat/prior-actions-cleared-e2e.test.ts`.

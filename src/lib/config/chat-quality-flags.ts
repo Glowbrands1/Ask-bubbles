@@ -918,6 +918,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
+  "PRIOR_ACTIONS_RETAINED_ENABLED",
 ] as const;
 
 /**
@@ -941,4 +942,19 @@ export function incidentClauseSplitEnabled(): boolean {
  */
 export function stateCodeNotAPersonEnabled(): boolean {
   return envFlag("STATE_CODE_NOT_A_PERSON_ENABLED");
+}
+
+/**
+ * "no prior coaching", "remove the prior" clear a prior already listed on the
+ * card (ported from the sibling app, same flag in both apps). On the full
+ * remap a prior stays through every later turn, and a removal never took: the
+ * line is read again from every turn and a blank read keeps the saved one. On,
+ * the priors are read from what was said after the last removal; one that
+ * names a kind ("no prior written") clears only that kind; a removal asked as
+ * a question or about somebody else does not count; "add the prior back"
+ * undoes it. See `ai/prior-actions-cleared.ts`. Off, the card is read as
+ * before.
+ */
+export function priorActionsRetainedEnabled(): boolean {
+  return envFlag("PRIOR_ACTIONS_RETAINED_ENABLED");
 }
