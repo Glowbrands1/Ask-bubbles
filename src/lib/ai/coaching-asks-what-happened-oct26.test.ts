@@ -167,7 +167,7 @@ async function chat(turns: readonly { say: string; raw?: Record<string, unknown>
 }
 
 const ASK = "You haven't told me what happened yet";
-const BARE = ["coaching for devon harlan", "Coaching for devon harlan", "Coaching for Devon Harlan", "create a coaching form for devon harlan"];
+const BARE = ["coaching for devon harlan", "Coaching for devon harlan", "Coaching for Devon Harlan", "create a coaching form for devon harlan", "COACHING FOR DEVON HARLAN"];
 const coach = (say: string) => ({ say, raw: { templateKey: "coaching", employeeName: "devon harlan" } });
 
 describe("path B, COACHING_ASKS_WHAT_HAPPENED_ENABLED on", () => {
@@ -198,5 +198,41 @@ describe("path B, COACHING_ASKS_WHAT_HAPPENED_ENABLED off", () => {
     const reply = await chat([coach(BARE[0]!)]);
     expect(reply.formProposal?.templateKey).toBe("coaching");
     expect(reply.content).not.toContain(ASK);
+  });
+});
+
+describe("path B, COACHING_ASKS_WHAT_HAPPENED_ENABLED on: once per card, and what counts as an account (QA-4 / QA-6, 26 Oct 2026)", () => {
+  const twins = (text: string) => [text, text.charAt(0).toUpperCase() + text.slice(1), text.toUpperCase()];
+  beforeEach(() => {
+    process.env.FORM_FULL_REMAP_ENABLED = "";
+    process.env.COACHING_ASKS_WHAT_HAPPENED_ENABLED = "true";
+  });
+
+  it("after the app has asked, no reply makes it ask again", async () => {
+    for (const reply of ["ok", "yes", "idk", "nothing", "no", "Ok", "IDK"]) {
+      const card = await chat([coach("coaching for devon harlan"), coach(reply)]);
+      expect(card.content, reply).not.toContain(ASK);
+    }
+  });
+
+  it("a clause that only says what did not happen is not an account: it asks", async () => {
+    for (const wording of [
+      "coaching for devon harlan, she was not late",
+      "coaching for devon harlan, she was never late",
+      "coaching for devon harlan, she didn't do anything wrong",
+      "coaching for devon harlan, nothing happened",
+      "coaching for devon harlan, no incident",
+    ]) {
+      for (const say of twins(wording)) expect((await chat([coach(say)])).content, say).toContain(ASK);
+    }
+  });
+
+  it("an account about somebody else is not this employee's: it asks", async () => {
+    const { askWhatHappened } = await import("./coaching-what-happened");
+    const card = { content: "Here is what I would put on a **Coaching Form**.", citations: [], formProposal: { templateKey: "coaching", employeeName: "Devon Harlan" } };
+    for (const wording of ["coaching for devon harlan, rory vance was late today", "coaching for devon harlan and rory vance was late today"]) {
+      for (const say of twins(wording)) expect(askWhatHappened(card as never, say, []).content, say).toContain(ASK);
+    }
+    expect(askWhatHappened(card as never, "coaching for devon harlan, she was late today", []).content).not.toContain(ASK);
   });
 });
