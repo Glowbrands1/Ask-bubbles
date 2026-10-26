@@ -13,7 +13,7 @@ import { caPolicyProposalLine, readCaPolicy } from "./ca-policy";
  * "Policy: Attendance, as you said" appeared when the manager never named a
  * policy. The form state wrote the extraction's heading ahead of the turn
  * ("Policy reference: …") and the policy reader took it for the manager's
- * words. Ported from Ask Sunny; the managers' wording is kept, the people
+ * words. Ported from the sibling app; the managers' wording is kept, the people
  * are invented.
  */
 const FLAG = "POLICY_AS_YOU_SAID_MANAGER_ONLY_ENABLED";
@@ -38,7 +38,7 @@ function withState(
   });
 }
 
-// Ask Sunny conv_mvod8jw02vsk2py, turn 1.
+// Sibling app conv_mvod8jw02vsk2py, turn 1.
 const DEEP_CLEAN =
   "create a ca form for test employee because she didnt do deep clean assigned by 9-15-26";
 const LATE = "Ava Pellmore was 20 minutes late for her shift on 10/20";
