@@ -9,9 +9,11 @@ import {
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
 import { remapIncidentFixEnabled } from "@/lib/config/chat-quality-flags";
 import { extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
+import { excerptTextForDisplay } from "@/lib/knowledge/excerpt-brand-filter";
 import type { KnowledgeCategory, SourceCitation } from "@/types";
 
 import { accountManualSections } from "./account-manual-sections";
+import { incidentTurn } from "./incident-clauses";
 import { formatManualCitation } from "./policy-citation-fields";
 
 /**
@@ -186,7 +188,8 @@ function turnIncident(
   // clauses below. Off, those clauses are read as main reads them (QA-3,
   // 26 Oct 2026: REMAP_DRAFT_SOURCES reads this with the fix off).
   const fix = remapIncidentFixEnabled();
-  for (const raw of withoutPriorList(turn).split(/[.!?;]+(?=\s|$)/)) {
+  // INCIDENT_CLAUSE_SPLIT_ENABLED: without the employee facts and policy text, "dodge, ne" kept whole.
+  for (const raw of withoutPriorList(incidentTurn(turn, employeeName, { subjectless: true })).split(/[.!?;]+(?=\s|$)/)) {
     const sentence = raw.trim();
     if (!sentence || isEditTurn(sentence) || TALKS_TO_THE_APP.test(sentence) || ASKS_FOR_HELP.test(sentence)) continue;
     const requested = requestLead().test(sentence) || LEVEL_REQUEST.test(sentence);
@@ -644,7 +647,7 @@ export function remapCitations(manual: RemapManual, sections: readonly ManualSec
       documentTitle: manual.documentTitle,
       locator: `Page ${section.page}`,
       category,
-      excerpt: `${section.heading}. ${chunk?.content ?? ""}`.slice(0, 500),
+      excerpt: `${section.heading}. ${excerptTextForDisplay(chunk?.content ?? "", manual.documentTitle)}`.slice(0, 500),
       relevance: 1,
     });
   }
