@@ -840,6 +840,17 @@ export function draftNeverBlankEnabled(): boolean {
 }
 
 /**
+ * NAME_BEFORE_TITLE_ENABLED (QA, 26 Oct 2026): "ca for <first> <last>, team member at
+ * <store>" in lowercase left the Employee unread, and "for <First> <Last> Team
+ * Member at <store>" dropped the surname. A two-word name right before a job
+ * title is read as the name, with the title after a comma. See
+ * `ai/name-before-title.ts`. Off, the turn is read as typed.
+ */
+export function nameBeforeTitleEnabled(): boolean {
+  return envFlag("NAME_BEFORE_TITLE_ENABLED");
+}
+
+/**
  * NO_CARD_NO_DRAFT_CLAIM_ENABLED: an answer that comes with no card (no
  * proposal, no form choices, no form changed or opened) never says a new
  * draft is open or was created, never says a draft is open for somebody
@@ -932,6 +943,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
+  "NAME_BEFORE_TITLE_ENABLED",
   "NO_CARD_NO_DRAFT_CLAIM_ENABLED",
 ] as const;
 
