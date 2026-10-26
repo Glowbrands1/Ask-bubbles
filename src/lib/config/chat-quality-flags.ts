@@ -947,6 +947,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ATTENDANCE_ACTION_PLAN_ENABLED",
   "HIDE_NO_POLICY_MATCH_NOTICE_ENABLED",
   "PRIOR_SENTENCE_FIX_ENABLED",
+  "REQUEST_LINE_ACCOUNT_ENABLED",
 ] as const;
 
 /**
@@ -1045,4 +1046,15 @@ export function hideNoPolicyMatchNoticeEnabled(): boolean {
  */
 export function priorSentenceFixEnabled(): boolean {
   return envFlag("PRIOR_SENTENCE_FIX_ENABLED");
+}
+
+/**
+ * A one-line request carries its own account (QA, 26 Oct 2026; same flag in
+ * both apps): in "create a verbal ca for <name> at omaha ne, she was late on
+ * 10-15-26" the clause after the comma is what happened, so a draft the model
+ * left blank is retried and then written from it (DRAFT_NEVER_BLANK). See
+ * `managerAccountClause` in `forms/draft-never-blank.ts`. Off, as before.
+ */
+export function requestLineAccountEnabled(): boolean {
+  return envFlag("REQUEST_LINE_ACCOUNT_ENABLED");
 }
