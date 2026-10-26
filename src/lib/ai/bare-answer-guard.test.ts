@@ -114,4 +114,16 @@ describe("BARE_ANSWER_BINDING_ENABLED on", () => {
     const both = respondWith(typed, "x");
     expect(bindBareAnswer({ response: both, question: "yes", history: two })).toBe(both);
   });
+
+  it("reads bare answers the same in lowercase and sentence case", () => {
+    process.env[FLAG] = "on";
+    for (const answer of ["yes", "Yes", "YES", "no", "No"]) {
+      const response = respond(card({ payrollDeduct: /^y/i.test(answer) ? "yes" : "no" }), "x");
+      expect(bindBareAnswer({ response, question: answer, history: HISTORY })).toBe(response);
+    }
+    for (const word of ["verbal", "Verbal", "dodge", "Dodge", "kearney", "Kearney"]) {
+      const out = bindBareAnswer({ response: respond(card({ employeeRole: word }), "x"), question: word, history: HISTORY });
+      expect(out.formProposal?.employeeRole).toBeNull();
+    }
+  });
 });
