@@ -1323,6 +1323,18 @@ const MAIN_OUTPUTS: Record<string, ReturnType<typeof readers>> = {
   }
 };
 
+
+// Captured on origin/main 39f2df1 with the same two flags plus LATE_OPEN_DATE_ENABLED=1 (on in production).
+// Only these inputs read differently with it on, and only in `intent`; every other input and reader is MAIN_OUTPUTS.
+const MAIN_INTENT_WITH_LATE_OPEN_DATE: Record<string, ReturnType<typeof readers>["intent"]> = {
+  "coaching form for rowan pell, she was late on 10-5 and 10-15, I coached her on 10-16": {"formDate": "2026-10-05", "warningLevel": null},
+  "coaching form for rowan pell, she was late on 10-5 and 10-15, i coached her on 10-16": {"formDate": "2026-10-05", "warningLevel": null},
+  "Coaching form for rowan pell, she was late on 10-5 and 10-15, i coached her on 10-16": {"formDate": "2026-10-05", "warningLevel": null},
+  "Written warning for Rowan Pell, no call no show on 10-24. Previous verbal 9-15 and coaching 8-1.": {"formDate": "2026-10-24", "warningLevel": null},
+  "written warning for rowan pell, no call no show on 10-24. previous verbal 9-15 and coaching 8-1.": {"formDate": "2026-10-24", "warningLevel": null},
+  "Written warning for rowan pell, no call no show on 10-24. Previous verbal 9-15 and coaching 8-1.": {"formDate": "2026-10-24", "warningLevel": null},
+};
+
 describe("NEVER-BREAK: PRIOR_ACTIONS_NO_COMMA_ENABLED off, with PRIOR_ACTIONS_PARSE_ENABLED and REOPEN_VERB_GUARD_ENABLED on, reads exactly as main", () => {
   const inputs = NEVER_BREAK_CASES.flatMap(casings);
 
@@ -1330,6 +1342,10 @@ describe("NEVER-BREAK: PRIOR_ACTIONS_NO_COMMA_ENABLED off, with PRIOR_ACTIONS_PA
     vi.stubEnv("PRIOR_ACTIONS_PARSE_ENABLED", "1");
     vi.stubEnv("REOPEN_VERB_GUARD_ENABLED", "1");
     vi.stubEnv("PRIOR_ACTIONS_NO_COMMA_ENABLED", noComma ? "1" : "");
+    // MAIN_OUTPUTS was captured with LATE_OPEN_DATE_ENABLED unset; pin it here so a
+    // shell or CI that sets it (production does) can't change what main is compared to.
+    // The LATE_OPEN_DATE_ENABLED=1 comparison is its own loop below.
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "");
   }
 
   it("covers every input main was run on, and no other", () => {
@@ -1341,6 +1357,15 @@ describe("NEVER-BREAK: PRIOR_ACTIONS_NO_COMMA_ENABLED off, with PRIOR_ACTIONS_PA
     it(`"${said}"`, () => {
       productionFlags(false);
       expect(readers(said)).toEqual(MAIN_OUTPUTS[said]);
+    });
+  }
+
+  for (const said of inputs) {
+    it(`"${said}" (LATE_OPEN_DATE_ENABLED=1, as in production)`, () => {
+      productionFlags(false);
+      vi.stubEnv("LATE_OPEN_DATE_ENABLED", "1");
+      const intent = MAIN_INTENT_WITH_LATE_OPEN_DATE[said] ?? MAIN_OUTPUTS[said].intent;
+      expect(readers(said)).toEqual({ ...MAIN_OUTPUTS[said], intent });
     });
   }
 
