@@ -765,6 +765,18 @@ export function terseSlotReadEnabled(): boolean {
 }
 
 /**
+ * The exit form's chat prose and Additional Details say only what is true
+ * (QA, 25 Oct 2026): the Date line shows the card's date when it has one, not
+ * "the day the draft is created"; Additional Details is never promised as "a
+ * short account drafted from what you've described" when nothing was
+ * described; and a drafted Details sentence about working the notice or
+ * calling in survives only when the manager raised it. Off, as before.
+ */
+export function exitProseFactsEnabled(): boolean {
+  return envFlag("EXIT_PROSE_FACTS_ENABLED");
+}
+
+/**
  * Chat answers never repeat a default-password format or Social Security
  * digits from the knowledge base (QA P0, 25 Oct 2026; same flag in both
  * apps). The sentence is taken out of the excerpts the model is given and of
@@ -857,6 +869,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "EXIT_PROSE_FACTS_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
   "INCIDENT_CLAUSE_SPLIT_ENABLED",
