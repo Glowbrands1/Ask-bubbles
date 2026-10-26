@@ -814,6 +814,15 @@ export function excerptBrandFilterEnabled(): boolean {
 }
 
 /**
+ * A Google review question gets the Google Reviews page's month-to-date
+ * figures, goal and pace for the caller's stores, and only with View reports.
+ * Off, review questions keep the existing path. Ported from the sibling app (QA T11).
+ */
+export function googleReviewsInChatEnabled(): boolean {
+  return envFlag("GOOGLE_REVIEWS_IN_CHAT_ENABLED");
+}
+
+/**
  * A form turn always answers the manager: when the card reply would be empty
  * or word for word the previous one, a line in front of it answers the turn
  * (press Create draft to edit; Finalize is a button on the form), and the
@@ -903,6 +912,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INCIDENT_CLAUSE_SPLIT_ENABLED",
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
+  "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "CARD_NEVER_SILENT_ENABLED",
 ] as const;
 
