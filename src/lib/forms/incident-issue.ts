@@ -1,4 +1,4 @@
-import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { decimalKeepEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 
 import { JOIN } from "./bounded-context";
@@ -25,6 +25,12 @@ import { describesIncident } from "./corrective-action-intake";
 
 const REQUEST =
   /\b(?:warning|write[- ]?up|corrective\s+action(?:\s+form)?|ca|c\/a|dpoa)\s+(?:for|about|over|regarding|re:?)\s+([^.;!?\n]+)/gi;
+/** DECIMAL_KEEP_ENABLED: the same, with "$3.25" read as one number. */
+const REQUEST_DECIMAL =
+  /\b(?:warning|write[- ]?up|corrective\s+action(?:\s+form)?|ca|c\/a|dpoa)\s+(?:for|about|over|regarding|re:?)\s+((?:[^.;!?\n]|(?<=\d)\.(?=\d))+)/gi;
+const SENTENCE = /[^.!?\n]+[.!?]*/g;
+/** DECIMAL_KEEP_ENABLED: a point between two digits does not end the sentence. */
+const SENTENCE_DECIMAL = /(?:[^.!?\n]|(?<=\d)\.(?=\d))+[.!?]*/g;
 const CUT = /\s*(?:,|\s-\s|\s—\s|\band\b(?=\s+(?:a|an|the|also|then|she|he|they|i|we|please|pls)\b)|\bplease\b|\bpls\b|\bthanks?\b|\bthank you\b)/i;
 const NOT_AN_ISSUE = /^(?:her|him|them|this|that|it|the\s+employee|my\s+employee|an?\s+employee|today|tomorrow|yesterday)$/i;
 /** "violation is that …" names the offense. The request's for-clause often names only the person. */
@@ -48,7 +54,7 @@ function issueFromRequest(text: string, employeeName: string | null): string | n
   const personWords = new Set(person.split(/\s+/).filter(Boolean));
   for (const turn of [...turnsOf(text)].reverse()) {
     let found: string | null = null;
-    for (const match of turn.matchAll(REQUEST)) {
+    for (const match of turn.matchAll(decimalKeepEnabled() ? REQUEST_DECIMAL : REQUEST)) {
       let raw = match[1]!;
       // "a CA for Jordan Testperson for cash handling", "… for jordan testperson - cash handling",
       // "CA for jordan testperson, cash handling": the person, then the issue.
@@ -111,6 +117,16 @@ function clipAccount(raw: string): string | null {
   return issue;
 }
 
+/** DECIMAL_KEEP_ENABLED: the comma clauses that answer payroll or prior coaching, left out. */
+function withoutPayrollClauses(sentence: string): string {
+  if (!NOT_THE_ACCOUNT.test(sentence)) return sentence;
+  return sentence
+    .split(",")
+    .filter((clause) => !NOT_THE_ACCOUNT.test(clause))
+    .join(",")
+    .trim();
+}
+
 /** The latest account of what happened, when the for-clause was only the person and the store. */
 function accountIssue(text: string): string | null {
   for (const turn of [...turnsOf(text)].reverse()) {
@@ -119,8 +135,12 @@ function accountIssue(text: string): string | null {
       const issue = clipAccount(violation[1]!);
       if (issue) return issue;
     }
-    const sentences = [...turn.matchAll(/[^.!?\n]+[.!?]*/g)]
+    const decimal = decimalKeepEnabled();
+    const sentences = [...turn.matchAll(decimal ? SENTENCE_DECIMAL : SENTENCE)]
       .map((match) => match[0].trim())
+      // "…, register shortage 10-20-26, $3.25 payroll deduct": the payroll
+      // clause answers its own field, the rest of the sentence is the account.
+      .map((sentence) => (decimal ? withoutPayrollClauses(sentence) : sentence))
       .filter((sentence) => sentence.length >= 3 && sentence.length <= 180);
     const hits = sentences
       .map((sentence, index) => ({ sentence, index }))
