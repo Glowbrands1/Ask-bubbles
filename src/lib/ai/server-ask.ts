@@ -199,7 +199,7 @@ export async function answerQuestion(
   if (passwordHelp) {
     return { content: passwordHelp, citations: [], coverage: "grounded" };
   }
-  return withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory));
+  return withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory), request.question);
 }
 
 async function answerQuestionTraced(
