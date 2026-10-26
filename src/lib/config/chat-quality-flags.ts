@@ -814,6 +814,15 @@ export function excerptBrandFilterEnabled(): boolean {
 }
 
 /**
+ * A Google review question gets the Google Reviews page's month-to-date
+ * figures, goal and pace for the caller's stores, and only with View reports.
+ * Off, review questions keep the existing path. Ported from the sibling app (QA T11).
+ */
+export function googleReviewsInChatEnabled(): boolean {
+  return envFlag("GOOGLE_REVIEWS_IN_CHAT_ENABLED");
+}
+
+/**
  * "CA" after a place ("Sacramento, CA", "Los Angeles CA 90001") is read as
  * California, not as a Corrective Action (26 Oct 2026, ported from the
  * sibling app). See `ai/state-ca.ts`. Off, every turn is read as typed.
@@ -899,6 +908,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INCIDENT_CLAUSE_SPLIT_ENABLED",
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
+  "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "STATE_CA_GUARD_ENABLED",
 ] as const;
 
