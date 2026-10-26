@@ -262,3 +262,127 @@ describe("the typed-name reader, in either case", () => {
     expect(typedEmployeeName("create ca form for Test employee for violating attendance policy")).toBeNull();
   });
 });
+
+/*
+ * QA-6, 26 Oct 2026: with NOT_A_NAME_GUARD_ENABLED on (live here), the
+ * lower-case reading above took "test employee" even where the manager said
+ * the form is not for them. QA's sentences, and their twins in this app's
+ * store wording, all in lower case and in sentence case ("Test employee").
+ * Guard off they read nobody, as on main; guard on they now read nobody too
+ * (before this fix: Test Employee).
+ */
+const QA6_NEGATED = [
+  "do not create a CA for test employee at Kearney",
+  "never write up test employee at Kearney",
+  "this is not for test employee, it is for the new hire",
+  "without test employee",
+  "everyone except test employee",
+  "Okay let's restart. Not Test Employee, Team Member, Kearney.",
+  // Store twins.
+  "do not create a CA for test employee at the Dodge store",
+  "never write up test employee, she covers the Bellevue store",
+  "this is not for test employee, it is for the new team member at the store",
+  "close the store tonight without test employee",
+  "everyone at the Kearney store except test employee",
+  "Okay let's restart. Not Test Employee, Team Member at the Kearney store.",
+] as const;
+
+const lowerCase = (text: string) => text.toLowerCase();
+const sentenceCase = (text: string) => {
+  const retyped = text.replace(/test employee/gi, "Test employee");
+  return retyped.charAt(0).toUpperCase() + retyped.slice(1);
+};
+
+describe("QA-6: a name after not / never / do not / without / except is not the employee", () => {
+  const sentences = QA6_NEGATED.flatMap((text) => [lowerCase(text), sentenceCase(text)]);
+
+  it.each(sentences)("guard on: %s → nobody", (text) => {
+    vi.stubEnv("NOT_A_NAME_GUARD_ENABLED", "true");
+    expect(typedEmployeeName(text)).not.toBe("Test Employee");
+    expect(typedEmployeeName(text)).toBeNull();
+  });
+
+  it.each(sentences)("guard off: %s → nobody, as on main", (text) => {
+    expect(typedEmployeeName(text)).toBeNull();
+  });
+
+  it("two people: the name in the negated clause is passed over and the first one not negated is read", () => {
+    vi.stubEnv("NOT_A_NAME_GUARD_ENABLED", "true");
+    for (const text of [
+      "test employee, not rowan pell, was late; rowan pell was on time",
+      "Test employee, not Rowan Pell, was late; Rowan Pell was on time",
+      "do not write up test employee at Kearney, write up Test employee at Dodge",
+      "test employee, not rowan pell, closed the store late",
+    ]) {
+      expect(typedEmployeeName(text), text).toBe("Test Employee");
+    }
+  });
+
+  it("two forms, two people: the CA's employee is the first, Test Employee (pinned)", () => {
+    vi.stubEnv("NOT_A_NAME_GUARD_ENABLED", "true");
+    expect(typedEmployeeName("create a CA for test employee and a coaching for rowan pell")).toBe("Test Employee");
+    expect(typedEmployeeName("Create a CA for Test employee and a coaching for Rowan Pell")).toBe("Test Employee");
+  });
+
+  /*
+   * Pinned known gap (docs/parity-log.md, 26 Oct 2026): a capitalised "for
+   * Test Employee" is main's reading and is read negated or not, the same
+   * with the guard off and on. The guard leaves it alone so that nothing main
+   * already read changes. A capitalised placeholder main never read
+   * ("without Test Employee") reads nobody either way.
+   */
+  it.each([
+    ["do not create a CA for Test Employee at Kearney", "Test Employee"],
+    ["this is not for Test Employee, it is for the new hire", "Test Employee"],
+    ["do not create a CA for Test Employee at the Dodge store", "Test Employee"],
+    ["never write up Test Employee at Kearney", null],
+    ["without Test Employee", null],
+    ["everyone except Test Employee", null],
+    ["Okay let's restart. Not Test Employee, Team Member, Kearney.", null],
+  ])("capitalised, pinned the same off and on: %s → %s", (text, expected) => {
+    expect(typedEmployeeName(text), "guard off").toBe(expected);
+    vi.stubEnv("NOT_A_NAME_GUARD_ENABLED", "true");
+    expect(typedEmployeeName(text), "guard on").toBe(expected);
+  });
+
+  // Every name main reads (a capitalised "Test Employee" in a name place) reads the same with the guard on.
+  it.each([
+    "create a written CA for Test Employee at Kearney for missing the 10-15-26 woven deadline",
+    "Create an exit form for Test Employee at Kearney, she resigned and her last day was 10-20",
+    "name is Test Employee",
+    "Employee name is Test Employee",
+    "employee: Test Employee",
+    "Test Employee at Kearney",
+    "Test Employee, General Manager",
+    "Test Employee",
+    "the Employee Performance Plan for Test Employee",
+    TURNS.B4[0],
+    "create a CA for Test Employee and a coaching for rowan pell",
+    "Test Employee, not rowan pell, was late; rowan pell was on time",
+  ])("main's reading is unchanged with the guard on: %s", (text) => {
+    expect(typedEmployeeName(text), "guard off").toBe("Test Employee");
+    vi.stubEnv("NOT_A_NAME_GUARD_ENABLED", "true");
+    expect(typedEmployeeName(text), "guard on").toBe("Test Employee");
+  });
+
+  it.each(
+    [
+      "do not create a CA for test employee at Kearney",
+      "never write up test employee at Kearney",
+      "do not create a CA for test employee at the Dodge store",
+    ].flatMap((text) => [lowerCase(text), sentenceCase(text)]),
+  )("the card: %s → not for Test Employee", { timeout: 120_000 }, async (text) => {
+    vi.stubEnv("NOT_A_NAME_GUARD_ENABLED", "true");
+    const [turn] = await propose([text]);
+    expect(turn!.employeeName).not.toBe("Test Employee");
+    expect(turn!.content).not.toContain("**Test Employee**");
+  });
+
+  // Pinned: the two-form reply splits the turn, and the Corrective Action card is for the first person.
+  it("the card, two forms and two people: the CA card is for Test Employee", { timeout: 120_000 }, async () => {
+    vi.stubEnv("NOT_A_NAME_GUARD_ENABLED", "true");
+    const [turn] = await propose(["create a CA for test employee and a coaching for rowan pell"]);
+    expect(turn!.templateKey).toBe("dpoa");
+    expect(turn!.employeeName).toBe("Test Employee");
+  });
+});

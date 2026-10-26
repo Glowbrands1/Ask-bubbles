@@ -6,6 +6,26 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 26 Oct 2026: a negated "test employee" is not the employee (QA-6) — same in both apps; capitalised negations a known gap
+
+With `NOT_A_NAME_GUARD_ENABLED` on (live in this app's production), the
+lower-case "test employee" reading (PR #158) took the name even where the
+manager said the form is not for them: "do not create a CA for test
+employee", "never write up test employee", "without test employee",
+"everyone except test employee", "Okay let's restart. Not Test Employee, …".
+Now a name right after not / never / no / without / except / don't / do not
+(with "for", "write up" or "create a CA for" in between) is passed over and
+the first name that is not negated is read. Only that guard-on reading is
+checked, so every name main already read is read the same, and flag off is
+unchanged.
+
+Known gap, pinned in `src/lib/ai/proposal-names-oct25.test.ts`: a
+capitalised name in a name place is main's reading and is still read when
+negated, the same with the guard off and on ("do not create a CA for Test
+Employee at Kearney" → Test Employee). A later turn's correction that
+repeats the old name ("not <old name>, it is <new name>") is not read as a
+rename by the slot keeper, as on main. Same code and same gap in both apps.
+
 ## 25 Oct 2026: a follow-up that names its own documents is searched on them — ported from Ask Sunny (a47bf19)
 
 `FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED` defaults off, same name in both apps.
