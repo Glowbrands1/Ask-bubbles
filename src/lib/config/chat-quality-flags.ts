@@ -947,6 +947,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ATTENDANCE_ACTION_PLAN_ENABLED",
   "HIDE_NO_POLICY_MATCH_NOTICE_ENABLED",
   "PRIOR_SENTENCE_FIX_ENABLED",
+  "DATE_ANSWER_APPLIED_ENABLED",
   "REQUEST_LINE_ACCOUNT_ENABLED",
 ] as const;
 
@@ -1046,6 +1047,17 @@ export function hideNoPolicyMatchNoticeEnabled(): boolean {
  */
 export function priorSentenceFixEnabled(): boolean {
   return envFlag("PRIOR_SENTENCE_FIX_ENABLED");
+}
+
+/**
+ * The manager's answer to "Which date goes on the form?" sets the form's date
+ * (QA, 26 Oct 2026; same flag in both apps): "10-15", "the 15th" and "most
+ * recent" are answers, also after a turn in between ("She is at Dodge"), and
+ * "most recent" is never read as a person. See `incident-dates.ts`. Off, read
+ * as before.
+ */
+export function dateAnswerAppliedEnabled(): boolean {
+  return envFlag("DATE_ANSWER_APPLIED_ENABLED");
 }
 
 /**
