@@ -19,8 +19,13 @@ vi.mock("@/config/company/locations", async () =>
  * 10/16 (the coaching) and "missing the woven deadline of 11-1-26" dated 11/1.
  *
  * Here, through POST /api/chat on this app's live form path (the full remap,
- * with the late-open reader), a yearless date was read without the
- * incident-only rule. The store is this app's.
+ * with the late-open reader), a yearless deadline ("the woven deadline of
+ * 10-15", "the 10-15 woven deadline") dated the card: the remap read yearless
+ * dates without the incident-only rule. The store is this app's.
+ *
+ * D1 and D2 (an earlier step's or the coaching's date on the card) are the
+ * remap's earlier-step reading, owned by PRIOR_SENTENCE_FIX_ENABLED (#305);
+ * this flag does not change them, and they are pinned here flag off only.
  */
 
 const store = {
@@ -251,11 +256,14 @@ afterEach(() => {
 });
 
 
-const SENTENCES = {
-  D1: "ca for lysander pembrook, coached her 10-16, written warning on 10-20",
-  D2: "create a ca for thessaly ironwood at kearney, she was late on 10-5 and 10-15. i coached her on 10-16 about being late",
-  D3: "create a ca for lysander pembrook at kearney for missing the woven deadline of 11-1-26",
-} as const;
+const D1 = "ca for lysander pembrook, coached her 10-16, written warning on 10-20";
+const D2 = "create a ca for thessaly ironwood at kearney, she was late on 10-5 and 10-15. i coached her on 10-16 about being late";
+const DEADLINES = [
+  "create a ca for lysander pembrook at kearney for missing the woven deadline of 11-1-26",
+  "create a ca for lysander pembrook at kearney for missing the woven deadline of 10-15",
+  "create a ca for lysander pembrook at kearney for missing the 10-15 woven deadline",
+  "create a ca for lysander pembrook at kearney, the woven deadline is 10-15 and she missed it",
+] as const;
 
 const REGISTERS: [string, (text: string) => string][] = [
   ["all lowercase", (text) => text.toLowerCase()],
@@ -280,23 +288,20 @@ async function cardDate(text: string): Promise<string | null> {
 }
 
 describe.each(REGISTERS)("the card's Date on the live path (%s)", (_register, as) => {
-  it("flag off: today's dates, pinned (D1 10/20, D2 10/16, D3 none)", async () => {
+  it("flag off: today's dates, pinned", async () => {
     delete process.env[FLAG];
-    expect(await cardDate(as(SENTENCES.D1))).toBe("2026-10-20");
-    expect(await cardDate(as(SENTENCES.D2))).toBe("2026-10-16");
-    expect(await cardDate(as(SENTENCES.D3))).toBeNull();
+    expect(await cardDate(as(D1))).toBe("2026-10-20");
+    expect(await cardDate(as(D2))).toBe("2026-10-16");
+    expect(await cardDate(as(DEADLINES[0]))).toBeNull();
+    for (const text of DEADLINES.slice(1)) expect(await cardDate(as(text)), text).toBe("2026-10-15");
   }, 120_000);
 
-  it("flag on: no earlier step, coaching or deadline dates the card", async () => {
+  it("flag on: a deadline never dates the card, yearless or not", async () => {
     process.env[FLAG] = "true";
-    // D1: both dates are earlier steps, so the form is dated the day it is created.
-    expect(await cardDate(as(SENTENCES.D1))).toBeNull();
-    // D2: never the coaching's 10/16. Of the two late dates, this app's late-open
-    // reader keeps the newest (LATE_OPEN_DATE_ENABLED, "the newest date wins").
-    expect(await cardDate(as(SENTENCES.D2))).toBe("2026-10-15");
-    // D3: the deadline. The slot model reading it as the incident's changes nothing here.
+    for (const text of DEADLINES) expect(await cardDate(as(text)), text).toBeNull();
+    // The slot model reading the deadline as the incident's changes nothing.
     bag.modelDate = "11-1-26";
-    expect(await cardDate(as(SENTENCES.D3))).toBeNull();
+    expect(await cardDate(as(DEADLINES[0]))).toBeNull();
     bag.modelDate = null;
   }, 120_000);
 
@@ -304,8 +309,8 @@ describe.each(REGISTERS)("the card's Date on the live path (%s)", (_register, as
     process.env[FLAG] = "true";
     for (const text of [
       "create a ca for thessaly ironwood at kearney, she was late on 10-22",
-      "create a ca for thessaly ironwood at kearney, she was late on 10-22, coached her on 10-1",
       "create a ca for thessaly ironwood at kearney, she was late on 10-22-26 and missed the 11-1-26 deadline",
+      "create a ca for lysander pembrook at kearney, she missed the woven deadline on 10-22",
     ]) {
       expect(await cardDate(as(text)), text).toBe("2026-10-22");
     }

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { formDateIncidentOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { blankYearlessStepDates } from "@/lib/forms/form-date-answer";
 import { statedPriorActions } from "@/lib/forms/prior-actions";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
@@ -278,7 +279,9 @@ describe("the readers", () => {
     expect(blankYearlessStepDates(SAID, TODAY)).toBe(SAID.replace("9-15", "    "));
     vi.stubEnv(FLAG_UNDER_TEST, "");
     expect(statedPriorActions(SAID, TODAY)).toEqual([]);
-    expect(fieldLines(SAID, TODAY)).toEqual(["It happened on 9/15/2026."]);
+    // FORM_DATE_INCIDENT_ONLY_ENABLED (changed on purpose, live card test 26 Oct 2026):
+    // the intake's line names the one incident date, never the earlier coaching's 9-15.
+    expect(fieldLines(SAID, TODAY)).toEqual([`It happened on ${formDateIncidentOnlyEnabled() ? "10/20" : "9/15"}/2026.`]);
   });
 
   it("leave a range and a held coaching alone", async () => {

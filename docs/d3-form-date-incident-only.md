@@ -86,13 +86,25 @@ coached her on 10-16" dated 10/16 (the coaching), and "missing the woven
 deadline of 11-1-26" dated 11/1.
 
 - `src/lib/ai/form-full-remap.ts` (this app's live path): with the late-open
-  reader, a yearless date was read without the incident-only rule. On, it
-  counts only when, with its year written, it is an incident date that is no
-  earlier step or deadline. Of two late dates the newest still wins.
+  reader, a yearless date was read without the incident-only rule, so "the
+  woven deadline of 10-15" dated the card. On, a yearless date that is a
+  deadline, assignment or prior-level date where it sits is not the
+  incident's. Earlier steps stay `dateIsPrior`'s: D1 and D2 (the warning's
+  and the coaching's date on the card) are PRIOR_SENTENCE_FIX_ENABLED's
+  (#305), and this flag does not change them.
 - `src/lib/ai/intake-augment.ts` `fieldLines` and `src/lib/ai/intent-slots.ts`
   `groundDate` (the intent path): the same rules as the sibling app.
 - `form-date-incident-only.ts`: "deadline of / is / was <date>". "missed the
   woven deadline on 10/15/26" is still the incident's day.
 
-Pinned through POST /api/chat: `src/app/api/chat/d3-card-date-live-path-oct26.test.ts`
-(lowercase, sentence case, ALL CAPS; fails before, passes after).
+- `src/lib/forms/draft-incident-dates.ts`, run by the draft route after every
+  guard: with the flag on, this app's created draft of "late to open on 10-5
+  and 10-15. i coached her on 10-16" named neither late date (the draft
+  model's wording). On, an incident date the manager stated and the
+  Observation left out comes back in the manager's own clause, under
+  "Observed:". Earlier steps, deadlines and follow-ups are not added.
+
+Pinned through POST /api/chat (`src/app/api/chat/d3-card-date-live-path-oct26.test.ts`)
+and the created draft (`src/app/api/forms/draft-never-blank-oct26-e2e.test.ts`,
+`src/lib/forms/draft-incident-dates.test.ts`): lowercase, sentence case,
+ALL CAPS; fails before, passes after.
