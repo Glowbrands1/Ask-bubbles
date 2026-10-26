@@ -1,5 +1,5 @@
 import { BCS_BRAND } from "@/config/company/brand";
-import { POLICY_MANUAL_BRAND_SCOPE } from "@/config/company/knowledge";
+import { REPLY_GUARD_WORDS } from "@/config/company/knowledge";
 import { brandReplyGuardEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
@@ -12,55 +12,54 @@ import { brandReplyGuardEnabled } from "@/lib/config/chat-quality-flags";
  * model's own prose still carried them from the manual's company-wide text:
  * an attendance answer that "applies across all brands (…)" listing every
  * brand and the operating group's office, each brand's own scheduling system
- * in one list, "for any brand under <the operating group>", service animals
- * "in the tanning room", the sibling company's role titles, and "open the
- * salon/store".
+ * in one list, the other company's rooms and role titles, and the other
+ * company's location word.
  *
  * At answer time, sentence by sentence:
  *
  *   a parenthetical or a list item that names another brand is taken out,
  *   and what is left is kept when it no longer names one;
  *   a sentence that is about another brand and nothing else is taken out;
- *   the location word is this company's ("store");
+ *   the location word is this company's;
  *   a quoted phrase and a manual title ("… Policy", "… Manual") are never
- *   rewritten, and the manual's own name is kept;
+ *   rewritten;
  *   a reply is never emptied: if nothing of it is left, a short line says so
  *   in this company's name.
  *
- * The other brands are this company's own configuration
- * (`POLICY_MANUAL_BRAND_SCOPE.otherBrands`), plus the operating group's name
- * and the tanning-room words. The manual's title ("JBA Policy Manual") and its
- * page citations are never touched. Off, the reply as written.
+ * The other company's words, and this company's location word, are company
+ * configuration (`REPLY_GUARD_WORDS` in `config/company/knowledge.ts`); this
+ * module is the same in both apps. The manual's title ("JBA Policy Manual")
+ * and its page citations are never touched. Off, the reply as written.
  */
 
-const OTHER_BRAND = new RegExp(
-  String.raw`\b(?:${[
-    ...POLICY_MANUAL_BRAND_SCOPE.otherBrands,
-    // The operating group, except as the manual's own name ("JB & Associates Policy Manual").
-    String.raw`JB\s*&\s*Associates(?:\s+office)?(?!\s+(?:Policy\s+)?Manual)`,
-    String.raw`J\.?B\.?\s+and\s+Associates(?!\s+(?:Policy\s+)?Manual)`,
-    String.raw`tanning(?:\s+(?:rooms?|beds?|booths?|sessions?|clients?|consultants?|salons?|equipment))?`,
-    // The sibling company's role titles.
-    String.raw`(?:Assistant\s+)?Salon\s+Directors?`,
-    String.raw`ASDs?`,
-    String.raw`VersaSpa`,
-    String.raw`spray\s+tan\w*`,
-  ].join("|")})\b`,
-  "i",
-);
+const WORDS = REPLY_GUARD_WORDS;
 
-/** "for any brand under JB & Associates" says "here". */
-const ANY_BRAND = /\b(?:for|at|across)\s+(?:any|every|all)\s+(?:brands?|locations?)\s+(?:under|of|in)\s+(?:the\s+)?JB\s*&\s*Associates(?:\s+family)?\b/gi;
+function anyOf(sources: readonly string[]): string {
+  return sources.map((source) => `(?:${source})`).join("|");
+}
 
-const LOCATION = BCS_BRAND.vocabulary.locationNoun;
-const LOCATIONS = BCS_BRAND.vocabulary.locationNounPlural;
+/** A name that marks a piece of a reply as about another company. */
+const OTHER_BRAND = new RegExp(String.raw`\b(?:${anyOf(WORDS.otherCompany)})\b`, "i");
 
-/** The sibling company's title inside a slash list: "AMM/ASD/AGM", "Assistant Salon Directors/Assistant Makery Managers". */
-const SIBLING_TITLE = String.raw`(?:(?:Assistant\s+)?Salon\s+Directors?|ASDs?)`;
+/** "for any brand under <the operating group>" says "here". Null when the company lists no group. */
+const ANY_BRAND =
+  WORDS.operatingGroup.length > 0
+    ? new RegExp(
+        String.raw`\b(?:for|at|across)\s+(?:any|every|all)\s+(?:brands?|locations?)\s+(?:under|of|in)\s+(?:the\s+)?(?:${anyOf(WORDS.operatingGroup)})(?:\s+family)?\b`,
+        "gi",
+      )
+    : null;
+
+const LOCATION = WORDS.location.own;
+const LOCATIONS = WORDS.location.ownPlural;
+
+/** The other company's title inside a slash list: "A/B/C". */
 function withoutSlashedTitles(sentence: string): string {
+  if (WORDS.otherTitles.length === 0) return sentence;
+  const title = `(?:${anyOf(WORDS.otherTitles)})`;
   return sentence
-    .replace(new RegExp(String.raw`\s*/\s*${SIBLING_TITLE}\b`, "g"), "")
-    .replace(new RegExp(String.raw`\b${SIBLING_TITLE}\s*/\s*`, "g"), "");
+    .replace(new RegExp(String.raw`\s*/\s*${title}\b`, "g"), "")
+    .replace(new RegExp(String.raw`\b${title}\s*/\s*`, "g"), "");
 }
 
 /** Parentheticals that name another brand. */
@@ -68,7 +67,7 @@ function withoutBrandParentheticals(sentence: string): string {
   return sentence.replace(/\s*\(([^()]*)\)/g, (whole, inner: string) => (OTHER_BRAND.test(inner) ? "" : whole));
 }
 
-/** List items that name another brand: "MyGlow for Buff City Soap, MyGlow for <another brand>, or Woven for <another>". */
+/** List items that name another brand: "MyGlow for <this brand>, MyGlow for <another>, or Woven for <a third>". */
 function withoutBrandListItems(sentence: string): string {
   const parts = sentence.split(/(,\s*(?:(?:and|or)\s+)?|\s+(?:and|or)\s+)/);
   if (parts.length < 3) return sentence;
@@ -86,21 +85,30 @@ function withoutBrandListItems(sentence: string): string {
 }
 
 /**
- * Quoted text and manual titles are kept as written: `"Salon Opening Policy"`,
- * "Salon Director Manual". Each is swapped for a placeholder while the
- * location word is changed, then put back.
+ * Quoted text and manual titles are kept as written: a quoted section name,
+ * "… Manual". Each is swapped for a placeholder while the location word is
+ * changed, then put back.
  */
 const KEPT_AS_WRITTEN =
   /"[^"\n]*"|“[^”\n]*”|\b(?:[A-Z][\w&'/-]*\s+){0,5}(?:Policy|Policies|Manual|Handbook|Guide)\b(?:\s+\[p\.\d+\])?/g;
 
-/** This company's word for a location. */
+/** This company's location word where a reply wrote both ("A/B"), or the other company's alone when the company says so. */
 function withLocationWord(text: string): string {
   const kept: string[] = [];
   const masked = text.replace(KEPT_AS_WRITTEN, (match) => `\u0000${kept.push(match) - 1}\u0000`);
-  const swapped = masked
-    .replace(/\bsalons?\s*\/\s*stores?\b|\bstores?\s*\/\s*salons?\b/gi, (match) => (/s\b/i.test(match.split("/")[0]!.trim()) ? LOCATIONS : LOCATION))
-    .replace(/\b(S|s)alons\b/g, (_m, s: string) => (s === "S" ? cap(LOCATIONS) : LOCATIONS))
-    .replace(/\b(S|s)alon\b/g, (_m, s: string) => (s === "S" ? cap(LOCATION) : LOCATION));
+  const own = WORDS.location.own;
+  const other = WORDS.location.other;
+  const pair = new RegExp(String.raw`\b${own}s?\s*\/\s*${other}s?\b|\b${other}s?\s*\/\s*${own}s?\b`, "gi");
+  let swapped = masked.replace(pair, (match) => (/s\b/i.test(match.split("/")[0]!.trim()) ? LOCATIONS : LOCATION));
+  if (WORDS.replaceOtherLocationAlone) {
+    swapped = swapped
+      .replace(new RegExp(String.raw`\b(${other.charAt(0).toUpperCase()}|${other.charAt(0)})${other.slice(1)}s\b`, "g"), (_m, first: string) =>
+        first === first.toUpperCase() ? cap(LOCATIONS) : LOCATIONS,
+      )
+      .replace(new RegExp(String.raw`\b(${other.charAt(0).toUpperCase()}|${other.charAt(0)})${other.slice(1)}\b`, "g"), (_m, first: string) =>
+        first === first.toUpperCase() ? cap(LOCATION) : LOCATION,
+      );
+  }
   return swapped.replace(/\u0000(\d+)\u0000/g, (_m, index: string) => kept[Number(index)]!);
 }
 
@@ -110,9 +118,9 @@ function cap(word: string): string {
 
 /** One sentence, with another brand taken out of it, or null when nothing of it is left. */
 function guardSentence(sentence: string): string | null {
-  if (!OTHER_BRAND.test(sentence) && !ANY_BRAND.test(sentence)) return sentence;
-  ANY_BRAND.lastIndex = 0;
-  let text = sentence.replace(ANY_BRAND, `at ${BCS_BRAND.brandName}`);
+  const anyBrand = ANY_BRAND !== null && new RegExp(ANY_BRAND.source, "i").test(sentence);
+  if (!OTHER_BRAND.test(sentence) && !anyBrand) return sentence;
+  let text = ANY_BRAND ? sentence.replace(ANY_BRAND, `at ${BCS_BRAND.brandName}`) : sentence;
   if (!OTHER_BRAND.test(text)) return text;
   text = withoutSlashedTitles(text);
   if (!OTHER_BRAND.test(text)) return text;

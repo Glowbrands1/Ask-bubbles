@@ -3,6 +3,7 @@ import { classifyPerformanceManagementIntent } from "@/lib/ai/performance-manage
 import type { ManualBrandScope } from "@/lib/knowledge/brand-sections";
 import type { KnowledgeDocumentRole } from "@/lib/knowledge/document-roles";
 import type { NamedHandbookConfig } from "@/lib/knowledge/named-handbook";
+import { BCS_BRAND } from "./brand";
 
 /**
  * ============================================================================
@@ -473,4 +474,45 @@ export const POLICY_MANUAL_BRAND_SCOPE: ManualBrandScope = {
     // Under "Employee Discounts": the employee tanning-privilege rules.
     /^Please keep in mind that The Company preaches tanning in moderation/i,
   ],
+};
+
+/**
+ * ============================================================================
+ * WORDS A REPLY MUST NOT USE FOR THIS COMPANY (BRAND_REPLY_GUARD_ENABLED)
+ * ============================================================================
+ *
+ * Company content: the mechanism that reads them is generic
+ * (`lib/ai/brand-reply-guard.ts`). Regular expression SOURCES. These are the
+ * filter's data, so they name what they filter.
+ */
+export interface ReplyGuardWords {
+  /** Names that mark a sentence, list item or parenthetical as about another company. */
+  readonly otherCompany: readonly string[];
+  /** "for any brand under <group>": the group names that phrase is rewritten for. */
+  readonly operatingGroup: readonly string[];
+  /** The other company's titles, taken out of a slash list ("A/B/C"). */
+  readonly otherTitles: readonly string[];
+  /** This company's location word, and the other company's. */
+  readonly location: { readonly own: string; readonly ownPlural: string; readonly other: string };
+  /** Whether the other company's location word is replaced on its own too, or only beside this one. */
+  readonly replaceOtherLocationAlone: boolean;
+}
+
+const OPERATING_GROUP = [String.raw`JB\s*&\s*Associates`, String.raw`J\.?B\.?\s+and\s+Associates`];
+const OTHER_TITLES = [String.raw`(?:Assistant\s+)?Salon\s+Directors?`, String.raw`ASDs?`];
+
+export const REPLY_GUARD_WORDS: ReplyGuardWords = {
+  otherCompany: [
+    ...POLICY_MANUAL_BRAND_SCOPE.otherBrands,
+    // The operating group, except as the manual's own name ("… Policy Manual").
+    ...OPERATING_GROUP.map((group) => String.raw`${group}(?:\s+office)?(?!\s+(?:Policy\s+)?Manual)`),
+    String.raw`tanning(?:\s+(?:rooms?|beds?|booths?|sessions?|clients?|consultants?|salons?|equipment))?`,
+    ...OTHER_TITLES,
+    String.raw`VersaSpa`,
+    String.raw`spray\s+tan\w*`,
+  ],
+  operatingGroup: OPERATING_GROUP,
+  otherTitles: OTHER_TITLES,
+  location: { own: BCS_BRAND.vocabulary.locationNoun, ownPlural: BCS_BRAND.vocabulary.locationNounPlural, other: "salon" },
+  replaceOtherLocationAlone: true,
 };
