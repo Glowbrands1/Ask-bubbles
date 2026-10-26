@@ -787,6 +787,17 @@ export function cardNeverSilentEnabled(): boolean {
   return envFlag("CARD_NEVER_SILENT_ENABLED");
 }
 
+/**
+ * A name is read the same however it is typed: a turn in capitals is read in
+ * lowercase, and the person named where a form is asked for ("write up devon
+ * harlan", "ca for Rory vance") is written in Title Case before the name
+ * readers see it (QA, 25-26 Oct 2026; ported from the sibling app). See
+ * `ai/name-case.ts`. Off, every turn is read as typed.
+ */
+export function nameCaseInsensitiveEnabled(): boolean {
+  return envFlag("NAME_CASE_INSENSITIVE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -861,4 +872,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STORE_ALIAS_ENABLED",
   "NAME_RESPELL_ENABLED",
   "CARD_NEVER_SILENT_ENABLED",
+  "NAME_CASE_INSENSITIVE_ENABLED",
 ] as const;

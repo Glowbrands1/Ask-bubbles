@@ -45,6 +45,7 @@ import { callClaude } from "./call-claude";
 import { loadChatDataBlock } from "./chat-data-tools";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
+import { withNameCase } from "./name-case";
 import { withTerseSlots } from "./terse-slots";
 import { withBareAnswerBinding } from "./bare-answer-guard";
 import { withManagerFormChoice } from "./manager-form-choice";
