@@ -918,6 +918,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
+  "LATE_OPEN_DATE_FIX_ENABLED",
 ] as const;
 
 /**
@@ -941,4 +942,19 @@ export function incidentClauseSplitEnabled(): boolean {
  */
 export function stateCodeNotAPersonEnabled(): boolean {
   return envFlag("STATE_CODE_NOT_A_PERSON_ENABLED");
+}
+
+/**
+ * A LATE_OPEN_DATE_ENABLED reading put right (QA, 25-26 Oct 2026; ported from
+ * the sibling app, same flag in both apps). With it on, the intent read dated
+ * "coaching form for …, she was late on 10-5 and 10-15, I coached her on
+ * 10-16" 10/5: "late on 10-5" is a lateness, not a late opening, yet its "on"
+ * made it the date the turn stated. On a Coaching Form the coaching the
+ * manager says they held dates it; two held coachings are asked about. No
+ * other stated date is read differently, and the full remap's card (this
+ * app's live form path) already dated it 10/16. See `forms/late-open.ts`.
+ * Off, exactly as before.
+ */
+export function lateOpenDateFixEnabled(): boolean {
+  return envFlag("LATE_OPEN_DATE_FIX_ENABLED");
 }

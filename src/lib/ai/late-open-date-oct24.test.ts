@@ -115,6 +115,8 @@ const F5 = "CA for Test Employee at Kearney, late to open 10-19, verbal, no payr
 
 describe("LATE_OPEN_DATE_ENABLED", () => {
   it("defaults off and is a chat-quality flag", () => {
+    // Pinned to flag-off (unset); the env may set it (production has it on). Restored by unstubAllEnvs.
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "");
     expect(lateOpenDateEnabled()).toBe(false);
     expect(CHAT_QUALITY_FLAG_NAMES).toContain("LATE_OPEN_DATE_ENABLED");
   });
@@ -135,6 +137,8 @@ describe("F5: late to open 10-19, verbal, no payroll", () => {
   });
 
   it("with the flag off, the intent read says Attendance and no date, and the card names no policy", () => {
+    // Pinned to flag-off; the env may set it. Restored by unstubAllEnvs.
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "");
     vi.stubEnv("FORM_FULL_REMAP_ENABLED", "1");
     const played = play([F5]);
     expect(played.intent.formDate).toBeNull();
@@ -263,5 +267,143 @@ describe("the readers behind it", () => {
       today: TODAY,
     });
     expect(out).toContain("It happened on 10/19/2026.");
+  });
+});
+
+/*
+ * ============================================================================
+ * LATE_OPEN_DATE_FIX_ENABLED (QA, 25-26 Oct 2026; ported from the sibling app)
+ * ============================================================================
+ *
+ * The sibling app's QA wording, with this app's store. With LATE_OPEN_DATE on
+ * (production), the intent read dated "coaching form for …, she was late on
+ * 10-5 and 10-15, I coached her on 10-16" 10/5: the "on" in "late on 10-5"
+ * made it the one date the turn stated, ahead of the coaching the manager
+ * held. With the fix, on a Coaching Form, the held coaching dates it, and two
+ * held coachings are asked about; every other stated date is read as before
+ * (QA-6, 26 Oct 2026: a fix must never drop one). The full remap's card, this
+ * app's live form path, already dated it 10/16 and is unchanged. "Test
+ * Employee" is the QA account's placeholder; Rowan Pell is invented.
+ */
+describe("LATE_OPEN_DATE_FIX_ENABLED, with LATE_OPEN_DATE_ENABLED on as in production", () => {
+  const YEAR_TODAY = "2026-10-25";
+
+  function read(words: string, kind: "ca" | "coaching", history: { role: string; content: string }[] = []) {
+    return decideIntentTurn({
+      question: words,
+      history,
+      today: YEAR_TODAY,
+      saved: null,
+      raw: {
+        employee: null,
+        store: null,
+        title: null,
+        incidentType: null,
+        incidentDate: null,
+        payrollAmount: null,
+        warningLevel: null,
+        formType: kind === "coaching" ? "coaching" : "corrective action",
+        formTurn: true,
+      },
+      people: [],
+      stores: STORES,
+      headings: HEADINGS,
+      templates: TEMPLATES,
+      formInProgress: false,
+    });
+  }
+
+  function remapDate(words: string, kind: "ca" | "coaching"): string | null {
+    const grounded = groundFormSlots({
+      raw: { templateKey: kind === "coaching" ? "coaching" : "dpoa", employeeName: "Test Employee", observation: null, actionPlan: null },
+      history: [],
+      question: words,
+      today: YEAR_TODAY,
+      people: [],
+      saved: null,
+    });
+    return grounded.slots.incidentDateIso ?? null;
+  }
+
+  const COACHING = "coaching form for Test Employee at Kearney, she was late on 10-5 and 10-15, I coached her on 10-16 about being late";
+  const COACHING_SENTENCES = "Coaching form for Test Employee at Kearney. She was late on 10-5 and 10-15. I coached her on 10-16 about being late.";
+
+  it.each([
+    ["lowercase", COACHING.toLowerCase()],
+    ["as typed", COACHING],
+    ["Sentence case", COACHING_SENTENCES],
+    ["negation", "coaching form for Test Employee at Kearney, she was not late on 10-5, I coached her on 10-16"],
+    ["negation, Sentence case", "Coaching form for Test Employee at Kearney. She was not late on 10-5. I coached her on 10-16."],
+    ["another person", "coaching form for Test Employee at Kearney, Rowan Pell was late on 10-5, I coached Test Employee on 10-16"],
+    ["another person, Sentence case", "Coaching form for Test Employee at Kearney. Rowan Pell was late on 10-5. I coached Test Employee on 10-16."],
+  ])("the held coaching dates the Coaching Form 10/16 (%s); the remap's card is 10/16 either way", (_label, words) => {
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "1");
+    vi.stubEnv("LATE_OPEN_DATE_FIX_ENABLED", "1");
+    expect(read(words, "coaching").state.formDate).toBe("2026-10-16");
+    expect(remapDate(words, "coaching")).toBe("2026-10-16");
+    // Never-break: fix off reads it as main does (10/5), and the remap's card is the same.
+    vi.stubEnv("LATE_OPEN_DATE_FIX_ENABLED", "");
+    expect(read(words, "coaching").state.formDate).toBe("2026-10-05");
+    expect(remapDate(words, "coaching")).toBe("2026-10-16");
+  });
+
+  it("never-break: with LATE_OPEN_DATE off the fix changes nothing", () => {
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "");
+    for (const fix of ["", "1"]) {
+      vi.stubEnv("LATE_OPEN_DATE_FIX_ENABLED", fix);
+      expect(read(COACHING, "coaching").state.formDate).toBeNull();
+      expect(remapDate(COACHING, "coaching")).toBe("2026-10-16");
+    }
+  });
+
+  /* [label, kind, lowercase, Sentence case, intent date with the fix, intent date on main ("asked": the date question)]. */
+  const PINS: readonly (readonly [string, "ca" | "coaching", string, string, string | null | "asked", string | null | "asked"])[] = [
+    ["two clauses, a late opening and a held coaching, a CA", "ca", "ca for Test Employee at Kearney, she was late to open on 10-5 and I coached her on 10-16", "CA for Test Employee at Kearney. She was late to open on 10-5 and I coached her on 10-16.", "2026-10-05", "2026-10-05"],
+    ["a real late opening", "ca", "ca for Test Employee at Kearney for being late to open on 10-20, no payroll", "CA for Test Employee at Kearney for being late to open on 10-20. No payroll.", "2026-10-20", "2026-10-20"],
+    ["opened late on", "ca", "create a ca for Rowan Pell, opened late on 10-5", "Create a CA for Rowan Pell. She opened late on 10-5.", "2026-10-05", "2026-10-05"],
+    ["opening the store late on", "ca", "create a ca for Rowan Pell, for opening the store late on 10-5", "Create a CA for Rowan Pell for opening the store late on 10-5.", "2026-10-05", "2026-10-05"],
+    ["late on, a CA", "ca", "create a ca for Rowan Pell, she was late on 10-5", "Create a CA for Rowan Pell. She was late on 10-5.", "2026-10-05", "2026-10-05"],
+    ["late on, then a held coaching, a CA", "ca", "create a ca for Rowan Pell, she was late on 10-5, I coached her on 10-16", "Create a CA for Rowan Pell. She was late on 10-5. I coached her on 10-16.", "2026-10-05", "2026-10-05"],
+    ["late on and opened late on, a CA", "ca", "create a ca for Rowan Pell, she was late on 10-5 and opened late on 10-9", "Create a CA for Rowan Pell. She was late on 10-5 and opened late on 10-9.", "asked", "asked"],
+    ["late on, a Coaching Form", "coaching", "coaching form for Rowan Pell, she was late on 10-5", "Coaching form for Rowan Pell. She was late on 10-5.", "2026-10-05", "2026-10-05"],
+    ["late again on, a Coaching Form", "coaching", "coaching form for Rowan Pell, she was late again on 10-5", "Coaching form for Rowan Pell. She was late again on 10-5.", "2026-10-05", "2026-10-05"],
+    ["two held coachings", "coaching", "coaching form for Rowan Pell, I coached her on 10-16 and 10-18", "Coaching form for Rowan Pell. I coached her on 10-16 and 10-18.", "asked", "2026-10-16"],
+  ];
+  const CASES = PINS.flatMap(([label, kind, lower, sentence, on, main]) => [
+    [`${label} (lowercase)`, kind, lower.toLowerCase(), on, main] as const,
+    [`${label} (Sentence case)`, kind, sentence, on, main] as const,
+  ]);
+
+  function expectRead(decision: ReturnType<typeof read>, expected: string | null | "asked") {
+    if (expected === "asked") {
+      expect(decision.clarification).toMatch(/^Which date should go on the form\? Reply with the number\./);
+      expect(decision.state.formDate).toBeNull();
+      return;
+    }
+    expect(decision.state.formDate).toBe(expected);
+  }
+
+  it.each(CASES)("probe, fix on: %s", (_label, kind, words, on) => {
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "1");
+    vi.stubEnv("LATE_OPEN_DATE_FIX_ENABLED", "1");
+    expectRead(read(words, kind), on);
+  });
+
+  it.each(CASES)("fix off reads it as main: %s", (_label, kind, words, _on, main) => {
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "1");
+    vi.stubEnv("LATE_OPEN_DATE_FIX_ENABLED", "");
+    expectRead(read(words, kind), main);
+  });
+
+  it("the date question is answered by its number: 10/18", () => {
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "1");
+    vi.stubEnv("LATE_OPEN_DATE_FIX_ENABLED", "1");
+    const words = "coaching form for Rowan Pell, I coached her on 10-16 and 10-18";
+    const asked = read(words, "coaching");
+    const answer = read("2", "coaching", [
+      { role: "user", content: words },
+      { role: "assistant", content: asked.clarification! },
+    ]);
+    expect(answer.state.formDate).toBe("2026-10-18");
   });
 });
