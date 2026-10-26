@@ -42,11 +42,14 @@ export async function loadChatDataBlock(input: {
   readonly question: string;
   readonly role: Role | null;
   readonly breakdown: boolean;
+  /** GOOGLE_REVIEWS_IN_CHAT_ENABLED already attached the review block. */
+  readonly reviewsHandled?: boolean;
 }): Promise<ChatDataAddition> {
   if (!input.enabled) return EMPTY;
   const help = passwordResetHelp(input.question);
   const allowed = input.role !== null && hasPermission(DEFAULT_PERMISSION_MATRIX, input.role, "view_reports");
   if (!allowed || !WANTS_DATA.test(input.question)) return { help, data: null };
+  if (input.reviewsHandled && /\breviews?\b/i.test(input.question)) return { help, data: null };
 
   const plan = input.breakdown || reportBreakdownEnabled() ? planReportBreakdown(input.question) : null;
   if (plan && (plan.kind === "unavailable" || plan.unavailable)) {
