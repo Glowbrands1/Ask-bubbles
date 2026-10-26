@@ -140,6 +140,7 @@ import {
   type ActionPlanInput,
 } from "@/lib/forms/ca-action-plan";
 import { twoSentenceActionPlan } from "@/lib/forms/action-plan-sentences";
+import { attendanceActionPlan, isAttendancePlan } from "@/lib/forms/attendance-action-plan";
 import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
 import { retainFilledFields } from "@/lib/forms/draft-merge";
 import {
@@ -161,6 +162,7 @@ import { fieldLines } from "@/lib/ai/intake-augment";
 import {
   actionPlanManagerOnlyEnabled,
   actionPlanSentencesEnabled,
+  attendanceActionPlanEnabled,
   draftEditMergeEnabled,
   draftNeverBlankEnabled,
   fieldAccuracyEnabled,
@@ -2119,9 +2121,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       }
     }
     const planValue = planInput && !managerOnlyPlan
-      ? actionPlanSentencesEnabled()
-        ? twoSentenceActionPlan(planInput)
-        : correctiveActionPlan(planInput)
+      ? attendanceActionPlanEnabled() && isAttendancePlan(planInput)
+        ? attendanceActionPlan(planInput)
+        : actionPlanSentencesEnabled()
+          ? twoSentenceActionPlan(planInput)
+          : correctiveActionPlan(planInput)
       : null;
     const planned =
       fixedPlan && planInput && planValue && draftedAnything && !keeps(fixedPlan.key)

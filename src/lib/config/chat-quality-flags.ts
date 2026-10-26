@@ -944,6 +944,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NAME_BEFORE_TITLE_ENABLED",
   "LATE_OPEN_PAYROLL_FROM_FORM_ENABLED",
   "STORED_SLOTS_NOT_A_REQUEST_ENABLED",
+  "ATTENDANCE_ACTION_PLAN_ENABLED",
 ] as const;
 
 /**
@@ -1009,4 +1010,13 @@ export function latePayrollFromFormEnabled(): boolean {
  */
 export function storedSlotsNotARequestEnabled(): boolean {
   return envFlag("STORED_SLOTS_NOT_A_REQUEST_ENABLED");
+}
+
+/**
+ * A Corrective Action whose policy is Attendance gets Pau's attendance Action
+ * Plan, with no follow-up date (26 Oct 2026; same flag in both apps). See
+ * `forms/attendance-action-plan.ts`. Off, the plan is built as before.
+ */
+export function attendanceActionPlanEnabled(): boolean {
+  return envFlag("ATTENDANCE_ACTION_PLAN_ENABLED");
 }
