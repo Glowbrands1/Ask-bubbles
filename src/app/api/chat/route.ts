@@ -181,6 +181,7 @@ export async function POST(request: Request) {
               request,
               instanceId: asked.activeFormInstanceId,
               question: asked.question,
+              history: asked.history,
             })
           : null;
       const parsed = draftAction

@@ -414,3 +414,78 @@ describe("B21-4: a form for another employee is its own card, never a redraft of
     expect(byEmployee("Test Employee Two")).toHaveLength(0);
   });
 });
+
+/*
+ * QA-6, 26 Oct 2026 (the sibling app's QA of this PR, ported). (a) No reader may
+ * depend on capitals: the headline wording typed in lower case, "now one for
+ * test employee two", still redrafted the open form. (b) "never one for Rowan
+ * Pell" and "do not make one for Rowan Pell" made a NEW card for the person
+ * the manager said not to make one for, and "not for Test Employee Two, for
+ * Test Employee" read both people. Each sentence, in lower case, in Sentence
+ * case and as QA wrote it, after Create for Test Employee at the Kearney store.
+ */
+const sentenceCase = (text: string) => text[0]!.toUpperCase() + text.slice(1).toLowerCase();
+const threeWays = (text: string) => [text.toLowerCase(), sentenceCase(text), text];
+
+/** What one turn did after Create: the reply, the card it offered, and whether the open form changed. */
+async function afterCreate(turn: string) {
+  for (const key of Object.keys(store)) store[key] = [];
+  await ensureTemplateLibrary("system");
+  const first = await chatThenCreate([FIRST]);
+  const before = fieldsOf(first.id);
+  const reply = await say(first.chat, turn);
+  return {
+    content: reply.content,
+    card: reply.formProposal?.employeeName ?? null,
+    updated: reply.formUpdate?.updated ?? null,
+    openFormChanged: fieldsOf(first.id) !== before,
+  };
+}
+
+describe("QA-6: the other employee is read in any case, and never a person the manager ruled out", () => {
+  it.each(
+    threeWays("now one for Test Employee Two at the Kearney store for being late on 10-20-26").map((turn) => [turn] as const),
+  )('(a) full remap on: "%s" is its own card for Test Employee Two', async (turn) => {
+    process.env[FLAG] = "on";
+    const result = await afterCreate(turn);
+    expect(result.content).not.toMatch(/Redrafted the/);
+    expect(result.updated).toBeNull();
+    // The full remap keeps the name as typed ("test employee two").
+    expect(result.card?.toLowerCase()).toBe("test employee two");
+    expect(result.openFormChanged).toBe(false);
+  });
+
+  /*
+   * A ruled-out person, or the open form's own employee after a "not for",
+   * is not another employee: with the flag on the turn is answered exactly as
+   * with it off (the open form answers it, as in production). What the open
+   * form then does is main's behaviour, which this flag must not change, so
+   * only the equality is pinned. The reading itself is pinned in
+   * `lib/forms/other-employee.test.ts`.
+   */
+  it.each(
+    ["full remap on", "full remap off"].flatMap((label) =>
+      [
+        ...threeWays("never one for Rowan Pell"),
+        ...threeWays("do not make one for Rowan Pell"),
+        ...threeWays("one for Test Employee, not Rowan Pell"),
+        ...threeWays("not for Test Employee Two, for Test Employee"),
+      ].map((turn) => [label, turn] as const),
+    ),
+  )('(b) %s: "%s" — the flag on answers exactly as the flag off, never a new card from the "one for" reading', async (label, turn) => {
+    if (label.endsWith("off")) process.env.FORM_FULL_REMAP_ENABLED = "off";
+    const off = await afterCreate(turn);
+    process.env[FLAG] = "on";
+    const on = await afterCreate(turn);
+    expect(on).toEqual(off);
+  });
+
+  it.each(
+    threeWays("now one for Test Employee Two at the Kearney store for being late on 10-20-26").map((turn) => [turn] as const),
+  )('flag off: "%s" redrafts the open form, as in production', async (turn) => {
+    const result = await afterCreate(turn);
+    expect(result.content).toMatch(/Redrafted the \*\*Corrective Action Form\*\* for \*\*Test Employee\*\*/);
+    expect(result.card).toBeNull();
+  });
+});
+
