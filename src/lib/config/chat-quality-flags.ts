@@ -814,6 +814,15 @@ export function excerptBrandFilterEnabled(): boolean {
 }
 
 /**
+ * A Google review question gets the Google Reviews page's month-to-date
+ * figures, goal and pace for the caller's stores, and only with View reports.
+ * Off, review questions keep the existing path. Ported from the sibling app (QA T11).
+ */
+export function googleReviewsInChatEnabled(): boolean {
+  return envFlag("GOOGLE_REVIEWS_IN_CHAT_ENABLED");
+}
+
+/**
  * A name is read the same however it is typed: a turn in capitals is read in
  * lowercase, and the person named where a form is asked for ("write up devon
  * harlan", "ca for Rory vance") is written in Title Case before the name
@@ -900,6 +909,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "APP_PASSWORD_HELP_ENABLED",
   "INCIDENT_CLAUSE_SPLIT_ENABLED",
   "EXCERPT_BRAND_FILTER_ENABLED",
+  "STATE_CODE_NOT_A_PERSON_ENABLED",
+  "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "NAME_CASE_INSENSITIVE_ENABLED",
 ] as const;
 
@@ -913,4 +924,15 @@ export const CHAT_QUALITY_FLAG_NAMES = [
  */
 export function incidentClauseSplitEnabled(): boolean {
   return envFlag("INCIDENT_CLAUSE_SPLIT_ENABLED");
+}
+
+/**
+ * A US state code after a place ("Dodge, NE", "lawrence, ks") is never a
+ * second person when a chat card is created (26 Oct 2026: "…at Dodge, NE.
+ * She did not clock in…" was refused as naming "Odalys Merriweather, NE";
+ * ported from the sibling app, same flag in both apps). See
+ * `forms/state-code-place.ts`. Off, the conversation is read as typed.
+ */
+export function stateCodeNotAPersonEnabled(): boolean {
+  return envFlag("STATE_CODE_NOT_A_PERSON_ENABLED");
 }
