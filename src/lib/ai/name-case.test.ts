@@ -86,7 +86,7 @@ describe("NAME_CASE_INSENSITIVE_ENABLED on: the same person in lowercase, senten
       "a written warning for attendance",
       "what is a ca?",
       "she works at kearney, ne",
-      "Create a coaching form for Kaitlyn about how the whole team should sanitize beds",
+      "Create a coaching form for Kaitlyn about how the whole team should sanitize the counters",
       "ca for lisa",
       "write up for being late",
     ]) {

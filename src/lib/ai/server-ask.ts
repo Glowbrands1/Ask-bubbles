@@ -211,7 +211,7 @@ async function answerQuestionTraced(
   // TERSE_SLOT_READ_ENABLED: a terse "ca …" line is read as the long form.
   // NAME_CASE_INSENSITIVE_ENABLED: a name is read the same however it is typed.
   const read = withNameCase(withTerseSlots(request));
-  if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory).then(withNameTitleCase);
+  if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory).then((response) => withNameTitleCase(response, request));
   const draft = openChatTrace({
     conversationId: request.conversationId,
     messageId: request.questionMessageId,
@@ -219,7 +219,7 @@ async function answerQuestionTraced(
     originalQuery: request.question,
     formInProgress: Boolean(request.continueProposalTemplateKey || request.openForm || request.activeFormInstanceId),
   });
-  return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory).then(withNameTitleCase));
+  return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory).then((response) => withNameTitleCase(response, request)));
 }
 
 /** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
