@@ -517,7 +517,7 @@ describe("individual and team-wide coaching", () => {
     expect(response!.formProposal?.warningLevel).toBe("verbal");
   });
 
-  // Ported from Ask Sunny conv_mvofsdg92obw8px (25 Oct 2026): the manager's
+  // Ported from the sibling app's conv_mvofsdg92obw8px (25 Oct 2026): the manager's
   // request sentence exactly; the first sentence is this company's own.
   const CHATTY_TEAM =
     "I have a few team members that arent making sure the required forms are signed before they help the guest. I want a coaching form I can reuse for any team member, so please leave the employee name blank and make it generic for the whole team";
