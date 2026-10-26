@@ -357,7 +357,13 @@ describe("a Corrective Action asked for by name alone", () => {
 /* ========================================================================= */
 
 describe("Direct policy from official manual, for a late opener", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("cites the manual's Late Opening section and its printed page, ahead of Attendance", async () => {
+    // Pinned to LATE_OPEN_DATE off, the reading this predates; the env may set it (production has it on). On: the twin below.
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "");
     const { create } = await conversation(["create ca for Pat Rivera", LATE_OPENER]);
     state.draft = {
       values: {
@@ -377,6 +383,35 @@ describe("Direct policy from official manual, for a late opener", () => {
     expect(policy).toContain("Source: JBA Policy Manual — Late Opening, p. 15");
     expect(policy).toContain("Source: JBA Policy Manual — Attendance, p. 14");
     expect(policy.indexOf("Late Opening, p. 15")).toBeLessThan(policy.indexOf("Attendance, p. 14"));
+    expect(policy).not.toMatch(/Invented/);
+    expect(field(form, "policy_language")!.provenance).toMatchObject({ verified: true });
+  });
+
+  /*
+   * LATE_OPEN_DATE is on in production; the pin above predates it. With it on,
+   * the same account cites Late Opening, p. 15 alone, verified, and the
+   * model's invented rule is still replaced.
+   */
+  it("with LATE_OPEN_DATE_ENABLED on, cites the manual's Late Opening section and its printed page alone", async () => {
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "1");
+    const { create } = await conversation(["create ca for Pat Rivera", LATE_OPENER]);
+    state.draft = {
+      values: {
+        observation: "Observed:\nPat Rivera was scheduled to open the store at 9:30 on 10/16 and arrived at 11:23.",
+        policy_language: "Invented late-opening rule.",
+      },
+      checked: { offense_type: ["tardiness"] },
+    };
+
+    const { reference, draftWarning } = await create();
+    expect(draftWarning).toBeNull();
+    const form = await review(reference.instanceId);
+    const policy = field(form, "policy_language")!.value!;
+
+    expect(field(form, "offense_type")!.checked).toEqual(["tardiness"]);
+    expect(policy).toContain("When an employee assigned to open a location is unable to open the location");
+    expect(policy).toContain("Source: JBA Policy Manual — Late Opening, p. 15");
+    expect(policy).not.toMatch(/Attendance/);
     expect(policy).not.toMatch(/Invented/);
     expect(field(form, "policy_language")!.provenance).toMatchObject({ verified: true });
   });
@@ -451,7 +486,13 @@ describe("a form created from a name alone is redrafted, with the citation, once
     return { ...played, instanceId: reference.instanceId };
   }
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("redrafts the form on screen, and Direct policy cites Late Opening, p. 15, then Attendance, p. 14", async () => {
+    // Pinned to LATE_OPEN_DATE off, the reading this predates; the env may set it (production has it on). On: the twin below.
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "");
     const { instanceId, messages } = await blankForm();
     state.draft = {
       values: {
@@ -485,6 +526,47 @@ describe("a form created from a name alone is redrafted, with the citation, once
     /* The Action Plan names both sections Direct policy cites (District Manager feedback, 21 Oct 2026). */
     expect(field(form, "action_plan")!.value).toBe(
       "Management will review the Late Opening and Attendance policies with Pat. Future policy violations may result in additional corrective action up to and including termination of employment.",
+    );
+  });
+
+  /*
+   * LATE_OPEN_DATE is on in production; the pin above predates it. With it on,
+   * the redraft cites Late Opening, p. 15 alone, and the Action Plan reviews
+   * the Late Opening policy.
+   */
+  it("with LATE_OPEN_DATE_ENABLED on, redrafts the form on screen and cites Late Opening, p. 15 alone", async () => {
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "1");
+    const { instanceId, messages } = await blankForm();
+    state.draft = {
+      values: {
+        observation: "Observed:\nPat Rivera was scheduled to open the store at 9:30 on 10/16 and arrived at 11:23.",
+      },
+      checked: { offense_type: ["tardiness"] },
+    };
+
+    const answer = await redraftActiveForm({
+      request: chatRequest(),
+      instanceId,
+      question: "Pat was scheduled to open the store at 9:30 on 10/16 and did not arrive until 11:23",
+      history: messages,
+    });
+
+    expect(answer!.content).toMatch(/Redrafted the \*\*Corrective Action Form\*\* for \*\*Pat Rivera\*\*/);
+    expect(answer!.content).toMatch(/cites its section and page/);
+    expect(answer!.formUpdate!.instanceId).toBe(instanceId);
+    expect(answer!.formUpdate!.updated).toContain("policy_language");
+    expect(store.form_instances).toHaveLength(1);
+
+    const form = await review(instanceId);
+    const policy = field(form, "policy_language")!.value!;
+    expect(field(form, "observation")!.value).toContain("scheduled to open the store");
+    expect(field(form, "offense_type")!.checked).toEqual(["tardiness"]);
+    expect(policy).toContain("When an employee assigned to open a location is unable to open the location");
+    expect(policy).toContain("Source: JBA Policy Manual — Late Opening, p. 15");
+    expect(policy).not.toMatch(/Attendance/);
+    expect(field(form, "policy_language")!.provenance).toMatchObject({ verified: true });
+    expect(field(form, "action_plan")!.value).toBe(
+      "Management will review the Late Opening policy with Pat. Future policy violations may result in additional corrective action up to and including termination of employment.",
     );
   });
 
