@@ -896,6 +896,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "POLICY_SPECIFIC_TOPICS_ENABLED",
   "EXIT_PROSE_FACTS_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
@@ -903,6 +904,20 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXCERPT_BRAND_FILTER_ENABLED",
   "POLICY_CLEANING_INCIDENT_ENABLED",
 ] as const;
+
+/**
+ * Specific incidents cite their own manual section, chosen by the code (policy
+ * reading; QA, 26 Oct 2026): no wet floor sign -> Safety in the Workplace, a
+ * long break -> Meal and Rest Policy, a social media post -> Social Media
+ * Policy, sexual comments -> Sexual and Other Forms of Harassment, a pet at
+ * work -> Animals in the Workplace, theft, cash shortages, insubordination and
+ * talking badly about coworkers -> the Standards of Conduct page that lists
+ * them. A coaching form's "other" topic is no longer primed with
+ * "Punctuality". Off, the policy and the topic are read exactly as before.
+ */
+export function policySpecificTopicsEnabled(): boolean {
+  return envFlag("POLICY_SPECIFIC_TOPICS_ENABLED");
+}
 
 /**
  * What happened (the card's Issue) is read from the clauses that say what

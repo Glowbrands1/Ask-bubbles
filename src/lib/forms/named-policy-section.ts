@@ -7,6 +7,7 @@ import {
   type ManualChunk,
   type ManualSection,
 } from "./official-policy-manual";
+import { specificTopicSection } from "./specific-policy-topics";
 
 /**
  * ============================================================================
@@ -173,6 +174,8 @@ export interface NamedManualSection {
   readonly section: ManualSection;
   /** The offense box that section is cited under: its own box where it has one, otherwise Violation of Company Policies. */
   readonly offenseKey: string;
+  /** Further sections the same incident is cited under (POLICY_SPECIFIC_TOPICS_ENABLED): Animals, then Visitors. */
+  readonly also?: readonly ManualSection[];
 }
 
 /**
@@ -457,12 +460,41 @@ export function mayDescribeSection(text: string): boolean {
   return !OWN_BOX.test(text);
 }
 
+/**
+ * POLICY_SPECIFIC_TOPICS_ENABLED: the incident the manager's words name — no
+ * wet floor sign, a long break, a social media post, sexual comments, a pet,
+ * theft, a shortage, insubordination, talking badly about coworkers — is the
+ * section of the pinned manual `specific-policy-topics.ts` finds for it, and
+ * not the model's catch-all. Nothing else must decide the policy first: a
+ * policy the manager named wins, and so do attendance, a late opening and
+ * dress code. Cleaning left undone (`cleaningSection`) leads when both read
+ * an account, and this section is offered beside it in `also`. Off,
+ * `specificTopicSection` reads nothing and this returns null.
+ */
+function specificSection(text: string, chunks: readonly ManualChunk[] | null): NamedManualSection | null {
+  if (!chunks || chunks.length === 0) return null;
+  const found = specificTopicSection({ text, chunks });
+  if (!found || !mayDescribeSection(text)) return null;
+  return { phrase: found.phrase, section: found.section, offenseKey: found.offenseKey, also: found.also };
+}
+
 export function describedManualSection(input: {
   readonly text: string;
   readonly chunks: readonly ManualChunk[] | null;
 }): NamedManualSection | null {
-  const cleaning = input.chunks && input.chunks.length > 0 ? cleaningSection(input.text ?? "", input.chunks) : null;
-  if (cleaning) return cleaning;
+  const chunks = input.chunks && input.chunks.length > 0 ? input.chunks : null;
+  const cleaning = chunks ? cleaningSection(input.text ?? "", chunks) : null;
+  const specific = specificSection(input.text ?? "", input.chunks);
+  /*
+   * Two incidents in one account: cleaning leads, and the other is offered
+   * beside it, never dropped (the same order as the sibling app).
+   */
+  if (cleaning) {
+    return specific && specific.section.heading !== cleaning.section.heading
+      ? { ...cleaning, also: [specific.section, ...(specific.also ?? [])] }
+      : cleaning;
+  }
+  if (specific) return specific;
   const found = describedHeadings(input);
   if (!found || found.size !== 1) return null;
   const [heading, phrase] = [...found.entries()][0]!;
@@ -474,7 +506,8 @@ export function describedManualSection(input: {
  * duties weren't done", "left the beds dirty") is the manual's Care and
  * Cleaning of Equipment and Facilities section, found by its own heading on
  * the pinned manual, and only where exactly one heading answers. Nothing
- * else must decide the policy first: a policy the manager named wins.
+ * else must decide the policy first: a policy the manager named wins. It runs
+ * before `specificSection`; a second incident that reads is offered in `also`.
  * Off (`cleaningIncidentPhrase` reads nothing), this returns null.
  */
 /** "she was not late, but she left the counters dirty": a lateness the manager denies decides nothing here. */
