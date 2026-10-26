@@ -134,6 +134,7 @@ import { earlierAnsweredTurn, isReformatTurn, keepEarlierSources } from "./refor
 import { slotOnlyRetrievalTopic } from "./slot-only-turn";
 import { appPasswordHelpFor } from "./app-password-help";
 import { redactSensitiveDefaults, withoutSensitiveDefaults } from "./sensitive-defaults";
+import { ownSystemsNote, withoutDisownedSystems } from "./own-systems";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
 import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
@@ -944,11 +945,17 @@ async function answerQuestionCore(
    * in the cached manual, so the prefix and its cache key stay the same.
    */
   const readingNotes = manualNegatedListNoteEnabled();
-  const groundingParts = [
+  const knowledgeParts = [
     useManual && manualPlan ? fullManualGroundingNote(manualPlan) : buildGroundingBlock(withoutSensitiveChunks(grounding)),
     supplementalText,
     useManual ? null : pinnedPolicy,
-  ]
+  ];
+  // OWN_SYSTEMS_FACT_ENABLED: one line saying the company uses the system a manual brand list names beside another brand.
+  const ownSystems = ownSystemsNote(
+    request.question,
+    [...knowledgeParts, useManual ? manualPlan?.cachedBlock : null, ...grounding.map((chunk) => chunk.content)].join("\n"),
+  );
+  const groundingParts = [...knowledgeParts, ownSystems]
     .filter((part) => part && part.length > 0)
     .join("\n\n");
   const groundingText = readingNotes
@@ -1003,7 +1010,7 @@ async function answerQuestionCore(
        * Ordinary retrieval is the same path the flag-off turn already uses.
        */
       fellBack = true;
-      const fallbackParts = [buildGroundingBlock(withoutSensitiveChunks(retrievalChunks)), pinnedPolicy]
+      const fallbackParts = [buildGroundingBlock(withoutSensitiveChunks(retrievalChunks)), pinnedPolicy, ownSystems]
         .filter((part) => part && part.length > 0)
         .join("\n\n");
       const fallbackGrounding = [readingNotes ? withManualReadingNotes(fallbackParts) : fallbackParts, dataAddition.help]
@@ -1115,6 +1122,7 @@ async function answerQuestionCore(
     history: request.history,
     attachedDocumentIds: request.attachedDocumentIds,
   }).content;
+  content = withoutDisownedSystems(content);
   return {
     content,
     formSelection: suggested?.selection,
