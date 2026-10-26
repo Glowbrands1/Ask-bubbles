@@ -83,7 +83,7 @@ const EXPECTED: { name: string; incidents: string[]; cites: string[]; box?: stri
   },
   {
     name: "a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29",
-    incidents: ["brought her puppy in", "brought her pupy to work", "she brought her dog into the salon", "had her dog at work all day", "brought a pet in"],
+    incidents: ["brought her puppy in", "brought her pupy to work", "she brought her dog into the store", "had her dog at work all day", "brought a pet in"],
     cites: ["Animals in the Workplace p.30", "Visitors in the Workplace p.29"],
   },
   {
@@ -320,7 +320,7 @@ const DENIALS = [
   "she did not walk off the job",
   "the drawer was not short",
   "she did not bring her dog",
-  "no dog was in the salon",
+  "no dog was in the store",
   "no sexual comments were made",
   "she never took an hour lunch",
   "she did not post on tiktok",
