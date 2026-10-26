@@ -5,7 +5,7 @@ import { accountManualSections } from "@/lib/ai/account-manual-sections";
 import { citedSections } from "@/lib/ai/violation-policy";
 import { manualChunkFromRow, type ManualChunkRow } from "@/lib/knowledge/full-manual-load";
 
-import { caPolicyProposalLine, readCaPolicy } from "./ca-policy";
+import { caPolicyProposalLine, cleaningIncidentPhrase, readCaPolicy } from "./ca-policy";
 import { describedManualSection } from "./named-policy-section";
 import type { ManualChunk } from "./official-policy-manual";
 
@@ -162,5 +162,43 @@ describe("flag on: the sanitize wording and its misspellings", () => {
   it.each(["she sanatized every station before close", "Santa's helper costume is not dress code"])("%s is not cleaning left undone", (text) => {
     on();
     expect(cited(text)).not.toContain(`${CARE} p.21`);
+  });
+});
+
+/* QA-6, 26 Oct 2026 (names invented): negated and opposite wording is not cleaning left undone. */
+describe("flag on: a negation undoes the incident", () => {
+  const registers = (text: string) => [text, sentence(text), text.toUpperCase()];
+  it.each(
+    [
+      "she never left the counters dirty",
+      "the counters were not left dirty",
+      "no dirty counters",
+      "no one left the counters dirty",
+      "she cleaned the counters, not left them dirty",
+      "she did not fail to clean the counters",
+      "it is not about cleaning, she was late",
+      "not cleaning, attendance",
+      "she is not responsible for cleaning",
+      "cleaning duties were done",
+      "cleaned the counters before close",
+      "Rowan Pell did the cleaning, Avery Holt did not",
+    ].flatMap(registers),
+  )("%s reads no cleaning incident", (text) => {
+    on();
+    expect(cleaningIncidentPhrase(text)).toBeNull();
+  });
+
+  it.each(
+    [
+      "cleaning duties werent done",
+      "left the counters dirty",
+      "didnt sanitize the counters",
+      "the counters were not cleaned",
+      "she never cleaned the work tables",
+      "Rowan Pell cleaned, Avery Holt left the counters dirty",
+    ].flatMap(registers),
+  )("%s still reads the incident", (text) => {
+    on();
+    expect(cleaningIncidentPhrase(text)).not.toBeNull();
   });
 });
