@@ -1,3 +1,4 @@
+import { policyWarningNotSectionEnabled } from "@/lib/config/chat-quality-flags";
 import { describedAttendanceKeys, readCaPolicy, statedOffenseKeys } from "@/lib/forms/ca-policy";
 import { describedManualSection, namedManualSection } from "@/lib/forms/named-policy-section";
 import {
@@ -58,7 +59,8 @@ export function accountManualSections(
     }
   }
 
-  return found;
+  // POLICY_WARNING_NOT_SECTION_ENABLED: the retirement "Warning" sheet is not a policy a turn names.
+  return policyWarningNotSectionEnabled() ? found.filter((section) => headingKey(section.heading) !== "warning") : found;
 }
 
 /** A heading printed on a chunk whose sheet has no usable page. Page 0 means "omit the page". */

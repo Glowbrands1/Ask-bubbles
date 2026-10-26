@@ -816,3 +816,10 @@ happened; "X instead of Y" names X; a prior action's date ("jba manual
 revision. Not ported: the Follow-up line rule (this card has none) and the
 card salon edit (the store edit is its own fix here). No salon wording was
 copied. Test: `src/app/api/chat/edits-dates-replay-e2e.test.ts`.
+
+**POLICY_WARNING_NOT_SECTION_ENABLED (Code 3, QA item 7, 25 Oct 2026). Bubbles-only:
+Ask Sunny already ships this unflagged.** "Verbal warning" named the retirement
+"Warning" sheet, and the card cited Warning p.36. Flag on, a turn never names
+that sheet (`headingsNamedIn`), and `accountManualSections` drops it, as Ask
+Sunny's `NOT_A_SECTION` and `citedPolicies` already do. Test:
+`src/lib/forms/policy-warning-not-section-oct25.test.ts`.

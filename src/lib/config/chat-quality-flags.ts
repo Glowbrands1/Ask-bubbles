@@ -733,6 +733,17 @@ export function terseSlotReadEnabled(): boolean {
   return envFlag("TERSE_SLOT_READ_ENABLED");
 }
 
+/**
+ * The retirement "Warning" sheet is never a policy a turn names (Code 3,
+ * policy reading; QA item 7, 25 Oct 2026, ported from the sibling app, which
+ * ships it unflagged). "Verbal warning" names a level on the form, and citing
+ * that sheet turned it into Warning p.36. Off, the sections are read exactly
+ * as before.
+ */
+export function policyWarningNotSectionEnabled(): boolean {
+  return envFlag("POLICY_WARNING_NOT_SECTION_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -802,4 +813,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "POLICY_WARNING_NOT_SECTION_ENABLED",
 ] as const;

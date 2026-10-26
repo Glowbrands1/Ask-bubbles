@@ -1,3 +1,5 @@
+import { policyWarningNotSectionEnabled } from "@/lib/config/chat-quality-flags";
+
 import { readCaPolicy, statedOffenseKeys } from "./ca-policy";
 import { manualSectionNamedBy } from "./named-policy-section";
 import {
@@ -121,6 +123,8 @@ export function headingsNamedIn(text: string, headings: readonly string[]): stri
   const matched = headings.filter((heading) => {
     const key = headingKey(heading);
     if (key.length < SHORTEST_HEADING || NOT_A_SECTION.has(key)) return false;
+    // POLICY_WARNING_NOT_SECTION_ENABLED: "verbal warning" is a level on the form, not the retirement Warning sheet (p.36).
+    if (policyWarningNotSectionEnabled() && key === "warning") return false;
     return said.includes(` ${key} `);
   });
   const keys = matched.map(headingKey);
