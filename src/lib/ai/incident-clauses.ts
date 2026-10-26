@@ -144,16 +144,27 @@ export function isStateSentence(text: string): boolean {
 const GLUED_STATE = /\s+It happened (?:at|on) [^.,;]{1,40}\.?$/;
 
 /**
+ * "she skipped a tour today, it happened at kearney ne and she did not clock
+ * out": the place sentence between two acts goes, both acts stay (QA-7).
+ */
+const PLACE_AND_ACT = /,\s*it happened (?:at|on|in) [^,.;]{1,40}? and\s+(?:(?:she|he|they)\s+)?/i;
+
+/**
  * A command to the app fills a field; it is never what happened (QA, 26 Oct
  * 2026, flags on and off): "no deduct", "yes payroll deduct", "date 10/14",
  * "date is", "change it to written", "verbal", "store is …".
  */
+/** "don't", "do not", "actually", "not", "never" in front of a command: still the command (QA-7, 26 Oct 2026). */
+const COMMAND_HEDGE = String.raw`(?:(?:actually|no|ok(?:ay)?|and|also)[,\s]+)*(?:(?:please\s+)?(?:don['’]?t|do\s+not|not|never)\s+)?`;
+const LEVEL = String.raw`(?:verbal|written|final)(?:\s+(?:warning|ca|c\/a))?`;
+
 const SLOT_COMMAND: readonly RegExp[] = [
-  /^(?:(?:yes|no)\s+)?(?:payroll\s+)?(?:deduct(?:ion|ed)?|no\s+payroll)(?:\s+(?:applies|n\/?a|not\s+applicable|\$?\d+(?:\.\d{2})?))?$/i,
-  /^(?:the\s+)?date(?:\s+(?:is|=|:|should\s+be))?(?:\s+(?:\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?|today|yesterday))?$/i,
-  /^(?:please\s+)?(?:change|make|switch|set)\s+(?:it|this|that|the\s+(?:level|warning|form))\s+to\b/i,
-  /^(?:(?:a|it'?s|its|make\s+it)\s+)?(?:verbal|written|final)(?:\s+(?:warning|ca|c\/a))?$/i,
-  /^(?:the\s+)?(?:salon|store|location)\s+(?:is|=|:)\s+/i,
+  new RegExp(String.raw`^${COMMAND_HEDGE}(?:(?:yes|no)\s+)?(?:payroll\s+)?(?:deduct(?:ion|ed)?|no\s+payroll)(?:\s+(?:applies|n\/?a|not\s+applicable|\$?\d+(?:\.\d{2})?))?$`, "i"),
+  new RegExp(String.raw`^${COMMAND_HEDGE}(?:the\s+)?date(?:\s+(?:is|=|:|should\s+be))?(?:\s+(?:\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?|today|yesterday))?$`, "i"),
+  new RegExp(String.raw`^${COMMAND_HEDGE}(?:change|make|switch|set)\s+(?:it|this|that|the\s+(?:level|warning|form))\s+to\b`, "i"),
+  // "verbal", "not verbal", "never written", "verbal not written", "she was not verbal".
+  new RegExp(String.raw`^${COMMAND_HEDGE}(?:(?:a|it'?s|its|make\s+it|(?:she|he|they)\s+(?:was|is|were|are)(?:\s+not)?)\s+)?${LEVEL}(?:,?\s+not\s+${LEVEL})?$`, "i"),
+  /^(?:the\s+)?(?:store|location)\s+(?:is|=|:)\s+/i,
 ];
 
 export function isSlotCommand(text: string): boolean {
@@ -224,7 +235,7 @@ function incidentOnlyLine(
     if (read.split && (isStateSentence(sentence) || isPolicyInstruction(unlabelled) || isPolicyText(unlabelled))) continue;
     // INCIDENT_COMMAND_WORDS_ENABLED: "no deduct", "date 10/14", "change it to written" fill a field.
     if (read.commands && isSlotCommand(sentence)) continue;
-    const body = read.commands ? sentence.replace(GLUED_STATE, "") : sentence;
+    const body = read.commands ? sentence.replace(GLUED_STATE, "").replace(PLACE_AND_ACT, " and ") : sentence;
     let clauses = read.split ? incidentClauses(body) : body.split(",").map((clause) => clause.trim()).filter(Boolean);
     if (read.split) {
       clauses = clauses

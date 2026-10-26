@@ -135,6 +135,32 @@ for (const both of [false, true]) describe(`INCIDENT_COMMAND_WORDS_ENABLED on${b
     }
   });
 
+  it("a negated or hedged command is still a command, never the Issue (QA-7)", () => {
+    for (const later of [
+      "don't change it to written",
+      "Do not change it to written",
+      "actually no deduct",
+      "Actually no deduct",
+      "not verbal",
+      "never written",
+      "she was not verbal",
+      "She was not verbal",
+      "verbal not written",
+      "written, not verbal",
+      "VERBAL NOT WRITTEN",
+    ]) {
+      expect(remap(["create a ca for kira dunmore, she was late today", later].join("\n"), "kira dunmore"), later).toBe("late today");
+    }
+  });
+
+  if (both) {
+    it("a place sentence between two acts goes; both acts stay (QA-7)", () => {
+      for (const text of cased("create a ca for kira dunmore, she skipped a tour today, it happened at kearney ne and she did not clock out", ["kira dunmore"])) {
+        expect(remap(text, "kira dunmore")).toBe("skipped a tour today and did not clock out");
+      }
+    });
+  }
+
   it("words after a duration keep the manager's wording", () => {
     for (const text of ["Devon harlan, dodge ne, was on her phone 25 min customers waiting 9-29-26", "devon harlan, dodge ne, was on her phone 25 min customers waiting 9-29-26"]) {
       expect(remap(text, "devon harlan")).toBe("on her phone 25 min customers waiting");
