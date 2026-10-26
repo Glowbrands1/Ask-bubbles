@@ -362,7 +362,7 @@ describe("a new coaching form", () => {
   });
 
   /*
-   * Ported from Ask Sunny (QA T14): a blank Direct policy held Corrective
+   * Ported from the sibling app (QA T14): a blank Direct policy held Corrective
    * Action finalize. With POLICY_GATE_NONBLOCKING_ENABLED on, a blank policy
    * field stays blank and is not an unresolved item.
    */

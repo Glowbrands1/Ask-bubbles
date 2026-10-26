@@ -1257,7 +1257,7 @@ describe("P4. finalizing freezes the version the SERVER holds", () => {
   });
 
   /*
-   * Ported from Ask Sunny (QA T14): a blank Direct policy opened the policy
+   * Ported from the sibling app (QA T14): a blank Direct policy opened the policy
    * acknowledgement instead of the finalize confirmation. With the
    * browser's NEXT_PUBLIC_POLICY_GATE_NONBLOCKING_ENABLED on, a blank policy
    * field is not an unresolved item.
