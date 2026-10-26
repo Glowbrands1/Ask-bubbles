@@ -48,6 +48,7 @@ import { deliverFormProposal } from "./grounded-turn";
 import { withTerseSlots } from "./terse-slots";
 import { withBareAnswerBinding } from "./bare-answer-guard";
 import { withManagerFormChoice } from "./manager-form-choice";
+import { withStoreAliases } from "./store-alias";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";

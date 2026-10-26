@@ -755,6 +755,16 @@ export function managerFormChoiceEnabled(): boolean {
   return envFlag("MANAGER_FORM_CHOICE_ENABLED");
 }
 
+/**
+ * The way managers name a store ("dodge ne", "dodge, ne", "kearney ne") is
+ * written as the roster name before any reader sees the turn; the aliases are
+ * built from the store list (25 Oct 2026, ported from the sibling app). See
+ * `ai/store-alias.ts`. Off, every turn is read as typed.
+ */
+export function storeAliasEnabled(): boolean {
+  return envFlag("STORE_ALIAS_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -826,4 +836,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TERSE_SLOT_READ_ENABLED",
   "BARE_ANSWER_BINDING_ENABLED",
   "MANAGER_FORM_CHOICE_ENABLED",
+  "STORE_ALIAS_ENABLED",
 ] as const;
