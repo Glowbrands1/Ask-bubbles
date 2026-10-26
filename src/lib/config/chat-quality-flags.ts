@@ -786,6 +786,16 @@ export function appPasswordHelpEnabled(): boolean {
   return envFlag("APP_PASSWORD_HELP_ENABLED");
 }
 
+/**
+ * With TERSE_SLOT_READ on, only a command line "<form word> <name> …" is
+ * written out as the long form; "<form word> for <name> …" and any line that
+ * talks in sentences are read as typed (QA, 26 Oct 2026; ported from the
+ * sibling app). See `ai/terse-slots.ts`. Off, TERSE_SLOT_READ reads as before.
+ */
+export function terseCommandOnlyEnabled(): boolean {
+  return envFlag("TERSE_COMMAND_ONLY_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -859,4 +869,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TERSE_SLOT_READ_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
+  "TERSE_COMMAND_ONLY_ENABLED",
 ] as const;
