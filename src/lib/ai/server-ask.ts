@@ -46,6 +46,7 @@ import { loadChatDataBlock } from "./chat-data-tools";
 import { loadGoogleReviewsChatBlock } from "./google-reviews-chat-read";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
+import { withEditInstructionRead } from "./edit-instruction-read";
 import { withTerseSlots } from "./terse-slots";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
@@ -210,7 +211,8 @@ async function answerQuestionTraced(
   memory: { memoryOwnerId?: string },
 ): Promise<AskResponse> {
   // TERSE_SLOT_READ_ENABLED: a terse "ca …" line is read as the long form.
-  const read = withTerseSlots(request);
+  // EDIT_INSTRUCTION_REPLACES_ENABLED: "Change Observation of Offense to: …" is never read as a name.
+  const read = withEditInstructionRead(withTerseSlots(request));
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,

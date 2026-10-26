@@ -16,6 +16,7 @@ import {
   priorActionsParseEnabled,
   keepFormEmployeeEnabled,
   formEditDateRulesEnabled,
+  editInstructionReplacesEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
 import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
@@ -300,6 +301,12 @@ export function groundFormSlots(input: {
       reread: (account) =>
         fixed ? requestIncident({ text: account, employeeName, slotClause: incidentSlot }) : statedIncident(account, employeeName, managerOnly),
     });
+  } else if (editInstructionReplacesEnabled()) {
+    // EDIT_INSTRUCTION_REPLACES_ENABLED: the What happened half alone — an edit replaces, adds to, or never becomes it.
+    const said = users.map(managerWords).filter((turn) => turn.trim());
+    const reread = (account: string) =>
+      fixed ? requestIncident({ text: account, employeeName, slotClause: incidentSlot }) : statedIncident(account, employeeName, managerOnly);
+    slots = { ...slots, observation: remapObservation({ users: said, current: slots.observation, reread }) };
   }
   const sections =
     fixed && input.manual
@@ -334,7 +341,7 @@ export function groundFormSlots(input: {
       : null,
   );
   // FORM_EDIT_DATE_RULES_ENABLED: the reply says what an edit did.
-  const editLine = formEditDateRulesEnabled() ? remapEditLine(managerWords(input.question)) : null;
+  const editLine = formEditDateRulesEnabled() || editInstructionReplacesEnabled() ? remapEditLine(managerWords(input.question)) : null;
   const response: AskResponse = {
     content: editLine ? `${content}\n\n${editLine}` : content,
     citations: fixed && input.manual ? remapCitations(input.manual, sections) : [],
