@@ -128,7 +128,7 @@ const SHORTEST_HEADING = 4;
  * is never named by a turn. A pasted Late Opening paragraph says "guidelines",
  * and the card gained Guidelines p.22, a social-media postings section the
  * manager never named (QA F1/M3, 25 Oct 2026). A one-word heading said only
- * as part of a job title ("tanning consultant") is not named either.
+ * as part of a job title ("orientation lead") is not named either.
  */
 const EVERYDAY_HEADINGS = new Set(["guidelines", "procedures", "overview", "requirements", "expectations"]);
 const JOB_WORD = /^(?:consultants?|associates?|specialists?|managers?|directors?|leads?|supervisors?|team members?)\b/;
