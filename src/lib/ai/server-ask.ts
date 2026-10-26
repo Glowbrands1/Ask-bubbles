@@ -132,6 +132,7 @@ import {
 import { retrievalPlanFor } from "./retrieval-query";
 import { earlierAnsweredTurn, isReformatTurn, keepEarlierSources } from "./reformat-turn";
 import { slotOnlyRetrievalTopic } from "./slot-only-turn";
+import { carriedPolicyTopic } from "./policy-carry-retrieval";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
 import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
@@ -640,7 +641,9 @@ async function answerQuestionCore(
    * own words, which found recipe and event pages (conv_mvnljjl32xlit48).
    * See `slot-only-turn.ts`.
    */
-  const slotTopic = slotOnlyRetrievalTopic(request.question, request.history);
+  // POLICY_CARRY_RETRIEVAL_ENABLED: "just make it" is searched with the policy named earlier (conv_mvofuq3l2jae1be).
+  const slotTopic =
+    slotOnlyRetrievalTopic(request.question, request.history) ?? carriedPolicyTopic(request.question, request.history);
   const rewrittenQuestion = slotTopic
     ? slotTopic
     : queryRewriteEnabled()

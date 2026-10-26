@@ -733,6 +733,18 @@ export function terseSlotReadEnabled(): boolean {
   return envFlag("TERSE_SLOT_READ_ENABLED");
 }
 
+/**
+ * A go-ahead turn ("just make it", "create it", "yes") is searched with the
+ * policy the manager named earlier, not its own words (Code 3, policy
+ * reading; QA item 10, conv_mvofuq3l2jae1be, 25 Oct 2026; same flag as the
+ * sibling app). "Just make it" found soap production recipes, and the reply
+ * denied the Animals in the Workplace policy it had cited two turns before.
+ * Off, the turn is searched as before.
+ */
+export function policyCarryRetrievalEnabled(): boolean {
+  return envFlag("POLICY_CARRY_RETRIEVAL_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -802,4 +814,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "POLICY_CARRY_RETRIEVAL_ENABLED",
 ] as const;
