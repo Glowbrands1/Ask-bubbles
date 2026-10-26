@@ -754,6 +754,16 @@ export function reopenVerbGuardEnabled(): boolean {
 }
 
 /**
+ * "Policy: …, as you said" only for a policy the manager named (D4, QA, 25
+ * Oct 2026). The app's own "Policy reference: …, JBA Policy Manual." line,
+ * which the form state writes ahead of the turn, is not the manager's words.
+ * Off, the policy is read as before.
+ */
+export function policyAsYouSaidManagerOnlyEnabled(): boolean {
+  return envFlag("POLICY_AS_YOU_SAID_MANAGER_ONLY_ENABLED");
+}
+
+/**
  * A terse "ca <name> <store> <what happened> <date> verbal" line is written
  * out as the long form before it is read, so the name, store, date, warning
  * level and payroll amount are read as from a full sentence, and the card
@@ -892,6 +902,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REMAP_DRAFT_SOURCES_ENABLED",
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
+  "POLICY_AS_YOU_SAID_MANAGER_ONLY_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
   "EXIT_PROSE_FACTS_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
