@@ -833,3 +833,10 @@ a Corrective Action, "yes", "$25" and Create draft already keep the incident
 turn and the observation with the flag off; the live blank draft
 (conv_mvp2eerf23op5u7) was not reproduced by this replay. Test:
 `src/app/api/chat/stored-slots-not-a-request-e2e.test.ts`.
+
+- 26 Oct 2026, POSITION_ANSWER_GUARD_ENABLED (Bubbles only): with the
+  position (job title) question open, a warning-level or payroll answer
+  ("verbal", "This is a verbal", "Payroll deduct is not applicable") was saved
+  as the Job Title. Not ported: the sibling app has no position question
+  (`employee-position.ts` does not exist there). Test:
+  `src/app/api/chat/position-answer-guard-e2e.test.ts`.

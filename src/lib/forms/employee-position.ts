@@ -1,3 +1,5 @@
+import { positionAnswerGuardEnabled } from "@/lib/config/chat-quality-flags";
+
 /**
  * ============================================================================
  * THE EMPLOYEE'S POSITION: FROM WOVEN, FROM THE MANAGER, OR ASKED — NEVER GUESSED
@@ -46,6 +48,15 @@ const NOT_A_POSITION = new Set([
   "not sure", "i don't know", "dont know", "don't know",
 ]);
 
+/*
+ * POSITION_ANSWER_GUARD_ENABLED (QA, 26 Oct 2026, three tester drafts): with
+ * the position question open, a reply to the warning-level or payroll question
+ * — "This is a verbal", "Written", "Verbal", "verbal warning", "no payroll
+ * deduct", "$25" — was saved as the Job Title. Such a reply is not a position.
+ */
+const ANSWERS_ANOTHER_QUESTION =
+  /^(?:(?:it|this|that)(?:['’]s|\s+is|\s+will\s+be|\s+should\s+be)\s+)?(?:an?\s+)?(?:(?:verbal|written|final)(?:\s+(?:written\s+)?(?:warning|ca|corrective\s+action))?|(?:yes|no)?[\s,]*(?:payroll|pay\s*roll|payrol)\b.*|\$\s?\d+(?:\.\d{2})?)[.!\s]*$/i;
+
 function titleCase(phrase: string): string {
   return phrase
     .split(/\s+/)
@@ -69,6 +80,8 @@ export function readPositionAnswer(reply: string): string | null {
   }
   text = text.trim();
   if (text === "" || NOT_A_POSITION.has(text.toLowerCase())) return null;
+  // POSITION_ANSWER_GUARD_ENABLED: "This is a verbal", "Written", "no payroll deduct" answer other questions.
+  if (positionAnswerGuardEnabled() && ANSWERS_ANOTHER_QUESTION.test(String(reply).trim())) return null;
   const words = text.split(/\s+/);
   if (words.length > 5 || !/^[A-Za-z][A-Za-z&/'’.\- ]*$/.test(text)) return null;
   return titleCase(text);
