@@ -840,3 +840,7 @@ turn and the observation with the flag off; the live blank draft
   as the Job Title. Not ported: the sibling app has no position question
   (`employee-position.ts` does not exist there). Test:
   `src/app/api/chat/position-answer-guard-e2e.test.ts`.
+
+## 26 Oct 2026: Animals in the Workplace widening — declined by Pau, 26 Oct 2026
+
+The live animals rule (POLICY_SPECIFIC_TOPICS_ENABLED) misses "came into the store … her new puppy." (LS-B11). Widening it and reading "cite <policy>" onto the form were scoped and declined by Pau, 26 Oct 2026. Not built in either app.

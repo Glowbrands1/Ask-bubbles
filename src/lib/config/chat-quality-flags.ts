@@ -952,6 +952,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PAYROLL_TYPO_NOT_A_NAME_ENABLED",
   "POSITION_ANSWER_GUARD_ENABLED",
   "PRIOR_ROW_NOT_ON_INCIDENT_DATE_ENABLED",
+  "NOT_DEDUCTIBLE_READ_ENABLED",
 ] as const;
 
 /**
@@ -1072,6 +1073,17 @@ export function dateAnswerAppliedEnabled(): boolean {
  */
 export function requestLineAccountEnabled(): boolean {
   return envFlag("REQUEST_LINE_ACCOUNT_ENABLED");
+}
+
+/**
+ * "not payroll deductible" is a No (a manager in the sibling app, 26 Oct 2026;
+ * same flag in both apps): it was not read, and "Is payroll deduct
+ * applicable?" was asked on every turn. The reader
+ * (`forms/payroll-deduct-answer.ts`, which imports nothing) reads the same
+ * variable itself. Off, as before.
+ */
+export function notDeductibleReadEnabled(): boolean {
+  return envFlag("NOT_DEDUCTIBLE_READ_ENABLED");
 }
 
 /**
