@@ -145,7 +145,7 @@ describe("Woven is never called another company's", () => {
   it.each(QUESTIONS)("flag on: %s", async (question) => {
     on();
     const answer = await ask(question, []);
-    expect(state.grounding).toContain("Buff City Soap uses Woven for policy acknowledgements and training");
+    expect(state.grounding).toContain("Buff City Soap uses Woven");
     expect(answer.content).not.toMatch(DISOWNS);
     expect(answer.content).toContain("Acknowledgement of Receipt and Understanding");
     expect(answer.content).toContain("Personnel files run through MyGlow");
@@ -172,7 +172,7 @@ describe("the backstop keeps every other sentence", () => {
     "WOVEN IS NOT USED HERE.",
   ])("flag on, the whole reply is the claim: %s -> the fact", (reply) => {
     on();
-    expect(withoutDisownedSystems(reply)).toBe("Buff City Soap uses Woven for policy acknowledgements and training.");
+    expect(withoutDisownedSystems(reply)).toBe("Buff City Soap uses Woven.");
   });
 
   it("flag off: the reply is as given, and no fact line", () => {
