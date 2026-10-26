@@ -13,8 +13,8 @@ import type { AskRequest } from "./types";
  * Before any reader sees a manager turn, "CA" is written as "California"
  * where it is a state: before a ZIP code ("Los Angeles CA 90001"), or after a
  * California city, with or without a comma, in any case ("Sacramento, CA",
- * "sacramento, ca", "Los Angeles CA"). After a person, a salon or a topic
- * ("Rowan Pell, CA", "at Lawrence CA", "Coaching, CA") it stays the form. "ca" as a form ("ca", "ca for …",
+ * "sacramento, ca", "Los Angeles CA"). After a person, a store or a topic
+ * ("Rowan Pell, CA", "at Kearney CA", "Coaching, CA") it stays the form. "ca" as a form ("ca", "ca for …",
  * "write up ca", "create a ca", "verbal ca …") is never changed. Off, every
  * turn is read as typed.
  *
@@ -42,7 +42,7 @@ export function withStateNames(request: AskRequest): AskRequest {
 /**
  * California's cities, the evidence that "CA" after a word is the state (QA-4
  * and QA-6, 26 Oct 2026: "Avery Stone CA", "Rowan Pell, CA", "avery, ca", "at
- * Lawrence CA", "Coaching, CA" are the form after a person, a salon or a
+ * Kearney CA", "Coaching, CA" are the form after a person, a store or a
  * topic, and capitals or a comma cannot tell them from "Sacramento, CA").
  * Geography, the same in both apps.
  */

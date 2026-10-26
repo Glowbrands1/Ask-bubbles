@@ -54,7 +54,7 @@ describe("STATE_CA_GUARD_ENABLED on", () => {
 });
 
 /**
- * QA-4 and QA-6, 26 Oct 2026: "CA" after a person, a salon or a topic is the
+ * QA-4 and QA-6, 26 Oct 2026: "CA" after a person, a store or a topic is the
  * form. Names invented.
  */
 describe("STATE_CA_GUARD_ENABLED on: CA after a name stays the form", () => {
@@ -65,7 +65,7 @@ describe("STATE_CA_GUARD_ENABLED on: CA after a name stays the form", () => {
     "Make Avery Stone CA",
     "Avery Stone, CA",
     "avery, ca",
-    "at Lawrence CA",
+    "at Kearney CA",
     "Rowan Pell CA",
     "Test Employee CA",
     "Rowan Pell, CA",
@@ -85,4 +85,17 @@ describe("STATE_CA_GUARD_ENABLED on: CA after a name stays the form", () => {
       else expect(out).toMatch(/California/);
     },
   );
+});
+
+/**
+ * Known gap, accepted by the coordinator (26 Oct 2026): a word that is both a
+ * California city and a name, before "CA" ("Avery Davis CA", "Orange CA",
+ * "richmond ca"), is read as the state, so the form is lost. Pinned as it is
+ * today; the flag stays off in production until these are run live.
+ */
+describe("STATE_CA_GUARD_ENABLED on: known gap, a city that is also a name", () => {
+  it.each(["Avery Davis CA", "Orange CA", "richmond ca"])("'%s' is read as the state today", (turn) => {
+    process.env[FLAG] = "on";
+    expect(statesSpelledOut(turn)).toMatch(/California$/);
+  });
 });
