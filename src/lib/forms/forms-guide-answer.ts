@@ -45,9 +45,18 @@ export function summaryToGuideTemplate(summary: TemplateSummary): GuideTemplate 
   };
 }
 
-/** This app's bundled templates, in display order. */
+/** This app's bundled templates, in display order, less the hidden and retired ones. */
 export function seedTemplates(): GuideTemplate[] {
-  return TEMPLATE_SEEDS.filter((seed) => !isHiddenTemplate(seed.key) && !RETIRED_TEMPLATE_KEYS.includes(seed.key))
+  return bundled((key) => !isHiddenTemplate(key) && !RETIRED_TEMPLATE_KEYS.includes(key));
+}
+
+/** The bundled templates this deployment hides — named only to say they are not available. */
+export function withheldTemplates(): GuideTemplate[] {
+  return bundled((key) => isHiddenTemplate(key));
+}
+
+function bundled(keep: (key: string) => boolean): GuideTemplate[] {
+  return TEMPLATE_SEEDS.filter((seed) => keep(seed.key))
     .sort((a, b) => a.displayOrder - b.displayOrder)
     .map((seed) => ({
       key: seed.key,
@@ -96,6 +105,7 @@ export async function answerFormsGuide(input: {
     templates: await guideTemplates(),
     access: guideAccess(input.role),
     productName: ACTIVE_BRAND.productName,
+    withheld: withheldTemplates(),
   });
   if (!content) return null;
   return { content, citations: [], coverage: "not_applicable" };

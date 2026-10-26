@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildFormsGuideAnswer, readFormsGuideQuestion, type GuideTemplate } from "./forms-guide";
-import { guideAccess, seedTemplates } from "./forms-guide-answer";
+import { guideAccess, seedTemplates, withheldTemplates } from "./forms-guide-answer";
 import type { Role } from "@/types";
 
 /**
@@ -23,13 +23,26 @@ import type { Role } from "@/types";
  * mechanism, this app's own templates, roles and labels.
  */
 
+/* Hidden-aware, exactly as the guide reads them: config/company/forms/hidden.ts decides both. */
 const TEMPLATES = seedTemplates();
+const WITHHELD = withheldTemplates();
 
-function answer(question: string, role: Role | null, templates: readonly GuideTemplate[] = TEMPLATES) {
+function answer(
+  question: string,
+  role: Role | null,
+  templates: readonly GuideTemplate[] = TEMPLATES,
+  withheld: readonly GuideTemplate[] = WITHHELD,
+) {
   const reading = readFormsGuideQuestion(question);
   if (!reading) return null;
-  return buildFormsGuideAnswer<Role>({ reading, templates, access: guideAccess(role), productName: "Ask Bubbles" });
+  return buildFormsGuideAnswer<Role>({ reading, templates, withheld, access: guideAccess(role), productName: "Ask Bubbles" });
 }
+
+const isEpp = (entry: GuideTemplate) => entry.layoutFamily === "epp" || entry.layoutFamily === "dmit_epp";
+const ALL_BUNDLED = [...TEMPLATES, ...WITHHELD];
+/** The library as it reads with the EPP keys hidden, and with them shown — the answer must hold either way. */
+const EPP_HIDDEN = { templates: ALL_BUNDLED.filter((entry) => !isEpp(entry)), withheld: ALL_BUNDLED.filter(isEpp) };
+const EPP_SHOWN = { templates: ALL_BUNDLED.filter(isEpp).concat(TEMPLATES.filter((entry) => !isEpp(entry))), withheld: [] };
 
 function sentenceCase(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
@@ -82,12 +95,36 @@ describe("the managers' openers, as typed and in sentence case", () => {
     expect(text).toContain(`**Corrective Action Form** — ${CA.description}`);
   });
 
-  it.each(both("what is an epp"))("%s lists every EPP template", (wording) => {
+  it.each(both("what is an epp"))("%s follows hidden.ts: every EPP when shown, \"not available\" when hidden", (wording) => {
     const text = answer(wording, "district_manager")!;
-    const epps = TEMPLATES.filter((entry) => entry.layoutFamily === "epp" || entry.layoutFamily === "dmit_epp");
+    const epps = TEMPLATES.filter(isEpp);
+    if (epps.length > 0) {
+      expect(text).toContain(epps.length === 1 ? `**${epps[0].name}**` : `There are ${epps.length} EPP forms:`);
+      for (const epp of epps) expect(text).toContain(`**${epp.name}**`);
+    } else {
+      expect(text).toContain("The EPP isn't a form available in Ask Bubbles.");
+    }
+  });
+
+  it.each(both("what is an epp"))("%s with the EPP keys hidden: not available here, no form named", (wording) => {
+    const text = answer(wording, "district_manager", EPP_HIDDEN.templates, EPP_HIDDEN.withheld)!;
+    expect(text).toContain("The EPP isn't a form available in Ask Bubbles.");
+    expect(text).toContain('Ask "which forms can I create here?" to see the forms you can use.');
+    for (const epp of EPP_HIDDEN.withheld) expect(text).not.toContain(epp.name);
+    expect(text).not.toMatch(/tanning|sun tan|sunny/i);
+  });
+
+  it.each(both("what is an epp"))("%s with the EPP keys shown: every EPP template", (wording) => {
+    const text = answer(wording, "district_manager", EPP_SHOWN.templates, EPP_SHOWN.withheld)!;
+    const epps = EPP_SHOWN.templates.filter(isEpp);
     expect(epps.length).toBeGreaterThan(1);
     expect(text).toContain(`There are ${epps.length} EPP forms:`);
-    for (const epp of epps) expect(text).toContain(`**${epp.name}**`);
+  });
+
+  it("a hidden form in a comparison is said to be unavailable; the other is still explained", () => {
+    const text = answer("epp vs coaching", "district_manager", EPP_HIDDEN.templates, EPP_HIDDEN.withheld)!;
+    expect(text).toContain("The EPP isn't a form available in Ask Bubbles.");
+    expect(text).toContain("**Coaching Form** — ");
   });
 
   it.each(both("what is a policy review"))("%s explains the Policy Review", (wording) => {
@@ -176,22 +213,23 @@ describe("who can create it, per role", () => {
     expect(answer("which forms can i create here?", role)).toMatch(/^Your role \([^)]+\) can't create forms in Ask Bubbles\./);
   });
 
-  it("a Location Manager is told the EPPs are District Manager and above", () => {
-    const text = answer("what is an epp", "location_manager")!;
+  it("a Location Manager is told the EPPs are District Manager and above (when the EPPs are shown)", () => {
+    const text = answer("what is an epp", "location_manager", EPP_SHOWN.templates, EPP_SHOWN.withheld)!;
     expect(text).toContain("Who can create it: District Manager, Regional Manager, Admin, Owner.");
     expect(text).toContain("Your role (Location Manager) can't create this one; your District Manager can.");
   });
 
   it("hidden templates (config/company/forms/hidden.ts) are never listed", () => {
     const text = answer("Which forms can I create here?", "owner")!;
-    expect(text).not.toContain("Tanning Consultant Interview Form");
-    expect(text).not.toContain("Management Interview Form");
+    expect(WITHHELD.length).toBeGreaterThan(0);
+    for (const hidden of WITHHELD) expect(text).not.toContain(`- ${hidden.name}`);
   });
 
-  it("a District Manager's list includes the EPPs", () => {
+  it("a District Manager's list includes the EPPs exactly when hidden.ts shows them", () => {
     const text = answer("Which forms can I create here?", "district_manager")!;
-    expect(text).toContain("- SDIT EPP");
     expect(text).toContain("As a District Manager you can create these");
+    for (const epp of TEMPLATES.filter(isEpp)) expect(text).toContain(`- ${epp.name}`);
+    for (const epp of WITHHELD.filter(isEpp)) expect(text).not.toContain(`- ${epp.name}`);
   });
 });
 
