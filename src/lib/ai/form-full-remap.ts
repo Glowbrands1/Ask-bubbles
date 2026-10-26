@@ -14,6 +14,7 @@ import {
   remapIncidentFixEnabled,
   placeSpanGuardEnabled,
   priorActionsParseEnabled,
+  priorSentenceFixEnabled,
   keepFormEmployeeEnabled,
   formEditDateRulesEnabled,
   formDateIncidentOnlyEnabled,
@@ -22,7 +23,7 @@ import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
 import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
 import { asksOnlyAboutFormsOnFile } from "@/lib/forms/chat-form-records";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
-import { listIncidentDates, datesInText, datesInTextWithYearless } from "@/lib/forms/form-date-answer";
+import { listIncidentDates, datesInText, datesInTextWithYearless, managerDatesForDraft, priorStepDateOffsets } from "@/lib/forms/form-date-answer";
 import { incidentOnly } from "@/lib/forms/form-date-incident-only";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { lateOpenOn, mostRecent } from "@/lib/forms/late-open";
@@ -195,7 +196,9 @@ export function groundFormSlots(input: {
   const jobTitle = managerOnly ? managerTitle(titleTurns, raw.employeeName) : groundedTitle(titleTurns);
   const store =
     (placeSpanGuardEnabled() ? newestNamedStore(users) : null) ?? groundedStore(said) ?? (fixed ? placeStore(said) : null);
-  const incidentDateIso = groundedDate(said, input.today);
+  // PRIOR_SENTENCE_FIX_ENABLED: an earlier step's date ("i coached her on 10-16") never dates the form.
+  const sentenceFix = priorSentenceFixEnabled();
+  const incidentDateIso = groundedDate(sentenceFix ? withoutPriorStepDates(said, input.today) : said, input.today);
   /*
    * WARNING_LEVEL_MANAGER_ONLY_ENABLED (ported from the sibling app, 24 Oct 2026):
    * the latest level the manager states, with a bare "Yes" counted only after
@@ -235,7 +238,8 @@ export function groundFormSlots(input: {
         ? null
         : acceptSummary(raw.observation, scoped)) ??
       (managerOnly ? sentenceAboutThem({ text: scoped, employeeName, slotClause: incidentSlot }) : null))
-    : (statedIncident(said, employeeName, managerOnly) ?? acceptSummary(raw.observation, said));
+    : (statedIncident(sentenceFix ? withoutPriorClauses(said, input.today) : said, employeeName, managerOnly) ??
+      acceptSummary(raw.observation, said));
   // Both readers contribute, each behind its own flag: the "previous coaching: …"
   // list (REMAP_INCIDENT_FIX_ENABLED) and the intent path's step reader
   // (PRIOR_ACTIONS_PARSE_ENABLED). With both on, a list item whose date a
@@ -971,6 +975,51 @@ function groundedDate(text: string, today: string): string | null {
     ),
   ];
   return spoken.length === 1 ? spoken[0]! : null;
+}
+
+/*
+ * PRIOR_SENTENCE_FIX_ENABLED (QA, 26 Oct 2026; ported from the sibling app).
+ * "create a ca for … she was late to open on 10-5 and 10-15. i coached her on
+ * 10-16 about being late" was dated 10/16, the coaching, and "ca for …,
+ * coached her 10-16, written warning on 10-20" was dated 10/20 with "written
+ * warning" as What happened. With the flag on, each earlier step's date
+ * (`priorStepDateOffsets`) is blanked before the form's date is read, so the
+ * newest INCIDENT date dates the form (10/15 here, as LATE_OPEN_DATE_ENABLED's
+ * newest-date rule reads it); and a clause holding only earlier steps' dates
+ * is no incident.
+ */
+function withoutPriorStepDates(text: string, today: string): string {
+  const steps = new Set(priorStepDateOffsets(text, today, text));
+  if (steps.size === 0) return text;
+  let out = text;
+  for (const found of managerDatesForDraft(text, today)) {
+    if (steps.has(found.index)) out = out.slice(0, found.index) + " ".repeat(found.end - found.index) + out.slice(found.end);
+  }
+  return out;
+}
+
+const CLAUSE_END = /\.(?=\s|$)|(?<!\d)\.(?!\d)|[;!?\n]|,(?!\s*\d{4})/g;
+
+function withoutPriorClauses(text: string, today: string): string {
+  const steps = priorStepDateOffsets(text, today, text);
+  if (steps.length === 0) return text;
+  const stepSet = new Set(steps);
+  const ends = [...text.matchAll(CLAUSE_END)].map((match) => match.index ?? 0);
+  const dates = datesInTextWithYearless(text, today);
+  const cuts: [number, number][] = [];
+  for (const index of steps) {
+    const opening = ends.filter((at) => at < index).at(-1) ?? -1;
+    const closing = ends.find((at) => at > index) ?? text.length;
+    // A clause that also dates something that is not an earlier step stays whole.
+    if (dates.some((found) => found.index > opening && found.index < closing && !stepSet.has(found.index))) continue;
+    const comma = opening >= 0 && text[opening] === ",";
+    const from = comma ? opening : opening + 1;
+    const to = !comma && text[closing] === "," ? closing + 1 : closing;
+    if (!cuts.some(([start, end]) => start === from && end === to)) cuts.push([from, to]);
+  }
+  let out = text;
+  for (const [from, to] of [...cuts].sort((left, right) => right[0] - left[0])) out = out.slice(0, from) + out.slice(to);
+  return out;
 }
 
 /** "9/01" and "October 20". Not "yesterday" or "2 days ago". */

@@ -941,6 +941,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
   "NAME_BEFORE_TITLE_ENABLED",
+  "PRIOR_SENTENCE_FIX_ENABLED",
 ] as const;
 
 /**
@@ -964,4 +965,19 @@ export function incidentClauseSplitEnabled(): boolean {
  */
 export function stateCodeNotAPersonEnabled(): boolean {
   return envFlag("STATE_CODE_NOT_A_PERSON_ENABLED");
+}
+
+/**
+ * A coaching or prior step said as its own sentence on a Corrective Action
+ * (QA, 26 Oct 2026; ported from the sibling app, same flag in both apps):
+ * "i coached her on 10-16 about being late", "coached her 10-16, written
+ * warning on 10-20" are Prior actions rows, never the form's Date, and never
+ * What happened. The created draft keeps every date the manager typed, and a
+ * coaching sentence there carries the coaching's own date. See
+ * `heldStepSpans` in `forms/form-date-answer.ts`, `correctDraftedDates` in
+ * `forms/form-date-grounding.ts` and `groundFormSlots` in
+ * `ai/form-full-remap.ts`. Off, read as before.
+ */
+export function priorSentenceFixEnabled(): boolean {
+  return envFlag("PRIOR_SENTENCE_FIX_ENABLED");
 }

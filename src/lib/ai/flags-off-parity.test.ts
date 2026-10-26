@@ -39,7 +39,9 @@ const PROTECTED = [
 /*
  * The user (Pau) approved, via QA on 25 Oct 2026, editing
  * src/lib/forms/form-date-answer.ts to fix prior-action parsing behind
- * PRIOR_ACTIONS_PARSE_ENABLED, with the flag-off reading unchanged. It stays
+ * PRIOR_ACTIONS_PARSE_ENABLED, with the flag-off reading unchanged, and on
+ * 26 Oct 2026 again for the incident date behind PRIOR_SENTENCE_FIX_ENABLED
+ * (an earlier step's date is never the form's Date). It stays
  * on the PROTECTED list; only the diff check leaves it out. No other
  * protected file is excepted.
  */
