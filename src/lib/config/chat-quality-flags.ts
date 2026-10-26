@@ -754,6 +754,17 @@ export function reopenVerbGuardEnabled(): boolean {
 }
 
 /**
+ * The Corrective Action Form's Observation carries no AI-written "Going
+ * Forward" section (QA, 25 Oct 2026): a plan or commitment the manager never
+ * typed is not part of the HR record. What the employee does next is the
+ * Action Plan, which is the manager's own (ACTION_PLAN_MANAGER_ONLY). Off, the
+ * Observation drafts as before.
+ */
+export function draftNoInventedPlanEnabled(): boolean {
+  return envFlag("DRAFT_NO_INVENTED_PLAN_ENABLED");
+}
+
+/**
  * A terse "ca <name> <store> <what happened> <date> verbal" line is written
  * out as the long form before it is read, so the name, store, date, warning
  * level and payroll amount are read as from a full sentence, and the card
@@ -909,6 +920,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REMAP_DRAFT_SOURCES_ENABLED",
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
+  "DRAFT_NO_INVENTED_PLAN_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
   "EXIT_PROSE_FACTS_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
