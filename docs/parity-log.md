@@ -816,3 +816,20 @@ happened; "X instead of Y" names X; a prior action's date ("jba manual
 revision. Not ported: the Follow-up line rule (this card has none) and the
 card salon edit (the store edit is its own fix here). No salon wording was
 copied. Test: `src/app/api/chat/edits-dates-replay-e2e.test.ts`.
+
+## 25 Oct 2026: /reviews says when Google reviews stopped syncing (ported)
+
+`GOOGLE_REVIEWS_STALE_BANNER_ENABLED` (default off), the same flag name in
+both apps. The sync failed "not_connected" every six hours from 21 Oct and
+only the admin Google Reviews screen said so; /reviews kept showing 21 Oct's
+figures as current. With the flag on, the admin screen names an
+invalid_grant refusal and the OAuth consent-screen step, and `loadSyncNotice`
+builds the /reviews notice (connection not active or no completed store sync
+for more than two days, naming the last one, with a reconnect link for
+administrators). Drawing that notice on /reviews is a UI edit waiting on the
+owner's flags-off-parity approval.
+Ported to the sibling as the stale-sync notice on its /reviews page, from
+the page's own last sync time; it has no OAuth connection, so the
+connection check and the invalid_grant wording stay here. Tests:
+`src/lib/google-reviews/sync-health.test.ts`,
+`src/lib/google-reviews/expired-connection.test.ts`.
