@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import rows from "@/test/fixtures/jba-manual-production-151.json";
 import { accountManualSections } from "@/lib/ai/account-manual-sections";
@@ -50,6 +50,8 @@ const DUTIES = [
 
 afterEach(() => vi.unstubAllEnvs());
 const on = () => vi.stubEnv("POLICY_CLEANING_INCIDENT_ENABLED", "true");
+// Flag-off pins hold whatever the environment has on; flag-on tests call on().
+beforeEach(() => vi.stubEnv("POLICY_CLEANING_INCIDENT_ENABLED", ""));
 const cited = (text: string) => accountManualSections(text, CHUNKS).map((section) => `${section.heading} p.${section.page}`);
 
 describe("flag off: main reads no policy (the bug)", () => {
@@ -200,5 +202,46 @@ describe("flag on: a negation undoes the incident", () => {
   )("%s still reads the incident", (text) => {
     on();
     expect(cleaningIncidentPhrase(text)).not.toBeNull();
+  });
+});
+
+/* QA-3, 26 Oct 2026, on describedManualSection with its prefix (name invented): denials and the later positive clause. */
+describe("flag on: QA-3's denials and positives, through describedManualSection", () => {
+  const PREFIX = "Create a verbal corrective action for Ione Varga. ";
+  const registers = (text: string) => [text, sentence(text), text.toUpperCase()];
+  const described = (text: string) => describedManualSection({ text: `${PREFIX}${text}`, chunks: CHUNKS })?.section.heading ?? null;
+
+  it.each(
+    [
+      "she never left the counters dirty",
+      "the counters were not left dirty",
+      "no dirty counters",
+      "she did not fail to clean the counters",
+      "she is not responsible for cleaning",
+      "she did not skip the sanitize",
+      "it was not a cleaning problem",
+      "it is not about cleaning, she was late",
+      "cleaning was done on time",
+      "the counters were clean",
+    ].flatMap(registers),
+  )("%s cites no Care and Cleaning", (text) => {
+    on();
+    expect(described(text)).not.toBe(CARE);
+  });
+
+  it.each(
+    [
+      "she was not late, but she left the counters dirty",
+      "she left the counters dirty",
+      "cleaning duties weren't done",
+      "the cleaning didn't get done during her shift",
+      "she did not do the sanitize clean on the counters",
+      "she skipped the sanitize",
+      "she didn't clean the counters",
+      "it is not about cleaning, she left the counters dirty",
+    ].flatMap(registers),
+  )("%s cites Care and Cleaning", (text) => {
+    on();
+    expect(described(text)).toBe(CARE);
   });
 });
