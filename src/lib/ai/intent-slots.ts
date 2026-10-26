@@ -10,6 +10,7 @@ import {
   keepFormEmployeeEnabled,
   managerWordsOnlyEnabled,
   notANameGuardEnabled,
+  negatedPersonNoCardEnabled,
   warningLevelManagerOnlyEnabled,
   caTemplateMapEnabled,
   formChoiceStatedEnabled,
@@ -19,8 +20,9 @@ import {
   formEditDateRulesEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
+import { firstUnnegatedPerson, negatedPeople, withoutNegatedPeople } from "@/lib/forms/negated-person";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
-import { extractJobTitle } from "@/lib/forms/proposal";
+import { extractEmployeeNames, extractJobTitle } from "@/lib/forms/proposal";
 import { lateOpenOn, newestStatedDate, withYearlessDatesWritten } from "@/lib/forms/late-open";
 import { correctiveActionBasis } from "@/lib/forms/corrective-action-intake";
 import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
@@ -167,9 +169,28 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
   const reading = parseReading(input.raw);
   const blob = conversationBlob(input);
   const choice = readPriorChoice(input.history, input.question, input.people, input.stores);
+  /*
+   * NEGATED_PERSON_NO_CARD_ENABLED: "never one for Rowan Pell" names nobody
+   * for the form. A person this turn names only after a negation is blanked
+   * out of what the employee is read from, and the model's reading of them is
+   * replaced by the first person the turn names without one. Off: unchanged.
+   */
+  const candidates = negatedPersonNoCardEnabled()
+    ? [reading?.employee, ...extractEmployeeNames(input.question), ...input.people.map(displayName)]
+    : [];
+  const negated = negatedPeople(input.question, candidates);
+  const nameInput = negated.length > 0 ? { ...input, question: withoutNegatedPeople(input.question, negated) } : input;
+  const modelEmployee =
+    reading?.employee && negated.some((name) => name.toLowerCase() === reading.employee!.trim().toLowerCase())
+      ? firstUnnegatedPerson(input.question, candidates)
+      : reading?.employee ?? null;
   const grounded = choice?.person
     ? { person: choice.person, name: displayName(choice.person), ambiguous: [] as readonly GroundedPerson[], typed: null }
-    : groundEmployee(guardedTyped(reading?.employee ?? null, input), blob, input.people);
+    : groundEmployee(
+        guardedTyped(modelEmployee, nameInput),
+        nameInput === input ? blob : conversationBlob(nameInput),
+        input.people,
+      );
   /*
    * KEEP_FORM_EMPLOYEE_ENABLED (ported from the sibling app, QA 25 Oct 2026):
    * "for Test Employee" names Test Employee. The readers end a name at
