@@ -1,8 +1,11 @@
 import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
+import { businessToday } from "@/lib/business-date";
 
 import { JOIN } from "./bounded-context";
 import { describesIncident } from "./corrective-action-intake";
+import { withoutPriorStepClauses } from "./form-date-answer";
+import { priorSentenceFixFor } from "./prior-sentence-scope";
 
 /**
  * ============================================================================
@@ -140,7 +143,14 @@ function accountIssue(text: string): string | null {
   return null;
 }
 
-export function correctiveActionIssue(text: string, employeeName: string | null): string | null {
+export function correctiveActionIssue(said: string, employeeName: string | null): string | null {
+  /*
+   * PRIOR_SENTENCE_FIX_ENABLED (ported from the sibling app, 26 Oct 2026): on a
+   * Corrective Action a held coaching or warning with its date ("coached her
+   * 10-16", "i coached her on 10-16 about being late") is a Prior actions row,
+   * never the Issue; the incident clause beside it is kept.
+   */
+  const text = priorSentenceFixFor(said) ? withoutPriorStepClauses(said, businessToday(), said).text : said;
   const fromRequest = issueFromRequest(text, employeeName);
   if (!typedNameEnabled()) return fromRequest;
   if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return fromRequest;

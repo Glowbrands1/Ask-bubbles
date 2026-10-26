@@ -758,7 +758,7 @@ function stepSpans(text: string, today: string, context?: string): { step: Writt
  * PRIOR_SENTENCE_FIX_ENABLED — "I COACHED HER ON 10-16" ON A CORRECTIVE ACTION
  * ============================================================================
  *
- * QA, 26 Oct 2026 (Ask Sunny production, 8365e21f): "create a ca for … she was
+ * QA, 26 Oct 2026 (the sibling app's production, 8365e21f): "create a ca for … she was
  * late on 10-5 and 10-15. i coached her on 10-16 about being late" had no
  * Prior actions row, and "ca for …, coached her 10-16, written warning on
  * 10-20" was dated 10/20, the written warning's day. On a Corrective Action

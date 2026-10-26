@@ -405,7 +405,7 @@ function draftIncidentOffsets(notes: string, noted: readonly DateInText[], today
  * PRIOR_SENTENCE_FIX_ENABLED — A STEP'S DATE IS THE ONE THE MANAGER GAVE IT
  * ============================================================================
  *
- * QA, 26 Oct 2026 (a saved Ask Sunny production draft): "…she was late on
+ * QA, 26 Oct 2026 (a saved draft in the sibling app's production): "…she was late on
  * 10-5 and 10-15. i coached her on 10-16 about being late" was filed as
  * "…was coached about being late on October 5, 2026" — a date the manager
  * gave for the lateness, put on the coaching. A sentence that names a step

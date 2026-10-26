@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { continuationFor } from "@/lib/forms/proposal-continuation";
+import { createId } from "@/lib/utils/id";
 import { rosterResultFor } from "@/test/roster-result";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import { JBA_MANUAL_CA_CHUNKS } from "@/test/fixtures/jba-manual-ca-sections";
@@ -9,36 +11,35 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
 
 /**
  * ============================================================================
- * QA-6 / QA-7, 26 OCT 2026 — PRIOR SENTENCES AND TWO INCIDENT DATES, IN ASK
- * SUNNY'S PRODUCTION ENV
+ * PRIOR_SENTENCE_FIX_ENABLED IN THIS APP'S PRODUCTION ENV (PORTED, 26 OCT 2026)
  * ============================================================================
  *
- * QA's turns, word for word, with this file's invented name (Rory Vance):
+ * Ported from the sibling app (its QA-6/QA-7 turns, word for word, with this
+ * file's invented name, Quinn Marlowe). Here, on main with this app's
+ * production flags (pinned below, flag off):
  *
- *   D1 "ca for rory vance, coached her 10-16, written warning on 10-20"
- *      → live: dated 10/20, the prior written warning's.
- *   D2 "create a ca for rory vance at kearney, she was late on 10-5 and 10-15.
- *       i coached her on 10-16 about being late"
- *      → live: dated 10/5 with only the coaching as the Observation.
- *   QA-7: "i coached her on 10-16 and <another name> on 10-17" put the other
- *   person's coaching on her (live: the form dated 10/17), and "i coached her
- *   coworker, not her, on 10-16" gave her a prior.
- *   And a Coaching Form: "create a coaching form for … i coached her on
- *   10-16" is dated 10/16 — the flag must leave it so.
+ *   D1 "ca for quinn marlowe, coached her 10-16, written warning on 10-20"
+ *      → dated 10/20, the prior written warning's, Issue "coached her 10-16".
+ *   D2 "create a ca for quinn marlowe at kearney, she was late on 10-5 and
+ *       10-15. i coached her on 10-16 about being late"
+ *      → dated 10/16, the coaching's, with the coaching in the Issue.
+ *   "i coached her on 10-16 and <another name> on 10-17" dated the form with
+ *   the other person's 10/17, and "i coached her coworker, not her, on 10-16"
+ *   dated it 10/16. A Coaching Form "create a coaching form for … i coached
+ *   her on 10-16" is dated 10/16 — the flag must leave it so.
  *
  * Coordinator's ruling (PRIOR_SENTENCE_FIX_ENABLED, Corrective Action only):
  * two incident dates are asked ONCE ("Which date goes on the form?"), both
- * stay in the Observation, and the form is dated the day it is created until
- * the manager answers; the answer sets it; an earlier step's or another
- * person's date is never an incident date; a range is one incident dated its
- * first day; one date asks nothing.
+ * stay in the Issue, and the form is dated the day it is created until the
+ * manager answers; the answer sets it; an earlier step's or another person's
+ * date is never an incident date; a range is one incident dated its first
+ * day; one date asks nothing.
  *
- * Every turn through POST /api/chat, and Create through the draft route. The
- * PRODUCTION block runs Ask Sunny's exact production env (the intent path; the
- * remap is off); a second block, labelled NOT PRODUCTION, runs the full remap
- * as extra coverage. FORM_DATE_INCIDENT_ONLY_ENABLED is pinned (unset, and an
- * extra run with it on). Flag off, each case reads as main does today.
- * "Corvin Mallow" is invented.
+ * Every turn through POST /api/chat, and Create through the draft route, in
+ * this app's production env (the full remap off) and again with the full
+ * remap on. FORM_DATE_INCIDENT_ONLY_ENABLED is pinned (unset, and a run with
+ * it on). Flag off, each case reads as main does today. "Corvin Mallow" is
+ * invented.
  */
 
 const store: FakeStore = {
@@ -127,7 +128,7 @@ vi.mock("@/lib/ai/call-claude", () => ({
       const text = JSON.stringify(input.messages ?? []);
       return {
         templateKey: /\b(?:ca|corrective action)\b/i.test(text) ? "dpoa" : null,
-        employeeName: /rory vance/i.test(text) ? "Rory Vance" : null,
+        employeeName: /quinn marlowe/i.test(text) ? "Quinn Marlowe" : null,
         observation: state.remapObservation,
         actionPlan: null,
       };
@@ -135,16 +136,18 @@ vi.mock("@/lib/ai/call-claude", () => ({
     if (input.tool?.name !== "record_intent_slots") return null;
     if (state.slotReading === "copy") {
       const text = JSON.stringify(input.messages ?? []);
+      // The model reads the whole conversation; the warning level only from an answer to its question.
       const manager = (text.split("Manager:").pop() ?? text).replace(/\\n/g, "\n");
-      const dates = manager.match(/\b\d{1,2}-\d{1,2}\b/g) ?? [];
+      const all = text.split("Manager:").slice(1).map((turn) => turn.split("Assistant:")[0]!).join("\n");
+      const dates = all.match(/\b\d{1,2}-\d{1,2}\b/g) ?? [];
       return {
-        employee: /rory vance/i.test(manager) ? "Rory Vance" : null,
-        store: /kearney/i.test(manager) ? "Kearney" : null,
-        title: /team member/i.test(manager) ? "team member" : null,
-        incidentType: /\blate\b/i.test(manager) ? "late" : null,
+        employee: /quinn marlowe/i.test(all) ? "Quinn Marlowe" : null,
+        store: /kearney/i.test(all) ? "Kearney" : null,
+        title: null,
+        incidentType: /\blate\b/i.test(all) ? "late" : null,
         incidentDate: dates[0] ?? null,
         payrollAmount: null,
-        warningLevel: /^\s*(?:team member,\s*)?written\s*$/i.test(manager) ? "written" : null,
+        warningLevel: /^\s*(verbal|written)\W*$/i.exec(manager)?.[1]?.toLowerCase() ?? null,
         formType: "Corrective Action Form",
         formTurn: true,
         policyHeading: null,
@@ -302,9 +305,10 @@ function toUuid(id: string): string {
 const TODAY = "2026-10-26";
 
 /**
- * Ask Sunny's production env, exactly (Vercel production, read 26 Oct 2026
- * 09:44Z, with the coordinator's correction; PROD-FLAGS-2026-10-26-0944Z).
- * Every other flag is off — FORM_FULL_REMAP and REMAP_INCIDENT_FIX among them.
+ * This app's production env (Vercel production, read by QA 26 Oct 2026; the
+ * encrypted values as QA's handoff gives them). Every other flag is off —
+ * FORM_FULL_REMAP and ACTION_PLAN_MANAGER_ONLY among them. INTENT_EXTRACTION
+ * is set by `INTENT_EXTRACTION_IN_PRODUCTION` below.
  */
 const PRODUCTION = [
   // Ask Bubbles production, 26 Oct 2026 (FORM_FULL_REMAP off: the intent path; ACTION_PLAN_MANAGER_ONLY off).
@@ -315,7 +319,7 @@ const PRODUCTION = [
   "ACTION_PLAN_SENTENCES_ENABLED", "CA_TEMPLATE_MAP_ENABLED", "CHAT_TRACE_ENABLED",
   "CONVERSATION_DRAFT_REUSE_ENABLED", "CROSS_CHAT_REPLY_GUARD_ENABLED", "DRAFT_ACTIONS_ENABLED", "FIELD_ACCURACY_ENABLED",
   "FORM_CHOICE_STATED_ENABLED", "FORM_STATE_ENABLED", "FULL_MANUAL_CONTEXT_ENABLED", "GLOBAL_STORE_ASK_ENABLED",
-  "GROUNDED_ENTITIES_ENABLED", "INTENT_EXTRACTION_ENABLED", "KEEP_FORM_EMPLOYEE_ENABLED", "LATE_OPEN_DATE_ENABLED",
+  "GROUNDED_ENTITIES_ENABLED", "KEEP_FORM_EMPLOYEE_ENABLED", "LATE_OPEN_DATE_ENABLED",
   "NOT_A_NAME_GUARD_ENABLED", "PAYROLL_DEDUCT_AMOUNT_ENABLED", "PLACE_SPAN_GUARD_ENABLED", "PRINTED_PAGE_ONLY_ENABLED",
   "PRIOR_ACTIONS_PARSE_ENABLED", "PROMPT_CACHE_ENABLED", "REMAP_DRAFT_SOURCES_ENABLED", "REMAP_INCIDENT_FIX_ENABLED",
   "SLOT_RETENTION_ENABLED", "TITLE_WHOLE_WORD_ENABLED", "TYPED_NAME_ENABLED", "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
@@ -325,7 +329,7 @@ const REMAP_EXTRA = ["FORM_FULL_REMAP_ENABLED"] as const;
 const FLAG = "PRIOR_SENTENCE_FIX_ENABLED";
 /** FORM_DATE_INCIDENT_ONLY_ENABLED (D3, =0 in production) is pinned by each case, never read from the shell. */
 const FIO = "FORM_DATE_INCIDENT_ONLY_ENABLED";
-const ALL_FLAGS = [...PRODUCTION, ...REMAP_EXTRA, FLAG, FIO, "CODE_SLOTS_ENABLED", "POLICY_CITATION_ENABLED", "FORM_STATE_ENABLED", "REMAP_DRAFT_SOURCES_ENABLED", "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED", "INTENT_PAYROLL_MANAGER_ONLY_ENABLED", "CHAT_DATA_TOOLS_ENABLED", "CHAT_MEMORY_ENABLED"];
+const ALL_FLAGS = [...PRODUCTION, "INTENT_EXTRACTION_ENABLED", ...REMAP_EXTRA, FLAG, FIO, "CODE_SLOTS_ENABLED", "POLICY_CITATION_ENABLED", "FORM_STATE_ENABLED", "REMAP_DRAFT_SOURCES_ENABLED", "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED", "INTENT_PAYROLL_MANAGER_ONLY_ENABLED", "CHAT_DATA_TOOLS_ENABLED", "CHAT_MEMORY_ENABLED"];
 
 type Answer = {
   content: string;
@@ -341,7 +345,8 @@ class Thread {
   proposal: ChatFormProposal | null = null;
   instanceId: string | null = null;
   private sequence = 0;
-  private readonly conversationId = `conv-${randomUUID()}`;
+  // A well-formed client id, so the route keeps the intake state between turns (`isClientConversationId`).
+  private readonly conversationId = createId("conv");
 
   async say(question: string): Promise<Answer> {
     const history = this.messages.map(({ id, role, content }) => ({ id, role, content }));
@@ -356,7 +361,8 @@ class Thread {
           history,
           questionMessageId: id,
           conversationId: this.conversationId,
-          ...(this.proposal && !this.instanceId ? { continueProposalTemplateKey: this.proposal.templateKey } : {}),
+          // As the browser does: the card on screen, or the intake still asking (`continuationFor`).
+          ...(!this.instanceId && continuationFor(this.messages) ? { continueProposalTemplateKey: continuationFor(this.messages)!.templateKey } : {}),
           ...(this.instanceId ? { activeFormInstanceId: this.instanceId } : {}),
         }),
       }),
@@ -410,7 +416,7 @@ beforeEach(async () => {
   state.draft = { values: {} };
   state.revision = { values: {} };
   state.directory = [
-    { id: "e-1", firstName: "Rory", lastName: "Vance", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: "Team Member Part Time" },
+    { id: "e-1", firstName: "Quinn", lastName: "Marlowe", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: "Team Member Part Time" },
   ];
   for (const name of ALL_FLAGS) saved.set(name, process.env[name]);
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -426,24 +432,35 @@ afterEach(() => {
 });
 
 
+/*
+ * INTENT_EXTRACTION_ENABLED: its value is encrypted on Vercel. This app's
+ * production chats show the card on the first CA turn ("Who is this
+ * **Corrective Action Form** for?") and the slot reader's "I still need …"
+ * only in tester chats up to 25 Oct, so it is read as off. QA confirms.
+ */
+const INTENT_EXTRACTION_IN_PRODUCTION = false;
+
 function useProfile(fix: boolean, fio = false, remap = false) {
   for (const name of ALL_FLAGS) delete process.env[name];
   for (const name of PRODUCTION) process.env[name] = "true";
+  if (INTENT_EXTRACTION_IN_PRODUCTION) process.env.INTENT_EXTRACTION_ENABLED = "true";
   if (remap) for (const name of REMAP_EXTRA) process.env[name] = "true";
   if (fix) process.env[FLAG] = "true";
   if (fio) process.env[FIO] = "true";
 }
 
 const SAID = {
-  D1: "ca for rory vance, coached her 10-16, written warning on 10-20",
-  D2: "create a ca for rory vance at kearney, she was late on 10-5 and 10-15. i coached her on 10-16 about being late",
-  TWO: "create a ca for rory vance at kearney, she was late on 10-5 and 10-15",
-  THREE: "create a ca for rory vance at kearney, she was late 10/5, 10/15 and 10/16",
-  RANGE: "create a ca for rory vance at kearney, she was late from 10-5 to 10-9",
-  ONE: "create a ca for rory vance at kearney, she was late on 10-5",
-  OTHER_IN_LIST: "create a ca for rory vance at kearney, she was late on 10-5. i coached her on 10-16 and corvin mallow on 10-17",
-  COWORKER: "create a ca for rory vance at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16",
-  COACHING_FORM: "create a coaching form for rory vance at kearney, i coached her on 10-16",
+  D1: "ca for quinn marlowe, coached her 10-16, written warning on 10-20",
+  D2: "create a ca for quinn marlowe at kearney, she was late on 10-5 and 10-15. i coached her on 10-16 about being late",
+  TWO: "create a ca for quinn marlowe at kearney, she was late on 10-5 and 10-15",
+  THREE: "create a ca for quinn marlowe at kearney, she was late 10/5, 10/15 and 10/16",
+  RANGE: "create a ca for quinn marlowe at kearney, she was late from 10-5 to 10-9",
+  ONE: "create a ca for quinn marlowe at kearney, she was late on 10-5",
+  OTHER_IN_LIST: "create a ca for quinn marlowe at kearney, she was late on 10-5. i coached her on 10-16 and corvin mallow on 10-17",
+  COWORKER: "create a ca for quinn marlowe at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16",
+  HISTORY:
+    "My employee quinn marlowe has was 10 minutes late on her last two shifts. On the first shift I verbally coached her on our policy and expectations. Then she was late again. Please create a CA form so I can document. She was late on 10/5 and 10/15",
+  COACHING_FORM: "create a coaching form for quinn marlowe at kearney, i coached her on 10-16",
 } as const;
 
 /** Sentence case: each sentence opens with a capital, and "i" is "I". */
@@ -471,8 +488,9 @@ function priorLine(content: string): string | null {
   const line = /\*\*Prior actions:\*\*\s*([^\n]+)/.exec(content)?.[1];
   return line ? line.replace(/, as you said\b.*$/, "") : null;
 }
+/** This app's card reads the incident back as "Issue" (`correctiveActionIssue`). */
 function observation(content: string): string {
-  return /\*\*Observation of Offense:\*\*\s*([^\n]*)/.exec(content)?.[1] ?? "";
+  return /\*\*Issue:\*\*\s*([^·\n]*)/.exec(content)?.[1]?.trim() ?? "";
 }
 
 async function card(said: string) {
@@ -482,7 +500,7 @@ async function card(said: string) {
 }
 
 const MODEL_OBSERVATION =
-  "Observed: Rory Vance arrived late on October 5, 2026, and again on October 15, 2026. Rory Vance was coached about being late on October 16, 2026.";
+  "Observed: Quinn Marlowe arrived late on October 5, 2026, and again on October 15, 2026. Quinn Marlowe was coached about being late on October 16, 2026.";
 
 /** Create, as the browser does it. A remap card names the manager's turns only with REMAP_DRAFT_SOURCES_ENABLED. */
 function draftSources() {
@@ -500,12 +518,17 @@ async function created(thread: Thread, observationText: string) {
 
 /*
  * ============================================================================
- * PRODUCTION: Ask Sunny's exact env (the intent path; the remap is off)
+ * PRODUCTION: this app's env (the full remap off), and the remap on
  * ============================================================================
  */
-// WIP: Bubbles asks the warning level before the card; these cases are not yet adapted to that flow.
-describe.skip.each(FIO_RUNS)("production env, flag on, %s", (_fioLabel, fio) => {
-  beforeEach(() => useProfile(true, fio));
+const REMAP_RUNS = [
+  ["full remap off (production)", false],
+  ["full remap on (not production, extra coverage)", true],
+] as const;
+
+describe.each(REMAP_RUNS)("%s", (_remapLabel, remap) => {
+describe.each(FIO_RUNS)("production env, flag on, %s", (_fioLabel, fio) => {
+  beforeEach(() => useProfile(true, fio, remap));
 
   describe.each(CASINGS)("%s", (casing, cased) => {
     it("D1: undated (never 10/20 or 10/16), both priors listed, no prior clause as the Observation; the draft too", async () => {
@@ -515,7 +538,7 @@ describe.skip.each(FIO_RUNS)("production env, flag on, %s", (_fioLabel, fio) => 
       expect(answer.content).not.toMatch(/\*\*Date:\*\*/);
       expect(priorLine(answer.content)).toBe("Coaching — 10/16/2026; Written warning — 10/20/2026");
       expect(observation(answer.content)).not.toMatch(/coach|written warning/i);
-      const draft = await created(thread, "Observed: Rory Vance has prior coaching and a written warning on file.");
+      const draft = await created(thread, "Observed: Quinn Marlowe has prior coaching and a written warning on file.");
       expect(draft.formDate).toBe(TODAY);
       expect(draft.priorActions).toBe("Coaching — 10/16/2026\nWritten warning — 10/20/2026");
       expect(draft.observation ?? "").not.toMatch(/coached her/i);
@@ -560,6 +583,8 @@ describe.skip.each(FIO_RUNS)("production env, flag on, %s", (_fioLabel, fio) => 
       const draft = await created(thread, MODEL_OBSERVATION);
       expect(draft.formDate).toBe("2026-10-15");
       expect(draft.observation).toContain("on October 5, 2026, and again on October 15, 2026.");
+      // QA, 26 Oct 2026: the old port left a dangling "and again." with the second date cut.
+      expect(draft.observation).not.toMatch(/and again\.(?:\s|$)/);
       expect(draft.observation).toContain("coached about being late on October 16, 2026.");
       expect(draft.priorActions?.toLowerCase()).toBe("coaching about being late — 10/16/2026");
     });
@@ -573,21 +598,21 @@ describe.skip.each(FIO_RUNS)("production env, flag on, %s", (_fioLabel, fio) => 
       expect(draft.observation).toContain("coached about being late on October 16, 2026.");
     });
 
-    it("QA-7 defect 1: another person in the same list is never Rory's prior or a date", async () => {
+    it("QA-7 defect 1: another person in the same list is never Quinn's prior or a date", async () => {
       const { thread, answer, proposal } = await card(cased(SAID.OTHER_IN_LIST));
       expect(priorLine(answer.content)).toBe("Coaching — 10/16/2026");
       expect(proposal?.formDate).toBe("2026-10-05");
       expect(answer.content).not.toMatch(ASKS);
       // In capitals the create route reads "CORVIN MALLOW" as a second person and asks which (as on main); the card is pinned.
       if (casing === "CAPS") return;
-      const draft = await created(thread, "Observed: Rory Vance arrived late on October 5, 2026.");
+      const draft = await created(thread, "Observed: Quinn Marlowe arrived late on October 5, 2026.");
       expect(draft.priorActions).toBe("Coaching — 10/16/2026");
     });
 
-    it("QA-7 defect 2: \"i coached her coworker, not her, on 10-16\" is no prior of Rory's", async () => {
+    it("QA-7 defect 2: \"i coached her coworker, not her, on 10-16\" is no prior of Quinn's", async () => {
       const { thread, answer } = await card(cased(SAID.COWORKER));
       expect(priorLine(answer.content)).toBeNull();
-      const draft = await created(thread, "Observed: Rory Vance arrived late on October 5, 2026.");
+      const draft = await created(thread, "Observed: Quinn Marlowe arrived late on October 5, 2026.");
       expect(draft.priorActions ?? null).toBeNull();
     });
 
@@ -595,10 +620,79 @@ describe.skip.each(FIO_RUNS)("production env, flag on, %s", (_fioLabel, fio) => 
       const { thread, answer, proposal } = await card(cased(SAID.COACHING_FORM));
       expect(proposal?.templateKey).toBe("coaching");
       expect(proposal?.formDate).toBe("2026-10-16");
-      expect(answer.content).toMatch(/\*\*Date:\*\* 10\/16\/2026/);
-      const draft = await created(thread, "Observed: Rory Vance was coached.");
+      // This app's Coaching Form card has no "**Date:**" line; the proposal's date is what Create files.
+      expect(answer.content).not.toMatch(ASKS);
+      const draft = await created(thread, "Observed: Quinn Marlowe was coached.");
       expect(draft.formDate).toBe("2026-10-16");
     });
   });
 });
 
+});
+
+/*
+ * QA's wording from this app's own history (26 Oct 2026, the name invented):
+ * both late dates stay, the form asks which one dates it, and the coaching
+ * sentence is never the Issue. The coaching here has no date, so no Prior
+ * actions row is written for it with the flag on or off (an undated step is
+ * outside this flag; reported to QA).
+ */
+describe.each(REMAP_RUNS)("%s: QA's history wording", (_remapLabel, remap) => {
+  describe.each(CASINGS.filter(([casing]) => casing !== "CAPS"))("%s", (_casing, cased) => {
+    it("keeps both late dates, asks once, and the draft keeps both", async () => {
+      useProfile(true, false, remap);
+      draftSources();
+      const { thread, answer, proposal } = await card(cased(SAID.HISTORY));
+      expect(proposal?.templateKey).toBe("dpoa");
+      expect(proposal?.formDate ?? null).toBeNull();
+      expect(answer.content).toMatch(asksAbout(["10/5", "10/15"]));
+      expect(observation(answer.content)).not.toMatch(/coach/i);
+      const draft = await created(
+        thread,
+        "Observed: Quinn Marlowe arrived late on October 5, 2026, and again on October 15, 2026.",
+      );
+      expect(draft.formDate).toBe(TODAY);
+      expect(draft.observation).toContain("on October 5, 2026, and again on October 15, 2026.");
+      expect(draft.observation).not.toMatch(/and again\.(?:\s|$)/);
+    });
+  });
+});
+
+/*
+ * NEVER-BREAK: with the flag off, each case reads exactly as this app's
+ * production does today (main 9016e3d9, this env), the failures pinned: D1
+ * dated the written warning's 10/20 with "coached her 10-16" as the Issue,
+ * D2 dated the coaching's 10/16, the other person's coaching dating the form.
+ * The full remap on reads the same here.
+ */
+const PROD_MAIN: Record<string, Record<string, unknown>> = {
+  D1: { formDate: "2026-10-20", observation: "coached her 10-16", priorLine: null, asks: false },
+  D2: { formDate: "2026-10-16", observation: "create a ca for Quinn Marlowe at kearney, she was late on 10-5 and 10-15. i coached her on 10-16 about being late", priorLine: null, asks: false },
+  TWO: { formDate: "2026-10-05", observation: "create a ca for Quinn Marlowe at kearney, she was late on 10-5 and 10-15", priorLine: null, asks: false },
+  THREE: { formDate: null, observation: "create a ca for Quinn Marlowe at kearney, she was late 10/5, 10/15 and 10/16", priorLine: null, asks: true },
+  RANGE: { formDate: null, observation: "create a ca for Quinn Marlowe at kearney, she was late from 10-5 to 10-9", priorLine: null, asks: false },
+  ONE: { formDate: "2026-10-05", observation: "create a ca for Quinn Marlowe at kearney, she was late on 10-5", priorLine: null, asks: false },
+  OTHER_IN_LIST: { formDate: "2026-10-17", observation: "create a ca for Quinn Marlowe at kearney, she was late on 10-5", priorLine: null, asks: false },
+  COWORKER: { formDate: "2026-10-16", observation: "create a ca for Quinn Marlowe at kearney, she was late on 10-5", priorLine: null, asks: false },
+  COACHING_FORM: { formDate: "2026-10-16", observation: "", priorLine: null, asks: false },
+};
+/** Where D3 (FORM_DATE_INCIDENT_ONLY_ENABLED) on changes it. */
+const PROD_FIO_MAIN: Record<string, Record<string, unknown>> = {
+  TWO: { formDate: "2026-10-15", observation: "create a ca for Quinn Marlowe at kearney, she was late on 10-5 and 10-15", priorLine: null, asks: false },
+};
+
+describe.each(REMAP_RUNS)("%s", (_remapLabel, remap) => {
+  describe.each(FIO_RUNS)("production env, flag off, %s: as main", (_fioLabel, fio) => {
+    beforeEach(() => useProfile(false, fio, remap));
+
+    it.each(Object.entries(PROD_MAIN))("%s", async (key, expected) => {
+      const { answer, proposal } = await card(SAID[key as keyof typeof SAID]);
+      expect({
+        formDate: proposal?.formDate ?? null,
+        observation: observation(answer.content),
+        priorLine: priorLine(answer.content),
+        asks: ASKS.test(answer.content),
+      }).toEqual(fio && PROD_FIO_MAIN[key] ? PROD_FIO_MAIN[key] : expected);
+    });
+  });
+});
