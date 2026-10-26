@@ -230,6 +230,12 @@ const PROD_FLAGS = [
   "PRIOR_ACTIONS_PARSE_ENABLED",
 ] as const;
 const FLAG = "PRIOR_SENTENCE_FIX_ENABLED";
+/**
+ * FORM_DATE_INCIDENT_ONLY_ENABLED (D3, on main since 5e151777, off in
+ * production) is pinned by each case, never read from the shell. Unset
+ * everywhere except the "D3 on" runs.
+ */
+const FIO = "FORM_DATE_INCIDENT_ONLY_ENABLED";
 const TODAY = "2026-10-26";
 const saved = new Map<string, string | undefined>();
 
@@ -258,7 +264,7 @@ class JoiningRows extends Array<Record<string, unknown>> {
 beforeEach(async () => {
   for (const key of Object.keys(store)) (store as Record<string, unknown[]>)[key] = [];
   store.form_instances = new JoiningRows() as never;
-  for (const name of [...PROD_FLAGS, FLAG, "INTENT_EXTRACTION_ENABLED", "REMAP_INCIDENT_FIX_ENABLED", "MANAGER_WORDS_ONLY_ENABLED", "REMAP_DRAFT_SOURCES_ENABLED"]) {
+  for (const name of [...PROD_FLAGS, FLAG, "INTENT_EXTRACTION_ENABLED", "REMAP_INCIDENT_FIX_ENABLED", "MANAGER_WORDS_ONLY_ENABLED", "REMAP_DRAFT_SOURCES_ENABLED", FIO]) {
     saved.set(name, process.env[name]);
   }
   state.remap = {};
@@ -405,11 +411,17 @@ const CASINGS = [
   ["Sentence case", sentenceCase],
 ] as const;
 
-function useProfile(fix: boolean) {
+function useProfile(fix: boolean, fio = false) {
   for (const name of saved.keys()) delete process.env[name];
   for (const name of PROD_FLAGS) process.env[name] = "true";
   if (fix) process.env[FLAG] = "true";
+  if (fio) process.env[FIO] = "true";
 }
+
+const FIO_RUNS = [
+  ["D3 unset", false],
+  ["D3 on", true],
+] as const;
 
 async function card(said: string) {
   const thread = new Thread();
@@ -417,16 +429,18 @@ async function card(said: string) {
   return { thread, answer, proposal: answer.formProposal ?? null };
 }
 
-describe.each(CASINGS)("flag on (%s)", (_casing, cased) => {
-  beforeEach(() => useProfile(true));
+describe.each(FIO_RUNS.flatMap(([fioLabel, fio]) => CASINGS.map(([casing, cased]) => [`${casing}, ${fioLabel}`, cased, fio] as const)))("flag on (%s)", (_casing, cased, fio) => {
+  beforeEach(() => useProfile(true, fio));
 
+  // Coordinator's ruling, 26 Oct 2026: two incident dates are asked once, and dated the day of creation until answered.
   it.each([
     ["T1", LIVE.T1],
     ["T1, late to open", LIVE.T1_OPEN],
-  ] as const)("%s: dated the newest lateness, 10/15, never the coaching; the coaching is the prior action", async (_label, said) => {
-    const { proposal } = await card(cased(said));
+  ] as const)("%s: asks which of 10/5 and 10/15, never the coaching; the coaching is the prior action", async (_label, said) => {
+    const { answer, proposal } = await card(cased(said));
     expect(proposal?.templateKey).toBe("dpoa");
-    expect(proposal?.formDate).toBe("2026-10-15");
+    expect(proposal?.formDate ?? null).toBeNull();
+    expect(answer.content).toMatch(/You mentioned more than one date \(\*\*10\/5\*\*, \*\*10\/15\*\*\)\. Which date goes on the form\?/);
     expect(proposal?.priorActions).toBe("Coaching about being late — 10/16/2026");
     expect(proposal?.issue ?? "").not.toMatch(/coach/i);
   });
@@ -561,7 +575,8 @@ describe.each(CASINGS)("the created draft from T1, late to open (%s)", (_casing,
   it("flag on: both lateness dates and the coaching's 10/16 stay, and the coaching is the prior action", async () => {
     useProfile(true);
     const draft = await createdDraft(cased(LIVE.T1_OPEN), MODEL_OBSERVATION);
-    expect(draft.formDate).toBe("2026-10-15");
+    // The date is asked, so the form is dated the day it is created.
+    expect(draft.formDate).toBe(TODAY);
     expect(draft.observation).toContain("on October 5, 2026, and again on October 15, 2026.");
     expect(draft.observation).toContain("coached about being late on October 16, 2026.");
     expect(draft.priorActions).toBe("Coaching about being late — 10/16/2026");

@@ -1,6 +1,15 @@
-import { antiLoopEnabled } from "@/lib/config/chat-quality-flags";
+import { withoutAppLines } from "@/lib/ai/app-sentences";
+import { antiLoopEnabled, priorSentenceFixEnabled } from "@/lib/config/chat-quality-flags";
 
-import { explicitFormDate, heldCoachingDates, listFormDates, listIncidentDates } from "./form-date-answer";
+import {
+  explicitFormDate,
+  formDateChange,
+  heldCoachingDates,
+  listFormDates,
+  listIncidentDates,
+  statedIncidentDates,
+  yearlessWrittenOut,
+} from "./form-date-answer";
 import { incidentOnly, incidentOnlyOn } from "./form-date-incident-only";
 
 /**
@@ -38,9 +47,12 @@ type Turn = { readonly role: string; readonly content: string };
  * the future. A date the manager gave the FORM ("dated 10/20") is not one of
  * them — it answers the question this module would otherwise ask.
  */
-export function incidentDates(text: string, today: string): string[] {
+export function incidentDates(text: string, today: string, coaching = false): string[] {
   const explicit = explicitFormDate(text, today);
-  return [...new Set(incidentOnly(text, today, listIncidentDates(text, today)).map((found) => found.iso))]
+  // PRIOR_SENTENCE_FIX_ENABLED: yearless "10-5 and 10-15" are two incident dates too, a range is one
+  // (`statedIncidentDates`). Not on a Coaching Form, whose date is the coaching held.
+  const read = priorSentenceFixEnabled() && !coaching ? statedIncidentDates(text, today) : listIncidentDates(text, today);
+  return [...new Set(incidentOnly(text, today, read).map((found) => found.iso))]
     .filter((iso) => iso <= today && iso !== explicit)
     .sort();
 }
@@ -191,7 +203,7 @@ export function decideFormDate(input: {
   const explicit = explicitFormDate(input.text, input.today);
   if (explicit) return { formDate: explicit };
 
-  let dates = incidentDates(input.text, input.today);
+  let dates = incidentDates(input.text, input.today, COACHING_TEMPLATES.has(input.templateKey));
   if (COACHING_TEMPLATES.has(input.templateKey)) {
     const latestIncident = dates[dates.length - 1] ?? "";
     const held = heldCoachingDates(input.text, input.today).filter((iso) => iso >= latestIncident);
@@ -226,4 +238,78 @@ export function decideFormDate(input: {
     candidates: dates,
     ...(dateAlreadyAsked(input.history) ? {} : { question: dateQuestion(dates) }),
   };
+}
+
+/*
+ * ============================================================================
+ * PRIOR_SENTENCE_FIX_ENABLED — TWO INCIDENT DATES ARE ASKED, ON EVERY PATH
+ * ============================================================================
+ *
+ * Coordinator's ruling, 26 Oct 2026 (ported from the sibling app): for a
+ * reader that picks the form's date on its own — the full remap — the same
+ * rule `decideFormDate` applies to written-out dates, for yearless ones too:
+ * the newest "change the date to …" or a date given to the form is the
+ * date; one incident date is the date, a range ("from 10-5 to 10-9") its
+ * first day; two or more are asked once ("Which date goes on the form?"),
+ * and until the manager answers the form is dated the day it is created; the
+ * answer sets it; an earlier step's, follow-up's or deadline's date is never
+ * one of them (`statedIncidentDates`). Null with the flag off, or when the
+ * manager gave no incident date.
+ */
+export interface StatedFormDate {
+  /** The form's date, or null for the day it is created. */
+  readonly iso: string | null;
+  /** The incident dates being asked about; empty once one is settled. */
+  readonly candidates: readonly string[];
+  /** The question to ask, once; null when settled or already asked. */
+  readonly question: string | null;
+}
+
+/** The conversation in the manager's own words: the app's lines ("It happened on 10/5/2026.") are not theirs. */
+function inOwnWords(conversation: readonly Turn[]): Turn[] {
+  return conversation.map((turn) => (turn.role === "user" ? { ...turn, content: withoutAppLines(String(turn.content)).trim() } : turn));
+}
+
+/** The manager turns that only answer the date question ("10/15", "most recent"), trimmed. */
+function answerTurns(conversation: readonly Turn[], today: string): Set<string> {
+  const answered = new Set<string>();
+  for (let index = 1; index < conversation.length; index += 1) {
+    const turn = conversation[index]!;
+    const before = conversation[index - 1]!;
+    if (turn.role !== "user" || before.role !== "assistant" || !askedForDate(before.content)) continue;
+    const reply = yearlessWrittenOut(String(turn.content), today);
+    if (readDateChoice(reply, [today], today) !== null) answered.add(String(turn.content).trim());
+  }
+  return answered;
+}
+
+/** PRIOR_SENTENCE_FIX_ENABLED: the manager turns that only answer the date question, in their own words. */
+export function dateAnswersSaid(conversation: readonly Turn[], today: string): Set<string> {
+  if (!priorSentenceFixEnabled()) return new Set();
+  return answerTurns(inOwnWords(conversation), today);
+}
+
+export function statedFormDate(conversation: readonly Turn[], today: string): StatedFormDate | null {
+  if (!priorSentenceFixEnabled()) return null;
+  const said = inOwnWords(conversation);
+  const answers = answerTurns(said, today);
+  const users = said
+    .filter((turn) => turn.role === "user")
+    .map((turn) => String(turn.content))
+    .filter((turn) => turn !== "" && !answers.has(turn.trim()));
+  const change = (turn: string) => formDateChange(yearlessWrittenOut(turn, today), today);
+  for (const turn of [...users].reverse()) {
+    const changed = change(turn);
+    if (changed) return { iso: changed, candidates: [], question: null };
+  }
+  const text = users.filter((turn) => !change(turn)).join("\n");
+  const explicit = explicitFormDate(yearlessWrittenOut(text, today), today);
+  if (explicit) return { iso: explicit, candidates: [], question: null };
+  const dates = [...new Set(incidentOnly(text, today, statedIncidentDates(text, today)).map((found) => found.iso))].sort();
+  if (dates.length === 0) return null;
+  if (dates.length === 1) return { iso: dates[0]!, candidates: [], question: null };
+  const written = said.map((turn) => (turn.role === "user" ? { ...turn, content: yearlessWrittenOut(String(turn.content), today) } : turn));
+  const choice = dateAnsweredIn(written, dates, today);
+  if (choice) return { iso: choice.kind === "date" ? choice.iso : null, candidates: [], question: null };
+  return { iso: null, candidates: dates, question: dateAlreadyAsked(said) ? null : dateQuestion(dates) };
 }

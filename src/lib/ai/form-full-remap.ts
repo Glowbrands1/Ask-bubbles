@@ -23,7 +23,8 @@ import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
 import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
 import { asksOnlyAboutFormsOnFile } from "@/lib/forms/chat-form-records";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
-import { listIncidentDates, datesInText, datesInTextWithYearless, managerDatesForDraft, priorStepDateOffsets } from "@/lib/forms/form-date-answer";
+import { blankPriorStepDates, listIncidentDates, datesInText, datesInTextWithYearless, withoutPriorStepClauses } from "@/lib/forms/form-date-answer";
+import { dateAnswersSaid, statedFormDate } from "@/lib/forms/incident-dates";
 import { incidentOnly } from "@/lib/forms/form-date-incident-only";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { lateOpenOn, mostRecent } from "@/lib/forms/late-open";
@@ -196,9 +197,19 @@ export function groundFormSlots(input: {
   const jobTitle = managerOnly ? managerTitle(titleTurns, raw.employeeName) : groundedTitle(titleTurns);
   const store =
     (placeSpanGuardEnabled() ? newestNamedStore(users) : null) ?? groundedStore(said) ?? (fixed ? placeStore(said) : null);
-  // PRIOR_SENTENCE_FIX_ENABLED: an earlier step's date ("i coached her on 10-16") never dates the form.
+  /*
+   * PRIOR_SENTENCE_FIX_ENABLED (coordinator's ruling, 26 Oct 2026; ported
+   * from the sibling app): the form's date by `statedFormDate` — one incident
+   * date, or two asked about once and dated the day it is created until
+   * answered — and otherwise this reader's own, with every earlier step's
+   * date ("i coached her on 10-16", "written warning on 10-20") blanked first.
+   */
   const sentenceFix = priorSentenceFixEnabled();
-  const incidentDateIso = groundedDate(sentenceFix ? withoutPriorStepDates(said, input.today) : said, input.today);
+  // Corrective Action only: on a Coaching Form the coaching held is its date.
+  const settled = sentenceFix && templateKey === "dpoa" ? statedFormDate(allTurns, input.today) : null;
+  const incidentDateIso = settled
+    ? settled.iso
+    : groundedDate(sentenceFix ? blankPriorStepDates(said, input.today) : said, input.today);
   /*
    * WARNING_LEVEL_MANAGER_ONLY_ENABLED (ported from the sibling app, 24 Oct 2026):
    * the latest level the manager states, with a bare "Yes" counted only after
@@ -227,8 +238,13 @@ export function groundFormSlots(input: {
   // MANAGER_WORDS_ONLY_ENABLED: a clause that only names the employee or says
   // where they work is not what happened, on either reader.
   const incidentSlot = managerOnly ? (clause: string) => slotClause(clause) || namesOrPlacesThem(clause) : slotClause;
+  // PRIOR_SENTENCE_FIX_ENABLED: an answer to the date question ("10/15", "most recent") is no account.
+  const answers = sentenceFix ? dateAnswersSaid(allTurns, input.today) : null;
+  const incidentScope = answers?.size
+    ? users.slice(start).filter((turn) => !answers.has(withoutAppLines(turn).trim())).join("\n")
+    : scoped;
   const observation = fixed
-    ? (requestIncident({ text: scoped, employeeName, slotClause: incidentSlot, managerOnly }) ??
+    ? (requestIncident({ text: incidentScope, employeeName, slotClause: incidentSlot, managerOnly, ...(sentenceFix ? { today: input.today } : {}) }) ??
       (isRequestLeftover(raw.observation, employeeName) ||
       hasCutDate(raw.observation, said) ||
       // MANAGER_WORDS_ONLY_ENABLED: the model's "She works at Grand Island" says
@@ -238,7 +254,7 @@ export function groundFormSlots(input: {
         ? null
         : acceptSummary(raw.observation, scoped)) ??
       (managerOnly ? sentenceAboutThem({ text: scoped, employeeName, slotClause: incidentSlot }) : null))
-    : (statedIncident(sentenceFix ? withoutPriorClauses(said, input.today) : said, employeeName, managerOnly) ??
+    : (statedIncident(sentenceFix ? withoutPriorStepClauses(said, input.today, said).text : said, employeeName, managerOnly) ??
       acceptSummary(raw.observation, said));
   // Both readers contribute, each behind its own flag: the "previous coaching: …"
   // list (REMAP_INCIDENT_FIX_ENABLED) and the intent path's step reader
@@ -297,6 +313,8 @@ export function groundFormSlots(input: {
       ? { ...kept, warningLevel: null }
       : kept;
   let slots = finishSlots(firstCoachingUnlessEarlier(mergeSlots(read, savedSlots), users), said);
+  // PRIOR_SENTENCE_FIX_ENABLED: a date settled (or asked about) this turn is not replaced by a saved one.
+  if (settled) slots = { ...slots, incidentDateIso: settled.iso };
   // FORM_EDIT_DATE_RULES_ENABLED: an edit replaces, adds to, or never becomes What happened; the Date follows the incident.
   if (formEditDateRulesEnabled()) {
     slots = withEditDateRules(slots, {
@@ -326,7 +344,12 @@ export function groundFormSlots(input: {
     .map((turn) => turn.content);
   // An ambiguous "Yes" answered nothing, so the questions before it are asked again.
   if (fixed && isAmbiguousAnswer(conversation, conversation.length - 1)) assistants.pop();
-  const questions = questionsFor(slots, assistants);
+  const questionsRead = questionsFor(slots, assistants);
+  // PRIOR_SENTENCE_FIX_ENABLED: two incident dates are asked about by name, once.
+  const questions =
+    settled && settled.candidates.length > 1
+      ? questionsRead.flatMap((question) => (question === QUESTIONS.incidentDateIso ? (settled.question ? [settled.question] : []) : [question]))
+      : questionsRead;
   const content = renderReply(
     slots,
     questions,
@@ -975,51 +998,6 @@ function groundedDate(text: string, today: string): string | null {
     ),
   ];
   return spoken.length === 1 ? spoken[0]! : null;
-}
-
-/*
- * PRIOR_SENTENCE_FIX_ENABLED (QA, 26 Oct 2026; ported from the sibling app).
- * "create a ca for … she was late to open on 10-5 and 10-15. i coached her on
- * 10-16 about being late" was dated 10/16, the coaching, and "ca for …,
- * coached her 10-16, written warning on 10-20" was dated 10/20 with "written
- * warning" as What happened. With the flag on, each earlier step's date
- * (`priorStepDateOffsets`) is blanked before the form's date is read, so the
- * newest INCIDENT date dates the form (10/15 here, as LATE_OPEN_DATE_ENABLED's
- * newest-date rule reads it); and a clause holding only earlier steps' dates
- * is no incident.
- */
-function withoutPriorStepDates(text: string, today: string): string {
-  const steps = new Set(priorStepDateOffsets(text, today, text));
-  if (steps.size === 0) return text;
-  let out = text;
-  for (const found of managerDatesForDraft(text, today)) {
-    if (steps.has(found.index)) out = out.slice(0, found.index) + " ".repeat(found.end - found.index) + out.slice(found.end);
-  }
-  return out;
-}
-
-const CLAUSE_END = /\.(?=\s|$)|(?<!\d)\.(?!\d)|[;!?\n]|,(?!\s*\d{4})/g;
-
-function withoutPriorClauses(text: string, today: string): string {
-  const steps = priorStepDateOffsets(text, today, text);
-  if (steps.length === 0) return text;
-  const stepSet = new Set(steps);
-  const ends = [...text.matchAll(CLAUSE_END)].map((match) => match.index ?? 0);
-  const dates = datesInTextWithYearless(text, today);
-  const cuts: [number, number][] = [];
-  for (const index of steps) {
-    const opening = ends.filter((at) => at < index).at(-1) ?? -1;
-    const closing = ends.find((at) => at > index) ?? text.length;
-    // A clause that also dates something that is not an earlier step stays whole.
-    if (dates.some((found) => found.index > opening && found.index < closing && !stepSet.has(found.index))) continue;
-    const comma = opening >= 0 && text[opening] === ",";
-    const from = comma ? opening : opening + 1;
-    const to = !comma && text[closing] === "," ? closing + 1 : closing;
-    if (!cuts.some(([start, end]) => start === from && end === to)) cuts.push([from, to]);
-  }
-  let out = text;
-  for (const [from, to] of [...cuts].sort((left, right) => right[0] - left[0])) out = out.slice(0, from) + out.slice(to);
-  return out;
 }
 
 /** "9/01" and "October 20". Not "yesterday" or "2 days ago". */
