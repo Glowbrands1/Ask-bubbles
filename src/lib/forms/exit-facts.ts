@@ -347,7 +347,7 @@ function dateTokens(text: string, today: string): DateToken[] {
     return shiftDays(today, ahead);
   });
   add(new RegExp(String.raw`\b(?:this\s+|on\s+)?(?:${WEEKDAY})\b`, "gi"), () => null);
-  // EXIT_NOTICE_FULFILLED_ENABLED too: "last day 9-28", "resigned 9-15" (QA, Sunny batch 13).
+  // EXIT_NOTICE_FULFILLED_ENABLED too: "last day 9-28", "resigned 9-15" (QA batch 13).
   if (exitIntakeFixEnabled() || exitNoticeFulfilledEnabled()) {
     for (const match of text.matchAll(YEARLESS_DASHED)) {
       const index = match.index ?? 0;
