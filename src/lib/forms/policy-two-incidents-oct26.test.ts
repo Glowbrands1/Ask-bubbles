@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import rows from "@/test/fixtures/jba-manual-production-151.json";
 import { accountManualSections } from "@/lib/ai/account-manual-sections";
@@ -72,6 +72,8 @@ const LIVE = [
 ] as const;
 
 afterEach(() => vi.unstubAllEnvs());
+// Flag-off pins hold whatever the environment has on; flag-on tests call on(true).
+beforeEach(() => vi.stubEnv("POLICY_TWO_INCIDENTS_ENABLED", ""));
 
 const cited = (text: string) => accountManualSections(text, CHUNKS).map((section) => `${section.heading} p.${section.page}`);
 const card = (text: string) => citedSections([text], CHUNKS).map((entry) => `${entry.section} p.${entry.page}`);
@@ -139,6 +141,27 @@ describe.each([
     it("the second person of a pair keeps only their own policy", () => {
       on(true);
       expect(cited("ca for devon harlan no call no show on 10-4-26")).toEqual(["Attendance p.14"]);
+    });
+
+    // QA-2, 26 Oct 2026: a late shift the manager denies is no incident and decides no order.
+    it.each(
+      [
+        "was not late to her shift, she opened the store late",
+        "was never late to her shift but opened the store late",
+        "is not late to her shift and did not open the store late",
+      ].flatMap(registers),
+    )("a denied late shift adds nothing: %s", (text) => {
+      on(true);
+      expect(describedAttendanceKeys(text)).toEqual(["late_opening"]);
+      expect(cited(text)).toEqual(["Late Opening p.15"]);
+    });
+
+    it("known quirk, the same with the flag off and on: an on-time opening still reads as one", () => {
+      const text = "opened the store on time and was a no call no show";
+      on(false);
+      const off = describedAttendanceKeys(text);
+      on(true);
+      expect(describedAttendanceKeys(text)).toEqual(off);
     });
 
     it("never a third section", () => {

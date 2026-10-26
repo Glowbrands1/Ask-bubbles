@@ -427,11 +427,11 @@ function openingSpans(text: string): { start: number; end: number }[] {
 
 /** The account with its opening words taken out, so "opened the store late" is not also a late shift. */
 function withoutOpeningWords(text: string): string {
+  // One pattern at a time, so overlapping matches ("did not open the store late") cannot leave a piece behind.
   let rest = text;
-  for (const span of [...openingSpans(text)].sort((a, b) => b.start - a.start)) {
-    rest = `${rest.slice(0, span.start)} ${rest.slice(span.end)}`;
-  }
-  return rest;
+  for (const pattern of [LATE_OPENING, OPENED_LATE, LATE_TO_OPEN]) rest = rest.replace(new RegExp(pattern.source, "gi"), " ");
+  // What "did not open" leaves of "did not open the store late".
+  return rest.replace(/\b(?:the\s+|our\s+|her\s+|his\s+|their\s+)?(?:store|location|shop|makery|doors)\s+(?:late|on\s+time)\b/gi, " ");
 }
 
 /**
@@ -439,13 +439,30 @@ function withoutOpeningWords(text: string): string {
  * incident, for listing their sections in the order the manager said them
  * (POLICY_TWO_INCIDENTS_ENABLED). -1 when the account does not say it.
  */
+/**
+ * A lateness or absence the manager denies ("was not late to her shift",
+ * "was never late", "isn't absent") is not an incident (QA-2, 26 Oct 2026):
+ * the late-shift reader beside a late opening and the order-said rule skip it.
+ */
+const DENIED_BEFORE = /\b(?:not|never|no\s+longer|was ?n[o']?t|wasn't|is ?n[o']?t|isn't|were ?n[o']?t|weren't|did ?n[o']?t|didn't)\s+(?:\S+\s+){0,2}$/;
+
+function deniedAt(text: string, index: number): boolean {
+  const clause = text.slice(0, index).split(/[,;:–—]|\s-\s|\bbut\b|\band\b/).pop() ?? "";
+  return DENIED_BEFORE.test(clause);
+}
+
+/** Whether the text says `pattern` without denying it. */
+function undenied(text: string, pattern: RegExp): boolean {
+  return [...text.matchAll(new RegExp(pattern.source, "gi"))].some((match) => !deniedAt(text, match.index));
+}
+
 export function attendanceIncidentPositions(rawText: string): { lateOpening: number; attendance: number } {
   const text = normalize(rawText);
   const spans = opensLate(text) ? openingSpans(text) : [];
   const inside = (index: number) => spans.some((span) => index >= span.start && index < span.end);
   let attendance = -1;
   for (const pattern of [ABSENCE, LATENESS]) {
-    const first = [...text.matchAll(new RegExp(pattern.source, "gi"))].find((match) => !inside(match.index));
+    const first = [...text.matchAll(new RegExp(pattern.source, "gi"))].find((match) => !inside(match.index) && !deniedAt(text, match.index));
     if (first && (attendance === -1 || first.index < attendance)) attendance = first.index;
   }
   return { lateOpening: spans.length > 0 ? Math.min(...spans.map((span) => span.start)) : -1, attendance };
@@ -467,7 +484,7 @@ function attendanceOffenseKeys(text: string, missed: boolean): string[] | null {
   const opening = opensLate(text);
   const absent = ABSENCE.test(text) || missed;
   // POLICY_TWO_INCIDENTS_ENABLED: a late shift beside a late opening is a second incident.
-  const late = opening ? policyTwoIncidentsEnabled() && LATENESS.test(withoutOpeningWords(text)) : LATENESS.test(text);
+  const late = opening ? policyTwoIncidentsEnabled() && undenied(withoutOpeningWords(text), LATENESS) : LATENESS.test(text);
   if (!opening && !absent && !late) return null;
   const keys: string[] = [];
   if (opening) keys.push(LATE_OPENING_OFFENSE);
