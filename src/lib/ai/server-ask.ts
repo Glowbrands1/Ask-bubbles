@@ -47,6 +47,7 @@ import { loadGoogleReviewsChatBlock } from "./google-reviews-chat-read";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
 import { withTerseSlots } from "./terse-slots";
+import { withNameRespell } from "./name-respell";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";
@@ -228,7 +229,8 @@ async function answerQuestionBody(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
-  return keepManagerActionPlan(await answerQuestionCore(request, actor, memory), request);
+  // NAME_RESPELL_ENABLED: the manager's newest spelling of the employee wins.
+  return withNameRespell(keepManagerActionPlan(await answerQuestionCore(request, actor, memory), request), request);
 }
 
 async function answerQuestionCore(
