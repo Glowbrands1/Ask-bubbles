@@ -578,6 +578,37 @@ export function titleWholeWordEnabled(): boolean {
 }
 
 /**
+ * Finalized-form edits carry a reason and a revision number, and the
+ * revision chain shows: "Revised <date> (supersedes <ref>)" on a revision and
+ * "Superseded <date> by <ref>" on the original, on the PDF and the form view,
+ * plus "Revision N of <ref>" with a link to the previous version.
+ *
+ * Off (the default) leaves the shipped revise flow exactly as it is: no
+ * reason is asked for or recorded, the history route answers 404, and the
+ * PDF footer is byte-identical. On, the server refuses an edit of a
+ * finalized form that gives no reason.
+ *
+ * The browser reads `NEXT_PUBLIC_FORM_REVISIONS_ENABLED` (see
+ * `formRevisionsUiEnabled`). Turn both on together: the server refuses an
+ * edit without a reason, and only the browser flag shows the reason dialog.
+ * Either spelling turns the server side on.
+ */
+export function formRevisionsEnabled(): boolean {
+  return envFlag("FORM_REVISIONS_ENABLED") || envFlag("NEXT_PUBLIC_FORM_REVISIONS_ENABLED");
+}
+
+/**
+ * The browser half of `formRevisionsEnabled`: the reason dialog, the marks
+ * and the history on the form card, the form page and the register row.
+ * Next inlines only a statically written `process.env.NEXT_PUBLIC_*` name
+ * into a client bundle, so the name is written out here.
+ */
+export function formRevisionsUiEnabled(): boolean {
+  const raw = process.env.NEXT_PUBLIC_FORM_REVISIONS_ENABLED;
+  return typeof raw === "string" && ON.has(raw.trim().toLowerCase());
+}
+
+/**
  * The exit form's intake reads what the manager typed (live QA, 25 Oct 2026).
  * A Details answer ("items returned") or the Permanent Address the manager
  * typed is never offered as the employee; "change the reason for resignation
@@ -733,6 +764,39 @@ export function draftNoInventedPlanEnabled(): boolean {
   return envFlag("DRAFT_NO_INVENTED_PLAN_ENABLED");
 }
 
+/**
+ * A terse "ca <name> <store> <what happened> <date> verbal" line is written
+ * out as the long form before it is read, so the name, store, date, warning
+ * level and payroll amount are read as from a full sentence, and the card
+ * appears (conv_mvofim8a2lqx6jn, 25 Oct 2026; ported from the sibling app).
+ * See `ai/terse-slots.ts`. Off, the turn is read as typed.
+ */
+export function terseSlotReadEnabled(): boolean {
+  return envFlag("TERSE_SLOT_READ_ENABLED");
+}
+
+/**
+ * Chat answers never repeat a default-password format or Social Security
+ * digits from the knowledge base (QA P0, 25 Oct 2026; same flag in both
+ * apps). The sentence is taken out of the excerpts the model is given and of
+ * the reply and its cited excerpts, and the person is told to ask their
+ * manager or HR to reset it. Knowledge rows are not changed. Off, the text is
+ * as retrieved.
+ */
+export function sensitiveDefaultsRedactEnabled(): boolean {
+  return envFlag("SENSITIVE_DEFAULTS_REDACT_ENABLED");
+}
+
+/**
+ * "I forgot my password" (any spelling) is answered about this app first:
+ * click "Forgot your password?" on the log-in screen (QA and Pau, 25 Oct
+ * 2026; same flag in both apps). Another system is talked about only when
+ * the manager names it. Off, the turn is answered as before.
+ */
+export function appPasswordHelpEnabled(): boolean {
+  return envFlag("APP_PASSWORD_HELP_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -789,6 +853,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TITLE_WHOLE_WORD_ENABLED",
   "EXIT_INTAKE_FIX_ENABLED",
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
+  "FORM_REVISIONS_ENABLED",
+  "NEXT_PUBLIC_FORM_REVISIONS_ENABLED",
   "REFORMAT_KEEPS_SOURCES_ENABLED",
   "FRAMEWORK_GENERAL_SECTIONS_ENABLED",
   "FORM_EDIT_DATE_RULES_ENABLED",
@@ -802,4 +868,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "DRAFT_NO_INVENTED_PLAN_ENABLED",
+  "TERSE_SLOT_READ_ENABLED",
+  "SENSITIVE_DEFAULTS_REDACT_ENABLED",
+  "APP_PASSWORD_HELP_ENABLED",
 ] as const;
