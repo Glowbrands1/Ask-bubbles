@@ -200,9 +200,51 @@ describe("STORE_ALIAS_ENABLED off", () => {
       expect(card.formProposal?.locationId ?? null, say).toBeNull();
     }
     const remapCard = await chat([{ say: "create a ca for kira dunmore, she was late today", raw: { employeeName: "kira dunmore" } }, { say: "dodge, ne" }]);
-    expect(remapCard.formProposal?.issue).toBe("dodge");
+    // Main (since 532e7f55) no longer reads the bare reply as the Issue; it still names no store.
+    expect(remapCard.formProposal?.locationId ?? null).toBeNull();
     process.env.FORM_FULL_REMAP_ENABLED = "";
     const pathB = await chat([{ say: "create a ca for kira dunmore, she was late today", raw: { employeeName: "kira dunmore" } }, { say: "dodge, ne" }]);
     expect(pathB.formProposal ?? null).toBeNull();
+  });
+});
+
+describe("STORE_ALIAS_ENABLED: a store the manager rules out, and a word that only looks like one (QA-6, 26 Oct 2026)", () => {
+  const twins = (text: string) => [text, text.charAt(0).toUpperCase() + text.slice(1), text.toUpperCase()];
+
+  it("a negated store reads exactly as with the flag off", async () => {
+    const { withStoreAliases } = await import("./store-alias");
+    const read = (question: string, on: boolean) => {
+      process.env.STORE_ALIAS_ENABLED = on ? "true" : "";
+      return withStoreAliases({ question, history: [] } as unknown as Parameters<typeof withStoreAliases>[0]).question;
+    };
+    for (const wording of [
+      "kira dunmore was never at dodge",
+      "she was not at dodge ne",
+      "she is not at the dodge location",
+      "kira dunmore isn't at kearney ne",
+      "every store except bellevue ne",
+    ]) {
+      for (const say of twins(wording)) expect(read(say, true), say).toBe(read(say, false));
+    }
+    delete process.env.STORE_ALIAS_ENABLED;
+  });
+
+  it("only the store the manager means is rewritten", async () => {
+    const { rosterNames } = await import("./store-alias");
+    expect(rosterNames("it is not dodge, it is grand island ne")).toBe("it is not dodge, it is Grand Island NE");
+    expect(rosterNames("It is not Dodge, it is Grand Island NE")).toBe("It is not Dodge, it is Grand Island NE");
+  });
+
+  it("\"in the dodge\" is not a store", async () => {
+    const { rosterNames } = await import("./store-alias");
+    for (const text of ["she left her keys in the dodge", "She left her keys in the Dodge", "SHE LEFT HER KEYS IN THE DODGE"]) {
+      expect(rosterNames(text), text).toBe(text);
+    }
+    expect(rosterNames("she works at dodge")).toBe("she works at Omaha NE (West Dodge Rd)");
+  });
+
+  it("a bare \"dodge, ne\" as the first message, with no card waiting, is written as the store answer (disclosed)", async () => {
+    const { rosterNames } = await import("./store-alias");
+    expect(rosterNames("dodge, ne")).toBe("the store is Omaha NE (West Dodge Rd)");
   });
 });
