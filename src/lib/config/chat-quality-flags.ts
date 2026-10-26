@@ -765,6 +765,15 @@ export function storeAliasEnabled(): boolean {
   return envFlag("STORE_ALIAS_ENABLED");
 }
 
+/**
+ * The manager's newest spelling of the card's employee wins, when the card's
+ * spelling is one they typed (ported from the sibling app, 25 Oct 2026). See
+ * `ai/name-respell.ts`. Off, the first spelling stays.
+ */
+export function nameRespellEnabled(): boolean {
+  return envFlag("NAME_RESPELL_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -837,4 +846,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "BARE_ANSWER_BINDING_ENABLED",
   "MANAGER_FORM_CHOICE_ENABLED",
   "STORE_ALIAS_ENABLED",
+  "NAME_RESPELL_ENABLED",
 ] as const;
