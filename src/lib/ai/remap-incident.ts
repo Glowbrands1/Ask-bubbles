@@ -6,10 +6,14 @@ import {
   type ManualChunk,
   type ManualSection,
 } from "@/lib/forms/official-policy-manual";
+import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
+import { remapIncidentFixEnabled } from "@/lib/config/chat-quality-flags";
 import { extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
+import { excerptTextForDisplay } from "@/lib/knowledge/excerpt-brand-filter";
 import type { KnowledgeCategory, SourceCitation } from "@/types";
 
 import { accountManualSections } from "./account-manual-sections";
+import { incidentTurn } from "./incident-clauses";
 import { formatManualCitation } from "./policy-citation-fields";
 
 /**
@@ -32,13 +36,28 @@ export interface RemapManual {
 }
 
 const FORM_WORDS = String.raw`(?:corrective\s+actions?|ca|c\/a|write-?ups?|dpoa|coaching\s+form|policy\s+review|follow-?up\s+coaching)(?:\s+forms?)?`;
+// REMAP_INCIDENT_FIX_ENABLED: "create a coaching document for …" asks for the
+// form too (QA, 25 Oct 2026, conv_mvnt95q52gmu047). Off, the words above.
+const FIXED_FORM_WORDS = String.raw`(?:corrective\s+actions?|ca|c\/a|write-?ups?|dpoa|coaching\s+(?:form|document|doc|paperwork)|policy\s+review|follow-?up\s+coaching)(?:\s+forms?)?`;
 const LEVEL_WORDS = String.raw`(?:(?:a|an|the)\s+)?(?:new\s+)?(?:(?:verbal|written|final)\s+(?:warning\s+)?)?`;
 
 /** "create a verbal CA for", "write a CA for", "CA for" — only at the start of a clause. */
-const REQUEST_LEAD = new RegExp(
-  String.raw`^\s*(?:please\s+)?(?:(?:can|could)\s+you\s+)?(?:(?:i\s+)?(?:need|want)\s+(?:to\s+)?)?(?:(?:create|make|start|open|do|file|write|draft|fill\s+out|put\s+together)\s+(?:me\s+)?)?${LEVEL_WORDS}${FORM_WORDS}\b\s*(?:for\s+)?`,
-  "i",
-);
+const requestLeadFor = (formWords: string) =>
+  new RegExp(
+    String.raw`^\s*(?:please\s+)?(?:(?:can|could)\s+you\s+)?(?:(?:i\s+)?(?:need|want)\s+(?:to\s+)?)?(?:(?:create|make|start|open|do|file|write|draft|fill\s+out|put\s+together)\s+(?:me\s+)?)?${LEVEL_WORDS}${formWords}\b\s*(?:for\s+)?`,
+    "i",
+  );
+const MAIN_REQUEST_LEAD = requestLeadFor(FORM_WORDS);
+const FIXED_REQUEST_LEAD = requestLeadFor(FIXED_FORM_WORDS);
+
+/** The request lead for the flag state: REMAP_INCIDENT_FIX_ENABLED adds "coaching document". */
+function requestLead(): RegExp {
+  return remapIncidentFixEnabled() ? FIXED_REQUEST_LEAD : MAIN_REQUEST_LEAD;
+}
+
+function formWords(): string {
+  return remapIncidentFixEnabled() ? FIXED_FORM_WORDS : FORM_WORDS;
+}
 
 /** A whole date: 10-15-26, 10/11, 1/1/2026. Never part of one ("10-1" of "10-15-26"). */
 const DATE = String.raw`(?<![\d/-])\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?(?![\d/-])`;
@@ -118,6 +137,8 @@ export function requestIncident(input: {
   readonly text: string;
   readonly employeeName: string | null;
   readonly slotClause: (clause: string) => boolean;
+  /** MANAGER_WORDS_ONLY_ENABLED: see `managerSentence`. */
+  readonly managerOnly?: boolean;
 }): string | null {
   let found: string | null = null;
   // One turn at a time. An edit or a command ("change the date to 10-22",
@@ -125,8 +146,29 @@ export function requestIncident(input: {
   // field and never What happened; the newest turn that describes an
   // incident is the incident.
   for (const turn of input.text.split("\n")) {
-    const offense = turnIncident(turn, input.employeeName, input.slotClause);
+    const offense = turnIncident(turn, input.employeeName, input.slotClause, input.managerOnly ?? false);
     if (offense) found = offense;
+  }
+  return found;
+}
+
+/**
+ * MANAGER_WORDS_ONLY_ENABLED (QA, 25 Oct 2026): when neither this reader nor
+ * the model's summary gives What happened, the newest sentence about her in
+ * the manager's own words, without the request, the name or the store: "She
+ * opened the store late at Grand Island" is "She opened the store late". The
+ * offense reader leaves a sentence about her to the model's summary, and a
+ * summary that copies the sentence is refused as the question itself.
+ */
+export function sentenceAboutThem(input: {
+  readonly text: string;
+  readonly employeeName: string | null;
+  readonly slotClause: (clause: string) => boolean;
+}): string | null {
+  let found: string | null = null;
+  for (const turn of input.text.split("\n")) {
+    const told = turnIncident(turn, input.employeeName, input.slotClause, true, true);
+    if (told) found = told;
   }
   return found;
 }
@@ -135,29 +177,170 @@ function turnIncident(
   turn: string,
   employeeName: string | null,
   slotClause: (clause: string) => boolean,
+  managerOnly = false,
+  aboutThemOnly = false,
 ): string | null {
   if (isEditTurn(turn)) return null;
   let found: string | null = null;
+  let aboutThem: string | null = null;
   const story: string[] = [];
-  for (const raw of withoutPriorList(turn).split(/[.!?;]+(?=\s|$)/)) {
+  // REMAP_INCIDENT_FIX_ENABLED: the payroll reason, prior steps and who/where
+  // clauses below. Off, those clauses are read as main reads them (QA-3,
+  // 26 Oct 2026: REMAP_DRAFT_SOURCES reads this with the fix off).
+  const fix = remapIncidentFixEnabled();
+  // INCIDENT_CLAUSE_SPLIT_ENABLED: without the employee facts and policy text, "dodge, ne" kept whole.
+  for (const raw of withoutPriorList(incidentTurn(turn, employeeName, { subjectless: true })).split(/[.!?;]+(?=\s|$)/)) {
     const sentence = raw.trim();
     if (!sentence || isEditTurn(sentence) || TALKS_TO_THE_APP.test(sentence) || ASKS_FOR_HELP.test(sentence)) continue;
-    const requested = REQUEST_LEAD.test(sentence) || LEVEL_REQUEST.test(sentence);
+    const requested = requestLead().test(sentence) || LEVEL_REQUEST.test(sentence);
     let kept = false;
     for (const clause of sentence.split(",")) {
       const text = clause.trim();
-      if (!text || slotClause(text) || STORE_CLAUSE.test(text) || PAYROLL_STATEMENT.test(text) || POLICY_ASK.test(text)) continue;
+      if (!text || slotClause(text) || STORE_CLAUSE.test(text) || POLICY_ASK.test(text)) continue;
+      if (!fix && PAYROLL_STATEMENT.test(text)) continue;
+      if (PAYROLL_STATEMENT.test(text)) {
+        // "$25 will be payroll deducted for late open on 10-21-26": the payroll
+        // answer, and after "for" what it is for (conv_mvnt9m172krh73y).
+        const reason = /\bfor\s+(?!the\s+(?:amount|total)\b)(.{4,})$/i.exec(text)?.[1];
+        const offense = reason ? clauseOffense(reason, employeeName) : null;
+        if (offense) found = offense;
+        continue;
+      }
+      // A prior step ("jba manual 1-1-26 for previous coaching", "she was coached
+      // on 9-15 for being late") is a prior action, never the incident (QA, 25 Oct
+      // 2026, conv_mvnt9by62zckttk, conv_mvnt9uu12rle7pt).
+      if (fix && isPriorStep(text)) continue;
+      // "create a CA form for test employee at kearney", "team member Test
+      // Employee at bellevue": who and where, never the incident (QA, 25 Oct 2026).
+      if (fix && onlyWhoOrWhere(text.replace(requestLead(), " ").replace(LEVEL_REQUEST, " ").trim(), employeeName)) continue;
       kept = true;
       const offense = clauseOffense(text, employeeName);
       if (offense) found = offense;
     }
     if (kept && !requested && sentence.split(/\s+/).length >= 3) story.push(sentence);
+    if (managerOnly && kept) {
+      const told = managerSentence(sentence, employeeName, slotClause);
+      if (/^(?:she|he|they)\s+\S+\s+\S/i.test(told)) aboutThem = told;
+    }
   }
   // An account of two or more sentences is kept in the manager's words, so
   // both dates and the coaching they already gave stay on the form
   // (conv_mvmzlpox2z7u4c3). One sentence is read down to the offense.
+  if (managerOnly) {
+    // MANAGER_WORDS_ONLY_ENABLED (QA, 25 Oct 2026): those words without the
+    // clauses that only request the form, name the employee or give their
+    // place: "She opened the store late at Grand Island. She did not call
+    // anyone" is "She opened the store late. She did not call anyone".
+    const told = story.map((sentence) => managerSentence(sentence, employeeName, slotClause)).filter(Boolean);
+    if (aboutThemOnly) return told.length >= 2 ? null : aboutThem;
+    if (told.length >= 2) return told.join(". ");
+    return found;
+  }
   if (story.length >= 2) return story.join(". ");
   return found;
+}
+
+/**
+ * MANAGER_WORDS_ONLY_ENABLED (QA, 25 Oct 2026; the same rule as the sibling
+ * app): a sentence of the account without the clauses that only request the
+ * form, name the employee or give their place (the store, or a job title at a
+ * store). Everything else stays word for word. Empty when nothing is left.
+ */
+function managerSentence(sentence: string, employeeName: string | null, slotClause: (clause: string) => boolean): string {
+  const kept: string[] = [];
+  let requested = false;
+  for (const clause of sentence.split(",")) {
+    let text = clause.trim();
+    if (!text || slotClause(text) || STORE_CLAUSE.test(text) || PAYROLL_STATEMENT.test(text) || POLICY_ASK.test(text)) continue;
+    if (requestLead().test(text) || LEVEL_REQUEST.test(text)) {
+      requested = true;
+      text = text.replace(requestLead(), " ").replace(LEVEL_REQUEST, " ").replace(/\s+/g, " ").trim();
+      if (!text || /^(?:so|to|with|from|because|now)\b/i.test(text)) continue;
+      if (onlyNamesThem(text, employeeName) || /^[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*){0,2}$/.test(text)) continue;
+    }
+    if (onlyWhoOrWhere(text, employeeName)) continue;
+    text = withoutStore(text);
+    // The "for" the dropped request left: "… for opening store late".
+    if (requested) text = text.replace(/^(?:for|about|regarding)\s+/i, "");
+    if (text) kept.push(text);
+  }
+  return kept.join(", ");
+}
+
+/**
+ * A step before this incident: a labelled prior ("previous coaching", "prior
+ * verbal"), a coaching she was given ("she was coached on 9-15"), or a policy
+ * manual with a date ("jba manual 1-1-26"). A coaching the manager says they
+ * held ("I verbally coached her …") is part of their account.
+ */
+function isPriorStep(clause: string): boolean {
+  return (
+    /\b(?:previous|prior|past|earlier)\s+(?:coaching|corrective|cas?\b|c\/as?\b|actions?|steps?|warnings?|discipline|verbal|written)/i.test(clause) ||
+    /\b(?:was|were|got|been|had\s+been)\s+(?:verbally\s+)?coached\b/i.test(clause) ||
+    /\bmanual\b.*(?<![\d/-])\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?(?![\d/-])/i.test(clause)
+  );
+}
+
+/** "soap maker at kearney", "Test Employee at Kearney", "the Grand Island store": who and where. */
+function onlyWhoOrWhere(clause: string, employeeName: string | null): boolean {
+  const text = clause.trim().replace(/[.!?]+$/, "");
+  if (!text) return false;
+  if (onlyNamesThem(text, employeeName) || isStoreOnly(text)) return true;
+  const unplaced = withoutStore(text);
+  if (unplaced === text) return false;
+  // A store was named: what is left is only the person or their job title.
+  const rest = employeeName ? unplaced.replace(new RegExp(escape(employeeName), "ig"), " ").trim() : unplaced;
+  if (!rest) return true;
+  const words = rest.replace(/^(?:a|an|the|our)\s+/i, "").split(/\s+/);
+  if (words.length > 4 || /\b(?:was|is|did|had|has|not)\b/i.test(rest)) return false;
+  return Boolean(statedJobTitle(rest) ?? extractJobTitle(rest)) || TITLE_HEAD.test(rest);
+}
+
+/** "soap maker", "assistant manager": the last word is a job. */
+const TITLE_HEAD = /\b(?:managers?|directors?|makers?|consultants?|supervisors?|leads?|trainers?|coordinators?|specialists?|associates?)$/i;
+
+function onlyNamesThem(text: string, employeeName: string | null): boolean {
+  if (!employeeName) return false;
+  const rest = text
+    .replace(new RegExp(escape(employeeName), "ig"), " ")
+    .replace(/\b(?:for|employee|team\s+member)\b/gi, " ")
+    .trim();
+  return rest === "" && text.trim() !== "";
+}
+
+const STORE_FILLER = new Set(["the", "store", "location", "shop", "our"]);
+
+/** Every word is the store's own name ("kearney", "the Grand Island store"). */
+function isStoreOnly(text: string): boolean {
+  const ids = [...new Set(readLocationMentions(`at ${text}`).flatMap((mention) => mention.locationIds))];
+  if (ids.length === 0) return false;
+  const storeWords = new Set(
+    ids.flatMap((id) => (rosterLocationName(id) ?? "").toLowerCase().split(/[^a-z0-9]+/)).filter(Boolean),
+  );
+  const words = text.toLowerCase().split(/[^a-z0-9']+/).filter(Boolean);
+  return words.length > 0 && words.every((word) => storeWords.has(word) || STORE_FILLER.has(word));
+}
+
+/** MANAGER_WORDS_ONLY_ENABLED: a summary that still says "at Grand Island" gives their place. */
+export function namesTheirStore(text: string | null | undefined): boolean {
+  return Boolean(text) && withoutStore(text!) !== text!.trim();
+}
+
+/** "at Grand Island", "at kearney": the store, taken out of the clause. */
+function withoutStore(clause: string): string {
+  const words = clause.trim().split(/\s+/);
+  for (let index = 0; index < words.length - 1; index += 1) {
+    if (!/^(?:at|in)$/i.test(words[index]!)) continue;
+    for (let length = Math.min(6, words.length - index - 1); length >= 1; length -= 1) {
+      const phrase = words.slice(index + 1, index + 1 + length).join(" ");
+      const bare = phrase.replace(/[.!?]+$/, "");
+      if (!isStoreOnly(bare)) continue;
+      const tail = phrase.slice(bare.length);
+      const rest = [...words.slice(0, index), ...words.slice(index + 1 + length)].join(" ");
+      return withoutStore(`${rest}${tail}`.trim());
+    }
+  }
+  return clause.trim();
 }
 
 /** "do verbal for team member …": a level and "for" is a request too. */
@@ -204,21 +387,37 @@ export function currentRequestStart(input: {
   let start = 0;
   for (const [index, raw] of input.turns.entries()) {
     const turn = raw.replace(STATE_LEAD, "");
-    if (!REQUEST_TURN.test(turn.trim())) continue;
+    if (!(remapIncidentFixEnabled() ? FIXED_REQUEST_TURN : MAIN_REQUEST_TURN).test(turn.trim())) continue;
     requests += 1;
-    if (requests > 1 && turnIncident(turn, input.employeeName, input.slotClause)) start = index;
+    if (requests > 1 && requestTellsIncident(turn, input.employeeName, input.slotClause)) start = index;
   }
   return start;
+}
+
+/**
+ * A later request's own incident. REMAP_INCIDENT_FIX_ENABLED also counts a
+ * sentence about them in the manager's words: "create a CA form for Test
+ * Employee at kearney, she skipped the disinfect" is a new form, now that
+ * "at kearney" is read as where and not as the incident (QA-3, 26 Oct 2026).
+ * Off, the offense reader alone, as main.
+ */
+function requestTellsIncident(turn: string, employeeName: string | null, slotClause: (clause: string) => boolean): boolean {
+  if (turnIncident(turn, employeeName, slotClause)) return true;
+  if (!remapIncidentFixEnabled()) return false;
+  return Boolean(turnIncident(turn, employeeName, slotClause, true) ?? turnIncident(turn, employeeName, slotClause, true, true));
 }
 
 /** The state sentences the intent read puts in front of a question ("The employee is …."). */
 const STATE_LEAD =
   /^\s*(?:(?:The form is the|The employee is|Job title:|It happened at|It happened on|Warning level:|Payroll amount:|Policy reference:|Incident:|The account continues)[^\n]*?\.(?=\s|$)\s*|(?:Payroll deduct applies|No payroll deduction)\.\s*)+/i;
 
-const REQUEST_TURN = new RegExp(
-  String.raw`^\s*(?:please\s+)?(?:(?:create|make|start|open|do|file|write|draft)\s+(?:me\s+)?)?${LEVEL_WORDS}${FORM_WORDS}\b`,
-  "i",
-);
+const requestTurnFor = (formWords: string) =>
+  new RegExp(
+    String.raw`^\s*(?:please\s+)?(?:(?:create|make|start|open|do|file|write|draft)\s+(?:me\s+)?)?${LEVEL_WORDS}${formWords}\b`,
+    "i",
+  );
+const MAIN_REQUEST_TURN = requestTurnFor(FORM_WORDS);
+const FIXED_REQUEST_TURN = requestTurnFor(FIXED_FORM_WORDS);
 
 /** The action plan the manager gave in their own words ("action plan: …"), or null. */
 export function statedActionPlan(text: string): string | null {
@@ -268,7 +467,7 @@ export function placeSpans(text: string): string[] {
 }
 
 function clauseOffense(clause: string, employeeName: string | null): string | null {
-  let text = clause.replace(REQUEST_LEAD, " ").replace(LEVEL_REQUEST, " ");
+  let text = clause.replace(requestLead(), " ").replace(LEVEL_REQUEST, " ");
   // "violation is that on 10-16-26 Testy was not measuring and weighing product"
   text = text.replace(/^\s*(?:the\s+)?(?:violation|incident|issue|offen[cs]e|what\s+happened|reason)\s+(?:is|was)(?:\s+that)?\s*[:-]?\s*/i, "");
   // "She was on her cell phone for 30+ minutes at the front desk"
@@ -289,6 +488,8 @@ function clauseOffense(clause: string, employeeName: string | null): string | nu
   text = text.replace(new RegExp(String.raw`^(?:on\s+)?${DATE}\s*,?\s*`, "i"), "");
   text = text.replace(new RegExp(String.raw`\s*,?\s*(?:on|at|dated)?\s*${DATE}$`, "i"), "");
   text = text.replace(/^(?:for|about|regarding|re:?)\s+/i, "");
+  // "regarding On 10-16-26 Test Employee did not …": the date the lead-in left.
+  if (remapIncidentFixEnabled()) text = text.replace(new RegExp(String.raw`^(?:on\s+)?${DATE}\s*,?\s*`, "i"), "");
   // Another spelling of the person as the subject: "Test Employee spent 40 minutes …".
   text = text.replace(/^[A-Z][a-z'-]+\s+[A-Z][a-z'-]+\s+(?=[a-z])/, "");
   text = text.replace(/^(?:was|is|has been)\s+/i, "");
@@ -296,6 +497,9 @@ function clauseOffense(clause: string, employeeName: string | null): string | nu
   text = text.replace(/^[,\s]+|[,\s.]+$/g, "").replace(/\s+(?:on|at)$/i, "");
   if (!text || text.length > 120) return null;
   if (/^(?:for|a|an|the|form|location|store|draft)$/i.test(text)) return null;
+  // "create a coaching document for Test Employee": a repeat request names the
+  // person, it is no new incident (QA, 25 Oct 2026, conv_mvnt95q52gmu047).
+  if (remapIncidentFixEnabled() && (requestLead().test(clause) || LEVEL_REQUEST.test(clause)) && /^[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*){0,2}$/.test(text)) return null;
   // "jba manual 11-1-25" answers the prior-coaching question.
   if (/^(?:the\s+)?(?:jba\s+)?(?:policy\s+)?manual(?:\s+ack\w*)?$/i.test(text)) return null;
   if (/\b(?:she|he|they|i|we)\b/i.test(text)) return null;
@@ -330,12 +534,12 @@ export function isRequestLeftover(summary: string | null | undefined, employeeNa
   // The form words as words: "ca" inside "call" or "vacation" is not a form.
   if (
     /^(?:please\s+)?(?:create|make|start|open|file|write|draft|do)\b/i.test(text) &&
-    new RegExp(String.raw`\b${FORM_WORDS}\b`, "i").test(text)
+    new RegExp(String.raw`\b${formWords()}\b`, "i").test(text)
   ) {
     return true;
   }
   if (STRIPPED_REQUEST.test(text)) return true;
-  return clauseOffense(text, employeeName) === null && REQUEST_LEAD.test(text);
+  return clauseOffense(text, employeeName) === null && requestLead().test(text);
 }
 
 /**
@@ -443,7 +647,7 @@ export function remapCitations(manual: RemapManual, sections: readonly ManualSec
       documentTitle: manual.documentTitle,
       locator: `Page ${section.page}`,
       category,
-      excerpt: `${section.heading}. ${chunk?.content ?? ""}`.slice(0, 500),
+      excerpt: `${section.heading}. ${excerptTextForDisplay(chunk?.content ?? "", manual.documentTitle)}`.slice(0, 500),
       relevance: 1,
     });
   }
