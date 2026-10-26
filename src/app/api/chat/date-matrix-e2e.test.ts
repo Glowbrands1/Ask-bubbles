@@ -499,7 +499,7 @@ const OWNER = {
   RANGE: "gap: Code 4 incident date (#237/#167) — \"from 10-5 to 10-9\" is not dated from its first day, and nothing is asked",
 } as const;
 
-/** Every cell that fails on main today (26 Oct 2026, main 39f2df1; unchanged on 3b92650). */
+/** Every cell that fails on main today (26 Oct 2026, main 39f2df1; unchanged on 5e151777). */
 const GAPS: Record<string, string> = {
 "qa-late-coached/*:formDate": OWNER.PSF,
   "qa-late-coached/*:priorActions": OWNER.PSF,
@@ -638,6 +638,17 @@ const GAPS: Record<string, string> = {
   "quit-10dot2/*:resignationDate": OWNER.DRW,
   "quit-1002/*:resignationDate": OWNER.DRW,
   "quit-the_2nd/*:resignationDate": OWNER.DRW,
+  "qa3-late-open-day-month-priors/*:incidentDates": OWNER.OBS_BUB,
+  "qa3-late-open-day-month-priors/*:priorActions": OWNER.DRW,
+  "list-25_jun/*:formDate": OWNER.DRW,
+  "prior-25_jun/*:incidentDates": OWNER.OBS_BUB,
+  "prior-25_jun/*:priorActions": OWNER.DRW,
+  "edit-25_jun/*:formDate": OWNER.DRW,
+  "last-day-25_jun/*:lastDayWorked": OWNER.DRW,
+  "last-day-10-20/*:lastDayWorked": OWNER.DRW,
+  "notice-25_jun/*:noticeDate": OWNER.DRW,
+  "quit-25_jun/*:resignationDate": OWNER.DRW,
+  "quit-10-20/*:resignationDate": OWNER.DRW,
 };
 
 /*
