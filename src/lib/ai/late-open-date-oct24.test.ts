@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CHAT_QUALITY_FLAG_NAMES, lateOpenDateEnabled } from "@/lib/config/chat-quality-flags";
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
@@ -352,5 +352,109 @@ describe("LATE_OPEN_PAYROLL_FROM_FORM_ENABLED, with LATE_OPEN_DATE_ENABLED on as
       vi.stubEnv("LATE_OPEN_PAYROLL_FROM_FORM_ENABLED", fix);
       expect(two(request, CA_CARD, "ok", "corrective action").first.payrollDeduct, `fix "${fix}"`).toBe("no");
     }
+  });
+});
+
+/*
+ * ============================================================================
+ * LIVE, 26 OCT 2026 (ported from the sibling app): WITH THE PRODUCTION BUNDLE,
+ * A BARE REPLY OR AN AMOUNT WAS SAVED AS PAYROLL DEDUCT OFF A CORRECTIVE ACTION
+ * ============================================================================
+ *
+ * The sibling app's live run with LATE_OPEN_PAYROLL_FROM_FORM_ENABLED on: an
+ * exit form then "yes", "no" or "$25" stored payroll deduct, and a CA with "no
+ * payroll deduct" flipped to Yes on a bare "yes". WARNING_LEVEL_MANAGER_ONLY's
+ * own reply reader saved a bare reply on every form, taking the exit card's
+ * "Payroll Deduction" box (or the read-back "Is payroll deduct applicable?
+ * **No**") for the question, and an amount alone made payroll deduct Yes.
+ * This app's intent read had the same three stores. Pinned with this app's
+ * production env as read on Vercel (09:44Z; FORM_FULL_REMAP false), with
+ * INTENT_PAYROLL_MANAGER_ONLY unset and set, in lowercase and Sentence case;
+ * the twin pins main with the fix off.
+ */
+describe("LATE_OPEN_PAYROLL_FROM_FORM_ENABLED with this app's production env (WARNING_LEVEL_MANAGER_ONLY on)", () => {
+  type Answer = "yes" | "no" | null;
+  const BUBBLES_PROD = [
+    "APP_PASSWORD_HELP", "DRAFT_NEVER_BLANK", "DRAFT_REUSE_SAME_CHAT_ONLY", "EXIT_INTAKE_FIX", "MANUAL_NEGATED_LIST_NOTE",
+    "NAME_BEFORE_TITLE", "POLICY_SPECIFIC_TOPICS", "REOPEN_VERB_GUARD", "STATE_CODE_NOT_A_PERSON", "ACTION_PLAN_MANAGER_ONLY",
+    "ACTION_PLAN_SENTENCES", "CA_TEMPLATE_MAP", "CHAT_TRACE", "CONVERSATION_DRAFT_REUSE", "CROSS_CHAT_REPLY_GUARD",
+    "DRAFT_ACTIONS", "FIELD_ACCURACY", "FORM_CHOICE_STATED", "FORM_STATE", "FULL_MANUAL_CONTEXT", "GLOBAL_STORE_ASK",
+    "GROUNDED_ENTITIES", "INTENT_EXTRACTION", "KEEP_FORM_EMPLOYEE", "LATE_OPEN_DATE", "NOT_A_NAME_GUARD",
+    "PAYROLL_DEDUCT_AMOUNT", "PLACE_SPAN_GUARD", "PRINTED_PAGE_ONLY", "PRIOR_ACTIONS_PARSE", "PROMPT_CACHE",
+    "REMAP_DRAFT_SOURCES", "REMAP_INCIDENT_FIX", "SLOT_RETENTION", "TITLE_WHOLE_WORD", "TYPED_NAME",
+    "WARNING_LEVEL_MANAGER_ONLY", "WOVEN_VALIDATION",
+  ].map((name) => `${name}_ENABLED`);
+  const FORMS = [...TEMPLATES, { key: "exit", name: "Resignation/Exit Form" }] as const;
+  const EXIT_CARD =
+    "Here's what I'll fill in on the **Resignation/Exit Form** for **Test Employee**:\n\n- **Name:** Test Employee\n\n**Left blank for you to review:** Store Items Returned, Salon Key Returned, Payroll Deduction, Eligible for Rehire.";
+  const ASKED = "Here is the **Corrective Action Form** for **Test Employee**.\n\nOne more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.";
+  const READ_BACK = "Here is the **Corrective Action Form** for **Test Employee**.\n\nIs payroll deduct applicable? **No** — tell me if that should change.";
+
+  function two(request: string, assistant: string, reply: string, formType: string) {
+    const turn = (question: string, history: { role: string; content: string }[], saved: ConversationFormState | null) =>
+      decideIntentTurn({
+        question,
+        history,
+        today: "2026-10-25",
+        saved,
+        raw: {
+          employee: null,
+          store: null,
+          title: null,
+          incidentType: null,
+          incidentDate: null,
+          payrollAmount: /\$\s*(\d+)/.exec(question)?.[1] ?? null,
+          warningLevel: null,
+          formType,
+          formTurn: true,
+        },
+        people: [],
+        stores: STORES,
+        headings: HEADINGS,
+        templates: FORMS,
+        formInProgress: history.length > 0,
+      });
+    const first = turn(request, [], null);
+    return turn(reply, [{ role: "user", content: request }, { role: "assistant", content: assistant }], first.state).state;
+  }
+
+  const EXIT = ["create an exit form for Test Employee at Kearney, she resigned, last day 10-24", "Create an exit form for Test Employee at Kearney. She resigned, last day 10-24."] as const;
+  const CA = ["create a verbal ca for Test Employee at Kearney for being late to open on 10-20", "Create a verbal CA for Test Employee at Kearney for being late to open on 10-20."] as const;
+  const CA_NO = ["create a verbal ca for Test Employee at Kearney for being late to open on 10-20, no payroll deduct", "Create a verbal CA for Test Employee at Kearney for being late to open on 10-20. No payroll deduct."] as const;
+
+  /* [label, request, card before the reply, reply, form, with the fix, main (IPMO unset), main (IPMO set)]. */
+  const PINS: readonly (readonly [string, readonly [string, string], string, string, string, Answer, Answer, Answer])[] = [
+    ["an exit form, then yes", EXIT, EXIT_CARD, "Yes", "exit", null, "yes", "yes"],
+    ["an exit form, then no", EXIT, EXIT_CARD, "No", "exit", null, "no", "no"],
+    ["an exit form, then $25", EXIT, EXIT_CARD, "$25", "exit", null, "yes", null],
+    ["a CA with \"no payroll deduct\", then yes", CA_NO, READ_BACK, "Yes", "corrective action", "no", "yes", "yes"],
+    ["a CA's payroll question, then yes", CA, ASKED, "Yes", "corrective action", "yes", "yes", "yes"],
+    ["a CA's payroll question, then no", CA, ASKED, "No", "corrective action", "no", "no", "no"],
+  ];
+  const CASES = PINS.flatMap(([label, [lower, sentence], card, reply, form, fixed, mainOff, mainOn]) => [
+    [`${label} (lowercase)`, lower.toLowerCase(), card, reply.toLowerCase(), form, fixed, mainOff, mainOn] as const,
+    [`${label} (Sentence case)`, sentence, card, reply, form, fixed, mainOff, mainOn] as const,
+  ]);
+
+  describe.each([
+    ["INTENT_PAYROLL_MANAGER_ONLY unset", false],
+    ["INTENT_PAYROLL_MANAGER_ONLY set", true],
+  ] as const)("%s", (_label, ipmo) => {
+    beforeEach(() => {
+      for (const name of Object.keys(process.env).filter((key) => key.endsWith("_ENABLED"))) vi.stubEnv(name, "");
+      for (const name of BUBBLES_PROD) vi.stubEnv(name, "1");
+      vi.stubEnv("FORM_FULL_REMAP_ENABLED", "");
+      vi.stubEnv("INTENT_PAYROLL_MANAGER_ONLY_ENABLED", ipmo ? "1" : "");
+    });
+
+    it.each(CASES)("fix on: %s", (_case, request, card, reply, form, fixed) => {
+      vi.stubEnv("LATE_OPEN_PAYROLL_FROM_FORM_ENABLED", "1");
+      expect(two(request, card, reply, form).payrollDeduct ?? null).toBe(fixed);
+    });
+
+    it.each(CASES)("fix off reads it as main: %s", (_case, request, card, reply, form, _fixed, mainOff, mainOn) => {
+      vi.stubEnv("LATE_OPEN_PAYROLL_FROM_FORM_ENABLED", "");
+      expect(two(request, card, reply, form).payrollDeduct ?? null).toBe(ipmo ? mainOn : mainOff);
+    });
   });
 });
