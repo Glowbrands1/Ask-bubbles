@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { formDateIncidentOnlyEnabled } from "@/lib/config/chat-quality-flags";
+
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { ChatFormProposal, ChatMessage } from "@/types";
 
@@ -378,7 +380,13 @@ describe("flag on: a draft is reused only by its own chat", () => {
       const woven = await chatThenCreate([WOVEN]);
       expect(woven.id).not.toBe(late.id);
       expect(woven.reused).toBe(false);
-      expect(row(woven.id)?.form_date).toBe("2026-10-15");
+      /*
+       * FORM_DATE_INCIDENT_ONLY_ENABLED (D3, changed on purpose; QA ruled D3 wins over
+       * "dated 10/15", 26 Oct 2026): a date written as the deadline ("the 10-15-26
+       * woven deadline", "by 10-15-26") never dates the form, so with the flag on
+       * the card is dated the day it is created. Flag off keeps 10-15.
+       */
+      expect(row(woven.id)?.form_date).toBe(formDateIncidentOnlyEnabled() ? "2026-10-25" : "2026-10-15");
       const update = await say(woven.chat, "add that she was also on her phone");
       expect(update.formUpdate?.instanceId).toBe(woven.id);
       expect(fieldsOf(late.id)).toBe(lateBefore);
