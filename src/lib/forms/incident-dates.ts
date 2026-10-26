@@ -1,4 +1,4 @@
-import { withoutAppLines } from "@/lib/ai/app-sentences";
+import { isAppLine, withoutAppLines } from "@/lib/ai/app-sentences";
 import { antiLoopEnabled, dateAnswerAppliedEnabled, keepFormEmployeeEnabled, priorSentenceFixEnabled } from "@/lib/config/chat-quality-flags";
 
 import {
@@ -126,8 +126,14 @@ function askedDayIn(text: string, dates: readonly string[]): string | null {
 
 /** DATE_ANSWER_APPLIED_ENABLED: a short reply that only answers the date question. */
 function bareDateAnswer(reply: string, dates: readonly string[], today: string): DateChoice | null {
-  if (String(reply).trim().split(/\s+/).length > 4) return null;
-  return readDateChoice(reply, dates, today);
+  // The manager's line only: the app adds its own lines around it ("10-15\nNo payroll deduction. Warning level: verbal.").
+  for (const line of String(reply).split("\n")) {
+    const own = line.trim();
+    if (own === "" || isAppLine(own) || own.split(/\s+/).length > 4) continue;
+    const choice = readDateChoice(own, dates, today);
+    if (choice) return choice;
+  }
+  return null;
 }
 
 /** DATE_ANSWER_APPLIED_ENABLED: the date question is open — asked earlier, and no reply since has answered it. */
@@ -163,7 +169,7 @@ export function dateAnsweredIn(conversation: readonly Turn[], dates: readonly st
     const before = conversation[index - 1]!;
     if (turn.role !== "user") continue;
     if (before.role === "assistant" && askedForDate(before.content)) {
-      choice = readDateChoice(turn.content, dates, today) ?? choice;
+      choice = readDateChoice(turn.content, dates, today) ?? (dateAnswerAppliedEnabled() ? bareDateAnswer(turn.content, dates, today) : null) ?? choice;
       continue;
     }
     // DATE_ANSWER_APPLIED_ENABLED: "10/15" after "She is at Dodge" still answers the open question.
@@ -291,7 +297,10 @@ export function decideFormDate(input: {
   return {
     formDate: null,
     candidates: dates,
-    ...(dateAlreadyAsked(input.history) ? {} : { question: dateQuestion(dates) }),
+    // DATE_ANSWER_APPLIED_ENABLED: asked on every card until answered, as the payroll question is.
+    ...((dateAnswerAppliedEnabled() ? dateQuestionOpen(input.conversation, dates, input.today) || !dateAlreadyAsked(input.history) : !dateAlreadyAsked(input.history))
+      ? { question: dateQuestion(dates) }
+      : {}),
   };
 }
 
@@ -390,7 +399,9 @@ export function statedFormDate(conversation: readonly Turn[], today: string): St
   const written = said.map((turn) => (turn.role === "user" ? { ...turn, content: yearlessWrittenOut(String(turn.content), today) } : turn));
   const choice = dateAnsweredIn(written, dates, today);
   if (choice) return { iso: choice.kind === "date" ? choice.iso : null, candidates: [], question: null };
-  return { iso: null, candidates: dates, question: dateAlreadyAsked(said) ? null : dateQuestion(dates) };
+  // DATE_ANSWER_APPLIED_ENABLED: asked on every card until answered.
+  const askAgain = dateAnswerAppliedEnabled() && dateQuestionOpen(said, dates, today);
+  return { iso: null, candidates: dates, question: dateAlreadyAsked(said) && !askAgain ? null : dateQuestion(dates) };
 }
 
 /** PRIOR_SENTENCE_FIX_ENABLED: the manager turns that only answer the date question ("10/15", "most recent"), in their own words. */

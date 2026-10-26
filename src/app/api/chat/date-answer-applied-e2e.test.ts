@@ -511,6 +511,39 @@ describe(`${DA_FLAG} on: not an answer`, () => {
 });
 
 /*
+ * QA BT4, live 26 Oct 2026 (conv_mvpnbveu27l2dv3): the date question, then
+ * two answers to the other questions, then the date. The question vanished
+ * from the card after the first answer, and "10-15" did not date the form:
+ * the app's own lines added to the reply ("No payroll deduction. Warning
+ * level: verbal.") made it more than a short answer. With the flag on the
+ * question stays on every card until answered, and the answer dates it.
+ */
+const BT4 = [
+  "create a ca for quinn marlowe at omaha ne, she was late on 10-5 and 10-15. i coached her on 10-16 about being late",
+  "verbal",
+  "no payroll deduct",
+  "10-15",
+];
+
+describe(`${DA_FLAG} on: BT4`, () => {
+  beforeEach(() => useProduction(true));
+
+  it.each(CASINGS)("%s", async (_casing, cased) => {
+    const thread = new Thread();
+    const asked: boolean[] = [];
+    let last: Answer | null = null;
+    for (const turn of BT4) {
+      last = await thread.say(cased(turn));
+      asked.push(/Which date goes on the form\?/.test(last.content));
+    }
+    expect(asked).toEqual([true, true, true, false]);
+    expect(last!.formProposal?.formDate).toBe("2026-10-15");
+    expect(last!.formProposal?.employeeName).toBe("Quinn Marlowe");
+    expect(await createdDate(thread, "Observed: Quinn Marlowe arrived late on October 5, 2026, and again on October 15, 2026.")).toBe("2026-10-15");
+  });
+});
+
+/*
  * NEVER-BREAK: with the flag off, main today (this app's production env).
  * Straight after the question "10/15", "10/15/26" and "oct 15" already date
  * it; "10-15", "the 15th" and "most recent" leave the card. After a turn in
@@ -555,6 +588,18 @@ describe(`${DA_FLAG} off: as main`, () => {
     await expect(answered([T1, T2, "most recent"])).rejects.toThrow(
       "This proposal is out of date: the conversation now says the form is for most recent, not Quinn Marlowe. Use the newest proposal.",
     );
+  });
+
+  it("BT4: the question is asked once and \"10-15\" after two other answers leaves the form undated", async () => {
+    const thread = new Thread();
+    const asked: boolean[] = [];
+    let last: Answer | null = null;
+    for (const turn of BT4) {
+      last = await thread.say(turn);
+      asked.push(/Which date goes on the form\?/.test(last.content));
+    }
+    expect(asked).toEqual([true, false, false, false]);
+    expect(last!.formProposal?.formDate ?? null).toBeNull();
   });
 
   it("the flag reads off by default", async () => {
