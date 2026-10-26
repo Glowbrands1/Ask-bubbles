@@ -21,7 +21,7 @@ import {
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { extractJobTitle } from "@/lib/forms/proposal";
-import { lateOpenOn, newestStatedDate, withYearlessDatesWritten } from "@/lib/forms/late-open";
+import { heldCoachingFormDates, lateOpenFixOn, lateOpenOn, newestStatedDate, withYearlessDatesWritten } from "@/lib/forms/late-open";
 import { correctiveActionBasis } from "@/lib/forms/corrective-action-intake";
 import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
 import { labelledStoreIds } from "@/lib/forms/store-cue";
@@ -251,13 +251,37 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
         managerText: managerBlob(input),
       });
   const formTurn = Boolean(input.formInProgress || reading?.formTurn || formType.key || saved.templateKey);
+  /*
+   * LATE_OPEN_DATE_FIX_ENABLED (QA, 25 Oct 2026; ported from the sibling app):
+   * on a Coaching Form the coaching the manager says they held ("I coached her
+   * on 10-16") is its date, ahead of "she was late on 10-5". Two held
+   * coachings are a question, and the manager's pick among them answers it.
+   * See `heldCoachingFormDates`.
+   */
+  const heldCoaching =
+    lateOpen && lateOpenFixOn()
+      ? heldCoachingFormDates(
+          withYearlessDatesWritten(managerTurns(input).join("\n"), input.today),
+          formType.key ?? saved.templateKey,
+          input.today,
+        )
+      : [];
+  const heldChosen = choice?.date ? normalizeIncidentDate(choice.date, input.today) : null;
+  const formDate =
+    heldChosen && heldCoaching.includes(heldChosen)
+      ? { iso: heldChosen, ambiguous: [] as readonly string[] }
+      : choice?.date || heldCoaching.length === 0
+        ? date
+        : heldCoaching.length === 1
+          ? { iso: heldCoaching[0]!, ambiguous: [] as readonly string[] }
+          : { iso: null, ambiguous: heldCoaching };
 
   const merged = mergeSlots(saved, {
     employee,
     store,
     title,
     incidentType,
-    date: date.iso,
+    date: formDate.iso,
     payrollAmount,
     payrollAnswer,
     managerOnly,
@@ -289,7 +313,7 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
     store,
     title,
     incidentType,
-    date,
+    date: formDate,
     payrollAmount,
     warningLevel,
     formType,
