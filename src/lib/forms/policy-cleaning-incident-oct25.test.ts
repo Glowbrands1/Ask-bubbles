@@ -130,7 +130,7 @@ describe("flag on: every register reads the same", () => {
     expect(readCaPolicy(text).suggestion).toBe(readCaPolicy(original).suggestion);
   });
 
-  it.each(["cleaning duties werent done", "the cleaning didnt get done", "left the rooms dirty", "Didnt sanitize the beds"])(
+  it.each(["cleaning duties werent done", "the cleaning didnt get done", "left the rooms dirty", "Didnt sanitize the counters"])(
     "terse: %s is Care and Cleaning p.21",
     (text) => {
       on();
@@ -243,5 +243,90 @@ describe("flag on: QA-3's denials and positives, through describedManualSection"
   )("%s cites Care and Cleaning", (text) => {
     on();
     expect(described(text)).toBe(CARE);
+  });
+});
+
+/*
+ * QA-3 and QA-7, 26 Oct 2026 (stand-in name invented): a refusal or failure
+ * the manager denies is not an incident ("never refused to clean"), a habit
+ * denial is not one ("she never skips the cleaning"), and leaving without
+ * cleaning is one. Each in lowercase, sentence case and CAPS.
+ */
+describe("flag on: denied refusals and failures, and leaving without cleaning", () => {
+  const PREFIX = "Create a verbal corrective action for Ione Varga. ";
+  const registers = (text: string) => [text, sentence(text), text.toUpperCase()];
+  const described = (text: string) => describedManualSection({ text: `${PREFIX}${text}`, chunks: CHUNKS })?.section.heading ?? null;
+
+  const DENIED = [
+    "never refused to clean",
+    "she never refused to clean the lobby",
+    "she did not refuse to clean",
+    "she didn't refuse to clean",
+    "she never skipped cleaning",
+    "she never failed to clean",
+    "she never skips the cleaning",
+    "she never left without cleaning the restrooms",
+  ].flatMap(registers);
+
+  it.each(DENIED)("%s reads no cleaning incident", (text) => {
+    on();
+    expect(cleaningIncidentPhrase(text)).toBeNull();
+    expect(described(text)).not.toBe(CARE);
+  });
+
+  it.each(["she left without cleaning the restrooms", "she went home without cleaning the lobby", "she failed to clean the lobby", "she skipped cleaning"].flatMap(registers))(
+    "%s cites Care and Cleaning",
+    (text) => {
+      on();
+      expect(cleaningIncidentPhrase(text)).not.toBeNull();
+      expect(described(text)).toBe(CARE);
+    },
+  );
+
+  it.each(DENIED)("flag off: %s reads nothing", (text) => {
+    expect(cleaningIncidentPhrase(text)).toBeNull();
+  });
+});
+
+/*
+ * BOTH READERS ON (Dispatcher, 26 Oct 2026): cleaning left undone leads and
+ * the other incident's sections are offered beside it, never dropped; the
+ * same order as the sibling app. A sentence only the specific-topics reader
+ * reads keeps its own section.
+ */
+describe("both flags on: cleaning leads, the other incident is offered", () => {
+  const PREFIX = "Create a verbal corrective action for Ione Varga. ";
+  const registers = (text: string) => [text, sentence(text), text.toUpperCase()];
+  const both = () => {
+    on();
+    vi.stubEnv("POLICY_SPECIFIC_TOPICS_ENABLED", "true");
+  };
+  beforeEach(() => vi.stubEnv("POLICY_SPECIFIC_TOPICS_ENABLED", ""));
+  const read = (text: string) => describedManualSection({ text: `${PREFIX}${text}`, chunks: CHUNKS });
+  const citedAll = (text: string) => accountManualSections(`${PREFIX}${text}`, CHUNKS).map((section) => `${section.heading} p.${section.page}`);
+
+  it.each(
+    ["the cleaning didn't get done and she took product without paying", "she left the counters dirty and stole cash from the drawer"].flatMap(registers),
+  )("%s", (text) => {
+    both();
+    const found = read(text);
+    expect(found?.section.heading).toBe(CARE);
+    expect(found?.also?.map((section) => section.heading)).toEqual(["Standards of Conduct", "Handling Theft"]);
+    expect(citedAll(text)).toEqual([`${CARE} p.21`, "Standards of Conduct p.13", "Handling Theft p.30"]);
+  });
+
+  it.each(["she refused to clean the lobby"].flatMap(registers))("a refusal is the specific reader's: %s", (text) => {
+    both();
+    expect(read(text)?.section.heading).toBe("Standards of Conduct");
+  });
+
+  it.each(["she cleaned up the spill but put out no wet floor sign"].flatMap(registers))("cleaning done is not cleaning undone: %s", (text) => {
+    both();
+    expect(citedAll(text)).toEqual(["Safety in the Workplace p.25", "Wet Floor Sign p.31"]);
+  });
+
+  it.each(["she never refused to clean the lobby"].flatMap(registers))("a denial reads nothing in either: %s", (text) => {
+    both();
+    expect(read(text)).toBeNull();
   });
 });

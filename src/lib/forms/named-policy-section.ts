@@ -503,7 +503,7 @@ export function describedManualSection(input: {
 
 /**
  * POLICY_CLEANING_INCIDENT_ENABLED: cleaning left undone ("the cleaning
- * duties weren't done", "left the beds dirty") is the manual's Care and
+ * duties weren't done", "left the counters dirty") is the manual's Care and
  * Cleaning of Equipment and Facilities section, found by its own heading on
  * the pinned manual, and only where exactly one heading answers. Nothing
  * else must decide the policy first: a policy the manager named wins. It runs

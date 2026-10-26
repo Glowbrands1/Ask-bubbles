@@ -199,12 +199,16 @@ const CLEANING_UNDONE = [
   // "skipped the 10 minute sanitize"
   new RegExp(String.raw`\b(?:skipped|skips|skipping)\s+(?:\S+\s+){0,4}?${CLEANING_WORD}\b`),
   /\bleft\s+(?:\S+\s+){0,4}?(?:dirty|unclean|filthy|a\s+mess|messy|uncleaned|unsanitized)\b/,
-  /\b(?:dirty|unclean|filthy|uncleaned|unsanitized)\s+(?:\S+\s+){0,1}?(?:beds?|booths?|rooms?|equipment|lobby|restrooms?|bathrooms?|floors?|counters?|stations?|machines?|units?|towels?|break\s?room)\b/,
+  /\b(?:dirty|unclean|filthy|uncleaned|unsanitized)\s+(?:\S+\s+){0,1}?(?:rooms?|equipment|lobby|restrooms?|bathrooms?|floors?|counters?|stations?|machines?|units?|towels?|break\s?room)\b/,
+  // "she left without cleaning the restrooms" (QA-7, 26 Oct 2026)
+  new RegExp(
+    String.raw`\b(?:left|leaves|leaving|went\s+home|clocked\s+out|closed(?:\s+up)?)\s+(?:\S+\s+){0,3}?without\s+(?:\S+\s+){0,2}?${CLEANING_WORD}\b`,
+  ),
 ];
 
 /**
  * Whether the account says cleaning was left undone: "the cleaning didn't get
- * done", "left the beds dirty". Questions are not accounts. Off, never.
+ * done", "left the counters dirty". Questions are not accounts. Off, never.
  */
 export function cleaningIncident(rawText: string): boolean {
   return cleaningIncidentPhrase(rawText) !== null;
@@ -212,18 +216,27 @@ export function cleaningIncident(rawText: string): boolean {
 
 /*
  * NOT AN ACCOUNT OF CLEANING LEFT UNDONE (QA-6, 26 Oct 2026): "she never left
- * the beds dirty", "the beds were not left dirty", "no dirty beds", "she did
- * not fail to clean the beds", "it is not about cleaning, she was late", "not
- * cleaning, attendance", "she is not responsible for cleaning". A negation
- * just before the incident words, in the same clause, undoes them; a
- * "failure" that is about the topic or a double negative is not one; a bare
- * "not" counts only before what was not done ("not cleaned").
+ * the counters dirty", "the counters were not left dirty", "no dirty
+ * counters", "she did not fail to clean the counters", "it is not about
+ * cleaning, she was late", "not cleaning, attendance", "she is not
+ * responsible for cleaning". A negation just before the incident words, in
+ * the same clause, undoes them; a "failure" that is about the topic or a
+ * double negative is not one; a bare "not" counts only before what was not
+ * done ("not cleaned").
  */
 const NEGATED_INCIDENT = /\b(?:never|not|no|no\s+one|nobody|none|did ?n[o']?t|didn't|was ?n[o']?t|wasn't|were ?n[o']?t|weren't)\s+(?:\S+\s+){0,3}$/;
 const NOT_A_FAILURE = /\b(?:about|responsible|regarding|related|fail|forget|neglect|skip|miss|only|just)\b/;
+/**
+ * A negation before a refusal or failure word is a denial, not an incident
+ * (QA-3, QA-7, 26 Oct 2026): "never refused to clean", "did not refuse to
+ * clean", "never skipped cleaning", "never failed to clean", "never skips the
+ * cleaning", "never left without cleaning".
+ */
+const DOUBLE_NEGATIVE =
+  /^(?:never|not|did ?n[o']?t|didn't|has ?n[o']?t|hasn't|have ?n[o']?t|haven't|had ?n[o']?t|hadn't|is ?n[o']?t|isn't)\s+(?:\S+\s+){0,3}?(?:refus\w*|skip\w*|fail\w*|miss\w*|forg[eo]t\w*|neglect\w*|declin\w*|avoid\w*|without)\b/;
 const DONE_WORD = /\b(?:cleaned|san[ai]?t[ai]?[zs]ed|disinfected|wiped\s+down|mopped|swept|vacuumed|dusted)\b/;
-/** The patterns above that say what happened ("left … dirty", "dirty beds", "skipped …"), not that something failed. */
-const AFFIRMATIVE_PATTERNS = new Set([3, 4, 5]);
+/** The patterns above that say what happened ("left … dirty", "dirty counters", "skipped …"), not that something failed. */
+const AFFIRMATIVE_PATTERNS = new Set([3, 4, 5, 6]);
 
 function clauseBefore(sentence: string, index: number): string {
   return sentence.slice(0, index).split(/[,;:–—]|\s-\s|\bbut\b/).pop() ?? "";
@@ -233,7 +246,7 @@ function readsAsIncident(sentence: string, match: RegExpExecArray, pattern: numb
   const before = clauseBefore(sentence, match.index);
   if (AFFIRMATIVE_PATTERNS.has(pattern)) return !NEGATED_INCIDENT.test(before);
   if (pattern === 1 || pattern === 2) {
-    if (NOT_A_FAILURE.test(match[0])) return false;
+    if (NOT_A_FAILURE.test(match[0]) || DOUBLE_NEGATIVE.test(match[0])) return false;
     if (NEGATED_INCIDENT.test(before)) return false;
     if (pattern === 2 && /^not\b/.test(match[0]) && !DONE_WORD.test(match[0])) return false;
   }
