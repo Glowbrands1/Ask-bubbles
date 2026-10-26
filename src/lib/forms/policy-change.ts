@@ -121,11 +121,12 @@ const SHORTEST_HEADING = 4;
 /*
  * POLICY_EVERYDAY_HEADING_ENABLED: a one-word heading that is also an everyday word
  * names its section only beside "policy", "section" or "rule". "it's for
- * october promotions" (sales offers) cited the HR Promotions section p.34 on
- * every turn of a coaching form in the sibling app (QA item 6), and an
- * onboarding "orientation" cited Orientation p.33.
+ * october promotions" (sales offers) cited the HR Promotions section on every
+ * turn of a coaching form (QA item 6), and an onboarding "orientation" cited
+ * Orientation. Every word below is a one-word heading in this app's copy of
+ * the JBA Policy Manual (src/test/fixtures/jba-manual-production-151.json).
  */
-const EVERYDAY_ONE_WORD = new Set(["promotions", "promotion", "orientation", "discounting", "solicitation", "overtime", "tanning", "minors", "robberies"]);
+export const EVERYDAY_ONE_WORD: ReadonlySet<string> = new Set(["promotions", "promotion", "orientation", "discounting", "solicitation", "overtime", "tanning", "minors", "robberies"]);
 
 function namedAsPolicy(said: string, key: string): boolean {
   return new RegExp(String.raw` ${key} (?:polic(?:y|ies)|section|rules?) |(?:polic(?:y|ies)|section|rules?) (?:on |for |about )?${key} `).test(said);
