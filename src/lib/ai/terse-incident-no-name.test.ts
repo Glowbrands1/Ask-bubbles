@@ -88,3 +88,26 @@ describe.each(REGISTERS)(
     }
   },
 );
+
+/*
+ * THE CHANGE IS INTENDED (CLAUDE.md): `coaching-feedback-e2e.test.ts:502` pins the flag-off expansion of
+ * the same turn word for word, with the name inside the incident. With this
+ * flag on, that exact string changes as below — the name, date, level and
+ * deduction are all still there; only the name leaves the incident sentence.
+ */
+describe("the coaching-feedback e2e turn, word for word", () => {
+  const TURN = "ca avery stone kearney dress code 10/11 verbal";
+
+  it("off: as `coaching-feedback-e2e.test.ts:502` pins it", () => {
+    expect(expandTerseRequest(TURN, "2026-10-25")).toBe(
+      "Create a corrective action form for avery stone at kearney. On 10/11/26 avery stone dress code. This is a verbal warning.",
+    );
+  });
+
+  it("on: the incident sentence without the name", () => {
+    process.env[FLAG] = "true";
+    expect(expandTerseRequest(TURN, "2026-10-25")).toBe(
+      "Create a corrective action form for avery stone at kearney. On 10/11/26, dress code. This is a verbal warning.",
+    );
+  });
+});
