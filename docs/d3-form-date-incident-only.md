@@ -69,7 +69,7 @@ why-comment in its own file:
 
 ## Never-break (pinned flag off and on, lowercase and sentence case)
 
-- A stated incident date is the form's date ("tanned on the clock on 9-28-26",
+- A stated incident date is the form's date ("on her phone on the clock on 9-28-26",
   "10/22/2026 is the date of incident").
 - "she was late on 10/20 and missed the 10/15 deadline" is dated 10/20.
 - "She was late on 10/5 and 10/15" lists both dates.
