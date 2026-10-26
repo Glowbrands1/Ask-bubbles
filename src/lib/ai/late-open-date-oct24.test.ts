@@ -265,3 +265,92 @@ describe("the readers behind it", () => {
     expect(out).toContain("It happened on 10/19/2026.");
   });
 });
+
+/*
+ * ============================================================================
+ * LATE_OPEN_PAYROLL_FROM_FORM_ENABLED (QA, 26 Oct 2026; ported from the
+ * sibling app): A BARE YES OR NO IS PAYROLL DEDUCT ONLY WHERE THE FORM ASKED IT
+ * ============================================================================
+ *
+ * With LATE_OPEN_DATE on (production), the intent read saved a bare "yes" or
+ * "no" after an exit form, a resignation or a Corrective Action reply as
+ * payroll deduct on the exit form. With the fix it is read from this form
+ * only: the manager's own statement, or a bare reply to the payroll question
+ * just asked on a Corrective Action Form. Each turn in lowercase, Sentence
+ * case and CAPS; the twin pins main exactly. Test Employee is the QA
+ * account's placeholder.
+ */
+describe("LATE_OPEN_PAYROLL_FROM_FORM_ENABLED, with LATE_OPEN_DATE_ENABLED on as in production", () => {
+  type Answer = "yes" | "no" | null;
+  const FORMS = [...TEMPLATES, { key: "exit", name: "Resignation/Exit Form" }] as const;
+  const EXIT = "Create an exit form for Test Employee at Kearney, she resigned and her last day was 10-20";
+  const RESIGNATION = "Create a resignation form for Test Employee at Kearney, her last day was 10-20";
+  const COACHING = "Create a coaching form for Test Employee at Kearney about her cell phone use";
+  const LATE_CA = "create a verbal ca for Test Employee at Kearney for being late to open on 10-20";
+  const EXIT_CARD = "Here is the **Resignation/Exit Form** for **Test Employee**.\n**Payroll Deduction:** left blank for you.";
+  const CA_REPLY = "Here is the Corrective Action Form.\nWhat is their job title?\nVerbal or written?\nIs payroll deduct applicable?";
+  const COACHING_CARD = "Here is the **Coaching Form** for **Test Employee**.";
+  const CA_CARD = "Here is the **Corrective Action Form** for **Test Employee**.\n\nIs payroll deduct applicable? Yes or No?";
+
+  function two(request: string, assistant: string, reply: string, formType: string) {
+    const turn = (question: string, history: { role: string; content: string }[], saved: ConversationFormState | null) =>
+      decideIntentTurn({
+        question,
+        history,
+        today: "2026-10-25",
+        saved,
+        raw: { employee: null, store: null, title: null, incidentType: null, incidentDate: null, payrollAmount: null, warningLevel: null, formType, formTurn: true },
+        people: [],
+        stores: STORES,
+        headings: HEADINGS,
+        templates: FORMS,
+        formInProgress: history.length > 0,
+      });
+    const first = turn(request, [], null);
+    const second = turn(reply, [{ role: "user", content: request }, { role: "assistant", content: assistant }], first.state);
+    return { first: first.state, second: second.state };
+  }
+
+  /* [label, request, the card before the reply, reply, form, main, with the fix]. */
+  const PINS: readonly (readonly [string, string, string, string, string, Answer, Answer])[] = [
+    ["an exit form, then yes", EXIT, EXIT_CARD, "Yes", "exit", "yes", null],
+    ["an exit form, then no", EXIT, EXIT_CARD, "No", "exit", "no", null],
+    ["an exit form after a CA reply, then yes", EXIT, CA_REPLY, "Yes", "exit", "yes", null],
+    ["an exit form after a CA reply, then no", EXIT, CA_REPLY, "No", "exit", "no", null],
+    ["a resignation, then yes", RESIGNATION, EXIT_CARD, "Yes", "exit", "yes", null],
+    ["a resignation, then no", RESIGNATION, EXIT_CARD, "No", "exit", "no", null],
+    ["a Coaching Form, then yes", COACHING, COACHING_CARD, "Yes", "coaching", null, null],
+    ["a Coaching Form, then no", COACHING, COACHING_CARD, "No", "coaching", null, null],
+    ["a late-opening CA's payroll question, then yes", LATE_CA, CA_CARD, "Yes", "corrective action", "yes", "yes"],
+    ["a late-opening CA's payroll question, then no", LATE_CA, CA_CARD, "No", "corrective action", "no", "no"],
+  ];
+  const CASES = PINS.flatMap(([label, request, card, reply, form, main, fixed]) => [
+    [`${label} (lowercase)`, request.toLowerCase(), card, reply.toLowerCase(), form, main, fixed] as const,
+    [`${label} (Sentence case)`, request, card, reply, form, main, fixed] as const,
+    [`${label} (CAPS)`, request.toUpperCase(), card, reply.toUpperCase(), form, main, fixed] as const,
+  ]);
+
+  it.each(CASES)("fix on, %s", (_label, request, card, reply, form, _main, fixed) => {
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "1");
+    vi.stubEnv("LATE_OPEN_PAYROLL_FROM_FORM_ENABLED", "1");
+    expect(two(request, card, reply, form).second.payrollDeduct ?? null).toBe(fixed);
+  });
+
+  it.each(CASES)("fix off reads it as main, %s", (_label, request, card, reply, form, main) => {
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "1");
+    vi.stubEnv("LATE_OPEN_PAYROLL_FROM_FORM_ENABLED", "");
+    expect(two(request, card, reply, form).second.payrollDeduct ?? null).toBe(main);
+  });
+
+  it.each([
+    ["lowercase", `${LATE_CA}, no payroll`.toLowerCase()],
+    ["Sentence case", "Create a verbal CA for Test Employee at Kearney for being late to open on 10-20. No payroll."],
+    ["CAPS", `${LATE_CA}, no payroll`.toUpperCase()],
+  ])('"no payroll" stated in the CA request is saved as No, fix on or off (%s)', (_label, request) => {
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "1");
+    for (const fix of ["1", ""]) {
+      vi.stubEnv("LATE_OPEN_PAYROLL_FROM_FORM_ENABLED", fix);
+      expect(two(request, CA_CARD, "ok", "corrective action").first.payrollDeduct, `fix "${fix}"`).toBe("no");
+    }
+  });
+});
