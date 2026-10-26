@@ -578,6 +578,37 @@ export function titleWholeWordEnabled(): boolean {
 }
 
 /**
+ * Finalized-form edits carry a reason and a revision number, and the
+ * revision chain shows: "Revised <date> (supersedes <ref>)" on a revision and
+ * "Superseded <date> by <ref>" on the original, on the PDF and the form view,
+ * plus "Revision N of <ref>" with a link to the previous version.
+ *
+ * Off (the default) leaves the shipped revise flow exactly as it is: no
+ * reason is asked for or recorded, the history route answers 404, and the
+ * PDF footer is byte-identical. On, the server refuses an edit of a
+ * finalized form that gives no reason.
+ *
+ * The browser reads `NEXT_PUBLIC_FORM_REVISIONS_ENABLED` (see
+ * `formRevisionsUiEnabled`). Turn both on together: the server refuses an
+ * edit without a reason, and only the browser flag shows the reason dialog.
+ * Either spelling turns the server side on.
+ */
+export function formRevisionsEnabled(): boolean {
+  return envFlag("FORM_REVISIONS_ENABLED") || envFlag("NEXT_PUBLIC_FORM_REVISIONS_ENABLED");
+}
+
+/**
+ * The browser half of `formRevisionsEnabled`: the reason dialog, the marks
+ * and the history on the form card, the form page and the register row.
+ * Next inlines only a statically written `process.env.NEXT_PUBLIC_*` name
+ * into a client bundle, so the name is written out here.
+ */
+export function formRevisionsUiEnabled(): boolean {
+  const raw = process.env.NEXT_PUBLIC_FORM_REVISIONS_ENABLED;
+  return typeof raw === "string" && ON.has(raw.trim().toLowerCase());
+}
+
+/**
  * The answering prompt's form rule asks for the form and never refuses. Turn 1
  * of a Corrective Action request (conv_mvnu3j932gpohx4, 25 Oct 2026) was
  * answered "I can't produce a facsimile of one or its contents". On, the rule
@@ -720,6 +751,75 @@ export function chatLongMessageEnabled(): boolean {
   );
 }
 
+/**
+ * A full-remap card names the manager's turns it was read from (QA H1, 25 Oct
+ * 2026), so Create draft prefills the form from them instead of filing it
+ * blank. Off, the remap card names no turns, as before. See
+ * `lib/ai/remap-draft-sources.ts`.
+ */
+export function remapDraftSourcesEnabled(): boolean {
+  return envFlag("REMAP_DRAFT_SOURCES_ENABLED");
+}
+
+/**
+ * The browser's reading of REMAP_DRAFT_SOURCES_ENABLED, for the Create step
+ * (`chat/create-inline-form.ts`): a draft whose notes are empty is written
+ * from the card's own lines only with this on. Only a statically written
+ * `process.env.NEXT_PUBLIC_…` is inlined by Next, so it is read here, not
+ * through `envFlag`. Off, a card with no usable turns files a blank draft and
+ * says so, as before.
+ */
+export function remapDraftSourcesClientEnabled(): boolean {
+  const inlined = process.env.NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED;
+  return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
+}
+
+/**
+ * A new form asked for is never read as "show me the form on file" (QA B22,
+ * 25 Oct 2026, both apps): "… for no call no show on 10/22" read "show" as
+ * the verb and put another chat's corrective action back in the thread. On,
+ * incident phrases that contain a reopen verb ("no call no show", "didn't
+ * show up") are not read as one, and a turn that opens by asking for a
+ * document ("Draft a …", "Write up …", "I need a …") is never a reopen. Off,
+ * the reopen reading is exactly as before.
+ */
+export function reopenVerbGuardEnabled(): boolean {
+  return envFlag("REOPEN_VERB_GUARD_ENABLED");
+}
+
+/**
+ * A terse "ca <name> <store> <what happened> <date> verbal" line is written
+ * out as the long form before it is read, so the name, store, date, warning
+ * level and payroll amount are read as from a full sentence, and the card
+ * appears (conv_mvofim8a2lqx6jn, 25 Oct 2026; ported from the sibling app).
+ * See `ai/terse-slots.ts`. Off, the turn is read as typed.
+ */
+export function terseSlotReadEnabled(): boolean {
+  return envFlag("TERSE_SLOT_READ_ENABLED");
+}
+
+/**
+ * Chat answers never repeat a default-password format or Social Security
+ * digits from the knowledge base (QA P0, 25 Oct 2026; same flag in both
+ * apps). The sentence is taken out of the excerpts the model is given and of
+ * the reply and its cited excerpts, and the person is told to ask their
+ * manager or HR to reset it. Knowledge rows are not changed. Off, the text is
+ * as retrieved.
+ */
+export function sensitiveDefaultsRedactEnabled(): boolean {
+  return envFlag("SENSITIVE_DEFAULTS_REDACT_ENABLED");
+}
+
+/**
+ * "I forgot my password" (any spelling) is answered about this app first:
+ * click "Forgot your password?" on the log-in screen (QA and Pau, 25 Oct
+ * 2026; same flag in both apps). Another system is talked about only when
+ * the manager names it. Off, the turn is answered as before.
+ */
+export function appPasswordHelpEnabled(): boolean {
+  return envFlag("APP_PASSWORD_HELP_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -776,6 +876,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TITLE_WHOLE_WORD_ENABLED",
   "EXIT_INTAKE_FIX_ENABLED",
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
+  "FORM_REVISIONS_ENABLED",
+  "NEXT_PUBLIC_FORM_REVISIONS_ENABLED",
   "FACSIMILE_ASK_ONLY_ENABLED",
   "TYPED_PRIOR_NOT_ON_FILE_ENABLED",
   "PAYROLL_FROM_THIS_FORM_ENABLED",
@@ -788,4 +890,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FRAMEWORK_UNPIN_ENABLED",
   "CHAT_LONG_MESSAGE_ENABLED",
   "NEXT_PUBLIC_CHAT_LONG_MESSAGE_ENABLED",
+  "REMAP_DRAFT_SOURCES_ENABLED",
+  "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
+  "REOPEN_VERB_GUARD_ENABLED",
+  "TERSE_SLOT_READ_ENABLED",
+  "SENSITIVE_DEFAULTS_REDACT_ENABLED",
+  "APP_PASSWORD_HELP_ENABLED",
 ] as const;
