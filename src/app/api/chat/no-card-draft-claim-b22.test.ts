@@ -34,7 +34,7 @@ const PHANTOM_REPLY =
 const HONEST =
   "I haven't created a form for Test Employee Two yet — say \"create a corrective action for Test Employee Two\" and I'll put a card here.";
 
-async function load(reply: Record<string, unknown>) {
+async function load(reply: Record<string, unknown>, openForms?: Record<string, Record<string, unknown>>) {
   vi.resetModules();
   const seen = { answered: 0 };
   vi.doMock("@/lib/auth/server", () => ({
@@ -63,6 +63,7 @@ async function load(reply: Record<string, unknown>) {
   }));
   vi.doMock("@/lib/forms/chat-correction", () => ({
     correctActiveForm: async () => null,
+    askWhichFormToCorrect: async () => null,
   }));
   vi.doMock("@/lib/forms/chat-policy-change", () => ({
     changeActiveFormPolicy: async () => null,
@@ -77,13 +78,16 @@ async function load(reply: Record<string, unknown>) {
     reopenRequestedForm: async () => null,
   }));
   vi.doMock("@/lib/forms/open-form-summary", () => ({
-    describeOpenForm: async () => ({
-      templateName: "Corrective Action Form",
-      employeeName: "Test Employee",
-      status: "draft",
-      lines: [],
-      unverifiedPolicy: [],
-    }),
+    describeOpenForm: async (_request: Request, instanceId: string) =>
+      openForms
+        ? (openForms[instanceId] ?? null)
+        : {
+            templateName: "Corrective Action Form",
+            employeeName: "Test Employee",
+            status: "draft",
+            lines: [],
+            unverifiedPolicy: [],
+          },
   }));
   vi.doMock("@/lib/supabase/server", () => ({
     getSupabaseAdmin: () => ({
@@ -102,7 +106,7 @@ async function load(reply: Record<string, unknown>) {
   return { route, seen };
 }
 
-function ask(question = QUESTION): Request {
+function ask(question = QUESTION, overrides: Record<string, unknown> = {}): Request {
   return new Request("https://app.test/api/chat", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -121,6 +125,7 @@ function ask(question = QUESTION): Request {
           content: "Here's the Corrective Action Form for Test Employee.",
         },
       ],
+      ...overrides,
     }),
   });
 }
@@ -233,5 +238,100 @@ describe("QA B22-2: a reply with no card never says a draft is open (NO_CARD_NO_
     const { route } = await load({ content: recase(PHANTOM_REPLY) });
     const payload = await (await route.POST(ask(recase(QUESTION)))).json();
     expect(payload.content).toBe(recase(PHANTOM_REPLY));
+  });
+});
+
+/*
+ * QA-7 (flag on, a reply with no card), through POST /api/chat. Conditional
+ * and instructional truths are kept; a two-clause sentence keeps its true
+ * clause and names the person of the false one; a policy answer's closing
+ * "Press Create draft on the card below." with no card is dropped and names
+ * nobody. In lowercase, sentence case and CAPS. "Rook Pemberly" stands in for
+ * QA's second name (invented, the same in both apps).
+ */
+describe("QA-7: conditional and instructional truths are kept, a claim is rewritten by the clause (NO_CARD_NO_DRAFT_CLAIM_ENABLED)", () => {
+  const lower = (text: string) => text.toLowerCase();
+  const sentenceCase = (text: string) =>
+    text.toLowerCase().replace(/(^|[.!?]\s+|\n+)([a-z])/g, (_m, lead: string, first: string) => `${lead}${first.toUpperCase()}`);
+  const registers = [
+    ["as typed", (text: string) => text],
+    ["all lowercase", lower],
+    ["sentence case", sentenceCase],
+    ["CAPS", (text: string) => text.toUpperCase()],
+  ] as const;
+  const POLICY = "Arriving late three times in 30 days is an attendance concern under the JBA Policy Manual.";
+
+  it.each(registers)("%s: \"Once you press Create, the draft for Test Employee Two will open.\" comes back as it came", async (_label, recase) => {
+    process.env.NO_CARD_NO_DRAFT_CLAIM_ENABLED = "true";
+    const content = recase("Once you press Create, the draft for Test Employee Two will open.");
+    const { route } = await load({ content });
+    const payload = await (await route.POST(ask(recase(QUESTION)))).json();
+    expect(payload.content).toBe(content);
+  });
+
+  it.each(registers)("%s: \"…not created because the store was missing. Press Create after you add it.\" comes back as it came", async (_label, recase) => {
+    process.env.NO_CARD_NO_DRAFT_CLAIM_ENABLED = "true";
+    const content = recase("The form was not created because the store was missing. Press Create after you add it.");
+    const { route } = await load({ content });
+    const payload = await (await route.POST(ask(recase(QUESTION)))).json();
+    expect(payload.content).toBe(content);
+  });
+
+  it.each(registers)("%s: a policy answer's \"Press Create draft on the card below.\" with no card is dropped, naming nobody", async (_label, recase) => {
+    process.env.NO_CARD_NO_DRAFT_CLAIM_ENABLED = "true";
+    const { route } = await load({ content: recase(`${POLICY} Press Create draft on the card below.`) });
+    const question = recase("Test Employee Two was late again, what does the policy say?");
+    for (const overrides of [{}, { activeFormInstanceId: undefined, history: [] }]) {
+      const payload = await (await route.POST(ask(question, overrides))).json();
+      expect(payload.content).toBe(recase(POLICY));
+    }
+  });
+
+  it.each(registers)("%s: two clauses keep the true one and name Rook Pemberly", async (_label, recase) => {
+    process.env.NO_CARD_NO_DRAFT_CLAIM_ENABLED = "true";
+    const { route } = await load({
+      content: recase("The draft for Test Employee is open, and I've created a new draft for Rook Pemberly."),
+    });
+    const payload = await (await route.POST(ask(recase("and one for Rook Pemberly, late today")))).json();
+    const kept = `${recase("The draft for Test Employee is open")}. `;
+    expect(payload.content.startsWith(kept), payload.content).toBe(true);
+    expect(payload.content.slice(kept.length)).toMatch(
+      /^I haven't created a form for rook pemberly yet — say "create a corrective action for rook pemberly" and I'll put a card here\.$/i,
+    );
+  });
+
+  it.each(registers)("off (%s): every QA-7 reply comes back exactly as it came", async (_label, recase) => {
+    for (const content of [
+      "Once you press Create, the draft for Test Employee Two will open.",
+      "The form was not created because the store was missing. Press Create after you add it.",
+      `${POLICY} Press Create draft on the card below.`,
+      "The draft for Test Employee is open, and I've created a new draft for Rook Pemberly.",
+    ]) {
+      const { route } = await load({ content: recase(content) });
+      const payload = await (await route.POST(ask(recase(QUESTION)))).json();
+      expect(payload.content).toBe(recase(content));
+    }
+  });
+
+  /*
+   * Two forms created from one message and a turn that names neither: the
+   * browser sends both ids (activeFormCandidateIds) and no activeFormInstanceId,
+   * so `openForm` is null. The guard is given both forms, so a true line about
+   * either card is kept.
+   */
+  it("two forms open from one message: a true line about one of them is kept", async () => {
+    process.env.NO_CARD_NO_DRAFT_CLAIM_ENABLED = "true";
+    const first = "0b6b6f0e-1111-4c2a-9a55-000000000b23";
+    const second = "0b6b6f0e-1111-4c2a-9a55-000000000b24";
+    const summary = { templateName: "Corrective Action Form", status: "draft", lines: [], unverifiedPolicy: [] };
+    const content = "The draft for Test Employee Two is open on the card above. When it's right, press Finalize on the card.";
+    const { route } = await load(
+      { content },
+      { [first]: { ...summary, employeeName: "Test Employee" }, [second]: { ...summary, employeeName: "Test Employee Two" } },
+    );
+    const payload = await (
+      await route.POST(ask("is it ready?", { activeFormInstanceId: undefined, activeFormCandidateIds: [first, second] }))
+    ).json();
+    expect(payload.content).toBe(content);
   });
 });
