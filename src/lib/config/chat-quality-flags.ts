@@ -953,6 +953,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "POSITION_ANSWER_GUARD_ENABLED",
   "PRIOR_ROW_NOT_ON_INCIDENT_DATE_ENABLED",
   "NOT_DEDUCTIBLE_READ_ENABLED",
+  "PRIOR_STEP_SENTENCE_ENABLED",
 ] as const;
 
 /**
@@ -1084,6 +1085,14 @@ export function requestLineAccountEnabled(): boolean {
  */
 export function notDeductibleReadEnabled(): boolean {
   return envFlag("NOT_DEDUCTIBLE_READ_ENABLED");
+ * An earlier step told in a sentence is a Prior actions row (managers in the
+ * sibling app, 26 Oct 2026; same flag in both apps): "note a verbal ca was
+ * given on 9-1-26" and "she was issued a verbal ca on 10.1 for this same
+ * thing" listed none. See `sentenceSteps` in `forms/prior-actions.ts`. Off, as
+ * before.
+ */
+export function priorStepSentenceEnabled(): boolean {
+  return envFlag("PRIOR_STEP_SENTENCE_ENABLED");
 }
 
 /**

@@ -1,4 +1,4 @@
-import { priorActionsParseEnabled, priorRowNotOnIncidentDateEnabled } from "@/lib/config/chat-quality-flags";
+import { priorActionsParseEnabled, priorRowNotOnIncidentDateEnabled, priorStepSentenceEnabled } from "@/lib/config/chat-quality-flags";
 
 import { statesFirstOccurrence } from "./corrective-action-intake";
 import { correctedDates, datesInText, managerDatesForDraft, priorSteps } from "./form-date-answer";
@@ -184,8 +184,65 @@ function stepTopic(topic: string | undefined): string {
  * chat reads back before the form is created.
  */
 export function statedPriorActions(notes: string, today: string): string[] {
-  return priorSteps(notes, today).map(managerStepLine);
+  return stepsSaid(notes, today).map(managerStepLine);
 }
+
+/*
+ * PRIOR_STEP_SENTENCE_ENABLED (managers in the sibling app, 26 Oct 2026): "this should be a
+ * written and note a verbal ca was given on 9-1-26" and "she was issued a
+ * verbal ca on 10.1 for this same thing" listed no Prior actions row. The
+ * step reader (`priorSteps`, in the protected `form-date-answer.ts`) reads a
+ * labelled list ("previous coaching: verbal ca 9-1-26"), not a step told in
+ * a sentence, and its date reader does not read "10.1". With the flag on a
+ * sentence that says a step was given, issued, received or signed on a date
+ * adds that step; "10.1" is October 1, its year the latest one not after
+ * today. Off, `priorSteps` alone.
+ */
+const STEP_GIVEN =
+  /\b(?:was|were|been|got|get|received|had)\s+(?:already\s+|previously\s+|also\s+)?(?:(?:issued|given|signed)\s+)?(?:an?\s+|her\s+|his\s+)?|\b(?:issued|gave|given|signed)\s+(?:her\s+|him\s+|them\s+)?(?:an?\s+)?/gi;
+const STEP_THEN_GIVEN = /\b(?:was|were)\s+(?:issued|given|signed)\b/i;
+const DOT_DATE = /(?<![$\d.])\b(\d{1,2})\.(\d{1,2})(?:\.(\d{2}|\d{4}))?\b(?![.\d])/g;
+
+function dotDates(sentence: string, today: string): { iso: string; index: number }[] {
+  const [year, month, day] = today.split("-").map(Number) as [number, number, number];
+  const out: { iso: string; index: number }[] = [];
+  for (const match of sentence.matchAll(DOT_DATE)) {
+    const m = Number(match[1]);
+    const d = Number(match[2]);
+    if (m < 1 || m > 12 || d < 1 || d > 31) continue;
+    let y = match[3] ? Number(match[3].length === 2 ? `20${match[3]}` : match[3]) : year;
+    if (!match[3] && (m > month || (m === month && d > day))) y -= 1;
+    const iso = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    if (iso > today) continue;
+    out.push({ iso, index: match.index });
+  }
+  return out;
+}
+
+function sentenceSteps(notes: string, today: string): { iso: string; named: string }[] {
+  const steps: { iso: string; named: string }[] = [];
+  for (const sentence of (notes ?? "").split(/(?<=[!?\n])|(?<=\.)(?!\d)/)) {
+    const step = namedStep(sentence);
+    if (!step) continue;
+    const before = sentence.slice(0, step.start);
+    const after = sentence.slice(step.end);
+    const given = [...before.matchAll(STEP_GIVEN)].some((match) => match.index + match[0].length >= step.start - 1) || STEP_THEN_GIVEN.test(after.slice(0, 20));
+    if (!given) continue;
+    const dates = [...datesInText(after, today), ...dotDates(after, today)];
+    const first = dates.filter((found) => found.iso <= today).sort((a, b) => a.index - b.index)[0];
+    if (first) steps.push({ iso: first.iso, named: sentence.slice(step.start, step.end) });
+  }
+  return steps;
+}
+
+/** The steps the manager dated: `priorSteps`, and with PRIOR_STEP_SENTENCE_ENABLED a step told in a sentence. */
+function stepsSaid(notes: string, today: string): { iso: string; named: string; topic?: string; about?: string }[] {
+  const steps = priorSteps(notes, today);
+  if (!priorStepSentenceEnabled()) return steps;
+  const have = new Set(steps.map((step) => step.iso));
+  return [...steps, ...sentenceSteps(notes, today).filter((step) => !have.has(step.iso) && have.add(step.iso))];
+}
+
 
 /**
  * One step the manager dated, as a line. PRIOR_ACTIONS_PARSE_ENABLED (QA, 25 Oct
@@ -246,7 +303,7 @@ export function groundPriorActions(input: {
    */
   onFile?: readonly { formDate: string; line: string; templateKey?: string }[];
 }): { value: string; added: string[]; removed: string[] } {
-  const managerSteps = priorSteps(input.notes, input.today);
+  const managerSteps = stepsSaid(input.notes, input.today);
   const onFile = input.onFile ?? [];
   // The dates the manager gave, with a step's date read as last year's where it would be ahead of today.
   const stated = new Set([
