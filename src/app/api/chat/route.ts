@@ -33,6 +33,7 @@ import { businessToday } from "@/lib/business-date";
 import {
   chatLongMessageEnabled,
   draftActionsEnabled,
+  formsGuideEnabled,
   payrollDeductAmountFieldEnabled,
   questionNotFormEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -192,7 +193,22 @@ export async function POST(request: Request) {
        * is open. See `lib/ai/question-not-form.ts`. Behind
        * QUESTION_NOT_FORM_ENABLED.
        */
-      const askedQuestion = questionNotFormEnabled() && isQuestionNotForm(parsed.question, parsed.history);
+      /*
+       * "WHAT IS A CA?", "DIFFERENCE BETWEEN COACHING AND CA", "WHICH FORMS CAN
+       * I CREATE HERE?" — answered from the published templates and the role
+       * matrix, and like any question never written into an open form. Null
+       * for every other sentence, and off unless FORMS_GUIDE_ENABLED. See
+       * `lib/forms/forms-guide.ts`.
+       */
+      const formsGuide =
+        formsGuideEnabled() && !draftAnswer
+          ? await (await import("@/lib/forms/forms-guide-answer")).answerFormsGuide({
+              question: parsed.question,
+              role: context.identity.role,
+            })
+          : null;
+      const askedQuestion =
+        Boolean(formsGuide) || (questionNotFormEnabled() && isQuestionNotForm(parsed.question, parsed.history));
       const correction = parsed.activeFormInstanceId && !askedQuestion
         ? await (await import("@/lib/forms/chat-correction")).correctActiveForm({
             request,
@@ -282,7 +298,7 @@ export async function POST(request: Request) {
        * See `lib/forms/chat-reopen.ts`.
        */
       const reopened =
-        !draftAnswer && !correction && !policyChange && !redraft && !revision && !which && mayAskToReopen(parsed.question)
+        !draftAnswer && !formsGuide && !correction && !policyChange && !redraft && !revision && !which && mayAskToReopen(parsed.question)
           ? await (await import("@/lib/forms/chat-reopen")).reopenRequestedForm({
               request,
               question: parsed.question,
@@ -305,6 +321,7 @@ export async function POST(request: Request) {
           : null;
       answer =
         draftAnswer ??
+        formsGuide ??
         correction ??
         policyChange ??
         redraft ??
