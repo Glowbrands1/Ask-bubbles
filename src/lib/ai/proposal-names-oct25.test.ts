@@ -193,3 +193,72 @@ describe("G4 (ported): the intake list no longer asks for the name it read", () 
     expect(out.content).toBe(ASKED);
   });
 });
+
+/*
+ * Pau, 26 Oct 2026: "lowercase or first letter capitalized, should be like
+ * human". QA's turns above, typed the way managers type: all in lower case
+ * (with and without the punctuation), and in sentence case with the name
+ * typed "test employee" or "Test employee". Each gives the card the same name
+ * as "Test Employee". Before the guard read the name in either case, B4 put
+ * **Test** on the card, B8 and G11 asked who the form was for, and G4's name
+ * was not read.
+ */
+const allLower = (text: string) => text.toLowerCase();
+const bare = (text: string) => text.toLowerCase().replace(/[.,!?'’]/g, "").replace(/\s+/g, " ").trim();
+const named = (name: string) => (text: string) => text.replace(/Test Employee/g, name);
+const REGISTERS: readonly [string, (text: string) => string][] = [
+  ["all lower case", allLower],
+  ["all lower case, no punctuation", bare],
+  ['sentence case, "test employee"', named("test employee")],
+  ['sentence case, "Test employee"', named("Test employee")],
+];
+
+describe("NOT_A_NAME_GUARD_ENABLED on: typed in lower or sentence case, the card is still for Test Employee", { timeout: 120_000 }, () => {
+  beforeEach(() => {
+    vi.stubEnv("NOT_A_NAME_GUARD_ENABLED", "true");
+  });
+
+  const cases = Object.entries(TURNS).flatMap(([id, turns]) =>
+    REGISTERS.map(([register, retype]) => [`${id}, ${register}`, turns.map(retype)] as const),
+  );
+  it.each(cases)("%s", async (_id, turns) => {
+    const seen = await propose(turns);
+    for (const [index, turn] of seen.entries()) {
+      const where = `turn ${index + 1}: ${turns[index]!.slice(0, 50)}`;
+      expect(turn.templateKey, where).toBe("dpoa");
+      expect(turn.employeeName, where).toBe("Test Employee");
+      expect(turn.content, where).not.toMatch(/which of them|who is this/i);
+      expect(turn.content, where).not.toMatch(/\*\*(?:NE|ne|JBA Manual|jba manual|Test|test)\*\*/);
+    }
+  });
+
+  it.each(REGISTERS)("G4, %s: read", (_register, retype) => {
+    const turn =
+      "Okay let's restart. Test Employee, Team Member, Kearney. Not completing closing duties and signing off that they were complete when they weren't.";
+    expect(typedEmployeeName(retype(turn))).toBe("Test Employee");
+  });
+});
+
+describe("the typed-name reader, in either case", () => {
+  it("guard on: a lower-case word before 'employee' is not a name unless it is QA's 'test'", () => {
+    vi.stubEnv("NOT_A_NAME_GUARD_ENABLED", "true");
+    for (const text of [
+      "write a ca for a late employee at kearney",
+      "coaching for a rude employee",
+      "create a coaching form for my employee",
+      "a form for the test employee handbook",
+      "is there a test employee form",
+      "coaching for New Employee orientation",
+      "coaching for test employees",
+      "the employee dress code for test",
+    ]) {
+      expect(typedEmployeeName(text), text).toBeNull();
+    }
+  });
+
+  it("guard off: unchanged — only the capitalised name is read", () => {
+    expect(typedEmployeeName("create ca form for Test Employee for violating attendance policy")).toBe("Test Employee");
+    expect(typedEmployeeName("create ca form for test employee for violating attendance policy")).toBeNull();
+    expect(typedEmployeeName("create ca form for Test employee for violating attendance policy")).toBeNull();
+  });
+});
