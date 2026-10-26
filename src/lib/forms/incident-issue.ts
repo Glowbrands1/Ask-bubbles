@@ -146,3 +146,17 @@ export function correctiveActionIssue(text: string, employeeName: string | null)
   if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return fromRequest;
   return accountIssue(text);
 }
+
+/**
+ * The incident clause the card shows as "Issue", read the way the card reads
+ * it with a typed name — the request's for-clause unless it only names the
+ * person and the store, else the manager's latest account of what happened —
+ * whatever TYPED_NAME_ENABLED says. Null when they gave no account. Used by
+ * DRAFT_NEVER_BLANK_ENABLED to write an Observation from the manager's own
+ * words; `correctiveActionIssue` is unchanged.
+ */
+export function managerIncidentClause(text: string, employeeName: string | null): string | null {
+  const fromRequest = issueFromRequest(text, employeeName);
+  if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return fromRequest;
+  return accountIssue(text);
+}
