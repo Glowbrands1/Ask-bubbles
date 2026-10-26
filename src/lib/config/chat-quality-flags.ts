@@ -950,6 +950,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "DATE_ANSWER_APPLIED_ENABLED",
   "REQUEST_LINE_ACCOUNT_ENABLED",
   "PAYROLL_TYPO_NOT_A_NAME_ENABLED",
+  "POSITION_ANSWER_GUARD_ENABLED",
 ] as const;
 
 /**
@@ -1080,4 +1081,14 @@ export function requestLineAccountEnabled(): boolean {
  */
 export function payrollTypoNotANameEnabled(): boolean {
   return envFlag("PAYROLL_TYPO_NOT_A_NAME_ENABLED");
+}
+
+/**
+ * An answer to another open question is never the job title (QA, 26 Oct 2026):
+ * with "What is <name>'s position (job title)?" open, "This is a verbal",
+ * "Written" or "Verbal" was saved as the Job Title. See `readPositionAnswer`
+ * in `forms/employee-position.ts`. Off, read as before.
+ */
+export function positionAnswerGuardEnabled(): boolean {
+  return envFlag("POSITION_ANSWER_GUARD_ENABLED");
 }
