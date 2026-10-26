@@ -1,4 +1,4 @@
-import { decimalKeepEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { decimalKeepEnabled, incidentSplitFixEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 
 import { JOIN } from "./bounded-context";
@@ -160,7 +160,127 @@ function accountIssue(text: string): string | null {
   return null;
 }
 
+/*
+ * ============================================================================
+ * INCIDENT_SPLIT_FIX_ENABLED: THE ACCOUNT IS THE REQUEST'S, IN ITS WHOLE SENTENCES
+ * ============================================================================
+ *
+ * QA, 25 Oct 2026 (Bubbles production, names invented in the tests):
+ *   conv_mvoftzhs29se8nb  "… for violating visitors at work policy on 10-10-26.
+ *                         <A> spent 40 minutes talking with friend …" — only the
+ *                         first sentence was the Issue;
+ *   conv_mvofuak12ovvib7  "… corrective action for <C>, she is a team member at
+ *                         our Dodge, NE store. On 10-1-26 she opened the store
+ *                         late." — Issue "she is a team member at our Dodge";
+ *   "… for <name>, she works at our Dodge, NE store as a team member and was
+ *   late today." — Issue "she works at our Dodge";
+ *   a later pasted policy paragraph, "Policy violated: …" or "not attendance,
+ *   late opening" replaced the account.
+ *
+ * On: the account comes from the latest request turn for the form, in whole
+ * sentences ("Dodge, NE" and "$3.25" never end one), without the request
+ * words, the person's name, where they work or their title, the payroll and
+ * prior-coaching answers, or pasted policy text. Only when that turn tells
+ * nothing does a later turn's account count; "change what happened to: …"
+ * replaces it. Off, the reading above is unchanged.
+ */
+const STATE_AFTER_PLACE = /\b([A-Za-z][\w'-]*),\s*(ne|ks|mo|ia|sd|nd|mn|wi|il|tx)\b/gi;
+const CREATE_REQUEST =
+  /\b(?:create|make|need|needs|draft|write|do|start|prepare|issue|give)\b[^.]*?\b(?:ca|c\/a|dpoa|corrective\s+action|write[- ]?up|warning)\b/i;
+const REQUEST_LEAD =
+  /^.*?\b(?:corrective\s+action(?:\s+form)?|ca(?:\s+form)?|c\/a|dpoa|write[- ]?up|warning)\s+(?:for|on|against)\s+/i;
+const EDIT_ACCOUNT =
+  /\b(?:change|replace|update|set)\s+(?:the\s+)?(?:observation(?:\s+of\s+offense)?|what\s+happened|issue|incident)\s+(?:to|with)\s*:?\s*([\s\S]+)$/i;
+const POLICY_TEXT =
+  /^(?:policy(?:\s+violated)?|issue|section|direct\s+policy|violation\s+of\s+company\s+policies)\s*:|\bthe\s+company\b|\bemployees?\s+(?:must|shall|will\s+be|are|is)\s+(?:required|expected|not\s+allowed)|\bwho\s+failed\s+to\s+open\s+will\b/i;
+const LEVEL_ONLY = /^(?:(?:this\s+is\s+)?(?:a\s+)?(?:verbal|written|final)(?:\s+(?:warning|ca|corrective\s+action))?|today'?s?\s+date|no\s+prior.*)$/i;
+const HAPPENED = /\b(?:late|tardy|did\s*n[o']?t|didnt|failed|missed|never|no\s+call|left|opened|open|talking|phone|ignor\w*|spent|was\s+not|wasn'?t|forgot|refused|rude|yell\w*|short(?:age)?|took|stole|clock\w*|sleep\w*)\b/i;
+
+function whoOrWhere(clause: string, personWords: ReadonlySet<string>): boolean {
+  const lower = clause.toLowerCase().trim();
+  if (HAPPENED.test(lower)) return false;
+  if (/\b(?:primary|home)\s+store\b/.test(lower)) return true;
+  const words = lower.split(/\s+/);
+  const subject = words[0] === "she" || words[0] === "he" || words[0] === "they" || personWords.has(words[0] ?? "");
+  const says = /^(?:\S+\s+){0,2}?(?:is|was|works|worked|'s)\b/.test(lower) || /^as\s+an?\b/.test(lower);
+  const titled = COMPANY_JOB_TITLES.some((entry) => new RegExp(entry.pattern.source, "i").test(lower));
+  const placed = /\b(?:store|location|at\s+our|in\s+our)\b/.test(lower);
+  return (subject || /^as\s+an?\b/.test(lower)) && says && (titled || placed);
+}
+
+function accountClauses(sentence: string, personWords: ReadonlySet<string>): string | null {
+  const parts = sentence
+    .split(/\s*,\s*|\s+and\s+(?=(?:she|he|they|was|is|did|has|had|then)\b)/i)
+    .map((part) => part.trim().replace(/^and\s+/i, ""))
+    .filter(Boolean)
+    .filter((part) => !NOT_THE_ACCOUNT.test(part) && !POLICY_TEXT.test(part) && !LEVEL_ONLY.test(part))
+    .filter((part) => !whoOrWhere(part, personWords))
+    .filter((part) => !part.split(/\s+/).every((word) => personWords.has(word.toLowerCase().replace(/[^a-z'-]/g, ""))));
+  const kept = parts.join(", ").trim();
+  return kept.length >= 3 ? kept : null;
+}
+
+function turnAccount(turn: string, personWords: ReadonlySet<string>, person: string): string | null {
+  const protectedTurn = turn.replace(STATE_AFTER_PLACE, "$1 $2");
+  const sentences = [...protectedTurn.matchAll(SENTENCE_DECIMAL)].map((match) => match[0].trim().replace(/[.!?]+$/, ""));
+  const kept: string[] = [];
+  for (const raw of sentences) {
+    let sentence = raw;
+    if (CREATE_REQUEST.test(sentence) || REQUEST_LEAD.test(sentence)) {
+      const led = sentence.replace(REQUEST_LEAD, "");
+      if (led === sentence) continue;
+      sentence = led;
+      // The person named right after "for", then the account: "<name>, she …", "<name> for violating …".
+      if (person) {
+        const name = new RegExp(`^(?:(?:${[...personWords].map(escapeWord).join("|")})\\b\\s*)+(?:for|about|over|regarding)?\\s*[-—–:,]?\\s*`, "i");
+        sentence = sentence.replace(name, "");
+      }
+    }
+    if (POLICY_TEXT.test(sentence)) continue;
+    const account = accountClauses(sentence, personWords);
+    if (!account) continue;
+    if (!HAPPENED.test(account) && !describesIncident(account) && kept.length === 0 && !/\bviolat\w*\b/i.test(account)) continue;
+    kept.push(account);
+  }
+  let joined = "";
+  for (const sentence of kept) {
+    const next = joined ? `${joined}. ${sentence}` : sentence;
+    if (next.length > 180) break;
+    joined = next;
+  }
+  return joined ? clipAccount(joined) : null;
+}
+
+function escapeWord(word: string): string {
+  return word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function splitFixedIssue(text: string, employeeName: string | null): string | null {
+  const person = (employeeName ?? "").trim().toLowerCase();
+  const personWords = new Set(person.split(/\s+/).filter(Boolean));
+  const turns = turnsOf(text);
+  let start = 0;
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    if (CREATE_REQUEST.test(turns[index]!)) {
+      start = index;
+      break;
+    }
+  }
+  let account: string | null = null;
+  for (const turn of turns.slice(start)) {
+    const edit = EDIT_ACCOUNT.exec(turn);
+    if (edit) {
+      account = clipAccount(edit[1]!.trim().replace(/^["“]|["”]$/g, ""));
+      continue;
+    }
+    if (account) continue;
+    account = turnAccount(turn, personWords, person);
+  }
+  return account;
+}
+
 export function correctiveActionIssue(text: string, employeeName: string | null): string | null {
+  if (incidentSplitFixEnabled()) return splitFixedIssue(text, employeeName) ?? issueFromRequest(text, employeeName);
   const fromRequest = issueFromRequest(text, employeeName);
   if (!typedNameEnabled()) return fromRequest;
   if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return fromRequest;

@@ -743,6 +743,17 @@ export function decimalKeepEnabled(): boolean {
   return envFlag("DECIMAL_KEEP_ENABLED");
 }
 
+/**
+ * The Issue is the request's account in whole sentences: "Dodge, NE" and a
+ * second sentence are kept, where they work and their title are not the
+ * incident, and a later pasted policy paragraph or a one-line correction does
+ * not replace it ("change what happened to: …" does). QA, 25 Oct 2026. See
+ * `forms/incident-issue.ts`. Off, the Issue is read as before.
+ */
+export function incidentSplitFixEnabled(): boolean {
+  return envFlag("INCIDENT_SPLIT_FIX_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -813,4 +824,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
   "DECIMAL_KEEP_ENABLED",
+  "INCIDENT_SPLIT_FIX_ENABLED",
 ] as const;
