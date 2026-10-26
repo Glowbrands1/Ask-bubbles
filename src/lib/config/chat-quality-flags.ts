@@ -1088,6 +1088,9 @@ export function requestLineAccountEnabled(): boolean {
  */
 export function notDeductibleReadEnabled(): boolean {
   return envFlag("NOT_DEDUCTIBLE_READ_ENABLED");
+}
+
+/**
  * An earlier step told in a sentence is a Prior actions row (managers in the
  * sibling app, 26 Oct 2026; same flag in both apps): "note a verbal ca was
  * given on 9-1-26" and "she was issued a verbal ca on 10.1 for this same
@@ -1096,6 +1099,9 @@ export function notDeductibleReadEnabled(): boolean {
  */
 export function priorStepSentenceEnabled(): boolean {
   return envFlag("PRIOR_STEP_SENTENCE_ENABLED");
+}
+
+/**
  * A notice worked to the last day was fulfilled on it (a manager in the
  * sibling app, 26 Oct 2026; same flag in both apps): "her last day worked was
  * 9-28-26" with "gave and worked 2 week notice" left "Date that notice was
@@ -1104,6 +1110,9 @@ export function priorStepSentenceEnabled(): boolean {
  */
 export function exitFulfilledIsLastDayEnabled(): boolean {
   return envFlag("EXIT_FULFILLED_IS_LAST_DAY_ENABLED");
+}
+
+/**
  * The reply is not sent on with an "It happened on …" line the conversation
  * already dates (QA LS-B5, 26 Oct 2026; same flag in both apps): after "… for
  * previous coaching" that line read as a second earlier step and the form was
@@ -1111,6 +1120,9 @@ export function exitFulfilledIsLastDayEnabled(): boolean {
  */
 export function dateLineNoEchoEnabled(): boolean {
   return envFlag("DATE_LINE_NO_ECHO_ENABLED");
+}
+
+/**
  * A Prior actions row dated after today is never kept (QA LS-B11, 26 Oct 2026;
  * same flag in both apps): a typo "11-1-26" the manager corrected to "11-1-25"
  * left "Coaching — signed 11/01/2026" on the draft. See `groundPriorActions`
