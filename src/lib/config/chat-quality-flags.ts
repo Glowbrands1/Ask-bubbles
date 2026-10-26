@@ -814,6 +814,15 @@ export function excerptBrandFilterEnabled(): boolean {
 }
 
 /**
+ * A Google review question gets the Google Reviews page's month-to-date
+ * figures, goal and pace for the caller's stores, and only with View reports.
+ * Off, review questions keep the existing path. Ported from the sibling app (QA T11).
+ */
+export function googleReviewsInChatEnabled(): boolean {
+  return envFlag("GOOGLE_REVIEWS_IN_CHAT_ENABLED");
+}
+
+/**
  * "ca for <name> …, previous coaching …" is read as "create a ca for …", so
  * the card opens (QA, 26 Oct 2026). See `ai/short-for-request.ts`. Off, every
  * turn is read as typed.
@@ -899,6 +908,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INCIDENT_CLAUSE_SPLIT_ENABLED",
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
+  "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "SHORT_FOR_REQUEST_ENABLED",
 ] as const;
 
