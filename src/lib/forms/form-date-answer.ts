@@ -1,4 +1,4 @@
-import { antiLoopEnabled, priorActionsParseEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, priorActionsNoCommaEnabled, priorActionsParseEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 
 import { JOIN } from "./bounded-context";
 
@@ -490,6 +490,28 @@ function statedEarlierStep(before: string): boolean {
   );
 }
 
+/*
+ * "PRIOR COACHING VERBAL 6/25 WRITTEN 7/28 NO DEDUCT" — THE LIST WITH NO
+ * COMMA. QA, 26 Oct 2026: with nothing between the items, the second date was
+ * no list item, and the labelled-step reader read every word back to the
+ * label as its topic, so the line read "Written warning — verbal 6/25 —
+ * 07/28/2026". With PRIOR_ACTIONS_NO_COMMA_ENABLED on, after a labelled step
+ * an item that names a step ("written", "final", "coaching", "ca") and is set
+ * off only by spaces continues the list, as a comma or "and" does, and holds
+ * only its own words. Anything else, an account included ("… 6/25 late again
+ * 7/28"), is read as before. Off, nothing here runs.
+ */
+const SPACED_ITEM_BEFORE = new RegExp(String.raw`^\s+((?:${TOPIC_WORD}\s+){1,5}?)(?:(?:on|dated|signed)\s+)?$`, "i");
+
+/** The words of a step item set off from the previous date by spaces alone, or null (flag on only). */
+function spacedStepItem(text: string, dates: readonly DateInText[], date: DateInText): string | null {
+  if (!priorActionsNoCommaEnabled()) return null;
+  const at = dates.indexOf(date);
+  if (at < 1) return null;
+  const words = SPACED_ITEM_BEFORE.exec(text.slice(dates[at - 1]!.end, date.index))?.[1] ?? "";
+  return words && NAMES_A_STEP_PARSE.test(words) ? words : null;
+}
+
 /**
  * `labelledSteps` with PRIOR_ACTIONS_PARSE_ENABLED on: the level alone names
  * a step, the topic drops its article, "on" may precede the date, and a step
@@ -508,6 +530,15 @@ function labelledStepsParsed(text: string, dates: readonly DateInText[], today?:
       found.set(date.index, {
         named: listNeedsStep ? (item[1] ?? "") : `${list}${item[1] ?? ""}`,
         topic: listNeedsStep ? "" : words.trim(),
+      });
+      continue;
+    }
+    // "prior coaching verbal 6/25 written 7/28": a labelled step's list continues without a comma.
+    const spaced = list ? spacedStepItem(text, dates, date) : null;
+    if (list && spaced !== null) {
+      found.set(date.index, {
+        named: listNeedsStep ? spaced : `${list}${spaced}`,
+        topic: listNeedsStep ? "" : spaced.replace(TOPIC_ARTICLE, "").trim(),
       });
       continue;
     }
