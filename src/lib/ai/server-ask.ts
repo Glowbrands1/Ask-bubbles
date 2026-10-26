@@ -137,6 +137,7 @@ import { slotOnlyRetrievalTopic } from "./slot-only-turn";
 import { appPasswordHelpFor } from "./app-password-help";
 import { redactSensitiveDefaults, withoutSensitiveDefaults } from "./sensitive-defaults";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
+import { withCleanupKeepsCard } from "./cleanup-keeps-card";
 import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
 
@@ -201,7 +202,8 @@ export async function answerQuestion(
   if (passwordHelp) {
     return { content: passwordHelp, citations: [], coverage: "grounded" };
   }
-  return withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory));
+  // CLEANUP_REQUEST_KEEPS_CARD_ENABLED: a clean-up request or a thank-you keeps the open card as it was.
+  return withoutSensitiveDefaults(withCleanupKeepsCard(await answerQuestionTraced(request, actor, memory), request));
 }
 
 async function answerQuestionTraced(
