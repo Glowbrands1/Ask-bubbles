@@ -6,7 +6,7 @@ import { respelling, withNameRespell } from "./name-respell";
 import type { AskRequest, AskResponse } from "./types";
 
 /**
- * Ported from Ask Sunny conv_mvofjlco271mr0t, 25 Oct 2026. The manager's
+ * Ported from the sibling app's conv_mvofjlco271mr0t, 25 Oct 2026. The manager's
  * turns, with this app's own title and store and an invented name spelled the same two ways ("wren caloway", then
  * "wren calloway").
  */
