@@ -23,7 +23,7 @@ const state = vi.hoisted(() => ({
     values: Record<string, string>;
     checked: Record<string, string[]>;
   }[],
-  /** Header overrides for one test: the employee, title and salon on the record. */
+  /** Header overrides for one test: the employee, title and store on the record. */
   instance: {} as Record<string, unknown>,
   stated: [] as {
     values: Record<string, string>;
@@ -62,7 +62,7 @@ vi.mock("@/lib/forms/instance-scope", () => ({
           layoutFamily: seed.layoutFamily,
           variantKey: null,
           employeeName: "Sarah Jones",
-          employeeRole: "Tanning Consultant",
+          employeeRole: "Soap Maker",
           locationName: null,
           formDate: "2026-09-28",
           status: "draft",
