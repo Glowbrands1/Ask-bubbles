@@ -859,4 +859,18 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TERSE_SLOT_READ_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
+  "CHAT_UPSTREAM_RETRY_ENABLED",
 ] as const;
+
+/**
+ * The answer's model call is tried again, up to two more times about 1 s and
+ * then 3 s apart, when it fails with a retryable upstream error (429, 529 or
+ * overloaded, 5xx, a dropped connection), and only while the turn is inside
+ * its time budget. A 400 or other request error is never retried. A call that
+ * still fails returns the same error as before, with the upstream code in the
+ * log and in chat_traces. See `ai/upstream-retry.ts`. Off, the call and its
+ * failure are exactly what main ships.
+ */
+export function chatUpstreamRetryEnabled(): boolean {
+  return envFlag("CHAT_UPSTREAM_RETRY_ENABLED");
+}
