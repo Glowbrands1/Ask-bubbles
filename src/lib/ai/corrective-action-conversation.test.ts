@@ -1974,3 +1974,35 @@ describe("HR feedback 30 Sep — the Corrective Action names or asks the policy"
     expect(answer.formProposal).toBeUndefined();
   });
 });
+
+/**
+ * QA live run, 26 Oct 2026 (tester 2, P4b conv_mvop6trc2lbk8yz, P4c
+ * conv_mvop7h1s28j9ega; names invented): a short "ca for <name> at <store>,
+ * <incident>, previous coaching …" opened no card. Flag off: as on main;
+ * flag on (SHORT_FOR_REQUEST_ENABLED): the Corrective Action card.
+ */
+describe("'ca for <name> at <store>, late today, previous coaching …'", () => {
+  const TURNS = [
+    "ca for rory vance at kearney, late today, previous coaching verbal 6/25",
+    "Ca for rory vance at kearney, late today, previous coaching verbal 6/25 and written 7/28",
+    "ca for rory vance at kearney, late today. previous coaching: verbal 6/25 and written 7/28",
+  ];
+
+  it.each(TURNS)("flag off, as on main: no card for '%s'", async (turn) => {
+    delete process.env.SHORT_FOR_REQUEST_ENABLED;
+    const answer = await ask(turn);
+    expect(answer.formProposal).toBeUndefined();
+  });
+
+  it.each(TURNS)("flag on: the Corrective Action card for Rory Vance from '%s'", async (turn) => {
+    process.env.SHORT_FOR_REQUEST_ENABLED = "on";
+    try {
+      const answer = await ask(turn);
+      expect(answer.formProposal?.templateKey).toBe("dpoa");
+      expect(answer.formProposal?.employeeName?.toLowerCase()).toBe("rory vance");
+      expect(answer.content).not.toMatch(/I can prepare:\s*$/);
+    } finally {
+      delete process.env.SHORT_FOR_REQUEST_ENABLED;
+    }
+  });
+});

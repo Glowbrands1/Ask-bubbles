@@ -816,3 +816,12 @@ happened; "X instead of Y" names X; a prior action's date ("jba manual
 revision. Not ported: the Follow-up line rule (this card has none) and the
 card salon edit (the store edit is its own fix here). No salon wording was
 copied. Test: `src/app/api/chat/edits-dates-replay-e2e.test.ts`.
+
+## 26 Oct 2026: SHORT_FOR_REQUEST_ENABLED stays Bubbles-only
+
+"ca for <name> at <store>, late today, previous coaching verbal 6/25" opened
+no card here (the prior clause made the request read as a description and
+the form suggestions were offered). The sibling app's proposal flow opens the
+Corrective Action card for the same shape ("ca for rory vance at lawrence,
+late today, previous coaching verbal 6/25"), so the pre-read is not needed
+there.
