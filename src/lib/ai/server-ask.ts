@@ -46,6 +46,7 @@ import { loadChatDataBlock } from "./chat-data-tools";
 import { loadGoogleReviewsChatBlock } from "./google-reviews-chat-read";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
+import { withNewFormOwnTurn } from "./new-form-own-turn";
 import { withTerseSlots } from "./terse-slots";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
@@ -228,7 +229,8 @@ async function answerQuestionBody(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
-  return keepManagerActionPlan(await answerQuestionCore(request, actor, memory), request);
+  // NEW_FORM_OWN_TURN_ENABLED: another form after a card is drafted from its own turns.
+  return keepManagerActionPlan(withNewFormOwnTurn(await answerQuestionCore(request, actor, memory), request), request);
 }
 
 async function answerQuestionCore(
