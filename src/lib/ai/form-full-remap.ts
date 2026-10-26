@@ -15,6 +15,7 @@ import {
   placeSpanGuardEnabled,
   priorActionsParseEnabled,
   keepFormEmployeeEnabled,
+  formEditDateRulesEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
 import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
@@ -40,6 +41,7 @@ import type { ChatFormProposal } from "@/types";
 import { withoutAppLines } from "./app-sentences";
 import { callClaudeToolDetailed } from "./call-claude";
 import { chatTraceDraft } from "./chat-trace-store";
+import { remapEditLine, formDateByRules, managerWords, remapObservation, withoutSetAsidePolicies } from "./edit-date-rules";
 import { readsAsPolicyPaste, readsAsStatedTitle, spelledAssistant } from "./title-words";
 import {
   currentRequestStart,
@@ -277,10 +279,21 @@ export function groundFormSlots(input: {
       ? { ...kept, warningLevel: null }
       : kept;
   let slots = finishSlots(firstCoachingUnlessEarlier(mergeSlots(read, savedSlots), users), said);
+  // FORM_EDIT_DATE_RULES_ENABLED: an edit replaces, adds to, or never becomes What happened; the Date follows the incident.
+  if (formEditDateRulesEnabled()) {
+    slots = withEditDateRules(slots, {
+      users,
+      question: input.question,
+      today: input.today,
+      reread: (account) =>
+        fixed ? requestIncident({ text: account, employeeName, slotClause: incidentSlot }) : statedIncident(account, employeeName, managerOnly),
+    });
+  }
   const sections =
     fixed && input.manual
       ? remapManualSections({
-          said: scoped,
+          // FORM_EDIT_DATE_RULES_ENABLED: "INSTEAD of the attendance policy" cites no Attendance.
+          said: formEditDateRulesEnabled() ? withoutSetAsidePolicies(scoped) : scoped,
           chunks: input.manual.chunks,
           incident: slots.observation,
           modelHeading: raw.policySection,
@@ -308,8 +321,10 @@ export function groundFormSlots(input: {
         }
       : null,
   );
+  // FORM_EDIT_DATE_RULES_ENABLED: the reply says what an edit did.
+  const editLine = formEditDateRulesEnabled() ? remapEditLine(managerWords(input.question)) : null;
   const response: AskResponse = {
-    content,
+    content: editLine ? `${content}\n\n${editLine}` : content,
     citations: fixed && input.manual ? remapCitations(input.manual, sections) : [],
     ...(slots.templateKey ? { formProposal: proposalFor(slots) } : {}),
   };
@@ -1194,7 +1209,7 @@ const STATE_ONLY = new RegExp(
   "i",
 );
 
-function slotClause(clause: string): boolean {
+export function slotClause(clause: string): boolean {
   const text = clause.trim();
   if (/^(?:verbal|written|yes|no|yeah|nope)[.!]?\s*$/i.test(text)) return true;
   // "Create a Coaching Form" names the form. It is not what happened.
@@ -1419,6 +1434,33 @@ function renderReply(
   const body = lines.join("\n");
   const asked = questions.join("\n");
   return [body, asked].filter((part) => part.trim() !== "").join("\n\n");
+}
+
+/**
+ * FORM_EDIT_DATE_RULES_ENABLED: What happened under the three edit kinds, and
+ * the Date read past a prior step's date (see `edit-date-rules.ts`).
+ */
+function withEditDateRules(
+  slots: FormRemapSlots,
+  input: {
+    readonly users: readonly string[];
+    readonly question: string;
+    readonly today: string;
+    readonly reread: (account: string) => string | null;
+  },
+): FormRemapSlots {
+  const users = input.users.map(managerWords).filter((turn) => turn.trim());
+  const observation = remapObservation({ users, current: slots.observation, reread: input.reread });
+  const date = formDateByRules({
+    managerTurns: users,
+    question: managerWords(input.question),
+    today: input.today,
+    current: slots.incidentDateIso,
+  });
+  const incidentDateIso = date === undefined ? slots.incidentDateIso : date;
+  return observation === slots.observation && incidentDateIso === slots.incidentDateIso
+    ? slots
+    : { ...slots, observation, incidentDateIso };
 }
 
 function proposalFor(slots: FormRemapSlots): ChatFormProposal {
