@@ -1,9 +1,27 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { APPROVED_GOOGLE_STORES } from "@/config/company/google-reviews";
 import { goalContext, type GoalRow } from "@/lib/google-reviews/goals";
 
 import { isGoogleReviewQuestion, storeCodesNamedIn } from "./google-reviews-chat";
+
+/*
+ * Each test starts with GOOGLE_REVIEWS_IN_CHAT_ENABLED unset, so the suite reads the same whether
+ * or not the environment running it turns the flag on; the flag-on cases set it
+ * themselves. The environment's own value is restored after the file.
+ */
+const ENV_FLAGS = ["GOOGLE_REVIEWS_IN_CHAT_ENABLED"];
+const ENV_SAVED = Object.fromEntries(ENV_FLAGS.map((name) => [name, process.env[name]]));
+beforeEach(() => {
+  for (const name of ENV_FLAGS) delete process.env[name];
+});
+afterAll(() => {
+  for (const name of ENV_FLAGS) {
+    const value = ENV_SAVED[name];
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
+});
 
 /**
  * Port from the sibling app, QA T11 (25 Oct 2026, a 1-star chat): the
