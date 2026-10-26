@@ -184,7 +184,7 @@ import {
   withConductOffense,
   withStatedOffense,
 } from "@/lib/forms/ca-policy";
-import { listFormDates, priorStepDate } from "@/lib/forms/form-date-answer";
+import { priorStepDate } from "@/lib/forms/form-date-answer";
 import {
   COACHING_CONTEXT_RULES,
   LANGUAGE_CLEANUP_RULES,
@@ -223,6 +223,7 @@ import { JOIN } from "@/lib/forms/bounded-context";
 import { businessToday } from "@/lib/business-date";
 import {
   correctDraftedDates,
+  draftBriefDates,
   formDateBrief,
   groundedSourceWithFormDate,
   resolveFormDate,
@@ -898,7 +899,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
        * rather than repairs: a model told the date does not invent one.
        */
       ...(resolvedFormDate
-        ? [formDateBrief(resolvedFormDate, listFormDates(notes, businessToday()).map((found) => found.iso))]
+        ? [formDateBrief(resolvedFormDate, draftBriefDates(notes, businessToday()))]
         : []),
       /*
        * THE PLAN OF ACTION — three beats, in order, and nothing else.
@@ -1215,6 +1216,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       narrativeKeys,
       notes,
       resolvedFormDate,
+      businessToday(),
     );
 
     const narrated = guardNarrativeDraft(dated.values, fields, groundingSource);

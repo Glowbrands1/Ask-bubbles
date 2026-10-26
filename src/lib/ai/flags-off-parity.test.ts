@@ -47,6 +47,11 @@ const PROTECTED = [
  * check reads the manager's words, not the app's stored-slot lines, with the
  * flag-off reading unchanged. It stays on the PROTECTED list; only the diff
  * check leaves it out. No other protected file is excepted.
+ * PRIOR_ACTIONS_PARSE_ENABLED, with the flag-off reading unchanged, and on
+ * 26 Oct 2026 again for the incident date behind PRIOR_SENTENCE_FIX_ENABLED
+ * (a prior step's date is never the form's Date). It stays
+ * on the PROTECTED list; only the diff check leaves it out. No other
+ * protected file is excepted.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/form-date-answer.ts",

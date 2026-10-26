@@ -17,12 +17,14 @@ import {
   keepFormEmployeeEnabled,
   formEditDateRulesEnabled,
   formDateIncidentOnlyEnabled,
+  priorSentenceFixEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
 import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
 import { asksOnlyAboutFormsOnFile } from "@/lib/forms/chat-form-records";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
-import { listIncidentDates, datesInText, datesInTextWithYearless } from "@/lib/forms/form-date-answer";
+import { blankPriorStepDates, datesInText, datesInTextWithYearless, listIncidentDates, withoutPriorStepClauses } from "@/lib/forms/form-date-answer";
+import { dateAnswersSaid, statedFormDate } from "@/lib/forms/incident-dates";
 import { incidentOnly } from "@/lib/forms/form-date-incident-only";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { lateOpenOn, mostRecent } from "@/lib/forms/late-open";
@@ -195,7 +197,19 @@ export function groundFormSlots(input: {
   const jobTitle = managerOnly ? managerTitle(titleTurns, raw.employeeName) : groundedTitle(titleTurns);
   const store =
     (placeSpanGuardEnabled() ? newestNamedStore(users) : null) ?? groundedStore(said) ?? (fixed ? placeStore(said) : null);
-  const incidentDateIso = groundedDate(said, input.today);
+  /*
+   * PRIOR_SENTENCE_FIX_ENABLED (coordinator's ruling, 26 Oct 2026): the form's
+   * date by `statedFormDate` — one incident date, or two asked about once and
+   * dated the day it is created until answered — and otherwise this reader's
+   * own, with every earlier step's date ("coached her 10-16", "written
+   * warning on 10-20") blanked first.
+   */
+  // Corrective Action only: on a Coaching Form the coaching held is its date.
+  const sentenceFix = priorSentenceFixEnabled() && templateKey === "dpoa";
+  const statedDate = sentenceFix ? statedFormDate(conversation, input.today) : null;
+  const incidentDateIso = statedDate
+    ? statedDate.iso
+    : groundedDate(sentenceFix ? blankPriorStepDates(said, input.today) : said, input.today);
   /*
    * WARNING_LEVEL_MANAGER_ONLY_ENABLED (ported from the sibling app, 24 Oct 2026):
    * the latest level the manager states, with a bare "Yes" counted only after
@@ -221,11 +235,16 @@ export function groundFormSlots(input: {
   // manual gives no section for it.
   const lateOpening = fixed && !named ? describedLateOpening(withoutPriorList(scoped)) : null;
   const policySection = fixed ? (named ?? lateOpening) : groundedPolicy(said);
+  // PRIOR_SENTENCE_FIX_ENABLED: an answer to the date question ("10/15", "most recent") is no account.
+  const answers = sentenceFix ? dateAnswersSaid(conversation) : null;
+  const incidentScope = answers?.size
+    ? users.slice(start).filter((turn) => !answers.has(withoutAppLines(turn).trim())).join("\n")
+    : scoped;
   // MANAGER_WORDS_ONLY_ENABLED: a clause that only names the employee or says
   // where they work is not what happened, on either reader.
   const incidentSlot = managerOnly ? (clause: string) => slotClause(clause) || namesOrPlacesThem(clause) : slotClause;
   const observation = fixed
-    ? (requestIncident({ text: scoped, employeeName, slotClause: incidentSlot, managerOnly }) ??
+    ? (requestIncident({ text: incidentScope, employeeName, slotClause: incidentSlot, managerOnly, ...(sentenceFix ? { today: input.today } : {}) }) ??
       (isRequestLeftover(raw.observation, employeeName) ||
       hasCutDate(raw.observation, said) ||
       // MANAGER_WORDS_ONLY_ENABLED: the model's "She works at Grand Island" says
@@ -235,7 +254,8 @@ export function groundFormSlots(input: {
         ? null
         : acceptSummary(raw.observation, scoped)) ??
       (managerOnly ? sentenceAboutThem({ text: scoped, employeeName, slotClause: incidentSlot }) : null))
-    : (statedIncident(said, employeeName, managerOnly) ?? acceptSummary(raw.observation, said));
+    : (statedIncident(sentenceFix ? withoutPriorStepClauses(said, input.today, said).text : said, employeeName, managerOnly) ??
+      acceptSummary(raw.observation, said));
   // Both readers contribute, each behind its own flag: the "previous coaching: …"
   // list (REMAP_INCIDENT_FIX_ENABLED) and the intent path's step reader
   // (PRIOR_ACTIONS_PARSE_ENABLED). With both on, a list item whose date a
@@ -293,6 +313,8 @@ export function groundFormSlots(input: {
       ? { ...kept, warningLevel: null }
       : kept;
   let slots = finishSlots(firstCoachingUnlessEarlier(mergeSlots(read, savedSlots), users), said);
+  // PRIOR_SENTENCE_FIX_ENABLED: a date settled (or asked about) this turn is not replaced by a saved one.
+  if (statedDate) slots = { ...slots, incidentDateIso: statedDate.iso };
   // FORM_EDIT_DATE_RULES_ENABLED: an edit replaces, adds to, or never becomes What happened; the Date follows the incident.
   if (formEditDateRulesEnabled()) {
     slots = withEditDateRules(slots, {
@@ -322,7 +344,12 @@ export function groundFormSlots(input: {
     .map((turn) => turn.content);
   // An ambiguous "Yes" answered nothing, so the questions before it are asked again.
   if (fixed && isAmbiguousAnswer(conversation, conversation.length - 1)) assistants.pop();
-  const questions = questionsFor(slots, assistants);
+  const questionsRead = questionsFor(slots, assistants);
+  // PRIOR_SENTENCE_FIX_ENABLED: two incident dates are asked about by name, once.
+  const questions =
+    statedDate && statedDate.candidates.length > 1
+      ? questionsRead.flatMap((question) => (question === QUESTIONS.incidentDateIso ? (statedDate.question ? [statedDate.question] : []) : [question]))
+      : questionsRead;
   const content = renderReply(
     slots,
     questions,
