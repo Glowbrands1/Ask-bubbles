@@ -741,6 +741,16 @@ export function remapDraftSourcesClientEnabled(): boolean {
 }
 
 /**
+ * The form's date is the incident date the manager stated, or the day the
+ * form is created — never a deadline, due date, assignment date, prior-action
+ * date or a "by <date>" (Pau's coordinator, 25 Oct 2026, D3). Off, the date
+ * readers keep main's reading.
+ */
+export function formDateIncidentOnlyEnabled(): boolean {
+  return envFlag("FORM_DATE_INCIDENT_ONLY_ENABLED");
+}
+
+/**
  * A new form asked for is never read as "show me the form on file" (QA B22,
  * 25 Oct 2026, both apps): "… for no call no show on 10/22" read "show" as
  * the verb and put another chat's corrective action back in the thread. On,
@@ -919,6 +929,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_CHAT_LONG_MESSAGE_ENABLED",
   "REMAP_DRAFT_SOURCES_ENABLED",
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
+  "FORM_DATE_INCIDENT_ONLY_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
   "EXIT_PROSE_FACTS_ENABLED",
