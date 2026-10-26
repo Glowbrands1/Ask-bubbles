@@ -1,7 +1,7 @@
-import { formEditDateRulesEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditDateRulesEnabled, lateOpenPlaceEnabled } from "@/lib/config/chat-quality-flags";
 
 import { JOIN } from "./bounded-context";
-import { LATE_TO_OPEN, lateOpenOn } from "./late-open";
+import { LATE_TO_OPEN, describesAttendanceToo, lateOpenOn } from "./late-open";
 import {
   findManualSection,
   isApprovedPolicyManualTitle,
@@ -94,6 +94,12 @@ export interface CaPolicyReading {
   ambiguous: CaPolicyName[] | null;
   /** A scheduled meeting, seminar or training session the account says was not attended: "the monthly meeting". */
   missedEvent: string | null;
+  /**
+   * LATE_OPEN_PLACE_ENABLED (with LATE_OPEN_DATE_ENABLED): the account
+   * describes a late opening ("opening store late", "opened the store late",
+   * "late to open") and no late shift or absence beside it. Absent when off.
+   */
+  lateOpening?: boolean;
 }
 
 /* ------------------------------------------------------------ the words -- */
@@ -302,6 +308,63 @@ function statedIn(turn: string): CaPolicyName | null {
  * the drafting notes carry them.
  */
 export function readCaPolicy(rawText: string): CaPolicyReading {
+  const reading = readCaPolicyWords(rawText);
+  // LATE_OPEN_PLACE_ENABLED with LATE_OPEN_DATE_ENABLED (QA B1, conv_mvifqra017j15ld8: "opening store late on 10-1-26" named no policy).
+  if (!lateOpenOn() || !lateOpenPlaceEnabled()) return reading;
+  if (!describesLateOpening(rawText) || describesAttendanceToo(rawText ?? "")) return reading;
+  if (!/\blate\b/i.test(rawText ?? "")) return reading;
+  if (approvedLateOpening(rawText) || deniedLateOpening(rawText)) return reading;
+  return { ...reading, lateOpening: true };
+}
+
+/*
+ * A DENIED LATE OPENING IS NO LATE OPENING (QA-7, 26 Oct 2026): "she did not
+ * open the store late", "she never opened the store late", "she wasn't late to
+ * open the store". The sibling app
+ * reads these as nothing (its NAMED pattern skips a match with a negation just
+ * before it); this does the same for the described reading above. Set aside
+ * only when every sentence that describes the late opening denies it, so
+ * "she did not open the store on time, she opened the store late" still is one.
+ */
+// "opened the store late", and "late to open" (QA-7: "she wasn't late to open the store").
+const OPEN_THEN_LATE = /\bopen(?:ed|ing|s)?\b(?:\s+\S+){0,3}?\s+late\b|\blate\s+to\s+open\b/i;
+const DENIED_BEFORE = /\b(?:not|never|no|\w+n['’]t)\s+(?:\S+\s+){0,2}$/i;
+
+function deniedLateOpening(rawText: string): boolean {
+  const opening = statements(normalize(rawText)).filter((sentence) => describesLateOpening(sentence));
+  return (
+    opening.length > 0 &&
+    opening.every((sentence) => {
+      const match = OPEN_THEN_LATE.exec(sentence);
+      return match !== null && DENIED_BEFORE.test(sentence.slice(0, match.index));
+    })
+  );
+}
+
+/*
+ * AN APPROVED LATE OPENING IS NO OFFENSE (QA-6 on the sibling app's port,
+ * 26 Oct 2026): "opening the store late was approved by the manager" is not
+ * the Late Opening policy. Set aside only when every sentence that describes
+ * the late opening says it was approved or permitted; "not approved" and
+ * "without permission" still describe one. Guards the described reading
+ * above only; the late-opening readings main already had are unchanged.
+ */
+const APPROVED_IN_SENTENCE = new RegExp(
+  String.raw`\b(?:pre-?approved|approved|authori[sz]ed|excused|sanctioned|ok(?:ay)?'?e?d|cleared|signed\s+off)\b|\b(?:approval|permission|authori[sz]ation|go[- ]ahead|sign[- ]?off)\b|\b(?:was|were|is|are|been|being|got|get)\s+(?:\S+\s+){0,2}?(?:allowed|permitted)\b|\b(?:allowed|permitted|let)\s+(?:her|him|them|me|us|the\s+\w+)\s+(?:to\s+)?open\b`,
+);
+const NOT_APPROVED_IN_SENTENCE = new RegExp(
+  String.raw`\b(?:not|never|no|nor|without|\w+n't)\s+(?:\S+\s+){0,3}?(?:pre-?approv\w*|approv\w*|authori[sz]\w*|excused|sanctioned|ok(?:ay)?'?e?d|cleared|signed\s+off|permi\w*|allowed|go[- ]ahead|sign[- ]?off)\b|\b(?:unapproved|unauthori[sz]ed|unexcused|unpermitted|disallowed)\b`,
+);
+
+function approvedLateOpening(rawText: string): boolean {
+  const opening = statements(normalize(rawText)).filter((sentence) => describesLateOpening(sentence));
+  return (
+    opening.length > 0 &&
+    opening.every((sentence) => APPROVED_IN_SENTENCE.test(sentence) && !NOT_APPROVED_IN_SENTENCE.test(sentence))
+  );
+}
+
+function readCaPolicyWords(rawText: string): CaPolicyReading {
   const text = normalize(rawText);
   const turns = text.split(JOIN).map((turn) => turn.trim()).filter(Boolean);
 
@@ -631,6 +694,10 @@ export function caPolicyProposalLine(reading: CaPolicyReading, named: NamedPolic
   }
   if (reading.stated === "under_performance" || reading.stated === "company_policies") {
     return `**Policy:** ${CA_POLICY_LABEL[reading.stated]}, as you said. The policy manual has no single section to quote for it, so Direct policy is left for you to complete.`;
+  }
+  /* LATE_OPEN_PLACE_ENABLED: a late opening is the Late Opening policy, named or described. */
+  if (!reading.stated && !reading.suggestion && reading.lateOpening) {
+    return "**Policy:** Late Opening — the store opened late. I'll quote that section from the current policy manual on the draft; tell me if a different policy applies.";
   }
   if (reading.suggestion && reading.source === "incident") {
     const what = reading.topics.map((topic) => TOPIC_WORDS[topic]).join(" and ");

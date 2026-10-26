@@ -941,6 +941,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
   "NAME_BEFORE_TITLE_ENABLED",
+  "LATE_OPEN_PLACE_ENABLED",
 ] as const;
 
 /**
@@ -964,4 +965,16 @@ export function incidentClauseSplitEnabled(): boolean {
  */
 export function stateCodeNotAPersonEnabled(): boolean {
   return envFlag("STATE_CODE_NOT_A_PERSON_ENABLED");
+}
+
+/**
+ * A described late opening with the place named — "opening store late",
+ * "opened the store late" — names the Late Opening policy on the proposal
+ * card (QA B1, conv_mvifqra017j15ld8; same flag in both apps). Needs
+ * LATE_OPEN_DATE_ENABLED as well. Not when the late opening was approved, or
+ * when the account also describes a late shift or an absence. See
+ * `forms/ca-policy.ts`. Off, the policy reader is exactly as before.
+ */
+export function lateOpenPlaceEnabled(): boolean {
+  return envFlag("LATE_OPEN_PLACE_ENABLED");
 }
