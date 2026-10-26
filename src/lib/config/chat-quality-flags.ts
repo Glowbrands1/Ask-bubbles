@@ -957,6 +957,17 @@ export function nameBeforeTitleEnabled(): boolean {
   return envFlag("NAME_BEFORE_TITLE_ENABLED");
 }
 
+/**
+ * A notice the manager says was worked fills "Date that notice was
+ * fulfilled" with the last day worked and ticks Submitted & Fulfilled Notice;
+ * "9/25 gave notice worked it til 10/9" is notice 9/25, last day 10/9 (QA,
+ * 25 Oct 2026). Never a date the manager did not give. Off, the exit form
+ * reads as before.
+ */
+export function exitNoticeFulfilledEnabled(): boolean {
+  return envFlag("EXIT_NOTICE_FULFILLED_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "INCIDENT_FROM_EARLIER_TURN_ENABLED",
   "LEVEL_REQUEST_DATE_ENABLED",
@@ -1334,6 +1345,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "WOVEN_OCR_PAGE_BATCHES_ENABLED",
   // coding 5: EXCERPT_BRAND_HEADING_DROP (QA's round 17c live test, 11 Nov 2026; default off).
   "EXCERPT_BRAND_HEADING_DROP_ENABLED",
+  "EXIT_NOTICE_FULFILLED_ENABLED",
 ] as const;
 
 /**
