@@ -957,6 +957,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXIT_FULFILLED_IS_LAST_DAY_ENABLED",
   "DATE_LINE_NO_ECHO_ENABLED",
   "FUTURE_PRIOR_ROW_DROP_ENABLED",
+  "MEETING_NOT_LATENESS_PLAN_ENABLED",
+  "PLAN_PAYROLL_SENTENCE_ENABLED",
 ] as const;
 
 /**
@@ -1130,6 +1132,25 @@ export function dateLineNoEchoEnabled(): boolean {
  */
 export function futurePriorRowDropEnabled(): boolean {
   return envFlag("FUTURE_PRIOR_ROW_DROP_ENABLED");
+}
+
+/**
+ * A missed meeting with no lateness keeps the general Action Plan, not the
+ * attendance (lateness) wording (QA LS-B8, 26 Oct 2026). The policy pick is
+ * unchanged. See `missedMeetingNotLateness` in `forms/attendance-action-plan.ts`.
+ * Off, as before.
+ */
+export function meetingNotLatenessPlanEnabled(): boolean {
+  return envFlag("MEETING_NOT_LATENESS_PLAN_ENABLED");
+}
+
+/**
+ * The Action Plan says the deduction: "<name> will be payroll deducted $3.25."
+ * when payroll deduct is Yes and the manager stated an amount (QA LS-B6 /
+ * LS-B9, 26 Oct 2026). See `forms/plan-payroll-sentence.ts`. Off, as before.
+ */
+export function planPayrollSentenceEnabled(): boolean {
+  return envFlag("PLAN_PAYROLL_SENTENCE_ENABLED");
 }
 
 /**

@@ -140,7 +140,8 @@ import {
   type ActionPlanInput,
 } from "@/lib/forms/ca-action-plan";
 import { twoSentenceActionPlan } from "@/lib/forms/action-plan-sentences";
-import { attendanceActionPlan, isAttendancePlan } from "@/lib/forms/attendance-action-plan";
+import { attendanceActionPlan, isAttendancePlan, missedMeetingNotLateness } from "@/lib/forms/attendance-action-plan";
+import { withPayrollSentence } from "@/lib/forms/plan-payroll-sentence";
 import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
 import { retainFilledFields } from "@/lib/forms/draft-merge";
 import {
@@ -2123,13 +2124,22 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         await applyStatedFacts(id, { values: { [fixedPlan.key]: typed }, checked: {} }, actor.id, new Set([fixedPlan.key]));
       }
     }
-    const planValue = planInput && !managerOnlyPlan
-      ? attendanceActionPlanEnabled() && isAttendancePlan(planInput)
+    // MEETING_NOT_LATENESS_PLAN_ENABLED: a missed meeting keeps the general plan.
+    const builtPlan = planInput && !managerOnlyPlan
+      ? attendanceActionPlanEnabled() && isAttendancePlan(planInput) && !missedMeetingNotLateness(notes)
         ? attendanceActionPlan(planInput)
         : actionPlanSentencesEnabled()
           ? twoSentenceActionPlan(planInput)
           : correctiveActionPlan(planInput)
       : null;
+    // PLAN_PAYROLL_SENTENCE_ENABLED: the deduction the manager stated is said in the plan.
+    const planValue = builtPlan && planInput
+      ? withPayrollSentence(builtPlan, {
+          answer: planInput.payroll.answer,
+          amount: payrollDeductAmount(amountNotes),
+          employeeName: loaded.instance.employeeName,
+        })
+      : builtPlan;
     const planned =
       fixedPlan && planInput && planValue && draftedAnything && !keeps(fixedPlan.key)
         ? {

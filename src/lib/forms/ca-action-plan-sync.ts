@@ -7,7 +7,7 @@ import {
 } from "@/lib/config/chat-quality-flags";
 
 import { collapseToTwoSentences } from "./action-plan-sentences";
-import { attendanceActionPlan, isAttendancePlan } from "./attendance-action-plan";
+import { attendanceActionPlan, isAttendancePlan, missedMeetingNotLateness } from "./attendance-action-plan";
 import { fixedActionPlanKey, refreshedActionPlan } from "./ca-action-plan";
 import { parseFormDocument } from "./document";
 import { applyAssistantDraft, loadInstance, type LoadedInstance } from "./instances";
@@ -65,7 +65,9 @@ export async function syncCorrectiveActionPlan(
     payroll: { answer: null, amount: null },
     closing: planField?.closing ?? null,
   };
-  const attendance = attendanceActionPlanEnabled() && isAttendancePlan(attendanceInput);
+  // MEETING_NOT_LATENESS_PLAN_ENABLED: what the form says happened, and this turn's words.
+  const account = [values.find((row) => row.fieldKey === "observation")?.value ?? "", options.notes ?? ""].join("\n");
+  const attendance = attendanceActionPlanEnabled() && isAttendancePlan(attendanceInput) && !missedMeetingNotLateness(account);
   const value = attendance
     ? attendanceActionPlan(attendanceInput)
     : actionPlanSentencesEnabled()
