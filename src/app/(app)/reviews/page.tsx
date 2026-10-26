@@ -31,14 +31,7 @@ export default async function ReviewsPage({
 
   return (
     <PermissionGate permission="view_reports">
-      {/* GOOGLE_REVIEWS_UPDATE_NOTE_ENABLED; see `lib/google-reviews/update-note.ts`. */}
-      {reviewsUpdateNoteEnabled() ? (
-        <div className="px-5 pt-5 sm:px-6">
-          <Notice tone="attention">
-            <p>{REVIEWS_UPDATE_NOTE}</p>
-          </Notice>
-        </div>
-      ) : null}
+      {reviewsUpdateNoteEnabled() ? <div className="px-5 pt-5 sm:px-6"><Notice tone="attention"><p>{REVIEWS_UPDATE_NOTE}</p></Notice></div> : null}
       <ReviewsDashboard
         tab={tab}
         status={resolveReviewsIntegrationStatus()}

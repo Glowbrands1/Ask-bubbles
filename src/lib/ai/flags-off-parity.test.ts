@@ -51,11 +51,21 @@ const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.ts
  * approval on 25 Oct 2026: behind CHAT_LONG_MESSAGE_ENABLED, a
  * character-count line under the field and send disabled over the limit.
  * Off, it renders as before.
- * The Google Reviews page. Pau, 26 Oct 2026: asked for the update note on the
- * Google Reviews page. Behind GOOGLE_REVIEWS_UPDATE_NOTE_ENABLED; off, it
- * renders as before (pinned in src/app/(app)/reviews/page.test.tsx).
  */
-const ALLOWED_UI = ["src/features/chat/message-bubble.tsx", "src/features/chat/composer.tsx", "src/app/(app)/reviews/page.tsx"];
+const ALLOWED_UI = ["src/features/chat/message-bubble.tsx", "src/features/chat/composer.tsx"];
+
+/*
+ * Pau, 26 Oct 2026: asked for the update note on the Google Reviews page. The
+ * page may differ from main by exactly these lines: the note's imports and one
+ * render guarded by GOOGLE_REVIEWS_UPDATE_NOTE_ENABLED. Anything else in the
+ * file fails. Off, it renders as before (src/app/(app)/reviews/page.test.tsx).
+ */
+const REVIEWS_PAGE = "src/app/(app)/reviews/page.tsx";
+const REVIEWS_NOTE_MOUNT = [
+  '+import { Notice } from "@/components/ui/feedback";',
+  '+import { REVIEWS_UPDATE_NOTE, reviewsUpdateNoteEnabled } from "@/lib/google-reviews/update-note";',
+  '+      {reviewsUpdateNoteEnabled() ? <div className="px-5 pt-5 sm:px-6"><Notice tone="attention"><p>{REVIEWS_UPDATE_NOTE}</p></Notice></div> : null}',
+];
 
 /*
  * The user (Pau) approved, via QA on 25 Oct 2026, the forms list's Edit and
@@ -117,10 +127,11 @@ describe("new flags default off", () => {
       const raw = diff(uiBase, [...UI_PATHS, ":(exclude)**/*.test.tsx", ":(exclude)**/*.dom.test.tsx"]);
       const unexpected = raw
         .split(/(?=^diff --git )/m)
-        .filter((block) => block.trim().length > 0 && !ALLOWED_UI.some((file) => block.includes(file)) && !block.includes(MONITORING_TABLE))
+        .filter((block) => block.trim().length > 0 && !ALLOWED_UI.some((file) => block.includes(file)) && !block.includes(MONITORING_TABLE) && !block.includes(REVIEWS_PAGE))
         .join("");
       expect(unexpected).toBe("");
       expect(changedLines(diff(uiBase, [MONITORING_TABLE])).filter((line) => !MONITORING_MOUNT.includes(line))).toEqual([]);
+      expect(changedLines(diff(uiBase, [REVIEWS_PAGE])).filter((line) => !REVIEWS_NOTE_MOUNT.includes(line))).toEqual([]);
     }
     const ask = readFileSync("src/lib/ai/server-ask.ts", "utf8");
     const code = ask.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
