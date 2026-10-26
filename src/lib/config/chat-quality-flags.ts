@@ -822,6 +822,18 @@ export function googleReviewsInChatEnabled(): boolean {
   return envFlag("GOOGLE_REVIEWS_IN_CHAT_ENABLED");
 }
 
+/**
+ * Cleaning left undone cites the manual's Care and Cleaning of Equipment and
+ * Facilities section, chosen by the code (Code 3, policy reading; QA T5,
+ * 25 Oct 2026; same flag as the sibling app): "cleaning duties not being
+ * completed", "weren't done", "didn't get done", "left dirty". Other duties
+ * left undone in those words are the Standards of Conduct. Off, the policy is
+ * read exactly as before.
+ */
+export function policyCleaningIncidentEnabled(): boolean {
+  return envFlag("POLICY_CLEANING_INCIDENT_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -893,6 +905,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "POLICY_SPECIFIC_TOPICS_ENABLED",
   "EXIT_PROSE_FACTS_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
@@ -900,7 +913,22 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
+  "POLICY_CLEANING_INCIDENT_ENABLED",
 ] as const;
+
+/**
+ * Specific incidents cite their own manual section, chosen by the code (policy
+ * reading; QA, 26 Oct 2026): no wet floor sign -> Safety in the Workplace, a
+ * long break -> Meal and Rest Policy, a social media post -> Social Media
+ * Policy, sexual comments -> Sexual and Other Forms of Harassment, a pet at
+ * work -> Animals in the Workplace, theft, cash shortages, insubordination and
+ * talking badly about coworkers -> the Standards of Conduct page that lists
+ * them. A coaching form's "other" topic is no longer primed with
+ * "Punctuality". Off, the policy and the topic are read exactly as before.
+ */
+export function policySpecificTopicsEnabled(): boolean {
+  return envFlag("POLICY_SPECIFIC_TOPICS_ENABLED");
+}
 
 /**
  * What happened (the card's Issue) is read from the clauses that say what
