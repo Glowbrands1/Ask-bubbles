@@ -822,6 +822,15 @@ export function googleReviewsInChatEnabled(): boolean {
   return envFlag("GOOGLE_REVIEWS_IN_CHAT_ENABLED");
 }
 
+/**
+ * The draft route keeps up to 24,000 characters of the manager's notes
+ * instead of 4,000, so a long account (CHAT_LONG_MESSAGE) is drafted whole
+ * (QA, 26 Oct 2026). Off, the 4,000-character cut stays.
+ */
+export function longDraftNotesEnabled(): boolean {
+  return envFlag("LONG_DRAFT_NOTES_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -900,6 +909,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
+  "LONG_DRAFT_NOTES_ENABLED",
 ] as const;
 
 /**
