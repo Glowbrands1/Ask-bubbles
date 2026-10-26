@@ -59,8 +59,11 @@ describe("STORE_ALIAS_ENABLED on", () => {
     process.env[FLAG] = "on";
     const asked = [{ role: "assistant", content: "I have **avery stone**. Which store is this for? Name it here or on the form." }];
     expect(ids(withStoreAliases({ question: "dodge, ne", history: asked } as unknown as AskRequest).question)).toEqual([DODGE]);
-    expect(withStoreAliases({ question: "dodge", history: asked } as unknown as AskRequest).question).toBe("Omaha, NE (West Dodge Rd)");
-    expect(withStoreAliases({ question: "Dodge", history: asked } as unknown as AskRequest).question).toBe("Omaha, NE (West Dodge Rd)");
+    // Changed on purpose (QA, 26 Oct 2026): a whole-turn reply is written as the
+    // store answer, without the roster name's comma, so the incident reader
+    // never takes it for the Issue and no splitter cuts at the comma.
+    expect(withStoreAliases({ question: "dodge", history: asked } as unknown as AskRequest).question).toBe("the store is Omaha NE (West Dodge Rd)");
+    expect(withStoreAliases({ question: "Dodge", history: asked } as unknown as AskRequest).question).toBe("the store is Omaha NE (West Dodge Rd)");
     expect(ids(withStoreAliases({ question: "Dodge, ne", history: asked } as unknown as AskRequest).question)).toEqual([DODGE]);
     expect(withStoreAliases({ question: "dodge", history: [] } as unknown as AskRequest).question).toBe("dodge");
   });

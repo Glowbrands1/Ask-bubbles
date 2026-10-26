@@ -39,6 +39,19 @@ interface PlaceParts {
 
 /** This app's stores, as name, state, city and the street in brackets ("Omaha, NE (West Dodge Rd)"). */
 const READERS = {
+  /**
+   * The roster name as written into the turn: without its comma ("Grand
+   * Island NE"), which the location reader reads the same, so no clause
+   * splitter cuts the turn at it ("at Grand Island, NE used her cell phone"
+   * left "NE used her cell phone" as the Issue; QA, 26 Oct 2026).
+   */
+  written: (name: string): string => name.replace(/,/g, ""),
+  /**
+   * A whole-turn place reply is written as this app's slot answer, "the store
+   * is Kearney NE": every reader takes it as the store, and the incident
+   * readers never take it for what happened (QA, 26 Oct 2026).
+   */
+  placeReply: (name: string): string => `the store is ${name.replace(/,/g, "")}`,
   /** The turn names one store the readers read. */
   named: (text: string): boolean => readLocationMentions(text).some((mention) => mention.locationIds.length === 1),
   places: (): PlaceParts[] =>
@@ -49,7 +62,8 @@ const READERS = {
     }),
 };
 
-const CUE_BEFORE = /\b(?:at|in|our|the|location|salon|store)\s+$/i;
+// "the location is dodge", "store: dodge" (QA, 26 Oct 2026).
+const CUE_BEFORE = /\b(?:at|in|our|the|location|salon|store)\s+$|\b(?:location|salon|store)\s*(?:is|=|:)\s*$/i;
 const CUE_AFTER = /^\s*(?:location|salon|store)\b/i;
 const SUFFIXES: readonly [string, string][] = [
   ["street", "st"],
@@ -120,7 +134,9 @@ export function withStoreAliases(request: AskRequest): AskRequest {
   if (!storeAliasEnabled()) return request;
   const asked = (index: number) => {
     const before = [...request.history.slice(0, index)].reverse().find((turn) => turn.role === "assistant");
-    return PLACE_QUESTION.test(before?.content ?? "");
+    // The app asked, or its card is still waiting on the store.
+    const card = (before as { readonly formProposal?: { readonly locationId?: string | null; readonly locationResolution?: string } | null } | undefined)?.formProposal;
+    return PLACE_QUESTION.test(before?.content ?? "") || Boolean(card && !card.locationId && card.locationResolution === "needs_selection");
   };
   // An alias fills the first STORE the chat names; a turn that already names one the
   // readers read, and every turn after it, stays as typed, so a later place word never
@@ -174,15 +190,19 @@ export function rosterNames(text: string, placeAsked = false): string {
   // address reader's, never a salon or store.
   out = out.replace(ADDRESS, (found) => `\u0000${kept.push(found) - 1}\u0000`);
   const whole = out.trim().replace(/[.!?]+$/, "").trim().toLowerCase();
+  // A roster name typed alone under "Which store?" is the store answer too.
+  if (placeAsked && /^\u0000\d+\u0000$/.test(whole) && READERS.places().some((place) => place.name === kept[Number(whole.slice(1, -1))])) {
+    return READERS.placeReply(kept[Number(whole.slice(1, -1))]!);
+  }
   for (const alias of ALIASES) {
     if (whole === alias.phrase && (placeAsked || alias.phrase.includes(" "))) {
-      out = alias.name;
+      out = READERS.placeReply(alias.name);
       break;
     }
     const pattern = new RegExp(`(?<![\\w\\u0000])${escape(alias.phrase).replace(/,\\s?/g, ",?\\s*").replace(/ /g, "\\s+")}(?![\\w\\u0000])`, "gi");
     out = out.replace(pattern, (found, offset: number, all: string) => {
       if (alias.cued && !CUE_BEFORE.test(all.slice(0, offset)) && !CUE_AFTER.test(all.slice(offset + found.length))) return found;
-      return `\u0000${kept.push(alias.name) - 1}\u0000`;
+      return `\u0000${kept.push(READERS.written(alias.name)) - 1}\u0000`;
     });
   }
   return out.replace(/\u0000(\d+)\u0000/g, (_, index: string) => kept[Number(index)]!);

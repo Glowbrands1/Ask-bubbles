@@ -816,3 +816,12 @@ happened; "X instead of Y" names X; a prior action's date ("jba manual
 revision. Not ported: the Follow-up line rule (this card has none) and the
 card salon edit (the store edit is its own fix here). No salon wording was
 copied. Test: `src/app/api/chat/edits-dates-replay-e2e.test.ts`.
+
+## 26 Oct 2026: store aliases (STORE_ALIAS_ENABLED), "empire, sd" not mapped
+
+"dodge ne", "dodge, ne", "dodge ne location" and a bare "dodge, ne" reply
+are the West Dodge Rd store with `STORE_ALIAS_ENABLED` on (aliases built from
+`COMPANY_LOCATION_ENTRIES`). "empire, sd" / "empire" is **not** mapped: Empire
+is not on the seven-store list or in Woven, and reading it as a Sioux Falls
+store would be a guess. `COMPANY_LOCATION_NICKNAMES` stays empty until the
+business (Pau) confirms which store managers mean by it.
