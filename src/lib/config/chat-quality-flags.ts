@@ -786,6 +786,21 @@ export function appPasswordHelpEnabled(): boolean {
   return envFlag("APP_PASSWORD_HELP_ENABLED");
 }
 
+/**
+ * A source excerpt shown under an answer never quotes the sibling company's
+ * lines (QA, 25 Oct 2026, B22-4). The JBA Policy Manual covers every brand;
+ * a question that names no brand reads the whole manual, and the excerpt cut
+ * from that reading quoted another company's peak-season PTO bullet. On, a
+ * line, bullet or sentence of a multi-brand manual's excerpt that names a
+ * brand in `EXCERPT_HIDDEN_BRANDS` (`config/company/knowledge.ts`) is left
+ * out before the excerpt is cut; what is kept is verbatim. Retrieval,
+ * ranking, the prompt, page numbers and titles are unchanged. Off, excerpts
+ * are built exactly as before.
+ */
+export function excerptBrandFilterEnabled(): boolean {
+  return envFlag("EXCERPT_BRAND_FILTER_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -859,4 +874,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TERSE_SLOT_READ_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
+  "EXCERPT_BRAND_FILTER_ENABLED",
 ] as const;
