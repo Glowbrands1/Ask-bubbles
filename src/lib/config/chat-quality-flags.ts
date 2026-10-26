@@ -823,6 +823,23 @@ export function googleReviewsInChatEnabled(): boolean {
 }
 
 /**
+ * A Corrective Action or coaching draft is never filed blank (production, 26
+ * Oct 2026: `drafted` with no fields and nothing rejected, from Create clicks
+ * fired several at once). The model's tool call is read when its `values` /
+ * `checked` came back JSON-encoded, one object per section, keyed by label,
+ * or with a single option as text; a model call that threw (429, 529,
+ * overloaded), answered with no tool call, or left no narrative although the
+ * notes hold an account is tried again up to twice (after 1 s, then 3 s), as
+ * is a failed framework read; if it is still empty, the Observation is the
+ * manager's own incident clause (the card's "Issue"). Every reason goes on a
+ * drafted event, with `{"fallback": "manager_words"}` where used. See
+ * `forms/draft-never-blank.ts`. Off, the draft route is unchanged.
+ */
+export function draftNeverBlankEnabled(): boolean {
+  return envFlag("DRAFT_NEVER_BLANK_ENABLED");
+}
+
+/**
  * The form the manager named is the form: "needs CA" and "write ca" ask for
  * the Corrective Action Form, and a request for "a form" that names none uses
  * the form last named in the chat (conv_mvofmpei2c50lhp, 25 Oct 2026). See
@@ -910,6 +927,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
+  "DRAFT_NEVER_BLANK_ENABLED",
   "MANAGER_FORM_CHOICE_ENABLED",
 ] as const;
 
