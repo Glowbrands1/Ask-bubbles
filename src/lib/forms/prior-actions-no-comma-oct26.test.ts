@@ -374,7 +374,7 @@ describe("PRIOR_ACTIONS_NO_COMMA_ENABLED off: today's output, pinned", () => {
  * production, and this change touches the readers both use. With
  * PRIOR_ACTIONS_NO_COMMA_ENABLED off, every reader below must return exactly
  * what main returns. `MAIN_OUTPUTS` was captured by running these inputs on
- * origin/main (e7a61f3) with the same three flags, and is hard-coded on
+ * origin/main (39f2df1) with the same three flags, and is hard-coded on
  * purpose: if this test fails, the flag-off path has changed — fix the code,
  * never the snapshot.
  *
@@ -426,7 +426,7 @@ function readers(said: string) {
   };
 }
 
-// Captured on origin/main e7a61f3 (same on b86bfd7) with PRIOR_ACTIONS_PARSE_ENABLED=1 and REOPEN_VERB_GUARD_ENABLED=1.
+// Captured on origin/main 39f2df1 (same on e7a61f3 and b86bfd7) with PRIOR_ACTIONS_PARSE_ENABLED=1 and REOPEN_VERB_GUARD_ENABLED=1.
 const MAIN_OUTPUTS: Record<string, ReturnType<typeof readers>> = {
   "prior coaching verbal 6/25 written 7/28 no deduct": {
     "priors": [
