@@ -73,8 +73,7 @@ describe("TERSE_COMMAND_ONLY_ENABLED on", () => {
 describe("TERSE_COMMAND_ONLY_ENABLED on: the live command lines", () => {
   it.each([
     ["ca rory ann vance dodge, ne late today verbal", "Create a corrective action form for rory ann vance at "],
-    // QA-4, 26 Oct 2026: "ca john michael doe late today" in lowercase is now unsure and left as
-    // typed — see "a third name word is read from the shape of the line" below.
+    ["ca john michael doe late today", "Create a corrective action form for john michael doe."],
     ["coach devon harlan dodge, ne measuring product recipe", "Create a coaching form for devon harlan at "],
     ["exit devon harlan dodge ldw 10-17-26", "Create an exit form for devon harlan at "],
     ["ca mara quill sd", "Create a corrective action form for mara quill"],
@@ -135,11 +134,9 @@ describe("TERSE_COMMAND_ONLY_ENABLED on: a third name word is never a level, top
     }
   });
 
-  it.each(["ca john michael doe late 10-14", "ca john michael doe late today"])("'%s' is left as typed in lowercase and capitals", (command) => {
+  it.each(["ca john michael doe late 10-14", "ca john michael doe late today"])("'%s' keeps the three-part name, in any case", (command) => {
     process.env.TERSE_COMMAND_ONLY_ENABLED = "on";
-    for (const variant of [command, command.toUpperCase()]) expect(expandTerseRequest(variant, TODAY)).toBe(variant);
-    const named = command.replace("john michael doe", "John Michael Doe");
-    expect(expandTerseRequest(named, TODAY)).toContain("form for John Michael Doe.");
+    for (const variant of cases(command)) expect(expandTerseRequest(variant, TODAY).toLowerCase()).toContain("form for john michael doe.");
   });
 
   it.each(["written ca mara quill 10/5 didnt do 10 min sanitize at dodge", "verbal ca mara quill 10/5 didnt do 10 min sanitize at dodge"])(
@@ -174,7 +171,7 @@ describe("TERSE_COMMAND_ONLY_ENABLED on: 'never' is not a name, and long-tail th
   });
 
   it.each([
-    // QA-4, 26 Oct 2026: "rory ann vance woven acks" is now unsure in lowercase (see below); a code still ends the name.
+    ["coach rory ann vance woven acks 10-16", "Create a coaching form for rory ann vance."],
     ["exit rory ann vance nc/ns last day 9/20", "Create an exit form for rory ann vance."],
   ])("'%s' keeps the three-part name, in any case", (command, start) => {
     process.env.TERSE_COMMAND_ONLY_ENABLED = "on";
@@ -188,23 +185,15 @@ describe("TERSE_COMMAND_ONLY_ENABLED on: adverbs, contractions and conjunctions 
     "'%s' never takes a third word into the name, in any case",
     (command) => {
       process.env.TERSE_COMMAND_ONLY_ENABLED = "on";
-      // Either written out for "dana smith" or, when the third word is unsure, left as typed.
-      for (const variant of cases(command)) {
-        const out = expandTerseRequest(variant, TODAY);
-        if (out !== variant) expect(out.toLowerCase()).toMatch(/ form for dana smith(?:[.,]| at )/);
-      }
+      for (const variant of cases(command)) expect(expandTerseRequest(variant, TODAY).toLowerCase()).toMatch(/ form for dana smith(?:[.,]| at )/);
     },
   );
 });
 
 describe("TERSE_COMMAND_ONLY_ENABLED on: a surname that ends in 'ly' is a name", () => {
-  // QA-4, 26 Oct 2026: changed on purpose — in lowercase the third word is unsure, so the line is
-  // left as typed (the name is never cut short); capitalised by the manager, it is kept.
-  it.each(["ca rory ann kelly late today", "ca rory ann kimberly late today"])("'%s' keeps the three-part name when capitalised", (command) => {
+  it.each(["ca rory ann kelly late today", "ca rory ann kimberly late today"])("'%s' keeps the three-part name, in any case", (command) => {
     process.env.TERSE_COMMAND_ONLY_ENABLED = "on";
-    expect(expandTerseRequest(command, TODAY)).toBe(command);
-    const named = command.replace(/rory ann (\w+)/, (_m, last: string) => `Rory Ann ${last[0]!.toUpperCase()}${last.slice(1)}`);
-    expect(expandTerseRequest(named, TODAY)).toMatch(/ form for Rory Ann (?:Kelly|Kimberly)\./);
+    for (const variant of cases(command)) expect(expandTerseRequest(variant, TODAY).toLowerCase()).toMatch(/ form for rory ann (?:kelly|kimberly)\./);
   });
 });
 
@@ -264,10 +253,7 @@ describe("TERSE_COMMAND_ONLY_ENABLED on: a third name word is read from the shap
   it.each([...LINES, "ca dana smith doesnt clock in", "ca avery stone barely opened late"])("'%s' never puts the third word in the name, in any case", (command) => {
     process.env.TERSE_COMMAND_ONLY_ENABLED = "on";
     const person = command.includes("avery") ? "avery stone" : "dana smith";
-    for (const variant of cases(command)) {
-      const out = expandTerseRequest(variant, TODAY);
-      if (out !== variant) expect(out.toLowerCase()).toMatch(new RegExp(` form for ${person}(?:[.,]| at )`));
-    }
+    for (const variant of cases(command)) expect(expandTerseRequest(variant, TODAY).toLowerCase()).toMatch(new RegExp(` form for ${person}(?:[.,]| at )`));
   });
 
   it.each([
@@ -279,8 +265,20 @@ describe("TERSE_COMMAND_ONLY_ENABLED on: a third name word is read from the shap
     expect(expandTerseRequest(command, TODAY).startsWith(start)).toBe(true);
   });
 
-  it.each(["ca rory ann vance late today", "CA RORY ANN VANCE LATE TODAY", "coach rory ann vance woven acks 10-16"])("'%s' is unsure and left as typed", (command) => {
+  /** QA-7, 26 Oct 2026 (invented names): lowercase and capitals, a three-word name before the account opens the card. */
+  it.each([
+    ["ca john michael doe late today", "john michael doe"],
+    ["ca rory ann vance late today", "rory ann vance"],
+    ["ca rory ann kelly late today", "rory ann kelly"],
+    ["ca rory ann kelly woven acks", "rory ann kelly"],
+    ["ca dana marie smith no call no show", "dana marie smith"],
+    ["ca dana marie smith late", "dana marie smith"],
+    ["ca rory ann vance ncns 10/11", "rory ann vance"],
+    ["coach john michael doe woven acks", "john michael doe"],
+    ["exit john michael doe last day 9/20", "john michael doe"],
+    ["coach rory ann vance woven acks 10-16", "rory ann vance"],
+  ])("'%s' is for %s, in any case", (command, person) => {
     process.env.TERSE_COMMAND_ONLY_ENABLED = "on";
-    expect(expandTerseRequest(command, TODAY)).toBe(command);
+    for (const variant of cases(command)) expect(expandTerseRequest(variant, TODAY).toLowerCase()).toMatch(new RegExp(` form for ${person}[.,]`));
   });
 });
