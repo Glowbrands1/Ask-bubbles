@@ -813,6 +813,17 @@ export function excerptBrandFilterEnabled(): boolean {
   return envFlag("EXCERPT_BRAND_FILTER_ENABLED");
 }
 
+/**
+ * The company's own systems are never called another company's (Code 3; QA,
+ * 26 Oct 2026; same flag in both apps): "do employees have to acknowledge
+ * policies in woven" was answered "Woven isn't your system". On, the
+ * grounding carries one line saying the company uses Woven, and a reply
+ * sentence that still disowns it is taken out. Off, as before.
+ */
+export function ownSystemsFactEnabled(): boolean {
+  return envFlag("OWN_SYSTEMS_FACT_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -889,6 +900,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "APP_PASSWORD_HELP_ENABLED",
   "INCIDENT_CLAUSE_SPLIT_ENABLED",
   "EXCERPT_BRAND_FILTER_ENABLED",
+  "OWN_SYSTEMS_FACT_ENABLED",
 ] as const;
 
 /**
