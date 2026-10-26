@@ -45,6 +45,7 @@ import { callClaude } from "./call-claude";
 import { loadChatDataBlock } from "./chat-data-tools";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
+import { withTerseSlots } from "./terse-slots";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";
@@ -177,7 +178,9 @@ export async function answerQuestion(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
-  if (!chatTraceEnabled()) return answerQuestionBody(request, actor, memory);
+  // TERSE_SLOT_READ_ENABLED: a terse "ca …" line is read as the long form.
+  const read = withTerseSlots(request);
+  if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
     messageId: request.questionMessageId,
@@ -185,7 +188,7 @@ export async function answerQuestion(
     originalQuery: request.question,
     formInProgress: Boolean(request.continueProposalTemplateKey || request.openForm || request.activeFormInstanceId),
   });
-  return finishChatTrace(draft, () => answerQuestionBody(request, actor, memory));
+  return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory));
 }
 
 /** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
