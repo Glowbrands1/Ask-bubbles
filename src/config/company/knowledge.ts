@@ -477,6 +477,16 @@ export const POLICY_MANUAL_BRAND_SCOPE: ManualBrandScope = {
 };
 
 /**
+ * The sibling company's brand, as a source excerpt must never show it
+ * (EXCERPT_BRAND_FILTER_ENABLED, `lib/knowledge/excerpt-brand-filter.ts`).
+ * Regular expression SOURCES, like `POLICY_MANUAL_BRAND_SCOPE.otherBrands`:
+ * the tanning brand's name and its initials. Crunch is not listed — a
+ * question that names no brand is answered for every brand of this manual
+ * (`full-manual-context.ts`), and the excerpt keeps what the answer covers.
+ */
+export const EXCERPT_HIDDEN_BRANDS: readonly string[] = [String.raw`Sun\s+Tan\s+City`, String.raw`STC`];
+
+/**
  * ============================================================================
  * WORDS A REPLY MUST NOT USE FOR THIS COMPANY (BRAND_REPLY_GUARD_ENABLED)
  * ============================================================================
