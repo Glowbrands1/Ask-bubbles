@@ -956,6 +956,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PRIOR_STEP_SENTENCE_ENABLED",
   "EXIT_FULFILLED_IS_LAST_DAY_ENABLED",
   "DATE_LINE_NO_ECHO_ENABLED",
+  "FUTURE_PRIOR_ROW_DROP_ENABLED",
 ] as const;
 
 /**
@@ -1110,6 +1111,13 @@ export function exitFulfilledIsLastDayEnabled(): boolean {
  */
 export function dateLineNoEchoEnabled(): boolean {
   return envFlag("DATE_LINE_NO_ECHO_ENABLED");
+ * A Prior actions row dated after today is never kept (QA LS-B11, 26 Oct 2026;
+ * same flag in both apps): a typo "11-1-26" the manager corrected to "11-1-25"
+ * left "Coaching — signed 11/01/2026" on the draft. See `groundPriorActions`
+ * in `forms/prior-actions.ts`. Off, as before.
+ */
+export function futurePriorRowDropEnabled(): boolean {
+  return envFlag("FUTURE_PRIOR_ROW_DROP_ENABLED");
 }
 
 /**
