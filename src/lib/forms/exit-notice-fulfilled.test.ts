@@ -111,7 +111,7 @@ describe("EXIT_NOTICE_FULFILLED_ENABLED", () => {
 });
 
 /*
- * QA, Sunny tester batch 13 (26 Oct 2026), invented names: a terse one-liner
+ * QA tester batch 13 (26 Oct 2026), invented names: a terse one-liner
  * and an impatient multi-turn chat. Year-less dashed dates ("last day 9-28",
  * "resigned 9-15") take the most recent such day; "2 wk notice worked" and
  * "she worked the notice" are a worked notice.
