@@ -741,6 +741,16 @@ export function remapDraftSourcesClientEnabled(): boolean {
 }
 
 /**
+ * The form's date is the incident date the manager stated, or the day the
+ * form is created — never a deadline, due date, assignment date, prior-action
+ * date or a "by <date>" (Pau's coordinator, 25 Oct 2026, D3). Off, the date
+ * readers keep main's reading.
+ */
+export function formDateIncidentOnlyEnabled(): boolean {
+  return envFlag("FORM_DATE_INCIDENT_ONLY_ENABLED");
+}
+
+/**
  * A new form asked for is never read as "show me the form on file" (QA B22,
  * 25 Oct 2026, both apps): "… for no call no show on 10/22" read "show" as
  * the verb and put another chat's corrective action back in the thread. On,
@@ -839,6 +849,17 @@ export function draftNeverBlankEnabled(): boolean {
   return envFlag("DRAFT_NEVER_BLANK_ENABLED");
 }
 
+/**
+ * NAME_BEFORE_TITLE_ENABLED (QA, 26 Oct 2026): "ca for <first> <last>, team member at
+ * <store>" in lowercase left the Employee unread, and "for <First> <Last> Team
+ * Member at <store>" dropped the surname. A two-word name right before a job
+ * title is read as the name, with the title after a comma. See
+ * `ai/name-before-title.ts`. Off, the turn is read as typed.
+ */
+export function nameBeforeTitleEnabled(): boolean {
+  return envFlag("NAME_BEFORE_TITLE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -908,8 +929,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_CHAT_LONG_MESSAGE_ENABLED",
   "REMAP_DRAFT_SOURCES_ENABLED",
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
+  "FORM_DATE_INCIDENT_ONLY_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "POLICY_SPECIFIC_TOPICS_ENABLED",
   "EXIT_PROSE_FACTS_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
@@ -918,8 +941,23 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
+  "NAME_BEFORE_TITLE_ENABLED",
   "LATE_OPEN_DATE_FIX_ENABLED",
 ] as const;
+
+/**
+ * Specific incidents cite their own manual section, chosen by the code (policy
+ * reading; QA, 26 Oct 2026): no wet floor sign -> Safety in the Workplace, a
+ * long break -> Meal and Rest Policy, a social media post -> Social Media
+ * Policy, sexual comments -> Sexual and Other Forms of Harassment, a pet at
+ * work -> Animals in the Workplace, theft, cash shortages, insubordination and
+ * talking badly about coworkers -> the Standards of Conduct page that lists
+ * them. A coaching form's "other" topic is no longer primed with
+ * "Punctuality". Off, the policy and the topic are read exactly as before.
+ */
+export function policySpecificTopicsEnabled(): boolean {
+  return envFlag("POLICY_SPECIFIC_TOPICS_ENABLED");
+}
 
 /**
  * What happened (the card's Issue) is read from the clauses that say what

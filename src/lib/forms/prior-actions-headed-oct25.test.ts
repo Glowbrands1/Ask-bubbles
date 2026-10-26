@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { formDateIncidentOnlyEnabled } from "@/lib/config/chat-quality-flags";
+
 import { listIncidentDates } from "./form-date-answer";
 import { incidentDates } from "./incident-dates";
 import { statedPriorActions } from "./prior-actions";
@@ -57,7 +59,8 @@ describe("flag on, in every register", () => {
   it.each(REGISTERS)("lists both priors and offers only the incident's date (%s)", (_register, said) => {
     vi.stubEnv("PRIOR_ACTIONS_PARSE_ENABLED", "1");
     expect(statedPriorActions(said, TODAY)).toEqual(["Verbal warning — 06/25/2026", "Written warning — 07/28/2026"]);
-    expect(incidentDates(said, TODAY)).toEqual(["2026-10-15"]);
+    // D3 (see "flag on" below): with FORM_DATE_INCIDENT_ONLY on the deadline is no incident date.
+    expect(incidentDates(said, TODAY)).toEqual(formDateIncidentOnlyEnabled() ? [] : ["2026-10-15"]);
   });
 });
 
@@ -68,7 +71,13 @@ describe("flag on", () => {
     expect(statedPriorActions(PRIORS, TODAY)).toEqual(["Verbal warning — 06/25/2026", "Written warning — 07/28/2026"]);
     expect(listIncidentDates(SAID, TODAY).map((found) => found.iso)).toEqual(["2026-10-15"]);
     expect(listIncidentDates(PRIORS, TODAY)).toEqual([]);
-    expect(incidentDates(SAID, TODAY)).toEqual(["2026-10-15"]);
+    /*
+     * FORM_DATE_INCIDENT_ONLY_ENABLED (D3, changed on purpose; QA ruled D3 wins over
+     * "dated 10/15", 26 Oct 2026): a date written as the deadline ("the 10-15-26
+     * woven deadline", "by 10-15-26") never dates the form, so with the flag on
+     * the card is dated the day it is created. Flag off keeps 10-15.
+     */
+    expect(incidentDates(SAID, TODAY)).toEqual(formDateIncidentOnlyEnabled() ? [] : ["2026-10-15"]);
   });
 
   it("one incident date and one prior date is no question", () => {
@@ -89,7 +98,8 @@ describe("flag off: unchanged", () => {
   it("reads no step, and every date is a candidate", () => {
     vi.stubEnv("PRIOR_ACTIONS_PARSE_ENABLED", "");
     expect(statedPriorActions(SAID, TODAY)).toEqual([]);
-    expect(incidentDates(SAID, TODAY)).toEqual(["2026-06-25", "2026-07-28", "2026-10-15"]);
+    // D3 on also drops the bracketed prior dates and the deadline (PRIOR_ACTIONS off here).
+    expect(incidentDates(SAID, TODAY)).toEqual(formDateIncidentOnlyEnabled() ? [] : ["2026-06-25", "2026-07-28", "2026-10-15"]);
     expect(listIncidentDates(PRIORS, TODAY).map((found) => found.iso)).toEqual(["2026-06-25", "2026-07-28"]);
   });
 });
