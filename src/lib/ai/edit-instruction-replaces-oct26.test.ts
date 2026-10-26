@@ -222,6 +222,8 @@ describe("the edit instruction's own words", () => {
     // Coordinator's ruling: "No." answers the question before it; the instruction after it is the edit.
     expect(lowercaseEditInstruction("No. Change Observation of Offense to: late")).toBe("No\nchange observation of offense to: late");
     expect(lowercaseEditInstruction("no. change observation of offense to: late")).toBe("no\nchange observation of offense to: late");
+    // A comma right after a lead-in word is no break.
+    expect(lowercaseEditInstruction("Ok, Can you Change the Issue to Kira left early")).toBe("ok, can you change the issue to Kira left early");
     // QA-6: the comma form, as the same-line form.
     expect(lowercaseEditInstruction("Create a CA for Kira Dunmore, Change Observation of Offense to: late")).toBe(
       "Create a CA for Kira Dunmore\nchange observation of offense to: late",
