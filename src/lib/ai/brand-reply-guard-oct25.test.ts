@@ -66,7 +66,9 @@ describe("flag on: Buff City Soap only, citations kept", () => {
     on();
     const out = withoutOtherBrands(REPLIES.lateOpeningUpper);
     expect(out).not.toMatch(LEAK);
-    expect(out).toContain("OPEN THE store ON TIME");
+    // Changed on purpose (QA-7, 26 Oct 2026): the location word keeps the case
+    // the reply wrote it in; this pinned the old lowercase "THE store".
+    expect(out).toContain("OPEN THE STORE ON TIME");
     expect(out).toContain("[p.15]");
   });
 
@@ -195,5 +197,67 @@ describe("flag on: a trailing clause about another brand goes, the rule stays", 
     const out = withoutOtherBrands(reply);
     expect(out).toMatch(expected);
     expect(out).not.toBe(NOTHING_LEFT);
+  });
+});
+
+/*
+ * QA-5 and QA-7, 26 Oct 2026, ported from the sibling app: a contrast clause
+ * about another brand goes and the true main clause stays; a prohibition that
+ * only set up the other brand's instruction goes with it; "SALON/STORE" keeps
+ * its capitals; an ordinary answer is untouched. Original, lowercase,
+ * sentence case and CAPS.
+ */
+describe("flag on: QA-5 and QA-7, second review", () => {
+  const registers = (text: string) => [...new Set([text, text.toLowerCase(), text.charAt(0).toUpperCase() + text.slice(1).toLowerCase(), text.toUpperCase()])];
+
+  it.each(
+    [
+      ["Late opening is verbal at Buff City Soap, but at Sun Tan City it is a written warning.", /^late opening is verbal at buff city soap\.$/i],
+      ["Standards of Conduct applies to everyone except Sun Tan City employees.", /^standards of conduct applies to everyone\.$/i],
+      ["Late opening is a verbal warning, whereas at Sun Tan City it is written.", /^late opening is a verbal warning\.$/i],
+      ["Do not use MyGlow; use Revel for Sun Tan City. Late opening is verbal.", /^late opening is verbal\.$/i],
+    ].flatMap(([text, expected]) => registers(text as string).map((typed) => [typed, expected] as const)),
+  )("%s", (reply, expected) => {
+    on();
+    const out = withoutOtherBrands(reply);
+    expect(out).toMatch(expected);
+    expect(out).not.toBe(NOTHING_LEFT);
+  });
+
+  it.each(registers("Do not use MyGlow; use Revel for Sun Tan City."))("QA-7's negation flip: the prohibition is not left as this company's rule: %s", (reply) => {
+    on();
+    expect(withoutOtherBrands(reply)).toBe(NOTHING_LEFT);
+  });
+
+  it("a prohibition before a kept clause stays", () => {
+    on();
+    expect(withoutOtherBrands("Do not open late; call your manager first.")).toBe("Do not open late; call your manager first.");
+  });
+
+  it.each([
+    ["IF YOU CAN'T OPEN THE SALON/STORE ON TIME, CALL YOUR MANAGER.", "IF YOU CAN'T OPEN THE STORE ON TIME, CALL YOUR MANAGER."],
+    ["If you can't open the salon/store on time, call your manager.", "If you can't open the store on time, call your manager."],
+  ])("the location word keeps the case it was written in: %s", (reply, expected) => {
+    on();
+    expect(withoutOtherBrands(reply)).toBe(expected);
+  });
+
+  it.each(
+    registers(
+      "Per the JBA Policy Manual [p.12], every Buff City Soap store opens on time. Wipe down the soap counter after each batch, and log it in Woven.",
+    ),
+  )("an ordinary answer is untouched: %s", (reply) => {
+    on();
+    expect(withoutOtherBrands(reply)).toBe(reply);
+  });
+
+  it.each(["An answer.", "Yes.", "See p.12."])("a short reply that names no other brand is kept: %s", (reply) => {
+    on();
+    expect(withoutOtherBrands(reply)).toBe(reply);
+  });
+
+  it("flag off: the contrast reply as written", () => {
+    const reply = "Late opening is verbal at Buff City Soap, but at Sun Tan City it is a written warning.";
+    expect(withoutOtherBrands(reply)).toBe(reply);
   });
 });
