@@ -7,7 +7,7 @@ import { withWriteItUp, writeItUpRequest } from "./write-it-up";
 import type { AskRequest } from "./types";
 
 /**
- * QA, 26 Oct 2026 (Sunny tester; the same reader in the sibling app): after
+ * QA, 26 Oct 2026 (the sibling app's tester; the same reader here): after
  * "whats the policy on being late opening the salon", "write it up for devon
  * harlan" got policy advice instead of a card. The tester's wording; the name
  * is the testers' invented one.

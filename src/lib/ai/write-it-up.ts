@@ -6,7 +6,7 @@ import type { AskRequest } from "./types";
  * WRITE_IT_UP_ENABLED: "write it up for <name>" asks for the Corrective Action
  * Form.
  *
- * QA, 26 Oct 2026 (Sunny tester; the same reader in the sibling app): after
+ * QA, 26 Oct 2026 (the sibling app's tester; the same reader here): after
  * "whats the policy on being late opening the salon", the manager's "write it
  * up for devon harlan" got long policy advice with invented facts instead of
  * a card; the card came only at "just make it". The form reader reads "write
