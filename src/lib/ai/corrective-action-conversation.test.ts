@@ -1,5 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { nameCaseInsensitiveEnabled } from "@/lib/config/chat-quality-flags";
 import { displayPersonName } from "@/lib/forms/proposal";
+import { titleCaseName } from "@/lib/ai/name-case";
+
+/**
+ * Changed on purpose, flag on: with NAME_CASE_INSENSITIVE_ENABLED names are
+ * read case-insensitively and stored in Title Case word by word (QA
+ * coordinator, 26 Oct 2026). Flag off unchanged: the name as typed.
+ */
+function storedPersonName(name: string): string {
+  return nameCaseInsensitiveEnabled() ? titleCaseName(displayPersonName(name)) : displayPersonName(name);
+}
 
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 
@@ -1409,7 +1420,7 @@ describe("a Corrective Action Form for a name typed in any case", () => {
 
     expect(answer.formProposal).toBeDefined();
     expect(answer.formProposal!.templateKey).toBe("dpoa");
-    expect(answer.formProposal!.employeeName).toBe(displayPersonName(name));
+    expect(answer.formProposal!.employeeName).toBe(storedPersonName(name));
     expect(answer.formProposal!.status).toBe("ready");
     expect(answer.formProposal!.supportsInlineDraft).toBe(true);
     expect(answer.content).toMatch(/create the draft here/i);
@@ -1425,7 +1436,7 @@ describe("a Corrective Action Form for a name typed in any case", () => {
     });
 
     expect(answer.formProposal).toBeDefined();
-    expect(answer.formProposal!.employeeName).toBe(displayPersonName(name));
+    expect(answer.formProposal!.employeeName).toBe(storedPersonName(name));
     expect(answer.formProposal!.status).toBe("ready");
     expect(answer.formProposal!.supportsInlineDraft).toBe(true);
   });
@@ -1474,7 +1485,7 @@ describe("a Corrective Action Form for a name wrapped in punctuation", () => {
     const answer = await ask(`Create a Corrective Action form for ${typed} She wore slippers today.`);
 
     expect(answer.formProposal).toBeDefined();
-    expect(answer.formProposal!.employeeName).toBe(displayPersonName(name));
+    expect(answer.formProposal!.employeeName).toBe(storedPersonName(name));
     expect(answer.formProposal!.status).toBe("ready");
     expect(answer.formProposal!.supportsInlineDraft).toBe(true);
   });
@@ -1489,7 +1500,7 @@ describe("a Corrective Action Form for a name wrapped in punctuation", () => {
     });
 
     expect(answer.formProposal).toBeDefined();
-    expect(answer.formProposal!.employeeName).toBe(displayPersonName(name));
+    expect(answer.formProposal!.employeeName).toBe(storedPersonName(name));
     expect(answer.formProposal!.status).toBe("ready");
     expect(answer.formProposal!.supportsInlineDraft).toBe(true);
   });
@@ -1614,7 +1625,7 @@ describe("the coaching intake answered on one line", () => {
 
     expect(answer.formProposal).toBeDefined();
     expect(answer.formProposal!.templateKey).toBe("coaching");
-    expect(answer.formProposal!.employeeName).toBe(displayPersonName(name));
+    expect(answer.formProposal!.employeeName).toBe(storedPersonName(name));
     expect(answer.formProposal!.employeeRole).toBe(title);
     expect(answer.formProposal!.status).toBe("ready");
   });
@@ -1633,7 +1644,7 @@ describe("the coaching intake answered on one line", () => {
       { role: "admin" as never, scope: { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] } },
     );
 
-    expect(answer.formProposal?.employeeName).toBe(displayPersonName("dana moss"));
+    expect(answer.formProposal?.employeeName).toBe(storedPersonName("dana moss"));
     expect(answer.formProposal?.status).toBe("ready");
     expect(answer.formProposal?.supportsInlineDraft).toBe(true);
   });
@@ -1832,7 +1843,7 @@ describe("a form's name leading the message, across the library", () => {
     const answer = await ask(question);
 
     expect(answer.formProposal?.templateKey).toBe(key);
-    expect(answer.formProposal?.employeeName).toBe(displayPersonName(employee));
+    expect(answer.formProposal?.employeeName).toBe(storedPersonName(employee));
     expect(answer.formProposal?.status).toBe("ready");
     expect(answer.formSelection).toBeUndefined();
     expect(answer.content).not.toMatch(/which form/i);
@@ -1842,10 +1853,10 @@ describe("a form's name leading the message, across the library", () => {
 
   it("keeps a middle name, and the details that follow it", async () => {
     const transfer = await ask("Transfer for mary anne cruz to salon 24");
-    expect(transfer.formProposal?.employeeName).toBe(displayPersonName("mary anne cruz"));
+    expect(transfer.formProposal?.employeeName).toBe(storedPersonName("mary anne cruz"));
 
     const exit = await ask("Exit for john michael doe effective october 2");
-    expect(exit.formProposal?.employeeName).toBe(displayPersonName("john michael doe"));
+    expect(exit.formProposal?.employeeName).toBe(storedPersonName("john michael doe"));
   });
 
   /*
@@ -1859,13 +1870,14 @@ describe("a form's name leading the message, across the library", () => {
     const answer = await ask(question);
 
     expect(answer.formProposal?.templateKey).toBe("dpoa");
-    expect(answer.formProposal?.employeeName).toBe(displayPersonName("marlowe co"));
+    expect(answer.formProposal?.employeeName).toBe(storedPersonName("marlowe co"));
     expect(answer.formProposal?.status).toBe("ready");
     expect(answer.formProposal?.formDate ?? null).toBeNull();
     expect(answer.formSelection).toBeUndefined();
     expect(answer.content).not.toMatch(/who is this/i);
     // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed.
-    expect(answer.content).toMatch(/I'll draft a \*\*Corrective Action Form\*\* for \*\*marlowe co\*\*/);
+    // Changed on purpose, flag on: NAME_CASE_INSENSITIVE_ENABLED stores it in Title Case (26 Oct 2026).
+    expect(answer.content).toContain(`I'll draft a **Corrective Action Form** for **${storedPersonName("marlowe co")}**`);
     // What happened and the prior warning were given: no numbered intake.
     expect(answer.content).not.toMatch(/^\d\. /m);
     /*
