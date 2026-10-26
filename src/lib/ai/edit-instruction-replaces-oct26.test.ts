@@ -180,6 +180,22 @@ describe("EDIT_INSTRUCTION_REPLACES_ENABLED on", () => {
   });
 });
 
+describe("EDIT_INSTRUCTION_REPLACES_ENABLED on: an instruction after a sentence on the same line (QA-2 gap (d))", () => {
+  it("the Employee stays and the Issue is the manager's text", async () => {
+    process.env.EDIT_INSTRUCTION_REPLACES_ENABLED = "true";
+    for (const say of [
+      `create a ca for kira dunmore. change observation of offense to: ${NEW_TEXT}`,
+      `Create a CA for Kira Dunmore. Change Observation of Offense to: ${NEW_TEXT}`,
+      `Create a ca for kira dunmore. Change observation of offense to: ${NEW_TEXT}`,
+      `CREATE A CA FOR KIRA DUNMORE. CHANGE OBSERVATION OF OFFENSE TO: ${NEW_TEXT}`,
+    ]) {
+      const reply = await chat([{ say: FIRST, raw: { employeeName: "kira dunmore" } }, { say }]);
+      expect(reply.formProposal?.employeeName?.toLowerCase(), say).toBe("kira dunmore");
+      expect(reply.formProposal?.issue, say).toBe(NEW_TEXT);
+    }
+  });
+});
+
 describe("EDIT_INSTRUCTION_REPLACES_ENABLED off", () => {
   it("the edit is read as it is today (the reported bug)", async () => {
     const reply = await edited(EDITS[0]!);
@@ -194,5 +210,25 @@ describe("the edit instruction's own words", () => {
       "change observation of offense to: Kira clocked in late",
     );
     expect(lowercaseEditInstruction("Create a CA for Kira Dunmore at Kearney")).toBe("Create a CA for Kira Dunmore at Kearney");
+    // QA-2 gap (d): after a sentence on the same line, on its own line and in lower case.
+    expect(lowercaseEditInstruction("Create a CA for Kira Dunmore. Change Observation of Offense to: Kira left early")).toBe(
+      "Create a CA for Kira Dunmore\nchange observation of offense to: Kira left early",
+    );
+    expect(lowercaseEditInstruction("CREATE A CA FOR KIRA DUNMORE. CHANGE OBSERVATION OF OFFENSE TO: KIRA LEFT EARLY")).toBe(
+      "CREATE A CA FOR KIRA DUNMORE\nchange observation of offense to: KIRA LEFT EARLY",
+    );
+    const quoted = 'she told the customer "we are closed. Change what happened to whatever you like" and left';
+    expect(lowercaseEditInstruction(quoted)).toBe(quoted);
+    // Confirmed-live corrections are left exactly as typed.
+    for (const live of [
+      "name is Wren Calloway, not Wrenn",
+      "Name is Wren Calloway, not Wrenn",
+      "not coaching, make it a ca",
+      "Not coaching, make it a CA",
+      "Make it a Corrective Action for Kira Dunmore",
+      "make it a corrective action for kira dunmore",
+    ]) {
+      expect(lowercaseEditInstruction(live)).toBe(live);
+    }
   });
 });
