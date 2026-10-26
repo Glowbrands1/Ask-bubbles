@@ -318,7 +318,7 @@ function statedIn(turn: string): CaPolicyName | null {
  * POLICIES THE MANAGER SET ASIDE (POLICY_SET_ASIDE_ENABLED)
  * ============================================================================
  *
- * Ported from Ask Sunny (QA F1/M3, 25 Oct 2026): after "not attendance, late
+ * Ported from the sibling app (QA F1/M3, 25 Oct 2026): after "not attendance, late
  * opening" and "no no late opening policy only" the card still cited
  * Attendance p.14 beside Late Opening p.15. A policy named after "not",
  * "instead of", "rather than" or "in place of" is set aside; one named with
