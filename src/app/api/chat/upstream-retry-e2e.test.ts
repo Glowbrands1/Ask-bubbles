@@ -1,4 +1,4 @@
-import { APIConnectionTimeoutError, APIError } from "@anthropic-ai/sdk";
+import { APIConnectionTimeoutError, APIError, APIUserAbortError } from "@anthropic-ai/sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { chatErrorTitle, toChatTurnError } from "@/features/chat/chat-error";
@@ -56,7 +56,10 @@ type Outcome =
   | { kind: "answer" }
   | { kind: "http"; status: number; type: string }
   | { kind: "midstream"; type: string }
-  | { kind: "timeout" };
+  | { kind: "timeout" }
+  /** Never answers until the attempt is aborted, before or after the first text. */
+  | { kind: "hang" }
+  | { kind: "hang-midstream" };
 
 const state = vi.hoisted(() => ({
   script: [] as unknown[],
@@ -141,12 +144,19 @@ vi.mock("@/lib/ai/anthropic", async (importOriginal) => ({
         state.modelCalls.push({ params, options, via: "create" });
         const next = (state.script.shift() ?? { kind: "answer" }) as Outcome;
         if (next.kind === "timeout") throw new APIConnectionTimeoutError();
+        if (next.kind === "hang" || next.kind === "hang-midstream") {
+          const signal = (options as { signal?: AbortSignal } | undefined)?.signal;
+          return new Promise((_, reject) => signal?.addEventListener("abort", () => reject(new APIUserAbortError())));
+        }
         if (next.kind !== "answer") throw sdkError(next);
         return MESSAGE;
       },
       stream: (params: unknown, options?: unknown) => {
         state.modelCalls.push({ params, options, via: "stream" });
         const next = (state.script.shift() ?? { kind: "answer" }) as Outcome;
+        const signal = (options as { signal?: AbortSignal } | undefined)?.signal;
+        const aborted = () =>
+          new Promise<never>((_, reject) => signal?.addEventListener("abort", () => reject(new APIUserAbortError())));
         const handlers: (() => void)[] = [];
         return {
           on(event: string, handler: () => void) {
@@ -156,7 +166,9 @@ vi.mock("@/lib/ai/anthropic", async (importOriginal) => ({
             // An HTTP error or a timeout rejects before any text; a streamed one after some.
             if (next.kind === "timeout") throw new APIConnectionTimeoutError();
             if (next.kind === "http") throw sdkError(next);
+            if (next.kind === "hang") return aborted();
             for (const handler of handlers) handler();
+            if (next.kind === "hang-midstream") return aborted();
             if (next.kind === "midstream") throw sdkError(next);
             return MESSAGE;
           },
@@ -276,6 +288,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   for (const key of Object.keys(process.env)) {
     if (!(key in SAVED)) delete process.env[key];
@@ -600,4 +613,56 @@ describe("QA's turn, exact wording, with the production flags", () => {
       expect(state.modelCalls).toHaveLength(1);
     });
   }
+});
+
+/** Lets real work (module loading, I/O) run while the clock is fake. */
+async function until(condition: () => boolean): Promise<void> {
+  for (let i = 0; i < 5_000 && !condition(); i += 1) await new Promise((resolve) => setImmediate(resolve));
+  expect(condition()).toBe(true);
+}
+
+describe("each attempt has its own deadline: min(45 s, what is left of the 120 s budget)", () => {
+  for (const kind of ["hang", "hang-midstream"] as const) {
+    it(`three attempts that ${kind === "hang" ? "hang before any text" : "stall after the first text"} end inside the budget with the plain card, not a 504`, async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+      flagOn();
+      state.script = [{ kind }, { kind }, { kind }];
+      const started = Date.now();
+      let endedAt: number | null = null;
+      const seen = managerSees(() => post(QUESTION)).finally(() => {
+        endedAt = Date.now();
+      });
+
+      await until(() => state.modelCalls.length === 1);
+      await vi.advanceTimersByTimeAsync(45_000);
+      await until(() => state.modelCalls.length === 2);
+      await vi.advanceTimersByTimeAsync(45_000);
+      await until(() => state.modelCalls.length === 3);
+      expect(endedAt).toBeNull();
+      await vi.advanceTimersByTimeAsync(30_000);
+      await until(() => endedAt !== null);
+
+      expect(await seen).toEqual(PLAIN_CARD);
+      expect(endedAt! - started).toBeLessThanOrEqual(120_000);
+      // The SDK is given the same deadline, next to maxRetries: 0.
+      expect(state.modelCalls.map((call) => (call.options as { timeout?: number }).timeout)).toEqual([45_000, 45_000, 30_000]);
+      expect(state.modelCalls.every((call) => (call.options as { maxRetries?: number }).maxRetries === 0)).toBe(true);
+      expect(warnings.join("\n")).toMatch(/model call failed after 3 attempts: upstream timeout/);
+      expect(store.chat_traces.at(-1)).toMatchObject({ succeeded: false, error_subtype: "timeout", retried: true });
+    });
+  }
+
+  it("an attempt that hangs once, then an answer, on the create path", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    delete process.env.CHAT_TRACE_ENABLED;
+    flagOn();
+    state.script = [{ kind: "hang" }, { kind: "answer" }];
+    const pending = post(QUESTION);
+    await until(() => state.modelCalls.length === 1);
+    await vi.advanceTimersByTimeAsync(45_000);
+    const response = await pending;
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as { content?: string }).content).toBe(ANSWER);
+    expect(state.modelCalls.map((call) => call.via)).toEqual(["create", "create"]);
+  });
 });

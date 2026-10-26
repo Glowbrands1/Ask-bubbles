@@ -129,6 +129,13 @@ export interface CallClaudeInput {
    * so a later policy question can read it back instead of sending it again.
    */
   readonly cachedContext?: string | null;
+  /**
+   * The chat answer only. With CHAT_UPSTREAM_RETRY_ENABLED on, a retryable
+   * upstream failure is tried again inside the chat turn's budget, each
+   * attempt with its own deadline. Omitted — the forms ingest refinement —
+   * the call is exactly what it was.
+   */
+  readonly upstreamRetry?: boolean;
 }
 
 /**
@@ -214,16 +221,18 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
   while (history.length > 0 && history[0]!.role === "assistant") history.shift();
 
   const started = Date.now();
-  // CHAT_UPSTREAM_RETRY_ENABLED: null when off, and then nothing below differs from main.
-  const retry = chatUpstreamRetryEnabled() ? newUpstreamRetryRecord() : null;
+  // CHAT_UPSTREAM_RETRY_ENABLED, chat answer only: null when off or not asked for,
+  // and then nothing below differs from main.
+  const retry = input.upstreamRetry && chatUpstreamRetryEnabled() ? newUpstreamRetryRecord() : null;
   // The retry budget runs from the turn's start when a trace is open, otherwise this call's.
   const budgetFrom = retry ? (chatTraceDraft()?.startedAt ?? started) : started;
   /*
    * One request to the model. `options` is passed only by the upstream
    * retry, which turns the SDK's own retries off so it alone decides how
-   * many attempts there are; off, the request is exactly what main sends.
+   * many attempts there are, and gives the attempt its deadline; off, the
+   * request is exactly what main sends.
    */
-  const attempt = async (maxTokens: number, options?: { maxRetries: number }) => {
+  const attempt = async (maxTokens: number, options?: { maxRetries: number; timeout: number; signal: AbortSignal }) => {
     const attemptStarted = Date.now();
     const params = {
       model: CLAUDE_MODEL,
@@ -272,7 +281,11 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
     const response = await withTruncationRetry(
       input.maxTokens,
       async (maxTokens) => {
-        if (retry) return withUpstreamRetry(retry, budgetFrom, () => attempt(maxTokens, { maxRetries: 0 }));
+        if (retry) {
+          return withUpstreamRetry(retry, budgetFrom, (limits) =>
+            attempt(maxTokens, { maxRetries: 0, timeout: limits.timeout, signal: limits.signal }),
+          );
+        }
         return attempt(maxTokens);
       },
       `${ACTIVE_BRAND.assistantName} ran out of room before finishing that answer, so it was not shown. Try asking for less at once, or split the question into parts.`,
