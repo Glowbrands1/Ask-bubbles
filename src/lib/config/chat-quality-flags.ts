@@ -802,4 +802,17 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "EDIT_INSTRUCTION_REPLACES_ENABLED",
 ] as const;
+
+/**
+ * "change observation of offense to: <text>" (also "what happened", "issue")
+ * replaces the Issue with exactly <text>; an "add …" is appended in the
+ * manager's words; any other instruction to the app is never content. The
+ * Employee and the other fields stay. Only the What happened half of
+ * FORM_EDIT_DATE_RULES_ENABLED, without its date rules (QA, 26 Oct 2026).
+ * Off (the default), an edit turn is read as it is today.
+ */
+export function editInstructionReplacesEnabled(): boolean {
+  return envFlag("EDIT_INSTRUCTION_REPLACES_ENABLED");
+}
