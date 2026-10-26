@@ -1,5 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { formDateIncidentOnlyEnabled } from "@/lib/config/chat-quality-flags";
+
 import manual151 from "@/test/fixtures/jba-manual-production-151.json";
 import { priorActionsParseEnabled } from "@/lib/config/chat-quality-flags";
 import { correctiveActionDocument } from "@/lib/forms/library";
@@ -663,7 +665,13 @@ describe("QA B5 conv_mvnmf1ik2lqkfld: the woven deadline request (prod, 25 Oct 2
       expect(response.formProposal?.issue).toBe("missing the 10-15-26 woven deadline");
       expect(response.content).toContain("**What happened:** missing the 10-15-26 woven deadline");
       expect(response.content).not.toMatch(/create a for|(?<![\d-])5-26|Meet the woven deadline|Action plan/i);
-      expect(response.formProposal?.formDate).toBe("2026-10-15");
+      /*
+       * FORM_DATE_INCIDENT_ONLY_ENABLED (D3, changed on purpose; QA ruled D3 wins over
+       * "dated 10/15", 26 Oct 2026): a date written as the deadline ("the 10-15-26
+       * woven deadline", "by 10-15-26") never dates the form, so with the flag on
+       * the card is dated the day it is created. Flag off keeps 10-15.
+       */
+      expect(response.formProposal?.formDate ?? null).toBe(formDateIncidentOnlyEnabled() ? null : "2026-10-15");
       expect(response.content).toContain("**Type of warning:** Written Warning, as you said");
     }
   });

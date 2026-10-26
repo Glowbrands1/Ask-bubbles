@@ -16,12 +16,14 @@ import {
   priorActionsParseEnabled,
   keepFormEmployeeEnabled,
   formEditDateRulesEnabled,
+  formDateIncidentOnlyEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
 import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
 import { asksOnlyAboutFormsOnFile } from "@/lib/forms/chat-form-records";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
 import { listIncidentDates, datesInText, datesInTextWithYearless } from "@/lib/forms/form-date-answer";
+import { incidentOnly } from "@/lib/forms/form-date-incident-only";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { lateOpenOn, mostRecent } from "@/lib/forms/late-open";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
@@ -946,7 +948,7 @@ function groundedDate(text: string, today: string): string | null {
   // LATE_OPEN_DATE_ENABLED: the newest date the manager typed, dashed or not.
   const newest = lateOpenOn() ? newestDate(text, today) : null;
   if (newest) return newest;
-  const found = listIncidentDates(text, today).filter((item) => !dateIsPrior(text, item.index));
+  const found = incidentOnly(text, today, listIncidentDates(text, today)).filter((item) => !dateIsPrior(text, item.index));
   const calendar = [...new Set(found.map((item) => item.iso))];
   // One incident date, or the later one when they correct it. A prior step's
   // date ("manual ack 9/01") is not this form's date and must not wipe it.
@@ -979,10 +981,38 @@ function calendarPhrase(phrase: string): boolean {
 }
 
 /** A date that belongs to an earlier step, not the form being written. */
+const PRIOR_STEP_JUST_BEFORE =
+  /\b(?:coached|coaching\s+(?:was\s+)?(?:given|held|done))\s+(?:(?:her|him|them|[a-z]+)\s+)?on\s*$|\b(?:gave|given|issued|had|got|received)\s+(?:(?:her|him|them)\s+)?(?:a\s+|an\s+)?(?:final\s+)?(?:verbal|written|warning|coaching|ca|c\/a|corrective\s+action|write[- ]?up)\b[^.;\n]{0,20}?\bon\s*$/i;
+
+/*
+ * A step "given on <date>" is an earlier one only when the turn dates the
+ * incident some other way ("no call no show today. … gave a verbal on 10-21").
+ * "write up <name>, i gave her a verbal on 10-21 for being late" is the
+ * verbal this form documents, dated 10-21 (dispatcher probe, 26 Oct 2026).
+ */
+const DAY_WORD = /\b(?:today|yesterday|this\s+morning|last\s+night|tonight)\b/i;
+const DATE_TOKEN = /\b\d{1,2}[-/]\d{1,2}(?:[-/]\d{2,4})?\b/g;
+
+function incidentDatedElsewhere(text: string, index: number): boolean {
+  if (DAY_WORD.test(text)) return true;
+  for (const match of text.matchAll(DATE_TOKEN)) {
+    const at = match.index ?? 0;
+    if (at === index) continue;
+    if (!PRIOR_STEP_JUST_BEFORE.test(text.slice(Math.max(0, at - 80), at))) return true;
+  }
+  return false;
+}
+
 function dateIsPrior(text: string, index: number): boolean {
   const before = text.slice(Math.max(0, index - 80), index);
   const clause = before.slice(Math.max(before.search(/[^.;\n]*$/), 0));
   if (/\b(?:prior|previous|coached\s+on|manual\s+ack|already|got|received)\b/i.test(clause)) return true;
+  /*
+   * FORM_DATE_INCIDENT_ONLY_ENABLED (QA, 26 Oct 2026, live tester finding):
+   * "I coached her on 10-16 and gave a verbal on 10-21" are earlier steps,
+   * never the form's date.
+   */
+  if (formDateIncidentOnlyEnabled() && PRIOR_STEP_JUST_BEFORE.test(before) && incidentDatedElsewhere(text, index)) return true;
   // REMAP_INCIDENT_FIX_ENABLED: "jba manual 11-1-25" dates the manual acknowledgement, not this form.
   return remapIncidentFixEnabled() && /\b(?:jba\s+(?:policy\s+)?manual|policy\s+manual)\b/i.test(clause);
 }
@@ -1021,7 +1051,7 @@ function explicitWarning(turns: readonly string[], today: string): "verbal" | "w
  * yearless "10-22" is the most recent 22 October, never a future one.
  */
 function newestDate(text: string, today: string): string | null {
-  const calendar = listIncidentDates(text, today)
+  const calendar = incidentOnly(text, today, listIncidentDates(text, today))
     .filter((item) => !dateIsPrior(text, item.index))
     .map((item) => ({ iso: item.iso, index: item.index }));
   const dashed = dashedMonthDays(text, today).map((item) => ({
