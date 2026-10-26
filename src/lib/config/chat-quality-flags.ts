@@ -946,6 +946,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STORED_SLOTS_NOT_A_REQUEST_ENABLED",
   "ATTENDANCE_ACTION_PLAN_ENABLED",
   "HIDE_NO_POLICY_MATCH_NOTICE_ENABLED",
+  "PRIOR_SENTENCE_FIX_ENABLED",
+  "DATE_ANSWER_APPLIED_ENABLED",
   "PAYROLL_TYPO_NOT_A_NAME_ENABLED",
 ] as const;
 
@@ -1032,6 +1034,30 @@ export function attendanceActionPlanEnabled(): boolean {
  */
 export function hideNoPolicyMatchNoticeEnabled(): boolean {
   return envFlag("HIDE_NO_POLICY_MATCH_NOTICE_ENABLED");
+}
+
+/**
+ * A coaching or prior step said as its own sentence on a Corrective Action
+ * (QA, 26 Oct 2026, the sibling app's production; same flag in both apps): "i coached
+ * her on 10-16 about being late", "coached her 10-16, written warning on
+ * 10-20" are Prior actions rows, never the form's Date, and never the
+ * Observation of Offense in place of the incident ("she was late again
+ * today" stays). See `heldStepSpans` in `forms/form-date-answer.ts` and
+ * the incident clause in `ai/remap-incident.ts`. Off, read as before.
+ */
+export function priorSentenceFixEnabled(): boolean {
+  return envFlag("PRIOR_SENTENCE_FIX_ENABLED");
+}
+
+/**
+ * The manager's answer to "Which date goes on the form?" sets the form's date
+ * (QA, 26 Oct 2026; same flag in both apps): "10-15", "the 15th" and "most
+ * recent" are answers, also after a turn in between ("She is at Dodge"), and
+ * "most recent" is never read as a person. See `incident-dates.ts`. Off, read
+ * as before.
+ */
+export function dateAnswerAppliedEnabled(): boolean {
+  return envFlag("DATE_ANSWER_APPLIED_ENABLED");
 }
 
 /**
