@@ -14,21 +14,21 @@ import { newestStatedDate, withYearlessDatesWritten } from "./late-open";
  * D3, decided by Pau's coordinator, 25 Oct 2026: the form's date is the
  * incident date the manager stated; today when they said "today" or gave
  * none; NEVER a deadline, due date, assignment date, prior-action date or a
- * "by <date>". Ported from Ask Sunny; the managers' wording is kept, the
+ * "by <date>". Ported from the sibling app; the managers' wording is kept, the
  * people and store are invented.
  */
 const TODAY = "2026-10-25";
 const FLAG = "FORM_DATE_INCIDENT_ONLY_ENABLED";
 
-// Ask Sunny conv_mvod8jw02vsk2py, turns 1 and 2.
+// Sibling app conv_mvod8jw02vsk2py, turns 1 and 2.
 const ASSIGNED_BY =
   "create a ca form for test employee because she didnt do deep clean assigned by 9-15-26";
 const ASSIGNED_AND_DUE =
   "deep clean assigned 9-1-26 of room 1 and due by 9-15-26. no previous coaching or ca on file";
-// Ask Sunny conv_mvof8w712p9rd9c; here the remap took the deadline as the newest date.
+// Sibling app conv_mvof8w712p9rd9c; here the remap took the deadline as the newest date.
 const WOVEN_DEADLINE =
   "create a verbal corrective action for Ava Pellmore, store associate at Test Store for missing the 10-15-26 woven deadline. previous coaching. verbal (06/25/2026) and written (07/28/2026). no payroll deducation";
-// Ask Sunny conv_mvoexl0b2upub8p, turn 2.
+// Sibling app conv_mvoexl0b2upub8p, turn 2.
 const PRIOR_IN_PARENS =
   "Ava Pellmore, today, - Ava set up the front table, then went into the back room and stayed there until the first customer arrived at 7:57am. Written warning. previous coaching. verbal (06/25/2026) and written (07/28/2026). no payroll deducation.";
 
@@ -202,7 +202,7 @@ describe.each(REGISTERS)(
 );
 
 /*
- * LIVE TESTER FINDINGS, 26 Oct 2026 (invented names). Sunny conv_mvolz9vk2cwijs1:
+ * LIVE TESTER FINDINGS, 26 Oct 2026 (invented names). Sibling app conv_mvolz9vk2cwijs1:
  * "late on 10-5 and 10-15, i coached her on 10-16" dated the Coaching Form
  * 10/5, the first of two late dates, because "10-15" after "and" was not read
  * as a date. Bubbles conv_mvolwmup27zde0x: "I coached her on 10-16 and gave a
