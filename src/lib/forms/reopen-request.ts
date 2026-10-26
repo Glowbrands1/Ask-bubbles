@@ -1,4 +1,4 @@
-import { reopenVerbGuardEnabled } from "@/lib/config/chat-quality-flags";
+import { reopenRequestVerbOnlyEnabled, reopenVerbGuardEnabled } from "@/lib/config/chat-quality-flags";
 
 import { EDIT_VERB, SHOW_VERB } from "./reopen-cue";
 import { asksAboutForms, detectTemplateIntent, leadingFormRequest } from "./template-intent";
@@ -85,6 +85,8 @@ export function readReopenRequest(question: string): ReopenRequest | null {
   const guarded = reopenVerbGuardEnabled();
   if (guarded && ASKS_FOR_A_DOCUMENT.test(text)) return null;
   const verbs = guarded ? text.replace(INCIDENT_WITH_A_VERB, " ") : text;
+  // REOPEN_REQUEST_VERB_ONLY_ENABLED: "follow up coaching form for <name> must see …" asks for a new form.
+  if (reopenRequestVerbOnlyEnabled() && opensWithFormForSomeone(text)) return null;
 
   const edit = EDIT_VERB.test(verbs);
   const show = !edit && SHOW_VERB.test(verbs);
@@ -99,6 +101,24 @@ export function readReopenRequest(question: string): ReopenRequest | null {
     templateKey,
     asksChange: edit && asksForAChange(text),
   };
+}
+
+/**
+ * REOPEN_REQUEST_VERB_ONLY_ENABLED (sibling app's tester, 26 Oct 2026; the
+ * same reader here): "follow up coaching form for devon harlan must see
+ * behavior red light promo check-ins" read "see" in the account as "show me"
+ * and answered "I couldn't find a Follow-Up Coaching Form … on file". A turn
+ * that opens with a form's name, says who it is for, and carries no edit or
+ * show verb in front of the name asks for that form: the proposal flow makes
+ * it. "show me the coaching form for …", "edit the …", "reopen …" still
+ * open one on file.
+ */
+function opensWithFormForSomeone(text: string): boolean {
+  if (LEADING_REQUEST.test(text)) return false;
+  const leading = leadingFormRequest(text);
+  if (!leading || leading.subject.length === 0) return false;
+  const before = text.slice(0, Math.max(0, text.toLowerCase().indexOf(leading.subject[0]!.toLowerCase())));
+  return !EDIT_VERB.test(before) && !SHOW_VERB.test(before);
 }
 
 /** The template a sentence names, read as the proposal flow reads one. */

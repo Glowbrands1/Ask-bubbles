@@ -889,6 +889,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "APP_PASSWORD_HELP_ENABLED",
   "INCIDENT_CLAUSE_SPLIT_ENABLED",
   "EXCERPT_BRAND_FILTER_ENABLED",
+  "REOPEN_REQUEST_VERB_ONLY_ENABLED",
 ] as const;
 
 /**
@@ -901,4 +902,15 @@ export const CHAT_QUALITY_FLAG_NAMES = [
  */
 export function incidentClauseSplitEnabled(): boolean {
   return envFlag("INCIDENT_CLAUSE_SPLIT_ENABLED");
+}
+
+/**
+ * A turn that opens with a form's name and who it is for ("follow up coaching
+ * form for <name> must see behavior …") asks for a new form, even when the
+ * account contains "see", "show" or "change"; only "show me / edit / reopen
+ * … form" opens one on file (`forms/reopen-request.ts`; 26 Oct 2026). Off
+ * (the default), the turn is read as it is today.
+ */
+export function reopenRequestVerbOnlyEnabled(): boolean {
+  return envFlag("REOPEN_REQUEST_VERB_ONLY_ENABLED");
 }
