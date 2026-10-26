@@ -6,6 +6,7 @@ import {
   type ManualChunk,
   type ManualSection,
 } from "@/lib/forms/official-policy-manual";
+import { payrollFromThisFormEnabled } from "@/lib/config/chat-quality-flags";
 import { extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
 import type { KnowledgeCategory, SourceCitation } from "@/types";
 
@@ -298,9 +299,10 @@ function clauseOffense(clause: string, employeeName: string | null): string | nu
   text = text.replace(/^(?:a|an)\s+(?=\S+\s+\S)/i, "");
   text = text.replace(/^[,\s]+|[,\s.]+$/g, "").replace(/\s+(?:on|at)$/i, "");
   if (!text || text.length > 120) return null;
-  // A stray quote or other punctuation left over is not an incident
-  // ('create a Corrective Action Form for Test Employee"', conv_mvnu3j932gpohx4).
-  if (!HAS_WORD.test(text)) return null;
+  // PAYROLL_FROM_THIS_FORM_ENABLED: a stray quote or other punctuation left
+  // over is not an incident ('create a Corrective Action Form for Test
+  // Employee"', conv_mvnu3j932gpohx4, B15). Off, read as before.
+  if (payrollFromThisFormEnabled() && !HAS_WORD.test(text)) return null;
   if (/^(?:for|a|an|the|form|location|store|draft)$/i.test(text)) return null;
   // "jba manual 11-1-25" answers the prior-coaching question.
   if (/^(?:the\s+)?(?:jba\s+)?(?:policy\s+)?manual(?:\s+ack\w*)?$/i.test(text)) return null;

@@ -368,4 +368,37 @@ describe("B15 conv_mvnu3j932gpohx4: \"payroll deduct applies\" in T1 is on the T
     expect(reply.formProposal?.payrollDeduct ?? null).toBeNull();
     expect(reply.content).toContain("Is payroll deduct applicable?");
   });
+
+  /* Pau, 26 Oct 2026: the manager's words typed all lowercase, and in sentence case with the name lowercase. */
+  const REGISTERS: readonly (readonly [string, (text: string) => string])[] = [
+    ["all lowercase", (text) => text.toLowerCase()],
+    [
+      "sentence case, name lowercase",
+      (text) => {
+        const lower = text.toLowerCase();
+        return lower.charAt(0).toUpperCase() + lower.slice(1);
+      },
+    ],
+  ];
+
+  /*
+   * PINNED, NOT THE WANTED OUTCOME (reported to QA, 26 Oct 2026): with the
+   * name typed lowercase, T3 "create a corrective action form for test
+   * employee"" still reads as a new request with its own incident, because the
+   * full-remap name reader needs a Capitalized name after "for", so the
+   * payroll answer is not carried. That needs its own flag outside this PR.
+   * Flag on or off, the card is the production card here.
+   */
+  it.each(REGISTERS)("%s: flag on or off, the production card (name typed lowercase, known gap)", async (_name, type) => {
+    on(...PRODUCTION, "PAYROLL_FROM_THIS_FORM_ENABLED");
+    const turns = [
+      { user: type(B15_T1), recordedReply: B15_T1_REPLY },
+      { user: type(B15_T2), recordedReply: B15_T2_REPLY },
+      type(B15_T3),
+    ];
+    expect((await replay(turns)).at(-1)!.formProposal?.payrollDeduct ?? null).toBeNull();
+    delete process.env.PAYROLL_FROM_THIS_FORM_ENABLED;
+    const off = (await replay(turns)).at(-1)!;
+    expect(off.formProposal?.payrollDeduct ?? null).toBeNull();
+  });
 });
