@@ -816,3 +816,12 @@ happened; "X instead of Y" names X; a prior action's date ("jba manual
 revision. Not ported: the Follow-up line rule (this card has none) and the
 card salon edit (the store edit is its own fix here). No salon wording was
 copied. Test: `src/app/api/chat/edits-dates-replay-e2e.test.ts`.
+
+## 26 Oct 2026: STATE_CA_GUARD_ENABLED known gap (both apps)
+
+"CA" is written as "California" only before a ZIP code or after a California
+city. A word that is both a California city and a name ("Avery Davis CA",
+"Orange CA", "richmond ca") is therefore still read as the state and the form
+is lost. Accepted by the coordinator as a known gap; pinned in
+`src/lib/ai/state-ca.test.ts`; the flag stays off in production until these
+are run live.

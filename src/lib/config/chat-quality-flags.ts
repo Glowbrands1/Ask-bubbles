@@ -839,6 +839,15 @@ export function draftNeverBlankEnabled(): boolean {
   return envFlag("DRAFT_NEVER_BLANK_ENABLED");
 }
 
+/**
+ * "CA" after a place ("Sacramento, CA", "Los Angeles CA 90001") is read as
+ * California, not as a Corrective Action (26 Oct 2026, ported from the
+ * sibling app). See `ai/state-ca.ts`. Off, every turn is read as typed.
+ */
+export function stateCaGuardEnabled(): boolean {
+  return envFlag("STATE_CA_GUARD_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -918,6 +927,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
+  "STATE_CA_GUARD_ENABLED",
 ] as const;
 
 /**
