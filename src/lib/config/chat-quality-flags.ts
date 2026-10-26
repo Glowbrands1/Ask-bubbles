@@ -859,4 +859,17 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TERSE_SLOT_READ_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
+  "INCIDENT_CLAUSE_SPLIT_ENABLED",
 ] as const;
+
+/**
+ * What happened (the card's Issue) is read from the clauses that say what
+ * happened: a clause that only gives the employee's title, store or tenure,
+ * a policy instruction or pasted policy text is never the incident, and
+ * "dodge, ne", "$3.25", "9/25/26" and "st. joe" stay inside one clause
+ * (`lib/ai/incident-clauses.ts`; QA, 26 Oct 2026). Off (the default), the
+ * incident readers see the turn as typed.
+ */
+export function incidentClauseSplitEnabled(): boolean {
+  return envFlag("INCIDENT_CLAUSE_SPLIT_ENABLED");
+}
