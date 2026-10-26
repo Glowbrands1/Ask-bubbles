@@ -1,0 +1,74 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import rows from "@/test/fixtures/jba-manual-production-151.json";
+import { manualChunkFromRow, type ManualChunkRow } from "@/lib/knowledge/full-manual-load";
+import type { ManualChunk } from "@/lib/forms/official-policy-manual";
+import { sectionsNamedIn } from "@/lib/forms/policy-change";
+
+import { citedSections } from "@/lib/ai/violation-policy";
+
+/**
+ * ============================================================================
+ * "PROMOTIONS" IS NOT THE PROMOTIONS SECTION (POLICY_EVERYDAY_HEADING_ENABLED)
+ * ============================================================================
+ *
+ * QA item 6, 25 Oct 2026 (reported in the sibling app, names invented): "help me
+ * create a coaching form" / "… it's for october promotions …" put "Promotions
+ * Policy, JBA Policy Manual p.34" (the HR section on promoting employees) on a
+ * coaching about sales offers, on every turn.
+ *
+ * Fails with the flag off and passes with it on.
+ */
+
+const CHUNKS: readonly ManualChunk[] = (rows.chunks as ManualChunkRow[]).map((row) => {
+  const chunk = manualChunkFromRow(row);
+  return { ...chunk, page: chunk.page ?? null, locator: chunk.locator ?? undefined };
+});
+afterEach(() => vi.unstubAllEnvs());
+const on = () => vi.stubEnv("POLICY_EVERYDAY_HEADING_ENABLED", "true");
+
+function cardLines(turns: readonly string[]): string[] {
+  return citedSections(turns, CHUNKS).map((entry) => `${entry.section} p.${entry.page}`);
+}
+
+const PROMOTIONS = [
+  "help me create a coaching form",
+  "1.  Can I keep this field blank to use this coaching form with multiple staff?\n2. October 1st\n3. it's for october promotions, can i upload the pdf to read off of?\n4. store associate",
+  "1. employee name is blank\n2. knowledge on october promotions",
+];
+
+const lower = (turns: readonly string[]) => turns.map((turn) => turn.toLowerCase());
+const sentence = (turns: readonly string[]) => turns.map((turn) => turn.charAt(0).toUpperCase() + turn.slice(1).toLowerCase());
+
+describe("conv_mvoe0zgh20z4krm: sales promotions are not the Promotions section", () => {
+  it("flag off: Promotions p.34 is cited (the bug)", () => {
+    expect(cardLines(PROMOTIONS).join("\n")).toMatch(/Promotions/);
+  });
+
+  it.each([PROMOTIONS, lower(PROMOTIONS), sentence(PROMOTIONS)])("flag on: no Promotions section (%#)", (...turns) => {
+    on();
+    expect(cardLines(turns).join("\n")).not.toMatch(/Promotions/);
+  });
+
+  it.each(["add the promotions policy", "Add the promotions policy", "cite the section on promotions"])("flag on: %s still names it", (turn) => {
+    on();
+    expect(sectionsNamedIn({ text: turn, chunks: CHUNKS }).map((section) => section.heading)).toContain("Promotions");
+  });
+});
+
+/*
+ * QA, 25 Oct 2026 (via Code 2's cross-person note): a Woven-acknowledgement
+ * coaching cited "Orientation p.33" because the account says "orientation".
+ */
+describe("an onboarding orientation is not the Orientation section", () => {
+  const TURN = "create a coaching form for wren okafor, she didnt finish her woven policy acknowledgements from orientation";
+
+  it("flag off: Orientation p.33 is cited (the bug)", () => {
+    expect(cardLines([TURN]).join("\n")).toMatch(/Orientation/);
+  });
+
+  it.each([TURN, TURN.charAt(0).toUpperCase() + TURN.slice(1)])("flag on: no Orientation section (%s)", (turn) => {
+    on();
+    expect(cardLines([turn]).join("\n")).not.toMatch(/Orientation/);
+  });
+});
