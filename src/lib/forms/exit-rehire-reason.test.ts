@@ -91,7 +91,7 @@ describe("EXIT_REHIRE_REASON_ENABLED", () => {
   }
 });
 
-/* QA, Sunny tester batch 13 (26 Oct 2026), invented names. */
+/* QA tester batch 13 (26 Oct 2026), invented names. */
 const TERSE =
   "exit form ava pellmore associate test store resigned 9-15 via woven last day 9-28 2 wk notice worked items returned rehire yes";
 const RESIGNED_ON_WOVEN_TURN = "she resigned 9-15 on woven";

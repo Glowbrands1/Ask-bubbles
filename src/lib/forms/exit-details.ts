@@ -479,7 +479,7 @@ function methodsIn(turn: string): string[] {
     ) {
       found.push("Phone call");
     }
-    // EXIT_REHIRE_REASON_ENABLED: "she resigned 9-15 on woven" (QA, Sunny batch 13).
+    // EXIT_REHIRE_REASON_ENABLED: "she resigned 9-15 on woven" (QA batch 13).
     if (exitRehireReasonEnabled() && RESIGNED_ON_WOVEN.test(sentence) && !found.includes("Woven message")) {
       found.push("Woven message");
     }
