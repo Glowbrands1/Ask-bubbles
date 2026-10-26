@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { managerStatedWarningLevel } from "@/lib/forms/warning-level";
 
@@ -95,6 +95,7 @@ beforeEach(() => {
 afterEach(() => {
   if (previous === undefined) delete process.env[FLAG];
   else process.env[FLAG] = previous;
+  vi.unstubAllEnvs();
 });
 
 describe("the level is only what the manager said (ported from Ask Sunny)", () => {
@@ -168,6 +169,8 @@ describe('a bare "Yes"/"No" answers the payroll question just asked (ported from
 
   it("flag off keeps main's reading: the bare answer is not stored", () => {
     delete process.env[FLAG];
+    // Pinned to LATE_OPEN_DATE off too, the reading this pins; the env may set it (with it on, payroll deduct is read from the manager's own Yes/No, its intended change). Restored after.
+    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "");
     expect(secondTurn(VERBAL_REQUEST, PAYROLL_ONLY_REPLY, "Yes").state.payrollDeduct).toBeNull();
   });
 });
