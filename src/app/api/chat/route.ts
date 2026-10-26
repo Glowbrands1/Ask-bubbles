@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { answerQuestion } from "@/lib/ai/server-ask";
+import { humanizeFormReply } from "@/lib/ai/human-replies";
 import { isQuestionNotForm } from "@/lib/ai/question-not-form";
 import {
   assertLiveMode,
@@ -325,6 +326,15 @@ export async function POST(request: Request) {
            */
           { memoryOwnerId: context.identity.subject },
         ));
+      /*
+       * HUMAN_REPLIES_ENABLED: a later card turn says what changed instead of
+       * the whole opener again. The card is untouched. Off, unchanged.
+       */
+      answer = humanizeFormReply(answer, {
+        history: parsed.history,
+        question: parsed.question,
+        today: parsed.context.todayIso,
+      });
     } catch (error) {
       /*
        * A FAILED ANSWER IS STILL A RECORDED TURN, closed as a failure. The row
