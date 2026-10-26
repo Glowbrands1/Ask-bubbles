@@ -839,6 +839,27 @@ export function draftNeverBlankEnabled(): boolean {
   return envFlag("DRAFT_NEVER_BLANK_ENABLED");
 }
 
+/**
+ * A point between two digits ("$3.25", "1.5 hours") is part of the number,
+ * not the end of a sentence (Ask Bubbles conv_mvofkkrg2ipw28x, 25 Oct 2026:
+ * the Issue read "... register shortage 10-20-26, $3"). Off, the Issue is
+ * cut at every point as before.
+ */
+export function decimalKeepEnabled(): boolean {
+  return envFlag("DECIMAL_KEEP_ENABLED");
+}
+
+/**
+ * The Issue is the request's account in whole sentences: "Dodge, NE" and a
+ * second sentence are kept, where they work and their title are not the
+ * incident, and a later pasted policy paragraph or a one-line correction does
+ * not replace it ("change what happened to: …" does). QA, 25 Oct 2026. See
+ * `forms/incident-issue.ts`. Off, the Issue is read as before.
+ */
+export function incidentSplitFixEnabled(): boolean {
+  return envFlag("INCIDENT_SPLIT_FIX_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -918,6 +939,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
+  "DECIMAL_KEEP_ENABLED",
+  "INCIDENT_SPLIT_FIX_ENABLED",
 ] as const;
 
 /**

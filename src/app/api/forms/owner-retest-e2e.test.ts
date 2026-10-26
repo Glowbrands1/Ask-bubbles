@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { incidentSplitFixEnabled } from "@/lib/config/chat-quality-flags";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { ChatFormProposal, ChatMessage } from "@/types";
@@ -414,8 +415,9 @@ describe("capitalisation, misspellings, shorthand and word order", () => {
     ["written warning for jordan testperson - cash handling", "jordan testperson", "written", "cash handling"],
     ["CA for jordan testperson, cash handling", "jordan testperson", null, "cash handling"],
     ["jordan testperson was $40 short on her drawer last night, needs a written warning", "jordan testperson", "written", null],
-    ["jordan testperson cash handling written warning", "jordan testperson", "written", null],
-    ["need a CA for jordan testperson. she mishandled cash at close yesterday. written warning", "jordan testperson", "written", null],
+    // Changed on purpose, INCIDENT_SPLIT_FIX_ENABLED on (QA, 26 Oct 2026): the Issue is the request's account in whole sentences; flag off unchanged.
+    ["jordan testperson cash handling written warning", "jordan testperson", "written", incidentSplitFixEnabled() ? "cash handling" : null],
+    ["need a CA for jordan testperson. she mishandled cash at close yesterday. written warning", "jordan testperson", "written", incidentSplitFixEnabled() ? "she mishandled cash at close yesterday" : null],
   ])("%s", async (prompt, employee, warning, issue) => {
     expect(brief(await say(prompt))).toEqual([{ form: "dpoa", employee, warning, issue }]);
   });
@@ -424,7 +426,8 @@ describe("capitalisation, misspellings, shorthand and word order", () => {
   it("'given verbal warning on 9/21' → Verbal, never Written", async () => {
     expect(brief(await say("create a ca form for rosalyn test, she was late again for 30 mins today. given verbal warning on 9/21"))).toEqual([
       // QA 22 Oct 2026 decision: off the directory the manager's spelling is kept as typed (supersedes the 9 Oct capitalisation rule).
-      { form: "dpoa", employee: "rosalyn test", warning: "verbal", issue: null },
+      // Changed on purpose, INCIDENT_SPLIT_FIX_ENABLED on (QA, 26 Oct 2026): the Issue is the request's account in whole sentences; flag off unchanged.
+      { form: "dpoa", employee: "rosalyn test", warning: "verbal", issue: incidentSplitFixEnabled() ? "she was late again for 30 mins today" : null },
     ]);
   });
 

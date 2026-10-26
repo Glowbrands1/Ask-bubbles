@@ -1,5 +1,6 @@
 import { rosterResultFor } from "@/test/roster-result";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { incidentSplitFixEnabled } from "@/lib/config/chat-quality-flags";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatMessage } from "@/types";
@@ -423,7 +424,12 @@ describe("the account survives the short answers after it", () => {
 
     expect(proposal.employeeName).toBe("Remy Calder");
     expect(proposal.sourceMessageIds).toEqual(["m1", "m2"]);
-    expect(proposal.issue).toBe("violating visitors at work policy on 10-10-26");
+    // Changed on purpose, INCIDENT_SPLIT_FIX_ENABLED on (QA, 26 Oct 2026): the Issue is the request's account in whole sentences; flag off unchanged.
+    expect(proposal.issue).toBe(
+      incidentSplitFixEnabled()
+        ? "violating visitors at work policy on 10-10-26. juno spent 40 minutes talking with friend and ignoring guests"
+        : "violating visitors at work policy on 10-10-26",
+    );
     expect(proposal.warningLevel).toBe("verbal");
     expect(proposal.payrollDeduct).toBe("no");
     expect(responses[1]!.content).toMatch(/\*\*Issue:\*\* violating visitors at work policy/);
@@ -445,7 +451,12 @@ describe("the account survives the short answers after it", () => {
       "Remy Calder",
     ]);
     expect(proposal.payrollDeduct).toBe("yes");
-    expect(proposal.issue).toBe("violating visitors at work policy on 10-10-26");
+    // Changed on purpose, INCIDENT_SPLIT_FIX_ENABLED on (QA, 26 Oct 2026): the Issue is the request's account in whole sentences; flag off unchanged.
+    expect(proposal.issue).toBe(
+      incidentSplitFixEnabled()
+        ? "violating visitors at work policy on 10-10-26. juno spent 40 minutes talking with friend and ignoring guests"
+        : "violating visitors at work policy on 10-10-26",
+    );
   });
 });
 
