@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { exitNoticeFulfilledEnabled } from "@/lib/config/chat-quality-flags";
 
 import { parseFormDocument } from "@/lib/forms/document";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
@@ -200,6 +201,15 @@ describe("what the model is shown", () => {
   });
 });
 
+/*
+ * EXIT_NOTICE_FULFILLED_ENABLED (changed on purpose, QA G4, 25 Oct 2026): a
+ * notice worked in full is fulfilled on the last day worked, so with the flag
+ * on the stored values gain notice_fulfilled_date. Off, as before.
+ */
+function fulfilledOnLastDay(iso: string): { notice_fulfilled_date?: string } {
+  return exitNoticeFulfilledEnabled() ? { notice_fulfilled_date: iso } : {};
+}
+
 describe("what is stored", () => {
   it("the dates and ticks from the manager's words, and Details", async () => {
     state.toolInput = { values: { details: "Sarah gave two weeks notice on 9/1 and worked through her last day, 9/15." } };
@@ -211,13 +221,17 @@ describe("what is stored", () => {
       details: "Sarah gave two weeks notice on 9/1 and worked through the last day, 9/15.",
       notice_given_date: "2026-09-01",
       last_day_worked: "2026-09-15",
+      ...fulfilledOnLastDay("2026-09-15"),
     });
     expect(stored().checked).toEqual({ resignation_notice: ["submitted_fulfilled_notice"] });
-    expect([...(payload.exitDerived as string[])].sort()).toEqual([
-      "last_day_worked",
-      "notice_given_date",
-      "resignation_notice",
-    ]);
+    expect([...(payload.exitDerived as string[])].sort()).toEqual(
+      [
+        "last_day_worked",
+        "notice_given_date",
+        ...(exitNoticeFulfilledEnabled() ? ["notice_fulfilled_date"] : []),
+        "resignation_notice",
+      ].sort(),
+    );
     expect(payload.notice).toBeNull();
   });
 
@@ -240,7 +254,9 @@ describe("what is stored", () => {
 
     const { values, checked } = stored();
     expect(values.last_day_worked).toBe("2026-09-15");
-    expect(values).not.toHaveProperty("notice_fulfilled_date");
+    // Flag on (changed on purpose, G4): the derived fulfilled date is the last day worked, not the model's.
+    if (exitNoticeFulfilledEnabled()) expect(values.notice_fulfilled_date).toBe("2026-09-15");
+    else expect(values).not.toHaveProperty("notice_fulfilled_date");
     expect(values).not.toHaveProperty("permanent_address");
     expect(checked).toEqual({ resignation_notice: ["submitted_fulfilled_notice"] });
   });
@@ -439,9 +455,11 @@ describe("HR feedback 30 Sep — the Harper exit form", () => {
         "On 9-15-26, Harper provided a resignation to management, sending the message via Woven. Harper gave and worked a two week notice, and the last day worked was 9-28-26.",
       last_day_worked: "2026-09-28",
       notice_given_date: "2026-09-15",
+      ...fulfilledOnLastDay("2026-09-28"),
     });
     // Unchanged rule, pending HR: the fulfilled date is not the last day worked.
-    expect(stored().values).not.toHaveProperty("notice_fulfilled_date");
+    // Flag on (changed on purpose, G4): fulfilled on the last day worked.
+    if (!exitNoticeFulfilledEnabled()) expect(stored().values).not.toHaveProperty("notice_fulfilled_date");
     expect(stored().checked).toEqual({ resignation_notice: ["submitted_fulfilled_notice"] });
     expect(payload.exitHeaderRestated).toEqual([
       "Harper Samples worked as a tanning consultant at the Manhattan location.",
