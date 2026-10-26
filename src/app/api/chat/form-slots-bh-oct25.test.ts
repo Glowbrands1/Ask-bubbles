@@ -6,6 +6,7 @@ import { rosterResultFor } from "@/test/roster-result";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import { JBA_MANUAL_CA_CHUNKS } from "@/test/fixtures/jba-manual-ca-sections";
 import { futureIncidentDateConfirmEnabled, statedTitleWinsEnabled } from "@/lib/config/chat-quality-flags";
+import { copularJobTitle } from "@/lib/ai/title-words";
 import { decideIntentTurn, type IntentTurnInput } from "@/lib/ai/intent-slots";
 import { withFutureDateQuestion } from "@/lib/ai/future-incident-date";
 import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
@@ -639,6 +640,53 @@ describe('B16: "she is an HR assistant" is the stated title; "send to HR" is non
   });
 });
 
+/**
+ * B16 typed (1) all lowercase and (2) in sentence case with the names typed
+ * lowercase or Capitalized: the same title, HR Assistant, either way.
+ */
+type Register = readonly [label: string, type: (text: string) => string];
+const B16_NAMES = ["test employee", "kearney"];
+
+function sentenceCase(text: string, capitalizeNames: boolean): string {
+  let out = text.toLowerCase();
+  if (capitalizeNames) {
+    for (const name of B16_NAMES) {
+      out = out.replace(new RegExp(`\\b${name}\\b`, "g"), name.replace(/\b[a-z]/g, (letter) => letter.toUpperCase()));
+    }
+  }
+  return out.replace(/(^|[.!?]\s+)([a-z])/g, (_match, lead: string, letter: string) => `${lead}${letter.toUpperCase()}`);
+}
+
+const REGISTERS: readonly Register[] = [
+  ["all lowercase", (text) => text.toLowerCase()],
+  ["sentence case, names lowercase", (text) => sentenceCase(text, false)],
+  ["sentence case, names Capitalized", (text) => sentenceCase(text, true)],
+];
+
+describe("registers: B16", () => {
+  it.each(REGISTERS)(`%s: on the live path with ${TITLE_FLAG}, HR Assistant`, async (_label, type) => {
+    for (const name of [...B16_FLAGS, TITLE_FLAG]) process.env[name] = "true";
+    const titled = await new Thread().say(type(B16_TITLE));
+    expect(titled.formProposal?.templateKey).toBe("coaching");
+    expect(titled.formProposal?.employeeRole).toBe("HR Assistant");
+    expect(titled.content).not.toContain("What is their job title?");
+    const hr = await new Thread().say(type(B16_HR));
+    expect(hr.formProposal?.employeeRole ?? null).toBeNull();
+  });
+
+  it.each(REGISTERS)(`%s: on the intent reading with ${TITLE_FLAG}`, (_label, type) => {
+    for (const name of [...B16_FLAGS, TITLE_FLAG]) process.env[name] = "true";
+    expect(intentTurn(type(B16_TITLE), { raw: { employee: "Test Employee", formType: "Coaching Form", formTurn: true } }).state.title).toBe(
+      "HR Assistant",
+    );
+  });
+
+  it.each(REGISTERS)("%s: the reader", (_label, type) => {
+    expect(copularJobTitle(type(B16_TITLE))).toBe("HR Assistant");
+    expect(copularJobTitle(type(B16_HR))).toBeNull();
+  });
+});
+
 /* ========================================================================= */
 /* BH3 — conv_mvi94k418pzwgmn                                                */
 /* ========================================================================= */
@@ -719,13 +767,9 @@ describe(`BH5 (${DATE_FLAG}): an incident date in the future is asked about once
     expect(later.content).not.toContain("in the future");
   });
 
-  it('flags off: "yes" after the card is not read as the payroll answer (payroll-deduct.ts, QA 25 Oct 2026)', async () => {
-    const thread = new Thread();
-    const card = await thread.say(BH5);
-    expect(card.formProposal?.payrollDeduct).toBe("no");
-    const answer = await thread.say("yes");
-    expect(answer.formProposal?.payrollDeduct).toBe("no");
-  });
+  // The flags-off "yes after the card" turn left with the payroll-deduct.ts
+  // change it tested (a protected file, not approved for this PR): the bare
+  // yes/no binding is the sibling app's #247 (BARE_ANSWER_BINDING).
 
   it("a corrected date is used, and not asked about", async () => {
     process.env[DATE_FLAG] = "true";
