@@ -423,6 +423,16 @@ export function conversationDraftReuseEnabled(): boolean {
 }
 
 /**
+ * DIFFERENT_EMPLOYEE_NEW_FORM_ENABLED: a turn that asks for a form for somebody
+ * other than the open form's employee ("now one for Test Employee Two …") is
+ * not a redraft or an edit of the open form; it gets its own card (QA, B21-4,
+ * 25 Oct 2026). Off, the open form answers as it does today.
+ */
+export function differentEmployeeNewFormEnabled(): boolean {
+  return envFlag("DIFFERENT_EMPLOYEE_NEW_FORM_ENABLED");
+}
+
+/**
  * DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED: an open draft is reused only when this
  * chat made it, for the same employee, form and incident or date. A card
  * dated differently from the chat's own draft makes a new draft, and a reuse
@@ -916,6 +926,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TITLE_WHOLE_WORD_ENABLED",
   "EXIT_INTAKE_FIX_ENABLED",
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
+  "DIFFERENT_EMPLOYEE_NEW_FORM_ENABLED",
   "FORM_REVISIONS_ENABLED",
   "NEXT_PUBLIC_FORM_REVISIONS_ENABLED",
   "REFORMAT_KEEPS_SOURCES_ENABLED",

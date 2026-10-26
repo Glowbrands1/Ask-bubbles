@@ -32,6 +32,7 @@ import { parseChatReportContext } from "@/lib/reporting/report-context";
 import { businessToday } from "@/lib/business-date";
 import {
   chatLongMessageEnabled,
+  differentEmployeeNewFormEnabled,
   draftActionsEnabled,
   payrollDeductAmountFieldEnabled,
   questionNotFormEnabled,
@@ -168,6 +169,21 @@ export async function POST(request: Request) {
        * Either way the open form is not corrected or revised by this turn: it
        * was answered above, or a new incident is a new form.
        */
+      /*
+       * "NOW ONE FOR <SOMEBODY ELSE>" (DIFFERENT_EMPLOYEE_NEW_FORM_ENABLED, QA
+       * B21-4): the open form is for another employee, so this turn is not a
+       * correction, redraft or revision of it. It is answered as a new card
+       * for the same form. See `lib/forms/other-employee.ts`.
+       */
+      const otherEmployee =
+        !draftAction && asked.activeFormInstanceId && differentEmployeeNewFormEnabled()
+          ? await (await import("@/lib/forms/other-employee-form")).otherEmployeeForm({
+              request,
+              instanceId: asked.activeFormInstanceId,
+              question: asked.question,
+              history: asked.history,
+            })
+          : null;
       const parsed = draftAction
         ? {
             ...asked,
@@ -175,7 +191,15 @@ export async function POST(request: Request) {
             activeFormInstanceId: undefined,
             activeFormCandidateIds: undefined,
           }
-        : asked;
+        : otherEmployee
+          ? {
+              ...asked,
+              question: otherEmployee.question,
+              activeFormInstanceId: undefined,
+              activeFormCandidateIds: undefined,
+              continueProposalTemplateKey: otherEmployee.templateKey,
+            }
+          : asked;
       /*
        * A CORRECTION TO A FORM THIS CONVERSATION ALREADY CREATED — "change the
        * date to yesterday". Tried first, and only where the browser named such
