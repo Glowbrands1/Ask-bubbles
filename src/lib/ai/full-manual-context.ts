@@ -1,6 +1,7 @@
 import { MULTI_BRAND_MANUAL_TITLES, POLICY_MANUAL_BRAND_SCOPE } from "@/config/company/knowledge";
 import { isTableOfContents } from "@/lib/forms/official-policy-manual";
 import { readManualForBrand, isMultiBrandManual, type ManualBrandScope } from "@/lib/knowledge/brand-sections";
+import { excerptTextForDisplay } from "@/lib/knowledge/excerpt-brand-filter";
 import { estimateTokens } from "@/lib/ingestion/chunking";
 import { isPageFooter, printedPageOf } from "@/lib/ingestion/extract/pdf-sections";
 import type { KnowledgeCategory } from "@/types";
@@ -452,8 +453,14 @@ function headerFor(choice: ManualBrandChoice): string {
 This is the current manual. Retired and superseded editions are not included. Each page is marked [p.N] with the page number printed in the manual, not the PDF sheet. Cite a statement with the [p.N] marker above that passage. Do not cite a page that has no marker. Do not write an [S#] marker. Name a heading only when it is printed on that page. ${coverage}`;
 }
 
-function excerptOf(heading: string | null, text: string): string {
-  const flat = text.replace(/\s+/g, " ").trim();
+/**
+ * With EXCERPT_BRAND_FILTER_ENABLED, the sibling company's lines are left out
+ * of `text` before it is cut (`excerpt-brand-filter.ts`); the reading the
+ * prompt and the page index are built from is not touched.
+ */
+function excerptOf(heading: string | null, text: string, documentTitle = ""): string {
+  const shown = documentTitle ? excerptTextForDisplay(text, documentTitle) : text;
+  const flat = shown.replace(/\s+/g, " ").trim();
   if (!heading) return flat.slice(0, 220).trim();
   const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const bare = flat.replace(new RegExp(`^${escaped}\\s*`, "i"), "").trim();
@@ -505,7 +512,7 @@ export function planFullManualContext(input: {
         printedPage: passage.printedPage,
         heading: passage.heading,
         knownHeadings: passage.knownHeadings,
-        excerpt: excerptOf(passage.heading, passage.text),
+        excerpt: excerptOf(passage.heading, passage.text, document.title),
         text: passage.text,
       });
     }
@@ -814,7 +821,7 @@ function excerptForHit(heading: string | null, passage: ManualPassage): string {
   if (!heading) return passage.excerpt || passage.documentTitle;
   const at = passage.text.toLowerCase().indexOf(heading.toLowerCase());
   const slice = at >= 0 ? passage.text.slice(at) : passage.text;
-  return excerptOf(heading, slice) || heading;
+  return excerptOf(heading, slice, passage.documentTitle) || heading;
 }
 
 /**
