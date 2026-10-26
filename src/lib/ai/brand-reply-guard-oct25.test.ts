@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { withoutOtherBrands } from "./brand-reply-guard";
+import { NOTHING_LEFT, withoutOtherBrands } from "./brand-reply-guard";
 
 /**
  * ============================================================================
@@ -86,5 +86,49 @@ describe("flag on: what must stay", () => {
   ])("%s", (reply) => {
     on();
     expect(withoutOtherBrands(reply)).toBe(reply);
+  });
+});
+
+/*
+ * QA-2 review, 26 Oct 2026, and the Bubbles KB sweep (71 questions x 2 casings):
+ * never an empty reply, never a renamed manual title, and the sibling
+ * company's role titles and holiday lists come out.
+ */
+describe("flag on: QA-2 review", () => {
+  it("never empties a reply", () => {
+    on();
+    expect(withoutOtherBrands("Sun Tan City applies to tanning rooms.")).toBe(NOTHING_LEFT);
+    expect(NOTHING_LEFT).not.toMatch(LEAK);
+  });
+
+  it.each([
+    'See "Salon Opening Policy" [p.15].',
+    "Cite it as Late Opening, JB & Associates Policy Manual [p.14].",
+    "The JB & Associates Policy Manual says to notify your manager [p.15].",
+  ])("keeps quoted text and manual titles: %s", (reply) => {
+    on();
+    expect(withoutOtherBrands(reply)).toBe(reply);
+  });
+
+  it.each([
+    ["Full-time is AMM/ASD/AGM – 30–35 hours per week [p.33].", "Full-time is AMM/AGM – 30–35 hours per week [p.33]."],
+    [
+      "PTO accrues for full-time Assistant Salon Directors/Assistant Makery Managers [p.41].",
+      "PTO accrues for full-time Assistant Makery Managers [p.41].",
+    ],
+  ])("takes the sibling title out of a slash list: %s", (reply, expected) => {
+    on();
+    expect(withoutOtherBrands(reply)).toBe(expected);
+  });
+
+  it.each([
+    "This applies across the brands covered by the manual — Buff City Soap, Crunch Fitness and Sun Tan City.",
+    "Holidays: Buff City Soap stores close on Thanksgiving [p.42]. Sun Tan City: salons stay open on Memorial Day [p.42].",
+    "These sources cover Sun Tan City performance coaching, discount, and dress code policy.",
+  ])("KB sweep wording: %s", (reply) => {
+    on();
+    const out = withoutOtherBrands(reply);
+    expect(out).not.toMatch(LEAK);
+    expect(out.trim().length).toBeGreaterThan(0);
   });
 });

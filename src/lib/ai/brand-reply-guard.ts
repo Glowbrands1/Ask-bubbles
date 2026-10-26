@@ -10,10 +10,10 @@ import { brandReplyGuardEnabled } from "@/lib/config/chat-quality-flags";
  * QA, 25 Oct 2026 (testers G21, U1, U6; production): retrieval already leaves
  * the other brands' sections out (`lib/knowledge/brand-sections.ts`), but the
  * model's own prose still carried them from the manual's company-wide text:
- * an attendance answer that "applies across all brands (Buff City Soap,
- * Crunch, Sun Tan City, JB & Associates office)", "MyGlow for Buff City Soap,
- * MyGlow for Sun Tan City, or Woven for Crunch Fitness", "for any brand under
- * JB & Associates", service animals "in the tanning room", and "open the
+ * an attendance answer that "applies across all brands (…)" listing every
+ * brand and the operating group's office, each brand's own scheduling system
+ * in one list, "for any brand under <the operating group>", service animals
+ * "in the tanning room", the sibling company's role titles, and "open the
  * salon/store".
  *
  * At answer time, sentence by sentence:
@@ -21,7 +21,11 @@ import { brandReplyGuardEnabled } from "@/lib/config/chat-quality-flags";
  *   a parenthetical or a list item that names another brand is taken out,
  *   and what is left is kept when it no longer names one;
  *   a sentence that is about another brand and nothing else is taken out;
- *   the location word is this company's ("store", never "salon").
+ *   the location word is this company's ("store");
+ *   a quoted phrase and a manual title ("… Policy", "… Manual") are never
+ *   rewritten, and the manual's own name is kept;
+ *   a reply is never emptied: if nothing of it is left, a short line says so
+ *   in this company's name.
  *
  * The other brands are this company's own configuration
  * (`POLICY_MANUAL_BRAND_SCOPE.otherBrands`), plus the operating group's name
@@ -32,9 +36,13 @@ import { brandReplyGuardEnabled } from "@/lib/config/chat-quality-flags";
 const OTHER_BRAND = new RegExp(
   String.raw`\b(?:${[
     ...POLICY_MANUAL_BRAND_SCOPE.otherBrands,
-    String.raw`JB\s*&\s*Associates(?:\s+office)?`,
-    String.raw`J\.?B\.?\s+and\s+Associates`,
-    String.raw`tanning\s+(?:rooms?|beds?|booths?|beds?|sessions?|clients?|consultants?|salons?|equipment)`,
+    // The operating group, except as the manual's own name ("JB & Associates Policy Manual").
+    String.raw`JB\s*&\s*Associates(?:\s+office)?(?!\s+(?:Policy\s+)?Manual)`,
+    String.raw`J\.?B\.?\s+and\s+Associates(?!\s+(?:Policy\s+)?Manual)`,
+    String.raw`tanning(?:\s+(?:rooms?|beds?|booths?|sessions?|clients?|consultants?|salons?|equipment))?`,
+    // The sibling company's role titles.
+    String.raw`(?:Assistant\s+)?Salon\s+Directors?`,
+    String.raw`ASDs?`,
     String.raw`VersaSpa`,
     String.raw`spray\s+tan\w*`,
   ].join("|")})\b`,
@@ -47,12 +55,20 @@ const ANY_BRAND = /\b(?:for|at|across)\s+(?:any|every|all)\s+(?:brands?|location
 const LOCATION = BCS_BRAND.vocabulary.locationNoun;
 const LOCATIONS = BCS_BRAND.vocabulary.locationNounPlural;
 
+/** The sibling company's title inside a slash list: "AMM/ASD/AGM", "Assistant Salon Directors/Assistant Makery Managers". */
+const SIBLING_TITLE = String.raw`(?:(?:Assistant\s+)?Salon\s+Directors?|ASDs?)`;
+function withoutSlashedTitles(sentence: string): string {
+  return sentence
+    .replace(new RegExp(String.raw`\s*/\s*${SIBLING_TITLE}\b`, "g"), "")
+    .replace(new RegExp(String.raw`\b${SIBLING_TITLE}\s*/\s*`, "g"), "");
+}
+
 /** Parentheticals that name another brand. */
 function withoutBrandParentheticals(sentence: string): string {
   return sentence.replace(/\s*\(([^()]*)\)/g, (whole, inner: string) => (OTHER_BRAND.test(inner) ? "" : whole));
 }
 
-/** List items that name another brand: "MyGlow for Buff City Soap, MyGlow for Sun Tan City, or Woven for Crunch". */
+/** List items that name another brand: "MyGlow for Buff City Soap, MyGlow for <another brand>, or Woven for <another>". */
 function withoutBrandListItems(sentence: string): string {
   const parts = sentence.split(/(,\s*(?:(?:and|or)\s+)?|\s+(?:and|or)\s+)/);
   if (parts.length < 3) return sentence;
@@ -69,12 +85,23 @@ function withoutBrandListItems(sentence: string): string {
     .concat(tail);
 }
 
+/**
+ * Quoted text and manual titles are kept as written: `"Salon Opening Policy"`,
+ * "Salon Director Manual". Each is swapped for a placeholder while the
+ * location word is changed, then put back.
+ */
+const KEPT_AS_WRITTEN =
+  /"[^"\n]*"|“[^”\n]*”|\b(?:[A-Z][\w&'/-]*\s+){0,5}(?:Policy|Policies|Manual|Handbook|Guide)\b(?:\s+\[p\.\d+\])?/g;
+
 /** This company's word for a location. */
 function withLocationWord(text: string): string {
-  return text
+  const kept: string[] = [];
+  const masked = text.replace(KEPT_AS_WRITTEN, (match) => `\u0000${kept.push(match) - 1}\u0000`);
+  const swapped = masked
     .replace(/\bsalons?\s*\/\s*stores?\b|\bstores?\s*\/\s*salons?\b/gi, (match) => (/s\b/i.test(match.split("/")[0]!.trim()) ? LOCATIONS : LOCATION))
     .replace(/\b(S|s)alons\b/g, (_m, s: string) => (s === "S" ? cap(LOCATIONS) : LOCATIONS))
     .replace(/\b(S|s)alon\b/g, (_m, s: string) => (s === "S" ? cap(LOCATION) : LOCATION));
+  return swapped.replace(/\u0000(\d+)\u0000/g, (_m, index: string) => kept[Number(index)]!);
 }
 
 function cap(word: string): string {
@@ -87,13 +114,18 @@ function guardSentence(sentence: string): string | null {
   ANY_BRAND.lastIndex = 0;
   let text = sentence.replace(ANY_BRAND, `at ${BCS_BRAND.brandName}`);
   if (!OTHER_BRAND.test(text)) return text;
+  text = withoutSlashedTitles(text);
+  if (!OTHER_BRAND.test(text)) return text;
   text = withoutBrandParentheticals(text);
   if (!OTHER_BRAND.test(text)) return text;
   text = withoutBrandListItems(text);
   return OTHER_BRAND.test(text) ? null : text;
 }
 
-/** The reply in this company's words. Off, as written. */
+/** Said when nothing of a reply is left: this company's name only. */
+export const NOTHING_LEFT = `That one isn't part of the ${BCS_BRAND.brandName} policy as far as I can see. Ask me about ${BCS_BRAND.brandName} and I'll check the manual.`;
+
+/** The reply in this company's words, never empty. Off, as written. */
 export function withoutOtherBrands(content: string): string {
   if (!brandReplyGuardEnabled() || !content) return content;
   const lines = content.split("\n").map((line) => {
@@ -113,5 +145,8 @@ export function withoutOtherBrands(content: string): string {
     const joined = out.join("").trimEnd();
     return dropped && joined.trim() === "" ? null : joined;
   });
-  return withLocationWord(lines.filter((line): line is string => line !== null).join("\n")).replace(/\n{3,}/g, "\n\n");
+  const guarded = withLocationWord(lines.filter((line): line is string => line !== null).join("\n")).replace(/\n{3,}/g, "\n\n");
+  // What is left must still say something: not only a citation, a label or punctuation.
+  const words = guarded.replace(/\[(?:p|S)\.?\s*\d+\]/g, " ").replace(/[^A-Za-z]+/g, " ").trim().split(/\s+/).filter(Boolean);
+  return words.length < 3 ? NOTHING_LEFT : guarded;
 }

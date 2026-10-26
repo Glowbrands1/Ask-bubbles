@@ -106,7 +106,20 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
-const QUESTIONS = ["can i bring my dog to work", "Can i bring my dog to work", "pets at work?", "Pets at work?"];
+const QUESTIONS = [
+  "can i bring my dog to work",
+  "Can i bring my dog to work",
+  "pets at work?",
+  "Pets at work?",
+  "what does our policy say about attendance?",
+  "What does our policy say about attendance?",
+  "whats policy say about store opening late",
+  "Whats policy say about store opening late",
+  "late opening policy",
+  "Late opening policy",
+  "whats policy say about changing availabilty",
+  "Whats policy say about changing availabilty",
+];
 
 describe("the pets answer", () => {
   it.each(QUESTIONS)("flag on: %s never names another brand", async (question) => {
