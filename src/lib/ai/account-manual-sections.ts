@@ -10,6 +10,7 @@ import {
   type ManualSection,
 } from "@/lib/forms/official-policy-manual";
 import { sectionsNamedIn } from "@/lib/forms/policy-change";
+import { correctPolicyTypos } from "@/lib/forms/policy-typos";
 
 /**
  * The manual sections a manager's account resolves, using the same readers
@@ -22,7 +23,8 @@ export function accountManualSections(
   chunks: readonly ManualChunk[],
   jobTitle?: string | null,
 ): ManualSection[] {
-  const text = notes ?? "";
+  // POLICY_NAME_TYPOS_ENABLED: "openning the store late" is read as "opening the store late". Off, as typed.
+  const text = correctPolicyTypos(notes ?? "");
   if (!text.trim() || chunks.length === 0) return [];
 
   const reading = readCaPolicy(text);

@@ -1,4 +1,5 @@
 import { readCaPolicy, statedOffenseKeys } from "./ca-policy";
+import { correctPolicyTypos } from "./policy-typos";
 import { manualSectionNamedBy } from "./named-policy-section";
 import {
   boxSectionNames,
@@ -209,6 +210,8 @@ export function sectionsNamedIn(input: {
   /** The manual's own title, whose words never name a section in it. */
   readonly manualTitle?: string | null;
 }): ManualSection[] {
+  // POLICY_NAME_TYPOS_ENABLED: "add the attendence policy" names Attendance.
+  input = { ...input, text: correctPolicyTypos(input.text) };
   const found: ManualSection[] = [];
   const keep = (section: ManualSection | null) => {
     if (section && !found.some((seen) => headingKey(seen.heading) === headingKey(section.heading))) found.push(section);

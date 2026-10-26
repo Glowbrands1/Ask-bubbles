@@ -733,6 +733,17 @@ export function terseSlotReadEnabled(): boolean {
   return envFlag("TERSE_SLOT_READ_ENABLED");
 }
 
+/**
+ * A misspelled policy name is still that policy (Code 3, policy reading; QA
+ * item 8, 25 Oct 2026; same flag as the sibling app): "attendence", "dres
+ * code", "openning", "verbl warning". One slip (two for a long word) from a
+ * word a policy is named by is read as that word, never changing the first
+ * letter or a real word one slip away. Off, the words are read as typed.
+ */
+export function policyNameTyposEnabled(): boolean {
+  return envFlag("POLICY_NAME_TYPOS_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -802,4 +813,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "POLICY_NAME_TYPOS_ENABLED",
 ] as const;
