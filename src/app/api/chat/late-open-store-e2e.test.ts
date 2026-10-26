@@ -363,3 +363,38 @@ describe("B1: a described late opening names Late Opening on the proposal flow",
     expect(POLICY(answer)).toBe("");
   });
 });
+
+/*
+ * QA-6 on the sibling app's port of this fix (26 Oct 2026), in this app's
+ * words: an approved late opening is no offense, and a late opening with an
+ * early leave is the Attendance section's too. Lowercase, Sentence case and
+ * ALL CAPS, flag on, on the proposal flow.
+ */
+const variants = (sentence: string) => [
+  sentence.toLowerCase(),
+  sentence.charAt(0).toUpperCase() + sentence.slice(1),
+  sentence.toUpperCase(),
+];
+const request = (sentence: string) => `create verbal ca for Test Employee on 10-1-26. ${sentence}. payroll deduct no`;
+
+describe("QA-6: not every late opening is the Late Opening policy", () => {
+  it.each([
+    ...variants("opening the store late was approved by the manager"),
+    ...variants("she opened the location late and also left early"),
+    ...variants("late for shift at the store"),
+    ...variants("she was late for her shift at the store"),
+  ])("%s → no Late Opening policy line", async (sentence) => {
+    const answer = await new Thread().say(request(sentence), EMPLOYEE);
+    expect(answer.formProposal?.templateKey).toBe("dpoa");
+    expect(POLICY(answer)).not.toMatch(/Late Opening/);
+  });
+
+  it.each([
+    ...variants("opening the store late was not approved"),
+    ...variants("she opened the store late without permission"),
+    ...variants("she opened the store late"),
+  ])("%s → still Late Opening", async (sentence) => {
+    const answer = await new Thread().say(request(sentence), EMPLOYEE);
+    expect(POLICY(answer)).toMatch(/^Late Opening\b/);
+  });
+});

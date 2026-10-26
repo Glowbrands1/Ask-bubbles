@@ -312,7 +312,31 @@ export function readCaPolicy(rawText: string): CaPolicyReading {
   // LATE_OPEN_DATE_ENABLED (QA B1, conv_mvifqra017j15ld8: "opening store late on 10-1-26" named no policy).
   if (!lateOpenOn() || !describesLateOpening(rawText) || describesAttendanceToo(rawText ?? "")) return reading;
   if (!/\blate\b/i.test(rawText ?? "")) return reading;
+  if (approvedLateOpening(rawText)) return reading;
   return { ...reading, lateOpening: true };
+}
+
+/*
+ * AN APPROVED LATE OPENING IS NO OFFENSE (QA-6 on the sibling app's port,
+ * 26 Oct 2026): "opening the store late was approved by the manager" is not
+ * the Late Opening policy. Set aside only when every sentence that describes
+ * the late opening says it was approved or permitted; "not approved" and
+ * "without permission" still describe one. Guards the described reading
+ * above only; the late-opening readings main already had are unchanged.
+ */
+const APPROVED_IN_SENTENCE = new RegExp(
+  String.raw`\b(?:pre-?approved|approved|authori[sz]ed|excused|sanctioned|ok(?:ay)?'?e?d|cleared|signed\s+off)\b|\b(?:approval|permission|authori[sz]ation|go[- ]ahead|sign[- ]?off)\b|\b(?:was|were|is|are|been|being|got|get)\s+(?:\S+\s+){0,2}?(?:allowed|permitted)\b|\b(?:allowed|permitted|let)\s+(?:her|him|them|me|us|the\s+\w+)\s+(?:to\s+)?open\b`,
+);
+const NOT_APPROVED_IN_SENTENCE = new RegExp(
+  String.raw`\b(?:not|never|no|nor|without|\w+n't)\s+(?:\S+\s+){0,3}?(?:pre-?approv\w*|approv\w*|authori[sz]\w*|excused|sanctioned|ok(?:ay)?'?e?d|cleared|signed\s+off|permi\w*|allowed|go[- ]ahead|sign[- ]?off)\b|\b(?:unapproved|unauthori[sz]ed|unexcused|unpermitted|disallowed)\b`,
+);
+
+function approvedLateOpening(rawText: string): boolean {
+  const opening = statements(normalize(rawText)).filter((sentence) => describesLateOpening(sentence));
+  return (
+    opening.length > 0 &&
+    opening.every((sentence) => APPROVED_IN_SENTENCE.test(sentence) && !NOT_APPROVED_IN_SENTENCE.test(sentence))
+  );
 }
 
 function readCaPolicyWords(rawText: string): CaPolicyReading {
