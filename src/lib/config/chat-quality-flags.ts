@@ -957,6 +957,16 @@ export function nameBeforeTitleEnabled(): boolean {
   return envFlag("NAME_BEFORE_TITLE_ENABLED");
 }
 
+/**
+ * Exit form Details, as managers type them (QA, 25 Oct 2026): "not
+ * rehireble", "not eligable for rehire" and a run-on "… rehire yes" fill
+ * Eligible for Rehire; "other career options" and "put her notice in because
+ * …" fill Reason for Resignation. Off, the Details read as before.
+ */
+export function exitRehireReasonEnabled(): boolean {
+  return envFlag("EXIT_REHIRE_REASON_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "INCIDENT_FROM_EARLIER_TURN_ENABLED",
   "LEVEL_REQUEST_DATE_ENABLED",
@@ -1332,6 +1342,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 5: INGEST_FAILURE_KEEPS_LAST_GOOD, WOVEN_OCR_PAGE_BATCHES (QA, the recipe book's lost content, 10 Nov 2026; default off).
   "INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED",
   "WOVEN_OCR_PAGE_BATCHES_ENABLED",
+  "EXIT_REHIRE_REASON_ENABLED",
 ] as const;
 
 /**
