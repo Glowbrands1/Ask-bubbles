@@ -390,6 +390,9 @@ describe("QA-6: not every late opening is the Late Opening policy", () => {
     ...variants("she did not open the store late"),
     ...variants("she never opened the store late"),
     ...variants("she didn't open the store late"),
+    ...variants("she wasn't late to open the store"),
+    ...variants("she was not late to open the store"),
+    ...variants("she was never late to open the store"),
   ])("%s → no Late Opening policy line", async (sentence) => {
     const answer = await new Thread().say(request(sentence), EMPLOYEE);
     expect(answer.formProposal?.templateKey).toBe("dpoa");
@@ -402,10 +405,22 @@ describe("QA-6: not every late opening is the Late Opening policy", () => {
     ...variants("she opened the store late"),
     // QA-7: only a sentence that denies the late opening is set aside.
     ...variants("she did not open the store on time, she opened the store late"),
+    ...variants("she was late to open the store"),
   ])("%s → still Late Opening", async (sentence) => {
     const answer = await new Thread().say(request(sentence), EMPLOYEE);
     expect(POLICY(answer)).toMatch(/^Late Opening\b/);
   });
+});
+
+// QA-7's exact turn (26 Oct 2026), with this file's invented employee.
+describe("QA-7: \"wasn't late to open\" is no late opening", () => {
+  it.each(variants("write up test employee on 10-1-26, she wasn't late to open the store"))(
+    "%s → no Late Opening policy line",
+    async (words) => {
+      const answer = await new Thread().say(words, EMPLOYEE);
+      expect(POLICY(answer)).not.toMatch(/Late Opening/);
+    },
+  );
 });
 
 /*
@@ -422,6 +437,7 @@ describe("LATE_OPEN_PLACE off, LATE_OPEN_DATE on: the proposal flow is main's", 
     ...variants("late for shift at the store").map((sentence) => [request(sentence)]),
     ...variants("she did not open the store late").map((sentence) => [request(sentence)]),
     ...variants("she never opened the store late").map((sentence) => [request(sentence)]),
+    ...variants("she wasn't late to open the store").map((sentence) => [request(sentence)]),
   ])("%s → no policy line", async (words) => {
     delete process.env[PLACE];
     const answer = await new Thread().say(words, EMPLOYEE);

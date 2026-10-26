@@ -319,13 +319,15 @@ export function readCaPolicy(rawText: string): CaPolicyReading {
 
 /*
  * A DENIED LATE OPENING IS NO LATE OPENING (QA-7, 26 Oct 2026): "she did not
- * open the store late", "she never opened the store late". The sibling app
+ * open the store late", "she never opened the store late", "she wasn't late to
+ * open the store". The sibling app
  * reads these as nothing (its NAMED pattern skips a match with a negation just
  * before it); this does the same for the described reading above. Set aside
  * only when every sentence that describes the late opening denies it, so
  * "she did not open the store on time, she opened the store late" still is one.
  */
-const OPEN_THEN_LATE = /\bopen(?:ed|ing|s)?\b(?:\s+\S+){0,3}?\s+late\b/i;
+// "opened the store late", and "late to open" (QA-7: "she wasn't late to open the store").
+const OPEN_THEN_LATE = /\bopen(?:ed|ing|s)?\b(?:\s+\S+){0,3}?\s+late\b|\blate\s+to\s+open\b/i;
 const DENIED_BEFORE = /\b(?:not|never|no|\w+n['’]t)\s+(?:\S+\s+){0,2}$/i;
 
 function deniedLateOpening(rawText: string): boolean {
