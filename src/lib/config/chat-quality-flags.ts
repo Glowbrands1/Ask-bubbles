@@ -578,6 +578,37 @@ export function titleWholeWordEnabled(): boolean {
 }
 
 /**
+ * Finalized-form edits carry a reason and a revision number, and the
+ * revision chain shows: "Revised <date> (supersedes <ref>)" on a revision and
+ * "Superseded <date> by <ref>" on the original, on the PDF and the form view,
+ * plus "Revision N of <ref>" with a link to the previous version.
+ *
+ * Off (the default) leaves the shipped revise flow exactly as it is: no
+ * reason is asked for or recorded, the history route answers 404, and the
+ * PDF footer is byte-identical. On, the server refuses an edit of a
+ * finalized form that gives no reason.
+ *
+ * The browser reads `NEXT_PUBLIC_FORM_REVISIONS_ENABLED` (see
+ * `formRevisionsUiEnabled`). Turn both on together: the server refuses an
+ * edit without a reason, and only the browser flag shows the reason dialog.
+ * Either spelling turns the server side on.
+ */
+export function formRevisionsEnabled(): boolean {
+  return envFlag("FORM_REVISIONS_ENABLED") || envFlag("NEXT_PUBLIC_FORM_REVISIONS_ENABLED");
+}
+
+/**
+ * The browser half of `formRevisionsEnabled`: the reason dialog, the marks
+ * and the history on the form card, the form page and the register row.
+ * Next inlines only a statically written `process.env.NEXT_PUBLIC_*` name
+ * into a client bundle, so the name is written out here.
+ */
+export function formRevisionsUiEnabled(): boolean {
+  const raw = process.env.NEXT_PUBLIC_FORM_REVISIONS_ENABLED;
+  return typeof raw === "string" && ON.has(raw.trim().toLowerCase());
+}
+
+/**
  * The exit form's intake reads what the manager typed (live QA, 25 Oct 2026).
  * A Details answer ("items returned") or the Permanent Address the manager
  * typed is never offered as the employee; "change the reason for resignation
@@ -789,6 +820,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TITLE_WHOLE_WORD_ENABLED",
   "EXIT_INTAKE_FIX_ENABLED",
   "MANUAL_NEGATED_LIST_NOTE_ENABLED",
+  "FORM_REVISIONS_ENABLED",
+  "NEXT_PUBLIC_FORM_REVISIONS_ENABLED",
   "REFORMAT_KEEPS_SOURCES_ENABLED",
   "FRAMEWORK_GENERAL_SECTIONS_ENABLED",
   "FORM_EDIT_DATE_RULES_ENABLED",
