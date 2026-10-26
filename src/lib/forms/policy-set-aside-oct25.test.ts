@@ -33,7 +33,7 @@ const CHUNKS: readonly ManualChunk[] = (rows.chunks as ManualChunkRow[]).map((ro
   const chunk = manualChunkFromRow(row);
   return { ...chunk, page: chunk.page ?? null, locator: chunk.locator ?? undefined };
 });
-const FIRST = "ca for Tobin Arle at manhattan opened the store late 9-28-26 verbal ca was given 9-1-26 make it written";
+const FIRST = "ca for Tobin Arle at the store opened the store late 9-28-26 verbal ca was given 9-1-26 make it written";
 
 const CORRECTIONS: readonly (readonly string[])[] = [
   ["not attendance, late opening"],
