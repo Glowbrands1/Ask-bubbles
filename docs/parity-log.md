@@ -816,3 +816,20 @@ happened; "X instead of Y" names X; a prior action's date ("jba manual
 revision. Not ported: the Follow-up line rule (this card has none) and the
 card salon edit (the store edit is its own fix here). No salon wording was
 copied. Test: `src/app/api/chat/edits-dates-replay-e2e.test.ts`.
+
+## 26 Oct 2026: the stored-slot lines are not a new request — ported from Ask Sunny (STORED_SLOTS_NOT_A_REQUEST_ENABLED)
+
+`STORED_SLOTS_NOT_A_REQUEST_ENABLED` defaults off, same name in both apps; Pau
+approved the form-proposal.ts edit for both apps on 26 Oct 2026. In the
+sibling app the stored-slot lines put ahead of a slot answer made
+`turnsAboutThisForm` start the form over at that turn, so its card was drafted
+from the last turn alone. The same ~8 lines here: with the flag on, the
+new-request check in `turnsAboutThisForm` reads `managerWords(...)`, not the
+app's lines (detectTemplateIntent, statesHistoryOnly, readEmployeeMentions,
+correctsTheEmployee, describesIncident, describesMoreThanTheRequest). This
+app's live form path is that proposal path (FORM_FULL_REMAP off in
+production). Replayed through POST /api/chat with this app's production list,
+a Corrective Action, "yes", "$25" and Create draft already keep the incident
+turn and the observation with the flag off; the live blank draft
+(conv_mvp2eerf23op5u7) was not reproduced by this replay. Test:
+`src/app/api/chat/stored-slots-not-a-request-e2e.test.ts`.
