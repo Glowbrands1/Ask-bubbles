@@ -1,4 +1,4 @@
-import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { priorActionsNoCommaEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
@@ -579,6 +579,20 @@ const REQUEST_CLAUSE =
 const CLAUSE_HISTORY =
   /\b(?:had|has|have|got|received|given|issued|previous(?:ly)?|prior|past|earlier|already|before|history|record|ago|last(?!\s+(?:night|shift|evening|weekend|weekend'?s))|back\s+in|spring|summer|fall|autumn|winter|q[1-4]|review|warnings|write[- ]?ups|coached|coaching)\b/i;
 
+/*
+ * "… VERBAL PRIOR COACHINGS 9/8 9/15 9/25" — THE LEVEL, THEN THE HISTORY. QA,
+ * 26 Oct 2026 (the sibling app's round 3, ported): "perf ca <name> … verbal
+ * prior coachings 9/8 9/15 9/25 no deduct" stated a verbal, and Type of
+ * Warning was left blank: the level is mid-sentence, with no "warning" or
+ * "ca" of its own, so nothing above reads it. With
+ * PRIOR_ACTIONS_NO_COMMA_ENABLED on, a bare level straight before a history
+ * label ("prior coachings", "previous warnings", "prior ca"), in a sentence
+ * that asks for the form with no words of history before it, is the level of
+ * the form asked for; the label after it opens the history. Off, not read.
+ */
+const LEVEL_BEFORE_HISTORY_LABEL =
+  /\b(verbal|written)\s+(?=(?:prior|previous|past|earlier)\s+(?:actions?|warnings?|coachings?|cas?|c\/a|corrective\s+actions?|write[- ]?ups?|discipline)\b)/gi;
+
 /**
  * Every warning level the text names, in order, with how each one reads.
  *
@@ -717,6 +731,16 @@ export function warningMentions(text: string, today: string): WarningMention[] {
     for (const match of source.matchAll(pattern)) {
       const start = match.index + match[0].length - match[1]!.length;
       push(levelOf(match[1]!), start, match.index + match[0].length, true);
+    }
+  }
+  if (priorActionsNoCommaEnabled()) {
+    for (const match of source.matchAll(LEVEL_BEFORE_HISTORY_LABEL)) {
+      const head = source.slice(0, match.index);
+      const sentenceBefore = head.slice(Math.max(...[".", ";", "!", "?", "\n"].map((mark) => head.lastIndexOf(mark))) + 1);
+      if (!REQUEST_CLAUSE.test(sentenceBefore)) continue;
+      const history = sentenceBefore.replace(new RegExp(REQUEST_CLAUSE.source, "gi"), " ");
+      if (CLAUSE_HISTORY.test(history) || LISTS_EARLIER_STEPS.test(history)) continue;
+      push(levelOf(match[1]!), match.index, match.index + match[1]!.length, true, "current");
     }
   }
   for (const match of source.matchAll(NAMED)) {
