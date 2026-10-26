@@ -723,11 +723,22 @@ export function reopenVerbGuardEnabled(): boolean {
 }
 
 /**
+ * A terse "ca <name> <store> <what happened> <date> verbal" line is written
+ * out as the long form before it is read, so the name, store, date, warning
+ * level and payroll amount are read as from a full sentence, and the card
+ * appears (conv_mvofim8a2lqx6jn, 25 Oct 2026; ported from the sibling app).
+ * See `ai/terse-slots.ts`. Off, the turn is read as typed.
+ */
+export function terseSlotReadEnabled(): boolean {
+  return envFlag("TERSE_SLOT_READ_ENABLED");
+}
+
+/**
  * "What is a ca?", "difference between coaching and ca", "which forms can I
  * create here?" are answered from the app's own published form templates and
  * role matrix (`lib/forms/forms-guide.ts`), never from model memory or a
  * knowledge-base miss. Off (the default), those turns are answered exactly as
- * before. Ported from Ask Sunny; same flag name.
+ * before. Same flag name in the sibling app.
  */
 export function formsGuideEnabled(): boolean {
   return envFlag("FORMS_GUIDE_ENABLED");
@@ -801,5 +812,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REMAP_DRAFT_SOURCES_ENABLED",
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
+  "TERSE_SLOT_READ_ENABLED",
   "FORMS_GUIDE_ENABLED",
 ] as const;
