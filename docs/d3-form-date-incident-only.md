@@ -76,3 +76,23 @@ why-comment in its own file:
 - "write up <name>, i gave her a verbal on 10-21 for being late" is dated 10-21.
 - A typed Action Plan with "by <date>" keeps the intake open
   (`action-plan-manager-only-e2e`).
+
+## The live card path (rollback of 26 Oct 2026)
+
+The flag was switched on in both production apps at 08:45Z and rolled back
+at 08:51Z. The sibling app's live card test (invented names) showed "coached
+her 10-16, written warning on 10-20" dated 10/20, "late on 10-5 and 10-15. i
+coached her on 10-16" dated 10/16 (the coaching), and "missing the woven
+deadline of 11-1-26" dated 11/1.
+
+- `src/lib/ai/form-full-remap.ts` (this app's live path): with the late-open
+  reader, a yearless date was read without the incident-only rule. On, it
+  counts only when, with its year written, it is an incident date that is no
+  earlier step or deadline. Of two late dates the newest still wins.
+- `src/lib/ai/intake-augment.ts` `fieldLines` and `src/lib/ai/intent-slots.ts`
+  `groundDate` (the intent path): the same rules as the sibling app.
+- `form-date-incident-only.ts`: "deadline of / is / was <date>". "missed the
+  woven deadline on 10/15/26" is still the incident's day.
+
+Pinned through POST /api/chat: `src/app/api/chat/d3-card-date-live-path-oct26.test.ts`
+(lowercase, sentence case, ALL CAPS; fails before, passes after).

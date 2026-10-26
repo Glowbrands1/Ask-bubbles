@@ -25,7 +25,7 @@ import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/fo
 import { listIncidentDates, datesInText, datesInTextWithYearless } from "@/lib/forms/form-date-answer";
 import { incidentOnly } from "@/lib/forms/form-date-incident-only";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
-import { lateOpenOn, mostRecent } from "@/lib/forms/late-open";
+import { lateOpenOn, mostRecent, withYearlessDatesWritten } from "@/lib/forms/late-open";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 import { statedPriorActions } from "@/lib/forms/prior-actions";
@@ -955,7 +955,7 @@ function groundedDate(text: string, today: string): string | null {
   if (calendar.length >= 1) return calendar.at(-1)!;
   // "10-20" with no year is 20 October when it is not a duration ("10-20 min").
   const dashed = dashedMonthDay(text, today);
-  if (dashed) return dashed;
+  if (dashed && yearlessIsIncident(text, today, dashed)) return dashed;
   if (/\b(?:use\s+)?today'?s\s+date\b/i.test(text)) return today;
   // spokenDates also returns every calendar date. Those were already decided
   // above, including a prior-step date that must stay off the form. This
@@ -1054,12 +1054,30 @@ function newestDate(text: string, today: string): string | null {
   const calendar = incidentOnly(text, today, listIncidentDates(text, today))
     .filter((item) => !dateIsPrior(text, item.index))
     .map((item) => ({ iso: item.iso, index: item.index }));
-  const dashed = dashedMonthDays(text, today).map((item) => ({
-    iso: mostRecent(item.month, item.day, today) ?? item.iso,
-    index: item.index,
-  }));
+  const dashed = dashedMonthDays(text, today)
+    .map((item) => ({
+      iso: mostRecent(item.month, item.day, today) ?? item.iso,
+      index: item.index,
+    }))
+    .filter((item) => yearlessIsIncident(text, today, item.iso));
   const all = [...calendar, ...dashed].sort((a, b) => a.index - b.index);
   return all.at(-1)?.iso ?? null;
+}
+
+/*
+ * FORM_DATE_INCIDENT_ONLY_ENABLED (live card test, 26 Oct 2026): "coached her
+ * 10-16, written warning on 10-20" dated the card 10/20, and "late on 10-5 and
+ * 10-15. i coached her on 10-16" dated it 10/16 — a yearless date is read
+ * here without the incident-only rule. On, a yearless date counts only when,
+ * with its year written, the shared reader keeps it as an incident date that
+ * is no earlier step or deadline. Off, every yearless date counts, as before.
+ */
+function yearlessIsIncident(text: string, today: string, iso: string): boolean {
+  if (!formDateIncidentOnlyEnabled()) return true;
+  const written = withYearlessDatesWritten(text, today);
+  return incidentOnly(written, today, listIncidentDates(written, today))
+    .filter((item) => !dateIsPrior(written, item.index))
+    .some((item) => item.iso === iso);
 }
 
 /** Every "10-20" that is a month and day, with where it sits. Same rules as `dashedMonthDay`. */
