@@ -20,9 +20,9 @@ import {
   formEditDateRulesEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
-import { firstUnnegatedPerson, negatedPeople, withoutNegatedPeople } from "@/lib/forms/negated-person";
+import { firstUnnegatedPerson, negatedPeople, negationCandidates, withoutNegatedPeople } from "@/lib/forms/negated-person";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
-import { extractEmployeeNames, extractJobTitle } from "@/lib/forms/proposal";
+import { extractJobTitle } from "@/lib/forms/proposal";
 import { lateOpenOn, newestStatedDate, withYearlessDatesWritten } from "@/lib/forms/late-open";
 import { correctiveActionBasis } from "@/lib/forms/corrective-action-intake";
 import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
@@ -176,7 +176,7 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
    * replaced by the first person the turn names without one. Off: unchanged.
    */
   const candidates = negatedPersonNoCardEnabled()
-    ? [reading?.employee, ...extractEmployeeNames(input.question), ...input.people.map(displayName)]
+    ? negationCandidates(input.question, reading?.employee, input.people.map(displayName))
     : [];
   const negated = negatedPeople(input.question, candidates);
   const nameInput = negated.length > 0 ? { ...input, question: withoutNegatedPeople(input.question, negated) } : input;

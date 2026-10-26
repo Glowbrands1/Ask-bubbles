@@ -31,6 +31,7 @@ import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-m
 import { payrollDeductAmount, payrollDeductFromConversation } from "@/lib/forms/payroll-deduct";
 import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
 import { extractEmployeeNames, extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
+import { unnegatedNameReading } from "@/lib/forms/negated-person";
 import { spokenDates } from "@/lib/forms/relative-date";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 import { detectTemplateIntent, mentionsEarlierCoaching } from "@/lib/forms/template-intent";
@@ -186,7 +187,9 @@ export function groundFormSlots(input: {
   const templateKey = stated?.key ?? templateFromUser(said) ?? continued ?? modelKey;
   // KEEP_FORM_EMPLOYEE_ENABLED keeps the saved employee; NOT_A_NAME_GUARD_ENABLED
   // has already dropped a saved name that was never typed.
-  const employeeName = groundedName(raw.employeeName, users, saved?.employeeName ?? null);
+  // NEGATED_PERSON_NO_CARD_ENABLED: "never one for Rowan Pell" names nobody for the form.
+  const nameReading = unnegatedNameReading(raw.employeeName, users, input.people.map((person) => `${person.firstName} ${person.lastName}`));
+  const employeeName = groundedName(nameReading.proposed, nameReading.turns, saved?.employeeName ?? null);
   // REMAP_INCIDENT_FIX_ENABLED drops "Kearney, NE"-style state codes before the
   // title is read; MANAGER_WORDS_ONLY_ENABLED then reads it from the manager's turns.
   const titleTurns = fixed ? users.map(withoutStateCodes) : users;
