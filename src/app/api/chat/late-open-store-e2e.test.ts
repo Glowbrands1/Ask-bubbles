@@ -177,6 +177,8 @@ const PROD_FLAGS = [
   "CONVERSATION_DRAFT_REUSE_ENABLED",
 ] as const;
 const FLAG = "LATE_OPEN_DATE_ENABLED";
+/** This PR's flag (default off). The described late opening needs it and LATE_OPEN_DATE_ENABLED. */
+const PLACE = "LATE_OPEN_PLACE_ENABLED";
 const TODAY = "2026-10-25";
 const saved = new Map<string, string | undefined>();
 
@@ -213,11 +215,12 @@ class JoiningRows extends Array<Record<string, unknown>> {
 beforeEach(async () => {
   for (const key of Object.keys(store)) (store as Record<string, unknown[]>)[key] = [];
   store.form_instances = new JoiningRows() as never;
-  for (const name of [...PROD_FLAGS, FLAG, "INTENT_EXTRACTION_ENABLED"]) saved.set(name, process.env[name]);
+  for (const name of [...PROD_FLAGS, FLAG, PLACE, "INTENT_EXTRACTION_ENABLED"]) saved.set(name, process.env[name]);
   for (const name of PROD_FLAGS) process.env[name] = "true";
   delete process.env.INTENT_EXTRACTION_ENABLED;
   delete process.env.FORM_FULL_REMAP_ENABLED;
   process.env[FLAG] = "true";
+  process.env[PLACE] = "true";
   state.remap = {};
   state.draft = LATE_OPENING_MODEL;
   state.revision = { values: {} };
@@ -396,5 +399,25 @@ describe("QA-6: not every late opening is the Late Opening policy", () => {
   ])("%s → still Late Opening", async (sentence) => {
     const answer = await new Thread().say(request(sentence), EMPLOYEE);
     expect(POLICY(answer)).toMatch(/^Late Opening\b/);
+  });
+});
+
+/*
+ * PRODUCTION AS IT IS: LATE_OPEN_DATE_ENABLED on, LATE_OPEN_PLACE_ENABLED off
+ * (its default). Every sentence reads as on origin/main: the card names no
+ * policy on the proposal flow.
+ */
+describe("LATE_OPEN_PLACE off, LATE_OPEN_DATE on: the proposal flow is main's", () => {
+  it.each([
+    [B1],
+    ...variants("opening the store late was approved by the manager").map((sentence) => [request(sentence)]),
+    ...variants("she opened the location late and also left early").map((sentence) => [request(sentence)]),
+    ...variants("she opened the store late").map((sentence) => [request(sentence)]),
+    ...variants("late for shift at the store").map((sentence) => [request(sentence)]),
+  ])("%s → no policy line", async (words) => {
+    delete process.env[PLACE];
+    const answer = await new Thread().say(words, EMPLOYEE);
+    expect(answer.formProposal?.templateKey).toBe("dpoa");
+    expect(POLICY(answer)).toBe("");
   });
 });

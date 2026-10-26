@@ -1,4 +1,4 @@
-import { formEditDateRulesEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditDateRulesEnabled, lateOpenPlaceEnabled } from "@/lib/config/chat-quality-flags";
 
 import { JOIN } from "./bounded-context";
 import { LATE_TO_OPEN, describesAttendanceToo, lateOpenOn } from "./late-open";
@@ -95,9 +95,9 @@ export interface CaPolicyReading {
   /** A scheduled meeting, seminar or training session the account says was not attended: "the monthly meeting". */
   missedEvent: string | null;
   /**
-   * LATE_OPEN_DATE_ENABLED: the account describes a late opening ("opening
-   * store late", "opened the store late", "late to open") and no late shift or
-   * absence beside it. Absent when off.
+   * LATE_OPEN_PLACE_ENABLED (with LATE_OPEN_DATE_ENABLED): the account
+   * describes a late opening ("opening store late", "opened the store late",
+   * "late to open") and no late shift or absence beside it. Absent when off.
    */
   lateOpening?: boolean;
 }
@@ -309,8 +309,9 @@ function statedIn(turn: string): CaPolicyName | null {
  */
 export function readCaPolicy(rawText: string): CaPolicyReading {
   const reading = readCaPolicyWords(rawText);
-  // LATE_OPEN_DATE_ENABLED (QA B1, conv_mvifqra017j15ld8: "opening store late on 10-1-26" named no policy).
-  if (!lateOpenOn() || !describesLateOpening(rawText) || describesAttendanceToo(rawText ?? "")) return reading;
+  // LATE_OPEN_PLACE_ENABLED with LATE_OPEN_DATE_ENABLED (QA B1, conv_mvifqra017j15ld8: "opening store late on 10-1-26" named no policy).
+  if (!lateOpenOn() || !lateOpenPlaceEnabled()) return reading;
+  if (!describesLateOpening(rawText) || describesAttendanceToo(rawText ?? "")) return reading;
   if (!/\blate\b/i.test(rawText ?? "")) return reading;
   if (approvedLateOpening(rawText)) return reading;
   return { ...reading, lateOpening: true };
@@ -670,7 +671,7 @@ export function caPolicyProposalLine(reading: CaPolicyReading, named: NamedPolic
   if (reading.stated === "under_performance" || reading.stated === "company_policies") {
     return `**Policy:** ${CA_POLICY_LABEL[reading.stated]}, as you said. The policy manual has no single section to quote for it, so Direct policy is left for you to complete.`;
   }
-  /* LATE_OPEN_DATE_ENABLED: a late opening is the Late Opening policy, named or described. */
+  /* LATE_OPEN_PLACE_ENABLED: a late opening is the Late Opening policy, named or described. */
   if (!reading.stated && !reading.suggestion && reading.lateOpening) {
     return "**Policy:** Late Opening — the store opened late. I'll quote that section from the current policy manual on the draft; tell me if a different policy applies.";
   }
