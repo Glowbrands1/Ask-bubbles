@@ -19,11 +19,14 @@ import type { AskRequest } from "./types";
  *     wherever it appears;
  *   - city and street together ("omaha dodge", "dodge omaha") too;
  *   - the street or city alone ("dodge", "west dodge") only where the sentence says
- *     it is a place ("at", "in", "our", "the", "location", "store")
- *     or when it is the whole reply ("dodge, ne"; a one-word reply such as
- *     "dodge" only after the app asked which store).
+ *     it is a place ("at", "our", "location", "store", "the location is …";
+ *     "in" and "the" only for a name of two words or more: "in the dodge" is
+ *     a car) or when it is the whole reply ("dodge, ne"; a one-word reply
+ *     such as "dodge" only after the app asked which store).
  * An alias two locations share is never used. A roster name already typed is
- * left as it is. Off, every turn is read as typed.
+ * left as it is. A store the manager rules out ("not at dodge", "never at the
+ * dodge location") is never rewritten (QA-6, 26 Oct 2026). Off, every turn is
+ * read as typed.
  *
  * The same file in the sibling app; only `READERS` differs.
  */
@@ -64,6 +67,16 @@ const READERS = {
 
 // "the location is dodge", "store: dodge" (QA, 26 Oct 2026).
 const CUE_BEFORE = /\b(?:at|in|our|the|location|salon|store)\s+$|\b(?:location|salon|store)\s*(?:is|=|:)\s*$/i;
+/** A one-word name needs a stronger cue: "in the dodge" is a car (QA-6, 26 Oct 2026). */
+const ONE_WORD_CUE_BEFORE = /\b(?:at|our|location|salon|store)\s+(?:the\s+)?$|\b(?:location|salon|store)\s*(?:is|=|:)\s*$/i;
+/**
+ * A place the manager rules out, in the same clause: "not at dodge", "never
+ * at the dodge location", "isn't kearney ne", "except bellevue", "without
+ * the dodge store". A comma or a stop ends it, so "it is not dodge, it is
+ * grand island ne" still reads Grand Island. The readers do not read
+ * negation, so a store ruled out must never be written as the store.
+ */
+const RULED_OUT = /\b(?:not|never|no|isn['’]?t|wasn['’]?t|aren['’]?t|weren['’]?t|doesn['’]?t|didn['’]?t|except|without)\b[^,.;!?\n]{0,30}$/i;
 const CUE_AFTER = /^\s*(?:location|salon|store)\b/i;
 const SUFFIXES: readonly [string, string][] = [
   ["street", "st"],
@@ -140,12 +153,12 @@ export function withStoreAliases(request: AskRequest): AskRequest {
   };
   // An alias fills the first STORE the chat names; a turn that already names one the
   // readers read, and every turn after it, stays as typed, so a later place word never
-  // changes the salon (that is NEWEST_PLACE_TURN_ENABLED's, as on main).
+  // changes the store (that is NEWEST_PLACE_TURN_ENABLED's, as on main).
   let named = false;
   const write = (text: string, placeAsked: boolean): string => {
     if (named) return text;
     // A turn the readers already read is theirs as typed, unless it answers
-    // the app's own "which salon or store?".
+    // the app's own "which store?".
     if (!placeAsked && READERS.named(text)) {
       named = true;
       return text;
@@ -187,7 +200,7 @@ export function rosterNames(text: string, placeAsked = false): string {
     out = out.replace(new RegExp(escape(place.name), "gi"), (found) => `\u0000${kept.push(found) - 1}\u0000`);
   }
   // An address ("permanent address 123 Main St, Kearney, NE 68847") is the
-  // address reader's, never a salon or store.
+  // address reader's, never a store.
   out = out.replace(ADDRESS, (found) => `\u0000${kept.push(found) - 1}\u0000`);
   const whole = out.trim().replace(/[.!?]+$/, "").trim().toLowerCase();
   // A roster name typed alone under "Which store?" is the store answer too.
@@ -201,7 +214,10 @@ export function rosterNames(text: string, placeAsked = false): string {
     }
     const pattern = new RegExp(`(?<![\\w\\u0000])${escape(alias.phrase).replace(/,\\s?/g, ",?\\s*").replace(/ /g, "\\s+")}(?![\\w\\u0000])`, "gi");
     out = out.replace(pattern, (found, offset: number, all: string) => {
-      if (alias.cued && !CUE_BEFORE.test(all.slice(0, offset)) && !CUE_AFTER.test(all.slice(offset + found.length))) return found;
+      const before = all.slice(0, offset);
+      if (RULED_OUT.test(before)) return found;
+      const cue = alias.phrase.includes(" ") ? CUE_BEFORE : ONE_WORD_CUE_BEFORE;
+      if (alias.cued && !cue.test(before) && !CUE_AFTER.test(all.slice(offset + found.length))) return found;
       return `\u0000${kept.push(READERS.written(alias.name)) - 1}\u0000`;
     });
   }
