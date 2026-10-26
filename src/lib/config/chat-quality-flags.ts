@@ -839,6 +839,16 @@ export function draftNeverBlankEnabled(): boolean {
   return envFlag("DRAFT_NEVER_BLANK_ENABLED");
 }
 
+/**
+ * Once a card is open, "now one for <name> …" (also "another one for",
+ * "next one is for") is read as a new request for that person, with the open
+ * card's form (QA, 26 Oct 2026; same flag in both apps). See
+ * `ai/next-person.ts`. Off, the turn is read as typed.
+ */
+export function nextPersonFormEnabled(): boolean {
+  return envFlag("NEXT_PERSON_FORM_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -918,6 +928,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
+  "NEXT_PERSON_FORM_ENABLED",
 ] as const;
 
 /**
