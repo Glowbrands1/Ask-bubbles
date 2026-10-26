@@ -204,12 +204,17 @@ const FORMS: readonly QaForm[] = [
   { key: "follow-up-coaching", phrase: "Create a follow-up coaching form for Jordan Testperson on punctuality. I followed up today and she has improved.", creator: "location_manager", edits: ["original_topic", "original_expectation"], edit: "revision" },
   { key: "dpoa", phrase: "Create a corrective action for Jordan Testperson. She was 20 minutes late today.", creator: "location_manager", edits: ["other_offense", "observation"], edit: "payroll" },
   { key: "policy-review", phrase: "Create a policy review for Jordan Testperson about the dress code.", creator: "location_manager", edits: ["topic", "observation"], edit: "editor" },
-  { key: "sdit-epp", phrase: "Create an SDIT EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "tsd-epp", phrase: "Create a TSD EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "asd-sdit-epp", phrase: "Create an ASD-SDIT Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "fttc-epp", phrase: "Create an FTTC Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "dmit-epp-tsd", phrase: "Create a DMIT EPP TSD review for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "dmit-epp-dmit", phrase: "Create a DMIT EPP DMIT review for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
+  /*
+   * The six EPPs are hidden too (QA decision, 26 Oct 2026; see
+   * `config/company/forms/hidden.ts`): their listing and creation steps check
+   * the refusal instead of a created form. The expectation changes on purpose.
+   */
+  { key: "sdit-epp", phrase: "Create an SDIT EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
+  { key: "tsd-epp", phrase: "Create a TSD EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
+  { key: "asd-sdit-epp", phrase: "Create an ASD-SDIT Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
+  { key: "fttc-epp", phrase: "Create an FTTC Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
+  { key: "dmit-epp-tsd", phrase: "Create a DMIT EPP TSD review for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
+  { key: "dmit-epp-dmit", phrase: "Create a DMIT EPP DMIT review for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
   { key: "resignation-exit", phrase: "Create an exit form for Jordan Testperson. She gave two weeks notice on 9/1 and her last day was 9/15.", creator: "location_manager", edits: ["details", "details"], edit: "exit" },
   { key: "demotion", phrase: "Create a demotion form for Jordan Testperson, from manager to sales associate effective 10/12.", creator: "location_manager", edits: ["reason", "reason"], edit: "revision" },
   { key: "position-transfer", phrase: "Create a position transfer form for Jordan Testperson, transferring from store 12 to store 18.", creator: "location_manager", edits: ["reason", "reason"], edit: "revision" },
@@ -682,6 +687,9 @@ describe.each(FORMS)("$key", (form) => {
       expect(Object.keys(enforced.values).sort()).toEqual([...ours].sort());
     }
     if (form.edits.length === 0) return;
+    // A hidden template is created nowhere, so only the field mapping above is
+    // checked for it; step 05 checks the refusal (EPPs hidden, QA, 26 Oct 2026).
+    if (form.hidden) return;
     const { id } = await createViaChat(form);
     const read = await values(id);
     expect(read[form.edits[0]!]?.value ?? "", "the drafted field was written").not.toBe("");
