@@ -50,3 +50,14 @@ describe("verbal warning", () => {
     },
   );
 });
+
+/* HOW MANAGERS TYPE (Pau, 26 Oct 2026): the same reading in all lowercase and in sentence case. */
+const lower = (text: string) => text.toLowerCase();
+const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+
+describe("flag on: every register", () => {
+  it.each([lower(TURN), sentence(TURN), "verbl warning for tobin, attendance", "Verbal Warning for Tobin Arle, Attendance"])("%s cites no Warning p.36", (text) => {
+    vi.stubEnv("POLICY_WARNING_NOT_SECTION_ENABLED", "true");
+    expect(names(accountManualSections(text, CHUNKS)).some((line) => line.startsWith("Warning"))).toBe(false);
+  });
+});
