@@ -166,7 +166,14 @@ import {
   namedPolicies,
 } from "@/lib/forms/named-policy-section";
 import { manualDisplayTitle, manualSheetHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
-import { actionPlanSentencesEnabled, antiLoopEnabled, slotRetentionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  actionPlanSentencesEnabled,
+  antiLoopEnabled,
+  slotRetentionEnabled,
+  storedSlotsNotARequestEnabled,
+  typedNameEnabled,
+} from "@/lib/config/chat-quality-flags";
+import { managerWords } from "./edit-date-rules";
 import { groundEmployeeResolution } from "./employee-candidate-grounding";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
@@ -2210,7 +2217,9 @@ function turnsAboutThisForm(
   /* Whether the turns kept so far start just after a turn about somebody else. */
   let afterAnotherPerson = false;
   const readings = context.messages.map((message, index) => {
-    const intent = detectTemplateIntent(message.content);
+    // STORED_SLOTS_NOT_A_REQUEST_ENABLED: the app's reminder lines are not the manager's request.
+    const said = storedSlotsNotARequestEnabled() ? managerWords(message.content) : message.content;
+    const intent = detectTemplateIntent(said);
     /*
      * "CREATE VERBAL CA FOR …" IS A REQUEST FOR THIS FORM. Production, 21 Oct
      * 2026: a request in the progression's shorthand reads as a corrective
@@ -2231,11 +2240,11 @@ function turnsAboutThisForm(
     const aboutThisForm =
       options.correctiveActionForm === true &&
       ((intent.kind === "corrective_action" && !intent.requestedCreation) ||
-        statesHistoryOnly(message.content, businessToday()));
+        statesHistoryOnly(said, businessToday()));
     const otherForm =
       (intent.kind === "explicit" && intent.templateKey !== templateKey && !aboutThisForm) ||
       (intent.kind === "corrective_action" && !thisForm && !aboutThisForm);
-    const reading = readEmployeeMentions(message.content);
+    const reading = readEmployeeMentions(said);
     const names = reading.names;
     /*
      * A person named only inside the account ("new hire Sam Lee") is not a
@@ -2266,7 +2275,7 @@ function turnsAboutThisForm(
       requestAt < 0 &&
       afterAnotherPerson &&
       start < index &&
-      !correctsTheEmployee(message.content)
+      !correctsTheEmployee(said)
     ) {
       start = index;
       formStart = index;
@@ -2284,8 +2293,8 @@ function turnsAboutThisForm(
       options.correctiveActionForm === true &&
       forThisEmployee &&
       requestAt >= 0 &&
-      (describesIncident(message.content) ||
-        describesMoreThanTheRequest(message.content, { ignore: [employeeName ?? ""] }))
+      (describesIncident(said) ||
+        describesMoreThanTheRequest(said, { ignore: [employeeName ?? ""] }))
     ) {
       start = index;
       formStart = index;

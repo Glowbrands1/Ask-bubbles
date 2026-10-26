@@ -932,6 +932,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_DATE_INCIDENT_ONLY_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "POLICY_SPECIFIC_TOPICS_ENABLED",
   "EXIT_PROSE_FACTS_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
@@ -941,8 +942,24 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
   "NAME_BEFORE_TITLE_ENABLED",
+  "LATE_OPEN_PAYROLL_FROM_FORM_ENABLED",
+  "STORED_SLOTS_NOT_A_REQUEST_ENABLED",
   "PRIOR_SENTENCE_FIX_ENABLED",
 ] as const;
+
+/**
+ * Specific incidents cite their own manual section, chosen by the code (policy
+ * reading; QA, 26 Oct 2026): no wet floor sign -> Safety in the Workplace, a
+ * long break -> Meal and Rest Policy, a social media post -> Social Media
+ * Policy, sexual comments -> Sexual and Other Forms of Harassment, a pet at
+ * work -> Animals in the Workplace, theft, cash shortages, insubordination and
+ * talking badly about coworkers -> the Standards of Conduct page that lists
+ * them. A coaching form's "other" topic is no longer primed with
+ * "Punctuality". Off, the policy and the topic are read exactly as before.
+ */
+export function policySpecificTopicsEnabled(): boolean {
+  return envFlag("POLICY_SPECIFIC_TOPICS_ENABLED");
+}
 
 /**
  * What happened (the card's Issue) is read from the clauses that say what
@@ -965,6 +982,34 @@ export function incidentClauseSplitEnabled(): boolean {
  */
 export function stateCodeNotAPersonEnabled(): boolean {
   return envFlag("STATE_CODE_NOT_A_PERSON_ENABLED");
+}
+
+/**
+ * With LATE_OPEN_DATE_ENABLED on, payroll deduct is read from this form only
+ * (QA, 26 Oct 2026; ported from the sibling app, same flag in both apps): what
+ * the manager's own turns state, and a bare Yes/No only as the reply to the
+ * payroll question just asked on a Corrective Action Form. A bare "Yes" after
+ * an exit form, a resignation or a Coaching Form is never saved as payroll
+ * deduct on the intent read; the full remap's card (this app's live form
+ * path) already never stored it. See `latePayrollFromForm` in
+ * `ai/intent-slots.ts`. Off, exactly as before.
+ */
+export function latePayrollFromFormEnabled(): boolean {
+  return envFlag("LATE_OPEN_PAYROLL_FROM_FORM_ENABLED");
+}
+
+/**
+ * The stored-slot lines put ahead of a turn ("The form is the Corrective
+ * Action Form. The employee is … Policy reference: …") are not a new request
+ * for the form (ported from the sibling app, same flag in both apps; Pau
+ * approved the form-proposal.ts edit on 26 Oct 2026). Live: a Corrective
+ * Action, then "yes", then "$25", then Create draft gave a blank draft, since
+ * the slot answer restarted the form and its draft was written from "$25"
+ * alone. On, the proposal decides whether a turn starts a new form from the
+ * manager's own words. Off, as before.
+ */
+export function storedSlotsNotARequestEnabled(): boolean {
+  return envFlag("STORED_SLOTS_NOT_A_REQUEST_ENABLED");
 }
 
 /**

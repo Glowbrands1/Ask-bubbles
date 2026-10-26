@@ -41,11 +41,19 @@ const PROTECTED = [
  * src/lib/forms/form-date-answer.ts to fix prior-action parsing behind
  * PRIOR_ACTIONS_PARSE_ENABLED, with the flag-off reading unchanged, and on
  * 26 Oct 2026 again for the incident date behind PRIOR_SENTENCE_FIX_ENABLED
- * (an earlier step's date is never the form's Date). It stays
- * on the PROTECTED list; only the diff check leaves it out. No other
- * protected file is excepted.
+ * (an earlier step's date is never the form's Date). It stays on the
+ * PROTECTED list; only the diff check leaves it out.
+ *
+ * The user (Pau) approved, on 26 Oct 2026, editing src/lib/ai/form-proposal.ts
+ * for STORED_SLOTS_NOT_A_REQUEST_ENABLED: in turnsAboutThisForm the new-request
+ * check reads the manager's words, not the app's stored-slot lines, with the
+ * flag-off reading unchanged. It stays on the PROTECTED list; only the diff
+ * check leaves it out. No other protected file is excepted.
  */
-const APPROVED_PROTECTED_EDITS = [":(exclude)src/lib/forms/form-date-answer.ts"];
+const APPROVED_PROTECTED_EDITS = [
+  ":(exclude)src/lib/forms/form-date-answer.ts",
+  ":(exclude)src/lib/ai/form-proposal.ts",
+];
 
 const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.tsx", "**/*.css"];
 /*
