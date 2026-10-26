@@ -227,6 +227,7 @@ function incidentOnlyLine(
 ): string {
   if (!line.trim()) return line;
   const sentences: string[] = [];
+  let dropped = false;
   // "st. joe": the readers split at a point too, so the abbreviation's own point goes.
   const unpointed = read.split ? line.replace(ABBREVIATIONS, (match) => match.replace(/\.$/, "")) : line;
   for (const sentence of incidentSentences(unpointed)) {
@@ -234,7 +235,10 @@ function incidentOnlyLine(
     const unlabelled = sentence.replace(/^\s*(?:issue|policy|note)\s*:\s*/i, "");
     if (read.split && (isStateSentence(sentence) || isPolicyInstruction(unlabelled) || isPolicyText(unlabelled))) continue;
     // INCIDENT_COMMAND_WORDS_ENABLED: "no deduct", "date 10/14", "change it to written" fill a field.
-    if (read.commands && isSlotCommand(sentence)) continue;
+    if (read.commands && isSlotCommand(sentence)) {
+      dropped = true;
+      continue;
+    }
     const body = read.commands ? sentence.replace(GLUED_STATE, "").replace(PLACE_AND_ACT, " and ") : sentence;
     let clauses = read.split ? incidentClauses(body) : body.split(",").map((clause) => clause.trim()).filter(Boolean);
     if (read.split) {
@@ -244,9 +248,15 @@ function incidentOnlyLine(
         .filter((clause) => !isEmployeeFact(clause, employeeName))
         .map((clause) => (read.subjectless && statesAnAct(clause) ? withoutSubject(clause) : clause));
     }
-    if (read.commands) clauses = clauses.filter((clause) => !isSlotCommand(clause));
+    if (read.commands) {
+      const kept = clauses.filter((clause) => !isSlotCommand(clause));
+      if (kept.length !== clauses.length || body !== sentence) dropped = true;
+      clauses = kept;
+    }
     if (clauses.length > 0) sentences.push(clauses.join(", "));
   }
+  // Commands alone: a line with no command in it is handed on exactly as typed.
+  if (!read.split && !dropped) return line;
   return sentences.join(". ");
 }
 
