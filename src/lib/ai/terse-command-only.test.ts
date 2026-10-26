@@ -65,3 +65,36 @@ describe("TERSE_COMMAND_ONLY_ENABLED on", () => {
     for (const variant of cases(command)) expect(expandTerseRequest(variant, TODAY).toLowerCase().startsWith(start.toLowerCase())).toBe(true);
   });
 });
+
+/**
+ * QA live runs, 26 Oct 2026 (Bubbles tester, dpl_27H86pct; names invented,
+ * "rory ann vance" stands in for the tester's three-part name).
+ */
+describe("TERSE_COMMAND_ONLY_ENABLED on: the live command lines", () => {
+  it.each([
+    ["ca rory ann vance dodge, ne late today verbal", "Create a corrective action form for rory ann vance at "],
+    ["ca john michael doe late today", "Create a corrective action form for john michael doe."],
+    ["coach devon harlan dodge, ne measuring product recipe", "Create a coaching form for devon harlan at "],
+    ["exit devon harlan dodge ldw 10-17-26", "Create an exit form for devon harlan at "],
+    ["ca mara quill sd", "Create a corrective action form for mara quill"],
+    ["verbal ca devon harlan tm dodge dress code 10-20-26 no payroll", "Create a corrective action form for devon harlan at "],
+    ["coach devon harlan woven acks 10-16", "Create a coaching form for devon harlan."],
+  ])("writes out '%s' with the whole name, in any case", (command, start) => {
+    process.env.TERSE_COMMAND_ONLY_ENABLED = "on";
+    for (const variant of cases(command)) expect(expandTerseRequest(variant, TODAY).toLowerCase().startsWith(start.toLowerCase())).toBe(true);
+  });
+
+  it.each([
+    "coaching form for rory ann vance, she was late today",
+    "Create a coaching form for Test Employee at Kearney, NE, she was late on 10-5 and 10-15, I coached her on 10-16.",
+    "coaching form for rory vance and a ca for devon harlan",
+    "Exit for rory ann vance effective october 2",
+    "Sacramento, CA",
+    "ca",
+    "coach",
+    "exit",
+  ])("leaves '%s' as typed, in any case", (turn) => {
+    process.env.TERSE_COMMAND_ONLY_ENABLED = "on";
+    for (const variant of cases(turn)) expect(expandTerseRequest(variant, TODAY)).toBe(variant);
+  });
+});
