@@ -451,18 +451,67 @@ function deniedAt(text: string, index: number): boolean {
   return DENIED_BEFORE.test(clause);
 }
 
-/** Whether the text says `pattern` without denying it. */
-function undenied(text: string, pattern: RegExp): boolean {
-  return [...text.matchAll(new RegExp(pattern.source, "gi"))].some((match) => !deniedAt(text, match.index));
+/** Whether the text says `pattern` without denying it, about the person who opened late. */
+function undenied(text: string, pattern: RegExp, opening: string | null = null): boolean {
+  return [...text.matchAll(new RegExp(pattern.source, "gi"))].some(
+    (match) => !deniedAt(text, match.index) && !(opening !== null && aboutSomeoneElse(text, match.index, opening)),
+  );
+}
+
+/*
+ * ANOTHER EMPLOYEE'S LATENESS IS NOT A SECOND INCIDENT (QA-7, 26 Oct 2026):
+ * "she opened the store late, <a coworker> was late to his shift" added
+ * Tardiness. The clause's own subject decides: a different name, or a
+ * different pronoun ("she" opened, "he" was late), is someone else. No
+ * subject, the same name, or a pronoun after a name is the same person.
+ */
+const PRONOUNS = new Set(["she", "he", "they", "i", "we"]);
+const SUBJECT_VERB =
+  /\s+(?:was|were|is|has\s+been|had\s+been|came\s+in|arrived|showed\s+up|clocked\s+in|got\s+(?:in|there)|ran|running|left|clocked\s+out|opened|open(?:s|ing)?|did\s+not\s+open|didn'?t\s+open)\b(?:\s+\S+){0,2}?\s*$/;
+
+function subjectBefore(text: string, index: number): string | null {
+  const clause = (text.slice(0, index).split(/[.!?,;:–—]|\s-\s|\bbut\b|\band\b|\bthen\b/).pop() ?? "").trim();
+  const verb = SUBJECT_VERB.exec(` ${clause}`);
+  if (!verb) return null;
+  const words = ` ${clause}`.slice(0, verb.index).trim().split(/\s+/).filter((word) => !/^(?:also|then|so|later|today|yesterday)$/.test(word));
+  const subject = words.slice(-2).join(" ").replace(/'s$/, "");
+  if (!subject || /\b(?:employee|team\s*member|associate)\b/.test(subject)) return null;
+  return subject;
+}
+
+/** Who the clause that says the late opening is about ("she opened the store late"), or null. */
+function openingSubject(text: string): string | null {
+  const spans = openingSpans(text);
+  if (spans.length === 0) return null;
+  const start = Math.min(...spans.map((span) => span.start));
+  const clause = (text.slice(0, start).split(/[.!?,;:–—]|\s-\s|\bbut\b|\band\b|\bthen\b/).pop() ?? "").trim();
+  const words = clause.split(/\s+/).filter((word) => word && !/^(?:also|then|so|later|today|yesterday|did|didn'?t|not|was|never)$/.test(word));
+  const subject = words.slice(-2).join(" ").replace(/'s$/, "");
+  return subject && !/\b(?:employee|team\s*member|associate)\b/.test(subject) ? subject : null;
+}
+
+function aboutSomeoneElse(text: string, index: number, opening: string): boolean {
+  const late = subjectBefore(text, index);
+  if (late === null) return false;
+  const lateWords = late.split(" ");
+  const openWords = opening.split(" ");
+  const latePronoun = PRONOUNS.has(lateWords.at(-1)!);
+  const openPronoun = PRONOUNS.has(openWords.at(-1)!);
+  if (latePronoun) return openPronoun && lateWords.at(-1) !== openWords.at(-1);
+  if (openPronoun) return true;
+  return !lateWords.some((word) => openWords.includes(word));
 }
 
 export function attendanceIncidentPositions(rawText: string): { lateOpening: number; attendance: number } {
   const text = normalize(rawText);
   const spans = opensLate(text) ? openingSpans(text) : [];
   const inside = (index: number) => spans.some((span) => index >= span.start && index < span.end);
+  const who = spans.length > 0 ? openingSubject(text) : null;
   let attendance = -1;
   for (const pattern of [ABSENCE, LATENESS]) {
-    const first = [...text.matchAll(new RegExp(pattern.source, "gi"))].find((match) => !inside(match.index) && !deniedAt(text, match.index));
+    const first = [...text.matchAll(new RegExp(pattern.source, "gi"))].find(
+      (match) => !inside(match.index) && !deniedAt(text, match.index) && !(who !== null && aboutSomeoneElse(text, match.index, who)),
+    );
     if (first && (attendance === -1 || first.index < attendance)) attendance = first.index;
   }
   return { lateOpening: spans.length > 0 ? Math.min(...spans.map((span) => span.start)) : -1, attendance };
@@ -484,7 +533,9 @@ function attendanceOffenseKeys(text: string, missed: boolean): string[] | null {
   const opening = opensLate(text);
   const absent = ABSENCE.test(text) || missed;
   // POLICY_TWO_INCIDENTS_ENABLED: a late shift beside a late opening is a second incident.
-  const late = opening ? policyTwoIncidentsEnabled() && undenied(withoutOpeningWords(text), LATENESS) : LATENESS.test(text);
+  const late = opening
+    ? policyTwoIncidentsEnabled() && undenied(withoutOpeningWords(text), LATENESS, openingSubject(text))
+    : LATENESS.test(text);
   if (!opening && !absent && !late) return null;
   const keys: string[] = [];
   if (opening) keys.push(LATE_OPENING_OFFENSE);

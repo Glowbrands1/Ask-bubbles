@@ -170,3 +170,40 @@ describe.each([
     });
   });
 });
+
+/*
+ * QA-7, 26 Oct 2026 (names invented): another employee's lateness beside a
+ * late opening is not a second incident for this one. Original, lowercase,
+ * sentence case and CAPS.
+ */
+describe("flag on: another person's lateness is not a second incident", () => {
+  const on = () => vi.stubEnv("POLICY_TWO_INCIDENTS_ENABLED", "true");
+
+  it.each(
+    [
+      "she opened the store late, devon harlan was late to his shift",
+      "she opened the store late, he was late to his shift",
+      "Marlo opened the store late on 10-5-26, Devon was late too",
+    ].flatMap(registers),
+  )("%s -> Late Opening only", (text) => {
+    on();
+    expect(describedAttendanceKeys(text)).toEqual(["late_opening"]);
+    expect(cited(text)).toEqual(["Late Opening p.15"]);
+  });
+
+  it.each(
+    [
+      "she opened the store late and she was late to her shift",
+      "Marlo opened the store late and was late to her shift",
+      "Marlo opened the store late, Marlo was also late",
+      "Marlo opened the store late. She was late to her shift too.",
+    ].flatMap(registers),
+  )("the same person's lateness is still a second incident: %s", (text) => {
+    on();
+    expect(describedAttendanceKeys(text)).toEqual(["late_opening", "tardiness"]);
+  });
+
+  it("flag off: a late opening alone, as before", () => {
+    expect(describedAttendanceKeys("she opened the store late, devon harlan was late to his shift")).toEqual(["late_opening"]);
+  });
+});
