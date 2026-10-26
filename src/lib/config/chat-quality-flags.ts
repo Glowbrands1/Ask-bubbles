@@ -733,6 +733,15 @@ export function terseSlotReadEnabled(): boolean {
   return envFlag("TERSE_SLOT_READ_ENABLED");
 }
 
+/**
+ * The manager's newest spelling of the card's employee wins, when the card's
+ * spelling is one they typed (ported from the sibling app, 25 Oct 2026). See
+ * `ai/name-respell.ts`. Off, the first spelling stays.
+ */
+export function nameRespellEnabled(): boolean {
+  return envFlag("NAME_RESPELL_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -802,4 +811,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "NAME_RESPELL_ENABLED",
 ] as const;
