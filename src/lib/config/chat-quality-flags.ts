@@ -722,6 +722,16 @@ export function reopenVerbGuardEnabled(): boolean {
   return envFlag("REOPEN_VERB_GUARD_ENABLED");
 }
 
+/**
+ * "Policy: …, as you said" only for a policy the manager named (D4, QA, 25
+ * Oct 2026). The app's own "Policy reference: …, JBA Policy Manual." line,
+ * which the form state writes ahead of the turn, is not the manager's words.
+ * Off, the policy is read as before.
+ */
+export function policyAsYouSaidManagerOnlyEnabled(): boolean {
+  return envFlag("POLICY_AS_YOU_SAID_MANAGER_ONLY_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -790,4 +800,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REMAP_DRAFT_SOURCES_ENABLED",
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
+  "POLICY_AS_YOU_SAID_MANAGER_ONLY_ENABLED",
 ] as const;
