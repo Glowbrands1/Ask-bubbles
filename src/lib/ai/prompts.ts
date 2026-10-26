@@ -10,9 +10,10 @@ import {
   type ReportDefinition,
 } from "@/lib/reporting/registry";
 import type { AnswerMode } from "@/types";
-import { promptCacheEnabled } from "@/lib/config/chat-quality-flags";
+import { facsimileAskOnlyEnabled, promptCacheEnabled, typedPriorNotOnFileEnabled } from "@/lib/config/chat-quality-flags";
 import { CROSS_CHAT_REPLY_RULE } from "@/lib/chat/cross-chat-guard";
 import { CHAT_STYLE_RULES } from "./chat-style-rules";
+import { withFormPromptRules } from "./form-prompt-rules";
 import { PRIOR_COACHING_OPTIONAL_RULES } from "./prior-coaching-optional";
 import { RETRIEVED_NOT_SHARED_NOTE, RETRIEVED_NOT_SHARED_RULE } from "./sources-not-shared";
 import type { AskContext, OpenFormSummary } from "./types";
@@ -205,7 +206,19 @@ ${list}
 - Pointing somebody to a report is not reading it to them. Never state a figure from a report unless it is written in the REPORT DATA section.`;
 }
 
-export function buildSystemPrompt(input: {
+/**
+ * The system prompt, with the flagged form rules (FACSIMILE_ASK_ONLY_ENABLED,
+ * TYPED_PRIOR_NOT_ON_FILE_ENABLED) applied. Both off, the prompt is unchanged.
+ * See `form-prompt-rules.ts`.
+ */
+export function buildSystemPrompt(input: Parameters<typeof buildPromptText>[0]): string {
+  return withFormPromptRules(buildPromptText(input), {
+    facsimileAskOnly: facsimileAskOnlyEnabled(),
+    typedPriorNotOnFile: typedPriorNotOnFileEnabled(),
+  });
+}
+
+function buildPromptText(input: {
   assistantName: string;
   brandName: string;
   productName: string;

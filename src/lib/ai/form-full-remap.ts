@@ -15,6 +15,7 @@ import {
   placeSpanGuardEnabled,
   priorActionsParseEnabled,
   keepFormEmployeeEnabled,
+  payrollFromThisFormEnabled,
   formEditDateRulesEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
@@ -204,12 +205,24 @@ export function groundFormSlots(input: {
       )
     : null;
   const warningLevel = managerWarning ?? explicitWarning(users, input.today);
-  // A bare "Yes" after a list of questions answers none of them (REMAP_INCIDENT_FIX_ENABLED).
-  const payrollDeduct = payrollDeductFromConversation(fixed ? withoutAmbiguousAnswers(conversation) : conversation);
-  const payrollAmount = payrollDeduct === "yes" ? managerPayrollAmount(said) : null;
   // A later create request with its own incident starts a new form: What
   // happened, the policy, the prior actions and the plan are read from there.
-  const start = fixed ? currentRequestStart({ turns: users, employeeName, slotClause }) : 0;
+  const requestStart = currentRequestStart({ turns: users, employeeName, slotClause });
+  const start = fixed ? requestStart : 0;
+  /*
+   * PAYROLL_FROM_THIS_FORM_ENABLED: when no later request starts a new form
+   * (currentRequestStart is 0), every turn is this form's, and the payroll
+   * answer is read from all of them. "payroll deduct applies" in T1 then
+   * survives 'create a Corrective Action Form for Test Employee"' in T3
+   * (conv_mvnu3j932gpohx4, B15, 25 Oct 2026). Off, the look-back starts after
+   * the next-to-last request, as before.
+   */
+  const fromThisForm = payrollFromThisFormEnabled() && requestStart === 0;
+  // A bare "Yes" after a list of questions answers none of them (REMAP_INCIDENT_FIX_ENABLED).
+  const payrollDeduct = payrollDeductFromConversation(fixed ? withoutAmbiguousAnswers(conversation) : conversation, {
+    fromThisForm,
+  });
+  const payrollAmount = payrollDeduct === "yes" ? managerPayrollAmount(said) : null;
   const scoped = users.slice(start).join("\n");
   const named = fixed ? namedPolicy(withoutPriorList(scoped)) : null;
   // LATE_OPEN_DATE_ENABLED with REMAP_INCIDENT_FIX_ENABLED: a described late

@@ -816,3 +816,11 @@ happened; "X instead of Y" names X; a prior action's date ("jba manual
 revision. Not ported: the Follow-up line rule (this card has none) and the
 card salon edit (the store edit is its own fix here). No salon wording was
 copied. Test: `src/app/api/chat/edits-dates-replay-e2e.test.ts`.
+
+- **Stray-punctuation incident check: behind PAYROLL_FROM_THIS_FORM_ENABLED here,
+  unflagged in the sibling app (26 Oct 2026).** A clause of punctuation only
+  ('create a Corrective Action Form for Test Employee"', B15) is not an
+  incident (`remap-incident.ts` `clauseOffense`). The sibling app shipped
+  this check unflagged earlier; this app never had it, so it is gated behind
+  the flag it was built for, keeping flag-off output equal to main. With the
+  flag on, both apps read the same.
