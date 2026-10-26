@@ -813,6 +813,32 @@ export function excerptBrandFilterEnabled(): boolean {
   return envFlag("EXCERPT_BRAND_FILTER_ENABLED");
 }
 
+/**
+ * A Google review question gets the Google Reviews page's month-to-date
+ * figures, goal and pace for the caller's stores, and only with View reports.
+ * Off, review questions keep the existing path. Ported from the sibling app (QA T11).
+ */
+export function googleReviewsInChatEnabled(): boolean {
+  return envFlag("GOOGLE_REVIEWS_IN_CHAT_ENABLED");
+}
+
+/**
+ * A Corrective Action or coaching draft is never filed blank (production, 26
+ * Oct 2026: `drafted` with no fields and nothing rejected, from Create clicks
+ * fired several at once). The model's tool call is read when its `values` /
+ * `checked` came back JSON-encoded, one object per section, keyed by label,
+ * or with a single option as text; a model call that threw (429, 529,
+ * overloaded), answered with no tool call, or left no narrative although the
+ * notes hold an account is tried again up to twice (after 1 s, then 3 s), as
+ * is a failed framework read; if it is still empty, the Observation is the
+ * manager's own incident clause (the card's "Issue"). Every reason goes on a
+ * drafted event, with `{"fallback": "manager_words"}` where used. See
+ * `forms/draft-never-blank.ts`. Off, the draft route is unchanged.
+ */
+export function draftNeverBlankEnabled(): boolean {
+  return envFlag("DRAFT_NEVER_BLANK_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -890,6 +916,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "INCIDENT_CLAUSE_SPLIT_ENABLED",
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
+  "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
+  "DRAFT_NEVER_BLANK_ENABLED",
   "NEGATED_LATE_SHIFT_ENABLED",
 ] as const;
 
