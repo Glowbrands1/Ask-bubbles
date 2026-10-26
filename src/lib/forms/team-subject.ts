@@ -69,8 +69,8 @@ const WHOLE_TEAM_EXTRA: readonly RegExp[] = [
 ];
 
 /**
- * CARD_NEVER_SILENT_ENABLED, ported from the sibling app: the chatty way of asking for the same thing (Ask
- * Sunny conv_mvofsdg92obw8px, 25 Oct 2026): "I want a coaching form I can
+ * CARD_NEVER_SILENT_ENABLED, ported from the sibling app: the chatty way of asking for the same thing (the sibling
+ * app's conv_mvofsdg92obw8px, 25 Oct 2026): "I want a coaching form I can
  * reuse for any team member, so please leave the employee name blank and make
  * it generic for the whole team" got no card, while "need a coaching form for
  * team not signing documents" did.
@@ -83,9 +83,30 @@ const CHATTY_TEAM_PHRASES: readonly RegExp[] = [
 
 /** Whether the manager's words make this coaching about the team. */
 export function readsAsTeamSubject(text: string): boolean {
-  const phrases = cardNeverSilentEnabled() ? [...TEAM_PHRASES, ...CHATTY_TEAM_PHRASES] : TEAM_PHRASES;
-  if (phrases.some((pattern) => pattern.test(text ?? ""))) return true;
+  if (TEAM_PHRASES.some((pattern) => pattern.test(text ?? ""))) return true;
+  if (cardNeverSilentEnabled() && chattyTeam(text ?? "")) return true;
   return wholeTeamCoachingEnabled() && WHOLE_TEAM_EXTRA.some((pattern) => pattern.test(text ?? ""));
+}
+
+/**
+ * QA-6 negation probes, 26 Oct 2026: "do not make it generic for the whole
+ * team", "never reuse for any team member", "do not leave the employee name
+ * blank", "leave the name blank for Rowan Pell" and "generic for the whole
+ * team except Rowan Pell" made the team card. A chatty phrase counts only when
+ * nothing before it in its clause negates it, and never in a turn that names a
+ * person or says "except".
+ */
+const NEGATED = /\b(?:not|never|no|don'?t|do\s+not|doesn'?t|without|instead\s+of)\b/i;
+const NAMED_PERSON = /\b[A-Z][a-z'’-]+\s+[A-Z][a-z'’-]+\b/;
+
+function chattyTeam(text: string): boolean {
+  if (/\bexcept\b/i.test(text) || NAMED_PERSON.test(text.replace(/^\s*[A-Z][a-z]+\b/, "").replace(/([.!?]\s+)[A-Z][a-z]+\b/g, "$1"))) return false;
+  return text.split(/[,.;!?]+/).some((clause) =>
+    CHATTY_TEAM_PHRASES.some((pattern) => {
+      const hit = pattern.exec(clause);
+      return hit !== null && !NEGATED.test(clause.slice(0, hit.index));
+    }),
+  );
 }
 
 /**

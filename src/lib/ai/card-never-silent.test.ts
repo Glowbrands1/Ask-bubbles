@@ -6,7 +6,7 @@ import { CREATE_DRAFT_LINE, withCardNeverSilent } from "./card-never-silent";
 import type { AskRequest, AskResponse } from "./types";
 
 /**
- * Ported from Ask Sunny conv_mvoenhk42lu3cxo, 25 Oct 2026. The manager's turns
+ * Ported from the sibling app's conv_mvoenhk42lu3cxo, 25 Oct 2026. The manager's turns
  * are copied exactly, typos included; the employee's name is invented (Wynn
  * Talbot).
  * Each turn below got the card reply back word for word, with nothing that
