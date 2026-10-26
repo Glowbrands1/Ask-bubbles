@@ -17,11 +17,20 @@ import type { AskRequest } from "./types";
  * Before any reader sees a manager turn, a turn that opens "ca / c/a /
  * coaching / coach / exit (form) for <name>" and names a prior action
  * ("previous coaching", "prior verbal", "written 7/28") is read with "create
- * a" in front. The rest stays as typed. Off, every turn is read as typed.
+ * a" (or "create an" before "exit") in front. The rest stays as typed. Off,
+ * every turn is read as typed.
+ *
+ * QA-4, 26 Oct 2026: a prior action that is denied ("she has no previous
+ * coaching", "never had a previous verbal", "without any previous coaching",
+ * "previous coaching was not documented") or that follows a question ("ca for
+ * <name>? no, previous coaching verbal 6/25") is not a prior action the request
+ * names, and the turn is read as typed.
  */
 
 const SHORT_FOR = /^\s*(?:(?:verbal|written)\s+)?(?:ca|c\/a|dpoa|coaching|coach|exit)(?:\s+form)?\s+for\s+\S/i;
 const PRIOR = /\b(?:previous|prior|past)\s+(?:coaching|coached|verbal|written|warnings?|cas?|corrective\s+actions?)\b/i;
+const DENIED_BEFORE = /\b(?:no(?!\s+(?:call|show)\b)|never|not|without|nor)\b(?:\s+[a-z'’]+){0,3}\s*$/i;
+const DENIED_AFTER = /^\s*(?:\S+\s+){0,2}?(?:was|were|is|has|had|have)\s+(?:not|never)\b|^\s*(?:\S+\s+){0,2}?(?:wasn'?t|weren'?t|isn'?t|hasn'?t|hadn'?t)\b/i;
 
 export function withShortForRequest(request: AskRequest): AskRequest {
   if (!shortForRequestEnabled()) return request;
@@ -39,6 +48,12 @@ export function withShortForRequest(request: AskRequest): AskRequest {
 
 /** "ca for <name> …, previous coaching …" as "create a ca for <name> …". */
 export function shortForRequest(text: string): string {
-  if (typeof text !== "string" || !SHORT_FOR.test(text) || !PRIOR.test(text)) return text;
-  return `create a ${text.trimStart()}`;
+  if (typeof text !== "string" || !SHORT_FOR.test(text)) return text;
+  const prior = PRIOR.exec(text);
+  if (!prior) return text;
+  const before = text.slice(0, prior.index);
+  const after = text.slice(prior.index + prior[0].length);
+  if (before.includes("?") || DENIED_BEFORE.test(before) || DENIED_AFTER.test(after)) return text;
+  const typed = text.trimStart();
+  return `${/^exit\b/i.test(typed) ? "create an" : "create a"} ${typed}`;
 }
