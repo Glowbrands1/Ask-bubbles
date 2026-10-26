@@ -943,6 +943,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "DRAFT_NEVER_BLANK_ENABLED",
   "NAME_BEFORE_TITLE_ENABLED",
   "LATE_OPEN_PAYROLL_FROM_FORM_ENABLED",
+  "STORED_SLOTS_NOT_A_REQUEST_ENABLED",
 ] as const;
 
 /**
@@ -994,4 +995,18 @@ export function stateCodeNotAPersonEnabled(): boolean {
  */
 export function latePayrollFromFormEnabled(): boolean {
   return envFlag("LATE_OPEN_PAYROLL_FROM_FORM_ENABLED");
+}
+
+/**
+ * The stored-slot lines put ahead of a turn ("The form is the Corrective
+ * Action Form. The employee is … Policy reference: …") are not a new request
+ * for the form (ported from the sibling app, same flag in both apps; Pau
+ * approved the form-proposal.ts edit on 26 Oct 2026). Live: a Corrective
+ * Action, then "yes", then "$25", then Create draft gave a blank draft, since
+ * the slot answer restarted the form and its draft was written from "$25"
+ * alone. On, the proposal decides whether a turn starts a new form from the
+ * manager's own words. Off, as before.
+ */
+export function storedSlotsNotARequestEnabled(): boolean {
+  return envFlag("STORED_SLOTS_NOT_A_REQUEST_ENABLED");
 }
