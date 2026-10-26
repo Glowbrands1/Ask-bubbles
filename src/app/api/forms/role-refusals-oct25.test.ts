@@ -13,8 +13,8 @@ vi.mock("@/config/company/locations", async () =>
  * ============================================================================
  *
  * Ported from the sibling app. The chat card is the offer; these routes are
- * the boundary. Whatever a card shows, a location manager cannot start an
- * SDIT EPP (`create_epp` sits with the district manager and above), and an
+ * the boundary. Whatever a card shows, an assistant manager cannot start a
+ * coaching form (they hold no create right), and an
  * assistant manager cannot finalize a coaching draft a district manager
  * started at their store (they hold no `create_coaching_form`). Each refusal is a 403 (or the 404 a record outside
  * the caller's scope gets), and the database is unchanged: no row inserted, the
@@ -119,17 +119,24 @@ beforeEach(async () => {
   await ensureTemplateLibrary("system");
 }, 60_000);
 
-describe("a location manager cannot start an SDIT EPP", () => {
-  it("POST /api/forms/instances {templateKey: \"sdit-epp\"} is a 403, and no row is inserted", async () => {
-    as("location_manager", "lm-1", STORE);
-    const response = await create("sdit-epp");
+/*
+ * The create refusal is pinned on a template that is NOT hidden. The six EPPs
+ * are on this app's hidden list (QA decision, 26 Oct 2026), and the route
+ * answers a hidden template with a 404 before it checks the permission, so an
+ * EPP could not show the 403. An assistant manager holds no create right at
+ * all, so a coaching form shows the same permission refusal.
+ */
+describe("an assistant manager cannot start a coaching form", () => {
+  it("POST /api/forms/instances {templateKey: \"coaching\"} is a 403, and no row is inserted", async () => {
+    as("assistant_manager", "am-1", STORE);
+    const response = await create("coaching");
     expect(response.status).toBe(403);
     expect(store.form_instances ?? []).toHaveLength(0);
   });
 
   it("a district manager may, so the refusal is the permission", async () => {
     as("district_manager", "dm-1", GLOBAL);
-    const response = await create("sdit-epp");
+    const response = await create("coaching");
     expect(response.status).toBe(200);
     expect(store.form_instances ?? []).toHaveLength(1);
   });
