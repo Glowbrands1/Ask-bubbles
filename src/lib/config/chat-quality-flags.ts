@@ -733,6 +733,17 @@ export function terseSlotReadEnabled(): boolean {
   return envFlag("TERSE_SLOT_READ_ENABLED");
 }
 
+/**
+ * A name is read the same however it is typed: a turn in capitals is read in
+ * lowercase, and the person named where a form is asked for ("write up devon
+ * harlan", "ca for Rory vance") is written in Title Case before the name
+ * readers see it (QA, 25-26 Oct 2026; ported from the sibling app). See
+ * `ai/name-case.ts`. Off, every turn is read as typed.
+ */
+export function nameCaseInsensitiveEnabled(): boolean {
+  return envFlag("NAME_CASE_INSENSITIVE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -802,4 +813,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "NAME_CASE_INSENSITIVE_ENABLED",
 ] as const;
