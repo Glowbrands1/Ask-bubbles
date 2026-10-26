@@ -136,3 +136,31 @@ describe("flag on: every register reads the same", () => {
     },
   );
 });
+
+/*
+ * QA live, 26 Oct 2026 (name invented): "written ca <name> 10/5 didnt do 10
+ * min sanitize" missed Care and Cleaning p.21 (this flag was not yet on), and
+ * a live test typed "sanatizing": the misspellings and "skipped" read the same.
+ */
+describe("flag on: the sanitize wording and its misspellings", () => {
+  const LIVE = "written ca wren okafor 10/5 didnt do 10 min sanitize at the store";
+  it.each([
+    LIVE,
+    sentence(LIVE),
+    LIVE.toUpperCase(),
+    "she didnt do the sanatizing",
+    "She didnt do the sanatizing",
+    "didnt sanatize the counters",
+    "she skipped the 10 minute sanitize on the pour station",
+    "She skipped the 10 minute sanatize on the pour station",
+    "never sanitzed the work tables",
+  ])("%s is Care and Cleaning p.21", (text) => {
+    on();
+    expect(cited(text)).toEqual([`${CARE} p.21`]);
+  });
+
+  it.each(["she sanatized every station before close", "Santa's helper costume is not dress code"])("%s is not cleaning left undone", (text) => {
+    on();
+    expect(cited(text)).not.toContain(`${CARE} p.21`);
+  });
+});
