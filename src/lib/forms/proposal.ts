@@ -21,6 +21,7 @@ import { proposeLocationWithSource, type LocationProposal } from "./location-sco
 import { ROSTER_STORE_INDEX, rosterLocationName } from "./location-mention";
 import { isStoreName, type StoreIndex } from "@/lib/stores/resolver";
 import type { AccessScope, ChatFormProposal, ChatMessage, EmployeeVerification } from "@/types";
+import { isPayrollWords } from "./payroll-words";
 
 /**
  * ============================================================================
@@ -1046,6 +1047,10 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    */
   if (typedNameEnabled()) strong.push(...nameBeforeTitle(text));
 
+  // PAYROLL_TYPO_NOT_A_NAME_ENABLED: "yes payrol ldeduct" answers the payroll question; it names nobody.
+  if (payrollTypoNotANameEnabled()) {
+    return settle(strong.filter((name) => !isPayrollWords(name)), found.filter((name) => !isPayrollWords(name)), text, subjects);
+  }
   return settle(strong, found, text, subjects);
 }
 
