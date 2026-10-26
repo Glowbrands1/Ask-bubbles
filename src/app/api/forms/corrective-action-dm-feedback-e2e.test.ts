@@ -1,5 +1,7 @@
 import { rosterResultFor } from "@/test/roster-result";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import manual151 from "@/test/fixtures/jba-manual-production-151.json";
+import { manualChunkFromRow, type ManualChunkRow } from "@/lib/knowledge/full-manual-load";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatMessage } from "@/types";
@@ -545,6 +547,49 @@ describe("previous coaching stated in chat", () => {
 /* ========================================================================= */
 /* A4 — A POLICY NAMED BY THE MANUAL'S OWN SECTION                            */
 /* ========================================================================= */
+
+/*
+ * POLICY_SPECIFIC_TOPICS_ENABLED, ON THE DRAFT PATH (QA, 26 Oct 2026, "dog at
+ * work" saved Standards of Conduct p.12): the manager's words choose the
+ * manual's Animals in the Workplace section (and Visitors beside it) on the
+ * saved draft, read from the production JBA manual rows. Off, the model's box
+ * stands, as in the production draft.
+ */
+describe("a dog at work, on the saved draft, against the production manual rows", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  const TURN = "create verbal CA for remy calder, brought her dog to work on 10-10-26. no payroll deduct";
+  const modelDraft = () => {
+    state.manual = { chunks: (manual151.chunks as ManualChunkRow[]).map(manualChunkFromRow) };
+    state.draft = {
+      values: { observation: "Observed:\nRemy Calder brought her dog to work.", other_offense: "Dog at work" },
+      checked: { offense_type: ["standards_of_conduct"] },
+    };
+  };
+
+  it("flag off: the model's Standards of Conduct stands (the production draft)", async () => {
+    vi.stubEnv("POLICY_SPECIFIC_TOPICS_ENABLED", "");
+    const { create } = await conversation([TURN]);
+    modelDraft();
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    expect(field(form, "offense_type")!.checked).toEqual(["standards_of_conduct"]);
+    expect(field(form, "policy_language")!.value ?? "").not.toMatch(/Animals in the Workplace/);
+  });
+
+  it("POLICY_SPECIFIC_TOPICS_ENABLED on: Animals in the Workplace p.30, with Visitors p.29 beside it", async () => {
+    vi.stubEnv("POLICY_SPECIFIC_TOPICS_ENABLED", "true");
+    const { create } = await conversation([TURN]);
+    modelDraft();
+    const { reference } = await create();
+    const form = await review(reference.instanceId);
+    const policy = field(form, "policy_language")!.value!;
+    expect(field(form, "offense_type")!.checked).toEqual(["company_policies"]);
+    expect(field(form, "other_offense")).toBeUndefined();
+    expect(policy).toContain("Source: JBA Policy Manual — Animals in the Workplace, p. 30");
+    expect(policy).toContain("Source: JBA Policy Manual — Visitors in the Workplace, p. 29");
+    expect(policy).not.toMatch(/Standards of Conduct/);
+  });
+});
 
 describe('"violating visitors at work policy" is the manual\'s Visitors in the Workplace', () => {
   it("is named in the reply, ticked, and quoted with its section and page", async () => {
@@ -1561,6 +1606,8 @@ type Round3Case = {
   /* null: a date given only as a deadline ("due 10/15/26") never dates the form (release decision F-03). */
   date: string | null;
   offense: string | null;
+  /* POLICY_SPECIFIC_TOPICS_ENABLED: a register or drawer shortage is the Standards of Conduct (page 13), ticked where the model ticked nothing. */
+  offenseOn?: string;
   prior: RegExp | "" | "none";
 };
 
@@ -1570,7 +1617,7 @@ const ROUND3_CASES: Round3Case[] = [
   { turns: ["tess varga — no call to the 10/20/26 manager meeting, issue a verbal, previously verbally warned 9/1/26, payroll not applicable"], employee: "Tess Varga", level: "verbal", payroll: "no", date: "2026-10-20", offense: "absenteeism", prior: /^Verbal warning — signed 09\/01\/2026$/ },
   { turns: ["Doc a CA on Tess Varga. Missed mandatory meeting 10.20.26. Level: written. Payroll ded: N"], employee: "Tess Varga", level: "written", payroll: "no", date: "2026-10-20", offense: "absenteeism", prior: "" },
   { turns: ["Can we put Tess Varga on a written for skipping the 10/20/26 meeting? She's had a verbal before on 9/1/26. Don't deduct."], employee: "Tess Varga", level: "written", payroll: "no", date: "2026-10-20", offense: "absenteeism", prior: /^Verbal warning — signed 09\/01\/2026$/ },
-  { turns: ["I'd like a verbal corrective for Remy Calder, register was $5 short on 10/19/26, $5 payroll deduction applies"], employee: "Remy Calder", level: "verbal", payroll: "yes", date: "2026-10-19", offense: null, prior: "" },
+  { turns: ["I'd like a verbal corrective for Remy Calder, register was $5 short on 10/19/26, $5 payroll deduction applies"], employee: "Remy Calder", level: "verbal", payroll: "yes", date: "2026-10-19", offense: null, offenseOn: "standards_of_conduct", prior: "" },
   { turns: ["remy calder came in 45 min late on 10/19/26 — write her up, verbal, payroll deduct none"], employee: "Remy Calder", level: "verbal", payroll: "no", date: "2026-10-19", offense: null, prior: "" },
   { turns: ["I have to write someone up", "Tess Varga", "she skipped the monthly meeting on 10/20/26", "written", "she had coaching on the jba manual 1/1/26 and a verbal ca 9/1/26", "no deduction"], employee: "Tess Varga", level: "written", payroll: "no", date: "2026-10-20", offense: "absenteeism", prior: /^Coaching — signed 01\/01\/2026\nVerbal corrective action — signed 09\/01\/2026$/ },
   { turns: ["need a CA for tess varga for missing the 10/20/26 meeting, verbal", "sorry, make that written", "wait, the meeting was 10/19/26", "she was coached 1-1-26 on the jba manual", "payroll deduct n/a"], employee: "Tess Varga", level: "written", payroll: "no", date: "2026-10-19", offense: "absenteeism", prior: /^Coaching — signed 01\/01\/2026$/ },
@@ -1578,7 +1625,7 @@ const ROUND3_CASES: Round3Case[] = [
   // Written afterwards, unseen by the readers.
   { turns: ["Tess Varga missed our team meeting yesterday 10/21/26 without telling anyone. I want to give her a written. No payroll deduction. She was coached on attendance 8/15/26."], employee: "Tess Varga", level: "written", payroll: "no", date: "2026-10-21", offense: "absenteeism", prior: /^Coaching.* — signed 08\/15\/2026$/ },
   { turns: ["Need to write up Remy Calder. He was 30 minutes late to his shift on 10/18/26. Verbal warning. Payroll deduct: no."], employee: "Remy Calder", level: "verbal", payroll: "no", date: "2026-10-18", offense: null, prior: "" },
-  { turns: ["remy calder's drawer came up $20 short on 10/17/26. lets do a written ca, deduct the $20 from payroll"], employee: "Remy Calder", level: "written", payroll: "yes", date: "2026-10-17", offense: null, prior: "" },
+  { turns: ["remy calder's drawer came up $20 short on 10/17/26. lets do a written ca, deduct the $20 from payroll"], employee: "Remy Calder", level: "written", payroll: "yes", date: "2026-10-17", offense: null, offenseOn: "standards_of_conduct", prior: "" },
   { turns: ["could you draft a verbal corrective action for Tess Varga? she skipped the 10/14/26 store meeting. not deducting pay"], employee: "Tess Varga", level: "verbal", payroll: "no", date: "2026-10-14", offense: "absenteeism", prior: "" },
   { turns: ["Tess Varga ditched the 10/20/26 all-hands meeting. Final step isn't needed yet, just a verbal. Payroll: N/A. No prior coaching."], employee: "Tess Varga", level: "verbal", payroll: "no", date: "2026-10-20", offense: "absenteeism", prior: "none" },
   { turns: ["Please document a written CA for Remy Calder — she didn't finish her Woven modules by the 10/12/26 deadline. She got a verbal for the same thing 9/10/26. No deduction."], employee: "Remy Calder", level: "written", payroll: "no", date: null, offense: "standards_of_conduct", prior: /^Verbal warning.* — signed 09\/10\/2026$/ },
@@ -1592,7 +1639,15 @@ const ROUND3_CASES: Round3Case[] = [
 ];
 
 describe("QA 22 Oct, round 3: everyday wording, single messages and multi-turn, through to the saved form", () => {
-  it.each(ROUND3_CASES.map((c) => [c.turns.join(" ⏎ "), c] as const))("%s", async (_label, c) => {
+  /*
+   * Each case runs with the flag OFF (the expectation main has always had) and,
+   * where POLICY_SPECIFIC_TOPICS_ENABLED changes it on purpose, again with it ON:
+   * a register or drawer shortage is the Standards of Conduct (page 13), ticked
+   * where the model ticked nothing. The flag is set explicitly either way.
+   */
+  afterEach(() => vi.unstubAllEnvs());
+  const round3 = async (c: Round3Case, on: boolean) => {
+    vi.stubEnv("POLICY_SPECIFIC_TOPICS_ENABLED", on ? "true" : "");
     const { taken, replied, proposal, create } = await chatTurns(c.turns);
     // Once the form is asked for, every later turn stays with it.
     const first = taken.indexOf(true);
@@ -1614,12 +1669,20 @@ describe("QA 22 Oct, round 3: everyday wording, single messages and multi-turn, 
     expect(field(form, "payroll_deduct")!.checked).toEqual([c.payroll]);
     if (c.date) expect(field(form, "form_date")!.value).toBe(c.date);
     else expect(field(form, "form_date")?.value ?? "").not.toMatch(/^2026-10-1[256]$/);
-    expect(field(form, "offense_type")?.checked ?? []).toEqual(c.offense ? [c.offense] : []);
+    const offense = on && c.offenseOn ? c.offenseOn : c.offense;
+    expect(field(form, "offense_type")?.checked ?? []).toEqual(offense ? [offense] : []);
     const prior = field(form, "prior_actions")?.value ?? "";
     if (c.prior === "none") expect(prior).toBe("None — first occurrence");
     else if (c.prior === "") expect(prior).toBe("");
     else expect(prior).toMatch(c.prior);
-  });
+  };
+
+  it.each(ROUND3_CASES.map((c) => [c.turns.join(" ⏎ "), c] as const))("%s", (_label, c) => round3(c, false));
+
+  it.each(ROUND3_CASES.filter((c) => c.offenseOn).map((c) => [c.turns.join(" ⏎ "), c] as const))(
+    "POLICY_SPECIFIC_TOPICS_ENABLED on: %s",
+    (_label, c) => round3(c, true),
+  );
 
   it.each([
     "What's our policy on missing meetings?",
