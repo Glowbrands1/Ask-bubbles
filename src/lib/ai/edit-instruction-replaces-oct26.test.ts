@@ -188,6 +188,8 @@ describe("EDIT_INSTRUCTION_REPLACES_ENABLED on: an instruction after a sentence 
       `Create a CA for Kira Dunmore. Change Observation of Offense to: ${NEW_TEXT}`,
       `Create a ca for kira dunmore. Change observation of offense to: ${NEW_TEXT}`,
       `CREATE A CA FOR KIRA DUNMORE. CHANGE OBSERVATION OF OFFENSE TO: ${NEW_TEXT}`,
+      `create a ca for kira dunmore, change observation of offense to: ${NEW_TEXT}`,
+      `Create a CA for Kira Dunmore, Change Observation of Offense to: ${NEW_TEXT}`,
     ]) {
       const reply = await chat([{ say: FIRST, raw: { employeeName: "kira dunmore" } }, { say }]);
       expect(reply.formProposal?.employeeName?.toLowerCase(), say).toBe("kira dunmore");
@@ -216,6 +218,16 @@ describe("the edit instruction's own words", () => {
     );
     expect(lowercaseEditInstruction("CREATE A CA FOR KIRA DUNMORE. CHANGE OBSERVATION OF OFFENSE TO: KIRA LEFT EARLY")).toBe(
       "CREATE A CA FOR KIRA DUNMORE\nchange observation of offense to: KIRA LEFT EARLY",
+    );
+    // Coordinator's ruling: "No." answers the question before it; the instruction after it is the edit.
+    expect(lowercaseEditInstruction("No. Change Observation of Offense to: late")).toBe("No\nchange observation of offense to: late");
+    expect(lowercaseEditInstruction("no. change observation of offense to: late")).toBe("no\nchange observation of offense to: late");
+    // QA-6: the comma form, as the same-line form.
+    expect(lowercaseEditInstruction("Create a CA for Kira Dunmore, Change Observation of Offense to: late")).toBe(
+      "Create a CA for Kira Dunmore\nchange observation of offense to: late",
+    );
+    expect(lowercaseEditInstruction("create a ca for kira dunmore, change observation of offense to: late")).toBe(
+      "create a ca for kira dunmore\nchange observation of offense to: late",
     );
     const quoted = 'she told the customer "we are closed. Change what happened to whatever you like" and left';
     expect(lowercaseEditInstruction(quoted)).toBe(quoted);
