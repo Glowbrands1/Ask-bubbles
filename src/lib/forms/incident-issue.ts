@@ -258,11 +258,25 @@ function withoutOtherPeople(parts: readonly string[]): string[] {
   return kept;
 }
 
+/** "tom lee was late": a clause whose subject is a two-word name that is not the employee's. */
+const NAMED_SUBJECT = /^([A-Za-z][a-z'’-]+)\s+([A-Za-z][a-z'’-]+)\s+(?:was|is|were|did|didn'?t|had|has|left|opened|came|got|took|spent)\b/i;
+
+function anotherPersonsClause(part: string, personWords: ReadonlySet<string>): boolean {
+  if (/^(?:but\s+)?not\s+[A-Za-z]+\s+[A-Za-z]+\s*$/i.test(part)) return true;
+  const named = NAMED_SUBJECT.exec(part);
+  if (!named) return false;
+  const first = named[1]!.toLowerCase();
+  const last = named[2]!.toLowerCase();
+  if (/^(?:she|he|they|it|this|that|the|her|his)$/.test(first)) return false;
+  return !personWords.has(first) && !personWords.has(last);
+}
+
 function accountClauses(sentence: string, personWords: ReadonlySet<string>): string | null {
-  if (IS_NOT.test(sentence.trim())) return null;
-  const split = sentence
-    .split(/\s*,\s*|\s+(?=but\s+not\s+for\b)|\s+and\s+(?=(?:she|he|they|was|is|did|has|had|then)\b)/i);
+  const split = sentence.split(
+    /\s*,\s*|\s+(?=but\s+not\b)|\s+and\s+(?=(?:she|he|they|was|is|did|has|had|then|no\s+payroll|payroll)\b)|\s+and\s+(?=[A-Za-z][a-z'’-]+\s+[A-Za-z][a-z'’-]+\s+(?:was|is|did|left|opened)\b)/i,
+  );
   const parts = withoutOtherPeople(split.map((part) => part.trim()))
+    .filter((part) => !IS_NOT.test(part) && !anotherPersonsClause(part, personWords))
     .map((part) => part.trim().replace(/^and\s+/i, "").replace(COURTESY_TAIL, "").replace(LEVEL_TAIL, "").trim())
     .filter(Boolean)
     .map((part) => withoutLeadingName(part, personWords))

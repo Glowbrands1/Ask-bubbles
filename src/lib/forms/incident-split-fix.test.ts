@@ -202,7 +202,7 @@ describe("INCIDENT_SPLIT_FIX_ENABLED on: another person and what she is not", ()
   it.each([
     ["create a ca for Devon Harlan but not for Rory Vance, who spent 40 minutes on the phone", null],
     ["create a ca for Devon Harlan. She is not rude. She was late.", "She was late"],
-    ["create a ca for Devon Harlan. She was never late. She did not clean the beds.", "She did not clean the beds"],
+    ["create a ca for Devon Harlan. She was never late. She did not clean the counters.", "She did not clean the counters"],
   ])("%s", (text, issue) => {
     process.env.INCIDENT_SPLIT_FIX_ENABLED = "on";
     process.env.TYPED_NAME_ENABLED = "1";
@@ -211,5 +211,29 @@ describe("INCIDENT_SPLIT_FIX_ENABLED on: another person and what she is not", ()
       if (issue === null) expect(out ?? "").not.toMatch(/rory|40 minutes/i);
       else expect(out?.toLowerCase()).toBe(issue.toLowerCase());
     }
+  });
+});
+
+/** QA-2 probes, 26 Oct 2026: a negated comma clause, another person's clause, and a payroll tail are never the Issue. */
+describe("INCIDENT_SPLIT_FIX_ENABLED on: negated and other people's clauses", () => {
+  it.each([
+    ["create ca for dana smith, she is not at fault, the register was short $12.50", "the register was short $12.50"],
+    ["Create CA for Dana Smith, she is not a manager, she left the register open on 10-5", "she left the register open on 10-5"],
+    ["Create CA for Dana Smith, she is not at the Dodge store, she was late on 10-5", "she was late on 10-5"],
+    ["Create CA for Dana Smith, she is not a team member, she is a shift lead, and left the store unlocked 10-5", "left the store unlocked 10-5"],
+    ["create ca for dana smith, she opened late on 10-5 and tom lee was late on 10-6", "she opened late on 10-5"],
+    ["create ca for dana smith, tom lee was late on 10-6 and she left early on 10-5", "she left early on 10-5"],
+    ["create ca for dana smith, she was late on 10-5, but not tom lee", "she was late on 10-5"],
+    ["create a ca for dana smith, he didn't clock in on 10-1 and no payroll deduct", "he didn't clock in on 10-1"],
+  ])("%s", (text, issue) => {
+    process.env.INCIDENT_SPLIT_FIX_ENABLED = "on";
+    process.env.TYPED_NAME_ENABLED = "1";
+    for (const variant of [text, text.toLowerCase()]) expect(correctiveActionIssue(variant, "Dana Smith")?.toLowerCase()).toBe(issue.toLowerCase());
+  });
+
+  it("another person's sentence is left out: 'Rory Vance was late.'", () => {
+    process.env.INCIDENT_SPLIT_FIX_ENABLED = "on";
+    process.env.TYPED_NAME_ENABLED = "1";
+    expect(correctiveActionIssue("create a ca for Devon Harlan. Rory Vance was late. Devon left early.", "Devon Harlan")).toBe("Devon left early");
   });
 });
