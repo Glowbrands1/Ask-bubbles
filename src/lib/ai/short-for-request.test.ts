@@ -37,6 +37,13 @@ describe("shortForRequest: a denied or questioned prior action", () => {
     "CA FOR RORY VANCE, PREVIOUS COACHING WAS NOT DOCUMENTED",
     "ca for rory vance? no, previous coaching verbal 6/25",
     "Ca for Rory Vance? No, previous coaching verbal 6/25",
+    // QA-4 re-check, 26 Oct 2026.
+    "ca for rory vance, previous coaching not given",
+    "Ca for Rory Vance, previous coaching not given",
+    "CA FOR RORY VANCE, PREVIOUS COACHING NOT GIVEN",
+    "ca for rory vance, nothing in previous coaching",
+    "Ca for Rory Vance, nothing in previous coaching",
+    "CA FOR RORY VANCE, NOTHING IN PREVIOUS COACHING",
   ])("leaves '%s' as typed", (turn) => {
     expect(shortForRequest(turn)).toBe(turn);
   });

@@ -29,8 +29,8 @@ import type { AskRequest } from "./types";
 
 const SHORT_FOR = /^\s*(?:(?:verbal|written)\s+)?(?:ca|c\/a|dpoa|coaching|coach|exit)(?:\s+form)?\s+for\s+\S/i;
 const PRIOR = /\b(?:previous|prior|past)\s+(?:coaching|coached|verbal|written|warnings?|cas?|corrective\s+actions?)\b/i;
-const DENIED_BEFORE = /\b(?:no(?!\s+(?:call|show)\b)|never|not|without|nor)\b(?:\s+[a-z'’]+){0,3}\s*$/i;
-const DENIED_AFTER = /^\s*(?:\S+\s+){0,2}?(?:was|were|is|has|had|have)\s+(?:not|never)\b|^\s*(?:\S+\s+){0,2}?(?:wasn'?t|weren'?t|isn'?t|hasn'?t|hadn'?t)\b/i;
+const DENIED_BEFORE = /\b(?:no(?!\s+(?:call|show)\b)|never|not|without|nor|nothing|none)\b(?:\s+[a-z'’]+){0,3}\s*$/i;
+const DENIED_AFTER = /^\s*(?:\S+\s+){0,2}?(?:(?:was|were|is|has|had|have)\s+)?(?:not|never)\b|^\s*(?:\S+\s+){0,2}?(?:wasn'?t|weren'?t|isn'?t|hasn'?t|hadn'?t)\b/i;
 
 export function withShortForRequest(request: AskRequest): AskRequest {
   if (!shortForRequestEnabled()) return request;
