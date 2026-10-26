@@ -839,6 +839,15 @@ export function draftNeverBlankEnabled(): boolean {
   return envFlag("DRAFT_NEVER_BLANK_ENABLED");
 }
 
+/**
+ * On an exit form, "effective october 2" fills Last Day Worked when no last
+ * day was stated (QA, 26 Oct 2026). "effective immediately" names no date.
+ * Off, an effective date fills nothing, as before.
+ */
+export function exitEffectiveDateEnabled(): boolean {
+  return envFlag("EXIT_EFFECTIVE_DATE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -918,6 +927,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
+  "EXIT_EFFECTIVE_DATE_ENABLED",
 ] as const;
 
 /**
