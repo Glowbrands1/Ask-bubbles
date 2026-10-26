@@ -93,6 +93,19 @@ describe("no notice while reviews are current", () => {
     });
     expect(notice?.body).toContain("have not synced since Oct 22, 2026");
     expect(notice?.body).not.toContain("connection is no longer active");
+    // QA-7: an active connection is checked, not reconnected.
+    expect(notice?.body).toContain("An administrator needs to check the Google review sync.");
+    expect(notice?.body).not.toContain("reconnect");
+  });
+
+  it("nothing ever synced: no \"as of then\" without a date", () => {
+    const notice = syncNotice({
+      stores: [],
+      connection: { state: "active", connectedAt: "2026-10-01T00:00:00.000Z", connectedBy: "admin", lastUsedAt: null },
+      now: new Date("2026-10-25T18:23:00.000Z"),
+      canManage: true,
+    });
+    expect(notice?.body).toBe("No Google review sync has completed yet. Check the last runs on the Google Reviews integration screen.");
   });
 });
 

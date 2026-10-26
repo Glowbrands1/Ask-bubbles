@@ -65,10 +65,19 @@ export function syncNotice(input: {
   const connected = input.connection.state === "active";
   if (connected && !old) return null;
 
-  const since = savedAt ? `Google reviews have not synced since ${INSTANT.format(savedAt)} (Central time).` : "No Google review sync has completed yet.";
+  /* "As of then" only when there is a then. */
+  const since = savedAt
+    ? `Google reviews have not synced since ${INSTANT.format(savedAt)} (Central time). The figures below are as of then.`
+    : "No Google review sync has completed yet.";
   const why = connected ? "" : " The Google account connection is no longer active.";
-  const body = input.canManage
-    ? `${since}${why} The figures below are as of then. Reconnect the Google account on the Google Reviews integration screen.`
-    : `${since}${why} The figures below are as of then. An administrator needs to reconnect the Google account.`;
+  /* Reconnecting is the fix only for a connection that ended; an active one that stopped syncing needs checking. */
+  const next = connected
+    ? input.canManage
+      ? " Check the last runs on the Google Reviews integration screen."
+      : " An administrator needs to check the Google review sync."
+    : input.canManage
+      ? " Reconnect the Google account on the Google Reviews integration screen."
+      : " An administrator needs to reconnect the Google account.";
+  const body = `${since}${why}${next}`;
   return { title: "Google reviews are not up to date", body, href: input.canManage ? RECONNECT_PATH : null };
 }
