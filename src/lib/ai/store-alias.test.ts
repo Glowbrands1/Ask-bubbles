@@ -41,6 +41,10 @@ describe("STORE_ALIAS_ENABLED on", () => {
     ["dodge, ne", DODGE],
     ["DODGE, NE", DODGE],
     ["Dodge NE", DODGE],
+    ["Dodge ne", DODGE],
+    ["Dodge, ne", DODGE],
+    ["I need a ca for avery stone at dodge ne location", DODGE],
+    ["Kearney ne", KEARNEY],
     ["dodge ne location", DODGE],
     ["at our dodge ne store", DODGE],
     ["i need a ca for avery stone at dodge ne location", DODGE],
@@ -56,6 +60,8 @@ describe("STORE_ALIAS_ENABLED on", () => {
     const asked = [{ role: "assistant", content: "I have **avery stone**. Which store is this for? Name it here or on the form." }];
     expect(ids(withStoreAliases({ question: "dodge, ne", history: asked } as unknown as AskRequest).question)).toEqual([DODGE]);
     expect(withStoreAliases({ question: "dodge", history: asked } as unknown as AskRequest).question).toBe("Omaha, NE (West Dodge Rd)");
+    expect(withStoreAliases({ question: "Dodge", history: asked } as unknown as AskRequest).question).toBe("Omaha, NE (West Dodge Rd)");
+    expect(ids(withStoreAliases({ question: "Dodge, ne", history: asked } as unknown as AskRequest).question)).toEqual([DODGE]);
     expect(withStoreAliases({ question: "dodge", history: [] } as unknown as AskRequest).question).toBe("dodge");
   });
 
