@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { incidentSplitFixEnabled } from "@/lib/config/chat-quality-flags";
 
 import { correctiveActionIssue } from "./incident-issue";
 
@@ -31,8 +32,11 @@ describe("DECIMAL_KEEP_ENABLED off: the Issue is read as on main", () => {
   it("cuts the reported turn at the point in $3.25", () => {
     process.env.TYPED_NAME_ENABLED = "on";
     delete process.env.DECIMAL_KEEP_ENABLED;
-    expect(correctiveActionIssue(REPORTED, "wren calloway")).toBe("create ca form for wren calloway, register shortage 10-20-26, $3");
-    expect(correctiveActionIssue(FOR_CLAUSE, "wren calloway")).toBe("a register shortage of $3");
+    // Changed on purpose, INCIDENT_SPLIT_FIX_ENABLED on (QA, 26 Oct 2026): the Issue is the request's account in whole sentences; flag off unchanged.
+    expect(correctiveActionIssue(REPORTED, "wren calloway")).toBe(
+      incidentSplitFixEnabled() ? "register shortage 10-20-26" : "create ca form for wren calloway, register shortage 10-20-26, $3",
+    );
+    expect(correctiveActionIssue(FOR_CLAUSE, "wren calloway")).toBe(incidentSplitFixEnabled() ? "a register shortage of $3.25 on 10-20-26" : "a register shortage of $3");
   });
 });
 
@@ -41,7 +45,8 @@ describe("DECIMAL_KEEP_ENABLED on: $3.25 is one number", () => {
     process.env.TYPED_NAME_ENABLED = "on";
     process.env.DECIMAL_KEEP_ENABLED = "on";
     const issue = correctiveActionIssue(REPORTED, "wren calloway");
-    expect(issue).toBe("create ca form for wren calloway, register shortage 10-20-26");
+    // Changed on purpose, INCIDENT_SPLIT_FIX_ENABLED on (QA, 26 Oct 2026): the Issue is the request's account in whole sentences; flag off unchanged.
+    expect(issue).toBe(incidentSplitFixEnabled() ? "register shortage 10-20-26" : "create ca form for wren calloway, register shortage 10-20-26");
     expect(issue).not.toMatch(/\$3$/);
   });
 

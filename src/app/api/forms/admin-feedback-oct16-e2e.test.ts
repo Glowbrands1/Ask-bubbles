@@ -1,5 +1,6 @@
 import { rosterResultFor } from "@/test/roster-result";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { incidentSplitFixEnabled } from "@/lib/config/chat-quality-flags";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatMessage } from "@/types";
@@ -861,7 +862,13 @@ describe("browser fixture", () => {
     if (process.env.UPDATE_E2E_FIXTURE) writeFileSync(path, `${JSON.stringify(produced, null, 2)}\n`);
     const normalize = (value: unknown) =>
       JSON.parse(JSON.stringify(value).replace(/"sourceMessageIds":\[[^\]]*\]/g, '"sourceMessageIds":[]'));
-    expect(normalize(produced)).toEqual(normalize(JSON.parse(readFileSync(path, "utf8"))));
+    // The fixture is the flags-off server. INCIDENT_SPLIT_FIX_ENABLED on changes only the Issue
+    // (QA, 26 Oct 2026, pinned in incident-split-fix.test.ts), so with it on the Issue is left out of the comparison.
+    const withoutIssue = (value: unknown) =>
+      incidentSplitFixEnabled()
+        ? JSON.parse(JSON.stringify(value).replace(/"issue":(?:null|"(?:[^"\\]|\\.)*")/g, '"issue":null').replace(/\*\*Issue:\*\*[^·\\]*(?:· )?/g, ""))
+        : value;
+    expect(withoutIssue(normalize(produced))).toEqual(withoutIssue(normalize(JSON.parse(readFileSync(path, "utf8")))));
   });
 });
 

@@ -167,3 +167,49 @@ describe("INCIDENT_SPLIT_FIX_ENABLED on: the Issue never carries another field's
     }
   });
 });
+
+/**
+ * Coordinator ruling, 26 Oct 2026: INCIDENT_SPLIT_FIX_ENABLED reads the Issue
+ * before the TYPED_NAME path (on in production), so for the typed-name turns
+ * it must give the Issue TYPED_NAME gives alone.
+ */
+describe("INCIDENT_SPLIT_FIX_ENABLED + TYPED_NAME_ENABLED: typed-name turns read as TYPED_NAME alone", () => {
+  it.each([
+    [
+      "create a verbal CA for team member Testy Testerson at Dodge, NE. location. On 10-16-26 Testy was not properly measuring and weighing product. payroll deduct is not applicable",
+      "Testy Testerson",
+    ],
+    [
+      "create a written corrective action for Team Member, Test Employee. Test was assigned to complete policy acknowledgements in woven by 10-15-26 and failed to meet the deadline. Previous coaching was a Verbal CA 10-1-26. Payroll deduct is not applicable.",
+      "Test Employee",
+    ],
+    [
+      "do verbal for team member sadie hoffart at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 sadie was not scheduled to work and came into the store to show her team her new puppy. Sadie was in the store 45 min",
+      "Sadie Hoffart",
+    ],
+    ["CA for team member Testy Testerson at Dodge. On 10-16-26 Testy was not properly measuring and weighing product.", "Testy Testerson"],
+  ])("%s", (text, employee) => {
+    process.env.TYPED_NAME_ENABLED = "1";
+    delete process.env.INCIDENT_SPLIT_FIX_ENABLED;
+    const typed = correctiveActionIssue(text, employee);
+    process.env.INCIDENT_SPLIT_FIX_ENABLED = "on";
+    expect(correctiveActionIssue(text, employee)).toBe(typed);
+  });
+});
+
+/** QA-6 negation probes, 26 Oct 2026: another person's clause and what she is not are never the Issue. */
+describe("INCIDENT_SPLIT_FIX_ENABLED on: another person and what she is not", () => {
+  it.each([
+    ["create a ca for Devon Harlan but not for Rory Vance, who spent 40 minutes on the phone", null],
+    ["create a ca for Devon Harlan. She is not rude. She was late.", "She was late"],
+    ["create a ca for Devon Harlan. She was never late. She did not clean the beds.", "She did not clean the beds"],
+  ])("%s", (text, issue) => {
+    process.env.INCIDENT_SPLIT_FIX_ENABLED = "on";
+    process.env.TYPED_NAME_ENABLED = "1";
+    for (const variant of [text, text.toLowerCase()]) {
+      const out = correctiveActionIssue(variant, "Devon Harlan");
+      if (issue === null) expect(out ?? "").not.toMatch(/rory|40 minutes/i);
+      else expect(out?.toLowerCase()).toBe(issue.toLowerCase());
+    }
+  });
+});

@@ -219,8 +219,9 @@ function withoutLeadingName(part: string, personWords: ReadonlySet<string>): str
   let index = 0;
   while (index < words.length - 1 && personWords.has(words[index]!.toLowerCase().replace(/[^a-z'-]/g, ""))) index += 1;
   // A name followed by what they did ("juno spent 40 minutes …") keeps its subject.
-  if (index === 0 || HAPPENED.test(words.slice(index).join(" "))) return part;
-  return words.slice(index).join(" ");
+  const rest = words.slice(index).join(" ");
+  if (index === 0 || HAPPENED.test(rest) || /^(?:was|is|were|are|did|didn'?t|has|had|spent|came|went|took|got|said)\b/i.test(rest)) return part;
+  return rest;
 }
 
 function whoOrWhere(clause: string, personWords: ReadonlySet<string>): boolean {
@@ -237,9 +238,31 @@ function whoOrWhere(clause: string, personWords: ReadonlySet<string>): boolean {
   return (subject || /^as\s+an?\b/.test(lower)) && says && (titled || placed);
 }
 
+/** "but not for Rory Vance": another person's clause; the "who …" clause after it is theirs too. */
+const NOT_FOR_OTHER = /^(?:but\s+)?not\s+(?:for|about)\s+\S/i;
+/** "She is not rude", "She was never late": what she is not, never the offense ("did not clean" is). */
+const IS_NOT = /^(?:she|he|they|[a-z]+)\s+(?:is|was|are|were)\s+(?:not|never)\b|^(?:she|he|they)\s+(?:isn'?t|wasn'?t)\b/i;
+
+function withoutOtherPeople(parts: readonly string[]): string[] {
+  const kept: string[] = [];
+  let theirs = false;
+  for (const part of parts) {
+    if (NOT_FOR_OTHER.test(part)) {
+      theirs = true;
+      continue;
+    }
+    if (theirs && /^who\b/i.test(part)) continue;
+    theirs = false;
+    kept.push(part);
+  }
+  return kept;
+}
+
 function accountClauses(sentence: string, personWords: ReadonlySet<string>): string | null {
-  const parts = sentence
-    .split(/\s*,\s*|\s+and\s+(?=(?:she|he|they|was|is|did|has|had|then)\b)/i)
+  if (IS_NOT.test(sentence.trim())) return null;
+  const split = sentence
+    .split(/\s*,\s*|\s+(?=but\s+not\s+for\b)|\s+and\s+(?=(?:she|he|they|was|is|did|has|had|then)\b)/i);
+  const parts = withoutOtherPeople(split.map((part) => part.trim()))
     .map((part) => part.trim().replace(/^and\s+/i, "").replace(COURTESY_TAIL, "").replace(LEVEL_TAIL, "").trim())
     .filter(Boolean)
     .map((part) => withoutLeadingName(part, personWords))
