@@ -1,6 +1,5 @@
 import { rosterResultFor } from "@/test/roster-result";
-import { policySpecificTopicsEnabled } from "@/lib/config/chat-quality-flags";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatMessage } from "@/types";
@@ -1595,7 +1594,15 @@ const ROUND3_CASES: Round3Case[] = [
 ];
 
 describe("QA 22 Oct, round 3: everyday wording, single messages and multi-turn, through to the saved form", () => {
-  it.each(ROUND3_CASES.map((c) => [c.turns.join(" ⏎ "), c] as const))("%s", async (_label, c) => {
+  /*
+   * Each case runs with the flag OFF (the expectation main has always had) and,
+   * where POLICY_SPECIFIC_TOPICS_ENABLED changes it on purpose, again with it ON:
+   * a register or drawer shortage is the Standards of Conduct (page 13), ticked
+   * where the model ticked nothing. The flag is set explicitly either way.
+   */
+  afterEach(() => vi.unstubAllEnvs());
+  const round3 = async (c: Round3Case, on: boolean) => {
+    vi.stubEnv("POLICY_SPECIFIC_TOPICS_ENABLED", on ? "true" : "");
     const { taken, replied, proposal, create } = await chatTurns(c.turns);
     // Once the form is asked for, every later turn stays with it.
     const first = taken.indexOf(true);
@@ -1617,13 +1624,20 @@ describe("QA 22 Oct, round 3: everyday wording, single messages and multi-turn, 
     expect(field(form, "payroll_deduct")!.checked).toEqual([c.payroll]);
     if (c.date) expect(field(form, "form_date")!.value).toBe(c.date);
     else expect(field(form, "form_date")?.value ?? "").not.toMatch(/^2026-10-1[256]$/);
-    const offense = policySpecificTopicsEnabled() && c.offenseOn ? c.offenseOn : c.offense;
+    const offense = on && c.offenseOn ? c.offenseOn : c.offense;
     expect(field(form, "offense_type")?.checked ?? []).toEqual(offense ? [offense] : []);
     const prior = field(form, "prior_actions")?.value ?? "";
     if (c.prior === "none") expect(prior).toBe("None — first occurrence");
     else if (c.prior === "") expect(prior).toBe("");
     else expect(prior).toMatch(c.prior);
-  });
+  };
+
+  it.each(ROUND3_CASES.map((c) => [c.turns.join(" ⏎ "), c] as const))("%s", (_label, c) => round3(c, false));
+
+  it.each(ROUND3_CASES.filter((c) => c.offenseOn).map((c) => [c.turns.join(" ⏎ "), c] as const))(
+    "POLICY_SPECIFIC_TOPICS_ENABLED on: %s",
+    (_label, c) => round3(c, true),
+  );
 
   it.each([
     "What's our policy on missing meetings?",

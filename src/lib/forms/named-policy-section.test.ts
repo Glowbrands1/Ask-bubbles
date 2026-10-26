@@ -1,6 +1,4 @@
-import { describe, expect, it } from "vitest";
-
-import { policySpecificTopicsEnabled } from "@/lib/config/chat-quality-flags";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ManualChunk } from "./official-policy-manual";
 import {
@@ -38,6 +36,8 @@ const CHUNKS: ManualChunk[] = [
   sheet(65, "Animals in the Workplace", 30),
   sheet(70, "Cell Phone Usage", 32),
 ];
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe("namesHeading", () => {
   it.each([
@@ -194,26 +194,25 @@ describe("describedManualSection — a policy the account describes", () => {
     "she let two visitors into the back room",
     "she did not follow the coupon collection process",
   ])("%s → nothing", (text) => {
-    /*
-     * POLICY_SPECIFIC_TOPICS_ENABLED changes two of these on purpose (QA
-     * rulings, 26 Oct 2026): a social media POST is the Social Media Policy,
-     * and a guest treated rudely is the Standards of Conduct, page 12. Off,
-     * every line here still reads nothing; the flag's own cases are in
-     * policy-specific-topics-oct26.test.ts.
-     */
-    const intended: Record<string, string> = {
-      "she was posting on social media": "Social Media Policy",
-    };
-    const heading = described(text)?.section.heading;
-    if (policySpecificTopicsEnabled() && /rude to a (?:guest|client)$/.test(text)) {
-      expect(heading).toBe("Standards of Conduct");
-      return;
-    }
-    if (policySpecificTopicsEnabled() && intended[text]) {
-      expect(heading).toBe(intended[text]);
-      return;
-    }
+    /* The flag is set explicitly: this list is what the code reads with it OFF. The ON twin is below. */
+    vi.stubEnv("POLICY_SPECIFIC_TOPICS_ENABLED", "");
     expect(described(text)).toBeNull();
+  });
+
+  /*
+   * POLICY_SPECIFIC_TOPICS_ENABLED changes two lines of the list above on
+   * purpose (QA rulings, 26 Oct 2026): a social media POST is the Social
+   * Media Policy, and a guest or client treated rudely is the Standards of
+   * Conduct, page 12. The rest of policy-specific-topics-oct26.test.ts covers
+   * the flag's other incidents.
+   */
+  it.each([
+    ["she was posting on social media", "Social Media Policy"],
+    ["create a disciplinary action form for tess. she was rude to a guest", "Standards of Conduct"],
+    ["create a disciplinary action form for tess. she was rude to a client", "Standards of Conduct"],
+  ])("POLICY_SPECIFIC_TOPICS_ENABLED on: %s → %s", (text, heading) => {
+    vi.stubEnv("POLICY_SPECIFIC_TOPICS_ENABLED", "true");
+    expect(described(text)?.section.heading).toBe(heading);
   });
 
   it("never over what already decides the policy", () => {
