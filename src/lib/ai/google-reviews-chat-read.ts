@@ -1,10 +1,10 @@
 import "server-only";
 
 import { supabaseReadiness } from "@/lib/config/server-env";
-import { readGoalData } from "@/lib/google-reviews/views";
-import { locationIdForCode } from "@/lib/locations";
+import { readGoalData, readStoreSummaries, type StoreSummary } from "@/lib/google-reviews/views";
+import { codeOfLocationId } from "@/lib/locations";
 import { hasPermission, DEFAULT_PERMISSION_MATRIX } from "@/lib/permissions";
-import { admitsLocation, reportingScopeOf } from "@/lib/reporting/scope/authorized-locations";
+import { reportingScopeOf } from "@/lib/reporting/scope/authorized-locations";
 import type { AccessScope, Role } from "@/types";
 
 import {
@@ -21,19 +21,31 @@ export interface GoogleReviewsChatBlock {
   readonly figures: boolean;
 }
 
+/** When reviews were last saved: the newest store sync that completed, in full or in part. */
+function lastSavedAt(stores: readonly StoreSummary[] | null): string | null {
+  const saved = (stores ?? [])
+    .filter((store) => store.lastSyncAt && (store.lastSyncStatus === "complete" || store.lastSyncStatus === "incomplete"))
+    .map((store) => store.lastSyncAt!)
+    .sort();
+  return saved.at(-1) ?? null;
+}
+
 /**
  * The Google review block for one chat turn, or null when the question is not
  * about Google reviews.
  *
  * View reports (the Google Reviews page's permission) is checked first:
- * without it nothing is read. The stores are the caller's (the same scope the
- * report reads use), narrowed to any store the question names. The figures
- * come from `readGoalData`, the read /reviews renders.
+ * without it nothing is read. The rows are the ones /reviews shows this
+ * caller (every store; the page does not narrow by assignment), narrowed to
+ * any store the question names, with the caller's own stores marked. The
+ * figures come from `readGoalData`, the read the page renders, and the last
+ * sync from the stores' own sync times.
  */
 export async function loadGoogleReviewsChatBlock(input: {
   readonly question: string;
   readonly role: Role | null;
   readonly scope: AccessScope | null;
+  readonly now?: Date;
 }): Promise<GoogleReviewsChatBlock | null> {
   if (!isGoogleReviewQuestion(input.question)) return null;
 
@@ -41,27 +53,25 @@ export async function loadGoogleReviewsChatBlock(input: {
     return { text: reviewsNotPermittedBlock(), figures: false };
   }
 
-  const scope = reportingScopeOf(input.scope);
-  const mayRead = (code: string) => admitsLocation(scope, locationIdForCode(code));
-  const named = storeCodesNamedIn(input.question);
-  const outOfScope = named.filter((code) => !mayRead(code));
-  const wanted = named.length > 0 ? named.filter(mayRead) : null;
-
-  if (wanted !== null && wanted.length === 0) {
-    return { text: formatGoogleReviewsBlock({ context: null, rows: [], outOfScopeStoreCodes: outOfScope }), figures: false };
-  }
-
   if (!supabaseReadiness().ready) {
     return { text: reviewsUnavailableBlock("This deployment cannot read the Google review records."), figures: false };
   }
 
+  const scope = reportingScopeOf(input.scope);
+  const own = new Set(scope.unrestricted ? [] : scope.locationIds.map((id) => codeOfLocationId(id)).filter((code): code is string => code !== null));
+  const named = storeCodesNamedIn(input.question);
+
   try {
-    const goals = await readGoalData();
-    const rows = goals.rows.filter(
-      (row) => mayRead(row.storeCode) && (wanted === null || wanted.includes(row.storeCode)),
-    );
+    const [goals, stores] = await Promise.all([readGoalData(), readStoreSummaries().catch(() => null)]);
+    const rows = goals.rows.filter((row) => named.length === 0 || named.includes(row.storeCode));
     return {
-      text: formatGoogleReviewsBlock({ context: goals.context, rows, outOfScopeStoreCodes: outOfScope }),
+      text: formatGoogleReviewsBlock({
+        context: goals.context,
+        rows,
+        ownStoreCodes: own,
+        lastSyncAt: lastSavedAt(stores),
+        now: input.now ?? new Date(),
+      }),
       figures: rows.length > 0,
     };
   } catch {

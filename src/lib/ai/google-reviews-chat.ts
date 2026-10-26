@@ -19,6 +19,10 @@ import {
  * which stores it names, and writes the block. The read and the permission
  * check are in `google-reviews-chat-read.ts`.
  *
+ * THE SAME STORES THE PAGE SHOWS. /reviews lists every store to anybody with
+ * View reports, so the block does too, never more. The caller's own stores
+ * are marked so the answer can lead with them.
+ *
  * Client-safe: no database client and no `server-only` import.
  */
 
@@ -27,6 +31,7 @@ const GOOGLE_REVIEW_PATTERNS: readonly RegExp[] = [
   /\b(?:reviews?|ratings?)\b[\s\S]{0,20}\bgoogle\b/i,
   /\b(?:how many|number of|count of)\b[\s\S]{0,40}\breviews\b/i,
   /\breviews?\b[\s\S]{0,60}\b(?:this month|month to date|mtd|this week|goal|target|on track|on pace|behind pace)\b/i,
+  /\b(?:on track|on pace|behind pace|goal|target)\b[\s\S]{0,40}\breviews?\b/i,
   /\b(?:review (?:goal|count|target)s?|star ratings?)\b/i,
 ];
 
@@ -48,9 +53,10 @@ function escapeRegExp(text: string): string {
  * Summit") or store number ("store 219"). Empty when it names none.
  */
 export function storeCodesNamedIn(question: string): string[] {
-  const normalized = question.replace(/[’‘]/g, "'");
+  /* "lees summit" is how a manager types Lee's Summit. */
+  const normalized = question.replace(/['’‘]/g, "");
   return APPROVED_GOOGLE_STORES.filter((store) => {
-    const byCity = new RegExp(`\\b${escapeRegExp(store.city)}\\b`, "i");
+    const byCity = new RegExp(`\\b${escapeRegExp(store.city.replace(/'/g, ""))}\\b`, "i");
     const byNumber = new RegExp(`\\bstore\\s*#?\\s*${escapeRegExp(store.code)}\\b`, "i");
     return byCity.test(normalized) || byNumber.test(normalized);
   }).map((store) => store.code);
@@ -58,10 +64,16 @@ export function storeCodesNamedIn(question: string): string[] {
 
 const HEADING = "GOOGLE REVIEWS — MONTH TO DATE";
 
+/** How old the last sync may be before the answer has to say the figures may be out of date. */
+export const STALE_AFTER_MS = 2 * 24 * 60 * 60 * 1000;
+
+const PAGE = "Google Reviews in the sidebar";
+
 const RULES = [
   "- These are the figures the Google Reviews page shows. Answer from them: give the count, the goal and whether the store is on track, and say which period and which store each figure is for.",
   "- On track means Goal met or On pace above. Behind pace means not on track yet. Partial month means counting started this month, so there is no pace verdict.",
   "- Never state a Google review figure that is not written here, never estimate one, and never send the manager to another tracker for a figure written here.",
+  `- The manager can see the same figures on ${PAGE}.`,
 ].join("\n");
 
 export function reviewsNotPermittedBlock(): string {
@@ -69,52 +81,65 @@ export function reviewsNotPermittedBlock(): string {
 }
 
 export function reviewsUnavailableBlock(reason: string): string {
-  return `${HEADING}\n\n${reason} No figure was estimated. Say so plainly; do not give a Google review count.`;
+  return `${HEADING}\n\n${reason} No figure was estimated. Say so plainly, do not give a Google review count, and point the manager to ${PAGE}.`;
 }
 
 const SHORT_DATE = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const MONTH_YEAR = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+const INSTANT = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "America/Chicago",
+});
 
 function day(date: string): Date {
   return new Date(`${date}T00:00:00Z`);
 }
 
-/**
- * The block for the stores this account may see. `outOfScopeStoreCodes` are
- * stores the question named that the account may not see; they are named
- * without a figure.
- */
-export function formatGoogleReviewsBlock(input: {
-  /** Null only when nothing is read: every store the question named is out of scope. */
-  readonly context: GoalContext | null;
-  readonly rows: readonly GoalRow[];
-  readonly outOfScopeStoreCodes: readonly string[];
-}): string {
-  const { context } = input;
-  const lines: string[] = [HEADING, ""];
-  if (context) {
-    const start = SHORT_DATE.format(day(context.monthStart));
-    const end = SHORT_DATE.format(day(context.today));
+/** "Data as of" and, past two days, the instruction to say the figures may be out of date. */
+export function freshnessLines(lastSyncAt: string | null, now: Date): string[] {
+  const at = lastSyncAt ? new Date(lastSyncAt) : null;
+  if (!at || Number.isNaN(at.getTime())) {
+    return [`Data as of: no completed sync is recorded. Say the figures may not be current, and point the manager to ${PAGE}.`];
+  }
+  const shown = INSTANT.format(at);
+  const lines = [`Data as of: the last Google review sync, ${shown} (Central time).`];
+  if (now.getTime() - at.getTime() > STALE_AFTER_MS) {
     lines.push(
-      `Period: ${MONTH_YEAR.format(day(context.monthStart))} month to date, ${start === end ? start : `${start} – ${end}`} (Central time).`,
-      "A qualifying review is 3, 4 or 5 stars. Each store's monthly goal is written on its line.",
+      `The last sync is more than 2 days old. Say so first: these figures are as of ${shown} and may be out of date, and the latest are on ${PAGE}.`,
     );
   }
+  return lines;
+}
 
-  for (const code of input.outOfScopeStoreCodes) {
-    const store = APPROVED_GOOGLE_STORES.find((entry) => entry.code === code);
-    lines.push(`- ${store?.displayName ?? `Store ${code}`}: not one of the stores this account may see. No figure is given for it.`);
-  }
-
-  if (input.rows.length === 0 || !context) {
-    if (input.outOfScopeStoreCodes.length === 0) {
-      lines.push("No store with a Google listing is assigned to this account.");
-    }
-    return [...lines, "", RULES].join("\n");
-  }
+/**
+ * The block. `rows` are the page's rows, already narrowed to any store the
+ * question names; `ownStoreCodes` are the caller's stores, marked.
+ */
+export function formatGoogleReviewsBlock(input: {
+  readonly context: GoalContext;
+  readonly rows: readonly GoalRow[];
+  readonly ownStoreCodes: ReadonlySet<string>;
+  readonly lastSyncAt: string | null;
+  readonly now: Date;
+}): string {
+  const { context } = input;
+  const start = SHORT_DATE.format(day(context.monthStart));
+  const end = SHORT_DATE.format(day(context.today));
+  const lines: string[] = [
+    HEADING,
+    "",
+    `Period: ${MONTH_YEAR.format(day(context.monthStart))} month to date, ${start === end ? start : `${start} – ${end}`} (Central time).`,
+    ...freshnessLines(input.lastSyncAt, input.now),
+    "A qualifying review is 3, 4 or 5 stars. Each store's monthly goal is written on its line.",
+  ];
 
   for (const row of input.rows) {
-    const name = `${row.displayName} (store ${row.storeCode})`;
+    const own = input.ownStoreCodes.has(row.storeCode) ? ", this manager's store" : "";
+    const name = `${row.displayName} (store ${row.storeCode}${own})`;
     const status = goalStatus(row, context);
     if (status === "not_counting") {
       lines.push(`- ${name}: not counting yet. No baseline is set, so the page shows no month-to-date figure for it.`);
