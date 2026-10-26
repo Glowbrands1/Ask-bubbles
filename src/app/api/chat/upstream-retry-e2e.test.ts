@@ -428,12 +428,13 @@ describe("a non-retryable 400 is not retried", () => {
 });
 
 /*
- * QA-2 follow-up (26 Oct 2026): in Ask Sunny, MODEL_RETRY_ENABLED turns a
- * final 529 into a "busy" 503. This app has no MODEL_RETRY flag and no busy
- * 503: `callClaude` maps a 529 to main's model_failed 502. The retry throws
- * the last attempt's error unchanged, so a final 529 stays that 502, with the
- * Sunny flag name set or not. What differs with CHAT_UPSTREAM_RETRY_ENABLED
- * on is only how many attempts came first, and both are pinned.
+ * A final 529 stays main's 502, with MODEL_RETRY_ENABLED set or not: in the
+ * sibling app that flag turns a final 529 into a "busy" 503. This app has no
+ * MODEL_RETRY flag and no busy 503: `callClaude` maps a 529 to main's
+ * model_failed 502. The retry throws the last attempt's error unchanged, so
+ * a final 529 stays that 502, with the sibling app's flag name set or not.
+ * What differs with CHAT_UPSTREAM_RETRY_ENABLED on is only how many attempts
+ * came first, and both are pinned.
  */
 describe("a final 529 with MODEL_RETRY_ENABLED set stays main's error (no busy 503 in this app)", () => {
   const OVERLOADED = FAILURES[1]![1];
