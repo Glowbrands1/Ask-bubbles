@@ -1,4 +1,5 @@
 import { BCS_BRAND } from "@/config/company/brand";
+import { POLICY_MANUAL_BRAND_SCOPE } from "@/config/company/knowledge";
 import { ownSystemsFactEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
@@ -51,21 +52,28 @@ export function ownSystemsNote(question: string, grounding: string): string | nu
     .join("\n");
 }
 
-/** "isn't your system", "not this company's platform", "is not used here", "another company's". */
-const DISOWNS =
-  /\b(?:isn'?t|is\s+not|not)\s+(?:your|our|this\s+company'?s|the\s+company'?s)\s+(?:own\s+)?(?:system|platform|tool|app|software|program)\b|\b(?:isn'?t|is\s+not|not)\s+used\s+(?:here|by\s+(?:you|your|us|our|this))\b|\b(?:another|a\s+different|a\s+sister|the\s+sister)\s+(?:brand|company)'?s\b/i;
-/** "it's Acme Fitness's", "belongs to Acme Fitness": another company named as its owner. */
-const OWNER = /\b(?:(?:it'?s|[Ii]t\s+is)\s+((?:[A-Z][\w&]*\s+){0,3}[A-Z][\w&]*?)'s\b|belongs?\s+to\s+((?:[A-Z][\w&]*\s*){1,4}))/g;
-/** This company's own names, which are never "another company". */
-const OWN_NAMES = [BCS_BRAND.brandName, BCS_BRAND.operatorName, BCS_BRAND.productName].map((name) => name.toLowerCase());
+const OTHER_BRANDS = POLICY_MANUAL_BRAND_SCOPE.otherBrands.map((source) => `(?:${source})`).join("|");
 
-function namesAnotherOwner(sentence: string): boolean {
-  for (const match of sentence.matchAll(OWNER)) {
-    const owner = (match[1] ?? match[2] ?? "").trim().toLowerCase();
-    if (owner === "" || OWN_SYSTEMS.some((system) => system.pattern.test(owner))) continue;
-    if (!OWN_NAMES.some((name) => name.startsWith(owner) || owner.startsWith(name))) return true;
-  }
-  return false;
+/**
+ * WHAT DISOWNS THE SYSTEM, ABOUT THE SYSTEM (QA-5, 26 Oct 2026): the phrase
+ * follows the system's name in the same clause ("Woven isn't your system"),
+ * and "another owner" is one of the other brands the manual lists
+ * (`POLICY_MANUAL_BRAND_SCOPE.otherBrands`), never any capitalised word. "Paycor is not your system
+ * for scheduling; Woven is.", "Woven belongs to HR." and "Woven doesn't
+ * handle payroll; it's Paycor's." are kept.
+ */
+function disowns(clause: string, system: OwnSystem): boolean {
+  const name = system.pattern.source;
+  const lead = String.raw`${name}\s+(?:\S+\s+){0,2}?`;
+  const notOurs = new RegExp(
+    String.raw`${lead}(?:isn'?t|is\s+not|not)\s+(?:your|our|this\s+company'?s|the\s+company'?s)\s+(?:own\s+)?(?:system|platform|tool|app|software|program)\b|${lead}(?:isn'?t|is\s+not)\s+used\s+(?:here|by\s+(?:you|your|us|our|this))\b|${lead}(?:is|belongs\s+to)\s+(?:another|a\s+different|a\s+sister|the\s+sister)\s+(?:brand|company)`,
+    "i",
+  );
+  const otherOwner = new RegExp(
+    String.raw`${name}[^.;]{0,60}?(?:\bit'?s|\bit\s+is|\bbelongs?\s+to|\bis\s+(?:only\s+)?(?:for|used\s+by))\s+(?:the\s+)?(?:${OTHER_BRANDS})`,
+    "i",
+  );
+  return notOurs.test(clause) || otherOwner.test(clause);
 }
 
 function factLine(system: OwnSystem): string {
@@ -81,7 +89,8 @@ export function withoutDisownedSystems(reply: string): string {
   for (const part of parts) {
     if (part === undefined) continue;
     const system = OWN_SYSTEMS.find((entry) => entry.pattern.test(part));
-    if (system && (DISOWNS.test(part) || namesAnotherOwner(part))) {
+    // Each clause on its own: "Paycor is not your system; Woven is." disowns nothing.
+    if (system && part.split(/;|\bbut\b/).some((clause) => disowns(clause, system))) {
       if (!dropped.includes(system)) dropped.push(system);
       continue;
     }
