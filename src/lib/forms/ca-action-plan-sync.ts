@@ -1,9 +1,14 @@
 import "server-only";
 
-import { actionPlanManagerOnlyEnabled, actionPlanSentencesEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  actionPlanManagerOnlyEnabled,
+  actionPlanSentencesEnabled,
+  attendanceActionPlanEnabled,
+} from "@/lib/config/chat-quality-flags";
 
 import { collapseToTwoSentences } from "./action-plan-sentences";
-import { refreshedActionPlan } from "./ca-action-plan";
+import { attendanceActionPlan, isAttendancePlan } from "./attendance-action-plan";
+import { fixedActionPlanKey, refreshedActionPlan } from "./ca-action-plan";
 import { parseFormDocument } from "./document";
 import { applyAssistantDraft, loadInstance, type LoadedInstance } from "./instances";
 
@@ -42,8 +47,31 @@ export async function syncCorrectiveActionPlan(
     notes: options.notes,
   });
   if (!next) return [];
-  const value = actionPlanSentencesEnabled() ? collapseToTwoSentences(next.value) : next.value;
-  if (actionPlanSentencesEnabled()) {
+  /*
+   * ATTENDANCE_ACTION_PLAN_ENABLED: the rebuilt plan of an Attendance policy
+   * keeps Pau's attendance wording, so a later edit in chat does not put the
+   * generic sentence back. The policies are the ones the plan was rebuilt for
+   * (its own provenance), the closing the form's.
+   */
+  const policies = Array.isArray(next.provenance.policies) ? (next.provenance.policies as string[]) : [];
+  const planField = fixedActionPlanKey(
+    loaded.instance.templateKey,
+    parseFormDocument(loaded.version.document),
+    loaded.instance.variantKey,
+  );
+  const attendanceInput = {
+    citedPolicies: policies,
+    employeeName: loaded.instance.employeeName,
+    payroll: { answer: null, amount: null },
+    closing: planField?.closing ?? null,
+  };
+  const attendance = attendanceActionPlanEnabled() && isAttendancePlan(attendanceInput);
+  const value = attendance
+    ? attendanceActionPlan(attendanceInput)
+    : actionPlanSentencesEnabled()
+      ? collapseToTwoSentences(next.value)
+      : next.value;
+  if (attendance || actionPlanSentencesEnabled()) {
     const held = values.find((row) => row.fieldKey === next.key)?.value ?? "";
     if (value === held) return [];
   }
