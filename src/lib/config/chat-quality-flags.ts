@@ -949,6 +949,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PRIOR_SENTENCE_FIX_ENABLED",
   "DATE_ANSWER_APPLIED_ENABLED",
   "REQUEST_LINE_ACCOUNT_ENABLED",
+  "PAYROLL_TYPO_NOT_A_NAME_ENABLED",
 ] as const;
 
 /**
@@ -1069,4 +1070,14 @@ export function dateAnswerAppliedEnabled(): boolean {
  */
 export function requestLineAccountEnabled(): boolean {
   return envFlag("REQUEST_LINE_ACCOUNT_ENABLED");
+}
+
+/**
+ * A payroll answer with typos ("yes payrol ldeduct") is never read as the
+ * employee's name, so the card is not called out of date for "payrol ldeduct"
+ * (a manager in the sibling app, 26 Oct 2026; same flag in both apps). See `forms/payroll-words.ts`.
+ * Off, names are read as before.
+ */
+export function payrollTypoNotANameEnabled(): boolean {
+  return envFlag("PAYROLL_TYPO_NOT_A_NAME_ENABLED");
 }
