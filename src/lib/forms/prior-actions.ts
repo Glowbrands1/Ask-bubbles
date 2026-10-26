@@ -1,7 +1,8 @@
-import { priorActionsParseEnabled } from "@/lib/config/chat-quality-flags";
+import { priorActionsParseEnabled, priorRowNotOnIncidentDateEnabled } from "@/lib/config/chat-quality-flags";
 
 import { statesFirstOccurrence } from "./corrective-action-intake";
 import { correctedDates, datesInText, managerDatesForDraft, priorSteps } from "./form-date-answer";
+import { incidentDates } from "./incident-dates";
 import { priorSentenceFixFor } from "./prior-sentence-scope";
 import { OFFICIAL_POLICY_MANUAL } from "./official-policy-manual";
 
@@ -255,6 +256,10 @@ export function groundPriorActions(input: {
     ...onFile.map((form) => form.formDate),
   ]);
   const stepOn = new Map(managerSteps.map((step) => [step.iso, stepLabel(step.named)]));
+  const incidentDays = priorRowNotOnIncidentDateEnabled() ? new Set(incidentDates(input.notes, input.today)) : new Set<string>();
+  const stepOrFile = new Set([...managerSteps.map((step) => step.iso), ...onFile.map((form) => form.formDate)]);
+  const onIncidentDatesOnly = (isos: readonly string[]) =>
+    isos.length > 0 && isos.every((iso) => incidentDays.has(iso) && !stepOrFile.has(iso));
   const mentioned = new Set(STEPS.filter(([pattern]) => pattern.test(input.notes)).map(([, label]) => label));
   const removed: string[] = [];
 
@@ -271,6 +276,11 @@ export function groundPriorActions(input: {
         return false;
       }
       const step = lineStep(line);
+      // PRIOR_ROW_NOT_ON_INCIDENT_DATE_ENABLED: a step on the incident's own date that nobody named is invented.
+      if (step && dates.length > 0 && onIncidentDatesOnly(dates.map((found) => found.iso))) {
+        removed.push(line);
+        return false;
+      }
       if (step && dates.length > 0) {
         // A different step on a day the manager named one is not their history.
         const said = dates.map((found) => stepOn.get(found.iso)).filter((label): label is string => Boolean(label));
