@@ -17,7 +17,7 @@ import type { AskRequest } from "./types";
  * Before any reader sees a manager turn, "<form word> for <word> <word>(,)
  * <job title>" is read as "<form word> for <Word> <Word>, <job title>": the
  * two words in Title Case, then a comma. Only when the words after the name
- * are a job title on their own, and the name is not itself a title, a
+ * are a job title (or a role word such as "team member") on their own, and the name is not itself a title, a
  * pronoun or a word like "the". The rest stays as typed. Off, every turn is
  * read as typed.
  *
@@ -26,6 +26,8 @@ import type { AskRequest } from "./types";
 
 const LEAD =
   /\b((?:ca|c\/a|dpoa|corrective\s+action(?:\s+form)?|coaching(?:\s+form)?|coach|exit(?:\s+form)?|write\s*up|form))\s+(for)\s+([A-Za-z][A-Za-z'’-]+)\s+([A-Za-z][A-Za-z'’-]+)\s*,?\s+/gi;
+/** Role words every company uses, read as a title here even where the company's titles do not list them. */
+const GENERIC_ROLE = /^(?:team\s+member|team\s?mate|associate|employee|staff\s+member|crew\s+member)$/i;
 const NOT_A_NAME =
   /^(?:the|a|an|my|our|her|his|their|this|that|one|team|staff|everyone|all|being|not|no|late|today|yesterday|at|on|in|and|or|she|he|they)$/i;
 
@@ -64,7 +66,7 @@ function titleAhead(rest: string): string | null {
     const phrase = words.slice(0, count).join(" ");
     const clean = phrase.replace(/[,.;]+$/, "");
     const closed = phrase !== clean || count === words.length || /^at$/i.test(words[count] ?? "");
-    if (closed && extractJobTitle(clean)) return clean;
+    if (closed && (extractJobTitle(clean) || GENERIC_ROLE.test(clean))) return clean;
   }
   return null;
 }
