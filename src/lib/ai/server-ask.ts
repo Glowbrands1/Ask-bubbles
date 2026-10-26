@@ -979,6 +979,8 @@ async function answerQuestionCore(
     maxTokens: CLAUDE_MAX_TOKENS[request.mode],
     // ANSWER_LENGTH_GUARD_ENABLED reads this; off, the request is main's.
     answerLengthGuard: true,
+    // CHAT_UPSTREAM_RETRY_ENABLED applies to the answer and its fallback only; see `ai/upstream-retry.ts`.
+    upstreamRetry: true,
   };
   const retrievalChunks: GroundingChunk[] = used.map((row, index) => ({
     marker: index + 1,

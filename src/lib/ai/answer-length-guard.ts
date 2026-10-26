@@ -3,6 +3,7 @@ import { CLAUDE_MAX_TOKENS } from "@/lib/config/models";
 
 import { chatTraceDraft } from "./chat-trace-store";
 import { withTruncationRetry } from "./truncation";
+import { UpstreamAttemptTimeout } from "./upstream-retry";
 
 /**
  * ============================================================================
@@ -33,6 +34,15 @@ import { withTruncationRetry } from "./truncation";
  * and never at 7168 tokens. The form draft and revision calls keep
  * `withTruncationRetry` as it is.
  *
+ * WITH CHAT_UPSTREAM_RETRY_ENABLED ON TOO, the guard sits outside and the
+ * retry inside each call: the first call and the length retry each go through
+ * `withUpstreamRetry`, on the one turn budget, each attempt capped at 60 s
+ * instead of 45 s. The length retry still starts only before 35 s, and at
+ * 60 s it is aborted (its signal reaches the request) as well as abandoned.
+ * When every attempt at the first call runs out of time after streaming a
+ * whole sentence, that text is shown cut clean (`timedOutAsCut`) instead of
+ * the error.
+ *
  * A reply that did not stop at max_tokens is returned as the same object, so
  * an end_turn answer is byte-identical with the flag on and off. Off, no guard
  * exists and the answer call goes through `withTruncationRetry` as on main.
@@ -44,6 +54,12 @@ export const ANSWER_GUARD_MAX_TOKENS = 3584;
 export const LENGTH_RETRY_BEFORE_MS = 35_000;
 /** The second attempt is abandoned when the turn reaches this. */
 export const TURN_CEILING_MS = 60_000;
+/**
+ * With CHAT_UPSTREAM_RETRY_ENABLED on too, each attempt's deadline is the
+ * lesser of this and what is left of the turn's 120 s budget, instead of
+ * 45 s: 3584 tokens can need about 45-50 s. The guard off keeps 45 s.
+ */
+export const GUARDED_ATTEMPT_TIMEOUT_MS = 60_000;
 
 export interface AnswerLengthGuard {
   /** The max_tokens the answer call sends. */
@@ -241,10 +257,36 @@ const MESSAGE: LengthAdapter<MessageLike> = {
 export function answerLengthRetry(guard: AnswerLengthGuard): typeof withTruncationRetry {
   return async <T extends { readonly stop_reason?: string | null }>(
     maxTokens: number,
-    call: (maxTokens: number) => Promise<T>,
+    call: (maxTokens: number, signal?: AbortSignal) => Promise<T>,
   ): Promise<T> => {
     const first = await call(maxTokens);
-    // `call` takes no signal here, so a second reply still running at 60 s is abandoned, not aborted.
-    return settleAnswerLength(guard, first, () => call(maxTokens), MESSAGE as unknown as LengthAdapter<T>);
+    // The second call gets the guard's signal; with the upstream retry off the
+    // answer call ignores it, so a second reply still running at 60 s is abandoned, not aborted.
+    return settleAnswerLength(guard, first, (signal) => call(maxTokens, signal), MESSAGE as unknown as LengthAdapter<T>);
+  };
+}
+
+/**
+ * Guard and retry on, when every attempt at the first call ran out of time:
+ * the longest text an attempt streamed, to be shown cut clean like a reply
+ * cut at max_tokens, so the manager never sees less than a cut answer. Null,
+ * and the error as before, for any other failure or when that text has no
+ * whole sentence or item.
+ */
+export function timedOutAsCut(error: unknown, streamed: string): string | null {
+  if (!(error instanceof UpstreamAttemptTimeout) || cutAtLastComplete(streamed).length === 0) return null;
+  console.warn(`[answer-length-guard] every attempt timed out; showing the streamed text cut clean (${streamed.length} chars)`);
+  return streamed.trim();
+}
+
+/** The streamed text as a reply cut at max_tokens, for `answerLengthRetry` to cut clean. */
+export function timedOutReply(text: string) {
+  return {
+    type: "message" as const,
+    role: "assistant" as const,
+    content: [{ type: "text" as const, text, citations: null }],
+    stop_reason: "max_tokens" as const,
+    usage: null,
+    firstTokenMs: null,
   };
 }
