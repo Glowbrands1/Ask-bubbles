@@ -326,7 +326,11 @@ export type Blocker =
   | { code: "not_configured"; missing: string[] }
   | { code: "disabled" }
   | { code: "not_connected" }
-  | { code: "authorization_expired" }
+  /**
+   * `refusedWith` is the code Google ended the saved connection with, set only
+   * with GOOGLE_REVIEWS_STALE_BANNER_ENABLED (see `status.ts`).
+   */
+  | { code: "authorization_expired"; refusedWith?: string | null }
   | { code: "api_access_pending" }
   | { code: "api_disabled" }
   | { code: "last_run_failed"; errorCode: string }

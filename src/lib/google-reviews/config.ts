@@ -37,6 +37,8 @@ export const GOOGLE_OAUTH_REDIRECT_URI_ENV = "GOOGLE_OAUTH_REDIRECT_URI";
 export const GOOGLE_REVIEWS_SYNC_ENABLED_ENV = "GOOGLE_REVIEWS_SYNC_ENABLED";
 export const GOOGLE_REVIEWS_WRITES_ENABLED_ENV = "GOOGLE_REVIEWS_WRITES_ENABLED";
 export const GOOGLE_REVIEWS_SCHEDULE_ENABLED_ENV = "GOOGLE_REVIEWS_SCHEDULE_ENABLED";
+/** The /reviews notice when reviews have stopped syncing. Off by default; see `sync-health.ts`. */
+export const GOOGLE_REVIEWS_STALE_BANNER_ENABLED_ENV = "GOOGLE_REVIEWS_STALE_BANNER_ENABLED";
 
 export const CALLBACK_PATH = "/api/admin/google-reviews/callback";
 
@@ -89,6 +91,16 @@ export function readGoogleReviewsConfig(env: EnvSource = process.env): GoogleRev
     missingCredentials: missing,
     credentialsReady: missing.length === 0,
   };
+}
+
+/**
+ * Whether /reviews says so when reviews have stopped syncing. Read like the
+ * chat flags (`envFlag`): "1", "true", "on" or "yes", any case, trimmed. The
+ * sibling app reads the same flag the same way, so one setting means the
+ * same in both (QA-2, 26 Oct 2026).
+ */
+export function staleBannerEnabled(env: EnvSource = process.env): boolean {
+  return ["1", "true", "on", "yes"].includes(env[GOOGLE_REVIEWS_STALE_BANNER_ENABLED_ENV]?.trim().toLowerCase() ?? "");
 }
 
 export interface OAuthSettings {

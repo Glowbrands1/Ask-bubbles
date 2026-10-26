@@ -32,6 +32,12 @@ export function blockerText(blocker: NonNullable<Blocker>): { title: string; bod
     case "not_connected":
       return { title: "No Google account is connected", body: "Connect the Google account that manages Buff City Soap's Business Profiles. Ask Bubbles only reads reviews." };
     case "authorization_expired":
+      if (blocker.refusedWith === "invalid_grant") {
+        return {
+          title: "Google refused the saved connection (invalid_grant)",
+          body: "Google no longer accepts the saved sign-in, so no reviews have been read since. Reconnect the Google account below; reviews already saved are kept. If it stops again about a week after reconnecting, the Google Cloud project's OAuth consent screen is still in Testing: set its publishing status to In production, then reconnect.",
+        };
+      }
       return { title: "Google no longer accepts the saved connection", body: "The access was revoked or expired. Reconnect the Google account. Reviews already saved are kept." };
     case "api_access_pending":
       return {

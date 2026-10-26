@@ -1,6 +1,6 @@
 import "server-only";
 
-import { readGoogleReviewsConfig, resolveRedirectUri } from "./config";
+import { readGoogleReviewsConfig, resolveRedirectUri, staleBannerEnabled } from "./config";
 import { deriveBlocker, readConnectionState, readRecentRuns, type Blocker, type ConnectionState, type RunRow } from "./views";
 
 /**
@@ -28,6 +28,16 @@ export async function readGoogleReviewsStatus(requestOrigin?: string): Promise<G
   const config = readGoogleReviewsConfig();
   const [connection, runs] = await Promise.all([readConnectionState(), readRecentRuns(10)]);
   const lastRun = runs.find((r) => r.status !== "running") ?? null;
+  const derived = deriveBlocker({ enabled: config.enabled, credentialsReady: config.credentialsReady, missingCredentials: config.missingCredentials, connection, lastRun });
+  /*
+   * GOOGLE_REVIEWS_STALE_BANNER_ENABLED: an ended connection says what Google
+   * refused it with, so the screen can name the cause (QA, 25 Oct 2026: an
+   * invalid_grant exactly seven days after connecting). Off, as before.
+   */
+  const blocker: Blocker =
+    staleBannerEnabled() && derived?.code === "authorization_expired" && connection.state !== "none" && connection.state !== "active"
+      ? { code: "authorization_expired", refusedWith: connection.errorCode }
+      : derived;
   return {
     enabled: config.enabled,
     writesEnabled: config.writesEnabled,
@@ -37,6 +47,6 @@ export async function readGoogleReviewsStatus(requestOrigin?: string): Promise<G
     redirectUri: resolveRedirectUri(process.env, requestOrigin),
     connection,
     runs,
-    blocker: deriveBlocker({ enabled: config.enabled, credentialsReady: config.credentialsReady, missingCredentials: config.missingCredentials, connection, lastRun }),
+    blocker,
   };
 }
