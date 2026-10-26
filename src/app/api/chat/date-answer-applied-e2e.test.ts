@@ -301,7 +301,7 @@ const TODAY = "2026-10-26";
  * This app's production env (Vercel production, decrypted and read by QA
  * 26 Oct 2026). Every other flag is off — FORM_FULL_REMAP,
  * ACTION_PLAN_MANAGER_ONLY, SLOT_RETENTION and FORM_STATE among them.
- * INTENT_EXTRACTION is set by `INTENT_EXTRACTION_IN_PRODUCTION` below.
+ * INTENT_EXTRACTION is off too.
  */
 const PRODUCTION = [
   // Ask Bubbles production, 26 Oct 2026 (FORM_FULL_REMAP off: the intent path; ACTION_PLAN_MANAGER_ONLY off).
@@ -425,20 +425,7 @@ afterEach(() => {
 });
 
 
-/*
- * INTENT_EXTRACTION_ENABLED is 0 in this app's production (QA read it
- * decrypted on Vercel, 26 Oct 2026): the card shows on the first turn.
- */
-const INTENT_EXTRACTION_IN_PRODUCTION = false;
 
-function useProfile(fix: boolean, fio = false, remap = false) {
-  for (const name of ALL_FLAGS) delete process.env[name];
-  for (const name of PRODUCTION) process.env[name] = "true";
-  if (INTENT_EXTRACTION_IN_PRODUCTION) process.env.INTENT_EXTRACTION_ENABLED = "true";
-  if (remap) for (const name of REMAP_EXTRA) process.env[name] = "true";
-  if (fix) process.env[FLAG] = "true";
-  if (fio) process.env[FIO] = "true";
-}
 
 const DA_FLAG = "DATE_ANSWER_APPLIED_ENABLED";
 const T1 =
