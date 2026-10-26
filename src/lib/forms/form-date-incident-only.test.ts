@@ -20,15 +20,15 @@ import { newestStatedDate, withYearlessDatesWritten } from "./late-open";
 const TODAY = "2026-10-25";
 const FLAG = "FORM_DATE_INCIDENT_ONLY_ENABLED";
 
-// Sibling app conv_mvod8jw02vsk2py, turns 1 and 2.
+// QA batch 13 (ported), turns 1 and 2.
 const ASSIGNED_BY =
   "create a ca form for test employee because she didnt do deep clean assigned by 9-15-26";
 const ASSIGNED_AND_DUE =
   "deep clean assigned 9-1-26 of room 1 and due by 9-15-26. no previous coaching or ca on file";
-// Sibling app conv_mvof8w712p9rd9c; here the remap took the deadline as the newest date.
+// QA batch 13 (ported); here the remap took the deadline as the newest date.
 const WOVEN_DEADLINE =
   "create a verbal corrective action for Ava Pellmore, store associate at Test Store for missing the 10-15-26 woven deadline. previous coaching. verbal (06/25/2026) and written (07/28/2026). no payroll deducation";
-// Sibling app conv_mvoexl0b2upub8p, turn 2.
+// QA batch 13 (ported), turn 2.
 const PRIOR_IN_PARENS =
   "Ava Pellmore, today, - Ava set up the front table, then went into the back room and stayed there until the first customer arrived at 7:57am. Written warning. previous coaching. verbal (06/25/2026) and written (07/28/2026). no payroll deducation.";
 
@@ -68,27 +68,26 @@ describe("FORM_DATE_INCIDENT_ONLY_ENABLED: the form's date is never a deadline, 
 
   it('"assigned by 9-15-26" is a due date: the form is dated the day it is created', () => {
     withFlag(true);
-    expect(extractFormDate(ASSIGNED_BY, TODAY)).toBeNull();
-    expect(listIncidentDates(ASSIGNED_BY, TODAY)).toEqual([]);
+    // Dated the day it is created; the shared reader still sees the date, so the intake stays open.
+    expect(decide(ASSIGNED_BY)).toEqual({ formDate: null });
+    expect(extractFormDate(ASSIGNED_BY, TODAY)).toBe("2026-09-15");
   });
 
   it('"assigned 9-1-26 … due by 9-15-26" offers neither date', () => {
     withFlag(true);
-    expect(extractFormDate(ASSIGNED_AND_DUE, TODAY)).toBeNull();
+    expect(decide(ASSIGNED_AND_DUE)).toEqual({ formDate: null });
     expect(incidentDates(ASSIGNED_AND_DUE, TODAY)).toEqual([]);
   });
 
   it("a woven deadline and prior-action dates are not offered as the form's date", () => {
     withFlag(true);
     expect(incidentDates(WOVEN_DEADLINE, TODAY)).toEqual([]);
-    expect(decide(WOVEN_DEADLINE)).toEqual({});
-    expect(extractFormDate(WOVEN_DEADLINE, TODAY)).toBeNull();
+    expect(decide(WOVEN_DEADLINE)).toEqual({ formDate: null });
   });
 
   it('"today" with prior actions in parentheses asks no "which date?" and takes today', () => {
     withFlag(true);
-    expect(decide(PRIOR_IN_PARENS)).toEqual({});
-    expect(extractFormDate(PRIOR_IN_PARENS, TODAY)).toBeNull();
+    expect(decide(PRIOR_IN_PARENS)).toEqual({ formDate: null });
   });
 
   it("every date stays in the account the draft keeps", () => {
@@ -162,10 +161,10 @@ describe.each(REGISTERS)(
   (_register, as) => {
     it("flag on: no deadline, assignment or prior-action date is the form's date", () => {
       withFlag(true);
-      expect(extractFormDate(as(ASSIGNED_BY), TODAY)).toBeNull();
+      expect(decide(as(ASSIGNED_BY))).toEqual({ formDate: null });
       expect(incidentDates(as(ASSIGNED_AND_DUE), TODAY)).toEqual([]);
       expect(incidentDates(as(WOVEN_DEADLINE), TODAY)).toEqual([]);
-      expect(decide(as(PRIOR_IN_PARENS))).toEqual({});
+      expect(decide(as(PRIOR_IN_PARENS))).toEqual({ formDate: null });
     });
 
     for (const on of [false, true]) {
@@ -202,10 +201,10 @@ describe.each(REGISTERS)(
 );
 
 /*
- * LIVE TESTER FINDINGS, 26 Oct 2026 (invented names). Sibling app conv_mvolz9vk2cwijs1:
+ * LIVE TESTER FINDINGS, 26 Oct 2026 (invented names). A sibling-app chat:
  * "late on 10-5 and 10-15, i coached her on 10-16" dated the Coaching Form
  * 10/5, the first of two late dates, because "10-15" after "and" was not read
- * as a date. Bubbles conv_mvolwmup27zde0x: "I coached her on 10-16 and gave a
+ * as a date. A live chat: "I coached her on 10-16 and gave a
  * verbal on 10-21" dated the form 10/21, a prior step, through the remap's
  * own year-less dates.
  */
@@ -269,6 +268,15 @@ describe.each(REGISTERS)("live tester findings, 26 Oct 2026 (%s)", (_register, a
     expect(remapDate(as(PRIORS_TODAY))).not.toBe("2026-10-21");
     expect(remapDate(as(PRIORS_TODAY))).not.toBe("2026-10-16");
   });
+
+  for (const on of [false, true]) {
+    // Dispatcher probe, 26 Oct 2026: the verbal this form documents keeps its date.
+    it(`NEVER-BREAK (flag ${on ? "on" : "off"}): "i gave her a verbal on 10-21 for being late" dates the form 10-21`, () => {
+      withFlag(on);
+      expect(remapDate(as("write up ava pellmore, i gave her a verbal on 10-21 for being late"))).toBe("2026-10-21");
+      expect(remapDate(as("verbal for ava pellmore, gave her a verbal on 10-21 for being late on 10-21"))).toBe("2026-10-21");
+    });
+  }
 
   for (const on of [false, true]) {
     it(`NEVER-BREAK (flag ${on ? "on" : "off"}): a late opening and a single year-less incident date are read as before`, () => {
