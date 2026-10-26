@@ -816,3 +816,22 @@ happened; "X instead of Y" names X; a prior action's date ("jba manual
 revision. Not ported: the Follow-up line rule (this card has none) and the
 card salon edit (the store edit is its own fix here). No salon wording was
 copied. Test: `src/app/api/chat/edits-dates-replay-e2e.test.ts`.
+
+## 26 Oct 2026: a prior stated in turn 2 dropped by a slot answer — not needed here (Ask Sunny PRIOR_ACTIONS_RETAINED_ENABLED)
+
+The sibling app's tester found a Corrective Action card that listed "prior
+coaching JBA Policy Manual 7-29-26" in turn 2 and dropped it when turn 3 only
+answered the payroll question ("no payroll deduct"). There the intent path's
+stored-slot lines read as a new request, so the priors were read from the
+latest turn alone; it is fixed behind `PRIOR_ACTIONS_RETAINED_ENABLED`
+(default off, same name in both apps). Not needed here: this app's live form
+path is the full remap, whose prior-actions line reads every turn of the
+form. Replayed through POST /api/chat on main (066ad62) with store wording
+and the full remap (with and without PRIOR_ACTIONS_PARSE_ENABLED and
+REMAP_INCIDENT_FIX_ENABLED): the prior stays through "no payroll deduct",
+"no payroll deduction", "verbal", "written warning please", "yes 25
+dollars", "she is a sales associate", "the date should be 10-16-26" and the
+same turns in capitals. This app has no `holdFilledSlots` step, so the
+sibling's reader has nowhere to go; the flag is not added here. Seen in the
+same replay and left for its own fix: on the remap, "no prior coaching" or
+"remove the prior" does not clear the prior already listed.
