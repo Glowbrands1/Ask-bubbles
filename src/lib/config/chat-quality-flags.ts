@@ -722,6 +722,17 @@ export function reopenVerbGuardEnabled(): boolean {
   return envFlag("REOPEN_VERB_GUARD_ENABLED");
 }
 
+/**
+ * The Corrective Action Form's Observation carries no AI-written "Going
+ * Forward" section (QA, 25 Oct 2026): a plan or commitment the manager never
+ * typed is not part of the HR record. What the employee does next is the
+ * Action Plan, which is the manager's own (ACTION_PLAN_MANAGER_ONLY). Off, the
+ * Observation drafts as before.
+ */
+export function draftNoInventedPlanEnabled(): boolean {
+  return envFlag("DRAFT_NO_INVENTED_PLAN_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -790,4 +801,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REMAP_DRAFT_SOURCES_ENABLED",
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
+  "DRAFT_NO_INVENTED_PLAN_ENABLED",
 ] as const;
