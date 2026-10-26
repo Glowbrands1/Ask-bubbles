@@ -813,6 +813,15 @@ export function excerptBrandFilterEnabled(): boolean {
   return envFlag("EXCERPT_BRAND_FILTER_ENABLED");
 }
 
+/**
+ * A new form asked for after a card ("another coaching form for <name>, …")
+ * is drafted from the turns after that card only (QA, 26 Oct 2026; same flag
+ * in both apps). See `ai/new-form-own-turn.ts`. Off, the card is as it is.
+ */
+export function newFormOwnTurnEnabled(): boolean {
+  return envFlag("NEW_FORM_OWN_TURN_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -889,6 +898,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "APP_PASSWORD_HELP_ENABLED",
   "INCIDENT_CLAUSE_SPLIT_ENABLED",
   "EXCERPT_BRAND_FILTER_ENABLED",
+  "NEW_FORM_OWN_TURN_ENABLED",
 ] as const;
 
 /**
