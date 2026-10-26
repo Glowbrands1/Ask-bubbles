@@ -300,6 +300,12 @@ export interface GuideAnswerInput<Role extends string> {
   access: GuideAccess<Role>;
   /** The product name, from the brand config. */
   productName: string;
+  /**
+   * Templates this deployment hides (`config/company/forms/hidden.ts`). A
+   * question about one is told plainly that the form is not available here,
+   * rather than going to the knowledge base or being explained.
+   */
+  withheld?: readonly GuideTemplate[];
 }
 
 function variantText(text: string, variants: readonly FormVariant[]): string | null {
@@ -472,6 +478,12 @@ function listCreatable<Role extends string>(input: GuideAnswerInput<Role>): stri
   ].join("\n\n");
 }
 
+function notAvailable(phrase: string, productName: string): string {
+  const shown = phrase.length <= 4 ? phrase.toUpperCase() : phrase;
+  const name = shown.replace(/ forms?$/i, "");
+  return `The ${name} isn't a form available in ${productName}.`;
+}
+
 /**
  * The answer, or null when the words name no published template — the turn
  * then goes down the usual path, so a guess about a form never replaces it.
@@ -490,7 +502,15 @@ export function buildFormsGuideAnswer<Role extends string>(input: GuideAnswerInp
   }
 
   const groups = reading.phrases.map((phrase) => ({ phrase, group: resolveGuidePhrase(phrase, templates) }));
-  if (groups.some((entry) => entry.group.length === 0)) return null;
+  const missing = groups.filter((entry) => entry.group.length === 0);
+  const withheld = missing.filter((entry) => resolveGuidePhrase(entry.phrase, input.withheld ?? []).length > 0);
+  if (missing.length > withheld.length) return null;
+  if (withheld.length > 0) {
+    const notHere = withheld.map((entry) => notAvailable(entry.phrase, input.productName));
+    const shown = groups.filter((entry) => entry.group.length > 0);
+    const blocks = shown.map((entry) => explainGroup(entry.phrase, entry.group, access, { full: entry.group.length === 1 }));
+    return [...notHere, ...blocks, `Ask "which forms can I create here?" to see the forms you can use.`].join("\n\n");
+  }
   const distinct = new Set(groups.flatMap((entry) => entry.group.map((template) => template.key)));
 
   if (reading.kind === "compare" && groups.length >= 2 && distinct.size >= 2) {

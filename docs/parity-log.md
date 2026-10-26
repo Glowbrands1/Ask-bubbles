@@ -816,3 +816,13 @@ happened; "X instead of Y" names X; a prior action's date ("jba manual
 revision. Not ported: the Follow-up line rule (this card has none) and the
 card salon edit (the store edit is its own fix here). No salon wording was
 copied. Test: `src/app/api/chat/edits-dates-replay-e2e.test.ts`.
+
+## 26 Oct 2026: the forms guide says a hidden form is not available (Bubbles-only)
+
+FORMS_GUIDE_ENABLED (#194, ported from the sibling app's #262). A question
+about a form this deployment hides in `config/company/forms/hidden.ts`
+("what is an epp" once the EPP keys are hidden) is answered "The EPP isn't a
+form available in Ask Bubbles." instead of falling through to the knowledge
+base. Stays Bubbles-only: the sibling app has no hidden-template list, so
+every template it explains is one it offers. Test:
+`src/lib/forms/forms-guide.test.ts` (holds with the EPP keys hidden and shown).

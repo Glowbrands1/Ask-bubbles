@@ -61,6 +61,7 @@ vi.mock("@/lib/config/server-env", async (importOriginal) => {
 });
 vi.mock("@/lib/auth/server", async () => {
   const { DEFAULT_PERMISSION_MATRIX, hasPermission } = await import("@/lib/permissions");
+const { isHiddenTemplate } = await import("@/config/company/forms/hidden");
   const { AuthError } = await import("@/lib/auth/types");
   return {
     authorizeRequest: async (_request: Request, permission: string) => {
@@ -178,6 +179,7 @@ vi.setConfig({ hookTimeout: 30_000, testTimeout: 30_000 });
 
 const { ensureTemplateLibrary } = await import("@/lib/forms/repository");
 const { DEFAULT_PERMISSION_MATRIX, hasPermission } = await import("@/lib/permissions");
+const { isHiddenTemplate } = await import("@/config/company/forms/hidden");
 const chatRoute = await import("./route");
 
 type Answer = { content: string; formProposal?: ChatFormProposal; formSelection?: unknown };
@@ -258,7 +260,7 @@ describe("flag on: the answer is the published template", () => {
       const listed = (store.form_templates ?? []).filter(
         (row) =>
           row.active !== false &&
-          !["tanning-consultant-interview", "management-interview-round-1", "management-interview-round-2"].includes(String(row.key)) &&
+          !isHiddenTemplate(String(row.key)) &&
           hasPermission(DEFAULT_PERMISSION_MATRIX, "location_manager", String(row.required_permission) as never),
       );
       expect(reply.content).toContain(`As a Location Manager you can create these ${listed.length} forms in Ask Bubbles:`);
