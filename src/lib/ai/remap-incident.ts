@@ -10,6 +10,7 @@ import { extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
 import type { KnowledgeCategory, SourceCitation } from "@/types";
 
 import { accountManualSections } from "./account-manual-sections";
+import { incidentTurn } from "./incident-clauses";
 import { formatManualCitation } from "./policy-citation-fields";
 
 /**
@@ -139,7 +140,8 @@ function turnIncident(
   if (isEditTurn(turn)) return null;
   let found: string | null = null;
   const story: string[] = [];
-  for (const raw of withoutPriorList(turn).split(/[.!?;]+(?=\s|$)/)) {
+  // INCIDENT_CLAUSE_SPLIT_ENABLED: without the employee facts and policy text, "dodge, ne" kept whole.
+  for (const raw of withoutPriorList(incidentTurn(turn, employeeName, { subjectless: true })).split(/[.!?;]+(?=\s|$)/)) {
     const sentence = raw.trim();
     if (!sentence || isEditTurn(sentence) || TALKS_TO_THE_APP.test(sentence) || ASKS_FOR_HELP.test(sentence)) continue;
     const requested = REQUEST_LEAD.test(sentence) || LEVEL_REQUEST.test(sentence);
