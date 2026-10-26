@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { answerQuestion } from "@/lib/ai/server-ask";
 import { isQuestionNotForm } from "@/lib/ai/question-not-form";
+import { withoutDanglingColon } from "@/lib/ai/reply-dangling-colon";
 import {
   assertLiveMode,
   assertNoConfigurationProblems,
@@ -371,7 +372,12 @@ export async function POST(request: Request) {
       logTurnEvent("turn.answer.missing_turn", { surface, where: "api/chat" });
     }
 
-    return NextResponse.json({ ...answer, turnId });
+    /*
+     * The last step that shapes the reply: it never ends on a lead-in colon
+     * with nothing after it (REPLY_NO_DANGLING_COLON_ENABLED, off by default;
+     * off, `answer` is returned as is). See `ai/reply-dangling-colon.ts`.
+     */
+    return NextResponse.json({ ...withoutDanglingColon(answer), turnId });
   } catch (error) {
     return errorResponse(error, "POST /api/chat");
   }

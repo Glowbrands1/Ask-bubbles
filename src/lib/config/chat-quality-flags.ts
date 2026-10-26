@@ -900,6 +900,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
+  "REPLY_NO_DANGLING_COLON_ENABLED",
 ] as const;
 
 /**
@@ -923,4 +924,17 @@ export function incidentClauseSplitEnabled(): boolean {
  */
 export function stateCodeNotAPersonEnabled(): boolean {
   return envFlag("STATE_CODE_NOT_A_PERSON_ENABLED");
+}
+
+/**
+ * A chat reply never ends on a lead-in colon with nothing after it (QA, 26 Oct
+ * 2026: "ca for test employee at kearney, late today, previous coaching verbal
+ * 6/25" was answered "…Based on what you've described, I can prepare:" and
+ * nothing more). The final dangling lead-in line or sentence is taken out; a
+ * reply with a card, a list after the colon, times and code are left alone.
+ * Same flag in both apps. See `ai/reply-dangling-colon.ts`. Off, the reply is
+ * returned as written.
+ */
+export function replyNoDanglingColonEnabled(): boolean {
+  return envFlag("REPLY_NO_DANGLING_COLON_ENABLED");
 }
