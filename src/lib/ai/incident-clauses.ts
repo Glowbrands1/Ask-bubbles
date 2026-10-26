@@ -32,7 +32,10 @@ import { incidentClauseSplitEnabled } from "@/lib/config/chat-quality-flags";
  *                today": the fact half goes, the act half stays;
  *   the app's    the intent read's own sentences in front of the turn ("The
  *   sentences    employee is …", "Policy reference: …") are never the
- *                incident.
+ *                incident;
+ *   commands     "no deduct", "date 10/14", "change it to written",
+ *                "verbal", "store is …" fill their own field, never What
+ *                happened.
  *
  * A clause that says what was done or not done stays whole, whoever it names,
  * so a story about two people keeps both. Off, the readers see the turn as
@@ -136,6 +139,27 @@ export function isStateSentence(text: string): boolean {
   return STATE_SENTENCE.test(text.trim());
 }
 
+/** "skipped a tour today It happened at Kearney NE.": the intent read's sentence glued on without a stop. */
+const GLUED_STATE = /\s+It happened (?:at|on) [^.,;]{1,40}\.?$/;
+
+/**
+ * A command to the app fills a field; it is never what happened (QA, 26 Oct
+ * 2026, flags on and off): "no deduct", "yes payroll deduct", "date 10/14",
+ * "date is", "change it to written", "verbal", "store is …".
+ */
+const SLOT_COMMAND: readonly RegExp[] = [
+  /^(?:(?:yes|no)\s+)?(?:payroll\s+)?(?:deduct(?:ion|ed)?|no\s+payroll)(?:\s+(?:applies|n\/?a|not\s+applicable|\$?\d+(?:\.\d{2})?))?$/i,
+  /^(?:the\s+)?date(?:\s+(?:is|=|:|should\s+be))?(?:\s+(?:\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?|today|yesterday))?$/i,
+  /^(?:please\s+)?(?:change|make|switch|set)\s+(?:it|this|that|the\s+(?:level|warning|form))\s+to\b/i,
+  /^(?:(?:a|it'?s|its|make\s+it)\s+)?(?:verbal|written|final)(?:\s+(?:warning|ca|c\/a))?$/i,
+  /^(?:the\s+)?(?:salon|store|location)\s+(?:is|=|:)\s+/i,
+];
+
+export function isSlotCommand(text: string): boolean {
+  const said = text.trim().replace(/[.!]+$/, "");
+  return said !== "" && SLOT_COMMAND.some((pattern) => pattern.test(said));
+}
+
 export function isPolicyInstruction(text: string): boolean {
   return POLICY_INSTRUCTION.some((pattern) => pattern.test(text.trim()));
 }
@@ -191,9 +215,9 @@ function incidentOnlyLine(line: string, employeeName: string | null, subjectless
   for (const sentence of incidentSentences(unpointed)) {
     // "Issue: The employee who failed to open will then be required …": the policy's words.
     const unlabelled = sentence.replace(/^\s*(?:issue|policy|note)\s*:\s*/i, "");
-    if (isStateSentence(sentence) || isPolicyInstruction(unlabelled) || isPolicyText(unlabelled)) continue;
-    const clauses = incidentClauses(sentence)
-      .filter((clause) => !isPolicyInstruction(clause) && !isPolicyText(clause))
+    if (isStateSentence(sentence) || isSlotCommand(sentence) || isPolicyInstruction(unlabelled) || isPolicyText(unlabelled)) continue;
+    const clauses = incidentClauses(sentence.replace(GLUED_STATE, ""))
+      .filter((clause) => !isPolicyInstruction(clause) && !isPolicyText(clause) && !isSlotCommand(clause))
       .map((clause) => actHalves(clause, employeeName))
       .filter((clause) => !isEmployeeFact(clause, employeeName))
       .map((clause) => (subjectless && statesAnAct(clause) ? withoutSubject(clause) : clause));
