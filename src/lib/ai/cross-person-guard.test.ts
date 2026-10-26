@@ -144,3 +144,37 @@ describe("CROSS_PERSON_INCIDENT_GUARD_ENABLED on", () => {
     }
   });
 });
+
+/**
+ * QA-6, 26 Oct 2026: one shared word made two people one ("Marla Quince" /
+ * "Marla Voss"), so the first person's incident stayed on the new person's
+ * card. Names invented.
+ */
+describe("CROSS_PERSON_INCIDENT_GUARD_ENABLED: two people are one only when first and last names match", () => {
+  it.each([
+    ["Marla Quince", "Marla Voss", false],
+    ["Rowan Pell", "Avery Pell", false],
+    ["Marla Quince", "Avery Quince", false],
+    ["Test Employee", "Test Employee Two", false],
+    ["Rowan Pell", "Rowan Pelt", true],
+    ["Marla Quince", "Marla Quinse", true],
+    ["Mara Quil", "Mara Quill", true],
+    ["Rowan Pell", "Rowan", true],
+  ])("%s / %s → %s", (a, b, same) => {
+    expect(samePerson(a, b)).toBe(same);
+    expect(samePerson(b.toUpperCase(), a.toLowerCase())).toBe(same);
+  });
+
+  it.each([
+    ["create a corrective action form for lena voss. on 10-20-26 lena was talking on her cell phone for over 30 minutes", "lena voss"],
+    ["Create a corrective action form for Lena Voss. On 10-20-26 Lena was talking on her cell phone for over 30 minutes", "Lena Voss"],
+    ["CREATE A CORRECTIVE ACTION FORM FOR AVERY MARSH. ON 10-20-26 AVERY WAS TALKING ON HER CELL PHONE FOR OVER 30 MINUTES", "AVERY MARSH"],
+  ])("'%s' carries none of Lena Marsh's answers", (question, person) => {
+    process.env[FLAG] = "on";
+    const response = { ...RESPONSE, formProposal: { ...RESPONSE.formProposal!, employeeName: person } } as AskResponse;
+    const out = withCrossPersonGuard(response, { ...REQUEST, question } as AskRequest);
+    expect(out.formProposal?.payrollDeduct).toBeNull();
+    expect(out.formProposal?.priorActions).toBeNull();
+    expect(out.formProposal?.warningLevel).toBeNull();
+  });
+});
