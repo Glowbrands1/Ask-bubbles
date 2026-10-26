@@ -51,11 +51,8 @@ const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.ts
  * approval on 25 Oct 2026: behind CHAT_LONG_MESSAGE_ENABLED, a
  * character-count line under the field and send disabled over the limit.
  * Off, it renders as before.
- * The Google Reviews page. Pau, 26 Oct 2026: asked for the update note on the
- * Google Reviews page. Behind GOOGLE_REVIEWS_UPDATE_NOTE_ENABLED; off, it
- * renders as before (pinned in src/app/(app)/reviews/page.test.tsx).
  */
-const ALLOWED_UI = ["src/features/chat/message-bubble.tsx", "src/features/chat/composer.tsx", "src/app/(app)/reviews/page.tsx"];
+const ALLOWED_UI = ["src/features/chat/message-bubble.tsx", "src/features/chat/composer.tsx"];
 
 /*
  * The user (Pau) approved, via QA on 25 Oct 2026, the forms list's Edit and
