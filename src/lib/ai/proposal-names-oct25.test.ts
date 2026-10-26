@@ -146,7 +146,7 @@ describe("off: as production", { timeout: 120_000 }, () => {
 });
 
 /*
- * Ask Sunny QA G4 (conv_mvo1t7qv253555k there), in this app's words: the name
+ * QA G4 (conv_mvo1t7qv253555k), in this app's words: the name
  * opening a sentence after another was read only by the intent model's slot,
  * so one run of three dropped it. The reader now finds it with the guard on.
  */
