@@ -1,7 +1,9 @@
 import {
   draftNotesAreUsable,
+  draftNotesFromCard,
   draftNotesFromConversation,
 } from "@/lib/forms/draft-notes";
+import { remapDraftSourcesClientEnabled } from "@/lib/config/chat-quality-flags";
 import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types";
 
 /**
@@ -63,6 +65,11 @@ export interface CreateInlineFormResult {
    * it as stored; nothing was drafted again.
    */
   reused?: boolean;
+  /**
+   * DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED: the reopened draft's date, which the
+   * card states ("Updated your open draft from <date>"). Absent otherwise.
+   */
+  reusedFrom?: string;
 }
 
 export const DRAFT_FAILED_WARNING =
@@ -110,7 +117,7 @@ export async function createInlineForm({
    * docs/chat-phase-3.md. A validated id with no name is honest; a validated id
    * with a demo name beside it is not.
    */
-  const created = await call<{ instance: { id: string }; reused?: boolean }>("/api/forms/instances", {
+  const created = await call<{ instance: { id: string }; reused?: boolean; reusedFrom?: string }>("/api/forms/instances", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -189,14 +196,30 @@ export async function createInlineForm({
    * the manager may already have edited it; prefilling again would spend a
    * model call to overwrite their work.
    */
-  if (created.reused) return { reference, draftWarning: null, reused: true };
+  if (created.reused) {
+    return {
+      reference,
+      draftWarning: null,
+      reused: true,
+      ...(typeof created.reusedFrom === "string" && created.reusedFrom ? { reusedFrom: created.reusedFrom } : {}),
+    };
+  }
 
   /*
    * THE DRAFT. Manager turns only, resolved from the ids the server retained —
    * see `draftNotesFromConversation`. An assistant turn cannot reach this, and
    * neither can a turn the bounded window dropped.
    */
-  const notes = draftNotesFromConversation(messages, proposal.sourceMessageIds, proposal.sourceExcerpts);
+  const fromTurns = draftNotesFromConversation(messages, proposal.sourceMessageIds, proposal.sourceExcerpts);
+  /*
+   * NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED: a form that would otherwise be
+   * blank is drafted from the card the manager pressed Create on, when that
+   * card shows what happened (QA H1, 25 Oct 2026). Only when no turn
+   * qualified: a draft with usable turns is unchanged. Off, as before. See
+   * `draftNotesFromCard`.
+   */
+  const notes =
+    draftNotesAreUsable(fromTurns) || !remapDraftSourcesClientEnabled() ? fromTurns : draftNotesFromCard(proposal);
   if (!draftNotesAreUsable(notes)) {
     return { reference, draftWarning: NO_NOTES_WARNING };
   }

@@ -6,6 +6,33 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 25 Oct 2026: a follow-up that names its own documents is searched on them — ported from Ask Sunny (a47bf19)
+
+`FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED` defaults off, same name in both apps.
+Found in Ask Sunny (QA Round 17, conv_mvo0ayai2x20aiy): a follow-up naming
+new documents was searched on the earlier turn's subject. This app's
+`rewriteRetrievalQuery` also reads the earlier turn and can do the same. On,
+after the rewrite, a turn that names two or more words no earlier manager
+turn used keeps the rewritten query only when it still has one of them;
+otherwise the turn is searched as typed. The test is a neutral store/HR
+case ("The I-9 and W-4 forms, direct deposit agreements"; the rewrite stubbed
+with this manual's Employment Verification heading): none of the sibling's
+documents or wording were copied.
+
+## 25 Oct 2026: the framework's sections are not pinned into governed drafts — Bubbles-only
+
+`FRAMEWORK_UNPIN_ENABLED` defaults off. The uploaded Performance Management
+Framework (`ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT`) was
+prepared from the sibling app's framework with only the app name changed,
+so it still carries the sibling company's name, examples and metrics, and
+the draft route pinned up to sixteen of its sections into every governed
+form's prompt (Follow-Up Coaching, Corrective Action, Policy Review, EPPs).
+On, a governed draft does not read the framework, its absence no longer
+withholds the draft, and the app's own escalation rules stay in the system
+prompt. Off, nothing changes. Test: `src/app/api/forms/pm-draft-route.test.ts`
+("FRAMEWORK_UNPIN_ENABLED"). **Sibling app: not needed** — Ask Sunny's
+framework is its own company's text; a matching note is in its parity log.
+
 ## 25 Oct 2026: the job title is a title the manager stated — ported from Ask Sunny (PR 188)
 
 Ask Sunny PR 188 (`59fe1ca`, the same patch as `517992a`) is the title rule
@@ -775,3 +802,17 @@ store <name>" as "at <name>" (the store reader's own rules still apply), and
 the store the newest manager turn names wins on the remap and the intent
 slots. No salon wording was copied. Test:
 `src/lib/forms/store-label-cue.test.ts`.
+
+## 25 Oct 2026: edits are applied or answered; dates follow the incident (port)
+
+`FORM_EDIT_DATE_RULES_ENABLED` (default off), the sibling app's flag and
+mechanism on this app's remap path. "change observation of offense to: …"
+makes What happened that text; "add that she was also on her phone" appends
+it and the reply says so (conv_mvnuh50i2hanl53); "clean up my grammar" and
+"change the date to 10-23-26" (conv_mvnsowzl20ljr9m) never become What
+happened; "X instead of Y" names X; a prior action's date ("jba manual
+11-1-25", conv_mvnsqglc2v7zuyk) is never the Date; "late today" is today
+(conv_mvnu46n823v1unt); "can you edit the form I already finalized" opens a
+revision. Not ported: the Follow-up line rule (this card has none) and the
+card salon edit (the store edit is its own fix here). No salon wording was
+copied. Test: `src/app/api/chat/edits-dates-replay-e2e.test.ts`.
