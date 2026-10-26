@@ -3,6 +3,7 @@ import "server-only";
 import { acceptedNameSuggestions } from "./employee-match";
 import { isQuestion } from "./employment-change";
 import { employeeState, managerContext, samePerson } from "./proposal";
+import { isPayrollAnswer } from "./payroll-words";
 import { answersToOpenQuestions } from "./question-answers";
 import { readFormRequests } from "./form-requests";
 import { stateCodePlaceContext } from "./state-code-place";
@@ -49,7 +50,9 @@ export function checkProposalIsCurrent(input: {
       message.role === "user" &&
       typeof message.content === "string" &&
       message.content.trim() !== "" &&
-      !answers.has(message.content.trim()),
+      !answers.has(message.content.trim()) &&
+      // PAYROLL_TYPO_NOT_A_NAME_ENABLED: "yes payrol ldeduct" answers the payroll question; it names nobody.
+      !isPayrollAnswer(message.content),
   );
   const last = turns[turns.length - 1];
   if (!last) return { current: true };
