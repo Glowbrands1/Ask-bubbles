@@ -19,6 +19,8 @@ import { loadFormState, saveFormState } from "./form-state-store";
 import { applyGroundedProposal, prepareGroundedQuestion, type GroundedPerson, type GroundedPrep } from "./grounded-entities";
 import type { ChatActor } from "./form-proposal";
 import type { AskRequest } from "./types";
+import { withFutureDateQuestion } from "./future-incident-date";
+import { withStatedTitleOnCard } from "./stated-title-card";
 import { withTypedEmployeeOnCard } from "./typed-employee-card";
 
 /**
@@ -51,7 +53,17 @@ export async function deliverFormProposal(input: {
   const stateOn = formStateEnabled();
   const dedupe = draftDedupeEnabled();
   // KEEP_FORM_EMPLOYEE_ENABLED: "for Test Employee" stays Test Employee on the card. See `withTypedEmployeeOnCard`.
-  const typedName = (response: AskResponse) => withTypedEmployeeOnCard(response, input.request.question);
+  const managerText = [
+    ...input.request.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
+    input.request.question,
+  ].join("\n");
+  // STATED_TITLE_WINS_ENABLED: the manager's stated job title stays on the card over Woven's. See `withStatedTitleOnCard`.
+  // FUTURE_INCIDENT_DATE_CONFIRM_ENABLED: a future incident date on the card is asked about once.
+  const typedName = (response: AskResponse) =>
+    withFutureDateQuestion(withStatedTitleOnCard(withTypedEmployeeOnCard(response, input.request.question), managerText), {
+      today: input.request.context.todayIso,
+      history: input.request.history,
+    });
   if (!entities && !stateOn && !dedupe) {
     const proposed = await input.propose(input.question);
     return proposed ? typedName(await input.decorate(proposed)) : null;

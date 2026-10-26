@@ -15,6 +15,7 @@ import {
   placeSpanGuardEnabled,
   priorActionsParseEnabled,
   keepFormEmployeeEnabled,
+  statedTitleWinsEnabled,
   formEditDateRulesEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
@@ -42,7 +43,7 @@ import { withoutAppLines } from "./app-sentences";
 import { callClaudeToolDetailed } from "./call-claude";
 import { chatTraceDraft } from "./chat-trace-store";
 import { remapEditLine, formDateByRules, managerWords, remapObservation, withoutSetAsidePolicies } from "./edit-date-rules";
-import { readsAsPolicyPaste, readsAsStatedTitle, spelledAssistant } from "./title-words";
+import { copularJobTitle, readsAsPolicyPaste, readsAsStatedTitle, spelledAssistant } from "./title-words";
 import {
   currentRequestStart,
   hasCutDate,
@@ -903,7 +904,8 @@ function groundedTitle(turns: readonly string[]): string | null {
   let title: string | null = null;
   for (const turn of turns) {
     if (/^(?:verbal|written|yes|no|yeah|nope)[.!\s]*$/i.test(turn.trim())) continue;
-    const found = statedJobTitle(turn) ?? extractJobTitle(turn);
+    // STATED_TITLE_WINS_ENABLED: "she is an HR assistant" states a title the list does not hold.
+    const found = statedJobTitle(turn) ?? extractJobTitle(turn) ?? (statedTitleWinsEnabled() ? copularJobTitle(turn) : null);
     if (!found || /^(?:verbal|written)$/i.test(found)) continue;
     title = found;
   }

@@ -822,6 +822,31 @@ export function googleReviewsInChatEnabled(): boolean {
   return envFlag("GOOGLE_REVIEWS_IN_CHAT_ENABLED");
 }
 
+/**
+ * An incident date after today is asked about once ("That date is in the
+ * future — is 12-20-26 right?") and never changed. A "yes", a restatement or
+ * any other answer keeps it and the question is not asked again for that date
+ * in the conversation; a corrected date is used instead. Only the incident
+ * date the form carries, not a follow-up or review date. Same flag in the
+ * sibling app (QA history, 21 Oct 2026). Off, a future date is accepted
+ * without a question, as before.
+ */
+export function futureIncidentDateConfirmEnabled(): boolean {
+  return envFlag("FUTURE_INCIDENT_DATE_CONFIRM_ENABLED");
+}
+
+/**
+ * The job title the manager states for the employee is the form's. Woven's
+ * different title for the same person does not silently replace it: the
+ * intent reading keeps the stated title, and where the proposal flow used
+ * Woven's, the card keeps the manager's and the reply names Woven's and asks
+ * which is right. Same flag in the sibling app (QA history, 22 Oct 2026). Off,
+ * Woven's verified title goes on the form, as before.
+ */
+export function statedTitleWinsEnabled(): boolean {
+  return envFlag("STATED_TITLE_WINS_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -900,6 +925,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
+  "FUTURE_INCIDENT_DATE_CONFIRM_ENABLED",
+  "STATED_TITLE_WINS_ENABLED",
 ] as const;
 
 /**
