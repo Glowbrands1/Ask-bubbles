@@ -55,7 +55,7 @@ const TOPIC_WORDS = new Set(
   (
     "cash handling dress code attendance tardiness tardy late lateness early phone cell cleaning clean deep register shortage drawer visitors " +
     "visitor conduct standards safety uniform behavior behaviour performance sales eft efts spa closing opening duties training theft time clock " +
-    "schedule break breaks customer customers guest guests service sanitizing sanitation bed beds products product inventory recipe measuring " +
+    "schedule break breaks customer customers guest guests service sanitizing sanitation products product inventory recipe measuring " +
     "acknowledgements acknowledgement acks onboarding woven promo checkins check-ins no-show ncns"
   ).split(" "),
 );
@@ -137,26 +137,49 @@ export function humanCase(text: string): string {
  * lowercase or all in capitals is written in Title Case, with its hyphen and
  * apostrophe parts ("mary-jane" → "Mary-Jane", "o'brien" → "O'Brien"); a word
  * with a capital inside it ("McDonald", "DeShawn", "rOsAlYn") is kept as
- * typed. The same name is changed where the reply shows it. Off, the reply is
- * as it is.
+ * typed, and so is a particle after the first word ("Van der Berg", "de la
+ * Cruz"). Only a name the manager typed is changed: a name spelled in a way
+ * no manager turn has is the directory's spelling, and it wins. The reply is
+ * changed on whole words only ("ann" never inside "Planning"). Off, the reply
+ * is as it is.
  */
-export function withNameTitleCase(response: AskResponse): AskResponse {
+export function withNameTitleCase(response: AskResponse, request: AskRequest): AskResponse {
   if (!nameCaseInsensitiveEnabled()) return response;
   const name = response.formProposal?.employeeName;
   if (!name) return response;
   const titled = titleCaseName(name);
   if (titled === name) return response;
+  const typed = [request.question, ...request.history.filter((turn) => turn.role === "user").map((turn) => turn.content)].filter(
+    (turn): turn is string => typeof turn === "string",
+  );
+  const asTyped = wholeWord(name);
+  if (!typed.some((turn) => asTyped.test(turn) || asTyped.test(humanCase(turn)))) return response;
   return {
     ...response,
-    content: response.content.split(name).join(titled),
+    content: response.content.replace(new RegExp(asTyped.source, "g"), titled),
     formProposal: { ...response.formProposal!, employeeName: titled },
   };
 }
 
+/** Name particles kept in lowercase after the first word. */
+const PARTICLES = new Set(["van", "der", "den", "de", "la", "le", "von", "bin", "ibn", "du", "di", "da", "del", "y"]);
+
 export function titleCaseName(name: string): string {
+  let first = true;
   return name.replace(/[A-Za-z][A-Za-z'’-]*/g, (word) => {
+    const atStart = first;
+    first = false;
     const plain = word === word.toLowerCase() || word === word.toUpperCase();
     if (!plain) return word;
-    return word.toLowerCase().replace(/(^|[-'’])([a-z])/g, (_, mark: string, letter: string) => `${mark}${letter.toUpperCase()}`);
+    if (!atStart && PARTICLES.has(word.toLowerCase())) return word.toLowerCase();
+    // "al-amin", "el-sayed": the prefix stays lowercase after the first word.
+    return word
+      .toLowerCase()
+      .replace(/(^|[-'’])([a-z])/g, (_, mark: string, letter: string) => `${mark}${letter.toUpperCase()}`)
+      .replace(/^(Al|El)-/, (prefix) => (atStart ? prefix : prefix.toLowerCase()));
   });
+}
+
+function wholeWord(name: string): RegExp {
+  return new RegExp(`(?<![A-Za-z])${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z])`);
 }
