@@ -900,6 +900,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
+  "COACHING_ASKS_WHAT_HAPPENED_ENABLED",
 ] as const;
 
 /**
@@ -923,4 +924,15 @@ export function incidentClauseSplitEnabled(): boolean {
  */
 export function stateCodeNotAPersonEnabled(): boolean {
   return envFlag("STATE_CODE_NOT_A_PERSON_ENABLED");
+}
+
+/**
+ * A coaching card for a named person with no account ("coaching for <name>")
+ * asks what happened, in the same words as the Corrective Action ("You
+ * haven't told me what happened yet"), instead of asking only the job title
+ * (`ai/coaching-what-happened.ts`; QA, 26 Oct 2026). Off (the default), the
+ * reply is as built.
+ */
+export function coachingAsksWhatHappenedEnabled(): boolean {
+  return envFlag("COACHING_ASKS_WHAT_HAPPENED_ENABLED");
 }
