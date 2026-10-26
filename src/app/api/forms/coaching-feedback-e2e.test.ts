@@ -499,9 +499,39 @@ describe("individual and team-wide coaching", () => {
 
   it("TERSE_SLOT_READ_ENABLED: the terse turn is written out with the store apart from the name", async () => {
     const { expandTerseRequest } = await import("@/lib/ai/terse-slots");
-    expect(expandTerseRequest(TERSE, "2026-10-25")).toBe(
-      "Create a corrective action form for avery stone at kearney. On 10/11/26 avery stone dress code. This is a verbal warning.",
-    );
+    // TERSE_INCIDENT_NO_NAME off here, whatever the run sets.
+    const noName = process.env.TERSE_INCIDENT_NO_NAME_ENABLED;
+    delete process.env.TERSE_INCIDENT_NO_NAME_ENABLED;
+    try {
+      expect(expandTerseRequest(TERSE, "2026-10-25")).toBe(
+        "Create a corrective action form for avery stone at kearney. On 10/11/26 avery stone dress code. This is a verbal warning.",
+      );
+    } finally {
+      if (noName !== undefined) process.env.TERSE_INCIDENT_NO_NAME_ENABLED = noName;
+    }
+  });
+
+  /*
+   * CHANGED ON PURPOSE, TERSE_INCIDENT_NO_NAME_ENABLED on (QA, 26 Oct 2026): the
+   * incident sentence no longer repeats the name ("On 10/11/26, dress code");
+   * the name, store, date and level are all still there. Flag off keeps the
+   * old string (the test above).
+   */
+  it("TERSE_SLOT_READ_ENABLED + TERSE_INCIDENT_NO_NAME_ENABLED on: the incident sentence without the name", async () => {
+    const { expandTerseRequest } = await import("@/lib/ai/terse-slots");
+    const before = { slot: process.env.TERSE_SLOT_READ_ENABLED, noName: process.env.TERSE_INCIDENT_NO_NAME_ENABLED };
+    process.env.TERSE_SLOT_READ_ENABLED = "true";
+    process.env.TERSE_INCIDENT_NO_NAME_ENABLED = "true";
+    try {
+      expect(expandTerseRequest(TERSE, "2026-10-25")).toBe(
+        "Create a corrective action form for avery stone at kearney. On 10/11/26, dress code. This is a verbal warning.",
+      );
+    } finally {
+      if (before.slot === undefined) delete process.env.TERSE_SLOT_READ_ENABLED;
+      else process.env.TERSE_SLOT_READ_ENABLED = before.slot;
+      if (before.noName === undefined) delete process.env.TERSE_INCIDENT_NO_NAME_ENABLED;
+      else process.env.TERSE_INCIDENT_NO_NAME_ENABLED = before.noName;
+    }
   });
 
   it("TERSE_SLOT_READ_ENABLED off: the raw terse turn does not read the employee apart from the store, as on main", async () => {
