@@ -6,8 +6,8 @@ import { goalContext, type GoalRow } from "@/lib/google-reviews/goals";
 import { isGoogleReviewQuestion, storeCodesNamedIn } from "./google-reviews-chat";
 
 /**
- * Port from Ask Sunny, QA T11 (25 Oct 2026, a 1-star chat): "Ask Sunny denies
- * data the app has." The chat answered Google review questions with "I don't
+ * Port from the sibling app, QA T11 (25 Oct 2026, a 1-star chat): the
+ * sibling's chat denied data the app has. The chat answered Google review questions with "I don't
  * have review counts" while /reviews showed the month to date against the
  * goal. Ask Bubbles reads only the stored inventory in chat, so it has the
  * same gap.
