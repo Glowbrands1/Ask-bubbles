@@ -1,4 +1,5 @@
-import { describedAttendanceKeys, readCaPolicy, statedOffenseKeys } from "@/lib/forms/ca-policy";
+import { policyTwoIncidentsEnabled } from "@/lib/config/chat-quality-flags";
+import { attendanceIncidentPositions, describedAttendanceKeys, readCaPolicy, statedOffenseKeys } from "@/lib/forms/ca-policy";
 import { describedManualSection, namedManualSection } from "@/lib/forms/named-policy-section";
 import {
   OFFENSE_MANUAL_SECTIONS,
@@ -58,7 +59,24 @@ export function accountManualSections(
     }
   }
 
-  return found;
+  return policyTwoIncidentsEnabled() ? inOrderSaid(found, text) : found;
+}
+
+/**
+ * Late Opening and Attendance in the order the manager said the incidents
+ * (POLICY_TWO_INCIDENTS_ENABLED): "no call no show and not opening the store
+ * on time" lists Attendance first. Every other section keeps its place.
+ */
+function inOrderSaid(found: ManualSection[], text: string): ManualSection[] {
+  const opening = found.findIndex((section) => headingKey(section.heading) === headingKey("Late Opening"));
+  const attendance = found.findIndex((section) => headingKey(section.heading) === "attendance");
+  if (opening === -1 || attendance === -1) return found;
+  const said = attendanceIncidentPositions(text);
+  if (said.lateOpening === -1 || said.attendance === -1) return found;
+  if (said.attendance < said.lateOpening === attendance < opening) return found;
+  const ordered = [...found];
+  [ordered[opening], ordered[attendance]] = [ordered[attendance]!, ordered[opening]!];
+  return ordered;
 }
 
 /** A heading printed on a chunk whose sheet has no usable page. Page 0 means "omit the page". */
