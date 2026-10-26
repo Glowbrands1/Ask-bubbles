@@ -6,6 +6,10 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 26 Oct 2026: BH3, both facts in one correction turn — unflagged here, flagged in Ask Sunny
+
+BH3 ("verbal. payroll deduct is not applicable." applies both the level and the payroll answer on a correction turn) has been on in Bubbles main, unflagged, since 9530112; Ask Sunny gates the same fix behind `CORRECTION_BOTH_FACTS_ENABLED` (default off, Ask-sunny#207); QA decided on 26 Oct 2026 not to add a flag in Bubbles (churn risk).
+
 ## 25 Oct 2026: a follow-up that names its own documents is searched on them — ported from Ask Sunny (a47bf19)
 
 `FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED` defaults off, same name in both apps.
