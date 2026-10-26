@@ -823,6 +823,23 @@ export function googleReviewsInChatEnabled(): boolean {
 }
 
 /**
+ * A Corrective Action or coaching draft is never filed blank (production, 26
+ * Oct 2026: `drafted` with no fields and nothing rejected, from Create clicks
+ * fired several at once). The model's tool call is read when its `values` /
+ * `checked` came back JSON-encoded, one object per section, keyed by label,
+ * or with a single option as text; a model call that threw (429, 529,
+ * overloaded), answered with no tool call, or left no narrative although the
+ * notes hold an account is tried again up to twice (after 1 s, then 3 s), as
+ * is a failed framework read; if it is still empty, the Observation is the
+ * manager's own incident clause (the card's "Issue"). Every reason goes on a
+ * drafted event, with `{"fallback": "manager_words"}` where used. See
+ * `forms/draft-never-blank.ts`. Off, the draft route is unchanged.
+ */
+export function draftNeverBlankEnabled(): boolean {
+  return envFlag("DRAFT_NEVER_BLANK_ENABLED");
+}
+
+/**
  * DRAFT_REUSE_OWN_DRAFTS_ONLY_ENABLED: a create from chat reopens an open
  * draft only when the calling manager made it (`created_by`). Another
  * manager's matching draft is never handed to this caller; a new draft is
@@ -944,6 +961,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
+  "DRAFT_NEVER_BLANK_ENABLED",
   "DRAFT_REUSE_OWN_DRAFTS_ONLY_ENABLED",
   "REMAP_ROLE_CHECK_ENABLED",
   "POLICY_GATE_NONBLOCKING_ENABLED",
