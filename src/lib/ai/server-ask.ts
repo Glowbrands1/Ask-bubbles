@@ -46,6 +46,7 @@ import { loadChatDataBlock } from "./chat-data-tools";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
 import { withTerseSlots } from "./terse-slots";
+import { withStoreAliases } from "./store-alias";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";
@@ -179,7 +180,8 @@ export async function answerQuestion(
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
   // TERSE_SLOT_READ_ENABLED: a terse "ca …" line is read as the long form.
-  const read = withTerseSlots(request);
+  // STORE_ALIAS_ENABLED: a store named the managers' way is read as its roster name.
+  const read = withStoreAliases(withTerseSlots(request));
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,

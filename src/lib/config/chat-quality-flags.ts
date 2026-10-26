@@ -733,6 +733,16 @@ export function terseSlotReadEnabled(): boolean {
   return envFlag("TERSE_SLOT_READ_ENABLED");
 }
 
+/**
+ * The way managers name a store ("dodge ne", "dodge, ne", "kearney ne") is
+ * written as the roster name before any reader sees the turn; the aliases are
+ * built from the store list (25 Oct 2026, ported from the sibling app). See
+ * `ai/store-alias.ts`. Off, every turn is read as typed.
+ */
+export function storeAliasEnabled(): boolean {
+  return envFlag("STORE_ALIAS_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -802,4 +812,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
+  "STORE_ALIAS_ENABLED",
 ] as const;
