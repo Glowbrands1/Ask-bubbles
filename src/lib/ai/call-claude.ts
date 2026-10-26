@@ -3,16 +3,23 @@ import "server-only";
 import type { TextBlockParam } from "@anthropic-ai/sdk/resources/messages";
 
 import { ACTIVE_BRAND } from "@/lib/brand";
-import { chatTraceEnabled, fullManualContextEnabled, promptCacheEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  chatTraceEnabled,
+  chatUpstreamRetryEnabled,
+  fullManualContextEnabled,
+  promptCacheEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { CLAUDE_EFFORT, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
 
 import { Anthropic, getAnthropicClient } from "./anthropic";
+import { chatTraceDraft } from "./chat-trace-store";
 import { AiError } from "./errors";
 import { selectLongContext } from "./long-context";
 import { noteModelCall } from "./model-failure";
 import { splitSystemPrompt } from "./prompts";
 import { withTruncationRetry } from "./truncation";
+import { newUpstreamRetryRecord, withUpstreamRetry } from "./upstream-retry";
 
 /**
  * ============================================================================
@@ -122,6 +129,13 @@ export interface CallClaudeInput {
    * so a later policy question can read it back instead of sending it again.
    */
   readonly cachedContext?: string | null;
+  /**
+   * The chat answer only. With CHAT_UPSTREAM_RETRY_ENABLED on, a retryable
+   * upstream failure is tried again inside the chat turn's budget, each
+   * attempt with its own deadline. Omitted — the forms ingest refinement —
+   * the call is exactly what it was.
+   */
+  readonly upstreamRetry?: boolean;
 }
 
 /**
@@ -207,53 +221,72 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
   while (history.length > 0 && history[0]!.role === "assistant") history.shift();
 
   const started = Date.now();
+  // CHAT_UPSTREAM_RETRY_ENABLED, chat answer only: null when off or not asked for,
+  // and then nothing below differs from main.
+  const retry = input.upstreamRetry && chatUpstreamRetryEnabled() ? newUpstreamRetryRecord() : null;
+  // The retry budget runs from the turn's start when a trace is open, otherwise this call's.
+  const budgetFrom = retry ? (chatTraceDraft()?.startedAt ?? started) : started;
+  /*
+   * One request to the model. `options` is passed only by the upstream
+   * retry, which turns the SDK's own retries off so it alone decides how
+   * many attempts there are, and gives the attempt its deadline; off, the
+   * request is exactly what main sends.
+   */
+  const attempt = async (maxTokens: number, options?: { maxRetries: number; timeout: number; signal: AbortSignal }) => {
+    const attemptStarted = Date.now();
+    const params = {
+      model: CLAUDE_MODEL,
+      max_tokens: maxTokens,
+      thinking: { type: "adaptive" as const },
+      output_config: { effort: CLAUDE_EFFORT },
+      system: claudeSystemPayload(input.system, input.cachedContext),
+      messages: [
+        ...history,
+        {
+          role: "user" as const,
+          // Every context block and then the question, in that order: the
+          // question last is what keeps a long briefing from burying it.
+          content: [
+            input.grounding,
+            ...(input.reportData ? [input.reportData] : []),
+            ...(input.personMemory ? [input.personMemory] : []),
+            ...(input.formsLibrary ? [input.formsLibrary] : []),
+            ...(input.verifiedRecords ? [input.verifiedRecords] : []),
+            ...(input.formRecords ? [input.formRecords] : []),
+            `QUESTION\n\n${input.question}`,
+          ].join("\n\n"),
+        },
+      ],
+    };
+    // The live client always has messages.stream. Streaming with the
+    // flags off would change production on merge, so stream only when a
+    // flag that reads the stream is on. A double with no stream stays
+    // on create either way, and firstTokenMs stays null on create.
+    const useStream =
+      (chatTraceEnabled() || promptCacheEnabled() || fullManualContextEnabled()) &&
+      typeof client.messages.stream === "function";
+    if (!useStream) {
+      const created = options ? await client.messages.create(params, options) : await client.messages.create(params);
+      return Object.assign(created, { firstTokenMs: null as number | null });
+    }
+    let firstTokenMs: number | null = null;
+    const running = options ? client.messages.stream(params, options) : client.messages.stream(params);
+    running.on("text", () => {
+      if (firstTokenMs === null) firstTokenMs = Date.now() - attemptStarted;
+    });
+    const streamed = await running.finalMessage();
+    return Object.assign(streamed, { firstTokenMs });
+  };
   try {
     const response = await withTruncationRetry(
       input.maxTokens,
       async (maxTokens) => {
-        const attemptStarted = Date.now();
-        const params = {
-          model: CLAUDE_MODEL,
-          max_tokens: maxTokens,
-          thinking: { type: "adaptive" as const },
-          output_config: { effort: CLAUDE_EFFORT },
-          system: claudeSystemPayload(input.system, input.cachedContext),
-          messages: [
-            ...history,
-            {
-              role: "user" as const,
-              // Every context block and then the question, in that order: the
-              // question last is what keeps a long briefing from burying it.
-              content: [
-                input.grounding,
-                ...(input.reportData ? [input.reportData] : []),
-                ...(input.personMemory ? [input.personMemory] : []),
-                ...(input.formsLibrary ? [input.formsLibrary] : []),
-                ...(input.verifiedRecords ? [input.verifiedRecords] : []),
-                ...(input.formRecords ? [input.formRecords] : []),
-                `QUESTION\n\n${input.question}`,
-              ].join("\n\n"),
-            },
-          ],
-        };
-        // The live client always has messages.stream. Streaming with the
-        // flags off would change production on merge, so stream only when a
-        // flag that reads the stream is on. A double with no stream stays
-        // on create either way, and firstTokenMs stays null on create.
-        const useStream =
-          (chatTraceEnabled() || promptCacheEnabled() || fullManualContextEnabled()) &&
-          typeof client.messages.stream === "function";
-        if (!useStream) {
-          const created = await client.messages.create(params);
-          return Object.assign(created, { firstTokenMs: null as number | null });
+        if (retry) {
+          return withUpstreamRetry(retry, budgetFrom, (limits) =>
+            attempt(maxTokens, { maxRetries: 0, timeout: limits.timeout, signal: limits.signal }),
+          );
         }
-        let firstTokenMs: number | null = null;
-        const running = client.messages.stream(params);
-        running.on("text", () => {
-          if (firstTokenMs === null) firstTokenMs = Date.now() - attemptStarted;
-        });
-        const streamed = await running.finalMessage();
-        return Object.assign(streamed, { firstTokenMs });
+        return attempt(maxTokens);
       },
       `${ACTIVE_BRAND.assistantName} ran out of room before finishing that answer, so it was not shown. Try asking for less at once, or split the question into parts.`,
     );
@@ -265,6 +298,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
       latencyMs: Date.now() - started,
       firstTokenMs: response.firstTokenMs,
       usage: response.usage,
+      ...(retry?.retried ? { retried: true } : {}),
     };
     if (response.stop_reason === "refusal") {
       noteModelCall({ ...noted, subtype: "refused" });
@@ -303,6 +337,9 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
       latencyMs: Date.now() - started,
       usage: null,
       error,
+      // With the retry on: whether it was tried again, and the subtype read
+      // from the SDK's own type field (a streamed overloaded error has no status).
+      ...(retry ? { retried: retry.retried, subtype: retry.last?.subtype ?? null } : {}),
     });
     logAnthropicFailure(error);
     if (error instanceof Anthropic.APIError && rejectsConfiguration(error.status)) {

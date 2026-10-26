@@ -988,6 +988,8 @@ async function answerQuestionCore(
     ...(longContext ? { historyPolicy: "budget" as const, priorSummary: longContext.summary } : {}),
     question: request.question,
     maxTokens: CLAUDE_MAX_TOKENS[request.mode],
+    // CHAT_UPSTREAM_RETRY_ENABLED applies to the answer and its fallback only; see `ai/upstream-retry.ts`.
+    upstreamRetry: true,
   };
   const retrievalChunks: GroundingChunk[] = used.map((row, index) => ({
     marker: index + 1,

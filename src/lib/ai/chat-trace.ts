@@ -87,7 +87,7 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
       error_status: draft.errorStatus,
       form_in_progress: draft.formInProgress,
       retryable: model?.retryable ?? false,
-      retried: false,
+      retried: model?.retried ?? false,
       succeeded: draft.succeeded === true,
       extraction_model: draft.formExtraction?.model ?? null,
       extraction_input_tokens: draft.formExtraction?.inputTokens ?? null,
