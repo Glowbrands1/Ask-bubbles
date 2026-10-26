@@ -1,5 +1,7 @@
+import { dateAnswerAppliedEnabled } from "@/lib/config/chat-quality-flags";
+
 import { POSITION_QUESTION_TAG, readPositionAnswer } from "./employee-position";
-import { DATE_QUESTION_TAG, readDateChoice } from "./incident-dates";
+import { DATE_QUESTION_TAG, dateAnswerTurns, readDateChoice } from "./incident-dates";
 import { readLocationMentions } from "./location-mention";
 import { correctsTheEmployee, extractJobTitle } from "./proposal";
 
@@ -39,6 +41,8 @@ export function answersToOpenQuestions(
       (before.content.includes(STORE_QUESTION_TAG) && readLocationMentions(reply).length > 0);
     if (isAnswer) answered.add(reply);
   }
+  // DATE_ANSWER_APPLIED_ENABLED: "most recent" answering the date question a turn or two back is no name either.
+  if (dateAnswerAppliedEnabled()) for (const reply of dateAnswerTurns(conversation as never)) answered.add(reply);
   return answered;
 }
 
