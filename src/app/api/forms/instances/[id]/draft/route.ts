@@ -147,6 +147,7 @@ import {
   readDraftedCall,
   recordDraftOutcome,
   DRAFT_RETRY_BACKOFF_MS,
+  withinDraftBudget,
   callSaidAnything,
   emptyCallReason,
   modelFailureReason,
@@ -306,6 +307,8 @@ async function readOfficialPolicyManual(
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    /* When this request began: DRAFT_NEVER_BLANK_ENABLED stops retrying past its budget. */
+    const startedAt = Date.now();
     assertLiveMode();
     assertNoConfigurationProblems();
     const { id } = await context.params;
@@ -552,7 +555,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       governance.governed &&
       !unpinFramework &&
       (progression === null || !progression.ok) &&
-      frameworkReads <= DRAFT_RETRY_BACKOFF_MS.length
+      frameworkReads <= DRAFT_RETRY_BACKOFF_MS.length &&
+      withinDraftBudget(startedAt)
     ) {
       await pauseBeforeRetry(DRAFT_RETRY_BACKOFF_MS[frameworkReads - 1]!);
       frameworkReads += 1;
@@ -575,7 +579,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       if (draftNeverBlankEnabled()) {
         await recordDraftOutcome(id, actor.id, {
           attempts: frameworkReads,
-          reasons: [progression === null ? "framework_read_failed" : "framework_unavailable"],
+          reasons: [
+            progression === null ? "framework_read_failed" : "framework_unavailable",
+            ...(frameworkReads <= DRAFT_RETRY_BACKOFF_MS.length && !withinDraftBudget(startedAt)
+              ? ["time_budget_exceeded"]
+              : []),
+          ],
         });
       }
       return NextResponse.json({
@@ -1399,7 +1408,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     let attempts = 1;
     let succeeded = !first.failed;
     let lastFailed = first.failed;
-    while (neverBlank && (lastFailed || blank(prose)) && attempts <= DRAFT_RETRY_BACKOFF_MS.length) {
+    while (
+      neverBlank &&
+      (lastFailed || blank(prose)) &&
+      attempts <= DRAFT_RETRY_BACKOFF_MS.length &&
+      withinDraftBudget(startedAt)
+    ) {
       await pauseBeforeRetry(DRAFT_RETRY_BACKOFF_MS[attempts - 1]!);
       attempts += 1;
       const next = await ask();
@@ -1412,6 +1426,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         prose = nextProse;
       }
       if (blank(prose)) reasons.push("no_narrative_after_guards");
+    }
+    /* Out of time with retries left: say so, and go straight to what is in hand. */
+    if (neverBlank && (lastFailed || blank(prose)) && attempts <= DRAFT_RETRY_BACKOFF_MS.length && !withinDraftBudget(startedAt)) {
+      reasons.push("time_budget_exceeded");
     }
     const retried = attempts > 1;
     let fallback: "manager_words" | null = null;
