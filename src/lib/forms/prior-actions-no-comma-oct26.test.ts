@@ -2,9 +2,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fieldLines } from "@/lib/ai/intake-augment";
 import { decideIntentTurn, type IntentTurnInput } from "@/lib/ai/intent-slots";
-import { blankYearlessStepDates, heldCoachingDates, listIncidentDates } from "@/lib/forms/form-date-answer";
+import {
+  blankYearlessStepDates,
+  datesInTextWithYearless,
+  heldCoachingDates,
+  listFormDates,
+  listIncidentDates,
+  priorStepDate,
+} from "@/lib/forms/form-date-answer";
 import { incidentDates } from "@/lib/forms/incident-dates";
 import { statedPriorActions } from "@/lib/forms/prior-actions";
+import { readReopenRequest } from "@/lib/forms/reopen-request";
 import { managerStatedWarningLevel, statedWarningLevel, warningLevelFromTurns } from "@/lib/forms/warning-level";
 
 /**
@@ -354,5 +362,991 @@ describe("PRIOR_ACTIONS_NO_COMMA_ENABLED off: today's output, pinned", () => {
     expect(statedPriorActions(text, TODAY)).toEqual(before);
     expect(statedPriorActions("prior verbal 9/1 written 9/15", TODAY)).toEqual([]);
     expect(incidentDates("prior verbal 9/1 written 9/15", TODAY)).toEqual(["2026-09-01", "2026-09-15"]);
+  });
+});
+
+/*
+ * ============================================================================
+ * NEVER-BREAK: FLAG OFF == MAIN, WITH THE PRODUCTION FLAGS ON
+ * ============================================================================
+ *
+ * PRIOR_ACTIONS_PARSE_ENABLED and REOPEN_VERB_GUARD_ENABLED are on in
+ * production, and this change touches the readers both use. With
+ * PRIOR_ACTIONS_NO_COMMA_ENABLED off, every reader below must return exactly
+ * what main returns. `MAIN_OUTPUTS` was captured by running these inputs on
+ * origin/main (e7a61f3) with the same three flags, and is hard-coded on
+ * purpose: if this test fails, the flag-off path has changed — fix the code,
+ * never the snapshot.
+ *
+ * The inputs are the manager turns this file's tests use plus ordinary
+ * prior-actions and reopen turns, each as typed, all lowercase and in
+ * sentence case. Names are invented ("Rowan Pell", "Test Store").
+ */
+const NEVER_BREAK_CASES = [
+  "prior coaching verbal 6/25 written 7/28 no deduct",
+  "prior verbal 9/1 written 9/15",
+  QA_ONE,
+  QA_TWO,
+  "prior coachings 9/8, 9/15 and 9/25",
+  NCNS,
+  "coaching form for rowan pell, she was late on 10-5 and 10-15, I coached her on 10-16",
+  "Create a verbal CA for Rowan Pell, late to open 10/20/2026. She had a coaching on 9/15/2026.",
+  "Written warning for Rowan Pell, no call no show on 10-24. Previous verbal 9-15 and coaching 8-1.",
+  "Final CA for Rowan Pell at Test Store. Prior actions: verbal 8/1, written 9/1.",
+  "Rowan Pell was late 10/22 and left early 10/23. No prior actions.",
+  "reopen the written ca for rowan pell, she was coached on 9-15",
+  "Can you reopen the coaching form for Rowan Pell? Prior verbal 9-15 written 10-1.",
+];
+
+/** As typed; all lowercase; sentence case. */
+function casings(text: string): string[] {
+  const lower = text.toLowerCase();
+  const sentence = lower.replace(/(^|[.!?]\s+)([a-z])/g, (_, lead: string, letter: string) => lead + letter.toUpperCase());
+  return [...new Set([text, lower, sentence])];
+}
+
+/** Every reader this change touches, as the flag-off snapshot records it. */
+function readers(said: string) {
+  const { formDate, warningLevel } = turn(said, null);
+  return {
+    priors: statedPriorActions(said, TODAY),
+    incidents: incidentDates(said, TODAY),
+    listIncident: listIncidentDates(said, TODAY).map((d) => `${d.iso}@${d.index}`),
+    listForm: listFormDates(said, TODAY).map((d) => `${d.iso}@${d.index}`),
+    yearless: datesInTextWithYearless(said, TODAY).map((d) => `${d.iso}@${d.index}`),
+    blanked: blankYearlessStepDates(said, TODAY),
+    held: heldCoachingDates(said, TODAY),
+    priorStep: priorStepDate(said, TODAY),
+    fields: fieldLines(said, TODAY),
+    level: statedWarningLevel(said, TODAY),
+    levelTurns: warningLevelFromTurns([said], TODAY),
+    managerLevel: managerStatedWarningLevel([{ role: "user", content: said }], TODAY),
+    intent: { formDate, warningLevel },
+    reopen: readReopenRequest(said),
+  };
+}
+
+// Captured on origin/main e7a61f3 (same on b86bfd7) with PRIOR_ACTIONS_PARSE_ENABLED=1 and REOPEN_VERB_GUARD_ENABLED=1.
+const MAIN_OUTPUTS: Record<string, ReturnType<typeof readers>> = {
+  "prior coaching verbal 6/25 written 7/28 no deduct": {
+    "priors": [
+      "Verbal warning — 06/25/2026",
+      "Written warning — verbal 6/25 — 07/28/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-06-25@22",
+      "2026-07-28@35"
+    ],
+    "blanked": "prior coaching verbal 6/25 written 7/28 no deduct",
+    "held": [],
+    "priorStep": "2026-07-28",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "Prior coaching verbal 6/25 written 7/28 no deduct": {
+    "priors": [
+      "Verbal warning — 06/25/2026",
+      "Written warning — verbal 6/25 — 07/28/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-06-25@22",
+      "2026-07-28@35"
+    ],
+    "blanked": "Prior coaching verbal 6/25 written 7/28 no deduct",
+    "held": [],
+    "priorStep": "2026-07-28",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "prior verbal 9/1 written 9/15": {
+    "priors": [
+      "Verbal warning — 09/01/2026",
+      "Written warning — 9/1 — 09/15/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-09-01@13",
+      "2026-09-15@25"
+    ],
+    "blanked": "prior verbal 9/1 written 9/15",
+    "held": [],
+    "priorStep": "2026-09-15",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "Prior verbal 9/1 written 9/15": {
+    "priors": [
+      "Verbal warning — 09/01/2026",
+      "Written warning — 9/1 — 09/15/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-09-01@13",
+      "2026-09-15@25"
+    ],
+    "blanked": "Prior verbal 9/1 written 9/15",
+    "held": [],
+    "priorStep": "2026-09-15",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "ca rowan pell written 10/22 back room station 4 prior coaching verbal 6/25 written 7/28 no deduct": {
+    "priors": [
+      "Verbal warning — 06/25/2026",
+      "Written warning — verbal 6/25 — 07/28/2026"
+    ],
+    "incidents": [
+      "2026-10-22"
+    ],
+    "listIncident": [
+      "2026-10-22@22"
+    ],
+    "listForm": [
+      "2026-10-22@22"
+    ],
+    "yearless": [
+      "2026-10-22@22",
+      "2026-06-25@70",
+      "2026-07-28@83"
+    ],
+    "blanked": "ca rowan pell written 10/22 back room station 4 prior coaching verbal 6/25 written 7/28 no deduct",
+    "held": [],
+    "priorStep": "2026-07-28",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": "2026-10-22",
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "Ca rowan pell written 10/22 back room station 4 prior coaching verbal 6/25 written 7/28 no deduct": {
+    "priors": [
+      "Verbal warning — 06/25/2026",
+      "Written warning — verbal 6/25 — 07/28/2026"
+    ],
+    "incidents": [
+      "2026-10-22"
+    ],
+    "listIncident": [
+      "2026-10-22@22"
+    ],
+    "listForm": [
+      "2026-10-22@22"
+    ],
+    "yearless": [
+      "2026-10-22@22",
+      "2026-06-25@70",
+      "2026-07-28@83"
+    ],
+    "blanked": "Ca rowan pell written 10/22 back room station 4 prior coaching verbal 6/25 written 7/28 no deduct",
+    "held": [],
+    "priorStep": "2026-07-28",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": "2026-10-22",
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "perf ca rowan pell 270 units below goal upt atv verbal prior coachings 9/8 9/15 9/25 no deduct": {
+    "priors": [
+      "Coaching — 09/08/2026",
+      "Coaching — 9/8 — 09/15/2026",
+      "Coaching — 9/8 9/15 — 09/25/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-09-08@71",
+      "2026-09-15@75",
+      "2026-09-25@80"
+    ],
+    "blanked": "perf ca rowan pell 270 units below goal upt atv verbal prior coachings 9/8 9/15 9/25 no deduct",
+    "held": [],
+    "priorStep": "2026-09-25",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": "verbal"
+    },
+    "reopen": null
+  },
+  "Perf ca rowan pell 270 units below goal upt atv verbal prior coachings 9/8 9/15 9/25 no deduct": {
+    "priors": [
+      "Coaching — 09/08/2026",
+      "Coaching — 9/8 — 09/15/2026",
+      "Coaching — 9/8 9/15 — 09/25/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-09-08@71",
+      "2026-09-15@75",
+      "2026-09-25@80"
+    ],
+    "blanked": "Perf ca rowan pell 270 units below goal upt atv verbal prior coachings 9/8 9/15 9/25 no deduct",
+    "held": [],
+    "priorStep": "2026-09-25",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": "verbal"
+    },
+    "reopen": null
+  },
+  "prior coachings 9/8, 9/15 and 9/25": {
+    "priors": [
+      "Coaching — 09/08/2026"
+    ],
+    "incidents": [
+      "2026-09-15",
+      "2026-09-25"
+    ],
+    "listIncident": [
+      "2026-09-15@21",
+      "2026-09-25@30"
+    ],
+    "listForm": [
+      "2026-09-15@21",
+      "2026-09-25@30"
+    ],
+    "yearless": [
+      "2026-09-08@16",
+      "2026-09-15@21",
+      "2026-09-25@30"
+    ],
+    "blanked": "prior coachings 9/8, 9/15 and 9/25",
+    "held": [],
+    "priorStep": "2026-09-08",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "Prior coachings 9/8, 9/15 and 9/25": {
+    "priors": [
+      "Coaching — 09/08/2026"
+    ],
+    "incidents": [
+      "2026-09-15",
+      "2026-09-25"
+    ],
+    "listIncident": [
+      "2026-09-15@21",
+      "2026-09-25@30"
+    ],
+    "listForm": [
+      "2026-09-15@21",
+      "2026-09-25@30"
+    ],
+    "yearless": [
+      "2026-09-08@16",
+      "2026-09-15@21",
+      "2026-09-25@30"
+    ],
+    "blanked": "Prior coachings 9/8, 9/15 and 9/25",
+    "held": [],
+    "priorStep": "2026-09-08",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "Write up Rowan Pell, Assistant Manager, Kearney, no call no show today. I coached her on 10-16 and gave a verbal on 10-21.": {
+    "priors": [],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [],
+    "blanked": "Write up Rowan Pell, Assistant Manager, Kearney, no call no show today. I coached her on 10-16 and gave a verbal on 10-21.",
+    "held": [],
+    "priorStep": null,
+    "fields": [
+      "It happened on 10/21/2026."
+    ],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": "verbal"
+    },
+    "reopen": null
+  },
+  "write up rowan pell, assistant manager, kearney, no call no show today. i coached her on 10-16 and gave a verbal on 10-21.": {
+    "priors": [],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [],
+    "blanked": "write up rowan pell, assistant manager, kearney, no call no show today. i coached her on 10-16 and gave a verbal on 10-21.",
+    "held": [],
+    "priorStep": null,
+    "fields": [
+      "It happened on 10/21/2026."
+    ],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": "verbal"
+    },
+    "reopen": null
+  },
+  "Write up rowan pell, assistant manager, kearney, no call no show today. I coached her on 10-16 and gave a verbal on 10-21.": {
+    "priors": [],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [],
+    "blanked": "Write up rowan pell, assistant manager, kearney, no call no show today. I coached her on 10-16 and gave a verbal on 10-21.",
+    "held": [],
+    "priorStep": null,
+    "fields": [
+      "It happened on 10/21/2026."
+    ],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": "verbal"
+    },
+    "reopen": null
+  },
+  "coaching form for rowan pell, she was late on 10-5 and 10-15, I coached her on 10-16": {
+    "priors": [],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-10-05@46",
+      "2026-10-15@55"
+    ],
+    "blanked": "coaching form for rowan pell, she was late on 10-5 and 10-15, I coached her on 10-16",
+    "held": [],
+    "priorStep": null,
+    "fields": [
+      "It happened on 10/16/2026."
+    ],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "coaching form for rowan pell, she was late on 10-5 and 10-15, i coached her on 10-16": {
+    "priors": [],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-10-05@46",
+      "2026-10-15@55"
+    ],
+    "blanked": "coaching form for rowan pell, she was late on 10-5 and 10-15, i coached her on 10-16",
+    "held": [],
+    "priorStep": null,
+    "fields": [
+      "It happened on 10/16/2026."
+    ],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "Coaching form for rowan pell, she was late on 10-5 and 10-15, i coached her on 10-16": {
+    "priors": [],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-10-05@46",
+      "2026-10-15@55"
+    ],
+    "blanked": "Coaching form for rowan pell, she was late on 10-5 and 10-15, i coached her on 10-16",
+    "held": [],
+    "priorStep": null,
+    "fields": [
+      "It happened on 10/16/2026."
+    ],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "Create a verbal CA for Rowan Pell, late to open 10/20/2026. She had a coaching on 9/15/2026.": {
+    "priors": [
+      "Coaching — 09/15/2026"
+    ],
+    "incidents": [
+      "2026-10-20"
+    ],
+    "listIncident": [
+      "2026-10-20@48"
+    ],
+    "listForm": [
+      "2026-10-20@48"
+    ],
+    "yearless": [
+      "2026-10-20@48",
+      "2026-09-15@82"
+    ],
+    "blanked": "Create a verbal CA for Rowan Pell, late to open 10/20/2026. She had a coaching on 9/15/2026.",
+    "held": [],
+    "priorStep": "2026-09-15",
+    "fields": [],
+    "level": "verbal",
+    "levelTurns": "verbal",
+    "managerLevel": "verbal",
+    "intent": {
+      "formDate": "2026-10-20",
+      "warningLevel": "verbal"
+    },
+    "reopen": null
+  },
+  "create a verbal ca for rowan pell, late to open 10/20/2026. she had a coaching on 9/15/2026.": {
+    "priors": [
+      "Coaching — 09/15/2026"
+    ],
+    "incidents": [
+      "2026-10-20"
+    ],
+    "listIncident": [
+      "2026-10-20@48"
+    ],
+    "listForm": [
+      "2026-10-20@48"
+    ],
+    "yearless": [
+      "2026-10-20@48",
+      "2026-09-15@82"
+    ],
+    "blanked": "create a verbal ca for rowan pell, late to open 10/20/2026. she had a coaching on 9/15/2026.",
+    "held": [],
+    "priorStep": "2026-09-15",
+    "fields": [],
+    "level": "verbal",
+    "levelTurns": "verbal",
+    "managerLevel": "verbal",
+    "intent": {
+      "formDate": "2026-10-20",
+      "warningLevel": "verbal"
+    },
+    "reopen": null
+  },
+  "Create a verbal ca for rowan pell, late to open 10/20/2026. She had a coaching on 9/15/2026.": {
+    "priors": [
+      "Coaching — 09/15/2026"
+    ],
+    "incidents": [
+      "2026-10-20"
+    ],
+    "listIncident": [
+      "2026-10-20@48"
+    ],
+    "listForm": [
+      "2026-10-20@48"
+    ],
+    "yearless": [
+      "2026-10-20@48",
+      "2026-09-15@82"
+    ],
+    "blanked": "Create a verbal ca for rowan pell, late to open 10/20/2026. She had a coaching on 9/15/2026.",
+    "held": [],
+    "priorStep": "2026-09-15",
+    "fields": [],
+    "level": "verbal",
+    "levelTurns": "verbal",
+    "managerLevel": "verbal",
+    "intent": {
+      "formDate": "2026-10-20",
+      "warningLevel": "verbal"
+    },
+    "reopen": null
+  },
+  "Written warning for Rowan Pell, no call no show on 10-24. Previous verbal 9-15 and coaching 8-1.": {
+    "priors": [
+      "Verbal warning — 09/15/2026",
+      "Coaching — 08/01/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-10-24@51",
+      "2026-09-15@74",
+      "2026-08-01@92"
+    ],
+    "blanked": "Written warning for Rowan Pell, no call no show on 10-24. Previous verbal      and coaching    .",
+    "held": [],
+    "priorStep": "2026-09-15",
+    "fields": [
+      "It happened on 10/24/2026."
+    ],
+    "level": "written",
+    "levelTurns": "written",
+    "managerLevel": "written",
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "written warning for rowan pell, no call no show on 10-24. previous verbal 9-15 and coaching 8-1.": {
+    "priors": [
+      "Verbal warning — 09/15/2026",
+      "Coaching — 08/01/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-10-24@51",
+      "2026-09-15@74",
+      "2026-08-01@92"
+    ],
+    "blanked": "written warning for rowan pell, no call no show on 10-24. previous verbal      and coaching    .",
+    "held": [],
+    "priorStep": "2026-09-15",
+    "fields": [
+      "It happened on 10/24/2026."
+    ],
+    "level": "written",
+    "levelTurns": "written",
+    "managerLevel": "written",
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "Written warning for rowan pell, no call no show on 10-24. Previous verbal 9-15 and coaching 8-1.": {
+    "priors": [
+      "Verbal warning — 09/15/2026",
+      "Coaching — 08/01/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-10-24@51",
+      "2026-09-15@74",
+      "2026-08-01@92"
+    ],
+    "blanked": "Written warning for rowan pell, no call no show on 10-24. Previous verbal      and coaching    .",
+    "held": [],
+    "priorStep": "2026-09-15",
+    "fields": [
+      "It happened on 10/24/2026."
+    ],
+    "level": "written",
+    "levelTurns": "written",
+    "managerLevel": "written",
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "Final CA for Rowan Pell at Test Store. Prior actions: verbal 8/1, written 9/1.": {
+    "priors": [
+      "Verbal warning — 08/01/2026",
+      "Written warning — 09/01/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-08-01@61",
+      "2026-09-01@74"
+    ],
+    "blanked": "Final CA for Rowan Pell at Test Store. Prior actions: verbal 8/1, written 9/1.",
+    "held": [],
+    "priorStep": "2026-09-01",
+    "fields": [],
+    "level": "final_warning",
+    "levelTurns": "final_warning",
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "final ca for rowan pell at test store. prior actions: verbal 8/1, written 9/1.": {
+    "priors": [
+      "Verbal warning — 08/01/2026",
+      "Written warning — 09/01/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-08-01@61",
+      "2026-09-01@74"
+    ],
+    "blanked": "final ca for rowan pell at test store. prior actions: verbal 8/1, written 9/1.",
+    "held": [],
+    "priorStep": "2026-09-01",
+    "fields": [],
+    "level": "final_warning",
+    "levelTurns": "final_warning",
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "Final ca for rowan pell at test store. Prior actions: verbal 8/1, written 9/1.": {
+    "priors": [
+      "Verbal warning — 08/01/2026",
+      "Written warning — 09/01/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-08-01@61",
+      "2026-09-01@74"
+    ],
+    "blanked": "Final ca for rowan pell at test store. Prior actions: verbal 8/1, written 9/1.",
+    "held": [],
+    "priorStep": "2026-09-01",
+    "fields": [],
+    "level": "final_warning",
+    "levelTurns": "final_warning",
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "Rowan Pell was late 10/22 and left early 10/23. No prior actions.": {
+    "priors": [],
+    "incidents": [
+      "2026-10-22",
+      "2026-10-23"
+    ],
+    "listIncident": [
+      "2026-10-22@20",
+      "2026-10-23@41"
+    ],
+    "listForm": [
+      "2026-10-22@20",
+      "2026-10-23@41"
+    ],
+    "yearless": [
+      "2026-10-22@20",
+      "2026-10-23@41"
+    ],
+    "blanked": "Rowan Pell was late 10/22 and left early 10/23. No prior actions.",
+    "held": [],
+    "priorStep": null,
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "rowan pell was late 10/22 and left early 10/23. no prior actions.": {
+    "priors": [],
+    "incidents": [
+      "2026-10-22",
+      "2026-10-23"
+    ],
+    "listIncident": [
+      "2026-10-22@20",
+      "2026-10-23@41"
+    ],
+    "listForm": [
+      "2026-10-22@20",
+      "2026-10-23@41"
+    ],
+    "yearless": [
+      "2026-10-22@20",
+      "2026-10-23@41"
+    ],
+    "blanked": "rowan pell was late 10/22 and left early 10/23. no prior actions.",
+    "held": [],
+    "priorStep": null,
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "Rowan pell was late 10/22 and left early 10/23. No prior actions.": {
+    "priors": [],
+    "incidents": [
+      "2026-10-22",
+      "2026-10-23"
+    ],
+    "listIncident": [
+      "2026-10-22@20",
+      "2026-10-23@41"
+    ],
+    "listForm": [
+      "2026-10-22@20",
+      "2026-10-23@41"
+    ],
+    "yearless": [
+      "2026-10-22@20",
+      "2026-10-23@41"
+    ],
+    "blanked": "Rowan pell was late 10/22 and left early 10/23. No prior actions.",
+    "held": [],
+    "priorStep": null,
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": null
+  },
+  "reopen the written ca for rowan pell, she was coached on 9-15": {
+    "priors": [
+      "Coaching — 09/15/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-09-15@57"
+    ],
+    "blanked": "reopen the written ca for rowan pell, she was coached on     ",
+    "held": [],
+    "priorStep": "2026-09-15",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": "written"
+    },
+    "reopen": null
+  },
+  "Reopen the written ca for rowan pell, she was coached on 9-15": {
+    "priors": [
+      "Coaching — 09/15/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-09-15@57"
+    ],
+    "blanked": "Reopen the written ca for rowan pell, she was coached on     ",
+    "held": [],
+    "priorStep": "2026-09-15",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": "written"
+    },
+    "reopen": null
+  },
+  "Can you reopen the coaching form for Rowan Pell? Prior verbal 9-15 written 10-1.": {
+    "priors": [
+      "Verbal warning — 09/15/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-09-15@62",
+      "2026-10-01@75"
+    ],
+    "blanked": "Can you reopen the coaching form for Rowan Pell? Prior verbal      written 10-1.",
+    "held": [],
+    "priorStep": "2026-09-15",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": {
+      "mode": "edit",
+      "templateKey": "coaching",
+      "asksChange": false
+    }
+  },
+  "can you reopen the coaching form for rowan pell? prior verbal 9-15 written 10-1.": {
+    "priors": [
+      "Verbal warning — 09/15/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-09-15@62",
+      "2026-10-01@75"
+    ],
+    "blanked": "can you reopen the coaching form for rowan pell? prior verbal      written 10-1.",
+    "held": [],
+    "priorStep": "2026-09-15",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": {
+      "mode": "edit",
+      "templateKey": "coaching",
+      "asksChange": false
+    }
+  },
+  "Can you reopen the coaching form for rowan pell? Prior verbal 9-15 written 10-1.": {
+    "priors": [
+      "Verbal warning — 09/15/2026"
+    ],
+    "incidents": [],
+    "listIncident": [],
+    "listForm": [],
+    "yearless": [
+      "2026-09-15@62",
+      "2026-10-01@75"
+    ],
+    "blanked": "Can you reopen the coaching form for rowan pell? Prior verbal      written 10-1.",
+    "held": [],
+    "priorStep": "2026-09-15",
+    "fields": [],
+    "level": null,
+    "levelTurns": null,
+    "managerLevel": null,
+    "intent": {
+      "formDate": null,
+      "warningLevel": null
+    },
+    "reopen": {
+      "mode": "edit",
+      "templateKey": "coaching",
+      "asksChange": false
+    }
+  }
+};
+
+describe("NEVER-BREAK: PRIOR_ACTIONS_NO_COMMA_ENABLED off, with PRIOR_ACTIONS_PARSE_ENABLED and REOPEN_VERB_GUARD_ENABLED on, reads exactly as main", () => {
+  const inputs = NEVER_BREAK_CASES.flatMap(casings);
+
+  function productionFlags(noComma: boolean): void {
+    vi.stubEnv("PRIOR_ACTIONS_PARSE_ENABLED", "1");
+    vi.stubEnv("REOPEN_VERB_GUARD_ENABLED", "1");
+    vi.stubEnv("PRIOR_ACTIONS_NO_COMMA_ENABLED", noComma ? "1" : "");
+  }
+
+  it("covers every input main was run on, and no other", () => {
+    expect(inputs.length).toBe(33);
+    expect([...inputs].sort()).toEqual(Object.keys(MAIN_OUTPUTS).sort());
+  });
+
+  for (const said of inputs) {
+    it(`"${said}"`, () => {
+      productionFlags(false);
+      expect(readers(said)).toEqual(MAIN_OUTPUTS[said]);
+    });
+  }
+
+  it("the same inputs read differently with the flag on (the snapshot exercises the changed code)", () => {
+    productionFlags(true);
+    const changed = inputs.filter((said) => JSON.stringify(readers(said)) !== JSON.stringify(MAIN_OUTPUTS[said]));
+    expect(changed.length).toBeGreaterThan(0);
   });
 });

@@ -416,10 +416,12 @@ function withYearlessDates(text: string, dates: readonly DateInText[], today: st
     const index = match.index ?? 0;
     const end = index + match[0].length;
     if (RANGE_AFTER.test(text.slice(end, end + 12))) continue;
-    seen.push({ iso: "", index, end });
     // "I coached her on 10-16": a coaching the manager held is read as it was before.
-    const heldText = scoped ? text.slice(previousDateEnd([...dates, ...seen], index), index) : text.slice(0, index);
-    if (!(scoped && keepHeld) && HELD_COACHING_BEFORE.test(heldText)) continue;
+    if (scoped) {
+      // PRIOR_ACTIONS_NO_COMMA_ENABLED: a held coaching governs only the words since the date before it.
+      seen.push({ iso: "", index, end });
+      if (!keepHeld && HELD_COACHING_BEFORE.test(text.slice(previousDateEnd([...dates, ...seen], index), index))) continue;
+    } else if (HELD_COACHING_BEFORE.test(text.slice(0, index))) continue;
     if (dates.some((found) => index < found.end && end > found.index)) continue;
     const iso = calendarIso(year, Number(match[1]), Number(match[2]));
     if (iso) extra.push({ iso, index, end });
@@ -456,10 +458,10 @@ export function blankYearlessStepDates(text: string, today: string): string {
    */
   const scoped = priorActionsNoCommaEnabled();
   const plain = withYearlessDates(text, [], today);
-  const plainAt = new Set(plain.map((found) => found.index));
+  const plainAt = scoped ? new Set(plain.map((found) => found.index)) : null;
   for (const found of scoped ? withYearlessDates(text, [], today, true) : plain) {
     if (read.has(found.index)) continue;
-    if (!plainAt.has(found.index)) {
+    if (plainAt && !plainAt.has(found.index)) {
       if (!steps.has(found.index) || !/\btoday\b/i.test(text.slice(0, found.index))) continue;
     } else if (!steps.has(found.index) && !manualOrCoachedDate(text.slice(0, found.index))) continue;
     out = out.slice(0, found.index) + " ".repeat(found.end - found.index) + out.slice(found.end);
@@ -621,19 +623,21 @@ function labelledStepsParsed(text: string, dates: readonly DateInText[], today?:
       });
       continue;
     }
-    // "prior coaching verbal 6/25 written 7/28": a labelled step's list continues without a comma.
-    const spaced = list ? spacedStepItem(text, dates, date) : null;
-    if (list && spaced !== null) {
-      found.set(date.index, {
-        named: listNeedsStep ? spaced : `${list}${spaced}`,
-        topic: listNeedsStep ? "" : spaced.replace(TOPIC_ARTICLE, "").trim(),
-      });
-      continue;
-    }
-    // "prior coachings 9/8 9/15 9/25": a bare date after a labelled step's date is one more, with only its own date.
-    if (list && bareDateItem(text, dates, date, list)) {
-      found.set(date.index, { named: list, topic: "" });
-      continue;
+    if (list && priorActionsNoCommaEnabled()) {
+      // "prior coaching verbal 6/25 written 7/28": a labelled step's list continues without a comma.
+      const spaced = spacedStepItem(text, dates, date);
+      if (spaced !== null) {
+        found.set(date.index, {
+          named: listNeedsStep ? spaced : `${list}${spaced}`,
+          topic: listNeedsStep ? "" : spaced.replace(TOPIC_ARTICLE, "").trim(),
+        });
+        continue;
+      }
+      // "prior coachings 9/8 9/15 9/25": a bare date after a labelled step's date is one more, with only its own date.
+      if (bareDateItem(text, dates, date, list)) {
+        found.set(date.index, { named: list, topic: "" });
+        continue;
+      }
     }
     list = null;
     const before = text.slice(0, date.index);
@@ -804,7 +808,7 @@ function stepsAsWritten(text: string, today: string): WrittenStep[] {
 /** Each earlier step with the offset of its date. A yearless "9-15" is read too with the flag on. */
 function stepSpans(text: string, today: string): { step: WrittenStep; index: number }[] {
   const dates = priorActionsParseEnabled()
-    ? withYearlessDates(text, datesInText(text, today), today, true)
+    ? withYearlessDates(text, datesInText(text, today), today, priorActionsNoCommaEnabled())
     : datesInText(text, today);
   const steps = labelledSteps(text, dates, today);
   // "jba manual 11-1-25" after "previous coaching jba manual 11-1-26": the later date is that step's (flag on only).
@@ -847,8 +851,10 @@ function stepSpans(text: string, today: string): { step: WrittenStep; index: num
       return at({ iso: found.iso, named: owned[0], ...withAbout });
     }
     // "I coached her on 10-16" before today: an earlier step (PRIOR_ACTIONS_NO_COMMA_ENABLED).
-    const coached = priorActionsNoCommaEnabled() && found.iso < today ? COACHED_HER_BEFORE.exec(before) : null;
-    if (coached) return at({ iso: found.iso, named: coached[0], ...withAbout });
+    if (priorActionsNoCommaEnabled() && found.iso < today) {
+      const coached = COACHED_HER_BEFORE.exec(before);
+      if (coached) return at({ iso: found.iso, named: coached[0], ...withAbout });
+    }
     return [];
   });
 }
