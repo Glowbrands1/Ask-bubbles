@@ -1,6 +1,7 @@
-import { formEditDateRulesEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditDateRulesEnabled, negatedLateShiftEnabled } from "@/lib/config/chat-quality-flags";
 
 import { JOIN } from "./bounded-context";
+import { deniedAt, saysUndenied } from "./denied-incident";
 import { LATE_TO_OPEN, lateOpenOn } from "./late-open";
 import {
   findManualSection,
@@ -237,10 +238,12 @@ const MISSED_EVENT_AFTER = new RegExp(
 /** Leading words that place the event rather than name it: "the", "her", "last", "tuesday's". */
 const EVENT_LEAD = /^(?:(?:the|a|an|her|his|their|our|this|that|last|next|yesterday['’]?s|today['’]?s|[a-z]+day['’]?s|[a-z]+day|todays|yesterdays)\s+)+/;
 
-function missedEventIn(sentences: readonly string[]): string | null {
+function missedEventIn(sentences: readonly string[], skipDenied = true): string | null {
   for (const sentence of sentences) {
     for (const clause of sentence.split(/;|:\s|\s+(?:but|however)\s+/)) {
       const match = MISSED_EVENT_BEFORE.exec(clause) ?? MISSED_EVENT_AFTER.exec(clause);
+      // NEGATED_LATE_SHIFT_ENABLED: "she did not miss the monthly meeting" missed nothing.
+      if (match && skipDenied && negatedLateShiftEnabled() && deniedAt(clause, match.index)) continue;
       if (match) return match[1]!.replace(EVENT_LEAD, "").trim();
     }
   }
@@ -428,10 +431,12 @@ export function describesLateOpening(rawText: string): boolean {
  * arrived late and the store did not. Absenteeism beside either when the
  * account also describes an absence.
  */
-function attendanceOffenseKeys(text: string, missed: boolean): string[] | null {
+function attendanceOffenseKeys(text: string, missed: boolean, asBefore = false): string[] | null {
   const opening = opensLate(text);
-  const absent = ABSENCE.test(text) || missed;
-  const late = !opening && LATENESS.test(text);
+  // NEGATED_LATE_SHIFT_ENABLED: "was not late" is not a lateness.
+  const says = (pattern: RegExp) => (asBefore ? pattern.test(text) : saysUndenied(text, pattern));
+  const absent = says(ABSENCE) || missed;
+  const late = !opening && says(LATENESS);
   if (!opening && !absent && !late) return null;
   const keys: string[] = [];
   if (opening) keys.push(LATE_OPENING_OFFENSE);
@@ -446,7 +451,13 @@ export function statedOffenseKeys(reading: CaPolicyReading, rawText: string): st
       return null;
     case "attendance": {
       const text = normalize(rawText);
-      return attendanceOffenseKeys(text, missedEventIn(statements(text)) !== null) ?? ["tardiness"];
+      // When the manager denies every lateness and absence ("she has never been
+      // absent"), the box is what it was before the flag, never a Tardiness
+      // nobody described (QA-6, NEGATED_LATE_SHIFT_ENABLED).
+      return (
+        attendanceOffenseKeys(text, missedEventIn(statements(text)) !== null) ??
+        attendanceOffenseKeys(text, missedEventIn(statements(text), false) !== null, true) ?? ["tardiness"]
+      );
     }
     default:
       return [reading.stated];
