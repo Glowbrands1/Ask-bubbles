@@ -203,9 +203,15 @@ describe("the chooser and the template library the chat reads", () => {
   });
 
   const HIDDEN = ["tanning-consultant-interview", "management-interview-round-1", "management-interview-round-2"];
+  /*
+   * The six EPPs were hidden after these (QA decision, 26 Oct 2026; see
+   * `hidden-epp-oct26.test.ts`), so the list is the three interviews plus
+   * those six. The expectation changes on purpose.
+   */
+  const HIDDEN_EPPS = ["sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit"];
 
   it("the Tanning Consultant Interview and both management interviews are hidden and never offered", () => {
-    expect([...HIDDEN_TEMPLATE_KEYS].sort()).toEqual([...HIDDEN].sort());
+    expect([...HIDDEN_TEMPLATE_KEYS].sort()).toEqual([...HIDDEN, ...HIDDEN_EPPS].sort());
     for (const key of HIDDEN) {
       expect(WITHHELD_FROM_CHOOSER).toContain(key);
       expect(offeredInChooser(key)).toBe(false);
@@ -224,7 +230,7 @@ describe("the chooser and the template library the chat reads", () => {
     it("…but the template list leaves them out, and nothing listed carries sibling wording", async () => {
       const summaries = await listTemplateSummaries();
       for (const key of HIDDEN) expect(summaries.map((summary) => summary.key)).not.toContain(key);
-      expect(summaries.length).toBe(TEMPLATE_SEEDS.length - HIDDEN.length);
+      expect(summaries.length).toBe(TEMPLATE_SEEDS.length - HIDDEN.length - HIDDEN_EPPS.length);
       for (const summary of summaries) {
         expectClean(summary.name, `${summary.key} name`);
         expectClean(summary.shortName, `${summary.key} short name`);

@@ -32,6 +32,21 @@ export const HIDDEN_TEMPLATE_KEYS: readonly string[] = [
   "tanning-consultant-interview",
   "management-interview-round-1",
   "management-interview-round-2",
+  /*
+   * The six Employee Performance Plans — SDIT, TSD, ASD-SDIT, FTTC and both
+   * DMIT readings. Their content came over from the sibling app with the rest
+   * of the library, and Buff City Soap has no EPP of its own yet. Hidden (QA
+   * decision, 26 Oct 2026). Config only: rows, versions and any form already
+   * filed from them stay as they are, and such a form keeps rendering against
+   * the version it pinned. Remove these lines when Buff City Soap's own plans
+   * are in the library.
+   */
+  "sdit-epp",
+  "tsd-epp",
+  "asd-sdit-epp",
+  "fttc-epp",
+  "dmit-epp-tsd",
+  "dmit-epp-dmit",
 ];
 
 export function isHiddenTemplate(templateKey: string): boolean {
