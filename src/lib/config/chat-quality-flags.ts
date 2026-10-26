@@ -822,6 +822,16 @@ export function googleReviewsInChatEnabled(): boolean {
   return envFlag("GOOGLE_REVIEWS_IN_CHAT_ENABLED");
 }
 
+/**
+ * An incident date after today is asked about once, in every register, and
+ * never dates the form (QA, 26 Oct 2026, U4). A deadline or a follow-up in
+ * the future is not asked about. Off, a future date is dropped silently, as
+ * before.
+ */
+export function futureIncidentDateAskEnabled(): boolean {
+  return envFlag("FUTURE_INCIDENT_DATE_ASK_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -900,6 +910,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXCERPT_BRAND_FILTER_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
+  "FUTURE_INCIDENT_DATE_ASK_ENABLED",
 ] as const;
 
 /**
