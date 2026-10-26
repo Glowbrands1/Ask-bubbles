@@ -658,7 +658,11 @@ describe("QA B-list on the full remap with the merged-bundle flags that carry th
 
   it("G11: every prior step and the $25 are kept", async () => {
     const answer = await new Thread().say(G11, EMPLOYEE);
-    expect(line(answer.content, "Prior actions")).toMatch(/01\/01\/2095.*10\/05\/2026/);
+    // Expectation changed on purpose (merge of main into PR 134): with
+    // PRIOR_ACTIONS_PARSE_ENABLED a two-digit year is never in the future, so
+    // "jba manual 1-1-95" is 01/01/1995, not 01/01/2095 (QA B13 P0 G11,
+    // conv_mvnt9m172krh73y; see b13-remap-p0-oct25.test.ts). Both steps are still required.
+    expect(line(answer.content, "Prior actions")).toMatch(/01\/01\/1995.*10\/05\/2026/);
     expect(line(answer.content, "Payroll deduction amount")).toBe("$25");
     expect(line(answer.content, "Date")).toBe("2026-10-21");
   });
