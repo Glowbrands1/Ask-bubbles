@@ -7,6 +7,7 @@ import {
   type ManualChunk,
   type ManualSection,
 } from "./official-policy-manual";
+import { specificTopicSection } from "./specific-policy-topics";
 
 /**
  * ============================================================================
@@ -173,6 +174,8 @@ export interface NamedManualSection {
   readonly section: ManualSection;
   /** The offense box that section is cited under: its own box where it has one, otherwise Violation of Company Policies. */
   readonly offenseKey: string;
+  /** Further sections the same incident is cited under (POLICY_SPECIFIC_TOPICS_ENABLED): Animals, then Visitors. */
+  readonly also?: readonly ManualSection[];
 }
 
 /**
@@ -457,10 +460,28 @@ export function mayDescribeSection(text: string): boolean {
   return !OWN_BOX.test(text);
 }
 
+/**
+ * POLICY_SPECIFIC_TOPICS_ENABLED: the incident the manager's words name — no
+ * wet floor sign, a long break, a social media post, sexual comments, a pet,
+ * theft, a shortage, insubordination, talking badly about coworkers — is the
+ * section of the pinned manual `specific-policy-topics.ts` finds for it, and
+ * not the model's catch-all. Nothing else must decide the policy first: a
+ * policy the manager named wins, and so do attendance, a late opening and
+ * dress code. Off, `specificTopicSection` reads nothing and this returns null.
+ */
+function specificSection(text: string, chunks: readonly ManualChunk[] | null): NamedManualSection | null {
+  if (!chunks || chunks.length === 0) return null;
+  const found = specificTopicSection({ text, chunks });
+  if (!found || !mayDescribeSection(text)) return null;
+  return { phrase: found.phrase, section: found.section, offenseKey: found.offenseKey, also: found.also };
+}
+
 export function describedManualSection(input: {
   readonly text: string;
   readonly chunks: readonly ManualChunk[] | null;
 }): NamedManualSection | null {
+  const specific = specificSection(input.text ?? "", input.chunks);
+  if (specific) return specific;
   const found = describedHeadings(input);
   if (!found || found.size !== 1) return null;
   const [heading, phrase] = [...found.entries()][0]!;
