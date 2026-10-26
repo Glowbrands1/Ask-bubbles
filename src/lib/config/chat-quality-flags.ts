@@ -786,6 +786,17 @@ export function appPasswordHelpEnabled(): boolean {
   return envFlag("APP_PASSWORD_HELP_ENABLED");
 }
 
+/**
+ * An everyday one-word heading names its section only when the manager says
+ * "policy", "section" or "rule" with it (Code 3, policy reading; QA item 6,
+ * 25 Oct 2026; same flag in both apps): a sales "promotions" coaching no
+ * longer cites the HR Promotions section p.34, nor an onboarding
+ * "orientation" Orientation p.33. Off, as before.
+ */
+export function policyEverydayHeadingEnabled(): boolean {
+  return envFlag("POLICY_EVERYDAY_HEADING_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -859,4 +870,5 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TERSE_SLOT_READ_ENABLED",
   "SENSITIVE_DEFAULTS_REDACT_ENABLED",
   "APP_PASSWORD_HELP_ENABLED",
+  "POLICY_EVERYDAY_HEADING_ENABLED",
 ] as const;
