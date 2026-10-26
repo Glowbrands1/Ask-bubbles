@@ -17,6 +17,7 @@ import {
   priorActionsParseEnabled,
   titleWholeWordEnabled,
   statedTitleWinsEnabled,
+  formEditDateRulesEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
@@ -32,6 +33,7 @@ import {
   stateSentences,
   type ConversationFormState,
 } from "./form-state";
+import { priorActionDates } from "./edit-date-rules";
 import type { GroundedPerson } from "./grounded-entities";
 import { copularJobTitle, titleTextFromTurns } from "./title-words";
 import { titleInWords } from "./title-in-words";
@@ -777,6 +779,12 @@ function datesInConversation(blob: string, today: string): string[] {
   if (priorActionsParseEnabled()) {
     const kept = new Set(listFormDates(blob, today).map((item) => item.iso));
     for (const iso of [...found]) if (!kept.has(iso)) found.delete(iso);
+  }
+  // FORM_EDIT_DATE_RULES_ENABLED: an earlier step's date is never offered as the form's (QA B4,
+  // conv_mvi98yvkfuehzye: "jba manual 1-1-26 for previous coaching" was option 2 of "Which date …?").
+  if (formEditDateRulesEnabled()) {
+    const prior = priorActionDates(blob, today);
+    for (const iso of [...found]) if (prior.has(iso)) found.delete(iso);
   }
   DAY_MONTH.lastIndex = 0;
   for (const match of blob.matchAll(DAY_MONTH)) {

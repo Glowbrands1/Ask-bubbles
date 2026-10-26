@@ -33,6 +33,7 @@ import {
 } from "@/lib/forms/employment-change";
 import {
   PERFORMANCE_MANAGEMENT_DRAFT_RULES,
+  UNPINNED_PERFORMANCE_MANAGEMENT_DRAFT_RULES,
   SENSITIVE_ACTION_NOTICE,
   refuseSensitiveSelections,
 } from "@/lib/forms/escalation-guard";
@@ -146,6 +147,7 @@ import {
   actionPlanSentencesEnabled,
   draftEditMergeEnabled,
   fieldAccuracyEnabled,
+  frameworkUnpinEnabled,
   policyCitationEnabled,
 } from "@/lib/config/chat-quality-flags";
 import {
@@ -187,7 +189,7 @@ import {
  * with the prior-actions list (`prior-actions.ts`).
  */
 const PREVIOUS_ACTION_DATE_KEY = LEGACY_PREVIOUS_ACTION_DATE_KEY;
-import { EXIT_STATED_KEYS, exitDetailValues, readExitDetails } from "@/lib/forms/exit-details";
+import { exitDetailValues, exitStatedKeys, readExitDetails } from "@/lib/forms/exit-details";
 import {
   WARNING_LEVEL_KEYS,
   WARNING_LEVEL_STATED_KEYS,
@@ -481,7 +483,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           id,
           exitDetailValues(readExitDetails(notes, businessToday())),
           actor.id,
-          EXIT_STATED_KEYS,
+          // EXIT_INTAKE_FIX_ENABLED adds the Permanent Address the manager typed.
+          exitStatedKeys(),
         )
       : [];
 
@@ -506,7 +509,15 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       variantKey,
     });
 
-    const progression = governance.governed
+    /*
+     * FRAMEWORK_UNPIN_ENABLED (QA, 25 Oct 2026): the uploaded framework text
+     * still carries the sibling company's examples and name, so with the flag
+     * on its sections are not pinned here. The document is not read, its
+     * absence does not withhold the draft, and the app's own escalation rules
+     * still go in the system prompt. Off, nothing below changes.
+     */
+    const unpinFramework = governance.governed && frameworkUnpinEnabled();
+    const progression = governance.governed && !unpinFramework
       ? await new SupabaseKnowledgeProvider()
           .fetchRoleGrounding(
             PERFORMANCE_MANAGEMENT_FRAMEWORK,
@@ -526,7 +537,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      * `.catch(() => null)` above collapses a retrieval OUTAGE into the same
      * unavailable state rather than a 500, so this branch covers both.
      */
-    if (governance.governed && (progression === null || !progression.ok)) {
+    if (!unpinFramework && governance.governed && (progression === null || !progression.ok)) {
       return NextResponse.json({
         values: {},
         checked: {},
@@ -920,7 +931,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
             "Each plan you do write is one or two sentences, tied to what the manager described and to the objective printed beside the category. No dates, no disciplinary step, no quoted policy wording.",
           ]
         : []),
-      ...(governance.governed ? PERFORMANCE_MANAGEMENT_DRAFT_RULES : []),
+      // FRAMEWORK_UNPIN_ENABLED: `unpinFramework` is only ever true on a governed form.
+      ...(unpinFramework
+        ? UNPINNED_PERFORMANCE_MANAGEMENT_DRAFT_RULES
+        : governance.governed ? PERFORMANCE_MANAGEMENT_DRAFT_RULES : []),
       /*
        * THE EPP'S OWN RULES, on the versions that have the appendix field.
        * They say what a performance plan IS — coaching, not a warning — and

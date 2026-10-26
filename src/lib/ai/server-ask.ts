@@ -45,9 +45,11 @@ import { callClaude } from "./call-claude";
 import { loadChatDataBlock } from "./chat-data-tools";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
 import { deliverFormProposal } from "./grounded-turn";
+import { withTerseSlots } from "./terse-slots";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";
+import { isQuestionNotForm } from "./question-not-form";
 import { pinnedManualBlock, printedPageFromRetrieval } from "./policy-citation-fields";
 import { recallMemory, rememberFact } from "./chat-memory-store";
 import { finishChatTrace, openChatTrace, redactTraceText } from "./chat-trace";
@@ -65,6 +67,7 @@ import {
   policyCitationEnabled,
   priorCoachingOptionalEnabled,
   queryRewriteEnabled,
+  followupNewTopicRetrievalEnabled,
   reportBreakdownEnabled,
   intentExtractionEnabled,
   retrievalRecallEnabled,
@@ -74,8 +77,11 @@ import {
   antiLoopEnabled,
   formFullRemapEnabled,
   fullManualContextEnabled,
+  frameworkGeneralSectionsEnabled,
+  reformatKeepsSourcesEnabled,
   crossChatReplyGuardEnabled,
   manualNegatedListNoteEnabled,
+  questionNotFormEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -85,11 +91,13 @@ import { understandFormTurn } from "./form-tool-understand";
 import { remapFormTurn, remapShouldRun, type FormRemapSlots } from "./form-full-remap";
 import { withFutureDateQuestion } from "./future-incident-date";
 import { historyForRemap } from "./form-remap-scope";
+import { withRemapDraftSources } from "./remap-draft-sources";
 import { augmentIntakeQuestion } from "./intake-augment";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import { prepareLongContext } from "./long-context-claude";
 import { applyOptionalPriorCoaching } from "./prior-coaching-optional";
 import { rewriteRetrievalQuery } from "./query-rewrite-claude";
+import { followUpOwnQuery } from "./query-rewrite";
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
 import { matchRecallKnowledge } from "@/lib/knowledge/recall-match";
 import { withMappedPolicy } from "./violation-policy";
@@ -119,9 +127,11 @@ import {
   buildSystemPrompt,
   extractUsedMarkers,
   stripMarkers,
+  isCoachingFrameworkTitle,
   type GroundingChunk,
 } from "./prompts";
 import { retrievalPlanFor } from "./retrieval-query";
+import { earlierAnsweredTurn, isReformatTurn, keepEarlierSources } from "./reformat-turn";
 import { slotOnlyRetrievalTopic } from "./slot-only-turn";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
 import type { AskRequest, AskResponse } from "./types";
@@ -169,7 +179,9 @@ export async function answerQuestion(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
-  if (!chatTraceEnabled()) return answerQuestionBody(request, actor, memory);
+  // TERSE_SLOT_READ_ENABLED: a terse "ca …" line is read as the long form.
+  const read = withTerseSlots(request);
+  if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
     messageId: request.questionMessageId,
@@ -177,7 +189,7 @@ export async function answerQuestion(
     originalQuery: request.question,
     formInProgress: Boolean(request.continueProposalTemplateKey || request.openForm || request.activeFormInstanceId),
   });
-  return finishChatTrace(draft, () => answerQuestionBody(request, actor, memory));
+  return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory));
 }
 
 /** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
@@ -208,7 +220,19 @@ async function answerQuestionCore(
     throw new AiError("not_configured", readiness.problems.join(" "), 503);
   }
 
-  if (intentExtractionEnabled()) {
+  /*
+   * A QUESTION IS NEVER A FORM TURN (P0, live replay 25 Oct 2026). "what
+   * policy does that fall under?" with a card open was written into What
+   * happened, and "employee has been late twice. should i do a coaching or
+   * corrective action" became a card filled from the turn before it. A
+   * question skips the slot reader, the remap and the proposal and is
+   * answered; an inventory question is still answered from the library, and an
+   * open card is left as it was. A create or edit request, however it is
+   * phrased, is not a question. See `question-not-form.ts`. Behind
+   * QUESTION_NOT_FORM_ENABLED; off, every turn is routed as before.
+   */
+  const askedQuestion = questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
+  if (intentExtractionEnabled() && !askedQuestion) {
     const prepared = await applyIntentExtraction({ request, actor });
     if (prepared.clarification) return prepared.clarification;
     request = prepared.request;
@@ -298,6 +322,7 @@ async function answerQuestionCore(
       .entries.filter((entry) => !entry.published)
       .map((entry) => entry.templateKey);
     if (
+      !askedQuestion &&
       formFullRemapEnabled() &&
       remapShouldRun({
         question: request.question,
@@ -345,15 +370,20 @@ async function answerQuestionCore(
             : null;
         },
       });
+      // REMAP_DRAFT_SOURCES_ENABLED: the card names the turns its draft is written from.
       // FUTURE_INCIDENT_DATE_CONFIRM_ENABLED: a future incident date on the card is asked about once.
-      if (remapped) return withFutureDateQuestion(remapped, { today: request.context.todayIso, history: [...request.history, ...history] });
+      if (remapped)
+        return withFutureDateQuestion(withRemapDraftSources(remapped, request), {
+          today: request.context.todayIso,
+          history: [...request.history, ...history],
+        });
     }
 
     let manualRead: ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]> | null = null;
     const readManual = () =>
       (manualRead ??= new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId));
     const proposalQuestion = await questionForProposal(request, actor);
-    const proposal = await deliverFormProposal({
+    const proposal = askedQuestion ? null : await deliverFormProposal({
       request,
       actor,
       question: proposalQuestion,
@@ -420,7 +450,8 @@ async function answerQuestionCore(
   if (formToolsEnabled() && !formsTurn) {
     const roster = slotRetentionEnabled() ? await loadRosterQuiet(actor) : [];
     const stored = await storedFields(request, actor);
-    const understood = await understandFormTurn({
+    // A question is answered, never read as a form command (`question-not-form.ts`).
+    const understood = askedQuestion ? null : await understandFormTurn({
       question: request.question,
       history: request.history,
       today: request.context.todayIso,
@@ -616,7 +647,7 @@ async function answerQuestionCore(
    * See `slot-only-turn.ts`.
    */
   const slotTopic = slotOnlyRetrievalTopic(request.question, request.history);
-  const retrievalQuestion = slotTopic
+  const rewrittenQuestion = slotTopic
     ? slotTopic
     : queryRewriteEnabled()
       ? await rewriteRetrievalQuery({
@@ -625,6 +656,20 @@ async function answerQuestionCore(
           fallback: request.question,
         })
       : request.question;
+  /*
+   * FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED: a follow-up that names documents of
+   * its own is searched on them when the rewrite kept only the earlier
+   * subject (ported from the sibling app, QA Round 17). See `followUpOwnQuery`.
+   */
+  const retrievalQuestion =
+    followupNewTopicRetrievalEnabled() && !slotTopic
+      ? followUpOwnQuery({
+          question: request.question,
+          history: request.history,
+          rewritten: rewrittenQuestion,
+          ownWords: request.question,
+        })
+      : rewrittenQuestion;
   updateChatTrace({ rewrittenQuery: retrievalQuestion === request.question ? null : retrievalQuestion });
   const plan = retrievalPlanFor({
     question: retrievalQuestion,
@@ -635,16 +680,32 @@ async function answerQuestionCore(
 
   let rows: MatchedChunkRow[];
   try {
-    rows = await searchWithPlan(
-      plan,
-      (query) =>
-        retrievalRecallEnabled()
-          ? matchRecallKnowledge({ query, scopeId: request.scopeId, limit })
-          : hybridSearchEnabled()
-            ? matchHybridKnowledge({ query, scopeId: request.scopeId, limit })
-            : knowledge.match({ query, scopeId: request.scopeId, limit }),
-      limit,
-    );
+    const search = (query: string) =>
+      retrievalRecallEnabled()
+        ? matchRecallKnowledge({ query, scopeId: request.scopeId, limit })
+        : hybridSearchEnabled()
+          ? matchHybridKnowledge({ query, scopeId: request.scopeId, limit })
+          : knowledge.match({ query, scopeId: request.scopeId, limit });
+    rows = await searchWithPlan(plan, search, limit);
+    /*
+     * A REFORMAT TURN KEEPS THE SOURCES OF THE ANSWER IT REFORMATS
+     * (REFORMAT_KEEPS_SOURCES_ENABLED). "Make this a downloadable document" is
+     * searched again with the question that answer was written for, and those
+     * rows go first, so the model is not left "correcting" claims whose sources
+     * it can no longer see. Ported from the sibling app. See `reformat-turn.ts`.
+     */
+    const earlier =
+      reformatKeepsSourcesEnabled() && isReformatTurn(request.question, request.history)
+        ? earlierAnsweredTurn(request.history)
+        : null;
+    if (earlier) {
+      const earlierPlan = retrievalPlanFor({
+        question: earlier.question,
+        history: earlier.history,
+        openForm: request.openForm ?? null,
+      });
+      rows = keepEarlierSources(await searchWithPlan(earlierPlan, search, limit), rows, limit);
+    }
   } catch (error) {
     if (error instanceof MissingConfigurationError) {
       throw new AiError("not_configured", error.message, 503, error.missing);
@@ -822,6 +883,15 @@ async function answerQuestionCore(
     policyCitation: policyCitationEnabled(),
     printedPageOnly: printedPageOnlyEnabled(),
     actionPlanSentences: actionPlanSentencesEnabled(),
+    /*
+     * FRAMEWORK_GENERAL_SECTIONS_ENABLED, and only where the framework is a
+     * marked source: an issue it does not name is still covered by its general
+     * sections. See `FRAMEWORK_GENERAL_SECTIONS_RULE`.
+     */
+    ...(frameworkGeneralSectionsEnabled() &&
+    grounding.some((chunk) => isCoachingFrameworkTitle(chunk.documentTitle))
+      ? { frameworkGeneralSections: true }
+      : {}),
   });
 
   const longContext = longContextEnabled()
@@ -959,7 +1029,7 @@ async function answerQuestionCore(
 
   const suggested = await suggestedFormsFor({ summariesPromise, request, actor });
 
-  const proseBody = stripMarkers(guarded);
+  const proseBody = stripMarkers(guarded, { tidy: reformatKeepsSourcesEnabled() });
   const prose = suggested ? `${proseBody}\n\n${suggested.lead}` : proseBody;
   const manualChunks = rows.map((row, index) => ({
     chunkIndex: index,
@@ -992,7 +1062,8 @@ async function answerQuestionCore(
       const finalMarkers = extractUsedMarkers(final.text, supplementalMarkers);
       citations = [...final.sources.map(toCitation), ...citedRows(finalMarkers, citationRows)];
     } else {
-      content = suggested ? `${stripMarkers(settled.text)}\n\n${suggested.lead}` : stripMarkers(settled.text);
+      const tidy = { tidy: reformatKeepsSourcesEnabled() };
+      content = suggested ? `${stripMarkers(settled.text, tidy)}\n\n${suggested.lead}` : stripMarkers(settled.text, tidy);
       citations = settled.sources.map(toCitation);
     }
   }
